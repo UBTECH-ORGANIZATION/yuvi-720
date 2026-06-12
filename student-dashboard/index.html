@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הדשבורד שלי - YuviLab 720</title>
+    <link rel="stylesheet" href="/shared/theme.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Rubik', 'Segoe UI', sans-serif;
+            background: var(--bg-body);
+            color: var(--text-dark);
+            min-height: 100vh;
+            direction: rtl;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 220px;
+            height: 100vh;
+            background: #fff;
+            border-left: 1px solid #f0edf7;
+            display: flex;
+            flex-direction: column;
+            z-index: 50;
+            padding: 20px 0;
+        }
+
+        .sidebar-logo {
+            text-align: center;
+            padding: 0 16px 18px;
+            border-bottom: 1px solid #f5f3fa;
+        }
+
+        .sidebar-logo h2 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #7c5cff, #9f7afe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sidebar-logo span {
+            font-size: 0.68rem;
+            color: var(--text-light);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 12px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 12px;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--text-medium);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .nav-item:hover { background: #f5f3fa; }
+        .nav-item.active {
+            background: linear-gradient(135deg, rgba(124,92,255,0.08), rgba(159,122,254,0.06));
+            color: #7c5cff;
+            font-weight: 600;
+        }
+
+        .nav-item .nav-icon { font-size: 1rem; }
+
+        .sidebar-profile {
+            padding: 14px 16px;
+            border-top: 1px solid #f5f3fa;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .profile-avatar {
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #7c5cff, #9f7afe);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .profile-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .profile-role {
+            font-size: 0.65rem;
+            color: var(--text-light);
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content {
+            margin-right: 220px;
+            padding: 24px 28px;
+            min-height: 100vh;
+            max-width: 1100px;
+        }
+
+        /* Header */
+        .page-header {
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, rgba(124,92,255,0.04), rgba(159,122,254,0.02));
+            border-radius: 16px;
+            padding: 18px 22px;
+        }
+
+        .page-header h1 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: #4a3d8f;
+            margin-bottom: 2px;
+        }
+
+        .page-header p {
+            font-size: 0.82rem;
+            color: var(--text-light);
+        }
+
+        .last-update {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Section Titles */
+        .section-title {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #7c5cff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .section-title .emoji { font-size: 0.95rem; }
+
+        /* ===== TWO COLUMN LAYOUT ===== */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-grid .full-width {
+            grid-column: 1 / -1;
+        }
+
+        /* ===== SUBJECTS PROGRESS ===== */
+        .subjects-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .subject-card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s;
+        }
+
+        .subject-card:hover { transform: translateY(-2px); }
+
+        .subject-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .subject-card-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .subject-icon {
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
+        }
+
+        .subject-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .subject-level {
+            font-size: 0.65rem;
+            padding: 2px 7px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .level-great { background: rgba(72,187,120,0.1); color: #38a169; }
+        .level-good { background: rgba(99,179,237,0.1); color: #3182ce; }
+        .level-building { background: rgba(246,173,85,0.1); color: #c05621; }
+
+        .subject-progress-bar {
+            height: 7px;
+            background: #f0edf7;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .subject-progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.8s ease;
+        }
+
+        .subject-progress-label {
+            font-size: 0.72rem;
+            color: var(--text-light);
+        }
+
+        /* ===== DIFFICULTIES ===== */
+        .difficulties-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .difficulty-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #fff;
+            border-radius: 10px;
+            padding: 10px 14px;
+            box-shadow: var(--shadow-sm);
+            border-right: 3px solid #f6ad55;
+        }
+
+        .difficulty-subject-tag {
+            font-size: 0.68rem;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 5px;
+            background: rgba(246,173,85,0.1);
+            color: #c05621;
+            white-space: nowrap;
+        }
+
+        .difficulty-text {
+            font-size: 0.8rem;
+            color: var(--text-medium);
+            flex: 1;
+        }
+
+        .difficulty-status {
+            font-size: 0.68rem;
+            padding: 2px 7px;
+            border-radius: 5px;
+            white-space: nowrap;
+        }
+
+        .status-working { background: rgba(99,179,237,0.1); color: #3182ce; }
+        .status-new { background: rgba(246,173,85,0.1); color: #c05621; }
+        .status-improving { background: rgba(72,187,120,0.1); color: #38a169; }
+
+        /* ===== GOALS / MENTORING ===== */
+        .goals-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .goal-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: #fff;
+            border-radius: 10px;
+            padding: 10px 14px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .goal-checkbox {
+            width: 20px; height: 20px;
+            border-radius: 6px;
+            border: 2px solid #e2e0ee;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            margin-top: 1px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .goal-checkbox.done {
+            background: linear-gradient(135deg, #7c5cff, #9f7afe);
+            border-color: #7c5cff;
+        }
+
+        .goal-checkbox.done::after {
+            content: '✓';
+            color: #fff;
+            font-size: 0.65rem;
+            font-weight: 700;
+        }
+
+        .goal-content { flex: 1; }
+
+        .goal-text {
+            font-size: 0.8rem;
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+
+        .goal-meta {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .goal-date {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* ===== MAPPING / PROFILE ===== */
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .profile-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 12px 14px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .profile-card-label {
+            font-size: 0.7rem;
+            color: var(--text-light);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .profile-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .profile-tag {
+            font-size: 0.72rem;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(124,92,255,0.06);
+            color: #5a4a9f;
+            font-weight: 500;
+        }
+
+        .profile-value {
+            font-size: 0.8rem;
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+
+        /* ===== COMPETENCIES (ACTIVISM) ===== */
+        .competencies-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .competency-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+        }
+
+        .competency-icon {
+            font-size: 1.3rem;
+            margin-bottom: 4px;
+        }
+
+        .competency-label {
+            font-size: 0.73rem;
+            color: var(--text-medium);
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .competency-bar-track {
+            height: 5px;
+            background: #f0edf7;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+
+        .competency-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.8s ease;
+        }
+
+        .competency-descriptor {
+            font-size: 0.67rem;
+            color: var(--text-light);
+            font-style: italic;
+        }
+
+        /* ===== MOCK SELECTOR ===== */
+        .mock-selector {
+            position: fixed;
+            bottom: 12px;
+            left: 12px;
+            z-index: 200;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            padding: 8px 10px;
+        }
+
+        .mock-selector label {
+            font-size: 0.62rem;
+            color: var(--text-light);
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .mock-selector select {
+            font-family: 'Rubik', sans-serif;
+            font-size: 0.72rem;
+            padding: 3px 6px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            direction: rtl;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in { animation: fadeIn 0.3s ease forwards; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main-content { margin-right: 0; padding: 16px; }
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .subjects-grid { grid-template-columns: 1fr; }
+            .competencies-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 1100px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <h2>YuviLab 720</h2>
+            <span>הלמידה שלך, הדרך שלך</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a class="nav-item active" href="#">
+                <span class="nav-icon">📊</span> הדשבורד שלי
+            </a>
+            <a class="nav-item" href="/learner-mapping/">
+                <span class="nav-icon">🧩</span> מיפוי
+            </a>
+            <a class="nav-item" href="#">
+                <span class="nav-icon">📚</span> שיעורים
+            </a>
+            <a class="nav-item" href="#">
+                <span class="nav-icon">🎯</span> יעדים
+            </a>
+            <a class="nav-item" href="#">
+                <span class="nav-icon">💬</span> שיחות מנטורינג
+            </a>
+            <a class="nav-item" href="#">
+                <span class="nav-icon">🏆</span> הישגים
+            </a>
+        </nav>
+        <div class="sidebar-profile">
+            <div class="profile-avatar" id="sidebarAvatar">י</div>
+            <div>
+                <div class="profile-name" id="sidebarName">יובל כהן</div>
+                <div class="profile-role">תלמיד</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Mock Selector -->
+    <div class="mock-selector">
+        <label>תלמיד לדוגמה:</label>
+        <select id="mockStudentSelect">
+            <option value="student_001" selected>יובל כהן</option>
+            <option value="student_002">נועה לוי</option>
+            <option value="student_003">אדם ברק</option>
+            <option value="student_004">מיכל דוד</option>
+            <option value="student_005">עומר שלום</option>
+            <option value="student_006">שירה אבירם</option>
+        </select>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+        <!-- Loaded dynamically -->
+    </main>
+
+    <script>
+        // ================================================
+        // MOCK DATA - Full dashboard data per student
+        // ================================================
+        const STUDENTS_DASHBOARD = {
+            student_001: {
+                name: "יובל כהן",
+                avatar: "י",
+                subjects: [
+                    {
+                        name: "מתמטיקה",
+                        icon: "🔢",
+                        iconBg: "rgba(124,92,255,0.1)",
+                        progress: 72,
+                        level: "מתקדם יפה",
+                        levelClass: "level-good",
+                        gradient: "linear-gradient(135deg, #7c5cff, #9f7afe)",
+                        description: "עובד על שברים ומספרים שליליים"
+                    },
+                    {
+                        name: "אנגלית",
+                        icon: "🌍",
+                        iconBg: "rgba(72,187,120,0.1)",
+                        progress: 85,
+                        level: "מצוין",
+                        levelClass: "level-great",
+                        gradient: "linear-gradient(135deg, #48bb78, #38a169)",
+                        description: "קריאה והבנה ברמה גבוהה"
+                    },
+                    {
+                        name: "מדעים",
+                        icon: "🔬",
+                        iconBg: "rgba(99,179,237,0.1)",
+                        progress: 58,
+                        level: "בהתפתחות",
+                        levelClass: "level-building",
+                        gradient: "linear-gradient(135deg, #63b3ed, #4299e1)",
+                        description: "נושא נוכחי: חשמל ומגנטיות"
+                    },
+                    {
+                        name: "היסטוריה",
+                        icon: "📜",
+                        iconBg: "rgba(246,173,85,0.1)",
+                        progress: 65,
+                        level: "מתקדם יפה",
+                        levelClass: "level-good",
+                        gradient: "linear-gradient(135deg, #f6ad55, #ed8936)",
+                        description: "תקופת בית שני"
+                    }
+                ],
+                difficulties: [
+                    { subject: "מתמטיקה", text: "פעולות עם שברים - הכפלה וחילוק", status: "עובד על זה", statusClass: "status-working" },
+                    { subject: "מדעים", text: "הבנת מעגלים חשמליים טוריים", status: "חדש", statusClass: "status-new" },
+                    { subject: "מתמטיקה", text: "בעיות מילוליות עם אחוזים", status: "משתפר", statusClass: "status-improving" }
+                ],
+                goals: [
+                    { text: "לסיים את יחידת השברים עד סוף החודש", meta: "מתוך שיחה עם המנטור - 2.6.2026", done: false },
+                    { text: "לתרגל 10 דקות אנגלית כל יום", meta: "יעד אישי - 15.5.2026", done: true },
+                    { text: "להגיש פרויקט מדעים על אנרגיה מתחדשת", meta: "מתוך שיחה עם המנטור - 8.6.2026", done: false },
+                    { text: "לנהל יומן למידה שבועי", meta: "יעד אישי - 1.6.2026", done: true }
+                ],
+                mapping: {
+                    interests: ["טכנולוגיה", "משחקים", "מדע בידור", "רובוטיקה"],
+                    learningStyle: "ויזואלי - אוהב ללמוד דרך סרטונים והדמיות",
+                    preferences: ["עבודה עצמאית", "אתגרים", "משוב מיידי"],
+                    environment: "לומד הכי טוב בסביבה שקטה עם מוזיקה ברקע",
+                    strengths: ["סקרנות גבוהה", "שליטה בטכנולוגיה", "התמדה"]
+                },
+                competencies: [
+                    { icon: "🎯", label: "יוזמה ואחריות", value: 78, descriptor: "לוקח יוזמה בפרויקטים" },
+                    { icon: "🤝", label: "שיתוף פעולה", value: 65, descriptor: "משתף ותורם בקבוצה" },
+                    { icon: "💡", label: "חשיבה ביקורתית", value: 72, descriptor: "שואל שאלות טובות" },
+                    { icon: "🔄", label: "גמישות והסתגלות", value: 60, descriptor: "מתמודד עם שינויים" },
+                    { icon: "🗣️", label: "תקשורת", value: 70, descriptor: "מביע דעה ומקשיב" },
+                    { icon: "🧭", label: "הכוונה עצמית", value: 75, descriptor: "מנהל את הלמידה שלו" }
+                ]
+            },
+            student_002: {
+                name: "נועה לוי",
+                avatar: "נ",
+                subjects: [
+                    { name: "מתמטיקה", icon: "🔢", iconBg: "rgba(124,92,255,0.1)", progress: 90, level: "מצוין", levelClass: "level-great", gradient: "linear-gradient(135deg, #7c5cff, #9f7afe)", description: "מתקדמת למשוואות" },
+                    { name: "אנגלית", icon: "🌍", iconBg: "rgba(72,187,120,0.1)", progress: 78, level: "מתקדם יפה", levelClass: "level-good", gradient: "linear-gradient(135deg, #48bb78, #38a169)", description: "עובדת על כתיבת חיבורים" },
+                    { name: "אמנות", icon: "🎨", iconBg: "rgba(236,72,153,0.1)", progress: 95, level: "מצוין", levelClass: "level-great", gradient: "linear-gradient(135deg, #ec4899, #be185d)", description: "פרויקט אישי - ציור דיגיטלי" },
+                    { name: "מדעים", icon: "🔬", iconBg: "rgba(99,179,237,0.1)", progress: 70, level: "מתקדם יפה", levelClass: "level-good", gradient: "linear-gradient(135deg, #63b3ed, #4299e1)", description: "גוף האדם" }
+                ],
+                difficulties: [
+                    { subject: "אנגלית", text: "זמנים מורכבים - Past Perfect", status: "עובד על זה", statusClass: "status-working" },
+                    { subject: "מדעים", text: "חישוב מהירות ותאוצה", status: "משתפר", statusClass: "status-improving" }
+                ],
+                goals: [
+                    { text: "להשתתף בתערוכת אמנות של בית הספר", meta: "מתוך שיחה עם המנטור - 5.6.2026", done: false },
+                    { text: "לקרוא ספר אחד באנגלית בחודש", meta: "יעד אישי - 20.5.2026", done: true },
+                    { text: "לעזור לחבר בכיתה במתמטיקה", meta: "מתוך שיחה עם המנטור - 1.6.2026", done: true }
+                ],
+                mapping: {
+                    interests: ["אמנות", "מוזיקה", "כתיבה יצירתית", "עיצוב"],
+                    learningStyle: "יצירתי - אוהבת ללמוד דרך פרויקטים ויצירה",
+                    preferences: ["עבודה בקבוצה", "ביטוי אישי", "למידה חוויתית"],
+                    environment: "אוהבת ללמוד עם חברים, אווירה פתוחה",
+                    strengths: ["יצירתיות", "מוטיבציה גבוהה", "עזרה לאחרים"]
+                },
+                competencies: [
+                    { icon: "🎯", label: "יוזמה ואחריות", value: 88, descriptor: "מובילה פרויקטים" },
+                    { icon: "🤝", label: "שיתוף פעולה", value: 92, descriptor: "מובילה קבוצתית" },
+                    { icon: "💡", label: "חשיבה ביקורתית", value: 75, descriptor: "מחפשת משמעות" },
+                    { icon: "🔄", label: "גמישות והסתגלות", value: 80, descriptor: "פתוחה לשינויים" },
+                    { icon: "🗣️", label: "תקשורת", value: 85, descriptor: "מביעה דעה בבטחון" },
+                    { icon: "🧭", label: "הכוונה עצמית", value: 70, descriptor: "מתחילה לנהל לבד" }
+                ]
+            },
+            student_003: {
+                name: "אדם ברק",
+                avatar: "א",
+                subjects: [
+                    { name: "מתמטיקה", icon: "🔢", iconBg: "rgba(124,92,255,0.1)", progress: 45, level: "בהתפתחות", levelClass: "level-building", gradient: "linear-gradient(135deg, #7c5cff, #9f7afe)", description: "חזרה על חיבור וחיסור" },
+                    { name: "אנגלית", icon: "🌍", iconBg: "rgba(72,187,120,0.1)", progress: 55, level: "בהתפתחות", levelClass: "level-building", gradient: "linear-gradient(135deg, #48bb78, #38a169)", description: "אוצר מילים בסיסי" },
+                    { name: "ספורט", icon: "⚽", iconBg: "rgba(246,173,85,0.1)", progress: 92, level: "מצוין", levelClass: "level-great", gradient: "linear-gradient(135deg, #f6ad55, #ed8936)", description: "כדורגל ואתלטיקה" },
+                    { name: "מדעים", icon: "🔬", iconBg: "rgba(99,179,237,0.1)", progress: 62, level: "מתקדם יפה", levelClass: "level-good", gradient: "linear-gradient(135deg, #63b3ed, #4299e1)", description: "ניסויים מעשיים" }
+                ],
+                difficulties: [
+                    { subject: "מתמטיקה", text: "לוח הכפל - 7, 8, 9", status: "עובד על זה", statusClass: "status-working" },
+                    { subject: "מתמטיקה", text: "בעיות מילוליות - הבנת הנקרא", status: "עובד על זה", statusClass: "status-working" },
+                    { subject: "אנגלית", text: "כתיבת משפטים שלמים", status: "חדש", statusClass: "status-new" }
+                ],
+                goals: [
+                    { text: "לדעת את לוח הכפל בעל פה", meta: "מתוך שיחה עם המנטור - 3.6.2026", done: false },
+                    { text: "לקרוא 5 דקות כל יום", meta: "יעד אישי - 10.5.2026", done: false },
+                    { text: "להשתתף בתחרות הספורט הבית-ספרית", meta: "מתוך שיחה עם המנטור - 1.6.2026", done: true }
+                ],
+                mapping: {
+                    interests: ["ספורט", "משחקי חוץ", "בעלי חיים", "בנייה"],
+                    learningStyle: "קינסטטי - לומד הכי טוב דרך תנועה ופעולה",
+                    preferences: ["למידה מעשית", "הפסקות תכופות", "תחרויות"],
+                    environment: "צריך מרחב תנועה, קשה לו לשבת זמן רב",
+                    strengths: ["אנרגיה גבוהה", "חברותי", "לא מפחד מאתגרים"]
+                },
+                competencies: [
+                    { icon: "🎯", label: "יוזמה ואחריות", value: 55, descriptor: "לומד לקחת אחריות" },
+                    { icon: "🤝", label: "שיתוף פעולה", value: 80, descriptor: "שחקן קבוצתי מצוין" },
+                    { icon: "💡", label: "חשיבה ביקורתית", value: 50, descriptor: "בתחילת הדרך" },
+                    { icon: "🔄", label: "גמישות והסתגלות", value: 72, descriptor: "מסתגל בקלות" },
+                    { icon: "🗣️", label: "תקשורת", value: 75, descriptor: "חברותי ופתוח" },
+                    { icon: "🧭", label: "הכוונה עצמית", value: 45, descriptor: "צריך הכוונה מבוגר" }
+                ]
+            }
+        };
+
+        // Copy 001 for others with slight variations
+        STUDENTS_DASHBOARD.student_004 = JSON.parse(JSON.stringify(STUDENTS_DASHBOARD.student_002));
+        STUDENTS_DASHBOARD.student_004.name = "מיכל דוד";
+        STUDENTS_DASHBOARD.student_004.avatar = "מ";
+
+        STUDENTS_DASHBOARD.student_005 = JSON.parse(JSON.stringify(STUDENTS_DASHBOARD.student_003));
+        STUDENTS_DASHBOARD.student_005.name = "עומר שלום";
+        STUDENTS_DASHBOARD.student_005.avatar = "ע";
+
+        STUDENTS_DASHBOARD.student_006 = JSON.parse(JSON.stringify(STUDENTS_DASHBOARD.student_001));
+        STUDENTS_DASHBOARD.student_006.name = "שירה אבירם";
+        STUDENTS_DASHBOARD.student_006.avatar = "ש";
+
+        // ================================================
+        // RENDER
+        // ================================================
+        function renderDashboard(studentId) {
+            const data = STUDENTS_DASHBOARD[studentId];
+            if (!data) return;
+
+            // Update sidebar
+            document.getElementById('sidebarAvatar').textContent = data.avatar;
+            document.getElementById('sidebarName').textContent = data.name;
+
+            const main = document.getElementById('mainContent');
+            main.innerHTML = `
+                <!-- Header -->
+                <div class="page-header fade-in">
+                    <h1>שלום, ${data.name}! 👋</h1>
+                    <p>הנה סיכום ההתקדמות שלך</p>
+                    <div class="last-update">עודכן לאחרונה: ${new Date().toLocaleDateString('he-IL')} | הנתונים מתעדכנים בזמן אמת</div>
+                </div>
+
+                <!-- Subjects Progress - full width -->
+                <div class="section-title"><span class="emoji">📚</span> המקצועות שלי</div>
+                <div class="subjects-grid" id="subjectsGrid"></div>
+
+                <!-- Two column: Difficulties + Goals side by side -->
+                <div class="dashboard-grid">
+                    <div>
+                        <div class="section-title"><span class="emoji">💪</span> נקודות לחיזוק</div>
+                        <div class="difficulties-list" id="difficultiesList"></div>
+                    </div>
+                    <div>
+                        <div class="section-title"><span class="emoji">🎯</span> היעדים שלי</div>
+                        <div class="goals-list" id="goalsList"></div>
+                    </div>
+                </div>
+
+                <!-- Competencies - full width -->
+                <div class="section-title"><span class="emoji">🏅</span> כשירויות ופעלנות</div>
+                <div class="competencies-grid" id="competenciesGrid"></div>
+
+                <!-- Profile / Mapping -->
+                <div class="section-title"><span class="emoji">🧩</span> מה שגילינו עליך</div>
+                <div class="profile-grid" id="profileGrid"></div>
+            `;
+
+            renderSubjects(data.subjects);
+            renderDifficulties(data.difficulties);
+            renderGoals(data.goals);
+            renderMapping(data.mapping);
+            renderCompetencies(data.competencies);
+        }
+
+        function renderSubjects(subjects) {
+            const grid = document.getElementById('subjectsGrid');
+            grid.innerHTML = subjects.map(s => `
+                <div class="subject-card fade-in">
+                    <div class="subject-card-header">
+                        <div class="subject-card-title">
+                            <div class="subject-icon" style="background: ${s.iconBg}">${s.icon}</div>
+                            <span class="subject-name">${s.name}</span>
+                        </div>
+                        <span class="subject-level ${s.levelClass}">${s.level}</span>
+                    </div>
+                    <div class="subject-progress-bar">
+                        <div class="subject-progress-fill" style="width: ${s.progress}%; background: ${s.gradient}"></div>
+                    </div>
+                    <div class="subject-progress-label">${s.description}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderDifficulties(difficulties) {
+            const list = document.getElementById('difficultiesList');
+            list.innerHTML = difficulties.map(d => `
+                <div class="difficulty-item fade-in">
+                    <span class="difficulty-subject-tag">${d.subject}</span>
+                    <span class="difficulty-text">${d.text}</span>
+                    <span class="difficulty-status ${d.statusClass}">${d.status}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderGoals(goals) {
+            const list = document.getElementById('goalsList');
+            list.innerHTML = goals.map((g, i) => `
+                <div class="goal-item fade-in">
+                    <div class="goal-checkbox ${g.done ? 'done' : ''}" data-index="${i}"></div>
+                    <div class="goal-content">
+                        <div class="goal-text" style="${g.done ? 'text-decoration: line-through; opacity: 0.6' : ''}">${g.text}</div>
+                        <div class="goal-meta">${g.meta}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Toggle goals
+            list.querySelectorAll('.goal-checkbox').forEach(cb => {
+                cb.addEventListener('click', () => {
+                    cb.classList.toggle('done');
+                    const textEl = cb.nextElementSibling.querySelector('.goal-text');
+                    if (cb.classList.contains('done')) {
+                        textEl.style.textDecoration = 'line-through';
+                        textEl.style.opacity = '0.6';
+                    } else {
+                        textEl.style.textDecoration = 'none';
+                        textEl.style.opacity = '1';
+                    }
+                });
+            });
+        }
+
+        function renderMapping(mapping) {
+            const grid = document.getElementById('profileGrid');
+            grid.innerHTML = `
+                <div class="profile-card fade-in">
+                    <div class="profile-card-label">תחומי עניין</div>
+                    <div class="profile-tags">${mapping.interests.map(i => `<span class="profile-tag">${i}</span>`).join('')}</div>
+                </div>
+                <div class="profile-card fade-in">
+                    <div class="profile-card-label">סגנון למידה</div>
+                    <div class="profile-value">${mapping.learningStyle}</div>
+                </div>
+                <div class="profile-card fade-in">
+                    <div class="profile-card-label">העדפות</div>
+                    <div class="profile-tags">${mapping.preferences.map(p => `<span class="profile-tag">${p}</span>`).join('')}</div>
+                </div>
+                <div class="profile-card fade-in">
+                    <div class="profile-card-label">סביבת למידה</div>
+                    <div class="profile-value">${mapping.environment}</div>
+                </div>
+                <div class="profile-card fade-in">
+                    <div class="profile-card-label">חוזקות</div>
+                    <div class="profile-tags">${mapping.strengths.map(s => `<span class="profile-tag">${s}</span>`).join('')}</div>
+                </div>
+            `;
+        }
+
+        function renderCompetencies(competencies) {
+            const grid = document.getElementById('competenciesGrid');
+            grid.innerHTML = competencies.map(c => {
+                const color = c.value >= 75 ? '#48bb78' : c.value >= 55 ? '#7c5cff' : '#f6ad55';
+                return `
+                    <div class="competency-card fade-in">
+                        <div class="competency-icon">${c.icon}</div>
+                        <div class="competency-label">${c.label}</div>
+                        <div class="competency-bar-track">
+                            <div class="competency-bar-fill" style="width: ${c.value}%; background: ${color}"></div>
+                        </div>
+                        <div class="competency-descriptor">${c.descriptor}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ================================================
+        // EVENTS
+        // ================================================
+        document.getElementById('mockStudentSelect').addEventListener('change', (e) => {
+            renderDashboard(e.target.value);
+        });
+
+        // Initial render
+        renderDashboard('student_001');
+    </script>
+</body>
+</html>

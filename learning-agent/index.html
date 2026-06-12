@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הלמידה שלי - YuviLab 720</title>
+    <link rel="stylesheet" href="/shared/theme.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Rubik', 'Segoe UI', sans-serif;
+            background: #f5f3fa;
+            color: #2d3748;
+            min-height: 100vh;
+            direction: rtl;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===== TOP BAR ===== */
+        .top-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            background: #fff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            height: 54px;
+        }
+
+        .top-bar-logo {
+            font-weight: 700;
+            font-size: 14px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .top-bar-breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.78rem;
+            color: #718096;
+            margin-right: 20px;
+        }
+
+        .top-bar-breadcrumb .sep { opacity: 0.4; }
+        .top-bar-breadcrumb .active { color: #4a3d8f; font-weight: 600; }
+        .top-bar-breadcrumb .clickable { cursor: pointer; }
+        .top-bar-breadcrumb .clickable:hover { color: #7c5cff; }
+
+        .top-bar-right {
+            margin-right: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .top-bar-avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #7c5cff, #9f7afe);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 0.75rem; font-weight: 700;
+        }
+
+        .top-bar-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #4a3d8f;
+        }
+
+        /* ===== SCREENS ===== */
+        .screen { display: none; padding-top: 54px; min-height: 100vh; }
+        .screen.active { display: block; }
+
+        /* ===== SCREEN 1: Subject Portal ===== */
+        .portal-screen { padding: 32px 40px; }
+
+        .portal-header {
+            margin-bottom: 28px;
+            max-width: 700px;
+        }
+
+        .portal-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 6px;
+        }
+
+        .portal-header p {
+            font-size: 0.88rem;
+            color: #718096;
+        }
+
+        .recommendation-banner {
+            background: linear-gradient(135deg, rgba(124,92,255,0.06), rgba(34,211,238,0.04));
+            border: 1px solid rgba(124,92,255,0.12);
+            border-radius: 14px;
+            padding: 18px 22px;
+            margin-bottom: 28px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .recommendation-banner .bot-icon {
+            width: 36px; height: 36px;
+            flex-shrink: 0;
+        }
+
+        .recommendation-banner .text {
+            flex: 1;
+        }
+
+        .recommendation-banner .text h4 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #4a3d8f;
+            margin-bottom: 4px;
+        }
+
+        .recommendation-banner .text p {
+            font-size: 0.8rem;
+            color: #5a6577;
+            line-height: 1.7;
+        }
+
+        .subjects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 18px;
+        }
+
+        .subject-card {
+            background: #fff;
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: 0 2px 12px rgba(124,92,255,0.05);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .subject-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(124,92,255,0.12);
+        }
+
+        .subject-card-icon {
+            width: 48px; height: 48px;
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 14px;
+        }
+
+        .subject-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .subject-card p {
+            font-size: 0.78rem;
+            color: #718096;
+            margin-bottom: 12px;
+        }
+
+        .subject-card-progress {
+            height: 5px;
+            background: #f0edf7;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .subject-card-progress-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+
+        .subject-card-meta {
+            font-size: 0.68rem;
+            color: #a0aec0;
+        }
+
+        .subject-card .recommended-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            font-size: 0.62rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(124,92,255,0.1);
+            color: #7c5cff;
+        }
+
+        /* ===== SCREEN 2: Topics/Stages ===== */
+        .topics-screen { padding: 32px 40px; }
+
+        .topics-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: #7c5cff;
+            cursor: pointer;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .topics-back:hover { text-decoration: underline; }
+
+        .topics-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .topics-header-icon {
+            width: 52px; height: 52px;
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.6rem;
+        }
+
+        .topics-header h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .topics-header p {
+            font-size: 0.82rem;
+            color: #718096;
+        }
+
+        .topics-reason {
+            background: rgba(124,92,255,0.04);
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-bottom: 24px;
+            font-size: 0.8rem;
+            color: #5a4a9f;
+            border-right: 3px solid #7c5cff;
+        }
+
+        .stages-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .stage-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 20px;
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(124,92,255,0.04);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .stage-item:hover { transform: translateX(-4px); box-shadow: 0 4px 16px rgba(124,92,255,0.1); }
+
+        .stage-item.locked { opacity: 0.5; pointer-events: none; }
+
+        .stage-number {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .stage-number.done { background: #48bb78; color: #fff; }
+        .stage-number.current { background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff; }
+        .stage-number.locked { background: #e8e4f5; color: #a0aec0; }
+
+        .stage-info { flex: 1; }
+        .stage-info h4 { font-size: 0.88rem; font-weight: 600; color: #2d3748; margin-bottom: 2px; }
+        .stage-info p { font-size: 0.72rem; color: #718096; }
+
+        .stage-badge {
+            font-size: 0.68rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+
+        .stage-badge.done { background: rgba(72,187,120,0.1); color: #276749; }
+        .stage-badge.current { background: rgba(124,92,255,0.08); color: #5a4a9f; }
+
+        /* ===== SCREEN 3: Game + Chat ===== */
+        .game-screen {
+            display: none;
+            padding-top: 54px;
+            height: 100vh;
+        }
+
+        .game-screen.active { display: flex; }
+
+        .game-layout {
+            display: flex;
+            height: calc(100vh - 54px);
+            width: 100%;
+        }
+
+        /* Right: Yubi Chat */
+        .yubi-chat-panel {
+            width: 340px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            border-left: 1px solid #f0edf7;
+        }
+
+        .yubi-chat-header {
+            padding: 14px 18px;
+            background: linear-gradient(135deg, #7c5cff, #9f7afe);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .yubi-chat-header h3 { font-size: 0.88rem; font-weight: 600; }
+        .yubi-chat-header span { font-size: 0.7rem; opacity: 0.8; }
+
+        .yubi-chat-header .online-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: #5eead4;
+            margin-right: auto;
+        }
+
+        .yubi-chat-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #faf9fe;
+        }
+
+        .chat-msg {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .chat-msg.user { justify-content: flex-end; }
+
+        .chat-msg .avatar {
+            width: 26px; height: 26px;
+            flex-shrink: 0;
+        }
+
+        .chat-bubble {
+            max-width: 82%;
+            padding: 10px 14px;
+            border-radius: 14px;
+            font-size: 0.8rem;
+            line-height: 1.7;
+        }
+
+        .chat-bubble.bot {
+            background: #fff;
+            border: 1px solid #ece9f7;
+            color: #2d3748;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-bubble.user {
+            background: linear-gradient(135deg, #7c5cff, #9f7afe);
+            color: #fff;
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-bubble.typing {
+            display: flex;
+            gap: 4px;
+            padding: 10px 14px;
+            background: #fff;
+            border: 1px solid #ece9f7;
+            border-bottom-right-radius: 4px;
+        }
+
+        .typing-dot {
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: #b8b3d0;
+            animation: bounce 1.4s infinite;
+        }
+        .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-3px); }
+        }
+
+        .yubi-chat-input {
+            padding: 12px 14px;
+            border-top: 1px solid #f0edf7;
+            display: flex;
+            gap: 8px;
+        }
+
+        .yubi-chat-input input {
+            flex: 1;
+            padding: 9px 12px;
+            border: 1px solid #e4e0f0;
+            border-radius: 10px;
+            font-family: 'Rubik', sans-serif;
+            font-size: 0.78rem;
+            outline: none;
+            direction: rtl;
+        }
+
+        .yubi-chat-input input:focus { border-color: #7c5cff; }
+
+        .yubi-chat-input button {
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #7c5cff, #9f7afe);
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        /* Left: Game iframe */
+        .game-iframe-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f0edf7;
+        }
+
+        .game-iframe-toolbar {
+            padding: 10px 20px;
+            background: #fff;
+            border-bottom: 1px solid #f0edf7;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .game-iframe-toolbar .game-title {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .game-iframe-toolbar .game-stage {
+            font-size: 0.7rem;
+            color: #718096;
+            padding: 3px 8px;
+            background: #f5f3fa;
+            border-radius: 6px;
+        }
+
+        .game-iframe-toolbar .exit-btn {
+            margin-right: auto;
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid #e4e0f0;
+            background: #fff;
+            font-family: 'Rubik', sans-serif;
+            font-size: 0.72rem;
+            color: #718096;
+            cursor: pointer;
+        }
+
+        .game-iframe-toolbar .exit-btn:hover { color: #e53e3e; border-color: #fed7d7; }
+
+        .game-iframe-container {
+            flex: 1;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .game-iframe-mock {
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .game-content {
+            flex: 1;
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .game-question-area {
+            width: 100%;
+            max-width: 560px;
+        }
+
+        .game-visual {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border-radius: 12px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .angle-display {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+
+        .angle-line {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 80px;
+            height: 3px;
+            background: #22d3ee;
+            transform-origin: right center;
+            border-radius: 2px;
+        }
+
+        .angle-line.base { transform: rotate(0deg); }
+        .angle-line.rotated { background: #7c5cff; }
+
+        .angle-label {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .angle-arc {
+            position: absolute;
+            bottom: 0; right: 0;
+            width: 40px; height: 40px;
+            border: 2px solid rgba(124,92,255,0.5);
+            border-radius: 50%;
+            clip-path: polygon(50% 50%, 100% 50%, 100% 0%, 50% 0%);
+        }
+
+        .game-question-text {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #2d3748;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .game-answers {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .game-answer-btn {
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 2px solid #e8e4f5;
+            background: #fff;
+            font-family: 'Rubik', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 500;
+            color: #2d3748;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .game-answer-btn:hover { border-color: #7c5cff; background: rgba(124,92,255,0.03); }
+
+        .game-answer-btn.correct {
+            border-color: #48bb78;
+            background: rgba(72,187,120,0.08);
+            color: #276749;
+        }
+
+        .game-answer-btn.wrong {
+            border-color: #fc8181;
+            background: rgba(252,129,129,0.08);
+            color: #9b2c2c;
+        }
+
+        .game-answer-btn.disabled { pointer-events: none; opacity: 0.7; }
+
+        .game-progress-bar {
+            padding: 12px 24px;
+            background: #f9f8fd;
+            border-top: 1px solid #f0edf7;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .game-progress-track {
+            flex: 1;
+            height: 6px;
+            background: #e8e4f5;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .game-progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #7c5cff, #9f7afe);
+            border-radius: 3px;
+            transition: width 0.5s;
+        }
+
+        .game-progress-label {
+            font-size: 0.7rem;
+            color: #a0aec0;
+            white-space: nowrap;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in { animation: fadeIn 0.4s ease forwards; }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .game-layout { flex-direction: column-reverse; }
+            .yubi-chat-panel { width: 100%; height: 40vh; }
+            .subjects-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <span class="top-bar-logo">YuviLab 720</span>
+        <div class="top-bar-breadcrumb" id="breadcrumb">
+            <span class="active">פורטל הלמידה</span>
+        </div>
+        <div class="top-bar-right">
+            <span class="top-bar-name">יובל כהן</span>
+            <div class="top-bar-avatar">י</div>
+        </div>
+    </div>
+
+    <!-- Screen 1: Subject Portal -->
+    <div class="screen active" id="screenPortal">
+        <div class="portal-screen">
+            <div class="portal-header">
+                <h1>מה נלמד היום? 🚀</h1>
+                <p>בחר מקצוע שמעניין אותך - המערכת התאימה לך תכנים על בסיס הפרופיל שלך</p>
+            </div>
+
+            <div class="recommendation-banner">
+                <svg class="bot-icon" viewBox="0 0 36 36" fill="none">
+                    <rect x="8" y="12" width="20" height="16" rx="4" fill="#7c5cff"/>
+                    <rect x="12" y="16" width="4" height="4" rx="1.5" fill="#fff"/>
+                    <rect x="20" y="16" width="4" height="4" rx="1.5" fill="#fff"/>
+                    <rect x="15" y="22" width="6" height="2" rx="1" fill="#c4b5fd"/>
+                    <rect x="14" y="6" width="8" height="6" rx="2" fill="#9f7afe"/>
+                    <rect x="17" y="3" width="2" height="4" rx="1" fill="#c4b5fd"/>
+                    <circle cx="18" cy="2" r="2" fill="#22d3ee"/>
+                </svg>
+                <div class="text">
+                    <h4>💡 יובי ממליץ לך:</h4>
+                    <p>על בסיס המיפוי שעשינו, ראיתי שאתה אוהב אתגרים ויש לך סקרנות גבוהה! לכן בחרתי לך תכנים במתמטיקה ובמדעים שמשלבים חשיבה ויזואלית - בדיוק הסגנון שמתאים לך. גם הוספתי רובוטיקה כי ציינת שזה מעניין אותך.</p>
+                </div>
+            </div>
+
+            <div class="subjects-grid" id="subjectsGrid"></div>
+        </div>
+    </div>
+
+    <!-- Screen 2: Topics/Stages -->
+    <div class="screen" id="screenTopics">
+        <div class="topics-screen" id="topicsContent"></div>
+    </div>
+
+    <!-- Screen 3: Game + Chat -->
+    <div class="screen" id="screenGame">
+        <div class="game-layout">
+            <!-- Right: Yubi Chat -->
+            <div class="yubi-chat-panel">
+                <div class="yubi-chat-header">
+                    <svg viewBox="0 0 36 36" width="28" height="28" fill="none">
+                        <rect x="8" y="12" width="20" height="16" rx="4" fill="#fff" fill-opacity="0.9"/>
+                        <rect x="12" y="16" width="4" height="4" rx="1.5" fill="#7c5cff"/>
+                        <rect x="20" y="16" width="4" height="4" rx="1.5" fill="#7c5cff"/>
+                        <rect x="15" y="22" width="6" height="2" rx="1" fill="#c4b5fd"/>
+                        <rect x="14" y="6" width="8" height="6" rx="2" fill="#fff" fill-opacity="0.7"/>
+                        <rect x="17" y="3" width="2" height="4" rx="1" fill="#c4b5fd"/>
+                        <circle cx="18" cy="2" r="2" fill="#22d3ee"/>
+                    </svg>
+                    <div>
+                        <h3>יובי</h3>
+                        <span>מלווה אותך בלמידה</span>
+                    </div>
+                    <div class="online-dot"></div>
+                </div>
+                <div class="yubi-chat-body" id="yubiChatBody"></div>
+                <div class="yubi-chat-input">
+                    <input type="text" id="yubiInput" placeholder="שאל את יובי..." />
+                    <button id="yubiSendBtn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Left: Game iframe -->
+            <div class="game-iframe-panel">
+                <div class="game-iframe-toolbar">
+                    <span class="game-title" id="gameTitle">משחק זוויות</span>
+                    <span class="game-stage" id="gameStage">שלב 1</span>
+                    <button class="exit-btn" id="exitGameBtn">✕ חזרה לנושאים</button>
+                </div>
+                <div class="game-iframe-container">
+                    <div class="game-iframe-mock">
+                        <div class="game-content" id="gameContent"></div>
+                        <div class="game-progress-bar">
+                            <div class="game-progress-track">
+                                <div class="game-progress-fill" id="gameProgressFill" style="width: 0%"></div>
+                            </div>
+                            <span class="game-progress-label" id="gameProgressLabel">שאלה 1 מתוך 6</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================================================
+        // DATA
+        // ================================================
+        const SUBJECTS = [
+            {
+                id: 'math',
+                name: 'מתמטיקה',
+                icon: '🔢',
+                iconBg: 'rgba(124,92,255,0.1)',
+                gradient: 'linear-gradient(135deg, #7c5cff, #9f7afe)',
+                desc: 'גיאומטריה, חשבון ואלגברה',
+                progress: 35,
+                recommended: true,
+                reason: 'ראיתי שאתה אוהב אתגרים ויש לך חשיבה ויזואלית חזקה - גיאומטריה זה בדיוק בשבילך! נתחיל מזוויות ונתקדם למשולשים.',
+                stages: [
+                    { id: 's1', title: 'סוגי זוויות', desc: 'לזהות זוויות חדות, ישרות, קהות ושטוחות', status: 'current' },
+                    { id: 's2', title: 'מדידת זוויות', desc: 'שימוש במד-זווית', status: 'locked' },
+                    { id: 's3', title: 'זוויות משלימות', desc: 'זוויות שסכומן 180°', status: 'locked' },
+                    { id: 's4', title: 'זוויות במשולש', desc: 'סכום זוויות במשולש', status: 'locked' },
+                    { id: 's5', title: 'משולשים - סיכום', desc: 'חזרה על הנלמד', status: 'locked' },
+                ]
+            },
+            {
+                id: 'science',
+                name: 'מדעים',
+                icon: '🔬',
+                iconBg: 'rgba(99,179,237,0.1)',
+                gradient: 'linear-gradient(135deg, #63b3ed, #4299e1)',
+                desc: 'חשמל, אנרגיה ותופעות טבע',
+                progress: 20,
+                recommended: true,
+                reason: 'ציינת שמדע בידור מעניין אותך - נתחיל מניסויים בחשמל שאפשר לעשות בבית!',
+                stages: [
+                    { id: 's1', title: 'מעגל חשמלי פשוט', desc: 'בניית מעגל עם סוללה ונורה', status: 'current' },
+                    { id: 's2', title: 'מוליכים ומבודדים', desc: 'מה מעביר חשמל ומה לא', status: 'locked' },
+                    { id: 's3', title: 'מעגל טורי ומקבילי', desc: 'חיבור נורות בסדר שונה', status: 'locked' },
+                ]
+            },
+            {
+                id: 'robotics',
+                name: 'רובוטיקה',
+                icon: '🤖',
+                iconBg: 'rgba(72,187,120,0.1)',
+                gradient: 'linear-gradient(135deg, #48bb78, #38a169)',
+                desc: 'תכנות, חיישנים ובנייה',
+                progress: 0,
+                recommended: true,
+                reason: 'אמרת שרובוטיקה מעניינת אותך! נתחיל מהבסיס - איך רובוט "חושב" ומקבל החלטות.',
+                stages: [
+                    { id: 's1', title: 'מהו רובוט?', desc: 'היכרות עם חלקי רובוט בסיסי', status: 'current' },
+                    { id: 's2', title: 'חיישנים', desc: 'איך רובוט מרגיש את הסביבה', status: 'locked' },
+                    { id: 's3', title: 'פקודות בסיסיות', desc: 'תכנות תנועה פשוטה', status: 'locked' },
+                ]
+            },
+            {
+                id: 'english',
+                name: 'אנגלית',
+                icon: '🌍',
+                iconBg: 'rgba(246,173,85,0.1)',
+                gradient: 'linear-gradient(135deg, #f6ad55, #ed8936)',
+                desc: 'קריאה, כתיבה ואוצר מילים',
+                progress: 55,
+                recommended: false,
+                stages: [
+                    { id: 's1', title: 'Reading Comprehension', desc: 'הבנת טקסט בסיסי', status: 'done' },
+                    { id: 's2', title: 'Vocabulary - Animals', desc: 'מילים חדשות: בעלי חיים', status: 'current' },
+                    { id: 's3', title: 'Simple Sentences', desc: 'בניית משפטים פשוטים', status: 'locked' },
+                ]
+            },
+            {
+                id: 'art',
+                name: 'אמנות דיגיטלית',
+                icon: '🎨',
+                iconBg: 'rgba(236,72,153,0.1)',
+                gradient: 'linear-gradient(135deg, #ec4899, #be185d)',
+                desc: 'עיצוב, ציור ויצירה',
+                progress: 10,
+                recommended: false,
+                stages: [
+                    { id: 's1', title: 'צבעים ראשוניים', desc: 'הכרת גלגל הצבעים', status: 'current' },
+                    { id: 's2', title: 'קומפוזיציה', desc: 'סידור אלמנטים בתמונה', status: 'locked' },
+                ]
+            },
+            {
+                id: 'tech',
+                name: 'טכנולוגיה',
+                icon: '💻',
+                iconBg: 'rgba(34,211,238,0.1)',
+                gradient: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
+                desc: 'תכנות, אלגוריתמים וחשיבה',
+                progress: 45,
+                recommended: false,
+                stages: [
+                    { id: 's1', title: 'מהו אלגוריתם?', desc: 'צעדים לפתרון בעיה', status: 'done' },
+                    { id: 's2', title: 'לולאות', desc: 'פעולות שחוזרות על עצמן', status: 'current' },
+                    { id: 's3', title: 'תנאים', desc: 'החלטות בתוכנית', status: 'locked' },
+                ]
+            }
+        ];
+
+        // Game questions for math angles
+        const GAME_QUESTIONS = [
+            {
+                visual: { angle: 45, label: '?' },
+                question: 'מה סוג הזווית הזו?',
+                answers: ['זווית חדה', 'זווית ישרה', 'זווית קהה', 'זווית שטוחה'],
+                correct: 0,
+                hint: 'זווית חדה היא כל זווית שקטנה מ-90°'
+            },
+            {
+                visual: { angle: 90, label: '?' },
+                question: 'מה סוג הזווית הזו?',
+                answers: ['זווית חדה', 'זווית ישרה', 'זווית קהה', 'זווית שטוחה'],
+                correct: 1,
+                hint: 'זווית ישרה נראית בדיוק כמו פינה של דף'
+            },
+            {
+                visual: { angle: 135, label: '?' },
+                question: 'מה סוג הזווית הזו?',
+                answers: ['זווית חדה', 'זווית ישרה', 'זווית קהה', 'זווית שטוחה'],
+                correct: 2,
+                hint: 'זווית קהה גדולה מ-90° אבל קטנה מ-180°'
+            },
+            {
+                visual: { angle: 60, label: '60°' },
+                question: 'הזווית הזו היא 60°. איך נסווג אותה?',
+                answers: ['חדה - כי קטנה מ-90°', 'ישרה - כי קרובה ל-90°', 'קהה - כי גדולה מ-45°', 'שטוחה'],
+                correct: 0,
+                hint: 'המבחן היחיד: האם היא קטנה, שווה, או גדולה מ-90°?'
+            },
+            {
+                visual: { angle: 180, label: '?' },
+                question: 'כשהקווים יוצרים קו ישר אחד, מה סוג הזווית?',
+                answers: ['חדה', 'ישרה', 'קהה', 'שטוחה - 180°'],
+                correct: 3,
+                hint: 'כשאין "פינה" בכלל והקווים ישרים - זו זווית שטוחה'
+            },
+            {
+                visual: { angle: 110, label: '110°' },
+                question: 'זווית של 110° היא:',
+                answers: ['חדה', 'ישרה', 'קהה', 'שטוחה'],
+                correct: 2,
+                hint: '110° גדולה מ-90° וקטנה מ-180°, אז...'
+            }
+        ];
+
+        // Yubi responses
+        const YUBI_CORRECT_RESPONSES = [
+            'מעולה! 🎉 ענית נכון! אתה ממש תופס את זה',
+            'בול! 🌟 רואה שאתה מבין את הנושא',
+            'יופי! ✨ זה בדיוק נכון. אתה מתקדם יפה!',
+            'נכון! 💪 ככה ממשיכים. אתה עושה עבודה מצוינת',
+        ];
+
+        const YUBI_WRONG_RESPONSES = [
+            { text: 'אופס, לא בדיוק 🤔 אבל בוא נבין את זה ביחד!', followup: '' },
+            { text: 'כמעט! אל תדאג, אני כאן כדי לעזור 😊', followup: '' },
+            { text: 'לא נורא בכלל! בוא נחשוב על זה שנייה ביחד 💡', followup: '' },
+        ];
+
+        // ================================================
+        // STATE
+        // ================================================
+        let currentScreen = 'portal';
+        let currentSubject = null;
+        let currentQuestionIdx = 0;
+        let score = 0;
+
+        // ================================================
+        // RENDER: Portal
+        // ================================================
+        function renderPortal() {
+            const grid = document.getElementById('subjectsGrid');
+            grid.innerHTML = SUBJECTS.map(s => `
+                <div class="subject-card fade-in" onclick="openSubject('${s.id}')">
+                    ${s.recommended ? '<span class="recommended-badge">⭐ מומלץ לך</span>' : ''}
+                    <div class="subject-card-icon" style="background: ${s.iconBg}">${s.icon}</div>
+                    <h3>${s.name}</h3>
+                    <p>${s.desc}</p>
+                    <div class="subject-card-progress">
+                        <div class="subject-card-progress-fill" style="width: ${s.progress}%; background: ${s.gradient}"></div>
+                    </div>
+                    <div class="subject-card-meta">${s.progress > 0 ? s.progress + '% הושלם' : 'עוד לא התחלת'}</div>
+                </div>
+            `).join('');
+        }
+
+        // ================================================
+        // RENDER: Topics
+        // ================================================
+        function openSubject(subjectId) {
+            currentSubject = SUBJECTS.find(s => s.id === subjectId);
+            if (!currentSubject) return;
+
+            switchScreen('topics');
+            updateBreadcrumb(['פורטל הלמידה', currentSubject.name]);
+
+            const container = document.getElementById('topicsContent');
+            container.innerHTML = `
+                <div class="topics-back" onclick="switchScreen('portal')">← חזרה למקצועות</div>
+                
+                <div class="topics-header">
+                    <div class="topics-header-icon" style="background: ${currentSubject.iconBg}">${currentSubject.icon}</div>
+                    <div>
+                        <h1>${currentSubject.name}</h1>
+                        <p>${currentSubject.desc}</p>
+                    </div>
+                </div>
+
+                ${currentSubject.reason ? `
+                <div class="topics-reason">
+                    <strong>💡 למה בחרנו לך את זה:</strong> ${currentSubject.reason}
+                </div>` : ''}
+
+                <div class="stages-list">
+                    ${currentSubject.stages.map((st, i) => `
+                        <div class="stage-item ${st.status === 'locked' ? 'locked' : ''}" onclick="openGame('${st.id}', ${i})">
+                            <div class="stage-number ${st.status}">${st.status === 'done' ? '✓' : i + 1}</div>
+                            <div class="stage-info">
+                                <h4>${st.title}</h4>
+                                <p>${st.desc}</p>
+                            </div>
+                            ${st.status === 'done' ? '<span class="stage-badge done">הושלם</span>' : 
+                              st.status === 'current' ? '<span class="stage-badge current">התחל</span>' : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // ================================================
+        // RENDER: Game
+        // ================================================
+        function openGame(stageId, stageIdx) {
+            currentQuestionIdx = 0;
+            score = 0;
+            switchScreen('game');
+
+            const stage = currentSubject.stages[stageIdx];
+            document.getElementById('gameTitle').textContent = stage.title;
+            document.getElementById('gameStage').textContent = `שלב ${stageIdx + 1}`;
+            updateBreadcrumb(['פורטל הלמידה', currentSubject.name, stage.title]);
+
+            // Clear chat and add intro
+            document.getElementById('yubiChatBody').innerHTML = '';
+            addYubiMessage(`היי! 👋 אני כאן איתך בזמן שאתה לומד "${stage.title}". אם תצטרך עזרה - פשוט תשאל אותי!`);
+            setTimeout(() => {
+                addYubiMessage('בוא נתחיל! תסתכל על הזווית שמוצגת ותגיד לי מה סוג שלה 🔍');
+            }, 1500);
+
+            renderGameQuestion();
+        }
+
+        function renderGameQuestion() {
+            const q = GAME_QUESTIONS[currentQuestionIdx];
+            const content = document.getElementById('gameContent');
+            const pct = Math.round((currentQuestionIdx / GAME_QUESTIONS.length) * 100);
+
+            document.getElementById('gameProgressFill').style.width = pct + '%';
+            document.getElementById('gameProgressLabel').textContent = `שאלה ${currentQuestionIdx + 1} מתוך ${GAME_QUESTIONS.length}`;
+
+            const angleDeg = q.visual.angle;
+            
+            content.innerHTML = `
+                <div class="game-question-area">
+                    <div class="game-visual">
+                        <div class="angle-display">
+                            <div class="angle-line base"></div>
+                            <div class="angle-line rotated" style="transform: rotate(-${angleDeg}deg)"></div>
+                            <div class="angle-label">${q.visual.label}</div>
+                        </div>
+                    </div>
+                    <div class="game-question-text">${q.question}</div>
+                    <div class="game-answers">
+                        ${q.answers.map((a, i) => `
+                            <button class="game-answer-btn" data-idx="${i}" onclick="submitAnswer(${i})">${a}</button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function submitAnswer(idx) {
+            const q = GAME_QUESTIONS[currentQuestionIdx];
+            const isCorrect = idx === q.correct;
+            const buttons = document.querySelectorAll('.game-answer-btn');
+
+            buttons.forEach((btn, i) => {
+                btn.classList.add('disabled');
+                if (i === q.correct) btn.classList.add('correct');
+                if (i === idx && !isCorrect) btn.classList.add('wrong');
+            });
+
+            if (isCorrect) {
+                score++;
+                const resp = YUBI_CORRECT_RESPONSES[Math.floor(Math.random() * YUBI_CORRECT_RESPONSES.length)];
+                setTimeout(() => addYubiMessage(resp), 500);
+            } else {
+                const resp = YUBI_WRONG_RESPONSES[Math.floor(Math.random() * YUBI_WRONG_RESPONSES.length)];
+                setTimeout(() => {
+                    addYubiMessage(resp.text);
+                    setTimeout(() => {
+                        addYubiMessage(`הנה טיפ: ${q.hint}`);
+                        setTimeout(() => {
+                            addYubiMessage('צריך שאסביר לך יותר? או שנמשיך לשאלה הבאה?');
+                        }, 1500);
+                    }, 1200);
+                }, 600);
+            }
+
+            // Move to next question after delay
+            setTimeout(() => {
+                currentQuestionIdx++;
+                if (currentQuestionIdx < GAME_QUESTIONS.length) {
+                    renderGameQuestion();
+                } else {
+                    showGameComplete();
+                }
+            }, isCorrect ? 2000 : 4000);
+        }
+
+        function showGameComplete() {
+            const content = document.getElementById('gameContent');
+            document.getElementById('gameProgressFill').style.width = '100%';
+            document.getElementById('gameProgressLabel').textContent = 'הושלם!';
+
+            content.innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <div style="font-size: 3rem; margin-bottom: 16px;">🎉</div>
+                    <h2 style="font-size: 1.3rem; color: #4a3d8f; margin-bottom: 8px;">סיימת את השלב!</h2>
+                    <p style="color: #718096; margin-bottom: 24px;">ענית נכון על ${score} מתוך ${GAME_QUESTIONS.length} שאלות</p>
+                    <button class="btn-primary" onclick="switchScreen('topics'); openSubject(currentSubject.id);" style="padding: 12px 28px; border-radius: 12px; border: none; background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff; font-family: Rubik; font-size: 0.9rem; font-weight: 600; cursor: pointer;">
+                        חזרה לנושאים
+                    </button>
+                </div>
+            `;
+
+            addYubiMessage(`כל הכבוד! 🏆 סיימת את השלב. ענית נכון על ${score} מתוך ${GAME_QUESTIONS.length}. ${score >= 5 ? 'מצוין! אתה מוכן לשלב הבא!' : 'בפעם הבאה תצליח עוד יותר, אני בטוח!'}`);
+        }
+
+        // ================================================
+        // CHAT
+        // ================================================
+        const BOT_SVG = `<svg viewBox="0 0 36 36" width="24" height="24" fill="none"><rect x="8" y="12" width="20" height="16" rx="4" fill="#7c5cff"/><rect x="12" y="16" width="4" height="4" rx="1.5" fill="#fff"/><rect x="20" y="16" width="4" height="4" rx="1.5" fill="#fff"/><rect x="15" y="22" width="6" height="2" rx="1" fill="#c4b5fd"/><rect x="14" y="6" width="8" height="6" rx="2" fill="#9f7afe"/><rect x="17" y="3" width="2" height="4" rx="1" fill="#c4b5fd"/><circle cx="18" cy="2" r="2" fill="#22d3ee"/></svg>`;
+
+        function addYubiMessage(text) {
+            const body = document.getElementById('yubiChatBody');
+            const msg = document.createElement('div');
+            msg.className = 'chat-msg bot';
+            msg.innerHTML = `
+                <div class="avatar">${BOT_SVG}</div>
+                <div class="chat-bubble bot">${text}</div>
+            `;
+            body.appendChild(msg);
+            body.scrollTop = body.scrollHeight;
+        }
+
+        function addUserChatMessage(text) {
+            const body = document.getElementById('yubiChatBody');
+            const msg = document.createElement('div');
+            msg.className = 'chat-msg user';
+            msg.innerHTML = `<div class="chat-bubble user">${text}</div>`;
+            body.appendChild(msg);
+            body.scrollTop = body.scrollHeight;
+        }
+
+        function handleUserChat() {
+            const input = document.getElementById('yubiInput');
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            addUserChatMessage(text);
+
+            // Simple mock responses
+            setTimeout(() => {
+                const lower = text.toLowerCase();
+                if (lower.includes('עזרה') || lower.includes('לא מבין') || lower.includes('קשה')) {
+                    const q = GAME_QUESTIONS[currentQuestionIdx];
+                    if (q) {
+                        addYubiMessage(`בטח! הנה רמז: ${q.hint} 💡`);
+                        setTimeout(() => addYubiMessage('נסה עכשיו שוב, אני בטוח שתצליח!'), 1000);
+                    } else {
+                        addYubiMessage('אני כאן בשבילך! מה בדיוק לא ברור? נעבור על זה ביחד 😊');
+                    }
+                } else if (lower.includes('כן') || lower.includes('תסביר')) {
+                    addYubiMessage('בוא נחשוב על זה ביחד: זווית היא המרחק בין שני קווים שנפגשים בנקודה. ככל שהקווים רחוקים יותר - הזווית גדולה יותר!');
+                    setTimeout(() => addYubiMessage('חד = קטן מ-90° (כמו קצה של פיצה) 🍕\nישר = בדיוק 90° (כמו פינה של ספר) 📖\nקהה = גדול מ-90° (כמו מניפה פתוחה) 🪭'), 1500);
+                } else if (lower.includes('לא') || lower.includes('בסדר') || lower.includes('הבנתי')) {
+                    addYubiMessage('מעולה! אם תצטרך עוד עזרה - אני תמיד כאן 💪');
+                } else {
+                    addYubiMessage('שאלה מעניינת! תמשיך לענות על השאלות ואם משהו לא ברור - תגיד לי ואני אסביר 😊');
+                }
+            }, 800);
+        }
+
+        // ================================================
+        // NAVIGATION
+        // ================================================
+        function switchScreen(name) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen' + capitalize(name)).classList.add('active');
+            currentScreen = name;
+
+            if (name === 'portal') {
+                updateBreadcrumb(['פורטל הלמידה']);
+            }
+        }
+
+        function updateBreadcrumb(parts) {
+            const bc = document.getElementById('breadcrumb');
+            bc.innerHTML = parts.map((p, i) => {
+                const isLast = i === parts.length - 1;
+                const isClickable = !isLast;
+                let html = '';
+                if (i > 0) html += '<span class="sep">›</span>';
+                if (isClickable && i === 0) {
+                    html += `<span class="clickable" onclick="switchScreen('portal')">${p}</span>`;
+                } else if (isClickable && i === 1) {
+                    html += `<span class="clickable" onclick="openSubject('${currentSubject?.id}')">${p}</span>`;
+                } else {
+                    html += `<span class="${isLast ? 'active' : ''}">${p}</span>`;
+                }
+                return html;
+            }).join('');
+        }
+
+        function capitalize(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        // ================================================
+        // EVENTS
+        // ================================================
+        document.getElementById('yubiSendBtn').addEventListener('click', handleUserChat);
+        document.getElementById('yubiInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') handleUserChat();
+        });
+        document.getElementById('exitGameBtn').addEventListener('click', () => {
+            switchScreen('topics');
+            openSubject(currentSubject.id);
+        });
+
+        // ================================================
+        // INIT
+        // ================================================
+        renderPortal();
+    </script>
+</body>
+</html>

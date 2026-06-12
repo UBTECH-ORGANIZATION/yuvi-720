@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>פרופיל למידה - YuviLab 720</title>
+    <link rel="stylesheet" href="/shared/theme.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Rubik', 'Segoe UI', sans-serif;
+            background: linear-gradient(165deg, #f3f0fc 0%, #ece7f8 55%, #f4f1fc 100%);
+            color: #2f2f44;
+            min-height: 100vh;
+            direction: rtl;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 28px;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 1px 12px rgba(102,126,234,0.08);
+        }
+        .top-bar-title { font-weight: 700; font-size: 15px; color: #6F5BFF; }
+        .top-bar-logo {
+            font-weight: 800; font-size: 15px;
+            background: linear-gradient(135deg, #6F5BFF, #9f7afe);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        /* Demo selector — small + subtle */
+        .mock-selector {
+            max-width: 760px;
+            margin: 18px auto 0;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #9a93b5;
+        }
+        .mock-selector select {
+            font-family: inherit;
+            font-size: 12px;
+            padding: 5px 10px;
+            border-radius: 10px;
+            border: 1px solid #e3ddf3;
+            background: #fff;
+            color: #6b6488;
+            cursor: pointer;
+        }
+
+        /* Layout */
+        .page {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 22px 20px 64px;
+        }
+
+        /* Hero / Main message */
+        .hero {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: linear-gradient(135deg, #6F5BFF 0%, #8b6cff 55%, #9f7afe 100%);
+            color: #fff;
+            border-radius: 26px;
+            padding: 26px 28px;
+            box-shadow: 0 18px 40px rgba(111,91,255,0.28);
+        }
+        .hero-mascot {
+            flex-shrink: 0;
+            width: 86px; height: 86px;
+            border-radius: 24px;
+            background: rgba(255,255,255,0.16);
+            display: flex; align-items: center; justify-content: center;
+            animation: bob 3.5s ease-in-out infinite;
+        }
+        @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+        .hero-text .hi { font-size: 15px; font-weight: 600; opacity: 0.92; margin-bottom: 4px; }
+        .hero-text .msg { font-size: 22px; font-weight: 700; line-height: 1.4; }
+
+        /* Section title */
+        .section-title {
+            display: flex; align-items: center; gap: 9px;
+            font-size: 19px; font-weight: 800; color: #3a3360;
+            margin: 34px 4px 16px;
+        }
+        .section-title .emoji { font-size: 22px; }
+
+        /* Strengths — 3 big clear cards */
+        .strengths-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+        }
+        .strength-card {
+            background: #fff;
+            border-radius: 22px;
+            padding: 22px 18px;
+            text-align: center;
+            box-shadow: 0 8px 26px rgba(102,126,234,0.10);
+            border: 1px solid #f0ecfb;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .strength-card:hover { transform: translateY(-4px); box-shadow: 0 16px 34px rgba(102,126,234,0.16); }
+        .strength-card .ico {
+            width: 66px; height: 66px;
+            margin: 0 auto 12px;
+            border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 32px;
+            background: linear-gradient(135deg, #efeaff, #e4f6fb);
+        }
+        .strength-card .name { font-size: 16px; font-weight: 800; color: #3a3360; margin-bottom: 6px; }
+        .strength-card .desc { font-size: 13px; color: #8b85a6; line-height: 1.5; }
+
+        /* Improve — 2-3 simple rows */
+        .improve-list { display: flex; flex-direction: column; gap: 12px; }
+        .improve-card {
+            background: #fff;
+            border-radius: 18px;
+            padding: 16px 20px;
+            box-shadow: 0 6px 20px rgba(102,126,234,0.08);
+            border: 1px solid #f0ecfb;
+        }
+        .improve-top {
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            margin-bottom: 10px;
+        }
+        .improve-label { display: flex; align-items: center; gap: 9px; font-size: 16px; font-weight: 700; color: #3a3360; }
+        .improve-label .e { font-size: 20px; }
+        .status-pill { font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 999px; white-space: nowrap; }
+        .status-good { background: rgba(111,91,255,0.12); color: #6F5BFF; }
+        .status-building { background: rgba(246,173,85,0.16); color: #d98724; }
+        .status-support { background: rgba(252,129,129,0.16); color: #e05656; }
+        .bar { height: 9px; border-radius: 999px; background: #efecf8; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 999px; transition: width 1s ease; }
+
+        /* Tips — exactly 3 short cards */
+        .tips-grid { display: flex; flex-direction: column; gap: 12px; }
+        .tip-card {
+            display: flex; align-items: center; gap: 16px;
+            background: #fff;
+            border-radius: 18px;
+            padding: 16px 20px;
+            box-shadow: 0 6px 20px rgba(102,126,234,0.08);
+            border: 1px solid #f0ecfb;
+        }
+        .tip-num {
+            flex-shrink: 0;
+            width: 38px; height: 38px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #6F5BFF, #9f7afe);
+            color: #fff; font-weight: 800; font-size: 17px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .tip-card .t { font-size: 15px; font-weight: 600; color: #43406a; }
+
+        .fade-up { opacity: 0; transform: translateY(14px); animation: fadeUp 0.5s ease forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 600px) {
+            .hero { flex-direction: column; text-align: center; gap: 14px; padding: 22px 20px; }
+            .hero-text .msg { font-size: 19px; }
+            .strengths-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <span class="top-bar-title" id="topBarTitle">פרופיל הלמידה שלי</span>
+        <span class="top-bar-logo">YuviLab 720</span>
+    </div>
+
+    <!-- Demo selector (for presentation only) -->
+    <div class="mock-selector">
+        <label>תלמיד לדוגמה:</label>
+        <select id="mockStudentSelect">
+            <option value="">--- מהשאלון שלי ---</option>
+            <option value="student_001">יובל כהן</option>
+            <option value="student_002">נועה לוי</option>
+            <option value="student_003">אדם ברק</option>
+            <option value="student_004">מיכל דוד</option>
+            <option value="student_005">עומר שלום</option>
+            <option value="student_006">שירה אבירם</option>
+        </select>
+    </div>
+
+    <div class="page">
+        <!-- 1. Main message -->
+        <div class="hero fade-up">
+            <div class="hero-mascot">
+                <svg viewBox="0 0 44 44" width="52" height="52" fill="none">
+                    <rect x="9" y="15" width="26" height="21" rx="6" fill="#fff"/>
+                    <rect x="15" y="21" width="5" height="5" rx="2" fill="#6F5BFF"/>
+                    <rect x="24" y="21" width="5" height="5" rx="2" fill="#6F5BFF"/>
+                    <path d="M18 30 Q22 33 26 30" stroke="#22d3ee" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+                    <rect x="17" y="8" width="10" height="8" rx="3" fill="#fff" fill-opacity="0.85"/>
+                    <rect x="21" y="3.5" width="2.4" height="5" rx="1.2" fill="#c4b5fd"/>
+                    <circle cx="22.2" cy="2.6" r="2.6" fill="#22d3ee"/>
+                    <rect x="4" y="20" width="5" height="11" rx="2.5" fill="#fff" fill-opacity="0.85"/>
+                    <rect x="35" y="20" width="5" height="11" rx="2.5" fill="#fff" fill-opacity="0.85"/>
+                </svg>
+            </div>
+            <div class="hero-text">
+                <div class="hi" id="heroHi">היי!</div>
+                <div class="msg" id="heroMsg">בוא נגלה ביחד איך אתה לומד הכי טוב</div>
+            </div>
+        </div>
+
+        <!-- 2. Top strengths -->
+        <div class="section-title"><span class="emoji">💪</span><span>החוזקות שלי</span></div>
+        <div class="strengths-grid" id="strengthsGrid"></div>
+
+        <!-- 3. What to strengthen -->
+        <div class="section-title"><span class="emoji">🌱</span><span>מה כדאי לחזק קצת</span></div>
+        <div class="improve-list" id="improveList"></div>
+
+        <!-- 4. Personal tips -->
+        <div class="section-title"><span class="emoji">💡</span><span>טיפים בשבילי</span></div>
+        <div class="tips-grid" id="tipsGrid"></div>
+    </div>
+
+    <script>
+        // =============================
+        // TRAIT METADATA
+        // =============================
+        const TRAITS = {
+            interest:       { icon: '🔍', label: 'סקרנות',       strong: 'אתה אוהב לשאול ולהבין איך דברים עובדים', tip: 'חבר את הלמידה לדברים שמעניינים אותך' },
+            investment:     { icon: '🎯', label: 'רצון להצליח',  strong: 'חשוב לך להצליח ואתה מוכן להשקיע',        tip: 'הצב לעצמך מטרה קטנה אחת בכל פעם' },
+            motivation:     { icon: '🔥', label: 'התמדה',        strong: 'יש לך נחישות להמשיך גם כשקצת קשה',       tip: 'פרק משימה גדולה ל-3 צעדים קטנים' },
+            autonomy:       { icon: '🚀', label: 'עצמאות',       strong: 'אתה יודע לקחת אחריות ולנסות בעצמך',      tip: 'נסה קודם לבד, ואז בקש רמז קטן' },
+            cognitive:      { icon: '🧩', label: 'חשיבה וארגון', strong: 'יש לך חשיבה מסודרת ויכולת לארגן מידע',   tip: 'כתוב את השלבים לפני שמתחילים' },
+            self_awareness: { icon: '🪞', label: 'הכרת עצמי',     strong: 'אתה מכיר את עצמך ויודע מה עוזר לך',      tip: 'שים לב מתי אתה לומד הכי טוב' },
+            school_climate: { icon: '🏫', label: 'הרגשה בכיתה',  strong: 'אתה מרגיש טוב ובטוח בכיתה',             tip: 'מצא פינה בכיתה שנעים לך ללמוד בה' },
+            tech_comfort:   { icon: '💻', label: 'טכנולוגיה',    strong: 'אתה מרגיש בבית עם מחשבים וכלים דיגיטליים', tip: 'נסה כלי דיגיטלי שעוזר לך ללמוד' },
+            focus:          { icon: '🎧', label: 'ריכוז',        strong: 'אתה יודע להתרכז ולהישאר במשימה',         tip: 'למד 10 דקות ואז קח הפסקה קצרה' },
+        };
+
+        const MAIN_MESSAGE = {
+            investment:     'גילינו שאתה לומד הכי טוב כשיש לך מטרה ברורה ושלבים קצרים',
+            interest:       'גילינו שהסקרנות שלך היא מנוע ענק — שאלות טובות עוזרות לך ללמוד',
+            motivation:     'גילינו שיש לך נחישות אמיתית — אתה לא מוותר גם כשקצת קשה',
+            autonomy:       'גילינו שאתה אלוף בלמידה עצמאית — נותנים לך משימה ואתה זז',
+            cognitive:      'גילינו שאתה חושב בצורה מסודרת ואוהב להבין שלב אחרי שלב',
+            self_awareness: 'גילינו שאתה מכיר את עצמך טוב ויודע מה עוזר לך ללמוד',
+            school_climate: 'גילינו שאתה מרגיש טוב בכיתה — וזה בסיס מצוין ללמידה',
+            tech_comfort:   'גילינו שאתה מרגיש בבית עם טכנולוגיה — וזה כלי-על בשבילך',
+            focus:          'גילינו שאתה יודע להתרכז ולהיכנס לעניין בלי הסחות',
+        };
+
+        function scoreToStatus(score) {
+            if (score >= 60) return { text: 'בדרך טובה', cls: 'status-good', color: '#6F5BFF' };
+            if (score >= 40) return { text: 'כדאי לחזק', cls: 'status-building', color: '#f6ad55' };
+            return { text: 'נחזק יחד', cls: 'status-support', color: '#fc8181' };
+        }
+
+        function scoresToArray(scores) {
+            return [
+                { key: 'interest',       val: scores.academic.interest },
+                { key: 'investment',     val: scores.academic.investment },
+                { key: 'motivation',     val: scores.psycho_pedagogical.motivation },
+                { key: 'autonomy',       val: scores.psycho_pedagogical.autonomy },
+                { key: 'cognitive',      val: scores.psycho_pedagogical.cognitive },
+                { key: 'self_awareness', val: scores.psycho_pedagogical.self_awareness },
+                { key: 'school_climate', val: scores.environmental.school_climate },
+                { key: 'tech_comfort',   val: scores.environmental.tech_comfort },
+                { key: 'focus',          val: scores.environmental.focus },
+            ];
+        }
+
+        // =============================
+        // RENDER
+        // =============================
+        function render(scores, name) {
+            document.getElementById('topBarTitle').textContent = `הפרופיל של ${name}`;
+
+            const arr = scoresToArray(scores);
+            const sorted = [...arr].sort((a, b) => b.val - a.val);
+
+            // 1. Main message — based on top strength
+            const top = sorted[0];
+            document.getElementById('heroHi').textContent = `${name}!`;
+            document.getElementById('heroMsg').textContent = MAIN_MESSAGE[top.key] || 'גילינו דברים מגניבים על איך שאתה לומד';
+
+            // 2. Strengths — top 3
+            const top3 = sorted.slice(0, 3);
+            document.getElementById('strengthsGrid').innerHTML = top3.map((s, i) => {
+                const m = TRAITS[s.key];
+                return `<div class="strength-card fade-up" style="animation-delay:${0.1 + i * 0.08}s">
+                    <div class="ico">${m.icon}</div>
+                    <div class="name">${m.label}</div>
+                    <div class="desc">${m.strong}</div>
+                </div>`;
+            }).join('');
+
+            // 3. What to strengthen — lowest 2
+            const bottom = [...sorted].reverse().slice(0, 2);
+            document.getElementById('improveList').innerHTML = bottom.map((s, i) => {
+                const m = TRAITS[s.key];
+                const st = scoreToStatus(s.val);
+                return `<div class="improve-card fade-up" style="animation-delay:${0.1 + i * 0.08}s">
+                    <div class="improve-top">
+                        <div class="improve-label"><span class="e">${m.icon}</span>${m.label}</div>
+                        <span class="status-pill ${st.cls}">${st.text}</span>
+                    </div>
+                    <div class="bar"><div class="bar-fill" style="width:${Math.max(s.val, 8)}%;background:${st.color}"></div></div>
+                </div>`;
+            }).join('');
+
+            // 4. Tips — exactly 3 short ones (from the 2 weakest + one universal)
+            const tips = [];
+            bottom.forEach(s => { if (TRAITS[s.key].tip) tips.push(TRAITS[s.key].tip); });
+            tips.push('כשמשהו מרגיש קשה — תמיד אפשר לבקש עזרה 🙂');
+            document.getElementById('tipsGrid').innerHTML = tips.slice(0, 3).map((t, i) => `
+                <div class="tip-card fade-up" style="animation-delay:${0.1 + i * 0.08}s">
+                    <div class="tip-num">${i + 1}</div>
+                    <div class="t">${t}</div>
+                </div>`).join('');
+        }
+
+        // =============================
+        // LOAD DATA
+        // =============================
+        async function loadResults(studentId = null) {
+            let data;
+            if (studentId) {
+                const res = await fetch(`/api/results/${studentId}`);
+                const json = await res.json();
+                data = { student_name: json.student.name, scores: json.student.scores };
+            } else {
+                const stored = localStorage.getItem('mapping_results');
+                if (stored) {
+                    data = JSON.parse(stored);
+                } else {
+                    const res = await fetch('/api/results/student_001');
+                    const json = await res.json();
+                    data = { student_name: json.student.name, scores: json.student.scores };
+                    document.getElementById('mockStudentSelect').value = 'student_001';
+                }
+            }
+            render(data.scores, data.student_name);
+        }
+
+        document.getElementById('mockStudentSelect').addEventListener('change', (e) => {
+            loadResults(e.target.value || null);
+        });
+
+        loadResults();
+    </script>
+</body>
+</html>
