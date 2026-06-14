@@ -74,6 +74,27 @@
             color: #4a3d8f;
         }
 
+        .dashboard-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #7c5cff;
+            background: #f1ecff;
+            border: 1px solid #e0d6ff;
+            padding: 7px 14px;
+            border-radius: 999px;
+            transition: all 0.18s ease;
+        }
+        .dashboard-link:hover {
+            background: #7c5cff;
+            color: #fff;
+            border-color: #7c5cff;
+            transform: translateY(-1px);
+        }
+
         /* ===== SCREENS ===== */
         .screen { display: none; padding-top: 54px; min-height: 100vh; }
         .screen.active { display: block; }
@@ -510,6 +531,14 @@
             flex-direction: column;
         }
 
+        .game-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+            background: #faf9ff;
+        }
+
         .game-content {
             flex: 1;
             padding: 32px;
@@ -674,6 +703,9 @@
             <span class="active">פורטל הלמידה</span>
         </div>
         <div class="top-bar-right">
+            <a class="dashboard-link" href="/student-dashboard/">
+                <span>📊</span> הדשבורד שלי
+            </a>
             <span class="top-bar-name">יובל כהן</span>
             <div class="top-bar-avatar">י</div>
         </div>
@@ -751,13 +783,7 @@
                 </div>
                 <div class="game-iframe-container">
                     <div class="game-iframe-mock">
-                        <div class="game-content" id="gameContent"></div>
-                        <div class="game-progress-bar">
-                            <div class="game-progress-track">
-                                <div class="game-progress-fill" id="gameProgressFill" style="width: 0%"></div>
-                            </div>
-                            <span class="game-progress-label" id="gameProgressLabel">שאלה 1 מתוך 6</span>
-                        </div>
+                        <iframe id="gameFrame" class="game-frame" title="משחק למידה"></iframe>
                     </div>
                 </div>
             </div>
@@ -999,8 +1025,6 @@
         // RENDER: Game
         // ================================================
         function openGame(stageId, stageIdx) {
-            currentQuestionIdx = 0;
-            score = 0;
             switchScreen('game');
 
             const stage = currentSubject.stages[stageIdx];
@@ -1008,102 +1032,68 @@
             document.getElementById('gameStage').textContent = `שלב ${stageIdx + 1}`;
             updateBreadcrumb(['פורטל הלמידה', currentSubject.name, stage.title]);
 
-            // Clear chat and add intro
+            // Load the interactive game into the iframe (real learning content)
+            const frame = document.getElementById('gameFrame');
+            frame.src = `/learning/game.html?subject=${encodeURIComponent(currentSubject.id)}&stage=${encodeURIComponent(stage.title)}`;
+
+            // Opening message (req: opening/closing messages between content)
             document.getElementById('yubiChatBody').innerHTML = '';
-            addYubiMessage(`היי! 👋 אני כאן איתך בזמן שאתה לומד "${stage.title}". אם תצטרך עזרה - פשוט תשאל אותי!`);
-            setTimeout(() => {
-                addYubiMessage('בוא נתחיל! תסתכל על הזווית שמוצגת ותגיד לי מה סוג שלה 🔍');
-            }, 1500);
-
-            renderGameQuestion();
+            addYubiMessage(`היי! 👋 פתחתי לך את "${stage.title}". זה משחק קצר ואינטראקטיבי — תתקדם בקצב שלך, ואני כאן לכל שאלה או רמז 💡`);
         }
 
-        function renderGameQuestion() {
-            const q = GAME_QUESTIONS[currentQuestionIdx];
-            const content = document.getElementById('gameContent');
-            const pct = Math.round((currentQuestionIdx / GAME_QUESTIONS.length) * 100);
+        // ================================================
+        // GAME <-> AGENT BRIDGE (postMessage from iframe)
+        // ================================================
+        const ENCOURAGE = [
+            'וואו, רצף מנצח! 🔥 אתה ממש בעניינים',
+            'איזה כיף לראות אותך מצליח ברצף! 🌟 ככה ממשיכים',
+            'אתה על גל של הצלחות! 💪 גאה בך',
+        ];
+        let lastIdleAt = 0;
 
-            document.getElementById('gameProgressFill').style.width = pct + '%';
-            document.getElementById('gameProgressLabel').textContent = `שאלה ${currentQuestionIdx + 1} מתוך ${GAME_QUESTIONS.length}`;
+        window.addEventListener('message', (e) => {
+            const d = e.data || {};
+            if (d.source !== 'yuvilab-game') return;
 
-            const angleDeg = q.visual.angle;
-            
-            content.innerHTML = `
-                <div class="game-question-area">
-                    <div class="game-visual">
-                        <div class="angle-display">
-                            <div class="angle-line base"></div>
-                            <div class="angle-line rotated" style="transform: rotate(-${angleDeg}deg)"></div>
-                            <div class="angle-label">${q.visual.label}</div>
-                        </div>
-                    </div>
-                    <div class="game-question-text">${q.question}</div>
-                    <div class="game-answers">
-                        ${q.answers.map((a, i) => `
-                            <button class="game-answer-btn" data-idx="${i}" onclick="submitAnswer(${i})">${a}</button>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        }
-
-        function submitAnswer(idx) {
-            const q = GAME_QUESTIONS[currentQuestionIdx];
-            const isCorrect = idx === q.correct;
-            const buttons = document.querySelectorAll('.game-answer-btn');
-
-            buttons.forEach((btn, i) => {
-                btn.classList.add('disabled');
-                if (i === q.correct) btn.classList.add('correct');
-                if (i === idx && !isCorrect) btn.classList.add('wrong');
-            });
-
-            if (isCorrect) {
-                score++;
-                const resp = YUBI_CORRECT_RESPONSES[Math.floor(Math.random() * YUBI_CORRECT_RESPONSES.length)];
-                setTimeout(() => addYubiMessage(resp), 500);
-            } else {
-                const resp = YUBI_WRONG_RESPONSES[Math.floor(Math.random() * YUBI_WRONG_RESPONSES.length)];
-                setTimeout(() => {
-                    addYubiMessage(resp.text);
-                    setTimeout(() => {
-                        addYubiMessage(`הנה טיפ: ${q.hint}`);
-                        setTimeout(() => {
-                            addYubiMessage('צריך שאסביר לך יותר? או שנמשיך לשאלה הבאה?');
-                        }, 1500);
-                    }, 1200);
-                }, 600);
+            switch (d.type) {
+                case 'progress':
+                    // mirror "where am I" in the toolbar
+                    document.getElementById('gameStage').textContent = `אתגר ${d.challenge}/${d.total}`;
+                    break;
+                case 'correct':
+                    // brief positive acknowledgement (not every time, to avoid spam)
+                    if (d.streak && d.streak % 2 === 0) {
+                        addYubiMessage('יפה מאוד! ✨ אתה תופס את זה ממש טוב');
+                    }
+                    break;
+                case 'streak':
+                    addYubiMessage(ENCOURAGE[Math.min(d.streak === 5 ? 2 : 0, ENCOURAGE.length - 1)]);
+                    break;
+                case 'idle':
+                    // proactive agent: nudge after inactivity
+                    if (Date.now() - lastIdleAt < 12000) break;
+                    lastIdleAt = Date.now();
+                    addYubiMessage('הכול בסדר? 🙂 אם תקוע/ה — לחץ/י על "💡 רמז" במשחק, או פשוט תכתוב/י לי כאן ונעבור על זה ביחד.');
+                    break;
+                case 'misconception':
+                    // repeated errors -> pedagogical alternative (req: alternative content)
+                    addYubiMessage('שמתי לב שהאתגר הזה קצת מבלבל 🤔 זה ממש בסדר! הוספתי לך במשחק כרטיס עם סרטון הסבר קצר — לפעמים לראות זה יותר קל מלקרוא 🎬');
+                    setTimeout(() => addYubiMessage('רוצה שאסביר את זה בדרך אחרת? פשוט כתוב/י לי "תסביר" 😊'), 1400);
+                    break;
+                case 'break':
+                    addYubiMessage('עבדת יפה! 🧘 קח/י הפסקה קטנה אם בא לך — אני אחכה כאן. כשמוכנים, ממשיכים!');
+                    break;
+                case 'complete':
+                    // closing message (req: closing messages between content)
+                    addYubiMessage(`כל הכבוד, סיימת את השלב! 🏆 אספת ${d.stars} כוכבים ${'⭐'.repeat(Math.max(d.earned || 1, 1))}`);
+                    setTimeout(() => addYubiMessage(d.earned >= 3 ? 'שליטה מלאה! אתה מוכן לשלב הבא 🚀' : 'יופי של התקדמות! אפשר תמיד לחזור ולתרגל עוד 💪'), 1400);
+                    break;
+                case 'exit':
+                    switchScreen('topics');
+                    openSubject(currentSubject.id);
+                    break;
             }
-
-            // Move to next question after delay
-            setTimeout(() => {
-                currentQuestionIdx++;
-                if (currentQuestionIdx < GAME_QUESTIONS.length) {
-                    renderGameQuestion();
-                } else {
-                    showGameComplete();
-                }
-            }, isCorrect ? 2000 : 4000);
-        }
-
-        function showGameComplete() {
-            const content = document.getElementById('gameContent');
-            document.getElementById('gameProgressFill').style.width = '100%';
-            document.getElementById('gameProgressLabel').textContent = 'הושלם!';
-
-            content.innerHTML = `
-                <div style="text-align: center; padding: 40px;">
-                    <div style="font-size: 3rem; margin-bottom: 16px;">🎉</div>
-                    <h2 style="font-size: 1.3rem; color: #4a3d8f; margin-bottom: 8px;">סיימת את השלב!</h2>
-                    <p style="color: #718096; margin-bottom: 24px;">ענית נכון על ${score} מתוך ${GAME_QUESTIONS.length} שאלות</p>
-                    <button class="btn-primary" onclick="switchScreen('topics'); openSubject(currentSubject.id);" style="padding: 12px 28px; border-radius: 12px; border: none; background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff; font-family: Rubik; font-size: 0.9rem; font-weight: 600; cursor: pointer;">
-                        חזרה לנושאים
-                    </button>
-                </div>
-            `;
-
-            addYubiMessage(`כל הכבוד! 🏆 סיימת את השלב. ענית נכון על ${score} מתוך ${GAME_QUESTIONS.length}. ${score >= 5 ? 'מצוין! אתה מוכן לשלב הבא!' : 'בפעם הבאה תצליח עוד יותר, אני בטוח!'}`);
-        }
+        });
 
         // ================================================
         // CHAT
@@ -1138,26 +1128,27 @@
             input.value = '';
             addUserChatMessage(text);
 
-            // Simple mock responses
+            const frame = document.getElementById('gameFrame');
+            const subjName = currentSubject ? currentSubject.name : 'הנושא';
+
             setTimeout(() => {
                 const lower = text.toLowerCase();
-                if (lower.includes('עזרה') || lower.includes('לא מבין') || lower.includes('קשה')) {
-                    const q = GAME_QUESTIONS[currentQuestionIdx];
-                    if (q) {
-                        addYubiMessage(`בטח! הנה רמז: ${q.hint} 💡`);
-                        setTimeout(() => addYubiMessage('נסה עכשיו שוב, אני בטוח שתצליח!'), 1000);
-                    } else {
-                        addYubiMessage('אני כאן בשבילך! מה בדיוק לא ברור? נעבור על זה ביחד 😊');
-                    }
-                } else if (lower.includes('כן') || lower.includes('תסביר')) {
-                    addYubiMessage('בוא נחשוב על זה ביחד: זווית היא המרחק בין שני קווים שנפגשים בנקודה. ככל שהקווים רחוקים יותר - הזווית גדולה יותר!');
-                    setTimeout(() => addYubiMessage('חד = קטן מ-90° (כמו קצה של פיצה) 🍕\nישר = בדיוק 90° (כמו פינה של ספר) 📖\nקהה = גדול מ-90° (כמו מניפה פתוחה) 🪭'), 1500);
-                } else if (lower.includes('לא') || lower.includes('בסדר') || lower.includes('הבנתי')) {
-                    addYubiMessage('מעולה! אם תצטרך עוד עזרה - אני תמיד כאן 💪');
+                if (lower.includes('עזרה') || lower.includes('לא מבין') || lower.includes('קשה') || lower.includes('רמז') || lower.includes('תקוע')) {
+                    addYubiMessage('בטח! 💡 הנה רמז למשחק — הדגשתי לך אותו על המסך.');
+                    // proactive: trigger the in-game hint
+                    if (frame && frame.contentWindow) frame.contentWindow.postMessage({ target: 'yuvilab-game', cmd: 'hint' }, '*');
+                    setTimeout(() => addYubiMessage('נסה/י עכשיו שוב — אני בטוח שתצליח/י! ואם עדיין קשה, נעבור על זה צעד-צעד 😊'), 1000);
+                } else if (lower.includes('תסביר') || lower.includes('הסבר') || lower.includes('איך')) {
+                    addYubiMessage(`בוא נפרק את זה ב${subjName} לצעדים קטנים וברורים 🧩`);
+                    setTimeout(() => addYubiMessage('אני יכול גם להעמיק יותר או להביא דוגמה מהחיים — מה יעזור לך יותר? 😊'), 1400);
+                } else if (lower.includes('משעמם') || lower.includes('קל מדי')) {
+                    addYubiMessage('הבנתי! 😄 אם זה קל לך — אפשר לדלג קדימה לאתגר הבא או לעבור לשלב מתקדם יותר. רוצה שאתאים לך אתגר קשה יותר?');
+                } else if (lower.includes('כן') || lower.includes('בסדר') || lower.includes('הבנתי') || lower.includes('תודה')) {
+                    addYubiMessage('מעולה! 💪 אני כאן לידך לכל אורך הדרך. תמשיך/י בקצב שלך.');
                 } else {
-                    addYubiMessage('שאלה מעניינת! תמשיך לענות על השאלות ואם משהו לא ברור - תגיד לי ואני אסביר 😊');
+                    addYubiMessage('שאלה טובה! 😊 תמשיך/י לשחק, ואם משהו לא ברור — כתוב/י לי "רמז" או "תסביר" ואני כאן.');
                 }
-            }, 800);
+            }, 700);
         }
 
         // ================================================

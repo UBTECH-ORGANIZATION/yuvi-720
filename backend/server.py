@@ -35,6 +35,8 @@ BASE_DIR = Path(__file__).parent.parent
 LEARNER_MAPPING_DIR = BASE_DIR / "learner-mapping"
 STUDENT_DASHBOARD_DIR = BASE_DIR / "student-dashboard"
 LEARNING_AGENT_DIR = BASE_DIR / "learning-agent"
+MENTORING_DIR = BASE_DIR / "mentoring"
+TEACHER_VIEW_DIR = BASE_DIR / "teacher-view"
 SHARED_DIR = BASE_DIR / "shared"
 
 
@@ -291,6 +293,12 @@ app.mount("/student-dashboard", StaticFiles(directory=str(STUDENT_DASHBOARD_DIR)
 
 # Serve learning-agent
 app.mount("/learning", StaticFiles(directory=str(LEARNING_AGENT_DIR), html=True), name="learning-agent")
+
+# Serve mentoring
+app.mount("/mentoring", StaticFiles(directory=str(MENTORING_DIR), html=True), name="mentoring")
+
+# Serve teacher-view
+app.mount("/teacher-view", StaticFiles(directory=str(TEACHER_VIEW_DIR), html=True), name="teacher-view")
 
 
 @app.get("/")

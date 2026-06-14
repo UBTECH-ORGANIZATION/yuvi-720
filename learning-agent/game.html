@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>משחק למידה - YuviLab 720</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+    --p1: #7c5cff; --p2: #9f7afe; --cy: #22d3ee; --grn: #48bb78;
+    --org: #f6ad55; --red: #fc8181; --ink: #1a1a2e;
+}
+html, body { height: 100%; }
+body {
+    font-family: 'Rubik', 'Segoe UI', sans-serif;
+    background: #faf9ff;
+    color: #2d3748;
+    direction: rtl;
+    overflow: hidden;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+.game-root { height: 100%; display: flex; flex-direction: column; position: relative; }
+
+/* HEADER */
+.g-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 18px;
+    background: linear-gradient(135deg, var(--p1), var(--p2));
+    color: #fff; flex-shrink: 0;
+}
+.g-head .g-icon { font-size: 1.3rem; }
+.g-head .g-titles { line-height: 1.2; }
+.g-head .g-titles b { font-size: 0.92rem; }
+.g-head .g-titles small { display: block; font-size: 0.66rem; opacity: 0.85; }
+.g-stats { margin-right: auto; display: flex; gap: 8px; align-items: center; }
+.g-pill {
+    background: rgba(255,255,255,0.18); border-radius: 20px;
+    padding: 4px 11px; font-size: 0.78rem; font-weight: 700;
+    display: flex; align-items: center; gap: 4px;
+    transition: transform 0.25s;
+}
+.g-pill.pop { transform: scale(1.35); }
+.g-pill .flame { filter: grayscale(1) opacity(0.5); transition: 0.3s; }
+.g-pill.lit .flame { filter: none; }
+
+/* PROGRESS */
+.g-prog-wrap { padding: 10px 18px 4px; flex-shrink: 0; }
+.g-prog-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.g-prog-row .step-label { font-size: 0.72rem; font-weight: 600; color: var(--p1); }
+.g-prog-row .pace { font-size: 0.66rem; color: #48bb78; font-weight: 600; }
+.g-prog-track { height: 7px; background: #e8e4f5; border-radius: 4px; overflow: hidden; }
+.g-prog-fill { height: 100%; width: 0%; border-radius: 4px;
+    background: linear-gradient(90deg, var(--p1), var(--cy)); transition: width 0.5s ease; }
+
+/* BODY */
+.g-body { flex: 1; padding: 14px 18px; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+.q-prompt { font-size: 1.05rem; font-weight: 700; text-align: center; margin-bottom: 12px; color: #2d3748; }
+
+/* angle stage */
+.stage {
+    position: relative; width: 100%; max-width: 460px; margin: 0 auto;
+    aspect-ratio: 16/10; background: radial-gradient(circle at 60% 80%, #232347, var(--ink));
+    border-radius: 14px; overflow: hidden; box-shadow: inset 0 0 40px rgba(0,0,0,0.4);
+}
+.stage svg { width: 100%; height: 100%; display: block; }
+.deg-read {
+    position: absolute; top: 10px; right: 14px; color: #fff;
+    font-size: 1.5rem; font-weight: 800; letter-spacing: 1px;
+}
+.deg-read small { font-size: 0.7rem; font-weight: 500; opacity: 0.8; display: block; }
+.classify-chip {
+    position: absolute; top: 12px; left: 14px; padding: 4px 12px;
+    border-radius: 20px; font-size: 0.75rem; font-weight: 700; color: #fff;
+    background: rgba(255,255,255,0.15); transition: 0.3s;
+}
+
+/* slider */
+.slider-wrap { max-width: 460px; margin: 16px auto 0; }
+.slider-wrap input[type=range] { width: 100%; height: 8px; -webkit-appearance: none;
+    background: linear-gradient(90deg, var(--p1), var(--cy)); border-radius: 5px; outline: none; }
+.slider-wrap input[type=range]::-webkit-slider-thumb { -webkit-appearance: none;
+    width: 26px; height: 26px; border-radius: 50%; background: #fff;
+    border: 4px solid var(--p1); cursor: grab; box-shadow: 0 2px 8px rgba(124,92,255,0.4); }
+.slider-hint { text-align: center; font-size: 0.72rem; color: #a0aec0; margin-top: 6px; }
+
+/* classify options */
+.opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 460px; margin: 4px auto 0; width: 100%; }
+.opt {
+    padding: 14px; border-radius: 12px; border: 2px solid #e8e4f5; background: #fff;
+    font-family: inherit; font-size: 0.9rem; font-weight: 600; color: #2d3748;
+    cursor: pointer; transition: 0.18s; text-align: center;
+}
+.opt:hover { border-color: var(--p1); transform: translateY(-2px); }
+.opt.correct { border-color: var(--grn); background: rgba(72,187,120,0.1); color: #276749; }
+.opt.wrong { border-color: var(--red); background: rgba(252,129,129,0.1); color: #9b2c2c; }
+.opt.dim { pointer-events: none; opacity: 0.55; }
+
+/* emoji visual */
+.emoji-visual { font-size: 4rem; text-align: center; margin: 10px 0 18px; animation: bob 2.4s ease-in-out infinite; }
+@keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+
+/* sort bins */
+.sort-items { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 16px; max-width: 480px; }
+.sort-chip {
+    padding: 10px 14px; border-radius: 12px; background: #fff; border: 2px solid #e8e4f5;
+    font-size: 0.86rem; font-weight: 600; cursor: pointer; transition: 0.18s; display: flex; align-items: center; gap: 6px;
+}
+.sort-chip:hover { border-color: var(--p1); }
+.sort-chip.selected { border-color: var(--cy); background: rgba(34,211,238,0.08); transform: scale(1.05); }
+.sort-chip.placed { opacity: 0.35; pointer-events: none; }
+.bins { display: flex; gap: 12px; width: 100%; max-width: 480px; }
+.bin {
+    flex: 1; min-height: 110px; border-radius: 14px; border: 2px dashed #cbd5e0;
+    background: #fff; padding: 10px; cursor: pointer; transition: 0.18s;
+    display: flex; flex-direction: column; gap: 6px;
+}
+.bin:hover { border-color: var(--p1); background: rgba(124,92,255,0.03); }
+.bin .bin-title { font-size: 0.78rem; font-weight: 700; color: #4a3d8f; text-align: center; padding-bottom: 4px; }
+.bin .dropped { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+.bin .dropped span { font-size: 0.72rem; background: rgba(124,92,255,0.1); padding: 3px 7px; border-radius: 8px; }
+
+/* order steps */
+.order-pool, .order-seq { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 500px; margin: 0 auto; }
+.order-seq { min-height: 52px; padding: 8px; border: 2px dashed #cbd5e0; border-radius: 12px; margin-bottom: 14px; align-content: flex-start; }
+.order-seq:empty::before { content: 'לחצו על הצעדים לפי הסדר הנכון ⬇️'; color: #a0aec0; font-size: 0.78rem; align-self: center; width: 100%; text-align: center; }
+.step-chip {
+    padding: 9px 13px; border-radius: 10px; background: #fff; border: 2px solid #e8e4f5;
+    font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: 0.15s; display: flex; align-items: center; gap: 6px;
+}
+.step-chip:hover { border-color: var(--p1); }
+.step-chip .num { width: 18px; height: 18px; border-radius: 50%; background: var(--p1); color: #fff; font-size: 0.66rem; display: flex; align-items: center; justify-content: center; }
+.step-chip.used { opacity: 0.3; pointer-events: none; }
+
+/* video alternative card */
+.alt-card {
+    max-width: 460px; margin: 10px auto; background: linear-gradient(135deg, #fff, #f5f3ff);
+    border: 1.5px solid #e8e4f5; border-radius: 14px; padding: 14px; display: flex; gap: 12px; align-items: center;
+    animation: slideUp 0.4s ease;
+}
+.alt-card .thumb { width: 78px; height: 56px; border-radius: 10px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--p1), var(--cy)); display: flex; align-items: center; justify-content: center; font-size: 1.6rem; cursor: pointer; }
+.alt-card .alt-txt b { font-size: 0.84rem; color: #4a3d8f; }
+.alt-card .alt-txt p { font-size: 0.72rem; color: #718096; margin-top: 2px; }
+
+/* FOOTER controls */
+.g-foot { display: flex; gap: 8px; padding: 12px 18px; background: #fff; border-top: 1px solid #f0edf7; flex-shrink: 0; }
+.g-btn {
+    padding: 10px 16px; border-radius: 11px; border: none; font-family: inherit;
+    font-size: 0.84rem; font-weight: 600; cursor: pointer; transition: 0.18s; display: flex; align-items: center; gap: 6px;
+}
+.g-btn.ghost { background: #f5f3fa; color: #718096; }
+.g-btn.ghost:hover { background: #ece8f7; }
+.g-btn.ghost:disabled { opacity: 0.4; cursor: default; }
+.g-btn.hint { background: rgba(246,173,85,0.15); color: #c05621; margin-right: auto; }
+.g-btn.primary { background: linear-gradient(135deg, var(--p1), var(--p2)); color: #fff; box-shadow: 0 4px 14px rgba(124,92,255,0.3); }
+.g-btn.primary:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
+
+/* feedback toast */
+.toast {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%) scale(0.6);
+    background: #fff; border-radius: 16px; padding: 18px 26px; box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+    font-size: 1rem; font-weight: 700; text-align: center; opacity: 0; pointer-events: none;
+    transition: 0.3s cubic-bezier(.34,1.56,.64,1); z-index: 30; max-width: 80%;
+}
+.toast.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+.toast .big { font-size: 2.2rem; display: block; margin-bottom: 4px; }
+
+/* OVERLAYS */
+.overlay {
+    position: absolute; inset: 0; z-index: 40; display: none;
+    flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    padding: 30px; background: rgba(250,249,255,0.97); backdrop-filter: blur(4px);
+}
+.overlay.show { display: flex; animation: fadeIn 0.4s ease; }
+.overlay .ov-emoji { font-size: 3.4rem; margin-bottom: 10px; animation: pop 0.5s cubic-bezier(.34,1.56,.64,1); }
+.overlay h2 { font-size: 1.4rem; color: #4a3d8f; margin-bottom: 8px; }
+.overlay p { font-size: 0.92rem; color: #718096; max-width: 360px; margin-bottom: 8px; line-height: 1.5; }
+.overlay .ov-stars { font-size: 1.8rem; letter-spacing: 6px; margin: 10px 0; }
+.overlay .ov-actions { display: flex; gap: 10px; margin-top: 14px; }
+
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+@keyframes pop { from{transform:scale(0)} to{transform:scale(1)} }
+@keyframes slideUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+@keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-7px)} 40%,80%{transform:translateX(7px)} }
+.shake { animation: shake 0.4s; }
+
+/* confetti */
+#fx { position: absolute; inset: 0; pointer-events: none; z-index: 25; }
+</style>
+</head>
+<body>
+<div class="game-root">
+    <div class="g-head">
+        <span class="g-icon" id="gIcon">🔢</span>
+        <div class="g-titles">
+            <b id="gTitle">משחק למידה</b>
+            <small id="gSub">YuviLab 720</small>
+        </div>
+        <div class="g-stats">
+            <div class="g-pill" id="starPill">⭐ <span id="starVal">0</span></div>
+            <div class="g-pill" id="streakPill"><span class="flame">🔥</span> <span id="streakVal">0</span></div>
+        </div>
+    </div>
+
+    <div class="g-prog-wrap">
+        <div class="g-prog-row">
+            <span class="step-label" id="stepLabel">אתגר 1</span>
+            <span class="pace" id="paceNote">בקצב שלך 🙂</span>
+        </div>
+        <div class="g-prog-track"><div class="g-prog-fill" id="progFill"></div></div>
+    </div>
+
+    <div class="g-body" id="gBody"></div>
+
+    <div class="g-foot">
+        <button class="g-btn ghost" id="backBtn">← אחורה</button>
+        <button class="g-btn hint" id="hintBtn">💡 רמז</button>
+        <button class="g-btn primary" id="nextBtn" disabled>המשך →</button>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <canvas id="fx"></canvas>
+
+    <!-- Start overlay -->
+    <div class="overlay show" id="startOv">
+        <div class="ov-emoji" id="startEmoji">🚀</div>
+        <h2 id="startTitle">מוכנים להתחיל?</h2>
+        <p id="startText">כמה אתגרים קצרים וכיפיים. תתקדמו בקצב שלכם — ואני כאן לכל שאלה!</p>
+        <div class="ov-actions">
+            <button class="g-btn primary" id="startBtn">בואו נתחיל! 🎮</button>
+        </div>
+    </div>
+
+    <!-- Break overlay -->
+    <div class="overlay" id="breakOv">
+        <div class="ov-emoji">🧘</div>
+        <h2>הפסקה קטנה?</h2>
+        <p>עבדת יפה! קח/י נשימה עמוקה, מתח/י קצת את הידיים 💪<br>אפשר להמשיך מתי שמרגישים מוכנים.</p>
+        <div class="ov-actions">
+            <button class="g-btn ghost" id="breakMore">עוד רגע ☕</button>
+            <button class="g-btn primary" id="breakContinue">אני מוכן/ה, ממשיכים! ✨</button>
+        </div>
+    </div>
+
+    <!-- Resume overlay -->
+    <div class="overlay" id="resumeOv">
+        <div class="ov-emoji">📍</div>
+        <h2>נמשיך מאיפה שעצרת?</h2>
+        <p id="resumeText">שמרתי לך את ההתקדמות מהפעם הקודמת.</p>
+        <div class="ov-actions">
+            <button class="g-btn ghost" id="restartBtn">התחל מחדש</button>
+            <button class="g-btn primary" id="resumeBtn">המשך מהמקום שעצרתי ▶</button>
+        </div>
+    </div>
+
+    <!-- End overlay -->
+    <div class="overlay" id="endOv">
+        <div class="ov-emoji">🏆</div>
+        <h2 id="endTitle">כל הכבוד!</h2>
+        <p id="endText"></p>
+        <div class="ov-stars" id="endStars"></div>
+        <div class="ov-actions">
+            <button class="g-btn primary" id="finishBtn">סיימתי! חזרה לנושאים</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ================= CONTENT =================
+const CONTENT = {
+    math: {
+        icon: '🔢', name: 'מתמטיקה',
+        challenges: [
+            { type: 'buildAngle', target: 'acute', prompt: 'גררו את הסרגל וצרו זווית חדה (קטנה מ-90°)',
+              hint: 'זווית חדה היא כל זווית שקטנה מפינה ישרה — כמו קצה של פרוסת פיצה 🍕' },
+            { type: 'classify', visual: { kind: 'angle', deg: 90 }, prompt: 'איזו זווית מוצגת על המסך?',
+              options: ['זווית חדה', 'זווית ישרה', 'זווית קהה', 'זווית שטוחה'], correct: 1,
+              hint: 'זווית ישרה היא בדיוק 90° — כמו הפינה של דף או ספר 📖' },
+            { type: 'matchAngle', targetDeg: 120, tol: 8, prompt: 'הזיזו את הסרגל עד שתגיעו לזווית של 120°',
+              hint: '120° גדולה מ-90°, אז תצטרכו לפתוח את הזווית מעבר לפינה הישרה' },
+            { type: 'buildAngle', target: 'obtuse', prompt: 'עכשיו צרו זווית קהה (גדולה מ-90°)',
+              hint: 'זווית קהה רחבה ופתוחה — גדולה מפינה ישרה אבל לא קו ישר לגמרי' },
+        ]
+    },
+    science: {
+        icon: '🔬', name: 'מדעים',
+        challenges: [
+            { type: 'order', prompt: 'סדרו את שלבי בניית מעגל חשמלי פשוט',
+              steps: ['מחברים את הסוללה 🔋', 'מותחים חוט מהקוטב החיובי', 'מחברים את החוט לנורה 💡', 'סוגרים את המעגל לקוטב השלילי'],
+              hint: 'הזרם יוצא מהקוטב + של הסוללה, עובר דרך הנורה, וחוזר לקוטב −' },
+            { type: 'sort', prompt: 'מיינו את החומרים — מה מוליך חשמל ומה לא?',
+              bins: [{ id: 'cond', label: '⚡ מוליך' }, { id: 'ins', label: '🚫 מבודד' }],
+              items: [{ label: 'נחושת', emoji: '🟠', bin: 'cond' }, { label: 'גומי', emoji: '⚫', bin: 'ins' },
+                      { label: 'ברזל', emoji: '🔩', bin: 'cond' }, { label: 'פלסטיק', emoji: '🧴', bin: 'ins' },
+                      { label: 'עץ', emoji: '🪵', bin: 'ins' }, { label: 'אלומיניום', emoji: '🥫', bin: 'cond' }],
+              hint: 'מתכות מוליכות חשמל מצוין. גומי, פלסטיק ועץ הם מבודדים' },
+            { type: 'classify', visual: { kind: 'emoji', text: '💡' }, prompt: 'מה גורם לנורה להידלק במעגל?',
+              options: ['זרם חשמלי שעובר דרכה', 'הצבע שלה', 'הגודל שלה', 'כמה שהיא כבדה'], correct: 0,
+              hint: 'הנורה נדלקת כשזרם חשמלי זורם דרך החוט הדק שבתוכה ומחמם אותו' },
+        ]
+    },
+    robotics: {
+        icon: '🤖', name: 'רובוטיקה',
+        challenges: [
+            { type: 'order', prompt: 'איך רובוט "חושב"? סדרו את שלבי קבלת ההחלטה',
+              steps: ['החיישן קולט מידע מהסביבה 👀', 'המוח (מעבד) מנתח את המידע 🧠', 'הרובוט מחליט מה לעשות', 'המנוע מבצע את התנועה ⚙️'],
+              hint: 'בדיוק כמו אצלנו: קודם מרגישים, אחר כך חושבים, ואז פועלים' },
+            { type: 'sort', prompt: 'מיינו את חלקי הרובוט — חומרה או תוכנה?',
+              bins: [{ id: 'hw', label: '🔧 חומרה' }, { id: 'sw', label: '💻 תוכנה' }],
+              items: [{ label: 'מנוע', emoji: '⚙️', bin: 'hw' }, { label: 'קוד', emoji: '📜', bin: 'sw' },
+                      { label: 'חיישן', emoji: '📡', bin: 'hw' }, { label: 'אלגוריתם', emoji: '🔢', bin: 'sw' },
+                      { label: 'גלגל', emoji: '🛞', bin: 'hw' }],
+              hint: 'חומרה זה מה שאפשר לגעת בו, תוכנה זה הפקודות שמריצות אותו' },
+            { type: 'classify', visual: { kind: 'emoji', text: '📡' }, prompt: 'מה תפקיד החיישן ברובוט?',
+              options: ['לחוש את הסביבה', 'להזיז את הגלגלים', 'לטעון את הסוללה', 'לצבוע את הרובוט'], correct: 0,
+              hint: 'חיישן הוא כמו חוש — הוא נותן לרובוט מידע על מה שקורה סביבו' },
+        ]
+    },
+    english: {
+        icon: '🌍', name: 'אנגלית',
+        challenges: [
+            { type: 'classify', visual: { kind: 'emoji', text: '🐶' }, prompt: 'What is this animal?',
+              options: ['Cat', 'Dog', 'Bird', 'Fish'], correct: 1, hint: 'הכלב נובח: "Woof!" 🐶 באנגלית — Dog' },
+            { type: 'order', prompt: 'Build the sentence — סדרו את המשפט הנכון',
+              steps: ['I', 'see', 'a', 'cat'], hint: 'המבנה באנגלית: מי → פועל → מה. "I see a cat" = אני רואה חתול' },
+            { type: 'sort', prompt: 'מיינו את המילים — Animals או Colors?',
+              bins: [{ id: 'an', label: '🐾 Animals' }, { id: 'co', label: '🎨 Colors' }],
+              items: [{ label: 'Lion', emoji: '🦁', bin: 'an' }, { label: 'Blue', emoji: '🔵', bin: 'co' },
+                      { label: 'Red', emoji: '🔴', bin: 'co' }, { label: 'Bear', emoji: '🐻', bin: 'an' },
+                      { label: 'Green', emoji: '🟢', bin: 'co' }],
+              hint: 'Animals = בעלי חיים, Colors = צבעים' },
+        ]
+    },
+    art: {
+        icon: '🎨', name: 'אמנות דיגיטלית',
+        challenges: [
+            { type: 'classify', visual: { kind: 'emoji', text: '🔴🟡🔵' }, prompt: 'מה הם שלושת הצבעים הראשוניים?',
+              options: ['אדום, צהוב, כחול', 'ירוק, כתום, סגול', 'שחור, לבן, אפור', 'ורוד, תכלת, זהב'], correct: 0,
+              hint: 'מהצבעים הראשוניים אפשר לערבב את כל שאר הצבעים 🎨' },
+            { type: 'sort', prompt: 'מיינו — צבע ראשוני או משני (מעורבב)?',
+              bins: [{ id: 'pri', label: '⭐ ראשוני' }, { id: 'sec', label: '🔀 משני' }],
+              items: [{ label: 'אדום', emoji: '🔴', bin: 'pri' }, { label: 'ירוק', emoji: '🟢', bin: 'sec' },
+                      { label: 'כחול', emoji: '🔵', bin: 'pri' }, { label: 'כתום', emoji: '🟠', bin: 'sec' },
+                      { label: 'צהוב', emoji: '🟡', bin: 'pri' }, { label: 'סגול', emoji: '🟣', bin: 'sec' }],
+              hint: 'כחול+צהוב=ירוק, אדום+צהוב=כתום, אדום+כחול=סגול' },
+            { type: 'classify', visual: { kind: 'emoji', text: '🔵🟡' }, prompt: 'איזה צבע נקבל אם נערבב כחול וצהוב?',
+              options: ['ירוק', 'סגול', 'כתום', 'חום'], correct: 0, hint: 'כחול + צהוב = ירוק 🟢' },
+        ]
+    },
+    tech: {
+        icon: '💻', name: 'טכנולוגיה',
+        challenges: [
+            { type: 'order', prompt: 'סדרו את שלבי האלגוריתם להכנת כריך 🥪',
+              steps: ['מוציאים שתי פרוסות לחם', 'מורחים ממרח על הלחם', 'מוסיפים את המילוי', 'סוגרים את הכריך'],
+              hint: 'אלגוריתם הוא רשימת צעדים מסודרת — הסדר חשוב!' },
+            { type: 'classify', visual: { kind: 'emoji', text: '🔁' }, prompt: 'מה עושה "לולאה" (Loop) בתכנות?',
+              options: ['חוזרת על פעולה כמה פעמים', 'מוחקת את הקוד', 'צובעת את המסך', 'מכבה את המחשב'], correct: 0,
+              hint: 'לולאה חוסכת לנו לכתוב את אותו דבר שוב ושוב — היא חוזרת על פעולה אוטומטית' },
+            { type: 'sort', prompt: 'מיינו — פקודת פעולה או פקודת החלטה (תנאי)?',
+              bins: [{ id: 'act', label: '▶️ פעולה' }, { id: 'cond', label: '❓ תנאי' }],
+              items: [{ label: 'זוז קדימה', emoji: '⬆️', bin: 'act' }, { label: 'אם חשוך — הדלק אור', emoji: '💡', bin: 'cond' },
+                      { label: 'נגן צליל', emoji: '🔊', bin: 'act' }, { label: 'אם אדום — עצור', emoji: '🛑', bin: 'cond' }],
+              hint: 'תנאי תמיד מתחיל ב"אם..." ובודק משהו לפני שמחליט' },
+        ]
+    },
+};
+
+// ================= STATE =================
+const params = new URLSearchParams(location.search);
+const subjectId = params.get('subject') || 'math';
+const stageTitle = params.get('stage') || 'שלב 1';
+const C = CONTENT[subjectId] || CONTENT.math;
+const challenges = C.challenges;
+const storeKey = 'yuvilab720_game_' + subjectId + '_' + stageTitle;
+
+let idx = 0;
+let stars = 0;
+let streak = 0;
+let answered = false;       // current challenge answered?
+let wrongStreak = 0;        // consecutive wrong for misconception
+let attemptsThisQ = 0;
+let idleTimer = null;
+let usedHint = false;
+
+// ================= POST TO PARENT =================
+function toParent(type, payload) {
+    try { window.parent.postMessage(Object.assign({ source: 'yuvilab-game', type }, payload || {}), '*'); } catch (e) {}
+}
+
+// ================= EL =================
+const $ = id => document.getElementById(id);
+const body = $('gBody');
+
+function init() {
+    $('gIcon').textContent = C.icon;
+    $('gTitle').textContent = C.name + ' · ' + stageTitle;
+    $('startEmoji').textContent = C.icon;
+    // resume?
+    const saved = localStorage.getItem(storeKey);
+    if (saved) {
+        try {
+            const s = JSON.parse(saved);
+            if (s.idx > 0 && s.idx < challenges.length) {
+                $('resumeText').textContent = 'הגעת לאתגר ' + (s.idx + 1) + ' מתוך ' + challenges.length + ' ואספת ' + s.stars + ' כוכבים ⭐';
+                $('startOv').classList.remove('show');
+                $('resumeOv').classList.add('show');
+                window._resumeState = s;
+                return;
+            }
+        } catch (e) {}
+    }
+}
+
+function saveProgress() {
+    localStorage.setItem(storeKey, JSON.stringify({ idx, stars }));
+}
+function clearProgress() { localStorage.removeItem(storeKey); }
+
+// ================= IDLE (proactive agent) =================
+function resetIdle() {
+    clearTimeout(idleTimer);
+    if (answered) return;
+    idleTimer = setTimeout(() => {
+        if (!answered) toParent('idle', { challenge: idx + 1 });
+    }, 16000);
+}
+['pointerdown', 'pointermove', 'keydown', 'input'].forEach(ev =>
+    document.addEventListener(ev, resetIdle, { passive: true }));
+
+// ================= RENDER =================
+function render() {
+    answered = false;
+    attemptsThisQ = 0;
+    usedHint = false;
+    const ch = challenges[idx];
+    $('stepLabel').textContent = 'אתגר ' + (idx + 1) + ' מתוך ' + challenges.length + ' · ' + stageTitle;
+    $('progFill').style.width = Math.round((idx / challenges.length) * 100) + '%';
+    $('backBtn').disabled = idx === 0;
+    $('nextBtn').disabled = true;
+    $('nextBtn').textContent = idx === challenges.length - 1 ? 'סיום ✓' : 'המשך →';
+    updatePace();
+
+    if (ch.type === 'buildAngle') renderBuildAngle(ch);
+    else if (ch.type === 'matchAngle') renderMatchAngle(ch);
+    else if (ch.type === 'classify') renderClassify(ch);
+    else if (ch.type === 'sort') renderSort(ch);
+    else if (ch.type === 'order') renderOrder(ch);
+
+    toParent('progress', { challenge: idx + 1, total: challenges.length, title: stageTitle });
+    resetIdle();
+}
+
+function updatePace() {
+    const note = $('paceNote');
+    if (streak >= 3) { note.textContent = 'אתה בכיוון מצוין! 🚀'; note.style.color = '#48bb78'; }
+    else if (wrongStreak >= 2) { note.textContent = 'קח/י את הזמן, אין לחץ 💛'; note.style.color = '#ed8936'; }
+    else { note.textContent = 'בקצב שלך 🙂'; note.style.color = '#48bb78'; }
+}
+
+// ---- angle SVG ----
+function angleSVG(deg, showLabel) {
+    const cx = 320, cy = 200, len = 170;
+    const rad = deg * Math.PI / 180;
+    const x2 = cx - len * Math.cos(rad);   // RTL: base points left
+    const y2 = cy - len * Math.sin(rad);
+    const bx = cx - len;
+    const arcR = 46;
+    const ax = cx - arcR, ay = cy;
+    const ax2 = cx - arcR * Math.cos(rad), ay2 = cy - arcR * Math.sin(rad);
+    const large = deg > 180 ? 1 : 0;
+    return '<svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid meet">' +
+        '<path d="M ' + ax + ' ' + ay + ' A ' + arcR + ' ' + arcR + ' 0 ' + large + ' 1 ' + ax2 + ' ' + ay2 + '" fill="none" stroke="rgba(124,92,255,0.7)" stroke-width="3"/>' +
+        '<line x1="' + cx + '" y1="' + cy + '" x2="' + bx + '" y2="' + cy + '" stroke="#22d3ee" stroke-width="5" stroke-linecap="round"/>' +
+        '<line x1="' + cx + '" y1="' + cy + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="#9f7afe" stroke-width="5" stroke-linecap="round"/>' +
+        '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#fff"/>' +
+        '</svg>';
+}
+function classifyDeg(deg) {
+    if (deg < 88) return { t: 'חדה', c: '#22d3ee' };
+    if (deg <= 92) return { t: 'ישרה', c: '#48bb78' };
+    if (deg < 178) return { t: 'קהה', c: '#f6ad55' };
+    return { t: 'שטוחה', c: '#fc8181' };
+}
+
+function renderBuildAngle(ch) {
+    const start = 40;
+    body.innerHTML =
+        '<div class="q-prompt">' + ch.prompt + '</div>' +
+        '<div class="stage"><div class="deg-read"><span id="degR">' + start + '°</span><small>מעלות</small></div>' +
+        '<div class="classify-chip" id="clsChip">זווית חדה</div><div id="svgWrap">' + angleSVG(start) + '</div></div>' +
+        '<div class="slider-wrap"><input type="range" id="angleSlider" min="10" max="180" value="' + start + '">' +
+        '<div class="slider-hint">גררו את הנקודה כדי לפתוח ולסגור את הזווית</div></div>';
+    const sl = $('angleSlider');
+    const target = ch.target;
+    sl.addEventListener('input', () => {
+        const d = +sl.value;
+        $('svgWrap').innerHTML = angleSVG(d);
+        $('degR').textContent = d + '°';
+        const cl = classifyDeg(d);
+        const chip = $('clsChip');
+        chip.textContent = 'זווית ' + cl.t;
+        chip.style.background = cl.c;
+        // enable submit via Next acting as "check"
+        $('nextBtn').disabled = false;
+        $('nextBtn').textContent = 'בדיקה ✓';
+    });
+    // Next becomes "check"
+    nextAction = () => {
+        const d = +sl.value;
+        const cl = classifyDeg(d);
+        const ok = (target === 'acute' && d < 88) || (target === 'right' && d >= 88 && d <= 92) ||
+                   (target === 'obtuse' && d > 92 && d < 178) || (target === 'straight' && d >= 178);
+        handleResult(ok, ok ? 'מעולה! יצרת זווית ' + cl.t + ' של ' + d + '° 🎯' : 'זו זווית ' + cl.t + '. נסה/י שוב — אתה קרוב!');
+    };
+}
+
+function renderMatchAngle(ch) {
+    const start = 30;
+    body.innerHTML =
+        '<div class="q-prompt">' + ch.prompt + '</div>' +
+        '<div class="stage"><div class="deg-read"><span id="degR">' + start + '°</span><small>מטרה: ' + ch.targetDeg + '°</small></div>' +
+        '<div class="classify-chip" id="clsChip">המשיכו...</div><div id="svgWrap">' + angleSVG(start) + '</div></div>' +
+        '<div class="slider-wrap"><input type="range" id="angleSlider" min="10" max="180" value="' + start + '">' +
+        '<div class="slider-hint">כוונו את הזווית קרוב ככל האפשר ל-' + ch.targetDeg + '°</div></div>';
+    const sl = $('angleSlider');
+    sl.addEventListener('input', () => {
+        const d = +sl.value;
+        $('svgWrap').innerHTML = angleSVG(d);
+        $('degR').textContent = d + '°';
+        const diff = Math.abs(d - ch.targetDeg);
+        const chip = $('clsChip');
+        if (diff <= ch.tol) { chip.textContent = 'מצוין, קרוב מאוד! 🎯'; chip.style.background = '#48bb78'; }
+        else if (diff <= 20) { chip.textContent = 'כמעט שם...'; chip.style.background = '#f6ad55'; }
+        else { chip.textContent = d < ch.targetDeg ? 'פתחו עוד ➡️' : 'סגרו קצת ⬅️'; chip.style.background = 'rgba(255,255,255,0.2)'; }
+        $('nextBtn').disabled = false;
+        $('nextBtn').textContent = 'בדיקה ✓';
+    });
+    nextAction = () => {
+        const d = +sl.value;
+        const ok = Math.abs(d - ch.targetDeg) <= ch.tol;
+        handleResult(ok, ok ? 'בול! ' + d + '° — בדיוק במטרה 🎯' : 'הגעת ל-' + d + '°, המטרה ' + ch.targetDeg + '°. עוד קצת!');
+    };
+}
+
+function renderClassify(ch) {
+    let visual = '';
+    if (ch.visual.kind === 'angle') {
+        visual = '<div class="stage"><div class="deg-read" style="opacity:.0">.</div>' + angleSVG(ch.visual.deg) + '</div>';
+    } else {
+        visual = '<div class="emoji-visual">' + ch.visual.text + '</div>';
+    }
+    body.innerHTML =
+        '<div class="q-prompt">' + ch.prompt + '</div>' + visual +
+        '<div class="opts">' + ch.options.map((o, i) =>
+            '<button class="opt" data-i="' + i + '">' + o + '</button>').join('') + '</div>';
+    body.querySelectorAll('.opt').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (answered && btn.classList.contains('dim')) return;
+            const i = +btn.dataset.i;
+            const ok = i === ch.correct;
+            if (ok) {
+                body.querySelectorAll('.opt').forEach(b => b.classList.add('dim'));
+                btn.classList.remove('dim'); btn.classList.add('correct');
+                handleResult(true, 'נכון! 🎉');
+            } else {
+                btn.classList.add('wrong'); btn.classList.add('dim');
+                attemptsThisQ++;
+                flashShake();
+                if (attemptsThisQ === 1) toastShow('🤔', 'כמעט! נסה/י תשובה אחרת');
+                registerWrong();
+            }
+        });
+    });
+    nextAction = goNext;
+}
+
+function renderSort(ch) {
+    body.innerHTML =
+        '<div class="q-prompt">' + ch.prompt + '</div>' +
+        '<div class="sort-items" id="sortItems">' + ch.items.map((it, i) =>
+            '<button class="sort-chip" data-i="' + i + '">' + it.emoji + ' ' + it.label + '</button>').join('') + '</div>' +
+        '<div class="bins">' + ch.bins.map(b =>
+            '<div class="bin" data-bin="' + b.id + '"><div class="bin-title">' + b.label + '</div><div class="dropped"></div></div>').join('') + '</div>';
+    let selected = null;
+    let placed = 0;
+    body.querySelectorAll('.sort-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            if (chip.classList.contains('placed')) return;
+            body.querySelectorAll('.sort-chip').forEach(c => c.classList.remove('selected'));
+            chip.classList.add('selected');
+            selected = chip;
+        });
+    });
+    body.querySelectorAll('.bin').forEach(bin => {
+        bin.addEventListener('click', () => {
+            if (!selected) { toastShow('👆', 'קודם בחרו פריט, ואז את הסל'); return; }
+            const i = +selected.dataset.i;
+            const item = ch.items[i];
+            if (item.bin === bin.dataset.bin) {
+                bin.querySelector('.dropped').innerHTML += '<span>' + item.emoji + ' ' + item.label + '</span>';
+                selected.classList.add('placed'); selected.classList.remove('selected');
+                selected = null; placed++;
+                spark();
+                if (placed === ch.items.length) handleResult(true, 'כל הכבוד! מיינת הכול נכון 🎉');
+            } else {
+                flashShake();
+                toastShow('🤔', item.label + ' לא שייך לכאן — נסה/י את הסל השני');
+                selected.classList.remove('selected'); selected = null;
+                attemptsThisQ++;
+                registerWrong();
+            }
+        });
+    });
+    nextAction = goNext;
+}
+
+function renderOrder(ch) {
+    const shuffled = ch.steps.map((s, i) => ({ s, i })).sort(() => Math.random() - 0.5);
+    body.innerHTML =
+        '<div class="q-prompt">' + ch.prompt + '</div>' +
+        '<div class="order-seq" id="orderSeq"></div>' +
+        '<div class="order-pool" id="orderPool">' + shuffled.map(o =>
+            '<button class="step-chip" data-i="' + o.i + '">' + o.s + '</button>').join('') + '</div>';
+    let next = 0;
+    body.querySelectorAll('#orderPool .step-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            if (chip.classList.contains('used')) return;
+            const i = +chip.dataset.i;
+            if (i === next) {
+                chip.classList.add('used');
+                const seq = $('orderSeq');
+                seq.innerHTML += '<div class="step-chip"><span class="num">' + (next + 1) + '</span>' + ch.steps[i] + '</div>';
+                next++;
+                spark();
+                if (next === ch.steps.length) handleResult(true, 'מושלם! סידרת את כל הצעדים נכון 🎉');
+            } else {
+                flashShake();
+                toastShow('🤔', 'זה לא הצעד הבא בסדר — מה בא קודם?');
+                attemptsThisQ++;
+                registerWrong();
+            }
+        });
+    });
+    nextAction = goNext;
+}
+
+// ================= RESULT HANDLING =================
+function handleResult(ok, msg) {
+    if (ok) {
+        if (!answered) {
+            answered = true;
+            const earned = usedHint ? 1 : (attemptsThisQ === 0 ? 3 : attemptsThisQ === 1 ? 2 : 1);
+            stars += earned;
+            streak++;
+            wrongStreak = 0;
+            $('starVal').textContent = stars;
+            $('streakVal').textContent = streak;
+            popPill('starPill'); popPill('streakPill');
+            $('streakPill').classList.toggle('lit', streak >= 2);
+            $('nextBtn').disabled = false;
+            $('nextBtn').textContent = idx === challenges.length - 1 ? 'סיום ✓' : 'המשך →';
+            nextAction = goNext;
+            toastShow('🎉', msg + ' (+' + earned + '⭐)');
+            confetti();
+            saveProgress();
+            toParent('correct', { streak, stars });
+            if (streak === 3 || streak === 5) toParent('streak', { streak });
+            updatePace();
+        }
+    } else {
+        flashShake();
+        toastShow('💪', msg);
+        registerWrong();
+    }
+}
+
+function registerWrong() {
+    wrongStreak++;
+    streak = 0;
+    $('streakVal').textContent = 0;
+    $('streakPill').classList.remove('lit');
+    updatePace();
+    toParent('wrong', { wrongStreak, challenge: idx + 1 });
+    if (wrongStreak >= 3) {
+        toParent('misconception', { challenge: idx + 1, subject: C.name });
+        showAlternative();
+        wrongStreak = 0;
+    }
+}
+
+function showAlternative() {
+    if (document.getElementById('altCard')) return;
+    const card = document.createElement('div');
+    card.className = 'alt-card'; card.id = 'altCard';
+    card.innerHTML = '<div class="thumb">▶️</div><div class="alt-txt"><b>בוא ננסה אחרת 🎬</b>' +
+        '<p>הכנתי לך סרטון הסבר קצר על הנושא הזה. לפעמים לראות זה יותר קל מלקרוא!</p></div>';
+    card.querySelector('.thumb').addEventListener('click', () => {
+        toastShow('🎬', 'מנגן סרטון הסבר... (דמו)');
+    });
+    body.appendChild(card);
+}
+
+// ================= NAV =================
+let nextAction = goNext;
+function goNext() {
+    if (idx >= challenges.length - 1) { finish(); return; }
+    idx++;
+    render();
+    // break suggestion mid-way (req: offer breaks at relevant times)
+    if (idx === Math.floor(challenges.length / 2) && challenges.length >= 4 && !window._breakShown) {
+        window._breakShown = true;
+        $('breakOv').classList.add('show');
+        toParent('break', {});
+    }
+}
+function goBack() {
+    if (idx === 0) return;
+    idx--;
+    render();
+}
+
+$('nextBtn').addEventListener('click', () => nextAction());
+$('backBtn').addEventListener('click', goBack);
+$('hintBtn').addEventListener('click', () => {
+    usedHint = true;
+    const ch = challenges[idx];
+    toastShow('💡', ch.hint);
+    toParent('hint', { challenge: idx + 1 });
+});
+
+// ================= OVERLAYS =================
+$('startBtn').addEventListener('click', () => { $('startOv').classList.remove('show'); render(); });
+$('resumeBtn').addEventListener('click', () => {
+    const s = window._resumeState; idx = s.idx; stars = s.stars;
+    $('starVal').textContent = stars;
+    $('resumeOv').classList.remove('show'); render();
+});
+$('restartBtn').addEventListener('click', () => { clearProgress(); idx = 0; stars = 0; $('resumeOv').classList.remove('show'); render(); });
+$('breakContinue').addEventListener('click', () => $('breakOv').classList.remove('show'));
+$('breakMore').addEventListener('click', () => $('breakOv').classList.remove('show'));
+$('finishBtn').addEventListener('click', () => { clearProgress(); toParent('exit', {}); });
+
+function finish() {
+    $('progFill').style.width = '100%';
+    const maxStars = challenges.length * 3;
+    const ratio = stars / maxStars;
+    const earned = ratio >= 0.8 ? 3 : ratio >= 0.5 ? 2 : 1;
+    $('endStars').textContent = '⭐'.repeat(earned) + '☆'.repeat(3 - earned);
+    $('endText').textContent = 'סיימת את "' + stageTitle + '" ואספת ' + stars + ' כוכבים! ' +
+        (earned >= 3 ? 'שליטה מלאה — אתה מוכן לשלב הבא! 🚀' : 'עבודה יפה, אפשר תמיד לחזור ולתרגל עוד 💪');
+    $('endOv').classList.add('show');
+    confetti(true);
+    clearProgress();
+    toParent('complete', { stars, earned });
+}
+
+// ================= FX =================
+function popPill(id) { const p = $(id); p.classList.add('pop'); setTimeout(() => p.classList.remove('pop'), 250); }
+function flashShake() { document.querySelector('.g-body').classList.add('shake'); setTimeout(() => document.querySelector('.g-body').classList.remove('shake'), 400); }
+let toastT;
+function toastShow(big, txt) {
+    const t = $('toast');
+    t.innerHTML = '<span class="big">' + big + '</span>' + txt;
+    t.classList.add('show');
+    clearTimeout(toastT);
+    toastT = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// confetti
+const cv = $('fx'), cx = cv.getContext('2d');
+let parts = [];
+function sizeCanvas() { cv.width = cv.offsetWidth; cv.height = cv.offsetHeight; }
+window.addEventListener('resize', sizeCanvas);
+function confetti(big) {
+    sizeCanvas();
+    const n = big ? 120 : 50;
+    const cols = ['#7c5cff', '#22d3ee', '#48bb78', '#f6ad55', '#ec4899', '#9f7afe'];
+    for (let i = 0; i < n; i++) parts.push({
+        x: cv.width / 2, y: cv.height / 2.5,
+        vx: (Math.random() - 0.5) * 14, vy: Math.random() * -12 - 3,
+        c: cols[i % cols.length], s: Math.random() * 6 + 4, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, life: 1
+    });
+    if (!cvRunning) loopFX();
+}
+function spark() {
+    sizeCanvas();
+    const cols = ['#48bb78', '#22d3ee', '#7c5cff'];
+    for (let i = 0; i < 14; i++) parts.push({
+        x: cv.width / 2, y: cv.height / 2, vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8,
+        c: cols[i % cols.length], s: Math.random() * 4 + 2, r: 0, vr: 0, life: 1
+    });
+    if (!cvRunning) loopFX();
+}
+let cvRunning = false;
+function loopFX() {
+    cvRunning = true;
+    cx.clearRect(0, 0, cv.width, cv.height);
+    parts.forEach(p => {
+        p.x += p.vx; p.y += p.vy; p.vy += 0.4; p.r += p.vr; p.life -= 0.012;
+        cx.save(); cx.globalAlpha = Math.max(p.life, 0); cx.translate(p.x, p.y); cx.rotate(p.r);
+        cx.fillStyle = p.c; cx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s); cx.restore();
+    });
+    parts = parts.filter(p => p.life > 0 && p.y < cv.height + 40);
+    if (parts.length) requestAnimationFrame(loopFX);
+    else { cvRunning = false; cx.clearRect(0, 0, cv.width, cv.height); }
+}
+
+// allow parent to trigger a hint remotely (agent proactivity)
+window.addEventListener('message', (e) => {
+    const d = e.data || {};
+    if (d.target !== 'yuvilab-game') return;
+    if (d.cmd === 'hint') { usedHint = true; toastShow('💡', challenges[idx].hint); }
+});
+
+init();
+</script>
+</body>
+</html>
