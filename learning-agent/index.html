@@ -958,6 +958,8 @@
         let currentSubject = null;
         let currentQuestionIdx = 0;
         let score = 0;
+        let wrongCount = 0;
+        let lessonOffered = false;
 
         // ================================================
         // RENDER: Portal
@@ -1038,6 +1040,8 @@
 
             // Opening message (req: opening/closing messages between content)
             document.getElementById('yubiChatBody').innerHTML = '';
+            wrongCount = 0;
+            lessonOffered = false;
             addYubiMessage(`היי! 👋 פתחתי לך את "${stage.title}". זה משחק קצר ואינטראקטיבי — תתקדם בקצב שלך, ואני כאן לכל שאלה או רמז 💡`);
         }
 
@@ -1064,6 +1068,26 @@
                     // brief positive acknowledgement (not every time, to avoid spam)
                     if (d.streak && d.streak % 2 === 0) {
                         addYubiMessage('יפה מאוד! ✨ אתה תופס את זה ממש טוב');
+                    }
+                    break;
+                case 'wrong':
+                    wrongCount++;
+                    if (wrongCount >= 3 && !lessonOffered) {
+                        lessonOffered = true;
+                        setTimeout(() => {
+                            addYubiMessage('שמתי לב שהנושא הזה קצת מבלבל 🤔 זה ממש בסדר! לפעמים צריך הסבר מסודר לפני שממשיכים לתרגל.');
+                            setTimeout(() => {
+                                addYubiMessage('מה דעתך שאכין לך לומדה קצרה ונקודתית על זוויות? 📐 הסבר ברור עם דוגמאות, ובסוף כמה תרגילים קלים כדי לוודא שהבנת. אחרי זה תוכל לחזור לבדיוק לנקודה שבה אתה עכשיו.');
+                                setTimeout(() => {
+                                    addYubiActionButton('כן, תלמד אותי! 📖', () => {
+                                        addYubiMessage('מעולה! 🎉 אני מכין לך עכשיו לומדה מותאמת אישית על סוגי זוויות. תמיד אפשר לחזור לפה — לאותו מקום בדיוק שבו הפסקת 💪');
+                                        setTimeout(() => {
+                                            window.location.href = '/learning/lesson.html?topic=angles';
+                                        }, 2000);
+                                    });
+                                }, 1200);
+                            }, 1800);
+                        }, 800);
                     }
                     break;
                 case 'streak':
@@ -1112,6 +1136,38 @@
             body.scrollTop = body.scrollHeight;
         }
 
+        function addYubiActionButton(label, onClick) {
+            const body = document.getElementById('yubiChatBody');
+            const msg = document.createElement('div');
+            msg.className = 'chat-msg bot';
+            msg.innerHTML = `
+                <div class="avatar">${BOT_SVG}</div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    <button class="lesson-offer-btn" style="
+                        font-family: 'Rubik', sans-serif;
+                        font-size: 0.85rem;
+                        font-weight: 700;
+                        color: #fff;
+                        background: linear-gradient(135deg, #7c5cff, #9f7afe);
+                        border: none;
+                        border-radius: 12px;
+                        padding: 12px 22px;
+                        cursor: pointer;
+                        box-shadow: 0 6px 18px rgba(124,92,255,0.3);
+                        transition: transform 0.2s, box-shadow 0.2s;
+                        white-space: nowrap;
+                    ">${label}</button>
+                    <span style="font-size:0.68rem;color:#a0aec0;text-align:center;">אפשר גם להמשיך לתרגל</span>
+                </div>
+            `;
+            const btn = msg.querySelector('.lesson-offer-btn');
+            btn.addEventListener('click', onClick);
+            btn.addEventListener('mouseenter', () => { btn.style.transform = 'translateY(-2px)'; btn.style.boxShadow = '0 10px 24px rgba(124,92,255,0.4)'; });
+            btn.addEventListener('mouseleave', () => { btn.style.transform = ''; btn.style.boxShadow = '0 6px 18px rgba(124,92,255,0.3)'; });
+            body.appendChild(msg);
+            body.scrollTop = body.scrollHeight;
+        }
+
         function addUserChatMessage(text) {
             const body = document.getElementById('yubiChatBody');
             const msg = document.createElement('div');
@@ -1133,11 +1189,27 @@
 
             setTimeout(() => {
                 const lower = text.toLowerCase();
-                if (lower.includes('עזרה') || lower.includes('לא מבין') || lower.includes('קשה') || lower.includes('רמז') || lower.includes('תקוע')) {
-                    addYubiMessage('בטח! 💡 הנה רמז למשחק — הדגשתי לך אותו על המסך.');
-                    // proactive: trigger the in-game hint
-                    if (frame && frame.contentWindow) frame.contentWindow.postMessage({ target: 'yuvilab-game', cmd: 'hint' }, '*');
-                    setTimeout(() => addYubiMessage('נסה/י עכשיו שוב — אני בטוח שתצליח/י! ואם עדיין קשה, נעבור על זה צעד-צעד 😊'), 1000);
+                if (lower.includes('עזרה') || lower.includes('לא מבין') || lower.includes('קשה') || lower.includes('רמז') || lower.includes('תקוע') || lower.includes('לא מצליח')) {
+                    // If already failed enough or explicitly struggling, offer lesson
+                    if ((wrongCount >= 2 || lower.includes('לא מצליח') || lower.includes('קשה לי')) && !lessonOffered) {
+                        lessonOffered = true;
+                        addYubiMessage('אני רואה שהנושא הזה דורש עוד קצת הסבר 🤔 זה ממש בסדר! לפעמים צריך לומדה מסודרת לפני שמתרגלים.');
+                        setTimeout(() => {
+                            addYubiMessage('מה דעתך שאכין לך לומדה קצרה על זוויות? 📐 הסבר ברור עם דוגמאות ותרגילים. אחרי זה תוכל לחזור לבדיוק לנקודה שבה אתה עכשיו!');
+                            setTimeout(() => {
+                                addYubiActionButton('כן, תלמד אותי! 📖', () => {
+                                    addYubiMessage('מעולה! 🎉 אני מכין לך עכשיו לומדה מותאמת אישית. תמיד אפשר לחזור לפה — לאותו מקום בדיוק שבו הפסקת 💪');
+                                    setTimeout(() => {
+                                        window.location.href = '/learning/lesson.html?topic=angles';
+                                    }, 2000);
+                                });
+                            }, 1200);
+                        }, 1500);
+                    } else {
+                        addYubiMessage('בטח! 💡 הנה רמז למשחק — הדגשתי לך אותו על המסך.');
+                        if (frame && frame.contentWindow) frame.contentWindow.postMessage({ target: 'yuvilab-game', cmd: 'hint' }, '*');
+                        setTimeout(() => addYubiMessage('נסה/י עכשיו שוב — אני בטוח שתצליח/י! ואם עדיין קשה, נעבור על זה צעד-צעד 😊'), 1000);
+                    }
                 } else if (lower.includes('תסביר') || lower.includes('הסבר') || lower.includes('איך')) {
                     addYubiMessage(`בוא נפרק את זה ב${subjName} לצעדים קטנים וברורים 🧩`);
                     setTimeout(() => addYubiMessage('אני יכול גם להעמיק יותר או להביא דוגמה מהחיים — מה יעזור לך יותר? 😊'), 1400);

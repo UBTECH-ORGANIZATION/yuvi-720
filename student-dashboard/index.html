@@ -551,32 +551,286 @@
             font-style: italic;
         }
 
-        /* ===== MOCK SELECTOR ===== */
-        .mock-selector {
-            position: fixed;
-            bottom: 92px;
-            left: 12px;
-            z-index: 200;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-            padding: 8px 10px;
-        }
+        /* ===== VIEWS (home + deep screens) ===== */
+        .view { display: none; animation: fadeIn 0.35s ease; }
+        .view.active { display: block; }
 
-        .mock-selector label {
-            font-size: 0.62rem;
-            color: var(--text-light);
-            display: block;
-            margin-bottom: 2px;
-        }
-
-        .mock-selector select {
+        .view-back {
+            display: inline-flex; align-items: center; gap: 6px;
             font-family: 'Rubik', sans-serif;
-            font-size: 0.72rem;
-            padding: 3px 6px;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            direction: rtl;
+            font-size: 0.8rem; font-weight: 600; color: #7c5cff;
+            background: rgba(124,92,255,0.07);
+            border: none; border-radius: 10px;
+            padding: 7px 14px; margin-bottom: 16px; cursor: pointer;
+            transition: background 0.2s;
+        }
+        .view-back:hover { background: rgba(124,92,255,0.14); }
+
+        .view-head { margin-bottom: 18px; }
+        .view-head h1 { font-size: 1.3rem; font-weight: 700; color: #4a3d8f; }
+        .view-head p { font-size: 0.82rem; color: var(--text-light); margin-top: 2px; }
+
+        /* ===== HOME: GREETING ===== */
+        .greeting {
+            background: linear-gradient(135deg, rgba(124,92,255,0.07), rgba(159,122,254,0.03));
+            border-radius: 22px;
+            padding: 16px 28px;
+            margin-bottom: 18px;
+            display: flex; align-items: center; gap: 18px;
+        }
+        .greeting-text { flex: 1; }
+        .greeting-text h1 { font-size: 1.55rem; font-weight: 800; color: #4a3d8f; }
+        .greeting-text p { font-size: 0.88rem; color: var(--text-light); margin-top: 2px; }
+        .greeting-robot {
+            flex-shrink: 0; width: 120px; height: 120px; object-fit: contain;
+            filter: drop-shadow(0 12px 20px rgba(124,92,255,0.28));
+            animation: bob 3.6s ease-in-out infinite;
+        }
+
+        .quick-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+        .quick-chip {
+            display: flex; align-items: center; gap: 7px;
+            background: #fff; border-radius: 14px;
+            padding: 9px 14px; box-shadow: var(--shadow-sm);
+            font-size: 0.8rem; font-weight: 500; color: var(--text-medium);
+        }
+        .quick-chip .qc-ico {
+            width: 26px; height: 26px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.95rem; flex-shrink: 0;
+        }
+        .quick-chip b { color: var(--text-dark); font-weight: 700; }
+
+        /* ===== HOME SECTION HEADERS ===== */
+        .home-section { margin-bottom: 26px; }
+        /* 2x2 grid of focus panels below the daily task */
+        .home-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 18px;
+            margin-top: 22px;
+        }
+        .panel {
+            background: #fff;
+            border-radius: 22px;
+            padding: 20px 22px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid rgba(124,92,255,0.06);
+        }
+        @media (max-width: 980px) {
+            .home-grid { grid-template-columns: 1fr; }
+        }
+        /* Inner items sit softly inside their panel (no nested-card look) */
+        .panel .improve-card,
+        .panel .step-card,
+        .panel .subject-row,
+        .panel .strength-card {
+            background: #faf9fe;
+            box-shadow: none;
+            border: 1px solid rgba(124,92,255,0.05);
+        }
+        .panel .home-section-head { margin-bottom: 14px; }
+        .home-section-head {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .home-section-head h2 {
+            font-size: 1rem; font-weight: 700; color: var(--text-dark);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .see-more-btn {
+            font-family: 'Rubik', sans-serif;
+            font-size: 0.74rem; font-weight: 600; color: #7c5cff;
+            background: transparent; border: none; cursor: pointer;
+            display: flex; align-items: center; gap: 3px;
+            padding: 4px 6px; border-radius: 8px; transition: background 0.2s;
+        }
+        .see-more-btn:hover { background: rgba(124,92,255,0.08); }
+
+        /* ===== HERO CARD (primary task) ===== */
+        .hero-card {
+            position: relative; overflow: hidden;
+            background: linear-gradient(120deg, #6d4dff 0%, #8b63ff 55%, #9f7afe 100%);
+            border-radius: 26px;
+            padding: 22px 32px;
+            color: #fff;
+            box-shadow: 0 18px 42px rgba(124,92,255,0.34);
+            display: flex; align-items: center; gap: 18px; min-height: 172px;
+        }
+        .hero-card .spark { position: absolute; color: rgba(255,255,255,0.55); z-index: 1; }
+        .hero-body { flex: 1; position: relative; z-index: 2; }
+        .hero-eyebrow { font-size: 0.82rem; font-weight: 600; opacity: 0.92; display: flex; align-items: center; gap: 6px; }
+        .hero-title { font-size: 1.55rem; font-weight: 800; margin: 8px 0 6px; line-height: 1.32; }
+        .hero-subtitle { font-size: 0.86rem; opacity: 0.92; margin-bottom: 16px; }
+        .hero-illu {
+            flex-shrink: 0; position: relative; z-index: 2;
+            width: 168px; height: 150px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .hero-illu .illu-circle {
+            width: 130px; height: 130px; border-radius: 50%;
+            background: radial-gradient(circle at 38% 30%, rgba(255,255,255,0.34), rgba(255,255,255,0.06));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 3.8rem;
+            box-shadow: inset 0 0 32px rgba(255,255,255,0.2);
+        }
+        .hero-illu .illu-float { position: absolute; font-size: 1.5rem; animation: bob 3s ease-in-out infinite; }
+        .hero-cta {
+            font-family: 'Rubik', sans-serif;
+            font-size: 0.9rem; font-weight: 700; color: #7c5cff;
+            background: #fff; border: none; border-radius: 14px;
+            padding: 11px 26px; cursor: pointer;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+            transition: transform 0.2s;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .hero-cta:hover { transform: translateY(-2px); }
+
+        /* ===== STRENGTH CARDS ===== */
+        .strengths-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+        .strength-card {
+            background: #fff; border-radius: 18px;
+            padding: 18px 14px; box-shadow: var(--shadow-sm);
+            text-align: center; transition: transform 0.2s;
+        }
+        .strength-card:hover { transform: translateY(-3px); }
+        .strength-ico {
+            width: 60px; height: 60px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.6rem; margin: 0 auto 12px;
+        }
+        .strength-name { font-size: 0.95rem; font-weight: 700; color: var(--text-dark); }
+        .strength-desc { font-size: 0.74rem; color: var(--text-light); margin-top: 5px; line-height: 1.45; }
+
+        /* ===== IMPROVE CARDS (what helps me grow) ===== */
+        .improve-list { display: flex; flex-direction: column; gap: 10px; }
+        .improve-card {
+            background: #fff; border-radius: 18px;
+            padding: 16px 18px; box-shadow: var(--shadow-sm);
+        }
+        .improve-top { display: flex; align-items: center; gap: 14px; }
+        .improve-ico {
+            width: 56px; height: 56px; border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.7rem; flex-shrink: 0;
+        }
+        .improve-main { flex: 1; }
+        .improve-title { font-size: 0.93rem; font-weight: 700; color: var(--text-dark); margin-bottom: 9px; }
+        .improve-sub { font-size: 0.74rem; color: var(--text-light); margin-top: 2px; }
+        .improve-toggle {
+            font-family: 'Rubik', sans-serif;
+            font-size: 0.74rem; font-weight: 600; color: #2f855a;
+            background: rgba(72,187,120,0.14); border: none;
+            border-radius: 999px; padding: 6px 14px; cursor: pointer;
+            white-space: nowrap; transition: background 0.2s;
+        }
+        .improve-toggle:hover { background: rgba(72,187,120,0.24); }
+        .improve-tip {
+            font-size: 0.78rem; color: var(--text-medium); line-height: 1.5;
+            margin-top: 0; max-height: 0; overflow: hidden;
+            transition: max-height 0.3s ease, margin-top 0.3s ease;
+        }
+        .improve-card.open .improve-tip { max-height: 120px; margin-top: 12px; }
+
+        /* ===== STEPS (goals on home) ===== */
+        .steps-list { display: flex; flex-direction: column; gap: 10px; }
+        .step-card {
+            background: #fff; border-radius: 16px;
+            padding: 14px 18px; box-shadow: var(--shadow-sm);
+            display: flex; align-items: center; gap: 12px;
+        }
+        .step-grip {
+            color: #d4cdec; font-size: 1rem; letter-spacing: -3px;
+            cursor: grab; flex-shrink: 0; user-select: none;
+        }
+        .step-text { flex: 1; font-size: 0.9rem; font-weight: 500; color: var(--text-dark); line-height: 1.45; }
+        .step-check {
+            flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+            border: 2px solid #d9f0e2; background: #fff; color: #48bb78;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem; cursor: pointer; transition: all 0.2s;
+        }
+        .step-check:hover { border-color: #48bb78; }
+        .step-check.done { background: linear-gradient(135deg,#48bb78,#38a169); border-color: #48bb78; color: #fff; }
+
+        /* ===== SUBJECTS SUMMARY (home) ===== */
+        .subjects-summary { display: flex; flex-direction: column; gap: 10px; }
+        .subject-row {
+            background: #fff; border-radius: 16px;
+            padding: 14px 18px; box-shadow: var(--shadow-sm);
+            display: flex; align-items: center; gap: 14px;
+        }
+        .subject-row-ico {
+            width: 42px; height: 42px; border-radius: 13px;
+            display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
+            flex-shrink: 0; order: 3;
+        }
+        .subject-row-name { font-size: 0.92rem; font-weight: 700; color: var(--text-dark); min-width: 70px; order: 1; }
+        .subject-bar-wrap { flex: 1; position: relative; height: 26px; display: flex; align-items: center; order: 2; }
+        .subject-bar-track { position: relative; width: 100%; height: 9px; background: #f0edf7; border-radius: 6px; overflow: hidden; }
+        .subject-bar-fill { position: absolute; right: 0; top: 0; height: 100%; border-radius: 6px; transition: width 0.8s ease; }
+        .subject-bar-pill {
+            position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+            font-size: 0.64rem; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+            background: #fff; box-shadow: 0 1px 5px rgba(0,0,0,0.1); white-space: nowrap;
+        }
+        .subject-bar-pill.level-great { color: #2f855a; }
+        .subject-bar-pill.level-good { color: #3182ce; }
+        .subject-bar-pill.level-building { color: #7c5cff; }
+
+        /* ===== ACCORDION (deep screens) ===== */
+        .accordion { display: flex; flex-direction: column; gap: 10px; }
+        .acc-item { background: #fff; border-radius: 14px; box-shadow: var(--shadow-sm); overflow: hidden; }
+        .acc-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 18px; cursor: pointer; user-select: none;
+        }
+        .acc-head h3 { font-size: 0.9rem; font-weight: 700; color: var(--text-dark); display: flex; align-items: center; gap: 8px; }
+        .acc-arrow { color: #b6abdd; transition: transform 0.25s; font-size: 0.8rem; }
+        .acc-item.open .acc-arrow { transform: rotate(180deg); }
+        .acc-body { max-height: 0; overflow: hidden; transition: max-height 0.32s ease; }
+        .acc-item.open .acc-body { max-height: 600px; }
+        .acc-body-inner { padding: 0 18px 16px; }
+
+        /* ===== BADGES (strengths deep) ===== */
+        .badge-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+        .badge {
+            display: inline-flex; align-items: center; gap: 7px;
+            background: #fff; border-radius: 999px;
+            padding: 9px 16px; box-shadow: var(--shadow-sm); cursor: pointer;
+            font-size: 0.82rem; font-weight: 600; color: var(--text-dark);
+            border: 1.5px solid transparent; transition: all 0.2s;
+        }
+        .badge:hover { border-color: #c4b5fd; transform: translateY(-2px); }
+        .badge.selected { border-color: #7c5cff; background: rgba(124,92,255,0.06); }
+        .badge-explain {
+            font-size: 0.78rem; color: var(--text-medium); line-height: 1.5;
+            background: rgba(124,92,255,0.05); border-radius: 12px;
+            padding: 0 14px; max-height: 0; overflow: hidden;
+            margin-top: 0; transition: all 0.3s ease;
+        }
+        .badge-explain.show { max-height: 90px; padding: 12px 14px; margin-top: 12px; }
+
+        .deep-block { margin-bottom: 22px; }
+        .deep-block-title {
+            font-size: 0.82rem; font-weight: 700; color: #7c5cff;
+            margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+        }
+
+        /* learning profile lists */
+        .lp-card {
+            background: #fff; border-radius: 14px; padding: 16px 18px;
+            box-shadow: var(--shadow-sm); margin-bottom: 12px;
+        }
+        .lp-card h3 { font-size: 0.9rem; font-weight: 700; color: var(--text-dark); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .lp-list { display: flex; flex-direction: column; gap: 8px; }
+        .lp-row { display: flex; align-items: center; gap: 9px; font-size: 0.82rem; color: var(--text-medium); }
+        .lp-row .lp-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+        @media (max-width: 768px) {
+            .strengths-row { grid-template-columns: 1fr; }
+            .greeting { flex-direction: row; }
+            .hero-card { flex-direction: column; text-align: center; }
         }
 
         /* ===== YUBI CHAT ===== */
@@ -713,23 +967,23 @@
             <span>הלמידה שלך, הדרך שלך</span>
         </div>
         <nav class="sidebar-nav">
-            <a class="nav-item active" href="#">
-                <span class="nav-icon">📊</span> הדשבורד שלי
-            </a>
-            <a class="nav-item" href="/learner-mapping/">
-                <span class="nav-icon">🧩</span> מיפוי
+            <a class="nav-item active" data-view="home" href="#">
+                <span class="nav-icon">🏠</span> הדשבורד שלי
             </a>
             <a class="nav-item" href="/learning/">
-                <span class="nav-icon">📚</span> שיעורים
+                <span class="nav-icon">🚀</span> המשימות שלי
             </a>
-            <a class="nav-item" href="#">
-                <span class="nav-icon">🎯</span> יעדים
+            <a class="nav-item" data-view="goals" href="#">
+                <span class="nav-icon">🎯</span> הצעדים שלי
             </a>
-            <a class="nav-item" href="/mentoring/">
-                <span class="nav-icon">💬</span> שיחות מנטורינג
+            <a class="nav-item" data-view="subjects" href="#">
+                <span class="nav-icon">📚</span> המקצועות שלי
             </a>
-            <a class="nav-item" href="#">
-                <span class="nav-icon">🏆</span> הישגים
+            <a class="nav-item" data-view="strengths" href="#">
+                <span class="nav-icon">💪</span> הכוחות שלי
+            </a>
+            <a class="nav-item" data-view="learning" href="#">
+                <span class="nav-icon">🧭</span> איך אני לומד
             </a>
         </nav>
         <div class="sidebar-profile">
@@ -741,22 +995,15 @@
         </div>
     </aside>
 
-    <!-- Mock Selector -->
-    <div class="mock-selector">
-        <label>תלמיד לדוגמה:</label>
-        <select id="mockStudentSelect">
-            <option value="student_001" selected>יובל כהן</option>
-            <option value="student_002">נועה לוי</option>
-            <option value="student_003">אדם ברק</option>
-            <option value="student_004">מיכל דוד</option>
-            <option value="student_005">עומר שלום</option>
-            <option value="student_006">שירה אבירם</option>
-        </select>
-    </div>
-
     <!-- Main Content -->
     <main class="main-content" id="mainContent">
-        <!-- Loaded dynamically -->
+        <!-- Loading state -->
+        <div id="dashboardLoading" style="text-align:center; padding:80px 20px;">
+            <div style="width:48px;height:48px;border:4px solid #efecf8;border-top-color:#7c5cff;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 20px;"></div>
+            <div style="font-size:17px;font-weight:700;color:#7c5cff;">יובי בונה את הדשבורד שלך... 🧠</div>
+            <div style="font-size:14px;color:#9a93b5;margin-top:8px;">מנתח את נתוני המיפוי ומכין תובנות אישיות</div>
+        </div>
+        <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
     </main>
 
     <!-- Real-time update toast -->
@@ -829,271 +1076,520 @@
 
     <script>
         // ================================================
-        // MOCK DATA - Full dashboard data per student
-        // ================================================
-        const STUDENTS_DASHBOARD = {
-            student_001: {
-                name: "יובל כהן",
-                avatar: "י",
-                personal: { age: 13, grade: "ז'", class: "ז'2", school: "בית ספר רבין, נתניה" },
-                subjects: [
-                    {
-                        name: "מתמטיקה",
-                        icon: "🔢",
-                        iconBg: "rgba(124,92,255,0.1)",
-                        progress: 72,
-                        level: "מתקדם יפה",
-                        levelClass: "level-good",
-                        gradient: "linear-gradient(135deg, #7c5cff, #9f7afe)",
-                        description: "עובד על שברים ומספרים שליליים"
-                    },
-                    {
-                        name: "אנגלית",
-                        icon: "🌍",
-                        iconBg: "rgba(72,187,120,0.1)",
-                        progress: 85,
-                        level: "מצוין",
-                        levelClass: "level-great",
-                        gradient: "linear-gradient(135deg, #48bb78, #38a169)",
-                        description: "קריאה והבנה ברמה גבוהה"
-                    },
-                    {
-                        name: "מדעים",
-                        icon: "🔬",
-                        iconBg: "rgba(99,179,237,0.1)",
-                        progress: 58,
-                        level: "בהתפתחות",
-                        levelClass: "level-building",
-                        gradient: "linear-gradient(135deg, #63b3ed, #4299e1)",
-                        description: "נושא נוכחי: חשמל ומגנטיות"
-                    },
-                    {
-                        name: "היסטוריה",
-                        icon: "📜",
-                        iconBg: "rgba(246,173,85,0.1)",
-                        progress: 65,
-                        level: "מתקדם יפה",
-                        levelClass: "level-good",
-                        gradient: "linear-gradient(135deg, #f6ad55, #ed8936)",
-                        description: "תקופת בית שני"
-                    }
-                ],
-                difficulties: [
-                    { subject: "מתמטיקה", text: "פעולות עם שברים - הכפלה וחילוק", status: "עובד על זה", statusClass: "status-working" },
-                    { subject: "מדעים", text: "הבנת מעגלים חשמליים טוריים", status: "חדש", statusClass: "status-new" },
-                    { subject: "מתמטיקה", text: "בעיות מילוליות עם אחוזים", status: "משתפר", statusClass: "status-improving" }
-                ],
-                goals: [
-                    { text: "לסיים את יחידת השברים עד סוף החודש", meta: "מתוך שיחה עם המנטור - 2.6.2026", done: false },
-                    { text: "לתרגל 10 דקות אנגלית כל יום", meta: "יעד אישי - 15.5.2026", done: true },
-                    { text: "להגיש פרויקט מדעים על אנרגיה מתחדשת", meta: "מתוך שיחה עם המנטור - 8.6.2026", done: false },
-                    { text: "לנהל יומן למידה שבועי", meta: "יעד אישי - 1.6.2026", done: true }
-                ],
-                mapping: {
-                    interests: ["טכנולוגיה", "משחקים", "מדע בידור", "רובוטיקה"],
-                    learningStyle: "ויזואלי - אוהב ללמוד דרך סרטונים והדמיות",
-                    preferences: ["עבודה עצמאית", "אתגרים", "משוב מיידי"],
-                    environment: "לומד הכי טוב בסביבה שקטה עם מוזיקה ברקע",
-                    strengths: ["סקרנות גבוהה", "שליטה בטכנולוגיה", "התמדה"]
-                },
-                competencies: [
-                    { icon: "🎯", label: "יוזמה ואחריות", value: 78, descriptor: "לוקח יוזמה בפרויקטים" },
-                    { icon: "🤝", label: "שיתוף פעולה", value: 65, descriptor: "משתף ותורם בקבוצה" },
-                    { icon: "💡", label: "חשיבה ביקורתית", value: 72, descriptor: "שואל שאלות טובות" },
-                    { icon: "🔄", label: "גמישות והסתגלות", value: 60, descriptor: "מתמודד עם שינויים" },
-                    { icon: "🗣️", label: "תקשורת", value: 70, descriptor: "מביע דעה ומקשיב" },
-                    { icon: "🧭", label: "הכוונה עצמית", value: 75, descriptor: "מנהל את הלמידה שלו" }
-                ]
-            },
-            student_002: {
-                name: "נועה לוי",
-                avatar: "נ",
-                personal: { age: 12, grade: "ז'", class: "ז'2", school: "בית ספר רבין, נתניה" },
-                subjects: [
-                    { name: "מתמטיקה", icon: "🔢", iconBg: "rgba(124,92,255,0.1)", progress: 90, level: "מצוין", levelClass: "level-great", gradient: "linear-gradient(135deg, #7c5cff, #9f7afe)", description: "מתקדמת למשוואות" },
-                    { name: "אנגלית", icon: "🌍", iconBg: "rgba(72,187,120,0.1)", progress: 78, level: "מתקדם יפה", levelClass: "level-good", gradient: "linear-gradient(135deg, #48bb78, #38a169)", description: "עובדת על כתיבת חיבורים" },
-                    { name: "אמנות", icon: "🎨", iconBg: "rgba(236,72,153,0.1)", progress: 95, level: "מצוין", levelClass: "level-great", gradient: "linear-gradient(135deg, #ec4899, #be185d)", description: "פרויקט אישי - ציור דיגיטלי" },
-                    { name: "מדעים", icon: "🔬", iconBg: "rgba(99,179,237,0.1)", progress: 70, level: "מתקדם יפה", levelClass: "level-good", gradient: "linear-gradient(135deg, #63b3ed, #4299e1)", description: "גוף האדם" }
-                ],
-                difficulties: [
-                    { subject: "אנגלית", text: "זמנים מורכבים - Past Perfect", status: "עובד על זה", statusClass: "status-working" },
-                    { subject: "מדעים", text: "חישוב מהירות ותאוצה", status: "משתפר", statusClass: "status-improving" }
-                ],
-                goals: [
-                    { text: "להשתתף בתערוכת אמנות של בית הספר", meta: "מתוך שיחה עם המנטור - 5.6.2026", done: false },
-                    { text: "לקרוא ספר אחד באנגלית בחודש", meta: "יעד אישי - 20.5.2026", done: true },
-                    { text: "לעזור לחבר בכיתה במתמטיקה", meta: "מתוך שיחה עם המנטור - 1.6.2026", done: true }
-                ],
-                mapping: {
-                    interests: ["אמנות", "מוזיקה", "כתיבה יצירתית", "עיצוב"],
-                    learningStyle: "יצירתי - אוהבת ללמוד דרך פרויקטים ויצירה",
-                    preferences: ["עבודה בקבוצה", "ביטוי אישי", "למידה חוויתית"],
-                    environment: "אוהבת ללמוד עם חברים, אווירה פתוחה",
-                    strengths: ["יצירתיות", "מוטיבציה גבוהה", "עזרה לאחרים"]
-                },
-                competencies: [
-                    { icon: "🎯", label: "יוזמה ואחריות", value: 88, descriptor: "מובילה פרויקטים" },
-                    { icon: "🤝", label: "שיתוף פעולה", value: 92, descriptor: "מובילה קבוצתית" },
-                    { icon: "💡", label: "חשיבה ביקורתית", value: 75, descriptor: "מחפשת משמעות" },
-                    { icon: "🔄", label: "גמישות והסתגלות", value: 80, descriptor: "פתוחה לשינויים" },
-                    { icon: "🗣️", label: "תקשורת", value: 85, descriptor: "מביעה דעה בבטחון" },
-                    { icon: "🧭", label: "הכוונה עצמית", value: 70, descriptor: "מתחילה לנהל לבד" }
-                ]
-            },
-            student_003: {
-                name: "אדם ברק",
-                avatar: "א",
-                personal: { age: 13, grade: "ז'", class: "ז'2", school: "בית ספר רבין, נתניה" },
-                subjects: [
-                    { name: "מתמטיקה", icon: "🔢", iconBg: "rgba(124,92,255,0.1)", progress: 45, level: "בהתפתחות", levelClass: "level-building", gradient: "linear-gradient(135deg, #7c5cff, #9f7afe)", description: "חזרה על חיבור וחיסור" },
-                    { name: "אנגלית", icon: "🌍", iconBg: "rgba(72,187,120,0.1)", progress: 55, level: "בהתפתחות", levelClass: "level-building", gradient: "linear-gradient(135deg, #48bb78, #38a169)", description: "אוצר מילים בסיסי" },
-                    { name: "ספורט", icon: "⚽", iconBg: "rgba(246,173,85,0.1)", progress: 92, level: "מצוין", levelClass: "level-great", gradient: "linear-gradient(135deg, #f6ad55, #ed8936)", description: "כדורגל ואתלטיקה" },
-                    { name: "מדעים", icon: "🔬", iconBg: "rgba(99,179,237,0.1)", progress: 62, level: "מתקדם יפה", levelClass: "level-good", gradient: "linear-gradient(135deg, #63b3ed, #4299e1)", description: "ניסויים מעשיים" }
-                ],
-                difficulties: [
-                    { subject: "מתמטיקה", text: "לוח הכפל - 7, 8, 9", status: "עובד על זה", statusClass: "status-working" },
-                    { subject: "מתמטיקה", text: "בעיות מילוליות - הבנת הנקרא", status: "עובד על זה", statusClass: "status-working" },
-                    { subject: "אנגלית", text: "כתיבת משפטים שלמים", status: "חדש", statusClass: "status-new" }
-                ],
-                goals: [
-                    { text: "לדעת את לוח הכפל בעל פה", meta: "מתוך שיחה עם המנטור - 3.6.2026", done: false },
-                    { text: "לקרוא 5 דקות כל יום", meta: "יעד אישי - 10.5.2026", done: false },
-                    { text: "להשתתף בתחרות הספורט הבית-ספרית", meta: "מתוך שיחה עם המנטור - 1.6.2026", done: true }
-                ],
-                mapping: {
-                    interests: ["ספורט", "משחקי חוץ", "בעלי חיים", "בנייה"],
-                    learningStyle: "קינסטטי - לומד הכי טוב דרך תנועה ופעולה",
-                    preferences: ["למידה מעשית", "הפסקות תכופות", "תחרויות"],
-                    environment: "צריך מרחב תנועה, קשה לו לשבת זמן רב",
-                    strengths: ["אנרגיה גבוהה", "חברותי", "לא מפחד מאתגרים"]
-                },
-                competencies: [
-                    { icon: "🎯", label: "יוזמה ואחריות", value: 55, descriptor: "לומד לקחת אחריות" },
-                    { icon: "🤝", label: "שיתוף פעולה", value: 80, descriptor: "שחקן קבוצתי מצוין" },
-                    { icon: "💡", label: "חשיבה ביקורתית", value: 50, descriptor: "בתחילת הדרך" },
-                    { icon: "🔄", label: "גמישות והסתגלות", value: 72, descriptor: "מסתגל בקלות" },
-                    { icon: "🗣️", label: "תקשורת", value: 75, descriptor: "חברותי ופתוח" },
-                    { icon: "🧭", label: "הכוונה עצמית", value: 45, descriptor: "צריך הכוונה מבוגר" }
-                ]
-            }
-        };
-
-        // Copy 001 for others with slight variations
-        STUDENTS_DASHBOARD.student_004 = JSON.parse(JSON.stringify(STUDENTS_DASHBOARD.student_002));
-        STUDENTS_DASHBOARD.student_004.name = "מיכל דוד";
-        STUDENTS_DASHBOARD.student_004.avatar = "מ";
-        STUDENTS_DASHBOARD.student_004.personal = { age: 12, grade: "ז'", class: "ז'2", school: "בית ספר רבין, נתניה" };
-
-        STUDENTS_DASHBOARD.student_005 = JSON.parse(JSON.stringify(STUDENTS_DASHBOARD.student_003));
-        STUDENTS_DASHBOARD.student_005.name = "עומר שלום";
-        STUDENTS_DASHBOARD.student_005.avatar = "ע";
-        STUDENTS_DASHBOARD.student_005.personal = { age: 13, grade: "ז'", class: "ז'2", school: "בית ספר רבין, נתניה" };
-
-        STUDENTS_DASHBOARD.student_006 = JSON.parse(JSON.stringify(STUDENTS_DASHBOARD.student_001));
-        STUDENTS_DASHBOARD.student_006.name = "שירה אבירם";
-        STUDENTS_DASHBOARD.student_006.avatar = "ש";
-        STUDENTS_DASHBOARD.student_006.personal = { age: 12, grade: "ז'", class: "ז'2", school: "בית ספר רבין, נתניה" };
-
-        // ================================================
-        // RENDER
+        // LOAD DASHBOARD FROM MAPPING DATA (via AI)
         // ================================================
         let currentData = null;
-        function renderDashboard(studentId) {
-            const data = STUDENTS_DASHBOARD[studentId];
-            if (!data) return;
-            currentData = data;
+
+        async function loadDashboard() {
+            const stored = localStorage.getItem('mapping_results');
+            if (!stored) {
+                document.getElementById('dashboardLoading').innerHTML = `
+                    <div style="font-size:48px;margin-bottom:16px;">📋</div>
+                    <div style="font-size:18px;font-weight:700;color:#3a3360;margin-bottom:12px;">עדיין אין נתוני מיפוי</div>
+                    <div style="font-size:14px;color:#9a93b5;margin-bottom:24px;">כדי לראות את הדשבורד האישי, צריך קודם למלא את השאלון</div>
+                    <a href="/learner-mapping/" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c5cff,#9f7afe);color:#fff;border-radius:14px;font-weight:700;text-decoration:none;">למילוי השאלון →</a>
+                `;
+                return;
+            }
+
+            const mappingData = JSON.parse(stored);
+            const name = mappingData.student_name || 'תלמיד/ה';
+
+            // Update sidebar with real name
+            document.getElementById('sidebarAvatar').textContent = name[0];
+            document.getElementById('sidebarName').textContent = name;
+
+            // Check cache - use stored dashboard if mapping data hasn't changed
+            const cacheKey = 'dashboard_cache';
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                try {
+                    const cacheObj = JSON.parse(cached);
+                    if (cacheObj.sourceHash === stored) {
+                        currentData = cacheObj.data;
+                        renderDashboard(cacheObj.data);
+                        return;
+                    }
+                } catch (e) { /* cache corrupt, regenerate */ }
+            }
+
+            try {
+                const resp = await fetch('/api/generate-dashboard', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ student_name: name, scores: mappingData.scores })
+                });
+
+                if (!resp.ok) throw new Error('API error');
+                const data = await resp.json();
+                currentData = data;
+
+                // Cache the result
+                localStorage.setItem(cacheKey, JSON.stringify({ sourceHash: stored, data }));
+
+                renderDashboard(data);
+            } catch (err) {
+                console.error('Dashboard generation error:', err);
+                document.getElementById('dashboardLoading').innerHTML = `
+                    <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
+                    <div style="font-size:18px;font-weight:700;color:#3a3360;">שגיאה בטעינת הדשבורד</div>
+                    <div style="font-size:14px;color:#9a93b5;margin-top:8px;">נסה לרענן את הדף</div>
+                `;
+            }
+        }
+
+        // ================================================
+        // HELPERS for derived content
+        // ================================================
+        const MASCOT_SVG = `<svg viewBox="0 0 44 44" width="36" height="36" fill="none">
+            <rect x="9" y="15" width="26" height="21" rx="6" fill="#fff"/>
+            <rect x="15" y="21" width="5" height="5" rx="2" fill="#7c5cff"/>
+            <rect x="24" y="21" width="5" height="5" rx="2" fill="#7c5cff"/>
+            <path d="M18 30 Q22 33 26 30" stroke="#22d3ee" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            <rect x="17" y="8" width="10" height="8" rx="3" fill="#fff" fill-opacity="0.9"/>
+            <rect x="21" y="3.5" width="2.4" height="5" rx="1.2" fill="#c4b5fd"/>
+            <circle cx="22.2" cy="2.6" r="2.6" fill="#22d3ee"/>
+            <rect x="4" y="20" width="5" height="11" rx="2.5" fill="#fff" fill-opacity="0.9"/>
+            <rect x="35" y="20" width="5" height="11" rx="2.5" fill="#fff" fill-opacity="0.9"/>
+        </svg>`;
+
+        const STRENGTH_ICONS = {
+            'סקרנות': '🔬', 'התמדה': '🎯', 'שיתוף פעולה': '🤝', 'יצירתיות': '🎨',
+            'חשיבה': '💡', 'תקשורת': '🗣️', 'יוזמה': '🚀', 'טכנולוגיה': '💻',
+            'אחריות': '🛡️', 'דמיון': '✨', 'מנהיגות': '🌟', 'ריכוז': '🎧'
+        };
+        function strengthIcon(name) {
+            for (const key in STRENGTH_ICONS) if (name.includes(key)) return STRENGTH_ICONS[key];
+            if (name.includes('שתף') || name.includes('עזר') || name.includes('ביחד')) return '🤝';
+            if (name.includes('להתחיל') || name.includes('לסיים') || name.includes('משימ')) return '🎯';
+            if (name.includes('לנסות') || name.includes('לגלות') || name.includes('סקרן')) return '🔬';
+            if (name.includes('רצון') || name.includes('מוטיב')) return '🌟';
+            return '⭐';
+        }
+        function strengthLine(name) {
+            if (name.includes('סקרנות') || name.includes('לגלות') || name.includes('לנסות')) return 'אוהב לגלות דברים חדשים';
+            if (name.includes('התמדה')) return 'ממשיך גם כשקצת מאתגר';
+            if (name.includes('שתף') || name.includes('עזר') || name.includes('ביחד')) return 'קל לך לעבוד ולשתף עם אחרים';
+            if (name.includes('להתחיל') || name.includes('לסיים') || name.includes('משימ')) return 'מתחיל משימות ומסיים אותן';
+            if (name.includes('יצירת')) return 'חושב על רעיונות מקוריים';
+            if (name.includes('טכנולוג')) return 'מסתדר מצוין עם כלים דיגיטליים';
+            if (name.includes('תקשורת')) return 'יודע להביע את עצמך';
+            if (name.includes('ריכוז')) return 'מצליח להתמקד במשימה';
+            if (name.includes('רצון') || name.includes('מוטיב')) return 'יש לך רצון לנסות ולהתקדם';
+            return 'זה אחד הכוחות הגדולים שלך';
+        }
+        // Positive reframing of a difficulty into a growth title + supportive how-to
+        function improveTitle(d) {
+            const t = (d.text || '').toLowerCase();
+            if (t.includes('ריכוז')) return 'לשמור על ריכוז לאורך זמן';
+            if (t.includes('טכנולוג') || t.includes('דיגיטל')) return 'להרגיש בטוח יותר עם כלים דיגיטליים';
+            if (t.includes('ארגון') || t.includes('תכנון')) return 'לארגן את המידע בצורה נוחה';
+            return d.text;
+        }
+        function improveHow(d) {
+            const t = (d.text || '').toLowerCase();
+            if (t.includes('ריכוז')) return 'נעבוד ביחידות קצרות עם הפסקות קטנות בין משימה למשימה.';
+            if (t.includes('טכנולוג') || t.includes('דיגיטל')) return 'נתחיל ממשימות קצרות עם כלי אחד בכל פעם, בלי לחץ.';
+            if (t.includes('ארגון') || t.includes('תכנון')) return 'נשתמש ברשימה קצרה של צעדים לפני שמתחילים.';
+            return 'נתקדם צעד אחד קטן בכל פעם, ויובי איתך בדרך.';
+        }
+        function avgProgress(subjects) {
+            if (!subjects.length) return 0;
+            return Math.round(subjects.reduce((a, s) => a + (s.progress || 0), 0) / subjects.length);
+        }
+        function topStrengthLabel(data) {
+            const comps = data.competencies || [];
+            if (comps.length) return [...comps].sort((a, b) => b.value - a.value)[0].label;
+            return (data.mapping && data.mapping.strengths && data.mapping.strengths[0]) || 'סקרנות';
+        }
+        // Hero illustration + subtitle derived from the focus subject
+        function heroSubtitle(name) {
+            if (name.includes('מדע')) return 'חקר קצר על צמחים והסביבה';
+            if (name.includes('מתמט') || name.includes('חשבון')) return 'משחק מספרים קצר וכיפי';
+            if (name.includes('עבר') || name.includes('שפה')) return 'סיפור קצר וכתיבה יצירתית';
+            if (name.includes('מחשב') || name.includes('טכנולוג')) return 'פרויקט דיגיטלי קטן';
+            if (name.includes('אנגל')) return 'משחק מילים קצר באנגלית';
+            return 'משימה קצרה שמתאימה בדיוק לך';
+        }
+        function heroIllu(name) {
+            if (name.includes('מדע')) return '🔬';
+            if (name.includes('מתמט') || name.includes('חשבון')) return '🔢';
+            if (name.includes('עבר') || name.includes('שפה')) return '📖';
+            if (name.includes('מחשב') || name.includes('טכנולוג')) return '💻';
+            if (name.includes('אנגל')) return '🔤';
+            return '🚀';
+        }
+        function heroFloats(name) {
+            if (name.includes('מדע')) return ['🌱', '🦋', '✨'];
+            if (name.includes('מתמט') || name.includes('חשבון')) return ['➕', '⭐', '✨'];
+            if (name.includes('עבר') || name.includes('שפה')) return ['✏️', '💬', '✨'];
+            return ['⭐', '✨', '💜'];
+        }
+        // Circular icon background colors for strength cards (rotating soft tones)
+        const STRENGTH_BG = ['rgba(246,173,85,0.20)', 'rgba(72,187,120,0.18)', 'rgba(124,92,255,0.18)'];
+        // Illustrated icon + soft circle color for "what helps me grow" cards
+        function improveVisual(d) {
+            const t = (d.text || '').toLowerCase();
+            if (t.includes('ריכוז')) return { emoji: '⏱️', bg: 'rgba(72,187,120,0.16)' };
+            if (t.includes('טכנולוג') || t.includes('דיגיטל')) return { emoji: '💻', bg: 'rgba(99,179,237,0.18)' };
+            if (t.includes('ארגון') || t.includes('תכנון')) return { emoji: '🗂️', bg: 'rgba(124,92,255,0.16)' };
+            return { emoji: '🌱', bg: 'rgba(246,173,85,0.18)' };
+        }
+
+        // ================================================
+        // RENDER DASHBOARD (home + deep views)
+        // ================================================
+        function renderDashboard(data) {
             resetChat();
-
-            // Update sidebar
-            document.getElementById('sidebarAvatar').textContent = data.avatar;
-            document.getElementById('sidebarName').textContent = data.name;
-
-            const p = data.personal || {};
-            const personalChips = p.age ? `
-                        <div class="personal-chips">
-                            <span class="personal-chip">🎂 גיל ${p.age}</span>
-                            <span class="personal-chip">🏫 כיתה ${p.class}</span>
-                            <span class="personal-chip">📍 ${p.school}</span>
-                        </div>` : '';
 
             const main = document.getElementById('mainContent');
             main.innerHTML = `
-                <!-- Header -->
-                <div class="page-header fade-in">
-                    <div class="header-row">
-                        <div class="header-mascot">
-                            <svg viewBox="0 0 44 44" width="36" height="36" fill="none">
-                                <rect x="9" y="15" width="26" height="21" rx="6" fill="#fff"/>
-                                <rect x="15" y="21" width="5" height="5" rx="2" fill="#7c5cff"/>
-                                <rect x="24" y="21" width="5" height="5" rx="2" fill="#7c5cff"/>
-                                <path d="M18 30 Q22 33 26 30" stroke="#22d3ee" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-                                <rect x="17" y="8" width="10" height="8" rx="3" fill="#fff" fill-opacity="0.9"/>
-                                <rect x="21" y="3.5" width="2.4" height="5" rx="1.2" fill="#c4b5fd"/>
-                                <circle cx="22.2" cy="2.6" r="2.6" fill="#22d3ee"/>
-                                <rect x="4" y="20" width="5" height="11" rx="2.5" fill="#fff" fill-opacity="0.9"/>
-                                <rect x="35" y="20" width="5" height="11" rx="2.5" fill="#fff" fill-opacity="0.9"/>
-                            </svg>
-                        </div>
-                        <div class="header-text">
-                            <h1>שלום, ${data.name}! 👋</h1>
-                            <p>הנה סיכום ההתקדמות שלך</p>
-                            ${personalChips}
-                        </div>
-                    </div>
-                    <div class="last-update"><span class="live-dot"></span> הנתונים מתעדכנים בזמן אמת · עודכן ${new Date().toLocaleDateString('he-IL')}</div>
-                </div>
-
-                <!-- Subjects Progress - full width -->
-                <div class="section-title"><span class="emoji">📚</span> המקצועות שלי</div>
-                <div class="subjects-grid" id="subjectsGrid"></div>
-
-                <!-- Two column: Difficulties + Goals side by side -->
-                <div class="dashboard-grid">
-                    <div>
-                        <div class="section-title"><span class="emoji">💪</span> נקודות לחיזוק</div>
-                        <div class="difficulties-list" id="difficultiesList"></div>
-                    </div>
-                    <div>
-                        <div class="section-title"><span class="emoji">🎯</span> היעדים שלי</div>
-                        <div class="goals-list" id="goalsList"></div>
-                    </div>
-                </div>
-
-                <!-- Competencies - full width -->
-                <div class="section-title"><span class="emoji">🏅</span> כשירויות ופעלנות</div>
-                <div class="competencies-grid" id="competenciesGrid"></div>
-
-                <!-- Profile / Mapping -->
-                <div class="section-title"><span class="emoji">🧩</span> מה שגילינו עליך</div>
-                <div class="profile-grid" id="profileGrid"></div>
+                <section class="view active" id="view-home"></section>
+                <section class="view" id="view-subjects"></section>
+                <section class="view" id="view-goals"></section>
+                <section class="view" id="view-strengths"></section>
+                <section class="view" id="view-learning"></section>
             `;
 
-            renderSubjects(data.subjects);
-            renderDifficulties(data.difficulties);
-            renderGoals(data.goals);
-            renderMapping(data.mapping);
-            renderCompetencies(data.competencies);
+            renderHome(data);
+            renderSubjectsView(data);
+            renderGoalsView(data);
+            renderStrengthsView(data);
+            renderLearningView(data);
+
+            setupNav();
         }
 
-        function renderSubjects(subjects) {
-            const grid = document.getElementById('subjectsGrid');
-            grid.innerHTML = subjects.map((s, i) => `
-                <div class="subject-card fade-in" style="animation-delay:${i * 0.06}s">
-                    <div class="subject-card-header">
-                        <div class="subject-card-title">
-                            <div class="subject-icon" style="background: ${s.iconBg}">${s.icon}</div>
-                            <span class="subject-name">${s.name}</span>
-                        </div>
-                        <span class="subject-level ${s.levelClass}">${s.level}</span>
+        // -------- HOME --------
+        function renderHome(data) {
+            const subjects = data.subjects || [];
+            const strengths = (data.mapping && data.mapping.strengths) || [];
+            const difficulties = data.difficulties || [];
+            const goals = data.goals || [];
+            const week = avgProgress(subjects);
+            const top = topStrengthLabel(data);
+            const lowSubject = [...subjects].sort((a, b) => (a.progress || 0) - (b.progress || 0))[0];
+            const heroSubject = lowSubject ? lowSubject.name : 'משימה קצרה';
+
+            const home = document.getElementById('view-home');
+            home.innerHTML = `
+                <div class="greeting fade-in">
+                    <div class="greeting-text">
+                        <h1>שלום ${data.name}! 👋</h1>
+                        <p>היום נמשיך בדיוק מאיפה שעצרת</p>
                     </div>
-                    <div class="subject-progress-bar">
-                        <div class="subject-progress-fill" style="width: 0%; background: ${s.gradient}" data-target="${s.progress}"></div>
-                    </div>
-                    <div class="subject-progress-label">${s.description}</div>
+                    <img class="greeting-robot" src="/shared/yubi-robot.png" alt="יובי">
                 </div>
-            `).join('');
-            animateBars(grid.querySelectorAll('.subject-progress-fill'));
+
+                <div class="home-section">
+                    <div class="hero-card fade-in">
+                        <div class="hero-body">
+                            <div class="hero-eyebrow">המשימה שלי להיום</div>
+                            <div class="hero-title">לתרגל 15 דקות ב${heroSubject} דרך משימה קצרה וכיפית</div>
+                            <div class="hero-subtitle">${heroSubtitle(heroSubject)}</div>
+                            <a class="hero-cta" href="/learning/">מתחילים ←</a>
+                        </div>
+                        <div class="hero-illu">
+                            <div class="illu-circle">${heroIllu(heroSubject)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="home-grid">
+                    <div class="panel fade-in">
+                        <div class="home-section-head">
+                            <h2>מה יעזור לי להתקדם</h2>
+                        </div>
+                        <div class="improve-list">
+                            ${difficulties.slice(0, 2).map(d => {
+                                const v = improveVisual(d);
+                                return `
+                                <div class="improve-card">
+                                    <div class="improve-top">
+                                        <div class="improve-main">
+                                            <div class="improve-title">${improveTitle(d)}</div>
+                                            <button class="improve-toggle">איך עושים את זה?</button>
+                                        </div>
+                                        <div class="improve-ico" style="background:${v.bg}">${v.emoji}</div>
+                                    </div>
+                                    <div class="improve-tip">${improveHow(d)}</div>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    <div class="panel fade-in">
+                        <div class="home-section-head">
+                            <h2>הכוחות שלי</h2>
+                            <button class="see-more-btn" data-goto="strengths">לכל הכוחות שלי ←</button>
+                        </div>
+                        <div class="strengths-row">
+                            ${strengths.slice(0, 3).map((s, i) => `
+                                <div class="strength-card">
+                                    <div class="strength-ico" style="background:${STRENGTH_BG[i % STRENGTH_BG.length]}">${strengthIcon(s)}</div>
+                                    <div class="strength-name">${s}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="panel fade-in">
+                        <div class="home-section-head">
+                            <h2>הצעדים שלי</h2>
+                            <button class="see-more-btn" data-goto="goals">לכל היעדים שלי ←</button>
+                        </div>
+                        <div class="steps-list">
+                            <div class="step-card">
+                                <span class="step-grip">⠿⠿</span>
+                                <span class="step-text">${(goals[0] && goals[0].text) || 'להשלים 3 משימות קצרות'}</span>
+                                <span class="step-check" role="button" tabindex="0">✓</span>
+                            </div>
+                            <div class="step-card">
+                                <span class="step-grip">⠿⠿</span>
+                                <span class="step-text">${(goals[1] && goals[1].text) || 'לכתוב בסוף כל משימה מה עזר לי'}</span>
+                                <span class="step-check" role="button" tabindex="0">✓</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel fade-in">
+                        <div class="home-section-head">
+                            <h2>המקצועות שלי</h2>
+                            <button class="see-more-btn" data-goto="subjects">לכל המקצועות ←</button>
+                        </div>
+                        <div class="subjects-summary">
+                            ${subjects.slice(0, 3).map(s => `
+                                <div class="subject-row">
+                                    <div class="subject-row-name">${s.name}</div>
+                                    <div class="subject-bar-wrap">
+                                        <div class="subject-bar-track">
+                                            <div class="subject-bar-fill" style="width:0%; background:${s.gradient}" data-target="${s.progress}"></div>
+                                        </div>
+                                        <span class="subject-bar-pill ${s.levelClass}">${s.level}</span>
+                                    </div>
+                                    <div class="subject-row-ico" style="background:${s.iconBg}">${s.icon}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // wire "show more" buttons
+            home.querySelectorAll('[data-goto]').forEach(b => {
+                b.addEventListener('click', () => switchView(b.dataset.goto));
+            });
+            // wire improve expanders
+            home.querySelectorAll('.improve-toggle').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const card = btn.closest('.improve-card');
+                    card.classList.toggle('open');
+                    btn.textContent = card.classList.contains('open') ? 'הבנתי 👍' : 'איך עושים את זה?';
+                });
+            });
+            // wire step check circles
+            home.querySelectorAll('.step-check').forEach(chk => {
+                const toggle = () => {
+                    chk.classList.toggle('done');
+                    if (chk.classList.contains('done')) {
+                        showLiveToast('כל הכבוד! סימנת צעד שהושלם 🎉', 'כל צעד קטן מקרב אותך למטרה', '✅');
+                    }
+                };
+                chk.addEventListener('click', toggle);
+                chk.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+            });
+            animateBars(home.querySelectorAll('.subject-bar-fill'));
         }
+
+
+        // -------- DEEP: SUBJECTS --------
+        function renderSubjectsView(data) {
+            const subjects = data.subjects || [];
+            const el = document.getElementById('view-subjects');
+            el.innerHTML = `
+                <button class="view-back" data-goto="home">→ חזרה לדשבורד</button>
+                <div class="view-head"><h1>📚 המקצועות שלי</h1><p>איפה אני מתקדם ומה יעזור לי בכל מקצוע</p></div>
+                <div class="subjects-grid">
+                    ${subjects.map((s, i) => `
+                        <div class="subject-card fade-in" style="animation-delay:${i * 0.05}s">
+                            <div class="subject-card-header">
+                                <div class="subject-card-title">
+                                    <div class="subject-icon" style="background:${s.iconBg}">${s.icon}</div>
+                                    <span class="subject-name">${s.name}</span>
+                                </div>
+                                <span class="subject-level ${s.levelClass}">${s.level}</span>
+                            </div>
+                            <div class="subject-progress-bar">
+                                <div class="subject-progress-fill" style="width:0%; background:${s.gradient}" data-target="${s.progress}"></div>
+                            </div>
+                            <div style="margin-top:10px; font-size:0.76rem; color:#38a169;">✅ מה הולך טוב: ${s.description}</div>
+                            <div style="margin-top:4px; font-size:0.76rem; color:#c05621;">🌱 מה יעזור: להמשיך עם משימות קצרות וכיפיות</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            el.querySelector('[data-goto]').addEventListener('click', () => switchView('home'));
+            animateBars(el.querySelectorAll('.subject-progress-fill'));
+        }
+
+        // -------- DEEP: GOALS (accordion) --------
+        function renderGoalsView(data) {
+            const goals = data.goals || [];
+            const active = goals.filter(g => !g.done);
+            const done = goals.filter(g => g.done);
+            const week = active.slice(0, 2);
+            const personal = active.slice(2);
+
+            const goalRow = (g, idx) => `
+                <div class="goal-item fade-in">
+                    <div class="goal-checkbox ${g.done ? 'done' : ''}" data-gi="${idx}"></div>
+                    <div class="goal-content">
+                        <div class="goal-text" style="${g.done ? 'text-decoration:line-through;opacity:0.6' : ''}">${g.text}</div>
+                        <div class="goal-meta">${g.meta || ''}</div>
+                    </div>
+                </div>`;
+
+            const accItem = (title, emoji, items, open) => `
+                <div class="acc-item ${open ? 'open' : ''}">
+                    <div class="acc-head"><h3>${emoji} ${title} <span style="color:#b6abdd;font-weight:500">(${items.length})</span></h3><span class="acc-arrow">▼</span></div>
+                    <div class="acc-body"><div class="acc-body-inner">
+                        <div class="goals-list">${items.length ? items.map((g) => goalRow(g, goals.indexOf(g))).join('') : '<div style="font-size:0.8rem;color:#9a93b5;padding:6px 0;">אין כרגע פריטים כאן</div>'}</div>
+                    </div></div>
+                </div>`;
+
+            const el = document.getElementById('view-goals');
+            el.innerHTML = `
+                <button class="view-back" data-goto="home">→ חזרה לדשבורד</button>
+                <div class="view-head"><h1>🎯 הצעדים שלי</h1><p>היעדים שלי — צעד אחרי צעד</p></div>
+                <div class="accordion">
+                    ${accItem('יעדים לשבוע הקרוב', '📅', week, true)}
+                    ${accItem('יעדים אישיים', '🌟', personal, false)}
+                    ${accItem('יעדים שהושלמו', '✅', done, false)}
+                </div>
+            `;
+            el.querySelector('[data-goto]').addEventListener('click', () => switchView('home'));
+            // accordion toggles
+            el.querySelectorAll('.acc-head').forEach(h => {
+                h.addEventListener('click', () => h.parentElement.classList.toggle('open'));
+            });
+            // goal checkbox toggles
+            el.querySelectorAll('.goal-checkbox').forEach(cb => {
+                cb.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    cb.classList.toggle('done');
+                    const t = cb.nextElementSibling.querySelector('.goal-text');
+                    const isDone = cb.classList.contains('done');
+                    t.style.textDecoration = isDone ? 'line-through' : 'none';
+                    t.style.opacity = isDone ? '0.6' : '1';
+                    if (isDone) showLiveToast('כל הכבוד! סימנת צעד שהושלם ✅', 'יובי עדכן את ההתקדמות שלך', '🎉');
+                });
+            });
+        }
+
+        // -------- DEEP: STRENGTHS --------
+        function renderStrengthsView(data) {
+            const m = data.mapping || {};
+            const strengths = m.strengths || [];
+            const interests = m.interests || [];
+            const prefs = m.preferences || [];
+            const comps = data.competencies || [];
+
+            const badge = (label, explain) => `<button class="badge" data-explain="${explain.replace(/"/g, '&quot;')}">${label}</button>`;
+
+            const el = document.getElementById('view-strengths');
+            el.innerHTML = `
+                <button class="view-back" data-goto="home">→ חזרה לדשבורד</button>
+                <div class="view-head"><h1>💪 הכוחות שלי</h1><p>כל מה שאני טוב בו — לחיצה על כל אחד מסבירה למה</p></div>
+
+                <div class="deep-block">
+                    <div class="deep-block-title">⭐ החוזקות שלי</div>
+                    <div class="badge-grid">${strengths.map(s => badge(`${strengthIcon(s)} ${s}`, strengthLine(s))).join('')}</div>
+                </div>
+                <div class="deep-block">
+                    <div class="deep-block-title">🏅 הכישורים שלי</div>
+                    <div class="badge-grid">${comps.map(c => badge(`${c.icon} ${c.label}`, c.descriptor || '')).join('')}</div>
+                </div>
+                <div class="deep-block">
+                    <div class="deep-block-title">💜 תחומי העניין שלי</div>
+                    <div class="badge-grid">${interests.map(i => badge(`✨ ${i}`, 'משהו שאתה אוהב — נשלב אותו בלמידה')).join('')}</div>
+                </div>
+                ${prefs.length ? `<div class="deep-block">
+                    <div class="deep-block-title">🧩 ההעדפות שלי</div>
+                    <div class="badge-grid">${prefs.map(p => badge(`👍 ${p}`, 'ככה נוח לך יותר ללמוד')).join('')}</div>
+                </div>` : ''}
+
+                <div class="badge-explain" id="strengthExplain"></div>
+            `;
+            el.querySelector('[data-goto]').addEventListener('click', () => switchView('home'));
+            const explainEl = el.querySelector('#strengthExplain');
+            el.querySelectorAll('.badge').forEach(b => {
+                b.addEventListener('click', () => {
+                    el.querySelectorAll('.badge').forEach(x => x.classList.remove('selected'));
+                    b.classList.add('selected');
+                    explainEl.textContent = b.dataset.explain;
+                    explainEl.classList.add('show');
+                });
+            });
+        }
+
+        // -------- DEEP: LEARNING PROFILE --------
+        function renderLearningView(data) {
+            const m = data.mapping || {};
+            const prefs = m.preferences || [];
+            const el = document.getElementById('view-learning');
+            const helps = prefs.length ? prefs : ['משימות קצרות', 'דוגמאות מוחשיות', 'עבודה בקצב אישי'];
+            el.innerHTML = `
+                <button class="view-back" data-goto="home">→ חזרה לדשבורד</button>
+                <div class="view-head"><h1>🧭 איך אני לומד</h1><p>הדרך שמתאימה לי ללמוד הכי טוב</p></div>
+
+                <div class="lp-card fade-in">
+                    <h3>🎨 סגנון הלמידה שלי</h3>
+                    <div style="font-size:0.85rem;color:var(--text-medium);line-height:1.5">${m.learningStyle || 'למידה בקצב אישי עם הרבה דוגמאות'}</div>
+                </div>
+                <div class="lp-card fade-in">
+                    <h3>✅ מה עוזר לי ללמוד</h3>
+                    <div class="lp-list">${helps.map(h => `<div class="lp-row"><span class="lp-dot" style="background:#48bb78"></span> ${h}</div>`).join('')}</div>
+                </div>
+                <div class="lp-card fade-in">
+                    <h3>🌧️ מה פחות עוזר לי</h3>
+                    <div class="lp-list">
+                        <div class="lp-row"><span class="lp-dot" style="background:#f6ad55"></span> משימות ארוכות מדי</div>
+                        <div class="lp-row"><span class="lp-dot" style="background:#f6ad55"></span> הרבה טקסט בבת אחת</div>
+                    </div>
+                </div>
+                <div class="lp-card fade-in">
+                    <h3>🌟 הסביבה שמתאימה לי</h3>
+                    <div style="font-size:0.85rem;color:var(--text-medium);line-height:1.5">${m.environment || 'סביבה שקטה ונוחה'}</div>
+                </div>
+            `;
+            el.querySelector('[data-goto]').addEventListener('click', () => switchView('home'));
+        }
+
+        // ================================================
+        // VIEW SWITCHING + NAV
+        // ================================================
+        function switchView(view) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            const target = document.getElementById('view-' + view);
+            if (target) target.classList.add('active');
+            document.querySelectorAll('.nav-item[data-view]').forEach(n => {
+                n.classList.toggle('active', n.dataset.view === view);
+            });
+            const mc = document.getElementById('mainContent');
+            if (mc) mc.scrollTo ? mc.scrollTo(0, 0) : (mc.scrollTop = 0);
+            window.scrollTo(0, 0);
+        }
+
+        function setupNav() {
+            document.querySelectorAll('.nav-item[data-view]').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    switchView(item.dataset.view);
+                });
+            });
+        }
+
+
 
         function animateBars(els) {
             requestAnimationFrame(() => {
@@ -1101,121 +1597,6 @@
                     els.forEach(el => { el.style.width = el.dataset.target + '%'; });
                 }, 120);
             });
-        }
-
-        function renderDifficulties(difficulties) {
-            const list = document.getElementById('difficultiesList');
-            list.innerHTML = difficulties.map(d => `
-                <div class="difficulty-item fade-in">
-                    <span class="difficulty-subject-tag">${d.subject}</span>
-                    <span class="difficulty-text">${d.text}</span>
-                    <span class="difficulty-status ${d.statusClass}">${d.status}</span>
-                </div>
-            `).join('');
-        }
-
-        function renderGoals(goals) {
-            const list = document.getElementById('goalsList');
-            list.innerHTML = goals.map((g, i) => `
-                <div class="goal-item fade-in">
-                    <div class="goal-checkbox ${g.done ? 'done' : ''}" data-index="${i}"></div>
-                    <div class="goal-content">
-                        <div class="goal-text" style="${g.done ? 'text-decoration: line-through; opacity: 0.6' : ''}">${g.text}</div>
-                        <div class="goal-meta">${g.meta}</div>
-                    </div>
-                </div>
-            `).join('') + `
-                <button class="add-goal-btn" id="addGoalBtn">➕ הוסף יעד אישי</button>
-            `;
-
-            // Toggle goals
-            list.querySelectorAll('.goal-checkbox').forEach(cb => {
-                cb.addEventListener('click', () => {
-                    cb.classList.toggle('done');
-                    const textEl = cb.nextElementSibling.querySelector('.goal-text');
-                    const done = cb.classList.contains('done');
-                    if (done) {
-                        textEl.style.textDecoration = 'line-through';
-                        textEl.style.opacity = '0.6';
-                        showLiveToast('כל הכבוד! סימנת יעד כהושם ✅', 'יובי עדכן את ההתקדמות שלך', '🎉');
-                    } else {
-                        textEl.style.textDecoration = 'none';
-                        textEl.style.opacity = '1';
-                    }
-                });
-            });
-
-            // Add a personal goal
-            const addBtn = document.getElementById('addGoalBtn');
-            if (addBtn) {
-                addBtn.addEventListener('click', () => {
-                    const text = prompt('מה היעד האישי החדש שלך?');
-                    if (text && text.trim()) {
-                        const today = new Date().toLocaleDateString('he-IL');
-                        const item = document.createElement('div');
-                        item.className = 'goal-item fade-in';
-                        item.innerHTML = `
-                            <div class="goal-checkbox"></div>
-                            <div class="goal-content">
-                                <div class="goal-text">${text.trim()}</div>
-                                <div class="goal-meta">יעד אישי - ${today}</div>
-                            </div>`;
-                        list.insertBefore(item, addBtn);
-                        item.querySelector('.goal-checkbox').addEventListener('click', (ev) => {
-                            ev.currentTarget.classList.toggle('done');
-                            const t = ev.currentTarget.nextElementSibling.querySelector('.goal-text');
-                            const done = ev.currentTarget.classList.contains('done');
-                            t.style.textDecoration = done ? 'line-through' : 'none';
-                            t.style.opacity = done ? '0.6' : '1';
-                        });
-                        showLiveToast('יעד חדש נוסף לכם! 🎯', 'היעד נשמר ומסונכרן למנטור שלך', '➕');
-                    }
-                });
-            }
-        }
-
-        function renderMapping(mapping) {
-            const grid = document.getElementById('profileGrid');
-            grid.innerHTML = `
-                <div class="profile-card fade-in">
-                    <div class="profile-card-label">תחומי עניין</div>
-                    <div class="profile-tags">${mapping.interests.map(i => `<span class="profile-tag">${i}</span>`).join('')}</div>
-                </div>
-                <div class="profile-card fade-in">
-                    <div class="profile-card-label">סגנון למידה</div>
-                    <div class="profile-value">${mapping.learningStyle}</div>
-                </div>
-                <div class="profile-card fade-in">
-                    <div class="profile-card-label">העדפות</div>
-                    <div class="profile-tags">${mapping.preferences.map(p => `<span class="profile-tag">${p}</span>`).join('')}</div>
-                </div>
-                <div class="profile-card fade-in">
-                    <div class="profile-card-label">סביבת למידה</div>
-                    <div class="profile-value">${mapping.environment}</div>
-                </div>
-                <div class="profile-card fade-in">
-                    <div class="profile-card-label">חוזקות</div>
-                    <div class="profile-tags">${mapping.strengths.map(s => `<span class="profile-tag">${s}</span>`).join('')}</div>
-                </div>
-            `;
-        }
-
-        function renderCompetencies(competencies) {
-            const grid = document.getElementById('competenciesGrid');
-            grid.innerHTML = competencies.map((c, i) => {
-                const color = c.value >= 75 ? '#48bb78' : c.value >= 55 ? '#7c5cff' : '#f6ad55';
-                return `
-                    <div class="competency-card fade-in" style="animation-delay:${i * 0.05}s">
-                        <div class="competency-icon">${c.icon}</div>
-                        <div class="competency-label">${c.label}</div>
-                        <div class="competency-bar-track">
-                            <div class="competency-bar-fill" style="width: 0%; background: ${color}" data-target="${c.value}"></div>
-                        </div>
-                        <div class="competency-descriptor">${c.descriptor}</div>
-                    </div>
-                `;
-            }).join('');
-            animateBars(grid.querySelectorAll('.competency-bar-fill'));
         }
 
         // ================================================
@@ -1414,17 +1795,16 @@
         // ================================================
         // EVENTS
         // ================================================
-        document.getElementById('mockStudentSelect').addEventListener('change', (e) => {
-            renderDashboard(e.target.value);
-        });
 
-        // Initial render
-        renderDashboard('student_001');
+        // Initial render from mapping data
+        loadDashboard();
 
         // Simulate a live update shortly after load (demo "alive" feel)
         setTimeout(() => {
-            showLiveToast('יובי זיהה שהתקדמת במתמטיקה! 📈', 'הדשבורד מתעדכן בזמן אמת', '🚀');
-        }, 2600);
+            if (currentData) {
+                showLiveToast('הכל מוכן! זה המרחב האישי שלך ביובי 💜', 'יובי כאן לעזור לך בכל שלב', '🚀');
+            }
+        }, 3500);
     </script>
 </body>
 </html>

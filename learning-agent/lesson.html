@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>לומדה מותאמת - סוגי זוויות 📐</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+    --p1: #7c5cff; --p2: #9f7afe; --cy: #22d3ee; --grn: #48bb78;
+    --org: #f6ad55; --red: #fc8181; --ink: #1a1a2e;
+}
+html, body { height: 100%; overflow: hidden; }
+body {
+    font-family: 'Rubik', 'Segoe UI', sans-serif;
+    background: linear-gradient(160deg, #0f0c29 0%, #1a1a3e 40%, #24243e 100%);
+    color: #e2e8f0;
+    direction: rtl;
+}
+
+.lesson-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* HEADER */
+.lesson-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 24px;
+    background: rgba(124, 92, 255, 0.12);
+    border-bottom: 1px solid rgba(124, 92, 255, 0.2);
+    flex-shrink: 0;
+}
+
+.lesson-header .yubi-badge {
+    background: linear-gradient(135deg, var(--p1), var(--p2));
+    border-radius: 10px;
+    padding: 6px 12px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.lesson-header h1 {
+    font-size: 1rem;
+    font-weight: 700;
+    flex: 1;
+}
+
+.back-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 8px 16px;
+    color: #e2e8f0;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+.back-btn:hover {
+    background: rgba(124, 92, 255, 0.2);
+    border-color: var(--p1);
+}
+
+/* PROGRESS BAR */
+.progress-bar {
+    padding: 12px 24px;
+    flex-shrink: 0;
+}
+.progress-track {
+    height: 6px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--p1), var(--cy));
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+.progress-label {
+    font-size: 0.68rem;
+    color: #a0aec0;
+    margin-top: 6px;
+    text-align: center;
+}
+
+/* SLIDES */
+.slide-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 40px;
+    overflow: hidden;
+    position: relative;
+}
+
+.slide {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    text-align: center;
+    max-width: 700px;
+    width: 100%;
+    animation: slideIn 0.4s ease;
+}
+.slide.active { display: flex; }
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(-30px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.slide-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 4px;
+}
+
+.slide-subtitle {
+    font-size: 0.9rem;
+    color: #a0aec0;
+    margin-bottom: 8px;
+}
+
+.slide-visual {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 30px 40px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+}
+
+.slide-text {
+    font-size: 0.92rem;
+    line-height: 1.8;
+    color: #cbd5e0;
+    max-width: 550px;
+}
+
+.angle-demo {
+    position: relative;
+    width: 160px;
+    height: 160px;
+}
+
+.angle-demo canvas {
+    width: 160px;
+    height: 160px;
+}
+
+.angle-types-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    width: 100%;
+}
+
+.angle-type-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 16px 12px;
+    text-align: center;
+    transition: all 0.3s;
+}
+.angle-type-card:hover {
+    border-color: var(--p1);
+    transform: translateY(-3px);
+}
+.angle-type-card .type-icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+}
+.angle-type-card .type-name {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+}
+.angle-type-card .type-range {
+    font-size: 0.7rem;
+    color: var(--cy);
+    font-weight: 600;
+}
+
+/* EXERCISE */
+.exercise-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 500px;
+}
+
+.exercise-card .q-text {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 16px;
+}
+
+.exercise-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.exercise-opt {
+    padding: 12px 18px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.04);
+    color: #e2e8f0;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: right;
+}
+.exercise-opt:hover { border-color: var(--p1); background: rgba(124,92,255,0.1); }
+.exercise-opt.correct { border-color: var(--grn); background: rgba(72,187,120,0.15); color: var(--grn); }
+.exercise-opt.wrong { border-color: var(--red); background: rgba(252,129,129,0.1); color: var(--red); }
+.exercise-opt.disabled { pointer-events: none; opacity: 0.6; }
+
+.exercise-feedback {
+    margin-top: 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 10px 14px;
+    border-radius: 10px;
+    display: none;
+}
+.exercise-feedback.show { display: block; }
+.exercise-feedback.success { background: rgba(72,187,120,0.12); color: var(--grn); }
+.exercise-feedback.fail { background: rgba(252,129,129,0.1); color: var(--red); }
+
+/* NAVIGATION */
+.nav-area {
+    padding: 16px 24px 20px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.nav-btn {
+    padding: 12px 28px;
+    border-radius: 12px;
+    border: none;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.nav-btn.primary {
+    background: linear-gradient(135deg, var(--p1), var(--p2));
+    color: #fff;
+    box-shadow: 0 6px 20px rgba(124,92,255,0.3);
+}
+.nav-btn.primary:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(124,92,255,0.4); }
+.nav-btn.secondary {
+    background: rgba(255,255,255,0.06);
+    color: #e2e8f0;
+    border: 1px solid rgba(255,255,255,0.15);
+}
+.nav-btn.secondary:hover { border-color: var(--p1); }
+
+/* COMPLETION */
+.completion-screen {
+    text-align: center;
+}
+.completion-screen .comp-emoji { font-size: 3rem; margin-bottom: 16px; }
+.completion-screen .comp-title { font-size: 1.4rem; font-weight: 800; color: #fff; margin-bottom: 8px; }
+.completion-screen .comp-sub { font-size: 0.9rem; color: #a0aec0; margin-bottom: 24px; line-height: 1.7; }
+.comp-stats {
+    display: flex; justify-content: center; gap: 24px; margin-bottom: 28px;
+}
+.comp-stat {
+    text-align: center;
+}
+.comp-stat .val { font-size: 1.6rem; font-weight: 800; color: var(--cy); }
+.comp-stat .lbl { font-size: 0.7rem; color: #a0aec0; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="lesson-container">
+    <!-- HEADER -->
+    <div class="lesson-header">
+        <div class="yubi-badge">🤖 יובי הכין לך</div>
+        <h1>לומדה מותאמת: סוגי זוויות 📐</h1>
+        <a href="/learning/" class="back-btn">← חזרה למשחק</a>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="progress-bar">
+        <div class="progress-track"><div class="progress-fill" id="progressFill" style="width: 0%"></div></div>
+        <div class="progress-label" id="progressLabel">שקופית 1 מתוך 7</div>
+    </div>
+
+    <!-- SLIDES -->
+    <div class="slide-area" id="slideArea">
+        <!-- Slide 1: Intro -->
+        <div class="slide active" data-slide="0">
+            <div class="slide-title">בוא נלמד על זוויות! 📐</div>
+            <div class="slide-subtitle">אל תדאג, אני אסביר הכול צעד אחרי צעד</div>
+            <div class="slide-visual">
+                <div style="text-align:center;">
+                    <div style="font-size:4rem; margin-bottom:16px;">📐✨</div>
+                    <p style="color:#a0aec0; font-size:0.85rem; line-height:1.8;">
+                        זווית נוצרת כשיש שני קווים שנפגשים בנקודה אחת.<br>
+                        הנקודה הזו נקראת <strong style="color:#22d3ee">קודקוד</strong>,<br>
+                        והקווים נקראים <strong style="color:#22d3ee">צלעות הזווית</strong>.
+                    </p>
+                </div>
+            </div>
+            <div class="slide-text">
+                בלומדה הזו נלמד לזהות 4 סוגי זוויות שונים. זה יותר קל ממה שנדמה! 😊
+            </div>
+        </div>
+
+        <!-- Slide 2: Acute -->
+        <div class="slide" data-slide="1">
+            <div class="slide-title">זווית חדה 🔹</div>
+            <div class="slide-subtitle">קטנה מ-90°</div>
+            <div class="slide-visual">
+                <div style="display:flex; align-items:center; gap:40px;">
+                    <canvas id="canvasAcute" width="160" height="160"></canvas>
+                    <div style="text-align:right; max-width:280px;">
+                        <p style="font-size:0.88rem; line-height:1.8; color:#cbd5e0;">
+                            <strong style="color:#fff;">זווית חדה</strong> היא כל זווית שקטנה מ-90°.<br><br>
+                            💡 <strong>טיפ לזיהוי:</strong> היא "חדה" כמו חוד של עיפרון — צרה וקטנה.<br><br>
+                            🌍 <strong>דוגמה מהחיים:</strong> הזווית שנוצרת כשפותחים מספריים רק קצת.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Right Angle -->
+        <div class="slide" data-slide="2">
+            <div class="slide-title">זווית ישרה ⬜</div>
+            <div class="slide-subtitle">בדיוק 90°</div>
+            <div class="slide-visual">
+                <div style="display:flex; align-items:center; gap:40px;">
+                    <canvas id="canvasRight" width="160" height="160"></canvas>
+                    <div style="text-align:right; max-width:280px;">
+                        <p style="font-size:0.88rem; line-height:1.8; color:#cbd5e0;">
+                            <strong style="color:#fff;">זווית ישרה</strong> היא בדיוק 90°.<br><br>
+                            💡 <strong>טיפ לזיהוי:</strong> היא נראית בדיוק כמו פינה של דף נייר — "L" מושלם.<br><br>
+                            🌍 <strong>דוגמה מהחיים:</strong> כל פינה של חדר, טלפון, מחשב!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Obtuse -->
+        <div class="slide" data-slide="3">
+            <div class="slide-title">זווית קהה 🔸</div>
+            <div class="slide-subtitle">בין 90° ל-180°</div>
+            <div class="slide-visual">
+                <div style="display:flex; align-items:center; gap:40px;">
+                    <canvas id="canvasObtuse" width="160" height="160"></canvas>
+                    <div style="text-align:right; max-width:280px;">
+                        <p style="font-size:0.88rem; line-height:1.8; color:#cbd5e0;">
+                            <strong style="color:#fff;">זווית קהה</strong> גדולה מ-90° אבל קטנה מ-180°.<br><br>
+                            💡 <strong>טיפ לזיהוי:</strong> היא "שמנה" ורחבה — יותר פתוחה מפינת דף.<br><br>
+                            🌍 <strong>דוגמה מהחיים:</strong> כשנשענים על כיסא לאחור — הזווית שנוצרת.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Straight -->
+        <div class="slide" data-slide="4">
+            <div class="slide-title">זווית שטוחה ➖</div>
+            <div class="slide-subtitle">בדיוק 180°</div>
+            <div class="slide-visual">
+                <div style="display:flex; align-items:center; gap:40px;">
+                    <canvas id="canvasStraight" width="160" height="160"></canvas>
+                    <div style="text-align:right; max-width:280px;">
+                        <p style="font-size:0.88rem; line-height:1.8; color:#cbd5e0;">
+                            <strong style="color:#fff;">זווית שטוחה</strong> היא בדיוק 180° — קו ישר!<br><br>
+                            💡 <strong>טיפ לזיהוי:</strong> אין "פינה" בכלל. הקווים יוצרים קו ישר אחד.<br><br>
+                            🌍 <strong>דוגמה מהחיים:</strong> סרגל פתוח או מכסה ספר שטוח על השולחן.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: Summary -->
+        <div class="slide" data-slide="5">
+            <div class="slide-title">סיכום — ארבעת הסוגים 🏆</div>
+            <div class="slide-subtitle">המפתח הוא לשאול: "כמה מעלות?"</div>
+            <div class="slide-visual" style="flex-direction:column; gap:16px; padding: 24px;">
+                <div class="angle-types-grid">
+                    <div class="angle-type-card">
+                        <div class="type-icon">🔹</div>
+                        <div class="type-name">חדה</div>
+                        <div class="type-range">0° – 90°</div>
+                    </div>
+                    <div class="angle-type-card">
+                        <div class="type-icon">⬜</div>
+                        <div class="type-name">ישרה</div>
+                        <div class="type-range">= 90°</div>
+                    </div>
+                    <div class="angle-type-card">
+                        <div class="type-icon">🔸</div>
+                        <div class="type-name">קהה</div>
+                        <div class="type-range">90° – 180°</div>
+                    </div>
+                    <div class="angle-type-card">
+                        <div class="type-icon">➖</div>
+                        <div class="type-name">שטוחה</div>
+                        <div class="type-range">= 180°</div>
+                    </div>
+                </div>
+                <p style="font-size:0.82rem; color:#a0aec0; margin-top:12px;">
+                    🎯 הכלל: בודקים האם הזווית קטנה, שווה, או גדולה מ-90°. זהו!
+                </p>
+            </div>
+        </div>
+
+        <!-- Slide 7: Exercise 1 -->
+        <div class="slide" data-slide="6">
+            <div class="slide-title">בוא נתרגל! 🎯</div>
+            <div class="slide-subtitle">תרגיל 1 מתוך 3</div>
+            <div class="exercise-card">
+                <div class="q-text">זווית של 45° היא:</div>
+                <div class="exercise-options" data-correct="0">
+                    <button class="exercise-opt" data-idx="0">חדה — כי קטנה מ-90°</button>
+                    <button class="exercise-opt" data-idx="1">ישרה — כי קרובה ל-90°</button>
+                    <button class="exercise-opt" data-idx="2">קהה — כי גדולה מ-0°</button>
+                    <button class="exercise-opt" data-idx="3">שטוחה</button>
+                </div>
+                <div class="exercise-feedback" id="fb1"></div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Exercise 2 -->
+        <div class="slide" data-slide="7">
+            <div class="slide-title">תרגיל נוסף! 💪</div>
+            <div class="slide-subtitle">תרגיל 2 מתוך 3</div>
+            <div class="exercise-card">
+                <div class="q-text">פינה של ספר (90°) היא:</div>
+                <div class="exercise-options" data-correct="1">
+                    <button class="exercise-opt" data-idx="0">חדה</button>
+                    <button class="exercise-opt" data-idx="1">ישרה — בדיוק 90°</button>
+                    <button class="exercise-opt" data-idx="2">קהה</button>
+                    <button class="exercise-opt" data-idx="3">שטוחה</button>
+                </div>
+                <div class="exercise-feedback" id="fb2"></div>
+            </div>
+        </div>
+
+        <!-- Slide 9: Exercise 3 -->
+        <div class="slide" data-slide="8">
+            <div class="slide-title">אחרון! 🏁</div>
+            <div class="slide-subtitle">תרגיל 3 מתוך 3</div>
+            <div class="exercise-card">
+                <div class="q-text">זווית של 120° היא:</div>
+                <div class="exercise-options" data-correct="2">
+                    <button class="exercise-opt" data-idx="0">חדה</button>
+                    <button class="exercise-opt" data-idx="1">ישרה</button>
+                    <button class="exercise-opt" data-idx="2">קהה — בין 90° ל-180°</button>
+                    <button class="exercise-opt" data-idx="3">שטוחה</button>
+                </div>
+                <div class="exercise-feedback" id="fb3"></div>
+            </div>
+        </div>
+
+        <!-- Slide 10: Completion -->
+        <div class="slide" data-slide="9">
+            <div class="completion-screen">
+                <div class="comp-emoji">🎉🏆✨</div>
+                <div class="comp-title">כל הכבוד! סיימת את הלומדה!</div>
+                <div class="comp-sub">
+                    עכשיו אתה מבין את סוגי הזוויות הרבה יותר טוב.<br>
+                    מוכן לחזור למשחק ולהראות מה למדת? 💪
+                </div>
+                <div class="comp-stats">
+                    <div class="comp-stat"><div class="val" id="correctCount">0</div><div class="lbl">תשובות נכונות</div></div>
+                    <div class="comp-stat"><div class="val">9</div><div class="lbl">שקופיות</div></div>
+                    <div class="comp-stat"><div class="val">📐</div><div class="lbl">נושא: זוויות</div></div>
+                </div>
+                <a href="/learning/" class="nav-btn primary" style="text-decoration:none; display:inline-block;">
+                    חזרה למשחק — להמשיך מאיפה שעצרתי! 🚀
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- NAVIGATION -->
+    <div class="nav-area" id="navArea">
+        <button class="nav-btn secondary" id="prevBtn" onclick="prevSlide()" style="display:none">← הקודם</button>
+        <button class="nav-btn primary" id="nextBtn" onclick="nextSlide()">הבא →</button>
+    </div>
+</div>
+
+<script>
+    const TOTAL_SLIDES = 10;
+    let currentSlide = 0;
+    let exerciseCorrect = 0;
+
+    function showSlide(idx) {
+        document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+        const target = document.querySelector(`.slide[data-slide="${idx}"]`);
+        if (target) target.classList.add('active');
+        currentSlide = idx;
+
+        // Update progress
+        const pct = Math.round(((idx + 1) / TOTAL_SLIDES) * 100);
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.getElementById('progressLabel').textContent = `שקופית ${idx + 1} מתוך ${TOTAL_SLIDES}`;
+
+        // Nav buttons
+        document.getElementById('prevBtn').style.display = idx === 0 ? 'none' : 'inline-block';
+
+        // On completion slide, hide nav
+        if (idx === TOTAL_SLIDES - 1) {
+            document.getElementById('navArea').style.display = 'none';
+            document.getElementById('correctCount').textContent = exerciseCorrect;
+        } else {
+            document.getElementById('navArea').style.display = 'flex';
+        }
+
+        // Next button text
+        const nextBtn = document.getElementById('nextBtn');
+        if (idx === TOTAL_SLIDES - 2) {
+            nextBtn.textContent = 'סיום! 🏆';
+        } else {
+            nextBtn.textContent = 'הבא →';
+        }
+
+        // Draw canvases if they exist on this slide
+        requestAnimationFrame(drawCanvases);
+    }
+
+    function nextSlide() {
+        if (currentSlide < TOTAL_SLIDES - 1) showSlide(currentSlide + 1);
+    }
+    function prevSlide() {
+        if (currentSlide > 0) showSlide(currentSlide - 1);
+    }
+
+    // Draw angle canvases
+    function drawAngle(canvasId, angleDeg, color, label) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const cx = 80, cy = 100, len = 60;
+        ctx.clearRect(0, 0, 160, 160);
+
+        const startAngle = 0;
+        const endAngle = -angleDeg * Math.PI / 180;
+
+        // Draw arc
+        ctx.beginPath();
+        ctx.arc(cx, cy, 25, startAngle, endAngle, true);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Draw lines
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + len, cy);
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + len * Math.cos(endAngle), cy + len * Math.sin(endAngle));
+        ctx.stroke();
+
+        // Label
+        ctx.font = 'bold 14px Rubik';
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center';
+        ctx.fillText(label, cx + 10, cy - 35);
+
+        // Dot at vertex
+        ctx.beginPath();
+        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#7c5cff';
+        ctx.fill();
+    }
+
+    function drawCanvases() {
+        drawAngle('canvasAcute', 45, '#22d3ee', '45°');
+        drawAngle('canvasRight', 90, '#48bb78', '90°');
+        drawAngle('canvasObtuse', 130, '#f6ad55', '130°');
+        drawAngle('canvasStraight', 180, '#fc8181', '180°');
+    }
+
+    // Exercise interaction
+    document.querySelectorAll('.exercise-options').forEach((optGroup, groupIdx) => {
+        const correctIdx = parseInt(optGroup.dataset.correct);
+        const feedbackEl = document.getElementById('fb' + (groupIdx + 1));
+        const buttons = optGroup.querySelectorAll('.exercise-opt');
+
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.classList.contains('disabled')) return;
+                const chosen = parseInt(btn.dataset.idx);
+                buttons.forEach(b => b.classList.add('disabled'));
+
+                if (chosen === correctIdx) {
+                    btn.classList.add('correct');
+                    feedbackEl.textContent = '🎉 מעולה! תשובה נכונה!';
+                    feedbackEl.className = 'exercise-feedback show success';
+                    exerciseCorrect++;
+                } else {
+                    btn.classList.add('wrong');
+                    buttons[correctIdx].classList.add('correct');
+                    feedbackEl.textContent = '😊 לא נורא! התשובה הנכונה מסומנת בירוק';
+                    feedbackEl.className = 'exercise-feedback show fail';
+                }
+            });
+        });
+    });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+            // In RTL: ArrowLeft = forward, ArrowRight = back
+            if (e.key === 'ArrowLeft') nextSlide();
+            else prevSlide();
+        }
+    });
+
+    // Init
+    showSlide(0);
+</script>
+</body>
+</html>

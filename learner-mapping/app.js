@@ -320,33 +320,90 @@ class LearnerMappingApp {
             return { question: q.text, answer: ansText };
         });
 
+        // Remember the section context so the free-chat LLM has something to react to
+        this.lastSectionContext = `${part.title} — ` +
+            qa_pairs.map(p => `${p.question}: ${p.answer}`).join(' | ');
+
         // Show typing
         const typing = this.createTypingBubble();
         container.appendChild(typing);
         this.scrollChat(container);
 
-        // Call LLM for summary
-        let summaryText;
+        // Call LLM for summary (streaming)
+        let summaryText = '';
         try {
-            const resp = await fetch('/api/section-summary', {
+            // Remove typing, create empty bot bubble for streaming
+            container.removeChild(typing);
+            const { row, bubble } = this.createStreamBubble(container);
+
+            const resp = await fetch('/api/section-summary-stream', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ part_title: part.title, questions_and_answers: qa_pairs })
+                body: JSON.stringify({ part_title: part.title, questions_and_answers: qa_pairs, student_name: this.studentName })
             });
-            const data = await resp.json();
-            summaryText = data.summary;
+
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    const payload = line.slice(6);
+                    if (payload === '[DONE]') break;
+                    try {
+                        const parsed = JSON.parse(payload);
+                        if (parsed.text) {
+                            summaryText += parsed.text;
+                            bubble.innerHTML = this.escapeHtml(summaryText).replace(/\n/g, '<br>');
+                            this.scrollChat(container);
+                        }
+                    } catch (e) {}
+                }
+            }
         } catch (err) {
+            if (typing.parentNode) container.removeChild(typing);
             summaryText = 'תודה על התשובות! רוצה להוסיף משהו נוסף שחשוב לך שאדע?';
+            await this.showBotMessage(container, summaryText);
         }
 
-        // Remove typing, show summary
-        container.removeChild(typing);
-        await this.showBotMessage(container, summaryText);
+        if (!this.chatHistory) this.chatHistory = [];
+        this.chatHistory.push({ role: 'assistant', content: summaryText });
 
         document.getElementById('chatStatus').textContent = 'מחובר';
 
         // Show free-text input + continue button
         this.showSummaryFooter(footer, isLast);
+    }
+
+    createStreamBubble(container) {
+        const row = document.createElement('div');
+        row.className = 'chat-row bot';
+        row.innerHTML = `
+            <div class="bot-avatar">
+                <svg viewBox="0 0 36 36" width="32" height="32" fill="none">
+                    <rect x="8" y="12" width="20" height="16" rx="4" fill="#7c5cff"/>
+                    <rect x="12" y="16" width="4" height="4" rx="1.5" fill="#fff"/>
+                    <rect x="20" y="16" width="4" height="4" rx="1.5" fill="#fff"/>
+                    <rect x="15" y="22" width="6" height="2" rx="1" fill="#c4b5fd"/>
+                    <rect x="14" y="6" width="8" height="6" rx="2" fill="#9f7afe"/>
+                    <rect x="17" y="3" width="2" height="4" rx="1" fill="#c4b5fd"/>
+                    <circle cx="18" cy="2" r="2" fill="#22d3ee"/>
+                    <rect x="4" y="16" width="4" height="8" rx="2" fill="#9f7afe"/>
+                    <rect x="28" y="16" width="4" height="8" rx="2" fill="#9f7afe"/>
+                </svg>
+            </div>
+            <div class="chat-bubble bot"></div>
+        `;
+        container.appendChild(row);
+        this.scrollChat(container);
+        const bubble = row.querySelector('.chat-bubble');
+        return { row, bubble };
     }
 
     async showBotMessage(container, text) {
@@ -366,7 +423,7 @@ class LearnerMappingApp {
                     <rect x="28" y="16" width="4" height="8" rx="2" fill="#9f7afe"/>
                 </svg>
             </div>
-            <div class="chat-bubble bot">${text}</div>
+            <div class="chat-bubble bot">${this.escapeHtml(text).replace(/\n/g, '<br>')}</div>
         `;
         container.appendChild(row);
         this.scrollChat(container);
@@ -409,31 +466,94 @@ class LearnerMappingApp {
         });
     }
 
-    sendFreeText() {
+    escapeHtml(str) {
+        return String(str == null ? '' : str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    async sendFreeText() {
         const input = document.getElementById('freeTextInput');
+        const sendBtn = document.getElementById('sendFreeTextBtn');
         const text = input.value.trim();
         if (!text) return;
 
-        // Show user message in chat
+        // Show the student's message
         const container = document.getElementById('chatBody');
         const userRow = document.createElement('div');
         userRow.className = 'chat-row user';
-        userRow.innerHTML = `<div class="chat-bubble user">${text}</div>`;
+        userRow.innerHTML = `<div class="chat-bubble user">${this.escapeHtml(text)}</div>`;
         container.appendChild(userRow);
         this.scrollChat(container);
 
-        // Store the free text
         if (!this.freeTextNotes) this.freeTextNotes = [];
         this.freeTextNotes.push(text);
+        if (!this.chatHistory) this.chatHistory = [];
+        this.chatHistory.push({ role: 'user', content: text });
 
-        // Clear input
         input.value = '';
+        input.disabled = true;
+        if (sendBtn) sendBtn.disabled = true;
 
-        // Show bot acknowledgment
-        setTimeout(async () => {
-            await this.showBotMessage(container, 'תודה! רשמתי. זה יעזור לי להכיר אותך טוב יותר');
-            this.scrollChat(container);
-        }, 500);
+        // Typing indicator while Yubi thinks
+        const typing = this.createTypingBubble();
+        container.appendChild(typing);
+        this.scrollChat(container);
+
+        let reply = '';
+        try {
+            if (typing.parentNode) container.removeChild(typing);
+            const { row, bubble } = this.createStreamBubble(container);
+
+            const resp = await fetch('/api/mapping-chat-stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: text,
+                    student_name: this.studentName,
+                    context: this.lastSectionContext || '',
+                    history: this.chatHistory.slice(-10)
+                })
+            });
+
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    const payload = line.slice(6);
+                    if (payload === '[DONE]') break;
+                    try {
+                        const parsed = JSON.parse(payload);
+                        if (parsed.text) {
+                            reply += parsed.text;
+                            bubble.innerHTML = this.escapeHtml(reply).replace(/\n/g, '<br>');
+                            this.scrollChat(container);
+                        }
+                    } catch (e) {}
+                }
+            }
+        } catch (err) {
+            if (typing.parentNode) container.removeChild(typing);
+            reply = 'תודה ששיתפת! רשמתי את זה. יש עוד משהו שתרצה לספר לי?';
+            await this.showBotMessage(container, reply);
+        }
+
+        this.chatHistory.push({ role: 'assistant', content: reply });
+
+        input.disabled = false;
+        if (sendBtn) sendBtn.disabled = false;
+        input.focus();
     }
 
     navigatePrev() {
@@ -471,7 +591,7 @@ class LearnerMappingApp {
             const resp = await fetch('/api/submit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ student_id: 'student_1', answers: this.answers })
+                body: JSON.stringify({ student_id: 'student_1', student_name: this.studentName, answers: this.answers })
             });
             const result = await resp.json();
             localStorage.setItem('mapping_results', JSON.stringify(result));

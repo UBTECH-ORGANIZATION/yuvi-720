@@ -38,142 +38,373 @@
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
 
-        /* Demo selector — small + subtle */
-        .mock-selector {
+        /* Loading state */
+        .loading-state {
             max-width: 760px;
-            margin: 18px auto 0;
-            padding: 0 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            color: #9a93b5;
+            margin: 60px auto;
+            text-align: center;
+            padding: 40px 20px;
         }
-        .mock-selector select {
-            font-family: inherit;
-            font-size: 12px;
-            padding: 5px 10px;
-            border-radius: 10px;
-            border: 1px solid #e3ddf3;
-            background: #fff;
-            color: #6b6488;
-            cursor: pointer;
+        .loading-mascot {
+            position: relative;
+            width: 100px; height: 100px;
+            margin: 0 auto 24px;
         }
-
-        /* Layout */
-        .page {
-            max-width: 760px;
-            margin: 0 auto;
-            padding: 22px 20px 64px;
-        }
-
-        /* Hero / Main message */
-        .hero {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            background: linear-gradient(135deg, #6F5BFF 0%, #8b6cff 55%, #9f7afe 100%);
-            color: #fff;
-            border-radius: 26px;
-            padding: 26px 28px;
-            box-shadow: 0 18px 40px rgba(111,91,255,0.28);
-        }
-        .hero-mascot {
-            flex-shrink: 0;
-            width: 86px; height: 86px;
+        .loading-mascot .mascot-body {
+            width: 80px; height: 80px;
+            margin: 10px auto;
+            background: linear-gradient(135deg, #6F5BFF, #9f7afe);
             border-radius: 24px;
-            background: rgba(255,255,255,0.16);
             display: flex; align-items: center; justify-content: center;
+            animation: mascotBounce 1.2s ease-in-out infinite;
+            box-shadow: 0 12px 30px rgba(111,91,255,0.35);
+            position: relative;
+        }
+        .loading-mascot .mascot-body::before {
+            content: '🧠';
+            font-size: 36px;
+            animation: brainPulse 1.8s ease-in-out infinite;
+        }
+        .loading-mascot .orbit-dot {
+            position: absolute;
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            animation: orbit 2s linear infinite;
+        }
+        .loading-mascot .orbit-dot:nth-child(2) {
+            background: #22d3ee;
+            animation-delay: 0s;
+        }
+        .loading-mascot .orbit-dot:nth-child(3) {
+            background: #f472b6;
+            animation-delay: 0.66s;
+        }
+        .loading-mascot .orbit-dot:nth-child(4) {
+            background: #fbbf24;
+            animation-delay: 1.33s;
+        }
+        @keyframes orbit {
+            0%   { transform: rotate(0deg) translateX(48px) rotate(0deg); opacity: 1; }
+            50%  { opacity: 0.6; }
+            100% { transform: rotate(360deg) translateX(48px) rotate(-360deg); opacity: 1; }
+        }
+        @keyframes mascotBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        @keyframes brainPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+        .loading-state .text {
+            font-size: 19px; font-weight: 700; color: #6F5BFF;
+            margin-bottom: 8px;
+        }
+        .loading-state .sub {
+            font-size: 14px; color: #9a93b5; margin-top: 4px;
+        }
+        .loading-steps {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin-top: 24px;
+        }
+        .loading-step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #9a93b5;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.4s ease;
+        }
+        .loading-step.visible {
+            opacity: 1;
+            transform: translateY(0);
+            color: #6F5BFF;
+        }
+        .loading-step.done {
+            color: #10b981;
+        }
+        .loading-step .step-icon {
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px;
+            background: #efecf8;
+            transition: background 0.3s;
+        }
+        .loading-step.visible .step-icon {
+            background: #ede9fe;
+            animation: stepPulse 1s ease-in-out infinite;
+        }
+        .loading-step.done .step-icon {
+            background: #d1fae5;
+            animation: none;
+        }
+        @keyframes stepPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        .loading-progress {
+            width: 200px;
+            height: 6px;
+            background: #efecf8;
+            border-radius: 3px;
+            margin: 20px auto 0;
+            overflow: hidden;
+        }
+        .loading-progress .bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #6F5BFF, #22d3ee);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .no-data-state {
+            max-width: 760px;
+            margin: 80px auto;
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .no-data-state .emoji { font-size: 48px; margin-bottom: 16px; }
+        .no-data-state .msg { font-size: 18px; font-weight: 700; color: #3a3360; margin-bottom: 12px; }
+        .no-data-state .sub { font-size: 14px; color: #9a93b5; margin-bottom: 24px; }
+        .no-data-state .btn {
+            display: inline-block;
+            padding: 12px 28px;
+            background: linear-gradient(135deg, #6F5BFF, #9f7afe);
+            color: #fff;
+            border-radius: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            font-size: 15px;
+        }
+
+        /* ============================================
+           JOURNEY — gradual discovery, one card at a time
+           ============================================ */
+        .journey {
+            max-width: 560px;
+            margin: 0 auto;
+            padding: 18px 20px 56px;
+            min-height: calc(100vh - 52px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Progress dots */
+        .journey-progress {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin: 8px 0 26px;
+        }
+        .journey-progress .dot {
+            width: 8px; height: 8px;
+            border-radius: 999px;
+            background: #ddd6f3;
+            transition: all 0.35s ease;
+        }
+        .journey-progress .dot.active {
+            width: 26px;
+            background: linear-gradient(90deg, #6F5BFF, #9f7afe);
+        }
+        .journey-progress .dot.done {
+            background: #b9aef5;
+        }
+
+        /* Card stage */
+        .journey-stage {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .scene {
+            display: none;
+            width: 100%;
+        }
+        .scene.active {
+            display: block;
+            animation: sceneIn 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        @keyframes sceneIn {
+            from { opacity: 0; transform: translateY(18px) scale(0.98); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* Welcome scene */
+        .welcome-card {
+            text-align: center;
+            padding: 10px;
+        }
+        .welcome-mascot {
+            width: 110px; height: 110px;
+            margin: 0 auto 22px;
+            border-radius: 30px;
+            background: linear-gradient(135deg, #6F5BFF 0%, #8b6cff 55%, #9f7afe 100%);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 18px 44px rgba(111,91,255,0.34);
+            animation: bob 3.2s ease-in-out infinite;
+            position: relative;
+        }
+        .welcome-confetti {
+            position: absolute;
+            font-size: 30px;
+            animation: pop 0.6s ease both;
+        }
+        @keyframes pop { from { transform: scale(0); } 60% { transform: scale(1.3); } to { transform: scale(1); } }
+        @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+        .welcome-card .title {
+            font-size: 27px; font-weight: 800; color: #3a3360;
+            margin-bottom: 12px; line-height: 1.3;
+        }
+        .welcome-card .sub {
+            font-size: 17px; color: #6b6485; line-height: 1.6;
+            max-width: 420px; margin: 0 auto 8px;
+        }
+
+        /* Generic big card (strength / improve) */
+        .big-card {
+            background: #fff;
+            border-radius: 28px;
+            padding: 34px 28px 30px;
+            text-align: center;
+            box-shadow: 0 16px 44px rgba(102,126,234,0.14);
+            border: 1px solid #f0ecfb;
+        }
+        .big-card .kicker {
+            display: inline-block;
+            font-size: 13px; font-weight: 700;
+            color: #6F5BFF;
+            background: rgba(111,91,255,0.10);
+            padding: 6px 16px; border-radius: 999px;
+            margin-bottom: 20px;
+        }
+        .big-card .big-ico {
+            width: 96px; height: 96px;
+            margin: 0 auto 20px;
+            border-radius: 28px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 46px;
+            background: linear-gradient(135deg, #efeaff, #e4f6fb);
             animation: bob 3.5s ease-in-out infinite;
         }
-        @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
-        .hero-text .hi { font-size: 15px; font-weight: 600; opacity: 0.92; margin-bottom: 4px; }
-        .hero-text .msg { font-size: 22px; font-weight: 700; line-height: 1.4; }
-
-        /* Section title */
-        .section-title {
-            display: flex; align-items: center; gap: 9px;
-            font-size: 19px; font-weight: 800; color: #3a3360;
-            margin: 34px 4px 16px;
+        .big-card .big-name {
+            font-size: 24px; font-weight: 800; color: #3a3360; margin-bottom: 10px;
         }
-        .section-title .emoji { font-size: 22px; }
-
-        /* Strengths — 3 big clear cards */
-        .strengths-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 14px;
+        .big-card .big-desc {
+            font-size: 16px; color: #6b6485; line-height: 1.6;
+            max-width: 400px; margin: 0 auto;
         }
-        .strength-card {
-            background: #fff;
-            border-radius: 22px;
-            padding: 22px 18px;
+
+        /* "Why is this important" expander */
+        .why-toggle {
+            margin-top: 18px;
+            background: none; border: none;
+            color: #6F5BFF; font-weight: 700; font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .why-toggle .chev { transition: transform 0.3s; font-size: 12px; }
+        .why-toggle.open .chev { transform: rotate(180deg); }
+        .why-body {
+            max-height: 0; overflow: hidden;
+            transition: max-height 0.4s ease, margin 0.4s ease;
+            font-size: 14px; color: #8b85a6; line-height: 1.6;
+        }
+        .why-body.open { max-height: 200px; margin-top: 12px; }
+
+        /* Reaction buttons (strengths) */
+        .reactions {
+            display: flex; gap: 10px; justify-content: center;
+            margin-top: 22px;
+        }
+        .reaction-btn {
+            background: #f6f3ff;
+            border: 1.5px solid #ece6fb;
+            color: #5a5478;
+            font-family: inherit; font-size: 14px; font-weight: 700;
+            padding: 10px 18px; border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .reaction-btn:hover { transform: translateY(-2px); border-color: #c9bdf6; }
+        .reaction-btn.selected {
+            background: linear-gradient(135deg, #6F5BFF, #9f7afe);
+            color: #fff; border-color: transparent;
+        }
+
+        /* Plan scene — small action steps */
+        .plan-head {
             text-align: center;
-            box-shadow: 0 8px 26px rgba(102,126,234,0.10);
-            border: 1px solid #f0ecfb;
-            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            margin-bottom: 22px;
         }
-        .strength-card:hover { transform: translateY(-4px); box-shadow: 0 16px 34px rgba(102,126,234,0.16); }
-        .strength-card .ico {
-            width: 66px; height: 66px;
-            margin: 0 auto 12px;
-            border-radius: 20px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 32px;
-            background: linear-gradient(135deg, #efeaff, #e4f6fb);
-        }
-        .strength-card .name { font-size: 16px; font-weight: 800; color: #3a3360; margin-bottom: 6px; }
-        .strength-card .desc { font-size: 13px; color: #8b85a6; line-height: 1.5; }
-
-        /* Improve — 2-3 simple rows */
-        .improve-list { display: flex; flex-direction: column; gap: 12px; }
-        .improve-card {
-            background: #fff;
-            border-radius: 18px;
-            padding: 16px 20px;
-            box-shadow: 0 6px 20px rgba(102,126,234,0.08);
-            border: 1px solid #f0ecfb;
-        }
-        .improve-top {
-            display: flex; align-items: center; justify-content: space-between; gap: 12px;
-            margin-bottom: 10px;
-        }
-        .improve-label { display: flex; align-items: center; gap: 9px; font-size: 16px; font-weight: 700; color: #3a3360; }
-        .improve-label .e { font-size: 20px; }
-        .status-pill { font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 999px; white-space: nowrap; }
-        .status-good { background: rgba(111,91,255,0.12); color: #6F5BFF; }
-        .status-building { background: rgba(246,173,85,0.16); color: #d98724; }
-        .status-support { background: rgba(252,129,129,0.16); color: #e05656; }
-        .bar { height: 9px; border-radius: 999px; background: #efecf8; overflow: hidden; }
-        .bar-fill { height: 100%; border-radius: 999px; transition: width 1s ease; }
-
-        /* Tips — exactly 3 short cards */
-        .tips-grid { display: flex; flex-direction: column; gap: 12px; }
-        .tip-card {
+        .plan-head .e { font-size: 40px; display: block; margin-bottom: 10px; }
+        .plan-head .title { font-size: 23px; font-weight: 800; color: #3a3360; }
+        .plan-steps { display: flex; flex-direction: column; gap: 12px; }
+        .plan-step {
             display: flex; align-items: center; gap: 16px;
             background: #fff;
             border-radius: 18px;
             padding: 16px 20px;
-            box-shadow: 0 6px 20px rgba(102,126,234,0.08);
+            box-shadow: 0 8px 24px rgba(102,126,234,0.10);
             border: 1px solid #f0ecfb;
+            opacity: 0; transform: translateX(16px);
+            animation: stepIn 0.5s ease forwards;
         }
-        .tip-num {
+        @keyframes stepIn { to { opacity: 1; transform: translateX(0); } }
+        .plan-step .num {
             flex-shrink: 0;
-            width: 38px; height: 38px;
-            border-radius: 12px;
+            width: 40px; height: 40px;
+            border-radius: 13px;
             background: linear-gradient(135deg, #6F5BFF, #9f7afe);
-            color: #fff; font-weight: 800; font-size: 17px;
+            color: #fff; font-weight: 800; font-size: 18px;
             display: flex; align-items: center; justify-content: center;
         }
-        .tip-card .t { font-size: 15px; font-weight: 600; color: #43406a; }
+        .plan-step .t { font-size: 15px; font-weight: 600; color: #43406a; line-height: 1.45; }
 
-        .fade-up { opacity: 0; transform: translateY(14px); animation: fadeUp 0.5s ease forwards; }
-        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        /* Navigation */
+        .journey-nav {
+            margin-top: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        .nav-btn {
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 16px 34px;
+            background: linear-gradient(135deg, #6F5BFF 0%, #9f7afe 100%);
+            color: #fff;
+            border: none;
+            border-radius: 16px;
+            font-family: inherit;
+            font-size: 16px; font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            box-shadow: 0 12px 30px rgba(111,91,255,0.30);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .nav-btn:hover { transform: translateY(-3px); box-shadow: 0 18px 38px rgba(111,91,255,0.4); }
+        .nav-btn.ghost {
+            background: #fff;
+            color: #6F5BFF;
+            box-shadow: 0 6px 18px rgba(102,126,234,0.10);
+            border: 1.5px solid #ece6fb;
+        }
+        .nav-btn.ghost:hover { box-shadow: 0 10px 24px rgba(102,126,234,0.16); }
 
         @media (max-width: 600px) {
-            .hero { flex-direction: column; text-align: center; gap: 14px; padding: 22px 20px; }
-            .hero-text .msg { font-size: 19px; }
-            .strengths-grid { grid-template-columns: 1fr; }
+            .welcome-card .title { font-size: 23px; }
+            .big-card { padding: 28px 20px 26px; }
+            .big-card .big-name { font-size: 21px; }
         }
     </style>
 </head>
@@ -183,179 +414,366 @@
         <span class="top-bar-logo">YuviLab 720</span>
     </div>
 
-    <!-- Demo selector (for presentation only) -->
-    <div class="mock-selector">
-        <label>תלמיד לדוגמה:</label>
-        <select id="mockStudentSelect">
-            <option value="">--- מהשאלון שלי ---</option>
-            <option value="student_001">יובל כהן</option>
-            <option value="student_002">נועה לוי</option>
-            <option value="student_003">אדם ברק</option>
-            <option value="student_004">מיכל דוד</option>
-            <option value="student_005">עומר שלום</option>
-            <option value="student_006">שירה אבירם</option>
-        </select>
-    </div>
-
-    <div class="page">
-        <!-- 1. Main message -->
-        <div class="hero fade-up">
-            <div class="hero-mascot">
-                <svg viewBox="0 0 44 44" width="52" height="52" fill="none">
-                    <rect x="9" y="15" width="26" height="21" rx="6" fill="#fff"/>
-                    <rect x="15" y="21" width="5" height="5" rx="2" fill="#6F5BFF"/>
-                    <rect x="24" y="21" width="5" height="5" rx="2" fill="#6F5BFF"/>
-                    <path d="M18 30 Q22 33 26 30" stroke="#22d3ee" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-                    <rect x="17" y="8" width="10" height="8" rx="3" fill="#fff" fill-opacity="0.85"/>
-                    <rect x="21" y="3.5" width="2.4" height="5" rx="1.2" fill="#c4b5fd"/>
-                    <circle cx="22.2" cy="2.6" r="2.6" fill="#22d3ee"/>
-                    <rect x="4" y="20" width="5" height="11" rx="2.5" fill="#fff" fill-opacity="0.85"/>
-                    <rect x="35" y="20" width="5" height="11" rx="2.5" fill="#fff" fill-opacity="0.85"/>
-                </svg>
+    <!-- Loading state -->
+    <div class="loading-state" id="loadingState" style="display:none">
+        <div class="loading-mascot">
+            <div class="orbit-dot"></div>
+            <div class="orbit-dot"></div>
+            <div class="orbit-dot"></div>
+            <div class="mascot-body"></div>
+        </div>
+        <div class="text">יובי מנתח את הפרופיל שלך... 🔍</div>
+        <div class="sub">זה הולך להיות מעניין!</div>
+        <div class="loading-steps" id="loadingSteps">
+            <div class="loading-step" data-delay="500">
+                <span class="step-icon">🎯</span>
+                <span>מזהה את הסגנון שלך...</span>
             </div>
-            <div class="hero-text">
-                <div class="hi" id="heroHi">היי!</div>
-                <div class="msg" id="heroMsg">בוא נגלה ביחד איך אתה לומד הכי טוב</div>
+            <div class="loading-step" data-delay="1500">
+                <span class="step-icon">💡</span>
+                <span>מחפש חוזקות מיוחדות...</span>
+            </div>
+            <div class="loading-step" data-delay="2500">
+                <span class="step-icon">🗺️</span>
+                <span>בונה מסלול אישי בדיוק בשבילך...</span>
+            </div>
+            <div class="loading-step" data-delay="3500">
+                <span class="step-icon">✨</span>
+                <span>מכין הפתעות!</span>
             </div>
         </div>
+        <div class="loading-progress">
+            <div class="bar" id="loadingBar"></div>
+        </div>
+    </div>
 
-        <!-- 2. Top strengths -->
-        <div class="section-title"><span class="emoji">💪</span><span>החוזקות שלי</span></div>
-        <div class="strengths-grid" id="strengthsGrid"></div>
+    <!-- No data state -->
+    <div class="no-data-state" id="noDataState" style="display:none">
+        <div class="emoji">📋</div>
+        <div class="msg">עדיין אין לנו נתונים</div>
+        <div class="sub">כדי לקבל פרופיל למידה אישי, צריך קודם למלא את השאלון</div>
+        <a class="btn" href="/learner-mapping/">למילוי השאלון →</a>
+    </div>
 
-        <!-- 3. What to strengthen -->
-        <div class="section-title"><span class="emoji">🌱</span><span>מה כדאי לחזק קצת</span></div>
-        <div class="improve-list" id="improveList"></div>
+    <div class="journey" id="journey" style="display:none">
+        <!-- Progress dots -->
+        <div class="journey-progress" id="journeyProgress"></div>
 
-        <!-- 4. Personal tips -->
-        <div class="section-title"><span class="emoji">💡</span><span>טיפים בשבילי</span></div>
-        <div class="tips-grid" id="tipsGrid"></div>
+        <!-- Card stage (scenes injected here) -->
+        <div class="journey-stage" id="journeyStage"></div>
+
+        <!-- Navigation -->
+        <div class="journey-nav" id="journeyNav"></div>
     </div>
 
     <script>
         // =============================
-        // TRAIT METADATA
+        // JOURNEY STATE
         // =============================
-        const TRAITS = {
-            interest:       { icon: '🔍', label: 'סקרנות',       strong: 'אתה אוהב לשאול ולהבין איך דברים עובדים', tip: 'חבר את הלמידה לדברים שמעניינים אותך' },
-            investment:     { icon: '🎯', label: 'רצון להצליח',  strong: 'חשוב לך להצליח ואתה מוכן להשקיע',        tip: 'הצב לעצמך מטרה קטנה אחת בכל פעם' },
-            motivation:     { icon: '🔥', label: 'התמדה',        strong: 'יש לך נחישות להמשיך גם כשקצת קשה',       tip: 'פרק משימה גדולה ל-3 צעדים קטנים' },
-            autonomy:       { icon: '🚀', label: 'עצמאות',       strong: 'אתה יודע לקחת אחריות ולנסות בעצמך',      tip: 'נסה קודם לבד, ואז בקש רמז קטן' },
-            cognitive:      { icon: '🧩', label: 'חשיבה וארגון', strong: 'יש לך חשיבה מסודרת ויכולת לארגן מידע',   tip: 'כתוב את השלבים לפני שמתחילים' },
-            self_awareness: { icon: '🪞', label: 'הכרת עצמי',     strong: 'אתה מכיר את עצמך ויודע מה עוזר לך',      tip: 'שים לב מתי אתה לומד הכי טוב' },
-            school_climate: { icon: '🏫', label: 'הרגשה בכיתה',  strong: 'אתה מרגיש טוב ובטוח בכיתה',             tip: 'מצא פינה בכיתה שנעים לך ללמוד בה' },
-            tech_comfort:   { icon: '💻', label: 'טכנולוגיה',    strong: 'אתה מרגיש בבית עם מחשבים וכלים דיגיטליים', tip: 'נסה כלי דיגיטלי שעוזר לך ללמוד' },
-            focus:          { icon: '🎧', label: 'ריכוז',        strong: 'אתה יודע להתרכז ולהישאר במשימה',         tip: 'למד 10 דקות ואז קח הפסקה קצרה' },
-        };
-
-        const MAIN_MESSAGE = {
-            investment:     'גילינו שאתה לומד הכי טוב כשיש לך מטרה ברורה ושלבים קצרים',
-            interest:       'גילינו שהסקרנות שלך היא מנוע ענק — שאלות טובות עוזרות לך ללמוד',
-            motivation:     'גילינו שיש לך נחישות אמיתית — אתה לא מוותר גם כשקצת קשה',
-            autonomy:       'גילינו שאתה אלוף בלמידה עצמאית — נותנים לך משימה ואתה זז',
-            cognitive:      'גילינו שאתה חושב בצורה מסודרת ואוהב להבין שלב אחרי שלב',
-            self_awareness: 'גילינו שאתה מכיר את עצמך טוב ויודע מה עוזר לך ללמוד',
-            school_climate: 'גילינו שאתה מרגיש טוב בכיתה — וזה בסיס מצוין ללמידה',
-            tech_comfort:   'גילינו שאתה מרגיש בבית עם טכנולוגיה — וזה כלי-על בשבילך',
-            focus:          'גילינו שאתה יודע להתרכז ולהיכנס לעניין בלי הסחות',
-        };
-
-        function scoreToStatus(score) {
-            if (score >= 60) return { text: 'בדרך טובה', cls: 'status-good', color: '#6F5BFF' };
-            if (score >= 40) return { text: 'כדאי לחזק', cls: 'status-building', color: '#f6ad55' };
-            return { text: 'נחזק יחד', cls: 'status-support', color: '#fc8181' };
-        }
-
-        function scoresToArray(scores) {
-            return [
-                { key: 'interest',       val: scores.academic.interest },
-                { key: 'investment',     val: scores.academic.investment },
-                { key: 'motivation',     val: scores.psycho_pedagogical.motivation },
-                { key: 'autonomy',       val: scores.psycho_pedagogical.autonomy },
-                { key: 'cognitive',      val: scores.psycho_pedagogical.cognitive },
-                { key: 'self_awareness', val: scores.psycho_pedagogical.self_awareness },
-                { key: 'school_climate', val: scores.environmental.school_climate },
-                { key: 'tech_comfort',   val: scores.environmental.tech_comfort },
-                { key: 'focus',          val: scores.environmental.focus },
-            ];
-        }
+        let journeySteps = [];
+        let journeyIndex = 0;
 
         // =============================
-        // RENDER
+        // BUILD journey from AI-generated profile
         // =============================
-        function render(scores, name) {
+        function render(profile, name) {
             document.getElementById('topBarTitle').textContent = `הפרופיל של ${name}`;
 
-            const arr = scoresToArray(scores);
-            const sorted = [...arr].sort((a, b) => b.val - a.val);
+            const strengths = (profile.strengths || []).slice(0, 3);
+            const improve = (profile.improve || []).slice(0, 2);
+            const tips = (profile.tips || []).slice(0, 3);
 
-            // 1. Main message — based on top strength
-            const top = sorted[0];
-            document.getElementById('heroHi').textContent = `${name}!`;
-            document.getElementById('heroMsg').textContent = MAIN_MESSAGE[top.key] || 'גילינו דברים מגניבים על איך שאתה לומד';
+            journeySteps = [];
 
-            // 2. Strengths — top 3
-            const top3 = sorted.slice(0, 3);
-            document.getElementById('strengthsGrid').innerHTML = top3.map((s, i) => {
-                const m = TRAITS[s.key];
-                return `<div class="strength-card fade-up" style="animation-delay:${0.1 + i * 0.08}s">
-                    <div class="ico">${m.icon}</div>
-                    <div class="name">${m.label}</div>
-                    <div class="desc">${m.strong}</div>
-                </div>`;
+            // 1. Welcome — short empowering message only
+            journeySteps.push({ type: 'welcome', name });
+
+            // 2. One strength card at a time
+            strengths.forEach((s, i) => {
+                journeySteps.push({ type: 'strength', data: s, index: i, total: strengths.length });
+            });
+
+            // 3. One "what helps me move forward" card at a time
+            improve.forEach((s, i) => {
+                journeySteps.push({ type: 'improve', data: s, index: i, total: improve.length });
+            });
+
+            // 4. Small action plan (all 3 small steps together)
+            if (tips.length) {
+                journeySteps.push({ type: 'plan', tips });
+            }
+
+            // 5. Final — go to dashboard
+            journeySteps.push({ type: 'done', name });
+
+            journeyIndex = 0;
+            document.getElementById('journey').style.display = 'flex';
+            renderProgress();
+            renderScene();
+        }
+
+        function renderProgress() {
+            const el = document.getElementById('journeyProgress');
+            el.innerHTML = journeySteps.map((_, i) => {
+                const cls = i === journeyIndex ? 'active' : (i < journeyIndex ? 'done' : '');
+                return `<span class="dot ${cls}"></span>`;
             }).join('');
+        }
 
-            // 3. What to strengthen — lowest 2
-            const bottom = [...sorted].reverse().slice(0, 2);
-            document.getElementById('improveList').innerHTML = bottom.map((s, i) => {
-                const m = TRAITS[s.key];
-                const st = scoreToStatus(s.val);
-                return `<div class="improve-card fade-up" style="animation-delay:${0.1 + i * 0.08}s">
-                    <div class="improve-top">
-                        <div class="improve-label"><span class="e">${m.icon}</span>${m.label}</div>
-                        <span class="status-pill ${st.cls}">${st.text}</span>
-                    </div>
-                    <div class="bar"><div class="bar-fill" style="width:${Math.max(s.val, 8)}%;background:${st.color}"></div></div>
-                </div>`;
-            }).join('');
+        function renderScene() {
+            const stage = document.getElementById('journeyStage');
+            const nav = document.getElementById('journeyNav');
+            const step = journeySteps[journeyIndex];
+            const isLast = journeyIndex === journeySteps.length - 1;
+            const isFirst = journeyIndex === 0;
 
-            // 4. Tips — exactly 3 short ones (from the 2 weakest + one universal)
-            const tips = [];
-            bottom.forEach(s => { if (TRAITS[s.key].tip) tips.push(TRAITS[s.key].tip); });
-            tips.push('כשמשהו מרגיש קשה — תמיד אפשר לבקש עזרה 🙂');
-            document.getElementById('tipsGrid').innerHTML = tips.slice(0, 3).map((t, i) => `
-                <div class="tip-card fade-up" style="animation-delay:${0.1 + i * 0.08}s">
-                    <div class="tip-num">${i + 1}</div>
-                    <div class="t">${t}</div>
-                </div>`).join('');
+            let html = '';
+            if (step.type === 'welcome') {
+                html = `
+                    <div class="scene active welcome-card">
+                        <div class="welcome-mascot">
+                            <span style="font-size:54px">🎉</span>
+                        </div>
+                        <div class="title">${step.name}, סיימנו את המיפוי!</div>
+                        <div class="sub">גיליתי כמה דברים שיעזרו לי להתאים לך למידה בדיוק בדרך שלך.</div>
+                    </div>`;
+            } else if (step.type === 'strength') {
+                const s = step.data;
+                const ordinal = ['הראשונה', 'השנייה', 'השלישית'][step.index] || '';
+                html = `
+                    <div class="scene active">
+                        <div class="big-card">
+                            <span class="kicker">החוזקה ${ordinal} שלך 💪</span>
+                            <div class="big-ico">${s.icon}</div>
+                            <div class="big-name">${s.label}</div>
+                            <div class="big-desc">${shorten(s.desc)}</div>
+                            <div class="reactions" id="reactions">
+                                <button class="reaction-btn" onclick="reactSelect(this)">נשמע כמוני 😊</button>
+                                <button class="reaction-btn" onclick="reactSelect(this)">לא בטוח 🤔</button>
+                            </div>
+                        </div>
+                    </div>`;
+            } else if (step.type === 'improve') {
+                const s = step.data;
+                const why = s.tip || s.desc || '';
+                html = `
+                    <div class="scene active">
+                        <div class="big-card">
+                            <span class="kicker">מה יעזור לי להתקדם 🌱</span>
+                            <div class="big-ico">${s.icon}</div>
+                            <div class="big-name">${softLabel(s.label)}</div>
+                            <div class="big-desc">${shorten(s.tip || s.desc)}</div>
+                            ${why ? `
+                            <button class="why-toggle" onclick="toggleWhy(this)">
+                                <span>למה זה חשוב?</span><span class="chev">▾</span>
+                            </button>
+                            <div class="why-body">${stripScores(s.desc || why)}</div>` : ''}
+                        </div>
+                    </div>`;
+            } else if (step.type === 'plan') {
+                html = `
+                    <div class="scene active">
+                        <div class="plan-head">
+                            <span class="e">💪</span>
+                            <div class="title">הצעדים הקטנים שלי</div>
+                        </div>
+                        <div class="plan-steps">
+                            ${step.tips.map((t, i) => `
+                                <div class="plan-step" style="animation-delay:${0.15 + i * 0.12}s">
+                                    <div class="num">${i + 1}</div>
+                                    <div class="t">${t}</div>
+                                </div>`).join('')}
+                        </div>
+                    </div>`;
+            } else if (step.type === 'done') {
+                html = `
+                    <div class="scene active welcome-card">
+                        <div class="welcome-mascot">
+                            <span style="font-size:50px">🚀</span>
+                        </div>
+                        <div class="title">מוכנים להתחיל?</div>
+                        <div class="sub">מעכשיו נלמד יחד בדרך שמתאימה בדיוק לך.</div>
+                    </div>`;
+            }
+
+            stage.innerHTML = html;
+
+            // Navigation buttons
+            let navHtml = '';
+            if (!isFirst && !isLast) {
+                navHtml += `<button class="nav-btn ghost" onclick="journeyBack()">→ הקודם</button>`;
+            }
+            if (step.type === 'welcome') {
+                navHtml += `<button class="nav-btn" onclick="journeyNext()">בוא נראה מה גיליתי ✨</button>`;
+            } else if (isLast) {
+                navHtml += `<a class="nav-btn" href="/student-dashboard/">מתחילים ללמוד בדרך שלי ←</a>`;
+            } else {
+                navHtml += `<button class="nav-btn" onclick="journeyNext()">הבא ←</button>`;
+            }
+            nav.innerHTML = navHtml;
+        }
+
+        function journeyNext() {
+            if (journeyIndex < journeySteps.length - 1) {
+                journeyIndex++;
+                renderProgress();
+                renderScene();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+        function journeyBack() {
+            if (journeyIndex > 0) {
+                journeyIndex--;
+                renderProgress();
+                renderScene();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+        function reactSelect(btn) {
+            btn.parentElement.querySelectorAll('.reaction-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+        }
+        function toggleWhy(btn) {
+            btn.classList.toggle('open');
+            const body = btn.nextElementSibling;
+            body.classList.toggle('open');
+        }
+
+        // Keep text short — 1-2 lines max
+        function shorten(txt) {
+            if (!txt) return '';
+            let clean = stripScores(txt.trim());
+            // Cut at first sentence boundary if it's long
+            if (clean.length > 90) {
+                const dot = clean.indexOf('. ');
+                if (dot > 20 && dot < 90) return clean.slice(0, dot + 1);
+                return clean.slice(0, 88).trim() + '…';
+            }
+            return clean;
+        }
+        // Safety net — the student must never see mapping scores.
+        // Removes stray numbers/percent that the AI might slip into strength/improve text.
+        function stripScores(txt) {
+            return txt
+                // "קיבלת 100 ב..." / "עם 65 ב..." / "ציון 80" / "100%"
+                .replace(/\b\d{1,3}\s*%/g, '')
+                .replace(/(?:קיבלת|עם|ציון|ציונך|של)\s*\d{1,3}\b/g, m => m.replace(/\d{1,3}/, '').trim())
+                .replace(/\b\d{1,3}\b/g, '')
+                // tidy leftover double spaces / dangling prepositions
+                .replace(/\s{2,}/g, ' ')
+                .replace(/\s+([.,!?…])/g, '$1')
+                .trim();
+        }
+        // Soften "deficit" style labels into opportunity framing
+        function softLabel(label) {
+            const map = {
+                'שליטה בטכנולוגיה': 'להרגיש בטוח עם כלים דיגיטליים',
+                'הכרה עצמית': 'להכיר מה עוזר לי ללמוד',
+                'מודעות עצמית': 'להכיר מה עוזר לי ללמוד',
+                'התמדה': 'להמשיך גם כשמאתגר',
+                'ארגון': 'לסדר את הדרך שלי'
+            };
+            return map[label] || label;
         }
 
         // =============================
-        // LOAD DATA
+        // LOAD & ANALYZE
         // =============================
-        async function loadResults(studentId = null) {
-            let data;
-            if (studentId) {
-                const res = await fetch(`/api/results/${studentId}`);
-                const json = await res.json();
-                data = { student_name: json.student.name, scores: json.student.scores };
-            } else {
-                const stored = localStorage.getItem('mapping_results');
-                if (stored) {
-                    data = JSON.parse(stored);
+        async function loadResults() {
+            const stored = localStorage.getItem('mapping_results');
+            if (!stored) {
+                document.getElementById('noDataState').style.display = '';
+                return;
+            }
+
+            const data = JSON.parse(stored);
+            const name = data.student_name || 'תלמיד/ה';
+
+            // Check cache - reuse if mapping data hasn't changed
+            const cacheKey = 'profile_cache_v2';
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                try {
+                    const cacheObj = JSON.parse(cached);
+                    if (cacheObj.sourceHash === stored) {
+                        render(cacheObj.data, name);
+                        return;
+                    }
+                } catch (e) { /* cache corrupt, regenerate */ }
+            }
+
+            // Show loading
+            document.getElementById('loadingState').style.display = '';
+            document.getElementById('journey').style.display = 'none';
+            startLoadingAnimation();
+
+            try {
+                // Call AI to analyze the profile
+                const resp = await fetch('/api/analyze-profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ student_name: name, scores: data.scores })
+                });
+
+                if (!resp.ok) throw new Error('API error');
+
+                const profile = await resp.json();
+
+                // Cache the result
+                localStorage.setItem(cacheKey, JSON.stringify({ sourceHash: stored, data: profile }));
+
+                // Hide loading, show journey
+                document.getElementById('loadingState').style.display = 'none';
+
+                render(profile, name);
+            } catch (err) {
+                console.error('Profile analysis error:', err);
+                // Hide loading, show journey with fallback render
+                document.getElementById('loadingState').style.display = 'none';
+                renderFallback(data, name);
+            }
+        }
+
+        function renderFallback(data, name) {
+            // Minimal journey if AI fails — still gentle, no raw report
+            const profile = {
+                strengths: [
+                    { icon: '🎯', label: 'ריכוז', desc: 'אתה מצליח להישאר ממוקד כשיש לך מטרה ברורה.' },
+                    { icon: '💡', label: 'סקרנות', desc: 'אתה אוהב לגלות איך דברים עובדים.' }
+                ],
+                improve: [],
+                tips: [
+                    'ללמוד ביחידות קצרות של 15 דקות',
+                    'לבחור מטרה קטנה לפני כל משימה',
+                    'לעצור בסוף ולכתוב: מה עבד לי טוב?'
+                ]
+            };
+            render(profile, name);
+        }
+
+        function startLoadingAnimation() {
+            const steps = document.querySelectorAll('#loadingSteps .loading-step');
+            const bar = document.getElementById('loadingBar');
+            let current = 0;
+
+            function showNext() {
+                if (current >= steps.length) return;
+                // Mark previous as done
+                if (current > 0) steps[current - 1].classList.add('done');
+                steps[current].classList.add('visible');
+                // Update progress bar
+                bar.style.width = ((current + 1) / steps.length * 100) + '%';
+                current++;
+                if (current < steps.length) {
+                    setTimeout(showNext, 1200);
                 } else {
-                    const res = await fetch('/api/results/student_001');
-                    const json = await res.json();
-                    data = { student_name: json.student.name, scores: json.student.scores };
-                    document.getElementById('mockStudentSelect').value = 'student_001';
+                    // Mark last as done after a moment
+                    setTimeout(() => steps[current - 1].classList.add('done'), 800);
                 }
             }
-            render(data.scores, data.student_name);
-        }
 
-        document.getElementById('mockStudentSelect').addEventListener('change', (e) => {
-            loadResults(e.target.value || null);
-        });
+            setTimeout(showNext, 500);
+        }
 
         loadResults();
     </script>
