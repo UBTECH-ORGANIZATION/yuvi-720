@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>הדשבורד שלי - YuviLab 720</title>
     <link rel="stylesheet" href="/shared/theme.css">
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+    </script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -114,10 +122,11 @@
 
         /* ===== MAIN CONTENT ===== */
         .main-content {
-            margin-right: 220px;
+            /* No sidebar — center the content across the full width. */
             padding: 24px 28px;
             min-height: 100vh;
-            max-width: 1100px;
+            max-width: 1180px;
+            margin: 0 auto;
         }
 
         /* Header */
@@ -384,6 +393,193 @@
         .status-new { background: rgba(246,173,85,0.1); color: #c05621; }
         .status-improving { background: rgba(72,187,120,0.1); color: #38a169; }
 
+        /* ===== CURRICULUM (progress vs syllabus) ===== */
+        .curriculum-block {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #e7e2f5;
+        }
+        .curriculum-title {
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: var(--text-medium);
+            margin-bottom: 8px;
+        }
+        .curriculum-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .curriculum-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.76rem;
+        }
+        .curriculum-mark {
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 0.72rem;
+            flex-shrink: 0;
+        }
+        .curriculum-topic { flex: 1; color: var(--text-medium); }
+        .curriculum-status {
+            font-size: 0.66rem;
+            padding: 1px 7px;
+            border-radius: 5px;
+            white-space: nowrap;
+        }
+        .curriculum-item.curr-done .curriculum-mark { background: rgba(72,187,120,0.15); color: #38a169; }
+        .curriculum-item.curr-done .curriculum-status { background: rgba(72,187,120,0.1); color: #38a169; }
+        .curriculum-item.curr-current .curriculum-mark { background: rgba(124,92,255,0.15); color: #7c5cff; }
+        .curriculum-item.curr-current .curriculum-status { background: rgba(124,92,255,0.1); color: #7c5cff; }
+        .curriculum-item.curr-current .curriculum-topic { font-weight: 700; color: var(--text-dark); }
+        .curriculum-item.curr-upcoming .curriculum-mark { background: #f0edf8; color: #b6abdd; }
+        .curriculum-item.curr-upcoming .curriculum-status { background: #f4f2fb; color: #9a93b5; }
+        .curriculum-item.curr-upcoming .curriculum-topic { color: var(--text-light); }
+
+        /* ===== SUBJECTS (deep view, rich cards) ===== */
+        .subjects-grid-rich {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+        @media (max-width: 880px) { .subjects-grid-rich { grid-template-columns: 1fr; } }
+        .subj-card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 20px 22px 18px;
+            box-shadow: 0 6px 22px rgba(76,58,160,0.08);
+            border: 1px solid #f0edf8;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .subj-card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(76,58,160,0.14); }
+        .subj-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+        .subj-id { display: flex; align-items: center; gap: 12px; }
+        .subj-ico {
+            width: 48px; height: 48px; border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; flex-shrink: 0;
+        }
+        .subj-name { font-size: 1.05rem; font-weight: 700; color: var(--text-dark); line-height: 1.2; }
+        .subj-lessons { font-size: 0.72rem; color: var(--text-light); margin-top: 3px; }
+        .subj-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 0.68rem; font-weight: 600;
+            padding: 5px 10px; border-radius: 999px;
+            white-space: nowrap; flex-shrink: 0;
+        }
+        .subj-badge .bdot { width: 7px; height: 7px; border-radius: 50%; }
+        .subj-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+        .subj-bar { flex: 1; height: 9px; background: #f0edf7; border-radius: 6px; overflow: hidden; }
+        .subj-fill { height: 100%; border-radius: 6px; width: 0; transition: width 0.9s cubic-bezier(0.18,0.89,0.32,1.1); }
+        .subj-pct { font-size: 0.82rem; font-weight: 700; color: var(--text-medium); min-width: 38px; text-align: left; }
+        .subj-next-label { font-size: 0.72rem; font-weight: 700; color: var(--text-light); margin-bottom: 9px; }
+        .subj-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 16px; }
+        .subj-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 7px 4px; font-size: 0.86rem;
+            border-bottom: 1px solid #f6f4fb;
+        }
+        .subj-item:last-child { border-bottom: none; }
+        .subj-mark {
+            width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.7rem; font-weight: 700;
+            border: 2px solid #e4dff2; background: #fff; color: transparent;
+        }
+        .subj-topic { color: var(--text-medium); flex: 1; }
+        .subj-item.done .subj-topic { color: var(--text-dark); }
+        .subj-item.upcoming .subj-topic { color: var(--text-light); }
+        .subj-item.current .subj-topic { font-weight: 700; color: var(--text-dark); }
+        .subj-cta {
+            margin-top: auto;
+            border: none; cursor: pointer;
+            width: 100%; padding: 12px;
+            border-radius: 14px;
+            font-family: 'Rubik', sans-serif; font-size: 0.86rem; font-weight: 600;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            transition: filter 0.2s, transform 0.15s;
+        }
+        .subj-cta:hover { filter: brightness(1.05); transform: translateY(-1px); }
+
+        /* ===== SUBJECTS carousel (one subject in focus) ===== */
+        .subj-chips {
+            display: flex; flex-wrap: wrap; gap: 8px;
+            justify-content: center;
+            margin-bottom: 22px;
+        }
+        .subj-chip {
+            display: inline-flex; align-items: center; gap: 7px;
+            border: 1.5px solid #ece8f6; background: #fff;
+            color: var(--text-medium);
+            font-family: 'Rubik', sans-serif; font-size: 0.82rem; font-weight: 600;
+            padding: 8px 14px; border-radius: 999px; cursor: pointer;
+            transition: all 0.18s;
+        }
+        .subj-chip:hover { border-color: #d7cffa; transform: translateY(-1px); }
+        .subj-chip .chip-ico { font-size: 0.95rem; }
+        .subj-chip.active { color: #fff; border-color: transparent; box-shadow: 0 6px 16px rgba(124,92,255,0.28); }
+        .subj-carousel {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .subj-arrow {
+            width: 50px; height: 50px; flex-shrink: 0;
+            border-radius: 50%; border: none; cursor: pointer;
+            background: #fff; color: #7c5cff;
+            box-shadow: 0 6px 18px rgba(76,58,160,0.12);
+            font-size: 1.4rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.18s;
+        }
+        .subj-arrow:hover { background: #7c5cff; color: #fff; transform: scale(1.08); }
+        .subj-arrow:disabled { opacity: 0.35; cursor: default; transform: none; background: #fff; color: #b6abdd; }
+        /* Coverflow: center card in focus, neighbours peek smaller on each side */
+        .subj-coverflow {
+            position: relative; flex: 1; min-width: 0;
+            display: flex; align-items: center; justify-content: center;
+            gap: 0; overflow: hidden; padding: 14px 0;
+        }
+        .subj-coverflow.anim-next { animation: subjSlideNext 0.4s cubic-bezier(.22,.9,.3,1); }
+        .subj-coverflow.anim-prev { animation: subjSlidePrev 0.4s cubic-bezier(.22,.9,.3,1); }
+        @keyframes subjSlideNext {
+            from { opacity: 0.35; transform: translateX(46px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes subjSlidePrev {
+            from { opacity: 0.35; transform: translateX(-46px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        .subj-slide {
+            flex: 0 0 auto; width: 430px; max-width: 80%;
+            transition: transform 0.38s cubic-bezier(.22,.9,.3,1), opacity 0.38s ease;
+        }
+        .subj-slide.center { transform: scale(1); opacity: 1; z-index: 3; }
+        .subj-slide.side {
+            opacity: 0.55; cursor: pointer; z-index: 1;
+            filter: saturate(0.85);
+        }
+        .subj-slide.side.prev { transform: scale(0.82) translateX(-26%); }
+        .subj-slide.side.next { transform: scale(0.82) translateX(26%); }
+        .subj-slide.side:hover { opacity: 0.85; }
+        .subj-slide.side.prev:hover { transform: scale(0.86) translateX(-22%); }
+        .subj-slide.side.next:hover { transform: scale(0.86) translateX(22%); }
+        .subj-slide.center .subj-card { padding: 24px 26px 22px; }
+        .subj-slide.center .subj-ico { width: 54px; height: 54px; font-size: 1.7rem; }
+        .subj-slide.center .subj-name { font-size: 1.2rem; }
+        .subj-slide.center .subj-item { font-size: 0.92rem; padding: 9px 4px; }
+        .subj-slide.side .subj-cta { pointer-events: none; }
+        .subj-dots { display: flex; justify-content: center; gap: 7px; margin-top: 18px; }
+        .subj-dot { width: 8px; height: 8px; border-radius: 50%; background: #ddd4f5; cursor: pointer; transition: all 0.2s; }
+        .subj-dot.active { width: 22px; border-radius: 999px; background: #7c5cff; }
+
         /* ===== GOALS / MENTORING ===== */
         .goals-list {
             display: flex;
@@ -438,6 +634,65 @@
             color: var(--text-muted);
             margin-top: 2px;
         }
+
+        .goal-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 5px;
+        }
+        .goal-source {
+            font-size: 0.66rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+        .goal-source.gsrc-mentor { background: rgba(124,92,255,0.12); color: #6b46c1; }
+        .goal-source.gsrc-mapping { background: rgba(99,179,237,0.12); color: #3182ce; }
+        .goal-source.gsrc-self { background: rgba(246,173,85,0.14); color: #c05621; }
+        .goal-edit-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 2px 4px;
+            opacity: 0.55;
+            transition: opacity 0.2s;
+            flex-shrink: 0;
+        }
+        .goal-edit-btn:hover { opacity: 1; }
+        .goal-add {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .goal-add-input {
+            flex: 1;
+            border: 1.5px solid #e2e0ee;
+            border-radius: 10px;
+            padding: 9px 12px;
+            font-size: 0.8rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .goal-add-input:focus { border-color: #7c5cff; }
+        .goal-add-btn {
+            background: linear-gradient(135deg, #7c5cff, #9f7afe);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 9px 16px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: transform 0.15s;
+        }
+        .goal-add-btn:hover { transform: translateY(-1px); }
 
         .goal-date {
             font-size: 0.65rem;
@@ -766,13 +1021,13 @@
             flex-shrink: 0; order: 3;
         }
         .subject-row-name { font-size: 0.92rem; font-weight: 700; color: var(--text-dark); min-width: 70px; order: 1; }
-        .subject-bar-wrap { flex: 1; position: relative; height: 26px; display: flex; align-items: center; order: 2; }
-        .subject-bar-track { position: relative; width: 100%; height: 9px; background: #f0edf7; border-radius: 6px; overflow: hidden; }
+        .subject-bar-wrap { flex: 1; display: flex; align-items: center; gap: 10px; order: 2; }
+        .subject-bar-track { position: relative; flex: 1; height: 9px; background: #f0edf7; border-radius: 6px; overflow: hidden; }
         .subject-bar-fill { position: absolute; right: 0; top: 0; height: 100%; border-radius: 6px; transition: width 0.8s ease; }
         .subject-bar-pill {
-            position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-            font-size: 0.64rem; font-weight: 700; padding: 3px 9px; border-radius: 999px;
-            background: #fff; box-shadow: 0 1px 5px rgba(0,0,0,0.1); white-space: nowrap;
+            flex-shrink: 0;
+            font-size: 0.64rem; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+            background: #f4f1fb; white-space: nowrap;
         }
         .subject-bar-pill.level-great { color: #2f855a; }
         .subject-bar-pill.level-good { color: #3182ce; }
@@ -834,20 +1089,70 @@
         }
 
         /* ===== YUBI CHAT ===== */
-        .yubi-fab {
-            position: fixed; bottom: 20px; left: 20px; z-index: 250;
-            width: 60px; height: 60px; border-radius: 50%; border: none; cursor: pointer;
-            background: linear-gradient(135deg, #7c5cff, #9f7afe);
-            box-shadow: 0 10px 28px rgba(124,92,255,0.45);
-            display: flex; align-items: center; justify-content: center;
-            transition: transform 0.25s;
-            animation: fabBob 3s ease-in-out infinite;
+        .yubi-launcher {
+            position: fixed; bottom: 22px; left: 22px; z-index: 250;
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
         }
-        @keyframes fabBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
-        .yubi-fab:hover { transform: scale(1.08); }
+        .yubi-launcher.hidden { display: none; }
+
+        .yubi-bubble {
+            position: relative;
+            background: #fff; border-radius: 18px;
+            padding: 14px 16px 13px; width: 210px;
+            box-shadow: 0 14px 34px rgba(76,58,160,0.22);
+            border: 1px solid #f0ecfb;
+            text-align: center;
+            animation: bubbleIn 0.4s ease both, bubbleFloat 3.6s ease-in-out 0.4s infinite;
+        }
+        .yubi-bubble strong { display:block; font-size: 0.92rem; color: #4a3d8f; margin-bottom: 3px; }
+        .yubi-bubble span { display:block; font-size: 0.74rem; color: var(--text-light); line-height: 1.4; margin-bottom: 10px; }
+        .yubi-bubble-btn {
+            border: none; cursor: pointer;
+            background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff;
+            font-family: 'Rubik', sans-serif; font-size: 0.82rem; font-weight: 700;
+            padding: 9px 18px; border-radius: 999px;
+            box-shadow: 0 6px 16px rgba(124,92,255,0.4);
+            transition: transform 0.15s, filter 0.2s;
+        }
+        .yubi-bubble-btn:hover { transform: translateY(-1px); filter: brightness(1.06); }
+        /* little tail pointing down to Yubi */
+        .yubi-bubble::after {
+            content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+            width: 16px; height: 16px; background: #fff;
+            border-right: 1px solid #f0ecfb; border-bottom: 1px solid #f0ecfb;
+            transform: translateX(-50%) rotate(45deg);
+        }
+        .yubi-bubble-close {
+            position: absolute; top: 6px; left: 8px;
+            background: none; border: none; cursor: pointer;
+            color: #c5bedd; font-size: 0.8rem; line-height: 1;
+        }
+        @keyframes bubbleIn { from { opacity:0; transform: translateY(8px) scale(0.92); } to { opacity:1; transform: translateY(0) scale(1); } }
+        @keyframes bubbleFloat { 0%,100%{ transform: translateY(0); } 50%{ transform: translateY(-4px); } }
+
+        .yubi-fab {
+            position: relative; border: none; cursor: pointer; padding: 0;
+            width: 132px; height: 132px; border-radius: 50%;
+            background:
+                radial-gradient(circle at 50% 44%, rgba(159,122,254,0.42), rgba(124,92,255,0.18) 58%, rgba(124,92,255,0) 74%);
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.2s;
+            animation: fabBob 3.4s ease-in-out infinite;
+        }
+        .yubi-fab::before {
+            /* a clear, soft clickable disc behind Yubi */
+            content: ''; position: absolute; inset: 16px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 50% 38%, #ffffff, #efe9ff 70%);
+            box-shadow: 0 12px 30px rgba(124,92,255,0.38), inset 0 0 0 2px rgba(124,92,255,0.12);
+        }
+        @keyframes fabBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+        .yubi-fab:hover { transform: scale(1.07); }
+        .yubi-fab .fab-robot { position: relative; z-index: 1; width: 100%; height: 100%; pointer-events: none; }
         .yubi-fab .fab-ping {
-            position: absolute; top: 4px; right: 4px; width: 13px; height: 13px;
-            background: #48bb78; border-radius: 50%; border: 2px solid #fff;
+            position: absolute; top: 22px; right: 22px; z-index: 2; width: 16px; height: 16px;
+            background: #48bb78; border-radius: 50%; border: 3px solid #fff;
+            box-shadow: 0 0 0 4px rgba(72,187,120,0.25);
         }
         .yubi-fab.hidden { display: none; }
 
@@ -868,7 +1173,8 @@
             padding: 11px 13px; color: #fff;
             background: linear-gradient(135deg, #7c5cff, #9f7afe);
         }
-        .yubi-head-ava { width: 36px; height: 36px; border-radius: 11px; background: rgba(255,255,255,0.18); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .yubi-head-ava { width: 46px; height: 46px; border-radius: 13px; background: rgba(255,255,255,0.18); display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden; }
+        .yubi-head-ava canvas { display:block; }
         .yubi-head-info { line-height: 1.2; }
         .yubi-head-info strong { font-size: 0.9rem; display:block; }
         .yubi-head-info small { font-size: 0.64rem; opacity: 0.9; display:flex; align-items:center; gap:4px; }
@@ -960,41 +1266,6 @@
 </head>
 <body>
 
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-logo">
-            <h2>YuviLab 720</h2>
-            <span>הלמידה שלך, הדרך שלך</span>
-        </div>
-        <nav class="sidebar-nav">
-            <a class="nav-item active" data-view="home" href="#">
-                <span class="nav-icon">🏠</span> הדשבורד שלי
-            </a>
-            <a class="nav-item" href="/learning/">
-                <span class="nav-icon">🚀</span> המשימות שלי
-            </a>
-            <a class="nav-item" data-view="goals" href="#">
-                <span class="nav-icon">🎯</span> הצעדים שלי
-            </a>
-            <a class="nav-item" data-view="subjects" href="#">
-                <span class="nav-icon">📚</span> המקצועות שלי
-            </a>
-            <a class="nav-item" data-view="strengths" href="#">
-                <span class="nav-icon">💪</span> הכוחות שלי
-            </a>
-            <a class="nav-item" data-view="learning" href="#">
-                <span class="nav-icon">🧭</span> איך אני לומד
-            </a>
-        </nav>
-        <div class="sidebar-profile">
-            <div class="profile-avatar" id="sidebarAvatar">י</div>
-            <div>
-                <div class="profile-name" id="sidebarName">יובל כהן</div>
-                <div class="profile-role">תלמיד</div>
-            </div>
-        </div>
-    </aside>
-
     <!-- Main Content -->
     <main class="main-content" id="mainContent">
         <!-- Loading state -->
@@ -1013,34 +1284,23 @@
     </div>
 
     <!-- Yubi Chat Launcher -->
-    <button class="yubi-fab" id="yubiFab" aria-label="דבר עם יובי">
-        <svg viewBox="0 0 44 44" width="34" height="34" fill="none">
-            <rect x="9" y="15" width="26" height="21" rx="6" fill="#fff"/>
-            <rect x="15" y="21" width="5" height="5" rx="2" fill="#7c5cff"/>
-            <rect x="24" y="21" width="5" height="5" rx="2" fill="#7c5cff"/>
-            <path d="M18 30 Q22 33 26 30" stroke="#22d3ee" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-            <rect x="17" y="8" width="10" height="8" rx="3" fill="#fff" fill-opacity="0.9"/>
-            <rect x="21" y="3.5" width="2.4" height="5" rx="1.2" fill="#c4b5fd"/>
-            <circle cx="22.2" cy="2.6" r="2.6" fill="#22d3ee"/>
-            <rect x="4" y="20" width="5" height="11" rx="2.5" fill="#fff" fill-opacity="0.9"/>
-            <rect x="35" y="20" width="5" height="11" rx="2.5" fill="#fff" fill-opacity="0.9"/>
-        </svg>
-        <span class="fab-ping"></span>
-    </button>
+    <div class="yubi-launcher" id="yubiLauncher">
+        <div class="yubi-bubble" id="yubiBubble">
+            <button class="yubi-bubble-close" id="yubiBubbleClose" aria-label="סגור">✕</button>
+            <strong>היי! אני כאן לעזור לך! 👋</strong>
+            <span>יש לך שאלה או משהו שאתה מתלבט?</span>
+            <button class="yubi-bubble-btn" id="yubiBubbleBtn">בוא נדבר 💬</button>
+        </div>
+        <button class="yubi-fab" id="yubiFab" aria-label="דבר עם יובי">
+            <div class="fab-robot" id="yubiFabRobot"></div>
+            <span class="fab-ping"></span>
+        </button>
+    </div>
 
     <!-- Yubi Chat Panel -->
     <div class="yubi-chat" id="yubiChat">
         <div class="yubi-chat-head">
-            <div class="yubi-head-ava">
-                <svg viewBox="0 0 44 44" width="24" height="24" fill="none">
-                    <rect x="9" y="15" width="26" height="21" rx="6" fill="#fff"/>
-                    <rect x="15" y="21" width="5" height="5" rx="2" fill="#7c5cff"/>
-                    <rect x="24" y="21" width="5" height="5" rx="2" fill="#7c5cff"/>
-                    <path d="M18 30 Q22 33 26 30" stroke="#22d3ee" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-                    <rect x="21" y="4" width="2.4" height="5" rx="1.2" fill="#c4b5fd"/>
-                    <circle cx="22.2" cy="3" r="2.6" fill="#22d3ee"/>
-                </svg>
-            </div>
+            <div class="yubi-head-ava" id="yubiHeadRobot"></div>
             <div class="yubi-head-info">
                 <strong>יובי</strong>
                 <small><span class="dot"></span> המנטור החכם שלך</small>
@@ -1095,9 +1355,11 @@
             const mappingData = JSON.parse(stored);
             const name = mappingData.student_name || 'תלמיד/ה';
 
-            // Update sidebar with real name
-            document.getElementById('sidebarAvatar').textContent = name[0];
-            document.getElementById('sidebarName').textContent = name;
+            // Update profile name where present (sidebar removed)
+            const sbAva = document.getElementById('sidebarAvatar');
+            const sbName = document.getElementById('sidebarName');
+            if (sbAva) sbAva.textContent = name[0];
+            if (sbName) sbName.textContent = name;
 
             // Check cache - use stored dashboard if mapping data hasn't changed
             const cacheKey = 'dashboard_cache';
@@ -1278,7 +1540,6 @@
                         <h1>שלום ${data.name}! 👋</h1>
                         <p>היום נמשיך בדיוק מאיפה שעצרת</p>
                     </div>
-                    <img class="greeting-robot" src="/shared/yubi-robot.png" alt="יובי">
                 </div>
 
                 <div class="home-section">
@@ -1298,36 +1559,20 @@
                 <div class="home-grid">
                     <div class="panel fade-in">
                         <div class="home-section-head">
-                            <h2>מה יעזור לי להתקדם</h2>
+                            <h2>המקצועות שלי</h2>
+                            <button class="see-more-btn" data-goto="subjects">לכל המקצועות ←</button>
                         </div>
-                        <div class="improve-list">
-                            ${difficulties.slice(0, 2).map(d => {
-                                const v = improveVisual(d);
-                                return `
-                                <div class="improve-card">
-                                    <div class="improve-top">
-                                        <div class="improve-main">
-                                            <div class="improve-title">${improveTitle(d)}</div>
-                                            <button class="improve-toggle">איך עושים את זה?</button>
+                        <div class="subjects-summary">
+                            ${subjects.slice(0, 3).map(s => `
+                                <div class="subject-row">
+                                    <div class="subject-row-name">${s.name}</div>
+                                    <div class="subject-bar-wrap">
+                                        <div class="subject-bar-track">
+                                            <div class="subject-bar-fill" style="width:0%; background:${s.gradient}" data-target="${s.progress}"></div>
                                         </div>
-                                        <div class="improve-ico" style="background:${v.bg}">${v.emoji}</div>
+                                        <span class="subject-bar-pill ${s.levelClass}">${s.level}</span>
                                     </div>
-                                    <div class="improve-tip">${improveHow(d)}</div>
-                                </div>`;
-                            }).join('')}
-                        </div>
-                    </div>
-
-                    <div class="panel fade-in">
-                        <div class="home-section-head">
-                            <h2>הכוחות שלי</h2>
-                            <button class="see-more-btn" data-goto="strengths">לכל הכוחות שלי ←</button>
-                        </div>
-                        <div class="strengths-row">
-                            ${strengths.slice(0, 3).map((s, i) => `
-                                <div class="strength-card">
-                                    <div class="strength-ico" style="background:${STRENGTH_BG[i % STRENGTH_BG.length]}">${strengthIcon(s)}</div>
-                                    <div class="strength-name">${s}</div>
+                                    <div class="subject-row-ico" style="background:${s.iconBg}">${s.icon}</div>
                                 </div>
                             `).join('')}
                         </div>
@@ -1354,22 +1599,39 @@
 
                     <div class="panel fade-in">
                         <div class="home-section-head">
-                            <h2>המקצועות שלי</h2>
-                            <button class="see-more-btn" data-goto="subjects">לכל המקצועות ←</button>
+                            <h2>נושאים לחיזוק</h2>
+                            <span class="see-more-btn" style="cursor:default;background:none;">פריטי ידע שזוהה בהם קושי</span>
                         </div>
-                        <div class="subjects-summary">
-                            ${subjects.slice(0, 3).map(s => `
-                                <div class="subject-row">
-                                    <div class="subject-row-name">${s.name}</div>
-                                    <div class="subject-bar-wrap">
-                                        <div class="subject-bar-track">
-                                            <div class="subject-bar-fill" style="width:0%; background:${s.gradient}" data-target="${s.progress}"></div>
-                                        </div>
-                                        <span class="subject-bar-pill ${s.levelClass}">${s.level}</span>
-                                    </div>
-                                    <div class="subject-row-ico" style="background:${s.iconBg}">${s.icon}</div>
+                        <div class="difficulties-list">
+                            ${difficulties.length ? difficulties.map(d => `
+                                <div class="difficulty-item">
+                                    <span class="difficulty-subject-tag">${d.subject || 'כללי'}</span>
+                                    <span class="difficulty-text">${d.text}</span>
+                                    ${d.status ? `<span class="difficulty-status ${d.statusClass || ''}">${d.status}</span>` : ''}
                                 </div>
-                            `).join('')}
+                            `).join('') : '<div style="font-size:0.82rem;color:#9a93b5;padding:6px 2px;">לא זוהו נושאים שדורשים חיזוק כרגע 🎉</div>'}
+                        </div>
+                    </div>
+
+                    <div class="panel fade-in">
+                        <div class="home-section-head">
+                            <h2>מה יעזור לי להתקדם</h2>
+                        </div>
+                        <div class="improve-list">
+                            ${difficulties.slice(0, 2).map(d => {
+                                const v = improveVisual(d);
+                                return `
+                                <div class="improve-card">
+                                    <div class="improve-top">
+                                        <div class="improve-main">
+                                            <div class="improve-title">${improveTitle(d)}</div>
+                                            <button class="improve-toggle">איך עושים את זה?</button>
+                                        </div>
+                                        <div class="improve-ico" style="background:${v.bg}">${v.emoji}</div>
+                                    </div>
+                                    <div class="improve-tip">${improveHow(d)}</div>
+                                </div>`;
+                            }).join('')}
                         </div>
                     </div>
                 </div>
@@ -1403,67 +1665,243 @@
 
 
         // -------- DEEP: SUBJECTS --------
+        let subjectIndex = 0;
         function renderSubjectsView(data) {
             const subjects = data.subjects || [];
             const el = document.getElementById('view-subjects');
+            // Per-subject accent palette (clean, kid-friendly, no "alarming" red)
+            const accents = [
+                { solid: '#48bb78', soft: 'rgba(72,187,120,0.12)', grad: 'linear-gradient(90deg,#48bb78,#68d391)' }, // green
+                { solid: '#6366f1', soft: 'rgba(99,102,241,0.12)', grad: 'linear-gradient(90deg,#6366f1,#818cf8)' }, // indigo
+                { solid: '#f6ad55', soft: 'rgba(246,173,85,0.16)', grad: 'linear-gradient(90deg,#f6ad55,#fbd38d)' }, // amber
+                { solid: '#ed64a6', soft: 'rgba(237,100,166,0.12)', grad: 'linear-gradient(90deg,#ed64a6,#f687b3)' }, // pink
+                { solid: '#7c5cff', soft: 'rgba(124,92,255,0.12)', grad: 'linear-gradient(90deg,#7c5cff,#9f7afe)' }  // purple
+            ];
+
+            // Generic syllabus fallback so every card is full for the demo
+            const genericSteps = {
+                'מתמטיקה': ['שברים פשוטים', 'מספרים מעורבים', 'חיבור וחיסור שברים', 'בעיות מילוליות', 'אחוזים ראשונים'],
+                'מדעים': ['מבנה התא', 'מחזור המים', 'כוחות ותנועה', 'מערכת השמש', 'ניסויים מעשיים'],
+                'עברית': ['חלקי הדיבור', 'זיהוי שמות עצם', 'זיהוי פעלים', 'הבנת הנקרא', 'כתיבת חיבור'],
+                'אנגלית': ['זמן הווה פשוט', 'אוצר מילים - משפחה', 'תיאור עצמי', 'שאלות ותשובות', 'קריאת טקסט קצר'],
+                'מחשבים': ['מבוא לאינטרנט', 'חיפוש מידע', 'דואר אלקטרוני', 'בטיחות ברשת', 'יצירת מצגת']
+            };
+
+            function buildSteps(s) {
+                // Prefer real curriculum from the data; otherwise use a friendly fallback
+                let items = [];
+                if (s.curriculum && s.curriculum.length) {
+                    items = s.curriculum.map(c => ({
+                        topic: c.topic,
+                        state: c.statusClass === 'curr-done' ? 'done'
+                             : c.statusClass === 'curr-current' ? 'current' : 'upcoming'
+                    }));
+                } else {
+                    const list = genericSteps[s.name] || ['שלב ראשון', 'שלב שני', 'שלב שלישי'];
+                    const done = Math.max(1, Math.round((s.progress || 0) / 100 * list.length));
+                    items = list.map((t, idx) => ({
+                        topic: t,
+                        state: idx < done ? 'done' : (idx === done ? 'current' : 'upcoming')
+                    }));
+                }
+                return items.slice(0, 5);
+            }
+
+            function cardHTML(s, i) {
+                const ac = accents[i % accents.length];
+                const steps = buildSteps(s);
+                const total = s.lessonsTotal || (genericSteps[s.name] ? genericSteps[s.name].length * 4 : 20);
+                const completed = s.lessonsDone != null ? s.lessonsDone : Math.round((s.progress || 0) / 100 * total);
+                return `
+                    <div class="subj-card fade-in">
+                        <div class="subj-top">
+                            <div class="subj-id">
+                                <div class="subj-ico" style="background:${s.iconBg || ac.soft}">${s.icon || '📘'}</div>
+                                <div>
+                                    <div class="subj-name">${s.name}</div>
+                                    <div class="subj-lessons">${completed}/${total} שיעורים הושלמו</div>
+                                </div>
+                            </div>
+                            <span class="subj-badge" style="background:${ac.soft}; color:${ac.solid}">
+                                <span class="bdot" style="background:${ac.solid}"></span> ${s.level || 'ממשיכים'}
+                            </span>
+                        </div>
+                        <div class="subj-bar-row">
+                            <div class="subj-bar"><div class="subj-fill" style="background:${ac.grad}" data-target="${s.progress || 0}"></div></div>
+                            <span class="subj-pct">${s.progress || 0}%</span>
+                        </div>
+                        <div class="subj-next-label">המשך ללמוד</div>
+                        <div class="subj-list">
+                            ${steps.map(st => `
+                                <div class="subj-item ${st.state}">
+                                    <span class="subj-mark" style="${st.state === 'done' ? `background:${ac.solid};border-color:${ac.solid};color:#fff` : st.state === 'current' ? `border-color:${ac.solid};color:${ac.solid}` : ''}">${st.state === 'done' ? '✓' : st.state === 'current' ? '◷' : ''}</span>
+                                    <span class="subj-topic">${st.topic}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button class="subj-cta" style="background:${ac.soft}; color:${ac.solid}" data-subject="${s.name}">להמשך למידה ←</button>
+                    </div>`;
+            }
+
+            if (!subjects.length) {
+                el.innerHTML = `
+                    <button class="view-back" data-goto="home">→ חזרה לדשבורד</button>
+                    <div class="view-head"><h1>📚 המקצועות שלי</h1><p>עוד רגע נטען את המקצועות שלך 💜</p></div>`;
+                el.querySelector('[data-goto]').addEventListener('click', () => switchView('home'));
+                return;
+            }
+
+            // Keep the index in range (state persists between renders within the session)
+            if (subjectIndex >= subjects.length || subjectIndex < 0) subjectIndex = 0;
+
             el.innerHTML = `
                 <button class="view-back" data-goto="home">→ חזרה לדשבורד</button>
-                <div class="view-head"><h1>📚 המקצועות שלי</h1><p>איפה אני מתקדם ומה יעזור לי בכל מקצוע</p></div>
-                <div class="subjects-grid">
-                    ${subjects.map((s, i) => `
-                        <div class="subject-card fade-in" style="animation-delay:${i * 0.05}s">
-                            <div class="subject-card-header">
-                                <div class="subject-card-title">
-                                    <div class="subject-icon" style="background:${s.iconBg}">${s.icon}</div>
-                                    <span class="subject-name">${s.name}</span>
-                                </div>
-                                <span class="subject-level ${s.levelClass}">${s.level}</span>
-                            </div>
-                            <div class="subject-progress-bar">
-                                <div class="subject-progress-fill" style="width:0%; background:${s.gradient}" data-target="${s.progress}"></div>
-                            </div>
-                            <div style="margin-top:10px; font-size:0.76rem; color:#38a169;">✅ מה הולך טוב: ${s.description}</div>
-                            <div style="margin-top:4px; font-size:0.76rem; color:#c05621;">🌱 מה יעזור: להמשיך עם משימות קצרות וכיפיות</div>
-                        </div>
-                    `).join('')}
+                <div class="view-head"><h1>📚 המקצועות שלי</h1><p>המקצוע שבמרכז הוא הפעיל — גלול עם החצים או לחץ על מקצוע בצד 🚀</p></div>
+                <div class="subj-chips">
+                    ${subjects.map((s, i) => {
+                        const ac = accents[i % accents.length];
+                        return `<button class="subj-chip" data-idx="${i}" style="${i === subjectIndex ? `background:${ac.grad}` : ''}">
+                            <span class="chip-ico">${s.icon || '📘'}</span> ${s.name}
+                        </button>`;
+                    }).join('')}
+                </div>
+                <div class="subj-carousel">
+                    <button class="subj-arrow" id="subjPrev" aria-label="הקודם">→</button>
+                    <div class="subj-coverflow" id="subjStage"></div>
+                    <button class="subj-arrow" id="subjNext" aria-label="הבא">←</button>
+                </div>
+                <div class="subj-dots">
+                    ${subjects.map((_, i) => `<span class="subj-dot ${i === subjectIndex ? 'active' : ''}" data-idx="${i}"></span>`).join('')}
                 </div>
             `;
+
+            const stage = el.querySelector('#subjStage');
+
+            function showSubject(idx, dir) {
+                const prevIdx = subjectIndex;
+                subjectIndex = (idx + subjects.length) % subjects.length;
+                const n = subjects.length;
+                if (dir === undefined && n > 1) {
+                    // pick a natural slide direction based on where we came from
+                    if (subjectIndex === (prevIdx + 1) % n) dir = 'next';
+                    else if (subjectIndex === (prevIdx - 1 + n) % n) dir = 'prev';
+                    else dir = subjectIndex > prevIdx ? 'next' : 'prev';
+                }
+                const prevI = (subjectIndex - 1 + n) % n;
+                const nextI = (subjectIndex + 1) % n;
+
+                // Build slides: previous (small) · current (focus) · next (small)
+                let slides = `<div class="subj-slide center" data-idx="${subjectIndex}">${cardHTML(subjects[subjectIndex], subjectIndex)}</div>`;
+                if (n > 1) {
+                    slides = `<div class="subj-slide side prev" data-idx="${prevI}">${cardHTML(subjects[prevI], prevI)}</div>`
+                           + slides;
+                    if (n > 2) {
+                        slides += `<div class="subj-slide side next" data-idx="${nextI}">${cardHTML(subjects[nextI], nextI)}</div>`;
+                    }
+                }
+                stage.innerHTML = slides;
+
+                // restart the slide-in animation in the travel direction
+                stage.classList.remove('anim-next', 'anim-prev');
+                if (dir) {
+                    void stage.offsetWidth; // force reflow so the animation replays
+                    stage.classList.add(dir === 'prev' ? 'anim-prev' : 'anim-next');
+                }
+
+                // Clicking a side card brings it to the center
+                stage.querySelectorAll('.subj-slide.side').forEach(sl => {
+                    sl.addEventListener('click', () => showSubject(parseInt(sl.dataset.idx, 10)));
+                });
+
+                // sync chips + dots active state
+                el.querySelectorAll('.subj-chip').forEach((c, i) => {
+                    const ac = accents[i % accents.length];
+                    if (i === subjectIndex) { c.classList.add('active'); c.style.background = ac.grad; }
+                    else { c.classList.remove('active'); c.style.background = ''; }
+                });
+                el.querySelectorAll('.subj-dot').forEach((d, i) => d.classList.toggle('active', i === subjectIndex));
+                // animate progress bar of the focused card + wire CTA
+                const center = stage.querySelector('.subj-slide.center');
+                const fill = center && center.querySelector('.subj-fill');
+                if (fill) requestAnimationFrame(() => { fill.style.width = (fill.dataset.target || 0) + '%'; });
+                const cta = center && center.querySelector('.subj-cta');
+                if (cta) cta.addEventListener('click', () => { window.location.href = '/learning/'; });
+            }
+
             el.querySelector('[data-goto]').addEventListener('click', () => switchView('home'));
-            animateBars(el.querySelectorAll('.subject-progress-fill'));
+            el.querySelector('#subjPrev').addEventListener('click', () => showSubject(subjectIndex - 1, 'prev'));
+            el.querySelector('#subjNext').addEventListener('click', () => showSubject(subjectIndex + 1, 'next'));
+            el.querySelectorAll('.subj-chip').forEach(c => c.addEventListener('click', () => showSubject(parseInt(c.dataset.idx, 10))));
+            el.querySelectorAll('.subj-dot').forEach(d => d.addEventListener('click', () => showSubject(parseInt(d.dataset.idx, 10))));
+
+            showSubject(subjectIndex);
         }
 
         // -------- DEEP: GOALS (accordion) --------
+        function persistDashboard() {
+            try {
+                const stored = localStorage.getItem('mapping_results');
+                if (stored && currentData) {
+                    localStorage.setItem('dashboard_cache', JSON.stringify({ sourceHash: stored, data: currentData }));
+                }
+            } catch (e) { /* ignore */ }
+        }
+
+        function goalSourceMeta(g) {
+            const src = g.source || '';
+            if (src.includes('מנטורינג')) return { label: '💬 משיחת מנטורינג', cls: 'gsrc-mentor' };
+            if (src.includes('מיפוי')) return { label: '🧭 מהמיפוי שלי', cls: 'gsrc-mapping' };
+            if (src.includes('עצמי') || src.includes('אני')) return { label: '⭐ הוספתי בעצמי', cls: 'gsrc-self' };
+            return { label: '🧭 מהמיפוי שלי', cls: 'gsrc-mapping' };
+        }
+
         function renderGoalsView(data) {
             const goals = data.goals || [];
+            data.goals = goals;
             const active = goals.filter(g => !g.done);
             const done = goals.filter(g => g.done);
-            const week = active.slice(0, 2);
-            const personal = active.slice(2);
+            const week = active.filter(g => (g.source || '').includes('מנטורינג'));
+            const personal = active.filter(g => !(g.source || '').includes('מנטורינג'));
 
-            const goalRow = (g, idx) => `
-                <div class="goal-item fade-in">
+            const goalRow = (g) => {
+                const idx = goals.indexOf(g);
+                const src = goalSourceMeta(g);
+                return `
+                <div class="goal-item fade-in" data-gi="${idx}">
                     <div class="goal-checkbox ${g.done ? 'done' : ''}" data-gi="${idx}"></div>
                     <div class="goal-content">
                         <div class="goal-text" style="${g.done ? 'text-decoration:line-through;opacity:0.6' : ''}">${g.text}</div>
-                        <div class="goal-meta">${g.meta || ''}</div>
+                        <div class="goal-meta-row">
+                            <span class="goal-source ${src.cls}">${src.label}</span>
+                            ${g.meta ? `<span class="goal-meta">${g.meta}</span>` : ''}
+                        </div>
                     </div>
+                    <button class="goal-edit-btn" data-edit="${idx}" title="עריכה">✏️</button>
+                </div>`;
+            };
+
+            const addForm = `
+                <div class="goal-add">
+                    <input type="text" id="newGoalInput" class="goal-add-input" placeholder="רוצה להוסיף יעד משלך? כתוב אותו כאן..." maxlength="120" />
+                    <button id="addGoalBtn" class="goal-add-btn">➕ הוספה</button>
                 </div>`;
 
-            const accItem = (title, emoji, items, open) => `
+            const accItem = (title, emoji, items, open, extra) => `
                 <div class="acc-item ${open ? 'open' : ''}">
                     <div class="acc-head"><h3>${emoji} ${title} <span style="color:#b6abdd;font-weight:500">(${items.length})</span></h3><span class="acc-arrow">▼</span></div>
                     <div class="acc-body"><div class="acc-body-inner">
-                        <div class="goals-list">${items.length ? items.map((g) => goalRow(g, goals.indexOf(g))).join('') : '<div style="font-size:0.8rem;color:#9a93b5;padding:6px 0;">אין כרגע פריטים כאן</div>'}</div>
+                        ${extra || ''}
+                        <div class="goals-list">${items.length ? items.map(g => goalRow(g)).join('') : '<div style="font-size:0.8rem;color:#9a93b5;padding:6px 0;">אין כרגע פריטים כאן</div>'}</div>
                     </div></div>
                 </div>`;
 
             const el = document.getElementById('view-goals');
             el.innerHTML = `
                 <button class="view-back" data-goto="home">→ חזרה לדשבורד</button>
-                <div class="view-head"><h1>🎯 הצעדים שלי</h1><p>היעדים שלי — צעד אחרי צעד</p></div>
+                <div class="view-head"><h1>🎯 הצעדים שלי</h1><p>היעדים שלי — חלקם משיחות מנטורינג וחלקם מהמיפוי. אפשר לסמן, להוסיף ולערוך</p></div>
                 <div class="accordion">
-                    ${accItem('יעדים לשבוע הקרוב', '📅', week, true)}
-                    ${accItem('יעדים אישיים', '🌟', personal, false)}
+                    ${accItem('יעדים משיחות מנטורינג', '💬', week, true)}
+                    ${accItem('יעדים אישיים', '🌟', personal, true, addForm)}
                     ${accItem('יעדים שהושלמו', '✅', done, false)}
                 </div>
             `;
@@ -1476,14 +1914,43 @@
             el.querySelectorAll('.goal-checkbox').forEach(cb => {
                 cb.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    cb.classList.toggle('done');
-                    const t = cb.nextElementSibling.querySelector('.goal-text');
-                    const isDone = cb.classList.contains('done');
-                    t.style.textDecoration = isDone ? 'line-through' : 'none';
-                    t.style.opacity = isDone ? '0.6' : '1';
-                    if (isDone) showLiveToast('כל הכבוד! סימנת צעד שהושלם ✅', 'יובי עדכן את ההתקדמות שלך', '🎉');
+                    const idx = parseInt(cb.dataset.gi, 10);
+                    goals[idx].done = !goals[idx].done;
+                    persistDashboard();
+                    if (goals[idx].done) showLiveToast('כל הכבוד! סימנת יעד שהושלם ✅', 'יובי עדכן את ההתקדמות שלך', '🎉');
+                    renderGoalsView(data);
+                    switchView('goals');
                 });
             });
+            // edit goal
+            el.querySelectorAll('.goal-edit-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const idx = parseInt(btn.dataset.edit, 10);
+                    const newText = prompt('עריכת היעד:', goals[idx].text);
+                    if (newText !== null && newText.trim()) {
+                        goals[idx].text = newText.trim();
+                        persistDashboard();
+                        showLiveToast('היעד עודכן ✏️', 'השינוי נשמר', '✅');
+                        renderGoalsView(data);
+                        switchView('goals');
+                    }
+                });
+            });
+            // add new goal
+            const addBtn = el.querySelector('#addGoalBtn');
+            const addInput = el.querySelector('#newGoalInput');
+            const doAdd = () => {
+                const text = (addInput.value || '').trim();
+                if (!text) return;
+                goals.push({ text, meta: 'נוסף היום', source: 'הוספתי בעצמי', done: false });
+                persistDashboard();
+                showLiveToast('הוספת יעד חדש! 🌟', 'יובי שמר אותו ברשימה שלך', '➕');
+                renderGoalsView(data);
+                switchView('goals');
+            };
+            if (addBtn) addBtn.addEventListener('click', doAdd);
+            if (addInput) addInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doAdd(); } });
         }
 
         // -------- DEEP: STRENGTHS --------
@@ -1759,16 +2226,21 @@
         // ---- Open / close / mode ----
         function openChat() {
             document.getElementById('yubiChat').classList.add('open');
-            document.getElementById('yubiFab').classList.add('hidden');
+            document.getElementById('yubiLauncher').classList.add('hidden');
             seedChat();
         }
         function closeChat() {
             document.getElementById('yubiChat').classList.remove('open');
-            document.getElementById('yubiFab').classList.remove('hidden');
+            document.getElementById('yubiLauncher').classList.remove('hidden');
             clearVoice();
         }
 
         document.getElementById('yubiFab').addEventListener('click', openChat);
+        document.getElementById('yubiBubbleBtn').addEventListener('click', openChat);
+        document.getElementById('yubiBubbleClose').addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('yubiBubble').style.display = 'none';
+        });
         document.getElementById('yubiClose').addEventListener('click', closeChat);
         document.getElementById('chatForm').addEventListener('submit', (e) => {
             e.preventDefault();
@@ -1805,6 +2277,31 @@
                 showLiveToast('הכל מוכן! זה המרחב האישי שלך ביובי 💜', 'יובי כאן לעזור לך בכל שלב', '🚀');
             }
         }, 3500);
+    </script>
+
+    <!-- 3D Yubi robot: floating launcher + head in the chat header, both follow the cursor -->
+    <script type="module" src="yubi-robot.js?v=2"></script>
+    <script type="module">
+        function whenReady(fn) {
+            if (window.YubiRobot) return fn();
+            const id = setInterval(() => {
+                if (window.YubiRobot) { clearInterval(id); fn(); }
+            }, 60);
+        }
+        whenReady(() => {
+            const launcher = document.getElementById('yubiLauncher');
+            const chat = document.getElementById('yubiChat');
+            // Floating launcher robot (full body, small)
+            window.YubiRobot.mount(document.getElementById('yubiFabRobot'), {
+                view: 'full',
+                isActive: () => launcher && !launcher.classList.contains('hidden')
+            });
+            // Head in the chat header — only renders while the chat is open
+            window.YubiRobot.mount(document.getElementById('yubiHeadRobot'), {
+                view: 'head',
+                isActive: () => chat && chat.classList.contains('open')
+            });
+        });
     </script>
 </body>
 </html>

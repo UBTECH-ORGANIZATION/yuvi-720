@@ -376,7 +376,10 @@ async def generate_dashboard(data: dict):
       "icon": "אימוג'י",
       "progress": מספר 0-100,
       "level": "מצוין/מתקדם יפה/בהתפתחות",
-      "description": "משפט קצר על מצב הלמידה"
+      "description": "משפט קצר על מצב הלמידה",
+      "curriculum": [
+        {{ "topic": "שם נושא בתוכנית הלימודים", "status": "הושלם/לומדים עכשיו/בהמשך" }}
+      ]
     }}
   ],
   "difficulties": [
@@ -390,6 +393,7 @@ async def generate_dashboard(data: dict):
     {{
       "text": "יעד מותאם אישית",
       "meta": "הקשר - מתי נקבע",
+      "source": "שיחת מנטורינג/מהמיפוי",
       "done": false
     }}
   ],
@@ -412,9 +416,9 @@ async def generate_dashboard(data: dict):
 
 הנחיות:
 1. עברית בלבד.
-2. subjects — 4 מקצועות. הציונים מבוססים על המיפוי: ריכוז+חשיבה → מתמטיקה, סקרנות → מדעים, הכרת עצמי+מוטיבציה → עברית, טכנולוגיה → מחשבים.
+2. subjects — 4 מקצועות. הציונים מבוססים על המיפוי: ריכוז+חשיבה → מתמטיקה, סקרנות → מדעים, הכרת עצמי+מוטיבציה → עברית, טכנולוגיה → מחשבים. לכל מקצוע 4-5 נושאים ב-curriculum המייצגים את תוכנית הלימודים — חלקם "הושלם", אחד "לומדים עכשיו", והשאר "בהמשך" (כמות ההושלמו תואמת ל-progress).
 3. difficulties — 2-3 קשיים ספציפיים ומציאותיים שמתאימים לציונים הנמוכים.
-4. goals — 3-4 יעדים מותאמים לציונים הנמוכים והגבוהים.
+4. goals — 3-4 יעדים מותאמים לציונים הנמוכים והגבוהים. לפחות 2 מהם source="שיחת מנטורינג" והשאר source="מהמיפוי".
 5. mapping — סגנון למידה, העדפות, חוזקות — הכל מבוסס על הציונים.
 6. competencies — 6 כשירויות (יוזמה, שיתוף פעולה, חשיבה ביקורתית, גמישות, תקשורת, הכוונה עצמית). הציון מבוסס על הממדים הרלוונטיים.
 7. הכל חיובי ומעודד, מותאם לילד בגיל 10-14.
@@ -435,6 +439,9 @@ async def generate_dashboard(data: dict):
                 progress = s.get("progress", 50)
                 s.setdefault("levelClass", "level-great" if progress >= 80 else "level-good" if progress >= 60 else "level-building")
                 s.setdefault("gradient", "linear-gradient(135deg, #7c5cff, #9f7afe)")
+                for c in s.get("curriculum", []):
+                    cstatus = c.get("status", "")
+                    c.setdefault("statusClass", "curr-done" if "הושלם" in cstatus else "curr-current" if "עכשיו" in cstatus else "curr-upcoming")
             for d in parsed.get("difficulties", []):
                 status = d.get("status", "")
                 d.setdefault("statusClass", "status-working" if "עובד" in status else "status-new" if "חדש" in status else "status-improving")
@@ -459,19 +466,19 @@ def generate_fallback_dashboard(scores: dict, name: str) -> dict:
         "name": name,
         "avatar": name[0] if name else "ת",
         "subjects": [
-            {"name": "מתמטיקה", "icon": "🔢", "iconBg": "rgba(124,92,255,0.1)", "progress": int((focus + cognitive) / 2), "level": "מתקדם", "levelClass": "level-good", "gradient": "linear-gradient(135deg, #7c5cff, #9f7afe)", "description": "בהתבסס על ריכוז וחשיבה"},
-            {"name": "מדעים", "icon": "🔬", "iconBg": "rgba(99,179,237,0.1)", "progress": int((interest + cognitive) / 2), "level": "בהתפתחות", "levelClass": "level-building", "gradient": "linear-gradient(135deg, #63b3ed, #4299e1)", "description": "בהתבסס על סקרנות וחשיבה"},
-            {"name": "עברית", "icon": "📖", "iconBg": "rgba(72,187,120,0.1)", "progress": int((motivation + focus) / 2), "level": "מתקדם", "levelClass": "level-good", "gradient": "linear-gradient(135deg, #48bb78, #38a169)", "description": "בהתבסס על התמדה וריכוז"},
-            {"name": "מחשבים", "icon": "💻", "iconBg": "rgba(246,173,85,0.1)", "progress": tech, "level": "מצוין" if tech >= 70 else "מתקדם", "levelClass": "level-great" if tech >= 70 else "level-good", "gradient": "linear-gradient(135deg, #f6ad55, #ed8936)", "description": "בהתבסס על שליטה בטכנולוגיה"},
+            {"name": "מתמטיקה", "icon": "🔢", "iconBg": "rgba(124,92,255,0.1)", "progress": int((focus + cognitive) / 2), "level": "מתקדם", "levelClass": "level-good", "gradient": "linear-gradient(135deg, #7c5cff, #9f7afe)", "description": "בהתבסס על ריכוז וחשיבה", "curriculum": [{"topic": "חיבור וחיסור", "status": "הושלם", "statusClass": "curr-done"}, {"topic": "לוח הכפל", "status": "הושלם", "statusClass": "curr-done"}, {"topic": "שברים פשוטים", "status": "לומדים עכשיו", "statusClass": "curr-current"}, {"topic": "גאומטריה בסיסית", "status": "בהמשך", "statusClass": "curr-upcoming"}]},
+            {"name": "מדעים", "icon": "🔬", "iconBg": "rgba(99,179,237,0.1)", "progress": int((interest + cognitive) / 2), "level": "בהתפתחות", "levelClass": "level-building", "gradient": "linear-gradient(135deg, #63b3ed, #4299e1)", "description": "בהתבסס על סקרנות וחשיבה", "curriculum": [{"topic": "עולם הצומח", "status": "הושלם", "statusClass": "curr-done"}, {"topic": "מצבי החומר", "status": "לומדים עכשיו", "statusClass": "curr-current"}, {"topic": "מערכת השמש", "status": "בהמשך", "statusClass": "curr-upcoming"}, {"topic": "גוף האדם", "status": "בהמשך", "statusClass": "curr-upcoming"}]},
+            {"name": "עברית", "icon": "📖", "iconBg": "rgba(72,187,120,0.1)", "progress": int((motivation + focus) / 2), "level": "מתקדם", "levelClass": "level-good", "gradient": "linear-gradient(135deg, #48bb78, #38a169)", "description": "בהתבסס על התמדה וריכוז", "curriculum": [{"topic": "קריאה שוטפת", "status": "הושלם", "statusClass": "curr-done"}, {"topic": "הבנת הנקרא", "status": "לומדים עכשיו", "statusClass": "curr-current"}, {"topic": "כתיבה יצירתית", "status": "בהמשך", "statusClass": "curr-upcoming"}]},
+            {"name": "מחשבים", "icon": "💻", "iconBg": "rgba(246,173,85,0.1)", "progress": tech, "level": "מצוין" if tech >= 70 else "מתקדם", "levelClass": "level-great" if tech >= 70 else "level-good", "gradient": "linear-gradient(135deg, #f6ad55, #ed8936)", "description": "בהתבסס על שליטה בטכנולוגיה", "curriculum": [{"topic": "שימוש בטוח במחשב", "status": "הושלם", "statusClass": "curr-done"}, {"topic": "חשיבה מחשבתית", "status": "לומדים עכשיו", "statusClass": "curr-current"}, {"topic": "בניית משחק ראשון", "status": "בהמשך", "statusClass": "curr-upcoming"}]},
         ],
         "difficulties": [
             {"subject": "למידה", "text": "ריכוז לאורך זמן", "status": "עובד על זה", "statusClass": "status-working"},
             {"subject": "למידה", "text": "ארגון מידע ותכנון", "status": "חדש", "statusClass": "status-new"},
         ],
         "goals": [
-            {"text": "לשפר ריכוז ב-10 דקות כל יום", "meta": "מהמיפוי - היום", "done": False},
-            {"text": "לנסות ללמוד בדרך חדשה השבוע", "meta": "מהמיפוי - היום", "done": False},
-            {"text": "לחזק נקודת חולשה אחת בהדרגה", "meta": "מהמיפוי - היום", "done": False},
+            {"text": "לשפר ריכוז ב-10 דקות כל יום", "meta": "נקבע השבוע", "source": "שיחת מנטורינג", "done": False},
+            {"text": "לנסות ללמוד בדרך חדשה השבוע", "meta": "נקבע השבוע", "source": "שיחת מנטורינג", "done": False},
+            {"text": "לחזק נקודת חולשה אחת בהדרגה", "meta": "מהמיפוי - היום", "source": "מהמיפוי", "done": False},
         ],
         "mapping": {
             "interests": ["טכנולוגיה", "גילוי דברים חדשים", "אתגרים"],
@@ -553,7 +560,7 @@ async def get_section_summary(data: dict):
 4. התייחס לתשובות הספציפיות — אבל אל תצטט את הבחירות מילה במילה (אל תכתוב 'ככה-ככה', 'ממש מתאים לי', 'לא כל כך' וכו'). תרגם את המשמעות לשפה טבעית וזורמת. למשל, במקום "בחרת 'ככה-ככה' בהתמדה" כתוב "עדיין בונים את שריר ההתמדה".
 5. אם ענה שלא אוהב מקצוע מסוים, אל תשפוט — התמקד בדברים שכן מעניינים.
 6. אל תהיה שלילי או ביקורתי. מצא תמיד זווית חיובית או מעודדת.
-7. סיים בשאלה קצרה ואישית — שמראה שאתה רוצה להכיר אותו יותר.
+7. סיים בשאלה ממוקדת שנותנת לילד מקום להוסיף משהו משלו דווקא על החלק הזה ("{part_title}") — אם יש משהו שחשוב לו שאדע, או משהו שלא בא לידי ביטוי בתשובות שבחר. אל תפתח שיחה כללית ואל תשאל מה יש לו היום בתוכנית או מה הכי מעניין אותו בשיעורים — רק תן לו הזדמנות להוסיף נקודה אחת משלו אם ירצה.
 8. לא יותר מ-4 משפטים בסה\"כ. אל תכתוב רשימות."""
 
     # Call the shared LLM (gpt-5-mini via APIM)
@@ -593,7 +600,7 @@ async def get_section_summary_stream(data: dict):
 4. התייחס לתשובות הספציפיות — אבל אל תצטט את הבחירות מילה במילה (אל תכתוב 'ככה-ככה', 'ממש מתאים לי', 'לא כל כך' וכו'). תרגם את המשמעות לשפה טבעית וזורמת. למשל, במקום "בחרת 'ככה-ככה' בהתמדה" כתוב "עדיין בונים את שריר ההתמדה".
 5. אם ענה שלא אוהב מקצוע מסוים, אל תשפוט — התמקד בדברים שכן מעניינים.
 6. אל תהיה שלילי או ביקורתי. מצא תמיד זווית חיובית או מעודדת.
-7. סיים בשאלה קצרה ואישית — שמראה שאתה רוצה להכיר אותו יותר.
+7. סיים בשאלה ממוקדת שנותנת לילד מקום להוסיף משהו משלו דווקא על החלק הזה ("{part_title}") — אם יש משהו שחשוב לו שאדע, או משהו שלא בא לידי ביטוי בתשובות שבחר. אל תפתח שיחה כללית ואל תשאל מה יש לו היום בתוכנית או מה הכי מעניין אותו בשיעורים — רק תן לו הזדמנות להוסיף נקודה אחת משלו אם ירצה.
 8. לא יותר מ-4 משפטים בסה\"כ. אל תכתוב רשימות."""
 
     async def event_generator():
