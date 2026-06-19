@@ -3,374 +3,578 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>תצוגת מורה - YuviLab 720</title>
+    <title>דשבורד מורה - YuviLab 720</title>
     <link rel="stylesheet" href="/shared/theme.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --ink-900: #2d2a4a;
+            --ink-700: #4a3d8f;
+            --ink-500: #6b6486;
+            --ink-400: #8b86a3;
+            --ink-300: #a8a3bd;
+            --line: #ece8f6;
+            --line-soft: #f4f1fb;
+            --purple: #7c5cff;
+            --purple-2: #9f7afe;
+            --bg: #f7f6fc;
+            --card: #ffffff;
+            --shadow: 0 1px 3px rgba(80, 60, 160, 0.04);
+            --shadow-hover: 0 6px 20px rgba(80, 60, 160, 0.09);
+            /* soft status colors (no harsh red) */
+            --attn-bg: #fdf3f4; --attn-bd: #f6dcdf; --attn-ink: #c25b66; --attn-dot: #e08792;
+            --warm-bg: #fdf6ec; --warm-bd: #f3e4cb; --warm-ink: #b9842f; --warm-dot: #eabd76;
+            --good-bg: #eefaf1; --good-bd: #cdeed8; --good-ink: #3d9466; --good-dot: #7fcf9f;
+            --info-bg: #eef4fd; --info-bd: #d4e3f8; --info-ink: #4071b8; --info-dot: #8bb2e8;
+        }
         body {
             font-family: 'Rubik', 'Segoe UI', sans-serif;
-            background: var(--bg-body);
-            color: var(--text-dark);
-            min-height: 100vh;
+            background: var(--bg);
+            color: var(--ink-900);
             direction: rtl;
-            line-height: 1.5;
+            line-height: 1.55;
             -webkit-font-smoothing: antialiased;
         }
 
-        /* ===== SIDEBAR ===== */
-        .sidebar {
-            position: fixed; top: 0; right: 0;
-            width: 220px; height: 100vh;
-            background: #fff; border-left: 1px solid #f0edf7;
-            display: flex; flex-direction: column;
-            z-index: 50; padding: 20px 0;
+        /* ===================== TOP BAR ===================== */
+        .topbar {
+            position: fixed; top: 0; right: 0; left: 0; height: 60px; z-index: 60;
+            background: #fff; border-bottom: 1px solid var(--line);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px;
         }
-        .sidebar-logo { text-align: center; padding: 0 16px 18px; border-bottom: 1px solid #f5f3fa; }
-        .sidebar-logo h2 {
-            font-size: 1.05rem; font-weight: 700;
-            background: linear-gradient(135deg, #7c5cff, #9f7afe);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-        .sidebar-logo span { font-size: 0.68rem; color: var(--text-light); }
-        .sidebar-nav { flex: 1; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; }
-        .nav-item {
-            display: flex; align-items: center; gap: 8px;
-            padding: 9px 12px; border-radius: 10px;
-            font-size: 0.82rem; font-weight: 500;
-            color: var(--text-medium); cursor: pointer;
-            transition: all 0.2s; text-decoration: none;
-        }
-        .nav-item:hover { background: #f5f3fa; }
-        .nav-item.active {
-            background: linear-gradient(135deg, rgba(124,92,255,0.08), rgba(159,122,254,0.06));
-            color: #7c5cff; font-weight: 600;
-        }
-        .nav-item .nav-icon { font-size: 1rem; }
-        .sidebar-profile {
-            padding: 14px 16px; border-top: 1px solid #f5f3fa;
-            display: flex; align-items: center; gap: 10px;
-        }
-        .profile-avatar {
-            width: 34px; height: 34px; border-radius: 50%;
-            background: linear-gradient(135deg, #7c5cff, #9f7afe);
-            display: flex; align-items: center; justify-content: center;
-            color: #fff; font-size: 0.8rem; font-weight: 700;
-        }
-        .profile-name { font-size: 0.8rem; font-weight: 600; color: var(--text-dark); }
-        .profile-role { font-size: 0.65rem; color: var(--text-light); }
+        .brand { display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 1.05rem;
+            background: linear-gradient(135deg, #7c5cff, #9f7afe); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .topbar-right { display: flex; align-items: center; gap: 14px; }
+        .bell { position: relative; width: 38px; height: 38px; border-radius: 12px; background: var(--line-soft);
+            display: flex; align-items: center; justify-content: center; font-size: 1.05rem; cursor: pointer; transition: background .15s; }
+        .bell:hover { background: #ece8f6; }
+        .bell .badge { position: absolute; top: -3px; left: -3px; min-width: 18px; height: 18px; border-radius: 999px;
+            background: var(--purple); color: #fff; font-size: 0.62rem; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
+        .userchip { display: flex; align-items: center; gap: 9px; padding: 5px 8px 5px 12px; border-radius: 999px;
+            border: 1px solid var(--line); cursor: pointer; transition: border-color .15s; }
+        .userchip:hover { border-color: #d9cffb; }
+        .userchip .ava { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#f0a0c0,#e87fb0);
+            color: #fff; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; }
+        .userchip .who .n { font-size: 0.8rem; font-weight: 600; color: var(--ink-900); line-height: 1.1; }
+        .userchip .who .r { font-size: 0.66rem; color: var(--ink-400); }
+        .userchip .caret { color: var(--ink-300); font-size: 0.7rem; }
 
-        /* ===== MAIN ===== */
-        .main-content { margin-right: 220px; padding: 24px 28px; min-height: 100vh; max-width: 1120px; }
+        /* context bar + filter popover */
+        .context-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+        .ctx-line { display: flex; align-items: center; gap: 7px; font-size: 0.86rem; }
+        .ctx-line .ctx-label { color: var(--ink-400); }
+        .ctx-line .ctx-value { font-weight: 600; color: var(--ink-700); }
+        .ctx-filter { position: relative; }
+        .ctx-btn { display: inline-flex; align-items: center; gap: 6px; font-family: 'Rubik', sans-serif;
+            font-size: 0.8rem; font-weight: 600; color: var(--purple); background: #f6f3ff;
+            border: 1px solid #ece6fb; border-radius: 999px; padding: 7px 14px; cursor: pointer; transition: background .15s; }
+        .ctx-btn:hover { background: #efeaff; }
+        .ctx-btn .cf-ico { font-size: 0.82rem; }
+        .filter-popover { position: absolute; top: calc(100% + 8px); inset-inline-start: 0; width: 290px;
+            background: #fff; border: 1px solid var(--line); border-radius: 16px;
+            box-shadow: 0 12px 36px rgba(80, 60, 160, 0.14); padding: 16px; z-index: 70; display: none; }
+        .filter-popover.open { display: block; animation: fadeUp .2s ease; }
+        .fp-section + .fp-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line-soft); }
+        .fp-title { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-400); margin-bottom: 10px; }
+        .filter-popover .view-toggle { display: flex; width: 100%; margin: 0; }
+        .filter-popover .vt-btn { flex: 1; justify-content: center; padding: 8px 10px; font-size: 0.8rem; }
+        .fp-field { margin-bottom: 10px; }
+        .fp-field:last-child { margin-bottom: 0; }
+        .fp-field label { display: block; font-size: 0.7rem; color: var(--ink-400); margin-bottom: 4px; }
+        .fp-field select { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px;
+            font-family: 'Rubik', sans-serif; font-size: 0.84rem; font-weight: 600; color: var(--ink-900);
+            background: #fff; cursor: pointer; outline: none; }
+        .fp-field select:focus { border-color: #c9b6fb; }
 
-        .page-header {
-            margin-bottom: 18px;
-            background: linear-gradient(135deg, rgba(124,92,255,0.05), rgba(159,122,254,0.02));
-            border-radius: 16px; padding: 20px 24px;
-            display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+        /* ===================== CHAT PANEL (fixed right rail) ===================== */
+        .chat-panel {
+            position: fixed; top: 60px; right: 0; width: 360px; height: calc(100vh - 60px);
+            background: #fff; border-left: 1px solid var(--line);
+            display: flex; flex-direction: column; z-index: 50;
         }
-        .page-header h1 { font-size: 1.35rem; font-weight: 700; color: #4a3d8f; margin-bottom: 3px; }
-        .page-header p { font-size: 0.82rem; color: var(--text-light); max-width: 560px; }
-        .header-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-        .group-select-wrap label { font-size: 0.62rem; color: var(--text-light); display: block; margin-bottom: 3px; }
-        .group-select {
-            padding: 9px 14px; border-radius: 10px; border: 1px solid #e6e0f5;
-            background: #fff; font-family: 'Rubik', sans-serif; font-size: 0.82rem;
-            font-weight: 600; color: var(--text-dark); cursor: pointer; min-width: 200px;
-        }
-        .live-badge {
-            display: inline-flex; align-items: center; gap: 6px;
-            background: rgba(72,187,120,0.1); color: #2f855a;
-            border-radius: 999px; padding: 6px 12px; font-size: 0.68rem; font-weight: 600;
-            white-space: nowrap;
-        }
-        .live-dot {
-            width: 8px; height: 8px; border-radius: 50%; background: #48bb78;
-            box-shadow: 0 0 0 0 rgba(72,187,120,0.5); animation: livePulse 1.8s infinite;
-        }
-        @keyframes livePulse {
-            0% { box-shadow: 0 0 0 0 rgba(72,187,120,0.55); }
-            70% { box-shadow: 0 0 0 7px rgba(72,187,120,0); }
-            100% { box-shadow: 0 0 0 0 rgba(72,187,120,0); }
-        }
+        .chat-head { padding: 15px 18px 13px; border-bottom: 1px solid var(--line-soft); }
+        .chat-head .ch-title { display: flex; align-items: center; gap: 8px; font-size: 0.96rem; font-weight: 700; color: var(--ink-700); }
+        .chat-head .ch-badge { font-size: 0.56rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+            color: var(--purple); background: #f3effe; padding: 3px 8px; border-radius: 999px; }
+        .chat-head .ch-sub { font-size: 0.72rem; color: var(--ink-400); margin-top: 5px; line-height: 1.45; }
+        .chat-body { flex: 1; overflow-y: auto; padding: 16px 16px 8px; display: flex; flex-direction: column; gap: 11px; }
+        .chat-msg { max-width: 90%; font-size: 0.82rem; line-height: 1.6; padding: 10px 13px; border-radius: 14px; word-break: break-word; }
+        .chat-msg.ai { align-self: flex-start; background: var(--line-soft); color: var(--ink-700); border-bottom-right-radius: 4px; }
+        .chat-msg.me { align-self: flex-end; background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff; border-bottom-left-radius: 4px; }
+        .chat-msg b { font-weight: 700; }
+        .chat-typing { align-self: flex-start; display: flex; gap: 4px; padding: 11px 14px; background: var(--line-soft); border-radius: 14px; border-bottom-right-radius: 4px; }
+        .chat-typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-300); animation: blink 1.2s infinite both; }
+        .chat-typing span:nth-child(2) { animation-delay: .2s; }
+        .chat-typing span:nth-child(3) { animation-delay: .4s; }
+        @keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+        .chat-chips { display: flex; flex-wrap: wrap; gap: 7px; padding: 4px 16px 10px; }
+        .chat-chip { font-size: 0.72rem; font-weight: 600; color: var(--purple); background: #f6f3ff;
+            border: 1px solid #ece6fb; border-radius: 999px; padding: 6px 11px; cursor: pointer; transition: background .15s; }
+        .chat-chip:hover { background: #efeaff; }
+        .chat-input { border-top: 1px solid var(--line-soft); padding: 12px 14px; display: flex; gap: 9px; align-items: flex-end; }
+        .chat-input textarea { flex: 1; resize: none; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+            font-family: 'Rubik', sans-serif; font-size: 0.82rem; color: var(--ink-900); outline: none; max-height: 96px; line-height: 1.5; }
+        .chat-input textarea:focus { border-color: #c9b6fb; }
+        .chat-send { width: 40px; height: 40px; flex-shrink: 0; border: none; border-radius: 12px;
+            background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: opacity .15s; }
+        .chat-send:hover { opacity: .9; }
 
-        /* ===== TABS ===== */
-        .tabs { display: flex; gap: 8px; margin-bottom: 18px; }
-        .tab {
-            padding: 10px 22px; border-radius: 999px; font-size: 0.84rem; font-weight: 600;
-            border: 1px solid #e6e0f5; background: #fff; color: var(--text-medium);
-            cursor: pointer; transition: all 0.18s; display: inline-flex; align-items: center; gap: 7px;
-        }
-        .tab:hover { border-color: #c9bdf0; }
-        .tab.active { background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff; border-color: transparent; box-shadow: 0 6px 18px rgba(124,92,255,0.3); }
+        /* ===================== MAIN ===================== */
+        .main { margin-right: 360px; margin-top: 60px; padding: 26px 30px 60px; max-width: 1240px; }
 
-        /* ===== SECTION HEADINGS ===== */
-        .section-title { font-size: 1rem; font-weight: 700; color: #4a3d8f; margin: 22px 0 12px; display: flex; align-items: center; gap: 8px; }
-        .section-title .badge-essential, .section-title .badge-secondary {
-            font-size: 0.6rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; letter-spacing: .02em;
-        }
-        .section-title .badge-essential { background: rgba(245,101,101,0.13); color: #c53030; }
-        .section-title .badge-secondary { background: #eef0f5; color: #718096; }
+        .greet { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+        .greet h1 { font-size: 1.5rem; font-weight: 700; color: var(--ink-900); }
+        .greet p { font-size: 0.85rem; color: var(--ink-400); margin-top: 4px; max-width: 560px; }
 
-        /* ===== KPI CARDS ===== */
-        .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
-        .kpi-card {
-            background: #fff; border-radius: 16px; padding: 18px 20px;
-            border: 1px solid #f0edf7; box-shadow: var(--shadow-sm, 0 2px 10px rgba(0,0,0,0.05));
-            position: relative; overflow: hidden;
-        }
-        .kpi-card.primary { border: 1.5px solid #d9cffb; background: linear-gradient(135deg, #fbfaff, #f6f3ff); }
-        .kpi-card.alert { border: 1.5px solid #fbb6b6; background: linear-gradient(135deg, #fff7f7, #fff0f0); }
-        .kpi-card.secondary { background: #fafbfc; }
-        .kpi-label { font-size: 0.72rem; color: var(--text-light); font-weight: 500; display: flex; align-items: center; gap: 6px; }
-        .kpi-value { font-size: 1.9rem; font-weight: 800; color: #4a3d8f; margin-top: 6px; line-height: 1; }
-        .kpi-card.alert .kpi-value { color: #c53030; }
-        .kpi-sub { font-size: 0.68rem; color: var(--text-muted); margin-top: 6px; }
-        .kpi-card.secondary .kpi-value { font-size: 1.4rem; color: var(--text-medium); }
-        .trend-up { color: #2f855a; } .trend-down { color: #c53030; } .trend-steady { color: #b7791f; }
+        /* filters */
+        .filters { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+        .filter { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 9px 14px;
+            display: flex; align-items: center; gap: 10px; min-width: 200px; cursor: pointer; transition: border-color .15s; }
+        .filter:hover { border-color: #d9cffb; }
+        .filter .f-ico { font-size: 1rem; color: var(--purple); }
+        .filter .f-body { flex: 1; }
+        .filter .f-lab { font-size: 0.62rem; color: var(--ink-400); }
+        .filter select { border: none; background: transparent; font-family: 'Rubik', sans-serif; width: 100%;
+            font-size: 0.84rem; font-weight: 600; color: var(--ink-900); cursor: pointer; outline: none; padding: 0; margin-top: 1px; }
 
-        /* engagement bar */
-        .eng-bars { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
-        .eng-bar-item { flex: 1; min-width: 120px; background: #fff; border: 1px solid #f0edf7; border-radius: 12px; padding: 12px 14px; }
-        .eng-bar-item .lab { font-size: 0.72rem; color: var(--text-light); display: flex; align-items: center; gap: 6px; }
-        .eng-bar-item .cnt { font-size: 1.25rem; font-weight: 800; margin-top: 4px; }
-        .eng-track { height: 7px; border-radius: 999px; background: #f0edf7; margin-top: 8px; overflow: hidden; }
+        /* view toggle */
+        .view-toggle { display: inline-flex; gap: 4px; background: #fff; border: 1px solid var(--line);
+            border-radius: 999px; padding: 4px; margin-bottom: 26px; box-shadow: var(--shadow); }
+        .vt-btn { display: flex; align-items: center; gap: 7px; font-family: 'Rubik', sans-serif;
+            font-size: 0.85rem; font-weight: 600; padding: 9px 20px; border-radius: 999px; border: none;
+            background: transparent; color: var(--ink-500); cursor: pointer; transition: all .18s; }
+        .vt-btn .vt-ico { font-size: 0.95rem; }
+        .vt-btn:hover { color: var(--ink-700); }
+        .vt-btn.active { background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff; box-shadow: 0 3px 10px rgba(124,92,255,0.28); }
+
+        /* section title */
+        .sec-title { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-400); margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
+        .sec-title .hint { display: none; }
+        .link-btn { margin-inline-start: auto; font-size: 0.76rem; font-weight: 600; color: var(--purple);
+            background: none; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        .link-btn:hover { text-decoration: underline; }
+
+        /* ===================== KPI CARDS ===================== */
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 30px; }
+        .kpi { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: none; position: relative; }
+        .kpi .k-lab { font-size: 0.74rem; font-weight: 600; color: var(--ink-400); }
+        .kpi .k-val { font-size: 1.85rem; font-weight: 800; line-height: 1; margin: 10px 0 5px; color: var(--ink-700); }
+        .kpi .k-val small { font-size: 0.9rem; font-weight: 700; color: var(--ink-400); }
+        .kpi .k-sub { font-size: 0.7rem; color: var(--ink-400); }
+        .kpi .k-cta { margin-top: 9px; font-size: 0.74rem; font-weight: 600; color: var(--purple); background: none; border: none; cursor: pointer; padding: 0; }
+        .kpi .k-cta:hover { text-decoration: underline; }
+        /* the attention card is the single point of focus */
+        .kpi.attn { border-color: var(--attn-bd); background: #fffafb; }
+        .kpi.attn .k-val { color: var(--attn-ink); }
+
+        /* ===================== TWO COLUMN ROW ===================== */
+        .row-2 { display: grid; grid-template-columns: 1.55fr 1fr; gap: 18px; margin-bottom: 28px; align-items: start; }
+        .panel { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 20px 22px; box-shadow: var(--shadow); }
+        .panel-head { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+        .panel-head h3 { font-size: 0.96rem; font-weight: 700; color: var(--ink-700); display: flex; align-items: center; gap: 7px; }
+        .panel-head .sub { font-size: 0.7rem; color: var(--ink-400); }
+
+        /* attention table */
+        .attn-table { width: 100%; border-collapse: collapse; }
+        .attn-table thead th { font-size: 0.66rem; font-weight: 600; color: var(--ink-400); text-align: right; padding: 0 8px 10px; border-bottom: 1px solid var(--line-soft); }
+        .attn-table tbody tr { cursor: pointer; transition: background .15s; }
+        .attn-table tbody tr:hover { background: var(--line-soft); }
+        .attn-table tbody tr.active { background: #faf8ff; box-shadow: inset 3px 0 0 var(--purple); }
+        .attn-table td { padding: 12px 8px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+        .attn-table tbody tr:last-child td { border-bottom: none; }
+        .tstud { display: flex; align-items: center; gap: 10px; }
+        .tstud-ava { width: 30px; height: 30px; border-radius: 50%; color: #fff; font-weight: 700; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .tstud-name { font-size: 0.84rem; font-weight: 600; color: var(--ink-900); }
+        .reason { display: flex; align-items: center; gap: 7px; }
+        .reason .r-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+        .reason .r-main { font-size: 0.8rem; font-weight: 600; color: var(--ink-900); }
+        .reason .r-sub { font-size: 0.66rem; color: var(--ink-400); }
+        .pill { font-size: 0.62rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; display: inline-block; }
+        .date-cell { font-size: 0.76rem; color: var(--ink-500); }
+        .eng-cell { min-width: 92px; }
+        .eng-cell .v { font-size: 0.78rem; font-weight: 700; color: var(--ink-700); margin-bottom: 4px; }
+        .eng-track { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
         .eng-fill { height: 100%; border-radius: 999px; }
 
-        /* ===== ATTENTION CARDS ===== */
-        .attn-list { display: flex; flex-direction: column; gap: 12px; }
-        .attn-card {
-            background: #fff; border-radius: 14px; border: 1px solid #fbd9d9;
-            border-right: 4px solid #f56565; padding: 16px 18px;
-        }
-        .attn-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-        .attn-stud { display: flex; align-items: center; gap: 10px; }
-        .attn-ava { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg,#f56565,#fc8181); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; }
-        .attn-name { font-weight: 700; font-size: 0.92rem; color: var(--text-dark); }
-        .attn-grp { font-size: 0.68rem; color: var(--text-light); }
-        .attn-reasons { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
-        .attn-reason {
-            background: #fff8f8; border: 1px solid #fde0e0; border-radius: 10px; padding: 10px 12px;
-        }
-        .attn-reason .r-title { font-size: 0.8rem; font-weight: 600; color: #c53030; display: flex; align-items: center; gap: 6px; }
-        .attn-raw {
-            margin-top: 6px; font-size: 0.74rem; color: var(--text-medium);
-            background: #fff; border: 1px dashed #f0b9b9; border-radius: 8px; padding: 7px 10px;
-            display: flex; align-items: flex-start; gap: 7px;
-        }
-        .attn-raw .raw-ico { color: #b7791f; flex-shrink: 0; }
-        .attn-raw b { color: #c53030; }
-        .xai-tag { font-size: 0.58rem; font-weight: 700; color: #6b46c1; background: rgba(124,92,255,0.12); border-radius: 999px; padding: 2px 8px; }
-        .attn-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-        .mini-btn {
-            font-size: 0.72rem; font-weight: 600; padding: 6px 13px; border-radius: 999px; cursor: pointer;
-            border: 1px solid #e6e0f5; background: #fff; color: var(--text-medium); transition: all .16s;
-        }
-        .mini-btn:hover { border-color: #c9bdf0; background: #f7f5fd; }
-        .mini-btn.solid { background: #7c5cff; color: #fff; border-color: #7c5cff; }
+        /* explainable expand */
+        .xai-row td { padding: 0 8px; border: none; }
+        .xai-box { background: #faf8ff; border: 1px solid #ece6fb; border-radius: 12px; padding: 13px 15px; margin: 2px 0 12px; }
+        .xai-box .why { font-size: 0.72rem; font-weight: 700; color: var(--ink-700); display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+        .xai-box ul { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+        .xai-box li { font-size: 0.76rem; color: var(--ink-500); display: flex; align-items: flex-start; gap: 7px; }
+        .xai-box li::before { content: '•'; color: var(--purple); font-weight: 700; }
+        .xai-rec { margin-top: 10px; background: #fff; border: 1px dashed #d9cffb; border-radius: 10px; padding: 9px 12px; font-size: 0.76rem; color: var(--ink-700); display: flex; align-items: flex-start; gap: 7px; }
+        .xai-actions { display: flex; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
+
+        .mini-btn { font-size: 0.74rem; font-weight: 600; padding: 7px 14px; border-radius: 999px; cursor: pointer;
+            border: 1px solid var(--line); background: #fff; color: var(--ink-500); transition: all .15s; }
+        .mini-btn:hover { border-color: #d9cffb; background: var(--line-soft); }
+        .mini-btn.solid { background: var(--purple); color: #fff; border-color: var(--purple); }
         .mini-btn.solid:hover { background: #6b4ce0; }
-        .mini-btn.danger { color: #c53030; border-color: #fbb6b6; }
-        .mini-btn.danger:hover { background: #fff5f5; }
 
-        .empty-state {
-            text-align: center; padding: 30px 20px; color: var(--text-light); font-size: 0.85rem;
-            background: #fff; border: 1px dashed #e6e0f5; border-radius: 14px;
-        }
-        .empty-state .big { font-size: 1.8rem; display: block; margin-bottom: 6px; }
+        /* trend chart */
+        .trend-toggle { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+        .trend-chip { font-size: 0.7rem; font-weight: 600; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--ink-500); cursor: pointer; transition: all .15s; }
+        .trend-chip:hover { border-color: #d9cffb; }
+        .trend-chip.active { background: #efeaff; color: var(--purple); border-color: #d9cffb; }
+        .chart-wrap { position: relative; }
+        .chart-legend { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+        .chart-legend .lg { font-size: 0.66rem; color: var(--ink-400); }
+        .chart-note { font-size: 0.68rem; color: var(--ink-400); margin-top: 12px; display: flex; align-items: center; gap: 6px; }
 
-        /* info banner */
-        .info-note {
-            display: flex; align-items: flex-start; gap: 10px;
-            background: #f5f3fa; border: 1px dashed #d9cffb;
-            border-radius: 12px; padding: 12px 16px; margin: 18px 0;
-            font-size: 0.76rem; color: var(--text-medium);
-        }
-        .info-note .ico { font-size: 1rem; flex-shrink: 0; }
+        /* ===================== STUDENT PROFILE SECTION ===================== */
+        .profile-section { background: #fff; border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); overflow: hidden; }
+        .profile-bar { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 22px; border-bottom: 1px solid var(--line-soft); flex-wrap: wrap; }
+        .ptabs { display: flex; gap: 6px; }
+        .ptab { font-size: 0.82rem; font-weight: 600; padding: 9px 18px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--ink-500); cursor: pointer; transition: all .15s; }
+        .ptab:hover { border-color: #d9cffb; }
+        .ptab.active { background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff; border-color: transparent; }
+        .pstud-select { display: flex; align-items: center; gap: 10px; }
+        .pstud-select .lab { font-size: 0.72rem; color: var(--ink-400); }
+        .pstud-select select { padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); background: #fff;
+            font-family: 'Rubik', sans-serif; font-size: 0.82rem; font-weight: 600; color: var(--ink-900); cursor: pointer; }
+        .pstud-select .chip-ava { width: 30px; height: 30px; border-radius: 50%; color: #fff; font-weight: 700; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; }
 
-        /* ===== STUDENT VIEW ===== */
-        .stud-toolbar { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 16px; }
-        .field-wrap label { font-size: 0.62rem; color: var(--text-light); display: block; margin-bottom: 3px; }
-        .field-wrap select {
-            padding: 9px 14px; border-radius: 10px; border: 1px solid #e6e0f5; background: #fff;
-            font-family: 'Rubik', sans-serif; font-size: 0.82rem; font-weight: 600; color: var(--text-dark); cursor: pointer; min-width: 180px;
-        }
-        .subj-chips { display: flex; gap: 7px; flex-wrap: wrap; }
-        .subj-chip {
-            padding: 6px 14px; border-radius: 999px; font-size: 0.76rem; font-weight: 500;
-            border: 1px solid #e6e0f5; background: #fff; color: var(--text-medium); cursor: pointer; transition: all .16s;
-        }
-        .subj-chip:hover { border-color: #c9bdf0; }
-        .subj-chip.active { background: #7c5cff; color: #fff; border-color: #7c5cff; }
+        .profile-body { padding: 22px; }
+        .cols-3 { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 20px; align-items: start; }
+        .col-head { font-size: 0.88rem; font-weight: 700; color: var(--ink-700); margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
 
-        .stud-hero {
-            background: linear-gradient(135deg, #fff, #faf8ff); border: 1px solid #efeaff; border-radius: 16px;
-            padding: 18px 20px; display: flex; align-items: center; gap: 14px; margin-bottom: 16px; flex-wrap: wrap;
-        }
-        .stud-hero-ava { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg,#7c5cff,#9f7afe); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.2rem; }
-        .stud-hero h2 { font-size: 1.1rem; color: #4a3d8f; }
-        .stud-hero .meta { font-size: 0.72rem; color: var(--text-light); margin-top: 2px; }
-        .stud-hero-stats { display: flex; gap: 18px; margin-right: auto; flex-wrap: wrap; }
-        .hero-stat { text-align: center; }
-        .hero-stat .v { font-size: 1.15rem; font-weight: 800; color: #4a3d8f; }
-        .hero-stat .l { font-size: 0.64rem; color: var(--text-light); }
-
-        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 16px; }
-        .panel { background: #fff; border: 1px solid #f0edf7; border-radius: 16px; padding: 18px 20px; box-shadow: var(--shadow-sm, 0 2px 10px rgba(0,0,0,0.05)); }
-        .panel h3 { font-size: 0.92rem; font-weight: 700; color: #4a3d8f; margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
-
-        /* progress vs goal */
-        .prog-item { margin-bottom: 14px; }
-        .prog-top { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; }
-        .prog-top .s-name { font-weight: 600; color: var(--text-dark); }
-        .prog-top .s-val { font-size: 0.74rem; color: var(--text-light); }
-        .prog-track { height: 10px; border-radius: 999px; background: #f0edf7; margin-top: 7px; position: relative; overflow: hidden; }
-        .prog-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #7c5cff, #9f7afe); transition: width .6s; }
-        .prog-goal { position: absolute; top: -3px; bottom: -3px; width: 2px; background: #f6ad55; }
-        .prog-goal::after { content: '🎯'; position: absolute; top: -16px; right: -8px; font-size: 0.7rem; }
-        .prog-legend { font-size: 0.66rem; color: var(--text-muted); margin-top: 4px; }
-
-        /* struggles */
-        .struggle-item { background: #fffaf5; border: 1px solid #f6e0c8; border-radius: 11px; padding: 11px 13px; margin-bottom: 9px; }
-        .struggle-item .t { font-size: 0.83rem; font-weight: 600; color: #b7791f; display: flex; align-items: center; gap: 6px; }
-        .struggle-evi { margin-top: 6px; font-size: 0.72rem; color: var(--text-medium); display: flex; align-items: flex-start; gap: 6px; background:#fff; border:1px dashed #eccfa3; border-radius:8px; padding:6px 9px; }
-        .struggle-evi .e-ico { color: #b7791f; flex-shrink: 0; }
-
-        /* recommendations */
-        .rec-item { display: flex; gap: 11px; padding: 11px 0; border-bottom: 1px solid #f5f3fa; }
-        .rec-item:last-child { border-bottom: none; }
-        .rec-ico { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
-        .rec-body .r-type { font-size: 0.7rem; font-weight: 700; padding: 1px 9px; border-radius: 999px; display: inline-block; margin-bottom: 4px; }
-        .rec-body .r-text { font-size: 0.8rem; color: var(--text-medium); }
-
-        /* teacher insights */
-        .insight-item { display: flex; gap: 10px; padding: 11px 12px; border-radius: 11px; margin-bottom: 9px; border: 1px solid #f0edf7; }
-        .insight-item.strength { background: #f3fcf6; border-color: #cdeed8; }
-        .insight-item.challenge { background: #fffaf3; border-color: #f6e3c5; }
-        .insight-item.note { background: #f6f5ff; border-color: #e2dcfa; }
-        .insight-ico { font-size: 1.1rem; flex-shrink: 0; }
-        .insight-body .i-type { font-size: 0.66rem; font-weight: 700; color: var(--text-light); }
-        .insight-body .i-text { font-size: 0.81rem; color: var(--text-dark); margin-top: 2px; }
-        .insight-body .i-meta { font-size: 0.62rem; color: var(--text-muted); margin-top: 3px; }
-        .insight-form { margin-top: 12px; border-top: 1px dashed #e6e0f5; padding-top: 12px; }
-        .insight-form .row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-        .insight-form select, .insight-form input {
-            padding: 9px 12px; border-radius: 10px; border: 1px solid #e6e0f5; background: #fff;
-            font-family: 'Rubik', sans-serif; font-size: 0.8rem; color: var(--text-dark);
-        }
-        .insight-form input { flex: 1; min-width: 180px; }
-        .add-insight-btn {
-            background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff; border: none; cursor: pointer;
-            padding: 9px 18px; border-radius: 999px; font-family: 'Rubik', sans-serif; font-size: 0.8rem; font-weight: 600;
-            display: inline-flex; align-items: center; gap: 6px;
-        }
+        /* insights column */
+        .add-insight-btn { width: 100%; margin-bottom: 14px; background: linear-gradient(135deg,#7c5cff,#9f7afe); color: #fff;
+            border: none; border-radius: 12px; padding: 10px; font-family: 'Rubik', sans-serif; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px; transition: transform .15s; }
         .add-insight-btn:hover { transform: translateY(-1px); }
-        .saved-flag { font-size: 0.62rem; color: #2f855a; }
+        .insight-card { background: #faf9fe; border: 1px solid var(--line); border-radius: 14px; padding: 13px 14px; margin-bottom: 11px; position: relative; }
+        .insight-card .i-flag { position: absolute; top: 12px; left: 12px; font-size: 0.9rem; }
+        .insight-card .i-text { font-size: 0.8rem; color: var(--ink-700); padding-left: 22px; }
+        .insight-card .i-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 9px; }
+        .insight-card .i-date { font-size: 0.66rem; color: var(--ink-400); }
+        .insight-card .i-tools { display: flex; gap: 6px; }
+        .insight-card .i-tools button { background: none; border: none; cursor: pointer; font-size: 0.78rem; color: var(--ink-300); padding: 2px; }
+        .insight-card .i-tools button:hover { color: var(--purple); }
+        .insight-type-tag { font-size: 0.62rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
 
-        /* ===== MOCK SELECTOR (compartmentalization demo) ===== */
-        .mock-selector {
-            position: fixed; bottom: 16px; left: 12px; z-index: 60;
-            background: #fff; border: 1px solid #e6e0f5; border-radius: 12px;
-            padding: 9px 12px; box-shadow: 0 6px 24px rgba(0,0,0,0.1);
-        }
-        .mock-selector label { font-size: 0.62rem; color: var(--text-light); display: block; margin-bottom: 2px; }
-        .mock-selector select {
-            border: none; background: transparent; font-family: 'Rubik', sans-serif;
-            font-size: 0.8rem; font-weight: 600; color: var(--text-dark); cursor: pointer; outline: none;
-        }
+        /* knowledge gaps column */
+        .gap-card { border: 1px solid var(--line); border-radius: 14px; padding: 14px 15px; margin-bottom: 12px; transition: border-color .15s; }
+        .gap-card .g-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .gap-card .g-title { font-size: 0.86rem; font-weight: 700; color: var(--ink-900); }
+        .gap-card .g-meta { font-size: 0.72rem; color: var(--ink-400); margin-top: 4px; }
+        .gap-card .g-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 11px; }
+        .gap-card .g-rate { font-size: 0.72rem; color: var(--ink-500); }
+        .gap-card .g-rate b { color: var(--ink-700); }
+        .gap-show { font-size: 0.72rem; font-weight: 600; color: var(--purple); background: none; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; padding: 0; }
+        .gap-show:hover { text-decoration: underline; }
+        .gap-evidence { margin-top: 11px; background: #faf8ff; border: 1px dashed #d9cffb; border-radius: 10px; padding: 10px 12px; font-size: 0.74rem; color: var(--ink-500); display: none; }
+        .gap-evidence.show { display: block; }
+        .gap-evidence b { color: var(--ink-700); }
+
+        /* recommendations column */
+        .rec-card { border: 1px solid var(--line); border-radius: 14px; margin-bottom: 11px; overflow: hidden; transition: border-color .15s; }
+        .rec-card:hover { border-color: #d9cffb; }
+        .rec-head { display: flex; align-items: center; gap: 11px; padding: 13px 14px; cursor: pointer; }
+        .rec-ico { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+        .rec-info { flex: 1; }
+        .rec-info .r-type { font-size: 0.82rem; font-weight: 700; color: var(--ink-900); }
+        .rec-info .r-text { font-size: 0.72rem; color: var(--ink-400); margin-top: 2px; }
+        .rec-chev { color: var(--ink-300); font-size: 0.8rem; transition: transform .2s; }
+        .rec-card.open .rec-chev { transform: rotate(-90deg); }
+        .rec-detail { display: none; padding: 0 14px 14px 14px; }
+        .rec-card.open .rec-detail { display: block; }
+        .rec-detail .rd-row { font-size: 0.74rem; color: var(--ink-500); margin-bottom: 6px; display: flex; gap: 7px; }
+        .rec-detail .rd-row b { color: var(--ink-700); }
+        .rec-detail .rd-act { margin-top: 8px; }
+
+        /* profile-summary tab */
+        .psum-hero { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+        .psum-ava { width: 56px; height: 56px; border-radius: 50%; color: #fff; font-weight: 800; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; }
+        .psum-hero h2 { font-size: 1.15rem; color: var(--ink-700); }
+        .psum-hero .meta { font-size: 0.74rem; color: var(--ink-400); margin-top: 2px; }
+        .psum-stats { display: flex; gap: 22px; margin-inline-start: auto; flex-wrap: wrap; }
+        .psum-stat { text-align: center; }
+        .psum-stat .v { font-size: 1.25rem; font-weight: 800; color: var(--ink-700); }
+        .psum-stat .l { font-size: 0.64rem; color: var(--ink-400); }
+        .status-tag { font-size: 0.66rem; font-weight: 700; padding: 4px 11px; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; }
+
+        .psum-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; align-items: start; }
+        .prog-item { margin-bottom: 16px; }
+        .prog-top { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; margin-bottom: 7px; }
+        .prog-top .s-name { font-weight: 600; color: var(--ink-900); }
+        .prog-top .s-val { font-size: 0.72rem; color: var(--ink-400); }
+        .prog-track { height: 10px; border-radius: 999px; background: var(--line); position: relative; overflow: visible; }
+        .prog-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #7c5cff, #9f7afe); }
+        .prog-goal { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #e0a64e; }
+        .ai-explain { background: #faf9fe; border: 1px solid var(--line); border-radius: 14px; padding: 15px 17px; }
+        .ai-explain .ae-h { font-size: 0.82rem; font-weight: 700; color: var(--ink-700); display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
+        .ai-explain ul { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+        .ai-explain li { font-size: 0.78rem; color: var(--ink-500); display: flex; align-items: flex-start; gap: 8px; }
+        .ai-explain li::before { content: '–'; color: var(--ink-300); }
+
+        /* empty / no-data state */
+        .empty { text-align: center; padding: 34px 20px; }
+        .empty .big { font-size: 2rem; display: block; margin-bottom: 8px; }
+        .empty h3 { font-size: 0.95rem; color: var(--ink-700); margin-bottom: 6px; }
+        .empty p { font-size: 0.8rem; color: var(--ink-400); max-width: 380px; margin: 0 auto 14px; }
+
+        /* ===================== MODAL ===================== */
+        .overlay { position: fixed; inset: 0; background: rgba(45,42,74,0.4); backdrop-filter: blur(2px);
+            display: none; align-items: center; justify-content: center; z-index: 90; padding: 20px; }
+        .overlay.open { display: flex; }
+        .modal { background: #fff; border-radius: 20px; width: 100%; max-width: 480px; padding: 24px; box-shadow: 0 30px 80px rgba(45,42,74,0.3); }
+        .modal h2 { font-size: 1.1rem; color: var(--ink-700); margin-bottom: 4px; }
+        .modal .m-sub { font-size: 0.76rem; color: var(--ink-400); margin-bottom: 18px; }
+        .mfield { margin-bottom: 14px; }
+        .mfield label { font-size: 0.72rem; font-weight: 600; color: var(--ink-500); display: block; margin-bottom: 6px; }
+        .mfield select, .mfield input, .mfield textarea { width: 100%; padding: 10px 13px; border-radius: 11px;
+            border: 1px solid var(--line); background: #fafafe; font-family: 'Rubik', sans-serif; font-size: 0.82rem; color: var(--ink-900); outline: none; }
+        .mfield textarea { resize: vertical; min-height: 84px; }
+        .mfield select:focus, .mfield input:focus, .mfield textarea:focus { border-color: #c9bdf0; background: #fff; }
+        .m-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .m-actions { display: flex; gap: 10px; margin-top: 8px; }
+        .m-save { flex: 1; background: linear-gradient(135deg,#7c5cff,#9f7afe); color: #fff; border: none; border-radius: 12px;
+            padding: 12px; font-family: 'Rubik', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+        .m-save:hover { transform: translateY(-1px); }
+        .m-cancel { background: var(--line-soft); color: var(--ink-500); border: none; border-radius: 12px; padding: 12px 22px;
+            font-family: 'Rubik', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
 
         /* toast */
-        .toast {
-            position: fixed; bottom: 20px; right: 50%; transform: translate(50%, 120px);
-            background: #fff; border: 1px solid #cdeed8; border-right: 4px solid #48bb78;
-            border-radius: 12px; padding: 12px 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.12);
-            display: flex; align-items: center; gap: 10px; z-index: 80; transition: transform .35s cubic-bezier(.68,-.3,.27,1.5);
-        }
+        .toast { position: fixed; bottom: 24px; right: 50%; transform: translate(50%, 130px);
+            background: #fff; border: 1px solid var(--good-bd); border-right: 4px solid var(--good-dot);
+            border-radius: 14px; padding: 13px 20px; box-shadow: 0 14px 38px rgba(45,42,74,0.16);
+            display: flex; align-items: center; gap: 11px; z-index: 100; transition: transform .35s cubic-bezier(.68,-.3,.27,1.5); }
         .toast.show { transform: translate(50%, 0); }
-        .toast .t-ico { font-size: 1.2rem; }
-        .toast strong { font-size: 0.85rem; color: var(--text-dark); }
-        .toast small { font-size: 0.7rem; color: var(--text-light); display: block; }
+        .toast .t-ico { font-size: 1.25rem; }
+        .toast strong { font-size: 0.85rem; color: var(--ink-900); display: block; }
+        .toast small { font-size: 0.7rem; color: var(--ink-400); }
 
-        .flash { animation: flashVal 0.9s ease; }
-        @keyframes flashVal { 0%{ background:rgba(124,92,255,0.18);} 100%{ background:transparent;} }
+        .fade-in { animation: fadeUp .35s ease; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* ===================== AI SUMMARY ===================== */
+        .ai-summary {
+            position: relative; border-radius: 16px; padding: 20px 22px;
+            background: #fff; border: 1px solid var(--line);
+            border-right: 3px solid var(--purple); box-shadow: var(--shadow);
+            margin-bottom: 30px;
+        }
+        .ai-summary .ai-head { display: flex; align-items: center; gap: 9px; margin-bottom: 11px; }
+        .ai-summary .ai-badge {
+            display: inline-flex; align-items: center; font-size: 0.64rem; font-weight: 800;
+            letter-spacing: 0.08em; text-transform: uppercase; color: var(--purple);
+        }
+        .ai-summary .ai-badge .dot { display: none; }
+        .ai-summary .ai-title { font-size: 0.9rem; font-weight: 700; color: var(--ink-700); }
+        .ai-summary .ai-scope { margin-inline-start: auto; font-size: 0.68rem; font-weight: 600; color: var(--ink-300); }
+        .ai-summary .ai-text { font-size: 0.88rem; color: var(--ink-500); line-height: 1.7; margin-bottom: 16px; }
+        .ai-summary .ai-text b { color: var(--ink-900); font-weight: 700; }
+        .ai-actions .ai-act-lab { display: block; font-size: 0.74rem; font-weight: 700; color: var(--ink-500); margin-bottom: 9px; }
+        .ai-acts { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+        .ai-act {
+            position: relative; padding: 7px 18px 7px 10px; padding-inline-start: 18px; padding-inline-end: 10px;
+            font-size: 0.83rem; font-weight: 500; color: var(--ink-700); cursor: pointer;
+            border-radius: 8px; transition: background .15s, color .15s;
+        }
+        .ai-act::before {
+            content: ''; position: absolute; inset-inline-start: 4px; top: 14px;
+            width: 6px; height: 6px; border-radius: 50%; background: var(--purple);
+        }
+        .ai-act:hover { background: #f6f3ff; color: var(--purple); }
+        .ai-act .ai-act-ico { display: none; }
+        .ai-summary.student { margin: 0 0 6px; border-right-color: #9f7afe; }
+
+        @media (max-width: 1080px) {
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .row-2 { grid-template-columns: 1fr; }
+            .cols-3 { grid-template-columns: 1fr; }
+            .psum-grid { grid-template-columns: 1fr; }
+            .chat-panel { width: 300px; }
+            .main { margin-right: 300px; }
+        }
         @media (max-width: 720px) {
-            .sidebar { display: none; }
-            .main-content { margin-right: 0; padding: 16px; }
+            .chat-panel { display: none; }
+            .main { margin-right: 0; padding: 18px; }
+            .kpi-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
 
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-logo">
-            <h2>YuviLab 720</h2>
-            <span>תצוגת מורה ומנטור</span>
-        </div>
-        <nav class="sidebar-nav">
-            <a class="nav-item active" href="/teacher-view/">
-                <span class="nav-icon">👩‍🏫</span> תצוגת מורה
-            </a>
-            <a class="nav-item" href="/student-dashboard/">
-                <span class="nav-icon">📊</span> דשבורד תלמיד
-            </a>
-            <a class="nav-item" href="/learner-mapping/">
-                <span class="nav-icon">🧩</span> מיפוי לומד
-            </a>
-            <a class="nav-item" href="/learning/">
-                <span class="nav-icon">📚</span> שיעורים
-            </a>
-            <a class="nav-item" href="/mentoring/">
-                <span class="nav-icon">💬</span> שיחות מנטורינג
-            </a>
-        </nav>
-        <div class="sidebar-profile">
-            <div class="profile-avatar" id="sidebarAvatar">מ</div>
-            <div>
-                <div class="profile-name" id="sidebarName">מירי לוי</div>
-                <div class="profile-role" id="sidebarRole">מורה למתמטיקה</div>
+    <!-- ===================== TOP BAR ===================== -->
+    <header class="topbar">
+        <div class="brand">YuviLab 720</div>
+
+        <div class="topbar-right">
+            <div class="bell" onclick="showToast('אין התראות חדשות כרגע','כאן יופיעו עדכונים על תלמידים שלך')">🔔<span class="badge">3</span></div>
+            <div class="userchip">
+                <div class="ava" id="topAva">מ</div>
+                <div class="who"><div class="n" id="topName">מיכל דוד</div><div class="r" id="topRole">מורה</div></div>
+                <span class="caret">▾</span>
             </div>
+        </div>
+    </header>
+
+    <!-- ===================== CHAT PANEL ===================== -->
+    <aside class="chat-panel">
+        <div class="chat-head">
+            <div class="ch-title"><span class="ch-badge">AI</span> עוזר ההוראה</div>
+            <div class="ch-sub">שאלו אותי כל דבר — ברמת הכיתה או על תלמיד ספציפי.</div>
+        </div>
+        <div class="chat-body" id="chatBody"></div>
+        <div class="chat-chips" id="chatChips">
+            <button class="chat-chip" data-q="מה תמונת המצב של הכיתה?">מה המצב בכיתה?</button>
+            <button class="chat-chip" data-q="על מי כדאי לי להתמקד?">על מי להתמקד?</button>
+            <button class="chat-chip" data-q="מה כדאי לעשות עם התלמיד שנבחר?">המלצות לתלמיד</button>
+        </div>
+        <div class="chat-input">
+            <textarea id="chatInput" rows="1" placeholder="כתבו שאלה..."></textarea>
+            <button class="chat-send" id="chatSend" title="שליחה">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </button>
         </div>
     </aside>
 
-    <!-- Mock teacher selector (compartmentalization demo) -->
-    <div class="mock-selector">
-        <label>מחובר/ת כ:</label>
-        <select id="mockTeacherSelect">
-            <option value="miri" selected>מירי לוי · מורה</option>
-            <option value="dana">דנה כהן · מורה</option>
-            <option value="avi">אבי שלום · מורה</option>
-            <option value="ronit">רונית אבטליון · יועצת</option>
-            <option value="admin">⚙️ ניהול מערכת · מנהל</option>
-        </select>
-    </div>
-
-    <!-- Main -->
-    <main class="main-content">
-        <div class="page-header">
+    <!-- ===================== MAIN ===================== -->
+    <main class="main">
+        <div class="greet">
             <div>
-                <h1>👩‍🏫 תצוגת מורה</h1>
-                <p>צפייה בכל המידע על התלמידים בקבוצות הלימוד שלך — תובנות, המלצות פדגוגיות וסימון תלמידים הדורשים תשומת לב. כל מורה רואה רק את התלמידים שתחתיו.</p>
+                <h1 id="greetTitle">שלום מיכל 👋</h1>
+                <p>כאן מוצגת תמונת מצב עדכנית של הקבוצות והתלמידים שלך.</p>
             </div>
-            <div class="header-controls">
-                <div class="group-select-wrap">
-                    <label>קבוצת לימוד</label>
-                    <select class="group-select" id="groupSelect"></select>
+        </div>
+
+        <!-- Context + filter popover -->
+        <div class="context-bar">
+            <div class="ctx-line">
+                <span class="ctx-label">מציג נתונים עבור:</span>
+                <span class="ctx-value" id="ctxValue">—</span>
+            </div>
+            <div class="ctx-filter">
+                <button class="ctx-btn" id="filterBtn"><span class="cf-ico">⚙️</span> שינוי סינון</button>
+                <div class="filter-popover" id="filterPopover">
+                    <div class="fp-section">
+                        <div class="fp-title">מצב צפייה</div>
+                        <div class="view-toggle" id="viewToggle">
+                            <button class="vt-btn active" data-view="class"><span class="vt-ico">📊</span> מבט כיתה</button>
+                            <button class="vt-btn" data-view="student"><span class="vt-ico">🎓</span> מבט תלמיד</button>
+                        </div>
+                    </div>
+                    <div class="fp-section">
+                        <div class="fp-title">פילטרים</div>
+                        <div class="fp-field">
+                            <label>קבוצת לימוד</label>
+                            <select id="fGroup"></select>
+                        </div>
+                        <div class="fp-field">
+                            <label>מקצוע</label>
+                            <select id="fSubject"></select>
+                        </div>
+                        <div class="fp-field">
+                            <label>טווח זמן</label>
+                            <select id="fRange">
+                                <option value="7">7 ימים אחרונים</option>
+                                <option value="14">14 ימים אחרונים</option>
+                                <option value="30">30 ימים אחרונים</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
-                <div class="live-badge"><span class="live-dot"></span> מתעדכן בזמן אמת</div>
             </div>
         </div>
 
-        <div class="tabs">
-            <button class="tab active" data-tab="group" id="tabGroup">📊 מבט קבוצה</button>
-            <button class="tab" data-tab="student" id="tabStudent">👤 מבט תלמיד</button>
+        <!-- ===================== CLASS VIEW ===================== -->
+        <div id="classView">
+            <!-- AI class summary -->
+            <div class="ai-summary" id="aiSummary"></div>
+
+            <!-- Group status KPIs -->
+            <div class="sec-title">תמונת מצב קבוצתית</div>
+            <div class="kpi-grid" id="kpiGrid"></div>
+
+            <!-- Attention + Trends -->
+            <div class="row-2">
+                <div class="panel" id="attnPanel">
+                    <div class="panel-head">
+                        <h3>תלמידים הדורשים תשומת לב</h3>
+                        <button class="link-btn" onclick="showToast('פתיחת רשימה מלאה','כאן תיפתח רשימת כל התלמידים לתשומת לב')">צפייה בכל</button>
+                    </div>
+                    <div id="attnTableWrap"></div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-head" style="flex-direction:column; align-items:flex-start; gap:2px;">
+                        <h3>מגמות בקבוצה</h3>
+                        <span class="sub" id="trendSub">התקדמות לעבר יעדי למידה לאורך זמן</span>
+                    </div>
+                    <div class="trend-toggle" id="trendToggle">
+                        <button class="trend-chip active" data-metric="progress">התקדמות</button>
+                        <button class="trend-chip" data-metric="engagement">מעורבות</button>
+                        <button class="trend-chip" data-metric="minutes">זמן פעילות</button>
+                    </div>
+                    <div class="chart-wrap" id="chartWrap"></div>
+                    <div class="chart-note">מוצגת מגמה קבוצתית בלבד — ללא השוואה בין תלמידים</div>
+                </div>
+            </div>
         </div>
 
-        <!-- ===== GROUP VIEW ===== -->
-        <div id="groupView"></div>
-
-        <!-- ===== STUDENT VIEW ===== -->
-        <div id="studentView" style="display:none;"></div>
+        <!-- ===================== STUDENT VIEW ===================== -->
+        <div id="studentView" style="display:none;">
+            <div class="profile-section">
+                <div class="profile-bar">
+                    <div class="ptabs">
+                        <button class="ptab active" data-ptab="insights" id="ptabInsights">תובנות שלי</button>
+                        <button class="ptab" data-ptab="profile" id="ptabProfile">פרופיל התלמיד</button>
+                    </div>
+                    <div class="pstud-select">
+                        <span class="lab">הצגת תלמיד:</span>
+                        <div class="chip-ava" id="pselAva">ר</div>
+                        <select id="pStudent"></select>
+                    </div>
+                </div>
+                <div class="ai-summary student" id="studentAiSummary"></div>
+                <div class="profile-body" id="profileBody"></div>
+            </div>
+        </div>
     </main>
+
+    <!-- ===================== ADD INSIGHT MODAL ===================== -->
+    <div class="overlay" id="insightOverlay">
+        <div class="modal">
+            <h2>📝 הוספת תובנה</h2>
+            <div class="m-sub" id="insightModalSub">תיעוד ידע איכותני על התלמיד/ה</div>
+            <div class="m-grid">
+                <div class="mfield">
+                    <label>סוג תובנה</label>
+                    <select id="miType">
+                        <option value="strength">💚 חוזקה</option>
+                        <option value="challenge">🌱 אתגר / לחיזוק</option>
+                        <option value="interest">⭐ תחום עניין</option>
+                        <option value="note">📝 הערה פדגוגית</option>
+                    </select>
+                </div>
+                <div class="mfield">
+                    <label>מקצוע / תחום</label>
+                    <select id="miSubject"></select>
+                </div>
+            </div>
+            <div class="mfield">
+                <label>תיאור התובנה</label>
+                <textarea id="miText" placeholder="לדוגמה: מגיב טוב להסברים חזותיים ומתקדם כשמקבל דוגמה פתורה..."></textarea>
+            </div>
+            <div class="mfield">
+                <label>רמת חשיפה</label>
+                <select id="miVisibility">
+                    <option value="me">רק אני</option>
+                    <option value="all_teachers" selected>כל המורים של התלמיד</option>
+                    <option value="teacher_student">מורה + תלמיד</option>
+                    <option value="mentor">מורה + מנטור / מנהל</option>
+                </select>
+            </div>
+            <div class="m-actions">
+                <button class="m-save" id="miSave">שמירה לפרופיל הלומד 💜</button>
+                <button class="m-cancel" id="miCancel">ביטול</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Toast -->
     <div class="toast" id="toast">
@@ -379,594 +583,810 @@
     </div>
 
     <script>
-        // ================= MOCK DATA =================
-        const TEACHERS = {
-            miri:  { name: 'מירי לוי',       role: 'מורה למתמטיקה',  avatar: 'מ', groups: ['g_math_a', 'g_science_b'] },
-            dana:  { name: 'דנה כהן',        role: 'מורה לאמנות וכתיבה', avatar: 'ד', groups: ['g_art_a'] },
-            avi:   { name: 'אבי שלום',       role: 'מורה למדעים',    avatar: 'א', groups: ['g_science_b'] },
-            ronit: { name: 'רונית אבטליון',  role: 'יועצת חינוכית',  avatar: 'ר', groups: ['g_support'] },
-            admin: { name: 'ניהול מערכת',    role: 'מנהל/ת מערכת',    avatar: '⚙️', groups: 'ALL' },
-        };
+    // ============================================================
+    //  MOCK DATA  (demo only)
+    // ============================================================
+    const TEACHER = { name: 'מיכל דוד', first: 'מיכל', role: 'מורה למתמטיקה', avatar: 'מ' };
 
-        const GROUPS = {
-            g_math_a:    { name: 'מתמטיקה — קבוצה א׳', subject: 'מתמטיקה', students: ['student_001', 'student_004', 'student_006'] },
-            g_science_b: { name: 'מדעים — קבוצה ב׳',   subject: 'מדעים',   students: ['student_003', 'student_005', 'student_001'] },
-            g_art_a:     { name: 'אמנות וכתיבה',        subject: 'אמנות',   students: ['student_002', 'student_006'] },
-            g_support:   { name: 'ליווי ותמיכה',        subject: 'ליווי',   students: ['student_004', 'student_005'] },
-        };
+    const SUBJECT_OPTIONS = ['מתמטיקה'];
 
-        // attention thresholds (provider-configurable)
-        const INACTIVE_THRESHOLD = 7;   // days without activity
-        const LOW_SUCCESS_THRESHOLD = 50; // % success across consecutive tasks
+    // soft status meta
+    const REASON_META = {
+        inactivity:    { label: 'אי-ביצוע פעילות',              cls: 'attn', pill: 'דחיפות גבוהה' },
+        low_success:   { label: 'ירידה בהצלחה במשימות עוקבות',  cls: 'warm', pill: 'דחיפות בינונית' },
+        knowledge_gap: { label: 'קושי חוזר בפריט ידע',          cls: 'warm', pill: 'דחיפות בינונית' },
+        manual:        { label: 'סומן ידנית ע״י המורה',          cls: 'info', pill: 'סימון מורה' },
+    };
+    const STATUS_META = {
+        requires_attention: { label: 'דורש תשומת לב', ico: '⚠️', bg: 'var(--attn-bg)', ink: 'var(--attn-ink)' },
+        reinforce:          { label: 'מומלץ לחיזוק',  ico: '🌱', bg: 'var(--warm-bg)', ink: 'var(--warm-ink)' },
+        on_track:           { label: 'תקין',           ico: '✅', bg: 'var(--good-bg)', ink: 'var(--good-ink)' },
+        progressing:        { label: 'מתקדם/ת היטב',   ico: '🚀', bg: 'var(--info-bg)', ink: 'var(--info-ink)' },
+    };
+    const GAP_LEVEL = {
+        high: { label: 'קושי גבוה',  cls: 'attn', col: 'var(--attn-ink)', bg: 'var(--attn-bg)' },
+        mid:  { label: 'קושי בינוני', cls: 'warm', col: 'var(--warm-ink)', bg: 'var(--warm-bg)' },
+        low:  { label: 'כמעט נשלט',   cls: 'good', col: 'var(--good-ink)', bg: 'var(--good-bg)' },
+    };
+    const REC_META = {
+        reinforcement: { type: 'חיזוק',     ico: '💪', bg: 'var(--good-bg)', col: 'var(--good-ink)' },
+        practice:      { type: 'תרגול נוסף', ico: '✍️', bg: 'var(--info-bg)', col: 'var(--info-ink)' },
+        deepening:     { type: 'העמקה',     ico: '🔍', bg: '#efeaff',          col: 'var(--purple)' },
+        enrichment:    { type: 'העשרה',     ico: '⭐', bg: 'var(--warm-bg)', col: 'var(--warm-ink)' },
+        personal_talk: { type: 'שיחה אישית', ico: '💬', bg: 'var(--info-bg)', col: 'var(--info-ink)' },
+        intervention:  { type: 'התערבות חינוכית', ico: '🧭', bg: 'var(--attn-bg)', col: 'var(--attn-ink)' },
+    };
+    const INSIGHT_META = {
+        strength:  { ico: '💚', label: 'חוזקה',         tag: 'var(--good-bg)',  col: 'var(--good-ink)' },
+        challenge: { ico: '🌱', label: 'אתגר / לחיזוק', tag: 'var(--warm-bg)',  col: 'var(--warm-ink)' },
+        interest:  { ico: '⭐', label: 'תחום עניין',     tag: '#efeaff',          col: 'var(--purple)' },
+        note:      { ico: '📝', label: 'הערה פדגוגית',   tag: 'var(--line-soft)', col: 'var(--ink-500)' },
+    };
+    const AVA_COLORS = ['#e87fb0','#7c5cff','#4cb3d4','#e0a64e','#56b87f','#9f7afe','#d97aa6'];
+    function avaColor(seed){ let h=0; for(const c of seed) h=(h*31+c.charCodeAt(0))>>>0; return AVA_COLORS[h%AVA_COLORS.length]; }
 
-        const STUDENTS = {
-            student_001: {
-                name: 'יובל כהן', avatar: 'י', grade: 'כיתה ז׳',
-                lastActiveDays: 1, lastActiveDate: '12.06.2026', engagementPct: 78, avgSessionMin: 22, tasksWeek: 9,
-                consecutive: { rate: 72, count: 5, subject: 'מתמטיקה' },
-                subjects: {
-                    'מתמטיקה': {
-                        progress: 64, goal: 80, trend: 'up',
-                        struggles: [
-                            { topic: 'חילוק שברים', evidence: '42% הצלחה ב-4 משימות עוקבות בשבועיים האחרונים' },
-                            { topic: 'חישובי אחוזים', evidence: 'נדרשו 3 ניסיונות עד פתרון נכון, פעמיים' },
-                        ],
-                        recommendations: [
-                            { type: 'תרגול נוסף', text: 'סדרת תרגול ממוקדת בחילוק שברים — 10 דקות ביום.' },
-                            { type: 'חיזוק', text: 'חזרה על מושג השבר כיחס לפני המעבר לחילוק.' },
-                        ],
-                    },
-                    'מדעים': {
-                        progress: 70, goal: 75, trend: 'steady',
-                        struggles: [ { topic: 'מערכת השרירים', evidence: 'בלבול בין שרירים אגוניסטים לאנטגוניסטים ב-2 משימות' } ],
-                        recommendations: [ { type: 'העמקה', text: 'צפייה בסרטון אינטראקטיבי על תנועת השריר.' } ],
-                    },
-                },
+    // students keyed by id
+    const STUDENTS = {
+        ron: {
+            name: 'רון לוי', avatar: 'ר', grade: 'כיתה ח׳1', status: 'requires_attention',
+            engagement: 20, avgMin: 9, tasksWeek: 1, lastActive: '04.06.2026',
+            reasonType: 'inactivity',
+            reasonSub: 'לא נכנס/ה למערכת 7 ימים',
+            recommendation: 'מומלץ לבדוק חסם רגשי או טכני, או לשלוח תזכורת אישית חמה.',
+            aiExplain: ['לא ביצע/ה פעילות במשך 7 ימים רצופים', 'המשימה האחרונה שהושלמה הייתה ב-04.06.2026', 'לפני כן נצפתה ירידה הדרגתית בזמן הפעילות'],
+            aiSummary: {
+                text: 'רון בעצירה זמנית — <b>7 ימים ללא פעילות</b>, וההתקדמות ירדה ל-48% (יעד 75%). הקושי המרכזי הוא «משוואות מילוליות» (20% הצלחה). זו ככל הנראה עצירה מוטיבציונית/טכנית ולא חוסר יכולת — הוא מגיב מצוין בקבוצות קטנות ובדוגמאות מהחיים. הצעד הראשון שלך: ליצור איתו קשר חם ולהחזיר אותו לפעילות.',
+                actions: [
+                    { ico: '💌', label: 'שליחת תזכורת אישית חמה', toast: ['נשלחה תזכורת אישית 💌', 'לרון לוי'] },
+                    { ico: '✍️', label: 'תרגול ממוקד 10 דק׳ ביום ב«משוואות מילוליות»', toast: ['התרגול נשלח ✓', 'משוואות מילוליות · 10 דק׳ ליום'] },
+                    { ico: '💬', label: 'קביעת שיחת בדיקה קצרה השבוע', toast: ['השיחה נקבעה 💬', 'שיחת בדיקה עם רון'] },
+                ],
             },
-            student_002: {
-                name: 'נועה לוי', avatar: 'נ', grade: 'כיתה ו׳',
-                lastActiveDays: 2, lastActiveDate: '11.06.2026', engagementPct: 85, avgSessionMin: 27, tasksWeek: 12,
-                consecutive: { rate: 80, count: 6, subject: 'אמנות' },
-                subjects: {
-                    'אמנות': {
-                        progress: 82, goal: 80, trend: 'up',
-                        struggles: [],
-                        recommendations: [ { type: 'העשרה', text: 'פרויקט סיפור מאויר כדי להרחיב ביטוי יצירתי.' } ],
-                    },
-                },
+            progress: [{ subject: 'מתמטיקה', value: 48, goal: 75, trend: 'down' }],
+            gaps: [
+                { title: 'משוואות מילוליות', level: 'high', rate: 20, tasks: 4, pattern: 'קושי בתרגום טקסט למשוואה מתמטית' },
+                { title: 'פישוט ביטויים אלגבריים', level: 'mid', rate: 45, tasks: 3, pattern: 'זיהוי משתנה ופעולה חשבונית' },
+                { title: 'פתרון משוואות ליניאריות', level: 'low', rate: 80, tasks: 2, pattern: 'שמירה על איזון בין האגפים' },
+            ],
+            recs: [
+                { type: 'reinforcement', text: 'תרגול נוסף בנושא משוואות מילוליות', target: 'רון לוי', why: 'זוהו טעויות חוזרות בפריט ידע זה (20% הצלחה ב-4 משימות עוקבות).', action: 'שליחת סדרת תרגול ממוקדת של 10 דק׳ ליום' },
+                { type: 'deepening', text: 'שימוש בדוגמאות מהחיים לתרגום בעיות', target: 'רון לוי', why: 'דפוס הקושי הוא תרגום טקסט למשוואה — הקשר יומיומי מקל על ההבנה.', action: 'הצגת 3 דוגמאות יומיומיות לפני המשימה הבאה' },
+                { type: 'personal_talk', text: 'שיחת בדיקה קצרה על אי-הפעילות', target: 'רון לוי', why: 'אי-כניסה למערכת 7 ימים רצופים — כדאי לוודא שהכול תקין.', action: 'יצירת קשר אישי השבוע' },
+            ],
+            insights: [
+                { type: 'note', text: 'רון מתחבר/ת טוב לעבודה בקבוצות קטנות. כדאי לשלב אותו במשימה קבוצתית.', subject: 'מתמטיקה', date: '04.06.2026' },
+                { type: 'strength', text: 'מצא/ה מוטיבציה גבוהה בשיעורים פרקטיים. לשלב יותר דוגמאות מהחיים.', subject: 'מתמטיקה', date: '01.06.2026' },
+            ],
+        },
+        noam: {
+            name: 'נועם כהן', avatar: 'נ', grade: 'כיתה ח׳1', status: 'requires_attention',
+            engagement: 45, avgMin: 14, tasksWeek: 4, lastActive: '04.06.2026',
+            reasonType: 'low_success',
+            reasonSub: '45% הצלחה ב-4 משימות עוקבות',
+            recommendation: 'מומלץ לתת תרגול חיזוק ממוקד בנושא שבו זוהתה הירידה.',
+            aiExplain: ['שיעור ההצלחה ירד ל-45% ב-4 המשימות האחרונות', 'הירידה מרוכזת בנושא פישוט ביטויים אלגבריים', 'זמן הפעילות נשמר תקין — מדובר בקושי תוכני, לא במוטיבציה'],
+            aiSummary: {
+                text: 'נועם מתמיד ולא נוטש משימות, אך שיעור ההצלחה ירד ל-<b>45%</b> ב-4 משימות עוקבות — קושי תוכני (לא מוטיבציוני) בנושא «פישוט ביטויים אלגבריים». זמן הפעילות תקין, כך שאם תשלחי לו תרגול חיזוק ממוקד הוא צפוי לחזור למסלול במהירות.',
+                actions: [
+                    { ico: '✍️', label: 'שליחת סדרת 5 תרגילים מדורגים', toast: ['התרגול נשלח ✓', 'נועם כהן · 5 תרגילים מדורגים'] },
+                    { ico: '🎯', label: 'שילוב דוגמאות יומיומיות לזיהוי משתנה', toast: ['נוסף למשימה הבאה 🎯', 'דוגמאות יומיומיות'] },
+                ],
             },
-            student_003: {
-                name: 'אדם ברק', avatar: 'א', grade: 'כיתה ז׳',
-                lastActiveDays: 3, lastActiveDate: '10.06.2026', engagementPct: 68, avgSessionMin: 18, tasksWeek: 7,
-                consecutive: { rate: 61, count: 5, subject: 'מדעים' },
-                subjects: {
-                    'מדעים': {
-                        progress: 58, goal: 75, trend: 'steady',
-                        struggles: [ { topic: 'מחזור המים בטבע', evidence: '55% הצלחה ב-5 משימות עוקבות' } ],
-                        recommendations: [ { type: 'תרגול נוסף', text: 'משחק התאמה על שלבי מחזור המים.' }, { type: 'חיזוק', text: 'סיכום ויזואלי קצר לפני כל משימה.' } ],
-                    },
-                },
+            progress: [{ subject: 'מתמטיקה', value: 58, goal: 75, trend: 'steady' }],
+            gaps: [
+                { title: 'פישוט ביטויים אלגבריים', level: 'high', rate: 45, tasks: 4, pattern: 'זיהוי משתנה ופעולה חשבונית' },
+                { title: 'משוואות מילוליות', level: 'mid', rate: 55, tasks: 3, pattern: 'תרגום טקסט למשוואה' },
+            ],
+            recs: [
+                { type: 'reinforcement', text: 'תרגול חיזוק בפישוט ביטויים אלגבריים', target: 'נועם כהן', why: 'ירידה ל-45% הצלחה ב-4 משימות עוקבות באותו נושא.', action: 'סדרת 5 תרגילים מדורגים מהקל לקשה' },
+                { type: 'practice', text: 'תרגול קצר עם דוגמאות יומיומיות', target: 'נועם כהן', why: 'חיזוק זיהוי המשתנה והפעולה דרך הקשר מוכר.', action: 'משחק התאמה קצר של ביטוי לערך' },
+            ],
+            insights: [
+                { type: 'strength', text: 'נועם מתמיד/ה ולא נוטש/ת משימות גם כשהן מאתגרות.', subject: 'מתמטיקה', date: '02.06.2026' },
+            ],
+        },
+        shahar: {
+            name: 'שחר ישראלי', avatar: 'ש', grade: 'כיתה ח׳1', status: 'requires_attention',
+            engagement: 18, avgMin: 11, tasksWeek: 2, lastActive: '03.06.2026',
+            reasonType: 'knowledge_gap',
+            reasonSub: '3 טעויות חוזרות בנושא שברים',
+            recommendation: 'מומלץ הסבר חוזר על המושג ולאחריו תרגול קצר וממוקד.',
+            aiExplain: ['אותה שגיאה חזרה ב-3 משימות שונות בנושא שברים', 'הקושי ממוקד בהמרת שבר לאחוז', 'שאר הנושאים נשלטים היטב — מדובר בקושי נקודתי'],
+            aiSummary: {
+                text: 'שחר שולט ברוב החומר, אך אותה שגיאה חוזרת ב-<b>3 משימות</b> בנושא «המרת שברים לאחוזים» (בלבול בין מונה למכנה). מדובר בקושי נקודתי — אם תיתני לו הסבר חוזר קצר וממוקד הוא צפוי להיפתר, ובמקביל תוכלי להציע לו אתגר בנושאים שכבר נשלטים.',
+                actions: [
+                    { ico: '🎬', label: 'שליחת סרטון קצר + 3 תרגילים מודרכים', toast: ['נשלח ✓', 'שחר ישראלי · המרת שברים לאחוזים'] },
+                    { ico: '⭐', label: 'הצעת אתגר בנושאים שכבר נשלטים', toast: ['האתגר נשלח ⭐', 'שחר ישראלי'] },
+                ],
             },
-            student_004: {
-                name: 'מיכל דוד', avatar: 'מ', grade: 'כיתה ו׳',
-                lastActiveDays: 9, lastActiveDate: '04.06.2026', engagementPct: 34, avgSessionMin: 11, tasksWeek: 1,
-                consecutive: { rate: 45, count: 4, subject: 'מתמטיקה' },
-                subjects: {
-                    'מתמטיקה': {
-                        progress: 40, goal: 75, trend: 'down',
-                        struggles: [
-                            { topic: 'לוח הכפל (7,8,9)', evidence: '38% הצלחה ב-4 משימות עוקבות' },
-                            { topic: 'בעיות מילוליות', evidence: 'נטישת 2 משימות באמצע ללא השלמה' },
-                        ],
-                        recommendations: [
-                            { type: 'הפניה להתערבות חינוכית', text: 'פגישת ליווי אישית לבדיקת חסמים ומוטיבציה.' },
-                            { type: 'חיזוק', text: 'משימות קצרות ומדורגות להחזרת תחושת הצלחה.' },
-                        ],
-                    },
-                    'ליווי': {
-                        progress: 30, goal: 60, trend: 'down',
-                        struggles: [ { topic: 'התמדה ורצף למידה', evidence: 'אי-כניסה למערכת 9 ימים רצופים' } ],
-                        recommendations: [ { type: 'הפניה להתערבות חינוכית', text: 'יצירת קשר עם התלמידה והמשפחה לבדיקת שלומה.' } ],
-                    },
-                },
+            progress: [{ subject: 'מתמטיקה', value: 62, goal: 75, trend: 'steady' }],
+            gaps: [
+                { title: 'המרת שברים לאחוזים', level: 'high', rate: 30, tasks: 3, pattern: 'בלבול בין מונה למכנה בהמרה' },
+                { title: 'משוואות מילוליות', level: 'low', rate: 78, tasks: 2, pattern: 'נשלט ברובו' },
+            ],
+            recs: [
+                { type: 'reinforcement', text: 'הסבר חוזר על המרת שבר לאחוז', target: 'שחר ישראלי', why: 'אותה טעות חזרה ב-3 משימות — הסבר ממוקד יפתור את הקושי.', action: 'סרטון קצר + 3 תרגילים מודרכים' },
+                { type: 'enrichment', text: 'אתגר מתקדם בנושאים שכבר נשלטים', target: 'שחר ישראלי', why: 'שליטה גבוהה ברוב הנושאים מאפשרת העשרה.', action: 'משימת אתגר אחת לשבוע' },
+            ],
+            insights: [],
+        },
+        maya: {
+            name: 'מאיה רון', avatar: 'מ', grade: 'כיתה ח׳1', status: 'progressing',
+            engagement: 92, avgMin: 28, tasksWeek: 13, lastActive: '12.06.2026',
+            reasonType: null, reasonSub: '', recommendation: '',
+            aiExplain: ['עומדת ביעדי הלמידה ומעבר להם', 'מעורבות גבוהה ויציבה לאורך זמן'],
+            aiSummary: {
+                text: 'מאיה עומדת ביעדים ומעבר להם (<b>88%</b> מול יעד 80%), מעורבות מצוינת (92%) ומובילה אחרים בקבוצה. כדאי שתשמרי את המומנטום עם אתגרים מעשירים ותתני לה הזדמנויות הובלה.',
+                actions: [
+                    { ico: '⭐', label: 'שליחת משימת אתגר / פרויקט חקר קצר', toast: ['האתגר נשלח ⭐', 'מאיה רון · פרויקט חקר'] },
+                ],
             },
-            student_005: {
-                name: 'עומר שלום', avatar: 'ע', grade: 'כיתה ז׳',
-                lastActiveDays: 4, lastActiveDate: '09.06.2026', engagementPct: 48, avgSessionMin: 14, tasksWeek: 4,
-                consecutive: { rate: 38, count: 5, subject: 'מדעים' },
-                subjects: {
-                    'מדעים': {
-                        progress: 50, goal: 75, trend: 'down',
-                        struggles: [
-                            { topic: 'קריאת גרפים', evidence: '38% הצלחה ב-5 משימות עוקבות' },
-                            { topic: 'יחידות מידה', evidence: 'בלבול בין מ"ל לליטר ב-3 משימות' },
-                        ],
-                        recommendations: [
-                            { type: 'תרגול נוסף', text: 'תרגול הדרגתי בקריאת גרפים פשוטים.' },
-                            { type: 'העמקה', text: 'הדגמה מוחשית של יחידות מידה במטבח.' },
-                        ],
-                    },
-                    'ליווי': {
-                        progress: 45, goal: 60, trend: 'steady',
-                        struggles: [],
-                        recommendations: [ { type: 'חיזוק', text: 'עידוד הבעה בעל פה מול הקבוצה לחיזוק ביטחון.' } ],
-                    },
-                },
+            progress: [{ subject: 'מתמטיקה', value: 88, goal: 80, trend: 'up' }],
+            gaps: [],
+            recs: [
+                { type: 'enrichment', text: 'משימת אתגר מתמטית מתקדמת', target: 'מאיה רון', why: 'עמידה ביעדים מאפשרת העשרה והרחבה.', action: 'פרויקט חקר קצר בנושא לבחירה' },
+            ],
+            insights: [
+                { type: 'strength', text: 'לומדת עצמאית ומובילה אחרים בקבוצה.', subject: 'מתמטיקה', date: '05.06.2026' },
+            ],
+        },
+        eitan: {
+            name: 'איתן ברק', avatar: 'א', grade: 'כיתה ח׳1', status: 'on_track',
+            engagement: 71, avgMin: 21, tasksWeek: 8, lastActive: '11.06.2026',
+            reasonType: null, reasonSub: '', recommendation: '',
+            aiExplain: ['מתקדם בקצב יציב לקראת היעדים'],
+            aiSummary: {
+                text: 'איתן מתקדם בקצב יציב לקראת היעד (<b>67%</b> מול 75%) ומעורבותו תקינה. חיזוק קל שתשלחי בנושא «פתרון משוואות ליניאריות» יסייע לו לסגור את הפער ולהגיע ליעד.',
+                actions: [
+                    { ico: '✍️', label: 'שליחת סדרת תרגול קצרה במשוואות ליניאריות', toast: ['התרגול נשלח ✓', 'איתן ברק · משוואות ליניאריות'] },
+                ],
             },
-            student_006: {
-                name: 'שירה אבירם', avatar: 'ש', grade: 'כיתה ו׳',
-                lastActiveDays: 1, lastActiveDate: '12.06.2026', engagementPct: 91, avgSessionMin: 31, tasksWeek: 14,
-                consecutive: { rate: 88, count: 6, subject: 'מתמטיקה' },
-                subjects: {
-                    'מתמטיקה': {
-                        progress: 88, goal: 85, trend: 'up',
-                        struggles: [],
-                        recommendations: [ { type: 'העשרה', text: 'אתגרי חשיבה מתמטית ברמה גבוהה יותר.' } ],
-                    },
-                    'אמנות': {
-                        progress: 79, goal: 75, trend: 'up',
-                        struggles: [],
-                        recommendations: [ { type: 'העשרה', text: 'שילוב טכניקות צבע חדשות בפרויקט הבא.' } ],
-                    },
-                },
+            progress: [{ subject: 'מתמטיקה', value: 67, goal: 75, trend: 'up' }],
+            gaps: [
+                { title: 'פתרון משוואות ליניאריות', level: 'mid', rate: 52, tasks: 3, pattern: 'שמירה על איזון בין האגפים' },
+            ],
+            recs: [
+                { type: 'practice', text: 'תרגול נוסף בפתרון משוואות ליניאריות', target: 'איתן ברק', why: 'חיזוק קל יסייע לעמוד ביעד.', action: 'סדרת תרגול קצרה' },
+            ],
+            insights: [],
+        },
+    };
+
+    // groups
+    const GROUPS = {
+        g_8a: {
+            name: 'כיתה ח׳1 – מתמטיקה', subject: 'מתמטיקה',
+            summary: { progress: 79, engagement: 67, active: 14, total: 21, avgMin: 21, attention: 3 },
+            attention: ['ron', 'noam', 'shahar'],
+            students: ['ron', 'noam', 'shahar', 'maya', 'eitan'],
+            aiSummary: {
+                text: 'הקבוצה במגמת עלייה יפה — ההתקדמות לעבר היעדים קפצה מ-65% ל-<b>79%</b> השבוע, והמעורבות יציבה (67%). המוקד העיקרי שלך כרגע: <b>3 תלמידים</b> הזקוקים לתשומת לב, כשהנושא «משוואות מילוליות» חוזר כקושי משותף. כדאי שתרכזי סביבו פעולה קבוצתית קצרה.',
+                actions: [
+                    { ico: '💌', label: 'תזכורת אישית לרון לוי', toast: ['נשלחה תזכורת אישית 💌', 'לרון לוי – 7 ימים ללא פעילות'] },
+                    { ico: '✍️', label: 'תרגול חיזוק קבוצתי ב«משוואות מילוליות»', toast: ['התרגול הקבוצתי נוצר ✓', 'משוואות מילוליות · 10 דק׳'] },
+                    { ico: '👥', label: 'מעבר לתלמידים לתשומת לב', scrollTo: 'attnPanel' },
+                ],
             },
-        };
+            trends: {
+                dates: ['30/5','31/5','1/6','2/6','3/6','4/6','5/6'],
+                progress:   [40, 43, 48, 50, 61, 65, 79],
+                engagement: [55, 58, 60, 62, 63, 65, 67],
+                minutes:    [16, 17, 18, 18, 20, 20, 21],
+            },
+        },
+        g_7b: {
+            name: 'כיתה ז׳2 – מתמטיקה', subject: 'מתמטיקה',
+            summary: { progress: 71, engagement: 74, active: 17, total: 23, avgMin: 19, attention: 1 },
+            attention: ['noam'],
+            students: ['noam', 'maya', 'eitan'],
+            aiSummary: {
+                text: 'קבוצה ז׳2 במצב טוב ויציב — מעורבות גבוהה (<b>74%</b>) והתקדמות מתמדת ל-71%. רק תלמיד אחד דורש תשומת לב כרגע, כך שתוכלי להשקיע גם בהעשרה למתקדמים ולשמר את המומנטום החיובי.',
+                actions: [
+                    { ico: '✍️', label: 'חיזוק לנועם כהן בנושא שזוהתה בו ירידה', toast: ['התרגול נשלח ✓', 'נועם כהן · חיזוק ממוקד'] },
+                    { ico: '⭐', label: 'אתגר העשרה למאיה (עומדת ביעדים)', toast: ['אתגר ההעשרה נשלח ⭐', 'מאיה רון · פרויקט חקר קצר'] },
+                ],
+            },
+            trends: {
+                dates: ['30/5','31/5','1/6','2/6','3/6','4/6','5/6'],
+                progress:   [52, 55, 58, 62, 64, 68, 71],
+                engagement: [60, 63, 66, 68, 70, 72, 74],
+                minutes:    [14, 15, 16, 17, 18, 18, 19],
+            },
+        },
+    };
 
-        // seed teacher insights (already in learner profile)
-        const TEACHER_INSIGHTS = {
-            student_001: [ { type: 'strength', text: 'חזק מאוד בחשיבה לוגית ובזיהוי דפוסים.', by: 'מירי לוי', date: '08.06.2026' } ],
-            student_004: [ { type: 'challenge', text: 'מתקשה לשמור על רצף למידה אחרי הפסקות.', by: 'רונית אבטליון', date: '03.06.2026' } ],
-            student_006: [ { type: 'strength', text: 'לומדת עצמאית ומובילה אחרים בקבוצה.', by: 'מירי לוי', date: '05.06.2026' } ],
-        };
+    const METRIC_LABEL = {
+        progress:   { name: 'התקדמות לעבר יעדי למידה', unit: '%', sub: 'התקדמות לעבר יעדי למידה לאורך זמן' },
+        engagement: { name: 'מעורבות',                 unit: '%', sub: 'מעורבות הקבוצה לאורך זמן' },
+        minutes:    { name: 'זמן פעילות ממוצע',         unit: " דק'", sub: 'זמן פעילות ממוצע לתלמיד לאורך זמן' },
+    };
 
-        const REC_META = {
-            'חיזוק':                    { ico: '💪', bg: 'rgba(72,187,120,0.13)', col: '#2f855a', chip: '#e6f6ec' },
-            'תרגול נוסף':               { ico: '✍️', bg: 'rgba(99,179,237,0.15)', col: '#2b6cb0', chip: '#e4f0fb' },
-            'העמקה':                    { ico: '🔍', bg: 'rgba(124,92,255,0.13)', col: '#6b46c1', chip: '#efeaff' },
-            'העשרה':                    { ico: '🌱', bg: 'rgba(246,173,85,0.18)', col: '#b7791f', chip: '#fdf1de' },
-            'הפניה להתערבות חינוכית':   { ico: '🧭', bg: 'rgba(245,101,101,0.13)', col: '#c53030', chip: '#fde8e8' },
-        };
+    // ============================================================
+    //  STATE
+    // ============================================================
+    let currentGroup = 'g_8a';
+    let currentRange = '7';
+    let currentMetric = 'progress';
+    let currentStudent = 'ron';
+    let profileTab = 'insights';
+    let currentView = 'class';
 
-        const INSIGHT_META = {
-            strength:  { ico: '💚', label: 'חוזקה' },
-            challenge: { ico: '⚠️', label: 'אתגר / לשיפור' },
-            note:      { ico: '📝', label: 'הערה כללית' },
-        };
+    // ============================================================
+    //  HELPERS
+    // ============================================================
+    function showToast(title, sub) {
+        document.getElementById('toastTitle').textContent = title;
+        document.getElementById('toastSub').textContent = sub || '';
+        const t = document.getElementById('toast');
+        t.classList.add('show');
+        clearTimeout(window._tt);
+        window._tt = setTimeout(() => t.classList.remove('show'), 2800);
+    }
+    function ava(el, name) { el.style.background = avaColor(name); el.textContent = name.charAt(0); }
 
-        // ================= STATE =================
-        let currentTeacher = 'miri';
-        let currentGroup = null;
-        let currentTab = 'group';
-        let currentStudent = null;
-        let groupSubjectFilter = 'all';
-        let studentSubjectFilter = 'all';
-        const manualAttention = new Set();   // studentIds flagged manually by teacher
-        const dismissedAttention = new Set(); // auto-flags acknowledged/cleared this session
+    // ============================================================
+    //  RENDER: top + filters
+    // ============================================================
+    function renderShell() {
+        document.getElementById('topName').textContent = TEACHER.name;
+        const ta = document.getElementById('topAva'); ta.textContent = TEACHER.avatar;
+        document.getElementById('greetTitle').textContent = `שלום ${TEACHER.first} 👋`;
 
-        // ================= HELPERS =================
-        function teacherGroups() {
-            const t = TEACHERS[currentTeacher];
-            return t.groups === 'ALL' ? Object.keys(GROUPS) : t.groups;
+        const fg = document.getElementById('fGroup');
+        fg.innerHTML = Object.keys(GROUPS).map(g => `<option value="${g}">${GROUPS[g].name}</option>`).join('');
+        fg.value = currentGroup;
+
+        const fs = document.getElementById('fSubject');
+        fs.innerHTML = SUBJECT_OPTIONS.map(s => `<option>${s}</option>`).join('');
+    }
+
+    const RANGE_LABELS = { '7': '7 ימים אחרונים', '14': '14 ימים אחרונים', '30': '30 ימים אחרונים' };
+    function updateContextLine() {
+        const g = GROUPS[currentGroup];
+        const cls = g.name.split('–')[0].trim();
+        const subject = document.getElementById('fSubject').value || g.subject;
+        const range = RANGE_LABELS[currentRange] || currentRange;
+        document.getElementById('ctxValue').textContent = `${cls} · ${subject} · ${range}`;
+    }
+
+    // ============================================================
+    //  RENDER: AI summaries (class + student)
+    // ============================================================
+    function aiActionsHtml(actions, scope) {
+        return actions.map((a, i) =>
+            `<li class="ai-act" data-scope="${scope}" data-idx="${i}">${a.label}</li>`
+        ).join('');
+    }
+    function handleAiAction(scope, idx) {
+        const ai = scope === 'group' ? GROUPS[currentGroup].aiSummary : STUDENTS[currentStudent].aiSummary;
+        const a = ai && ai.actions[idx];
+        if (!a) return;
+        if (a.scrollTo) { document.getElementById(a.scrollTo).scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+        if (a.toast) showToast(a.toast[0], a.toast[1] || '');
+    }
+    function renderAiSummary() {
+        const g = GROUPS[currentGroup];
+        const ai = g.aiSummary;
+        const el = document.getElementById('aiSummary');
+        if (!ai) { el.style.display = 'none'; return; }
+        el.style.display = '';
+        el.innerHTML = `
+            <div class="ai-head">
+                <span class="ai-badge">סיכום AI</span>
+                <span class="ai-title">${g.name}</span>
+                <span class="ai-scope">ברמת הכיתה</span>
+            </div>
+            <div class="ai-text"><b>${TEACHER.first}</b>, ${ai.text}</div>
+            <div class="ai-actions"><span class="ai-act-lab">מה כדאי לעשות:</span><ul class="ai-acts">${aiActionsHtml(ai.actions, 'group')}</ul></div>`;
+    }
+    function renderStudentAiSummary() {
+        const s = STUDENTS[currentStudent];
+        const ai = s.aiSummary;
+        const el = document.getElementById('studentAiSummary');
+        if (!ai) { el.style.display = 'none'; return; }
+        el.style.display = '';
+        el.innerHTML = `
+            <div class="ai-head">
+                <span class="ai-badge">סיכום AI</span>
+                <span class="ai-title">${s.name}</span>
+                <span class="ai-scope">ברמת התלמיד/ה</span>
+            </div>
+            <div class="ai-text"><b>${TEACHER.first}</b>, ${ai.text}</div>
+            <div class="ai-actions"><span class="ai-act-lab">מה כדאי לעשות:</span><ul class="ai-acts">${aiActionsHtml(ai.actions, 'student')}</ul></div>`;
+    }
+
+    // ============================================================
+    //  RENDER: KPI cards
+    // ============================================================
+    function renderKpis() {
+        const s = GROUPS[currentGroup].summary;
+        const grid = document.getElementById('kpiGrid');
+        grid.innerHTML = `
+            <div class="kpi attn">
+                <div class="k-lab">דורשים תשומת לב</div>
+                <div class="k-val">${s.attention}</div>
+                <button class="k-cta" onclick="document.getElementById('attnPanel').scrollIntoView({behavior:'smooth',block:'center'})">צפייה בתלמידים</button>
+            </div>
+            <div class="kpi">
+                <div class="k-lab">מעורבות</div>
+                <div class="k-val">${s.engagement}<small>%</small></div>
+                <div class="k-sub">${s.active}/${s.total} תלמידים פעילים</div>
+            </div>
+            <div class="kpi">
+                <div class="k-lab">התקדמות ליעדים</div>
+                <div class="k-val">${s.progress}<small>%</small></div>
+                <div class="k-sub">ממוצע הקבוצה</div>
+            </div>
+            <div class="kpi">
+                <div class="k-lab">זמן פעילות ממוצע</div>
+                <div class="k-val">${s.avgMin}<small> דק׳</small></div>
+                <div class="k-sub">לשבוע, לכל תלמיד</div>
+            </div>`;
+    }
+
+    // ============================================================
+    //  RENDER: attention table
+    // ============================================================
+    function renderAttention() {
+        const g = GROUPS[currentGroup];
+        const wrap = document.getElementById('attnTableWrap');
+        if (!g.attention.length) {
+            wrap.innerHTML = `<div class="empty"><span class="big">🎉</span><h3>אין כרגע תלמידים לתשומת לב</h3><p>כל התלמידים בקבוצה זו במעקב תקין. כל הכבוד!</p></div>`;
+            return;
         }
-        function groupStudents(gid) { return GROUPS[gid] ? GROUPS[gid].students : []; }
-
-        // Explainable attention computation — returns raw signals
-        function computeAttention(sid) {
+        let rows = '';
+        g.attention.forEach(sid => {
             const s = STUDENTS[sid];
-            const reasons = [];
-            if (s.lastActiveDays >= INACTIVE_THRESHOLD && !dismissedAttention.has(sid + ':inactive')) {
-                reasons.push({
-                    type: 'inactive',
-                    title: 'אי-ביצוע פעילות לאורך זמן',
-                    raw: `לא נכנס/ה למערכת כבר <b>${s.lastActiveDays} ימים</b> (פעילות אחרונה: ${s.lastActiveDate}). הסף שהוגדר: ${INACTIVE_THRESHOLD} ימים.`,
-                });
-            }
-            if (s.consecutive.rate < LOW_SUCCESS_THRESHOLD && !dismissedAttention.has(sid + ':lowsuccess')) {
-                reasons.push({
-                    type: 'lowsuccess',
-                    title: 'שיעור הצלחה נמוך במשימות עוקבות',
-                    raw: `<b>${s.consecutive.rate}%</b> הצלחה ב-${s.consecutive.count} משימות עוקבות ב${s.consecutive.subject}. הסף שהוגדר: ${LOW_SUCCESS_THRESHOLD}%.`,
-                });
-            }
-            if (manualAttention.has(sid)) {
-                reasons.push({
-                    type: 'manual',
-                    title: 'סומן ידנית ע״י המורה',
-                    raw: `${TEACHERS[currentTeacher].name} סימן/ה תלמיד/ה זה כדורש/ת תשומת לב מיידית.`,
-                });
-            }
-            return reasons;
-        }
-
-        function subjectsForStudent(sid) { return Object.keys(STUDENTS[sid].subjects); }
-
-        function showToast(title, sub) {
-            document.getElementById('toastTitle').textContent = title;
-            document.getElementById('toastSub').textContent = sub || '';
-            const t = document.getElementById('toast');
-            t.classList.add('show');
-            clearTimeout(window._tt);
-            window._tt = setTimeout(() => t.classList.remove('show'), 2600);
-        }
-
-        // ================= RENDER: CONTEXT =================
-        function renderContext() {
-            const t = TEACHERS[currentTeacher];
-            document.getElementById('sidebarAvatar').textContent = t.avatar;
-            document.getElementById('sidebarName').textContent = t.name;
-            document.getElementById('sidebarRole').textContent = t.role;
-
-            const gs = teacherGroups();
-            const sel = document.getElementById('groupSelect');
-            sel.innerHTML = gs.map(g => `<option value="${g}">${GROUPS[g].name}${TEACHERS[currentTeacher].groups === 'ALL' ? '' : ''}</option>`).join('');
-            if (!gs.includes(currentGroup)) currentGroup = gs[0];
-            sel.value = currentGroup;
-        }
-
-        // ================= RENDER: GROUP VIEW =================
-        function renderGroupView() {
-            const gid = currentGroup;
-            const sids = groupStudents(gid);
-            const subj = GROUPS[gid].subject;
-            const total = sids.length;
-
-            const activeCount = sids.filter(s => STUDENTS[s].lastActiveDays <= 3).length;
-            const midCount = sids.filter(s => STUDENTS[s].lastActiveDays >= 4 && STUDENTS[s].lastActiveDays <= 6).length;
-            const inactiveCount = sids.filter(s => STUDENTS[s].lastActiveDays >= 7).length;
-            const activePct = total ? Math.round((activeCount / total) * 100) : 0;
-            const avgSession = total ? Math.round(sids.reduce((a, s) => a + STUDENTS[s].avgSessionMin, 0) / total) : 0;
-
-            // avg progress vs goal across the group subject
-            const progVals = sids.map(s => {
-                const subjData = STUDENTS[s].subjects[subj] || Object.values(STUDENTS[s].subjects)[0];
-                return subjData ? Math.round((subjData.progress / subjData.goal) * 100) : 0;
-            });
-            const avgGoalPct = total ? Math.min(100, Math.round(progVals.reduce((a, b) => a + b, 0) / total)) : 0;
-
-            // attention students
-            const attnStudents = sids.filter(s => computeAttention(s).length > 0);
-
-            // trend of group
-            const upCount = sids.filter(s => { const d = STUDENTS[s].subjects[subj] || Object.values(STUDENTS[s].subjects)[0]; return d && d.trend === 'up'; }).length;
-            const trendLabel = upCount >= total / 2 ? 'מגמת עלייה' : (upCount > 0 ? 'מעורבת' : 'יציבה');
-
-            let html = `
-                <div class="section-title">🎯 תמונת מצב קבוצתית <span class="badge-essential">מידע מהותי</span></div>
-                <div class="kpi-row">
-                    <div class="kpi-card primary">
-                        <div class="kpi-label">👥 תלמידים פעילים</div>
-                        <div class="kpi-value" id="kpiActive">${activePct}%</div>
-                        <div class="kpi-sub">${activeCount} מתוך ${total} פעילים ב-3 הימים האחרונים</div>
-                    </div>
-                    <div class="kpi-card primary">
-                        <div class="kpi-label">📈 התקדמות מול יעדי הלמידה</div>
-                        <div class="kpi-value">${avgGoalPct}%</div>
-                        <div class="kpi-sub">ממוצע קבוצתי בהשגת היעדים ב${subj}</div>
-                    </div>
-                    <div class="kpi-card ${attnStudents.length ? 'alert' : 'primary'}">
-                        <div class="kpi-label">🚨 דורשים תשומת לב מיידית</div>
-                        <div class="kpi-value">${attnStudents.length}</div>
-                        <div class="kpi-sub">${attnStudents.length ? 'ראה פירוט והנתון הגולמי למטה' : 'אין כרגע תלמידים מסומנים 🎉'}</div>
-                    </div>
-                </div>
-
-                <div class="section-title" style="margin-top:18px;">📊 מעורבות הקבוצה <span class="badge-secondary">מידע משני</span></div>
-                <div class="kpi-row">
-                    <div class="kpi-card secondary">
-                        <div class="kpi-label">⏱️ זמן פעילות ממוצע</div>
-                        <div class="kpi-value">${avgSession} <span style="font-size:0.9rem;">דק'</span></div>
-                        <div class="kpi-sub">לכל מפגש למידה</div>
-                    </div>
-                    <div class="kpi-card secondary">
-                        <div class="kpi-label">👤 מספר תלמידים בקבוצה</div>
-                        <div class="kpi-value">${total}</div>
-                        <div class="kpi-sub">קבוצת ${subj}</div>
-                    </div>
-                    <div class="kpi-card secondary">
-                        <div class="kpi-label">🏆 מגמת הישגים</div>
-                        <div class="kpi-value trend-${upCount >= total/2 ? 'up' : 'steady'}" style="font-size:1.2rem;">${trendLabel}</div>
-                        <div class="kpi-sub">${upCount} תלמידים במגמת עלייה</div>
-                    </div>
-                </div>
-
-                <div class="section-title" style="margin-top:18px;">🟢 פילוח מעורבות</div>
-                <div class="eng-bars">
-                    <div class="eng-bar-item">
-                        <div class="lab">🟢 פעילים (עד 3 ימים)</div>
-                        <div class="cnt trend-up">${activeCount}</div>
-                        <div class="eng-track"><div class="eng-fill" style="width:${total?activeCount/total*100:0}%; background:#48bb78;"></div></div>
-                    </div>
-                    <div class="eng-bar-item">
-                        <div class="lab">🟡 מעורבות בינונית (4–6 ימים)</div>
-                        <div class="cnt trend-steady">${midCount}</div>
-                        <div class="eng-track"><div class="eng-fill" style="width:${total?midCount/total*100:0}%; background:#f6ad55;"></div></div>
-                    </div>
-                    <div class="eng-bar-item">
-                        <div class="lab">🔴 לא פעילים (7+ ימים)</div>
-                        <div class="cnt trend-down">${inactiveCount}</div>
-                        <div class="eng-track"><div class="eng-fill" style="width:${total?inactiveCount/total*100:0}%; background:#f56565;"></div></div>
-                    </div>
-                </div>
-
-                <div class="section-title" style="margin-top:22px;">🚨 דורשים תשומת לב מיידית
-                    <span class="badge-essential">מידע מהותי</span>
-                    <span class="xai-tag" style="margin-right:auto;">🔍 AI מוסבר — מוצג הנתון הגולמי</span>
-                </div>
-                <div class="attn-list" id="attnList"></div>
-            `;
-            document.getElementById('groupView').innerHTML = html;
-
-            // attention cards
-            const list = document.getElementById('attnList');
-            if (!attnStudents.length) {
-                list.innerHTML = `<div class="empty-state"><span class="big">🎉</span> כל התלמידים בקבוצה זו במעקב תקין. ניתן לסמן ידנית תלמיד/ה לתשומת לב דרך "מבט תלמיד".</div>`;
-            } else {
-                list.innerHTML = attnStudents.map(sid => {
-                    const s = STUDENTS[sid];
-                    const reasons = computeAttention(sid);
-                    const inGroups = Object.keys(GROUPS).filter(g => GROUPS[g].students.includes(sid)).map(g => GROUPS[g].name).join(' · ');
-                    return `
-                    <div class="attn-card">
-                        <div class="attn-head">
-                            <div class="attn-stud">
-                                <div class="attn-ava">${s.avatar}</div>
-                                <div>
-                                    <div class="attn-name">${s.name}</div>
-                                    <div class="attn-grp">${s.grade} · קבוצות: ${inGroups}</div>
-                                </div>
-                            </div>
-                            <button class="mini-btn solid" onclick="goToStudent('${sid}')">👤 פתח פרופיל מלא</button>
+            const rm = REASON_META[s.reasonType];
+            const active = sid === currentStudent;
+            rows += `
+                <tr class="${active ? 'active' : ''}" onclick="selectStudent('${sid}')">
+                    <td>
+                        <div class="tstud">
+                            <div class="tstud-ava" style="background:${avaColor(s.name)}">${s.avatar}</div>
+                            <div><div class="tstud-name">${s.name}</div><div class="r-sub">${s.grade}</div></div>
                         </div>
-                        <div class="attn-reasons">
-                            ${reasons.map(r => `
-                                <div class="attn-reason">
-                                    <div class="r-title">⚠️ ${r.title}</div>
-                                    <div class="attn-raw"><span class="raw-ico">📌</span><div><b>הנתון הגולמי:</b> ${r.raw}</div></div>
-                                    ${r.type === 'manual' ? `<button class="mini-btn danger" style="margin-top:8px;" onclick="unflag('${sid}')">בטל סימון ידני</button>` : `<button class="mini-btn" style="margin-top:8px;" onclick="dismiss('${sid}','${r.type}')">סמן כטופל</button>`}
-                                </div>
-                            `).join('')}
+                    </td>
+                    <td>
+                        <div class="reason">
+                            <span class="r-dot" style="background:var(--${rm.cls === 'attn' ? 'attn' : rm.cls === 'warm' ? 'warm' : 'info'}-dot)"></span>
+                            <div><div class="r-main">${rm.label}</div><div class="r-sub">${s.reasonSub}</div></div>
                         </div>
-                    </div>`;
-                }).join('');
-            }
-        }
-
-        // ================= RENDER: STUDENT VIEW =================
-        function renderStudentView() {
-            const gid = currentGroup;
-            const sids = groupStudents(gid);
-            if (!currentStudent || !sids.includes(currentStudent)) currentStudent = sids[0];
-            const sid = currentStudent;
-            const s = STUDENTS[sid];
-
-            // subject chips (only this student's subjects)
-            const subs = subjectsForStudent(sid);
-            if (studentSubjectFilter !== 'all' && !subs.includes(studentSubjectFilter)) studentSubjectFilter = 'all';
-            const shownSubs = studentSubjectFilter === 'all' ? subs : [studentSubjectFilter];
-
-            const attn = computeAttention(sid);
-
-            let html = `
-                <div class="stud-toolbar">
-                    <div class="field-wrap">
-                        <label>בחר/י תלמיד/ה מהקבוצה</label>
-                        <select id="studentSelect">
-                            ${sids.map(x => `<option value="${x}" ${x === sid ? 'selected' : ''}>${STUDENTS[x].name}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="field-wrap" style="flex:1;">
-                        <label>סינון לפי מקצוע / תחום עניין</label>
-                        <div class="subj-chips" id="subjChips">
-                            <button class="subj-chip ${studentSubjectFilter === 'all' ? 'active' : ''}" data-subj="all">הכל</button>
-                            ${subs.map(sub => `<button class="subj-chip ${studentSubjectFilter === sub ? 'active' : ''}" data-subj="${sub}">${sub}</button>`).join('')}
+                    </td>
+                    <td><div class="date-cell">${s.lastActive}</div></td>
+                    <td>
+                        <div class="eng-cell">
+                            <div class="v">${s.engagement}%</div>
+                            <div class="eng-track"><div class="eng-fill" style="width:${s.engagement}%; background:${s.engagement < 40 ? 'var(--attn-dot)' : s.engagement < 70 ? 'var(--warm-dot)' : 'var(--good-dot)'}"></div></div>
+                        </div>
+                    </td>
+                </tr>`;
+            if (active) {
+                rows += `
+                <tr class="xai-row"><td colspan="4">
+                    <div class="xai-box fade-in">
+                        <div class="why">למה סומן/ה? הסימון מבוסס על הנתונים הבאים:</div>
+                        <ul>${s.aiExplain.map(x => `<li>${x}</li>`).join('')}</ul>
+                        <div class="xai-rec"><span>💡</span><div><b>המלצה:</b> ${s.recommendation}</div></div>
+                        <div class="xai-actions">
+                            <button class="mini-btn solid" onclick="event.stopPropagation(); openProfileTab('${sid}')">👤 פתח פרופיל מלא</button>
+                            <button class="mini-btn" onclick="event.stopPropagation(); showToast('נשלחה תזכורת אישית 💌','ל${s.name}')">💌 שליחת תזכורת</button>
+                            <button class="mini-btn" onclick="event.stopPropagation(); showToast('סומן כטופל ✓','')">✓ סמן כטופל</button>
                         </div>
                     </div>
-                </div>
+                </td></tr>`;
+            }
+        });
+        wrap.innerHTML = `
+            <table class="attn-table">
+                <thead><tr><th>תלמיד/ה</th><th>סיבת הסימון</th><th>פעילות אחרונה</th><th>מעורבות</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+    }
 
-                <div class="stud-hero">
-                    <div class="stud-hero-ava">${s.avatar}</div>
-                    <div>
-                        <h2>${s.name}</h2>
-                        <div class="meta">${s.grade} · פעילות אחרונה: ${s.lastActiveDate}${attn.length ? ` · <span style="color:#c53030;font-weight:700;">🚨 דורש/ת תשומת לב</span>` : ''}</div>
-                    </div>
-                    <div class="stud-hero-stats">
-                        <div class="hero-stat"><div class="v">${s.engagementPct}%</div><div class="l">מעורבות</div></div>
-                        <div class="hero-stat"><div class="v">${s.avgSessionMin}'</div><div class="l">זמן ממוצע</div></div>
-                        <div class="hero-stat"><div class="v">${s.tasksWeek}</div><div class="l">משימות השבוע</div></div>
-                        <div class="hero-stat" style="display:flex; align-items:center;">
-                            ${manualAttention.has(sid)
-                                ? `<button class="mini-btn danger" onclick="unflag('${sid}')">🚩 בטל סימון לתשומת לב</button>`
-                                : `<button class="mini-btn" onclick="flagStudent('${sid}')">🚩 סמן/י לתשומת לב</button>`}
-                        </div>
-                    </div>
-                </div>
-            `;
+    // ============================================================
+    //  RENDER: trend chart (inline SVG)
+    // ============================================================
+    function renderTrend() {
+        const g = GROUPS[currentGroup];
+        const days = parseInt(currentRange, 10);
+        const allDates = g.trends.dates;
+        const allVals = g.trends[currentMetric];
+        const n = Math.max(2, Math.min(allDates.length, days <= 7 ? 7 : days <= 14 ? 6 : 5));
+        const dates = allDates.slice(-n);
+        const vals = allVals.slice(-n);
 
-            if (attn.length) {
-                html += `
-                <div class="attn-card" style="margin-bottom:16px;">
-                    <div class="r-title" style="font-size:0.9rem; color:#c53030; font-weight:700;">🚨 תלמיד/ה זה/זו סומן/ה כדורש/ת תשומת לב מיידית <span class="xai-tag">🔍 AI מוסבר</span></div>
-                    <div class="attn-reasons">
-                        ${attn.map(r => `<div class="attn-reason"><div class="r-title">⚠️ ${r.title}</div><div class="attn-raw"><span class="raw-ico">📌</span><div><b>הנתון הגולמי:</b> ${r.raw}</div></div></div>`).join('')}
+        document.getElementById('trendSub').textContent = METRIC_LABEL[currentMetric].sub;
+
+        const W = 300, H = 150, padX = 22, padY = 22;
+        const maxV = currentMetric === 'minutes' ? Math.max(...vals) + 6 : 100;
+        const minV = 0;
+        const x = i => padX + (i / (vals.length - 1)) * (W - padX * 2);
+        const y = v => H - padY - ((v - minV) / (maxV - minV)) * (H - padY * 2);
+
+        const linePts = vals.map((v, i) => `${x(i)},${y(v)}`).join(' ');
+        const areaPts = `${x(0)},${H - padY} ${linePts} ${x(vals.length - 1)},${H - padY}`;
+        const lastV = vals[vals.length - 1];
+        const unit = METRIC_LABEL[currentMetric].unit;
+
+        const dots = vals.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="${i === vals.length - 1 ? 5 : 3.5}" fill="#fff" stroke="#7c5cff" stroke-width="2.5"/>`).join('');
+        const xlabels = dates.map((d, i) => `<text x="${x(i)}" y="${H - 5}" font-size="8" fill="#a8a3bd" text-anchor="middle">${d}</text>`).join('');
+        const gridY = [0, 25, 50, 75, 100].filter(() => currentMetric !== 'minutes');
+        const grid = (currentMetric === 'minutes' ? [] : gridY).map(gv => `<line x1="${padX}" y1="${y(gv)}" x2="${W - padX}" y2="${y(gv)}" stroke="#f4f1fb" stroke-width="1"/><text x="${padX - 4}" y="${y(gv) + 3}" font-size="7" fill="#c4bfd6" text-anchor="end">${gv}</text>`).join('');
+
+        document.getElementById('chartWrap').innerHTML = `
+            <svg viewBox="0 0 ${W} ${H}" width="100%" height="170" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                    <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#7c5cff" stop-opacity="0.22"/>
+                        <stop offset="100%" stop-color="#7c5cff" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+                ${grid}
+                <polygon points="${areaPts}" fill="url(#areaGrad)"/>
+                <polyline points="${linePts}" fill="none" stroke="#7c5cff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                ${dots}
+                <text x="${x(vals.length - 1)}" y="${y(lastV) - 11}" font-size="11" font-weight="700" fill="#7c5cff" text-anchor="middle">${lastV}${unit}</text>
+                ${xlabels}
+            </svg>`;
+    }
+
+    // ============================================================
+    //  RENDER: student profile section
+    // ============================================================
+    function renderProfileBar() {
+        const sel = document.getElementById('pStudent');
+        const list = GROUPS[currentGroup].students;
+        sel.innerHTML = list.map(sid => `<option value="${sid}">${STUDENTS[sid].name}</option>`).join('');
+        if (!list.includes(currentStudent)) currentStudent = list[0];
+        sel.value = currentStudent;
+        ava(document.getElementById('pselAva'), STUDENTS[currentStudent].name);
+        document.getElementById('ptabInsights').classList.toggle('active', profileTab === 'insights');
+        document.getElementById('ptabProfile').classList.toggle('active', profileTab === 'profile');
+        renderStudentAiSummary();
+    }
+
+    function renderProfileBody() {
+        if (profileTab === 'insights') renderInsightsTab();
+        else renderProfileTab();
+    }
+
+    function renderInsightsTab() {
+        const s = STUDENTS[currentStudent];
+        const insights = s.insights || [];
+        const insightsHtml = insights.length
+            ? insights.map((ins, idx) => {
+                const m = INSIGHT_META[ins.type];
+                return `<div class="insight-card">
+                    <div class="i-text">${ins.text}</div>
+                    <div class="i-foot">
+                        <span class="insight-type-tag" style="background:${m.tag}; color:${m.col}">${m.label} · ${ins.subject}</span>
+                        <span class="i-tools">
+                            <span class="i-date">${ins.date}</span>
+                            <button title="עריכה" onclick="showToast('עריכת תובנה','אפשרות עריכה תיפתח כאן')">✎</button>
+                            <button title="מחיקה" onclick="deleteInsight(${idx})">🗑</button>
+                        </span>
                     </div>
                 </div>`;
-            }
+            }).join('')
+            : `<div class="empty" style="padding:20px 10px"><span class="big">📝</span><p>עדיין לא הוספת תובנות על ${s.name}. הוסיפו תובנה כדי להעשיר את פרופיל הלומד.</p></div>`;
 
-            // progress vs goals
-            html += `<div class="section-title">📈 התקדמות מול יעדי הלמידה</div><div class="panel" style="margin-bottom:16px;">`;
-            shownSubs.forEach(sub => {
-                const d = s.subjects[sub];
-                const pct = Math.min(100, d.progress);
-                const goalPos = Math.min(100, d.goal);
-                const trendIco = d.trend === 'up' ? '↗️ עלייה' : d.trend === 'down' ? '↘️ ירידה' : '➡️ יציב';
-                const trendCls = d.trend === 'up' ? 'trend-up' : d.trend === 'down' ? 'trend-down' : 'trend-steady';
-                html += `
-                    <div class="prog-item">
-                        <div class="prog-top">
-                            <span class="s-name">${sub} <span class="${trendCls}" style="font-size:0.7rem;">${trendIco}</span></span>
-                            <span class="s-val">${d.progress}% מתוך יעד ${d.goal}%</span>
-                        </div>
-                        <div class="prog-track">
-                            <div class="prog-fill" style="width:${pct}%;"></div>
-                            <div class="prog-goal" style="right:${goalPos}%;"></div>
-                        </div>
-                        <div class="prog-legend">🎯 קו היעד מסומן בכתום</div>
-                    </div>`;
-            });
-            html += `</div>`;
-
-            // two-column: struggles + recommendations
-            html += `<div class="grid-2">`;
-
-            // struggles
-            html += `<div class="panel"><h3>🧩 פריטי ידע עם קושי שזוהה</h3>`;
-            let anyStruggle = false;
-            shownSubs.forEach(sub => {
-                const d = s.subjects[sub];
-                d.struggles.forEach(st => {
-                    anyStruggle = true;
-                    html += `
-                        <div class="struggle-item">
-                            <div class="t">📍 ${st.topic} <span style="font-size:0.64rem; color:var(--text-muted); font-weight:500;">· ${sub}</span></div>
-                            <div class="struggle-evi"><span class="e-ico">🔍</span><div><b>על סמך מה זוהה:</b> ${st.evidence}</div></div>
-                        </div>`;
-                });
-            });
-            if (!anyStruggle) html += `<div class="empty-state"><span class="big">✨</span> לא זוהו פריטי ידע עם קושי במקצוע זה — עבודה יפה!</div>`;
-            html += `</div>`;
-
-            // recommendations
-            html += `<div class="panel"><h3>💡 המלצות פדגוגיות מותאמות</h3>`;
-            let recHtml = '';
-            shownSubs.forEach(sub => {
-                const d = s.subjects[sub];
-                d.recommendations.forEach(rec => {
-                    const m = REC_META[rec.type] || REC_META['חיזוק'];
-                    recHtml += `
-                        <div class="rec-item">
-                            <div class="rec-ico" style="background:${m.bg};">${m.ico}</div>
-                            <div class="rec-body">
-                                <span class="r-type" style="background:${m.chip}; color:${m.col};">${rec.type}</span>
-                                <div class="r-text">${rec.text} <span style="font-size:0.64rem; color:var(--text-muted);">· ${sub}</span></div>
-                            </div>
-                        </div>`;
-                });
-            });
-            html += recHtml || `<div class="empty-state">אין המלצות להצגה במקצוע זה.</div>`;
-            html += `</div>`;
-            html += `</div>`; // grid-2
-
-            // teacher insights
-            const insights = TEACHER_INSIGHTS[sid] || [];
-            html += `
-                <div class="section-title" style="margin-top:18px;">🗒️ תובנות המורה <span class="badge-secondary">נכלל בפרופיל הלומד</span></div>
-                <div class="panel">
-                    <div id="insightList">
-                        ${insights.length ? insights.map(ins => {
-                            const m = INSIGHT_META[ins.type];
-                            return `<div class="insight-item ${ins.type}">
-                                <div class="insight-ico">${m.ico}</div>
-                                <div class="insight-body">
-                                    <div class="i-type">${m.label}</div>
-                                    <div class="i-text">${ins.text}</div>
-                                    <div class="i-meta">נכתב ע״י ${ins.by} · ${ins.date}</div>
-                                </div>
-                            </div>`;
-                        }).join('') : `<div class="empty-state" style="padding:18px;">עדיין לא הוזנו תובנות. הוסף/י את התרשמותך כדי להעשיר את פרופיל הלומד.</div>`}
+        const gaps = s.gaps || [];
+        const gapsHtml = gaps.length
+            ? gaps.map((g, idx) => {
+                const lv = GAP_LEVEL[g.level];
+                return `<div class="gap-card">
+                    <div class="g-top">
+                        <span class="g-title">${g.title}</span>
+                        <span class="pill" style="background:${lv.bg}; color:${lv.col}">${lv.label}</span>
                     </div>
-                    <div class="insight-form">
-                        <div class="row">
-                            <select id="insightType">
-                                <option value="strength">💚 חוזקה</option>
-                                <option value="challenge">⚠️ אתגר / לשיפור</option>
-                                <option value="note">📝 הערה כללית</option>
-                            </select>
-                            <input id="insightText" type="text" placeholder="כתוב/כתבי תובנה על התלמיד/ה (חוזקה / חולשה / אתגר ספציפי)...">
-                        </div>
-                        <button class="add-insight-btn" id="addInsightBtn">➕ הוסף לפרופיל הלומד</button>
-                        <span class="saved-flag" id="savedFlag" style="display:none;"> ✓ נשמר בפרופיל</span>
+                    <div class="g-meta">דפוס קושי: ${g.pattern}</div>
+                    <div class="g-foot">
+                        <span class="g-rate">שיעור הצלחה: <b>${g.rate}%</b> · ב-${g.tasks} משימות עוקבות</span>
+                        <button class="gap-show" onclick="toggleGap(${idx})">הצגת נתונים <span id="gapchev${idx}">▾</span></button>
+                    </div>
+                    <div class="gap-evidence" id="gapev${idx}">
+                        🔍 <b>הנתון הגולמי:</b> זוהו ${g.tasks} משימות עוקבות בנושא «${g.title}» עם ${g.rate}% הצלחה בלבד. דפוס הקושי החוזר: ${g.pattern}.
+                    </div>
+                </div>`;
+            }).join('')
+            : `<div class="empty" style="padding:20px 10px"><span class="big">✨</span><p>לא זוהו פריטי ידע עם קושי — עבודה יפה!</p></div>`;
+
+        const recs = s.recs || [];
+        const recsHtml = recs.length
+            ? recs.map((r, idx) => {
+                const m = REC_META[r.type];
+                return `<div class="rec-card" id="rec${idx}">
+                    <div class="rec-head" onclick="toggleRec(${idx})">
+                        <div class="rec-ico" style="background:${m.col}"></div>
+                        <div class="rec-info"><div class="r-type">${m.type}</div><div class="r-text">${r.text}</div></div>
+                        <span class="rec-chev">‹</span>
+                    </div>
+                    <div class="rec-detail">
+                        <div class="rd-row"><b>למי:</b> ${r.target}</div>
+                        <div class="rd-row"><b>למה נוצר:</b> ${r.why}</div>
+                        <div class="rd-row rd-act"><button class="mini-btn solid" onclick="event.stopPropagation(); showToast('הפעולה נשמרה ✓','${r.action}')">✓ ${r.action}</button></div>
+                    </div>
+                </div>`;
+            }).join('')
+            : `<div class="empty" style="padding:20px 10px"><span class="big">💡</span><p>אין כרגע המלצות להצגה.</p></div>`;
+
+        document.getElementById('profileBody').innerHTML = `
+            <div class="cols-3 fade-in">
+                <div>
+                    <div class="col-head">התובנות האחרונות שלי</div>
+                    <button class="add-insight-btn" onclick="openInsightModal()">הוספת תובנה</button>
+                    ${insightsHtml}
+                </div>
+                <div>
+                    <div class="col-head">פריטי ידע בהם ${s.name} מתקשה</div>
+                    ${gapsHtml}
+                </div>
+                <div>
+                    <div class="col-head">המלצות מותאמות</div>
+                    ${recsHtml}
+                    <button class="link-btn" style="margin-top:6px" onclick="showToast('כל ההמלצות','כאן תיפתח רשימת ההמלצות המלאה')">צפייה בכל ההמלצות ↓</button>
+                </div>
+            </div>`;
+    }
+
+    function renderProfileTab() {
+        const s = STUDENTS[currentStudent];
+        const st = STATUS_META[s.status];
+        const reasonLine = s.reasonType ? `<div class="ai-explain" style="margin-bottom:20px"><div class="ae-h">למה ${s.name} סומן/ה? הסבר המערכת</div><ul>${s.aiExplain.map(x => `<li>${x}</li>`).join('')}</ul></div>` : '';
+        const progHtml = s.progress.map(p => {
+            const ti = p.trend === 'up' ? '↗️ עלייה' : p.trend === 'down' ? '↘️ ירידה' : '➡️ יציב';
+            return `<div class="prog-item">
+                <div class="prog-top"><span class="s-name">${p.subject} <span style="font-size:0.7rem; color:var(--ink-400)">${ti}</span></span><span class="s-val">${p.value}% מתוך יעד ${p.goal}%</span></div>
+                <div class="prog-track"><div class="prog-fill" style="width:${Math.min(100,p.value)}%"></div><div class="prog-goal" style="right:${Math.min(100,p.goal)}%"></div></div>
+            </div>`;
+        }).join('');
+        const recHint = s.recommendation ? `<div class="xai-rec" style="margin-top:16px"><span>💡</span><div><b>המלצה מותאמת:</b> ${s.recommendation}</div></div>` : '';
+
+        document.getElementById('profileBody').innerHTML = `
+            <div class="fade-in">
+                <div class="psum-hero">
+                    <div class="psum-ava" style="background:${avaColor(s.name)}">${s.avatar}</div>
+                    <div>
+                        <h2>${s.name}</h2>
+                        <div class="meta">${s.grade} · ${GROUPS[currentGroup].subject} · פעילות אחרונה: ${s.lastActive}</div>
+                        <div style="margin-top:7px"><span class="status-tag" style="background:${st.bg}; color:${st.ink}">${st.ico} ${st.label}</span></div>
+                    </div>
+                    <div class="psum-stats">
+                        <div class="psum-stat"><div class="v">${s.engagement}%</div><div class="l">מעורבות</div></div>
+                        <div class="psum-stat"><div class="v">${s.avgMin}׳</div><div class="l">זמן ממוצע</div></div>
+                        <div class="psum-stat"><div class="v">${s.tasksWeek}</div><div class="l">משימות השבוע</div></div>
                     </div>
                 </div>
-
-                <div class="info-note">
-                    <span class="ico">🔒</span>
-                    <div>אתה רואה רק תלמידים המשויכים לקבוצות הלימוד שלך. המערכת אינה מציגה השוואות בין תלמידים — כל תלמיד מוצג ביחס ליעדים האישיים שלו בלבד.</div>
+                <div class="psum-grid">
+                    <div>
+                        <div class="col-head">📈 התקדמות מול יעדי הלמידה האישיים</div>
+                        ${progHtml}
+                        ${recHint}
+                    </div>
+                    <div>
+                        ${reasonLine || `<div class="ai-explain"><div class="ae-h">🔍 תובנות המערכת</div><ul>${s.aiExplain.map(x => `<li>${x}</li>`).join('')}</ul></div>`}
+                    </div>
                 </div>
-            `;
+            </div>`;
+    }
 
-            document.getElementById('studentView').innerHTML = html;
+    // ============================================================
+    //  ACTIONS
+    // ============================================================
+    function selectStudent(sid) {
+        currentStudent = sid;
+        renderAttention();
+        renderProfileBar();
+        renderProfileBody();
+    }
+    function setView(view) {
+        currentView = view;
+        document.getElementById('classView').style.display = view === 'class' ? '' : 'none';
+        document.getElementById('studentView').style.display = view === 'student' ? '' : 'none';
+        document.querySelectorAll('#viewToggle .vt-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+        const sub = document.querySelector('.greet p');
+        if (sub) sub.textContent = view === 'class'
+            ? 'תמונת מצב קבוצתית — מעורבות, התקדמות ותלמידים הדורשים תשומת לב.'
+            : 'מבט מעמיק על תלמיד/ה בודד/ת — תובנות, פערי ידע והמלצות מותאמות.';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function openProfileTab(sid) {
+        currentStudent = sid; profileTab = 'profile';
+        renderProfileBar(); renderProfileBody();
+        setView('student');
+    }
+    function toggleGap(idx) {
+        document.getElementById('gapev' + idx).classList.toggle('show');
+        const c = document.getElementById('gapchev' + idx); c.textContent = c.textContent === '▾' ? '▴' : '▾';
+    }
+    function toggleRec(idx) { document.getElementById('rec' + idx).classList.toggle('open'); }
+    function deleteInsight(idx) {
+        STUDENTS[currentStudent].insights.splice(idx, 1);
+        renderInsightsTab();
+        showToast('התובנה הוסרה', '');
+    }
 
-            // wire student-view events
-            document.getElementById('studentSelect').addEventListener('change', e => { currentStudent = e.target.value; studentSubjectFilter = 'all'; renderStudentView(); });
-            document.querySelectorAll('#subjChips .subj-chip').forEach(c => c.addEventListener('click', () => { studentSubjectFilter = c.dataset.subj; renderStudentView(); }));
-            document.getElementById('addInsightBtn').addEventListener('click', addInsight);
-            document.getElementById('insightText').addEventListener('keydown', e => { if (e.key === 'Enter') addInsight(); });
-        }
+    // insight modal
+    function openInsightModal() {
+        document.getElementById('insightModalSub').textContent = 'תיעוד ידע איכותני על ' + STUDENTS[currentStudent].name;
+        const ms = document.getElementById('miSubject');
+        ms.innerHTML = SUBJECT_OPTIONS.map(x => `<option>${x}</option>`).join('');
+        document.getElementById('miText').value = '';
+        document.getElementById('insightOverlay').classList.add('open');
+        setTimeout(() => document.getElementById('miText').focus(), 80);
+    }
+    function closeInsightModal() { document.getElementById('insightOverlay').classList.remove('open'); }
+    function saveInsight() {
+        const text = document.getElementById('miText').value.trim();
+        if (!text) { showToast('כתבו תיאור לתובנה 📝', 'התיאור לא יכול להיות ריק'); document.getElementById('miText').focus(); return; }
+        const type = document.getElementById('miType').value;
+        const subject = document.getElementById('miSubject').value;
+        const today = new Date().toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.');
+        if (!STUDENTS[currentStudent].insights) STUDENTS[currentStudent].insights = [];
+        STUDENTS[currentStudent].insights.unshift({ type, text, subject, date: today });
+        closeInsightModal();
+        if (profileTab !== 'insights') { profileTab = 'insights'; renderProfileBar(); }
+        renderProfileBody();
+        showToast('התובנה נשמרה! 💜', 'נוספה לפרופיל הלומד של ' + STUDENTS[currentStudent].name);
+    }
 
-        // ================= ACTIONS =================
-        function addInsight() {
-            const type = document.getElementById('insightType').value;
-            const text = document.getElementById('insightText').value.trim();
-            if (!text) { document.getElementById('insightText').focus(); return; }
-            if (!TEACHER_INSIGHTS[currentStudent]) TEACHER_INSIGHTS[currentStudent] = [];
-            TEACHER_INSIGHTS[currentStudent].push({ type, text, by: TEACHERS[currentTeacher].name, date: new Date().toLocaleDateString('he-IL') });
-            renderStudentView();
-            showToast('התובנה נשמרה! 🗒️', 'נוספה לפרופיל הלומד של ' + STUDENTS[currentStudent].name);
-        }
+    // ============================================================
+    //  WIRING
+    // ============================================================
+    function renderAll() {
+        renderAiSummary();
+        renderKpis();
+        renderAttention();
+        renderTrend();
+        renderProfileBar();
+        renderProfileBody();
+    }
 
-        function goToStudent(sid) {
-            currentStudent = sid; studentSubjectFilter = 'all';
-            switchTab('student');
-        }
-        function flagStudent(sid) {
-            manualAttention.add(sid);
-            showToast('סומן לתשומת לב 🚩', STUDENTS[sid].name + ' יופיע/תופיע ברשימת התלמידים הדורשים תשומת לב');
-            renderAll();
-        }
-        function unflag(sid) { manualAttention.delete(sid); showToast('הסימון בוטל', ''); renderAll(); }
-        function dismiss(sid, type) { dismissedAttention.add(sid + ':' + type); showToast('סומן כטופל ✓', 'הנתון יוסר מרשימת תשומת הלב'); renderAll(); }
-        window.goToStudent = goToStudent; window.flagStudent = flagStudent; window.unflag = unflag; window.dismiss = dismiss;
-
-        // ================= TABS =================
-        function switchTab(tab) {
-            currentTab = tab;
-            document.getElementById('tabGroup').classList.toggle('active', tab === 'group');
-            document.getElementById('tabStudent').classList.toggle('active', tab === 'student');
-            document.getElementById('groupView').style.display = tab === 'group' ? 'block' : 'none';
-            document.getElementById('studentView').style.display = tab === 'student' ? 'block' : 'none';
-            renderAll();
-        }
-
-        function renderAll() {
-            if (currentTab === 'group') renderGroupView();
-            else renderStudentView();
-        }
-
-        // ================= INIT & EVENTS =================
-        document.getElementById('mockTeacherSelect').addEventListener('change', e => {
-            currentTeacher = e.target.value;
-            currentGroup = null; currentStudent = null; studentSubjectFilter = 'all'; groupSubjectFilter = 'all';
-            renderContext();
-            renderAll();
-            const t = TEACHERS[currentTeacher];
-            showToast('מחובר/ת כ' + t.name, t.groups === 'ALL' ? 'גישת מנהל — כל הקבוצות והתלמידים' : 'מוצגים רק התלמידים בקבוצות שלך');
-        });
-        document.getElementById('groupSelect').addEventListener('change', e => {
-            currentGroup = e.target.value; currentStudent = null; renderAll();
-        });
-        document.getElementById('tabGroup').addEventListener('click', () => switchTab('group'));
-        document.getElementById('tabStudent').addEventListener('click', () => switchTab('student'));
-
-        // real-time simulation: subtle live nudge of active-students KPI
-        setInterval(() => {
-            if (currentTab !== 'group') return;
-            const el = document.getElementById('kpiActive');
-            if (el) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
-        }, 6000);
-
-        // boot
-        renderContext();
+    document.getElementById('fGroup').addEventListener('change', e => {
+        currentGroup = e.target.value;
+        const list = GROUPS[currentGroup].students;
+        if (!list.includes(currentStudent)) currentStudent = GROUPS[currentGroup].attention[0] || list[0];
         renderAll();
+        updateContextLine();
+        showToast('הקבוצה הוחלפה', GROUPS[currentGroup].name);
+    });
+    document.getElementById('fSubject').addEventListener('change', () => { renderAll(); updateContextLine(); });
+    document.getElementById('fRange').addEventListener('change', e => { currentRange = e.target.value; renderTrend(); updateContextLine(); });
+
+    // filter popover open/close
+    const filterBtn = document.getElementById('filterBtn');
+    const filterPopover = document.getElementById('filterPopover');
+    filterBtn.addEventListener('click', e => { e.stopPropagation(); filterPopover.classList.toggle('open'); });
+    document.addEventListener('click', e => {
+        if (filterPopover.classList.contains('open') && !filterPopover.contains(e.target) && !filterBtn.contains(e.target)) {
+            filterPopover.classList.remove('open');
+        }
+    });
+
+    document.getElementById('trendToggle').addEventListener('click', e => {
+        const b = e.target.closest('.trend-chip'); if (!b) return;
+        currentMetric = b.dataset.metric;
+        document.querySelectorAll('#trendToggle .trend-chip').forEach(c => c.classList.toggle('active', c === b));
+        renderTrend();
+    });
+
+    document.getElementById('pStudent').addEventListener('change', e => { currentStudent = e.target.value; renderAttention(); renderProfileBar(); renderProfileBody(); });
+    document.getElementById('ptabInsights').addEventListener('click', () => { profileTab = 'insights'; renderProfileBar(); renderProfileBody(); });
+    document.getElementById('ptabProfile').addEventListener('click', () => { profileTab = 'profile'; renderProfileBar(); renderProfileBody(); });
+
+    document.getElementById('viewToggle').addEventListener('click', e => {
+        const b = e.target.closest('.vt-btn'); if (!b) return;
+        setView(b.dataset.view);
+    });
+
+    document.getElementById('miSave').addEventListener('click', saveInsight);
+    document.getElementById('miCancel').addEventListener('click', closeInsightModal);
+    document.getElementById('insightOverlay').addEventListener('click', e => { if (e.target.id === 'insightOverlay') closeInsightModal(); });
+
+    // AI summary action buttons (event delegation)
+    document.getElementById('aiSummary').addEventListener('click', e => {
+        const b = e.target.closest('.ai-act'); if (!b) return;
+        handleAiAction(b.dataset.scope, parseInt(b.dataset.idx, 10));
+    });
+    document.getElementById('studentAiSummary').addEventListener('click', e => {
+        const b = e.target.closest('.ai-act'); if (!b) return;
+        handleAiAction(b.dataset.scope, parseInt(b.dataset.idx, 10));
+    });
+
+    // expose for inline handlers
+    window.showToast = showToast;
+    window.selectStudent = selectStudent;
+    window.openProfileTab = openProfileTab;
+    window.toggleGap = toggleGap;
+    window.toggleRec = toggleRec;
+    window.deleteInsight = deleteInsight;
+    window.openInsightModal = openInsightModal;
+    window.setView = setView;
+
+    /* ===================== CHAT ASSISTANT ===================== */
+    function escapeHtml(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    function chatAppend(role, html) {
+        const body = document.getElementById('chatBody');
+        const div = document.createElement('div');
+        div.className = 'chat-msg ' + role;
+        div.innerHTML = html;
+        body.appendChild(div);
+        body.scrollTop = body.scrollHeight;
+        return div;
+    }
+    function chatShowTyping() {
+        const body = document.getElementById('chatBody');
+        const div = document.createElement('div');
+        div.className = 'chat-typing';
+        div.innerHTML = '<span></span><span></span><span></span>';
+        body.appendChild(div);
+        body.scrollTop = body.scrollHeight;
+        return div;
+    }
+    function chatRespond(text) {
+        const g = GROUPS[currentGroup];
+        const t = text.trim();
+        // student mention?
+        let matched = null;
+        for (const sid of g.students) {
+            const name = STUDENTS[sid].name;
+            const first = name.split(' ')[0];
+            if (t.includes(first) || t.includes(name)) { matched = sid; break; }
+        }
+        if (!matched && /(תלמיד|הילד|הילדה|שנבחר|עליו|עליה|איתו|איתה)/.test(t)) matched = currentStudent;
+
+        if (matched) {
+            const s = STUDENTS[matched];
+            const acts = (s.aiSummary.actions || []).map(a => `<br>• ${a.label}`).join('');
+            return `לגבי <b>${s.name}</b>: ${s.aiSummary.text}${acts ? `<br><br><b>מה כדאי לעשות:</b>${acts}` : ''}`;
+        }
+        if (/(מי|להתמקד|דחוף|דורש|תשומת)/.test(t)) {
+            const names = g.attention.map(id => STUDENTS[id].name).join(', ');
+            return `כרגע מומלץ להתמקד ב-<b>${g.attention.length} תלמידים</b> ב${g.name}: ${names}. רוצה שאפרט על אחד מהם? כתבי לי את שמו.`;
+        }
+        // class-level default
+        const sm = g.summary;
+        return `תמונת מצב של <b>${g.name}</b>: התקדמות ${sm.progress}%, מעורבות ${sm.engagement}%, ${sm.active}/${sm.total} תלמידים פעילים, ${sm.attention} דורשים תשומת לב.<br><br>${g.aiSummary.text}`;
+    }
+    function chatSend(forcedText) {
+        const input = document.getElementById('chatInput');
+        const t = (forcedText != null ? forcedText : input.value).trim();
+        if (!t) return;
+        chatAppend('me', escapeHtml(t));
+        input.value = '';
+        input.style.height = 'auto';
+        const typing = chatShowTyping();
+        setTimeout(() => {
+            typing.remove();
+            chatAppend('ai', chatRespond(t));
+        }, 650);
+    }
+    function initChat() {
+        chatAppend('ai', `שלום <b>${TEACHER.first}</b>! אפשר לשאול אותי כל דבר על הכיתה או על תלמיד ספציפי — תמונת מצב, המלצות, או מה כדאי לעשות הלאה.`);
+        const input = document.getElementById('chatInput');
+        document.getElementById('chatSend').addEventListener('click', () => chatSend());
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); chatSend(); }
+        });
+        input.addEventListener('input', () => {
+            input.style.height = 'auto';
+            input.style.height = Math.min(input.scrollHeight, 96) + 'px';
+        });
+        document.getElementById('chatChips').addEventListener('click', e => {
+            const c = e.target.closest('.chat-chip'); if (!c) return;
+            chatSend(c.dataset.q);
+        });
+    }
+
+    // boot
+    renderShell();
+    renderAll();
+    initChat();
+    setView('class');
+    updateContextLine();
     </script>
 </body>
 </html>

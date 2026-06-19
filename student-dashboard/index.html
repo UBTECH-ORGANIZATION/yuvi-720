@@ -902,6 +902,34 @@
         }
         .see-more-btn:hover { background: rgba(124,92,255,0.08); }
 
+        /* ===== COPILOT SECTION SPARK (hover-reveal "summary" button) ===== */
+        .copilot-spark {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-family: 'Rubik', sans-serif; font-size: 0.66rem; font-weight: 700;
+            color: #7c5cff;
+            background: linear-gradient(135deg, #f3eeff, #ece4ff);
+            border: 1px solid #e2d8fb; border-radius: 999px;
+            padding: 3px 9px; cursor: pointer; white-space: nowrap;
+            opacity: 0; transform: translateY(-3px);
+            transition: opacity .18s ease, transform .18s ease, background .18s ease, color .18s ease;
+            pointer-events: none;
+        }
+        .panel:hover .copilot-spark,
+        .deep-block:hover .copilot-spark,
+        .lp-card:hover .copilot-spark { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        .copilot-spark:hover { background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff; border-color: transparent; }
+        .copilot-spark .cs-ico { font-size: 0.72rem; }
+
+        /* CTA button inside chat bubbles */
+        .chat-cta {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-family: 'Rubik', sans-serif; font-size: 0.76rem; font-weight: 700;
+            color: #fff; background: linear-gradient(135deg, #7c5cff, #9f7afe);
+            border: none; border-radius: 999px; padding: 7px 14px; cursor: pointer;
+            box-shadow: 0 4px 12px rgba(124,92,255,0.28); transition: transform .15s ease, box-shadow .15s ease;
+        }
+        .chat-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(124,92,255,0.36); }
+
         /* ===== HERO CARD (primary task) ===== */
         .hero-card {
             position: relative; overflow: hidden;
@@ -1032,6 +1060,271 @@
         .subject-bar-pill.level-great { color: #2f855a; }
         .subject-bar-pill.level-good { color: #3182ce; }
         .subject-bar-pill.level-building { color: #7c5cff; }
+
+        /* ===== AGENCY ("מצפן הפעלנות") ===== */
+        .agency-radar-svg { width: 100%; height: auto; display: block; overflow: visible; }
+        /* home summary panel */
+        .agency-summary-body { display: flex; align-items: center; gap: 22px; }
+        .agency-mini-radar { width: 168px; flex-shrink: 0; }
+        .agency-summary-side { flex: 1; min-width: 0; }
+        .agency-highlight {
+            font-size: 0.92rem; color: var(--text-medium); margin-bottom: 12px;
+        }
+        .agency-highlight strong { color: #4a3d8f; }
+        .agency-chip-row { display: flex; flex-wrap: wrap; gap: 7px; }
+        .agency-chip {
+            display: inline-flex; align-items: center; gap: 5px;
+            font-size: 0.72rem; font-weight: 700; padding: 5px 11px; border-radius: 999px;
+            white-space: nowrap;
+        }
+        /* deep view */
+        .agency-radar-wrap {
+            background: #fff; border-radius: 22px; padding: 18px;
+            box-shadow: var(--shadow-sm); border: 1px solid rgba(124,92,255,0.06);
+            max-width: 360px; margin: 0 auto 20px;
+        }
+        .agency-cards { display: flex; flex-direction: column; gap: 12px; }
+        .agency-card {
+            background: #fff; border-radius: 18px; padding: 14px 16px;
+            box-shadow: var(--shadow-sm); border: 1px solid rgba(124,92,255,0.06);
+            cursor: pointer; transition: box-shadow 0.2s, transform 0.15s;
+        }
+        .agency-card:hover { transform: translateY(-1px); box-shadow: 0 8px 26px rgba(102,126,234,0.12); }
+        .agency-card-head { display: flex; align-items: center; gap: 12px; }
+        .agency-ico {
+            width: 44px; height: 44px; border-radius: 14px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
+        }
+        .agency-card-main { flex: 1; min-width: 0; }
+        .agency-name { font-size: 0.96rem; font-weight: 700; color: var(--text-dark); }
+        .agency-line { font-size: 0.78rem; color: var(--text-light); margin-top: 2px; line-height: 1.4; }
+        .agency-pill {
+            flex-shrink: 0; font-size: 0.68rem; font-weight: 800;
+            padding: 4px 11px; border-radius: 999px; white-space: nowrap;
+        }
+        .agency-caret { flex-shrink: 0; color: #c0b6e4; font-size: 0.8rem; transition: transform 0.25s; }
+        .agency-card.open .agency-caret { transform: rotate(180deg); }
+        .agency-bar { height: 8px; background: #f0edf7; border-radius: 6px; overflow: hidden; margin-top: 12px; }
+        .agency-fill { height: 100%; border-radius: 6px; width: 0; transition: width 0.8s cubic-bezier(.22,.9,.3,1); }
+        .agency-detail {
+            max-height: 0; overflow: hidden; opacity: 0;
+            transition: max-height 0.32s ease, opacity 0.32s ease, margin 0.32s ease;
+        }
+        .agency-card.open .agency-detail { max-height: 240px; opacity: 1; margin-top: 12px; }
+        .agency-meaning {
+            font-size: 0.82rem; color: var(--text-medium); line-height: 1.5;
+            background: #f7f5fc; border-radius: 12px; padding: 10px 12px;
+        }
+        .agency-meaning strong { color: #4a3d8f; }
+        .agency-next {
+            font-size: 0.82rem; color: var(--text-medium); line-height: 1.5;
+            margin-top: 8px; display: flex; gap: 7px; align-items: flex-start;
+        }
+        .agency-next b { color: #6b4ddb; font-weight: 700; white-space: nowrap; }
+        .agency-source { font-size: 0.7rem; color: var(--text-muted); margin-top: 8px; }
+        @media (max-width: 600px) {
+            .agency-summary-body { flex-direction: column; align-items: stretch; }
+            .agency-mini-radar { width: 150px; margin: 0 auto; }
+        }
+
+        /* ===== FOCUS / JOURNEY ("הצעדים שלי") ===== */
+        .focus-wrap { max-width: 620px; margin: 0 auto; }
+        .focus-card {
+            display: flex; align-items: center; gap: 18px;
+            background: linear-gradient(135deg, #7c5cff, #9f7afe);
+            border-radius: 26px; padding: 24px 26px; color: #fff;
+            box-shadow: 0 18px 40px rgba(124,92,255,0.28); margin-bottom: 22px;
+        }
+        .focus-card.is-done { background: linear-gradient(135deg, #48bb78, #68d391); box-shadow: 0 18px 40px rgba(72,187,120,0.28); }
+        .focus-card.celebrate { background: linear-gradient(135deg, #f6ad55, #ed8fb0); box-shadow: 0 18px 40px rgba(246,173,85,0.3); }
+        .focus-body { flex: 1; min-width: 0; }
+        .focus-eyebrow { font-size: 0.8rem; font-weight: 700; opacity: 0.92; margin-bottom: 8px; }
+        .focus-goal { font-size: 1.32rem; font-weight: 800; line-height: 1.4; margin-bottom: 18px; }
+        .focus-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .focus-btn {
+            border: none; background: #fff; color: #6b4ddb; font-weight: 800; font-size: 0.92rem;
+            padding: 11px 20px; border-radius: 999px; cursor: pointer; text-decoration: none;
+            display: inline-flex; align-items: center; transition: transform 0.15s, box-shadow 0.2s;
+        }
+        .focus-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.18); }
+        .focus-btn.secondary { background: rgba(255,255,255,0.22); color: #fff; }
+        .focus-illu {
+            width: 84px; height: 84px; border-radius: 24px; background: rgba(255,255,255,0.18);
+            display: flex; align-items: center; justify-content: center; font-size: 2.5rem; flex-shrink: 0;
+        }
+
+        .journey { max-width: 620px; margin: 0 auto; }
+        .journey-progress { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+        .journey-count { font-size: 0.92rem; color: var(--text-medium); }
+        .journey-count strong { color: #6b4ddb; font-size: 1.05rem; }
+        .journey-dots { display: flex; gap: 6px; }
+        .jdot { width: 9px; height: 9px; border-radius: 50%; background: #e3ddf3; transition: transform 0.2s; }
+        .jdot.done { background: #48bb78; }
+        .jdot.current { background: #7c5cff; transform: scale(1.35); }
+
+        .path { position: relative; }
+        .path-line { position: absolute; right: 23px; top: 24px; bottom: 24px; width: 2px; background: #ece7f8; z-index: 1; }
+        .path-node { display: flex; align-items: center; gap: 14px; padding: 9px 0; position: relative; cursor: pointer; transition: transform 0.15s; }
+        .path-node:hover { transform: translateX(-3px); }
+        .node-badge {
+            width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 1.25rem; flex-shrink: 0; z-index: 2; border: 3px solid #fff; box-shadow: var(--shadow-sm);
+            background: #f3f0fb;
+        }
+        .path-node.done .node-badge { background: #e6f7ee; color: #2f855a; }
+        .path-node.current .node-badge { background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff; box-shadow: 0 0 0 6px rgba(124,92,255,0.16); animation: focusPulse 2.2s infinite; }
+        .path-node.upcoming { opacity: 0.72; }
+        .node-title { font-size: 0.96rem; font-weight: 600; color: var(--text-dark); line-height: 1.35; }
+        .path-node.current .node-title { font-weight: 700; color: #4a3d8f; }
+        .node-status { font-size: 0.74rem; color: var(--text-muted); margin-top: 2px; }
+        .path-node.current .node-status { color: #7c5cff; font-weight: 600; }
+        .path-node.done .node-status { color: #48bb78; }
+
+        .goal-add-mini {
+            margin: 20px auto 0; display: block; background: #f4f1fb; color: #6b4ddb; border: 1.5px dashed #c9bdf0;
+            font-weight: 700; font-size: 0.88rem; padding: 10px 18px; border-radius: 999px; cursor: pointer; transition: background 0.2s;
+        }
+        .goal-add-mini:hover { background: #ece6fa; }
+        .goal-add-inline { display: flex; gap: 8px; margin-top: 14px; max-width: 620px; margin-left: auto; margin-right: auto; }
+
+        @keyframes focusPulse {
+            0%, 100% { box-shadow: 0 0 0 6px rgba(124,92,255,0.16); }
+            50% { box-shadow: 0 0 0 11px rgba(124,92,255,0.06); }
+        }
+        @media (max-width: 600px) {
+            .focus-card { flex-direction: column; text-align: center; }
+            .focus-actions { justify-content: center; }
+        }
+
+        /* ===== GOAL DOCS CAROUSEL ("היעדים שלי") ===== */
+        .docs-carousel { max-width: 640px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
+        .docs-arrow {
+            width: 46px; height: 46px; border-radius: 50%; border: none; background: #fff;
+            box-shadow: var(--shadow-sm); cursor: pointer; font-size: 1.5rem; color: #7c5cff;
+            flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+            transition: transform 0.15s, background 0.2s; line-height: 1;
+            direction: initial;
+        }
+        .docs-arrow:hover:not(:disabled) { background: #f4f1fb; transform: scale(1.08); }
+        .docs-arrow:disabled { opacity: 0.35; cursor: default; }
+        .docs-stage { flex: 1; min-width: 0; }
+        .docs-stage.anim-next { animation: docSlideNext 0.35s ease; }
+        .docs-stage.anim-prev { animation: docSlidePrev 0.35s ease; }
+        @keyframes docSlideNext { from { opacity: 0.3; transform: translateX(42px); } to { opacity: 1; transform: none; } }
+        @keyframes docSlidePrev { from { opacity: 0.3; transform: translateX(-42px); } to { opacity: 1; transform: none; } }
+
+        .doc-card {
+            background: #fff; border-radius: 22px; box-shadow: var(--shadow-sm);
+            border: 1px solid rgba(124,92,255,0.07); overflow: hidden; cursor: pointer;
+            transition: box-shadow 0.2s;
+        }
+        .doc-card:hover { box-shadow: 0 12px 32px rgba(102,126,234,0.13); }
+        .doc-top { display: flex; align-items: center; gap: 10px; padding: 16px 18px 0; }
+        .doc-stage-badge {
+            background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff;
+            font-size: 0.74rem; font-weight: 700; padding: 5px 13px; border-radius: 999px;
+        }
+        .doc-date { margin-inline-start: auto; font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
+        .doc-people { display: flex; gap: 18px; padding: 13px 18px 0; flex-wrap: wrap; }
+        .doc-person { display: flex; align-items: center; gap: 6px; font-size: 0.84rem; color: var(--text-medium); }
+        .doc-person .lbl { color: var(--text-muted); }
+        .doc-section-label { font-size: 0.74rem; font-weight: 700; color: #9a8fc4; margin: 15px 18px 5px; }
+        .doc-transcript { padding: 0 18px; font-size: 0.88rem; color: var(--text-medium); line-height: 1.65; }
+        .doc-transcript.clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .doc-card.expanded .doc-transcript.clamp { -webkit-line-clamp: unset; overflow: visible; }
+        .doc-next { margin: 14px 18px 0; background: #f7f5fc; border-radius: 14px; padding: 12px 14px; }
+        .doc-next-title { font-size: 0.78rem; font-weight: 700; color: #6b4ddb; margin-bottom: 7px; }
+        .doc-next-item { font-size: 0.86rem; color: var(--text-medium); display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 4px 0; }
+        .doc-deadline { font-size: 0.74rem; color: #c97a16; font-weight: 700; white-space: nowrap; }
+        .doc-foot { padding: 15px 18px 18px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .doc-hint { font-size: 0.78rem; color: var(--text-light); }
+        .doc-summarize-btn {
+            background: linear-gradient(135deg, #7c5cff, #4cc9f0); color: #fff; border: none;
+            font-weight: 700; font-size: 0.88rem; padding: 10px 18px; border-radius: 999px;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: transform 0.15s, box-shadow 0.2s;
+        }
+        .doc-summarize-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(124,92,255,0.3); }
+        .docs-dots { display: flex; justify-content: center; gap: 7px; margin-top: 18px; }
+        .docs-dot { width: 8px; height: 8px; border-radius: 50%; background: #e3ddf3; cursor: pointer; transition: width 0.25s, background 0.25s; }
+        .docs-dot.active { background: #7c5cff; width: 22px; border-radius: 999px; }
+
+        /* add-doc button + empty state */
+        .docs-add-btn {
+            display: inline-flex; align-items: center; gap: 8px; margin: 22px auto 0;
+            background: #fff; color: #7c5cff; border: 1.5px solid #d9cffa; box-shadow: var(--shadow-sm);
+            font-weight: 700; font-size: 0.92rem; padding: 11px 22px; border-radius: 999px; cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
+        }
+        .docs-add-btn:hover { transform: translateY(-2px); background: #f4f1fb; box-shadow: 0 8px 20px rgba(124,92,255,0.22); }
+        .docs-empty {
+            max-width: 520px; margin: 6px auto 0; background: #fff; border-radius: 22px;
+            padding: 34px 26px; text-align: center; box-shadow: var(--shadow-sm);
+            border: 1px solid rgba(124,92,255,0.07);
+        }
+        .docs-empty .emoji { font-size: 2.6rem; margin-bottom: 8px; }
+        .docs-empty h3 { font-size: 1.05rem; font-weight: 800; color: var(--text-dark); margin-bottom: 8px; }
+        .docs-empty p { font-size: 0.9rem; color: var(--text-light); line-height: 1.6; }
+
+        /* meetings timeline (overview list under the carousel) */
+        .docs-timeline { max-width: 640px; margin: 32px auto 0; }
+        .docs-tl-title { font-size: 0.92rem; font-weight: 800; color: #4a3d8f; margin-bottom: 12px; display: flex; align-items: center; gap: 7px; }
+        .docs-tl-list { display: flex; flex-direction: column; gap: 8px; }
+        .docs-tl-row {
+            display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 14px;
+            padding: 12px 16px; cursor: pointer; box-shadow: var(--shadow-sm);
+            border: 1.5px solid transparent; transition: border-color 0.15s, transform 0.15s, background 0.15s;
+        }
+        .docs-tl-row:hover { transform: translateX(-3px); border-color: #e0d7fa; }
+        .docs-tl-row.active { border-color: #9f7afe; background: #faf8ff; }
+        .docs-tl-dot { width: 10px; height: 10px; border-radius: 50%; background: #d9cffa; flex-shrink: 0; transition: background 0.15s; }
+        .docs-tl-row.active .docs-tl-dot { background: #7c5cff; }
+        .docs-tl-main { min-width: 0; }
+        .docs-tl-stage { font-size: 0.86rem; font-weight: 700; color: var(--text-dark); }
+        .docs-tl-meta { font-size: 0.76rem; color: var(--text-light); margin-top: 1px; }
+        .docs-tl-date { margin-inline-start: auto; font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
+
+        /* doc form modal */
+        .docform-overlay {
+            position: fixed; inset: 0; background: rgba(40,30,80,0.45); backdrop-filter: blur(2px);
+            display: flex; align-items: center; justify-content: center; padding: 18px; z-index: 1000;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .docform-overlay.open { opacity: 1; pointer-events: auto; }
+        .docform {
+            background: #fff; border-radius: 24px; width: 100%; max-width: 560px; max-height: 90vh;
+            overflow-y: auto; padding: 26px 24px; box-shadow: 0 20px 60px rgba(60,40,120,0.3);
+            transform: translateY(16px); transition: transform 0.25s;
+        }
+        .docform-overlay.open .docform { transform: none; }
+        .docform h2 { font-size: 1.15rem; font-weight: 800; color: var(--text-dark); margin-bottom: 4px; }
+        .docform-sub { font-size: 0.84rem; color: var(--text-light); margin-bottom: 18px; }
+        .docform-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+        .docform-field { margin-bottom: 14px; }
+        .docform-field label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--text-medium); margin-bottom: 6px; }
+        .docform-field input, .docform-field select, .docform-field textarea {
+            width: 100%; border: 1.5px solid #e6e1f3; border-radius: 12px; padding: 10px 12px;
+            font-family: inherit; font-size: 0.9rem; color: var(--text-dark); background: #faf9fe;
+            box-sizing: border-box; transition: border-color 0.15s;
+        }
+        .docform-field textarea { min-height: 92px; resize: vertical; line-height: 1.6; }
+        .docform-field input:focus, .docform-field select:focus, .docform-field textarea:focus { outline: none; border-color: #9f7afe; background: #fff; }
+        .docstep-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+        .docstep-row .step-text { flex: 1; }
+        .docstep-row .step-deadline { width: 148px; flex-shrink: 0; }
+        .docstep-remove { flex-shrink: 0; width: 34px; height: 34px; border-radius: 10px; border: none; background: #f3eefc; color: #9a8fc4; cursor: pointer; font-size: 0.85rem; transition: background 0.15s, color 0.15s; }
+        .docstep-remove:hover { background: #efe7fb; color: #7c5cff; }
+        .docform-addstep { background: none; border: 1.5px dashed #c9bff0; color: #7c5cff; border-radius: 10px; padding: 8px 14px; cursor: pointer; font-weight: 700; font-size: 0.82rem; transition: background 0.15s; }
+        .docform-addstep:hover { background: #f6f3fd; }
+        .docform-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .docform-save { background: linear-gradient(135deg, #7c5cff, #4cc9f0); color: #fff; border: none; padding: 12px 24px; border-radius: 999px; font-weight: 800; cursor: pointer; font-size: 0.92rem; transition: transform 0.15s, box-shadow 0.2s; }
+        .docform-save:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(124,92,255,0.3); }
+        .docform-cancel { background: #f0edf9; color: var(--text-medium); border: none; padding: 12px 22px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 0.92rem; transition: background 0.15s; }
+        .docform-cancel:hover { background: #e7e1f5; }
+        @media (max-width: 560px) {
+            .docform-grid { grid-template-columns: 1fr; }
+            .docstep-row { flex-wrap: wrap; }
+            .docstep-row .step-deadline { width: 100%; }
+        }
 
         /* ===== ACCORDION (deep screens) ===== */
         .accordion { display: flex; flex-direction: column; gap: 10px; }
@@ -1464,6 +1757,7 @@
             if (comps.length) return [...comps].sort((a, b) => b.value - a.value)[0].label;
             return (data.mapping && data.mapping.strengths && data.mapping.strengths[0]) || 'סקרנות';
         }
+
         // Hero illustration + subtitle derived from the focus subject
         function heroSubtitle(name) {
             if (name.includes('מדע')) return 'חקר קצר על צמחים והסביבה';
@@ -1511,6 +1805,7 @@
                 <section class="view" id="view-goals"></section>
                 <section class="view" id="view-strengths"></section>
                 <section class="view" id="view-learning"></section>
+                <section class="view" id="view-agency"></section>
             `;
 
             renderHome(data);
@@ -1518,8 +1813,10 @@
             renderGoalsView(data);
             renderStrengthsView(data);
             renderLearningView(data);
+            renderAgencyView(data);
 
             setupNav();
+            injectCopilotSparks();
         }
 
         // -------- HOME --------
@@ -1580,7 +1877,7 @@
 
                     <div class="panel fade-in">
                         <div class="home-section-head">
-                            <h2>הצעדים שלי</h2>
+                            <h2>יעדים</h2>
                             <button class="see-more-btn" data-goto="goals">לכל היעדים שלי ←</button>
                         </div>
                         <div class="steps-list">
@@ -1634,6 +1931,30 @@
                             }).join('')}
                         </div>
                     </div>
+
+                    ${(() => {
+                        const agency = deriveAgency(data);
+                        const topComp = [...agency].sort((a, b) => b.score - a.score)[0];
+                        return `
+                    <div class="panel fade-in agency-summary" style="grid-column:1 / -1">
+                        <div class="home-section-head">
+                            <h2>🧭 מצפן הפעלנות שלי</h2>
+                            <button class="see-more-btn" data-goto="agency">לכל הכוחות ←</button>
+                        </div>
+                        <div class="agency-summary-body">
+                            <div class="agency-mini-radar">${agencyRadarSVG(agency)}</div>
+                            <div class="agency-summary-side">
+                                <div class="agency-highlight">הכוח הבולט שלך: <strong>${topComp.icon} ${topComp.name}</strong> — המשך כך! 🌟</div>
+                                <div class="agency-chip-row">
+                                    ${agency.map(a => {
+                                        const lv = agencyLevel(a.score);
+                                        return `<span class="agency-chip" style="background:${lv.soft};color:${lv.color}">${a.icon} ${a.name}</span>`;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                    })()}
                 </div>
             `;
 
@@ -1837,7 +2158,7 @@
             showSubject(subjectIndex);
         }
 
-        // -------- DEEP: GOALS (accordion) --------
+        // -------- DEEP: GOALS (mentoring documentation carousel) --------
         function persistDashboard() {
             try {
                 const stored = localStorage.getItem('mapping_results');
@@ -1847,113 +2168,453 @@
             } catch (e) { /* ignore */ }
         }
 
-        function goalSourceMeta(g) {
-            const src = g.source || '';
-            if (src.includes('מנטורינג')) return { label: '💬 משיחת מנטורינג', cls: 'gsrc-mentor' };
-            if (src.includes('מיפוי')) return { label: '🧭 מהמיפוי שלי', cls: 'gsrc-mapping' };
-            if (src.includes('עצמי') || src.includes('אני')) return { label: '⭐ הוספתי בעצמי', cls: 'gsrc-self' };
-            return { label: '🧭 מהמיפוי שלי', cls: 'gsrc-mapping' };
+        // Build the seed mentoring-session documentation records shown in "היעדים שלי".
+        function deriveGoalDocs(data) {
+            const learner = data.name || 'התלמיד/ה';
+            return [
+                {
+                    date: '5.5.2026', teacher: 'המורה רותם', learner, stage: 'מפגש היכרות',
+                    transcript: `נפגשנו להיכרות ראשונית ו${learner} הגיע/ה בסקרנות ובמצב רוח טוב. שיתפנו על תחומי העניין — בעיקר יצירה, משחקים ומחשבים. דיברנו על המקצועות בבית הספר: בעברית מורגש ביטחון יפה, ובמתמטיקה יש עדיין מעט חוסר ביטחון. סיכמנו שנתחיל ממשימות קטנות וכיפיות שיבנו תחושת מסוגלות, ושנשלב נושאים שאהובים על ${learner} כדי שהלמידה תהיה מהנה ומשמעותית.`,
+                    aiSummary: `נפגשתם להיכרות 😊 גילינו שאתה אוהב יצירה, משחקים ומחשבים, ושבעברית אתה מרגיש בטוח. במתמטיקה נתחיל לאט ובכיף כדי לבנות ביטחון.`,
+                    nextSteps: [{ text: 'לתרגל 10 דקות כתיבה ביום על נושא אהוב', deadline: '19.5.2026' }]
+                },
+                {
+                    date: '21.5.2026', teacher: 'המורה רותם', learner, stage: 'מפגש מעקב',
+                    transcript: `במפגש המעקב ראינו התקדמות יפה בביטוי הכתוב. ${learner} כתב/ה סיפור קצר וקראנו אותו יחד בהנאה. עדיין יש קושי קל בארגון הרעיונות לפסקאות, אז עבדנו על מבנה ברור של התחלה–אמצע–סוף. ${learner} היה/הייתה מרוכז/ת מאוד, שיתף/ה פעולה ושאל/ה שאלות טובות. ניכר רצון אמיתי להשתפר.`,
+                    aiSummary: `כל הכבוד! 🌟 כתבת סיפור קצר וקראתם אותו יחד. עכשיו נתאמן לסדר את הרעיונות לפסקאות — התחלה, אמצע וסוף.`,
+                    nextSteps: [
+                        { text: 'לכתוב סיפור עם 3 פסקאות ברורות', deadline: '28.5.2026' },
+                        { text: 'לקרוא ספר קצר ולספר עליו', deadline: '4.6.2026' }
+                    ]
+                },
+                {
+                    date: '8.6.2026', teacher: 'המורה דנה', learner, stage: 'מפגש העמקה',
+                    transcript: `התמקדנו במתמטיקה. בנינו ביטחון דרך משחק מספרים, ו${learner} פתר/ה תרגילי שברים בהצלחה ובחיוך. גילינו יחד שכשמפרקים בעיה לצעדים קטנים — ההתמודדות הופכת להרבה יותר קלה. ${learner} אמר/ה שהוא/היא מתחיל/ה ליהנות יותר מהמקצוע, וזו התקדמות נהדרת בגישה וברגש.`,
+                    aiSummary: `מתמטיקה נהיית כיפית! 🎉 פתרת תרגילי שברים בהצלחה, וראינו שפירוק בעיה לצעדים קטנים עוזר המון. אתה מתחיל ליהנות מהמקצוע 💪`,
+                    nextSteps: [{ text: 'לפתור 5 תרגילי שברים ביום בקצב נינוח', deadline: '15.6.2026' }]
+                }
+            ];
+        }
+
+        // Open Yubi chat and produce a short AI-style summary of a documentation record.
+        function summarizeDocInChat(i) {
+            const docs = (currentData && currentData._goalDocs) || [];
+            const doc = docs[i];
+            if (!doc) return;
+            openChat();
+            addMsg(`סכם/י לי בבקשה בקצרה את התיעוד מ"${doc.stage}" (${doc.date}) 🙏`, 'user');
+            const core = (doc.aiSummary && doc.aiSummary.trim()) ? doc.aiSummary : autoDocSummary(doc);
+            const steps = (doc.nextSteps || [])
+                .filter(s => s && s.text)
+                .map(s => `• ${s.text}${s.deadline ? ` <span style="color:#c97a16;font-weight:600">(עד ${s.deadline})</span>` : ''}`)
+                .join('<br>');
+            const stepsBlock = steps ? `<br><br><strong>הצעדים הקרובים שלך:</strong><br>${steps}` : '';
+            botReply(`הנה התקציר שלי ✨<br><br>${core}${stepsBlock}<br><br>אני כאן ללוות אותך בכל אחד מהם 💜`);
+        }
+
+        // Friendly fallback summary for documentation the student wrote themselves.
+        function autoDocSummary(doc) {
+            const t = (doc.transcript || '').trim().replace(/\s+/g, ' ');
+            const short = t.length > 150 ? t.slice(0, 150).replace(/[,\.;:!\s]+\S*$/, '') + '…' : t;
+            const who = doc.teacher ? ` עם ${doc.teacher}` : '';
+            return short
+                ? `כל הכבוד על התיעוד! 🌟 ב"${doc.stage}"${who} סיכמת: ${short}`
+                : `כל הכבוד על התיעוד של "${doc.stage}"${who}! 🌟 כל מפגש כזה מקדם אותך צעד קדימה.`;
         }
 
         function renderGoalsView(data) {
-            const goals = data.goals || [];
-            data.goals = goals;
-            const active = goals.filter(g => !g.done);
-            const done = goals.filter(g => g.done);
-            const week = active.filter(g => (g.source || '').includes('מנטורינג'));
-            const personal = active.filter(g => !(g.source || '').includes('מנטורינג'));
+            if (!Array.isArray(data.goalDocs)) data.goalDocs = deriveGoalDocs(data);
+            const docs = data.goalDocs;
+            data._goalDocs = docs;
+            if (typeof data._docIndex !== 'number') data._docIndex = 0;
+            if (data._docIndex >= docs.length) data._docIndex = docs.length - 1;
+            if (data._docIndex < 0) data._docIndex = 0;
 
-            const goalRow = (g) => {
-                const idx = goals.indexOf(g);
-                const src = goalSourceMeta(g);
-                return `
-                <div class="goal-item fade-in" data-gi="${idx}">
-                    <div class="goal-checkbox ${g.done ? 'done' : ''}" data-gi="${idx}"></div>
-                    <div class="goal-content">
-                        <div class="goal-text" style="${g.done ? 'text-decoration:line-through;opacity:0.6' : ''}">${g.text}</div>
-                        <div class="goal-meta-row">
-                            <span class="goal-source ${src.cls}">${src.label}</span>
-                            ${g.meta ? `<span class="goal-meta">${g.meta}</span>` : ''}
-                        </div>
-                    </div>
-                    <button class="goal-edit-btn" data-edit="${idx}" title="עריכה">✏️</button>
-                </div>`;
-            };
-
-            const addForm = `
-                <div class="goal-add">
-                    <input type="text" id="newGoalInput" class="goal-add-input" placeholder="רוצה להוסיף יעד משלך? כתוב אותו כאן..." maxlength="120" />
-                    <button id="addGoalBtn" class="goal-add-btn">➕ הוספה</button>
-                </div>`;
-
-            const accItem = (title, emoji, items, open, extra) => `
-                <div class="acc-item ${open ? 'open' : ''}">
-                    <div class="acc-head"><h3>${emoji} ${title} <span style="color:#b6abdd;font-weight:500">(${items.length})</span></h3><span class="acc-arrow">▼</span></div>
-                    <div class="acc-body"><div class="acc-body-inner">
-                        ${extra || ''}
-                        <div class="goals-list">${items.length ? items.map(g => goalRow(g)).join('') : '<div style="font-size:0.8rem;color:#9a93b5;padding:6px 0;">אין כרגע פריטים כאן</div>'}</div>
-                    </div></div>
-                </div>`;
+            const carouselHtml = docs.length ? `
+                <div class="docs-carousel">
+                    <button class="docs-arrow" id="docNext" aria-label="הבא">›</button>
+                    <div class="docs-stage" id="docStage"></div>
+                    <button class="docs-arrow" id="docPrev" aria-label="הקודם">‹</button>
+                </div>
+                <div class="docs-dots" id="docDots"></div>
+            ` : `
+                <div class="docs-empty">
+                    <div class="emoji">📝</div>
+                    <h3>עוד אין כאן תיעוד מפגשים</h3>
+                    <p>אחרי שתיפגש/י עם המורה — אפשר לתעד כאן על מה דיברתם, מה למדת והצעדים להמשך 💜</p>
+                </div>
+            `;
 
             const el = document.getElementById('view-goals');
             el.innerHTML = `
                 <button class="view-back" data-goto="home">→ חזרה לדשבורד</button>
-                <div class="view-head"><h1>🎯 הצעדים שלי</h1><p>היעדים שלי — חלקם משיחות מנטורינג וחלקם מהמיפוי. אפשר לסמן, להוסיף ולערוך</p></div>
-                <div class="accordion">
-                    ${accItem('יעדים משיחות מנטורינג', '💬', week, true)}
-                    ${accItem('יעדים אישיים', '🌟', personal, true, addForm)}
-                    ${accItem('יעדים שהושלמו', '✅', done, false)}
-                </div>
+                <div class="view-head"><h1>🎯 היעדים שלי</h1><p>תיעוד המפגשים שלך עם המורה — לחץ על כרטיסייה לתיעוד המלא ולסיכום חכם ✨</p></div>
+                ${carouselHtml}
+                <div style="text-align:center"><button class="docs-add-btn" id="docAddBtn">➕ הוספת תיעוד מפגש</button></div>
+                ${docs.length ? `
+                <div class="docs-timeline" id="docTimeline">
+                    <div class="docs-tl-title">📋 כל המפגשים שלי</div>
+                    <div class="docs-tl-list" id="docTlList"></div>
+                </div>` : ''}
+                ${docFormHtml(data)}
             `;
             el.querySelector('[data-goto]').addEventListener('click', () => switchView('home'));
-            // accordion toggles
-            el.querySelectorAll('.acc-head').forEach(h => {
-                h.addEventListener('click', () => h.parentElement.classList.toggle('open'));
-            });
-            // goal checkbox toggles
-            el.querySelectorAll('.goal-checkbox').forEach(cb => {
-                cb.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const idx = parseInt(cb.dataset.gi, 10);
-                    goals[idx].done = !goals[idx].done;
-                    persistDashboard();
-                    if (goals[idx].done) showLiveToast('כל הכבוד! סימנת יעד שהושלם ✅', 'יובי עדכן את ההתקדמות שלך', '🎉');
-                    renderGoalsView(data);
-                    switchView('goals');
-                });
-            });
-            // edit goal
-            el.querySelectorAll('.goal-edit-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const idx = parseInt(btn.dataset.edit, 10);
-                    const newText = prompt('עריכת היעד:', goals[idx].text);
-                    if (newText !== null && newText.trim()) {
-                        goals[idx].text = newText.trim();
-                        persistDashboard();
-                        showLiveToast('היעד עודכן ✏️', 'השינוי נשמר', '✅');
-                        renderGoalsView(data);
-                        switchView('goals');
+
+            const rerender = () => renderGoalsView(data);
+            wireDocForm(el, data, rerender);
+            el.querySelector('#docAddBtn').addEventListener('click', () => openDocForm(el, data));
+
+            if (!docs.length) return;
+
+            const renderCard = (dir) => {
+                const i = data._docIndex;
+                const doc = docs[i];
+                const stage = el.querySelector('#docStage');
+                const steps = (doc.nextSteps || []).filter(s => s && s.text).map(s => `
+                    <div class="doc-next-item"><span>${s.text}</span>${s.deadline ? `<span class="doc-deadline">⏳ עד ${s.deadline}</span>` : ''}</div>`).join('');
+                const nextBlock = steps ? `
+                        <div class="doc-next">
+                            <div class="doc-next-title">🎯 צעדים להמשך</div>
+                            ${steps}
+                        </div>` : '';
+                stage.innerHTML = `
+                    <div class="doc-card" data-doc="${i}">
+                        <div class="doc-top">
+                            <span class="doc-stage-badge">${doc.stage}</span>
+                            <span class="doc-date">📅 ${doc.date}</span>
+                        </div>
+                        <div class="doc-people">
+                            <span class="doc-person"><span class="lbl">מורה:</span> 👩‍🏫 ${doc.teacher}</span>
+                            <span class="doc-person"><span class="lbl">לומד/ת:</span> 🧒 ${doc.learner}</span>
+                        </div>
+                        <div class="doc-section-label">📝 תיעוד השיחה</div>
+                        <div class="doc-transcript clamp">${doc.transcript || '—'}</div>
+                        ${nextBlock}
+                        <div class="doc-foot" id="docFoot">
+                            <span class="doc-hint">👆 לחץ לתיעוד המלא</span>
+                        </div>
+                    </div>`;
+
+                // arrows + dots state
+                el.querySelector('#docPrev').disabled = (i === 0);
+                el.querySelector('#docNext').disabled = (i === docs.length - 1);
+                el.querySelector('#docDots').innerHTML = docs.map((_, k) =>
+                    `<span class="docs-dot ${k === i ? 'active' : ''}" data-dot="${k}"></span>`).join('');
+                el.querySelectorAll('.docs-dot').forEach(d => d.addEventListener('click', () => {
+                    const k = parseInt(d.dataset.dot, 10);
+                    if (k === data._docIndex) return;
+                    const d2 = k > data._docIndex ? 'next' : 'prev';
+                    data._docIndex = k;
+                    renderCard(d2);
+                }));
+                el.querySelectorAll('.docs-tl-row').forEach(r => r.classList.toggle('active', parseInt(r.dataset.tl, 10) === i));
+
+                // expand on click → full documentation + summarize button
+                const card = stage.querySelector('.doc-card');
+                card.addEventListener('click', (e) => {
+                    if (e.target.closest('.doc-summarize-btn')) return;
+                    card.classList.toggle('expanded');
+                    const foot = card.querySelector('#docFoot');
+                    if (card.classList.contains('expanded')) {
+                        foot.innerHTML = `<button class="doc-summarize-btn" data-sum="${i}">✨ סכם לי בקצרה</button><span class="doc-hint">סיכום חכם של יובי</span>`;
+                        foot.querySelector('.doc-summarize-btn').addEventListener('click', (ev) => {
+                            ev.stopPropagation();
+                            summarizeDocInChat(i);
+                        });
+                    } else {
+                        foot.innerHTML = `<span class="doc-hint">👆 לחץ לתיעוד המלא</span>`;
                     }
                 });
-            });
-            // add new goal
-            const addBtn = el.querySelector('#addGoalBtn');
-            const addInput = el.querySelector('#newGoalInput');
-            const doAdd = () => {
-                const text = (addInput.value || '').trim();
-                if (!text) return;
-                goals.push({ text, meta: 'נוסף היום', source: 'הוספתי בעצמי', done: false });
-                persistDashboard();
-                showLiveToast('הוספת יעד חדש! 🌟', 'יובי שמר אותו ברשימה שלך', '➕');
-                renderGoalsView(data);
-                switchView('goals');
+
+                // slide animation
+                if (dir) {
+                    stage.classList.remove('anim-next', 'anim-prev');
+                    void stage.offsetWidth;
+                    stage.classList.add(dir === 'prev' ? 'anim-prev' : 'anim-next');
+                }
             };
-            if (addBtn) addBtn.addEventListener('click', doAdd);
-            if (addInput) addInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doAdd(); } });
+
+            // → right arrow advances forward, ← left arrow goes back (RTL-friendly)
+            el.querySelector('#docNext').addEventListener('click', () => {
+                if (data._docIndex < docs.length - 1) { data._docIndex++; renderCard('next'); }
+            });
+            el.querySelector('#docPrev').addEventListener('click', () => {
+                if (data._docIndex > 0) { data._docIndex--; renderCard('prev'); }
+            });
+
+            // timeline list (overview of all meetings) — fills the screen + quick jump
+            const tlList = el.querySelector('#docTlList');
+            if (tlList) {
+                tlList.innerHTML = docs.map((d, k) => `
+                    <div class="docs-tl-row" data-tl="${k}">
+                        <span class="docs-tl-dot"></span>
+                        <div class="docs-tl-main">
+                            <div class="docs-tl-stage">${d.stage}</div>
+                            <div class="docs-tl-meta">👩‍🏫 ${d.teacher}</div>
+                        </div>
+                        <span class="docs-tl-date">📅 ${d.date}</span>
+                    </div>`).join('');
+                tlList.querySelectorAll('.docs-tl-row').forEach(row => row.addEventListener('click', () => {
+                    const k = parseInt(row.dataset.tl, 10);
+                    if (k === data._docIndex) return;
+                    const d2 = k > data._docIndex ? 'next' : 'prev';
+                    data._docIndex = k;
+                    renderCard(d2);
+                    document.querySelector('.docs-carousel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }));
+            }
+
+            renderCard();
+        }
+
+        // ----- Add-documentation form (student self-reporting on mentoring sessions) -----
+        const DOC_STAGES = ['מפגש היכרות', 'מפגש מעקב', 'מפגש העמקה', 'מפגש תכנון', 'מפגש סיכום', 'אחר'];
+
+        function docStepRowHtml() {
+            return `
+                <div class="docstep-row">
+                    <input type="text" class="step-text" placeholder="צעד להמשך...">
+                    <input type="date" class="step-deadline" aria-label="תאריך דד-ליין">
+                    <button type="button" class="docstep-remove" title="הסרה">✕</button>
+                </div>`;
+        }
+
+        function docFormHtml(data) {
+            return `
+            <div class="docform-overlay" id="docFormOverlay">
+                <div class="docform">
+                    <h2>📝 תיעוד מפגש מנטורינג</h2>
+                    <div class="docform-sub">מלא/י את הפרטים על השיחה שלך עם המורה</div>
+                    <div class="docform-grid">
+                        <div class="docform-field"><label>📅 תאריך</label><input type="date" id="df_date"></div>
+                        <div class="docform-field"><label>🎯 שלב המפגש</label><select id="df_stage">${DOC_STAGES.map(s => `<option>${s}</option>`).join('')}</select></div>
+                        <div class="docform-field"><label>👩‍🏫 שם המורה</label><input type="text" id="df_teacher" placeholder="לדוגמה: המורה רותם"></div>
+                        <div class="docform-field"><label>🧒 שם הלומד/ת</label><input type="text" id="df_learner" value="${(data.name || '').replace(/"/g, '&quot;')}"></div>
+                    </div>
+                    <div class="docform-field"><label>💬 תיעוד השיחה</label><textarea id="df_transcript" placeholder="על מה דיברתם? מה למדת? איך הרגשת?"></textarea></div>
+                    <div class="docform-field">
+                        <label>✅ צעדים להמשך + דד-ליין</label>
+                        <div id="df_steps">${docStepRowHtml()}</div>
+                        <button type="button" class="docform-addstep" id="df_addstep">➕ עוד צעד</button>
+                    </div>
+                    <div class="docform-actions">
+                        <button type="button" class="docform-save" id="df_save">שמירה 💜</button>
+                        <button type="button" class="docform-cancel" id="df_cancel">ביטול</button>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function todayYmd() {
+            const d = new Date();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${d.getFullYear()}-${m}-${day}`;
+        }
+
+        function ymdToDisplay(v) {
+            if (!v) return '';
+            const parts = v.split('-');
+            if (parts.length !== 3) return v;
+            return `${parseInt(parts[2], 10)}.${parseInt(parts[1], 10)}.${parts[0]}`;
+        }
+
+        function openDocForm(el) {
+            const overlay = el.querySelector('#docFormOverlay');
+            if (!overlay) return;
+            const dateInput = overlay.querySelector('#df_date');
+            if (dateInput && !dateInput.value) dateInput.value = todayYmd();
+            overlay.classList.add('open');
+            const teacher = overlay.querySelector('#df_teacher');
+            if (teacher) setTimeout(() => teacher.focus(), 50);
+        }
+
+        function wireDocForm(el, data, rerender) {
+            const overlay = el.querySelector('#docFormOverlay');
+            if (!overlay) return;
+            const close = () => overlay.classList.remove('open');
+
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+            overlay.querySelector('#df_cancel').addEventListener('click', close);
+
+            const stepsWrap = overlay.querySelector('#df_steps');
+            overlay.querySelector('#df_addstep').addEventListener('click', () => {
+                stepsWrap.insertAdjacentHTML('beforeend', docStepRowHtml());
+            });
+            stepsWrap.addEventListener('click', (e) => {
+                const rm = e.target.closest('.docstep-remove');
+                if (!rm) return;
+                const rows = stepsWrap.querySelectorAll('.docstep-row');
+                if (rows.length > 1) {
+                    rm.closest('.docstep-row').remove();
+                } else {
+                    const row = rm.closest('.docstep-row');
+                    row.querySelector('.step-text').value = '';
+                    row.querySelector('.step-deadline').value = '';
+                }
+            });
+
+            overlay.querySelector('#df_save').addEventListener('click', () => {
+                const transcript = overlay.querySelector('#df_transcript').value.trim();
+                if (!transcript) {
+                    showLiveToast('רגע אחד 😊', 'כדאי לכתוב כמה מילים על השיחה לפני השמירה', '✍️');
+                    overlay.querySelector('#df_transcript').focus();
+                    return;
+                }
+                const steps = [];
+                overlay.querySelectorAll('.docstep-row').forEach(row => {
+                    const text = row.querySelector('.step-text').value.trim();
+                    if (text) steps.push({ text, deadline: ymdToDisplay(row.querySelector('.step-deadline').value) });
+                });
+                const doc = {
+                    date: ymdToDisplay(overlay.querySelector('#df_date').value) || ymdToDisplay(todayYmd()),
+                    teacher: overlay.querySelector('#df_teacher').value.trim() || 'המורה שלי',
+                    learner: overlay.querySelector('#df_learner').value.trim() || data.name || 'התלמיד/ה',
+                    stage: overlay.querySelector('#df_stage').value,
+                    transcript,
+                    aiSummary: '',
+                    nextSteps: steps,
+                    own: true
+                };
+                data.goalDocs.push(doc);
+                data._docIndex = data.goalDocs.length - 1;
+                persistDashboard();
+                close();
+                showLiveToast('התיעוד נשמר! 🌟', 'יובי שמר את המפגש ברשימת היעדים שלך', '📝');
+                if (rerender) rerender();
+            });
         }
 
         // -------- DEEP: STRENGTHS --------
+        // -------- DEEP: AGENCY ("מצפן הפעלנות") --------
+        function agencyLevel(score) {
+            if (score >= 85) return { label: 'כוח-על',       color: '#2f855a', soft: 'rgba(72,187,120,0.16)' };
+            if (score >= 68) return { label: 'מתחזק',         color: '#5a4bd0', soft: 'rgba(99,102,241,0.14)' };
+            if (score >= 50) return { label: 'בונה',          color: '#2b86b3', soft: 'rgba(76,201,240,0.16)' };
+            return              { label: 'מתחיל לגלות', color: '#7c5cff', soft: 'rgba(159,122,254,0.16)' };
+        }
+
+        // Friendly, kid-safe model of the 6 "agency" components from the spec.
+        function deriveAgency(data) {
+            if (data.agency && data.agency.length) return data.agency;
+            const seed = (data.name || 'תלמיד').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+            const vary = (base, i) => Math.max(44, Math.min(96, base + ((seed * (i + 3)) % 19) - 9));
+            const defs = [
+                { key: 'motivation', name: 'אני אוהב ללמוד את זה', term: 'מוטיבציה ורלוונטיות', icon: '🔥', base: 78,
+                  hi: 'אתה מתחבר ללמידה כשהיא קשורה למה שמעניין אותך 🔥',
+                  lo: 'כשנמצא נושאים שמדברים אליך — הלמידה תהפוך לכיף שלך',
+                  meaning: 'כמה הלמידה מרגישה לך מעניינת, חשובה וקשורה לחיים שלך — ועד כמה אתה מאמין שתצליח.',
+                  tip: 'בוא נבחר נושא שאתה אוהב ונבנה עליו משימה קצרה' },
+                { key: 'growth', name: 'אני לא מוותר', term: 'תודעת צמיחה', icon: '🌱', base: 85,
+                  hi: 'אתה ממשיך לנסות גם כשקשה — וזה כוח ענק 💪',
+                  lo: 'כל טעות היא הזדמנות ללמוד — נתאמן על זה ביחד',
+                  meaning: 'איך אתה מתמודד עם אתגרים וקשיים, וכמה אתה מוכן להשקיע מאמץ — בלי להשוות את עצמך לאחרים.',
+                  tip: 'כשמשהו קשה, נחלק אותו לצעד אחד קטן בכל פעם' },
+                { key: 'initiative', name: 'אני לוקח אחריות', term: 'יוזמה ואחריות', icon: '🚀', base: 66,
+                  hi: 'אתה לוקח חלק פעיל בלמידה ויודע לפעול לבד 🚀',
+                  lo: 'נתרגל לבחור משימה ולהתחיל אותה בעצמך — צעד אחר צעד',
+                  meaning: 'כמה אתה מעורב באופן פעיל בלמידה, ויכול לפעול באופן עצמאי בתוך מסגרת ברורה.',
+                  tip: 'בחר היום משימה אחת שתתחיל בה בלי שיזכירו לך' },
+                { key: 'regulation', name: 'אני שולט ברגשות שלי', term: 'ויסות עצמי', icon: '🧘', base: 60,
+                  hi: 'אתה יודע להירגע ולהמשיך גם אחרי תסכול 🧘',
+                  lo: 'נלמד טריקים קטנים להירגע כשמתעצבנים — וזה ממש עוזר',
+                  meaning: 'היכולת לזהות ולנהל רגשות בצורה טובה, להתמודד עם תסכול ולחץ, ולקום אחרי כישלון.',
+                  tip: 'כשמרגישים תסכול — שלוש נשימות עמוקות ואז ממשיכים' },
+                { key: 'awareness', name: 'אני מכיר את עצמי', term: 'מודעות עצמית', icon: '🪞', base: 72,
+                  hi: 'אתה יודע במה אתה טוב ומה עוזר לך ללמוד 🪞',
+                  lo: 'נגלה יחד מה הדרך שהכי מתאימה לך ללמוד בה',
+                  meaning: 'כמה אתה מעריך את ההתקדמות שלך, מזהה מה אתה צריך, ובוחר דרכים שמתאימות לך ללמוד.',
+                  tip: 'בסוף משימה, כתוב משפט אחד: מה עזר לי היום?' },
+                { key: 'support', name: 'יש לי על מי לסמוך', term: 'תמיכה וחוויות רגשיות', icon: '🤝', base: 88,
+                  hi: 'אתה יודע לבקש עזרה כשצריך — וזה חכם מאוד 🤝',
+                  lo: 'תמיד יש מי שישמח לעזור לך — גם יובי כאן בשבילך',
+                  meaning: 'תחושת הביטחון והשייכות שלך, והיכולת לבקש ולקבל עזרה כשאתה צריך.',
+                  tip: 'כשנתקעים — מבקשים עזרה ממורה, מחבר או מיובי' }
+            ];
+            return defs.map((d, i) => {
+                const score = vary(d.base, i);
+                return {
+                    key: d.key, name: d.name, term: d.term, icon: d.icon, score,
+                    kidLine: score >= 60 ? d.hi : d.lo,
+                    meaning: d.meaning, tip: d.tip,
+                    source: i % 2 === 0 ? 'מהמיפוי 🧭' : 'משיחה עם יובי 💬'
+                };
+            });
+        }
+
+        // Build a hexagon radar chart (SVG) for the 6 agency components.
+        function agencyRadarSVG(items) {
+            const size = 240, c = size / 2, R = 88, n = items.length;
+            const ang = i => (-90 + i * (360 / n)) * Math.PI / 180;
+            const pt = (i, r) => [c + r * Math.cos(ang(i)), c + r * Math.sin(ang(i))];
+            const poly = (r) => items.map((_, i) => pt(i, r).map(x => x.toFixed(1)).join(',')).join(' ');
+
+            let rings = '';
+            [0.25, 0.5, 0.75, 1].forEach(f => {
+                rings += `<polygon points="${poly(R * f)}" fill="none" stroke="#e9e3f8" stroke-width="1"/>`;
+            });
+            let axes = '';
+            items.forEach((_, i) => {
+                const [x, y] = pt(i, R);
+                axes += `<line x1="${c}" y1="${c}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#efeafb" stroke-width="1"/>`;
+            });
+            const dataPoly = items.map((it, i) => pt(i, R * (it.score / 100)).map(x => x.toFixed(1)).join(',')).join(' ');
+            let dots = '', labels = '';
+            items.forEach((it, i) => {
+                const [dx, dy] = pt(i, R * (it.score / 100));
+                dots += `<circle cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="3.6" fill="#7c5cff"/>`;
+                const [lx, ly] = pt(i, R + 17);
+                labels += `<text x="${lx.toFixed(1)}" y="${(ly + 5).toFixed(1)}" text-anchor="middle" font-size="16">${it.icon}</text>`;
+            });
+            return `<svg viewBox="0 0 ${size} ${size}" class="agency-radar-svg" role="img" aria-label="מצפן הפעלנות">
+                <defs><linearGradient id="agGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#9f7afe"/><stop offset="1" stop-color="#4cc9f0"/></linearGradient></defs>
+                ${rings}${axes}
+                <polygon points="${dataPoly}" fill="url(#agGrad)" fill-opacity="0.32" stroke="url(#agGrad)" stroke-width="2.5" stroke-linejoin="round"/>
+                ${dots}${labels}
+            </svg>`;
+        }
+
+        function renderAgencyView(data) {
+            const agency = deriveAgency(data);
+            const el = document.getElementById('view-agency');
+            el.innerHTML = `
+                <button class="view-back" data-goto="home">→ חזרה לדשבורד</button>
+                <div class="view-head"><h1>🧭 מצפן הפעלנות שלי</h1><p>הכוחות שעוזרים לך ללמוד — לחיצה על כל כוח מספרת לך עוד 💜</p></div>
+                <div class="agency-radar-wrap fade-in">${agencyRadarSVG(agency)}</div>
+                <div class="agency-cards">
+                    ${agency.map(a => {
+                        const lv = agencyLevel(a.score);
+                        return `
+                        <div class="agency-card fade-in" data-key="${a.key}">
+                            <div class="agency-card-head">
+                                <div class="agency-ico" style="background:${lv.soft}">${a.icon}</div>
+                                <div class="agency-card-main">
+                                    <div class="agency-name">${a.name}</div>
+                                    <div class="agency-line">${a.kidLine}</div>
+                                </div>
+                                <span class="agency-pill" style="background:${lv.soft};color:${lv.color}">${lv.label}</span>
+                                <span class="agency-caret">▾</span>
+                            </div>
+                            <div class="agency-bar"><div class="agency-fill" data-target="${a.score}" style="background:linear-gradient(90deg,#9f7afe,#4cc9f0)"></div></div>
+                            <div class="agency-detail">
+                                <div class="agency-meaning"><strong>מה זה אומר?</strong> ${a.meaning}</div>
+                                <div class="agency-next"><b>🎯 צעד קטן קדימה:</b><span>${a.tip}</span></div>
+                                <div class="agency-source">${a.source}</div>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            `;
+            el.querySelector('[data-goto]').addEventListener('click', () => switchView('home'));
+            requestAnimationFrame(() => setTimeout(() => {
+                el.querySelectorAll('.agency-fill').forEach(f => { f.style.width = f.dataset.target + '%'; });
+            }, 150));
+            el.querySelectorAll('.agency-card').forEach(card => {
+                card.querySelector('.agency-card-head').addEventListener('click', () => card.classList.toggle('open'));
+            });
+        }
+
         function renderStrengthsView(data) {
             const m = data.mapping || {};
             const strengths = m.strengths || [];
@@ -2153,6 +2814,101 @@
                 typing.remove();
                 addMsg(text, 'bot');
             }, 850 + Math.min(text.length * 12, 900));
+        }
+
+        // ================================================
+        // COPILOT SECTION SPARKS (hover summary buttons)
+        // ================================================
+        function sectionKeyFromHeading(t) {
+            t = (t || '').trim();
+            if (/יעזור|להתקדם/.test(t)) return 'improve';
+            if (/מקצוע/.test(t)) return 'subjects';
+            if (/יעד/.test(t)) return 'goals';
+            if (/חיזוק/.test(t)) return 'difficulties';
+            if (/פעלנות|מצפן/.test(t)) return 'agency';
+            if (/חוזק|כישור|עניין|כוח/.test(t)) return 'strengths';
+            if (/לומד|סגנון|למידה/.test(t)) return 'learning';
+            return 'generic';
+        }
+
+        function buildSectionSummary(key, data, heading) {
+            data = data || {};
+            const subjects = data.subjects || [];
+            switch (key) {
+                case 'subjects': {
+                    const avg = avgProgress(subjects);
+                    const sorted = [...subjects].sort((a, b) => (a.progress || 0) - (b.progress || 0));
+                    const weak = sorted[0], strong = sorted[sorted.length - 1];
+                    const list = subjects.slice(0, 4).map(s => `• ${s.name} — ${s.progress || 0}%`).join('<br>');
+                    return {
+                        html: `הנה תמונת המצב במקצועות שלך 📚<br><br>${list || 'עוד אין מקצועות להצגה'}<br><br>הממוצע שלך כרגע <strong>${avg}%</strong>.${strong ? ` הכי חזק/ה ב<strong>${strong.name}</strong> 🌟` : ''}${weak && weak !== strong ? ` שווה לשים פוקוס על <strong>${weak.name}</strong>.` : ''}`,
+                        cta: weak ? { label: `💪 בוא נתרגל ${weak.name}`, msg: `אני רוצה לתרגל ${weak.name}` } : null
+                    };
+                }
+                case 'goals': {
+                    const goals = data.goals || [];
+                    if (!goals.length) return { html: 'עוד לא הגדרנו יעדים יחד 🎯 רוצה שנבחר יעד ראשון?', cta: { label: '🎯 בוא נגדיר יעד', msg: 'עזור לי להגדיר יעד חדש' } };
+                    const list = goals.slice(0, 4).map(g => `• ${g.text || g}`).join('<br>');
+                    return { html: `היעדים שלך כרגע 🎯<br><br>${list}<br><br>כל צעד קטן מקרב אותך! 💜`, cta: { label: '✅ עזור לי להתקדם', msg: `עזור לי להתקדם ביעד: ${goals[0].text || goals[0]}` } };
+                }
+                case 'difficulties': {
+                    const diff = data.difficulties || [];
+                    if (!diff.length) return { html: 'אין כרגע נושאים שדורשים חיזוק מיוחד — כל הכבוד! 🎉', cta: null };
+                    const list = diff.slice(0, 4).map(d => `• ${d.text}${d.subject ? ` <span style="color:#9a93b5">(${d.subject})</span>` : ''}`).join('<br>');
+                    return { html: `זיהיתי כמה נושאים ששווה לחזק 🧩<br><br>${list}<br><br>אל דאגה — נעבוד עליהם יחד בקצב שלך.`, cta: { label: `🚀 בוא נתחיל`, msg: `בוא נעבוד על ${diff[0].text}` } };
+                }
+                case 'improve': {
+                    const diff = data.difficulties || [];
+                    const tips = diff.slice(0, 2).map(d => `• ${improveTitle(d)}`).join('<br>');
+                    return { html: `כמה דברים קטנים שיכולים לעזור לך להתקדם ✨<br><br>${tips || '• להתמיד בתרגול קצר כל יום 💪'}<br><br>רוצה שאלווה אותך צעד-צעד?`, cta: { label: '👣 כן, בוא נתחיל', msg: 'עזור לי להתקדם צעד צעד' } };
+                }
+                case 'agency': {
+                    const agency = deriveAgency(data);
+                    const top = [...agency].sort((a, b) => b.score - a.score)[0];
+                    const chips = agency.map(a => `• ${a.icon} ${a.name}`).join('<br>');
+                    return { html: `מצפן הפעלנות שלך 🧭<br><br>${chips}<br><br>הכוח הבולט שלך הוא <strong>${top.icon} ${top.name}</strong> — אפשר להישען עליו! 🌟`, cta: { label: '🧭 איך לחזק עוד?', msg: 'איך אני יכול לחזק את כישורי הפעלנות שלי?' } };
+                }
+                case 'strengths': {
+                    const s = (data.mapping && data.mapping.strengths) || [];
+                    return { html: `החוזקות שלך 💪<br><br>${s.slice(0, 5).map(x => `• ${x}`).join('<br>') || 'נגלה אותן יחד!'}<br><br>אלה הדברים שאפשר להישען עליהם בכל אתגר.`, cta: { label: '✨ איך לנצל אותן?', msg: 'איך אני יכול להשתמש בחוזקות שלי בלמידה?' } };
+                }
+                case 'learning': {
+                    const ls = (data.mapping && data.mapping.learningStyle) || 'למידה בקצב אישי עם הרבה דוגמאות';
+                    return { html: `ככה אתה לומד הכי טוב 🧭<br><br>${ls}<br><br>אני אתאים את ההסברים בדיוק לסגנון הזה 💜`, cta: { label: '🎨 התאם לי משימה', msg: 'תכין לי משימה שמתאימה לסגנון הלמידה שלי' } };
+                }
+                default:
+                    return { html: `הנה סקירה קצרה על "${heading}" ✨ אני כאן כדי לעזור לך להבין ולהתקדם.`, cta: { label: '💬 בוא נדבר על זה', msg: `ספר לי עוד על ${heading}` } };
+            }
+        }
+
+        function copilotSummarize(key, heading) {
+            openChat();
+            addMsg(`ספר/י לי על "${heading}" 👀`, 'user');
+            const s = buildSectionSummary(key, currentData, heading);
+            const cta = s.cta
+                ? `<br><br><button class="chat-cta" onclick="sendUserMsg('${String(s.cta.msg).replace(/'/g, "\\'")}')">${s.cta.label}</button>`
+                : '';
+            botReply(s.html + cta);
+        }
+
+        function injectCopilotSparks() {
+            const heads = document.querySelectorAll(
+                '#mainContent .home-section-head h2, #mainContent .deep-block-title, #mainContent .lp-card h3'
+            );
+            heads.forEach(h => {
+                if (h.querySelector('.copilot-spark')) return;
+                const heading = h.textContent.trim();
+                const key = sectionKeyFromHeading(heading);
+                const btn = document.createElement('button');
+                btn.className = 'copilot-spark';
+                btn.type = 'button';
+                btn.innerHTML = '<span class="cs-ico">✨</span> סיכום מיובי';
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    copilotSummarize(key, heading);
+                });
+                h.appendChild(btn);
+            });
         }
 
         function renderSuggestions() {
