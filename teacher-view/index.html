@@ -395,6 +395,168 @@
             .main { margin-right: 0; padding: 18px; }
             .kpi-grid { grid-template-columns: 1fr; }
         }
+
+        /* ===================== LIVE VIEW ===================== */
+        .live-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+        .live-badge { display: inline-flex; align-items: center; gap: 7px; font-size: 0.72rem; font-weight: 800;
+            letter-spacing: 0.06em; color: var(--attn-ink); background: var(--attn-bg); border: 1px solid var(--attn-bd);
+            padding: 5px 12px; border-radius: 999px; }
+        .live-badge .lpulse { width: 8px; height: 8px; border-radius: 50%; background: var(--attn-ink);
+            box-shadow: 0 0 0 0 rgba(194,91,102,.5); animation: livePulse 1.6s infinite; }
+        @keyframes livePulse { 0% { box-shadow: 0 0 0 0 rgba(194,91,102,.5); } 70% { box-shadow: 0 0 0 7px rgba(194,91,102,0); } 100% { box-shadow: 0 0 0 0 rgba(194,91,102,0); } }
+        .live-time { font-size: 0.74rem; color: var(--ink-400); }
+        .live-time b { color: var(--ink-700); font-weight: 700; }
+        .live-filters { display: flex; gap: 7px; margin-inline-start: auto; flex-wrap: wrap; }
+        .live-chip { font-size: 0.76rem; font-weight: 600; color: var(--ink-500); background: #fff;
+            border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; transition: all .15s; }
+        .live-chip:hover { border-color: #d9cffb; }
+        .live-chip.active { color: var(--purple); background: #f6f3ff; border-color: #ddd0fb; }
+        .live-chip .lc-count { font-weight: 800; }
+
+        .live-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(248px, 1fr)); gap: 16px; }
+        .live-card { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+            padding: 16px; cursor: pointer; transition: box-shadow .18s, transform .18s, border-color .18s; box-shadow: var(--shadow); }
+        .live-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+        .live-card.off { opacity: 0.72; }
+        .live-card.help { border-color: var(--attn-bd); background: linear-gradient(180deg, #fff 0%, #fdf6f7 100%); }
+        .live-card.flash { animation: liveFlash 1.4s ease; }
+        @keyframes liveFlash { 0% { box-shadow: 0 0 0 0 rgba(224,135,146,.55); } 100% { box-shadow: 0 0 0 14px rgba(224,135,146,0); } }
+        .live-top { display: flex; align-items: center; gap: 11px; }
+        .live-ava { position: relative; width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; color: #fff;
+            font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; }
+        .live-dot { position: absolute; bottom: -1px; inset-inline-end: -1px; width: 13px; height: 13px; border-radius: 50%;
+            border: 2.5px solid #fff; }
+        .live-dot.on { background: var(--good-dot); }
+        .live-dot.off { background: var(--ink-300); }
+        .live-id { flex: 1; min-width: 0; }
+        .live-name { font-size: 0.94rem; font-weight: 700; color: var(--ink-900); }
+        .live-class { font-size: 0.74rem; color: var(--ink-400); margin-top: 1px; }
+        .live-status { display: inline-flex; align-items: center; gap: 5px; font-size: 0.68rem; font-weight: 700;
+            padding: 3px 9px; border-radius: 999px; }
+        .live-status.on { color: var(--good-ink); background: var(--good-bg); }
+        .live-status.off { color: var(--ink-400); background: var(--line-soft); }
+        .live-act { margin-top: 13px; font-size: 0.78rem; color: var(--ink-500); display: flex; align-items: center; gap: 6px; }
+        .live-help { display: inline-flex; align-items: center; gap: 5px; font-size: 0.68rem; font-weight: 800;
+            color: var(--attn-ink); background: var(--attn-bg); border: 1px solid var(--attn-bd);
+            padding: 4px 9px; border-radius: 999px; white-space: nowrap; }
+        .live-why { margin-top: 12px; background: #fff; border: 1px solid var(--attn-bd); border-radius: 12px;
+            padding: 10px 12px; font-size: 0.78rem; color: var(--ink-500); line-height: 1.6; }
+        .live-why .lw-badge { display: inline-block; font-size: 0.58rem; font-weight: 800; letter-spacing: 0.06em;
+            text-transform: uppercase; color: var(--purple); margin-bottom: 4px; }
+        .live-why b { color: var(--ink-900); font-weight: 700; }
+        .live-open { margin-top: 12px; width: 100%; border: 1px solid var(--line); background: #fff;
+            border-radius: 10px; padding: 8px; font-family: 'Rubik', sans-serif; font-size: 0.78rem; font-weight: 600;
+            color: var(--purple); cursor: pointer; transition: background .15s; }
+        .live-open:hover { background: #f6f3ff; }
+
+        /* ===================== TOP TABS (main nav) ===================== */
+        .top-tabs { display: flex; gap: 6px; margin: 0 auto; }
+        .tt-btn { display: inline-flex; align-items: center; gap: 7px; position: relative;
+            font-family: 'Rubik', sans-serif; font-size: 0.9rem; font-weight: 700; color: var(--ink-500);
+            background: transparent; border: none; padding: 8px 18px; border-radius: 12px; cursor: pointer; transition: all .16s; }
+        .tt-btn .tt-ico { font-size: 1rem; }
+        .tt-btn:hover { background: #f5f2fe; color: var(--ink-700); }
+        .tt-btn.active { background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff; box-shadow: 0 3px 10px rgba(124,92,255,0.28); }
+        .tt-badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #ff6b6b; color: #fff;
+            font-size: 0.62rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+        .tt-btn.active .tt-badge { background: rgba(255,255,255,0.92); color: var(--purple); }
+
+        /* ===================== PANE (messages + calendar) ===================== */
+        .pane { margin-top: 60px; padding: 26px 30px 60px; max-width: 1240px; }
+        .pane-head { margin-bottom: 22px; }
+        .pane-head h1 { font-size: 1.4rem; font-weight: 700; color: var(--ink-900); }
+        .pane-head p { font-size: 0.86rem; color: var(--ink-400); margin-top: 4px; }
+
+        /* messaging */
+        .msg-layout { display: grid; grid-template-columns: 320px 1fr; gap: 18px;
+            height: calc(100vh - 230px); min-height: 480px; }
+        .msg-students { background: #fff; border: 1px solid var(--line); border-radius: 18px; overflow-y: auto; padding: 10px; }
+        .msg-students-title { font-size: 0.66rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+            color: var(--ink-400); padding: 8px 10px 10px; }
+        .stu-item { display: flex; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 14px; cursor: pointer; transition: background .14s; }
+        .stu-item:hover { background: var(--line-soft); }
+        .stu-item.active { background: #f3effe; }
+        .stu-ava { width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; color: #fff; font-weight: 700;
+            font-size: 1.05rem; display: flex; align-items: center; justify-content: center; }
+        .stu-info { flex: 1; min-width: 0; }
+        .stu-name { font-size: 0.9rem; font-weight: 700; color: var(--ink-900); }
+        .stu-sub { font-size: 0.72rem; color: var(--ink-400); margin-top: 1px; }
+        .stu-preview { font-size: 0.76rem; color: var(--ink-400); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .stu-unread { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px;
+            background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff; font-size: 0.66rem; font-weight: 800;
+            display: inline-flex; align-items: center; justify-content: center; }
+        .msg-thread { background: #fff; border: 1px solid var(--line); border-radius: 18px; display: flex; flex-direction: column; overflow: hidden; }
+        .thread-head { display: flex; align-items: center; gap: 11px; padding: 14px 18px; border-bottom: 1px solid var(--line-soft); }
+        .th-ava { width: 40px; height: 40px; border-radius: 50%; color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+        .th-name { font-size: 0.96rem; font-weight: 700; color: var(--ink-900); }
+        .th-sub { font-size: 0.74rem; color: var(--ink-400); display: flex; align-items: center; gap: 6px; }
+        .th-sub .live-dot2 { width: 8px; height: 8px; border-radius: 50%; background: var(--good-dot); display: inline-block; }
+        .thread-body { flex: 1; overflow-y: auto; padding: 18px; background: #faf9ff; display: flex; flex-direction: column; gap: 9px; }
+        .m-day { align-self: center; font-size: 0.68rem; font-weight: 700; color: var(--ink-400);
+            background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; margin: 6px 0; }
+        .m-bubble { max-width: 74%; font-size: 0.86rem; line-height: 1.55; padding: 9px 13px; border-radius: 15px; position: relative; }
+        .m-bubble.them { align-self: flex-start; background: #fff; border: 1px solid var(--line); color: var(--ink-900); border-bottom-right-radius: 5px; }
+        .m-bubble.me { align-self: flex-end; background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff; border-bottom-left-radius: 5px; }
+        .m-time { font-size: 0.62rem; opacity: 0.7; margin-top: 3px; text-align: end; }
+        .thread-input { border-top: 1px solid var(--line-soft); padding: 12px 14px; display: flex; gap: 10px; align-items: center; }
+        .thread-input input { flex: 1; border: 1px solid var(--line); border-radius: 12px; padding: 11px 14px;
+            font-family: 'Rubik', sans-serif; font-size: 0.86rem; color: var(--ink-900); outline: none; }
+        .thread-input input:focus { border-color: #c9b6fb; }
+        .thread-input button { width: 44px; height: 44px; flex-shrink: 0; border: none; border-radius: 50%;
+            background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff; font-size: 1.1rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: opacity .15s; }
+        .thread-input button:hover { opacity: 0.9; }
+        .thread-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--ink-400); }
+        .thread-empty .te-ico { font-size: 2.4rem; }
+
+        /* calendar */
+        .cal-toolbar { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+        .cal-month-title { font-size: 1.1rem; font-weight: 700; color: var(--ink-900); }
+        .cal-nav { display: inline-flex; gap: 6px; }
+        .cal-nav button { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--line); background: #fff;
+            color: var(--ink-500); cursor: pointer; font-size: 1rem; transition: background .14s; }
+        .cal-nav button:hover { background: var(--line-soft); }
+        .cal-view-toggle { display: inline-flex; gap: 4px; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 4px; margin-inline-start: auto; }
+        .cvt-btn { font-family: 'Rubik', sans-serif; font-size: 0.82rem; font-weight: 600; padding: 7px 16px;
+            border-radius: 999px; border: none; background: transparent; color: var(--ink-500); cursor: pointer; transition: all .16s; }
+        .cvt-btn.active { background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff; }
+        .cal-grid { background: #fff; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+        .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--line); }
+        .cal-weekdays div { padding: 11px 8px; text-align: center; font-size: 0.74rem; font-weight: 700; color: var(--ink-400); }
+        .cal-days { display: grid; grid-template-columns: repeat(7, 1fr); }
+        .cal-cell { min-height: 104px; border-left: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft);
+            padding: 7px 8px; display: flex; flex-direction: column; gap: 4px; }
+        .cal-cell:nth-child(7n) { border-left: none; }
+        .cal-cell.blank { background: #fbfaff; }
+        .cal-cell-num { font-size: 0.82rem; font-weight: 700; color: var(--ink-500); align-self: flex-end;
+            width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+        .cal-cell.today .cal-cell-num { background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff; }
+        .cal-chip { font-size: 0.68rem; font-weight: 600; color: var(--ink-700); border-radius: 7px;
+            padding: 3px 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default;
+            background: var(--ev-soft, #f3effe); border-right: 3px solid var(--ev-color, #7c5cff); }
+        .cal-agenda { display: flex; flex-direction: column; gap: 14px; }
+        .cal-day { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; }
+        .cal-day-head { display: flex; align-items: center; gap: 13px; margin-bottom: 13px; }
+        .cal-day-num { width: 46px; height: 46px; border-radius: 14px; background: #f3effe; color: var(--purple);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+        .cal-day-num b { font-size: 1.15rem; }
+        .cal-day-num span { font-size: 0.6rem; margin-top: 2px; }
+        .cal-day-label { font-size: 0.96rem; font-weight: 700; color: var(--ink-900); }
+        .cal-day-sub { font-size: 0.74rem; color: var(--ink-400); }
+        .cal-events { display: flex; flex-direction: column; gap: 9px; }
+        .cal-event { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 12px;
+            background: var(--ev-soft, #f3effe); border-right: 3px solid var(--ev-color, #7c5cff); }
+        .cal-ev-time { font-size: 0.74rem; font-weight: 700; color: var(--ink-500); min-width: 58px; }
+        .cal-ev-ico { font-size: 1.1rem; }
+        .cal-ev-body { flex: 1; }
+        .cal-ev-title { font-size: 0.86rem; font-weight: 600; color: var(--ink-900); }
+        .cal-ev-tag { font-size: 0.66rem; font-weight: 700; color: var(--ev-color, #7c5cff); }
+
+        @media (max-width: 880px) {
+            .msg-layout { grid-template-columns: 1fr; height: auto; }
+            .top-tabs { gap: 2px; }
+            .tt-btn { padding: 8px 12px; font-size: 0.82rem; }
+        }
     </style>
 </head>
 <body>
@@ -402,6 +564,12 @@
     <!-- ===================== TOP BAR ===================== -->
     <header class="topbar">
         <div class="brand">YuviLab 720</div>
+
+        <nav class="top-tabs" id="topTabs">
+            <button type="button" class="tt-btn active" data-tab="dashboard"><span class="tt-ico">📊</span> דאשבורד</button>
+            <button type="button" class="tt-btn" data-tab="messages"><span class="tt-ico">💬</span> צאט <span class="tt-badge" id="msgBadge">3</span></button>
+            <button type="button" class="tt-btn" data-tab="calendar"><span class="tt-ico">📅</span> יומן</button>
+        </nav>
 
         <div class="topbar-right">
             <div class="bell" onclick="showToast('אין התראות חדשות כרגע','כאן יופיעו עדכונים על תלמידים שלך')">🔔<span class="badge">3</span></div>
@@ -455,6 +623,7 @@
                         <div class="fp-title">מצב צפייה</div>
                         <div class="view-toggle" id="viewToggle">
                             <button class="vt-btn active" data-view="class"><span class="vt-ico">📊</span> מבט כיתה</button>
+                            <button class="vt-btn" data-view="live"><span class="vt-ico">🟢</span> מבט לייב</button>
                             <button class="vt-btn" data-view="student"><span class="vt-ico">🎓</span> מבט תלמיד</button>
                         </div>
                     </div>
@@ -516,6 +685,20 @@
             </div>
         </div>
 
+        <!-- ===================== LIVE VIEW ===================== -->
+        <div id="liveView" style="display:none;">
+            <div class="live-bar">
+                <span class="live-badge"><span class="lpulse"></span> לייב</span>
+                <span class="live-time">עודכן: <b id="liveTime">—</b></span>
+                <div class="live-filters" id="liveFilters">
+                    <button class="live-chip active" data-lf="all">הכל <span class="lc-count" id="lcAll">0</span></button>
+                    <button class="live-chip" data-lf="online">מחוברים <span class="lc-count" id="lcOnline">0</span></button>
+                    <button class="live-chip" data-lf="help">דורשים עזרה <span class="lc-count" id="lcHelp">0</span></button>
+                </div>
+            </div>
+            <div class="live-grid" id="liveGrid"></div>
+        </div>
+
         <!-- ===================== STUDENT VIEW ===================== -->
         <div id="studentView" style="display:none;">
             <div class="profile-section">
@@ -536,7 +719,34 @@
         </div>
     </main>
 
-    <!-- ===================== ADD INSIGHT MODAL ===================== -->
+    <!-- ===================== MESSAGES PANE ===================== -->
+    <section class="pane" id="messagesPane" style="display:none;">
+        <div class="pane-head">
+            <h1>💬 הצ'אט שלי עם התלמידים</h1>
+            <p>אפשר לכתוב לתלמידים שלך, לשלוח עידוד, לתאם מפגשים ולתת משוב אישי</p>
+        </div>
+        <div class="msg-layout">
+            <aside class="msg-students" id="msgStudents"></aside>
+            <section class="msg-thread" id="msgThread"></section>
+        </div>
+    </section>
+
+    <!-- ===================== CALENDAR PANE ===================== -->
+    <section class="pane" id="calendarPane" style="display:none;">
+        <div class="pane-head">
+            <h1>📅 היומן שלי</h1>
+            <p>מפגשים, שיחות אישיות, מטלות ודדליינים — הכל במקום אחד</p>
+        </div>
+        <div class="cal-toolbar">
+            <div class="cal-month-title" id="calMonthTitle">יוני 2026</div>
+            <div class="cal-view-toggle" id="calViewToggle">
+                <button class="cvt-btn active" data-cv="month">חודש</button>
+                <button class="cvt-btn" data-cv="list">רשימה</button>
+            </div>
+        </div>
+        <div id="calMonthWrap"></div>
+        <div id="calListWrap" style="display:none;"></div>
+    </section>
     <div class="overlay" id="insightOverlay">
         <div class="modal">
             <h2>📝 הוספת תובנה</h2>
@@ -810,6 +1020,17 @@
     let currentStudent = 'ron';
     let profileTab = 'insights';
     let currentView = 'class';
+
+    // live presence + help detection (demo — updates in real time)
+    let liveFilter = 'all';
+    let liveTimer = null;
+    const LIVE = {
+        ron:    { online: false, needsHelp: true,  activity: 'לא מחובר/ת',                       why: 'לא נכנס/ה למערכת 7 ימים — ייתכן חסם רגשי או טכני. כדאי קשר אישי חם.' },
+        noam:   { online: true,  needsHelp: true,  activity: 'עובד/ת על «פישוט ביטויים אלגבריים»', why: 'ירידה ל-45% הצלחה ב-4 משימות עוקבות — קושי תוכני, לא מוטיבציוני.' },
+        shahar: { online: true,  needsHelp: true,  activity: 'תרגול «המרת שברים לאחוזים»',          why: '3 טעויות חוזרות באותו נושא — קושי נקודתי שהסבר קצר יפתור.' },
+        maya:   { online: true,  needsHelp: false, activity: 'פרויקט חקר במתמטיקה',                why: '' },
+        eitan:  { online: false, needsHelp: false, activity: 'לא מחובר/ת',                       why: '' },
+    };
 
     // ============================================================
     //  HELPERS
@@ -1172,6 +1393,107 @@
     }
 
     // ============================================================
+    //  RENDER: live view (presence + real-time help detection)
+    // ============================================================
+    function liveTimeNow() {
+        return new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    function liveCardHtml(sid) {
+        const s = STUDENTS[sid];
+        const L = LIVE[sid];
+        const statusTag = L.online
+            ? `<span class="live-status on">● מחובר/ת</span>`
+            : `<span class="live-status off">● לא מחובר/ת</span>`;
+        const helpBadge = L.needsHelp ? `<span class="live-help">🔔 צריך/ה עזרה</span>` : '';
+        const actLine = L.online
+            ? `<div class="live-act">🟢 ${L.activity}</div>`
+            : `<div class="live-act">⚪ ${L.activity}</div>`;
+        const whyBlock = (L.needsHelp && L.why)
+            ? `<div class="live-why"><span class="lw-badge">סיכום AI · למה</span><div>${L.why}</div></div>`
+            : '';
+        return `
+            <div class="live-card ${L.online ? 'on' : 'off'} ${L.needsHelp ? 'help' : ''}" id="livecard-${sid}">
+                <div class="live-top">
+                    <div class="live-ava" style="background:${avaColor(s.name)}">${s.avatar}<span class="live-dot ${L.online ? 'on' : 'off'}"></span></div>
+                    <div class="live-id">
+                        <div class="live-name">${s.name}</div>
+                        <div class="live-class">${s.grade}</div>
+                    </div>
+                    ${helpBadge}
+                </div>
+                <div style="margin-top:10px">${statusTag}</div>
+                ${actLine}
+                ${whyBlock}
+                <button class="live-open" onclick="openProfileTab('${sid}')">👤 פתיחת פרופיל מלא</button>
+            </div>`;
+    }
+    function renderLive() {
+        const list = GROUPS[currentGroup].students;
+        const onlineN = list.filter(sid => LIVE[sid].online).length;
+        const helpN = list.filter(sid => LIVE[sid].needsHelp).length;
+        document.getElementById('lcAll').textContent = list.length;
+        document.getElementById('lcOnline').textContent = onlineN;
+        document.getElementById('lcHelp').textContent = helpN;
+        document.getElementById('liveTime').textContent = liveTimeNow();
+
+        const filtered = list.filter(sid => {
+            const L = LIVE[sid];
+            if (liveFilter === 'online') return L.online;
+            if (liveFilter === 'help') return L.needsHelp;
+            return true;
+        });
+        const grid = document.getElementById('liveGrid');
+        grid.innerHTML = filtered.length
+            ? filtered.map(liveCardHtml).join('')
+            : `<div class="empty" style="grid-column:1/-1"><span class="big">✨</span><p>אין תלמידים שתואמים לסינון הזה כרגע.</p></div>`;
+    }
+    // simulate live changes every few seconds (demo)
+    function liveTick() {
+        const list = GROUPS[currentGroup].students;
+        // randomly flip presence for one student
+        const flipSid = list[Math.floor(Math.random() * list.length)];
+        const L = LIVE[flipSid];
+        if (Math.random() < 0.5) {
+            const wasOnline = L.online;
+            L.online = !L.online;
+            if (L.online && !wasOnline) L.activity = ['פותר/ת משימת מתמטיקה', 'צופה בהסבר קצר', 'מתרגל/ת בנושא חדש', 'עובד/ת על אתגר'][Math.floor(Math.random() * 4)];
+            else if (!L.online) { L.activity = 'לא מחובר/ת'; }
+        }
+        // occasionally a connected student starts struggling → needs help
+        const online = list.filter(sid => LIVE[sid].online && !LIVE[sid].needsHelp);
+        if (online.length && Math.random() < 0.25) {
+            const sid = online[Math.floor(Math.random() * online.length)];
+            const reasons = [
+                'נתקע/ה על אותה שאלה כבר כמה דקות.',
+                '3 ניסיונות שגויים ברצף באותה משימה — קושי נקודתי.',
+                'ירידה פתאומית בקצב — ייתכן שאיבד/ה ריכוז.',
+                'ביקש/ה רמז פעמיים ועדיין מתקשה להתקדם.',
+            ];
+            LIVE[sid].needsHelp = true;
+            LIVE[sid].why = reasons[Math.floor(Math.random() * reasons.length)];
+            if (currentView === 'live') {
+                showToast(`🔔 ${STUDENTS[sid].name} זקוק/ה לעזרה`, LIVE[sid].why);
+                setTimeout(() => {
+                    const card = document.getElementById('livecard-' + sid);
+                    if (card) { card.classList.add('flash'); setTimeout(() => card.classList.remove('flash'), 1500); }
+                }, 60);
+            }
+        }
+        // a flagged student may recover on their own (keeps the board dynamic)
+        const flagged = list.filter(sid => LIVE[sid].needsHelp && LIVE[sid].online && sid !== 'ron');
+        if (flagged.length && Math.random() < 0.3) {
+            const sid = flagged[Math.floor(Math.random() * flagged.length)];
+            LIVE[sid].needsHelp = false;
+            LIVE[sid].why = '';
+        }
+        if (currentView === 'live') renderLive();
+    }
+    function startLive() {
+        if (liveTimer) clearInterval(liveTimer);
+        liveTimer = setInterval(liveTick, 5000);
+    }
+
+    // ============================================================
     //  ACTIONS
     // ============================================================
     function selectStudent(sid) {
@@ -1183,12 +1505,16 @@
     function setView(view) {
         currentView = view;
         document.getElementById('classView').style.display = view === 'class' ? '' : 'none';
+        document.getElementById('liveView').style.display = view === 'live' ? '' : 'none';
         document.getElementById('studentView').style.display = view === 'student' ? '' : 'none';
         document.querySelectorAll('#viewToggle .vt-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
         const sub = document.querySelector('.greet p');
         if (sub) sub.textContent = view === 'class'
             ? 'תמונת מצב קבוצתית — מעורבות, התקדמות ותלמידים הדורשים תשומת לב.'
+            : view === 'live'
+            ? 'מבט לייב — מי מחובר/ת עכשיו ומי מהתלמידים זקוק/ה לעזרה בזמן אמת.'
             : 'מבט מעמיק על תלמיד/ה בודד/ת — תובנות, פערי ידע והמלצות מותאמות.';
+        if (view === 'live') renderLive();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     function openProfileTab(sid) {
@@ -1241,6 +1567,7 @@
         renderTrend();
         renderProfileBar();
         renderProfileBody();
+        renderLive();
     }
 
     document.getElementById('fGroup').addEventListener('change', e => {
@@ -1262,6 +1589,13 @@
         if (filterPopover.classList.contains('open') && !filterPopover.contains(e.target) && !filterBtn.contains(e.target)) {
             filterPopover.classList.remove('open');
         }
+    });
+
+    document.getElementById('liveFilters').addEventListener('click', e => {
+        const b = e.target.closest('.live-chip'); if (!b) return;
+        liveFilter = b.dataset.lf;
+        document.querySelectorAll('#liveFilters .live-chip').forEach(c => c.classList.toggle('active', c === b));
+        renderLive();
     });
 
     document.getElementById('trendToggle').addEventListener('click', e => {
@@ -1381,12 +1715,220 @@
         });
     }
 
+    /* ===================== TOP TABS + MESSAGES + CALENDAR ===================== */
+    let currentTab = 'dashboard';
+    let activeMsgStudent = null;
+
+    const MSG_THREADS = {
+        ron:    { unread: 2, messages: [
+            { from:'me',   text:'היי רון, שמתי לב שלא נכנסת כמה ימים — הכל בסדר? 😊', day:'אתמול', time:'09:10' },
+            { from:'them', text:'היי המורה, היה לי קצת עומס... אני אחזור היום', day:'אתמול', time:'18:24' },
+            { from:'them', text:'אפשר עזרה במשוואות מילוליות? זה קשה לי', day:'היום', time:'08:05' },
+        ]},
+        noam:   { unread: 1, messages: [
+            { from:'me',   text:'נועם, ראיתי שהתאמצת במשימות האחרונות — כל הכבוד! 👏', day:'אתמול', time:'12:40' },
+            { from:'them', text:'תודה! אני אנסה את התרגול ששלחת', day:'היום', time:'07:50' },
+        ]},
+        shahar: { unread: 0, messages: [
+            { from:'me',   text:'שחר, שלחתי לך סרטון קצר על המרת שברים לאחוזים 🎬', day:'אתמול', time:'15:20' },
+            { from:'them', text:'מעולה, אני אצפה בערב 🙂', day:'אתמול', time:'17:02' },
+        ]},
+        maya:   { unread: 0, messages: [
+            { from:'me',   text:'מאיה, הכנתי לך אתגר חקר מתקדם — בא לך? ⭐', day:'אתמול', time:'11:00' },
+            { from:'them', text:'כן בטח! אני אוהבת אתגרים 🚀', day:'אתמול', time:'11:15' },
+        ]},
+    };
+    const MSG_ORDER = ['ron','noam','shahar','maya'];
+    const STU_REPLIES = ['תודה המורה! 😊','הבנתי, אני אנסה 💪','אוקיי, אני על זה','מתי המפגש הבא שלנו?','אפשר עוד דוגמה אחת?'];
+
+    function updateMsgBadge(){
+        const total = MSG_ORDER.reduce((n,id)=> n + (MSG_THREADS[id].unread||0), 0);
+        const b = document.getElementById('msgBadge');
+        if(total>0){ b.textContent = total; b.style.display=''; } else { b.style.display='none'; }
+    }
+
+    function renderMsgStudents(){
+        const wrap = document.getElementById('msgStudents');
+        wrap.innerHTML = '<div class="msg-students-title">התלמידים שלי</div>' + MSG_ORDER.map(id=>{
+            const s = STUDENTS[id]; const t = MSG_THREADS[id];
+            const last = t.messages[t.messages.length-1];
+            const prev = (last.from==='me'?'אני: ':'') + last.text;
+            const col = avaColor(s.name);
+            return `<div class="stu-item ${id===activeMsgStudent?'active':''}" data-stu="${id}">
+                <div class="stu-ava" style="background:${col}">${s.avatar}</div>
+                <div class="stu-info">
+                    <div class="stu-name">${s.name}</div>
+                    <div class="stu-preview">${prev}</div>
+                </div>
+                ${t.unread?`<span class="stu-unread">${t.unread}</span>`:''}
+            </div>`;
+        }).join('');
+        wrap.querySelectorAll('.stu-item').forEach(el=> el.addEventListener('click', ()=> selectMsgStudent(el.dataset.stu)));
+    }
+
+    function selectMsgStudent(id){
+        activeMsgStudent = id;
+        MSG_THREADS[id].unread = 0;
+        updateMsgBadge();
+        renderMsgStudents();
+        renderMsgThread();
+    }
+
+    function nowHM(){ const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+
+    function renderMsgThread(){
+        const wrap = document.getElementById('msgThread');
+        if(!activeMsgStudent){
+            wrap.innerHTML = `<div class="thread-empty"><div class="te-ico">💬</div><div>בחר/י תלמיד מהרשימה כדי להתחיל שיחה</div></div>`;
+            return;
+        }
+        const s = STUDENTS[activeMsgStudent]; const t = MSG_THREADS[activeMsgStudent];
+        const online = (typeof LIVE!=='undefined' && LIVE[activeMsgStudent] && LIVE[activeMsgStudent].online);
+        const col = avaColor(s.name);
+        let lastDay = '';
+        const body = t.messages.map(m=>{
+            let sep = '';
+            if(m.day && m.day!==lastDay){ sep = `<div class="m-day">${m.day}</div>`; lastDay = m.day; }
+            return `${sep}<div class="m-bubble ${m.from}">${escapeHtml(m.text)}<div class="m-time">${m.time}</div></div>`;
+        }).join('');
+        wrap.innerHTML = `
+            <div class="thread-head">
+                <div class="th-ava" style="background:${col}">${s.avatar}</div>
+                <div><div class="th-name">${s.name}</div>
+                <div class="th-sub">${online?'<span class="live-dot2"></span> מחובר/ת עכשיו':s.grade}</div></div>
+            </div>
+            <div class="thread-body" id="threadBody">${body}</div>
+            <form class="thread-input" id="threadForm">
+                <input id="threadInput" placeholder="כתוב/כתבי ל${s.name.split(' ')[0]}..." autocomplete="off">
+                <button type="submit" title="שליחה">➤</button>
+            </form>`;
+        const tb = document.getElementById('threadBody'); tb.scrollTop = tb.scrollHeight;
+        document.getElementById('threadForm').addEventListener('submit', e=>{
+            e.preventDefault();
+            const inp = document.getElementById('threadInput');
+            const v = inp.value.trim(); if(!v) return;
+            sendStudentMsg(v); inp.value='';
+        });
+    }
+
+    function sendStudentMsg(text){
+        const id = activeMsgStudent; if(!id) return;
+        MSG_THREADS[id].messages.push({ from:'me', text, day:'היום', time: nowHM() });
+        renderMsgThread();
+        setTimeout(()=>{
+            const r = STU_REPLIES[Math.floor(Math.random()*STU_REPLIES.length)];
+            MSG_THREADS[id].messages.push({ from:'them', text:r, day:'היום', time: nowHM() });
+            if(activeMsgStudent===id) renderMsgThread();
+        }, 1400);
+    }
+
+    // ----- Calendar -----
+    const CAL_YEAR = 2026, CAL_MONTH = 5; // June (0-indexed)
+    const CAL_MONTH_NAMES = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+    const CAL_WEEKDAYS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
+    const CAL_DAY_NAMES = ['יום ראשון','יום שני','יום שלישי','יום רביעי','יום חמישי','יום שישי','שבת'];
+    const EV_TYPES = {
+        meeting:  { color:'#7c5cff', soft:'#f3effe', ico:'👩‍🏫', tag:'מפגש כיתה' },
+        talk:     { color:'#4071b8', soft:'#eef4fd', ico:'💬', tag:'שיחה אישית' },
+        task:     { color:'#3d9466', soft:'#eefaf1', ico:'✍️', tag:'מטלה' },
+        deadline: { color:'#c25b66', soft:'#fdf3f4', ico:'⏰', tag:'דדליין' },
+        parents:  { color:'#b9842f', soft:'#fdf6ec', ico:'👨‍👩‍👧', tag:'מפגש הורים' },
+    };
+    const CAL_EVENTS = {
+        '2026-06-19': [ {time:'14:00', type:'talk', title:'שיחה אישית עם רון לוי'} ],
+        '2026-06-21': [ {time:'10:00', type:'meeting', title:'מפגש כיתה ח׳1 — מתמטיקה'}, {time:'13:00', type:'task', title:'בדיקת מטלות שבועיות'} ],
+        '2026-06-23': [ {time:'12:00', type:'parents', title:'מפגש הורים — נועם כהן'} ],
+        '2026-06-25': [ {time:'כל היום', type:'deadline', title:'דדליין דוחות התקדמות'} ],
+        '2026-06-28': [ {time:'09:00', type:'meeting', title:'מפגש כיתה ז׳2 — מתמטיקה'} ],
+    };
+    const CAL_TODAY = '2026-06-19';
+    function dstr(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+
+    function renderCalMonth(){
+        const startDay = new Date(CAL_YEAR, CAL_MONTH, 1).getDay();
+        const daysInMonth = new Date(CAL_YEAR, CAL_MONTH+1, 0).getDate();
+        let cells = '';
+        for(let i=0;i<startDay;i++) cells += `<div class="cal-cell blank"></div>`;
+        for(let d=1; d<=daysInMonth; d++){
+            const ds = dstr(CAL_YEAR, CAL_MONTH, d);
+            const evs = CAL_EVENTS[ds] || [];
+            const chips = evs.map(e=>{
+                const m = EV_TYPES[e.type];
+                return `<div class="cal-chip" style="--ev-color:${m.color};--ev-soft:${m.soft}" title="${e.time} · ${e.title}">${m.ico} ${e.title}</div>`;
+            }).join('');
+            cells += `<div class="cal-cell ${ds===CAL_TODAY?'today':''}"><div class="cal-cell-num">${d}</div>${chips}</div>`;
+        }
+        document.getElementById('calMonthWrap').innerHTML = `
+            <div class="cal-grid">
+                <div class="cal-weekdays">${CAL_WEEKDAYS.map(w=>`<div>${w}</div>`).join('')}</div>
+                <div class="cal-days">${cells}</div>
+            </div>`;
+        document.getElementById('calMonthTitle').textContent = `${CAL_MONTH_NAMES[CAL_MONTH]} ${CAL_YEAR}`;
+    }
+
+    function renderCalList(){
+        const keys = Object.keys(CAL_EVENTS).sort();
+        const html = keys.map(ds=>{
+            const [y,m,d] = ds.split('-').map(Number);
+            const dt = new Date(y, m-1, d);
+            const events = CAL_EVENTS[ds].map(e=>{
+                const meta = EV_TYPES[e.type];
+                return `<div class="cal-event" style="--ev-color:${meta.color};--ev-soft:${meta.soft}">
+                    <div class="cal-ev-time">${e.time}</div>
+                    <div class="cal-ev-ico">${meta.ico}</div>
+                    <div class="cal-ev-body"><div class="cal-ev-title">${e.title}</div><div class="cal-ev-tag">${meta.tag}</div></div>
+                </div>`;
+            }).join('');
+            return `<div class="cal-day">
+                <div class="cal-day-head">
+                    <div class="cal-day-num"><b>${d}</b><span>${CAL_MONTH_NAMES[m-1]}</span></div>
+                    <div><div class="cal-day-label">${CAL_DAY_NAMES[dt.getDay()]}${ds===CAL_TODAY?' · היום':''}</div>
+                    <div class="cal-day-sub">${d} ב${CAL_MONTH_NAMES[m-1]} ${y}</div></div>
+                </div>
+                <div class="cal-events">${events}</div>
+            </div>`;
+        }).join('');
+        document.getElementById('calListWrap').innerHTML = `<div class="cal-agenda">${html}</div>`;
+    }
+
+    function setTab(tab){
+        currentTab = tab;
+        const isDash = tab==='dashboard';
+        document.querySelector('.main').style.display = isDash ? '' : 'none';
+        document.querySelector('.chat-panel').style.display = isDash ? '' : 'none';
+        document.getElementById('messagesPane').style.display = tab==='messages' ? '' : 'none';
+        document.getElementById('calendarPane').style.display = tab==='calendar' ? '' : 'none';
+        document.querySelectorAll('#topTabs .tt-btn').forEach(b=> b.classList.toggle('active', b.dataset.tab===tab));
+        if(tab==='messages'){
+            if(!activeMsgStudent) activeMsgStudent = MSG_ORDER[0];
+            MSG_THREADS[activeMsgStudent].unread = 0;
+            updateMsgBadge();
+            renderMsgStudents(); renderMsgThread();
+        }
+        if(tab==='calendar'){ renderCalMonth(); renderCalList(); }
+        window.scrollTo({ top:0, behavior:'smooth' });
+    }
+
+    document.getElementById('topTabs').addEventListener('click', e=>{
+        const b = e.target.closest('.tt-btn'); if(!b) return;
+        setTab(b.dataset.tab);
+    });
+    document.getElementById('calViewToggle').addEventListener('click', e=>{
+        const b = e.target.closest('.cvt-btn'); if(!b) return;
+        document.querySelectorAll('#calViewToggle .cvt-btn').forEach(c=> c.classList.toggle('active', c===b));
+        const month = b.dataset.cv==='month';
+        document.getElementById('calMonthWrap').style.display = month ? '' : 'none';
+        document.getElementById('calListWrap').style.display = month ? 'none' : '';
+    });
+
     // boot
     renderShell();
     renderAll();
     initChat();
     setView('class');
     updateContextLine();
+    startLive();
+    updateMsgBadge();
     </script>
 </body>
 </html>

@@ -930,39 +930,51 @@
         }
         .chat-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(124,92,255,0.36); }
 
-        /* ===== HERO CARD (primary task) ===== */
+        /* ===== HERO CARD (Yubi's daily task message) ===== */
         .hero-card {
-            position: relative; overflow: hidden;
-            background: linear-gradient(120deg, #6d4dff 0%, #8b63ff 55%, #9f7afe 100%);
+            position: relative; overflow: visible;
+            background: #fff;
+            border: 1px solid #ece8f8;
             border-radius: 26px;
-            padding: 22px 32px;
-            color: #fff;
-            box-shadow: 0 18px 42px rgba(124,92,255,0.34);
+            padding: 20px 24px;
+            box-shadow: 0 14px 34px rgba(124,92,255,0.12);
             display: flex; align-items: center; gap: 18px; min-height: 172px;
         }
-        .hero-card .spark { position: absolute; color: rgba(255,255,255,0.55); z-index: 1; }
-        .hero-body { flex: 1; position: relative; z-index: 2; }
-        .hero-eyebrow { font-size: 0.82rem; font-weight: 600; opacity: 0.92; display: flex; align-items: center; gap: 6px; }
-        .hero-title { font-size: 1.55rem; font-weight: 800; margin: 8px 0 6px; line-height: 1.32; }
-        .hero-subtitle { font-size: 0.86rem; opacity: 0.92; margin-bottom: 16px; }
-        .hero-illu {
-            flex-shrink: 0; position: relative; z-index: 2;
-            width: 168px; height: 150px;
-            display: flex; align-items: center; justify-content: center;
+        .hero-yubi {
+            flex-shrink: 0; width: 124px; height: 124px; border-radius: 50%;
+            background: radial-gradient(circle at 38% 30%, #efe9ff, #ded3ff);
+            box-shadow: inset 0 0 26px rgba(124,92,255,0.16);
+            position: relative; z-index: 2;
         }
-        .hero-illu .illu-circle {
-            width: 130px; height: 130px; border-radius: 50%;
-            background: radial-gradient(circle at 38% 30%, rgba(255,255,255,0.34), rgba(255,255,255,0.06));
-            display: flex; align-items: center; justify-content: center;
-            font-size: 3.8rem;
-            box-shadow: inset 0 0 32px rgba(255,255,255,0.2);
+        .hero-bubble {
+            position: relative; flex: 1; align-self: stretch;
+            display: flex; flex-direction: column; justify-content: center;
+            background: linear-gradient(120deg, #6d4dff 0%, #8b63ff 55%, #9f7afe 100%);
+            color: #fff; border-radius: 22px; padding: 18px 22px;
+            box-shadow: 0 12px 30px rgba(124,92,255,0.26);
         }
-        .hero-illu .illu-float { position: absolute; font-size: 1.5rem; animation: bob 3s ease-in-out infinite; }
+        /* speech tail pointing toward Yubi (right side in RTL) */
+        .hero-bubble::after {
+            content: ''; position: absolute; top: 38px; right: -11px;
+            width: 0; height: 0;
+            border-top: 11px solid transparent; border-bottom: 11px solid transparent;
+            border-left: 13px solid #7b5cff;
+        }
+        .hero-bubble-head { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+        .hero-yubi-name { font-size: 0.95rem; font-weight: 800; }
+        .hero-yubi-badge {
+            font-size: 0.64rem; font-weight: 700; letter-spacing: 0.02em;
+            background: rgba(255,255,255,0.22); color: #fff;
+            padding: 3px 9px; border-radius: 999px;
+        }
+        .hero-msg-text { font-size: 1.05rem; font-weight: 600; line-height: 1.5; margin-bottom: 15px; }
+        .hero-msg-text b { font-weight: 800; }
         .hero-cta {
+            align-self: flex-start;
             font-family: 'Rubik', sans-serif;
             font-size: 0.9rem; font-weight: 700; color: #7c5cff;
             background: #fff; border: none; border-radius: 14px;
-            padding: 11px 26px; cursor: pointer;
+            padding: 11px 22px; cursor: pointer;
             box-shadow: 0 6px 16px rgba(0,0,0,0.12);
             transition: transform 0.2s;
             text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
@@ -1555,9 +1567,207 @@
         @media (max-width: 1100px) {
             .dashboard-grid { grid-template-columns: 1fr; }
         }
+
+        /* ============================================================
+           TOP BAR + 3 PROMINENT TABS (Dashboard / Chat / Calendar)
+           ============================================================ */
+        .top-bar {
+            position: sticky; top: 0; z-index: 240;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #efecf8;
+            box-shadow: 0 2px 12px rgba(124,92,255,0.05);
+        }
+        .top-bar-inner {
+            max-width: 1180px; margin: 0 auto;
+            display: flex; align-items: center; gap: 16px;
+            padding: 10px 28px;
+        }
+        .tb-logo { font-size: 1rem; font-weight: 700; color: #4a3d8f; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+        .tb-logo b { background: linear-gradient(135deg,#7c5cff,#9f7afe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .tb-logo .tb-logo-mark { font-size: 1.05rem; }
+
+        .top-tabs { display: flex; gap: 8px; margin: 0 auto; }
+        .tt-btn {
+            position: relative;
+            font-family: 'Rubik', sans-serif; font-size: 0.92rem; font-weight: 700;
+            color: #6b6486; background: transparent; border: 1.5px solid transparent;
+            border-radius: 14px; padding: 9px 20px; cursor: pointer;
+            display: flex; align-items: center; gap: 7px;
+            transition: all 0.2s ease;
+        }
+        .tt-btn .tt-ico { font-size: 1.05rem; }
+        .tt-btn:hover { background: #f5f2fe; color: #7c5cff; }
+        .tt-btn.active {
+            color: #fff;
+            background: linear-gradient(135deg, #7c5cff, #9f7afe);
+            box-shadow: 0 6px 16px rgba(124,92,255,0.30);
+        }
+        .tt-badge {
+            min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
+            background: #ff6b6b; color: #fff; font-size: 0.66rem; font-weight: 700;
+            display: inline-flex; align-items: center; justify-content: center;
+            line-height: 1;
+        }
+        .tt-btn.active .tt-badge { background: rgba(255,255,255,0.28); }
+
+        .tb-profile { display: flex; align-items: center; gap: 9px; white-space: nowrap; }
+        .tb-profile .tb-ava {
+            width: 34px; height: 34px; border-radius: 50%;
+            background: linear-gradient(135deg,#7c5cff,#9f7afe); color: #fff;
+            display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem;
+        }
+        .tb-profile .tb-meta { line-height: 1.15; }
+        .tb-profile .tb-name { font-size: 0.8rem; font-weight: 700; color: var(--text-dark); }
+        .tb-profile .tb-role { font-size: 0.66rem; color: var(--text-light); }
+
+        .pane { max-width: 1180px; margin: 0 auto; padding: 24px 28px; }
+
+        @media (max-width: 720px) {
+            .top-bar-inner { flex-wrap: wrap; gap: 10px; padding: 10px 14px; }
+            .tb-logo, .tb-profile { display: none; }
+            .top-tabs { width: 100%; }
+            .tt-btn { flex: 1; justify-content: center; padding: 9px 10px; font-size: 0.84rem; }
+        }
+
+        /* ============================================================
+           TEACHER MESSAGING (CHAT) PANE
+           ============================================================ */
+        .msg-head { margin-bottom: 18px; }
+        .msg-head h1 { font-size: 1.4rem; font-weight: 700; color: #4a3d8f; display: flex; align-items: center; gap: 9px; }
+        .msg-head p { font-size: 0.84rem; color: var(--text-light); margin-top: 3px; }
+
+        .msg-layout {
+            display: grid; grid-template-columns: 300px 1fr; gap: 18px;
+            height: calc(100vh - 200px); min-height: 460px;
+        }
+        .msg-teachers {
+            background: #fff; border: 1px solid rgba(124,92,255,0.08); border-radius: 20px;
+            padding: 12px; overflow-y: auto; box-shadow: var(--shadow-sm);
+        }
+        .msg-teachers-title { font-size: 0.72rem; font-weight: 700; color: #9a93b5; text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 8px 10px; }
+        .teacher-item {
+            display: flex; align-items: center; gap: 11px; padding: 11px 10px;
+            border-radius: 14px; cursor: pointer; transition: background 0.18s; position: relative;
+        }
+        .teacher-item:hover { background: #f7f5ff; }
+        .teacher-item.active { background: linear-gradient(135deg, rgba(124,92,255,0.10), rgba(159,122,254,0.06)); }
+        .teacher-ava {
+            width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-weight: 700; font-size: 0.95rem;
+        }
+        .teacher-info { flex: 1; min-width: 0; }
+        .teacher-name { font-size: 0.88rem; font-weight: 700; color: var(--text-dark); }
+        .teacher-sub { font-size: 0.72rem; color: #9a93b5; }
+        .teacher-preview { font-size: 0.74rem; color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+        .teacher-unread {
+            min-width: 19px; height: 19px; padding: 0 5px; border-radius: 999px;
+            background: #7c5cff; color: #fff; font-size: 0.66rem; font-weight: 700;
+            display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+
+        .msg-thread {
+            background: #fff; border: 1px solid rgba(124,92,255,0.08); border-radius: 20px;
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow-sm);
+        }
+        .thread-head {
+            display: flex; align-items: center; gap: 11px; padding: 14px 18px;
+            border-bottom: 1px solid #f0edf7;
+        }
+        .thread-head .teacher-ava { width: 40px; height: 40px; font-size: 0.85rem; }
+        .thread-head .th-name { font-size: 0.95rem; font-weight: 700; color: var(--text-dark); }
+        .thread-head .th-sub { font-size: 0.72rem; color: #48bb78; display: flex; align-items: center; gap: 4px; }
+        .thread-body {
+            flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 10px;
+            background: #faf9ff;
+        }
+        .m-day { text-align: center; font-size: 0.68rem; color: #b5afc9; margin: 6px 0; }
+        .m-bubble {
+            max-width: 74%; padding: 10px 14px; border-radius: 16px; font-size: 0.86rem; line-height: 1.45;
+            position: relative; word-wrap: break-word;
+        }
+        .m-bubble .m-time { display: block; font-size: 0.62rem; opacity: 0.6; margin-top: 4px; }
+        .m-bubble.them { align-self: flex-start; background: #fff; color: var(--text-dark); border: 1px solid #efecf8; border-bottom-right-radius: 5px; }
+        .m-bubble.me { align-self: flex-end; background: linear-gradient(135deg,#7c5cff,#9f7afe); color: #fff; border-bottom-left-radius: 5px; }
+        .thread-input {
+            display: flex; gap: 9px; padding: 12px 16px; border-top: 1px solid #f0edf7; background: #fff;
+        }
+        .thread-input input {
+            flex: 1; border: 1px solid #e7e0fb; border-radius: 999px; padding: 11px 16px;
+            font-family: 'Rubik', sans-serif; font-size: 0.86rem; outline: none;
+        }
+        .thread-input input:focus { border-color: #7c5cff; }
+        .thread-input button {
+            width: 44px; height: 44px; border-radius: 50%; border: none; flex-shrink: 0;
+            background: linear-gradient(135deg,#7c5cff,#9f7afe); color: #fff; cursor: pointer; font-size: 1.05rem;
+        }
+        .thread-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #b5afc9; gap: 10px; }
+        .thread-empty .te-ico { font-size: 2.6rem; }
+
+        @media (max-width: 820px) {
+            .msg-layout { grid-template-columns: 1fr; height: auto; }
+            .msg-teachers { max-height: 260px; }
+            .msg-thread { height: 60vh; }
+        }
+
+        /* ============================================================
+           CALENDAR / JOURNAL (יומן) PANE
+           ============================================================ */
+        .cal-head { margin-bottom: 18px; }
+        .cal-head h1 { font-size: 1.4rem; font-weight: 700; color: #4a3d8f; display: flex; align-items: center; gap: 9px; }
+        .cal-head p { font-size: 0.84rem; color: var(--text-light); margin-top: 3px; }
+        .cal-agenda { display: flex; flex-direction: column; gap: 16px; }
+        .cal-day {
+            background: #fff; border: 1px solid rgba(124,92,255,0.08); border-radius: 20px;
+            padding: 16px 18px; box-shadow: var(--shadow-sm);
+        }
+        .cal-day-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+        .cal-day-num {
+            width: 46px; height: 46px; border-radius: 14px; flex-shrink: 0;
+            background: linear-gradient(135deg,#f3eeff,#ece4ff); color: #7c5cff;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
+        }
+        .cal-day-num b { font-size: 1.15rem; font-weight: 800; }
+        .cal-day-num span { font-size: 0.6rem; font-weight: 600; margin-top: 2px; }
+        .cal-day-label { font-size: 0.95rem; font-weight: 700; color: var(--text-dark); }
+        .cal-day-sub { font-size: 0.72rem; color: #9a93b5; }
+        .cal-events { display: flex; flex-direction: column; gap: 8px; }
+        .cal-event {
+            display: flex; align-items: center; gap: 12px; padding: 11px 13px;
+            background: #faf9fe; border: 1px solid rgba(124,92,255,0.05); border-radius: 13px;
+            border-right: 3px solid var(--ev-color, #7c5cff);
+        }
+        .cal-ev-time { font-size: 0.78rem; font-weight: 700; color: var(--text-medium); min-width: 48px; }
+        .cal-ev-ico { font-size: 1.1rem; }
+        .cal-ev-body { flex: 1; }
+        .cal-ev-title { font-size: 0.85rem; font-weight: 600; color: var(--text-dark); }
+        .cal-ev-tag {
+            font-size: 0.66rem; font-weight: 700; padding: 2px 9px; border-radius: 999px;
+            background: var(--ev-soft, #f3eeff); color: var(--ev-color, #7c5cff);
+        }
     </style>
 </head>
 <body>
+
+    <!-- Top bar with 3 prominent tabs -->
+    <header class="top-bar">
+        <div class="top-bar-inner">
+            <div class="tb-logo"><span class="tb-logo-mark">🚀</span> YuviLab <b>720</b></div>
+            <nav class="top-tabs" id="topTabs">
+                <button type="button" class="tt-btn active" data-mode="dashboard"><span class="tt-ico">📊</span> דאשבורד</button>
+                <button type="button" class="tt-btn" data-mode="chat"><span class="tt-ico">💬</span> צאט <span class="tt-badge" id="chatBadge">2</span></button>
+                <button type="button" class="tt-btn" data-mode="calendar"><span class="tt-ico">📅</span> יומן</button>
+            </nav>
+            <div class="tb-profile">
+                <div class="tb-meta" style="text-align:left">
+                    <div class="tb-name" id="tbName">תלמיד/ה</div>
+                    <div class="tb-role">לומד/ת ב‑YuviLab</div>
+                </div>
+                <div class="tb-ava" id="tbAva">ת</div>
+            </div>
+        </div>
+    </header>
 
     <!-- Main Content -->
     <main class="main-content" id="mainContent">
@@ -1569,6 +1779,29 @@
         </div>
         <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
     </main>
+
+    <!-- Chat pane (messaging with teachers) -->
+    <div class="pane" id="chatPane" style="display:none;">
+        <div class="msg-head">
+            <h1>💬 הצ'אט שלי עם המורים</h1>
+            <p>אפשר לכתוב למורים שלך, לשאול שאלות ולתאם מפגשים</p>
+        </div>
+        <div class="msg-layout">
+            <aside class="msg-teachers" id="msgTeachers">
+                <div class="msg-teachers-title">המורים שלי</div>
+            </aside>
+            <section class="msg-thread" id="msgThread"></section>
+        </div>
+    </div>
+
+    <!-- Calendar / Journal pane -->
+    <div class="pane" id="calendarPane" style="display:none;">
+        <div class="cal-head">
+            <h1>📅 היומן שלי</h1>
+            <p>המפגשים, המשימות והיעדים הקרובים שלך — הכל במקום אחד</p>
+        </div>
+        <div class="cal-agenda" id="calAgenda"></div>
+    </div>
 
     <!-- Real-time update toast -->
     <div class="live-toast" id="liveToast">
@@ -1758,6 +1991,15 @@
             return (data.mapping && data.mapping.strengths && data.mapping.strengths[0]) || 'סקרנות';
         }
 
+        // Short, warm task message written as if Yubi just sent it in chat —
+        // explains *why* to practice now and connects to the child's world.
+        function heroMessage(childName, subject, interests) {
+            const first = ((childName || '').split(' ')[0]) || 'חבר';
+            const interest = (interests && interests.length) ? interests[0] : null;
+            const link = interest ? ` שמחברת את זה ל${interest} שאתה אוהב` : '';
+            return `היי ${first}! 👋 שמתי לב שב<b>${subject}</b> יש משהו קטן שכיף לחזק היום. הכנתי לך משימה קצרה של 15 דקות${link} — ננסה יחד? 💪`;
+        }
+
         // Hero illustration + subtitle derived from the focus subject
         function heroSubtitle(name) {
             if (name.includes('מדע')) return 'חקר קצר על צמחים והסביבה';
@@ -1817,6 +2059,7 @@
 
             setupNav();
             injectCopilotSparks();
+            updateTopProfile();
         }
 
         // -------- HOME --------
@@ -1841,14 +2084,14 @@
 
                 <div class="home-section">
                     <div class="hero-card fade-in">
-                        <div class="hero-body">
-                            <div class="hero-eyebrow">המשימה שלי להיום</div>
-                            <div class="hero-title">לתרגל 15 דקות ב${heroSubject} דרך משימה קצרה וכיפית</div>
-                            <div class="hero-subtitle">${heroSubtitle(heroSubject)}</div>
-                            <a class="hero-cta" href="/learning/">מתחילים ←</a>
-                        </div>
-                        <div class="hero-illu">
-                            <div class="illu-circle">${heroIllu(heroSubject)}</div>
+                        <div class="hero-yubi" id="heroYubiRobot"></div>
+                        <div class="hero-bubble">
+                            <div class="hero-bubble-head">
+                                <span class="hero-yubi-name">יובי</span>
+                                <span class="hero-yubi-badge">המנטור שלך</span>
+                            </div>
+                            <div class="hero-msg-text">${heroMessage(data.name, heroSubject, (data.mapping && data.mapping.interests) || [])}</div>
+                            <a class="hero-cta" href="/learning/">${heroIllu(heroSubject)} מתחילים במשימה ←</a>
                         </div>
                     </div>
                 </div>
@@ -1982,10 +2225,20 @@
                 chk.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
             });
             animateBars(home.querySelectorAll('.subject-bar-fill'));
+            mountHeroYubi();
         }
 
-
-        // -------- DEEP: SUBJECTS --------
+        // Mount Yubi's robot head inside the daily-task message bubble
+        function mountHeroYubi() {
+            const el = document.getElementById('heroYubiRobot');
+            if (!el || el.querySelector('canvas')) return;
+            const go = () => window.YubiRobot && window.YubiRobot.mount(el, {
+                view: 'head',
+                isActive: () => el.offsetParent !== null
+            });
+            if (window.YubiRobot) go();
+            else { const id = setInterval(() => { if (window.YubiRobot) { clearInterval(id); go(); } }, 60); }
+        }
         let subjectIndex = 0;
         function renderSubjectsView(data) {
             const subjects = data.subjects || [];
@@ -3019,6 +3272,187 @@
             });
         });
         document.getElementById('micBtn').addEventListener('click', startVoiceDemo);
+
+        // ================================================
+        // TOP TABS: Dashboard / Chat (teachers) / Calendar
+        // ================================================
+        let currentMode = 'dashboard';
+        let activeTeacher = null;
+
+        const TEACHERS = [
+            {
+                id: 'rotem', name: 'המורה רותם', subject: 'מתמטיקה', avatar: 'ר', color: '#7c5cff', online: true, unread: 1,
+                messages: [
+                    { from: 'them', text: 'היי! ראיתי שהתקדמת יפה בשברים השבוע 👏', day: 'אתמול', time: '14:20' },
+                    { from: 'me', text: 'תודה! עדיין קצת מתקשה בבעיות מילוליות 😅', day: 'אתמול', time: '14:25' },
+                    { from: 'them', text: 'בוא נעבור על זה יחד במפגש הבא. הכנתי לך דוגמאות מהחיים שיעזרו 🙂', day: 'אתמול', time: '14:31' }
+                ]
+            },
+            {
+                id: 'dana', name: 'המורה דנה', subject: 'מדעים', avatar: 'ד', color: '#48bb78', online: false, unread: 1,
+                messages: [
+                    { from: 'them', text: 'אל תשכח/י להביא את הניסוי הקטן למפגש ביום ראשון 🔬', day: 'היום', time: '09:10' }
+                ]
+            }
+        ];
+
+        function updateTopProfile() {
+            if (!currentData) return;
+            const n = (currentData.name || 'תלמיד/ה').trim();
+            const nameEl = document.getElementById('tbName');
+            const avaEl = document.getElementById('tbAva');
+            if (nameEl) nameEl.textContent = n;
+            if (avaEl) avaEl.textContent = n.charAt(0) || 'ת';
+        }
+
+        function updateChatBadge() {
+            const total = TEACHERS.reduce((s, t) => s + (t.unread || 0), 0);
+            const badge = document.getElementById('chatBadge');
+            if (!badge) return;
+            if (total > 0) { badge.textContent = total; badge.style.display = ''; }
+            else badge.style.display = 'none';
+        }
+
+        function renderTeacherList() {
+            const wrap = document.getElementById('msgTeachers');
+            wrap.innerHTML = '<div class="msg-teachers-title">המורים שלי</div>' +
+                TEACHERS.map(t => {
+                    const last = t.messages[t.messages.length - 1];
+                    const preview = last ? (last.from === 'me' ? 'את/ה: ' : '') + last.text : '';
+                    return `<div class="teacher-item ${activeTeacher === t.id ? 'active' : ''}" data-teacher="${t.id}">
+                        <div class="teacher-ava" style="background:linear-gradient(135deg,${t.color},${t.color}cc)">${t.avatar}</div>
+                        <div class="teacher-info">
+                            <div class="teacher-name">${t.name}</div>
+                            <div class="teacher-sub">${t.subject}</div>
+                            <div class="teacher-preview">${preview}</div>
+                        </div>
+                        ${t.unread ? `<span class="teacher-unread">${t.unread}</span>` : ''}
+                    </div>`;
+                }).join('');
+            wrap.querySelectorAll('.teacher-item').forEach(el => {
+                el.addEventListener('click', () => selectTeacher(el.dataset.teacher));
+            });
+        }
+
+        function selectTeacher(id) {
+            activeTeacher = id;
+            const t = TEACHERS.find(x => x.id === id);
+            if (t) t.unread = 0;
+            updateChatBadge();
+            renderTeacherList();
+            renderThread();
+        }
+
+        function renderThread() {
+            const thread = document.getElementById('msgThread');
+            const t = TEACHERS.find(x => x.id === activeTeacher);
+            if (!t) {
+                thread.innerHTML = `<div class="thread-empty"><div class="te-ico">💬</div><div>בחר/י מורה כדי להתחיל לשוחח</div></div>`;
+                return;
+            }
+            let lastDay = '';
+            const body = t.messages.map(m => {
+                let dayHdr = '';
+                if (m.day && m.day !== lastDay) { lastDay = m.day; dayHdr = `<div class="m-day">${m.day}</div>`; }
+                return `${dayHdr}<div class="m-bubble ${m.from}">${m.text}<span class="m-time">${m.time}</span></div>`;
+            }).join('');
+            thread.innerHTML = `
+                <div class="thread-head">
+                    <div class="teacher-ava" style="background:linear-gradient(135deg,${t.color},${t.color}cc)">${t.avatar}</div>
+                    <div>
+                        <div class="th-name">${t.name}</div>
+                        <div class="th-sub">${t.online ? '<span class="live-dot"></span> מחובר/ת עכשיו' : t.subject}</div>
+                    </div>
+                </div>
+                <div class="thread-body" id="threadBody">${body}</div>
+                <form class="thread-input" id="threadForm">
+                    <input id="threadInput" type="text" placeholder="כתוב/כתבי ל${t.name}..." autocomplete="off">
+                    <button type="submit" aria-label="שלח">➤</button>
+                </form>`;
+            const tb = document.getElementById('threadBody');
+            tb.scrollTop = tb.scrollHeight;
+            document.getElementById('threadForm').addEventListener('submit', e => {
+                e.preventDefault();
+                const inp = document.getElementById('threadInput');
+                sendTeacherMsg(inp.value);
+                inp.value = '';
+            });
+        }
+
+        function sendTeacherMsg(text) {
+            text = (text || '').trim();
+            if (!text) return;
+            const t = TEACHERS.find(x => x.id === activeTeacher);
+            if (!t) return;
+            const now = new Date();
+            const hh = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            t.messages.push({ from: 'me', text, day: 'היום', time: hh });
+            renderThread();
+            setTimeout(() => {
+                const replies = ['קיבלתי! אענה לך בהקדם 🙂', 'כל הכבוד על השאלה 👏 נדבר על זה במפגש', 'מעולה, רשמתי לי 📝', 'אחלה! ממשיכים ככה 💪'];
+                t.messages.push({ from: 'them', text: replies[Math.floor(Math.random() * replies.length)], day: 'היום', time: hh });
+                if (currentMode === 'chat' && activeTeacher === t.id) renderThread();
+            }, 1400);
+        }
+
+        const CALENDAR = [
+            {
+                dnum: '21', dlabel: 'יום ראשון', dsub: '21 ביוני 2026', events: [
+                    { time: '10:00', ico: '👩‍🏫', title: 'מפגש עם המורה רותם — מתמטיקה', tag: 'מפגש', color: '#7c5cff', soft: '#f3eeff' },
+                    { time: '16:00', ico: '✏️', title: 'תרגול שברים — 15 דקות', tag: 'משימה', color: '#48bb78', soft: '#eafaf1' }
+                ]
+            },
+            {
+                dnum: '23', dlabel: 'יום שלישי', dsub: '23 ביוני 2026', events: [
+                    { time: '12:00', ico: '🔬', title: 'ניסוי מדעים עם המורה דנה', tag: 'מפגש', color: '#7c5cff', soft: '#f3eeff' }
+                ]
+            },
+            {
+                dnum: '25', dlabel: 'יום חמישי', dsub: '25 ביוני 2026', events: [
+                    { time: 'כל היום', ico: '🎯', title: 'יעד: לסיים 3 משימות קצרות', tag: 'יעד', color: '#f6ad55', soft: '#fff5e8' }
+                ]
+            }
+        ];
+
+        function renderCalendar() {
+            const wrap = document.getElementById('calAgenda');
+            wrap.innerHTML = CALENDAR.map(d => `
+                <div class="cal-day">
+                    <div class="cal-day-head">
+                        <div class="cal-day-num"><b>${d.dnum}</b><span>יוני</span></div>
+                        <div><div class="cal-day-label">${d.dlabel}</div><div class="cal-day-sub">${d.dsub}</div></div>
+                    </div>
+                    <div class="cal-events">
+                        ${d.events.map(e => `
+                            <div class="cal-event" style="--ev-color:${e.color};--ev-soft:${e.soft}">
+                                <div class="cal-ev-time">${e.time}</div>
+                                <div class="cal-ev-ico">${e.ico}</div>
+                                <div class="cal-ev-body"><div class="cal-ev-title">${e.title}</div></div>
+                                <span class="cal-ev-tag">${e.tag}</span>
+                            </div>`).join('')}
+                    </div>
+                </div>`).join('');
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('mainContent').style.display = mode === 'dashboard' ? '' : 'none';
+            document.getElementById('chatPane').style.display = mode === 'chat' ? '' : 'none';
+            document.getElementById('calendarPane').style.display = mode === 'calendar' ? '' : 'none';
+            document.querySelectorAll('#topTabs .tt-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+            if (mode === 'chat') {
+                if (!activeTeacher && TEACHERS.length) activeTeacher = TEACHERS[0].id;
+                renderTeacherList();
+                renderThread();
+            }
+            if (mode === 'calendar') renderCalendar();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        document.querySelectorAll('#topTabs .tt-btn').forEach(b => {
+            b.addEventListener('click', () => setMode(b.dataset.mode));
+        });
+        updateChatBadge();
 
         // ================================================
         // EVENTS
