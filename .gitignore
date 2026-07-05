@@ -1,6 +1,7 @@
 .venv/
 backend/.env
 .env
+.runtime/
 __pycache__/
 *.py[cod]
 frontend/node_modules/

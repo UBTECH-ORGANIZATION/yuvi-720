@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { apiPost, getLearnerState, updateLearnerState } from '../../services/api'
 import type { MappingResults, Profile, ProfileImprove, ProfileStrength } from './types'
 
 type SceneStep =
@@ -10,7 +11,6 @@ type SceneStep =
 
 type Status = 'loading' | 'analyzing' | 'noData' | 'journey'
 
-const CACHE_KEY = 'profile_cache_v2'
 const loadingSteps = [
   { icon: '🎯', text: 'מזהה את הסגנון שלך...' },
   { icon: '💡', text: 'מחפש חוזקות מיוחדות...' },
@@ -45,27 +45,23 @@ export function ResultsPage() {
   }, [status, loadingStep])
 
   async function loadResults() {
-    const stored = localStorage.getItem('mapping_results')
-    if (!stored) {
+    const state = await getLearnerState()
+    const data = state.mapping_results as MappingResults | null | undefined
+    if (!data) {
       setStatus('noData')
       return
     }
 
-    const data = JSON.parse(stored) as MappingResults
     const name = data.student_name || 'תלמיד/ה'
+    const sourceHash = JSON.stringify(data)
     setStudentName(name)
 
-    const cached = localStorage.getItem(CACHE_KEY)
+    const cached = state.profile_cache as { sourceHash?: string; data?: Profile } | null | undefined
     if (cached) {
-      try {
-        const cacheObj = JSON.parse(cached) as { sourceHash: string; data: Profile }
-        if (cacheObj.sourceHash === stored) {
-          setProfile(cacheObj.data)
-          setStatus('journey')
-          return
-        }
-      } catch {
-        // cache corrupt, regenerate
+      if (cached.sourceHash === sourceHash && cached.data) {
+        setProfile(cached.data)
+        setStatus('journey')
+        return
       }
     }
 
@@ -73,14 +69,8 @@ export function ResultsPage() {
     setLoadingStep(0)
 
     try {
-      const resp = await fetch('/api/analyze-profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ student_name: name, scores: data.scores })
-      })
-      if (!resp.ok) throw new Error('API error')
-      const analyzed = (await resp.json()) as Profile
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ sourceHash: stored, data: analyzed }))
+      const analyzed = await apiPost<Profile>('/api/analyze-profile', { student_name: name, scores: data.scores })
+      void updateLearnerState({ profile_cache: { sourceHash, data: analyzed } })
       setProfile(analyzed)
       setStatus('journey')
     } catch {
@@ -263,7 +253,7 @@ function TopBar({ title }: { title: string }) {
   return (
     <div className="top-bar">
       <span className="top-bar-title">{title}</span>
-      <span className="top-bar-logo">YuviLab 720</span>
+      <span className="top-bar-logo">Yuvilab Spark</span>
     </div>
   )
 }

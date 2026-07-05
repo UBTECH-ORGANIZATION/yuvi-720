@@ -243,16 +243,12 @@ export function LearnerMappingPage() {
     setScreen('complete')
     setActiveStep(3)
     try {
-      const result = await apiPost<{ scores?: Record<string, unknown> }>('/api/submit', {
+      await apiPost('/api/submit', {
         student_name: studentName,
         answers
       })
-      localStorage.setItem(
-        'mapping_results',
-        JSON.stringify({ student_name: studentName, scores: result.scores || {} })
-      )
     } catch {
-      // The results page still has a local fallback; keep the student moving.
+      // Keep the student moving; results will show a no-data state if persistence fails.
     }
   }
 
@@ -268,16 +264,12 @@ export function LearnerMappingPage() {
     setScreen('complete')
     setActiveStep(3)
     try {
-      const result = await apiPost<{ scores?: Record<string, unknown> }>('/api/submit', {
+      await apiPost('/api/submit', {
         student_name: studentName,
         answers: filled
       })
-      localStorage.setItem(
-        'mapping_results',
-        JSON.stringify({ student_name: studentName, scores: result.scores || {} })
-      )
     } catch {
-      // Results page has a local fallback.
+      // Results page will show a no-data state if persistence fails.
     }
     navigate('/results')
   }

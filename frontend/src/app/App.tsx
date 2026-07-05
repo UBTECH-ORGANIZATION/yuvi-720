@@ -6,10 +6,11 @@ import { MentoringPage } from '../features/mentoring/MentoringPage'
 import { LearningPortalPage } from '../features/learning-portal/LearningPortalPage'
 import { LessonPage } from '../features/learning-lesson/LessonPage'
 import { LomdaCreatorPage } from '../features/learning-create/LomdaCreatorPage'
+import { LanguageSwitcher } from '../components/LanguageSwitcher'
+import { useI18n } from '../i18n/I18nProvider'
 import { useRoute } from './router'
 
-export function App() {
-  const pathname = useRoute()
+function pageForRoute(pathname: string) {
   if (pathname.startsWith('/results')) return <ResultsPage />
   if (pathname.startsWith('/student-dashboard')) return <StudentDashboardPage />
   if (pathname.startsWith('/teacher-view')) return <TeacherViewPage />
@@ -18,4 +19,20 @@ export function App() {
   if (pathname.startsWith('/learning/create')) return <LomdaCreatorPage />
   if (pathname.startsWith('/learning')) return <LearningPortalPage />
   return <LearnerMappingPage />
+}
+
+export function App() {
+  const pathname = useRoute()
+  const { language } = useI18n()
+  const isMappingRoute = pathname === '/' || pathname === ''
+
+  return (
+    <>
+      {/* Keying by language forces every migrated route to remount and re-fetch
+          content (and re-run its localization) whenever the language changes. */}
+      <div key={language}>{pageForRoute(pathname)}</div>
+      {/* The mapping page already shows a language switcher in its own app bar. */}
+      {!isMappingRoute && <LanguageSwitcher variant="floating" />}
+    </>
+  )
 }

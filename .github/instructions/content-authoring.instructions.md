@@ -1,6 +1,6 @@
 ---
 description: "Use when creating, generating, reviewing, or instrumenting 720 learning content, lomdot, iframe content, practice items, assessments, xAPI events, or adaptive content routes."
-applyTo: "learning-agent/**,backend/server.py"
+applyTo: "learning-agent/**,backend/server.py,backend/app/**"
 ---
 # 720 Content Authoring Guidelines
 

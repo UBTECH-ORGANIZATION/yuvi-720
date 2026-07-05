@@ -2,68 +2,180 @@
 /* eslint-disable */
 import './yubiRobot'
 
-export function initDashboard() {
+export function initDashboard(t, language) {
+        const dashboardToken = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const initialMain = document.getElementById('mainContent');
+        if (initialMain) initialMain.dataset.dashboardMount = dashboardToken;
+        function isCurrentMount() {
+            const main = document.getElementById('mainContent');
+            return !!main && main.dataset.dashboardMount === dashboardToken;
+        }
+        // ================================================
+        // LOCALIZE STATIC CHROME (top bar, panes, Yubi launcher/chat)
+        // ================================================
+        function localizeChrome() {
+            document.querySelectorAll('.tt-label[data-tab]').forEach(el => {
+                el.textContent = t('dashboard.tabs.' + el.dataset.tab);
+            });
+            const tbRole = document.getElementById('tbRole');
+            if (tbRole) tbRole.textContent = t('dashboard.profile.role');
+            const loadingTitle = document.getElementById('dashboardLoadingTitle');
+            if (loadingTitle) loadingTitle.textContent = t('dashboard.loading.title');
+            const loadingSubtitle = document.getElementById('dashboardLoadingSubtitle');
+            if (loadingSubtitle) loadingSubtitle.textContent = t('dashboard.loading.subtitle');
+            const chatTitle = document.getElementById('chatPaneTitle');
+            if (chatTitle) chatTitle.textContent = t('dashboard.chatPane.title');
+            const chatSubtitle = document.getElementById('chatPaneSubtitle');
+            if (chatSubtitle) chatSubtitle.textContent = t('dashboard.chatPane.subtitle');
+            const calTitle = document.getElementById('calendarPaneTitle');
+            if (calTitle) calTitle.textContent = t('dashboard.calendarPane.title');
+            const calSubtitle = document.getElementById('calendarPaneSubtitle');
+            if (calSubtitle) calSubtitle.textContent = t('dashboard.calendarPane.subtitle');
+            const bubbleClose = document.getElementById('yubiBubbleClose');
+            if (bubbleClose) bubbleClose.setAttribute('aria-label', t('dashboard.yubi.bubbleCloseAria'));
+            const bubbleTitle = document.getElementById('yubiBubbleTitle');
+            if (bubbleTitle) bubbleTitle.textContent = t('dashboard.yubi.bubbleTitle');
+            const bubbleSubtitle = document.getElementById('yubiBubbleSubtitle');
+            if (bubbleSubtitle) bubbleSubtitle.textContent = t('dashboard.yubi.bubbleSubtitle');
+            const bubbleBtn = document.getElementById('yubiBubbleBtn');
+            if (bubbleBtn) bubbleBtn.textContent = t('dashboard.yubi.bubbleBtn');
+            const fab = document.getElementById('yubiFab');
+            if (fab) fab.setAttribute('aria-label', t('dashboard.yubi.fabAria'));
+            const chatName = document.getElementById('yubiChatName');
+            if (chatName) chatName.textContent = t('dashboard.yubi.name');
+            const chatSub = document.getElementById('yubiChatSubtitle');
+            if (chatSub) chatSub.textContent = t('dashboard.yubi.subtitle');
+            document.querySelectorAll('[data-toggle-label]').forEach(el => {
+                el.textContent = el.dataset.toggleLabel === 'voice' ? t('dashboard.yubi.modeVoice') : t('dashboard.yubi.modeText');
+            });
+            const yubiClose = document.getElementById('yubiClose');
+            if (yubiClose) yubiClose.setAttribute('aria-label', t('dashboard.yubi.closeAria'));
+            const chatInput = document.getElementById('chatInput');
+            if (chatInput) chatInput.setAttribute('placeholder', t('dashboard.yubi.inputPlaceholder'));
+            const chatForm = document.getElementById('chatForm');
+            if (chatForm) {
+                const sendBtn = chatForm.querySelector('button[type="submit"]');
+                if (sendBtn) sendBtn.setAttribute('aria-label', t('dashboard.yubi.sendAria'));
+            }
+        }
+        localizeChrome();
+
         // ================================================
         // LOAD DASHBOARD FROM MAPPING DATA (via AI)
         // ================================================
         let currentData = null;
+        let currentSourceHash = '';
+
+        function timeoutSignal(ms) {
+            const controller = new AbortController();
+            const timeoutId = window.setTimeout(() => controller.abort(), ms);
+            return { signal: controller.signal, cancel: () => window.clearTimeout(timeoutId) };
+        }
+
+        async function getLearnerState() {
+            const timeout = timeoutSignal(7000);
+            try {
+                const resp = await fetch('/api/learner-state', { signal: timeout.signal });
+                if (!resp.ok) throw new Error('Learner state error');
+                return resp.json();
+            } finally {
+                timeout.cancel();
+            }
+        }
+
+        async function updateLearnerState(updates) {
+            const resp = await fetch('/api/learner-state', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updates)
+            });
+            if (!resp.ok) throw new Error('Learner state update error');
+            return resp.json();
+        }
+
+        async function fetchDashboardData(name, mappingData, preferFallback, signal) {
+            const timeout = signal ? null : timeoutSignal(preferFallback ? 7000 : 25000);
+            const resp = await fetch('/api/generate-dashboard', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                signal: signal || timeout.signal,
+                body: JSON.stringify({
+                    student_name: name,
+                    scores: mappingData.scores,
+                    language,
+                    prefer_fallback: preferFallback
+                })
+            });
+            if (timeout) timeout.cancel();
+            if (!resp.ok) throw new Error('Dashboard API error');
+            return resp.json();
+        }
 
         async function loadDashboard() {
-            const stored = localStorage.getItem('mapping_results');
-            if (!stored) {
-                document.getElementById('dashboardLoading').innerHTML = `
-                    <div style="font-size:48px;margin-bottom:16px;">📋</div>
-                    <div style="font-size:18px;font-weight:700;color:#3a3360;margin-bottom:12px;">עדיין אין נתוני מיפוי</div>
-                    <div style="font-size:14px;color:#9a93b5;margin-bottom:24px;">כדי לראות את הדשבורד האישי, צריך קודם למלא את השאלון</div>
-                    <a href="/" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c5cff,#9f7afe);color:#fff;border-radius:14px;font-weight:700;text-decoration:none;">למילוי השאלון →</a>
-                `;
-                return;
-            }
-
-            const mappingData = JSON.parse(stored);
-            const name = mappingData.student_name || 'תלמיד/ה';
-
-            // Update profile name where present (sidebar removed)
-            const sbAva = document.getElementById('sidebarAvatar');
-            const sbName = document.getElementById('sidebarName');
-            if (sbAva) sbAva.textContent = name[0];
-            if (sbName) sbName.textContent = name;
-
-            // Check cache - use stored dashboard if mapping data hasn't changed
-            const cacheKey = 'dashboard_cache';
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-                try {
-                    const cacheObj = JSON.parse(cached);
-                    if (cacheObj.sourceHash === stored) {
-                        currentData = cacheObj.data;
-                        renderDashboard(cacheObj.data);
-                        return;
-                    }
-                } catch (e) { /* cache corrupt, regenerate */ }
-            }
-
             try {
-                const resp = await fetch('/api/generate-dashboard', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ student_name: name, scores: mappingData.scores })
-                });
+                const learnerState = await getLearnerState();
+                if (!isCurrentMount()) return;
+                const mappingData = learnerState.mapping_results;
+                if (!mappingData) {
+                    document.getElementById('dashboardLoading').innerHTML = `
+                    <div style="font-size:48px;margin-bottom:16px;">📋</div>
+                    <div style="font-size:18px;font-weight:700;color:#3a3360;margin-bottom:12px;">${t('dashboard.noData.title')}</div>
+                    <div style="font-size:14px;color:#9a93b5;margin-bottom:24px;">${t('dashboard.noData.subtitle')}</div>
+                    <a href="/" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c5cff,#9f7afe);color:#fff;border-radius:14px;font-weight:700;text-decoration:none;">${t('dashboard.noData.cta')}</a>
+                `;
+                    return;
+                }
 
-                if (!resp.ok) throw new Error('API error');
-                const data = await resp.json();
-                currentData = data;
+                const name = mappingData.student_name || t('dashboard.profile.defaultName');
+                currentSourceHash = JSON.stringify(mappingData) + '|' + language;
 
-                // Cache the result
-                localStorage.setItem(cacheKey, JSON.stringify({ sourceHash: stored, data }));
+                // Update profile name where present (sidebar removed)
+                const sbAva = document.getElementById('sidebarAvatar');
+                const sbName = document.getElementById('sidebarName');
+                if (sbAva) sbAva.textContent = name[0];
+                if (sbName) sbName.textContent = name;
 
-                renderDashboard(data);
+                // Check persisted dashboard cache if mapping data hasn't changed
+                const cached = learnerState.dashboard_cache;
+                if (cached) {
+                    try {
+                        if (cached.sourceHash === currentSourceHash) {
+                            currentData = cached.data;
+                            renderDashboard(cached.data);
+                            return;
+                        }
+                    } catch (e) {
+                        console.warn('Dashboard cache render failed, regenerating:', e);
+                        currentData = null;
+                    }
+                }
+
+                const fallbackData = await fetchDashboardData(name, mappingData, true);
+                if (!isCurrentMount()) return;
+                currentData = fallbackData;
+                renderDashboard(fallbackData);
+
+                const controller = new AbortController();
+                const timeoutId = window.setTimeout(() => controller.abort(), 25000);
+                try {
+                    const data = await fetchDashboardData(name, mappingData, false, controller.signal);
+                    window.clearTimeout(timeoutId);
+                    if (!isCurrentMount()) return;
+                    currentData = data;
+                    void updateLearnerState({ dashboard_cache: { sourceHash: currentSourceHash, data } });
+                    renderDashboard(data);
+                } catch (aiErr) {
+                    window.clearTimeout(timeoutId);
+                    console.warn('Dashboard AI refresh skipped:', aiErr);
+                    void updateLearnerState({ dashboard_cache: { sourceHash: currentSourceHash, data: fallbackData } });
+                }
             } catch (err) {
                 console.error('Dashboard generation error:', err);
+                if (!isCurrentMount()) return;
                 document.getElementById('dashboardLoading').innerHTML = `
                     <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
-                    <div style="font-size:18px;font-weight:700;color:#3a3360;">שגיאה בטעינת הדשבורד</div>
-                    <div style="font-size:14px;color:#9a93b5;margin-top:8px;">נסה לרענן את הדף</div>
+                    <div style="font-size:18px;font-weight:700;color:#3a3360;">${t('dashboard.error.title')}</div>
+                    <div style="font-size:14px;color:#9a93b5;margin-top:8px;">${t('dashboard.error.subtitle')}</div>
                 `;
             }
         }
@@ -84,44 +196,55 @@ export function initDashboard() {
         </svg>`;
 
         const STRENGTH_ICONS = {
-            'סקרנות': '🔬', 'התמדה': '🎯', 'שיתוף פעולה': '🤝', 'יצירתיות': '🎨',
-            'חשיבה': '💡', 'תקשורת': '🗣️', 'יוזמה': '🚀', 'טכנולוגיה': '💻',
-            'אחריות': '🛡️', 'דמיון': '✨', 'מנהיגות': '🌟', 'ריכוז': '🎧'
+            'סקרנות': '🔬', 'curiosity': '🔬', 'الفضول': '🔬',
+            'התמדה': '🎯', 'persistence': '🎯', 'المثابرة': '🎯',
+            'שיתוף פעולה': '🤝', 'collaboration': '🤝', 'التعاون': '🤝',
+            'יצירתיות': '🎨', 'creativity': '🎨', 'الإبداع': '🎨',
+            'חשיבה': '💡', 'thinking': '💡', 'التفكير': '💡',
+            'תקשורת': '🗣️', 'communication': '🗣️', 'التواصل': '🗣️',
+            'יוזמה': '🚀', 'initiative': '🚀', 'المبادرة': '🚀',
+            'טכנולוגיה': '💻', 'technology': '💻', 'التكنولوجيا': '💻',
+            'אחריות': '🛡️', 'responsibility': '🛡️', 'المسؤولية': '🛡️',
+            'דמיון': '✨', 'imagination': '✨', 'الخيال': '✨',
+            'מנהיגות': '🌟', 'leadership': '🌟', 'القيادة': '🌟',
+            'ריכוז': '🎧', 'focus': '🎧', 'التركيز': '🎧'
         };
+        // Categorize a strength/subject label across Hebrew, English, and Arabic
+        // keywords so display text can stay localized regardless of source language.
+        function strengthCategory(name) {
+            const n = (name || '').toLowerCase();
+            if (/סקרנות|לגלות|לנסות|curiosity|discover|الفضول|اكتشاف/.test(n)) return 'curiosity';
+            if (/התמדה|persistence|المثابرة/.test(n)) return 'persistence';
+            if (/שתף|עזר|ביחד|collaborat|together|التعاون|مشارك/.test(n)) return 'collaboration';
+            if (/להתחיל|לסיים|משימ|task|finish|إنجاز|مهمة/.test(n)) return 'taskFocus';
+            if (/יצירת|creativ|إبداع/.test(n)) return 'creativity';
+            if (/טכנולוג|tech|تكنولوج|حاسوب/.test(n)) return 'tech';
+            if (/תקשורת|communicat|تواصل/.test(n)) return 'communication';
+            if (/ריכוז|focus|تركيز/.test(n)) return 'focus';
+            if (/רצון|מוטיב|motivat|drive|رغبة|دافع/.test(n)) return 'motivation';
+            return 'default';
+        }
         function strengthIcon(name) {
-            for (const key in STRENGTH_ICONS) if (name.includes(key)) return STRENGTH_ICONS[key];
-            if (name.includes('שתף') || name.includes('עזר') || name.includes('ביחד')) return '🤝';
-            if (name.includes('להתחיל') || name.includes('לסיים') || name.includes('משימ')) return '🎯';
-            if (name.includes('לנסות') || name.includes('לגלות') || name.includes('סקרן')) return '🔬';
-            if (name.includes('רצון') || name.includes('מוטיב')) return '🌟';
+            for (const key in STRENGTH_ICONS) if ((name || '').includes(key)) return STRENGTH_ICONS[key];
             return '⭐';
         }
         function strengthLine(name) {
-            if (name.includes('סקרנות') || name.includes('לגלות') || name.includes('לנסות')) return 'אוהב לגלות דברים חדשים';
-            if (name.includes('התמדה')) return 'ממשיך גם כשקצת מאתגר';
-            if (name.includes('שתף') || name.includes('עזר') || name.includes('ביחד')) return 'קל לך לעבוד ולשתף עם אחרים';
-            if (name.includes('להתחיל') || name.includes('לסיים') || name.includes('משימ')) return 'מתחיל משימות ומסיים אותן';
-            if (name.includes('יצירת')) return 'חושב על רעיונות מקוריים';
-            if (name.includes('טכנולוג')) return 'מסתדר מצוין עם כלים דיגיטליים';
-            if (name.includes('תקשורת')) return 'יודע להביע את עצמך';
-            if (name.includes('ריכוז')) return 'מצליח להתמקד במשימה';
-            if (name.includes('רצון') || name.includes('מוטיב')) return 'יש לך רצון לנסות ולהתקדם';
-            return 'זה אחד הכוחות הגדולים שלך';
+            return t('dashboard.strengthLine.' + strengthCategory(name));
         }
         // Positive reframing of a difficulty into a growth title + supportive how-to
+        function difficultyCategory(d) {
+            const txt = (d.text || '').toLowerCase();
+            if (/ריכוז|focus|تركيز/.test(txt)) return 'focus';
+            if (/טכנולוג|דיגיטל|tech|digital|تكنولوج|رقمي/.test(txt)) return 'tech';
+            if (/ארגון|תכנון|organiz|plan|تنظيم|تخطيط/.test(txt)) return 'organization';
+            return 'default';
+        }
         function improveTitle(d) {
-            const t = (d.text || '').toLowerCase();
-            if (t.includes('ריכוז')) return 'לשמור על ריכוז לאורך זמן';
-            if (t.includes('טכנולוג') || t.includes('דיגיטל')) return 'להרגיש בטוח יותר עם כלים דיגיטליים';
-            if (t.includes('ארגון') || t.includes('תכנון')) return 'לארגן את המידע בצורה נוחה';
-            return d.text;
+            const category = difficultyCategory(d);
+            return category === 'default' ? d.text : t('dashboard.improve.title.' + category);
         }
         function improveHow(d) {
-            const t = (d.text || '').toLowerCase();
-            if (t.includes('ריכוז')) return 'נעבוד ביחידות קצרות עם הפסקות קטנות בין משימה למשימה.';
-            if (t.includes('טכנולוג') || t.includes('דיגיטל')) return 'נתחיל ממשימות קצרות עם כלי אחד בכל פעם, בלי לחץ.';
-            if (t.includes('ארגון') || t.includes('תכנון')) return 'נשתמש ברשימה קצרה של צעדים לפני שמתחילים.';
-            return 'נתקדם צעד אחד קטן בכל פעם, ויובי איתך בדרך.';
+            return t('dashboard.improve.how.' + difficultyCategory(d));
         }
         function avgProgress(subjects) {
             if (!subjects.length) return 0;
@@ -130,50 +253,58 @@ export function initDashboard() {
         function topStrengthLabel(data) {
             const comps = data.competencies || [];
             if (comps.length) return [...comps].sort((a, b) => b.value - a.value)[0].label;
-            return (data.mapping && data.mapping.strengths && data.mapping.strengths[0]) || 'סקרנות';
+            return (data.mapping && data.mapping.strengths && data.mapping.strengths[0]) || t('dashboard.strengthLine.curiosity');
         }
 
         // Short, warm task message written as if Yubi just sent it in chat —
         // explains *why* to practice now and connects to the child's world.
         function heroMessage(childName, subject, interests) {
-            const first = ((childName || '').split(' ')[0]) || 'חבר';
+            const first = ((childName || '').split(' ')[0]) || t('dashboard.hero.friend');
             const interest = (interests && interests.length) ? interests[0] : null;
-            const link = interest ? ` שמחברת את זה ל${interest} שאתה אוהב` : '';
-            return `היי ${first}! 👋 שמתי לב שב<b>${subject}</b> יש משהו קטן שכיף לחזק היום. הכנתי לך משימה קצרה של 15 דקות${link} — ננסה יחד? 💪`;
+            const link = interest ? t('dashboard.hero.messageLink', { interest }) : '';
+            return t('dashboard.hero.message', { first, subject: `<b>${subject}</b>`, link });
         }
 
+        // Categorize a subject name across languages so the hero card illustration
+        // and subtitle stay localized regardless of the language the AI returned.
+        function subjectCategory(name) {
+            const n = (name || '').toLowerCase();
+            if (/מדע|science|علوم/.test(n)) return 'science';
+            if (/מתמט|חשבון|math|رياضيات/.test(n)) return 'math';
+            if (/עבר|שפה|language|arts|لغة/.test(n)) return 'language';
+            if (/מחשב|טכנולוג|computer|tech|حاسوب|تكنولوج/.test(n)) return 'tech';
+            if (/אנגל|english|إنجليز/.test(n)) return 'english';
+            return 'default';
+        }
         // Hero illustration + subtitle derived from the focus subject
         function heroSubtitle(name) {
-            if (name.includes('מדע')) return 'חקר קצר על צמחים והסביבה';
-            if (name.includes('מתמט') || name.includes('חשבון')) return 'משחק מספרים קצר וכיפי';
-            if (name.includes('עבר') || name.includes('שפה')) return 'סיפור קצר וכתיבה יצירתית';
-            if (name.includes('מחשב') || name.includes('טכנולוג')) return 'פרויקט דיגיטלי קטן';
-            if (name.includes('אנגל')) return 'משחק מילים קצר באנגלית';
-            return 'משימה קצרה שמתאימה בדיוק לך';
+            return t('dashboard.hero.subtitle.' + subjectCategory(name));
         }
         function heroIllu(name) {
-            if (name.includes('מדע')) return '🔬';
-            if (name.includes('מתמט') || name.includes('חשבון')) return '🔢';
-            if (name.includes('עבר') || name.includes('שפה')) return '📖';
-            if (name.includes('מחשב') || name.includes('טכנולוג')) return '💻';
-            if (name.includes('אנגל')) return '🔤';
-            return '🚀';
+            const icons = { science: '🔬', math: '🔢', language: '📖', tech: '💻', english: '🔤', default: '🚀' };
+            return icons[subjectCategory(name)];
         }
         function heroFloats(name) {
-            if (name.includes('מדע')) return ['🌱', '🦋', '✨'];
-            if (name.includes('מתמט') || name.includes('חשבון')) return ['➕', '⭐', '✨'];
-            if (name.includes('עבר') || name.includes('שפה')) return ['✏️', '💬', '✨'];
-            return ['⭐', '✨', '💜'];
+            const floats = {
+                science: ['🌱', '🦋', '✨'],
+                math: ['➕', '⭐', '✨'],
+                language: ['✏️', '💬', '✨'],
+                default: ['⭐', '✨', '💜']
+            };
+            return floats[subjectCategory(name)] || floats.default;
         }
         // Circular icon background colors for strength cards (rotating soft tones)
         const STRENGTH_BG = ['rgba(246,173,85,0.20)', 'rgba(72,187,120,0.18)', 'rgba(124,92,255,0.18)'];
         // Illustrated icon + soft circle color for "what helps me grow" cards
         function improveVisual(d) {
-            const t = (d.text || '').toLowerCase();
-            if (t.includes('ריכוז')) return { emoji: '⏱️', bg: 'rgba(72,187,120,0.16)' };
-            if (t.includes('טכנולוג') || t.includes('דיגיטל')) return { emoji: '💻', bg: 'rgba(99,179,237,0.18)' };
-            if (t.includes('ארגון') || t.includes('תכנון')) return { emoji: '🗂️', bg: 'rgba(124,92,255,0.16)' };
-            return { emoji: '🌱', bg: 'rgba(246,173,85,0.18)' };
+            const category = difficultyCategory(d);
+            const visuals = {
+                focus: { emoji: '⏱️', bg: 'rgba(72,187,120,0.16)' },
+                tech: { emoji: '💻', bg: 'rgba(99,179,237,0.18)' },
+                organization: { emoji: '🗂️', bg: 'rgba(124,92,255,0.16)' },
+                default: { emoji: '🌱', bg: 'rgba(246,173,85,0.18)' }
+            };
+            return visuals[category];
         }
 
         // ================================================
@@ -213,14 +344,14 @@ export function initDashboard() {
             const week = avgProgress(subjects);
             const top = topStrengthLabel(data);
             const lowSubject = [...subjects].sort((a, b) => (a.progress || 0) - (b.progress || 0))[0];
-            const heroSubject = lowSubject ? lowSubject.name : 'משימה קצרה';
+            const heroSubject = lowSubject ? lowSubject.name : t('dashboard.home.taskDefault');
 
             const home = document.getElementById('view-home');
             home.innerHTML = `
                 <div class="greeting fade-in">
                     <div class="greeting-text">
-                        <h1>שלום ${data.name}! 👋</h1>
-                        <p>היום נמשיך בדיוק מאיפה שעצרת</p>
+                        <h1>${t('dashboard.home.greeting', { name: data.name })}</h1>
+                        <p>${t('dashboard.home.greetingSub')}</p>
                     </div>
                 </div>
 
@@ -229,11 +360,11 @@ export function initDashboard() {
                         <div class="hero-yubi" id="heroYubiRobot"></div>
                         <div class="hero-bubble">
                             <div class="hero-bubble-head">
-                                <span class="hero-yubi-name">יובי</span>
-                                <span class="hero-yubi-badge">המנטור שלך</span>
+                                <span class="hero-yubi-name">${t('dashboard.home.yubiName')}</span>
+                                <span class="hero-yubi-badge">${t('dashboard.home.yubiBadge')}</span>
                             </div>
                             <div class="hero-msg-text">${heroMessage(data.name, heroSubject, (data.mapping && data.mapping.interests) || [])}</div>
-                            <a class="hero-cta" href="/learning/">${heroIllu(heroSubject)} מתחילים במשימה ←</a>
+                            <a class="hero-cta" href="/learning/">${heroIllu(heroSubject)} ${t('dashboard.home.heroCta')}</a>
                         </div>
                     </div>
                 </div>
@@ -241,8 +372,8 @@ export function initDashboard() {
                 <div class="home-grid">
                     <div class="panel fade-in">
                         <div class="home-section-head">
-                            <h2>המקצועות שלי</h2>
-                            <button class="see-more-btn" data-goto="subjects">לכל המקצועות ←</button>
+                            <h2>${t('dashboard.home.subjectsTitle')}</h2>
+                            <button class="see-more-btn" data-goto="subjects">${t('dashboard.home.seeAllSubjects')}</button>
                         </div>
                         <div class="subjects-summary">
                             ${subjects.slice(0, 3).map(s => `
@@ -262,18 +393,18 @@ export function initDashboard() {
 
                     <div class="panel fade-in">
                         <div class="home-section-head">
-                            <h2>יעדים</h2>
-                            <button class="see-more-btn" data-goto="goals">לכל היעדים שלי ←</button>
+                            <h2>${t('dashboard.home.goalsTitle')}</h2>
+                            <button class="see-more-btn" data-goto="goals">${t('dashboard.home.seeAllGoals')}</button>
                         </div>
                         <div class="steps-list">
                             <div class="step-card">
                                 <span class="step-grip">⠿⠿</span>
-                                <span class="step-text">${(goals[0] && goals[0].text) || 'להשלים 3 משימות קצרות'}</span>
+                                <span class="step-text">${(goals[0] && goals[0].text) || t('dashboard.home.goalDefault1')}</span>
                                 <span class="step-check" role="button" tabindex="0">✓</span>
                             </div>
                             <div class="step-card">
                                 <span class="step-grip">⠿⠿</span>
-                                <span class="step-text">${(goals[1] && goals[1].text) || 'לכתוב בסוף כל משימה מה עזר לי'}</span>
+                                <span class="step-text">${(goals[1] && goals[1].text) || t('dashboard.home.goalDefault2')}</span>
                                 <span class="step-check" role="button" tabindex="0">✓</span>
                             </div>
                         </div>
@@ -281,23 +412,23 @@ export function initDashboard() {
 
                     <div class="panel fade-in">
                         <div class="home-section-head">
-                            <h2>נושאים לחיזוק</h2>
-                            <span class="see-more-btn" style="cursor:default;background:none;">פריטי ידע שזוהה בהם קושי</span>
+                            <h2>${t('dashboard.home.difficultiesTitle')}</h2>
+                            <span class="see-more-btn" style="cursor:default;background:none;">${t('dashboard.home.difficultiesSub')}</span>
                         </div>
                         <div class="difficulties-list">
                             ${difficulties.length ? difficulties.map(d => `
                                 <div class="difficulty-item">
-                                    <span class="difficulty-subject-tag">${d.subject || 'כללי'}</span>
+                                    <span class="difficulty-subject-tag">${d.subject || t('dashboard.home.difficultyDefaultSubject')}</span>
                                     <span class="difficulty-text">${d.text}</span>
                                     ${d.status ? `<span class="difficulty-status ${d.statusClass || ''}">${d.status}</span>` : ''}
                                 </div>
-                            `).join('') : '<div style="font-size:0.82rem;color:#9a93b5;padding:6px 2px;">לא זוהו נושאים שדורשים חיזוק כרגע 🎉</div>'}
+                            `).join('') : `<div style="font-size:0.82rem;color:#9a93b5;padding:6px 2px;">${t('dashboard.home.noDifficulties')}</div>`}
                         </div>
                     </div>
 
                     <div class="panel fade-in">
                         <div class="home-section-head">
-                            <h2>מה יעזור לי להתקדם</h2>
+                            <h2>${t('dashboard.home.improveTitle')}</h2>
                         </div>
                         <div class="improve-list">
                             ${difficulties.slice(0, 2).map(d => {
@@ -307,7 +438,7 @@ export function initDashboard() {
                                     <div class="improve-top">
                                         <div class="improve-main">
                                             <div class="improve-title">${improveTitle(d)}</div>
-                                            <button class="improve-toggle">איך עושים את זה?</button>
+                                            <button class="improve-toggle">${t('dashboard.home.howToggle')}</button>
                                         </div>
                                         <div class="improve-ico" style="background:${v.bg}">${v.emoji}</div>
                                     </div>
@@ -323,13 +454,13 @@ export function initDashboard() {
                         return `
                     <div class="panel fade-in agency-summary" style="grid-column:1 / -1">
                         <div class="home-section-head">
-                            <h2>🧭 מצפן הפעלנות שלי</h2>
-                            <button class="see-more-btn" data-goto="agency">לכל הכוחות ←</button>
+                            <h2>${t('dashboard.home.agencyTitle')}</h2>
+                            <button class="see-more-btn" data-goto="agency">${t('dashboard.home.agencySeeAll')}</button>
                         </div>
                         <div class="agency-summary-body">
                             <div class="agency-mini-radar">${agencyRadarSVG(agency)}</div>
                             <div class="agency-summary-side">
-                                <div class="agency-highlight">הכוח הבולט שלך: <strong>${topComp.icon} ${topComp.name}</strong> — המשך כך! 🌟</div>
+                                <div class="agency-highlight">${t('dashboard.home.agencyHighlight', { name: `<strong>${topComp.icon} ${topComp.name}</strong>` })}</div>
                                 <div class="agency-chip-row">
                                     ${agency.map(a => {
                                         const lv = agencyLevel(a.score);
@@ -352,7 +483,7 @@ export function initDashboard() {
                 btn.addEventListener('click', () => {
                     const card = btn.closest('.improve-card');
                     card.classList.toggle('open');
-                    btn.textContent = card.classList.contains('open') ? 'הבנתי 👍' : 'איך עושים את זה?';
+                    btn.textContent = card.classList.contains('open') ? t('dashboard.home.howToggleDone') : t('dashboard.home.howToggle');
                 });
             });
             // wire step check circles
@@ -360,7 +491,7 @@ export function initDashboard() {
                 const toggle = () => {
                     chk.classList.toggle('done');
                     if (chk.classList.contains('done')) {
-                        showLiveToast('כל הכבוד! סימנת צעד שהושלם 🎉', 'כל צעד קטן מקרב אותך למטרה', '✅');
+                        showLiveToast(t('dashboard.home.stepDoneToast'), t('dashboard.home.stepDoneToastSub'), '✅');
                     }
                 };
                 chk.addEventListener('click', toggle);
@@ -374,7 +505,7 @@ export function initDashboard() {
         function mountHeroYubi() {
             const el = document.getElementById('heroYubiRobot');
             if (!el || el.querySelector('canvas')) return;
-            const go = () => window.YubiRobot && window.YubiRobot.mount(el, {
+            const go = () => mountYubiRobot(el, {
                 view: 'head',
                 isActive: () => el.offsetParent !== null
             });
@@ -435,18 +566,18 @@ export function initDashboard() {
                                 <div class="subj-ico" style="background:${s.iconBg || ac.soft}">${s.icon || '📘'}</div>
                                 <div>
                                     <div class="subj-name">${s.name}</div>
-                                    <div class="subj-lessons">${completed}/${total} שיעורים הושלמו</div>
+                                    <div class="subj-lessons">${t('dashboard.subjects.lessonsCompleted', { completed, total })}</div>
                                 </div>
                             </div>
                             <span class="subj-badge" style="background:${ac.soft}; color:${ac.solid}">
-                                <span class="bdot" style="background:${ac.solid}"></span> ${s.level || 'ממשיכים'}
+                                <span class="bdot" style="background:${ac.solid}"></span> ${s.level || t('dashboard.subjects.defaultLevel')}
                             </span>
                         </div>
                         <div class="subj-bar-row">
                             <div class="subj-bar"><div class="subj-fill" style="background:${ac.grad}" data-target="${s.progress || 0}"></div></div>
                             <span class="subj-pct">${s.progress || 0}%</span>
                         </div>
-                        <div class="subj-next-label">המשך ללמוד</div>
+                        <div class="subj-next-label">${t('dashboard.subjects.continueLabel')}</div>
                         <div class="subj-list">
                             ${steps.map(st => `
                                 <div class="subj-item ${st.state}">
@@ -455,14 +586,14 @@ export function initDashboard() {
                                 </div>
                             `).join('')}
                         </div>
-                        <button class="subj-cta" style="background:${ac.soft}; color:${ac.solid}" data-subject="${s.name}">להמשך למידה ←</button>
+                        <button class="subj-cta" style="background:${ac.soft}; color:${ac.solid}" data-subject="${s.name}">${t('dashboard.subjects.continueCta')}</button>
                     </div>`;
             }
 
             if (!subjects.length) {
                 el.innerHTML = `
-                    <button class="view-back" data-goto="home">→ חזרה לדשבורד</button>
-                    <div class="view-head"><h1>📚 המקצועות שלי</h1><p>עוד רגע נטען את המקצועות שלך 💜</p></div>`;
+                    <button class="view-back" data-goto="home">${t('dashboard.backToDashboard')}</button>
+                    <div class="view-head"><h1>${t('dashboard.subjects.title')}</h1><p>${t('dashboard.subjects.loadingSub')}</p></div>`;
                 el.querySelector('[data-goto]').addEventListener('click', () => switchView('home'));
                 return;
             }
@@ -471,8 +602,8 @@ export function initDashboard() {
             if (subjectIndex >= subjects.length || subjectIndex < 0) subjectIndex = 0;
 
             el.innerHTML = `
-                <button class="view-back" data-goto="home">→ חזרה לדשבורד</button>
-                <div class="view-head"><h1>📚 המקצועות שלי</h1><p>המקצוע שבמרכז הוא הפעיל — גלול עם החצים או לחץ על מקצוע בצד 🚀</p></div>
+                <button class="view-back" data-goto="home">${t('dashboard.backToDashboard')}</button>
+                <div class="view-head"><h1>${t('dashboard.subjects.title')}</h1><p>${t('dashboard.subjects.hintSub')}</p></div>
                 <div class="subj-chips">
                     ${subjects.map((s, i) => {
                         const ac = accents[i % accents.length];
@@ -482,9 +613,9 @@ export function initDashboard() {
                     }).join('')}
                 </div>
                 <div class="subj-carousel">
-                    <button class="subj-arrow" id="subjPrev" aria-label="הקודם">→</button>
+                    <button class="subj-arrow" id="subjPrev" aria-label="${t('dashboard.subjects.prevAria')}">→</button>
                     <div class="subj-coverflow" id="subjStage"></div>
-                    <button class="subj-arrow" id="subjNext" aria-label="הבא">←</button>
+                    <button class="subj-arrow" id="subjNext" aria-label="${t('dashboard.subjects.nextAria')}">←</button>
                 </div>
                 <div class="subj-dots">
                     ${subjects.map((_, i) => `<span class="subj-dot ${i === subjectIndex ? 'active' : ''}" data-idx="${i}"></span>`).join('')}
@@ -556,9 +687,8 @@ export function initDashboard() {
         // -------- DEEP: GOALS (mentoring documentation carousel) --------
         function persistDashboard() {
             try {
-                const stored = localStorage.getItem('mapping_results');
-                if (stored && currentData) {
-                    localStorage.setItem('dashboard_cache', JSON.stringify({ sourceHash: stored, data: currentData }));
+                if (currentSourceHash && currentData) {
+                    void updateLearnerState({ dashboard_cache: { sourceHash: currentSourceHash, data: currentData } });
                 }
             } catch (e) { /* ignore */ }
         }
@@ -627,23 +757,23 @@ export function initDashboard() {
 
             const carouselHtml = docs.length ? `
                 <div class="docs-carousel">
-                    <button class="docs-arrow" id="docNext" aria-label="הבא">›</button>
+                    <button class="docs-arrow" id="docNext" aria-label="${t('dashboard.subjects.nextAria')}">›</button>
                     <div class="docs-stage" id="docStage"></div>
-                    <button class="docs-arrow" id="docPrev" aria-label="הקודם">‹</button>
+                    <button class="docs-arrow" id="docPrev" aria-label="${t('dashboard.subjects.prevAria')}">‹</button>
                 </div>
                 <div class="docs-dots" id="docDots"></div>
             ` : `
                 <div class="docs-empty">
                     <div class="emoji">📝</div>
-                    <h3>עוד אין כאן תיעוד מפגשים</h3>
-                    <p>אחרי שתיפגש/י עם המורה — אפשר לתעד כאן על מה דיברתם, מה למדת והצעדים להמשך 💜</p>
+                    <h3>${t('dashboard.goals.emptyTitle')}</h3>
+                    <p>${t('dashboard.goals.emptySubtitle')}</p>
                 </div>
             `;
 
             const el = document.getElementById('view-goals');
             el.innerHTML = `
-                <button class="view-back" data-goto="home">→ חזרה לדשבורד</button>
-                <div class="view-head"><h1>🎯 היעדים שלי</h1><p>תיעוד המפגשים שלך עם המורה — לחץ על כרטיסייה לתיעוד המלא ולסיכום חכם ✨</p></div>
+                <button class="view-back" data-goto="home">${t('dashboard.backToDashboard')}</button>
+                <div class="view-head"><h1>${t('dashboard.goals.title')}</h1><p>${t('dashboard.goals.subtitle')}</p></div>
                 ${carouselHtml}
                 <div style="text-align:center"><button class="docs-add-btn" id="docAddBtn">➕ הוספת תיעוד מפגש</button></div>
                 ${docs.length ? `
@@ -974,8 +1104,8 @@ export function initDashboard() {
             const agency = deriveAgency(data);
             const el = document.getElementById('view-agency');
             el.innerHTML = `
-                <button class="view-back" data-goto="home">→ חזרה לדשבורד</button>
-                <div class="view-head"><h1>🧭 מצפן הפעלנות שלי</h1><p>הכוחות שעוזרים לך ללמוד — לחיצה על כל כוח מספרת לך עוד 💜</p></div>
+                <button class="view-back" data-goto="home">${t('dashboard.backToDashboard')}</button>
+                <div class="view-head"><h1>${t('dashboard.agency.title')}</h1><p>${t('dashboard.agency.subtitle')}</p></div>
                 <div class="agency-radar-wrap fade-in">${agencyRadarSVG(agency)}</div>
                 <div class="agency-cards">
                     ${agency.map(a => {
@@ -993,8 +1123,8 @@ export function initDashboard() {
                             </div>
                             <div class="agency-bar"><div class="agency-fill" data-target="${a.score}" style="background:linear-gradient(90deg,#9f7afe,#4cc9f0)"></div></div>
                             <div class="agency-detail">
-                                <div class="agency-meaning"><strong>מה זה אומר?</strong> ${a.meaning}</div>
-                                <div class="agency-next"><b>🎯 צעד קטן קדימה:</b><span>${a.tip}</span></div>
+                                <div class="agency-meaning"><strong>${t('dashboard.agency.meaningLabel')}</strong> ${a.meaning}</div>
+                                <div class="agency-next"><b>${t('dashboard.agency.nextLabel')}</b><span>${a.tip}</span></div>
                                 <div class="agency-source">${a.source}</div>
                             </div>
                         </div>`;
@@ -1021,24 +1151,24 @@ export function initDashboard() {
 
             const el = document.getElementById('view-strengths');
             el.innerHTML = `
-                <button class="view-back" data-goto="home">→ חזרה לדשבורד</button>
-                <div class="view-head"><h1>💪 הכוחות שלי</h1><p>כל מה שאני טוב בו — לחיצה על כל אחד מסבירה למה</p></div>
+                <button class="view-back" data-goto="home">${t('dashboard.backToDashboard')}</button>
+                <div class="view-head"><h1>${t('dashboard.strengths.title')}</h1><p>${t('dashboard.strengths.subtitle')}</p></div>
 
                 <div class="deep-block">
-                    <div class="deep-block-title">⭐ החוזקות שלי</div>
+                    <div class="deep-block-title">${t('dashboard.strengths.sectionStrengths')}</div>
                     <div class="badge-grid">${strengths.map(s => badge(`${strengthIcon(s)} ${s}`, strengthLine(s))).join('')}</div>
                 </div>
                 <div class="deep-block">
-                    <div class="deep-block-title">🏅 הכישורים שלי</div>
+                    <div class="deep-block-title">${t('dashboard.strengths.sectionSkills')}</div>
                     <div class="badge-grid">${comps.map(c => badge(`${c.icon} ${c.label}`, c.descriptor || '')).join('')}</div>
                 </div>
                 <div class="deep-block">
-                    <div class="deep-block-title">💜 תחומי העניין שלי</div>
-                    <div class="badge-grid">${interests.map(i => badge(`✨ ${i}`, 'משהו שאתה אוהב — נשלב אותו בלמידה')).join('')}</div>
+                    <div class="deep-block-title">${t('dashboard.strengths.sectionInterests')}</div>
+                    <div class="badge-grid">${interests.map(i => badge(`✨ ${i}`, t('dashboard.strengths.interestExplain'))).join('')}</div>
                 </div>
                 ${prefs.length ? `<div class="deep-block">
-                    <div class="deep-block-title">🧩 ההעדפות שלי</div>
-                    <div class="badge-grid">${prefs.map(p => badge(`👍 ${p}`, 'ככה נוח לך יותר ללמוד')).join('')}</div>
+                    <div class="deep-block-title">${t('dashboard.strengths.sectionPreferences')}</div>
+                    <div class="badge-grid">${prefs.map(p => badge(`👍 ${p}`, t('dashboard.strengths.prefExplain'))).join('')}</div>
                 </div>` : ''}
 
                 <div class="badge-explain" id="strengthExplain"></div>
@@ -1060,29 +1190,29 @@ export function initDashboard() {
             const m = data.mapping || {};
             const prefs = m.preferences || [];
             const el = document.getElementById('view-learning');
-            const helps = prefs.length ? prefs : ['משימות קצרות', 'דוגמאות מוחשיות', 'עבודה בקצב אישי'];
+            const helps = prefs.length ? prefs : [t('dashboard.learning.defaultHelp1'), t('dashboard.learning.defaultHelp2'), t('dashboard.learning.defaultHelp3')];
             el.innerHTML = `
-                <button class="view-back" data-goto="home">→ חזרה לדשבורד</button>
-                <div class="view-head"><h1>🧭 איך אני לומד</h1><p>הדרך שמתאימה לי ללמוד הכי טוב</p></div>
+                <button class="view-back" data-goto="home">${t('dashboard.backToDashboard')}</button>
+                <div class="view-head"><h1>${t('dashboard.learning.title')}</h1><p>${t('dashboard.learning.subtitle')}</p></div>
 
                 <div class="lp-card fade-in">
-                    <h3>🎨 סגנון הלמידה שלי</h3>
-                    <div style="font-size:0.85rem;color:var(--text-medium);line-height:1.5">${m.learningStyle || 'למידה בקצב אישי עם הרבה דוגמאות'}</div>
+                    <h3>${t('dashboard.learning.styleTitle')}</h3>
+                    <div style="font-size:0.85rem;color:var(--text-medium);line-height:1.5">${m.learningStyle || t('dashboard.learning.styleDefault')}</div>
                 </div>
                 <div class="lp-card fade-in">
-                    <h3>✅ מה עוזר לי ללמוד</h3>
+                    <h3>${t('dashboard.learning.helpsTitle')}</h3>
                     <div class="lp-list">${helps.map(h => `<div class="lp-row"><span class="lp-dot" style="background:#48bb78"></span> ${h}</div>`).join('')}</div>
                 </div>
                 <div class="lp-card fade-in">
-                    <h3>🌧️ מה פחות עוזר לי</h3>
+                    <h3>${t('dashboard.learning.hurtsTitle')}</h3>
                     <div class="lp-list">
-                        <div class="lp-row"><span class="lp-dot" style="background:#f6ad55"></span> משימות ארוכות מדי</div>
-                        <div class="lp-row"><span class="lp-dot" style="background:#f6ad55"></span> הרבה טקסט בבת אחת</div>
+                        <div class="lp-row"><span class="lp-dot" style="background:#f6ad55"></span> ${t('dashboard.learning.hurts1')}</div>
+                        <div class="lp-row"><span class="lp-dot" style="background:#f6ad55"></span> ${t('dashboard.learning.hurts2')}</div>
                     </div>
                 </div>
                 <div class="lp-card fade-in">
-                    <h3>🌟 הסביבה שמתאימה לי</h3>
-                    <div style="font-size:0.85rem;color:var(--text-medium);line-height:1.5">${m.environment || 'סביבה שקטה ונוחה'}</div>
+                    <h3>${t('dashboard.learning.environmentTitle')}</h3>
+                    <div style="font-size:0.85rem;color:var(--text-medium);line-height:1.5">${m.environment || t('dashboard.learning.environmentDefault')}</div>
                 </div>
             `;
             el.querySelector('[data-goto]').addEventListener('click', () => switchView('home'));
@@ -1349,7 +1479,7 @@ export function initDashboard() {
             if (mic) mic.classList.remove('recording');
             orbState('idle');
             const cap = document.getElementById('voiceCaption');
-            if (cap) cap.textContent = 'לחצו על המיקרופון כדי לדבר עם יובי 🎤';
+            if (cap) cap.textContent = t('dashboard.yubi.voiceIdle');
         }
         function startVoiceDemo() {
             clearVoice();
@@ -1357,11 +1487,11 @@ export function initDashboard() {
             const mic = document.getElementById('micBtn');
             mic.classList.add('recording');
             orbState('listening');
-            cap.textContent = 'מקשיב לך... 🎧';
+            cap.textContent = t('dashboard.yubi.voiceListening');
             voiceTimers.push(setTimeout(() => {
                 orbState('idle');
                 mic.classList.remove('recording');
-                cap.textContent = 'חושב... 💭';
+                cap.textContent = t('dashboard.yubi.voiceThinking');
             }, 2000));
             voiceTimers.push(setTimeout(() => {
                 const reply = generateReply('שלום');
@@ -1370,7 +1500,7 @@ export function initDashboard() {
             }, 2900));
             voiceTimers.push(setTimeout(() => {
                 orbState('idle');
-                document.getElementById('voiceCaption').textContent = 'לחצו שוב כדי לדבר עם יובי 🎤';
+                document.getElementById('voiceCaption').textContent = t('dashboard.yubi.voiceAgain');
             }, 7500));
         }
 
@@ -1610,12 +1740,22 @@ export function initDashboard() {
             }
         }, 3500);
 
-  function __whenRobotReady(fn){ if (window.YubiRobot) return fn(); const id = setInterval(() => { if (window.YubiRobot) { clearInterval(id); fn(); } }, 60); }
+    function mountYubiRobot(container, options) {
+        if (!container || container.querySelector('canvas')) return;
+        try {
+            window.YubiRobot.mount(container, options);
+        } catch (err) {
+            console.warn('Yubi robot mount failed:', err);
+            container.classList.add('robot-fallback');
+            container.innerHTML = MASCOT_SVG;
+        }
+    }
+    function __whenRobotReady(fn){ if (window.YubiRobot) return fn(); const id = setInterval(() => { if (window.YubiRobot) { clearInterval(id); fn(); } }, 60); }
   __whenRobotReady(() => {
     const launcher = document.getElementById('yubiLauncher');
     const chat = document.getElementById('yubiChat');
-    window.YubiRobot.mount(document.getElementById('yubiFabRobot'), { view: 'full', isActive: () => launcher && !launcher.classList.contains('hidden') });
-    window.YubiRobot.mount(document.getElementById('yubiHeadRobot'), { view: 'head', isActive: () => chat && chat.classList.contains('open') });
+        mountYubiRobot(document.getElementById('yubiFabRobot'), { view: 'full', isActive: () => launcher && !launcher.classList.contains('hidden') });
+        mountYubiRobot(document.getElementById('yubiHeadRobot'), { view: 'head', isActive: () => chat && chat.classList.contains('open') });
   });
   window.sendUserMsg = sendUserMsg;
 }

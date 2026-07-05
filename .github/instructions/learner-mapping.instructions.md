@@ -1,6 +1,6 @@
 ---
 description: "Use when changing learner mapping, the initial questionnaire, learner profile scoring, activeness mapping, questionnaire localization, or dashboard data derived from mapping in yuvi-720."
-applyTo: "learner-mapping/**,backend/mock_data.py,backend/server.py,student-dashboard/**,teacher-view/**"
+applyTo: "frontend/src/features/learner-mapping/**,frontend/src/features/results/**,frontend/src/features/student-dashboard/**,frontend/src/features/teacher-view/**,learner-mapping/**,backend/mock_data.py,backend/server.py,backend/app/routes/learner_mapping.py,student-dashboard/**,teacher-view/**"
 ---
 # 720 Learner Mapping Guidelines
 
@@ -33,5 +33,6 @@ Map outputs into the 720 activeness components:
 - There are no right or wrong answers. Ask for honest self-report.
 - Do not show numeric scores to students. Use verbal, encouraging summaries.
 - Results must feed both the student dashboard and teacher/mentor view.
+- Persist mapping results and derived profile/dashboard data in MongoDB-backed backend state. Do not cache learner mapping results in `localStorage` or `sessionStorage`.
 - Student-facing results should be positive, actionable, and age-appropriate.
 - Teacher-facing results may include richer diagnostic detail, but should be explainable and should not compare students to each other.

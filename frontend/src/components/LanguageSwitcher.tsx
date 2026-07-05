@@ -6,11 +6,15 @@ const languages: Array<{ value: Language; label: string }> = [
   { value: 'ar', label: 'العربية' }
 ]
 
-export function LanguageSwitcher() {
+interface LanguageSwitcherProps {
+  variant?: 'inline' | 'floating'
+}
+
+export function LanguageSwitcher({ variant = 'inline' }: LanguageSwitcherProps) {
   const { language, setLanguage, t } = useI18n()
 
   return (
-    <label className="yuvi-language-switcher yuvi-language-switcher-inline">
+    <label className={`yuvi-language-switcher yuvi-language-switcher-${variant}`}>
       <span>{t('language.switcherLabel')}</span>
       <select value={language} onChange={(event) => setLanguage(event.target.value as Language)}>
         {languages.map((option) => (

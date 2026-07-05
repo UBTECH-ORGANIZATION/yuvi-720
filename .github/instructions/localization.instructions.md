@@ -1,15 +1,16 @@
 ---
 description: "Use when adding or changing localization, translations, UI strings, backend prompts, language switching, RTL, LTR, Arabic, English, or Hebrew support in yuvi-720."
-applyTo: "shared/**,locales/**,learner-mapping/**,learning-agent/**,student-dashboard/**,teacher-view/**,mentoring/**,backend/server.py,backend/mock_data.py"
+applyTo: "frontend/**,shared/**,locales/**,learner-mapping/**,learning-agent/**,student-dashboard/**,teacher-view/**,mentoring/**,backend/server.py,backend/app/**,backend/mock_data.py"
 ---
 # Localization Guidelines
 
 - Supported locales are `he`, `ar`, and `en`.
 - Direction rules: Hebrew and Arabic use `dir="rtl"`; English uses `dir="ltr"`.
 - Put direction on `document.documentElement`; avoid per-component hardcoded `dir` unless an embedded iframe or user-generated content needs isolation.
-- Store the selected language in `localStorage` and pass it to backend endpoints that produce text or prompt an AI model.
+- Store the selected language in MongoDB-backed learner state through the backend API, not in `localStorage` or `sessionStorage`, and pass it to backend endpoints that produce text or prompt an AI model.
 - All new UI strings must be represented in all three locale files. Hebrew is the source language.
-- Prefer `data-i18n` / `data-i18n-*` attributes for static HTML and `t("key")` for JavaScript-rendered strings.
+- Prefer `data-i18n` / `data-i18n-*` attributes for static HTML and `t("key")` for JavaScript/React-rendered strings.
+- Do not add hardcoded learner-facing Hebrew, Arabic, or English strings in React components, HTML templates, backend prompts, or generated UI. Add locale keys in `he.json`, `en.json`, and `ar.json`, and use the i18n runtime.
 - Use logical CSS properties (`margin-inline-start`, `padding-inline-end`, `inset-inline-start`, `text-align: start`) instead of physical left/right rules.
 - Use `dir="auto"` on free-text inputs, chat messages, and content that can mix Hebrew, Arabic, and English.
 - Backend prompts, fallback messages, and AI response instructions must come from language-keyed dictionaries such as `PROMPTS[language]`.

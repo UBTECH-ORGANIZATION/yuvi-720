@@ -1,7 +1,7 @@
 // @ts-nocheck
 /* eslint-disable */
 /* =============================================================
- * YuviLab 720 · Yubi Robot for the Dashboard chat
+ * Yuvilab Spark · Yubi Robot for the Dashboard chat
  * Reuses the procedural Three.js model from the learner mapping.
  * Exposes window.YubiRobot.mount(container, { view, isActive })
  *   view: 'full'  → small floating robot (used as the chat launcher)
@@ -59,25 +59,25 @@ function makeRobot() {
     chest.position.set(0, 0.84, 0.18);
     robot.add(chest);
 
-    // glowing "720" chest label
+    // glowing Spark chest label
     const labelCanvas = document.createElement('canvas');
     labelCanvas.width = 256; labelCanvas.height = 192;
     const lctx = labelCanvas.getContext('2d');
-    lctx.font = '700 120px "Heebo", "Rubik", system-ui, sans-serif';
+    lctx.font = '700 72px "Heebo", "Rubik", system-ui, sans-serif';
     lctx.textAlign = 'center';
     lctx.textBaseline = 'middle';
     lctx.shadowColor = '#7c5cff';
     lctx.shadowBlur = 28;
     lctx.fillStyle = '#9d8bff';
-    lctx.fillText('720', 128, 100);
+    lctx.fillText('Spark', 128, 100);
     lctx.shadowBlur = 0;
     lctx.fillStyle = '#e8e3ff';
-    lctx.fillText('720', 128, 100);
+    lctx.fillText('Spark', 128, 100);
     const labelTex = new THREE.CanvasTexture(labelCanvas);
     labelTex.colorSpace = THREE.SRGBColorSpace;
     labelTex.anisotropy = 4;
     const labelMat = new THREE.MeshBasicMaterial({ map: labelTex, transparent: true, toneMapped: false });
-    const label = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.15), labelMat);
+    const label = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.12), labelMat);
     label.position.set(0, 0.84, 0.198);
     robot.add(label);
 

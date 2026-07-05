@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { getLearnerState, updateLearnerState } from '../services/api'
 
 type Language = 'he' | 'en' | 'ar'
 type Direction = 'rtl' | 'ltr'
@@ -16,9 +17,13 @@ const supportedLanguages: Language[] = ['he', 'en', 'ar']
 const rtlLanguages = new Set<Language>(['he', 'ar'])
 const I18nContext = createContext<I18nContextValue | null>(null)
 
-function getInitialLanguage(): Language {
-  const stored = localStorage.getItem('yuvi-language') as Language | null
-  return stored && supportedLanguages.includes(stored) ? stored : 'he'
+function timeoutSignal(ms: number) {
+  const controller = new AbortController()
+  const timeoutId = window.setTimeout(() => controller.abort(), ms)
+  return {
+    signal: controller.signal,
+    cancel: () => window.clearTimeout(timeoutId)
+  }
 }
 
 function applyDocumentLanguage(language: Language) {
@@ -28,17 +33,41 @@ function applyDocumentLanguage(language: Language) {
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(getInitialLanguage)
+  const [language, setLanguageState] = useState<Language>('he')
   const [messages, setMessages] = useState<Messages>({})
   const [isLoading, setIsLoading] = useState(true)
+  const [loadedPreference, setLoadedPreference] = useState(false)
 
   useEffect(() => {
     let active = true
+    const timeout = timeoutSignal(5000)
+    getLearnerState(timeout.signal)
+      .then((state) => {
+        if (!active) return
+        if (state.language && supportedLanguages.includes(state.language)) {
+          setLanguageState(state.language)
+        }
+      })
+      .catch(() => {
+        // Keep Hebrew as the safe default if state cannot be loaded.
+      })
+      .finally(() => {
+        timeout.cancel()
+        if (active) setLoadedPreference(true)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    const timeout = timeoutSignal(5000)
     applyDocumentLanguage(language)
-    localStorage.setItem('yuvi-language', language)
+    if (loadedPreference) void updateLearnerState({ language })
     setIsLoading(true)
 
-    fetch(`/locales/${language}.json`)
+    fetch(`/locales/${language}.json`, { signal: timeout.signal })
       .then((response) => response.json() as Promise<Messages>)
       .then((nextMessages) => {
         if (active) setMessages(nextMessages)
@@ -47,13 +76,14 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         if (active) setMessages({})
       })
       .finally(() => {
+        timeout.cancel()
         if (active) setIsLoading(false)
       })
 
     return () => {
       active = false
     }
-  }, [language])
+  }, [language, loadedPreference])
 
   const setLanguage = (nextLanguage: Language) => {
     setLanguageState(nextLanguage)

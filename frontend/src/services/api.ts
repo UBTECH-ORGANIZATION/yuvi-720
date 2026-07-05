@@ -1,5 +1,5 @@
-export async function apiGet<T>(path: string): Promise<T> {
-  const response = await fetch(path)
+export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, init)
   if (!response.ok) throw new Error(`GET ${path} failed with ${response.status}`)
   return response.json() as Promise<T>
 }
@@ -12,6 +12,33 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   })
   if (!response.ok) throw new Error(`POST ${path} failed with ${response.status}`)
   return response.json() as Promise<T>
+}
+
+export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(path, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  if (!response.ok) throw new Error(`PATCH ${path} failed with ${response.status}`)
+  return response.json() as Promise<T>
+}
+
+export interface LearnerState {
+  learner_id: string
+  language?: 'he' | 'en' | 'ar'
+  mapping_results?: unknown
+  profile_cache?: unknown
+  dashboard_cache?: unknown
+  game_progress?: Record<string, unknown>
+}
+
+export function getLearnerState(signal?: AbortSignal) {
+  return apiGet<LearnerState>('/api/learner-state', signal ? { signal } : undefined)
+}
+
+export function updateLearnerState(updates: Partial<LearnerState>) {
+  return apiPatch<LearnerState>('/api/learner-state', updates)
 }
 
 export async function streamPost(

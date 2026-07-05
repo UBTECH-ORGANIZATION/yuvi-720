@@ -41,3 +41,24 @@ button {
 button:disabled {
   cursor: not-allowed;
 }
+
+.yuvi-language-switcher-floating {
+  position: fixed;
+  inset-block-end: 20px;
+  inset-inline-start: auto;
+  inset-inline-end: auto;
+  right: 20px;
+  left: auto;
+  z-index: 1900;
+}
+
+@media (max-width: 640px) {
+  .yuvi-language-switcher-floating {
+    inset-block-end: 12px;
+    right: 12px;
+    left: auto;
+  }
+  .yuvi-language-switcher-floating span {
+    display: none;
+  }
+}

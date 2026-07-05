@@ -1,11 +1,12 @@
 ---
 description: "Use when implementing frontend or backend features in yuvi-720. Covers folder structure, code separation, architecture, validation, legacy cleanup, localization, FastAPI, vanilla JS, and 720 compliance."
-applyTo: "backend/**,learner-mapping/**,learning-agent/**,student-dashboard/**,teacher-view/**,mentoring/**,shared/**,locales/**"
+applyTo: "backend/**,frontend/**,learner-mapping/**,learning-agent/**,student-dashboard/**,teacher-view/**,mentoring/**,shared/**,locales/**"
 ---
-# YuviLab 720 Implementation Architecture
+# Yuvilab Spark Implementation Architecture
 
 ## Default Architecture
 - Backend: FastAPI in `backend/`, with reusable logic split into small modules as features grow.
+- Persistence: MongoDB/Cosmos is the source of truth for learner profile, language preference, dashboard cache, mentoring state, content progress, and AI memory. Do not use `localStorage` or `sessionStorage` for app state.
 - Frontend today: vanilla HTML/CSS/JavaScript. React migration is now explicitly approved by the user.
 - Shared frontend behavior belongs in `shared/`; translatable text belongs in `locales/`.
 - Keep all changes mapped to a 720 requirement where possible.
@@ -15,9 +16,11 @@ applyTo: "backend/**,learner-mapping/**,learning-agent/**,student-dashboard/**,t
 - HTML owns semantic structure, accessible labels, page landmarks, and static mounting points.
 - CSS owns layout, visual state, animation, and responsive behavior.
 - JavaScript owns state, API calls, event handling, rendering, persistence, and runtime localization.
+- Persist frontend state through backend APIs backed by MongoDB. Browser storage is allowed only for temporary, non-authoritative UI ephemera when explicitly justified.
 - Avoid new large inline scripts. Prefer extracting focused shared modules for repeated logic.
 - Do not duplicate language, API, chat, dashboard, or component-rendering helpers across pages.
 - Use `shared/i18n.js`, `data-i18n`, `data-i18n-*`, and locale JSON files for user-visible text.
+- React-rendered user-visible text must use the React i18n provider and locale keys. Static HTML must use `data-i18n` attributes. Backend prompts and fallbacks must use language-keyed dictionaries.
 - Direction must come from `document.documentElement.dir`: `he` and `ar` are RTL; `en` is LTR.
 - Use logical CSS properties: `margin-inline-*`, `padding-inline-*`, `inset-inline-*`, `text-align: start`.
 - Use `dir="auto"` or plaintext bidi handling for user-generated mixed-language content.
@@ -40,6 +43,7 @@ applyTo: "backend/**,learner-mapping/**,learning-agent/**,student-dashboard/**,t
 
 ## Backend Best Practices
 - Keep route handlers thin. Move reusable logic into dedicated modules such as `questionnaire_locales.py`, prompt templates, scoring, LLM access, dashboard generation, mentoring, and data access.
+- Put persistence logic in dedicated backend modules instead of scattering MongoDB calls through route handlers.
 - Use async I/O for HTTP, database, and storage calls.
 - Keep LLM prompt templates and fallback text language-keyed.
 - Keep the app demoable when LLM credentials are missing.
@@ -49,9 +53,12 @@ applyTo: "backend/**,learner-mapping/**,learning-agent/**,student-dashboard/**,t
 - Teacher-facing AI insights must be explainable and show raw evidence for flags.
 
 ## Folder Structure Direction
-- `backend/server.py`: app setup, route registration, static mounts, thin request orchestration.
-- `backend/*_locales.py` or `backend/prompts.py`: localized content and prompts.
-- `backend/*_service.py`: feature logic such as dashboard, mentoring, agent, recommendations, or persistence.
+- `backend/server.py`: FastAPI app bootstrap only: middleware, router inclusion, static mount registration, and uvicorn entrypoint.
+- `backend/app/routes/`: APIRouter modules grouped by feature or surface, such as learner mapping, learner state, static pages, learning agent, dashboard, mentoring, and teacher view.
+- `backend/app/services/`: reusable logic such as LLM clients, dashboard generation, mentoring workflows, recommendations, and content generation.
+- `backend/app/core/`: shared configuration, paths, settings, constants, and app-wide helpers.
+- `backend/*_locales.py` or `backend/app/core/*_locales.py`: localized content and prompt dictionaries.
+- `backend/learner_state.py` and future persistence modules: MongoDB/Cosmos data access isolated from route handlers.
 - `shared/`: frontend runtime utilities and shared assets.
 - `locales/`: `he.json`, `en.json`, `ar.json` with matching keys.
 - Feature folders (`learner-mapping/`, `learning-agent/`, `student-dashboard/`, `teacher-view/`, `mentoring/`): page-specific HTML/CSS/JS only.

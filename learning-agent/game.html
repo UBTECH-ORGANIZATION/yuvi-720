@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>משחק למידה - YuviLab 720</title>
+<title>משחק למידה - Yuvilab Spark</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -195,7 +195,7 @@ body {
         <span class="g-icon" id="gIcon">🔢</span>
         <div class="g-titles">
             <b id="gTitle">משחק למידה</b>
-            <small id="gSub">YuviLab 720</small>
+            <small id="gSub">Yuvilab Spark</small>
         </div>
         <div class="g-stats">
             <div class="g-pill" id="starPill">⭐ <span id="starVal">0</span></div>
@@ -373,6 +373,7 @@ const stageTitle = params.get('stage') || 'שלב 1';
 const C = CONTENT[subjectId] || CONTENT.math;
 const challenges = C.challenges;
 const storeKey = 'yuvilab720_game_' + subjectId + '_' + stageTitle;
+let gameProgress = {};
 
 let idx = 0;
 let stars = 0;
@@ -392,15 +393,37 @@ function toParent(type, payload) {
 const $ = id => document.getElementById(id);
 const body = $('gBody');
 
-function init() {
+async function loadLearnerState() {
+    try {
+        const resp = await fetch('/api/learner-state');
+        if (!resp.ok) throw new Error('state error');
+        return await resp.json();
+    } catch (e) {
+        return { game_progress: {} };
+    }
+}
+
+async function persistGameProgress() {
+    try {
+        await fetch('/api/learner-state', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ game_progress: gameProgress })
+        });
+    } catch (e) {}
+}
+
+async function init() {
     $('gIcon').textContent = C.icon;
     $('gTitle').textContent = C.name + ' · ' + stageTitle;
     $('startEmoji').textContent = C.icon;
     // resume?
-    const saved = localStorage.getItem(storeKey);
+    const learnerState = await loadLearnerState();
+    gameProgress = learnerState.game_progress || {};
+    const saved = gameProgress[storeKey];
     if (saved) {
         try {
-            const s = JSON.parse(saved);
+            const s = saved;
             if (s.idx > 0 && s.idx < challenges.length) {
                 $('resumeText').textContent = 'הגעת לאתגר ' + (s.idx + 1) + ' מתוך ' + challenges.length + ' ואספת ' + s.stars + ' כוכבים ⭐';
                 $('startOv').classList.remove('show');
@@ -413,9 +436,13 @@ function init() {
 }
 
 function saveProgress() {
-    localStorage.setItem(storeKey, JSON.stringify({ idx, stars }));
+    gameProgress[storeKey] = { idx, stars };
+    void persistGameProgress();
 }
-function clearProgress() { localStorage.removeItem(storeKey); }
+function clearProgress() {
+    delete gameProgress[storeKey];
+    void persistGameProgress();
+}
 
 // ================= IDLE (proactive agent) =================
 function resetIdle() {
