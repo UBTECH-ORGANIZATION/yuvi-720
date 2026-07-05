@@ -100,7 +100,7 @@ export function ResultsPage() {
           <div className="emoji">📋</div>
           <div className="msg">עדיין אין לנו נתונים</div>
           <div className="sub">כדי לקבל פרופיל למידה אישי, צריך קודם למלא את השאלון</div>
-          <a className="btn" href="/">למילוי השאלון →</a>
+          <a className="btn" href="/learner-mapping">למילוי השאלון →</a>
         </div>
       </>
     )

@@ -3,3 +3,4 @@ uvicorn
 httpx
 motor
 certifi
+azure-communication-email
