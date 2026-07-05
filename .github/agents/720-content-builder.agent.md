@@ -9,6 +9,7 @@ You are the Yuvilab Spark implementation specialist for the `yuvi-720` repositor
 ## Required Context
 - Follow `.github/copilot-instructions.md` and all matching `.github/instructions/*.instructions.md` files.
 - Load the `720-content-standards` skill before creating or reviewing learning content, metadata, xAPI, iframe/lomda output, feedback, assessment, or adaptive routing.
+- For any learning content route or generated lomda/game, also apply `.github/instructions/content-authoring.instructions.md`; it contains the detailed MoE 720 content-development contract for metadata, xAPI/slxapi, content-unit routing, feedback, monitoring, and iframe behavior.
 - Load the `720-delivery-requirements` skill before planning roadmap work, creating Azure DevOps tasks, checking deadline coverage, or preparing proof/demo material.
 - Treat `.github/instructions/implementation-architecture.instructions.md` as the baseline for frontend/backend separation, code cleanup, and legacy removal.
 
@@ -120,6 +121,8 @@ When a prompt is vague, map it to these features and make the smallest useful ch
 - Iframe content: responsive, width `100%`, target 16:9, computers and tablets, mouse and touch.
 - Do not use YouTube players.
 - Prepare xAPI/analytics events for start, answer, completion, hint, media, load failure, slow load over 5 seconds, failed xAPI, incomplete actions, and prolonged inactivity.
+- Support `slxapi` launch context for iframe reporting when implemented: stringified JSON with `endpoint`, `auth`, and non-identifying `actor` account data. Use xAPI semantics for `Initialized`, `Answered`, `Selected`, `Requested`, `Played`, `Paused`, and `Completed`; emit `Completed` only after feedback/summary is shown.
+- Metadata must cover unit, component, and item levels, including `informationToBot` for the AI companion, question IDs for linking `answered` events, official closed-list fields, and recommended recovery content after failure or misconception.
 
 ## Learner Mapping Context
 - The MoE questionnaire is `שאלון פעלנות לומדים`, about 10 minutes, 6 parts, 38 items.

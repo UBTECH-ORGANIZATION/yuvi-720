@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect } from 'react'
 import { initLearningPortal } from './app'
+import { LanguageSwitcher } from '../../components/LanguageSwitcher'
 import skeleton from './skeleton.html?raw'
 import portalCss from './portal.css?inline'
 
@@ -12,23 +13,39 @@ import portalCss from './portal.css?inline'
  * only while this route is mounted to avoid global class-name collisions.
  */
 export function LearningPortalPage() {
-  const didInit = useRef(false)
-
   useEffect(() => {
     const style = document.createElement('style')
     style.setAttribute('data-scope', 'learning-portal')
     style.textContent = portalCss
     document.head.appendChild(style)
 
-    if (!didInit.current) {
-      didInit.current = true
-      initLearningPortal()
-    }
-
     return () => {
       if (style.parentNode) style.parentNode.removeChild(style)
     }
   }, [])
 
-  return <div dangerouslySetInnerHTML={{ __html: skeleton }} />
+  useLayoutEffect(() => {
+    const startPortal = () => {
+      const grid = document.getElementById('subjectsGrid')
+      if (!grid || grid.dataset.portalInitialized === 'true') return
+      grid.dataset.portalInitialized = 'true'
+      try {
+        initLearningPortal()
+      } catch (error) {
+        console.error('Learning portal initialization failed:', error)
+        grid.innerHTML = '<div class="portal-error">לא הצלחנו לטעון את מסלולי הלמידה כרגע.</div>'
+      }
+    }
+
+    startPortal()
+  }, [])
+
+  return (
+    <>
+      <div dangerouslySetInnerHTML={{ __html: skeleton }} />
+      <div className="learning-navbar-language">
+        <LanguageSwitcher />
+      </div>
+    </>
+  )
 }

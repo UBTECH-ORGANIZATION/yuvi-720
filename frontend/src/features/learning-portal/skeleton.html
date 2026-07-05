@@ -13,6 +13,7 @@
             <a class="dashboard-link" href="/student-dashboard/">
                 <span>📊</span> הדשבורד שלי
             </a>
+            <div class="top-bar-language" id="learningLanguageSlot"></div>
             <span class="top-bar-name">יובל כהן</span>
             <div class="top-bar-avatar">י</div>
         </div>
@@ -42,7 +43,53 @@
                 </div>
             </div>
 
-            <div class="subjects-grid" id="subjectsGrid"></div>
+            <div class="subjects-grid" id="subjectsGrid">
+                <div class="subject-card fade-in" onclick="window.openSubject && window.openSubject('math')">
+                    <span class="recommended-badge">⭐ מומלץ לך</span>
+                    <div class="subject-card-icon" style="background: rgba(124,92,255,0.1)">🔢</div>
+                    <h3>מתמטיקה</h3>
+                    <p>גיאומטריה, חשבון ואלגברה</p>
+                    <div class="subject-card-progress"><div class="subject-card-progress-fill" style="width:35%;background:linear-gradient(135deg, #7c5cff, #9f7afe)"></div></div>
+                    <div class="subject-card-meta">35% הושלם</div>
+                </div>
+                <div class="subject-card fade-in" onclick="window.openSubject && window.openSubject('science')">
+                    <span class="recommended-badge">⭐ מומלץ לך</span>
+                    <div class="subject-card-icon" style="background: rgba(99,179,237,0.1)">🔬</div>
+                    <h3>מדעים</h3>
+                    <p>חשמל, אנרגיה ותופעות טבע</p>
+                    <div class="subject-card-progress"><div class="subject-card-progress-fill" style="width:20%;background:linear-gradient(135deg, #63b3ed, #4299e1)"></div></div>
+                    <div class="subject-card-meta">20% הושלם</div>
+                </div>
+                <div class="subject-card fade-in" onclick="window.openSubject && window.openSubject('robotics')">
+                    <span class="recommended-badge">⭐ מומלץ לך</span>
+                    <div class="subject-card-icon" style="background: rgba(72,187,120,0.1)">🤖</div>
+                    <h3>רובוטיקה</h3>
+                    <p>תכנות, חיישנים ובנייה</p>
+                    <div class="subject-card-progress"><div class="subject-card-progress-fill" style="width:0%;background:linear-gradient(135deg, #48bb78, #38a169)"></div></div>
+                    <div class="subject-card-meta">עוד לא התחלת</div>
+                </div>
+                <div class="subject-card fade-in" onclick="window.openSubject && window.openSubject('english')">
+                    <div class="subject-card-icon" style="background: rgba(246,173,85,0.1)">🌍</div>
+                    <h3>אנגלית</h3>
+                    <p>קריאה, כתיבה ואוצר מילים</p>
+                    <div class="subject-card-progress"><div class="subject-card-progress-fill" style="width:55%;background:linear-gradient(135deg, #f6ad55, #ed8936)"></div></div>
+                    <div class="subject-card-meta">55% הושלם</div>
+                </div>
+                <div class="subject-card fade-in" onclick="window.openSubject && window.openSubject('art')">
+                    <div class="subject-card-icon" style="background: rgba(236,72,153,0.1)">🎨</div>
+                    <h3>אמנות דיגיטלית</h3>
+                    <p>עיצוב, ציור ויצירה</p>
+                    <div class="subject-card-progress"><div class="subject-card-progress-fill" style="width:10%;background:linear-gradient(135deg, #ec4899, #be185d)"></div></div>
+                    <div class="subject-card-meta">10% הושלם</div>
+                </div>
+                <div class="subject-card fade-in" onclick="window.openSubject && window.openSubject('tech')">
+                    <div class="subject-card-icon" style="background: rgba(34,211,238,0.1)">💻</div>
+                    <h3>טכנולוגיה</h3>
+                    <p>תכנות, אלגוריתמים וחשיבה</p>
+                    <div class="subject-card-progress"><div class="subject-card-progress-fill" style="width:45%;background:linear-gradient(135deg, #22d3ee, #06b6d4)"></div></div>
+                    <div class="subject-card-meta">45% הושלם</div>
+                </div>
+            </div>
         </div>
     </div>
 

@@ -25,6 +25,7 @@ export function App() {
   const pathname = useRoute()
   const { language } = useI18n()
   const isMappingRoute = pathname === '/' || pathname === ''
+  const isLearningPortalRoute = pathname === '/learning' || pathname === '/learning/'
 
   return (
     <>
@@ -32,7 +33,7 @@ export function App() {
           content (and re-run its localization) whenever the language changes. */}
       <div key={language}>{pageForRoute(pathname)}</div>
       {/* The mapping page already shows a language switcher in its own app bar. */}
-      {!isMappingRoute && <LanguageSwitcher variant="floating" />}
+      {!isMappingRoute && !isLearningPortalRoute && <LanguageSwitcher variant="floating" />}
     </>
   )
 }
