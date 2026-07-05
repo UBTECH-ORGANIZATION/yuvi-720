@@ -121,7 +121,7 @@ export function initDashboard(t, language) {
                     <div style="font-size:48px;margin-bottom:16px;">📋</div>
                     <div style="font-size:18px;font-weight:700;color:#3a3360;margin-bottom:12px;">${t('dashboard.noData.title')}</div>
                     <div style="font-size:14px;color:#9a93b5;margin-bottom:24px;">${t('dashboard.noData.subtitle')}</div>
-                    <a href="/" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c5cff,#9f7afe);color:#fff;border-radius:14px;font-weight:700;text-decoration:none;">${t('dashboard.noData.cta')}</a>
+                    <a href="/learner-mapping" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c5cff,#9f7afe);color:#fff;border-radius:14px;font-weight:700;text-decoration:none;">${t('dashboard.noData.cta')}</a>
                 `;
                     return;
                 }

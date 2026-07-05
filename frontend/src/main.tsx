@@ -4,6 +4,7 @@ import { App } from './app/App'
 import { I18nProvider } from './i18n/I18nProvider'
 import './styles/theme.css'
 import './styles/global.css'
+import './styles/landing-login.css'
 import './styles/learner-mapping.css'
 import './styles/results.css'
 

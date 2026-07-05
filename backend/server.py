@@ -6,6 +6,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.routes.contact import router as contact_router
 from app.routes.dashboard import router as dashboard_router
 from app.routes.learner_mapping import router as learner_mapping_router
 from app.routes.learner_state import router as learner_state_router
@@ -32,6 +33,7 @@ def create_app() -> FastAPI:
     app.include_router(dashboard_router)
     app.include_router(mapping_chat_router)
     app.include_router(learning_content_router)
+    app.include_router(contact_router)
 
     mount_static_assets(app)
     app.include_router(static_pages_router)
