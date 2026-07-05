@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ארכיטקטורת 720 - מוח למידה משותף</title>
+  <style>
+    :root {
+      --ink: #17204a;
+      --muted: #5b6388;
+      --paper: #fffdf9;
+      --shell: #f6f0ff;
+      --blue: #2f80ed;
+      --violet: #7c5cff;
+      --green: #2fa75f;
+      --orange: #f2994a;
+      --red: #eb5757;
+      --cyan: #24a7c9;
+      --line: rgba(40, 49, 105, 0.15);
+      --shadow: 0 22px 60px rgba(23, 32, 74, 0.14);
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Heebo", "Rubik", "Arial", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 18% 8%, rgba(124, 92, 255, 0.18), transparent 34rem),
+        radial-gradient(circle at 78% 18%, rgba(36, 167, 201, 0.16), transparent 30rem),
+        linear-gradient(145deg, #fff7ef 0%, #f5f0ff 42%, #eef8ff 100%);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(23, 32, 74, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(23, 32, 74, 0.035) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent 75%);
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 36px));
+      margin-inline: auto;
+      padding-block: 28px 64px;
+    }
+
+    .hero {
+      min-height: 76vh;
+      display: grid;
+      grid-template-columns: minmax(390px, 0.92fr) minmax(430px, 1.08fr);
+      gap: clamp(28px, 4vw, 54px);
+      align-items: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      border: 1px solid rgba(124, 92, 255, 0.18);
+      border-radius: 999px;
+      color: #533fbb;
+      background: rgba(255, 255, 255, 0.64);
+      box-shadow: 0 8px 24px rgba(124, 92, 255, 0.08);
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      margin-block-start: 22px;
+      font-size: clamp(2.7rem, 5.4vw, 5.15rem);
+      line-height: 0.98;
+      letter-spacing: 0;
+      max-width: 760px;
+    }
+
+    .hero-copy {
+      margin-block-start: 22px;
+      color: var(--muted);
+      font-size: clamp(1.08rem, 1.6vw, 1.36rem);
+      line-height: 1.8;
+      max-width: 680px;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-block-start: 28px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding-inline: 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(23, 32, 74, 0.12);
+      text-decoration: none;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.7);
+      font-weight: 800;
+      box-shadow: 0 10px 24px rgba(23, 32, 74, 0.08);
+    }
+
+    .button.primary {
+      color: #fff;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--violet), #3b67e9);
+    }
+
+    .architecture-stage {
+      position: relative;
+      min-height: 520px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 176px minmax(0, 1fr);
+      grid-template-rows: minmax(94px, auto) 176px minmax(94px, auto) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 24px;
+      border-radius: 36px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.52);
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255, 255, 255, 0.76);
+      backdrop-filter: blur(20px);
+    }
+
+    .architecture-stage::before {
+      content: "";
+      position: absolute;
+      inset: 11%;
+      border: 1px dashed rgba(23, 32, 74, 0.17);
+      border-radius: 50%;
+      animation: spin 34s linear infinite;
+    }
+
+    .architecture-stage::after {
+      content: "";
+      position: absolute;
+      inset: 20%;
+      border: 1px solid rgba(124, 92, 255, 0.13);
+      border-radius: 50%;
+      animation: breathe 4.2s ease-in-out infinite;
+    }
+
+    .brain {
+      position: relative;
+      grid-column: 2;
+      grid-row: 2;
+      justify-self: center;
+      width: 168px;
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: #fff;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.55), transparent 17%),
+        radial-gradient(circle at 50% 50%, #57b6ff 0%, #2861d7 54%, #162a7a 100%);
+      box-shadow:
+        0 0 0 14px rgba(255, 255, 255, 0.7),
+        0 0 42px rgba(47, 128, 237, 0.46),
+        inset 0 0 42px rgba(255, 255, 255, 0.34);
+      z-index: 4;
+      animation: float 5s ease-in-out infinite;
+    }
+
+    .brain strong {
+      display: block;
+      font-size: 1.26rem;
+      line-height: 1.08;
+    }
+
+    .brain span {
+      display: block;
+      margin-block-start: 8px;
+      font-size: 0.9rem;
+      opacity: 0.92;
+    }
+
+    .student {
+      display: none;
+      position: absolute;
+      inset-block-end: 18px;
+      inset-inline-start: 50%;
+      transform: translateX(50%);
+      z-index: 6;
+      text-align: center;
+      font-weight: 900;
+      color: var(--ink);
+    }
+
+    .student .avatar {
+      width: 58px;
+      height: 58px;
+      margin-inline: auto;
+      margin-block-end: 8px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #fff;
+      box-shadow: var(--shadow);
+      font-size: 2rem;
+    }
+
+    .agent-card {
+      --agent-color: var(--violet);
+      position: relative;
+      width: 100%;
+      min-height: 96px;
+      padding: 14px 54px 14px 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: 0 14px 30px rgba(23, 32, 74, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.78);
+      z-index: 5;
+      animation: rise 0.8s ease both;
+    }
+
+    .agent-card::before {
+      content: attr(data-icon);
+      position: absolute;
+      inset-inline-start: 18px;
+      inset-block-start: 20px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--agent-color);
+      box-shadow: 0 12px 22px color-mix(in srgb, var(--agent-color), transparent 65%);
+      font-size: 1rem;
+    }
+
+    .agent-card h3 {
+      font-size: 0.94rem;
+      margin-block-end: 5px;
+    }
+
+    .agent-card p {
+      color: var(--muted);
+      line-height: 1.35;
+      font-size: 0.73rem;
+    }
+
+    .architecture-stage .agent-card:nth-of-type(1) { grid-column: 2; grid-row: 1; animation-delay: 0.05s; }
+    .architecture-stage .agent-card:nth-of-type(2) { grid-column: 1; grid-row: 2; --agent-color: var(--green); animation-delay: 0.12s; }
+    .architecture-stage .agent-card:nth-of-type(3) { grid-column: 3; grid-row: 2; --agent-color: var(--orange); animation-delay: 0.18s; }
+    .architecture-stage .agent-card:nth-of-type(4) { grid-column: 1; grid-row: 3; --agent-color: var(--violet); animation-delay: 0.24s; }
+    .architecture-stage .agent-card:nth-of-type(5) { grid-column: 3; grid-row: 3; --agent-color: var(--blue); animation-delay: 0.3s; }
+    .architecture-stage .agent-card:nth-of-type(6) { grid-column: 2; grid-row: 3; --agent-color: var(--red); animation-delay: 0.36s; }
+
+    .memory-bar {
+      position: relative;
+      grid-column: 1 / -1;
+      grid-row: 4;
+      z-index: 4;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 1px;
+      padding: 10px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.62);
+      border: 1px solid rgba(255, 255, 255, 0.78);
+      box-shadow: 0 14px 34px rgba(23, 32, 74, 0.1);
+    }
+
+    .memory-bar span {
+      min-height: 36px;
+      display: grid;
+      place-items: center;
+      padding: 8px;
+      color: var(--ink);
+      font-size: 0.82rem;
+      font-weight: 800;
+      border-inline-start: 1px solid rgba(23, 32, 74, 0.09);
+    }
+
+    .section {
+      margin-block-start: 56px;
+      padding: 34px;
+      border-radius: 30px;
+      background: rgba(255, 255, 255, 0.62);
+      border: 1px solid rgba(255, 255, 255, 0.78);
+      box-shadow: 0 18px 48px rgba(23, 32, 74, 0.1);
+      backdrop-filter: blur(18px);
+      opacity: 0;
+      transform: translateY(22px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+
+    .section.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: end;
+      margin-block-end: 24px;
+    }
+
+    .section-title h2 {
+      font-size: clamp(1.8rem, 3vw, 3rem);
+      line-height: 1.1;
+    }
+
+    .section-title p {
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 520px;
+    }
+
+    .flow-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .flow-step {
+      position: relative;
+      min-height: 180px;
+      padding: 22px;
+      border-radius: 22px;
+      background: #fff;
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .flow-step::after {
+      content: "";
+      position: absolute;
+      inset-inline-start: -25%;
+      inset-block-end: -55%;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--flow-color), transparent 75%);
+    }
+
+    .flow-step .number {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--flow-color);
+      font-weight: 900;
+      margin-block-end: 14px;
+    }
+
+    .flow-step h3 {
+      font-size: 1.1rem;
+      margin-block-end: 9px;
+    }
+
+    .flow-step p {
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 0.94rem;
+    }
+
+    .chart-layout {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 26px;
+      align-items: center;
+    }
+
+    .bar-chart {
+      display: grid;
+      gap: 12px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 170px 1fr 48px;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .bar-row strong {
+      font-size: 0.98rem;
+    }
+
+    .bar-track {
+      height: 22px;
+      border-radius: 999px;
+      background: rgba(23, 32, 74, 0.08);
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--bar-color), color-mix(in srgb, var(--bar-color), white 24%));
+      transition: width 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .section.visible .bar-fill {
+      width: var(--value);
+    }
+
+    .donut {
+      --p: 70;
+      width: min(300px, 100%);
+      aspect-ratio: 1;
+      margin-inline: auto;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle closest-side, #fff 64%, transparent 66%),
+        conic-gradient(var(--violet) 0 25%, var(--blue) 25% 45%, var(--green) 45% 65%, var(--orange) 65% 80%, #b8c2d8 80% 100%);
+      display: grid;
+      place-items: center;
+      box-shadow: inset 0 0 0 1px rgba(23, 32, 74, 0.08), 0 18px 44px rgba(23, 32, 74, 0.12);
+      animation: breathe 4.8s ease-in-out infinite;
+    }
+
+    .donut-label {
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    .donut-label strong {
+      display: block;
+      font-size: 2.2rem;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    .panel {
+      padding: 24px;
+      border-radius: 24px;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+
+    .panel h3 {
+      margin-block-end: 14px;
+      font-size: 1.28rem;
+    }
+
+    .panel ul {
+      margin: 0;
+      padding-inline-start: 20px;
+      color: var(--muted);
+      line-height: 1.9;
+    }
+
+    .agents-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .agent-detail {
+      --accent: var(--violet);
+      position: relative;
+      min-height: 290px;
+      padding: 22px;
+      border-radius: 24px;
+      background: #fff;
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .agent-detail::before {
+      content: "";
+      position: absolute;
+      inset-inline-start: 18px;
+      inset-block-start: 18px;
+      width: 52px;
+      height: 52px;
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--accent), white 12%);
+      box-shadow: 0 16px 28px color-mix(in srgb, var(--accent), transparent 75%);
+    }
+
+    .agent-detail::after {
+      content: attr(data-index);
+      position: absolute;
+      inset-inline-start: 35px;
+      inset-block-start: 31px;
+      color: #fff;
+      font-weight: 900;
+    }
+
+    .agent-detail h3 {
+      padding-inline-start: 66px;
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      margin-block-end: 16px;
+      font-size: 1.18rem;
+    }
+
+    .agent-detail .tagline {
+      color: var(--ink);
+      font-weight: 800;
+      line-height: 1.55;
+      margin-block-end: 14px;
+    }
+
+    .agent-detail dl {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+    }
+
+    .agent-detail div {
+      padding-block-start: 10px;
+      border-block-start: 1px solid rgba(23, 32, 74, 0.08);
+    }
+
+    .agent-detail dt {
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 900;
+      margin-block-end: 4px;
+    }
+
+    .agent-detail dd {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+
+    .lrs-lane {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      padding-block-start: 20px;
+    }
+
+    .lrs-lane::before {
+      content: "";
+      position: absolute;
+      inset-inline: 8%;
+      inset-block-start: 70px;
+      height: 4px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--violet), var(--blue), var(--green));
+      opacity: 0.38;
+    }
+
+    .lrs-card {
+      position: relative;
+      min-height: 154px;
+      padding: 22px;
+      border-radius: 20px;
+      background: #fff;
+      border: 1px solid var(--line);
+      text-align: center;
+      z-index: 1;
+    }
+
+    .lrs-card .dot {
+      width: 42px;
+      height: 42px;
+      margin-inline: auto;
+      margin-block-end: 12px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--dot-color);
+      color: #fff;
+      font-weight: 900;
+      animation: pulse 2.4s ease-in-out infinite;
+    }
+
+    .lrs-card h3 {
+      font-size: 1rem;
+      margin-block-end: 8px;
+    }
+
+    .lrs-card p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .roadmap {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .roadmap-card {
+      position: relative;
+      padding: 18px 16px;
+      min-height: 180px;
+      border-radius: 22px;
+      background: #fff;
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .roadmap-card::before {
+      content: attr(data-phase);
+      position: absolute;
+      inset-inline-start: 14px;
+      inset-block-start: 14px;
+      color: #fff;
+      background: var(--phase-color);
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 0.74rem;
+      font-weight: 900;
+    }
+
+    .roadmap-card h3 {
+      margin-block-start: 32px;
+      margin-block-end: 10px;
+      font-size: 1.05rem;
+    }
+
+    .roadmap-card p {
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 0.9rem;
+    }
+
+    .guardrails {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .guardrail {
+      padding: 22px;
+      min-height: 154px;
+      border-radius: 22px;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+
+    .guardrail strong {
+      display: block;
+      font-size: 1.08rem;
+      margin-block-end: 10px;
+    }
+
+    .guardrail p {
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 0.92rem;
+    }
+
+    .footer {
+      padding-block: 42px 0;
+      color: var(--muted);
+      line-height: 1.7;
+      text-align: center;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes breathe {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.035); opacity: 1; }
+    }
+
+    @keyframes float {
+      0%, 100% { translate: 0 0; }
+      50% { translate: 0 -12px; }
+    }
+
+    @keyframes rise {
+      from { opacity: 0; translate: 0 16px; }
+      to { opacity: 1; translate: 0 0; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot-color), transparent 55%); }
+      50% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--dot-color), transparent 90%); }
+    }
+
+    @media (max-width: 1040px) {
+      .hero,
+      .chart-layout,
+      .split {
+        grid-template-columns: 1fr;
+      }
+
+      .architecture-stage {
+        min-height: 760px;
+      }
+
+      .agent-card {
+        width: min(280px, 44%);
+      }
+
+      .flow-grid,
+      .agents-grid,
+      .lrs-lane,
+      .roadmap,
+      .guardrails {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 680px) {
+      .page {
+        width: min(100% - 22px, 1180px);
+        padding-block-start: 16px;
+      }
+
+      .hero {
+        min-height: auto;
+        padding-block: 24px;
+      }
+
+      .architecture-stage {
+        min-height: auto;
+        padding: 22px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .architecture-stage::before,
+      .architecture-stage::after,
+      .student,
+      .memory-bar {
+        display: none;
+      }
+
+      .brain,
+      .agent-card {
+        position: static;
+        transform: none;
+        width: 100%;
+      }
+
+      .brain {
+        width: 190px;
+        margin-inline: auto;
+      }
+
+      .flow-grid,
+      .agents-grid,
+      .lrs-lane,
+      .roadmap,
+      .guardrails {
+        grid-template-columns: 1fr;
+      }
+
+      .lrs-lane::before {
+        display: none;
+      }
+
+      .section {
+        padding: 22px;
+        border-radius: 22px;
+      }
+
+      .section-title {
+        display: block;
+      }
+
+      .section-title p {
+        margin-block-start: 12px;
+      }
+
+      .bar-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" aria-labelledby="hero-title">
+      <div>
+        <span class="eyebrow">מערכת 720 · מוח אחד · מנטור אישי לכל תלמיד</span>
+        <h1 id="hero-title">ארכיטקטורת הלמידה האישית של יובילאב</h1>
+        <p class="hero-copy">
+          המטרה: לבנות עוזר הוראה AI שמכיר את התלמיד לאורך זמן, מבין מה הוא לומד,
+          מזהה קושי בזמן אמת, ומציע את הצעד הבא במתמטיקה ובמדעים על בסיס נתונים אמיתיים.
+        </p>
+        <div class="hero-actions" aria-label="קישורי ניווט בדף">
+          <a class="button primary" href="#brain">איך זה עובד</a>
+          <a class="button" href="#agents">הסוכנים</a>
+          <a class="button" href="#weights">מה חשוב ב-720</a>
+          <a class="button" href="#lrs">איך נכנסים אירועי xAPI</a>
+        </div>
+      </div>
+
+      <div class="architecture-stage" aria-label="תרשים מוח הלמידה והסוכנים">
+        <div class="brain">
+          <div>
+            <strong>מוח למידה משותף</strong>
+            <span>Context Engine · MongoDB</span>
+          </div>
+        </div>
+
+        <article class="agent-card" data-icon="1" style="--agent-color: var(--violet)">
+          <h3>סוכן מיפוי</h3>
+          <p>מייצר את תמונת ההתחלה: תחומי עניין, העדפות, פעלנות וסגנון למידה.</p>
+        </article>
+        <article class="agent-card" data-icon="2">
+          <h3>מלווה למידה יובי</h3>
+          <p>צ'אט צף בכל מסך, הסברים מותאמים, דוגמאות אישיות ויוזמה בזמן קושי.</p>
+        </article>
+        <article class="agent-card" data-icon="3">
+          <h3>סוכן פדגוגי</h3>
+          <p>בוחר מה ללמוד עכשיו: יעד, רכיב, רמת קושי וייצוג חלופי במקרה של קושי.</p>
+        </article>
+        <article class="agent-card" data-icon="4">
+          <h3>סוכן רפלקציה</h3>
+          <p>עוזר לתלמיד לחשוב על הדרך, לא רק על התשובה, ושומר תובנות בפרופיל.</p>
+        </article>
+        <article class="agent-card" data-icon="5">
+          <h3>תובנות למורה</h3>
+          <p>מציג המלצות מוסברות על בסיס אירועים גולמיים, בלי להשוות בין תלמידים.</p>
+        </article>
+        <article class="agent-card" data-icon="6">
+          <h3>סוכן מוגנות</h3>
+          <p>שומר על פרטיות, בטיחות, שקיפות AI ושפה מכבדת בכל אינטראקציה.</p>
+        </article>
+
+        <div class="memory-bar" aria-label="שדות הזיכרון המשותף">
+          <span>פרופיל</span>
+          <span>יעדים</span>
+          <span>התקדמות</span>
+          <span>היסטוריית למידה</span>
+          <span>חוזקות</span>
+          <span>אתגרים</span>
+        </div>
+        <div class="student"><div class="avatar">👤</div>התלמיד</div>
+      </div>
+    </section>
+
+    <section id="brain" class="section">
+      <div class="section-title">
+        <h2>איך המערכת עובדת מקצה לקצה</h2>
+        <p>כל מסך, סוכן ורכיב תוכן קוראים וכותבים לאותו מוח למידה. אין נתונים מומצאים ואין זיכרון מפוזר.</p>
+      </div>
+      <div class="flow-grid">
+        <article class="flow-step" style="--flow-color: var(--violet)">
+          <div class="number">1</div>
+          <h3>מיפוי ראשוני</h3>
+          <p>השאלון והשיחה עם יובי ממלאים את הפרופיל הראשוני: העדפות, פעלנות, חוזקות ואתגרים.</p>
+        </article>
+        <article class="flow-step" style="--flow-color: var(--blue)">
+          <div class="number">2</div>
+          <h3>תכנון למידה</h3>
+          <p>מנוע דטרמיניסטי בוחר את יעד הלמידה הבא במתמטיקה או מדעים לפי תוכנית מאושרת ושליטה בפועל.</p>
+        </article>
+        <article class="flow-step" style="--flow-color: var(--green)">
+          <div class="number">3</div>
+          <h3>תוכן ב-iframe</h3>
+          <p>המערכת טוענת רכיב חיצוני מאושר ומעבירה לו slxapi כדי שידווח בחזרה מה קרה.</p>
+        </article>
+        <article class="flow-step" style="--flow-color: var(--orange)">
+          <div class="number">4</div>
+          <h3>אירועי xAPI</h3>
+          <p>התוכן שולח Initialized, Answered, Requested, Completed ועוד אל נקודת הדיווח שלנו.</p>
+        </article>
+        <article class="flow-step" style="--flow-color: var(--red)">
+          <div class="number">5</div>
+          <h3>מוח מתעדכן</h3>
+          <p>האירועים מעדכנים שליטה, קושי, התקדמות וטריגרים ליובי בזמן אמת.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="agents" class="section">
+      <div class="section-title">
+        <h2>מי הם הסוכנים ומה כל אחד עושה</h2>
+        <p>הסוכנים אינם שישה זיכרונות נפרדים. הם מומחים זמניים שמקבלים תצוגה מוגבלת של מוח הלמידה, מבצעים פעולה אחת, ומחזירים עדכון מבוקר.</p>
+      </div>
+      <div class="agents-grid">
+        <article class="agent-detail" data-index="1" style="--accent: var(--violet)">
+          <h3>סוכן מיפוי</h3>
+          <p class="tagline">בונה את תמונת ההתחלה בלי להפוך את השאלון למבחן.</p>
+          <dl>
+            <div><dt>קורא</dt><dd>תשובות שאלון, שפת ממשק, תחומי עניין ראשוניים והעדפות למידה.</dd></div>
+            <div><dt>כותב</dt><dd>פעלנות, סגנון למידה, העדפות, חוזקות ואתגרים רכים עם מקור נתונים.</dd></div>
+            <div><dt>כלים</dt><dd>ניתוח שאלון, סיכום ידידותי, יצירת Context ראשוני ליובי.</dd></div>
+          </dl>
+        </article>
+        <article class="agent-detail" data-index="2" style="--accent: var(--blue)">
+          <h3>מלווה למידה יובי</h3>
+          <p class="tagline">נמצא בכל מסך ומתרגם את נתוני הלמידה לעזרה פשוטה ומותאמת.</p>
+          <dl>
+            <div><dt>קורא</dt><dd>יעד נוכחי, קושי אחרון, תחומי עניין, מידע לפריט ונתוני שיחה בטוחים.</dd></div>
+            <div><dt>כותב</dt><dd>העדפות חדשות, דיווח עצמי על קושי, מטרות קטנות וסימני תסכול או ביטחון.</dd></div>
+            <div><dt>כלים</dt><dd>הסבר פשוט, העמקה, דוגמה אישית, רמז מדורג והצעת הפסקה.</dd></div>
+          </dl>
+        </article>
+        <article class="agent-detail" data-index="3" style="--accent: var(--green)">
+          <h3>סוכן פדגוגי</h3>
+          <p class="tagline">מחבר בין תוכנית הלימודים המאושרת לבין הצעד הבא של התלמיד.</p>
+          <dl>
+            <div><dt>קורא</dt><dd>שליטה לפי יעדים, תנאי קדם, קטלוג רכיבי תוכן ואירועי הצלחה או כשל.</dd></div>
+            <div><dt>כותב</dt><dd>המלצת רכיב הבא, סיבת בחירה, חלופה אחרי קושי ותוכנית התאוששות קצרה.</dd></div>
+            <div><dt>כלים</dt><dd>Planner דטרמיניסטי, בחירת iframe מאושר, התאמת רמת קושי וייצוג חלופי.</dd></div>
+          </dl>
+        </article>
+        <article class="agent-detail" data-index="4" style="--accent: var(--orange)">
+          <h3>סוכן רפלקציה</h3>
+          <p class="tagline">עוזר לתלמיד להבין איך הוא לומד, לא רק אם צדק.</p>
+          <dl>
+            <div><dt>קורא</dt><dd>מאמץ, בקשות רמז, דפוסי התמדה, מטרות מנטורינג ותשובות רפלקציה קודמות.</dd></div>
+            <div><dt>כותב</dt><dd>תובנות עצמיות, אסטרטגיות שעבדו, תחושת מסוגלות ונושאים לשיחה עם מורה.</dd></div>
+            <div><dt>כלים</dt><dd>שאלות תכנון, ניטור וסיכום קצר אחרי רכיב קשה או הצלחה משמעותית.</dd></div>
+          </dl>
+        </article>
+        <article class="agent-detail" data-index="5" style="--accent: var(--cyan)">
+          <h3>סוכן תובנות למורה</h3>
+          <p class="tagline">הופך אירועים גולמיים לתמונה שאפשר לפעול לפיה בכיתה.</p>
+          <dl>
+            <div><dt>קורא</dt><dd>אירועי למידה, שליטה לפי יעדים, מטרות, נוכחות פעילות והרשאות קבוצה.</dd></div>
+            <div><dt>כותב</dt><dd>דגלי תשומת לב, המלצות 2-5 פעולות, חוזקות לבנייה וראיות לכל מסקנה.</dd></div>
+            <div><dt>כלים</dt><dd>סינון לפי קבוצה, הסבר מקור הנתונים, זיהוי חוסר פעילות וקושי מתמשך.</dd></div>
+          </dl>
+        </article>
+        <article class="agent-detail" data-index="6" style="--accent: var(--red)">
+          <h3>סוכן מוגנות</h3>
+          <p class="tagline">שכבת בקרה לפני ואחרי כל תשובת AI לתלמיד.</p>
+          <dl>
+            <div><dt>קורא</dt><dd>הודעה נוכחית, מדיניות בטיחות, שפה נבחרת ואינדיקציה אם יש מידע מזהה.</dd></div>
+            <div><dt>כותב</dt><dd>החלטת אישור, הסרת מידע מזהה, סיבת חסימה או ניסוח חלופי בטוח.</dd></div>
+            <div><dt>כלים</dt><dd>בדיקת PII, התאמת גיל, שקיפות AI, שמירת טון מכבד ותמיכה בעברית וערבית.</dd></div>
+          </dl>
+        </article>
+      </div>
+    </section>
+
+    <section id="weights" class="section">
+      <div class="section-title">
+        <h2>מה מקבל עדיפות בדרישות 720</h2>
+        <p>הפיתוח מכוון קודם לאזורים עם המשקל הגבוה ביותר: סוכן אישי, הגשת תוכן מותאמת ותצוגת מורה.</p>
+      </div>
+      <div class="chart-layout">
+        <div class="bar-chart" aria-label="תרשים משקלי מאפייני 720">
+          <div class="bar-row"><strong>סוכן למידה אישי</strong><div class="bar-track"><div class="bar-fill" style="--value: 25%; --bar-color: var(--violet)"></div></div><b>25%</b></div>
+          <div class="bar-row"><strong>תוכן מותאם אישית</strong><div class="bar-track"><div class="bar-fill" style="--value: 20%; --bar-color: var(--blue)"></div></div><b>20%</b></div>
+          <div class="bar-row"><strong>תצוגת מורה</strong><div class="bar-track"><div class="bar-fill" style="--value: 20%; --bar-color: var(--green)"></div></div><b>20%</b></div>
+          <div class="bar-row"><strong>דשבורד תלמיד</strong><div class="bar-track"><div class="bar-fill" style="--value: 15%; --bar-color: var(--orange)"></div></div><b>15%</b></div>
+          <div class="bar-row"><strong>מנטורינג</strong><div class="bar-track"><div class="bar-fill" style="--value: 10%; --bar-color: var(--cyan)"></div></div><b>10%</b></div>
+          <div class="bar-row"><strong>מיפוי ראשוני</strong><div class="bar-track"><div class="bar-fill" style="--value: 5%; --bar-color: #9aa6c1"></div></div><b>5%</b></div>
+          <div class="bar-row"><strong>משוב והרשאות</strong><div class="bar-track"><div class="bar-fill" style="--value: 5%; --bar-color: #b6bfd3"></div></div><b>5%</b></div>
+        </div>
+        <div class="donut" aria-label="תרשים עוגה של מוקד הפיתוח">
+          <div class="donut-label">
+            <strong>65%</strong>
+            <span>שלושת המאפיינים הקריטיים: יובי, התאמת למידה, תובנות למורה</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>איך יודעים מה להציע במתמטיקה ובמדעים</h2>
+        <p>הסילבוס אינו נוצר על ידי AI. הוא מגיע כקטלוג יעדי למידה מאושר, והמערכת רק מתאימה את המסלול לתלמיד.</p>
+      </div>
+      <div class="split">
+        <article class="panel">
+          <h3>מנוע התכנון</h3>
+          <ul>
+            <li>קורא את רשימת יעדי הלמידה המאושרים במתמטיקה ובמדעים.</li>
+            <li>בודק אילו תנאי קדם כבר הושגו לפי אירועים אמיתיים.</li>
+            <li>מוצא את היעד הבא שלא נלמד או שדורש חיזוק.</li>
+            <li>נותן ליובי אפשרות להסביר למה זה הצעד הבא.</li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h3>הסוכן הפדגוגי</h3>
+          <ul>
+            <li>בוחר רכיב תוכן מאושר שמתאים לשפה, רמת קושי וצרכי התלמיד.</li>
+            <li>מפעיל חלופה מאושרת אחרי כישלון או תפיסה שגויה.</li>
+            <li>לא ממציא ציונים, תוכן או יעדי למידה.</li>
+            <li>מחזיר הסבר פשוט לתלמיד ולמורה על ההמלצה.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="lrs" class="section">
+      <div class="section-title">
+        <h2>הגשר בין iframe חיצוני למוח הלמידה</h2>
+        <p>התוכן החיצוני לא נקרא מתוך הדפדפן. הוא מדווח אלינו דרך xAPI, ואנחנו מעדכנים את המוח.</p>
+      </div>
+      <div class="lrs-lane">
+        <article class="lrs-card" style="--dot-color: var(--violet)">
+          <div class="dot">1</div>
+          <h3>טעינת רכיב</h3>
+          <p>הפלטפורמה טוענת iframe עם slxapi: endpoint, auth ו-actor לא מזהה.</p>
+        </article>
+        <article class="lrs-card" style="--dot-color: var(--blue)">
+          <div class="dot">2</div>
+          <h3>פעולת תלמיד</h3>
+          <p>התלמיד עונה, מבקש רמז, צופה במדיה או מסיים רכיב.</p>
+        </article>
+        <article class="lrs-card" style="--dot-color: var(--orange)">
+          <div class="dot">3</div>
+          <h3>דיווח xAPI</h3>
+          <p>התוכן שולח Answered, Requested, Played, Paused או Completed אל ה-LRS שלנו.</p>
+        </article>
+        <article class="lrs-card" style="--dot-color: var(--green)">
+          <div class="dot">4</div>
+          <h3>עדכון שליטה</h3>
+          <p>המוח מעדכן mastery, קושי, נסיונות, תפיסות שגויות והתקדמות.</p>
+        </article>
+        <article class="lrs-card" style="--dot-color: var(--red)">
+          <div class="dot">5</div>
+          <h3>תגובה בזמן אמת</h3>
+          <p>יובי מציע רמז, חלופה פדגוגית, עידוד או הפסקה לפי הצורך.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>מה כל סוכן רשאי לראות</h2>
+        <p>כדי לשמור על פרטיות ולמנוע בלבול, כל סוכן מקבל רק את החלק במוח שהוא צריך.</p>
+      </div>
+      <div class="guardrails">
+        <article class="guardrail"><strong>יובי</strong><p>רואה תחומי עניין, יעדים, האירוע הנוכחי ומידע לפריט. לא רואה הערות פרטיות של מורה.</p></article>
+        <article class="guardrail"><strong>פדגוגי</strong><p>רואה שליטה, יעד נוכחי וקטלוג תוכן. לא רואה תמלילי צ'אט אישיים.</p></article>
+        <article class="guardrail"><strong>תובנות מורה</strong><p>רואה רק תלמידים בקבוצות המותרות, עם ראיות גולמיות לכל סימון.</p></article>
+        <article class="guardrail"><strong>מוגנות</strong><p>בודק הודעה ומדיניות בלבד, מסיר מידע מזהה ושומר על שיח בטוח.</p></article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>מפת יישום</h2>
+        <p>ההתקדמות בנויה בשלבים קטנים, כל אחד מדגים יכולת אמיתית מול דרישות 720.</p>
+      </div>
+      <div class="roadmap">
+        <article class="roadmap-card" data-phase="P0" style="--phase-color: var(--violet)"><h3>מוח בסיסי</h3><p>אוסף אחד לנתוני תלמיד, Context Engine ומעבר ממצב מפוזר למוח משותף.</p></article>
+        <article class="roadmap-card" data-phase="P1" style="--phase-color: var(--blue)"><h3>xAPI ולומדה אחת</h3><p>נקודת דיווח, אירועי למידה, עדכון שליטה והוכחת iframe חיצוני.</p></article>
+        <article class="roadmap-card" data-phase="P2" style="--phase-color: var(--green)"><h3>דשבורד אמיתי</h3><p>מיפוי ודשבורד שמציגים נתונים מהמוח, בלי נתונים מומצאים.</p></article>
+        <article class="roadmap-card" data-phase="P3" style="--phase-color: var(--orange)"><h3>יובי צף</h3><p>צ'אט בכל מסך, זיכרון שיחה בטוח, והסברים לפי תחומי עניין.</p></article>
+        <article class="roadmap-card" data-phase="P4" style="--phase-color: var(--red)"><h3>למידה אדפטיבית</h3><p>טריגרים לקושי, חוסר פעילות והצלחה, ותוכן חלופי מאושר.</p></article>
+        <article class="roadmap-card" data-phase="P5" style="--phase-color: var(--cyan)"><h3>מורה ומנטורינג</h3><p>תובנות מוסברות, יעדים, הרשאות קבוצתיות ומשוב משתמשים.</p></article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>כללי יסוד שלא שוברים</h2>
+        <p>אלה הגבולות שמבטיחים שהמערכת עומדת ב-720 וגם באמת עוזרת לתלמיד.</p>
+      </div>
+      <div class="guardrails">
+        <article class="guardrail"><strong>אין מידע מזהה ל-AI</strong><p>הסוכנים מקבלים רק Context לא מזהה. שם, בית ספר ופרטים אישיים נשארים מחוץ לפרומפט.</p></article>
+        <article class="guardrail"><strong>אין ציונים מספריים לתלמיד</strong><p>המערכת משתמשת במספרים רק פנימית. לתלמיד מוצג משוב מילולי, חיובי ומעשי.</p></article>
+        <article class="guardrail"><strong>לוקליזציה מלאה</strong><p>כל טקסט עתידי במוצר עובר דרך he, ar, en ותומך RTL/LTR לפי שפת התלמיד.</p></article>
+        <article class="guardrail"><strong>AI לא ממציא עובדות</strong><p>התקדמות ושליטה מגיעות מאירועי למידה. הסוכן רק מסביר, מעודד ומתאים את הדרך.</p></article>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p>מסמך ויזואלי זה מסביר את הארכיטקטורה. במימוש המוצר עצמו כל הטקסטים חייבים לעבור דרך מנגנון הלוקליזציה של יובילאב.</p>
+    </footer>
+  </main>
+
+  <script>
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible')
+        }
+      }
+    }, { threshold: 0.15 })
+
+    document.querySelectorAll('.section').forEach((section) => observer.observe(section))
+  </script>
+</body>
+</html>

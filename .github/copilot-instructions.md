@@ -27,6 +27,13 @@ Yuvilab Spark is a Hebrew-first, AI-assisted learning platform for the Israeli M
 - Use the `720-delivery-requirements` skill whenever planning roadmap, backlog, Azure DevOps work items, demos, proof videos, or feature coverage for the 30/07 deadline.
 - Use the `720-content-standards` skill whenever authoring, reviewing, generating, importing, or instrumenting 720 content units, components, items, metadata, xAPI events, feedback, or adaptive routes.
 
+## Agentic Architecture (Shared Learning Brain)
+- The product is being built as **one AI mentor per student** around a **Shared Learning Brain / Context Engine**: a single per-learner document in MongoDB keyed by a **non-identifying `learner_id`** (collection `learners`) that all agents read from and write to. Agents are stateless specialists; the brain is the only durable memory.
+- Six agents map to 720 features: Onboarding (F2), Learning Coach (F3, floating chat on every screen + proactive), Pedagogical (F1, adaptive next content), Reflection (self-awareness), Teacher Insights (F6, explainable + group-scoped), Safety (cross-cutting gate). The brain projection powers the dashboard (F4).
+- Orchestration uses **Microsoft Agent Framework** as a layer over the existing **APIM** model access; keep deterministic + JSON fallbacks so the demo runs without agent/Mongo/APIM infra (never the production path).
+- Replace mock/LLM-invented data with brain projections: progress/mastery come from real `learning_events` (xAPI), not the LLM; the LLM only phrases verbal, non-numeric feedback. Every AI claim must be traceable to a brain field or event.
+- The canonical design is `docs/architecture/shared-learning-brain.md`. Use the `720-agent-architecture` skill whenever working on the brain, agents, orchestration, context assembly, xAPI ingestion, dashboard/teacher-view projection, or mock-data replacement.
+
 ## Language, Direction, and Tone
 - Supported product languages: Hebrew (`he`, RTL), Arabic (`ar`, RTL), English (`en`, LTR).
 - All new user-visible strings must be localizable. Hebrew is the source language unless the task explicitly says otherwise.

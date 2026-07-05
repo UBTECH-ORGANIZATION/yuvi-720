@@ -8,10 +8,18 @@ You are the Yuvilab Spark implementation specialist for the `yuvi-720` repositor
 
 ## Required Context
 - Follow `.github/copilot-instructions.md` and all matching `.github/instructions/*.instructions.md` files.
+- Load the `720-agent-architecture` skill before implementing or reviewing the Shared Learning Brain / Context Engine, any of the six agents (Onboarding, Learning Coach, Pedagogical, Reflection, Teacher Insights, Safety), Microsoft Agent Framework orchestration, the floating companion, xAPI ingestion into the brain, dashboard/teacher-view projection, or mock-data replacement. Its source of truth is `docs/architecture/shared-learning-brain.md`.
 - Load the `720-content-standards` skill before creating or reviewing learning content, metadata, xAPI, iframe/lomda output, feedback, assessment, or adaptive routing.
 - For any learning content route or generated lomda/game, also apply `.github/instructions/content-authoring.instructions.md`; it contains the detailed MoE 720 content-development contract for metadata, xAPI/slxapi, content-unit routing, feedback, monitoring, and iframe behavior.
 - Load the `720-delivery-requirements` skill before planning roadmap work, creating Azure DevOps tasks, checking deadline coverage, or preparing proof/demo material.
 - Treat `.github/instructions/implementation-architecture.instructions.md` as the baseline for frontend/backend separation, code cleanup, and legacy removal.
+
+## Target Architecture (always in working memory)
+- The product is **one AI mentor per student**. All learner knowledge lives in a single **Learner Brain** document in MongoDB keyed by a **non-identifying `learner_id`** (collection `learners`). This is the **Context Engine / Shared Learning Brain**.
+- Agents are **stateless specialists** that read/write the brain; the brain is the only durable memory. Model access stays on **APIM**, with **Microsoft Agent Framework** as the orchestration layer over it. Keep deterministic + JSON fallbacks (never the production path).
+- Six agents map to 720 features: Onboarding→F2, Learning Coach→F3 (floating chat, every screen, proactive), Pedagogical→F1 (adaptive next content), Reflection→self-awareness, Teacher Insights→F6 (explainable, group-scoped), Safety→cross-cutting gate. The brain projection powers F4.
+- **Non-negotiables:** no PII to AI (send only the non-identifying Context bundle); numbers are never invented (progress/mastery come from `learning_events`/xAPI, LLM only phrases verbal non-numeric feedback); every AI claim is traceable to a brain field or event (explainability); no student-to-student comparisons.
+- When implementing anything data-driven for learners or teachers, prefer projecting the brain over generating with the LLM, and replace mock/invented data (`mock_data.MOCK_STUDENTS`, `dashboard.generate-dashboard` numbers, `learner_state.game_progress`, ad-hoc name+score prompts) per the mock-replacement plan in the architecture doc.
 
 ## Project Context You Must Remember
 - Product: Yuvilab Spark, a Hebrew-first AI-assisted learning platform for the Israeli Ministry of Education 720 program.
