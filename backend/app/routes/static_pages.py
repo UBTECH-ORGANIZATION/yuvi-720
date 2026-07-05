@@ -42,6 +42,13 @@ async def results_route(path: str = ""):
     return serve_react_app()
 
 
+@router.get("/learner-mapping")
+@router.get("/learner-mapping/{path:path}")
+async def learner_mapping_route(path: str = ""):
+    """Serve the React app shell for the learner mapping route."""
+    return serve_react_app()
+
+
 @router.get("/student-dashboard")
 @router.get("/student-dashboard/{path:path}")
 async def student_dashboard_route(path: str = ""):
