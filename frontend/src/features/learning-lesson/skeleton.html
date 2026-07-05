@@ -1,0 +1,216 @@
+<div class="lesson-container">
+    <!-- HEADER -->
+    <div class="lesson-header">
+        <div class="yubi-badge">🤖 יובי הכין לך</div>
+        <h1>לומדה מותאמת: סוגי זוויות 📐</h1>
+        <a href="/learning/" class="back-btn">← חזרה למשחק</a>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="progress-bar">
+        <div class="progress-track"><div class="progress-fill" id="progressFill" style="width: 0%"></div></div>
+        <div class="progress-label" id="progressLabel">שקופית 1 מתוך 7</div>
+    </div>
+
+    <!-- SLIDES -->
+    <div class="slide-area" id="slideArea">
+        <!-- Slide 1: Intro -->
+        <div class="slide active" data-slide="0">
+            <div class="slide-title">בוא נלמד על זוויות! 📐</div>
+            <div class="slide-subtitle">אל תדאג, אני אסביר הכול צעד אחרי צעד</div>
+            <div class="slide-visual">
+                <div style="text-align:center;">
+                    <div style="font-size:4rem; margin-bottom:16px;">📐✨</div>
+                    <p style="color:#a0aec0; font-size:0.85rem; line-height:1.8;">
+                        זווית נוצרת כשיש שני קווים שנפגשים בנקודה אחת.<br>
+                        הנקודה הזו נקראת <strong style="color:#22d3ee">קודקוד</strong>,<br>
+                        והקווים נקראים <strong style="color:#22d3ee">צלעות הזווית</strong>.
+                    </p>
+                </div>
+            </div>
+            <div class="slide-text">
+                בלומדה הזו נלמד לזהות 4 סוגי זוויות שונים. זה יותר קל ממה שנדמה! 😊
+            </div>
+        </div>
+
+        <!-- Slide 2: Acute -->
+        <div class="slide" data-slide="1">
+            <div class="slide-title">זווית חדה 🔹</div>
+            <div class="slide-subtitle">קטנה מ-90°</div>
+            <div class="slide-visual">
+                <div style="display:flex; align-items:center; gap:40px;">
+                    <canvas id="canvasAcute" width="160" height="160"></canvas>
+                    <div style="text-align:right; max-width:280px;">
+                        <p style="font-size:0.88rem; line-height:1.8; color:#cbd5e0;">
+                            <strong style="color:#fff;">זווית חדה</strong> היא כל זווית שקטנה מ-90°.<br><br>
+                            💡 <strong>טיפ לזיהוי:</strong> היא "חדה" כמו חוד של עיפרון — צרה וקטנה.<br><br>
+                            🌍 <strong>דוגמה מהחיים:</strong> הזווית שנוצרת כשפותחים מספריים רק קצת.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Right Angle -->
+        <div class="slide" data-slide="2">
+            <div class="slide-title">זווית ישרה ⬜</div>
+            <div class="slide-subtitle">בדיוק 90°</div>
+            <div class="slide-visual">
+                <div style="display:flex; align-items:center; gap:40px;">
+                    <canvas id="canvasRight" width="160" height="160"></canvas>
+                    <div style="text-align:right; max-width:280px;">
+                        <p style="font-size:0.88rem; line-height:1.8; color:#cbd5e0;">
+                            <strong style="color:#fff;">זווית ישרה</strong> היא בדיוק 90°.<br><br>
+                            💡 <strong>טיפ לזיהוי:</strong> היא נראית בדיוק כמו פינה של דף נייר — "L" מושלם.<br><br>
+                            🌍 <strong>דוגמה מהחיים:</strong> כל פינה של חדר, טלפון, מחשב!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Obtuse -->
+        <div class="slide" data-slide="3">
+            <div class="slide-title">זווית קהה 🔸</div>
+            <div class="slide-subtitle">בין 90° ל-180°</div>
+            <div class="slide-visual">
+                <div style="display:flex; align-items:center; gap:40px;">
+                    <canvas id="canvasObtuse" width="160" height="160"></canvas>
+                    <div style="text-align:right; max-width:280px;">
+                        <p style="font-size:0.88rem; line-height:1.8; color:#cbd5e0;">
+                            <strong style="color:#fff;">זווית קהה</strong> גדולה מ-90° אבל קטנה מ-180°.<br><br>
+                            💡 <strong>טיפ לזיהוי:</strong> היא "שמנה" ורחבה — יותר פתוחה מפינת דף.<br><br>
+                            🌍 <strong>דוגמה מהחיים:</strong> כשנשענים על כיסא לאחור — הזווית שנוצרת.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Straight -->
+        <div class="slide" data-slide="4">
+            <div class="slide-title">זווית שטוחה ➖</div>
+            <div class="slide-subtitle">בדיוק 180°</div>
+            <div class="slide-visual">
+                <div style="display:flex; align-items:center; gap:40px;">
+                    <canvas id="canvasStraight" width="160" height="160"></canvas>
+                    <div style="text-align:right; max-width:280px;">
+                        <p style="font-size:0.88rem; line-height:1.8; color:#cbd5e0;">
+                            <strong style="color:#fff;">זווית שטוחה</strong> היא בדיוק 180° — קו ישר!<br><br>
+                            💡 <strong>טיפ לזיהוי:</strong> אין "פינה" בכלל. הקווים יוצרים קו ישר אחד.<br><br>
+                            🌍 <strong>דוגמה מהחיים:</strong> סרגל פתוח או מכסה ספר שטוח על השולחן.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: Summary -->
+        <div class="slide" data-slide="5">
+            <div class="slide-title">סיכום — ארבעת הסוגים 🏆</div>
+            <div class="slide-subtitle">המפתח הוא לשאול: "כמה מעלות?"</div>
+            <div class="slide-visual" style="flex-direction:column; gap:16px; padding: 24px;">
+                <div class="angle-types-grid">
+                    <div class="angle-type-card">
+                        <div class="type-icon">🔹</div>
+                        <div class="type-name">חדה</div>
+                        <div class="type-range">0° – 90°</div>
+                    </div>
+                    <div class="angle-type-card">
+                        <div class="type-icon">⬜</div>
+                        <div class="type-name">ישרה</div>
+                        <div class="type-range">= 90°</div>
+                    </div>
+                    <div class="angle-type-card">
+                        <div class="type-icon">🔸</div>
+                        <div class="type-name">קהה</div>
+                        <div class="type-range">90° – 180°</div>
+                    </div>
+                    <div class="angle-type-card">
+                        <div class="type-icon">➖</div>
+                        <div class="type-name">שטוחה</div>
+                        <div class="type-range">= 180°</div>
+                    </div>
+                </div>
+                <p style="font-size:0.82rem; color:#a0aec0; margin-top:12px;">
+                    🎯 הכלל: בודקים האם הזווית קטנה, שווה, או גדולה מ-90°. זהו!
+                </p>
+            </div>
+        </div>
+
+        <!-- Slide 7: Exercise 1 -->
+        <div class="slide" data-slide="6">
+            <div class="slide-title">בוא נתרגל! 🎯</div>
+            <div class="slide-subtitle">תרגיל 1 מתוך 3</div>
+            <div class="exercise-card">
+                <div class="q-text">זווית של 45° היא:</div>
+                <div class="exercise-options" data-correct="0">
+                    <button class="exercise-opt" data-idx="0">חדה — כי קטנה מ-90°</button>
+                    <button class="exercise-opt" data-idx="1">ישרה — כי קרובה ל-90°</button>
+                    <button class="exercise-opt" data-idx="2">קהה — כי גדולה מ-0°</button>
+                    <button class="exercise-opt" data-idx="3">שטוחה</button>
+                </div>
+                <div class="exercise-feedback" id="fb1"></div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Exercise 2 -->
+        <div class="slide" data-slide="7">
+            <div class="slide-title">תרגיל נוסף! 💪</div>
+            <div class="slide-subtitle">תרגיל 2 מתוך 3</div>
+            <div class="exercise-card">
+                <div class="q-text">פינה של ספר (90°) היא:</div>
+                <div class="exercise-options" data-correct="1">
+                    <button class="exercise-opt" data-idx="0">חדה</button>
+                    <button class="exercise-opt" data-idx="1">ישרה — בדיוק 90°</button>
+                    <button class="exercise-opt" data-idx="2">קהה</button>
+                    <button class="exercise-opt" data-idx="3">שטוחה</button>
+                </div>
+                <div class="exercise-feedback" id="fb2"></div>
+            </div>
+        </div>
+
+        <!-- Slide 9: Exercise 3 -->
+        <div class="slide" data-slide="8">
+            <div class="slide-title">אחרון! 🏁</div>
+            <div class="slide-subtitle">תרגיל 3 מתוך 3</div>
+            <div class="exercise-card">
+                <div class="q-text">זווית של 120° היא:</div>
+                <div class="exercise-options" data-correct="2">
+                    <button class="exercise-opt" data-idx="0">חדה</button>
+                    <button class="exercise-opt" data-idx="1">ישרה</button>
+                    <button class="exercise-opt" data-idx="2">קהה — בין 90° ל-180°</button>
+                    <button class="exercise-opt" data-idx="3">שטוחה</button>
+                </div>
+                <div class="exercise-feedback" id="fb3"></div>
+            </div>
+        </div>
+
+        <!-- Slide 10: Completion -->
+        <div class="slide" data-slide="9">
+            <div class="completion-screen">
+                <div class="comp-emoji">🎉🏆✨</div>
+                <div class="comp-title">כל הכבוד! סיימת את הלומדה!</div>
+                <div class="comp-sub">
+                    עכשיו אתה מבין את סוגי הזוויות הרבה יותר טוב.<br>
+                    מוכן לחזור למשחק ולהראות מה למדת? 💪
+                </div>
+                <div class="comp-stats">
+                    <div class="comp-stat"><div class="val" id="correctCount">0</div><div class="lbl">תשובות נכונות</div></div>
+                    <div class="comp-stat"><div class="val">9</div><div class="lbl">שקופיות</div></div>
+                    <div class="comp-stat"><div class="val">📐</div><div class="lbl">נושא: זוויות</div></div>
+                </div>
+                <a href="/learning/" class="nav-btn primary" style="text-decoration:none; display:inline-block;">
+                    חזרה למשחק — להמשיך מאיפה שעצרתי! 🚀
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- NAVIGATION -->
+    <div class="nav-area" id="navArea">
+        <button class="nav-btn secondary" id="prevBtn" onclick="prevSlide()" style="display:none">← הקודם</button>
+        <button class="nav-btn primary" id="nextBtn" onclick="nextSlide()">הבא →</button>
+    </div>
+</div>
+

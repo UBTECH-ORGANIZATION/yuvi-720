@@ -83,11 +83,47 @@ body {
     font-family: var(--font-family);
     background: var(--bg-body);
     color: var(--text-dark);
-    direction: rtl;
+    direction: inherit;
     line-height: 1.6;
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}
+
+.yuvi-language-switcher {
+    position: fixed;
+    z-index: 1000;
+    inset-block-start: 14px;
+    inset-inline-end: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(10px);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-medium);
+}
+
+.yuvi-language-switcher select {
+    border: none;
+    background: transparent;
+    color: var(--text-dark);
+    font: inherit;
+    cursor: pointer;
+    outline: none;
+}
+
+.yuvi-language-switcher-inline {
+    position: static;
+    inset: auto;
+    margin-inline-start: auto;
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(111, 91, 255, 0.18);
 }
 
 /* Utility Classes */

@@ -1,0 +1,95 @@
+name: Build, Deploy Dev & Promote to Production (spark / yuvi-720)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      promote:
+        description: "Promote Dev → Production after deploy?"
+        required: true
+        type: boolean
+        default: false
+
+env:
+  ACR_NAME: yuvi720acr
+  ACR_LOGIN_SERVER: yuvi720acr.azurecr.io
+  IMAGE_NAME: yuvi-720
+  RESOURCE_GROUP: rg-yuvi-720
+  WEBAPP_NAME: ubi-yuvi-720
+  SLOT_NAME: dev
+
+jobs:
+  # ── Job 1: Build & Push Docker image ──────────────────────────
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push Docker image
+        run: |
+          docker build --platform linux/amd64 \
+            -t ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -t ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest .
+          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+
+  # ── Job 2: Deploy to Dev slot (always runs) ───────────────────
+  deploy-dev:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: staging
+      url: https://dev.spark.yuvilab.ai
+    steps:
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Dev slot
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.WEBAPP_NAME }}
+          slot-name: ${{ env.SLOT_NAME }}
+          images: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Azure logout
+        run: az logout
+        if: always()
+
+  # ── Job 3: Swap Dev → Production (only on manual trigger) ─────
+  promote-production:
+    runs-on: ubuntu-latest
+    needs: deploy-dev
+    if: github.event_name == 'workflow_dispatch' && inputs.promote == true
+    environment:
+      name: production
+      url: https://spark.yuvilab.ai
+    steps:
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Swap Dev slot → Production
+        run: |
+          echo "🔄 Swapping Dev → Production..."
+          az webapp deployment slot swap \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --slot ${{ env.SLOT_NAME }} \
+            --target-slot production
+          echo "✅ Swap completed!"
+
+      - name: Azure logout
+        run: az logout
+        if: always()

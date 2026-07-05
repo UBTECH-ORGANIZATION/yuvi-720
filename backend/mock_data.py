@@ -355,32 +355,35 @@ MOCK_STUDENTS = [
 
 def calculate_scores(answers: dict) -> dict:
     """
-    Calculate dimension scores from raw answers (shortened 18-question version).
+    Calculate dimension scores from raw answers.
     answers: dict of question_id -> option_index (0-based, 0=best)
     Returns scores dict with overall and sub-dimension percentages.
     """
-    # Map question IDs to sub-dimensions
+    # Map question IDs to sub-dimensions. The live questionnaire follows the
+    # 38-item MoE sample; missing answers remain neutral for legacy mock data.
     question_mapping = {
-        # Academic (Q1-5)
-        "interest": [1, 2, 3],
-        "relevance": [4],
-        "investment": [5],
-        # Psycho-pedagogical (Q6-14)
-        "motivation": [6, 7, 8, 9],
-        "autonomy": [11, 12],
-        "cognitive": [13],
-        "self_awareness": [10, 14],
-        # Environmental (Q15-18)
-        "school_climate": [15],
-        "tech_comfort": [17],
-        "focus": [18]
+        "interest": [1, 2, 3, 10],
+        "relevance": [7, 8],
+        "investment": [11, 12],
+        "motivation": [9, 13, 14, 15, 16],
+        "autonomy": [17, 18, 19, 20, 21, 25],
+        "cognitive": [22, 23],
+        "self_awareness": [24, 26, 27, 28],
+        "school_climate": [30, 31, 32],
+        "tech_comfort": [33, 34, 35, 36, 38],
+        "focus": [29, 37]
     }
 
-    def score_answer(option_idx):
+    reverse_scored = {4, 5, 6, 9, 14, 29, 36, 37, 38}
+
+    def score_answer(option_idx, question_id):
         """Convert option index (0=best) to percentage score."""
         if option_idx is None:
             return 60  # neutral
-        # 0=100, 1=80, 2=60, 3=40, 4=20
+        if question_id == 34:
+            return 45 if option_idx == 0 else 80
+        if question_id in reverse_scored:
+            return min(100, 20 + (option_idx * 20))
         return max(20, 100 - (option_idx * 20))
 
     sub_scores = {}
@@ -389,7 +392,7 @@ def calculate_scores(answers: dict) -> dict:
         for q_id in q_ids:
             key = q_id if q_id in answers else str(q_id)
             if key in answers:
-                scores_list.append(score_answer(answers[key]))
+                scores_list.append(score_answer(answers[key], q_id))
         if scores_list:
             sub_scores[sub_dim] = round(sum(scores_list) / len(scores_list))
         else:

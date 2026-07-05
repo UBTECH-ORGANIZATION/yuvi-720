@@ -1,0 +1,43 @@
+:root {
+  --m-primary: #6F5BFF;
+  --m-primary-2: #9f7afe;
+  --m-secondary: #4CC9F0;
+  --m-soft-bg: #F5F2FF;
+  --m-card: #FFFFFF;
+  --m-text: #2F2F44;
+  --m-text-soft: #6b6880;
+  --m-text-light: #9893ab;
+  --m-border: #E8E2F7;
+  --m-gradient: linear-gradient(135deg, #6F5BFF 0%, #9f7afe 55%, #4CC9F0 130%);
+  --m-gradient-soft: linear-gradient(135deg, #7c5cff 0%, #9f7afe 100%);
+  --m-shadow-sm: 0 2px 10px rgba(111, 91, 255, 0.08);
+  --m-shadow-md: 0 12px 36px rgba(111, 91, 255, 0.12), 0 3px 10px rgba(47, 47, 68, 0.04);
+  --m-shadow-lg: 0 24px 60px rgba(111, 91, 255, 0.16);
+  --font-family: 'Rubik', 'Heebo', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  color: var(--m-text);
+  direction: inherit;
+  min-height: 100vh;
+  background:
+    radial-gradient(1100px 600px at 88% -8%, rgba(76, 201, 240, 0.12), transparent 60%),
+    radial-gradient(900px 600px at 6% 12%, rgba(111, 91, 255, 0.14), transparent 55%),
+    linear-gradient(168deg, #F7F5FF 0%, #F1EEFC 48%, #EFEAFB 100%);
+}
+
+button, input, select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}

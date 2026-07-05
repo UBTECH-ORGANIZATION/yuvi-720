@@ -1,0 +1,82 @@
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <span class="top-bar-logo">YuviLab 720</span>
+        <div class="top-bar-breadcrumb">
+            <a href="/learning/">פורטל הלמידה</a>
+            <span class="sep">›</span>
+            <span class="active">צור לומדה משלי ✨</span>
+        </div>
+        <div class="top-bar-right">
+            <a class="back-link" href="/learning/"><span>→</span> חזרה</a>
+            <span class="top-bar-name">יובל כהן</span>
+            <div class="top-bar-avatar">י</div>
+        </div>
+    </div>
+
+    <div class="builder">
+        <!-- LEFT: stage -->
+        <div class="stage-panel">
+            <div class="stage-tabs">
+                <button class="stage-tab active" id="tabPreview" onclick="showTab('preview')">▶ המשחק שלי</button>
+                <button class="stage-tab" id="tabCode" onclick="showTab('code')">&lt;/&gt; הקוד שנוצר</button>
+                <div class="stage-title" id="stageStatus"><span class="dot"></span><span id="stageStatusText">ממתין ליצירה</span></div>
+            </div>
+            <div class="stage-body">
+                <div class="preview-wrap active" id="previewWrap">
+                    <div class="preview-empty" id="previewEmpty">
+                        <div class="big">🔬✨</div>
+                        <h3>כאן תופיע הלומדה שתיצור</h3>
+                        <p>ספר ליובי בצ'אט מה תרצה לבנות — למשל מעבדת אלקטרוניקה שבה מחברים רכיבים ומדליקים נורה — והמשחק ייבנה כאן בזמן אמת.</p>
+                    </div>
+                    <iframe id="previewFrame" sandbox="allow-scripts" title="הלומדה שלי" style="display:none;"></iframe>
+                </div>
+                <div class="code-wrap" id="codeWrap">
+                    <div class="code-scroll" id="codeScroll">
+                        <pre id="codePre"><span style="color:#6b647f;">// הקוד שיובי יוצר יופיע כאן בזמן אמת...</span></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: chat -->
+        <div class="chat-panel">
+            <div class="chat-header">
+                <div class="avatar">
+                    <svg viewBox="0 0 36 36" width="26" height="26" fill="none">
+                        <rect x="8" y="12" width="20" height="16" rx="4" fill="#fff" fill-opacity="0.92"/>
+                        <rect x="12" y="16" width="4" height="4" rx="1.5" fill="#7c5cff"/>
+                        <rect x="20" y="16" width="4" height="4" rx="1.5" fill="#7c5cff"/>
+                        <rect x="15" y="22" width="6" height="2" rx="1" fill="#c4b5fd"/>
+                        <rect x="14" y="6" width="8" height="6" rx="2" fill="#fff" fill-opacity="0.75"/>
+                        <rect x="17" y="3" width="2" height="4" rx="1" fill="#c4b5fd"/>
+                        <circle cx="18" cy="2" r="2" fill="#22d3ee"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3>יובי</h3>
+                    <span>בונה איתך לומדות-משחק</span>
+                </div>
+                <div class="online"></div>
+            </div>
+
+            <div class="topic-bar">
+                <div class="lbl">📚 הנושא הנלמד</div>
+                <div class="chips" id="topicChips">
+                    <span class="chip active" data-topic="electronics">⚡ אלקטרוניקה</span>
+                    <span class="chip" data-topic="math">📐 מתמטיקה</span>
+                    <span class="chip" data-topic="science">🔬 מדעים</span>
+                </div>
+            </div>
+
+            <div class="chat-body" id="chatBody"></div>
+
+            <div class="suggest-wrap" id="suggestWrap"></div>
+
+            <div class="chat-input">
+                <input type="text" id="chatInput" placeholder="ספר ליובי מה תרצה לבנות..." />
+                <button id="sendBtn" onclick="onSend()">↑</button>
+            </div>
+        </div>
+    </div>
+

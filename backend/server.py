@@ -5,7 +5,7 @@ Serves static files and provides API for the learner mapping questionnaire.
 
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 import uvicorn
@@ -13,7 +13,7 @@ import os
 import re
 import json
 import httpx
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 
 from mock_data import (
     QUESTIONNAIRE,
@@ -23,22 +23,26 @@ from mock_data import (
     generate_insights,
     generate_recommendations,
 )
+from questionnaire_locales import get_questionnaire_for_language
 
 # ============================================================
-# LLM configuration — reuse the main backend's .env credentials
-# (APIM gateway → gpt-5-mini). This lets the 720 demo talk to a
-# real model for the learner-mapping chat & section summaries.
+# LLM configuration. The app works without these credentials by falling
+# back to canned/mock responses, but a local backend/.env enables the
+# learner-mapping chat and AI-generated summaries/dashboard content.
 # ============================================================
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-_ENV_PATH = _REPO_ROOT / "src" / "backend" / ".env"
+_APP_ROOT = Path(__file__).resolve().parent.parent
+_ENV_PATHS = [
+    Path(__file__).resolve().parent / ".env",
+    _APP_ROOT / ".env",
+    _APP_ROOT.parent / "src" / "backend" / ".env",
+]
 
 
-def _load_env_file(path: Path) -> None:
+def _load_env_file(path: Path) -> bool:
     """Lightweight .env loader (no external deps). Does not override existing vars."""
     try:
         if not path.exists():
-            print(f"⚠️ .env not found at {path}")
-            return
+            return False
         for raw in path.read_text(encoding="utf-8").splitlines():
             line = raw.strip()
             if not line or line.startswith("#") or "=" not in line:
@@ -49,11 +53,14 @@ def _load_env_file(path: Path) -> None:
             if re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", key) and key not in os.environ:
                 os.environ[key] = val
         print(f"✅ Loaded LLM env from {path}")
+        return True
     except Exception as e:
         print(f"⚠️ Failed to load .env: {e}")
+        return False
 
 
-_load_env_file(_ENV_PATH)
+if not any(_load_env_file(_env_path) for _env_path in _ENV_PATHS):
+    print("ℹ️ No LLM .env found; AI features will use fallback responses.")
 
 
 async def call_llm(messages: list, max_tokens: int = 1200, json_mode: bool = False):
@@ -176,22 +183,58 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+SUPPORTED_LANGUAGES = {"he", "en", "ar"}
+LANGUAGE_NAMES = {
+    "he": "Hebrew",
+    "en": "English",
+    "ar": "Arabic",
+}
+
+
+def normalize_language(language: Optional[str]) -> str:
+    """Return a supported 2-letter language code."""
+    normalized = (language or "he").lower()[:2]
+    return normalized if normalized in SUPPORTED_LANGUAGES else "he"
+
+
+def output_language_instruction(language: str) -> str:
+    """Instruction for learner-facing AI output language."""
+    return f"Write only in {LANGUAGE_NAMES.get(language, 'Hebrew')}."
+
+
+LOCALIZED_FALLBACKS = {
+    "empty_chat": {
+        "he": "לא הבנתי, אפשר לכתוב שוב? 😊",
+        "en": "I did not understand. Can you write that again? 😊",
+        "ar": "لم أفهم، هل يمكنك أن تكتب ذلك مرة أخرى؟ 😊",
+    },
+    "chat_saved": {
+        "he": "תודה ששיתפת! רשמתי את זה. יש עוד משהו שתרצה לספר לי?",
+        "en": "Thanks for sharing! I wrote that down. Is there anything else you want to tell me?",
+        "ar": "شكرًا لمشاركتك! سجلت ذلك. هل هناك شيء آخر تريد إخباري به؟",
+    },
+}
+
+
+def localized_fallback(key: str, language: str) -> str:
+    return LOCALIZED_FALLBACKS.get(key, {}).get(language) or LOCALIZED_FALLBACKS[key]["he"]
+
 # Paths
 BASE_DIR = Path(__file__).parent.parent
-LEARNER_MAPPING_DIR = BASE_DIR / "learner-mapping"
-STUDENT_DASHBOARD_DIR = BASE_DIR / "student-dashboard"
 LEARNING_AGENT_DIR = BASE_DIR / "learning-agent"
-MENTORING_DIR = BASE_DIR / "mentoring"
-TEACHER_VIEW_DIR = BASE_DIR / "teacher-view"
 SHARED_DIR = BASE_DIR / "shared"
+LOCALES_DIR = BASE_DIR / "locales"
+REACT_APP_DIR = BASE_DIR / "static" / "react"
+REACT_ASSETS_DIR = REACT_APP_DIR / "assets"
 
 
 # --- API Routes ---
 
 @app.get("/api/questionnaire")
-async def get_questionnaire():
+async def get_questionnaire(request: Request):
     """Return the full questionnaire structure."""
-    return JSONResponse(content=QUESTIONNAIRE)
+    language = request.query_params.get("lang") or request.query_params.get("language") or "he"
+    return JSONResponse(content=get_questionnaire_for_language(language))
 
 
 @app.get("/api/dimensions")
@@ -539,6 +582,7 @@ async def get_section_summary(data: dict):
     part_title = data.get("part_title", "")
     qa_pairs = data.get("questions_and_answers", [])
     student_name = data.get("student_name", "")
+    language = normalize_language(data.get("language"))
 
     print(f"📝 section-summary called: part_title='{part_title}', qa_pairs={len(qa_pairs)}, name='{student_name}'")
     for qa in qa_pairs[:3]:
@@ -554,7 +598,7 @@ async def get_section_summary(data: dict):
 {qa_text}
 
 הנחיות:
-1. כתוב בעברית בלבד (ללא מילים בשפות אחרות!).
+1. {output_language_instruction(language)}
 2. כתוב 2-3 משפטים קצרים בגוף שני, בטון חם ואינטימי.
 3. פנה לילד בשמו הפרטי ({student_name.split()[0] if student_name else 'חבר'}) לפחות פעם אחת — זה חשוב ליצירת קשר.
 4. התייחס לתשובות הספציפיות — אבל אל תצטט את הבחירות מילה במילה (אל תכתוב 'ככה-ככה', 'ממש מתאים לי', 'לא כל כך' וכו'). תרגם את המשמעות לשפה טבעית וזורמת. למשל, במקום "בחרת 'ככה-ככה' בהתמדה" כתוב "עדיין בונים את שריר ההתמדה".
@@ -571,7 +615,7 @@ async def get_section_summary(data: dict):
 
     # Fallback: generate a simple summary without LLM
     print(f"⚠️ LLM returned None, using fallback for: '{part_title}'")
-    fallback = generate_fallback_summary(part_title, qa_pairs)
+    fallback = generate_fallback_summary(part_title, qa_pairs, language)
     return JSONResponse(content={"summary": fallback})
 
 
@@ -584,6 +628,7 @@ async def get_section_summary_stream(data: dict):
     part_title = data.get("part_title", "")
     qa_pairs = data.get("questions_and_answers", [])
     student_name = data.get("student_name", "")
+    language = normalize_language(data.get("language"))
 
     qa_text = "\n".join([f"- {qa['question']}: {qa['answer']}" for qa in qa_pairs])
 
@@ -594,7 +639,7 @@ async def get_section_summary_stream(data: dict):
 {qa_text}
 
 הנחיות:
-1. כתוב בעברית בלבד (ללא מילים בשפות אחרות!).
+1. {output_language_instruction(language)}
 2. כתוב 2-3 משפטים קצרים בגוף שני, בטון חם ואינטימי.
 3. פנה לילד בשמו הפרטי ({student_name.split()[0] if student_name else 'חבר'}) לפחות פעם אחת — זה חשוב ליצירת קשר.
 4. התייחס לתשובות הספציפיות — אבל אל תצטט את הבחירות מילה במילה (אל תכתוב 'ככה-ככה', 'ממש מתאים לי', 'לא כל כך' וכו'). תרגם את המשמעות לשפה טבעית וזורמת. למשל, במקום "בחרת 'ככה-ככה' בהתמדה" כתוב "עדיין בונים את שריר ההתמדה".
@@ -609,7 +654,7 @@ async def get_section_summary_stream(data: dict):
             has_content = True
             yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
         if not has_content:
-            fallback = generate_fallback_summary(part_title, qa_pairs)
+            fallback = generate_fallback_summary(part_title, qa_pairs, language)
             yield f"data: {json.dumps({'text': fallback}, ensure_ascii=False)}\n\n"
         yield "data: [DONE]\n\n"
 
@@ -623,10 +668,11 @@ async def mapping_chat_stream(data: dict):
     student_name = data.get("student_name", "")
     context = data.get("context", "")
     history = data.get("history", [])
+    language = normalize_language(data.get("language"))
 
     if not message:
         async def empty():
-            yield f"data: {json.dumps({'text': 'לא הבנתי, אפשר לכתוב שוב? 😊'}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'text': localized_fallback('empty_chat', language)}, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
         return StreamingResponse(empty(), media_type="text/event-stream")
 
@@ -634,7 +680,7 @@ async def mapping_chat_stream(data: dict):
 {('הקשר מהשאלון עד כה: ' + context) if context else ''}
 
 הנחיות חשובות:
-- דבר/י בעברית בלבד, פשוטה, ידידותית ומכבדת — מתאים לנער/ה, לא ילדותי מדי.
+- {output_language_instruction(language)} Use simple, friendly, respectful language for a teenager; not too childish.
 - פנה בשם הפרטי ({student_name.split()[0] if student_name else 'חבר/ה'}).
 - תשובות קצרות וטבעיות: 1-3 משפטים בלבד.
 - הקשב/י באמת: שקף/י שהבנת מה שנאמר, ושאל/י שאלת המשך עדינה כשזה מתאים.
@@ -658,15 +704,19 @@ async def mapping_chat_stream(data: dict):
             has_content = True
             yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
         if not has_content:
-            fallback = f"תודה ששיתפת! רשמתי את זה לעצמי. יש עוד משהו שתרצה שאדע עליך, {student_name.split()[0] if student_name else ''}?"
+            fallback = localized_fallback("chat_saved", language)
             yield f"data: {json.dumps({'text': fallback}, ensure_ascii=False)}\n\n"
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-def generate_fallback_summary(part_title: str, qa_pairs: list) -> str:
+def generate_fallback_summary(part_title: str, qa_pairs: list, language: str = "he") -> str:
     """Generate a simple summary when LLM is unavailable."""
+    if language == "en":
+        return "Thanks for your answers! I learned a little more about how you learn. Is there one more thing you would like me to know about this part?"
+    if language == "ar":
+        return "شكرًا على إجاباتك! تعرفت أكثر قليلًا على طريقة تعلمك. هل هناك شيء آخر تريد أن أعرفه عن هذا القسم؟"
     if "למידה" in part_title or "מעניין" in part_title:
         return "נראה שיש לך תחומים שמעניינים אותך יותר ואחרים פחות - וזה לגמרי טבעי! אני שמח להכיר את העדפות הלמידה שלך. יש משהו נוסף שתרצה לספר לי על איך אתה לומד?"
     elif "מתמודד" in part_title or "אתגרים" in part_title:
@@ -770,15 +820,16 @@ async def mapping_chat(data: dict):
     student_name = data.get("student_name", "")
     context = data.get("context", "")
     history = data.get("history", [])
+    language = normalize_language(data.get("language"))
 
     if not message:
-        return JSONResponse(content={"reply": "לא הבנתי, אפשר לכתוב שוב? 😊"})
+        return JSONResponse(content={"reply": localized_fallback("empty_chat", language)})
 
     system_prompt = f"""אתה יובי, רובוט AI חינוכי חם וחכם שמלווה תלמיד/ה בשם {student_name} (כיתות ז'-ט', גילאי 12-15) בתהליך היכרות ומיפוי של דרך הלמידה שלו/שלה.
 {('הקשר מהשאלון עד כה: ' + context) if context else ''}
 
 הנחיות חשובות:
-- דבר/י בעברית פשוטה, ידידותית ומכבדת — מתאים לנער/ה, לא ילדותי מדי.
+- {output_language_instruction(language)} Use simple, friendly, respectful language for a teenager; not too childish.
 - תשובות קצרות וטבעיות: 1-3 משפטים בלבד.
 - הקשב/י באמת: שקף/י שהבנת מה שנאמר, ושאל/י שאלת המשך עדינה כשזה מתאים.
 - אל תיתן/י הרצאות או רשימות ארוכות. שמור/י על שיחה זורמת אחד-על-אחד.
@@ -797,7 +848,7 @@ async def mapping_chat(data: dict):
 
     reply = await call_llm(messages, max_tokens=800)
     if not reply:
-        reply = "תודה ששיתפת! רשמתי את זה לעצמי. יש עוד משהו שתרצה/י שאדע עליך?"
+        reply = localized_fallback("chat_saved", language)
     return JSONResponse(content={"reply": reply})
 
 
@@ -875,27 +926,86 @@ async def create_lomda_stream(data: dict):
 # Serve shared assets
 app.mount("/shared", StaticFiles(directory=str(SHARED_DIR)), name="shared")
 
-# Serve learner-mapping
-app.mount("/learner-mapping", StaticFiles(directory=str(LEARNER_MAPPING_DIR), html=True), name="learner-mapping")
+# Serve locale files
+app.mount("/locales", StaticFiles(directory=str(LOCALES_DIR)), name="locales")
 
-# Serve student-dashboard
-app.mount("/student-dashboard", StaticFiles(directory=str(STUDENT_DASHBOARD_DIR), html=True), name="student-dashboard")
+# Serve the migrated React app build. Vite dev serves this during local React work;
+# FastAPI serves the built files from / for integrated demos and deployment.
+if REACT_ASSETS_DIR.exists():
+    app.mount("/assets", StaticFiles(directory=str(REACT_ASSETS_DIR)), name="react-assets")
 
-# Serve learning-agent
-app.mount("/learning", StaticFiles(directory=str(LEARNING_AGENT_DIR), html=True), name="learning-agent")
+# Serve the interactive game + generated lomda content as self-contained iframe
+# documents (720 content standard). The learning portal/lesson/create chrome is
+# served by the React app; only the game file remains a standalone document.
+LEARNING_GAME_FILE = LEARNING_AGENT_DIR / "game.html"
 
-# Serve mentoring
-app.mount("/mentoring", StaticFiles(directory=str(MENTORING_DIR), html=True), name="mentoring")
 
-# Serve teacher-view
-app.mount("/teacher-view", StaticFiles(directory=str(TEACHER_VIEW_DIR), html=True), name="teacher-view")
+def _serve_react_app():
+    """Serve the built React SPA shell, or a clear error if it is missing."""
+    index_file = REACT_APP_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
+    return JSONResponse(
+        content={"error": "React build missing. Run `npm run build` in frontend/."},
+        status_code=503,
+    )
 
 
 @app.get("/")
 async def root():
-    """Redirect to learner mapping questionnaire."""
-    return FileResponse(str(LEARNER_MAPPING_DIR / "index.html"))
+    """Serve the React app shell at the site root (learner mapping)."""
+    return _serve_react_app()
+
+
+@app.get("/results")
+@app.get("/results/{path:path}")
+async def results_route(path: str = ""):
+    """Serve the React app shell for the migrated results route."""
+    return _serve_react_app()
+
+
+@app.get("/student-dashboard")
+@app.get("/student-dashboard/{path:path}")
+async def student_dashboard_route(path: str = ""):
+    """Serve the React app shell for the migrated student dashboard route."""
+    return _serve_react_app()
+
+
+@app.get("/teacher-view")
+@app.get("/teacher-view/{path:path}")
+async def teacher_view_route(path: str = ""):
+    """Serve the React app shell for the migrated teacher view route."""
+    return _serve_react_app()
+
+
+@app.get("/mentoring")
+@app.get("/mentoring/{path:path}")
+async def mentoring_route(path: str = ""):
+    """Serve the React app shell for the migrated mentoring route."""
+    return _serve_react_app()
+
+
+@app.get("/learning/game.html")
+async def learning_game():
+    """Serve the self-contained interactive game as a standalone iframe document."""
+    if LEARNING_GAME_FILE.exists():
+        return FileResponse(LEARNING_GAME_FILE)
+    return JSONResponse(content={"error": "game not found"}, status_code=404)
+
+
+@app.get("/learning")
+@app.get("/learning/{path:path}")
+async def learning_route(path: str = ""):
+    """Serve the React app shell for the migrated learning portal/lesson/create routes."""
+    return _serve_react_app()
+
+
+@app.get("/app")
+@app.get("/app/{path:path}")
+async def old_react_app_path(path: str = ""):
+    """Redirect the temporary migration URL to the root app."""
+    return RedirectResponse(url="/")
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8720)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", "8720")))

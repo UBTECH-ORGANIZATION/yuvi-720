@@ -1,0 +1,99 @@
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <span class="top-bar-logo">YuviLab 720</span>
+        <div class="top-bar-breadcrumb" id="breadcrumb">
+            <span class="active">פורטל הלמידה</span>
+        </div>
+        <div class="top-bar-right">
+            <a class="dashboard-link" href="/learning/create.html"
+               style="background:linear-gradient(135deg,#7c5cff,#9f7afe);color:#fff;border-color:#7c5cff;">
+                <span>✨</span> צור לומדה משלי
+            </a>
+            <a class="dashboard-link" href="/student-dashboard/">
+                <span>📊</span> הדשבורד שלי
+            </a>
+            <span class="top-bar-name">יובל כהן</span>
+            <div class="top-bar-avatar">י</div>
+        </div>
+    </div>
+
+    <!-- Screen 1: Subject Portal -->
+    <div class="screen active" id="screenPortal">
+        <div class="portal-screen">
+            <div class="portal-header">
+                <h1>מה נלמד היום? 🚀</h1>
+                <p>בחר מקצוע שמעניין אותך - המערכת התאימה לך תכנים על בסיס הפרופיל שלך</p>
+            </div>
+
+            <div class="recommendation-banner">
+                <svg class="bot-icon" viewBox="0 0 36 36" fill="none">
+                    <rect x="8" y="12" width="20" height="16" rx="4" fill="#7c5cff"/>
+                    <rect x="12" y="16" width="4" height="4" rx="1.5" fill="#fff"/>
+                    <rect x="20" y="16" width="4" height="4" rx="1.5" fill="#fff"/>
+                    <rect x="15" y="22" width="6" height="2" rx="1" fill="#c4b5fd"/>
+                    <rect x="14" y="6" width="8" height="6" rx="2" fill="#9f7afe"/>
+                    <rect x="17" y="3" width="2" height="4" rx="1" fill="#c4b5fd"/>
+                    <circle cx="18" cy="2" r="2" fill="#22d3ee"/>
+                </svg>
+                <div class="text">
+                    <h4>💡 יובי ממליץ לך:</h4>
+                    <p>על בסיס המיפוי שעשינו, ראיתי שאתה אוהב אתגרים ויש לך סקרנות גבוהה! לכן בחרתי לך תכנים במתמטיקה ובמדעים שמשלבים חשיבה ויזואלית - בדיוק הסגנון שמתאים לך. גם הוספתי רובוטיקה כי ציינת שזה מעניין אותך.</p>
+                </div>
+            </div>
+
+            <div class="subjects-grid" id="subjectsGrid"></div>
+        </div>
+    </div>
+
+    <!-- Screen 2: Topics/Stages -->
+    <div class="screen" id="screenTopics">
+        <div class="topics-screen" id="topicsContent"></div>
+    </div>
+
+    <!-- Screen 3: Game + Chat -->
+    <div class="screen" id="screenGame">
+        <div class="game-layout">
+            <!-- Right: Yubi Chat -->
+            <div class="yubi-chat-panel">
+                <div class="yubi-chat-header">
+                    <svg viewBox="0 0 36 36" width="28" height="28" fill="none">
+                        <rect x="8" y="12" width="20" height="16" rx="4" fill="#fff" fill-opacity="0.9"/>
+                        <rect x="12" y="16" width="4" height="4" rx="1.5" fill="#7c5cff"/>
+                        <rect x="20" y="16" width="4" height="4" rx="1.5" fill="#7c5cff"/>
+                        <rect x="15" y="22" width="6" height="2" rx="1" fill="#c4b5fd"/>
+                        <rect x="14" y="6" width="8" height="6" rx="2" fill="#fff" fill-opacity="0.7"/>
+                        <rect x="17" y="3" width="2" height="4" rx="1" fill="#c4b5fd"/>
+                        <circle cx="18" cy="2" r="2" fill="#22d3ee"/>
+                    </svg>
+                    <div>
+                        <h3>יובי</h3>
+                        <span>מלווה אותך בלמידה</span>
+                    </div>
+                    <div class="online-dot"></div>
+                </div>
+                <div class="yubi-chat-body" id="yubiChatBody"></div>
+                <div class="yubi-chat-input">
+                    <input type="text" id="yubiInput" placeholder="שאל את יובי..." />
+                    <button id="yubiSendBtn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Left: Game iframe -->
+            <div class="game-iframe-panel">
+                <div class="game-iframe-toolbar">
+                    <span class="game-title" id="gameTitle">משחק זוויות</span>
+                    <span class="game-stage" id="gameStage">שלב 1</span>
+                    <button class="exit-btn" id="exitGameBtn">✕ חזרה לנושאים</button>
+                </div>
+                <div class="game-iframe-container">
+                    <div class="game-iframe-mock">
+                        <iframe id="gameFrame" class="game-frame" title="משחק למידה"></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+

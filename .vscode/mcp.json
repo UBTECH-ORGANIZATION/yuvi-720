@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "azure-devops-yuvi": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@azure-devops/mcp",
+        "yuvilab"
+      ]
+    }
+  }
+}

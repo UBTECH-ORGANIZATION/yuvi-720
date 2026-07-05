@@ -1,0 +1,39 @@
+/* Shared design tokens ported from shared/theme.css for the React app. */
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --primary: #667eea;
+  --primary-dark: #5a67d8;
+  --primary-light: #a3bffa;
+  --secondary: #764ba2;
+  --gradient-primary: linear-gradient(135deg, #667eea, #764ba2);
+  --gradient-success: linear-gradient(135deg, #48bb78, #38a169);
+  --gradient-warm: linear-gradient(135deg, #f6ad55, #ed8936);
+  --gradient-bg: linear-gradient(135deg, #f0eef8 0%, #e8e6f0 100%);
+
+  --success: #48bb78;
+  --warning: #f6ad55;
+  --danger: #fc8181;
+  --info: #63b3ed;
+
+  --bg-body: #f0eef8;
+  --bg-card: #ffffff;
+  --bg-card-hover: #fafafe;
+
+  --text-dark: #2d3748;
+  --text-medium: #4a5568;
+  --text-light: #718096;
+  --text-muted: #a0aec0;
+  --white: #ffffff;
+
+  --shadow-sm: 0 2px 8px rgba(102, 126, 234, 0.08);
+  --shadow-md: 0 10px 40px rgba(102, 126, 234, 0.12);
+  --shadow-lg: 0 20px 60px rgba(102, 126, 234, 0.18);
+  --shadow-glow: 0 5px 20px rgba(102, 126, 234, 0.35);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-full: 50%;
+}
