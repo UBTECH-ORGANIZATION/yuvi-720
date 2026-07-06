@@ -26,12 +26,13 @@
     }
 
     html {
-      scroll-behavior: smooth;
+      scroll-behavior: auto;
     }
 
     body {
       margin: 0;
       min-height: 100vh;
+      overflow: hidden;
       font-family: "Heebo", "Rubik", "Arial", sans-serif;
       color: var(--ink);
       background:
@@ -55,11 +56,13 @@
     .page {
       width: min(1180px, calc(100% - 36px));
       margin-inline: auto;
-      padding-block: 28px 64px;
+      height: 100vh;
+      padding-block: 22px;
+      position: relative;
     }
 
     .hero {
-      min-height: 76vh;
+      min-height: calc(100vh - 44px);
       display: grid;
       grid-template-columns: minmax(390px, 0.92fr) minmax(430px, 1.08fr);
       gap: clamp(28px, 4vw, 54px);
@@ -244,17 +247,17 @@
     .agent-card::before {
       content: attr(data-icon);
       position: absolute;
-      inset-inline-start: 18px;
-      inset-block-start: 20px;
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
+      inset-inline-start: 16px;
+      inset-block-start: 18px;
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
       display: grid;
       place-items: center;
       color: #fff;
       background: var(--agent-color);
       box-shadow: 0 12px 22px color-mix(in srgb, var(--agent-color), transparent 65%);
-      font-size: 1rem;
+      font-size: 1.15rem;
     }
 
     .agent-card h3 {
@@ -268,12 +271,26 @@
       font-size: 0.73rem;
     }
 
-    .architecture-stage .agent-card:nth-of-type(1) { grid-column: 2; grid-row: 1; animation-delay: 0.05s; }
-    .architecture-stage .agent-card:nth-of-type(2) { grid-column: 1; grid-row: 2; --agent-color: var(--green); animation-delay: 0.12s; }
-    .architecture-stage .agent-card:nth-of-type(3) { grid-column: 3; grid-row: 2; --agent-color: var(--orange); animation-delay: 0.18s; }
-    .architecture-stage .agent-card:nth-of-type(4) { grid-column: 1; grid-row: 3; --agent-color: var(--violet); animation-delay: 0.24s; }
-    .architecture-stage .agent-card:nth-of-type(5) { grid-column: 3; grid-row: 3; --agent-color: var(--blue); animation-delay: 0.3s; }
-    .architecture-stage .agent-card:nth-of-type(6) { grid-column: 2; grid-row: 3; --agent-color: var(--red); animation-delay: 0.36s; }
+    .flow-dot {
+      position: absolute;
+      inset-inline-start: 50%;
+      inset-block-start: 50%;
+      width: 9px;
+      height: 9px;
+      margin: -4.5px;
+      border-radius: 50%;
+      background: var(--dot-color, var(--violet));
+      box-shadow: 0 0 10px var(--dot-color, var(--violet));
+      z-index: 3;
+      animation: orbit-flow var(--duration, 9s) linear infinite;
+    }
+
+    .architecture-stage .agent-card:nth-of-type(1) { grid-column: 1; grid-row: 1; animation-delay: 0.05s; }
+    .architecture-stage .agent-card:nth-of-type(2) { grid-column: 3; grid-row: 1; --agent-color: var(--green); animation-delay: 0.12s; }
+    .architecture-stage .agent-card:nth-of-type(3) { grid-column: 1; grid-row: 2; --agent-color: var(--orange); animation-delay: 0.18s; }
+    .architecture-stage .agent-card:nth-of-type(4) { grid-column: 3; grid-row: 2; --agent-color: var(--violet); animation-delay: 0.24s; }
+    .architecture-stage .agent-card:nth-of-type(5) { grid-column: 1; grid-row: 3; --agent-color: var(--blue); animation-delay: 0.3s; }
+    .architecture-stage .agent-card:nth-of-type(6) { grid-column: 3; grid-row: 3; --agent-color: var(--red); animation-delay: 0.36s; }
 
     .memory-bar {
       position: relative;
@@ -302,8 +319,9 @@
     }
 
     .section {
-      margin-block-start: 56px;
-      padding: 34px;
+      margin-block-start: 0;
+      min-height: calc(100vh - 44px);
+      padding: clamp(24px, 3vw, 34px);
       border-radius: 30px;
       background: rgba(255, 255, 255, 0.62);
       border: 1px solid rgba(255, 255, 255, 0.78);
@@ -314,6 +332,38 @@
       transition: opacity 0.7s ease, transform 0.7s ease;
     }
 
+    .hero,
+    .section {
+      position: absolute;
+      inset: 22px 0;
+      width: 100%;
+      max-height: calc(100vh - 44px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-28px) scale(0.985);
+      transition: opacity 0.38s ease, transform 0.38s ease;
+    }
+
+    .hero::-webkit-scrollbar,
+    .section::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .hero::-webkit-scrollbar-thumb,
+    .section::-webkit-scrollbar-thumb {
+      background: rgba(23, 32, 74, 0.18);
+      border-radius: 999px;
+    }
+
+    .hero.active,
+    .section.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(0) scale(1);
+    }
+
     .section.visible {
       opacity: 1;
       transform: translateY(0);
@@ -321,18 +371,23 @@
 
     .section-title {
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       gap: 18px;
       align-items: end;
-      margin-block-end: 24px;
+      margin-block-end: clamp(14px, 2vh, 22px);
     }
 
     .section-title h2 {
-      font-size: clamp(1.8rem, 3vw, 3rem);
+      min-width: 0;
+      max-width: 100%;
+      font-size: clamp(1.65rem, 2.8vw, 2.75rem);
       line-height: 1.1;
     }
 
     .section-title p {
+      flex: 1 1 320px;
+      min-width: 0;
       color: var(--muted);
       line-height: 1.7;
       max-width: 520px;
@@ -391,7 +446,7 @@
 
     .chart-layout {
       display: grid;
-      grid-template-columns: 1.1fr 0.9fr;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
       gap: 26px;
       align-items: center;
     }
@@ -399,16 +454,20 @@
     .bar-chart {
       display: grid;
       gap: 12px;
+      min-width: 0;
     }
 
     .bar-row {
       display: grid;
-      grid-template-columns: 170px 1fr 48px;
+      grid-template-columns: minmax(0, 170px) minmax(0, 1fr) 48px;
       gap: 12px;
       align-items: center;
     }
 
     .bar-row strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
       font-size: 0.98rem;
     }
 
@@ -438,7 +497,7 @@
       margin-inline: auto;
       border-radius: 50%;
       background:
-        radial-gradient(circle closest-side, #fff 64%, transparent 66%),
+        radial-gradient(circle closest-side, #fff 58%, transparent 60%),
         conic-gradient(var(--violet) 0 25%, var(--blue) 25% 45%, var(--green) 45% 65%, var(--orange) 65% 80%, #b8c2d8 80% 100%);
       display: grid;
       place-items: center;
@@ -447,13 +506,22 @@
     }
 
     .donut-label {
+      max-width: 58%;
+      margin-inline: auto;
       text-align: center;
       line-height: 1.3;
     }
 
     .donut-label strong {
       display: block;
-      font-size: 2.2rem;
+      font-size: 2rem;
+    }
+
+    .donut-label span {
+      display: block;
+      margin-block-start: 4px;
+      font-size: 0.72rem;
+      line-height: 1.4;
     }
 
     .split {
@@ -481,17 +549,138 @@
       line-height: 1.9;
     }
 
+    .planner-visual,
+    .access-visual,
+    .principle-visual {
+      margin-block-start: 18px;
+      padding: 18px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid var(--line);
+    }
+
+    .learning-spine {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      align-items: center;
+    }
+
+    .spine-step {
+      position: relative;
+      min-height: 112px;
+      padding: 16px;
+      border-radius: 18px;
+      background: #fff;
+      border: 1px solid rgba(23, 32, 74, 0.09);
+      overflow: hidden;
+    }
+
+    .spine-step::before {
+      content: "";
+      position: absolute;
+      inset-inline-start: 14px;
+      inset-block-start: 14px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--step-color);
+      opacity: 0.92;
+    }
+
+    .spine-step strong {
+      display: block;
+      padding-inline-start: 46px;
+      margin-block-end: 10px;
+      font-size: 0.94rem;
+    }
+
+    .spine-step span {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+
+    .access-matrix {
+      display: grid;
+      grid-template-columns: 1.1fr repeat(4, 1fr);
+      border: 1px solid rgba(23, 32, 74, 0.1);
+      border-radius: 20px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .access-matrix div {
+      min-height: 48px;
+      display: grid;
+      place-items: center;
+      padding: 10px;
+      border-inline-start: 1px solid rgba(23, 32, 74, 0.08);
+      border-block-start: 1px solid rgba(23, 32, 74, 0.08);
+      color: var(--muted);
+      text-align: center;
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+
+    .access-matrix .head,
+    .access-matrix .row-head {
+      color: var(--ink);
+      background: rgba(47, 128, 237, 0.07);
+      font-weight: 900;
+    }
+
+    .access-matrix .yes {
+      color: var(--green);
+      font-weight: 900;
+    }
+
+    .access-matrix .no {
+      color: var(--red);
+      font-weight: 900;
+    }
+
+    .principle-visual {
+      display: grid;
+      grid-template-columns: 210px 1fr;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .shield-svg {
+      width: 100%;
+      max-width: 210px;
+      margin-inline: auto;
+      filter: drop-shadow(0 18px 28px rgba(23, 32, 74, 0.16));
+    }
+
+    .principle-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .principle-pill {
+      padding: 14px 16px;
+      border-radius: 16px;
+      color: var(--ink);
+      background: rgba(47, 128, 237, 0.07);
+      font-size: 0.9rem;
+      font-weight: 900;
+      line-height: 1.45;
+    }
+
     .agents-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 16px;
+      gap: 10px;
     }
 
     .agent-detail {
       --accent: var(--violet);
       position: relative;
-      min-height: 290px;
-      padding: 22px;
+      min-height: 210px;
+      padding: 14px;
       border-radius: 24px;
       background: #fff;
       border: 1px solid var(--line);
@@ -501,11 +690,11 @@
     .agent-detail::before {
       content: "";
       position: absolute;
-      inset-inline-start: 18px;
-      inset-block-start: 18px;
-      width: 52px;
-      height: 52px;
-      border-radius: 18px;
+      inset-inline-start: 14px;
+      inset-block-start: 14px;
+      width: 46px;
+      height: 46px;
+      border-radius: 16px;
       background: color-mix(in srgb, var(--accent), white 12%);
       box-shadow: 0 16px 28px color-mix(in srgb, var(--accent), transparent 75%);
     }
@@ -513,51 +702,52 @@
     .agent-detail::after {
       content: attr(data-index);
       position: absolute;
-      inset-inline-start: 35px;
-      inset-block-start: 31px;
+      inset-inline-start: 30px;
+      inset-block-start: 25px;
       color: #fff;
       font-weight: 900;
     }
 
     .agent-detail h3 {
-      padding-inline-start: 66px;
-      min-height: 52px;
+      padding-inline-start: 58px;
+      min-height: 46px;
       display: flex;
       align-items: center;
-      margin-block-end: 16px;
-      font-size: 1.18rem;
+      margin-block-end: 7px;
+      font-size: 1.04rem;
     }
 
     .agent-detail .tagline {
       color: var(--ink);
       font-weight: 800;
-      line-height: 1.55;
-      margin-block-end: 14px;
+      line-height: 1.38;
+      margin-block-end: 7px;
+      font-size: 0.88rem;
     }
 
     .agent-detail dl {
       display: grid;
-      gap: 10px;
+      gap: 5px;
       margin: 0;
     }
 
     .agent-detail div {
-      padding-block-start: 10px;
+      padding-block-start: 5px;
       border-block-start: 1px solid rgba(23, 32, 74, 0.08);
     }
 
     .agent-detail dt {
       color: var(--accent);
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       font-weight: 900;
-      margin-block-end: 4px;
+      margin-block-end: 3px;
     }
 
     .agent-detail dd {
       margin: 0;
       color: var(--muted);
-      font-size: 0.9rem;
-      line-height: 1.55;
+      font-size: 0.8rem;
+      line-height: 1.38;
     }
 
     .lrs-lane {
@@ -624,7 +814,7 @@
     .roadmap-card {
       position: relative;
       padding: 18px 16px;
-      min-height: 180px;
+      min-height: 158px;
       border-radius: 22px;
       background: #fff;
       border: 1px solid var(--line);
@@ -652,8 +842,8 @@
 
     .roadmap-card p {
       color: var(--muted);
-      line-height: 1.55;
-      font-size: 0.9rem;
+      line-height: 1.45;
+      font-size: 0.84rem;
     }
 
     .guardrails {
@@ -663,8 +853,8 @@
     }
 
     .guardrail {
-      padding: 22px;
-      min-height: 154px;
+      padding: 18px;
+      min-height: 132px;
       border-radius: 22px;
       background: #fff;
       border: 1px solid var(--line);
@@ -678,8 +868,199 @@
 
     .guardrail p {
       color: var(--muted);
-      line-height: 1.55;
-      font-size: 0.92rem;
+      line-height: 1.45;
+      font-size: 0.86rem;
+    }
+
+    .cloud-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.18fr) minmax(320px, 0.82fr);
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .cloud-map {
+      position: relative;
+      min-height: 470px;
+      padding: 18px;
+      border-radius: 28px;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(239, 247, 255, 0.78)),
+        radial-gradient(circle at 30% 20%, rgba(47, 128, 237, 0.18), transparent 18rem);
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .cloud-map::before {
+      content: "";
+      position: absolute;
+      inset: 76px 58px 86px;
+      border: 2px dashed rgba(47, 128, 237, 0.22);
+      border-radius: 46px;
+    }
+
+    .cloud-core {
+      position: absolute;
+      inset-block-start: 50%;
+      inset-inline-start: 50%;
+      transform: translate(50%, -50%);
+      width: 206px;
+      min-height: 140px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 22px;
+      border-radius: 30px;
+      color: #fff;
+      background: linear-gradient(135deg, #2668e8, #7c5cff);
+      box-shadow: 0 24px 54px rgba(47, 128, 237, 0.32);
+      z-index: 3;
+    }
+
+    .cloud-core strong {
+      display: block;
+      font-size: 1.26rem;
+      line-height: 1.2;
+      margin-block-end: 8px;
+    }
+
+    .cloud-core span {
+      font-size: 0.86rem;
+      opacity: 0.9;
+    }
+
+    .cloud-node {
+      --node-color: var(--blue);
+      position: absolute;
+      width: 168px;
+      min-height: 96px;
+      padding: 14px;
+      border-radius: 20px;
+      background: #fff;
+      border: 1px solid var(--line);
+      box-shadow: 0 16px 34px rgba(23, 32, 74, 0.12);
+      z-index: 2;
+    }
+
+    .cloud-node::before {
+      content: "";
+      display: block;
+      width: 34px;
+      height: 5px;
+      border-radius: 999px;
+      background: var(--node-color);
+      margin-block-end: 10px;
+    }
+
+    .cloud-node h3 {
+      font-size: 0.98rem;
+      margin-block-end: 7px;
+    }
+
+    .cloud-node p {
+      color: var(--muted);
+      line-height: 1.38;
+      font-size: 0.78rem;
+    }
+
+    .cloud-node:nth-of-type(2) { inset-block-start: 24px; inset-inline-start: 50%; transform: translateX(50%); --node-color: var(--violet); }
+    .cloud-node:nth-of-type(3) { inset-block-start: 126px; inset-inline-end: 26px; --node-color: var(--blue); }
+    .cloud-node:nth-of-type(4) { inset-block-end: 32px; inset-inline-end: 54px; --node-color: var(--green); }
+    .cloud-node:nth-of-type(5) { inset-block-end: 32px; inset-inline-start: 54px; --node-color: var(--orange); }
+    .cloud-node:nth-of-type(6) { inset-block-start: 126px; inset-inline-start: 26px; --node-color: var(--cyan); }
+
+    .cost-panel {
+      display: grid;
+      gap: 10px;
+    }
+
+    .cost-card,
+    .token-card {
+      padding: 18px;
+      border-radius: 24px;
+      background: #fff;
+      border: 1px solid var(--line);
+      box-shadow: 0 16px 36px rgba(23, 32, 74, 0.08);
+    }
+
+    .cost-card h3,
+    .token-card h3 {
+      font-size: 1.08rem;
+      margin-block-end: 10px;
+    }
+
+    .cost-row {
+      display: grid;
+      grid-template-columns: 130px 1fr;
+      gap: 12px;
+      align-items: center;
+      margin-block-start: 9px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+
+    .cost-track {
+      height: 16px;
+      border-radius: 999px;
+      background: rgba(23, 32, 74, 0.08);
+      overflow: hidden;
+    }
+
+    .cost-fill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--cost-color), color-mix(in srgb, var(--cost-color), white 22%));
+      transition: width 1.2s ease;
+    }
+
+    .section.visible .cost-fill {
+      width: var(--cost-value);
+    }
+
+    .token-pipeline {
+      display: grid;
+      gap: 7px;
+    }
+
+    .token-step {
+      display: grid;
+      grid-template-columns: 34px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 8px;
+      border-radius: 16px;
+      background: rgba(47, 128, 237, 0.06);
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.34;
+    }
+
+    .token-step b {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--blue);
+    }
+
+    .token-step strong {
+      color: var(--ink);
+      white-space: nowrap;
+    }
+
+    .money-note {
+      padding: 14px 16px;
+      border-radius: 20px;
+      color: #513b00;
+      background: rgba(242, 153, 74, 0.16);
+      border: 1px solid rgba(242, 153, 74, 0.28);
+      line-height: 1.48;
+      font-size: 0.88rem;
+      font-weight: 800;
     }
 
     .footer {
@@ -687,6 +1068,235 @@
       color: var(--muted);
       line-height: 1.7;
       text-align: center;
+    }
+
+    .callout {
+      --callout-color: var(--violet);
+      margin-block-start: 22px;
+      padding: 16px 20px;
+      border-radius: 20px;
+      line-height: 1.65;
+      font-size: 0.94rem;
+      font-weight: 700;
+      color: var(--ink);
+      background: color-mix(in srgb, var(--callout-color), white 88%);
+      border: 1px solid color-mix(in srgb, var(--callout-color), transparent 60%);
+    }
+
+    .callout b {
+      color: var(--callout-color);
+    }
+
+    .insight-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-block-start: 22px;
+    }
+
+    .insight-item {
+      --item-color: var(--violet);
+      position: relative;
+      padding: 16px 18px 16px 22px;
+      border-radius: 18px;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+
+    .insight-item::before {
+      content: "";
+      position: absolute;
+      inset-inline-start: 0;
+      inset-block: 12px;
+      width: 4px;
+      border-radius: 999px;
+      background: var(--item-color);
+    }
+
+    .insight-item strong {
+      display: block;
+      margin-block-end: 6px;
+      font-size: 0.96rem;
+    }
+
+    .insight-item span {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+
+    .xapi-layout {
+      margin-block-start: 22px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .xapi-code {
+      padding: 20px;
+      border-radius: 20px;
+      background: #14183a;
+      color: #d7e0ff;
+      font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      font-size: 0.8rem;
+      line-height: 1.75;
+      direction: ltr;
+      text-align: left;
+      box-shadow: var(--shadow);
+    }
+
+    .xapi-code .k { color: #7dd3fc; }
+    .xapi-code .s { color: #a5e8b0; }
+
+    .xapi-notes {
+      padding: 20px;
+      border-radius: 20px;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+
+    .xapi-notes h3 {
+      font-size: 1rem;
+      margin-block-end: 12px;
+    }
+
+    .xapi-notes ul {
+      margin: 0;
+      padding-inline-start: 20px;
+      color: var(--muted);
+      line-height: 1.75;
+      font-size: 0.88rem;
+    }
+
+    .phase-timeline {
+      margin-block-start: 20px;
+      padding: 18px 20px;
+      border-radius: 20px;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+
+    .phase-track {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+    }
+
+    .phase-track span {
+      height: 10px;
+      border-radius: 999px;
+      opacity: 0.82;
+    }
+
+    .phase-timeline p {
+      margin-block-start: 12px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.6;
+    }
+
+    .stat-strip {
+      margin-block-start: 22px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .stat-strip .stat {
+      padding: 20px;
+      border-radius: 20px;
+      text-align: center;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+
+    .stat-strip .stat strong {
+      display: block;
+      font-size: 2rem;
+      color: var(--violet);
+    }
+
+    .stat-strip .stat span {
+      display: block;
+      margin-block-start: 6px;
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.4;
+    }
+
+    .deck-controls {
+      position: fixed;
+      inset-inline: 24px;
+      inset-block-end: 18px;
+      display: grid;
+      grid-template-columns: 56px 1fr 56px;
+      gap: 14px;
+      align-items: center;
+      z-index: 50;
+      pointer-events: none;
+    }
+
+    .deck-arrow {
+      width: 56px;
+      height: 56px;
+      border: 0;
+      border-radius: 50%;
+      color: #fff;
+      background: linear-gradient(135deg, var(--ink), #3553c7);
+      box-shadow: 0 18px 44px rgba(23, 32, 74, 0.24);
+      font-size: 1.45rem;
+      font-weight: 900;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+
+    .deck-arrow:disabled {
+      cursor: default;
+      opacity: 0.28;
+    }
+
+    .deck-progress {
+      min-height: 56px;
+      padding: 12px 16px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.74);
+      border: 1px solid rgba(23, 32, 74, 0.1);
+      box-shadow: 0 18px 44px rgba(23, 32, 74, 0.12);
+      backdrop-filter: blur(16px);
+      pointer-events: auto;
+    }
+
+    .slide-status {
+      color: var(--ink);
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .deck-dots {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 7px;
+    }
+
+    .deck-dot {
+      width: 9px;
+      height: 9px;
+      padding: 0;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(23, 32, 74, 0.22);
+      cursor: pointer;
+    }
+
+    .deck-dot.active {
+      width: 28px;
+      background: var(--violet);
     }
 
     @keyframes spin {
@@ -708,6 +1318,11 @@
       to { opacity: 1; translate: 0 0; }
     }
 
+    @keyframes orbit-flow {
+      from { transform: rotate(0deg) translateX(150px); }
+      to { transform: rotate(360deg) translateX(150px); }
+    }
+
     @keyframes pulse {
       0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot-color), transparent 55%); }
       50% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--dot-color), transparent 90%); }
@@ -716,12 +1331,17 @@
     @media (max-width: 1040px) {
       .hero,
       .chart-layout,
-      .split {
+      .split,
+      .cloud-layout {
         grid-template-columns: 1fr;
       }
 
       .architecture-stage {
         min-height: 760px;
+      }
+
+      .cloud-map {
+        min-height: 620px;
       }
 
       .agent-card {
@@ -732,7 +1352,10 @@
       .agents-grid,
       .lrs-lane,
       .roadmap,
-      .guardrails {
+      .guardrails,
+      .insight-row,
+      .xapi-layout,
+      .stat-strip {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
@@ -748,6 +1371,12 @@
         padding-block: 24px;
       }
 
+      .hero,
+      .section {
+        inset: 12px 0 86px;
+        max-height: calc(100vh - 98px);
+      }
+
       .architecture-stage {
         min-height: auto;
         padding: 22px;
@@ -758,7 +1387,8 @@
       .architecture-stage::before,
       .architecture-stage::after,
       .student,
-      .memory-bar {
+      .memory-bar,
+      .flow-dot {
         display: none;
       }
 
@@ -774,11 +1404,36 @@
         margin-inline: auto;
       }
 
+      .cloud-map {
+        min-height: auto;
+        display: grid;
+        gap: 12px;
+      }
+
+      .cloud-map::before {
+        display: none;
+      }
+
+      .cloud-core,
+      .cloud-node {
+        position: static;
+        transform: none;
+        width: 100%;
+      }
+
+      .cost-row,
+      .token-step {
+        grid-template-columns: 1fr;
+      }
+
       .flow-grid,
       .agents-grid,
       .lrs-lane,
       .roadmap,
-      .guardrails {
+      .guardrails,
+      .insight-row,
+      .xapi-layout,
+      .stat-strip {
         grid-template-columns: 1fr;
       }
 
@@ -802,12 +1457,27 @@
       .bar-row {
         grid-template-columns: 1fr;
       }
+
+      .deck-controls {
+        inset-inline: 10px;
+        grid-template-columns: 48px 1fr 48px;
+      }
+
+      .deck-arrow {
+        width: 48px;
+        height: 48px;
+      }
+
+      .deck-progress {
+        min-height: 48px;
+        padding-inline: 10px;
+      }
     }
   </style>
 </head>
 <body>
   <main class="page">
-    <section class="hero" aria-labelledby="hero-title">
+    <section class="hero active" aria-labelledby="hero-title">
       <div>
         <span class="eyebrow">מערכת 720 · מוח אחד · מנטור אישי לכל תלמיד</span>
         <h1 id="hero-title">ארכיטקטורת הלמידה האישית של יובילאב</h1>
@@ -819,6 +1489,7 @@
           <a class="button primary" href="#brain">איך זה עובד</a>
           <a class="button" href="#agents">הסוכנים</a>
           <a class="button" href="#weights">מה חשוב ב-720</a>
+          <a class="button" href="#cloud">ענן ועלויות</a>
           <a class="button" href="#lrs">איך נכנסים אירועי xAPI</a>
         </div>
       </div>
@@ -831,30 +1502,34 @@
           </div>
         </div>
 
-        <article class="agent-card" data-icon="1" style="--agent-color: var(--violet)">
+        <article class="agent-card" data-icon="🧭" style="--agent-color: var(--violet)">
           <h3>סוכן מיפוי</h3>
-          <p>מייצר את תמונת ההתחלה: תחומי עניין, העדפות, פעלנות וסגנון למידה.</p>
+          <p>מזהה תחומי עניין, קצב וסגנון למידה.</p>
         </article>
-        <article class="agent-card" data-icon="2">
+        <article class="agent-card" data-icon="💬">
           <h3>מלווה למידה יובי</h3>
-          <p>צ'אט צף בכל מסך, הסברים מותאמים, דוגמאות אישיות ויוזמה בזמן קושי.</p>
+          <p>מסביר, מעודד ומכוון בזמן אמת בכל מסך.</p>
         </article>
-        <article class="agent-card" data-icon="3">
+        <article class="agent-card" data-icon="🎯">
           <h3>סוכן פדגוגי</h3>
-          <p>בוחר מה ללמוד עכשיו: יעד, רכיב, רמת קושי וייצוג חלופי במקרה של קושי.</p>
+          <p>בוחר את הצעד הבא לפי שליטה ותוכנית לימודים.</p>
         </article>
-        <article class="agent-card" data-icon="4">
+        <article class="agent-card" data-icon="🪞">
           <h3>סוכן רפלקציה</h3>
-          <p>עוזר לתלמיד לחשוב על הדרך, לא רק על התשובה, ושומר תובנות בפרופיל.</p>
+          <p>עוזר לתלמיד להבין איך הוא לומד, לא רק אם צדק.</p>
         </article>
-        <article class="agent-card" data-icon="5">
+        <article class="agent-card" data-icon="📊">
           <h3>תובנות למורה</h3>
-          <p>מציג המלצות מוסברות על בסיס אירועים גולמיים, בלי להשוות בין תלמידים.</p>
+          <p>מציג לוח מצב לכיתה על בסיס אירועים אמיתיים.</p>
         </article>
-        <article class="agent-card" data-icon="6">
+        <article class="agent-card" data-icon="🛡️">
           <h3>סוכן מוגנות</h3>
-          <p>שומר על פרטיות, בטיחות, שקיפות AI ושפה מכבדת בכל אינטראקציה.</p>
+          <p>שומר על פרטיות, בטיחות ושפה מכבדת בכל שיחה.</p>
         </article>
+
+        <span class="flow-dot" style="--dot-color: var(--violet); --duration: 8s; animation-delay: 0s;"></span>
+        <span class="flow-dot" style="--dot-color: var(--blue); --duration: 8s; animation-delay: -2.6s;"></span>
+        <span class="flow-dot" style="--dot-color: var(--green); --duration: 8s; animation-delay: -5.3s;"></span>
 
         <div class="memory-bar" aria-label="שדות הזיכרון המשותף">
           <span>פרופיל</span>
@@ -899,6 +1574,14 @@
           <h3>מוח מתעדכן</h3>
           <p>האירועים מעדכנים שליטה, קושי, התקדמות וטריגרים ליובי בזמן אמת.</p>
         </article>
+      </div>
+      <div class="callout" style="--callout-color: var(--blue)">
+        <b>לולאה סגורה, לא תרשים חד-פעמי:</b> שלב 5 מזין ישירות חזרה לשלב 2 - כל אירוע למידה משנה את התכנון הבא בזמן אמת, בלי שמורה צריך לעדכן משהו ידנית.
+      </div>
+      <div class="insight-row" aria-label="עקרונות המפתח של הזרימה">
+        <article class="insight-item" style="--item-color: var(--violet)"><strong>מוח אחד</strong><span>כל הסוכנים קוראים וכותבים לאותו מאגר, אין עותקים מקומיים או מוחות נפרדים למסך.</span></article>
+        <article class="insight-item" style="--item-color: var(--green)"><strong>מבוסס אירועים</strong><span>כל עדכון שליטה מגיע מ-xAPI אמיתי מהלומדה, לא מהערכה ידנית או ניחוש.</span></article>
+        <article class="insight-item" style="--item-color: var(--orange)"><strong>עדכון מיידי</strong><span>יובי והמורה רואים שינוי תוך שניות מרגע האירוע, לא בסבב עיבוד לילי.</span></article>
       </div>
     </section>
 
@@ -987,6 +1670,70 @@
           </div>
         </div>
       </div>
+      <div class="insight-row" aria-label="למה שלושת המאפיינים המובילים קריטיים">
+        <article class="insight-item" style="--item-color: var(--violet)"><strong>סוכן למידה אישי · 25%</strong><span>יובי הוא הממשק שהתלמיד פוגש הכי הרבה - חייב להרגיש אישי ולא גנרי.</span></article>
+        <article class="insight-item" style="--item-color: var(--blue)"><strong>תוכן מותאם אישית · 20%</strong><span>בלי בחירת רכיב נכונה אין דרך להוכיח שהמערכת באמת מבינה את התלמיד.</span></article>
+        <article class="insight-item" style="--item-color: var(--green)"><strong>תצוגת מורה · 20%</strong><span>זו נקודת האמון של המורה במערכת - בלי תובנות ברורות אין אימוץ בכיתה.</span></article>
+      </div>
+    </section>
+
+    <section id="cloud" class="section">
+      <div class="section-title">
+        <h2>ארכיטקטורת ענן: למה זה פרויקט שמייצר צריכת Azure</h2>
+        <p>המערכת בנויה כך שכל למידה, שיחה, רמז, תובנת מורה ואירוע xAPI הופכים לצריכת ענן מדידה. המספרים כאן הם מנועי צריכה, לא הצעת מחיר.</p>
+      </div>
+      <div class="cloud-layout">
+        <div class="cloud-map" aria-label="תרשים ארכיטקטורת ענן Azure">
+          <div class="cloud-core">
+            <div>
+              <strong>YuviLab 720 on Azure</strong>
+              <span>למידה פעילה → אירועים → סוכני AI → תובנות</span>
+            </div>
+          </div>
+          <article class="cloud-node">
+            <h3>Azure OpenAI / Foundry</h3>
+            <p>כל שיחת יובי, רמז, הסבר, רפלקציה ותובנת מורה צורכים tokens.</p>
+          </article>
+          <article class="cloud-node">
+            <h3>API Management</h3>
+            <p>שער מאובטח לכל קריאת AI: מדיניות, ניטור, throttling ובקרה.</p>
+          </article>
+          <article class="cloud-node">
+            <h3>App Service / Container</h3>
+            <p>FastAPI, endpoints, Streaming, xAPI ingest, dashboard ו-orchestration.</p>
+          </article>
+          <article class="cloud-node">
+            <h3>Cosmos DB / MongoDB</h3>
+            <p>מוח הלמידה, אירועי למידה, mastery, מטרות, הרשאות ותובנות.</p>
+          </article>
+          <article class="cloud-node">
+            <h3>Blob + Monitor</h3>
+            <p>תוכן iframe, קבצים, לוגים, telemetry, מדדי שימוש ועלויות תפעול.</p>
+          </article>
+        </div>
+
+        <div class="cost-panel">
+          <article class="token-card">
+            <h3>מסלול צריכת tokens</h3>
+            <div class="token-pipeline">
+              <div class="token-step"><b>1</b><span>תלמיד שואל את יובי או נתקע בלומדה</span><strong>Prompt</strong></div>
+              <div class="token-step"><b>2</b><span>Context Engine מצרף פרופיל לא מזהה, יעד נוכחי ואירוע אחרון</span><strong>Context</strong></div>
+              <div class="token-step"><b>3</b><span>סוכן AI מייצר הסבר, רמז, רפלקציה או המלצה</span><strong>Completion</strong></div>
+              <div class="token-step"><b>4</b><span>סוכן מוגנות בודק פרטיות, שפה וגיל</span><strong>Safety</strong></div>
+              <div class="token-step"><b>5</b><span>תובנה נשמרת וחוזרת לדשבורד או למורה</span><strong>Persistence</strong></div>
+            </div>
+          </article>
+          <article class="cost-card">
+            <h3>מנועי צריכה עיקריים</h3>
+            <div class="cost-row"><span>AI tokens</span><div class="cost-track"><div class="cost-fill" style="--cost-value: 92%; --cost-color: var(--violet)"></div></div></div>
+            <div class="cost-row"><span>APIM calls</span><div class="cost-track"><div class="cost-fill" style="--cost-value: 74%; --cost-color: var(--blue)"></div></div></div>
+            <div class="cost-row"><span>Compute</span><div class="cost-track"><div class="cost-fill" style="--cost-value: 66%; --cost-color: var(--green)"></div></div></div>
+            <div class="cost-row"><span>DB / RU / Storage</span><div class="cost-track"><div class="cost-fill" style="--cost-value: 58%; --cost-color: var(--orange)"></div></div></div>
+            <div class="cost-row"><span>Logs / Monitor</span><div class="cost-track"><div class="cost-fill" style="--cost-value: 44%; --cost-color: var(--cyan)"></div></div></div>
+          </article>
+          <p class="money-note">המסר למיקרוסופט: ככל שמספר תלמידים, מורים, שיעורים ואירועי למידה גדל, כך גדלה צריכת Azure OpenAI, APIM, compute, database, storage ו-monitoring. זה מוצר חינוכי עם שימוש חוזר יומיומי, לא דמו חד-פעמי.</p>
+        </div>
+      </div>
     </section>
 
     <section class="section">
@@ -1013,6 +1760,18 @@
             <li>מחזיר הסבר פשוט לתלמיד ולמורה על ההמלצה.</li>
           </ul>
         </article>
+      </div>
+      <div class="planner-visual" aria-label="תרשים מסלול התאמת למידה">
+        <div class="learning-spine">
+          <div class="spine-step" style="--step-color: var(--violet)"><strong>יעדי משרד החינוך</strong><span>רשימת objectives מאושרת, לפי מתמטיקה ומדעים.</span></div>
+          <div class="spine-step" style="--step-color: var(--blue)"><strong>שליטה בפועל</strong><span>מחושבת רק מאירועי xAPI ונתוני רכיב.</span></div>
+          <div class="spine-step" style="--step-color: var(--green)"><strong>Planner</strong><span>בודק תנאי קדם ומוצא את ה-frontier הבא.</span></div>
+          <div class="spine-step" style="--step-color: var(--orange)"><strong>תוכן מאושר</strong><span>בחירת iframe לפי קושי, שפה והעדפות.</span></div>
+          <div class="spine-step" style="--step-color: var(--red)"><strong>תגובה מותאמת</strong><span>יובי מסביר, נותן רמז או מפנה לחלופה.</span></div>
+        </div>
+      </div>
+      <div class="callout" style="--callout-color: var(--green)">
+        <b>דוגמה:</b> תלמיד לומד "חיבור שברים", עונה נכון פעמיים ברצף אבל מבקש רמז בשאלה השלישית. ה-Planner לא מקדם אותו אוטומטית ליעד הבא - הוא מסמן שליטה חלקית, ויובי מציע ייצוג חזותי חלופי לפני שהמערכת ממשיכה הלאה.
       </div>
     </section>
 
@@ -1048,6 +1807,26 @@
           <p>יובי מציע רמז, חלופה פדגוגית, עידוד או הפסקה לפי הצורך.</p>
         </article>
       </div>
+      <div class="xapi-layout" aria-label="דוגמת אירוע xAPI ומה קורה איתו">
+        <div class="xapi-code">
+          <div>{</div>
+          <div>&nbsp;&nbsp;<span class="k">"verb"</span>: <span class="s">"answered"</span>,</div>
+          <div>&nbsp;&nbsp;<span class="k">"actor"</span>: <span class="s">"student_hash_9f21"</span>,</div>
+          <div>&nbsp;&nbsp;<span class="k">"object"</span>: <span class="s">"fractions.add.03"</span>,</div>
+          <div>&nbsp;&nbsp;<span class="k">"result"</span>: { <span class="k">"success"</span>: <span class="s">false</span>, <span class="k">"attempts"</span>: 2 },</div>
+          <div>&nbsp;&nbsp;<span class="k">"timestamp"</span>: <span class="s">"2026-07-06T10:41:03Z"</span></div>
+          <div>}</div>
+        </div>
+        <div class="xapi-notes">
+          <h3>מה המוח עושה עם האירוע הזה</h3>
+          <ul>
+            <li>מעדכן mastery של "חיבור שברים" ומוריד את רמת הביטחון.</li>
+            <li>שומר תפיסה שגויה אפשרית לניתוח בהמשך.</li>
+            <li>שולח טריגר ליובי אם הכישלון חוזר על עצמו.</li>
+            <li>לא נוגע בשם התלמיד - רק במזהה לא מזהה.</li>
+          </ul>
+        </div>
+      </div>
     </section>
 
     <section class="section">
@@ -1060,6 +1839,18 @@
         <article class="guardrail"><strong>פדגוגי</strong><p>רואה שליטה, יעד נוכחי וקטלוג תוכן. לא רואה תמלילי צ'אט אישיים.</p></article>
         <article class="guardrail"><strong>תובנות מורה</strong><p>רואה רק תלמידים בקבוצות המותרות, עם ראיות גולמיות לכל סימון.</p></article>
         <article class="guardrail"><strong>מוגנות</strong><p>בודק הודעה ומדיניות בלבד, מסיר מידע מזהה ושומר על שיח בטוח.</p></article>
+      </div>
+      <div class="access-visual" aria-label="מטריצת הרשאות סוכנים">
+        <div class="access-matrix">
+          <div class="head">סוכן / נתון</div><div class="head">פרופיל לא מזהה</div><div class="head">שליטה ויעדים</div><div class="head">אירועים גולמיים</div><div class="head">הערות מורה פרטיות</div>
+          <div class="row-head">יובי</div><div class="yes">כן</div><div class="yes">כן</div><div>אחרון בלבד</div><div class="no">לא</div>
+          <div class="row-head">פדגוגי</div><div>מינימלי</div><div class="yes">כן</div><div class="yes">כן</div><div class="no">לא</div>
+          <div class="row-head">תובנות מורה</div><div>קבוצתי</div><div class="yes">כן</div><div class="yes">כן + ראיות</div><div>לפי הרשאה</div>
+          <div class="row-head">מוגנות</div><div>רק מדיניות</div><div class="no">לא</div><div class="no">לא</div><div class="no">לא</div>
+        </div>
+      </div>
+      <div class="callout" style="--callout-color: var(--red)">
+        <b>איך זה נאכף בפועל:</b> ההרשאות אינן מוסכמה תיעודית בלבד - כל קריאת סוכן עוברת דרך Context Engine שמסנן שדות לפי תפקיד לפני שהמידע מגיע ל-LLM, ולוג הגישה נשמר לצורך ביקורת.
       </div>
     </section>
 
@@ -1076,6 +1867,22 @@
         <article class="roadmap-card" data-phase="P4" style="--phase-color: var(--red)"><h3>למידה אדפטיבית</h3><p>טריגרים לקושי, חוסר פעילות והצלחה, ותוכן חלופי מאושר.</p></article>
         <article class="roadmap-card" data-phase="P5" style="--phase-color: var(--cyan)"><h3>מורה ומנטורינג</h3><p>תובנות מוסברות, יעדים, הרשאות קבוצתיות ומשוב משתמשים.</p></article>
       </div>
+      <div class="phase-timeline" aria-label="ציר זמן שלבי היישום">
+        <div class="phase-track">
+          <span style="background: var(--violet)"></span>
+          <span style="background: var(--blue)"></span>
+          <span style="background: var(--green)"></span>
+          <span style="background: var(--orange)"></span>
+          <span style="background: var(--red)"></span>
+          <span style="background: var(--cyan)"></span>
+        </div>
+        <p>כל שלב נבנה על קודמו: אין דשבורד (P2) בלי xAPI אמיתי (P1), ואין למידה אדפטיבית (P4) בלי שהוכח ש-P3 עובד עם תלמידים אמיתיים.</p>
+      </div>
+      <div class="insight-row" aria-label="איך בודקים כל שלב לפני שממשיכים">
+        <article class="insight-item" style="--item-color: var(--violet)"><strong>קריטריון קבלה לכל שלב</strong><span>שלב לא נחשב גמור בלי הגדרה ברורה של מה צריך לעבוד בסופו.</span></article>
+        <article class="insight-item" style="--item-color: var(--blue)"><strong>הדגמה חיה, לא מצגת</strong><span>כל שלב מוכיח את עצמו על אירועי xAPI אמיתיים, לא על נתוני דמו.</span></article>
+        <article class="insight-item" style="--item-color: var(--green)"><strong>תלות מפורשת</strong><span>שלב חדש לא נפתח לפני שהשלב הקודם הוכיח שהוא עובד בשטח.</span></article>
+      </div>
     </section>
 
     <section class="section">
@@ -1089,23 +1896,106 @@
         <article class="guardrail"><strong>לוקליזציה מלאה</strong><p>כל טקסט עתידי במוצר עובר דרך he, ar, en ותומך RTL/LTR לפי שפת התלמיד.</p></article>
         <article class="guardrail"><strong>AI לא ממציא עובדות</strong><p>התקדמות ושליטה מגיעות מאירועי למידה. הסוכן רק מסביר, מעודד ומתאים את הדרך.</p></article>
       </div>
+      <div class="principle-visual" aria-label="תרשים עקרונות מוגנות ולוקליזציה">
+        <svg class="shield-svg" viewBox="0 0 220 240" role="img" aria-label="מגן עקרונות">
+          <defs>
+            <linearGradient id="shieldGradient" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0" stop-color="#2f80ed" />
+              <stop offset="1" stop-color="#7c5cff" />
+            </linearGradient>
+          </defs>
+          <path d="M110 14 190 46v62c0 58-32 98-80 118-48-20-80-60-80-118V46l80-32Z" fill="url(#shieldGradient)" />
+          <circle cx="110" cy="104" r="46" fill="rgba(255,255,255,.22)" />
+          <path d="M84 106l18 18 38-48" fill="none" stroke="#fff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" />
+          <text x="110" y="178" text-anchor="middle" fill="#fff" font-size="18" font-weight="800">720 Ready</text>
+        </svg>
+        <div class="principle-list">
+          <div class="principle-pill">פרטיות לפני פרסונליזציה</div>
+          <div class="principle-pill">כל Claim של AI מגובה בנתון</div>
+          <div class="principle-pill">עברית וערבית נתמכות מהליבה</div>
+          <div class="principle-pill">תלמיד מקבל משוב מילולי, לא ציונים</div>
+          <div class="principle-pill">כל תשובת AI ניתנת למעקב ולביקורת</div>
+          <div class="principle-pill">ילדים ומורים תמיד יודעים מתי מדובר ב-AI</div>
+        </div>
+      </div>
     </section>
 
-    <footer class="footer">
-      <p>מסמך ויזואלי זה מסביר את הארכיטקטורה. במימוש המוצר עצמו כל הטקסטים חייבים לעבור דרך מנגנון הלוקליזציה של יובילאב.</p>
-    </footer>
+    <section class="section closing-slide">
+      <div class="section-title">
+        <h2>מה צריך לקחת מהמצגת</h2>
+        <p>זה לא רק תרשים מערכת. זו הצעה לפלטפורמה חינוכית פעילה שמחברת בין דרישות 720, נתוני למידה אמיתיים וצריכת ענן משמעותית.</p>
+      </div>
+      <div class="guardrails">
+        <article class="guardrail"><strong>מוצר 720 לגיטימי</strong><p>המערכת עוברת ממוק ודאטה מומצא למוח למידה, אירועים אמיתיים ותובנות מוסברות.</p></article>
+        <article class="guardrail"><strong>ערך למשרד החינוך</strong><p>למידה מותאמת, מלווה אישי, תצוגת מורה, מנטורינג ועמידה טובה יותר בדרישות ההגשה.</p></article>
+        <article class="guardrail"><strong>ערך למיקרוסופט</strong><p>כל שימוש יומיומי מייצר צריכת Azure: tokens, API calls, compute, database, storage ו-monitoring.</p></article>
+        <article class="guardrail"><strong>השלב הבא</strong><p>לבנות P0-P1: מוח בסיסי, xAPI ingest, לומדה אחת ומלווה יובי שמגיב לנתוני אמת.</p></article>
+      </div>
+      <div class="stat-strip" aria-label="מספרים מרכזיים של הפרויקט">
+        <div class="stat"><strong>1</strong><span>מוח למידה משותף לכל מסך ולכל סוכן</span></div>
+        <div class="stat"><strong>6</strong><span>סוכני AI ייעודיים, כל אחד עם תפקיד מוגדר</span></div>
+        <div class="stat"><strong>6</strong><span>שלבי יישום, מ-P0 ועד מורה ומנטורינג</span></div>
+        <div class="stat"><strong>3</strong><span>בעלי עניין שמרוויחים: תלמיד, מורה ומשרד החינוך</span></div>
+      </div>
+      <div class="callout" style="--callout-color: var(--violet)">
+        <b>למה עכשיו:</b> כל שבוע בלי מוח למידה אחד הוא עוד נתונים מפוזרים בין מסכים ודוחות. קל וזול הרבה יותר לבנות את זה נכון מ-P0, מאשר לאחד מערכות מפוזרות בדיעבד.
+      </div>
+      <p class="footer">מוכנים להתחיל מ-P0: מוח בסיסי אחד, על נתונים אמיתיים, בלי קיצורי דרך.</p>
+    </section>
   </main>
 
-  <script>
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible')
-        }
-      }
-    }, { threshold: 0.15 })
+  <nav class="deck-controls" aria-label="ניווט שקפים">
+    <button class="deck-arrow" type="button" data-direction="prev" aria-label="שקף קודם">→</button>
+    <div class="deck-progress">
+      <span class="slide-status" aria-live="polite"></span>
+      <div class="deck-dots" aria-label="בחירת שקף"></div>
+    </div>
+    <button class="deck-arrow" type="button" data-direction="next" aria-label="שקף הבא">←</button>
+  </nav>
 
-    document.querySelectorAll('.section').forEach((section) => observer.observe(section))
+  <script>
+    const slides = Array.from(document.querySelectorAll('.hero, .section'))
+    const prevButton = document.querySelector('[data-direction="prev"]')
+    const nextButton = document.querySelector('[data-direction="next"]')
+    const status = document.querySelector('.slide-status')
+    const dots = document.querySelector('.deck-dots')
+    let currentSlide = 0
+
+    slides.forEach((slide, index) => {
+      slide.dataset.slideTitle = slide.querySelector('h1, h2')?.textContent?.trim() || `שקף ${index + 1}`
+      const dot = document.createElement('button')
+      dot.type = 'button'
+      dot.className = 'deck-dot'
+      dot.setAttribute('aria-label', `מעבר אל ${slide.dataset.slideTitle}`)
+      dot.addEventListener('click', () => showSlide(index))
+      dots.appendChild(dot)
+    })
+
+    function showSlide(index) {
+      currentSlide = Math.max(0, Math.min(index, slides.length - 1))
+      slides.forEach((slide, slideIndex) => {
+        slide.classList.toggle('active', slideIndex === currentSlide)
+        slide.classList.toggle('visible', slideIndex === currentSlide)
+      })
+      document.querySelectorAll('.deck-dot').forEach((dot, dotIndex) => {
+        dot.classList.toggle('active', dotIndex === currentSlide)
+      })
+      prevButton.disabled = currentSlide === 0
+      nextButton.disabled = currentSlide === slides.length - 1
+      status.textContent = `${currentSlide + 1} / ${slides.length} · ${slides[currentSlide].dataset.slideTitle}`
+    }
+
+    prevButton.addEventListener('click', () => showSlide(currentSlide - 1))
+    nextButton.addEventListener('click', () => showSlide(currentSlide + 1))
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowLeft') showSlide(currentSlide + 1)
+      if (event.key === 'ArrowRight') showSlide(currentSlide - 1)
+      if (event.key === 'Home') showSlide(0)
+      if (event.key === 'End') showSlide(slides.length - 1)
+    })
+
+    showSlide(0)
   </script>
 </body>
 </html>
