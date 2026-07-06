@@ -321,6 +321,9 @@
     .section {
       margin-block-start: 0;
       min-height: calc(100vh - 44px);
+      display: flex;
+      flex-direction: column;
+      justify-content: safe center;
       padding: clamp(24px, 3vw, 34px);
       border-radius: 30px;
       background: rgba(255, 255, 255, 0.62);
@@ -879,95 +882,55 @@
       align-items: stretch;
     }
 
-    .cloud-map {
-      position: relative;
-      min-height: 470px;
-      padding: 18px;
+    .arch-diagram {
+      padding: 16px;
       border-radius: 28px;
-      background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(239, 247, 255, 0.78)),
-        radial-gradient(circle at 30% 20%, rgba(47, 128, 237, 0.18), transparent 18rem);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(239, 247, 255, 0.78));
       border: 1px solid var(--line);
       overflow: hidden;
     }
 
-    .cloud-map::before {
-      content: "";
-      position: absolute;
-      inset: 76px 58px 86px;
-      border: 2px dashed rgba(47, 128, 237, 0.22);
-      border-radius: 46px;
-    }
-
-    .cloud-core {
-      position: absolute;
-      inset-block-start: 50%;
-      inset-inline-start: 50%;
-      transform: translate(50%, -50%);
-      width: 206px;
-      min-height: 140px;
-      display: grid;
-      place-items: center;
-      text-align: center;
-      padding: 22px;
-      border-radius: 30px;
-      color: #fff;
-      background: linear-gradient(135deg, #2668e8, #7c5cff);
-      box-shadow: 0 24px 54px rgba(47, 128, 237, 0.32);
-      z-index: 3;
-    }
-
-    .cloud-core strong {
+    .arch-diagram svg {
+      width: 100%;
+      height: auto;
       display: block;
-      font-size: 1.26rem;
-      line-height: 1.2;
-      margin-block-end: 8px;
     }
 
-    .cloud-core span {
-      font-size: 0.86rem;
-      opacity: 0.9;
+    .arch-caption {
+      margin-block-start: 12px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.5;
+      text-align: start;
     }
 
-    .cloud-node {
-      --node-color: var(--blue);
-      position: absolute;
-      width: 168px;
-      min-height: 96px;
-      padding: 14px;
-      border-radius: 20px;
+    .arch-future {
+      margin-block-start: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: rgba(124, 92, 255, 0.06);
+      border: 1px solid rgba(124, 92, 255, 0.18);
+      color: var(--ink);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .arch-future b { color: var(--violet); }
+
+    .arch-future .arrow { color: var(--muted); font-weight: 900; }
+
+    .arch-future .chip {
+      padding: 5px 10px;
+      border-radius: 999px;
       background: #fff;
       border: 1px solid var(--line);
-      box-shadow: 0 16px 34px rgba(23, 32, 74, 0.12);
-      z-index: 2;
+      font-size: 0.74rem;
+      font-weight: 800;
     }
-
-    .cloud-node::before {
-      content: "";
-      display: block;
-      width: 34px;
-      height: 5px;
-      border-radius: 999px;
-      background: var(--node-color);
-      margin-block-end: 10px;
-    }
-
-    .cloud-node h3 {
-      font-size: 0.98rem;
-      margin-block-end: 7px;
-    }
-
-    .cloud-node p {
-      color: var(--muted);
-      line-height: 1.38;
-      font-size: 0.78rem;
-    }
-
-    .cloud-node:nth-of-type(2) { inset-block-start: 24px; inset-inline-start: 50%; transform: translateX(50%); --node-color: var(--violet); }
-    .cloud-node:nth-of-type(3) { inset-block-start: 126px; inset-inline-end: 26px; --node-color: var(--blue); }
-    .cloud-node:nth-of-type(4) { inset-block-end: 32px; inset-inline-end: 54px; --node-color: var(--green); }
-    .cloud-node:nth-of-type(5) { inset-block-end: 32px; inset-inline-start: 54px; --node-color: var(--orange); }
-    .cloud-node:nth-of-type(6) { inset-block-start: 126px; inset-inline-start: 26px; --node-color: var(--cyan); }
 
     .cost-panel {
       display: grid;
@@ -1225,6 +1188,147 @@
       line-height: 1.4;
     }
 
+    .memory-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .memory-card {
+      --mem-color: var(--violet);
+      position: relative;
+      padding: 16px;
+      border-radius: 20px;
+      background: #fff;
+      border: 1px solid var(--line);
+      overflow: hidden;
+      animation: rise 0.7s ease both;
+    }
+
+    .memory-card::after {
+      content: "";
+      position: absolute;
+      inset-inline-end: -30px;
+      inset-block-start: -30px;
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--mem-color), transparent 88%);
+    }
+
+    .memory-card .mem-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 13px;
+      display: grid;
+      place-items: center;
+      font-size: 1.2rem;
+      color: #fff;
+      background: var(--mem-color);
+      box-shadow: 0 12px 22px color-mix(in srgb, var(--mem-color), transparent 70%);
+      margin-block-end: 10px;
+      animation: breathe 4.4s ease-in-out infinite;
+    }
+
+    .memory-card h3 {
+      font-size: 0.98rem;
+      margin-block-end: 2px;
+    }
+
+    .memory-card .mem-en {
+      display: block;
+      color: var(--mem-color);
+      font-size: 0.68rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      margin-block-end: 8px;
+    }
+
+    .memory-card p {
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+
+    .mem-src {
+      display: block;
+      margin-block-start: 9px;
+      padding-block-start: 8px;
+      border-block-start: 1px dashed rgba(23, 32, 74, 0.12);
+      color: var(--ink);
+      font-size: 0.72rem;
+      font-weight: 800;
+      line-height: 1.4;
+    }
+
+    .mem-src code {
+      color: var(--mem-color, var(--violet));
+      font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      font-weight: 700;
+    }
+
+    .mem-pipeline {
+      margin-block-start: 20px;
+      display: grid;
+      grid-template-columns: 1fr 44px 1fr 44px 1fr 44px 1fr;
+      align-items: stretch;
+      gap: 6px;
+      padding: 16px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid var(--line);
+    }
+
+    .mem-stage {
+      --stage-color: var(--violet);
+      padding: 14px 12px;
+      border-radius: 18px;
+      background: #fff;
+      border: 1px solid var(--line);
+      text-align: center;
+    }
+
+    .mem-stage b {
+      --dot-color: var(--stage-color);
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      margin-inline: auto;
+      margin-block-end: 8px;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--stage-color);
+      animation: pulse 3.6s ease-in-out infinite;
+      animation-delay: var(--pulse-delay, 0s);
+    }
+
+    .mem-stage strong {
+      display: block;
+      font-size: 0.9rem;
+      margin-block-end: 5px;
+    }
+
+    .mem-stage span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.75rem;
+      line-height: 1.45;
+    }
+
+    .mem-link {
+      align-self: center;
+      height: 6px;
+      border-radius: 999px;
+      background: repeating-linear-gradient(90deg, var(--violet) 0 9px, transparent 9px 18px);
+      opacity: 0.55;
+      animation: dash-flow 1.1s linear infinite;
+    }
+
+    @keyframes dash-flow {
+      to { background-position: -18px 0; }
+    }
+
     .deck-controls {
       position: fixed;
       inset-inline: 24px;
@@ -1340,10 +1444,6 @@
         min-height: 760px;
       }
 
-      .cloud-map {
-        min-height: 620px;
-      }
-
       .agent-card {
         width: min(280px, 44%);
       }
@@ -1355,8 +1455,14 @@
       .guardrails,
       .insight-row,
       .xapi-layout,
-      .stat-strip {
+      .stat-strip,
+      .memory-grid,
+      .mem-pipeline {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .mem-link {
+        display: none;
       }
     }
 
@@ -1404,23 +1510,6 @@
         margin-inline: auto;
       }
 
-      .cloud-map {
-        min-height: auto;
-        display: grid;
-        gap: 12px;
-      }
-
-      .cloud-map::before {
-        display: none;
-      }
-
-      .cloud-core,
-      .cloud-node {
-        position: static;
-        transform: none;
-        width: 100%;
-      }
-
       .cost-row,
       .token-step {
         grid-template-columns: 1fr;
@@ -1433,7 +1522,9 @@
       .guardrails,
       .insight-row,
       .xapi-layout,
-      .stat-strip {
+      .stat-strip,
+      .memory-grid,
+      .mem-pipeline {
         grid-template-columns: 1fr;
       }
 
@@ -1585,6 +1676,94 @@
       </div>
     </section>
 
+    <section id="memory" class="section">
+      <div class="section-title">
+        <h2>איך המוח זוכר: הנדסת זיכרון</h2>
+        <p>הזיכרון אינו טרנסקריפט אחד ארוך. ארבעה סוגי זיכרון — לכל אחד מקור נתונים משלו, מחזור חיים מנוהל, וחיבור מובנה ל-Microsoft Agent Framework — ובסוף תרחישי שימוש אמיתיים.</p>
+      </div>
+      <div class="memory-grid" aria-label="ארבעת סוגי הזיכרון">
+        <article class="memory-card" style="--mem-color: var(--blue); animation-delay: 0.05s">
+          <div class="mem-icon">⚡</div>
+          <h3>זיכרון עבודה</h3>
+          <span class="mem-en">WORKING</span>
+          <p>המצב הנוכחי והשיחה החיה: 6–10 תורות אחרונות, סיכום מתגלגל ורשימת עובדות לסשן.</p>
+          <span class="mem-src">מקור: <code>agent_sessions</code> · לפי learner_id + session_id</span>
+        </article>
+        <article class="memory-card" style="--mem-color: var(--green); animation-delay: 0.12s">
+          <div class="mem-icon">🎬</div>
+          <h3>זיכרון אירועים</h3>
+          <span class="mem-en">EPISODIC</span>
+          <p>כל מה שקרה באמת: אירועי xAPI ורפלקציות, append-only — הראיות לכל טענה.</p>
+          <span class="mem-src">מקור: <code>learning_events</code> · <code>reflections</code></span>
+        </article>
+        <article class="memory-card" style="--mem-color: var(--violet); animation-delay: 0.19s">
+          <div class="mem-icon">🧠</div>
+          <h3>זיכרון סמנטי</h3>
+          <span class="mem-en">SEMANTIC</span>
+          <p>עובדות יציבות על הלומד: פרופיל, שליטה, חוזקות ותחומי עניין — עם מקור וביטחון.</p>
+          <span class="mem-src">מקור: <code>profile</code> · <code>mastery</code> — מאירועים + איחוד</span>
+        </article>
+        <article class="memory-card" style="--mem-color: var(--orange); animation-delay: 0.26s">
+          <div class="mem-icon">🔁</div>
+          <h3>זיכרון פרוצדורלי</h3>
+          <span class="mem-en">PROCEDURAL</span>
+          <p>מה עובד עבור התלמיד הזה: "אנלוגיות ספורט מתחברות", "וידאו אחרי כישלון".</p>
+          <span class="mem-src">מקור: <code>strategies[]</code> — מקודם ע"י ה-Consolidator</span>
+        </article>
+      </div>
+      <div class="mem-pipeline" aria-label="מחזור חיי הזיכרון">
+        <div class="mem-stage" style="--stage-color: var(--violet); --pulse-delay: 0s">
+          <b>1</b>
+          <strong>לכידה</strong>
+          <span>אחרי כל תור, מועמדי זיכרון מחולצים מהשיחה — כל אחד עם ציטוט ראיה וציון ביטחון.</span>
+        </div>
+        <div class="mem-link"></div>
+        <div class="mem-stage" style="--stage-color: var(--blue); --pulse-delay: 0.9s">
+          <b>2</b>
+          <strong>אימות</strong>
+          <span>סוכן מוגנות מסנן PII, ורשימת ההיתרים בודקת הרשאת כתיבה. ביטחון נמוך נשאר בהמתנה.</span>
+        </div>
+        <div class="mem-link"></div>
+        <div class="mem-stage" style="--stage-color: var(--green); --pulse-delay: 1.8s">
+          <b>3</b>
+          <strong>איחוד</strong>
+          <span>דה-דופליקציה, "קשה גובר על רך", דעיכה לעובדות שלא אושררו, וקידום עובדות יציבות לפרופיל.</span>
+        </div>
+        <div class="mem-link"></div>
+        <div class="mem-stage" style="--stage-color: var(--orange); --pulse-delay: 2.7s">
+          <b>4</b>
+          <strong>הזרקה</strong>
+          <span>לפני כל קריאה נבנית חבילה סקופית עם תקציב טוקנים ומיקום מחושב בפרומפט.</span>
+        </div>
+      </div>
+      <div class="insight-row" aria-label="חיבור ל-Agent Framework">
+        <article class="insight-item" style="--item-color: var(--violet)"><strong>before_run — הזרקה</strong><span>ContextProvider מזריק לכל סוכן רק את פרוסת המוח שלו, בכל קריאה, בלי קוד פר-מסך.</span></article>
+        <article class="insight-item" style="--item-color: var(--blue)"><strong>after_run — לכידה</strong><span>אחרי כל תשובה נאספים מועמדי זיכרון ונשלחים לאיחוד — הפרופיל לעולם לא נכתב ישירות מהשיחה.</span></article>
+        <article class="insight-item" style="--item-color: var(--green)"><strong>Audit Provider — ביקורת</strong><span>עותק מדויק של ההקשר שכל סוכן ראה נשמר ב-MongoDB — הסברתיות כתשתית, לא כתוספת.</span></article>
+      </div>
+      <div class="split" aria-label="תרחישי שימוש בזיכרון">
+        <article class="panel">
+          <h3>תרחיש: "בעצם אני אוהב כדורסל"</h3>
+          <ul>
+            <li>יובי לוכד מועמד <b>סמנטי רך</b> (source:chat, confidence) עם ציטוט ראיה.</li>
+            <li>ה-Consolidator מעדכן את תחומי העניין; אם לא יאושרר — <b>ידעך</b>.</li>
+            <li>בשיחה הבאה יובי כבר נותן דוגמאות מכדורסל — בלי שאיש עדכן ידנית.</li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h3>תרחיש: כישלון שלישי ברצף בשברים</h3>
+          <ul>
+            <li>אירוע <b>אפיזודי קשה</b> (xAPI answered, success:false) נכנס append-only.</li>
+            <li>עדכון <b>mastery</b> (סמנטי) — מספר פנימי בלבד; מופעל טריגר "תפיסה שגויה".</li>
+            <li>יובי מגיב יזום; אם הצליח — נשמר לזיכרון <b>פרוצדורלי</b> "וידאו אחרי כישלון עובד".</li>
+          </ul>
+        </article>
+      </div>
+      <div class="callout" style="--callout-color: var(--blue)">
+        <b>המשכיות שיחה:</b> היסטוריית הצ'אט נשמרת ב-<code>agent_sessions</code> לפי <b>learner_id + session_id</b> (זיכרון עבודה: N תורות אחרונות + סיכום מתגלגל). כשהתלמיד חוזר, יובי ממשיך מאותה נקודה — בלי localStorage, הכול מ-MongoDB.
+      </div>
+    </section>
+
     <section id="agents" class="section">
       <div class="section-title">
         <h2>מי הם הסוכנים ומה כל אחד עושה</h2>
@@ -1593,58 +1772,72 @@
       <div class="agents-grid">
         <article class="agent-detail" data-index="1" style="--accent: var(--violet)">
           <h3>סוכן מיפוי</h3>
-          <p class="tagline">בונה את תמונת ההתחלה בלי להפוך את השאלון למבחן.</p>
+          <p class="tagline">בונה את פרופיל ההתחלה מהשאלון — פעם אחת, בלי להפוך אותו למבחן.</p>
           <dl>
-            <div><dt>קורא</dt><dd>תשובות שאלון, שפת ממשק, תחומי עניין ראשוניים והעדפות למידה.</dd></div>
-            <div><dt>כותב</dt><dd>פעלנות, סגנון למידה, העדפות, חוזקות ואתגרים רכים עם מקור נתונים.</dd></div>
-            <div><dt>כלים</dt><dd>ניתוח שאלון, סיכום ידידותי, יצירת Context ראשוני ליובי.</dd></div>
+            <div><dt>קלט</dt><dd>תשובות שאלון הפעלנות, שפת ממשק ותחומי עניין ראשוניים.</dd></div>
+            <div><dt>מופיע ב</dt><dd>מסך המיפוי הראשוני — שאלון ושיחת פתיחה עם יובי.</dd></div>
+            <div><dt>מדבר עם</dt><dd>מזין את <b>יובי</b> בפרופיל ההתחלתי, ואז נדם עד מיפוי חוזר.</dd></div>
+            <div><dt>כלים</dt><dd><code>get_mapping</code> · <code>write_profile</code> · <code>set_interests</code></dd></div>
           </dl>
         </article>
         <article class="agent-detail" data-index="2" style="--accent: var(--blue)">
           <h3>מלווה למידה יובי</h3>
-          <p class="tagline">נמצא בכל מסך ומתרגם את נתוני הלמידה לעזרה פשוטה ומותאמת.</p>
+          <p class="tagline">מתרגם נתוני למידה לעזרה פשוטה — בכל מסך ובאופן יזום.</p>
           <dl>
-            <div><dt>קורא</dt><dd>יעד נוכחי, קושי אחרון, תחומי עניין, מידע לפריט ונתוני שיחה בטוחים.</dd></div>
-            <div><dt>כותב</dt><dd>העדפות חדשות, דיווח עצמי על קושי, מטרות קטנות וסימני תסכול או ביטחון.</dd></div>
-            <div><dt>כלים</dt><dd>הסבר פשוט, העמקה, דוגמה אישית, רמז מדורג והצעת הפסקה.</dd></div>
+            <div><dt>קלט</dt><dd>חבילת Context לא מזהה: יעד נוכחי, <code>informationToBot</code>, אירועים אחרונים, תחומי עניין, שפה.</dd></div>
+            <div><dt>מופיע ב</dt><dd>צ'אט צף בכל מסך + נדנוד יזום (idle / תפיסה שגויה / הצלחה).</dd></div>
+            <div><dt>מדבר עם</dt><dd>מבקש מ<b>הפדגוגי</b> ייצוג חלופי; מעביר ל<b>רפלקציה</b> אחרי רכיב קשה; כל פלט עובר ב<b>מוגנות</b>.</dd></div>
+            <div><dt>כלים</dt><dd><code>get_context</code> · <code>get_item_info</code> · <code>offer_hint</code> · <code>stage_memory_candidate</code></dd></div>
           </dl>
         </article>
         <article class="agent-detail" data-index="3" style="--accent: var(--green)">
           <h3>סוכן פדגוגי</h3>
-          <p class="tagline">מחבר בין תוכנית הלימודים המאושרת לבין הצעד הבא של התלמיד.</p>
+          <p class="tagline">מחבר בין הסילבוס המאושר לבין הצעד הבא של התלמיד.</p>
           <dl>
-            <div><dt>קורא</dt><dd>שליטה לפי יעדים, תנאי קדם, קטלוג רכיבי תוכן ואירועי הצלחה או כשל.</dd></div>
-            <div><dt>כותב</dt><dd>המלצת רכיב הבא, סיבת בחירה, חלופה אחרי קושי ותוכנית התאוששות קצרה.</dd></div>
-            <div><dt>כלים</dt><dd>Planner דטרמיניסטי, בחירת iframe מאושר, התאמת רמת קושי וייצוג חלופי.</dd></div>
+            <div><dt>קלט</dt><dd>שליטה לפי יעדים, <code>current_state</code>, ומטא-דאטה של רכיבים משרת ה-MCP של התוכן.</dd></div>
+            <div><dt>מופיע ב</dt><dd>מאחורי הקלעים — לפני טעינת כל רכיב תוכן ואחרי סיומו.</dd></div>
+            <div><dt>מדבר עם</dt><dd>מקבל "מה ללמד" מה-<b>Planner</b> הדטרמיניסטי; מקבל בקשות מ<b>יובי</b>; כותב ל<b>מוח</b>.</dd></div>
+            <div><dt>כלים</dt><dd><code>plan_next</code> · <code>list_available_content (MCP)</code> · <code>select_component</code> · <code>record_route</code></dd></div>
           </dl>
         </article>
         <article class="agent-detail" data-index="4" style="--accent: var(--orange)">
           <h3>סוכן רפלקציה</h3>
           <p class="tagline">עוזר לתלמיד להבין איך הוא לומד, לא רק אם צדק.</p>
           <dl>
-            <div><dt>קורא</dt><dd>מאמץ, בקשות רמז, דפוסי התמדה, מטרות מנטורינג ותשובות רפלקציה קודמות.</dd></div>
-            <div><dt>כותב</dt><dd>תובנות עצמיות, אסטרטגיות שעבדו, תחושת מסוגלות ונושאים לשיחה עם מורה.</dd></div>
-            <div><dt>כלים</dt><dd>שאלות תכנון, ניטור וסיכום קצר אחרי רכיב קשה או הצלחה משמעותית.</dd></div>
+            <div><dt>קלט</dt><dd>מאמץ, בקשות רמז, דפוסי התמדה ואירועים אחרונים.</dd></div>
+            <div><dt>מופיע ב</dt><dd>אחרי רכיב קשה, בהתאוששות מ-idle, או בלו"ז קבוע.</dd></div>
+            <div><dt>מדבר עם</dt><dd>מוזמן ע"י <b>יובי</b>; שולח <b>אירועי-חי ל"תובנות מורה"</b> (עבר יעד / כישלון עקבי) להתראה חיה.</dd></div>
+            <div><dt>כלים</dt><dd><code>get_reflection_prompt</code> · <code>store_reflection</code> · <code>emit_teacher_signal</code></dd></div>
           </dl>
         </article>
         <article class="agent-detail" data-index="5" style="--accent: var(--cyan)">
           <h3>סוכן תובנות למורה</h3>
-          <p class="tagline">הופך אירועים גולמיים לתמונה שאפשר לפעול לפיה בכיתה.</p>
+          <p class="tagline">הופך אירועים גולמיים לתמונה מוסברת שאפשר לפעול לפיה.</p>
           <dl>
-            <div><dt>קורא</dt><dd>אירועי למידה, שליטה לפי יעדים, מטרות, נוכחות פעילות והרשאות קבוצה.</dd></div>
-            <div><dt>כותב</dt><dd>דגלי תשומת לב, המלצות 2-5 פעולות, חוזקות לבנייה וראיות לכל מסקנה.</dd></div>
-            <div><dt>כלים</dt><dd>סינון לפי קבוצה, הסבר מקור הנתונים, זיהוי חוסר פעילות וקושי מתמשך.</dd></div>
+            <div><dt>קלט</dt><dd>אגרגציות קבוצה + ראיות גולמיות — בהיקף הקבוצות של המורה בלבד.</dd></div>
+            <div><dt>מופיע ב</dt><dd>פורטל המורה — תצוגה קבוצתית ופרטנית + <b>התראות חיות</b>.</dd></div>
+            <div><dt>מדבר עם</dt><dd>מקבל אירועי-חי מ<b>רפלקציה / מנוע הטריגרים</b>; קורא בלבד מהמוח; <b>לא</b> כותב ללומד.</dd></div>
+            <div><dt>כלים</dt><dd><code>aggregate_group</code> · <code>flag_attention(evidence)</code> · <code>explain_flag</code> · <code>push_live_alert</code></dd></div>
           </dl>
         </article>
         <article class="agent-detail" data-index="6" style="--accent: var(--red)">
           <h3>סוכן מוגנות</h3>
-          <p class="tagline">שכבת בקרה לפני ואחרי כל תשובת AI לתלמיד.</p>
+          <p class="tagline">שכבת בקרה דו-שכבתית לפני ואחרי כל תשובת AI.</p>
           <dl>
-            <div><dt>קורא</dt><dd>הודעה נוכחית, מדיניות בטיחות, שפה נבחרת ואינדיקציה אם יש מידע מזהה.</dd></div>
-            <div><dt>כותב</dt><dd>החלטת אישור, הסרת מידע מזהה, סיבת חסימה או ניסוח חלופי בטוח.</dd></div>
-            <div><dt>כלים</dt><dd>בדיקת PII, התאמת גיל, שקיפות AI, שמירת טון מכבד ותמיכה בעברית וערבית.</dd></div>
+            <div><dt>קלט</dt><dd>ההודעה הבודדת + מדיניות; שפה נבחרת; חיווי אם יש מידע מזהה.</dd></div>
+            <div><dt>מופיע ב</dt><dd>עוטף כל קלט/פלט מול הלומד, בכל הסוכנים.</dd></div>
+            <div><dt>מדבר עם</dt><dd>שער חוצה-מערכת — מנקה לפני שהמידע מגיע ל-LLM ולפני שהתלמיד רואה תשובה.</dd></div>
+            <div><dt>כלים</dt><dd><code>screen_input</code> · <code>screen_output</code> · <code>strip_pii</code> · <code>assert_ai_disclosure</code></dd></div>
           </dl>
         </article>
+      </div>
+      <div class="insight-row" aria-label="איך הסוכנים מדברים ביניהם">
+        <article class="insight-item" style="--item-color: var(--blue)"><strong>יובי ⇄ פדגוגי</strong><span>כשיובי מזהה תפיסה שגויה הוא מבקש ייצוג חלופי (recommendedAfterFail); הפדגוגי מחזיר את הרכיב הבא.</span></article>
+        <article class="insight-item" style="--item-color: var(--orange)"><strong>יובי → רפלקציה</strong><span>אחרי רכיב קשה יובי מעביר את התלמיד לרפלקציה כדי לעבד "איך למדתי", לא רק "אם צדקתי".</span></article>
+        <article class="insight-item" style="--item-color: var(--cyan)"><strong>רפלקציה → תובנות מורה</strong><span>אירועי-חי (עבר יעד, כישלון עקבי, חוסר פעילות) נדחפים למורה כהתראה בזמן אמת בזמן שהתלמיד מחובר.</span></article>
+      </div>
+      <div class="callout" style="--callout-color: var(--cyan)">
+        <b>המורה כותב לזיכרון:</b> הנחיות והערות שהמורה מוסיף בפורטל נכנסות למוח כ-<b>directives בעדיפות גבוהה</b> — כשהסוכנים מחליטים מה להציע, הנחיית מורה גוברת על אות רך מהשיחה ועל היוריסטיקה, אך <b>לעולם לא משנה מספרי שליטה אמיתיים</b> שמגיעים מאירועי xAPI.
       </div>
     </section>
 
@@ -1683,33 +1876,116 @@
         <p>המערכת בנויה כך שכל למידה, שיחה, רמז, תובנת מורה ואירוע xAPI הופכים לצריכת ענן מדידה. המספרים כאן הם מנועי צריכה, לא הצעת מחיר.</p>
       </div>
       <div class="cloud-layout">
-        <div class="cloud-map" aria-label="תרשים ארכיטקטורת ענן Azure">
-          <div class="cloud-core">
-            <div>
-              <strong>YuviLab 720 on Azure</strong>
-              <span>למידה פעילה → אירועים → סוכני AI → תובנות</span>
-            </div>
+        <div class="arch-diagram" dir="ltr" aria-label="תרשים ארכיטקטורת Azure בפועל של המערכת">
+          <svg viewBox="0 0 980 560" role="img" xmlns="http://www.w3.org/2000/svg" font-family="Heebo, Rubik, Arial, sans-serif">
+            <defs>
+              <marker id="arrowHead" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L7,3 L0,6 Z" fill="#5b6388"></path>
+              </marker>
+            </defs>
+
+            <g fill="none" stroke="#5b6388" stroke-width="2">
+              <path d="M295,74 L438,104" marker-end="url(#arrowHead)"></path>
+              <path d="M685,74 L546,104" marker-end="url(#arrowHead)"></path>
+              <path d="M490,166 L490,212" marker-end="url(#arrowHead)"></path>
+              <path d="M280,250 L247,250" marker-end="url(#arrowHead)"></path>
+              <path d="M145,294 L145,332" marker-end="url(#arrowHead)"></path>
+              <path d="M430,294 L385,442" marker-end="url(#arrowHead)"></path>
+              <path d="M505,294 L590,442" marker-end="url(#arrowHead)"></path>
+              <path d="M560,294 L775,442" stroke-dasharray="6 5" marker-end="url(#arrowHead)"></path>
+              <path d="M730,254 L702,254" stroke-dasharray="6 5" marker-end="url(#arrowHead)"></path>
+            </g>
+
+            <g font-size="10" fill="#5b6388" text-anchor="middle">
+              <text x="372" y="86">HTTPS</text>
+              <text x="520" y="197">route /spark</text>
+              <text x="152" y="318">gpt-5-mini</text>
+              <text x="356" y="372">MongoDB</text>
+              <text x="694" y="352">telemetry</text>
+              <text x="716" y="244" text-anchor="end">deploy image</text>
+            </g>
+
+            <g>
+              <rect x="190" y="18" width="210" height="56" rx="14" fill="#fff" stroke="#17204a" stroke-opacity="0.14"></rect>
+              <rect x="204" y="18" width="182" height="4" rx="2" fill="#7c5cff"></rect>
+              <text x="295" y="42" text-anchor="middle" font-size="13" font-weight="800" fill="#17204a">דפדפן תלמיד</text>
+              <text x="295" y="60" text-anchor="middle" font-size="10.5" fill="#5b6388">he · ar · en · יובי צף</text>
+            </g>
+            <g>
+              <rect x="580" y="18" width="210" height="56" rx="14" fill="#fff" stroke="#17204a" stroke-opacity="0.14"></rect>
+              <rect x="594" y="18" width="182" height="4" rx="2" fill="#24a7c9"></rect>
+              <text x="685" y="42" text-anchor="middle" font-size="13" font-weight="800" fill="#17204a">דפדפן מורה</text>
+              <text x="685" y="60" text-anchor="middle" font-size="10.5" fill="#5b6388">פורטל מורה · תובנות</text>
+            </g>
+
+            <g>
+              <rect x="260" y="104" width="460" height="62" rx="16" fill="#fff" stroke="#17204a" stroke-opacity="0.14"></rect>
+              <rect x="274" y="104" width="432" height="4" rx="2" fill="#2f80ed"></rect>
+              <text x="490" y="132" text-anchor="middle" font-size="13.5" font-weight="800" fill="#17204a">Azure Front Door</text>
+              <text x="490" y="150" text-anchor="middle" font-size="10.5" fill="#5b6388">fd-vibe-coding-kids · endpoint: spark · WAF · TLS · CDN</text>
+            </g>
+
+            <g>
+              <rect x="280" y="214" width="420" height="80" rx="16" fill="#fff" stroke="#17204a" stroke-opacity="0.14"></rect>
+              <rect x="294" y="214" width="392" height="4" rx="2" fill="#7c5cff"></rect>
+              <text x="490" y="242" text-anchor="middle" font-size="13.5" font-weight="800" fill="#17204a">App Service · ubi-yuvi-720</text>
+              <text x="490" y="260" text-anchor="middle" font-size="10.5" fill="#5b6388">FastAPI + React · Linux container · WEBSITES_PORT</text>
+              <text x="490" y="277" text-anchor="middle" font-size="10" fill="#5b6388">asp-yuvi-720 · North Europe · Context Engine + Agents</text>
+            </g>
+
+            <g>
+              <rect x="730" y="226" width="196" height="56" rx="14" fill="#fff" stroke="#17204a" stroke-opacity="0.14"></rect>
+              <rect x="744" y="226" width="168" height="4" rx="2" fill="#f2994a"></rect>
+              <text x="828" y="250" text-anchor="middle" font-size="12.5" font-weight="800" fill="#17204a">Container Registry</text>
+              <text x="828" y="267" text-anchor="middle" font-size="10.5" fill="#5b6388">yuvi720acr</text>
+            </g>
+
+            <g>
+              <rect x="45" y="214" width="200" height="80" rx="16" fill="#fff" stroke="#17204a" stroke-opacity="0.14"></rect>
+              <rect x="59" y="214" width="172" height="4" rx="2" fill="#2fa75f"></rect>
+              <text x="145" y="244" text-anchor="middle" font-size="12.5" font-weight="800" fill="#17204a">API Management</text>
+              <text x="145" y="262" text-anchor="middle" font-size="10.5" fill="#5b6388">apim-cotrade-prod</text>
+              <text x="145" y="279" text-anchor="middle" font-size="9.5" fill="#5b6388">gateway · policy · throttling</text>
+            </g>
+
+            <g>
+              <rect x="45" y="334" width="200" height="70" rx="16" fill="#fff" stroke="#17204a" stroke-opacity="0.14"></rect>
+              <rect x="59" y="334" width="172" height="4" rx="2" fill="#2f80ed"></rect>
+              <text x="145" y="364" text-anchor="middle" font-size="12.5" font-weight="800" fill="#17204a">Azure OpenAI</text>
+              <text x="145" y="382" text-anchor="middle" font-size="10.5" fill="#5b6388">gpt-5-mini deployment</text>
+            </g>
+
+            <g>
+              <rect x="250" y="442" width="250" height="84" rx="16" fill="#fff" stroke="#17204a" stroke-opacity="0.14"></rect>
+              <rect x="264" y="442" width="222" height="4" rx="2" fill="#7c5cff"></rect>
+              <text x="375" y="470" text-anchor="middle" font-size="12.5" font-weight="800" fill="#17204a">Cosmos DB for MongoDB</text>
+              <text x="375" y="488" text-anchor="middle" font-size="10" fill="#5b6388">Learner Brain · learning_events</text>
+              <text x="375" y="504" text-anchor="middle" font-size="10" fill="#5b6388">agent_sessions · content · mentoring</text>
+            </g>
+            <g>
+              <rect x="520" y="442" width="170" height="84" rx="16" fill="#fff" stroke="#17204a" stroke-opacity="0.14"></rect>
+              <rect x="534" y="442" width="142" height="4" rx="2" fill="#f2994a"></rect>
+              <text x="605" y="478" text-anchor="middle" font-size="12.5" font-weight="800" fill="#17204a">Blob Storage</text>
+              <text x="605" y="496" text-anchor="middle" font-size="10" fill="#5b6388">iframe content · assets</text>
+            </g>
+            <g>
+              <rect x="710" y="442" width="220" height="84" rx="16" fill="#fff" stroke="#17204a" stroke-opacity="0.14"></rect>
+              <rect x="724" y="442" width="192" height="4" rx="2" fill="#24a7c9"></rect>
+              <text x="820" y="478" text-anchor="middle" font-size="12.5" font-weight="800" fill="#17204a">Azure Monitor</text>
+              <text x="820" y="496" text-anchor="middle" font-size="10" fill="#5b6388">logs · telemetry · metrics</text>
+            </g>
+          </svg>
+          <p class="arch-caption">כל התיבות הן משאבי Azure אמיתיים בפריסה הנוכחית: Front Door → App Service (container מ-ACR) → APIM → Azure OpenAI, עם MongoDB, Blob ו-Monitor.</p>
+          <div class="arch-future">
+            <b>היום:</b><span>מונוליט על App Service</span>
+            <span class="arrow">→</span>
+            <b>מחר:</b><span>מיקרו-שירותים על AKS + Azure Service Bus</span>
+            <span class="chip">Brain / Context</span>
+            <span class="chip">xAPI Ingest</span>
+            <span class="chip">Agents Orchestrator</span>
+            <span class="chip">Coach</span>
+            <span class="chip">Teacher Insights</span>
           </div>
-          <article class="cloud-node">
-            <h3>Azure OpenAI / Foundry</h3>
-            <p>כל שיחת יובי, רמז, הסבר, רפלקציה ותובנת מורה צורכים tokens.</p>
-          </article>
-          <article class="cloud-node">
-            <h3>API Management</h3>
-            <p>שער מאובטח לכל קריאת AI: מדיניות, ניטור, throttling ובקרה.</p>
-          </article>
-          <article class="cloud-node">
-            <h3>App Service / Container</h3>
-            <p>FastAPI, endpoints, Streaming, xAPI ingest, dashboard ו-orchestration.</p>
-          </article>
-          <article class="cloud-node">
-            <h3>Cosmos DB / MongoDB</h3>
-            <p>מוח הלמידה, אירועי למידה, mastery, מטרות, הרשאות ותובנות.</p>
-          </article>
-          <article class="cloud-node">
-            <h3>Blob + Monitor</h3>
-            <p>תוכן iframe, קבצים, לוגים, telemetry, מדדי שימוש ועלויות תפעול.</p>
-          </article>
         </div>
 
         <div class="cost-panel">
@@ -1731,7 +2007,7 @@
             <div class="cost-row"><span>DB / RU / Storage</span><div class="cost-track"><div class="cost-fill" style="--cost-value: 58%; --cost-color: var(--orange)"></div></div></div>
             <div class="cost-row"><span>Logs / Monitor</span><div class="cost-track"><div class="cost-fill" style="--cost-value: 44%; --cost-color: var(--cyan)"></div></div></div>
           </article>
-          <p class="money-note">המסר למיקרוסופט: ככל שמספר תלמידים, מורים, שיעורים ואירועי למידה גדל, כך גדלה צריכת Azure OpenAI, APIM, compute, database, storage ו-monitoring. זה מוצר חינוכי עם שימוש חוזר יומיומי, לא דמו חד-פעמי.</p>
+          <p class="money-note">ככל שמספר התלמידים, המורים, השיעורים ואירועי הלמידה גדל, כך גדלה צריכת הענן: AI tokens, APIM, compute, database, storage ו-monitoring. זה מוצר חינוכי עם שימוש חוזר יומיומי, לא דמו חד-פעמי.</p>
         </div>
       </div>
     </section>
@@ -1739,7 +2015,7 @@
     <section class="section">
       <div class="section-title">
         <h2>איך יודעים מה להציע במתמטיקה ובמדעים</h2>
-        <p>הסילבוס אינו נוצר על ידי AI. הוא מגיע כקטלוג יעדי למידה מאושר, והמערכת רק מתאימה את המסלול לתלמיד.</p>
+        <p>הסילבוס אינו נוצר על ידי AI. הוא מגיע כקטלוג יעדי למידה מאושר, שרת MCP חושף את התוכן הזמין, והסוכן בוחר ממנו לפי כללים והקשר מהזיכרון.</p>
       </div>
       <div class="split">
         <article class="panel">
@@ -1754,10 +2030,10 @@
         <article class="panel">
           <h3>הסוכן הפדגוגי</h3>
           <ul>
-            <li>בוחר רכיב תוכן מאושר שמתאים לשפה, רמת קושי וצרכי התלמיד.</li>
+            <li>שואל <b>שרת MCP</b> אילו לומדות מאושרות זמינות ליעד (לפי שליטה, שפה וקושי).</li>
+            <li>בוחר רכיב תוכן מאושר לפי כללים והקשר מהזיכרון — לא ניחוש.</li>
             <li>מפעיל חלופה מאושרת אחרי כישלון או תפיסה שגויה.</li>
-            <li>לא ממציא ציונים, תוכן או יעדי למידה.</li>
-            <li>מחזיר הסבר פשוט לתלמיד ולמורה על ההמלצה.</li>
+            <li>לא ממציא ציונים, תוכן או יעדי למידה; מחזיר הסבר פשוט על ההמלצה.</li>
           </ul>
         </article>
       </div>
@@ -1766,9 +2042,12 @@
           <div class="spine-step" style="--step-color: var(--violet)"><strong>יעדי משרד החינוך</strong><span>רשימת objectives מאושרת, לפי מתמטיקה ומדעים.</span></div>
           <div class="spine-step" style="--step-color: var(--blue)"><strong>שליטה בפועל</strong><span>מחושבת רק מאירועי xAPI ונתוני רכיב.</span></div>
           <div class="spine-step" style="--step-color: var(--green)"><strong>Planner</strong><span>בודק תנאי קדם ומוצא את ה-frontier הבא.</span></div>
-          <div class="spine-step" style="--step-color: var(--orange)"><strong>תוכן מאושר</strong><span>בחירת iframe לפי קושי, שפה והעדפות.</span></div>
+          <div class="spine-step" style="--step-color: var(--orange)"><strong>שרת MCP · תוכן זמין</strong><span>הסוכן שואל אילו רכיבים זמינים ובוחר לפי כללים + זיכרון.</span></div>
           <div class="spine-step" style="--step-color: var(--red)"><strong>תגובה מותאמת</strong><span>יובי מסביר, נותן רמז או מפנה לחלופה.</span></div>
         </div>
+      </div>
+      <div class="callout" style="--callout-color: var(--blue)">
+        <b>מי בוחר? Planner + סוכן דרך MCP:</b> ה-<b>Planner</b> הדטרמיניסטי קובע את <b>הרצף</b> — יעד הלמידה הבא לפי הסילבוס והשליטה בפועל. הסוכן הפדגוגי בוחר את <b>הרכיב הקונקרטי</b>: הוא שואל <b>שרת MCP</b> אילו לומדות מאושרות זמינות (לפי יעד, שליטה, שפה וקושי) ומחליט לפי כללים + הקשר מהזיכרון. הסילבוס והציונים לעולם לא מומצאים ע"י ה-AI.
       </div>
       <div class="callout" style="--callout-color: var(--green)">
         <b>דוגמה:</b> תלמיד לומד "חיבור שברים", עונה נכון פעמיים ברצף אבל מבקש רמז בשאלה השלישית. ה-Planner לא מקדם אותו אוטומטית ליעד הבא - הוא מסמן שליטה חלקית, ויובי מציע ייצוג חזותי חלופי לפני שהמערכת ממשיכה הלאה.
@@ -1823,6 +2102,7 @@
             <li>מעדכן mastery של "חיבור שברים" ומוריד את רמת הביטחון.</li>
             <li>שומר תפיסה שגויה אפשרית לניתוח בהמשך.</li>
             <li>שולח טריגר ליובי אם הכישלון חוזר על עצמו.</li>
+            <li>שידור חוזר של אותו statement מזוהה לפי ה-id ולא נספר פעמיים.</li>
             <li>לא נוגע בשם התלמיד - רק במזהה לא מזהה.</li>
           </ul>
         </div>
@@ -1928,7 +2208,7 @@
       <div class="guardrails">
         <article class="guardrail"><strong>מוצר 720 לגיטימי</strong><p>המערכת עוברת ממוק ודאטה מומצא למוח למידה, אירועים אמיתיים ותובנות מוסברות.</p></article>
         <article class="guardrail"><strong>ערך למשרד החינוך</strong><p>למידה מותאמת, מלווה אישי, תצוגת מורה, מנטורינג ועמידה טובה יותר בדרישות ההגשה.</p></article>
-        <article class="guardrail"><strong>ערך למיקרוסופט</strong><p>כל שימוש יומיומי מייצר צריכת Azure: tokens, API calls, compute, database, storage ו-monitoring.</p></article>
+        <article class="guardrail"><strong>פוטנציאל צריכת ענן</strong><p>כל שימוש יומיומי מייצר צריכה מתמשכת: tokens, API calls, compute, database, storage ו-monitoring.</p></article>
         <article class="guardrail"><strong>השלב הבא</strong><p>לבנות P0-P1: מוח בסיסי, xAPI ingest, לומדה אחת ומלווה יובי שמגיב לנתוני אמת.</p></article>
       </div>
       <div class="stat-strip" aria-label="מספרים מרכזיים של הפרויקט">

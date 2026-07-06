@@ -187,6 +187,10 @@ Four layers, top to bottom:
   school, contact, health, family, age.
 - All AI calls go through the **Safety Agent gate** and use a model API declared not to train on
   submitted data (720 AI‑use rule).
+- **Who is asking matters as much as who it's about.** Sessions arrive from unified sign‑in with a
+  **role** (student / teacher / admin) and group claims. The API layer resolves role → permitted
+  routes, and F8 scoping (groups/enrollments) is applied **server‑side before any brain read**. Agents
+  never make authorization decisions — by the time an agent runs, its view is already scoped (§5.8).
 
 ### 4.2 Collection: `learners` (the brain document)
 
@@ -233,13 +237,24 @@ Four layers, top to bottom:
     "science": { "objectives_total": 18, "objectives_mastered": 4 }
   },
 
+  // ── planner output cache (§5.6) — recomputed on new events, never hand-edited ──
+  "next_recommendations": { "math": ["obj-frac-add", "obj-frac-sub"], "science": ["obj-cells-1"],
+                            "computed_at": "..." },
+
   // ── F5 goals (mirrored from mentoring_conversations, learner-visible ones) ──
   "goals": [ { "id": "goal_..", "text": "לתרגל ריכוז 10 דק'", "deadline": "2026-07-20",
                "source": "mentoring", "status": "open", "visible_to_learner": true } ],
 
-  // ── Reflection Agent output ──
-  "reflections": [ { "prompt_id": "..", "answer": "..", "self_rating": 3, "at": "..",
-                     "system_estimate": 0.5 } ],   // enables self vs system comparison (teacher add'l req)
+  // ── F6 teacher-authored guidance — HIGH precedence for agent DECISIONS, never for mastery numbers (§5.7) ──
+  "teacher_directives": [ { "id": "td_..", "text": "תן יותר דוגמאות חזותיות בשברים",
+                            "scope": "objective:math-frac-add", "priority": "high", "author": "teacher",
+                            "group": "group_7A_math", "visible_to_learner": false,
+                            "created_at": "...", "expires_at": null } ],
+
+  // ── Reflection Agent output — the FULL log lives in the `reflections` collection (R2);
+  //    the brain embeds only the recent window used for bundle assembly ──
+  "reflections_recent": [ { "prompt_id": "..", "answer": "..", "self_rating": 3, "at": "..",
+                            "system_estimate": 0.5 } ],   // last N; self vs system comparison
 
   // ── live "where am I" state for resume + coach context ──
   "current_state": {
@@ -250,8 +265,12 @@ Four layers, top to bottom:
     "pace": "on_track"                    // on_track | ahead | behind
   },
 
-  // ── agent working notes (short, non-identifying, human-readable) ──
+  // ── agent working notes (short, non-identifying, human-readable scratch observations) ──
   "agent_notes": [ { "agent": "coach", "note": "responds well to sports analogies", "at": "..." } ],
+
+  // ── procedural memory: consolidated "what works for THIS learner" (promoted by §5.7 consolidator) ──
+  "strategies": [ { "note": "sports analogies land well", "confidence": 0.8,
+                    "evidence_refs": ["evt_...", "chat_..."], "last_seen": "..." } ],
 
   "enrollments": ["group_7A_math"],       // F8 scoping
   "created_at": "...", "updated_at": "..."
@@ -275,13 +294,19 @@ Four layers, top to bottom:
   `prerequisiteLearningObjective`, `questions[]`, `isAssessment` …). See content‑standards references.
 - **`mentoring_conversations`** — F5 (date, teacher, learner, meeting stage, notes, next steps,
   deadline, visibility, `author` = teacher|learner, `teacher_only` notes).
+- **`reflections`** — the full reflection log; the brain embeds only `reflections_recent` (last N).
+  The brain is a **projection, not a log** (R2) — this is the rule applied, not just stated.
 - **`schools` / `teachers` / `groups` / `enrollments`** — F8 entities + permission scoping for F6.
 - **`feedback_reports`** — F7 technical issue + UX reports (in‑ and out‑of‑system).
-- **`agent_sessions`** — per‑learner conversation/thread state for the Agent Framework (resume chat).
+- **`agent_sessions`** — per‑learner conversation/thread state for the Agent Framework, keyed by
+  **`{ learner_id, session_id, role }`** (working memory: last N turns + rolling summary + entity
+  ledger); lets the Coach resume a chat exactly where the learner left off on return — no `localStorage`,
+  all in Mongo.
 
 ### 4.4 The Context bundle (what agents actually see)
 
-The Context Engine assembles a **non‑identifying** bundle on demand:
+The Context Engine assembles a **non‑identifying** bundle on demand. Shown here is the **Coach view**
+— there is no single universal bundle; §5.8 defines the exact projection each agent role receives:
 
 ```jsonc
 {
@@ -300,6 +325,40 @@ The Context Engine assembles a **non‑identifying** bundle on demand:
 - Everything the mentor "knows about him" is here: interests → relatable examples; challenges + recent
   events → targeted help; goals → motivation; locale → language.
 
+**Assembly rules (context engineering, not just data access):**
+
+- **Token budget first.** Every bundle section has a fixed budget allocated *before* retrieval
+  (profile summary ≤ N tokens, `recent_events` = last K, one active goal, …). Retrieval **fills a
+  budget**; it never grows the prompt. This prevents the classic failure mode where memory gradually
+  starves instructions and reasoning space.
+- **Placement matters.** Hard rules and safety constraints render at the **top** of the prompt; the
+  *current item* (`informationToBot`) and `recent_events` render **last**, closest to the generation
+  point — mitigating the "lost in the middle" attention dip on mid‑context content.
+- **Delimited blocks.** Brain‑derived content is wrapped in explicit delimiters
+  (`<learner_context>…</learner_context>`) and declared as *data, not instructions* — cheap
+  defense‑in‑depth against prompt injection via chat or content metadata (R7).
+- **Precedence.** Current user message > session working memory > durable semantic memory. On
+  contradiction the fresher scope wins at *read* time; durable *writes* are reconciled only by the
+  consolidator (§5.7), never mid‑conversation.
+
+### 4.5 Memory model — four memory types over one brain
+
+The brain document + its supporting collections implement the four standard agentic memory types.
+The taxonomy decides **where a fact lives, how it is retrieved, and when it decays** — instead of one
+undifferentiated blob:
+
+| Type | What it holds here | Backing store | Retrieval | Lifecycle |
+|---|---|---|---|---|
+| **Working** | `current_state` + the live Coach session: last 6–10 turns verbatim, a **rolling summary** (fixed size, regenerated), and a small **entity ledger** of session facts | brain + `agent_sessions` | injected every call | session‑scoped; trimmed continuously, summary absorbs what falls off |
+| **Episodic** | `learning_events`, `reflections`, mentoring history — everything that *happened* | append‑only collections | queried by objective/recency (never injected wholesale) | permanent evidence; old tails compressed into summaries |
+| **Semantic** | `profile.*`, `mastery`, `strengths/challenges`, `goals` — stable facts about the learner | brain document | field projection through agent scopes (§5.8) | updated only via events + consolidation; soft facts decay (§5.7) |
+| **Procedural** | `strategies[]` — *what works for this learner* ("sports analogies land", "video after fail beats re‑reading") | brain document | injected into Coach/Pedagogical bundles | promoted from repeated evidence; confidence‑weighted |
+
+The split fixes two concrete problems in the old sketch: the Coach session is no longer a raw capped
+transcript (recent turns + rolling summary + entity ledger answer "what did we talk about?" without
+replaying everything), and learned teaching tactics get a first‑class, consolidated home instead of
+living informally inside `agent_notes`.
+
 ---
 
 ## 5. Agent layer (Microsoft Agent Framework)
@@ -310,7 +369,15 @@ Today `llm.py` is a bare HTTP call. We adopt **Microsoft Agent Framework** (`age
 - first‑class **agents with tools** (function tools that read/write the brain),
 - **sessions/threads** (continuity across turns and sessions),
 - **orchestration** (workflow for the pedagogical loop; handoff/router for the coach),
-- a natural place to insert the **Safety gate** and the **non‑identifying Context bundle**.
+- a natural place to insert the **Safety gate** and the **non‑identifying Context bundle**,
+- **`ContextProvider` hooks (`before_run` / `after_run`)** — the framework‑native seam where the
+  Context Engine plugs in: scoped bundle **injection** before every model call and memory‑candidate
+  **capture** after it (§5.4, §5.7). No per‑route hand‑rolled prompt assembly.
+- **`HistoryProvider`** — pluggable chat‑history persistence. We back it with `agent_sessions`
+  (Mongo), and add a second **write‑only audit provider** (`store_context_messages=True`) that records
+  *exactly what context each agent saw* per invocation — explainability (§11) as infrastructure, not
+  as an afterthought. (Rule: exactly **one** history provider has `load_messages=True`, so history is
+  never replayed twice into the same call.)
 
 **Model access stays on APIM.** The APIM endpoint is Azure OpenAI‑compatible, so we point the Agent
 Framework chat client at it (base URL + `api-key`/`Ocp-Apim-Subscription-Key` header, api‑version from
@@ -344,8 +411,10 @@ backend/app/
     schema.py           # dataclasses/Pydantic for the brain + collections
     repository.py       # async Mongo access (source of truth) + JSON fallback
     context_engine.py   # assemble non-identifying Context bundle; write-back updates
+    consolidator.py     # memory lifecycle: dedupe, conflict resolution, decay, promotion (§5.7)
   agents/
     client.py           # Agent Framework chat client over APIM (+ fallback flag)
+    providers.py        # MAF ContextProvider/HistoryProvider bridges to the brain (§5.4)
     tools.py            # function tools = brain read/write, content lookup, event queries
     onboarding.py       # Onboarding Agent
     pedagogical.py      # Pedagogical Agent (next-content decision)
@@ -356,7 +425,8 @@ backend/app/
     orchestrator.py     # workflow wiring + trigger engine
   services/
     llm.py              # existing APIM gateway (fallback + simple calls)
-    events.py           # xAPI ingest + normalization → learning_events
+    events.py           # xAPI ingest (idempotent, §8.2) + normalization → learning_events
+    planner.py          # deterministic curriculum planner (§5.6) — subject + next objective
     dashboard.py        # PROJECT brain → dashboard DTO (replaces LLM-invented numbers)
     insights.py         # deterministic aggregations behind Teacher Insights
 ```
@@ -371,10 +441,18 @@ Safety gate.
 |---|---|---|---|---|
 | **Onboarding** | Mapping submitted (F2) | `mapping_scores` | `profile.activeness`, `interests`, `preferences`, `learning_style`, initial `strengths/challenges` | `get_mapping`, `write_profile`, `set_interests` |
 | **Pedagogical** | Learner enters/finishes a component (F1) | `mastery`, `current_state`, content metadata | `current_state`, `mastery` snapshot, route decision | `get_brain`, `list_candidate_components(objective, mastery)`, `select_next`, `record_route` |
-| **Learning Coach** | Floating chat message **or** proactive trigger (F3) | Context bundle + `informationToBot` + `recent_events` | `agent_notes`, `profile` signals, `challenges` updates | `get_context`, `get_item_info`, `offer_hint`, `log_interaction`, `update_profile_signal` |
+| **Learning Coach** | Floating chat message **or** proactive trigger (F3) | Context bundle + `informationToBot` + `recent_events` | `agent_notes` (scratch); **staged** memory candidates → consolidator (§5.7) | `get_context`, `get_item_info`, `offer_hint`, `log_interaction`, `stage_memory_candidate` |
 | **Reflection** | After hard task / schedule / idle recovery | `mastery`, recent events | `reflections` (+ `self_rating` vs `system_estimate`) | `get_reflection_prompt`, `store_reflection` |
 | **Teacher Insights** | Teacher opens view / real‑time (F6) | brain + `learning_events` + group | *nothing in learner brain*; returns explainable insights | `aggregate_group`, `flag_attention(reason, raw_evidence)`, `recommend_actions`, `explain_flag` |
 | **Safety** | Every learner‑facing AI in/out | message + policy | may append `agent_notes` on escalation | `screen_input`, `screen_output`, `strip_pii`, `assert_ai_disclosure` |
+
+**Two write lanes (keeps §5.7 honest):** tools may write **directly** only to scratch/append fields
+(`agent_notes`, interaction logs, `reflections`) and to working state owned by that agent
+(`current_state` for the Pedagogical agent). Anything that changes the **durable picture of the
+learner** — `profile.*`, `strategies`, `challenges` — is *staged* by the capture step and applied only
+by the consolidator (§5.7). Exception: the **Onboarding agent seeds `profile` directly** — it runs once,
+from deterministic questionnaire scores, before any conversational memory exists. The §5.8 allow‑lists
+encode exactly this split.
 
 **Coach ⇄ Pedagogical split (important):** the **Coach** talks and supports *inside the current item*;
 the **Pedagogical** agent decides *which item/component comes next*. The Coach can *ask* the Pedagogical
@@ -395,17 +473,46 @@ COACH_INSTRUCTIONS = """
 - שקיפות: המערכת כבר יידעה שמדובר ב-AI; אל תתחזה לאדם.
 """
 
+# backend/app/agents/providers.py (sketch) — the brain plugs into MAF hooks, not into each route
+class BrainContextProvider(ContextProvider):
+    """Per-agent-role scoped memory bridge (one instance per role)."""
+    def __init__(self, role: str):                       # "coach" | "pedagogical" | ...
+        super().__init__(f"brain_{role}")
+        self.role = role
+
+    async def before_run(self, *, agent, session, context, state) -> None:
+        # INJECT: scoped view (§5.8), budgeted + placed + delimited (§4.4)
+        bundle = await context_engine.build_bundle(state["learner_id"], view=self.role)
+        context.extend_instructions(self.source_id, render_bundle(bundle))
+
+    async def after_run(self, *, agent, session, context, state) -> None:
+        # CAPTURE: distill memory candidates; staging only — never direct writes (§5.7)
+        candidates = extract_memory_candidates(context)
+        await context_engine.stage_candidates(state["learner_id"], self.role, candidates)
+
+
+# backend/app/agents/coach.py (sketch) — memory is provider wiring, not route logic
+def build_coach() -> Agent:
+    return Agent(
+        client=build_chat_client(),                      # APIM-backed (§5.1)
+        name="coach",
+        instructions=COACH_INSTRUCTIONS,                 # from PROMPTS[locale] (§11.1)
+        tools=[offer_hint, log_interaction, update_profile_signal],
+        context_providers=[
+            MongoHistoryProvider("agent_sessions", load_messages=True),   # WORKING memory:
+                                                         #   last N turns + rolling summary + entity ledger
+            BrainContextProvider("coach"),               # SEMANTIC + PROCEDURAL memory, coach-scoped
+            AuditHistoryProvider("agent_audit",          # exactly-what-the-agent-saw, write-only,
+                                 store_context_messages=True),  # fuels explainability (§11)
+        ],
+    )
+
 async def run_coach(learner_id, user_message=None, trigger=None):
-    ctx = await context_engine.build_bundle(learner_id)         # non-identifying
-    ctx = await safety.screen_input(ctx, user_message)          # gate in
-    agent = chat_client.create_agent(name="coach", instructions=COACH_INSTRUCTIONS,
-                                     tools=[offer_hint, log_interaction, update_profile_signal])
-    session = await agent_sessions.load(learner_id, "coach")
-    prompt = user_message or PROACTIVE_PROMPTS[trigger]         # idle / misconception / success
-    reply = await agent.run(prompt, session=session, context=ctx)
-    reply = await safety.screen_output(reply)                   # gate out
-    await agent_sessions.save(learner_id, "coach", session)
-    return reply
+    agent = build_coach()
+    session = await agent_sessions.session_for(learner_id, "coach")
+    prompt = user_message or PROACTIVE_PROMPTS[trigger]  # idle / misconception / success
+    return await safety.gated(agent.run)(prompt, session=session,   # Safety wraps in/out
+                                         state={"learner_id": learner_id})
 ```
 
 Because `ctx.profile.interests` and `ctx.current.informationToBot` are always injected, the Coach can
@@ -445,8 +552,21 @@ Orchestration shape:
 - **Coach** → event/chat‑driven, single agent with tools + session; may **hand off** to Reflection
   (after hard task) or request a route from Pedagogical.
 - **Teacher Insights** → invoked by teacher view; read‑only over brain + events, returns explainable
-  payloads.
+  payloads. It also **receives live signals** (`emit_teacher_signal` from Reflection / the trigger
+  engine) and **pushes real‑time alerts** (`push_live_alert`) to the teacher portal while the learner is
+  connected — "passed an objective", "consecutive failures", "gone idle" — each carrying its raw evidence.
 - **Safety** → a wrapper/gate, not a conversational node; wraps every learner‑facing in/out.
+  **Tiered, so it doesn't double cost/latency (R4): tier 1 is deterministic** (PII patterns,
+  blocklists, disclosure/format checks) and runs synchronously on *every* message; **tier 2 (LLM
+  screening) runs only** when tier 1 flags, on proactive nudges, and on a random sample — never as a
+  blanket second model call per turn.
+
+**Runtime shape (honest for P1–P4):** ingest → trigger evaluation → SSE push all run **in‑process**
+(single App Service instance): an asyncio queue plus per‑session idle timers. That is fine for the
+pilot; it does **not** survive scale‑out (an event landing on worker A cannot push to a learner whose
+SSE socket lives on worker B). The seam is isolated in `events.py` + the push channel: scaling out
+swaps in Mongo change streams / Azure Service Bus and a shared pub‑sub, with **zero change** to agent
+or brain contracts. (Risk R15.)
 
 ### 5.6 Curriculum planning — how the mentor knows *what to teach next*
 
@@ -464,6 +584,12 @@ three data sources, not a guess:
 - **Planner (deterministic, code — `services/planner.py`)** chooses the *subject + objective*.
 - **Pedagogical Agent** chooses the *content unit → component → representation* within that objective
   (by `masteryLevel`, `relativeDifficulty`, `recommendedAfterFail`), and phrases it.
+- **Content availability is exposed as an MCP tool server** (`content-catalog`). The Pedagogical Agent
+  does not hold the catalog: it **calls a tool** — `list_available_content(objective, mastery, locale,
+  difficulty)` — that returns the approved components the platform can currently serve, then selects one
+  by rules + memory context. The planner still owns the *sequence*; the MCP server owns *what is
+  available*; the agent owns *which of the available fits this learner now*. (This is the same seam that
+  later lets an external content provider expose its catalog over MCP without changing the agent.)
 
 ```python
 # services/planner.py (sketch) — "what next", scoped to enrolled subjects e.g. ["math","science"]
@@ -507,31 +633,66 @@ you mastered its prerequisite and it's the earliest unmastered objective in the 
 > Cold start (new learner, empty `mastery`): the planner returns the first objective of each enrolled
 > subject; the Coach leans on `interests` from onboarding for engagement until events accrue.
 
-### 5.7 Chat‑driven knowledge capture (persisting what Yuvi learns in conversation)
+### 5.7 Memory lifecycle — capture → validate → consolidate → inject
 
-When the student talks to Yuvi in free chat, the mentor must **remember** what it learns — "I actually
-love basketball, not football", "fractions confuse me", "I study better at night". After **every** Coach
-turn (chat or proactive), a lightweight extraction step proposes durable brain updates:
+When the student talks to Yuvi, the mentor must **remember** what it learns — "I actually love
+basketball, not football", "fractions confuse me", "I study better at night". But raw capture alone
+**rots**: duplicates pile up, stale beliefs linger, chat contradicts events. So memory is a managed
+**pipeline**, not a side effect of chatting:
 
 ```
-Coach reply ─▶ capture_from_chat(transcript_delta)  ─▶  JSON candidates
-   each candidate: { field, value, confidence, evidence_quote, source:"chat", ttl? }
-   types: interest_add/remove · preference · self_reported_difficulty · misconception_hint ·
-          emotional_signal · goal_mention
-        ─▶ Safety + validation gate ─▶ allow-listed write-back (per §5.8 coach scope)
+① CAPTURE     (after_run hook)   Coach turn → extract_memory_candidates(transcript_delta)
+                each: { field, value, confidence, evidence_quote, source:"chat", ttl? }
+                types: interest_add/remove · preference · self_reported_difficulty ·
+                       misconception_hint · emotional_signal · goal_mention · strategy_worked
+② VALIDATE    (sync)             Safety gate (PII / off-limits) + per-agent write allow-list (§5.8);
+                low-confidence candidates → staged as *pending*, never applied directly
+③ CONSOLIDATE (async job)        session-end + nightly (brain/consolidator.py):
+                dedupe near-identical facts · resolve conflicts (hard beats soft, then recency) ·
+                decay unreaffirmed soft facts (confidence × time) · expire TTL ·
+                compress episodic tails into rolling summaries ·
+                PROMOTE stable repeated soft facts → structured profile/strategies fields
+④ INJECT      (before_run hook)  next bundle renders the consolidated view —
+                budgeted, placed, delimited per §4.4
 ```
 
 Rules that keep this safe and correct:
 - **Soft vs hard knowledge.** Chat‑sourced beliefs are **soft** (`source:"chat"`, `confidence`,
   `last_seen`); event‑sourced facts are **hard**. On conflict, **hard wins**; unreaffirmed soft interests
   **decay**. This prevents the mentor from being talked into a wrong picture of the learner.
+- **Teacher directives outrank both — for *decisions* only.** A teacher‑authored `teacher_directives`
+  entry (from the teacher portal) is injected at **top precedence when an agent decides what to offer or
+  how to frame it** (Pedagogical routing, Coach tone/examples). Precedence for decisions is therefore
+  **teacher directive > hard event‑fact > soft chat**. It **never overrides `mastery`/`progress` numbers**
+  — those come *only* from `learning_events`; a teacher steers *choices*, not *measurements*. Directives
+  carry `scope`, `priority`, and optional `expires_at`, and are visible in the audit trail like any other
+  injected context.
 - **Chat never sets mastery.** "I get it" is at most a `Selected/isUnderstood` signal, not proof — only
   `answered/completed` events move `mastery`. (Otherwise a student could talk their way to "mastered".)
 - **Privacy + safety.** Drop anything PII or off‑limits (health, family, contact); low‑confidence
   candidates are stored as pending, not applied. Only the distilled candidates enter the brain; the raw
-  transcript stays capped in `agent_sessions`.
+  transcript stays capped in `agent_sessions` (working memory: last N turns + rolling summary).
 - **Provenance for explainability.** Every captured field keeps its `evidence_quote`, so a teacher/dev
   can see *why* the brain believes it.
+- **Consolidation is the only promoter.** Capture may only *stage*; the consolidator is the **single
+  writer** that upgrades soft → structured. One writer means no races between agents "discovering"
+  profile facts mid‑conversation, and stable notes graduate into schema fields over time instead of
+  accumulating as free text.
+
+> Pattern sources: OpenAI Agents SDK *context personalization* cookbook (session vs global notes,
+> post‑session consolidation, precedence rules, delimiter‑wrapped injection); Microsoft Agent Framework
+> *memory* tutorial (`ContextProvider` / `HistoryProvider` / audit store); context‑vs‑memory engineering
+> guidance (four memory types, write‑policy gates, retrieval budgets, placement); practical context
+> management patterns (rolling summary + entity ledger, hot/cold tiering, decay).
+
+### 5.7.1 Where memory lives — storage decision (alternatives evaluated)
+
+| Option | Verdict | Why |
+|---|---|---|
+| **Mongo/Cosmos brain + MAF providers** (chosen) | ✅ | One queryable learner model = the explainability substrate 720 requires; scope enforcement stays in **our** code (§5.8); no learner data leaves the Azure boundary; adds Azure consumption (Cosmos RU/s), which is a program goal. |
+| Mem0 (`Mem0ContextProvider`) | ❌ for now | Managed extraction/retrieval is attractive, but learner data would transit a third‑party service — breaks the PII boundary (§4.1) — and its opaque retrieval weakens "every claim traceable to a brain field" (§11). Revisit only if self‑hosted inside our Azure tenant. |
+| Foundry Agent Service server‑side threads | ❌ as the brain | Persists *conversations*, not a queryable learner model; scopes, consolidation, and projections would still be ours. May later replace `agent_sessions` raw storage — nothing else changes. |
+| Vector index for episodic recall (Mongo/Cosmos vector or Azure AI Search) | ⏳ P4+ | Becomes useful when `learning_events`/`reflections` outgrow recency queries ("have we struggled with something like this before?"). Slots in behind `context_engine` retrieval without changing any agent contract. |
 
 ### 5.8 Agent access scopes (least‑context — read/write roles)
 
@@ -550,7 +711,7 @@ AGENT_VIEWS = {
                   "write": ["current_state", "next_recommendations", "mastery"]},
   "coach":       {"read": ["profile.interests", "goals", "current.informationToBot",
                             "current.recent_events", "identity.locale"],
-                  "write": ["agent_notes", "profile.interests(soft)", "challenges"]},
+                  "write": ["agent_notes", "staged_candidates"]},   # durable fields only via consolidator (§5.7)
   "reflection":  {"read": ["mastery", "recent_events", "reflections"],
                   "write": ["reflections"]},
   "teacher_insights": {"read": ["group_aggregates", "evidence"],   # scoped to the teacher's groups only
@@ -570,10 +731,17 @@ def apply_writes(agent, learner_id, updates):
 |---|---|---|---|
 | **Onboarding** | mapping scores, onboarding chat | profile.*, initial strengths/challenges | events, other learners, teacher notes |
 | **Pedagogical** | mastery, current_state, curriculum graph, content metadata | current_state, next_recommendations, mastery | interests, chat transcript, reflections, teacher notes |
-| **Learning Coach** | Context bundle (interests, current item `informationToBot`, recent events, goals, locale) | agent_notes, soft profile signals, challenges | raw activeness numbers, `teacher_only` notes, other learners |
+| **Learning Coach** | Context bundle (interests, current item `informationToBot`, recent events, goals, locale) | agent_notes (scratch); staged candidates → consolidator | raw activeness numbers, `teacher_only` notes, other learners |
 | **Reflection** | mastery, recent events, prior reflections | reflections (+ self vs system) | interests, teacher notes, other learners |
 | **Teacher Insights** | group aggregates + evidence, **their groups only** | *nothing in the learner brain* | other groups, learner chat transcript, PII |
 | **Safety** | the single message + policy | escalation flags | full brain, events, other learners |
+| **Teacher (portal write lane)** | their groups' learners + directives | `teacher_directives`, learner‑visible `goals`, mentoring notes | learner chat transcript, other groups, raw activeness internals |
+
+> **Teacher write lane vs Teacher Insights agent.** The **Insights agent stays read‑only** on the learner
+> brain (it only *reads* to explain). Teacher *writes* happen through a **separate, authenticated portal
+> lane** (server‑side, group‑scoped) that appends `teacher_directives` / goals / mentoring notes — never an
+> LLM path. This is how a teacher "guides" the agents (§5.7 precedence) without ever touching real mastery
+> numbers or another teacher's groups.
 
 **Why this shape:** the Coach doesn't need raw פעלנות numbers to be warm (interests + current item are
 enough); the Pedagogical agent reasons over mastery + curriculum, and only receives interests as a tiny
@@ -698,6 +866,10 @@ sequenceDiagram
 - Our `/api/xapi` acts as a **lightweight LRS**: verify the token, confirm persistence back to the
   content (so it can honor the retry policy), append to `learning_events`, and notify the trigger engine
   + brain updater. Retries are transparent to the learner and must not block the flow.
+- **Ingestion is idempotent — non‑negotiable.** The retry policy *guarantees* duplicate statements
+  will arrive. The xAPI statement `id` is a **unique index** on `learning_events`; a replayed statement
+  acks success **without** double‑counting `attempts`, re‑moving `mastery`, or re‑firing triggers.
+  (Without this, every network blip inflates the learner's failure count.)
 
 ### 8.3 Because content is external, we depend on a conformance contract
 
@@ -931,10 +1103,42 @@ An honest list of where this design can break, and how we contain each one.
 | R9 | **Explainability drift** — LLM over‑claims in teacher insights. | Deterministic evidence first; the LLM may only *reword* the evidence, never add facts; every flag returns its raw datum. |
 | R10 | **Content not available in the learner's locale / no approved alternative.** | Locale + `targetSector/targetAudience` filter with a defined fallback; if none, the planner surfaces the gap instead of inventing content. |
 | R11 | **Degraded mode** (no APIM/Mongo/agent infra). | Deterministic + JSON fallbacks keep the demo alive, but must degrade **honestly** — never fabricate progress or insights. |
+| R12 | **History replayed twice** — multiple MAF history providers loading messages into one call. | Exactly one `HistoryProvider` has `load_messages=True`; the audit provider is write‑only (`store_context_messages=True`, `load_messages=False`). |
+| R13 | **Consolidator failure / lag** — staged candidates never promoted, or decay never runs. | Staging is durable (pending queue in Mongo); consolidation is idempotent and re‑runnable; the bundle renders only *consolidated* state, so a stalled consolidator degrades to "yesterday's memory", never to corrupted memory. |
+| R14 | **Duplicate / replayed xAPI statements** — the mandated provider retry policy guarantees them. | Statement `id` unique index; idempotent ingest acks duplicates without re‑counting `attempts`, moving `mastery`, or re‑firing triggers (§8.2). |
+| R15 | **In‑process triggers + SSE don't survive scale‑out** (event on worker A, learner socket on worker B). | Accepted single‑instance for P1–P4; the seam is isolated in `events.py` + the push channel → swap for Mongo change streams / Service Bus + shared pub‑sub when scaling (§5.5), with no agent/brain contract change. |
 
 **Net:** the biggest structural risk is *over‑agenting* — pushing decisions into the LLM that belong in
 deterministic code. The intended balance is a **deterministic learning engine** (curriculum, mastery,
 triggers, aggregation) with **LLM agents layered on top** for language, empathy, and adaptive judgment.
+
+---
+
+## 16. Microservice‑readiness (path to AKS + Service Bus)
+
+Everything in §§4–8 runs **in‑process on a single App Service today** (the honest P1–P4 shape, R15). But
+each seam is drawn as an **interface**, so the system can later be pulled apart into independently
+deployable services on **AKS**, wired by **Azure Service Bus** events, **without changing any agent or
+brain contract**. Design rules that keep this migration cheap — apply them now even in the monolith:
+
+- **Bounded contexts = future services.** `brain/context_engine`, `services/events` (xAPI ingest),
+  `agents/orchestrator`, `services/insights`, mentoring, and org/permissions are separable modules with
+  **no shared in‑memory state** — only the brain (Mongo/Cosmos) and events cross between them.
+- **The event bus is an interface.** Today: an in‑process asyncio queue + per‑session idle timers.
+  Tomorrow: **Mongo change streams / Azure Service Bus** topics (`learning_events`, `triggers`,
+  `teacher_alerts`) with competing consumers. `events.py` is the single swap point (R15).
+- **The proactive push channel is an interface.** Today: in‑process SSE. Tomorrow: a shared pub/sub
+  (Service Bus / Redis) so an event on worker A reaches a learner whose socket lives on worker B.
+- **Stateless agents, state in the brain.** Agents hold no durable memory, so any agent can run as its
+  own horizontally‑scaled pod; the brain + `agent_sessions` are the only state.
+- **APIM stays the model gateway** and **Front Door stays the edge** in both shapes; only what sits
+  *between* them changes (monolith → mesh of services).
+- **Idempotent, replay‑safe ingestion** (§8.2) is already required — which is exactly the prerequisite for
+  at‑least‑once Service Bus delivery, so going distributed adds no new correctness work.
+
+> Target picture: **Front Door → APIM → AKS** cluster of services (Brain/Context, xAPI Ingest, Agents
+> Orchestrator, Coach, Teacher Insights) exchanging **Service Bus** events over Cosmos/Mongo + Blob +
+> Monitor. The deck's "היום → מחר" band renders exactly this transition.
 
 ---
 
