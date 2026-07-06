@@ -8,6 +8,14 @@
         "@azure-devops/mcp",
         "yuvilab"
       ]
+    },
+    "drawio": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "drawio-mcp-server"
+      ]
     }
   }
 }

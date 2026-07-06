@@ -51,6 +51,9 @@ Surfaces (dashboards, teacher view, floating chat) render the brain, not mock da
   `.github/instructions/localization.instructions.md` and doc §11.1.
 - Model access stays on **APIM**; Microsoft Agent Framework is the orchestration layer over it. Keep
   deterministic + JSON fallbacks so the demo runs without agent/Mongo/APIM infra (never the prod path).
+- **Microservice-readiness.** Build in-process now, but keep every seam (event bus, proactive push
+  channel, agent invocation) an interface with **no shared in-memory state**, so the App Service monolith
+  can later split into **AKS + Azure Service Bus** services with no agent/brain contract change (doc §16).
 - Prefer a **deterministic learning engine** (planner, triggers, mastery, aggregation) with LLM agents
   on top for language/empathy/adaptive judgment. Avoid over-agenting.
 - Follow `720-content-standards` for content metadata, `informationToBot`, xAPI verbs, `slxapi` launch,
