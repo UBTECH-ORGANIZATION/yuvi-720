@@ -2,6 +2,7 @@ export interface QuestionnaireOptionQuestion {
   id: number
   text: string
   dimension: string
+  type?: string
   options: string[]
 }
 

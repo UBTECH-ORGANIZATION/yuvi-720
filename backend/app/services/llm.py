@@ -1,7 +1,7 @@
 """LLM gateway service for learner-facing AI features."""
 
 from pathlib import Path
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Literal
 import json
 import os
 import re
@@ -16,42 +16,32 @@ ENV_PATHS = [
     APP_ROOT.parent / "src" / "backend" / ".env",
 ]
 
+# Canonical loader lives in app.core.env (import-safe for every entrypoint).
+from app.core.env import ensure_env_loaded, load_env_file  # noqa: E402,F401
 
-def load_env_file(path: Path) -> bool:
-    """Lightweight .env loader. Does not override existing environment variables."""
-    try:
-        if not path.exists():
-            return False
-        for raw in path.read_text(encoding="utf-8").splitlines():
-            line = raw.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, value = line.partition("=")
-            key = key.strip()
-            value = value.strip().strip('"').strip("'")
-            if re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", key) and key not in os.environ:
-                os.environ[key] = value
-        print(f"✅ Loaded LLM env from {path}")
-        return True
-    except Exception as exc:
-        print(f"⚠️ Failed to load .env: {exc}")
-        return False
+ensure_env_loaded()
+
+LlmModelTier = Literal["strong", "mini"]
 
 
-if not any(load_env_file(env_path) for env_path in ENV_PATHS):
-    print("ℹ️ No LLM .env found; AI features will use fallback responses.")
+def _deployment_for_tier(model_tier: LlmModelTier) -> str:
+    if model_tier == "strong":
+        return (
+            os.environ.get("LLM_STRONG_DEPLOYMENT_NAME")
+            or os.environ.get("GPT_54_DEPLOYMENT_NAME")
+            or "gpt-5.4"
+        )
+    return (
+        os.environ.get("LLM_MINI_DEPLOYMENT_NAME")
+        or os.environ.get("LLM_WEAK_DEPLOYMENT_NAME")
+        or "gpt-5.4-mini"
+    )
 
 
-def _resolve_llm_config() -> tuple[str, str, str, str]:
+def _resolve_llm_config(model_tier: LlmModelTier = "mini") -> tuple[str, str, str, str]:
     apim_base = os.environ.get("APIM_BASE_URL", "").rstrip("/")
     apim_key = os.environ.get("APIM_SUBSCRIPTION_KEY", "")
-    deployment = (
-        os.environ.get("MODEL_DEPLOYMENT_NAME")
-        or os.environ.get("COPILOT_MODEL")
-        or "gpt-4.1-mini"
-    )
-    if deployment in {"gpt-5-mini", "gpt-5-mini-2025-08-07"}:
-        deployment = "gpt-4.1-mini"
+    deployment = _deployment_for_tier(model_tier)
     api_version = os.environ.get("APIM_API_VERSION", "2024-10-21")
 
     endpoint, key = apim_base, apim_key
@@ -65,9 +55,14 @@ def _resolve_llm_config() -> tuple[str, str, str, str]:
     return endpoint, key, deployment, api_version
 
 
-async def call_llm(messages: list, max_tokens: int = 1200, json_mode: bool = False):
+async def call_llm(
+    messages: list,
+    max_tokens: int = 1200,
+    json_mode: bool = False,
+    model_tier: LlmModelTier = "mini",
+):
     """Call the shared Azure OpenAI model through the APIM gateway."""
-    endpoint, key, deployment, api_version = _resolve_llm_config()
+    endpoint, key, deployment, api_version = _resolve_llm_config(model_tier)
     if not endpoint or not key:
         print("⚠️ No LLM endpoint configured (APIM/Foundry)")
         return None
@@ -100,9 +95,13 @@ async def call_llm(messages: list, max_tokens: int = 1200, json_mode: bool = Fal
         return None
 
 
-async def call_llm_stream(messages: list, max_tokens: int = 4000) -> AsyncGenerator[str, None]:
+async def call_llm_stream(
+    messages: list,
+    max_tokens: int = 4000,
+    model_tier: LlmModelTier = "mini",
+) -> AsyncGenerator[str, None]:
     """Stream tokens from the Azure OpenAI model."""
-    endpoint, key, deployment, api_version = _resolve_llm_config()
+    endpoint, key, deployment, api_version = _resolve_llm_config(model_tier)
     if not endpoint or not key:
         return
 

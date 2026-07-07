@@ -1,19 +1,22 @@
+/* Legacy `--m-*` brand tokens are now thin aliases over the canonical `--sp-*`
+   system in tokens.css. Do not hardcode brand colors here — change tokens.css
+   and every screen (onboarding + dashboards) updates from one place. */
 :root {
-  --m-primary: #6F5BFF;
-  --m-primary-2: #9f7afe;
-  --m-secondary: #4CC9F0;
-  --m-soft-bg: #F5F2FF;
-  --m-card: #FFFFFF;
-  --m-text: #2F2F44;
-  --m-text-soft: #6b6880;
-  --m-text-light: #9893ab;
-  --m-border: #E8E2F7;
-  --m-gradient: linear-gradient(135deg, #6F5BFF 0%, #9f7afe 55%, #4CC9F0 130%);
-  --m-gradient-soft: linear-gradient(135deg, #7c5cff 0%, #9f7afe 100%);
-  --m-shadow-sm: 0 2px 10px rgba(111, 91, 255, 0.08);
-  --m-shadow-md: 0 12px 36px rgba(111, 91, 255, 0.12), 0 3px 10px rgba(47, 47, 68, 0.04);
-  --m-shadow-lg: 0 24px 60px rgba(111, 91, 255, 0.16);
-  --font-family: 'Rubik', 'Heebo', system-ui, sans-serif;
+  --m-primary: var(--sp-primary-600);
+  --m-primary-2: var(--sp-purple-600);
+  --m-secondary: var(--sp-teal-500);
+  --m-soft-bg: var(--sp-primary-050);
+  --m-card: var(--sp-surface);
+  --m-text: var(--sp-ink-700);
+  --m-text-soft: var(--sp-ink-400);
+  --m-text-light: var(--sp-ink-300);
+  --m-border: var(--sp-border);
+  --m-gradient: var(--sp-gradient);
+  --m-gradient-soft: var(--sp-gradient-soft);
+  --m-shadow-sm: var(--sp-shadow-sm);
+  --m-shadow-md: var(--sp-shadow-md);
+  --m-shadow-lg: var(--sp-shadow-lg);
+  --font-family: var(--sp-font);
 }
 
 * { box-sizing: border-box; }

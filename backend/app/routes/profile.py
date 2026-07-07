@@ -19,8 +19,8 @@ async def analyze_profile(data: dict):
     scores = data.get("scores", {})
     language = normalize_language(data.get("language"))
 
-    first_name = student_name.split()[0] if student_name else "חבר"
-
+    # Privacy (§4.1/§11): the learner's NAME never enters an AI prompt. Scores are
+    # non-identifying. The UI personalizes with the name client-side afterwards.
     scores_text = f"""
 ציוני המיפוי (0-100):
 - סקרנות ועניין: {scores.get('academic', {}).get('interest', 50)}
@@ -33,16 +33,14 @@ async def analyze_profile(data: dict):
 - שליטה בטכנולוגיה: {scores.get('environmental', {}).get('tech_comfort', 50)}
 - ריכוז: {scores.get('environmental', {}).get('focus', 50)}"""
 
-    prompt = f"""אתה יובי, סוכן AI חינוכי שמנתח פרופיל למידה של תלמיד.
-שם התלמיד: {student_name}
-
+    prompt = f"""אתה יובי, סוכן AI חינוכי שמנתח פרופיל למידה של תלמיד/ה.
 {scores_text}
 
 צור ניתוח פרופיל למידה אישי בפורמט JSON הבא בדיוק:
 {{
-  "hero_message": "משפט אחד אישי ומעודד שמסכם את הדבר המרכזי שגילינו על {first_name} (פנה בשם). משהו כמו: גילינו שאתה לומד הכי טוב כש...",
+  "hero_message": "משפט אחד אישי ומעודד שמסכם את הדבר המרכזי שגילינו (פנה בגוף שני, בלי שם). משהו כמו: גילינו שאת/ה לומד/ת הכי טוב כש...",
   "strengths": [
-    {{ "icon": "אימוג'י מתאים", "label": "שם התכונה", "desc": "משפט אישי קצר שמסביר למה זו חוזקה, פנה ב-אתה" }},
+    {{ "icon": "אימוג'י מתאים", "label": "שם התכונה", "desc": "משפט אישי קצר שמסביר למה זו חוזקה, פנה בגוף שני" }},
     {{ "icon": "...", "label": "...", "desc": "..." }},
     {{ "icon": "...", "label": "...", "desc": "..." }}
   ],
@@ -61,8 +59,8 @@ async def analyze_profile(data: dict):
 1. {output_language_instruction(language)}
 2. strengths — 3 החוזקות הגבוהות ביותר. כל desc צריך להיות אישי, חם ומעודד.
 3. improve — 2 התחומים שהכי כדאי לחזק. ה-tip צריך להיות מעשי, מעודד ומנוסח כהזדמנות.
-4. tips — 3 טיפים מותאמים שמחברים בין החוזקות לחולשות. למשל: "בגלל שאתה עצמאי, נסה..." 
-5. הטון חם, מעודד, אישי — פנה בשם {first_name}.
+4. tips — 3 טיפים מותאמים שמחברים בין החוזקות לחולשות. למשל: "בגלל שאת/ה עצמאי/ת, נסה/י..."
+5. הטון חם, מעודד, אישי — פנה בגוף שני (את/ה), בלי להשתמש בשם.
 6. אל תהיה שלילי. אל תשתמש במילים כמו "חלש" או "נמוך".
 7. 🚫 קריטי: אסור בהחלט להזכיר מספרים, ציונים, אחוזים או ערכים מספריים כלשהם בטקסט שהילד יקרא (לא "100", לא "65", לא "ציון גבוה", לא "אחוז"). הילד לעולם לא רואה מספרים — רק תיאור מילולי חם. הציונים משמשים אותך רק כדי לבחור על מה לכתוב, אבל אסור לכתוב אותם או להתייחס אליהם.
 8. החזר JSON תקין בלבד, בלי טקסט נוסף."""
@@ -71,6 +69,7 @@ async def analyze_profile(data: dict):
         [{"role": "user", "content": prompt}],
         max_tokens=4000,
         json_mode=True,
+        model_tier="strong",
     )
 
     if result:
@@ -175,8 +174,9 @@ async def results_chat(data: dict):
     history = data.get("history", [])
     language = normalize_language(data.get("language"))
 
+    # Privacy (§4.1/§11): no name in the prompt. Scores are non-identifying.
     scores_text = f"""
-פרופיל {student_name}:
+פרופיל הלמידה (0-100):
 - סקרנות ועניין: {scores.get('academic', {}).get('interest', 50)}
 - רצון להצליח: {scores.get('academic', {}).get('investment', 50)}
 - אומץ ונחישות: {scores.get('psycho_pedagogical', {}).get('motivation', 50)}

@@ -2,6 +2,19 @@
 
 The platform needs learning activity reports from content so it can update learner profiles, route learners, and generate recommendations.
 
+## Authoritative closed vocabularies (MoE LXP) — source of truth
+Use these exact IRIs; never invent verbs, activity types, extensions, or domains. Canonical registry:
+- Verbs: `https://lxp.education.gov.il/vocabulery/Verb.html`
+- Activity types: `https://lxp.education.gov.il/vocabulery/ActivityType.html`
+- Result extensions: `https://lxp.education.gov.il/vocabulery/ResultExtension.html`
+- Domains (subjects): `https://lxp.education.gov.il/vocabulery/Domain.html`
+
+IRI bases: verbs `https://lxp.education.gov.il/xapi/moe/verbs/{verb}`; activities
+`https://lxp.education.gov.il/xapi/moe/activities/{type}`; result extensions
+`https://lxp.education.gov.il/xapi/moe/extensions/{name}`; curriculum tag object
+`https://lxp.education.gov.il/xapi/curriculum`; catalog grouping id
+`https://lxp.education.gov.il/xapi/moe/ecat/item/{catalogId}`.
+
 ## Core Learning Events
 - Content/component started.
 - Question answered.
@@ -26,13 +39,57 @@ When iframe content needs reporting credentials, the platform should pass a top-
 
 Do not put real government IDs or unnecessary personal details in AI-adjacent reporting context.
 
-## Verb Semantics
-- `Initialized`: learner started a component or item. Use the `object` to distinguish component-level vs item-level initialization.
-- `Answered`: learner answered an assessed question/task. Use the question ID from metadata as the `object.id` and include `result.response`, `result.success`, and internal `result.score.scaled` when relevant.
-- `Selected`: learner made a non-assessed choice. Include a category for the choice type and `result.response` from the relevant allowed values.
-- `Requested`: learner requested help, a hint, or learning support.
-- `Played` / `Paused`: learner played or paused media, with timestamp context when available.
-- `Completed`: learner completed the item or component. For components, emit only after the full component flow, feedback, and summary are complete because the platform may remove the component after receiving completion.
+## Verbs (closed list — `.../xapi/moe/verbs/{verb}`)
+The MoE LXP defines the closed verb set below. Choose the verb by activity type + scoring timing. These
+are the **wire** verbs — there is **no** generic `Initialized` / `Selected` / `Requested`.
+
+| Verb (slug) | Hebrew | When to use |
+|---|---|---|
+| `enter` / `exit` | כניסה / יציאה | learner enters/leaves the system, course, or activity |
+| `attempted` | ניסה | an answer **attempt** when multiple tries are allowed and a wrong attempt exists (question, gameon, simulation) |
+| `answered` | ענה | learner **submitted** an answer where scoring is **not** immediate (open questions, tasks) |
+| `scored` | נוקד | a score was later given for a non-immediately-scored activity |
+| `completed` | סיים | activity that is itself scored — emit **only after** the final score/feedback is shown to the learner |
+| `submitted` | הגשה | learner submitted a submittable task/assignment |
+| `read` | קרא | learner read reading content (page/article/book) |
+| `watched` | צפה | learner watched video |
+| `listened` | הקשיב | learner listened to audio |
+| `played` / `paused` | שיחק / השהה | learner played/paused a game or pausable media |
+| `play` | ניגן | learner played back media (video/audio) |
+| `downloaded` | הוריד | learner downloaded a downloadable activity |
+| `install` | התקין | learner installed an installable activity (e.g., app) |
+| `assigned` | הקצאה | a submittable activity was linked/assigned to a learner |
+| `created` | יצירה | creation of a learning group, course, or task |
+| `joined` / `leave` | הצטרפות / עזיבה | learner joined/left a learning group |
+| `voided` | ביטול | void a previously sent (erroneous) statement |
+
+Every statement carries the three mandatory fields — **`actor`** (non-identifying), **`verb`** (an IRI
+from the list above), and **`object`** (the activity id from metadata / the education catalog).
+
+**Mapping our internal events → MoE verbs:** start → `enter` / `attempted`; formative retry → `attempted`;
+submitted answer with delayed score → `answered` then `scored`; inline-scored activity finished →
+`completed`; media → `watched` / `listened` / `played` / `paused`; reading → `read`; assignment →
+`submitted`. **Hint requests and prolonged inactivity are NOT MoE verbs** — capture them as
+monitoring/telemetry (internal), not as conformant xAPI statements.
+
+## Activity types (closed list — `.../xapi/moe/activities/{type}`)
+`question` · `page` · `onlinelesson` · `assignment` · `onlinesession` · `lms` · `e-book` · `video` ·
+`audio` · `simulation` · `application` · `serious-game` · `article` · `questionnaire` · `course` · `tag`.
+Set `object.definition.type` to the matching IRI. `course` is the top grouping (carries a catalog id
+`.../ecat/item/{catalogId}`); `tag` tags content to the curriculum (`.../xapi/curriculum`).
+
+## Result extensions (`.../xapi/moe/extensions/{name}`)
+- `weight` (משקל) — the activity's weight within the overall score (e.g., a question inside a
+  `questionnaire` when questions carry different weights).
+
+Standard xAPI `result` fields (`success`, `response`, `score.scaled`, `duration`, `completion`) are used
+as-is; `score.*` stays **internal** (never shown to the learner).
+
+## Domains / subjects (closed list)
+The curriculum **domain** (subject) comes from the LXP Domain registry. Scope for תשפ"ז is **מתמטיקה**
+and **מדע וטכנולוגיה**. The list also includes מבוא למדעים, ביולוגיה, אנגלית, עברית – הבנה הבעה
+ולשון, היסטוריה, גאוגרפיה, אזרחות, חשיבה מחשובית ורובוטיקה, אוריינות דיגיטלית ועוד. Use only domains from the
+registry; do not invent subjects.
 
 ## Completion Reporting
 At the end of a component, return:

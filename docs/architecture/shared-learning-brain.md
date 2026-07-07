@@ -784,6 +784,10 @@ read or write outside its scope.
 
 ## 7. Frontend changes (concrete)
 
+> The full screen-by-screen build plan (routes ↔ APIs ↔ brain fields ↔ states, the design-system
+> refactor, and the migration/legacy-removal order) is **§17**. This section lists the component-level
+> changes; §17 is the delivery plan.
+
 1. **Floating Learning Coach** (`frontend/src/components/CompanionChat.tsx`) mounted **globally** in
    `app/App.tsx` so it appears on **every** route (F3 "accessible from every screen"). It:
    - streams chat via SSE from `/api/agent/coach/stream`,
@@ -813,7 +817,19 @@ question is: *how do we know what's happening inside content we didn't write?*
 
 We never "guess" or scrape events at runtime. The 720 standard defines a **fixed, closed xAPI
 vocabulary** that every content provider is **required** to emit. Knowing the events = knowing this
-contract. The whole set:
+contract.
+
+> **Authoritative source (closed lists).** The MoE **LXP vocabulary registry** — verbs, activity types,
+> result extensions, domains — at `lxp.education.gov.il/vocabulery/{Verb,ActivityType,ResultExtension,Domain}.html`,
+> with wire IRIs `https://lxp.education.gov.il/xapi/moe/verbs/{verb}` (and `/activities/`, `/extensions/`).
+> The **real** verb set is `enter/exit · attempted · answered · scored · completed · submitted · read ·
+> watched · listened · played/paused · play · downloaded · install · assigned · created · joined/leave ·
+> voided` — there is **no** generic `Initialized/Selected/Requested`. The table below is the *conceptual*
+> behavior; map it to those verbs (start→`enter`/`attempted`; a hint request or idle is **monitoring
+> telemetry, not a verb**). Full mapping + activity types/extensions/domains:
+> `.github/skills/720-content-standards/references/xapi-reporting.md`.
+
+The conceptual set:
 
 | Verb | When | Key payload |
 |---|---|---|
@@ -971,6 +987,10 @@ internally** (`score.scaled` stays server‑side; learners never see a number, p
 - **P4 Pedagogical loop + triggers**: adaptive next‑content + idle/misconception/success proactivity.
 - **P5 Teacher Insights + mentoring + org/permissions + feedback**.
 
+> The full **per‑phase execution plan** — backend/frontend/data/agent deliverables, the 720 features each
+> phase lights up, legacy removed, and a demoable exit gate — is **§18**. This table is the summary; §18
+> is the build order.
+
 ---
 
 ## 10. End‑to‑end walkthroughs
@@ -1121,9 +1141,22 @@ each seam is drawn as an **interface**, so the system can later be pulled apart 
 deployable services on **AKS**, wired by **Azure Service Bus** events, **without changing any agent or
 brain contract**. Design rules that keep this migration cheap — apply them now even in the monolith:
 
-- **Bounded contexts = future services.** `brain/context_engine`, `services/events` (xAPI ingest),
-  `agents/orchestrator`, `services/insights`, mentoring, and org/permissions are separable modules with
-  **no shared in‑memory state** — only the brain (Mongo/Cosmos) and events cross between them.
+**Modules now, few services later.** Build clean in‑process modules (`brain/context_engine`,
+`services/events`, `agents/orchestrator`, `services/insights`, `services/dashboard`, mentoring, org) with
+**no shared in‑memory state** — they cross only through the brain (Mongo/Cosmos) and the event‑bus
+interface. **Keep the service count low** — over‑splitting buys distributed‑systems pain for no benefit at
+this scale. When scale demands it, those modules group into **three** deployable services, not seven:
+
+| Service (AKS) | Packs which modules | Responsibility | Talks to |
+|---|---|---|---|
+| **spark-web** | API/BFF, static React, SSE push, dashboard projection | serve the app + learner/teacher surfaces; hold the proactive push sockets | ← Front Door; ⇄ brain‑agents (HTTP); consumes `teacher_alerts` / push from the bus |
+| **brain-agents** | Context Engine + all six agents + orchestrator + insights + planner | assemble scoped context, run agents via APIM, write‑back through the consolidator | ⇄ spark‑web; consumes `triggers`; → APIM → OpenAI; ⇄ Cosmos |
+| **xapi-events** | xAPI ingest (LRS) + trigger engine + mastery/progress projection | idempotently ingest events, update mastery, publish topics | ← content iframe; → Service Bus; ⇄ Cosmos |
+
+Why exactly these three: **web** scales on user/socket load, **events** on ingest throughput, and
+**brain-agents** on LLM concurrency — three genuinely different scaling axes. Insights, mentoring, org and
+dashboard stay **modules** inside those services; promote one to its own service **only** if a real
+bottleneck appears.
 - **The event bus is an interface.** Today: an in‑process asyncio queue + per‑session idle timers.
   Tomorrow: **Mongo change streams / Azure Service Bus** topics (`learning_events`, `triggers`,
   `teacher_alerts`) with competing consumers. `events.py` is the single swap point (R15).
@@ -1136,9 +1169,307 @@ brain contract**. Design rules that keep this migration cheap — apply them now
 - **Idempotent, replay‑safe ingestion** (§8.2) is already required — which is exactly the prerequisite for
   at‑least‑once Service Bus delivery, so going distributed adds no new correctness work.
 
-> Target picture: **Front Door → APIM → AKS** cluster of services (Brain/Context, xAPI Ingest, Agents
-> Orchestrator, Coach, Teacher Insights) exchanging **Service Bus** events over Cosmos/Mongo + Blob +
-> Monitor. The deck's "היום → מחר" band renders exactly this transition.
+> Target picture: **Front Door → APIM → AKS** running just **spark-web · brain-agents · xapi-events**,
+> exchanging **Service Bus** events (`learning_events` · `triggers` · `teacher_alerts`) over Cosmos/Mongo
+> + Blob + Monitor. The deck's future‑architecture slide renders exactly these three services and their
+> messages — same agent + brain contracts as the monolith.
+
+---
+
+## 17. Frontend implementation plan (screens ↔ routes ↔ APIs ↔ brain)
+
+The frontend is the visible half of every 720 feature. This section is the **contract** between the
+**design** (owned by `.github/skills/720-UIUX/SKILL.md`), the **plan** (this doc), and the **backend**
+(§6/§7). Division of labor: this doc says *what data a screen shows and where it comes from*; the UIUX
+skill says *how it looks*. Do not duplicate visual rules here.
+
+### 17.1 Where the frontend lives & non-negotiables
+- **Stack:** Vite + React + TypeScript in `frontend/`. Built to **static assets** — today served by the
+  single FastAPI app (`app/routes/static_pages.py`), tomorrow by **`spark-web`** / Front Door CDN (§16).
+  The frontend is **not** its own runtime service.
+- **Design language = the `720-UIUX` skill:** mature EdTech, **RTL-first**, calm, **no emojis, not
+  childish**. Use the *mature ("older")* treatment as the bar — cf. the vibe-coding-kids academy "older"
+  mode which strips the starfield/ornaments/emoji: clean **line-SVG icons**, soft cards, navy ink with
+  royal-blue / teal / soft-purple accents, generous whitespace, calm shadows.
+- **No `localStorage` / `sessionStorage`** for learner state — language, mapping, dashboard, progress,
+  mentoring, and companion memory all flow through backend APIs (the brain).
+- **i18n he/ar/en**, `dir` on `<html>`, logical CSS (`margin-inline`, `text-align: start`), `dir="auto"`
+  on user- and AI-generated text.
+- **Numbers rule:** learner screens are **verbal, non-numeric**; teacher screens show **evidence**.
+- **The `יובי` companion is on learner routes only**; teacher/admin/reviewer screens use insights, never
+  a student-style companion.
+
+### 17.2 App shell & structure
+```
+frontend/src/
+  app/          App.tsx (shell), router.tsx (path router: useRoute/navigate)
+  providers/    I18nProvider · DirectionProvider · SessionProvider(role/group)
+                BrainProvider(read cache) · CompanionProvider(SSE chat + proactive)
+  components/   design-system primitives (17.3) + CompanionChat.tsx (global, learner routes)
+  features/     landing-login · learner-mapping · results · student-dashboard · learning-portal
+                learning-lesson · mentoring · teacher-view · (new) reflections · feedback · admin · reviewer
+  services/     api.ts (typed fetch + SSE) · brain.ts · agents.ts · xapi.ts
+  i18n/         he.json · ar.json · en.json
+  styles/       tokens.css (design tokens) · base · utilities
+```
+Keep the current lightweight path router (`useRoute`/`navigate`) — **no new router dependency**.
+Providers assemble once in `App.tsx`; `CompanionProvider` mounts the floating chat on learner routes and
+opens the proactive SSE channel.
+
+### 17.3 Design system — the refactor
+Extract a **token layer** and a small set of **primitives**, then migrate features onto them. This *is*
+the UI refactor the project needs (and the place the `720-UIUX` design lands in code):
+- **Tokens** (`styles/tokens.css`): color (navy ink, royal blue, teal, soft purple, light gray-blue bg),
+  radius, spacing scale, **calm** elevation, type scale, motion (honor `prefers-reduced-motion`).
+- **Primitives** (`components/`): `Card` · `Panel` · `SectionHeader` · `StatusPill` (verbal —
+  "מתקדם/כדאי לחזק/מוכן לאתגר") · **`EvidenceChip`** (the "why we think this" atom) · `Stepper` · `Tabs` ·
+  `Filter` · `Timeline` (event history) · `Drawer`/`Sheet` · `CompanionChat` · `EmptyState` ·
+  `LoadingState` · `ErrorState` · `Icon` (line-SVG set, **no emoji**).
+- **The refactor removes:** emoji-driven UI, childish decoration, ad-hoc inline styles, every
+  `localStorage` learner read, and the FE dependence on `LearnerState.profile_cache /
+  dashboard_cache / game_progress` (replaced by brain projections, §9).
+
+### 17.4 Screen ↔ route ↔ API ↔ brain map
+"Now" = existing endpoint; "Target" = §6 endpoint. Every learner screen also mounts the companion.
+
+| Screen (feature) | Route | Backend: now → target | Brain fields shown | Agent | Key states |
+|---|---|---|---|---|---|
+| Landing / login | `/` | static → unified sign-in `/auth/*` (role+group) | — | — | default · loading · error |
+| Onboarding intro | `/learner-mapping` (intro) | `/api/questionnaire` | `identity.locale` | Onboarding | intro · consent · AI-disclosure |
+| Mapping questionnaire | `/learner-mapping` | `/api/questionnaire`, `/api/submit`, `/api/mapping-chat-stream` → Onboarding agent | writes `profile.mapping_scores` | Onboarding | per-step · save · resume · validate |
+| Results / profile | `/results` | `/api/analyze-profile` → `/api/brain/{id}` projection | `profile.*`, `strengths`, `challenges` | Onboarding/Coach | verbal only · loading · empty |
+| **Student dashboard** | `/student-dashboard` | **kill** `/api/generate-dashboard` → `/api/brain/{id}` + `/api/agent/route/next` | `progress` (verbalized), `mastery`, `goals`, `current_state`, `next_recommendations` | Context Engine projection | real · empty · loading · resume CTA |
+| Learning portal | `/learning-portal` | → `/api/brain/{id}` + content catalog | `next_recommendations`, subjects, status | Planner + Pedagogical | recommended vs browse · filters |
+| **Learning lesson (anchor)** | `/learning-lesson` | → component load (Pedagogical/MCP) + iframe `slxapi` + `POST /api/xapi` + `/api/agent/coach/stream` (SSE) + `/api/agent/coach/proactive` | `current_state`, item `informationToBot`, `recent_events`, `resume_token` | Coach (+Pedagogical, Safety, Reflection) | loading · slow>5s · xapi-retry · idle · misconception · success · resume |
+| Companion `יובי` (global) | overlay | `/api/agent/coach/stream`, `/api/agent/coach/proactive` | Context bundle, `agent_sessions` | Coach + Safety | collapsed · expanded · streaming · proactive · offline |
+| Reflection | modal / `/reflections` | `/api/agent/reflect` | `reflections_recent` | Reflection | prompt · answer · save · share-toggle |
+| Mentoring (learner) | `/mentoring` | → `/api/mentoring/*` | learner-visible `goals` | — | list · empty · add-note |
+| **Teacher dashboard** | `/teacher-view` | **kill** `MOCK_STUDENTS` → `/api/agent/insights` + `/api/groups/*` | group aggregates + evidence, live alerts | Teacher Insights | group · filter · alerts · empty |
+| Teacher student-detail | `/teacher-view/:id` | `/api/brain/{id}` (teacher scope) + `/api/agent/insights` | `mastery`+evidence, `Timeline`, strengths/challenges, `goals`, `teacher_directives`, shared reflections | Teacher Insights | detail · live · evidence-expand |
+| Teacher directive composer | drawer | portal write lane → `teacher_directives` | `teacher_directives` | portal (not an agent) | compose · scope · priority · visibility · preview |
+| Mentoring form (teacher) | `/mentoring` (teacher) | `/api/mentoring/*` | `mentoring_conversations`, `goals` mirror | — | draft · final · private-note · preview |
+| Feedback / issue | modal / route | `POST /api/feedback` | `feedback_reports` (+ auto context) | — | form · context-attach · confirm |
+| Admin overview | `/admin` | `/api/orgs/*`, `/api/groups/*` | schools · teachers · groups · enrollments | — | list · permission-preview |
+| Reviewer / compliance | `/reviewer` | read-only brain + `learning_events` + audit | evidence trace, feature coverage, arch mini-map | read-only | trace · replay |
+
+### 17.5 Data-flow patterns + `services/api.ts` additions
+- **Reads** are **brain projections** (`GET /api/brain/{id}` and DTO sub-routes) — never invented on the
+  client. **Live** data uses **SSE**: `streamCoach` (chat) and `subscribeProactive` (nudges + teacher
+  alerts). The lesson iframe posts events via `postXapi` from the parent host.
+- **Writes** go through **scoped endpoints** only; the client never writes the brain directly. Teacher
+  guidance uses the **portal write lane** (`teacher_directives`), not an LLM path (§5.8).
+- **Add to `services/api.ts`** (keep the existing `streamPost` SSE helper): `getBrain`, `getDashboard`,
+  `getNext`, `streamCoach`, `subscribeProactive`, `postXapi`, `getTeacherInsights`, `subscribeAlerts`,
+  `mentoringList/Create`, `saveDirective`, `postFeedback`, `orgs*`. Type every response DTO.
+
+### 17.6 States, accessibility, localization (every screen)
+Every screen must implement **loading / empty / error / success** (+ the lesson's `slow>5s`,
+`xapi-retry`, `idle`, `misconception`, `resume`). RTL for he/ar, LTR for en; keyboard-navigable; visible
+focus; `prefers-reduced-motion`; `EvidenceChip`s render the "why" for any AI claim; **no learner-facing
+numbers**; teacher flags always expand to raw evidence.
+
+### 17.7 Migration & legacy-removal order (each step demoable)
+1. **Tokens + primitives** (`styles/tokens.css`, `components/*`) — establish the mature design system.
+2. **Shell + providers** (i18n, direction, session/role, brain, companion).
+3. **Companion** mounted globally on learner routes (SSE chat + proactive), Safety-gated.
+4. **Student dashboard** → brain projection; **delete** `generate-dashboard` invented numbers usage.
+5. **Learning lesson** → Pedagogical/MCP content + iframe `slxapi` + `postXapi` + resume.
+6. **Teacher view** → insights + evidence + live alerts; **delete** `MOCK_STUDENTS` usage.
+7. **Mentoring · directive composer · feedback · admin · reviewer**.
+- **Remove as replaced (§9):** emoji/childish UI, ad-hoc inline styles, all `localStorage` learner reads,
+  and FE reliance on `profile_cache / dashboard_cache / game_progress`. Keep i18n, the path router, and
+  `streamPost`; keep legacy screens only until their refactored route is feature-equivalent, then delete.
+
+### 17.8 Acceptance (frontend)
+- Every learner screen: verbal (no numbers), companion present, AI disclosure visible, he/ar/en + RTL,
+  no `localStorage` for learner state.
+- Every teacher screen: each flag/insight expands to raw evidence; group-scoped; no student comparison.
+- Dashboard + teacher view read **real** brain/insights (no `generate-dashboard`/`MOCK_STUDENTS`).
+- Lesson posts real xAPI and resumes from `current_state`; companion streams + fires a proactive nudge.
+- Design matches the `720-UIUX` skill bar (mature, calm, emoji-free, line-SVG icons).
+
+---
+
+## 18. Phased implementation plan (execution)
+
+> **Implementation status (2026-07):** **P0–P5 are implemented and verified** against real
+> Cosmos + APIM (each with a passing end-to-end check; PII boundary, idempotency, and
+> no-invented-numbers enforced). Backend is complete for all eight features. **F6 teacher view is
+> also refactored to real React** on the design-system primitives. **Remaining:** the §17 *visual*
+> React refactor of the last legacy imperative pages (mentoring, student dashboard) onto their
+> verified clients, and **P6** (hardening + AKS/Service Bus split). Per-phase build/verify detail below.
+>
+> | Phase | Features | Backend | Frontend | Verified |
+> |---|---|---|---|---|
+> | P0 brain + design tokens | F4 substrate | ✅ | ✅ tokens+primitives | ✅ |
+> | P1 xAPI events | F1 | ✅ LRS+brain updater | ✅ lesson instrumented | ✅ |
+> | P2 onboarding + dashboard | F2, F4 | ✅ projection (no invention) | legacy page on real data | ✅ |
+> | P3 Coach + Safety | F3 | ✅ | ✅ floating companion | ✅ |
+> | P4 pedagogical + triggers + memory | F1, F3 | ✅ | ✅ proactive+idle | ✅ |
+> | P5 teacher + mentoring + org + feedback | F6, F5, F7, F8 | ✅ | F6 ✅ React · F5 client | ✅ |
+> | P6 hardening/scale | — | ⏳ | ⏳ | — |
+
+This is the **build order** for everything in §§4–17. It expands the phase sketch (§9) and the roadmap
+(§12) into concrete, demoable increments. Guiding rules:
+
+- **Substrate first.** P0 (brain) + P1 (events) are the foundation every weighted feature projects over;
+  they are not optional groundwork you can defer behind a flashy demo.
+- **Every phase ships.** Each phase ends at a **demoable, honest** state (no fabricated data) and maps to
+  named 720 features + acceptance clauses (§14). A phase is "done" only when its **exit gate** passes.
+- **Deterministic before agentic.** Within a phase, build the deterministic skeleton (schema, projection,
+  planner, triggers, aggregation) first; layer the LLM agent on top for language/empathy/judgment (R4).
+- **Vertical slices.** Prefer one screen wired end-to-end (surface → API → agent → brain → back) over
+  broad half-built horizontals — proves the whole stack early.
+- **Fallbacks stay green.** At no phase may removing APIM/Mongo/Agent Framework break the demo; degrade
+  honestly (§15 R11).
+
+Cross-cutting workstreams run in **every** phase, never as a trailing cleanup: **localization** (he/ar/en
+keys added with each string, §11.1), **privacy/Safety** (no PII to AI, disclosure shown, §11), **legacy
+removal** (delete mock/invented paths as each real path lands, §9), and **microservice hygiene** (no
+shared in-memory state across module seams, §16).
+
+### Phase 0 — Brain skeleton + design foundation
+**Goal:** one queryable learner model + the mature design system, replacing fragmented `learner_state`.
+- **Backend:** `app/brain/{schema.py, repository.py, context_engine.py}`; `learners` collection (§4.2)
+  with field-scoped `$set` writes + `version`/`updated_at` (R3); JSON fallback preserved. `GET
+  /api/brain/{learner_id}` projection. Migrate `learner_state` fields → brain (`language→identity.locale`,
+  `mapping_results→profile.mapping_scores`, `game_progress→mastery/current_state`).
+- **Frontend:** `styles/tokens.css` + design-system primitives (§17.3: `Card`, `Panel`, `StatusPill`,
+  `EvidenceChip`, `Timeline`, `EmptyState`/`LoadingState`/`ErrorState`, line-SVG `Icon`); providers shell
+  (I18n, Direction, Session/role, Brain). No feature migrated yet.
+- **Data:** `learners`; keep `learning_objectives` seed stub (math/science placeholders until MoE catalog).
+- **Features lit:** foundation for F4 (dashboard substrate).
+- **Legacy removed:** none yet (parallel-run `learner_state` behind the brain repo).
+- **Exit gate:** a real learner doc round-trips through `context_engine` with a scoped view; primitives
+  render in Storybook/preview in he/ar/en RTL; no invented numbers introduced.
+
+### Phase 1 — Event pipeline (xAPI LRS)
+**Goal:** real learning events flow into the brain — the fuel for every projection (closes G4).
+- **Backend:** `app/services/events.py` (validate → normalize → append `learning_events`; **idempotent**
+  on statement `id` unique index, R14); `POST /api/xapi/{launch}/statements` lightweight LRS + `slxapi`
+  launch minting (§8.2, non-identifying `actor`); Brain updater writes `mastery/current_state/progress`
+  from `answered/completed` (§8.6). MoE LXP closed vocabulary enforced (§8.1).
+- **Frontend:** `learning-lesson` host mounts the content iframe, passes `slxapi`, and `postXapi` from the
+  parent; **resume** from `current_state.resume_token`.
+- **Data:** `learning_events` (append-only, unique `id`); one **reference lomda** instrumented to the
+  conformance checklist (§8.3) as the proving content.
+- **Features lit:** F1 (partial — instrumented delivery + resume), F4 substrate becomes real.
+- **Legacy removed:** begin retiring `learner_state.game_progress` (now derived from events).
+- **Exit gate:** completing the reference lomda writes real `mastery`; replaying a statement does **not**
+  double-count `attempts` or re-fire; resume works after closing mid-task without save/submit (F1.6).
+
+### Phase 2 — Onboarding agent + real dashboard
+**Goal:** mapping seeds the brain; the dashboard **projects** it (kills invented numbers + `MOCK_STUDENTS`).
+- **Backend:** `app/agents/{client.py, providers.py, tools.py, onboarding.py}` (Agent Framework over APIM,
+  §5.1); `agent_sessions` collection; `learner_mapping.submit` → deterministic `calculate_scores` then
+  **Onboarding agent** derives `interests/preferences/learning_style` + initial `strengths/challenges`
+  (agent phrases, never invents numbers). `app/services/dashboard.py` projects brain → DTO
+  (`progress` verbalized, `goals`, competencies from `profile.activeness`). **Delete**
+  `dashboard.generate-dashboard` invented path.
+- **Frontend:** migrate `learner-mapping`, `results`, `student-dashboard` onto primitives; dashboard reads
+  `/api/brain/{id}` (+ `/api/agent/route/next` stub); **verbal, non-numeric** learner view.
+- **Data:** `agent_sessions`.
+- **Features lit:** **F2** (5%), **F4** (15%).
+- **Legacy removed:** `dashboard.generate-dashboard` numbers, `profile_cache`/`dashboard_cache`, and the
+  FE `localStorage` learner reads for these screens.
+- **Exit gate (§14 F2/F4):** questionnaire submit populates `profile.*`; dashboard shows real progress from
+  events, verbal only, goals present; `MOCK_STUDENTS`/`generate-dashboard` no longer referenced by these
+  routes.
+
+### Phase 3 — Floating Learning Coach + Safety gate
+**Goal:** the always-present companion that *relates* to the learner (highest weight, F3 25%).
+- **Backend:** `app/agents/{coach.py, safety.py}`; `MongoHistoryProvider` (working memory: last N turns +
+  rolling summary + entity ledger) + `AuditHistoryProvider` (write-only, exactly-what-it-saw, R12);
+  `BrainContextProvider("coach")` scoped injection (§5.8) budgeted/placed/delimited (§4.4); **tiered
+  Safety** (deterministic tier-1 always, LLM tier-2 on flag/sample, R4); `POST /api/agent/coach/stream`
+  (SSE). Language-keyed instruction/prompt dictionaries (§11.1).
+- **Frontend:** `CompanionChat.tsx` mounted **globally on learner routes** via `CompanionProvider`; SSE
+  stream; AI-disclosure line; `dir="auto"` on messages; no `localStorage`.
+- **Data:** brain `agent_notes`; staged memory candidates (consolidator wiring stubbed in P3, activated P4).
+- **Features lit:** **F3** (25%) core conversational path; privacy boundary enforced in code (closes G8).
+- **Legacy removed:** ad-hoc `profile.py` prompts inlining name+scores → Context bundle.
+- **Exit gate (§14 F3):** Coach answers in he/ar/en on every learner route, uses ≥1 real interest in an
+  example, AI disclosure visible, verified **no PII** in the assembled prompt (inspect the audit store).
+
+### Phase 4 — Pedagogical loop + triggers + memory lifecycle
+**Goal:** adaptive next-content + proactivity + persistent, self-correcting memory (F1 depth, F3 proactivity).
+- **Backend:** `app/services/planner.py` (deterministic curriculum planner over `learning_objectives`
+  spine, §5.6); `app/agents/{pedagogical.py, reflection.py}`; `orchestrator.py` (pedagogical workflow +
+  in-process **trigger engine**: idle/misconception/success from real events, §5.5); MCP `content-catalog`
+  tool `list_available_content(...)`; `brain/consolidator.py` (capture→validate→consolidate→inject, §5.7:
+  hard>soft, decay, promote, chat never sets mastery); `POST /api/agent/coach/proactive` (SSE push),
+  `/api/agent/route/next`, `/api/agent/reflect`.
+- **Frontend:** `learning-portal` (recommended vs browse), `learning-lesson` full states
+  (`slow>5s`/`xapi-retry`/`idle`/`misconception`/`success`/`resume`); `subscribeProactive`; Reflection
+  modal (`reflections` + self-vs-system).
+- **Data:** `content_units/components/items` metadata (incl. `informationToBot`, `recommendedAfterFail`);
+  `reflections` collection.
+- **Features lit:** **F1** (20%) full adaptive delivery; **F3** proactivity; F4 self-awareness competency.
+- **Legacy removed:** heuristic `mock_data.generate_recommendations` for routing.
+- **Exit gate (§14 F1):** a fail streak routes the learner to `recommendedAfterFail`; opening/closing +
+  pace messages shown; a proactive nudge fires on idle **and** on a misconception streak; a chat-stated
+  interest survives a session (consolidated), while "I get it" does **not** move `mastery`.
+
+### Phase 5 — Teacher view + mentoring + org/permissions + feedback
+**Goal:** the teacher/mentor half + the scoping and reporting features (F6 20%, F5, F7, F8).
+- **Backend:** `app/agents/teacher_insights.py` (read-only, explainable, group-scoped) + deterministic
+  `app/services/insights.py` aggregations; **teacher portal write lane** (`teacher_directives`, non-LLM,
+  §5.8) feeding §5.7 precedence; live `emit_teacher_signal`/`push_live_alert`; `schools/teachers/groups/
+  enrollments` (F8) with **server-side scoping before any brain read** (§4.1); `mentoring_conversations`
+  (F5 fields + visibility + `author`); `feedback_reports` (F7, in/out-of-system); routers
+  `/api/agent/insights`, `/api/groups/*`, `/api/orgs/*`, `/api/mentoring/*`, `/api/feedback`.
+- **Frontend:** `teacher-view` (group + student-detail with `Timeline` + `EvidenceChip` on every flag,
+  live alerts, filters), directive composer drawer, `mentoring` (teacher + learner), feedback modal,
+  admin overview; **delete** `MOCK_STUDENTS` usage.
+- **Data:** `groups/enrollments/schools/teachers`, `mentoring_conversations`, `feedback_reports`,
+  `teacher_directives`.
+- **Features lit:** **F6** (20%), **F5** (10%), **F7** (3%), **F8** (2%).
+- **Legacy removed:** `mock_data.MOCK_STUDENTS`, `generate_insights` heuristic (fallback only).
+- **Exit gate (§14 F5/F6/F7/F8):** teacher sees only their groups; every flag expands to raw evidence;
+  2–5 actionable recs; **no** student-to-student comparison; mentoring conversation persists all required
+  fields and learner-visible goals mirror to the brain; feedback report persists; group scoping enforced
+  server-side.
+
+### Phase 6 — Hardening & scale-readiness (post-minimum)
+**Goal:** production robustness + the AKS/Service Bus split (no agent/brain contract change, §16).
+- Swap in-process event bus + SSE push for **Mongo change streams / Azure Service Bus** (`learning_events`
+  · `triggers` · `teacher_alerts`) so triggers survive scale-out (R15); split the monolith into
+  **spark-web · brain-agents · xapi-events** on AKS behind Front Door + APIM. Add episodic **vector recall**
+  behind `context_engine` if events outgrow recency queries (§5.7.1, P4+). Load/cost tuning, concurrency
+  tests (R3), consolidator idempotency/lag drills (R13), reviewer/compliance route (evidence trace).
+- **Exit gate:** an event on one pod pushes to a learner socket on another; contract tests prove agent +
+  brain APIs unchanged across the split.
+
+### Critical path & sequencing
+
+```mermaid
+flowchart LR
+  P0["P0 Brain + design system"] --> P1["P1 Events (xAPI LRS)"]
+  P1 --> P2["P2 Onboarding + real dashboard\nF2 · F4"]
+  P2 --> P3["P3 Coach + Safety\nF3 core"]
+  P3 --> P4["P4 Pedagogical + triggers + memory\nF1 · F3 proactive"]
+  P4 --> P5["P5 Teacher · mentoring · org · feedback\nF6 · F5 · F7 · F8"]
+  P5 --> P6["P6 Hardening + AKS/Service Bus"]
+  P1 -. substrate .-> P4
+  P1 -. substrate .-> P5
+```
+
+- **Hard dependencies:** P0→P1 (brain must exist before events land); P1→everything real (no true F1/F4/F6
+  without events); P3→P4 (Coach exists before proactive triggers push to it); F8 scoping (P5) gates any
+  multi-group teacher demo.
+- **Weight vs order:** F3 (25%) is highest weight but depends on the P0–P1 substrate, so it lands in P3 —
+  **do not** front-load a fake Coach over invented data to chase the weight; that violates the "numbers
+  never invented" and "traceable" non-negotiables and creates rework.
+- **Parallelizable within a phase:** deterministic services (planner, dashboard projection, insights
+  aggregation) and their agent wrappers can be built by separate tracks since the agent only *phrases* the
+  deterministic result.
+
+### Definition of Done (applies to every phase)
+A phase is complete only when: (1) its exit gate passes on **real** data (no fabrication); (2) the mapped
+§14 acceptance clauses demo end-to-end; (3) new strings exist in `he/ar/en` and render RTL; (4) no PII
+reaches any prompt and AI disclosure shows where applicable; (5) the replaced legacy path is **deleted**,
+not left dormant; (6) fallbacks still keep the app demoable without APIM/Mongo/agent infra; (7) every
+learner-facing claim is traceable to a brain field or a `learning_events` row.
 
 ---
 

@@ -1,0 +1,50 @@
+import type { ReactNode, HTMLAttributes } from 'react'
+
+// Line-SVG icon set (stroke = currentColor). No emoji, per the 720-UIUX bar.
+const ICON_PATHS: Record<string, ReactNode> = {
+  spark: <path d="M12 3v4m0 10v4m9-9h-4M7 12H3m14.5-5.5-2.8 2.8M9.3 14.7l-2.8 2.8m11 0-2.8-2.8M9.3 9.3 6.5 6.5" />,
+  chart: <><path d="M4 20V4" /><path d="M4 20h16" /><path d="M8 16v-4m4 4V8m4 8v-6" /></>,
+  target: <><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="4" /><circle cx="12" cy="12" r="1" /></>,
+  book: <><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z" /><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20" /></>,
+  message: <path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H9l-4 4V6a1 1 0 0 1 1-1z" />,
+  teacher: <><circle cx="12" cy="8" r="3.2" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></>,
+  alert: <><path d="M12 4 2.5 20h19z" /><path d="M12 10v4m0 3h.01" /></>,
+  check: <path d="M4 12.5 9 17.5 20 6.5" />,
+  arrow: <path d="M5 12h14m-6-6 6 6-6 6" />,
+  clock: <><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" /></>,
+  reflect: <><path d="M12 3a9 9 0 1 0 9 9" /><path d="M12 7v5l3 2" /><path d="M21 3v5h-5" /></>,
+  lightbulb: <><path d="M9 18h6" /><path d="M10 21h4" /><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.3 1 2.5h6c0-1.2.3-1.8 1-2.5A6 6 0 0 0 12 3z" /></>,
+  lock: <><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></>,
+  inbox: <><path d="M4 13h4l1.5 3h5L16 13h4" /><path d="M4 13 6 5h12l2 8v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" /></>,
+}
+
+export interface IconProps extends Omit<HTMLAttributes<SVGElement>, 'children'> {
+  name: keyof typeof ICON_PATHS | string
+  size?: number
+  strokeWidth?: number
+  title?: string
+}
+
+export function Icon({ name, size = 20, strokeWidth = 1.8, title, ...rest }: IconProps) {
+  const path = ICON_PATHS[name] ?? ICON_PATHS.spark
+  return (
+    <svg
+      className="sp-icon"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      role={title ? 'img' : 'presentation'}
+      aria-hidden={title ? undefined : true}
+      aria-label={title}
+      {...rest}
+    >
+      {title ? <title>{title}</title> : null}
+      {path}
+    </svg>
+  )
+}
