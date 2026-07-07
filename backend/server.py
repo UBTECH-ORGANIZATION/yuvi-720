@@ -6,6 +6,10 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.routes.brain import router as brain_router
+from app.routes.agent import router as agent_router
+from app.routes.teacher import router as teacher_router
+from app.routes.mentoring import router as mentoring_router
 from app.routes.contact import router as contact_router
 from app.routes.dashboard import router as dashboard_router
 from app.routes.learner_mapping import router as learner_mapping_router
@@ -14,6 +18,7 @@ from app.routes.learning_content import router as learning_content_router
 from app.routes.mapping_chat import router as mapping_chat_router
 from app.routes.profile import router as profile_router
 from app.routes.static_pages import mount_static_assets, router as static_pages_router
+from app.routes.xapi import router as xapi_router
 
 
 def create_app() -> FastAPI:
@@ -29,6 +34,11 @@ def create_app() -> FastAPI:
 
     app.include_router(learner_mapping_router)
     app.include_router(learner_state_router)
+    app.include_router(brain_router)
+    app.include_router(xapi_router)
+    app.include_router(agent_router)
+    app.include_router(teacher_router)
+    app.include_router(mentoring_router)
     app.include_router(profile_router)
     app.include_router(dashboard_router)
     app.include_router(mapping_chat_router)

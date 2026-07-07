@@ -1,0 +1,166 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Responsive foundation (single source for breakpoint layout behaviour).
+   CSS-first: every screen inherits fluid sizing from tokens.css (clamp-based
+   type/space) and the shell/grid rules here, so elements adapt without any
+   per-component JS. The useResponsive() hook is only for structural branching.
+
+   Breakpoints mirror hooks/useResponsive.ts and tokens.css --sp-bp-*:
+     phone   : ≤ 599px
+     tablet  : 600–899px
+     desktop : 900–1199px
+     xl      : 1200–1599px
+     xxl     : ≥ 1600px
+   Load AFTER feature stylesheets so these overrides win at small widths.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ── Reusable primitives ─────────────────────────────────────────────────── */
+
+/* Centered page container — clamps width and gives fluid inline padding. */
+.sp-container {
+  inline-size: 100%;
+  max-inline-size: var(--sp-container, 1080px);
+  margin-inline: auto;
+  padding-inline: var(--sp-gutter);
+}
+
+/* Auto-fitting card grid: fills columns down to a min width, then wraps. */
+.sp-grid-auto {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(var(--sp-col-min, 240px), 100%), 1fr));
+}
+
+/* Visibility utilities driven by breakpoint (use sparingly; prefer fluid CSS). */
+.sp-hide-phone { display: revert; }
+.sp-only-phone { display: none; }
+
+/* Media never overflows its box. */
+img, svg, video, canvas { max-inline-size: 100%; }
+
+/* Lightweight SVG robot shown on phones instead of the WebGL canvas. */
+.robot-lite {
+  display: grid;
+  place-items: center;
+  inline-size: clamp(96px, 34vw, 150px);
+  aspect-ratio: 1;
+  border-radius: 28px;
+  background: var(--sp-gradient-soft);
+  box-shadow: var(--sp-shadow-md);
+}
+.robot-lite svg { inline-size: 58%; block-size: 58%; }
+
+/* ── Tablet and below (≤ 899px) ──────────────────────────────────────────── */
+@media (max-width: 899px) {
+  /* App shell: tighten chrome, allow the brand block to shrink. */
+  .app-bar { padding-inline: var(--sp-gutter); gap: var(--sp-3); }
+  .app-bar-brand { min-width: 0; }
+  .stage { padding-inline: var(--sp-gutter); }
+  .step-label { display: none; }
+  .app-bar-user .user-sub { display: none; }
+
+  /* Onboarding: stack the narrated stage on compact screens. */
+  .intro-stage { grid-template-columns: 1fr; height: auto; min-height: 0; gap: var(--sp-5); padding-block: var(--sp-5); overflow: visible; direction: inherit; }
+  .intro-robot-zone { grid-column: 1; grid-row: 1; block-size: auto; min-block-size: 0; }
+  .intro-stage-orbit { display: none; }
+  .intro-stage .yubi-floater { position: relative; left: auto; top: auto; justify-self: center; width: clamp(180px, 42vw, 300px); margin: 0; transform: none; animation: yubiStageAppear .55s ease both; }
+  .intro-script { grid-column: 1; grid-row: 2; align-items: stretch; justify-self: center; justify-content: flex-start; width: min(620px, 100%); min-height: 0; padding-inline: var(--sp-4); direction: inherit; }
+  .intro-lines { min-height: 0; }
+  .intro-line { text-align: start; max-width: 100%; }
+  .intro-reveal { align-items: center; }
+  .intro-stage-actions, .intro-trust { justify-content: center; }
+
+  .intro-scene { flex-direction: column-reverse; align-items: center; max-inline-size: 560px; min-height: 0; gap: var(--sp-4); }
+  .chat-side { width: 100%; height: auto; min-height: 440px; }
+  .intro-scene > .yubi-floater { position: relative; inset-inline-start: auto; top: auto; transform: none; width: clamp(180px, 42vw, 300px); margin: 0 auto; animation: none; }
+  .yubi-floater::after { inset: 10% 8%; }
+
+  /* Dense panels breathe less on tablets. */
+  .sp-panel { padding: var(--sp-6); }
+
+  /* Feature page wraps: trim outer padding so content keeps its width. */
+  .sd-wrap, .tv-wrap, .mt-wrap { padding-inline: var(--sp-gutter); }
+}
+
+/* ── Phone (≤ 599px) ─────────────────────────────────────────────────────── */
+@media (max-width: 599px) {
+  .sp-hide-phone { display: none !important; }
+  .sp-only-phone { display: revert; }
+
+  /* Stepper in the bar: dots only, small. */
+  .stepper { gap: 3px; }
+  .step-dot { width: 26px; height: 26px; font-size: 12px; }
+  .step-line { width: 14px; }
+
+  /* App bar user chip: hide the secondary subtitle line, keep name + avatar. */
+  .user-sub { display: none; }
+  .app-bar { gap: 8px; padding-inline: 12px; }
+  .app-bar-user { padding-inline: var(--sp-2); gap: 8px; }
+  .app-bar-left { gap: 8px; }
+
+  /* Onboarding scene/chat fills the width; bubbles get a touch more room. */
+  .intro-line { font-size: clamp(16px, 4.7vw, 22px); }
+  .intro-line-1 { font-size: clamp(20px, 6vw, 28px); }
+  .intro-line-5 { font-size: clamp(18px, 5.4vw, 25px); }
+  .intro-scene { max-inline-size: 100%; gap: var(--sp-4); }
+  .chat-side { padding: var(--sp-5) var(--sp-4) var(--sp-4); border-radius: 22px; }
+  .chat-bubble { max-width: 90%; }
+  .intro-stage .yubi-floater { width: clamp(150px, 42vw, 220px); }
+  .intro-script { padding-block-start: var(--sp-2); }
+
+  /* Question screen: single-column options, comfortable touch targets. */
+  .options-grid { grid-template-columns: 1fr !important; }
+  .option-btn { min-block-size: 52px; }
+  .nav-arrow { width: 44px; height: 44px; }
+
+  /* Cards / panels: reduce padding so content isn't squeezed. */
+  .sp-card { padding: var(--sp-5); }
+  .sp-panel { padding: var(--sp-5); border-radius: var(--sp-radius-lg); }
+  .sp-section-header { flex-direction: column; gap: var(--sp-2); }
+
+  /* Feature pages: tighter vertical rhythm; tab strips scroll if they overflow
+     rather than wrapping or clipping. */
+  .sd-wrap, .tv-wrap, .mt-wrap { padding-block: var(--sp-6) var(--sp-10); }
+  .tv-tabs, .mt-roles {
+    display: flex;
+    max-inline-size: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tv-tabs::-webkit-scrollbar, .mt-roles::-webkit-scrollbar { display: none; }
+  .tv-tab, .mt-role { white-space: nowrap; }
+  .tv-stat__value { font-size: var(--sp-fs-2xl); }
+}
+
+/* ── Large desktop / xl (≥1200px) ─────────────────────────────────────────
+   Standard laptops top out around here; give content more room instead of a
+   fixed narrow column, and let the onboarding two-panel layout breathe. */
+@media (min-width: 1200px) {
+  :root { --sp-container: 1200px; }
+  .intro-scene { max-width: 1080px; }
+  .chat-side { height: clamp(400px, calc(100dvh - 112px), 640px); }
+  .yubi-floater { width: min(44%, 380px); }
+  .q-shell { max-width: 900px; }
+}
+
+/* ── Ultrawide / xxl (≥1600px) ────────────────────────────────────────────
+   4K / large external displays: widen the container, grow the gutter, and
+   nudge the fluid type maxes up so the UI never looks tiny and lost. */
+@media (min-width: 1600px) {
+  :root {
+    --sp-container: 1360px;
+    --sp-gutter: clamp(40px, 5vw, 72px);
+    --sp-fs-xl: 23px;
+    --sp-fs-2xl: 30px;
+    --sp-fs-3xl: 38px;
+  }
+  .intro-scene { max-width: 1240px; }
+  .chat-side { height: clamp(420px, calc(100dvh - 120px), 700px); }
+  .yubi-floater { width: min(46%, 440px); }
+  .q-shell { max-width: 960px; }
+}
+
+/* ── Touch input: enlarge interactive targets regardless of width ────────── */
+@media (pointer: coarse) {
+  .sp-btn, .option-btn, .nav-arrow, .sp-input { min-block-size: 44px; }
+}

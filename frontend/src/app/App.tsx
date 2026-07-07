@@ -8,6 +8,7 @@ import { LessonPage } from '../features/learning-lesson/LessonPage'
 import { LomdaCreatorPage } from '../features/learning-create/LomdaCreatorPage'
 import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
+import { CompanionChat } from '../components/CompanionChat'
 import { useI18n } from '../i18n/I18nProvider'
 import { useRoute } from './router'
 
@@ -24,6 +25,18 @@ function pageForRoute(pathname: string) {
   return <LandingLoginPage />
 }
 
+// The floating Coach is a LEARNER companion — never on landing or teacher/admin
+// surfaces. It is held off the mapping flow (already a guided chat) until that
+// legacy chat is refactored onto the unified companion, to avoid a double-companion.
+function isLearnerRoute(pathname: string) {
+  return (
+    pathname.startsWith('/results') ||
+    pathname.startsWith('/student-dashboard') ||
+    pathname.startsWith('/mentoring') ||
+    pathname.startsWith('/learning')
+  )
+}
+
 export function App() {
   const pathname = useRoute()
   const { language } = useI18n()
@@ -38,6 +51,7 @@ export function App() {
       <div key={language}>{pageForRoute(pathname)}</div>
       {/* The mapping page already shows a language switcher in its own app bar. */}
       {!isLandingRoute && !isMappingRoute && !isLearningPortalRoute && <LanguageSwitcher variant="floating" />}
+      {isLearnerRoute(pathname) && <CompanionChat />}
     </>
   )
 }

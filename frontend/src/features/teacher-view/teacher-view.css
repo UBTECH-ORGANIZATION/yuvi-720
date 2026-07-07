@@ -1,0 +1,42 @@
+/* Teacher view (F6) — mature, evidence-first. Tokens + logical properties. */
+.tv-wrap { max-inline-size: 1100px; margin-inline: auto; padding: var(--sp-8) var(--sp-6) var(--sp-12); }
+.tv-tabs { display: inline-flex; gap: var(--sp-1); background: var(--sp-bg-subtle); border-radius: var(--sp-radius-pill); padding: var(--sp-1); margin-block-end: var(--sp-6); }
+.tv-tab { border: none; background: transparent; padding-block: var(--sp-2); padding-inline: var(--sp-5); border-radius: var(--sp-radius-pill); font: inherit; font-size: var(--sp-fs-sm); font-weight: var(--sp-fw-medium); color: var(--sp-ink-400); cursor: pointer; }
+.tv-tab--active { background: var(--sp-surface); color: var(--sp-primary-700); box-shadow: var(--sp-shadow-sm); }
+
+.tv-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-4); margin-block-end: var(--sp-6); }
+.tv-stat { text-align: center; }
+.tv-stat__value { font-size: var(--sp-fs-3xl); font-weight: var(--sp-fw-bold); color: var(--sp-ink-900); line-height: 1.1; }
+.tv-stat__label { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); margin-block-start: var(--sp-1); }
+@media (max-width: 720px) { .tv-stats { grid-template-columns: repeat(2, 1fr); } }
+
+.tv-list { display: flex; flex-direction: column; gap: var(--sp-3); }
+.tv-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); cursor: pointer; }
+.tv-row__name { font-weight: var(--sp-fw-medium); color: var(--sp-ink-700); }
+.tv-row__meta { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+
+.tv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+@media (max-width: 720px) { .tv-grid { grid-template-columns: 1fr; } }
+.tv-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.tv-recs { margin: 0; padding-inline-start: var(--sp-5); color: var(--sp-ink-500); font-size: var(--sp-fs-sm); line-height: var(--sp-lh-loose); }
+.tv-progress { display: flex; flex-direction: column; gap: var(--sp-3); }
+.tv-progress__row { display: flex; flex-direction: column; gap: var(--sp-1); }
+.tv-progress__head { display: flex; justify-content: space-between; font-size: var(--sp-fs-sm); color: var(--sp-ink-500); }
+.tv-bar { block-size: 8px; background: var(--sp-bg-subtle); border-radius: var(--sp-radius-pill); overflow: hidden; }
+.tv-bar__fill { block-size: 100%; background: var(--sp-primary-500); border-radius: var(--sp-radius-pill); }
+
+.tv-timeline { display: flex; flex-direction: column; gap: var(--sp-2); }
+.tv-tl { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--sp-fs-sm); color: var(--sp-ink-500); }
+.tv-tl__dot { inline-size: 8px; block-size: 8px; border-radius: var(--sp-radius-pill); flex: none; }
+.tv-tl__dot--ok { background: var(--sp-success-600); }
+.tv-tl__dot--no { background: var(--sp-danger-600); }
+.tv-tl__dot--n { background: var(--sp-ink-300); }
+
+.tv-selectrow { display: flex; align-items: center; gap: var(--sp-3); margin-block-end: var(--sp-5); flex-wrap: wrap; }
+.tv-select { border: 1px solid var(--sp-border); border-radius: var(--sp-radius-md); padding: var(--sp-2) var(--sp-4); font: inherit; font-size: var(--sp-fs-sm); color: var(--sp-ink-700); background: var(--sp-surface); }
+.tv-directive { display: flex; flex-direction: column; gap: var(--sp-3); }
+.tv-directive textarea { border: 1px solid var(--sp-border); border-radius: var(--sp-radius-md); padding: var(--sp-3) var(--sp-4); font: inherit; font-size: var(--sp-fs-sm); color: var(--sp-ink-700); resize: vertical; min-block-size: 72px; }
+.tv-directive textarea:focus-visible { outline: none; border-color: var(--sp-primary-500); box-shadow: var(--sp-ring); }
+.tv-btn { align-self: flex-start; border: none; border-radius: var(--sp-radius-md); background: var(--sp-primary-600); color: #fff; padding: var(--sp-2) var(--sp-5); font: inherit; font-size: var(--sp-fs-sm); font-weight: var(--sp-fw-medium); cursor: pointer; }
+.tv-btn:disabled { background: var(--sp-border-strong); cursor: not-allowed; }
+.tv-saved { color: var(--sp-success-600); font-size: var(--sp-fs-sm); }

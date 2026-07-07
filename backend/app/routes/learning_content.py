@@ -60,7 +60,7 @@ async def create_lomda_stream(data: dict):
     async def event_generator():
         has_content = False
         try:
-            async for chunk in call_llm_stream(messages, max_tokens=6000):
+            async for chunk in call_llm_stream(messages, max_tokens=6000, model_tier="strong"):
                 has_content = True
                 yield f"data: {json.dumps({'code': chunk}, ensure_ascii=False)}\n\n"
         except Exception as exc:

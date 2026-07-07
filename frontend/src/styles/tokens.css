@@ -1,0 +1,109 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Yuvilab Spark — design tokens (single source of truth).
+   Brand: playful purple + cyan, RTL-first, warm. Purple primary · cyan accent.
+   The `--sp-*` namespace is THE design system; every screen inherits from here.
+   Legacy `--m-*` (global.css) is aliased onto these tokens — do not redefine
+   brand colors elsewhere. Edit a value here and it flows to all screens.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* ── Ink — text hierarchy (warm purple-gray, matches brand) ── */
+  --sp-ink-900: #241f3d;   /* headings */
+  --sp-ink-700: #2f2f44;   /* body strong */
+  --sp-ink-500: #4a4763;   /* body */
+  --sp-ink-400: #6b6880;   /* secondary */
+  --sp-ink-300: #9893ab;   /* muted / captions */
+
+  /* ── Brand — purple primary ── */
+  --sp-primary-700: #5a45f0;
+  --sp-primary-600: #6f5bff;   /* brand primary */
+  --sp-primary-500: #7c6cff;
+  --sp-primary-100: #ece8ff;   /* tint bg */
+  --sp-primary-050: #f5f2ff;
+
+  /* ── Accents — cyan + soft purple ── */
+  --sp-teal-600: #1aa9d1;      /* cyan accent (kept --sp-teal-* name for API compat) */
+  --sp-teal-500: #4cc9f0;      /* brand cyan */
+  --sp-teal-100: #dcf3fb;
+  --sp-purple-600: #9f7afe;    /* brand purple-2 */
+  --sp-purple-500: #b09bff;
+  --sp-purple-100: #ece8ff;
+
+  /* ── Brand gradients ── */
+  --sp-gradient:      linear-gradient(135deg, #6f5bff 0%, #9f7afe 55%, #4cc9f0 130%);
+  --sp-gradient-soft: linear-gradient(135deg, #7c5cff 0%, #9f7afe 100%);
+
+  /* ── Status (verbal-first; numbers stay server-side) ── */
+  --sp-success-600: #1f9d6b;  --sp-success-100: #dcf3ea;
+  --sp-warn-600:    #b9800c;  --sp-warn-100:    #fbeecd;
+  --sp-danger-600:  #cf4a3a;  --sp-danger-100:  #fbe3df;
+  --sp-info-600:    #6f5bff;  --sp-info-100:    #ece8ff;
+
+  /* ── Surfaces (lavender-tinted) ── */
+  --sp-bg:        #f4f1fe;    /* app background */
+  --sp-bg-subtle: #eee9fb;
+  --sp-surface:   #ffffff;    /* cards / panels */
+  --sp-surface-2: #f7f5ff;    /* nested / hover */
+  --sp-border:    #e8e2f7;
+  --sp-border-strong: #d6cdf0;
+  --sp-overlay:   rgba(36, 31, 61, 0.42);
+
+  /* ── Radius ── */
+  --sp-radius-sm: 8px;
+  --sp-radius-md: 12px;
+  --sp-radius-lg: 16px;
+  --sp-radius-xl: 22px;
+  --sp-radius-pill: 999px;
+
+  /* ── Spacing scale (4-based) ── */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px;
+
+  /* ── Responsive breakpoints (mirror hooks/useResponsive.ts) ──
+     phone ≤599 · tablet 600–899 · desktop 900–1199 · xl 1200–1599 · xxl ≥1600.
+     Values are reference tokens; @media rules live in responsive.css (CSS
+     custom media isn't native yet). Large screens widen, not just center. */
+  --sp-bp-sm: 600px;    /* phone → tablet */
+  --sp-bp-md: 900px;    /* tablet → desktop */
+  --sp-bp-lg: 1200px;   /* desktop → xl */
+  --sp-bp-xl: 1600px;   /* xl → xxl */
+
+  /* Fluid page gutter + default container width (used by .sp-container).
+     --sp-container is raised on xl/xxl in responsive.css so ultrawide
+     displays use the extra space instead of a lonely centered column. */
+  --sp-gutter: clamp(16px, 4vw, 40px);
+  --sp-container: 1080px;
+
+  /* ── Type scale ── body sizes stay fixed for legibility; headings are fluid
+     (clamp shrinks them on phones, current desktop value is the max). ── */
+  --sp-font: 'Rubik', 'Heebo', system-ui, -apple-system, sans-serif;
+  --sp-fs-xs: 12px; --sp-fs-sm: 14px; --sp-fs-md: 16px;
+  --sp-fs-lg:  clamp(16px, 0.6rem + 1.1vw, 18px);
+  --sp-fs-xl:  clamp(19px, 0.6rem + 1.6vw, 22px);
+  --sp-fs-2xl: clamp(22px, 0.5rem + 2.4vw, 28px);
+  --sp-fs-3xl: clamp(26px, 0.5rem + 3.2vw, 34px);
+  --sp-lh-tight: 1.25; --sp-lh: 1.5; --sp-lh-loose: 1.7;
+  --sp-fw-regular: 400; --sp-fw-medium: 500; --sp-fw-semibold: 600; --sp-fw-bold: 700;
+
+  /* ── Elevation (soft, purple-tinted) ── */
+  --sp-shadow-sm: 0 2px 10px rgba(111, 91, 255, 0.08);
+  --sp-shadow-md: 0 12px 36px rgba(111, 91, 255, 0.12), 0 3px 10px rgba(47, 47, 68, 0.04);
+  --sp-shadow-lg: 0 24px 60px rgba(111, 91, 255, 0.16);
+  --sp-ring: 0 0 0 3px rgba(111, 91, 255, 0.28);   /* focus ring */
+
+  /* ── Motion ── */
+  --sp-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --sp-dur-fast: 120ms;
+  --sp-dur: 200ms;
+  --sp-dur-slow: 320ms;
+}
+
+/* Respect the user's reduced-motion preference everywhere. */
+@media (prefers-reduced-motion: reduce) {
+  :root { --sp-dur-fast: 0ms; --sp-dur: 0ms; --sp-dur-slow: 0ms; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

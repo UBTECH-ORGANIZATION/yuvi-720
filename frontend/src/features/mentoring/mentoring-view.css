@@ -1,0 +1,31 @@
+/* Mentoring (F5) — mature form + conversation list. Tokens + logical props. */
+.mt-wrap { max-inline-size: 860px; margin-inline: auto; padding: var(--sp-8) var(--sp-6) var(--sp-12); }
+.mt-roles { display: inline-flex; gap: var(--sp-1); background: var(--sp-bg-subtle); border-radius: var(--sp-radius-pill); padding: var(--sp-1); margin-block-end: var(--sp-6); }
+.mt-role { border: none; background: transparent; padding-block: var(--sp-2); padding-inline: var(--sp-5); border-radius: var(--sp-radius-pill); font: inherit; font-size: var(--sp-fs-sm); font-weight: var(--sp-fw-medium); color: var(--sp-ink-400); cursor: pointer; }
+.mt-role--active { background: var(--sp-surface); color: var(--sp-primary-700); box-shadow: var(--sp-shadow-sm); }
+
+.mt-form { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+.mt-form .mt-full { grid-column: 1 / -1; }
+@media (max-width: 640px) { .mt-form { grid-template-columns: 1fr; } }
+.mt-field { display: flex; flex-direction: column; gap: var(--sp-1); }
+.mt-field label { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); font-weight: var(--sp-fw-medium); }
+.mt-field input, .mt-field select, .mt-field textarea {
+  border: 1px solid var(--sp-border); border-radius: var(--sp-radius-md);
+  padding: var(--sp-2) var(--sp-3); font: inherit; font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700); background: var(--sp-surface);
+}
+.mt-field textarea { resize: vertical; min-block-size: 64px; }
+.mt-field input:focus-visible, .mt-field select:focus-visible, .mt-field textarea:focus-visible {
+  outline: none; border-color: var(--sp-primary-500); box-shadow: var(--sp-ring);
+}
+.mt-actions { display: flex; align-items: center; gap: var(--sp-3); margin-block-start: var(--sp-2); }
+.mt-btn { border: none; border-radius: var(--sp-radius-md); background: var(--sp-primary-600); color: #fff; padding: var(--sp-2) var(--sp-6); font: inherit; font-size: var(--sp-fs-sm); font-weight: var(--sp-fw-medium); cursor: pointer; }
+.mt-btn:disabled { background: var(--sp-border-strong); cursor: not-allowed; }
+.mt-saved { color: var(--sp-success-600); font-size: var(--sp-fs-sm); }
+
+.mt-list { display: flex; flex-direction: column; gap: var(--sp-3); margin-block-start: var(--sp-6); }
+.mt-conv__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); margin-block-end: var(--sp-2); }
+.mt-conv__date { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+.mt-conv__row { font-size: var(--sp-fs-sm); color: var(--sp-ink-600); margin-block: 2px; }
+.mt-conv__label { color: var(--sp-ink-400); }
+.mt-conv__goal { margin-block-start: var(--sp-2); }

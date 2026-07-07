@@ -3,7 +3,10 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from learner_state import update_learner_state
+from app.agents.onboarding import run_onboarding
+from app.brain.repository import apply_brain_updates
+from app.core.localization import normalize_language
+from learner_state import normalize_learner_id, update_learner_state
 from mock_data import DIMENSIONS, calculate_scores, generate_insights, generate_recommendations
 from questionnaire_locales import get_questionnaire_for_language
 
@@ -49,5 +52,22 @@ async def submit_questionnaire(data: dict):
         "recommendations": recommendations,
     }
 
-    await update_learner_state(data.get("learner_id"), {"mapping_results": result})
+    learner_id = normalize_learner_id(data.get("learner_id"))
+    language = normalize_language(data.get("language"))
+
+    # Legacy state kept during migration (dashboard still reads mapping_results).
+    await update_learner_state(learner_id, {"mapping_results": result})
+
+    # Seed the brain (F2): mapping_scores via the system lane; the Onboarding
+    # agent derives profile/strengths/challenges/activeness (numbers deterministic).
+    # display_name is UI-only (§4.1) — stored for the dashboard, never sent to AI.
+    await apply_brain_updates(learner_id, {
+        "profile.mapping_scores": scores,
+        "identity.display_name": student_name,
+    })
+    try:
+        await run_onboarding(learner_id, scores, language, free_text=data.get("free_text"))
+    except Exception as exc:  # never block the questionnaire on agent failure
+        print(f"⚠️ onboarding agent failed (mapping still saved): {exc}")
+
     return JSONResponse(content=result)

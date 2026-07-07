@@ -101,6 +101,77 @@ For teacher screens:
 - Use cards, summaries, and grouped sections.
 - Make the next action obvious.
 
+## Responsive Design (required on every screen)
+
+Responsive is a first-class requirement, not an afterthought. Every screen must
+work on phone, tablet, and desktop, in both RTL and LTR. Design for the small
+screen first, then let it expand.
+
+### Breakpoints (single scale — do not invent new ones)
+
+| Bucket | Width | Typical device |
+|--------|-------|----------------|
+| `phone` | ≤ 599px | phones |
+| `tablet` | 600–899px | tablets, small windows |
+| `desktop` | 900–1199px | laptops, small desktops |
+| `xl` | 1200–1599px | large desktops |
+| `xxl` | ≥ 1600px | 4K / ultrawide displays |
+
+Large screens must **use the extra space** (wider container, larger gutter,
+nudged-up heading sizes) — never leave a lonely narrow column centered in a sea
+of whitespace. The xl/xxl scale-up lives in `responsive.css` (`--sp-container`,
+`--sp-gutter`, fluid `--sp-fs-*` maxes).
+
+These live in one place and must stay in sync:
+- CSS: `--sp-bp-sm: 600px`, `--sp-bp-md: 900px`, `--sp-bp-lg: 1200px`,
+  `--sp-bp-xl: 1600px` in `frontend/src/styles/tokens.css`.
+- JS: `BREAKPOINTS` + `useResponsive()` in `frontend/src/hooks/useResponsive.ts`
+  (`isPhone`/`isTablet`/`isDesktop`/`isXl`/`isXxl`, plus `isCompact` and `isWide`).
+
+### CSS-first rule (make elements adapt without JS)
+
+Styling responsiveness belongs in CSS, so it applies to every element for free:
+- Use the fluid tokens: `--sp-gutter` for page padding, fluid heading sizes
+  (`--sp-fs-xl/2xl/3xl` are `clamp()`), and the 4-based spacing scale.
+- Use the shared primitives: `.sp-container` (clamped width + fluid gutter) and
+  `.sp-grid-auto` (auto-fitting card grid) instead of hardcoded column counts.
+- Use **logical properties** (`padding-inline`, `inset-inline`, `margin-block`,
+  `text-align: start`) so RTL/LTR both work. Never hardcode left/right for layout.
+- Never set fixed pixel heights on content panels; use `min-height` + `clamp()`.
+- Global breakpoint overrides live in `frontend/src/styles/responsive.css`
+  (loaded last). Add screen-specific rules there or in the feature stylesheet,
+  always keyed to the three breakpoints above.
+- Grids collapse to fewer columns on tablet and to a single column on phone.
+- Interactive targets are ≥ 44px on touch (`@media (pointer: coarse)`).
+
+### JS hook (only for structural branching)
+
+Use `useResponsive()` when the component *tree* must change, not just its styling
+(e.g. skip mounting a heavy 3D/WebGL canvas on phones, swap a grid for a carousel,
+render a drawer instead of a sidebar):
+
+```tsx
+import { useResponsive } from '../../hooks/useResponsive'
+
+const { isPhone, isTablet, isDesktop, isCompact, isTouch, atMost, atLeast, width } = useResponsive()
+// e.g. <RobotPanel lightweight={isPhone} />   — no WebGL on phones
+```
+
+Do **not** use the hook for things CSS can do (spacing, font size, hiding an
+element, column counts). Reach for CSS first; use the hook only when structure
+must differ. The reference implementation is the onboarding screen
+(`LearnerMappingPage` + `learner-mapping.css` + `responsive.css`).
+
+### Responsive checklist (every screen)
+
+1. Works at 360px, 768px, and 1280px wide without horizontal scroll.
+2. Correct in both RTL (Hebrew/Arabic) and LTR (English).
+3. No fixed heights that clip content; panels grow with content.
+4. Grids collapse sensibly (multi → 2 → 1 column).
+5. Tap targets ≥ 44px on touch; no hover-only actions.
+6. Heavy visuals (3D, large media) are lightened or dropped on phone.
+7. Uses the shared breakpoints, tokens, primitives — no ad-hoc pixel values.
+
 ## Icons
 
 Use clean line icons or filled product icons.

@@ -1,74 +1,148 @@
-import { useEffect } from 'react'
-import { initDashboard } from './dashboardApp'
+import { useEffect, useState } from 'react'
 import { useI18n } from '../../i18n/I18nProvider'
-import skeleton from './skeleton.html?raw'
-import dashboardCss from './dashboard.css?inline'
+import { useBrain } from '../../providers/BrainProvider'
+import { getDashboard, type DashboardDTO } from '../../services/brain'
+import { navigate } from '../../app/router'
+import {
+  Panel, SectionHeader, Card, StatusPill, EmptyState, LoadingState, ErrorState, Icon,
+  type StatusTone,
+} from '../../components/primitives'
+import './student-dashboard.css'
 
 /**
- * Student dashboard (720 Feature 4).
- *
- * This is a 1:1 migration of the original student-dashboard page. The exact
- * markup, CSS, imperative logic, and the real Three.js Yubi robot are reused;
- * React owns routing and mounting. The page CSS is injected only while this
- * route is mounted so its global class names (.top-bar, .journey, .chat-body,
- * ...) never collide with the mapping/results routes.
+ * Student dashboard (720 Feature 4) — verbal, non-numeric, on real brain data.
+ * Progress is shown as a bar + verbal level (no numeric grade); competencies as
+ * verbal bands. Replaces the mock imperative page; reads the brain projection.
  */
 export function StudentDashboardPage() {
-  const { t, language, isLoading } = useI18n()
+  const { t, language } = useI18n()
+  const { learnerId } = useBrain()
+  const [dto, setDto] = useState<DashboardDTO | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
-    if (isLoading) return
+    let active = true
+    const controller = new AbortController()
+    setLoading(true); setError(false)
+    getDashboard(learnerId, language, controller.signal)
+      .then((d) => active && setDto(d))
+      .catch(() => active && setError(true))
+      .finally(() => active && setLoading(false))
+    return () => { active = false; controller.abort() }
+  }, [learnerId, language])
 
-    document.querySelectorAll<HTMLElement>('.tt-label[data-tab]').forEach((element) => {
-      element.textContent = t(`dashboard.tabs.${element.dataset.tab}`)
-    })
-    document.getElementById('tbRole')?.replaceChildren(t('dashboard.profile.role'))
-    document.getElementById('dashboardLoadingTitle')?.replaceChildren(t('dashboard.loading.title'))
-    document.getElementById('dashboardLoadingSubtitle')?.replaceChildren(t('dashboard.loading.subtitle'))
-    document.getElementById('chatPaneTitle')?.replaceChildren(t('dashboard.chatPane.title'))
-    document.getElementById('chatPaneSubtitle')?.replaceChildren(t('dashboard.chatPane.subtitle'))
-    document.getElementById('calendarPaneTitle')?.replaceChildren(t('dashboard.calendarPane.title'))
-    document.getElementById('calendarPaneSubtitle')?.replaceChildren(t('dashboard.calendarPane.subtitle'))
-    document.getElementById('yubiBubbleTitle')?.replaceChildren(t('dashboard.yubi.bubbleTitle'))
-    document.getElementById('yubiBubbleSubtitle')?.replaceChildren(t('dashboard.yubi.bubbleSubtitle'))
-    document.getElementById('yubiBubbleBtn')?.replaceChildren(t('dashboard.yubi.bubbleBtn'))
-  }, [isLoading, t])
+  if (loading) return <div className="sd-wrap"><LoadingState title={t('sdash.loading')} /></div>
+  if (error) return <div className="sd-wrap"><ErrorState title={t('sdash.error')} /></div>
+  if (!dto) return null
 
-  useEffect(() => {
-    const style = document.createElement('style')
-    style.setAttribute('data-scope', 'student-dashboard')
-    style.textContent = dashboardCss
-    document.head.appendChild(style)
+  const hasData = dto.subjects.length > 0 || dto.mapping.strengths.length > 0
+  if (!hasData) {
+    return (
+      <div className="sd-wrap">
+        <EmptyState
+          title={t('sdash.noData')}
+          action={<button className="sd-cta" onClick={() => navigate('/learner-mapping')}>{t('sdash.noDataCta')}</button>}
+        />
+      </div>
+    )
+  }
 
-    return () => {
-      if (style.parentNode) style.parentNode.removeChild(style)
-    }
-  }, [])
+  const band = (v: number): { tone: StatusTone; key: string } =>
+    v >= 70 ? { tone: 'strong', key: 'sdash.band.strong' }
+      : v >= 45 ? { tone: 'steady', key: 'sdash.band.steady' }
+        : { tone: 'support', key: 'sdash.band.support' }
 
-  useEffect(() => {
-    if (isLoading) return
+  const name = dto.name || 'תלמיד/ה'
 
-    const startDashboard = () => {
-      const main = document.getElementById('mainContent')
-      if (!main || main.dataset.dashboardInitialized === language) return
-      main.dataset.dashboardInitialized = language
-      try {
-        initDashboard(t, language)
-      } catch (error) {
-        console.error('Dashboard initialization failed:', error)
-        main.innerHTML = `
-          <div style="text-align:center; padding:80px 20px;">
-            <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
-            <div style="font-size:18px;font-weight:700;color:#3a3360;">${t('dashboard.error.title')}</div>
-            <div style="font-size:14px;color:#9a93b5;margin-top:8px;">${t('dashboard.error.subtitle')}</div>
+  return (
+    <div className="sd-wrap">
+      <div className="sd-hero">
+        <div className="sd-hero__avatar" aria-hidden="true">{name.slice(0, 1)}</div>
+        <div>
+          <h1 className="sd-hero__name" dir="auto">{name}</h1>
+          <p className="sd-hero__sub">{t('sdash.subtitle')}</p>
+        </div>
+      </div>
+
+      <div className="sd-grid">
+        <Panel className="sd-span">
+          <SectionHeader title={t('sdash.subjects')} />
+          {dto.subjects.map((s) => {
+            const lvl = s.progress >= 80 ? 'strong' : s.progress >= 50 ? 'steady' : 'support'
+            return (
+              <div className="sd-subject" key={s.name}>
+                <div className="sd-subject__head">
+                  <span className="sd-subject__name" dir="auto">{s.name}</span>
+                  <StatusPill tone={lvl as StatusTone}>{s.level}</StatusPill>
+                </div>
+                {/* Visual progress only — no numeric grade shown to the learner. */}
+                <div className="sd-bar"><div className="sd-bar__fill" style={{ inlineSize: `${s.progress}%` }} /></div>
+                {s.curriculum.length > 0 && (
+                  <div className="sd-curric">
+                    {s.curriculum.map((c, i) => (
+                      <span key={i} className={`sd-cur ${c.statusClass === 'curr-done' ? 'sd-cur--done' : c.statusClass === 'curr-current' ? 'sd-cur--current' : ''}`}>
+                        <span className="sd-cur__dot" /><span dir="auto">{c.topic}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </Panel>
+
+        <Panel>
+          <SectionHeader title={t('sdash.strengths')} />
+          <div className="sd-chips">
+            {dto.mapping.strengths.map((s, i) => <StatusPill key={i} tone="strong">{s}</StatusPill>)}
           </div>
-        `
-      }
-    }
+          <div style={{ height: 'var(--sp-4)' }} />
+          <SectionHeader title={t('sdash.challenges')} />
+          <div className="sd-chips">
+            {dto.difficulties.map((d, i) => <StatusPill key={i} tone="support">{d.text}</StatusPill>)}
+          </div>
+        </Panel>
 
-    const frame = window.requestAnimationFrame(startDashboard)
-    return () => window.cancelAnimationFrame(frame)
-  }, [isLoading, language, t])
+        <Panel>
+          <SectionHeader title={t('sdash.competencies')} />
+          {dto.competencies.map((c) => {
+            const b = band(c.value)
+            return (
+              <div className="sd-comp" key={c.label}>
+                <span dir="auto">{c.label}</span>
+                <StatusPill tone={b.tone}>{t(b.key)}</StatusPill>
+              </div>
+            )
+          })}
+        </Panel>
 
-  return <div dangerouslySetInnerHTML={{ __html: skeleton }} />
+        <Panel>
+          <SectionHeader title={t('sdash.goals')} />
+          {dto.goals.length === 0 ? (
+            <p style={{ color: 'var(--sp-ink-400)', fontSize: 'var(--sp-fs-sm)' }}>{t('sdash.goalsEmpty')}</p>
+          ) : (
+            dto.goals.map((g, i) => (
+              <div className="sd-goal" key={i}>
+                <Icon name="target" size={16} />
+                <span dir="auto">{g.text}{g.meta ? <span className="sd-goal__meta"> · {g.meta}</span> : null}</span>
+              </div>
+            ))
+          )}
+        </Panel>
+
+        <Panel className="sd-span">
+          <SectionHeader title={t('sdash.mapping')} />
+          <div className="sd-map__row"><span className="sd-map__label">{t('sdash.interests')}</span>
+            <div className="sd-chips">{dto.mapping.interests.map((x, i) => <StatusPill key={i} tone="neutral">{x}</StatusPill>)}</div>
+          </div>
+          <div className="sd-map__row"><span className="sd-map__label">{t('sdash.learningStyle')}</span><span dir="auto">{dto.mapping.learningStyle}</span></div>
+          <div className="sd-map__row"><span className="sd-map__label">{t('sdash.preferences')}</span>
+            <div className="sd-chips">{dto.mapping.preferences.map((x, i) => <StatusPill key={i} tone="neutral">{x}</StatusPill>)}</div>
+          </div>
+          <div className="sd-map__row"><span className="sd-map__label">{t('sdash.environment')}</span><span dir="auto">{dto.mapping.environment}</span></div>
+        </Panel>
+      </div>
+    </div>
+  )
 }

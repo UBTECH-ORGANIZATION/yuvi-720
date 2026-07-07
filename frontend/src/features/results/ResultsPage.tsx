@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiPost, getLearnerState, updateLearnerState } from '../../services/api'
+import { useI18n } from '../../i18n/I18nProvider'
 import type { MappingResults, Profile, ProfileImprove, ProfileStrength } from './types'
 
 type SceneStep =
@@ -19,6 +20,7 @@ const loadingSteps = [
 ]
 
 export function ResultsPage() {
+  const { language } = useI18n()
   const [status, setStatus] = useState<Status>('loading')
   const [profile, setProfile] = useState<Profile | null>(null)
   const [studentName, setStudentName] = useState('תלמיד/ה')
@@ -53,7 +55,7 @@ export function ResultsPage() {
     }
 
     const name = data.student_name || 'תלמיד/ה'
-    const sourceHash = JSON.stringify(data)
+    const sourceHash = JSON.stringify(data) + '|' + language
     setStudentName(name)
 
     const cached = state.profile_cache as { sourceHash?: string; data?: Profile } | null | undefined
@@ -69,7 +71,7 @@ export function ResultsPage() {
     setLoadingStep(0)
 
     try {
-      const analyzed = await apiPost<Profile>('/api/analyze-profile', { student_name: name, scores: data.scores })
+      const analyzed = await apiPost<Profile>('/api/analyze-profile', { student_name: name, scores: data.scores, language })
       void updateLearnerState({ profile_cache: { sourceHash, data: analyzed } })
       setProfile(analyzed)
       setStatus('journey')
