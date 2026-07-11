@@ -136,12 +136,13 @@ function UsageContent({ data }: { data: UsageSummary }) {
   const daily = data.daily
   const exactRate = totals.requests > 0 ? (totals.exact_usage_events ?? 0) / totals.requests : 0
   const successRate = totals.requests > 0 ? totals.completed / totals.requests : 0
+  const displayedCost = totals.requests === 0 ? 0 : totals.cost_usd
   const metricCards = [
     { icon: '↻', value: compact(totals.requests, language), label: t('usage.requests'), detail: percent(successRate, language) + ' ' + t('usage.successful'), tone: 'indigo' as const, sparkline: daily.map((row) => row.requests) },
     { icon: '◆', value: compact(totals.total_tokens, language), label: t('usage.tokens'), detail: percent(exactRate, language) + ' ' + t('usage.exactMetering'), tone: 'cyan' as const, sparkline: daily.map((row) => row.total_tokens) },
     { icon: '↓', value: compact(totals.input_tokens, language), label: t('usage.inputTokens'), tone: 'emerald' as const, sparkline: daily.map((row) => row.input_tokens) },
     { icon: '↑', value: compact(totals.output_tokens, language), label: t('usage.outputTokens'), tone: 'violet' as const, sparkline: daily.map((row) => row.output_tokens) },
-    { icon: '$', value: money(totals.cost_usd, language, t('usage.pendingPricing')), label: t('usage.cost'), detail: totals.unpriced_requests ? t('usage.unpricedShort', { count: totals.unpriced_requests }) : t('usage.allPriced'), tone: 'amber' as const, sparkline: daily.map((row) => row.cost_usd ?? 0) },
+    { icon: '$', value: money(displayedCost, language, t('usage.pendingPricing')), label: t('usage.cost'), detail: totals.unpriced_requests ? t('usage.unpricedShort', { count: totals.unpriced_requests }) : t('usage.allPriced'), tone: 'amber' as const, sparkline: daily.map((row) => row.cost_usd ?? 0) },
     { icon: '✓', value: compact(totals.completed, language), label: t('usage.completed'), detail: compact(totals.failed, language) + ' ' + t('usage.failed'), tone: 'rose' as const, sparkline: daily.map((row) => row.completed) },
   ]
   const modelRows = data.by_deployment.filter((row) => row.key !== 'unknown')
