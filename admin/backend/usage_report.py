@@ -47,6 +47,25 @@ class UsageEvent(BaseModel):
     latency_ms: int
 
 
+class PricingRate(BaseModel):
+    pricing_id: str
+    provider: str
+    deployment: str
+    display_name: str
+    meter: str
+    unit_size: int
+    input_usd_per_unit: Optional[float]
+    cached_input_usd_per_unit: Optional[float]
+    output_usd_per_unit: Optional[float]
+    characters_usd_per_unit: Optional[float]
+    currency: str
+    price_scope: str
+    pricing_note: Optional[str]
+    source_url: str
+    source_checked_at: str
+    effective_from: str
+
+
 class UsagePeriod(BaseModel):
     days: int
     start: str
@@ -66,8 +85,11 @@ class UsageSummary(BaseModel):
     by_actor: list[UsageBucket]
     by_endpoint: list[UsageBucket]
     by_operation: list[UsageBucket]
+    by_deployment: list[UsageBucket]
+    by_feature: list[UsageBucket]
     daily: list[UsageBucket]
     recent: list[UsageEvent]
+    pricing: list[PricingRate]
 
 
 def _number(value: Any) -> int:
@@ -164,6 +186,27 @@ def _recent_event(event: dict[str, Any]) -> UsageEvent:
     )
 
 
+def _pricing_rate(document: dict[str, Any]) -> PricingRate:
+    return PricingRate(
+        pricing_id=_text(document.get("pricing_id")),
+        provider=_text(document.get("provider")),
+        deployment=_text(document.get("deployment")),
+        display_name=_text(document.get("display_name"), _text(document.get("deployment"))),
+        meter=_text(document.get("meter")),
+        unit_size=_number(document.get("unit_size")),
+        input_usd_per_unit=_cost(document.get("input_usd_per_unit")),
+        cached_input_usd_per_unit=_cost(document.get("cached_input_usd_per_unit")),
+        output_usd_per_unit=_cost(document.get("output_usd_per_unit")),
+        characters_usd_per_unit=_cost(document.get("characters_usd_per_unit")),
+        currency=_text(document.get("currency"), "USD"),
+        price_scope=_text(document.get("price_scope")),
+        pricing_note=_text(document.get("pricing_note")) if document.get("pricing_note") else None,
+        source_url=_text(document.get("source_url")),
+        source_checked_at=_iso(document.get("source_checked_at")) or "",
+        effective_from=_iso(document.get("effective_from")) or "",
+    )
+
+
 def build_usage_summary(
     *,
     events: list[dict[str, Any]],
@@ -172,6 +215,7 @@ def build_usage_summary(
     end: datetime,
     actor_id: Optional[str],
     endpoint: Optional[str],
+    pricing: Optional[list[dict[str, Any]]] = None,
     access_mode: Literal["public_preview", "authenticated_admin"] = "authenticated_admin",
 ) -> UsageSummary:
     """Aggregate already-sanitized events without identity enrichment."""
@@ -195,6 +239,9 @@ def build_usage_summary(
         by_actor=_group(events, "actor_id"),
         by_endpoint=_group(events, "endpoint"),
         by_operation=_group(events, "operation"),
+        by_deployment=_group(events, "deployment"),
+        by_feature=_group(events, "feature"),
         daily=[UsageBucket.model_validate(daily_buckets[key]) for key in sorted(daily_buckets)],
         recent=[_recent_event(event) for event in events[:100]],
+        pricing=[_pricing_rate(document) for document in (pricing or [])],
     )

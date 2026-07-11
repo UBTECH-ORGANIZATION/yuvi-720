@@ -19,10 +19,11 @@ RUN pip install --no-cache-dir -r requirements.txt \
     && adduser --system --ingroup adminapp adminapp
 
 COPY backend ./backend
+COPY scripts ./scripts
 COPY --from=frontend-builder /build/dist ./frontend/dist
 RUN test -f ./frontend/dist/index.html
 
 USER adminapp
 EXPOSE 8000
 
-CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT} --proxy-headers --forwarded-allow-ips='*'"]
+CMD ["sh", "-c", "python -m scripts.sync_pricing && uvicorn backend.main:app --host 0.0.0.0 --port ${PORT} --proxy-headers --forwarded-allow-ips='*'"]

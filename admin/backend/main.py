@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
+import asyncio
 import os
 from pathlib import Path
 import secrets
@@ -279,11 +280,14 @@ def create_app(
         end = datetime.now(timezone.utc) + timedelta(seconds=1)
         start = end - timedelta(days=days)
         try:
-            events = await usage_repository.fetch_events(
-                start=start,
-                end=end,
-                actor_id=actor_id,
-                endpoint=endpoint,
+            events, pricing = await asyncio.gather(
+                usage_repository.fetch_events(
+                    start=start,
+                    end=end,
+                    actor_id=actor_id,
+                    endpoint=endpoint,
+                ),
+                usage_repository.fetch_pricing(at=end),
             )
         except Exception as exc:
             print(f"⚠️ Admin usage report query failed: {type(exc).__name__}")
@@ -295,6 +299,7 @@ def create_app(
             end=end,
             actor_id=actor_id,
             endpoint=endpoint,
+            pricing=pricing,
             access_mode="public_preview" if resolved_public_access else "authenticated_admin",
         )
 
