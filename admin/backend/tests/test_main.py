@@ -59,6 +59,9 @@ class AdminRouteTests(unittest.TestCase):
                     "latency_ms": 100,
                 }]
 
+            async def fetch_pricing(self, **_):
+                return []
+
         self.app.state.usage_repository = FakeRepository()
         token = create_admin_token(
             email="allowed@example.com",
@@ -77,6 +80,9 @@ class AdminRouteTests(unittest.TestCase):
     def test_public_mode_opens_usage_report_without_cookie(self) -> None:
         class FakeRepository:
             async def fetch_events(self, **_):
+                return []
+
+            async def fetch_pricing(self, **_):
                 return []
 
         public_app = create_app(TEST_SETTINGS, public_access=True)

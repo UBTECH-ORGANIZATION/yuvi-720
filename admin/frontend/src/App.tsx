@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { getAuthStatus, logout } from './api'
 import { LanguageSwitcher, useI18n } from './i18n/I18nProvider'
 import type { AdminIdentity, AuthStatus } from './types'
-import { UsagePage } from './usage/UsagePage'
+import { UsageDashboard } from './usage/UsageDashboard'
 
 
 type LoadState = 'loading' | 'ready' | 'error'
@@ -163,7 +163,7 @@ function AdminShell({
             </div>
           ) : <span className="public-access-badge">{t('shell.publicAccess')}</span>}
         </header>
-        <UsagePage onUnauthorized={onUnauthorized} />
+        <UsageDashboard onUnauthorized={onUnauthorized} />
       </div>
     </div>
   )

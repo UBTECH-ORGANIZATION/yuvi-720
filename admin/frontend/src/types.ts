@@ -47,6 +47,25 @@ export interface UsageEvent {
   latency_ms: number
 }
 
+export interface PricingRate {
+  pricing_id: string
+  provider: string
+  deployment: string
+  display_name: string
+  meter: string
+  unit_size: number
+  input_usd_per_unit: number | null
+  cached_input_usd_per_unit: number | null
+  output_usd_per_unit: number | null
+  characters_usd_per_unit: number | null
+  currency: string
+  price_scope: string
+  pricing_note: string | null
+  source_url: string
+  source_checked_at: string
+  effective_from: string
+}
+
 export interface UsageSummary {
   access_mode: 'public_preview' | 'authenticated_admin'
   period: { days: number; start: string; end: string }
@@ -55,8 +74,11 @@ export interface UsageSummary {
   by_actor: UsageBucket[]
   by_endpoint: UsageBucket[]
   by_operation: UsageBucket[]
+  by_deployment: UsageBucket[]
+  by_feature: UsageBucket[]
   daily: UsageBucket[]
   recent: UsageEvent[]
+  pricing: PricingRate[]
 }
 
 export interface UsageFilters {

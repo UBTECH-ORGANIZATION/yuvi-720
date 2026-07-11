@@ -35,6 +35,27 @@ _SAFE_EVENT_FIELDS = {
     "latency_ms": 1,
 }
 
+_SAFE_PRICING_FIELDS = {
+    "_id": 0,
+    "pricing_id": 1,
+    "provider": 1,
+    "deployment": 1,
+    "display_name": 1,
+    "meter": 1,
+    "unit_size": 1,
+    "input_usd_per_unit": 1,
+    "cached_input_usd_per_unit": 1,
+    "output_usd_per_unit": 1,
+    "characters_usd_per_unit": 1,
+    "currency": 1,
+    "price_scope": 1,
+    "pricing_note": 1,
+    "source_url": 1,
+    "source_checked_at": 1,
+    "effective_from": 1,
+    "effective_to": 1,
+}
+
 
 class UsageEventRepository:
     """Query only allowlisted operational fields from `ai_usage_events`."""
@@ -81,6 +102,31 @@ class UsageEventRepository:
             .limit(limit)
         )
         return [document async for document in cursor]
+
+    async def fetch_pricing(self, *, at: datetime) -> list[dict[str, Any]]:
+        """Read current pricing records through an explicit operational projection."""
+        query = {
+            "effective_from": {"$lte": at},
+            "$or": [
+                {"effective_to": None},
+                {"effective_to": {"$exists": False}},
+                {"effective_to": {"$gt": at}},
+            ],
+        }
+        cursor = self._collection().database["ai_usage_pricing"].find(
+            query,
+            _SAFE_PRICING_FIELDS,
+        ).sort([("deployment", 1), ("effective_from", -1)])
+        documents = [document async for document in cursor]
+        latest: dict[tuple[str, str, str], dict[str, Any]] = {}
+        for document in documents:
+            key = (
+                str(document.get("provider") or ""),
+                str(document.get("deployment") or ""),
+                str(document.get("meter") or ""),
+            )
+            latest.setdefault(key, document)
+        return list(latest.values())
 
     def close(self) -> None:
         if self._client is not None:
