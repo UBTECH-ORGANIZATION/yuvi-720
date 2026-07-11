@@ -1,6 +1,7 @@
 """Route-boundary tests for the standalone administrator service."""
 
 import unittest
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -109,7 +110,9 @@ class AdminRouteTests(unittest.TestCase):
         self.assertIn("frame-ancestors 'none'", response.headers["content-security-policy"])
 
     def test_readiness_requires_database_access(self) -> None:
-        response = self.client.get("/health/ready")
+        with patch("backend.main._FRONTEND_DIST") as frontend_dist:
+            frontend_dist.exists.return_value = True
+            response = self.client.get("/health/ready")
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json()["detail"], "database_unavailable")
 
