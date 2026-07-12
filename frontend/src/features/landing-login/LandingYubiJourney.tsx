@@ -189,14 +189,16 @@ export function LandingYubiJourney() {
   useEffect(() => {
     const pilot = pilotRef.current
     const root = document.querySelector<HTMLElement>('.landing720')
-    if (!pilot || !root || isCompact) return
+    if (!pilot || !root) return
 
     const stops = Array.from(root.querySelectorAll<HTMLElement>('[data-yubi-stop]'))
+    const artwork = root.querySelector<HTMLElement>('.landing720-yubi-artwork')
     if (stops.length === 0) return
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
     let frame = 0
     let flightStopTimer = 0
+    let resizeTimer = 0
     let isActivelyScrolling = false
     let previousScrollY = window.scrollY
 
@@ -204,30 +206,60 @@ export function LandingYubiJourney() {
       frame = 0
       const viewportWidth = window.innerWidth
       const viewportHeight = window.innerHeight
-      const focusY = window.scrollY + viewportHeight * 0.52
+      const focusOffset = viewportHeight * 0.52
       const anchors = stops.map((element) => {
         const rect = element.getBoundingClientRect()
+        const center = rect.top + window.scrollY + rect.height * 0.5
         return {
           element,
           scene: element.dataset.yubiStop ?? 'hero',
-          center: rect.top + window.scrollY + rect.height * 0.5,
+          center,
+          trigger: Math.max(0, center - focusOffset),
         }
       })
 
       let index = 0
-      while (index < anchors.length - 1 && focusY > anchors[index + 1].center) index += 1
+      while (index < anchors.length - 1 && window.scrollY > anchors[index + 1].trigger) index += 1
 
       const current = anchors[index]
       const next = anchors[Math.min(index + 1, anchors.length - 1)]
-      const distance = Math.max(1, next.center - current.center)
-      const rawProgress = current === next ? 0 : clamp((focusY - current.center) / distance, 0, 1)
+      const heroAnchor = anchors.find((anchor) => anchor.scene === 'hero')
+      const distance = Math.max(1, next.trigger - current.trigger)
+      const rawProgress = current === next ? 0 : clamp((window.scrollY - current.trigger) / distance, 0, 1)
       const progress = smoothstep(rawProgress)
-      const from = pointFor(current.scene, direction === 'rtl')
-      const to = pointFor(next.scene, direction === 'rtl')
+      const scenePoint = (scene: string) => {
+        const point = pointFor(scene, direction === 'rtl')
+        if (scene !== 'hero' || !artwork) {
+          return isCompact ? { ...point, scale: point.scale * 0.78 } : point
+        }
+
+        const artworkRect = artwork.getBoundingClientRect()
+        const artworkDocumentY = artworkRect.top + window.scrollY + artworkRect.height * 0.5
+        const dockScroll = Math.min(window.scrollY, heroAnchor?.trigger ?? 0)
+        return {
+          ...point,
+          x: (artworkRect.left + artworkRect.width * 0.5) / viewportWidth,
+          y: (artworkDocumentY - dockScroll) / viewportHeight,
+          scale: clamp((artworkRect.width * 0.55) / pilot.offsetWidth, 0.48, isCompact ? 0.72 : point.scale),
+        }
+      }
+      const from = scenePoint(current.scene)
+      const to = scenePoint(next.scene)
       const arc = prefersReducedMotion.matches ? 0 : Math.sin(progress * Math.PI) * Math.min(88, viewportHeight * 0.1)
-      const x = (from.x + (to.x - from.x) * progress) * viewportWidth
-      const y = (from.y + (to.y - from.y) * progress) * viewportHeight - arc
       const scale = from.scale + (to.scale - from.scale) * progress
+      const pilotHalfWidth = pilot.offsetWidth * scale * 0.5
+      const pilotHalfHeight = pilot.offsetHeight * scale * 0.5
+      const safeInset = 16
+      const isDockedToHero = current.scene === 'hero' && rawProgress === 0
+      const x = clamp(
+        (from.x + (to.x - from.x) * progress) * viewportWidth,
+        safeInset + pilotHalfWidth,
+        viewportWidth - safeInset - pilotHalfWidth,
+      )
+      const rawY = (from.y + (to.y - from.y) * progress) * viewportHeight - arc
+      const y = isDockedToHero
+        ? rawY
+        : clamp(rawY, safeInset + pilotHalfHeight, viewportHeight - safeInset - pilotHalfHeight)
       const opacity = from.opacity + (to.opacity - from.opacity) * progress
       const directionDelta = (to.x - from.x) * viewportWidth
       const rotation = prefersReducedMotion.matches ? 0 : clamp(directionDelta * 0.018 * Math.sin(progress * Math.PI), -13, 13)
@@ -263,16 +295,29 @@ export function LandingYubiJourney() {
       scheduleUpdate()
     }
 
+    const handleResize = () => {
+      scheduleUpdate()
+      if (resizeTimer) window.clearTimeout(resizeTimer)
+      resizeTimer = window.setTimeout(scheduleUpdate, 120)
+    }
+
     update()
+    resizeTimer = window.setTimeout(scheduleUpdate, 120)
+    const resizeObserver = 'ResizeObserver' in window ? new ResizeObserver(scheduleUpdate) : null
+    resizeObserver?.observe(document.documentElement)
+    if (artwork) resizeObserver?.observe(artwork)
+    stops.forEach((stop) => resizeObserver?.observe(stop))
     window.addEventListener('scroll', handleScroll, { passive: true })
-    window.addEventListener('resize', scheduleUpdate, { passive: true })
+    window.addEventListener('resize', handleResize, { passive: true })
     prefersReducedMotion.addEventListener('change', scheduleUpdate)
 
     return () => {
       if (frame) window.cancelAnimationFrame(frame)
       if (flightStopTimer) window.clearTimeout(flightStopTimer)
+      if (resizeTimer) window.clearTimeout(resizeTimer)
+      resizeObserver?.disconnect()
       window.removeEventListener('scroll', handleScroll)
-      window.removeEventListener('resize', scheduleUpdate)
+      window.removeEventListener('resize', handleResize)
       prefersReducedMotion.removeEventListener('change', scheduleUpdate)
       delete root.dataset.yubiScene
       delete root.dataset.yubiFlying
@@ -294,31 +339,15 @@ export function LandingYubiJourney() {
         ))}
       </div>
 
-      {!isCompact && (
-        <div ref={pilotRef} className="landing720-yubi-pilot" aria-hidden="true" data-flying="false">
-          <span className="landing720-yubi-speed landing720-yubi-speed--one" />
-          <span className="landing720-yubi-speed landing720-yubi-speed--two" />
-          <span className="landing720-yubi-speed landing720-yubi-speed--three" />
-          <div className="landing720-yubi-pilot__robot">
-            <YubiAvatar3D initialDesign={DEFAULT_DESIGN} label={t('companion.title')} muted frontFacing />
-            <Thrusters />
-          </div>
+      <div ref={pilotRef} className="landing720-yubi-pilot" aria-hidden="true" data-flying="false">
+        <span className="landing720-yubi-speed landing720-yubi-speed--one" />
+        <span className="landing720-yubi-speed landing720-yubi-speed--two" />
+        <span className="landing720-yubi-speed landing720-yubi-speed--three" />
+        <div className="landing720-yubi-pilot__robot">
+          <YubiAvatar3D initialDesign={DEFAULT_DESIGN} label={t('companion.title')} muted frontFacing />
+          <Thrusters />
         </div>
-      )}
+      </div>
     </>
-  )
-}
-
-export function LandingYubiHeroRobot() {
-  const { t } = useI18n()
-  const { isCompact } = useResponsive()
-
-  if (!isCompact) return null
-
-  return (
-    <div className="landing720-yubi-mobile" aria-hidden="true">
-      <YubiAvatar3D initialDesign={DEFAULT_DESIGN} label={t('companion.title')} muted frontFacing />
-      <Thrusters />
-    </div>
   )
 }

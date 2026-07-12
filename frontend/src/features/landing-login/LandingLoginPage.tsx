@@ -4,7 +4,7 @@ import { LanguageSwitcher } from '../../components/LanguageSwitcher'
 import { useI18n } from '../../i18n/I18nProvider'
 import { apiPost } from '../../services/api'
 import { AgentsDiagram } from './AgentsDiagram'
-import { LandingYubiArtwork, LandingYubiHeroRobot, LandingYubiJourney } from './LandingYubiJourney'
+import { LandingYubiArtwork, LandingYubiJourney } from './LandingYubiJourney'
 
 const FAQ_KEYS = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6']
 
@@ -216,7 +216,6 @@ export function LandingLoginPage() {
 
         <div className="landing720-hero-visual" aria-hidden="true">
           <LandingYubiArtwork />
-          <LandingYubiHeroRobot />
         </div>
       </section>
 
