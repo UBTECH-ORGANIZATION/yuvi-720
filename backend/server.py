@@ -6,6 +6,13 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.env import ensure_env_loaded
+
+
+# Local development secrets live in backend/.env (gitignored). Azure App
+# Service process settings retain precedence over file values.
+ensure_env_loaded()
+
 from app.routes.brain import router as brain_router
 from app.routes.agent import router as agent_router
 from app.routes.teacher import router as teacher_router

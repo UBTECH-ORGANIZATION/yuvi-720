@@ -7,15 +7,19 @@ import { LearningPortalPage } from '../features/learning-portal/LearningPortalPa
 import { LessonPage } from '../features/learning-lesson/LessonPage'
 import { LomdaCreatorPage } from '../features/learning-create/LomdaCreatorPage'
 import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
+import { YubiStudioPage } from '../features/yubi-studio/YubiStudioPage'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { CompanionChat } from '../components/CompanionChat'
+import { YubiCompanionDock } from '../components/YubiCompanionDock'
 import { useI18n } from '../i18n/I18nProvider'
+import { useCompanion } from '../providers/CompanionProvider'
 import { useRoute } from './router'
 
 function pageForRoute(pathname: string) {
   if (pathname === '/' || pathname === '') return <LandingLoginPage />
   if (pathname.startsWith('/learner-mapping')) return <LearnerMappingPage />
   if (pathname.startsWith('/results')) return <ResultsPage />
+  if (pathname.startsWith('/yuvi-studio')) return <YubiStudioPage />
   if (pathname.startsWith('/student-dashboard')) return <StudentDashboardPage />
   if (pathname.startsWith('/teacher-view')) return <TeacherViewPage />
   if (pathname.startsWith('/mentoring')) return <MentoringPage />
@@ -39,19 +43,32 @@ function isLearnerRoute(pathname: string) {
 
 export function App() {
   const pathname = useRoute()
-  const { language } = useI18n()
+  const { language, direction } = useI18n()
+  const { isOpen, isOpening, isClosing, panelWidth } = useCompanion()
   const isLandingRoute = pathname === '/' || pathname === ''
   const isMappingRoute = pathname.startsWith('/learner-mapping')
   const isLearningPortalRoute = pathname === '/learning' || pathname === '/learning/'
+  const isStudentDashboardRoute = pathname.startsWith('/student-dashboard')
+  const isStudioRoute = pathname.startsWith('/yuvi-studio')
+  const learnerRoute = isLearnerRoute(pathname)
+  const routePage = <div key={language}>{pageForRoute(pathname)}</div>
 
   return (
     <>
       {/* Keying by language forces every migrated route to remount and re-fetch
           content (and re-run its localization) whenever the language changes. */}
-      <div key={language}>{pageForRoute(pathname)}</div>
+      {learnerRoute ? (
+        <div
+          className={`sp-learner-shell${isOpen && !isOpening && !isClosing ? ' is-companion-open' : ''}${isOpening ? ' is-companion-opening' : ''}${isClosing ? ' is-companion-closing' : ''}`}
+          style={{ '--sp-companion-width': `${panelWidth}px` } as React.CSSProperties}
+        >
+          <CompanionChat />
+          <div className="sp-learner-shell__content" dir={direction}>{routePage}</div>
+        </div>
+      ) : routePage}
       {/* The mapping page already shows a language switcher in its own app bar. */}
-      {!isLandingRoute && !isMappingRoute && !isLearningPortalRoute && <LanguageSwitcher variant="floating" />}
-      {isLearnerRoute(pathname) && <CompanionChat />}
+      {!isLandingRoute && !isMappingRoute && !isLearningPortalRoute && !isStudentDashboardRoute && !isStudioRoute && <LanguageSwitcher variant="floating" />}
+      {learnerRoute && !isStudioRoute && <YubiCompanionDock />}
     </>
   )
 }

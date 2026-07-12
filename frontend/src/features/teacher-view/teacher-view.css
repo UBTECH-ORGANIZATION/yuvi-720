@@ -15,6 +15,14 @@
 .tv-row__name { font-weight: var(--sp-fw-medium); color: var(--sp-ink-700); }
 .tv-row__meta { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
 
+/* Wellbeing (learner-shared distress) — highest-priority, visually distinct. */
+.tv-row--wellbeing { border-inline-start: 3px solid var(--sp-danger-600); background: var(--sp-danger-100); }
+.tv-wellbeing { border: 1px solid var(--sp-danger-600); background: var(--sp-danger-100); }
+.tv-wellbeing__head { display: flex; align-items: center; gap: var(--sp-2); color: var(--sp-danger-600); font-size: var(--sp-fs-md); }
+.tv-wellbeing__mark { font-size: 1.1em; margin-inline-end: var(--sp-1); }
+.tv-wellbeing__note { margin: var(--sp-2) 0 var(--sp-3); font-size: var(--sp-fs-sm); color: var(--sp-ink-500); line-height: var(--sp-lh-loose); }
+.tv-wellbeing__list { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
 .tv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
 @media (max-width: 720px) { .tv-grid { grid-template-columns: 1fr; } }
 .tv-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }

@@ -24,6 +24,12 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   return response.json() as Promise<T>
 }
 
+export async function apiDelete<T>(path: string): Promise<T> {
+  const response = await fetch(path, { method: 'DELETE' })
+  if (!response.ok) throw new Error(`DELETE ${path} failed with ${response.status}`)
+  return response.json() as Promise<T>
+}
+
 export interface LearnerState {
   learner_id: string
   language?: 'he' | 'en' | 'ar'
@@ -31,6 +37,8 @@ export interface LearnerState {
   profile_cache?: unknown
   dashboard_cache?: unknown
   game_progress?: Record<string, unknown>
+  avatar?: unknown
+  avatar_unlocks?: string[]
 }
 
 export function getLearnerState(signal?: AbortSignal) {

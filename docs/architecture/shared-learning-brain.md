@@ -76,7 +76,7 @@ explainable (we can always point at the brain field / event that produced it).
   scores inlined; can emit `score_updates`).
 - `app/routes/dashboard.py` — `/api/generate-dashboard` (**LLM invents** subjects, progress numbers,
   goals, competencies) + `MOCK_STUDENTS` fallback.
-- `app/routes/mapping_chat.py` — `/api/section-summary(-stream)`, `/api/mapping-chat(-stream)`.
+- `app/routes/mapping_chat.py` — `/api/section-reflect`, `/api/section-reflect/capture` (deterministic, no LLM; bank in `app/services/reflection_engine.py` + `reflect.*` locale keys).
 - `app/routes/learning_content.py` — `/api/create-lomda-stream` → one‑shot self‑contained HTML game,
   **not instrumented** (no xAPI, no metadata, no routing).
 - `app/routes/learner_state.py` — `/api/learner-state` GET/PATCH.
@@ -302,6 +302,16 @@ Four layers, top to bottom:
   **`{ learner_id, session_id, role }`** (working memory: last N turns + rolling summary + entity
   ledger); lets the Coach resume a chat exactly where the learner left off on return — no `localStorage`,
   all in Mongo.
+- **`agent_conversations` / `agent_messages`** — learner-visible Coach history. Conversation metadata
+  is sorted by `updated_at`; messages are append-only and cursor-paginated by `{ at, _id }`. This keeps
+  the complete transcript (including safe rendered visuals) available for reconnection without loading
+  it into the model or browser all at once. `agent_sessions` remains the only bounded prompt-history
+  provider; the archive is display-only, preventing history replay twice (R12). A new thread keeps a
+  localized default label until its first learner message; the mini model then creates one short topic
+  title from that Safety-screened message without copying it. Rendered visual payloads are attached to
+  the corresponding assistant message before the stream completes. Learner deletion is a soft delete
+  (`is_deleted`, `deleted_at`): lists hide the conversation while transcript and working-memory records
+  remain available for audit or a future restore workflow.
 
 ### 4.4 The Context bundle (what agents actually see)
 
@@ -349,7 +359,7 @@ undifferentiated blob:
 
 | Type | What it holds here | Backing store | Retrieval | Lifecycle |
 |---|---|---|---|---|
-| **Working** | `current_state` + the live Coach session: last 6–10 turns verbatim, a **rolling summary** (fixed size, regenerated), and a small **entity ledger** of session facts | brain + `agent_sessions` | injected every call | session‑scoped; trimmed continuously, summary absorbs what falls off |
+| **Working** | `current_state` + the live Coach session: last 6–10 turns verbatim, a **rolling summary** (fixed size, regenerated), and a small **entity ledger** of session facts; the full learner-visible transcript is archived separately in `agent_messages` | brain + `agent_sessions`; display archive in `agent_conversations` / `agent_messages` | only the bounded `agent_sessions` window is injected; archive pages are UI-only | session‑scoped prompt window is trimmed continuously; display archive remains cursor-paginated |
 | **Episodic** | `learning_events`, `reflections`, mentoring history — everything that *happened* | append‑only collections | queried by objective/recency (never injected wholesale) | permanent evidence; old tails compressed into summaries |
 | **Semantic** | `profile.*`, `mastery`, `strengths/challenges`, `goals` — stable facts about the learner | brain document | field projection through agent scopes (§5.8) | updated only via events + consolidation; soft facts decay (§5.7) |
 | **Procedural** | `strategies[]` — *what works for this learner* ("sports analogies land", "video after fail beats re‑reading") | brain document | injected into Coach/Pedagogical bundles | promoted from repeated evidence; confidence‑weighted |
@@ -709,8 +719,10 @@ AGENT_VIEWS = {
                             "profile.learning_style", "strengths", "challenges"]},
   "pedagogical": {"read": ["mastery", "current_state", "next_recommendations"],   # + curriculum/content
                   "write": ["current_state", "next_recommendations", "mastery"]},
-  "coach":       {"read": ["profile.interests", "goals", "current.informationToBot",
-                            "current.recent_events", "identity.locale"],
+  "coach":       {"read": ["profile.interests", "profile.hobbies", "profile.characteristics",
+                            "profile.learning_style", "profile.preferences", "profile.environment",
+                            "strengths", "challenges", "strategies", "goals", "current_state",
+                            "teacher_directives", "identity.locale"],
                   "write": ["agent_notes", "staged_candidates"]},   # durable fields only via consolidator (§5.7)
   "reflection":  {"read": ["mastery", "recent_events", "reflections"],
                   "write": ["reflections"]},
@@ -731,7 +743,7 @@ def apply_writes(agent, learner_id, updates):
 |---|---|---|---|
 | **Onboarding** | mapping scores, onboarding chat | profile.*, initial strengths/challenges | events, other learners, teacher notes |
 | **Pedagogical** | mastery, current_state, curriculum graph, content metadata | current_state, next_recommendations, mastery | interests, chat transcript, reflections, teacher notes |
-| **Learning Coach** | Context bundle (interests, current item `informationToBot`, recent events, goals, locale) | agent_notes (scratch); staged candidates → consolidator | raw activeness numbers, `teacher_only` notes, other learners |
+| **Learning Coach** | Context bundle (interests, learning preferences, verbal strengths/challenges, proven strategies, relevant active teacher guidance, current item `informationToBot`, recent events, goals, locale) | agent_notes (scratch); staged candidates → consolidator | raw activeness numbers, identity fields, `teacher_only` mentoring notes, other learners |
 | **Reflection** | mastery, recent events, prior reflections | reflections (+ self vs system) | interests, teacher notes, other learners |
 | **Teacher Insights** | group aggregates + evidence, **their groups only** | *nothing in the learner brain* | other groups, learner chat transcript, PII |
 | **Safety** | the single message + policy | escalation flags | full brain, events, other learners |
@@ -1236,12 +1248,12 @@ the UI refactor the project needs (and the place the `720-UIUX` design lands in 
 |---|---|---|---|---|---|
 | Landing / login | `/` | static → unified sign-in `/auth/*` (role+group) | — | — | default · loading · error |
 | Onboarding intro | `/learner-mapping` (intro) | `/api/questionnaire` | `identity.locale` | Onboarding | intro · consent · AI-disclosure |
-| Mapping questionnaire | `/learner-mapping` | `/api/questionnaire`, `/api/submit`, `/api/mapping-chat-stream` → Onboarding agent | writes `profile.mapping_scores` | Onboarding | per-step · save · resume · validate |
+| Mapping questionnaire | `/learner-mapping` | `/api/questionnaire`, `/api/submit`, `/api/section-reflect` (+ `/capture`) → Onboarding agent | writes `profile.mapping_scores` | Onboarding | per-step · save · resume · validate |
 | Results / profile | `/results` | `/api/analyze-profile` → `/api/brain/{id}` projection | `profile.*`, `strengths`, `challenges` | Onboarding/Coach | verbal only · loading · empty |
 | **Student dashboard** | `/student-dashboard` | **kill** `/api/generate-dashboard` → `/api/brain/{id}` + `/api/agent/route/next` | `progress` (verbalized), `mastery`, `goals`, `current_state`, `next_recommendations` | Context Engine projection | real · empty · loading · resume CTA |
 | Learning portal | `/learning-portal` | → `/api/brain/{id}` + content catalog | `next_recommendations`, subjects, status | Planner + Pedagogical | recommended vs browse · filters |
 | **Learning lesson (anchor)** | `/learning-lesson` | → component load (Pedagogical/MCP) + iframe `slxapi` + `POST /api/xapi` + `/api/agent/coach/stream` (SSE) + `/api/agent/coach/proactive` | `current_state`, item `informationToBot`, `recent_events`, `resume_token` | Coach (+Pedagogical, Safety, Reflection) | loading · slow>5s · xapi-retry · idle · misconception · success · resume |
-| Companion `יובי` (global) | overlay | `/api/agent/coach/stream`, `/api/agent/coach/proactive` | Context bundle, `agent_sessions` | Coach + Safety | collapsed · expanded · streaming · proactive · offline |
+| Companion `יובי` (global) | overlay | `/api/agent/coach/stream`, `/api/agent/coach/proactive`, `/api/agent/coach/conversations*` | Context bundle, `agent_sessions`, `agent_conversations`, `agent_messages` | Coach + Safety | collapsed · expanded · streaming · history · reconnecting · proactive · offline |
 | Reflection | modal / `/reflections` | `/api/agent/reflect` | `reflections_recent` | Reflection | prompt · answer · save · share-toggle |
 | Mentoring (learner) | `/mentoring` | → `/api/mentoring/*` | learner-visible `goals` | — | list · empty · add-note |
 | **Teacher dashboard** | `/teacher-view` | **kill** `MOCK_STUDENTS` → `/api/agent/insights` + `/api/groups/*` | group aggregates + evidence, live alerts | Teacher Insights | group · filter · alerts · empty |

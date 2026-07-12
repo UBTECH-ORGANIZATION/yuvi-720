@@ -1,5 +1,6 @@
 """Route-boundary tests for the standalone administrator service."""
 
+import os
 import unittest
 from unittest.mock import patch
 
@@ -38,6 +39,15 @@ class AdminRouteTests(unittest.TestCase):
             "oauth_configured": False,
             "public_access": False,
         })
+
+    def test_authenticated_access_is_the_default(self) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            private_app = create_app(TEST_SETTINGS)
+        private_client = TestClient(private_app)
+
+        status = private_client.get("/api/auth/status")
+        self.assertFalse(status.json()["public_access"])
+        self.assertEqual(private_client.get("/api/ai-usage/summary").status_code, 401)
 
     def test_usage_report_requires_server_issued_admin_cookie(self) -> None:
         response = self.client.get("/api/ai-usage/summary")

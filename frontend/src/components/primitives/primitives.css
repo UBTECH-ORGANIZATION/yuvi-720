@@ -138,7 +138,6 @@
 .sp-btn--gradient {
   background: var(--sp-gradient-soft);
   font-weight: var(--sp-fw-bold);
-  box-shadow: 0 10px 24px rgba(111, 91, 255, 0.28);
 }
 .sp-btn--gradient:hover:not(:disabled) { box-shadow: 0 14px 30px rgba(111, 91, 255, 0.34); }
 

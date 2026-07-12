@@ -1,5 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { getLearnerState, updateLearnerState } from '../services/api'
+import heMessages from '../../../locales/he.json'
+import enMessages from '../../../locales/en.json'
+import arMessages from '../../../locales/ar.json'
 
 type Language = 'he' | 'en' | 'ar'
 type Direction = 'rtl' | 'ltr'
@@ -15,6 +18,11 @@ interface I18nContextValue {
 
 const supportedLanguages: Language[] = ['he', 'en', 'ar']
 const rtlLanguages = new Set<Language>(['he', 'ar'])
+const bundledMessages: Record<Language, Messages> = {
+  he: heMessages,
+  en: enMessages,
+  ar: arMessages
+}
 const I18nContext = createContext<I18nContextValue | null>(null)
 
 function timeoutSignal(ms: number) {
@@ -34,7 +42,7 @@ function applyDocumentLanguage(language: Language) {
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>('he')
-  const [messages, setMessages] = useState<Messages>({})
+  const [messagesByLanguage, setMessagesByLanguage] = useState<Record<Language, Messages>>(bundledMessages)
   const [isLoading, setIsLoading] = useState(true)
   const [loadedPreference, setLoadedPreference] = useState(false)
 
@@ -67,13 +75,18 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     if (loadedPreference) void updateLearnerState({ language })
     setIsLoading(true)
 
-    fetch(`/locales/${language}.json`, { signal: timeout.signal })
+    fetch(`/locales/${language}.json`, { signal: timeout.signal, cache: 'no-store' })
       .then((response) => response.json() as Promise<Messages>)
       .then((nextMessages) => {
-        if (active) setMessages(nextMessages)
+        if (active) {
+          setMessagesByLanguage((current) => ({
+            ...current,
+            [language]: nextMessages
+          }))
+        }
       })
       .catch(() => {
-        if (active) setMessages({})
+        // Keep the bundled locale so the UI never exposes raw translation keys.
       })
       .finally(() => {
         timeout.cancel()
@@ -90,7 +103,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }
 
   const t = (key: string, params: Record<string, string | number> = {}) => {
-    const template = messages[key] || key
+    const template = messagesByLanguage[language][key] || key
     return Object.entries(params).reduce(
       (text, [paramKey, value]) => text.split(`{${paramKey}}`).join(String(value)),
       template

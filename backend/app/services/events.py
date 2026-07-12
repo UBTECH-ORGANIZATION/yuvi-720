@@ -268,6 +268,8 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> None:
     current: dict[str, Any] = {}
     if event.get("object_id"):
         current["item_id"] = event["object_id"]
+    if event.get("launch"):
+        current["component_id"] = event["launch"]
     if event.get("resume_token") is not None:
         current["resume_token"] = event["resume_token"]
     if current:

@@ -95,6 +95,8 @@ async def cleanup():
         ("learners", {"_id": LID}), ("learner_state", {"_id": LID}),
         ("learning_events", {"learner_id": LID}),
         ("agent_sessions", {"learner_id": LID}),
+        ("agent_conversations", {"learner_id": LID}),
+        ("agent_messages", {"learner_id": LID}),
         ("reflections", {"learner_id": LID}),
         ("mentoring_conversations", {"learner_id": LID}),
         ("feedback_reports", {"learner_id": LID}),
@@ -140,13 +142,24 @@ async def main():
         # ═══ F4 · Dashboard projection ════════════════════════════════════════
         print("\n── F4 Dashboard ──")
         d = (await c.get(f"/api/brain/{LID}/dashboard", params={"lang": "he"})).json()
+        check("dashboard contract v2", d["contractVersion"] == 2)
         check("dashboard name from identity", d["name"] == "נועה כהן")
+        check("profile/evidence flags are honest", d["hasProfile"] and not d["hasLearningEvidence"])
         check("2 subjects (math+science)", len(d["subjects"]) == 2)
         check("competencies == activeness (no invention)",
               sorted(x["value"] for x in d["competencies"]) == sorted(prof["activeness"].values()))
+        check("competencies include verbal descriptors",
+              all(x.get("descriptor") and x.get("tone") in {"strong", "steady", "support"} for x in d["competencies"]))
         check("subjects start honest (0 events → 0%)", all(s["progress"] == 0 for s in d["subjects"]))
+        check("next-step hero is read-only and localized",
+              d["hero"]["mode"] == "next"
+              and d["hero"]["objectiveId"] == "math-angles"
+              and d["hero"]["objectiveTitle"] == "סוגי זוויות והגדרות")
+        check("curriculum labels do not expose internal ids",
+              all(item["topic"] != item["objectiveId"] for s in d["subjects"] for item in s["curriculum"]))
         d_ar = (await c.get(f"/api/brain/{LID}/dashboard", params={"lang": "ar"})).json()
         check("dashboard localizes (ar subject name)", any("الرياضيات" in s["name"] for s in d_ar["subjects"]))
+        check("dashboard localizes objective title (ar)", d_ar["hero"]["objectiveTitle"] == "أنواع الزوايا وتعريفاتها")
 
         # ═══ F1 · Event pipeline (P1) ═════════════════════════════════════════
         print("\n── F1 Events ──")
@@ -177,6 +190,11 @@ async def main():
         check("attempts counted once", m.get("attempts") == 1, str(m))
         check("misconception captured", m.get("misconceptions") == ["angle_type_confusion"])
         check("resume_token persisted (F1.6)", brain["current_state"]["resume_token"] == {"slide": 4})
+        d_resume = (await c.get(f"/api/brain/{LID}/dashboard", params={"lang": "he"})).json()
+        check("dashboard offers exact resume context",
+              d_resume["hero"]["mode"] == "resume"
+              and d_resume["hero"]["canResume"]
+              and d_resume["hero"]["componentId"] == "YuviDori-math-angles-0001-lesson")
 
         # ═══ F1 · Pedagogical agent (P4a) ═════════════════════════════════════
         print("\n── F1 Pedagogical ──")
@@ -204,6 +222,9 @@ async def main():
         d2 = (await c.get(f"/api/brain/{LID}/dashboard", params={"lang": "he"})).json()
         math_subj = next(s for s in d2["subjects"] if "מתמט" in s["name"])
         check("dashboard reflects real event progress", math_subj["progress"] > 0)
+        check("dashboard advances hero after mastery",
+              d2["hero"]["mode"] == "next"
+              and d2["hero"]["objectiveId"] == "math-angles-vertical")
 
         # ═══ F3 · Coach + Safety (P3) ═════════════════════════════════════════
         print("\n── F3 Coach + Safety ──")
@@ -223,6 +244,82 @@ async def main():
         check("second turn replied", len(reply2) > 10)
         turns2 = await sessions.get_recent(LID, "coach", limit=10)
         check("memory accumulates across turns", len(turns2) == 4)
+        history_page = (await c.get("/api/agent/coach/conversations", params={
+            "learner_id": LID, "limit": 1,
+        })).json()
+        check("conversation history is durable", len(history_page["conversations"]) == 1)
+        generated_title = history_page["conversations"][0]["title"]
+        check(
+            "conversation title is generated, not copied",
+            bool(generated_title)
+            and generated_title != "שלום! הטלפון שלי 0521234567. אני תקוע בזוויות, אפשר רמז?",
+            generated_title,
+        )
+        conversation_id = history_page["conversations"][0]["id"]
+        message_page = (await c.get(
+            f"/api/agent/coach/conversations/{conversation_id}/messages",
+            params={"learner_id": LID, "limit": 2},
+        )).json()
+        check("message history is paginated", len(message_page["messages"]) == 2 and message_page["has_more"])
+        latest_assistant = next(
+            message for message in reversed(message_page["messages"])
+            if message["role"] == "assistant"
+        )
+        visual_saved = await sessions.attach_visual(
+            LID,
+            conversation_id,
+            latest_assistant["id"],
+            {
+                "id": "e2e-visual",
+                "type": "image",
+                "mime_type": "image/svg+xml",
+                "data_url": "data:image/svg+xml;base64,PHN2Zy8+",
+                "title": "המחשה",
+                "alt": "המחשה מתמטית",
+                "caption": "",
+                "renderer": "svg-fallback",
+                "scene": {"use_visual": True, "title": "המחשה", "alt": "המחשה מתמטית", "caption": "", "elements": []},
+            },
+            latest_assistant["text"],
+            "המשך אחרי ההמחשה",
+        )
+        visual_page = (await c.get(
+            f"/api/agent/coach/conversations/{conversation_id}/messages",
+            params={"learner_id": LID, "limit": 2},
+        )).json()
+        visual_message = next(
+            message for message in visual_page["messages"]
+            if message["id"] == latest_assistant["id"]
+        )
+        check(
+            "saved drawing reloads from chat history",
+            visual_saved
+            and visual_message.get("visual", {}).get("id") == "e2e-visual"
+            and visual_message.get("text_after") == "המשך אחרי ההמחשה",
+        )
+        older_page = (await c.get(
+            f"/api/agent/coach/conversations/{conversation_id}/messages",
+            params={"learner_id": LID, "limit": 2, "cursor": message_page["next_cursor"]},
+        )).json()
+        check("older messages load by cursor", len(older_page["messages"]) == 2)
+        new_conversation = (await c.post(
+            "/api/agent/coach/conversations", json={"learner_id": LID}
+        )).json()
+        check("new conversation can be created", new_conversation["message_count"] == 0)
+        deleted = await c.delete(
+            f"/api/agent/coach/conversations/{new_conversation['id']}",
+            params={"learner_id": LID},
+        )
+        visible_after_delete = (await c.get(
+            "/api/agent/coach/conversations", params={"learner_id": LID, "limit": 20}
+        )).json()
+        check(
+            "conversation soft-delete hides conversation",
+            deleted.status_code == 200
+            and new_conversation["id"] not in {
+                item["id"] for item in visible_after_delete["conversations"]
+            },
+        )
         brain = await get_brain(LID)
         check("consolidator promoted chat interest", any("כדורסל" in i for i in brain["profile"]["interests"]),
               str(brain["profile"]["interests"]))
@@ -269,6 +366,10 @@ async def main():
         brain = await get_brain(LID)
         refl = brain["reflections_recent"]
         check("reflection in brain recent window", len(refl) == 1 and refl[0]["self_rating"] == 4)
+        d_reflection = (await c.get(f"/api/brain/{LID}/dashboard", params={"lang": "he"})).json()
+        check("dashboard reflection preview is verbal only",
+              d_reflection["reflectionPreview"]["answer"] == "היה קשה אבל הצלחתי בסוף"
+              and "self_rating" not in d_reflection["reflectionPreview"])
 
         # ═══ F6 · Teacher Insights + F8 scoping ═══════════════════════════════
         print("\n── F6 Teacher + F8 Org ──")
@@ -313,6 +414,8 @@ async def main():
         check("goal mirrored to brain (F5→F4)", any("10 דקות" in g["text"] for g in brain["goals"]))
         d3 = (await c.get(f"/api/brain/{LID}/dashboard", params={"lang": "he"})).json()
         check("goal visible on dashboard", any("10 דקות" in g["text"] for g in d3["goals"]))
+        check("goal deadline visible on dashboard",
+              any(g.get("deadline") == "2026-07-20" for g in d3["goals"]))
         as_teacher = (await c.get("/api/mentoring", params={"learner_id": LID, "role": "teacher"})).json()
         as_learner = (await c.get("/api/mentoring", params={"learner_id": LID, "role": "learner"})).json()
         check("teacher sees teacher_only note", any(cv.get("teacher_only_note") for cv in as_teacher["conversations"]))

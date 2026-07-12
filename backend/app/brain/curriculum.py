@@ -122,6 +122,69 @@ CONTENT_COMPONENTS: list[dict[str, Any]] = [
 _OBJ_BY_ID = {o["id"]: o for o in LEARNING_OBJECTIVES}
 _COMP_BY_ID = {c["id"]: c for c in CONTENT_COMPONENTS}
 
+# Learner-facing labels for the DEMO catalog above. These are UI translations
+# only; they do not turn the placeholder spine into an official MoE catalog.
+# The official import must replace both the objective rows and their labels.
+OBJECTIVE_TITLES: dict[str, dict[str, str]] = {
+    "math-angles": {
+        "he": "סוגי זוויות והגדרות",
+        "en": "Angle types and definitions",
+        "ar": "أنواع الزوايا وتعريفاتها",
+    },
+    "math-angles-vertical": {
+        "he": "זוויות קודקודיות",
+        "en": "Vertical angles",
+        "ar": "الزوايا المتقابلة بالرأس",
+    },
+    "math-angles-triangle": {
+        "he": "סכום זוויות במשולש",
+        "en": "Angles in a triangle",
+        "ar": "مجموع زوايا المثلث",
+    },
+    "math-fractions-intro": {
+        "he": "היכרות עם שברים",
+        "en": "Introduction to fractions",
+        "ar": "مقدمة في الكسور",
+    },
+    "math-fractions-equiv": {
+        "he": "שברים שווי ערך",
+        "en": "Equivalent fractions",
+        "ar": "الكسور المتكافئة",
+    },
+    "math-fractions-percent": {
+        "he": "משברים לאחוזים",
+        "en": "Fractions and percentages",
+        "ar": "من الكسور إلى النسب المئوية",
+    },
+    "sci-matter-states": {
+        "he": "מצבי צבירה של החומר",
+        "en": "States of matter",
+        "ar": "حالات المادة",
+    },
+    "sci-matter-changes": {
+        "he": "מעברים בין מצבי צבירה",
+        "en": "Changes of state",
+        "ar": "التحولات بين حالات المادة",
+    },
+    "sci-circuit-basic": {
+        "he": "מעגל חשמלי פשוט",
+        "en": "A simple electric circuit",
+        "ar": "دائرة كهربائية بسيطة",
+    },
+    "sci-circuit-series": {
+        "he": "מעגל חשמלי טורי",
+        "en": "Series circuits",
+        "ar": "الدائرة الكهربائية على التوالي",
+    },
+}
+
+
+def localized_objective_title(objective_id: str, locale: str = "he") -> str:
+    """Return a localized demo-catalog label without exposing an internal id."""
+    labels = OBJECTIVE_TITLES.get(objective_id) or {}
+    objective = _OBJ_BY_ID.get(objective_id) or {}
+    return labels.get(locale) or labels.get("he") or objective.get("title") or objective_id
+
 
 def objectives_for(subject: str) -> list[dict[str, Any]]:
     """Ordered objective spine for a subject (linear within a sub-topic)."""

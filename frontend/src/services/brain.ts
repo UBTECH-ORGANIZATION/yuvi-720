@@ -77,8 +77,16 @@ export interface Brain {
 /** Non-identifying Coach Context bundle — proves the PII boundary (§4.4). */
 export interface CoachBundle {
   profile: { interests: string[]; learning_style: string | null; preferences: string[] }
-  goals: { text: string; deadline?: string }[]
-  current: { objective_id: string | null; informationToBot: string | null; recent_events: unknown[] }
+  goals: { text: string; deadline?: string; status?: string }[]
+  surface: { screen: import('./agents').CoachScreenId; visible_areas: string[] }
+  current: {
+    objective_id: string | null
+    objective_title: string
+    task_status: 'resume_available' | 'no_open_task'
+    pace: string
+    informationToBot: string | null
+    recent_events: unknown[]
+  }
   locale: 'he' | 'ar' | 'en'
 }
 
@@ -88,6 +96,7 @@ export function getBrain(learnerId: string, signal?: AbortSignal) {
 
 /** F4 dashboard DTO projected from the brain (real numbers; UI verbalizes them). */
 export interface DashboardSubject {
+  key: 'math' | 'science'
   name: string
   icon: string
   iconBg: string
@@ -96,19 +105,58 @@ export interface DashboardSubject {
   levelClass: string
   gradient: string
   description: string
-  curriculum: { topic: string; status: string; statusClass: string }[]
+  curriculum: {
+    objectiveId: string
+    topic: string
+    status: string
+    statusClass: 'curr-done' | 'curr-current' | 'curr-upcoming'
+  }[]
 }
+
+export interface DashboardHero {
+  mode: 'resume' | 'next' | 'complete'
+  subjectKey: 'math' | 'science' | null
+  subjectName: string | null
+  objectiveId: string | null
+  objectiveTitle: string | null
+  componentId: string | null
+  canResume: boolean
+  reason: string
+  pace: string | null
+}
+
 export interface DashboardDTO {
+  contractVersion: 2
+  brainVersion: number
+  hasProfile: boolean
+  hasLearningEvidence: boolean
   name: string
   avatar: string
+  hero: DashboardHero
   subjects: DashboardSubject[]
   difficulties: { subject: string; text: string; status: string; statusClass: string }[]
-  goals: { text: string; meta: string; source: string; done: boolean }[]
+  goals: {
+    id?: string
+    text: string
+    meta: string
+    source: string
+    done: boolean
+    deadline?: string | null
+  }[]
   mapping: {
     interests: string[]; learningStyle: string; preferences: string[]
     environment: string; strengths: string[]
   }
-  competencies: { icon: string; label: string; value: number; descriptor: string }[]
+  competencies: {
+    key: string
+    icon: string
+    label: string
+    value: number
+    descriptor: string
+    tone: 'strong' | 'steady' | 'support'
+  }[]
+  reflectionPreview: { answer: string; promptId?: string; at?: string } | null
+  updatedAt: string | null
 }
 
 export function getDashboard(learnerId: string, lang: string, signal?: AbortSignal) {

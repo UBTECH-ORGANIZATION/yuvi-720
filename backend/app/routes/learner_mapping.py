@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from app.agents.onboarding import run_onboarding
 from app.brain.repository import apply_brain_updates
 from app.core.localization import normalize_language
+from app.services.ai_usage import UsageContext
 from learner_state import normalize_learner_id, update_learner_state
 from mock_data import DIMENSIONS, calculate_scores, generate_insights, generate_recommendations
 from questionnaire_locales import get_questionnaire_for_language
@@ -66,7 +67,20 @@ async def submit_questionnaire(data: dict):
         "identity.display_name": student_name,
     })
     try:
-        await run_onboarding(learner_id, scores, language, free_text=data.get("free_text"))
+        await run_onboarding(
+            learner_id,
+            scores,
+            language,
+            free_text=data.get("free_text"),
+            usage_context=UsageContext(
+                actor_id=learner_id,
+                actor_type="learner",
+                endpoint="/api/submit",
+                feature="feature_2_mapping",
+                operation="onboarding.interest_extraction",
+                source="learner_mapping_route",
+            ),
+        )
     except Exception as exc:  # never block the questionnaire on agent failure
         print(f"⚠️ onboarding agent failed (mapping still saved): {exc}")
 

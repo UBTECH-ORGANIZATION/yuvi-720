@@ -51,6 +51,9 @@ applyTo: "backend/**,frontend/**,learner-mapping/**,learning-agent/**,student-da
 - Use Pydantic models when endpoint request/response contracts become more than trivial dictionaries.
 - Do not send personally identifying learner details to AI. Use non-identifying learner profile traits and learning context.
 - Teacher-facing AI insights must be explainable and show raw evidence for flags.
+- Route every external AI/provider request through an approved instrumented service. Every model call requires `UsageContext`; do not invoke APIM, Azure OpenAI, Agent Framework runs, or Azure Speech directly from feature routes or agents.
+- Persist one privacy-safe usage event per provider attempt. Streaming finalizes once after completion/failure/cancellation, exact provider usage is never estimated, and unknown pricing remains null.
+- Keep prompts, responses, PII, disclosures, provider URLs/headers/secrets, and exception messages out of usage telemetry.
 
 ## Folder Structure Direction
 - `backend/server.py`: FastAPI app bootstrap only: middleware, router inclusion, static mount registration, and uvicorn entrypoint.
@@ -77,3 +80,4 @@ applyTo: "backend/**,frontend/**,learner-mapping/**,learning-agent/**,student-da
 - For JSON changes: run `python3 -m json.tool` on touched JSON files.
 - For UI/direction changes: use a browser smoke test for Hebrew RTL, English LTR, and Arabic RTL.
 - Always run `git diff --check` before finishing.
+- For AI changes, run the usage guard/tests and verify every provider call has stable endpoint, feature, operation, pseudonymous actor, and session/exchange attribution where available.

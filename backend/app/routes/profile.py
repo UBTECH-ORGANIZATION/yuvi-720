@@ -6,7 +6,9 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 from app.core.localization import normalize_language, output_language_instruction
+from app.services.ai_usage import UsageContext
 from app.services.llm import call_llm
+from learner_state import normalize_learner_id
 
 
 router = APIRouter(prefix="/api", tags=["profile"])
@@ -15,6 +17,7 @@ router = APIRouter(prefix="/api", tags=["profile"])
 @router.post("/analyze-profile")
 async def analyze_profile(data: dict):
     """Generate a personalized learner profile from mapping scores."""
+    learner_id = normalize_learner_id(data.get("learner_id"))
     student_name = data.get("student_name", "תלמיד/ה")
     scores = data.get("scores", {})
     language = normalize_language(data.get("language"))
@@ -67,6 +70,14 @@ async def analyze_profile(data: dict):
 
     result = await call_llm(
         [{"role": "user", "content": prompt}],
+        usage_context=UsageContext(
+            actor_id=learner_id,
+            actor_type="learner",
+            endpoint="/api/analyze-profile",
+            feature="feature_2_mapping",
+            operation="profile.analysis",
+            source="profile_route",
+        ),
         max_tokens=4000,
         json_mode=True,
         model_tier="strong",
@@ -168,6 +179,7 @@ def generate_fallback_profile(scores: dict, name: str, language: str = "he") -> 
 @router.post("/results-chat")
 async def results_chat(data: dict):
     """Chat with Yubi about the student's profile."""
+    learner_id = normalize_learner_id(data.get("learner_id"))
     message = data.get("message", "")
     student_name = data.get("student_name", "")
     scores = data.get("scores", {})
@@ -212,7 +224,19 @@ async def results_chat(data: dict):
         messages.append({"role": item.get("role", "user"), "content": item.get("content", "")})
     messages.append({"role": "user", "content": message})
 
-    content = await call_llm(messages, max_tokens=800, json_mode=True)
+    content = await call_llm(
+        messages,
+        usage_context=UsageContext(
+            actor_id=learner_id,
+            actor_type="learner",
+            endpoint="/api/results-chat",
+            feature="feature_2_mapping",
+            operation="profile.results_chat",
+            source="profile_route",
+        ),
+        max_tokens=800,
+        json_mode=True,
+    )
     if content:
         try:
             parsed = json.loads(content)

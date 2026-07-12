@@ -152,16 +152,18 @@ td code { padding: 0.2rem 0.38rem; border-radius: 5px; background: rgba(129, 140
 .spinner { display: inline-block; inline-size: 2rem; block-size: 2rem; border: 3px solid rgba(124, 92, 252, 0.16); border-block-start-color: var(--accent); border-radius: 50%; animation: spin 850ms linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.login-page, .centered-state { display: grid; place-items: center; min-height: 100vh; padding: 1.25rem; background: radial-gradient(circle at 75% 10%, rgba(124, 92, 252, 0.16), transparent 30%), radial-gradient(circle at 15% 90%, rgba(34, 211, 238, 0.08), transparent 28%), var(--bg); }
+.login-page, .centered-state { min-height: 100vh; padding: 1.25rem; background: radial-gradient(ellipse at 50% 0%, rgba(124, 92, 252, 0.08) 0%, transparent 60%), var(--bg); }
+.login-page { display: flex; align-items: center; justify-content: center; }
 .centered-state { align-content: center; gap: 0.8rem; color: var(--muted); }
 .login-language { position: fixed; inset-block-start: 1.25rem; inset-inline-end: 1.25rem; }
-.login-card { display: grid; justify-items: center; inline-size: min(100%, 29rem); padding: clamp(1.7rem, 5vw, 3rem); border: 1px solid var(--border-light); border-radius: var(--radius-lg); background: rgba(20, 22, 48, 0.9); box-shadow: var(--shadow-lg); text-align: center; backdrop-filter: blur(18px); }
-.login-card .eyebrow { margin-block-start: 1.3rem; }
-.login-card h1 { margin: 0; font-size: clamp(1.65rem, 4vw, 2.2rem); }
-.login-subtitle { margin: 0.75rem 0 1.5rem; color: var(--muted); line-height: 1.6; }
+.login-card { inline-size: min(100%, 27.5rem); padding: 3.25rem 3rem; border: 1px solid var(--border-light); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-lg); text-align: center; }
+.login-card h1 { margin: 0 0 0.5rem; font-size: 2rem; font-weight: 700; }
+.login-subtitle { margin: 0 0 2.25rem; color: var(--muted); font-size: 0.95rem; line-height: 1.6; }
 .notice { inline-size: 100%; padding: 0.85rem; margin-block-end: 1rem; border: 1px solid rgba(251, 191, 36, 0.2); border-radius: 9px; background: rgba(251, 191, 36, 0.07); color: #d1ae52; }
 .notice--error { border-color: rgba(251, 113, 133, 0.25); background: rgba(251, 113, 133, 0.08); color: var(--rose); }
-.login-card .button { min-inline-size: 12rem; }
+.login-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.65rem; min-inline-size: 12rem; padding: 0.875rem 2rem; border: 0; border-radius: var(--radius-sm); background: linear-gradient(135deg, var(--accent), #a855f7); color: #fff; font: 600 1rem/1.25 inherit; text-decoration: none; cursor: pointer; transition: transform 250ms var(--ease), box-shadow 250ms var(--ease); box-shadow: 0 4px 20px rgba(124, 92, 252, 0.35); }
+.login-btn:hover:not(.login-btn--disabled) { color: #fff; transform: translateY(-2px); box-shadow: 0 6px 28px rgba(124, 92, 252, 0.5); }
+.login-btn--disabled { opacity: 0.45; pointer-events: none; }
 
 @media (max-width: 1380px) { .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 1100px) {
@@ -190,6 +192,7 @@ td code { padding: 0.2rem 0.38rem; border-radius: 5px; background: rgba(129, 140
   .nav-label, .sidebar-brand span { display: none; }
   .pricing-row { grid-template-columns: 1fr repeat(3, minmax(3.5rem, 0.7fr)); }
   .pricing-source { align-items: flex-start; flex-direction: column; }
+  .login-card { padding: 2.5rem 1.5rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.001ms !important; }

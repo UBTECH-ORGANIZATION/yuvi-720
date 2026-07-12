@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from app.brain.context_engine import apply_writes
+from app.services.ai_usage import UsageContext
 from app.services.llm import call_llm
 
 
@@ -149,7 +150,11 @@ def derive_profile(scores: dict[str, Any], language: str) -> dict[str, Any]:
     }
 
 
-async def _extract_interests(free_text: str, language: str) -> list[str]:
+async def _extract_interests(
+    free_text: str,
+    language: str,
+    usage_context: UsageContext,
+) -> list[str]:
     """LLM only extracts genuine interest topics the learner stated (no invention)."""
     if not free_text or not free_text.strip():
         return []
@@ -159,7 +164,12 @@ async def _extract_interests(free_text: str, language: str) -> list[str]:
         'array of short strings in the same language. If none are stated, return []. '
         f"Text:\n{free_text}"
     )
-    result = await call_llm([{"role": "user", "content": prompt}], max_tokens=200, json_mode=False)
+    result = await call_llm(
+        [{"role": "user", "content": prompt}],
+        usage_context=usage_context,
+        max_tokens=200,
+        json_mode=False,
+    )
     if not result:
         return []
     try:
@@ -177,10 +187,19 @@ async def run_onboarding(
     scores: dict[str, Any],
     language: str = "he",
     free_text: Optional[str] = None,
+    usage_context: Optional[UsageContext] = None,
 ) -> dict[str, Any]:
     """Populate the brain `profile` from mapping scores (+ optional free text)."""
     profile = derive_profile(scores, language)
-    interests = await _extract_interests(free_text or "", language)
+    context = usage_context or UsageContext(
+        actor_id=learner_id,
+        actor_type="learner",
+        endpoint="internal:onboarding",
+        feature="feature_2_mapping",
+        operation="onboarding.interest_extraction",
+        source="onboarding_agent",
+    )
+    interests = await _extract_interests(free_text or "", language, context)
 
     updates = {
         "profile.activeness": profile["activeness"],

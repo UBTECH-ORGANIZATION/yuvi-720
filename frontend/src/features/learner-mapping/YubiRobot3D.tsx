@@ -5,6 +5,9 @@ import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import yuviFaviconUrl from '../../assets/yuvi-favicon.png'
+import { buildBlondeHair, buildEyebrowsBundle, getAsset } from '../yubi-studio/yubiAssets'
+import { useYubiDesign } from '../yubi-studio/YubiDesignProvider'
+import { normalizeDesign, type YubiDesign, type YubiSlot, type YubiVariant } from '../yubi-studio/yubiDesign'
 
 const INTRO_PEEK_DURATION = 2.55
 const INTRO_SETTLE_DURATION = 1.0
@@ -31,6 +34,21 @@ function getFaviconTexture(): THREE.Texture {
   return sharedFaviconTexture
 }
 
+function hexToRgb(hex: string): [number, number, number] {
+  const value = hex.replace('#', '')
+  const full = value.length === 3 ? value.split('').map((part) => part + part).join('') : value
+  const numeric = Number.parseInt(full, 16)
+  return [(numeric >> 16) & 255, (numeric >> 8) & 255, numeric & 255]
+}
+
+function mixWhite([red, green, blue]: number[], amount: number): [number, number, number] {
+  const lighten = (channel: number) => Math.round(channel + (255 - channel) * amount)
+  return [lighten(red), lighten(green), lighten(blue)]
+}
+
+const rgba = ([red, green, blue]: number[], alpha: number) =>
+  `rgba(${red}, ${green}, ${blue}, ${alpha})`
+
 /**
  * Yubi — a procedural Three.js chibi robot modeled on the reference companion:
  * a big light-blue glossy helmet wrapping an inset clean black screen (cyan
@@ -42,23 +60,61 @@ function getFaviconTexture(): THREE.Texture {
 export function YubiRobot3D({
   label,
   speaking = false,
+  thinking = false,
+  celebrating = false,
   pointAt = null,
   followPointer = false,
   presenting = false,
+  editable = false,
+  editTooltip = '',
+  onEdit,
 }: {
   label: string
   speaking?: boolean
+  thinking?: boolean
+  celebrating?: boolean
   pointAt?: { x: number; y: number } | null
   followPointer?: boolean
   presenting?: boolean
+  /** When true, the chest "Y" badge is a hover-pop button that opens the studio. */
+  editable?: boolean
+  editTooltip?: string
+  onEdit?: (sourceEl: HTMLElement) => void
 }) {
   const mountRef = useRef<HTMLDivElement | null>(null)
+  const { design: savedDesign } = useYubiDesign()
+  const savedDesignRef = useRef<YubiDesign>(savedDesign)
+  const applyDesignRef = useRef<((design: YubiDesign) => void) | null>(null)
+  const tooltipRef = useRef<HTMLDivElement | null>(null)
+  const canvasElRef = useRef<HTMLCanvasElement | null>(null)
+  const editableRef = useRef(false)
+  const onEditRef = useRef(onEdit)
+  useEffect(() => {
+    savedDesignRef.current = savedDesign
+    applyDesignRef.current?.(savedDesign)
+  }, [savedDesign])
+  useEffect(() => { editableRef.current = editable }, [editable])
+  useEffect(() => { onEditRef.current = onEdit }, [onEdit])
+  // The floating-robot containers (.yubi-floater / .q-ring-center) are
+  // `pointer-events: none`; opt the canvas back in when the chest Y is editable
+  // so the click can land (a child can re-enable events under a `none` parent).
+  useEffect(() => {
+    if (canvasElRef.current) canvasElRef.current.style.pointerEvents = editable ? 'auto' : ''
+  }, [editable])
   // Live speaking flag read inside the (mount-once) animation loop via a ref,
   // so prop changes drive the mouth/gesture without re-creating the scene.
   const speakingRef = useRef(false)
   useEffect(() => {
     speakingRef.current = speaking
   }, [speaking])
+  const thinkingRef = useRef(false)
+  useEffect(() => {
+    thinkingRef.current = thinking
+  }, [thinking])
+  const celebratingRef = useRef(false)
+  useEffect(() => {
+    celebratingRef.current = celebrating
+  }, [celebrating])
   // Direction (screen space, +y down) the robot should look toward — used on the
   // question screen so Yubi points at the option the slider is currently on.
   const pointRef = useRef<{ x: number; y: number } | null>(null)
@@ -96,6 +152,10 @@ export function YubiRobot3D({
     renderer.domElement.style.display = 'block'
     renderer.domElement.style.width = '100%'
     renderer.domElement.style.height = '100%'
+    // Editable robots need the canvas to receive pointer events even though the
+    // floating container is `pointer-events: none`.
+    renderer.domElement.style.pointerEvents = editableRef.current ? 'auto' : ''
+    canvasElRef.current = renderer.domElement
     container.appendChild(renderer.domElement)
 
     const scene = new THREE.Scene()
@@ -105,6 +165,8 @@ export function YubiRobot3D({
 
     const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100)
     camera.position.set(0, 0, 5.4)
+
+    const activeDesign = normalizeDesign(savedDesignRef.current)
 
     // ── Lighting: soft studio key + cool fill for glossy plastic ──
     scene.add(new THREE.HemisphereLight(0xffffff, 0xd6e0f5, 0.85))
@@ -118,9 +180,9 @@ export function YubiRobot3D({
     rim.position.set(0, 3, -6)
     scene.add(rim)
 
-    // ── Materials: glossy two-tone plastic (powder blue + white) ──
-    const blueMat = new THREE.MeshStandardMaterial({ color: 0x9cc1e8, roughness: 0.3, metalness: 0.14, envMapIntensity: 0.7 })
-    const jointMat = new THREE.MeshStandardMaterial({ color: 0x77a8d8, roughness: 0.34, metalness: 0.1, envMapIntensity: 0.65 })
+    // ── Materials: glossy two-tone plastic (graphite grey + white) ──
+    const blueMat = new THREE.MeshStandardMaterial({ color: 0x85878c, roughness: 0.3, metalness: 0.14, envMapIntensity: 0.7 })
+    const jointMat = new THREE.MeshStandardMaterial({ color: 0x5c5e62, roughness: 0.34, metalness: 0.1, envMapIntensity: 0.65 })
     const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.26, metalness: 0.08, envMapIntensity: 0.85 })
     const faceMat = new THREE.MeshBasicMaterial({ color: 0x050711 })
     const glowMat = new THREE.MeshBasicMaterial({ color: 0x4eeef0 })
@@ -175,6 +237,8 @@ export function YubiRobot3D({
         (x / screenWidth + 0.5) * canvas.width,
         (0.5 - y / screenHeight) * canvas.height,
       ]
+      const eyeShadow = () => rgba(mixWhite(hexToRgb(activeDesign.colors.eyes), 0.2), 1)
+      const smileShadow = () => rgba(mixWhite(hexToRgb(activeDesign.colors.smile), 0.25), 1)
       const drawGlowArc = (center: [number, number], radius: number, lineWidth: number, color: string, blur: number, eyeOpen = 1) => {
         const [x, y] = toCanvasPoint(center)
         const pxRadius = radius * canvas.width / screenWidth
@@ -185,7 +249,7 @@ export function YubiRobot3D({
         ctx.lineJoin = 'round'
         ctx.lineWidth = lineWidth
         ctx.strokeStyle = color
-        ctx.shadowColor = '#54f7ff'
+        ctx.shadowColor = eyeShadow()
         ctx.shadowBlur = blur
         ctx.beginPath()
         ctx.arc(0, 0, pxRadius, Math.PI * 1.08, Math.PI * 1.92)
@@ -199,7 +263,7 @@ export function YubiRobot3D({
         ctx.lineJoin = 'round'
         ctx.lineWidth = lineWidth
         ctx.strokeStyle = color
-        ctx.shadowColor = '#54f7ff'
+        ctx.shadowColor = smileShadow()
         ctx.shadowBlur = blur
         ctx.beginPath()
         points.forEach((point, index) => {
@@ -233,7 +297,7 @@ export function YubiRobot3D({
         const pxW = (w * canvas.width) / screenWidth
         const pxH = (h * canvas.height) / screenHeight
         ctx.save()
-        ctx.shadowColor = '#3fd9e0'
+        ctx.shadowColor = eyeShadow()
         ctx.shadowBlur = blur
         ctx.fillStyle = color
         ctx.fillRect(x - pxW / 2, y - pxH / 2, pxW, pxH)
@@ -257,6 +321,7 @@ export function YubiRobot3D({
         ctx.beginPath()
         ctx.ellipse(clipX, clipY, clipHalfW, clipHalfH, 0, 0, Math.PI * 2)
         ctx.clip()
+        const teeth = rgba(mixWhite(hexToRgb(activeDesign.colors.eyes), 0.1), 0.95)
         for (let r = 0; r < rows; r += 1) {
           for (let c = 0; c < cols; c += 1) {
             const x = startX + c * step
@@ -264,12 +329,16 @@ export function YubiRobot3D({
             const nx = (Math.abs(x - center[0]) + cell * 0.58) / safeHalfW
             const ny = (Math.abs(y - center[1]) + cell * 0.58) / safeHalfH
             if (nx * nx + ny * ny > 1) continue
-            fillGlowRect(x, y, cell, cell, 'rgba(78, 214, 240, 0.95)', 5)
+            fillGlowRect(x, y, cell, cell, teeth, 5)
           }
         }
         ctx.restore()
       }
       const drawMouth = (mouthOpen: number) => {
+        const smile = hexToRgb(activeDesign.colors.smile)
+        const halo = 'rgba(124, 92, 255, 0.2)'
+        const middle = rgba(smile, 0.94)
+        const core = rgba(mixWhite(smile, 0.55), 1)
         // The mouth is always built from Yubi's closed smile: the smile is the
         // lower lip; opening lifts a mirrored upper lip in the middle (corners
         // stay pinched) so it reads as the smile opening — never a stray circle.
@@ -281,9 +350,9 @@ export function YubiRobot3D({
         )
         if (lift < 0.012) {
           // Idle: the closed happy smile.
-          drawGlowPath(bottom, 26, 'rgba(124, 92, 255, 0.2)', 28)
-          drawGlowPath(bottom, 12, 'rgba(116, 247, 255, 0.94)', 12)
-          drawGlowPath(bottom, 5, 'rgba(245, 255, 255, 1)', 4)
+          drawGlowPath(bottom, 26, halo, 28)
+          drawGlowPath(bottom, 12, middle, 12)
+          drawGlowPath(bottom, 5, core, 4)
           return
         }
         // Blue-square teeth fill the opening between the two lips.
@@ -291,20 +360,21 @@ export function YubiRobot3D({
         drawMouthSquares([0, midY], corner * 0.8, lift * 0.5)
         // Lips: one closed loop = lower smile + mirrored upper arc (shared corners).
         const outline: Array<[number, number]> = [...bottom, ...[...top].reverse()]
-        drawGlowPath(outline, 20, 'rgba(124, 92, 255, 0.18)', 24)
-        drawGlowPath(outline, 10, 'rgba(116, 247, 255, 0.9)', 12)
-        drawGlowPath(outline, 4, 'rgba(245, 255, 255, 1)', 4)
+        drawGlowPath(outline, 20, halo, 24)
+        drawGlowPath(outline, 10, middle, 12)
+        drawGlowPath(outline, 4, core, 4)
       }
 
       const texture = new THREE.CanvasTexture(canvas)
       texture.colorSpace = THREE.SRGBColorSpace
       const draw = (eyeOpen = 1, mouthOpen = 0) => {
         ctx.clearRect(0, 0, canvas.width, canvas.height)
+        const eyesColor = hexToRgb(activeDesign.colors.eyes)
         const eyes: Array<[number, number]> = [[-0.165, 0.06], [0.165, 0.06]]
-        eyes.forEach((center) => drawGlowArc(center, 0.066, 36, 'rgba(42, 245, 255, 0.2)', 32, eyeOpen))
-        eyes.forEach((center) => drawGlowArc(center, 0.066, 21, 'rgba(64, 241, 255, 0.5)', 20, eyeOpen))
-        eyes.forEach((center) => drawGlowArc(center, 0.066, 11, 'rgba(100, 250, 255, 0.96)', 11, eyeOpen))
-        eyes.forEach((center) => drawGlowArc(center, 0.066, 5, 'rgba(238, 255, 255, 1)', 4, eyeOpen))
+        eyes.forEach((center) => drawGlowArc(center, 0.066, 36, rgba(eyesColor, 0.2), 32, eyeOpen))
+        eyes.forEach((center) => drawGlowArc(center, 0.066, 21, rgba(eyesColor, 0.5), 20, eyeOpen))
+        eyes.forEach((center) => drawGlowArc(center, 0.066, 11, rgba(mixWhite(eyesColor, 0.4), 0.96), 11, eyeOpen))
+        eyes.forEach((center) => drawGlowArc(center, 0.066, 5, rgba(mixWhite(eyesColor, 0.85), 1), 4, eyeOpen))
         drawMouth(mouthOpen)
         texture.needsUpdate = true
       }
@@ -397,6 +467,10 @@ export function YubiRobot3D({
     sparkBadge.position.set(0, 0.845, 0.23)
     sparkBadge.renderOrder = 6
     robot.add(sparkBadge)
+    // Invisible hit target sized to the visible "Y" so the clickable area is tight.
+    const badgeHit = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2), new THREE.MeshBasicMaterial({ visible: false }))
+    badgeHit.position.set(0, 0.845, 0.231)
+    robot.add(badgeHit)
 
     // ── Arms (rounded shoulders, blue upper arms, flared white gauntlets, mitten hands) ──
     const makeArm = (side: number) => {
@@ -518,6 +592,99 @@ export function YubiRobot3D({
     earCapR.rotation.y = Math.PI / 2
     earCapR.position.x = 0.623
     head.add(earCapR)
+    const nativeEarParts = [earL, earR, earCapL, earCapR]
+
+    // ── Persisted studio design ──
+    // These anchors mirror YubiAvatar3D so the same equipment catalog fits the
+    // animated mapping Yuvi without replacing his speaking/pointing behavior.
+    const anchors: Record<YubiSlot, THREE.Group> = {
+      headTop: new THREE.Group(),
+      face: new THREE.Group(),
+      back: new THREE.Group(),
+      handR: new THREE.Group(),
+      body: new THREE.Group(),
+    }
+    anchors.headTop.position.set(0, 0, 0)
+    head.add(anchors.headTop)
+    anchors.face.position.set(0, -0.03, 0)
+    head.add(anchors.face)
+    anchors.back.position.set(0, 0.9, -0.22)
+    robot.add(anchors.back)
+    anchors.handR.position.set(0.058, -0.56, 0.12)
+    armR.add(anchors.handR)
+    anchors.body.position.set(0, 0.82, 0.04)
+    robot.add(anchors.body)
+
+    const variantGroup = new THREE.Group()
+    head.add(variantGroup)
+    const equippedObjects: Partial<Record<YubiSlot, THREE.Group>> = {}
+    const disposeGroup = (object: THREE.Object3D) => {
+      object.traverse((child) => {
+        const mesh = child as THREE.Mesh
+        mesh.geometry?.dispose()
+        const material = mesh.material as THREE.Material | THREE.Material[] | undefined
+        if (Array.isArray(material)) material.forEach((entry) => entry.dispose())
+        else material?.dispose()
+      })
+    }
+    const equip = (slot: YubiSlot, id: string | null) => {
+      const anchor = anchors[slot]
+      const previous = equippedObjects[slot]
+      if (previous) {
+        anchor.remove(previous)
+        disposeGroup(previous)
+        delete equippedObjects[slot]
+      }
+      activeDesign.equipped[slot] = id
+      if (slot === 'headTop') {
+        antenna.visible = !id
+        nativeEarParts.forEach((part) => { part.visible = id !== 'headphones' })
+      }
+      if (!id) return
+      const asset = getAsset(id)
+      if (!asset) return
+      const object = asset.build()
+      anchor.add(object)
+      equippedObjects[slot] = object
+    }
+    const setVariant = (variant: YubiVariant) => {
+      activeDesign.variant = variant
+      while (variantGroup.children.length) {
+        const child = variantGroup.children[0]
+        variantGroup.remove(child)
+        disposeGroup(child)
+      }
+      if (variant === 'girl') {
+        variantGroup.add(buildBlondeHair())
+        variantGroup.add(buildEyebrowsBundle())
+      }
+    }
+    const setColors = (colors: YubiDesign['colors']) => {
+      activeDesign.colors = { ...colors }
+      const bodyColor = new THREE.Color(colors.body)
+      blueMat.color.copy(bodyColor)
+      jointMat.color.copy(bodyColor.clone().multiplyScalar(0.82))
+      const glowColor = new THREE.Color(colors.glow)
+      ringMat.color.copy(glowColor)
+      ringMat.emissive.copy(glowColor)
+      earCapMat.color.copy(glowColor)
+      earCapMat.emissive.copy(glowColor)
+      antennaTipMat.color.copy(glowColor)
+      antennaTipMat.emissive.copy(glowColor)
+      antennaLight.color.copy(glowColor)
+      faceGlow.color.copy(glowColor)
+      faceLight.draw()
+    }
+    const applyDesign = (next: YubiDesign) => {
+      const normalized = normalizeDesign(next)
+      setColors(normalized.colors)
+      setVariant(normalized.variant)
+      ;(Object.keys(anchors) as YubiSlot[]).forEach((slot) => {
+        equip(slot, normalized.equipped[slot] ?? null)
+      })
+    }
+    applyDesignRef.current = applyDesign
+    applyDesign(activeDesign)
 
     // Center the full body vertically in the frame.
     robot.position.y = -1.45
@@ -537,6 +704,27 @@ export function YubiRobot3D({
     const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resize) : null
     resizeObserver?.observe(container)
     window.addEventListener('resize', resize)
+
+    // ── Interactive chest "Y": hover pops the badge + tooltip, click opens studio ──
+    const raycaster = new THREE.Raycaster()
+    const ndc = new THREE.Vector2()
+    let hoveredBadge = false
+    let badgeScale = 1
+    const badgeWorld = new THREE.Vector3()
+    const onBadgeMove = (event: PointerEvent) => {
+      if (!editableRef.current) { hoveredBadge = false; return }
+      const rect = renderer.domElement.getBoundingClientRect()
+      ndc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+      ndc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+      raycaster.setFromCamera(ndc, camera)
+      hoveredBadge = raycaster.intersectObject(badgeHit, false).length > 0
+      renderer.domElement.style.cursor = hoveredBadge ? 'pointer' : 'default'
+    }
+    const onBadgeLeave = () => { hoveredBadge = false; renderer.domElement.style.cursor = 'default' }
+    const onBadgeClick = () => { if (editableRef.current && hoveredBadge) onEditRef.current?.(container) }
+    renderer.domElement.addEventListener('pointermove', onBadgeMove)
+    renderer.domElement.addEventListener('pointerleave', onBadgeLeave)
+    renderer.domElement.addEventListener('click', onBadgeClick)
 
     // ── Animation loop ──
     const clock = new THREE.Clock()
@@ -586,6 +774,8 @@ export function YubiRobot3D({
       const isPostWalkHold = isPresentingScene && t >= INTRO_ENTRANCE_DURATION && t < turnStart
       const isTurningToFront = isPresentingScene && t >= turnStart && t < turnEnd
       const isSpeaking = speakingRef.current
+      const isThinking = thinkingRef.current
+      const isCelebrating = celebratingRef.current
       const atEdge = isWaving || isSettling
       const leanActive = isWaving || isSettling || isRetreating
       const gait = Math.sin(t * 8.2)
@@ -598,7 +788,8 @@ export function YubiRobot3D({
           : isRetreating ? peekX + (startX - peekX) * retreatEase
           : startX + (endX - startX) * walkEase)
         : 0
-      robot.position.y = -1.2 + (atEdge ? Math.sin(t * 3.2) * 0.012 : 0)
+      const celebrationBounce = isCelebrating && !reduceMotion ? Math.abs(Math.sin(t * 6.4)) * 0.14 : 0
+      robot.position.y = -1.2 + (atEdge ? Math.sin(t * 3.2) * 0.012 : 0) + celebrationBounce
       robot.position.z = 0
       robot.scale.set(1, 1, 1)
 
@@ -614,7 +805,10 @@ export function YubiRobot3D({
       } else if (shouldFollowPointer) {
         targetY = pointer.x * 0.46 + Math.sin(t * 0.4) * 0.025
         targetX = pointer.y * 0.24 + Math.sin(t * 0.7) * 0.012
-      } else if (isSpeaking) {
+      } else if (isThinking) {
+        targetY = -0.22
+        targetX = -0.2
+      } else if (isSpeaking || isCelebrating) {
         targetY = 0
         targetX = 0
       } else {
@@ -634,8 +828,8 @@ export function YubiRobot3D({
       head.rotation.y = effectiveLookX - (atEdge ? 0.12 : 0)
       head.rotation.x = lookY - (atEdge ? 0.02 : 0)
       head.rotation.z = -(leanActive ? peekLean * 0.6 + (atEdge ? Math.sin(t * 3.2) * 0.01 : 0) : 0)
-      robot.rotation.y = bodyLookX + walkTurn + peekYaw
-      robot.rotation.z = peekLean
+      robot.rotation.y = bodyLookX + walkTurn + peekYaw + (isCelebrating && !reduceMotion ? Math.sin(t * 3.2) * 0.12 : 0)
+      robot.rotation.z = peekLean + (isThinking ? -0.055 : 0) + (isCelebrating && !reduceMotion ? Math.sin(t * 6.4) * 0.045 : 0)
 
       // Peek: screen-right arm raised and ABDUCTED out (↗) so the wave clears
       // his big head; screen-left (edge) arm hangs holding the frame. All arm
@@ -659,10 +853,14 @@ export function YubiRobot3D({
       }
       applyLowerStep(legPartsL, gait)
       applyLowerStep(legPartsR, -gait)
-      const armLTX = isWaving ? 0.12 : 0.08 - (isWalking ? gait * 0.18 : 0)
-      const armLTZ = isWaving ? -0.16 : (isWalking ? 0.03 : 0)
-      const armRTX = isWaving ? -0.1 : 0.08 + (isWalking ? gait * 0.18 : 0)
-      const armRTZ = isWaving ? 2.3 : 0.095 - (isWalking ? 0.02 : 0)
+      const celebrateWave = isCelebrating && !reduceMotion ? Math.sin(t * 9.2) * 0.16 : 0
+      // Thinking is conveyed by Yubi's gaze, head tilt, antenna, and surrounding
+      // particles. Keep both arms in their neutral pose so entering a reflection
+      // never produces the distracting hand-to-the-side movement.
+      const armLTX = isCelebrating ? -0.18 : isWaving ? 0.12 : 0.08 - (isWalking ? gait * 0.18 : 0)
+      const armLTZ = isCelebrating ? -2.12 - celebrateWave : isWaving ? -0.16 : (isWalking ? 0.03 : 0)
+      const armRTX = isCelebrating ? -0.18 : isWaving ? -0.1 : 0.08 + (isWalking ? gait * 0.18 : 0)
+      const armRTZ = isCelebrating ? 2.12 + celebrateWave : isWaving ? 2.3 : 0.095 - (isWalking ? 0.02 : 0)
       const armLerp = 0.14
       armLX += (armLTX - armLX) * armLerp
       armLZ += (armLTZ - armLZ) * armLerp
@@ -675,15 +873,35 @@ export function YubiRobot3D({
 
       earCapMat.emissiveIntensity = 0.4 + Math.sin(t * 2.0) * 0.16
       sparkBadge.rotation.z = 0
-      sparkBadgeMat.opacity = 0.95
+      // Chest "Y" hover pop + tooltip when the badge is editable.
+      if (editableRef.current) {
+        badgeScale += ((hoveredBadge ? 1.32 : 1) - badgeScale) * 0.2
+        sparkBadge.scale.setScalar(badgeScale)
+        sparkBadgeMat.opacity = hoveredBadge ? 1 : 0.95
+        const tip = tooltipRef.current
+        if (tip) {
+          if (hoveredBadge && editTooltip) {
+            sparkBadge.updateWorldMatrix(true, false)
+            sparkBadge.getWorldPosition(badgeWorld); badgeWorld.project(camera)
+            const rect = renderer.domElement.getBoundingClientRect()
+            tip.style.display = 'block'
+            tip.style.left = `${(badgeWorld.x * 0.5 + 0.5) * rect.width}px`
+            tip.style.top = `${(-badgeWorld.y * 0.5 + 0.5) * rect.height}px`
+          } else {
+            tip.style.display = 'none'
+          }
+        }
+      } else {
+        sparkBadgeMat.opacity = 0.95
+      }
       const blinkPhase = (t + 0.35) % 4.8
       const eyeOpen = blinkPhase > 4.62 ? 0.06 : blinkPhase > 4.54 ? 0.32 : blinkPhase > 4.46 ? 0.68 : 1
       faceLight.draw(eyeOpen, mouth)
       faceLightMat.opacity = 0.9 + Math.sin(t * 1.8) * 0.05
-      faceGlow.intensity = 0.24 + Math.sin(t * 1.8) * 0.05 + speakAmt * 0.08
-      antenna.rotation.z = Math.sin(t * 1.4) * 0.06
-      antennaTipMat.emissiveIntensity = 1.8 + Math.sin(t * 2.2) * 0.4
-      antennaLight.intensity = 0.28 + Math.sin(t * 2.2) * 0.06
+      faceGlow.intensity = 0.24 + Math.sin(t * 1.8) * 0.05 + speakAmt * 0.08 + (isCelebrating ? 0.16 : 0)
+      antenna.rotation.z = Math.sin(t * (isThinking ? 2.8 : 1.4)) * (isThinking ? 0.1 : 0.06)
+      antennaTipMat.emissiveIntensity = 1.8 + Math.sin(t * (isThinking ? 4.2 : 2.2)) * 0.4 + (isCelebrating ? 0.7 : 0)
+      antennaLight.intensity = 0.28 + Math.sin(t * 2.2) * 0.06 + (isCelebrating ? 0.14 : 0)
 
       renderer.render(scene, camera)
     }
@@ -693,6 +911,9 @@ export function YubiRobot3D({
       cancelAnimationFrame(frame)
       window.removeEventListener('pointermove', onPointerMove)
       window.removeEventListener('resize', resize)
+      renderer.domElement.removeEventListener('pointermove', onBadgeMove)
+      renderer.domElement.removeEventListener('pointerleave', onBadgeLeave)
+      renderer.domElement.removeEventListener('click', onBadgeClick)
       resizeObserver?.disconnect()
       renderer.dispose()
       scene.traverse((obj) => {
@@ -706,8 +927,17 @@ export function YubiRobot3D({
       // sparkBadgeTexture is the shared module-cached favicon — do not dispose it
       // here or other live Yubi instances would lose their chest mark.
       if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement)
+      canvasElRef.current = null
+      applyDesignRef.current = null
     }
   }, [])
 
-  return <div className="robot-3d-canvas" role="img" aria-label={label} ref={mountRef} />
+  return (
+    <div className="robot-3d-canvas" style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div role="img" aria-label={label} ref={mountRef} style={{ width: '100%', height: '100%' }} />
+      {editable && (
+        <div ref={tooltipRef} className="yubi-y-tooltip" style={{ display: 'none' }}>{editTooltip}</div>
+      )}
+    </div>
+  )
 }

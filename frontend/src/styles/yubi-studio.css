@@ -1,0 +1,179 @@
+/* Yubi Studio — game-style character customization. RTL-first, logical props. */
+.yubi-studio {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: radial-gradient(1200px 700px at 80% -10%, #f3e9ff 0%, #e7e0ff 45%, #ddd6fb 100%);
+  box-sizing: border-box;
+  color: var(--sp-ink-900, #241f3d);
+}
+/* Grid body sits below the shared navbar. */
+.ys-body {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: var(--sp-4, 16px);
+  flex: 1;
+  min-height: 0;
+  padding: var(--sp-4, 16px);
+}
+
+/* ── Left drawer ── */
+.ys-drawer {
+  background: var(--sp-surface, #fff);
+  border-radius: var(--sp-radius-xl, 22px);
+  box-shadow: 0 18px 44px rgba(70, 50, 160, 0.16);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+.ys-drawer__head { padding: 18px 20px 10px; border-bottom: 1px solid var(--sp-border, #e8e2f7); }
+.ys-drawer__head h1 { margin: 0; font-size: 20px; }
+.ys-drawer__head p { margin: 4px 0 0; font-size: 12.5px; color: var(--sp-ink-400, #6b6880); }
+
+.ys-tabs { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 16px 0; }
+.ys-tab {
+  border: none; cursor: pointer;
+  background: var(--sp-surface-2, #f3f0ff); color: var(--sp-ink-400, #6b6880);
+  padding: 8px 12px; border-radius: var(--sp-radius-pill, 999px);
+  font: inherit; font-size: 13px; font-weight: 600;
+  transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.ys-tab.is-active { background: var(--sp-primary-600, #6f5bff); color: #fff; box-shadow: 0 6px 14px rgba(124, 92, 255, .35); }
+
+.ys-panels { padding: 14px 16px 18px; overflow-y: auto; min-height: 0; flex: 1; }
+
+.ys-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+.ys-card {
+  position: relative;
+  background: var(--sp-surface-2, #f7f5ff);
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 10px 6px 8px;
+  text-align: center;
+  cursor: pointer;
+  font: inherit;
+  display: flex; flex-direction: column; align-items: center;
+  transition: transform .12s ease, border-color .12s ease, background .12s ease;
+}
+.ys-card:hover:not(:disabled) { transform: translateY(-2px); background: #f0ecff; }
+.ys-card.is-equipped { border-color: var(--sp-primary-600, #6f5bff); background: #efe9ff; }
+.ys-card.is-locked { cursor: not-allowed; opacity: .72; }
+.ys-card__thumb { height: 54px; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; }
+.ys-card__thumb img { width: 54px; height: 54px; object-fit: contain; filter: drop-shadow(0 4px 7px rgba(80, 60, 160, .2)); }
+.ys-card__none { width: 40px; height: 40px; border-radius: 50%; border: 2px dashed #cfc7ea; position: relative; }
+.ys-card__none::after { content: ''; position: absolute; inset-block: 50%; inset-inline: 4px; height: 2px; background: #cfc7ea; transform: rotate(-45deg); }
+.ys-card__label { font-size: 12px; font-weight: 600; color: var(--sp-ink-900, #241f3d); }
+.ys-card.is-locked .ys-card__label { color: var(--sp-ink-400, #6b6880); }
+.ys-card__lock { position: absolute; inset-inline-end: 6px; inset-block-start: 6px; font-size: 13px; }
+.ys-card__tip {
+  position: absolute; inset-block-end: calc(100% + 6px); inset-inline-start: 50%;
+  transform: translateX(50%) translateY(4px);
+  background: #2a2350; color: #fff; font-size: 11.5px; font-weight: 500;
+  padding: 6px 9px; border-radius: 8px; width: max-content; max-width: 180px;
+  opacity: 0; pointer-events: none; transition: opacity .14s ease, transform .14s ease;
+  z-index: 5; box-shadow: 0 8px 18px rgba(0, 0, 0, .25);
+}
+.ys-card.is-locked:hover .ys-card__tip { opacity: 1; transform: translateX(50%) translateY(0); }
+
+.ys-variant-row { display: flex; gap: 10px; margin-bottom: 16px; }
+.ys-variant {
+  flex: 1; border: 2px solid var(--sp-border, #ece7ff); background: var(--sp-surface-2, #f7f5ff);
+  border-radius: 14px; padding: 12px; cursor: pointer; font: inherit; font-weight: 700; font-size: 14px;
+  color: var(--sp-ink-900, #241f3d);
+}
+.ys-variant.is-active { border-color: var(--sp-primary-600, #6f5bff); background: #efe9ff; }
+
+.ys-swatch-group { margin-bottom: 14px; }
+.ys-swatch-group h3 { margin: 0 0 8px; font-size: 13px; color: var(--sp-ink-400, #6b6880); font-weight: 700; }
+.ys-swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+.ys-swatch {
+  width: 34px; height: 34px; border-radius: 10px; cursor: pointer; padding: 0;
+  border: 3px solid #fff; box-shadow: 0 0 0 1px #e4dcff, 0 4px 10px rgba(80, 60, 160, .15);
+  transition: transform .1s ease, box-shadow .1s ease;
+}
+.ys-swatch:hover { transform: scale(1.08); }
+.ys-swatch.is-active { box-shadow: 0 0 0 3px var(--sp-primary-600, #6f5bff); }
+
+/* ── Right stage ── */
+.ys-stage {
+  position: relative;
+  background: linear-gradient(160deg, #efeaff 0%, #e3dcff 100%);
+  border-radius: var(--sp-radius-xl, 22px);
+  box-shadow: 0 18px 44px rgba(70, 50, 160, 0.16);
+  overflow: hidden;
+}
+.ys-stage__canvas { position: absolute; inset: 0; }
+.yubi-avatar-canvas { width: 100%; height: 100%; }
+.ys-hint {
+  position: absolute; inset-block-start: 16px; inset-inline-start: 16px;
+  background: rgba(255, 255, 255, .82); backdrop-filter: blur(6px);
+  padding: 8px 14px; border-radius: var(--sp-radius-pill, 999px); font-size: 13px; font-weight: 600;
+  color: var(--sp-primary-700, #5a45f0); box-shadow: 0 6px 16px rgba(90, 60, 180, .14);
+}
+.ys-toolbar {
+  position: absolute; inset-block-end: 16px; inset-inline: auto;
+  left: 50%; transform: translateX(-50%);
+  display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
+  width: fit-content; max-width: calc(100% - 32px);
+  padding: 8px; border-radius: var(--sp-radius-pill, 999px);
+  background: rgba(255, 255, 255, 0.55); backdrop-filter: blur(8px);
+  box-shadow: 0 8px 22px rgba(90, 60, 180, 0.14);
+}
+.ys-btn {
+  border: none; cursor: pointer; font: inherit; font-weight: 700; font-size: 14px;
+  padding: 12px 22px; border-radius: var(--sp-radius-pill, 999px);
+  box-shadow: 0 10px 22px rgba(90, 60, 180, .22);
+  transition: transform .1s ease;
+}
+.ys-btn:active { transform: translateY(1px); }
+.ys-btn--primary { background: var(--sp-primary-600, #6f5bff); color: #fff; }
+.ys-btn--ghost { background: #fff; color: var(--sp-primary-700, #5a45f0); }
+.ys-btn--mute { background: #fff; color: var(--sp-ink-400, #6b6880); }
+
+/* Chest-Y tooltip styling lives in global.css (loaded app-wide). */
+
+/* ── Animated studio overlay + shared-element Yuvi flight ── */
+.studio-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 380ms ease;
+}
+.studio-overlay.is-visible { opacity: 1; }
+.studio-overlay .yubi-studio { height: 100%; }
+
+/* The stage robot stays mounted (warming up) but invisible while the flight
+   Yuvi animates onto its spot, so the hand-off has no blank flash. */
+.ys-stage__canvas.is-flight-hidden { visibility: hidden; }
+
+/* Shared-element FLIP: the studio stage grows from the source robot's spot on
+   open and shrinks back on close, driven by CSS keyframes (robust vs. imperative
+   transitions). --ys-from / --ys-to carry the measured source transform. */
+.ys-stage__canvas.ys-flying {
+  animation: ys-fly-in 700ms cubic-bezier(.2, .86, .18, 1) both;
+  transform-origin: center center;
+  will-change: transform;
+  z-index: 3;
+}
+@keyframes ys-fly-in {
+  from { transform: var(--ys-from, none); }
+  to { transform: none; }
+}
+.ys-stage__canvas.ys-flying-out {
+  animation: ys-fly-out 540ms cubic-bezier(.4, 0, .2, 1) both;
+  transform-origin: center center;
+  will-change: transform;
+  z-index: 3;
+}
+@keyframes ys-fly-out {
+  from { transform: none; }
+  to { transform: var(--ys-to, none); }
+}
+
+@media (max-width: 860px) {
+  .ys-body { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+  .ys-stage { min-height: 300px; }
+}

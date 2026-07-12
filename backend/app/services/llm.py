@@ -1,12 +1,21 @@
 """LLM gateway service for learner-facing AI features."""
 
-from pathlib import Path
-from typing import AsyncGenerator, Literal
+import asyncio
 import json
 import os
 import re
+from pathlib import Path
+from typing import AsyncGenerator, Literal
 
 import httpx
+
+from app.services.ai_usage import (
+    UsageContext,
+    UsageTimer,
+    provider_request_id,
+    record_usage,
+    token_usage_from_payload,
+)
 
 
 APP_ROOT = Path(__file__).resolve().parents[3]
@@ -57,14 +66,31 @@ def _resolve_llm_config(model_tier: LlmModelTier = "mini") -> tuple[str, str, st
 
 async def call_llm(
     messages: list,
+    *,
+    usage_context: UsageContext,
     max_tokens: int = 1200,
     json_mode: bool = False,
     model_tier: LlmModelTier = "mini",
 ):
     """Call the shared Azure OpenAI model through the APIM gateway."""
+    timer = UsageTimer.start()
     endpoint, key, deployment, api_version = _resolve_llm_config(model_tier)
+    gateway = "apim" if os.environ.get("APIM_BASE_URL") else "foundry"
     if not endpoint or not key:
         print("⚠️ No LLM endpoint configured (APIM/Foundry)")
+        await record_usage(
+            context=usage_context,
+            timer=timer,
+            provider="azure_openai",
+            gateway=gateway,
+            deployment=deployment,
+            api_version=api_version,
+            streaming=False,
+            meter="tokens",
+            status="unavailable",
+            usage_status="unavailable",
+            model_tier=model_tier,
+        )
         return None
 
     url = f"{endpoint}/deployments/{deployment}/chat/completions?api-version={api_version}"
@@ -78,31 +104,72 @@ async def call_llm(
     if json_mode:
         body["response_format"] = {"type": "json_object"}
 
+    response = None
+    error = None
+    status = "failed"
+    usage = None
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.post(url, json=body, headers=headers)
             if response.status_code == 200:
                 data = response.json()
+                usage = token_usage_from_payload(data.get("usage"))
+                status = "completed"
                 content = (data.get("choices") or [{}])[0].get("message", {}).get("content")
                 if content and content.strip():
                     return content.strip()
-                print(f"⚠️ LLM returned empty content: {str(data)[:300]}")
+                print("⚠️ LLM returned empty content")
                 return None
-            print(f"⚠️ LLM HTTP {response.status_code}: {response.text[:300]}")
+            print(f"⚠️ LLM HTTP {response.status_code}")
             return None
     except Exception as exc:
-        print(f"⚠️ LLM request failed: {exc}")
+        error = exc
+        print(f"⚠️ LLM request failed: {type(exc).__name__}")
         return None
+    finally:
+        await record_usage(
+            context=usage_context,
+            timer=timer,
+            provider="azure_openai",
+            gateway=gateway,
+            deployment=deployment,
+            api_version=api_version,
+            streaming=False,
+            meter="tokens",
+            status=status,
+            usage_status="exact" if usage is not None else "unavailable",
+            usage=usage,
+            provider_request=provider_request_id(response.headers) if response is not None else None,
+            error=error,
+            model_tier=model_tier,
+        )
 
 
 async def call_llm_stream(
     messages: list,
+    *,
+    usage_context: UsageContext,
     max_tokens: int = 4000,
     model_tier: LlmModelTier = "mini",
 ) -> AsyncGenerator[str, None]:
     """Stream tokens from the Azure OpenAI model."""
+    timer = UsageTimer.start()
     endpoint, key, deployment, api_version = _resolve_llm_config(model_tier)
+    gateway = "apim" if os.environ.get("APIM_BASE_URL") else "foundry"
     if not endpoint or not key:
+        await record_usage(
+            context=usage_context,
+            timer=timer,
+            provider="azure_openai",
+            gateway=gateway,
+            deployment=deployment,
+            api_version=api_version,
+            streaming=True,
+            meter="tokens",
+            status="unavailable",
+            usage_status="unavailable",
+            model_tier=model_tier,
+        )
         return
 
     url = f"{endpoint}/deployments/{deployment}/chat/completions?api-version={api_version}"
@@ -116,12 +183,19 @@ async def call_llm_stream(
         "messages": messages,
         token_key: max_tokens,
         "stream": True,
+        "stream_options": {"include_usage": True},
     }
 
+    status = "cancelled"
+    usage = None
+    provider_request = None
+    error = None
     try:
         async with httpx.AsyncClient(timeout=60) as client:
             async with client.stream("POST", url, json=body, headers=headers) as response:
+                provider_request = provider_request_id(response.headers)
                 if response.status_code != 200:
+                    status = "failed"
                     print(f"⚠️ LLM stream HTTP {response.status_code}")
                     return
                 async for line in response.aiter_lines():
@@ -129,14 +203,47 @@ async def call_llm_stream(
                         continue
                     data_str = line[6:]
                     if data_str == "[DONE]":
+                        status = "completed"
                         break
                     try:
                         chunk = json.loads(data_str)
+                        chunk_usage = token_usage_from_payload(chunk.get("usage"))
+                        if chunk_usage is not None:
+                            usage = chunk_usage
                         delta = (chunk.get("choices") or [{}])[0].get("delta", {})
                         content = delta.get("content")
                         if content:
                             yield content
                     except (json.JSONDecodeError, IndexError, KeyError):
                         continue
+                else:
+                    status = "completed"
+    except asyncio.CancelledError as exc:
+        error = exc
+        status = "cancelled"
+        raise
     except Exception as exc:
-        print(f"⚠️ LLM stream error: {exc}")
+        error = exc
+        status = "failed"
+        print(f"⚠️ LLM stream error: {type(exc).__name__}")
+    finally:
+        write = asyncio.create_task(record_usage(
+            context=usage_context,
+            timer=timer,
+            provider="azure_openai",
+            gateway=gateway,
+            deployment=deployment,
+            api_version=api_version,
+            streaming=True,
+            meter="tokens",
+            status=status,
+            usage_status="exact" if usage is not None else "unavailable",
+            usage=usage,
+            provider_request=provider_request,
+            error=error,
+            model_tier=model_tier,
+        ))
+        try:
+            await asyncio.shield(write)
+        except asyncio.CancelledError:
+            pass

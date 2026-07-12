@@ -1,6 +1,8 @@
 // @ts-nocheck
 /* eslint-disable */
 
+import { CURRENT_LEARNER_ID } from '../../services/xapi'
+
 export function initLomdaCreator() {
     // ============================================================
     //  Create-a-Lomda demo  — kid builds a curriculum game by describing it
@@ -137,7 +139,12 @@ export function initLomdaCreator() {
             const resp = await fetch('/api/create-lomda-stream', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text, topic: currentTopic, student_name: STUDENT_NAME }),
+                body: JSON.stringify({
+                  learner_id: CURRENT_LEARNER_ID,
+                  message: text,
+                  topic: currentTopic,
+                  student_name: STUDENT_NAME,
+                }),
             });
             if (!resp.ok || !resp.body) throw new Error('bad response');
 

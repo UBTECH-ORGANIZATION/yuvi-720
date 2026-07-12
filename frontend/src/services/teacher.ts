@@ -3,7 +3,8 @@
 
 import { apiGet, apiPost } from './api'
 
-export interface AttentionFlag { reason: string; evidence: string }
+export interface AttentionFlag { reason: string; evidence: string; kind?: string }
+export interface WellbeingFlag { evidence: string; at?: string; source?: string }
 export interface StudentInsight {
   learner_id: string
   display_name: string | null
@@ -12,6 +13,7 @@ export interface StudentInsight {
   struggle_items: { label?: string; objective_id?: string; evidence?: string[] | null }[]
   strengths: string[]
   attention: AttentionFlag | null
+  wellbeing_flags: WellbeingFlag[]
   recommendations: string[]
   timeline: { verb?: string; objective_id?: string; success?: boolean | null; at?: string }[]
   reflections_recent: unknown[]

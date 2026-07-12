@@ -45,6 +45,64 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Learner routes become a physical-left IDE shell while Yuvi is open. */
+.sp-learner-shell {
+  display: flex;
+  flex-direction: row;
+  min-inline-size: 0;
+  min-block-size: 100dvh;
+  direction: ltr;
+}
+
+.sp-learner-shell__content {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  inline-size: 100%;
+}
+
+/* These migrated learning workspaces use viewport-fixed chrome. Shift its
+   physical left edge too, so it reflows with the dock instead of hiding below it. */
+.sp-learner-shell.is-companion-open .sp-learner-shell__content .top-bar,
+.sp-learner-shell.is-companion-open .sp-learner-shell__content .builder {
+  left: var(--sp-companion-width);
+}
+
+.sp-learner-shell.is-companion-opening .sp-learner-shell__content .top-bar,
+.sp-learner-shell.is-companion-opening .sp-learner-shell__content .builder {
+  animation: sp-companion-fixed-chrome-drag 1450ms linear both;
+}
+
+.sp-learner-shell.is-companion-closing .sp-learner-shell__content .top-bar,
+.sp-learner-shell.is-companion-closing .sp-learner-shell__content .builder {
+  animation: sp-companion-fixed-chrome-return 1450ms linear both;
+}
+
+@keyframes sp-companion-fixed-chrome-drag {
+  0%, 44% { left: 0; }
+  72%, 100% { left: var(--sp-companion-width); }
+}
+
+@keyframes sp-companion-fixed-chrome-return {
+  0%, 8% { left: var(--sp-companion-width); }
+  70%, 100% { left: 0; }
+}
+
+body.is-resizing-companion,
+body.is-resizing-companion * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+@media (max-width: 767px) {
+  .sp-learner-shell { display: block; }
+  .sp-learner-shell.is-companion-open .sp-learner-shell__content .top-bar,
+  .sp-learner-shell.is-companion-open .sp-learner-shell__content .builder,
+  .sp-learner-shell.is-companion-opening .sp-learner-shell__content .top-bar,
+  .sp-learner-shell.is-companion-opening .sp-learner-shell__content .builder,
+  .sp-learner-shell.is-companion-closing .sp-learner-shell__content .top-bar,
+  .sp-learner-shell.is-companion-closing .sp-learner-shell__content .builder { left: 0; animation: none; }
+}
+
 .yuvi-language-switcher-floating {
   position: fixed;
   inset-block-end: 20px;
@@ -64,4 +122,27 @@ button:disabled {
   .yuvi-language-switcher-floating span {
     display: none;
   }
+}
+
+/* Chest-Y "edit" tooltip rendered inside any Yuvi avatar canvas wrapper.
+  Anchored to the Y badge (JS sets left/top). */
+.yubi-y-tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 13px));
+  background: linear-gradient(135deg, #6f5bff 0%, #9f7afe 55%, #4cc9f0 135%);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  padding: 8px 14px;
+  border-radius: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 20;
+  box-shadow: 0 12px 26px rgba(90, 60, 180, 0.42), inset 0 0 0 1.5px rgba(255, 255, 255, 0.28);
+  animation: yubi-tip-pop .2s cubic-bezier(.2, .9, .3, 1.4) both;
+}
+@keyframes yubi-tip-pop {
+  from { opacity: 0; transform: translate(-50%, calc(-100% - 5px)) scale(.86); }
+  to { opacity: 1; transform: translate(-50%, calc(-100% - 13px)) scale(1); }
 }
