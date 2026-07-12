@@ -2373,8 +2373,7 @@
   opacity: 1;
 }
 
-.landing720-yubi-pilot__robot,
-.landing720-yubi-mobile {
+.landing720-yubi-pilot__robot {
   position: absolute;
   inset: 0;
 }
@@ -2389,8 +2388,7 @@
   transform: translateY(-7px) scale(1.06);
 }
 
-.landing720-yubi-pilot__robot .yubi-avatar-canvas,
-.landing720-yubi-mobile .yubi-avatar-canvas {
+.landing720-yubi-pilot__robot .yubi-avatar-canvas {
   position: relative;
   z-index: 2;
   filter: saturate(1.06) contrast(1.02);
@@ -2481,9 +2479,7 @@
 }
 
 .landing720-yubi-pilot[data-flying='true'] .landing720-yubi-smoke b,
-.landing720-yubi-pilot[data-flying='true'] .landing720-yubi-thrusters i,
-.landing720-yubi-mobile .landing720-yubi-smoke b,
-.landing720-yubi-mobile .landing720-yubi-thrusters i {
+.landing720-yubi-pilot[data-flying='true'] .landing720-yubi-thrusters i {
   animation-play-state: running;
 }
 
@@ -2613,36 +2609,6 @@
     inline-size: 270px;
     block-size: 335px;
   }
-
-  .landing720-yubi-mobile {
-    inline-size: 225px;
-    block-size: 280px;
-    inset: auto;
-    inset-block-start: 8px;
-    inset-inline-start: 50%;
-    transform: translateX(-50%);
-    filter: drop-shadow(0 24px 24px rgba(44, 31, 125, .28));
-    animation: landing-yubi-mobile-arrival 1.4s var(--sp-ease) both, landing-yubi-mobile-hover 4s 1.4s ease-in-out infinite;
-  }
-
-  [dir='rtl'] .landing720-yubi-mobile {
-    transform: translateX(50%);
-    animation-name: landing-yubi-mobile-arrival-rtl, landing-yubi-mobile-hover;
-  }
-
-  .landing720-yubi-mobile .landing720-yubi-thrusters {
-    opacity: 1;
-    animation: landing-yubi-mobile-thrusters 1.4s ease both;
-  }
-
-  .landing720-yubi-mobile .landing720-yubi-smoke {
-    opacity: 1;
-    animation: landing-yubi-mobile-smoke 1.4s ease both;
-  }
-
-  [dir='rtl'] .landing720-yubi-mobile .landing720-yubi-thrusters {
-    animation-name: landing-yubi-mobile-thrusters-rtl;
-  }
 }
 
 @media (max-width: 599px) {
@@ -2651,31 +2617,6 @@
     inset-block-start: 132px;
     block-size: 520px;
     z-index: 4;
-  }
-
-  .landing720-yubi-mobile {
-    inline-size: 205px;
-    block-size: 260px;
-    inset: auto;
-    inset-block-start: 8px;
-    inset-inline-start: 50%;
-    transform: translateX(-50%);
-    filter: drop-shadow(0 24px 24px rgba(44, 31, 125, .28));
-    animation: landing-yubi-mobile-arrival 1.4s var(--sp-ease) both, landing-yubi-mobile-hover 4s 1.4s ease-in-out infinite;
-  }
-
-  [dir='rtl'] .landing720-yubi-mobile {
-    transform: translateX(50%);
-    animation-name: landing-yubi-mobile-arrival-rtl, landing-yubi-mobile-hover;
-  }
-
-  .landing720-yubi-mobile .landing720-yubi-thrusters {
-    opacity: 1;
-    animation: landing-yubi-mobile-thrusters 1.4s ease both;
-  }
-
-  [dir='rtl'] .landing720-yubi-mobile .landing720-yubi-thrusters {
-    animation-name: landing-yubi-mobile-thrusters-rtl;
   }
 
   .landing720-hero {
@@ -2701,20 +2642,6 @@
   }
 }
 
-@keyframes landing-yubi-mobile-arrival {
-  from { opacity: 0; transform: translateX(-50%) translateY(210px) rotate(-11deg) scale(.45); }
-  72% { opacity: 1; transform: translateX(-50%) translateY(-12px) rotate(3deg) scale(1.04); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0) rotate(0) scale(1); }
-}
-@keyframes landing-yubi-mobile-arrival-rtl {
-  from { opacity: 0; transform: translateX(50%) translateY(210px) rotate(11deg) scale(.45); }
-  72% { opacity: 1; transform: translateX(50%) translateY(-12px) rotate(-3deg) scale(1.04); }
-  to { opacity: 1; transform: translateX(50%) translateY(0) rotate(0) scale(1); }
-}
-@keyframes landing-yubi-mobile-hover { 0%, 100% { translate: 0 0; } 50% { translate: 0 -9px; } }
-@keyframes landing-yubi-mobile-thrusters { 0%, 82% { opacity: 1; transform: translateX(-50%) scaleY(1); } to { opacity: 0; transform: translateX(-50%) scaleY(.2); } }
-@keyframes landing-yubi-mobile-thrusters-rtl { 0%, 82% { opacity: 1; transform: translateX(50%) scaleY(1); } to { opacity: 0; transform: translateX(50%) scaleY(.2); } }
-@keyframes landing-yubi-mobile-smoke { 0%, 75% { opacity: 1; } to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
   .landing720-flight-glow,
   .landing720-flight-node,
@@ -2727,15 +2654,13 @@
   .landing720-station-stars circle,
   .landing720-station-arch--inner,
   .landing720-station-beam,
-  .landing720-yubi-mobile,
   .landing720-yubi-thrusters i,
   .landing720-yubi-smoke b,
   .landing720-yubi-speed {
     animation: none !important;
   }
 
-  .landing720-yubi-pilot[data-flying='true'] .landing720-yubi-thrusters,
-  .landing720-yubi-mobile .landing720-yubi-thrusters {
+  .landing720-yubi-pilot[data-flying='true'] .landing720-yubi-thrusters {
     display: none;
   }
 
