@@ -15,6 +15,16 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
+# Manim's Cairo/Pango renderer and still/video export dependencies.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+	build-essential \
+	ffmpeg \
+	fonts-noto-core \
+	libcairo2-dev \
+	libpango1.0-dev \
+	pkg-config \
+	&& rm -rf /var/lib/apt/lists/*
+
 # Install Python deps first for better layer caching.
 COPY backend/requirements.txt ./backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt

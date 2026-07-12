@@ -91,15 +91,30 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Enable temporary public admin access
+      - name: Verify administrator authentication settings
+        run: |
+          for setting in ADMIN_SECRET_KEY ADMIN_EMAILS GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET; do
+            value="$(az webapp config appsettings list \
+              --resource-group rg-yuvi-720 \
+              --name "${{ env.WEBAPP_NAME }}" \
+              --query "[?name=='${setting}'].value | [0]" \
+              --output tsv)"
+            if [ -z "${value}" ]; then
+              echo "Missing required App Service setting: ${setting}"
+              exit 1
+            fi
+          done
+
+      - name: Enforce Google administrator authentication
         run: |
           az webapp config appsettings set \
             --resource-group rg-yuvi-720 \
             --name "${{ env.WEBAPP_NAME }}" \
             --settings \
               ADMIN_ENV=production \
-              ADMIN_PUBLIC_ACCESS=true \
+              ADMIN_PUBLIC_ACCESS=false \
               ADMIN_BASE_URL=https://admin.spark.yuvilab.ai \
+              ADMIN_COOKIE_SECURE=true \
               WEBSITES_PORT=8000 \
             --output none
 

@@ -5,7 +5,9 @@ import json
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
+from app.services.ai_usage import UsageContext
 from app.services.llm import call_llm_stream
+from learner_state import normalize_learner_id
 
 
 router = APIRouter(prefix="/api", tags=["learning-content"])
@@ -30,6 +32,7 @@ CURRICULUM_TOPICS = {
 @router.post("/create-lomda-stream")
 async def create_lomda_stream(data: dict):
     """Stream a complete self-contained HTML learning mini-game."""
+    learner_id = normalize_learner_id(data.get("learner_id"))
     message = (data.get("message") or "").strip()
     topic_id = (data.get("topic") or "electronics").strip()
     topic = CURRICULUM_TOPICS.get(topic_id, CURRICULUM_TOPICS["electronics"])
@@ -60,7 +63,19 @@ async def create_lomda_stream(data: dict):
     async def event_generator():
         has_content = False
         try:
-            async for chunk in call_llm_stream(messages, max_tokens=6000, model_tier="strong"):
+            async for chunk in call_llm_stream(
+                messages,
+                usage_context=UsageContext(
+                    actor_id=learner_id,
+                    actor_type="learner",
+                    endpoint="/api/create-lomda-stream",
+                    feature="feature_1_personalized_content",
+                    operation="learning_content.generate",
+                    source="learning_content_route",
+                ),
+                max_tokens=6000,
+                model_tier="strong",
+            ):
                 has_content = True
                 yield f"data: {json.dumps({'code': chunk}, ensure_ascii=False)}\n\n"
         except Exception as exc:

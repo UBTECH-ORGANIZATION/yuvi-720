@@ -46,6 +46,8 @@ async def select_next(learner_id: str, locale: str = "he") -> dict[str, Any]:
     if component:
         updates["current_state.unit_id"] = component["id"].rsplit("-", 1)[0]
         updates["current_state.component_id"] = component["id"]
+        updates["current_state.item_id"] = None
+        updates["current_state.resume_token"] = None
     await apply_writes("pedagogical", learner_id, updates)
 
     return {
@@ -69,5 +71,9 @@ async def route_after_fail(learner_id: str, locale: str = "he") -> Optional[dict
     alt = content_catalog.recommended_after_fail(component_id, locale)
     if not alt:
         return None
-    await apply_writes("pedagogical", learner_id, {"current_state.component_id": alt["id"]})
+    await apply_writes("pedagogical", learner_id, {
+        "current_state.component_id": alt["id"],
+        "current_state.item_id": None,
+        "current_state.resume_token": None,
+    })
     return alt

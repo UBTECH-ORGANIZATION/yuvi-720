@@ -22,6 +22,7 @@ LOW_SUCCESS_STREAK = 3
 REASON = {
     "inactivity": {"he": "אין פעילות", "ar": "لا يوجد نشاط", "en": "No activity"},
     "low_success": {"he": "כישלונות רצופים", "ar": "إخفاقات متتالية", "en": "Consecutive failures"},
+    "wellbeing": {"he": "שיתף/ה מצוקה — דורש תשומת לב", "ar": "شارك ضائقة — يتطلب انتباهًا", "en": "Shared distress — needs attention"},
 }
 REC = {
     "reach_out": {"he": "צור/צרי קשר והצע/י משימה קצרה לחזרה", "ar": "تواصل واقترح مهمة قصيرة", "en": "Reach out and offer a short re-entry task"},
@@ -77,15 +78,26 @@ async def student_insights(learner_id: str, language: str = "he") -> dict[str, A
     ]
 
     # Attention flag — always with raw evidence (F6 explainability).
+    # Wellbeing (a learner-shared distress signal) OUTRANKS academic flags: a
+    # student's safety takes priority over inactivity/low-success.
     attention = None
-    if days_inactive is not None and days_inactive >= INACTIVITY_DAYS:
+    open_wellbeing = [f for f in (brain.get("wellbeing_flags") or [])
+                      if isinstance(f, dict) and not f.get("resolved")]
+    if open_wellbeing:
+        latest = open_wellbeing[-1]
+        attention = {"reason": _t(REASON, "wellbeing", language),
+                     "evidence": latest.get("evidence") or "",
+                     "kind": "wellbeing"}
+    elif days_inactive is not None and days_inactive >= INACTIVITY_DAYS:
         attention = {"reason": _t(REASON, "inactivity", language),
                      "evidence": f"{days_inactive} ימים ללא פעילות" if language == "he"
-                                 else f"{days_inactive} days without activity"}
+                                 else f"{days_inactive} days without activity",
+                     "kind": "inactivity"}
     elif fail_streak >= LOW_SUCCESS_STREAK:
         attention = {"reason": _t(REASON, "low_success", language),
                      "evidence": f"{fail_streak} כישלונות רצופים" if language == "he"
-                                 else f"{fail_streak} consecutive failures"}
+                                 else f"{fail_streak} consecutive failures",
+                     "kind": "low_success"}
 
     # 2–5 actionable recommendations (deterministic).
     recommendations: list[str] = []
@@ -105,6 +117,10 @@ async def student_insights(learner_id: str, language: str = "he") -> dict[str, A
         "struggle_items": struggle_items,
         "strengths": [s.get("label") for s in (brain.get("strengths") or []) if isinstance(s, dict)],
         "attention": attention,
+        "wellbeing_flags": [
+            {"evidence": f.get("evidence"), "at": f.get("at"), "source": f.get("source")}
+            for f in open_wellbeing
+        ],
         "recommendations": recommendations,
         "timeline": [
             {"verb": e.get("verb"), "objective_id": e.get("objective_id"),

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { Stepper } from './Stepper'
 import { useI18n } from '../i18n/I18nProvider'
@@ -6,9 +7,10 @@ interface AppBarProps {
   studentName: string
   studentSubtitle: string
   activeStep?: number
+  center?: ReactNode
 }
 
-export function AppBar({ studentName, studentSubtitle, activeStep }: AppBarProps) {
+export function AppBar({ studentName, studentSubtitle, activeStep, center }: AppBarProps) {
   const { t } = useI18n()
   const initials = studentName
     .split(' ')
@@ -29,6 +31,9 @@ export function AppBar({ studentName, studentSubtitle, activeStep }: AppBarProps
         <div className="app-bar-steps">
           <Stepper activeStep={activeStep} />
         </div>
+      )}
+      {typeof activeStep !== 'number' && center && (
+        <div className="app-bar-steps">{center}</div>
       )}
       <div className="app-bar-user">
         <div className="user-meta">

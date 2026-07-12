@@ -3,6 +3,9 @@ name: Build, Deploy Dev & Promote to Production (spark / yuvi-720)
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "admin/**"
+      - ".github/workflows/deploy-admin.yml"
   workflow_dispatch:
     inputs:
       promote:

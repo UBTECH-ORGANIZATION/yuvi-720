@@ -1,9 +1,16 @@
 .venv/
+.venv*/
+venv/
 backend/.env
+admin/.env
 .env
 .runtime/
 __pycache__/
 *.py[cod]
 frontend/node_modules/
 frontend/*.tsbuildinfo
+static/react/
+admin/frontend/node_modules/
+admin/frontend/dist/
 .DS_Store
+artifacts/

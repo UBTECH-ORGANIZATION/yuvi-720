@@ -116,6 +116,7 @@ async def _wipe(lids: list[str]) -> None:
     plans = [
         ("learners", "_id"), ("learner_state", "_id"),
         ("learning_events", "learner_id"), ("agent_sessions", "learner_id"),
+        ("agent_conversations", "learner_id"), ("agent_messages", "learner_id"),
         ("reflections", "learner_id"), ("mentoring_conversations", "learner_id"),
         ("feedback_reports", "learner_id"),
     ]

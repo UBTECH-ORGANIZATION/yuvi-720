@@ -1,28 +1,62 @@
-"""Agent session store — the Coach's WORKING memory (§4.5, §5.4).
+"""Coach working memory plus durable, paginated conversation history.
 
-Keyed by `{learner_id, session_id, role}` in the `agent_sessions` collection.
-Holds the last N turns verbatim so the Coach can resume a chat where the learner
-left off — no `localStorage`, all in Mongo (JSON fallback for the local demo).
-Rolling-summary + entity-ledger compression is layered in P4; P3 keeps the
-verbatim recent window.
+``agent_sessions`` remains the bounded prompt window required by §4.5. The
+learner-visible transcript is append-only in ``agent_messages`` and indexed by
+``agent_conversations`` so opening the panel never loads every past message.
+All keys use the pseudonymous learner id; no browser storage or identity data is
+involved. A JSON fallback keeps the local demo usable without Mongo/Cosmos.
 """
 
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from base64 import urlsafe_b64decode, urlsafe_b64encode
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import re
 from typing import Any, Optional
+from uuid import uuid4
 
 from app.brain.repository import _get_collection_named
 from learner_state import normalize_learner_id  # type: ignore
 
 MAX_TURNS = 20                      # verbatim window cap (R2 — brain stays compact)
 _FALLBACK = Path(__file__).resolve().parents[2] / ".runtime" / "agent_sessions.json"
+_HISTORY_FALLBACK = Path(__file__).resolve().parents[2] / ".runtime" / "agent_chat_history.json"
+_SESSION_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")
+_indexes_ready = False
+
+
+def normalize_session_id(value: object) -> str:
+    """Return a safe opaque thread id; legacy callers continue on ``default``."""
+    candidate = str(value or "default").strip()
+    return candidate if _SESSION_ID.fullmatch(candidate) else "default"
 
 
 def _key(learner_id: str, role: str, session_id: str = "default") -> str:
-    return f"{normalize_learner_id(learner_id)}:{session_id}:{role}"
+    return f"{normalize_learner_id(learner_id)}:{normalize_session_id(session_id)}:{role}"
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _encode_cursor(timestamp: str, document_id: str) -> str:
+    payload = json.dumps([timestamp, document_id], separators=(",", ":")).encode("utf-8")
+    return urlsafe_b64encode(payload).decode("ascii").rstrip("=")
+
+
+def _decode_cursor(cursor: Optional[str]) -> Optional[tuple[str, str]]:
+    if not cursor:
+        return None
+    try:
+        padded = cursor + "=" * (-len(cursor) % 4)
+        value = json.loads(urlsafe_b64decode(padded).decode("utf-8"))
+        if isinstance(value, list) and len(value) == 2 and all(isinstance(item, str) for item in value):
+            return value[0], value[1]
+    except (ValueError, TypeError, json.JSONDecodeError):
+        pass
+    return None
 
 
 def _read_fallback() -> dict[str, Any]:
@@ -40,9 +74,170 @@ def _write_fallback(data: dict[str, Any]) -> None:
         print(f"⚠️ agent_sessions fallback write failed: {exc}")
 
 
-async def get_recent(learner_id: str, role: str, limit: int = 8) -> list[dict[str, str]]:
+def _read_history_fallback() -> dict[str, dict[str, Any]]:
+    try:
+        if _HISTORY_FALLBACK.exists():
+            data = json.loads(_HISTORY_FALLBACK.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return {
+                    "conversations": data.get("conversations", {}),
+                    "messages": data.get("messages", {}),
+                }
+    except (OSError, json.JSONDecodeError):
+        pass
+    return {"conversations": {}, "messages": {}}
+
+
+def _write_history_fallback(data: dict[str, dict[str, Any]]) -> None:
+    try:
+        _HISTORY_FALLBACK.parent.mkdir(parents=True, exist_ok=True)
+        _HISTORY_FALLBACK.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    except OSError as exc:
+        print(f"⚠️ agent history fallback write failed: {exc}")
+
+
+async def _ensure_indexes() -> None:
+    global _indexes_ready
+    if _indexes_ready:
+        return
+    _indexes_ready = True
+    conversations = _get_collection_named("agent_conversations")
+    messages = _get_collection_named("agent_messages")
+    if conversations is None or messages is None:
+        return
+    try:
+        await conversations.create_index(
+            [("learner_id", 1), ("role", 1), ("updated_at", -1)],
+            name="learner_role_updated",
+        )
+        await messages.create_index(
+            [("learner_id", 1), ("conversation_id", 1), ("at", -1)],
+            name="learner_conversation_at",
+        )
+    except Exception as exc:  # Cosmos may manage indexes outside the Mongo API.
+        print(f"⚠️ agent history index setup skipped: {exc}")
+
+
+def _conversation_payload(document: dict[str, Any]) -> dict[str, Any]:
+    title_source = document.get("title_source") or "pending"
+    return {
+        "id": document.get("session_id") or "default",
+        "title": (document.get("title") or "") if title_source in {"model", "fallback"} else "",
+        "preview": document.get("preview") or "",
+        "message_count": int(document.get("message_count") or 0),
+        "created_at": document.get("created_at") or document.get("updated_at") or _now(),
+        "updated_at": document.get("updated_at") or document.get("created_at") or _now(),
+    }
+
+
+def _message_payload(document: dict[str, Any]) -> dict[str, Any]:
+    payload = {
+        "id": str(document.get("_id") or ""),
+        "role": document.get("message_role") or "assistant",
+        "text": document.get("content") or "",
+        "text_after": document.get("text_after") or "",
+        "at": document.get("at") or _now(),
+    }
+    if isinstance(document.get("visual"), dict):
+        payload["visual"] = document["visual"]
+    return payload
+
+
+async def _migrate_legacy_default(learner_id: str, role: str) -> None:
+    """Expose the existing capped ``default`` transcript in the new history UI."""
+    safe_id = normalize_learner_id(learner_id)
+    session_id = "default"
+    key = _key(safe_id, role, session_id)
+    conversations = _get_collection_named("agent_conversations")
+    messages = _get_collection_named("agent_messages")
+    legacy = _get_collection_named("agent_sessions")
+    if conversations is not None and messages is not None and legacy is not None:
+        try:
+            if await conversations.find_one({"_id": key}, {"_id": 1}):
+                return
+            legacy_document = await legacy.find_one({"_id": key})
+            turns = (legacy_document or {}).get("turns", [])
+            if not turns:
+                return
+            for index, turn in enumerate(turns):
+                await messages.update_one(
+                    {"_id": f"{key}:legacy:{index:04d}"},
+                    {"$setOnInsert": {
+                        "learner_id": safe_id,
+                        "conversation_id": session_id,
+                        "agent_role": role,
+                        "message_role": turn.get("role") if turn.get("role") in {"user", "assistant"} else "assistant",
+                        "content": turn.get("content") or "",
+                        "text_after": "",
+                        "at": turn.get("at") or legacy_document.get("updated_at") or _now(),
+                    }},
+                    upsert=True,
+                )
+            updated_at = legacy_document.get("updated_at") or turns[-1].get("at") or _now()
+            await conversations.update_one(
+                {"_id": key},
+                {"$setOnInsert": {
+                    "learner_id": safe_id,
+                    "session_id": session_id,
+                    "role": role,
+                    "title": "",
+                    "title_source": "pending",
+                    "preview": turns[-1].get("content") or "",
+                    "message_count": len(turns),
+                    "created_at": turns[0].get("at") or updated_at,
+                    "updated_at": updated_at,
+                }},
+                upsert=True,
+            )
+            return
+        except Exception as exc:
+            print(f"⚠️ legacy agent history migration failed, using fallback: {exc}")
+
+    history = _read_history_fallback()
+    if key in history["conversations"]:
+        return
+    legacy_document = _read_fallback().get(key, {})
+    turns = legacy_document.get("turns", [])
+    if not turns:
+        return
+    for index, turn in enumerate(turns):
+        message_id = f"{key}:legacy:{index:04d}"
+        history["messages"][message_id] = {
+            "_id": message_id,
+            "learner_id": safe_id,
+            "conversation_id": session_id,
+            "agent_role": role,
+            "message_role": turn.get("role") if turn.get("role") in {"user", "assistant"} else "assistant",
+            "content": turn.get("content") or "",
+            "text_after": "",
+            "at": turn.get("at") or legacy_document.get("updated_at") or _now(),
+        }
+    updated_at = legacy_document.get("updated_at") or turns[-1].get("at") or _now()
+    history["conversations"][key] = {
+        "_id": key,
+        "learner_id": safe_id,
+        "session_id": session_id,
+        "role": role,
+        "title": "",
+        "title_source": "pending",
+        "preview": turns[-1].get("content") or "",
+        "message_count": len(turns),
+        "created_at": turns[0].get("at") or updated_at,
+        "updated_at": updated_at,
+    }
+    _write_history_fallback(history)
+
+
+async def get_recent(
+    learner_id: str,
+    role: str,
+    limit: int = 8,
+    session_id: str = "default",
+) -> list[dict[str, str]]:
     """Return the last `limit` turns as [{role, content}] (oldest→newest)."""
-    key = _key(learner_id, role)
+    key = _key(learner_id, role, session_id)
     collection = _get_collection_named("agent_sessions")
     if collection is not None:
         try:
@@ -54,30 +249,481 @@ async def get_recent(learner_id: str, role: str, limit: int = 8) -> list[dict[st
     return (_read_fallback().get(key, {}).get("turns", []))[-limit:]
 
 
-async def append_turn(learner_id: str, role: str, user: str, assistant: str) -> None:
-    """Append a user+assistant exchange, capped to the recent window."""
-    key = _key(learner_id, role)
-    now = datetime.now(timezone.utc).isoformat()
+async def create_conversation(learner_id: str, role: str = "coach") -> dict[str, Any]:
+    """Return the existing empty thread, or create one durable empty thread."""
+    await _ensure_indexes()
+    safe_id = normalize_learner_id(learner_id)
+    collection = _get_collection_named("agent_conversations")
+    use_fallback = collection is None
+    if collection is not None:
+        try:
+            existing = await collection.find_one(
+                {
+                    "learner_id": safe_id,
+                    "role": role,
+                    "message_count": {"$lte": 0},
+                    "is_deleted": {"$ne": True},
+                },
+                sort=[("updated_at", -1), ("_id", -1)],
+            )
+            if existing:
+                return _conversation_payload(existing)
+        except Exception as exc:
+            print(f"⚠️ empty conversation lookup failed, using fallback: {exc}")
+            use_fallback = True
+
+    history = _read_history_fallback()
+    empty_fallbacks = (
+        [
+            document for document in history["conversations"].values()
+            if document.get("learner_id") == safe_id
+            and document.get("role") == role
+            and int(document.get("message_count") or 0) == 0
+            and document.get("is_deleted") is not True
+        ]
+        if use_fallback else []
+    )
+    if empty_fallbacks:
+        empty_fallbacks.sort(
+            key=lambda item: (item.get("updated_at", ""), item.get("_id", "")),
+            reverse=True,
+        )
+        return _conversation_payload(empty_fallbacks[0])
+
+    session_id = f"chat-{uuid4().hex}"
+    now = _now()
+    document = {
+        "_id": _key(safe_id, role, session_id),
+        "learner_id": safe_id,
+        "session_id": session_id,
+        "role": role,
+        "title": "",
+        "title_source": "pending",
+        "preview": "",
+        "message_count": 0,
+        "is_deleted": False,
+        "created_at": now,
+        "updated_at": now,
+    }
+    if collection is not None:
+        try:
+            await collection.insert_one(document)
+            return _conversation_payload(document)
+        except Exception as exc:
+            print(f"⚠️ conversation create failed, using fallback: {exc}")
+    history["conversations"][document["_id"]] = document
+    _write_history_fallback(history)
+    return _conversation_payload(document)
+
+
+async def list_conversations(
+    learner_id: str,
+    role: str = "coach",
+    limit: int = 12,
+    cursor: Optional[str] = None,
+) -> dict[str, Any]:
+    """Return newest threads first using an opaque stable cursor."""
+    await _ensure_indexes()
+    safe_id = normalize_learner_id(learner_id)
+    await _migrate_legacy_default(safe_id, role)
+    decoded = _decode_cursor(cursor)
+    collection = _get_collection_named("agent_conversations")
+    documents: list[dict[str, Any]]
+    use_fallback = collection is None
+    if collection is not None:
+        try:
+            query: dict[str, Any] = {
+                "learner_id": safe_id,
+                "role": role,
+                "is_deleted": {"$ne": True},
+            }
+            if decoded:
+                timestamp, document_id = decoded
+                query["$or"] = [
+                    {"updated_at": {"$lt": timestamp}},
+                    {"updated_at": timestamp, "_id": {"$lt": document_id}},
+                ]
+            documents = await collection.find(query).sort(
+                [("updated_at", -1), ("_id", -1)]
+            ).limit(limit + 1).to_list(length=limit + 1)
+        except Exception as exc:
+            print(f"⚠️ conversation list failed, using fallback: {exc}")
+            documents = []
+            use_fallback = True
+    else:
+        documents = []
+    if use_fallback:
+        history = _read_history_fallback()
+        documents = [
+            document for document in history["conversations"].values()
+            if document.get("learner_id") == safe_id
+            and document.get("role") == role
+            and document.get("is_deleted") is not True
+        ]
+        documents.sort(key=lambda item: (item.get("updated_at", ""), item.get("_id", "")), reverse=True)
+        if decoded:
+            documents = [
+                item for item in documents
+                if (item.get("updated_at", ""), item.get("_id", "")) < decoded
+            ]
+        documents = documents[: limit + 1]
+    has_more = len(documents) > limit
+    selected = documents[:limit]
+    next_cursor = (
+        _encode_cursor(selected[-1].get("updated_at", ""), selected[-1].get("_id", ""))
+        if has_more and selected else None
+    )
+    return {
+        "conversations": [_conversation_payload(document) for document in selected],
+        "next_cursor": next_cursor,
+        "has_more": has_more,
+    }
+
+
+async def conversation_needs_title(
+    learner_id: str,
+    session_id: str,
+    role: str = "coach",
+) -> bool:
+    """Return whether a thread still needs its first model-authored title."""
+    safe_id = normalize_learner_id(learner_id)
+    safe_session = normalize_session_id(session_id)
+    key = _key(safe_id, role, safe_session)
+    collection = _get_collection_named("agent_conversations")
+    if collection is not None:
+        try:
+            document = await collection.find_one(
+                {"_id": key, "is_deleted": {"$ne": True}},
+                {"title": 1, "title_source": 1},
+            )
+            if not document:
+                return True
+            return (document.get("title_source") or "pending") not in {"model", "fallback"}
+        except Exception as exc:
+            print(f"⚠️ conversation title read failed, using fallback: {exc}")
+    document = _read_history_fallback()["conversations"].get(key)
+    if not document or document.get("is_deleted") is True:
+        return document is None
+    return (document.get("title_source") or "pending") not in {"model", "fallback"}
+
+
+async def get_first_user_message(
+    learner_id: str,
+    session_id: str,
+    role: str = "coach",
+) -> Optional[str]:
+    """Return the oldest archived learner message for title generation."""
+    safe_id = normalize_learner_id(learner_id)
+    safe_session = normalize_session_id(session_id)
+    collection = _get_collection_named("agent_messages")
+    if collection is not None:
+        try:
+            documents = await collection.find({
+                "learner_id": safe_id,
+                "conversation_id": safe_session,
+                "agent_role": role,
+                "message_role": "user",
+            }).sort([("at", 1), ("_id", 1)]).limit(1).to_list(length=1)
+            if documents:
+                return str(documents[0].get("content") or "").strip() or None
+            return None
+        except Exception as exc:
+            print(f"⚠️ first conversation message read failed, using fallback: {exc}")
+    history = _read_history_fallback()
+    documents = [
+        document for document in history["messages"].values()
+        if document.get("learner_id") == safe_id
+        and document.get("conversation_id") == safe_session
+        and document.get("agent_role") == role
+        and document.get("message_role") == "user"
+    ]
+    documents.sort(key=lambda item: (item.get("at", ""), item.get("_id", "")))
+    if not documents:
+        return None
+    return str(documents[0].get("content") or "").strip() or None
+
+
+async def soft_delete_conversation(
+    learner_id: str,
+    session_id: str,
+    role: str = "coach",
+) -> bool:
+    """Hide a learner-owned thread without deleting its transcript or memory."""
+    safe_id = normalize_learner_id(learner_id)
+    safe_session = normalize_session_id(session_id)
+    key = _key(safe_id, role, safe_session)
+    deleted_at = _now()
+    collection = _get_collection_named("agent_conversations")
+    if collection is not None:
+        try:
+            result = await collection.update_one(
+                {
+                    "_id": key,
+                    "learner_id": safe_id,
+                    "role": role,
+                    "is_deleted": {"$ne": True},
+                },
+                {"$set": {"is_deleted": True, "deleted_at": deleted_at}},
+            )
+            return bool(result.matched_count)
+        except Exception as exc:
+            print(f"⚠️ conversation soft-delete failed, using fallback: {exc}")
+    history = _read_history_fallback()
+    document = history["conversations"].get(key)
+    if not document or document.get("learner_id") != safe_id or document.get("role") != role:
+        return False
+    document.update({"is_deleted": True, "deleted_at": deleted_at})
+    _write_history_fallback(history)
+    return True
+
+
+async def list_messages(
+    learner_id: str,
+    session_id: str,
+    role: str = "coach",
+    limit: int = 20,
+    cursor: Optional[str] = None,
+) -> dict[str, Any]:
+    """Return one older page in chronological order for scroll-up prepending."""
+    await _ensure_indexes()
+    safe_id = normalize_learner_id(learner_id)
+    safe_session = normalize_session_id(session_id)
+    await _migrate_legacy_default(safe_id, role)
+    decoded = _decode_cursor(cursor)
+    collection = _get_collection_named("agent_messages")
+    documents: list[dict[str, Any]]
+    use_fallback = collection is None
+    if collection is not None:
+        try:
+            query: dict[str, Any] = {
+                "learner_id": safe_id,
+                "conversation_id": safe_session,
+                "agent_role": role,
+            }
+            if decoded:
+                timestamp, document_id = decoded
+                query["$or"] = [
+                    {"at": {"$lt": timestamp}},
+                    {"at": timestamp, "_id": {"$lt": document_id}},
+                ]
+            documents = await collection.find(query).sort(
+                [("at", -1), ("_id", -1)]
+            ).limit(limit + 1).to_list(length=limit + 1)
+        except Exception as exc:
+            print(f"⚠️ message history failed, using fallback: {exc}")
+            documents = []
+            use_fallback = True
+    else:
+        documents = []
+    if use_fallback:
+        history = _read_history_fallback()
+        documents = [
+            document for document in history["messages"].values()
+            if document.get("learner_id") == safe_id
+            and document.get("conversation_id") == safe_session
+            and document.get("agent_role") == role
+        ]
+        documents.sort(key=lambda item: (item.get("at", ""), item.get("_id", "")), reverse=True)
+        if decoded:
+            documents = [
+                item for item in documents
+                if (item.get("at", ""), item.get("_id", "")) < decoded
+            ]
+        documents = documents[: limit + 1]
+    has_more = len(documents) > limit
+    selected_desc = documents[:limit]
+    next_cursor = (
+        _encode_cursor(selected_desc[-1].get("at", ""), selected_desc[-1].get("_id", ""))
+        if has_more and selected_desc else None
+    )
+    return {
+        "messages": [_message_payload(document) for document in reversed(selected_desc)],
+        "next_cursor": next_cursor,
+        "has_more": has_more,
+    }
+
+
+async def append_turn(
+    learner_id: str,
+    role: str,
+    user: str,
+    assistant: str,
+    session_id: str = "default",
+    exchange_id: Optional[str] = None,
+    include_user_in_history: bool = True,
+    conversation_title: Optional[str] = None,
+    title_source: Optional[str] = None,
+) -> None:
+    """Append an exchange to bounded prompt memory and durable transcript."""
+    await _ensure_indexes()
+    safe_id = normalize_learner_id(learner_id)
+    safe_session = normalize_session_id(session_id)
+    key = _key(safe_id, role, safe_session)
+    now_value = datetime.now(timezone.utc)
+    now = now_value.isoformat()
+    assistant_at = (now_value + timedelta(microseconds=1)).isoformat()
+    safe_exchange = normalize_session_id(exchange_id or uuid4().hex)
     new_turns = [
         {"role": "user", "content": user, "at": now},
-        {"role": "assistant", "content": assistant, "at": now},
+        {"role": "assistant", "content": assistant, "at": assistant_at},
     ]
     collection = _get_collection_named("agent_sessions")
+    working_memory_stored = False
     if collection is not None:
         try:
             doc = await collection.find_one({"_id": key})
             turns = ((doc or {}).get("turns", []) + new_turns)[-MAX_TURNS:]
             await collection.update_one(
                 {"_id": key},
-                {"$set": {"turns": turns, "learner_id": normalize_learner_id(learner_id),
-                          "role": role, "updated_at": now}},
+                {"$set": {"turns": turns, "learner_id": safe_id,
+                          "session_id": safe_session, "role": role, "updated_at": assistant_at}},
+                upsert=True,
+            )
+            working_memory_stored = True
+        except Exception as exc:
+            print(f"⚠️ agent_sessions write failed, using fallback: {exc}")
+    if not working_memory_stored:
+        data = _read_fallback()
+        entry = data.get(key, {"turns": []})
+        entry["turns"] = (entry.get("turns", []) + new_turns)[-MAX_TURNS:]
+        entry.update({"learner_id": safe_id, "session_id": safe_session, "role": role, "updated_at": assistant_at})
+        data[key] = entry
+        _write_fallback(data)
+
+    message_documents = []
+    if include_user_in_history:
+        message_documents.append({
+            "_id": f"{safe_exchange}:0",
+            "learner_id": safe_id,
+            "conversation_id": safe_session,
+            "agent_role": role,
+            "message_role": "user",
+            "content": user,
+            "text_after": "",
+            "at": now,
+        })
+    message_documents.append({
+        "_id": f"{safe_exchange}:1",
+        "learner_id": safe_id,
+        "conversation_id": safe_session,
+        "agent_role": role,
+        "message_role": "assistant",
+        "content": assistant,
+        "text_after": "",
+        "at": assistant_at,
+    })
+    title = " ".join((conversation_title or "").split())[:72]
+    resolved_title_source = title_source if title and title_source in {"model", "fallback"} else "pending"
+    conversation_document = {
+        "_id": key,
+        "learner_id": safe_id,
+        "session_id": safe_session,
+        "role": role,
+        "title": title,
+        "title_source": resolved_title_source,
+        "preview": assistant or user,
+        "message_count": len(message_documents),
+        "created_at": now,
+        "updated_at": assistant_at,
+    }
+    messages = _get_collection_named("agent_messages")
+    conversations = _get_collection_named("agent_conversations")
+    if messages is not None and conversations is not None:
+        try:
+            inserted = 0
+            for document in message_documents:
+                result = await messages.update_one(
+                    {"_id": document["_id"]}, {"$setOnInsert": document}, upsert=True
+                )
+                if result.upserted_id is not None:
+                    inserted += 1
+            existing = await conversations.find_one(
+                {"_id": key}, {"title": 1, "title_source": 1}
+            )
+            existing_source = (existing or {}).get("title_source") or "pending"
+            replace_title = bool(title) and existing_source not in {"model", "fallback"}
+            await conversations.update_one(
+                {"_id": key},
+                {
+                    "$set": {
+                        "learner_id": safe_id,
+                        "session_id": safe_session,
+                        "role": role,
+                        "title": title if replace_title else (existing or {}).get("title") or "",
+                        "title_source": resolved_title_source if replace_title else existing_source,
+                        "preview": assistant or user,
+                        "updated_at": assistant_at,
+                    },
+                    "$setOnInsert": {"created_at": now},
+                    "$inc": {"message_count": inserted},
+                },
                 upsert=True,
             )
             return
         except Exception as exc:
-            print(f"⚠️ agent_sessions write failed, using fallback: {exc}")
-    data = _read_fallback()
-    entry = data.get(key, {"turns": []})
-    entry["turns"] = (entry.get("turns", []) + new_turns)[-MAX_TURNS:]
-    data[key] = entry
-    _write_fallback(data)
+            print(f"⚠️ durable agent history write failed, using fallback: {exc}")
+
+    history = _read_history_fallback()
+    inserted = 0
+    for document in message_documents:
+        if document["_id"] not in history["messages"]:
+            history["messages"][document["_id"]] = document
+            inserted += 1
+    existing = history["conversations"].get(key, {})
+    existing_source = existing.get("title_source") or "pending"
+    if title and existing_source not in {"model", "fallback"}:
+        conversation_document["title"] = title
+        conversation_document["title_source"] = resolved_title_source
+    else:
+        conversation_document["title"] = existing.get("title") or ""
+        conversation_document["title_source"] = existing_source
+    conversation_document["created_at"] = existing.get("created_at") or now
+    conversation_document["message_count"] = int(existing.get("message_count") or 0) + inserted
+    history["conversations"][key] = conversation_document
+    _write_history_fallback(history)
+
+
+async def attach_visual(
+    learner_id: str,
+    session_id: str,
+    assistant_message_id: str,
+    visual: dict[str, Any],
+    text: str,
+    text_after: str,
+    role: str = "coach",
+) -> bool:
+    """Attach the rendered visual and displayed text split to its assistant message."""
+    safe_id = normalize_learner_id(learner_id)
+    safe_session = normalize_session_id(session_id)
+    collection = _get_collection_named("agent_messages")
+    if collection is not None:
+        try:
+            result = await collection.update_one(
+                {
+                    "_id": assistant_message_id,
+                    "learner_id": safe_id,
+                    "conversation_id": safe_session,
+                    "agent_role": role,
+                },
+                {"$set": {
+                    "visual": visual,
+                    "content": text,
+                    "text_after": text_after,
+                    "visual_attached_at": _now(),
+                }},
+            )
+            if result.matched_count:
+                return True
+        except Exception as exc:
+            print(f"⚠️ visual history attachment failed, using fallback: {exc}")
+    history = _read_history_fallback()
+    message = history["messages"].get(assistant_message_id)
+    if (
+        message
+        and message.get("learner_id") == safe_id
+        and message.get("conversation_id") == safe_session
+    ):
+        message.update({"visual": visual, "content": text, "text_after": text_after})
+        _write_history_fallback(history)
+        return True
+    return False

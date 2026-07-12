@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yubi Studio · אולפן עיצוב יובי (Demo)</title>
+  <!--
+    STANDALONE DESIGN/DEBUG DEMO for the Yubi Character Studio.
+    Purpose: iterate on the design-driven robot, the accessory catalog, the
+    girl variant, live recoloring, the transform animation + sound, and the
+    game-style studio layout BEFORE porting into YubiRobot3D.tsx.
+
+    This intentionally mirrors the production data model:
+      design = { variant, colors:{body,eyes,smile,glow}, equipped:{slot:id} }
+    Slots (anchors): headTop, face, back, handR, body
+    Nothing here touches the React app. Open directly in a browser.
+  -->
+  <style>
+    :root {
+      --shell: #ede9ff;
+      --panel: #ffffff;
+      --ink: #2a2350;
+      --muted: #7c74a8;
+      --primary: #7c5cff;
+      --primary-2: #6a4cf0;
+      --accent: #3fd9e0;
+      --locked: #c9c4e4;
+      --radius: 18px;
+      --shadow: 0 18px 44px rgba(70, 50, 160, 0.16);
+      font-family: "Heebo", "Rubik", system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      background: radial-gradient(1200px 700px at 80% -10%, #f3e9ff 0%, #e7e0ff 45%, #ddd6fb 100%);
+      color: var(--ink);
+      overflow: hidden;
+    }
+    .studio {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 18px;
+      height: 100vh;
+      padding: 18px;
+    }
+    /* ── Left: asset drawer ── */
+    .drawer {
+      background: var(--panel);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+    .drawer__head {
+      padding: 18px 20px 10px;
+      border-bottom: 1px solid #efeafc;
+    }
+    .drawer__head h1 { margin: 0; font-size: 20px; }
+    .drawer__head p { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); }
+    .tabs {
+      display: flex; gap: 6px; flex-wrap: wrap;
+      padding: 12px 16px 0;
+    }
+    .tab {
+      border: none; cursor: pointer;
+      background: #f3f0ff; color: var(--muted);
+      padding: 8px 12px; border-radius: 999px;
+      font-size: 13px; font-weight: 600;
+      transition: all .15s ease;
+    }
+    .tab.is-active { background: var(--primary); color: #fff; box-shadow: 0 6px 14px rgba(124,92,255,.35); }
+    .tabpanels { padding: 14px 16px 18px; overflow-y: auto; min-height: 0; flex: 1; }
+    .grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    }
+    .card {
+      position: relative;
+      background: #f7f5ff;
+      border: 2px solid transparent;
+      border-radius: 14px;
+      padding: 10px 6px 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+      user-select: none;
+    }
+    .card:hover { transform: translateY(-2px); background: #f0ecff; }
+    .card.is-equipped { border-color: var(--primary); background: #efe9ff; }
+    .card.is-locked { cursor: not-allowed; opacity: .72; }
+    .card__emoji { font-size: 26px; line-height: 1; display: block; margin-bottom: 6px; }
+    .card__thumb {
+      height: 54px; margin-bottom: 4px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .card__thumb img {
+      width: 54px; height: 54px; object-fit: contain;
+      filter: drop-shadow(0 4px 7px rgba(80, 60, 160, .2));
+    }
+    .card__none {
+      width: 40px; height: 40px; border-radius: 50%;
+      border: 2px dashed #cfc7ea; position: relative;
+    }
+    .card__none::after {
+      content: ''; position: absolute; inset-block: 50%; inset-inline: 4px;
+      height: 2px; background: #cfc7ea; transform: rotate(-45deg);
+    }
+    .card__label { font-size: 12px; font-weight: 600; color: var(--ink); }
+    .card__lock {
+      position: absolute; inset-inline-end: 6px; inset-block-start: 6px;
+      font-size: 13px;
+    }
+    .card.is-locked .card__label { color: var(--muted); }
+    /* tooltip for locked requirement */
+    .card__tip {
+      position: absolute; inset-block-end: calc(100% + 6px); inset-inline-start: 50%;
+      transform: translateX(50%) translateY(4px);
+      background: #2a2350; color: #fff; font-size: 11.5px; font-weight: 500;
+      padding: 6px 9px; border-radius: 8px; width: max-content; max-width: 180px;
+      opacity: 0; pointer-events: none; transition: opacity .14s ease, transform .14s ease;
+      z-index: 5; box-shadow: 0 8px 18px rgba(0,0,0,.25);
+    }
+    [dir="rtl"] .card__tip { transform: translateX(50%) translateY(4px); }
+    .card.is-locked:hover .card__tip { opacity: 1; transform: translateX(50%) translateY(0); }
+
+    .swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+    .swatch-group { margin-bottom: 14px; }
+    .swatch-group h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); font-weight: 700; }
+    .swatch {
+      width: 34px; height: 34px; border-radius: 10px; cursor: pointer;
+      border: 3px solid #fff; box-shadow: 0 0 0 1px #e4dcff, 0 4px 10px rgba(80,60,160,.15);
+      transition: transform .1s ease;
+    }
+    .swatch:hover { transform: scale(1.08); }
+    .swatch.is-active { box-shadow: 0 0 0 3px var(--primary); }
+
+    .variant-row { display: flex; gap: 10px; margin-bottom: 16px; }
+    .variant-btn {
+      flex: 1; border: 2px solid #ece7ff; background: #f7f5ff; border-radius: 14px;
+      padding: 12px; cursor: pointer; font-weight: 700; font-size: 14px; color: var(--ink);
+    }
+    .variant-btn.is-active { border-color: var(--primary); background: #efe9ff; }
+
+    /* ── Right: stage ── */
+    .stage {
+      position: relative;
+      background: linear-gradient(160deg, #efeaff 0%, #e3dcff 100%);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    #canvas-host { position: absolute; inset: 0; }
+    .stage__hint {
+      position: absolute; inset-block-start: 16px; inset-inline-start: 16px;
+      background: rgba(255,255,255,.8); backdrop-filter: blur(6px);
+      padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;
+      color: var(--primary-2); box-shadow: 0 6px 16px rgba(90,60,180,.14);
+    }
+    .toolbar {
+      position: absolute; inset-block-end: 18px; inset-inline: 0;
+      display: flex; justify-content: center; gap: 12px;
+    }
+    .btn {
+      border: none; cursor: pointer; font-weight: 700; font-size: 14px;
+      padding: 12px 22px; border-radius: 999px;
+      box-shadow: 0 10px 22px rgba(90,60,180,.22);
+      transition: transform .1s ease, box-shadow .1s ease;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn--primary { background: var(--primary); color: #fff; }
+    .btn--ghost { background: #fff; color: var(--primary-2); }
+    .btn--mute { background: #fff; color: var(--muted); }
+    .savepill {
+      position: absolute; inset-block-start: 16px; inset-inline-end: 16px;
+      background: #fff; padding: 8px 14px; border-radius: 999px; font-size: 12px;
+      color: var(--muted); box-shadow: 0 6px 16px rgba(90,60,180,.14);
+    }
+    .savepill code { color: var(--ink); }
+  </style>
+</head>
+<body>
+  <div class="studio">
+    <!-- LEFT: asset drawer -->
+    <aside class="drawer">
+      <div class="drawer__head">
+        <h1>🎨 אולפן יובי</h1>
+        <p>בחרו פריטים, צבעים ווריאציה — יובי משתנה בזמן אמת</p>
+      </div>
+      <div class="tabs" id="tabs"></div>
+      <div class="tabpanels" id="tabpanels"></div>
+    </aside>
+
+    <!-- RIGHT: 3D stage -->
+    <section class="stage">
+      <div id="canvas-host"></div>
+      <div class="stage__hint">אפשר ללחוץ עליי כדי לשנות איך אני נראה! ✨</div>
+      <div class="savepill">design: <code id="design-json">…</code></div>
+      <div class="toolbar">
+        <button class="btn btn--primary" id="btn-save">שמירה</button>
+        <button class="btn btn--ghost" id="btn-reset">איפוס</button>
+        <button class="btn btn--mute" id="btn-mute">🔊 סאונד</button>
+      </div>
+    </section>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three'
+    import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
+
+    // ============================================================
+    // 1. DESIGN MODEL (mirrors production learner_state.avatar)
+    // ============================================================
+    const DEFAULT_DESIGN = {
+      variant: 'classic',            // 'classic' | 'girl'
+      colors: {
+        body: '#9cc1e8',             // shell (recolorable — NOT skin)
+        eyes: '#4eeef0',
+        smile: '#7c5cff',
+        glow: '#3fd9e0',             // antenna tip + chest ring + ear caps
+      },
+      equipped: {
+        headTop: null,
+        face: null,
+        back: null,
+        handR: null,
+        body: null,
+      },
+    }
+    // deep clone helper
+    const clone = (o) => JSON.parse(JSON.stringify(o))
+    let design = clone(DEFAULT_DESIGN)
+
+    // ============================================================
+    // 2. ASSET CATALOG (the future "store")
+    //    Each asset: { id, slot, label, emoji, unlock, build(mats) }
+    //    unlock: { locked, requirement }  (demo-only; prod derives from progress)
+    // ============================================================
+    // Colors passed to builders so accessories can echo the shell palette.
+    const SLOTS = ['headTop', 'face', 'back', 'handR', 'body']
+
+    const TABS = [
+      { id: 'headTop', label: 'ראש 🎩' },
+      { id: 'face', label: 'פנים 👓' },
+      { id: 'body', label: 'גוף 🦾' },
+      { id: 'handR', label: 'יד 🛹' },
+      { id: 'back', label: 'גב 🎒' },
+      { id: 'colors', label: 'צבעים 🎨' },
+    ]
+
+    // small material factory
+    const mat = (color, opts = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.1, ...opts })
+    const emissive = (color, intensity = 1.6) => new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: intensity, roughness: 0.3, toneMapped: false })
+
+    // ---- accessory builders (return THREE.Group) ----
+    // Head accessories are authored in HEAD-LOCAL space: the helmet spans y ±0.5,
+    // so a hat "sits" around y≈0.5 and grows upward. The headTop anchor is at the
+    // head centre, so these coordinates line up directly with the helmet.
+    function buildCap() {
+      const g = new THREE.Group()
+      const crown = new THREE.Mesh(new THREE.SphereGeometry(0.5, 28, 20, 0, Math.PI * 2, 0, Math.PI / 2), mat('#ff5d73'))
+      crown.scale.set(1, 0.62, 1); crown.position.y = 0.46
+      g.add(crown)
+      const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.05, 28, 1, false, 0, Math.PI), mat('#e8455c'))
+      brim.position.set(0, 0.44, 0.42); brim.rotation.x = -0.08
+      g.add(brim)
+      const btn = new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 12), mat('#ffd166'))
+      btn.position.y = 0.78; g.add(btn)
+      return g
+    }
+    function buildWizardHat() {
+      const g = new THREE.Group()
+      const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.66, 0.06, 30), mat('#5a3fd6'))
+      brim.position.y = 0.48; g.add(brim)
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(0.42, 1.0, 26), mat('#6a4cf0'))
+      cone.position.y = 1.0; g.add(cone)
+      const star = new THREE.Mesh(new THREE.IcosahedronGeometry(0.09, 0), emissive('#ffd166', 1.4))
+      star.position.set(0.14, 1.05, 0.36); g.add(star)
+      return g
+    }
+    function buildCrown() {
+      const g = new THREE.Group()
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.18, 26, 1, true), mat('#ffd166', { metalness: 0.5, roughness: 0.25 }))
+      band.position.y = 0.55; g.add(band)
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.22, 12), mat('#ffcf4d', { metalness: 0.5, roughness: 0.25 }))
+        spike.position.set(Math.cos(a) * 0.44, 0.72, Math.sin(a) * 0.44)
+        g.add(spike)
+        const gem = new THREE.Mesh(new THREE.IcosahedronGeometry(0.045, 0), emissive('#ff5d73', 1.2))
+        gem.position.set(Math.cos(a) * 0.44, 0.55, Math.sin(a) * 0.44 + 0.02)
+        g.add(gem)
+      }
+      return g
+    }
+    function buildHeadphones() {
+      const g = new THREE.Group()
+      const band = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.05, 12, 30, Math.PI), mat('#2a2350'))
+      band.position.y = 0.44; g.add(band)
+      for (const side of [-1, 1]) {
+        const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.12, 20), mat('#3a3266'))
+        cup.rotation.z = Math.PI / 2; cup.position.set(0.56 * side, 0.0, 0); g.add(cup)
+        const pad = new THREE.Mesh(new THREE.CircleGeometry(0.13, 20), emissive('#3fd9e0', 0.8))
+        pad.rotation.y = -Math.PI / 2 * side; pad.position.set(0.62 * side, 0.0, 0); g.add(pad)
+      }
+      return g
+    }
+    function buildPropeller() {
+      const g = new THREE.Group()
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.46, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2), mat('#3fd9e0'))
+      cap.scale.set(1, 0.5, 1); cap.position.y = 0.46; g.add(cap)
+      const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.16, 10), mat('#2a2350'))
+      stalk.position.y = 0.72; g.add(stalk)
+      const prop = new THREE.Group()
+      for (let i = 0; i < 3; i++) {
+        const blade = new THREE.Mesh(new RoundedBoxGeometry(0.34, 0.02, 0.09, 3, 0.01), mat(['#ff5d73', '#ffd166', '#6a4cf0'][i]))
+        blade.position.x = 0.17
+        const holder = new THREE.Group(); holder.rotation.y = (i / 3) * Math.PI * 2; holder.add(blade); prop.add(holder)
+      }
+      prop.position.y = 0.82; g.add(prop)
+      g.userData.spin = prop
+      return g
+    }
+    function buildSunglasses() {
+      const g = new THREE.Group()
+      const frameMat = mat('#1a1730', { metalness: 0.3, roughness: 0.3 })
+      for (const side of [-1, 1]) {
+        const lens = new THREE.Mesh(new THREE.CircleGeometry(0.16, 24), new THREE.MeshStandardMaterial({ color: '#0a0a14', roughness: 0.1, metalness: 0.6 }))
+        lens.position.set(0.17 * side, 0, 0.48); g.add(lens)
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.02, 10, 24), frameMat)
+        rim.position.set(0.17 * side, 0, 0.48); g.add(rim)
+      }
+      const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.02, 0.02), frameMat)
+      bridge.position.set(0, 0, 0.49); g.add(bridge)
+      return g
+    }
+    // Girl variant is a bundle applied via variant toggle, but eyebrows are also
+    // exposed as a standalone face asset for flexibility.
+    function buildEyebrows() {
+      const g = new THREE.Group()
+      for (const side of [-1, 1]) {
+        const brow = new THREE.Mesh(new RoundedBoxGeometry(0.14, 0.03, 0.03, 3, 0.014), mat('#4a3a2a'))
+        brow.position.set(0.17 * side, 0.22, 0.505); brow.rotation.z = -0.12 * side
+        g.add(brow)
+      }
+      return g
+    }
+    function buildBlondeHair() {
+      const g = new THREE.Group()
+      const hairMat = mat('#f3d27a', { roughness: 0.55 })
+      // side bangs framing the screen + two low pigtails
+      const top = new THREE.Mesh(new THREE.SphereGeometry(0.6, 24, 18, 0, Math.PI * 2, 0, Math.PI * 0.55), hairMat)
+      top.scale.set(1.02, 0.8, 1.02); top.position.y = 0.12; g.add(top)
+      for (const side of [-1, 1]) {
+        const tail = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.32, 6, 14), hairMat)
+        tail.position.set(0.62 * side, -0.2, -0.05); tail.rotation.z = 0.2 * side; g.add(tail)
+        const tie = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.03, 8, 16), emissive('#ff5d73', 0.6))
+        tie.position.set(0.62 * side, 0.0, -0.05); tie.rotation.y = Math.PI / 2; g.add(tie)
+      }
+      g.position.y = 0.28
+      return g
+    }
+    function buildSkateboard() {
+      const g = new THREE.Group()
+      const deck = new THREE.Mesh(new RoundedBoxGeometry(0.72, 0.05, 0.22, 5, 0.06), mat('#ff5d73'))
+      g.add(deck)
+      const grip = new THREE.Mesh(new RoundedBoxGeometry(0.68, 0.01, 0.2, 4, 0.04), mat('#2a2350', { roughness: 0.9 }))
+      grip.position.y = 0.031; g.add(grip)
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.05, 18), mat('#ffd166'))
+        wheel.rotation.x = Math.PI / 2; wheel.position.set(0.26 * sx, -0.08, 0.08 * sz); g.add(wheel)
+      }
+      // held vertically at the hand
+      g.rotation.z = Math.PI / 2
+      g.rotation.y = 0.2
+      g.position.set(0, -0.1, 0.1)
+      g.scale.setScalar(0.9)
+      return g
+    }
+    function buildCape() {
+      const g = new THREE.Group()
+      const cape = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.95, 8, 8), new THREE.MeshStandardMaterial({ color: '#6a4cf0', side: THREE.DoubleSide, roughness: 0.6 }))
+      cape.position.set(0, -0.3, -0.02)
+      // gentle curl
+      const pos = cape.geometry.attributes.position
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i); pos.setZ(i, -Math.cos(x * 3) * 0.06 - 0.05)
+      }
+      pos.needsUpdate = true; cape.geometry.computeVertexNormals()
+      g.add(cape)
+      const collar = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.03, 10, 22, Math.PI), mat('#5a3fd6'))
+      collar.position.set(0, 0.16, 0.02); collar.rotation.x = Math.PI / 2; g.add(collar)
+      g.userData.wave = cape
+      return g
+    }
+    function buildJetpack() {
+      const g = new THREE.Group()
+      for (const side of [-1, 1]) {
+        const tank = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.34, 8, 16), mat('#c9d4e6', { metalness: 0.5, roughness: 0.3 }))
+        tank.position.set(0.16 * side, -0.1, -0.16); g.add(tank)
+        const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.11, 0.1, 16), mat('#4a4a5a'))
+        nozzle.position.set(0.16 * side, -0.36, -0.16); g.add(nozzle)
+        const flame = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.22, 14), emissive('#ff9d3f', 1.8))
+        flame.position.set(0.16 * side, -0.52, -0.16); flame.rotation.x = Math.PI; g.add(flame)
+        flame.userData.flame = true
+      }
+      g.userData.flames = g.children.filter(c => c.userData.flame)
+      return g
+    }
+    function buildIronmanSuit() {
+      // chestplate overlay + reactor
+      const g = new THREE.Group()
+      const plate = new THREE.Mesh(new THREE.SphereGeometry(0.31, 32, 24), new THREE.MeshStandardMaterial({ color: '#c0392b', metalness: 0.7, roughness: 0.25 }))
+      plate.scale.set(0.92, 1.04, 0.8); g.add(plate)
+      const gold = new THREE.Mesh(new RoundedBoxGeometry(0.34, 0.14, 0.2, 5, 0.05), new THREE.MeshStandardMaterial({ color: '#f1c40f', metalness: 0.8, roughness: 0.2 }))
+      gold.position.set(0, 0.14, 0.14); g.add(gold)
+      const reactor = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.04, 24), emissive('#aef7ff', 2.2))
+      reactor.rotation.x = Math.PI / 2; reactor.position.set(0, 0.0, 0.26); g.add(reactor)
+      g.userData.reactor = reactor
+      return g
+    }
+
+    const CATALOG = [
+      // headTop
+      { id: 'cap', slot: 'headTop', label: 'כובע מצחייה', emoji: '🧢', build: buildCap, unlock: { locked: false } },
+      { id: 'wizard', slot: 'headTop', label: 'כובע קוסם', emoji: '🎩', build: buildWizardHat, unlock: { locked: false } },
+      { id: 'crown', slot: 'headTop', label: 'כתר', emoji: '👑', build: buildCrown, unlock: { locked: true, requirement: 'סיימו את שלב 4 כדי לפתוח 👑' } },
+      { id: 'headphones', slot: 'headTop', label: 'אוזניות', emoji: '🎧', build: buildHeadphones, unlock: { locked: false } },
+      { id: 'propeller', slot: 'headTop', label: 'כובע מדחף', emoji: '🚁', build: buildPropeller, unlock: { locked: true, requirement: 'סיימו 3 אתגרים כדי לפתוח 🚁' } },
+      // face
+      { id: 'sunglasses', slot: 'face', label: 'משקפי שמש', emoji: '🕶️', build: buildSunglasses, unlock: { locked: false } },
+      { id: 'eyebrows', slot: 'face', label: 'גבות', emoji: '🤨', build: buildEyebrows, unlock: { locked: false } },
+      // body
+      { id: 'ironman', slot: 'body', label: 'חליפת גיבור', emoji: '🦾', build: buildIronmanSuit, unlock: { locked: true, requirement: 'סיימו את שלב 6 כדי לפתוח 🦾' } },
+      // handR
+      { id: 'skateboard', slot: 'handR', label: 'סקייטבורד', emoji: '🛹', build: buildSkateboard, unlock: { locked: false } },
+      // back
+      { id: 'cape', slot: 'back', label: 'גלימה', emoji: '🦸', build: buildCape, unlock: { locked: false } },
+      { id: 'jetpack', slot: 'back', label: 'מגף סילון', emoji: '🚀', build: buildJetpack, unlock: { locked: true, requirement: 'סיימו את שלב 5 כדי לפתוח 🚀' } },
+    ]
+    const assetById = (id) => CATALOG.find(a => a.id === id) || null
+
+    // ============================================================
+    // 3. THREE.JS SCENE + DESIGN-DRIVEN ROBOT
+    // ============================================================
+    const host = document.getElementById('canvas-host')
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 0.98
+    renderer.outputColorSpace = THREE.SRGBColorSpace
+    host.appendChild(renderer.domElement)
+
+    const scene = new THREE.Scene()
+    const pmrem = new THREE.PMREMGenerator(renderer)
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.035).texture
+    pmrem.dispose()
+
+    const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100)
+    camera.position.set(0, 1.5, 6.6)
+    camera.lookAt(0, 1.0, 0)
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xd6e0f5, 0.9))
+    const key = new THREE.DirectionalLight(0xffffff, 1.35); key.position.set(3, 7, 6); scene.add(key)
+    const fill = new THREE.DirectionalLight(0xbcd7ef, 0.5); fill.position.set(-5, 2, 3); scene.add(fill)
+    const rim = new THREE.DirectionalLight(0xdcecff, 0.5); rim.position.set(0, 3, -6); scene.add(rim)
+
+    // Recolorable materials (named — live updates without rebuild)
+    const M = {
+      body: new THREE.MeshStandardMaterial({ color: design.colors.body, roughness: 0.3, metalness: 0.14, envMapIntensity: 0.7 }),
+      joint: new THREE.MeshStandardMaterial({ color: design.colors.body, roughness: 0.34, metalness: 0.1, envMapIntensity: 0.65 }),
+      white: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.26, metalness: 0.08, envMapIntensity: 0.85 }),
+      glow: new THREE.MeshStandardMaterial({ color: design.colors.glow, emissive: design.colors.glow, emissiveIntensity: 1.8, roughness: 0.3, toneMapped: false }),
+      face: new THREE.MeshBasicMaterial({ color: 0x050711 }),
+    }
+    // joint is a slightly darker shade of body
+    function refreshDerivedMaterials() {
+      const b = new THREE.Color(design.colors.body)
+      M.body.color.copy(b)
+      M.joint.color.copy(b.clone().multiplyScalar(0.82))
+      M.glow.color.set(design.colors.glow); M.glow.emissive.set(design.colors.glow)
+    }
+
+    const robot = new THREE.Group()
+    scene.add(robot)
+
+    // ---- face screen (eyes + smile) as a canvas texture, recolorable ----
+    const faceCanvas = document.createElement('canvas'); faceCanvas.width = 512; faceCanvas.height = 512
+    const fctx = faceCanvas.getContext('2d')
+    const faceTexture = new THREE.CanvasTexture(faceCanvas)
+    faceTexture.colorSpace = THREE.SRGBColorSpace
+    function drawFace(eyeOpen = 1, mouthOpen = 0) {
+      const w = faceCanvas.width, h = faceCanvas.height
+      fctx.clearRect(0, 0, w, h)
+      const cx = w / 2, cy = h / 2
+      // eyes
+      const eyeColor = design.colors.eyes
+      fctx.save()
+      fctx.shadowColor = eyeColor; fctx.shadowBlur = 34; fctx.fillStyle = eyeColor
+      for (const sx of [-1, 1]) {
+        const ex = cx + sx * 78, ey = cy - 26
+        const rY = 46 * eyeOpen
+        fctx.beginPath(); fctx.ellipse(ex, ey, 30, Math.max(3, rY), 0, 0, Math.PI * 2); fctx.fill()
+      }
+      fctx.restore()
+      // smile
+      const smile = design.colors.smile
+      fctx.save()
+      fctx.strokeStyle = smile; fctx.lineCap = 'round'; fctx.lineWidth = 20
+      fctx.shadowColor = smile; fctx.shadowBlur = 20
+      fctx.beginPath()
+      const my = cy + 66
+      if (mouthOpen > 0.05) {
+        fctx.ellipse(cx, my, 66, 34 + mouthOpen * 40, 0, 0.12 * Math.PI, 0.88 * Math.PI)
+      } else {
+        fctx.arc(cx, my - 6, 74, 0.15 * Math.PI, 0.85 * Math.PI)
+      }
+      fctx.stroke(); fctx.restore()
+      faceTexture.needsUpdate = true
+    }
+    drawFace()
+
+    // ---- build the base robot ----
+    // legs
+    function makeLeg(side) {
+      const g = new THREE.Group()
+      const thigh = new THREE.Mesh(new RoundedBoxGeometry(0.16, 0.17, 0.15, 8, 0.06), M.body); thigh.position.set(0.01 * side, 0.29, 0.02); g.add(thigh)
+      const knee = new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.078, 0.05, 20), M.joint); knee.rotation.z = Math.PI / 2; knee.position.set(0.003 * side, 0.18, 0.025); g.add(knee)
+      const shin = new THREE.Mesh(new RoundedBoxGeometry(0.16, 0.19, 0.145, 8, 0.06), M.body); shin.position.set(0.006 * side, 0.05, 0.03); g.add(shin)
+      const foot = new THREE.Mesh(new RoundedBoxGeometry(0.25, 0.12, 0.36, 8, 0.06), M.body); foot.position.set(0.006 * side, -0.06, 0.1); foot.rotation.x = -0.09; g.add(foot)
+      const toe = new THREE.Mesh(new RoundedBoxGeometry(0.2, 0.07, 0.17, 6, 0.04), M.white); toe.position.set(0.006 * side, -0.05, 0.2); g.add(toe)
+      g.position.set(0.145 * side, 0.12, 0)
+      return g
+    }
+    robot.add(makeLeg(-1), makeLeg(1))
+    const hips = new THREE.Mesh(new RoundedBoxGeometry(0.33, 0.11, 0.25, 8, 0.06), M.body); hips.position.y = 0.54; robot.add(hips)
+
+    // torso
+    const torso = new THREE.Mesh(new THREE.SphereGeometry(0.27, 40, 40), M.white)
+    torso.scale.set(0.9, 1.02, 0.76); torso.position.y = 0.82; robot.add(torso)
+    const yoke = new THREE.Mesh(new RoundedBoxGeometry(0.36, 0.12, 0.27, 8, 0.06), M.body); yoke.position.set(0, 1.08, 0); robot.add(yoke)
+    const chestRing = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.02, 12, 28), M.glow); chestRing.position.set(0, 0.85, 0.22); robot.add(chestRing)
+
+    // arms
+    function makeArm(side) {
+      const arm = new THREE.Group()
+      const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.118, 28, 20), M.body); shoulder.scale.set(1.05, 0.92, 1.03); arm.add(shoulder)
+      const upper = new THREE.Mesh(new RoundedBoxGeometry(0.128, 0.2, 0.125, 8, 0.052), M.body); upper.position.set(0.028 * side, -0.13, 0.008); arm.add(upper)
+      const elbow = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.064, 24), M.joint); elbow.position.set(0.045 * side, -0.232, 0.008); elbow.scale.set(1.05, 0.74, 1); arm.add(elbow)
+      const fore = new THREE.Mesh(new THREE.CylinderGeometry(0.112, 0.078, 0.235, 26), M.white); fore.position.set(0.052 * side, -0.34, 0.026); arm.add(fore)
+      const hand = new THREE.Mesh(new THREE.SphereGeometry(0.096, 24, 18), M.body); hand.scale.set(0.98, 1.1, 0.82); hand.position.set(0.058 * side, -0.5, 0.068); arm.add(hand)
+      arm.position.set(0.318 * side, 1.015, -0.005); arm.rotation.z = 0.095 * side
+      return arm
+    }
+    const armL = makeArm(-1), armR = makeArm(1)
+    robot.add(armL, armR)
+
+    // head
+    const head = new THREE.Group(); head.position.y = 1.59; head.scale.setScalar(0.9); robot.add(head)
+    const helmet = new THREE.Mesh(new RoundedBoxGeometry(1.12, 1.02, 0.94, 10, 0.42), M.body); helmet.scale.set(1, 1, 0.95); head.add(helmet)
+    const screen = new THREE.Mesh(new RoundedBoxGeometry(0.86, 0.72, 0.06, 8, 0.22), M.face); screen.position.set(0, 0.0, 0.46); head.add(screen)
+    const faceMat = new THREE.MeshBasicMaterial({ map: faceTexture, transparent: true })
+    const facePlane = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.72), faceMat); facePlane.position.set(0, 0, 0.5); head.add(facePlane)
+    // ears
+    for (const side of [-1, 1]) {
+      const ear = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.12, 20), M.body); ear.rotation.z = Math.PI / 2; ear.position.set(0.56 * side, -0.02, 0.02); head.add(ear)
+      const cap = new THREE.Mesh(new THREE.CircleGeometry(0.07, 22), M.glow); cap.rotation.y = -Math.PI / 2 * side; cap.position.set(0.625 * side, -0.02, 0.02); head.add(cap)
+    }
+    // antenna
+    const antenna = new THREE.Group(); antenna.position.set(0, 0.52, 0.02); head.add(antenna)
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.018, 0.22, 12), M.joint); rod.position.y = 0.11; antenna.add(rod)
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.05, 18, 16), M.glow); tip.position.y = 0.24; antenna.add(tip)
+
+    // ---- ANCHORS (attachment points) ----
+    const anchors = {
+      headTop: new THREE.Group(), // top of head
+      face: new THREE.Group(),    // on the screen
+      back: new THREE.Group(),    // behind torso
+      handR: new THREE.Group(),   // right hand
+      body: new THREE.Group(),    // front of torso
+    }
+    anchors.headTop.position.set(0, 0, 0); head.add(anchors.headTop)
+    anchors.face.position.set(0, 0, 0.02); head.add(anchors.face)
+    anchors.back.position.set(0, 0.86, -0.24); robot.add(anchors.back)
+    anchors.handR.position.set(0.058, -0.5, 0.12); armR.add(anchors.handR)
+    anchors.body.position.set(0, 0.82, 0.02); robot.add(anchors.body)
+
+    // variant bundle group (hair, applied on top of headTop area)
+    const variantGroup = new THREE.Group(); head.add(variantGroup)
+
+    // ---- equip / unequip ----
+    const equippedObjects = {} // slot -> Group
+    function disposeGroup(obj) {
+      obj.traverse((o) => { if (o.geometry) o.geometry.dispose() })
+    }
+    function equip(slot, assetId, { animate = true } = {}) {
+      const anchor = anchors[slot]
+      // remove old
+      if (equippedObjects[slot]) { anchor.remove(equippedObjects[slot]); disposeGroup(equippedObjects[slot]); delete equippedObjects[slot] }
+      design.equipped[slot] = assetId
+      // A hat/helmet accessory replaces the antenna — hide it so nothing clips through.
+      if (slot === 'headTop') antenna.visible = !assetId
+      if (!assetId) { updateDesignJson(); return }
+      const asset = assetById(assetId)
+      if (!asset) return
+      const g = asset.build(M)
+      anchor.add(g)
+      equippedObjects[slot] = g
+      if (animate) playTransform(g)
+      updateDesignJson()
+    }
+
+    function applyVariant(variant, { animate = true } = {}) {
+      design.variant = variant
+      // clear
+      while (variantGroup.children.length) { const c = variantGroup.children[0]; variantGroup.remove(c); disposeGroup(c) }
+      if (variant === 'girl') {
+        const hair = buildBlondeHair(); variantGroup.add(hair)
+        const brows = buildEyebrows(); variantGroup.add(brows)
+        if (animate) playTransform(variantGroup)
+      }
+      updateDesignJson()
+    }
+
+    // ---- live recolor ----
+    function applyColors() {
+      refreshDerivedMaterials()
+      drawFace()
+      updateDesignJson()
+    }
+
+    // ============================================================
+    // 4. TRANSFORM ANIMATION + WEBAUDIO SOUND
+    // ============================================================
+    let soundOn = true
+    let audioCtx = null
+    function transformSound() {
+      if (!soundOn) return
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)()
+        const now = audioCtx.currentTime
+        // sci-fi "power up" sweep + shimmer
+        const osc = audioCtx.createOscillator()
+        const gain = audioCtx.createGain()
+        osc.type = 'sawtooth'
+        osc.frequency.setValueAtTime(220, now)
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.18)
+        osc.frequency.exponentialRampToValueAtTime(660, now + 0.32)
+        gain.gain.setValueAtTime(0.0001, now)
+        gain.gain.exponentialRampToValueAtTime(0.12, now + 0.04)
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42)
+        const filter = audioCtx.createBiquadFilter()
+        filter.type = 'bandpass'; filter.frequency.value = 900; filter.Q.value = 4
+        osc.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination)
+        osc.start(now); osc.stop(now + 0.44)
+        // shimmer
+        const osc2 = audioCtx.createOscillator(); const g2 = audioCtx.createGain()
+        osc2.type = 'triangle'; osc2.frequency.setValueAtTime(1320, now + 0.1)
+        osc2.frequency.exponentialRampToValueAtTime(2640, now + 0.3)
+        g2.gain.setValueAtTime(0.0001, now + 0.1); g2.gain.exponentialRampToValueAtTime(0.05, now + 0.16); g2.gain.exponentialRampToValueAtTime(0.0001, now + 0.4)
+        osc2.connect(g2); g2.connect(audioCtx.destination); osc2.start(now + 0.1); osc2.stop(now + 0.42)
+      } catch (e) { /* no audio */ }
+    }
+
+    // whole-robot transform flourish
+    let transformT = 0, transforming = false
+    const popTargets = [] // {obj, t}
+    function playTransform(newObj) {
+      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+      transformSound()
+      if (reduce) return
+      transforming = true; transformT = 0
+      if (newObj) { newObj.scale.setScalar(0.001); popTargets.push({ obj: newObj, t: 0, base: 1 }) }
+    }
+
+    // ============================================================
+    // 5. RENDER LOOP
+    // ============================================================
+    let turntable = 0
+    const clock = new THREE.Clock()
+    let blink = 0, nextBlink = 2 + Math.random() * 3
+    function resize() {
+      const w = host.clientWidth, h = host.clientHeight
+      renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix()
+    }
+    const ro = new ResizeObserver(resize); ro.observe(host); resize()
+
+    function loop() {
+      const dt = clock.getDelta(); const t = clock.elapsedTime
+      // gentle turntable + idle bob
+      turntable += dt * 0.35
+      robot.rotation.y = Math.sin(turntable) * 0.5
+      robot.position.y = Math.sin(t * 1.5) * 0.03
+      // blink
+      blink -= dt
+      let eyeOpen = 1
+      if (blink < 0) { if (blink > -0.12) eyeOpen = 0; else { blink = nextBlink; nextBlink = 2 + Math.random() * 3 } }
+      drawFace(eyeOpen, 0)
+      // antenna pulse
+      M.glow.emissiveIntensity = 1.6 + Math.sin(t * 2.4) * 0.4
+
+      // spinny propeller
+      const prop = equippedObjects.headTop?.userData?.spin
+      if (prop) prop.rotation.y += dt * 8
+      // jetpack flame flicker
+      const flames = equippedObjects.back?.userData?.flames
+      if (flames) flames.forEach((f, i) => { f.scale.y = 1 + Math.sin(t * 20 + i) * 0.25 })
+      // cape wave
+      const cape = equippedObjects.back?.userData?.wave
+      if (cape) { const p = cape.geometry.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i); p.setZ(i, -Math.cos(x * 3 + t * 3) * 0.06 - 0.05 + Math.sin(y * 4 + t * 2) * 0.02) } p.needsUpdate = true }
+      // reactor pulse
+      const reactor = equippedObjects.body?.userData?.reactor
+      if (reactor) reactor.material.emissiveIntensity = 2 + Math.sin(t * 4) * 0.6
+
+      // transform flourish: quick squash+spin
+      if (transforming) {
+        transformT += dt
+        const p = Math.min(1, transformT / 0.5)
+        const squash = Math.sin(p * Math.PI)
+        robot.scale.set(1 + squash * 0.06, 1 - squash * 0.05, 1 + squash * 0.06)
+        robot.rotation.y += squash * dt * 6
+        M.glow.emissiveIntensity = 1.6 + squash * 3
+        if (p >= 1) { transforming = false; robot.scale.setScalar(1) }
+      }
+      // pop-in accessories
+      for (let i = popTargets.length - 1; i >= 0; i--) {
+        const pt = popTargets[i]; pt.t += dt
+        const p = Math.min(1, pt.t / 0.4)
+        const s = pt.base * (p < 0.7 ? (p / 0.7) * 1.15 : 1.15 - ((p - 0.7) / 0.3) * 0.15)
+        pt.obj.scale.setScalar(s)
+        if (p >= 1) { pt.obj.scale.setScalar(pt.base); popTargets.splice(i, 1) }
+      }
+
+      renderer.render(scene, camera)
+      requestAnimationFrame(loop)
+    }
+    loop()
+
+    // ============================================================
+    // 6. UI WIRING
+    // ============================================================
+    // Real 3D thumbnails: render each catalog object once to a data URL so the
+    // picker shows the actual item, not an emoji.
+    const THUMBS = {}
+    ;(function generateThumbnails() {
+      const tR = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
+      tR.setPixelRatio(2); tR.setSize(140, 140)
+      tR.outputColorSpace = THREE.SRGBColorSpace
+      tR.toneMapping = THREE.ACESFilmicToneMapping; tR.toneMappingExposure = 1.0
+      const tS = new THREE.Scene(); tS.environment = scene.environment
+      tS.add(new THREE.HemisphereLight(0xffffff, 0xd6e0f5, 1.0))
+      const kl = new THREE.DirectionalLight(0xffffff, 1.5); kl.position.set(3, 6, 6); tS.add(kl)
+      const fl = new THREE.DirectionalLight(0xbcd7ef, 0.5); fl.position.set(-4, 2, 3); tS.add(fl)
+      const tC = new THREE.PerspectiveCamera(30, 1, 0.1, 100)
+      for (const a of CATALOG) {
+        const obj = a.build(M)
+        obj.rotation.set(0, 0, 0) // neutral pose for a clean, readable thumbnail
+        const box = new THREE.Box3().setFromObject(obj)
+        const c = box.getCenter(new THREE.Vector3()); const s = box.getSize(new THREE.Vector3())
+        obj.position.sub(c)
+        tS.add(obj)
+        const maxDim = Math.max(s.x, s.y, s.z) || 1
+        const dist = maxDim * 2.3
+        tC.position.set(dist * 0.38, dist * 0.3, dist); tC.lookAt(0, 0, 0)
+        tR.render(tS, tC)
+        THUMBS[a.id] = tR.domElement.toDataURL('image/png')
+        tS.remove(obj); disposeGroup(obj)
+      }
+      tR.dispose()
+    })()
+
+    const tabsEl = document.getElementById('tabs')
+    const panelsEl = document.getElementById('tabpanels')
+    let activeTab = 'headTop'
+
+    TABS.forEach(tab => {
+      const b = document.createElement('button')
+      b.className = 'tab' + (tab.id === activeTab ? ' is-active' : '')
+      b.textContent = tab.label
+      b.onclick = () => { activeTab = tab.id; renderTabs(); renderPanel() }
+      tabsEl.appendChild(b)
+    })
+    function renderTabs() {
+      [...tabsEl.children].forEach((b, i) => b.classList.toggle('is-active', TABS[i].id === activeTab))
+    }
+
+    const COLOR_OPTIONS = {
+      body: ['#9cc1e8', '#ff9ec4', '#b5f2c9', '#ffd27a', '#c9b6ff', '#8ee6f2', '#ff8f8f', '#9ad0ff'],
+      eyes: ['#4eeef0', '#7c5cff', '#ff5d73', '#ffd166', '#5ce67e', '#ff8fd0'],
+      smile: ['#7c5cff', '#ff5d73', '#3fd9e0', '#ffd166', '#ff8fd0'],
+      glow: ['#3fd9e0', '#7c5cff', '#ff5d73', '#ffd166', '#aef7ff'],
+    }
+
+    function renderPanel() {
+      panelsEl.innerHTML = ''
+      if (activeTab === 'colors') { renderColorsPanel(); return }
+      // variant selector appears on headTop and face tabs top
+      if (activeTab === 'headTop') renderVariantRow()
+
+      const items = CATALOG.filter(a => a.slot === activeTab)
+      const grid = document.createElement('div'); grid.className = 'grid'
+      // "none" option
+      grid.appendChild(makeCard({ id: null, label: 'ללא', emoji: '🚫', slot: activeTab, unlock: { locked: false } }))
+      items.forEach(a => grid.appendChild(makeCard(a)))
+      panelsEl.appendChild(grid)
+    }
+
+    function makeCard(asset) {
+      const card = document.createElement('div')
+      const equipped = design.equipped[asset.slot] === asset.id
+      const locked = asset.unlock?.locked
+      card.className = 'card' + (equipped ? ' is-equipped' : '') + (locked ? ' is-locked' : '')
+      const thumb = asset.id
+        ? `<img src="${THUMBS[asset.id]}" alt="${asset.label}">`
+        : '<span class="card__none"></span>'
+      card.innerHTML = `
+        <span class="card__thumb">${thumb}</span>
+        <span class="card__label">${asset.label}</span>
+        ${locked ? '<span class="card__lock">🔒</span>' : ''}
+        ${locked ? `<span class="card__tip">${asset.unlock.requirement || 'נעול'}</span>` : ''}
+      `
+      if (!locked) card.onclick = () => { equip(asset.slot, asset.id); renderPanel() }
+      return card
+    }
+
+    function renderVariantRow() {
+      const row = document.createElement('div'); row.className = 'variant-row'
+      ;['classic', 'girl'].forEach(v => {
+        const b = document.createElement('button')
+        b.className = 'variant-btn' + (design.variant === v ? ' is-active' : '')
+        b.textContent = v === 'classic' ? 'יובי 🤖' : 'יובי-גירל 👧'
+        b.onclick = () => { applyVariant(v); renderPanel() }
+        row.appendChild(b)
+      })
+      panelsEl.appendChild(row)
+    }
+
+    function renderColorsPanel() {
+      panelsEl.innerHTML = ''
+      const labels = { body: 'צבע גוף', eyes: 'צבע עיניים', smile: 'צבע חיוך', glow: 'צבע זוהר' }
+      Object.keys(COLOR_OPTIONS).forEach(key => {
+        const group = document.createElement('div'); group.className = 'swatch-group'
+        const h = document.createElement('h3'); h.textContent = labels[key]; group.appendChild(h)
+        const row = document.createElement('div'); row.className = 'swatches'
+        COLOR_OPTIONS[key].forEach(hex => {
+          const s = document.createElement('div')
+          s.className = 'swatch' + (design.colors[key].toLowerCase() === hex.toLowerCase() ? ' is-active' : '')
+          s.style.background = hex
+          s.onclick = () => { design.colors[key] = hex; applyColors(); renderColorsPanel() }
+          row.appendChild(s)
+        })
+        group.appendChild(row); panelsEl.appendChild(group)
+      })
+    }
+
+    function updateDesignJson() {
+      const el = document.getElementById('design-json')
+      const compact = { variant: design.variant, colors: design.colors, equipped: design.equipped }
+      el.textContent = JSON.stringify(compact)
+    }
+
+    // toolbar
+    document.getElementById('btn-save').onclick = () => {
+      // In production this PATCHes /api/learner-state { avatar: design }
+      console.log('SAVE avatar =>', JSON.stringify(design, null, 2))
+      const pill = document.querySelector('.stage__hint')
+      const old = pill.textContent; pill.textContent = 'נשמר! ✅'
+      setTimeout(() => (pill.textContent = old), 1400)
+    }
+    document.getElementById('btn-reset').onclick = () => {
+      design = clone(DEFAULT_DESIGN)
+      SLOTS.forEach(s => equip(s, null, { animate: false }))
+      applyVariant('classic', { animate: false })
+      applyColors(); renderPanel()
+    }
+    document.getElementById('btn-mute').onclick = (e) => {
+      soundOn = !soundOn
+      e.currentTarget.textContent = soundOn ? '🔊 סאונד' : '🔇 מושתק'
+    }
+
+    // init
+    refreshDerivedMaterials(); drawFace(); renderPanel(); updateDesignJson()
+  </script>
+</body>
+</html>

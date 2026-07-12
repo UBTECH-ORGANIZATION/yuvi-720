@@ -4,7 +4,7 @@ import { LanguageSwitcher } from '../../components/LanguageSwitcher'
 import { useI18n } from '../../i18n/I18nProvider'
 import { apiPost } from '../../services/api'
 import { AgentsDiagram } from './AgentsDiagram'
-import lpImage from '../../assets/lp-image.png'
+import { LandingYubiArtwork, LandingYubiHeroRobot, LandingYubiJourney } from './LandingYubiJourney'
 
 const FAQ_KEYS = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6']
 
@@ -161,11 +161,11 @@ export function LandingLoginPage() {
 
   return (
     <main className="landing720" id="mainContent">
+      <LandingYubiJourney />
       <header className="landing720-header">
         <div className="landing720-brand">
           <img src="/shared/brand/yuvispark.png" alt="" />
           <span className="landing720-brand-name">Yuvi Spark</span>
-          <span className="landing720-brand-tag">{t('landing.brand.project')}</span>
         </div>
 
         <nav className="landing720-nav" aria-label={t('landing.nav.aria')}>
@@ -180,7 +180,7 @@ export function LandingLoginPage() {
         </div>
       </header>
 
-      <section className="landing720-hero" id="about">
+      <section className="landing720-hero" id="about" data-yubi-stop="hero" data-yubi-reveal>
         <article className="landing720-copy">
           <span className="landing720-eyebrow">
             <SparkleIcon width={16} height={16} />
@@ -214,14 +214,17 @@ export function LandingLoginPage() {
           </aside>
         </article>
 
-        <div className="landing720-hero-image">
-          <img src={lpImage} alt="" />
+        <div className="landing720-hero-visual" aria-hidden="true">
+          <LandingYubiArtwork />
+          <LandingYubiHeroRobot />
         </div>
       </section>
 
-      <AgentsDiagram />
+      <div className="landing720-yubi-stop landing720-yubi-stop--hub" data-yubi-stop="hub" data-yubi-reveal>
+        <AgentsDiagram />
+      </div>
 
-      <section className="landing720-feature-grid">
+      <section className="landing720-feature-grid" data-yubi-stop="features" data-yubi-reveal>
         <article className="landing720-feature-card">
           <span className="landing720-feature-icon icon-purple">
             <CompassIcon />
@@ -245,7 +248,7 @@ export function LandingLoginPage() {
         </article>
       </section>
 
-      <section className="landing720-faq" id="faq">
+      <section className="landing720-faq" id="faq" data-yubi-stop="faq" data-yubi-reveal>
         <div className="landing720-faq-head">
           <h2>{t('landing.faq.title')}</h2>
           <p>{t('landing.faq.subtitle')}</p>
@@ -271,7 +274,7 @@ export function LandingLoginPage() {
         </div>
       </section>
 
-      <section className="landing720-contact" id="contact">
+      <section className="landing720-contact" id="contact" data-yubi-stop="contact" data-yubi-reveal>
         <div className="landing720-contact-head">
           <span className="landing720-feature-icon icon-purple">
             <MailIcon />
@@ -328,7 +331,7 @@ export function LandingLoginPage() {
         </form>
       </section>
 
-      <section className="landing720-trust">
+      <section className="landing720-trust" data-yubi-stop="exit" data-yubi-reveal>
         <span>
           <UserCheckIcon width={17} height={17} />
           {t('landing.pills.studentsTeachers')}

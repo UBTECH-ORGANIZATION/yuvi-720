@@ -52,6 +52,9 @@ def empty_brain(learner_id: str, locale: str = DEFAULT_LOCALE) -> dict[str, Any]
             "mapping_scores": None,
             "learning_style": None,
             "interests": [],
+            "hobbies": [],              # soft, chat-sourced (mapping reflection); deduped/capped
+            "characteristics": [],      # soft self-described traits (mapping reflection)
+            "mapping_clarifications": [],  # student clarifications on their answers (provenance; raw scores untouched)
             "preferences": [],
             "environment": None,
             "source": None,
@@ -74,6 +77,7 @@ def empty_brain(learner_id: str, locale: str = DEFAULT_LOCALE) -> dict[str, Any]
         },
         "agent_notes": [],
         "strategies": [],       # procedural memory (§4.5)
+        "wellbeing_flags": [],  # teacher-facing distress signals (Safety agent); raw evidence, not profile
         "enrollments": [],      # F8 scoping
         "version": 1,           # optimistic concurrency (R3)
         "created_at": now,

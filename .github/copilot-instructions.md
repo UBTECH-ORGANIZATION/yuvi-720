@@ -49,6 +49,12 @@ Yuvilab Spark is a Hebrew-first, AI-assisted learning platform for the Israeli M
 - Keep AI outputs child-safe, educational, and explainable. Teacher-facing AI insights must show the raw data or reason behind flags such as "requires immediate attention".
 - Use model/API options that do not train on submitted learner data.
 
+## AI Usage Observability
+- Every external AI request must use the approved central gateway and include a typed, privacy-safe `UsageContext`; never add a direct model/provider call that bypasses `ai_usage_events`.
+- Track exact provider-reported tokens, or the provider's real billing unit such as Azure Speech characters. Missing usage and unknown prices stay `null`, never estimated or treated as zero.
+- Usage events may contain pseudonymous IDs and operational metadata only. Never store prompts, responses, names, email addresses, disclosures, URLs, headers, secrets, or exception messages.
+- Apply `.github/instructions/ai-usage-tracking.instructions.md` whenever adding or changing AI, LLM, Agent Framework, APIM, Azure Speech, model pricing, or usage reporting.
+
 ## Implementation Preferences
 - Prefer small, demoable changes that map directly to a 720 requirement.
 - Keep frontend changes framework-free unless the user explicitly approves a migration.

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiPost, getLearnerState, updateLearnerState } from '../../services/api'
+import { CURRENT_LEARNER_ID } from '../../services/xapi'
 import { useI18n } from '../../i18n/I18nProvider'
 import type { MappingResults, Profile, ProfileImprove, ProfileStrength } from './types'
 
@@ -71,7 +72,12 @@ export function ResultsPage() {
     setLoadingStep(0)
 
     try {
-      const analyzed = await apiPost<Profile>('/api/analyze-profile', { student_name: name, scores: data.scores, language })
+      const analyzed = await apiPost<Profile>('/api/analyze-profile', {
+        learner_id: CURRENT_LEARNER_ID,
+        student_name: name,
+        scores: data.scores,
+        language,
+      })
       void updateLearnerState({ profile_cache: { sourceHash, data: analyzed } })
       setProfile(analyzed)
       setStatus('journey')

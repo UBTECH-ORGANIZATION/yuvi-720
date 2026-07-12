@@ -81,7 +81,7 @@ def create_app(
     public_access: Optional[bool] = None,
 ) -> FastAPI:
     requested_public_access = (
-        _environment_flag("ADMIN_PUBLIC_ACCESS", True)
+        _environment_flag("ADMIN_PUBLIC_ACCESS", False)
         if public_access is None
         else public_access
     )

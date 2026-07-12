@@ -87,23 +87,22 @@ function LoginPage({
     <main className="login-page">
       <div className="login-language"><LanguageSwitcher /></div>
       <section className="login-card" aria-labelledby="login-title">
-        <BrandMark />
-        <p className="eyebrow">{t('app.admin')}</p>
-        <h1 id="login-title">{t('auth.title')}</h1>
+        <h1 id="login-title"><span aria-hidden="true">🔧</span> {t('auth.title')}</h1>
         <p className="login-subtitle">{t('auth.subtitle')}</p>
         {errorMessage ? <div className="notice notice--error" role="alert">{errorMessage}</div> : null}
         {!oauthConfigured ? <div className="notice" role="status">{t('auth.notConfigured')}</div> : null}
         {onRetry ? (
-          <button className="button button--primary" type="button" onClick={onRetry}>
+          <button className="login-btn" type="button" onClick={onRetry}>
             {t('usage.retry')}
           </button>
         ) : (
           <a
-            className={`button button--primary${oauthConfigured ? '' : ' button--disabled'}`}
+            className={`login-btn${oauthConfigured ? '' : ' login-btn--disabled'}`}
             href={oauthConfigured ? '/auth/login' : undefined}
             aria-disabled={!oauthConfigured}
           >
-            {t('auth.signIn')}
+            <span aria-hidden="true">🔐</span>
+            <span>{t('auth.signIn')}</span>
           </a>
         )}
       </section>

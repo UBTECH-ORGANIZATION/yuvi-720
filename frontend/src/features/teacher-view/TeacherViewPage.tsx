@@ -109,8 +109,11 @@ function GroupView({ group, onPick }: { group: GroupInsight | null; onPick: (id:
         ) : (
           <div className="tv-list">
             {group.attention.map((a) => (
-              <Card key={a.learner_id} interactive className="tv-row" onClick={() => onPick(a.learner_id)}>
-                <span className="tv-row__name" dir="auto">{a.display_name || a.learner_id}</span>
+              <Card key={a.learner_id} interactive className={`tv-row${a.kind === 'wellbeing' ? ' tv-row--wellbeing' : ''}`} onClick={() => onPick(a.learner_id)}>
+                <span className="tv-row__name" dir="auto">
+                  {a.kind === 'wellbeing' && <span className="tv-wellbeing__mark" aria-hidden="true">🚨</span>}
+                  {a.display_name || a.learner_id}
+                </span>
                 <span className="tv-row__meta">
                   <StatusPill tone="support">{a.reason}</StatusPill>
                   <EvidenceChip label={t('teacher.evidence')}>{a.evidence}</EvidenceChip>
@@ -168,7 +171,21 @@ function StudentView({
         <LoadingState title={t('teacher.loading')} />
       ) : (
         <>
-          {student.attention && (
+          {student.wellbeing_flags && student.wellbeing_flags.length > 0 && (
+            <Card className="tv-wellbeing" style={{ marginBlockEnd: 'var(--sp-4)' }}>
+              <div className="tv-wellbeing__head">
+                <span className="tv-wellbeing__mark" aria-hidden="true">🚨</span>
+                <strong>{t('teacher.wellbeing.title')}</strong>
+              </div>
+              <p className="tv-wellbeing__note">{t('teacher.wellbeing.note')}</p>
+              <div className="tv-wellbeing__list">
+                {student.wellbeing_flags.map((w, i) => (
+                  <EvidenceChip key={i} label={t('teacher.evidence')}>{w.evidence}</EvidenceChip>
+                ))}
+              </div>
+            </Card>
+          )}
+          {student.attention && student.attention.kind !== 'wellbeing' && (
             <Card style={{ marginBlockEnd: 'var(--sp-4)' }}>
               <span className="tv-row__meta">
                 <StatusPill tone="support">{student.attention.reason}</StatusPill>
