@@ -213,7 +213,9 @@ const scenarios = [
     id: 'inverse',
     name: 'Inverse function',
     prompt: 'צור גרף מדויק של y=1/x עבור x בין -5 ל-5 בלי x=0. השתמש בשני קווים נפרדים לשני הענפים, אל תחבר דרך האפס, והסבר את האסימפטוטות.',
-    answerTerms: [/1\s*\/\s*x|1\\over x/i, /אסימפטוט/],
+    // KaTeX's accessible DOM can linearize the fraction as either "1 x" or
+    // "x 1", so accept those forms only when they remain bound to y=.
+    answerTerms: [/1\s*\/\s*x|1\\over x|(?:y|𝑦)\s*=\s*(?:1\s*(?:x|𝑥)|(?:x|𝑥)\s*1)/i, /אסימפטוט/],
     verify(scene) {
       requireTypes(scene, { axes: 1, polyline: 2 })
       verifyAxesBounds(scene)
@@ -471,11 +473,18 @@ async function runScenario(page, scenario, index) {
 
   const panelBox = await page.locator('#yubi-companion-panel').boundingBox()
   const contentBox = await page.locator('.sp-learner-shell__content').boundingBox()
-  const viewportHeight = await page.evaluate(() => innerHeight)
+  const { viewportWidth, viewportHeight } = await page.evaluate(() => ({
+    viewportWidth: innerWidth,
+    viewportHeight: innerHeight,
+  }))
   invariant(panelBox && contentBox, 'panel/content geometry unavailable')
-  invariant(Math.abs(panelBox.x) <= 1 && Math.abs(panelBox.y) <= 1, 'chat is not the physical-left full-height column')
+  invariant(
+    Math.abs(panelBox.x + panelBox.width - viewportWidth) <= 1 && Math.abs(panelBox.y) <= 1,
+    'chat is not the physical-right full-height column',
+  )
   invariant(Math.abs(panelBox.y + panelBox.height - viewportHeight) <= 1, 'chat does not reach viewport bottom')
-  invariant(contentBox.x >= panelBox.width - 1, 'page content did not move to the right of the chat')
+  invariant(Math.abs(contentBox.x) <= 1, 'page content did not stay anchored to the physical left')
+  invariant(contentBox.x + contentBox.width <= panelBox.x + 1, 'page content did not make room for the right-side chat')
 
   const resizer = page.locator('.sp-companion__resizer')
   await resizer.hover()
@@ -496,13 +505,16 @@ async function runScenario(page, scenario, index) {
   invariant(grip, 'resize grip geometry unavailable')
   await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
   await page.mouse.down()
-  await page.mouse.move(grip.x + grip.width / 2 + 64, grip.y + grip.height / 2, { steps: 4 })
+  await page.mouse.move(grip.x + grip.width / 2 - 64, grip.y + grip.height / 2, { steps: 4 })
   await page.mouse.up()
   const resizedPanel = await page.locator('#yubi-companion-panel').boundingBox()
   const resizedContent = await page.locator('.sp-learner-shell__content').boundingBox()
   invariant(resizedPanel && resizedPanel.width >= panelBox.width + 55, 'dragging did not enlarge the panel')
-  invariant(resizedContent && resizedContent.x >= resizedPanel.width - 1, 'page did not reflow after resizing')
-  pass('full-height physical-left dock reflows the page and has a purple draggable border')
+  invariant(
+    resizedContent && resizedContent.x + resizedContent.width <= resizedPanel.x + 1,
+    'page did not reflow after resizing',
+  )
+  pass('full-height physical-right dock reflows the page and has a purple draggable border')
 
   await page.screenshot({ path: path.join(outputDir, 'chat.png') })
   await imageButton.click()

@@ -97,6 +97,45 @@
   --sp-dur-slow: 320ms;
 }
 
+/* Dark theme: deep indigo rather than flat black, preserving Spark's purple/cyan identity. */
+:root[data-theme='dark'] {
+   --sp-ink-900: #f7f5ff;
+   --sp-ink-700: #eeeaff;
+   --sp-ink-500: #d0cae6;
+   --sp-ink-400: #aaa4c4;
+   --sp-ink-300: #85809f;
+
+   --sp-primary-700: #b9adff;
+   --sp-primary-600: #9d8dff;
+   --sp-primary-500: #8b7aff;
+   --sp-primary-100: #30295b;
+   --sp-primary-050: #252044;
+   --sp-teal-600: #70dcf9;
+   --sp-teal-500: #4cc9f0;
+   --sp-teal-100: #173b4d;
+   --sp-purple-600: #c3a7ff;
+   --sp-purple-500: #ad8cff;
+   --sp-purple-100: #382753;
+
+   --sp-success-600: #67d7a6; --sp-success-100: #173e34;
+   --sp-warn-600: #f3c96a; --sp-warn-100: #493b1f;
+   --sp-danger-600: #ff9588; --sp-danger-100: #4d292d;
+   --sp-info-600: #aa9cff; --sp-info-100: #30295b;
+
+   --sp-bg: #0d1024;
+   --sp-bg-subtle: #171a35;
+   --sp-surface: #181c38;
+   --sp-surface-2: #202443;
+   --sp-border: #34395f;
+   --sp-border-strong: #4b527d;
+   --sp-overlay: rgba(5, 7, 20, 0.72);
+
+   --sp-shadow-sm: 0 3px 14px rgba(2, 4, 17, 0.28);
+   --sp-shadow-md: 0 16px 44px rgba(2, 4, 17, 0.36), 0 0 0 1px rgba(159, 122, 254, 0.04);
+   --sp-shadow-lg: 0 28px 72px rgba(2, 4, 17, 0.46);
+   --sp-ring: 0 0 0 3px rgba(112, 220, 249, 0.34);
+}
+
 /* Respect the user's reduced-motion preference everywhere. */
 @media (prefers-reduced-motion: reduce) {
   :root { --sp-dur-fast: 0ms; --sp-dur: 0ms; --sp-dur-slow: 0ms; }

@@ -30,8 +30,10 @@ interface Props {
   /** Expressive activity states update through refs without remounting WebGL. */
   thinking?: boolean
   speaking?: boolean
-  /** Companion transition: Yuvi reaches left with both hands and pulls the panel. */
+  /** Companion transition: Yuvi reaches with both hands and pulls the panel. */
   pulling?: boolean
+  /** Physical side Yuvi turns and reaches toward during the pulling transition. */
+  pullingSide?: 'left' | 'right'
   /** Hold a neutral front-facing pose while two avatar canvases hand off. */
   frontFacing?: boolean
 }
@@ -59,7 +61,7 @@ function mixWhite([r, g, b]: number[], t: number): [number, number, number] {
 const rgba = ([r, g, b]: number[], a: number) => `rgba(${r}, ${g}, ${b}, ${a})`
 
 export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAvatar3D(
-  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, thinking = false, speaking = false, pulling = false, frontFacing = false },
+  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', frontFacing = false },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null)
@@ -71,6 +73,7 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
   const thinkingRef = useRef(thinking)
   const speakingRef = useRef(speaking)
   const pullingRef = useRef(pulling)
+  const pullingSideRef = useRef(pullingSide)
   const frontFacingRef = useRef(frontFacing)
   const pullingStartedAtRef = useRef(pulling ? Date.now() : 0)
   useEffect(() => { mutedRef.current = muted }, [muted])
@@ -82,6 +85,7 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
     if (pulling && !pullingRef.current) pullingStartedAtRef.current = Date.now()
     pullingRef.current = pulling
   }, [pulling])
+  useEffect(() => { pullingSideRef.current = pullingSide }, [pullingSide])
   useEffect(() => { frontFacingRef.current = frontFacing }, [frontFacing])
 
   useImperativeHandle(ref, () => ({
@@ -494,26 +498,30 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
         const dockingStrength = frontFacingRef.current
           ? 1
           : Math.max(0, Math.min(1, (pullPhase - 0.74) / 0.18))
+        const pullRight = pullingSideRef.current === 'right'
+        const pullDirection = pullRight ? 1 : -1
         // Thinking: a curious head tilt with one hand toward the chin.
         // Speaking: warm alternating gestures and a live speech envelope.
         const sway = isSpeaking ? Math.sin(t * 1.9) * 0.16 : Math.sin(t * 0.5) * 0.32
         const idleStrength = (1 - gripStrength) * (1 - dockingStrength)
         const postureEase = dockingStrength > 0 ? 0.3 : 0.14
-        const robotYawTarget = sway * idleStrength - 0.34 * gripStrength
+        const robotYawTarget = sway * idleStrength + 0.34 * pullDirection * gripStrength
         robot.rotation.y += (robotYawTarget - robot.rotation.y) * postureEase
         robot.rotation.z += ((((isThinking ? -0.035 : 0) + (isSpeaking ? Math.sin(t * 2.2) * 0.018 : 0)) * (1 - dockingStrength) + 0.13 * gripStrength) - robot.rotation.z) * postureEase
         robot.position.y = -1.35 + Math.sin(t * (isSpeaking ? 2.5 : 1.4)) * (isSpeaking ? 0.045 : 0.03)
-        head.rotation.y = (isThinking ? -0.16 + Math.sin(t * 0.8) * 0.05 : Math.sin(t * 0.4) * 0.08) * idleStrength - 0.24 * gripStrength
+        head.rotation.y = (isThinking ? -0.16 + Math.sin(t * 0.8) * 0.05 : Math.sin(t * 0.4) * 0.08) * idleStrength + 0.24 * pullDirection * gripStrength
         head.rotation.x = (isThinking ? -0.07 + Math.sin(t * 1.1) * 0.025 : Math.sin(t * 0.7) * 0.03) * (1 - dockingStrength)
         head.rotation.z += (((isThinking ? 0.13 : isSpeaking ? Math.sin(t * 1.6) * 0.055 : 0) * (1 - dockingStrength) - head.rotation.z) * postureEase)
         const naturalRightArm = isThinking ? -1.12 : isSpeaking ? -0.18 + Math.sin(t * 2.7) * 0.24 : 0.095
         const naturalLeftArm = isSpeaking ? -0.095 - Math.sin(t * 2.7) * 0.18 : -0.095
         const restingRightArm = naturalRightArm * (1 - dockingStrength) + 0.095 * dockingStrength
         const restingLeftArm = naturalLeftArm * (1 - dockingStrength) - 0.095 * dockingStrength
-        // Both hands reach toward the physical-left panel edge. The right arm
-        // crosses the chest while the left arm extends, then both release for docking.
-        const rightArmTarget = restingRightArm * (1 - gripStrength) - 1.55 * gripStrength
-        const leftArmTarget = restingLeftArm * (1 - gripStrength) - 1.18 * gripStrength
+        // Both hands reach toward the selected physical panel edge. The farther
+        // arm crosses the chest while the nearer arm extends, then both release.
+        const rightPullRotation = pullRight ? 1.18 : -1.55
+        const leftPullRotation = pullRight ? 1.55 : -1.18
+        const rightArmTarget = restingRightArm * (1 - gripStrength) + rightPullRotation * gripStrength
+        const leftArmTarget = restingLeftArm * (1 - gripStrength) + leftPullRotation * gripStrength
         armR.rotation.z += (rightArmTarget - armR.rotation.z) * postureEase
         armR.rotation.x += ((((isThinking ? -0.36 : 0) * (1 - dockingStrength) - 0.5 * gripStrength) - armR.rotation.x) * postureEase)
         armL.rotation.z += (leftArmTarget - armL.rotation.z) * postureEase

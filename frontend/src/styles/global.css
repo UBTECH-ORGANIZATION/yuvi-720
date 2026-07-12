@@ -30,7 +30,8 @@ body {
   background:
     radial-gradient(1100px 600px at 88% -8%, rgba(76, 201, 240, 0.12), transparent 60%),
     radial-gradient(900px 600px at 6% 12%, rgba(111, 91, 255, 0.14), transparent 55%),
-    linear-gradient(168deg, #F7F5FF 0%, #F1EEFC 48%, #EFEAFB 100%);
+    linear-gradient(168deg, var(--sp-surface-2) 0%, var(--sp-bg) 48%, var(--sp-bg-subtle) 100%);
+  transition: color var(--sp-dur) var(--sp-ease), background-color var(--sp-dur) var(--sp-ease);
 }
 
 button, input, select {
@@ -45,10 +46,99 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Learner routes become a physical-left IDE shell while Yuvi is open. */
+.yuvi-brand-logo {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 100%;
+  block-size: 100%;
+  line-height: 0;
+}
+
+.yuvi-brand-logo__image {
+  grid-area: 1 / 1;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: contain;
+}
+
+.yuvi-brand-logo__image--light { display: none; }
+[data-theme='dark'] .yuvi-brand-logo__image--dark { display: none; }
+[data-theme='dark'] .yuvi-brand-logo__image--light { display: block; }
+
+.yuvi-theme-switcher {
+  display: inline-grid;
+  place-items: center;
+  min-inline-size: 48px;
+  min-block-size: 44px;
+  padding: 5px;
+  border: 0;
+  border-radius: var(--sp-radius-pill);
+  background: transparent;
+  color: var(--sp-ink-500);
+}
+
+.yuvi-theme-switcher:focus-visible {
+  outline: none;
+  box-shadow: var(--sp-ring);
+}
+
+.yuvi-theme-switcher__track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  inline-size: 42px;
+  block-size: 24px;
+  padding-inline: 5px;
+  border: 1px solid var(--sp-border-strong);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-bg-subtle);
+  transition: background var(--sp-dur) var(--sp-ease), border-color var(--sp-dur) var(--sp-ease);
+}
+
+.yuvi-theme-switcher__icon {
+  inline-size: 12px;
+  block-size: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.yuvi-theme-switcher__icon--sun { color: #b9800c; }
+.yuvi-theme-switcher__icon--moon { color: var(--sp-primary-600); }
+
+.yuvi-theme-switcher__thumb {
+  position: absolute;
+  inset-block-start: 3px;
+  inset-inline-start: 3px;
+  inline-size: 16px;
+  block-size: 16px;
+  border-radius: 50%;
+  background: var(--sp-surface);
+  box-shadow: 0 2px 7px rgba(18, 14, 45, 0.24);
+  transition: transform var(--sp-dur) var(--sp-ease), background var(--sp-dur) var(--sp-ease);
+}
+
+[data-theme='dark'] .yuvi-theme-switcher__track {
+  border-color: rgba(112, 220, 249, 0.34);
+  background: linear-gradient(135deg, rgba(111, 91, 255, 0.32), rgba(76, 201, 240, 0.2));
+}
+
+[data-theme='dark'] .yuvi-theme-switcher__thumb {
+  transform: translateX(18px);
+  background: #f5f2ff;
+}
+
+[dir='rtl'][data-theme='dark'] .yuvi-theme-switcher__thumb {
+  transform: translateX(-18px);
+}
+
+/* Learner routes reserve a physical-right coach rail while Yuvi is open. */
 .sp-learner-shell {
   display: flex;
-  flex-direction: row;
+  flex-direction: row-reverse;
   min-inline-size: 0;
   min-block-size: 100dvh;
   direction: ltr;
@@ -61,10 +151,10 @@ button:disabled {
 }
 
 /* These migrated learning workspaces use viewport-fixed chrome. Shift its
-   physical left edge too, so it reflows with the dock instead of hiding below it. */
+   physical right edge too, so it reflows with the coach instead of hiding below it. */
 .sp-learner-shell.is-companion-open .sp-learner-shell__content .top-bar,
 .sp-learner-shell.is-companion-open .sp-learner-shell__content .builder {
-  left: var(--sp-companion-width);
+  right: var(--sp-companion-width);
 }
 
 .sp-learner-shell.is-companion-opening .sp-learner-shell__content .top-bar,
@@ -78,13 +168,13 @@ button:disabled {
 }
 
 @keyframes sp-companion-fixed-chrome-drag {
-  0%, 44% { left: 0; }
-  72%, 100% { left: var(--sp-companion-width); }
+  0%, 44% { right: 0; }
+  72%, 100% { right: var(--sp-companion-width); }
 }
 
 @keyframes sp-companion-fixed-chrome-return {
-  0%, 8% { left: var(--sp-companion-width); }
-  70%, 100% { left: 0; }
+  0%, 8% { right: var(--sp-companion-width); }
+  70%, 100% { right: 0; }
 }
 
 body.is-resizing-companion,
@@ -100,7 +190,7 @@ body.is-resizing-companion * {
   .sp-learner-shell.is-companion-opening .sp-learner-shell__content .top-bar,
   .sp-learner-shell.is-companion-opening .sp-learner-shell__content .builder,
   .sp-learner-shell.is-companion-closing .sp-learner-shell__content .top-bar,
-  .sp-learner-shell.is-companion-closing .sp-learner-shell__content .builder { left: 0; animation: none; }
+  .sp-learner-shell.is-companion-closing .sp-learner-shell__content .builder { right: 0; animation: none; }
 }
 
 .yuvi-language-switcher-floating {

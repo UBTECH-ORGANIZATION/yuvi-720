@@ -92,6 +92,7 @@ export function YubiCompanionDock() {
               muted
               interactiveY
               pulling={isOpening}
+              pullingSide="right"
               yTooltip={t('yubiStudio.launcher')}
               onYClick={openStudio}
               onAvatarClick={openImmediately}

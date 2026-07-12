@@ -422,8 +422,8 @@ export function CompanionChat() {
         }}
         onPointerMove={(event: ReactPointerEvent<HTMLDivElement>) => {
           if (!isResizing || !event.currentTarget.hasPointerCapture(event.pointerId)) return
-          const panelLeft = event.currentTarget.parentElement?.getBoundingClientRect().left || 0
-          setPanelWidth(clampPanelWidth(event.clientX - panelLeft))
+          const panelRight = event.currentTarget.parentElement?.getBoundingClientRect().right || window.innerWidth
+          setPanelWidth(clampPanelWidth(panelRight - event.clientX))
         }}
         onPointerUp={(event: ReactPointerEvent<HTMLDivElement>) => {
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
@@ -434,8 +434,8 @@ export function CompanionChat() {
         onPointerCancel={() => setIsResizing(false)}
         onKeyDown={(event) => {
           let next = panelWidth
-          if (event.key === 'ArrowLeft') next -= 16
-          else if (event.key === 'ArrowRight') next += 16
+          if (event.key === 'ArrowLeft') next += 16
+          else if (event.key === 'ArrowRight') next -= 16
           else if (event.key === 'Home') next = MIN_PANEL_WIDTH
           else if (event.key === 'End') next = maximumPanelWidth()
           else return
@@ -657,9 +657,8 @@ export function CompanionChat() {
                   <div
                     key={m.id}
                     className="sp-companion__message-row sp-companion__message-row--user"
-                    dir="auto"
                   >
-                    <div className="sp-companion__msg sp-companion__msg--user">{m.text}</div>
+                    <div className="sp-companion__msg sp-companion__msg--user" dir="auto">{m.text}</div>
                   </div>
                 )
             ))}
