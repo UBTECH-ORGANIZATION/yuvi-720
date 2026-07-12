@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { apiPost, getLearnerState, updateLearnerState } from '../../services/api'
 import { CURRENT_LEARNER_ID } from '../../services/xapi'
 import { useI18n } from '../../i18n/I18nProvider'
+import { BrandLogo } from '../../components/BrandLogo'
+import { ThemeSwitcher } from '../../components/ThemeSwitcher'
 import type { MappingResults, Profile, ProfileImprove, ProfileStrength } from './types'
 
 type SceneStep =
@@ -261,7 +263,10 @@ function TopBar({ title }: { title: string }) {
   return (
     <div className="top-bar">
       <span className="top-bar-title">{title}</span>
-      <span className="top-bar-logo">Yuvilab Spark</span>
+      <div className="top-bar-controls">
+        <ThemeSwitcher />
+        <BrandLogo className="top-bar-logo" />
+      </div>
     </div>
   )
 }

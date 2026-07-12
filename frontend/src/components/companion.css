@@ -23,8 +23,8 @@
 .sp-companion {
   position: fixed;
   inset-block: 0;
-  left: 0; /* Intentional physical placement for every document direction. */
-  right: auto;
+  right: 0; /* Intentional physical placement requested for every language. */
+  left: auto;
   z-index: 1420;
   display: flex;
   flex-direction: column;
@@ -32,24 +32,24 @@
   inline-size: var(--sp-companion-width, 430px);
   block-size: 100dvh;
   border: 0;
-  border-inline-end: 1px solid rgba(124, 108, 255, 0.24);
+  border-inline-start: 1px solid rgba(124, 108, 255, 0.24);
   border-radius: 0;
   background: rgba(255, 255, 255, 0.97);
   box-shadow: 0 30px 80px rgba(49, 35, 116, 0.25), 0 8px 24px rgba(111, 91, 255, 0.12);
   overflow: visible;
   font-family: var(--sp-font);
-  transform-origin: left center;
+  transform-origin: right center;
   animation: sp-companion-enter 140ms var(--sp-ease) both;
 }
 
 .sp-companion.is-opening {
-  inset: 0 auto 0 0;
+  inset: 0 0 0 auto;
   pointer-events: none;
   animation: sp-companion-drag-enter 1450ms linear both;
 }
 
 .sp-companion.is-closing {
-  inset: 0 auto 0 0;
+  inset: 0 0 0 auto;
   pointer-events: none;
   animation: sp-companion-drag-exit 1450ms linear both;
 }
@@ -57,7 +57,7 @@
 .sp-companion__resizer {
   position: absolute;
   inset-block: 0;
-  right: -5px;
+  left: -5px;
   z-index: 20;
   inline-size: 10px;
   touch-action: none;
@@ -119,11 +119,11 @@
 /* Keep the panel completely outside the viewport while Yuvi flies to its
    handle. It only becomes visible once the pull begins. */
 @keyframes sp-companion-drag-enter {
-  0%, 44% { opacity: 0; transform: translateX(-103%); }
-  46% { opacity: 1; transform: translateX(-99%); }
+  0%, 44% { opacity: 0; transform: translateX(103%); }
+  46% { opacity: 1; transform: translateX(99%); }
   72% { opacity: 1; transform: translateX(0); }
-  77% { opacity: 1; transform: translateX(1.2%); }
-  82% { opacity: 1; transform: translateX(-.35%); }
+  77% { opacity: 1; transform: translateX(-1.2%); }
+  82% { opacity: 1; transform: translateX(.35%); }
   100% { opacity: 1; transform: translateX(0); }
 }
 
@@ -140,8 +140,8 @@
 
 @keyframes sp-companion-drag-exit {
   0%, 8% { opacity: 1; transform: translateX(0); }
-  64% { opacity: 1; transform: translateX(-101%); }
-  100% { opacity: 0; transform: translateX(-103%); }
+  64% { opacity: 1; transform: translateX(101%); }
+  100% { opacity: 0; transform: translateX(103%); }
 }
 
 @keyframes sp-companion-slot-return {
@@ -160,7 +160,7 @@
   display: flex;
   align-items: flex-start;
   min-block-size: 154px;
-  padding: 28px 22px 24px 152px;
+  padding: 28px 152px 24px 22px;
   background:
     radial-gradient(circle at 12% 95%, rgba(76, 201, 240, 0.24), transparent 34%),
     radial-gradient(circle at 86% 10%, rgba(255, 255, 255, 0.22), transparent 30%),
@@ -181,7 +181,7 @@
 
 .sp-companion__yuvi-stage {
   position: absolute;
-  left: 10px;
+  right: 10px;
   bottom: -12px;
   z-index: 2;
   inline-size: 142px;
@@ -257,7 +257,7 @@
 .sp-companion__head-actions {
   position: absolute;
   top: 14px;
-  right: 18px; /* Intentional physical side: avoids the always-left Yuvi stage. */
+  left: 18px; /* Physical opposite side from Yuvi's right-hand stage. */
   z-index: 4;
   display: flex;
   gap: 7px;
@@ -698,6 +698,9 @@
   align-items: flex-end;
   gap: 8px;
   inline-size: 100%;
+  /* Chat lanes are physical: coach on the left, learner on the right.
+     Each bubble keeps its own automatic text direction. */
+  direction: ltr;
 }
 
 .sp-companion__message-row--assistant { justify-content: flex-start; }
@@ -1144,6 +1147,7 @@
   .sp-companion {
     position: fixed;
     inset: 0;
+    right: 0;
     left: 0;
     inline-size: 100vw;
     block-size: 100dvh;
@@ -1152,12 +1156,12 @@
 
   .sp-companion__resizer { display: none; }
 
-  .sp-companion__head { min-block-size: 132px; padding: 22px 16px 18px 126px; }
-  .sp-companion__yuvi-stage { left: 2px; bottom: -17px; inline-size: 126px; block-size: 147px; }
+  .sp-companion__head { min-block-size: 132px; padding: 22px 126px 18px 16px; }
+  .sp-companion__yuvi-stage { right: 2px; bottom: -17px; inline-size: 126px; block-size: 147px; }
   .sp-companion__avatar { inline-size: 40px; block-size: 40px; }
   .sp-companion__avatar svg { inline-size: 33px; block-size: 33px; }
   .sp-companion__title { font-size: 19px; }
-  .sp-companion__head-actions { top: 10px; right: 12px; gap: 6px; }
+  .sp-companion__head-actions { top: 10px; left: 12px; gap: 6px; }
   .sp-companion__close,
   .sp-companion__head-action { inline-size: 33px; block-size: 33px; }
   .sp-companion__body { padding: 14px 12px; }

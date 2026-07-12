@@ -1,6 +1,8 @@
 import { useState, type FormEvent, type SVGProps } from 'react'
 import { navigate } from '../../app/router'
 import { LanguageSwitcher } from '../../components/LanguageSwitcher'
+import { BrandLogo } from '../../components/BrandLogo'
+import { ThemeSwitcher } from '../../components/ThemeSwitcher'
 import { useI18n } from '../../i18n/I18nProvider'
 import { apiPost } from '../../services/api'
 import { AgentsDiagram } from './AgentsDiagram'
@@ -164,8 +166,7 @@ export function LandingLoginPage() {
       <LandingYubiJourney />
       <header className="landing720-header">
         <div className="landing720-brand">
-          <img src="/shared/brand/yuvispark.png" alt="" />
-          <span className="landing720-brand-name">Yuvi Spark</span>
+          <BrandLogo />
         </div>
 
         <nav className="landing720-nav" aria-label={t('landing.nav.aria')}>
@@ -176,6 +177,7 @@ export function LandingLoginPage() {
         </nav>
 
         <div className="landing720-lang-wrap">
+          <ThemeSwitcher />
           <LanguageSwitcher />
         </div>
       </header>

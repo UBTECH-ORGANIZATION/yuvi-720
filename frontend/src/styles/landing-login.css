@@ -1082,9 +1082,9 @@
   gap: 11px;
 }
 
-.landing720-brand img {
-  inline-size: 36px;
-  block-size: 36px;
+.landing720-brand .yuvi-brand-logo {
+  inline-size: 126px;
+  block-size: 48px;
   filter: drop-shadow(0 7px 10px rgba(86, 64, 181, 0.2));
 }
 

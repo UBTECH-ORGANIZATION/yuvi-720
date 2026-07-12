@@ -2,11 +2,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --primary: #667eea;
-  --primary-dark: #5a67d8;
-  --primary-light: #a3bffa;
-  --secondary: #764ba2;
-  --gradient-primary: linear-gradient(135deg, #667eea, #764ba2);
+  --primary: var(--sp-primary-600);
+  --primary-dark: var(--sp-primary-700);
+  --primary-light: var(--sp-primary-500);
+  --secondary: var(--sp-purple-600);
+  --gradient-primary: var(--sp-gradient);
   --gradient-success: linear-gradient(135deg, #48bb78, #38a169);
   --gradient-warm: linear-gradient(135deg, #f6ad55, #ed8936);
   --gradient-bg: linear-gradient(135deg, #f0eef8 0%, #e8e6f0 100%);
@@ -16,19 +16,19 @@
   --danger: #fc8181;
   --info: #63b3ed;
 
-  --bg-body: #f0eef8;
-  --bg-card: #ffffff;
-  --bg-card-hover: #fafafe;
+  --bg-body: var(--sp-bg);
+  --bg-card: var(--sp-surface);
+  --bg-card-hover: var(--sp-surface-2);
 
-  --text-dark: #2d3748;
-  --text-medium: #4a5568;
-  --text-light: #718096;
-  --text-muted: #a0aec0;
+  --text-dark: var(--sp-ink-900);
+  --text-medium: var(--sp-ink-500);
+  --text-light: var(--sp-ink-400);
+  --text-muted: var(--sp-ink-300);
   --white: #ffffff;
 
-  --shadow-sm: 0 2px 8px rgba(102, 126, 234, 0.08);
-  --shadow-md: 0 10px 40px rgba(102, 126, 234, 0.12);
-  --shadow-lg: 0 20px 60px rgba(102, 126, 234, 0.18);
+  --shadow-sm: var(--sp-shadow-sm);
+  --shadow-md: var(--sp-shadow-md);
+  --shadow-lg: var(--sp-shadow-lg);
   --shadow-glow: 0 5px 20px rgba(102, 126, 234, 0.35);
 
   --radius-sm: 8px;

@@ -11,14 +11,8 @@
   box-shadow: 0 1px 12px rgba(102, 126, 234, 0.08);
 }
 .top-bar-title { font-weight: 700; font-size: 15px; color: #6F5BFF; }
-.top-bar-logo {
-  font-weight: 800;
-  font-size: 15px;
-  background: linear-gradient(135deg, #6F5BFF, #9f7afe);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
+.top-bar-controls { display: flex; align-items: center; gap: 8px; }
+.top-bar-logo { width: 104px; height: 40px; }
 
 .loading-state { max-width: 760px; margin: 60px auto; text-align: center; padding: 40px 20px; }
 .loading-mascot { position: relative; width: 100px; height: 100px; margin: 0 auto 24px; }

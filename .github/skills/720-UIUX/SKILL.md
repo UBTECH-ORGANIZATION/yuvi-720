@@ -49,6 +49,10 @@ Preferred palette:
 - Light gray-blue backgrounds.
 - No aggressive colors.
 
+These principles apply to both product themes. Light mode uses airy lavender
+surfaces; dark mode uses deep navy/indigo surfaces with restrained purple and
+cyan ambient light. Dark mode is not flat black and must remain calm and premium.
+
 ## Typography
 
 Use clear modern Hebrew-friendly typography.
@@ -172,6 +176,17 @@ must differ. The reference implementation is the onboarding screen
 6. Heavy visuals (3D, large media) are lightened or dropped on phone.
 7. Uses the shared breakpoints, tokens, primitives — no ad-hoc pixel values.
 
+### Shared application navigation
+
+- Keep the full center navigation only at `xl`/`xxl` widths (at least 1200px).
+- At `desktop`, `tablet`, and `phone` widths, replace crowded center navigation
+  with the shared 44px hamburger trigger and a focused menu surface. Never allow
+  navigation, language, theme, profile, or logo controls to overlap.
+- The compact menu must support `aria-expanded`, Escape-to-close, an explicit
+  backdrop, visible keyboard focus, 44px minimum targets, and both themes.
+- Constrain the full `BrandLogo` lockup inside app chrome. Transparent source
+  canvases must never determine header height or escape the navigation bar.
+
 ## Icons
 
 Use clean line icons or filled product icons.
@@ -256,6 +271,48 @@ Trust strip:
 - למידה בקצב אישי
 - מותאם לתלמידים ולמורים
 
+## Light and Dark Themes (required)
+
+Every new or changed component must be complete in both light and dark mode.
+
+- Use semantic `--sp-*` tokens from `frontend/src/styles/tokens.css`. Never
+  hardcode a white card background, dark body text, border, shadow, or input
+  surface that only works in one theme.
+- Keep `data-theme="light|dark"` on `<html>` as the theme contract. Read and
+  update it through `ThemeProvider` / `useTheme()`; do not create page-local
+  theme state.
+- Respect `prefers-color-scheme` as the initial preference. Theme choice is UI
+  ephemera and must not become learner-profile or AI-memory data.
+- Put the shared `ThemeSwitcher` in top navigation/chrome. It needs localized
+  labels, switch semantics, visible focus, SVG sun/moon icons, and a touch target
+  of at least 44px.
+- Use the full `BrandLogo` lockup instead of a separate Y icon plus typed brand
+  name. Use `yuvilab-spark-dark.png` (dark lettering) on light surfaces and
+  `yuvilab-spark-light.png` (white lettering) on dark surfaces.
+- Do not invert or recolor the logo with CSS filters. Preserve its native
+  gradient and choose the correct supplied asset for contrast.
+- Status colors, focus rings, disabled states, placeholders, charts, glass
+  surfaces, dialogs, and iframe chrome all need legible variants in both themes.
+- Design signature surfaces—landing heroes, learning-objective heroes, AI
+  companion docks, and chat workspaces—as intentional dark compositions. Do not
+  satisfy dark mode by dimming, inverting, or globally recoloring the light
+  version; preserve hierarchy while using deep indigo, restrained cyan light,
+  and theme-appropriate depth.
+- Keep the global Yuvi companion dock and expanded coach panel on the physical
+  right edge in Hebrew, Arabic, and English. Mirror its preview direction,
+  resizer edge, workspace offset, and enter/exit flight animation together.
+- Theme changes should be immediate, avoid layout shift, and honor
+  `prefers-reduced-motion`.
+
+### Dual-theme validation checklist
+
+1. Validate light and dark at 360px, 768px, and 1280px.
+2. Validate Hebrew/Arabic RTL and English LTR in both themes.
+3. Verify WCAG AA contrast for text, controls, focus indicators, and status UI.
+4. Verify the correct logo variant and readable browser form controls.
+5. Check hover, focus, active, selected, disabled, empty, loading, and error states.
+6. Confirm there is no flash of the wrong theme and no theme-specific overflow.
+
 ## UI Quality Bar
 
 Before finalizing any design, check:
@@ -270,6 +327,7 @@ Before finalizing any design, check:
 8. Are the icons consistent?
 9. Is there enough whitespace?
 10. Would this feel credible in front of the Ministry of Education or a municipality?
+11. Does every surface and state work in both light and dark mode?
 
 If the answer to any of these is no, redesign before responding.
 

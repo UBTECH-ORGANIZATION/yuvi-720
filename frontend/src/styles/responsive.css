@@ -49,7 +49,122 @@ img, svg, video, canvas { max-inline-size: 100%; }
 }
 .robot-lite svg { inline-size: 58%; block-size: 58%; }
 
+/* App navigation responds to the header's actual width. This also catches the
+   reduced workspace while the physical-right companion panel is open. */
+  .app-bar.is-compact {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: var(--sp-3);
+    padding-inline: var(--sp-gutter);
+  }
+
+  .app-bar.is-compact .app-bar-left { grid-column: 1; min-inline-size: 0; }
+  .app-bar.is-compact .app-bar-steps--navigation { display: none; }
+  .app-bar.is-compact .app-bar-user { grid-column: 3; }
+
+  .app-bar.is-compact .app-bar-menu-toggle {
+    position: relative;
+    z-index: 5;
+    grid-column: 2;
+    display: grid;
+    place-content: center;
+    gap: 4px;
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    border: 1px solid var(--sp-border-strong);
+    border-radius: 14px;
+    background: var(--sp-surface);
+    color: var(--sp-ink-600);
+    box-shadow: var(--sp-shadow-sm);
+  }
+
+  .app-bar.is-compact .app-bar-menu-toggle span {
+    display: block;
+    inline-size: 19px;
+    block-size: 2px;
+    border-radius: 999px;
+    background: currentColor;
+    transform-origin: center;
+    transition: transform var(--sp-dur) var(--sp-ease), opacity var(--sp-dur) ease;
+  }
+
+  .app-bar.is-compact .app-bar-menu-toggle[aria-expanded='true'] span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+  .app-bar.is-compact .app-bar-menu-toggle[aria-expanded='true'] span:nth-child(2) { opacity: 0; }
+  .app-bar.is-compact .app-bar-menu-toggle[aria-expanded='true'] span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+  .app-bar.is-compact .app-bar-menu-toggle:focus-visible { outline: none; box-shadow: var(--sp-ring), var(--sp-shadow-sm); }
+
+  .app-bar.is-compact .app-bar-menu-backdrop {
+    position: fixed;
+    inset: var(--mapping-app-bar-height, 73px) 0 0;
+    z-index: 1;
+    display: block;
+    border: 0;
+    background: rgba(13, 17, 48, .26);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity var(--sp-dur) ease, visibility var(--sp-dur);
+    backdrop-filter: blur(2px);
+  }
+
+  .app-bar.is-compact .app-bar-menu-backdrop.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .app-bar.is-compact .app-bar-menu {
+    position: fixed;
+    inset-block-start: calc(var(--mapping-app-bar-height, 73px) + 10px);
+    inset-inline: var(--sp-gutter);
+    z-index: 4;
+    display: block;
+    inline-size: min(360px, calc(100vw - (var(--sp-gutter) * 2)));
+    margin-inline: auto;
+    padding: 10px;
+    border: 1px solid var(--sp-border-strong);
+    border-radius: 22px;
+    background: var(--sp-surface);
+    box-shadow: var(--sp-shadow-lg);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-10px) scale(.98);
+    transform-origin: top center;
+    transition: opacity var(--sp-dur) ease, transform var(--sp-dur) var(--sp-ease), visibility var(--sp-dur);
+    backdrop-filter: blur(18px);
+  }
+
+  .app-bar.is-compact .app-bar-menu.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+  }
+
+  .app-bar.is-compact .app-bar-menu .sd-app-nav {
+    display: grid;
+    gap: 6px;
+    inline-size: 100%;
+    padding: 4px;
+    border: 0;
+    border-radius: 16px;
+    background: transparent;
+  }
+
+  .app-bar.is-compact .app-bar-menu .sd-app-nav button {
+    justify-content: flex-start;
+    min-block-size: 48px;
+    inline-size: 100%;
+    padding-inline: 16px;
+    border-radius: 13px;
+    text-align: start;
+  }
+
+  .app-bar.is-compact .app-bar-menu .sd-app-nav span { display: inline; }
+
 /* ── Tablet and below (≤ 899px) ──────────────────────────────────────────── */
+
 @media (max-width: 899px) {
   /* App shell: tighten chrome, allow the brand block to shrink. */
   .app-bar { padding-inline: var(--sp-gutter); gap: var(--sp-3); }
@@ -95,7 +210,16 @@ img, svg, video, canvas { max-inline-size: 100%; }
   .user-sub { display: none; }
   .app-bar { gap: 8px; padding-inline: 12px; }
   .app-bar-user { padding-inline: var(--sp-2); gap: 8px; }
-  .app-bar-left { gap: 8px; }
+  .app-bar-left { gap: 6px; }
+  .app-bar-brand { width: 78px; height: 46px; }
+  .app-bar-brand .yuvi-brand-logo { width: 72px; height: 46px; }
+  .app-bar-user .user-meta { display: none; }
+  .app-bar-user { padding: 4px; }
+  .app-bar-user .user-avatar { width: 36px; height: 36px; }
+  .app-bar-left .yuvi-language-switcher { gap: 0; padding: 5px 7px; }
+  .app-bar-left .yuvi-language-switcher > span { display: none; }
+  .app-bar-left .yuvi-language-switcher select { max-inline-size: 58px; font-size: 11px; }
+  .app-bar-left .yuvi-theme-switcher { min-inline-size: 42px; padding-inline: 2px; }
 
   /* Onboarding scene/chat fills the width; bubbles get a touch more room. */
   .intro-line { font-size: clamp(16px, 4.7vw, 22px); }

@@ -81,6 +81,7 @@
             z-index: 130;
             display: flex;
             align-items: center;
+            gap: 4px;
         }
         .learning-navbar-language .yuvi-language-switcher {
             padding: 7px 10px;
