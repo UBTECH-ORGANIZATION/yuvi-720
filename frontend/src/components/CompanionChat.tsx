@@ -8,6 +8,9 @@ import { Icon } from './primitives'
 import { YuviHeadIcon } from './YuviHeadIcon'
 import type { CoachVisual } from '../services/agents'
 import { playCoachSpeech, stopCoachSpeech, type SpeechState } from '../services/speech'
+import { navigate, useRoute } from '../app/router'
+import { useLessonRoadmap } from '../providers/LessonRoadmapProvider'
+import { LearningRoadmap } from '../features/learning-portal/LearningRoadmap'
 import 'katex/dist/katex.min.css'
 import './companion.css'
 
@@ -131,6 +134,7 @@ export function CompanionChat() {
     historyError,
     canStartNewConversation,
     send,
+    requestSupport,
     selectConversation,
     startNewConversation,
     deleteConversation,
@@ -138,15 +142,20 @@ export function CompanionChat() {
     loadMoreMessages,
     reloadHistory,
   } = useCompanion()
+  const pathname = useRoute()
+  const isTaskMode = pathname.startsWith('/learning/lesson')
+  const { snapshot: lessonRoadmap } = useLessonRoadmap()
   const { design, loaded } = useYubiDesign()
   const [draft, setDraft] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
   const [deletePendingId, setDeletePendingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showLiveYuvi, setShowLiveYuvi] = useState(false)
+  const [yubiFallbackReady, setYubiFallbackReady] = useState(false)
   const [settleHeaderYuvi, setSettleHeaderYuvi] = useState(false)
   const [expandedVisual, setExpandedVisual] = useState<CoachVisual | null>(null)
   const [isResizing, setIsResizing] = useState(false)
+  const [taskView, setTaskView] = useState<'chat' | 'roadmap'>('chat')
   const [speech, setSpeech] = useState<{ messageId: string | null; state: SpeechState }>({
     messageId: null,
     state: 'idle',
@@ -177,11 +186,11 @@ export function CompanionChat() {
       if (expandedVisual) setExpandedVisual(null)
       else if (deletePendingId) setDeletePendingId(null)
       else if (historyOpen) setHistoryOpen(false)
-      else close()
+      else if (!isTaskMode) close()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [close, deletePendingId, expandedVisual, historyOpen, isClosing, isOpen, isOpening])
+  }, [close, deletePendingId, expandedVisual, historyOpen, isClosing, isOpen, isOpening, isTaskMode])
 
   useEffect(() => {
     const onResize = () => setPanelWidth(clampPanelWidth(panelWidth))
@@ -220,7 +229,17 @@ export function CompanionChat() {
     return () => window.clearTimeout(settle)
   }, [isOpen, isOpening])
 
+  useEffect(() => {
+    if (!isOpen || loaded) return
+    const fallbackTimer = window.setTimeout(() => setYubiFallbackReady(true), 900)
+    return () => window.clearTimeout(fallbackTimer)
+  }, [isOpen, loaded])
+
   useEffect(() => () => stopCoachSpeech(), [])
+
+  useEffect(() => {
+    if (!isTaskMode) setTaskView('chat')
+  }, [isTaskMode, pathname])
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -386,18 +405,18 @@ export function CompanionChat() {
 
   return (
     <>
-    <div
+    {!isTaskMode && <div
       className={`sp-companion-backdrop${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}`}
       aria-hidden="true"
       onPointerDown={close}
-    />
+    />}
     <div
-      className={`sp-companion-slot${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}`}
+      className={`sp-companion-slot${isTaskMode ? ' sp-companion-slot--task' : ''}${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}`}
       style={{ '--sp-companion-width': `${panelWidth}px` } as CSSProperties}
     >
     <section
       id="yubi-companion-panel"
-      className={`sp-companion${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}${isResizing ? ' is-resizing' : ''}`}
+      className={`sp-companion${isTaskMode ? ' sp-companion--task' : ''}${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}${isResizing ? ' is-resizing' : ''}`}
       role="dialog"
       aria-labelledby="yubi-companion-title"
       dir={direction}
@@ -405,7 +424,7 @@ export function CompanionChat() {
       data-closing={isClosing ? 'true' : 'false'}
       style={{ '--sp-companion-width': `${panelWidth}px` } as CSSProperties}
     >
-      <div
+      {!isTaskMode && <div
         className="sp-companion__resizer"
         role="separator"
         aria-orientation="vertical"
@@ -442,7 +461,7 @@ export function CompanionChat() {
           event.preventDefault()
           setPanelWidth(clampPanelWidth(next))
         }}
-      />
+      />}
       <header className="sp-companion__head">
         <div
           className="sp-companion__yuvi-stage"
@@ -450,12 +469,14 @@ export function CompanionChat() {
           aria-hidden="true"
         >
           <span className="sp-companion__yuvi-orbit" />
-          {loaded && showLiveYuvi ? (
+          {(loaded || yubiFallbackReady) && showLiveYuvi ? (
             <YubiAvatar3D
+              key={loaded ? 'persisted-yuvi' : 'fallback-yuvi'}
               initialDesign={design}
               label={t('companion.title')}
               muted
               frontFacing={settleHeaderYuvi}
+              followPointer
               thinking={activity === 'thinking'}
               speaking={activity === 'speaking' || speech.state === 'playing'}
             />
@@ -470,7 +491,7 @@ export function CompanionChat() {
             <p className="sp-companion__subtitle">{t('companion.subtitle')}</p>
           </div>
         </div>
-        <div className="sp-companion__head-actions">
+        {!isTaskMode && <div className="sp-companion__head-actions">
           <button
             type="button"
             className={`sp-companion__head-action${historyOpen ? ' is-active' : ''}`}
@@ -499,7 +520,7 @@ export function CompanionChat() {
           >
             <Icon name="arrow" size={18} />
           </button>
-        </div>
+        </div>}
       </header>
 
       <p className="sp-companion__disclosure" dir="auto">
@@ -507,7 +528,32 @@ export function CompanionChat() {
         {disclosure || t('companion.disclosure')}
       </p>
 
-      {historyOpen ? (
+      {isTaskMode && (
+        <div className="sp-companion__task-tabs" role="tablist" aria-label={t('companion.task.tabs')}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={taskView === 'chat'}
+            className={taskView === 'chat' ? 'is-active' : ''}
+            onClick={() => setTaskView('chat')}
+          >
+            <Icon name="message" size={16} />
+            <span>{t('companion.task.tabChat')}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={taskView === 'roadmap'}
+            className={taskView === 'roadmap' ? 'is-active' : ''}
+            onClick={() => setTaskView('roadmap')}
+          >
+            <Icon name="spark" size={16} />
+            <span>{t('companion.task.tabRoadmap')}</span>
+          </button>
+        </div>
+      )}
+
+      {historyOpen && !isTaskMode ? (
         <section className="sp-companion__history" aria-labelledby="companion-history-title">
           <div className="sp-companion__history-heading">
             <div>
@@ -624,15 +670,43 @@ export function CompanionChat() {
         </section>
       ) : (
         <>
-          <div className="sp-companion__thread-bar">
+          {!isTaskMode && <div className="sp-companion__thread-bar">
             <span><Icon name="message" size={15} /></span>
             <div>
               <small>{t('companion.history.current')}</small>
               <strong dir="auto">{activeConversation?.title || t('companion.history.untitled')}</strong>
             </div>
             <button type="button" onClick={() => setHistoryOpen(true)}>{t('companion.history.open')}</button>
-          </div>
-          <div
+          </div>}
+          {isTaskMode && taskView === 'chat' && (
+            <div className="sp-companion__task-actions" aria-label={t('companion.task.actions')}>
+              <button type="button" disabled={isStreaming} onClick={() => void requestSupport('hint')}>
+                <Icon name="lightbulb" size={17} />
+                <span>{t('companion.task.hint')}</span>
+              </button>
+              <button type="button" disabled={isStreaming} onClick={() => void requestSupport('explanation')}>
+                <Icon name="book" size={17} />
+                <span>{t('companion.task.explain')}</span>
+              </button>
+            </div>
+          )}
+          {isTaskMode && taskView === 'roadmap' && lessonRoadmap ? (
+            <div className="sp-companion__roadmap-view" role="tabpanel">
+              <LearningRoadmap
+                unit={lessonRoadmap.unit}
+                activeComponentId={lessonRoadmap.activeComponentId}
+                travellingFromId={lessonRoadmap.travellingFromId}
+                compact
+                onSelect={(component) => {
+                  const params = new URLSearchParams({
+                    unit: lessonRoadmap.unit.id,
+                    component: component.id,
+                  })
+                  navigate(`/learning/lesson?${params.toString()}`)
+                }}
+              />
+            </div>
+          ) : taskView === 'chat' && <div
             className="sp-companion__body"
             ref={bodyRef}
             onScroll={onMessageScroll}
@@ -662,11 +736,11 @@ export function CompanionChat() {
                   </div>
                 )
             ))}
-          </div>
+          </div>}
         </>
       )}
 
-      {!historyOpen && <form className="sp-companion__composer" onSubmit={submit}>
+      {!historyOpen && (!isTaskMode || taskView === 'chat') && <form className="sp-companion__composer" onSubmit={submit}>
         <input
           ref={inputRef}
           value={draft}

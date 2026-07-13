@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react'
-import { AppBar } from '../../components/AppBar'
+import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { EmptyState, ErrorState, Icon, LoadingState } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useBrain } from '../../providers/BrainProvider'
 import { useCompanion } from '../../providers/CompanionProvider'
 import { getDashboard, type DashboardDTO } from '../../services/brain'
+import {
+  getLearningCatalog,
+  type LearningComponentDTO,
+  type LearningUnitDTO,
+} from '../../services/learning'
 import { navigate } from '../../app/router'
 import { selectNextRoute } from '../../services/agents'
 import { DashboardHero } from './DashboardHero'
 import { DashboardOverview } from './DashboardOverview'
 import { SubjectJourney } from './SubjectJourney'
 import './student-dashboard.css'
-
-const REFERENCE_LESSON_COMPONENT = 'YuviDori-math-angles-0001-lesson'
 
 /**
  * Student dashboard — 720 F4 projection over the real Learner Brain.
@@ -24,6 +27,7 @@ export function StudentDashboardPage() {
   const { learnerId, brain, refresh: refreshBrain } = useBrain()
   const { open: openCompanion } = useCompanion()
   const [dashboard, setDashboard] = useState<DashboardDTO | null>(null)
+  const [roadmapUnits, setRoadmapUnits] = useState<LearningUnitDTO[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
@@ -54,6 +58,20 @@ export function StudentDashboardPage() {
   }, [learnerId, language, reloadKey])
 
   useEffect(() => {
+    let active = true
+    const controller = new AbortController()
+    getLearningCatalog(learnerId, controller.signal)
+      .then((catalog) => {
+        if (active) setRoadmapUnits(catalog.units)
+      })
+      .catch(() => undefined)
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [learnerId, reloadKey])
+
+  useEffect(() => {
     const refresh = () => setReloadKey((key) => key + 1)
     const onVisibility = () => {
       if (document.visibilityState === 'visible') refresh()
@@ -68,8 +86,15 @@ export function StudentDashboardPage() {
     }
   }, [])
 
-  const routeForComponent = (componentId: string | null) =>
-    componentId === REFERENCE_LESSON_COMPONENT ? '/learning/lesson' : '/learning'
+  const routeForComponent = (componentId: string | null) => {
+    if (!componentId || !/-00001-/.test(componentId)) return '/learning'
+    return `/learning/lesson?${new URLSearchParams({ component: componentId }).toString()}`
+  }
+
+  const openRoadmapComponent = (unit: LearningUnitDTO, component: LearningComponentDTO) => {
+    const params = new URLSearchParams({ unit: unit.id, component: component.id })
+    navigate(`/learning/lesson?${params.toString()}`)
+  }
 
   const startHeroStep = async () => {
     if (!dashboard || dashboard.hero.mode === 'complete' || isStarting) return
@@ -93,30 +118,9 @@ export function StudentDashboardPage() {
 
   const studentName = dashboard?.name || brain?.identity.display_name || t('sdash.learnerFallback')
 
-  const navigation = (
-    <nav className="sd-app-nav" aria-label={t('sdash.nav.label')}>
-      <button className="is-active" type="button" aria-current="page">
-        <Icon name="chart" size={16} />
-        <span>{t('sdash.nav.dashboard')}</span>
-      </button>
-      <button type="button" onClick={() => navigate('/learning')}>
-        <Icon name="book" size={16} />
-        <span>{t('sdash.nav.learning')}</span>
-      </button>
-      <button type="button" onClick={() => navigate('/mentoring')}>
-        <Icon name="target" size={16} />
-        <span>{t('sdash.nav.goals')}</span>
-      </button>
-    </nav>
-  )
-
   return (
     <div className="sd-page">
-      <AppBar
-        studentName={studentName}
-        studentSubtitle={t('sdash.appbar.subtitle')}
-        center={navigation}
-      />
+      <LearnerAppBar studentName={studentName} />
 
       <main className="sd-dashboard">
         {loading && !dashboard && <LoadingState title={t('sdash.loading')} body={t('sdash.loading.body')} />}
@@ -146,7 +150,12 @@ export function StudentDashboardPage() {
               onStart={() => void startHeroStep()}
               onBrowse={() => navigate('/learning')}
             />
-            <SubjectJourney subjects={dashboard.subjects} onOpenLearning={() => navigate('/learning')} />
+            <SubjectJourney
+              subjects={dashboard.subjects}
+              roadmapUnits={roadmapUnits}
+              onOpenLearning={() => navigate('/learning')}
+              onOpenComponent={openRoadmapComponent}
+            />
             <DashboardOverview
               dashboard={dashboard}
               onMentoring={() => navigate('/mentoring')}

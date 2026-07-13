@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { initLomdaCreator } from './app'
 import skeleton from './skeleton.html?raw'
 import createCss from './create.css?inline'
@@ -30,5 +31,10 @@ export function LomdaCreatorPage() {
     }
   }, [])
 
-  return <div dangerouslySetInnerHTML={{ __html: skeleton }} />
+  return (
+    <>
+      <LearnerAppBar />
+      <div dangerouslySetInnerHTML={{ __html: skeleton }} />
+    </>
+  )
 }

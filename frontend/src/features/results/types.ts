@@ -1,21 +1,20 @@
-export interface ProfileStrength {
-  icon: string
-  label: string
-  desc: string
+export type ProfileClaimCategory = 'strength' | 'characteristic' | 'preference' | 'interest' | 'support'
+export type ProfileFeedbackVerdict = 'accurate' | 'unsure' | 'inaccurate'
+
+export interface ProfileClaim {
+  id: string
+  source_id: string
+  category: ProfileClaimCategory
+  title: string
+  description: string
+  icon_key: string
+  evidence_label: string
+  feedback_status?: ProfileFeedbackVerdict | null
 }
 
-export interface ProfileImprove {
-  icon: string
-  label: string
-  tip?: string
-  desc?: string
-}
-
-export interface Profile {
-  hero_message?: string
-  strengths?: ProfileStrength[]
-  improve?: ProfileImprove[]
-  tips?: string[]
+export interface ProfileSummary {
+  hero_message: string
+  claims: ProfileClaim[]
 }
 
 export interface MappingResults {

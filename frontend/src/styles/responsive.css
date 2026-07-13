@@ -58,7 +58,6 @@ img, svg, video, canvas { max-inline-size: 100%; }
   }
 
   .app-bar.is-compact .app-bar-left { grid-column: 1; min-inline-size: 0; }
-  .app-bar.is-compact .app-bar-steps--navigation { display: none; }
   .app-bar.is-compact .app-bar-user { grid-column: 3; }
 
   .app-bar.is-compact .app-bar-menu-toggle {
@@ -142,7 +141,7 @@ img, svg, video, canvas { max-inline-size: 100%; }
     transform: translateY(0) scale(1);
   }
 
-  .app-bar.is-compact .app-bar-menu .sd-app-nav {
+  .app-bar.is-compact .app-bar-menu .learner-app-nav {
     display: grid;
     gap: 6px;
     inline-size: 100%;
@@ -152,7 +151,7 @@ img, svg, video, canvas { max-inline-size: 100%; }
     background: transparent;
   }
 
-  .app-bar.is-compact .app-bar-menu .sd-app-nav button {
+  .app-bar.is-compact .app-bar-menu .learner-app-nav button {
     justify-content: flex-start;
     min-block-size: 48px;
     inline-size: 100%;
@@ -161,7 +160,7 @@ img, svg, video, canvas { max-inline-size: 100%; }
     text-align: start;
   }
 
-  .app-bar.is-compact .app-bar-menu .sd-app-nav span { display: inline; }
+  .app-bar.is-compact .app-bar-menu .learner-app-nav span { display: inline; }
 
 /* ── Tablet and below (≤ 899px) ──────────────────────────────────────────── */
 
@@ -201,6 +200,38 @@ img, svg, video, canvas { max-inline-size: 100%; }
   .sp-hide-phone { display: none !important; }
   .sp-only-phone { display: revert; }
 
+  /* Mapping keeps progress visible, but moves it onto a calm second row so
+     brand, language, theme, and learner controls never collide at 320–390px. */
+  .learner-mapping-page,
+  .results-page { --mapping-app-bar-height: 104px; }
+  .learner-mapping-page .app-bar,
+  .results-page .app-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: 52px 34px;
+    align-items: center;
+    gap: 2px 8px;
+    height: var(--mapping-app-bar-height);
+    padding: 4px 10px 6px;
+  }
+  .learner-mapping-page .app-bar-left,
+  .results-page .app-bar-left {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+  }
+  .learner-mapping-page .app-bar-user,
+  .results-page .app-bar-user {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+  .learner-mapping-page .app-bar-steps--progress,
+  .results-page .app-bar-steps--progress {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: center;
+  }
+
   /* Stepper in the bar: dots only, small. */
   .stepper { gap: 3px; }
   .step-dot { width: 26px; height: 26px; font-size: 12px; }
@@ -211,8 +242,8 @@ img, svg, video, canvas { max-inline-size: 100%; }
   .app-bar { gap: 8px; padding-inline: 12px; }
   .app-bar-user { padding-inline: var(--sp-2); gap: 8px; }
   .app-bar-left { gap: 6px; }
-  .app-bar-brand { width: 78px; height: 46px; }
-  .app-bar-brand .yuvi-brand-logo { width: 72px; height: 46px; }
+  .app-bar-brand { width: 70px; height: 44px; }
+  .app-bar-brand .yuvi-brand-logo { width: 64px; height: 44px; }
   .app-bar-user .user-meta { display: none; }
   .app-bar-user { padding: 4px; }
   .app-bar-user .user-avatar { width: 36px; height: 36px; }

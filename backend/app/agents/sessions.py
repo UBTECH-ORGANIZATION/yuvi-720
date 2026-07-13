@@ -17,13 +17,17 @@ import re
 from typing import Any, Optional
 from uuid import uuid4
 
+from app.agents.safety import strip_pii
 from app.brain.repository import _get_collection_named
 from learner_state import normalize_learner_id  # type: ignore
 
 MAX_TURNS = 20                      # verbatim window cap (R2 — brain stays compact)
+MAX_ROLLING_SUMMARY_ITEMS = 6
+MAX_ENTITY_LEDGER_ITEMS = 12
 _FALLBACK = Path(__file__).resolve().parents[2] / ".runtime" / "agent_sessions.json"
 _HISTORY_FALLBACK = Path(__file__).resolve().parents[2] / ".runtime" / "agent_chat_history.json"
 _SESSION_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")
+_ACTIVITY_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,179}$")
 _indexes_ready = False
 
 
@@ -31,6 +35,12 @@ def normalize_session_id(value: object) -> str:
     """Return a safe opaque thread id; legacy callers continue on ``default``."""
     candidate = str(value or "default").strip()
     return candidate if _SESSION_ID.fullmatch(candidate) else "default"
+
+
+def normalize_activity_id(value: object) -> Optional[str]:
+    """Return one bounded provider identifier, never arbitrary URL/text data."""
+    candidate = str(value or "").strip()
+    return candidate if _ACTIVITY_ID.fullmatch(candidate) else None
 
 
 def _key(learner_id: str, role: str, session_id: str = "default") -> str:
@@ -98,6 +108,41 @@ def _write_history_fallback(data: dict[str, dict[str, Any]]) -> None:
         print(f"⚠️ agent history fallback write failed: {exc}")
 
 
+def _conversation_memory(turns: list[dict[str, Any]]) -> dict[str, Any]:
+    """Derive compact working memory from visible, non-retracted turns."""
+    visible = [
+        turn for turn in turns
+        if isinstance(turn, dict)
+        and not turn.get("deleted")
+        and not turn.get("retracted")
+        and turn.get("content")
+    ]
+    older = visible[:-8] if len(visible) > 8 else []
+    assistant_points = [
+        " ".join(str(turn.get("content") or "").split())[:160]
+        for turn in older
+        if turn.get("role") == "assistant"
+    ][-MAX_ROLLING_SUMMARY_ITEMS:]
+    facts: list[str] = []
+    signal = re.compile(
+        r"(?:אני\s+(?:אוהב|אוהבת|מעדיף|מעדיפה|מתקשה)|עוזר לי|המטרה שלי|"
+        r"أنا\s+(?:أحب|أفضل|أجد صعوبة)|يساعدني|هدفي|"
+        r"I\s+(?:like|love|prefer|struggle|learn best)|helps me|my goal)",
+        re.IGNORECASE,
+    )
+    for turn in older:
+        if turn.get("role") != "user":
+            continue
+        text, _ = strip_pii(" ".join(str(turn.get("content") or "").split())[:180])
+        if text and signal.search(text) and text not in facts:
+            facts.append(text)
+    return {
+        "rolling_summary": assistant_points,
+        "entity_ledger": facts[-MAX_ENTITY_LEDGER_ITEMS:],
+        "updated_at": visible[-1].get("at") if visible else None,
+    }
+
+
 async def _ensure_indexes() -> None:
     global _indexes_ready
     if _indexes_ready:
@@ -111,6 +156,13 @@ async def _ensure_indexes() -> None:
         await conversations.create_index(
             [("learner_id", 1), ("role", 1), ("updated_at", -1)],
             name="learner_role_updated",
+        )
+        await conversations.create_index(
+            [
+                ("learner_id", 1), ("role", 1), ("activity_unit_id", 1),
+                ("activity_component_id", 1), ("activity_status", 1),
+            ],
+            name="learner_activity_open",
         )
         await messages.create_index(
             [("learner_id", 1), ("conversation_id", 1), ("at", -1)],
@@ -129,6 +181,9 @@ def _conversation_payload(document: dict[str, Any]) -> dict[str, Any]:
         "message_count": int(document.get("message_count") or 0),
         "created_at": document.get("created_at") or document.get("updated_at") or _now(),
         "updated_at": document.get("updated_at") or document.get("created_at") or _now(),
+        "activity_unit_id": document.get("activity_unit_id"),
+        "activity_component_id": document.get("activity_component_id"),
+        "activity_status": document.get("activity_status"),
     }
 
 
@@ -249,21 +304,64 @@ async def get_recent(
     return (_read_fallback().get(key, {}).get("turns", []))[-limit:]
 
 
-async def create_conversation(learner_id: str, role: str = "coach") -> dict[str, Any]:
-    """Return the existing empty thread, or create one durable empty thread."""
+async def get_conversation_memory(
+    learner_id: str,
+    role: str = "coach",
+    session_id: str = "default",
+) -> dict[str, Any]:
+    """Return the compact continuity digest stored outside the verbatim window."""
+    key = _key(learner_id, role, session_id)
+    collection = _get_collection_named("agent_sessions")
+    if collection is not None:
+        try:
+            document = await collection.find_one({"_id": key}, {"conversation_memory": 1})
+            value = (document or {}).get("conversation_memory")
+            return value if isinstance(value, dict) else {}
+        except Exception as exc:
+            print(f"⚠️ conversation memory read failed, using fallback: {exc}")
+    value = (_read_fallback().get(key) or {}).get("conversation_memory")
+    return value if isinstance(value, dict) else {}
+
+
+async def create_conversation(
+    learner_id: str,
+    role: str = "coach",
+    unit_id: object = None,
+    component_id: object = None,
+) -> dict[str, Any]:
+    """Resolve the open activity thread, or create a durable empty thread.
+
+    Activity-scoped conversations remain open across reloads until a trusted
+    xAPI completion closes them. Unscoped callers retain the legacy behavior of
+    reusing only a globally empty thread.
+    """
     await _ensure_indexes()
     safe_id = normalize_learner_id(learner_id)
+    safe_unit = normalize_activity_id(unit_id)
+    safe_component = normalize_activity_id(component_id)
+    activity_scoped = bool(safe_unit and safe_component)
     collection = _get_collection_named("agent_conversations")
     use_fallback = collection is None
     if collection is not None:
         try:
-            existing = await collection.find_one(
-                {
-                    "learner_id": safe_id,
-                    "role": role,
+            query: dict[str, Any] = {
+                "learner_id": safe_id,
+                "role": role,
+                "is_deleted": {"$ne": True},
+            }
+            if activity_scoped:
+                query.update({
+                    "activity_unit_id": safe_unit,
+                    "activity_component_id": safe_component,
+                    "activity_status": "open",
+                })
+            else:
+                query.update({
                     "message_count": {"$lte": 0},
-                    "is_deleted": {"$ne": True},
-                },
+                    "activity_component_id": {"$exists": False},
+                })
+            existing = await collection.find_one(
+                query,
                 sort=[("updated_at", -1), ("_id", -1)],
             )
             if existing:
@@ -278,8 +376,15 @@ async def create_conversation(learner_id: str, role: str = "coach") -> dict[str,
             document for document in history["conversations"].values()
             if document.get("learner_id") == safe_id
             and document.get("role") == role
-            and int(document.get("message_count") or 0) == 0
             and document.get("is_deleted") is not True
+            and (
+                document.get("activity_unit_id") == safe_unit
+                and document.get("activity_component_id") == safe_component
+                and document.get("activity_status") == "open"
+                if activity_scoped
+                else int(document.get("message_count") or 0) == 0
+                and not document.get("activity_component_id")
+            )
         ]
         if use_fallback else []
     )
@@ -305,6 +410,12 @@ async def create_conversation(learner_id: str, role: str = "coach") -> dict[str,
         "created_at": now,
         "updated_at": now,
     }
+    if activity_scoped:
+        document.update({
+            "activity_unit_id": safe_unit,
+            "activity_component_id": safe_component,
+            "activity_status": "open",
+        })
     if collection is not None:
         try:
             await collection.insert_one(document)
@@ -314,6 +425,58 @@ async def create_conversation(learner_id: str, role: str = "coach") -> dict[str,
     history["conversations"][document["_id"]] = document
     _write_history_fallback(history)
     return _conversation_payload(document)
+
+
+async def close_activity_conversations(
+    learner_id: str,
+    unit_id: object,
+    component_id: object,
+    role: str = "coach",
+) -> int:
+    """Close every open transcript for one genuinely completed activity."""
+    safe_id = normalize_learner_id(learner_id)
+    safe_unit = normalize_activity_id(unit_id)
+    safe_component = normalize_activity_id(component_id)
+    if not safe_unit or not safe_component:
+        return 0
+    closed_at = _now()
+    query = {
+        "learner_id": safe_id,
+        "role": role,
+        "activity_unit_id": safe_unit,
+        "activity_component_id": safe_component,
+        "activity_status": "open",
+        "is_deleted": {"$ne": True},
+    }
+    collection = _get_collection_named("agent_conversations")
+    if collection is not None:
+        try:
+            result = await collection.update_many(
+                query,
+                {"$set": {"activity_status": "completed", "activity_closed_at": closed_at}},
+            )
+            return int(result.modified_count)
+        except Exception as exc:
+            print(f"⚠️ activity conversation closure failed, using fallback: {exc}")
+    history = _read_history_fallback()
+    closed = 0
+    for document in history["conversations"].values():
+        if (
+            document.get("learner_id") == safe_id
+            and document.get("role") == role
+            and document.get("activity_unit_id") == safe_unit
+            and document.get("activity_component_id") == safe_component
+            and document.get("activity_status") == "open"
+            and document.get("is_deleted") is not True
+        ):
+            document.update({
+                "activity_status": "completed",
+                "activity_closed_at": closed_at,
+            })
+            closed += 1
+    if closed:
+        _write_history_fallback(history)
+    return closed
 
 
 async def list_conversations(
@@ -575,7 +738,7 @@ async def append_turn(
             turns = ((doc or {}).get("turns", []) + new_turns)[-MAX_TURNS:]
             await collection.update_one(
                 {"_id": key},
-                {"$set": {"turns": turns, "learner_id": safe_id,
+                {"$set": {"turns": turns, "conversation_memory": _conversation_memory(turns), "learner_id": safe_id,
                           "session_id": safe_session, "role": role, "updated_at": assistant_at}},
                 upsert=True,
             )
@@ -586,6 +749,7 @@ async def append_turn(
         data = _read_fallback()
         entry = data.get(key, {"turns": []})
         entry["turns"] = (entry.get("turns", []) + new_turns)[-MAX_TURNS:]
+        entry["conversation_memory"] = _conversation_memory(entry["turns"])
         entry.update({"learner_id": safe_id, "session_id": safe_session, "role": role, "updated_at": assistant_at})
         data[key] = entry
         _write_fallback(data)
@@ -679,6 +843,11 @@ async def append_turn(
         conversation_document["title_source"] = existing_source
     conversation_document["created_at"] = existing.get("created_at") or now
     conversation_document["message_count"] = int(existing.get("message_count") or 0) + inserted
+    for field in (
+        "activity_unit_id", "activity_component_id", "activity_status", "activity_closed_at",
+    ):
+        if existing.get(field) is not None:
+            conversation_document[field] = existing[field]
     history["conversations"][key] = conversation_document
     _write_history_fallback(history)
 

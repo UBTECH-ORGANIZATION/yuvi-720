@@ -1,0 +1,32 @@
+.learner-app-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px;
+  border: 1px solid rgba(111, 91, 255, .1);
+  border-radius: var(--sp-radius-pill);
+  background: rgba(245, 242, 255, .82);
+}
+
+.learner-app-nav button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-block-size: 36px;
+  padding-inline: 14px;
+  border: 0;
+  border-radius: var(--sp-radius-pill);
+  background: transparent;
+  color: var(--sp-ink-400);
+  font: 600 var(--sp-fs-xs)/1 var(--sp-font);
+  cursor: pointer;
+}
+
+.learner-app-nav button:hover { color: var(--sp-primary-700); }
+.learner-app-nav button.is-active { background: var(--sp-surface); color: var(--sp-primary-700); box-shadow: var(--sp-shadow-sm); }
+.learner-app-nav button:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+
+@media (max-width: 720px) {
+  .learner-app-nav span { display: none; }
+  .learner-app-nav button { padding-inline: 11px; }
+}

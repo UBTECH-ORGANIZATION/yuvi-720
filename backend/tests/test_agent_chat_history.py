@@ -133,6 +133,79 @@ class AgentChatHistoryTests(unittest.IsolatedAsyncioTestCase):
         next_conversation = await sessions.create_conversation(learner_id)
         self.assertNotEqual(next_conversation["id"], first["id"])
 
+    async def test_activity_conversation_resumes_until_completion_then_rotates(self) -> None:
+        learner_id = "activity-thread-learner"
+        unit_id = "YuviDori-math-angles-00001"
+        component_id = "YuviDori-math-angles-00001-00002-basic"
+        first = await sessions.create_conversation(
+            learner_id,
+            unit_id=unit_id,
+            component_id=component_id,
+        )
+        await sessions.append_turn(
+            learner_id,
+            "coach",
+            user="I need a hint for this activity.",
+            assistant="Let us inspect the two rays.",
+            session_id=first["id"],
+            exchange_id="activity-first-turn",
+        )
+
+        resumed = await sessions.create_conversation(
+            learner_id,
+            unit_id=unit_id,
+            component_id=component_id,
+        )
+        other_component = await sessions.create_conversation(
+            learner_id,
+            unit_id=unit_id,
+            component_id="YuviDori-math-angles-00001-00003-basic",
+        )
+        self.assertEqual(resumed["id"], first["id"])
+        self.assertNotEqual(other_component["id"], first["id"])
+
+        closed = await sessions.close_activity_conversations(
+            learner_id,
+            unit_id,
+            component_id,
+        )
+        self.assertEqual(closed, 1)
+        next_attempt = await sessions.create_conversation(
+            learner_id,
+            unit_id=unit_id,
+            component_id=component_id,
+        )
+        self.assertNotEqual(next_attempt["id"], first["id"])
+
+        history = await sessions.list_conversations(learner_id, limit=10)
+        stored = {item["id"]: item for item in history["conversations"]}
+        self.assertEqual(stored[first["id"]]["activity_status"], "completed")
+        self.assertEqual(stored[next_attempt["id"]]["activity_status"], "open")
+
+    async def test_working_memory_summarizes_only_turns_outside_recent_window(self) -> None:
+        learner_id = "rolling-memory-learner"
+        conversation = await sessions.create_conversation(learner_id)
+        for index in range(6):
+            user = (
+                "I prefer visual examples; contact learner@example.com"
+                if index == 0 else f"question {index}"
+            )
+            await sessions.append_turn(
+                learner_id,
+                "coach",
+                user=user,
+                assistant=f"answer {index}",
+                session_id=conversation["id"],
+                exchange_id=f"rolling-{index}",
+            )
+
+        memory = await sessions.get_conversation_memory(
+            learner_id, "coach", conversation["id"]
+        )
+        self.assertEqual(memory["rolling_summary"], ["answer 0", "answer 1"])
+        self.assertEqual(len(memory["entity_ledger"]), 1)
+        self.assertNotIn("learner@example.com", memory["entity_ledger"][0])
+
     async def test_model_title_is_short_and_never_copies_the_first_message(self) -> None:
         first_message = "Please explain how to identify similar triangles"
         with patch.object(

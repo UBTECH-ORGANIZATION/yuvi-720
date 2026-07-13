@@ -170,6 +170,27 @@
   box-shadow: var(--sp-shadow-md);
 }
 [data-theme='dark'] .q-progress-track { background: var(--sp-bg-subtle); }
+[data-theme='dark'] .reflection-speech-option:hover,
+[data-theme='dark'] .reflection-speech-option:focus-visible {
+  color: #fff;
+  border-color: rgba(115, 226, 255, .82);
+  background: linear-gradient(135deg, #7057f5, #476bd9 56%, #218aa9);
+  box-shadow:
+    0 15px 32px rgba(2, 8, 36, .48),
+    0 0 0 3px rgba(76, 201, 240, .13),
+    inset 0 1px rgba(255, 255, 255, .2);
+}
+[data-theme='dark'] .q-node:hover,
+[data-theme='dark'] .q-node:focus-visible,
+[data-theme='dark'] .q-node.chosen {
+  color: #fff;
+  border-color: rgba(115, 226, 255, .82);
+  background: linear-gradient(135deg, #7057f5, #476bd9 56%, #218aa9);
+  box-shadow:
+    0 15px 32px rgba(2, 8, 36, .48),
+    0 0 0 3px rgba(76, 201, 240, .13),
+    inset 0 1px rgba(255, 255, 255, .2);
+}
 
 /* Student dashboard */
 [data-theme='dark'] .sd-page {
@@ -178,8 +199,8 @@
     radial-gradient(circle at 88% 24%, rgba(159, 122, 254, .14), transparent 32%),
     linear-gradient(180deg, #11152d 0%, var(--sp-bg) 48%, #0a0d1e 100%);
 }
-[data-theme='dark'] .sd-app-nav { border-color: var(--sp-border); background: var(--sp-bg-subtle); }
-[data-theme='dark'] .sd-app-nav button.is-active { background: var(--sp-surface); }
+[data-theme='dark'] .learner-app-nav { border-color: var(--sp-border); background: var(--sp-bg-subtle); }
+[data-theme='dark'] .learner-app-nav button.is-active { background: var(--sp-surface); }
 [data-theme='dark'] .sd-subject-card,
 [data-theme='dark'] .sd-focus-card,
 [data-theme='dark'] .sd-learning-profile,

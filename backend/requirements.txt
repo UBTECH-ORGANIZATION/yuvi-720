@@ -1,6 +1,8 @@
 fastapi
 uvicorn
 httpx
+mcp>=1.28,<2
+agent-framework-core==1.11.0
 motor
 certifi
 azure-communication-email

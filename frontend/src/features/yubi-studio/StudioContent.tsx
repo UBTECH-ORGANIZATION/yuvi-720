@@ -2,7 +2,7 @@
 /* eslint-disable */
 import { useMemo } from 'react'
 import { useI18n } from '../../i18n/I18nProvider'
-import { AppBar } from '../../components/AppBar'
+import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { YubiAvatar3D } from './YubiAvatar3D'
 import { assetsForSlot, getThumbnails, type YubiAsset } from './yubiAssets'
 import type { YubiColors, YubiSlot, YubiVariant } from './yubiDesign'
@@ -14,9 +14,6 @@ const TABS: Tab[] = ['headTop', 'face', 'body', 'handR', 'back', 'colors']
 
 // TEMP: show every asset unlocked so new items can be previewed on Yuvi.
 const PREVIEW_ALL = true
-
-// Matches the onboarding learner so the navbar reads consistently everywhere.
-const STUDENT_NAME = 'יובל כהן'
 
 const COLOR_OPTIONS: Record<keyof YubiColors, string[]> = {
   body: ['#85878C', '#9cc1e8', '#ff9ec4', '#b5f2c9', '#ffd27a', '#c9b6ff', '#8ee6f2', '#ff8f8f', '#9ad0ff'],
@@ -47,7 +44,7 @@ export function StudioContent({
 
   return (
     <div className="yubi-studio">
-      <AppBar studentName={STUDENT_NAME} studentSubtitle={t('app.studentSubtitle')} />
+      <LearnerAppBar />
       <div className="ys-body">
         <aside className="ys-drawer">
         <div className="ys-drawer__head">

@@ -2,7 +2,9 @@
 
 After a questionnaire phase, we rank the learner's answers by how *extreme* they
 are (distance from the neutral option, with reverse-phrased items flipped), pick
-the top 1-2, and map each to a prebuilt clarification question. All learner-facing
+the top signals, and map each to a prebuilt clarification question. If those
+signals collapse to one repeated theme, a section-specific actionable follow-up
+provides a coherent second turn. All learner-facing
 text lives in the locale files (``reflect.*`` keys); this module only decides
 *which* keys + signals to serve. That keeps the flow cheap, instant, offline, and
 privacy-safe (no learner text leaves the app), and every question is traceable to
@@ -33,12 +35,13 @@ _SUBJECT_BY_QID = {1: "math", 2: "science", 3: "english", 4: "math", 5: "science
 # reflect.q.<code>.opt.<n>; signal = "<code>.<n>").
 _CLARIFIER_OPTIONS = {
     "subj_hard": 4, "subj_interest": 4, "subj_like": 3,
-    "acad_class": 4, "acad_diff": 4, "acad_str": 3,
-    "growth_diff": 4, "growth_str": 3,
-    "resp_diff": 4,
-    "reg_diff": 4,
-    "aware_diff": 4,
-    "env_bored": 4, "env_support": 4, "env_focus": 4, "env_computer": 3, "env_diff": 4,
+    "acad_class": 4, "acad_diff": 4, "acad_str": 3, "acad_action": 4,
+    "growth_diff": 4, "growth_str": 3, "growth_action": 4,
+    "resp_diff": 4, "resp_action": 4,
+    "reg_diff": 4, "reg_action": 4,
+    "aware_diff": 4, "aware_action": 4,
+    "env_bored": 4, "env_support": 4, "env_focus": 4, "env_computer": 3,
+    "env_diff": 4, "env_action": 4,
 }
 
 # Codes whose prompt needs a {subject} slot (resolved client-side from the key).
@@ -73,6 +76,19 @@ _PHASE_FALLBACK = {
     ("part_self_awareness", "difficulty"): "aware_diff",
     ("part_environment", "difficulty"): "env_diff",
     ("part_environment", "strength"): "env_computer",
+}
+
+# A single question can occur when several extreme answers map to the same
+# clarifier code (for example, all responsibility items map to ``resp_diff``).
+# Rather than repeating that question or inventing another diagnosis, ask one
+# phase-specific, action-oriented follow-up grounded in the same learning area.
+_PHASE_ACTION_FOLLOWUP = {
+    "part_academic": "acad_action",
+    "part_growth": "growth_action",
+    "part_responsibility": "resp_action",
+    "part_regulation": "reg_action",
+    "part_self_awareness": "aware_action",
+    "part_environment": "env_action",
 }
 
 
@@ -136,7 +152,12 @@ def _build_question(code: str, qid: int) -> dict:
 
 
 def build_reflection(part_id: str, qa_pairs: list, language: str) -> dict:
-    """Deterministic opener + up to 2 clarification questions for a phase."""
+    """Build 0 or 2-3 grounded clarification questions for a phase.
+
+    Neutral answers need no interrogation. Once a phase does need clarification,
+    however, one isolated question feels accidental and gives too little context,
+    so a meaningful action-oriented second question is guaranteed.
+    """
     ranked = _rank_answers(part_id, qa_pairs, language)
 
     questions: list[dict] = []
@@ -149,6 +170,11 @@ def build_reflection(part_id: str, qa_pairs: list, language: str) -> dict:
             continue
         questions.append(_build_question(code, item["qid"]))
         used_codes.add(code)
+
+    if len(questions) == 1:
+        followup_code = _PHASE_ACTION_FOLLOWUP.get(part_id)
+        if followup_code and followup_code not in used_codes:
+            questions.append(_build_question(followup_code, ranked[0]["qid"]))
 
     # Deep opener: name the learner's top strength + top difficulty *themes*
     # (not a generic per-phase line), so the first message reads like a real,

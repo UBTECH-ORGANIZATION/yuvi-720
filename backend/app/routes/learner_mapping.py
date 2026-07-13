@@ -57,7 +57,12 @@ async def submit_questionnaire(data: dict):
     language = normalize_language(data.get("language"))
 
     # Legacy state kept during migration (dashboard still reads mapping_results).
-    await update_learner_state(learner_id, {"mapping_results": result})
+    await update_learner_state(learner_id, {
+        "mapping_results": result,
+        # A new questionnaire creates a new profile-verification journey. Never
+        # inherit a completed checkpoint from an older mapping submission.
+        "profile_summary_progress": None,
+    })
 
     # Seed the brain (F2): mapping_scores via the system lane; the Onboarding
     # agent derives profile/strengths/challenges/activeness (numbers deterministic).

@@ -16,7 +16,9 @@ from typing import AsyncGenerator, Optional
 
 from app.agents import safety
 from app.agents import sessions
+from app.agents.client import build_chat_client
 from app.brain.context_engine import build_coach_bundle
+from app.brain.memory import classify_query_intent, profile_answer_fallback
 from app.services.ai_usage import UsageContext
 from app.services.llm import call_llm, call_llm_stream
 
@@ -76,6 +78,38 @@ COACH_INSTRUCTIONS = {
     ),
 }
 
+QUERY_MODE_INSTRUCTIONS = {
+    "profile_question": {
+        "he": (
+            "השאלה היא על מה שלמדת על התלמיד/ה. סכם תמונת לומד/ת אישית ולא רשימת שדות: "
+            "שלב דפוס למידה אחד, חוזקה או עניין משמעותי אחד, ויעד נוכחי אם קיים. "
+            "פתח ב'ממה שלמדתי עד עכשיו', אל תגיד 'אני רואה בלוח', ואל תחשוף מקור פנימי או הנחיית מורה. "
+            "כתוב 2–3 משפטים בלבד וסיים בהזמנה קצרה לתקן אותך."
+        ),
+        "ar": (
+            "السؤال عمّا تعلمته عن الطالب. قدّم صورة تعلم شخصية مترابطة لا قائمة حقول: اجمع نمط تعلم واحدًا، "
+            "ونقطة قوة أو اهتمامًا مهمًا، وهدفًا حاليًا إن وُجد. ابدأ بما يعادل «مما تعلمته حتى الآن»، ولا تذكر لوحة "
+            "أو مصدرًا داخليًا أو توجيه معلّم. اكتب جملتين أو ثلاثًا واختم بدعوة قصيرة للتصحيح."
+        ),
+        "en": (
+            "The learner is asking what you have learned about them. Give a connected learning portrait, not a field inventory: "
+            "combine one learning pattern, one meaningful strength or interest, and a current goal when present. Start with "
+            "'From what I've learned so far'; never mention a dashboard, internal source, or teacher guidance. Use 2–3 sentences "
+            "and end with a brief invitation to correct you."
+        ),
+    },
+    "memory_correct": {
+        "he": "התלמיד/ה תיקן/ה פרט בזיכרון. אשר בקצרה שהעדכון נקלט, בלי לחזור על מידע רגיש, ואז המשך באופן טבעי.",
+        "ar": "صحّح الطالب معلومة في الذاكرة. أكّد باختصار أن التحديث تم دون تكرار معلومات حساسة، ثم تابع طبيعيًا.",
+        "en": "The learner corrected a memory item. Briefly confirm the update without repeating sensitive information, then continue naturally.",
+    },
+    "memory_forget": {
+        "he": "התלמיד/ה ביקש/ה לשכוח פרט. אשר בקצרה שלא תשתמש בו עוד; אל תתווכח ואל תבקש הצדקה.",
+        "ar": "طلب الطالب نسيان معلومة. أكّد باختصار أنك لن تستخدمها بعد الآن، ولا تجادل أو تطلب تبريرًا.",
+        "en": "The learner asked you to forget something. Briefly confirm you will no longer use it; do not argue or ask for justification.",
+    },
+}
+
 # Proactive nudges (used by the trigger engine in P4).
 PROACTIVE_PROMPTS = {
     "idle": {
@@ -88,10 +122,28 @@ PROACTIVE_PROMPTS = {
         "ar": "تم رصد فهم خاطئ متكرر. اقترح/ي تمثيلًا آخر أو تلميحًا مركزًا — لا الإجابة.",
         "en": "A repeated misconception was detected. Offer a different representation or a focused hint — not the answer.",
     },
+    "slow_progress": {
+        "he": "נמדד זמן ארוך בין אירועי הפעילות. הצע/י בעדינות לפרק את השאלה לצעד קטן או לתת רמז ממוקד — בלי להניח חוסר הבנה ובלי לתת את התשובה.",
+        "ar": "تم قياس وقت طويل بين أحداث النشاط. اقترح/ي بلطف تقسيم السؤال إلى خطوة صغيرة أو تقديم تلميح مركّز، دون افتراض عدم الفهم ودون إعطاء الإجابة.",
+        "en": "A long interval was measured between activity events. Gently offer to break the question into a smaller step or give a focused hint, without assuming confusion or giving the answer.",
+    },
     "success": {
         "he": "התלמיד/ה התקדם/ה יפה. תן/י חיזוק חיובי קצר ומכוון.",
         "ar": "أحرز/ت الطالب/ة تقدمًا جيدًا. قدّم/ي تعزيزًا إيجابيًا قصيرًا وموجّهًا.",
         "en": "The student made good progress. Give short, targeted positive reinforcement.",
+    },
+}
+
+SUPPORT_PROMPTS = {
+    "hint": {
+        "he": "תן/י רמז אחד קטן וממוקד למשימה הנוכחית, על בסיס מידע הפריט והאירועים האחרונים בלבד. אל תיתן/י את התשובה ואל תמציא/י מה התלמיד/ה עשה/תה.",
+        "ar": "قدّم/ي تلميحًا واحدًا صغيرًا ومركّزًا للمهمة الحالية، اعتمادًا فقط على معلومات العنصر والأحداث الأخيرة. لا تعطِ الإجابة ولا تختلق ما فعله الطالب/ة.",
+        "en": "Give one small, focused hint for the current task, using only the item information and recent events. Do not give the answer or invent what the learner did.",
+    },
+    "explanation": {
+        "he": "הסבר/י לעומק ובשלבים את הרעיון שנדרש בבעיה הנוכחית, על בסיס מידע הפריט והאירועים האחרונים בלבד. קשר/י את ההסבר לקושי שנראה בראיות אם יש כזה, בלי לחשוף תשובה סופית ובלי להמציא קושי.",
+        "ar": "اشرح/ي الفكرة المطلوبة في المشكلة الحالية بعمق وعلى مراحل، اعتمادًا فقط على معلومات العنصر والأحداث الأخيرة. اربط/ي الشرح بالصعوبة الظاهرة في الأدلة إن وجدت، دون كشف الإجابة النهائية أو اختلاق صعوبة.",
+        "en": "Explain the idea required by the current problem in depth and in steps, using only the item information and recent events. Connect it to evidence of difficulty when present, without revealing the final answer or inventing difficulty.",
     },
 }
 
@@ -179,13 +231,15 @@ def _render_context(bundle: dict) -> str:
     profile = bundle.get("profile", {})
     current = bundle.get("current", {})
     surface = bundle.get("surface", {})
+    portrait = bundle.get("portrait", {})
+    conversation_memory = bundle.get("conversation_memory", {})
     joined = lambda values: "; ".join(str(value) for value in (values or []) if value) or "—"
     goals = joined(
         f"text={g.get('text') or '—'}, status={g.get('status') or '—'}, deadline={g.get('deadline') or '—'}"
         for g in (bundle.get("goals") or [])
     )
     recent = joined(
-        f"verb={event.get('verb') or '—'}, success={event.get('success')}, misconception={event.get('misconception') or '—'}"
+        f"verb={event.get('verb') or '—'}, component={event.get('component_id') or '—'}, question={event.get('question_id') or '—'}, object={event.get('object_id') or '—'}, success={event.get('success')}, misconception={event.get('misconception') or '—'}, elapsed_seconds={event.get('elapsed_seconds')}, timing_quality={event.get('timing_quality') or '—'}"
         for event in (current.get("recent_events") or [])
     )
     lines = [
@@ -207,6 +261,15 @@ def _render_context(bundle: dict) -> str:
         f"current_pace: {current.get('pace') or '—'}",
         f"recent_learning_evidence: {recent}",
         f"current_item_info: {current.get('informationToBot') or '—'}",
+        f"query_intent: {bundle.get('query_intent') or 'learning_help'}",
+        f"portrait_interests: {joined(portrait.get('interests'))}",
+        f"portrait_preferences: {joined(portrait.get('preferences'))}",
+        f"portrait_characteristics: {joined(portrait.get('characteristics'))}",
+        f"portrait_strengths: {joined(portrait.get('strengths'))}",
+        f"portrait_effective_strategies: {joined(portrait.get('strategies'))}",
+        f"portrait_active_goal: {portrait.get('active_goal') or '—'}",
+        f"older_conversation_summary: {joined(conversation_memory.get('rolling_summary'))}",
+        f"older_learner_stated_facts: {joined(conversation_memory.get('entity_ledger'))}",
         "</learner_context>",
     ]
     return "\n".join(lines)
@@ -226,6 +289,47 @@ def _build_messages(instructions: str, context_block: str, history: list, user_m
     return messages
 
 
+async def _stream_coach_model(
+    messages: list[dict[str, str]], usage_context: UsageContext
+) -> AsyncGenerator[str, None]:
+    """Stream through Agent Framework without bypassing the tracked APIM lane."""
+    client = build_chat_client(usage_context, model_tier="strong", max_tokens=700)
+    if client is None:
+        async for chunk in call_llm_stream(
+            messages,
+            usage_context=usage_context,
+            model_tier="strong",
+            max_tokens=700,
+        ):
+            yield chunk
+        return
+
+    yielded = False
+    try:
+        from agent_framework import Agent, Message
+
+        agent = Agent(client, name="yuvi_learning_coach")
+        framework_messages = [
+            Message(message["role"], [message["content"]])
+            for message in messages
+        ]
+        async for update in agent.run(framework_messages, stream=True):
+            text = getattr(update, "text", "") or ""
+            if text:
+                yielded = True
+                yield text
+    except Exception as exc:  # framework availability must never break the demo
+        print(f"⚠️ Agent Framework Coach run failed: {type(exc).__name__}")
+        if not yielded:
+            async for chunk in call_llm_stream(
+                messages,
+                usage_context=usage_context,
+                model_tier="strong",
+                max_tokens=700,
+            ):
+                yield chunk
+
+
 async def run_coach_stream(
     learner_id: str,
     user_message: Optional[str] = None,
@@ -235,6 +339,7 @@ async def run_coach_stream(
     exchange_id: Optional[str] = None,
     endpoint: str = "/api/agent/coach/stream",
     surface_context: Optional[dict] = None,
+    support_mode: Optional[str] = None,
 ) -> AsyncGenerator[str, None]:
     """Stream a Coach reply (chat or proactive), Safety-gated, then persist it."""
     lang = language if language in COACH_INSTRUCTIONS else "he"
@@ -243,7 +348,10 @@ async def run_coach_stream(
         actor_type="learner",
         endpoint=endpoint,
         feature="feature_3_learning_companion",
-        operation="coach.proactive" if trigger is not None else "coach.reply",
+        operation=(
+            f"coach.support.{support_mode}" if support_mode in SUPPORT_PROMPTS
+            else "coach.proactive" if trigger is not None else "coach.reply"
+        ),
         source="coach_agent",
         session_id=session_id,
         exchange_id=exchange_id,
@@ -252,7 +360,10 @@ async def run_coach_stream(
     # Resolve the prompt: a chat message (Safety-screened) or a proactive nudge.
     # `memory_user` is what we PERSIST — always the sanitized text, never raw PII,
     # because working memory is re-injected into later prompts (§4.1 / R7).
-    if user_message is not None:
+    if support_mode in SUPPORT_PROMPTS:
+        prompt_text = SUPPORT_PROMPTS[support_mode][lang]
+        memory_user = f"[support:{support_mode}]"
+    elif user_message is not None:
         screened = safety.screen_input(user_message, lang)
         prompt_text = screened.text or FALLBACK_REPLY[lang]
         memory_user = prompt_text
@@ -276,7 +387,32 @@ async def run_coach_stream(
         prompt_text = PROACTIVE_PROMPTS.get(trigger or "idle", PROACTIVE_PROMPTS["idle"])[lang]
         memory_user = f"[proactive:{trigger}]"
 
-    bundle = await build_coach_bundle(learner_id, surface_context=surface_context)
+    query_intent = (
+        f"support_{support_mode}" if support_mode in SUPPORT_PROMPTS
+        else classify_query_intent(prompt_text, lang) if user_message is not None
+        else "proactive"
+    )
+    memory_processed_before_reply = False
+    if user_message is not None and query_intent in {"memory_correct", "memory_forget"}:
+        try:
+            from app.brain.consolidator import capture_and_consolidate
+            await capture_and_consolidate(
+                learner_id,
+                memory_user,
+                lang,
+                session_id=session_id,
+                exchange_id=exchange_id,
+            )
+            memory_processed_before_reply = True
+        except Exception as exc:  # pragma: no cover
+            print(f"⚠️ memory correction failed: {exc}")
+
+    bundle = await build_coach_bundle(
+        learner_id,
+        surface_context=surface_context,
+        user_message=prompt_text,
+        query_intent=query_intent,
+    )
     lang = bundle.get("locale") or lang
     title_task: Optional[asyncio.Task[tuple[str, str]]] = None
     if user_message is not None and await sessions.conversation_needs_title(
@@ -293,20 +429,51 @@ async def run_coach_stream(
     history = await sessions.get_recent(
         learner_id, "coach", limit=8, session_id=session_id
     )
-    messages = _build_messages(COACH_INSTRUCTIONS[lang], _render_context(bundle), history, prompt_text)
+    bundle["conversation_memory"] = await sessions.get_conversation_memory(
+        learner_id, "coach", session_id=session_id
+    )
+    instructions = COACH_INSTRUCTIONS[lang]
+    if support_mode in SUPPORT_PROMPTS:
+        instructions = f"{instructions}\n- {SUPPORT_PROMPTS[support_mode][lang]}"
+    mode_instruction = QUERY_MODE_INSTRUCTIONS.get(query_intent, {})
+    if mode_instruction:
+        instructions = f"{instructions}\n- {mode_instruction.get(lang) or mode_instruction['he']}"
+    messages = _build_messages(instructions, _render_context(bundle), history, prompt_text)
 
     collected = ""
-    async for chunk in call_llm_stream(
-        messages,
-        usage_context=usage_context,
-        model_tier="strong",
-    ):
+    pending_output = ""
+    sentence_count = 0
+    max_sentences = 6 if support_mode == "explanation" else 3
+    async for chunk in _stream_coach_model(messages, usage_context):
         out = safety.screen_output(chunk, lang).text   # tier-1 on the way out
-        collected += out
-        yield out
+        if sentence_count >= max_sentences:
+            continue
+        pending_output += out
+        while sentence_count < max_sentences:
+            boundary = re.match(r"^([\s\S]*?[.!?؟]+)(?:\s+|$)", pending_output)
+            if boundary is None:
+                break
+            sentence = boundary.group(1).strip()
+            pending_output = pending_output[boundary.end():]
+            if not sentence:
+                continue
+            sentence_count += 1
+            separator = " " if collected else ""
+            collected += separator + sentence
+            yield separator + sentence
+
+    if sentence_count < max_sentences and pending_output.strip():
+        remainder = pending_output.strip()[:1200 if support_mode == "explanation" else 600]
+        separator = " " if collected else ""
+        collected += separator + remainder
+        yield separator + remainder
 
     if not collected.strip():
-        collected = FALLBACK_REPLY[lang]
+        collected = (
+            profile_answer_fallback(bundle.get("portrait") or {}, lang)
+            if query_intent == "profile_question"
+            else FALLBACK_REPLY[lang]
+        )
         yield collected
 
     # Persist the turn as working memory so the chat resumes (no localStorage).
@@ -333,7 +500,7 @@ async def run_coach_stream(
 
     # Chat persists (§5.7): consolidate durable signals (interests) from the turn.
     # Only for real learner messages, and never a blocker on the reply.
-    if user_message is not None:
+    if user_message is not None and not memory_processed_before_reply:
         try:
             from app.brain.consolidator import capture_and_consolidate
             await capture_and_consolidate(

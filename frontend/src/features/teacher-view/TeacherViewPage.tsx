@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { AppBar } from '../../components/AppBar'
 import { useI18n } from '../../i18n/I18nProvider'
 import {
   getGroupInsights, getStudentInsights, listGroups, saveDirective,
@@ -57,11 +58,20 @@ export function TeacherViewPage() {
     return () => { active = false }
   }, [studentId, tab, language])
 
-  if (loading && !group) return <div className="tv-wrap"><LoadingState title={t('teacher.loading')} /></div>
-  if (error) return <div className="tv-wrap"><ErrorState title={t('teacher.error')} /></div>
+  const appBar = (
+    <AppBar
+      studentName={t('teacher.appbar.name')}
+      studentSubtitle={t('teacher.appbar.subtitle')}
+    />
+  )
+
+  if (loading && !group) return <>{appBar}<main className="tv-wrap"><LoadingState title={t('teacher.loading')} /></main></>
+  if (error) return <>{appBar}<main className="tv-wrap"><ErrorState title={t('teacher.error')} /></main></>
 
   return (
-    <div className="tv-wrap">
+    <>
+      {appBar}
+      <main className="tv-wrap">
       <SectionHeader title={t('teacher.title')} subtitle={t('teacher.subtitle')} />
       <div className="tv-tabs" role="tablist">
         <button className={`tv-tab ${tab === 'group' ? 'tv-tab--active' : ''}`} onClick={() => setTab('group')}>
@@ -77,7 +87,8 @@ export function TeacherViewPage() {
       ) : (
         <StudentView group={group} studentId={studentId} student={student} onSelect={setStudentId} />
       )}
-    </div>
+      </main>
+    </>
   )
 }
 

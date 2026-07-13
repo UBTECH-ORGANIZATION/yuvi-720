@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import type { ReactNode } from 'react'
 import '../styles/toast.css'
 
 /**
@@ -6,7 +7,7 @@ import '../styles/toast.css'
  * (rewards, saves, tips…). Auto-dismisses and can carry one action button.
  */
 export interface ToastProps {
-  icon?: string
+  icon?: ReactNode
   title: string
   body?: string
   actionLabel?: string

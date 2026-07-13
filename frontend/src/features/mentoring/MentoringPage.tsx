@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { useI18n } from '../../i18n/I18nProvider'
 import {
   createMentoring, listMentoring, type MentoringConversation,
@@ -33,7 +34,9 @@ export function MentoringPage() {
   const today = new Date().toISOString().slice(0, 10)
 
   return (
-    <div className="mt-wrap">
+    <>
+      <LearnerAppBar />
+      <main className="mt-wrap">
       <SectionHeader title={t('mentoring.title')} subtitle={t('mentoring.subtitle')} />
 
       <div className="mt-roles" role="tablist">
@@ -75,7 +78,8 @@ export function MentoringPage() {
           ))}
         </div>
       )}
-    </div>
+      </main>
+    </>
   )
 }
 
