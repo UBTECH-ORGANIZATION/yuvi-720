@@ -58,7 +58,7 @@ AGENT_VIEWS: dict[str, dict[str, list[str]]] = {
             "profile.characteristics", "profile.learning_style",
             "profile.preferences", "profile.environment", "strengths",
             "challenges", "strategies", "goals", "current_state",
-            "teacher_directives",
+            "teacher_directives", "memory",
         ],
         "write": ["agent_notes"],   # durable fields only via consolidator (§5.7)
     },
@@ -109,7 +109,10 @@ async def apply_writes(
 
 
 async def build_coach_bundle(
-    learner_id: Optional[str], surface_context: Optional[dict[str, Any]] = None
+    learner_id: Optional[str],
+    surface_context: Optional[dict[str, Any]] = None,
+    user_message: Optional[str] = None,
+    query_intent: Optional[str] = None,
 ) -> dict[str, Any]:
     """Assemble the non-identifying Coach Context bundle (§4.4).
 
@@ -118,7 +121,14 @@ async def build_coach_bundle(
     detect struggle. Content/event lookups are imported lazily to avoid cycles.
     """
     from app.brain.curriculum import get_component, localized_objective_title
+    from app.brain.memory import (
+        active_themes,
+        build_learner_portrait,
+        classify_query_intent,
+        memory_defaults,
+    )
     from app.services.content_catalog import information_to_bot
+    from app.services import content_provider
     from app.services.events import get_recent_events
 
     brain = await view_for("coach", learner_id)
@@ -129,8 +139,18 @@ async def build_coach_bundle(
     resume_token = get_path(brain, "current_state.resume_token")
     pace = get_path(brain, "current_state.pace")
     component = get_component(component_id) if component_id else None
-    objective_id = (component or {}).get("objective_id")
+    provider_unit: Optional[dict[str, Any]] = None
+    provider_component: Optional[dict[str, Any]] = None
+    if component_id and component is None:
+        try:
+            provider_unit, provider_component = await content_provider.resolve_component(
+                component_id, unit_id
+            )
+        except content_provider.ContentProviderError:
+            pass
+    objective_id = (component or {}).get("objective_id") or (provider_unit or {}).get("objective_id")
     locale = get_path(brain, "identity.locale") or "he"
+    intent = query_intent or classify_query_intent(user_message or "", locale)
     screen = (surface_context or {}).get("screen")
     if screen not in COACH_SCREEN_AREAS:
         screen = "unknown"
@@ -147,6 +167,8 @@ async def build_coach_bundle(
     def labels(values: Any, limit: int = 3) -> list[str]:
         result: list[str] = []
         for value in values if isinstance(values, list) else []:
+            if isinstance(value, dict) and value.get("learner_feedback") == "inaccurate":
+                continue
             raw = value.get("label") or value.get("text") if isinstance(value, dict) else value
             text = safe_text(raw)
             if text:
@@ -154,6 +176,20 @@ async def build_coach_bundle(
             if len(result) >= limit:
                 break
         return result
+
+    memory = get_path(brain, "memory") or memory_defaults()
+    memory_interests = [
+        safe_text(theme.get("value"))
+        for theme in active_themes(memory, {"interest"}, limit=6)
+    ]
+    memory_characteristics = [
+        safe_text(theme.get("value"))
+        for theme in active_themes(memory, {"characteristic", "self_belief"}, limit=3)
+    ]
+    memory_preferences = [
+        safe_text(theme.get("value"))
+        for theme in active_themes(memory, {"preference"}, limit=5)
+    ]
 
     strategies: list[str] = []
     for strategy in get_path(brain, "strategies") or []:
@@ -196,26 +232,32 @@ async def build_coach_bundle(
             break
     teacher_guidance.reverse()
 
-    recent = await get_recent_events(learner_id or "", limit=5)
+    recent = await get_recent_events(learner_id or "", objective_id=objective_id, limit=5)
     recent_view = [
         {
             "verb": safe_text(e.get("verb"), 60),
             "success": (e.get("result") or {}).get("success"),
             "misconception": safe_text(e.get("misconception"), 120),
+            "question_id": safe_text(e.get("question_id"), 100),
+            "object_id": safe_text(e.get("object_id"), 180),
+            "component_id": safe_text(e.get("launch"), 160),
+            "elapsed_seconds": (e.get("timing") or {}).get("elapsed_since_previous_seconds"),
+            "timing_quality": safe_text((e.get("timing") or {}).get("quality"), 40),
         }
         for e in recent
     ]
 
     return {
         "profile": {
-            "interests": labels(
+            "interests": memory_interests or labels(
                 (get_path(brain, "profile.interests") or [])
-                + (get_path(brain, "profile.hobbies") or []),
-                limit=6,
+                + (get_path(brain, "profile.hobbies") or []), limit=6
             ),
-            "characteristics": labels(get_path(brain, "profile.characteristics") or []),
+            "characteristics": memory_characteristics
+            or labels(get_path(brain, "profile.characteristics") or []),
             "learning_style": safe_text(get_path(brain, "profile.learning_style")),
-            "preferences": labels(get_path(brain, "profile.preferences") or [], limit=5),
+            "preferences": memory_preferences
+            or labels(get_path(brain, "profile.preferences") or [], limit=5),
             "environment": safe_text(get_path(brain, "profile.environment")),
         },
         "strengths": labels(get_path(brain, "strengths") or []),
@@ -238,15 +280,28 @@ async def build_coach_bundle(
         "current": {
             "objective_id": objective_id,
             "objective_title": (
-                safe_text(localized_objective_title(objective_id, locale), 160)
-                if objective_id else ""
+                safe_text((provider_unit or {}).get("title"), 160)
+                if provider_unit else (
+                    safe_text(localized_objective_title(objective_id, locale), 160)
+                    if objective_id else ""
+                )
             ),
             "task_status": (
                 "resume_available" if component_id and resume_token else "no_open_task"
             ),
             "pace": safe_text(pace, 30),
-            "informationToBot": safe_text(information_to_bot(component_id), 900),
+            "informationToBot": safe_text(
+                (provider_component or {}).get("information_to_bot")
+                or information_to_bot(component_id),
+                900,
+            ),
             "recent_events": recent_view,
         },
+        "query_intent": intent,
+        "portrait": (
+            build_learner_portrait(brain, locale)
+            if intent in {"profile_question", "memory_correct", "memory_forget"}
+            else {}
+        ),
         "locale": locale,
     }

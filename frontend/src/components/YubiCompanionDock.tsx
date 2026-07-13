@@ -91,6 +91,7 @@ export function YubiCompanionDock() {
               label={t('companion.launcher')}
               muted
               interactiveY
+              followPointer
               pulling={isOpening}
               pullingSide="right"
               yTooltip={t('yubiStudio.launcher')}

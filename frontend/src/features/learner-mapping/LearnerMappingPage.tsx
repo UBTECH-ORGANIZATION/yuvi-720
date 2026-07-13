@@ -12,10 +12,10 @@ import { PHASE_REWARDS, getAsset } from '../yubi-studio/yubiAssets'
 import { useStudioTransition } from '../yubi-studio/StudioTransitionProvider'
 import { Toast } from '../../components/Toast'
 
-type Screen = 'chat' | 'question' | 'complete'
+type Screen = 'chat' | 'question'
 type ChatMode = 'intro' | 'section' | 'summary'
 type Answers = Record<number, number>
-type ReflectionPhase = 'entering' | 'thinking' | 'speaking' | 'awaiting' | 'celebrating' | 'returning'
+type ReflectionPhase = 'entering' | 'thinking' | 'speaking' | 'opener' | 'awaiting' | 'celebrating' | 'returning'
 
 type SummarySnapshot = {
   partIndex: number
@@ -51,7 +51,6 @@ const QUESTION_HANDOFF_MOVE_MS = 1180
 const REFLECTION_HANDOFF_MOVE_MS = 900
 const REFLECTION_THINK_MS = 1300
 const REFLECTION_BETWEEN_MESSAGES_MS = 520
-const REFLECTION_CELEBRATE_MS = 2350
 const REFLECTION_SPEECH_MAX_MS = 1250
 const REFLECTION_BLACK_HOLE_MS = 540
 // Option-label fade duration once Yubi lands (matches the .q-node opacity
@@ -99,7 +98,11 @@ export function LearnerMappingPage() {
   // Already-earned unlocks, loaded once so a reward isn't re-announced on resume.
   const unlockedRef = useRef<Set<string>>(new Set())
   const chatSequenceRunRef = useRef(0)
+  const reflectionSpeechRunRef = useRef(0)
   const transitionRunRef = useRef(0)
+  const reflectionContinuePendingRef = useRef(false)
+  const reflectionChoicePendingRef = useRef(false)
+  const reflectionFinishPendingRef = useRef(false)
   const hydratedRef = useRef(false)
   const skipIntroRef = useRef(false)
   // Mirrors the live transcript so the debounced autosave can persist the real
@@ -169,7 +172,7 @@ export function LearnerMappingPage() {
         )
         if (cancelled) return
         const progress = state?.mapping_progress
-        if (progress && !progress.completed && progress.screen && progress.screen !== 'complete') {
+        if (progress && !progress.completed && progress.screen && (progress.screen as string) !== 'complete') {
           skipIntroRef.current = true
           setQuestionnaire(nextQuestionnaire)
           restoreProgress(progress)
@@ -229,13 +232,16 @@ export function LearnerMappingPage() {
       setReflectChoices(snapshot.choices || [])
       setReflectProfile(snapshot.profile || 'neutral')
       setChatMessages(snapshot.messages || [])
+      chatMessagesRef.current = snapshot.messages || []
       setChatHistory(snapshot.messages || [])
       setIsTyping(false)
       setIsSpeakingText(false)
       const latestAssistant = [...(snapshot.messages || [])].reverse().find((message) => message.role === 'assistant')
-      const activePrompt = snapshot.questions?.[snapshot.reflectIndex ?? -1]?.prompt
+      const restoredReflectIndex = snapshot.reflectIndex ?? -1
+      const activePrompt = snapshot.questions?.[restoredReflectIndex]?.prompt
+      const isWaitingAtOpener = !snapshot.resolved && restoredReflectIndex < 0 && Boolean(snapshot.questions?.length)
       setReflectionText(snapshot.resolved ? latestAssistant?.content || '' : activePrompt || latestAssistant?.content || '')
-      setReflectionPhase(snapshot.resolved ? 'celebrating' : 'awaiting')
+      setReflectionPhase(snapshot.resolved ? 'celebrating' : isWaitingAtOpener ? 'opener' : 'awaiting')
     } else {
       setScreen('question')
       setChatMode('section')
@@ -287,13 +293,18 @@ export function LearnerMappingPage() {
   }
 
   // Persist question/location progress (debounced) so a refresh resumes the
-  // learner at the exact spot. Chat transcript snapshots are saved explicitly
-  // only after a message finishes typing, not during every character.
+  // learner at the exact spot. Reflection transcript entries always contain
+  // their complete text even while the visible card is still animating.
   useEffect(() => {
     if (!questionnaire || !hydratedRef.current) return
     const inQuestion = screen === 'question'
     const inSummary = screen === 'chat' && chatMode === 'summary'
     if (!inQuestion && !inSummary) return
+    // `showSectionSummary` owns the first durable reflection checkpoint once
+    // its grounded opener and questions are ready. Saving during the animated
+    // thinking gap would overwrite the previous checkpoint with an empty,
+    // non-resumable summary.
+    if (inSummary && chatMessagesRef.current.length === 0) return
     const handle = window.setTimeout(() => {
       const progress: MappingProgress = {
         screen,
@@ -322,26 +333,13 @@ export function LearnerMappingPage() {
     }, 500)
     return () => window.clearTimeout(handle)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [questionnaire, screen, chatMode, activeStep, currentIndex, answers,
+  }, [questionnaire, screen, chatMode, activeStep, currentIndex, answers, chatMessages,
       sectionResolved, summaryPartIndex, summaryTitle, summaryQa, lastSectionContext, isLastSection,
       reflectQuestions, reflectIndex, reflectChoices])
 
   useEffect(() => {
     chatMessagesRef.current = chatMessages
   }, [chatMessages, isTyping])
-
-  // A resolved reflection always moves on automatically. Keeping this in an
-  // effect also makes a refreshed, already-resolved checkpoint continue rather
-  // than restoring a dead-end "next" button.
-  useEffect(() => {
-    if (screen !== 'chat' || chatMode !== 'summary' || !sectionResolved || reflectionPhase !== 'celebrating') return
-    const runId = transitionRunRef.current
-    const handle = window.setTimeout(() => {
-      if (transitionRunRef.current !== runId) return
-      void finishReflectionStage()
-    }, REFLECTION_CELEBRATE_MS)
-    return () => window.clearTimeout(handle)
-  }, [screen, chatMode, sectionResolved, reflectionPhase])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -425,30 +423,28 @@ export function LearnerMappingPage() {
   // transcript in the backend checkpoint. The learner only sees one active
   // message, so the reflection stays focused and does not become a chat log.
   async function speakReflection(text: string) {
-    const runId = chatSequenceRunRef.current + 1
-    chatSequenceRunRef.current = runId
+    // Reflection speech has its own lifecycle. Sharing the intro sequence token
+    // allowed an unrelated intro-effect cleanup to cancel a follow-up midway,
+    // leaving the stage in an empty `speaking` state with no way to continue.
+    const runId = reflectionSpeechRunRef.current + 1
+    reflectionSpeechRunRef.current = runId
     const reducedMotion =
       typeof window !== 'undefined' &&
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-    setReflectionText('')
     setReflectionPhase('speaking')
     setIsSpeakingText(!reducedMotion)
     setIsTyping(false)
-    setChatMessages((previous) => {
-      const next = [...previous, { role: 'assistant' as const, content: '' }]
-      chatMessagesRef.current = next
-      return next
-    })
+    setReflectionText('')
+    // Keep the durable checkpoint complete from the start. Only the visible
+    // speech card is revealed character-by-character; route changes, reloads,
+    // and background tabs must never persist a truncated transcript.
+    const nextMessages = [...chatMessagesRef.current, { role: 'assistant' as const, content: text }]
+    chatMessagesRef.current = nextMessages
+    setChatMessages(nextMessages)
 
     if (reducedMotion) {
       setReflectionText(text)
-      setChatMessages((previous) => {
-        const copy = [...previous]
-        copy[copy.length - 1] = { role: 'assistant', content: text }
-        chatMessagesRef.current = copy
-        return copy
-      })
       setIsSpeakingText(false)
       return true
     }
@@ -459,19 +455,23 @@ export function LearnerMappingPage() {
     const characterPause = Math.min(14, REFLECTION_SPEECH_MAX_MS / weightedLength)
     let output = ''
     for (const char of characters) {
-      if (chatSequenceRunRef.current !== runId) return false
+      if (reflectionSpeechRunRef.current !== runId) return false
+
+      // Browsers aggressively throttle timers in background tabs. Complete
+      // the active line immediately when that happens instead of leaving a
+      // half-rendered card that appears to vanish and restart after focus.
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        output = text
+        setReflectionText(text)
+        break
+      }
+
       output += char
       const snapshot = output
       setReflectionText(snapshot)
-      setChatMessages((previous) => {
-        const copy = [...previous]
-        copy[copy.length - 1] = { role: 'assistant', content: snapshot }
-        chatMessagesRef.current = copy
-        return copy
-      })
-      await wait(/[.!?…,\n]/.test(char) ? characterPause * 3 : characterPause)
+      await waitForReflectionDelay(/[.!?…,\n]/.test(char) ? characterPause * 3 : characterPause)
     }
-    if (chatSequenceRunRef.current !== runId) return false
+    if (reflectionSpeechRunRef.current !== runId) return false
     setIsSpeakingText(false)
     return true
   }
@@ -614,6 +614,21 @@ export function LearnerMappingPage() {
     setQuestionEntryTransition(false)
   }
 
+  async function continueReflectionAfterClosing() {
+    if (
+      reflectionFinishPendingRef.current ||
+      !sectionResolved ||
+      reflectionPhase !== 'celebrating'
+    ) return
+
+    reflectionFinishPendingRef.current = true
+    try {
+      await finishReflectionStage()
+    } finally {
+      reflectionFinishPendingRef.current = false
+    }
+  }
+
   async function startQuestions() {
     if (!questionnaire || introHandoff) return
     setShowIntegrityDialog(false)
@@ -645,14 +660,25 @@ export function LearnerMappingPage() {
           top: fromRect.top,
           width: fromRect.width,
           height: fromRect.height,
+          opacity: 0,
           transform: 'translate(0px, 0px) scale(1)',
           transition: 'none',
         },
       })
+
+      // `YubiRobot3D` creates its WebGL renderer after mounting. Give the fixed
+      // handoff instance two paint frames to draw over the source position
+      // before the source robot is hidden. Without this warm-up both live
+      // robots become visible when the intro grid recenters for the handoff.
+      await waitForAnimationFrames(2)
+      if (transitionRunRef.current !== runId) return
+      setTransitionYubi((current) => current
+        ? { style: { ...current.style, opacity: 1 } }
+        : current)
     }
 
-    // Intro copy fades out while Yubi stays put; the overlay warms up its first
-    // frames behind the identical intro robot so the swap has no blank flash.
+    // Intro copy fades out while the warmed transition Yubi stays put. The
+    // source Yubi is hidden by the handoff class, so only one robot is visible.
     setIntroHandoff(true)
     await wait(QUESTION_HANDOFF_CLEAR_MS)
     if (transitionRunRef.current !== runId) return
@@ -739,9 +765,11 @@ export function LearnerMappingPage() {
     setSectionResolved(false)
     setActiveStep(2)
     setChatMessages([])
+    chatMessagesRef.current = []
     setReflectQuestions([])
     setReflectIndex(-1)
     setReflectChoices([])
+    reflectionContinuePendingRef.current = false
     setIsTyping(true)
     setReflectionText('')
 
@@ -788,7 +816,7 @@ export function LearnerMappingPage() {
         questions_and_answers: questionsAndAnswers,
         language,
         }),
-        wait(REFLECTION_THINK_MS),
+        waitForReflectionDelay(REFLECTION_THINK_MS),
       ])
       profile = response.profile || 'neutral'
       const openerParams: Record<string, string> = {}
@@ -803,31 +831,63 @@ export function LearnerMappingPage() {
       opener = t('fallback.summary')
     }
     setReflectProfile(profile)
+    setReflectQuestions(questions)
+    setReflectIndex(-1)
 
     setChatHistory((previous) => [...previous, { role: 'assistant', content: opener }])
-    if (!await speakReflection(opener)) return
+    const openerSpeech = speakReflection(opener)
+    // Save the complete opener and generated follow-up questions before its
+    // typewriter animation finishes. A studio route change or hard reload can
+    // then restore this exact conversational step without clipping the text.
+    persistMappingProgress({
+      screen: 'chat',
+      chatMode: 'summary',
+      activeStep: 2,
+      currentIndex: resumeIndex,
+      answers: nextAnswers,
+      summary: {
+        partIndex,
+        title: part.title,
+        qa: questionsAndAnswers,
+        context: `${part.title} - ${questionsAndAnswers.map((pair) => `${pair.question}: ${pair.answer}`).join(' | ')}`,
+        isLast: last,
+        resolved: false,
+        messages: chatMessagesRef.current,
+        questions,
+        reflectIndex: -1,
+        choices: [],
+        profile,
+      },
+      completed: false,
+    })
+    if (!await openerSpeech) return
 
     let resolved = false
     if (questions.length > 0) {
-      setReflectQuestions(questions)
-      setReflectIndex(0)
-      await wait(REFLECTION_BETWEEN_MESSAGES_MS)
-      setReflectionText('')
-      setReflectionPhase('thinking')
-      await wait(REFLECTION_THINK_MS)
-      if (!await speakReflection(questions[0].prompt)) return
-      setReflectionPhase('awaiting')
-      setChatHistory((previous) => [...previous, { role: 'assistant', content: questions[0].prompt }])
+      // The grounded opener is a real conversational turn. Keep it visible
+      // until the learner explicitly starts the follow-up questions.
+      setReflectionPhase('opener')
     } else {
       // Nothing notable to clarify — close warmly and supportively.
       resolved = true
       setSectionResolved(true)
       const closing = t(`reflect.close.${profile}.${last ? 'results' : 'next'}`)
-      await wait(REFLECTION_BETWEEN_MESSAGES_MS)
+      await waitForReflectionDelay(REFLECTION_BETWEEN_MESSAGES_MS)
       setReflectionText('')
       setReflectionPhase('thinking')
-      await wait(REFLECTION_THINK_MS)
-      if (!await speakReflection(closing)) return
+      await waitForReflectionDelay(REFLECTION_THINK_MS)
+      const closingSpeech = speakReflection(closing)
+      persistMappingProgress({
+        screen: 'chat', chatMode: 'summary', activeStep: 2, currentIndex: resumeIndex, answers: nextAnswers,
+        summary: {
+          partIndex, title: part.title, qa: questionsAndAnswers,
+          context: `${part.title} - ${questionsAndAnswers.map((pair) => `${pair.question}: ${pair.answer}`).join(' | ')}`,
+          isLast: last, resolved: true, messages: chatMessagesRef.current,
+          questions, reflectIndex: -1, choices: [], profile,
+        },
+        completed: false,
+      })
+      if (!await closingSpeech) return
       setChatHistory((previous) => [...previous, { role: 'assistant', content: closing }])
       setReflectionPhase('celebrating')
     }
@@ -847,7 +907,7 @@ export function LearnerMappingPage() {
         resolved,
         messages: chatMessagesRef.current,
         questions,
-        reflectIndex: questions.length > 0 ? 0 : -1,
+        reflectIndex: -1,
         choices: [],
         profile,
       },
@@ -855,71 +915,151 @@ export function LearnerMappingPage() {
     })
   }
 
+  async function continueReflectionFromOpener() {
+    if (
+      reflectionContinuePendingRef.current ||
+      reflectionPhase !== 'opener' ||
+      reflectQuestions.length === 0
+    ) return
+
+    reflectionContinuePendingRef.current = true
+    const firstQuestion = reflectQuestions[0]
+    setReflectIndex(0)
+    setReflectionText('')
+    setReflectionPhase('thinking')
+    persistMappingProgress({
+      screen: 'chat', chatMode: 'summary', activeStep: 2, currentIndex, answers,
+      summary: {
+        partIndex: summaryPartIndex, title: summaryTitle, qa: summaryQa,
+        context: lastSectionContext, isLast: isLastSection, resolved: false,
+        messages: chatMessagesRef.current, questions: reflectQuestions,
+        reflectIndex: 0, choices: reflectChoices, profile: reflectProfile,
+      },
+      completed: false,
+    })
+    await waitForReflectionDelay(REFLECTION_BETWEEN_MESSAGES_MS + REFLECTION_THINK_MS)
+
+    if (!await speakReflection(firstQuestion.prompt)) {
+      reflectionContinuePendingRef.current = false
+      return
+    }
+
+    setReflectionPhase('awaiting')
+    setChatHistory((previous) => [...previous, { role: 'assistant', content: firstQuestion.prompt }])
+    persistMappingProgress({
+      screen: 'chat', chatMode: 'summary', activeStep: 2, currentIndex, answers,
+      summary: {
+        partIndex: summaryPartIndex, title: summaryTitle, qa: summaryQa,
+        context: lastSectionContext, isLast: isLastSection, resolved: false,
+        messages: chatMessagesRef.current, questions: reflectQuestions,
+        reflectIndex: 0, choices: reflectChoices, profile: reflectProfile,
+      },
+      completed: false,
+    })
+    reflectionContinuePendingRef.current = false
+  }
+
   // Learner taps one of the (≤4) grounded options for the active reflection
   // question. Records the pick, advances to the next question, and on the last
   // one silently consolidates the picks into the brain, then closes warmly.
   async function pickReflectOption(option: ReflectOption) {
     const active = reflectQuestions[reflectIndex]
-    if (!active || sectionResolved || isSpeakingText || reflectionPhase !== 'awaiting') return
+    if (
+      reflectionChoicePendingRef.current ||
+      !active ||
+      sectionResolved ||
+      isSpeakingText ||
+      reflectionPhase !== 'awaiting'
+    ) return
 
-    setChatMessages((previous) => {
-      const next = [...previous, { role: 'user' as const, content: option.label }]
-      chatMessagesRef.current = next
-      return next
-    })
-    setChatHistory((previous) => [...previous, { role: 'user', content: option.label }])
-    const nextChoices = [...reflectChoices, { question: active.prompt, choice: option.label, signal: option.signal }]
-    setReflectChoices(nextChoices)
-    setReflectionText('')
-    setReflectionPhase('thinking')
-    await wait(REFLECTION_THINK_MS)
+    reflectionChoicePendingRef.current = true
 
-    const nextIndex = reflectIndex + 1
-    if (nextIndex < reflectQuestions.length) {
-      setReflectIndex(nextIndex)
-      if (!await speakReflection(reflectQuestions[nextIndex].prompt)) return
-      setReflectionPhase('awaiting')
-      setChatHistory((previous) => [...previous, { role: 'assistant', content: reflectQuestions[nextIndex].prompt }])
+    try {
+      setChatMessages((previous) => {
+        const next = [...previous, { role: 'user' as const, content: option.label }]
+        chatMessagesRef.current = next
+        return next
+      })
+      setChatHistory((previous) => [...previous, { role: 'user', content: option.label }])
+      const nextChoices = [...reflectChoices, { question: active.prompt, choice: option.label, signal: option.signal }]
+      setReflectChoices(nextChoices)
+      setReflectionText('')
+      setReflectionPhase('thinking')
+      await waitForReflectionDelay(REFLECTION_THINK_MS)
+
+      const nextIndex = reflectIndex + 1
+      if (nextIndex < reflectQuestions.length) {
+        setReflectIndex(nextIndex)
+        persistMappingProgress({
+          screen: 'chat', chatMode: 'summary', activeStep: 2, currentIndex, answers,
+          summary: {
+            partIndex: summaryPartIndex, title: summaryTitle, qa: summaryQa,
+            context: lastSectionContext, isLast: isLastSection, resolved: false,
+            messages: chatMessagesRef.current, questions: reflectQuestions,
+            reflectIndex: nextIndex, choices: nextChoices, profile: reflectProfile,
+          },
+          completed: false,
+        })
+        if (!await speakReflection(reflectQuestions[nextIndex].prompt)) return
+        setReflectionPhase('awaiting')
+        setChatHistory((previous) => [...previous, { role: 'assistant', content: reflectQuestions[nextIndex].prompt }])
+        persistMappingProgress({
+          screen: 'chat', chatMode: 'summary', activeStep: 2, currentIndex, answers,
+          summary: {
+            partIndex: summaryPartIndex, title: summaryTitle, qa: summaryQa,
+            context: lastSectionContext, isLast: isLastSection, resolved: false,
+            messages: chatMessagesRef.current, questions: reflectQuestions,
+            reflectIndex: nextIndex, choices: nextChoices, profile: reflectProfile,
+          },
+          completed: false,
+        })
+        return
+      }
+
+      // Last question answered — consolidate picks (non-blocking) and close.
+      setReflectIndex(reflectQuestions.length)
+      void apiPost('/api/section-reflect/capture', {
+        learner_id: CURRENT_LEARNER_ID,
+        phase_title: summaryTitle,
+        language,
+        choices: nextChoices.map((c) => ({ label: c.choice, signal: c.signal })),
+      }).catch(() => {})
+      setSectionResolved(true)
+      const closing = t(`reflect.close.${reflectProfile}.${isLastSection ? 'results' : 'next'}`)
+      const closingSpeech = speakReflection(closing)
       persistMappingProgress({
         screen: 'chat', chatMode: 'summary', activeStep: 2, currentIndex, answers,
         summary: {
           partIndex: summaryPartIndex, title: summaryTitle, qa: summaryQa,
-          context: lastSectionContext, isLast: isLastSection, resolved: false,
+          context: lastSectionContext, isLast: isLastSection, resolved: true,
           messages: chatMessagesRef.current, questions: reflectQuestions,
-          reflectIndex: nextIndex, choices: nextChoices, profile: reflectProfile,
+          reflectIndex: reflectQuestions.length, choices: nextChoices, profile: reflectProfile,
         },
         completed: false,
       })
-      return
+      if (!await closingSpeech) return
+      setChatHistory((previous) => [...previous, { role: 'assistant', content: closing }])
+      persistMappingProgress({
+        screen: 'chat', chatMode: 'summary', activeStep: 2, currentIndex, answers,
+        summary: {
+          partIndex: summaryPartIndex, title: summaryTitle, qa: summaryQa,
+          context: lastSectionContext, isLast: isLastSection, resolved: true,
+          messages: chatMessagesRef.current, questions: reflectQuestions,
+          reflectIndex: reflectQuestions.length, choices: nextChoices, profile: reflectProfile,
+        },
+        completed: false,
+      })
+      setReflectionPhase('celebrating')
+    } finally {
+      reflectionChoicePendingRef.current = false
     }
-
-    // Last question answered — consolidate picks (non-blocking) and close.
-    setReflectIndex(reflectQuestions.length)
-    void apiPost('/api/section-reflect/capture', {
-      learner_id: CURRENT_LEARNER_ID,
-      phase_title: summaryTitle,
-      language,
-      choices: nextChoices.map((c) => ({ label: c.choice, signal: c.signal })),
-    }).catch(() => {})
-    setSectionResolved(true)
-    const closing = t(`reflect.close.${reflectProfile}.${isLastSection ? 'results' : 'next'}`)
-    if (!await speakReflection(closing)) return
-    setChatHistory((previous) => [...previous, { role: 'assistant', content: closing }])
-    persistMappingProgress({
-      screen: 'chat', chatMode: 'summary', activeStep: 2, currentIndex, answers,
-      summary: {
-        partIndex: summaryPartIndex, title: summaryTitle, qa: summaryQa,
-        context: lastSectionContext, isLast: isLastSection, resolved: true,
-        messages: chatMessagesRef.current, questions: reflectQuestions,
-        reflectIndex: reflectQuestions.length, choices: nextChoices, profile: reflectProfile,
-      },
-      completed: false,
-    })
-    setReflectionPhase('celebrating')
   }
 
   async function submitQuestionnaire() {
-    setScreen('complete')
+    // Keep the final reflection scene visible while Yubi processes the answers;
+    // the results route continues the same robot-led transition without an
+    // unrelated completion card in between.
+    setReflectionPhase('thinking')
     setActiveStep(3)
     try {
       // language localizes the Onboarding agent's profile labels; the learner's
@@ -935,10 +1075,11 @@ export function LearnerMappingPage() {
       // Keep the student moving; results will show a no-data state if persistence fails.
     }
     // Mapping is done — clear the resume checkpoint so the next visit starts fresh.
-    void apiPatch('/api/learner-state', {
+    await apiPatch('/api/learner-state', {
       learner_id: CURRENT_LEARNER_ID,
       mapping_progress: { completed: true },
     }).catch(() => {})
+    navigate('/results')
   }
 
   // Demo shortcut: fill every question with a neutral default and jump to results.
@@ -950,7 +1091,11 @@ export function LearnerMappingPage() {
       filled[question.id] = Math.floor((optionCount - 1) / 2)
     })
     setAnswers(filled)
-    setScreen('complete')
+    // Keep the existing Yubi scene mounted while the demo result is persisted;
+    // a blank completion screen would break the visual handoff to results.
+    setScreen('chat')
+    setChatMode('intro')
+    setIsTyping(true)
     setActiveStep(3)
     try {
       await apiPost('/api/submit', {
@@ -1010,6 +1155,7 @@ export function LearnerMappingPage() {
                 isSpeakingText={isSpeakingText}
                 canStart={Boolean(questionnaire)}
                 isHandoff={introHandoff}
+                hideOrbit={Boolean(transitionYubi)}
                 onStart={() => setShowIntegrityDialog(true)}
                 onSkip={() => void skipWithDefaults()}
                 editTooltip={t('yubiStudio.launcher')}
@@ -1027,10 +1173,23 @@ export function LearnerMappingPage() {
                     : []
                 }
                 pickLabel={t('chat.reflect.pickAria')}
+                continueLabel={
+                  reflectionPhase === 'celebrating'
+                    ? t(isLastSection ? 'chat.action.showResults' : 'chat.action.nextSection')
+                    : t('chat.action.start')
+                }
                 thinkingLabel={t('chat.status.thinking')}
                 robotLabel={t('robot.aria')}
                 lightweight={isPhone}
                 speaking={isSpeakingText}
+                messageSide={reflectIndex >= 0 && reflectIndex % 2 === 0 ? 'right' : 'left'}
+                onContinue={() => {
+                  if (reflectionPhase === 'celebrating') {
+                    void continueReflectionAfterClosing()
+                    return
+                  }
+                  void continueReflectionFromOpener()
+                }}
                 onPick={(option) => void pickReflectOption(option)}
                 editTooltip={t('yubiStudio.launcher')}
                 onEdit={(el) => (studioTransition ? studioTransition.openStudio(el) : navigate('/yuvi-studio'))}
@@ -1068,18 +1227,6 @@ export function LearnerMappingPage() {
           </section>
         )}
 
-        {!booting && screen === 'complete' && (
-          <section className="screen active">
-            <div className="complete-card">
-              <div className="complete-icon-svg"><CheckIcon /></div>
-              <h2 className="complete-title">{t('complete.title', { studentName })}</h2>
-              <p className="complete-subtitle">{t('complete.subtitle')}</p>
-              <button className="sp-btn sp-btn--gradient sp-btn--pill complete-cta" onClick={() => navigate('/results')}>
-                {t('complete.cta')}
-              </button>
-            </div>
-          </section>
-        )}
       </main>
       {transitionYubi && !isPhone && (
         <div className="yubi-transition-layer" style={transitionYubi.style} aria-hidden="true">
@@ -1163,10 +1310,13 @@ function ReflectionStage({
   text,
   options,
   pickLabel,
+  continueLabel,
   thinkingLabel,
   robotLabel,
   lightweight,
   speaking,
+  messageSide,
+  onContinue,
   onPick,
   editTooltip,
   onEdit,
@@ -1177,18 +1327,23 @@ function ReflectionStage({
   text: string
   options: ReflectOption[]
   pickLabel: string
+  continueLabel: string
   thinkingLabel: string
   robotLabel: string
   lightweight: boolean
   speaking: boolean
+  messageSide: 'left' | 'right'
+  onContinue: () => void
   onPick: (option: ReflectOption) => void
   editTooltip: string
   onEdit: (sourceEl: HTMLElement) => void
 }) {
   const isThinking = phase === 'thinking'
   const isCelebrating = phase === 'celebrating'
+  const showContinue = phase === 'opener' || phase === 'celebrating'
   const showCard = Boolean(text) && phase !== 'thinking' && phase !== 'entering' && phase !== 'returning'
   const showOptions = phase === 'awaiting' && options.length > 0
+  const formattedText = text.replace(/([.!?؟])\s+(?=\S)/gu, '$1\n')
 
   return (
     <div className={`reflection-stage is-${phase}`}>
@@ -1221,8 +1376,19 @@ function ReflectionStage({
         </div>
       )}
 
-      <div className={`reflection-speech${showCard ? ' is-visible' : ''}`} aria-live="polite">
-        <p dir="auto">{text}</p>
+      <div className={`reflection-speech is-${messageSide}${showCard ? ' is-visible' : ''}`} aria-live="polite">
+        <p dir="auto">{formattedText}</p>
+        {showContinue && (
+          <button
+            type="button"
+            className="reflection-speech-continue"
+            onClick={onContinue}
+            autoFocus
+          >
+            <span>{continueLabel}</span>
+            <ChevronBackIcon />
+          </button>
+        )}
         {showOptions && (
           <div className="reflection-speech-options" role="group" aria-label={pickLabel}>
             {options.map((option, index) => (
@@ -1313,7 +1479,7 @@ function YubiFloater({
 
 function IntroNarrative({
   messages, isTyping, startLabel, skipLabel, trustLabel, robotLabel, lightweight,
-  isSpeakingText, canStart, isHandoff, onStart, onSkip, editTooltip, onEdit,
+  isSpeakingText, canStart, isHandoff, hideOrbit, onStart, onSkip, editTooltip, onEdit,
 }: {
   messages: ChatMessage[]
   isTyping: boolean
@@ -1325,6 +1491,7 @@ function IntroNarrative({
   isSpeakingText: boolean
   canStart: boolean
   isHandoff: boolean
+  hideOrbit: boolean
   onStart: () => void
   onSkip: () => void
   editTooltip: string
@@ -1334,7 +1501,7 @@ function IntroNarrative({
   const showActions = !isTyping && messages.length > 0
 
   return (
-    <div className={`intro-stage${isTyping ? ' is-narrating' : ' is-ready'}${isHandoff ? ' is-handoff' : ''}`}>
+    <div className={`intro-stage${isTyping ? ' is-narrating' : ' is-ready'}${isHandoff ? ' is-handoff' : ''}${hideOrbit ? ' is-transitioning' : ''}`}>
       <div className="intro-robot-zone" aria-hidden="true">
         <div className="intro-stage-orbit" />
         <YubiFloater
@@ -1633,6 +1800,43 @@ function cleanPartTitle(title: string) {
 
 function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms))
+}
+
+function waitForReflectionDelay(ms: number) {
+  if (typeof document === 'undefined' || document.visibilityState !== 'visible') {
+    return Promise.resolve()
+  }
+
+  return new Promise<void>((resolve) => {
+    let settled = false
+    const timeoutId = window.setTimeout(finish, ms)
+
+    function finish() {
+      if (settled) return
+      settled = true
+      window.clearTimeout(timeoutId)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      resolve()
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState !== 'visible') finish()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+  })
+}
+
+function waitForAnimationFrames(count: number) {
+  return new Promise<void>((resolve) => {
+    const waitForNext = (remaining: number) => {
+      window.requestAnimationFrame(() => {
+        if (remaining <= 1) resolve()
+        else waitForNext(remaining - 1)
+      })
+    }
+    waitForNext(Math.max(1, count))
+  })
 }
 
 function YubiFaceIcon() {

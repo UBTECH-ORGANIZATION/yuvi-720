@@ -34,6 +34,8 @@ export interface LearnerState {
   learner_id: string
   language?: 'he' | 'en' | 'ar'
   mapping_results?: unknown
+  mapping_progress?: unknown
+  profile_summary_progress?: unknown
   profile_cache?: unknown
   dashboard_cache?: unknown
   game_progress?: Record<string, unknown>

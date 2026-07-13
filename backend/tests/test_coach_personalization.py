@@ -80,6 +80,48 @@ class CoachPersonalizationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(bundle["surface"]["screen"], "unknown")
         self.assertEqual(bundle["surface"]["visible_areas"], [])
 
+    async def test_bundle_resolves_provider_item_metadata_and_timing_evidence(self) -> None:
+        scoped_view = {
+            "identity": {"locale": "en"},
+            "profile": {},
+            "goals": [],
+            "current_state": {
+                "unit_id": "provider-unit",
+                "component_id": "provider-component",
+                "resume_token": {"step": 1},
+            },
+        }
+        provider_unit = {"id": "provider-unit", "title": "Vertical angles", "objective_id": "angles"}
+        provider_component = {
+            "id": "provider-component",
+            "information_to_bot": "Compare opposite angles at one intersection.",
+        }
+        recent = [{
+            "verb": "answered",
+            "launch": "provider-component",
+            "object_id": "provider-item#q2",
+            "question_id": "q2",
+            "result": {"success": False},
+            "timing": {"elapsed_since_previous_seconds": 181.0, "quality": "elapsed_between_events"},
+        }]
+        with (
+            patch("app.brain.context_engine.view_for", new=AsyncMock(return_value=scoped_view)),
+            patch("app.brain.curriculum.get_component", return_value=None),
+            patch(
+                "app.services.content_provider.resolve_component",
+                new=AsyncMock(return_value=(provider_unit, provider_component)),
+            ),
+            patch("app.services.events.get_recent_events", new=AsyncMock(return_value=recent)),
+        ):
+            bundle = await build_coach_bundle("learner-pseudonym", {"screen": "learning_lesson"})
+
+        self.assertEqual(bundle["current"]["objective_title"], "Vertical angles")
+        self.assertIn("opposite angles", bundle["current"]["informationToBot"])
+        self.assertEqual(bundle["current"]["recent_events"][0]["question_id"], "q2")
+        rendered = _render_context(bundle)
+        self.assertIn("elapsed_seconds=181.0", rendered)
+        self.assertIn("timing_quality=elapsed_between_events", rendered)
+
     def test_coach_scope_declares_every_brain_field_used_by_bundle(self) -> None:
         reads = set(AGENT_VIEWS["coach"]["read"])
         expected = {

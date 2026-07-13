@@ -60,6 +60,13 @@ def empty_brain(learner_id: str, locale: str = DEFAULT_LOCALE) -> dict[str, Any]
             "source": None,
             "updated_at": None,
         },
+        "memory": {             # evidence-backed, revisable soft learner model
+            "version": 1,
+            "themes": [],
+            "open_questions": [],
+            "legacy_profile_refs": [],
+            "updated_at": None,
+        },
         "strengths": [],
         "challenges": [],
         "mastery": {},          # per-objective, from real events only (never invented)

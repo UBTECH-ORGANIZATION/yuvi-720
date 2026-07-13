@@ -36,6 +36,10 @@ interface Props {
   pullingSide?: 'left' | 'right'
   /** Hold a neutral front-facing pose while two avatar canvases hand off. */
   frontFacing?: boolean
+  /** Track the pointer across the viewport with Yuvi's eyes, head, and body. */
+  followPointer?: boolean
+  /** Keep Yuvi's feet planted instead of applying the ambient hover motion. */
+  grounded?: boolean
 }
 
 // The chest-badge favicon is shared across every avatar instance.
@@ -61,7 +65,7 @@ function mixWhite([r, g, b]: number[], t: number): [number, number, number] {
 const rgba = ([r, g, b]: number[], a: number) => `rgba(${r}, ${g}, ${b}, ${a})`
 
 export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAvatar3D(
-  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', frontFacing = false },
+  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', frontFacing = false, followPointer = false, grounded = false },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null)
@@ -75,6 +79,8 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
   const pullingRef = useRef(pulling)
   const pullingSideRef = useRef(pullingSide)
   const frontFacingRef = useRef(frontFacing)
+  const followPointerRef = useRef(followPointer)
+  const groundedRef = useRef(grounded)
   const pullingStartedAtRef = useRef(pulling ? Date.now() : 0)
   useEffect(() => { mutedRef.current = muted }, [muted])
   useEffect(() => { onYClickRef.current = onYClick }, [onYClick])
@@ -87,6 +93,8 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
   }, [pulling])
   useEffect(() => { pullingSideRef.current = pullingSide }, [pullingSide])
   useEffect(() => { frontFacingRef.current = frontFacing }, [frontFacing])
+  useEffect(() => { followPointerRef.current = followPointer }, [followPointer])
+  useEffect(() => { groundedRef.current = grounded }, [grounded])
 
   useImperativeHandle(ref, () => ({
     equip: (slot, id, animate = true) => controllerRef.current?.equip(slot, id, animate),
@@ -236,14 +244,19 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
         drawGlowPath(outline, 20, halo, 24); drawGlowPath(outline, 10, mid, 12); drawGlowPath(outline, 4, core, 4)
       }
       const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace
-      const draw = (eyeOpen = 1, mouthOpen = 0) => {
+      const draw = (eyeOpen = 1, mouthOpen = 0, lookX = 0, lookY = 0) => {
         ctx.clearRect(0, 0, canvas.width, canvas.height)
         const e = hexToRgb(design.colors.eyes)
         const layers = [
           [36, rgba(e, 0.2), 32], [21, rgba(e, 0.5), 20],
           [11, rgba(mixWhite(e, 0.4), 0.96), 11], [5, rgba(mixWhite(e, 0.85), 1), 4],
         ] as const
-        const eyes: Array<[number, number]> = [[-0.165, 0.06], [0.165, 0.06]]
+        const eyeOffsetX = lookX * 0.025
+        const eyeOffsetY = -lookY * 0.018
+        const eyes: Array<[number, number]> = [
+          [-0.165 + eyeOffsetX, 0.06 + eyeOffsetY],
+          [0.165 + eyeOffsetX, 0.06 + eyeOffsetY],
+        ]
         layers.forEach(([lw, col, blur]) => eyes.forEach((c) => drawGlowArc(c, 0.066, lw, col, blur, eyeOpen)))
         drawMouth(mouthOpen)
         texture.needsUpdate = true
@@ -461,9 +474,33 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
       window.addEventListener('pointerup', onOrbitUp)
     }
 
+    // ── viewport pointer tracking ──
+    // The companion can be much smaller than the page, so tracking listens at
+    // window level rather than only while the pointer is over the WebGL canvas.
+    let pointerTargetX = 0, pointerTargetY = 0
+    let pointerLookX = 0, pointerLookY = 0
+    const onGlobalPointerMove = (event: PointerEvent) => {
+      if (!followPointerRef.current || (event.pointerType && event.pointerType !== 'mouse' && event.pointerType !== 'pen')) return
+      const rect = container.getBoundingClientRect()
+      const centerX = rect.left + rect.width / 2
+      const centerY = rect.top + rect.height * 0.42
+      const horizontalRange = Math.max(240, window.innerWidth * 0.38)
+      const verticalRange = Math.max(180, window.innerHeight * 0.4)
+      pointerTargetX = THREE.MathUtils.clamp((event.clientX - centerX) / horizontalRange, -1, 1)
+      pointerTargetY = THREE.MathUtils.clamp((event.clientY - centerY) / verticalRange, -1, 1)
+    }
+    const resetPointerLook = () => {
+      pointerTargetX = 0
+      pointerTargetY = 0
+    }
+    window.addEventListener('pointermove', onGlobalPointerMove, { passive: true })
+    window.addEventListener('blur', resetPointerLook)
+    document.documentElement.addEventListener('mouseleave', resetPointerLook)
+
     // ── loop ──
     let blink = 2 + Math.random() * 3, nextBlink = 2 + Math.random() * 3
-    const clock = new THREE.Clock()
+    const animationStartedAt = performance.now()
+    let previousFrameAt = animationStartedAt
     const badgeWorld = new THREE.Vector3()
     const resize = () => {
       const w = container.clientWidth || 1, h = container.clientHeight || 1
@@ -478,7 +515,10 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
     const loop = () => {
       frame = requestAnimationFrame(loop)
       if (container.offsetParent === null) return
-      const dt = clock.getDelta(); const t = clock.elapsedTime
+      const frameAt = performance.now()
+      const dt = Math.min((frameAt - previousFrameAt) / 1000, 0.1)
+      const t = (frameAt - animationStartedAt) / 1000
+      previousFrameAt = frameAt
       if (orbit) {
         // Studio: drag-controlled turntable (with gentle inertia) + framed higher.
         if (!dragging) { velYaw *= 0.94; orbitYaw += velYaw }
@@ -500,17 +540,22 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
           : Math.max(0, Math.min(1, (pullPhase - 0.74) / 0.18))
         const pullRight = pullingSideRef.current === 'right'
         const pullDirection = pullRight ? 1 : -1
+        const tracksPointer = followPointerRef.current && !reduceMotion && !isPulling && !frontFacingRef.current
+        pointerLookX += ((tracksPointer ? pointerTargetX : 0) - pointerLookX) * 0.11
+        pointerLookY += ((tracksPointer ? pointerTargetY : 0) - pointerLookY) * 0.11
         // Thinking: a curious head tilt with one hand toward the chin.
         // Speaking: warm alternating gestures and a live speech envelope.
-        const sway = isSpeaking ? Math.sin(t * 1.9) * 0.16 : Math.sin(t * 0.5) * 0.32
+        const isGrounded = groundedRef.current
+        const sway = isGrounded ? 0 : isSpeaking ? Math.sin(t * 1.9) * 0.16 : Math.sin(t * 0.5) * 0.32
         const idleStrength = (1 - gripStrength) * (1 - dockingStrength)
         const postureEase = dockingStrength > 0 ? 0.3 : 0.14
-        const robotYawTarget = sway * idleStrength + 0.34 * pullDirection * gripStrength
+        const robotYawTarget = sway * idleStrength + pointerLookX * 0.12 * idleStrength + 0.34 * pullDirection * gripStrength
         robot.rotation.y += (robotYawTarget - robot.rotation.y) * postureEase
+        robot.rotation.x += ((pointerLookY * 0.035 * idleStrength) - robot.rotation.x) * postureEase
         robot.rotation.z += ((((isThinking ? -0.035 : 0) + (isSpeaking ? Math.sin(t * 2.2) * 0.018 : 0)) * (1 - dockingStrength) + 0.13 * gripStrength) - robot.rotation.z) * postureEase
-        robot.position.y = -1.35 + Math.sin(t * (isSpeaking ? 2.5 : 1.4)) * (isSpeaking ? 0.045 : 0.03)
-        head.rotation.y = (isThinking ? -0.16 + Math.sin(t * 0.8) * 0.05 : Math.sin(t * 0.4) * 0.08) * idleStrength + 0.24 * pullDirection * gripStrength
-        head.rotation.x = (isThinking ? -0.07 + Math.sin(t * 1.1) * 0.025 : Math.sin(t * 0.7) * 0.03) * (1 - dockingStrength)
+        robot.position.y = -1.35 + (isGrounded ? 0 : Math.sin(t * (isSpeaking ? 2.5 : 1.4)) * (isSpeaking ? 0.045 : 0.03))
+        head.rotation.y = ((isThinking ? -0.16 + Math.sin(t * 0.8) * 0.05 : Math.sin(t * 0.4) * 0.08) + pointerLookX * 0.3) * idleStrength + 0.24 * pullDirection * gripStrength
+        head.rotation.x = ((isThinking ? -0.07 + Math.sin(t * 1.1) * 0.025 : Math.sin(t * 0.7) * 0.03) + pointerLookY * 0.16) * (1 - dockingStrength)
         head.rotation.z += (((isThinking ? 0.13 : isSpeaking ? Math.sin(t * 1.6) * 0.055 : 0) * (1 - dockingStrength) - head.rotation.z) * postureEase)
         const naturalRightArm = isThinking ? -1.12 : isSpeaking ? -0.18 + Math.sin(t * 2.7) * 0.24 : 0.095
         const naturalLeftArm = isSpeaking ? -0.095 - Math.sin(t * 2.7) * 0.18 : -0.095
@@ -533,7 +578,7 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
       const speechEnvelope = speakingRef.current && !reduceMotion
         ? 0.28 + Math.abs(Math.sin(t * 7.4) * Math.cos(t * 4.1)) * 0.72
         : 0
-      faceLight.draw(eyeOpen, speechEnvelope)
+      faceLight.draw(eyeOpen, speechEnvelope, pointerLookX, pointerLookY)
       faceLightMat.opacity = 0.9 + Math.sin(t * 1.8) * 0.05
       antennaTipMat.emissiveIntensity = 1.8 + Math.sin(t * 2.2) * 0.4
       antennaLight.intensity = 0.28 + Math.sin(t * 2.2) * 0.06
@@ -599,6 +644,9 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
       renderer.domElement.removeEventListener('pointerdown', onOrbitDown)
       window.removeEventListener('pointermove', onOrbitMove)
       window.removeEventListener('pointerup', onOrbitUp)
+      window.removeEventListener('pointermove', onGlobalPointerMove)
+      window.removeEventListener('blur', resetPointerLook)
+      document.documentElement.removeEventListener('mouseleave', resetPointerLook)
       controllerRef.current = null
       faceLight.texture.dispose()
       renderer.dispose()

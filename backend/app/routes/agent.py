@@ -43,6 +43,8 @@ class CoachConversationRequest(BaseModel):
     """Create a pseudonymous learner-owned Coach conversation."""
 
     learner_id: str = Field(default="demo-learner", min_length=1, max_length=120)
+    unit_id: str | None = Field(default=None, min_length=1, max_length=180)
+    component_id: str | None = Field(default=None, min_length=1, max_length=180)
 
 
 class CoachSurfaceContext(BaseModel):
@@ -53,6 +55,8 @@ class CoachSurfaceContext(BaseModel):
         "results", "student_dashboard", "mentoring", "learning_portal",
         "learning_lesson", "learning_create", "unknown",
     ] = "unknown"
+    unit_id: str | None = Field(default=None, min_length=1, max_length=180)
+    component_id: str | None = Field(default=None, min_length=1, max_length=180)
 
 
 class CoachStreamRequest(BaseModel):
@@ -66,7 +70,15 @@ class CoachStreamRequest(BaseModel):
 class CoachProactiveRequest(BaseModel):
     learner_id: str = Field(default="demo-learner", min_length=1, max_length=120)
     conversation_id: str = Field(default="default", min_length=1, max_length=120)
-    trigger: Literal["idle", "misconception", "success"] = "idle"
+    trigger: Literal["idle", "misconception", "slow_progress", "success"] = "idle"
+    language: str = Field(default="he", max_length=8)
+    surface: CoachSurfaceContext = Field(default_factory=CoachSurfaceContext)
+
+
+class CoachSupportRequest(BaseModel):
+    learner_id: str = Field(default="demo-learner", min_length=1, max_length=120)
+    conversation_id: str = Field(default="default", min_length=1, max_length=120)
+    support: Literal["hint", "explanation"]
     language: str = Field(default="he", max_length=8)
     surface: CoachSurfaceContext = Field(default_factory=CoachSurfaceContext)
 
@@ -246,7 +258,12 @@ async def create_coach_conversation(request: CoachConversationRequest):
     safe_id = normalize_learner_id(request.learner_id)
     return JSONResponse(
         status_code=201,
-        content=await sessions.create_conversation(safe_id, role="coach"),
+        content=await sessions.create_conversation(
+            safe_id,
+            role="coach",
+            unit_id=request.unit_id,
+            component_id=request.component_id,
+        ),
     )
 
 
@@ -340,6 +357,31 @@ async def coach_proactive(request: CoachProactiveRequest):
             exchange_id=exchange_id,
             endpoint="/api/agent/coach/proactive",
             surface_context=request.surface.model_dump(),
+        ):
+            yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@router.post("/coach/support")
+async def coach_support(request: CoachSupportRequest):
+    """Stream learner-requested, current-item-grounded support into the task thread."""
+    learner_id = normalize_learner_id(request.learner_id)
+    language = normalize_language(request.language)
+    conversation_id = sessions.normalize_session_id(request.conversation_id)
+    exchange_id = uuid4().hex
+
+    async def event_generator():
+        yield f"data: {json.dumps({'disclosure': safety.disclosure(language), 'support': request.support}, ensure_ascii=False)}\n\n"
+        async for chunk in run_coach_stream(
+            learner_id,
+            language=language,
+            session_id=conversation_id,
+            exchange_id=exchange_id,
+            endpoint="/api/agent/coach/support",
+            surface_context=request.surface.model_dump(),
+            support_mode=request.support,
         ):
             yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
         yield "data: [DONE]\n\n"

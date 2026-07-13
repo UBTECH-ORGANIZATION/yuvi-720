@@ -14,6 +14,7 @@ from typing import Any
 from app.brain.org import get_group, learners_in_group
 from app.brain.repository import get_brain
 from app.services.events import get_recent_events
+from app.services.learning_timing import PROLONGED_INTERACTION_SECONDS
 from app.services.planner import plan_next
 
 INACTIVITY_DAYS = 6
@@ -22,6 +23,7 @@ LOW_SUCCESS_STREAK = 3
 REASON = {
     "inactivity": {"he": "אין פעילות", "ar": "لا يوجد نشاط", "en": "No activity"},
     "low_success": {"he": "כישלונות רצופים", "ar": "إخفاقات متتالية", "en": "Consecutive failures"},
+    "slow_progress": {"he": "זמן ממושך בשאלה", "ar": "وقت طويل في السؤال", "en": "Long question interval"},
     "wellbeing": {"he": "שיתף/ה מצוקה — דורש תשומת לב", "ar": "شارك ضائقة — يتطلب انتباهًا", "en": "Shared distress — needs attention"},
 }
 REC = {
@@ -29,6 +31,7 @@ REC = {
     "targeted": {"he": "תרגול ממוקד בנושא שבו יש קושי", "ar": "تدريب مركّز على النقطة الصعبة", "en": "Targeted practice on the struggling objective"},
     "alt_rep": {"he": "הצע/י ייצוג חלופי (וידאו/סימולציה)", "ar": "اقترح تمثيلًا بديلًا", "en": "Offer an alternative representation"},
     "build_strength": {"he": "בסס/י על חוזקה קיימת", "ar": "ابنِ على نقطة قوة", "en": "Build on an existing strength"},
+    "check_in": {"he": "בדוק/י אם כדאי לפרק את המשימה לצעד קטן או להציע רמז", "ar": "تحقق إن كان من المفيد تقسيم المهمة أو تقديم تلميح", "en": "Check whether to break the task into a smaller step or offer a hint"},
 }
 
 
@@ -70,6 +73,12 @@ async def student_insights(learner_id: str, language: str = "he") -> dict[str, A
 
     days_inactive = _days_since(recent[0]["stored_at"]) if recent else None
     fail_streak = _trailing_fail_streak(recent)
+    prolonged_events = [
+        event for event in recent
+        if event.get("verb") in ("answered", "attempted")
+        and isinstance((event.get("timing") or {}).get("elapsed_since_previous_seconds"), (int, float))
+        and (event.get("timing") or {}).get("elapsed_since_previous_seconds") >= PROLONGED_INTERACTION_SECONDS
+    ]
 
     struggle_items = [
         {"label": c.get("label"), "objective_id": c.get("objective_id"),
@@ -98,6 +107,27 @@ async def student_insights(learner_id: str, language: str = "he") -> dict[str, A
                      "evidence": f"{fail_streak} כישלונות רצופים" if language == "he"
                                  else f"{fail_streak} consecutive failures",
                      "kind": "low_success"}
+    elif prolonged_events:
+        latest = prolonged_events[0]
+        elapsed_seconds = (latest.get("timing") or {}).get("elapsed_since_previous_seconds")
+        elapsed_minutes = max(1, round(elapsed_seconds / 60))
+        evidence_text = {
+            "he": f"כ-{elapsed_minutes} דקות בין אירועי שאלה",
+            "ar": f"حوالي {elapsed_minutes} دقائق بين أحداث السؤال",
+            "en": f"About {elapsed_minutes} minutes between question events",
+        }.get(language, f"About {elapsed_minutes} minutes between question events")
+        attention = {
+            "reason": _t(REASON, "slow_progress", language),
+            "evidence": evidence_text,
+            "kind": "slow_progress",
+            "raw_evidence": {
+                "event_id": latest.get("_id"),
+                "question_id": latest.get("question_id"),
+                "elapsed_seconds": elapsed_seconds,
+                "timing_quality": (latest.get("timing") or {}).get("quality"),
+                "occurred_at": latest.get("occurred_at"),
+            },
+        }
 
     # 2–5 actionable recommendations (deterministic).
     recommendations: list[str] = []
@@ -105,6 +135,8 @@ async def student_insights(learner_id: str, language: str = "he") -> dict[str, A
         recommendations.append(_t(REC, "reach_out", language))
     if fail_streak >= 2:
         recommendations.extend([_t(REC, "targeted", language), _t(REC, "alt_rep", language)])
+    if prolonged_events:
+        recommendations.append(_t(REC, "check_in", language))
     if brain.get("strengths"):
         recommendations.append(_t(REC, "build_strength", language))
     recommendations = recommendations[:5] or [_t(REC, "targeted", language)]
@@ -115,7 +147,11 @@ async def student_insights(learner_id: str, language: str = "he") -> dict[str, A
         "progress": brain.get("progress") or {},
         "next": {s: plan[s]["next_titles"] for s in plan},
         "struggle_items": struggle_items,
-        "strengths": [s.get("label") for s in (brain.get("strengths") or []) if isinstance(s, dict)],
+        "strengths": [
+            s.get("label")
+            for s in (brain.get("strengths") or [])
+            if isinstance(s, dict) and s.get("learner_feedback") != "inaccurate"
+        ],
         "attention": attention,
         "wellbeing_flags": [
             {"evidence": f.get("evidence"), "at": f.get("at"), "source": f.get("source")}
@@ -124,7 +160,8 @@ async def student_insights(learner_id: str, language: str = "he") -> dict[str, A
         "recommendations": recommendations,
         "timeline": [
             {"verb": e.get("verb"), "objective_id": e.get("objective_id"),
-             "success": (e.get("result") or {}).get("success"), "at": e.get("stored_at")}
+             "success": (e.get("result") or {}).get("success"), "at": e.get("stored_at"),
+             "question_id": e.get("question_id"), "timing": e.get("timing")}
             for e in recent[:10]
         ],
         # self vs system awareness (F4 self-awareness)

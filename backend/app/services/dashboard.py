@@ -272,7 +272,11 @@ def project_dashboard(brain: dict, name: str, language: str = "he") -> dict[str,
         "learningStyle": profile.get("learning_style") or "",
         "preferences": profile.get("preferences") or [],
         "environment": profile.get("environment") or "",
-        "strengths": [s.get("label") for s in (brain.get("strengths") or []) if isinstance(s, dict)],
+        "strengths": [
+            s.get("label")
+            for s in (brain.get("strengths") or [])
+            if isinstance(s, dict) and s.get("learner_feedback") != "inaccurate"
+        ],
     }
 
     reflections = [r for r in (brain.get("reflections_recent") or []) if isinstance(r, dict)]

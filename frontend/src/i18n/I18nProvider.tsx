@@ -81,7 +81,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         if (active) {
           setMessagesByLanguage((current) => ({
             ...current,
-            [language]: nextMessages
+            // The Vite bundle is the versioned source of truth. Merge any
+            // runtime locale response over it so a stale static-server copy
+            // can never remove new keys and expose raw identifiers in the UI.
+            [language]: { ...bundledMessages[language], ...nextMessages }
           }))
         }
       })
@@ -103,7 +106,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }
 
   const t = (key: string, params: Record<string, string | number> = {}) => {
-    const template = messagesByLanguage[language][key] || key
+    const template = messagesByLanguage[language][key]
+      || bundledMessages[language][key]
+      || bundledMessages.he[key]
+      || key
     return Object.entries(params).reduce(
       (text, [paramKey, value]) => text.split(`{${paramKey}}`).join(String(value)),
       template

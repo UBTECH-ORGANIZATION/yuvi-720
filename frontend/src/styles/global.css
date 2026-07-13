@@ -185,6 +185,10 @@ body.is-resizing-companion * {
 
 @media (max-width: 767px) {
   .sp-learner-shell { display: block; }
+  .sp-learner-shell.is-task-route {
+    display: flex;
+    flex-direction: column-reverse;
+  }
   .sp-learner-shell.is-companion-open .sp-learner-shell__content .top-bar,
   .sp-learner-shell.is-companion-open .sp-learner-shell__content .builder,
   .sp-learner-shell.is-companion-opening .sp-learner-shell__content .top-bar,

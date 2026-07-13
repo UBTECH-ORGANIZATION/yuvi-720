@@ -113,8 +113,8 @@
   color: var(--sp-primary-700, #5a45f0); box-shadow: 0 6px 16px rgba(90, 60, 180, .14);
 }
 .ys-toolbar {
-  position: absolute; inset-block-end: 16px; inset-inline: auto;
-  left: 50%; transform: translateX(-50%);
+  position: absolute; inset-block-end: 16px; inset-inline: 0;
+  margin-inline: auto;
   display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
   width: fit-content; max-width: calc(100% - 32px);
   padding: 8px; border-radius: var(--sp-radius-pill, 999px);
@@ -131,6 +131,184 @@
 .ys-btn--primary { background: var(--sp-primary-600, #6f5bff); color: #fff; }
 .ys-btn--ghost { background: #fff; color: var(--sp-primary-700, #5a45f0); }
 .ys-btn--mute { background: #fff; color: var(--sp-ink-400, #6b6880); }
+
+.ys-tab:focus-visible,
+.ys-card:focus-visible,
+.ys-variant:focus-visible,
+.ys-swatch:focus-visible,
+.ys-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--sp-ring, 0 0 0 3px rgba(111, 91, 255, .28));
+}
+
+/* ── Dark studio ──
+   The stage uses its own night-scene treatment so dark mode feels intentional
+   rather than leaving the largest surface in the light palette. */
+[data-theme='dark'] .yubi-studio {
+  background:
+    radial-gradient(circle at 78% 28%, rgba(76, 201, 240, .12), transparent 31%),
+    radial-gradient(circle at 12% 6%, rgba(159, 122, 254, .2), transparent 34%),
+    linear-gradient(155deg, #10142e 0%, var(--sp-bg) 52%, #090d20 100%);
+  color: var(--sp-ink-900);
+}
+
+[data-theme='dark'] .ys-drawer {
+  border: 1px solid rgba(164, 151, 255, .16);
+  background: linear-gradient(165deg, rgba(28, 32, 65, .98), rgba(20, 24, 51, .98));
+  box-shadow: 0 24px 64px rgba(2, 4, 20, .48), inset 0 1px rgba(255, 255, 255, .04);
+}
+
+[data-theme='dark'] .ys-drawer__head {
+  border-color: rgba(161, 151, 222, .16);
+  background: linear-gradient(135deg, rgba(157, 141, 255, .08), transparent 72%);
+}
+
+[data-theme='dark'] .ys-tab {
+  border: 1px solid transparent;
+  background: rgba(35, 40, 76, .9);
+  color: var(--sp-ink-400);
+}
+
+[data-theme='dark'] .ys-tab:hover:not(.is-active) {
+  border-color: rgba(112, 220, 249, .18);
+  background: rgba(43, 49, 91, .96);
+  color: var(--sp-ink-700);
+}
+
+[data-theme='dark'] .ys-tab.is-active {
+  border-color: rgba(205, 199, 255, .22);
+  background: linear-gradient(135deg, #7665f5, #9d78f5);
+  box-shadow: 0 8px 20px rgba(93, 70, 222, .36), inset 0 1px rgba(255, 255, 255, .18);
+}
+
+[data-theme='dark'] .ys-panels {
+  scrollbar-color: rgba(157, 141, 255, .45) transparent;
+}
+
+[data-theme='dark'] .ys-card {
+  border-color: rgba(139, 146, 202, .1);
+  background: rgba(34, 39, 75, .88);
+}
+
+[data-theme='dark'] .ys-card:hover:not(:disabled) {
+  border-color: rgba(112, 220, 249, .23);
+  background: rgba(43, 50, 92, .98);
+  box-shadow: 0 12px 24px rgba(2, 5, 24, .28), 0 0 18px rgba(76, 201, 240, .06);
+}
+
+[data-theme='dark'] .ys-card.is-equipped {
+  border-color: var(--sp-primary-600);
+  background: linear-gradient(145deg, rgba(83, 71, 160, .78), rgba(43, 45, 91, .95));
+  box-shadow: 0 0 0 1px rgba(187, 176, 255, .08), 0 10px 24px rgba(2, 4, 22, .32);
+}
+
+[data-theme='dark'] .ys-card__thumb img {
+  filter: drop-shadow(0 7px 10px rgba(2, 4, 20, .45));
+}
+
+[data-theme='dark'] .ys-card__none {
+  border-color: var(--sp-border-strong);
+}
+
+[data-theme='dark'] .ys-card__none::after {
+  background: var(--sp-border-strong);
+}
+
+[data-theme='dark'] .ys-variant {
+  border-color: var(--sp-border);
+  background: rgba(34, 39, 75, .9);
+  color: var(--sp-ink-700);
+}
+
+[data-theme='dark'] .ys-variant:hover:not(.is-active) {
+  border-color: rgba(112, 220, 249, .25);
+  background: rgba(43, 50, 92, .98);
+}
+
+[data-theme='dark'] .ys-variant.is-active {
+  border-color: var(--sp-primary-600);
+  background: rgba(74, 64, 143, .78);
+}
+
+[data-theme='dark'] .ys-swatch {
+  border-color: #252a50;
+  box-shadow: 0 0 0 1px var(--sp-border-strong), 0 7px 14px rgba(2, 4, 20, .34);
+}
+
+[data-theme='dark'] .ys-swatch.is-active {
+  box-shadow: 0 0 0 3px var(--sp-primary-600), 0 8px 18px rgba(2, 4, 20, .42);
+}
+
+[data-theme='dark'] .ys-stage {
+  isolation: isolate;
+  border: 1px solid rgba(112, 220, 249, .17);
+  background:
+    radial-gradient(circle at 50% 43%, rgba(80, 92, 175, .38), transparent 29%),
+    radial-gradient(circle at 50% 72%, rgba(61, 213, 236, .11), transparent 28%),
+    linear-gradient(155deg, #171b3c 0%, #121731 54%, #0c1d31 100%);
+  box-shadow: 0 28px 72px rgba(1, 4, 22, .52), inset 0 1px rgba(199, 246, 255, .07);
+}
+
+[data-theme='dark'] .ys-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(rgba(112, 220, 249, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(112, 220, 249, .035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .76), transparent 88%);
+}
+
+[data-theme='dark'] .ys-stage::after {
+  content: '';
+  position: absolute;
+  inset-inline: 15%;
+  inset-block-end: -22%;
+  block-size: 44%;
+  z-index: -1;
+  border: 1px solid rgba(99, 225, 249, .13);
+  border-radius: 50%;
+  box-shadow: 0 0 80px rgba(76, 201, 240, .1);
+}
+
+[data-theme='dark'] .ys-stage__canvas { z-index: 1; }
+
+[data-theme='dark'] .ys-hint,
+[data-theme='dark'] .ys-toolbar {
+  z-index: 2;
+  border: 1px solid rgba(145, 228, 246, .16);
+  background: rgba(18, 24, 53, .72);
+  box-shadow: 0 14px 34px rgba(1, 4, 22, .36), inset 0 1px rgba(255, 255, 255, .06);
+  backdrop-filter: blur(14px);
+}
+
+[data-theme='dark'] .ys-hint {
+  color: #baf3ff;
+}
+
+[data-theme='dark'] .ys-btn {
+  border: 1px solid rgba(174, 164, 232, .15);
+  box-shadow: 0 10px 24px rgba(2, 4, 20, .34);
+}
+
+[data-theme='dark'] .ys-btn--primary {
+  border-color: rgba(213, 207, 255, .2);
+  background: linear-gradient(135deg, #7665f5, #9d78f5);
+  color: #fff;
+}
+
+[data-theme='dark'] .ys-btn--ghost,
+[data-theme='dark'] .ys-btn--mute {
+  background: rgba(35, 41, 77, .94);
+  color: var(--sp-ink-700);
+}
+
+[data-theme='dark'] .ys-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(112, 220, 249, .26);
+}
 
 /* Chest-Y tooltip styling lives in global.css (loaded app-wide). */
 

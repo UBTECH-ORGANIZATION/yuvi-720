@@ -24,6 +24,7 @@ except ImportError:  # pragma: no cover - local fallback path
 
 from app.core.env import ensure_env_loaded  # side-effect: .env for ANY entrypoint
 from app.brain.schema import empty_brain, flatten_updates
+from app.brain.memory import ensure_memory_state
 
 # Reuse the demo learner id + id normalization already used by learner_state.
 from learner_state import (  # type: ignore
@@ -144,7 +145,19 @@ async def get_brain(learner_id: Optional[str] = None) -> dict[str, Any]:
         try:
             document = await collection.find_one({"_id": safe_id})
             if document:
-                return document
+                migrated, changed = ensure_memory_state(document)
+                if changed:
+                    await collection.update_one(
+                        {"_id": safe_id},
+                        {
+                            "$set": {
+                                "memory": migrated["memory"],
+                                "updated_at": datetime.now(timezone.utc).isoformat(),
+                            },
+                            "$inc": {"version": 1},
+                        },
+                    )
+                return migrated
             brain = await migrate_learner_state(safe_id)
             await collection.update_one(
                 {"_id": safe_id}, {"$setOnInsert": brain}, upsert=True
@@ -155,7 +168,13 @@ async def get_brain(learner_id: Optional[str] = None) -> dict[str, Any]:
 
     data = _read_fallback()
     if safe_id in data:
-        return data[safe_id]
+        migrated, changed = ensure_memory_state(data[safe_id])
+        if changed:
+            migrated["version"] = int(migrated.get("version", 1)) + 1
+            migrated["updated_at"] = datetime.now(timezone.utc).isoformat()
+            data[safe_id] = migrated
+            _write_fallback(data)
+        return migrated
     brain = await migrate_learner_state(safe_id)
     data[safe_id] = brain
     _write_fallback(data)

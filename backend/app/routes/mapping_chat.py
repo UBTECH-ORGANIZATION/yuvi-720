@@ -1,6 +1,6 @@
 """Learner-mapping reflection routes (deterministic — no LLM).
 
-After each questionnaire phase the client asks for a short opener + up to two
+After each questionnaire phase the client asks for a short opener + zero or 2-3
 tap-to-answer clarification questions (`/api/section-reflect`) and reports the
 learner's picks (`/api/section-reflect/capture`). The question bank and ranking
 are fully deterministic (see `app/services/reflection_engine.py`); all learner
@@ -23,11 +23,12 @@ router = APIRouter(prefix="/api", tags=["mapping-reflect"])
 
 @router.post("/section-reflect")
 async def section_reflect(data: dict):
-    """Deterministic opener + up to 3 tap-to-answer questions for a phase (F2).
+    """Deterministic opener + zero or 2-3 tap-to-answer questions for a phase (F2).
 
     A ranking engine picks the learner's most *extreme* answers and maps them to
-    prebuilt questions whose text lives in the locales (``reflect.*``). Returns
-    locale keys + stable signal codes for the client to resolve.
+    prebuilt questions whose text lives in the locales (``reflect.*``). When
+    repeated signals collapse to one theme, a related action question supplies
+    a meaningful second turn. Returns locale keys + stable signal codes.
     """
     part_id = data.get("part_id") or ""
     qa_pairs = data.get("questions_and_answers", [])

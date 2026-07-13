@@ -69,7 +69,18 @@ export function AppBar({ studentName, studentSubtitle, activeStep, center }: App
         </div>
       )}
       {typeof activeStep !== 'number' && center && (
-        <div className="app-bar-steps app-bar-steps--navigation">{center}</div>
+        <div
+          id={hasNavigation ? 'app-bar-compact-navigation' : undefined}
+          className={`app-bar-steps app-bar-steps--navigation${isCompact ? ` app-bar-menu${isNavigationOpen ? ' is-open' : ''}` : ''}`}
+          aria-hidden={isCompact ? !isNavigationOpen : undefined}
+          onClick={(event) => {
+            if (isCompact && event.target instanceof Element && event.target.closest('a, button')) {
+              setIsNavigationOpen(false)
+            }
+          }}
+        >
+          {center}
+        </div>
       )}
       {hasNavigation && (
         <button
@@ -94,28 +105,14 @@ export function AppBar({ studentName, studentSubtitle, activeStep, center }: App
         <div className="user-avatar">{initials}</div>
       </div>
       {hasNavigation && (
-        <>
-          <button
-            className={`app-bar-menu-backdrop${isNavigationOpen ? ' is-open' : ''}`}
-            type="button"
-            aria-label={t('app.navigation.close')}
-            aria-hidden={!isNavigationOpen}
-            tabIndex={isNavigationOpen ? 0 : -1}
-            onClick={() => setIsNavigationOpen(false)}
-          />
-          <div
-            id="app-bar-compact-navigation"
-            className={`app-bar-menu${isNavigationOpen ? ' is-open' : ''}`}
-            aria-hidden={!isNavigationOpen}
-            onClick={(event) => {
-              if (event.target instanceof Element && event.target.closest('a, button')) {
-                setIsNavigationOpen(false)
-              }
-            }}
-          >
-            {center}
-          </div>
-        </>
+        <button
+          className={`app-bar-menu-backdrop${isNavigationOpen ? ' is-open' : ''}`}
+          type="button"
+          aria-label={t('app.navigation.close')}
+          aria-hidden={!isNavigationOpen}
+          tabIndex={isNavigationOpen ? 0 : -1}
+          onClick={() => setIsNavigationOpen(false)}
+        />
       )}
     </header>
   )

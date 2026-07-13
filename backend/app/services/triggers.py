@@ -11,6 +11,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any, AsyncGenerator, Optional
 
+from app.services.learning_timing import PROLONGED_INTERACTION_SECONDS
+
 # learner_id → set of subscriber queues (proactive push channel — an interface).
 _subscribers: dict[str, set[asyncio.Queue]] = {}
 
@@ -46,7 +48,22 @@ async def evaluate(learner_id: str, event: dict[str, Any]) -> Optional[dict[str,
         if streak >= MISCONCEPTION_STREAK:
             trigger = {"type": "misconception", "objective_id": objective_id,
                        "misconception": event.get("misconception")}
-    elif verb == "completed" and result.get("success") is True:
+    timing = event.get("timing") or {}
+    elapsed = timing.get("elapsed_since_previous_seconds")
+    if (
+        trigger is None
+        and verb in ("answered", "attempted")
+        and isinstance(elapsed, (int, float))
+        and elapsed >= PROLONGED_INTERACTION_SECONDS
+    ):
+        trigger = {
+            "type": "slow_progress",
+            "objective_id": objective_id,
+            "question_id": event.get("question_id"),
+            "elapsed_seconds": elapsed,
+            "timing_quality": timing.get("quality"),
+        }
+    elif trigger is None and verb == "completed" and result.get("success") is True:
         trigger = {"type": "success", "objective_id": objective_id}
 
     if trigger:

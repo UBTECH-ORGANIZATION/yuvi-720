@@ -232,9 +232,17 @@
   justify-self: center;
   transform: translateY(2vh) scale(1.04);
 }
+.intro-stage.is-handoff .intro-robot-zone .yubi-floater {
+  opacity: 0;
+  visibility: hidden;
+  animation: none;
+}
+.intro-stage.is-transitioning .intro-stage-orbit,
 .intro-stage.is-handoff .intro-stage-orbit {
-  opacity: .98;
-  transform: translate(-50%, -50%) scale(1.08);
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, -50%) scale(.86);
+  transition: opacity .16s ease, transform .22s ease, visibility 0s linear .16s;
 }
 .intro-stage.is-handoff .intro-script {
   opacity: 0;
@@ -527,9 +535,31 @@
 .q-dial-fill { fill: none; stroke: var(--m-primary); stroke-width: 3; stroke-linecap: round; }
 .q-dial-thumb { fill: #fff; stroke: var(--m-primary); stroke-width: 1.8; filter: drop-shadow(0 1.5px 3px rgba(111, 91, 255, 0.45)); transition: cx .25s ease, cy .25s ease; }
 .q-ring-center { position: absolute; inset: 24%; z-index: 2; pointer-events: none; }
-.q-node { position: absolute; transform: translate(calc(var(--q-tx, -50%) + var(--q-radial-x, 0px)), calc(var(--q-ty, -50%) + var(--q-radial-y, 0px))); z-index: 3; min-width: 116px; max-width: 205px; min-height: 44px; white-space: normal; overflow-wrap: normal; padding: 8px 13px; border-radius: 14px; border: 1px solid var(--m-border); background: #fff; color: var(--m-text); font-weight: 700; font-size: 12.5px; line-height: 1.3; text-align: center; box-shadow: var(--m-shadow-sm); transition: opacity .5s ease, transform .35s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease, color .2s ease; }
-.q-node:hover { border-color: rgba(111,91,255,.4); box-shadow: 0 10px 22px rgba(111,91,255,.16); }
-.q-node.chosen { background: var(--m-gradient-soft); color: #fff; border-color: transparent; transform: translate(calc(var(--q-tx, -50%) + var(--q-radial-x, 0px)), calc(var(--q-ty, -50%) + var(--q-radial-y, 0px))) scale(1.06); box-shadow: 0 12px 26px rgba(111,91,255,.34); }
+.q-node { position: absolute; isolation: isolate; overflow: hidden; transform: translate(calc(var(--q-tx, -50%) + var(--q-radial-x, 0px)), calc(var(--q-ty, -50%) + var(--q-radial-y, 0px))); z-index: 3; min-width: 116px; max-width: 205px; min-height: 44px; white-space: normal; overflow-wrap: normal; padding: 8px 13px; border-radius: 14px; border: 1px solid var(--m-border); background: #fff; color: var(--m-text); font-weight: 700; font-size: 12.5px; line-height: 1.3; text-align: center; box-shadow: var(--m-shadow-sm), inset 0 1px rgba(255,255,255,.72); cursor: pointer; transition: opacity .5s ease, transform .22s var(--sp-ease), border-color .18s ease, box-shadow .18s ease, background .18s ease, color .18s ease, filter .18s ease; }
+.q-node::after { content: ""; position: absolute; inset: -35% auto -35% -35%; z-index: -1; width: 32%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.42), transparent); pointer-events: none; transform: translateX(-220%) skewX(-18deg); transition: transform .48s ease; }
+.q-node:hover,
+.q-node:focus-visible { outline: none; border-color: var(--m-primary); background: var(--m-gradient-soft); color: #fff; box-shadow: 0 14px 30px rgba(111,91,255,.32), 0 0 0 3px rgba(139,104,255,.1); filter: saturate(1.08); }
+.q-node:hover::after,
+.q-node:focus-visible::after { transform: translateX(520%) skewX(-18deg); }
+.q-node:active { filter: saturate(1.12) brightness(.96); }
+.q-node.chosen {
+  border-color: var(--m-primary);
+  background: var(--m-gradient-soft);
+  color: #fff;
+  transform: translate(calc(var(--q-tx, -50%) + var(--q-radial-x, 0px)), calc(var(--q-ty, -50%) + var(--q-radial-y, 0px)));
+  box-shadow: 0 14px 30px rgba(111,91,255,.32), 0 0 0 3px rgba(139,104,255,.1);
+  filter: saturate(1.08);
+}
+.q-node.chosen:hover,
+.q-node.chosen:focus-visible { transform: translate(calc(var(--q-tx, -50%) + var(--q-radial-x, 0px)), calc(var(--q-ty, -50%) + var(--q-radial-y, 0px))); }
+
+@media (prefers-reduced-motion: reduce) {
+  .q-node::after { display: none; }
+  .q-node:hover,
+  .q-node:focus-visible,
+  .q-node.chosen:hover,
+  .q-node.chosen:focus-visible { transition: none; }
+}
 
 .q-actions { display: flex; align-items: center; gap: 12px; margin-top: 32px; }
 .q-microcopy { text-align: center; color: var(--m-text-soft); font-size: 12.5px; font-weight: 600; margin: 0; }
@@ -662,7 +692,7 @@
 .reflection-yubi-anchor {
   position: absolute;
   z-index: 3;
-  bottom: 7%;
+  bottom: 12%;
   left: 50%;
   width: clamp(310px, 37vw, 440px);
   height: clamp(350px, 56vh, 500px);
@@ -704,14 +734,14 @@
   animation: reflectionEventHorizon .54s cubic-bezier(.72,.02,.92,.38) both;
 }
 
-/* The card opens beside Yubi. Its logical inline-start edge always faces his
-  mouth: right side in LTR, left side in RTL. */
+/* Reflection turns alternate around Yubi like a conversation. Physical side
+   classes keep the choreography consistent while the text remains bidi-safe. */
 .reflection-speech {
   position: absolute;
   z-index: 8;
-  top: 56%;
-  inset-inline-start: calc(50% + clamp(126px, 12vw, 148px));
-  width: min(31vw, 360px);
+  top: 50%;
+  width: min(38vw, 440px, calc(50vw - clamp(126px, 12vw, 148px) - 24px));
+  min-width: min(320px, calc(50vw - clamp(126px, 12vw, 148px) - 24px));
   max-height: min(70dvh, 470px);
   padding: clamp(18px, 2.5vw, 26px);
   border: 1px solid rgba(111, 91, 255, .18);
@@ -726,12 +756,21 @@
   transform-origin: left center;
   overflow: visible;
 }
-[dir="rtl"] .reflection-speech { transform-origin: right center; }
+.reflection-speech.is-right {
+  right: auto;
+  left: calc(50% + clamp(126px, 12vw, 148px));
+  transform-origin: left center;
+}
+.reflection-speech.is-left {
+  right: calc(50% + clamp(126px, 12vw, 148px));
+  left: auto;
+  transform-origin: right center;
+}
 .reflection-speech::before {
   content: "";
   position: absolute;
   top: 50%;
-  inset-inline-start: -38px;
+  left: -38px;
   width: 42px;
   height: 48px;
   background: rgba(255, 255, 255, .97);
@@ -739,12 +778,16 @@
   filter: drop-shadow(-7px 7px 7px rgba(65, 45, 145, .12));
   transform: translateY(-50%);
 }
-[dir="rtl"] .reflection-speech::before { transform: translateY(-50%) scaleX(-1); }
+.reflection-speech.is-left::before {
+  right: -38px;
+  left: auto;
+  transform: translateY(-50%) scaleX(-1);
+}
 .reflection-speech::after {
   content: "";
   position: absolute;
   top: 50%;
-  inset-inline-start: -48px;
+  left: -48px;
   width: 12px;
   aspect-ratio: 1;
   border-radius: 50%;
@@ -752,6 +795,7 @@
   box-shadow: 0 0 0 5px rgba(139,104,255,.13), 0 0 20px rgba(76,201,240,.48);
   transform: translateY(-50%);
 }
+.reflection-speech.is-left::after { right: -48px; left: auto; }
 .reflection-speech.is-visible {
   opacity: 1;
   pointer-events: auto;
@@ -777,7 +821,40 @@
   gap: 10px;
   margin-block-start: 20px;
 }
+.reflection-speech-continue {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: fit-content;
+  min-width: 142px;
+  min-height: 46px;
+  margin: 20px auto 0;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--m-gradient-soft);
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(111, 91, 255, .3);
+  font: 800 14px/1 var(--sp-font);
+  cursor: pointer;
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+.reflection-speech-continue svg { width: 17px; height: 17px; }
+.reflection-speech-continue:hover,
+.reflection-speech-continue:focus-visible {
+  outline: none;
+  transform: translateY(-2px);
+  box-shadow: var(--sp-ring), 0 15px 34px rgba(111, 91, 255, .4);
+  filter: saturate(1.08);
+}
+.reflection-speech-continue:active { transform: translateY(0) scale(.98); }
 .reflection-speech-option {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   min-height: 48px;
   padding: 10px 15px;
   border: 1px solid var(--m-border);
@@ -793,7 +870,19 @@
   unicode-bidi: plaintext;
   opacity: 0;
   animation: reflectionOptionIn .3s ease both;
-  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease, color .16s ease, background .16s ease;
+  box-shadow: inset 0 1px rgba(255, 255, 255, .72);
+  transition: transform .18s var(--sp-ease), border-color .18s ease, box-shadow .18s ease, color .18s ease, background .18s ease, filter .18s ease;
+}
+.reflection-speech-option::after {
+  content: "";
+  position: absolute;
+  inset: -35% auto -35% -35%;
+  z-index: -1;
+  width: 32%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .42), transparent);
+  pointer-events: none;
+  transform: translateX(-220%) skewX(-18deg);
+  transition: transform .48s ease;
 }
 .reflection-speech-option:nth-child(2) { animation-delay: .05s; }
 .reflection-speech-option:nth-child(3) { animation-delay: .1s; }
@@ -804,15 +893,24 @@
   border-color: var(--m-primary);
   background: var(--m-gradient-soft);
   color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 12px 26px rgba(111, 91, 255, .27);
+  transform: translateY(-3px) scale(1.018);
+  box-shadow: 0 14px 30px rgba(111, 91, 255, .32), 0 0 0 3px rgba(139, 104, 255, .1);
+  filter: saturate(1.08);
 }
+.reflection-speech-option:hover::after,
+.reflection-speech-option:focus-visible::after { transform: translateX(520%) skewX(-18deg); }
 .reflection-speech-option:active { transform: translateY(0) scale(.98); }
+
+@media (prefers-reduced-motion: reduce) {
+  .reflection-speech-option::after { display: none; }
+  .reflection-speech-option:hover,
+  .reflection-speech-option:focus-visible { transform: none; }
+}
 
 .reflection-thinking {
   position: absolute;
   z-index: 9;
-  top: 30%;
+  top: 24%;
   left: 50%;
   display: flex;
   align-items: center;
@@ -963,28 +1061,63 @@
   .q-ring { width: min(440px, 62vw, 88vw); }
   .q-node { min-width: 108px; max-width: 190px; min-height: 42px; font-size: 12px; padding: 7px 11px; }
   .reflection-stage { height: 100%; min-height: 0; }
-  .reflection-yubi-anchor { bottom: 5%; width: clamp(260px, 43vw, 360px); height: clamp(320px, 52vh, 430px); }
+  .reflection-yubi-anchor { bottom: 9%; width: clamp(260px, 43vw, 360px); height: clamp(320px, 52vh, 430px); }
   .reflection-speech {
-    inset-inline-start: calc(50% + clamp(92px, 14vw, 118px));
-    width: calc(50% - clamp(108px, 16vw, 134px));
+    top: 49%;
+    width: min(390px, calc(50% - clamp(108px, 16vw, 134px) - 16px));
+    min-width: 0;
     padding: 18px 16px;
     border-radius: 22px;
   }
+  .reflection-speech.is-right { right: auto; left: calc(50% + clamp(92px, 14vw, 118px)); }
+  .reflection-speech.is-left { right: calc(50% + clamp(92px, 14vw, 118px)); left: auto; }
   .reflection-speech p { font-size: clamp(16px, 2.4vw, 21px); }
   .reflection-speech-options { grid-template-columns: 1fr; gap: 7px; margin-block-start: 14px; }
   .reflection-speech-option { min-height: 44px; padding: 8px 11px; font-size: 12.5px; }
 }
 
 @media (max-width: 599px) {
-  .reflection-stage { height: 100%; min-height: 0; }
-  .reflection-phase-header { top: 12px; gap: 3px; }
+  .reflection-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    height: 100%;
+    min-height: 0;
+    padding: 10px 12px 14px;
+    overflow-x: clip;
+    overflow-y: auto;
+  }
+  .reflection-phase-header {
+    position: relative;
+    top: auto;
+    left: auto;
+    flex: none;
+    gap: 3px;
+    width: 100%;
+    animation: none;
+    transform: none;
+  }
   .reflection-phase-header span { padding: 4px 10px; font-size: 10px; }
   .reflection-phase-header h1 { font-size: clamp(16px, 4.8vw, 20px); }
   .reflection-spark-field i:nth-child(n + 17) { display: none; }
-  .reflection-yubi-anchor { inset-block-end: 3%; width: min(78vw, 320px); height: 330px; }
-  .reflection-yubi-anchor .yubi-floater { display: grid; place-items: end center; }
+  .reflection-yubi-anchor {
+    position: relative;
+    inset: auto;
+    flex: 1 0 210px;
+    order: 4;
+    width: min(72vw, 280px);
+    min-height: 210px;
+    height: min(34dvh, 270px);
+    transform: none;
+  }
+  .reflection-yubi-anchor .yubi-floater {
+    display: grid;
+    place-items: start center;
+    padding-block-start: 18px;
+  }
   .reflection-yubi-anchor .robot-lite {
-    width: min(56vw, 210px);
+    width: min(44vw, 170px);
     border-radius: 50%;
     background: radial-gradient(circle, rgba(255,255,255,.98), rgba(124,92,255,.18));
     animation: none;
@@ -992,25 +1125,32 @@
   .reflection-yubi-anchor .yubi-floater.is-thinking .robot-lite { animation: reflectionLiteThink 1.1s ease-in-out infinite; }
   .reflection-yubi-anchor .yubi-floater.is-celebrating .robot-lite { animation: reflectionLiteCelebrate .52s ease-in-out infinite alternate; }
   .reflection-speech {
-    top: 18px;
-    inset-inline-start: 12px;
-    width: calc(100% - 24px);
-    max-height: 48dvh;
+    position: relative;
+    top: auto;
+    right: auto;
+    left: auto;
+    flex: none;
+    order: 3;
+    width: 100%;
+    min-width: 0;
+    max-height: none;
     padding: 17px 14px;
     border-radius: 22px;
     transform: scale(.08);
     transform-origin: 50% 100%;
   }
-  [dir="rtl"] .reflection-speech { transform-origin: 50% 100%; }
-  .reflection-speech::before { top: auto; bottom: -34px; inset-inline-start: 50%; transform: translateX(-50%) rotate(-90deg); }
-  [dir="rtl"] .reflection-speech::before { transform: translateX(-50%) rotate(-90deg); }
-  .reflection-speech::after { top: auto; bottom: -43px; inset-inline-start: calc(50% + 28px); transform: none; }
+  .reflection-speech.is-left,
+  .reflection-speech.is-right { right: auto; left: auto; transform-origin: 50% 100%; }
+  .reflection-speech::before,
+  .reflection-speech.is-left::before { top: auto; right: auto; bottom: -34px; left: 50%; transform: translateX(-50%) rotate(-90deg); }
+  .reflection-speech::after,
+  .reflection-speech.is-left::after { top: auto; right: auto; bottom: -43px; left: calc(50% + 28px); transform: none; }
   .reflection-speech.is-visible { transform: scale(1); }
   .reflection-speech.is-visible { animation-name: reflectionSpeechFromMouthMobile; }
   .reflection-speech p { font-size: clamp(16px, 4.8vw, 20px); }
   .reflection-speech-options { grid-template-columns: 1fr; gap: 7px; margin-block-start: 14px; }
   .reflection-speech-option { min-height: 44px; padding: 8px 12px; font-size: 13px; }
-  .reflection-thinking { inset-block-start: 48%; }
+  .reflection-thinking { inset-block-start: 42%; }
   @keyframes reflectionLiteThink { 50% { transform: translateY(-7px) rotate(-4deg); } }
   @keyframes reflectionLiteCelebrate { to { transform: translateY(-12px) scale(1.08) rotate(4deg); } }
   @keyframes reflectionSpeechFromMouthMobile {

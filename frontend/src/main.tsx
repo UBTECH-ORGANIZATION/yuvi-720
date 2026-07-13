@@ -4,6 +4,7 @@ import { App } from './app/App'
 import { I18nProvider } from './i18n/I18nProvider'
 import { BrainProvider } from './providers/BrainProvider'
 import { CompanionProvider } from './providers/CompanionProvider'
+import { LessonRoadmapProvider } from './providers/LessonRoadmapProvider'
 import { ThemeProvider } from './providers/ThemeProvider'
 import { StudioTransitionProvider } from './features/yubi-studio/StudioTransitionProvider'
 import { YubiDesignProvider } from './features/yubi-studio/YubiDesignProvider'
@@ -26,9 +27,11 @@ createRoot(document.getElementById('root') as HTMLElement).render(
         <BrainProvider>
           <CompanionProvider>
             <YubiDesignProvider>
-              <StudioTransitionProvider>
-                <App />
-              </StudioTransitionProvider>
+              <LessonRoadmapProvider>
+                <StudioTransitionProvider>
+                  <App />
+                </StudioTransitionProvider>
+              </LessonRoadmapProvider>
             </YubiDesignProvider>
           </CompanionProvider>
         </BrainProvider>

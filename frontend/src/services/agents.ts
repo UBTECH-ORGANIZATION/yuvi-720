@@ -38,6 +38,9 @@ export interface CoachConversation {
   message_count: number
   created_at: string
   updated_at: string
+  activity_unit_id?: string | null
+  activity_component_id?: string | null
+  activity_status?: 'open' | 'completed' | null
 }
 
 export interface CoachHistoryMessage {
@@ -81,6 +84,8 @@ export type CoachScreenId =
 
 export interface CoachSurfaceContext {
   screen: CoachScreenId
+  unit_id?: string
+  component_id?: string
 }
 
 /** Convert the local route into a bounded semantic screen id. Never send the
@@ -89,7 +94,17 @@ export function coachSurfaceForPath(pathname: string): CoachSurfaceContext {
   if (pathname.startsWith('/results')) return { screen: 'results' }
   if (pathname.startsWith('/student-dashboard')) return { screen: 'student_dashboard' }
   if (pathname.startsWith('/mentoring')) return { screen: 'mentoring' }
-  if (pathname.startsWith('/learning/lesson')) return { screen: 'learning_lesson' }
+  if (pathname.startsWith('/learning/lesson')) {
+    const query = pathname.includes('?') ? pathname.slice(pathname.indexOf('?')) : ''
+    const params = new URLSearchParams(query)
+    const unitId = params.get('unit')?.trim()
+    const componentId = params.get('component')?.trim()
+    return {
+      screen: 'learning_lesson',
+      ...(unitId ? { unit_id: unitId } : {}),
+      ...(componentId ? { component_id: componentId } : {}),
+    }
+  }
   if (pathname.startsWith('/learning/create')) return { screen: 'learning_create' }
   if (pathname.startsWith('/learning')) return { screen: 'learning_portal' }
   return { screen: 'unknown' }
@@ -183,6 +198,23 @@ export function streamProactive(
   )
 }
 
+export type CoachSupportMode = 'hint' | 'explanation'
+
+export function streamCoachSupport(
+  support: CoachSupportMode,
+  language: string,
+  handlers: CoachStreamHandlers,
+  conversationId: string = 'default',
+  learnerId: string = CURRENT_LEARNER_ID,
+  surface: CoachSurfaceContext = { screen: 'learning_lesson' }
+): Promise<void> {
+  return streamAgent(
+    '/api/agent/coach/support',
+    { learner_id: learnerId, conversation_id: conversationId, support, language, surface },
+    handlers
+  )
+}
+
 export function listCoachConversations(
   cursor?: string | null,
   limit: number = 12,
@@ -197,9 +229,14 @@ export function listCoachConversations(
 }
 
 export function createCoachConversation(
-  learnerId: string = CURRENT_LEARNER_ID
+  learnerId: string = CURRENT_LEARNER_ID,
+  surface: CoachSurfaceContext = { screen: 'unknown' }
 ): Promise<CoachConversation> {
-  return apiPost<CoachConversation>('/api/agent/coach/conversations', { learner_id: learnerId })
+  return apiPost<CoachConversation>('/api/agent/coach/conversations', {
+    learner_id: learnerId,
+    unit_id: surface.unit_id,
+    component_id: surface.component_id,
+  })
 }
 
 export function listCoachMessages(
@@ -227,9 +264,11 @@ export function deleteCoachConversation(
 }
 
 export interface Trigger {
-  type: 'idle' | 'misconception' | 'success' | '_heartbeat'
+  type: 'idle' | 'misconception' | 'slow_progress' | 'success' | '_heartbeat'
   objective_id?: string | null
   misconception?: string | null
+  elapsed_seconds?: number | null
+  timing_quality?: 'elapsed_between_events' | 'unavailable'
 }
 
 export interface NextRouteDecision {

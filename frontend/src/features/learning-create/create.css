@@ -6,7 +6,7 @@
             color: #2d3748;
             height: 100vh;
             overflow: hidden;
-            direction: rtl;
+            direction: inherit;
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
         }
@@ -48,9 +48,9 @@
 
         /* ===== LAYOUT ===== */
         .builder {
-            position: fixed; top: 54px; left: 0; right: 0; bottom: 0;
+            position: fixed; top: var(--mapping-app-bar-height, 73px); left: 0; right: 0; bottom: 0;
             display: grid; grid-template-columns: 1.35fr 0.95fr; gap: 16px;
-            padding: 16px; height: calc(100vh - 54px);
+            padding: 16px; height: calc(100dvh - var(--mapping-app-bar-height, 73px));
         }
 
         /* ===== LEFT: stage (preview + code) ===== */

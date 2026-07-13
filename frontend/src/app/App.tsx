@@ -8,7 +8,6 @@ import { LessonPage } from '../features/learning-lesson/LessonPage'
 import { LomdaCreatorPage } from '../features/learning-create/LomdaCreatorPage'
 import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
 import { YubiStudioPage } from '../features/yubi-studio/YubiStudioPage'
-import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { CompanionChat } from '../components/CompanionChat'
 import { YubiCompanionDock } from '../components/YubiCompanionDock'
 import { useI18n } from '../i18n/I18nProvider'
@@ -29,12 +28,11 @@ function pageForRoute(pathname: string) {
   return <LandingLoginPage />
 }
 
-// The floating Coach is a LEARNER companion — never on landing or teacher/admin
-// surfaces. It is held off the mapping flow (already a guided chat) until that
-// legacy chat is refactored onto the unified companion, to avoid a double-companion.
+// The floating Coach begins only once the learner reaches the dashboard. Mapping
+// and results are one guided onboarding flow, so showing a second companion there
+// would compete with Yubi's profile-verification experience.
 function isLearnerRoute(pathname: string) {
   return (
-    pathname.startsWith('/results') ||
     pathname.startsWith('/student-dashboard') ||
     pathname.startsWith('/mentoring') ||
     pathname.startsWith('/learning')
@@ -45,13 +43,10 @@ export function App() {
   const pathname = useRoute()
   const { language, direction } = useI18n()
   const { isOpen, isOpening, isClosing, panelWidth } = useCompanion()
-  const isLandingRoute = pathname === '/' || pathname === ''
-  const isMappingRoute = pathname.startsWith('/learner-mapping')
-  const isLearningPortalRoute = pathname === '/learning' || pathname === '/learning/'
-  const isStudentDashboardRoute = pathname.startsWith('/student-dashboard')
   const isStudioRoute = pathname.startsWith('/yuvi-studio')
+  const isActiveTaskRoute = pathname.startsWith('/learning/lesson')
   const learnerRoute = isLearnerRoute(pathname)
-  const routePage = <div key={language}>{pageForRoute(pathname)}</div>
+  const routePage = <div key={`${language}:${pathname}`}>{pageForRoute(pathname)}</div>
 
   return (
     <>
@@ -59,16 +54,14 @@ export function App() {
           content (and re-run its localization) whenever the language changes. */}
       {learnerRoute ? (
         <div
-          className={`sp-learner-shell${isOpen && !isOpening && !isClosing ? ' is-companion-open' : ''}${isOpening ? ' is-companion-opening' : ''}${isClosing ? ' is-companion-closing' : ''}`}
+          className={`sp-learner-shell${isActiveTaskRoute ? ' is-task-route' : ''}${isOpen && !isOpening && !isClosing ? ' is-companion-open' : ''}${isOpening ? ' is-companion-opening' : ''}${isClosing ? ' is-companion-closing' : ''}`}
           style={{ '--sp-companion-width': `${panelWidth}px` } as React.CSSProperties}
         >
           <CompanionChat />
           <div className="sp-learner-shell__content" dir={direction}>{routePage}</div>
         </div>
       ) : routePage}
-      {/* The mapping page already shows a language switcher in its own app bar. */}
-      {!isLandingRoute && !isMappingRoute && !isLearningPortalRoute && !isStudentDashboardRoute && !isStudioRoute && <LanguageSwitcher variant="floating" />}
-      {learnerRoute && !isStudioRoute && <YubiCompanionDock />}
+      {learnerRoute && !isStudioRoute && !isActiveTaskRoute && <YubiCompanionDock />}
     </>
   )
 }

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   createCoachConversation,
   coachSurfaceForPath,
@@ -6,11 +6,13 @@ import {
   listCoachConversations,
   listCoachMessages,
   streamCoach,
+  streamCoachSupport,
   streamProactive,
   subscribeTriggers,
   type CoachConversation,
   type CoachHistoryMessage,
   type CoachVisual,
+  type CoachSupportMode,
 } from '../services/agents'
 import { useI18n } from '../i18n/I18nProvider'
 import { useRoute } from '../app/router'
@@ -57,6 +59,7 @@ interface CompanionContextValue {
   historyError: boolean
   canStartNewConversation: boolean
   send: (text: string) => Promise<void>
+  requestSupport: (support: CoachSupportMode) => Promise<void>
   selectConversation: (conversationId: string) => Promise<void>
   startNewConversation: () => Promise<void>
   deleteConversation: (conversationId: string) => Promise<boolean>
@@ -93,6 +96,9 @@ function mergeUnique<T extends { id: string }>(current: T[], incoming: T[]): T[]
 export function CompanionProvider({ children }: { children: ReactNode }) {
   const { language } = useI18n()
   const pathname = useRoute()
+  const surface = useMemo(() => coachSurfaceForPath(pathname), [pathname])
+  const activityScoped = surface.screen === 'learning_lesson'
+    && Boolean(surface.unit_id && surface.component_id)
   const [isOpen, setIsOpen] = useState(false)
   const [isOpening, setIsOpening] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
@@ -179,6 +185,10 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     if (closingTimer.current) clearTimeout(closingTimer.current)
   }, [])
 
+  useEffect(() => {
+    if (pathname.startsWith('/learning/lesson')) open()
+  }, [open, pathname])
+
   const selectConversation = useCallback(async (conversationId: string) => {
     const request = ++messageRequest.current
     setActiveConversationId(conversationId)
@@ -226,14 +236,26 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     let active = true
     conversationLoading.current = true
     setIsLoadingConversations(true)
-    listCoachConversations()
-      .then(async (page) => {
+    const initialize = async () => {
+      const activityConversation = activityScoped
+        ? await createCoachConversation(undefined, surface)
+        : null
+      const page = await listCoachConversations()
+      return { activityConversation, page }
+    }
+    initialize()
+      .then(async ({ activityConversation, page }) => {
         if (!active) return
-        setConversations(page.conversations)
+        const nextConversations = activityConversation
+          && !page.conversations.some((item) => item.id === activityConversation.id)
+          ? [activityConversation, ...page.conversations]
+          : page.conversations
+        setConversations(nextConversations)
         setConversationCursor(page.next_cursor)
         setHasMoreConversations(page.has_more)
-        if (page.conversations[0] && !liveTurnInProgress.current) {
-          await selectConversation(page.conversations[0].id)
+        const target = activityConversation || page.conversations[0]
+        if (target && !liveTurnInProgress.current) {
+          await selectConversation(target.id)
         } else if (!liveTurnInProgress.current) {
           setActiveConversationId('default')
         }
@@ -252,7 +274,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       active = false
       messageRequest.current += 1
     }
-  }, [selectConversation])
+  }, [activityScoped, pathname, selectConversation, surface])
 
   const loadMoreConversations = useCallback(async () => {
     if (!hasMoreConversations || !conversationCursor || conversationLoading.current) return
@@ -298,18 +320,27 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     if (isStreaming) return
     setHistoryError(false)
     try {
+      if (activityScoped) {
+        const conversation = await createCoachConversation(undefined, surface)
+        setConversations((current) => [
+          conversation,
+          ...current.filter((item) => item.id !== conversation.id),
+        ])
+        await selectConversation(conversation.id)
+        return
+      }
       const existingEmpty = conversations.find((item) => item.message_count === 0)
       if (existingEmpty) {
         await selectConversation(existingEmpty.id)
         return
       }
-      const conversation = await createCoachConversation()
+      const conversation = await createCoachConversation(undefined, surface)
       setConversations((current) => [conversation, ...current.filter((item) => item.id !== conversation.id)])
       await selectConversation(conversation.id)
     } catch {
       setHistoryError(true)
     }
-  }, [conversations, isStreaming, selectConversation])
+  }, [activityScoped, conversations, isStreaming, selectConversation, surface])
 
   const deleteConversation = useCallback(async (conversationId: string) => {
     if (isStreaming) return false
@@ -326,7 +357,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         if (remaining[0]) {
           await selectConversation(remaining[0].id)
         } else {
-          const conversation = await createCoachConversation()
+          const conversation = await createCoachConversation(undefined, surface)
           setConversations([conversation])
           await selectConversation(conversation.id)
         }
@@ -336,7 +367,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       setHistoryError(true)
       return false
     }
-  }, [activeConversationId, conversations, isStreaming, selectConversation])
+  }, [activeConversationId, conversations, isStreaming, selectConversation, surface])
 
   const send = useCallback(
     async (text: string) => {
@@ -347,7 +378,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       let conversationId = activeConversationId
       if (!conversationId) {
         try {
-          const conversation = await createCoachConversation()
+          const conversation = await createCoachConversation(undefined, surface)
           conversationId = conversation.id
           setActiveConversationId(conversation.id)
           setConversations((current) => [conversation, ...current])
@@ -399,7 +430,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
                 message.id === assistantId ? { ...message, visual, isVisualizing: false } : message
               ))
             ),
-        }, conversationId, undefined, coachSurfaceForPath(pathname))
+        }, conversationId, undefined, surface)
       } catch {
         setMessages((prev) =>
           prev.map((message) =>
@@ -424,8 +455,57 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         window.dispatchEvent(new CustomEvent('yuvilab:brain-updated'))
       }
     },
-    [activeConversationId, isStreaming, language, pathname, reloadHistory]
+    [activeConversationId, isStreaming, language, reloadHistory, surface]
   )
+
+  const requestSupport = useCallback(async (support: CoachSupportMode) => {
+    if (isStreaming) return
+    liveTurnInProgress.current = true
+    let conversationId = activeConversationId
+    if (!conversationId) {
+      try {
+        const conversation = await createCoachConversation(undefined, surface)
+        conversationId = conversation.id
+        setActiveConversationId(conversation.id)
+        setConversations((current) => [conversation, ...current])
+      } catch {
+        setHistoryError(true)
+        liveTurnInProgress.current = false
+        return
+      }
+    }
+    messageRequest.current += 1
+    const assistantId = nextId()
+    setMessages((current) => [
+      ...current,
+      { id: assistantId, role: 'assistant', text: '', isComplete: false },
+    ])
+    setIsStreaming(true)
+    setActiveAssistantId(assistantId)
+    setActivity('thinking')
+    try {
+      await streamCoachSupport(support, language, {
+        onDisclosure: setDisclosure,
+        onPhase: setActivity,
+        onText: (chunk) => setMessages((current) => current.map((message) => (
+          message.id === assistantId ? { ...message, text: message.text + chunk } : message
+        ))),
+      }, conversationId, undefined, surface)
+    } catch {
+      setMessages((current) => current.map((message) => (
+        message.id === assistantId && !message.text ? { ...message, text: '…' } : message
+      )))
+    } finally {
+      setMessages((current) => current.map((message) => (
+        message.id === assistantId ? { ...message, isComplete: true } : message
+      )))
+      setIsStreaming(false)
+      setActiveAssistantId(null)
+      setActivity('idle')
+      await reloadHistory()
+      liveTurnInProgress.current = false
+    }
+  }, [activeConversationId, isStreaming, language, reloadHistory, surface])
 
   // Proactive nudges stream into the active thread without taking control of
   // the screen. Only the learner-visible assistant message enters history.
@@ -436,8 +516,20 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       if (isStreaming || now - lastProactive.current < 15000) return
       lastProactive.current = now
       if (!isOpen) setUnreadCount((count) => count + 1)
-      const conversationId = activeConversationId || 'default'
-      if (!activeConversationId) setActiveConversationId(conversationId)
+      let conversationId = activeConversationId
+      if (!conversationId) {
+        try {
+          const conversation = await createCoachConversation(undefined, surface)
+          conversationId = conversation.id
+          setActiveConversationId(conversation.id)
+          setConversations((current) => [
+            conversation,
+            ...current.filter((item) => item.id !== conversation.id),
+          ])
+        } catch {
+          return
+        }
+      }
       const assistantId = nextId()
       setMessages((prev) => [...prev, { id: assistantId, role: 'assistant', text: '', isComplete: false }])
       setIsStreaming(true)
@@ -453,7 +545,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
                 message.id === assistantId ? { ...message, text: message.text + chunk } : message
               ))
             ),
-        }, conversationId, undefined, coachSurfaceForPath(pathname))
+        }, conversationId, undefined, surface)
       } catch {
         /* Proactivity must never disrupt the learner. */
       } finally {
@@ -469,12 +561,12 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         window.dispatchEvent(new CustomEvent('yuvilab:brain-updated'))
       }
     },
-    [activeConversationId, isOpen, isStreaming, language, pathname, reloadHistory]
+    [activeConversationId, isOpen, isStreaming, language, reloadHistory, surface]
   )
 
   useEffect(() => {
     const close = subscribeTriggers((trigger) => {
-      if (trigger.type === 'misconception' || trigger.type === 'idle' || trigger.type === 'success') {
+      if (trigger.type === 'misconception' || trigger.type === 'slow_progress' || trigger.type === 'idle' || trigger.type === 'success') {
         void receiveProactive(trigger.type)
       }
     })
@@ -507,9 +599,11 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         hasMoreConversations,
         hasMoreMessages,
         historyError,
-        canStartNewConversation: !isLoadingConversations
+        canStartNewConversation: !activityScoped
+          && !isLoadingConversations
           && !conversations.some((conversation) => conversation.message_count === 0),
         send,
+        requestSupport,
         selectConversation,
         startNewConversation,
         deleteConversation,
