@@ -58,12 +58,74 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Configure Dev slot routing
+        run: |
+          az webapp config appsettings set \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --slot ${{ env.SLOT_NAME }} \
+            --slot-settings \
+              FRONTEND_URL=https://dev.spark.yuvilab.ai \
+              PUBLIC_APP_URL=https://dev.spark.yuvilab.ai \
+              WEBSITES_PORT=8000 \
+              LLM_STRONG_DEPLOYMENT_NAME=gpt-5.4 \
+              LLM_MINI_DEPLOYMENT_NAME=gpt-5.4-mini \
+            --output none
+
+      - name: Verify required Dev slot settings
+        run: |
+          configured_settings="$(az webapp config appsettings list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --slot ${{ env.SLOT_NAME }} \
+            --output json | jq -r '.[] | select(.value != null and .value != "") | .name')"
+          required_settings=(
+            APIM_BASE_URL
+            APIM_SUBSCRIPTION_KEY
+            APIM_API_VERSION
+            LLM_STRONG_DEPLOYMENT_NAME
+            LLM_MINI_DEPLOYMENT_NAME
+            MONGODB_CONNECTION_STRING
+            FRONTEND_URL
+            PUBLIC_APP_URL
+            SECRET_KEY
+            WEBSITES_PORT
+          )
+          missing_settings=()
+          for setting_name in "${required_settings[@]}"; do
+            if ! grep -qx "$setting_name" <<< "$configured_settings"; then
+              missing_settings+=("$setting_name")
+            fi
+          done
+          if (( ${#missing_settings[@]} )); then
+            printf 'Missing required Dev slot settings: %s\n' "${missing_settings[*]}"
+            exit 1
+          fi
+
       - name: Deploy to Dev slot
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.WEBAPP_NAME }}
           slot-name: ${{ env.SLOT_NAME }}
           images: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Verify Dev route
+        run: |
+          curl --fail --silent --show-error \
+            --retry 12 \
+            --retry-delay 10 \
+            --retry-all-errors \
+            --max-time 30 \
+            https://dev.spark.yuvilab.ai/ \
+            --output /dev/null
+          curl --fail --silent --show-error \
+            --retry 6 \
+            --retry-delay 10 \
+            --retry-all-errors \
+            --max-time 30 \
+            "https://dev.spark.yuvilab.ai/api/learning/catalog?learner_id=deployment-smoke" \
+            | jq -e '.provider_status == "online" and (.units | length) > 0' \
+            > /dev/null
 
       - name: Azure logout
         run: az logout

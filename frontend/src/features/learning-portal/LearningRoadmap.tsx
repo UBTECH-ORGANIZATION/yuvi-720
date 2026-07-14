@@ -1,23 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import * as THREE from 'three'
 import { useI18n } from '../../i18n/I18nProvider'
-import { useTheme } from '../../providers/ThemeProvider'
 import type { LearningComponentDTO, LearningUnitDTO } from '../../services/learning'
-import { YubiAvatar3D } from '../yubi-studio/YubiAvatar3D'
-import { useYubiDesign } from '../yubi-studio/YubiDesignProvider'
 
 interface RoadmapPoint {
   component: LearningComponentDTO
+  stageIndex: number
   xPercent: number
-  labelXPercent: number
-  yPercent: number
-  world: THREE.Vector3
-}
-
-interface RoadmapScreenPoint {
-  platformXPercent: number
-  labelXPercent: number
-  yPercent: number
+  yPx: number
+  depth: number
 }
 
 interface LearningRoadmapProps {
@@ -30,11 +20,11 @@ interface LearningRoadmapProps {
   onTravelComplete?: () => void
 }
 
-const STATE_COLORS: Record<LearningComponentDTO['progress_state'], number> = {
-  completed: 0x58d8ad,
-  current: 0x9f82ff,
-  available: 0x4ddcf3,
-  locked: 0x53607e,
+interface RoadmapDebugState {
+  enabled: boolean
+  flightProgress: number | null
+  fromId: string | null
+  toId: string | null
 }
 
 function purposeKey(component: LearningComponentDTO) {
@@ -44,49 +34,28 @@ function purposeKey(component: LearningComponentDTO) {
   return 'learning.component.activity'
 }
 
-function disposeScene(scene: THREE.Scene) {
-  scene.traverse((object) => {
-    if (!(object instanceof THREE.Mesh || object instanceof THREE.Points || object instanceof THREE.Line)) return
-    object.geometry?.dispose()
-    const materials = Array.isArray(object.material) ? object.material : [object.material]
-    materials.forEach((material) => material?.dispose())
-  })
+function clamp(value: number, minimum: number, maximum: number) {
+  return Math.min(maximum, Math.max(minimum, value))
 }
 
-function platformGeometry(width: number, depth: number, height: number) {
-  const halfWidth = width / 2
-  const halfDepth = depth / 2
-  const cut = Math.min(width, depth) * .17
-  const shape = new THREE.Shape()
-  shape.moveTo(-halfWidth + cut, -halfDepth)
-  shape.lineTo(halfWidth - cut, -halfDepth)
-  shape.lineTo(halfWidth, -halfDepth + cut)
-  shape.lineTo(halfWidth, halfDepth - cut)
-  shape.lineTo(halfWidth - cut, halfDepth)
-  shape.lineTo(-halfWidth + cut, halfDepth)
-  shape.lineTo(-halfWidth, halfDepth - cut)
-  shape.lineTo(-halfWidth, -halfDepth + cut)
-  shape.closePath()
-  const geometry = new THREE.ExtrudeGeometry(shape, {
-    depth: height,
-    bevelEnabled: true,
-    bevelSegments: 1,
-    bevelSize: Math.min(.055, height * .28),
-    bevelThickness: Math.min(.045, height * .24),
-    curveSegments: 1,
-  })
-  geometry.rotateX(Math.PI / 2)
-  geometry.translate(0, height / 2, 0)
-  return geometry
+function pathBetween(source: RoadmapPoint, destination: RoadmapPoint) {
+  const direction = Math.sign(destination.yPx - source.yPx) || -1
+  const startY = source.yPx + direction * 42
+  const endY = destination.yPx - direction * 42
+  const distance = endY - startY
+  return [
+    `M ${source.xPercent} ${startY}`,
+    `C ${source.xPercent} ${startY + distance * .42}`,
+    `${destination.xPercent} ${startY + distance * .58}`,
+    `${destination.xPercent} ${endY}`,
+  ].join(' ')
 }
 
-function progressionEffect(componentId: string) {
-  const effects = ['boost', 'portal', 'burst'] as const
-  const seed = [...componentId].reduce((total, character) => total + character.charCodeAt(0), 0)
-  return effects[seed % effects.length]
-}
-
-/** A vertical Three.js journey whose states remain derived from Brain/xAPI evidence. */
+/**
+ * A provider-ordered, Duolingo-style path. The route itself uses SVG/CSS so
+ * each card does not allocate a WebGL context. Progress states still come
+ * exclusively from Brain/xAPI.
+ */
 export function LearningRoadmap({
   unit,
   activeComponentId,
@@ -97,33 +66,58 @@ export function LearningRoadmap({
   onTravelComplete,
 }: LearningRoadmapProps) {
   const { t } = useI18n()
-  const { theme } = useTheme()
-  const { design, loaded } = useYubiDesign()
   const scrollRef = useRef<HTMLElement>(null)
-  const canvasHostRef = useRef<HTMLDivElement>(null)
-  const [renderWorld, setRenderWorld] = useState(false)
-  const [sceneReady, setSceneReady] = useState(false)
   const [roadmapReady, setRoadmapReady] = useState(false)
-  const [yubiFallbackReady, setYubiFallbackReady] = useState(false)
-  const [screenPoints, setScreenPoints] = useState<Record<string, RoadmapScreenPoint>>({})
+
   const components = useMemo(
     () => [...unit.components].sort((first, second) => (
       (first.order ?? 0) - (second.order ?? 0) || first.id.localeCompare(second.id)
     )),
     [unit.components],
   )
-  const points = useMemo<RoadmapPoint[]>(() => {
-    const count = Math.max(components.length, 1)
-    const worldGap = count > 5 ? 1.75 : 2.05
-    const front = ((count - 1) * worldGap) / 2
-    return components.map((component, index) => ({
-      component,
-      xPercent: index % 2 === 0 ? 37 : 63,
-      labelXPercent: index % 2 === 0 ? 80 : 20,
-      yPercent: count === 1 ? 50 : 10 + (index / (count - 1)) * 80,
-      world: new THREE.Vector3(index % 2 === 0 ? -1.25 : 1.25, 0, front - index * worldGap),
-    }))
+
+  const debug = useMemo<RoadmapDebugState>(() => {
+    const params = new URLSearchParams(window.location.search)
+    const rawProgress = params.get('roadmapFlight')
+    const progressValue = rawProgress == null ? Number.NaN : Number(rawProgress)
+    return {
+      enabled: params.get('roadmapDebug') === '1',
+      flightProgress: Number.isFinite(progressValue) ? clamp(progressValue, 0, 1) : null,
+      fromId: params.get('roadmapFrom'),
+      toId: params.get('roadmapTo'),
+    }
+  }, [])
+
+  const stages = useMemo(() => {
+    const grouped = new Map<string, LearningComponentDTO[]>()
+    components.forEach((component, index) => {
+      const key = component.order == null ? `component:${index}` : `order:${component.order}`
+      grouped.set(key, [...(grouped.get(key) ?? []), component])
+    })
+    return [...grouped.values()]
   }, [components])
+
+  const stageGap = compact ? 142 : 154
+  const trackHeight = Math.max(compact ? 570 : 610, 122 + stages.length * stageGap)
+  const points = useMemo<RoadmapPoint[]>(() => {
+    const singlePositions = [58, 74, 58, 42]
+    return stages.flatMap((stageComponents, stageIndex) => {
+      const depth = stages.length <= 1 ? 1 : 1 - stageIndex / (stages.length - 1)
+      return stageComponents.map((component, alternativeIndex) => {
+        const alternativeCount = stageComponents.length
+        const xPercent = alternativeCount === 1
+          ? singlePositions[stageIndex % singlePositions.length]
+          : 38 + (alternativeIndex / Math.max(1, alternativeCount - 1)) * 36
+        return {
+          component,
+          stageIndex,
+          xPercent,
+          yPx: trackHeight - 152 - stageIndex * stageGap,
+          depth,
+        }
+      })
+    })
+  }, [stageGap, stages, trackHeight])
 
   const activeComponent = components.find((component) => component.id === activeComponentId)
   const brainCurrent = components.find((component) => component.id === unit.current_component_id)
@@ -131,298 +125,163 @@ export function LearningRoadmap({
     component.progress_state === 'current' || component.progress_state === 'available'
   ))
   const lastCompleted = [...components].reverse().find((component) => component.progress_state === 'completed')
-  const visibleYuviId = travellingFromId
+  const debugFromId = debug.enabled && debug.flightProgress != null
+    ? debug.fromId || lastCompleted?.id
+    : null
+  const effectiveTravellingFromId = travellingFromId || debugFromId
+  const currentComponentId = effectiveTravellingFromId
     || (activeComponent?.progress_state !== 'completed' ? activeComponent?.id : null)
     || (brainCurrent?.progress_state === 'current' ? brainCurrent.id : null)
     || unit.next_component_id
     || firstRoutable?.id
     || lastCompleted?.id
     || components[0]?.id
-  const yuviPoint = points.find((point) => point.component.id === visibleYuviId)
-  const yuviIndex = yuviPoint ? points.indexOf(yuviPoint) : -1
+  const currentPoint = points.find((point) => point.component.id === currentComponentId)
+  const destinationId = debug.enabled && debug.toId ? debug.toId : unit.next_component_id
   const nextPoint = points.find((point) => (
-    point.component.id === unit.next_component_id && point.component.id !== travellingFromId
-  )) || (yuviIndex >= 0 ? points[yuviIndex + 1] : undefined)
-  const trackHeight = Math.max(compact ? 560 : 620, components.length * (compact ? 152 : 172))
-  const projectionReady = points.length > 0 && points.every((point) => Boolean(screenPoints[point.component.id]))
-  const yubiReady = !yuviPoint || loaded || yubiFallbackReady
-  const yuviScreenPoint = yuviPoint ? screenPoints[yuviPoint.component.id] : undefined
+    point.component.id === destinationId && point.component.id !== effectiveTravellingFromId
+  )) || points.find((point) => (
+    point.stageIndex === (currentPoint?.stageIndex ?? -1) + 1
+    && point.component.progress_state !== 'locked'
+  ))
+
+  const connections = useMemo(() => stages.slice(0, -1).flatMap((_stage, stageIndex) => {
+    const sources = points.filter((point) => point.stageIndex === stageIndex)
+    const destinations = points.filter((point) => point.stageIndex === stageIndex + 1)
+    return sources.flatMap((source) => destinations.map((destination) => ({ source, destination })))
+  }), [points, stages])
+
+  const markerIdPrefix = useMemo(
+    () => `roadmap-arrow-${unit.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`,
+    [unit.id],
+  )
 
   useEffect(() => {
-    if (loaded) return
-    const fallbackTimer = window.setTimeout(() => setYubiFallbackReady(true), 900)
-    return () => window.clearTimeout(fallbackTimer)
-  }, [loaded])
-
-  useEffect(() => {
-    const ready = renderWorld && sceneReady && projectionReady && yubiReady
-    if (!ready) {
-      setRoadmapReady(false)
-      return
-    }
-    const revealTimer = window.setTimeout(() => setRoadmapReady(true), 180)
-    return () => window.clearTimeout(revealTimer)
-  }, [projectionReady, renderWorld, sceneReady, yubiReady])
-
-  useEffect(() => {
-    const host = canvasHostRef.current
-    if (!host) return
-    const updateVisibility = () => {
-      const rect = host.getBoundingClientRect()
-      const visibleHeight = Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0))
-      const visibleWidth = Math.max(0, Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0))
-      const visible = visibleHeight > Math.min(rect.height * .22, 160)
-        && visibleWidth > Math.min(rect.width * .22, 120)
-      setRenderWorld((current) => current === visible ? current : visible)
-    }
-    const observer = new IntersectionObserver(
-      () => updateVisibility(),
-      // Keep only the visible two-card row warm. Preload margins can retain the
-      // previous row and create four simultaneous WebGL contexts while scrolling.
-      { rootMargin: '0px', threshold: .01 },
-    )
-    observer.observe(host)
-    window.addEventListener('scroll', updateVisibility, { capture: true, passive: true })
-    window.addEventListener('resize', updateVisibility, { passive: true })
-    updateVisibility()
-    return () => {
-      observer.disconnect()
-      window.removeEventListener('scroll', updateVisibility, true)
-      window.removeEventListener('resize', updateVisibility)
-    }
+    const revealFrame = window.requestAnimationFrame(() => setRoadmapReady(true))
+    return () => window.cancelAnimationFrame(revealFrame)
   }, [])
 
   useEffect(() => {
-    const host = canvasHostRef.current
-    if (!host || !renderWorld || points.length === 0) return
-    setSceneReady(false)
-    setScreenPoints({})
-    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, powerPreference: 'low-power' })
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25))
-    renderer.outputColorSpace = THREE.SRGBColorSpace
-    renderer.domElement.setAttribute('aria-hidden', 'true')
-    renderer.domElement.style.inlineSize = '100%'
-    renderer.domElement.style.blockSize = '100%'
-    renderer.domElement.style.display = 'block'
-    host.appendChild(renderer.domElement)
-
-    const scene = new THREE.Scene()
-    const isDark = theme === 'dark'
-    const camera = new THREE.PerspectiveCamera(34, 1, .1, 80)
-    const worldHeight = Math.max(7.2, Math.abs(points[0].world.z - points[points.length - 1].world.z) + 2.6)
-    camera.position.set(0, Math.max(5.6, worldHeight * .68), Math.max(9.2, worldHeight * 1.12))
-    camera.lookAt(0, -.15, -.2)
-
-    scene.add(new THREE.HemisphereLight(isDark ? 0xc8ebff : 0xffffff, isDark ? 0x151a36 : 0xb7c4dd, isDark ? 1.25 : 1.5))
-    const key = new THREE.DirectionalLight(isDark ? 0xeaf8ff : 0xffffff, isDark ? 1.55 : 1.95)
-    key.position.set(3.5, 9, 5)
-    scene.add(key)
-
-    points.slice(0, -1).forEach((point, index) => {
-      const destination = points[index + 1]
-      if (
-        point.component.progress_state !== 'completed'
-        || destination.component.progress_state !== 'completed'
-      ) return
-      const start = point.world.clone().setY(.13)
-      const end = destination.world.clone().setY(.13)
-      const middle = start.clone().lerp(end, .5).setY(.2)
-      const curve = new THREE.CatmullRomCurve3([start, middle, end])
-      const glow = new THREE.Mesh(
-        new THREE.TubeGeometry(curve, 10, .09, 4, false),
-        new THREE.MeshBasicMaterial({ color: 0x4ddcf3, transparent: true, opacity: .12, depthWrite: false }),
-      )
-      const trail = new THREE.Mesh(
-        new THREE.TubeGeometry(curve, 10, .035, 4, false),
-        new THREE.MeshBasicMaterial({ color: 0x58d8ad, transparent: true, opacity: .92 }),
-      )
-      scene.add(glow, trail)
-    })
-
-    points.forEach((point) => {
-      const state = point.component.progress_state
-      const color = STATE_COLORS[state]
-      const group = new THREE.Group()
-      group.position.copy(point.world)
-
-      const underGlow = new THREE.Mesh(
-        platformGeometry(1.82, 1.3, .025),
-        new THREE.MeshBasicMaterial({
-          color,
-          transparent: true,
-          opacity: state === 'locked' ? .035 : .13,
-          depthWrite: false,
-        }),
-      )
-      underGlow.position.y = -.08
-      group.add(underGlow)
-
-      const baseGeometry = platformGeometry(1.62, 1.12, .24)
-      const base = new THREE.Mesh(
-        baseGeometry,
-        new THREE.MeshStandardMaterial({
-          color: state === 'locked'
-            ? (isDark ? 0x252d43 : 0x8995a8)
-            : (isDark ? 0x263756 : 0x687990),
-          metalness: .82,
-          roughness: .26,
-          flatShading: true,
-        }),
-      )
-      group.add(base)
-
-      const energyBandGeometry = platformGeometry(1.55, 1.05, .045)
-      const energyBand = new THREE.Mesh(
-        energyBandGeometry,
-        new THREE.MeshBasicMaterial({
-          color,
-          transparent: true,
-          opacity: state === 'locked' ? .18 : .78,
-        }),
-      )
-      energyBand.position.y = .135
-      group.add(energyBand)
-
-      const deckGeometry = platformGeometry(1.4, .91, .12)
-      const deck = new THREE.Mesh(
-        deckGeometry,
-        new THREE.MeshStandardMaterial({
-          color: state === 'locked'
-            ? (isDark ? 0x4c566c : 0xaeb7c5)
-            : (isDark ? 0xa9b9ce : 0xe7edf5),
-          metalness: .7,
-          roughness: .18,
-          flatShading: true,
-        }),
-      )
-      deck.position.y = .235
-      group.add(deck)
-
-      const deckEdges = new THREE.LineSegments(
-        new THREE.EdgesGeometry(deckGeometry, 18),
-        new THREE.LineBasicMaterial({
-          color,
-          transparent: true,
-          opacity: state === 'locked' ? .24 : .88,
-        }),
-      )
-      deckEdges.position.y = .238
-      group.add(deckEdges)
-
-      scene.add(group)
-    })
-
-    const starCount = compact ? 45 : 80
-    const starPositions = new Float32Array(starCount * 3)
-    for (let index = 0; index < starCount; index += 1) {
-      starPositions[index * 3] = (Math.random() - .5) * 10
-      starPositions[index * 3 + 1] = Math.random() * 2.2
-      starPositions[index * 3 + 2] = (Math.random() - .5) * (worldHeight + 3)
-    }
-    const starsGeometry = new THREE.BufferGeometry()
-    starsGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3))
-    const stars = new THREE.Points(
-      starsGeometry,
-      new THREE.PointsMaterial({ color: isDark ? 0xaedfff : 0x7588bc, size: .045, transparent: true, opacity: isDark ? .62 : .34, depthWrite: false }),
-    )
-    scene.add(stars)
-
-    let readyTimer = 0
-    const render = () => renderer.render(scene, camera)
-    const projectScreenPoints = () => {
-      const nextPoints = Object.fromEntries(points.map((point) => {
-        const projected = point.world.clone()
-        projected.y = .22
-        projected.project(camera)
-        const platformXPercent = THREE.MathUtils.clamp((projected.x + 1) * 50, 20, 80)
-        return [point.component.id, {
-          platformXPercent,
-          labelXPercent: platformXPercent < 50 ? 74 : 26,
-          yPercent: THREE.MathUtils.clamp((1 - projected.y) * 50, 13, 86),
-        }]
-      }))
-      setScreenPoints(nextPoints)
-    }
-    const resize = () => {
-      const width = Math.max(1, host.clientWidth)
-      const height = Math.max(1, host.clientHeight)
-      renderer.setSize(width, height, false)
-      camera.aspect = width / height
-      camera.updateProjectionMatrix()
-      camera.updateMatrixWorld(true)
-      projectScreenPoints()
-      render()
-      window.clearTimeout(readyTimer)
-      readyTimer = window.setTimeout(() => setSceneReady(true), 0)
-    }
-    const observer = new ResizeObserver(resize)
-    observer.observe(host)
-    resize()
-
-    return () => {
-      observer.disconnect()
-      window.clearTimeout(readyTimer)
-      disposeScene(scene)
-      renderer.dispose()
-      renderer.domElement.remove()
-    }
-  }, [compact, points, renderWorld, theme])
-
-  useEffect(() => {
     const viewport = scrollRef.current
-    if (!viewport || !visibleYuviId || !renderWorld) return
-    const point = screenPoints[visibleYuviId]
-    if (!point) return
-    const target = (point.yPercent / 100) * trackHeight - viewport.clientHeight * .52
+    if (!viewport || !currentPoint) return
+    if (!compact && !cinematic) {
+      viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'auto' })
+      return
+    }
+    const target = currentPoint.yPx - viewport.clientHeight * .48
     viewport.scrollTo({ top: Math.max(0, target), behavior: cinematic ? 'smooth' : 'auto' })
-  }, [cinematic, renderWorld, screenPoints, trackHeight, visibleYuviId])
+  }, [cinematic, compact, currentPoint])
 
   return (
     <section
       ref={scrollRef}
-      className={`learning-roadmap learning-roadmap--three${compact ? ' learning-roadmap--panel' : ''}${cinematic ? ' learning-roadmap--cinematic' : ''}${travellingFromId ? ' is-travelling' : ''}${roadmapReady ? ' is-ready' : ' is-loading'}`}
+      className={`learning-roadmap learning-roadmap--path${compact ? ' learning-roadmap--panel' : ''}${cinematic ? ' learning-roadmap--cinematic' : ''}${effectiveTravellingFromId ? ' is-travelling' : ''}${debug.enabled ? ' is-debug' : ''}${debug.flightProgress != null ? ' is-debug-flight' : ''}${roadmapReady ? ' is-ready' : ' is-loading'}`}
+      data-roadmap-unit={unit.id}
+      style={{
+        '--roadmap-debug-delay': debug.flightProgress == null
+          ? '0ms'
+          : `${debug.flightProgress * -1200}ms`,
+      } as CSSProperties}
       aria-label={t('learning.roadmap.label', { title: unit.title })}
       aria-busy={!roadmapReady}
     >
-      {!roadmapReady && (
-        <div className="learning-roadmap__loading" role="status">
-          <span className="learning-roadmap__loading-spinner" aria-hidden="true" />
-          <span>{t('learning.loading.title')}</span>
+      <div className="learning-path__track" style={{ '--roadmap-track-height': `${trackHeight}px` } as CSSProperties}>
+        <svg
+          className="learning-path__routes"
+          viewBox={`0 0 100 ${trackHeight}`}
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <defs>
+            {(['completed', 'open', 'locked'] as const).map((state) => (
+              <marker
+                id={`${markerIdPrefix}-${state}`}
+                markerWidth="16"
+                markerHeight="16"
+                refX="14"
+                refY="8"
+                viewBox="0 0 16 16"
+                orient="auto"
+                markerUnits="userSpaceOnUse"
+                key={state}
+              >
+                <path d="M 1 1 L 15 8 L 1 15 L 4.5 8 Z" className={`learning-path__arrow is-${state}`} />
+              </marker>
+            ))}
+          </defs>
+          {connections.map(({ source, destination }) => {
+            const isCompleted = source.component.progress_state === 'completed'
+              && destination.component.progress_state === 'completed'
+            const isOpen = destination.component.progress_state !== 'locked'
+            const routeState = isCompleted ? 'completed' : isOpen ? 'open' : 'locked'
+            const isTravelling = effectiveTravellingFromId === source.component.id
+              && nextPoint?.component.id === destination.component.id
+            const routeKey = `${source.component.id}-${destination.component.id}`
+            return (
+              <g key={routeKey}>
+                <path
+                  className={`learning-path__route-shadow is-${routeState}`}
+                  d={pathBetween(source, destination)}
+                  vectorEffect="non-scaling-stroke"
+                />
+                <path
+                  className={`learning-path__route is-${routeState}${isTravelling ? ' is-travelling' : ''}`}
+                  d={pathBetween(source, destination)}
+                  markerEnd={`url(#${markerIdPrefix}-${routeState})`}
+                  vectorEffect="non-scaling-stroke"
+                  onAnimationEnd={(event) => {
+                    if (!debug.enabled && event.animationName === 'learning-path-route-travel') onTravelComplete?.()
+                  }}
+                />
+              </g>
+            )
+          })}
+        </svg>
+
+        <div className="learning-path__depth-grid" aria-hidden="true">
+          {stages.map((_stage, stageIndex) => (
+            <i
+              style={{
+                '--roadmap-y-px': `${trackHeight - 152 - stageIndex * stageGap}px`,
+                '--stage-depth': stages.length <= 1 ? 1 : 1 - stageIndex / (stages.length - 1),
+                '--stage-width': `${52 + (stages.length <= 1 ? 1 : 1 - stageIndex / (stages.length - 1)) * 24}%`,
+              } as CSSProperties}
+              key={`depth-${stageIndex}`}
+            />
+          ))}
         </div>
-      )}
-      <div className="learning-roadmap__track" style={{ '--roadmap-track-height': `${trackHeight}px` } as CSSProperties}>
-        <div className="learning-roadmap__world" ref={canvasHostRef} aria-hidden="true" />
-        <div className="learning-roadmap__atmosphere" aria-hidden="true"><i /><i /><i /></div>
-        {points.map(({ component, labelXPercent, yPercent }, index) => {
+
+        {points.map((point) => {
+          const { component, stageIndex, xPercent, yPx, depth } = point
           const disabled = !roadmapReady || component.progress_state === 'locked' || !onSelect
-          const screenPoint = screenPoints[component.id]
-          const platformY = screenPoint?.yPercent ?? yPercent
-          const projectedLabelX = screenPoint?.labelXPercent ?? labelXPercent
-          const labelNearYuvi = component.id !== visibleYuviId
-            && yuviScreenPoint
-            && Math.abs(projectedLabelX - yuviScreenPoint.platformXPercent) < 34
-            && Math.abs(platformY - yuviScreenPoint.yPercent) < 22
-          const labelX = labelNearYuvi ? (projectedLabelX < 50 ? 74 : 26) : projectedLabelX
-          const labelY = THREE.MathUtils.clamp(
-            platformY + (component.id === visibleYuviId ? 11.5 : index % 2 === 0 ? 1.3 : -1.3),
-            9,
-            91,
-          )
+          const isCurrent = component.id === currentComponentId
           return (
             <button
               type="button"
-              className={`learning-roadmap__stage is-${component.progress_state}${component.id === activeComponentId ? ' is-active' : ''}`}
+              className={`learning-path__stage is-${component.progress_state}${component.id === activeComponentId ? ' is-active' : ''}${isCurrent ? ' is-yuvi' : ''}`}
               style={{
-                '--roadmap-x': `${labelX}%`,
-                '--roadmap-y': `${labelY}%`,
-                '--roadmap-index': index,
+                '--roadmap-x': `${xPercent}%`,
+                '--roadmap-y-px': `${yPx}px`,
+                '--stage-depth': depth,
+                '--stage-scale': .76 + depth * .28,
               } as CSSProperties}
+              data-roadmap-debug={`${stageIndex + 1} · ${component.order ?? '—'}`}
+              data-roadmap-component={component.id}
+              data-roadmap-state={component.progress_state}
               disabled={disabled}
               onClick={() => onSelect?.(component)}
-              aria-label={`${component.title}. ${t(`learning.roadmap.state.${component.progress_state}`)}`}
+              aria-label={`${stageIndex + 1}. ${component.title}. ${t(`learning.roadmap.state.${component.progress_state}`)}`}
               key={component.id}
             >
-              <span className="learning-roadmap__stage-copy">
+              {isCurrent && <span className="learning-path__current-flag">{t('learning.roadmap.next')}</span>}
+              <span className="learning-path__node" aria-hidden="true">
+                <span className="learning-path__node-top">
+                  {stageIndex + 1}
+                </span>
+                <span className="learning-path__node-base" />
+                {component.progress_state === 'completed' && <span className="learning-path__completed-mark">✓</span>}
+              </span>
+              <span className="learning-path__stage-copy">
                 <strong dir="auto">{component.title}</strong>
                 <small>{t(purposeKey(component))}</small>
                 <em>{t(`learning.roadmap.state.${component.progress_state}`)}</em>
@@ -430,52 +289,8 @@ export function LearningRoadmap({
             </button>
           )
         })}
-        {points.filter(({ component }) => component.progress_state === 'completed').map((point) => {
-          const screenPoint = screenPoints[point.component.id]
-          return (
-            <span
-              className="learning-roadmap__completed-check"
-              style={{
-                '--roadmap-x': `${screenPoint?.platformXPercent ?? point.xPercent}%`,
-                '--roadmap-y': `${screenPoint?.yPercent ?? point.yPercent}%`,
-              } as CSSProperties}
-              aria-hidden="true"
-              key={`check-${point.component.id}`}
-            >✓</span>
-          )
-        })}
-        {renderWorld && yubiReady && sceneReady && yuviPoint && (() => {
-          const nextScreenPoint = nextPoint ? screenPoints[nextPoint.component.id] : undefined
-          const yuviX = yuviScreenPoint?.platformXPercent ?? yuviPoint.xPercent
-          const yuviY = yuviScreenPoint?.yPercent ?? yuviPoint.yPercent
-          return (
-          <div
-            className={`learning-roadmap__yuvi-3d${travellingFromId === yuviPoint.component.id ? ` is-flying flight-${progressionEffect(yuviPoint.component.id)}` : ''}`}
-            style={{
-              '--roadmap-x': `${yuviX}%`,
-              '--roadmap-y': `${yuviY}%`,
-              '--flight-destination-x': `${nextScreenPoint?.platformXPercent ?? nextPoint?.xPercent ?? yuviX}%`,
-              '--flight-destination-y': `${nextScreenPoint?.yPercent ?? nextPoint?.yPercent ?? yuviY}%`,
-            } as CSSProperties}
-            aria-label={t('learning.roadmap.yuviHere')}
-            onAnimationEnd={(event) => {
-              if (event.animationName === 'learning-yuvi-3d-flight') onTravelComplete?.()
-            }}
-          >
-            <span className="learning-roadmap__flight-smoke" aria-hidden="true"><i /><i /><i /><i /></span>
-            <span className="learning-roadmap__flight-thrusters" aria-hidden="true"><i /><i /></span>
-            <YubiAvatar3D
-              key={loaded ? 'persisted-yuvi' : 'fallback-yuvi'}
-              initialDesign={design}
-              label={t('learning.roadmap.yuviHere')}
-              muted
-              frontFacing
-              grounded
-            />
-          </div>
-          )
-        })()}
-        <p className="learning-roadmap__world-hint">{t('learning.roadmap.worldHint')}</p>
+
+        <p className="learning-path__hint">{t('learning.roadmap.worldHint')}</p>
       </div>
     </section>
   )
