@@ -78,6 +78,7 @@ export type CoachScreenId =
   | 'student_dashboard'
   | 'mentoring'
   | 'learning_portal'
+  | 'learning_world'
   | 'learning_lesson'
   | 'learning_create'
   | 'unknown'
@@ -106,6 +107,7 @@ export function coachSurfaceForPath(pathname: string): CoachSurfaceContext {
     }
   }
   if (pathname.startsWith('/learning/create')) return { screen: 'learning_create' }
+  if (pathname === '/learning' || pathname.startsWith('/learning?')) return { screen: 'learning_world' }
   if (pathname.startsWith('/learning')) return { screen: 'learning_portal' }
   return { screen: 'unknown' }
 }

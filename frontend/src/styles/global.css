@@ -150,6 +150,13 @@ button:disabled {
   inline-size: 100%;
 }
 
+.sp-learner-shell.is-world-route,
+.sp-learner-shell.is-world-route .sp-learner-shell__content {
+  block-size: 100dvh;
+  min-block-size: 0;
+  overflow: hidden;
+}
+
 /* These migrated learning workspaces use viewport-fixed chrome. Shift its
    physical right edge too, so it reflows with the coach instead of hiding below it. */
 .sp-learner-shell.is-companion-open .sp-learner-shell__content .top-bar,

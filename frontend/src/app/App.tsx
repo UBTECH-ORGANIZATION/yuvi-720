@@ -45,6 +45,7 @@ export function App() {
   const { isOpen, isOpening, isClosing, panelWidth } = useCompanion()
   const isStudioRoute = pathname.startsWith('/yuvi-studio')
   const isActiveTaskRoute = pathname.startsWith('/learning/lesson')
+  const isLearningWorldRoute = pathname === '/learning' || pathname.startsWith('/learning?')
   const learnerRoute = isLearnerRoute(pathname)
   const routePage = <div key={`${language}:${pathname}`}>{pageForRoute(pathname)}</div>
 
@@ -54,14 +55,14 @@ export function App() {
           content (and re-run its localization) whenever the language changes. */}
       {learnerRoute ? (
         <div
-          className={`sp-learner-shell${isActiveTaskRoute ? ' is-task-route' : ''}${isOpen && !isOpening && !isClosing ? ' is-companion-open' : ''}${isOpening ? ' is-companion-opening' : ''}${isClosing ? ' is-companion-closing' : ''}`}
+          className={`sp-learner-shell${isActiveTaskRoute ? ' is-task-route' : ''}${isLearningWorldRoute ? ' is-world-route' : ''}${isOpen && !isOpening && !isClosing ? ' is-companion-open' : ''}${isOpening ? ' is-companion-opening' : ''}${isClosing ? ' is-companion-closing' : ''}`}
           style={{ '--sp-companion-width': `${panelWidth}px` } as React.CSSProperties}
         >
           <CompanionChat />
           <div className="sp-learner-shell__content" dir={direction}>{routePage}</div>
         </div>
       ) : routePage}
-      {learnerRoute && !isStudioRoute && !isActiveTaskRoute && <YubiCompanionDock />}
+      {learnerRoute && !isStudioRoute && !isActiveTaskRoute && !isLearningWorldRoute && <YubiCompanionDock />}
     </>
   )
 }

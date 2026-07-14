@@ -40,6 +40,12 @@ interface Props {
   followPointer?: boolean
   /** Keep Yuvi's feet planted instead of applying the ambient hover motion. */
   grounded?: boolean
+  /** Top-down world locomotion: the landing-page flight pose while moving. */
+  flying?: boolean
+  /** Direction Yuvi faces while flying through a top-down world. */
+  heading?: 'down' | 'left' | 'right' | 'up'
+  /** Reduce pixel density and antialiasing for small, repeated roadmap avatars. */
+  performanceMode?: 'standard' | 'low'
 }
 
 // The chest-badge favicon is shared across every avatar instance.
@@ -65,7 +71,7 @@ function mixWhite([r, g, b]: number[], t: number): [number, number, number] {
 const rgba = ([r, g, b]: number[], a: number) => `rgba(${r}, ${g}, ${b}, ${a})`
 
 export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAvatar3D(
-  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', frontFacing = false, followPointer = false, grounded = false },
+  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', frontFacing = false, followPointer = false, grounded = false, flying = false, heading = 'down', performanceMode = 'standard' },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null)
@@ -81,6 +87,8 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
   const frontFacingRef = useRef(frontFacing)
   const followPointerRef = useRef(followPointer)
   const groundedRef = useRef(grounded)
+  const flyingRef = useRef(flying)
+  const headingRef = useRef(heading)
   const pullingStartedAtRef = useRef(pulling ? Date.now() : 0)
   useEffect(() => { mutedRef.current = muted }, [muted])
   useEffect(() => { onYClickRef.current = onYClick }, [onYClick])
@@ -95,6 +103,8 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
   useEffect(() => { frontFacingRef.current = frontFacing }, [frontFacing])
   useEffect(() => { followPointerRef.current = followPointer }, [followPointer])
   useEffect(() => { groundedRef.current = grounded }, [grounded])
+  useEffect(() => { flyingRef.current = flying }, [flying])
+  useEffect(() => { headingRef.current = heading }, [heading])
 
   useImperativeHandle(ref, () => ({
     equip: (slot, id, animate = true) => controllerRef.current?.equip(slot, id, animate),
@@ -106,11 +116,23 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
   useEffect(() => {
     const container = mountRef.current
     if (!container) return
+    const avatarRoot = container.closest('.yubi-avatar-canvas') as HTMLElement | null
     const reduceMotion =
       typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    let renderer: THREE.WebGLRenderer
+    try {
+      renderer = new THREE.WebGLRenderer({
+        antialias: performanceMode !== 'low',
+        alpha: true,
+        powerPreference: performanceMode === 'low' ? 'low-power' : 'default',
+      })
+    } catch {
+      if (avatarRoot) avatarRoot.dataset.webglState = 'unavailable'
+      return
+    }
+    if (avatarRoot) avatarRoot.dataset.webglState = 'ready'
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, performanceMode === 'low' ? 1.25 : 2))
     renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMappingExposure = 0.98
     renderer.outputColorSpace = THREE.SRGBColorSpace
@@ -512,9 +534,21 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
     window.addEventListener('resize', resize)
 
     let frame = 0
-    const loop = () => {
-      frame = requestAnimationFrame(loop)
-      if (container.offsetParent === null) return
+    let viewportVisible = true
+    let contextAvailable = true
+    let loop: () => void
+    const requestFrame = () => {
+      if (frame === 0 && viewportVisible && contextAvailable && !document.hidden) {
+        frame = requestAnimationFrame(loop)
+      }
+    }
+    loop = () => {
+      frame = 0
+      if (!viewportVisible || !contextAvailable || document.hidden) return
+      if (container.offsetParent === null) {
+        requestFrame()
+        return
+      }
       const frameAt = performance.now()
       const dt = Math.min((frameAt - previousFrameAt) / 1000, 0.1)
       const t = (frameAt - animationStartedAt) / 1000
@@ -545,20 +579,35 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
         pointerLookY += ((tracksPointer ? pointerTargetY : 0) - pointerLookY) * 0.11
         // Thinking: a curious head tilt with one hand toward the chin.
         // Speaking: warm alternating gestures and a live speech envelope.
+        const isFlying = flyingRef.current
         const isGrounded = groundedRef.current
-        const sway = isGrounded ? 0 : isSpeaking ? Math.sin(t * 1.9) * 0.16 : Math.sin(t * 0.5) * 0.32
+        const headingYaw = headingRef.current === 'up'
+          ? Math.PI
+          : headingRef.current === 'left'
+            ? -Math.PI / 2
+            : headingRef.current === 'right'
+              ? Math.PI / 2
+              : 0
+        const sway = isFlying ? headingYaw : isGrounded ? 0 : isSpeaking ? Math.sin(t * 1.9) * 0.16 : Math.sin(t * 0.5) * 0.32
         const idleStrength = (1 - gripStrength) * (1 - dockingStrength)
         const postureEase = dockingStrength > 0 ? 0.3 : 0.14
-        const robotYawTarget = sway * idleStrength + pointerLookX * 0.12 * idleStrength + 0.34 * pullDirection * gripStrength
+        const robotYawTarget = isFlying
+          ? headingYaw
+          : sway * idleStrength + pointerLookX * 0.12 * idleStrength + 0.34 * pullDirection * gripStrength
         robot.rotation.y += (robotYawTarget - robot.rotation.y) * postureEase
-        robot.rotation.x += ((pointerLookY * 0.035 * idleStrength) - robot.rotation.x) * postureEase
+        // Flight: pitch forward like the landing-page pilot; idle keeps pointer look.
+        const robotPitchTarget = isFlying ? 0.34 : pointerLookY * 0.035 * idleStrength
+        robot.rotation.x += (robotPitchTarget - robot.rotation.x) * postureEase
         robot.rotation.z += ((((isThinking ? -0.035 : 0) + (isSpeaking ? Math.sin(t * 2.2) * 0.018 : 0)) * (1 - dockingStrength) + 0.13 * gripStrength) - robot.rotation.z) * postureEase
-        robot.position.y = -1.35 + (isGrounded ? 0 : Math.sin(t * (isSpeaking ? 2.5 : 1.4)) * (isSpeaking ? 0.045 : 0.03))
+        robot.position.y = -1.35 + (isFlying
+          ? 0.14 + Math.sin(t * 5.2) * 0.045
+          : isGrounded ? 0 : Math.sin(t * (isSpeaking ? 2.5 : 1.4)) * (isSpeaking ? 0.045 : 0.03))
         head.rotation.y = ((isThinking ? -0.16 + Math.sin(t * 0.8) * 0.05 : Math.sin(t * 0.4) * 0.08) + pointerLookX * 0.3) * idleStrength + 0.24 * pullDirection * gripStrength
         head.rotation.x = ((isThinking ? -0.07 + Math.sin(t * 1.1) * 0.025 : Math.sin(t * 0.7) * 0.03) + pointerLookY * 0.16) * (1 - dockingStrength)
         head.rotation.z += (((isThinking ? 0.13 : isSpeaking ? Math.sin(t * 1.6) * 0.055 : 0) * (1 - dockingStrength) - head.rotation.z) * postureEase)
-        const naturalRightArm = isThinking ? -1.12 : isSpeaking ? -0.18 + Math.sin(t * 2.7) * 0.24 : 0.095
-        const naturalLeftArm = isSpeaking ? -0.095 - Math.sin(t * 2.7) * 0.18 : -0.095
+        const flyFlutter = isFlying && !reduceMotion ? Math.sin(t * 9.5) * 0.06 : 0
+        const naturalRightArm = isFlying ? 0.72 + flyFlutter : isThinking ? -1.12 : isSpeaking ? -0.18 + Math.sin(t * 2.7) * 0.24 : 0.095
+        const naturalLeftArm = isFlying ? -0.72 - flyFlutter : isSpeaking ? -0.095 - Math.sin(t * 2.7) * 0.18 : -0.095
         const restingRightArm = naturalRightArm * (1 - dockingStrength) + 0.095 * dockingStrength
         const restingLeftArm = naturalLeftArm * (1 - dockingStrength) - 0.095 * dockingStrength
         // Both hands reach toward the selected physical panel edge. The farther
@@ -631,11 +680,53 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
       }
 
       renderer.render(scene, camera)
+      requestFrame()
     }
-    loop()
+    const renderObserver = typeof IntersectionObserver !== 'undefined'
+      ? new IntersectionObserver(([entry]) => {
+          viewportVisible = Boolean(entry?.isIntersecting)
+          if (viewportVisible) {
+            resize()
+            requestFrame()
+          } else if (frame !== 0) {
+            cancelAnimationFrame(frame)
+            frame = 0
+          }
+        }, { rootMargin: '160px', threshold: 0 })
+      : null
+    renderObserver?.observe(container)
+    const onVisibilityChange = () => {
+      if (document.hidden && frame !== 0) {
+        cancelAnimationFrame(frame)
+        frame = 0
+      } else {
+        requestFrame()
+      }
+    }
+    const onContextLost = (event: Event) => {
+      event.preventDefault()
+      contextAvailable = false
+      if (frame !== 0) cancelAnimationFrame(frame)
+      frame = 0
+      if (avatarRoot) avatarRoot.dataset.webglState = 'lost'
+    }
+    const onContextRestored = () => {
+      contextAvailable = true
+      if (avatarRoot) avatarRoot.dataset.webglState = 'ready'
+      resize()
+      requestFrame()
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    renderer.domElement.addEventListener('webglcontextlost', onContextLost, false)
+    renderer.domElement.addEventListener('webglcontextrestored', onContextRestored, false)
+    requestFrame()
 
     return () => {
       cancelAnimationFrame(frame)
+      renderObserver?.disconnect()
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      renderer.domElement.removeEventListener('webglcontextlost', onContextLost)
+      renderer.domElement.removeEventListener('webglcontextrestored', onContextRestored)
       window.removeEventListener('resize', resize)
       resizeObserver?.disconnect()
       renderer.domElement.removeEventListener('pointermove', onPointerMove)
@@ -665,6 +756,7 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
 
   return (
     <div className="yubi-avatar-canvas" style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <img className="yubi-avatar-canvas__fallback" src="/shared/yubi-robot.png" alt="" aria-hidden="true" />
       <div
         role={onAvatarClick ? 'button' : 'img'}
         aria-label={label}
