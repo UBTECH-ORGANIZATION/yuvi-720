@@ -126,6 +126,19 @@ jobs:
             "https://dev.spark.yuvilab.ai/api/learning/catalog?learner_id=deployment-smoke" \
             | jq -e '.provider_status == "online" and (.units | length) > 0' \
             > /dev/null
+          for unity_artifact in \
+            unity-world/Build/unity-world.loader.js \
+            unity-world/Build/unity-world.framework.js \
+            unity-world/Build/unity-world.data \
+            unity-world/Build/unity-world.wasm; do
+            curl --fail --silent --show-error \
+              --retry 6 \
+              --retry-delay 10 \
+              --retry-all-errors \
+              --max-time 60 \
+              "https://dev.spark.yuvilab.ai/${unity_artifact}" \
+              --output /dev/null
+          done
 
       - name: Azure logout
         run: az logout

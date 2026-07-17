@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1280" viewBox="0 0 1024 1280">
+	<defs>
+		<filter id="inkWobble" x="-8%" y="-8%" width="116%" height="116%"><feTurbulence type="fractalNoise" baseFrequency="0.008 0.014" numOctaves="2" seed="37" result="noise"/><feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G"/></filter>
+		<pattern id="hatchLight" width="23" height="23" patternUnits="userSpaceOnUse" patternTransform="rotate(-13)"><path d="M2 0 L2 23 M13 0 L13 23" stroke="#56575a" stroke-width="2.2" opacity=".20"/></pattern>
+		<radialGradient id="leafRear" cx="44%" cy="36%" r="74%"><stop offset="0" stop-color="#dededa"/><stop offset=".6" stop-color="#aaa9a5"/><stop offset="1" stop-color="#7d7d7b"/></radialGradient>
+	</defs>
+	<use href="YW_CentralLearningTree_Grayscale_Master.svg#rear-layer" xlink:href="YW_CentralLearningTree_Grayscale_Master.svg#rear-layer"/>
+</svg>

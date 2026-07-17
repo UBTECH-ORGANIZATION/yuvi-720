@@ -7,6 +7,10 @@ RUN cd frontend && npm install
 COPY frontend ./frontend
 COPY locales ./locales
 RUN cd frontend && npm run build
+RUN test -s /app/static/react/unity-world/Build/unity-world.loader.js \
+	&& test -s /app/static/react/unity-world/Build/unity-world.data \
+	&& test -s /app/static/react/unity-world/Build/unity-world.framework.js \
+	&& test -s /app/static/react/unity-world/Build/unity-world.wasm
 
 FROM python:3.11-slim
 
