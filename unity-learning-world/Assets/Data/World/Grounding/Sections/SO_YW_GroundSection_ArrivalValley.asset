@@ -1,0 +1,170 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32505038b090c494c97b512a4b8b9e32, type: 3}
+  m_Name: SO_YW_GroundSection_ArrivalValley
+  m_EditorClassIdentifier: 
+  sectionId: arrival-valley
+  displayName: Asymmetric Arrival Valley
+  theme: {fileID: 11400000, guid: 52a08d8cc8c7c4bc7ad8fc56d4fef8be, type: 2}
+  elevationBands:
+  - id: broad-valley-plaza
+    topHeight: 0.2
+    bottomHeight: -1.55
+    surface:
+      outer:
+      - {x: -40.125, y: 5}
+      - {x: -40.375, y: 1}
+      - {x: -39.875, y: -3}
+      - {x: -38.625, y: -7}
+      - {x: -37, y: -10.5}
+      - {x: -35, y: -13.5}
+      - {x: -32.25, y: -15.875}
+      - {x: -28.75, y: -17.625}
+      - {x: -24.75, y: -18.875}
+      - {x: -20.25, y: -19.625}
+      - {x: -15.5, y: -19.875}
+      - {x: -10.5, y: -19.625}
+      - {x: -5.75, y: -19.125}
+      - {x: -1.25, y: -18.375}
+      - {x: 2.75, y: -17.125}
+      - {x: 6.25, y: -15.375}
+      - {x: 9.25, y: -13.125}
+      - {x: 11.75, y: -10.375}
+      - {x: 13.625, y: -7.25}
+      - {x: 14.875, y: -3.75}
+      - {x: 15.625, y: -0.5}
+      - {x: 15.875, y: 2.5}
+      - {x: 15.375, y: 5.375}
+      - {x: 14.125, y: 8.125}
+      - {x: 11.875, y: 10.375}
+      - {x: 8.625, y: 12.125}
+      - {x: 4.75, y: 13.25}
+      - {x: 0.25, y: 13.75}
+      - {x: -4.5, y: 13.875}
+      - {x: -9.5, y: 13.625}
+      - {x: -14.5, y: 13.25}
+      - {x: -19.5, y: 12.75}
+      - {x: -24.5, y: 12.125}
+      - {x: -29.5, y: 11.375}
+      - {x: -33.375, y: 10.5}
+      - {x: -36.125, y: 9.5}
+      - {x: -38.125, y: 8.5}
+      - {x: -39.375, y: 7.5}
+      holes:
+      - vertices:
+        - {x: 0.5907484, y: 7.6087375}
+        - {x: 2.000312, y: 4.638242}
+        - {x: 1.7049403, y: 1.1506127}
+        - {x: -0.29536724, y: -2.8541489}
+        - {x: -0.51003003, y: -7.0942936}
+        - {x: 1.060952, y: -11.56982}
+        - {x: 2.9232213, y: -13.403792}
+        - {x: 5.0767784, y: -12.596208}
+        - {x: 5.439048, y: -10.43018}
+        - {x: 4.01003, y: -6.9057064}
+        - {x: 4.2953672, y: -3.1458511}
+        - {x: 6.295059, y: 0.8493873}
+        - {x: 6.499687, y: 4.861758}
+        - {x: 4.9092517, y: 8.891263}
+        - {x: 3.0570168, y: 10.453008}
+        - {x: 0.9429833, y: 9.546992}
+    traversable: 1
+    surfaceFamily: primary
+  - id: sunken-reflection-basin
+    topHeight: -0.7
+    bottomHeight: -2
+    surface:
+      outer:
+      - {x: -31.75, y: -10.25}
+      - {x: -27.25, y: -10.75}
+      - {x: -24.75, y: -8.75}
+      - {x: -24.25, y: -4.25}
+      - {x: -26.25, y: -1.75}
+      - {x: -30.75, y: -1.25}
+      - {x: -33.25, y: -3.25}
+      - {x: -33.75, y: -7.75}
+      holes: []
+    traversable: 1
+    surfaceFamily: lower
+  - id: rear-overlook-bluff
+    topHeight: 2.4
+    bottomHeight: 0.1
+    surface:
+      outer:
+      - {x: -9.5, y: 12.5}
+      - {x: -0.5, y: 12.5}
+      - {x: 4.75, y: 13.375}
+      - {x: 6.25, y: 15.125}
+      - {x: 6.375, y: 17.375}
+      - {x: 5.125, y: 20.125}
+      - {x: 2.375, y: 21.875}
+      - {x: -1.875, y: 22.625}
+      - {x: -6, y: 22.5}
+      - {x: -10, y: 21.5}
+      - {x: -13, y: 19.875}
+      - {x: -15, y: 17.625}
+      - {x: -15.5, y: 15.5}
+      - {x: -14.5, y: 13.5}
+      holes: []
+    traversable: 1
+    surfaceFamily: secondary
+  transitions:
+  - id: overlook-rise
+    kind: 0
+    start: {x: -5, y: 0.23, z: 12}
+    end: {x: -5, y: 2.42, z: 15}
+    width: 3.6
+    stepCount: 5
+    surfaceFamily: route
+  - id: pond-descent
+    kind: 0
+    start: {x: -27, y: 0.23, z: -2.5}
+    end: {x: -27.5, y: -0.67, z: -4.5}
+    width: 2.6
+    stepCount: 5
+    surfaceFamily: route
+  - id: river-crossing
+    kind: 2
+    start: {x: -1, y: 0.2, z: -1}
+    end: {x: 7, y: 0.2, z: -1}
+    width: 3
+    stepCount: 5
+    surfaceFamily: route
+  portals:
+  - id: in-start
+    position: {x: -39.5, y: 0.23, z: 0}
+    forward: {x: -1, y: 0, z: 0}
+    width: 3.5
+  - id: out-archive
+    position: {x: 15.5, y: 0.23, z: 1}
+    forward: {x: 1, y: 0, z: 0}
+    width: 3.4
+  reservedZones:
+  - id: arrival-landmark-future
+    bounds:
+      m_Center: {x: -4, y: 2.5, z: 18}
+      m_Extent: {x: 6, y: 1.5, z: 3.5}
+  - id: arrival-secondary-kiosk
+    bounds:
+      m_Center: {x: 10, y: 0.4, z: -6}
+      m_Extent: {x: 3, y: 1, z: 2.5}
+  - id: arrival-quiet-plaza
+    bounds:
+      m_Center: {x: -30, y: 0.4, z: 2}
+      m_Extent: {x: 4.5, y: 1, z: 3.5}
+  cameraDefinition:
+    anchorPosition: {x: -12, y: 40, z: -40}
+    anchorEuler: {x: 46, y: 0, z: 0}
+    orthographicSize: 32
+    coverage:
+      m_Center: {x: -12, y: 2, z: -3}
+      m_Extent: {x: 30, y: 6, z: 20}

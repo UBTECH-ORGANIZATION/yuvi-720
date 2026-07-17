@@ -4,7 +4,14 @@ from fastapi import APIRouter, FastAPI
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.core.paths import LEARNING_GAME_FILE, LOCALES_DIR, REACT_APP_DIR, REACT_ASSETS_DIR, SHARED_DIR
+from app.core.paths import (
+    LEARNING_GAME_FILE,
+    LOCALES_DIR,
+    REACT_APP_DIR,
+    REACT_ASSETS_DIR,
+    SHARED_DIR,
+    UNITY_WORLD_DIR,
+)
 
 
 router = APIRouter(tags=["static"])
@@ -16,6 +23,8 @@ def mount_static_assets(app: FastAPI) -> None:
     app.mount("/locales", StaticFiles(directory=str(LOCALES_DIR)), name="locales")
     if REACT_ASSETS_DIR.exists():
         app.mount("/assets", StaticFiles(directory=str(REACT_ASSETS_DIR)), name="react-assets")
+    if UNITY_WORLD_DIR.exists():
+        app.mount("/unity-world", StaticFiles(directory=str(UNITY_WORLD_DIR)), name="unity-world")
 
 
 def serve_react_app():

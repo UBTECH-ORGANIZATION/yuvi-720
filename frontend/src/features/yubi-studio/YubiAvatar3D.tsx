@@ -40,10 +40,15 @@ interface Props {
   followPointer?: boolean
   /** Keep Yuvi's feet planted instead of applying the ambient hover motion. */
   grounded?: boolean
-  /** Top-down world locomotion: the landing-page flight pose while moving. */
+  /** Airborne locomotion (Space): upright vertical lift-off, V-hands, thrusters. */
   flying?: boolean
-  /** Direction Yuvi faces while flying through a top-down world. */
+  /** Ground locomotion (arrows): a walking gait — legs and arms swing. */
+  walking?: boolean
+  /** Direction Yuvi faces while moving through a top-down world. */
   heading?: 'down' | 'left' | 'right' | 'up'
+  /** Continuous facing yaw (radians) derived from real movement — overrides `heading` when set.
+   *  Convention matches `heading`: 0 = toward camera (down), +π/2 = right, π = away (up), −π/2 = left. */
+  headingAngle?: number
   /** Reduce pixel density and antialiasing for small, repeated roadmap avatars. */
   performanceMode?: 'standard' | 'low'
 }
@@ -71,7 +76,7 @@ function mixWhite([r, g, b]: number[], t: number): [number, number, number] {
 const rgba = ([r, g, b]: number[], a: number) => `rgba(${r}, ${g}, ${b}, ${a})`
 
 export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAvatar3D(
-  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', frontFacing = false, followPointer = false, grounded = false, flying = false, heading = 'down', performanceMode = 'standard' },
+  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard' },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null)
@@ -88,7 +93,9 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
   const followPointerRef = useRef(followPointer)
   const groundedRef = useRef(grounded)
   const flyingRef = useRef(flying)
+  const walkingRef = useRef(walking)
   const headingRef = useRef(heading)
+  const headingAngleRef = useRef(headingAngle)
   const pullingStartedAtRef = useRef(pulling ? Date.now() : 0)
   useEffect(() => { mutedRef.current = muted }, [muted])
   useEffect(() => { onYClickRef.current = onYClick }, [onYClick])
@@ -104,7 +111,9 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
   useEffect(() => { followPointerRef.current = followPointer }, [followPointer])
   useEffect(() => { groundedRef.current = grounded }, [grounded])
   useEffect(() => { flyingRef.current = flying }, [flying])
+  useEffect(() => { walkingRef.current = walking }, [walking])
   useEffect(() => { headingRef.current = heading }, [heading])
+  useEffect(() => { headingAngleRef.current = headingAngle }, [headingAngle])
 
   useImperativeHandle(ref, () => ({
     equip: (slot, id, animate = true) => controllerRef.current?.equip(slot, id, animate),
@@ -300,7 +309,8 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
       grp.position.set(0.145 * side, 0.12, 0)
       return grp
     }
-    robot.add(makeLeg(-1), makeLeg(1))
+    const legL = makeLeg(-1), legR = makeLeg(1)
+    robot.add(legL, legR)
     const hips = new THREE.Mesh(new RoundedBoxGeometry(0.33, 0.11, 0.25, 8, 0.06), blueMat); hips.position.y = 0.54; robot.add(hips)
 
     // ── Torso + yoke + chest Y badge ──
@@ -581,33 +591,45 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
         // Speaking: warm alternating gestures and a live speech envelope.
         const isFlying = flyingRef.current
         const isGrounded = groundedRef.current
-        const headingYaw = headingRef.current === 'up'
-          ? Math.PI
-          : headingRef.current === 'left'
-            ? -Math.PI / 2
-            : headingRef.current === 'right'
-              ? Math.PI / 2
-              : 0
+        const isWalking = walkingRef.current && !isFlying
+        const isMoving = isFlying || isWalking
+        const headingYaw = headingAngleRef.current != null
+          ? headingAngleRef.current
+          : headingRef.current === 'up'
+            ? Math.PI
+            : headingRef.current === 'left'
+              ? -Math.PI / 2
+              : headingRef.current === 'right'
+                ? Math.PI / 2
+                : 0
+        // Walk gait: legs/arms swing in anti-phase; the body bobs a touch each step.
+        const walkPhase = t * 9
+        const walkStride = Math.sin(walkPhase)
+        const walkAmp = isWalking ? (reduceMotion ? 0.18 : 0.5) : 0
         const sway = isFlying ? headingYaw : isGrounded ? 0 : isSpeaking ? Math.sin(t * 1.9) * 0.16 : Math.sin(t * 0.5) * 0.32
         const idleStrength = (1 - gripStrength) * (1 - dockingStrength)
         const postureEase = dockingStrength > 0 ? 0.3 : 0.14
-        const robotYawTarget = isFlying
+        const robotYawTarget = isMoving
           ? headingYaw
           : sway * idleStrength + pointerLookX * 0.12 * idleStrength + 0.34 * pullDirection * gripStrength
-        robot.rotation.y += (robotYawTarget - robot.rotation.y) * postureEase
-        // Flight: pitch forward like the landing-page pilot; idle keeps pointer look.
-        const robotPitchTarget = isFlying ? 0.34 : pointerLookY * 0.035 * idleStrength
+        // Shortest-path turn so crossing the ±π (facing-away) seam doesn't spin Yuvi the long way round.
+        const yawDelta = Math.atan2(Math.sin(robotYawTarget - robot.rotation.y), Math.cos(robotYawTarget - robot.rotation.y))
+        robot.rotation.y += yawDelta * postureEase
+        // Flying: upright vertical lift-off (no forward pitch). Walking: a slight forward lean.
+        const robotPitchTarget = isFlying ? 0 : isWalking ? 0.06 : pointerLookY * 0.035 * idleStrength
         robot.rotation.x += (robotPitchTarget - robot.rotation.x) * postureEase
         robot.rotation.z += ((((isThinking ? -0.035 : 0) + (isSpeaking ? Math.sin(t * 2.2) * 0.018 : 0)) * (1 - dockingStrength) + 0.13 * gripStrength) - robot.rotation.z) * postureEase
         robot.position.y = -1.35 + (isFlying
-          ? 0.14 + Math.sin(t * 5.2) * 0.045
+          ? 0.16 + Math.sin(t * 5.2) * 0.05
+          : isWalking ? Math.abs(walkStride) * 0.03
           : isGrounded ? 0 : Math.sin(t * (isSpeaking ? 2.5 : 1.4)) * (isSpeaking ? 0.045 : 0.03))
         head.rotation.y = ((isThinking ? -0.16 + Math.sin(t * 0.8) * 0.05 : Math.sin(t * 0.4) * 0.08) + pointerLookX * 0.3) * idleStrength + 0.24 * pullDirection * gripStrength
         head.rotation.x = ((isThinking ? -0.07 + Math.sin(t * 1.1) * 0.025 : Math.sin(t * 0.7) * 0.03) + pointerLookY * 0.16) * (1 - dockingStrength)
         head.rotation.z += (((isThinking ? 0.13 : isSpeaking ? Math.sin(t * 1.6) * 0.055 : 0) * (1 - dockingStrength) - head.rotation.z) * postureEase)
         const flyFlutter = isFlying && !reduceMotion ? Math.sin(t * 9.5) * 0.06 : 0
-        const naturalRightArm = isFlying ? 0.72 + flyFlutter : isThinking ? -1.12 : isSpeaking ? -0.18 + Math.sin(t * 2.7) * 0.24 : 0.095
-        const naturalLeftArm = isFlying ? -0.72 - flyFlutter : isSpeaking ? -0.095 - Math.sin(t * 2.7) * 0.18 : -0.095
+        // Flying → overhead V (hands up and out); walking → relaxed at sides (they swing via rotation.x below).
+        const naturalRightArm = isFlying ? 2.15 + flyFlutter : isWalking ? 0.12 : isThinking ? -1.12 : isSpeaking ? -0.18 + Math.sin(t * 2.7) * 0.24 : 0.095
+        const naturalLeftArm = isFlying ? -2.15 - flyFlutter : isWalking ? -0.12 : isSpeaking ? -0.095 - Math.sin(t * 2.7) * 0.18 : -0.095
         const restingRightArm = naturalRightArm * (1 - dockingStrength) + 0.095 * dockingStrength
         const restingLeftArm = naturalLeftArm * (1 - dockingStrength) - 0.095 * dockingStrength
         // Both hands reach toward the selected physical panel edge. The farther
@@ -616,10 +638,15 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
         const leftPullRotation = pullRight ? 1.55 : -1.18
         const rightArmTarget = restingRightArm * (1 - gripStrength) + rightPullRotation * gripStrength
         const leftArmTarget = restingLeftArm * (1 - gripStrength) + leftPullRotation * gripStrength
+        const armSwing = walkAmp * 0.7   // arms counter-swing the legs
         armR.rotation.z += (rightArmTarget - armR.rotation.z) * postureEase
-        armR.rotation.x += ((((isThinking ? -0.36 : 0) * (1 - dockingStrength) - 0.5 * gripStrength) - armR.rotation.x) * postureEase)
+        armR.rotation.x += ((((isThinking ? -0.36 : 0) * (1 - dockingStrength) - 0.5 * gripStrength - walkStride * armSwing) - armR.rotation.x) * postureEase)
         armL.rotation.z += (leftArmTarget - armL.rotation.z) * postureEase
-        armL.rotation.x += ((-0.28 * gripStrength - armL.rotation.x) * postureEase)
+        armL.rotation.x += (((-0.28 * gripStrength + walkStride * armSwing) - armL.rotation.x) * postureEase)
+        // Legs stride when walking, tuck slightly when flying, and straighten otherwise.
+        const legTuck = isFlying ? 0.12 : 0
+        legR.rotation.x += ((legTuck - walkStride * walkAmp) - legR.rotation.x) * postureEase
+        legL.rotation.x += ((legTuck + walkStride * walkAmp) - legL.rotation.x) * postureEase
       }
       blink -= dt
       let eyeOpen = 1

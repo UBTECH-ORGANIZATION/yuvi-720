@@ -1,0 +1,154 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee2060d9e00ad440fa0a8d54c9fe2001, type: 3}
+  m_Name: SO_YW_ProductionGrounding
+  m_EditorClassIdentifier: 
+  worldId: yuvi-learning-mainland-production-v1
+  foundationTheme: {fileID: 11400000, guid: 5388f1e3769284fa9832316191f5ba89, type: 2}
+  foundationBands:
+  - id: continuous-mainland-stratum
+    topHeight: -1.5
+    bottomHeight: -3.25
+    surface:
+      outer:
+      - {x: -36.125, y: -9}
+      - {x: -34.875, y: -11}
+      - {x: -33.25, y: -12.8125}
+      - {x: -31.25, y: -14.4375}
+      - {x: -28.875, y: -15.875}
+      - {x: -26.125, y: -17.125}
+      - {x: -23.1875, y: -18.03125}
+      - {x: -20.0625, y: -18.59375}
+      - {x: -16.75, y: -18.8125}
+      - {x: -13.25, y: -18.6875}
+      - {x: -9.875, y: -18.4375}
+      - {x: -6.625, y: -18.0625}
+      - {x: -3.5, y: -17.5625}
+      - {x: -0.5, y: -16.9375}
+      - {x: 2.3125, y: -16.09375}
+      - {x: 4.9375, y: -15.03125}
+      - {x: 7.375, y: -13.75}
+      - {x: 9.625, y: -12.25}
+      - {x: 11.875, y: -10.75}
+      - {x: 14.125, y: -9.25}
+      - {x: 16.375, y: -7.75}
+      - {x: 18.625, y: -6.25}
+      - {x: 21.0625, y: -4.9375}
+      - {x: 23.6875, y: -3.8125}
+      - {x: 26.5, y: -2.875}
+      - {x: 29.5, y: -2.125}
+      - {x: 32.5, y: -1.4375}
+      - {x: 35.5, y: -0.8125}
+      - {x: 38.5, y: -0.25}
+      - {x: 41.5, y: 0.25}
+      - {x: 44.375, y: 0.75}
+      - {x: 47.125, y: 1.25}
+      - {x: 49.75, y: 1.75}
+      - {x: 52.25, y: 2.25}
+      - {x: 54.875, y: 2.875}
+      - {x: 57.625, y: 3.625}
+      - {x: 60.5, y: 4.5}
+      - {x: 63.5, y: 5.5}
+      - {x: 66.625, y: 6.4375}
+      - {x: 69.875, y: 7.3125}
+      - {x: 73.25, y: 8.125}
+      - {x: 76.75, y: 8.875}
+      - {x: 80.25, y: 9.75}
+      - {x: 83.75, y: 10.75}
+      - {x: 87.25, y: 11.875}
+      - {x: 90.75, y: 13.125}
+      - {x: 93.8125, y: 14.5}
+      - {x: 96.4375, y: 16}
+      - {x: 98.625, y: 17.625}
+      - {x: 100.375, y: 19.375}
+      - {x: 101.5625, y: 21.25}
+      - {x: 102.1875, y: 23.25}
+      - {x: 102.25, y: 25.375}
+      - {x: 101.75, y: 27.625}
+      - {x: 100.8125, y: 29.625}
+      - {x: 99.4375, y: 31.375}
+      - {x: 97.625, y: 32.875}
+      - {x: 95.375, y: 34.125}
+      - {x: 92.9375, y: 35}
+      - {x: 90.3125, y: 35.5}
+      - {x: 87.5, y: 35.625}
+      - {x: 84.5, y: 35.375}
+      - {x: 81.5, y: 34.9375}
+      - {x: 78.5, y: 34.3125}
+      - {x: 75.5, y: 33.5}
+      - {x: 72.5, y: 32.5}
+      - {x: 69.625, y: 31.5625}
+      - {x: 66.875, y: 30.6875}
+      - {x: 64.25, y: 29.875}
+      - {x: 61.75, y: 29.125}
+      - {x: 59.25, y: 28.5}
+      - {x: 56.75, y: 28}
+      - {x: 54.25, y: 27.625}
+      - {x: 51.75, y: 27.375}
+      - {x: 49.25, y: 27}
+      - {x: 46.75, y: 26.5}
+      - {x: 44.25, y: 25.875}
+      - {x: 41.75, y: 25.125}
+      - {x: 39.25, y: 24.3125}
+      - {x: 36.75, y: 23.4375}
+      - {x: 34.25, y: 22.5}
+      - {x: 31.75, y: 21.5}
+      - {x: 29.125, y: 20.5}
+      - {x: 26.375, y: 19.5}
+      - {x: 23.5, y: 18.5}
+      - {x: 20.5, y: 17.5}
+      - {x: 17.5, y: 16.5625}
+      - {x: 14.5, y: 15.6875}
+      - {x: 11.5, y: 14.875}
+      - {x: 8.5, y: 14.125}
+      - {x: 5.375, y: 13.625}
+      - {x: 2.125, y: 13.375}
+      - {x: -1.25, y: 13.375}
+      - {x: -4.75, y: 13.625}
+      - {x: -8.25, y: 13.6875}
+      - {x: -11.75, y: 13.5625}
+      - {x: -15.25, y: 13.25}
+      - {x: -18.75, y: 12.75}
+      - {x: -22.0625, y: 12.125}
+      - {x: -25.1875, y: 11.375}
+      - {x: -28.125, y: 10.5}
+      - {x: -30.875, y: 9.5}
+      - {x: -33.125, y: 7.875}
+      - {x: -34.875, y: 5.625}
+      - {x: -36.125, y: 2.75}
+      - {x: -36.875, y: -0.75}
+      - {x: -37.125, y: -3.875}
+      - {x: -36.875, y: -6.625}
+      holes: []
+    traversable: 0
+    surfaceFamily: primary
+  sections:
+  - {fileID: 11400000, guid: 84f46a4dba78e490b86885fe1a699f30, type: 2}
+  - {fileID: 11400000, guid: 2bbdbe01a395243abb4fb6f051eb4ec0, type: 2}
+  - {fileID: 11400000, guid: ace1082ffb98746b2b0ad19524aee35c, type: 2}
+  connectors:
+  - id: arrival-to-archive-neck
+    fromSectionId: arrival-valley
+    fromPortalId: out-archive
+    toSectionId: archive-court
+    toPortalId: in-arrival
+    kind: 0
+    width: 3.4
+  - id: archive-to-ravine-rise
+    fromSectionId: archive-court
+    fromPortalId: out-ravine
+    toSectionId: hooked-ravine
+    toPortalId: in-archive
+    kind: 1
+    width: 3
+  minimumSectionArea: 90
+  maximumTriangleBudget: 12000

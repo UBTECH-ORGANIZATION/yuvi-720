@@ -20,7 +20,7 @@ import {
   type LearningUnitDTO,
 } from '../../services/learning'
 import { useYubiDesign } from '../yubi-studio/YubiDesignProvider'
-import { LearningWorld2D } from './LearningWorld2D'
+import { LearningWorldUnity } from './LearningWorldUnity'
 import {
   buildLearningWorldModel,
   type LearningWorldLandmark,
@@ -103,6 +103,7 @@ export function LearningPortalPage() {
   const [selectedLandmarkId, setSelectedLandmarkId] = useState<string | null>(null)
   const [journeyOpen, setJourneyOpen] = useState(false)
   const [sceneReady, setSceneReady] = useState(false)
+  const [unityFailed, setUnityFailed] = useState(false)
   const [travelling, setTravelling] = useState(false)
   const [announcement, setAnnouncement] = useState('')
   const [loading, setLoading] = useState(true)
@@ -158,6 +159,7 @@ export function LearningPortalPage() {
   useEffect(() => {
     if (!world) return
     setSceneReady(false)
+    setUnityFailed(false)
     setTravelling(false)
     setSelectedLandmarkId((current) => (
       current && world.landmarks.some((landmark) => landmark.id === current)
@@ -217,9 +219,14 @@ export function LearningPortalPage() {
 
   const handleSceneReady = useCallback(() => setSceneReady(true), [])
   const handleStats = useCallback((nextStats: LearningWorldStats) => setStats(nextStats), [])
+  const handleUnityFatalError = useCallback(() => setUnityFailed(true), [])
+  const handleWorldBlocked = useCallback(() => {
+    setTravelling(false)
+    setAnnouncement(t('learning.world.bridgeLocked'))
+  }, [t])
 
   const lowPower = isTablet
-  const useStaticWorld = isPhone
+  const useStaticWorld = isPhone || unityFailed
 
   return (
     <div
@@ -258,19 +265,20 @@ export function LearningPortalPage() {
               {useStaticWorld ? (
                 <StaticLearningWorld world={world} selectedId={selectedLandmarkId} onSelect={selectLandmark} />
               ) : (
-                <LearningWorld2D
+                <LearningWorldUnity
                   ref={sceneRef}
                   world={world}
                   design={design}
                   lowPower={lowPower}
                   reducedMotion={reducedMotion}
-                  debug={debug.enabled}
                   simulate={debug.simulate}
                   selectedLandmarkId={selectedLandmarkId}
                   ariaLabel={t('learning.world.canvasAria', { subject: t(`learning.subject.${world.subject}`) })}
                   onLandmarkSelect={selectLandmark}
                   onYubiInteract={openCompanion}
+                  onBlocked={handleWorldBlocked}
                   onReady={handleSceneReady}
+                  onFatalError={handleUnityFatalError}
                   onStats={handleStats}
                 />
               )}
@@ -290,14 +298,9 @@ export function LearningPortalPage() {
               )}
 
               <header className="learning-world-hud">
-                <div className="learning-world-hud__intro">
-                  <span className="learning-world-hud__eyebrow">
-                    <Icon name={world.subject === 'science' ? 'leaf' : 'orbit'} size={17} />
-                    {t('learning.world.eyebrow')}
-                  </span>
-                  <h1 id="learning-world-title">{t(`learning.world.title.${world.subject}`)}</h1>
-                  <p>{t(`learning.world.subtitle.${world.subject}`)}</p>
-                </div>
+                {/* Title kept for screen readers only (the <main> is labelled by it); the visible
+                    intro card was removed to keep the world view clean. */}
+                <h1 id="learning-world-title" className="sp-sr-only">{t(`learning.world.title.${world.subject}`)}</h1>
 
                 <div className="learning-world-subjects" role="group" aria-label={t('learning.filters.subject')}>
                   {availableSubjects.map((subject) => (
@@ -395,7 +398,7 @@ export function LearningPortalPage() {
                 <output className="learning-world-debug" aria-label={t('learning.world.debug')}>
                   <b>WORLD DEBUG</b>
                   <span>subject: {world.subject}</span>
-                  <span>renderer: {stats?.renderer ?? 'dom-2d'}</span>
+                  <span>renderer: {stats?.renderer ?? 'unity-webgl'}</span>
                   <span>landmarks: {world.landmarks.length}</span>
                   <span>selected: {selectedLandmarkId ?? 'none'}</span>
                   <span>position: {stats?.positionX ?? '—'}, {stats?.positionY ?? '—'}</span>
