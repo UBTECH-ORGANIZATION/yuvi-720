@@ -1,4 +1,4 @@
-import { apiGet } from './api'
+import { apiGet, apiPost } from './api'
 
 /* Typed client for the Learner Brain (architecture §4.2, backend `app/brain`).
    Reads are brain projections — never invented on the client. Learner surfaces
@@ -123,6 +123,23 @@ export interface DashboardHero {
   canResume: boolean
   reason: string
   pace: string | null
+  illustration: {
+    assetId: string
+    url: string
+    staticUrl: string
+    alt: string
+    tip: string
+    width: number
+    height: number
+    aiGenerated: boolean
+    animationPreset: string
+  } | null
+  stats: {
+    timeSpentMinutes: number | null
+    overallProgress: number
+    completedUnits: number
+    timingAvailable: boolean
+  }
 }
 
 export interface DashboardDTO {
@@ -140,6 +157,8 @@ export interface DashboardDTO {
     text: string
     meta: string
     source: string
+    status?: string
+    steps?: { done: number; total: number } | null
     done: boolean
     deadline?: string | null
   }[]
@@ -170,5 +189,16 @@ export function getCoachBundle(learnerId: string, signal?: AbortSignal) {
   return apiGet<CoachBundle>(
     `/api/brain/${encodeURIComponent(learnerId)}/context/coach`,
     signal ? { signal } : undefined
+  )
+}
+
+/** Create a learner self-goal derived from an activeness domain (mirrors to F4 goals). */
+export function createActivenessGoal(
+  learnerId: string,
+  payload: { domain: string; text: string },
+) {
+  return apiPost<{ id: string; text: string; domain: string }>(
+    `/api/brain/${encodeURIComponent(learnerId)}/activeness-goal`,
+    payload,
   )
 }

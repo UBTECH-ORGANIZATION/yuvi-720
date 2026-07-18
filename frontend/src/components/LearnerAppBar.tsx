@@ -5,13 +5,15 @@ import { AppBar } from './AppBar'
 import { Icon } from './primitives'
 import './learner-app-bar.css'
 
-type LearnerSection = 'dashboard' | 'learning' | 'goals'
+type LearnerSection = 'dashboard' | 'learning' | 'goals' | 'chat' | 'calendar'
 
 interface LearnerAppBarProps {
   studentName?: string
 }
 
 function sectionForRoute(pathname: string): LearnerSection | null {
+  if (pathname.startsWith('/student-dashboard/chat')) return 'chat'
+  if (pathname.startsWith('/student-dashboard/calendar')) return 'calendar'
   if (pathname.startsWith('/student-dashboard')) return 'dashboard'
   if (pathname.startsWith('/learning')) return 'learning'
   if (pathname.startsWith('/mentoring')) return 'goals'
@@ -53,6 +55,24 @@ export function LearnerAppBar({ studentName }: LearnerAppBarProps) {
       >
         <Icon name="target" size={16} />
         <span>{t('sdash.nav.goals')}</span>
+      </button>
+      <button
+        className={activeSection === 'chat' ? 'is-active' : ''}
+        type="button"
+        aria-current={activeSection === 'chat' ? 'page' : undefined}
+        onClick={() => navigate('/student-dashboard/chat')}
+      >
+        <Icon name="message" size={16} />
+        <span>{t('sdash.nav.chat')}</span>
+      </button>
+      <button
+        className={activeSection === 'calendar' ? 'is-active' : ''}
+        type="button"
+        aria-current={activeSection === 'calendar' ? 'page' : undefined}
+        onClick={() => navigate('/student-dashboard/calendar')}
+      >
+        <Icon name="calendar" size={16} />
+        <span>{t('sdash.nav.calendar')}</span>
       </button>
     </nav>
   )

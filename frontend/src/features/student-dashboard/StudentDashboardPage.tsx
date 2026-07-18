@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { LearnerAppBar } from '../../components/LearnerAppBar'
-import { EmptyState, ErrorState, Icon, LoadingState } from '../../components/primitives'
+import { EmptyState, ErrorState, Icon } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useBrain } from '../../providers/BrainProvider'
 import { useCompanion } from '../../providers/CompanionProvider'
@@ -13,8 +13,11 @@ import {
 import { navigate } from '../../app/router'
 import { selectNextRoute } from '../../services/agents'
 import { DashboardHero } from './DashboardHero'
+import { DashboardLoadingScreen } from './DashboardLoadingScreen'
 import { DashboardOverview } from './DashboardOverview'
-import { SubjectJourney } from './SubjectJourney'
+import { RecentLessons } from './RecentLessons'
+import { ActivenessMapSection } from './ActivenessMapSection'
+import { StudentConnectionsPane } from './StudentConnectionsPane'
 import './student-dashboard.css'
 
 /**
@@ -33,6 +36,12 @@ export function StudentDashboardPage() {
   const [reloadKey, setReloadKey] = useState(0)
   const [isStarting, setIsStarting] = useState(false)
   const [actionError, setActionError] = useState(false)
+  const [minimumLoadElapsed, setMinimumLoadElapsed] = useState(false)
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setMinimumLoadElapsed(true), 1600)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -60,7 +69,7 @@ export function StudentDashboardPage() {
   useEffect(() => {
     let active = true
     const controller = new AbortController()
-    getLearningCatalog(learnerId, controller.signal)
+    getLearningCatalog(learnerId, controller.signal, language)
       .then((catalog) => {
         if (active) setRoadmapUnits(catalog.units)
       })
@@ -69,7 +78,7 @@ export function StudentDashboardPage() {
       active = false
       controller.abort()
     }
-  }, [learnerId, reloadKey])
+  }, [learnerId, language, reloadKey])
 
   useEffect(() => {
     const refresh = () => setReloadKey((key) => key + 1)
@@ -118,13 +127,23 @@ export function StudentDashboardPage() {
 
   const studentName = dashboard?.name || brain?.identity.display_name || t('sdash.learnerFallback')
 
+  const utilityPane = window.location.pathname.endsWith('/chat')
+    ? 'chat'
+    : window.location.pathname.endsWith('/calendar')
+      ? 'calendar'
+      : null
+
+  if (utilityPane) {
+    return <StudentConnectionsPane mode={utilityPane} studentName={studentName} />
+  }
+
+  if (!minimumLoadElapsed || (loading && !dashboard)) return <DashboardLoadingScreen />
+
   return (
     <div className="sd-page">
       <LearnerAppBar studentName={studentName} />
 
       <main className="sd-dashboard">
-        {loading && !dashboard && <LoadingState title={t('sdash.loading')} body={t('sdash.loading.body')} />}
-
         {error && !dashboard && (
           <ErrorState
             title={t('sdash.error')}
@@ -150,9 +169,8 @@ export function StudentDashboardPage() {
               onStart={() => void startHeroStep()}
               onBrowse={() => navigate('/learning')}
             />
-            <SubjectJourney
-              subjects={dashboard.subjects}
-              roadmapUnits={roadmapUnits}
+            <RecentLessons
+              units={roadmapUnits}
               onOpenLearning={() => navigate('/learning')}
               onOpenComponent={openRoadmapComponent}
             />
@@ -160,6 +178,10 @@ export function StudentDashboardPage() {
               dashboard={dashboard}
               onMentoring={() => navigate('/mentoring')}
               onAskYuvi={openCompanion}
+            />
+            <ActivenessMapSection
+              competencies={dashboard.competencies}
+              studentName={studentName}
             />
             <p className="sd-last-updated" aria-live="polite">
               <Icon name="check" size={14} />

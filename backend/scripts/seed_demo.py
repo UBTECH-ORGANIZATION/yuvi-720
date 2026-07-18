@@ -142,8 +142,8 @@ PERSONAS = [
         "free_text": "אני ממש אוהב כדורסל ומחשבים",
         "scores": {
             "academic": {"interest": 85, "relevance": 80, "investment": 88},
-            "psycho_pedagogical": {"motivation": 82, "autonomy": 86, "cognitive": 78, "self_awareness": 80},
-            "environmental": {"school_climate": 75, "tech_comfort": 90, "focus": 80},
+            "psycho_pedagogical": {"motivation": 82, "autonomy": 86, "cognitive": 40, "self_awareness": 38},
+            "environmental": {"school_climate": 42, "tech_comfort": 90, "focus": 38},
         },
     },
     {
@@ -213,6 +213,28 @@ async def main() -> None:
         "next_steps": "לצפות בסרטון קצר על זוויות ולתרגל 3 שאלות מודרכות", "deadline": "2026-07-15",
         "visibility": "shared", "teacher_only_note": "רגישה לתסכול — לעודד בעדינות ולפרק לצעדים.",
     })
+
+    # ── Curated learner-visible goals for the "היעדים שלי" dashboard card ─────
+    # Mixed origins (teacher / self / Yuvi) with real step counts so the card
+    # renders step-based progress and status — never an invented percentage.
+    demo_goals = [
+        {"id": "goal-participation", "text": "להשתתף יותר בשיעורים", "source": "teacher",
+         "status": "in_progress", "steps": {"done": 3, "total": 5}, "deadline": "2026-07-28",
+         "visible_to_learner": True},
+        {"id": "goal-time", "text": "לשפר את ניהול הזמן שלי", "source": "self",
+         "status": "started", "steps": {"done": 1, "total": 4}, "deadline": "2026-08-15",
+         "visible_to_learner": True},
+        {"id": "goal-math", "text": "להתמיד בתרגול מתמטיקה", "source": "teacher",
+         "status": "in_progress", "steps": {"done": 2, "total": 4}, "deadline": "2026-07-31",
+         "visible_to_learner": True},
+        {"id": "goal-reading", "text": "לקרוא 15 דקות בכל יום", "source": "self",
+         "status": "almost_done", "steps": {"done": 4, "total": 5}, "deadline": None,
+         "visible_to_learner": True},
+        {"id": "goal-submissions", "text": "להגיש עבודות בזמן", "source": "yuvi",
+         "status": "new", "steps": {"done": 0, "total": 3}, "deadline": "2026-08-20",
+         "visible_to_learner": True},
+    ]
+    await apply_brain_updates("demo-learner", {"goals": demo_goals})
 
     # ── Reflections (F4 self-awareness: self vs system estimate) ─────────────
     await reflection.store_reflection("demo-learner", "hard_task",

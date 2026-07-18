@@ -13,6 +13,7 @@ const ICON_PATHS: Record<string, ReactNode> = {
   check: <path d="M4 12.5 9 17.5 20 6.5" />,
   arrow: <path d="M5 12h14m-6-6 6 6-6 6" />,
   clock: <><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" /></>,
+  calendar: <><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M8 3v4m8-4v4M3.5 9.5h17M8 13h.01m4 0h.01m4 0h.01M8 16.5h.01m4 0h.01" /></>,
   reflect: <><path d="M12 3a9 9 0 1 0 9 9" /><path d="M12 7v5l3 2" /><path d="M21 3v5h-5" /></>,
   lightbulb: <><path d="M9 18h6" /><path d="M10 21h4" /><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.3 1 2.5h6c0-1.2.3-1.8 1-2.5A6 6 0 0 0 12 3z" /></>,
   lock: <><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></>,
@@ -25,6 +26,11 @@ const ICON_PATHS: Record<string, ReactNode> = {
   inbox: <><path d="M4 13h4l1.5 3h5L16 13h4" /><path d="M4 13 6 5h12l2 8v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" /></>,
   plus: <path d="M12 5v14M5 12h14" />,
   trash: <><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" /></>,
+  calculator: <><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M8 7h8" /><path d="M8 11h.01M12 11h.01M16 11h.01M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h4" /></>,
+  document: <><path d="M7 3h7l4 4v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" /><path d="M14 3v4h4" /><path d="M9 12h6M9 16h6" /></>,
+  chevronLeft: <path d="m14 6-6 6 6 6" />,
+  chevronUp: <path d="m6 14 6-6 6 6" />,
+  expand: <><path d="M8 3H4a1 1 0 0 0-1 1v4" /><path d="M16 3h4a1 1 0 0 1 1 1v4" /><path d="M16 21h4a1 1 0 0 0 1-1v-4" /><path d="M8 21H4a1 1 0 0 1-1-1v-4" /></>,
 }
 
 export interface IconProps extends Omit<HTMLAttributes<SVGElement>, 'children'> {

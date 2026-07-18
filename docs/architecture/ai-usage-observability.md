@@ -83,6 +83,8 @@ Azure OpenAI streams request terminal usage metadata with `stream_options.includ
 | Feature | Endpoint | Operation | Provider | Meter |
 |---|---|---|---|---|
 | F1 personalized content | `/api/create-lomda-stream` | `learning_content.generate` | Azure OpenAI through APIM | tokens |
+| F1 personalized content | `/api/internal/learning/illustrations` | `lesson_illustration.generate` | Azure OpenAI through APIM | tokens |
+| F1 personalized content | `/api/internal/learning/illustrations` | `lesson_illustration.tip` | Azure OpenAI through APIM | tokens |
 | F2 mapping | `/api/submit` | `onboarding.interest_extraction` | Azure OpenAI through APIM | tokens |
 | F2 mapping | `/api/analyze-profile` | `profile.analysis` | Azure OpenAI through APIM | tokens |
 | F2 mapping | `/api/results-chat` | `profile.results_chat` | Azure OpenAI through APIM | tokens |
