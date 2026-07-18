@@ -20,6 +20,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from .auth import create_admin_token, decode_admin_token, is_allowed_admin, normalize_email
 from .config import Settings
 from .database import UsageEventRepository
+from .telemetry import configure_telemetry
 from .usage_report import UsageSummary, build_usage_summary
 
 
@@ -312,6 +313,8 @@ def create_app(
                 status_code=503,
                 content={"error": "Admin frontend build is missing"},
             )
+
+    configure_telemetry(app, service_name="spark-admin")
 
     return app
 

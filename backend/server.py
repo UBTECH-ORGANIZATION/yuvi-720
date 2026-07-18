@@ -29,6 +29,7 @@ from app.routes.mapping_chat import router as mapping_chat_router
 from app.routes.profile import router as profile_router
 from app.routes.static_pages import mount_static_assets, router as static_pages_router
 from app.routes.xapi import router as xapi_router
+from app.core.telemetry import configure_telemetry
 from app.services.content_catalog_mcp import content_catalog_mcp_lifespan, mount_content_catalog_mcp
 
 
@@ -68,6 +69,8 @@ def create_app() -> FastAPI:
 
     mount_static_assets(app)
     app.include_router(static_pages_router)
+
+    configure_telemetry(app, service_name="spark-backend")
 
     return app
 
