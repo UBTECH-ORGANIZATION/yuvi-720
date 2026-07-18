@@ -1125,6 +1125,12 @@ export function ActivenessMap3D({ competencies, studentName, initial, onClose }:
     let pendingOpenKey: string | null = null
     let wireProgress = 0
     let wireMesh: THREE.Mesh | null = null
+    // Tapping the orb grows every cord at once, then opens Yubi's chat.
+    let allWiresActive = false
+    let allWireProgress = 0
+    let pendingPanelOpen = false
+    let sawPanel = false
+    const allWireMeshes = new Map<string, THREE.Mesh>()
     const wireMat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
       emissive: 0xffffff,
@@ -1225,8 +1231,16 @@ export function ActivenessMap3D({ competencies, studentName, initial, onClose }:
       const quick = performance.now() - downAt < 400
       const far = Math.hypot(e.clientX - downX, e.clientY - downY) > 6
       if (!it) {
-        // Quick tap on the central orb → open Yubi's status summary.
-        if (orbDownHit && quick && !far) openOrbPanelRef.current()
+        // Quick tap on the central orb → grow every cord, then open Yubi's chat.
+        if (orbDownHit && quick && !far) {
+          setFocusKeyRef.current(null)
+          activeWireKey = null
+          pendingOpenKey = null
+          allWiresActive = true
+          allWireProgress = 0
+          sawPanel = false
+          pendingPanelOpen = true
+        }
         orbDownHit = false
         return
       }
@@ -1253,6 +1267,10 @@ export function ActivenessMap3D({ competencies, studentName, initial, onClose }:
           wireProgress = 0
           setFocusKeyRef.current(null) // keep the card hidden until the cord connects
           applyFocus(it.key, false)
+          // Leaving the orb overview: drop the all-cords chat.
+          allWiresActive = false
+          pendingPanelOpen = false
+          setPanelOpenRef.current(false)
         }
       }
     }
@@ -1448,6 +1466,57 @@ export function ActivenessMap3D({ competencies, studentName, initial, onClose }:
         wireMesh = null
       }
 
+      // All cords at once: grow from the orb to every domain, then open the
+      // Yubi chat; the cords stay lit while the chat is open.
+      if (allWiresActive) {
+        const center = wA.set(0, personaNode?.position.y ?? 1.2, 0)
+        allWireProgress = reduced ? 1 : Math.min(1, allWireProgress + dt / 0.7)
+        const building = allWireProgress < 1
+        for (const it of islands) {
+          if (!it.group.visible) continue
+          let mesh = allWireMeshes.get(it.key)
+          if (building || !mesh) {
+            const target = wB.set(it.group.position.x, -0.1, it.group.position.z)
+            const dir = wC.copy(target).sub(center).normalize()
+            const origin = center.clone().add(dir.multiplyScalar(1.05))
+            const mid = origin.clone().add(target).multiplyScalar(0.5)
+            mid.y += 0.9
+            const curve = new THREE.QuadraticBezierCurve3(origin, mid.clone(), target.clone())
+            const geo = buildWireGeometry(curve, allWireProgress)
+            if (!mesh) {
+              const m = wireMat.clone()
+              m.color.copy(it.tint)
+              m.emissive.copy(it.tint)
+              mesh = new THREE.Mesh(geo, m)
+              mesh.renderOrder = 9
+              scene.add(mesh)
+              allWireMeshes.set(it.key, mesh)
+            } else {
+              mesh.geometry.dispose()
+              mesh.geometry = geo
+            }
+          }
+        }
+        if (allWireProgress >= 1 && pendingPanelOpen) {
+          openOrbPanelRef.current()
+          pendingPanelOpen = false
+        }
+        // Once the chat has actually opened, close the cords when it closes.
+        if (!pendingPanelOpen) {
+          if (panelOpenRef.current) sawPanel = true
+          if (sawPanel && !panelOpenRef.current) allWiresActive = false
+        }
+      }
+      if (!allWiresActive && allWireMeshes.size) {
+        for (const m of allWireMeshes.values()) {
+          m.geometry.dispose()
+          ;(m.material as any).dispose?.()
+          scene.remove(m)
+        }
+        allWireMeshes.clear()
+        sawPanel = false
+      }
+
       renderFrame()
 
       // Project labels to screen (HTML overlay), pinned just below each node.
@@ -1544,6 +1613,10 @@ export function ActivenessMap3D({ competencies, studentName, initial, onClose }:
   useEffect(() => { setFocusKeyRef.current = setFocusKey })
   const openOrbPanelRef = useRef<() => void>(() => {})
   useEffect(() => { openOrbPanelRef.current = () => setPanelOpen(true) })
+  const panelOpenRef = useRef(panelOpen)
+  useEffect(() => { panelOpenRef.current = panelOpen }, [panelOpen])
+  const setPanelOpenRef = useRef(setPanelOpen)
+  useEffect(() => { setPanelOpenRef.current = setPanelOpen })
   const activeGoalRef = useRef(activeGoal)
   useEffect(() => { activeGoalRef.current = activeGoal }, [activeGoal])
   // Persist the new arrangement after a drag (keeps focus + goal intact).
