@@ -13,26 +13,27 @@
   align-items: center;
   justify-content: flex-start;
   gap: 4px;
-  inline-size: 320px;
+  inline-size: 344px;
   max-inline-size: calc(100% - 24px);
-  block-size: 90px;
-  padding: 12px 24px 0;
+  block-size: 104px;
+  padding: 14px 26px 0;
   border: 0;
   /* Wide elliptical half-circle that only peeks from the bottom edge. */
   border-radius: 50% 50% 0 0 / 100% 100% 0 0;
   background:
-    radial-gradient(circle at 30% 12%, rgba(159, 122, 254, .34), transparent 46%),
-    radial-gradient(circle at 80% 78%, rgba(56, 161, 240, .26), transparent 50%),
-    linear-gradient(150deg, #f5f2ff 0%, #ece7ff 52%, #eef6ff 100%);
+    radial-gradient(circle at 30% 8%, rgba(255, 255, 255, .35), transparent 44%),
+    radial-gradient(circle at 82% 74%, rgba(56, 161, 240, .5), transparent 55%),
+    linear-gradient(150deg, #8a6cff 0%, #6b5cff 52%, #5b8bff 100%);
   box-shadow:
-    0 -14px 44px rgba(108, 92, 255, .26),
-    inset 0 1px 0 rgba(255, 255, 255, .6);
+    0 -18px 54px rgba(108, 92, 255, .55),
+    0 -6px 20px rgba(56, 161, 240, .34),
+    inset 0 1px 0 rgba(255, 255, 255, .5);
   cursor: pointer;
   /* Hidden: tucked fully below the screen edge. */
   transform: translateX(-50%) translateY(100%);
   opacity: 0;
   pointer-events: none;
-  transition: transform 460ms cubic-bezier(.2, .7, .2, 1), opacity 340ms ease;
+  transition: transform 460ms cubic-bezier(.2, .7, .2, 1), opacity 340ms ease, box-shadow 260ms ease;
   will-change: transform, opacity;
 }
 .sd-actmap-bubble--visible {
@@ -40,29 +41,45 @@
   transform: translateX(-50%) translateY(0);
   opacity: 1;
   pointer-events: auto;
-  animation: sd-actmap-bubble-breathe 3.4s ease-in-out infinite 460ms;
+  animation: sd-actmap-bubble-breathe 3s ease-in-out infinite 460ms;
 }
 .sd-actmap-bubble:hover {
   animation-play-state: paused;
-  transform: translateX(-50%) translateY(-6px);
+  transform: translateX(-50%) translateY(-12px) scale(1.05);
+  box-shadow:
+    0 -26px 70px rgba(108, 92, 255, .75),
+    0 -10px 30px rgba(56, 161, 240, .5),
+    inset 0 1px 0 rgba(255, 255, 255, .6);
+}
+.sd-actmap-bubble:hover .sd-actmap-bubble__glow { opacity: 1; transform: translateX(-50%) scale(1.15); }
+.sd-actmap-bubble:hover .sd-actmap-bubble__arrow { animation-duration: 1s; color: #fff; }
+.sd-actmap-bubble:hover .sd-actmap-bubble__title { letter-spacing: .03em; }
+.sd-actmap-bubble:focus-visible {
+  outline: none;
+  transform: translateX(-50%) translateY(-12px) scale(1.05);
+  box-shadow:
+    0 -26px 70px rgba(108, 92, 255, .8),
+    0 0 0 3px rgba(255, 255, 255, .7);
 }
 .sd-actmap-bubble:active {
-  transform: translateX(-50%) translateY(2px) scale(.98);
+  transform: translateX(-50%) translateY(-4px) scale(1.01);
 }
 @keyframes sd-actmap-bubble-breathe {
   0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(-5px); }
+  50% { transform: translateX(-50%) translateY(-7px); }
 }
 .sd-actmap-bubble__glow {
   position: absolute;
-  inset-block-start: -30%;
+  inset-block-start: -34%;
   left: 50%;
-  inline-size: 200px;
-  block-size: 200px;
+  inline-size: 260px;
+  block-size: 260px;
   transform: translateX(-50%);
-  background: radial-gradient(circle, rgba(159, 122, 254, .3), transparent 68%);
-  filter: blur(14px);
+  background: radial-gradient(circle, rgba(146, 120, 255, .6), transparent 66%);
+  filter: blur(16px);
+  opacity: .85;
   pointer-events: none;
+  transition: opacity 260ms ease, transform 260ms ease;
 }
 .sd-actmap-bubble__arrow {
   position: relative;
@@ -70,55 +87,58 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #7c5cff;
+  color: rgba(255, 255, 255, .92);
   pointer-events: none;
-  animation: sd-actmap-arrow-hint 2.4s ease-in-out infinite;
+  animation: sd-actmap-arrow-hint 1.8s ease-in-out infinite;
 }
 @keyframes sd-actmap-arrow-hint {
-  0%, 100% { transform: translateY(1px); opacity: .55; }
-  50% { transform: translateY(-2px); opacity: 1; }
+  0%, 100% { transform: translateY(2px); opacity: .7; }
+  50% { transform: translateY(-3px); opacity: 1; }
 }
 .sd-actmap-bubble__content {
   position: relative;
   z-index: 1;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  color: #6b5cff;
+  gap: 9px;
+  color: #fff;
   pointer-events: none;
 }
 .sd-actmap-bubble__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  inline-size: 28px;
-  block-size: 28px;
+  inline-size: 30px;
+  block-size: 30px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(124, 92, 255, .16), rgba(56, 161, 240, .12));
-  color: #7c5cff;
+  background: rgba(255, 255, 255, .22);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35);
+  color: #fff;
   flex-shrink: 0;
 }
 .sd-actmap-bubble__icon .sp-icon {
   flex-shrink: 0;
 }
 .sd-actmap-bubble__title {
-  font-size: var(--sp-fs-sm, 15px);
+  font-size: var(--sp-fs-md, 16px);
   font-weight: 800;
   letter-spacing: .01em;
-  color: #4a3db8;
+  color: #fff;
+  text-shadow: 0 1px 8px rgba(40, 24, 92, .4);
   white-space: nowrap;
+  transition: letter-spacing 200ms ease;
 }
 @media (max-width: 720px) {
   .sd-actmap-bubble {
-    inline-size: 280px;
-    block-size: 82px;
-    padding: 10px 20px 0;
+    inline-size: 300px;
+    block-size: 92px;
+    padding: 12px 22px 0;
   }
   .sd-actmap-bubble__icon {
-    inline-size: 24px;
-    block-size: 24px;
+    inline-size: 26px;
+    block-size: 26px;
   }
-  .sd-actmap-bubble__title { font-size: var(--sp-fs-xs, 13px); }
+  .sd-actmap-bubble__title { font-size: var(--sp-fs-sm, 15px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
