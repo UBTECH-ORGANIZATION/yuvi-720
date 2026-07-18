@@ -33,6 +33,7 @@ export async function apiDelete<T>(path: string): Promise<T> {
 export interface LearnerState {
   learner_id: string
   language?: 'he' | 'en' | 'ar'
+  theme?: 'light' | 'dark'
   mapping_results?: unknown
   mapping_progress?: unknown
   profile_summary_progress?: unknown
@@ -41,6 +42,11 @@ export interface LearnerState {
   game_progress?: Record<string, unknown>
   avatar?: unknown
   avatar_unlocks?: string[]
+  activeness_map?: {
+    positions?: Record<string, number>
+    focus?: string | null
+    goal?: { domain: string; behavior: string; context: string; text: string; id?: string } | null
+  } | null
 }
 
 export function getLearnerState(signal?: AbortSignal) {

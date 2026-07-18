@@ -37,6 +37,19 @@ export interface LearningUnitDTO {
   source: 'content_provider'
   current_component_id: string | null
   next_component_id: string | null
+  illustration?: LessonIllustrationDTO | null
+}
+
+export interface LessonIllustrationDTO {
+  assetId: string
+  url: string
+  staticUrl: string
+  alt: string
+  tip: string
+  width: number
+  height: number
+  aiGenerated: boolean
+  animationPreset: string
 }
 
 export interface LearningCatalogDTO {
@@ -91,8 +104,9 @@ export interface LearningTimingDTO {
   active_time_available: false
 }
 
-export function getLearningCatalog(learnerId: string, signal?: AbortSignal) {
+export function getLearningCatalog(learnerId: string, signal?: AbortSignal, lang?: Language) {
   const params = new URLSearchParams({ learner_id: learnerId })
+  if (lang) params.set('lang', lang)
   return apiGet<LearningCatalogDTO>(`/api/learning/catalog?${params}`, signal ? { signal } : undefined)
 }
 

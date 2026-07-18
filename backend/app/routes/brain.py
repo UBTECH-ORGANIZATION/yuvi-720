@@ -10,9 +10,13 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 from app.brain.context_engine import build_coach_bundle, view_for, AgentScopeError
-from app.brain.repository import get_brain
-from app.services.dashboard import project_dashboard
+from app.brain.repository import get_brain, apply_brain_updates
+from app.services.dashboard import project_dashboard, project_hero_metrics
+from app.services.events import get_learner_events
+from app.services.lesson_illustrations import find_for_lesson, localized_alt, public_metadata
 from learner_state import normalize_learner_id  # type: ignore
+
+import uuid
 
 
 router = APIRouter(prefix="/api/brain", tags=["brain"])
@@ -23,6 +27,35 @@ async def read_brain(learner_id: str):
     """Return the brain document for UI rendering (dashboards, results, teacher)."""
     brain = await get_brain(normalize_learner_id(learner_id))
     return JSONResponse(content=brain)
+
+
+@router.post("/{learner_id}/activeness-goal")
+async def create_activeness_goal(learner_id: str, data: dict):
+    """Create a learner self-goal derived from an activeness domain (F5 mirror).
+
+    Writes a `visible_to_learner` goal into `brain.goals` so it appears in the
+    dashboard "My goals" card, tagged with its source activeness `domain`.
+    """
+    safe_id = normalize_learner_id(learner_id)
+    text = (data.get("text") or "").strip()
+    if not text:
+        return JSONResponse(status_code=400, content={"error": "text required"})
+    domain = (data.get("domain") or "").strip()
+    brain = await get_brain(safe_id)
+    goals = list(brain.get("goals") or [])
+    goal = {
+        "id": f"act-{uuid.uuid4().hex[:8]}",
+        "text": text,
+        "source": "self",
+        "status": "new",
+        "steps": {"done": 0, "total": 3},
+        "visible_to_learner": True,
+        "domain": domain,
+        "meta": "activeness",
+    }
+    goals.append(goal)
+    await apply_brain_updates(safe_id, {"goals": goals[-12:]})
+    return JSONResponse(content=goal)
 
 
 @router.get("/{learner_id}/dashboard")
@@ -45,7 +78,29 @@ async def read_dashboard(learner_id: str, lang: str = "he"):
             brain = await get_brain(safe_id)
         except Exception as exc:
             print(f"⚠️ dashboard onboarding seed failed: {exc}")
-    return JSONResponse(content=project_dashboard(brain, brain.get("identity", {}).get("display_name") or "", lang))
+    dashboard = project_dashboard(
+        brain,
+        brain.get("identity", {}).get("display_name") or "",
+        lang,
+    )
+    hero = dashboard["hero"]
+    events = await get_learner_events(safe_id)
+    hero["stats"] = project_hero_metrics(brain, events)
+    if hero.get("mode") != "complete":
+        asset = await find_for_lesson(hero.get("objectiveId"), hero.get("componentId"))
+        if asset:
+            illustration = public_metadata(asset, lang)
+            illustration["alt"] = localized_alt(
+                lang,
+                hero.get("objectiveTitle") or "",
+                hero.get("subjectName") or "",
+            )
+            hero["illustration"] = illustration
+        else:
+            hero["illustration"] = None
+    else:
+        hero["illustration"] = None
+    return JSONResponse(content=dashboard)
 
 
 @router.get("/{learner_id}/context/coach")

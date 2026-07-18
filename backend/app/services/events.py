@@ -283,6 +283,21 @@ async def get_recent_events(
     return events[:limit]
 
 
+async def get_learner_events(learner_id: str, limit: int = 500) -> list[dict[str, Any]]:
+    """Return bounded event evidence for learner-owned aggregate projections."""
+    safe_id = normalize_learner_id(learner_id)
+    collection = await _events_collection()
+    if collection is not None:
+        try:
+            cursor = collection.find({"learner_id": safe_id}).sort("stored_at", -1).limit(limit)
+            return [event async for event in cursor]
+        except Exception as exc:
+            print(f"⚠️ learner events read failed, using fallback: {exc}")
+    events = [event for event in _fallback_read().values() if event.get("learner_id") == safe_id]
+    events.sort(key=lambda event: event.get("stored_at", ""), reverse=True)
+    return events[:limit]
+
+
 async def get_session_events(learner_id: str, session_id: str) -> list[dict[str, Any]]:
     """Return one pseudonymous launch's events in reported occurrence order."""
     query = {

@@ -238,6 +238,29 @@ def _hero(brain: dict, language: str) -> dict[str, Any]:
     }
 
 
+def project_hero_metrics(brain: dict, events: list[dict[str, Any]]) -> dict[str, Any]:
+    """Project real platform-level totals; absent timing remains unavailable."""
+    plans = plan_next(brain)
+    total = sum(int((plans.get(subject) or {}).get("total", 0)) for subject in DEFAULT_SUBJECTS)
+    mastered = sum(int((plans.get(subject) or {}).get("mastered", 0)) for subject in DEFAULT_SUBJECTS)
+    elapsed_seconds = sum(
+        float((event.get("timing") or {}).get("elapsed_since_previous_seconds") or 0)
+        for event in events
+        if (event.get("timing") or {}).get("quality") == "elapsed_between_events"
+    )
+    completed_units = {
+        event.get("unit_id")
+        for event in events
+        if event.get("verb") == "completed" and event.get("unit_id")
+    }
+    return {
+        "timeSpentMinutes": round(elapsed_seconds / 60) if elapsed_seconds else None,
+        "overallProgress": round((mastered / total) * 100) if total else 0,
+        "completedUnits": len(completed_units),
+        "timingAvailable": bool(elapsed_seconds),
+    }
+
+
 def project_dashboard(brain: dict, name: str, language: str = "he") -> dict[str, Any]:
     """Project the brain into the dashboard DTO (real numbers only)."""
     profile = brain.get("profile") or {}
@@ -260,6 +283,8 @@ def project_dashboard(brain: dict, name: str, language: str = "he") -> dict[str,
             "text": g.get("text", ""),
             "meta": g.get("source", ""),
             "source": g.get("source", ""),
+            "status": g.get("status", ""),
+            "steps": g.get("steps") if isinstance(g.get("steps"), dict) else None,
             "done": g.get("status") == "done",
             "deadline": g.get("deadline"),
         }

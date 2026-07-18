@@ -270,18 +270,28 @@
   }
 }
 
+/* Closing is a shove, not a slide: Yuvi braces side-on against the panel's
+   inner edge and heaves it out with straining, jerky pushes (each heave slips
+   back a touch) before the panel finally clears the right edge. The keyframe
+   timing mirrors the dock so Yuvi's hands stay glued to the panel edge. */
 @keyframes sp-companion-drag-exit {
-  0%, 8% { opacity: 1; transform: translateX(0); }
-  64% { opacity: 1; transform: translateX(101%); }
+  0%, 12% { opacity: 1; transform: translateX(0); }
+  20% { opacity: 1; transform: translateX(2%); }
+  34% { opacity: 1; transform: translateX(6%); }
+  40% { opacity: 1; transform: translateX(5%); }
+  54% { opacity: 1; transform: translateX(20%); }
+  60% { opacity: 1; transform: translateX(17%); }
+  74% { opacity: 1; transform: translateX(55%); }
+  86% { opacity: 1; transform: translateX(90%); }
   100% { opacity: 0; transform: translateX(103%); }
 }
 
 @keyframes sp-companion-slot-return {
-  0%, 8% {
+  0%, 12% {
     flex-basis: var(--sp-companion-width, 430px);
     inline-size: var(--sp-companion-width, 430px);
   }
-  70%, 100% {
+  74%, 100% {
     flex-basis: 0;
     inline-size: 0;
   }
