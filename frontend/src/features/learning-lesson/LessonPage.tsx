@@ -71,7 +71,7 @@ export function LessonPage() {
     setLoading(true)
     setError(false)
     setFrameState('loading')
-    createLearningSession(learnerId, selection.componentId, selection.unitId, language)
+    createLearningSession(selection.componentId, selection.unitId, language)
       .then((nextSession) => {
         if (active) {
           setSession(nextSession)
@@ -121,7 +121,7 @@ export function LessonPage() {
           await wait(attempt === 0 ? 1450 : 850)
           if (controller.signal.aborted) return
           try {
-            const catalog = await getLearningCatalog(learnerId, controller.signal)
+            const catalog = await getLearningCatalog(controller.signal)
             const nextRoadmap = catalog.units.find((unit) => unit.id === session.unit.id)
             const persistedComponent = nextRoadmap?.components.find(
               (component) => component.id === session.component.id,

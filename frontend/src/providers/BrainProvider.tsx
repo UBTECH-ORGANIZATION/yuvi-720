@@ -1,15 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { getBrain, type Brain } from '../services/brain'
+import { useAuth } from './AuthProvider'
 
 /* BrainProvider — the frontend seam onto the Learner Brain (architecture §17.2).
    Surfaces read the brain projection through this provider; they never invent
-   learner data on the client. Until unified sign-in (Phase 5) the current learner
-   is the demo learner; the id becomes session-derived without changing consumers. */
-
-const CURRENT_LEARNER_ID = 'demo-learner'
+   learner data on the client. The learner id is the signed-in user's id, so it
+   is null while logged out and every consumer must handle that. */
 
 interface BrainContextValue {
-  learnerId: string
+  learnerId: string | null
   brain: Brain | null
   isLoading: boolean
   error: string | null
@@ -19,6 +18,8 @@ interface BrainContextValue {
 const BrainContext = createContext<BrainContextValue | null>(null)
 
 export function BrainProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
+  const learnerId = user?.user_id ?? null
   const [brain, setBrain] = useState<Brain | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -27,11 +28,18 @@ export function BrainProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(() => setReloadKey((k) => k + 1), [])
 
   useEffect(() => {
+    if (!learnerId) {
+      // Logged out: nothing to fetch, and asking would only produce a 401.
+      setBrain(null)
+      setError(null)
+      setIsLoading(false)
+      return
+    }
     let active = true
     const controller = new AbortController()
     setIsLoading(true)
     setError(null)
-    getBrain(CURRENT_LEARNER_ID, controller.signal)
+    getBrain(learnerId, controller.signal)
       .then((data) => {
         if (active) setBrain(data)
       })
@@ -45,11 +53,11 @@ export function BrainProvider({ children }: { children: ReactNode }) {
       active = false
       controller.abort()
     }
-  }, [reloadKey])
+  }, [reloadKey, learnerId])
 
   return (
     <BrainContext.Provider
-      value={{ learnerId: CURRENT_LEARNER_ID, brain, isLoading, error, refresh }}
+      value={{ learnerId, brain, isLoading, error, refresh }}
     >
       {children}
     </BrainContext.Provider>

@@ -7,8 +7,6 @@
 
 import { apiPost } from './api'
 
-// Until unified sign-in (Phase 5) the current learner is the demo learner.
-export const CURRENT_LEARNER_ID = 'demo-learner'
 
 const VERB_IRI_BASE = 'https://lxp.education.gov.il/xapi/moe/verbs/'
 const ACTIVITY_IRI_BASE = 'https://lxp.education.gov.il/xapi/moe/activities/'
@@ -32,7 +30,6 @@ export interface Launch {
 }
 
 export interface LaunchParams {
-  learner_id?: string
   objective_id?: string
   component_id?: string
   unit_id?: string
@@ -42,7 +39,6 @@ export interface LaunchParams {
 /** Mint an slxapi launch context for a learner + objective/component. */
 export function mintLaunch(params: LaunchParams): Promise<Launch> {
   return apiPost<Launch>('/api/xapi/launch', {
-    learner_id: params.learner_id ?? CURRENT_LEARNER_ID,
     ...params,
   })
 }

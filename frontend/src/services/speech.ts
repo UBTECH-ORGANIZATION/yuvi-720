@@ -1,7 +1,6 @@
 /* Math-aware read-aloud for completed Yuvi messages.
    Azure Speech is preferred; Web Speech is the no-credentials fallback. */
 
-import { CURRENT_LEARNER_ID } from './xapi'
 import type { YubiVariant } from '../features/yubi-studio/yubiDesign'
 
 export type SpeechState = 'preparing' | 'playing' | 'idle'
@@ -149,7 +148,6 @@ export async function playCoachSpeech(
         text,
         language,
         avatar_variant: avatarVariant,
-        learner_id: CURRENT_LEARNER_ID,
         conversation_id: conversationId,
         exchange_id: exchangeId,
       }),

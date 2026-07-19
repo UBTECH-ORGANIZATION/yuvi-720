@@ -8,10 +8,11 @@ import json
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.auth.dependencies import require_learner
 from app.agents import safety
 from app.agents import sessions
 from app.agents.coach import run_coach_stream
@@ -22,7 +23,6 @@ from app.core.localization import normalize_language
 from app.services.ai_usage import UsageContext
 from app.services.speech import SpeechUnavailable, synthesize_speech
 from app.services import triggers
-from learner_state import normalize_learner_id  # type: ignore
 
 
 router = APIRouter(prefix="/api/agent", tags=["agent"])
@@ -34,7 +34,6 @@ class CoachSpeechRequest(BaseModel):
     text: str = Field(min_length=1, max_length=6000)
     language: str = Field(default="he", max_length=8)
     avatar_variant: Literal["classic", "girl"] = "classic"
-    learner_id: str = Field(default="demo-learner", min_length=1, max_length=120)
     conversation_id: str = Field(default="default", min_length=1, max_length=120)
     exchange_id: str | None = Field(default=None, max_length=120)
 
@@ -42,7 +41,6 @@ class CoachSpeechRequest(BaseModel):
 class CoachConversationRequest(BaseModel):
     """Create a pseudonymous learner-owned Coach conversation."""
 
-    learner_id: str = Field(default="demo-learner", min_length=1, max_length=120)
     unit_id: str | None = Field(default=None, min_length=1, max_length=180)
     component_id: str | None = Field(default=None, min_length=1, max_length=180)
 
@@ -60,7 +58,6 @@ class CoachSurfaceContext(BaseModel):
 
 
 class CoachStreamRequest(BaseModel):
-    learner_id: str = Field(default="demo-learner", min_length=1, max_length=120)
     conversation_id: str = Field(default="default", min_length=1, max_length=120)
     message: str = Field(min_length=1, max_length=4000)
     language: str = Field(default="he", max_length=8)
@@ -68,7 +65,6 @@ class CoachStreamRequest(BaseModel):
 
 
 class CoachProactiveRequest(BaseModel):
-    learner_id: str = Field(default="demo-learner", min_length=1, max_length=120)
     conversation_id: str = Field(default="default", min_length=1, max_length=120)
     trigger: Literal["idle", "misconception", "slow_progress", "success"] = "idle"
     language: str = Field(default="he", max_length=8)
@@ -76,7 +72,6 @@ class CoachProactiveRequest(BaseModel):
 
 
 class CoachSupportRequest(BaseModel):
-    learner_id: str = Field(default="demo-learner", min_length=1, max_length=120)
     conversation_id: str = Field(default="default", min_length=1, max_length=120)
     support: Literal["hint", "explanation"]
     language: str = Field(default="he", max_length=8)
@@ -91,18 +86,16 @@ _SPEECH_UNAVAILABLE = {
 
 
 @router.post("/route/next")
-async def route_next(data: dict):
+async def route_next(data: dict, learner_id: str = Depends(require_learner)):
     """Decide the next objective + component (F1, Pedagogical agent)."""
-    learner_id = normalize_learner_id(data.get("learner_id"))
     language = normalize_language(data.get("language"))
     decision = await select_next(learner_id, locale=language)
     return JSONResponse(content=decision)
 
 
 @router.post("/route/after-fail")
-async def route_after_fail_endpoint(data: dict):
+async def route_after_fail_endpoint(data: dict, learner_id: str = Depends(require_learner)):
     """Route to the alternative representation after a fail/misconception (F1)."""
-    learner_id = normalize_learner_id(data.get("learner_id"))
     language = normalize_language(data.get("language"))
     alt = await route_after_fail(learner_id, locale=language)
     return JSONResponse(content={"component": alt})
@@ -117,9 +110,8 @@ async def reflect_prompt(data: dict):
 
 
 @router.post("/reflect/answer")
-async def reflect_answer(data: dict):
+async def reflect_answer(data: dict, learner_id: str = Depends(require_learner)):
     """Store a learner's reflection answer (+ self vs system estimate)."""
-    learner_id = normalize_learner_id(data.get("learner_id"))
     entry = await reflection.store_reflection(
         learner_id,
         prompt_id=data.get("prompt_id") or "hard_task",
@@ -131,9 +123,9 @@ async def reflect_answer(data: dict):
 
 
 @router.get("/triggers/subscribe")
-async def triggers_subscribe(learner_id: str):
+async def triggers_subscribe(learner_id: str = Depends(require_learner)):
     """SSE stream of proactive triggers for a learner (idle/misconception/success)."""
-    lid = normalize_learner_id(learner_id)
+    lid = learner_id
 
     async def event_generator():
         async for trig in triggers.subscribe(lid):
@@ -143,17 +135,16 @@ async def triggers_subscribe(learner_id: str):
 
 
 @router.post("/triggers/idle")
-async def triggers_idle(data: dict):
+async def triggers_idle(data: dict, learner_id: str = Depends(require_learner)):
     """Client reports idle (absence isn't an event, R5) → fire an idle nudge."""
-    lid = normalize_learner_id(data.get("learner_id"))
+    lid = learner_id
     triggers.publish_idle(lid, data.get("objective_id"))
     return JSONResponse(content={"ok": True})
 
 
 @router.post("/coach/stream")
-async def coach_stream(request: CoachStreamRequest):
+async def coach_stream(request: CoachStreamRequest, learner_id: str = Depends(require_learner)):
     """Stream a Coach chat reply via SSE (F3)."""
-    learner_id = normalize_learner_id(request.learner_id)
     message = request.message.strip()
     language = normalize_language(request.language)
     conversation_id = sessions.normalize_session_id(request.conversation_id)
@@ -238,12 +229,12 @@ async def coach_stream(request: CoachStreamRequest):
 
 @router.get("/coach/conversations")
 async def coach_conversations(
-    learner_id: str,
     limit: int = Query(default=12, ge=1, le=30),
     cursor: str | None = Query(default=None, max_length=400),
+    learner_id: str = Depends(require_learner),
 ):
     """Page through learner-owned Coach threads, newest first."""
-    safe_id = normalize_learner_id(learner_id)
+    safe_id = learner_id
     return JSONResponse(
         content=await sessions.list_conversations(
             safe_id, role="coach", limit=limit, cursor=cursor
@@ -253,9 +244,9 @@ async def coach_conversations(
 
 
 @router.post("/coach/conversations", status_code=201)
-async def create_coach_conversation(request: CoachConversationRequest):
+async def create_coach_conversation(request: CoachConversationRequest, learner_id: str = Depends(require_learner)):
     """Start a new empty Coach thread without storing state in the browser."""
-    safe_id = normalize_learner_id(request.learner_id)
+    safe_id = learner_id
     return JSONResponse(
         status_code=201,
         content=await sessions.create_conversation(
@@ -270,12 +261,12 @@ async def create_coach_conversation(request: CoachConversationRequest):
 @router.get("/coach/conversations/{conversation_id}/messages")
 async def coach_conversation_messages(
     conversation_id: str,
-    learner_id: str,
     limit: int = Query(default=20, ge=1, le=50),
     cursor: str | None = Query(default=None, max_length=400),
+    learner_id: str = Depends(require_learner),
 ):
     """Page backward through one conversation for scroll-up loading."""
-    safe_id = normalize_learner_id(learner_id)
+    safe_id = learner_id
     return JSONResponse(
         content=await sessions.list_messages(
             safe_id,
@@ -289,9 +280,9 @@ async def coach_conversation_messages(
 
 
 @router.delete("/coach/conversations/{conversation_id}")
-async def delete_coach_conversation(conversation_id: str, learner_id: str):
+async def delete_coach_conversation(conversation_id: str, learner_id: str = Depends(require_learner)):
     """Soft-delete a learner-owned thread while retaining its durable records."""
-    safe_id = normalize_learner_id(learner_id)
+    safe_id = learner_id
     deleted = await sessions.soft_delete_conversation(
         safe_id,
         sessions.normalize_session_id(conversation_id),
@@ -303,10 +294,9 @@ async def delete_coach_conversation(conversation_id: str, learner_id: str):
 
 
 @router.post("/coach/tts")
-async def coach_tts(request: CoachSpeechRequest):
+async def coach_tts(request: CoachSpeechRequest, learner_id: str = Depends(require_learner)):
     """Read a completed Coach message aloud without sending image content."""
     language = normalize_language(request.language)
-    learner_id = normalize_learner_id(request.learner_id)
     conversation_id = sessions.normalize_session_id(request.conversation_id)
     screened_text = safety.screen_output(request.text, language).text
     try:
@@ -338,10 +328,9 @@ async def coach_tts(request: CoachSpeechRequest):
 
 
 @router.post("/coach/proactive")
-async def coach_proactive(request: CoachProactiveRequest):
+async def coach_proactive(request: CoachProactiveRequest, learner_id: str = Depends(require_learner)):
     """Stream a proactive nudge (idle / misconception / success). Fired by the
     trigger engine in P4; exposed now so the companion can subscribe."""
-    learner_id = normalize_learner_id(request.learner_id)
     language = normalize_language(request.language)
     trigger = request.trigger
     conversation_id = sessions.normalize_session_id(request.conversation_id)
@@ -365,9 +354,8 @@ async def coach_proactive(request: CoachProactiveRequest):
 
 
 @router.post("/coach/support")
-async def coach_support(request: CoachSupportRequest):
+async def coach_support(request: CoachSupportRequest, learner_id: str = Depends(require_learner)):
     """Stream learner-requested, current-item-grounded support into the task thread."""
-    learner_id = normalize_learner_id(request.learner_id)
     language = normalize_language(request.language)
     conversation_id = sessions.normalize_session_id(request.conversation_id)
     exchange_id = uuid4().hex

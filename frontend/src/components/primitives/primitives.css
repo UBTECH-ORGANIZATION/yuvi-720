@@ -202,3 +202,488 @@
   line-height: 1.2;
 }
 .sp-chip--soft { background: var(--sp-primary-050); border-color: transparent; }
+
+/* ── Modal (see Modal.tsx) ────────────────────────────────────────────────── */
+.sp-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-6);
+  background: var(--sp-overlay);
+  isolation: isolate;
+}
+.sp-modal {
+  position: relative;
+  z-index: 1;
+  width: min(440px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-8);
+  border-radius: 26px;
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+  box-shadow: var(--sp-shadow-lg);
+  color: var(--sp-ink-900);
+  text-align: start;
+  animation: spModalIn .22s ease both;
+}
+.sp-modal:focus,
+.sp-modal:focus-visible {
+  /* The dialog takes focus on open so screen readers announce it, but it is a
+     container — the browser's default ring would draw a box around the whole
+     panel. Its focusable children keep their own rings. */
+  outline: none;
+}
+.sp-modal__title { font-size: 1.32rem; font-weight: 700; margin: 0; }
+.sp-modal__subtitle { margin: 0; color: var(--sp-ink-400); font-size: .95rem; }
+.sp-modal__form { display: flex; flex-direction: column; gap: var(--sp-4); }
+.sp-modal__field { display: flex; flex-direction: column; gap: 6px; }
+.sp-modal__label { font-size: .88rem; font-weight: 600; color: var(--sp-ink-400); }
+.sp-modal__error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: .9rem;
+  color: var(--sp-danger-600);
+  background: var(--sp-danger-100);
+}
+.sp-modal__actions { display: flex; gap: var(--sp-3); justify-content: flex-end; }
+
+@keyframes spModalIn {
+  from { opacity: 0; transform: translateY(8px) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sp-modal { animation: none; }
+}
+
+/* Boot gate placeholder while the session resolves (AuthProvider). */
+.sp-auth-boot { min-height: 100vh; background: var(--sp-bg); }
+
+/* ── User menu (see UserMenu.tsx) ─────────────────────────────────────────── */
+.sp-user-menu { display: inline-flex; align-items: center; gap: 8px; }
+.sp-user-menu__name {
+  font-size: .88rem;
+  font-weight: 600;
+  color: var(--sp-ink-400);
+  max-width: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Auth dialog: the "forge" ─────────────────────────────────────────────
+   Not an overlay on top of the page. The hero image and the login card fly to
+   the centre of the screen as two separate slabs and then weld into a single
+   panel: the gap closes, the facing corners square off, and a seam flares along
+   the join. The landing page hides its own artwork + pilot while this runs, so
+   exactly one Yubi is ever on screen. */
+.sp-modal-backdrop--bare {
+  background: transparent;
+  place-items: center;
+}
+.sp-modal.auth-dialog {
+  width: min(880px, 100%);
+  /* Flex order follows writing direction, which would swap the image to the
+     right in Hebrew/Arabic. Pin the row LTR; the card carries its own dir. */
+  direction: ltr;
+  display: flex;
+  /* Base .sp-modal is a column; this variant is a row of two slabs. */
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;                 /* the slabs must meet flush — this is the weld */
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
+  animation: spForgeEnter .42s cubic-bezier(.2, .9, .25, 1.06) both;
+}
+
+/* Both slabs carry the surface; the container itself is bare so the seam can
+   sit between them. */
+.auth-forge__art,
+.auth-forge__card {
+  position: relative;
+  border: 0;
+  background: var(--sp-surface);
+  box-shadow: var(--sp-shadow-lg);
+}
+.auth-forge__art {
+  flex: 0 0 44%;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(158deg, #1b1550 0%, #3a2fae 46%, #1668a8 100%);
+  border-radius: 26px 0 0 26px;
+  animation: spForgeArt .72s cubic-bezier(.24, .96, .3, 1.02) .34s both;
+}
+
+.auth-forge__card {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-8);
+  color: var(--sp-ink-900);
+  border-radius: 0 26px 26px 0;
+  animation: spForgeCard .72s cubic-bezier(.24, .96, .3, 1.02) .34s both;
+}
+
+/* Full-bleed scene: the backdrop IS the slab, rather than an illustration
+   framed inside it. Everything here is CSS so it scales to any slab size. */
+.auth-forge__sky {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.auth-forge__sky::before {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(126, 231, 255, .20), transparent 42%),
+    radial-gradient(circle at 82% 78%, rgba(168, 132, 255, .24), transparent 46%);
+}
+/* Faint grid, so the space reads as Yubi's station rather than empty colour. */
+.auth-forge__sky::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: .16;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, .5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, .5) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(circle at 50% 62%, #000 12%, transparent 72%);
+}
+
+.auth-forge__orbit {
+  position: absolute;
+  inset-inline-start: 50%;
+  inset-block-start: 58%;
+  border: 1px solid rgba(160, 232, 255, .28);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+}
+.auth-forge__orbit--a { inline-size: 208px; block-size: 208px; animation: spOrbitSpin 16s linear infinite; }
+.auth-forge__orbit--b { inline-size: 286px; block-size: 286px; border-style: dashed; opacity: .5; animation: spOrbitSpin 26s linear infinite reverse; }
+.auth-forge__orbit--c { inline-size: 364px; block-size: 364px; opacity: .28; animation: spOrbitSpin 38s linear infinite; }
+
+/* The pad Yubi hovers over. */
+.auth-forge__glow {
+  position: absolute;
+  inset-inline-start: 50%;
+  inset-block-end: 12%;
+  inline-size: 190px;
+  block-size: 44px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(140, 240, 255, .55), rgba(120, 150, 255, .12) 55%, transparent 74%);
+  filter: blur(3px);
+  animation: spPadPulse 3.4s ease-in-out infinite;
+}
+
+.auth-forge__mote {
+  position: absolute;
+  inline-size: 5px;
+  block-size: 5px;
+  border-radius: 50%;
+  background: #b9f2ff;
+  box-shadow: 0 0 8px rgba(150, 235, 255, .9);
+  opacity: 0;
+  animation: spMoteDrift 7s ease-in-out infinite;
+}
+.auth-forge__mote--1 { inset-inline-start: 12%; inset-block-start: 24%; animation-delay: 0s;   }
+.auth-forge__mote--2 { inset-inline-start: 78%; inset-block-start: 18%; animation-delay: .7s;  }
+.auth-forge__mote--3 { inset-inline-start: 30%; inset-block-start: 70%; animation-delay: 1.4s; }
+.auth-forge__mote--4 { inset-inline-start: 88%; inset-block-start: 52%; animation-delay: 2.1s; }
+.auth-forge__mote--5 { inset-inline-start: 20%; inset-block-start: 46%; animation-delay: 2.8s; }
+.auth-forge__mote--6 { inset-inline-start: 66%; inset-block-start: 78%; animation-delay: 3.5s; }
+.auth-forge__mote--7 { inset-inline-start: 46%; inset-block-start: 14%; animation-delay: 4.2s; }
+.auth-forge__mote--8 { inset-inline-start: 8%;  inset-block-start: 62%; animation-delay: 4.9s; }
+.auth-forge__mote--9 { inset-inline-start: 92%; inset-block-start: 34%; animation-delay: 5.6s; }
+
+/* Yubi hovers and drifts rather than standing still. */
+.auth-forge__robot {
+  position: absolute;
+  inset-inline: 14%;
+  inset-block-end: 8%;
+  block-size: 58%;
+  z-index: 2;
+  pointer-events: none;
+  animation: spYubiHover 5.2s ease-in-out infinite;
+}
+
+/* Greeting bubble, re-keyed per message so each one animates in. */
+.auth-forge__bubble {
+  position: absolute;
+  inset-block-start: 9%;
+  inset-inline: 8%;
+  z-index: 3;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 16px 16px 16px 4px;
+  background: rgba(255, 255, 255, .95);
+  color: #241f3d;
+  font-size: .92rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: 0 10px 26px rgba(12, 8, 48, .34);
+  animation: spBubbleIn .42s cubic-bezier(.2, .9, .3, 1.05) both;
+}
+.auth-forge__bubble::after {
+  content: '';
+  position: absolute;
+  inset-block-end: -7px;
+  inset-inline-start: 22px;
+  inline-size: 14px;
+  block-size: 14px;
+  background: inherit;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+@keyframes spOrbitSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+@keyframes spPadPulse {
+  0%, 100% { opacity: .75; transform: translateX(-50%) scale(1); }
+  50%      { opacity: 1;   transform: translateX(-50%) scale(1.1); }
+}
+@keyframes spMoteDrift {
+  0%       { opacity: 0; transform: translateY(10px) scale(.6); }
+  30%      { opacity: 1; transform: translateY(0) scale(1); }
+  70%      { opacity: .8; transform: translateY(-14px) scale(1); }
+  100%     { opacity: 0; transform: translateY(-26px) scale(.55); }
+}
+@keyframes spYubiHover {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  25%      { transform: translate3d(-8px, -12px, 0) rotate(-1.6deg); }
+  50%      { transform: translate3d(0, -18px, 0) rotate(0deg); }
+  75%      { transform: translate3d(8px, -10px, 0) rotate(1.6deg); }
+}
+@keyframes spBubbleIn {
+  from { opacity: 0; transform: translateY(8px) scale(.94); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* The weld: a bright line that flares along the join as the two slabs meet. */
+.auth-forge__seam {
+  position: absolute;
+  inset-block: 8%;
+  inset-inline-end: -1px;
+  inline-size: 4px;
+  z-index: 4;
+  border-radius: 2px;
+  background: linear-gradient(180deg, transparent, #8ef0ff 18%, #ffffff 50%, #8ef0ff 82%, transparent);
+  opacity: 0;
+  animation: spForgeSeam .95s ease-out .82s both;
+}
+
+@keyframes spForgeEnter {
+  from { opacity: 0; transform: translateY(26px) scale(.9); }
+  to   { opacity: 1; transform: none; }
+}
+/* Slabs start apart with fully rounded facing corners, then close and square
+   off — reading as two parts fusing rather than one box appearing. */
+@keyframes spForgeArt {
+  from { transform: translateX(-104px) scale(.94); border-radius: 26px; }
+  60%  { border-radius: 26px; }
+  to   { transform: none; border-radius: 26px 0 0 26px; }
+}
+@keyframes spForgeCard {
+  from { transform: translateX(104px) scale(.94); border-radius: 26px; }
+  60%  { border-radius: 26px; }
+  to   { transform: none; border-radius: 0 26px 26px 0; }
+}
+@keyframes spForgeSeam {
+  0%   { opacity: 0; transform: scaleY(.15); filter: blur(0); }
+  35%  { opacity: 1; transform: scaleY(1.04); filter: blur(2px); }
+  60%  { opacity: .9; transform: scaleY(1); filter: blur(5px); }
+  100% { opacity: 0; transform: scaleY(1); filter: blur(9px); }
+}
+
+/* Narrow screens: stack, and bring the scrim back since the hero isn't beside it. */
+@media (max-width: 900px) {
+  .sp-modal-backdrop--bare { background: var(--sp-overlay); }
+  .sp-modal.auth-dialog { width: min(420px, 100%); flex-direction: column; }
+  .auth-forge__art { flex: 0 0 190px; }
+  .auth-forge__card { padding: var(--sp-6); }
+  .auth-forge__art, .auth-forge__card { animation: none; }
+  .auth-forge__art { border-radius: 26px 26px 0 0; }
+  .auth-forge__card { border-radius: 0 0 26px 26px; }
+  .auth-forge__seam { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sp-modal.auth-dialog,
+  .auth-forge__art,
+  .auth-forge__card { animation-duration: .01ms; }
+  .auth-forge__seam { display: none; }
+  /* Keep the scene, drop the perpetual motion. */
+  .auth-forge__orbit,
+  .auth-forge__glow,
+  .auth-forge__mote,
+  .auth-forge__robot,
+  .auth-forge__bubble { animation: none; }
+  .auth-forge__mote { opacity: .8; }
+}
+
+/* Boot gate placeholder while the session resolves (AuthProvider). */
+.sp-auth-boot { min-height: 100vh; background: var(--sp-bg); }
+
+/* ── User menu (see UserMenu.tsx) ─────────────────────────────────────────── */
+.sp-user-menu { display: inline-flex; align-items: center; gap: 8px; }
+.sp-user-menu__name {
+  font-size: .88rem;
+  font-weight: 600;
+  color: var(--sp-ink-400);
+  max-width: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Boot gate placeholder while the session resolves (AuthProvider). */
+.sp-auth-boot { min-height: 100vh; background: var(--sp-bg); }
+
+/* ── User menu (see UserMenu.tsx) ─────────────────────────────────────────── */
+.sp-user-menu { display: inline-flex; align-items: center; gap: 8px; }
+.sp-user-menu__name {
+  font-size: .88rem;
+  font-weight: 600;
+  color: var(--sp-ink-400);
+  max-width: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Account menu (see UserMenu.tsx) ──────────────────────────────────────
+   The avatar is the account surface: identity, the preferences stored on the
+   user document (language, light/dark) and sign-out. */
+.user-menu { position: relative; }
+.user-menu__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 6px 6px;
+  border: 1px solid var(--sp-border);
+  border-radius: 999px;
+  background: var(--sp-surface);
+  color: var(--sp-ink-900);
+  cursor: pointer;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+.user-menu__trigger:hover { border-color: var(--sp-border-strong); }
+.user-menu__trigger[aria-expanded='true'] {
+  border-color: var(--sp-primary-500);
+  box-shadow: 0 0 0 3px var(--sp-primary-100);
+}
+.user-menu__name {
+  font-size: 14px;
+  font-weight: 700;
+  max-width: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-menu__chevron { width: 16px; height: 16px; opacity: .55; flex-shrink: 0; }
+.user-menu__trigger[aria-expanded='true'] .user-menu__chevron { transform: rotate(180deg); }
+
+.user-menu__pop {
+  position: absolute;
+  inset-block-start: calc(100% + 8px);
+  inset-inline-end: 0;
+  z-index: 60;
+  inline-size: 264px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border: 1px solid var(--sp-border);
+  border-radius: 18px;
+  background: var(--sp-surface);
+  box-shadow: var(--sp-shadow-lg);
+  animation: spMenuIn .16s ease both;
+}
+.user-menu__head { display: flex; flex-direction: column; gap: 2px; }
+.user-menu__head-name { font-size: 15px; font-weight: 800; color: var(--sp-ink-900); }
+.user-menu__head-handle { font-size: 12px; color: var(--sp-ink-300); }
+
+.user-menu__group { display: flex; flex-direction: column; gap: 6px; }
+.user-menu__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--sp-ink-300);
+}
+.user-menu__choices { display: flex; gap: 6px; }
+.user-menu__choice {
+  flex: 1;
+  padding: 7px 4px;
+  border: 1px solid var(--sp-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--sp-ink-500);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.user-menu__choice:hover { border-color: var(--sp-border-strong); }
+.user-menu__choice.is-active {
+  border-color: transparent;
+  background: var(--sp-primary-600);
+  color: #fff;
+}
+
+.user-menu__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: 9px 10px;
+  border: 1px solid var(--sp-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--sp-ink-700);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.user-menu__row:hover { border-color: var(--sp-border-strong); }
+.user-menu__row--danger { justify-content: center; color: var(--sp-danger-600); }
+
+.user-menu__switch {
+  position: relative;
+  inline-size: 34px;
+  block-size: 20px;
+  border-radius: 999px;
+  background: var(--sp-border-strong);
+  transition: background .18s ease;
+  flex-shrink: 0;
+}
+.user-menu__switch::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-start: 2px;
+  inline-size: 16px;
+  block-size: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform .18s ease;
+}
+.user-menu__switch.is-on { background: var(--sp-primary-600); }
+.user-menu__switch.is-on::after { transform: translateX(14px); }
+[dir='rtl'] .user-menu__switch.is-on::after { transform: translateX(-14px); }
+
+@keyframes spMenuIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .user-menu__pop { animation: none; }
+}

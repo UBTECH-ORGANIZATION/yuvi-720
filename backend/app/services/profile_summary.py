@@ -217,7 +217,11 @@ def build_profile_sources(
             category,
             evidence_type,
             path=f"memory.{theme.get('id')}",
-            feedback_status="accurate" if theme.get("learner_confirmed") else None,
+            # Only the learner's OWN verdict on this claim counts. A theme
+            # confirmed elsewhere (e.g. a mapping reflection) must not arrive
+            # pre-marked "accurate" — that answers the verification question for
+            # them, which is the one thing this screen exists to avoid.
+            feedback_status=_feedback_status(theme),
             memory_kind=kind,
         )
         memory_count += 1

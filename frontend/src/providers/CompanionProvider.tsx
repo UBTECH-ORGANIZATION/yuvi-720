@@ -238,7 +238,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     setIsLoadingConversations(true)
     const initialize = async () => {
       const activityConversation = activityScoped
-        ? await createCoachConversation(undefined, surface)
+        ? await createCoachConversation(surface)
         : null
       const page = await listCoachConversations()
       return { activityConversation, page }
@@ -321,7 +321,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     setHistoryError(false)
     try {
       if (activityScoped) {
-        const conversation = await createCoachConversation(undefined, surface)
+        const conversation = await createCoachConversation(surface)
         setConversations((current) => [
           conversation,
           ...current.filter((item) => item.id !== conversation.id),
@@ -334,7 +334,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         await selectConversation(existingEmpty.id)
         return
       }
-      const conversation = await createCoachConversation(undefined, surface)
+      const conversation = await createCoachConversation(surface)
       setConversations((current) => [conversation, ...current.filter((item) => item.id !== conversation.id)])
       await selectConversation(conversation.id)
     } catch {
@@ -357,7 +357,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         if (remaining[0]) {
           await selectConversation(remaining[0].id)
         } else {
-          const conversation = await createCoachConversation(undefined, surface)
+          const conversation = await createCoachConversation(surface)
           setConversations([conversation])
           await selectConversation(conversation.id)
         }
@@ -378,7 +378,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       let conversationId = activeConversationId
       if (!conversationId) {
         try {
-          const conversation = await createCoachConversation(undefined, surface)
+          const conversation = await createCoachConversation(surface)
           conversationId = conversation.id
           setActiveConversationId(conversation.id)
           setConversations((current) => [conversation, ...current])
@@ -430,7 +430,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
                 message.id === assistantId ? { ...message, visual, isVisualizing: false } : message
               ))
             ),
-        }, conversationId, undefined, surface)
+        }, conversationId, surface)
       } catch {
         setMessages((prev) =>
           prev.map((message) =>
@@ -464,7 +464,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     let conversationId = activeConversationId
     if (!conversationId) {
       try {
-        const conversation = await createCoachConversation(undefined, surface)
+        const conversation = await createCoachConversation(surface)
         conversationId = conversation.id
         setActiveConversationId(conversation.id)
         setConversations((current) => [conversation, ...current])
@@ -490,7 +490,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         onText: (chunk) => setMessages((current) => current.map((message) => (
           message.id === assistantId ? { ...message, text: message.text + chunk } : message
         ))),
-      }, conversationId, undefined, surface)
+      }, conversationId, surface)
     } catch {
       setMessages((current) => current.map((message) => (
         message.id === assistantId && !message.text ? { ...message, text: '…' } : message
@@ -519,7 +519,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       let conversationId = activeConversationId
       if (!conversationId) {
         try {
-          const conversation = await createCoachConversation(undefined, surface)
+          const conversation = await createCoachConversation(surface)
           conversationId = conversation.id
           setActiveConversationId(conversation.id)
           setConversations((current) => [
@@ -545,7 +545,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
                 message.id === assistantId ? { ...message, text: message.text + chunk } : message
               ))
             ),
-        }, conversationId, undefined, surface)
+        }, conversationId, surface)
       } catch {
         /* Proactivity must never disrupt the learner. */
       } finally {

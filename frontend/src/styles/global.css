@@ -48,6 +48,11 @@ button:disabled {
 
 .yuvi-brand-logo {
   display: inline-grid;
+  /* Definite tracks: without these the single grid row auto-sizes to the image's
+     intrinsic height, so the child's `block-size: 100%` resolves against that
+     instead of the box the caller set — the wordmark then overflows its slot. */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   place-items: center;
   inline-size: 100%;
   block-size: 100%;

@@ -91,19 +91,16 @@ export interface LearningTimingDTO {
   active_time_available: false
 }
 
-export function getLearningCatalog(learnerId: string, signal?: AbortSignal) {
-  const params = new URLSearchParams({ learner_id: learnerId })
-  return apiGet<LearningCatalogDTO>(`/api/learning/catalog?${params}`, signal ? { signal } : undefined)
+export function getLearningCatalog(signal?: AbortSignal) {
+  return apiGet<LearningCatalogDTO>('/api/learning/catalog', signal ? { signal } : undefined)
 }
 
 export function createLearningSession(
-  learnerId: string,
   componentId: string,
   unitId: string | null,
   language: Language,
 ) {
   return apiPost<LearningSessionDTO>('/api/learning/sessions', {
-    learner_id: learnerId,
     component_id: componentId,
     unit_id: unitId,
     language,

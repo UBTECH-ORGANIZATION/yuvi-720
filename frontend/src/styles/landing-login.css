@@ -99,7 +99,10 @@
   gap: 10px;
 }
 
-.landing720-brand img {
+/* Legacy rule from the old icon-only mark. The brand logo is a wordmark that
+   sizes itself from .yuvi-brand-logo, so it must opt out — 26px squashed it to
+   an illegible dot. */
+.landing720-brand img:not(.yuvi-brand-logo__image) {
   width: 26px;
   height: 26px;
   object-fit: contain;
@@ -1083,8 +1086,8 @@
 }
 
 .landing720-brand .yuvi-brand-logo {
-  inline-size: 126px;
-  block-size: 48px;
+  inline-size: 168px;
+  block-size: 60px;
   filter: drop-shadow(0 7px 10px rgba(86, 64, 181, 0.2));
 }
 
@@ -2675,3 +2678,13 @@
   }
 }
 
+
+/* Sign-in open: the hero hands its artwork over to the dialog, so the page's
+   own copy (and the pilot Yubi that rides it) steps aside.
+   `visibility`, not `opacity`: the journey script writes the pilot's opacity
+   inline every frame, so a stylesheet opacity rule can never win. */
+.landing720.is-auth-open .landing720-hero-visual,
+.landing720.is-auth-open .landing720-yubi-pilot {
+  visibility: hidden;
+  pointer-events: none;
+}

@@ -28,10 +28,17 @@ _mongo_client: Optional[Any] = None
 
 
 def normalize_learner_id(value: Optional[str]) -> str:
-    """Keep demo learner ids predictable and safe for document keys."""
-    learner_id = (value or DEFAULT_LEARNER_ID).strip()
-    safe = "".join(ch for ch in learner_id if ch.isalnum() or ch in {"-", "_"})
-    return safe or DEFAULT_LEARNER_ID
+    """Sanitize a learner id for use as a document key.
+
+    Deliberately raises instead of substituting a default: an unauthenticated or
+    mis-wired route must fail loudly rather than silently read and write some
+    other account. (This function used to fall back to ``demo-learner``, which
+    is how every route in the app ended up sharing one anonymous identity.)
+    """
+    safe = "".join(ch for ch in (value or "").strip() if ch.isalnum() or ch in {"-", "_"})
+    if not safe:
+        raise ValueError("learner_id is required")
+    return safe
 
 
 def _database_name() -> str:

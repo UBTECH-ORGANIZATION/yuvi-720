@@ -7,19 +7,19 @@ in `app.services.events`.
 
 from typing import Any, Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from app.auth.dependencies import require_learner
 from app.services.events import ingest_statement, mint_launch, verify_launch
-from learner_state import normalize_learner_id  # type: ignore
 
 
 router = APIRouter(prefix="/api/xapi", tags=["xapi"])
 
 
 class LaunchRequest(BaseModel):
-    learner_id: str = Field(default="demo-learner", max_length=120)
+    # No learner_id: the launch is always minted for the session learner.
     objective_id: Optional[str] = Field(default=None, max_length=180)
     component_id: Optional[str] = Field(default=None, max_length=180)
     unit_id: Optional[str] = Field(default=None, max_length=180)
@@ -28,9 +28,8 @@ class LaunchRequest(BaseModel):
 
 
 @router.post("/launch")
-async def create_launch(data: LaunchRequest):
+async def create_launch(data: LaunchRequest, learner_id: str = Depends(require_learner)):
     """Mint an `slxapi` launch context for a learner + (optional) objective/component."""
-    learner_id = normalize_learner_id(data.learner_id)
     return JSONResponse(
         content=mint_launch(
             learner_id,
