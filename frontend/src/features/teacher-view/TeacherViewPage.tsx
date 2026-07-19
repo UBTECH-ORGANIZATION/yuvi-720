@@ -59,10 +59,7 @@ export function TeacherViewPage() {
   }, [studentId, tab, language])
 
   const appBar = (
-    <AppBar
-      studentName={t('teacher.appbar.name')}
-      studentSubtitle={t('teacher.appbar.subtitle')}
-    />
+    <AppBar />
   )
 
   if (loading && !group) return <>{appBar}<main className="tv-wrap"><LoadingState title={t('teacher.loading')} /></main></>

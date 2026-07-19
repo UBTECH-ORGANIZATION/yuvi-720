@@ -152,7 +152,7 @@ export function LandingYubiArtwork() {
 }
 
 export function LandingYubiJourney() {
-  const { t, direction } = useI18n()
+  const { t, direction, language } = useI18n()
   const { isCompact } = useResponsive()
   const pilotRef = useRef<HTMLDivElement | null>(null)
 
@@ -191,9 +191,16 @@ export function LandingYubiJourney() {
     const root = document.querySelector<HTMLElement>('.landing720')
     if (!pilot || !root) return
 
-    const stops = Array.from(root.querySelectorAll<HTMLElement>('[data-yubi-stop]'))
-    const artwork = root.querySelector<HTMLElement>('.landing720-yubi-artwork')
-    if (stops.length === 0) return
+    // Queried fresh on every update rather than captured once. On a language
+    // switch the landing remounts, and this effect can run before the hero's
+    // artwork is queryable — a captured `artwork` would then stay null for the
+    // life of the effect and Yubi would dock to the static fallback point
+    // instead of the illustration, stranding him beside the hero.
+    const readScene = () => ({
+      stops: Array.from(root.querySelectorAll<HTMLElement>('[data-yubi-stop]')),
+      artwork: root.querySelector<HTMLElement>('.landing720-yubi-artwork'),
+    })
+    if (readScene().stops.length === 0) return
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
     let frame = 0
@@ -204,6 +211,8 @@ export function LandingYubiJourney() {
 
     const update = () => {
       frame = 0
+      const { stops, artwork } = readScene()
+      if (stops.length === 0) return
       const viewportWidth = window.innerWidth
       const viewportHeight = window.innerHeight
       const focusOffset = viewportHeight * 0.52
@@ -265,6 +274,10 @@ export function LandingYubiJourney() {
       const rotation = prefersReducedMotion.matches ? 0 : clamp(directionDelta * 0.018 * Math.sin(progress * Math.PI), -13, 13)
       const isFlying = !prefersReducedMotion.matches && isActivelyScrolling && current !== next
 
+      if (artwork) {
+        const r = artwork.getBoundingClientRect()
+        lastAnchor = { x: r.left + r.width * 0.5, y: r.top, w: r.width }
+      }
       pilot.style.left = `${x}px`
       pilot.style.top = `${y}px`
       pilot.style.opacity = `${opacity}`
@@ -301,12 +314,57 @@ export function LandingYubiJourney() {
       resizeTimer = window.setTimeout(scheduleUpdate, 120)
     }
 
+    // Re-anchor every frame for a short window instead of at a few fixed
+    // delays. A language switch remounts the page, mirrors the layout and swaps
+    // text asynchronously (the locale JSON is fetched), so the hero artwork
+    // keeps moving for several hundred ms — and a re-render in the middle of
+    // that would cancel any timers we had pending. Driving it off rAF until the
+    // layout stops moving is immune to both.
+    let lastAnchor: { x: number; y: number; w: number } | null = null
+    let settleUntil = 0
+    let settleFrame = 0
+    const settleLoop = () => {
+      update()
+      settleFrame = performance.now() < settleUntil ? window.requestAnimationFrame(settleLoop) : 0
+    }
+    const beginSettle = (duration = 1500) => {
+      settleUntil = performance.now() + duration
+      if (!settleFrame) settleFrame = window.requestAnimationFrame(settleLoop)
+    }
+
+    // Self-healing anchor watch. Nothing emits an event when an element merely
+    // *moves* — ResizeObserver only fires on size — yet the hero artwork shifts
+    // on locale swaps, font loads and image loads. Rather than guessing at
+    // delays, cheaply re-read its rect and re-dock Yubi whenever it has drifted.
+    const anchorWatch = window.setInterval(() => {
+      const { artwork: current } = readScene()
+      if (!current || !lastAnchor) return
+      const r = current.getBoundingClientRect()
+      const moved =
+        Math.abs(r.left + r.width * 0.5 - lastAnchor.x) > 0.5 ||
+        Math.abs(r.top - lastAnchor.y) > 0.5 ||
+        Math.abs(r.width - lastAnchor.w) > 0.5
+      if (moved) scheduleUpdate()
+    }, 150)
+
     update()
+    beginSettle()
     resizeTimer = window.setTimeout(scheduleUpdate, 120)
     const resizeObserver = 'ResizeObserver' in window ? new ResizeObserver(scheduleUpdate) : null
     resizeObserver?.observe(document.documentElement)
-    if (artwork) resizeObserver?.observe(artwork)
-    stops.forEach((stop) => resizeObserver?.observe(stop))
+    const initial = readScene()
+    if (initial.artwork) resizeObserver?.observe(initial.artwork)
+    initial.stops.forEach((stop) => resizeObserver?.observe(stop))
+
+    // ResizeObserver fires on size, not position. Switching he <-> en mirrors the
+    // hero: the artwork keeps its exact dimensions but jumps to the other side,
+    // so nothing above notices and Yubi is left stranded mid-page. Watch the
+    // `dir`/`lang` attributes that I18nProvider writes on <html> instead.
+    const localeObserver = new MutationObserver(() => beginSettle())
+    localeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['dir', 'lang'],
+    })
     window.addEventListener('scroll', handleScroll, { passive: true })
     window.addEventListener('resize', handleResize, { passive: true })
     prefersReducedMotion.addEventListener('change', scheduleUpdate)
@@ -315,14 +373,17 @@ export function LandingYubiJourney() {
       if (frame) window.cancelAnimationFrame(frame)
       if (flightStopTimer) window.clearTimeout(flightStopTimer)
       if (resizeTimer) window.clearTimeout(resizeTimer)
+      if (settleFrame) window.cancelAnimationFrame(settleFrame)
+      window.clearInterval(anchorWatch)
       resizeObserver?.disconnect()
+      localeObserver.disconnect()
       window.removeEventListener('scroll', handleScroll)
       window.removeEventListener('resize', handleResize)
       prefersReducedMotion.removeEventListener('change', scheduleUpdate)
       delete root.dataset.yubiScene
       delete root.dataset.yubiFlying
     }
-  }, [direction, isCompact])
+  }, [direction, language, isCompact])
 
   return (
     <>

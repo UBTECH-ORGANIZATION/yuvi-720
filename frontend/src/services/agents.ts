@@ -2,7 +2,6 @@
    carries the AI-use `disclosure`, then `text` chunks, then `[DONE]`. Reads/writes
    only through the backend — no `localStorage`. */
 
-import { CURRENT_LEARNER_ID } from './xapi'
 import { apiDelete, apiGet, apiPost } from './api'
 
 export interface CoachVisualScene {
@@ -119,6 +118,7 @@ async function streamAgent(
 ): Promise<void> {
   const response = await fetch(path, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
     signal: handlers.signal,
@@ -175,12 +175,11 @@ export function streamCoach(
   language: string,
   handlers: CoachStreamHandlers,
   conversationId: string = 'default',
-  learnerId: string = CURRENT_LEARNER_ID,
   surface: CoachSurfaceContext = { screen: 'unknown' }
 ): Promise<void> {
   return streamAgent(
     '/api/agent/coach/stream',
-    { learner_id: learnerId, conversation_id: conversationId, message, language, surface },
+    { conversation_id: conversationId, message, language, surface },
     handlers
   )
 }
@@ -190,12 +189,11 @@ export function streamProactive(
   language: string,
   handlers: CoachStreamHandlers,
   conversationId: string = 'default',
-  learnerId: string = CURRENT_LEARNER_ID,
   surface: CoachSurfaceContext = { screen: 'unknown' }
 ): Promise<void> {
   return streamAgent(
     '/api/agent/coach/proactive',
-    { learner_id: learnerId, conversation_id: conversationId, trigger, language, surface },
+    { conversation_id: conversationId, trigger, language, surface },
     handlers
   )
 }
@@ -207,22 +205,20 @@ export function streamCoachSupport(
   language: string,
   handlers: CoachStreamHandlers,
   conversationId: string = 'default',
-  learnerId: string = CURRENT_LEARNER_ID,
   surface: CoachSurfaceContext = { screen: 'learning_lesson' }
 ): Promise<void> {
   return streamAgent(
     '/api/agent/coach/support',
-    { learner_id: learnerId, conversation_id: conversationId, support, language, surface },
+    { conversation_id: conversationId, support, language, surface },
     handlers
   )
 }
 
 export function listCoachConversations(
   cursor?: string | null,
-  limit: number = 12,
-  learnerId: string = CURRENT_LEARNER_ID
+  limit: number = 12
 ): Promise<CoachConversationPage> {
-  const params = new URLSearchParams({ learner_id: learnerId, limit: String(limit) })
+  const params = new URLSearchParams({ limit: String(limit) })
   if (cursor) params.set('cursor', cursor)
   return apiGet<CoachConversationPage>(
     `/api/agent/coach/conversations?${params}`,
@@ -231,11 +227,9 @@ export function listCoachConversations(
 }
 
 export function createCoachConversation(
-  learnerId: string = CURRENT_LEARNER_ID,
   surface: CoachSurfaceContext = { screen: 'unknown' }
 ): Promise<CoachConversation> {
   return apiPost<CoachConversation>('/api/agent/coach/conversations', {
-    learner_id: learnerId,
     unit_id: surface.unit_id,
     component_id: surface.component_id,
   })
@@ -244,10 +238,9 @@ export function createCoachConversation(
 export function listCoachMessages(
   conversationId: string,
   cursor?: string | null,
-  limit: number = 20,
-  learnerId: string = CURRENT_LEARNER_ID
+  limit: number = 20
 ): Promise<CoachMessagePage> {
-  const params = new URLSearchParams({ learner_id: learnerId, limit: String(limit) })
+  const params = new URLSearchParams({ limit: String(limit) })
   if (cursor) params.set('cursor', cursor)
   return apiGet<CoachMessagePage>(
     `/api/agent/coach/conversations/${encodeURIComponent(conversationId)}/messages?${params}`,
@@ -256,12 +249,10 @@ export function listCoachMessages(
 }
 
 export function deleteCoachConversation(
-  conversationId: string,
-  learnerId: string = CURRENT_LEARNER_ID
+  conversationId: string
 ): Promise<{ ok: true }> {
-  const params = new URLSearchParams({ learner_id: learnerId })
   return apiDelete<{ ok: true }>(
-    `/api/agent/coach/conversations/${encodeURIComponent(conversationId)}?${params}`
+    `/api/agent/coach/conversations/${encodeURIComponent(conversationId)}`
   )
 }
 
@@ -282,23 +273,20 @@ export interface NextRouteDecision {
 
 /** Commit the deterministic next route after the learner explicitly starts it. */
 export function selectNextRoute(
-  language: string,
-  learnerId: string = CURRENT_LEARNER_ID
+  language: string
 ): Promise<NextRouteDecision> {
   return apiPost<NextRouteDecision>('/api/agent/route/next', {
-    learner_id: learnerId,
     language,
   })
 }
 
 /** Subscribe to proactive triggers via SSE (EventSource). Returns a closer. */
 export function subscribeTriggers(
-  onTrigger: (t: Trigger) => void,
-  learnerId: string = CURRENT_LEARNER_ID
+  onTrigger: (t: Trigger) => void
 ): () => void {
-  const source = new EventSource(
-    `/api/agent/triggers/subscribe?learner_id=${encodeURIComponent(learnerId)}`
-  )
+  // Same-origin through the Vite proxy today, but be explicit: the SSE stream
+  // is session-scoped and must carry the auth cookie.
+  const source = new EventSource('/api/agent/triggers/subscribe', { withCredentials: true })
   source.onmessage = (e) => {
     try {
       const t = JSON.parse(e.data) as Trigger
@@ -311,10 +299,11 @@ export function subscribeTriggers(
 }
 
 /** Report learner idle (absence isn't an event) so the trigger engine can nudge. */
-export function reportIdle(objectiveId?: string, learnerId: string = CURRENT_LEARNER_ID): void {
+export function reportIdle(objectiveId?: string): void {
   void fetch('/api/agent/triggers/idle', {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ learner_id: learnerId, objective_id: objectiveId }),
+    body: JSON.stringify({ objective_id: objectiveId }),
   }).catch(() => {})
 }

@@ -6,28 +6,29 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
+from app.auth.dependencies import optional_user, require_learner
 from app.brain.repository import _get_collection_named
 from app.services import mentoring
-from learner_state import normalize_learner_id  # type: ignore
 
 
 router = APIRouter(prefix="/api", tags=["mentoring-feedback"])
 
 
 @router.post("/mentoring")
-async def create_mentoring(data: dict):
+async def create_mentoring(data: dict, learner_id: str = Depends(require_learner)):
     """Create a mentoring conversation (F5)."""
-    record = await mentoring.create_conversation(data)
+    # The whole dict is forwarded to the service, so pin the identity here.
+    record = await mentoring.create_conversation({**data, "learner_id": learner_id})
     return JSONResponse(content=record)
 
 
 @router.get("/mentoring")
-async def list_mentoring(learner_id: str, role: str = "teacher"):
+async def list_mentoring(role: str = "teacher", learner_id: str = Depends(require_learner)):
     """List a learner's mentoring conversations (learner hides teacher-only notes)."""
-    rows = await mentoring.list_conversations(normalize_learner_id(learner_id), role)
+    rows = await mentoring.list_conversations(learner_id, role)
     return JSONResponse(content={"conversations": rows})
 
 
@@ -35,11 +36,15 @@ _FB_FALLBACK = Path(__file__).resolve().parents[2] / ".runtime" / "feedback.json
 
 
 @router.post("/feedback")
-async def submit_feedback(data: dict):
-    """Persist a technical/UX feedback report (F7), from inside or outside the app."""
+async def submit_feedback(data: dict, session=Depends(optional_user)):
+    """Persist a technical/UX feedback report (F7), from inside or outside the app.
+
+    Stays reachable while logged out (the landing page can report issues), so the
+    learner id is attached only when a session exists.
+    """
     report = {
         "id": f"fb_{uuid.uuid4().hex[:10]}",
-        "learner_id": normalize_learner_id(data.get("learner_id")) if data.get("learner_id") else None,
+        "learner_id": session["sub"] if session else None,
         "kind": data.get("kind", "issue"),          # issue | suggestion | content_fit
         "message": data.get("message", ""),
         "context": data.get("context", {}),          # route, ua, etc. (auto-attached client-side)

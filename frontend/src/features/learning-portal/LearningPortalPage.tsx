@@ -124,7 +124,7 @@ export function LearningPortalPage() {
     const controller = new AbortController()
     setLoading(true)
     setError(false)
-    getLearningCatalog(learnerId, controller.signal)
+    getLearningCatalog(controller.signal)
       .then((catalog) => {
         if (!active) return
         setUnits(catalog.units)

@@ -1,28 +1,25 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { LanguageSwitcher } from './LanguageSwitcher'
 import { Stepper } from './Stepper'
 import { useI18n } from '../i18n/I18nProvider'
 import { BrandLogo } from './BrandLogo'
-import { ThemeSwitcher } from './ThemeSwitcher'
+import { UserMenu } from './UserMenu'
+
+/* The bar shows the signed-in account and nothing else about "the student" —
+   name, school and avatar all come from the session now, so there is no
+   placeholder identity to drift out of date. Language, theme and sign-out live
+   behind the avatar (see UserMenu). */
 
 interface AppBarProps {
-  studentName: string
-  studentSubtitle: string
   activeStep?: number
   center?: ReactNode
 }
 
-export function AppBar({ studentName, studentSubtitle, activeStep, center }: AppBarProps) {
+export function AppBar({ activeStep, center }: AppBarProps) {
   const { t } = useI18n()
   const [isNavigationOpen, setIsNavigationOpen] = useState(false)
   const [isCompact, setIsCompact] = useState(false)
   const appBarRef = useRef<HTMLElement>(null)
   const hasNavigation = typeof activeStep !== 'number' && Boolean(center)
-  const initials = studentName
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
 
   useEffect(() => {
     const appBar = appBarRef.current
@@ -60,8 +57,6 @@ export function AppBar({ studentName, studentSubtitle, activeStep, center }: App
         <div className="app-bar-brand" aria-label={t('app.brand')}>
           <BrandLogo />
         </div>
-        <LanguageSwitcher />
-        <ThemeSwitcher />
       </div>
       {typeof activeStep === 'number' && (
         <div className="app-bar-steps app-bar-steps--progress">
@@ -98,11 +93,7 @@ export function AppBar({ studentName, studentSubtitle, activeStep, center }: App
         </button>
       )}
       <div className="app-bar-user">
-        <div className="user-meta">
-          <span className="user-name">{studentName}</span>
-          <span className="user-sub">{studentSubtitle}</span>
-        </div>
-        <div className="user-avatar">{initials}</div>
+        <UserMenu />
       </div>
       {hasNavigation && (
         <button

@@ -17,7 +17,9 @@
   box-shadow: 0 10px 32px rgba(2, 4, 17, .26);
 }
 
-[data-theme='dark'] .app-bar-user,
+/* .app-bar-user is a bare wrapper now — the account pill is the trigger button
+   inside it (see UserMenu), which carries its own themed surface. Painting the
+   wrapper too drew a second box around it in dark mode. */
 [data-theme='dark'] .yuvi-language-switcher {
   border-color: var(--sp-border);
   background: rgba(31, 36, 69, .88);

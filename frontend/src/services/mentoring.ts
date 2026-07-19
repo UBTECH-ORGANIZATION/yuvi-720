@@ -2,7 +2,6 @@
    teacher, learner, meeting stage, notes, next steps, deadline. */
 
 import { apiGet, apiPost } from './api'
-import { CURRENT_LEARNER_ID } from './xapi'
 
 export interface MentoringConversation {
   id?: string
@@ -19,12 +18,12 @@ export interface MentoringConversation {
   teacher_only_note?: string
 }
 
-export function createMentoring(conv: MentoringConversation, learnerId = CURRENT_LEARNER_ID) {
-  return apiPost<MentoringConversation>('/api/mentoring', { ...conv, learner_id: learnerId })
+export function createMentoring(conv: MentoringConversation) {
+  return apiPost<MentoringConversation>('/api/mentoring', conv)
 }
-export function listMentoring(role: 'teacher' | 'learner', learnerId = CURRENT_LEARNER_ID) {
+export function listMentoring(role: 'teacher' | 'learner') {
   return apiGet<{ conversations: MentoringConversation[] }>(
-    `/api/mentoring?learner_id=${encodeURIComponent(learnerId)}&role=${role}`
+    `/api/mentoring?role=${role}`
   )
 }
 
@@ -33,10 +32,9 @@ export interface FeedbackInput {
   message: string
   context?: Record<string, unknown>
 }
-export function postFeedback(input: FeedbackInput, learnerId = CURRENT_LEARNER_ID) {
+export function postFeedback(input: FeedbackInput) {
   return apiPost<{ ok: boolean; id: string }>('/api/feedback', {
     ...input,
-    learner_id: learnerId,
     context: { route: location.pathname, ...(input.context || {}) },
   })
 }

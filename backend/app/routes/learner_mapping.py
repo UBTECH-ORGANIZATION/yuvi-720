@@ -1,13 +1,14 @@
 """Learner mapping questionnaire API routes."""
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 
 from app.agents.onboarding import run_onboarding
+from app.auth.dependencies import require_learner
 from app.brain.repository import apply_brain_updates
 from app.core.localization import normalize_language
 from app.services.ai_usage import UsageContext
-from learner_state import normalize_learner_id, update_learner_state
+from learner_state import update_learner_state
 from mock_data import DIMENSIONS, calculate_scores, generate_insights, generate_recommendations
 from questionnaire_locales import get_questionnaire_for_language
 
@@ -29,7 +30,7 @@ async def get_dimensions():
 
 
 @router.post("/submit")
-async def submit_questionnaire(data: dict):
+async def submit_questionnaire(data: dict, learner_id: str = Depends(require_learner)):
     """Submit questionnaire answers, score them, and persist mapping results."""
     answers = data.get("answers", {})
     student_name = data.get("student_name", "תלמיד/ה")
@@ -53,7 +54,6 @@ async def submit_questionnaire(data: dict):
         "recommendations": recommendations,
     }
 
-    learner_id = normalize_learner_id(data.get("learner_id"))
     language = normalize_language(data.get("language"))
 
     # Legacy state kept during migration (dashboard still reads mapping_results).

@@ -1,33 +1,62 @@
-export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, init)
-  if (!response.ok) throw new Error(`GET ${path} failed with ${response.status}`)
-  return response.json() as Promise<T>
+/* Transport for every backend call.
+
+   The session lives in an httpOnly cookie, so every request must be credentialed
+   — there is no token for JS to attach (and localStorage is off-limits in this
+   app; learner state belongs in the backend).
+
+   A 401 is broadcast as a window event rather than handled here: the transport
+   must not know about routing. AuthProvider listens and clears the session. */
+
+export const UNAUTHORIZED_EVENT = 'spark:unauthorized'
+
+export class UnauthorizedError extends Error {
+  constructor(path: string) {
+    super(`${path} requires authentication`)
+    this.name = 'UnauthorizedError'
+  }
 }
 
-export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+export class ForbiddenError extends Error {
+  constructor(path: string) {
+    super(`${path} is not permitted for this account`)
+    this.name = 'ForbiddenError'
+  }
+}
+
+async function request<T>(method: string, path: string, body?: unknown, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    ...init,
+    method,
+    credentials: 'include',
+    headers: body === undefined
+      ? init?.headers
+      : { 'Content-Type': 'application/json', ...(init?.headers || {}) },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) })
   })
-  if (!response.ok) throw new Error(`POST ${path} failed with ${response.status}`)
+
+  if (response.status === 401) {
+    window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT))
+    throw new UnauthorizedError(path)
+  }
+  if (response.status === 403) throw new ForbiddenError(path)
+  if (!response.ok) throw new Error(`${method} ${path} failed with ${response.status}`)
   return response.json() as Promise<T>
 }
 
-export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(path, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  })
-  if (!response.ok) throw new Error(`PATCH ${path} failed with ${response.status}`)
-  return response.json() as Promise<T>
+export function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
+  return request<T>('GET', path, undefined, init)
 }
 
-export async function apiDelete<T>(path: string): Promise<T> {
-  const response = await fetch(path, { method: 'DELETE' })
-  if (!response.ok) throw new Error(`DELETE ${path} failed with ${response.status}`)
-  return response.json() as Promise<T>
+export function apiPost<T>(path: string, body: unknown): Promise<T> {
+  return request<T>('POST', path, body)
+}
+
+export function apiPatch<T>(path: string, body: unknown): Promise<T> {
+  return request<T>('PATCH', path, body)
+}
+
+export function apiDelete<T>(path: string): Promise<T> {
+  return request<T>('DELETE', path)
 }
 
 export interface LearnerState {
@@ -58,10 +87,15 @@ export async function streamPost(
 ): Promise<void> {
   const response = await fetch(path, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   })
 
+  if (response.status === 401) {
+    window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT))
+    throw new UnauthorizedError(path)
+  }
   if (!response.ok || !response.body) throw new Error(`POST ${path} stream failed`)
 
   const reader = response.body.getReader()
