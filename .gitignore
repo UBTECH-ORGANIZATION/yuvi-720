@@ -13,6 +13,9 @@ static/react/
 admin/frontend/node_modules/
 admin/frontend/dist/
 .DS_Store
+
+# Postman env holds LRS staging client_secret – never commit
+docs/LRS/postman/720-LRS.postman_environment.json
 artifacts/
 unity-learning-world/[Ll]ibrary/
 unity-learning-world/[Tt]emp/
