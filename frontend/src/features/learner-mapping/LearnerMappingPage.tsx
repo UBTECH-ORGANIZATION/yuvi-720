@@ -3,9 +3,9 @@ import type { CSSProperties } from 'react'
 import { AppBar } from '../../components/AppBar'
 import { navigate } from '../../app/router'
 import { useI18n } from '../../i18n/I18nProvider'
+import { useAuth } from '../../providers/AuthProvider'
 import { useResponsive } from '../../hooks/useResponsive'
 import { apiGet, apiPatch, apiPost } from '../../services/api'
-import { CURRENT_LEARNER_ID } from '../../services/xapi'
 import type { ChatMessage, QuestionLocation, Questionnaire, QuestionnaireOptionQuestion } from './types'
 import { YubiRobot3D, YUBI_INTRO_READY_DELAY_MS } from './YubiRobot3D'
 import { PHASE_REWARDS, getAsset } from '../yubi-studio/yubiAssets'
@@ -45,7 +45,6 @@ type MappingProgress = {
   completed: boolean
 }
 
-const studentName = 'יובל כהן'
 const QUESTION_HANDOFF_CLEAR_MS = 600
 const QUESTION_HANDOFF_MOVE_MS = 1180
 const REFLECTION_HANDOFF_MOVE_MS = 900
@@ -64,6 +63,9 @@ const QUESTION_HANDOFF_QUESTION_DELAY_MS =
 
 export function LearnerMappingPage() {
   const { language, isLoading, t } = useI18n()
+  const { user } = useAuth()
+  // The learner is whoever is signed in — there is no placeholder student.
+  const displayName = user?.display_name || t('sdash.learnerFallback')
   const studioTransition = useStudioTransition()
   const { isPhone } = useResponsive()
   const [questionnaire, setQuestionnaire] = useState<Questionnaire | null>(null)
@@ -168,7 +170,7 @@ export function LearnerMappingPage() {
       // localStorage (720: learner progress must live in backend state).
       try {
         const state = await apiGet<{ mapping_progress?: MappingProgress | null }>(
-          `/api/learner-state?learner_id=${encodeURIComponent(CURRENT_LEARNER_ID)}`
+          '/api/learner-state'
         )
         if (cancelled) return
         const progress = state?.mapping_progress
@@ -252,7 +254,7 @@ export function LearnerMappingPage() {
   useEffect(() => {
     if (!questionnaire || isLoading || booting) return
     if (skipIntroRef.current) return
-    const messages = [1, 2, 3, 4, 5, 6].map((index) => t(`intro.${index}`, { studentName }))
+    const messages = [1, 2, 3, 4, 5, 6].map((index) => t(`intro.${index}`, { studentName: displayName }))
     void playChatSequence(messages, 'intro')
     return () => {
       chatSequenceRunRef.current += 1
@@ -261,7 +263,6 @@ export function LearnerMappingPage() {
 
   function persistMappingProgress(progress: MappingProgress) {
     void apiPatch('/api/learner-state', {
-      learner_id: CURRENT_LEARNER_ID,
       mapping_progress: progress,
     }).catch(() => {})
   }
@@ -270,7 +271,7 @@ export function LearnerMappingPage() {
   // already rewarded (e.g. after a resume) doesn't re-announce the prize.
   useEffect(() => {
     void apiGet<{ avatar_unlocks?: string[] }>(
-      `/api/learner-state?learner_id=${encodeURIComponent(CURRENT_LEARNER_ID)}`
+      '/api/learner-state'
     )
       .then((state) => {
         unlockedRef.current = new Set(Array.isArray(state?.avatar_unlocks) ? state.avatar_unlocks : [])
@@ -286,7 +287,6 @@ export function LearnerMappingPage() {
     if (!assetId || unlockedRef.current.has(assetId)) return
     unlockedRef.current.add(assetId)
     void apiPatch('/api/learner-state', {
-      learner_id: CURRENT_LEARNER_ID,
       avatar_unlocks: Array.from(unlockedRef.current),
     }).catch(() => {})
     setRewardAssetId(assetId)
@@ -1019,7 +1019,6 @@ export function LearnerMappingPage() {
       // Last question answered — consolidate picks (non-blocking) and close.
       setReflectIndex(reflectQuestions.length)
       void apiPost('/api/section-reflect/capture', {
-        learner_id: CURRENT_LEARNER_ID,
         phase_title: summaryTitle,
         language,
         choices: nextChoices.map((c) => ({ label: c.choice, signal: c.signal })),
@@ -1066,7 +1065,7 @@ export function LearnerMappingPage() {
       // free-text chat lines feed interest extraction (only what they stated).
       const freeTextLines = chatHistory.filter((m) => m.role === 'user').map((m) => m.content)
       await apiPost('/api/submit', {
-        student_name: studentName,
+        student_name: displayName,
         answers,
         language,
         free_text: freeTextLines.join('\n')
@@ -1076,38 +1075,6 @@ export function LearnerMappingPage() {
     }
     // Mapping is done — clear the resume checkpoint so the next visit starts fresh.
     await apiPatch('/api/learner-state', {
-      learner_id: CURRENT_LEARNER_ID,
-      mapping_progress: { completed: true },
-    }).catch(() => {})
-    navigate('/results')
-  }
-
-  // Demo shortcut: fill every question with a neutral default and jump to results.
-  async function skipWithDefaults() {
-    if (!flattened.questions.length) return
-    const filled: Answers = {}
-    flattened.questions.forEach((question) => {
-      const optionCount = question.options?.length ?? 2
-      filled[question.id] = Math.floor((optionCount - 1) / 2)
-    })
-    setAnswers(filled)
-    // Keep the existing Yubi scene mounted while the demo result is persisted;
-    // a blank completion screen would break the visual handoff to results.
-    setScreen('chat')
-    setChatMode('intro')
-    setIsTyping(true)
-    setActiveStep(3)
-    try {
-      await apiPost('/api/submit', {
-        student_name: studentName,
-        answers: filled,
-        language
-      })
-    } catch {
-      // Results page will show a no-data state if persistence fails.
-    }
-    void apiPatch('/api/learner-state', {
-      learner_id: CURRENT_LEARNER_ID,
       mapping_progress: { completed: true },
     }).catch(() => {})
     navigate('/results')
@@ -1118,7 +1085,7 @@ export function LearnerMappingPage() {
 
   return (
     <div className="learner-mapping-page">
-      <AppBar studentName={studentName} studentSubtitle={t('app.studentSubtitle')} activeStep={activeStep} />
+      <AppBar activeStep={activeStep} />
       {rewardAssetId && (() => {
         const asset = getAsset(rewardAssetId)
         if (!asset) return null
@@ -1148,7 +1115,6 @@ export function LearnerMappingPage() {
                 messages={chatMessages}
                 isTyping={isTyping}
                 startLabel={t('chat.action.start')}
-                skipLabel={t('chat.action.skip')}
                 trustLabel={t('chat.trust')}
                 robotLabel={t('robot.aria')}
                 lightweight={isPhone}
@@ -1157,7 +1123,6 @@ export function LearnerMappingPage() {
                 isHandoff={introHandoff}
                 hideOrbit={Boolean(transitionYubi)}
                 onStart={() => setShowIntegrityDialog(true)}
-                onSkip={() => void skipWithDefaults()}
                 editTooltip={t('yubiStudio.launcher')}
                 onEdit={(el) => (studioTransition ? studioTransition.openStudio(el) : navigate('/yuvi-studio'))}
               />
@@ -1478,13 +1443,12 @@ function YubiFloater({
 }
 
 function IntroNarrative({
-  messages, isTyping, startLabel, skipLabel, trustLabel, robotLabel, lightweight,
-  isSpeakingText, canStart, isHandoff, hideOrbit, onStart, onSkip, editTooltip, onEdit,
+  messages, isTyping, startLabel, trustLabel, robotLabel, lightweight,
+  isSpeakingText, canStart, isHandoff, hideOrbit, onStart, editTooltip, onEdit,
 }: {
   messages: ChatMessage[]
   isTyping: boolean
   startLabel: string
-  skipLabel: string
   trustLabel: string
   robotLabel: string
   lightweight: boolean
@@ -1493,7 +1457,6 @@ function IntroNarrative({
   isHandoff: boolean
   hideOrbit: boolean
   onStart: () => void
-  onSkip: () => void
   editTooltip: string
   onEdit: (sourceEl: HTMLElement) => void
 }) {
@@ -1535,9 +1498,6 @@ function IntroNarrative({
               <button className="sp-btn sp-btn--gradient sp-btn--pill" onClick={onStart} disabled={!canStart}>
                 <span>{startLabel}</span>
                 <ChevronBackIcon />
-              </button>
-              <button className="sp-btn sp-btn--ghost sp-btn--pill sp-btn--sm" onClick={onSkip} disabled={!canStart}>
-                {skipLabel}
               </button>
             </div>
             <div className="trust-line intro-trust">

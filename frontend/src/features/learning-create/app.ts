@@ -1,7 +1,6 @@
 // @ts-nocheck
 /* eslint-disable */
 
-import { CURRENT_LEARNER_ID } from '../../services/xapi'
 
 export function initLomdaCreator() {
     // ============================================================
@@ -140,7 +139,6 @@ export function initLomdaCreator() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  learner_id: CURRENT_LEARNER_ID,
                   message: text,
                   topic: currentTopic,
                   student_name: STUDENT_NAME,

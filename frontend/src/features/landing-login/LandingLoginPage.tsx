@@ -3,10 +3,13 @@ import { navigate } from '../../app/router'
 import { LanguageSwitcher } from '../../components/LanguageSwitcher'
 import { BrandLogo } from '../../components/BrandLogo'
 import { ThemeSwitcher } from '../../components/ThemeSwitcher'
+import { UserMenu } from '../../components/UserMenu'
 import { useI18n } from '../../i18n/I18nProvider'
+import { useAuth } from '../../providers/AuthProvider'
 import { apiPost } from '../../services/api'
 import { AgentsDiagram } from './AgentsDiagram'
 import { LandingYubiArtwork, LandingYubiJourney } from './LandingYubiJourney'
+import { LoginDialog } from './LoginDialog'
 
 const FAQ_KEYS = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6']
 
@@ -132,13 +135,32 @@ function MailIcon(props: SVGProps<SVGSVGElement>) {
 
 type ContactStatus = 'idle' | 'sending' | 'success' | 'error'
 
-export function LandingLoginPage() {
+type LoginIntent = 'student' | 'teacher'
+
+/* `initialDialog` lets the route guard render this page with sign-in already
+   open, instead of navigating away and losing the URL the user asked for. */
+export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginIntent } = {}) {
   const { t, language } = useI18n()
+  const { user, isTeacher, logout } = useAuth()
+  const [loginIntent, setLoginIntent] = useState<LoginIntent | null>(initialDialog ?? null)
   const [openFaq, setOpenFaq] = useState<string | null>(FAQ_KEYS[0])
   const [contactName, setContactName] = useState('')
   const [contactEmail, setContactEmail] = useState('')
   const [contactMessage, setContactMessage] = useState('')
   const [contactStatus, setContactStatus] = useState<ContactStatus>('idle')
+
+  const afterLogin = '/student-dashboard'
+
+  const onLoginSuccess = () => {
+    const intent = loginIntent
+    setLoginIntent(null)
+    // Guard mode: the router is already sitting on the page the user asked for,
+    // so authenticating is enough — navigating would throw that destination away.
+    if (initialDialog) return
+    // Head for the dashboard and let the onboarding gate redirect to whichever
+    // step this learner is actually on — it is the single source of truth.
+    navigate(intent === 'teacher' ? '/teacher-view' : afterLogin)
+  }
 
   async function submitContactForm(event: FormEvent) {
     event.preventDefault()
@@ -162,7 +184,7 @@ export function LandingLoginPage() {
   }
 
   return (
-    <main className="landing720" id="mainContent">
+    <main className={`landing720${loginIntent ? ' is-auth-open' : ''}`} id="mainContent">
       <LandingYubiJourney />
       <header className="landing720-header">
         <div className="landing720-brand">
@@ -179,6 +201,7 @@ export function LandingLoginPage() {
         <div className="landing720-lang-wrap">
           <ThemeSwitcher />
           <LanguageSwitcher />
+          <UserMenu />
         </div>
       </header>
 
@@ -197,22 +220,43 @@ export function LandingLoginPage() {
 
           <aside className="landing720-login">
             <h2>{t('landing.login.title')}</h2>
-            <p>{t('landing.login.subtitle')}</p>
+            <p>{user ? t('auth.status.signedInAs').replace('{name}', user.display_name) : t('landing.login.subtitle')}</p>
 
-            <button className="landing720-login-btn student" onClick={() => navigate('/learner-mapping')}>
-              <GraduationCapIcon />
-              <span>{t('landing.login.student')}</span>
-            </button>
+            {user ? (
+              <>
+                <button className="landing720-login-btn student" onClick={() => navigate(afterLogin)}>
+                  <GraduationCapIcon />
+                  <span>{t('auth.action.continue')}</span>
+                </button>
+                {isTeacher ? (
+                  <button className="landing720-login-btn teacher" onClick={() => navigate('/teacher-view')}>
+                    <UserCheckIcon />
+                    <span>{t('landing.login.teacher')}</span>
+                  </button>
+                ) : null}
+                <button className="landing720-login-btn secure" onClick={() => void logout()}>
+                  <ShieldIcon />
+                  <span>{t('auth.action.logout')}</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="landing720-login-btn student" onClick={() => setLoginIntent('student')}>
+                  <GraduationCapIcon />
+                  <span>{t('landing.login.student')}</span>
+                </button>
 
-            <button className="landing720-login-btn teacher" onClick={() => navigate('/teacher-view')}>
-              <UserCheckIcon />
-              <span>{t('landing.login.teacher')}</span>
-            </button>
+                <button className="landing720-login-btn teacher" onClick={() => setLoginIntent('teacher')}>
+                  <UserCheckIcon />
+                  <span>{t('landing.login.teacher')}</span>
+                </button>
 
-            <button className="landing720-login-btn secure" onClick={() => navigate('/student-dashboard')}>
-              <ShieldIcon />
-              <span>{t('landing.login.secure')}</span>
-            </button>
+                <button className="landing720-login-btn secure" onClick={() => setLoginIntent('student')}>
+                  <ShieldIcon />
+                  <span>{t('landing.login.secure')}</span>
+                </button>
+              </>
+            )}
           </aside>
         </article>
 
@@ -346,6 +390,12 @@ export function LandingLoginPage() {
           {t('landing.pills.languages')}
         </span>
       </section>
+
+      <LoginDialog
+        open={loginIntent !== null}
+        onClose={() => setLoginIntent(null)}
+        onSuccess={onLoginSuccess}
+      />
     </main>
   )
 }

@@ -104,20 +104,19 @@ export interface LearningTimingDTO {
   active_time_available: false
 }
 
-export function getLearningCatalog(learnerId: string, signal?: AbortSignal, lang?: Language) {
-  const params = new URLSearchParams({ learner_id: learnerId })
-  if (lang) params.set('lang', lang)
-  return apiGet<LearningCatalogDTO>(`/api/learning/catalog?${params}`, signal ? { signal } : undefined)
+export function getLearningCatalog(signal?: AbortSignal, lang?: Language) {
+  // The learner is resolved server-side from the session cookie — never sent
+  // by the client. `lang` only localizes the per-unit lesson illustrations.
+  const suffix = lang ? `?lang=${encodeURIComponent(lang)}` : ''
+  return apiGet<LearningCatalogDTO>(`/api/learning/catalog${suffix}`, signal ? { signal } : undefined)
 }
 
 export function createLearningSession(
-  learnerId: string,
   componentId: string,
   unitId: string | null,
   language: Language,
 ) {
   return apiPost<LearningSessionDTO>('/api/learning/sessions', {
-    learner_id: learnerId,
     component_id: componentId,
     unit_id: unitId,
     language,

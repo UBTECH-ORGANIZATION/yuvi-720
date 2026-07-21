@@ -956,3 +956,15 @@
   .profile-claim__feedback-actions { display: grid; grid-template-columns: 1fr; }
   .profile-claim__feedback button { inline-size: 100%; }
 }
+
+/* Shown when the learner has not yet answered the claim on screen. */
+.results-journey__hint {
+  margin: 0;
+  align-self: center;
+  font-size: .9rem;
+  color: var(--sp-ink-400);
+}
+.results-primary-button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}

@@ -2,12 +2,12 @@
 
 import json
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
+from app.auth.dependencies import require_learner
 from app.services.ai_usage import UsageContext
 from app.services.llm import call_llm_stream
-from learner_state import normalize_learner_id
 
 
 router = APIRouter(prefix="/api", tags=["learning-content"])
@@ -30,9 +30,8 @@ CURRICULUM_TOPICS = {
 
 
 @router.post("/create-lomda-stream")
-async def create_lomda_stream(data: dict):
+async def create_lomda_stream(data: dict, learner_id: str = Depends(require_learner)):
     """Stream a complete self-contained HTML learning mini-game."""
-    learner_id = normalize_learner_id(data.get("learner_id"))
     message = (data.get("message") or "").strip()
     topic_id = (data.get("topic") or "electronics").strip()
     topic = CURRICULUM_TOPICS.get(topic_id, CURRICULUM_TOPICS["electronics"])

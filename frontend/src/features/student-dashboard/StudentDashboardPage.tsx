@@ -44,6 +44,7 @@ export function StudentDashboardPage() {
   }, [])
 
   useEffect(() => {
+    if (!learnerId) return
     let active = true
     const controller = new AbortController()
     if (!dashboard) setLoading(true)
@@ -69,7 +70,7 @@ export function StudentDashboardPage() {
   useEffect(() => {
     let active = true
     const controller = new AbortController()
-    getLearningCatalog(learnerId, controller.signal, language)
+    getLearningCatalog(controller.signal, language)
       .then((catalog) => {
         if (active) setRoadmapUnits(catalog.units)
       })
@@ -115,7 +116,7 @@ export function StudentDashboardPage() {
 
     setIsStarting(true)
     try {
-      const decision = await selectNextRoute(language, learnerId)
+      const decision = await selectNextRoute(language)
       refreshBrain()
       navigate(routeForComponent(decision.component?.id || dashboard.hero.componentId))
     } catch {

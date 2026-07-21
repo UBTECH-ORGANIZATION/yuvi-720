@@ -14,7 +14,7 @@ import { useI18n } from '../../i18n/I18nProvider'
 import { useTheme } from '../../providers/ThemeProvider'
 import type { DashboardDTO } from '../../services/brain'
 import { createActivenessGoal } from '../../services/brain'
-import { CURRENT_LEARNER_ID } from '../../services/xapi'
+import { useBrain } from '../../providers/BrainProvider'
 import { updateLearnerState } from '../../services/api'
 import './activeness-map.css'
 
@@ -770,6 +770,7 @@ const EMISSIVE_BY_TONE: Record<Tone, number> = { strong: 0.32, steady: 0, suppor
 export function ActivenessMap3D({ competencies, studentName, initial, onClose }: ActivenessMap3DProps) {
   const { t, direction } = useI18n()
   const { theme } = useTheme()
+  const { learnerId } = useBrain()
   const mountRef = useRef<HTMLDivElement | null>(null)
   const labelRefs = useRef<Record<string, HTMLButtonElement | null>>({})
   const captionRef = useRef<HTMLDivElement | null>(null)
@@ -877,7 +878,8 @@ export function ActivenessMap3D({ competencies, studentName, initial, onClose }:
     const goal = { domain: flow.domain, behavior: flow.behavior, context: flow.context, text }
     setSaving(true)
     try {
-      const created = await createActivenessGoal(CURRENT_LEARNER_ID, { domain: flow.domain, text })
+      if (!learnerId) throw new Error('learner unknown')   // catch keeps the local demo flow
+      const created = await createActivenessGoal(learnerId, { domain: flow.domain, text })
       const withId = { ...goal, id: created.id }
       setActiveGoal(withId)
       persist(withId)

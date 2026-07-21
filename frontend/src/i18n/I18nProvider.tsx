@@ -72,7 +72,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     let active = true
     const timeout = timeoutSignal(5000)
     applyDocumentLanguage(language)
-    if (loadedPreference) void updateLearnerState({ language })
+    // Signed-out visitors can still switch language on the landing page; the
+    // write just 401s and the choice stays local until they sign in.
+    if (loadedPreference) void updateLearnerState({ language }).catch(() => undefined)
     setIsLoading(true)
 
     fetch(`/locales/${language}.json`, { signal: timeout.signal, cache: 'no-store' })

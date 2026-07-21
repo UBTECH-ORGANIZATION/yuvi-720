@@ -16,6 +16,18 @@
         "-y",
         "drawio-mcp-server"
       ]
+    },
+    "yuvi-unity": {
+      "type": "stdio",
+      "command": "/opt/homebrew/bin/uvx",
+      "args": [
+        "--from",
+        "mcpforunityserver==10.1.0",
+        "mcp-for-unity",
+        "--transport",
+        "stdio",
+        "--project-scoped-tools"
+      ]
     }
   }
 }

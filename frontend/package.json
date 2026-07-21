@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
+    "build:unity": "../scripts/build-unity-world.sh",
+    "build:all": "npm run build:unity && npm run build",
     "preview": "vite preview --host 0.0.0.0",
     "test:companion-visuals": "node scripts/test-companion-visuals.mjs",
     "test:companion-visuals:headed": "node scripts/test-companion-visuals.mjs --headed"

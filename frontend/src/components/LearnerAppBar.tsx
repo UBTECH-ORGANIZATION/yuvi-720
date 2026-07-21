@@ -78,10 +78,6 @@ export function LearnerAppBar({ studentName }: LearnerAppBarProps) {
   )
 
   return (
-    <AppBar
-      studentName={displayName}
-      studentSubtitle={t('sdash.appbar.subtitle')}
-      center={navigation}
-    />
+    <AppBar center={navigation} />
   )
 }

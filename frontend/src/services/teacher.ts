@@ -26,20 +26,19 @@ export interface GroupInsight {
 }
 export interface Group { id: string; name: string; subject?: string; teacher_id?: string }
 
-export function getGroupInsights(groupId: string, language: string, teacherId = 'teacher-demo') {
-  return apiPost<GroupInsight>('/api/agent/insights', { teacher_id: teacherId, group_id: groupId, language })
+export function getGroupInsights(groupId: string, language: string) {
+  return apiPost<GroupInsight>('/api/agent/insights', { group_id: groupId, language })
 }
-export function getStudentInsights(learnerId: string, language: string, teacherId = 'teacher-demo') {
-  return apiPost<StudentInsight>('/api/agent/insights', { teacher_id: teacherId, learner_id: learnerId, language })
+export function getStudentInsights(learnerId: string, language: string) {
+  return apiPost<StudentInsight>('/api/agent/insights', { learner_id: learnerId, language })
 }
-export function listGroups(teacherId = 'teacher-demo') {
-  return apiGet<{ groups: Group[] }>(`/api/groups?teacher_id=${encodeURIComponent(teacherId)}`)
+export function listGroups() {
+  return apiGet<{ groups: Group[] }>('/api/groups')
 }
 export function saveDirective(
   learnerId: string,
   text: string,
-  opts: { scope?: string; priority?: string; visible_to_learner?: boolean } = {},
-  teacherId = 'teacher-demo'
+  opts: { scope?: string; priority?: string; visible_to_learner?: boolean } = {}
 ) {
-  return apiPost('/api/teacher/directive', { teacher_id: teacherId, learner_id: learnerId, text, ...opts })
+  return apiPost('/api/teacher/directive', { learner_id: learnerId, text, ...opts })
 }

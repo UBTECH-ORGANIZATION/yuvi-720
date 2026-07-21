@@ -13,4 +13,30 @@ static/react/
 admin/frontend/node_modules/
 admin/frontend/dist/
 .DS_Store
+
+# Postman env holds LRS staging client_secret – never commit
+docs/LRS/postman/720-LRS.postman_environment.json
 artifacts/
+unity-learning-world/[Ll]ibrary/
+unity-learning-world/[Tt]emp/
+unity-learning-world/[Oo]bj/
+unity-learning-world/[Ll]ogs/
+unity-learning-world/[Uu]ser[Ss]ettings/
+unity-learning-world/[Mm]emoryCaptures/
+unity-learning-world/[Bb]uild/
+unity-learning-world/[Bb]uilds/
+unity-learning-world/[Ss]erver[Dd]ata/
+unity-learning-world/.vscode/
+# Unity-generated solution/project files (regenerated from Assets on open)
+unity-learning-world/*.csproj
+unity-learning-world/*.sln
+unity-learning-world/*.slnx
+# Regenerable capture output — not source
+unity-learning-world/[Aa]ssets/Screenshots/
+unity-learning-world/[Aa]ssets/Screenshots.meta
+unity-learning-world/Assets/Art/World/HighFidelity/ReviewCaptures/
+unity-learning-world/Assets/Art/World/HighFidelity/ReviewCaptures.meta
+
+# Local editor prefs and scratch exports (not project source)
+.vscode/settings.json
+/Gemini_Generated_Image_*.svg

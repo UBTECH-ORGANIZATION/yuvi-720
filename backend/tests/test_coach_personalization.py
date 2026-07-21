@@ -15,7 +15,6 @@ class CoachPersonalizationTests(unittest.IsolatedAsyncioTestCase):
             "identity": {"locale": "he"},
             "profile": {
                 "interests": ["כדורגל"],
-                "hobbies": ["ציור"],
                 "characteristics": ["אוהב/ת לנסות לבד"],
                 "learning_style": "הסבר חזותי בצעדים קצרים",
                 "preferences": ["משוב מיידי"],
@@ -49,7 +48,7 @@ class CoachPersonalizationTests(unittest.IsolatedAsyncioTestCase):
                 "learner-pseudonym", {"screen": "student_dashboard"}
             )
 
-        self.assertEqual(bundle["profile"]["interests"], ["כדורגל", "ציור"])
+        self.assertEqual(bundle["profile"]["interests"], ["כדורגל"])
         self.assertEqual(bundle["strategies"], ["דוגמה חזותית לפני הנוסחה"])
         self.assertEqual(bundle["teacher_guidance"], ["לתת דוגמה חזותית"])
         rendered = _render_context(bundle)
@@ -125,15 +124,28 @@ class CoachPersonalizationTests(unittest.IsolatedAsyncioTestCase):
     def test_coach_scope_declares_every_brain_field_used_by_bundle(self) -> None:
         reads = set(AGENT_VIEWS["coach"]["read"])
         expected = {
-            "identity.locale", "profile.interests", "profile.hobbies",
+            "identity.locale", "profile.interests",
             "profile.characteristics", "profile.learning_style",
             "profile.preferences", "profile.environment", "strengths",
             "challenges", "strategies", "goals", "current_state",
             "teacher_directives",
         }
         self.assertTrue(expected.issubset(reads))
-        self.assertNotIn("profile.activeness", reads)
+        # B-4: activeness IS projected server-side, but only to derive verbal
+        # coaching hints — the raw 0-100 scores must never reach a prompt.
+        self.assertIn("profile.activeness", reads)
+        self.assertIn("mastery", reads)
+        self.assertIn("student_description", reads)
         self.assertNotIn("identity.display_name", reads)
+
+    def test_activeness_scores_never_rendered_into_prompt(self) -> None:
+        from app.brain.context_engine import _activeness_hints
+        hints = _activeness_hints(
+            {"self_regulation": 23, "motivation_relevance": 31, "growth_mindset": 80}, "he"
+        )
+        self.assertEqual(len(hints), 2)
+        for hint in hints:
+            self.assertNotRegex(hint, r"\d")   # verbal guidance only, no numbers
 
 
 if __name__ == "__main__":
