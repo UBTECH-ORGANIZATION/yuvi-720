@@ -1,5 +1,6 @@
 import type { SVGProps } from 'react'
 import { useI18n } from '../../i18n/I18nProvider'
+import sparkMarkUrl from '../../assets/yuvi-favicon.png'
 
 function Icon({ children, ...props }: SVGProps<SVGSVGElement>) {
   return (
@@ -88,8 +89,6 @@ const AGENTS = [
   { key: 'safety', Icon: SafetyIcon, tone: 'pink' }
 ] as const
 
-const CHIPS = ['mapping', 'learning', 'guide', 'safety', 'insights', 'motivation'] as const
-
 const RADIUS = 38
 
 // One full trip (core -> agent) in seconds. Slow, calm, non-distracting.
@@ -160,13 +159,14 @@ export function AgentsDiagram() {
   const { t } = useI18n()
 
   const nodes = AGENTS.map((agent, index) => {
-    const angle = (-90 + index * 60) * (Math.PI / 180)
+    const angleDeg = -90 + index * 60
+    const angle = angleDeg * (Math.PI / 180)
     const cx = 50 + RADIUS * Math.cos(angle)
     const cy = 50 + RADIUS * Math.sin(angle)
     // Stagger each connection evenly around the ring so packets ripple outward
     // like a rotating wave rather than all firing at once.
     const begin = (index * FLOW_DUR) / AGENTS.length
-    return { ...agent, cx, cy, index, rgb: TONE_RGB[agent.tone], begin }
+    return { ...agent, cx, cy, angleDeg, index, rgb: TONE_RGB[agent.tone], begin }
   })
 
   return (
@@ -332,8 +332,7 @@ export function AgentsDiagram() {
           </svg>
           <span className="landing720-hub-core-reflection" aria-hidden="true" />
           <span className="landing720-hub-core-arrival" aria-hidden="true" />
-          <strong>{t('landing.hub.coreTitle')}</strong>
-          <span>{t('landing.hub.coreSubtitle')}</span>
+          <img className="landing720-hub-core-logo" src={sparkMarkUrl} alt={t('landing.hub.coreTitle')} />
         </div>
 
         {nodes.map((node) => (
@@ -343,12 +342,14 @@ export function AgentsDiagram() {
             style={{
               '--x': `${node.cx}%`,
               '--y': `${node.cy}%`,
+              '--angle': `${node.angleDeg}deg`,
               '--delay': `${node.index * 0.12}s`,
               '--tone': node.rgb,
               '--flow': `${FLOW_DUR}s`,
               '--pulse-delay': `${node.begin}s`
             } as React.CSSProperties}
           >
+            <span className="landing720-hub-node-port" aria-hidden="true" />
             <span className="landing720-hub-icon">
               <node.Icon />
             </span>
@@ -358,15 +359,6 @@ export function AgentsDiagram() {
             </div>
           </article>
         ))}
-      </div>
-
-      <div className="landing720-hub-summary">
-        <p>{t('landing.hub.summary')}</p>
-        <div className="landing720-hub-chips">
-          {CHIPS.map((chip) => (
-            <span key={chip}>{t(`landing.hub.chip.${chip}`)}</span>
-          ))}
-        </div>
       </div>
     </section>
   )
