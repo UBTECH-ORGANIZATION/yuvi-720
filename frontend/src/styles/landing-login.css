@@ -99,7 +99,10 @@
   gap: 10px;
 }
 
-.landing720-brand img {
+/* Legacy rule from the old icon-only mark. The brand logo is a wordmark that
+   sizes itself from .yuvi-brand-logo, so it must opt out — 26px squashed it to
+   an illegible dot. */
+.landing720-brand img:not(.yuvi-brand-logo__image) {
   width: 26px;
   height: 26px;
   object-fit: contain;
@@ -145,11 +148,18 @@
   justify-self: end;
 }
 
-.landing720 .yuvi-language-switcher {
+.landing720 .yuvi-language-switcher,
+.landing720 .yuvi-theme-switcher {
   border: 1px solid var(--l720-border);
   background: var(--l720-card);
   color: var(--l720-navy-soft);
   box-shadow: none;
+  /* Trim the language/theme chips ~15–18% so visual weight shifts to the
+     wordmark and primary nav — a lighter, more premium top edge. */
+  gap: 6px;
+  min-block-size: 36px;
+  padding: 6px 9px;
+  font-size: 11px;
 }
 
 .landing720-hero {
@@ -253,6 +263,9 @@
 }
 
 .landing720-login-btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   border-radius: 12px;
   border: 1px solid transparent;
   padding: 13px 16px;
@@ -261,21 +274,71 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  backdrop-filter: blur(14px) saturate(180%);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+/* Glassy top-down sheen — the fixed highlight that reads as a glass pane. */
+.landing720-login-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.08) 46%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+}
+
+/* Specular streak that glides across on hover. */
+.landing720-login-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  inset-inline-start: -140%;
+  z-index: -1;
+  inline-size: 55%;
+  block-size: 100%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.5) 50%,
+    transparent 100%
+  );
+  transform: skewX(-18deg);
+  transition: inset-inline-start 0.6s cubic-bezier(0.22, 0.9, 0.28, 1);
+  pointer-events: none;
 }
 
 .landing720-login-btn:hover {
   transform: translateY(-1px);
-  box-shadow: var(--l720-shadow-sm);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.55),
+    var(--l720-shadow-sm);
+}
+
+.landing720-login-btn:hover::after {
+  inset-inline-start: 170%;
 }
 
 .landing720-login-btn.student {
   color: #ffffff;
-  background: var(--l720-blue);
+  background: linear-gradient(135deg, #3a63f7 0%, var(--l720-blue) 100%);
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4);
 }
 
 .landing720-login-btn.student:hover {
-  background: var(--l720-blue-dark);
+  background: linear-gradient(135deg, var(--l720-blue) 0%, var(--l720-blue-dark) 100%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.5),
+    var(--l720-shadow-sm);
 }
 
 .landing720-login-btn.teacher {
@@ -284,10 +347,24 @@
   border-color: rgba(13, 143, 130, 0.16);
 }
 
+.landing720-login-btn.teacher:hover {
+  border-color: rgba(13, 143, 130, 0.28);
+}
+
 .landing720-login-btn.secure {
   color: var(--l720-navy-soft);
   background: #f5f7fb;
   border-color: var(--l720-border);
+}
+
+.landing720-login-btn.secure:hover {
+  border-color: var(--l720-navy-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing720-login-btn::after {
+    transition: none;
+  }
 }
 
 /* ---- How it works: shared brain hub ---- */
@@ -344,11 +421,18 @@
 }
 
 .landing720-hub-link {
-  stroke: rgba(43, 86, 245, 0.22);
-  stroke-width: 0.4;
-  stroke-dasharray: 2 3;
+  stroke-width: 0.6;
+  stroke-linecap: round;
+  stroke-opacity: 0.2;
   vector-effect: non-scaling-stroke;
-  animation: l720-hub-flow 4s linear infinite;
+}
+
+.landing720-hub-link-glow {
+  fill: none;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.5;
 }
 
 .landing720-hub-orbit {
@@ -361,24 +445,8 @@
   animation: l720-hub-spin 70s linear infinite;
 }
 
-.landing720-hub-packet {
-  fill: var(--l720-blue);
-  filter: drop-shadow(0 0 2px rgba(43, 86, 245, 0.6));
-  animation: l720-hub-packet-fade 3.4s ease-in-out infinite;
-}
-
-.landing720-hub-packet.return {
-  fill: #6e5bd6;
-  filter: drop-shadow(0 0 2px rgba(110, 91, 214, 0.6));
-}
-
-@keyframes l720-hub-packet-fade {
-  0%, 100% { opacity: 0; }
-  15%, 85% { opacity: 0.9; }
-}
-
-@keyframes l720-hub-flow {
-  to { stroke-dashoffset: -12; }
+.landing720-hub-spark {
+  opacity: 0;
 }
 
 @keyframes l720-hub-spin {
@@ -390,8 +458,8 @@
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: clamp(160px, 24vw, 230px);
-  height: clamp(160px, 24vw, 230px);
+  width: clamp(136px, 20vw, 196px);
+  height: clamp(136px, 20vw, 196px);
   border-radius: 50%;
   display: flex;
   flex-direction: column;
@@ -401,9 +469,25 @@
   text-align: center;
   color: #ffffff;
   padding: 20px;
-  background: radial-gradient(circle at 32% 26%, #7b67e0, #3256ea 68%);
-  box-shadow: 0 22px 52px rgba(50, 86, 234, 0.4);
+  /* Transparent glass shell — a faint violet tint that only gains density near
+     the rim; the centre stays clear so the text and network read cleanly. */
+  background:
+    radial-gradient(circle at 34% 22%, rgba(214, 206, 255, 0.5) 0%, rgba(170, 154, 250, 0.12) 30%, transparent 46%),
+    radial-gradient(circle at 50% 50%, rgba(104, 88, 214, 0.12) 0%, rgba(84, 66, 190, 0.18) 60%, rgba(132, 112, 244, 0.34) 100%);
+  box-shadow:
+    inset 0 0 0 1.5px rgba(220, 224, 255, 0.72),
+    inset 0 0 20px rgba(160, 128, 255, 0.42),
+    inset 0 8px 18px rgba(255, 255, 255, 0.22),
+    0 0 34px rgba(126, 100, 255, 0.36);
   z-index: 2;
+  animation: l720-hub-core-breathe 6.5s ease-in-out infinite;
+}
+
+.landing720-hub-core strong,
+.landing720-hub-core span {
+  position: relative;
+  z-index: 4;
+  text-shadow: 0 1px 5px rgba(12, 8, 40, 0.55);
 }
 
 .landing720-hub-core strong {
@@ -417,21 +501,276 @@
   opacity: 0.88;
 }
 
-.landing720-hub-core-pulse {
+/* Energy — a soft violet halo hugging the rim (clear centre, no inner cloud). */
+.landing720-hub-core-energy {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(210px, 29vw, 292px);
+  height: clamp(210px, 29vw, 292px);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 42%, rgba(150, 112, 255, 0.3) 54%, rgba(96, 126, 255, 0.2) 66%, transparent 80%),
+    radial-gradient(46% 46% at 38% 34%, rgba(176, 130, 255, 0.22), transparent 68%);
+  filter: blur(14px);
+  animation: l720-hub-core-energy 20s ease-in-out infinite;
+}
+
+@keyframes l720-hub-core-energy {
+  0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 0.9; }
+  50% { transform: translate(-50%, -50%) scale(1.08) rotate(9deg); opacity: 1; }
+}
+
+/* Faint elliptical ground shadow so the sphere doesn't float. */
+.landing720-hub-core-shadow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(110px, 15vw, 150px);
+  height: 22px;
+  transform: translate(-50%, clamp(80px, 10.5vw, 108px));
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(10, 8, 30, 0.5) 0%, rgba(10, 8, 30, 0.26) 46%, transparent 72%);
+  filter: blur(6px);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Inner neural / noise texture, clipped to the sphere and kept very subtle. */
+.landing720-hub-core-texture {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 2px solid rgba(50, 86, 234, 0.35);
-  animation: l720-hub-pulse 3s ease-out infinite;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.14;
+  mix-blend-mode: soft-light;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 150px 150px;
 }
 
-.landing720-hub-core-pulse.delay {
-  animation-delay: 1.5s;
+/* Live layered neural brain inside the glass core. */
+.landing720-hub-core-net {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  z-index: 2;
+  pointer-events: none;
+  /* Default (dark) — a blue/violet mesh that reads as an internal light source. */
+  --net-a: rgba(168, 176, 255, 0.9);
+  --net-b: rgba(178, 140, 255, 0.9);
+  --net-edge-back: rgba(150, 162, 255, 0.2);
+  --net-edge-mid: rgba(160, 146, 255, 0.28);
+  --net-edge-front: rgba(184, 160, 255, 0.36);
 }
 
-@keyframes l720-hub-pulse {
-  0% { transform: scale(1); opacity: 0.6; }
-  100% { transform: scale(1.55); opacity: 0; }
+.landing720-hub-core-layer {
+  transform-origin: 50% 50%;
+}
+
+.landing720-hub-core-layer.back {
+  opacity: 0.6;
+  animation: l720-hub-core-spin-cw 210s linear infinite;
+}
+
+.landing720-hub-core-layer.mid {
+  opacity: 0.85;
+  animation: l720-hub-core-spin-ccw 150s linear infinite;
+}
+
+.landing720-hub-core-layer.front {
+  opacity: 1;
+  animation: l720-hub-core-spin-cw 110s linear infinite;
+}
+
+.landing720-hub-core-edge {
+  stroke-width: 0.26;
+  vector-effect: non-scaling-stroke;
+}
+
+.landing720-hub-core-layer.back .landing720-hub-core-edge { stroke: var(--net-edge-back); }
+.landing720-hub-core-layer.mid .landing720-hub-core-edge { stroke: var(--net-edge-mid); }
+.landing720-hub-core-layer.front .landing720-hub-core-edge { stroke: var(--net-edge-front); }
+
+.landing720-hub-core-node.hue-a { fill: var(--net-a); }
+.landing720-hub-core-node.hue-b { fill: var(--net-b); }
+
+.landing720-hub-core-layer.mid .landing720-hub-core-node {
+  filter: drop-shadow(0 0 0.9px rgba(150, 150, 255, 0.7));
+}
+
+.landing720-hub-core-layer.front .landing720-hub-core-node {
+  filter: drop-shadow(0 0 1.4px rgba(158, 156, 255, 0.9));
+}
+
+.landing720-hub-core-node.flicker {
+  animation: l720-hub-core-node-flicker 4s ease-in-out infinite;
+}
+
+/* Glass sheen: white-violet reflection on the upper part of the sphere. */
+.landing720-hub-core-reflection {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+  background:
+    radial-gradient(54% 38% at 34% 18%, rgba(255, 255, 255, 0.5) 0%, rgba(236, 232, 255, 0.14) 44%, transparent 62%),
+    radial-gradient(120% 82% at 50% -16%, rgba(255, 255, 255, 0.22) 0%, transparent 46%);
+}
+
+/* Small pulse on the rim each time a data light reaches the core. */
+.landing720-hub-core-arrival {
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+  box-shadow: 0 0 0 0 rgba(206, 214, 255, 0);
+  animation: l720-hub-core-arrival var(--arrival, 0.7s) ease-out infinite;
+}
+
+@keyframes l720-hub-core-arrival {
+  0% { box-shadow: inset 0 0 8px 0 rgba(198, 208, 255, 0.4), 0 0 6px 0 rgba(170, 150, 255, 0.3); }
+  40% { box-shadow: inset 0 0 8px 0 rgba(198, 208, 255, 0), 0 0 6px 1px rgba(170, 150, 255, 0); }
+  100% { box-shadow: inset 0 0 8px 0 rgba(198, 208, 255, 0), 0 0 6px 1px rgba(170, 150, 255, 0); }
+}
+
+/* Two thin rings orbiting the core at different speeds and directions. */
+.landing720-hub-core-ring {
+  position: absolute;
+  inset: -7%;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  border-top-color: rgba(255, 255, 255, 0.55);
+  border-inline-end-color: rgba(190, 200, 255, 0.18);
+  pointer-events: none;
+  z-index: 1;
+  animation: l720-hub-core-ring-spin 16s linear infinite;
+}
+
+.landing720-hub-core-ring.delay {
+  inset: -15%;
+  border-top-color: rgba(150, 170, 255, 0.42);
+  border-inline-end-color: rgba(150, 170, 255, 0.1);
+  animation-duration: 26s;
+  animation-direction: reverse;
+}
+
+@keyframes l720-hub-core-ring-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes l720-hub-core-spin-cw {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes l720-hub-core-spin-ccw {
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes l720-hub-core-node-flicker {
+  0%, 100% { opacity: 0.32; }
+  50% { opacity: 1; }
+}
+
+@keyframes l720-hub-core-breathe {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.018); }
+}
+
+/* ============================================================
+   Light mode — the core is a different MATERIAL: a bright glass
+   crystal that reflects light, not a violet light source.
+   ============================================================ */
+[data-theme='light'] .landing720-hub-core {
+  color: #1c2545;
+  /* White -> pale cyan -> light violet glass, with a strong top highlight. */
+  background:
+    radial-gradient(circle at 34% 20%, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.42) 22%, transparent 44%),
+    radial-gradient(circle at 50% 56%, rgba(255, 255, 255, 0.6) 0%, rgba(202, 235, 255, 0.44) 44%, rgba(214, 204, 255, 0.5) 100%);
+  /* Sharp white rim, faint cool inner light, glassy top — almost no outer glow. */
+  box-shadow:
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.95),
+    inset 0 1px 0 1px rgba(255, 255, 255, 0.7),
+    inset 0 0 18px rgba(150, 196, 255, 0.32),
+    inset 0 12px 22px rgba(255, 255, 255, 0.62),
+    inset 0 -14px 26px rgba(120, 140, 220, 0.16),
+    0 10px 22px rgba(120, 150, 210, 0.16);
+}
+
+[data-theme='light'] .landing720-hub-core strong { color: #16203f; }
+[data-theme='light'] .landing720-hub-core span { color: #47507a; }
+
+[data-theme='light'] .landing720-hub-core strong,
+[data-theme='light'] .landing720-hub-core span {
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
+}
+
+/* Internal network turns bright blue / turquoise. */
+[data-theme='light'] .landing720-hub-core-net {
+  --net-a: rgba(46, 148, 236, 0.95);
+  --net-b: rgba(32, 196, 208, 0.95);
+  --net-edge-back: rgba(70, 168, 230, 0.24);
+  --net-edge-mid: rgba(52, 188, 214, 0.32);
+  --net-edge-front: rgba(64, 178, 236, 0.42);
+}
+
+[data-theme='light'] .landing720-hub-core-layer.mid .landing720-hub-core-node {
+  filter: drop-shadow(0 0 0.9px rgba(70, 180, 235, 0.6));
+}
+
+[data-theme='light'] .landing720-hub-core-layer.front .landing720-hub-core-node {
+  filter: drop-shadow(0 0 1.3px rgba(56, 190, 224, 0.8));
+}
+
+/* Strong glassy reflection on the upper part. */
+[data-theme='light'] .landing720-hub-core-reflection {
+  background:
+    radial-gradient(58% 42% at 33% 16%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.34) 40%, transparent 60%),
+    radial-gradient(120% 82% at 50% -18%, rgba(255, 255, 255, 0.55) 0%, transparent 44%);
+}
+
+/* Bright white rim ring (kept crisp) via the delay-less orbit ring. */
+[data-theme='light'] .landing720-hub-core-ring {
+  border-top-color: rgba(255, 255, 255, 0.9);
+  border-inline-end-color: rgba(150, 200, 255, 0.28);
+}
+
+[data-theme='light'] .landing720-hub-core-ring.delay {
+  border-top-color: rgba(120, 200, 235, 0.5);
+  border-inline-end-color: rgba(120, 200, 235, 0.16);
+}
+
+/* Ambient light: a weak cool-blue halo instead of a violet cloud. */
+[data-theme='light'] .landing720-hub-core-energy {
+  background:
+    radial-gradient(circle at 50% 50%, transparent 40%, rgba(120, 185, 255, 0.22) 56%, rgba(90, 205, 220, 0.14) 70%, transparent 82%);
+  filter: blur(18px);
+  opacity: 0.85;
+}
+
+/* Soft neutral elliptical shadow so the crystal floats over the white page. */
+[data-theme='light'] .landing720-hub-core-shadow {
+  background: radial-gradient(circle, rgba(64, 84, 140, 0.28) 0%, rgba(64, 84, 140, 0.13) 46%, transparent 72%);
+}
+
+/* The rim-arrival pulse reads as a cool light glint in light mode. */
+[data-theme='light'] .landing720-hub-core-arrival {
+  animation-name: l720-hub-core-arrival-light;
+}
+
+@keyframes l720-hub-core-arrival-light {
+  0% { box-shadow: inset 0 0 8px 0 rgba(120, 190, 255, 0.5), 0 0 5px 0 rgba(90, 200, 220, 0.28); }
+  40% { box-shadow: inset 0 0 8px 0 rgba(120, 190, 255, 0), 0 0 5px 1px rgba(90, 200, 220, 0); }
+  100% { box-shadow: inset 0 0 8px 0 rgba(120, 190, 255, 0), 0 0 5px 1px rgba(90, 200, 220, 0); }
 }
 
 .landing720-hub-node {
@@ -570,6 +909,16 @@
     border-radius: 20px;
     padding: 22px;
     margin-block-end: 4px;
+    animation: none;
+  }
+
+  .landing720-hub-core-ring,
+  .landing720-hub-core-texture,
+  .landing720-hub-core-net,
+  .landing720-hub-core-reflection,
+  .landing720-hub-core-energy,
+  .landing720-hub-core-shadow {
+    display: none;
   }
 
   .landing720-hub-node {
@@ -582,15 +931,33 @@
     opacity: 1;
     animation: none;
   }
+
+  .landing720-hub-node::after {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .landing720-hub-link,
+  .landing720-hub-link-glow,
   .landing720-hub-orbit,
-  .landing720-hub-packet,
-  .landing720-hub-core-pulse,
+  .landing720-hub-spark,
+  .landing720-hub-core,
+  .landing720-hub-core-ring,
+  .landing720-hub-core-arrival,
+  .landing720-hub-core-energy,
+  .landing720-hub-core-layer,
+  .landing720-hub-core-node.flicker,
   .landing720-hub-node {
     animation: none;
+  }
+
+  .landing720-hub-core {
+    transform: translate(-50%, -50%);
+  }
+
+  .landing720-hub-spark {
+    opacity: 0;
   }
 
   .landing720-hub-node {
@@ -1033,7 +1400,7 @@
 
   min-block-size: 100dvh;
   padding: 18px var(--sp-gutter) 48px;
-  gap: clamp(24px, 4vw, 52px);
+  gap: clamp(16px, 2.4vw, 34px);
   align-items: center;
   overflow: hidden;
   background:
@@ -1083,8 +1450,8 @@
 }
 
 .landing720-brand .yuvi-brand-logo {
-  inline-size: 126px;
-  block-size: 48px;
+  inline-size: 168px;
+  block-size: 60px;
   filter: drop-shadow(0 7px 10px rgba(86, 64, 181, 0.2));
 }
 
@@ -1130,7 +1497,8 @@
   box-shadow: var(--sp-ring);
 }
 
-.landing720 .yuvi-language-switcher {
+.landing720 .yuvi-language-switcher,
+.landing720 .yuvi-theme-switcher {
   border-color: rgba(111, 91, 255, 0.16);
   border-radius: var(--sp-radius-pill);
   background: rgba(255, 255, 255, 0.92);
@@ -1360,12 +1728,24 @@
 }
 
 .landing720-hub-core {
-  background: radial-gradient(circle at 32% 24%, #9f8bff, #6f5bff 55%, #4a35d4 100%);
-  box-shadow: 0 26px 60px rgba(77, 56, 180, 0.34), inset 0 1px rgba(255, 255, 255, 0.34);
+  background:
+    radial-gradient(circle at 34% 20%, rgba(220, 212, 255, 0.52) 0%, rgba(176, 158, 252, 0.14) 30%, transparent 48%),
+    radial-gradient(circle at 50% 50%, rgba(110, 92, 222, 0.13) 0%, rgba(88, 70, 196, 0.2) 60%, rgba(138, 118, 248, 0.36) 100%);
+  box-shadow:
+    inset 0 0 0 1.6px rgba(224, 226, 255, 0.74),
+    inset 0 0 22px rgba(166, 132, 255, 0.44),
+    inset 0 8px 18px rgba(255, 255, 255, 0.22),
+    0 0 36px rgba(136, 108, 255, 0.38);
 }
 
-.landing720-hub-core-pulse {
-  border-color: rgba(111, 91, 255, 0.36);
+.landing720-hub-core-ring {
+  border-top-color: rgba(255, 255, 255, 0.6);
+  border-inline-end-color: rgba(198, 186, 255, 0.2);
+}
+
+.landing720-hub-core-ring.delay {
+  border-top-color: rgba(174, 150, 255, 0.46);
+  border-inline-end-color: rgba(174, 150, 255, 0.12);
 }
 
 .landing720-hub-node {
@@ -1899,25 +2279,21 @@
   position: absolute;
   inset-block-start: 50%;
   inset-inline-start: 50%;
-  inline-size: min(34vw, 410px);
-  aspect-ratio: 1.16;
+  inline-size: min(56vw, 720px);
+  aspect-ratio: 1.42;
   padding: 10px;
-  border: 1px solid rgba(255, 255, 255, .56);
-  border-radius: 38px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, .3), rgba(255, 255, 255, .08));
-  box-shadow:
-    0 34px 64px rgba(28, 20, 92, .24),
-    inset 0 1px rgba(255, 255, 255, .78),
-    inset 0 -1px rgba(76, 201, 240, .2);
-  backdrop-filter: blur(10px);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
   isolation: isolate;
   overflow: visible;
-  transform: translate(-50%, -50%) perspective(700px) rotateY(-4deg);
+  transform: translate(calc(-50% + 50px), -50%) perspective(640px) rotateY(11deg);
   transition: transform 420ms var(--sp-ease), filter 420ms ease, opacity 420ms ease;
 }
 
 [dir='rtl'] .landing720-yubi-artwork {
-  transform: translate(50%, -50%) perspective(700px) rotateY(4deg);
+  transform: translate(calc(50% - 50px), -50%) perspective(640px) rotateY(-11deg);
 }
 
 .landing720-yubi-artwork::before {
@@ -1934,11 +2310,15 @@
   position: relative;
   inline-size: 100%;
   block-size: 100%;
-  overflow: hidden;
-  border: 1px solid rgba(220, 248, 255, .36);
-  border-radius: 29px;
-  background: #20178d;
-  box-shadow: inset 0 0 42px rgba(255, 255, 255, .12), 0 12px 28px rgba(22, 15, 91, .22);
+  overflow: visible;
+  border: 0;
+  border-radius: 30px;
+  background: transparent;
+}
+
+.landing720-yubi-artwork__shine,
+.landing720-yubi-artwork__corner {
+  display: none;
 }
 
 .landing720-yubi-artwork__image::before {
@@ -1949,6 +2329,422 @@
   display: block;
   inline-size: 100%;
   block-size: 100%;
+}
+
+/* ── Student-hologram artwork ─────────────────────────────────────────────
+   Yuvi (docked at the left of the visual) reads and analyses a floating,
+   glass hologram of the learner: a profile silhouette in a slowly rotating
+   ring, a progress dial, a radar, a few metric cards and a "next step" card —
+   linked by thin UI lines with packets flowing along them. Purple glow, cyan
+   only for accents, lots of empty space. */
+.landing720-holo-float {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: landing-holo-float 5.5s ease-in-out infinite;
+}
+
+@keyframes landing-holo-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3.5px); }
+}
+
+.landing720-holo-cone { filter: blur(5px); }
+.landing720-holo-base-glow { filter: blur(6px); }
+
+.landing720-holo-base {
+  fill: rgba(150, 120, 245, .16);
+  stroke: rgba(196, 180, 255, .5);
+  stroke-width: 1.5;
+}
+
+.landing720-holo-base-core {
+  fill: rgba(210, 196, 255, .28);
+  filter: blur(2px);
+}
+
+/* The world: a dark round platform beneath the projector and Yuvi, a soft
+   purple sheen (the hologram reflecting off it) and a faint reflected pool, so
+   nothing floats in a void. Yuvi's own contact shadow is added in dark-mode. */
+.landing720-holo-floor-disc { fill: url(#holo-floor); }
+
+.landing720-holo-floor-sheen {
+  fill: url(#holo-floor-sheen);
+  opacity: .6;
+}
+
+.landing720-holo-floor-reflect {
+  fill: url(#holo-base);
+  opacity: .5;
+  filter: blur(5px);
+}
+
+.landing720-holo-yubi-shadow {
+  fill: rgba(3, 2, 12, .38);
+  filter: blur(11px);
+}
+
+.landing720-holo-lines path {
+  fill: none;
+  stroke: rgba(184, 162, 255, .42);
+  stroke-width: 1;
+  stroke-dasharray: 3 5;
+  filter: drop-shadow(0 0 3px rgba(150, 120, 255, .55));
+}
+
+/* The board itself: a barely-there sheet of glass with light that lives only on
+   its edges — a 1.5px glowing rim, a soft inner-edge glow, and a corner
+   reflection — so it reads as a transparent LED slate, not a grey card. */
+.landing720-holo-glass {
+  fill: rgba(150, 120, 255, .02);
+  stroke: none;
+}
+
+.landing720-holo-inner-glow {
+  fill: none;
+  stroke: rgba(190, 165, 255, .32);
+  stroke-width: 1;
+  filter: blur(1px);
+  opacity: .55;
+}
+
+.landing720-holo-frame {
+  fill: none;
+  stroke: url(#holo-ring);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 3px rgba(150, 120, 255, .75)) drop-shadow(0 0 9px rgba(140, 110, 255, .3));
+}
+
+.landing720-holo-frame-shine {
+  fill: none;
+  stroke: rgba(255, 255, 255, .6);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  opacity: .5;
+}
+
+/* White edge highlight along the top + left of the glass, and faint reflection
+   streaks — the cues that read as a transparent LED slate, not milky glass. */
+.landing720-holo-edge-hi {
+  fill: none;
+  stroke: rgba(255, 255, 255, .5);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  filter: blur(.3px);
+  opacity: .5;
+}
+
+.landing720-holo-reflect {
+  fill: none;
+  stroke: rgba(255, 255, 255, .3);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  filter: blur(1.2px);
+  opacity: .4;
+}
+
+/* A brighter inner core inside the projection cone that gently breathes, so the
+   hologram reads as beamed up from the floor. */
+.landing720-holo-beam {
+  mix-blend-mode: screen;
+  filter: blur(3px);
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: landing-holo-beam 4.2s ease-in-out infinite;
+}
+
+@keyframes landing-holo-beam {
+  0%, 100% { opacity: .35; transform: scaleX(.92); }
+  50% { opacity: .62; transform: scaleX(1.06); }
+}
+
+/* Motes of light drifting up through the projection. */
+.landing720-holo-particles circle {
+  fill: #cabaff;
+  filter: drop-shadow(0 0 3px rgba(160, 130, 255, .85));
+  opacity: 0;
+  transform-box: fill-box;
+  animation: landing-holo-rise 5.6s ease-in-out infinite;
+}
+
+.landing720-holo-particles circle:nth-child(2n) { animation-duration: 6.8s; animation-delay: -1.6s; }
+.landing720-holo-particles circle:nth-child(3n) { animation-duration: 7.4s; animation-delay: -3.1s; }
+.landing720-holo-particles circle:nth-child(4n) { animation-duration: 6.2s; animation-delay: -2.2s; }
+.landing720-holo-particles circle:nth-child(5n) { animation-delay: -.8s; }
+
+@keyframes landing-holo-rise {
+  0% { transform: translateY(8px); opacity: 0; }
+  22% { opacity: .85; }
+  78% { opacity: .5; }
+  100% { transform: translateY(-118px); opacity: 0; }
+}
+
+.landing720-holo-packet {
+  fill: #c3b0ff;
+  filter: drop-shadow(0 0 5px rgba(150, 120, 255, .9));
+  animation: landing-holo-packet 3.4s linear infinite;
+}
+
+.landing720-holo-packet.cool {
+  fill: #7fe6ff;
+  filter: drop-shadow(0 0 5px rgba(120, 220, 255, .9));
+}
+
+.landing720-holo-packet--a { offset-path: path('M290 160 L268 138'); animation-delay: -.2s; }
+.landing720-holo-packet--b { offset-path: path('M441 170 L512 132'); animation-delay: -1.1s; }
+.landing720-holo-packet--c { offset-path: path('M360 298 L360 318'); animation-delay: -2s; }
+
+@keyframes landing-holo-packet {
+  0% { offset-distance: 0%; opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { offset-distance: 100%; opacity: 0; }
+}
+
+.landing720-holo-pulse {
+  fill: none;
+  stroke: rgba(150, 120, 255, .5);
+  stroke-width: 2;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: landing-holo-pulse 3.8s ease-out infinite;
+}
+
+@keyframes landing-holo-pulse {
+  0% { transform: scale(1); opacity: .45; }
+  70%, 100% { transform: scale(1.24); opacity: 0; }
+}
+
+.landing720-holo-ring-bg {
+  fill: rgba(140, 110, 240, .03);
+  stroke: rgba(176, 156, 255, .18);
+  stroke-width: 5;
+}
+
+.landing720-holo-ring {
+  fill: none;
+  stroke: url(#holo-ring);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 330 565;
+  filter: drop-shadow(0 0 10px rgba(140, 110, 255, .7));
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: landing-holo-spin 14s linear infinite;
+}
+
+/* Soft purple halo behind the student — makes the profile the clear focal hero. */
+.landing720-holo-profile-glow {
+  fill: url(#holo-base);
+  opacity: .5;
+  filter: blur(5px);
+}
+
+/* "AI analysing" ring: a slow dashed orbit, pulsing nodes around the profile,
+   and two cyan scan dots that circle it — the system reading the learner. */
+.landing720-holo-ai-orbit {
+  fill: none;
+  stroke: rgba(150, 120, 255, .16);
+  stroke-width: 1;
+  stroke-dasharray: 2 9;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: landing-holo-spin 26s linear infinite reverse;
+}
+
+.landing720-holo-ai-nodes circle {
+  fill: rgba(201, 184, 255, .9);
+  filter: drop-shadow(0 0 4px rgba(150, 120, 255, .85));
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: landing-holo-node 3s ease-in-out infinite;
+}
+
+.landing720-holo-ai-nodes circle:nth-child(2n) { animation-delay: -1s; }
+.landing720-holo-ai-nodes circle:nth-child(3n) { animation-delay: -2s; }
+
+@keyframes landing-holo-node {
+  0%, 100% { opacity: .45; transform: scale(.85); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+.landing720-holo-ai-scan {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: landing-holo-spin 9s linear infinite;
+}
+
+.landing720-holo-ai-scan circle {
+  fill: #7fe6ff;
+  filter: drop-shadow(0 0 5px rgba(120, 220, 255, .9));
+}
+
+@keyframes landing-holo-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Digital-silhouette learner: a faint ghost fill, a glowing contour, animated
+   holographic scan-lines clipped to the body, and cyan contour nodes — a
+   premium "scanned learner" instead of a generic person icon. */
+.landing720-holo-figure-fill > * {
+  fill: url(#holo-fig);
+  opacity: .24;
+}
+
+.landing720-holo-figure-line > * {
+  fill: none;
+  stroke: #cbb9ff;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 5px rgba(150, 120, 255, .7));
+}
+
+.landing720-holo-figure-scan path {
+  fill: none;
+  stroke: rgba(184, 164, 255, .5);
+  stroke-width: 1;
+}
+
+.landing720-holo-figure-scan {
+  animation: landing-holo-figscan 3.6s linear infinite;
+}
+
+@keyframes landing-holo-figscan {
+  from { transform: translateY(0); }
+  to { transform: translateY(-12px); }
+}
+
+.landing720-holo-figure-dots circle {
+  fill: #7fe6ff;
+  filter: drop-shadow(0 0 4px rgba(120, 220, 255, .9));
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: landing-holo-node 3s ease-in-out infinite;
+}
+
+.landing720-holo-figure-dots circle:nth-child(2n) { animation-delay: -1s; }
+.landing720-holo-figure-dots circle:nth-child(3n) { animation-delay: -1.8s; }
+
+.landing720-holo-arc-bg {
+  fill: none;
+  stroke: rgba(176, 156, 255, .18);
+  stroke-width: 5;
+}
+
+.landing720-holo-arc {
+  fill: none;
+  stroke: url(#holo-accent);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 118 151;
+  transform: rotate(-90deg);
+  transform-box: fill-box;
+  transform-origin: center;
+  filter: drop-shadow(0 0 5px rgba(124, 150, 255, .6));
+}
+
+.landing720-holo-dot {
+  fill: #7fe6ff;
+  filter: drop-shadow(0 0 5px rgba(120, 220, 255, .9));
+}
+
+.landing720-holo-radar-grid {
+  fill: none;
+  stroke: rgba(176, 156, 255, .28);
+  stroke-width: 1;
+}
+
+.landing720-holo-radar-data {
+  fill: rgba(150, 120, 255, .28);
+  stroke: #b9a5ff;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 3px rgba(150, 120, 255, .5));
+}
+
+/* Mini trend: a small progress line-graph with a cyan tip. */
+.landing720-holo-trend .axis {
+  fill: none;
+  stroke: rgba(176, 156, 255, .22);
+  stroke-width: 1;
+}
+
+.landing720-holo-trend .line {
+  fill: none;
+  stroke: url(#holo-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 3px rgba(150, 120, 255, .5));
+}
+
+.landing720-holo-trend circle {
+  fill: #7fe6ff;
+  filter: drop-shadow(0 0 4px rgba(120, 220, 255, .9));
+}
+
+.landing720-holo-cards rect {
+  fill: rgba(255, 255, 255, .05);
+  stroke: rgba(184, 164, 255, .22);
+  stroke-width: 1;
+}
+
+.landing720-holo-cards path {
+  fill: none;
+  stroke: rgba(190, 172, 255, .5);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 2px rgba(150, 120, 255, .5));
+}
+
+.landing720-holo-cards circle { fill: #8a6ff0; }
+.landing720-holo-cards g:nth-child(2) circle { fill: #7fe6ff; }
+
+.landing720-holo-next rect {
+  fill: rgba(255, 255, 255, .06);
+  stroke: rgba(190, 172, 255, .28);
+  stroke-width: 1.2;
+}
+
+.landing720-holo-next-target {
+  fill: none;
+  stroke: url(#holo-accent);
+  stroke-width: 2;
+}
+
+.landing720-holo-next-core {
+  fill: #7fe6ff;
+  filter: drop-shadow(0 0 4px rgba(120, 220, 255, .9));
+}
+
+.landing720-holo-next-bar {
+  fill: none;
+  stroke: rgba(190, 172, 255, .45);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.landing720-holo-next-arrow {
+  fill: none;
+  stroke: #c3b0ff;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 3px rgba(150, 120, 255, .55));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing720-holo-float,
+  .landing720-holo-packet,
+  .landing720-holo-pulse,
+  .landing720-holo-beam,
+  .landing720-holo-particles circle,
+  .landing720-holo-ai-orbit,
+  .landing720-holo-ai-nodes circle,
+  .landing720-holo-ai-scan,
+  .landing720-holo-figure-scan,
+  .landing720-holo-figure-dots circle,
+  .landing720-holo-ring { animation: none; }
 }
 
 .landing720-station-orbit {
@@ -2257,11 +3053,11 @@
 .landing720[data-yubi-flying='true'] .landing720-yubi-artwork {
   opacity: .9;
   filter: brightness(1.1);
-  transform: translate(-50%, -50%) perspective(700px) rotateY(-8deg) scale(.94);
+  transform: translate(calc(-50% + 50px), -50%) perspective(640px) rotateY(14deg) scale(.94);
 }
 
 [dir='rtl'] .landing720[data-yubi-flying='true'] .landing720-yubi-artwork {
-  transform: translate(50%, -50%) perspective(700px) rotateY(8deg) scale(.94);
+  transform: translate(calc(50% - 50px), -50%) perspective(640px) rotateY(-14deg) scale(.94);
 }
 
 .landing720-flight-scene {
@@ -2386,6 +3182,19 @@
 .landing720-yubi-pilot[data-flying='true'] .landing720-yubi-pilot__robot {
   filter: drop-shadow(0 24px 26px rgba(76, 201, 240, .32));
   transform: translateY(-7px) scale(1.06);
+}
+
+/* Resting micro-animation: once Yuvi settles beside a section he keeps a soft,
+   low-amplitude hover and a gentle head-tilt so he reads as an attentive
+   companion rather than a frozen sprite — calm enough not to tire the reader. */
+.landing720-yubi-pilot[data-flying='false'] .landing720-yubi-pilot__robot {
+  animation: landing-yubi-rest 5.2s ease-in-out infinite;
+}
+
+@keyframes landing-yubi-rest {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  28% { transform: translateY(-5px) rotate(-1.1deg); }
+  62% { transform: translateY(-2px) rotate(1deg); }
 }
 
 .landing720-yubi-pilot__robot .yubi-avatar-canvas {
@@ -2660,6 +3469,10 @@
     animation: none !important;
   }
 
+  .landing720-yubi-pilot[data-flying='false'] .landing720-yubi-pilot__robot {
+    animation: none !important;
+  }
+
   .landing720-yubi-pilot[data-flying='true'] .landing720-yubi-thrusters {
     display: none;
   }
@@ -2675,3 +3488,107 @@
   }
 }
 
+
+/* Sign-in open: the hero hands its artwork over to the dialog, so the page's
+   own copy (and the pilot Yubi that rides it) steps aside.
+   `visibility`, not `opacity`: the journey script writes the pilot's opacity
+   inline every frame, so a stylesheet opacity rule can never win. */
+.landing720.is-auth-open .landing720-hero-visual,
+.landing720.is-auth-open .landing720-yubi-pilot {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+
+/* ── Apple "liquid glass" — the sign-in dialog action buttons ──
+   Scoped to the auth card so only the login screen gets the treatment.
+   A translucent pane that blurs and saturates the surface behind it, a bright
+   specular rim along the top edge, and a soft sheen that slides across on
+   hover. */
+.auth-forge__card .sp-modal__actions .sp-btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  -webkit-backdrop-filter: blur(18px) saturate(185%);
+  backdrop-filter: blur(18px) saturate(185%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.7),
+    inset 0 -1px 2px rgba(120, 110, 190, 0.18),
+    0 6px 18px rgba(60, 50, 130, 0.16);
+}
+
+/* Static top-down sheen that gives the pane its glassy depth. */
+.auth-forge__card .sp-modal__actions .sp-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.42) 0%,
+    rgba(255, 255, 255, 0.08) 42%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+}
+
+/* Specular streak that glides across the surface on hover. */
+.auth-forge__card .sp-modal__actions .sp-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  inset-inline-start: -140%;
+  z-index: -1;
+  inline-size: 60%;
+  block-size: 100%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 100%
+  );
+  transform: skewX(-18deg);
+  transition: inset-inline-start 0.6s cubic-bezier(0.22, 0.9, 0.28, 1);
+  pointer-events: none;
+}
+
+.auth-forge__card .sp-modal__actions .sp-btn:hover:not(:disabled)::after {
+  inset-inline-start: 160%;
+}
+
+.auth-forge__card .sp-modal__actions .sp-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.85),
+    inset 0 -1px 2px rgba(120, 110, 190, 0.22),
+    0 12px 26px rgba(60, 50, 130, 0.24);
+}
+
+/* Primary CTA: keep the brand gradient but let it read through the glass. */
+.auth-forge__card .sp-modal__actions .sp-btn--gradient {
+  background:
+    linear-gradient(135deg, rgba(124, 108, 255, 0.82), rgba(94, 132, 255, 0.82));
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Secondary: a clear frosted pane over the card surface. */
+.auth-forge__card .sp-modal__actions .sp-btn--ghost {
+  background: rgba(255, 255, 255, 0.32);
+  color: var(--sp-ink-500);
+  border-style: solid;
+}
+
+.auth-forge__card .sp-modal__actions .sp-btn--ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.48);
+  color: var(--sp-primary-600);
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+/* Honour reduced-motion: no sliding sheen. */
+@media (prefers-reduced-motion: reduce) {
+  .auth-forge__card .sp-modal__actions .sp-btn::after {
+    transition: none;
+  }
+}

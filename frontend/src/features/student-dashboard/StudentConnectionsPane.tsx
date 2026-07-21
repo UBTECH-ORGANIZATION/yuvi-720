@@ -29,7 +29,9 @@ export function StudentConnectionsPane({ mode, studentName }: StudentConnections
     let active = true
     setRows(null)
     setError(false)
-    listMentoring('learner', learnerId)
+    // The learner is resolved server-side from the session; learnerId only
+    // keys the refetch when the signed-in learner changes.
+    listMentoring('learner')
       .then((response) => {
         if (active) setRows(response.conversations)
       })

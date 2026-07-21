@@ -4,12 +4,12 @@ import { AppBar } from '../../components/AppBar'
 import { Toast } from '../../components/Toast'
 import { useI18n } from '../../i18n/I18nProvider'
 import { apiPatch, apiPost, getLearnerState } from '../../services/api'
-import { CURRENT_LEARNER_ID } from '../../services/xapi'
+import { useBrain } from '../../providers/BrainProvider'
 import { YubiRobot3D } from '../learner-mapping/YubiRobot3D'
 import { ProfileGlyph, ProfileIllustration } from './ProfileGlyph'
 import type { MappingResults, ProfileClaim, ProfileFeedbackVerdict, ProfileSummary } from './types'
 
-type Status = 'loading' | 'analyzing' | 'noData' | 'ready' | 'error'
+type Status = 'loading' | 'analyzing' | 'ready' | 'error'
 type ToastState = { variant: 'info'; title: string; body?: string } | null
 type ResultsProgress = {
   journey_index: number
@@ -50,14 +50,11 @@ function resolveIllustrationKey(claims: ProfileClaim[], activeIndex: number) {
   return resolved
 }
 
-function requestProfileSummary(language: string) {
-  const key = `${CURRENT_LEARNER_ID}:${language}`
+function requestProfileSummary(learnerId: string, language: string) {
+  const key = `${learnerId}:${language}`
   const existing = pendingSummaries.get(key)
   if (existing) return existing
-  const request = apiPost<ProfileSummary>('/api/profile-summary', {
-    learner_id: CURRENT_LEARNER_ID,
-    language,
-  })
+  const request = apiPost<ProfileSummary>('/api/profile-summary', { language })
   pendingSummaries.set(key, request)
   void request.finally(() => pendingSummaries.delete(key))
   return request
@@ -80,10 +77,7 @@ function savedResultsProgress(value: unknown): ResultsProgress | null {
 }
 
 function persistResultsProgress(progress: ResultsProgress) {
-  return apiPatch('/api/learner-state', {
-    learner_id: CURRENT_LEARNER_ID,
-    profile_summary_progress: progress,
-  })
+  return apiPatch('/api/learner-state', { profile_summary_progress: progress })
 }
 
 function restoredJourneyIndex(progress: ResultsProgress | null, summary: ProfileSummary) {
@@ -101,6 +95,7 @@ function restoredJourneyIndex(progress: ResultsProgress | null, summary: Profile
 
 export function ResultsPage() {
   const { language, t } = useI18n()
+  const { learnerId } = useBrain()
   const [status, setStatus] = useState<Status>('loading')
   const [summary, setSummary] = useState<ProfileSummary | null>(null)
   const [studentName, setStudentName] = useState(t('results.learnerFallback'))
@@ -118,9 +113,17 @@ export function ResultsPage() {
       try {
         const state = await getLearnerState()
         if (cancelled) return
+        const mappingDone =
+          (state.mapping_progress as { completed?: boolean } | null | undefined)?.completed === true
         const mapping = state.mapping_results as MappingResults | null | undefined
-        if (!mapping) {
-          setStatus('noData')
+        // /results is the profile-verification step and only exists once mapping
+        // is actually finished. `mapping_results` can be present from a partial or
+        // abandoned run, so completion is judged by mapping_progress.completed —
+        // the same authoritative signal OnboardingProvider trusts. Reaching this
+        // step early (or with no saved results) is an invalid state: send the
+        // learner back to the start of onboarding instead of showing a dead-end.
+        if (!mappingDone || !mapping) {
+          navigate('/learner-mapping')
           return
         }
         setStudentName(mapping.student_name || t('results.learnerFallback'))
@@ -134,7 +137,7 @@ export function ResultsPage() {
           return
         }
         setStatus('analyzing')
-        const nextSummary = await requestProfileSummary(language)
+        const nextSummary = await requestProfileSummary(learnerId ?? '', language)
         if (cancelled) return
         const restoredIndex = restoredJourneyIndex(savedProgress, nextSummary)
         summaryRef.current = nextSummary
@@ -209,7 +212,6 @@ export function ResultsPage() {
       for (let attempt = 0; attempt < 2; attempt += 1) {
         try {
           await apiPost('/api/profile-feedback', {
-            learner_id: CURRENT_LEARNER_ID,
             language,
             source_id: sourceId,
             verdict,
@@ -239,7 +241,7 @@ export function ResultsPage() {
   if (status === 'loading' || status === 'analyzing') {
     return (
       <div className="results-page results-page--transition">
-        <AppBar studentName={studentName} studentSubtitle={t('app.studentSubtitle')} activeStep={3} />
+        <AppBar activeStep={3} />
         <main className="results-transition" aria-live="polite">
           <div className="results-transition__robot" aria-label={t('results.robot.aria')}>
             <span className="results-transition__orbit results-transition__orbit--outer" aria-hidden="true" />
@@ -264,17 +266,16 @@ export function ResultsPage() {
     )
   }
 
-  if (status === 'noData' || status === 'error') {
-    const noData = status === 'noData'
+  if (status === 'error') {
     return (
       <div className="results-page">
-        <AppBar studentName={studentName} studentSubtitle={t('app.studentSubtitle')} activeStep={3} />
+        <AppBar activeStep={3} />
         <main className="results-empty">
-          <span className="results-empty__icon"><ProfileGlyph iconKey={noData ? 'organization' : 'growth'} /></span>
-          <h1>{t(noData ? 'results.noData.title' : 'results.error.title')}</h1>
-          <p>{t(noData ? 'results.noData.subtitle' : 'results.error.subtitle')}</p>
-          <button className="results-primary-button" onClick={() => noData ? navigate('/learner-mapping') : window.location.reload()}>
-            {t(noData ? 'results.noData.cta' : 'results.error.cta')}
+          <span className="results-empty__icon"><ProfileGlyph iconKey="growth" /></span>
+          <h1>{t('results.error.title')}</h1>
+          <p>{t('results.error.subtitle')}</p>
+          <button className="results-primary-button" onClick={() => window.location.reload()}>
+            {t('results.error.cta')}
           </button>
         </main>
       </div>
@@ -286,8 +287,14 @@ export function ResultsPage() {
   const isIntro = journeyIndex === 0
   const isDone = journeyIndex === journeyLength - 1
   const activeClaim = !isIntro && !isDone ? claims[journeyIndex - 1] : null
+  // Verification only means something if the learner actually answers, so the
+  // step cannot be skipped past.
+  const awaitingAnswer = Boolean(activeClaim) && !activeClaim?.feedback_status
 
   function goToJourneyStep(nextIndex: number) {
+    // Belt-and-braces with the disabled button: never advance off an unanswered
+    // claim, whatever calls this.
+    if (nextIndex > journeyIndex && awaitingAnswer) return
     const resolvedIndex = Math.max(0, Math.min(nextIndex, journeyLength - 1))
     setJourneyIndex(resolvedIndex)
     if (summaryRef.current) {
@@ -316,7 +323,7 @@ export function ResultsPage() {
 
   return (
     <div className="results-page">
-      <AppBar studentName={studentName} studentSubtitle={t('app.studentSubtitle')} activeStep={3} />
+      <AppBar activeStep={3} />
       {toast && (
         <Toast
           variant={toast.variant}
@@ -415,9 +422,20 @@ export function ResultsPage() {
             </button>
           )}
           {!isDone && (
-            <button className="results-primary-button" type="button" onClick={() => goToJourneyStep(journeyIndex + 1)}>
+            <button
+              className="results-primary-button"
+              type="button"
+              onClick={() => goToJourneyStep(journeyIndex + 1)}
+              disabled={awaitingAnswer}
+              aria-describedby={awaitingAnswer ? 'results-answer-required' : undefined}
+            >
               {t(isIntro ? 'results.journey.start' : 'results.journey.next')}
             </button>
+          )}
+          {awaitingAnswer && (
+            <p className="results-journey__hint" id="results-answer-required">
+              {t('results.journey.answerRequired')}
+            </p>
           )}
           {isDone && (
             <button className="results-primary-button" type="button" onClick={() => void openDashboard()}>

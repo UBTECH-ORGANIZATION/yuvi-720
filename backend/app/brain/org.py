@@ -15,22 +15,27 @@ SCHOOLS = [
     {"id": "school-rabin", "name": "בית ספר רבין, נתניה"},
 ]
 TEACHERS = [
-    {"id": "teacher-demo", "name": "מורה הדגמה", "school_id": "school-rabin",
-     "role": "teacher", "group_ids": ["group-7a-math"]},
-    {"id": "admin-demo", "name": "מנהל/ת הדגמה", "school_id": "school-rabin",
-     "role": "admin", "group_ids": []},
+    # Real accounts (see `scripts/seed_users.py`). They hold both roles.
+    # Each owns a SEPARATE group and is enrolled only in their own: co-teaching
+    # one shared group would make them mutual teachers and let each read the
+    # other's brain, which is not what a personal account should allow.
+    {"id": "gal", "name": "Gal", "school_id": "school-rabin",
+     "role": "teacher", "group_ids": ["group-gal"]},
+    {"id": "moti", "name": "Moti", "school_id": "school-rabin",
+     "role": "teacher", "group_ids": ["group-moti"]},
 ]
 GROUPS = [
-    {"id": "group-7a-math", "name": "ז'1 · מתמטיקה", "school_id": "school-rabin",
-     "subject": "math", "teacher_id": "teacher-demo"},
+    # `teacher_ids` (plural) lets a group have co-teachers; `teacher_id` stays
+    # supported for the single-owner rows above.
+    {"id": "group-gal", "name": "יובי 720 · Gal", "school_id": "school-rabin",
+     "subject": "math", "teacher_ids": ["gal"]},
+    {"id": "group-moti", "name": "יובי 720 · Moti", "school_id": "school-rabin",
+     "subject": "math", "teacher_ids": ["moti"]},
 ]
-# enrollments link a learner_id → group. The demo learners are enrolled so the
-# teacher view shows real brains once they have used the system (see
-# `scripts/seed_demo.py`, which populates their mapping + learning events).
+# enrollments link a learner_id → group.
 ENROLLMENTS = [
-    {"learner_id": "demo-learner", "group_id": "group-7a-math"},
-    {"learner_id": "demo-learner-noa", "group_id": "group-7a-math"},
-    {"learner_id": "demo-learner-adam", "group_id": "group-7a-math"},
+    {"learner_id": "gal", "group_id": "group-gal"},
+    {"learner_id": "moti", "group_id": "group-moti"},
 ]
 
 _TEACHER_BY_ID = {t["id"]: t for t in TEACHERS}
@@ -47,10 +52,17 @@ def is_admin(teacher_id: str) -> bool:
 
 
 def groups_for_teacher(teacher_id: str) -> list[dict[str, Any]]:
-    """Groups the teacher may access (admin → all groups)."""
+    """Groups the teacher may access (admin → all groups).
+
+    A group is owned either by a single `teacher_id` or a list of co-teachers in
+    `teacher_ids`.
+    """
     if is_admin(teacher_id):
         return list(GROUPS)
-    return [g for g in GROUPS if g.get("teacher_id") == teacher_id]
+    return [
+        g for g in GROUPS
+        if g.get("teacher_id") == teacher_id or teacher_id in (g.get("teacher_ids") or [])
+    ]
 
 
 def learners_in_group(group_id: str) -> list[str]:

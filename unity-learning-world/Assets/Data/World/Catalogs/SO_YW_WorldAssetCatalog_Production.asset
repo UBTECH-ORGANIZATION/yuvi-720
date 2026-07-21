@@ -1,0 +1,337 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f23f4ccf168dd4dfaa57f9fa88e0286a, type: 3}
+  m_Name: SO_YW_WorldAssetCatalog_Production
+  m_EditorClassIdentifier: 
+  schemaVersion: 1
+  catalogId: production
+  missingAssetFallback: {fileID: 0}
+  availableStateOverlay: {fileID: 0}
+  currentStateOverlay: {fileID: 0}
+  lockedStateOverlay: {fileID: 0}
+  completedStateOverlay: {fileID: 0}
+  prefabs:
+  - assetId: terrain.template
+    kind: 0
+    prefab: {fileID: 5886327631867910369, guid: e0dc655665e5943b19e56a8cb86b7ba1, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: landmark.template
+    kind: 1
+    prefab: {fileID: 7710440855595660981, guid: 059983d53cb2c4519ac151ff2ac9c971, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: bridge.template
+    kind: 2
+    prefab: {fileID: 4591536820931797718, guid: a69c07f196671422b8ecb2b7e29e26b6, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: decoration.template
+    kind: 5
+    prefab: {fileID: 514462289714533655, guid: 410a9b63b035c4411a3d9c2a9cf298e2, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: landmark.central-learning-tree
+    kind: 1
+    prefab: {fileID: 8840125604078788143, guid: 7584d5f786ef445629198d0a8d8e608e, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: landmark.welcome-harbor
+    kind: 1
+    prefab: {fileID: 7710440855595660981, guid: 059983d53cb2c4519ac151ff2ac9c971, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: landmark.maker-meadow
+    kind: 1
+    prefab: {fileID: 6436005265771087274, guid: 2fc1dcd65a76f4788bb5d4db68e4e84a, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: landmark.story-grove
+    kind: 1
+    prefab: {fileID: 3847609060838460952, guid: 958cb24e22d9e421ca8716c72e9b1272, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: landmark.archive-hill
+    kind: 1
+    prefab: {fileID: 6733904728087735677, guid: 4ea6a68d1ec8f47b896630af14ba9140, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: landmark.observation-ridge
+    kind: 1
+    prefab: {fileID: 2015993363619964413, guid: a5fbfbef1fb424adf9de61a75e5db203, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: landmark.reflection-gardens
+    kind: 1
+    prefab: {fileID: 8989341845464425982, guid: bf19b8dc2991c47e2b12c0fa9f107a94, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: landmark.mentor-lodge
+    kind: 1
+    prefab: {fileID: 9206682248814194172, guid: ff9a50e4d715e4ccbb4391a37593168a, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: landmark.challenge-crossing
+    kind: 1
+    prefab: {fileID: 7645401228465551141, guid: 09ca741ef755b4b5c9867624d5b20aa5, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: bridge.rope
+    kind: 2
+    prefab: {fileID: 4591536820931797718, guid: a69c07f196671422b8ecb2b7e29e26b6, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: bridge.timber
+    kind: 2
+    prefab: {fileID: 4591730135502864521, guid: 8b23a52215eab45c3b07d5574644d2da, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: bridge.stone
+    kind: 2
+    prefab: {fileID: 3890798013696339166, guid: 813780322a44e45d498bc55bdda9149e, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: bridge.garden
+    kind: 2
+    prefab: {fileID: 5290203736935267493, guid: b894ab043d3314f3f9f4b10900405cee, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: bridge.drawbridge
+    kind: 2
+    prefab: {fileID: 5071503512034668719, guid: bb3bf78aa171745e8b87ebdbd0da1827, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: bridge.stepping-stones
+    kind: 2
+    prefab: {fileID: 4555224849390135308, guid: 6ed0d7871942e4b3991449af03d2e530, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: bridge.boardwalk
+    kind: 2
+    prefab: {fileID: 6332644406467122538, guid: 576278b01b2ba49fba5c3ac29cb34846, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: vegetation.tree.round
+    kind: 6
+    prefab: {fileID: 514462289714533655, guid: 410a9b63b035c4411a3d9c2a9cf298e2, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: vegetation.tree.coastal
+    kind: 6
+    prefab: {fileID: 970486144494161811, guid: 0829ede5264344a2caa8527f29f67686, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: vegetation.tree.story
+    kind: 6
+    prefab: {fileID: 5367943161864727567, guid: f2bc46bd282c348f89918eb58e70dbb2, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: vegetation.tree.willow
+    kind: 6
+    prefab: {fileID: 2713198399246766539, guid: 470ac0c31146749888a456860c76f6bd, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: vegetation.tree.pine
+    kind: 6
+    prefab: {fileID: 5399444995988402712, guid: 23559b9f91aad4b4d9a7c7f6e2c50bd7, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: vegetation.tree.orchard
+    kind: 6
+    prefab: {fileID: 4886279932363940270, guid: 7de95774064c04af1a254044e74336c5, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: vegetation.bush.flowers
+    kind: 6
+    prefab: {fileID: 227064386334543199, guid: 97261b68d1dbf45fbbf0d7deafa61f81, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: vegetation.grass.reeds
+    kind: 6
+    prefab: {fileID: 8758306590954901439, guid: a283135e0d35b45f085cce2c29c51e29, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: geology.rock-cluster
+    kind: 5
+    prefab: {fileID: 4860313138703680972, guid: 3f858ece4f7304e2281bddd9f3034fff, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: prop.bench
+    kind: 5
+    prefab: {fileID: 405926316320886490, guid: 1d0b257d506404e46a373efdd4a0794f, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: prop.lantern
+    kind: 5
+    prefab: {fileID: 1836882234709861589, guid: 9a0fc58821e80406eb1dc2efc2145393, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: prop.crates
+    kind: 5
+    prefab: {fileID: 2150081623348169123, guid: 68efef93a2f6f4d11aa112992098d34c, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: atmosphere.cloud
+    kind: 4
+    prefab: {fileID: 6173789001999076547, guid: 5ba93db530b3f4684bb6361a3e121e21, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: character.yubi
+    kind: 3
+    prefab: {fileID: 7072936933247637361, guid: 4e064930432074ad09273a8add4491c5, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0
+  - assetId: terrain.meadow-path
+    kind: 0
+    prefab: {fileID: 2143813913073017985, guid: 3c714f43fdf5f47ecadbb3c0b740ed12, type: 3}
+    lowPowerSubstitute: {fileID: 0}
+    allowedTintMaskIds: []
+    density: 0
+    exclusionRadius: 0
+    version: 1
+    reviewStatus: 0

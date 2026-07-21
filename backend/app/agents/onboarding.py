@@ -200,6 +200,13 @@ async def run_onboarding(
         source="onboarding_agent",
     )
     interests = await _extract_interests(free_text or "", language, context)
+    if interests:
+        # Same content-safety guardian as chat memory: free-text mapping answers
+        # must not seed an inappropriate "interest" into the profile either.
+        from app.agents import safety
+        unsafe = await safety.screen_memory_values(interests, language, usage_context=context)
+        if unsafe:
+            interests = [i for i in interests if i not in unsafe]
 
     updates = {
         "profile.activeness": profile["activeness"],

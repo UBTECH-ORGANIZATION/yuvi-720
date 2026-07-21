@@ -16,6 +16,7 @@ import {
   type LearningUnitDTO,
 } from '../../services/learning'
 import { LearningRoadmap } from '../learning-portal/LearningRoadmap'
+import { ReflectionPanel } from './ReflectionPanel'
 import { playProgressionAudio } from '../../services/progressionAudio'
 import './lesson-workspace.css'
 
@@ -71,7 +72,7 @@ export function LessonPage() {
     setLoading(true)
     setError(false)
     setFrameState('loading')
-    createLearningSession(learnerId, selection.componentId, selection.unitId, language)
+    createLearningSession(selection.componentId, selection.unitId, language)
       .then((nextSession) => {
         if (active) {
           setSession(nextSession)
@@ -121,7 +122,7 @@ export function LessonPage() {
           await wait(attempt === 0 ? 1450 : 850)
           if (controller.signal.aborted) return
           try {
-            const catalog = await getLearningCatalog(learnerId, controller.signal)
+            const catalog = await getLearningCatalog(controller.signal)
             const nextRoadmap = catalog.units.find((unit) => unit.id === session.unit.id)
             const persistedComponent = nextRoadmap?.components.find(
               (component) => component.id === session.component.id,
@@ -380,6 +381,12 @@ export function LessonPage() {
                   }}
                 />
               </div>
+
+              <ReflectionPanel
+                componentId={session?.component.id || null}
+                sessionId={session?.session_id || null}
+                onDone={() => undefined}
+              />
 
               <footer className="learning-completion-dialog__footer">
                 <div>

@@ -1,0 +1,589 @@
+{
+  "info": {
+    "name": "720 → LRS (xAPI) – MoE",
+    "description": "כל אירועי ה-xAPI ש-720 שולחת ל-LRS של משרד החינוך. הריצו '00 · Get OAuth Token' תחילה, ואז 'Session / 01 enter'. מבוסס על docs/LRS/720 התממשקות לLRS 1.0.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 · Get OAuth Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const json = pm.response.json();",
+              "if (json.access_token) {",
+              "  pm.environment.set('access_token', json.access_token);",
+              "  console.log('access_token saved');",
+              "}",
+              "pm.test('got access_token', () => pm.expect(json.access_token).to.be.a('string'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{token_url}}?grant_type=client_credentials&client_id={{client_id}}&client_secret={{client_secret}}&scope=lrs",
+          "host": ["{{token_url}}"],
+          "query": [
+            { "key": "grant_type", "value": "client_credentials" },
+            { "key": "client_id", "value": "{{client_id}}" },
+            { "key": "client_secret", "value": "{{client_secret}}" },
+            { "key": "scope", "value": "lrs" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Session",
+      "item": [
+        {
+          "name": "01 · enter",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('sessionId', pm.variables.replaceIn('{{$guid}}'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": {\n    \"objectType\": \"Agent\",\n    \"account\": {\n      \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\",\n      \"name\": \"{{learner_id}}\"\n    }\n  },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/enter\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/session/{{sessionId}}\",\n    \"definition\": {\n      \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/session\",\n      \"name\": { \"he\": \"Session\" }\n    }\n  },\n  \"context\": {\n    \"team\": { \"objectType\": \"Group\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/nmm/kvutsa\", \"name\": \"{{nmm}}\" } },\n    \"extensions\": {\n      \"https://lxp.education.gov.il/xapi/moe/extensions/deviceType\": \"Desktop\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/platform\": \"Web\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/operatingSystem\": \"Windows\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/osVersion\": \"11\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/browser\": \"Chrome\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/browserVersion\": \"138.0\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/applicationVersion\": \"2.5.17\"\n    }\n  },\n  \"timestamp\": \"2026-01-15T08:30:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "02 · suspend",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/suspend\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/session/{{sessionId}}\",\n    \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/session\" }\n  },\n  \"timestamp\": \"2026-01-15T09:02:15Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "03 · resume",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/resume\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/session/{{sessionId}}\",\n    \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/session\" }\n  },\n  \"timestamp\": \"2026-01-15T09:05:10Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "04 · exit",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/exit\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/session/{{sessionId}}\",\n    \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/session\" }\n  },\n  \"result\": { \"duration\": \"PT45M12S\" },\n  \"timestamp\": \"2026-01-15T09:15:12Z\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "05 · viewed",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/viewed\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/dashboard/student-personal\",\n    \"definition\": {\n      \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/dashboard\",\n      \"name\": { \"he\": \"דשבורד פר תלמיד\" }\n    }\n  },\n  \"result\": { \"duration\": \"PT2M35S\" },\n  \"context\": {\n    \"extensions\": {\n      \"https://lxp.education.gov.il/xapi/moe/extensions/dashboardId\": \"{{learner_id}}\"\n    }\n  },\n  \"timestamp\": \"2026-01-15T09:10:00Z\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Agency Questionnaire",
+      "item": [
+        {
+          "name": "06 · initialized",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/initialized\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/agency/pre\",\n    \"definition\": {\n      \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/questionnaire\",\n      \"name\": { \"he\": \"שאלון פעלנות - לפני הלמידה\" }\n    }\n  },\n  \"timestamp\": \"2026-01-15T08:30:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "07 · answered",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/answered\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/agency/question/5\",\n    \"definition\": {\n      \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/question\",\n      \"name\": { \"he\": \"שאלה 5\" }\n    }\n  },\n  \"result\": { \"response\": \"מסכים מאוד\", \"score\": { \"min\": 0, \"max\": 5, \"raw\": 5 } },\n  \"context\": {\n    \"contextActivities\": {\n      \"parent\": [ { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/agency/pre\" } ]\n    }\n  },\n  \"timestamp\": \"2026-01-15T08:31:15Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "08 · completed",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/completed\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/agency/pre\",\n    \"definition\": {\n      \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/questionnaire\",\n      \"name\": { \"he\": \"שאלון פעלנות - לפני הלמידה\" }\n    }\n  },\n  \"result\": { \"completion\": true, \"duration\": \"PT3M42S\" },\n  \"timestamp\": \"2026-01-15T08:34:12Z\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Conversation (Bot)",
+      "item": [
+        {
+          "name": "09 · interacted",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/interacted\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/conversation/8d22fe91\",\n    \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/conversation\" }\n  },\n  \"context\": {\n    \"extensions\": {\n      \"https://lxp.education.gov.il/xapi/moe/extensions/speaker\": \"student\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/conversationTrigger\": \"student-request\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/helpType\": \"hint\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/componentId\": \"{{supplier_domain}}/component/200\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/itemId\": \"{{supplier_domain}}/item/questionnaire/315\"\n    }\n  },\n  \"timestamp\": \"2026-01-15T10:25:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "10 · rated",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/rated\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/conversation/7b42b7ef\",\n    \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/conversation\" }\n  },\n  \"result\": { \"response\": \"like\" },\n  \"context\": {\n    \"extensions\": {\n      \"https://lxp.education.gov.il/xapi/moe/extensions/conversationType\": \"bot\"\n    }\n  },\n  \"timestamp\": \"2026-01-15T10:15:10Z\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reflection Questionnaire",
+      "item": [
+        {
+          "name": "11 · initialized",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/initialized\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/reflection/end-of-lesson\",\n    \"definition\": {\n      \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/questionnaire\",\n      \"name\": { \"he\": \"שאלון רפלקציה\" }\n    }\n  },\n  \"context\": {\n    \"extensions\": {\n      \"https://lxp.education.gov.il/xapi/moe/extensions/reflactionTrigger\": \"difficult-task\"\n    }\n  },\n  \"timestamp\": \"2026-01-15T08:30:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "12 · answered (open)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/answered\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/reflection/question/3\",\n    \"definition\": {\n      \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/question\",\n      \"name\": { \"he\": \"מה תרם לך ההסבר?\" }\n    }\n  },\n  \"result\": { \"response\": \"הבנתי טוב יותר את הנושא.\" },\n  \"context\": {\n    \"contextActivities\": {\n      \"parent\": [ { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/reflection/end-of-lesson\" } ]\n    }\n  },\n  \"timestamp\": \"2026-01-15T08:31:15Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "13 · answered (rating)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/answered\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/reflection/question/4\",\n    \"definition\": {\n      \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/question\",\n      \"name\": { \"he\": \"דרג מ1 עד 10 את קושי העבודה?\" }\n    }\n  },\n  \"result\": { \"score\": { \"raw\": 4, \"min\": 1, \"max\": 5 } },\n  \"context\": {\n    \"contextActivities\": {\n      \"parent\": [ { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/reflection/end-of-lesson\" } ]\n    }\n  },\n  \"timestamp\": \"2026-01-15T08:32:10Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "14 · skipped",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/skipped\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/reflection/question/5\",\n    \"definition\": {\n      \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/question\",\n      \"name\": { \"he\": \"מה תרם לך ההסבר?\" }\n    }\n  },\n  \"context\": {\n    \"contextActivities\": {\n      \"parent\": [ { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/reflection/end-of-lesson\" } ]\n    }\n  },\n  \"timestamp\": \"2026-01-15T08:32:45Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "15 · completed",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/completed\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/reflection/end-of-lesson\",\n    \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/questionnaire\" }\n  },\n  \"result\": { \"completion\": true, \"duration\": \"PT4M18S\" },\n  \"timestamp\": \"2026-01-15T08:34:12Z\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mentor-Student Meeting",
+      "item": [
+        {
+          "name": "16 · completed",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/completed\", \"display\": { \"en\": \"completed\" } },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/mentor-student-meeting/987654\",\n    \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/mentor-student-meeting\" }\n  },\n  \"context\": {\n    \"team\": { \"objectType\": \"Group\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/school\", \"name\": \"{{school}}\" } },\n    \"contextActivities\": {\n      \"grouping\": [\n        { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/lms\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/lms\", \"name\": { \"he\": \"720\" } } },\n        { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/session/{{sessionId}}\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/session\" } },\n        { \"objectType\": \"Activity\", \"id\": \"https://lxp.education.gov.il/xapi/moe/program/720-platform\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/program\" } }\n      ]\n    },\n    \"extensions\": {\n      \"https://lxp.education.gov.il/xapi/moe/extensions/mentor\": \"987654321\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/student\": \"{{learner_id}}\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/meetingDate\": \"2026-09-15\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/mentoringPhase\": \"follow-up\"\n    }\n  },\n  \"timestamp\": \"2026-09-15T10:45:00Z\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student Goal",
+      "item": [
+        {
+          "name": "17 · initialized",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/initialized\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/student-goal/548965\",\n    \"definition\": {\n      \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/student-goal\",\n      \"extensions\": { \"https://lxp.education.gov.il/xapi/moe/extensions/goalType\": \"academic\" }\n    }\n  },\n  \"context\": {\n    \"team\": { \"objectType\": \"Group\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/school\", \"name\": \"{{school}}\" } },\n    \"contextActivities\": {\n      \"grouping\": [\n        { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/lms\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/lms\", \"name\": { \"he\": \"720\" } } },\n        { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/session/{{sessionId}}\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/session\" } },\n        { \"objectType\": \"Activity\", \"id\": \"https://lxp.education.gov.il/xapi/moe/program/720-platform\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/program\" } }\n      ]\n    },\n    \"instructor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"987654321\" } }\n  },\n  \"timestamp\": \"2026-09-15T08:30:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "18 · updated",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/updated\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/student-goal/548965\",\n    \"definition\": {\n      \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/student-goal\",\n      \"extensions\": { \"https://lxp.education.gov.il/xapi/moe/extensions/goalType\": \"academic\" }\n    }\n  },\n  \"context\": {\n    \"team\": { \"objectType\": \"Group\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/school\", \"name\": \"{{school}}\" } },\n    \"contextActivities\": {\n      \"grouping\": [\n        { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/lms\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/lms\", \"name\": { \"he\": \"720\" } } },\n        { \"objectType\": \"Activity\", \"id\": \"https://lxp.education.gov.il/xapi/moe/program/720-platform\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/program\" } }\n      ]\n    },\n    \"instructor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"987654321\" } }\n  },\n  \"timestamp\": \"2026-09-15T08:35:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "19 · completed",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/completed\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/student-goal/548965\",\n    \"definition\": {\n      \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/student-goal\",\n      \"extensions\": { \"https://lxp.education.gov.il/xapi/moe/extensions/goalType\": \"academic\" }\n    }\n  },\n  \"context\": {\n    \"team\": { \"objectType\": \"Group\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/school\", \"name\": \"{{school}}\" } },\n    \"contextActivities\": {\n      \"grouping\": [\n        { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/lms\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/lms\", \"name\": { \"he\": \"720\" } } },\n        { \"objectType\": \"Activity\", \"id\": \"https://lxp.education.gov.il/xapi/moe/program/720-platform\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/program\" } }\n      ]\n    }\n  },\n  \"timestamp\": \"2026-09-15T09:30:00Z\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Content · Component",
+      "item": [
+        {
+          "name": "20 · initialized",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/initialized\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/component/12345\",\n    \"definition\": {\n      \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/component\",\n      \"name\": { \"he\": \"תרגול שברים\" }\n    }\n  },\n  \"context\": {\n    \"team\": { \"objectType\": \"Group\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/nmm/kvutsa\", \"name\": \"{{nmm}}\" } },\n    \"contextActivities\": {\n      \"parent\": [ { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/learning-unit/4587\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/learning-unit\", \"name\": { \"he\": \"שברים פשוטים\" } } } ],\n      \"grouping\": [\n        { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/lms\" } },\n        { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/session/{{sessionId}}\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/session\" } },\n        { \"objectType\": \"Activity\", \"id\": \"https://lxp.education.gov.il/xapi/moe/ecat/item/123456\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/content-vendor\" } },\n        { \"objectType\": \"Activity\", \"id\": \"https://lxp.education.gov.il/xapi/moe/program/720-platform\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/program\" } }\n      ]\n    },\n    \"extensions\": {\n      \"https://lxp.education.gov.il/xapi/moe/extensions/subTopic\": \"fractions\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/learningObjective\": \"add-fractions\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/skills\": \"problem-solving\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/componentPurpose\": \"practice\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/isAssessment\": false,\n      \"https://lxp.education.gov.il/xapi/moe/extensions/masteryLevel\": \"intermediate\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/order\": 5,\n      \"https://lxp.education.gov.il/xapi/moe/extensions/estimatedTimeInMinutes\": 15\n    }\n  },\n  \"timestamp\": \"2026-01-15T08:40:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "21 · completed",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/completed\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/component/12345\",\n    \"definition\": {\n      \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/component\",\n      \"name\": { \"he\": \"תרגול שברים\" }\n    }\n  },\n  \"result\": { \"success\": true, \"score\": { \"scaled\": 0.92 }, \"duration\": \"PT12M34S\" },\n  \"context\": {\n    \"team\": { \"objectType\": \"Group\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/nmm/kvutsa\", \"name\": \"{{nmm}}\" } },\n    \"contextActivities\": {\n      \"parent\": [ { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/learning-unit/4587\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/learning-unit\" } } ],\n      \"grouping\": [\n        { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/lms\" } },\n        { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/session/{{sessionId}}\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/session\" } },\n        { \"objectType\": \"Activity\", \"id\": \"https://lxp.education.gov.il/xapi/moe/program/720-platform\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/program\" } }\n      ]\n    }\n  },\n  \"timestamp\": \"2026-01-15T08:52:34Z\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Content · Item (Questionnaire / Question)",
+      "item": [
+        {
+          "name": "22 · questionnaire initialized",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/initialized\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/questionnaire/first-questionnaire\",\n    \"definition\": {\n      \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/questionnaire\",\n      \"name\": { \"he\": \"שאלון ראשון\" }\n    }\n  },\n  \"context\": {\n    \"contextActivities\": {\n      \"parent\": { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/component/987\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/component\" } }\n    }\n  },\n  \"timestamp\": \"2026-01-15T08:30:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "23 · questionnaire completed",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/completed\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/questionnaire/first-questionnaire\",\n    \"definition\": {\n      \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/questionnaire\",\n      \"name\": { \"he\": \"שאלון ראשון\" }\n    }\n  },\n  \"result\": { \"score\": { \"min\": 0, \"max\": 100, \"raw\": 95, \"scaled\": 0.95 }, \"duration\": \"PT4M18S\" },\n  \"context\": {\n    \"contextActivities\": {\n      \"parent\": { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/component/987\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/component\" } }\n    }\n  },\n  \"timestamp\": \"2026-01-15T08:34:18Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "24 · question answered",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/answered\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/item/question/12345\",\n    \"definition\": {\n      \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/item\",\n      \"name\": { \"he\": \"שאלה 3\" }\n    }\n  },\n  \"result\": { \"response\": \"B\", \"success\": true, \"score\": { \"scaled\": 1, \"min\": 0, \"max\": 1, \"raw\": 1 } },\n  \"context\": {\n    \"contextActivities\": {\n      \"parent\": [ { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/component/987\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/component\" } } ]\n    },\n    \"extensions\": {\n      \"https://lxp.education.gov.il/xapi/moe/extensions/questionId\": \"3\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/questionType\": \"multiple-choice\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/attemptNumber\": 1\n    }\n  },\n  \"timestamp\": \"2026-01-15T08:33:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "25 · item skipped",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/skipped\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/questionnaire/first-questionnaire\",\n    \"definition\": {\n      \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/questionnaire\",\n      \"name\": { \"he\": \"שאלון ראשון\" }\n    }\n  },\n  \"context\": {\n    \"contextActivities\": {\n      \"parent\": { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/component/987\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/component\" } }\n    }\n  },\n  \"timestamp\": \"2026-01-15T08:31:00Z\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Content · Media",
+      "item": [
+        {
+          "name": "26 · played",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/played\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/item/video/12345\",\n    \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/video\" }\n  },\n  \"context\": {\n    \"contextActivities\": {\n      \"parent\": [ { \"objectType\": \"Activity\", \"id\": \"{{supplier_domain}}/component/987\", \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/component\" } } ]\n    },\n    \"extensions\": {\n      \"https://lxp.education.gov.il/xapi/moe/extensions/mediaFormat\": \"video\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/mediaPosition\": 0,\n      \"https://lxp.education.gov.il/xapi/moe/extensions/mediaDuration\": 120\n    }\n  },\n  \"timestamp\": \"2026-01-15T08:45:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "27 · paused",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/paused\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/item/video/12345\",\n    \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/video\" }\n  },\n  \"result\": { \"duration\": \"PT0M25S\" },\n  \"context\": {\n    \"extensions\": {\n      \"https://lxp.education.gov.il/xapi/moe/extensions/mediaFormat\": \"video\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/mediaPosition\": 105,\n      \"https://lxp.education.gov.il/xapi/moe/extensions/mediaDuration\": 120\n    }\n  },\n  \"timestamp\": \"2026-01-15T08:45:25Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "28 · completed",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/completed\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/item/video/12345\",\n    \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/video\" }\n  },\n  \"result\": { \"duration\": \"PT2M0S\" },\n  \"context\": {\n    \"extensions\": {\n      \"https://lxp.education.gov.il/xapi/moe/extensions/mediaFormat\": \"video\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/mediaPosition\": 120,\n      \"https://lxp.education.gov.il/xapi/moe/extensions/mediaDuration\": 120\n    }\n  },\n  \"timestamp\": \"2026-01-15T08:47:00Z\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Help & Selection",
+      "item": [
+        {
+          "name": "29 · help requested",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/requested\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/component/987\",\n    \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/component\" }\n  },\n  \"context\": {\n    \"extensions\": {\n      \"https://lxp.education.gov.il/xapi/moe/extensions/helpSource\": \"content\",\n      \"https://lxp.education.gov.il/xapi/moe/extensions/helpType\": \"hint\"\n    }\n  },\n  \"timestamp\": \"2026-01-15T09:18:25Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "30 · non-learning selected",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Experience-API-Version", "value": "1.0.3" }
+            ],
+            "url": { "raw": "{{lrs_statements_url}}", "host": ["{{lrs_statements_url}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"actor\": { \"objectType\": \"Agent\", \"account\": { \"homePage\": \"https://lxp.education.gov.il/xapi/moe/identity/exidentifier\", \"name\": \"{{learner_id}}\" } },\n  \"verb\": { \"id\": \"https://lxp.education.gov.il/xapi/moe/verbs/selected\" },\n  \"object\": {\n    \"objectType\": \"Activity\",\n    \"id\": \"{{supplier_domain}}/component/987\",\n    \"definition\": { \"type\": \"https://lxp.education.gov.il/xapi/moe/activities/component\" }\n  },\n  \"result\": { \"response\": \"practice\" },\n  \"context\": {\n    \"extensions\": {\n      \"https://lxp.education.gov.il/xapi/moe/extensions/selectionType\": \"practice-decision\"\n    }\n  },\n  \"timestamp\": \"2026-01-15T09:20:00Z\"\n}"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": []
+}

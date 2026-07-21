@@ -52,12 +52,6 @@
   justify-self: end;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 7px 10px 7px 14px;
-  border: 1px solid rgba(111, 91, 255, 0.14);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: 0 6px 18px rgba(111, 91, 255, 0.08);
   min-width: 0;
 }
 
@@ -106,7 +100,8 @@
   font-weight: 700;
 }
 
-.yuvi-language-switcher select {
+.yuvi-language-switcher select,
+.yuvi-theme-switcher select {
   border: 0;
   background: transparent;
   color: var(--m-text);

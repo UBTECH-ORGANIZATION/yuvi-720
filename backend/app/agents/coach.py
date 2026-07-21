@@ -28,13 +28,16 @@ COACH_INSTRUCTIONS = {
     "he": (
         "אתה \"יובי\", מלווה למידה של תלמיד/ה בכיתות ז'–ט'. ענה בעברית.\n"
         "- דבר חם, מכבד, לא ילדותי, קצר (1–3 משפטים).\n"
+        "- פנייה דקדוקית: אם התלמיד/ה כתב/ה על עצמו/ה בלשון זכר או נקבה — פנה באותה צורה בעקביות לאורך כל השיחה. אם עוד לא ברור, השתמש בניסוחים ניטרליים (\"אפשר לנסות\", \"בוא נבדוק יחד\") — לעולם אל תערבב צורות באותה הודעה.\n"
         "- התאם את דרך ההסבר, הקצב והניסוח לסגנון הלמידה ולהעדפות שבהקשר, בלי לתייג את התלמיד/ה ובלי לחשוף את נתוני הפרופיל.\n"
         "- השתמש בחוזקות ובתחומי עניין רק כשזה רלוונטי; אל תדחוף פרט אישי לכל תשובה.\n"
         "- אם קיימת אסטרטגיה שעבדה בעבר, העדף אותה. כבד הנחיית מורה רלוונטית אך לעולם אל תצטט או תחשוף אותה.\n"
+        "- student_description, mastery_stance ו-coaching_hints מנחים איך לגשת ולנסח — פעל לפיהם בשקט, בלי לצטט או לחשוף אותם.\n"
         "- השתמש באירועים האחרונים ובאתגרים כדי לבחור צעד קטן, עומק מתאים או ייצוג חלופי; אל תמציא הצלחה, קושי או התקדמות.\n"
         "- current_screen מתאר את המסך שבו התלמיד/ה נמצא/ת. כשנשאלת על 'המסך הזה', משימה פתוחה, יעדים או ביצועים — ענה רק מנתוני ההקשר הגלויים לתלמיד/ה; אם הנתון חסר, אמור שאינך רואה אותו כרגע.\n"
         "- אם מופיע קושי חוזר או תפיסה שגויה — הצע ייצוג אחר או רמז ממוקד, אל תיתן את התשובה מיד.\n"
         "- אם התלמיד/ה מתוסכל/ת — עודד, נרמל את הקושי, הצע צעד קטן.\n"
+        "- personalization_gaps מציין מה עוד לא ידוע עליו/ה. ברגע טבעי — במיוחד כשהסבר לא מתחבר או שיש תסכול — שלב שאלה קצרה אחת כדי ללמוד את זה (למשל: \"ספר/י לי על משהו שאתה מתחבר אליו ואסביר דרכו\"). לכל היותר שאלה אחת כזו בשיחה, לעולם לא חקירה, והתשובה תיזכר.\n"
         "- כששרטוט עשוי להבהיר רעיון, תאר במדויק את הנתונים או הקשרים שיש להמחיש; כלי שרטוט בטוח עשוי לצרף המחשה. אל תטען שנוצר שרטוט.\n"
         "- אם המחשה חזותית מתאימה, אל תיצור גרסת טקסט/ASCII שלה ואל תכתוב בלוק קוד. כתוב רק הסבר מילולי קצר; ההמחשה תשתלב בתוך ההודעה.\n"
         "- אל תצרף תמונת Markdown, קישור תמונה או נתיב קובץ; כלי ההמחשה הנפרד מטפל בתמונה.\n"
@@ -45,13 +48,16 @@ COACH_INSTRUCTIONS = {
     "ar": (
         "أنت \"يوفي\"، مرافق تعلّم لطالب/ة في الصفوف السابع–التاسع. أجب بالعربية.\n"
         "- تحدّث بدفء واحترام، بإيجاز (١–٣ جمل)، وليس بأسلوب طفولي.\n"
+        "- المخاطبة النحوية: إذا كتب الطالب/ة عن نفسه بصيغة المذكر أو المؤنث فخاطبه بالصيغة نفسها باتساق طوال المحادثة؛ وإن لم يتضح بعد فاستخدم صياغات محايدة، ولا تخلط الصيغ في الرسالة الواحدة.\n"
         "- كيّف طريقة الشرح والوتيرة والصياغة مع أسلوب التعلّم والتفضيلات في السياق، دون تصنيف الطالب/ة أو كشف بيانات الملف.\n"
         "- استخدم نقاط القوة والاهتمامات فقط عندما تكون ذات صلة؛ لا تُقحم تفصيلًا شخصيًا في كل جواب.\n"
         "- إذا وُجدت استراتيجية نجحت سابقًا ففضّلها. اتبع توجيه المعلّم ذي الصلة من دون اقتباسه أو كشفه.\n"
+        "- توجّه student_description و-mastery_stance و-coaching_hints طريقة التعامل والصياغة — اعمل بها بهدوء دون اقتباسها أو كشفها.\n"
         "- استخدم الأحداث الأخيرة والتحديات لاختيار خطوة صغيرة أو عمق مناسب أو تمثيل بديل؛ لا تخترع نجاحًا أو صعوبة أو تقدّمًا.\n"
         "- يصف current_screen الشاشة الحالية. عند السؤال عن «هذه الشاشة» أو مهمة مفتوحة أو الأهداف أو الأداء، أجب فقط من بيانات السياق المرئية للطالب/ة؛ إن غابت المعلومة فقل إنك لا تراها حاليًا.\n"
         "- عند ظهور صعوبة متكررة أو فهم خاطئ — اقترح تمثيلًا آخر أو تلميحًا، ولا تعطِ الإجابة فورًا.\n"
         "- إذا شعر/ت بالإحباط — شجّع، وطبّع الصعوبة، واقترح خطوة صغيرة.\n"
+        "- يبيّن personalization_gaps ما لا يُعرف بعد عن الطالب/ة. في لحظة طبيعية — خاصة عندما لا يصل الشرح أو يظهر إحباط — ادمج سؤالًا قصيرًا واحدًا لتعلّمه (مثل: \"حدّثني عن شيء تحبه وسأشرح من خلاله\"). سؤال واحد كهذا في المحادثة على الأكثر، وليس استجوابًا، وستُحفظ الإجابة.\n"
         "- عندما يساعد الرسم على توضيح الفكرة، صِف بدقة المعطيات أو العلاقات المطلوب تمثيلها؛ قد تُرفق أداة رسم آمنة توضيحًا. لا تدّعِ أن الرسم أُنشئ.\n"
         "- عندما يناسب الشرح المرئي، لا تنشئ نسخة نصية أو ASCII منه ولا تكتب كتلة شيفرة. اكتب شرحًا لفظيًا قصيرًا فقط؛ سيُدمج الرسم داخل الرسالة.\n"
         "- لا تُرفق صورة Markdown أو رابط صورة أو مسار ملف؛ أداة الرسم المنفصلة تتولى الصورة.\n"
@@ -65,10 +71,12 @@ COACH_INSTRUCTIONS = {
         "- Adapt explanation format, pacing, and phrasing to the learning style and preferences in context, without labeling the learner or exposing profile data.\n"
         "- Use strengths and interests only when relevant; do not force a personal detail into every answer.\n"
         "- Prefer a strategy known to have worked before. Follow relevant teacher guidance, but never quote or reveal it.\n"
+        "- student_description, mastery_stance, and coaching_hints guide how to approach and phrase things — apply them quietly, never quote or reveal them.\n"
         "- Use recent events and challenges to choose a small step, suitable depth, or alternate representation; never invent success, difficulty, or progress.\n"
         "- current_screen identifies the learner's present screen. For questions about 'this screen', an open task, goals, or performance, answer only from learner-visible context; if the fact is absent, say you cannot currently see it.\n"
         "- On a repeated difficulty or misconception, offer a different representation or a focused hint — don't give the answer immediately.\n"
         "- If the student is frustrated, encourage, normalize the difficulty, offer a small step.\n"
+        "- personalization_gaps lists what is not yet known about this learner. At a natural moment — especially when an explanation isn't landing or frustration shows — weave in ONE short question to learn it (e.g., \"tell me something you're into and I'll explain through it\"). At most one such question per conversation, never an interrogation; the answer will be remembered.\n"
         "- When a drawing could clarify an idea, precisely describe the givens or relationships to visualize; a safe drawing tool may attach it. Do not claim a drawing was created.\n"
         "- When a visual is suitable, do not duplicate it as text/ASCII and do not emit a code block. Write only a short verbal explanation; the visual will be embedded in the message.\n"
         "- Do not emit a Markdown image, image link, or file path; the separate visual tool owns the image.\n"
@@ -131,6 +139,16 @@ PROACTIVE_PROMPTS = {
         "he": "התלמיד/ה התקדם/ה יפה. תן/י חיזוק חיובי קצר ומכוון.",
         "ar": "أحرز/ت الطالب/ة تقدمًا جيدًا. قدّم/ي تعزيزًا إيجابيًا قصيرًا وموجّهًا.",
         "en": "The student made good progress. Give short, targeted positive reinforcement.",
+    },
+    "rapid_guessing": {
+        "he": "נמדדו כמה תשובות מהירות מאוד ברצף. הצע/י בחום לעצור רגע ולנסות יחד צעד אחד לאט — בלי שיפוטיות ובלי לרמוז לניחוש.",
+        "ar": "رُصدت عدة إجابات سريعة جدًا متتالية. اقترح/ي بلطف التوقّف لحظة وتجربة خطوة واحدة ببطء معًا — دون إصدار حكم ودون التلميح إلى التخمين.",
+        "en": "Several very fast answers in a row were measured. Warmly suggest pausing and trying one step slowly together — no judgment, no hinting at guessing.",
+    },
+    "wheel_spinning": {
+        "he": "היו הרבה ניסיונות על אותה מיומנות בלי התקדמות עקבית. הצע/י לעבור לפעילות או ייצוג אחר של אותו רעיון — שינוי כיוון, לא עוד מאותו הדבר.",
+        "ar": "كانت هناك محاولات كثيرة على المهارة نفسها دون تقدّم ثابت. اقترح/ي الانتقال إلى نشاط أو تمثيل آخر للفكرة نفسها — تغيير الاتجاه لا مزيدًا من الشيء نفسه.",
+        "en": "There were many attempts on the same skill without consistent progress. Suggest switching to a different activity or representation of the same idea — a change of direction, not more of the same.",
     },
 }
 
@@ -252,6 +270,11 @@ def _render_context(bundle: dict) -> str:
         f"strengths: {joined(bundle.get('strengths'))}",
         f"challenges: {joined(bundle.get('challenges'))}",
         f"known_effective_strategies: {joined(bundle.get('strategies'))}",
+        f"student_description: {bundle.get('student_description') or '—'}",
+        f"mastery_stance: {joined(bundle.get('mastery_stance'))}",
+        f"coaching_hints: {joined(bundle.get('coaching_hints'))}",
+        f"personalization_gaps: {joined(bundle.get('personalization_gaps'))}",
+        f"learner_clarifications: {joined(bundle.get('mapping_clarifications'))}",
         f"teacher_guidance: {joined(bundle.get('teacher_guidance'))}",
         f"goals: {goals}",
         f"current_screen: {surface.get('screen') or 'unknown'}",
@@ -370,7 +393,10 @@ async def run_coach_stream(
 
         # Cross-cutting Safety gate: distress / personal-PII disclosures get a
         # disclosure + redirect instead of a normal answer. Distress also raises a
-        # teacher wellbeing flag (learner's own words as evidence). Not persisted.
+        # teacher wellbeing flag (learner's own words as evidence). Academic
+        # frustration is a COACHING moment — it flows to the normal reply.
+        # "review" = classifier outage (fail-closed): reply normally, teacher
+        # gets a throttled screen-was-down flag.
         category = await safety.classify_disclosure(
             prompt_text,
             lang,
@@ -383,6 +409,11 @@ async def run_coach_stream(
                 )
             yield safety.redirect_message(category, lang)
             return
+        if category == "review":
+            try:
+                await safety.record_classifier_outage(learner_id, lang)
+            except Exception:
+                pass
     else:
         prompt_text = PROACTIVE_PROMPTS.get(trigger or "idle", PROACTIVE_PROMPTS["idle"])[lang]
         memory_user = f"[proactive:{trigger}]"
@@ -402,6 +433,7 @@ async def run_coach_stream(
                 lang,
                 session_id=session_id,
                 exchange_id=exchange_id,
+                force=True,   # coach already routed this as a memory intent (B-3)
             )
             memory_processed_before_reply = True
         except Exception as exc:  # pragma: no cover
@@ -413,7 +445,12 @@ async def run_coach_stream(
         user_message=prompt_text,
         query_intent=query_intent,
     )
-    lang = bundle.get("locale") or lang
+    # The EXPLICIT request language (the UI the learner is looking at right
+    # now) wins; the brain's stored locale only fills in when the request
+    # carried no valid language. The old order silently answered Arabic
+    # learners in Hebrew whenever the brain still held its creation-default.
+    if language not in COACH_INSTRUCTIONS:
+        lang = bundle.get("locale") or lang
     title_task: Optional[asyncio.Task[tuple[str, str]]] = None
     if user_message is not None and await sessions.conversation_needs_title(
         learner_id, session_id, role="coach"
@@ -438,6 +475,40 @@ async def run_coach_stream(
     mode_instruction = QUERY_MODE_INSTRUCTIONS.get(query_intent, {})
     if mode_instruction:
         instructions = f"{instructions}\n- {mode_instruction.get(lang) or mode_instruction['he']}"
+
+    # A-4b tutor decision layer: classify the moment → fixed-taxonomy strategy +
+    # intention → condition the generation → log the triple (teacher-explainable).
+    from app.agents import tutor_decision
+    recent_view = (bundle.get("current") or {}).get("recent_events") or []
+    hint_level = 1
+    component_for_ladder = (surface_context or {}).get("component_id")
+    # The VanLehn ladder escalates on repeated HINT requests only; an
+    # explanation is its own strategy and must not push the learner toward the
+    # L3 worked-example bottom-out.
+    is_hint = support_mode == "hint"
+    if is_hint:
+        hint_level = tutor_decision.next_hint_level(
+            {"hint_ladder": (bundle.get("current") or {}).get("hint_ladder") or {}},
+            component_for_ladder,
+        )
+    decision = tutor_decision.decide(
+        error_type=tutor_decision.classify_error_type(recent_view),
+        query_intent=query_intent,
+        support_mode=support_mode,
+        trigger=trigger,
+        hint_level=hint_level,
+        has_open_misconception=any(e.get("misconception") for e in recent_view),
+    )
+    if decision is not None:
+        instructions = f"{instructions}\n- {tutor_decision.guidance_line(decision, hint_level)}"
+        await tutor_decision.log_decision(
+            learner_id, decision,
+            session_id=session_id, exchange_id=exchange_id,
+            hint_level=hint_level if is_hint else None,
+            surface_component=component_for_ladder,
+        )
+        if is_hint:
+            await tutor_decision.record_hint_level(learner_id, component_for_ladder, hint_level)
     messages = _build_messages(instructions, _render_context(bundle), history, prompt_text)
 
     collected = ""

@@ -1,5 +1,6 @@
 """Yuvilab Spark FastAPI application bootstrap."""
 
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
@@ -15,6 +16,7 @@ from app.core.env import ensure_env_loaded
 # Service process settings retain precedence over file values.
 ensure_env_loaded()
 
+from app.routes.auth import router as auth_router
 from app.routes.brain import router as brain_router
 from app.routes.agent import router as agent_router
 from app.routes.teacher import router as teacher_router
@@ -30,27 +32,60 @@ from app.routes.mapping_chat import router as mapping_chat_router
 from app.routes.profile import router as profile_router
 from app.routes.static_pages import mount_static_assets, router as static_pages_router
 from app.routes.xapi import router as xapi_router
+from app.core.telemetry import configure_telemetry
 from app.services.content_catalog_mcp import content_catalog_mcp_lifespan, mount_content_catalog_mcp
+
+
+_DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+
+def _allowed_origins() -> list[str]:
+    """Explicit CORS origins, required because the session cookie is credentialed."""
+    configured = os.environ.get("ALLOWED_ORIGINS", "")
+    origins = [origin.strip() for origin in configured.split(",") if origin.strip()]
+    for key in ("PUBLIC_APP_URL", "FRONTEND_URL"):
+        value = (os.environ.get(key) or "").strip().rstrip("/")
+        if value and value not in origins:
+            origins.append(value)
+    if not origins:
+        return list(_DEV_ORIGINS)
+    return origins + [o for o in _DEV_ORIGINS if o not in origins]
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Start shared application resources, including the MCP session manager."""
-    async with content_catalog_mcp_lifespan():
-        yield
+    # MoE-LRS outbox sweeper (Retry/Resend) — only when reporting is enabled.
+    from app.services.lrs import config as lrs_config, outbox as lrs_outbox
+
+    sweeper = (
+        asyncio.create_task(lrs_outbox.run_sweeper()) if lrs_config.is_enabled() else None
+    )
+    try:
+        async with content_catalog_mcp_lifespan():
+            yield
+    finally:
+        if sweeper:
+            sweeper.cancel()
 
 
 def create_app() -> FastAPI:
     """Create and configure the Yuvilab Spark API application."""
     app = FastAPI(title="Yuvilab Spark", version="1.0.0", lifespan=lifespan)
 
+    # Credentialed requests (the session cookie) are incompatible with a
+    # wildcard origin — browsers reject the response outright. Origins must be
+    # explicit. In dev the Vite proxy makes /api same-origin, so this only
+    # matters once the frontend is served from a different host.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=_allowed_origins(),
+        allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
+    app.include_router(auth_router)
     app.include_router(learner_mapping_router)
     app.include_router(learner_state_router)
     app.include_router(brain_router)
@@ -70,6 +105,8 @@ def create_app() -> FastAPI:
 
     mount_static_assets(app)
     app.include_router(static_pages_router)
+
+    configure_telemetry(app, service_name="spark-backend")
 
     return app
 

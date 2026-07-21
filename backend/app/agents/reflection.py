@@ -63,4 +63,12 @@ async def store_reflection(
     recent.append(entry)
     recent = recent[-_MAX_RECENT:]
     await apply_writes("reflection", learner_id, {"reflections_recent": recent})
+
+    # A completed reflection is meaningful evidence — refresh the description
+    # lazily on the next context build (system lane, not the agent scope).
+    try:
+        from app.brain.repository import apply_brain_operators
+        await apply_brain_operators(learner_id, {"student_description.stale": True})
+    except Exception:
+        pass
     return entry

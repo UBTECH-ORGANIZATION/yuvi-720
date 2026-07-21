@@ -107,7 +107,8 @@ def _subject_curriculum(
     items = []
     for objective in objectives_for(subject):
         objective_id = objective["id"]
-        entry = mastery.get(objective_id) or {}
+        from app.brain.mastery import entry_for
+        entry = entry_for(mastery, objective_id)
         done = bool(entry.get("achieved"))
         status_key = "done" if done else "current" if objective_id == next_objective else "upcoming"
         items.append({
@@ -179,14 +180,15 @@ def _hero(brain: dict, language: str) -> dict[str, Any]:
     current_component_id = current.get("component_id") or current.get("item_id")
     current_component = get_component(current_component_id) if current_component_id else None
     current_objective_id = (current_component or {}).get("objective_id")
+    from app.brain.mastery import entry_for
     can_resume = bool(
         current.get("resume_token")
         and current_component
-        and not (mastery.get(current_objective_id) or {}).get("achieved")
+        and not entry_for(mastery, current_objective_id).get("achieved")
     )
 
     if can_resume:
-        subject = (mastery.get(current_objective_id) or {}).get("subject")
+        subject = entry_for(mastery, current_objective_id).get("subject")
         if not subject:
             subject = "science" if str(current_objective_id).startswith("sci-") else "math"
         return {
@@ -274,7 +276,7 @@ def project_dashboard(brain: dict, name: str, language: str = "he") -> dict[str,
             "statusClass": "status-working" if c.get("status") == "working" else "status-new",
         }
         for c in (brain.get("challenges") or [])
-        if isinstance(c, dict)
+        if isinstance(c, dict) and c.get("status") != "resolved"
     ]
 
     goals = [
@@ -314,6 +316,37 @@ def project_dashboard(brain: dict, name: str, language: str = "he") -> dict[str,
             "at": latest.get("at"),
         }
 
+    # B-5 learner-facing self-awareness nudge — VERBAL only, never a number.
+    self_awareness_note = None
+    if (
+        reflections
+        and isinstance(reflections[-1].get("self_rating"), (int, float))
+        and isinstance(reflections[-1].get("system_estimate"), (int, float))
+    ):
+        gap = (float(reflections[-1]["self_rating"]) / 5.0) - float(
+            reflections[-1]["system_estimate"]
+        )
+        key = (
+            "selfAbove" if gap >= 0.25 else "selfBelow" if gap <= -0.25 else "calibrated"
+        )
+        self_awareness_note = {
+            "he": {
+                "selfAbove": "שווה לבדוק יחד עם יובי אילו חלקים באמת יושבים חזק — לפעמים ההרגשה מקדימה את התרגול.",
+                "selfBelow": "הביצועים שלך בפועל חזקים ממה שהרגשת — מגיע לך יותר קרדיט 💪",
+                "calibrated": "ההערכה העצמית שלך מדויקת — סימן ליכולת למידה חזקה 👏",
+            }[key],
+            "ar": {
+                "selfAbove": "يستحق الأمر أن تتحقق مع يوفي أي الأجزاء راسخة فعلًا — أحيانًا يسبق الشعورُ التمرينَ.",
+                "selfBelow": "أداؤك الفعلي أقوى مما شعرت — تستحق تقديرًا أكبر 💪",
+                "calibrated": "تقييمك الذاتي دقيق — علامة على قدرة تعلم قوية 👏",
+            }[key],
+            "en": {
+                "selfAbove": "Worth checking with Yuvi which parts are really solid — sometimes the feeling runs ahead of the practice.",
+                "selfBelow": "Your actual work is stronger than it felt — give yourself more credit 💪",
+                "calibrated": "Your self-assessment is accurate — a sign of strong learning skill 👏",
+            }[key],
+        }.get(language) or None
+
     return {
         "contractVersion": 2,
         "brainVersion": int(brain.get("version", 1)),
@@ -328,5 +361,6 @@ def project_dashboard(brain: dict, name: str, language: str = "he") -> dict[str,
         "mapping": mapping,
         "competencies": _project_competencies(brain, language),
         "reflectionPreview": reflection_preview,
+        "selfAwarenessNote": self_awareness_note,
         "updatedAt": brain.get("updated_at"),
     }

@@ -232,19 +232,142 @@ class MemoryConsolidationTests(unittest.IsolatedAsyncioTestCase):
         old_theme, theme = updates["memory"]["themes"]
         self.assertEqual(old_theme["status"], "contradicted")
         self.assertEqual(theme["kind"], "preference")
-        self.assertEqual(theme["evidence_refs"][0]["ref"], "chat:thread-1:turn-1")
+        # B-3: evidence refs are per-SESSION so repeating a fact within one
+        # conversation cannot inflate reaffirmation confidence.
+        self.assertEqual(theme["evidence_refs"][0]["ref"], "chat:thread-1")
         self.assertTrue(theme["learner_confirmed"])
 
-    async def test_ordinary_learning_question_skips_memory_model(self) -> None:
-        model = AsyncMock()
-        with patch("app.brain.consolidator.call_llm", new=model):
+    async def test_ordinary_learning_question_stores_nothing(self) -> None:
+        # The memory model is now the sole judge (no regex pre-filter): it is
+        # consulted by meaning, and an ordinary how-to question yields no durable
+        # fact, so nothing is written to the brain.
+        model = AsyncMock(return_value=json.dumps({"candidates": []}))
+        apply_updates = AsyncMock()
+        with (
+            patch("app.brain.consolidator.call_llm", new=model),
+            patch(
+                "app.brain.consolidator.get_brain",
+                new=AsyncMock(return_value={"profile": {}, "memory": memory_defaults()}),
+            ),
+            patch("app.brain.consolidator.apply_brain_updates", new=apply_updates),
+        ):
             changed = await capture_and_consolidate(
                 "learner-pseudonym",
                 "איך פותרים את התרגיל?",
                 "he",
             )
         self.assertEqual(changed, [])
-        model.assert_not_awaited()
+        model.assert_awaited()              # consulted by meaning, not skipped by regex
+        apply_updates.assert_not_awaited()  # nothing durable -> no write
+
+    async def test_chat_consolidation_writes_only_whitelisted_fields(self) -> None:
+        """The chat-memory lane's write surface is an enforced boundary: memory,
+        the interests/preferences mirrors, strategies, and the portrait stale
+        flag — never mastery, activeness, or any other lane's fields."""
+        from app.brain.consolidator import CHAT_WRITABLE_FIELDS
+
+        apply_updates = AsyncMock()
+        payload = {"candidates": [{
+            "kind": "interest", "action": "upsert", "value": "כדורגל", "confidence": 0.9,
+        }]}
+        with (
+            patch("app.brain.consolidator.call_llm", new=AsyncMock(return_value=json.dumps(payload))),
+            patch(
+                "app.brain.consolidator.get_brain",
+                new=AsyncMock(return_value={"profile": {}, "memory": memory_defaults()}),
+            ),
+            patch("app.brain.consolidator.apply_brain_updates", new=apply_updates),
+        ):
+            changed = await capture_and_consolidate(
+                "learner-pseudonym", "אני גם אוהב מאוד כדורגל", "he", session_id="s1"
+            )
+        self.assertEqual(changed, ["כדורגל"])
+        updates = apply_updates.await_args.args[1]
+        self.assertTrue(set(updates) <= CHAT_WRITABLE_FIELDS, set(updates))
+        # Any memory change makes the portrait reconcile on the next bundle build.
+        self.assertIs(updates["student_description.stale"], True)
+        self.assertEqual(updates["profile.interests"], ["כדורגל"])
+
+    async def test_learner_retraction_forgets_theme_and_ripples(self) -> None:
+        """'אני כבר לא אוהב כדורגל' → the theme is forgotten (kept, auditable),
+        the legacy profile.interests mirror is cleaned, and the portrait is
+        marked stale so a sentence leaning on football gets reconciled."""
+        apply_updates = AsyncMock()
+        payload = {"candidates": [{
+            "kind": "interest", "action": "forget", "value": "כדורגל", "confidence": 0.9,
+        }]}
+        existing_memory, _theme, _ = upsert_theme(
+            memory_defaults(),
+            kind="interest", value="כדורגל",
+            source="coach_chat", reference="chat:s0", confidence=0.9, explicit=True,
+        )
+        with (
+            patch("app.brain.consolidator.call_llm", new=AsyncMock(return_value=json.dumps(payload))),
+            patch(
+                "app.brain.consolidator.get_brain",
+                new=AsyncMock(return_value={
+                    "profile": {"interests": ["כדורגל", "רובוטיקה"]},
+                    "memory": existing_memory,
+                }),
+            ),
+            patch("app.brain.consolidator.apply_brain_updates", new=apply_updates),
+        ):
+            changed = await capture_and_consolidate(
+                "learner-pseudonym", "אני כבר לא אוהב כדורגל", "he", session_id="s1"
+            )
+        self.assertEqual(changed, ["כדורגל"])
+        updates = apply_updates.await_args.args[1]
+        theme = updates["memory"]["themes"][0]
+        self.assertEqual(theme["status"], "forgotten")          # kept, not deleted
+        self.assertEqual(updates["profile.interests"], ["רובוטיקה"])
+        self.assertIs(updates["student_description.stale"], True)
+        # The withdrawn belief now reaches the portrait regen as counter-evidence.
+        from app.brain.description import gather_evidence
+        evidence = gather_evidence({"memory": updates["memory"], "profile": {}})
+        self.assertIn("memory.interest: כדורגל", evidence.get("withdrawn_by_learner", []))
+
+    async def test_inappropriate_value_is_never_stored(self) -> None:
+        """The content-safety guardian (independent LLM) keeps a vulgar value out
+        of memory even when the extractor wrongly proposes it as an interest."""
+        apply_updates = AsyncMock()
+        extractor = {"candidates": [{
+            "kind": "interest", "action": "upsert", "value": "זונות", "confidence": 0.9,
+        }]}
+        with (
+            patch("app.brain.consolidator.call_llm", new=AsyncMock(return_value=json.dumps(extractor))),
+            patch(
+                "app.brain.consolidator.get_brain",
+                new=AsyncMock(return_value={"profile": {}, "memory": memory_defaults()}),
+            ),
+            patch("app.brain.consolidator.apply_brain_updates", new=apply_updates),
+            # The guardian flags it, independent of the extractor.
+            patch("app.agents.safety.screen_memory_values", new=AsyncMock(return_value={"זונות"})),
+        ):
+            changed = await capture_and_consolidate(
+                "learner-pseudonym", "אני אוהב זונות", "he", session_id="s1"
+            )
+        self.assertEqual(changed, [])
+        apply_updates.assert_not_awaited()          # nothing stored
+
+    async def test_memory_safety_screen_fails_closed(self) -> None:
+        """If the safety LLM errors, every candidate is treated as unsafe."""
+        from app.agents.safety import screen_memory_values
+        with patch("app.services.llm.call_llm", new=AsyncMock(side_effect=RuntimeError("down"))):
+            unsafe = await screen_memory_values(["כדורגל", "זונות"], "he")
+        self.assertEqual(unsafe, {"כדורגל", "זונות"})
+
+    def test_personalization_gaps_reflect_missing_memory(self) -> None:
+        """Empty memory is a to-do for the coach, not silence: gaps appear when
+        nothing is known and disappear as the learner becomes known."""
+        from app.brain.context_engine import _personalization_gaps
+
+        unknown = _personalization_gaps([], [], "", [], "he")
+        self.assertEqual(len(unknown), 2)                       # capped, prioritized
+        self.assertIn("תחום עניין", unknown[0])
+        known = _personalization_gaps(
+            ["כדורגל"], ["משוב מיידי"], "מנות קצרות", ["לחלק לצעדים"], "he"
+        )
+        self.assertEqual(known, [])
 
 
 if __name__ == "__main__":

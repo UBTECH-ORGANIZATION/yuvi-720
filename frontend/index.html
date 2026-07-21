@@ -52,8 +52,16 @@
       }
     </style>
     <script>
-      document.documentElement.classList.add('theme-pending')
-      document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+      (function () {
+        // theme-pending suppresses transition flashes until ThemeProvider
+        // hydrates and removes it; the sp_theme cookie is the user's saved
+        // preference (system falls back to the OS scheme).
+        document.documentElement.classList.add('theme-pending')
+        var m = document.cookie.match(/(?:^|;\s*)sp_theme=(light|dark|system)/)
+        var pref = m ? m[1] : 'system'
+        var dark = pref === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches : pref === 'dark'
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+      })()
     </script>
     <link rel="icon" type="image/png" href="/yuvi-favicon.png" />
     <title>Yuvilab Spark</title>

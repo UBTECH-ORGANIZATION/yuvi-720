@@ -17,8 +17,11 @@
   box-shadow: 0 10px 32px rgba(2, 4, 17, .26);
 }
 
-[data-theme='dark'] .app-bar-user,
-[data-theme='dark'] .yuvi-language-switcher {
+/* .app-bar-user is a bare wrapper now — the account pill is the trigger button
+   inside it (see UserMenu), which carries its own themed surface. Painting the
+   wrapper too drew a second box around it in dark mode. */
+[data-theme='dark'] .yuvi-language-switcher,
+[data-theme='dark'] .yuvi-theme-switcher {
   border-color: var(--sp-border);
   background: rgba(31, 36, 69, .88);
   color: var(--sp-ink-500);
@@ -36,122 +39,549 @@
 [data-theme='dark'] .q-part-dot,
 [data-theme='dark'] .q-dial-thumb { background: var(--sp-surface); }
 
-/* Landing */
+/* ── Landing — dark redesign ──────────────────────────────────────────────
+   A calm, warm night scene instead of a cyber dashboard. Near-black purple
+   canvas, exactly two soft light sources, layers separated by tone + shadow
+   rather than borders and grids, an open (un-boxed) hero, and a few small warm
+   accents to balance the blues. Scoped to dark so light mode, markup and login
+   logic are untouched. */
 [data-theme='dark'] .landing720 {
-  background:
-    radial-gradient(circle at 12% 10%, rgba(76, 201, 240, .12), transparent 28%),
-    radial-gradient(circle at 88% 24%, rgba(159, 122, 254, .17), transparent 32%),
-    linear-gradient(180deg, #11152d 0%, var(--sp-bg) 48%, #0a0d1e 100%);
+  --l720d-bg: #131126;
+  --l720d-surface: #1b1a33;
+  --l720d-surface-2: #232141;
+  --l720d-border: rgba(255, 255, 255, .09);
+  --l720d-border-strong: rgba(255, 255, 255, .14);
+  --l720d-text: #ffffff;
+  --l720d-text-soft: #b7b3ca;
+  --l720d-text-muted: #837f98;
+  --l720d-warm: #ffb45c;
+  --l720d-gold: #ffd46a;
+  --l720d-pink: #ff8fb0;
+
+  /* Midnight canvas lit from two unequal sides: a strong violet dawn on the
+     left, a weak cool-blue depth on the right — organic, not symmetric. A fine
+     film of noise keeps the darks from banding and adds a premium, tactile
+     grain. Mostly dark: the colour lives in a few soft pools, not everywhere. */
+  background-color: #0f0b24;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(1100px 780px at 12% -4%, rgba(139, 108, 255, .26), transparent 58%),
+    radial-gradient(760px 560px at 2% 44%, rgba(120, 92, 240, .12), transparent 56%),
+    radial-gradient(1080px 760px at 97% 104%, rgba(64, 128, 214, .09), transparent 60%),
+    linear-gradient(168deg, #161232 0%, #100c26 56%, #0b081c 100%);
+  background-attachment: fixed;
 }
 
+/* Living ambient light: two big soft pools — one purple, one warm — that drift
+   very slowly, so the page breathes even when nothing is happening. */
+[data-theme='dark'] .landing720::before,
+[data-theme='dark'] .landing720::after {
+  display: block;
+  filter: blur(100px);
+  opacity: .4;
+  mix-blend-mode: screen;
+}
+
+[data-theme='dark'] .landing720::before {
+  background: radial-gradient(circle, rgba(146, 112, 250, .42), transparent 68%);
+}
+
+[data-theme='dark'] .landing720::after {
+  background: radial-gradient(circle, rgba(70, 140, 210, .22), transparent 68%);
+}
+
+/* Header: a floating pane of glass over the hero — not a solid block. A
+   lighter, translucent purple-tinted fill lets the aurora show through, a thin
+   bright hairline catches the light, and a faint violet glow lifts it off the
+   canvas so it blends instead of cutting the background. */
 [data-theme='dark'] .landing720-header {
-  border-color: rgba(124, 132, 184, .28);
-  background: rgba(20, 24, 50, .82);
-  box-shadow: 0 18px 48px rgba(2, 4, 17, .34);
-}
-
-[data-theme='dark'] .landing720-nav { background: rgba(9, 12, 30, .56); }
-[data-theme='dark'] .landing720-nav a:hover { background: var(--sp-surface-2); }
-[data-theme='dark'] .landing720 .yuvi-language-switcher { background: rgba(31, 36, 69, .9); }
-
-/* Night launch deck: the dark landing hero is a distinct scene, not a dimmed
-   copy of the daylight gradient. */
-[data-theme='dark'] .landing720-hero {
-  border: 1px solid rgba(125, 231, 255, .16);
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 20px;
   background:
-    linear-gradient(rgba(77, 207, 238, .055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(77, 207, 238, .055) 1px, transparent 1px),
-    radial-gradient(circle at 78% 44%, rgba(49, 215, 244, .19), transparent 24%),
-    radial-gradient(circle at 18% 14%, rgba(144, 95, 255, .23), transparent 31%),
-    linear-gradient(128deg, #151940 0%, #17143d 46%, #0b2440 100%);
-  background-size: 44px 44px, 44px 44px, auto, auto, auto;
+    linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, 0) 62%),
+    rgba(38, 34, 74, .42);
   box-shadow:
-    0 42px 110px rgba(1, 4, 22, .58),
-    inset 0 1px rgba(196, 247, 255, .12),
-    inset 0 0 80px rgba(71, 58, 203, .1);
+    0 10px 40px rgba(124, 92, 255, .18),
+    inset 0 1px 0 rgba(255, 255, 255, .10);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
 }
 
-[data-theme='dark'] .landing720-hero::before {
-  border-color: rgba(94, 226, 255, .13);
-  box-shadow:
-    0 0 0 42px rgba(74, 203, 235, .018),
-    0 0 0 96px rgba(157, 106, 255, .018);
+[data-theme='dark'] .landing720-nav { background: transparent; }
+[data-theme='dark'] .landing720-nav a { color: var(--l720d-text-soft); }
+[data-theme='dark'] .landing720-nav a:hover,
+[data-theme='dark'] .landing720-nav a:focus-visible {
+  color: #ffffff;
+  background: rgba(255, 255, 255, .06);
+}
+[data-theme='dark'] .landing720 .yuvi-language-switcher,
+[data-theme='dark'] .landing720 .yuvi-theme-switcher {
+  border-color: var(--l720d-border);
+  background: rgba(30, 30, 56, .8);
+  color: var(--l720d-text-soft);
+  box-shadow: none;
 }
 
+/* Hero: open and un-caged. No border, no grid, no decorative rings — the copy
+   and the artwork sit straight on the canvas, separated by space alone. */
+[data-theme='dark'] .landing720-hero {
+  min-block-size: auto;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  padding: clamp(4px, 2vw, 20px) 0 clamp(8px, 1.5vw, 18px);
+}
+
+[data-theme='dark'] .landing720-hero::before,
 [data-theme='dark'] .landing720-hero::after {
-  border-color: rgba(111, 225, 255, .2);
-  box-shadow: 0 0 110px rgba(44, 211, 244, .24);
+  display: none;
 }
 
+/* Desktop: pull the copy and a larger artwork together into one open scene.
+   Guarded by min-width so it never overrides the mobile single-column stack
+   (the [data-theme] selector otherwise outranks the responsive rules). */
+@media (min-width: 901px) {
+  [data-theme='dark'] .landing720-hero {
+    gap: clamp(18px, 2.4vw, 40px);
+    grid-template-columns: minmax(0, 1.02fr) minmax(400px, .98fr);
+  }
+
+  [data-theme='dark'] .landing720-hero-visual {
+    min-block-size: 470px;
+  }
+
+  [data-theme='dark'] .landing720-yubi-artwork {
+    inline-size: min(58vw, 720px);
+    aspect-ratio: 1.42;
+  }
+}
+
+[data-theme='dark'] .landing720-copy h1 {
+  text-shadow: 0 14px 40px rgba(10, 6, 30, .5);
+}
+
+/* Softer, purple-leaning tag — pulls the eyebrow away from the cyan cyber look. */
 [data-theme='dark'] .landing720-eyebrow {
-  border-color: rgba(114, 224, 250, .25);
-  background: rgba(13, 31, 61, .54);
-  color: #b9f3ff;
-  box-shadow: inset 0 1px rgba(255, 255, 255, .08);
+  border-color: rgba(163, 139, 255, .28);
+  background: rgba(118, 103, 245, .16);
+  color: #cbbcff;
+  box-shadow: none;
 }
 
+[data-theme='dark'] .landing720-subtitle { color: var(--l720d-text-soft); }
+[data-theme='dark'] .landing720-note { color: var(--l720d-text-muted); }
+
+/* Artwork: the robot is the subject, not the frame. Unwrap the outer glass
+   frame and keep a single soft screen with a purple-blue glow and a hint of
+   warm light. */
 [data-theme='dark'] .landing720-yubi-artwork {
-  border-color: rgba(124, 239, 255, .3);
-  background: linear-gradient(145deg, rgba(58, 89, 150, .3), rgba(13, 18, 52, .36));
-  box-shadow:
-    0 34px 78px rgba(0, 3, 25, .5),
-    0 0 52px rgba(67, 217, 247, .14),
-    inset 0 1px rgba(202, 249, 255, .28);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+[data-theme='dark'] .landing720-yubi-artwork::before {
+  inset: 6% -10% -14%;
+  background: radial-gradient(ellipse, rgba(130, 105, 255, .3), rgba(76, 201, 240, .12) 48%, transparent 72%);
+  filter: blur(26px);
 }
 
 [data-theme='dark'] .landing720-yubi-artwork__image {
-  border-color: rgba(126, 232, 255, .3);
-  background: #070b2b;
-  box-shadow: inset 0 0 64px rgba(92, 80, 219, .24), 0 16px 34px rgba(0, 2, 18, .44);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
+/* No card around the scene: kill the container radius and the glassy sheen sweep
+   so Yuvi + the hologram sit straight on the hero, with no transparent rectangle
+   or rounded corners framing them. */
+[data-theme='dark'] .landing720-yubi-artwork { border-radius: 0; }
+[data-theme='dark'] .landing720-yubi-artwork__shine { display: none; }
+
+/* Calm the neon a touch so the scene reads clean, not clinical. */
+[data-theme='dark'] .landing720-yubi-station { filter: saturate(.94); }
+
+/* Drop the corner brackets — the artwork should not read as a framed viewport. */
+[data-theme='dark'] .landing720-yubi-artwork__corner { display: none; }
+
+/* Yuvi now turns toward the hologram for real via the 3D model's presenting
+   pose (see LandingYubiJourney), so no CSS fake-tilt is applied here. */
+
+/* Ground Yuvi with a soft contact shadow on the platform (hero only), so he
+   stands on the floor instead of hovering over the void. */
+[data-theme='dark'] .landing720-yubi-pilot[data-scene='hero'] .landing720-yubi-pilot__robot::after {
+  content: '';
+  position: absolute;
+  inset-inline-start: 50%;
+  inset-block-end: 3%;
+  inline-size: 42%;
+  block-size: 9%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgba(0, 0, 0, .5), transparent 70%);
+  filter: blur(6px);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Layering: the hero paints at z-index 2 and the flight overlay at 1, so Yuvi
+   would hide *behind* the enlarged hologram. Lift the overlay above the hero
+   (still under the sticky header) so he stands in front of the panel and
+   overlaps its lower-left corner for depth. */
+[data-theme='dark'] .landing720-flight-scene { z-index: 12; }
+
+/* Login: part of the hero copy, not a second box on top of it. The buttons sit
+   straight under the text; student is primary, teacher secondary, unified
+   sign-in a plain text link. */
 [data-theme='dark'] .landing720-login {
-  border-color: rgba(181, 174, 223, .2);
-  background: rgba(20, 24, 50, .93);
-  box-shadow: 0 22px 54px rgba(2, 4, 17, .42);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding: 6px 0 0;
+}
+
+[data-theme='dark'] .landing720-login h2 { color: var(--l720d-text); }
+[data-theme='dark'] .landing720-login p { color: var(--l720d-text-soft); }
+
+[data-theme='dark'] .landing720-login-btn.student {
+  background: linear-gradient(135deg, #7d6bff 0%, #9f7cff 58%, #c3a7ff 128%);
+  box-shadow: 0 14px 36px rgba(126, 92, 255, .38);
 }
 
 [data-theme='dark'] .landing720-login-btn.teacher {
-  color: var(--sp-teal-600);
-  border-color: rgba(112, 220, 249, .24);
-  background: linear-gradient(135deg, #173b4d, #1d3049);
+  color: #e7e6ee;
+  border-color: var(--l720d-border-strong);
+  background: var(--l720d-surface-2);
 }
 
 [data-theme='dark'] .landing720-login-btn.secure {
-  color: var(--sp-primary-700);
-  border-color: var(--sp-border);
-  background: var(--sp-primary-050);
+  min-block-size: 40px;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--l720d-text-muted);
+  box-shadow: none;
+  font-size: 13.5px;
 }
 
+[data-theme='dark'] .landing720-login-btn.secure svg { opacity: .75; }
+
+[data-theme='dark'] .landing720-login-btn.secure:hover {
+  color: #ffffff;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+/* One continuous story, not a stack of boxes. Only three surfaces exist: the
+   page canvas, a faint section wash (contact), and genuine content cards. */
+
+/* Agents section: an open section. The title sits on the canvas and the diagram
+   floats over it — only the central brain and the agents around it are cards. */
 [data-theme='dark'] .landing720-hub {
-  border-color: var(--sp-border);
-  background:
-    radial-gradient(circle at 50% 32%, rgba(159, 122, 254, .16), transparent 36%),
-    linear-gradient(135deg, rgba(24, 28, 56, .97), rgba(16, 20, 44, .94));
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding-inline: 0;
 }
 
+/* Keep a card boundary only where it earns one: the agent nodes and the three
+   feature cards. Give them depth with a soft top-lit gradient and an inner
+   highlight instead of a flat fill. */
 [data-theme='dark'] .landing720-hub-node,
-[data-theme='dark'] .landing720-feature-card,
+[data-theme='dark'] .landing720-feature-card {
+  border-color: var(--l720d-border);
+  background: linear-gradient(180deg, #221f40 0%, #191830 100%);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, .3), inset 0 1px rgba(255, 255, 255, .06);
+}
+
+/* Larger, calmer feature cards; drop the corner blob that added nothing. */
+[data-theme='dark'] .landing720-feature-card {
+  padding: 30px;
+  border-radius: 22px;
+}
+
+[data-theme='dark'] .landing720-feature-card::before { display: none; }
+
+[data-theme='dark'] .landing720-feature-icon {
+  inline-size: 54px;
+  block-size: 54px;
+  border-radius: 17px;
+}
+
+/* FAQ and the trust strip open straight onto the page — dividers, not a box. */
 [data-theme='dark'] .landing720-faq,
-[data-theme='dark'] .landing720-contact,
 [data-theme='dark'] .landing720-trust {
-  border-color: var(--sp-border);
-  background: rgba(24, 28, 56, .9);
-  box-shadow: var(--sp-shadow-md);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
+[data-theme='dark'] .landing720-faq { padding-inline: 0; }
+[data-theme='dark'] .landing720-faq-item { border-block-end-color: var(--l720d-border); }
+[data-theme='dark'] .landing720-trust span + span { border-inline-start-color: var(--l720d-border); }
+
+/* Contact is a distinct zone via a faint section wash, not another framed card.
+   Only the input fields inside it stay as surfaces. */
+[data-theme='dark'] .landing720-contact {
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  background: linear-gradient(180deg, rgba(24, 24, 46, .55), rgba(17, 17, 34, .55));
+}
+
+[data-theme='dark'] .landing720-contact::after { display: none; }
+
+/* The summary line reads as plain text, not a pinned bar. */
 [data-theme='dark'] .landing720-hub-summary {
-  border-color: var(--sp-border);
-  background: linear-gradient(120deg, var(--sp-primary-050), rgba(23, 59, 77, .72));
+  border: 0;
+  background: transparent;
+  padding-inline: 0;
 }
 
-[data-theme='dark'] .landing720-hub-chips span { background: var(--sp-surface-2); }
+[data-theme='dark'] .landing720-hub-chips span {
+  background: var(--l720d-surface-2);
+  border-color: var(--l720d-border);
+}
+
+[data-theme='dark'] .landing720-trust span svg { color: #b7a3ff; }
+
 [data-theme='dark'] .landing720-contact-field input,
-[data-theme='dark'] .landing720-contact-field textarea,
+[data-theme='dark'] .landing720-contact-field textarea {
+  border-color: var(--l720d-border);
+  background: var(--l720d-surface-2);
+}
 [data-theme='dark'] .landing720-contact-field input:focus,
 [data-theme='dark'] .landing720-contact-field textarea:focus {
-  border-color: var(--sp-border);
-  background: var(--sp-surface-2);
+  border-color: rgba(163, 139, 255, .5);
+  background: #14142a;
+}
+
+/* ── Landing — presence, scale & rhythm ───────────────────────────────────
+   De-boxing left the page feeling small in a big dark void. This layer scales
+   the hero and the agents diagram up, gives each section its own light instead
+   of a card, and adds a two-column FAQ — so the page reads as one premium
+   journey rather than small widgets stacked on black. Layout-shifting rules are
+   gated behind min-width so the mobile stack is untouched. */
+
+/* Hero — the WOW. Bigger type, a larger artwork, and a taller, balanced 55/45
+   stage that fills the container. */
+[data-theme='dark'] .landing720-copy h1 {
+  font-size: clamp(40px, 5.2vw, 72px);
+  line-height: 1.03;
+  letter-spacing: -0.03em;
+}
+
+[data-theme='dark'] .landing720-subtitle {
+  font-size: clamp(17px, 1.4vw, 20px);
+  line-height: 1.65;
+  max-inline-size: 58ch;
+}
+
+[data-theme='dark'] .landing720-eyebrow { font-size: 13px; padding: 8px 15px; }
+
+[data-theme='dark'] .landing720-login { gap: 14px; }
+
+[data-theme='dark'] .landing720-login-btn.student,
+[data-theme='dark'] .landing720-login-btn.teacher {
+  min-block-size: 56px;
+  font-size: 15.5px;
+}
+
+@media (min-width: 901px) {
+  [data-theme='dark'] .landing720-hero {
+    min-block-size: clamp(460px, 56vh, 580px);
+    grid-template-columns: minmax(0, 1.12fr) minmax(430px, .88fr);
+    gap: clamp(24px, 3vw, 56px);
+    align-items: center;
+  }
+
+  [data-theme='dark'] .landing720-hero-visual { min-block-size: 470px; overflow: visible; }
+  [data-theme='dark'] .landing720-yubi-artwork { inline-size: min(60vw, 760px); aspect-ratio: 1.42; }
+}
+
+/* A soft violet glow behind the robot so it reads as lit, not screenshotted —
+   dialled back so contrast, not glow, carries the scene. */
+[data-theme='dark'] .landing720-yubi-artwork::before {
+  inset: 4% -12% -16%;
+  background: radial-gradient(ellipse, rgba(140, 112, 255, .3), rgba(90, 150, 220, .08) 46%, transparent 72%);
+  filter: blur(28px);
+}
+
+/* Trust strip: a real band, not a footer afterthought. */
+[data-theme='dark'] .landing720-trust span {
+  min-block-size: 64px;
+  font-size: 14.5px;
+}
+
+/* Agents — the centrepiece. Its own purple light, a wide stage, a bigger brain,
+   larger agent cards and clearer links. */
+[data-theme='dark'] .landing720-hub {
+  background: radial-gradient(1100px 640px at 50% 44%, rgba(132, 106, 255, .14), transparent 62%);
+}
+
+[data-theme='dark'] .landing720-hub-head h2 { font-size: clamp(30px, 3.2vw, 46px); }
+[data-theme='dark'] .landing720-hub-head p { font-size: clamp(15px, 1.3vw, 17px); }
+
+[data-theme='dark'] .landing720-hub-link {
+  stroke: rgba(150, 130, 255, .42);
+  stroke-width: .55;
+}
+
+[data-theme='dark'] .landing720-hub-orbit { stroke: rgba(120, 200, 255, .22); }
+[data-theme='dark'] .landing720-hub-core strong { font-size: clamp(17px, 1.8vw, 22px); }
+
+@media (min-width: 901px) {
+  [data-theme='dark'] .landing720-hub-stage {
+    max-inline-size: 1040px;
+    aspect-ratio: 1 / 0.66;
+  }
+
+  [data-theme='dark'] .landing720-hub-core {
+    inline-size: clamp(178px, 20vw, 252px);
+    block-size: clamp(178px, 20vw, 252px);
+  }
+
+  [data-theme='dark'] .landing720-hub-core-shadow {
+    inline-size: clamp(140px, 16vw, 190px);
+    transform: translate(-50%, clamp(100px, 10.5vw, 138px));
+  }
+
+  [data-theme='dark'] .landing720-hub-node {
+    inline-size: clamp(196px, 20vw, 238px);
+    padding: 15px 17px;
+  }
+
+  [data-theme='dark'] .landing720-hub-node .landing720-hub-icon {
+    inline-size: 44px;
+    block-size: 44px;
+  }
+}
+
+/* Feature cards — three larger, confident cards. */
+[data-theme='dark'] .landing720-feature-grid {
+  padding-block: clamp(8px, 2vw, 26px);
+  gap: clamp(18px, 2vw, 26px);
+}
+
+[data-theme='dark'] .landing720-feature-card {
+  min-block-size: 236px;
+  padding: 34px;
+}
+
+[data-theme='dark'] .landing720-feature-card h3 { font-size: 21px; }
+[data-theme='dark'] .landing720-feature-card p { font-size: 15px; line-height: 1.6; }
+
+[data-theme='dark'] .landing720-feature-icon {
+  inline-size: 60px;
+  block-size: 60px;
+  border-radius: 18px;
+}
+
+/* FAQ — a two-column composition on desktop: a sticky intro on one side,
+   the questions on the other. Bigger type, still no outer box. */
+[data-theme='dark'] .landing720-faq-head h2 { font-size: clamp(30px, 3vw, 44px); }
+[data-theme='dark'] .landing720-faq-question { font-size: 16.5px; min-block-size: 68px; }
+[data-theme='dark'] .landing720-faq-answer { font-size: 15.5px; line-height: 1.7; }
+
+@media (min-width: 901px) {
+  [data-theme='dark'] .landing720-faq {
+    display: grid;
+    grid-template-columns: minmax(260px, .82fr) minmax(0, 1.18fr);
+    gap: clamp(32px, 5vw, 72px);
+    align-items: start;
+  }
+
+  [data-theme='dark'] .landing720-faq-head {
+    margin: 0;
+    max-inline-size: none;
+    text-align: start;
+    align-items: flex-start;
+    position: sticky;
+    inset-block-start: 100px;
+  }
+}
+
+/* Contact — a distinct closing zone lit from two corners. */
+[data-theme='dark'] .landing720-contact {
+  background:
+    radial-gradient(900px 480px at 82% 10%, rgba(132, 106, 255, .17), transparent 60%),
+    radial-gradient(720px 440px at 8% 98%, rgba(50, 145, 210, .11), transparent 58%),
+    linear-gradient(180deg, rgba(26, 26, 50, .58), rgba(17, 17, 34, .55));
+}
+
+[data-theme='dark'] .landing720-contact-head h2 { font-size: clamp(30px, 3vw, 44px); }
+[data-theme='dark'] .landing720-contact-head p { font-size: 15.5px; }
+
+/* ── Landing — warmth & energy ────────────────────────────────────────────
+   Small warm accents (gold/pink) woven through the blue-purple so the page
+   feels like a bright place to start learning, not a night shift. Each section
+   is lit in its own hue: hero + agents lean purple energy, features catch a
+   warm dawn, contact closes on a warm sunset. */
+
+/* A living violet accent — lavender → violet with just a cool spark at the end,
+   so the one energetic word still belongs to the midnight-purple language. */
+[data-theme='dark'] .landing720-accent {
+  background: linear-gradient(96deg, #d8c8ff 0%, #b79bff 34%, #9a7cff 66%, #7fd0ff 100%);
+  background-size: 260% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: l720-accent-shift 7s ease-in-out infinite;
+}
+
+/* Soft violet/lavender tag — unified with the brand, no warm outlier. */
+[data-theme='dark'] .landing720-eyebrow {
+  border-color: rgba(168, 146, 255, .28);
+  background: rgba(120, 100, 240, .14);
+  color: #d4c6ff;
+}
+
+/* Feature icons stay in-family: two violet, one small cool-cyan highlight. */
+[data-theme='dark'] .landing720-feature-icon.icon-purple { color: #c3b0ff; background: rgba(140, 112, 255, .17); }
+[data-theme='dark'] .landing720-feature-icon.icon-blue { color: #a99cff; background: rgba(120, 96, 235, .16); }
+[data-theme='dark'] .landing720-feature-icon.icon-teal { color: #8fe6ff; background: rgba(90, 180, 235, .14); }
+
+/* Agent-node tones: fold the old orange/pink/blue/beige chips into the
+   midnight-purple family, keeping only the learning agent's small cyan spark. */
+[data-theme='dark'] .tone-purple .landing720-hub-icon { color: #c3b0ff; background: rgba(140, 112, 255, .16); }
+[data-theme='dark'] .tone-indigo .landing720-hub-icon { color: #a99cff; background: rgba(120, 96, 235, .15); }
+[data-theme='dark'] .tone-blue .landing720-hub-icon { color: #a99cff; background: rgba(110, 92, 230, .15); }
+[data-theme='dark'] .tone-teal .landing720-hub-icon { color: #8fe6ff; background: rgba(90, 180, 235, .13); }
+[data-theme='dark'] .tone-pink .landing720-hub-icon { color: #cbb4ff; background: rgba(150, 116, 240, .15); }
+[data-theme='dark'] .tone-orange .landing720-hub-icon { color: #d0bdff; background: rgba(150, 116, 240, .15); }
+
+/* Features catch a soft violet light from above — not a warm dawn. */
+[data-theme='dark'] .landing720-feature-grid {
+  background: radial-gradient(1100px 420px at 50% -10%, rgba(150, 116, 255, .06), transparent 62%);
+}
+
+/* Warmer hover: cards lift toward the light with a gentle warm-purple glow. */
+[data-theme='dark'] .landing720-feature-card,
+[data-theme='dark'] .landing720-hub-node {
+  transition: transform .28s var(--sp-ease), box-shadow .28s var(--sp-ease), border-color .28s var(--sp-ease);
+}
+
+[data-theme='dark'] .landing720-feature-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(168, 146, 255, .24);
+  box-shadow: 0 28px 60px rgba(0, 0, 0, .4), 0 0 34px rgba(140, 108, 255, .1), inset 0 1px rgba(255, 255, 255, .07);
+}
+
+/* Contact closes the page on a deep violet zone, cooled by a faint blue edge. */
+[data-theme='dark'] .landing720-contact {
+  background:
+    radial-gradient(920px 500px at 84% 4%, rgba(132, 106, 255, .2), transparent 60%),
+    radial-gradient(700px 440px at 8% 96%, rgba(64, 120, 205, .1), transparent 58%),
+    linear-gradient(180deg, rgba(26, 22, 52, .6), rgba(15, 12, 32, .55));
 }
 
 /* Learner mapping */

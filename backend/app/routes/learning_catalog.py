@@ -4,41 +4,42 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from app.auth.dependencies import require_learner
 from app.services import content_provider
 from app.services.learning_sessions import create_provider_session
 from app.services.learning_progress import project_unit_roadmap
 from app.services.learning_timing import summarize_session
 from app.services.lesson_illustrations import find_for_lesson, localized_alt, public_metadata
 from app.services.events import get_session_events, verify_launch
-from learner_state import normalize_learner_id  # type: ignore
 
 
 router = APIRouter(prefix="/api/learning", tags=["learning-catalog"])
 
 
 class LearningSessionRequest(BaseModel):
-    learner_id: str = Field(default="demo-learner", max_length=120)
+    # No learner_id: the session is always minted for the session learner.
     component_id: str = Field(min_length=1, max_length=160)
     unit_id: Optional[str] = Field(default=None, max_length=160)
     language: Literal["he", "ar", "en"] = "he"
 
 
 @router.get("/catalog")
-async def read_catalog(learner_id: str = "demo-learner", lang: str = "he") -> dict:
+async def read_catalog(lang: str = "he", learner_id: str = Depends(require_learner)) -> dict:
     """Return provider-owned units and components through Spark's stable facade.
 
-    Each unit carries the cached AI lesson illustration (read-only; never
-    generated here) so the dashboard can render a topic visual per lesson.
+    The learner comes from the session cookie only (a client-supplied
+    learner_id is never accepted). Each unit carries the cached AI lesson
+    illustration (read-only; never generated here) so the dashboard can render
+    a topic visual per lesson, localized by ``lang``.
     """
     try:
         units = await content_provider.list_units()
-        safe_learner_id = normalize_learner_id(learner_id)
         projected = []
         for unit in units:
-            roadmap = await project_unit_roadmap(unit, safe_learner_id)
+            roadmap = await project_unit_roadmap(unit, learner_id)
             roadmap["illustration"] = await _unit_illustration(roadmap, lang)
             projected.append(roadmap)
         units = projected
@@ -65,11 +66,15 @@ async def _unit_illustration(unit: dict, lang: str) -> Optional[dict]:
 
 
 @router.post("/sessions")
-async def create_learning_session(data: LearningSessionRequest, request: Request) -> dict:
+async def create_learning_session(
+    data: LearningSessionRequest,
+    request: Request,
+    learner_id: str = Depends(require_learner),
+) -> dict:
     """Validate approved content and mint an absolute cross-origin xAPI launch."""
     try:
         return await create_provider_session(
-            normalize_learner_id(data.learner_id),
+            learner_id,
             data.component_id,
             unit_id=data.unit_id,
             language=data.language,

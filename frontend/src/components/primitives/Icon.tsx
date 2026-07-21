@@ -21,6 +21,8 @@ const ICON_PATHS: Record<string, ReactNode> = {
   orbit: <><circle cx="12" cy="12" r="2" /><ellipse cx="12" cy="12" rx="9" ry="4" /><ellipse cx="12" cy="12" rx="4" ry="9" transform="rotate(42 12 12)" /></>,
   compass: <><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5z" /></>,
   map: <><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z" /><path d="M9 3v15m6-12v15" /></>,
+  camera: <><rect x="3" y="7" width="13" height="11" rx="2.4" /><path d="m16 10.5 5-3v10l-5-3" /></>,
+  help: <><circle cx="12" cy="12" r="9" /><path d="M9.4 9.2a2.6 2.6 0 0 1 5.1.7c0 1.7-2.5 2.1-2.5 3.6" /><path d="M12 17h.01" /></>,
   close: <path d="m6 6 12 12M18 6 6 18" />,
   play: <path d="m8 5 11 7-11 7z" />,
   inbox: <><path d="M4 13h4l1.5 3h5L16 13h4" /><path d="M4 13 6 5h12l2 8v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" /></>,

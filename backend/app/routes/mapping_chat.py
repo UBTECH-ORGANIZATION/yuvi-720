@@ -9,13 +9,13 @@ AI model — instant, offline-capable, privacy-safe, and every question traces t
 real answer.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
+from app.auth.dependencies import require_learner
 from app.brain.consolidator import capture_reflection_choices
 from app.core.localization import normalize_language
 from app.services.reflection_engine import build_reflection
-from learner_state import normalize_learner_id
 
 
 router = APIRouter(prefix="/api", tags=["mapping-reflect"])
@@ -37,14 +37,13 @@ async def section_reflect(data: dict):
 
 
 @router.post("/section-reflect/capture")
-async def section_reflect_capture(data: dict):
+async def section_reflect_capture(data: dict, learner_id: str = Depends(require_learner)):
     """Persist the learner's option picks as soft brain signals (deterministic).
 
     The client sends the localized label it showed + a stable signal code; we
     store the label as a characteristic and keep the codes for traceability. No
     LLM, no learner free text. Non-blocking — a failure never affects the flow.
     """
-    learner_id = normalize_learner_id(data.get("learner_id"))
     phase_title = data.get("phase_title", "")
     language = normalize_language(data.get("language"))
     choices = data.get("choices") or []

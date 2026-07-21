@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1280" viewBox="0 0 1024 1280">
+	<defs>
+		<filter id="inkWobble" x="-8%" y="-8%" width="116%" height="116%"><feTurbulence type="fractalNoise" baseFrequency="0.008 0.014" numOctaves="2" seed="37" result="noise"/><feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G"/></filter>
+		<filter id="softWobble" x="-8%" y="-8%" width="116%" height="116%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="19" result="noise"/><feDisplacementMap in="SourceGraphic" in2="noise" scale="3"/></filter>
+	</defs>
+	<use href="YW_CentralLearningTree_Grayscale_Master.svg#foreground-layer" xlink:href="YW_CentralLearningTree_Grayscale_Master.svg#foreground-layer"/>
+</svg>

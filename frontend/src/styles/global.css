@@ -48,6 +48,11 @@ button:disabled {
 
 .yuvi-brand-logo {
   display: inline-grid;
+  /* Definite tracks: without these the single grid row auto-sizes to the image's
+     intrinsic height, so the child's `block-size: 100%` resolves against that
+     instead of the box the caller set — the wordmark then overflows its slot. */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   place-items: center;
   inline-size: 100%;
   block-size: 100%;
@@ -66,15 +71,27 @@ button:disabled {
 [data-theme='dark'] .yuvi-brand-logo__image--light { display: block; }
 
 .yuvi-theme-switcher {
-  display: inline-grid;
-  place-items: center;
-  min-inline-size: 48px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   min-block-size: 44px;
-  padding: 5px;
-  border: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(111, 91, 255, 0.14);
   border-radius: var(--sp-radius-pill);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 6px 18px rgba(111, 91, 255, 0.08);
   color: var(--sp-ink-500);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.yuvi-theme-switcher select {
+  border: 0;
+  background: transparent;
+  color: var(--sp-ink-700);
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
 }
 
 .yuvi-theme-switcher:focus-visible {
@@ -246,4 +263,17 @@ body.is-resizing-companion * {
 @keyframes yubi-tip-pop {
   from { opacity: 0; transform: translate(-50%, calc(-100% - 5px)) scale(.86); }
   to { opacity: 1; transform: translate(-50%, calc(-100% - 13px)) scale(1); }
+}
+/* Screen-reader-only content (visually hidden, still announced). Used by the learning world's
+   accessible title + live announcements. */
+.sp-sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
