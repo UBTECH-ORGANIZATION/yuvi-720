@@ -16,6 +16,7 @@ import {
   type LearningUnitDTO,
 } from '../../services/learning'
 import { LearningRoadmap } from '../learning-portal/LearningRoadmap'
+import { ReflectionPanel } from './ReflectionPanel'
 import { playProgressionAudio } from '../../services/progressionAudio'
 import './lesson-workspace.css'
 
@@ -380,6 +381,12 @@ export function LessonPage() {
                   }}
                 />
               </div>
+
+              <ReflectionPanel
+                componentId={session?.component.id || null}
+                sessionId={session?.session_id || null}
+                onDone={() => undefined}
+              />
 
               <footer className="learning-completion-dialog__footer">
                 <div>

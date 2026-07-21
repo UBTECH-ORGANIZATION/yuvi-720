@@ -813,5 +813,13 @@
   "auth.dialog.hello.1": "היי! אני יובי 👋",
   "auth.dialog.hello.2": "בואו נלמד משהו חדש יחד",
   "auth.dialog.hello.3": "מוכנים? רק שם משתמש וסיסמה",
-  "auth.menu.open": "תפריט חשבון"
+  "auth.menu.open": "תפריט חשבון",
+  "learning.reflection.title": "רגע של רפלקציה",
+  "learning.reflection.loading": "יובי מכין שאלה קצרה עליך ועל המשימה…",
+  "learning.reflection.step": "שאלה {current} מתוך {total}",
+  "learning.reflection.placeholder": "כתבו כאן במילים שלכם…",
+  "learning.reflection.skip": "דלג/י",
+  "learning.reflection.next": "המשך",
+  "learning.reflection.finish": "סיום",
+  "learning.reflection.thanks": "תודה ששיתפת! זה עוזר ליובי להכיר אותך טוב יותר."
 }

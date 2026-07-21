@@ -35,7 +35,9 @@ def _secret() -> str:
     return _DEV_SECRET
 
 
-def create_session_token(*, user_id: str, username: str, roles: list[str]) -> str:
+def create_session_token(
+    *, user_id: str, username: str, roles: list[str], session_id: Optional[str] = None
+) -> str:
     now = datetime.now(timezone.utc)
     payload = {
         "sub": user_id,
@@ -46,6 +48,10 @@ def create_session_token(*, user_id: str, username: str, roles: list[str]) -> st
         "iat": now,
         "exp": now + TOKEN_LIFETIME,
     }
+    if session_id:
+        # MoE LRS sessionId — one visit, minted at login; every outbound 720
+        # statement of this visit carries it, and exit reports the duration.
+        payload["sid"] = session_id
     return jwt.encode(payload, _secret(), algorithm=_ALGORITHM)
 
 

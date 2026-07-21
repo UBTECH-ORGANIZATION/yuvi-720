@@ -4,17 +4,24 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
 from app.agents.onboarding import run_onboarding
-from app.auth.dependencies import require_learner
+from app.auth.dependencies import require_learner_session
 from app.brain.repository import get_brain
 from app.core.localization import normalize_language
 from app.services.dashboard import project_dashboard
+from app.services.lrs import reporter as lrs_reporter
 
 
 router = APIRouter(prefix="/api", tags=["dashboard"])
 
 
 @router.post("/generate-dashboard")
-async def generate_dashboard(data: dict, learner_id: str = Depends(require_learner)):
+async def generate_dashboard(data: dict, session=Depends(require_learner_session)):
+    learner_id = session["sub"]
+    # MoE 720: learner viewing their own data → dashboard/student-personal.
+    if session.get("sid"):
+        await lrs_reporter.report_dashboard_viewed(
+            learner_id, session["sid"], "student-personal", None
+        )
     """Project the learner brain into the dashboard DTO (F4).
 
     Numbers are **real** — progress from `mastery`/`progress`, competencies from

@@ -163,3 +163,15 @@ async def update_preferences(user_id: str, updates: dict[str, Any]) -> dict[str,
 
 async def touch_last_login(user_id: str) -> None:
     await _set_fields(user_id, {"last_login_at": _now()})
+
+
+async def set_current_moe_session(user_id: str, session_id: Optional[str]) -> None:
+    """Track the learner's active MoE LRS sessionId (minted at login, cleared
+    at logout) so server-side event forwarding can stamp the right session."""
+    await _set_fields(user_id, {"current_moe_session_id": session_id})
+
+
+async def set_agency_started_at(user_id: str, value: Optional[str]) -> None:
+    """Onboarding span marker: set on first mapping load, cleared on completion
+    (drives the agency `completed` duration = results-approved − mapping-start)."""
+    await _set_fields(user_id, {"agency_started_at": value})

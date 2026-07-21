@@ -38,9 +38,12 @@ COLLECTIONS = [
     ("agent_conversations", "learner_id"),
     ("agent_messages", "learner_id"),
     ("reflections", "learner_id"),
+    ("reflection_flows", "learner_id"),
+    ("tutor_decisions", "learner_id"),
     ("mentoring_conversations", "learner_id"),
     ("feedback_reports", "learner_id"),
 ]
+# `lrs_outbox` is intentionally absent: it is the permanent MoE send ledger.
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 REPO_DIR = BACKEND_DIR.parent

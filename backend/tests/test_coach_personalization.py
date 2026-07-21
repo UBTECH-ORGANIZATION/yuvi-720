@@ -132,8 +132,21 @@ class CoachPersonalizationTests(unittest.IsolatedAsyncioTestCase):
             "teacher_directives",
         }
         self.assertTrue(expected.issubset(reads))
-        self.assertNotIn("profile.activeness", reads)
+        # B-4: activeness IS projected server-side, but only to derive verbal
+        # coaching hints — the raw 0-100 scores must never reach a prompt.
+        self.assertIn("profile.activeness", reads)
+        self.assertIn("mastery", reads)
+        self.assertIn("student_description", reads)
         self.assertNotIn("identity.display_name", reads)
+
+    def test_activeness_scores_never_rendered_into_prompt(self) -> None:
+        from app.brain.context_engine import _activeness_hints
+        hints = _activeness_hints(
+            {"self_regulation": 23, "motivation_relevance": 31, "growth_mindset": 80}, "he"
+        )
+        self.assertEqual(len(hints), 2)
+        for hint in hints:
+            self.assertNotRegex(hint, r"\d")   # verbal guidance only, no numbers
 
 
 if __name__ == "__main__":

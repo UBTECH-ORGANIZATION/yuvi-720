@@ -307,3 +307,54 @@ export function reportIdle(objectiveId?: string): void {
     body: JSON.stringify({ objective_id: objectiveId }),
   }).catch(() => {})
 }
+
+/* ── Post-lesson personalized reflection (F4) ─────────────────────────────── */
+
+export interface ReflectionQuestion {
+  number: number
+  kind: 'rating' | 'open'
+  text: string
+  min?: number
+  max?: number
+}
+
+export interface ReflectionStart {
+  reflection_id: string
+  questions: ReflectionQuestion[]
+}
+
+export function startReflection(
+  componentId: string | null,
+  sessionId: string | null,
+  language: string
+): Promise<ReflectionStart> {
+  return apiPost<ReflectionStart>('/api/agent/reflection/start', {
+    component_id: componentId,
+    session_id: sessionId,
+    language,
+  })
+}
+
+export function answerReflection(
+  reflectionId: string,
+  questionNumber: number,
+  payload: { answer?: string; rating?: number }
+): Promise<{ ok: boolean }> {
+  return apiPost<{ ok: boolean }>(`/api/agent/reflection/${reflectionId}/answer`, {
+    question_number: questionNumber,
+    ...payload,
+  })
+}
+
+export function skipReflection(
+  reflectionId: string,
+  questionNumber: number
+): Promise<{ ok: boolean }> {
+  return apiPost<{ ok: boolean }>(`/api/agent/reflection/${reflectionId}/skip`, {
+    question_number: questionNumber,
+  })
+}
+
+export function completeReflection(reflectionId: string): Promise<{ ok: boolean }> {
+  return apiPost<{ ok: boolean }>(`/api/agent/reflection/${reflectionId}/complete`, {})
+}

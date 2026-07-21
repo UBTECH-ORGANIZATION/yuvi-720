@@ -217,3 +217,51 @@ async def apply_brain_updates(
     data[safe_id] = current
     _write_fallback(data)
     return current
+
+
+async def apply_brain_operators(
+    learner_id: Optional[str],
+    set_fields: dict[str, Any],
+    inc_fields: Optional[dict[str, float]] = None,
+) -> None:
+    """One atomic update combining dotted `$set` fields with `$inc` counters.
+
+    Counters (attempts, evidence tallies) survive concurrent deliveries — the
+    mandated LRS retry policy guarantees those — without any version/CAS
+    bookkeeping. Computed fields still last-write-win, which is acceptable for
+    idempotent derivations.
+    """
+    safe_id = normalize_learner_id(learner_id)
+    await get_brain(safe_id)  # ensure the document exists
+
+    flat = flatten_updates(set_fields or {})
+    flat.pop("_id", None)
+    flat.pop("version", None)
+    flat["updated_at"] = datetime.now(timezone.utc).isoformat()
+    incs = {path: value for path, value in (inc_fields or {}).items() if value}
+
+    collection = _get_collection()
+    if collection is not None:
+        try:
+            update: dict[str, Any] = {"$set": flat, "$inc": {"version": 1, **incs}}
+            await collection.update_one({"_id": safe_id}, update, upsert=True)
+            return
+        except Exception as exc:
+            print(f"⚠️ Mongo brain operator write failed, using fallback: {exc}")
+
+    data = _read_fallback()
+    current = data.get(safe_id) or empty_brain(safe_id)
+    _apply_flat(current, flat)
+    for path, value in incs.items():
+        parts = path.split(".")
+        node = current
+        for part in parts[:-1]:
+            nxt = node.get(part)
+            if not isinstance(nxt, dict):
+                nxt = {}
+                node[part] = nxt
+            node = nxt
+        node[parts[-1]] = (node.get(parts[-1]) or 0) + value
+    current["version"] = int(current.get("version", 1)) + 1
+    data[safe_id] = current
+    _write_fallback(data)

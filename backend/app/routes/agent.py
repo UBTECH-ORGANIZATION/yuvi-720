@@ -5,6 +5,7 @@ is sent as the first SSE event so the UI always shows it (§11).
 """
 
 import json
+import re
 from typing import Literal
 from uuid import uuid4
 
@@ -12,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.auth.dependencies import require_learner
+from app.auth.dependencies import require_learner, require_learner_session
 from app.agents import safety
 from app.agents import sessions
 from app.agents.coach import run_coach_stream
@@ -21,8 +22,44 @@ from app.agents.pedagogical import select_next, route_after_fail
 from app.agents import reflection
 from app.core.localization import normalize_language
 from app.services.ai_usage import UsageContext
+from app.services.lrs import reporter as lrs_reporter
 from app.services.speech import SpeechUnavailable, synthesize_speech
 from app.services import triggers
+
+
+_VISUAL_HINT = re.compile(
+    r"[\d=+×÷/%°]|משולש|זווית|שבר|גרף|צורה|מרובע|מעגל|ציר|נוסח|שטח|היקף|"
+    r"مثلث|زاوية|كسر|رسم|شكل|دائرة|مساحة|triangle|angle|fraction|graph|shape|equation"
+)
+
+
+def _worth_visual_planning(message: str, response_text: str) -> bool:
+    """Cheap gate before the visual-planner LLM call — a 'thanks!' turn or a
+    short non-mathematical reply never justifies a full planning request."""
+    if len(response_text.strip()) < 80:
+        return False
+    if len(message.strip()) < 8 and not _VISUAL_HINT.search(message):
+        return False
+    return bool(_VISUAL_HINT.search(message) or _VISUAL_HINT.search(response_text))
+
+
+def _surface_component_iri(surface: "CoachSurfaceContext") -> str | None:
+    """Full component IRI for MoE conversation extensions, when known."""
+    if surface.component_id:
+        from app.services.lrs import config as lrs_config
+        return f"{lrs_config.supplier_domain()}/component/{surface.component_id}"
+    return None
+
+
+# MoE conversationTrigger enum ← our internal trigger names.
+_MOE_TRIGGER = {
+    "idle": "idle-time",
+    "misconception": "misconception",
+    "slow_progress": "idle-time",
+    "success": "success-effort",
+    "rapid_guessing": "idle-time",
+    "wheel_spinning": "misconception",
+}
 
 
 router = APIRouter(prefix="/api/agent", tags=["agent"])
@@ -66,7 +103,10 @@ class CoachStreamRequest(BaseModel):
 
 class CoachProactiveRequest(BaseModel):
     conversation_id: str = Field(default="default", min_length=1, max_length=120)
-    trigger: Literal["idle", "misconception", "slow_progress", "success"] = "idle"
+    trigger: Literal[
+        "idle", "misconception", "slow_progress", "success",
+        "rapid_guessing", "wheel_spinning",
+    ] = "idle"
     language: str = Field(default="he", max_length=8)
     surface: CoachSurfaceContext = Field(default_factory=CoachSurfaceContext)
 
@@ -111,15 +151,95 @@ async def reflect_prompt(data: dict):
 
 @router.post("/reflect/answer")
 async def reflect_answer(data: dict, learner_id: str = Depends(require_learner)):
-    """Store a learner's reflection answer (+ self vs system estimate)."""
+    """Store a learner's reflection answer. `system_estimate` is computed
+    server-side by the personalized reflection flow (B-5) and is NEVER accepted
+    from the client here — a learner could otherwise poison the self-vs-system
+    calibration signal. `self_rating` is coerced to a bounded int."""
+    raw_rating = data.get("self_rating")
+    self_rating = raw_rating if isinstance(raw_rating, int) and 1 <= raw_rating <= 5 else None
     entry = await reflection.store_reflection(
         learner_id,
         prompt_id=data.get("prompt_id") or "hard_task",
         answer=data.get("answer") or "",
-        self_rating=data.get("self_rating"),
-        system_estimate=data.get("system_estimate"),
+        self_rating=self_rating,
+        system_estimate=None,
     )
     return JSONResponse(content=entry)
+
+
+class ReflectionStartRequest(BaseModel):
+    component_id: str | None = Field(default=None, max_length=180)
+    session_id: str | None = Field(default=None, max_length=120)   # launch sid
+    language: str = Field(default="he", max_length=8)
+
+
+class ReflectionAnswerRequest(BaseModel):
+    question_number: int = Field(ge=1, le=10)
+    answer: str | None = Field(default=None, max_length=800)
+    rating: int | None = Field(default=None, ge=1, le=5)
+
+
+class ReflectionSkipRequest(BaseModel):
+    question_number: int = Field(ge=1, le=10)
+
+
+@router.post("/reflection/start")
+async def reflection_start(
+    request: ReflectionStartRequest, session=Depends(require_learner_session)
+):
+    """Personalized post-lesson reflection (F4): questions built from the
+    session's real evidence; emits the 720 `initialized` statement."""
+    from app.services import reflection_flow
+    result = await reflection_flow.start_reflection(
+        session["sub"],
+        component_id=request.component_id,
+        launch_session_id=request.session_id,
+        moe_session_id=session.get("sid"),
+        language=normalize_language(request.language),
+    )
+    return JSONResponse(content=result)
+
+
+@router.post("/reflection/{reflection_id}/answer")
+async def reflection_answer(
+    reflection_id: str,
+    request: ReflectionAnswerRequest,
+    session=Depends(require_learner_session),
+):
+    from app.services import reflection_flow
+    result = await reflection_flow.answer_question(
+        session["sub"], reflection_id, request.question_number,
+        answer=request.answer, rating=request.rating,
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Reflection not found")
+    return JSONResponse(content=result)
+
+
+@router.post("/reflection/{reflection_id}/skip")
+async def reflection_skip(
+    reflection_id: str,
+    request: ReflectionSkipRequest,
+    session=Depends(require_learner_session),
+):
+    from app.services import reflection_flow
+    result = await reflection_flow.skip_question(
+        session["sub"], reflection_id, request.question_number
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Reflection not found")
+    return JSONResponse(content=result)
+
+
+@router.post("/reflection/{reflection_id}/complete")
+async def reflection_complete(
+    reflection_id: str, session=Depends(require_learner_session)
+):
+    from app.services import reflection_flow
+    result = await reflection_flow.complete_reflection(session["sub"], reflection_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Reflection not found")
+    return JSONResponse(content=result)
 
 
 @router.get("/triggers/subscribe")
@@ -143,12 +263,24 @@ async def triggers_idle(data: dict, learner_id: str = Depends(require_learner)):
 
 
 @router.post("/coach/stream")
-async def coach_stream(request: CoachStreamRequest, learner_id: str = Depends(require_learner)):
+async def coach_stream(request: CoachStreamRequest, session=Depends(require_learner_session)):
     """Stream a Coach chat reply via SSE (F3)."""
+    learner_id = session["sub"]
     message = request.message.strip()
     language = normalize_language(request.language)
     conversation_id = sessions.normalize_session_id(request.conversation_id)
     exchange_id = uuid4().hex
+
+    # MoE 720: one `interacted` per chat turn — the student's message now, the
+    # bot's reply when the stream completes. Chat text is never sent.
+    moe_sid = session.get("sid")
+    component_iri = _surface_component_iri(request.surface)
+    if moe_sid:
+        await lrs_reporter.report_conversation_interacted(
+            learner_id, moe_sid, conversation_id,
+            speaker="student", conversation_trigger="student-request",
+            component_id=component_iri,
+        )
 
     async def event_generator():
         # First event carries the mandatory AI-use disclosure.
@@ -177,7 +309,10 @@ async def coach_stream(request: CoachStreamRequest, learner_id: str = Depends(re
         try:
             screened_message = safety.screen_input(message, language).text
             response_text = "".join(response_parts)
-            scene = await plan_manim_visual(
+            scene = None if (
+                safety.is_safety_redirect(response_text)
+                or not _worth_visual_planning(screened_message, response_text)
+            ) else await plan_manim_visual(
                 screened_message,
                 response_text,
                 language,
@@ -215,6 +350,12 @@ async def coach_stream(request: CoachStreamRequest, learner_id: str = Depends(re
                 yield f"data: {json.dumps({'visual': visual}, ensure_ascii=False)}\n\n"
         except Exception as exc:  # pragma: no cover - optional visual support
             print(f"⚠️ Coach visual tool failed: {exc}")
+        if moe_sid:  # the bot's turn of this exchange
+            await lrs_reporter.report_conversation_interacted(
+                learner_id, moe_sid, conversation_id,
+                speaker="bot", conversation_trigger="student-request",
+                component_id=component_iri,
+            )
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(
@@ -328,13 +469,25 @@ async def coach_tts(request: CoachSpeechRequest, learner_id: str = Depends(requi
 
 
 @router.post("/coach/proactive")
-async def coach_proactive(request: CoachProactiveRequest, learner_id: str = Depends(require_learner)):
+async def coach_proactive(request: CoachProactiveRequest, session=Depends(require_learner_session)):
     """Stream a proactive nudge (idle / misconception / success). Fired by the
     trigger engine in P4; exposed now so the companion can subscribe."""
+    learner_id = session["sub"]
     language = normalize_language(request.language)
     trigger = request.trigger
     conversation_id = sessions.normalize_session_id(request.conversation_id)
     exchange_id = uuid4().hex
+
+    # MoE 720: a bot-initiated turn — helpType=bot-help-offer, trigger mapped
+    # to the closed conversationTrigger enum.
+    if session.get("sid"):
+        await lrs_reporter.report_conversation_interacted(
+            learner_id, session["sid"], conversation_id,
+            speaker="bot",
+            conversation_trigger=_MOE_TRIGGER.get(trigger, "idle-time"),
+            help_type="bot-help-offer",
+            component_id=_surface_component_iri(request.surface),
+        )
 
     async def event_generator():
         yield f"data: {json.dumps({'disclosure': safety.disclosure(language), 'proactive': trigger}, ensure_ascii=False)}\n\n"
@@ -354,11 +507,27 @@ async def coach_proactive(request: CoachProactiveRequest, learner_id: str = Depe
 
 
 @router.post("/coach/support")
-async def coach_support(request: CoachSupportRequest, learner_id: str = Depends(require_learner)):
+async def coach_support(request: CoachSupportRequest, session=Depends(require_learner_session)):
     """Stream learner-requested, current-item-grounded support into the task thread."""
+    learner_id = session["sub"]
     language = normalize_language(request.language)
     conversation_id = sessions.normalize_session_id(request.conversation_id)
     exchange_id = uuid4().hex
+
+    # MoE 720: the hint/explanation button IS the help-request event. Object =
+    # the component when known, else the conversation itself.
+    if session.get("sid"):
+        component_iri = _surface_component_iri(request.surface)
+        from app.services.lrs import config as lrs_config
+        await lrs_reporter.report_help_requested(
+            learner_id,
+            session["sid"],
+            object_id=component_iri
+            or f"{lrs_config.supplier_domain()}/conversation/{conversation_id}",
+            object_type="component" if component_iri else "conversation",
+            help_source="platform",
+            help_type=request.support,
+        )
 
     async def event_generator():
         yield f"data: {json.dumps({'disclosure': safety.disclosure(language), 'support': request.support}, ensure_ascii=False)}\n\n"

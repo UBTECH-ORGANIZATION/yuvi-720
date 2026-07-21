@@ -84,6 +84,20 @@ def empty_brain(learner_id: str, locale: str = DEFAULT_LOCALE) -> dict[str, Any]
         },
         "agent_notes": [],
         "strategies": [],       # procedural memory (§4.5)
+        "behavior_signals": [],  # A-3 detector flags (neutral behavior + evidence ids, capped)
+        "student_description": {  # how the system sees the learner — bounded labeled
+            "blocks": {           # blocks with provenance; injected into coach prompts
+                "learning_preferences": [],
+                "motivational_patterns": [],
+                "what_frustrates": [],
+                "how_to_reach": [],
+            },
+            "text": None,         # rendered ≤4 Hebrew sentences (internal-only)
+            "stale": False,
+            "events_since_generation": 0,
+            "last_generated_at": None,
+            "updated_at": None,
+        },
         "wellbeing_flags": [],  # teacher-facing distress signals (Safety agent); raw evidence, not profile
         "enrollments": [],      # F8 scoping
         "version": 1,           # optimistic concurrency (R3)

@@ -9,7 +9,7 @@ import { YubiRobot3D } from '../learner-mapping/YubiRobot3D'
 import { ProfileGlyph, ProfileIllustration } from './ProfileGlyph'
 import type { MappingResults, ProfileClaim, ProfileFeedbackVerdict, ProfileSummary } from './types'
 
-type Status = 'loading' | 'analyzing' | 'noData' | 'ready' | 'error'
+type Status = 'loading' | 'analyzing' | 'ready' | 'error'
 type ToastState = { variant: 'info'; title: string; body?: string } | null
 type ResultsProgress = {
   journey_index: number
@@ -113,9 +113,17 @@ export function ResultsPage() {
       try {
         const state = await getLearnerState()
         if (cancelled) return
+        const mappingDone =
+          (state.mapping_progress as { completed?: boolean } | null | undefined)?.completed === true
         const mapping = state.mapping_results as MappingResults | null | undefined
-        if (!mapping) {
-          setStatus('noData')
+        // /results is the profile-verification step and only exists once mapping
+        // is actually finished. `mapping_results` can be present from a partial or
+        // abandoned run, so completion is judged by mapping_progress.completed —
+        // the same authoritative signal OnboardingProvider trusts. Reaching this
+        // step early (or with no saved results) is an invalid state: send the
+        // learner back to the start of onboarding instead of showing a dead-end.
+        if (!mappingDone || !mapping) {
+          navigate('/learner-mapping')
           return
         }
         setStudentName(mapping.student_name || t('results.learnerFallback'))
@@ -258,17 +266,16 @@ export function ResultsPage() {
     )
   }
 
-  if (status === 'noData' || status === 'error') {
-    const noData = status === 'noData'
+  if (status === 'error') {
     return (
       <div className="results-page">
         <AppBar activeStep={3} />
         <main className="results-empty">
-          <span className="results-empty__icon"><ProfileGlyph iconKey={noData ? 'organization' : 'growth'} /></span>
-          <h1>{t(noData ? 'results.noData.title' : 'results.error.title')}</h1>
-          <p>{t(noData ? 'results.noData.subtitle' : 'results.error.subtitle')}</p>
-          <button className="results-primary-button" onClick={() => noData ? navigate('/learner-mapping') : window.location.reload()}>
-            {t(noData ? 'results.noData.cta' : 'results.error.cta')}
+          <span className="results-empty__icon"><ProfileGlyph iconKey="growth" /></span>
+          <h1>{t('results.error.title')}</h1>
+          <p>{t('results.error.subtitle')}</p>
+          <button className="results-primary-button" onClick={() => window.location.reload()}>
+            {t('results.error.cta')}
           </button>
         </main>
       </div>

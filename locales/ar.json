@@ -813,5 +813,13 @@
   "auth.dialog.hello.1": "مرحبًا! أنا يوبي 👋",
   "auth.dialog.hello.2": "لنتعلّم شيئًا جديدًا معًا",
   "auth.dialog.hello.3": "جاهز؟ فقط اسم المستخدم وكلمة المرور",
-  "auth.menu.open": "قائمة الحساب"
+  "auth.menu.open": "قائمة الحساب",
+  "learning.reflection.title": "لحظة تأمل",
+  "learning.reflection.loading": "يوفي يجهّز سؤالًا قصيرًا عنك وعن المهمة…",
+  "learning.reflection.step": "سؤال {current} من {total}",
+  "learning.reflection.placeholder": "اكتب هنا بكلماتك…",
+  "learning.reflection.skip": "تخطّي",
+  "learning.reflection.next": "متابعة",
+  "learning.reflection.finish": "إنهاء",
+  "learning.reflection.thanks": "شكرًا للمشاركة! هذا يساعد يوفي على معرفتك أفضل."
 }
