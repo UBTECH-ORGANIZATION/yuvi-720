@@ -10,6 +10,9 @@ import { apiPost } from '../../services/api'
 import { AgentsDiagram } from './AgentsDiagram'
 import { LandingYubiArtwork, LandingYubiJourney } from './LandingYubiJourney'
 import { LoginDialog } from './LoginDialog'
+import userMappingImage from '../../assets/user-mapping-image.png'
+import userAdaptiveImage from '../../assets/user-adaptive-image.png'
+import teacherInsightImage from '../../assets/teacher-insight-image.png'
 
 const FAQ_KEYS = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6']
 
@@ -219,8 +222,9 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
           <p className="landing720-note">{t('landing.hero.note')}</p>
 
           <aside className="landing720-login">
-            <h2>{t('landing.login.title')}</h2>
-            <p>{user ? t('auth.status.signedInAs').replace('{name}', user.display_name) : t('landing.login.subtitle')}</p>
+            {user ? (
+              <p>{t('auth.status.signedInAs').replace('{name}', user.display_name)}</p>
+            ) : null}
 
             {user ? (
               <>
@@ -240,22 +244,10 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
                 </button>
               </>
             ) : (
-              <>
-                <button className="landing720-login-btn student" onClick={() => setLoginIntent('student')}>
-                  <GraduationCapIcon />
-                  <span>{t('landing.login.student')}</span>
-                </button>
-
-                <button className="landing720-login-btn teacher" onClick={() => setLoginIntent('teacher')}>
-                  <UserCheckIcon />
-                  <span>{t('landing.login.teacher')}</span>
-                </button>
-
-                <button className="landing720-login-btn secure" onClick={() => setLoginIntent('student')}>
-                  <ShieldIcon />
-                  <span>{t('landing.login.secure')}</span>
-                </button>
-              </>
+              <button className="landing720-login-btn student" onClick={() => setLoginIntent('student')}>
+                <GraduationCapIcon />
+                <span>{t('landing.login.student')}</span>
+              </button>
             )}
           </aside>
         </article>
@@ -269,27 +261,65 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
         <AgentsDiagram />
       </div>
 
-      <section className="landing720-feature-grid" data-yubi-stop="features" data-yubi-reveal>
-        <article className="landing720-feature-card">
-          <span className="landing720-feature-icon icon-purple">
-            <CompassIcon />
-          </span>
-          <h3>{t('landing.features.profile.title')}</h3>
-          <p>{t('landing.features.profile.desc')}</p>
+      <section className="landing720-feature-rows" data-yubi-stop="features" data-yubi-reveal>
+        <header className="landing720-feature-rows__head">
+          <span className="landing720-eyebrow">{t('landing.features.sectionEyebrow')}</span>
+          <h2>{t('landing.features.sectionTitle')}</h2>
+          <p>{t('landing.features.sectionSubtitle')}</p>
+        </header>
+
+        <article className="landing720-feature-row">
+          <div className="landing720-feature-row__media">
+            <img src={userMappingImage} alt={t('landing.features.profile.title')} loading="lazy" />
+          </div>
+          <div className="landing720-feature-row__text">
+            <span className="landing720-feature-icon icon-purple">
+              <CompassIcon />
+            </span>
+            <h3>{t('landing.features.profile.title')}</h3>
+            <p>{t('landing.features.profile.desc')}</p>
+            <ul className="landing720-feature-row__points">
+              <li>{t('landing.features.profile.point1')}</li>
+              <li>{t('landing.features.profile.point2')}</li>
+              <li>{t('landing.features.profile.point3')}</li>
+            </ul>
+          </div>
         </article>
-        <article className="landing720-feature-card">
-          <span className="landing720-feature-icon icon-blue">
-            <LayersIcon />
-          </span>
-          <h3>{t('landing.features.adaptive.title')}</h3>
-          <p>{t('landing.features.adaptive.desc')}</p>
+
+        <article className="landing720-feature-row is-reversed">
+          <div className="landing720-feature-row__media">
+            <img src={userAdaptiveImage} alt={t('landing.features.adaptive.title')} loading="lazy" />
+          </div>
+          <div className="landing720-feature-row__text">
+            <span className="landing720-feature-icon icon-blue">
+              <LayersIcon />
+            </span>
+            <h3>{t('landing.features.adaptive.title')}</h3>
+            <p>{t('landing.features.adaptive.desc')}</p>
+            <ul className="landing720-feature-row__points">
+              <li>{t('landing.features.adaptive.point1')}</li>
+              <li>{t('landing.features.adaptive.point2')}</li>
+              <li>{t('landing.features.adaptive.point3')}</li>
+            </ul>
+          </div>
         </article>
-        <article className="landing720-feature-card">
-          <span className="landing720-feature-icon icon-teal">
-            <InsightsIcon />
-          </span>
-          <h3>{t('landing.features.analytics.title')}</h3>
-          <p>{t('landing.features.analytics.desc')}</p>
+
+        <article className="landing720-feature-row">
+          <div className="landing720-feature-row__media">
+            <img src={teacherInsightImage} alt={t('landing.features.analytics.title')} loading="lazy" />
+          </div>
+          <div className="landing720-feature-row__text">
+            <span className="landing720-feature-icon icon-teal">
+              <InsightsIcon />
+            </span>
+            <h3>{t('landing.features.analytics.title')}</h3>
+            <p>{t('landing.features.analytics.desc')}</p>
+            <ul className="landing720-feature-row__points">
+              <li>{t('landing.features.analytics.point1')}</li>
+              <li>{t('landing.features.analytics.point2')}</li>
+              <li>{t('landing.features.analytics.point3')}</li>
+            </ul>
+          </div>
         </article>
       </section>
 
