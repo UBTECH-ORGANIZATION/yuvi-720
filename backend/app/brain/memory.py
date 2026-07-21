@@ -372,9 +372,6 @@ def ensure_memory_state(brain: dict[str, Any]) -> tuple[dict[str, Any], bool]:
     for value in profile.get("interests") or []:
         raw = value.get("text") or value.get("label") if isinstance(value, dict) else value
         sources.append(("interest", raw, 0.78))
-    for value in profile.get("hobbies") or []:
-        raw = value.get("text") or value.get("label") if isinstance(value, dict) else value
-        sources.append(("interest", raw, 0.76))
     for value in profile.get("preferences") or []:
         raw = value.get("text") or value.get("label") if isinstance(value, dict) else value
         sources.append(("preference", raw, 0.82))

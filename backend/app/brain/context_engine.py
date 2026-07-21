@@ -54,14 +54,14 @@ AGENT_VIEWS: dict[str, dict[str, list[str]]] = {
     },
     "coach": {
         "read": [
-            "identity.locale", "profile.interests", "profile.hobbies",
+            "identity.locale", "profile.interests",
             "profile.characteristics", "profile.learning_style",
             "profile.preferences", "profile.environment", "profile.activeness",
             "profile.mapping_clarifications", "strengths",
             "challenges", "strategies", "goals", "current_state",
             "teacher_directives", "memory", "mastery", "student_description",
         ],
-        "write": ["agent_notes"],   # durable fields only via consolidator (§5.7)
+        "write": [],   # coach's durable writes go through the memory consolidator (§5.7)
     },
     "reflection": {
         "read": ["mastery", "reflections_recent"],
@@ -73,7 +73,7 @@ AGENT_VIEWS: dict[str, dict[str, list[str]]] = {
     },
     "safety": {
         "read": ["identity.locale"],
-        "write": ["agent_notes", "wellbeing_flags"],
+        "write": ["wellbeing_flags"],
     },
 }
 
@@ -405,8 +405,7 @@ async def build_coach_bundle(
     ]
 
     interests_view = memory_interests or labels(
-        (get_path(brain, "profile.interests") or [])
-        + (get_path(brain, "profile.hobbies") or []), limit=6
+        get_path(brain, "profile.interests") or [], limit=6
     )
     preferences_view = memory_preferences or labels(
         get_path(brain, "profile.preferences") or [], limit=5

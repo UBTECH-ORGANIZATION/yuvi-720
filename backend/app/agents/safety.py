@@ -45,6 +45,79 @@ _BLOCKLIST = re.compile(
     r"\b(כתובת\s+הבית|address|תעודת\s*זהות|social\s+security)\b", re.IGNORECASE
 )
 
+# ── Content safety for what the brain STORES/USES (not distress) ──────────────
+# A real LLM judges whether extracted memory values are appropriate to keep on a
+# minor's (12–15) educational profile. This is an INDEPENDENT guardian, separate
+# from the extraction model that produced the values — so an extractor that
+# wrongly treats "זונות" as an interest cannot get it stored. No keyword lists:
+# the judge understands morphology, slang, and context across he/ar/en.
+_MEMORY_SAFETY_PROMPT = {
+    "he": (
+        "את/ה שכבת בטיחות תוכן לפרופיל תלמיד/ה בגילאי 12–15. לפניך ערכים שהמערכת "
+        "שוקלת לשמור כתחומי עניין/העדפות ולהשתמש בהם כדי להתאים לימוד. "
+        "סמן/י כלא-בטוח כל ערך שהוא מיני, וולגרי, מגונה, פוגעני, אלים, שנאה או גזענות, "
+        "סמים/אלכוהול/עישון, פעילות בלתי חוקית, או כל דבר שאינו הולם פרופיל חינוכי של קטין. "
+        "שקול/י משמעות והקשר, לא רק מילים. תחביבים לגיטימיים (ספורט, מוזיקה, גיימינג וכו') בטוחים. "
+        "החזר/י JSON בלבד: {\"unsafe\": [\"הערך המדויק שיש לפסול\", ...]} (רשימה ריקה אם הכל תקין)."
+    ),
+    "ar": (
+        "أنت طبقة أمان محتوى لملف طالب/ة بعمر 12–15. أمامك قيم يفكّر النظام بحفظها كاهتمامات/تفضيلات "
+        "لاستخدامها في تخصيص التعلّم. علّم كـ«غير آمن» أي قيمة جنسية أو بذيئة أو مسيئة أو عنيفة أو تحضّ على "
+        "الكراهية/العنصرية، أو مخدرات/كحول/تدخين، أو نشاط غير قانوني، أو أي شيء لا يليق بملف تعليمي لقاصر. "
+        "راعِ المعنى والسياق لا الكلمات فقط. الهوايات المشروعة (رياضة، موسيقى، ألعاب...) آمنة. "
+        "أعِد JSON فقط: {\"unsafe\": [\"القيمة المرفوضة بالضبط\", ...]} (قائمة فارغة إن كان كل شيء سليمًا)."
+    ),
+    "en": (
+        "You are a content-safety layer for a 12–15-year-old student's profile. You are given values the "
+        "system is considering saving as interests/preferences and using to personalize learning. "
+        "Flag as unsafe any value that is sexual, vulgar, obscene, harassing, violent, hateful/racist, "
+        "drug/alcohol/smoking-related, illegal, or otherwise inappropriate for a minor's educational profile. "
+        "Judge meaning and context, not just words. Legitimate hobbies (sports, music, gaming, etc.) are safe. "
+        "Return JSON only: {\"unsafe\": [\"the exact value to reject\", ...]} (empty list if all are fine)."
+    ),
+}
+
+
+async def screen_memory_values(
+    values: list[str], language: str = "he", *, usage_context=None
+) -> set[str]:
+    """LLM guardian → the subset of `values` that must NOT be stored/used.
+
+    Fails CLOSED: on any error or unparseable reply, every value is treated as
+    unsafe (a memory can always be re-captured later; storing harm cannot be
+    undone from a minor's profile)."""
+    clean = [str(v).strip() for v in (values or []) if str(v or "").strip()]
+    if not clean:
+        return set()
+    lang = language if language in _MEMORY_SAFETY_PROMPT else "he"
+    import json
+    from app.services.ai_usage import UsageContext
+    from app.services.llm import call_llm
+
+    ctx = (usage_context.for_operation("safety.memory_content")
+           if usage_context is not None else UsageContext(
+               actor_id="unknown", actor_type="learner",
+               endpoint="internal:memory-safety",
+               feature="feature_3_learning_companion",
+               operation="safety.memory_content", source="memory_safety"))
+    try:
+        raw = await call_llm(
+            [
+                {"role": "system", "content": _MEMORY_SAFETY_PROMPT[lang]},
+                {"role": "user", "content": _json_dumps({"values": clean})},
+            ],
+            usage_context=ctx, max_tokens=200, json_mode=True, model_tier="mini",
+        )
+        payload = json.loads(raw or "{}")
+        unsafe = payload.get("unsafe") if isinstance(payload, dict) else None
+        if not isinstance(unsafe, list):
+            return set(clean)                       # unparseable → fail closed
+        flagged = {str(v).strip().casefold() for v in unsafe if str(v or "").strip()}
+        return {v for v in clean if v.strip().casefold() in flagged}
+    except Exception as exc:                        # LLM down / bad JSON → fail closed
+        print(f"⚠️ memory content-safety screen failed (dropping candidates): {type(exc).__name__}")
+        return set(clean)
+
 AI_DISCLOSURE = {
     "he": "את/ה משוחח/ת עם יובי, עוזר/ת למידה מבוסס/ת בינה מלאכותית.",
     "ar": "أنت تتحدث مع يوفي، مساعد تعلّم يعمل بالذكاء الاصطناعي.",

@@ -15,7 +15,6 @@ class CoachPersonalizationTests(unittest.IsolatedAsyncioTestCase):
             "identity": {"locale": "he"},
             "profile": {
                 "interests": ["כדורגל"],
-                "hobbies": ["ציור"],
                 "characteristics": ["אוהב/ת לנסות לבד"],
                 "learning_style": "הסבר חזותי בצעדים קצרים",
                 "preferences": ["משוב מיידי"],
@@ -49,7 +48,7 @@ class CoachPersonalizationTests(unittest.IsolatedAsyncioTestCase):
                 "learner-pseudonym", {"screen": "student_dashboard"}
             )
 
-        self.assertEqual(bundle["profile"]["interests"], ["כדורגל", "ציור"])
+        self.assertEqual(bundle["profile"]["interests"], ["כדורגל"])
         self.assertEqual(bundle["strategies"], ["דוגמה חזותית לפני הנוסחה"])
         self.assertEqual(bundle["teacher_guidance"], ["לתת דוגמה חזותית"])
         rendered = _render_context(bundle)
@@ -125,7 +124,7 @@ class CoachPersonalizationTests(unittest.IsolatedAsyncioTestCase):
     def test_coach_scope_declares_every_brain_field_used_by_bundle(self) -> None:
         reads = set(AGENT_VIEWS["coach"]["read"])
         expected = {
-            "identity.locale", "profile.interests", "profile.hobbies",
+            "identity.locale", "profile.interests",
             "profile.characteristics", "profile.learning_style",
             "profile.preferences", "profile.environment", "strengths",
             "challenges", "strategies", "goals", "current_state",
