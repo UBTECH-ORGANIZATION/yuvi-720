@@ -326,6 +326,36 @@ class MemoryConsolidationTests(unittest.IsolatedAsyncioTestCase):
         evidence = gather_evidence({"memory": updates["memory"], "profile": {}})
         self.assertIn("memory.interest: כדורגל", evidence.get("withdrawn_by_learner", []))
 
+    async def test_inappropriate_value_is_never_stored(self) -> None:
+        """The content-safety guardian (independent LLM) keeps a vulgar value out
+        of memory even when the extractor wrongly proposes it as an interest."""
+        apply_updates = AsyncMock()
+        extractor = {"candidates": [{
+            "kind": "interest", "action": "upsert", "value": "זונות", "confidence": 0.9,
+        }]}
+        with (
+            patch("app.brain.consolidator.call_llm", new=AsyncMock(return_value=json.dumps(extractor))),
+            patch(
+                "app.brain.consolidator.get_brain",
+                new=AsyncMock(return_value={"profile": {}, "memory": memory_defaults()}),
+            ),
+            patch("app.brain.consolidator.apply_brain_updates", new=apply_updates),
+            # The guardian flags it, independent of the extractor.
+            patch("app.agents.safety.screen_memory_values", new=AsyncMock(return_value={"זונות"})),
+        ):
+            changed = await capture_and_consolidate(
+                "learner-pseudonym", "אני אוהב זונות", "he", session_id="s1"
+            )
+        self.assertEqual(changed, [])
+        apply_updates.assert_not_awaited()          # nothing stored
+
+    async def test_memory_safety_screen_fails_closed(self) -> None:
+        """If the safety LLM errors, every candidate is treated as unsafe."""
+        from app.agents.safety import screen_memory_values
+        with patch("app.services.llm.call_llm", new=AsyncMock(side_effect=RuntimeError("down"))):
+            unsafe = await screen_memory_values(["כדורגל", "זונות"], "he")
+        self.assertEqual(unsafe, {"כדורגל", "זונות"})
+
     def test_personalization_gaps_reflect_missing_memory(self) -> None:
         """Empty memory is a to-do for the coach, not silence: gaps appear when
         nothing is known and disappear as the learner becomes known."""

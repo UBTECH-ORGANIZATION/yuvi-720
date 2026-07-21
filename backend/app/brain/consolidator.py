@@ -28,7 +28,6 @@ from app.services.ai_usage import UsageContext
 from app.services.llm import call_llm
 
 _MAX_INTERESTS = 8
-_MAX_HOBBIES = 8
 _MAX_CHARACTERISTICS = 8
 _MAX_CLARIFICATIONS = 12
 
@@ -53,6 +52,7 @@ _MEMORY_CANDIDATE_PROMPTS = {
         "אסור: שם, גיל, כיתה, בית ספר, פרטי קשר, משפחה, בריאות או מידע רגיש. "
         "כללי החלטה: אל תחזור על פריט שכבר קיים ב-already_known; אם ההודעה מעדכנת או סותרת פריט קיים ציין אותו ב-replaces_value; "
         "חלץ רק מה שנאמר במפורש — אל תמציא תכונה. "
+        "לעולם אל תחזיר תוכן מיני, וולגרי, פוגעני, אלים, שנאה, סמים או לא הולם לפרופיל חינוכי של קטין — התעלם ממנו. "
         "value = המושג עצמו בצורת בסיס בלבד (למשל 'כדורגל'), בלי פועל כמו 'אוהב', בלי 'מאוד' ובלי סיומת מגדר. "
         "אם התלמיד/ה אומר/ת שמשהו כבר לא נכון (\"כבר לא אוהב\", \"נמאס לי מ\") — החזר עבורו action=forget. "
         "החזר JSON בלבד: {\"candidates\":[{\"kind\":\"interest|preference|challenge|strategy|self_belief|motivation_pattern|goal\","
@@ -65,6 +65,7 @@ _MEMORY_CANDIDATE_PROMPTS = {
         "استراتيجية مفيدة، اعتقاد ذاتي، نمط دافعية، أو هدف. يُمنع حفظ الاسم أو العمر أو المدرسة أو معلومات الاتصال "
         "أو العائلة أو الصحة. قواعد: لا تكرّر عنصرًا موجودًا في already_known؛ إن كانت الرسالة تحدّث أو تناقض عنصرًا "
         "قائمًا فاذكره في replaces_value؛ استخرج فقط ما صُرّح به ولا تستنتج صفة. "
+        "لا تُعِد أبدًا محتوى جنسيًا أو بذيئًا أو مسيئًا أو عنيفًا أو كراهية أو مخدرات أو غير لائق بملف تعليمي لقاصر — تجاهله. "
         "value = المفهوم نفسه بصيغته الأساسية فقط (مثل 'كرة القدم')، دون فعل مثل 'أحب' ودون 'جدا'. "
         "إذا قال الطالب إن شيئًا لم يعد صحيحًا (\"لم أعد أحب\") فأعد له action=forget. أعد JSON فقط بالشكل "
         "{\"candidates\":[{\"kind\":\"interest|preference|challenge|strategy|self_belief|motivation_pattern|goal\","
@@ -78,6 +79,7 @@ _MEMORY_CANDIDATE_PROMPTS = {
         "Never retain name, age, grade, school, contact, family, health, or other sensitive information. "
         "Rules: do not repeat an item already in already_known; if the message updates or contradicts an existing item, name it in replaces_value; "
         "extract only what was explicitly stated — do not infer an unstated trait. "
+        "Never return sexual, vulgar, offensive, violent, hateful, drug-related, or otherwise minor-inappropriate content — ignore it. "
         "value = the concept itself in base form only (e.g. 'football'), never a verb like 'love' or an intensifier. "
         "If the learner says something no longer holds (\"I don't like X anymore\"), return action=forget for it. Return JSON only as "
         "{\"candidates\":[{\"kind\":\"interest|preference|challenge|strategy|self_belief|motivation_pattern|goal\","
@@ -214,6 +216,22 @@ async def capture_and_consolidate(
         exchange_id=exchange_id,
         known_memory=_known_memory_summary(memory),
     )
+    if not candidates:
+        return []
+
+    # Content-safety guardian (independent LLM): never store a value that is
+    # inappropriate for a minor's profile, even if the extractor proposed it
+    # (e.g. a vulgar word wrongly read as an "interest"). Fails closed.
+    from app.agents import safety
+    unsafe = await safety.screen_memory_values(
+        [c["value"] for c in candidates] + [c.get("replaces_value") for c in candidates if c.get("replaces_value")],
+        language,
+    )
+    if unsafe:
+        candidates = [
+            c for c in candidates
+            if c["value"] not in unsafe and c.get("replaces_value") not in unsafe
+        ]
     if not candidates:
         return []
 

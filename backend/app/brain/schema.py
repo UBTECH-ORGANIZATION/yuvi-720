@@ -52,7 +52,6 @@ def empty_brain(learner_id: str, locale: str = DEFAULT_LOCALE) -> dict[str, Any]
             "mapping_scores": None,
             "learning_style": None,
             "interests": [],
-            "hobbies": [],              # soft, chat-sourced (mapping reflection); deduped/capped
             "characteristics": [],      # soft self-described traits (mapping reflection)
             "mapping_clarifications": [],  # student clarifications on their answers (provenance; raw scores untouched)
             "preferences": [],
@@ -82,7 +81,6 @@ def empty_brain(learner_id: str, locale: str = DEFAULT_LOCALE) -> dict[str, Any]
             "resume_token": None,
             "pace": None,       # on_track | ahead | behind
         },
-        "agent_notes": [],
         "strategies": [],       # procedural memory (§4.5)
         "behavior_signals": [],  # A-3 detector flags (neutral behavior + evidence ids, capped)
         "student_description": {  # how the system sees the learner — bounded labeled

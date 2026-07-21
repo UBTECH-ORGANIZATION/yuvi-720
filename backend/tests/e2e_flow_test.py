@@ -441,7 +441,7 @@ async def main():
         except AgentScopeError:
             check("coach cannot write mastery", True)
         try:
-            await apply_writes("teacher_insights", LID, {"agent_notes": []})
+            await apply_writes("teacher_insights", LID, {"strategies": []})
             check("teacher_insights is write-blocked", False)
         except AgentScopeError:
             check("teacher_insights is write-blocked", True)
