@@ -21,6 +21,21 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
+// Signed-out visitors (the landing/login screen) have no user document to hold
+// their choice, so a UI-only cookie keeps light/dark across reloads. It is not
+// learner state — the boot script in index.html reads the same cookie to paint
+// the right theme before React mounts, which avoids a flash.
+const THEME_COOKIE = 'sp_theme'
+
+function readThemeCookie(): ThemePreference | null {
+  const match = document.cookie.match(/(?:^|;\s*)sp_theme=(light|dark|system)/)
+  return (match?.[1] as ThemePreference | undefined) ?? null
+}
+
+function writeThemeCookie(value: ThemePreference): void {
+  document.cookie = `${THEME_COOKIE}=${value}; path=/; max-age=31536000; SameSite=Lax`
+}
+
 function systemTheme(): Theme {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
@@ -29,7 +44,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const { user, updatePreferences } = useAuth()
   // AuthProvider gates the tree on /me, so the stored preference is already
   // known on the very first render — no intermediate paint in the wrong theme.
-  const stored = user?.preferences.theme ?? 'system'
+  // Signed out, fall back to the visitor's own cookie choice before 'system'.
+  const stored = user?.preferences.theme ?? readThemeCookie() ?? 'system'
   const [preference, setPreferenceState] = useState<ThemePreference>(stored)
   const [systemValue, setSystemValue] = useState<Theme>(systemTheme)
 
@@ -58,6 +74,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     // Fire-and-forget: AuthProvider already applied it optimistically and
     // reverts its own copy on failure. A failed write must never block the UI.
     if (user) void updatePreferences({ theme: next }).catch(() => undefined)
+    // Signed out, persist the choice in the visitor cookie so it survives reload.
+    else writeThemeCookie(next)
   }
 
   const toggleTheme = () => setPreference(theme === 'light' ? 'dark' : 'light')
