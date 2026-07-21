@@ -46,11 +46,9 @@ _CORRECTION_PATTERNS = {
     "ar": re.compile(r"هذا غير (?:صحيح|دقيق)|في الحقيقة|صحح", re.IGNORECASE),
     "en": re.compile(r"that(?:'s| is) not (?:right|accurate)|actually|correct that", re.IGNORECASE),
 }
-_MEMORY_SIGNAL_PATTERNS = {
-    "he": re.compile(r"אני\s+(?:אוהב|אוהבת|מעדיף|מעדיפה|מתעניין|מתעניינת|מתקשה|מצליח|מצליחה|צריך|צריכה)|עוזר לי|קשה לי|המטרה שלי|אל תזכור|זה לא נכון|בעצם", re.IGNORECASE),
-    "ar": re.compile(r"أنا\s+(?:أحب|أفضل|مهتم|أجد صعوبة|أحتاج)|يساعدني|هدفي|لا تتذكر|غير صحيح", re.IGNORECASE),
-    "en": re.compile(r"i\s+(?:like|love|prefer|am interested|struggle|find it hard|need|learn best)|helps me|my goal|forget|not accurate", re.IGNORECASE),
-}
+# NOTE: the old `_MEMORY_SIGNAL_PATTERNS` regex pre-filter was removed — memory
+# capture is judged by the mini-LLM against the current memory on every real
+# turn (consolidator), never by keyword matching.
 
 
 def _now() -> str:
@@ -332,7 +330,7 @@ def active_themes(
             and set(theme.get("source_types") or []) <= {"coach_chat"}
         ):
             age_days = max(0, (now - last_seen).days)
-            confidence *= max(0.35, 1.0 - age_days / 240)
+            confidence *= max(0.35, 1.0 - age_days / 120)
         if confidence < minimum_confidence:
             continue
         selected.append({**theme, "retrieval_confidence": round(confidence, 3)})
@@ -428,11 +426,6 @@ def classify_query_intent(message: str, language: str) -> str:
     if any(token in lower for token in ("מטרה", "יעד", "هدف", "goal", "next")):
         return "goal_planning"
     return "learning_help"
-
-
-def looks_like_memory_signal(message: str, language: str) -> bool:
-    lang = language if language in _MEMORY_SIGNAL_PATTERNS else "he"
-    return bool(_MEMORY_SIGNAL_PATTERNS[lang].search(message or ""))
 
 
 def build_learner_portrait(brain: dict[str, Any], locale: str) -> dict[str, Any]:

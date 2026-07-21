@@ -79,6 +79,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized)
   }, [])
 
+  // MoE 720 session suspend/resume: report focus loss/return while signed in.
+  // sendBeacon so the suspend survives tab switches and page unloads; the
+  // session itself rides the httpOnly cookie, so no payload is needed.
+  useEffect(() => {
+    if (!user) return
+    const beacon = (path: string) => {
+      try {
+        if (!navigator.sendBeacon(path)) void apiPost(path, {})
+      } catch {
+        void apiPost(path, {}).catch(() => undefined)
+      }
+    }
+    const onVisibility = () => {
+      beacon(document.hidden ? '/api/auth/session/suspend' : '/api/auth/session/resume')
+    }
+    const onPageHide = () => beacon('/api/auth/session/suspend')
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pagehide', onPageHide)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pagehide', onPageHide)
+    }
+  }, [user])
+
   const login = useCallback(async (username: string, password: string) => {
     let data: MeResponse
     try {

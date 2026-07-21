@@ -47,12 +47,30 @@ async def require_learner(request: Request) -> str:
     return session["sub"]
 
 
+async def require_learner_session(request: Request) -> dict[str, Any]:
+    """Like `require_learner`, but returns the full session payload — for
+    routes that also need the MoE LRS `sid` claim for outbound reporting."""
+    session = await current_user(request)
+    if ROLE_LEARNER not in (session.get("roles") or []):
+        raise HTTPException(status_code=403, detail="learner_role_required")
+    return session
+
+
 async def require_teacher(request: Request) -> str:
     """Return the session teacher id, 403 if the account lacks the teacher role."""
     session = await current_user(request)
     if ROLE_TEACHER not in (session.get("roles") or []):
         raise HTTPException(status_code=403, detail="teacher_role_required")
     return session["sub"]
+
+
+async def require_teacher_session(request: Request) -> dict[str, Any]:
+    """Like `require_teacher`, but returns the full session payload (incl. the
+    MoE LRS `sid`) for routes that report outbound 720 events."""
+    session = await current_user(request)
+    if ROLE_TEACHER not in (session.get("roles") or []):
+        raise HTTPException(status_code=403, detail="teacher_role_required")
+    return session
 
 
 def assert_can_read_learner(actor: dict[str, Any], learner_id: str) -> None:

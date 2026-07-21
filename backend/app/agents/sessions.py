@@ -9,6 +9,7 @@ involved. A JSON fallback keeps the local demo usable without Mongo/Cosmos.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from base64 import urlsafe_b64decode, urlsafe_b64encode
 from datetime import datetime, timedelta, timezone
@@ -23,6 +24,7 @@ from learner_state import normalize_learner_id  # type: ignore
 
 MAX_TURNS = 20                      # verbatim window cap (R2 — brain stays compact)
 MAX_ROLLING_SUMMARY_ITEMS = 6
+_summary_tasks: set = set()   # hold session-summary task refs (GC-safe)
 MAX_ENTITY_LEDGER_ITEMS = 12
 _FALLBACK = Path(__file__).resolve().parents[2] / ".runtime" / "agent_sessions.json"
 _HISTORY_FALLBACK = Path(__file__).resolve().parents[2] / ".runtime" / "agent_chat_history.json"
@@ -108,8 +110,14 @@ def _write_history_fallback(data: dict[str, dict[str, Any]]) -> None:
         print(f"⚠️ agent history fallback write failed: {exc}")
 
 
-def _conversation_memory(turns: list[dict[str, Any]]) -> dict[str, Any]:
-    """Derive compact working memory from visible, non-retracted turns."""
+def _conversation_memory(
+    turns: list[dict[str, Any]], previous: Optional[dict[str, Any]] = None
+) -> dict[str, Any]:
+    """Derive compact working memory from visible, non-retracted turns.
+
+    If a mini-LLM session summary already exists (B-9, `summary_source == 'llm'`),
+    preserve it instead of overwriting with the crude last-lines digest — the new
+    turn only refreshes the entity ledger."""
     visible = [
         turn for turn in turns
         if isinstance(turn, dict)
@@ -136,11 +144,16 @@ def _conversation_memory(turns: list[dict[str, Any]]) -> dict[str, Any]:
         text, _ = strip_pii(" ".join(str(turn.get("content") or "").split())[:180])
         if text and signal.search(text) and text not in facts:
             facts.append(text)
-    return {
+    result = {
         "rolling_summary": assistant_points,
         "entity_ledger": facts[-MAX_ENTITY_LEDGER_ITEMS:],
         "updated_at": visible[-1].get("at") if visible else None,
     }
+    if isinstance(previous, dict) and previous.get("summary_source") == "llm":
+        # A durable LLM session summary outranks the last-lines digest; keep it.
+        result["rolling_summary"] = previous.get("rolling_summary") or assistant_points
+        result["summary_source"] = "llm"
+    return result
 
 
 async def _ensure_indexes() -> None:
@@ -433,7 +446,11 @@ async def close_activity_conversations(
     component_id: object,
     role: str = "coach",
 ) -> int:
-    """Close every open transcript for one genuinely completed activity."""
+    """Close every open transcript for one genuinely completed activity.
+
+    Session close is also the B-9 summary moment: each closed thread gets ONE
+    bounded mini-LLM summary replacing the crude last-assistant-lines digest —
+    the cheapest change with the largest continuity gain."""
     safe_id = normalize_learner_id(learner_id)
     safe_unit = normalize_activity_id(unit_id)
     safe_component = normalize_activity_id(component_id)
@@ -451,10 +468,22 @@ async def close_activity_conversations(
     collection = _get_collection_named("agent_conversations")
     if collection is not None:
         try:
+            closed_ids = [
+                str(doc["_id"]) async for doc in collection.find(query, {"_id": 1})
+            ]
             result = await collection.update_many(
                 query,
                 {"$set": {"activity_status": "completed", "activity_closed_at": closed_at}},
             )
+            for conversation_id in closed_ids[:2]:
+                try:
+                    task = asyncio.create_task(
+                        summarize_closed_conversation(safe_id, conversation_id, role)
+                    )
+                    _summary_tasks.add(task)
+                    task.add_done_callback(_summary_tasks.discard)
+                except RuntimeError:
+                    pass
             return int(result.modified_count)
         except Exception as exc:
             print(f"⚠️ activity conversation closure failed, using fallback: {exc}")
@@ -477,6 +506,80 @@ async def close_activity_conversations(
     if closed:
         _write_history_fallback(history)
     return closed
+
+
+_SUMMARY_PROMPT = (
+    "סכם/י שיחת ליווי למידה בין תלמיד/ה לבין יובי ב-3–4 נקודות קצרות, "
+    "באותה שפה שבה מתנהלת השיחה (עברית/ערבית/אנגלית): "
+    "אילו נושאים נלמדו, אילו קשיים נראו, מה עזר בפועל, ומה נשאר פתוח להמשך. "
+    "בלי שמות, בלי ציונים, בלי ציטוטים ארוכים. "
+    "החזר JSON בלבד: {\"points\": [\"...\"]}."
+)
+
+
+async def summarize_closed_conversation(
+    learner_id: str, conversation_id: str, role: str = "coach"
+) -> None:
+    """B-9: one bounded mini-LLM summary at session close, stored into the
+    thread's `conversation_memory.rolling_summary` (entity ledger untouched).
+    Failure keeps the deterministic digest — never raises."""
+    try:
+        turns = await get_recent(learner_id, role, limit=30, session_id=conversation_id)
+        visible = [
+            (turn.get("role"), " ".join(str(turn.get("content") or "").split())[:220])
+            for turn in turns
+            if isinstance(turn, dict) and turn.get("content")
+            and turn.get("role") in ("user", "assistant")
+        ]
+        if len(visible) < 4:
+            return
+        transcript = "\n".join(f"{speaker}: {text}" for speaker, text in visible)
+
+        from app.services.ai_usage import UsageContext
+        from app.services.llm import call_llm
+        raw = await call_llm(
+            [
+                {"role": "system", "content": _SUMMARY_PROMPT},
+                {"role": "user", "content": transcript[:6000]},
+            ],
+            usage_context=UsageContext(
+                actor_id=learner_id,
+                actor_type="learner",
+                endpoint="internal:session-summary",
+                feature="feature_3_learning_companion",
+                operation="coach.session_summary",
+                source="session_close",
+            ),
+            max_tokens=260,
+            json_mode=True,
+            model_tier="mini",
+        )
+        points = (json.loads(raw or "{}") or {}).get("points")
+        points = [
+            strip_pii(str(p))[0][:200] for p in points if str(p).strip()
+        ][:MAX_ROLLING_SUMMARY_ITEMS] if isinstance(points, list) else []
+        if not points:
+            return
+
+        key = _key(learner_id, role, conversation_id)
+        collection = _get_collection_named("agent_sessions")
+        update = {
+            "conversation_memory.rolling_summary": points,
+            "conversation_memory.summary_source": "llm",
+            "conversation_memory.updated_at": _now(),
+        }
+        if collection is not None:
+            await collection.update_one({"_id": key}, {"$set": update}, upsert=True)
+        else:
+            data = _read_fallback()
+            doc = data.setdefault(key, {})
+            memory = doc.setdefault("conversation_memory", {})
+            memory.update({
+                "rolling_summary": points, "summary_source": "llm", "updated_at": _now(),
+            })
+            _write_fallback(data)
+    except Exception as exc:
+        print(f"⚠️ session summary skipped: {type(exc).__name__}")
 
 
 async def list_conversations(
@@ -738,7 +841,10 @@ async def append_turn(
             turns = ((doc or {}).get("turns", []) + new_turns)[-MAX_TURNS:]
             await collection.update_one(
                 {"_id": key},
-                {"$set": {"turns": turns, "conversation_memory": _conversation_memory(turns), "learner_id": safe_id,
+                {"$set": {"turns": turns,
+                          "conversation_memory": _conversation_memory(
+                              turns, (doc or {}).get("conversation_memory")),
+                          "learner_id": safe_id,
                           "session_id": safe_session, "role": role, "updated_at": assistant_at}},
                 upsert=True,
             )
@@ -749,7 +855,8 @@ async def append_turn(
         data = _read_fallback()
         entry = data.get(key, {"turns": []})
         entry["turns"] = (entry.get("turns", []) + new_turns)[-MAX_TURNS:]
-        entry["conversation_memory"] = _conversation_memory(entry["turns"])
+        entry["conversation_memory"] = _conversation_memory(
+            entry["turns"], entry.get("conversation_memory"))
         entry.update({"learner_id": safe_id, "session_id": safe_session, "role": role, "updated_at": assistant_at})
         data[key] = entry
         _write_fallback(data)

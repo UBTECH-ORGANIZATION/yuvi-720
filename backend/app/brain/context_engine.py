@@ -56,9 +56,10 @@ AGENT_VIEWS: dict[str, dict[str, list[str]]] = {
         "read": [
             "identity.locale", "profile.interests", "profile.hobbies",
             "profile.characteristics", "profile.learning_style",
-            "profile.preferences", "profile.environment", "strengths",
+            "profile.preferences", "profile.environment", "profile.activeness",
+            "profile.mapping_clarifications", "strengths",
             "challenges", "strategies", "goals", "current_state",
-            "teacher_directives", "memory",
+            "teacher_directives", "memory", "mastery", "student_description",
         ],
         "write": ["agent_notes"],   # durable fields only via consolidator (§5.7)
     },
@@ -106,6 +107,132 @@ async def apply_writes(
                 f"agent {agent!r} may not write {path!r} (allowed: {scope['write']})"
             )
     return await apply_brain_updates(learner_id, flat)
+
+
+# Deterministic mapping from the six activeness components to phrasing guidance
+# (B-4). The 0-100 scores stay internal; only the verbal hint enters a prompt.
+_ACTIVENESS_HINTS = {
+    "self_regulation": {
+        "he": "העדף צעדים קטנים והגדר במפורש את הצעד הבא",
+        "ar": "فضّل خطوات صغيرة وحدّد الخطوة التالية صراحة",
+        "en": "Prefer small steps and name the next action explicitly",
+    },
+    "motivation_relevance": {
+        "he": "חבר את הלמידה לתחומי העניין לפני התוכן עצמו",
+        "ar": "اربط التعلم بالاهتمامات قبل المحتوى نفسه",
+        "en": "Tie learning to the learner's interests before the content itself",
+    },
+    "growth_mindset": {
+        "he": "הדגש שהיכולת גדלה עם תרגול; שבח מאמץ ותהליך, לא תוצאה",
+        "ar": "أكّد أن القدرة تنمو بالتمرّن؛ امدح الجهد والعملية لا النتيجة",
+        "en": "Stress that ability grows with practice; praise effort and process, not outcome",
+    },
+    "initiative_responsibility": {
+        "he": "הצע בחירה קטנה בין שתי דרכים כדי לתת תחושת שליטה",
+        "ar": "اعرض خيارًا صغيرًا بين طريقتين لمنح شعور بالتحكم",
+        "en": "Offer a small choice between two paths to give a sense of control",
+    },
+    "self_awareness": {
+        "he": "עזור לנסח מה היה קשה ומה עזר, בשאלות רפלקציה קצרות",
+        "ar": "ساعد في صياغة ما كان صعبًا وما ساعد، بأسئلة تأمل قصيرة",
+        "en": "Help articulate what was hard and what helped, with short reflection questions",
+    },
+    "support_emotional": {
+        "he": "הקפד על טון מרגיע ומנרמל טעויות",
+        "ar": "حافظ على نبرة مطمئنة وطبّع الأخطاء",
+        "en": "Keep a reassuring tone and normalize mistakes",
+    },
+}
+
+
+# When a component is a clear STRENGTH (high), lean INTO it rather than
+# remediate — a high-motivation-relevance learner should still get "tie to
+# interests" as a lever, not silence. Deficits (low) still take priority.
+_ACTIVENESS_STRENGTH_HINTS = {
+    "motivation_relevance": {
+        "he": "התלמיד/ה מונע/ת מעניין — עגן/י כל נושא בעולם התוכן שלו/ה",
+        "ar": "الطالب/ة مدفوع/ة بالاهتمام — اربط/ي كل موضوع بعالمه/ا",
+        "en": "This learner is interest-driven — anchor every topic in their world",
+    },
+    "initiative_responsibility": {
+        "he": "התלמיד/ה עצמאי/ת — תן/י לנסות לבד קודם, רמז רק כשמבקש/ת",
+        "ar": "الطالب/ة مستقل/ة — دعه/ا يحاول أولًا، ولمّح فقط عند الطلب",
+        "en": "This learner is autonomous — let them try first, hint only when asked",
+    },
+    "growth_mindset": {
+        "he": "התלמיד/ה מוכן/ה לאתגר — אפשר להעלות רמה כשמצליח/ה",
+        "ar": "الطالب/ة مستعد/ة للتحدي — يمكن رفع المستوى عند النجاح",
+        "en": "This learner welcomes challenge — raise the level on success",
+    },
+}
+
+
+def _activeness_hints(activeness: dict[str, Any], locale: str) -> list[str]:
+    """Verbal coaching hints: address the lowest components first (deficits), and
+    if room remains, lean into a standout strength. The 0-100 scores never leave
+    the server — only the verbal hint does."""
+    lang = locale if locale in {"he", "ar", "en"} else "he"
+    entries = [
+        (value, key) for key, value in (activeness or {}).items()
+        if isinstance(value, (int, float))
+    ]
+    hints: list[str] = []
+    for value, key in sorted(entries):                 # lowest first (deficits)
+        if value < 40 and key in _ACTIVENESS_HINTS:
+            hints.append(_ACTIVENESS_HINTS[key][lang])
+        if len(hints) >= 2:
+            return hints
+    for value, key in sorted(entries, reverse=True):   # highest (strengths)
+        if value >= 75 and key in _ACTIVENESS_STRENGTH_HINTS:
+            hint = _ACTIVENESS_STRENGTH_HINTS[key][lang]
+            if hint not in hints:
+                hints.append(hint)
+        if len(hints) >= 2:
+            break
+    return hints[:2]
+
+
+# What the brain does NOT yet know that would make coaching more personal.
+# Surfaced as verbal hints so the coach can close a gap with ONE natural
+# question at the right moment (e.g. an explanation isn't landing and no
+# interest is known to reframe it through) — the goal is to know the learner,
+# and empty memory is a to-do, not a silence.
+_PERSONALIZATION_GAP_HINTS = {
+    "interests": {
+        "he": "עוד לא ידוע אף תחום עניין. אם התלמיד/ה אומר/ת שההסבר לא עוזר או לא מתחבר — זה הרגע: שאל/י \"ספר/י לי על משהו שאתה אוהב או מתחבר אליו, ואסביר דרכו\", והסבר/הסבירי בפעם הבאה דרך מה שיענה",
+        "ar": "لا تُعرف أي اهتمامات بعد. إذا قال الطالب/ة إن الشرح لا يساعد أو لا يصل — فهذه هي اللحظة: اسأل \"حدّثني عن شيء تحبه أو ترتبط به وسأشرح من خلاله\"، ثم اشرح عبر ما يجيب به",
+        "en": "No interests are known yet. If the learner says an explanation isn't helping or isn't landing — that is the moment: ask \"tell me about something you love or relate to, and I'll explain through it\", then explain through whatever they answer",
+    },
+    "preferences": {
+        "he": "עוד לא ידוע איך הכי נוח לתלמיד/ה ללמוד. כשמתאים, שאל/י שאלה קצרה אחת (למשל: הסבר בשלבים או דוגמה קודם?) וזכור/זכרי את התשובה",
+        "ar": "لا يُعرف بعد كيف يفضّل الطالب/ة أن يتعلم. عند الملاءمة اسأل سؤالًا قصيرًا واحدًا (مثلًا: شرح بخطوات أم مثال أولًا؟)",
+        "en": "It is not yet known how this learner prefers to learn. When fitting, ask one short question (e.g., steps first or an example first?) and remember the answer",
+    },
+    "strategies": {
+        "he": "עוד לא ידועה אסטרטגיה שעובדת לתלמיד/ה. אחרי הצלחה, שאל/י בקצרה מה עזר הפעם — כדי להשתמש בזה שוב",
+        "ar": "لا تُعرف بعد استراتيجية ناجحة لهذا الطالب/ة. بعد نجاح، اسأل باختصار ما الذي ساعد هذه المرة — لاستخدامه لاحقًا",
+        "en": "No working strategy is known for this learner yet. After a success, briefly ask what helped this time — so it can be used again",
+    },
+}
+
+
+def _personalization_gaps(
+    interests: list[str],
+    preferences: list[str],
+    learning_style: str,
+    strategies: list[str],
+    locale: str,
+) -> list[str]:
+    """Verbal 'what we don't know yet' hints, most valuable first, max 2."""
+    lang = locale if locale in {"he", "ar", "en"} else "he"
+    gaps: list[str] = []
+    if not interests:
+        gaps.append(_PERSONALIZATION_GAP_HINTS["interests"][lang])
+    if not preferences and not learning_style:
+        gaps.append(_PERSONALIZATION_GAP_HINTS["preferences"][lang])
+    if not strategies:
+        gaps.append(_PERSONALIZATION_GAP_HINTS["strategies"][lang])
+    return gaps[:2]
 
 
 async def build_coach_bundle(
@@ -232,11 +359,41 @@ async def build_coach_bundle(
             break
     teacher_guidance.reverse()
 
+    # B-4: mastery stance + activeness coaching hints + the student description.
+    # All verbal, evidence-traceable; internal scores never leave the server.
+    from app.brain.mastery import stance_for
+    from app.brain import description as description_model
+
+    mastery_map = get_path(brain, "mastery") or {}
+    objective_title = (
+        localized_objective_title(objective_id, locale) if objective_id else ""
+    ) or (provider_unit or {}).get("title") or ""
+    mastery_stance = [
+        safe_text(line, 220)
+        for line in stance_for(mastery_map, objective_id, objective_title, locale)
+    ]
+    coaching_hints = _activeness_hints(get_path(brain, "profile.activeness") or {}, locale)
+    description_text = safe_text(
+        get_path(brain, "student_description.text"), 600
+    )
+    # Lazy freshness: stale description regenerates in the background for the
+    # NEXT turn; this one uses what exists (never blocks the conversation).
+    if learner_id:
+        try:
+            description_model.maybe_schedule_regeneration(
+                learner_id, {"student_description": get_path(brain, "student_description") or {}}
+            )
+        except Exception:
+            pass
+
+    clarifications = labels(get_path(brain, "profile.mapping_clarifications") or [], limit=3)
+
     recent = await get_recent_events(learner_id or "", objective_id=objective_id, limit=5)
     recent_view = [
         {
             "verb": safe_text(e.get("verb"), 60),
             "success": (e.get("result") or {}).get("success"),
+            "effortful": e.get("effortful"),
             "misconception": safe_text(e.get("misconception"), 120),
             "question_id": safe_text(e.get("question_id"), 100),
             "object_id": safe_text(e.get("object_id"), 180),
@@ -247,22 +404,38 @@ async def build_coach_bundle(
         for e in recent
     ]
 
+    interests_view = memory_interests or labels(
+        (get_path(brain, "profile.interests") or [])
+        + (get_path(brain, "profile.hobbies") or []), limit=6
+    )
+    preferences_view = memory_preferences or labels(
+        get_path(brain, "profile.preferences") or [], limit=5
+    )
+    learning_style_view = safe_text(get_path(brain, "profile.learning_style"))
+    personalization_gaps = _personalization_gaps(
+        interests_view, preferences_view, learning_style_view, strategies, locale
+    )
+
     return {
         "profile": {
-            "interests": memory_interests or labels(
-                (get_path(brain, "profile.interests") or [])
-                + (get_path(brain, "profile.hobbies") or []), limit=6
-            ),
+            "interests": interests_view,
             "characteristics": memory_characteristics
             or labels(get_path(brain, "profile.characteristics") or []),
-            "learning_style": safe_text(get_path(brain, "profile.learning_style")),
-            "preferences": memory_preferences
-            or labels(get_path(brain, "profile.preferences") or [], limit=5),
+            "learning_style": learning_style_view,
+            "preferences": preferences_view,
             "environment": safe_text(get_path(brain, "profile.environment")),
         },
         "strengths": labels(get_path(brain, "strengths") or []),
-        "challenges": labels(get_path(brain, "challenges") or []),
+        "challenges": labels([
+            c for c in (get_path(brain, "challenges") or [])
+            if not (isinstance(c, dict) and c.get("status") == "resolved")
+        ]),
         "strategies": strategies,
+        "student_description": description_text,
+        "mastery_stance": mastery_stance,
+        "coaching_hints": coaching_hints,
+        "personalization_gaps": personalization_gaps,
+        "mapping_clarifications": clarifications,
         "goals": [
             {
                 "text": safe_text(g.get("text")),
@@ -295,6 +468,7 @@ async def build_coach_bundle(
                 or information_to_bot(component_id),
                 900,
             ),
+            "hint_ladder": get_path(brain, "current_state.hint_ladder") or {},
             "recent_events": recent_view,
         },
         "query_intent": intent,

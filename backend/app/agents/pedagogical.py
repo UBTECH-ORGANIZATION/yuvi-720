@@ -55,10 +55,13 @@ async def select_next(learner_id: str, locale: str = "he") -> dict[str, Any]:
         "objective_id": objective_id,
         "component": component,
         "plan": plan,
-        # Explainable: why THIS objective (earliest unmastered, prereqs met).
+        # Explainable: review-due beats new material; else earliest unmastered.
         "explanation": (
-            f"next = {objective_id} — earliest unmastered objective in {focus_subject} "
-            f"with prerequisites met"
+            f"next = {objective_id} — spaced-review due (mastered skill decayed or "
+            f"failed after mastery) in {focus_subject}"
+            if objective_id in ((plan.get(focus_subject) or {}).get("review_due") or [])
+            else f"next = {objective_id} — earliest unmastered objective in "
+                 f"{focus_subject} with prerequisites met"
         ) if objective_id else "all enrolled objectives mastered",
     }
 

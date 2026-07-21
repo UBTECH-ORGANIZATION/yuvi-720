@@ -813,5 +813,13 @@
   "auth.dialog.hello.1": "Hi! I'm Yubi 👋",
   "auth.dialog.hello.2": "Let's learn something new together",
   "auth.dialog.hello.3": "Ready? Just your username and password",
-  "auth.menu.open": "Account menu"
+  "auth.menu.open": "Account menu",
+  "learning.reflection.title": "A moment to reflect",
+  "learning.reflection.loading": "Yuvi is preparing a short question about you and the task…",
+  "learning.reflection.step": "Question {current} of {total}",
+  "learning.reflection.placeholder": "Write here in your own words…",
+  "learning.reflection.skip": "Skip",
+  "learning.reflection.next": "Next",
+  "learning.reflection.finish": "Finish",
+  "learning.reflection.thanks": "Thanks for sharing! This helps Yuvi get to know you better."
 }

@@ -80,20 +80,24 @@ async def student_insights(learner_id: str, language: str = "he") -> dict[str, A
         and (event.get("timing") or {}).get("elapsed_since_previous_seconds") >= PROLONGED_INTERACTION_SECONDS
     ]
 
+    from app.brain.mastery import entry_for
     struggle_items = [
         {"label": c.get("label"), "objective_id": c.get("objective_id"),
-         "evidence": (brain.get("mastery") or {}).get(c.get("objective_id", ""), {}).get("misconceptions")}
+         "evidence": entry_for(brain.get("mastery"), c.get("objective_id", "")).get("misconceptions")}
         for c in (brain.get("challenges") or []) if isinstance(c, dict)
     ]
 
     # Attention flag — always with raw evidence (F6 explainability).
-    # Wellbeing (a learner-shared distress signal) OUTRANKS academic flags: a
-    # student's safety takes priority over inactivity/low-success.
+    # A genuine distress disclosure OUTRANKS academic flags. A `review`
+    # classifier-outage flag is an OPERATIONAL signal (safety screen was down),
+    # NOT a child-distress claim — it must never present as "shared distress".
     attention = None
     open_wellbeing = [f for f in (brain.get("wellbeing_flags") or [])
                       if isinstance(f, dict) and not f.get("resolved")]
-    if open_wellbeing:
-        latest = open_wellbeing[-1]
+    open_distress = [f for f in open_wellbeing if f.get("category") != "review"]
+    open_review = [f for f in open_wellbeing if f.get("category") == "review"]
+    if open_distress:
+        latest = open_distress[-1]
         attention = {"reason": _t(REASON, "wellbeing", language),
                      "evidence": latest.get("evidence") or "",
                      "kind": "wellbeing"}
@@ -154,8 +158,13 @@ async def student_insights(learner_id: str, language: str = "he") -> dict[str, A
         ],
         "attention": attention,
         "wellbeing_flags": [
-            {"evidence": f.get("evidence"), "at": f.get("at"), "source": f.get("source")}
-            for f in open_wellbeing
+            {"evidence": f.get("evidence"), "at": f.get("at"),
+             "source": f.get("source"), "category": f.get("category") or "distress"}
+            for f in open_distress
+        ],
+        # Operational notice, kept separate from child-distress signals.
+        "safety_screen_notices": [
+            {"at": f.get("at"), "source": f.get("source")} for f in open_review
         ],
         "recommendations": recommendations,
         "timeline": [
@@ -166,7 +175,35 @@ async def student_insights(learner_id: str, language: str = "he") -> dict[str, A
         ],
         # self vs system awareness (F4 self-awareness)
         "reflections_recent": brain.get("reflections_recent") or [],
+        "self_awareness": _self_awareness_gap(brain.get("reflections_recent") or []),
     }
+
+
+def _self_awareness_gap(reflections: list) -> dict[str, Any] | None:
+    """B-5: compare the learner's self-ratings to the server-computed session
+    success rate — the F4 self-vs-system delivery signal, teacher-facing."""
+    samples = [
+        {
+            "self_rating": r.get("self_rating"),
+            "system_estimate": r.get("system_estimate"),
+            "at": r.get("at"),
+        }
+        for r in reflections
+        if isinstance(r, dict)
+        and isinstance(r.get("self_rating"), (int, float))
+        and isinstance(r.get("system_estimate"), (int, float))
+    ][-5:]
+    if not samples:
+        return None
+    latest = samples[-1]
+    gap = (float(latest["self_rating"]) / 5.0) - float(latest["system_estimate"])
+    if gap >= 0.25:
+        reading = "self_above_evidence"     # מעריך/ה את עצמו/ה מעל הביצוע בפועל
+    elif gap <= -0.25:
+        reading = "self_below_evidence"     # מעריך/ה את עצמו/ה מתחת לביצוע בפועל
+    else:
+        reading = "calibrated"
+    return {"reading": reading, "gap": round(gap, 2), "samples": samples}
 
 
 async def group_insights(group_id: str, language: str = "he") -> dict[str, Any]:

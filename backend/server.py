@@ -1,5 +1,6 @@
 """Yuvilab Spark FastAPI application bootstrap."""
 
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
@@ -53,8 +54,18 @@ def _allowed_origins() -> list[str]:
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Start shared application resources, including the MCP session manager."""
-    async with content_catalog_mcp_lifespan():
-        yield
+    # MoE-LRS outbox sweeper (Retry/Resend) — only when reporting is enabled.
+    from app.services.lrs import config as lrs_config, outbox as lrs_outbox
+
+    sweeper = (
+        asyncio.create_task(lrs_outbox.run_sweeper()) if lrs_config.is_enabled() else None
+    )
+    try:
+        async with content_catalog_mcp_lifespan():
+            yield
+    finally:
+        if sweeper:
+            sweeper.cancel()
 
 
 def create_app() -> FastAPI:

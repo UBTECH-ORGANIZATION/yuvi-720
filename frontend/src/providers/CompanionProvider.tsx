@@ -566,7 +566,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const close = subscribeTriggers((trigger) => {
-      if (trigger.type === 'misconception' || trigger.type === 'slow_progress' || trigger.type === 'idle' || trigger.type === 'success') {
+      if (['misconception', 'slow_progress', 'idle', 'success', 'rapid_guessing', 'wheel_spinning'].includes(trigger.type)) {
         void receiveProactive(trigger.type)
       }
     })

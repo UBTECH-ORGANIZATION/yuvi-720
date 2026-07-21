@@ -2,6 +2,8 @@
 
 The platform needs learning activity reports from content so it can update learner profiles, route learners, and generate recommendations.
 
+> **Scope note — two LRS directions.** This reference covers the **inbound** wire vocabulary (content → Yuvi's own `/api/xapi`). For **outbound** reporting (Yuvi → the Ministry's LRS), the 720-project PDF defines a different, overriding vocabulary (`session enter/suspend/resume/exit`, `initialized`, `viewed`, `interacted/rated`, `skipped`, `updated`, …) — see the `720-lrs-reporting` skill. On conflict, the 720 PDF wins for outbound; the inbound list below is unchanged.
+
 ## Authoritative closed vocabularies (MoE LXP) — source of truth
 Use these exact IRIs; never invent verbs, activity types, extensions, or domains. Canonical registry:
 - Verbs: `https://lxp.education.gov.il/vocabulery/Verb.html`

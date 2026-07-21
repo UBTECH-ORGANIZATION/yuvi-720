@@ -1,13 +1,17 @@
 """Learner mapping questionnaire API routes."""
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 
 from app.agents.onboarding import run_onboarding
-from app.auth.dependencies import require_learner
+from app.auth.dependencies import optional_user, require_learner, require_learner_session
+from app.auth.repository import get_user_by_id, set_agency_started_at
 from app.brain.repository import apply_brain_updates
 from app.core.localization import normalize_language
 from app.services.ai_usage import UsageContext
+from app.services.lrs import reporter as lrs_reporter
 from learner_state import update_learner_state
 from mock_data import DIMENSIONS, calculate_scores, generate_insights, generate_recommendations
 from questionnaire_locales import get_questionnaire_for_language
@@ -17,9 +21,24 @@ router = APIRouter(prefix="/api", tags=["learner-mapping"])
 
 
 @router.get("/questionnaire")
-async def get_questionnaire(request: Request):
+async def get_questionnaire(request: Request, session=Depends(optional_user)):
     """Return the full localized questionnaire structure."""
     language = request.query_params.get("lang") or request.query_params.get("language") or "he"
+    # Onboarding started (MoE agency questionnaire): first mapping load of a
+    # journey → agency/PRE `initialized`. `agency_started_at` marks the span
+    # start; the `completed` at results-approval reports the full duration.
+    if session and session.get("sid"):
+        try:
+            user = await get_user_by_id(session["sub"])
+            if user is not None and not user.get("agency_started_at"):
+                await set_agency_started_at(
+                    session["sub"], datetime.now(timezone.utc).isoformat()
+                )
+                await lrs_reporter.report_agency_initialized(
+                    session["sub"], session["sid"]
+                )
+        except Exception as exc:  # reporting must never break the questionnaire
+            print(f"⚠️ agency initialized report skipped: {type(exc).__name__}")
     return JSONResponse(content=get_questionnaire_for_language(language))
 
 
@@ -30,8 +49,9 @@ async def get_dimensions():
 
 
 @router.post("/submit")
-async def submit_questionnaire(data: dict, learner_id: str = Depends(require_learner)):
+async def submit_questionnaire(data: dict, session=Depends(require_learner_session)):
     """Submit questionnaire answers, score them, and persist mapping results."""
+    learner_id = session["sub"]
     answers = data.get("answers", {})
     student_name = data.get("student_name", "תלמיד/ה")
 
@@ -41,6 +61,18 @@ async def submit_questionnaire(data: dict, learner_id: str = Depends(require_lea
             int_answers[int(key)] = value
         except (ValueError, TypeError):
             int_answers[key] = value
+
+    # MoE agency questionnaire: one `answered` per question (response + score).
+    if session.get("sid"):
+        for question_key in sorted(int_answers, key=str):
+            value = int_answers[question_key]
+            await lrs_reporter.report_agency_answered(
+                learner_id,
+                session["sid"],
+                question_key,
+                str(value),
+                score_raw=float(value) if isinstance(value, (int, float)) else None,
+            )
 
     scores = calculate_scores(int_answers)
     insights = generate_insights(scores)

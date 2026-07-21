@@ -34,7 +34,8 @@ def list_available_content(
     representations, and orders by mastery level then difficulty, so the
     earliest-appropriate primary component surfaces first.
     """
-    entry = (mastery or {}).get(objective_id) or {}
+    from app.brain.mastery import entry_for
+    entry = entry_for(mastery, objective_id)
     achieved_level = entry.get("level")
     available = [
         c for c in components_for(objective_id)
