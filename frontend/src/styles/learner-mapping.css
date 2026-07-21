@@ -100,7 +100,8 @@
   font-weight: 700;
 }
 
-.yuvi-language-switcher select {
+.yuvi-language-switcher select,
+.yuvi-theme-switcher select {
   border: 0;
   background: transparent;
   color: var(--m-text);
