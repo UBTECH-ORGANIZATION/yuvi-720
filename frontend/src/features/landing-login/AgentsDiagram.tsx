@@ -92,6 +92,70 @@ const CHIPS = ['mapping', 'learning', 'guide', 'safety', 'insights', 'motivation
 
 const RADIUS = 38
 
+// One full trip (core -> agent) in seconds. Slow, calm, non-distracting.
+const FLOW_DUR = 4.2
+
+// RGB triplets per tone so the SVG energy lines / packets and the node pulse
+// ring share one accent colour per connection.
+const TONE_RGB: Record<(typeof AGENTS)[number]['tone'], string> = {
+  blue: '43, 86, 245',
+  teal: '13, 143, 130',
+  purple: '110, 91, 214',
+  orange: '201, 119, 42',
+  indigo: '75, 82, 201',
+  pink: '196, 81, 127'
+}
+
+// Layered neural "brain" rendered as SVG inside the glass core. Three depth
+// layers (back / mid / front) give parallax so it reads as a volume you could
+// step into. Nodes are blue / violet — never flat white.
+type BrainNode = { x: number; y: number; r: number; hue: 'a' | 'b'; flicker: boolean; delay: number; dur: number }
+type BrainLink = { x1: number; y1: number; x2: number; y2: number }
+type BrainLayer = { nodes: BrainNode[]; links: BrainLink[] }
+
+function buildBrain(): BrainLayer[] {
+  // Seeded LCG so the layout is stable across renders (no hydration drift).
+  let seed = 20260721
+  const rand = () => {
+    seed = (seed * 1664525 + 1013904223) % 4294967296
+    return seed / 4294967296
+  }
+  const specs = [
+    { count: 15, maxR: 29, size: 0.5, linkDist: 15 }, // back
+    { count: 20, maxR: 39, size: 0.72, linkDist: 15 }, // mid
+    { count: 15, maxR: 46, size: 0.98, linkDist: 14 } // front
+  ]
+  return specs.map((spec) => {
+    const nodes: BrainNode[] = []
+    for (let i = 0; i < spec.count; i++) {
+      const angle = rand() * Math.PI * 2
+      const radius = Math.sqrt(rand()) * spec.maxR
+      nodes.push({
+        x: 50 + radius * Math.cos(angle),
+        y: 50 + radius * Math.sin(angle),
+        r: spec.size * (0.8 + rand() * 0.55),
+        hue: rand() < 0.5 ? 'a' : 'b',
+        flicker: rand() < 0.4,
+        delay: rand() * 5,
+        dur: 3.4 + rand() * 2.6
+      })
+    }
+    const links: BrainLink[] = []
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const d = Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y)
+        if (d < spec.linkDist) {
+          links.push({ x1: nodes[i].x, y1: nodes[i].y, x2: nodes[j].x, y2: nodes[j].y })
+        }
+      }
+    }
+    return { nodes, links }
+  })
+}
+
+const BRAIN = buildBrain()
+const BRAIN_LAYER_NAMES = ['back', 'mid', 'front'] as const
+
 export function AgentsDiagram() {
   const { t } = useI18n()
 
@@ -99,7 +163,10 @@ export function AgentsDiagram() {
     const angle = (-90 + index * 60) * (Math.PI / 180)
     const cx = 50 + RADIUS * Math.cos(angle)
     const cy = 50 + RADIUS * Math.sin(angle)
-    return { ...agent, cx, cy, index }
+    // Stagger each connection evenly around the ring so packets ripple outward
+    // like a rotating wave rather than all firing at once.
+    const begin = (index * FLOW_DUR) / AGENTS.length
+    return { ...agent, cx, cy, index, rgb: TONE_RGB[agent.tone], begin }
   })
 
   return (
@@ -120,8 +187,27 @@ export function AgentsDiagram() {
               <stop offset="0%" stopColor="rgba(43, 86, 245, 0.16)" />
               <stop offset="100%" stopColor="rgba(43, 86, 245, 0)" />
             </radialGradient>
+            <filter id="l720-hub-line-blur" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="0.85" />
+            </filter>
           </defs>
           <circle cx="50" cy="50" r="30" fill="url(#l720-hub-glow)" />
+
+          {/* Soft glow that hugs each fiber line */}
+          {nodes.map((node) => (
+            <line
+              key={`glow-${node.key}`}
+              x1="50"
+              y1="50"
+              x2={node.cx}
+              y2={node.cy}
+              className="landing720-hub-link-glow"
+              filter="url(#l720-hub-line-blur)"
+              style={{ stroke: `rgba(${node.rgb}, 0.16)` } as React.CSSProperties}
+            />
+          ))}
+
+          {/* Thin continuous fiber line; brightens a little as its light nears the core */}
           {nodes.map((node) => (
             <line
               key={`line-${node.key}`}
@@ -130,34 +216,122 @@ export function AgentsDiagram() {
               x2={node.cx}
               y2={node.cy}
               className="landing720-hub-link"
-            />
-          ))}
-          <circle cx="50" cy="50" r={RADIUS} className="landing720-hub-orbit" />
-          {nodes.map((node) => (
-            <circle key={`out-${node.key}`} r="1.1" className="landing720-hub-packet">
-              <animateMotion
-                dur="3.4s"
-                begin={`${node.index * 0.4}s`}
+              style={{ stroke: `rgb(${node.rgb})` } as React.CSSProperties}
+            >
+              <animate
+                attributeName="stroke-opacity"
+                dur={`${FLOW_DUR}s`}
+                begin={`${node.begin}s`}
                 repeatCount="indefinite"
-                path={`M50 50 L ${node.cx} ${node.cy}`}
+                values="0.2;0.2;0.5;0.22"
+                keyTimes="0;0.6;0.92;1"
               />
-            </circle>
+            </line>
           ))}
+
+          <circle cx="50" cy="50" r={RADIUS} className="landing720-hub-orbit" />
+
+          {/* A single tiny light travelling along the fiber into the core */}
           {nodes.map((node) => (
-            <circle key={`in-${node.key}`} r="0.9" className="landing720-hub-packet return">
+            <circle
+              key={`spark-${node.key}`}
+              r="0.5"
+              className="landing720-hub-spark"
+              style={{
+                fill: `rgb(${node.rgb})`,
+                filter: `drop-shadow(0 0 1.6px rgba(${node.rgb}, 0.95))`
+              } as React.CSSProperties}
+            >
               <animateMotion
-                dur="3.4s"
-                begin={`${node.index * 0.4 + 1.7}s`}
+                dur={`${FLOW_DUR}s`}
+                begin={`${node.begin}s`}
                 repeatCount="indefinite"
+                calcMode="spline"
+                keyPoints="0;1"
+                keyTimes="0;1"
+                keySplines="0.4 0 0.6 1"
                 path={`M${node.cx} ${node.cy} L50 50`}
+              />
+              <animate
+                attributeName="opacity"
+                dur={`${FLOW_DUR}s`}
+                begin={`${node.begin}s`}
+                repeatCount="indefinite"
+                values="0;1;1;0.9;0"
+                keyTimes="0;0.08;0.7;0.92;1"
+              />
+              <animate
+                attributeName="r"
+                dur={`${FLOW_DUR}s`}
+                begin={`${node.begin}s`}
+                repeatCount="indefinite"
+                values="0.42;0.5;0.72"
+                keyTimes="0;0.7;1"
               />
             </circle>
           ))}
         </svg>
 
-        <div className="landing720-hub-core">
-          <span className="landing720-hub-core-pulse" aria-hidden="true" />
-          <span className="landing720-hub-core-pulse delay" aria-hidden="true" />
+        <span className="landing720-hub-core-energy" aria-hidden="true" />
+        <span className="landing720-hub-core-shadow" aria-hidden="true" />
+
+        <div className="landing720-hub-core" style={{ '--arrival': `${FLOW_DUR / AGENTS.length}s` } as React.CSSProperties}>
+          <span className="landing720-hub-core-ring" aria-hidden="true" />
+          <span className="landing720-hub-core-ring delay" aria-hidden="true" />
+          <span className="landing720-hub-core-texture" aria-hidden="true" />
+          <svg
+            className="landing720-hub-core-net"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="xMidYMid slice"
+            aria-hidden="true"
+          >
+            <defs>
+              <clipPath id="l720-core-clip">
+                <circle cx="50" cy="50" r="49" />
+              </clipPath>
+              <filter id="l720-core-soft" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="0.45" />
+              </filter>
+            </defs>
+            <g clipPath="url(#l720-core-clip)">
+              {BRAIN.map((layer, li) => {
+                const name = BRAIN_LAYER_NAMES[li]
+                return (
+                  <g
+                    key={`layer-${name}`}
+                    className={`landing720-hub-core-layer ${name}`}
+                    filter={name === 'back' ? 'url(#l720-core-soft)' : undefined}
+                  >
+                    {layer.links.map((link, i) => (
+                      <line
+                        key={`e-${name}-${i}`}
+                        x1={link.x1}
+                        y1={link.y1}
+                        x2={link.x2}
+                        y2={link.y2}
+                        className="landing720-hub-core-edge"
+                      />
+                    ))}
+                    {layer.nodes.map((n, i) => (
+                      <circle
+                        key={`n-${name}-${i}`}
+                        cx={n.x}
+                        cy={n.y}
+                        r={n.r}
+                        className={`landing720-hub-core-node hue-${n.hue}${n.flicker ? ' flicker' : ''}`}
+                        style={{
+                          animationDelay: `${n.delay}s`,
+                          animationDuration: `${n.dur}s`
+                        } as React.CSSProperties}
+                      />
+                    ))}
+                  </g>
+                )
+              })}
+            </g>
+          </svg>
+          <span className="landing720-hub-core-reflection" aria-hidden="true" />
+          <span className="landing720-hub-core-arrival" aria-hidden="true" />
           <strong>{t('landing.hub.coreTitle')}</strong>
           <span>{t('landing.hub.coreSubtitle')}</span>
         </div>
@@ -166,7 +340,14 @@ export function AgentsDiagram() {
           <article
             key={node.key}
             className={`landing720-hub-node tone-${node.tone}`}
-            style={{ '--x': `${node.cx}%`, '--y': `${node.cy}%`, '--delay': `${node.index * 0.12}s` } as React.CSSProperties}
+            style={{
+              '--x': `${node.cx}%`,
+              '--y': `${node.cy}%`,
+              '--delay': `${node.index * 0.12}s`,
+              '--tone': node.rgb,
+              '--flow': `${FLOW_DUR}s`,
+              '--pulse-delay': `${node.begin}s`
+            } as React.CSSProperties}
           >
             <span className="landing720-hub-icon">
               <node.Icon />

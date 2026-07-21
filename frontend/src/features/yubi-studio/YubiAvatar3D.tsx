@@ -34,6 +34,10 @@ interface Props {
   pulling?: boolean
   /** Physical side Yuvi turns and reaches toward during the pulling transition. */
   pullingSide?: 'left' | 'right'
+  /** Sustained presenting pose: Yuvi turns toward a panel and extends his near hand toward it. */
+  presenting?: boolean
+  /** Physical side the presented panel sits on relative to Yuvi. */
+  presentingSide?: 'left' | 'right'
   /** Hold a neutral front-facing pose while two avatar canvases hand off. */
   frontFacing?: boolean
   /** Track the pointer across the viewport with Yuvi's eyes, head, and body. */
@@ -76,7 +80,7 @@ function mixWhite([r, g, b]: number[], t: number): [number, number, number] {
 const rgba = ([r, g, b]: number[], a: number) => `rgba(${r}, ${g}, ${b}, ${a})`
 
 export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAvatar3D(
-  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard' },
+  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard' },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null)
@@ -89,6 +93,8 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
   const speakingRef = useRef(speaking)
   const pullingRef = useRef(pulling)
   const pullingSideRef = useRef(pullingSide)
+  const presentingRef = useRef(presenting)
+  const presentingSideRef = useRef(presentingSide)
   const frontFacingRef = useRef(frontFacing)
   const followPointerRef = useRef(followPointer)
   const groundedRef = useRef(grounded)
@@ -107,6 +113,8 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
     pullingRef.current = pulling
   }, [pulling])
   useEffect(() => { pullingSideRef.current = pullingSide }, [pullingSide])
+  useEffect(() => { presentingRef.current = presenting }, [presenting])
+  useEffect(() => { presentingSideRef.current = presentingSide }, [presentingSide])
   useEffect(() => { frontFacingRef.current = frontFacing }, [frontFacing])
   useEffect(() => { followPointerRef.current = followPointer }, [followPointer])
   useEffect(() => { groundedRef.current = grounded }, [grounded])
@@ -609,9 +617,17 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
         const sway = isFlying ? headingYaw : isGrounded ? 0 : isSpeaking ? Math.sin(t * 1.9) * 0.16 : Math.sin(t * 0.5) * 0.32
         const idleStrength = (1 - gripStrength) * (1 - dockingStrength)
         const postureEase = dockingStrength > 0 ? 0.3 : 0.14
+        // Sustained "presenting" pose: Yuvi holds a gentle turn toward a panel and
+        // keeps his near hand extended toward it (unlike `pulling`, which is a
+        // one-shot grab that settles back to front).
+        const isPresenting = presentingRef.current && !isMoving && !isPulling
+        const presentSign = presentingSideRef.current === 'left' ? -1 : 1
+        const presentStrength = isPresenting ? 1 : 0
         const robotYawTarget = isMoving
           ? headingYaw
-          : sway * idleStrength + pointerLookX * 0.12 * idleStrength + 0.34 * pullDirection * gripStrength
+          : isPresenting
+            ? 0.46 * presentSign
+            : sway * idleStrength + pointerLookX * 0.12 * idleStrength + 0.34 * pullDirection * gripStrength
         // Shortest-path turn so crossing the ±π (facing-away) seam doesn't spin Yuvi the long way round.
         const yawDelta = Math.atan2(Math.sin(robotYawTarget - robot.rotation.y), Math.cos(robotYawTarget - robot.rotation.y))
         robot.rotation.y += yawDelta * postureEase
@@ -623,8 +639,8 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
           ? 0.16 + Math.sin(t * 5.2) * 0.05
           : isWalking ? Math.abs(walkStride) * 0.03
           : isGrounded ? 0 : Math.sin(t * (isSpeaking ? 2.5 : 1.4)) * (isSpeaking ? 0.045 : 0.03))
-        head.rotation.y = ((isThinking ? -0.16 + Math.sin(t * 0.8) * 0.05 : Math.sin(t * 0.4) * 0.08) + pointerLookX * 0.3) * idleStrength + 0.24 * pullDirection * gripStrength
-        head.rotation.x = ((isThinking ? -0.07 + Math.sin(t * 1.1) * 0.025 : Math.sin(t * 0.7) * 0.03) + pointerLookY * 0.16) * (1 - dockingStrength)
+        head.rotation.y = ((isThinking ? -0.16 + Math.sin(t * 0.8) * 0.05 : Math.sin(t * 0.4) * 0.08) + pointerLookX * 0.3) * idleStrength + 0.24 * pullDirection * gripStrength + 0.26 * presentSign * presentStrength
+        head.rotation.x = ((isThinking ? -0.07 + Math.sin(t * 1.1) * 0.025 : Math.sin(t * 0.7) * 0.03) + pointerLookY * 0.16) * (1 - dockingStrength) - 0.16 * presentStrength
         head.rotation.z += (((isThinking ? 0.13 : isSpeaking ? Math.sin(t * 1.6) * 0.055 : 0) * (1 - dockingStrength) - head.rotation.z) * postureEase)
         const flyFlutter = isFlying && !reduceMotion ? Math.sin(t * 9.5) * 0.06 : 0
         // Flying → overhead V (hands up and out); walking → relaxed at sides (they swing via rotation.x below).
@@ -639,6 +655,8 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
         const rightArmTarget = restingRightArm * (1 - gripStrength) + rightPullRotation * gripStrength
         const leftArmTarget = restingLeftArm * (1 - gripStrength) + leftPullRotation * gripStrength
         const armSwing = walkAmp * 0.7   // arms counter-swing the legs
+        // Presenting turns only Yuvi's face and head toward the panel — both arms
+        // stay in their natural resting pose (no pointing/reaching gesture).
         armR.rotation.z += (rightArmTarget - armR.rotation.z) * postureEase
         armR.rotation.x += ((((isThinking ? -0.36 : 0) * (1 - dockingStrength) - 0.5 * gripStrength - walkStride * armSwing) - armR.rotation.x) * postureEase)
         armL.rotation.z += (leftArmTarget - armL.rotation.z) * postureEase
