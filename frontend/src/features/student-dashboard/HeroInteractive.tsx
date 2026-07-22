@@ -115,8 +115,8 @@ function AngleScene() {
           </linearGradient>
         </defs>
 
-        {/* soft floor grid */}
-        {[0, 1, 2, 3].map((i) => (
+        {/* soft floor grid — kept minimal so the angle stays the focus */}
+        {[1, 2].map((i) => (
           <line key={i} x1={20} y1={68 + i * 47} x2={380} y2={68 + i * 47} className="sd-viz-grid" />
         ))}
 
@@ -175,7 +175,7 @@ function AngleScene() {
             can never travel (deg is clamped ≥ 4°), so it never blocks the drag */}
         <g className="sd-viz-readout" transform={`translate(${cx}, 262)`}>
           <text className="sd-viz-readout__value" textAnchor="middle">{deg}°</text>
-          <text className="sd-viz-readout__label" textAnchor="middle" y="24" fill={color}>
+          <text className="sd-viz-readout__label" textAnchor="middle" y="20" fill={color}>
             {t(`sdash.viz.angle.${kind}`)}
           </text>
         </g>

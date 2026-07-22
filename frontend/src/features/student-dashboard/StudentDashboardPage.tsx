@@ -165,33 +165,34 @@ export function StudentDashboardPage() {
 
         {dashboard && (dashboard.hasProfile || dashboard.hasLearningEvidence) && (
           <>
-            <DashboardHero
-              dashboard={dashboard}
-              isStarting={isStarting}
-              actionError={actionError}
-              onStart={() => void startHeroStep()}
-              onBrowse={() => navigate('/learning')}
-            />
-            {/* Two-column layout: the learner's own activity (lessons, goals)
-                reads down the main column; the learning map rides a sticky
-                side rail so "where am I strong / what to reinforce" stays in
-                view while scrolling. Collapses to one column on narrow screens. */}
+            {/* Hero + recent lessons share one card: the current objective and
+                the lessons that continue it read as a single "what's next" panel. */}
+            <section className="sd-hero-card">
+              <DashboardHero
+                dashboard={dashboard}
+                isStarting={isStarting}
+                actionError={actionError}
+                onStart={() => void startHeroStep()}
+                onBrowse={() => navigate('/learning')}
+              />
+              <RecentLessons
+                units={roadmapUnits}
+                onOpenLearning={() => navigate('/learning')}
+                onOpenComponent={openRoadmapComponent}
+              />
+            </section>
+            {/* Goals and the learning map stack full-width below the hero card. */}
             <div className="sd-grid">
+              <aside className="sd-grid__rail">
+                <LearningMap competencies={dashboard.competencies} />
+              </aside>
               <div className="sd-grid__main">
-                <RecentLessons
-                  units={roadmapUnits}
-                  onOpenLearning={() => navigate('/learning')}
-                  onOpenComponent={openRoadmapComponent}
-                />
                 <MyGoals
                   goals={dashboard.goals}
                   onSeeAll={() => navigate('/mentoring')}
                   onAddGoal={() => navigate('/mentoring')}
                 />
               </div>
-              <aside className="sd-grid__rail">
-                <LearningMap competencies={dashboard.competencies} />
-              </aside>
             </div>
             <p className="sd-last-updated" aria-live="polite">
               <Icon name="check" size={14} />

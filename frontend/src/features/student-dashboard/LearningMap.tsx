@@ -59,7 +59,7 @@ function TopicRow({ competency, side, onOpenDetail, detailsLabel }: ColumnRowPro
         aria-label={`${competency.label} — ${competency.descriptor}. ${detailsLabel}`}
       >
         <span className="sd-lmap-row__icon" aria-hidden="true">
-          <Icon name={visual.icon} size={20} />
+          <Icon name={visual.icon} size={17} />
         </span>
         <span className="sd-lmap-row__body">
           <span className="sd-lmap-row__title" dir="auto">{competency.label}</span>
@@ -128,39 +128,36 @@ function TopicDetailDialog({ competency, side, onClose }: TopicDetailProps) {
         </button>
 
         <header className="sd-lmap-detail__head">
-          <div>
-            <h3 id="sd-lmap-detail-title" dir="auto">{competency.label}</h3>
-            <span className={`sd-lmap-detail__band sd-lmap-detail__band--${side}`} dir="auto">{competency.descriptor}</span>
-          </div>
+          <span className="sd-lmap-detail__spark" aria-hidden="true">
+            <CompetencyGlyph competencyKey={competency.key} color={visual.color} />
+          </span>
+          <h3 id="sd-lmap-detail-title" dir="auto">{competency.label}</h3>
         </header>
 
-        {/* Info column — glanceable: a topic glyph, the meaning, why this band,
-            one next step. Stays on the inline-start side (right in RTL). */}
+        {/* Info column — one short insight: what it is → the focus now → one
+            small action. Stays on the inline-start side (right in RTL). */}
         <div className="sd-lmap-detail__info">
-          <div className="sd-lmap-detail__glyph" aria-hidden="true">
-            <CompetencyGlyph competencyKey={competency.key} color={visual.color} />
-          </div>
-
           <p className="sd-lmap-detail__meaning" dir="auto">{k('meaning')}</p>
 
-          <div className="sd-lmap-detail__block">
-            <h4>{t(`sdash.lmap.d.whyTitle.${side}`)}</h4>
-            <p dir="auto">{k(side === 'good' ? 'whyGood' : 'whyReinforce')}</p>
-          </div>
-
-          <div className="sd-lmap-detail__next">
-            <span className="sd-lmap-detail__next-icon" aria-hidden="true"><Icon name="target" size={16} /></span>
-            <div>
-              <strong>{t('sdash.lmap.d.nextTitle')}</strong>
-              <span dir="auto">{k('next')}</span>
-            </div>
+          <div className="sd-lmap-detail__focus">
+            <span className="sd-lmap-detail__focus-tag">
+              <Icon name="target" size={13} />
+              <span>{t('sdash.lmap.d.focusNow')}</span>
+            </span>
+            <p className="sd-lmap-detail__focus-step" dir="auto">{k('next')}</p>
           </div>
 
           {!chatOpen && (
-            <button type="button" className="sd-lmap-detail__talk" onClick={() => setChatOpen(true)}>
-              <Icon name="message" size={16} />
-              <span>{t('sdash.lmap.d.talk')}</span>
-            </button>
+            <div className="sd-lmap-detail__actions">
+              <button type="button" className="sd-lmap-detail__cta" onClick={() => setChatOpen(true)}>
+                <Icon name="spark" size={16} />
+                <span>{t('sdash.lmap.d.tryCta')}</span>
+              </button>
+              <button type="button" className="sd-lmap-detail__talk-link" onClick={() => setChatOpen(true)}>
+                <Icon name="message" size={15} />
+                <span>{t('sdash.lmap.d.talk')}</span>
+              </button>
+            </div>
           )}
         </div>
 
@@ -170,6 +167,11 @@ function TopicDetailDialog({ competency, side, onClose }: TopicDetailProps) {
               competencyKey={competency.key}
               greeting={t(`sdash.lmap.chat.greeting.${side}`, { topic: competency.label })}
               ephemeralNote={t('sdash.lmap.chat.ephemeral')}
+              suggestions={[
+                t('sdash.lmap.chat.suggest.yes'),
+                t('sdash.lmap.chat.suggest.hard'),
+                t('sdash.lmap.chat.suggest.example'),
+              ]}
             />
           </div>
         )}
@@ -233,7 +235,7 @@ export function LearningMap({ competencies }: LearningMapProps) {
           <div className="sd-lmap__col sd-lmap__col--reinforce">
             <div className="sd-lmap__col-head">
               <span className="sd-lmap__col-icon" aria-hidden="true"><Icon name="target" size={16} /></span>
-              <h3>{t('sdash.learningMap.reinforce.title')}</h3>
+              <h3>{t('sdash.learningMap.reinforce.heading')}</h3>
             </div>
             {reinforceDisplay.length > 0 ? (
               <ul className="sd-lmap__list">
@@ -255,7 +257,7 @@ export function LearningMap({ competencies }: LearningMapProps) {
           <div className="sd-lmap__col sd-lmap__col--good">
             <div className="sd-lmap__col-head">
               <span className="sd-lmap__col-icon" aria-hidden="true"><Icon name="leaf" size={16} /></span>
-              <h3>{t('sdash.learningMap.good.title')}</h3>
+              <h3>{t('sdash.learningMap.good.heading')}</h3>
             </div>
             {good.length > 0 ? (
               <ul className="sd-lmap__list">
