@@ -75,7 +75,7 @@ export function Modal({ open, onClose, titleId, children, className, overlay = t
   }, [open])
 
   // Freeze the page behind. Beyond the usual reason, the landing page animates
-  // Yubi along the scroll position — letting it scroll would fly him off the
+  // Yuvi along the scroll position — letting it scroll would fly him off the
   // scene the dialog is part of.
   useEffect(() => {
     if (!open) return

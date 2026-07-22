@@ -1,5 +1,5 @@
 /* Closed companion: Yuvi lives in an orbital portal at the physical bottom-right. */
-.yubi-companion-dock {
+.Yuvi-companion-dock {
   position: fixed;
   inset-block-end: 10px;
   right: 12px; /* Intentional physical placement requested for every language. */
@@ -11,15 +11,15 @@
   transition: opacity 220ms ease, transform 260ms var(--sp-ease), visibility 220ms;
 }
 
-.yubi-companion-dock.is-open:not(.is-opening):not(.is-closing),
-.yubi-companion-dock.is-studio-open {
+.Yuvi-companion-dock.is-open:not(.is-opening):not(.is-closing),
+.Yuvi-companion-dock.is-studio-open {
   opacity: 0;
   visibility: hidden;
   transform: translateY(14px) scale(.92);
   pointer-events: none;
 }
 
-.yubi-companion-dock.is-opening {
+.Yuvi-companion-dock.is-opening {
   z-index: 1435;
   opacity: 1;
   visibility: visible;
@@ -27,7 +27,7 @@
   pointer-events: none;
 }
 
-.yubi-companion-dock.is-closing {
+.Yuvi-companion-dock.is-closing {
   z-index: 1435;
   opacity: 1;
   visibility: visible;
@@ -36,41 +36,41 @@
   transition: none;
 }
 
-.yubi-companion-dock.is-closing .yubi-companion-dock__portal {
+.Yuvi-companion-dock.is-closing .Yuvi-companion-dock__portal {
   pointer-events: none;
 }
 
-.yubi-companion-dock.is-opening .yubi-companion-dock__portal {
+.Yuvi-companion-dock.is-opening .Yuvi-companion-dock__portal {
   pointer-events: none;
 }
 
-.yubi-companion-dock.is-opening .yubi-companion-dock__portal::before,
-.yubi-companion-dock.is-opening .yubi-companion-dock__portal::after,
-.yubi-companion-dock.is-opening .yubi-companion-dock__ring,
-.yubi-companion-dock.is-opening .yubi-companion-dock__orbit-label,
-.yubi-companion-dock.is-opening .yubi-companion-dock__orbit-node,
-.yubi-companion-dock.is-opening .yubi-companion-dock__unread {
+.Yuvi-companion-dock.is-opening .Yuvi-companion-dock__portal::before,
+.Yuvi-companion-dock.is-opening .Yuvi-companion-dock__portal::after,
+.Yuvi-companion-dock.is-opening .Yuvi-companion-dock__ring,
+.Yuvi-companion-dock.is-opening .Yuvi-companion-dock__orbit-label,
+.Yuvi-companion-dock.is-opening .Yuvi-companion-dock__orbit-node,
+.Yuvi-companion-dock.is-opening .Yuvi-companion-dock__unread {
   opacity: 0;
   visibility: hidden;
   animation: none;
   transition: none;
 }
 
-.yubi-companion-dock.is-opening .yubi-companion-dock__robot {
+.Yuvi-companion-dock.is-opening .Yuvi-companion-dock__robot {
   pointer-events: none;
   transform-origin: center center;
   will-change: transform;
-  animation: yubi-leave-orbit-and-drag 1450ms linear both;
+  animation: Yuvi-leave-orbit-and-drag 1450ms linear both;
 }
 
-.yubi-companion-dock.is-closing .yubi-companion-dock__robot {
+.Yuvi-companion-dock.is-closing .Yuvi-companion-dock__robot {
   pointer-events: none;
   transform-origin: center center;
   will-change: transform;
-  animation: yubi-return-to-orbit 1450ms linear both;
+  animation: Yuvi-return-to-orbit 1450ms linear both;
 }
 
-.yubi-companion-dock.is-opening .yubi-companion-dock__robot::after {
+.Yuvi-companion-dock.is-opening .Yuvi-companion-dock__robot::after {
   content: '';
   position: absolute;
   top: 39%;
@@ -82,10 +82,10 @@
   background: linear-gradient(180deg, #fff, #4cc9f0 28%, #6f5bff 72%, #fff);
   box-shadow: 0 0 0 3px rgba(255, 255, 255, .74), 0 0 18px rgba(76, 201, 240, .82);
   transform-origin: center;
-  animation: yubi-hand-grip 1450ms ease both;
+  animation: Yuvi-hand-grip 1450ms ease both;
 }
 
-.yubi-companion-dock__portal {
+.Yuvi-companion-dock__portal {
   position: absolute;
   inset: 0;
   border-radius: 50%;
@@ -96,7 +96,7 @@
 
 /* The portal surface is separate from Yuvi. Fading the portal element itself
    also faded its 3D child, which made him vanish halfway through the flight. */
-.yubi-companion-dock__portal::before {
+.Yuvi-companion-dock__portal::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -111,43 +111,43 @@
   transition: box-shadow 180ms ease;
 }
 
-.yubi-companion-dock__portal:hover {
+.Yuvi-companion-dock__portal:hover {
   transform: translateY(-2px) scale(1.015);
 }
 
-.yubi-companion-dock__portal:hover::before {
+.Yuvi-companion-dock__portal:hover::before {
   box-shadow: 0 22px 52px rgba(69, 51, 154, 0.27), inset 0 1px rgba(255, 255, 255, 0.9);
 }
 
-.yubi-companion-dock__portal::after {
+.Yuvi-companion-dock__portal::after {
   content: '';
   position: absolute;
   inset: 26px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(76, 201, 240, 0.16), transparent 67%);
   filter: blur(7px);
-  animation: yubi-portal-glow 3s ease-in-out infinite;
+  animation: Yuvi-portal-glow 3s ease-in-out infinite;
 }
 
-.yubi-companion-dock__ring {
+.Yuvi-companion-dock__ring {
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
 }
 
-.yubi-companion-dock__ring--outer {
+.Yuvi-companion-dock__ring--outer {
   inset: 9px;
   border: 1px solid rgba(111, 91, 255, 0.28);
-  animation: yubi-portal-spin 18s linear infinite;
+  animation: Yuvi-portal-spin 18s linear infinite;
 }
 
-.yubi-companion-dock__ring--inner {
+.Yuvi-companion-dock__ring--inner {
   inset: 25px;
   border: 1px dashed rgba(76, 201, 240, 0.5);
-  animation: yubi-portal-spin 12s linear infinite reverse;
+  animation: Yuvi-portal-spin 12s linear infinite reverse;
 }
 
-.yubi-companion-dock__orbit-label {
+.Yuvi-companion-dock__orbit-label {
   position: absolute;
   inset: 0;
   z-index: 5;
@@ -157,7 +157,7 @@
   transition: opacity 180ms ease, transform 220ms var(--sp-ease);
 }
 
-.yubi-companion-dock__orbit-label > span {
+.Yuvi-companion-dock__orbit-label > span {
   --orbit-angle: calc(-52deg + (110deg * var(--orbit-index) / var(--orbit-count)));
   position: absolute;
   inset-block-start: 50%;
@@ -168,7 +168,7 @@
   transform-origin: center;
 }
 
-.yubi-companion-dock__orbit-label > span > span {
+.Yuvi-companion-dock__orbit-label > span > span {
   display: block;
   color: var(--sp-primary-700);
   font: 800 13px/1 var(--sp-font);
@@ -179,13 +179,13 @@
     0 3px 9px rgba(62, 45, 150, 0.2);
 }
 
-.yubi-companion-dock__portal:hover .yubi-companion-dock__orbit-label,
-.yubi-companion-dock__portal:focus-within .yubi-companion-dock__orbit-label {
+.Yuvi-companion-dock__portal:hover .Yuvi-companion-dock__orbit-label,
+.Yuvi-companion-dock__portal:focus-within .Yuvi-companion-dock__orbit-label {
   opacity: 1;
   transform: scale(1);
 }
 
-.yubi-companion-dock__orbit-node {
+.Yuvi-companion-dock__orbit-node {
   position: absolute;
   z-index: 3;
   inline-size: 11px;
@@ -195,10 +195,10 @@
   box-shadow: 0 4px 12px rgba(62, 45, 150, 0.25);
 }
 
-.yubi-companion-dock__orbit-node--one { inset-block-start: 20px; inset-inline-end: 28px; background: var(--sp-teal-500); }
-.yubi-companion-dock__orbit-node--two { inset-block-end: 28px; inset-inline-start: 17px; background: var(--sp-primary-600); }
+.Yuvi-companion-dock__orbit-node--one { inset-block-start: 20px; inset-inline-end: 28px; background: var(--sp-teal-500); }
+.Yuvi-companion-dock__orbit-node--two { inset-block-end: 28px; inset-inline-start: 17px; background: var(--sp-primary-600); }
 
-.yubi-companion-dock__robot {
+.Yuvi-companion-dock__robot {
   position: absolute;
   z-index: 2;
   inset: -7px 10px -1px;
@@ -206,7 +206,7 @@
   filter: drop-shadow(0 13px 16px rgba(54, 42, 126, 0.2));
 }
 
-.yubi-companion-dock__thrusters {
+.Yuvi-companion-dock__thrusters {
   position: absolute;
   left: 50%;
   bottom: 8px;
@@ -219,7 +219,7 @@
   transform: translateX(-50%);
 }
 
-.yubi-companion-dock__thrusters i {
+.Yuvi-companion-dock__thrusters i {
   position: relative;
   display: block;
   inline-size: 15px;
@@ -228,10 +228,10 @@
   background: linear-gradient(to bottom, #fff 0 10%, #bff7ff 18%, #38d8ff 38%, #6f5bff 63%, rgba(111, 91, 255, 0) 100%);
   box-shadow: 0 8px 17px rgba(56, 216, 255, .92), 0 18px 30px rgba(111, 91, 255, .62);
   transform-origin: 50% 0;
-  animation: yubi-thruster-flame 105ms ease-in-out infinite alternate;
+  animation: Yuvi-thruster-flame 105ms ease-in-out infinite alternate;
 }
 
-.yubi-companion-dock__thrusters i::after {
+.Yuvi-companion-dock__thrusters i::after {
   content: '';
   position: absolute;
   inset: 2px 4px 15px;
@@ -240,33 +240,33 @@
   filter: drop-shadow(0 5px 5px rgba(255, 122, 54, .8));
 }
 
-.yubi-companion-dock.is-opening .yubi-companion-dock__thrusters {
-  animation: yubi-thrusters-flight 1450ms ease both;
+.Yuvi-companion-dock.is-opening .Yuvi-companion-dock__thrusters {
+  animation: Yuvi-thrusters-flight 1450ms ease both;
 }
 
-.yubi-companion-dock.is-closing .yubi-companion-dock__thrusters {
-  animation: yubi-thrusters-return 1450ms ease both;
+.Yuvi-companion-dock.is-closing .Yuvi-companion-dock__thrusters {
+  animation: Yuvi-thrusters-return 1450ms ease both;
 }
 
-.yubi-companion-dock.is-closing .yubi-companion-dock__portal::before,
-.yubi-companion-dock.is-closing .yubi-companion-dock__portal::after {
-  animation: yubi-portal-return 1450ms ease both;
+.Yuvi-companion-dock.is-closing .Yuvi-companion-dock__portal::before,
+.Yuvi-companion-dock.is-closing .Yuvi-companion-dock__portal::after {
+  animation: Yuvi-portal-return 1450ms ease both;
 }
 
-.yubi-companion-dock.is-closing .yubi-companion-dock__ring,
-.yubi-companion-dock.is-closing .yubi-companion-dock__orbit-node {
-  animation: yubi-orbit-return 1450ms ease both;
+.Yuvi-companion-dock.is-closing .Yuvi-companion-dock__ring,
+.Yuvi-companion-dock.is-closing .Yuvi-companion-dock__orbit-node {
+  animation: Yuvi-orbit-return 1450ms ease both;
 }
 
-.yubi-companion-dock__robot [role="button"] { border-radius: 50%; }
-.yubi-companion-dock__robot [role="button"],
-.yubi-companion-dock__robot canvas { cursor: pointer !important; }
-.yubi-companion-dock__robot [role="button"]:focus-visible {
+.Yuvi-companion-dock__robot [role="button"] { border-radius: 50%; }
+.Yuvi-companion-dock__robot [role="button"],
+.Yuvi-companion-dock__robot canvas { cursor: pointer !important; }
+.Yuvi-companion-dock__robot [role="button"]:focus-visible {
   outline: 3px solid rgba(111, 91, 255, 0.55);
   outline-offset: -7px;
 }
 
-.yubi-companion-dock__loader {
+.Yuvi-companion-dock__loader {
   position: absolute;
   inset-block-start: 69px;
   inset-inline-start: calc(50% - 15px);
@@ -276,10 +276,10 @@
   border-block-start-color: var(--sp-primary-600);
   border-inline-end-color: var(--sp-teal-500);
   border-radius: 50%;
-  animation: yubi-chat-loader-spin 700ms linear infinite;
+  animation: Yuvi-chat-loader-spin 700ms linear infinite;
 }
 
-.yubi-companion-dock__preview {
+.Yuvi-companion-dock__preview {
   position: absolute;
   inset-block-end: 38px;
   right: 142px;
@@ -297,10 +297,10 @@
   box-shadow: 0 16px 38px rgba(61, 46, 139, 0.2);
   font: 600 var(--sp-fs-xs)/1.45 var(--sp-font);
   pointer-events: none;
-  animation: yubi-preview-enter 300ms var(--sp-ease) both;
+  animation: Yuvi-preview-enter 300ms var(--sp-ease) both;
 }
 
-.yubi-companion-dock__preview-head {
+.Yuvi-companion-dock__preview-head {
   display: grid;
   place-items: center;
   flex: none;
@@ -310,9 +310,9 @@
   background: var(--sp-primary-050);
 }
 
-.yubi-companion-dock__preview-head svg { inline-size: 29px; block-size: 29px; }
+.Yuvi-companion-dock__preview-head svg { inline-size: 29px; block-size: 29px; }
 
-.yubi-companion-dock__unread {
+.Yuvi-companion-dock__unread {
   position: absolute;
   inset-block-start: 10px;
   inset-inline-start: 11px;
@@ -331,16 +331,16 @@
   box-shadow: 0 7px 18px rgba(111, 91, 255, 0.32);
 }
 
-.yubi-companion-dock.is-thinking .yubi-companion-dock__portal {
-  animation: yubi-portal-thinking 1.6s ease-in-out infinite;
+.Yuvi-companion-dock.is-thinking .Yuvi-companion-dock__portal {
+  animation: Yuvi-portal-thinking 1.6s ease-in-out infinite;
 }
 
-@keyframes yubi-chat-loader-spin { to { transform: rotate(360deg); } }
-@keyframes yubi-portal-spin { to { transform: rotate(360deg); } }
-@keyframes yubi-portal-glow { 0%, 100% { opacity: .55; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.08); } }
-@keyframes yubi-portal-thinking { 0%, 100% { box-shadow: 0 18px 44px rgba(69, 51, 154, 0.2); } 50% { box-shadow: 0 18px 52px rgba(76, 201, 240, 0.42); } }
-@keyframes yubi-preview-enter { from { opacity: 0; transform: translateX(12px) scale(.96); } to { opacity: 1; transform: translateX(0) scale(1); } }
-@keyframes yubi-leave-orbit-and-drag {
+@keyframes Yuvi-chat-loader-spin { to { transform: rotate(360deg); } }
+@keyframes Yuvi-portal-spin { to { transform: rotate(360deg); } }
+@keyframes Yuvi-portal-glow { 0%, 100% { opacity: .55; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.08); } }
+@keyframes Yuvi-portal-thinking { 0%, 100% { box-shadow: 0 18px 44px rgba(69, 51, 154, 0.2); } 50% { box-shadow: 0 18px 52px rgba(76, 201, 240, 0.42); } }
+@keyframes Yuvi-preview-enter { from { opacity: 0; transform: translateX(12px) scale(.96); } to { opacity: 1; transform: translateX(0) scale(1); } }
+@keyframes Yuvi-leave-orbit-and-drag {
   0% { opacity: 1; transform: translate3d(0, 0, 0) rotate(0) scale(1); }
   12% { opacity: 1; transform: translate3d(-68px, -18vh, 0) rotate(-7deg) scale(1.06); }
   26% { opacity: 1; transform: translate3d(-28px, -40vh, 0) rotate(7deg) scale(1.02); }
@@ -351,7 +351,7 @@
   82% { opacity: 1; transform: translate3d(calc(-1 * (var(--sp-companion-width, 430px) - 16px)), -48vh, 0) rotate(0) scale(.98); }
   100% { opacity: 1; transform: translate3d(0, calc(-100vh + 190px), 0) rotate(0) scale(.9); }
 }
-@keyframes yubi-return-to-orbit {
+@keyframes Yuvi-return-to-orbit {
   0% { opacity: 1; transform: translate3d(0, calc(-100vh + 190px), 0) scale(.92); }
   12% { opacity: 1; transform: translate3d(calc(-1 * var(--sp-companion-width, 430px) - 20px), -50vh, 0) scale(1.04); }
   20% { opacity: 1; transform: translate3d(calc(-.98 * var(--sp-companion-width, 430px) - 20px), -49vh, 0) scale(1.06); }
@@ -363,27 +363,27 @@
   86% { opacity: 1; transform: translate3d(calc(-.10 * var(--sp-companion-width, 430px) - 14px), -40vh, 0) scale(1.01); }
   100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
 }
-@keyframes yubi-portal-return {
+@keyframes Yuvi-portal-return {
   0%, 78% { opacity: 0; visibility: hidden; transform: scale(.68); }
   91% { opacity: .72; visibility: visible; transform: scale(1.08); }
   100% { opacity: 1; visibility: visible; transform: scale(1); }
 }
-@keyframes yubi-orbit-return {
+@keyframes Yuvi-orbit-return {
   0%, 80% { opacity: 0; visibility: hidden; transform: rotate(-70deg) scale(.72); }
   94% { opacity: .8; visibility: visible; transform: rotate(12deg) scale(1.08); }
   100% { opacity: 1; visibility: visible; transform: rotate(0) scale(1); }
 }
-@keyframes yubi-hand-grip {
+@keyframes Yuvi-hand-grip {
   0%, 34% { opacity: 0; transform: translateX(8px) scaleY(.35); }
   39% { opacity: 1; transform: translateX(0) scaleY(1.08); }
   43%, 76% { opacity: 1; transform: translateX(0) scaleY(1); }
   82%, 100% { opacity: 0; transform: translateX(-8px) scaleY(.45); }
 }
-@keyframes yubi-thruster-flame {
+@keyframes Yuvi-thruster-flame {
   from { transform: scaleX(.82) scaleY(.82); filter: brightness(.94); }
   to { transform: translateY(4px) scaleX(1.08) scaleY(1.18); filter: brightness(1.2); }
 }
-@keyframes yubi-thrusters-flight {
+@keyframes Yuvi-thrusters-flight {
   0% { opacity: 0; transform: translateX(-50%) scaleY(.3); }
   4%, 35% { opacity: 1; transform: translateX(-50%) scaleY(1); }
   43% { opacity: .35; transform: translateX(-50%) scaleY(.55); }
@@ -393,7 +393,7 @@
   87%, 95% { opacity: .9; transform: translateX(-50%) scaleY(.78); }
   100% { opacity: 0; transform: translateX(-50%) scaleY(.2); }
 }
-@keyframes yubi-thrusters-return {
+@keyframes Yuvi-thrusters-return {
   0% { opacity: .9; transform: translateX(-50%) scaleY(.72); }
   8%, 70% { opacity: 1; transform: translateX(-50%) scaleY(1); }
   82% { opacity: .72; transform: translateX(-50%) scaleY(.68); }
@@ -402,30 +402,30 @@
 }
 
 @media (max-width: 599px) {
-  .yubi-companion-dock {
+  .Yuvi-companion-dock {
     inset-block-end: 7px;
     right: 7px;
     inline-size: 142px;
     block-size: 142px;
   }
 
-  .yubi-companion-dock__robot { inset: -8px 7px -2px; }
-  .yubi-companion-dock__orbit-label > span { transform: rotate(var(--orbit-angle)) translateY(-82px); }
-  .yubi-companion-dock__orbit-label > span > span {
+  .Yuvi-companion-dock__robot { inset: -8px 7px -2px; }
+  .Yuvi-companion-dock__orbit-label > span { transform: rotate(var(--orbit-angle)) translateY(-82px); }
+  .Yuvi-companion-dock__orbit-label > span > span {
     font-size: 11px;
   }
-  .yubi-companion-dock__preview { right: 116px; inline-size: min(220px, calc(100vw - 130px)); inset-block-end: 30px; }
+  .Yuvi-companion-dock__preview { right: 116px; inline-size: min(220px, calc(100vw - 130px)); inset-block-end: 30px; }
 
-  .yubi-companion-dock.is-opening .yubi-companion-dock__robot {
-    animation-name: yubi-leave-orbit-and-drag-mobile;
+  .Yuvi-companion-dock.is-opening .Yuvi-companion-dock__robot {
+    animation-name: Yuvi-leave-orbit-and-drag-mobile;
   }
 
-  .yubi-companion-dock.is-closing .yubi-companion-dock__robot {
-    animation-name: yubi-return-to-orbit-mobile;
+  .Yuvi-companion-dock.is-closing .Yuvi-companion-dock__robot {
+    animation-name: Yuvi-return-to-orbit-mobile;
   }
 }
 
-@keyframes yubi-leave-orbit-and-drag-mobile {
+@keyframes Yuvi-leave-orbit-and-drag-mobile {
   0% { opacity: 1; transform: translate3d(0, 0, 0) rotate(0) scale(1); }
   12% { opacity: 1; transform: translate3d(-54px, -18vh, 0) rotate(-7deg) scale(1.04); }
   26% { opacity: 1; transform: translate3d(-22px, -40vh, 0) rotate(7deg) scale(1); }
@@ -437,7 +437,7 @@
   100% { opacity: 1; transform: translate3d(5px, calc(-100vh + 160px), 0) rotate(0) scale(.9); }
 }
 
-@keyframes yubi-return-to-orbit-mobile {
+@keyframes Yuvi-return-to-orbit-mobile {
   0% { opacity: 1; transform: translate3d(5px, calc(-100vh + 160px), 0) scale(.92); }
   12% { opacity: 1; transform: translate3d(calc(-1 * 100vw + 44px), -50vh, 0) scale(1.02); }
   20% { opacity: 1; transform: translate3d(calc(-.98 * 100vw + 44px), -49vh, 0) scale(1.04); }
@@ -451,28 +451,28 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .yubi-companion-dock.is-opening {
+  .Yuvi-companion-dock.is-opening {
     opacity: 0;
     visibility: hidden;
   }
-  .yubi-companion-dock.is-closing {
+  .Yuvi-companion-dock.is-closing {
     opacity: 0;
     visibility: hidden;
   }
-  .yubi-companion-dock.is-opening .yubi-companion-dock__portal,
-  .yubi-companion-dock.is-opening .yubi-companion-dock__portal::before,
-  .yubi-companion-dock.is-opening .yubi-companion-dock__ring,
-  .yubi-companion-dock.is-opening .yubi-companion-dock__robot,
-  .yubi-companion-dock.is-opening .yubi-companion-dock__robot::after,
-  .yubi-companion-dock.is-opening .yubi-companion-dock__thrusters,
-  .yubi-companion-dock.is-closing .yubi-companion-dock__portal,
-  .yubi-companion-dock.is-closing .yubi-companion-dock__portal::before,
-  .yubi-companion-dock.is-closing .yubi-companion-dock__ring,
-  .yubi-companion-dock.is-closing .yubi-companion-dock__robot,
-  .yubi-companion-dock.is-closing .yubi-companion-dock__thrusters,
-  .yubi-companion-dock__thrusters i { animation: none; }
-  .yubi-companion-dock__ring,
-  .yubi-companion-dock__portal::after,
-  .yubi-companion-dock.is-thinking .yubi-companion-dock__portal { animation: none; }
-  .yubi-companion-dock__loader { animation-duration: 1.4s; }
+  .Yuvi-companion-dock.is-opening .Yuvi-companion-dock__portal,
+  .Yuvi-companion-dock.is-opening .Yuvi-companion-dock__portal::before,
+  .Yuvi-companion-dock.is-opening .Yuvi-companion-dock__ring,
+  .Yuvi-companion-dock.is-opening .Yuvi-companion-dock__robot,
+  .Yuvi-companion-dock.is-opening .Yuvi-companion-dock__robot::after,
+  .Yuvi-companion-dock.is-opening .Yuvi-companion-dock__thrusters,
+  .Yuvi-companion-dock.is-closing .Yuvi-companion-dock__portal,
+  .Yuvi-companion-dock.is-closing .Yuvi-companion-dock__portal::before,
+  .Yuvi-companion-dock.is-closing .Yuvi-companion-dock__ring,
+  .Yuvi-companion-dock.is-closing .Yuvi-companion-dock__robot,
+  .Yuvi-companion-dock.is-closing .Yuvi-companion-dock__thrusters,
+  .Yuvi-companion-dock__thrusters i { animation: none; }
+  .Yuvi-companion-dock__ring,
+  .Yuvi-companion-dock__portal::after,
+  .Yuvi-companion-dock.is-thinking .Yuvi-companion-dock__portal { animation: none; }
+  .Yuvi-companion-dock__loader { animation-duration: 1.4s; }
 }

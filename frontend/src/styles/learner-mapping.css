@@ -149,9 +149,9 @@
   min-height: 0;
   overflow: hidden;
   display: grid;
-  grid-template-columns: minmax(360px, 0.92fr) minmax(480px, 0.98fr);
-  align-items: stretch;
-  column-gap: clamp(72px, 8vw, 148px);
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  align-items: center;
+  column-gap: clamp(24px, 3vw, 56px);
   isolation: isolate;
   direction: ltr;
   transition: column-gap .5s ease, grid-template-columns .5s ease;
@@ -160,56 +160,255 @@
   grid-column: 1;
   position: relative;
   inline-size: 100%;
-  block-size: min(72vh, 560px);
-  min-block-size: 430px;
+  block-size: min(78vh, 620px);
+  min-block-size: 460px;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
   align-self: center;
-  overflow: hidden;
+  overflow: visible;
   isolation: isolate;
   border-radius: 28px;
   transition: transform .56s cubic-bezier(.2,.8,.2,1), inline-size .56s ease, block-size .56s ease;
 }
+/* A few soft light motes drifting around Yuvi — just enough sparkle to feel
+   alive; kept faint and behind the robot so the message stays the focus. */
+.intro-robot-zone::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 4% 6% 10%;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 20% 28%, rgba(191, 170, 255, .55) 0 1.6px, transparent 2.6px),
+    radial-gradient(circle at 76% 20%, rgba(120, 200, 255, .5) 0 1.6px, transparent 2.6px),
+    radial-gradient(circle at 84% 62%, rgba(191, 170, 255, .42) 0 1.2px, transparent 2.2px),
+    radial-gradient(circle at 28% 72%, rgba(140, 210, 255, .42) 0 1.2px, transparent 2.2px),
+    radial-gradient(circle at 56% 12%, rgba(255, 255, 255, .4) 0 1px, transparent 2px),
+    radial-gradient(circle at 50% 86%, rgba(191, 170, 255, .38) 0 1px, transparent 2px);
+  opacity: .6;
+  animation: introSparkle 4.6s ease-in-out infinite;
+}
+@keyframes introSparkle {
+  0%, 100% { opacity: .45; transform: translateY(0); }
+  50% { opacity: .85; transform: translateY(-4px); }
+}
+/* Subtle elliptical light pad the robot stands on is now rendered by the
+   dedicated .intro-stage-plate element below, so this pseudo-element only
+   keeps the drifting light motes above. */
 .intro-stage-orbit {
   position: absolute;
-  inset: 50% auto auto 50%;
-  width: min(42vw, 500px);
-  aspect-ratio: 1;
+  inset: 40% auto auto 47%;
+  width: min(34vw, 420px);
+  height: min(46vh, 470px);
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  background: radial-gradient(circle, rgba(76,201,240,.18), rgba(124,92,255,.08) 52%, transparent 70%);
-  filter: blur(2px);
+  /* Back glow: a soft blue-purple radial aura, focused around Yuvi's head and
+     torso. Heavy blur + low opacity keep it a felt depth cue that lifts him off
+     the canvas, never a hard bright disc. */
+  background: radial-gradient(ellipse at center, rgba(124, 92, 255, .24), rgba(76, 201, 240, .10) 40%, transparent 62%);
+  filter: blur(46px);
+  opacity: .68;
   z-index: 0;
   transition: opacity .42s ease, transform .56s cubic-bezier(.2,.8,.2,1);
 }
-.intro-stage .yubi-floater {
+/* Back arc ring behind Yuvi. Instead of a uniform border, it is an arc glow:
+   brightest at the bottom/front, fading through the sides and almost invisible
+   at the top. A conic-gradient controls where the light is strong, a radial
+   mask turns it into a thin ring, and blur keeps it a soft glow, not a hard
+   line. */
+.intro-back-ring {
+  position: absolute;
+  left: 50%;
+  top: 47%;
+  width: min(34vw, 360px);
+  height: min(34vw, 360px);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  background: conic-gradient(
+    from 90deg,
+    rgba(139, 92, 246, 0) 0deg,
+    rgba(139, 92, 246, 0) 120deg,
+    rgba(145, 100, 255, .05) 150deg,
+    rgba(168, 122, 255, .16) 170deg,
+    rgba(201, 165, 255, .44) 190deg,
+    rgba(224, 200, 255, .60) 205deg,
+    rgba(201, 165, 255, .40) 222deg,
+    rgba(168, 122, 255, .14) 250deg,
+    rgba(145, 100, 255, .04) 285deg,
+    rgba(139, 92, 246, 0) 315deg,
+    rgba(139, 92, 246, 0) 360deg
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px), #000 calc(100% - 1px), transparent 100%);
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px), #000 calc(100% - 1px), transparent 100%);
+  filter: blur(1.6px);
+  opacity: .46;
+  transition: opacity .42s ease, transform .56s cubic-bezier(.2,.8,.2,1);
+}
+/* A wider, softer companion glow around the ring for extra depth. */
+.intro-back-ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 90deg,
+    rgba(139, 92, 246, 0) 0deg,
+    rgba(139, 92, 246, 0) 130deg,
+    rgba(151, 105, 255, .03) 160deg,
+    rgba(180, 130, 255, .09) 185deg,
+    rgba(206, 170, 255, .20) 205deg,
+    rgba(180, 130, 255, .09) 228deg,
+    rgba(151, 105, 255, .03) 260deg,
+    rgba(139, 92, 246, 0) 300deg,
+    rgba(139, 92, 246, 0) 360deg
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 8px), #000 calc(100% - 3px), transparent 100%);
+  mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 8px), #000 calc(100% - 3px), transparent 100%);
+  filter: blur(10px);
+  opacity: .4;
+}
+/* Thin LED plate Yuvi stands on. A dark elliptical surface with a faint centre
+   glow, a soft bottom halo for depth, an inner foot glow and a bright front LED
+   strip — a slim disc, never a thick neon portal. */
+.intro-stage-plate {
+  position: absolute;
+  left: 50%;
+  top: 92%;
+  width: min(67%, 391px);
+  height: 96px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  /* The LED plate floats up from below and settles exactly as Yuvi finishes
+     walking in from hiding and plants on it (~5.7s into the intro entrance),
+     so the pad is never sitting there empty before he arrives. */
+  animation: introPlateRise 1.05s cubic-bezier(.2, .72, .28, 1) 4.75s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-stage-plate { opacity: 1; animation: none; }
+}
+/* Soft glow beneath the plate. */
+.intro-stage-plate__glow {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 82%;
+  height: 42px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(112, 83, 255, .30) 0%,
+    rgba(92, 68, 220, .15) 42%,
+    rgba(76, 55, 176, .06) 66%,
+    transparent 84%
+  );
+  filter: blur(17px);
+  opacity: .82;
+}
+/* The plate surface. */
+.intro-stage-plate__surface {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  width: 90%;
+  height: 58px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse at 50% 42%,
+    rgba(159, 145, 255, .19) 0%,
+    rgba(111, 94, 219, .12) 36%,
+    rgba(44, 37, 105, .40) 70%,
+    rgba(17, 14, 48, .74) 100%
+  );
+  border: 1px solid rgba(143, 102, 255, .40);
+  box-shadow:
+    0 0 6px rgba(139, 96, 255, .36),
+    0 0 17px rgba(101, 75, 230, .22),
+    inset 0 2px 12px rgba(209, 198, 255, .12),
+    inset 0 -12px 20px rgba(24, 18, 73, .36);
+}
+/* Inner foot glow near the centre of the plate. */
+.intro-stage-plate__surface::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 7px;
+  width: 60%;
+  height: 34px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(177, 165, 255, .24) 0%,
+    rgba(120, 96, 234, .11) 48%,
+    transparent 80%
+  );
+  filter: blur(9px);
+}
+/* Front LED strip: bright in the middle, fading to the sides. */
+.intro-stage-plate__surface::after {
+  content: "";
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  bottom: -1px;
+  height: 3px;
+  border-radius: 50%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(112, 78, 255, .08) 10%,
+    rgba(137, 93, 255, .34) 24%,
+    rgba(181, 130, 255, .78) 42%,
+    rgba(231, 207, 255, 1) 50%,
+    rgba(181, 130, 255, .78) 58%,
+    rgba(137, 93, 255, .34) 76%,
+    rgba(112, 78, 255, .08) 90%,
+    transparent 100%
+  );
+  filter: blur(.5px);
+  box-shadow:
+    0 0 6px rgba(179, 120, 255, .85),
+    0 0 15px rgba(111, 82, 255, .52);
+}
+.intro-stage .Yuvi-floater {
   position: relative;
   left: auto;
   top: auto;
-  width: min(38vw, 450px);
+  justify-self: center;
+  width: min(46vw, 580px);
   z-index: 1;
-  transform: none;
-  animation: yubiStageAppear .55s ease both;
+  transform: translateY(-10px);
+  animation: YuviStageAppear .55s ease both;
 }
-.intro-stage.is-narrating .yubi-floater {
-  animation: yubiStageAppear .55s ease both;
+.intro-stage.is-narrating .Yuvi-floater {
+  animation: YuviStageAppear .55s ease both;
 }
-.intro-stage.is-narrating .yubi-floater::after {
+.intro-stage.is-narrating .Yuvi-floater::after {
   background: radial-gradient(circle, rgba(76,201,240,.30), transparent 70%);
   animation: robotGlowPulse 1.9s ease-in-out infinite;
 }
 .intro-script {
   grid-column: 2;
-  justify-self: end;
-  align-self: start;
+  justify-self: start;
+  align-self: center;
   position: relative;
   z-index: 2;
+  transform: translateY(-26px);
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  justify-content: flex-start;
-  gap: clamp(10px, 1.5vh, 18px);
-  width: min(680px, 100%);
+  justify-content: center;
+  gap: clamp(18px, 3vh, 30px);
+  width: min(540px, 100%);
+  max-width: 560px;
   min-height: 0;
   max-height: 100%;
   padding-block: clamp(8px, 1.8vh, 18px);
@@ -227,17 +426,25 @@
   justify-self: center;
   transform: translateY(2vh) scale(1.04);
 }
-.intro-stage.is-handoff .intro-robot-zone .yubi-floater {
+.intro-stage.is-handoff .intro-robot-zone .Yuvi-floater {
   opacity: 0;
   visibility: hidden;
   animation: none;
 }
 .intro-stage.is-transitioning .intro-stage-orbit,
-.intro-stage.is-handoff .intro-stage-orbit {
+.intro-stage.is-handoff .intro-stage-orbit,
+.intro-stage.is-transitioning .intro-back-ring,
+.intro-stage.is-handoff .intro-back-ring {
   opacity: 0;
   visibility: hidden;
   transform: translate(-50%, -50%) scale(.86);
   transition: opacity .16s ease, transform .22s ease, visibility 0s linear .16s;
+}
+.intro-stage.is-transitioning .intro-stage-plate,
+.intro-stage.is-handoff .intro-stage-plate {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .16s ease, visibility 0s linear .16s;
 }
 .intro-stage.is-handoff .intro-script {
   opacity: 0;
@@ -248,31 +455,31 @@
 .intro-lines {
   display: flex;
   flex-direction: column;
-  gap: clamp(7px, 1.1vh, 13px);
+  gap: clamp(10px, 1.8vh, 18px);
   width: 100%;
   min-height: 0;
 }
 .intro-line {
   margin: 0;
   max-width: 100%;
-  font-size: clamp(18px, 1.55vw, 27px);
-  line-height: 1.27;
-  font-weight: 750;
+  font-size: clamp(15px, 1.15vw, 18px);
+  line-height: 1.5;
+  font-weight: 600;
   letter-spacing: 0;
   text-align: start;
-  color: var(--m-text);
+  color: var(--m-text-soft);
   transform: translateY(6px);
   opacity: 1;
   transition: color .35s ease, opacity .35s ease, transform .35s ease;
 }
-.intro-line-1 { font-size: clamp(24px, 2vw, 34px); font-weight: 850; }
-.intro-line-2, .intro-line-6 { color: var(--m-primary); }
-.intro-line-5 { font-size: clamp(21px, 1.8vw, 31px); font-weight: 850; }
-.intro-line.done { color: var(--m-text); opacity: .84; transform: translateY(0); }
-.intro-line.done.intro-line-2,
-.intro-line.done.intro-line-5,
-.intro-line.done.intro-line-6 { color: var(--m-primary); opacity: .95; }
-.intro-line.active { color: var(--m-primary); opacity: 1; transform: translateY(0); }
+.intro-line-1 { font-size: clamp(30px, 3vw, 46px); font-weight: 850; line-height: 1.08; color: var(--m-text); margin-block-start: clamp(2px, 1.4vh, 14px); }
+.intro-line-2 { font-size: clamp(17px, 1.55vw, 22px); font-weight: 700; line-height: 1.4; color: var(--m-primary); }
+.intro-line-3 { color: var(--m-text-soft); }
+.intro-line.done { color: var(--m-text-soft); opacity: 1; transform: translateY(0); }
+.intro-line-1.done { color: var(--m-text); }
+.intro-line.done.intro-line-2 { color: var(--m-primary); }
+.intro-line.active { opacity: 1; transform: translateY(0); }
+.intro-line.active.intro-line-2 { color: var(--m-primary); }
 .intro-line.is-typing::after {
   content: "";
   display: inline-block;
@@ -289,20 +496,99 @@
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  margin-top: 2px;
+  margin-top: 0;
 }
-.intro-reveal { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; animation: introReveal .55s ease both; }
+/* The CTA spans the full width of the text column so it reads as part of the
+   conversation block, not a small button floating in the middle. */
+.intro-stage-actions > .sp-btn {
+  position: relative;
+  overflow: hidden;
+  flex: 1 1 auto;
+  width: 100%;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(124, 92, 255, .28), 0 0 20px rgba(124, 92, 255, .16);
+  transition: transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .22s ease;
+}
+/* Keep the label + chevron above the shimmer sweep. */
+.intro-stage-actions > .sp-btn > span,
+.intro-stage-actions > .sp-btn > svg {
+  position: relative;
+  z-index: 1;
+}
+/* Soft diagonal light that sweeps across the CTA on hover. */
+.intro-stage-actions > .sp-btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  inset-inline-start: -120%;
+  width: 55%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, .34) 50%, transparent 100%);
+  transform: skewX(-18deg);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 0;
+}
+.intro-stage-actions > .sp-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 32px rgba(124, 92, 255, .44), 0 0 34px rgba(124, 92, 255, .3);
+}
+.intro-stage-actions > .sp-btn:hover::after {
+  animation: introCtaShimmer .85s ease;
+}
+.intro-reveal { display: flex; flex-direction: column; align-items: stretch; gap: clamp(14px, 2.2vh, 22px); animation: introReveal .55s ease both; }
+/* A small glass card sets the reassuring note apart from the instructions,
+   so the child reads it as a gentle aside rather than another step. */
+.intro-reassure {
+  padding: 18px 24px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--m-primary) 28%, var(--m-border));
+  background: color-mix(in srgb, var(--m-card) 90%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--sp-shadow-sm),
+    inset 0 0 0 1px color-mix(in srgb, var(--m-primary) 8%, transparent),
+    0 6px 20px color-mix(in srgb, var(--m-primary) 12%, transparent);
+  color: var(--m-text);
+  font-size: clamp(13px, 1vw, 15px);
+  font-weight: 600;
+  line-height: 1.6;
+}
+.intro-cta { display: flex; flex-direction: column; gap: 5px; }
+.intro-duration {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  color: var(--m-text-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+.intro-duration svg { opacity: .85; }
 .intro-trust { justify-content: flex-start; margin-top: 0; }
-@keyframes yubiStageAppear {
+@keyframes YuviStageAppear {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-@keyframes yubiStageEnterCompact {
+@keyframes YuviStageEnterCompact {
   from { opacity: 0; transform: translateY(28px) scale(.95); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 @keyframes introReveal { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes caretBlink { 50% { opacity: 0; } }
+@keyframes introCtaShimmer {
+  from { inset-inline-start: -120%; opacity: .15; }
+  55% { opacity: 1; }
+  to { inset-inline-start: 150%; opacity: 0; }
+}
+/* LED plate floats up from below the frame and settles with a gentle overshoot,
+   timed to land as Yuvi walks in and stands on it. */
+@keyframes introPlateRise {
+  0% { opacity: 0; transform: translateX(-50%) translateY(66px) scale(.8); }
+  50% { opacity: 1; }
+  82% { transform: translateX(-50%) translateY(-5px) scale(1.03); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
 
 .integrity-dialog-backdrop {
   position: fixed;
@@ -387,10 +673,10 @@
   z-index: 2;
 }
 .chat-side::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 5px; background: var(--m-gradient); border-radius: 28px 28px 0 0; }
-.yubi-mark { position: relative; display: inline-flex; align-items: baseline; margin-bottom: 4px; }
-.yubi-word { font-size: 34px; font-weight: 800; background: var(--m-gradient); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; }
-.yubi-swoosh { position: absolute; bottom: -7px; inset-inline-start: 0; width: 84px; height: 12px; }
-.yubi-spark { font-size: 13px; color: var(--m-secondary); margin-inline-start: 4px; animation: twinkle 2.4s ease-in-out infinite; }
+.Yuvi-mark { position: relative; display: inline-flex; align-items: baseline; margin-bottom: 4px; }
+.Yuvi-word { font-size: 34px; font-weight: 800; background: var(--m-gradient); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; }
+.Yuvi-swoosh { position: absolute; bottom: -7px; inset-inline-start: 0; width: 84px; height: 12px; }
+.Yuvi-spark { font-size: 13px; color: var(--m-secondary); margin-inline-start: 4px; animation: twinkle 2.4s ease-in-out infinite; }
 .spark-a { color: var(--m-primary); }
 .spark-b { font-size: 9px; color: var(--m-secondary); animation-delay: .8s; }
 @keyframes twinkle { 0%, 100% { opacity: .4; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.15); } }
@@ -438,18 +724,18 @@
 .trust-line { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 12px; color: var(--m-text-light); font-size: 12px; }
 
 /* Free-floating, card-less companion that drifts beside the chat panel. */
-.yubi-floater { position: absolute; left: 0; top: 50%; width: min(42%, 340px); aspect-ratio: 1 / 1.14; transform: translateY(-50%); z-index: 1; pointer-events: none; animation: yubiDrift 9s ease-in-out infinite, fadeInRobot .6s ease both; }
+.Yuvi-floater { position: absolute; left: 0; top: 50%; width: min(42%, 340px); aspect-ratio: 1 / 1.14; transform: translateY(-50%); z-index: 1; pointer-events: none; animation: YuviDrift 9s ease-in-out infinite, fadeInRobot .6s ease both; }
 @keyframes fadeInRobot { from { opacity: 0; } to { opacity: 1; } }
-@keyframes yubiDrift {
+@keyframes YuviDrift {
   0%, 100% { transform: translateY(-50%) translateX(0) rotate(0deg); }
   33% { transform: translateY(-55%) translateX(10px) rotate(-1.4deg); }
   66% { transform: translateY(-46%) translateX(-8px) rotate(1.1deg); }
 }
 @keyframes robotGlowPulse { 0%, 100% { transform: scale(1); opacity: .82; } 50% { transform: scale(1.06); opacity: 1; } }
-@keyframes yubiFloatBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes YuviFloatBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .yubi-floater { animation: none; }
+  .Yuvi-floater { animation: none; }
 }
 
 .robot-3d-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -477,7 +763,7 @@
 .q-layout.is-entering .q-ring-center {
   opacity: 0;
 }
-/* Option labels stay hidden while Yubi flies in, then fade + scale up smoothly
+/* Option labels stay hidden while Yuvi flies in, then fade + scale up smoothly
    once he has landed (the .is-entering class is removed on flight end). */
 .q-layout.is-entering .q-node {
   opacity: 0;
@@ -492,9 +778,9 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Single Yubi that persists across the intro→question screen swap and glides
+/* Single Yuvi that persists across the intro→question screen swap and glides
    from his intro spot into the ring center (position/size set inline in JS). */
-.yubi-transition-layer {
+.Yuvi-transition-layer {
   position: fixed;
   z-index: 60;
   pointer-events: none;
@@ -527,8 +813,13 @@
 .q-ring-halo { position: absolute; inset: 22%; border-radius: 50%; background: radial-gradient(circle, rgba(124,92,255,.10), rgba(76,201,240,.08) 60%, transparent 72%); }
 .q-dial { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; cursor: pointer; touch-action: none; overflow: visible; }
 .q-dial-track { fill: none; stroke: rgba(124, 92, 255, 0.16); stroke-width: 2.2; }
-.q-dial-fill { fill: none; stroke: var(--m-primary); stroke-width: 3; stroke-linecap: round; }
-.q-dial-thumb { fill: #fff; stroke: var(--m-primary); stroke-width: 1.8; filter: drop-shadow(0 1.5px 3px rgba(111, 91, 255, 0.45)); transition: cx .25s ease, cy .25s ease; }
+/* Selected segment rendered as a soft LED: purple→blue gradient stroke with a
+   gentle glow (from the SVG filter), while the unselected track stays clean. */
+.q-dial-fill { fill: none; stroke: url(#qDialLed); stroke-width: 3.2; stroke-linecap: round; transition: stroke-dashoffset .25s ease; }
+/* Soft halo behind the selection orb. */
+.q-dial-orb-halo { fill: rgba(124, 92, 255, 0.28); filter: blur(0.6px); transition: cx .25s ease, cy .25s ease; }
+/* The selection point as a small glowing LED orb. */
+.q-dial-thumb { fill: url(#qDialLed); stroke: rgba(255, 255, 255, 0.9); stroke-width: 0.8; transition: cx .25s ease, cy .25s ease; }
 .q-ring-center { position: absolute; inset: 24%; z-index: 2; pointer-events: none; }
 .q-node { position: absolute; isolation: isolate; overflow: hidden; transform: translate(calc(var(--q-tx, -50%) + var(--q-radial-x, 0px)), calc(var(--q-ty, -50%) + var(--q-radial-y, 0px))); z-index: 3; min-width: 116px; max-width: 205px; min-height: 44px; white-space: normal; overflow-wrap: normal; padding: 8px 13px; border-radius: 14px; border: 1px solid var(--m-border); background: #fff; color: var(--m-text); font-weight: 700; font-size: 12.5px; line-height: 1.3; text-align: center; box-shadow: var(--m-shadow-sm), inset 0 1px rgba(255,255,255,.72); cursor: pointer; transition: opacity .5s ease, transform .22s var(--sp-ease), border-color .18s ease, box-shadow .18s ease, background .18s ease, color .18s ease, filter .18s ease; }
 .q-node::after { content: ""; position: absolute; inset: -35% auto -35% -35%; z-index: -1; width: 32%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.42), transparent); pointer-events: none; transform: translateX(-220%) skewX(-18deg); transition: transform .48s ease; }
@@ -559,7 +850,7 @@
 .q-actions { display: flex; align-items: center; gap: 12px; margin-top: 32px; }
 .q-microcopy { text-align: center; color: var(--m-text-soft); font-size: 12.5px; font-weight: 600; margin: 0; }
 
-/* ── Mid-phase reflection: one centered Yubi, no chat chrome ────────────── */
+/* ── Mid-phase reflection: one centered Yuvi, no chat chrome ────────────── */
 .reflection-stage {
   position: relative;
   isolation: isolate;
@@ -684,17 +975,17 @@
   box-shadow: 0 0 8px rgba(190, 168, 255, .88), 0 0 20px rgba(95, 199, 238, .38);
 }
 
-.reflection-yubi-anchor {
+.reflection-Yuvi-anchor {
   position: absolute;
   z-index: 3;
   bottom: 12%;
   left: 50%;
-  width: clamp(310px, 37vw, 440px);
-  height: clamp(350px, 56vh, 500px);
+  width: clamp(347px, 41vw, 495px);
+  height: clamp(392px, 62vh, 560px);
   transform: translateX(-50%);
   transition: opacity .16s ease, filter .2s ease;
 }
-.reflection-yubi-anchor .yubi-floater {
+.reflection-Yuvi-anchor .Yuvi-floater {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -703,19 +994,19 @@
   animation: none;
   pointer-events: none;
 }
-.reflection-yubi-anchor .yubi-floater::after { inset: 14% 9% 7%; }
-.reflection-yubi-anchor .yubi-floater.is-thinking::after {
+.reflection-Yuvi-anchor .Yuvi-floater::after { inset: 14% 9% 7%; }
+.reflection-Yuvi-anchor .Yuvi-floater.is-thinking::after {
   background: radial-gradient(circle, rgba(76,201,240,.34), rgba(124,92,255,.12) 46%, transparent 72%);
   animation: robotGlowPulse 1.15s ease-in-out infinite;
 }
-.reflection-yubi-anchor .yubi-floater.is-celebrating::after {
+.reflection-Yuvi-anchor .Yuvi-floater.is-celebrating::after {
   background: radial-gradient(circle, rgba(255,218,94,.42), rgba(124,92,255,.2) 48%, transparent 73%);
   animation: reflectionCelebrateGlow .58s ease-in-out infinite alternate;
 }
-.reflection-stage.is-entering .reflection-yubi-anchor,
-.reflection-stage.is-returning .reflection-yubi-anchor { opacity: 0; }
-.reflection-stage.is-thinking .reflection-yubi-anchor { filter: drop-shadow(0 20px 34px rgba(76, 201, 240, .22)); }
-.reflection-stage.is-celebrating .reflection-yubi-anchor { filter: drop-shadow(0 24px 40px rgba(124, 92, 255, .3)); }
+.reflection-stage.is-entering .reflection-Yuvi-anchor,
+.reflection-stage.is-returning .reflection-Yuvi-anchor { opacity: 0; }
+.reflection-stage.is-thinking .reflection-Yuvi-anchor { filter: drop-shadow(0 20px 34px rgba(76, 201, 240, .22)); }
+.reflection-stage.is-celebrating .reflection-Yuvi-anchor { filter: drop-shadow(0 24px 40px rgba(124, 92, 255, .3)); }
 .reflection-stage.is-entering { animation: reflectionWorldOpen .82s cubic-bezier(.18,.85,.2,1) both; }
 .reflection-stage.is-returning {
   pointer-events: none;
@@ -729,14 +1020,14 @@
   animation: reflectionEventHorizon .54s cubic-bezier(.72,.02,.92,.38) both;
 }
 
-/* Reflection turns alternate around Yubi like a conversation. Physical side
+/* Reflection turns alternate around Yuvi like a conversation. Physical side
    classes keep the choreography consistent while the text remains bidi-safe. */
 .reflection-speech {
   position: absolute;
   z-index: 8;
   top: 50%;
-  width: min(38vw, 440px, calc(50vw - clamp(126px, 12vw, 148px) - 24px));
-  min-width: min(320px, calc(50vw - clamp(126px, 12vw, 148px) - 24px));
+  width: min(38vw, 440px, calc(50vw - clamp(102px, 10vw, 124px) - 24px));
+  min-width: min(320px, calc(50vw - clamp(102px, 10vw, 124px) - 24px));
   max-height: min(70dvh, 470px);
   padding: clamp(18px, 2.5vw, 26px);
   border: 1px solid rgba(111, 91, 255, .18);
@@ -753,11 +1044,11 @@
 }
 .reflection-speech.is-right {
   right: auto;
-  left: calc(50% + clamp(126px, 12vw, 148px));
+  left: calc(50% + clamp(102px, 10vw, 124px));
   transform-origin: left center;
 }
 .reflection-speech.is-left {
-  right: calc(50% + clamp(126px, 12vw, 148px));
+  right: calc(50% + clamp(102px, 10vw, 124px));
   left: auto;
   transform-origin: right center;
 }
@@ -765,32 +1056,32 @@
   content: "";
   position: absolute;
   top: 50%;
-  left: -38px;
-  width: 42px;
-  height: 48px;
-  background: rgba(255, 255, 255, .97);
-  clip-path: polygon(100% 3%, 0 50%, 100% 97%, 76% 50%);
-  filter: drop-shadow(-7px 7px 7px rgba(65, 45, 145, .12));
-  transform: translateY(-50%);
+  left: -22px;
+  width: 34px;
+  height: 30px;
+  background: rgba(255, 255, 255, .96);
+  border-radius: 48% 52% 46% 54% / 62% 60% 40% 38%;
+  filter: drop-shadow(-5px 5px 6px rgba(65, 45, 145, .1));
+  transform: translateY(-50%) rotate(-6deg);
 }
 .reflection-speech.is-left::before {
-  right: -38px;
+  right: -22px;
   left: auto;
-  transform: translateY(-50%) scaleX(-1);
+  transform: translateY(-50%) rotate(-6deg) scaleX(-1);
 }
 .reflection-speech::after {
   content: "";
   position: absolute;
   top: 50%;
-  left: -48px;
-  width: 12px;
+  left: -40px;
+  width: 13px;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: #8b68ff;
-  box-shadow: 0 0 0 5px rgba(139,104,255,.13), 0 0 20px rgba(76,201,240,.48);
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 0 0 4px rgba(139,104,255,.1), 0 0 16px rgba(76,201,240,.3);
   transform: translateY(-50%);
 }
-.reflection-speech.is-left::after { right: -48px; left: auto; }
+.reflection-speech.is-left::after { right: -40px; left: auto; }
 .reflection-speech.is-visible {
   opacity: 1;
   pointer-events: auto;
@@ -1056,7 +1347,7 @@
   .q-ring { width: min(440px, 62vw, 88vw); }
   .q-node { min-width: 108px; max-width: 190px; min-height: 42px; font-size: 12px; padding: 7px 11px; }
   .reflection-stage { height: 100%; min-height: 0; }
-  .reflection-yubi-anchor { bottom: 9%; width: clamp(260px, 43vw, 360px); height: clamp(320px, 52vh, 430px); }
+  .reflection-Yuvi-anchor { bottom: 9%; width: clamp(260px, 43vw, 360px); height: clamp(320px, 52vh, 430px); }
   .reflection-speech {
     top: 49%;
     width: min(390px, calc(50% - clamp(108px, 16vw, 134px) - 16px));
@@ -1096,7 +1387,7 @@
   .reflection-phase-header span { padding: 4px 10px; font-size: 10px; }
   .reflection-phase-header h1 { font-size: clamp(16px, 4.8vw, 20px); }
   .reflection-spark-field i:nth-child(n + 17) { display: none; }
-  .reflection-yubi-anchor {
+  .reflection-Yuvi-anchor {
     position: relative;
     inset: auto;
     flex: 1 0 210px;
@@ -1106,19 +1397,19 @@
     height: min(34dvh, 270px);
     transform: none;
   }
-  .reflection-yubi-anchor .yubi-floater {
+  .reflection-Yuvi-anchor .Yuvi-floater {
     display: grid;
     place-items: start center;
     padding-block-start: 18px;
   }
-  .reflection-yubi-anchor .robot-lite {
+  .reflection-Yuvi-anchor .robot-lite {
     width: min(44vw, 170px);
     border-radius: 50%;
     background: radial-gradient(circle, rgba(255,255,255,.98), rgba(124,92,255,.18));
     animation: none;
   }
-  .reflection-yubi-anchor .yubi-floater.is-thinking .robot-lite { animation: reflectionLiteThink 1.1s ease-in-out infinite; }
-  .reflection-yubi-anchor .yubi-floater.is-celebrating .robot-lite { animation: reflectionLiteCelebrate .52s ease-in-out infinite alternate; }
+  .reflection-Yuvi-anchor .Yuvi-floater.is-thinking .robot-lite { animation: reflectionLiteThink 1.1s ease-in-out infinite; }
+  .reflection-Yuvi-anchor .Yuvi-floater.is-celebrating .robot-lite { animation: reflectionLiteCelebrate .52s ease-in-out infinite alternate; }
   .reflection-speech {
     position: relative;
     top: auto;
@@ -1161,8 +1452,8 @@
   .reflection-stage::after,
   .reflection-phase-header,
   .reflection-spark-field i,
-  .reflection-yubi-anchor .yubi-floater,
-  .reflection-yubi-anchor .robot-lite,
+  .reflection-Yuvi-anchor .Yuvi-floater,
+  .reflection-Yuvi-anchor .robot-lite,
   .reflection-thinking,
   .reflection-thinking-dot,
   .reflection-celebration i { animation: none; }

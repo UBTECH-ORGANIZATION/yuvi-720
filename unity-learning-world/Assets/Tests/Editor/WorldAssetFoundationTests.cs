@@ -42,7 +42,7 @@ namespace Yuvi720.LearningWorld.Tests
             var expected = new[]
             {
                 "avatar-projection", "blocked", "bridge-blocked", "error", "landmark-select", "ready",
-                "runtime-ready", "stats", "travel-complete", "yubi-interact"
+                "runtime-ready", "stats", "travel-complete", "Yuvi-interact"
             };
             Assert.That(actual, Is.EqualTo(expected));
         }
@@ -138,7 +138,7 @@ namespace Yuvi720.LearningWorld.Tests
             Assert.That(traversal.MovementRoot, Is.Not.Null);
             Assert.That(traversal.MovementRoot.GetComponentsInChildren<Collider>(true), Is.Not.Empty);
             Assert.That(traversal.MovementRoot.GetComponentsInChildren<Renderer>(true), Is.Empty,
-                "Visible terrain and roads must not define Yubi's movement area.");
+                "Visible terrain and roads must not define Yuvi's movement area.");
         }
 
         [Test]
@@ -191,8 +191,8 @@ namespace Yuvi720.LearningWorld.Tests
             Assert.That(terrain, Is.Not.Null);
             Assert.That(terrain.MovementZonesRoot.GetComponentsInChildren<Collider>(true), Is.Not.Empty);
             Assert.That(terrain.MovementZonesRoot.GetComponentsInChildren<Renderer>(true), Is.Empty);
-            Assert.That(prefab.GetComponentsInChildren<YubiTarget>(true), Is.Empty,
-                "The section must not add a visible or interactive Unity Yubi; React/Three.js owns the avatar presentation.");
+            Assert.That(prefab.GetComponentsInChildren<YuviTarget>(true), Is.Empty,
+                "The section must not add a visible or interactive Unity Yuvi; React/Three.js owns the avatar presentation.");
         }
 
         [Test]
@@ -388,7 +388,7 @@ namespace Yuvi720.LearningWorld.Tests
             Assert.That(prefab, Is.Not.Null);
             Assert.That(prefab.GetComponentsInChildren<WorldSectionView>(true), Has.Length.EqualTo(1));
             Assert.That(prefab.GetComponentsInChildren<LandmarkVisual>(true), Has.Length.EqualTo(2));
-            Assert.That(prefab.GetComponentsInChildren<YubiTarget>(true), Is.Empty);
+            Assert.That(prefab.GetComponentsInChildren<YuviTarget>(true), Is.Empty);
 
             var first = AssetDatabase.LoadAssetAtPath<GameObject>(HighFidelityFirstSectionBuilder.SectionPrefabPath);
             var firstExit = first.transform.Find(HighFidelityFirstSectionBuilder.RouteAnchorsName + "/Exit");
@@ -428,7 +428,7 @@ namespace Yuvi720.LearningWorld.Tests
             Assert.That(prefab.GetComponentsInChildren<LandmarkVisual>(true), Is.Empty);
             Assert.That(prefab.GetComponentsInChildren<WorldWindElement>(true), Is.Empty);
             Assert.That(prefab.GetComponentsInChildren<SpriteRenderer>(true), Is.Empty);
-            Assert.That(prefab.GetComponentsInChildren<YubiTarget>(true), Is.Empty);
+            Assert.That(prefab.GetComponentsInChildren<YuviTarget>(true), Is.Empty);
 
             var terrain = prefab.GetComponent<TerrainVisual>();
             Assert.That(terrain, Is.Not.Null);

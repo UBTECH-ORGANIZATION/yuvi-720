@@ -7,9 +7,9 @@ import { useAuth } from '../../providers/AuthProvider'
 import { useResponsive } from '../../hooks/useResponsive'
 import { apiGet, apiPatch, apiPost } from '../../services/api'
 import type { ChatMessage, QuestionLocation, Questionnaire, QuestionnaireOptionQuestion } from './types'
-import { YubiRobot3D, YUBI_INTRO_READY_DELAY_MS } from './YubiRobot3D'
-import { PHASE_REWARDS, getAsset } from '../yubi-studio/yubiAssets'
-import { useStudioTransition } from '../yubi-studio/StudioTransitionProvider'
+import { YuviRobot3D, Yuvi_INTRO_READY_DELAY_MS } from './YuviRobot3D'
+import { PHASE_REWARDS, getAsset } from '../Yuvi-studio/YuviAssets'
+import { useStudioTransition } from '../Yuvi-studio/StudioTransitionProvider'
 import { Toast } from '../../components/Toast'
 
 type Screen = 'chat' | 'question'
@@ -52,7 +52,7 @@ const REFLECTION_THINK_MS = 1300
 const REFLECTION_BETWEEN_MESSAGES_MS = 520
 const REFLECTION_SPEECH_MAX_MS = 1250
 const REFLECTION_BLACK_HOLE_MS = 540
-// Option-label fade duration once Yubi lands (matches the .q-node opacity
+// Option-label fade duration once Yuvi lands (matches the .q-node opacity
 // transition in learner-mapping.css).
 const QUESTION_HANDOFF_LABEL_FADE_MS = 500
 // Sequence reads land → labels fade in → 1s beat → first question types.
@@ -78,7 +78,7 @@ export function LearnerMappingPage() {
   const [introHandoff, setIntroHandoff] = useState(false)
   const [showIntegrityDialog, setShowIntegrityDialog] = useState(false)
   const [questionEntryTransition, setQuestionEntryTransition] = useState(false)
-  const [transitionYubi, setTransitionYubi] = useState<{ style: CSSProperties } | null>(null)
+  const [transitionYuvi, setTransitionYuvi] = useState<{ style: CSSProperties } | null>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<Answers>({})
   const [lastSectionContext, setLastSectionContext] = useState('')
@@ -198,7 +198,7 @@ export function LearnerMappingPage() {
       setShowIntegrityDialog(false)
       setIntroHandoff(false)
       setQuestionEntryTransition(false)
-      setTransitionYubi(null)
+      setTransitionYuvi(null)
       setReflectionPhase('thinking')
       setReflectionText('')
       transitionRunRef.current += 1
@@ -218,7 +218,7 @@ export function LearnerMappingPage() {
     setCurrentIndex(progress.currentIndex || 0)
     setIntroHandoff(false)
     setQuestionEntryTransition(false)
-    setTransitionYubi(null)
+    setTransitionYuvi(null)
     if (progress.screen === 'chat' && progress.chatMode === 'summary' && progress.summary) {
       const snapshot = progress.summary
       setScreen('chat')
@@ -254,7 +254,7 @@ export function LearnerMappingPage() {
   useEffect(() => {
     if (!questionnaire || isLoading || booting) return
     if (skipIntroRef.current) return
-    const messages = [1, 2, 3, 4, 5, 6].map((index) => t(`intro.${index}`, { studentName: displayName }))
+    const messages = [1, 2, 3].map((index) => t(`intro.${index}`, { studentName: displayName }))
     void playChatSequence(messages, 'intro')
     return () => {
       chatSequenceRunRef.current += 1
@@ -267,7 +267,7 @@ export function LearnerMappingPage() {
     }).catch(() => {})
   }
 
-  // Load already-earned Yubi unlocks once so completing a section that was
+  // Load already-earned Yuvi unlocks once so completing a section that was
   // already rewarded (e.g. after a resume) doesn't re-announce the prize.
   useEffect(() => {
     void apiGet<{ avatar_unlocks?: string[] }>(
@@ -369,7 +369,7 @@ export function LearnerMappingPage() {
     for (let i = 0; i < messages.length; i += 1) {
       const message = messages[i]
       if (i === introPauseBeforeIndex) {
-        const remainingIntroDelay = YUBI_INTRO_READY_DELAY_MS - (Date.now() - sequenceStartedAt)
+        const remainingIntroDelay = Yuvi_INTRO_READY_DELAY_MS - (Date.now() - sequenceStartedAt)
         if (remainingIntroDelay > 0) await wait(remainingIntroDelay)
         if (chatSequenceRunRef.current !== runId) return
       } else if (i > 0) {
@@ -488,7 +488,7 @@ export function LearnerMappingPage() {
 
     setReflectionPhase('entering')
     if (!reducedMotion && fromRect && fromRect.width > 0) {
-      setTransitionYubi({
+      setTransitionYuvi({
         style: {
           left: fromRect.left,
           top: fromRect.top,
@@ -509,13 +509,13 @@ export function LearnerMappingPage() {
     }
     await wait(40)
     if (transitionRunRef.current !== runId) return false
-    const stageEl = document.querySelector('.reflection-yubi-anchor') as HTMLElement | null
+    const stageEl = document.querySelector('.reflection-Yuvi-anchor') as HTMLElement | null
     const toRect = stageEl?.getBoundingClientRect()
     if (fromRect && fromRect.width > 0 && toRect && toRect.width > 0) {
       const dx = (toRect.left + toRect.width / 2) - (fromRect.left + fromRect.width / 2)
       const dy = (toRect.top + toRect.height / 2) - (fromRect.top + fromRect.height / 2)
       const scale = toRect.width / fromRect.width
-      setTransitionYubi({
+      setTransitionYuvi({
         style: {
           left: fromRect.left,
           top: fromRect.top,
@@ -528,7 +528,7 @@ export function LearnerMappingPage() {
     }
     await wait(REFLECTION_HANDOFF_MOVE_MS)
     if (transitionRunRef.current !== runId) return false
-    setTransitionYubi(null)
+    setTransitionYuvi(null)
     setReflectionPhase('thinking')
     return true
   }
@@ -545,12 +545,12 @@ export function LearnerMappingPage() {
       isPhone ||
       (typeof window !== 'undefined' &&
         window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
-    const stageEl = document.querySelector('.reflection-yubi-anchor') as HTMLElement | null
+    const stageEl = document.querySelector('.reflection-Yuvi-anchor') as HTMLElement | null
     const fromRect = stageEl?.getBoundingClientRect()
     setReflectionPhase('returning')
 
     if (!reducedMotion && fromRect && fromRect.width > 0) {
-      setTransitionYubi({
+      setTransitionYuvi({
         style: {
           left: fromRect.left,
           top: fromRect.top,
@@ -563,7 +563,7 @@ export function LearnerMappingPage() {
     }
 
     // Let the purple reflection world spiral into its center before replacing
-    // it with the questionnaire. The separate transition Yubi remains visible
+    // it with the questionnaire. The separate transition Yuvi remains visible
     // above the collapsing field and then flies back into the answer ring.
     if (!reducedMotion) {
       await wait(REFLECTION_BLACK_HOLE_MS)
@@ -585,7 +585,7 @@ export function LearnerMappingPage() {
       completed: false,
     })
     if (reducedMotion) {
-      setTransitionYubi(null)
+      setTransitionYuvi(null)
       return
     }
 
@@ -597,7 +597,7 @@ export function LearnerMappingPage() {
       const dx = (toRect.left + toRect.width / 2) - (fromRect.left + fromRect.width / 2)
       const dy = (toRect.top + toRect.height / 2) - (fromRect.top + fromRect.height / 2)
       const scale = toRect.width / fromRect.width
-      setTransitionYubi({
+      setTransitionYuvi({
         style: {
           left: fromRect.left,
           top: fromRect.top,
@@ -610,7 +610,7 @@ export function LearnerMappingPage() {
     }
     await wait(REFLECTION_HANDOFF_MOVE_MS)
     if (transitionRunRef.current !== runId) return
-    setTransitionYubi(null)
+    setTransitionYuvi(null)
     setQuestionEntryTransition(false)
   }
 
@@ -648,13 +648,13 @@ export function LearnerMappingPage() {
       return
     }
 
-    // Measure where Yubi currently stands, then float a single persistent Yubi
+    // Measure where Yuvi currently stands, then float a single persistent Yuvi
     // overlay onto that exact spot so it survives the intro→question screen swap
     // (the per-screen WebGL robots would otherwise unmount and "disappear").
-    const introEl = document.querySelector('.intro-robot-zone .yubi-floater') as HTMLElement | null
+    const introEl = document.querySelector('.intro-robot-zone .Yuvi-floater') as HTMLElement | null
     const fromRect = introEl?.getBoundingClientRect()
     if (fromRect && fromRect.width > 0) {
-      setTransitionYubi({
+      setTransitionYuvi({
         style: {
           left: fromRect.left,
           top: fromRect.top,
@@ -666,19 +666,19 @@ export function LearnerMappingPage() {
         },
       })
 
-      // `YubiRobot3D` creates its WebGL renderer after mounting. Give the fixed
+      // `YuviRobot3D` creates its WebGL renderer after mounting. Give the fixed
       // handoff instance two paint frames to draw over the source position
       // before the source robot is hidden. Without this warm-up both live
       // robots become visible when the intro grid recenters for the handoff.
       await waitForAnimationFrames(2)
       if (transitionRunRef.current !== runId) return
-      setTransitionYubi((current) => current
+      setTransitionYuvi((current) => current
         ? { style: { ...current.style, opacity: 1 } }
         : current)
     }
 
-    // Intro copy fades out while the warmed transition Yubi stays put. The
-    // source Yubi is hidden by the handoff class, so only one robot is visible.
+    // Intro copy fades out while the warmed transition Yuvi stays put. The
+    // source Yuvi is hidden by the handoff class, so only one robot is visible.
     setIntroHandoff(true)
     await wait(QUESTION_HANDOFF_CLEAR_MS)
     if (transitionRunRef.current !== runId) return
@@ -689,7 +689,7 @@ export function LearnerMappingPage() {
     setQuestionEntryTransition(true)
     setIntroHandoff(false)
 
-    // Once the ring exists, shrink + glide the overlay Yubi into its center.
+    // Once the ring exists, shrink + glide the overlay Yuvi into its center.
     await wait(30)
     if (transitionRunRef.current !== runId) return
     const ringEl = document.querySelector('.q-ring-center') as HTMLElement | null
@@ -698,7 +698,7 @@ export function LearnerMappingPage() {
       const dx = (toRect.left + toRect.width / 2) - (fromRect.left + fromRect.width / 2)
       const dy = (toRect.top + toRect.height / 2) - (fromRect.top + fromRect.height / 2)
       const scale = toRect.width / fromRect.width
-      setTransitionYubi({
+      setTransitionYuvi({
         style: {
           left: fromRect.left,
           top: fromRect.top,
@@ -716,7 +716,7 @@ export function LearnerMappingPage() {
     // Hand off to the real ring robot (identical pose → no visible pop), then
     // the first question begins typing (its own entry delay covers the glide).
     setQuestionEntryTransition(false)
-    setTransitionYubi(null)
+    setTransitionYuvi(null)
   }
 
   function navigatePrev() {
@@ -787,7 +787,7 @@ export function LearnerMappingPage() {
     setSummaryPartIndex(partIndex)
     setSummaryTitle(part.title)
     setSummaryQa(questionsAndAnswers)
-    // Completing this section earns a Yubi store item (if that part maps to one).
+    // Completing this section earns a Yuvi store item (if that part maps to one).
     grantPhaseReward(partIndex)
     setLastSectionContext(
       `${part.title} - ${questionsAndAnswers.map((pair) => `${pair.question}: ${pair.answer}`).join(' | ')}`
@@ -1055,7 +1055,7 @@ export function LearnerMappingPage() {
   }
 
   async function submitQuestionnaire() {
-    // Keep the final reflection scene visible while Yubi processes the answers;
+    // Keep the final reflection scene visible while Yuvi processes the answers;
     // the results route continues the same robot-led transition without an
     // unrelated completion card in between.
     setReflectionPhase('thinking')
@@ -1093,12 +1093,12 @@ export function LearnerMappingPage() {
           <Toast
             variant="reward"
             icon="🎉"
-            title={t('yubiStudio.reward.title')}
-            body={t('yubiStudio.reward.body', { item: t(asset.labelKey) })}
-            actionLabel={t('yubiStudio.reward.cta')}
+            title={t('YuviStudio.reward.title')}
+            body={t('YuviStudio.reward.body', { item: t(asset.labelKey) })}
+            actionLabel={t('YuviStudio.reward.cta')}
             onAction={() => navigate('/yuvi-studio')}
             onDismiss={() => setRewardAssetId(null)}
-            dismissLabel={t('yubiStudio.reward.dismiss')}
+            dismissLabel={t('YuviStudio.reward.dismiss')}
           />
         )
       })()}
@@ -1114,16 +1114,18 @@ export function LearnerMappingPage() {
               <IntroNarrative
                 messages={chatMessages}
                 isTyping={isTyping}
-                startLabel={t('chat.action.start')}
+                startLabel={t('intro.start')}
+                reassureLabel={t('intro.reassure')}
+                durationLabel={t('intro.duration')}
                 trustLabel={t('chat.trust')}
                 robotLabel={t('robot.aria')}
                 lightweight={isPhone}
                 isSpeakingText={isSpeakingText}
                 canStart={Boolean(questionnaire)}
                 isHandoff={introHandoff}
-                hideOrbit={Boolean(transitionYubi)}
+                hideOrbit={Boolean(transitionYuvi)}
                 onStart={() => setShowIntegrityDialog(true)}
-                editTooltip={t('yubiStudio.launcher')}
+                editTooltip={t('YuviStudio.launcher')}
                 onEdit={(el) => (studioTransition ? studioTransition.openStudio(el) : navigate('/yuvi-studio'))}
               />
             ) : (
@@ -1156,7 +1158,7 @@ export function LearnerMappingPage() {
                   void continueReflectionFromOpener()
                 }}
                 onPick={(option) => void pickReflectOption(option)}
-                editTooltip={t('yubiStudio.launcher')}
+                editTooltip={t('YuviStudio.launcher')}
                 onEdit={(el) => (studioTransition ? studioTransition.openStudio(el) : navigate('/yuvi-studio'))}
               />
             )}
@@ -1186,16 +1188,16 @@ export function LearnerMappingPage() {
               microcopy={t('question.microcopy')}
               entryTransition={questionEntryTransition}
               entryDelayMs={questionEntryTransition ? QUESTION_HANDOFF_QUESTION_DELAY_MS : 0}
-              editTooltip={t('yubiStudio.launcher')}
+              editTooltip={t('YuviStudio.launcher')}
               onEdit={(el) => (studioTransition ? studioTransition.openStudio(el) : navigate('/yuvi-studio'))}
             />
           </section>
         )}
 
       </main>
-      {transitionYubi && !isPhone && (
-        <div className="yubi-transition-layer" style={transitionYubi.style} aria-hidden="true">
-          <YubiRobot3D label={t('robot.aria')} speaking={false} followPointer={false} presenting={false} />
+      {transitionYuvi && !isPhone && (
+        <div className="Yuvi-transition-layer" style={transitionYuvi.style} aria-hidden="true">
+          <YuviRobot3D label={t('robot.aria')} speaking={false} followPointer={false} presenting={false} />
         </div>
       )}
       {showIntegrityDialog && (
@@ -1377,8 +1379,8 @@ function ReflectionStage({
         </div>
       )}
 
-      <div className="reflection-yubi-anchor">
-        <YubiFloater
+      <div className="reflection-Yuvi-anchor">
+        <YuviFloater
           label={robotLabel}
           lightweight={lightweight}
           speaking={speaking}
@@ -1395,7 +1397,7 @@ function ReflectionStage({
   )
 }
 
-function YubiFloater({
+function YuviFloater({
   label,
   lightweight,
   speaking,
@@ -1422,11 +1424,11 @@ function YubiFloater({
   // the scene (CSS) while the robot idles/talks inside (WebGL). On phones we
   // skip mounting Three.js and show a light SVG mark instead — no WebGL cost.
   return (
-    <div className={`yubi-floater${speaking ? ' is-speaking' : ''}${thinking ? ' is-thinking' : ''}${celebrating ? ' is-celebrating' : ''}`}>
+    <div className={`Yuvi-floater${speaking ? ' is-speaking' : ''}${thinking ? ' is-thinking' : ''}${celebrating ? ' is-celebrating' : ''}`}>
       {lightweight ? (
-        <div className="robot-lite" role="img" aria-label={label}><YubiFaceIcon /></div>
+        <div className="robot-lite" role="img" aria-label={label}><YuviFaceIcon /></div>
       ) : (
-        <YubiRobot3D
+        <YuviRobot3D
           label={label}
           speaking={speaking}
           thinking={thinking}
@@ -1443,12 +1445,14 @@ function YubiFloater({
 }
 
 function IntroNarrative({
-  messages, isTyping, startLabel, trustLabel, robotLabel, lightweight,
+  messages, isTyping, startLabel, reassureLabel, durationLabel, trustLabel, robotLabel, lightweight,
   isSpeakingText, canStart, isHandoff, hideOrbit, onStart, editTooltip, onEdit,
 }: {
   messages: ChatMessage[]
   isTyping: boolean
   startLabel: string
+  reassureLabel: string
+  durationLabel: string
   trustLabel: string
   robotLabel: string
   lightweight: boolean
@@ -1467,7 +1471,8 @@ function IntroNarrative({
     <div className={`intro-stage${isTyping ? ' is-narrating' : ' is-ready'}${isHandoff ? ' is-handoff' : ''}${hideOrbit ? ' is-transitioning' : ''}`}>
       <div className="intro-robot-zone" aria-hidden="true">
         <div className="intro-stage-orbit" />
-        <YubiFloater
+        <div className="intro-back-ring" />
+        <YuviFloater
           label={robotLabel}
           lightweight={lightweight}
           speaking={isSpeakingText}
@@ -1476,6 +1481,10 @@ function IntroNarrative({
           editTooltip={editTooltip}
           onEdit={onEdit}
         />
+        <div className="intro-stage-plate">
+          <span className="intro-stage-plate__glow" />
+          <span className="intro-stage-plate__surface" />
+        </div>
       </div>
       <div className="intro-script" aria-live="polite">
         <div className="intro-lines">
@@ -1494,11 +1503,20 @@ function IntroNarrative({
         </div>
         {showActions && (
           <div className="intro-reveal">
-            <div className="intro-stage-actions">
-              <button className="sp-btn sp-btn--gradient sp-btn--pill" onClick={onStart} disabled={!canStart}>
-                <span>{startLabel}</span>
-                <ChevronBackIcon />
-              </button>
+            <div className="intro-reassure">
+              <span>{reassureLabel}</span>
+            </div>
+            <div className="intro-cta">
+              <span className="intro-duration">
+                <ClockIcon />
+                <span>{durationLabel}</span>
+              </span>
+              <div className="intro-stage-actions">
+                <button className="sp-btn sp-btn--gradient sp-btn--pill" onClick={onStart} disabled={!canStart}>
+                  <span>{startLabel}</span>
+                  <ChevronBackIcon />
+                </button>
+              </div>
             </div>
             <div className="trust-line intro-trust">
               <LockIcon />
@@ -1577,12 +1595,12 @@ function QuestionArena({
     }
   }, [entryDelayMs, question.id, question.text])
 
-  // Options ring around Yubi (screen coords, +y down). The LEAST option (last
+  // Options ring around Yuvi (screen coords, +y down). The LEAST option (last
   // index) sits at the bottom; values ascend going up the left side.
   const slotAngle = (slot: number) => Math.PI / 2 + (slot / count) * Math.PI * 2
   const angleFor = (i: number) => slotAngle(count - 1 - i)
 
-  // Direction Yubi should gaze toward = the selected option's spot on the ring.
+  // Direction Yuvi should gaze toward = the selected option's spot on the ring.
   const pointAt = hasSelection
     ? { x: Math.cos(angleFor(selected as number)), y: Math.sin(angleFor(selected as number)) }
     : null
@@ -1629,7 +1647,7 @@ function QuestionArena({
           <div className="q-ring-halo" aria-hidden="true" />
           <CircularDial count={count} value={selected} radius={33} onPick={onChoose} />
           <div className="q-ring-center">
-            <YubiRobot3D
+            <YuviRobot3D
               label={robotLabel}
               pointAt={pointAt}
               speaking={isQuestionTyping}
@@ -1719,7 +1737,7 @@ function CircularDial({ count, value, radius, onPick }: { count: number; value?:
     const cx = rect.left + rect.width / 2
     const cy = rect.top + rect.height / 2
     const dist = Math.hypot(clientX - cx, clientY - cy)
-    if (dist < rect.width * 0.14) return // ignore taps on Yubi himself
+    if (dist < rect.width * 0.14) return // ignore taps on Yuvi himself
     const ang = Math.atan2(clientY - cy, clientX - cx)
     let rel = ang - Math.PI / 2
     rel = ((rel % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)
@@ -1744,9 +1762,30 @@ function CircularDial({ count, value, radius, onPick }: { count: number; value?:
       ref={ref}
       onClick={(event) => pickFrom(event.clientX, event.clientY)}
     >
+      <defs>
+        {/* Purple → blue gradient for the selected (LED) segment. */}
+        <linearGradient id="qDialLed" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#a78bff" />
+          <stop offset="55%" stopColor="#7c5cff" />
+          <stop offset="100%" stopColor="#4cc9f0" />
+        </linearGradient>
+        {/* Soft glow so the lit segment + orb read as an LED, not neon. */}
+        <filter id="qDialGlow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="1.6" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
       <circle className="q-dial-track" cx="50" cy="50" r={radius} />
-      {arc && <path className="q-dial-fill" d={arc} />}
-      {hasValue && <circle className="q-dial-thumb" cx={tx} cy={ty} r="3.4" />}
+      {arc && <path className="q-dial-fill" d={arc} filter="url(#qDialGlow)" />}
+      {hasValue && (
+        <>
+          <circle className="q-dial-orb-halo" cx={tx} cy={ty} r="6.2" />
+          <circle className="q-dial-thumb" cx={tx} cy={ty} r="3" filter="url(#qDialGlow)" />
+        </>
+      )}
     </svg>
   )
 }function splitLeadingEmoji(value: string) {
@@ -1799,7 +1838,7 @@ function waitForAnimationFrames(count: number) {
   })
 }
 
-function YubiFaceIcon() {
+function YuviFaceIcon() {
   return (
     <svg viewBox="0 0 36 36" width="32" height="32" fill="none" aria-hidden="true">
       <rect x="8" y="12" width="20" height="16" rx="4" fill="#7c5cff" />
@@ -1821,6 +1860,10 @@ function ChevronBackIcon() {
 
 function LockIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+}
+
+function ClockIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
 }
 
 function CheckIcon() {

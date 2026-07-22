@@ -5,9 +5,9 @@ import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import yuviFaviconUrl from '../../assets/yuvi-favicon.png'
-import { buildBlondeHair, buildEyebrowsBundle, getAsset } from '../yubi-studio/yubiAssets'
-import { useYubiDesign } from '../yubi-studio/YubiDesignProvider'
-import { normalizeDesign, type YubiDesign, type YubiSlot, type YubiVariant } from '../yubi-studio/yubiDesign'
+import { buildBlondeHair, buildEyebrowsBundle, getAsset } from '../Yuvi-studio/YuviAssets'
+import { useYuviDesign } from '../Yuvi-studio/YuviDesignProvider'
+import { normalizeDesign, type YuviDesign, type YuviSlot, type YuviVariant } from '../Yuvi-studio/YuviDesign'
 
 const INTRO_PEEK_DURATION = 2.55
 const INTRO_SETTLE_DURATION = 1.0
@@ -16,12 +16,14 @@ const INTRO_ENTRANCE_DURATION = 5.7
 const INTRO_TURN_DELAY = 0.5
 const INTRO_TURN_DURATION = 0.9
 const INTRO_READY_BUFFER = 0.12
+// A brief, friendly hello the calm intro Yuvi plays on entry (no walk-in).
+const ENTRY_WAVE_DURATION = 2.4
 
-export const YUBI_INTRO_READY_DELAY_MS = Math.ceil(
+export const Yuvi_INTRO_READY_DELAY_MS = Math.ceil(
   (INTRO_ENTRANCE_DURATION + INTRO_TURN_DELAY + INTRO_TURN_DURATION + INTRO_READY_BUFFER) * 1000
 )
 
-// The chest-badge favicon is shared across every Yubi instance. Loading it once
+// The chest-badge favicon is shared across every Yuvi instance. Loading it once
 // at module scope means later robots (the intro→question overlay and the ring
 // robot) reuse the already-decoded texture, so the "Y" mark is present on their
 // very first rendered frame instead of popping in after an async decode.
@@ -50,14 +52,14 @@ const rgba = ([red, green, blue]: number[], alpha: number) =>
   `rgba(${red}, ${green}, ${blue}, ${alpha})`
 
 /**
- * Yubi — a procedural Three.js chibi robot modeled on the reference companion:
+ * Yuvi — a procedural Three.js chibi robot modeled on the reference companion:
  * a big light-blue glossy helmet wrapping an inset clean black screen (cyan
  * closed-happy eyes + smile), cyan ear pods, a tiny glossy white egg torso
  * with a blue shoulder yoke and a glowing cyan chest ring, and two-tone
  * (blue + white) short chunky arms and legs. A studio environment map gives it the plastic-toy
  * sheen. It idles calmly and blinks. Pointer-follow is opt-in per scene.
  */
-export function YubiRobot3D({
+export function YuviRobot3D({
   label,
   speaking = false,
   thinking = false,
@@ -82,9 +84,9 @@ export function YubiRobot3D({
   onEdit?: (sourceEl: HTMLElement) => void
 }) {
   const mountRef = useRef<HTMLDivElement | null>(null)
-  const { design: savedDesign } = useYubiDesign()
-  const savedDesignRef = useRef<YubiDesign>(savedDesign)
-  const applyDesignRef = useRef<((design: YubiDesign) => void) | null>(null)
+  const { design: savedDesign } = useYuviDesign()
+  const savedDesignRef = useRef<YuviDesign>(savedDesign)
+  const applyDesignRef = useRef<((design: YuviDesign) => void) | null>(null)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const canvasElRef = useRef<HTMLCanvasElement | null>(null)
   const editableRef = useRef(false)
@@ -95,7 +97,7 @@ export function YubiRobot3D({
   }, [savedDesign])
   useEffect(() => { editableRef.current = editable }, [editable])
   useEffect(() => { onEditRef.current = onEdit }, [onEdit])
-  // The floating-robot containers (.yubi-floater / .q-ring-center) are
+  // The floating-robot containers (.Yuvi-floater / .q-ring-center) are
   // `pointer-events: none`; opt the canvas back in when the chest Y is editable
   // so the click can land (a child can re-enable events under a `none` parent).
   useEffect(() => {
@@ -116,7 +118,7 @@ export function YubiRobot3D({
     celebratingRef.current = celebrating
   }, [celebrating])
   // Direction (screen space, +y down) the robot should look toward — used on the
-  // question screen so Yubi points at the option the slider is currently on.
+  // question screen so Yuvi points at the option the slider is currently on.
   const pointRef = useRef<{ x: number; y: number } | null>(null)
   useEffect(() => {
     pointRef.current = pointAt
@@ -339,7 +341,7 @@ export function YubiRobot3D({
         const halo = 'rgba(124, 92, 255, 0.2)'
         const middle = rgba(smile, 0.94)
         const core = rgba(mixWhite(smile, 0.55), 1)
-        // The mouth is always built from Yubi's closed smile: the smile is the
+        // The mouth is always built from Yuvi's closed smile: the smile is the
         // lower lip; opening lifts a mirrored upper lip in the middle (corners
         // stay pinched) so it reads as the smile opening — never a stray circle.
         const corner = 0.205
@@ -595,9 +597,9 @@ export function YubiRobot3D({
     const nativeEarParts = [earL, earR, earCapL, earCapR]
 
     // ── Persisted studio design ──
-    // These anchors mirror YubiAvatar3D so the same equipment catalog fits the
+    // These anchors mirror YuviAvatar3D so the same equipment catalog fits the
     // animated mapping Yuvi without replacing his speaking/pointing behavior.
-    const anchors: Record<YubiSlot, THREE.Group> = {
+    const anchors: Record<YuviSlot, THREE.Group> = {
       headTop: new THREE.Group(),
       face: new THREE.Group(),
       back: new THREE.Group(),
@@ -617,7 +619,7 @@ export function YubiRobot3D({
 
     const variantGroup = new THREE.Group()
     head.add(variantGroup)
-    const equippedObjects: Partial<Record<YubiSlot, THREE.Group>> = {}
+    const equippedObjects: Partial<Record<YuviSlot, THREE.Group>> = {}
     const disposeGroup = (object: THREE.Object3D) => {
       object.traverse((child) => {
         const mesh = child as THREE.Mesh
@@ -627,7 +629,7 @@ export function YubiRobot3D({
         else material?.dispose()
       })
     }
-    const equip = (slot: YubiSlot, id: string | null) => {
+    const equip = (slot: YuviSlot, id: string | null) => {
       const anchor = anchors[slot]
       const previous = equippedObjects[slot]
       if (previous) {
@@ -647,7 +649,7 @@ export function YubiRobot3D({
       anchor.add(object)
       equippedObjects[slot] = object
     }
-    const setVariant = (variant: YubiVariant) => {
+    const setVariant = (variant: YuviVariant) => {
       activeDesign.variant = variant
       while (variantGroup.children.length) {
         const child = variantGroup.children[0]
@@ -659,7 +661,7 @@ export function YubiRobot3D({
         variantGroup.add(buildEyebrowsBundle())
       }
     }
-    const setColors = (colors: YubiDesign['colors']) => {
+    const setColors = (colors: YuviDesign['colors']) => {
       activeDesign.colors = { ...colors }
       const bodyColor = new THREE.Color(colors.body)
       blueMat.color.copy(bodyColor)
@@ -675,11 +677,11 @@ export function YubiRobot3D({
       faceGlow.color.copy(glowColor)
       faceLight.draw()
     }
-    const applyDesign = (next: YubiDesign) => {
+    const applyDesign = (next: YuviDesign) => {
       const normalized = normalizeDesign(next)
       setColors(normalized.colors)
       setVariant(normalized.variant)
-      ;(Object.keys(anchors) as YubiSlot[]).forEach((slot) => {
+      ;(Object.keys(anchors) as YuviSlot[]).forEach((slot) => {
         equip(slot, normalized.equipped[slot] ?? null)
       })
     }
@@ -776,11 +778,16 @@ export function YubiRobot3D({
       const isSpeaking = speakingRef.current
       const isThinking = thinkingRef.current
       const isCelebrating = celebratingRef.current
+      // Calm intro (presenting=false): a short hello wave on entry, then a
+      // relaxed idle. `waving` merges it with the presenting-scene wave so the
+      // arm-pose code below drives both.
+      const isEntryWaving = !isPresentingScene && !isSpeaking && !isThinking && !isCelebrating && !reduceMotion && t < ENTRY_WAVE_DURATION
+      const waving = isWaving || isEntryWaving
       const atEdge = isWaving || isSettling
       const leanActive = isWaving || isSettling || isRetreating
       const gait = Math.sin(t * 8.2)
 
-      // Intro stage: Yubi peeks + waves from the left corner, slides back out of
+      // Intro stage: Yuvi peeks + waves from the left corner, slides back out of
       // frame, then walks in on his legs. Locomotion is body translation + gait,
       // like the academy action runner — no container slide, no teleport.
       robot.position.x = isPresentingScene
@@ -789,7 +796,9 @@ export function YubiRobot3D({
           : startX + (endX - startX) * walkEase)
         : 0
       const celebrationBounce = isCelebrating && !reduceMotion ? Math.abs(Math.sin(t * 6.4)) * 0.14 : 0
-      robot.position.y = -1.2 + (atEdge ? Math.sin(t * 3.2) * 0.012 : 0) + celebrationBounce
+      // Gentle breathing so idle Yuvi feels alive rather than parked.
+      const idleBreath = !isPresentingScene && !reduceMotion ? Math.sin(t * 1.5) * 0.02 : 0
+      robot.position.y = -1.2 + (atEdge ? Math.sin(t * 3.2) * 0.012 : 0) + celebrationBounce + idleBreath
       robot.position.z = 0
       robot.scale.set(1, 1, 1)
 
@@ -828,7 +837,10 @@ export function YubiRobot3D({
       head.rotation.y = effectiveLookX - (atEdge ? 0.12 : 0)
       head.rotation.x = lookY - (atEdge ? 0.02 : 0)
       head.rotation.z = -(leanActive ? peekLean * 0.6 + (atEdge ? Math.sin(t * 3.2) * 0.01 : 0) : 0)
-      robot.rotation.y = bodyLookX + walkTurn + peekYaw + (isCelebrating && !reduceMotion ? Math.sin(t * 3.2) * 0.12 : 0)
+      // Turn a touch toward the text column so Yuvi reads as facing the child
+      // he's talking to, not staring straight past them.
+      const faceTextYaw = !isPresentingScene && !isSpeaking && !isThinking && !isCelebrating ? -0.16 : 0
+      robot.rotation.y = bodyLookX + walkTurn + peekYaw + faceTextYaw + (isCelebrating && !reduceMotion ? Math.sin(t * 3.2) * 0.12 : 0)
       robot.rotation.z = peekLean + (isThinking ? -0.055 : 0) + (isCelebrating && !reduceMotion ? Math.sin(t * 6.4) * 0.045 : 0)
 
       // Peek: screen-right arm raised and ABDUCTED out (↗) so the wave clears
@@ -854,13 +866,13 @@ export function YubiRobot3D({
       applyLowerStep(legPartsL, gait)
       applyLowerStep(legPartsR, -gait)
       const celebrateWave = isCelebrating && !reduceMotion ? Math.sin(t * 9.2) * 0.16 : 0
-      // Thinking is conveyed by Yubi's gaze, head tilt, antenna, and surrounding
+      // Thinking is conveyed by Yuvi's gaze, head tilt, antenna, and surrounding
       // particles. Keep both arms in their neutral pose so entering a reflection
       // never produces the distracting hand-to-the-side movement.
-      const armLTX = isCelebrating ? -0.18 : isWaving ? 0.12 : 0.08 - (isWalking ? gait * 0.18 : 0)
-      const armLTZ = isCelebrating ? -2.12 - celebrateWave : isWaving ? -0.16 : (isWalking ? 0.03 : 0)
-      const armRTX = isCelebrating ? -0.18 : isWaving ? -0.1 : 0.08 + (isWalking ? gait * 0.18 : 0)
-      const armRTZ = isCelebrating ? 2.12 + celebrateWave : isWaving ? 2.3 : 0.095 - (isWalking ? 0.02 : 0)
+      const armLTX = isCelebrating ? -0.18 : waving ? 0.12 : 0.08 - (isWalking ? gait * 0.18 : 0)
+      const armLTZ = isCelebrating ? -2.12 - celebrateWave : waving ? -0.16 : (isWalking ? 0.03 : 0)
+      const armRTX = isCelebrating ? -0.18 : waving ? -0.1 : 0.08 + (isWalking ? gait * 0.18 : 0)
+      const armRTZ = isCelebrating ? 2.12 + celebrateWave : waving ? 2.3 : 0.095 - (isWalking ? 0.02 : 0)
       const armLerp = 0.14
       armLX += (armLTX - armLX) * armLerp
       armLZ += (armLTZ - armLZ) * armLerp
@@ -869,7 +881,7 @@ export function YubiRobot3D({
       armL.rotation.x = armLX
       armL.rotation.z = armLZ
       armR.rotation.x = armRX
-      armR.rotation.z = armRZ + (isWaving ? Math.sin(t * 7.2) * 0.22 : 0)
+      armR.rotation.z = armRZ + (waving ? Math.sin(t * 7.2) * 0.22 : 0)
 
       earCapMat.emissiveIntensity = 0.4 + Math.sin(t * 2.0) * 0.16
       sparkBadge.rotation.z = 0
@@ -925,7 +937,7 @@ export function YubiRobot3D({
       })
       faceLightTexture.dispose()
       // sparkBadgeTexture is the shared module-cached favicon — do not dispose it
-      // here or other live Yubi instances would lose their chest mark.
+      // here or other live Yuvi instances would lose their chest mark.
       if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement)
       canvasElRef.current = null
       applyDesignRef.current = null
@@ -936,7 +948,7 @@ export function YubiRobot3D({
     <div className="robot-3d-canvas" style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div role="img" aria-label={label} ref={mountRef} style={{ width: '100%', height: '100%' }} />
       {editable && (
-        <div ref={tooltipRef} className="yubi-y-tooltip" style={{ display: 'none' }}>{editTooltip}</div>
+        <div ref={tooltipRef} className="Yuvi-y-tooltip" style={{ display: 'none' }}>{editTooltip}</div>
       )}
     </div>
   )

@@ -25,7 +25,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 FALLBACK_USERS_FILE = BASE_DIR / ".runtime" / "users.json"
 
 DEFAULT_PREFERENCES: dict[str, Any] = {
-    "theme": "system",
+    "theme": "dark",
     "language": "he",
     "reduced_motion": False,
 }

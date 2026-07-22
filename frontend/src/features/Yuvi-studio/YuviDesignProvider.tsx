@@ -11,28 +11,28 @@ import {
   DEFAULT_DESIGN,
   cloneDesign,
   normalizeDesign,
-  type YubiDesign,
-} from './yubiDesign'
+  type YuviDesign,
+} from './YuviDesign'
 
-interface YubiDesignContextValue {
-  design: YubiDesign
+interface YuviDesignContextValue {
+  design: YuviDesign
   loaded: boolean
-  refresh: () => Promise<YubiDesign>
-  applySavedDesign: (design: YubiDesign) => void
+  refresh: () => Promise<YuviDesign>
+  applySavedDesign: (design: YuviDesign) => void
 }
 
-const YubiDesignContext = createContext<YubiDesignContextValue | null>(null)
+const YuviDesignContext = createContext<YuviDesignContextValue | null>(null)
 
 /**
  * Application-wide view of the persisted Yuvi design.
  * MongoDB remains authoritative; this context synchronizes every live Yuvi
  * immediately after a successful save without relying on browser storage.
  */
-export function YubiDesignProvider({ children }: { children: ReactNode }) {
-  const [design, setDesign] = useState<YubiDesign>(() => cloneDesign(DEFAULT_DESIGN))
+export function YuviDesignProvider({ children }: { children: ReactNode }) {
+  const [design, setDesign] = useState<YuviDesign>(() => cloneDesign(DEFAULT_DESIGN))
   const [loaded, setLoaded] = useState(false)
 
-  const applySavedDesign = useCallback((next: YubiDesign) => {
+  const applySavedDesign = useCallback((next: YuviDesign) => {
     setDesign(normalizeDesign(next))
     setLoaded(true)
   }, [])
@@ -57,14 +57,14 @@ export function YubiDesignProvider({ children }: { children: ReactNode }) {
   }, [refresh])
 
   return (
-    <YubiDesignContext.Provider value={{ design, loaded, refresh, applySavedDesign }}>
+    <YuviDesignContext.Provider value={{ design, loaded, refresh, applySavedDesign }}>
       {children}
-    </YubiDesignContext.Provider>
+    </YuviDesignContext.Provider>
   )
 }
 
-export function useYubiDesign() {
-  const value = useContext(YubiDesignContext)
-  if (!value) throw new Error('useYubiDesign must be used inside YubiDesignProvider')
+export function useYuviDesign() {
+  const value = useContext(YuviDesignContext)
+  if (!value) throw new Error('useYuviDesign must be used inside YuviDesignProvider')
   return value
 }

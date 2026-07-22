@@ -11,7 +11,7 @@ export function Stepper({ activeStep }: { activeStep: number }) {
         <span className="step-pair" key={stepKey}>
           {index > 0 && <span className="step-line" />}
           <span className={`step ${index === activeStep ? 'active' : ''} ${index < activeStep ? 'done' : ''}`}>
-            <span className="step-dot">{index === 0 ? <YubiMiniIcon /> : index + 1}</span>
+            <span className="step-dot">{index === 0 ? <YuviMiniIcon /> : index + 1}</span>
             <span className="step-label">{t(stepKey)}</span>
           </span>
         </span>
@@ -20,7 +20,7 @@ export function Stepper({ activeStep }: { activeStep: number }) {
   )
 }
 
-function YubiMiniIcon() {
+function YuviMiniIcon() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
       <rect x="5" y="8" width="14" height="11" rx="3.5" fill="currentColor" />

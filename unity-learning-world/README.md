@@ -27,7 +27,7 @@ Run `npm run build:all` to rebuild Unity and the React application together.
 React calls the `LearningWorld` GameObject methods `Configure`, `Focus`, `SetSelected`,
 `TravelTo`, `ShowBlocked`, `ResetCamera`, and `SetPaused`. Unity emits the
 `yuvi-unity-world` browser event with `ready`, `landmark-select`, `blocked`,
-`bridge-blocked`, `yubi-interact`, `avatar-projection`, `travel-complete`, `stats`,
+`bridge-blocked`, `Yuvi-interact`, `avatar-projection`, `travel-complete`, `stats`,
 or `error`.
 
 Bridge state remains backend-derived: a bridge opens only when the preceding unit is

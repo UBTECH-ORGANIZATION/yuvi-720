@@ -2,13 +2,13 @@
 /* eslint-disable */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getLearnerState, updateLearnerState } from '../../services/api'
-import type { YubiAvatarHandle } from './YubiAvatar3D'
+import type { YuviAvatarHandle } from './YuviAvatar3D'
 import {
   DEFAULT_DESIGN, cloneDesign, normalizeDesign,
-  type YubiColors, type YubiDesign, type YubiSlot, type YubiVariant,
-} from './yubiDesign'
-import { type YubiAsset } from './yubiAssets'
-import { useYubiDesign } from './YubiDesignProvider'
+  type YuviColors, type YuviDesign, type YuviSlot, type YuviVariant,
+} from './YuviDesign'
+import { type YuviAsset } from './YuviAssets'
+import { useYuviDesign } from './YuviDesignProvider'
 
 /**
  * Shared studio state + design mutations, used by both the routed studio page
@@ -18,12 +18,12 @@ export function useStudioDesign(autoLoad = true) {
   const {
     refresh: refreshSavedDesign,
     applySavedDesign,
-  } = useYubiDesign()
-  const avatarRef = useRef<YubiAvatarHandle | null>(null)
+  } = useYuviDesign()
+  const avatarRef = useRef<YuviAvatarHandle | null>(null)
   const [loaded, setLoaded] = useState(false)
-  const [design, setDesign] = useState<YubiDesign>(() => cloneDesign(DEFAULT_DESIGN))
+  const [design, setDesign] = useState<YuviDesign>(() => cloneDesign(DEFAULT_DESIGN))
   const [unlockedIds, setUnlockedIds] = useState<Set<string>>(() => new Set())
-  const [activeTab, setActiveTab] = useState<YubiSlot | 'colors'>('headTop')
+  const [activeTab, setActiveTab] = useState<YuviSlot | 'colors'>('headTop')
   const [muted, setMuted] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -42,17 +42,17 @@ export function useStudioDesign(autoLoad = true) {
 
   useEffect(() => { if (autoLoad) void load() }, [autoLoad, load])
 
-  const isLocked = (asset: YubiAsset) => Boolean(asset.requirementKey) && !unlockedIds.has(asset.id)
+  const isLocked = (asset: YuviAsset) => Boolean(asset.requirementKey) && !unlockedIds.has(asset.id)
 
-  const equip = (slot: YubiSlot, id: string | null) => {
+  const equip = (slot: YuviSlot, id: string | null) => {
     setDesign((prev) => ({ ...prev, equipped: { ...prev.equipped, [slot]: id } }))
     avatarRef.current?.equip(slot, id, true)
   }
-  const setVariant = (variant: YubiVariant) => {
+  const setVariant = (variant: YuviVariant) => {
     setDesign((prev) => ({ ...prev, variant }))
     avatarRef.current?.setVariant(variant, true)
   }
-  const setColor = (key: keyof YubiColors, hex: string) => {
+  const setColor = (key: keyof YuviColors, hex: string) => {
     setDesign((prev) => {
       const colors = { ...prev.colors, [key]: hex }
       avatarRef.current?.setColors(colors, false)

@@ -749,7 +749,7 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             return root;
         }
 
-        // Faithful Unity replica of the production three.js Yuvi (YubiAvatar3D): same palette, proportions
+        // Faithful Unity replica of the production three.js Yuvi (YuviAvatar3D): same palette, proportions
         // and cyan face/antenna/ears, built from smooth primitives. In the shipped learning page the real
         // three.js robot is composited over the Unity canvas (externalAvatar); this proxy makes the
         // standalone Unity demo preview that same robot.

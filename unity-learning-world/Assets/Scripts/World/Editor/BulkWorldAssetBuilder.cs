@@ -15,7 +15,7 @@ namespace Yuvi720.LearningWorld.Editor
     public static class BulkWorldAssetBuilder
     {
         public const string TerrainPrefabPath = "Assets/Prefabs/World/Terrain/PF_YW_Terrain_Production.prefab";
-        public const string YubiPrefabPath = "Assets/Prefabs/World/Characters/PF_YW_Yubi_Mesh.prefab";
+        public const string YuviPrefabPath = "Assets/Prefabs/World/Characters/PF_YW_Yuvi_Mesh.prefab";
         public const string ReviewScenePath = "Assets/Scenes/ArtReview/SCN_YW_BulkWorldReview.unity";
 
         private const string MaterialFolder = "Assets/Art/World/Materials";
@@ -94,7 +94,7 @@ namespace Yuvi720.LearningWorld.Editor
             {
                 var ids = new List<string>
                 {
-                    "terrain.template", CentralLearningTreeBuilder.AssetId, "character.yubi",
+                    "terrain.template", CentralLearningTreeBuilder.AssetId, "character.Yuvi",
                     "atmosphere.cloud", "decoration.template", "bridge.template", "landmark.template"
                 };
                 ids.AddRange(LandmarkIds);
@@ -155,15 +155,15 @@ namespace Yuvi720.LearningWorld.Editor
 
                 var cloud = BuildCloud();
                 Register(catalog, "atmosphere.cloud", WorldAssetKind.Effect, cloud);
-                var yubi = BuildYubi();
-                Register(catalog, "character.yubi", WorldAssetKind.Character, yubi);
+                var Yuvi = BuildYuvi();
+                Register(catalog, "character.Yuvi", WorldAssetKind.Character, Yuvi);
 
                 EditorUtility.SetDirty(catalog);
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
 
                 EditorUtility.DisplayProgressBar("Yuvilab World", "Building complete-world review scene", .92f);
-                BuildReviewScene(terrain, centralTree, yubi, catalog);
+                BuildReviewScene(terrain, centralTree, Yuvi, catalog);
 
                 var issues = ValidateEntireWorld();
                 if (issues.Count > 0) throw new InvalidOperationException(string.Join("\n", issues));
@@ -222,9 +222,9 @@ namespace Yuvi720.LearningWorld.Editor
                     issues.Add("Movement zones must remain renderer-free.");
             }
 
-            if (catalog.TryResolve("character.yubi", false, out var yubi)
-                && yubi.GetComponentsInChildren<MeshRenderer>(true).Length < 5)
-                issues.Add("Yubi requires a readable segmented mesh silhouette.");
+            if (catalog.TryResolve("character.Yuvi", false, out var Yuvi)
+                && Yuvi.GetComponentsInChildren<MeshRenderer>(true).Length < 5)
+                issues.Add("Yuvi requires a readable segmented mesh silhouette.");
 
             return issues;
         }
@@ -739,9 +739,9 @@ namespace Yuvi720.LearningWorld.Editor
             }
         }
 
-        private static GameObject BuildYubi()
+        private static GameObject BuildYuvi()
         {
-            var root = new GameObject("PF_YW_Yubi_Mesh");
+            var root = new GameObject("PF_YW_Yuvi_Mesh");
             try
             {
                 var visual = Child(root.transform, "VisualRoot");
@@ -768,8 +768,8 @@ namespace Yuvi720.LearningWorld.Editor
                 AddInkPolygon(antenna, "Glow", StarPoints(.28f, .14f, 7), materials["glow"], .035f,
                     new Vector3(0f, .82f, 0f), Vector3.one);
                 antenna.gameObject.AddComponent<WorldWindElement>().EditorAssignContract(antenna, Vector3.forward, 4f, 1.4f, .5f, false);
-                root.AddComponent<YubiTarget>();
-                return SavePrefab(root, YubiPrefabPath);
+                root.AddComponent<YuviTarget>();
+                return SavePrefab(root, YuviPrefabPath);
             }
             finally
             {
@@ -777,7 +777,7 @@ namespace Yuvi720.LearningWorld.Editor
             }
         }
 
-        private static void BuildReviewScene(GameObject terrain, GameObject centralTree, GameObject yubi, WorldAssetCatalog catalog)
+        private static void BuildReviewScene(GameObject terrain, GameObject centralTree, GameObject Yuvi, WorldAssetCatalog catalog)
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var cameraObject = new GameObject("Main Camera");
@@ -799,8 +799,8 @@ namespace Yuvi720.LearningWorld.Editor
             PrefabUtility.InstantiatePrefab(terrain, review.transform);
             var tree = (GameObject)PrefabUtility.InstantiatePrefab(centralTree, review.transform);
             tree.transform.position = new Vector3(-1f, .85f, -1f);
-            var yubiInstance = (GameObject)PrefabUtility.InstantiatePrefab(yubi, review.transform);
-            yubiInstance.transform.position = new Vector3(-7f, .85f, -2f);
+            var YuviInstance = (GameObject)PrefabUtility.InstantiatePrefab(Yuvi, review.transform);
+            YuviInstance.transform.position = new Vector3(-7f, .85f, -2f);
 
             for (var index = 0; index < LandmarkIds.Length; index++)
             {

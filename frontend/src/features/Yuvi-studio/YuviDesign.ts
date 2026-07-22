@@ -1,10 +1,10 @@
-// Yubi avatar design model — mirrors the persisted `learner_state.avatar` shape.
+// Yuvi avatar design model — mirrors the persisted `learner_state.avatar` shape.
 // The design is non-identifying UI state: colours, a variant, and equipped items.
 
-export type YubiVariant = 'classic' | 'girl'
-export type YubiSlot = 'headTop' | 'face' | 'back' | 'handR' | 'body'
+export type YuviVariant = 'classic' | 'girl'
+export type YuviSlot = 'headTop' | 'face' | 'back' | 'handR' | 'body'
 
-export interface YubiColors {
+export interface YuviColors {
   /** Shell / helmet colour (recolourable — never a skin tone). */
   body: string
   eyes: string
@@ -13,16 +13,16 @@ export interface YubiColors {
   glow: string
 }
 
-export interface YubiDesign {
+export interface YuviDesign {
   version: number
-  variant: YubiVariant
-  colors: YubiColors
-  equipped: Record<YubiSlot, string | null>
+  variant: YuviVariant
+  colors: YuviColors
+  equipped: Record<YuviSlot, string | null>
 }
 
-export const YUBI_SLOTS: YubiSlot[] = ['headTop', 'face', 'back', 'handR', 'body']
+export const Yuvi_SLOTS: YuviSlot[] = ['headTop', 'face', 'back', 'handR', 'body']
 
-export const DEFAULT_DESIGN: YubiDesign = {
+export const DEFAULT_DESIGN: YuviDesign = {
   version: 1,
   variant: 'classic',
   colors: { body: '#85878C', eyes: '#4eeef0', smile: '#74f7ff', glow: '#3fd9e0' },
@@ -31,7 +31,7 @@ export const DEFAULT_DESIGN: YubiDesign = {
 
 const LEGACY_DEFAULT_BODY_COLOR = '#717378'
 
-export function cloneDesign(design: YubiDesign): YubiDesign {
+export function cloneDesign(design: YuviDesign): YuviDesign {
   return {
     version: design.version,
     variant: design.variant,
@@ -41,7 +41,7 @@ export function cloneDesign(design: YubiDesign): YubiDesign {
 }
 
 /** Coerce whatever came back from the API into a safe, complete design. */
-export function normalizeDesign(raw: unknown): YubiDesign {
+export function normalizeDesign(raw: unknown): YuviDesign {
   const base = cloneDesign(DEFAULT_DESIGN)
   if (!raw || typeof raw !== 'object') return base
   const record = raw as Record<string, unknown>
@@ -61,7 +61,7 @@ export function normalizeDesign(raw: unknown): YubiDesign {
   }
   if (record.equipped && typeof record.equipped === 'object') {
     const equipped = record.equipped as Record<string, unknown>
-    for (const slot of YUBI_SLOTS) {
+    for (const slot of Yuvi_SLOTS) {
       base.equipped[slot] = typeof equipped[slot] === 'string' ? (equipped[slot] as string) : null
     }
   }

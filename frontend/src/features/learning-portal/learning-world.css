@@ -199,8 +199,8 @@
   pointer-events: auto;
 }
 
-.learning-world-unity__three-avatar .yubi-avatar-canvas,
-.learning-world-unity__three-avatar .yubi-avatar-canvas > div,
+.learning-world-unity__three-avatar .Yuvi-avatar-canvas,
+.learning-world-unity__three-avatar .Yuvi-avatar-canvas > div,
 .learning-world-unity__three-avatar canvas {
   inline-size: 100%;
   block-size: 100%;
@@ -932,7 +932,7 @@
   transition: transform 240ms var(--sp-ease, ease), filter 240ms ease;
 }
 
-.lw-player__avatar .yubi-avatar-canvas > div { cursor: pointer; }
+.lw-player__avatar .Yuvi-avatar-canvas > div { cursor: pointer; }
 
 .lw-player.is-flying .lw-player__avatar {
   /* Height now comes from the altitude-driven .lw-player__lift wrapper; just add the airborne glow + a hair

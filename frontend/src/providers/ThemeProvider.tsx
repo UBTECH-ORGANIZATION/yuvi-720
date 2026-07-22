@@ -44,8 +44,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const { user, updatePreferences } = useAuth()
   // AuthProvider gates the tree on /me, so the stored preference is already
   // known on the very first render — no intermediate paint in the wrong theme.
-  // Signed out, fall back to the visitor's own cookie choice before 'system'.
-  const stored = user?.preferences.theme ?? readThemeCookie() ?? 'system'
+  // Signed out, fall back to the visitor's own cookie choice, then to 'dark'
+  // (the product default) rather than tracking the OS.
+  const stored = user?.preferences.theme ?? readThemeCookie() ?? 'dark'
   const [preference, setPreferenceState] = useState<ThemePreference>(stored)
   const [systemValue, setSystemValue] = useState<Theme>(systemTheme)
 

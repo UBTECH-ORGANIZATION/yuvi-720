@@ -8,8 +8,8 @@ import { CompanionProvider } from './providers/CompanionProvider'
 import { OnboardingProvider } from './providers/OnboardingProvider'
 import { LessonRoadmapProvider } from './providers/LessonRoadmapProvider'
 import { ThemeProvider } from './providers/ThemeProvider'
-import { StudioTransitionProvider } from './features/yubi-studio/StudioTransitionProvider'
-import { YubiDesignProvider } from './features/yubi-studio/YubiDesignProvider'
+import { StudioTransitionProvider } from './features/Yuvi-studio/StudioTransitionProvider'
+import { YuviDesignProvider } from './features/Yuvi-studio/YuviDesignProvider'
 import './styles/tokens.css'
 import './styles/theme.css'
 import './styles/global.css'
@@ -32,13 +32,13 @@ createRoot(document.getElementById('root') as HTMLElement).render(
           <BrainProvider>
             <OnboardingProvider>
             <CompanionProvider>
-              <YubiDesignProvider>
+              <YuviDesignProvider>
                 <LessonRoadmapProvider>
                   <StudioTransitionProvider>
                     <App />
                   </StudioTransitionProvider>
                 </LessonRoadmapProvider>
-              </YubiDesignProvider>
+              </YuviDesignProvider>
             </CompanionProvider>
             </OnboardingProvider>
           </BrainProvider>

@@ -2330,7 +2330,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 7072936933247637361, guid: 4e064930432074ad09273a8add4491c5, type: 3}
       propertyPath: m_Name
-      value: PF_YW_Yubi_Mesh
+      value: PF_YW_Yuvi_Mesh
       objectReference: {fileID: 0}
     - target: {fileID: 8200889724022579587, guid: 4e064930432074ad09273a8add4491c5, type: 3}
       propertyPath: m_LocalPosition.x

@@ -8,7 +8,7 @@ import { useI18n } from '../../i18n/I18nProvider'
 import { useAuth } from '../../providers/AuthProvider'
 import { apiPost } from '../../services/api'
 import { AgentsDiagram } from './AgentsDiagram'
-import { LandingYubiArtwork, LandingYubiJourney } from './LandingYubiJourney'
+import { LandingYuviArtwork, LandingYuviJourney } from './LandingYuviJourney'
 import { LoginDialog } from './LoginDialog'
 import userMappingImage from '../../assets/user-mapping-image.png'
 import userAdaptiveImage from '../../assets/user-adaptive-image.png'
@@ -188,7 +188,7 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
 
   return (
     <main className={`landing720${loginIntent ? ' is-auth-open' : ''}`} id="mainContent">
-      <LandingYubiJourney />
+      <LandingYuviJourney />
       <header className="landing720-header">
         <div className="landing720-brand">
           <BrandLogo />
@@ -208,7 +208,7 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
         </div>
       </header>
 
-      <section className="landing720-hero" id="about" data-yubi-stop="hero" data-yubi-reveal>
+      <section className="landing720-hero" id="about" data-Yuvi-stop="hero" data-Yuvi-reveal>
         <article className="landing720-copy">
           <span className="landing720-eyebrow">
             <SparkleIcon width={16} height={16} />
@@ -253,15 +253,15 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
         </article>
 
         <div className="landing720-hero-visual" aria-hidden="true">
-          <LandingYubiArtwork />
+          <LandingYuviArtwork />
         </div>
       </section>
 
-      <div className="landing720-yubi-stop landing720-yubi-stop--hub" data-yubi-stop="hub" data-yubi-reveal>
+      <div className="landing720-Yuvi-stop landing720-Yuvi-stop--hub" data-Yuvi-stop="hub" data-Yuvi-reveal>
         <AgentsDiagram />
       </div>
 
-      <section className="landing720-feature-rows" data-yubi-stop="features" data-yubi-reveal>
+      <section className="landing720-feature-rows" data-Yuvi-stop="features" data-Yuvi-reveal>
         <header className="landing720-feature-rows__head">
           <span className="landing720-eyebrow">{t('landing.features.sectionEyebrow')}</span>
           <h2>{t('landing.features.sectionTitle')}</h2>
@@ -323,7 +323,7 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
         </article>
       </section>
 
-      <section className="landing720-faq" id="faq" data-yubi-stop="faq" data-yubi-reveal>
+      <section className="landing720-faq" id="faq" data-Yuvi-stop="faq" data-Yuvi-reveal>
         <div className="landing720-faq-head">
           <h2>{t('landing.faq.title')}</h2>
           <p>{t('landing.faq.subtitle')}</p>
@@ -349,7 +349,7 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
         </div>
       </section>
 
-      <section className="landing720-contact" id="contact" data-yubi-stop="contact" data-yubi-reveal>
+      <section className="landing720-contact" id="contact" data-Yuvi-stop="contact" data-Yuvi-reveal>
         <div className="landing720-contact-head">
           <span className="landing720-feature-icon icon-purple">
             <MailIcon />
@@ -406,7 +406,7 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
         </form>
       </section>
 
-      <section className="landing720-trust" data-yubi-stop="exit" data-yubi-reveal>
+      <section className="landing720-trust" data-Yuvi-stop="exit" data-Yuvi-reveal>
         <span>
           <UserCheckIcon width={17} height={17} />
           {t('landing.pills.studentsTeachers')}
