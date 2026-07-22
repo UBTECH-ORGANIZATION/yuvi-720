@@ -32,8 +32,10 @@ const visualFor = (key: string) => DOMAIN_VISUAL[key] ?? FALLBACK_VISUAL
 
 const S = 440
 const C = S / 2
-const MAXR = S * 0.33 // outer ring radius — emblems sit on these vertices (kept
-                      // in from the edge so their labels fit inside the board)
+const MAXR = S * 0.36 // outer ring radius — emblems sit on these vertices. Bigger
+                      // than the old 0.33 so small point-changes read clearly, but
+                      // kept in enough that a zoomed rim vertex keeps its label on
+                      // screen. (SVG has overflow:visible, so labels don't clip.)
 // Label distance beyond the emblem. Horizontal (side) labels need more room
 // because their text is wide; vertical (top/bottom) labels need less, else they
 // read as too far from the icon. Scale by how horizontal the axis is.
@@ -162,7 +164,11 @@ export function ActivenessMap({ competencies, initial, revealed, onClose }: Acti
         ovy: C + Math.sin(ang) * oldLevel * MAXR,
         delta,
         dir: delta >= 0 ? 'up' : 'down',
-        changed: last != null && Math.abs(delta) >= CHANGE_THRESHOLD,
+        // A change only counts when it's backed by real activity — otherwise the
+        // arrow could animate on seeded/fabricated history the model can't
+        // explain, and the "why" blurb would be forced into its no-evidence
+        // fallback. Gating here keeps the arrow and the explanation in lockstep.
+        changed: (c.evidenceBacked ?? false) && last != null && Math.abs(delta) >= CHANGE_THRESHOLD,
       }
     })
   }, [competencies, baseline])
