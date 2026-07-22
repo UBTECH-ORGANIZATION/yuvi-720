@@ -1,11 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
-import katex from 'katex'
 import { useI18n } from '../i18n/I18nProvider'
 import { useCompanion } from '../providers/CompanionProvider'
 import { YuviAvatar3D } from '../features/Yuvi-studio/YuviAvatar3D'
 import { useYuviDesign } from '../features/Yuvi-studio/YuviDesignProvider'
 import { Icon } from './primitives'
+import { CoachMarkdown } from './CoachMarkdown'
+import { VisualCTA } from './VisualCTA'
 import { YuviHeadIcon } from './YuviHeadIcon'
+import type { VisualMode } from '../services/agents'
 import type { CoachVisual } from '../services/agents'
 import { playCoachSpeech, stopCoachSpeech, type SpeechState } from '../services/speech'
 import { navigate, useRoute } from '../app/router'
@@ -15,7 +17,6 @@ import 'katex/dist/katex.min.css'
 import './companion.css'
 
 const FENCED_BLOCK = /```[^\n]*\n?[\s\S]*?```/g
-const INLINE_FORMAT = /(\\\([^]*?\\\)|\\\[[^]*?\\\]|\$\$[^]*?\$\$|\$[^$\n]+\$|\*\*[^*]+\*\*|`[^`\n]+`)/g
 const MIN_PANEL_WIDTH = 340
 const MAX_PANEL_WIDTH = 720
 const MIN_PAGE_WIDTH = 360
@@ -27,58 +28,6 @@ function maximumPanelWidth() {
 
 function clampPanelWidth(width: number) {
   return Math.max(MIN_PANEL_WIDTH, Math.min(maximumPanelWidth(), Math.round(width)))
-}
-
-function inlineContent(text: string) {
-  const nodes: React.ReactNode[] = []
-  let cursor = 0
-  for (const match of text.matchAll(INLINE_FORMAT)) {
-    const index = match.index
-    if (index > cursor) nodes.push(text.slice(cursor, index))
-    const token = match[0]
-    if (token.startsWith('\\(') || token.startsWith('\\[') || token.startsWith('$')) {
-      const displayMode = token.startsWith('\\[') || token.startsWith('$$')
-      const delimiterLength = token.startsWith('$$') || token.startsWith('\\') ? 2 : 1
-      const formula = token.slice(delimiterLength, -delimiterLength).trim()
-      nodes.push(
-        <span
-          className={`sp-companion__math${displayMode ? ' sp-companion__math--display' : ''}`}
-          dir="ltr"
-          key={`${index}-${token}`}
-          dangerouslySetInnerHTML={{
-            __html: katex.renderToString(formula, {
-              displayMode,
-              output: 'htmlAndMathml',
-              strict: 'ignore',
-              throwOnError: false,
-              trust: false,
-            }),
-          }}
-        />
-      )
-    } else if (token.startsWith('**')) {
-      nodes.push(<strong key={`${index}-${token}`}>{token.slice(2, -2)}</strong>)
-    } else {
-      nodes.push(
-        <bdi className="sp-companion__math" dir="ltr" key={`${index}-${token}`}>
-          {token.slice(1, -1)}
-        </bdi>
-      )
-    }
-    cursor = index + token.length
-  }
-  if (cursor < text.length) nodes.push(text.slice(cursor))
-  return nodes
-}
-
-function CoachText({ text }: { text: string }) {
-  const safeText = text.replace(FENCED_BLOCK, '').trim()
-  if (!safeText) return null
-  return (
-    <div className="sp-companion__prose" dir="auto">
-      {inlineContent(safeText)}
-    </div>
-  )
 }
 
 function conversationPreview(text: string) {
@@ -135,6 +84,7 @@ export function CompanionChat() {
     canStartNewConversation,
     send,
     requestSupport,
+    requestVisual,
     selectConversation,
     startNewConversation,
     deleteConversation,
@@ -329,6 +279,8 @@ export function CompanionChat() {
     isVisualizing?: boolean,
     textAfter?: string,
     isComplete = true,
+    visualFailed?: boolean,
+    canVisualize?: boolean,
   ) => (
     <div
       className="sp-companion__message-row sp-companion__message-row--assistant"
@@ -343,7 +295,7 @@ export function CompanionChat() {
           {isComplete && text && key && (
             <button
               type="button"
-              className={`sp-companion__speech${speech.messageId === key ? ' is-active' : ''}`}
+              className={`sp-companion__speech${speech.messageId === key ? ' is-active' : ''}${speech.messageId === key && speech.state === 'playing' ? ' is-playing' : ''}`}
               onClick={() => toggleSpeech(key, text, textAfter)}
               aria-label={speech.messageId === key && speech.state !== 'idle'
                 ? t('companion.speech.stop')
@@ -356,6 +308,11 @@ export function CompanionChat() {
             >
               {speech.messageId === key && speech.state === 'preparing' ? (
                 <span className="sp-companion__speech-spinner" aria-hidden="true" />
+              ) : speech.messageId === key && speech.state === 'playing' ? (
+                // Reading aloud — a red stop square the learner can tap to stop.
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" className="sp-companion__speech-stop">
+                  <rect x="6.5" y="6.5" width="11" height="11" rx="2.6" />
+                </svg>
               ) : (
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <rect x="9" y="3" width="6" height="11" rx="3" />
@@ -364,7 +321,7 @@ export function CompanionChat() {
               )}
             </button>
           )}
-          {text ? <CoachText text={text} /> : (key === activeAssistantId
+          {text ? <CoachMarkdown text={text} /> : (key === activeAssistantId
             ? <ThinkingIndicator label={t('companion.thinking')} />
             : '')}
           {isVisualizing && (
@@ -385,7 +342,18 @@ export function CompanionChat() {
                 onClick={() => setExpandedVisual(visual)}
                 aria-label={t('companion.visual.open')}
               >
-                <img src={visual.data_url} alt={visual.alt || visual.title} />
+                {visual.type === 'video' ? (
+                  <video
+                    src={visual.data_url}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    aria-label={visual.alt || visual.title}
+                  />
+                ) : (
+                  <img src={visual.data_url} alt={visual.alt || visual.title} />
+                )}
                 <span className="sp-companion__visual-zoom" aria-hidden="true">
                   <svg viewBox="0 0 24 24" focusable="false">
                     <circle cx="10.5" cy="10.5" r="5.5" />
@@ -397,7 +365,13 @@ export function CompanionChat() {
               {visual.caption && <figcaption dir="auto">{visual.caption}</figcaption>}
             </figure>
           )}
-          {textAfter && <CoachText text={textAfter} />}
+          {textAfter && <CoachMarkdown text={textAfter} />}
+          {isComplete && key && !visual && !isVisualizing && (visualFailed || canVisualize) && (
+            <VisualCTA
+              failed={visualFailed}
+              onRequest={(mode: VisualMode) => void requestVisual(key, mode)}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -726,7 +700,7 @@ export function CompanionChat() {
             {!isLoadingMessages && messages.length === 0 && assistantMessage(t('companion.greeting'))}
             {messages.map((m) => (
               m.role === 'assistant'
-                ? assistantMessage(m.text, m.id, m.visual, m.isVisualizing, m.textAfter, m.isComplete)
+                ? assistantMessage(m.text, m.id, m.visual, m.isVisualizing, m.textAfter, m.isComplete, m.visualFailed, m.canVisualize)
                 : (
                   <div
                     key={m.id}
@@ -776,7 +750,19 @@ export function CompanionChat() {
           </svg>
         </button>
         <figure className="sp-companion-lightbox__content" onClick={(event) => event.stopPropagation()}>
-          <img src={expandedVisual.data_url} alt={expandedVisual.alt || expandedVisual.title} />
+          {expandedVisual.type === 'video' ? (
+            <video
+              src={expandedVisual.data_url}
+              autoPlay
+              muted
+              loop
+              playsInline
+              controls
+              aria-label={expandedVisual.alt || expandedVisual.title}
+            />
+          ) : (
+            <img src={expandedVisual.data_url} alt={expandedVisual.alt || expandedVisual.title} />
+          )}
           {expandedVisual.caption && <figcaption dir="auto">{expandedVisual.caption}</figcaption>}
         </figure>
       </div>

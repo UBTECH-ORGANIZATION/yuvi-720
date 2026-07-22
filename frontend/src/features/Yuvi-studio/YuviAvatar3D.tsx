@@ -34,6 +34,10 @@ interface Props {
   pulling?: boolean
   /** Physical side Yuvi turns and reaches toward during the pulling transition. */
   pullingSide?: 'left' | 'right'
+  /** Companion transition: Yuvi turns side-on and shoves the panel with both hands. */
+  pushing?: boolean
+  /** Physical side Yuvi braces against and pushes toward during the closing transition. */
+  pushingSide?: 'left' | 'right'
   /** Sustained presenting pose: Yuvi turns toward a panel and extends his near hand toward it. */
   presenting?: boolean
   /** Physical side the presented panel sits on relative to Yuvi. */
@@ -80,7 +84,7 @@ function mixWhite([r, g, b]: number[], t: number): [number, number, number] {
 const rgba = ([r, g, b]: number[], a: number) => `rgba(${r}, ${g}, ${b}, ${a})`
 
 export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAvatar3D(
-  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard' },
+  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard' },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null)
@@ -93,6 +97,9 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   const speakingRef = useRef(speaking)
   const pullingRef = useRef(pulling)
   const pullingSideRef = useRef(pullingSide)
+  const pushingRef = useRef(pushing)
+  const pushingSideRef = useRef(pushingSide)
+  const pushingStartedAtRef = useRef(pushing ? Date.now() : 0)
   const presentingRef = useRef(presenting)
   const presentingSideRef = useRef(presentingSide)
   const frontFacingRef = useRef(frontFacing)
@@ -113,6 +120,11 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     pullingRef.current = pulling
   }, [pulling])
   useEffect(() => { pullingSideRef.current = pullingSide }, [pullingSide])
+  useEffect(() => {
+    if (pushing && !pushingRef.current) pushingStartedAtRef.current = Date.now()
+    pushingRef.current = pushing
+  }, [pushing])
+  useEffect(() => { pushingSideRef.current = pushingSide }, [pushingSide])
   useEffect(() => { presentingRef.current = presenting }, [presenting])
   useEffect(() => { presentingSideRef.current = presentingSide }, [presentingSide])
   useEffect(() => { frontFacingRef.current = frontFacing }, [frontFacing])
@@ -587,12 +599,23 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         const reachStrength = Math.max(0, Math.min(1, (pullPhase - 0.22) / 0.14))
         const releaseStrength = Math.max(0, Math.min(1, (1 - pullPhase) / 0.22))
         const gripStrength = reachStrength * releaseStrength
+        // Closing: Yuvi turns side-on and heaves the panel away with both hands.
+        const isPushing = pushingRef.current
+        const pushElapsed = isPushing ? Date.now() - pushingStartedAtRef.current : 0
+        const pushPhase = isPushing ? Math.min(1, pushElapsed / 1450) : 0
+        const pushRampIn = Math.max(0, Math.min(1, (pushPhase - 0.1) / 0.1))
+        const pushRelease = Math.max(0, Math.min(1, (1 - pushPhase) / 0.16))
+        const pushStrength = pushRampIn * pushRelease
+        // Straining pulse: hands press harder, then ease, over and over.
+        const pushStrain = isPushing && !reduceMotion ? (Math.sin(pushElapsed / 1000 * 20) * 0.5 + 0.5) : 0
         const dockingStrength = frontFacingRef.current
           ? 1
           : Math.max(0, Math.min(1, (pullPhase - 0.74) / 0.18))
         const pullRight = pullingSideRef.current === 'right'
         const pullDirection = pullRight ? 1 : -1
-        const tracksPointer = followPointerRef.current && !reduceMotion && !isPulling && !frontFacingRef.current
+        const pushRight = pushingSideRef.current === 'right'
+        const pushDirection = pushRight ? 1 : -1
+        const tracksPointer = followPointerRef.current && !reduceMotion && !isPulling && !isPushing && !frontFacingRef.current
         pointerLookX += ((tracksPointer ? pointerTargetX : 0) - pointerLookX) * 0.11
         pointerLookY += ((tracksPointer ? pointerTargetY : 0) - pointerLookY) * 0.11
         // Thinking: a curious head tilt with one hand toward the chin.
@@ -615,8 +638,8 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         const walkStride = Math.sin(walkPhase)
         const walkAmp = isWalking ? (reduceMotion ? 0.18 : 0.5) : 0
         const sway = isFlying ? headingYaw : isGrounded ? 0 : isSpeaking ? Math.sin(t * 1.9) * 0.16 : Math.sin(t * 0.5) * 0.32
-        const idleStrength = (1 - gripStrength) * (1 - dockingStrength)
-        const postureEase = dockingStrength > 0 ? 0.3 : 0.14
+        const idleStrength = (1 - gripStrength) * (1 - dockingStrength) * (1 - pushStrength)
+        const postureEase = dockingStrength > 0 ? 0.3 : (pushStrength > 0 ? 0.22 : 0.14)
         // Sustained "presenting" pose: Yuvi holds a gentle turn toward a panel and
         // keeps his near hand extended toward it (unlike `pulling`, which is a
         // one-shot grab that settles back to front).
@@ -627,19 +650,20 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
           ? headingYaw
           : isPresenting
             ? 0.46 * presentSign
-            : sway * idleStrength + pointerLookX * 0.12 * idleStrength + 0.34 * pullDirection * gripStrength
+            : sway * idleStrength + pointerLookX * 0.12 * idleStrength + 0.34 * pullDirection * gripStrength + 1.28 * pushDirection * pushStrength
         // Shortest-path turn so crossing the ±π (facing-away) seam doesn't spin Yuvi the long way round.
         const yawDelta = Math.atan2(Math.sin(robotYawTarget - robot.rotation.y), Math.cos(robotYawTarget - robot.rotation.y))
         robot.rotation.y += yawDelta * postureEase
-        // Flying: upright vertical lift-off (no forward pitch). Walking: a slight forward lean.
-        const robotPitchTarget = isFlying ? 0 : isWalking ? 0.06 : pointerLookY * 0.035 * idleStrength
+        // Flying: upright vertical lift-off (no forward pitch). Walking: a slight
+        // forward lean. Pushing: lean into the panel, deeper on each strain heave.
+        const robotPitchTarget = isFlying ? 0 : isWalking ? 0.06 : pointerLookY * 0.035 * idleStrength + (0.22 + pushStrain * 0.06) * pushStrength
         robot.rotation.x += (robotPitchTarget - robot.rotation.x) * postureEase
-        robot.rotation.z += ((((isThinking ? -0.035 : 0) + (isSpeaking ? Math.sin(t * 2.2) * 0.018 : 0)) * (1 - dockingStrength) + 0.13 * gripStrength) - robot.rotation.z) * postureEase
+        robot.rotation.z += ((((isThinking ? -0.035 : 0) + (isSpeaking ? Math.sin(t * 2.2) * 0.018 : 0)) * (1 - dockingStrength) + 0.13 * gripStrength + 0.12 * pushDirection * pushStrength) - robot.rotation.z) * postureEase
         robot.position.y = -1.35 + (isFlying
           ? 0.16 + Math.sin(t * 5.2) * 0.05
           : isWalking ? Math.abs(walkStride) * 0.03
           : isGrounded ? 0 : Math.sin(t * (isSpeaking ? 2.5 : 1.4)) * (isSpeaking ? 0.045 : 0.03))
-        head.rotation.y = ((isThinking ? -0.16 + Math.sin(t * 0.8) * 0.05 : Math.sin(t * 0.4) * 0.08) + pointerLookX * 0.3) * idleStrength + 0.24 * pullDirection * gripStrength + 0.26 * presentSign * presentStrength
+        head.rotation.y = ((isThinking ? -0.16 + Math.sin(t * 0.8) * 0.05 : Math.sin(t * 0.4) * 0.08) + pointerLookX * 0.3) * idleStrength + 0.24 * pullDirection * gripStrength + 0.2 * pushDirection * pushStrength + 0.26 * presentSign * presentStrength
         head.rotation.x = ((isThinking ? -0.07 + Math.sin(t * 1.1) * 0.025 : Math.sin(t * 0.7) * 0.03) + pointerLookY * 0.16) * (1 - dockingStrength) - 0.16 * presentStrength
         head.rotation.z += (((isThinking ? 0.13 : isSpeaking ? Math.sin(t * 1.6) * 0.055 : 0) * (1 - dockingStrength) - head.rotation.z) * postureEase)
         const flyFlutter = isFlying && !reduceMotion ? Math.sin(t * 9.5) * 0.06 : 0
@@ -652,15 +676,19 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         // arm crosses the chest while the nearer arm extends, then both release.
         const rightPullRotation = pullRight ? 1.18 : -1.55
         const leftPullRotation = pullRight ? 1.55 : -1.18
-        const rightArmTarget = restingRightArm * (1 - gripStrength) + rightPullRotation * gripStrength
-        const leftArmTarget = restingLeftArm * (1 - gripStrength) + leftPullRotation * gripStrength
+        // Pushing: both arms extend forward, shoulder-width, palms flat on the
+        // panel; a strain pulse presses them a little deeper on each heave.
+        const pushArmX = (-1.42 - pushStrain * 0.14) * pushStrength
+        const restWeight = 1 - gripStrength - pushStrength
+        const rightArmTarget = restingRightArm * restWeight + rightPullRotation * gripStrength + 0.16 * pushStrength
+        const leftArmTarget = restingLeftArm * restWeight + leftPullRotation * gripStrength - 0.16 * pushStrength
         const armSwing = walkAmp * 0.7   // arms counter-swing the legs
         // Presenting turns only Yuvi's face and head toward the panel — both arms
         // stay in their natural resting pose (no pointing/reaching gesture).
         armR.rotation.z += (rightArmTarget - armR.rotation.z) * postureEase
-        armR.rotation.x += ((((isThinking ? -0.36 : 0) * (1 - dockingStrength) - 0.5 * gripStrength - walkStride * armSwing) - armR.rotation.x) * postureEase)
+        armR.rotation.x += ((((isThinking ? -0.36 : 0) * (1 - dockingStrength) - 0.5 * gripStrength - walkStride * armSwing) + pushArmX - armR.rotation.x) * postureEase)
         armL.rotation.z += (leftArmTarget - armL.rotation.z) * postureEase
-        armL.rotation.x += (((-0.28 * gripStrength + walkStride * armSwing) - armL.rotation.x) * postureEase)
+        armL.rotation.x += (((-0.28 * gripStrength + walkStride * armSwing) + pushArmX - armL.rotation.x) * postureEase)
         // Legs stride when walking, tuck slightly when flying, and straighten otherwise.
         const legTuck = isFlying ? 0.12 : 0
         legR.rotation.x += ((legTuck - walkStride * walkAmp) - legR.rotation.x) * postureEase

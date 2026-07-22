@@ -94,6 +94,8 @@ export function YuviCompanionDock() {
               followPointer
               pulling={isOpening}
               pullingSide="right"
+              pushing={isClosing}
+              pushingSide="right"
               yTooltip={t('YuviStudio.launcher')}
               onYClick={openStudio}
               onAvatarClick={openImmediately}

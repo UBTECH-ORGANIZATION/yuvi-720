@@ -24,6 +24,9 @@ from app.services.llm import call_llm, call_llm_stream
 
 
 # ── Instructions (language-keyed — §11.1; never inline learner-facing text) ──
+# A bare list marker on its own — not a real sentence for the brevity cap.
+_BARE_MARKER = re.compile(r"(?:\d+[.)]|[-*+•])")
+
 COACH_INSTRUCTIONS = {
     "he": (
         "אתה \"יובי\", מלווה למידה של תלמיד/ה בכיתות ז'–ט'. ענה בעברית.\n"
@@ -41,6 +44,7 @@ COACH_INSTRUCTIONS = {
         "- כששרטוט עשוי להבהיר רעיון, תאר במדויק את הנתונים או הקשרים שיש להמחיש; כלי שרטוט בטוח עשוי לצרף המחשה. אל תטען שנוצר שרטוט.\n"
         "- אם המחשה חזותית מתאימה, אל תיצור גרסת טקסט/ASCII שלה ואל תכתוב בלוק קוד. כתוב רק הסבר מילולי קצר; ההמחשה תשתלב בתוך ההודעה.\n"
         "- אל תצרף תמונת Markdown, קישור תמונה או נתיב קובץ; כלי ההמחשה הנפרד מטפל בתמונה.\n"
+        "- עצב את התשובה ב-Markdown כברירת מחדל כשזה עוזר לבהירות: רשימת תבליטים (‎- ‎) או ממוספרת עם כל פריט בשורה נפרדת, טבלה קטנה להשוואה, ו-**מודגש** למונחי מפתח. אל תאריך רק בשביל העיצוב.\n"
         "- לעולם אל תמציא עובדות על התלמיד/ה; הסתמך רק על ההקשר.\n"
         "- אל תציג ציונים מספריים. תן משוב מילולי ומעודד.\n"
         "- שקיפות: המערכת כבר יידעה שמדובר ב-AI; אל תתחזה לאדם."
@@ -61,6 +65,7 @@ COACH_INSTRUCTIONS = {
         "- عندما يساعد الرسم على توضيح الفكرة، صِف بدقة المعطيات أو العلاقات المطلوب تمثيلها؛ قد تُرفق أداة رسم آمنة توضيحًا. لا تدّعِ أن الرسم أُنشئ.\n"
         "- عندما يناسب الشرح المرئي، لا تنشئ نسخة نصية أو ASCII منه ولا تكتب كتلة شيفرة. اكتب شرحًا لفظيًا قصيرًا فقط؛ سيُدمج الرسم داخل الرسالة.\n"
         "- لا تُرفق صورة Markdown أو رابط صورة أو مسار ملف؛ أداة الرسم المنفصلة تتولى الصورة.\n"
+        "- نسّق الرد بصيغة Markdown افتراضيًا عندما يساعد على الوضوح: قائمة نقطية (‎- ‎) أو مرقّمة بكل عنصر في سطر، جدول صغير للمقارنة، و**تخشين** للمصطلحات المفتاحية. لا تُطِل لأجل التنسيق فقط.\n"
         "- لا تختلق معلومات عن الطالب/ة؛ اعتمد على السياق فقط.\n"
         "- لا تعرض درجات رقمية. قدّم تغذية راجعة لفظية ومشجّعة.\n"
         "- الشفافية: النظام أبلغ أنّه ذكاء اصطناعي؛ لا تتظاهر بأنك إنسان."
@@ -80,6 +85,7 @@ COACH_INSTRUCTIONS = {
         "- When a drawing could clarify an idea, precisely describe the givens or relationships to visualize; a safe drawing tool may attach it. Do not claim a drawing was created.\n"
         "- When a visual is suitable, do not duplicate it as text/ASCII and do not emit a code block. Write only a short verbal explanation; the visual will be embedded in the message.\n"
         "- Do not emit a Markdown image, image link, or file path; the separate visual tool owns the image.\n"
+        "- Format your answer in Markdown by default when it aids clarity: a bulleted (- ) or numbered list with one item per line, a small table for comparisons, and **bold** for key terms. Don't pad length just to format.\n"
         "- Never invent facts about the student; rely only on the context.\n"
         "- Never show numeric grades; give verbal, encouraging feedback.\n"
         "- Transparency: the system already disclosed this is AI; do not pretend to be human."
@@ -528,10 +534,14 @@ async def run_coach_stream(
             pending_output = pending_output[boundary.end():]
             if not sentence:
                 continue
-            sentence_count += 1
             separator = " " if collected else ""
             collected += separator + sentence
             yield separator + sentence
+            # A bare list marker ("1.", "-", "•") is not a sentence — otherwise a
+            # numbered/bulleted list is cut off after two markers. Only count
+            # sentences with real content toward the brevity cap.
+            if not _BARE_MARKER.fullmatch(sentence):
+                sentence_count += 1
 
     if sentence_count < max_sentences and pending_output.strip():
         remainder = pending_output.strip()[:1200 if support_mode == "explanation" else 600]

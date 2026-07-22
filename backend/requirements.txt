@@ -5,6 +5,7 @@ mcp>=1.28,<2
 agent-framework-core==1.11.0
 motor
 certifi
+defusedxml>=0.7,<1
 PyJWT>=2.9.0,<3.0
 azure-communication-email
 azure-monitor-opentelemetry>=1.6,<2

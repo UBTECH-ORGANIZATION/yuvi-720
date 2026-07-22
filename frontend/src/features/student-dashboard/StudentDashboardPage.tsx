@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import { LearnerAppBar } from '../../components/LearnerAppBar'
-import { EmptyState, ErrorState, Icon, LoadingState } from '../../components/primitives'
+import { EmptyState, ErrorState, Icon } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useBrain } from '../../providers/BrainProvider'
-import { useCompanion } from '../../providers/CompanionProvider'
 import { getDashboard, type DashboardDTO } from '../../services/brain'
 import {
   getLearningCatalog,
@@ -13,8 +12,12 @@ import {
 import { navigate } from '../../app/router'
 import { selectNextRoute } from '../../services/agents'
 import { DashboardHero } from './DashboardHero'
-import { DashboardOverview } from './DashboardOverview'
-import { SubjectJourney } from './SubjectJourney'
+import { DashboardLoadingScreen } from './DashboardLoadingScreen'
+import { LearningMap } from './LearningMap'
+import { MyGoals } from './MyGoals'
+import { RecentLessons } from './RecentLessons'
+import { ActivenessMapSection } from './ActivenessMapSection'
+import { StudentConnectionsPane } from './StudentConnectionsPane'
 import './student-dashboard.css'
 
 /**
@@ -25,7 +28,6 @@ import './student-dashboard.css'
 export function StudentDashboardPage() {
   const { t, language } = useI18n()
   const { learnerId, brain, refresh: refreshBrain } = useBrain()
-  const { open: openCompanion } = useCompanion()
   const [dashboard, setDashboard] = useState<DashboardDTO | null>(null)
   const [roadmapUnits, setRoadmapUnits] = useState<LearningUnitDTO[]>([])
   const [loading, setLoading] = useState(true)
@@ -33,6 +35,12 @@ export function StudentDashboardPage() {
   const [reloadKey, setReloadKey] = useState(0)
   const [isStarting, setIsStarting] = useState(false)
   const [actionError, setActionError] = useState(false)
+  const [minimumLoadElapsed, setMinimumLoadElapsed] = useState(false)
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setMinimumLoadElapsed(true), 1600)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     if (!learnerId) return
@@ -58,10 +66,13 @@ export function StudentDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [learnerId, language, reloadKey])
 
+  // The lesson catalog loads once per visit (or language switch). It is NOT
+  // tied to the focus/brain-updated refresh cycle — refetching it made the
+  // whole carousel remount and replay its entrance animation mid-session.
   useEffect(() => {
     let active = true
     const controller = new AbortController()
-    getLearningCatalog(controller.signal)
+    getLearningCatalog(controller.signal, language)
       .then((catalog) => {
         if (active) setRoadmapUnits(catalog.units)
       })
@@ -70,7 +81,7 @@ export function StudentDashboardPage() {
       active = false
       controller.abort()
     }
-  }, [learnerId, reloadKey])
+  }, [learnerId, language])
 
   useEffect(() => {
     const refresh = () => setReloadKey((key) => key + 1)
@@ -119,13 +130,23 @@ export function StudentDashboardPage() {
 
   const studentName = dashboard?.name || brain?.identity.display_name || t('sdash.learnerFallback')
 
+  const utilityPane = window.location.pathname.endsWith('/chat')
+    ? 'chat'
+    : window.location.pathname.endsWith('/calendar')
+      ? 'calendar'
+      : null
+
+  if (utilityPane) {
+    return <StudentConnectionsPane mode={utilityPane} studentName={studentName} />
+  }
+
+  if (!minimumLoadElapsed || (loading && !dashboard)) return <DashboardLoadingScreen />
+
   return (
     <div className="sd-page">
       <LearnerAppBar studentName={studentName} />
 
       <main className="sd-dashboard">
-        {loading && !dashboard && <LoadingState title={t('sdash.loading')} body={t('sdash.loading.body')} />}
-
         {error && !dashboard && (
           <ErrorState
             title={t('sdash.error')}
@@ -151,21 +172,35 @@ export function StudentDashboardPage() {
               onStart={() => void startHeroStep()}
               onBrowse={() => navigate('/learning')}
             />
-            <SubjectJourney
-              subjects={dashboard.subjects}
-              roadmapUnits={roadmapUnits}
-              onOpenLearning={() => navigate('/learning')}
-              onOpenComponent={openRoadmapComponent}
-            />
-            <DashboardOverview
-              dashboard={dashboard}
-              onMentoring={() => navigate('/mentoring')}
-              onAskYuvi={openCompanion}
-            />
+            {/* Two-column layout: the learner's own activity (lessons, goals)
+                reads down the main column; the learning map rides a sticky
+                side rail so "where am I strong / what to reinforce" stays in
+                view while scrolling. Collapses to one column on narrow screens. */}
+            <div className="sd-grid">
+              <div className="sd-grid__main">
+                <RecentLessons
+                  units={roadmapUnits}
+                  onOpenLearning={() => navigate('/learning')}
+                  onOpenComponent={openRoadmapComponent}
+                />
+                <MyGoals
+                  goals={dashboard.goals}
+                  onSeeAll={() => navigate('/mentoring')}
+                  onAddGoal={() => navigate('/mentoring')}
+                />
+              </div>
+              <aside className="sd-grid__rail">
+                <LearningMap competencies={dashboard.competencies} />
+              </aside>
+            </div>
             <p className="sd-last-updated" aria-live="polite">
               <Icon name="check" size={14} />
               {t('sdash.live')}
             </p>
+            <ActivenessMapSection
+              competencies={dashboard.competencies}
+              studentName={studentName}
+            />
           </>
         )}
       </main>
