@@ -20,49 +20,46 @@
 @keyframes gw-spin { to { transform: rotate(360deg); } }
 @keyframes gw-pulse { 0%, 100% { transform: scale(1); opacity: .95; } 50% { transform: scale(1.1); opacity: 1; } }
 
-/* ── Bottom gate ──────────────────────────────────────────────────────────── */
+/* ── Bottom gate — a calm docked card (no dome) ───────────────────────────── */
 .trail-gate {
   position: fixed;
   left: 50%;
-  inset-block-end: 0;
+  inset-block-end: 18px;
   z-index: 100;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 2px;
-  inline-size: 344px;
-  max-inline-size: calc(100% - 24px);
-  block-size: 118px;
-  padding: 16px 26px 0;
-  border: 0;
-  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  gap: 13px;
+  inline-size: auto;
+  max-inline-size: calc(100% - 32px);
+  padding: 11px 22px 11px 16px;
+  border: 1px solid rgba(150, 130, 255, .22);
+  border-radius: 18px;
   background:
-    radial-gradient(circle at 32% 12%, rgba(150, 180, 255, .26), transparent 50%),
-    radial-gradient(circle at 82% 82%, rgba(58, 190, 214, .34), transparent 60%),
-    linear-gradient(160deg, #241c5e 0%, #21356e 52%, #17495c 100%);
-  box-shadow: 0 -18px 54px rgba(60, 90, 190, .5), 0 -6px 22px rgba(48, 160, 200, .3), inset 0 1px 0 rgba(255, 255, 255, .34);
+    radial-gradient(140px circle at 16% 0%, rgba(138, 108, 255, .18), transparent 72%),
+    linear-gradient(180deg, rgba(30, 25, 62, .92), rgba(18, 15, 40, .94));
+  box-shadow: 0 16px 40px rgba(8, 6, 26, .5), inset 0 1px 0 rgba(255, 255, 255, .06);
+  backdrop-filter: blur(12px);
   cursor: pointer;
-  color: #fff;
-  transform: translateX(-50%) translateY(100%);
+  color: #eef0ff;
+  transform: translateX(-50%) translateY(140%);
   opacity: 0;
   pointer-events: none;
-  transition: transform 480ms cubic-bezier(.2, .7, .2, 1), opacity 340ms ease, box-shadow 260ms ease;
+  transition: transform 460ms cubic-bezier(.2, .7, .2, 1), opacity 320ms ease, box-shadow 240ms ease, border-color 240ms ease;
   will-change: transform, opacity;
 }
 .trail-gate--visible {
   transform: translateX(-50%) translateY(0);
   opacity: 1;
   pointer-events: auto;
-  animation: trail-gate-breathe 3.2s ease-in-out infinite 480ms;
 }
 .trail-gate:hover {
-  animation-play-state: paused;
-  transform: translateX(-50%) translateY(-12px) scale(1.04);
-  box-shadow: 0 -26px 70px rgba(70, 110, 220, .72), 0 -10px 30px rgba(58, 190, 216, .5), inset 0 1px 0 rgba(255, 255, 255, .55);
+  transform: translateX(-50%) translateY(-3px);
+  border-color: rgba(178, 158, 255, .4);
+  box-shadow: 0 22px 52px rgba(8, 6, 26, .58), inset 0 1px 0 rgba(255, 255, 255, .1);
 }
-.trail-gate:focus-visible { outline: none; transform: translateX(-50%) translateY(-12px) scale(1.04); box-shadow: 0 -26px 70px rgba(70, 110, 220, .78), 0 0 0 3px rgba(255, 255, 255, .7); }
-@keyframes trail-gate-breathe { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-7px); } }
-.trail-gate__portal { position: relative; inline-size: 46px; block-size: 46px; display: grid; place-items: center; pointer-events: none; }
+.trail-gate:focus-visible { outline: none; transform: translateX(-50%) translateY(-3px); box-shadow: 0 22px 52px rgba(8, 6, 26, .58), 0 0 0 3px rgba(150, 130, 255, .5); }
+.trail-gate__portal { position: relative; inline-size: 40px; block-size: 40px; flex: none; display: grid; place-items: center; pointer-events: none; }
 .trail-gate__spark {
   position: absolute;
   inline-size: 8px;
@@ -73,81 +70,64 @@
   box-shadow: 0 0 10px var(--gw-c);
   opacity: 0;
 }
-.trail-gate__label { display: flex; flex-direction: column; align-items: center; gap: 1px; pointer-events: none; }
-.trail-gate__title { font-size: var(--sp-fs-md, 16px); font-weight: 800; text-shadow: 0 1px 8px rgba(40, 24, 92, .4); white-space: nowrap; }
-.trail-gate__hint { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: rgba(255, 255, 255, .86); }
+.trail-gate__label { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; pointer-events: none; }
+.trail-gate__title { font-size: var(--sp-fs-md, 16px); font-weight: 800; white-space: nowrap; }
+.trail-gate__hint { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: rgba(224, 220, 250, .7); }
 .trail-gate__hint .sp-icon { animation: gw-nudge 1.8s ease-in-out infinite; }
-@keyframes gw-nudge { 0%, 100% { transform: translateY(2px); opacity: .7; } 50% { transform: translateY(-3px); opacity: 1; } }
-@media (max-width: 720px) { .trail-gate { inline-size: 300px; block-size: 104px; } }
+@keyframes gw-nudge { 0%, 100% { transform: translateY(2px); opacity: .6; } 50% { transform: translateY(-2px); opacity: 1; } }
+@media (max-width: 720px) { .trail-gate { max-inline-size: calc(100% - 24px); } }
 
-/* ── Reveal: the gate grows to fill below the nav, then content fades in ───── */
-/* Transparent while growing so the real dashboard stays visible behind the
-   gate; the growing gate (and the scrim) cover it progressively, bottom-up. */
+/* ── Reveal: a full-screen sheet that slides up + fades in over the same dark
+   product surface (no expanding dome). ──────────────────────────────────────── */
 .amap-overlay {
   position: fixed;
   inset: 0;
   z-index: 2000;
   display: flex;
   flex-direction: column;
-  background: transparent;
+  background:
+    radial-gradient(1100px circle at 50% 24%, rgba(120, 96, 240, .16), transparent 60%),
+    radial-gradient(820px circle at 84% 90%, rgba(74, 112, 210, .10), transparent 62%),
+    linear-gradient(168deg, #0f1230 0%, #161435 46%, #1c1740 100%);
+  animation: amap-sheet-in .42s cubic-bezier(.22, .68, .16, 1) both;
 }
+.amap-overlay.is-closing { animation: amap-sheet-out .3s ease both; }
+@keyframes amap-sheet-in {
+  from { opacity: 0; transform: translateY(26px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes amap-sheet-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(26px) scale(.99); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .amap-overlay, .amap-overlay.is-closing { animation: amap-sheet-fade .2s ease both; }
+}
+@keyframes amap-sheet-fade { from { opacity: 0; } to { opacity: 1; } }
+
 .amap__nav { flex: none; position: relative; z-index: 3; }
-/* Once committed, blend the app bar into the map's surface. While the gate is
-   still growing the nav keeps its normal dashboard look (matches the page
-   showing behind), so nothing changes until the map has filled. */
-.amap-overlay.is-committed .amap__nav .app-bar {
-  background: linear-gradient(180deg, rgba(28, 24, 74, .72), rgba(23, 40, 82, .46));
-  border-block-end: 1px solid rgba(150, 180, 255, .16);
-  box-shadow: 0 8px 30px rgba(10, 12, 40, .3);
-  transition: background .4s ease, border-color .4s ease, box-shadow .4s ease;
+/* Blend the app bar into the map's surface. */
+.amap-overlay .amap__nav .app-bar {
+  background: linear-gradient(180deg, rgba(24, 20, 58, .72), rgba(20, 17, 46, .5));
+  border-block-end: 1px solid rgba(140, 120, 230, .16);
+  box-shadow: 0 8px 30px rgba(8, 8, 30, .3);
 }
-.amap-overlay.is-committed .amap__nav .learner-app-nav {
-  background: rgba(14, 16, 46, .42);
-  border-color: rgba(150, 180, 255, .18);
+.amap-overlay .amap__nav .learner-app-nav {
+  background: rgba(14, 14, 40, .4);
+  border-color: rgba(140, 120, 230, .18);
 }
-.amap-overlay.is-committed .amap__nav .learner-app-nav button { color: rgba(224, 226, 255, .74); }
-.amap-overlay.is-committed .amap__nav .learner-app-nav button:hover { color: #fff; }
-.amap-overlay.is-committed .amap__nav .learner-app-nav button.is-active {
-  background: rgba(120, 150, 255, .22);
+.amap-overlay .amap__nav .learner-app-nav button { color: rgba(220, 222, 250, .74); }
+.amap-overlay .amap__nav .learner-app-nav button:hover { color: #fff; }
+.amap-overlay .amap__nav .learner-app-nav button.is-active {
+  background: rgba(120, 130, 240, .2);
   color: #fff;
-  box-shadow: inset 0 0 0 1px rgba(180, 200, 255, .28);
+  box-shadow: inset 0 0 0 1px rgba(170, 180, 250, .26);
 }
-.amap__below { position: relative; flex: 1; min-block-size: 0; overflow: hidden; }
-.amap__scrim { position: absolute; inset: 0; z-index: 0; background: #05041a; opacity: 0; pointer-events: none; will-change: opacity; }
-/* The growing gate — JS drives its size; it is also the page background. */
-.trail-gate--grow {
-  position: absolute;
-  left: 50%;
-  inset-block-end: 0;
-  inset-block-start: auto;
-  max-inline-size: none;
-  z-index: 1;
-  transform: translateX(-50%);
-  opacity: 1;
-  pointer-events: none;
-  overflow: hidden;
-  box-shadow: none;
-  transition: none;
-  animation: none;
-  will-change: width, height;
-}
-.trail-gate__growinner {
-  position: absolute;
-  inset-inline: 0;
-  inset-block-end: 0;
-  block-size: 118px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding-block-start: 16px;
-  color: #fff;
-  will-change: opacity;
-}
-.amap__content { position: absolute; inset: 0; z-index: 2; opacity: 0; }
+.amap__sheet { position: relative; flex: 1; min-block-size: 0; display: flex; }
+
 
 /* ── Map shell ────────────────────────────────────────────────────────────── */
-.amap { block-size: 100%; display: flex; flex-direction: column; color: #eef0ff; }
+.amap { flex: 1; min-inline-size: 0; block-size: 100%; display: flex; flex-direction: column; color: #eef0ff; }
 .amap__nav { position: relative; z-index: 4; }
 .amap__bar { position: relative; z-index: 4; display: flex; align-items: center; gap: 14px; padding: 12px clamp(16px, 4vw, 40px); }
 .amap__icon-btn {
@@ -194,11 +174,21 @@
 .amap__radar { position: relative; inline-size: 100%; display: grid; place-items: center; transform-style: preserve-3d; will-change: transform; }
 .amap__board { position: relative; inline-size: min(94%, 660px); aspect-ratio: 1; transition: transform .5s cubic-bezier(.2, .7, .2, 1); will-change: transform; }
 .amap__svg { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; overflow: visible; }
-.amap__ring { fill: none; stroke: rgba(180, 190, 255, .14); stroke-width: 1.3; }
-.amap__ring:last-of-type { stroke: rgba(190, 200, 255, .3); stroke-width: 1.7; }
-.amap__spoke { stroke: rgba(170, 180, 255, .13); stroke-width: 1.1; }
-.amap__data { stroke: rgba(196, 212, 255, .92); stroke-width: 2.4; stroke-linejoin: round; filter: drop-shadow(0 0 10px rgba(120, 150, 255, .6)); }
-.amap__dot { fill: color-mix(in srgb, var(--c) 70%, #fff); stroke: var(--c); stroke-width: 1.5; filter: drop-shadow(0 0 5px var(--c)); }
+.amap__ring { fill: none; stroke: rgba(170, 178, 235, .09); stroke-width: 1; }
+.amap__ring:last-of-type { stroke: rgba(180, 188, 240, .2); stroke-width: 1.3; }
+.amap__spoke { stroke: rgba(160, 170, 235, .09); stroke-width: 1; transition: stroke .3s ease, stroke-width .3s ease; }
+/* Focus spoke — the ray toward the "focus now" domain gets a gentle light. */
+.amap__spoke.is-focus { stroke: rgba(150, 168, 255, .34); stroke-width: 1.4; }
+.amap__data { stroke: rgba(198, 206, 250, .72); stroke-width: 1.8; stroke-linejoin: round; filter: drop-shadow(0 0 4px rgba(120, 132, 235, .32)); }
+/* Graph vertices stay in one blue-lilac family so the shape reads as a whole,
+   not a rainbow. Only the focus dot picks up its domain accent. */
+.amap__dot { fill: rgba(206, 214, 252, .92); stroke: rgba(150, 164, 240, .9); stroke-width: 1.3; transition: fill .3s ease, r .3s ease; }
+.amap__dot.is-focus {
+  fill: color-mix(in srgb, var(--c) 60%, #fff);
+  stroke: var(--c);
+  stroke-width: 1.6;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--c) 65%, transparent));
+}
 
 /* Change layer — the trace runs from where you were (hollow ghost) to now (the
    solid dot on the shape), with an arrowhead pointing at the current dot. */
@@ -221,45 +211,84 @@
   z-index: 3;
 }
 .amap__emblem-inner { display: block; }
+/* One shared "node" texture for every domain: a dark glass disc, a thin
+   colored rim and a faint local halo. Colour is carried by the border and a
+   soft inner tint only — no glossy candy balls, no permanent glow. */
 .amap__emblem-dome {
   position: relative;
   display: grid;
   place-items: center;
-  inline-size: 56px;
-  block-size: 56px;
+  inline-size: 54px;
+  block-size: 54px;
   border-radius: 50%;
-  color: #fff;
-  background: radial-gradient(circle at 34% 26%, color-mix(in srgb, var(--c) 26%, #fff 74%), var(--c) 56%, color-mix(in srgb, var(--c) 55%, #000 45%) 100%);
+  color: color-mix(in srgb, var(--c) 58%, #eef0ff 42%);
+  background:
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--c) 16%, transparent), transparent 72%),
+    linear-gradient(180deg, rgba(32, 28, 62, .92), rgba(18, 15, 40, .94));
+  border: 1.5px solid color-mix(in srgb, var(--c) 42%, rgba(150, 160, 220, .18));
   box-shadow:
-    0 10px 22px rgba(0, 0, 0, .5),
-    0 0 26px color-mix(in srgb, var(--c) 55%, transparent),
-    inset 0 2px 5px rgba(255, 255, 255, .55),
-    inset 0 -7px 12px rgba(0, 0, 0, .32);
-  transition: transform 200ms cubic-bezier(.2, .7, .2, 1), box-shadow 200ms ease;
+    0 6px 16px rgba(0, 0, 0, .4),
+    inset 0 1px 0 rgba(255, 255, 255, .05);
+  transition: transform 200ms cubic-bezier(.2, .7, .2, 1), box-shadow 200ms ease, border-color 200ms ease;
 }
+/* Double-ring used only by the focus node (see .is-focus below). */
 .amap__emblem-dome::after {
   content: '';
   position: absolute;
-  inset-block-start: 15%;
-  inset-inline-start: 22%;
-  inline-size: 36%;
-  block-size: 26%;
+  inset: -6px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, .92), transparent 68%);
-  filter: blur(1px);
+  border: 1.5px solid transparent;
+  transition: border-color 220ms ease, inset 220ms ease;
   pointer-events: none;
 }
-.amap__emblem-dome .sp-icon { position: relative; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .35)); }
-.amap__emblem--strong .amap__emblem-dome { inline-size: 64px; block-size: 64px; }
-.amap__emblem--support .amap__emblem-dome { inline-size: 48px; block-size: 48px; }
-.amap__emblem:hover .amap__emblem-dome,
-.amap__emblem.is-active .amap__emblem-dome {
-  transform: translateY(-4px) scale(1.07);
+.amap__emblem-dome .sp-icon { position: relative; }
+/* Every node is the same size; the focus node is the only one that grows. */
+.amap__emblem--strong .amap__emblem-dome,
+.amap__emblem--support .amap__emblem-dome { inline-size: 54px; block-size: 54px; }
+/* Subtle hover — a small lift and a local halo, never a permanent glow. */
+.amap__emblem:hover .amap__emblem-dome {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--c) 64%, transparent);
   box-shadow:
-    0 16px 30px rgba(0, 0, 0, .55),
-    0 0 42px color-mix(in srgb, var(--c) 78%, transparent),
-    inset 0 2px 6px rgba(255, 255, 255, .6),
-    inset 0 -7px 12px rgba(0, 0, 0, .32);
+    0 12px 24px rgba(0, 0, 0, .48),
+    0 0 16px color-mix(in srgb, var(--c) 34%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+/* Selected (clicked) node — a firm colored rim so it clearly reads as chosen. */
+.amap__emblem.is-active .amap__emblem-dome {
+  transform: translateY(-3px) scale(1.04);
+  color: color-mix(in srgb, var(--c) 42%, #fff 58%);
+  border-color: color-mix(in srgb, var(--c) 78%, transparent);
+  box-shadow:
+    0 14px 26px rgba(0, 0, 0, .5),
+    0 0 22px color-mix(in srgb, var(--c) 44%, transparent),
+    inset 0 0 12px color-mix(in srgb, var(--c) 20%, transparent);
+}
+/* THE focus node — "my focus now": bigger, stronger halo and a double ring.
+   This is the one thing the eye should land on first. */
+.amap__emblem.is-focus { z-index: 5; }
+.amap__emblem.is-focus .amap__emblem-dome {
+  inline-size: 66px;
+  block-size: 66px;
+  color: color-mix(in srgb, var(--c) 38%, #fff 62%);
+  border-color: color-mix(in srgb, var(--c) 82%, transparent);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, .5),
+    0 0 30px color-mix(in srgb, var(--c) 52%, transparent),
+    inset 0 0 16px color-mix(in srgb, var(--c) 24%, transparent);
+}
+.amap__emblem.is-focus .amap__emblem-dome::after {
+  inset: -7px;
+  border-color: color-mix(in srgb, var(--c) 46%, transparent);
+  animation: amap-focus-pulse 3s ease-in-out infinite;
+}
+.amap__emblem.is-focus .sp-icon { transform: scale(1.08); }
+@keyframes amap-focus-pulse {
+  0%, 100% { opacity: .55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .amap__emblem.is-focus .amap__emblem-dome::after { animation: none; opacity: .9; }
 }
 .amap__label {
   position: absolute;
@@ -274,6 +303,13 @@
   text-shadow: 0 2px 10px rgba(0, 0, 0, .75);
   pointer-events: none;
   transition: opacity .35s ease, filter .35s ease;
+}
+/* Non-focus labels sit a touch quieter; the focus label is brighter + bolder. */
+.amap__label { color: rgba(224, 226, 245, .8); }
+.amap__label.is-focus {
+  color: #fff;
+  font-weight: 800;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .75), 0 0 14px color-mix(in srgb, var(--c) 45%, transparent);
 }
 /* Focus zoom: everything but the chosen domain recedes. */
 .amap__emblem { transition: opacity .35s ease, filter .35s ease; }
@@ -341,9 +377,11 @@
   block-size: 26px;
   flex: none;
   border-radius: 50%;
-  color: #fff;
-  background: radial-gradient(circle at 34% 28%, color-mix(in srgb, var(--c) 26%, #fff 74%), var(--c) 62%, color-mix(in srgb, var(--c) 55%, #000 45%) 100%);
-  box-shadow: inset 0 1px 2px rgba(255, 255, 255, .5);
+  color: color-mix(in srgb, var(--c) 50%, #eef0ff 50%);
+  background:
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--c) 18%, transparent), transparent 72%),
+    linear-gradient(180deg, rgba(32, 28, 62, .9), rgba(18, 15, 40, .92));
+  border: 1.3px solid color-mix(in srgb, var(--c) 46%, transparent);
 }
 .amap__mini-head strong { font-size: 13px; font-weight: 800; color: #f2f0ff; }
 .amap__spark { inline-size: 100%; block-size: 46px; overflow: visible; }
@@ -361,17 +399,17 @@
   flex-direction: column;
   min-block-size: 0;
   padding: 22px;
-  border-radius: 24px;
-  border: 1px solid rgba(150, 130, 255, .2);
-  background: linear-gradient(180deg, rgba(26, 22, 56, .7), rgba(16, 13, 38, .74));
-  box-shadow: 0 24px 60px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .05);
-  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid rgba(140, 124, 220, .12);
+  background: linear-gradient(180deg, rgba(26, 22, 54, .4), rgba(18, 15, 42, .44));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
+  backdrop-filter: blur(6px);
 }
 .amap__panel-spot {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 0%), rgba(150, 130, 255, .16), transparent 72%);
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 0%), rgba(150, 130, 255, .1), transparent 72%);
 }
 .amap__panel > :not(.amap__panel-spot) { position: relative; z-index: 1; }
 /* Inline back arrow, on the same line as the title. */
@@ -436,12 +474,59 @@
   color: inherit;
   text-align: start;
   cursor: pointer;
+  position: relative;
   transition: background .16s ease, border-color .16s ease, transform .16s ease;
 }
 .amap__drow:hover {
   background: color-mix(in srgb, var(--c) 14%, rgba(255, 255, 255, .04));
   border-color: color-mix(in srgb, var(--c) 42%, transparent);
   transform: translateY(-1px);
+}
+/* The focus row mirrors the focus node: a glowing rim, a slightly brighter bed
+   and a thin light line entering from the graph side — so tapping the row and
+   tapping the dot on the map feel like the same act. */
+.amap__drow.is-focus {
+  background: color-mix(in srgb, var(--c) 12%, rgba(255, 255, 255, .05));
+  border-color: color-mix(in srgb, var(--c) 56%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--c) 28%, transparent),
+    0 10px 24px rgba(0, 0, 0, .3),
+    0 0 18px color-mix(in srgb, var(--c) 20%, transparent);
+}
+.amap__drow.is-focus::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -22px;
+  inline-size: 24px;
+  block-size: 2px;
+  transform: translateY(-50%);
+  border-radius: 2px;
+  background: linear-gradient(to right, transparent, color-mix(in srgb, var(--c) 72%, transparent));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--c) 52%, transparent);
+  pointer-events: none;
+}
+.amap__drow.is-focus .amap__drow-mark {
+  color: color-mix(in srgb, var(--c) 40%, #fff 60%);
+  border-color: color-mix(in srgb, var(--c) 80%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--c) 40%, transparent);
+}
+.amap__drow.is-focus .amap__pip.is-on {
+  background: var(--c);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--c) 62%, transparent);
+}
+/* "my focus now" pill — the only textual focus cue in the list. */
+.amap__drow-focus {
+  flex: none;
+  padding: 1.5px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1.3;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--c) 28%, #fff 72%);
+  background: color-mix(in srgb, var(--c) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c) 42%, transparent);
 }
 .amap__drow-mark {
   display: inline-grid;
@@ -450,14 +535,18 @@
   block-size: 30px;
   flex: none;
   border-radius: 50%;
-  color: #fff;
-  background: radial-gradient(circle at 34% 28%, color-mix(in srgb, var(--c) 26%, #fff 74%), var(--c) 62%, color-mix(in srgb, var(--c) 55%, #000 45%) 100%);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, .35), inset 0 1px 2px rgba(255, 255, 255, .5);
+  color: color-mix(in srgb, var(--c) 58%, #eef0ff 42%);
+  background:
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--c) 16%, transparent), transparent 72%),
+    linear-gradient(180deg, rgba(32, 28, 62, .9), rgba(18, 15, 40, .92));
+  border: 1.4px solid color-mix(in srgb, var(--c) 40%, rgba(150, 160, 220, .16));
+  transition: border-color .16s ease, color .16s ease;
 }
 .amap__drow-name { font-size: 13.5px; font-weight: 700; color: #ecebff; min-inline-size: 0; }
 .amap__drow-bar { display: inline-flex; gap: 4px; }
 .amap__pip { inline-size: 7px; block-size: 7px; border-radius: 50%; background: rgba(255, 255, 255, .16); }
-.amap__pip.is-on { background: var(--c); box-shadow: 0 0 7px color-mix(in srgb, var(--c) 70%, transparent); }
+/* Colored, but calm by default — no glow until this domain is the focus. */
+.amap__pip.is-on { background: color-mix(in srgb, var(--c) 78%, transparent); }
 .amap__drow-go { color: rgba(210, 206, 240, .5); display: inline-grid; place-items: center; }
 .amap__drow:hover .amap__drow-go { color: #fff; }
 [dir='ltr'] .amap__drow-go .sp-icon { transform: scaleX(-1); }
@@ -511,9 +600,12 @@
   block-size: 46px;
   flex: none;
   border-radius: 50%;
-  color: #fff;
-  background: radial-gradient(circle at 34% 26%, color-mix(in srgb, var(--c) 26%, #fff 74%), var(--c) 58%, color-mix(in srgb, var(--c) 55%, #000 45%) 100%);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, .4), inset 0 2px 4px rgba(255, 255, 255, .5), inset 0 -5px 9px rgba(0, 0, 0, .3);
+  color: color-mix(in srgb, var(--c) 46%, #fff 54%);
+  background:
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--c) 20%, transparent), transparent 72%),
+    linear-gradient(180deg, rgba(32, 28, 62, .92), rgba(18, 15, 40, .94));
+  border: 1.5px solid color-mix(in srgb, var(--c) 62%, transparent);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, .4), 0 0 16px color-mix(in srgb, var(--c) 26%, transparent);
 }
 .amap__chat-emblem { inline-size: 34px; block-size: 34px; }
 .amap__chip {

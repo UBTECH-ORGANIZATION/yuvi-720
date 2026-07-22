@@ -1,12 +1,12 @@
-/* Closed companion: Yuvi lives in an orbital portal at the physical bottom-right. */
+/* Closed companion: Yuvi rests in the physical bottom-right corner. */
 .Yuvi-companion-dock {
   position: fixed;
-  inset-block-end: 10px;
-  right: 12px; /* Intentional physical placement requested for every language. */
+  inset-block-end: max(16px, env(safe-area-inset-bottom));
+  right: 16px; /* Intentional physical placement requested for every language. */
   left: auto;
   z-index: 1410;
-  inline-size: 174px;
-  block-size: 174px;
+  inline-size: 150px;
+  block-size: 150px;
   pointer-events: none;
   transition: opacity 220ms ease, transform 260ms var(--sp-ease), visibility 220ms;
 }
@@ -88,115 +88,86 @@
 .Yuvi-companion-dock__portal {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
   cursor: pointer;
-  pointer-events: auto;
+  /* Only Yuvi's body is interactive; the empty corner around him lets clicks
+     fall through to the content he floats over, so he never blocks a button. */
+  pointer-events: none;
   transition: transform 180ms var(--sp-ease);
 }
 
-/* The portal surface is separate from Yuvi. Fading the portal element itself
-   also faded its 3D child, which made him vanish halfway through the flight. */
-.Yuvi-companion-dock__portal::before {
-  content: '';
+/* While the learner is scrolling, Yuvi steps aside (fades + drops a little) so
+   he never obscures the content being read. He returns once scrolling stops. */
+.Yuvi-companion-dock.is-scrolling {
+  opacity: 0.32;
+  transform: translateY(10px);
+  pointer-events: none;
+}
+
+/* Subtle purple ground shadow so Yuvi feels present without a big halo. */
+.Yuvi-companion-dock__base {
   position: absolute;
-  inset: 0;
+  inset-block-end: 8px;
+  left: 50%;
   z-index: 0;
-  border: 1px solid rgba(124, 108, 255, 0.26);
+  inline-size: 74px;
+  block-size: 15px;
   border-radius: 50%;
-  background:
-    radial-gradient(circle at 48% 47%, rgba(255, 255, 255, 0.96) 0 29%, rgba(236, 232, 255, 0.86) 50%, rgba(76, 201, 240, 0.12) 68%, transparent 70%),
-    linear-gradient(145deg, rgba(111, 91, 255, 0.15), rgba(76, 201, 240, 0.1));
-  box-shadow: 0 18px 44px rgba(69, 51, 154, 0.2), inset 0 1px rgba(255, 255, 255, 0.9);
+  background: radial-gradient(ellipse at center, rgba(111, 91, 255, 0.34), rgba(111, 91, 255, 0.12) 55%, transparent 72%);
+  filter: blur(2px);
+  transform: translateX(-50%);
   pointer-events: none;
-  transition: box-shadow 180ms ease;
+  transition: opacity 180ms ease, transform 180ms ease;
 }
 
-.Yuvi-companion-dock__portal:hover {
-  transform: translateY(-2px) scale(1.015);
+.Yuvi-companion-dock__portal:has(.Yuvi-companion-dock__robot:hover) .Yuvi-companion-dock__base {
+  transform: translateX(-50%) scale(1.06);
 }
 
-.Yuvi-companion-dock__portal:hover::before {
-  box-shadow: 0 22px 52px rgba(69, 51, 154, 0.27), inset 0 1px rgba(255, 255, 255, 0.9);
+.Yuvi-companion-dock.is-opening .Yuvi-companion-dock__base,
+.Yuvi-companion-dock.is-closing .Yuvi-companion-dock__base {
+  opacity: 0;
 }
 
-.Yuvi-companion-dock__portal::after {
+/* Small hint bubble shown on hover / focus only. */
+.Yuvi-companion-dock__tooltip {
+  position: absolute;
+  inset-block-end: 100%;
+  right: 4px;
+  z-index: 6;
+  margin-block-end: 4px;
+  padding: 7px 12px;
+  border-radius: 12px;
+  background: var(--sp-primary-700);
+  color: #fff;
+  font: 700 var(--sp-fs-xs)/1.2 var(--sp-font);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(6px) scale(.96);
+  transform-origin: bottom right;
+  box-shadow: 0 12px 28px rgba(61, 46, 139, 0.28);
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 180ms var(--sp-ease);
+}
+
+.Yuvi-companion-dock__tooltip::after {
   content: '';
   position: absolute;
-  inset: 26px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(76, 201, 240, 0.16), transparent 67%);
-  filter: blur(7px);
-  animation: Yuvi-portal-glow 3s ease-in-out infinite;
+  inset-block-start: 100%;
+  right: 20px;
+  border: 6px solid transparent;
+  border-block-start-color: var(--sp-primary-700);
 }
 
-.Yuvi-companion-dock__ring {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.Yuvi-companion-dock__ring--outer {
-  inset: 9px;
-  border: 1px solid rgba(111, 91, 255, 0.28);
-  animation: Yuvi-portal-spin 18s linear infinite;
-}
-
-.Yuvi-companion-dock__ring--inner {
-  inset: 25px;
-  border: 1px dashed rgba(76, 201, 240, 0.5);
-  animation: Yuvi-portal-spin 12s linear infinite reverse;
-}
-
-.Yuvi-companion-dock__orbit-label {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  opacity: 0;
-  pointer-events: none;
-  transform: scale(.96);
-  transition: opacity 180ms ease, transform 220ms var(--sp-ease);
-}
-
-.Yuvi-companion-dock__orbit-label > span {
-  --orbit-angle: calc(-52deg + (110deg * var(--orbit-index) / var(--orbit-count)));
-  position: absolute;
-  inset-block-start: 50%;
-  inset-inline-start: 50%;
-  inline-size: 0;
-  block-size: 0;
-  transform: rotate(var(--orbit-angle)) translateY(-95px);
-  transform-origin: center;
-}
-
-.Yuvi-companion-dock__orbit-label > span > span {
-  display: block;
-  color: var(--sp-primary-700);
-  font: 800 13px/1 var(--sp-font);
-  transform: translate(-50%, -50%);
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.98),
-    0 0 5px rgba(255, 255, 255, 0.96),
-    0 3px 9px rgba(62, 45, 150, 0.2);
-}
-
-.Yuvi-companion-dock__portal:hover .Yuvi-companion-dock__orbit-label,
-.Yuvi-companion-dock__portal:focus-within .Yuvi-companion-dock__orbit-label {
+.Yuvi-companion-dock__portal:has(.Yuvi-companion-dock__robot:hover) .Yuvi-companion-dock__tooltip,
+.Yuvi-companion-dock__portal:focus-within .Yuvi-companion-dock__tooltip {
   opacity: 1;
-  transform: scale(1);
+  transform: translateY(0) scale(1);
 }
 
-.Yuvi-companion-dock__orbit-node {
-  position: absolute;
-  z-index: 3;
-  inline-size: 11px;
-  block-size: 11px;
-  border: 3px solid #fff;
-  border-radius: 50%;
-  box-shadow: 0 4px 12px rgba(62, 45, 150, 0.25);
+.Yuvi-companion-dock.is-opening .Yuvi-companion-dock__tooltip,
+.Yuvi-companion-dock.is-closing .Yuvi-companion-dock__tooltip {
+  opacity: 0 !important;
 }
-
-.Yuvi-companion-dock__orbit-node--one { inset-block-start: 20px; inset-inline-end: 28px; background: var(--sp-teal-500); }
-.Yuvi-companion-dock__orbit-node--two { inset-block-end: 28px; inset-inline-start: 17px; background: var(--sp-primary-600); }
 
 .Yuvi-companion-dock__robot {
   position: absolute;
@@ -204,6 +175,11 @@
   inset: -7px 10px -1px;
   pointer-events: auto;
   filter: drop-shadow(0 13px 16px rgba(54, 42, 126, 0.2));
+  animation: Yuvi-idle-hint 7s ease-in-out infinite;
+}
+
+.Yuvi-companion-dock__robot:hover {
+  animation-play-state: paused;
 }
 
 .Yuvi-companion-dock__thrusters {
@@ -336,6 +312,11 @@
 }
 
 @keyframes Yuvi-chat-loader-spin { to { transform: rotate(360deg); } }
+@keyframes Yuvi-idle-hint {
+  0%, 88%, 100% { transform: scale(1); }
+  92% { transform: scale(1.045); }
+  96% { transform: scale(1.02); }
+}
 @keyframes Yuvi-portal-spin { to { transform: rotate(360deg); } }
 @keyframes Yuvi-portal-glow { 0%, 100% { opacity: .55; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.08); } }
 @keyframes Yuvi-portal-thinking { 0%, 100% { box-shadow: 0 18px 44px rgba(69, 51, 154, 0.2); } 50% { box-shadow: 0 18px 52px rgba(76, 201, 240, 0.42); } }
@@ -403,17 +384,10 @@
 
 @media (max-width: 599px) {
   .Yuvi-companion-dock {
-    inset-block-end: 7px;
-    right: 7px;
-    inline-size: 142px;
-    block-size: 142px;
+    inset-block-end: max(12px, env(safe-area-inset-bottom));
+    right: 10px;
   }
 
-  .Yuvi-companion-dock__robot { inset: -8px 7px -2px; }
-  .Yuvi-companion-dock__orbit-label > span { transform: rotate(var(--orbit-angle)) translateY(-82px); }
-  .Yuvi-companion-dock__orbit-label > span > span {
-    font-size: 11px;
-  }
   .Yuvi-companion-dock__preview { right: 116px; inline-size: min(220px, calc(100vw - 130px)); inset-block-end: 30px; }
 
   .Yuvi-companion-dock.is-opening .Yuvi-companion-dock__robot {
@@ -472,6 +446,7 @@
   .Yuvi-companion-dock.is-closing .Yuvi-companion-dock__thrusters,
   .Yuvi-companion-dock__thrusters i { animation: none; }
   .Yuvi-companion-dock__ring,
+  .Yuvi-companion-dock__robot,
   .Yuvi-companion-dock__portal::after,
   .Yuvi-companion-dock.is-thinking .Yuvi-companion-dock__portal { animation: none; }
   .Yuvi-companion-dock__loader { animation-duration: 1.4s; }

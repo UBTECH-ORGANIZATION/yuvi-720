@@ -27,85 +27,95 @@
 .sd-lmap__heading p { margin: 4px 0 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
 
 /* ── Two columns ────────────────────────────────────────────────── */
+/* Same table structure, but no per-column card: both columns share the one
+   surface of the outer .sd-lmap frame, separated only by a thin divider. */
 .sd-lmap__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(14px, 1.8vw, 22px);
+  gap: 0;
 }
 
 .sd-lmap__col {
-  padding: clamp(12px, 1.6vw, 18px);
-  border: 1px solid var(--sp-border);
-  border-radius: 20px;
-  background: var(--lmap-col-tint, #fbfaff);
+  padding: 0 clamp(14px, 1.8vw, 26px);
+  border: 0;
+  background: none;
 }
-.sd-lmap__col--reinforce { --lmap-col-tint: #fff6f0; --lmap-col-accent: #e08a3c; border-color: rgba(224, 138, 60, .18); }
-.sd-lmap__col--good { --lmap-col-tint: #f1faf5; --lmap-col-accent: #1f9d6b; border-color: rgba(31, 157, 107, .18); }
+.sd-lmap__col--reinforce { --lmap-col-accent: #e08a3c; padding-inline-start: 0; }
+.sd-lmap__col--good {
+  --lmap-col-accent: #1f9d6b;
+  padding-inline-end: 0;
+  border-inline-start: 1px solid var(--sp-border);
+}
 
 .sd-lmap__col-head {
-  display: flex; align-items: center; gap: 8px;
-  padding-block-end: 12px; margin-block-end: 4px;
-  border-block-end: 1px solid rgba(0, 0, 0, .05);
+  display: flex; align-items: center; gap: 9px;
+  padding-block-end: 14px; margin-block-end: 4px;
+  border-block-end: 1px solid var(--sp-border);
 }
 .sd-lmap__col-icon {
   display: grid; place-items: center;
-  inline-size: 26px; block-size: 26px; border-radius: 9px;
-  background: color-mix(in srgb, var(--lmap-col-accent) 14%, #fff);
+  inline-size: 20px; block-size: 20px;
+  background: none;
   color: var(--lmap-col-accent);
 }
 .sd-lmap__col-head h3 {
-  margin: 0; color: var(--lmap-col-accent);
-  font-size: var(--sp-fs-sm); font-weight: 800; line-height: 1;
+  margin: 0; color: var(--sp-ink-500, #6b6880);
+  font-size: var(--sp-fs-sm); font-weight: 700; letter-spacing: .01em; line-height: 1;
 }
 
 .sd-lmap__list { list-style: none; margin: 0; padding: 0; }
-.sd-lmap__list > li + li { border-block-start: 1px solid rgba(0, 0, 0, .05); }
+.sd-lmap__list > li + li { border-block-start: 1px solid var(--sp-border); }
 
 .sd-lmap__empty {
-  margin: 10px 4px; color: var(--sp-ink-400);
+  margin: 12px 2px; color: var(--sp-ink-400);
   font-size: var(--sp-fs-xs); line-height: 1.5;
 }
 
-/* ── Topic row ──────────────────────────────────────────────────── */
+/* ── Topic row — a clean line, not a card ───────────────────────── */
 .sd-lmap-row {
   display: grid;
   grid-template-columns: auto 1fr auto auto;
   align-items: center;
   gap: 12px;
   inline-size: 100%;
-  padding: 12px 8px;
+  padding: 13px 4px;
   border: 0; background: transparent; text-align: start; cursor: pointer;
-  border-radius: 14px;
+  border-radius: 12px;
   transition: background .15s var(--sp-ease);
 }
-.sd-lmap-row:hover { background: rgba(255, 255, 255, .75); }
+.sd-lmap-row:hover { background: color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 6%, transparent); }
 .sd-lmap-row:focus-visible { outline: 3px solid rgba(111, 91, 255, .24); outline-offset: 0; }
 
+/* Small, quiet accent icon — no filled tile. */
 .sd-lmap-row__icon {
   display: grid; place-items: center;
-  inline-size: 38px; block-size: 38px; border-radius: 12px;
+  inline-size: 28px; block-size: 28px; border-radius: 9px;
   color: var(--lmap-accent, var(--sp-primary-600));
-  background: color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 12%, #fff);
+  background: color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 10%, transparent);
 }
+.sd-lmap-row__icon svg { inline-size: 17px; block-size: 17px; }
 .sd-lmap-row__body { display: grid; gap: 2px; min-inline-size: 0; }
 .sd-lmap-row__title {
-  color: var(--sp-ink-900); font-size: var(--sp-fs-sm); font-weight: 750;
+  color: var(--sp-ink-900); font-size: var(--sp-fs-sm); font-weight: 800;
   line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .sd-lmap-row__desc {
-  color: var(--sp-ink-400); font-size: var(--sp-fs-xs); line-height: 1.3;
+  color: var(--sp-ink-400); font-size: var(--sp-fs-xs); line-height: 1.3; font-weight: 400;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
+/* Status is a faint marker — it must not compete with the skill name. */
 .sd-lmap-row__status {
   display: grid; place-items: center;
-  inline-size: 24px; block-size: 24px; border-radius: 50%;
+  inline-size: 18px; block-size: 18px;
+  background: none;
+  opacity: .55;
 }
-.sd-lmap-row__status--good { background: rgba(31, 157, 107, .14); color: #1f9d6b; }
-.sd-lmap-row__status--reinforce { background: rgba(224, 138, 60, .16); color: #e08a3c; }
+.sd-lmap-row__status--good { color: #1f9d6b; }
+.sd-lmap-row__status--reinforce { color: #e08a3c; }
 
-.sd-lmap-row__chevron { color: var(--sp-ink-300, #b7b3c9); display: grid; place-items: center; }
-.sd-lmap-row:hover .sd-lmap-row__chevron { color: var(--sp-primary-600); }
+.sd-lmap-row__chevron { color: var(--sp-ink-300, #c7c4d6); display: grid; place-items: center; opacity: .7; }
+.sd-lmap-row:hover .sd-lmap-row__chevron { color: var(--sp-primary-600); opacity: 1; }
 
 /* ── Responsive: stack columns on narrow viewports ──────────────── */
 @media (max-width: 720px) {
@@ -118,30 +128,26 @@
 [data-theme='dark'] .sd-lmap__heading p { color: rgba(214, 216, 245, .62); }
 [data-theme='dark'] .sd-lmap__head-icon { background: rgba(159, 122, 254, .16); color: #b9a5ff; }
 
-/* Inner status columns: keep each side's identity (amber = reinforce,
-   green = doing well) as a tint over dark glass instead of a light card. */
-[data-theme='dark'] .sd-lmap__col { background: rgba(20, 23, 54, .6); }
-[data-theme='dark'] .sd-lmap__col--reinforce {
-  --lmap-col-accent: #f0a95e;
-  border-color: rgba(224, 138, 60, .3);
-  background: linear-gradient(165deg, rgba(224, 138, 60, .12), rgba(20, 23, 54, .55));
-}
+/* No tinted per-column cards — both columns sit on the one dark card surface,
+   separated only by a thin divider. Each side keeps its accent on the icons. */
+[data-theme='dark'] .sd-lmap__col { background: none; border: 0; }
+[data-theme='dark'] .sd-lmap__col--reinforce { --lmap-col-accent: #f0a95e; }
 [data-theme='dark'] .sd-lmap__col--good {
   --lmap-col-accent: #4cd39a;
-  border-color: rgba(31, 157, 107, .3);
-  background: linear-gradient(165deg, rgba(31, 157, 107, .12), rgba(20, 23, 54, .55));
+  border-inline-start: 1px solid rgba(255, 255, 255, .08);
 }
 [data-theme='dark'] .sd-lmap__col-head { border-block-end-color: rgba(255, 255, 255, .08); }
-[data-theme='dark'] .sd-lmap__col-icon { background: color-mix(in srgb, var(--lmap-col-accent) 22%, transparent); }
+[data-theme='dark'] .sd-lmap__col-icon { background: none; }
+[data-theme='dark'] .sd-lmap__col-head h3 { color: rgba(214, 216, 245, .6); }
 [data-theme='dark'] .sd-lmap__list > li + li { border-block-start-color: rgba(255, 255, 255, .07); }
 [data-theme='dark'] .sd-lmap__empty { color: rgba(214, 216, 245, .55); }
 
-[data-theme='dark'] .sd-lmap-row:hover { background: rgba(255, 255, 255, .06); }
-[data-theme='dark'] .sd-lmap-row__icon { background: color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 24%, transparent); }
+[data-theme='dark'] .sd-lmap-row:hover { background: rgba(255, 255, 255, .05); }
+[data-theme='dark'] .sd-lmap-row__icon { background: color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 16%, transparent); }
 [data-theme='dark'] .sd-lmap-row__title { color: #eef0ff; }
 [data-theme='dark'] .sd-lmap-row__desc { color: rgba(214, 216, 245, .6); }
-[data-theme='dark'] .sd-lmap-row__status--good { background: rgba(31, 157, 107, .24); color: #4cd39a; }
-[data-theme='dark'] .sd-lmap-row__status--reinforce { background: rgba(224, 138, 60, .24); color: #f0a95e; }
+[data-theme='dark'] .sd-lmap-row__status--good { color: #4cd39a; background: none; }
+[data-theme='dark'] .sd-lmap-row__status--reinforce { color: #f0a95e; background: none; }
 [data-theme='dark'] .sd-lmap-row__chevron { color: rgba(214, 216, 245, .4); }
 
 /* ── Topic detail dialog ─────────────────────────────────────────
@@ -193,68 +199,92 @@
 .sd-lmap-detail__close:hover { background: var(--sp-bg-subtle, #f6f5ff); color: var(--sp-ink-700); }
 .sd-lmap-detail__close:focus-visible { outline: 3px solid rgba(111, 91, 255, .26); outline-offset: 2px; }
 
-.sd-lmap-detail__head { display: flex; align-items: center; gap: 14px; padding-inline-end: 34px; }
-.sd-lmap-detail__icon {
+.sd-lmap-detail__head { display: flex; align-items: center; gap: 13px; padding-inline-end: 34px; }
+.sd-lmap-detail__spark {
+  position: relative;
   display: grid;
   place-items: center;
   flex: none;
-  inline-size: 52px;
-  block-size: 52px;
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 14%, transparent);
-  color: var(--lmap-accent, var(--sp-primary-600));
+  inline-size: 48px;
+  block-size: 48px;
+  border-radius: 15px;
+  color: var(--lmap-accent, var(--sp-primary-500));
+  background: color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 12%, transparent);
 }
+/* Local glow behind the small glyph — no big rectangle. */
+.sd-lmap-detail__spark::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 34%, transparent), transparent 70%);
+  filter: blur(6px);
+  opacity: .7;
+  z-index: -1;
+}
+.sd-lmap-detail__spark .sd-lmap-detail__glyph-svg { inline-size: 32px; block-size: 32px; }
 .sd-lmap-detail__head h3 { margin: 0; color: var(--sp-ink-900); font-size: var(--sp-fs-lg); line-height: var(--sp-lh-tight); }
-.sd-lmap-detail__band {
+
+.sd-lmap-detail__meaning { margin: 0; color: var(--sp-ink-600); font-size: var(--sp-fs-sm); line-height: 1.55; }
+
+/* Focus card — the central, prominent area: your one small action right now. */
+.sd-lmap-detail__focus {
+  display: grid;
+  gap: 8px;
+  padding: 15px 16px;
+  border: 1px solid color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 30%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 9%, transparent);
+}
+.sd-lmap-detail__focus-tag {
   display: inline-flex;
-  margin-block-start: 5px;
-  padding: 3px 11px;
-  border-radius: var(--sp-radius-pill);
-  font-size: 11px;
-  font-weight: 750;
+  align-items: center;
+  gap: 6px;
+  color: var(--lmap-accent, var(--sp-primary-600));
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: .02em;
 }
-.sd-lmap-detail__band--good { background: rgba(31, 157, 107, .13); color: #17835a; }
-.sd-lmap-detail__band--reinforce { background: rgba(224, 138, 60, .15); color: #b56a1e; }
+.sd-lmap-detail__focus-tag .sp-icon { flex: none; }
+.sd-lmap-detail__focus-step { margin: 0; color: var(--sp-ink-900); font-size: var(--sp-fs-md, 15px); font-weight: 650; line-height: 1.5; }
 
-.sd-lmap-detail__meaning { margin: 0; color: var(--sp-ink-600); font-size: var(--sp-fs-sm); line-height: 1.6; }
-
-.sd-lmap-detail__block h4 { margin: 0 0 6px; color: var(--sp-ink-900); font-size: var(--sp-fs-xs); font-weight: 800; letter-spacing: .02em; }
-.sd-lmap-detail__block p { margin: 0; color: var(--sp-ink-500, var(--sp-ink-600)); font-size: var(--sp-fs-sm); line-height: 1.6; }
-.sd-lmap-detail__tips { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.sd-lmap-detail__tips li { display: flex; align-items: flex-start; gap: 8px; color: var(--sp-ink-600); font-size: var(--sp-fs-sm); line-height: 1.55; }
-.sd-lmap-detail__tips .sp-icon { flex: none; margin-block-start: 3px; color: var(--lmap-accent, var(--sp-primary-500)); }
-
-.sd-lmap-detail__next {
-  display: flex;
-  align-items: flex-start;
-  gap: 11px;
-  padding: 13px 15px;
-  border: 1px solid color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 26%, transparent);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 7%, transparent);
-}
-.sd-lmap-detail__next-icon { flex: none; display: grid; place-items: center; inline-size: 30px; block-size: 30px; border-radius: 10px; background: color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 16%, transparent); color: var(--lmap-accent, var(--sp-primary-600)); }
-.sd-lmap-detail__next div { display: grid; gap: 2px; }
-.sd-lmap-detail__next strong { color: var(--sp-ink-900); font-size: 11px; letter-spacing: .03em; }
-.sd-lmap-detail__next span { color: var(--sp-ink-600); font-size: var(--sp-fs-sm); line-height: 1.55; }
-
-.sd-lmap-detail__talk {
+.sd-lmap-detail__actions { display: grid; gap: 9px; margin-block-start: 2px; }
+.sd-lmap-detail__cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 9px;
-  min-block-size: 44px;
+  min-block-size: 46px;
   border: 0;
   border-radius: var(--sp-radius-pill);
   background: linear-gradient(135deg, #6f5bff, #5336ef);
   color: #fff;
-  font: 700 var(--sp-fs-sm)/1 var(--sp-font);
+  font: 800 var(--sp-fs-sm)/1 var(--sp-font);
   cursor: pointer;
-  box-shadow: 0 13px 30px rgba(83, 54, 239, .22);
+  box-shadow: 0 13px 30px rgba(83, 54, 239, .24);
   transition: transform .15s var(--sp-ease), box-shadow .15s var(--sp-ease);
 }
-.sd-lmap-detail__talk:hover { transform: translateY(-1px); box-shadow: 0 16px 34px rgba(83, 54, 239, .3); }
-.sd-lmap-detail__talk:focus-visible { outline: 3px solid rgba(111, 91, 255, .32); outline-offset: 2px; }
+.sd-lmap-detail__cta:hover { transform: translateY(-1px); box-shadow: 0 16px 34px rgba(83, 54, 239, .32); }
+.sd-lmap-detail__cta:focus-visible { outline: 3px solid rgba(111, 91, 255, .32); outline-offset: 2px; }
+.sd-lmap-detail__cta .sp-icon { flex: none; }
+
+.sd-lmap-detail__talk-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-block-size: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--sp-ink-500, var(--sp-ink-600));
+  font: 650 var(--sp-fs-sm)/1 var(--sp-font);
+  cursor: pointer;
+  border-radius: var(--sp-radius-pill);
+}
+.sd-lmap-detail__talk-link:hover { color: var(--sp-primary-600); }
+.sd-lmap-detail__talk-link:focus-visible { outline: 3px solid rgba(111, 91, 255, .26); outline-offset: 2px; }
+.sd-lmap-detail__talk-link .sp-icon { flex: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .sd-lmap-modal, .sd-lmap-detail { animation: none; }
@@ -266,27 +296,40 @@
 [data-theme='dark'] .sd-lmap-detail__close { border-color: rgba(255, 255, 255, .14); color: rgba(214, 216, 245, .6); }
 [data-theme='dark'] .sd-lmap-detail__close:hover { background: rgba(255, 255, 255, .07); color: #eef0ff; }
 [data-theme='dark'] .sd-lmap-detail__head h3 { color: #eef0ff; }
-[data-theme='dark'] .sd-lmap-detail__band--good { background: rgba(31, 157, 107, .22); color: #4cd39a; }
-[data-theme='dark'] .sd-lmap-detail__band--reinforce { background: rgba(224, 138, 60, .22); color: #f0a95e; }
-[data-theme='dark'] .sd-lmap-detail__meaning,
-[data-theme='dark'] .sd-lmap-detail__block p,
-[data-theme='dark'] .sd-lmap-detail__tips li,
-[data-theme='dark'] .sd-lmap-detail__next span { color: rgba(214, 216, 245, .78); }
-[data-theme='dark'] .sd-lmap-detail__block h4,
-[data-theme='dark'] .sd-lmap-detail__next strong { color: #eef0ff; }
-[data-theme='dark'] .sd-lmap-detail__icon { background: color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 24%, transparent); }
-[data-theme='dark'] .sd-lmap-detail__next { background: color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 12%, transparent); }
+[data-theme='dark'] .sd-lmap-detail__meaning { color: rgba(214, 216, 245, .78); }
+[data-theme='dark'] .sd-lmap-detail__focus-step { color: #eef0ff; }
+[data-theme='dark'] .sd-lmap-detail__talk-link { color: rgba(214, 216, 245, .62); }
+[data-theme='dark'] .sd-lmap-detail__talk-link:hover { color: #cfc4ff; }
 
 /* ── Embedded topic chat (ephemeral, competency-scoped) ─────────── */
-/* Chat opens as a second pane BESIDE the info column: info stays at the
-   inline-start (right in RTL), the chat pane sits at the inline-end (left). */
+/* When the chat opens, the modal becomes ONE focused column: a compact info
+   header at the top (name → meaning → the focus now), and the chat filling the
+   space below as the clear, primary action — no competing second column. */
 .sd-lmap-detail__info { display: grid; gap: 14px; min-inline-size: 0; align-content: start; }
-.sd-lmap-detail--chat { inline-size: min(920px, 100%); grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); column-gap: 24px; align-items: stretch; }
-.sd-lmap-detail--chat .sd-lmap-detail__head { grid-column: 1 / -1; }
-.sd-lmap-detail__chatpane { display: flex; flex-direction: column; gap: 10px; min-inline-size: 0; }
-@media (max-width: 800px) {
-  .sd-lmap-detail--chat { grid-template-columns: 1fr; }
-  .sd-lmap-detail--chat .sd-lmap-detail__info { display: none; }
+.sd-lmap-detail--chat {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  inline-size: min(560px, 100%);
+  block-size: min(88vh, 660px);
+  max-block-size: 88vh;
+  overflow: hidden;
+}
+.sd-lmap-detail--chat .sd-lmap-detail__info { gap: 10px; flex: none; }
+.sd-lmap-detail--chat .sd-lmap-detail__meaning { font-size: var(--sp-fs-sm); }
+.sd-lmap-detail--chat .sd-lmap-detail__focus { padding: 12px 14px; gap: 6px; }
+.sd-lmap-detail__chatpane { display: flex; flex-direction: column; min-inline-size: 0; flex: 1; min-block-size: 0; }
+
+/* The chat blends into the modal's own surface — no extra bordered box around
+   the transcript, so it reads as one clean conversation, not a nested panel. */
+.sd-lmap-detail__chatpane .cchat__log {
+  border: 0;
+  background: transparent;
+  padding: 2px 0;
+  min-block-size: 0;
+}
+@media (max-width: 640px) {
+  .sd-lmap-detail--chat { inline-size: 100%; block-size: min(90vh, 620px); }
 }
 .sd-lmap-chat__ephemeral { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--sp-ink-300); font-size: 11.5px; }
 .sd-lmap-chat__ephemeral .sp-icon { flex: none; }
@@ -341,17 +384,5 @@
 [data-theme='dark'] .sd-lmap-chat__composer input { border-color: rgba(159, 122, 254, .24); background: rgba(20, 23, 54, .8); color: #eef0ff; }
 [data-theme='dark'] .sd-lmap-chat__ephemeral { color: rgba(214, 216, 245, .5); }
 
-/* ── Topic glyph banner (glanceable info panel) ─────────────────── */
-.sd-lmap-detail__glyph {
-  display: grid;
-  place-items: center;
-  padding: 14px;
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 8%, #fbfaff);
-  border: 1px solid color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 16%, transparent);
-}
-.sd-lmap-detail__glyph-svg { inline-size: min(220px, 100%); block-size: auto; display: block; }
-[data-theme='dark'] .sd-lmap-detail__glyph {
-  background: color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 14%, rgba(12, 14, 36, .5));
-  border-color: color-mix(in srgb, var(--lmap-accent, var(--sp-primary-500)) 26%, transparent);
-}
+/* ── Topic glyph (small chip in the header) ─────────────────────── */
+.sd-lmap-detail__glyph-svg { inline-size: 32px; block-size: 32px; display: block; }

@@ -17,6 +17,11 @@ import 'katex/dist/katex.min.css'
 import './companion.css'
 
 const FENCED_BLOCK = /```[^\n]*\n?[\s\S]*?```/g
+const SUGGESTION_KEYS = [
+  'companion.suggestions.explain',
+  'companion.suggestions.example',
+  'companion.suggestions.practice',
+] as const
 const MIN_PANEL_WIDTH = 340
 const MAX_PANEL_WIDTH = 720
 const MIN_PAGE_WIDTH = 360
@@ -437,27 +442,29 @@ export function CompanionChat() {
         }}
       />}
       <header className="sp-companion__head">
-        <div
-          className="sp-companion__yuvi-stage"
-          data-yuvi-activity={speech.state === 'playing' ? 'speaking' : activity}
-          aria-hidden="true"
-        >
-          <span className="sp-companion__yuvi-orbit" />
-          {(loaded || YuviFallbackReady) && showLiveYuvi ? (
-            <YuviAvatar3D
-              key={loaded ? 'persisted-yuvi' : 'fallback-yuvi'}
-              initialDesign={design}
-              label={t('companion.title')}
-              muted
-              frontFacing={settleHeaderYuvi}
-              followPointer
-              thinking={activity === 'thinking'}
-              speaking={activity === 'speaking' || speech.state === 'playing'}
-            />
-          ) : (
-            <span className="sp-companion__yuvi-loader" role="presentation" />
-          )}
-        </div>
+        {isTaskMode && (
+          <div
+            className="sp-companion__yuvi-stage"
+            data-yuvi-activity={speech.state === 'playing' ? 'speaking' : activity}
+            aria-hidden="true"
+          >
+            <span className="sp-companion__yuvi-orbit" />
+            {(loaded || YuviFallbackReady) && showLiveYuvi ? (
+              <YuviAvatar3D
+                key={loaded ? 'persisted-yuvi' : 'fallback-yuvi'}
+                initialDesign={design}
+                label={t('companion.title')}
+                muted
+                frontFacing={settleHeaderYuvi}
+                followPointer
+                thinking={activity === 'thinking'}
+                speaking={activity === 'speaking' || speech.state === 'playing'}
+              />
+            ) : (
+              <span className="sp-companion__yuvi-loader" role="presentation" />
+            )}
+          </div>
+        )}
         <div className="sp-companion__id">
           <span className="sp-companion__avatar"><YuviHeadIcon /></span>
           <div>
@@ -714,19 +721,37 @@ export function CompanionChat() {
         </>
       )}
 
-      {!historyOpen && (!isTaskMode || taskView === 'chat') && <form className="sp-companion__composer" onSubmit={submit}>
-        <input
-          ref={inputRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder={t('companion.placeholder')}
-          aria-label={t('companion.placeholder')}
-          dir={draft.trim() ? 'auto' : direction}
-        />
-        <button type="submit" disabled={isStreaming || !draft.trim()} aria-label={t('companion.send')}>
-          <Icon name="arrow" size={18} />
-        </button>
-      </form>}
+      {!historyOpen && (!isTaskMode || taskView === 'chat') && (
+        <div className="sp-companion__composer-shell">
+          {!isStreaming && !draft.trim() && messages.length > 0 && (
+            <div className="sp-companion__suggestions" role="group" aria-label={t('companion.suggestions.label')}>
+              {SUGGESTION_KEYS.map((key) => (
+                <button
+                  type="button"
+                  key={key}
+                  className="sp-companion__suggestion"
+                  onClick={() => void send(t(key))}
+                >
+                  {t(key)}
+                </button>
+              ))}
+            </div>
+          )}
+          <form className="sp-companion__composer" onSubmit={submit}>
+            <input
+              ref={inputRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder={t('companion.placeholder')}
+              aria-label={t('companion.placeholder')}
+              dir={draft.trim() ? 'auto' : direction}
+            />
+            <button type="submit" disabled={isStreaming || !draft.trim()} aria-label={t('companion.send')}>
+              <Icon name="arrow" size={18} />
+            </button>
+          </form>
+        </div>
+      )}
     </section>
     </div>
 
