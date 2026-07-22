@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
 import { useCompanion } from '../providers/CompanionProvider'
-import { YubiAvatar3D } from '../features/yubi-studio/YubiAvatar3D'
-import { useYubiDesign } from '../features/yubi-studio/YubiDesignProvider'
+import { YuviAvatar3D } from '../features/Yuvi-studio/YuviAvatar3D'
+import { useYuviDesign } from '../features/Yuvi-studio/YuviDesignProvider'
 import { Icon } from './primitives'
 import { CoachMarkdown } from './CoachMarkdown'
 import { VisualCTA } from './VisualCTA'
@@ -95,13 +95,13 @@ export function CompanionChat() {
   const pathname = useRoute()
   const isTaskMode = pathname.startsWith('/learning/lesson')
   const { snapshot: lessonRoadmap } = useLessonRoadmap()
-  const { design, loaded } = useYubiDesign()
+  const { design, loaded } = useYuviDesign()
   const [draft, setDraft] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
   const [deletePendingId, setDeletePendingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showLiveYuvi, setShowLiveYuvi] = useState(false)
-  const [yubiFallbackReady, setYubiFallbackReady] = useState(false)
+  const [YuviFallbackReady, setYuviFallbackReady] = useState(false)
   const [settleHeaderYuvi, setSettleHeaderYuvi] = useState(false)
   const [expandedVisual, setExpandedVisual] = useState<CoachVisual | null>(null)
   const [isResizing, setIsResizing] = useState(false)
@@ -181,7 +181,7 @@ export function CompanionChat() {
 
   useEffect(() => {
     if (!isOpen || loaded) return
-    const fallbackTimer = window.setTimeout(() => setYubiFallbackReady(true), 900)
+    const fallbackTimer = window.setTimeout(() => setYuviFallbackReady(true), 900)
     return () => window.clearTimeout(fallbackTimer)
   }, [isOpen, loaded])
 
@@ -389,10 +389,10 @@ export function CompanionChat() {
       style={{ '--sp-companion-width': `${panelWidth}px` } as CSSProperties}
     >
     <section
-      id="yubi-companion-panel"
+      id="Yuvi-companion-panel"
       className={`sp-companion${isTaskMode ? ' sp-companion--task' : ''}${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}${isResizing ? ' is-resizing' : ''}`}
       role="dialog"
-      aria-labelledby="yubi-companion-title"
+      aria-labelledby="Yuvi-companion-title"
       dir={direction}
       data-opening={isOpening ? 'true' : 'false'}
       data-closing={isClosing ? 'true' : 'false'}
@@ -443,8 +443,8 @@ export function CompanionChat() {
           aria-hidden="true"
         >
           <span className="sp-companion__yuvi-orbit" />
-          {(loaded || yubiFallbackReady) && showLiveYuvi ? (
-            <YubiAvatar3D
+          {(loaded || YuviFallbackReady) && showLiveYuvi ? (
+            <YuviAvatar3D
               key={loaded ? 'persisted-yuvi' : 'fallback-yuvi'}
               initialDesign={design}
               label={t('companion.title')}
@@ -461,7 +461,7 @@ export function CompanionChat() {
         <div className="sp-companion__id">
           <span className="sp-companion__avatar"><YuviHeadIcon /></span>
           <div>
-            <p id="yubi-companion-title" className="sp-companion__title">{t('companion.title')}</p>
+            <p id="Yuvi-companion-title" className="sp-companion__title">{t('companion.title')}</p>
             <p className="sp-companion__subtitle">{t('companion.subtitle')}</p>
           </div>
         </div>

@@ -171,7 +171,7 @@ When a prompt is vague, map it to these features and make the smallest useful ch
 	- JS owns state, rendering, events, API calls, and runtime localization.
 	- Shared behavior belongs in `shared/`, not copy-pasted across pages.
 	- Translatable text belongs in `locales/`, not inline templates or prompts.
-- During migration, preserve the current design language: the soft purple shell, Yubi robot treatment, stepper, chat cards, dashboard cards, and Hebrew-first RTL layout.
+- During migration, preserve the current design language: the soft purple shell, Yuvi robot treatment, stepper, chat cards, dashboard cards, and Hebrew-first RTL layout.
 - Prefer Vite + React + TypeScript for the new frontend. Keep FastAPI as the backend API/static host.
 - Build reusable React modules for layout, language switching, API calls, learner mapping, chat streaming, dashboards, teacher insights, and mentoring forms.
 - Prefer reusable helpers for API calls, language selection, profile calculations, and repeated UI rendering.

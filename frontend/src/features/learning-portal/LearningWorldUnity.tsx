@@ -10,10 +10,10 @@ import {
 } from 'react'
 import { Icon } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
-import { YubiAvatar3D, type YubiAvatarHandle } from '../yubi-studio/YubiAvatar3D'
-import type { YubiDesign } from '../yubi-studio/yubiDesign'
+import { YuviAvatar3D, type YuviAvatarHandle } from '../Yuvi-studio/YuviAvatar3D'
+import type { YuviDesign } from '../Yuvi-studio/YuviDesign'
 import type { LearningWorldModel } from './learningWorldModel'
-import type { LearningWorldHandle, LearningWorldStats, YubiWorldProjection } from './learningWorldRenderer'
+import type { LearningWorldHandle, LearningWorldStats, YuviWorldProjection } from './learningWorldRenderer'
 
 interface UnityInstance {
   SendMessage: (gameObject: string, method: string, parameter?: string | number) => void
@@ -54,14 +54,14 @@ interface UnityBridgeEventDetail {
 
 interface LearningWorldUnityProps {
   world: LearningWorldModel
-  design: YubiDesign
+  design: YuviDesign
   lowPower: boolean
   reducedMotion: boolean
   simulate: string | null
   selectedLandmarkId: string | null
   ariaLabel: string
   onLandmarkSelect: (landmarkId: string) => void
-  onYubiInteract: () => void
+  onYuviInteract: () => void
   onBlocked: () => void
   onReady: () => void
   onFatalError: () => void
@@ -116,7 +116,7 @@ function loadUnityLoader(buildId: string) {
 
 function buildUnityConfig(
   world: LearningWorldModel,
-  design: YubiDesign,
+  design: YuviDesign,
   lowPower: boolean,
   reducedMotion: boolean,
   simulate: string | null,
@@ -166,7 +166,7 @@ export const LearningWorldUnity = forwardRef<LearningWorldHandle, LearningWorldU
   selectedLandmarkId,
   ariaLabel,
   onLandmarkSelect,
-  onYubiInteract,
+  onYuviInteract,
   onBlocked,
   onReady,
   onFatalError,
@@ -174,13 +174,13 @@ export const LearningWorldUnity = forwardRef<LearningWorldHandle, LearningWorldU
 }, forwardedRef) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const instanceRef = useRef<UnityInstance | null>(null)
-  const avatarRef = useRef<YubiAvatarHandle>(null)
+  const avatarRef = useRef<YuviAvatarHandle>(null)
   const travelCallbacksRef = useRef(new Map<string, () => void>())
   const readyRef = useRef(false)
   const [progress, setProgress] = useState(0)
   const [failed, setFailed] = useState(false)
   const { t } = useI18n()
-  const [avatarProjection, setAvatarProjection] = useState<YubiWorldProjection | null>(null)
+  const [avatarProjection, setAvatarProjection] = useState<YuviWorldProjection | null>(null)
   // First person is the DEFAULT view; the mode is pushed to Unity as soon as the bridge reports ready.
   const [viewMode, setViewMode] = useState<'iso' | 'fps'>('fps')
   const viewModeRef = useRef<'iso' | 'fps'>('fps')
@@ -235,11 +235,11 @@ export const LearningWorldUnity = forwardRef<LearningWorldHandle, LearningWorldU
         onReady()
       } else if (type === 'landmark-select' && payload) {
         onLandmarkSelect(payload)
-      } else if (type === 'yubi-interact') {
-        onYubiInteract()
+      } else if (type === 'Yuvi-interact') {
+        onYuviInteract()
       } else if (type === 'avatar-projection' && payload) {
         try {
-          setAvatarProjection(JSON.parse(payload) as YubiWorldProjection)
+          setAvatarProjection(JSON.parse(payload) as YuviWorldProjection)
         } catch {
           // A malformed visual projection must never affect world movement.
         }
@@ -316,7 +316,7 @@ export const LearningWorldUnity = forwardRef<LearningWorldHandle, LearningWorldU
       instanceRef.current = null
       if (instance) void instance.Quit()
     }
-  }, [onBlocked, onFatalError, onLandmarkSelect, onReady, onStats, onYubiInteract, serializedConfig])
+  }, [onBlocked, onFatalError, onLandmarkSelect, onReady, onStats, onYuviInteract, serializedConfig])
 
   useEffect(() => {
     if (readyRef.current) send('SetSelected', selectedLandmarkId ?? '')
@@ -373,7 +373,7 @@ export const LearningWorldUnity = forwardRef<LearningWorldHandle, LearningWorldU
   const flying = flyIntent
   const walking = moving && !flyIntent
   const grounded = !moving && !flyIntent
-  // Screen-space height above the ground (see YubiWorldProjection.altitude). Drives Yuvi's visual lift so
+  // Screen-space height above the ground (see YuviWorldProjection.altitude). Drives Yuvi's visual lift so
   // flying reads as rising into the air; the shadow stays at the ground point. 0 until the bridge sends it.
   const altitude = avatarProjection?.altitude ?? 0
 
@@ -442,12 +442,12 @@ export const LearningWorldUnity = forwardRef<LearningWorldHandle, LearningWorldU
             <span className="lw-player__thrusters" aria-hidden="true"><i /><i /></span>
             <span className="lw-player__smoke" aria-hidden="true"><b /><b /><b /><b /><b /><b /></span>
             <div className="lw-player__avatar">
-              <YubiAvatar3D
+              <YuviAvatar3D
                 ref={avatarRef}
                 initialDesign={design}
                 label={ariaLabel}
                 muted
-                onAvatarClick={onYubiInteract}
+                onAvatarClick={onYuviInteract}
                 grounded={grounded}
                 flying={flying}
                 walking={walking}

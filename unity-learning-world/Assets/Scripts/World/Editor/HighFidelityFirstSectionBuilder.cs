@@ -209,9 +209,9 @@ namespace Yuvi720.LearningWorld.Editor
             }
 
             if (prefab.GetComponentsInChildren<Renderer>(true).Any(renderer =>
-                    renderer.name.Contains("Yubi", StringComparison.OrdinalIgnoreCase)
+                    renderer.name.Contains("Yuvi", StringComparison.OrdinalIgnoreCase)
                     || renderer.name.Contains("YuviPlayer", StringComparison.OrdinalIgnoreCase)))
-                issues.Add("The section must not introduce a visible Unity avatar; Three.js Yubi remains canonical.");
+                issues.Add("The section must not introduce a visible Unity avatar; Three.js Yuvi remains canonical.");
 
             return issues;
         }

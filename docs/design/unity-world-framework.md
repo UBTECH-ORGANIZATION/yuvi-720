@@ -173,7 +173,7 @@ where they need to go and explains the next step in kid-clear language.
 - **Capstone** = fly to a raised landmark (the bluff Pavilion in World 1) for the adaptive
   **synthesis challenge** tying the world's skills together.
 - **Finale** = scripted camera sweep + **cloud curtain** parts to the next world; award **two
-  badges** (subject-mastery + world-clear), both wearable in the Yubi Studio wardrobe. A world
+  badges** (subject-mastery + world-clear), both wearable in the Yuvi Studio wardrobe. A world
   HUD "Design Yuvi" button routes to the Studio (earn → customize loop). **Cosmetic unlocks +
   badge rewards + the unlock dialog are fully specified in §21.**
 
@@ -360,26 +360,26 @@ Authored alongside **Phase 0**, once there's a harness to document.
 
 ---
 
-## 21. Cosmetic unlocks & Yubi Studio integration
+## 21. Cosmetic unlocks & Yuvi Studio integration
 
-Progress and badges unlock **Yubi Studio cosmetics** — the earn→customize loop. This **extends
+Progress and badges unlock **Yuvi Studio cosmetics** — the earn→customize loop. This **extends
 the existing system**, it does not replace it.
 
 ### 21.1 What already exists (reuse, don't reinvent)
-- **Catalog** — `frontend/src/features/yubi-studio/yubiAssets.ts` (`YUBI_CATALOG`): 32 cosmetics
+- **Catalog** — `frontend/src/features/Yuvi-studio/YuviAssets.ts` (`Yuvi_CATALOG`): 32 cosmetics
   across 5 slots (`headTop / face / body / handR / back`), each a procedural `THREE.Group`
   (`build()`), some with a `requirementKey`. Plus recolorable **colors** (`body/eyes/smile/glow`)
-  and 2 **variants** (`classic/girl`) in `yubiDesign.ts`.
+  and 2 **variants** (`classic/girl`) in `YuviDesign.ts`.
 - **The gate** — `useStudioDesign.ts`: `isLocked(asset) = Boolean(asset.requirementKey) &&
   !unlockedIds.has(asset.id)`, where `unlockedIds` loads from persisted
   **`learner_state.avatar_unlocks: string[]`** (`services/api.ts`). **Granting a cosmetic =
   appending its id to `avatar_unlocks`.** Free items (no `requirementKey`) are always available.
 - **Existing hooks** — `PHASE_REWARDS` (mapping-section → item), `PREVIEW_ALL` dev bypass in
   `StudioContent.tsx`, and `getThumbnails()` (renders each asset in 3D — reuse for the dialog).
-- **Persisted design** — `learner_state.avatar` = `{variant, colors, equipped}` (`yubiDesign.ts`).
+- **Persisted design** — `learner_state.avatar` = `{variant, colors, equipped}` (`YuviDesign.ts`).
 
 ### 21.2 First-entry state (what's open on day one)
-On first entry to the Yubi platform the learner already has: **all free cosmetics** (every item
+On first entry to the Yuvi platform the learner already has: **all free cosmetics** (every item
 with no `requirementKey` — ~22 today), **all colors**, and **both variants**. So a kid can
 personalize immediately. Everything with a `requirementKey` is **locked** until its id lands in
 `avatar_unlocks`. Nothing about the world is required to start customizing.

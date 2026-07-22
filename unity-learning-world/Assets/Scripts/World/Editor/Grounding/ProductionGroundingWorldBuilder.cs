@@ -120,8 +120,8 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
                 issues.Add("Macro grounding approval must not include landmarks or buildings.");
             if (prefab.GetComponentsInChildren<WorldWindElement>(true).Length > 0)
                 issues.Add("Macro grounding approval must not include vegetation or atmosphere.");
-            if (prefab.GetComponentsInChildren<YubiTarget>(true).Length > 0)
-                issues.Add("React/Three.js must remain the only visible Yubi owner.");
+            if (prefab.GetComponentsInChildren<YuviTarget>(true).Length > 0)
+                issues.Add("React/Three.js must remain the only visible Yuvi owner.");
             if (prefab.GetComponentsInChildren<SpriteRenderer>(true).Length > 0)
                 issues.Add("Macro grounding must prove dimensional geometry without SVG-derived sprites.");
             if (prefab.GetComponentsInChildren<BridgeVisual>(true).Length > 0)

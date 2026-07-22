@@ -97,13 +97,15 @@
   --sp-dur-slow: 320ms;
 }
 
-/* Dark theme: deep indigo rather than flat black, preserving Spark's purple/cyan identity. */
+/* Dark theme: warm violet night, matched to the landing page's night scene
+   (#0f0b24 canvas, violet surfaces) rather than a cold blue-indigo, so the app
+   chrome and the landing share one identity. Preserves Spark's purple/cyan. */
 :root[data-theme='dark'] {
-   --sp-ink-900: #f7f5ff;
-   --sp-ink-700: #eeeaff;
-   --sp-ink-500: #d0cae6;
-   --sp-ink-400: #aaa4c4;
-   --sp-ink-300: #85809f;
+   --sp-ink-900: #ffffff;
+   --sp-ink-700: #ece9f5;
+   --sp-ink-500: #b7b3ca;
+   --sp-ink-400: #9d99b3;
+   --sp-ink-300: #837f98;
 
    --sp-primary-700: #b9adff;
    --sp-primary-600: #9d8dff;
@@ -120,13 +122,13 @@
    --sp-success-600: #67d7a6; --sp-success-100: #173e34;
    --sp-warn-600: #f3c96a; --sp-warn-100: #493b1f;
    --sp-danger-600: #ff9588; --sp-danger-100: #4d292d;
-   --sp-info-600: #aa9cff; --sp-info-100: #30295b;
-
-   --sp-bg: #0d1024;
-   --sp-bg-subtle: #171a35;
-   --sp-surface: #181c38;
-   --sp-surface-2: #202443;
-   --sp-border: #34395f;
+   --sp-info-6f0b24;
+   --sp-bg-subtle: #131126;
+   --sp-surface: #1b1a33;
+   --sp-surface-2: #232141;
+   --sp-border: #2f2c4d;
+   --sp-border-strong: #423e68;
+   --sp-overlay: rgba(9, 6, 24
    --sp-border-strong: #4b527d;
    --sp-overlay: rgba(5, 7, 20, 0.72);
 

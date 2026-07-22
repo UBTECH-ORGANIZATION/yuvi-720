@@ -280,7 +280,7 @@
    the centre of the screen as two separate slabs and then weld into a single
    panel: the gap closes, the facing corners square off, and a seam flares along
    the join. The landing page hides its own artwork + pilot while this runs, so
-   exactly one Yubi is ever on screen. */
+   exactly one Yuvi is ever on screen. */
 .sp-modal-backdrop--bare {
   background: transparent;
   place-items: center;
@@ -347,7 +347,7 @@
     radial-gradient(circle at 22% 18%, rgba(126, 231, 255, .20), transparent 42%),
     radial-gradient(circle at 82% 78%, rgba(168, 132, 255, .24), transparent 46%);
 }
-/* Faint grid, so the space reads as Yubi's station rather than empty colour. */
+/* Faint grid, so the space reads as Yuvi's station rather than empty colour. */
 .auth-forge__sky::after {
   content: '';
   position: absolute;
@@ -373,7 +373,7 @@
 .auth-forge__orbit--b { inline-size: 286px; block-size: 286px; border-style: dashed; opacity: .5; animation: spOrbitSpin 26s linear infinite reverse; }
 .auth-forge__orbit--c { inline-size: 364px; block-size: 364px; opacity: .28; animation: spOrbitSpin 38s linear infinite; }
 
-/* The pad Yubi hovers over. */
+/* The pad Yuvi hovers over. */
 .auth-forge__glow {
   position: absolute;
   inset-inline-start: 50%;
@@ -407,7 +407,7 @@
 .auth-forge__mote--8 { inset-inline-start: 8%;  inset-block-start: 62%; animation-delay: 4.9s; }
 .auth-forge__mote--9 { inset-inline-start: 92%; inset-block-start: 34%; animation-delay: 5.6s; }
 
-/* Yubi hovers and drifts rather than standing still. */
+/* Yuvi hovers and drifts rather than standing still. */
 .auth-forge__robot {
   position: absolute;
   inset-inline: 14%;
@@ -415,7 +415,7 @@
   block-size: 58%;
   z-index: 2;
   pointer-events: none;
-  animation: spYubiHover 5.2s ease-in-out infinite;
+  animation: spYuviHover 5.2s ease-in-out infinite;
 }
 
 /* Greeting bubble, re-keyed per message so each one animates in. */
@@ -458,7 +458,7 @@
   70%      { opacity: .8; transform: translateY(-14px) scale(1); }
   100%     { opacity: 0; transform: translateY(-26px) scale(.55); }
 }
-@keyframes spYubiHover {
+@keyframes spYuviHover {
   0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
   25%      { transform: translate3d(-8px, -12px, 0) rotate(-1.6deg); }
   50%      { transform: translate3d(0, -18px, 0) rotate(0deg); }
