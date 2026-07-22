@@ -28,6 +28,8 @@ from app.services.llm import call_llm
 MAX_ELEMENTS = 24
 MAX_LABEL_LENGTH = 48
 MAX_POLYLINE_POINTS = 80
+MAX_ANIMATION_STEPS = 5
+ANIMATION_KINDS = {"draw", "fade", "grow", "pulse", "slide", "none"}
 X_LIMIT = 6.6
 Y_LIMIT = 3.4
 # Manim's first isolated worker can spend most of its time importing and
@@ -94,7 +96,19 @@ Allowed elements:
 - {"type":"right_angle","points":[[ray1x,ray1y],[vertexx,vertexy],[ray2x,ray2y]],"color":"accent"}
 - {"type":"axes","position":[x,y],"x_range":[-5,5,1],"y_range":[-3,3,1],"x_label":"x","y_label":"y","color":"ink"}
 - {"type":"text","position":[x,y],"label":"short text","color":"ink"}
+- {"type":"brace","points":[[x1,y1],[x2,y2]],"label":"3","color":"ink"}  (curly measuring brace along the segment; label on its outer side)
+- {"type":"number_line","position":[x,y],"range":[0,10,1],"marks":[2,7],"label":"optional","color":"ink"}  (horizontal number line centered at position; marks are highlighted values)
 Colors: primary, secondary, accent, success, warning, ink, muted, white.
+ANIMATION — prefer it whenever the idea unfolds over time (construction, change, motion,
+comparison, sweep, accumulation). Set scene-level "animated": true, then stage the reveal:
+- per-element "step": 0..5 — elements sharing a step appear together; steps play in order.
+- per-element "animate": "draw" (stroke is drawn), "fade", "grow", "pulse" (appears then flashes
+  to draw attention), "slide" (glides from "from":[x,y] to its place — use for motion/change),
+  or "none" (already on screen at its step).
+Stage the scene like a teacher at a board: givens first, construction next, the insight last.
+Choose the MOST EXPLANATORY scene you can express with these primitives, not the simplest —
+an animated step-by-step construction beats a static picture whenever a process is involved.
+A static scene (animated:false or omitted) is still right for a single unchanging fact.
 IMPORTANT: When an axes element is present, coordinates in every other element are mathematical
 DATA coordinates from the axes ranges, not canvas positions. For example, point [4,4] is placed with
 axes.c2p(4,4). Do not manually offset or rescale graph points. Set x_range and y_range so every
@@ -106,6 +120,13 @@ other mathematical diagram from these primitives. Keep labels short. Never inclu
 For polygon side_labels, index i labels the edge from points[i] to points[(i+1) mod n]; use an
 empty string for an unlabeled edge. Put semantic side names such as יתר on the actual side, never
 as a free-standing text element. Use right_angle instead of a floating "90°" text label.
+LAYOUT — clarity over decoration. Labels must never overlap: leave clear empty
+space around each, and never place two labels or text elements at the same spot.
+A "text" label is SHORT — a value, a name, or a short formula — never a sentence
+and never a directional phrase like "above:"/"below:"/"note:". Put any explanatory
+sentence in "caption", not on the canvas. Do NOT put a centered label on a shape
+that contains other shapes or labels (e.g. a whole bar divided into parts): label
+the individual parts and name the whole in the caption. Use few labels, not many.
 Use only the selected language plus conventional mathematical notation.
 """
 
@@ -204,6 +225,69 @@ _SIMILAR_TRIANGLES_VISUAL_TEXT = {
 }
 
 
+_VISUAL_OFFER_PROMPTS = {
+    "he": (
+        "החלט/י אם הצעת המחשה (תמונה או אנימציה קצרה) באמת תעזור לתלמיד/ת חטיבה "
+        "להבין את התשובה הזו. החזר/י JSON בלבד. {\"offer_visual\":true} רק כאשר "
+        "התשובה מסבירה מושג, תהליך, מבנה, כמות, צורה, יחס או רעיון שלב-אחר-שלב "
+        "שברור יותר כשמציירים אותו. {\"offer_visual\":false} עבור ברכות, שיחת חולין, "
+        "אישורים, עידוד, רגשות, שיחה אישית/חברתית, הפניות בטיחות או מחוץ לנושא, "
+        "או תשובה שכבר ברורה לגמרי במילים."
+    ),
+    "ar": (
+        "قرّر إن كان اقتراح توضيح (صورة أو رسم متحرك قصير) سيساعد فعلًا طالب/ة "
+        "المرحلة الإعدادية على فهم هذا الرد. أعد JSON فقط. {\"offer_visual\":true} فقط "
+        "عندما يشرح الرد مفهومًا أو عملية أو بنية أو كمية أو شكلًا أو علاقة أو فكرة "
+        "خطوة بخطوة تكون أوضح عند رسمها. {\"offer_visual\":false} للتحيّات والدردشة "
+        "والتأكيدات والتشجيع والمشاعر والحديث الشخصي/الاجتماعي وإعادة التوجيه أو خارج "
+        "الموضوع، أو ردّ واضح تمامًا بالكلمات."
+    ),
+    "en": (
+        "Decide whether offering a visual (an image or short animation) would "
+        "genuinely help a middle-school student understand THIS reply. Return JSON "
+        "only. {\"offer_visual\":true} only when the reply explains a concept, "
+        "process, structure, quantity, shape, relationship, or step-by-step idea "
+        "that is clearer when drawn. {\"offer_visual\":false} for greetings, small "
+        "talk, acknowledgments, encouragement, feelings, personal/social chat, "
+        "safety or off-topic redirects, or an answer already fully clear in words."
+    ),
+}
+
+
+async def should_offer_visual(
+    user_message: str,
+    assistant_response: str,
+    language: str,
+    usage_context: UsageContext,
+) -> bool:
+    """LLM decision (mini tier): is this reply an explanation where a visual would
+    genuinely help? Used to gate the on-demand "show me a video / image" buttons
+    so they never appear on greetings, social chat, or safety redirects."""
+    lang = language if language in _VISUAL_OFFER_PROMPTS else "he"
+    messages = [
+        {"role": "system", "content": _VISUAL_OFFER_PROMPTS[lang]},
+        {
+            "role": "user",
+            "content": f"<learner_message>{user_message}</learner_message>\n"
+            f"<reply>{assistant_response}</reply>",
+        },
+    ]
+    try:
+        response = await call_llm(
+            messages,
+            usage_context=usage_context,
+            max_tokens=20,
+            json_mode=True,
+            model_tier="mini",
+        )
+    except Exception:
+        return False
+    try:
+        return json.loads(response).get("offer_visual") is True
+    except (json.JSONDecodeError, TypeError, ValueError, AttributeError):
+        return False
+
+
 def split_visual_response(text: str) -> tuple[str, str]:
     """Remove a duplicate fenced diagram and place the visual at that point.
 
@@ -300,6 +384,58 @@ def _dedupe_scene_text(elements: list[dict], title: str) -> None:
         seen.add(normalized)
         retained.append(element)
     elements[:] = retained
+
+
+_NARRATION_LABEL = re.compile(
+    r"^\s*(?:למעלה|למטה|מימין|משמאל|כאן|שים\s*לב|הערה|above|below|left|right|note|here|"
+    r"أعلى|أسفل|يمين|يسار|هنا|ملاحظة)\s*[:：]",
+    re.IGNORECASE,
+)
+
+
+def _prune_text_annotations(elements: list[dict]) -> None:
+    """Drop narration and over-long free ``text`` overlays that cause the
+    overlapping clutter seen in busy scenes. The canvas carries short labels
+    only (values, names, short formulas); sentences belong in the caption. Caps
+    the number of free text elements so scenes stay readable."""
+    kept: list[dict] = []
+    text_count = 0
+    for element in elements:
+        if element["type"] != "text":
+            kept.append(element)
+            continue
+        label = element.get("label", "")
+        if not label or _NARRATION_LABEL.match(label) or len(label) > 28 or text_count >= 3:
+            continue
+        text_count += 1
+        kept.append(element)
+    elements[:] = kept
+
+
+def _drop_container_rect_labels(elements: list[dict]) -> None:
+    """A rectangle that spatially contains other shapes/labels (a "whole" split
+    into parts) must not carry a centered label — it collides with the inner
+    content. Drop that label; the whole is named in the caption. Labels on empty
+    rectangles are kept."""
+    for rect in [e for e in elements if e["type"] == "rectangle" and e.get("label")]:
+        cx, cy = rect["center"]
+        half_w, half_h = rect["width"] / 2, rect["height"] / 2
+        left, right, bottom, top = cx - half_w, cx + half_w, cy - half_h, cy + half_h
+        for other in elements:
+            if other is rect or other["type"] == "axes":
+                continue
+            points: list[list[float]] = []
+            if other.get("center"):
+                points.append(other["center"])
+            if other.get("position"):
+                points.append(other["position"])
+            points.extend(other.get("points", []))
+            if any(
+                left + 0.1 < px < right - 0.1 and bottom + 0.1 < py < top - 0.1
+                for px, py in points
+            ):
+                rect.pop("label", None)
+                break
 
 
 def _fit_axes_to_elements(elements: list[dict]) -> None:
@@ -818,19 +954,20 @@ def sanitize_scene(
         if kind not in {
             "polygon", "polyline", "line", "arrow", "point", "circle",
             "rectangle", "arc", "angle", "right_angle", "axes", "text",
+            "brace", "number_line",
         }:
             continue
         color = candidate.get("color") if candidate.get("color") in COLORS else "primary"
         clean: dict = {"type": kind, "color": color}
 
-        if kind in {"polygon", "polyline", "line", "arrow", "point", "angle", "right_angle"}:
+        if kind in {"polygon", "polyline", "line", "arrow", "point", "angle", "right_angle", "brace"}:
             raw_points = candidate.get("points")
             if not isinstance(raw_points, list):
                 continue
             points = [p for p in (diagram_point(item) for item in raw_points) if p]
             required = {
-                "polygon": 3, "polyline": 2, "line": 2,
-                "arrow": 2, "point": 1, "angle": 3, "right_angle": 3,
+                "polygon": 3, "polyline": 2, "line": 2, "arrow": 2,
+                "point": 1, "angle": 3, "right_angle": 3, "brace": 2,
             }[kind]
             if len(points) < required:
                 continue
@@ -879,6 +1016,20 @@ def sanitize_scene(
             if position is None:
                 continue
             clean["position"] = position
+        elif kind == "number_line":
+            position = diagram_point(candidate.get("position", [0, 0]))
+            value_range = _range(candidate.get("range"))
+            if position is None or value_range is None:
+                continue
+            raw_marks = candidate.get("marks")
+            marks = [
+                mark for mark in (
+                    _number(item, 1000.0)
+                    for item in (raw_marks if isinstance(raw_marks, list) else [])[:12]
+                )
+                if mark is not None and value_range[0] <= mark <= value_range[1]
+            ]
+            clean.update({"position": position, "range": value_range, "marks": marks})
 
         label = _short_text(candidate.get("label"), text_filter)
         if label:
@@ -906,22 +1057,72 @@ def sanitize_scene(
         if kind == "rectangle":
             opacity = _number(candidate.get("fill_opacity", 0.08), 0.22)
             clean["fill_opacity"] = max(0.0, opacity if opacity is not None else 0.08)
+
+        # Staged-animation metadata (bounded; ignored on static renders).
+        step = candidate.get("step")
+        if isinstance(step, (int, float)) and not isinstance(step, bool):
+            clean["step"] = max(0, min(MAX_ANIMATION_STEPS, int(step)))
+        animate = candidate.get("animate")
+        if animate in ANIMATION_KINDS:
+            clean["animate"] = animate
+        slide_from = diagram_point(candidate.get("from"))
+        if slide_from is not None:
+            clean["from"] = slide_from
         elements.append(clean)
 
     if not elements:
         return None
     title = _short_text(raw.get("title"), text_filter, 90)
     _dedupe_scene_text(elements, title)
+    _prune_text_annotations(elements)
+    _drop_container_rect_labels(elements)
     _align_triangle_side_measures(elements)
     _bind_semantic_geometry_labels(elements)
     _fit_axes_to_elements(elements)
     return {
         "use_visual": True,
+        "animated": raw.get("animated") is True,
         "title": title,
         "alt": _short_text(raw.get("alt"), text_filter, 240),
         "caption": _short_text(raw.get("caption"), text_filter, 180),
         "elements": elements,
     }
+
+
+_ON_DEMAND_DIRECTIVE = {
+    "he": (
+        "\nהלומד/ת ביקש/ה במפורש לראות המחשה של ההסבר הזה — חובה להחזיר "
+        "use_visual=true עם סצנה שימושית ומדויקת. אל תסרב/י."
+    ),
+    "ar": (
+        "\nطلب المتعلّم صراحةً رؤية توضيح لهذا الشرح — يجب إعادة use_visual=true "
+        "بمشهد مفيد ودقيق. لا ترفض."
+    ),
+    "en": (
+        "\nThe learner explicitly asked to SEE a visual of this explanation — you "
+        "MUST return use_visual=true with a useful, accurate scene. Do not decline."
+    ),
+}
+_PREFER_ANIMATION_DIRECTIVE = {
+    "he": (
+        "\nבחר/י סצנה מונפשת: קבע/י animated=true והצג/י את הרעיון שלב-אחר-שלב עם "
+        "step (0..5) ו-animate לכל אלמנט — תנועה או בנייה מדורגת עדיפה על תמונה."
+    ),
+    "ar": (
+        "\nاختر مشهدًا متحركًا: اضبط animated=true واعرض الفكرة خطوة بخطوة باستخدام "
+        "step (0..5) و-animate لكل عنصر — الحركة أو البناء المتدرّج أفضل من صورة ثابتة."
+    ),
+    "en": (
+        "\nChoose an ANIMATED scene: set animated=true and reveal the idea "
+        "step-by-step with per-element step (0..5) and animate — motion or staged "
+        "construction beats a still picture."
+    ),
+}
+_PREFER_STILL_DIRECTIVE = {
+    "he": "\nהחזר/י תמונה סטטית אחת וברורה: animated=false, בלי שלבים.",
+    "ar": "\nأعد صورة ثابتة واحدة وواضحة: animated=false، دون خطوات.",
+    "en": "\nReturn one clear STILL image: animated=false, no steps.",
+}
 
 
 async def plan_manim_visual(
@@ -930,15 +1131,31 @@ async def plan_manim_visual(
     language: str,
     usage_context: UsageContext,
     text_filter: Optional[Callable[[str], str]] = None,
+    *,
+    prefer_animation: Optional[bool] = None,
+    force_visual: bool = False,
 ) -> Optional[dict]:
-    """Let the Coach choose the visual tool and return a constrained scene."""
+    """Let the Coach choose the visual tool and return a constrained scene.
+
+    ``force_visual`` (on-demand "show me a visual" button) tells the planner it
+    must produce a scene; ``prefer_animation`` steers video vs. still. The final
+    ``animated`` flag is still re-asserted by the caller to match the request.
+    """
     lang = language if language in VISUAL_TOOL_PROMPTS else "he"
 
+    system_content = f"{VISUAL_TOOL_PROMPTS[lang]}\n{SCENE_CONTRACT}"
+    if force_visual:
+        system_content += _ON_DEMAND_DIRECTIVE[lang]
+    if prefer_animation is True:
+        system_content += _PREFER_ANIMATION_DIRECTIVE[lang]
+    elif prefer_animation is False:
+        system_content += _PREFER_STILL_DIRECTIVE[lang]
+
     messages = [
-        {"role": "system", "content": f"{VISUAL_TOOL_PROMPTS[lang]}\n{SCENE_CONTRACT}"},
+        {"role": "system", "content": system_content},
         {"role": "user", "content": f"<learner_request>{user_message}</learner_request>\n<coach_reply>{assistant_response}</coach_reply>"},
     ]
-    explicit_request = bool(_EXPLICIT_VISUAL_REQUEST[lang].search(user_message))
+    explicit_request = force_visual or bool(_EXPLICIT_VISUAL_REQUEST[lang].search(user_message))
     semantic_visual = _visual_benefit_signal(f"{user_message}\n{assistant_response}", lang)
     attempts = 2 if explicit_request or semantic_visual else 1
     for attempt in range(attempts):
@@ -1233,6 +1450,47 @@ def _svg_fallback(scene: dict) -> bytes:
             c = (vx + second_x / second_length * size, vy + second_y / second_length * size)
             b = (a[0] + second_x / second_length * size, a[1] + second_y / second_length * size)
             shapes.append(f'<path d="M {a[0]:.1f} {a[1]:.1f} L {b[0]:.1f} {b[1]:.1f} L {c[0]:.1f} {c[1]:.1f}" fill="none" stroke="{color}" stroke-width="4"/>')
+        elif kind == "brace":
+            (x1, y1), (x2, y2) = [svg_point(point) for point in element["points"]]
+            dx, dy = x2 - x1, y2 - y1
+            length = math.hypot(dx, dy) or 1.0
+            # Outward normal (below a horizontal span in screen space).
+            nx, ny = dy / length, -dx / length
+            if ny < 0:
+                nx, ny = -nx, -ny
+            depth = 16.0
+            mid = ((x1 + x2) / 2 + nx * depth * 1.8, (y1 + y2) / 2 + ny * depth * 1.8)
+            a = (x1 + nx * depth, y1 + ny * depth)
+            b = (x2 + nx * depth, y2 + ny * depth)
+            shapes.append(
+                f'<path d="M {x1:.1f} {y1:.1f} Q {a[0]:.1f} {a[1]:.1f} {(x1 + mid[0]) / 2:.1f} {(y1 + mid[1]) / 2:.1f} '
+                f'T {mid[0]:.1f} {mid[1]:.1f} '
+                f'M {x2:.1f} {y2:.1f} Q {b[0]:.1f} {b[1]:.1f} {(x2 + mid[0]) / 2:.1f} {(y2 + mid[1]) / 2:.1f} '
+                f'T {mid[0]:.1f} {mid[1]:.1f}" fill="none" stroke="{color}" stroke-width="3.5"/>'
+            )
+            if element.get("label"):
+                labels.append(
+                    f'<text x="{mid[0] + nx * 26:.1f}" y="{mid[1] + ny * 26 + 7:.1f}" class="side-label backed-label" '
+                    f'direction="auto" unicode-bidi="plaintext">{escape(element["label"])}</text>'
+                )
+        elif kind == "number_line":
+            ox, oy = svg_point(element["position"])
+            start, end, step = element["range"]
+            span = end - start
+            half = 380.0
+            def nl_x(value: float) -> float:
+                return ox - half + (value - start) / span * half * 2
+            shapes.append(f'<line x1="{ox - half - 14:.1f}" y1="{oy:.1f}" x2="{ox + half + 14:.1f}" y2="{oy:.1f}" stroke="{color}" stroke-width="3" marker-end="url(#arrow)"/>')
+            value = start
+            while value <= end + 1e-9:
+                px = nl_x(value)
+                shapes.append(f'<line x1="{px:.1f}" y1="{oy - 7:.1f}" x2="{px:.1f}" y2="{oy + 7:.1f}" stroke="{color}" stroke-width="2"/>')
+                labels.append(f'<text x="{px:.1f}" y="{oy + 28:.1f}" class="tick">{value:g}</text>')
+                value += step
+            for mark in element.get("marks", []):
+                shapes.append(f'<circle cx="{nl_x(mark):.1f}" cy="{oy:.1f}" r="8" fill="{COLORS["accent"]}"/>')
+            if element.get("label"):
+                labels.append(f'<text x="{ox:.1f}" y="{oy - 26:.1f}" class="label backed-label" direction="auto" unicode-bidi="plaintext">{escape(element["label"])}</text>')
 
     svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img">
 <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#302b4a"/></marker></defs>
@@ -1242,16 +1500,30 @@ def _svg_fallback(scene: dict) -> bytes:
     return svg.encode("utf-8")
 
 
+# Animated renders run several manim animations and an ffmpeg encode.
+ANIMATED_RENDER_TIMEOUT_SECONDS = 90
+# A chat payload guard: beyond this the still frame ships instead of the movie.
+MAX_VIDEO_BYTES = 3_500_000
+
+
 async def render_manim_visual(scene: dict) -> dict:
-    """Render a validated scene in an isolated Manim process, with SVG fallback."""
-    image_bytes: bytes
+    """Render a validated scene in an isolated Manim process, with SVG fallback.
+
+    Static scenes render a PNG still. Animated scenes (``scene["animated"]``)
+    render an MP4 built from the staged steps plus a final-frame PNG; the still
+    is the safety net when the movie is missing or too large for a chat payload.
+    """
+    payload_bytes: bytes
     mime_type = "image/png"
+    visual_type = "image"
     renderer = "manim"
+    animated = bool(scene.get("animated"))
 
     with tempfile.TemporaryDirectory(prefix="yuvi-manim-") as temp_dir:
         root = Path(temp_dir)
         spec_path = root / "scene.json"
         output_path = root / "scene.png"
+        movie_path = root / "scene.mp4"
         spec_path.write_text(json.dumps(scene, ensure_ascii=False), encoding="utf-8")
         try:
             process = await asyncio.create_subprocess_exec(
@@ -1264,24 +1536,37 @@ async def render_manim_visual(scene: dict) -> dict:
                 stderr=asyncio.subprocess.PIPE,
                 env={**os.environ, "MANIM_DISABLE_CACHING": "1"},
             )
-            _, stderr = await asyncio.wait_for(process.communicate(), timeout=RENDER_TIMEOUT_SECONDS)
+            _, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=ANIMATED_RENDER_TIMEOUT_SECONDS if animated else RENDER_TIMEOUT_SECONDS,
+            )
             if process.returncode != 0 or not output_path.exists():
                 detail = stderr.decode("utf-8", errors="replace")[-300:]
                 raise RuntimeError(detail or "Manim worker did not produce an image")
-            image_bytes = output_path.read_bytes()
+            payload_bytes = output_path.read_bytes()
+            if animated and movie_path.exists():
+                movie_bytes = movie_path.read_bytes()
+                if 0 < len(movie_bytes) <= MAX_VIDEO_BYTES:
+                    payload_bytes = movie_bytes
+                    mime_type = "video/mp4"
+                    visual_type = "video"
+                else:
+                    print(
+                        f"ℹ️ Manim movie skipped ({len(movie_bytes)} bytes); shipping the still frame"
+                    )
         except (FileNotFoundError, RuntimeError, asyncio.TimeoutError) as exc:
             if "process" in locals() and process.returncode is None:
                 process.kill()
                 await process.communicate()
             print(f"ℹ️ Manim renderer unavailable; using SVG fallback: {exc}")
-            image_bytes = _svg_fallback(scene)
+            payload_bytes = _svg_fallback(scene)
             mime_type = "image/svg+xml"
             renderer = "svg-fallback"
 
-    encoded = base64.b64encode(image_bytes).decode("ascii")
+    encoded = base64.b64encode(payload_bytes).decode("ascii")
     return {
         "id": f"visual-{uuid4().hex}",
-        "type": "image",
+        "type": visual_type,
         "mime_type": mime_type,
         "data_url": f"data:{mime_type};base64,{encoded}",
         "title": scene.get("title") or "",

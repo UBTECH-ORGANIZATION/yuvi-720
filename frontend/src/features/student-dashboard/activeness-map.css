@@ -1,9 +1,27 @@
-/* Activeness map — a personal, interactive 3D space (not a chart, not a game). */
+/* Activeness map — front-facing radar (left) + info/chat panel (right). */
 
-/* ── Wide half-circle "hidden gate" for the activeness map ────────────────── */
-/* A fixed overlay above the page content — never part of the layout flow.     */
-/* Centered horizontally, flush to the bottom, peeking up as a wide arch.       */
-.sd-actmap-bubble {
+/* ── Portal primitives (shared by the bottom gate) ────────────────────────── */
+.gw-portal__ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(168, 148, 255, .5);
+  box-shadow: 0 0 20px rgba(120, 96, 255, .35), inset 0 0 16px rgba(120, 96, 255, .18);
+}
+.gw-portal__ring--1 { inline-size: 100%; block-size: 100%; border-color: rgba(168, 148, 255, .6); animation: gw-spin 22s linear infinite; }
+.gw-portal__ring--3 { inline-size: 52%; block-size: 52%; border-color: rgba(210, 150, 255, .6); animation: gw-spin 11s linear infinite reverse; }
+.gw-portal__core {
+  inline-size: 30%;
+  block-size: 30%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 42% 36%, #fff, #b9a9ff 42%, #6b5cff 80%);
+  box-shadow: 0 0 26px rgba(140, 116, 255, .85), 0 0 54px rgba(90, 130, 255, .5);
+  animation: gw-pulse 3.2s ease-in-out infinite;
+}
+@keyframes gw-spin { to { transform: rotate(360deg); } }
+@keyframes gw-pulse { 0%, 100% { transform: scale(1); opacity: .95; } 50% { transform: scale(1.1); opacity: 1; } }
+
+/* ── Bottom gate ──────────────────────────────────────────────────────────── */
+.trail-gate {
   position: fixed;
   left: 50%;
   inset-block-end: 0;
@@ -11,140 +29,560 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: 4px;
+  gap: 2px;
   inline-size: 344px;
   max-inline-size: calc(100% - 24px);
-  block-size: 104px;
-  padding: 14px 26px 0;
+  block-size: 118px;
+  padding: 16px 26px 0;
   border: 0;
-  /* Wide elliptical half-circle that only peeks from the bottom edge. */
   border-radius: 50% 50% 0 0 / 100% 100% 0 0;
   background:
-    radial-gradient(circle at 30% 8%, rgba(255, 255, 255, .35), transparent 44%),
-    radial-gradient(circle at 82% 74%, rgba(56, 161, 240, .5), transparent 55%),
-    linear-gradient(150deg, #8a6cff 0%, #6b5cff 52%, #5b8bff 100%);
-  box-shadow:
-    0 -18px 54px rgba(108, 92, 255, .55),
-    0 -6px 20px rgba(56, 161, 240, .34),
-    inset 0 1px 0 rgba(255, 255, 255, .5);
+    radial-gradient(circle at 32% 12%, rgba(150, 180, 255, .26), transparent 50%),
+    radial-gradient(circle at 82% 82%, rgba(58, 190, 214, .34), transparent 60%),
+    linear-gradient(160deg, #241c5e 0%, #21356e 52%, #17495c 100%);
+  box-shadow: 0 -18px 54px rgba(60, 90, 190, .5), 0 -6px 22px rgba(48, 160, 200, .3), inset 0 1px 0 rgba(255, 255, 255, .34);
   cursor: pointer;
-  /* Hidden: tucked fully below the screen edge. */
+  color: #fff;
   transform: translateX(-50%) translateY(100%);
   opacity: 0;
   pointer-events: none;
-  transition: transform 460ms cubic-bezier(.2, .7, .2, 1), opacity 340ms ease, box-shadow 260ms ease;
+  transition: transform 480ms cubic-bezier(.2, .7, .2, 1), opacity 340ms ease, box-shadow 260ms ease;
   will-change: transform, opacity;
 }
-.sd-actmap-bubble--visible {
-  /* Visible: flush to the bottom, no gap beneath it. */
+.trail-gate--visible {
   transform: translateX(-50%) translateY(0);
   opacity: 1;
   pointer-events: auto;
-  animation: sd-actmap-bubble-breathe 3s ease-in-out infinite 460ms;
+  animation: trail-gate-breathe 3.2s ease-in-out infinite 480ms;
 }
-.sd-actmap-bubble:hover {
+.trail-gate:hover {
   animation-play-state: paused;
-  transform: translateX(-50%) translateY(-12px) scale(1.05);
-  box-shadow:
-    0 -26px 70px rgba(108, 92, 255, .75),
-    0 -10px 30px rgba(56, 161, 240, .5),
-    inset 0 1px 0 rgba(255, 255, 255, .6);
+  transform: translateX(-50%) translateY(-12px) scale(1.04);
+  box-shadow: 0 -26px 70px rgba(70, 110, 220, .72), 0 -10px 30px rgba(58, 190, 216, .5), inset 0 1px 0 rgba(255, 255, 255, .55);
 }
-.sd-actmap-bubble:hover .sd-actmap-bubble__glow { opacity: 1; transform: translateX(-50%) scale(1.15); }
-.sd-actmap-bubble:hover .sd-actmap-bubble__arrow { animation-duration: 1s; color: #fff; }
-.sd-actmap-bubble:hover .sd-actmap-bubble__title { letter-spacing: .03em; }
-.sd-actmap-bubble:focus-visible {
-  outline: none;
-  transform: translateX(-50%) translateY(-12px) scale(1.05);
-  box-shadow:
-    0 -26px 70px rgba(108, 92, 255, .8),
-    0 0 0 3px rgba(255, 255, 255, .7);
-}
-.sd-actmap-bubble:active {
-  transform: translateX(-50%) translateY(-4px) scale(1.01);
-}
-@keyframes sd-actmap-bubble-breathe {
-  0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(-7px); }
-}
-.sd-actmap-bubble__glow {
+.trail-gate:focus-visible { outline: none; transform: translateX(-50%) translateY(-12px) scale(1.04); box-shadow: 0 -26px 70px rgba(70, 110, 220, .78), 0 0 0 3px rgba(255, 255, 255, .7); }
+@keyframes trail-gate-breathe { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-7px); } }
+.trail-gate__portal { position: relative; inline-size: 46px; block-size: 46px; display: grid; place-items: center; pointer-events: none; }
+.trail-gate__spark {
   position: absolute;
-  inset-block-start: -34%;
-  left: 50%;
-  inline-size: 260px;
-  block-size: 260px;
-  transform: translateX(-50%);
-  background: radial-gradient(circle, rgba(146, 120, 255, .6), transparent 66%);
-  filter: blur(16px);
-  opacity: .85;
-  pointer-events: none;
-  transition: opacity 260ms ease, transform 260ms ease;
-}
-.sd-actmap-bubble__arrow {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, .92);
-  pointer-events: none;
-  animation: sd-actmap-arrow-hint 1.8s ease-in-out infinite;
-}
-@keyframes sd-actmap-arrow-hint {
-  0%, 100% { transform: translateY(2px); opacity: .7; }
-  50% { transform: translateY(-3px); opacity: 1; }
-}
-.sd-actmap-bubble__content {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  color: #fff;
-  pointer-events: none;
-}
-.sd-actmap-bubble__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  inline-size: 30px;
-  block-size: 30px;
+  inline-size: 8px;
+  block-size: 8px;
+  margin: -4px 0 0 -4px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, .22);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35);
+  background: radial-gradient(circle at 40% 36%, #fff, var(--gw-c) 62%);
+  box-shadow: 0 0 10px var(--gw-c);
+  opacity: 0;
+}
+.trail-gate__label { display: flex; flex-direction: column; align-items: center; gap: 1px; pointer-events: none; }
+.trail-gate__title { font-size: var(--sp-fs-md, 16px); font-weight: 800; text-shadow: 0 1px 8px rgba(40, 24, 92, .4); white-space: nowrap; }
+.trail-gate__hint { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: rgba(255, 255, 255, .86); }
+.trail-gate__hint .sp-icon { animation: gw-nudge 1.8s ease-in-out infinite; }
+@keyframes gw-nudge { 0%, 100% { transform: translateY(2px); opacity: .7; } 50% { transform: translateY(-3px); opacity: 1; } }
+@media (max-width: 720px) { .trail-gate { inline-size: 300px; block-size: 104px; } }
+
+/* ── Reveal: the gate grows to fill below the nav, then content fades in ───── */
+/* Transparent while growing so the real dashboard stays visible behind the
+   gate; the growing gate (and the scrim) cover it progressively, bottom-up. */
+.amap-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+}
+.amap__nav { flex: none; position: relative; z-index: 3; }
+/* Once committed, blend the app bar into the map's surface. While the gate is
+   still growing the nav keeps its normal dashboard look (matches the page
+   showing behind), so nothing changes until the map has filled. */
+.amap-overlay.is-committed .amap__nav .app-bar {
+  background: linear-gradient(180deg, rgba(28, 24, 74, .72), rgba(23, 40, 82, .46));
+  border-block-end: 1px solid rgba(150, 180, 255, .16);
+  box-shadow: 0 8px 30px rgba(10, 12, 40, .3);
+  transition: background .4s ease, border-color .4s ease, box-shadow .4s ease;
+}
+.amap-overlay.is-committed .amap__nav .learner-app-nav {
+  background: rgba(14, 16, 46, .42);
+  border-color: rgba(150, 180, 255, .18);
+}
+.amap-overlay.is-committed .amap__nav .learner-app-nav button { color: rgba(224, 226, 255, .74); }
+.amap-overlay.is-committed .amap__nav .learner-app-nav button:hover { color: #fff; }
+.amap-overlay.is-committed .amap__nav .learner-app-nav button.is-active {
+  background: rgba(120, 150, 255, .22);
   color: #fff;
-  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(180, 200, 255, .28);
 }
-.sd-actmap-bubble__icon .sp-icon {
-  flex-shrink: 0;
+.amap__below { position: relative; flex: 1; min-block-size: 0; overflow: hidden; }
+.amap__scrim { position: absolute; inset: 0; z-index: 0; background: #05041a; opacity: 0; pointer-events: none; will-change: opacity; }
+/* The growing gate — JS drives its size; it is also the page background. */
+.trail-gate--grow {
+  position: absolute;
+  left: 50%;
+  inset-block-end: 0;
+  inset-block-start: auto;
+  max-inline-size: none;
+  z-index: 1;
+  transform: translateX(-50%);
+  opacity: 1;
+  pointer-events: none;
+  overflow: hidden;
+  box-shadow: none;
+  transition: none;
+  animation: none;
+  will-change: width, height;
 }
-.sd-actmap-bubble__title {
-  font-size: var(--sp-fs-md, 16px);
+.trail-gate__growinner {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 118px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-block-start: 16px;
+  color: #fff;
+  will-change: opacity;
+}
+.amap__content { position: absolute; inset: 0; z-index: 2; opacity: 0; }
+
+/* ── Map shell ────────────────────────────────────────────────────────────── */
+.amap { block-size: 100%; display: flex; flex-direction: column; color: #eef0ff; }
+.amap__nav { position: relative; z-index: 4; }
+.amap__bar { position: relative; z-index: 4; display: flex; align-items: center; gap: 14px; padding: 12px clamp(16px, 4vw, 40px); }
+.amap__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 42px;
+  block-size: 42px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .06);
+  color: #eef0ff;
+  cursor: pointer;
+  transition: background 180ms ease, transform 180ms ease;
+}
+.amap__icon-btn:hover { background: rgba(255, 255, 255, .14); transform: translateY(-1px); }
+.amap__bar-heading { display: flex; flex-direction: column; gap: 2px; min-inline-size: 0; }
+.amap__title {
+  margin: 0;
+  font-size: clamp(19px, 2.4vw, 27px);
   font-weight: 800;
-  letter-spacing: .01em;
-  color: #fff;
-  text-shadow: 0 1px 8px rgba(40, 24, 92, .4);
-  white-space: nowrap;
-  transition: letter-spacing 200ms ease;
+  background: linear-gradient(100deg, #cfc4ff 0%, #a9c8ff 46%, #7fe6dd 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
-@media (max-width: 720px) {
-  .sd-actmap-bubble {
-    inline-size: 300px;
-    block-size: 92px;
-    padding: 12px 22px 0;
-  }
-  .sd-actmap-bubble__icon {
-    inline-size: 26px;
-    block-size: 26px;
-  }
-  .sd-actmap-bubble__title { font-size: var(--sp-fs-sm, 15px); }
+.amap__subtitle { margin: 0; font-size: 13px; color: rgba(214, 210, 244, .72); }
+
+/* Two columns: radar physically left, panel physically right (force LTR order). */
+.amap__body {
+  flex: 1;
+  min-block-size: 0;
+  display: grid;
+  direction: ltr;
+  grid-template-columns: minmax(0, 1.62fr) minmax(320px, .82fr);
+  gap: clamp(14px, 2vw, 26px);
+  padding: 4px clamp(16px, 3.4vw, 40px) clamp(18px, 3vh, 34px);
+}
+.amap--rtl .amap__panel { direction: rtl; text-align: start; }
+
+/* ── LEFT: front-facing radar ─────────────────────────────────────────────── */
+.amap__stage { position: relative; display: grid; place-items: center; perspective: 1100px; min-block-size: 0; padding-inline: clamp(40px, 6vw, 96px); }
+.amap__radar { position: relative; inline-size: 100%; display: grid; place-items: center; transform-style: preserve-3d; will-change: transform; }
+.amap__board { position: relative; inline-size: min(88%, 560px); aspect-ratio: 1; transition: transform .5s cubic-bezier(.2, .7, .2, 1); will-change: transform; }
+.amap__svg { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; overflow: visible; }
+.amap__ring { fill: none; stroke: rgba(180, 190, 255, .14); stroke-width: 1.3; }
+.amap__ring:last-of-type { stroke: rgba(190, 200, 255, .3); stroke-width: 1.7; }
+.amap__spoke { stroke: rgba(170, 180, 255, .13); stroke-width: 1.1; }
+.amap__data { stroke: rgba(196, 212, 255, .92); stroke-width: 2.4; stroke-linejoin: round; filter: drop-shadow(0 0 10px rgba(120, 150, 255, .6)); }
+.amap__dot { fill: color-mix(in srgb, var(--c) 70%, #fff); stroke: var(--c); stroke-width: 1.5; filter: drop-shadow(0 0 5px var(--c)); }
+
+/* Change layer — the trace runs from where you were (hollow ghost) to now (the
+   solid dot on the shape), with an arrowhead pointing at the current dot. */
+/* Previous position — a small neutral hollow ring (no filled/black disc). */
+.amap__ghost { fill: none; stroke: rgba(220, 225, 255, .85); stroke-width: 1.7; stroke-dasharray: 3 2.4; opacity: 0; filter: drop-shadow(0 0 3px rgba(200, 210, 255, .5)); }
+/* Change trace — green when the domain rose, red when it dropped. */
+.amap__trace { stroke-width: 2.6; stroke-linecap: round; opacity: 0; }
+.amap__trace--up { stroke: #2ec77e; filter: drop-shadow(0 0 5px rgba(46, 199, 126, .7)); }
+.amap__trace--down { stroke: #ff5a5a; filter: drop-shadow(0 0 5px rgba(255, 90, 90, .7)); }
+@media (prefers-reduced-motion: reduce) { .amap__ghost, .amap__trace { opacity: 1; } }
+
+/* Glossy faux-3D emblems ON each vertex. */
+.amap__emblem {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  z-index: 3;
+}
+.amap__emblem-inner { display: block; }
+.amap__emblem-dome {
+  position: relative;
+  display: grid;
+  place-items: center;
+  inline-size: 56px;
+  block-size: 56px;
+  border-radius: 50%;
+  color: #fff;
+  background: radial-gradient(circle at 34% 26%, color-mix(in srgb, var(--c) 26%, #fff 74%), var(--c) 56%, color-mix(in srgb, var(--c) 55%, #000 45%) 100%);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, .5),
+    0 0 26px color-mix(in srgb, var(--c) 55%, transparent),
+    inset 0 2px 5px rgba(255, 255, 255, .55),
+    inset 0 -7px 12px rgba(0, 0, 0, .32);
+  transition: transform 200ms cubic-bezier(.2, .7, .2, 1), box-shadow 200ms ease;
+}
+.amap__emblem-dome::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 15%;
+  inset-inline-start: 22%;
+  inline-size: 36%;
+  block-size: 26%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, .92), transparent 68%);
+  filter: blur(1px);
+  pointer-events: none;
+}
+.amap__emblem-dome .sp-icon { position: relative; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .35)); }
+.amap__emblem--strong .amap__emblem-dome { inline-size: 64px; block-size: 64px; }
+.amap__emblem--support .amap__emblem-dome { inline-size: 48px; block-size: 48px; }
+.amap__emblem:hover .amap__emblem-dome,
+.amap__emblem.is-active .amap__emblem-dome {
+  transform: translateY(-4px) scale(1.07);
+  box-shadow:
+    0 16px 30px rgba(0, 0, 0, .55),
+    0 0 42px color-mix(in srgb, var(--c) 78%, transparent),
+    inset 0 2px 6px rgba(255, 255, 255, .6),
+    inset 0 -7px 12px rgba(0, 0, 0, .32);
+}
+.amap__label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  max-inline-size: 116px;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.16;
+  text-align: center;
+  color: #eef0ff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .75);
+  pointer-events: none;
+  transition: opacity .35s ease, filter .35s ease;
+}
+/* Focus zoom: everything but the chosen domain recedes. */
+.amap__emblem { transition: opacity .35s ease, filter .35s ease; }
+.amap__emblem.is-dim, .amap__label.is-dim { opacity: .18; filter: saturate(.5); }
+
+/* Legend — what the change markers mean (top-left of the stage). */
+.amap__legend {
+  position: absolute;
+  inset-block-start: clamp(6px, 2vh, 22px);
+  inset-inline-start: clamp(6px, 1.6vw, 22px);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(150, 160, 220, .16);
+  background: linear-gradient(180deg, rgba(22, 18, 48, .74), rgba(14, 12, 34, .74));
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .4);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+}
+.amap__legend-title { font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: rgba(200, 200, 240, .66); }
+.amap__legend-row { display: inline-flex; align-items: center; gap: 9px; font-size: 12.5px; font-weight: 700; color: #e7e6ff; }
+/* "now" = the solid dot that sits on the shape. */
+.amap__legend-dot--now {
+  inline-size: 10px;
+  block-size: 10px;
+  flex: none;
+  border-radius: 50%;
+  background: #dfe6ff;
+  box-shadow: 0 0 7px rgba(190, 205, 255, .95);
+}
+/* "a week ago" = the hollow ghost ring marker. */
+.amap__legend-ghost {
+  inline-size: 10px;
+  block-size: 10px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.6px dashed rgba(220, 225, 255, .85);
+  background: transparent;
 }
 
+/* Concentrated view of the focused area — its recent trend, over the stage. */
+.amap__mini-history {
+  position: absolute;
+  inset-block-end: clamp(10px, 3vh, 26px);
+  inset-inline-start: clamp(10px, 2vw, 26px);
+  z-index: 4;
+  inline-size: 210px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--c) 34%, rgba(255, 255, 255, .12));
+  background: linear-gradient(180deg, rgba(22, 18, 48, .82), rgba(14, 12, 34, .82));
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .45);
+  backdrop-filter: blur(8px);
+  animation: amap-mini-in .34s cubic-bezier(.2, .7, .2, 1);
+}
+@keyframes amap-mini-in { from { opacity: 0; transform: translateY(8px); } }
+.amap__mini-head { display: flex; align-items: center; gap: 8px; margin-block-end: 9px; }
+.amap__mini-emblem {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 26px;
+  block-size: 26px;
+  flex: none;
+  border-radius: 50%;
+  color: #fff;
+  background: radial-gradient(circle at 34% 28%, color-mix(in srgb, var(--c) 26%, #fff 74%), var(--c) 62%, color-mix(in srgb, var(--c) 55%, #000 45%) 100%);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, .5);
+}
+.amap__mini-head strong { font-size: 13px; font-weight: 800; color: #f2f0ff; }
+.amap__spark { inline-size: 100%; block-size: 46px; overflow: visible; }
+.amap__spark-line { fill: none; stroke: var(--c); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--c) 70%, transparent)); }
+.amap__spark-dot { fill: #fff; stroke: var(--c); stroke-width: 2; }
+.amap__mini-caption { display: block; margin-block-start: 6px; font-size: 11px; color: rgba(210, 206, 240, .66); }
+.amap__mini-caption--empty { margin-block-start: 0; }
+@media (prefers-reduced-motion: reduce) { .amap__mini-history { animation: none; } }
+
+/* ── RIGHT: info / tips / chat panel ──────────────────────────────────────── */
+.amap__panel {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+  padding: 22px;
+  border-radius: 24px;
+  border: 1px solid rgba(150, 130, 255, .2);
+  background: linear-gradient(180deg, rgba(26, 22, 56, .7), rgba(16, 13, 38, .74));
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .05);
+  backdrop-filter: blur(10px);
+}
+.amap__panel-spot {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 0%), rgba(150, 130, 255, .16), transparent 72%);
+}
+.amap__panel > :not(.amap__panel-spot) { position: relative; z-index: 1; }
+/* Inline back arrow, on the same line as the title. */
+.amap__back {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  inline-size: 38px;
+  block-size: 38px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .06);
+  color: #eef0ff;
+  cursor: pointer;
+  transition: background 160ms ease, transform 160ms ease;
+}
+.amap__back:hover { background: rgba(255, 255, 255, .14); transform: translateY(-1px); }
+.amap__back .sp-icon { transform: scaleX(-1); }
+[dir='rtl'] .amap__back .sp-icon { transform: none; }
+.amap__phead { display: flex; align-items: center; gap: 12px; }
+.amap__panel-title { margin: 0; font-size: 19px; font-weight: 800; color: #fff; }
+.amap__panel-title--overview {
+  font-size: 22px;
+  background: linear-gradient(100deg, #cfc4ff, #9fd0ff 60%, #7fe6dd);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Overview (nothing selected). */
+.amap__overview { display: flex; flex-direction: column; gap: 16px; }
+.amap__overview-text { margin: 0; font-size: 14.5px; line-height: 1.6; color: rgba(222, 218, 248, .84); }
+.amap__overview-stats { display: flex; gap: 12px; }
+.amap__ovstat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  background: rgba(255, 255, 255, .04);
+}
+.amap__ovstat strong { font-size: 26px; font-weight: 800; line-height: 1; }
+.amap__ovstat span { font-size: 12px; color: rgba(214, 210, 244, .74); }
+.amap__ovstat--good { color: #7fe0b6; }
+.amap__ovstat--reinforce { color: #f4c07a; }
+
+/* Per-domain level list (fills the panel; each row opens that domain). */
+.amap__dlist { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+.amap__drow {
+  inline-size: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .035);
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, transform .16s ease;
+}
+.amap__drow:hover {
+  background: color-mix(in srgb, var(--c) 14%, rgba(255, 255, 255, .04));
+  border-color: color-mix(in srgb, var(--c) 42%, transparent);
+  transform: translateY(-1px);
+}
+.amap__drow-mark {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 30px;
+  block-size: 30px;
+  flex: none;
+  border-radius: 50%;
+  color: #fff;
+  background: radial-gradient(circle at 34% 28%, color-mix(in srgb, var(--c) 26%, #fff 74%), var(--c) 62%, color-mix(in srgb, var(--c) 55%, #000 45%) 100%);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .35), inset 0 1px 2px rgba(255, 255, 255, .5);
+}
+.amap__drow-name { font-size: 13.5px; font-weight: 700; color: #ecebff; min-inline-size: 0; }
+.amap__drow-bar { display: inline-flex; gap: 4px; }
+.amap__pip { inline-size: 7px; block-size: 7px; border-radius: 50%; background: rgba(255, 255, 255, .16); }
+.amap__pip.is-on { background: var(--c); box-shadow: 0 0 7px color-mix(in srgb, var(--c) 70%, transparent); }
+.amap__drow-go { color: rgba(210, 206, 240, .5); display: inline-grid; place-items: center; }
+.amap__drow:hover .amap__drow-go { color: #fff; }
+[dir='ltr'] .amap__drow-go .sp-icon { transform: scaleX(-1); }
+.amap__drow-main { display: flex; align-items: center; gap: 8px; min-inline-size: 0; }
+.amap__drow-name { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Change chip — icon only, green when up, red when down. */
+.amap__change-chip {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  inline-size: 22px;
+  block-size: 22px;
+  border-radius: 50%;
+}
+.amap__change-chip--up { background: rgba(52, 199, 126, .18); }
+.amap__change-chip--up .amap__trend { color: #52d597; }
+.amap__change-chip--down { background: rgba(255, 92, 92, .18); }
+.amap__change-chip--down .amap__trend { color: #ff7a7a; }
+
+/* "What changed" card in the domain detail. */
+.amap__whatchanged {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 213, 74, .3);
+  background: rgba(255, 213, 74, .08);
+}
+.amap__wc-head { display: flex; align-items: center; gap: 9px; margin-block-end: 7px; }
+.amap__wc-head strong { font-size: 13px; font-weight: 800; color: #ffe6a6; }
+.amap__wc-blurb { margin: 0; font-size: 14px; line-height: 1.55; color: rgba(240, 232, 214, .92); }
+.amap__wc-blurb--loading { display: flex; flex-direction: column; gap: 7px; }
+.amap__wc-shimmer {
+  block-size: 11px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(255, 213, 74, .1), rgba(255, 213, 74, .24), rgba(255, 213, 74, .1));
+  background-size: 200% 100%;
+  animation: amap-shimmer 1.2s linear infinite;
+}
+.amap__wc-shimmer:last-child { inline-size: 72%; }
+@keyframes amap-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .amap__wc-shimmer { animation: none; } }
+
+/* Detail (domain selected). */
+.amap__detail { display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+.amap__detail-head { display: flex; align-items: center; gap: 12px; }
+.amap__detail-head > div { min-inline-size: 0; }
+.amap__detail-emblem, .amap__chat-emblem {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 46px;
+  block-size: 46px;
+  flex: none;
+  border-radius: 50%;
+  color: #fff;
+  background: radial-gradient(circle at 34% 26%, color-mix(in srgb, var(--c) 26%, #fff 74%), var(--c) 58%, color-mix(in srgb, var(--c) 55%, #000 45%) 100%);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, .4), inset 0 2px 4px rgba(255, 255, 255, .5), inset 0 -5px 9px rgba(0, 0, 0, .3);
+}
+.amap__chat-emblem { inline-size: 34px; block-size: 34px; }
+.amap__chip {
+  display: inline-block;
+  margin-block-start: 5px;
+  padding: 2px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.amap__chip--strong { background: rgba(37, 180, 131, .2); color: #7fe0b6; }
+.amap__chip--steady { background: rgba(90, 130, 255, .2); color: #a9c0ff; }
+.amap__chip--support { background: rgba(229, 154, 60, .2); color: #f4c07a; }
+.amap__detail-meaning { margin: 0; font-size: 15px; line-height: 1.6; color: rgba(230, 226, 250, .9); }
+.amap__detail-why { padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, .04); border: 1px solid rgba(255, 255, 255, .08); }
+.amap__detail-why h4, .amap__improve h4 { margin: 0 0 6px; font-size: 12.5px; font-weight: 800; letter-spacing: .02em; color: rgba(200, 192, 255, .9); text-transform: uppercase; }
+.amap__detail-why p { margin: 0; font-size: 14px; line-height: 1.55; color: rgba(220, 216, 246, .82); }
+.amap__improve ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
+.amap__improve li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.5; color: rgba(224, 220, 248, .88); }
+.amap__improve-mark {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 24px;
+  block-size: 24px;
+  flex: none;
+  border-radius: 8px;
+  color: #cbb8ff;
+  background: rgba(140, 116, 255, .18);
+}
+.amap__improve-mark--next { color: #7fe6dd; background: rgba(64, 202, 224, .16); }
+[dir='rtl'] .amap__improve-mark--next .sp-icon { transform: scaleX(-1); }
+.amap__talk, .amap__chat-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  cursor: pointer;
+  font-weight: 800;
+  color: #fff;
+}
+.amap__talk {
+  align-self: center;
+  justify-content: center;
+  margin-block-start: 12px;
+  padding: 15px 34px;
+  border-radius: 999px;
+  font-size: 16px;
+  background: linear-gradient(150deg, #8a6cff, #6b5cff 55%, #4aa3e8);
+  box-shadow: 0 14px 32px rgba(108, 92, 255, .48);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.amap__talk:hover { transform: translateY(-2px); box-shadow: 0 20px 42px rgba(108, 92, 255, .62); }
+.amap__talk .sp-icon { inline-size: 18px; block-size: 18px; }
+
+/* Chat inside the panel. */
+.amap__chatwrap { display: flex; flex-direction: column; gap: 12px; min-block-size: 0; flex: 1; }
+.amap__chat-back { align-self: flex-start; background: none; padding: 0; font-size: 13px; color: rgba(206, 200, 240, .82); }
+.amap__chat-back:hover { color: #fff; }
+.amap__chat-back .sp-icon { transform: scaleX(-1); }
+[dir='rtl'] .amap__chat-back .sp-icon { transform: none; }
+.amap__chat-head { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 800; color: #fff; }
+
+@media (max-width: 900px) {
+  .amap__body { grid-template-columns: 1fr; grid-template-rows: minmax(240px, 1fr) auto; }
+  .amap__board { inline-size: min(78%, 380px); }
+}
 @media (prefers-reduced-motion: reduce) {
-  .sd-actmap-bubble { transition: transform 200ms ease, opacity 200ms ease; }
-  .sd-actmap-bubble--visible { animation: none; }
-  .sd-actmap-bubble__arrow { animation: none; opacity: .8; }
+  .gw-portal__ring--1, .gw-portal__ring--3, .gw-portal__core, .trail-gate--visible, .trail-gate__hint .sp-icon { animation: none; }
+  .trail-gate__spark { opacity: .85; }
 }
 
 /* ── Full-screen 3D space ─────────────────────────────────────────────────── */
@@ -153,12 +591,34 @@
   inset: 0;
   z-index: 2000;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
   background:
     radial-gradient(circle at 50% 38%, rgba(120, 96, 240, .32), transparent 52%),
     radial-gradient(circle at 18% 16%, rgba(80, 120, 220, .22), transparent 44%),
     linear-gradient(160deg, #241d4a 0%, #1b1638 46%, #120f28 100%);
   /* Opens like the hidden gate blooming up from the bottom-centre bubble. */
   animation: actmap-in .62s cubic-bezier(.2, .7, .2, 1) both;
+}
+
+/* Real app navigation on top; below it the content row: side card at the
+   inline start (right in RTL), the 3D stage filling the rest (left in RTL). */
+.actmap__nav { flex: none; }
+.actmap__content {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-block-size: 0;
+  gap: clamp(12px, 1.6vw, 20px);
+  padding: clamp(12px, 1.6vw, 20px);
+}
+.actmap__stage-wrap {
+  position: relative;
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  border: 1px solid rgba(160, 145, 255, .18);
+  border-radius: 24px;
 }
 @keyframes actmap-in {
   0% {
@@ -748,26 +1208,50 @@
   background: rgba(8, 5, 22, .32);
   animation: actmap-fade .25s ease;
 }
-.actmap__yubi {
-  position: absolute;
-  inset-block: 0;
-  right: 0;
-  left: auto;
-  z-index: 15;
-  inline-size: min(384px, 92vw);
+/* In-content side card: rounded, sized by content (never full height),
+   scrolls internally when long. */
+.actmap__side {
+  flex: none;
+  align-self: flex-start;
+  inline-size: min(392px, 38vw);
+  max-block-size: 100%;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid rgba(160, 145, 255, .28);
-  background: linear-gradient(180deg, rgba(30, 23, 56, .98), rgba(20, 15, 40, .98));
-  box-shadow: -24px 0 64px rgba(6, 4, 20, .5);
+  overflow: hidden;
+  border: 1px solid rgba(160, 145, 255, .26);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(30, 23, 56, .96), rgba(20, 15, 40, .96));
+  box-shadow: 0 24px 64px rgba(6, 4, 20, .45);
   backdrop-filter: blur(16px);
   color: #ece8ff;
   animation: actmap-yubi-in .32s cubic-bezier(.2, .7, .2, 1);
 }
 @keyframes actmap-yubi-in {
-  from { opacity: 0; transform: translateX(24px); }
-  to { opacity: 1; transform: translateX(0); }
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
 }
+.actmap__side-body {
+  overflow-y: auto;
+  padding: 16px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.actmap__side-intro { margin: 0; font-size: 14px; line-height: 1.55; color: #eae6ff; }
+/* Flat sections separated by hairlines — no nested bubbles. */
+.actmap__side-section { display: grid; gap: 4px; padding-block-start: 12px; border-block-start: 1px solid rgba(160, 145, 255, .16); }
+.actmap__side-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-block-end: 4px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #c3b6ff;
+}
+.actmap__side-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.actmap__side-list li + li { border-block-start: 1px solid rgba(255, 255, 255, .06); }
+.actmap__side-outro { margin: 0; padding-block-start: 12px; border-block-start: 1px solid rgba(160, 145, 255, .16); font-size: 12.5px; line-height: 1.5; color: rgba(224, 219, 250, .72); }
 .actmap__yubi-head {
   display: flex;
   align-items: center;
@@ -786,53 +1270,6 @@
 }
 .actmap__yubi-head strong { font-size: 17px; color: #f6f3ff; }
 .actmap__yubi-head .actmap__card-close { margin-inline-start: auto; }
-.actmap__yubi-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 18px 18px 26px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.actmap__yubi-msg {
-  padding: 14px 16px;
-  border-radius: 16px 16px 16px 5px;
-  border: 1px solid rgba(160, 145, 255, .2);
-  background: rgba(255, 255, 255, .05);
-  font-size: 14px;
-  line-height: 1.55;
-  color: #eae6ff;
-  animation: actmap-card .3s cubic-bezier(.2, .7, .2, 1);
-}
-.actmap__yubi-msg--outro {
-  background: rgba(124, 92, 255, .14);
-  border-color: rgba(160, 145, 255, .34);
-  color: #f2eeff;
-}
-.actmap__yubi-section {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-block-end: 10px;
-  font-size: 12.5px;
-  font-weight: 700;
-  letter-spacing: .01em;
-  color: #c3b6ff;
-  text-transform: none;
-}
-.actmap__yubi-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.actmap__yubi-list li {
-  display: flex;
-  align-items: start;
-  gap: 10px;
-}
 .actmap__yubi-dot {
   flex: none;
   inline-size: 9px;
@@ -841,15 +1278,279 @@
   border-radius: 50%;
   box-shadow: 0 0 0 3px rgba(255, 255, 255, .06);
 }
-.actmap__yubi-list li p {
-  margin: 0;
-  font-size: 13.5px;
-  line-height: 1.55;
-  color: rgba(224, 219, 250, .92);
-}
-.actmap__yubi-list li b { color: #f4f1ff; font-weight: 700; }
-
 @media (prefers-reduced-motion: reduce) {
   .actmap__orbhint,
-  .actmap__yubi { animation: none; }
+  .actmap__side { animation: none; }
+}
+
+/* Narrow screens: side card stacks above the map. */
+@media (max-width: 900px) {
+  .actmap__content { flex-direction: column; }
+  .actmap__side { inline-size: 100%; align-self: stretch; max-block-size: 46%; }
+  .actmap__stage-wrap { flex: 1; min-block-size: 0; }
+}
+
+/* ── Docked explainer additions (panel open by default, non-modal) ────────── */
+.actmap__yubi-reopen {
+  position: absolute;
+  inset-block-start: 74px;
+  inset-inline-end: 16px;
+  z-index: 15;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border: 1px solid rgba(159, 122, 254, .32);
+  border-radius: 999px;
+  background: rgba(24, 20, 52, .82);
+  color: #e6e2ff;
+  font: 700 12px/1 inherit;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.actmap__yubi-reopen:hover { background: rgba(48, 40, 96, .9); }
+
+/* The learner's single "focus now" — one clear next thing, not a chart. */
+.actmap__focus-card {
+  display: grid;
+  gap: 7px;
+  inline-size: 100%;
+  padding: 14px 16px;
+  border: 1px solid rgba(159, 122, 254, .38);
+  border-radius: 18px;
+  background: linear-gradient(140deg, rgba(111, 91, 255, .22), rgba(24, 20, 52, .55));
+  color: #efecff;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color .16s ease, transform .16s ease;
+}
+.actmap__focus-card:hover { border-color: rgba(185, 165, 255, .6); transform: translateY(-1px); }
+.actmap__focus-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(111, 91, 255, .3);
+  color: #cfc4ff;
+  font-size: 11px;
+  font-weight: 800;
+}
+.actmap__focus-name { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 800; }
+.actmap__focus-line { color: rgba(230, 226, 255, .8); font-size: 12.5px; line-height: 1.5; }
+
+/* Clickable domain rows — tapping a row flies the 3D camera to that station. */
+.actmap__domain-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  inline-size: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 13px;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.actmap__domain-row:hover { background: rgba(255, 255, 255, .07); }
+.actmap__domain-row__body { display: grid; gap: 2px; min-inline-size: 0; }
+.actmap__domain-row__body b { font-size: 13px; }
+.actmap__domain-row__body small { color: rgba(230, 226, 255, .66); font-size: 11.5px; line-height: 1.45; }
+.actmap__domain-chip {
+  flex: none;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.actmap__domain-chip--strong { background: rgba(31, 157, 107, .26); color: #6fe0ae; }
+.actmap__domain-chip--steady { background: rgba(56, 161, 240, .24); color: #8fcbff; }
+.actmap__domain-chip--support { background: rgba(224, 138, 60, .26); color: #ffc584; }
+
+/* ── 2D constellation map (nodes + drawn star-lines over the trail chrome) ─── */
+.cmap__stars { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.cmap__bgstar {
+  position: absolute;
+  inline-size: var(--s, 2px);
+  block-size: var(--s, 2px);
+  border-radius: 50%;
+  background: rgba(210, 220, 255, .9);
+  box-shadow: 0 0 6px rgba(190, 205, 255, .8);
+  opacity: .3;
+  animation: cmap-twinkle 3.6s ease-in-out infinite;
+}
+@keyframes cmap-twinkle { 0%, 100% { opacity: .22; } 50% { opacity: .85; } }
+
+/* Constellation lines — kept crisp despite the stretched viewBox. */
+.cmap__edge {
+  fill: none;
+  stroke: rgba(170, 150, 255, .7);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 4px rgba(140, 116, 255, .7));
+}
+.cmap__tourpath { fill: none; stroke: none; }
+
+/* Star nodes (HTML overlay, positioned in board %). */
+.cmap__star {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: #fff;
+  z-index: 3;
+}
+.cmap__star-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--dot, 52px);
+  block-size: var(--dot, 52px);
+  border-radius: 50%;
+  color: #fff;
+  background: radial-gradient(circle at 38% 32%, color-mix(in srgb, var(--trail-c) 60%, #fff 40%), var(--trail-c) 80%);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--trail-c) 30%, transparent),
+    0 10px 26px rgba(0, 0, 0, .42),
+    0 0 30px color-mix(in srgb, var(--trail-c) 62%, transparent);
+  transition: transform 200ms cubic-bezier(.2, .7, .2, 1), box-shadow 200ms ease;
+}
+.cmap__star--support .cmap__star-dot { opacity: .96; }
+.cmap__star:hover .cmap__star-dot,
+.cmap__star.is-active .cmap__star-dot {
+  transform: scale(1.09);
+  box-shadow:
+    0 0 0 5px color-mix(in srgb, var(--trail-c) 44%, transparent),
+    0 14px 34px rgba(0, 0, 0, .48),
+    0 0 46px color-mix(in srgb, var(--trail-c) 82%, transparent);
+}
+.cmap__star-label {
+  max-inline-size: 128px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .65);
+}
+
+@media (max-width: 720px) {
+  .cmap__star-label { max-inline-size: 92px; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cmap__bgstar { animation: none; opacity: .5; }
+}
+
+/* ── 3D activeness radar ("level shape" on a tilted plate) ─────────────────── */
+.radar__stage {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: grid;
+  place-items: center;
+  perspective: 1150px;
+  perspective-origin: 50% 42%;
+  padding: clamp(8px, 3vh, 30px);
+}
+.radar__board {
+  position: relative;
+  inline-size: min(84vmin, 540px);
+  block-size: min(84vmin, 540px);
+  transform-style: preserve-3d;
+}
+.radar__scene {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+}
+.radar__svg { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; overflow: visible; }
+
+.radar__ring {
+  fill: none;
+  stroke: rgba(180, 190, 255, .16);
+  stroke-width: 1.4;
+}
+.radar__ring:last-of-type { stroke: rgba(190, 200, 255, .3); stroke-width: 1.8; }
+.radar__spoke { stroke: rgba(170, 180, 255, .14); stroke-width: 1.2; }
+.radar__data {
+  stroke: rgba(190, 210, 255, .9);
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 10px rgba(120, 150, 255, .6));
+}
+.radar__shadow { fill: rgba(6, 6, 20, .5); }
+
+/* Vertex beads — glowing orbs that stand off the plate (face the camera). */
+.radar__bead {
+  position: absolute;
+  inline-size: 20px;
+  block-size: 20px;
+  margin: -10px 0 0 -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #fff, var(--c) 66%);
+  box-shadow: 0 0 12px var(--c), 0 0 26px color-mix(in srgb, var(--c) 70%, transparent);
+  transform-style: preserve-3d;
+}
+.radar__bead.is-active { box-shadow: 0 0 18px var(--c), 0 0 40px var(--c); }
+
+/* Rim markers — icon + label standing around the tilted plate, upright. */
+.radar__rim {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: #fff;
+  z-index: 3;
+}
+.radar__rim.is-active { z-index: 4; }
+.radar__rim-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: 50%;
+  color: #fff;
+  background: radial-gradient(circle at 38% 32%, color-mix(in srgb, var(--c) 58%, #fff 42%), var(--c) 82%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 30%, transparent), 0 8px 20px rgba(0, 0, 0, .45), 0 0 22px color-mix(in srgb, var(--c) 55%, transparent);
+  transition: transform 180ms cubic-bezier(.2, .7, .2, 1), box-shadow 180ms ease;
+}
+.radar__rim--strong .radar__rim-dot { inline-size: 50px; block-size: 50px; }
+.radar__rim--support .radar__rim-dot { inline-size: 38px; block-size: 38px; }
+.radar__rim:hover .radar__rim-dot,
+.radar__rim.is-active .radar__rim-dot {
+  transform: scale(1.1);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 44%, transparent), 0 10px 26px rgba(0, 0, 0, .5), 0 0 36px color-mix(in srgb, var(--c) 80%, transparent);
+}
+.radar__rim-label {
+  max-inline-size: 108px;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.18;
+  text-align: center;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .7);
+}
+
+@media (max-width: 720px) {
+  .radar__rim-label { max-inline-size: 84px; font-size: 11.5px; }
+  .radar__rim-dot { inline-size: 38px; block-size: 38px; }
 }

@@ -3,7 +3,6 @@ import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { EmptyState, ErrorState, Icon } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useBrain } from '../../providers/BrainProvider'
-import { useCompanion } from '../../providers/CompanionProvider'
 import { getDashboard, type DashboardDTO } from '../../services/brain'
 import {
   getLearningCatalog,
@@ -14,7 +13,8 @@ import { navigate } from '../../app/router'
 import { selectNextRoute } from '../../services/agents'
 import { DashboardHero } from './DashboardHero'
 import { DashboardLoadingScreen } from './DashboardLoadingScreen'
-import { DashboardOverview } from './DashboardOverview'
+import { LearningMap } from './LearningMap'
+import { MyGoals } from './MyGoals'
 import { RecentLessons } from './RecentLessons'
 import { ActivenessMapSection } from './ActivenessMapSection'
 import { StudentConnectionsPane } from './StudentConnectionsPane'
@@ -28,7 +28,6 @@ import './student-dashboard.css'
 export function StudentDashboardPage() {
   const { t, language } = useI18n()
   const { learnerId, brain, refresh: refreshBrain } = useBrain()
-  const { open: openCompanion } = useCompanion()
   const [dashboard, setDashboard] = useState<DashboardDTO | null>(null)
   const [roadmapUnits, setRoadmapUnits] = useState<LearningUnitDTO[]>([])
   const [loading, setLoading] = useState(true)
@@ -67,6 +66,9 @@ export function StudentDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [learnerId, language, reloadKey])
 
+  // The lesson catalog loads once per visit (or language switch). It is NOT
+  // tied to the focus/brain-updated refresh cycle — refetching it made the
+  // whole carousel remount and replay its entrance animation mid-session.
   useEffect(() => {
     let active = true
     const controller = new AbortController()
@@ -79,7 +81,7 @@ export function StudentDashboardPage() {
       active = false
       controller.abort()
     }
-  }, [learnerId, language, reloadKey])
+  }, [learnerId, language])
 
   useEffect(() => {
     const refresh = () => setReloadKey((key) => key + 1)
@@ -170,24 +172,35 @@ export function StudentDashboardPage() {
               onStart={() => void startHeroStep()}
               onBrowse={() => navigate('/learning')}
             />
-            <RecentLessons
-              units={roadmapUnits}
-              onOpenLearning={() => navigate('/learning')}
-              onOpenComponent={openRoadmapComponent}
-            />
-            <DashboardOverview
-              dashboard={dashboard}
-              onMentoring={() => navigate('/mentoring')}
-              onAskYuvi={openCompanion}
-            />
-            <ActivenessMapSection
-              competencies={dashboard.competencies}
-              studentName={studentName}
-            />
+            {/* Two-column layout: the learner's own activity (lessons, goals)
+                reads down the main column; the learning map rides a sticky
+                side rail so "where am I strong / what to reinforce" stays in
+                view while scrolling. Collapses to one column on narrow screens. */}
+            <div className="sd-grid">
+              <div className="sd-grid__main">
+                <RecentLessons
+                  units={roadmapUnits}
+                  onOpenLearning={() => navigate('/learning')}
+                  onOpenComponent={openRoadmapComponent}
+                />
+                <MyGoals
+                  goals={dashboard.goals}
+                  onSeeAll={() => navigate('/mentoring')}
+                  onAddGoal={() => navigate('/mentoring')}
+                />
+              </div>
+              <aside className="sd-grid__rail">
+                <LearningMap competencies={dashboard.competencies} />
+              </aside>
+            </div>
             <p className="sd-last-updated" aria-live="polite">
               <Icon name="check" size={14} />
               {t('sdash.live')}
             </p>
+            <ActivenessMapSection
+              competencies={dashboard.competencies}
+              studentName={studentName}
+            />
           </>
         )}
       </main>

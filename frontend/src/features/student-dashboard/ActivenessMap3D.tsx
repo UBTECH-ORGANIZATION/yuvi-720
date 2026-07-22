@@ -9,6 +9,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import { Icon } from '../../components/primitives'
+import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { YuviHeadIcon } from '../../components/YuviHeadIcon'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useTheme } from '../../providers/ThemeProvider'
@@ -782,7 +783,10 @@ export function ActivenessMap3D({ competencies, studentName, initial, onClose }:
   const [flow, setFlow] = useState<{ domain: string; step: 1 | 2 | 3; behavior: string | null; context: string | null } | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [panelOpen, setPanelOpen] = useState(false)
+  // The explainer panel is OPEN by default: the 3D space alone was not
+  // self-explanatory for a kid — the panel says, in words, what each station
+  // is, what is already strong, and where to focus now (verbal only, no scores).
+  const [panelOpen, setPanelOpen] = useState(true)
 
   const reduced = useMemo(
     () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
@@ -1628,58 +1632,154 @@ export function ActivenessMap3D({ competencies, studentName, initial, onClose }:
   const cardDomain = focusKey && !flow ? domains.find((d) => d.key === focusKey) : null
 
   // Yubi status summary (deterministic, from real activeness — no invented numbers).
-  const summaryStrengths = domains.filter((d) => d.tone !== 'support')
-  const summaryGrowth = domains.filter((d) => d.tone === 'support')
+  // Panel view: the focus domain is promoted to its own card; the rest split
+  // into "already strong" vs "growing" by their real verbal band.
+  const focusDomain = domains.find((d) => d.key === nextFocusKey) ?? null
+  const summaryStrengths = domains.filter((d) => d.tone !== 'support' && d.key !== nextFocusKey)
+  const summaryGrowth = domains.filter((d) => d.tone === 'support' && d.key !== nextFocusKey)
+  const focusFromPanel = (key: string) => {
+    setFocusKey(key)
+    sceneApi.current?.focusDomain(key)
+  }
 
   return (
     <div className={`actmap ${direction === 'rtl' ? 'actmap--rtl' : ''}`} dir={direction}>
-      <div className="actmap__stage" ref={mountRef} />
+      {/* Real app navigation stays available on the map screen. */}
+      <div className="actmap__nav">
+        <LearnerAppBar studentName={studentName} />
+      </div>
 
-      {/* Minimal top chrome. */}
-      <header className="actmap__bar">
-        <button className="actmap__icon-btn" type="button" onClick={onClose} aria-label={t('actmap.back')}>
-          <Icon name="arrow" size={18} />
-        </button>
-        <h2 className="actmap__title">{t('actmap.title')}</h2>
-      </header>
-
-      {/* Domain names are drawn in-scene as framed nameplates below each node. */}
-
-      {/* Personal note from Yubi about the tapped domain. */}
-      {cardDomain && isDomainVisible(cardDomain.key) && (
-        <div className="actmap__card actmap__card--yubi" role="dialog" aria-label={t(`actmap.domain.${cardDomain.key}`)}>
-          <button className="actmap__card-close" type="button" onClick={() => { setFocusKey(null); sceneApi.current?.resetView() }} aria-label={t('actmap.card.close')}>
-            <Icon name="close" size={16} />
-          </button>
-          <div className="actmap__card-yubi-head">
-            <span className="actmap__card-yubi-mark"><YuviHeadIcon width={34} height={34} /></span>
-            <div className="actmap__card-yubi-id">
+      <div className="actmap__content">
+        {/* Side card first in DOM: at inline-start (right in RTL), map fills the rest. */}
+        {panelOpen && (
+          <aside className="actmap__side" role="complementary" aria-label={t('actmap.yubi.title')} dir={direction}>
+            <header className="actmap__yubi-head">
+              <span className="actmap__yubi-mark"><YuviHeadIcon width={30} height={30} /></span>
               <strong>{t('actmap.yubi.title')}</strong>
-              <span>{t('actmap.card.yubi.sub')}</span>
+              <button className="actmap__card-close" type="button" onClick={() => setPanelOpen(false)} aria-label={t('actmap.yubi.close')}>
+                <Icon name="close" size={16} />
+              </button>
+            </header>
+            <div className="actmap__side-body">
+              <p className="actmap__side-intro" dir="auto">{t('actmap.yubi.intro', { name: studentName })}</p>
+
+              {focusDomain && (
+                <button
+                  type="button"
+                  className="actmap__focus-card"
+                  onClick={() => focusFromPanel(focusDomain.key)}
+                >
+                  <span className="actmap__focus-tag"><Icon name="target" size={13} /> {t('actmap.tag.focus')}</span>
+                  <span className="actmap__focus-name" dir="auto">
+                    <span className="actmap__yubi-dot" style={{ background: focusDomain.color }} aria-hidden="true" />
+                    {t(`actmap.domain.${focusDomain.key}`)}
+                  </span>
+                  <span className="actmap__focus-line" dir="auto">{t(`actmap.yubi.grow.${focusDomain.key}`)}</span>
+                </button>
+              )}
+
+              {summaryStrengths.length > 0 && (
+                <div className="actmap__side-section">
+                  <span className="actmap__side-label"><Icon name="check" size={13} /> {t('actmap.yubi.strengths')}</span>
+                  <ul className="actmap__side-list">
+                    {summaryStrengths.map((d) => (
+                      <li key={d.key}>
+                        <button type="button" className="actmap__domain-row" onClick={() => focusFromPanel(d.key)}>
+                          <span className="actmap__yubi-dot" style={{ background: d.color }} aria-hidden="true" />
+                          <span className="actmap__domain-row__body" dir="auto">
+                            <b>{t(`actmap.domain.${d.key}`)}</b>
+                            <small>{t(`actmap.yubi.strong.${d.key}`)}</small>
+                          </span>
+                          <span className={`actmap__domain-chip actmap__domain-chip--${d.tone}`}>{t(`actmap.status.${d.tone}`)}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {summaryGrowth.length > 0 && (
+                <div className="actmap__side-section">
+                  <span className="actmap__side-label"><Icon name="target" size={13} /> {t('actmap.yubi.growth')}</span>
+                  <ul className="actmap__side-list">
+                    {summaryGrowth.map((d) => (
+                      <li key={d.key}>
+                        <button type="button" className="actmap__domain-row" onClick={() => focusFromPanel(d.key)}>
+                          <span className="actmap__yubi-dot" style={{ background: d.color }} aria-hidden="true" />
+                          <span className="actmap__domain-row__body" dir="auto">
+                            <b>{t(`actmap.domain.${d.key}`)}</b>
+                            <small>{t(`actmap.yubi.grow.${d.key}`)}</small>
+                          </span>
+                          <span className={`actmap__domain-chip actmap__domain-chip--${d.tone}`}>{t(`actmap.status.${d.tone}`)}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <p className="actmap__side-outro" dir="auto">{t('actmap.yubi.outro')}</p>
             </div>
-            <span
-              className="actmap__card-domain"
-              style={{ ['--dot' as any]: cardDomain.color }}
-            >
-              <span className="actmap__card-dot" style={{ background: cardDomain.color }} aria-hidden="true" />
-              {t(`actmap.domain.${cardDomain.key}`)}
-            </span>
-          </div>
-          <p className="actmap__card-greeting" dir="auto">
-            {t(`actmap.card.yubi.msg.${activeGoal?.domain === cardDomain.key ? 'hasGoal' : (stateByKey[cardDomain.key] || 'strength')}`, {
-              name: studentName,
-              domain: t(`actmap.domain.${cardDomain.key}`),
-            })}
-          </p>
-          {activeGoal?.domain === cardDomain.key ? (
-            <p className="actmap__card-hasgoal"><Icon name="check" size={14} /> {t('actmap.card.hasGoalNote')}</p>
-          ) : (
-            <button className="actmap__card-cta" type="button" onClick={() => startFlow(cardDomain.key)}>
-              <Icon name="target" size={15} /> {t('actmap.card.makeGoal')}
+          </aside>
+        )}
+
+        <div className="actmap__stage-wrap">
+          <div className="actmap__stage" ref={mountRef} />
+
+          {/* Minimal top chrome. */}
+          <header className="actmap__bar">
+            <button className="actmap__icon-btn" type="button" onClick={onClose} aria-label={t('actmap.back')}>
+              <Icon name="arrow" size={18} />
+            </button>
+            <h2 className="actmap__title">{t('actmap.title')}</h2>
+          </header>
+
+          {!panelOpen && (
+            <button className="actmap__yubi-reopen" type="button" onClick={() => setPanelOpen(true)}>
+              <YuviHeadIcon width={22} height={22} />
+              <span>{t('actmap.yubi.title')}</span>
             </button>
           )}
+
+          {/* Domain names are drawn in-scene as framed nameplates below each node. */}
+
+          {/* Personal note from Yubi about the tapped domain. */}
+          {cardDomain && isDomainVisible(cardDomain.key) && (
+            <div className="actmap__card actmap__card--yubi" role="dialog" aria-label={t(`actmap.domain.${cardDomain.key}`)}>
+              <button className="actmap__card-close" type="button" onClick={() => { setFocusKey(null); sceneApi.current?.resetView() }} aria-label={t('actmap.card.close')}>
+                <Icon name="close" size={16} />
+              </button>
+              <div className="actmap__card-yubi-head">
+                <span className="actmap__card-yubi-mark"><YuviHeadIcon width={34} height={34} /></span>
+                <div className="actmap__card-yubi-id">
+                  <strong>{t('actmap.yubi.title')}</strong>
+                  <span>{t('actmap.card.yubi.sub')}</span>
+                </div>
+                <span
+                  className="actmap__card-domain"
+                  style={{ ['--dot' as any]: cardDomain.color }}
+                >
+                  <span className="actmap__card-dot" style={{ background: cardDomain.color }} aria-hidden="true" />
+                  {t(`actmap.domain.${cardDomain.key}`)}
+                </span>
+              </div>
+              <p className="actmap__card-greeting" dir="auto">
+                {t(`actmap.card.yubi.msg.${activeGoal?.domain === cardDomain.key ? 'hasGoal' : (stateByKey[cardDomain.key] || 'strength')}`, {
+                  name: studentName,
+                  domain: t(`actmap.domain.${cardDomain.key}`),
+                })}
+              </p>
+              {activeGoal?.domain === cardDomain.key ? (
+                <p className="actmap__card-hasgoal"><Icon name="check" size={14} /> {t('actmap.card.hasGoalNote')}</p>
+              ) : (
+                <button className="actmap__card-cta" type="button" onClick={() => startFlow(cardDomain.key)}>
+                  <Icon name="target" size={15} /> {t('actmap.card.makeGoal')}
+                </button>
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Goal-building flow: behavior → context → measurable goal. */}
       {flow && (
@@ -1754,55 +1854,6 @@ export function ActivenessMap3D({ competencies, studentName, initial, onClose }:
       )}
 
       {toast && <div className="actmap__toast" role="status"><Icon name="check" size={15} /> {toast}</div>}
-
-      {/* Yubi status summary — a right-side chat panel opened from the orb. */}
-      {panelOpen && (
-        <>
-          <div className="actmap__yubi-backdrop" onClick={() => setPanelOpen(false)} />
-          <aside className="actmap__yubi" role="dialog" aria-label={t('actmap.yubi.title')} dir={direction}>
-            <header className="actmap__yubi-head">
-              <span className="actmap__yubi-mark"><YuviHeadIcon width={30} height={30} /></span>
-              <strong>{t('actmap.yubi.title')}</strong>
-              <button className="actmap__card-close" type="button" onClick={() => setPanelOpen(false)} aria-label={t('actmap.yubi.close')}>
-                <Icon name="close" size={16} />
-              </button>
-            </header>
-            <div className="actmap__yubi-body">
-              <div className="actmap__yubi-msg" dir="auto">{t('actmap.yubi.intro', { name: studentName })}</div>
-
-              {summaryStrengths.length > 0 && (
-                <div className="actmap__yubi-msg">
-                  <span className="actmap__yubi-section"><Icon name="check" size={13} /> {t('actmap.yubi.strengths')}</span>
-                  <ul className="actmap__yubi-list">
-                    {summaryStrengths.map((d) => (
-                      <li key={d.key}>
-                        <span className="actmap__yubi-dot" style={{ background: d.color }} aria-hidden="true" />
-                        <p dir="auto"><b>{t(`actmap.domain.${d.key}`)}</b> — {t(`actmap.yubi.strong.${d.key}`)}</p>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {summaryGrowth.length > 0 && (
-                <div className="actmap__yubi-msg">
-                  <span className="actmap__yubi-section"><Icon name="target" size={13} /> {t('actmap.yubi.growth')}</span>
-                  <ul className="actmap__yubi-list">
-                    {summaryGrowth.map((d) => (
-                      <li key={d.key}>
-                        <span className="actmap__yubi-dot" style={{ background: d.color }} aria-hidden="true" />
-                        <p dir="auto"><b>{t(`actmap.domain.${d.key}`)}</b> — {t(`actmap.yubi.grow.${d.key}`)}</p>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div className="actmap__yubi-msg actmap__yubi-msg--outro" dir="auto">{t('actmap.yubi.outro')}</div>
-            </div>
-          </aside>
-        </>
-      )}
     </div>
   )
 }

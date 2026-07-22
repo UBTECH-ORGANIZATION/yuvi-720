@@ -75,6 +75,9 @@ export interface LearnerState {
     positions?: Record<string, number>
     focus?: string | null
     goal?: { domain: string; behavior: string; context: string; text: string; id?: string } | null
+    /** Capped, timestamped snapshots of per-domain positions (oldest→newest).
+     * Powers the "what changed since last time" deltas and per-vertex history. */
+    history?: { at: string; positions: Record<string, number> }[]
   } | null
 }
 

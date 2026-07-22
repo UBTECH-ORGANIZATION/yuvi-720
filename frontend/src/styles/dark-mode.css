@@ -708,12 +708,6 @@
   background: rgba(11, 31, 58, .5);
 }
 
-[data-theme='dark'] .sd-journey-hero .sd-button--primary {
-  background: linear-gradient(135deg, #f7fbff, #dff8ff);
-  color: #30259f;
-  box-shadow: 0 14px 34px rgba(1, 7, 31, .32), 0 0 24px rgba(73, 218, 247, .13);
-}
-
 [data-theme='dark'] .sd-journey-hero .sd-button--quiet {
   border-color: rgba(150, 224, 242, .24);
   background: rgba(16, 32, 65, .56);
@@ -980,7 +974,8 @@
   background: var(--sp-surface-2);
   box-shadow: 0 10px 26px rgba(0, 2, 18, .3);
 }
-[data-theme='dark'] .sp-companion__visual img { background: #0b0f24; }
+[data-theme='dark'] .sp-companion__visual img,
+[data-theme='dark'] .sp-companion__visual video { background: #0b0f24; }
 
 [data-theme='dark'] .sp-companion__composer {
   border-color: var(--sp-border);

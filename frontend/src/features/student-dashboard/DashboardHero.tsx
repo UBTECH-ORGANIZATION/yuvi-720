@@ -1,8 +1,9 @@
-import { useEffect, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { Icon, StatusPill } from '../../components/primitives'
+import { type PointerEvent as ReactPointerEvent } from 'react'
+import { Icon } from '../../components/primitives'
 import { useMediaQuery } from '../../hooks/useResponsive'
 import { useI18n } from '../../i18n/I18nProvider'
 import type { DashboardDTO } from '../../services/brain'
+import { HeroInteractive } from './HeroInteractive'
 
 interface DashboardHeroProps {
   dashboard: DashboardDTO
@@ -22,14 +23,14 @@ export function DashboardHero({
   const { t } = useI18n()
   const { hero } = dashboard
   const isComplete = hero.mode === 'complete'
-  const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
-  const [imageFailed, setImageFailed] = useState(false)
-  const showIllustration = Boolean(hero.illustration && !imageFailed)
-  const illustrationUrl = prefersReducedMotion
-    ? hero.illustration?.staticUrl || hero.illustration?.url
-    : hero.illustration?.url
 
-  useEffect(() => setImageFailed(false), [hero.illustration?.assetId])
+  // Highlight the learner's name inside the localized greeting, whatever its
+  // position in he/en/ar. A zero-width sentinel marks the name so we can wrap it.
+  const NAME_MARK = '⁣'
+  const greetingParts = t('sdash.greeting', {
+    name: `${NAME_MARK}${dashboard.name}${NAME_MARK}`,
+  }).split(NAME_MARK)
+  const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
 
   const updateHeroGlow = (event: ReactPointerEvent<HTMLElement>) => {
     if (prefersReducedMotion || event.pointerType !== 'mouse') return
@@ -56,48 +57,51 @@ export function DashboardHero({
       <div className="sd-journey-hero__content">
         <div className="sd-journey-hero__head">
           <p className="sd-journey-hero__welcome" dir="auto">
-            {t('sdash.greeting', { name: dashboard.name })}
+            {greetingParts.length === 3 ? (
+              <>
+                {greetingParts[0]}
+                <span className="sd-journey-hero__name" dir="auto">{greetingParts[1]}</span>
+                {greetingParts[2]}
+              </>
+            ) : (
+              t('sdash.greeting', { name: dashboard.name })
+            )}
           </p>
-          <span className="sd-journey-hero__eyebrow">
-            <Icon name={hero.mode === 'resume' ? 'clock' : 'spark'} size={15} />
-            {t(`sdash.hero.${hero.mode}.eyebrow`)}
-          </span>
-          <h1 id="sd-journey-title" className="sd-journey-hero__title" dir="auto">
-            {hero.objectiveTitle || t('sdash.hero.complete.title')}
-          </h1>
-          <div className="sd-journey-hero__meta">
-            {hero.subjectName && <StatusPill tone="neutral">{hero.subjectName}</StatusPill>}
-            {hero.pace && <StatusPill tone="steady">{hero.pace}</StatusPill>}
+          <div className="sd-journey-hero__title-row">
+            <h1 id="sd-journey-title" className="sd-journey-hero__title" dir="auto">
+              {hero.objectiveTitle || t('sdash.hero.complete.title')}
+            </h1>
+            {!isComplete && (
+              <button className={`sd-button sd-button--primary${hero.mode === 'next' ? ' sd-button--directional' : ''}`} type="button" onClick={onStart} disabled={isStarting}>
+                <span>{isStarting ? t('sdash.hero.starting') : t(`sdash.hero.${hero.mode}.action`)}</span>
+                <Icon name={hero.mode === 'resume' ? 'reflect' : 'arrow'} size={18} />
+              </button>
+            )}
           </div>
-        </div>
-
-        {!isComplete && (
-          <div className="sd-journey-hero__progress" aria-hidden="true">
-            <div className="sd-journey-hero__progress-head">
-              <span>{t('sdash.hero.progress')}</span>
-              <span>{hero.stats.overallProgress}%</span>
-            </div>
-            <div className="sd-journey-hero__progress-track">
-              <div
-                className="sd-journey-hero__progress-fill"
-                style={{ inlineSize: `${hero.stats.overallProgress}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="sd-journey-hero__actions">
-          {!isComplete && (
-            <button className={`sd-button sd-button--primary${hero.mode === 'next' ? ' sd-button--directional' : ''}`} type="button" onClick={onStart} disabled={isStarting}>
-              <span>{isStarting ? t('sdash.hero.starting') : t(`sdash.hero.${hero.mode}.action`)}</span>
-              <Icon name={hero.mode === 'resume' ? 'reflect' : 'arrow'} size={18} />
-            </button>
-          )}
         </div>
         {actionError && <p className="sd-journey-hero__error" role="alert">{t('sdash.hero.actionError')}</p>}
+
+        {/* KPIs sit above the Spark tip and are sized to fill the column. */}
+        <dl className="sd-journey-hero__stats">
+          <div><dt><Icon name="clock" size={15} />{t('sdash.hero.timeSpent')}</dt><dd>{hero.stats.timeSpentMinutes === null ? t('sdash.hero.notAvailable') : t('sdash.hero.minutes', { count: hero.stats.timeSpentMinutes })}</dd></div>
+          <div><dt><Icon name="chart" size={15} />{t('sdash.hero.progress')}</dt><dd>{hero.stats.overallProgress}%</dd></div>
+          <div><dt><Icon name="check" size={15} />{t('sdash.hero.completedUnits')}</dt><dd>{hero.stats.completedUnits}</dd></div>
+        </dl>
         {hero.illustration?.tip && (
           <aside className="sd-journey-hero__tip">
-            <Icon name="lightbulb" size={17} />
+            <span className="sd-journey-hero__tip-bulb" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <g className="sd-tip-rays" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                  <path d="M12 1.1v2.5" />
+                  <path d="M20.6 4.4l-1.8 1.8" />
+                  <path d="M3.4 4.4l1.8 1.8" />
+                  <path d="M22.6 12h-2.5" />
+                  <path d="M3.9 12H1.4" />
+                </g>
+                <path stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" d="M8.5 14.7a5 5 0 1 1 7 0c-.75.65-1.15 1.45-1.25 2.35H9.75c-.1-.9-.5-1.7-1.25-2.35z" />
+                <path stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" d="M9.7 19.3h4.6M10.8 21.5h2.4" />
+              </svg>
+            </span>
             <div>
               <strong>{t('sdash.hero.tip')}</strong>
               <span dir="auto">{hero.illustration.tip}</span>
@@ -107,39 +111,8 @@ export function DashboardHero({
       </div>
 
       <div className="sd-journey-hero__visual">
-        {showIllustration ? (
-          <figure className="sd-lesson-illustration">
-            <div className="sd-lesson-illustration__badge">
-              <Icon name="target" size={15} />
-              <span>{t('sdash.hero.currentLesson')}</span>
-            </div>
-            <img
-              src={illustrationUrl}
-              alt={hero.illustration!.alt}
-              width={hero.illustration!.width}
-              height={hero.illustration!.height}
-              decoding="async"
-              onError={() => setImageFailed(true)}
-            />
-            {hero.illustration!.aiGenerated && (
-              <figcaption className="sd-lesson-illustration__ai"><Icon name="spark" size={12} />{t('sdash.hero.aiIllustration')}</figcaption>
-            )}
-          </figure>
-        ) : (
-          <div className="sd-orbit-wrap" aria-hidden="true">
-            <div className="sd-orbit sd-orbit--outer" />
-            <div className="sd-orbit sd-orbit--inner" />
-            <div className="sd-orbit__node sd-orbit__node--done"><Icon name="check" size={18} /></div>
-            <div className="sd-orbit__node sd-orbit__node--current"><Icon name="book" size={20} /></div>
-            <div className="sd-orbit__node sd-orbit__node--next"><Icon name="spark" size={17} /></div>
-            <div className="sd-orbit__center"><Icon name="target" size={34} /></div>
-          </div>
-        )}
-        <dl className="sd-journey-hero__stats">
-          <div><dt><Icon name="clock" size={15} />{t('sdash.hero.timeSpent')}</dt><dd>{hero.stats.timeSpentMinutes === null ? t('sdash.hero.notAvailable') : t('sdash.hero.minutes', { count: hero.stats.timeSpentMinutes })}</dd></div>
-          <div><dt><Icon name="chart" size={15} />{t('sdash.hero.progress')}</dt><dd>{hero.stats.overallProgress}%</dd></div>
-          <div><dt><Icon name="check" size={15} />{t('sdash.hero.completedUnits')}</dt><dd>{hero.stats.completedUnits}</dd></div>
-        </dl>
+        {/* Playable topic visual — fills the full column height, no card frame. */}
+        <HeroInteractive title={hero.objectiveTitle} />
       </div>
     </section>
   )

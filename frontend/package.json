@@ -14,7 +14,9 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
+    "animejs": "^4.5.0",
     "katex": "^0.17.0",
+    "motion": "^12.42.2",
     "react": "latest",
     "react-dom": "latest",
     "three": "latest",
