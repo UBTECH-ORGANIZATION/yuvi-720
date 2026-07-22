@@ -321,6 +321,29 @@
   border-radius: 50%;
 }
 
+/* Coach (non-task) header: compact identity bar — small avatar, name, short
+   status, close only. No robot stage, rings or grid competing with the chat. */
+.sp-companion:not(.sp-companion--task) .sp-companion__head {
+  align-items: center;
+  min-block-size: 0;
+  padding: 13px 16px;
+  overflow: visible;
+}
+.sp-companion:not(.sp-companion--task) .sp-companion__head::after { display: none; }
+.sp-companion:not(.sp-companion--task) .sp-companion__id { padding-block-start: 0; }
+.sp-companion:not(.sp-companion--task) .sp-companion__avatar {
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: 13px;
+}
+.sp-companion:not(.sp-companion--task) .sp-companion__avatar svg { inline-size: 32px; block-size: 32px; }
+.sp-companion:not(.sp-companion--task) .sp-companion__title { font-size: 16px; font-weight: 750; }
+.sp-companion:not(.sp-companion--task) .sp-companion__subtitle { margin-block-start: 2px; font-size: 11px; }
+.sp-companion:not(.sp-companion--task) .sp-companion__head-actions {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 .sp-companion__yuvi-stage {
   position: absolute;
   right: 10px;
@@ -826,9 +849,9 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
   min-block-size: 0;
-  padding: 18px;
+  padding: 20px 18px;
   overflow-y: auto;
   background:
     linear-gradient(rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.92)),
@@ -847,6 +870,17 @@
 
 .sp-companion__message-row--assistant { justify-content: flex-start; }
 .sp-companion__message-row--user { justify-content: flex-end; }
+
+/* A run of same-sender messages sits closer together than a change of speaker. */
+.sp-companion__message-row--assistant + .sp-companion__message-row--assistant,
+.sp-companion__message-row--user + .sp-companion__message-row--user {
+  margin-block-start: -8px;
+}
+
+/* Yuvi's avatar only marks the first bubble of a run, not every message. */
+.sp-companion__message-row--assistant + .sp-companion__message-row--assistant .sp-companion__message-avatar {
+  visibility: hidden;
+}
 
 .sp-companion__message-avatar {
   display: grid;
@@ -867,7 +901,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-inline-size: 82%;
+  max-inline-size: 80%;
   min-inline-size: 0;
 }
 
@@ -877,11 +911,12 @@
 }
 
 .sp-companion__msg {
-  max-inline-size: 78%;
-  padding: 11px 14px;
-  border-radius: 17px;
+  max-inline-size: 82%;
+  inline-size: fit-content;
+  padding: 9px 13px;
+  border-radius: 16px;
   font-size: var(--sp-fs-sm);
-  line-height: 1.58;
+  line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -1318,22 +1353,53 @@
   box-shadow: 0 8px 18px rgba(111, 91, 255, 0.18);
 }
 
-.sp-companion__composer {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 12px 14px 14px;
+.sp-companion__composer-shell {
+  padding: 10px 14px 14px;
   border-block-start: 1px solid var(--sp-border);
   background: rgba(255, 255, 255, 0.98);
 }
 
-.sp-companion__composer input {
-  flex: 1;
-  min-inline-size: 0;
-  min-block-size: 44px;
-  border: 1px solid var(--sp-border-strong);
+.sp-companion__suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-block-end: 10px;
+}
+
+.sp-companion__suggestion {
+  padding: 7px 13px;
+  border: 1px solid rgba(124, 108, 255, 0.22);
   border-radius: var(--sp-radius-pill);
-  padding-inline: 17px;
+  background: rgba(244, 241, 255, 0.72);
+  color: var(--sp-primary-600);
+  font: 650 12px/1 var(--sp-font);
+  cursor: pointer;
+  transition: background 0.15s var(--sp-ease), border-color 0.15s var(--sp-ease), transform 0.15s var(--sp-ease);
+}
+
+.sp-companion__suggestion:hover {
+  border-color: rgba(111, 91, 255, 0.4);
+  background: rgba(111, 91, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.sp-companion__suggestion:focus-visible { outline: 3px solid var(--sp-primary-300); outline-offset: 2px; }
+
+.sp-companion__composer {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.sp-companion__composer input {
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 48px;
+  border: 1px solid var(--sp-border-strong);
+  border-radius: 18px;
+  padding-inline: 18px 56px;
   background: var(--sp-bg);
   color: var(--sp-ink-700);
   font: 400 var(--sp-fs-sm)/1 var(--sp-font);
@@ -1347,17 +1413,20 @@
 
 .sp-companion__composer input:focus-visible { border-color: var(--sp-primary-500); box-shadow: var(--sp-ring); }
 .sp-companion__composer button {
+  position: absolute;
+  inset-inline-end: 6px;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
   display: grid;
   place-items: center;
-  flex: none;
-  inline-size: 44px;
-  block-size: 44px;
+  inline-size: 38px;
+  block-size: 38px;
   border: none;
-  border-radius: 50%;
+  border-radius: 13px;
   background: linear-gradient(135deg, var(--sp-primary-600), var(--sp-purple-600));
   color: #fff;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgba(111, 91, 255, 0.24);
+  box-shadow: 0 6px 14px rgba(111, 91, 255, 0.22);
 }
 
 .sp-companion__composer button:disabled { background: var(--sp-border-strong); box-shadow: none; cursor: not-allowed; }

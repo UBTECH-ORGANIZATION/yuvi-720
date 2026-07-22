@@ -67,26 +67,19 @@ export function DashboardHero({
               t('sdash.greeting', { name: dashboard.name })
             )}
           </p>
-          <div className="sd-journey-hero__title-row">
-            <h1 id="sd-journey-title" className="sd-journey-hero__title" dir="auto">
-              {hero.objectiveTitle || t('sdash.hero.complete.title')}
-            </h1>
-            {!isComplete && (
-              <button className={`sd-button sd-button--primary${hero.mode === 'next' ? ' sd-button--directional' : ''}`} type="button" onClick={onStart} disabled={isStarting}>
-                <span>{isStarting ? t('sdash.hero.starting') : t(`sdash.hero.${hero.mode}.action`)}</span>
-                <Icon name={hero.mode === 'resume' ? 'reflect' : 'arrow'} size={18} />
-              </button>
-            )}
-          </div>
+          <h1 id="sd-journey-title" className="sd-journey-hero__title" dir="auto">
+            {hero.objectiveTitle || t('sdash.hero.complete.title')}
+          </h1>
+          <p className="sd-journey-hero__lead" dir="auto">{t(`sdash.hero.${hero.mode}.eyebrow`)}</p>
+          {!isComplete && (
+            <button className={`sd-button sd-button--primary${hero.mode === 'next' ? ' sd-button--directional' : ''}`} type="button" onClick={onStart} disabled={isStarting}>
+              <span>{isStarting ? t('sdash.hero.starting') : t(`sdash.hero.${hero.mode}.action`)}</span>
+              <Icon name={hero.mode === 'resume' ? 'reflect' : 'arrow'} size={18} />
+            </button>
+          )}
         </div>
         {actionError && <p className="sd-journey-hero__error" role="alert">{t('sdash.hero.actionError')}</p>}
 
-        {/* KPIs sit above the Spark tip and are sized to fill the column. */}
-        <dl className="sd-journey-hero__stats">
-          <div><dt><Icon name="clock" size={15} />{t('sdash.hero.timeSpent')}</dt><dd>{hero.stats.timeSpentMinutes === null ? t('sdash.hero.notAvailable') : t('sdash.hero.minutes', { count: hero.stats.timeSpentMinutes })}</dd></div>
-          <div><dt><Icon name="chart" size={15} />{t('sdash.hero.progress')}</dt><dd>{hero.stats.overallProgress}%</dd></div>
-          <div><dt><Icon name="check" size={15} />{t('sdash.hero.completedUnits')}</dt><dd>{hero.stats.completedUnits}</dd></div>
-        </dl>
         {hero.illustration?.tip && (
           <aside className="sd-journey-hero__tip">
             <span className="sd-journey-hero__tip-bulb" aria-hidden="true">
@@ -102,10 +95,9 @@ export function DashboardHero({
                 <path stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" d="M9.7 19.3h4.6M10.8 21.5h2.4" />
               </svg>
             </span>
-            <div>
-              <strong>{t('sdash.hero.tip')}</strong>
-              <span dir="auto">{hero.illustration.tip}</span>
-            </div>
+            <span className="sd-journey-hero__tip-text" dir="auto">
+              <strong>{t('sdash.hero.tip')}</strong> {hero.illustration.tip}
+            </span>
           </aside>
         )}
       </div>

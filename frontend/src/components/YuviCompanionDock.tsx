@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useI18n } from '../i18n/I18nProvider'
 import { useCompanion } from '../providers/CompanionProvider'
@@ -22,10 +22,31 @@ export function YuviCompanionDock() {
   const { design, loaded } = useYuviDesign()
   const avatarRef = useRef<YuviAvatarHandle | null>(null)
   const studioOpen = transition?.isOpen ?? false
+  const [isScrolling, setIsScrolling] = useState(false)
 
   useEffect(() => {
     if (loaded) avatarRef.current?.applyDesign(design, false)
   }, [design, loaded])
+
+  // While the learner scrolls, step Yuvi aside so he never obscures the content
+  // being read; bring him back once scrolling settles.
+  useEffect(() => {
+    if (isOpen || isOpening || isClosing) {
+      setIsScrolling(false)
+      return
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const onScroll = () => {
+      setIsScrolling(true)
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => setIsScrolling(false), 650)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true, capture: true })
+    return () => {
+      if (timer) clearTimeout(timer)
+      window.removeEventListener('scroll', onScroll, { capture: true } as EventListenerOptions)
+    }
+  }, [isOpen, isOpening, isClosing])
 
   const openStudio = (sourceEl: HTMLElement) => {
     close()
@@ -35,15 +56,13 @@ export function YuviCompanionDock() {
 
   const previewText = isStreaming ? t('companion.thinking') : preview
   const showPreview = !isOpen && (isStreaming || unreadCount > 0) && Boolean(previewText)
-  const orbitLabel = t('companion.launcher')
-  const orbitCharacters = Array.from(orbitLabel)
   const openImmediately = () => {
     flushSync(() => open())
   }
 
   return (
     <aside
-      className={`Yuvi-companion-dock${isOpen ? ' is-open' : ''}${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}${isStreaming ? ' is-thinking' : ''}${studioOpen ? ' is-studio-open' : ''}`}
+      className={`Yuvi-companion-dock${isOpen ? ' is-open' : ''}${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}${isStreaming ? ' is-thinking' : ''}${studioOpen ? ' is-studio-open' : ''}${isScrolling && !isOpen && !isOpening && !isClosing ? ' is-scrolling' : ''}`}
       aria-label={t('companion.title')}
       aria-hidden={studioOpen || undefined}
       data-opening={isOpening ? 'true' : 'false'}
@@ -66,23 +85,10 @@ export function YuviCompanionDock() {
           openImmediately()
         }}
       >
-        <span className="Yuvi-companion-dock__ring Yuvi-companion-dock__ring--outer" aria-hidden="true" />
-        <span className="Yuvi-companion-dock__ring Yuvi-companion-dock__ring--inner" aria-hidden="true" />
-        <span className="Yuvi-companion-dock__orbit-label" aria-hidden="true" dir={direction}>
-          {orbitCharacters.map((character, index) => (
-            <span
-              key={`${character}-${index}`}
-              style={{
-                '--orbit-index': direction === 'rtl' ? orbitCharacters.length - 1 - index : index,
-                '--orbit-count': Math.max(orbitCharacters.length - 1, 1),
-              } as React.CSSProperties}
-            >
-              <span>{character === ' ' ? '\u00a0' : character}</span>
-            </span>
-          ))}
+        <span className="Yuvi-companion-dock__base" aria-hidden="true" />
+        <span className="Yuvi-companion-dock__tooltip" role="tooltip" dir={direction}>
+          {t('companion.tooltip')}
         </span>
-        <span className="Yuvi-companion-dock__orbit-node Yuvi-companion-dock__orbit-node--one" aria-hidden="true" />
-        <span className="Yuvi-companion-dock__orbit-node Yuvi-companion-dock__orbit-node--two" aria-hidden="true" />
         <div className="Yuvi-companion-dock__robot">
           {loaded && !studioOpen && (
             <YuviAvatar3D
