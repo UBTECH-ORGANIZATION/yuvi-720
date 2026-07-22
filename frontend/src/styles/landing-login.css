@@ -146,6 +146,9 @@
 
 .landing720-lang-wrap {
   justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
 .landing720 .yuvi-language-switcher,
@@ -264,8 +267,6 @@
 
 .landing720-login-btn {
   position: relative;
-  isolation: isolate;
-  overflow: hidden;
   border-radius: 12px;
   border: 1px solid transparent;
   padding: 13px 16px;
@@ -274,71 +275,33 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  -webkit-backdrop-filter: blur(14px) saturate(180%);
-  backdrop-filter: blur(14px) saturate(180%);
   transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease,
     border-color 0.15s ease;
 }
 
-/* Glassy top-down sheen — the fixed highlight that reads as a glass pane. */
-.landing720-login-btn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.4) 0%,
-    rgba(255, 255, 255, 0.08) 46%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  pointer-events: none;
-}
-
-/* Specular streak that glides across on hover. */
-.landing720-login-btn::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  inset-inline-start: -140%;
-  z-index: -1;
-  inline-size: 55%;
-  block-size: 100%;
-  background: linear-gradient(
-    100deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.5) 50%,
-    transparent 100%
-  );
-  transform: skewX(-18deg);
-  transition: inset-inline-start 0.6s cubic-bezier(0.22, 0.9, 0.28, 1);
-  pointer-events: none;
-}
-
 .landing720-login-btn:hover {
   transform: translateY(-1px);
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.55),
-    var(--l720-shadow-sm);
-}
-
-.landing720-login-btn:hover::after {
-  inset-inline-start: 170%;
+  box-shadow: var(--l720-shadow-sm);
 }
 
 .landing720-login-btn.student {
-  color: #ffffff;
-  background: linear-gradient(135deg, #3a63f7 0%, var(--l720-blue) 100%);
-  border-color: rgba(255, 255, 255, 0.35);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  color: var(--l720-blue);
+  background: #ffffff;
+  border-color: rgba(43, 86, 245, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 22px rgba(43, 86, 245, 0.16),
+    0 2px 6px rgba(20, 40, 120, 0.12);
 }
 
 .landing720-login-btn.student:hover {
-  background: linear-gradient(135deg, var(--l720-blue) 0%, var(--l720-blue-dark) 100%);
+  transform: translateY(-2px);
+  background: #ffffff;
+  border-color: rgba(43, 86, 245, 0.4);
   box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.5),
-    var(--l720-shadow-sm);
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 16px 30px rgba(43, 86, 245, 0.22),
+    0 3px 8px rgba(20, 40, 120, 0.16);
 }
 
 .landing720-login-btn.teacher {
@@ -359,12 +322,6 @@
 
 .landing720-login-btn.secure:hover {
   border-color: var(--l720-navy-faint);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .landing720-login-btn::after {
-    transition: none;
-  }
 }
 
 /* ---- How it works: shared brain hub ---- */
@@ -488,6 +445,22 @@
   position: relative;
   z-index: 4;
   text-shadow: 0 1px 5px rgba(12, 8, 40, 0.55);
+}
+
+.landing720-hub-core-logo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 4;
+  width: clamp(92px, 12vw, 124px);
+  height: auto;
+  filter: drop-shadow(0 0 14px rgba(150, 120, 255, 0.65));
+  animation: l720-hub-core-logo-float 6.5s ease-in-out infinite;
+}
+
+@keyframes l720-hub-core-logo-float {
+  0%, 100% { transform: translate(-50%, -50%); }
+  50% { transform: translate(-50%, calc(-50% - 3px)); }
 }
 
 .landing720-hub-core strong {
@@ -819,6 +792,21 @@
   justify-content: center;
 }
 
+/* Small connection port where the spoke line meets the card — sits on the
+   inner edge facing the core (position derived from the card's spoke --angle). */
+.landing720-hub-node-port {
+  position: absolute;
+  left: calc(50% - 50% * cos(var(--angle, 0deg)));
+  top: calc(50% - 50% * sin(var(--angle, 0deg)));
+  width: 7px;
+  height: 7px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 4;
+}
+
 .landing720-hub-text {
   display: flex;
   flex-direction: column;
@@ -933,6 +921,10 @@
   }
 
   .landing720-hub-node::after {
+    display: none;
+  }
+
+  .landing720-hub-node-port {
     display: none;
   }
 }
@@ -1054,6 +1046,185 @@
 .landing720-feature-icon.icon-teal {
   color: var(--l720-teal);
   background: var(--l720-teal-bg);
+}
+
+/* ---- Alternating feature rows (image + text) ---- */
+.landing720-feature-rows {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(32px, 5vw, 72px);
+}
+
+.landing720-feature-rows__head {
+  text-align: center;
+  max-inline-size: 720px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.landing720-feature-rows__head .landing720-eyebrow {
+  color: var(--l720-purple);
+  background: var(--l720-purple-bg);
+  border: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.landing720-feature-rows__head h2 {
+  margin: 0;
+  font-size: clamp(28px, 3.4vw, 44px);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--l720-navy);
+}
+
+.landing720-feature-rows__head p {
+  margin: 0;
+  font-size: clamp(15px, 1.5vw, 19px);
+  line-height: 1.6;
+  color: var(--l720-navy-soft);
+}
+
+.landing720-feature-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(24px, 4vw, 56px);
+}
+
+/* Default (RTL): image on the right (first column), text on the left. */
+.landing720-feature-row.is-reversed {
+  direction: ltr;
+}
+
+.landing720-feature-row.is-reversed .landing720-feature-row__text {
+  direction: rtl;
+}
+
+.landing720-feature-row__media {
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: var(--l720-shadow-sm);
+  background: var(--l720-card);
+}
+
+.landing720-feature-row__media img {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  aspect-ratio: 4 / 3;
+  transition: transform 0.4s ease;
+}
+
+.landing720-feature-row__media:hover img {
+  transform: scale(1.03);
+}
+
+.landing720-feature-row__text {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.landing720-feature-row__text h3 {
+  margin: 0;
+  font-size: clamp(22px, 2.4vw, 30px);
+  font-weight: 700;
+  color: var(--l720-navy);
+}
+
+.landing720-feature-row__text p {
+  margin: 0;
+  font-size: clamp(15px, 1.4vw, 18px);
+  line-height: 1.6;
+  color: var(--l720-navy-soft);
+}
+
+.landing720-feature-row__points {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.landing720-feature-row__points li {
+  position: relative;
+  padding-inline-start: 30px;
+  font-size: clamp(14.5px, 1.35vw, 17px);
+  line-height: 1.5;
+  color: var(--l720-navy);
+}
+
+.landing720-feature-row__points li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 2px;
+  inline-size: 20px;
+  block-size: 20px;
+  border-radius: 50%;
+  background:
+    linear-gradient(135deg, var(--l720-blue), var(--l720-purple));
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 13 4 4L19 7'/%3E%3C/svg%3E") center / 12px no-repeat,
+    linear-gradient(#fff, #fff);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 13 4 4L19 7'/%3E%3C/svg%3E") center / 12px no-repeat,
+    linear-gradient(#fff, #fff);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* Reveal effect: rows rise in and points stagger. */
+.landing720-feature-row {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.is-yubi-revealed .landing720-feature-row,
+[data-yubi-reveal].is-yubi-revealed .landing720-feature-row {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.landing720-feature-row:nth-child(3) { transition-delay: 0.08s; }
+.landing720-feature-row:nth-child(4) { transition-delay: 0.16s; }
+
+.landing720-feature-row__points li {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.is-yubi-revealed .landing720-feature-row__points li {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.landing720-feature-row__points li:nth-child(1) { transition-delay: 0.12s; }
+.landing720-feature-row__points li:nth-child(2) { transition-delay: 0.22s; }
+.landing720-feature-row__points li:nth-child(3) { transition-delay: 0.32s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .landing720-feature-row,
+  .landing720-feature-row__points li {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .landing720-feature-row,
+  .landing720-feature-row.is-reversed {
+    grid-template-columns: minmax(0, 1fr);
+    direction: rtl;
+  }
 }
 
 .landing720-feature-card h3 {
@@ -1595,13 +1766,13 @@
   inline-size: min(100%, 520px);
   max-inline-size: none;
   margin-block-start: 10px;
-  padding: 22px;
+  padding: 0;
   gap: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.34);
+  border: 0;
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 20px 48px rgba(38, 27, 105, 0.24);
-  backdrop-filter: blur(16px);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .landing720-login h2 {
@@ -1624,12 +1795,19 @@
 }
 
 .landing720-login-btn.student {
-  background: linear-gradient(135deg, var(--sp-primary-600), var(--sp-purple-600));
-  box-shadow: 0 12px 28px rgba(79, 57, 194, 0.24);
+  color: var(--l720-blue);
+  background: #ffffff;
+  border-color: rgba(43, 86, 245, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 22px rgba(43, 86, 245, 0.16),
+    0 2px 6px rgba(20, 40, 120, 0.12);
 }
 
 .landing720-login-btn.student:hover {
-  background: linear-gradient(135deg, var(--sp-primary-700), var(--sp-primary-600));
+  color: var(--l720-blue);
+  background: #ffffff;
+  border-color: rgba(43, 86, 245, 0.4);
 }
 
 .landing720-login-btn.teacher {
@@ -2247,13 +2425,14 @@
 .landing720-login {
   inline-size: min(100%, 545px);
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  padding: 18px;
-  border-color: rgba(255, 255, 255, .48);
-  background: rgba(255, 255, 255, .91);
-  box-shadow:
-    0 28px 68px rgba(31, 20, 102, .26),
-    inset 0 1px rgba(255, 255, 255, .95);
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .landing720-login h2,
