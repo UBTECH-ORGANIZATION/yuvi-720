@@ -213,6 +213,35 @@ _CAUSE_HINTS = {
 }
 
 
+# In the interactive chat, the kid may ask "why did this go down?" / "how do I
+# get better here?". This hands the coach the same deterministic signals the map
+# uses, so those answers are grounded in real behaviour rather than guessed.
+_CHAT_SIGNALS_DIRECTIVE = {
+    "he": (
+        "\nלגבי התחום הזה, המערכת זיהתה את האותות ההתנהגותיים ב-activeness_signals. "
+        "אם התלמיד/ה שואל/ת מה השתנה, למה התחום עלה או ירד, או איך להשתפר — "
+        "התבסס/י על האותות האלה כדי להסביר בשפה מילולית וחמה ולהציע צעד קטן ומעשי, "
+        "בלי מספרים, בלי ציונים ובלי לצטט אותם מילה במילה. אם אין אותות, אמור/י "
+        "בכנות שעדיין אין מספיק עדות ושתגלו יחד תוך כדי."
+    ),
+    "ar": (
+        "\nبخصوص هذا المجال، رصدت المنظومة الإشارات السلوكية في activeness_signals. "
+        "إذا سأل الطالب/ة عمّا تغيّر، أو لماذا ارتفع المجال أو انخفض، أو كيف يتحسّن — "
+        "اعتمد/ي على هذه الإشارات لتشرح بلغة لفظية دافئة وتقترح خطوة صغيرة عملية، "
+        "دون أرقام أو علامات ودون اقتباسها حرفيًا. إن لم تكن هناك إشارات فقل بصدق "
+        "إنه لا توجد أدلة كافية بعد وأنكما ستكتشفان ذلك معًا."
+    ),
+    "en": (
+        "\nFor this area, the system detected the behavioural signals in "
+        "activeness_signals. If the student asks what changed, why the area went "
+        "up or down, or how to improve — use these signals to explain in warm "
+        "verbal language and offer one small practical step, with no numbers, no "
+        "grades, and without quoting them verbatim. If there are no signals, say "
+        "honestly that there isn't enough evidence yet and you'll find out together."
+    ),
+}
+
+
 async def _activeness_signals(learner_id: str, brain: dict, competency: str, lang: str) -> list[str]:
     """The deterministic model's own causes for this domain, as internal phrases.
 
@@ -358,6 +387,7 @@ async def run_competency_chat_stream(
         surface_context={"screen": "student_dashboard"},
         user_message=last_user,
     )
+    signals = await _activeness_signals(learner_id, brain, competency, lang)
 
     import json as _json
     context_payload = {
@@ -373,10 +403,13 @@ async def run_competency_chat_stream(
         "student_description": bundle.get("student_description"),
         "goals": bundle.get("goals"),
     }
+    if signals:
+        context_payload["activeness_signals"] = signals
 
     instructions = _INSTRUCTIONS[lang].format(
         name=context_payload["competency"], band=context_payload["band"]
     )
+    instructions += _CHAT_SIGNALS_DIRECTIVE[lang]
     messages = [
         {"role": "system", "content": instructions},
         {

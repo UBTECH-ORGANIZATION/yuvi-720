@@ -163,6 +163,8 @@ def _project_competencies(
     that drive state-aware improve tips. When absent, we fall back to the raw
     onboarding base so the projection never depends on live signals being ready.
     """
+    from app.brain.activeness import MIN_CAUSE_CONF
+
     base = (brain.get("profile") or {}).get("activeness") or {}
     out = []
     for key in COMPETENCY_ORDER:
@@ -181,6 +183,11 @@ def _project_competencies(
             "tone": tone,
             # State-aware "how to improve" cause tags (behavioural, no numbers).
             "improve": list(eff.get("causes") or []),
+            # True only when there's enough real activity to name *why* the score
+            # sits where it does. The map gates its change arrow on this so it can
+            # never claim a movement it couldn't explain (seeded/fabricated
+            # history with no events behind it → no arrow).
+            "evidenceBacked": float(eff.get("confidence") or 0) >= MIN_CAUSE_CONF,
         })
     return out
 

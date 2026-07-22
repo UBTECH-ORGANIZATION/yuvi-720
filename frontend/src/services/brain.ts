@@ -176,6 +176,10 @@ export interface DashboardDTO {
     /** State-aware "how to improve" cause tags from live signals (behavioural,
      * no numbers). Empty when there's no activity evidence yet. */
     improve?: string[]
+    /** True only when there's enough real activity to explain *why* this domain
+     * sits where it does. The activeness map gates its change arrow on this, so
+     * it never shows a movement it can't ground in evidence. */
+    evidenceBacked?: boolean
   }[]
   reflectionPreview: { answer: string; promptId?: string; at?: string } | null
   updatedAt: string | null

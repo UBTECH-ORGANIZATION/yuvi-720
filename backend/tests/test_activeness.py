@@ -251,6 +251,20 @@ def test_direction_and_cause_are_coherent():
                 assert not _is_drag(d["causes"]), f"{label}/{key} rose but was blamed"
 
 
+def test_evidence_gate_matches_groundable_cause():
+    # The map shows a change arrow only when `confidence >= MIN_CAUSE_CONF`
+    # (surfaced as evidenceBacked), and the "why" blurb is groundable only when
+    # causes is non-empty. These MUST be the same condition, or the arrow could
+    # render a change the blurb can't explain (the exact desync we're closing).
+    scenarios = _all_scenarios() + [("no_activity", _brain(), [], [])]
+    for label, brain, events, decisions in scenarios:
+        out = effective_activeness(brain, events, decisions)
+        for key in COMPETENCY_KEYS:
+            backed = out[key]["confidence"] >= MIN_CAUSE_CONF
+            groundable = len(out[key]["causes"]) > 0
+            assert backed == groundable, f"{label}/{key}: gate {backed} != cause {groundable}"
+
+
 def test_confidence_grows_with_evidence():
     # self_regulation weights evidence as the raw scored count, so the ramp from
     # thin → full is visible (domains that weight rare signals — recovery, help —
