@@ -122,15 +122,13 @@
    --sp-success-600: #67d7a6; --sp-success-100: #173e34;
    --sp-warn-600: #f3c96a; --sp-warn-100: #493b1f;
    --sp-danger-600: #ff9588; --sp-danger-100: #4d292d;
-   --sp-info-6f0b24;
+   --sp-info-600: #aa9cff; --sp-info-100: #30295b;
    --sp-bg-subtle: #131126;
    --sp-surface: #1b1a33;
    --sp-surface-2: #232141;
    --sp-border: #2f2c4d;
    --sp-border-strong: #423e68;
-   --sp-overlay: rgba(9, 6, 24
-   --sp-border-strong: #4b527d;
-   --sp-overlay: rgba(5, 7, 20, 0.72);
+   --sp-overlay: rgba(9, 6, 24, 0.72);
 
    --sp-shadow-sm: 0 3px 14px rgba(2, 4, 17, 0.28);
    --sp-shadow-md: 0 16px 44px rgba(2, 4, 17, 0.36), 0 0 0 1px rgba(159, 122, 254, 0.04);
