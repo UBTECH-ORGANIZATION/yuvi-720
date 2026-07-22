@@ -176,6 +176,16 @@ export function ActivenessMap({ competencies, initial, revealed, onClose }: Acti
   const hasBaseline = axes.some((a) => a.last != null)
   const changedAxes = axes.filter((a) => a.changed)
 
+  // The single domain worth focusing on now — the lowest level (unless a domain
+  // is already declining, which takes priority). Exactly one domain is promoted
+  // as "my focus now" so the eye lands on it immediately; the rest stay calm.
+  const focusKey = useMemo<string | null>(() => {
+    if (!axes.length) return null
+    const declining = axes.filter((a) => a.changed && a.dir === 'down')
+    const pool = declining.length ? declining : axes
+    return pool.reduce((a, b) => (b.level < a.level ? b : a), pool[0]).key
+  }, [axes])
+
   const rings = useMemo(
     () =>
       Array.from({ length: LEVELS }, (_, g) =>
@@ -365,9 +375,9 @@ export function ActivenessMap({ competencies, initial, revealed, onClose }: Acti
               <svg className="amap__svg" viewBox={`0 0 ${S} ${S}`} aria-hidden="true">
                 <defs>
                   <radialGradient id="amap-fill" cx="50%" cy="50%" r="60%">
-                    <stop offset="0%" stopColor="rgba(150,130,255,.5)" />
-                    <stop offset="72%" stopColor="rgba(96,120,240,.3)" />
-                    <stop offset="100%" stopColor="rgba(60,180,220,.16)" />
+                    <stop offset="0%" stopColor="rgba(140,120,240,.34)" />
+                    <stop offset="72%" stopColor="rgba(96,110,220,.18)" />
+                    <stop offset="100%" stopColor="rgba(80,96,200,.08)" />
                   </radialGradient>
                   {/* Arrowheads on the change trace (green up / red down), pointing to the current dot. */}
                   <marker id="amap-arrow-up" viewBox="0 0 10 10" refX="7.5" refY="5" markerWidth="5" markerHeight="5" orient="auto">
@@ -383,7 +393,7 @@ export function ActivenessMap({ competencies, initial, revealed, onClose }: Acti
                 {axes.map((a) => (
                   <line
                     key={a.key}
-                    className={`amap__spoke${selectedKey === a.key ? ' is-focus' : ''}`}
+                    className={`amap__spoke${selectedKey === a.key || (!selected && a.key === focusKey) ? ' is-focus' : ''}`}
                     x1={C}
                     y1={C}
                     x2={a.ex}
@@ -393,7 +403,7 @@ export function ActivenessMap({ competencies, initial, revealed, onClose }: Acti
                 <g className="amap__data-g" ref={dataRef} style={{ transformOrigin: `${C}px ${C}px`, transformBox: 'view-box' } as CSSProperties}>
                   <polygon className="amap__data" ref={dataPolyRef} points={dataPoly} fill="url(#amap-fill)" />
                   {axes.map((a) => (
-                    <circle key={a.key} className="amap__dot" data-key={a.key} cx={a.vx} cy={a.vy} r={5} style={{ '--c': visualFor(a.key).color } as CSSProperties} />
+                    <circle key={a.key} className={`amap__dot${a.key === focusKey ? ' is-focus' : ''}`} data-key={a.key} cx={a.vx} cy={a.vy} r={a.key === focusKey ? 5.6 : 5} style={{ '--c': visualFor(a.key).color } as CSSProperties} />
                   ))}
                 </g>
 
@@ -419,10 +429,10 @@ export function ActivenessMap({ competencies, initial, revealed, onClose }: Acti
                 <button
                   key={a.key}
                   type="button"
-                  className={`amap__emblem amap__emblem--${a.tone}${selectedKey === a.key ? ' is-active' : ''}${selected && selectedKey !== a.key ? ' is-dim' : ''}`}
+                  className={`amap__emblem amap__emblem--${a.tone}${selectedKey === a.key ? ' is-active' : ''}${!selected && a.key === focusKey ? ' is-focus' : ''}${selected && selectedKey !== a.key ? ' is-dim' : ''}`}
                   style={{ left: `${pct(a.ex)}%`, top: `${pct(a.ey)}%`, '--c': visualFor(a.key).color } as CSSProperties}
                   onClick={() => selectDomain(a.key)}
-                  aria-label={`${a.label} — ${t(`actmap.status.${a.tone}`)}`}
+                  aria-label={`${a.label} — ${a.key === focusKey ? t('sdash.lmap.d.focusNow') : t(`actmap.status.${a.tone}`)}`}
                 >
                   <span className="amap__emblem-inner">
                     <span className="amap__emblem-dome"><Icon name={visualFor(a.key).icon} size={22} /></span>
@@ -434,7 +444,7 @@ export function ActivenessMap({ competencies, initial, revealed, onClose }: Acti
               {axes.map((a) => (
                 <span
                   key={a.key}
-                  className={`amap__label${selected && selectedKey !== a.key ? ' is-dim' : ''}`}
+                  className={`amap__label${!selected && a.key === focusKey ? ' is-focus' : ''}${selected && selectedKey !== a.key ? ' is-dim' : ''}`}
                   style={{ left: `${pct(a.lx)}%`, top: `${pct(a.ly)}%` }}
                   dir="auto"
                 >
@@ -499,13 +509,16 @@ export function ActivenessMap({ competencies, initial, revealed, onClose }: Acti
                     <li key={a.key}>
                       <button
                         type="button"
-                        className={`amap__drow amap__drow--${a.tone}${a.changed ? ' is-changed' : ''}`}
+                        className={`amap__drow amap__drow--${a.tone}${a.changed ? ' is-changed' : ''}${a.key === focusKey ? ' is-focus' : ''}`}
                         style={{ '--c': visualFor(a.key).color } as CSSProperties}
                         onClick={() => selectDomain(a.key)}
                       >
                         <span className="amap__drow-mark"><Icon name={visualFor(a.key).icon} size={16} /></span>
                         <span className="amap__drow-main">
                           <span className="amap__drow-name" dir="auto">{a.label}</span>
+                          {a.key === focusKey && (
+                            <span className="amap__drow-focus">{t('sdash.lmap.d.focusNow')}</span>
+                          )}
                           {a.changed && (
                             <span className={`amap__change-chip amap__change-chip--${a.dir}`} aria-label={t(`actmap.change.${a.dir}`)}>
                               <TrendIcon dir={a.dir} size={13} />
@@ -538,6 +551,11 @@ export function ActivenessMap({ competencies, initial, revealed, onClose }: Acti
                 competencyKey={selected.key}
                 greeting={t(`sdash.lmap.chat.greeting.${sideFor(selected.tone)}`, { topic: selected.label })}
                 ephemeralNote={t('sdash.lmap.chat.ephemeral')}
+                suggestions={[
+                  t('sdash.lmap.chat.suggest.yes'),
+                  t('sdash.lmap.chat.suggest.hard'),
+                  t('sdash.lmap.chat.suggest.example'),
+                ]}
                 className="cchat--dark"
               />
             </div>

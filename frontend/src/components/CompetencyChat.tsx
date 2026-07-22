@@ -89,6 +89,8 @@ interface CompetencyChatProps {
   greeting: string
   /** Optional privacy/ephemeral note shown above the log. */
   ephemeralNote?: string
+  /** Optional one-tap reply chips shown before the learner types anything. */
+  suggestions?: string[]
   className?: string
 }
 
@@ -99,8 +101,8 @@ interface CompetencyChatProps {
  * turned into a visual on demand. Shared by the learning-map dialog and the
  * activeness-map info panel.
  */
-export function CompetencyChat({ competencyKey, greeting, ephemeralNote, className }: CompetencyChatProps) {
-  const { t, language } = useI18n()
+export function CompetencyChat({ competencyKey, greeting, ephemeralNote, suggestions, className }: CompetencyChatProps) {
+  const { t, language, direction } = useI18n()
   const [bubbles, setBubbles] = useState<ChatBubble[]>([])
   const [draft, setDraft] = useState('')
   const [streaming, setStreaming] = useState(false)
@@ -127,8 +129,8 @@ export function CompetencyChat({ competencyKey, greeting, ephemeralNote, classNa
     return () => window.removeEventListener('keydown', onKey)
   }, [expandedVisual])
 
-  const send = async () => {
-    const text = draft.trim()
+  const send = async (explicit?: string) => {
+    const text = (explicit ?? draft).trim()
     if (!text || streaming) return
     setDraft('')
     setChatError(false)
@@ -204,6 +206,21 @@ export function CompetencyChat({ competencyKey, greeting, ephemeralNote, classNa
           onExpand={setExpandedVisual}
           onRequestVisual={requestVisual}
         />
+        {suggestions && suggestions.length > 0 && bubbles.length === 0 && !streaming && (
+          <div className="cchat__suggests">
+            {suggestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                className="cchat__suggest"
+                dir="auto"
+                onClick={() => void send(suggestion)}
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        )}
         {bubbles.map((bubble) =>
           bubble.role === 'assistant' ? (
             <AssistantChatBubble
@@ -226,7 +243,7 @@ export function CompetencyChat({ competencyKey, greeting, ephemeralNote, classNa
         <input
           type="text"
           value={draft}
-          dir="auto"
+          dir={draft.trim() ? 'auto' : direction}
           placeholder={t('sdash.lmap.chat.placeholder')}
           maxLength={1200}
           onChange={(event) => setDraft(event.target.value)}

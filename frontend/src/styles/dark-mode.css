@@ -868,48 +868,88 @@
   filter: blur(6px);
 }
 
-/* Student dashboard */
+/* Student dashboard — a direct continuation of the landing page's warm violet
+   night. Same midnight-violet base and the same two soft, unequal light pools
+   (violet dawn top-left, cool-blue depth bottom-right), plus one gentle glow
+   behind the content column. The unified dark card tokens live here so every
+   panel on the page speaks the landing's surface language. */
 [data-theme='dark'] .sd-page {
-  background:
-    radial-gradient(circle at 12% 10%, rgba(76, 201, 240, .1), transparent 27%),
-    radial-gradient(circle at 88% 24%, rgba(159, 122, 254, .14), transparent 32%),
-    linear-gradient(180deg, #11152d 0%, var(--sp-bg) 48%, #0a0d1e 100%);
+  --sdd-card-bg: linear-gradient(180deg, #221f40 0%, #191830 100%);
+  --sdd-card-border: rgba(255, 255, 255, .09);
+  --sdd-card-border-strong: rgba(255, 255, 255, .14);
+  --sdd-card-shadow: 0 20px 48px rgba(0, 0, 0, .3), inset 0 1px rgba(255, 255, 255, .06);
+  --sdd-card-radius: 24px;
+
+  position: relative;
+  isolation: isolate;
+  background-color: #0f0b24;
+  /* Depth without clutter: a wide purple-blue halo crowning the Hero, a very
+     faint cyan pool on the opposite side by the lessons band, and a weak violet
+     glow low on the page to break the vertical sameness. Large, transparent
+     radials only — the centre column stays dark so cards and text stay clear. */
+  background-image:
+    radial-gradient(1300px 720px at 50% -4%, rgba(139, 108, 255, .24), transparent 60%),
+    radial-gradient(820px 560px at 6% 4%, rgba(104, 118, 245, .13), transparent 58%),
+    radial-gradient(760px 540px at 97% 30%, rgba(76, 201, 240, .07), transparent 60%),
+    radial-gradient(1080px 640px at 26% 97%, rgba(129, 100, 235, .13), transparent 62%),
+    linear-gradient(180deg, #141031 0%, #0f0b24 58%, #0b0819 100%);
+}
+
+/* One thin decorative arc crowning the Hero — the same soft-line language as the
+   landing page. A single hairline circle, masked to a faint crown, drifting
+   almost imperceptibly. No per-card glow, no particles. */
+[data-theme='dark'] .sd-page::before {
+  content: '';
+  position: absolute;
+  inset-block-start: clamp(-680px, -44vw, -440px);
+  inset-inline-start: 50%;
+  inline-size: min(1680px, 156vw);
+  aspect-ratio: 1;
+  translate: -50% 0;
+  border-radius: 50%;
+  border: 1px solid rgba(159, 122, 254, .16);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 30%);
+  mask-image: linear-gradient(180deg, #000 0%, transparent 30%);
+  pointer-events: none;
+  z-index: -1;
+  animation: sd-page-arc-drift 60s ease-in-out infinite alternate;
+}
+@keyframes sd-page-arc-drift {
+  to { transform: translateY(18px); opacity: .82; }
 }
 [data-theme='dark'] .learner-app-nav { border-color: var(--sp-border); background: var(--sp-bg-subtle); }
 [data-theme='dark'] .learner-app-nav button.is-active { background: var(--sp-surface); }
 [data-theme='dark'] .sd-subject-card,
 [data-theme='dark'] .sd-focus-card {
-  border-color: var(--sp-border);
-  background: rgba(24, 28, 56, .9);
+  border-color: var(--sdd-card-border);
+  background: var(--sdd-card-bg);
+  box-shadow: var(--sdd-card-shadow);
 }
 [data-theme='dark'] .sk-radar-card,
 [data-theme='dark'] .sk-weekly {
-  border-color: var(--sp-border);
-  background: linear-gradient(160deg, rgba(24, 28, 56, .97), rgba(19, 23, 48, .94));
+  border-color: var(--sdd-card-border);
+  background: var(--sdd-card-bg);
+  box-shadow: var(--sdd-card-shadow);
 }
 [data-theme='dark'] .sk-node__label { color: var(--sp-ink-700); }
 [data-theme='dark'] .sk-tooltip { background: #06081a; }
 [data-theme='dark'] .sd-objective__marker,
 [data-theme='dark'] .sd-profile-tag { background: var(--sp-surface-2); }
 [data-theme='dark'] .sd-reflection {
-  border-color: rgba(76, 201, 240, .24);
-  background: linear-gradient(120deg, #142d3d, #211d3d);
+  border-color: rgba(112, 220, 249, .2);
+  background: var(--sdd-card-bg);
+  box-shadow: var(--sdd-card-shadow);
 }
 
-/* Learning observatory: the current objective becomes the bright focal point
-   within a deep indigo map of the learner's next steps. */
+/* Learning observatory — open and un-caged: no card wrapper, the content and
+   the angle sit straight on the page canvas, separated by the divider alone. */
 [data-theme='dark'] .sd-journey-hero {
-  border-color: rgba(115, 229, 255, .18);
-  background:
-    radial-gradient(circle at 76% 50%, rgba(54, 221, 248, .16), transparent 23%),
-    radial-gradient(circle at 17% 2%, rgba(150, 91, 255, .28), transparent 34%),
-    linear-gradient(122deg, #171842 0%, #15143c 52%, #09263d 116%);
-  box-shadow:
-    0 34px 84px rgba(1, 4, 22, .5),
-    inset 0 1px rgba(206, 249, 255, .1),
-    inset 0 0 70px rgba(84, 64, 207, .08);
+  border: 0;
+  background: none;
+  box-shadow: none;
 }
 
+/* Whisper-faint grid, only behind the visual side — texture, not decoration. */
 [data-theme='dark'] .sd-journey-hero::before {
   inset: 0;
   inline-size: auto;
@@ -917,28 +957,52 @@
   border: 0;
   border-radius: 0;
   background:
-    linear-gradient(rgba(99, 218, 242, .045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(99, 218, 242, .045) 1px, transparent 1px);
-  background-size: 42px 42px;
-  mask-image: linear-gradient(90deg, transparent, #000 28%, #000);
+    linear-gradient(rgba(150, 170, 240, .028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(150, 170, 240, .028) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: linear-gradient(90deg, transparent, #000 42%, transparent 94%);
 }
 
+/* One soft violet halo centred on the visual — no hard ring, no strong bloom. */
 [data-theme='dark'] .sd-journey-hero::after {
-  inline-size: 420px;
-  block-size: 420px;
-  inset-block-end: -300px;
-  inset-inline-end: 18%;
-  border: 1px solid rgba(105, 226, 250, .18);
-  background: transparent;
-  box-shadow: 0 0 80px rgba(55, 212, 241, .11);
+  inline-size: 460px;
+  block-size: 460px;
+  inset-block-start: 50%;
+  inset-block-end: auto;
+  inset-inline-end: 6%;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(146, 112, 250, .11), transparent 68%);
+  box-shadow: none;
 }
 
 [data-theme='dark'] .sd-journey-hero__glow {
   background:
-    radial-gradient(circle 240px at var(--sd-pointer-x) var(--sd-pointer-y), rgba(83, 231, 255, calc(.12 * var(--sd-pointer-opacity))), transparent 72%),
-    radial-gradient(circle at 76% 52%, rgba(83, 231, 255, .18), transparent 28%),
-    linear-gradient(112deg, transparent 58%, rgba(99, 221, 245, .045));
+    radial-gradient(circle 220px at var(--sd-pointer-x) var(--sd-pointer-y), rgba(146, 112, 250, calc(.09 * var(--sd-pointer-opacity))), transparent 72%);
 }
+
+/* Primary CTA — the landing's lilac pill: a soft violet gradient, a bright
+   inner top highlight and a gentle (non-neon) glow. Shared by every dashboard
+   primary button so the whole page presses the same button. */
+[data-theme='dark'] .sd-button--primary {
+  border-color: rgba(255, 255, 255, .22);
+  background: linear-gradient(135deg, #7d6bff 0%, #9f7cff 58%, #c3a7ff 128%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 14px 30px rgba(126, 92, 255, .38);
+}
+[data-theme='dark'] .sd-button--primary:hover:not(:disabled) {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 18px 38px rgba(126, 92, 255, .5);
+}
+[data-theme='dark'] .sd-journey-hero .sd-button--primary {
+  min-block-size: 50px;
+  padding-inline: 28px;
+}
+
+/* The angle is the panel's visual anchor: give it a touch more room, a slightly
+   softer divider, fainter grid lines and a bolder central readout. */
+[data-theme='dark'] .sd-journey-hero__visual { border-inline-start-color: var(--sdd-card-border); }
+[data-theme='dark'] .sd-journey-hero__visual .sd-hero-viz > svg { max-inline-size: 540px; }
+[data-theme='dark'] .sd-viz-readout__value { font-size: 46px; }
 
 [data-theme='dark'] .sd-journey-hero__eyebrow {
   inline-size: fit-content;
@@ -1131,6 +1195,15 @@
   background-size: 28px 28px, 28px 28px, auto, auto, auto;
 }
 
+/* Coach (non-task) header: one calm dark surface with a single soft glow, no
+   grid, matching the dashboard's premium tone. */
+[data-theme='dark'] .sp-companion:not(.sp-companion--task) .sp-companion__head {
+  border-block-end: 1px solid rgba(120, 226, 249, .1);
+  background:
+    radial-gradient(circle at 88% 12%, rgba(120, 132, 255, .16), transparent 46%),
+    #12152e;
+}
+
 [data-theme='dark'] .sp-companion__avatar,
 [data-theme='dark'] .sp-companion__close,
 [data-theme='dark'] .sp-companion__head-action {
@@ -1194,8 +1267,8 @@
 
 [data-theme='dark'] .sp-companion__body {
   background:
-    radial-gradient(circle at 88% 8%, rgba(62, 213, 242, .08), transparent 31%),
-    linear-gradient(180deg, #10142d, #0c1025);
+    radial-gradient(circle at 90% 4%, rgba(120, 132, 255, .06), transparent 34%),
+    #0e1128;
 }
 
 [data-theme='dark'] .sp-companion__message-avatar {
@@ -1205,9 +1278,16 @@
 }
 
 [data-theme='dark'] .sp-companion__msg--assistant {
-  border-color: rgba(111, 221, 245, .14);
-  background: linear-gradient(135deg, rgba(43, 39, 96, .94), rgba(16, 48, 66, .94));
+  border-color: rgba(118, 148, 220, .16);
+  background: rgba(28, 37, 66, .92);
   color: var(--sp-ink-700);
+}
+
+[data-theme='dark'] .sp-companion__msg--user {
+  background: rgba(96, 82, 190, .34);
+  border: 1px solid rgba(140, 122, 255, .28);
+  color: #f1eeff;
+  box-shadow: none;
 }
 
 [data-theme='dark'] .sp-companion__speech {
@@ -1225,8 +1305,24 @@
 [data-theme='dark'] .sp-companion__visual video { background: #0b0f24; }
 
 [data-theme='dark'] .sp-companion__composer {
-  border-color: var(--sp-border);
-  background: rgba(15, 19, 43, .98);
+  border: 0;
+  background: transparent;
+}
+
+[data-theme='dark'] .sp-companion__composer-shell {
+  border-color: rgba(120, 226, 249, .1);
+  background: #12152e;
+}
+
+[data-theme='dark'] .sp-companion__suggestion {
+  border-color: rgba(140, 122, 255, .26);
+  background: rgba(96, 82, 190, .16);
+  color: #cbbfff;
+}
+
+[data-theme='dark'] .sp-companion__suggestion:hover {
+  border-color: rgba(140, 122, 255, .44);
+  background: rgba(96, 82, 190, .28);
 }
 
 [data-theme='dark'] .sp-companion__composer input {

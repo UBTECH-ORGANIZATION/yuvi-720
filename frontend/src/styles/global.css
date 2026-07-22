@@ -167,6 +167,12 @@ button:disabled {
   inline-size: 100%;
 }
 
+/* Keep a clear corner so page-end content never rests beneath the fixed Yuvi
+   companion. Only applies to routes where Yuvi is shown (not world/task). */
+.sp-learner-shell:not(.is-world-route):not(.is-task-route) .sp-learner-shell__content {
+  padding-block-end: var(--sp-companion-safe-area, 128px);
+}
+
 .sp-learner-shell.is-world-route,
 .sp-learner-shell.is-world-route .sp-learner-shell__content {
   block-size: 100dvh;
