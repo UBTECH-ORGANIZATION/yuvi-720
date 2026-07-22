@@ -10,7 +10,7 @@ export interface LearningWorldStats {
   zoom?: number
 }
 
-export interface YubiWorldProjection {
+export interface YuviWorldProjection {
   x: number
   y: number
   scale: number

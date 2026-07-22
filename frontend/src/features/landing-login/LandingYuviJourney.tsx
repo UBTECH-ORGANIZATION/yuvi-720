@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useResponsive } from '../../hooks/useResponsive'
-import { YubiAvatar3D } from '../yubi-studio/YubiAvatar3D'
-import { DEFAULT_DESIGN } from '../yubi-studio/yubiDesign'
+import { YuviAvatar3D } from '../Yuvi-studio/YuviAvatar3D'
+import { DEFAULT_DESIGN } from '../Yuvi-studio/YuviDesign'
 
 type FlightPoint = {
   x: number
@@ -34,8 +34,8 @@ function pointFor(scene: string, isRtl: boolean): FlightPoint {
 
 function Thrusters() {
   return (
-    <span className="landing720-yubi-thrusters" aria-hidden="true">
-      <span className="landing720-yubi-smoke">
+    <span className="landing720-Yuvi-thrusters" aria-hidden="true">
+      <span className="landing720-Yuvi-smoke">
         {Array.from({ length: 6 }, (_, index) => <b key={index} />)}
       </span>
       <i />
@@ -44,11 +44,11 @@ function Thrusters() {
   )
 }
 
-export function LandingYubiArtwork() {
+export function LandingYuviArtwork() {
   return (
-    <div className="landing720-yubi-artwork" aria-hidden="true">
-      <div className="landing720-yubi-artwork__image">
-        <svg className="landing720-yubi-station" viewBox="0 0 620 436" role="presentation">
+    <div className="landing720-Yuvi-artwork" aria-hidden="true">
+      <div className="landing720-Yuvi-artwork__image">
+        <svg className="landing720-Yuvi-station" viewBox="0 0 620 436" role="presentation">
           <defs>
             <linearGradient id="holo-panel" x1="0" y1="0" x2="1" y2="1">
               <stop offset="0" stopColor="#ffffff" stopOpacity=".08" />
@@ -97,7 +97,7 @@ export function LandingYubiArtwork() {
           <circle cx="378" cy="205" r="205" fill="url(#holo-glow)" />
 
           <g className="landing720-holo-floor">
-            <ellipse className="landing720-holo-yubi-shadow" cx="150" cy="416" rx="92" ry="21" />
+            <ellipse className="landing720-holo-Yuvi-shadow" cx="150" cy="416" rx="92" ry="21" />
           </g>
 
           <g className="landing720-holo-float">
@@ -205,14 +205,14 @@ export function LandingYubiArtwork() {
           </g>
         </svg>
       </div>
-      <span className="landing720-yubi-artwork__shine" />
-      <span className="landing720-yubi-artwork__corner landing720-yubi-artwork__corner--one" />
-      <span className="landing720-yubi-artwork__corner landing720-yubi-artwork__corner--two" />
+      <span className="landing720-Yuvi-artwork__shine" />
+      <span className="landing720-Yuvi-artwork__corner landing720-Yuvi-artwork__corner--one" />
+      <span className="landing720-Yuvi-artwork__corner landing720-Yuvi-artwork__corner--two" />
     </div>
   )
 }
 
-export function LandingYubiJourney() {
+export function LandingYuviJourney() {
   const { t, direction, language } = useI18n()
   const { isCompact } = useResponsive()
   const pilotRef = useRef<HTMLDivElement | null>(null)
@@ -222,9 +222,9 @@ export function LandingYubiJourney() {
   useEffect(() => {
     const root = document.querySelector<HTMLElement>('.landing720')
     if (!root) return
-    const revealTargets = Array.from(root.querySelectorAll<HTMLElement>('[data-yubi-reveal]'))
+    const revealTargets = Array.from(root.querySelectorAll<HTMLElement>('[data-Yuvi-reveal]'))
     if (!('IntersectionObserver' in window)) {
-      revealTargets.forEach((target) => target.classList.add('is-yubi-revealed'))
+      revealTargets.forEach((target) => target.classList.add('is-Yuvi-revealed'))
       return
     }
 
@@ -232,7 +232,7 @@ export function LandingYubiJourney() {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            entry.target.classList.add('is-yubi-revealed')
+            entry.target.classList.add('is-Yuvi-revealed')
             observer.unobserve(entry.target)
           }
         })
@@ -240,12 +240,12 @@ export function LandingYubiJourney() {
       { rootMargin: '0px 0px -12% 0px', threshold: 0.12 },
     )
 
-    root.classList.add('is-yubi-motion-ready')
+    root.classList.add('is-Yuvi-motion-ready')
     revealTargets.forEach((target) => observer.observe(target))
 
     return () => {
       observer.disconnect()
-      root.classList.remove('is-yubi-motion-ready')
+      root.classList.remove('is-Yuvi-motion-ready')
     }
   }, [])
 
@@ -257,11 +257,11 @@ export function LandingYubiJourney() {
     // Queried fresh on every update rather than captured once. On a language
     // switch the landing remounts, and this effect can run before the hero's
     // artwork is queryable — a captured `artwork` would then stay null for the
-    // life of the effect and Yubi would dock to the static fallback point
+    // life of the effect and Yuvi would dock to the static fallback point
     // instead of the illustration, stranding him beside the hero.
     const readScene = () => ({
-      stops: Array.from(root.querySelectorAll<HTMLElement>('[data-yubi-stop]')),
-      artwork: root.querySelector<HTMLElement>('.landing720-yubi-artwork'),
+      stops: Array.from(root.querySelectorAll<HTMLElement>('[data-Yuvi-stop]')),
+      artwork: root.querySelector<HTMLElement>('.landing720-Yuvi-artwork'),
     })
     if (readScene().stops.length === 0) return
 
@@ -327,9 +327,9 @@ export function LandingYubiJourney() {
       // ordinary trailing stays calm and rests.
       const catchingUp = !reduce && distance > 42
       pilot.dataset.flying = catchingUp ? 'true' : 'false'
-      root.dataset.yubiFlying = catchingUp ? 'true' : 'false'
+      root.dataset.yuviFlying = catchingUp ? 'true' : 'false'
       pilot.dataset.scene = targetScene
-      root.dataset.yubiScene = targetScene
+      root.dataset.yuviScene = targetScene
 
       const settled =
         distance < 0.4 &&
@@ -347,7 +347,7 @@ export function LandingYubiJourney() {
         pilot.style.opacity = `${renderOpacity}`
         pilot.style.transform = `translate3d(-50%, -50%, 0) rotate(0deg) scale(${renderScale})`
         pilot.dataset.flying = 'false'
-        root.dataset.yubiFlying = 'false'
+        root.dataset.yuviFlying = 'false'
         return
       }
       tickFrame = window.requestAnimationFrame(tick)
@@ -370,7 +370,7 @@ export function LandingYubiJourney() {
         const rect = element.getBoundingClientRect()
         const center = rect.top + window.scrollY + rect.height * 0.5
         return {
-          scene: element.dataset.yubiStop ?? 'hero',
+          scene: element.dataset.yuviStop ?? 'hero',
           trigger: Math.max(0, center - focusOffset),
         }
       })
@@ -479,7 +479,7 @@ export function LandingYubiJourney() {
     // Self-healing anchor watch. Nothing emits an event when an element merely
     // *moves* — ResizeObserver only fires on size — yet the hero artwork shifts
     // on locale swaps, font loads and image loads. Rather than guessing at
-    // delays, cheaply re-read its rect and re-dock Yubi whenever it has drifted.
+    // delays, cheaply re-read its rect and re-dock Yuvi whenever it has drifted.
     const anchorWatch = window.setInterval(() => {
       const { artwork: current } = readScene()
       if (!current || !lastAnchor) return
@@ -502,7 +502,7 @@ export function LandingYubiJourney() {
 
     // ResizeObserver fires on size, not position. Switching he <-> en mirrors the
     // hero: the artwork keeps its exact dimensions but jumps to the other side,
-    // so nothing above notices and Yubi is left stranded mid-page. Watch the
+    // so nothing above notices and Yuvi is left stranded mid-page. Watch the
     // `dir`/`lang` attributes that I18nProvider writes on <html> instead.
     const localeObserver = new MutationObserver(() => beginSettle())
     localeObserver.observe(document.documentElement, {
@@ -524,8 +524,8 @@ export function LandingYubiJourney() {
       window.removeEventListener('scroll', handleScroll)
       window.removeEventListener('resize', handleResize)
       prefersReducedMotion.removeEventListener('change', scheduleUpdate)
-      delete root.dataset.yubiScene
-      delete root.dataset.yubiFlying
+      delete root.dataset.yuviScene
+      delete root.dataset.yuviFlying
     }
   }, [direction, language, isCompact])
 
@@ -544,12 +544,12 @@ export function LandingYubiJourney() {
         ))}
       </div>
 
-      <div ref={pilotRef} className="landing720-yubi-pilot" aria-hidden="true" data-flying="false">
-        <span className="landing720-yubi-speed landing720-yubi-speed--one" />
-        <span className="landing720-yubi-speed landing720-yubi-speed--two" />
-        <span className="landing720-yubi-speed landing720-yubi-speed--three" />
-        <div className="landing720-yubi-pilot__robot">
-          <YubiAvatar3D
+      <div ref={pilotRef} className="landing720-Yuvi-pilot" aria-hidden="true" data-flying="false">
+        <span className="landing720-Yuvi-speed landing720-Yuvi-speed--one" />
+        <span className="landing720-Yuvi-speed landing720-Yuvi-speed--two" />
+        <span className="landing720-Yuvi-speed landing720-Yuvi-speed--three" />
+        <div className="landing720-Yuvi-pilot__robot">
+          <YuviAvatar3D
             initialDesign={DEFAULT_DESIGN}
             label={t('companion.title')}
             muted

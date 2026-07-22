@@ -317,7 +317,7 @@ MonoBehaviour:
     exclusionRadius: 0
     version: 1
     reviewStatus: 0
-  - assetId: character.yubi
+  - assetId: character.Yuvi
     kind: 3
     prefab: {fileID: 7072936933247637361, guid: 4e064930432074ad09273a8add4491c5, type: 3}
     lowPowerSubstitute: {fileID: 0}

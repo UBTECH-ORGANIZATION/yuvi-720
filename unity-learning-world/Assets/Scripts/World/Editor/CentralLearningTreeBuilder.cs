@@ -212,10 +212,10 @@ namespace Yuvi720.LearningWorld.Editor
             tree.transform.position = new Vector3(2.4f, 0f, 2.4f);
 
             var camera = Camera.main ?? throw new InvalidOperationException("Grayscale review scene requires a Main Camera.");
-            var yubiCameraTarget = new Vector3(-2.2f, .85f, -1.5f);
+            var YuviCameraTarget = new Vector3(-2.2f, .85f, -1.5f);
             camera.orthographic = true;
             camera.orthographicSize = 7.5f;
-            camera.transform.SetPositionAndRotation(yubiCameraTarget + GameplayCameraOffset, Quaternion.Euler(54f, 0f, 0f));
+            camera.transform.SetPositionAndRotation(YuviCameraTarget + GameplayCameraOffset, Quaternion.Euler(54f, 0f, 0f));
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(.78f, .79f, .80f);
             camera.aspect = 16f / 9f;

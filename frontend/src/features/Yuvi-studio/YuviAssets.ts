@@ -1,15 +1,15 @@
 // @ts-nocheck
 /* eslint-disable */
-// Yubi accessory catalog + procedural builders (ported from the validated
-// docs/yubi-studio-demo.html). Each asset returns a self-contained THREE.Group
+// Yuvi accessory catalog + procedural builders (ported from the validated
+// docs/Yuvi-studio-demo.html). Each asset returns a self-contained THREE.Group
 // authored in ANCHOR-LOCAL space so it snaps onto the robot's attachment points.
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
-import type { YubiColors, YubiSlot } from './yubiDesign'
-import { DEFAULT_DESIGN } from './yubiDesign'
+import type { YuviColors, YuviSlot } from './YuviDesign'
+import { DEFAULT_DESIGN } from './YuviDesign'
 
-export interface YubiMaterials {
+export interface YuviMaterials {
   body: THREE.MeshStandardMaterial
   joint: THREE.MeshStandardMaterial
   white: THREE.MeshStandardMaterial
@@ -17,19 +17,19 @@ export interface YubiMaterials {
   face: THREE.MeshBasicMaterial
 }
 
-export function createMaterials(colors: YubiColors): YubiMaterials {
+export function createMaterials(colors: YuviColors): YuviMaterials {
   const body = new THREE.MeshStandardMaterial({ color: colors.body, roughness: 0.3, metalness: 0.14, envMapIntensity: 0.7 })
   const joint = new THREE.MeshStandardMaterial({ color: colors.body, roughness: 0.34, metalness: 0.1, envMapIntensity: 0.65 })
   const white = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.26, metalness: 0.08, envMapIntensity: 0.85 })
   const glow = new THREE.MeshStandardMaterial({ color: colors.glow, emissive: colors.glow, emissiveIntensity: 1.8, roughness: 0.3, toneMapped: false })
   const face = new THREE.MeshBasicMaterial({ color: 0x050711 })
-  const mats: YubiMaterials = { body, joint, white, glow, face }
+  const mats: YuviMaterials = { body, joint, white, glow, face }
   refreshMaterials(mats, colors)
   return mats
 }
 
 /** Live recolour: body drives a darker joint shade; glow is emissive. */
-export function refreshMaterials(mats: YubiMaterials, colors: YubiColors) {
+export function refreshMaterials(mats: YuviMaterials, colors: YuviColors) {
   const b = new THREE.Color(colors.body)
   mats.body.color.copy(b)
   mats.joint.color.copy(b.clone().multiplyScalar(0.82))
@@ -428,9 +428,9 @@ function buildRocketPack() {
   return g
 }
 
-export interface YubiAsset {
+export interface YuviAsset {
   id: string
-  slot: YubiSlot
+  slot: YuviSlot
   /** i18n key for the display label. */
   labelKey: string
   build: () => THREE.Group
@@ -438,55 +438,55 @@ export interface YubiAsset {
   requirementKey?: string
 }
 
-export const YUBI_CATALOG: YubiAsset[] = [
+export const Yuvi_CATALOG: YuviAsset[] = [
   // ── head ──
-  { id: 'cap', slot: 'headTop', labelKey: 'yubiStudio.item.cap', build: buildCap },
-  { id: 'wizard', slot: 'headTop', labelKey: 'yubiStudio.item.wizard', build: buildWizardHat },
-  { id: 'headphones', slot: 'headTop', labelKey: 'yubiStudio.item.headphones', build: buildHeadphones },
-  { id: 'cowboy', slot: 'headTop', labelKey: 'yubiStudio.item.cowboy', build: buildCowboyHat },
-  { id: 'party', slot: 'headTop', labelKey: 'yubiStudio.item.party', build: buildPartyHat },
-  { id: 'beanie', slot: 'headTop', labelKey: 'yubiStudio.item.beanie', build: buildBeanie },
-  { id: 'tophat', slot: 'headTop', labelKey: 'yubiStudio.item.tophat', build: buildTopHat },
-  { id: 'chef', slot: 'headTop', labelKey: 'yubiStudio.item.chef', build: buildChefHat },
-  { id: 'catears', slot: 'headTop', labelKey: 'yubiStudio.item.catears', build: buildCatEars },
-  { id: 'halo', slot: 'headTop', labelKey: 'yubiStudio.item.halo', build: buildHalo },
-  { id: 'astro', slot: 'headTop', labelKey: 'yubiStudio.item.astro', build: buildAstroHelmet, requirementKey: 'yubiStudio.unlock.achievement' },
-  { id: 'ironhelmet', slot: 'headTop', labelKey: 'yubiStudio.item.ironhelmet', build: buildIronHelmet, requirementKey: 'yubiStudio.unlock.achievement' },
-  { id: 'crown', slot: 'headTop', labelKey: 'yubiStudio.item.crown', build: buildCrown, requirementKey: 'yubiStudio.unlock.section4' },
-  { id: 'propeller', slot: 'headTop', labelKey: 'yubiStudio.item.propeller', build: buildPropeller, requirementKey: 'yubiStudio.unlock.challenges3' },
+  { id: 'cap', slot: 'headTop', labelKey: 'YuviStudio.item.cap', build: buildCap },
+  { id: 'wizard', slot: 'headTop', labelKey: 'YuviStudio.item.wizard', build: buildWizardHat },
+  { id: 'headphones', slot: 'headTop', labelKey: 'YuviStudio.item.headphones', build: buildHeadphones },
+  { id: 'cowboy', slot: 'headTop', labelKey: 'YuviStudio.item.cowboy', build: buildCowboyHat },
+  { id: 'party', slot: 'headTop', labelKey: 'YuviStudio.item.party', build: buildPartyHat },
+  { id: 'beanie', slot: 'headTop', labelKey: 'YuviStudio.item.beanie', build: buildBeanie },
+  { id: 'tophat', slot: 'headTop', labelKey: 'YuviStudio.item.tophat', build: buildTopHat },
+  { id: 'chef', slot: 'headTop', labelKey: 'YuviStudio.item.chef', build: buildChefHat },
+  { id: 'catears', slot: 'headTop', labelKey: 'YuviStudio.item.catears', build: buildCatEars },
+  { id: 'halo', slot: 'headTop', labelKey: 'YuviStudio.item.halo', build: buildHalo },
+  { id: 'astro', slot: 'headTop', labelKey: 'YuviStudio.item.astro', build: buildAstroHelmet, requirementKey: 'YuviStudio.unlock.achievement' },
+  { id: 'ironhelmet', slot: 'headTop', labelKey: 'YuviStudio.item.ironhelmet', build: buildIronHelmet, requirementKey: 'YuviStudio.unlock.achievement' },
+  { id: 'crown', slot: 'headTop', labelKey: 'YuviStudio.item.crown', build: buildCrown, requirementKey: 'YuviStudio.unlock.section4' },
+  { id: 'propeller', slot: 'headTop', labelKey: 'YuviStudio.item.propeller', build: buildPropeller, requirementKey: 'YuviStudio.unlock.challenges3' },
   // ── face ──
-  { id: 'sunglasses', slot: 'face', labelKey: 'yubiStudio.item.sunglasses', build: buildSunglasses },
-  { id: 'eyebrows', slot: 'face', labelKey: 'yubiStudio.item.eyebrows', build: buildEyebrows },
-  { id: 'roundglasses', slot: 'face', labelKey: 'yubiStudio.item.roundglasses', build: buildRoundGlasses },
-  { id: 'eyepatch', slot: 'face', labelKey: 'yubiStudio.item.eyepatch', build: buildEyepatch },
-  { id: 'heromask', slot: 'face', labelKey: 'yubiStudio.item.heromask', build: buildHeroMask, requirementKey: 'yubiStudio.unlock.achievement' },
+  { id: 'sunglasses', slot: 'face', labelKey: 'YuviStudio.item.sunglasses', build: buildSunglasses },
+  { id: 'eyebrows', slot: 'face', labelKey: 'YuviStudio.item.eyebrows', build: buildEyebrows },
+  { id: 'roundglasses', slot: 'face', labelKey: 'YuviStudio.item.roundglasses', build: buildRoundGlasses },
+  { id: 'eyepatch', slot: 'face', labelKey: 'YuviStudio.item.eyepatch', build: buildEyepatch },
+  { id: 'heromask', slot: 'face', labelKey: 'YuviStudio.item.heromask', build: buildHeroMask, requirementKey: 'YuviStudio.unlock.achievement' },
   // ── body ──
-  { id: 'bowtie', slot: 'body', labelKey: 'yubiStudio.item.bowtie', build: buildBowtie },
-  { id: 'medal', slot: 'body', labelKey: 'yubiStudio.item.medal', build: buildMedal },
-  { id: 'spideremblem', slot: 'body', labelKey: 'yubiStudio.item.spideremblem', build: buildSpiderEmblem },
-  { id: 'heroarmor', slot: 'body', labelKey: 'yubiStudio.item.heroarmor', build: buildHeroArmor, requirementKey: 'yubiStudio.unlock.achievement' },
-  { id: 'ironman', slot: 'body', labelKey: 'yubiStudio.item.ironman', build: buildIronmanSuit, requirementKey: 'yubiStudio.unlock.section6' },
+  { id: 'bowtie', slot: 'body', labelKey: 'YuviStudio.item.bowtie', build: buildBowtie },
+  { id: 'medal', slot: 'body', labelKey: 'YuviStudio.item.medal', build: buildMedal },
+  { id: 'spideremblem', slot: 'body', labelKey: 'YuviStudio.item.spideremblem', build: buildSpiderEmblem },
+  { id: 'heroarmor', slot: 'body', labelKey: 'YuviStudio.item.heroarmor', build: buildHeroArmor, requirementKey: 'YuviStudio.unlock.achievement' },
+  { id: 'ironman', slot: 'body', labelKey: 'YuviStudio.item.ironman', build: buildIronmanSuit, requirementKey: 'YuviStudio.unlock.section6' },
   // ── hand ──
-  { id: 'skateboard', slot: 'handR', labelKey: 'yubiStudio.item.skateboard', build: buildSkateboard },
-  { id: 'sword', slot: 'handR', labelKey: 'yubiStudio.item.sword', build: buildSword },
-  { id: 'wand', slot: 'handR', labelKey: 'yubiStudio.item.wand', build: buildWand },
-  { id: 'shield', slot: 'handR', labelKey: 'yubiStudio.item.shield', build: buildShield },
-  { id: 'lightsaber', slot: 'handR', labelKey: 'yubiStudio.item.lightsaber', build: buildLightsaber, requirementKey: 'yubiStudio.unlock.achievement' },
+  { id: 'skateboard', slot: 'handR', labelKey: 'YuviStudio.item.skateboard', build: buildSkateboard },
+  { id: 'sword', slot: 'handR', labelKey: 'YuviStudio.item.sword', build: buildSword },
+  { id: 'wand', slot: 'handR', labelKey: 'YuviStudio.item.wand', build: buildWand },
+  { id: 'shield', slot: 'handR', labelKey: 'YuviStudio.item.shield', build: buildShield },
+  { id: 'lightsaber', slot: 'handR', labelKey: 'YuviStudio.item.lightsaber', build: buildLightsaber, requirementKey: 'YuviStudio.unlock.achievement' },
   // ── back ──
-  { id: 'cape', slot: 'back', labelKey: 'yubiStudio.item.cape', build: buildCape },
-  { id: 'angelwings', slot: 'back', labelKey: 'yubiStudio.item.angelwings', build: buildAngelWings },
-  { id: 'rocketpack', slot: 'back', labelKey: 'yubiStudio.item.rocketpack', build: buildRocketPack },
-  { id: 'dragonwings', slot: 'back', labelKey: 'yubiStudio.item.dragonwings', build: buildDragonWings, requirementKey: 'yubiStudio.unlock.achievement' },
-  { id: 'jetpack', slot: 'back', labelKey: 'yubiStudio.item.jetpack', build: buildJetpack, requirementKey: 'yubiStudio.unlock.section5' },
+  { id: 'cape', slot: 'back', labelKey: 'YuviStudio.item.cape', build: buildCape },
+  { id: 'angelwings', slot: 'back', labelKey: 'YuviStudio.item.angelwings', build: buildAngelWings },
+  { id: 'rocketpack', slot: 'back', labelKey: 'YuviStudio.item.rocketpack', build: buildRocketPack },
+  { id: 'dragonwings', slot: 'back', labelKey: 'YuviStudio.item.dragonwings', build: buildDragonWings, requirementKey: 'YuviStudio.unlock.achievement' },
+  { id: 'jetpack', slot: 'back', labelKey: 'YuviStudio.item.jetpack', build: buildJetpack, requirementKey: 'YuviStudio.unlock.section5' },
 ]
 
-export function getAsset(id: string | null): YubiAsset | null {
+export function getAsset(id: string | null): YuviAsset | null {
   if (!id) return null
-  return YUBI_CATALOG.find((a) => a.id === id) ?? null
+  return Yuvi_CATALOG.find((a) => a.id === id) ?? null
 }
 
-export function assetsForSlot(slot: YubiSlot): YubiAsset[] {
-  return YUBI_CATALOG.filter((a) => a.slot === slot)
+export function assetsForSlot(slot: YuviSlot): YuviAsset[] {
+  return Yuvi_CATALOG.filter((a) => a.slot === slot)
 }
 
 // Phase rewards: completing a mapping section (0-based part index) unlocks an
@@ -515,7 +515,7 @@ export function getThumbnails(): Record<string, string> {
     const kl = new THREE.DirectionalLight(0xffffff, 1.5); kl.position.set(3, 6, 6); scene.add(kl)
     const fl = new THREE.DirectionalLight(0xbcd7ef, 0.5); fl.position.set(-4, 2, 3); scene.add(fl)
     const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 100)
-    for (const asset of YUBI_CATALOG) {
+    for (const asset of Yuvi_CATALOG) {
       const obj = asset.build()
       obj.rotation.set(0, 0, 0)
       const box = new THREE.Box3().setFromObject(obj)

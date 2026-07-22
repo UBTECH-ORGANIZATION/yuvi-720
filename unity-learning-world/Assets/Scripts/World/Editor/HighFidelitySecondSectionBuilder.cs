@@ -129,9 +129,9 @@ namespace Yuvi720.LearningWorld.Editor
             }
             ValidateRoute(prefab.transform.Find(RouteAnchorsName), issues);
             if (prefab.GetComponentsInChildren<Renderer>(true).Any(renderer =>
-                    renderer.name.Contains("Yubi", StringComparison.OrdinalIgnoreCase)
+                    renderer.name.Contains("Yuvi", StringComparison.OrdinalIgnoreCase)
                     || renderer.name.Contains("YuviPlayer", StringComparison.OrdinalIgnoreCase)))
-                issues.Add("Three.js Yubi remains the only visible avatar.");
+                issues.Add("Three.js Yuvi remains the only visible avatar.");
             return issues;
         }
 

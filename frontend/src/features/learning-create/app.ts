@@ -146,7 +146,7 @@ export function initLomdaCreator() {
             });
             if (!resp.ok || !resp.body) throw new Error('bad response');
 
-            // Yubi short "building" message replaces typing
+            // Yuvi short "building" message replaces typing
             typing.querySelector('.bubble').innerHTML = 'רגע, אני בונה לך את זה עכשיו... 🔧 אפשר לעקוב אחרי הקוד שאני כותב בצד שמאל!';
 
             const reader = resp.body.getReader();

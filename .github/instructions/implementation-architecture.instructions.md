@@ -28,7 +28,7 @@ applyTo: "backend/**,frontend/**,learner-mapping/**,learning-agent/**,student-da
 
 ## React Migration Plan
 - Use Vite + React + TypeScript unless the user chooses a different React stack.
-- Preserve visual design first: theme colors, spacing, Yubi robot, stepper, chat card rhythm, dashboard panels, and RTL-first layout should survive migration.
+- Preserve visual design first: theme colors, spacing, Yuvi robot, stepper, chat card rhythm, dashboard panels, and RTL-first layout should survive migration.
 - Create a React app in `frontend/` or `src/frontend/` with:
 	- `src/app/` for app shell, route state, providers, and page composition.
 	- `src/components/` for reusable UI components.

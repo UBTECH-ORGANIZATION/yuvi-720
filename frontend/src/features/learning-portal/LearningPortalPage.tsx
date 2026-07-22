@@ -19,7 +19,7 @@ import {
   type LearningSubject,
   type LearningUnitDTO,
 } from '../../services/learning'
-import { useYubiDesign } from '../yubi-studio/YubiDesignProvider'
+import { useYuviDesign } from '../Yuvi-studio/YuviDesignProvider'
 import { LearningWorldUnity } from './LearningWorldUnity'
 import {
   buildLearningWorldModel,
@@ -94,7 +94,7 @@ export function LearningPortalPage() {
   const { t, language } = useI18n()
   const { learnerId } = useBrain()
   const { open: openCompanion } = useCompanion()
-  const { design } = useYubiDesign()
+  const { design } = useYuviDesign()
   const { isPhone, isTablet } = useResponsive()
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
   const sceneRef = useRef<LearningWorldHandle>(null)
@@ -275,7 +275,7 @@ export function LearningPortalPage() {
                   selectedLandmarkId={selectedLandmarkId}
                   ariaLabel={t('learning.world.canvasAria', { subject: t(`learning.subject.${world.subject}`) })}
                   onLandmarkSelect={selectLandmark}
-                  onYubiInteract={openCompanion}
+                  onYuviInteract={openCompanion}
                   onBlocked={handleWorldBlocked}
                   onReady={handleSceneReady}
                   onFatalError={handleUnityFatalError}
@@ -328,7 +328,7 @@ export function LearningPortalPage() {
                   </button>
                   <button className="is-coach" type="button" onClick={openCompanion}>
                     <Icon name="message" size={19} />
-                    <span>{t('learning.world.askYubi')}</span>
+                    <span>{t('learning.world.askYuvi')}</span>
                   </button>
                 </div>
               </header>

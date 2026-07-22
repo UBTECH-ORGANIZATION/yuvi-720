@@ -1,5 +1,5 @@
 
-> **Visual rejection record (2026):** The Atlas terrain experiment, all earlier generated primitive world assets, and grayscale composition A were rejected by the product owner. Composition A was too sparse and separated the world into disconnected islands. They are not references, fallbacks, or approved production assets. New work must use one continuous explorable world, camera framing around Yubi, substantially denser authored detail, and an animation-ready runtime representation.
+> **Visual rejection record (2026):** The Atlas terrain experiment, all earlier generated primitive world assets, and grayscale composition A were rejected by the product owner. Composition A was too sparse and separated the world into disconnected islands. They are not references, fallbacks, or approved production assets. New work must use one continuous explorable world, camera framing around Yuvi, substantially denser authored detail, and an animation-ready runtime representation.
 # Unity Hand-Drawn Learning World — Production Plan
 
 **Status:** Approved architecture for asset-by-asset high-fidelity production  
@@ -17,7 +17,7 @@ The world will use a **hybrid deformable-mesh 2.5D pipeline**, not blanket dense
 - Trees, grass, flags, cloth, vines, and character parts use segmented transform rigs or skinned meshes where deformation matters.
 - Rigid mesh cards remain acceptable only for distant or static details that do not need deformation or structural depth.
 - A small WebGL-safe shared material set supplies painted colors, restrained texture/grain, state cues, and optional shared wind parameters.
-- Yubi remains the canonical customized Three.js model rendered by React above Unity. Unity owns only its invisible movement, collision, interaction, section-camera selection, and world-space projection proxy.
+- Yuvi remains the canonical customized Three.js model rendered by React above Unity. Unity owns only its invisible movement, collision, interaction, section-camera selection, and world-space projection proxy.
 - Invisible simplified geometry owns traversal, obstacles, and interaction. Visible meshes never become the source of progression, mastery, unlock, or resume state.
 - SVG may remain as concept/source evidence, but production prefabs and runtime animation must not depend on SVG import, SVG rendering, or exact exported sprite dimensions.
 
@@ -59,7 +59,7 @@ The following browser events must retain their current names and meanings:
 - `landmark-select`
 - `blocked`
 - `bridge-blocked`
-- `yubi-interact`
+- `Yuvi-interact`
 - `travel-complete`
 - `stats`
 - `error`
@@ -106,7 +106,7 @@ Every visible asset should contain evidence of an artist's hand:
 - Landmarks should remain distinct at the default orthographic zoom.
 - Walkable open space, stairs, ramps, and local bridge entrances must remain visible behind trees and props.
 - Interactive elements receive stronger edge contrast than decorative elements.
-- Foreground framing assets may overlap terrain but never cover a current target or Yubi.
+- Foreground framing assets may overlap terrain but never cover a current target or Yuvi.
 
 ### 3.3 Rich but organized
 
@@ -138,14 +138,14 @@ The world may be playful, but learning state is calm and actionable:
 - The navigable world is one connected mainland/campus, not a chain of detached islands.
 - Districts are separated through elevation, vegetation, architecture, streams, courtyards, and gates—not empty water gaps or mandatory road corridors.
 - A bridge may cross a local stream, ravine, or canal, but it must not be the only connection between large floating land pieces.
-- The complete world is larger than one gameplay viewport. Each authored section owns one static whole-section view, and the camera reveals the next composition only when Yubi crosses a section boundary.
-- Yubi enters from the far-left arrival area rather than spawning at the map center or beside the current/recommended landmark. District order unfolds first to the right, then through right/up-right transitions, so the world is discovered through movement.
-- At normal gameplay zoom, Yubi, nearby walkable space, one primary destination, and two to four secondary anchors remain visible.
+- The complete world is larger than one gameplay viewport. Each authored section owns one static whole-section view, and the camera reveals the next composition only when Yuvi crosses a section boundary.
+- Yuvi enters from the far-left arrival area rather than spawning at the map center or beside the current/recommended landmark. District order unfolds first to the right, then through right/up-right transitions, so the world is discovered through movement.
+- At normal gameplay zoom, Yuvi, nearby walkable space, one primary destination, and two to four secondary anchors remain visible.
 - Overview framing is a review/debug presentation; the learner experience uses fixed authored section framing with smooth boundary transitions and optional shallow visual parallax.
-- Dense detail is authored in clusters with walkable-area and interaction exclusion zones, so richness never hides Yubi or landmark approaches.
-- Roads and trails are decorative composition tools only. They never define or limit where Yubi may walk.
+- Dense detail is authored in clusters with walkable-area and interaction exclusion zones, so richness never hides Yuvi or landmark approaches.
+- Roads and trails are decorative composition tools only. They never define or limit where Yuvi may walk.
 - Walkability is authored as invisible area polygons or simple traversal colliders, independently of terrain paint and sprite silhouettes.
-- World height is real: raised terraces, ramps, stairs, bridges, and slopes project Yubi onto different ground elevations.
+- World height is real: raised terraces, ramps, stairs, bridges, and slopes project Yuvi onto different ground elevations.
 - The broad play pattern is an original illustrated overworld with free roaming, landmark interaction, and section-led camera reveals. Do not copy proprietary map layouts, assets, characters, code, or encounter design.
 
 ## 4. World Composition Grammar
@@ -162,7 +162,7 @@ The complete world is assembled from authored kits rather than one enormous pain
 | Ground-detail layer | Composition and story | optional roads, stepping stones, worn grass, stairs, ramps, bridge approaches |
 | Landmark layer | Learning destinations | buildings, gates, gardens, docks, stages |
 | Midground decoration | Story and variety | trees, rocks, fences, carts, lamps, plants |
-| Character layer | Yubi and residents | avatar, guides, ambient creatures |
+| Character layer | Yuvi and residents | avatar, guides, ambient creatures |
 | Foreground framing | Depth and composition | large leaves, cliff edges, mist cards |
 | State/VFX layer | Interaction feedback | selection halo, current banner, lock treatment, completion flourish |
 
@@ -204,7 +204,7 @@ Hero assets receive the deepest review during the holistic world pass and may re
 
 - primary buildings;
 - unique bridges;
-- Yubi;
+- Yuvi;
 - major terrain chunks;
 - district gates;
 - waterfalls, caves, and towers;
@@ -623,16 +623,16 @@ Motion rules:
 - low-power disables most particles and uses one water/current layer;
 - no flashing, rapid strobing, or high-frequency contrast changes.
 
-## 6.12 Yubi and resident characters
+## 6.12 Yuvi and resident characters
 
-### Yubi integration deliverables
+### Yuvi integration deliverables
 
-- reuse the existing `YubiAvatar3D` geometry, variants, colors, accessories, face animation, and interaction behavior;
+- reuse the existing `YuviAvatar3D` geometry, variants, colors, accessories, face animation, and interaction behavior;
 - keep a renderer-free Unity player proxy for movement, collision, interaction, routes, and camera follow;
 - emit normalized viewport position, visibility, scale, heading, and movement state to React at a smooth bounded cadence;
-- render Yubi in a transparent Three.js layer above the Unity canvas without remounting it during movement;
+- render Yuvi in a transparent Three.js layer above the Unity canvas without remounting it during movement;
 - preserve low-power, reduced-motion, keyboard activation, and click-to-open-companion behavior;
-- accept that this first hybrid version always composites Yubi above Unity depth; do not place critical foreground occluders over its route.
+- accept that this first hybrid version always composites Yuvi above Unity depth; do not place critical foreground occluders over its route.
 
 Animation target for the existing Three.js avatar:
 
@@ -753,7 +753,7 @@ The legacy ellipse-only `IslandZone` and island-to-island bridge routing model i
 Migration path:
 
 1. Author broad invisible walkable-area proxies for open ground, courtyards, ramps, terraces, stairs, and local bridges.
-2. Project Yubi to the highest valid ground surface while enforcing maximum rise and drop limits.
+2. Project Yuvi to the highest valid ground surface while enforcing maximum rise and drop limits.
 3. Allow free keyboard and pointer movement anywhere inside these areas; do not snap movement to roads.
 4. Add decoration exclusion radii around open movement space and landmark approaches.
 5. Validate that every reachable landmark has a continuous traversable area connection.
@@ -762,10 +762,10 @@ Migration path:
 
 ### 7.7 2.5D depth and camera mechanics
 
-- Use a pitched orthographic camera that follows Yubi with restrained look-ahead and bounded zoom.
+- Use a pitched orthographic camera that follows Yuvi with restrained look-ahead and bounded zoom.
 - Terrain tops, ramps, stairs, cliffs, bridges, and building bases occupy real world-space height.
 - Illustrated façades, roofs, trees, props, and effects are layered silhouette meshes at shallow depth offsets, with transform segments where movement matters.
-- Landmark prefabs separate base, façade, roof/foreground, shadow, movable pivots, and state layers so Yubi can pass visually behind tall elements where appropriate.
+- Landmark prefabs separate base, façade, roof/foreground, shadow, movable pivots, and state layers so Yuvi can pass visually behind tall elements where appropriate.
 - Painted contact shadows, shallow geometry, and height-separated mesh layers provide depth; glossy primitives and generic perspective extrusion do not.
 - Foreground layers may use restrained camera-relative parallax. Reduced-motion freezes nonessential parallax, wind, deformation, and line-boil movement.
 - Movement remains on the XZ plane projected to authored ground height; visible roads have no movement authority.
@@ -833,7 +833,7 @@ Examples:
 - `SPR_YW_Terrain_Grass_A_Base`
 - `PF_YW_Bridge_Rope_Long_Available`
 - `PF_YW_Landmark_ArchiveHill_A`
-- `ANIM_YW_Yubi_Help_A`
+- `ANIM_YW_Yuvi_Help_A`
 
 ## 9. Source-Art and Import Standard
 
@@ -907,7 +907,7 @@ Ink outlines should be part of the artwork for most assets. A shader outline is 
 
 ### 11.1 Character clips
 
-- Yubi idle: 2–4 seconds with held poses;
+- Yuvi idle: 2–4 seconds with held poses;
 - move: 8–12 unique drawings or equivalent cutout poses per cycle;
 - turn: short directional settle;
 - help/point: under 1.5 seconds;
@@ -973,7 +973,7 @@ Every build records:
 
 ### Gate A — Asset brief and isolated scene
 
-- gameplay purpose, silhouette, scale against Yubi, state needs, motion needs, and originality constraints are explicit;
+- gameplay purpose, silhouette, scale against Yuvi, state needs, motion needs, and originality constraints are explicit;
 - the asset is generated or authored in an isolated lit review scene;
 - the operation is safely rerunnable without deleting unrelated work.
 
@@ -1011,7 +1011,7 @@ Every build records:
 
 ## 14. Representative Complete-World Gate
 
-Build and inspect the complete original connected world in one production pass. It must include continuous terrain and elevation, water, all eight district landmark families, all seven bridge families, vegetation/geology/prop families, Yubi, state cues, background atmosphere, and normal/low-power/reduced-motion behavior.
+Build and inspect the complete original connected world in one production pass. It must include continuous terrain and elevation, water, all eight district landmark families, all seven bridge families, vegetation/geology/prop families, Yuvi, state cues, background atmosphere, and normal/low-power/reduced-motion behavior.
 
 The holistic review includes a full composition overview and robot-centered 16:9 captures from the left entrance, middle districts, and right/up-right destination. It must demonstrate all district families, at least six vegetation silhouettes, multiple prop clusters, and animation-ready motion pivots.
 
@@ -1019,12 +1019,12 @@ The holistic review includes a full composition overview and robot-centered 16:9
 
 - The frame reads as an original illustrated world rather than textured primitives.
 - District silhouettes remain distinct and landmarks are recognizable at default zoom.
-- Open walkable areas remain understandable without forcing Yubi onto a road.
+- Open walkable areas remain understandable without forcing Yuvi onto a road.
 - The world reads as one connected place rather than separated islands.
 - Dense nearby detail retains unobstructed movement and landmark approaches.
 - Raised terrain, shallow structure, and foreground/midground/background meshes create clear 2.5D depth.
 - State cues are distinguishable without reading color.
-- Yubi remains readable, clickable, and animation-ready.
+- Yuvi remains readable, clickable, and animation-ready.
 - Existing React methods/events pass unchanged and navigation collision does not follow render meshes.
 - The representative complete world stays inside all hard WebGL thresholds.
 - Hebrew RTL, Arabic RTL, and English LTR platform overlays remain correct around the canvas.
@@ -1070,7 +1070,7 @@ Use three asset classes when planning capacity:
 
 | Class | Typical scope | Expected review depth |
 |---|---|---|
-| Hero | unique building, Yubi, major bridge, waterfall/cave | brief + silhouette + color + animation + integration + WebGL + originality review |
+| Hero | unique building, Yuvi, major bridge, waterfall/cave | brief + silhouette + color + animation + integration + WebGL + originality review |
 | Modular | tree family, path family, roof/door kit, bridge segments | family concept + representative integration + batch validation |
 | Dressing | flowers, pebbles, shells, small props | palette/silhouette sheet + atlas/import review |
 
@@ -1106,7 +1106,7 @@ The redesign is complete only when:
 - every landmark family has accessible state variants;
 - every navigable surface has verified collision/movement coverage;
 - bridges connect authored anchors without route gaps;
-- Yubi supports normal, reduced-motion, and low-power modes;
+- Yuvi supports normal, reduced-motion, and low-power modes;
 - no learner PII or authoritative progress state is stored or generated in Unity;
 - React-to-Unity methods and events remain stable;
 - the world can be rebuilt reproducibly through the existing WebGL build pipeline;
@@ -1120,7 +1120,7 @@ The baseline, structural catalog, invisible free-roaming surface, raised-terrace
 
 Proceed in this order:
 
-1. publish and visually validate the Three.js Yubi overlay synchronized to Unity's invisible player proxy;
+1. publish and visually validate the Three.js Yuvi overlay synchronized to Unity's invisible player proxy;
 2. inspect the high-fidelity central learning tree in its isolated lit review scene and capture close-up evidence;
 3. revise that tree until it is sharp, cohesive, grounded, and approved at gameplay scale;
 4. integrate the approved tree without changing the browser façade, traversal, or Brain/xAPI data ownership;

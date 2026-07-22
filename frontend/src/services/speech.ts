@@ -1,7 +1,7 @@
 /* Math-aware read-aloud for completed Yuvi messages.
    Azure Speech is preferred; Web Speech is the no-credentials fallback. */
 
-import type { YubiVariant } from '../features/yubi-studio/yubiDesign'
+import type { YuviVariant } from '../features/Yuvi-studio/YuviDesign'
 
 export type SpeechState = 'preparing' | 'playing' | 'idle'
 
@@ -102,7 +102,7 @@ function waitForAudio(audio: HTMLAudioElement): Promise<void> {
   })
 }
 
-function speakInBrowser(text: string, language: string, avatarVariant: YubiVariant, run: number): Promise<void> {
+function speakInBrowser(text: string, language: string, avatarVariant: YuviVariant, run: number): Promise<void> {
   if (!('speechSynthesis' in window)) throw new Error('speech synthesis unavailable')
   const utterance = new SpeechSynthesisUtterance(normalizeMathForSpeech(text, language))
   utterance.lang = languageKey(language) === 'he' ? 'he-IL' : languageKey(language) === 'ar' ? 'ar-SA' : 'en-US'
@@ -129,7 +129,7 @@ function speakInBrowser(text: string, language: string, avatarVariant: YubiVaria
 export async function playCoachSpeech(
   text: string,
   language: string,
-  avatarVariant: YubiVariant,
+  avatarVariant: YuviVariant,
   onState: StateListener,
   conversationId: string = 'default',
   exchangeId?: string,

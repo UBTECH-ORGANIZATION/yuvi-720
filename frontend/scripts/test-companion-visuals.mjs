@@ -335,11 +335,11 @@ async function runScenario(page, scenario, index) {
   await page.goto(`${BASE_URL}/student-dashboard`, { waitUntil: 'domcontentloaded', timeout: 30_000 })
   const localizedBody = await page.locator('body').innerText()
   invariant(!localizedBody.includes('language.switcherLabel'), 'UI exposed raw locale keys during startup')
-  await page.locator('.yubi-companion-dock__portal').waitFor({ state: 'attached', timeout: 30_000 })
-  await page.locator('.yubi-companion-dock__portal').dispatchEvent('click')
-  await page.locator('#yubi-companion-panel').waitFor({ state: 'visible', timeout: 30_000 })
+  await page.locator('.Yuvi-companion-dock__portal').waitFor({ state: 'attached', timeout: 30_000 })
+  await page.locator('.Yuvi-companion-dock__portal').dispatchEvent('click')
+  await page.locator('#Yuvi-companion-panel').waitFor({ state: 'visible', timeout: 30_000 })
   invariant(
-    await page.locator('#yubi-companion-title').innerText() === 'יובי',
+    await page.locator('#Yuvi-companion-title').innerText() === 'יובי',
     'companion title was not localized before interaction',
   )
   const input = page.locator('.sp-companion__composer input')
@@ -471,7 +471,7 @@ async function runScenario(page, scenario, index) {
   )
   pass('zoom overlay appears on hover')
 
-  const panelBox = await page.locator('#yubi-companion-panel').boundingBox()
+  const panelBox = await page.locator('#Yuvi-companion-panel').boundingBox()
   const contentBox = await page.locator('.sp-learner-shell__content').boundingBox()
   const { viewportWidth, viewportHeight } = await page.evaluate(() => ({
     viewportWidth: innerWidth,
@@ -507,7 +507,7 @@ async function runScenario(page, scenario, index) {
   await page.mouse.down()
   await page.mouse.move(grip.x + grip.width / 2 - 64, grip.y + grip.height / 2, { steps: 4 })
   await page.mouse.up()
-  const resizedPanel = await page.locator('#yubi-companion-panel').boundingBox()
+  const resizedPanel = await page.locator('#Yuvi-companion-panel').boundingBox()
   const resizedContent = await page.locator('.sp-learner-shell__content').boundingBox()
   invariant(resizedPanel && resizedPanel.width >= panelBox.width + 55, 'dragging did not enlarge the panel')
   invariant(
@@ -529,11 +529,11 @@ async function runScenario(page, scenario, index) {
   pass('click opens a larger image in the lightbox')
   await page.keyboard.press('Escape')
   invariant(await lightbox.count() === 0, 'Escape did not close the lightbox')
-  invariant(await page.locator('#yubi-companion-panel').count() === 1, 'closing lightbox also closed chat')
+  invariant(await page.locator('#Yuvi-companion-panel').count() === 1, 'closing lightbox also closed chat')
 
   if (index === 0) {
     await page.setViewportSize({ width: 700, height: 900 })
-    const mobilePanel = await page.locator('#yubi-companion-panel').boundingBox()
+    const mobilePanel = await page.locator('#Yuvi-companion-panel').boundingBox()
     const mobileContent = await page.locator('.sp-learner-shell__content').boundingBox()
     invariant(mobilePanel && approximately(mobilePanel.width, 700, 1), 'narrow-screen chat is not full width')
     invariant(mobileContent && Math.abs(mobileContent.x) <= 1, 'narrow-screen fallback still reserves a desktop column')

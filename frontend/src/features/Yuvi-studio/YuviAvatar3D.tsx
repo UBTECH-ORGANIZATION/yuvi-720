@@ -5,18 +5,18 @@ import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import yuviFaviconUrl from '../../assets/yuvi-favicon.png'
-import type { YubiColors, YubiDesign, YubiSlot, YubiVariant } from './yubiDesign'
-import { getAsset, buildBlondeHair, buildEyebrowsBundle } from './yubiAssets'
+import type { YuviColors, YuviDesign, YuviSlot, YuviVariant } from './YuviDesign'
+import { getAsset, buildBlondeHair, buildEyebrowsBundle } from './YuviAssets'
 
-export interface YubiAvatarHandle {
-  equip: (slot: YubiSlot, id: string | null, animate?: boolean) => void
-  setColors: (colors: YubiColors, animate?: boolean) => void
-  setVariant: (variant: YubiVariant, animate?: boolean) => void
-  applyDesign: (design: YubiDesign, animate?: boolean) => void
+export interface YuviAvatarHandle {
+  equip: (slot: YuviSlot, id: string | null, animate?: boolean) => void
+  setColors: (colors: YuviColors, animate?: boolean) => void
+  setVariant: (variant: YuviVariant, animate?: boolean) => void
+  applyDesign: (design: YuviDesign, animate?: boolean) => void
 }
 
 interface Props {
-  initialDesign: YubiDesign
+  initialDesign: YuviDesign
   label: string
   muted?: boolean
   /** When true, the chest "Y" badge is a hover-pop button that fires onYClick. */
@@ -79,13 +79,13 @@ function mixWhite([r, g, b]: number[], t: number): [number, number, number] {
 }
 const rgba = ([r, g, b]: number[], a: number) => `rgba(${r}, ${g}, ${b}, ${a})`
 
-export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAvatar3D(
+export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAvatar3D(
   { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard' },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
-  const controllerRef = useRef<YubiAvatarHandle | null>(null)
+  const controllerRef = useRef<YuviAvatarHandle | null>(null)
   const mutedRef = useRef(muted)
   const onYClickRef = useRef(onYClick)
   const onAvatarClickRef = useRef(onAvatarClick)
@@ -133,7 +133,7 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
   useEffect(() => {
     const container = mountRef.current
     if (!container) return
-    const avatarRoot = container.closest('.yubi-avatar-canvas') as HTMLElement | null
+    const avatarRoot = container.closest('.Yuvi-avatar-canvas') as HTMLElement | null
     const reduceMotion =
       typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
@@ -171,14 +171,14 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
     const fill = new THREE.DirectionalLight(0xbcd7ef, 0.5); fill.position.set(-5, 2, 3); scene.add(fill)
     const rim = new THREE.DirectionalLight(0xdcecff, 0.5); rim.position.set(0, 3, -6); scene.add(rim)
 
-    const design: YubiDesign = {
+    const design: YuviDesign = {
       version: initialDesign.version,
       variant: initialDesign.variant,
       colors: { ...initialDesign.colors },
       equipped: { ...initialDesign.equipped },
     }
 
-    // ── Materials (identical palette to the start-scene YubiRobot3D) ──
+    // ── Materials (identical palette to the start-scene YuviRobot3D) ──
     const blueMat = new THREE.MeshStandardMaterial({ color: 0x717378, roughness: 0.3, metalness: 0.14, envMapIntensity: 0.7 })
     const jointMat = new THREE.MeshStandardMaterial({ color: 0x5c5e62, roughness: 0.34, metalness: 0.1, envMapIntensity: 0.65 })
     const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.26, metalness: 0.08, envMapIntensity: 0.85 })
@@ -372,7 +372,7 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
     robot.position.y = -1.35
 
     // ── Anchors ──
-    const anchors: Record<YubiSlot, THREE.Group> = {
+    const anchors: Record<YuviSlot, THREE.Group> = {
       headTop: new THREE.Group(), face: new THREE.Group(), back: new THREE.Group(), handR: new THREE.Group(), body: new THREE.Group(),
     }
     anchors.headTop.position.set(0, 0, 0); head.add(anchors.headTop)
@@ -383,7 +383,7 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
     const variantGroup = new THREE.Group(); head.add(variantGroup)
 
     // ── equip / variant / colours ──
-    const equippedObjects: Partial<Record<YubiSlot, THREE.Group>> = {}
+    const equippedObjects: Partial<Record<YuviSlot, THREE.Group>> = {}
     const popTargets: Array<{ obj: THREE.Group; t: number }> = []
     let transforming = false, transformT = 0
     const disposeGroup = (obj: THREE.Object3D) => obj.traverse((o) => { const m = o as THREE.Mesh; if (m.geometry) m.geometry.dispose() })
@@ -393,7 +393,7 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
       transforming = true; transformT = 0
       if (newObj) { newObj.scale.setScalar(0.001); popTargets.push({ obj: newObj, t: 0 }) }
     }
-    function equip(slot: YubiSlot, id: string | null, animate = true) {
+    function equip(slot: YuviSlot, id: string | null, animate = true) {
       const anchor = anchors[slot]
       if (equippedObjects[slot]) { anchor.remove(equippedObjects[slot]!); disposeGroup(equippedObjects[slot]!); delete equippedObjects[slot] }
       design.equipped[slot] = id
@@ -407,12 +407,12 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
       const g = asset.build(); anchor.add(g); equippedObjects[slot] = g
       if (animate) playTransform(g)
     }
-    function setVariant(variant: YubiVariant, animate = true) {
+    function setVariant(variant: YuviVariant, animate = true) {
       design.variant = variant
       while (variantGroup.children.length) { const c = variantGroup.children[0]; variantGroup.remove(c); disposeGroup(c) }
       if (variant === 'girl') { variantGroup.add(buildBlondeHair()); variantGroup.add(buildEyebrowsBundle()); if (animate) playTransform(variantGroup) }
     }
-    function setColors(colors: YubiColors, animate = false) {
+    function setColors(colors: YuviColors, animate = false) {
       design.colors = { ...colors }
       const b = new THREE.Color(colors.body)
       blueMat.color.copy(b)
@@ -425,10 +425,10 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
       faceLight.draw()
       if (animate) playTransform()
     }
-    function applyDesign(next: YubiDesign, animate = false) {
+    function applyDesign(next: YuviDesign, animate = false) {
       setColors(next.colors, false)
       setVariant(next.variant, animate)
-      for (const slot of Object.keys(anchors) as YubiSlot[]) equip(slot, next.equipped[slot] ?? null, animate)
+      for (const slot of Object.keys(anchors) as YuviSlot[]) equip(slot, next.equipped[slot] ?? null, animate)
     }
     controllerRef.current = { equip, setColors, setVariant, applyDesign }
     applyDesign(design, false)
@@ -800,8 +800,8 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
   }, [])
 
   return (
-    <div className="yubi-avatar-canvas" style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <img className="yubi-avatar-canvas__fallback" src="/shared/yubi-robot.png" alt="" aria-hidden="true" />
+    <div className="Yuvi-avatar-canvas" style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <img className="Yuvi-avatar-canvas__fallback" src="/shared/yubi-robot.png" alt="" aria-hidden="true" />
       <div
         role={onAvatarClick ? 'button' : 'img'}
         aria-label={label}
@@ -816,7 +816,7 @@ export const YubiAvatar3D = forwardRef<YubiAvatarHandle, Props>(function YubiAva
         style={{ width: '100%', height: '100%' }}
       />
       {interactiveY && (
-        <div ref={tooltipRef} className="yubi-y-tooltip" style={{ display: 'none' }}>{yTooltip}</div>
+        <div ref={tooltipRef} className="Yuvi-y-tooltip" style={{ display: 'none' }}>{yTooltip}</div>
       )}
     </div>
   )

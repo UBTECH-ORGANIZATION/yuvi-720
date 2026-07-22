@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Modal } from '../../components/primitives/Modal'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useAuth, type AuthUser } from '../../providers/AuthProvider'
-import { YubiRobot3D } from '../learner-mapping/YubiRobot3D'
+import { YuviRobot3D } from '../learner-mapping/YuviRobot3D'
 
 /* Sign-in dialog. Opens in place over the landing page so a deep link the user
    was sent to is still there behind them once they authenticate. */
@@ -25,7 +25,7 @@ export function LoginDialog({ open, onClose, onSuccess }: LoginDialogProps) {
   const [pending, setPending] = useState(false)
   const [helloIndex, setHelloIndex] = useState(0)
 
-  // Yubi cycles through a few greetings while the learner signs in.
+  // Yuvi cycles through a few greetings while the learner signs in.
   useEffect(() => {
     if (!open) {
       setHelloIndex(0)
@@ -71,8 +71,8 @@ export function LoginDialog({ open, onClose, onSuccess }: LoginDialogProps) {
   return (
     <Modal open={open} onClose={close} titleId="auth-dialog-title" className="auth-dialog" overlay={false}>
       {/* The scene and the login card fly to centre as two separate slabs, then
-          weld into one panel. The landing's own artwork and pilot Yubi are
-          hidden while this is open, so there is never a second Yubi on screen.
+          weld into one panel. The landing's own artwork and pilot Yuvi are
+          hidden while this is open, so there is never a second Yuvi on screen.
           The scene is full-bleed CSS — no framed illustration inside a frame. */}
       <div className="auth-forge__art">
         <div className="auth-forge__sky" aria-hidden="true">
@@ -90,7 +90,7 @@ export function LoginDialog({ open, onClose, onSuccess }: LoginDialogProps) {
         </p>
 
         <div className="auth-forge__robot">
-          <YubiRobot3D label={t('auth.dialog.robotAria')} speaking followPointer presenting={false} />
+          <YuviRobot3D label={t('auth.dialog.robotAria')} speaking followPointer presenting={false} />
         </div>
         <span className="auth-forge__seam" aria-hidden="true" />
       </div>

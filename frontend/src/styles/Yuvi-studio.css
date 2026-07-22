@@ -1,5 +1,5 @@
-/* Yubi Studio — game-style character customization. RTL-first, logical props. */
-.yubi-studio {
+/* Yuvi Studio — game-style character customization. RTL-first, logical props. */
+.Yuvi-studio {
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -105,8 +105,8 @@
   overflow: hidden;
 }
 .ys-stage__canvas { position: absolute; inset: 0; }
-.yubi-avatar-canvas { width: 100%; height: 100%; }
-.yubi-avatar-canvas__fallback {
+.Yuvi-avatar-canvas { width: 100%; height: 100%; }
+.Yuvi-avatar-canvas__fallback {
   position: absolute;
   z-index: 0;
   inset: 0;
@@ -116,10 +116,10 @@
   object-fit: contain;
   pointer-events: none;
 }
-.yubi-avatar-canvas[data-webgl-state='lost'] .yubi-avatar-canvas__fallback,
-.yubi-avatar-canvas[data-webgl-state='unavailable'] .yubi-avatar-canvas__fallback { display: block; }
-.yubi-avatar-canvas[data-webgl-state='lost'] canvas,
-.yubi-avatar-canvas[data-webgl-state='unavailable'] canvas { visibility: hidden; }
+.Yuvi-avatar-canvas[data-webgl-state='lost'] .Yuvi-avatar-canvas__fallback,
+.Yuvi-avatar-canvas[data-webgl-state='unavailable'] .Yuvi-avatar-canvas__fallback { display: block; }
+.Yuvi-avatar-canvas[data-webgl-state='lost'] canvas,
+.Yuvi-avatar-canvas[data-webgl-state='unavailable'] canvas { visibility: hidden; }
 .ys-hint {
   position: absolute; inset-block-start: 16px; inset-inline-start: 16px;
   background: rgba(255, 255, 255, .82); backdrop-filter: blur(6px);
@@ -158,7 +158,7 @@
 /* ── Dark studio ──
    The stage uses its own night-scene treatment so dark mode feels intentional
    rather than leaving the largest surface in the light palette. */
-[data-theme='dark'] .yubi-studio {
+[data-theme='dark'] .Yuvi-studio {
   background:
     radial-gradient(circle at 78% 28%, rgba(76, 201, 240, .12), transparent 31%),
     radial-gradient(circle at 12% 6%, rgba(159, 122, 254, .2), transparent 34%),
@@ -335,7 +335,7 @@
   transition: opacity 380ms ease;
 }
 .studio-overlay.is-visible { opacity: 1; }
-.studio-overlay .yubi-studio { height: 100%; }
+.studio-overlay .Yuvi-studio { height: 100%; }
 
 /* The stage robot stays mounted (warming up) but invisible while the flight
    Yuvi animates onto its spot, so the hand-off has no blank flash. */

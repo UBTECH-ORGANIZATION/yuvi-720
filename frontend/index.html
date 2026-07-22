@@ -7,7 +7,7 @@
     <script>
       (function () {
         var m = document.cookie.match(/(?:^|;\s*)sp_theme=(light|dark|system)/)
-        var pref = m ? m[1] : 'system'
+        var pref = m ? m[1] : 'dark'
         var dark = pref === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches : pref === 'dark'
         document.documentElement.dataset.theme = dark ? 'dark' : 'light'
       })()
