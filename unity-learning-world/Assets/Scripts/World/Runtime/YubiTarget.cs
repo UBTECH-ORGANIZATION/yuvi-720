@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Yuvi720.LearningWorld
 {
-    public sealed class YubiTarget : MonoBehaviour
+    public sealed class YuviTarget : MonoBehaviour
     {
     }
 }

@@ -6,7 +6,7 @@ namespace Yuvi720.LearningWorld
 {
     /// <summary>
     /// Moves between authored section viewpoints. Once a transition finishes,
-    /// the camera remains unchanged while Yubi moves inside that section.
+    /// the camera remains unchanged while Yuvi moves inside that section.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class WorldSectionCameraController : MonoBehaviour

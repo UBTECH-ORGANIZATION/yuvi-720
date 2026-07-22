@@ -127,8 +127,8 @@ namespace Yuvi720.LearningWorld.Editor
                 issues.Add("Grounding approval must not contain vegetation or atmospheric dressing.");
             if (prefab.GetComponentsInChildren<SpriteRenderer>(true).Length > 0)
                 issues.Add("Grounding approval uses native dimensional meshes only.");
-            if (prefab.GetComponentsInChildren<YubiTarget>(true).Length > 0)
-                issues.Add("React/Three.js remains the only visible Yubi owner.");
+            if (prefab.GetComponentsInChildren<YuviTarget>(true).Length > 0)
+                issues.Add("React/Three.js remains the only visible Yuvi owner.");
 
             if (terrain != null)
             {

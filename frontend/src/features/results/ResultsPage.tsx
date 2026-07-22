@@ -5,8 +5,8 @@ import { Toast } from '../../components/Toast'
 import { useI18n } from '../../i18n/I18nProvider'
 import { apiPatch, apiPost, getLearnerState } from '../../services/api'
 import { useBrain } from '../../providers/BrainProvider'
-import { YubiRobot3D } from '../learner-mapping/YubiRobot3D'
-import { ProfileGlyph, ProfileIllustration } from './ProfileGlyph'
+import { YuviRobot3D } from '../learner-mapping/YuviRobot3D'
+import { ProfileGlyph } from './ProfileGlyph'
 import type { MappingResults, ProfileClaim, ProfileFeedbackVerdict, ProfileSummary } from './types'
 
 type Status = 'loading' | 'analyzing' | 'ready' | 'error'
@@ -21,33 +21,19 @@ type ResultsProgress = {
 
 const pendingSummaries = new Map<string, Promise<ProfileSummary>>()
 
-const illustrationAlternatives: Record<ProfileClaim['category'], string[]> = {
-  strength: ['growth', 'persistence', 'focus', 'spark'],
-  characteristic: ['self_awareness', 'independence', 'organization', 'focus', 'belonging'],
-  preference: ['feedback', 'visual', 'organization', 'technology'],
-  interest: ['interest', 'curiosity', 'technology', 'environment'],
-  support: ['belonging', 'environment', 'feedback', 'focus'],
-}
-
-function resolveIllustrationKey(claims: ProfileClaim[], activeIndex: number) {
-  const used = new Set<string>()
-  let resolved = claims[activeIndex]?.icon_key || 'spark'
-
-  for (let index = 0; index <= activeIndex; index += 1) {
-    const claim = claims[index]
-    if (!claim) continue
-    const candidates = [
-      claim.icon_key,
-      ...illustrationAlternatives[claim.category],
-      'curiosity', 'focus', 'independence', 'organization', 'persistence', 'self_awareness',
-      'belonging', 'technology', 'visual', 'feedback', 'environment', 'interest', 'growth', 'spark',
-    ]
-    const selected = candidates.find((candidate) => !used.has(candidate)) || claim.icon_key
-    used.add(selected)
-    if (index === activeIndex) resolved = selected
-  }
-
-  return resolved
+function FeedbackFace({ verdict }: { verdict: ProfileFeedbackVerdict }) {
+  const mouth =
+    verdict === 'accurate' ? 'M8.5 13.5c1.1 1.6 5.9 1.6 7 0'
+    : verdict === 'inaccurate' ? 'M8.5 15c1.1-1.6 5.9-1.6 7 0'
+    : 'M9 14.5h6'
+  return (
+    <svg className="results-card__face" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="9" cy="10" r=".6" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="10" r=".6" fill="currentColor" stroke="none" />
+      <path d={mouth} />
+    </svg>
+  )
 }
 
 function requestProfileSummary(learnerId: string, language: string) {
@@ -246,7 +232,7 @@ export function ResultsPage() {
           <div className="results-transition__robot" aria-label={t('results.robot.aria')}>
             <span className="results-transition__orbit results-transition__orbit--outer" aria-hidden="true" />
             <span className="results-transition__orbit results-transition__orbit--inner" aria-hidden="true" />
-            <YubiRobot3D label={t('results.robot.aria')} thinking />
+            <YuviRobot3D label={t('results.robot.aria')} thinking />
           </div>
           <div className="results-transition__copy">
             <span className="results-eyebrow">{t('results.loading.eyebrow')}</span>
@@ -335,114 +321,118 @@ export function ResultsPage() {
         />
       )}
       <main className="results-journey">
-        <div className="results-journey__progress" aria-label={t('results.journey.progress')}>
-          {Array.from({ length: journeyLength }, (_, index) => (
-            <span
-              className={`${index === journeyIndex ? 'is-active' : ''}${index < journeyIndex ? ' is-complete' : ''}`}
-              aria-current={index === journeyIndex ? 'step' : undefined}
-              key={index}
-            />
-          ))}
-        </div>
-
-        <section className="results-dialog-stage" aria-live="polite">
-          <div
-            className={`results-dialog-stage__robot${robotSpeaking ? ' is-speaking' : ''}`}
-            data-speaking={robotSpeaking ? 'true' : 'false'}
-            aria-label={t('results.robot.aria')}
-          >
-            <span className="results-dialog-stage__glow" aria-hidden="true" />
-            <YubiRobot3D
-              label={t('results.robot.aria')}
-              speaking={robotSpeaking}
-              celebrating={isDone}
-            />
+        <header className="results-journey__top">
+          <div className="results-journey__progress" aria-label={t('results.journey.progress')}>
+            {Array.from({ length: journeyLength }, (_, index) => (
+              <span
+                className={`${index === journeyIndex ? 'is-active' : ''}${index < journeyIndex ? ' is-complete' : ''}`}
+                aria-current={index === journeyIndex ? 'step' : undefined}
+                key={index}
+              />
+            ))}
           </div>
-
-          <article className={`results-dialog${activeClaim ? ` profile-claim--${activeClaim.category}` : ''}`} key={journeyIndex}>
-            {isIntro && (
-              <>
-                <span className="results-eyebrow">{t('results.hero.eyebrow')}</span>
-                <h1>{t('results.hero.title', { name: studentName })}</h1>
-                <p className="results-dialog__lead" dir="auto">{summary?.hero_message}</p>
-                <p className="results-dialog__note"><ProfileGlyph iconKey="feedback" />{t('results.hero.verification')}</p>
-              </>
-            )}
-
-            {activeClaim && (
-              <>
-                <div className="results-dialog__claim-grid">
-                  <div className="results-dialog__illustration">
-                    <ProfileIllustration iconKey={resolveIllustrationKey(claims, journeyIndex - 1)} />
-                  </div>
-                  <div className="results-dialog__claim-copy">
-                    <div className="results-dialog__topline">
-                      <span className="results-dialog__category">{t(`results.category.${activeClaim.category}`)}</span>
-                    </div>
-                    <h1 dir="auto">{activeClaim.title}</h1>
-                    <p className="results-dialog__lead" dir="auto">{activeClaim.description}</p>
-                  </div>
-                </div>
-                <p className="results-dialog__evidence" dir="auto"><ProfileGlyph iconKey="organization" />{activeClaim.evidence_label}</p>
-                <div className="results-dialog__feedback" aria-label={t('results.feedback.prompt')}>
-                  <strong>{t('results.feedback.prompt')}</strong>
-                  <div className="results-dialog__feedback-actions">
-                    {(['accurate', 'unsure', 'inaccurate'] as const).map((verdict) => (
-                      <button
-                        type="button"
-                        className={activeClaim.feedback_status === verdict ? 'is-selected' : ''}
-                        aria-pressed={activeClaim.feedback_status === verdict}
-                        onClick={() => submitFeedback(activeClaim.source_id, verdict)}
-                        key={verdict}
-                      >
-                        {t(`results.feedback.${verdict}`)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {isDone && (
-              <>
-                <span className="results-dialog__icon results-dialog__icon--finish"><ProfileGlyph iconKey="spark" /></span>
-                <span className="results-eyebrow">{t('results.claims.eyebrow')}</span>
-                <h1>{t('results.journey.doneTitle')}</h1>
-                <p className="results-dialog__lead">{t('results.journey.doneSubtitle')}</p>
-                <p className="results-dialog__note"><ProfileGlyph iconKey="spark" />{t('results.aiDisclosure')}</p>
-              </>
-            )}
-          </article>
-        </section>
-
-        <nav className="results-journey__actions" aria-label={t('results.journey.navigation')}>
-          {journeyIndex > 0 && !isDone && (
-            <button className="results-secondary-button" type="button" onClick={() => goToJourneyStep(journeyIndex - 1)}>
-              {t('results.journey.previous')}
-            </button>
-          )}
-          {!isDone && (
-            <button
-              className="results-primary-button"
-              type="button"
-              onClick={() => goToJourneyStep(journeyIndex + 1)}
-              disabled={awaitingAnswer}
-              aria-describedby={awaitingAnswer ? 'results-answer-required' : undefined}
-            >
-              {t(isIntro ? 'results.journey.start' : 'results.journey.next')}
-            </button>
-          )}
-          {awaitingAnswer && (
-            <p className="results-journey__hint" id="results-answer-required">
-              {t('results.journey.answerRequired')}
+          {activeClaim && (
+            <p className="results-journey__counter">
+              {t('results.journey.insightCounter', { current: journeyIndex, total: claims.length })}
             </p>
           )}
-          {isDone && (
-            <button className="results-primary-button" type="button" onClick={() => void openDashboard()}>
-              {t('results.cta')}
-            </button>
-          )}
-        </nav>
+        </header>
+
+        <section className="results-stage" aria-live="polite">
+          <article className="results-card" key={journeyIndex}>
+            <div className="results-card__main">
+              <div className="results-card__content">
+              {isIntro && (
+                <>
+                  <span className="results-eyebrow"><ProfileGlyph iconKey="spark" />{t('results.hero.eyebrow')}</span>
+                  <h1>{t('results.hero.title', { name: studentName })}</h1>
+                  <p className="results-card__lead" dir="auto">{summary?.hero_message}</p>
+                </>
+              )}
+
+              {activeClaim && (
+                <>
+                  <span className="results-eyebrow"><ProfileGlyph iconKey="spark" />{t('results.insight.label')}</span>
+                  <h1 dir="auto">{activeClaim.title}</h1>
+                  <p className="results-card__lead" dir="auto">{activeClaim.description}</p>
+
+                  <div className="results-card__feedback" aria-label={t('results.feedback.prompt')}>
+                    <span className="results-card__divider" aria-hidden="true" />
+                    <strong>{t('results.feedback.prompt')}</strong>
+                    <div className="results-card__feedback-actions">
+                      {(['accurate', 'unsure', 'inaccurate'] as const).map((verdict) => (
+                        <button
+                          type="button"
+                          className={activeClaim.feedback_status === verdict ? 'is-selected' : ''}
+                          aria-pressed={activeClaim.feedback_status === verdict}
+                          onClick={() => submitFeedback(activeClaim.source_id, verdict)}
+                          key={verdict}
+                        >
+                          <FeedbackFace verdict={verdict} />
+                          <span>{t(`results.feedback.${verdict}`)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {isDone && (
+                <>
+                  <span className="results-eyebrow"><ProfileGlyph iconKey="spark" />{t('results.claims.eyebrow')}</span>
+                  <h1>{t('results.journey.doneTitle')}</h1>
+                  <p className="results-card__lead">{t('results.journey.doneSubtitle')}</p>
+                </>
+              )}
+            </div>
+
+            <div className="results-card__yuvi">
+              <p className="results-card__bubble" dir="auto">{t('results.robot.bubble')}</p>
+              <div
+                className={`results-card__robot${robotSpeaking ? ' is-speaking' : ''}`}
+                data-speaking={robotSpeaking ? 'true' : 'false'}
+                aria-label={t('results.robot.aria')}
+              >
+                <span className="results-card__robot-halo" aria-hidden="true" />
+                <YuviRobot3D
+                  label={t('results.robot.aria')}
+                  speaking={robotSpeaking}
+                  celebrating={isDone}
+                />
+              </div>
+            </div>
+            </div>
+
+            <nav className="results-card__actions" aria-label={t('results.journey.navigation')}>
+              {journeyIndex > 0 && !isDone && (
+                <button className="results-secondary-button" type="button" onClick={() => goToJourneyStep(journeyIndex - 1)}>
+                  {t('results.journey.previous')}
+                </button>
+              )}
+              {!isDone && (
+                <p className="results-journey__hint" id="results-answer-required">
+                  {awaitingAnswer ? t('results.journey.answerRequired') : t('results.journey.feedbackHint')}
+                </p>
+              )}
+              {!isDone && (
+                <button
+                  className="results-primary-button"
+                  type="button"
+                  onClick={() => goToJourneyStep(journeyIndex + 1)}
+                  disabled={awaitingAnswer}
+                  aria-describedby="results-answer-required"
+                >
+                  {t(isIntro ? 'results.journey.start' : 'results.journey.next')}
+                </button>
+              )}
+              {isDone && (
+                <button className="results-primary-button" type="button" onClick={() => void openDashboard()}>
+                  {t('results.cta')}
+                </button>
+              )}
+            </nav>
+          </article>
+        </section>
       </main>
     </div>
   )

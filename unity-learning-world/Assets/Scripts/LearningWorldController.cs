@@ -14,7 +14,7 @@ namespace Yuvi720.LearningWorld
         private const float DistrictRise = 5.5f;
         private const float PlayerColliderRadius = 1.2f;
         private const string CentralLearningTreeAssetId = "landmark.central-learning-tree";
-        private const string YubiAssetId = "character.yubi";
+        private const string YuviAssetId = "character.Yuvi";
         private static readonly Vector3 CameraOffset = new(0f, 11.5f, -8.5f);
         private static readonly Vector3 PlayerColliderCenter = new(0f, 1.8f, 0f);
         private static readonly Vector3 WorldEntranceOffset = new(-7f, .85f, -1.5f);
@@ -516,7 +516,7 @@ namespace Yuvi720.LearningWorld
 
         private void BuildPlayer()
         {
-            player = InstantiateVisual(YubiAssetId, Vector3.zero, "YuviPlayer");
+            player = InstantiateVisual(YuviAssetId, Vector3.zero, "YuviPlayer");
             playerBody = player.Find("VisualRoot") ?? player;
 
             if (config.externalAvatar)
@@ -528,8 +528,8 @@ namespace Yuvi720.LearningWorld
             var collider = player.GetComponent<SphereCollider>() ?? player.gameObject.AddComponent<SphereCollider>();
             collider.radius = PlayerColliderRadius;
             collider.center = PlayerColliderCenter;
-            var yubiTarget = player.GetComponent<YubiTarget>() ?? player.gameObject.AddComponent<YubiTarget>();
-            yubiTarget.enabled = true;
+            var YuviTarget = player.GetComponent<YuviTarget>() ?? player.gameObject.AddComponent<YuviTarget>();
+            YuviTarget.enabled = true;
         }
 
         private static WorldLandmarkVisualState ParseLandmarkState(string state, bool revealed)
@@ -572,9 +572,9 @@ namespace Yuvi720.LearningWorld
                     OnLandmarkClicked(landmarkTarget.Id);
                     return;
                 }
-                if (hit.collider.GetComponentInParent<YubiTarget>() != null)
+                if (hit.collider.GetComponentInParent<YuviTarget>() != null)
                 {
-                    YuviBrowserBridge.Emit(WorldBrowserEvents.YubiInteract);
+                    YuviBrowserBridge.Emit(WorldBrowserEvents.YuviInteract);
                     return;
                 }
                 var bridgeTarget = hit.collider.GetComponentInParent<BridgeTarget>();

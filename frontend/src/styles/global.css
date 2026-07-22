@@ -244,7 +244,7 @@ body.is-resizing-companion * {
 
 /* Chest-Y "edit" tooltip rendered inside any Yuvi avatar canvas wrapper.
   Anchored to the Y badge (JS sets left/top). */
-.yubi-y-tooltip {
+.Yuvi-y-tooltip {
   position: absolute;
   transform: translate(-50%, calc(-100% - 13px));
   background: linear-gradient(135deg, #6f5bff 0%, #9f7afe 55%, #4cc9f0 135%);
@@ -258,9 +258,9 @@ body.is-resizing-companion * {
   pointer-events: none;
   z-index: 20;
   box-shadow: 0 12px 26px rgba(90, 60, 180, 0.42), inset 0 0 0 1.5px rgba(255, 255, 255, 0.28);
-  animation: yubi-tip-pop .2s cubic-bezier(.2, .9, .3, 1.4) both;
+  animation: Yuvi-tip-pop .2s cubic-bezier(.2, .9, .3, 1.4) both;
 }
-@keyframes yubi-tip-pop {
+@keyframes Yuvi-tip-pop {
   from { opacity: 0; transform: translate(-50%, calc(-100% - 5px)) scale(.86); }
   to { opacity: 1; transform: translate(-50%, calc(-100% - 13px)) scale(1); }
 }

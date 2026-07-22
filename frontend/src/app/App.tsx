@@ -7,9 +7,9 @@ import { LearningPortalPage } from '../features/learning-portal/LearningPortalPa
 import { LessonPage } from '../features/learning-lesson/LessonPage'
 import { LomdaCreatorPage } from '../features/learning-create/LomdaCreatorPage'
 import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
-import { YubiStudioPage } from '../features/yubi-studio/YubiStudioPage'
+import { YuviStudioPage } from '../features/Yuvi-studio/YuviStudioPage'
 import { CompanionChat } from '../components/CompanionChat'
-import { YubiCompanionDock } from '../components/YubiCompanionDock'
+import { YuviCompanionDock } from '../components/YuviCompanionDock'
 import { useEffect } from 'react'
 import { ErrorState, LoadingState } from '../components/primitives'
 import { useI18n } from '../i18n/I18nProvider'
@@ -54,7 +54,7 @@ function pageForRoute(pathname: string) {
   if (pathname === '/' || pathname === '') return <LandingLoginPage />
   if (pathname.startsWith('/learner-mapping')) return <LearnerMappingPage />
   if (pathname.startsWith('/results')) return <ResultsPage />
-  if (pathname.startsWith('/yuvi-studio')) return <YubiStudioPage />
+  if (pathname.startsWith('/yuvi-studio')) return <YuviStudioPage />
   if (pathname.startsWith('/student-dashboard')) return <StudentDashboardPage />
   if (pathname.startsWith('/teacher-view')) return <TeacherViewPage />
   if (pathname.startsWith('/mentoring')) return <MentoringPage />
@@ -66,7 +66,7 @@ function pageForRoute(pathname: string) {
 
 // The floating Coach begins only once the learner reaches the dashboard. Mapping
 // and results are one guided onboarding flow, so showing a second companion there
-// would compete with Yubi's profile-verification experience.
+// would compete with Yuvi's profile-verification experience.
 function isLearnerRoute(pathname: string) {
   return (
     pathname.startsWith('/student-dashboard') ||
@@ -130,7 +130,7 @@ export function App() {
           <div className="sp-learner-shell__content" dir={direction}>{routePage}</div>
         </div>
       ) : routePage}
-      {learnerRoute && !isStudioRoute && !isActiveTaskRoute && !isLearningWorldRoute && <YubiCompanionDock />}
+      {learnerRoute && !isStudioRoute && !isActiveTaskRoute && !isLearningWorldRoute && <YuviCompanionDock />}
     </>
   )
 }

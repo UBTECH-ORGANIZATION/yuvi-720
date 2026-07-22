@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react'
 import { StudioContent } from './StudioContent'
 import { useStudioDesign } from './useStudioDesign'
-import '../../styles/yubi-studio.css'
+import '../../styles/Yuvi-studio.css'
 
 type Phase = 'closed' | 'opening' | 'open' | 'closing'
 

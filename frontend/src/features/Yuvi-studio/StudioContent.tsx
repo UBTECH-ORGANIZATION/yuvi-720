@@ -3,19 +3,19 @@
 import { useMemo } from 'react'
 import { useI18n } from '../../i18n/I18nProvider'
 import { LearnerAppBar } from '../../components/LearnerAppBar'
-import { YubiAvatar3D } from './YubiAvatar3D'
-import { assetsForSlot, getThumbnails, type YubiAsset } from './yubiAssets'
-import type { YubiColors, YubiSlot, YubiVariant } from './yubiDesign'
+import { YuviAvatar3D } from './YuviAvatar3D'
+import { assetsForSlot, getThumbnails, type YuviAsset } from './YuviAssets'
+import type { YuviColors, YuviSlot, YuviVariant } from './YuviDesign'
 import type { StudioDesign } from './useStudioDesign'
-import '../../styles/yubi-studio.css'
+import '../../styles/Yuvi-studio.css'
 
-type Tab = YubiSlot | 'colors'
+type Tab = YuviSlot | 'colors'
 const TABS: Tab[] = ['headTop', 'face', 'body', 'handR', 'back', 'colors']
 
 // TEMP: show every asset unlocked so new items can be previewed on Yuvi.
 const PREVIEW_ALL = true
 
-const COLOR_OPTIONS: Record<keyof YubiColors, string[]> = {
+const COLOR_OPTIONS: Record<keyof YuviColors, string[]> = {
   body: ['#85878C', '#9cc1e8', '#ff9ec4', '#b5f2c9', '#ffd27a', '#c9b6ff', '#8ee6f2', '#ff8f8f', '#9ad0ff'],
   eyes: ['#4eeef0', '#7c5cff', '#ff5d73', '#ffd166', '#5ce67e', '#ff8fd0'],
   smile: ['#74f7ff', '#7c5cff', '#ff5d73', '#3fd9e0', '#ffd166', '#ff8fd0'],
@@ -43,16 +43,16 @@ export function StudioContent({
   } = studio
 
   return (
-    <div className="yubi-studio">
+    <div className="Yuvi-studio">
       <LearnerAppBar />
       <div className="ys-body">
         <aside className="ys-drawer">
         <div className="ys-drawer__head">
-          <h1>{t('yubiStudio.title')}</h1>
-          <p>{t('yubiStudio.subtitle')}</p>
+          <h1>{t('YuviStudio.title')}</h1>
+          <p>{t('YuviStudio.subtitle')}</p>
         </div>
 
-        <div className="ys-tabs" role="tablist" aria-label={t('yubiStudio.title')}>
+        <div className="ys-tabs" role="tablist" aria-label={t('YuviStudio.title')}>
           {TABS.map((tab) => (
             <button
               key={tab}
@@ -62,7 +62,7 @@ export function StudioContent({
               className={`ys-tab${activeTab === tab ? ' is-active' : ''}`}
               onClick={() => setActiveTab(tab)}
             >
-              {t(`yubiStudio.tab.${tab}`)}
+              {t(`YuviStudio.tab.${tab}`)}
             </button>
           ))}
         </div>
@@ -74,26 +74,26 @@ export function StudioContent({
             <>
               {activeTab === 'headTop' && (
                 <div className="ys-variant-row">
-                  {(['classic', 'girl'] as YubiVariant[]).map((v) => (
+                  {(['classic', 'girl'] as YuviVariant[]).map((v) => (
                     <button
                       key={v}
                       type="button"
                       className={`ys-variant${design.variant === v ? ' is-active' : ''}`}
                       onClick={() => setVariant(v)}
                     >
-                      {t(`yubiStudio.variant.${v}`)}
+                      {t(`YuviStudio.variant.${v}`)}
                     </button>
                   ))}
                 </div>
               )}
               <div className="ys-grid">
                 <Card
-                  equipped={design.equipped[activeTab as YubiSlot] === null}
-                  onClick={() => equip(activeTab as YubiSlot, null)}
-                  label={t('yubiStudio.none')}
+                  equipped={design.equipped[activeTab as YuviSlot] === null}
+                  onClick={() => equip(activeTab as YuviSlot, null)}
+                  label={t('YuviStudio.none')}
                   none
                 />
-                {assetsForSlot(activeTab as YubiSlot).map((asset) => {
+                {assetsForSlot(activeTab as YuviSlot).map((asset) => {
                   const locked = PREVIEW_ALL ? false : isLocked(asset)
                   return (
                     <Card
@@ -116,17 +116,17 @@ export function StudioContent({
       <section className="ys-stage">
         <div className={`ys-stage__canvas${robotHidden ? ' is-flight-hidden' : ''}`}>
           {loaded && (
-            <YubiAvatar3D ref={avatarRef} initialDesign={design} muted={muted} orbit label={t('yubiStudio.avatarAlt')} />
+            <YuviAvatar3D ref={avatarRef} initialDesign={design} muted={muted} orbit label={t('YuviStudio.avatarAlt')} />
           )}
         </div>
-        <div className="ys-hint">{justSaved ? t('yubiStudio.saved') : t('yubiStudio.hint')}</div>
+        <div className="ys-hint">{justSaved ? t('YuviStudio.saved') : t('YuviStudio.hint')}</div>
         <div className="ys-toolbar">
-          <button type="button" className="ys-btn ys-btn--primary" onClick={save} disabled={saving}>{t('yubiStudio.save')}</button>
-          <button type="button" className="ys-btn ys-btn--ghost" onClick={reset} disabled={saving}>{t('yubiStudio.reset')}</button>
+          <button type="button" className="ys-btn ys-btn--primary" onClick={save} disabled={saving}>{t('YuviStudio.save')}</button>
+          <button type="button" className="ys-btn ys-btn--ghost" onClick={reset} disabled={saving}>{t('YuviStudio.reset')}</button>
           <button type="button" className="ys-btn ys-btn--mute" onClick={() => setMuted((m) => !m)}>
-            {muted ? t('yubiStudio.sound.off') : t('yubiStudio.sound.on')}
+            {muted ? t('YuviStudio.sound.off') : t('YuviStudio.sound.on')}
           </button>
-          <button type="button" className="ys-btn ys-btn--ghost" onClick={onClose} disabled={saving}>{t('yubiStudio.back')}</button>
+          <button type="button" className="ys-btn ys-btn--ghost" onClick={onClose} disabled={saving}>{t('YuviStudio.back')}</button>
         </div>
       </section>
       </div>
@@ -166,15 +166,15 @@ function Card({
 function ColorsPanel({
   design, onPick, t,
 }: {
-  design: import('./yubiDesign').YubiDesign
-  onPick: (key: keyof YubiColors, hex: string) => void
+  design: import('./YuviDesign').YuviDesign
+  onPick: (key: keyof YuviColors, hex: string) => void
   t: (key: string) => string
 }) {
   return (
     <>
-      {(Object.keys(COLOR_OPTIONS) as (keyof YubiColors)[]).map((key) => (
+      {(Object.keys(COLOR_OPTIONS) as (keyof YuviColors)[]).map((key) => (
         <div key={key} className="ys-swatch-group">
-          <h3>{t(`yubiStudio.color.${key}`)}</h3>
+          <h3>{t(`YuviStudio.color.${key}`)}</h3>
           <div className="ys-swatches">
             {COLOR_OPTIONS[key].map((hex) => (
               <button

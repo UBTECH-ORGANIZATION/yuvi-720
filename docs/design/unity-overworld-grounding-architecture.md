@@ -37,7 +37,7 @@ It proved that the project can provide:
 - structural connectors;
 - elevated movement projection;
 - one static camera view per section;
-- no visible Unity Yubi;
+- no visible Unity Yuvi;
 - clean geometry without square seams or duplicate cliff z-fighting;
 - 209 passing EditMode tests.
 
@@ -61,7 +61,7 @@ The current prefab, review scene, captures, and tests are retained temporarily a
 3. Make the ground large and deep enough to host future hero buildings, vegetation, props, foreground framing, and atmosphere without constricting movement.
 4. Support movement up, around, behind, across, and down—not only across a flat central ribbon.
 5. Keep traversal independent from visible roads, paint, and decorative surfaces.
-6. Preserve the React/Three.js Yubi as the only visible avatar.
+6. Preserve the React/Three.js Yuvi as the only visible avatar.
 7. Preserve exactly one static authored whole-section camera view per section, with transitions only at section boundaries.
 8. Keep all learner progress, mastery, recommendation, unlock, and resume truth outside Unity.
 9. Produce deterministic, reviewable, testable assets suitable for Unity 6 WebGL.
@@ -72,7 +72,7 @@ The current prefab, review scene, captures, and tests are retained temporarily a
 This phase does not:
 
 - place buildings, trees, props, signs, characters, or atmospheric effects;
-- redesign the visible Three.js Yubi;
+- redesign the visible Three.js Yuvi;
 - change browser method names or event names;
 - move learner state into Unity;
 - add runtime terrain generation;
@@ -578,7 +578,7 @@ Every connector includes start and end aprons integrated into section geometry. 
 
 ### 14.4 Camera boundaries
 
-Section transitions occur at authored boundary thresholds near connector centers, after Yubi has clearly left one composition and entered the next. The transition must not fire repeatedly while Yubi moves on a landing or apron.
+Section transitions occur at authored boundary thresholds near connector centers, after Yuvi has clearly left one composition and entered the next. The transition must not fire repeatedly while Yuvi moves on a landing or apron.
 
 ## 15. Static Section Camera Contract
 
@@ -586,7 +586,7 @@ The production camera model is:
 
 - exactly one authored camera anchor per section;
 - exactly one authored orthographic size per section;
-- camera position remains fixed while Yubi moves within the section;
+- camera position remains fixed while Yuvi moves within the section;
 - smooth interpolation occurs only when the active section changes;
 - reduced motion may snap between authored views;
 - avatar projection continues throughout transitions.
@@ -764,7 +764,7 @@ Automated checks include:
 - top-surface winding faces upward;
 - no generated visible mesh under `MovementZonesRoot`;
 - no trigger under traversal surfaces;
-- no visible Unity Yubi;
+- no visible Unity Yuvi;
 - no landmarks, vegetation, props, or atmosphere during grounding approval.
 
 ### 19.5 Traversal validation
@@ -1028,7 +1028,7 @@ The grounding redesign is done only when:
 - every section and connector is continuously traversable in both directions where intended;
 - movement colliders remain invisible and independent from roads;
 - one static whole-section camera view is authored and stable for each section;
-- Three.js remains the only visible Yubi;
+- Three.js remains the only visible Yuvi;
 - no landmarks, props, vegetation, or atmosphere were used to disguise weak grounding during approval;
 - geometry has no duplicate boundary surfaces, z-fighting, hollow tops, or tile seams;
 - automated validation and the complete EditMode suite pass;

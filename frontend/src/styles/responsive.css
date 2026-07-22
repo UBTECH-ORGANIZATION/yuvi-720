@@ -176,7 +176,9 @@ img, svg, video, canvas { max-inline-size: 100%; }
   .intro-stage { grid-template-columns: 1fr; height: auto; min-height: 0; gap: var(--sp-5); padding-block: var(--sp-5); overflow: visible; direction: inherit; }
   .intro-robot-zone { grid-column: 1; grid-row: 1; block-size: auto; min-block-size: 0; }
   .intro-stage-orbit { display: none; }
-  .intro-stage .yubi-floater { position: relative; left: auto; top: auto; justify-self: center; width: clamp(180px, 42vw, 300px); margin: 0; transform: none; animation: yubiStageAppear .55s ease both; }
+  .intro-back-ring { display: none; }
+  .intro-stage-plate { display: none; }
+  .intro-stage .Yuvi-floater { position: relative; left: auto; top: auto; justify-self: center; width: clamp(180px, 42vw, 300px); margin: 0; transform: none; animation: YuviStageAppear .55s ease both; }
   .intro-script { grid-column: 1; grid-row: 2; align-items: stretch; justify-self: center; justify-content: flex-start; width: min(620px, 100%); min-height: 0; padding-inline: var(--sp-4); direction: inherit; }
   .intro-lines { min-height: 0; }
   .intro-line { text-align: start; max-width: 100%; }
@@ -185,8 +187,8 @@ img, svg, video, canvas { max-inline-size: 100%; }
 
   .intro-scene { flex-direction: column-reverse; align-items: center; max-inline-size: 560px; min-height: 0; gap: var(--sp-4); }
   .chat-side { width: 100%; height: auto; min-height: 440px; }
-  .intro-scene > .yubi-floater { position: relative; inset-inline-start: auto; top: auto; transform: none; width: clamp(180px, 42vw, 300px); margin: 0 auto; animation: none; }
-  .yubi-floater::after { inset: 10% 8%; }
+  .intro-scene > .Yuvi-floater { position: relative; inset-inline-start: auto; top: auto; transform: none; width: clamp(180px, 42vw, 300px); margin: 0 auto; animation: none; }
+  .Yuvi-floater::after { inset: 10% 8%; }
 
   /* Dense panels breathe less on tablets. */
   .sp-panel { padding: var(--sp-6); }
@@ -259,7 +261,7 @@ img, svg, video, canvas { max-inline-size: 100%; }
   .intro-scene { max-inline-size: 100%; gap: var(--sp-4); }
   .chat-side { padding: var(--sp-5) var(--sp-4) var(--sp-4); border-radius: 22px; }
   .chat-bubble { max-width: 90%; }
-  .intro-stage .yubi-floater { width: clamp(150px, 42vw, 220px); }
+  .intro-stage .Yuvi-floater { width: clamp(150px, 42vw, 220px); }
   .intro-script { padding-block-start: var(--sp-2); }
 
   /* Question screen: single-column options, comfortable touch targets. */
@@ -294,7 +296,7 @@ img, svg, video, canvas { max-inline-size: 100%; }
   :root { --sp-container: 1200px; }
   .intro-scene { max-width: 1080px; }
   .chat-side { height: clamp(400px, calc(100dvh - 112px), 640px); }
-  .yubi-floater { width: min(44%, 380px); }
+  .Yuvi-floater { width: min(44%, 380px); }
   .q-shell { max-width: 900px; }
 }
 
@@ -311,7 +313,7 @@ img, svg, video, canvas { max-inline-size: 100%; }
   }
   .intro-scene { max-width: 1240px; }
   .chat-side { height: clamp(420px, calc(100dvh - 120px), 700px); }
-  .yubi-floater { width: min(46%, 440px); }
+  .Yuvi-floater { width: min(46%, 440px); }
   .q-shell { max-width: 960px; }
 }
 
