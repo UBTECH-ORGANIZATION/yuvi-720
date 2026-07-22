@@ -1,4 +1,4 @@
-import { apiGet } from './api'
+import { apiGet, apiPost } from './api'
 
 /* Typed client for the Learner Brain (architecture §4.2, backend `app/brain`).
    Reads are brain projections — never invented on the client. Learner surfaces
@@ -123,6 +123,23 @@ export interface DashboardHero {
   canResume: boolean
   reason: string
   pace: string | null
+  illustration: {
+    assetId: string
+    url: string
+    staticUrl: string
+    alt: string
+    tip: string
+    width: number
+    height: number
+    aiGenerated: boolean
+    animationPreset: string
+  } | null
+  stats: {
+    timeSpentMinutes: number | null
+    overallProgress: number
+    completedUnits: number
+    timingAvailable: boolean
+  }
 }
 
 export interface DashboardDTO {
@@ -140,6 +157,8 @@ export interface DashboardDTO {
     text: string
     meta: string
     source: string
+    status?: string
+    steps?: { done: number; total: number } | null
     done: boolean
     deadline?: string | null
   }[]
@@ -154,6 +173,13 @@ export interface DashboardDTO {
     value: number
     descriptor: string
     tone: 'strong' | 'steady' | 'support'
+    /** State-aware "how to improve" cause tags from live signals (behavioural,
+     * no numbers). Empty when there's no activity evidence yet. */
+    improve?: string[]
+    /** True only when there's enough real activity to explain *why* this domain
+     * sits where it does. The activeness map gates its change arrow on this, so
+     * it never shows a movement it can't ground in evidence. */
+    evidenceBacked?: boolean
   }[]
   reflectionPreview: { answer: string; promptId?: string; at?: string } | null
   updatedAt: string | null
@@ -170,5 +196,16 @@ export function getCoachBundle(learnerId: string, signal?: AbortSignal) {
   return apiGet<CoachBundle>(
     `/api/brain/${encodeURIComponent(learnerId)}/context/coach`,
     signal ? { signal } : undefined
+  )
+}
+
+/** Create a learner self-goal derived from an activeness domain (mirrors to F4 goals). */
+export function createActivenessGoal(
+  learnerId: string,
+  payload: { domain: string; text: string },
+) {
+  return apiPost<{ id: string; text: string; domain: string }>(
+    `/api/brain/${encodeURIComponent(learnerId)}/activeness-goal`,
+    payload,
   )
 }

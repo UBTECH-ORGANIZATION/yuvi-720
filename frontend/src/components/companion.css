@@ -270,18 +270,28 @@
   }
 }
 
+/* Closing is a shove, not a slide: Yuvi braces side-on against the panel's
+   inner edge and heaves it out with straining, jerky pushes (each heave slips
+   back a touch) before the panel finally clears the right edge. The keyframe
+   timing mirrors the dock so Yuvi's hands stay glued to the panel edge. */
 @keyframes sp-companion-drag-exit {
-  0%, 8% { opacity: 1; transform: translateX(0); }
-  64% { opacity: 1; transform: translateX(101%); }
+  0%, 12% { opacity: 1; transform: translateX(0); }
+  20% { opacity: 1; transform: translateX(2%); }
+  34% { opacity: 1; transform: translateX(6%); }
+  40% { opacity: 1; transform: translateX(5%); }
+  54% { opacity: 1; transform: translateX(20%); }
+  60% { opacity: 1; transform: translateX(17%); }
+  74% { opacity: 1; transform: translateX(55%); }
+  86% { opacity: 1; transform: translateX(90%); }
   100% { opacity: 0; transform: translateX(103%); }
 }
 
 @keyframes sp-companion-slot-return {
-  0%, 8% {
+  0%, 12% {
     flex-basis: var(--sp-companion-width, 430px);
     inline-size: var(--sp-companion-width, 430px);
   }
-  70%, 100% {
+  74%, 100% {
     flex-basis: 0;
     inline-size: 0;
   }
@@ -882,6 +892,57 @@
 .sp-companion__prose p + p { margin-block-start: 10px; }
 .sp-companion__prose strong { font-weight: 800; }
 
+/* Markdown blocks in Yuvi's replies. */
+.sp-companion__prose > * + * { margin-block-start: 10px; }
+.sp-companion__prose .sp-md-heading { font-weight: 800; line-height: 1.3; color: var(--sp-ink-900); }
+.sp-companion__prose .sp-md-heading--1 { font-size: 1.12em; }
+.sp-companion__prose .sp-md-heading--2 { font-size: 1.06em; }
+.sp-companion__prose .sp-md-heading--3,
+.sp-companion__prose .sp-md-heading--4 { font-size: 1em; letter-spacing: .01em; }
+/* Manual flex markers (not ::marker) so the bullet/number always keeps a
+   predictable padding from the bubble edge regardless of RTL/LTR. */
+.sp-companion__prose .sp-md-list { margin: 0; padding: 0; list-style: none; }
+.sp-companion__prose .sp-md-list--ordered { counter-reset: sp-md-item; }
+.sp-companion__prose .sp-md-list li {
+  display: flex; align-items: baseline; gap: 9px;
+  padding-inline-start: 12px; margin-block-start: 6px;
+}
+.sp-companion__prose .sp-md-list li:first-child { margin-block-start: 0; }
+.sp-companion__prose .sp-md-list li::before {
+  flex: none; min-inline-size: 1.1em; text-align: center;
+  color: var(--sp-primary-500); font-weight: 800; content: "•";
+}
+.sp-companion__prose .sp-md-list .sp-md-li-body { flex: 1 1 auto; min-inline-size: 0; }
+.sp-companion__prose .sp-md-list--ordered li { counter-increment: sp-md-item; }
+.sp-companion__prose .sp-md-list--ordered li::before { content: counter(sp-md-item) "."; text-align: start; }
+.sp-companion__prose .sp-md-quote {
+  margin: 0; padding: 6px 12px;
+  border-inline-start: 3px solid var(--sp-primary-400, #9f88ff);
+  background: rgba(111, 91, 255, .07);
+  border-radius: 8px; color: var(--sp-ink-600);
+}
+.sp-companion__prose .sp-md-hr { border: 0; block-size: 1px; background: var(--sp-border); margin-block: 12px; }
+.sp-companion__prose .sp-md-tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.sp-companion__prose .sp-md-table {
+  border-collapse: collapse; inline-size: 100%; font-size: .95em;
+  border: 1px solid var(--sp-border); border-radius: 10px; overflow: hidden;
+}
+.sp-companion__prose .sp-md-table th,
+.sp-companion__prose .sp-md-table td {
+  padding: 7px 11px; border: 1px solid var(--sp-border); text-align: start; vertical-align: top;
+}
+.sp-companion__prose .sp-md-table th { background: rgba(111, 91, 255, .08); font-weight: 750; color: var(--sp-ink-900); }
+.sp-companion__prose .sp-md-table tbody tr:nth-child(even) td { background: rgba(111, 91, 255, .03); }
+
+[data-theme='dark'] .sp-companion__prose .sp-md-heading { color: #eef0ff; }
+[data-theme='dark'] .sp-companion__prose .sp-md-quote { background: rgba(159, 122, 254, .12); color: rgba(232, 230, 251, .85); border-inline-start-color: #9f7afe; }
+[data-theme='dark'] .sp-companion__prose .sp-md-hr { background: rgba(159, 122, 254, .22); }
+[data-theme='dark'] .sp-companion__prose .sp-md-table,
+[data-theme='dark'] .sp-companion__prose .sp-md-table th,
+[data-theme='dark'] .sp-companion__prose .sp-md-table td { border-color: rgba(159, 122, 254, .22); }
+[data-theme='dark'] .sp-companion__prose .sp-md-table th { background: rgba(159, 122, 254, .16); color: #eef0ff; }
+[data-theme='dark'] .sp-companion__prose .sp-md-table tbody tr:nth-child(even) td { background: rgba(159, 122, 254, .06); }
+
 .sp-companion__thinking {
   display: flex;
   align-items: center;
@@ -962,6 +1023,49 @@
   animation: sp-companion-loader-spin 700ms linear infinite;
 }
 
+/* On-demand "show me a video / image" prompt under a text-only reply. */
+.sp-visual-cta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-block-start: 10px;
+}
+.sp-visual-cta__label {
+  color: var(--sp-ink-400);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.sp-visual-cta__buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+.sp-visual-cta__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border: 1px solid rgba(124, 108, 255, 0.26);
+  border-radius: var(--sp-radius-pill);
+  background: rgba(244, 241, 255, 0.7);
+  color: var(--sp-primary-600);
+  font: 750 12px/1 var(--sp-font);
+  cursor: pointer;
+  transition: background 0.15s var(--sp-ease), transform 0.15s var(--sp-ease), box-shadow 0.15s var(--sp-ease);
+}
+.sp-visual-cta__btn:hover {
+  background: rgba(111, 91, 255, 0.14);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(83, 54, 239, 0.16);
+}
+.sp-visual-cta__btn:focus-visible { outline: 3px solid rgba(111, 91, 255, 0.28); outline-offset: 2px; }
+.sp-visual-cta__btn .sp-icon { flex: none; color: var(--sp-primary-500); }
+[data-theme='dark'] .sp-visual-cta__label { color: rgba(214, 216, 245, 0.6); }
+[data-theme='dark'] .sp-visual-cta__btn {
+  border-color: rgba(159, 122, 254, 0.34);
+  background: rgba(159, 122, 254, 0.12);
+  color: #c9bcff;
+}
+[data-theme='dark'] .sp-visual-cta__btn:hover { background: rgba(159, 122, 254, 0.22); }
+[data-theme='dark'] .sp-visual-cta__btn .sp-icon { color: #b9a5ff; }
+
 .sp-companion__visual {
   inline-size: 100%;
   margin: 12px 0;
@@ -980,7 +1084,8 @@
   line-height: 1.35;
 }
 
-.sp-companion__visual img {
+.sp-companion__visual img,
+.sp-companion__visual video {
   display: block;
   inline-size: 100%;
   block-size: auto;
@@ -1096,7 +1201,8 @@
   text-align: center;
 }
 
-.sp-companion-lightbox__content img {
+.sp-companion-lightbox__content img,
+.sp-companion-lightbox__content video {
   display: block;
   max-inline-size: 100%;
   max-block-size: calc(90dvh - 130px);
@@ -1179,9 +1285,18 @@
   outline-offset: 2px;
 }
 
-.sp-companion__speech.is-active:not(:has(.sp-companion__speech-spinner)) svg {
+.sp-companion__speech.is-active:not(.is-playing):not(:has(.sp-companion__speech-spinner)) svg {
   animation: sp-companion-speech-pulse 900ms ease-in-out infinite;
 }
+
+/* Reading aloud — a red stop button so the learner knows they can stop it. */
+.sp-companion__speech.is-playing {
+  background: #e5484d;
+  border-color: #e5484d;
+  color: #fff;
+}
+.sp-companion__speech.is-playing:hover { background: #d43c41; border-color: #d43c41; }
+.sp-companion__speech-stop { fill: currentColor !important; stroke: none !important; }
 
 .sp-companion__speech-spinner {
   inline-size: 14px;

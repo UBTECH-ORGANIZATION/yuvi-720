@@ -729,15 +729,17 @@
 [data-theme='dark'] .learner-app-nav { border-color: var(--sp-border); background: var(--sp-bg-subtle); }
 [data-theme='dark'] .learner-app-nav button.is-active { background: var(--sp-surface); }
 [data-theme='dark'] .sd-subject-card,
-[data-theme='dark'] .sd-focus-card,
-[data-theme='dark'] .sd-learning-profile,
-[data-theme='dark'] .sd-competency {
+[data-theme='dark'] .sd-focus-card {
   border-color: var(--sp-border);
   background: rgba(24, 28, 56, .9);
 }
-[data-theme='dark'] .sd-learning-profile {
-  background: linear-gradient(135deg, rgba(24, 28, 56, .97), rgba(19, 23, 48, .94));
+[data-theme='dark'] .sk-radar-card,
+[data-theme='dark'] .sk-weekly {
+  border-color: var(--sp-border);
+  background: linear-gradient(160deg, rgba(24, 28, 56, .97), rgba(19, 23, 48, .94));
 }
+[data-theme='dark'] .sk-node__label { color: var(--sp-ink-700); }
+[data-theme='dark'] .sk-tooltip { background: #06081a; }
 [data-theme='dark'] .sd-objective__marker,
 [data-theme='dark'] .sd-profile-tag { background: var(--sp-surface-2); }
 [data-theme='dark'] .sd-reflection {
@@ -784,6 +786,7 @@
 
 [data-theme='dark'] .sd-journey-hero__glow {
   background:
+    radial-gradient(circle 240px at var(--sd-pointer-x) var(--sd-pointer-y), rgba(83, 231, 255, calc(.12 * var(--sd-pointer-opacity))), transparent 72%),
     radial-gradient(circle at 76% 52%, rgba(83, 231, 255, .18), transparent 28%),
     linear-gradient(112deg, transparent 58%, rgba(99, 221, 245, .045));
 }
@@ -800,12 +803,6 @@
 [data-theme='dark'] .sd-journey-hero__meta .sp-pill {
   border-color: rgba(122, 230, 251, .2);
   background: rgba(11, 31, 58, .5);
-}
-
-[data-theme='dark'] .sd-journey-hero .sd-button--primary {
-  background: linear-gradient(135deg, #f7fbff, #dff8ff);
-  color: #30259f;
-  box-shadow: 0 14px 34px rgba(1, 7, 31, .32), 0 0 24px rgba(73, 218, 247, .13);
 }
 
 [data-theme='dark'] .sd-journey-hero .sd-button--quiet {
@@ -847,6 +844,18 @@
 [data-theme='dark'] .sd-orbit__node--done { background: #123c45; color: #85f3cc; }
 [data-theme='dark'] .sd-orbit__node--current { background: #292466; color: #d9d3ff; }
 [data-theme='dark'] .sd-orbit__node--next { background: #10354d; color: #93efff; }
+
+@media (hover: hover) and (pointer: fine) {
+  [data-theme='dark'] .sd-lesson-illustration:hover,
+  [data-theme='dark'] .sd-lesson-illustration:focus-within {
+    border-color: rgba(115, 229, 255, .28);
+    box-shadow: inset 0 1px rgba(206, 249, 255, .1), 0 16px 38px rgba(0, 5, 30, .28);
+  }
+  [data-theme='dark'] .sd-lesson-illustration:hover .sd-lesson-illustration__ai,
+  [data-theme='dark'] .sd-lesson-illustration:focus-within .sd-lesson-illustration__ai { background-color: rgba(38, 43, 84, .96); color: var(--sp-ink-400); }
+  [data-theme='dark'] .sd-journey-hero__stats > div:hover { border-color: rgba(115, 229, 255, .25); box-shadow: 0 14px 32px rgba(0, 5, 30, .3); }
+  [data-theme='dark'] .sd-journey-hero__tip:hover { border-color: rgba(115, 229, 255, .22); box-shadow: 0 12px 30px rgba(0, 5, 30, .24); }
+}
 
 @keyframes sp-dark-orbit-spin { to { transform: rotate(1turn); } }
 
@@ -1062,7 +1071,8 @@
   background: var(--sp-surface-2);
   box-shadow: 0 10px 26px rgba(0, 2, 18, .3);
 }
-[data-theme='dark'] .sp-companion__visual img { background: #0b0f24; }
+[data-theme='dark'] .sp-companion__visual img,
+[data-theme='dark'] .sp-companion__visual video { background: #0b0f24; }
 
 [data-theme='dark'] .sp-companion__composer {
   border-color: var(--sp-border);

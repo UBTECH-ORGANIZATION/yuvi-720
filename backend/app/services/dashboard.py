@@ -153,12 +153,24 @@ def _project_subjects(brain: dict, language: str) -> list[dict[str, Any]]:
     return out
 
 
-def _project_competencies(brain: dict, language: str) -> list[dict[str, Any]]:
-    activeness = (brain.get("profile") or {}).get("activeness") or {}
+def _project_competencies(
+    brain: dict, language: str, effective: dict[str, dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """Project the six activeness competencies for the learner UI.
+
+    `effective` (from app.brain.activeness) carries the dynamic score — the
+    questionnaire base nudged by recent activity — plus per-domain "cause" tags
+    that drive state-aware improve tips. When absent, we fall back to the raw
+    onboarding base so the projection never depends on live signals being ready.
+    """
+    from app.brain.activeness import MIN_CAUSE_CONF
+
+    base = (brain.get("profile") or {}).get("activeness") or {}
     out = []
     for key in COMPETENCY_ORDER:
         meta = COMPETENCY_META[key]
-        value = int(activeness.get(key, 0))
+        eff = (effective or {}).get(key) or {}
+        value = int(eff.get("value", base.get(key, 0)))
         tone = "strong" if value >= 70 else "steady" if value >= 45 else "support"
         out.append({
             "key": key,
@@ -169,6 +181,13 @@ def _project_competencies(brain: dict, language: str) -> list[dict[str, Any]]:
             "value": value,
             "descriptor": _t(BAND_WORDS, tone, language),
             "tone": tone,
+            # State-aware "how to improve" cause tags (behavioural, no numbers).
+            "improve": list(eff.get("causes") or []),
+            # True only when there's enough real activity to name *why* the score
+            # sits where it does. The map gates its change arrow on this so it can
+            # never claim a movement it couldn't explain (seeded/fabricated
+            # history with no events behind it → no arrow).
+            "evidenceBacked": float(eff.get("confidence") or 0) >= MIN_CAUSE_CONF,
         })
     return out
 
@@ -240,8 +259,38 @@ def _hero(brain: dict, language: str) -> dict[str, Any]:
     }
 
 
-def project_dashboard(brain: dict, name: str, language: str = "he") -> dict[str, Any]:
-    """Project the brain into the dashboard DTO (real numbers only)."""
+def project_hero_metrics(brain: dict, events: list[dict[str, Any]]) -> dict[str, Any]:
+    """Project real platform-level totals; absent timing remains unavailable."""
+    plans = plan_next(brain)
+    total = sum(int((plans.get(subject) or {}).get("total", 0)) for subject in DEFAULT_SUBJECTS)
+    mastered = sum(int((plans.get(subject) or {}).get("mastered", 0)) for subject in DEFAULT_SUBJECTS)
+    elapsed_seconds = sum(
+        float((event.get("timing") or {}).get("elapsed_since_previous_seconds") or 0)
+        for event in events
+        if (event.get("timing") or {}).get("quality") == "elapsed_between_events"
+    )
+    completed_units = {
+        event.get("unit_id")
+        for event in events
+        if event.get("verb") == "completed" and event.get("unit_id")
+    }
+    return {
+        "timeSpentMinutes": round(elapsed_seconds / 60) if elapsed_seconds else None,
+        "overallProgress": round((mastered / total) * 100) if total else 0,
+        "completedUnits": len(completed_units),
+        "timingAvailable": bool(elapsed_seconds),
+    }
+
+
+def project_dashboard(
+    brain: dict, name: str, language: str = "he",
+    effective_activeness: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Project the brain into the dashboard DTO (real numbers only).
+
+    `effective_activeness` is the dynamic competency map (base + live signals);
+    when omitted the projection uses the raw onboarding base.
+    """
     profile = brain.get("profile") or {}
     display_name = (brain.get("identity") or {}).get("display_name") or name or "תלמיד/ה"
 
@@ -262,6 +311,8 @@ def project_dashboard(brain: dict, name: str, language: str = "he") -> dict[str,
             "text": g.get("text", ""),
             "meta": g.get("source", ""),
             "source": g.get("source", ""),
+            "status": g.get("status", ""),
+            "steps": g.get("steps") if isinstance(g.get("steps"), dict) else None,
             "done": g.get("status") == "done",
             "deadline": g.get("deadline"),
         }
@@ -334,7 +385,7 @@ def project_dashboard(brain: dict, name: str, language: str = "he") -> dict[str,
         "difficulties": difficulties,
         "goals": goals,
         "mapping": mapping,
-        "competencies": _project_competencies(brain, language),
+        "competencies": _project_competencies(brain, language, effective_activeness),
         "reflectionPreview": reflection_preview,
         "selfAwarenessNote": self_awareness_note,
         "updatedAt": brain.get("updated_at"),

@@ -37,6 +37,19 @@ export interface LearningUnitDTO {
   source: 'content_provider'
   current_component_id: string | null
   next_component_id: string | null
+  illustration?: LessonIllustrationDTO | null
+}
+
+export interface LessonIllustrationDTO {
+  assetId: string
+  url: string
+  staticUrl: string
+  alt: string
+  tip: string
+  width: number
+  height: number
+  aiGenerated: boolean
+  animationPreset: string
 }
 
 export interface LearningCatalogDTO {
@@ -91,8 +104,11 @@ export interface LearningTimingDTO {
   active_time_available: false
 }
 
-export function getLearningCatalog(signal?: AbortSignal) {
-  return apiGet<LearningCatalogDTO>('/api/learning/catalog', signal ? { signal } : undefined)
+export function getLearningCatalog(signal?: AbortSignal, lang?: Language) {
+  // The learner is resolved server-side from the session cookie — never sent
+  // by the client. `lang` only localizes the per-unit lesson illustrations.
+  const suffix = lang ? `?lang=${encodeURIComponent(lang)}` : ''
+  return apiGet<LearningCatalogDTO>(`/api/learning/catalog${suffix}`, signal ? { signal } : undefined)
 }
 
 export function createLearningSession(
