@@ -9,10 +9,12 @@ import {
   streamCoachSupport,
   streamProactive,
   subscribeTriggers,
+  requestVisualization,
   type CoachConversation,
   type CoachHistoryMessage,
   type CoachVisual,
   type CoachSupportMode,
+  type VisualMode,
 } from '../services/agents'
 import { useI18n } from '../i18n/I18nProvider'
 import { useRoute } from '../app/router'
@@ -27,6 +29,10 @@ export interface CoachMessage {
   textAfter?: string
   visual?: CoachVisual
   isVisualizing?: boolean
+  /** Set when an on-demand visual request returned nothing renderable. */
+  visualFailed?: boolean
+  /** LLM decided this reply is explanatory → offer the on-demand visual buttons. */
+  canVisualize?: boolean
   isComplete: boolean
   createdAt?: string
 }
@@ -60,6 +66,7 @@ interface CompanionContextValue {
   canStartNewConversation: boolean
   send: (text: string) => Promise<void>
   requestSupport: (support: CoachSupportMode) => Promise<void>
+  requestVisual: (messageId: string, mode: VisualMode) => Promise<void>
   selectConversation: (conversationId: string) => Promise<void>
   startNewConversation: () => Promise<void>
   deleteConversation: (conversationId: string) => Promise<boolean>
@@ -104,6 +111,8 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const [isClosing, setIsClosing] = useState(false)
   const [panelWidth, setPanelWidth] = useState(430)
   const [messages, setMessages] = useState<CoachMessage[]>([])
+  // Latest messages for handlers that must read them without being re-created.
+  const messagesRef = useRef<CoachMessage[]>([])
   const [conversations, setConversations] = useState<CoachConversation[]>([])
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
   const [conversationCursor, setConversationCursor] = useState<string | null>(null)
@@ -127,6 +136,8 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const isClosingRef = useRef(false)
   const openingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => { messagesRef.current = messages }, [messages])
 
   const nextId = () => `live-${Date.now()}-${counter.current++}`
 
@@ -416,18 +427,32 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
                 message.id === assistantId ? { ...message, text: message.text + chunk } : message
               ))
             ),
-          onVisualStatus: ({ textBefore, textAfter }) =>
+          onVisualStatus: ({ status, textBefore, textAfter }) =>
             setMessages((prev) =>
-              prev.map((message) => (
-                message.id === assistantId
-                  ? { ...message, text: textBefore, textAfter, isVisualizing: true }
-                  : message
-              ))
+              prev.map((message) => {
+                if (message.id !== assistantId) return message
+                // planning: loader appears while the text still streams/settles
+                // — the message never looks finished and then suddenly grows.
+                if (status === 'planning') return { ...message, isVisualizing: true }
+                if (status === 'none') return { ...message, isVisualizing: false }
+                return {
+                  ...message,
+                  text: textBefore ?? message.text,
+                  textAfter,
+                  isVisualizing: true,
+                }
+              })
             ),
           onVisual: (visual) =>
             setMessages((prev) =>
               prev.map((message) => (
                 message.id === assistantId ? { ...message, visual, isVisualizing: false } : message
+              ))
+            ),
+          onCanVisualize: (canVisualize) =>
+            setMessages((prev) =>
+              prev.map((message) => (
+                message.id === assistantId ? { ...message, canVisualize } : message
               ))
             ),
         }, conversationId, surface)
@@ -506,6 +531,50 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       liveTurnInProgress.current = false
     }
   }, [activeConversationId, isStreaming, language, reloadHistory, surface])
+
+  // On-demand visual: the learner tapped "show me a video / image" under a
+  // text-only reply. We plan + render from that message's text plus its
+  // prompting user turn. Not persisted to history — regenerated on demand.
+  const requestVisual = useCallback(async (messageId: string, mode: VisualMode) => {
+    const current = messagesRef.current
+    const index = current.findIndex((message) => message.id === messageId)
+    if (index === -1) return
+    const assistantText = [current[index].text, current[index].textAfter].filter(Boolean).join('\n\n')
+    if (!assistantText) return
+    let userMessage = ''
+    for (let i = index - 1; i >= 0; i -= 1) {
+      if (current[i].role === 'user' && current[i].text) { userMessage = current[i].text; break }
+    }
+    setMessages((prev) =>
+      prev.map((message) =>
+        message.id === messageId ? { ...message, isVisualizing: true, visualFailed: false } : message
+      )
+    )
+    try {
+      const visual = await requestVisualization(
+        userMessage || assistantText,
+        assistantText,
+        mode,
+        language,
+        activeConversationId || 'default'
+      )
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === messageId
+            ? visual
+              ? { ...message, visual, isVisualizing: false, visualFailed: false }
+              : { ...message, isVisualizing: false, visualFailed: true }
+            : message
+        )
+      )
+    } catch {
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === messageId ? { ...message, isVisualizing: false, visualFailed: true } : message
+        )
+      )
+    }
+  }, [activeConversationId, language])
 
   // Proactive nudges stream into the active thread without taking control of
   // the screen. Only the learner-visible assistant message enters history.
@@ -604,6 +673,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           && !conversations.some((conversation) => conversation.message_count === 0),
         send,
         requestSupport,
+        requestVisual,
         selectConversation,
         startNewConversation,
         deleteConversation,

@@ -1,0 +1,66 @@
+/* Reusable ephemeral competency chat — shared by the learning-map dialog and
+   the activeness-map info panel. Bubbles reuse .sp-companion__* (companion.css)
+   so all Yuvi chats look identical. Light by default; add .cchat--dark on a
+   dark surface. */
+.cchat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-block-size: 0;
+}
+.cchat__ephemeral { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--sp-ink-300); font-size: 11.5px; }
+.cchat__ephemeral .sp-icon { flex: none; }
+.cchat__log {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-block-size: 200px;
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px solid var(--sp-border);
+  border-radius: 18px;
+  background: var(--sp-bg-subtle, #f8f7ff);
+}
+.cchat__log .sp-companion__message-row { margin: 0; }
+.cchat__dots { color: var(--sp-ink-300); font-weight: 800; letter-spacing: .2em; }
+.cchat__error { margin: 0; color: var(--sp-warn-600, #c2410c); font-size: var(--sp-fs-xs); }
+.cchat__composer { display: flex; align-items: center; gap: 8px; }
+.cchat__composer input {
+  flex: 1;
+  min-inline-size: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: #fff;
+  color: var(--sp-ink-900);
+  font: 500 var(--sp-fs-sm)/1.4 var(--sp-font);
+}
+.cchat__composer input:focus-visible { outline: 3px solid rgba(111, 91, 255, .24); }
+.cchat__send {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 44px;
+  block-size: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6f5bff, #5336ef);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(83, 54, 239, .24);
+  transition: transform .15s var(--sp-ease), opacity .15s var(--sp-ease);
+}
+.cchat__send:hover:not(:disabled) { transform: translateY(-1px); }
+.cchat__send:disabled { opacity: .45; cursor: not-allowed; }
+[dir='rtl'] .cchat__send .sp-icon { transform: scaleX(-1); }
+
+[data-theme='dark'] .cchat__log { border-color: rgba(159, 122, 254, .18); background: rgba(12, 14, 36, .5); }
+[data-theme='dark'] .cchat__composer input { border-color: rgba(159, 122, 254, .24); background: rgba(20, 23, 54, .8); color: #eef0ff; }
+[data-theme='dark'] .cchat__ephemeral { color: rgba(214, 216, 245, .5); }
+
+/* Dark surface (activeness-map panel) — force the dark treatment regardless of theme. */
+.cchat--dark .cchat__log { border-color: rgba(159, 122, 254, .2); background: rgba(10, 12, 32, .55); }
+.cchat--dark .cchat__composer input { border-color: rgba(159, 122, 254, .26); background: rgba(20, 23, 54, .85); color: #eef0ff; }
+.cchat--dark .cchat__ephemeral { color: rgba(214, 216, 245, .6); }

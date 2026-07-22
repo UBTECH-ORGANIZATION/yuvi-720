@@ -1,0 +1,61 @@
+.sd-connections-page { min-block-size: 100dvh; }
+.sd-connections { inline-size: min(1180px, calc(100% - 2 * var(--sp-gutter))); margin-inline: auto; padding-block: clamp(28px, 4vw, 52px) 140px; }
+.sd-connections__heading { display: flex; align-items: center; gap: 16px; margin-block-end: 24px; }
+.sd-connections__heading h1 { margin: 0; color: var(--sp-ink-900); font-size: var(--sp-fs-2xl); line-height: var(--sp-lh-tight); }
+.sd-connections__heading p { margin: 7px 0 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
+.sd-connections__icon { display: grid; place-items: center; inline-size: 52px; block-size: 52px; flex: none; border-radius: 17px; background: var(--sp-primary-100); color: var(--sp-primary-700); }
+
+.sd-chat-window, .sd-calendar-window { min-block-size: clamp(480px, 65dvh, 720px); overflow: hidden; border: 1px solid var(--sp-border); border-radius: 28px; background: color-mix(in srgb, var(--sp-surface), transparent 4%); box-shadow: var(--sp-shadow-md); }
+.sd-chat-window { display: grid; grid-template-columns: minmax(230px, .32fr) minmax(0, 1fr); }
+.sd-chat-window__teachers { padding: 20px 14px; border-inline-end: 1px solid var(--sp-border); background: color-mix(in srgb, var(--sp-bg-subtle), transparent 18%); }
+.sd-chat-window__teachers h2 { margin: 3px 8px 16px; color: var(--sp-ink-700); font-size: var(--sp-fs-sm); }
+.sd-chat-window__teachers button { display: grid; grid-template-columns: 42px 1fr; align-items: center; gap: 11px; inline-size: 100%; min-block-size: 66px; padding: 10px; border: 1px solid transparent; border-radius: 16px; background: transparent; color: var(--sp-ink-600); font: inherit; text-align: start; cursor: pointer; }
+.sd-chat-window__teachers button:hover, .sd-chat-window__teachers button.is-active { border-color: var(--sp-border); background: var(--sp-surface); box-shadow: var(--sp-shadow-sm); }
+.sd-chat-window__teachers button:focus-visible, .sd-chat-thread__footer button:focus-visible, .sd-connections__action:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+.sd-chat-window__teachers strong, .sd-chat-window__teachers small, .sd-chat-thread__header strong, .sd-chat-thread__header small { display: block; }
+.sd-chat-window__teachers strong, .sd-chat-thread__header strong { color: var(--sp-ink-800); font-size: var(--sp-fs-sm); }
+.sd-chat-window__teachers small, .sd-chat-thread__header small { margin-block-start: 4px; color: var(--sp-ink-300); font-size: var(--sp-fs-xs); }
+.sd-chat-window__avatar { display: grid; place-items: center; inline-size: 42px; block-size: 42px; border-radius: 14px; background: var(--sp-gradient); color: #fff; font-weight: 800; }
+.sd-chat-thread { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-inline-size: 0; }
+.sd-chat-thread__header { display: flex; align-items: center; gap: 12px; min-block-size: 78px; padding: 14px 20px; border-block-end: 1px solid var(--sp-border); }
+.sd-chat-thread__body { display: grid; align-content: start; gap: 14px; padding: clamp(18px, 3vw, 30px); overflow-y: auto; background: radial-gradient(circle at 85% 15%, rgba(111, 91, 255, .07), transparent 32%); }
+.sd-chat-thread__body > .sp-state { align-self: center; }
+.sd-chat-summary { justify-self: start; max-inline-size: min(620px, 88%); padding: 16px 18px; border: 1px solid var(--sp-border); border-radius: 18px 18px 6px 18px; background: var(--sp-surface); box-shadow: var(--sp-shadow-sm); }
+[dir='rtl'] .sd-chat-summary { border-radius: 18px 18px 18px 6px; }
+.sd-chat-summary span { color: var(--sp-primary-600); font-size: var(--sp-fs-xs); font-weight: 700; }
+.sd-chat-summary p { margin: 8px 0; color: var(--sp-ink-700); font-size: var(--sp-fs-sm); line-height: 1.6; }
+.sd-chat-summary small { color: var(--sp-ink-400); font-size: var(--sp-fs-xs); line-height: 1.5; }
+.sd-chat-thread__footer { padding: 14px 20px; border-block-start: 1px solid var(--sp-border); background: var(--sp-surface); }
+.sd-chat-thread__footer button, .sd-connections__action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-block-size: 44px; padding-inline: 18px; border: 0; border-radius: var(--sp-radius-pill); background: var(--sp-primary-600); color: #fff; font: 700 var(--sp-fs-xs)/1 var(--sp-font); cursor: pointer; }
+
+.sd-calendar-window { display: grid; align-content: start; gap: 0; padding: clamp(18px, 3vw, 30px); }
+.sd-calendar-item { display: grid; grid-template-columns: minmax(170px, .34fr) 44px minmax(0, 1fr); align-items: center; gap: 16px; min-block-size: 112px; padding-block: 17px; border-block-end: 1px solid var(--sp-border); }
+.sd-calendar-item:last-child { border-block-end: 0; }
+.sd-calendar-item time { display: flex; align-items: center; gap: 8px; color: var(--sp-ink-500); font-size: var(--sp-fs-xs); font-weight: 650; }
+.sd-calendar-item__marker { display: grid; place-items: center; inline-size: 44px; block-size: 44px; border-radius: 15px; }
+.sd-calendar-item__marker--meeting { background: var(--sp-teal-100); color: var(--sp-teal-600); }
+.sd-calendar-item__marker--goal { background: var(--sp-primary-100); color: var(--sp-primary-700); }
+.sd-calendar-item__copy { min-inline-size: 0; }
+.sd-calendar-item__copy span { display: block; margin-block-end: 5px; color: var(--sp-primary-600); font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.sd-calendar-item__copy strong { display: block; color: var(--sp-ink-800); font-size: var(--sp-fs-md); line-height: 1.5; }
+.sd-calendar-item__copy small { display: block; margin-block-start: 6px; color: var(--sp-ink-400); font-size: var(--sp-fs-xs); }
+
+[data-theme='dark'] .sd-chat-thread__body { background: radial-gradient(circle at 85% 15%, rgba(159, 122, 254, .1), transparent 34%); }
+[data-theme='dark'] .sd-chat-window__teachers { background: rgba(12, 17, 42, .32); }
+
+@media (max-width: 899px) {
+  .sd-chat-window { grid-template-columns: 190px minmax(0, 1fr); }
+  .sd-calendar-item { grid-template-columns: 1fr 44px minmax(0, 1.4fr); }
+}
+@media (max-width: 599px) {
+  .sd-connections { inline-size: calc(100% - 20px); padding-block-start: 20px; }
+  .sd-connections__heading { align-items: flex-start; }
+  .sd-chat-window, .sd-calendar-window { min-block-size: 560px; border-radius: 22px; }
+  .sd-chat-window { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  .sd-chat-window__teachers { display: flex; gap: 8px; overflow-x: auto; padding: 12px; border-inline-end: 0; border-block-end: 1px solid var(--sp-border); }
+  .sd-chat-window__teachers h2 { display: none; }
+  .sd-chat-window__teachers button { inline-size: auto; min-inline-size: 180px; }
+  .sd-calendar-item { grid-template-columns: 40px 1fr; gap: 12px; }
+  .sd-calendar-item time { grid-column: 1 / -1; }
+  .sd-calendar-item__marker { inline-size: 40px; block-size: 40px; }
+}
