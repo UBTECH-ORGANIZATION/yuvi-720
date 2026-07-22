@@ -1,7 +1,9 @@
 /* Student dashboard — a personal learning journey, not a score report. */
 .sd-page {
   min-block-size: 100dvh;
-  overflow-x: hidden;
+  /* clip (not hidden): hidden creates a scroll container, which silently breaks
+     position: sticky for the app bar and the side rail. clip only cuts overflow. */
+  overflow-x: clip;
   background:
     radial-gradient(circle at 12% 10%, rgba(76, 201, 240, .11), transparent 26%),
     radial-gradient(circle at 88% 24%, rgba(159, 122, 254, .14), transparent 31%),
@@ -139,130 +141,162 @@
 }
 .sd-dashboard { inline-size: min(1240px, calc(100% - 2 * var(--sp-gutter))); margin-inline: auto; padding-block: clamp(24px, 4vw, 52px) 170px; }
 
-.sd-journey-hero { --sd-pointer-x: 50%; --sd-pointer-y: 50%; --sd-pointer-opacity: 0; position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr) minmax(460px, 1.05fr); align-items: stretch; min-block-size: 548px; padding: 32px 42px 34px; overflow: hidden; border: 1px solid rgba(255,255,255,.92); border-radius: 48px; background: linear-gradient(128deg, rgba(255,255,255,.91), rgba(250,249,255,.82)); box-shadow: 0 30px 90px rgba(91,72,176,.13), inset 0 1px 0 rgba(255,255,255,.92); color: var(--sp-ink-700); backdrop-filter: blur(18px); }
+/* Compact hero: content (title → progress → CTA → KPI row) is the main area;
+   the illustration sits alone in the second column (inline-end = left in RTL).
+   Height follows content — no forced min-block-size. */
+.sd-journey-hero { --sd-pointer-x: 50%; --sd-pointer-y: 50%; --sd-pointer-opacity: 0; position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(340px, 1fr); gap: 10px clamp(22px, 3vw, 46px); align-items: stretch; padding: clamp(14px, 1.9vw, 20px) clamp(22px, 3vw, 34px); overflow: hidden; border: 1px solid rgba(255,255,255,.92); border-radius: 32px; background: linear-gradient(128deg, rgba(255,255,255,.91), rgba(250,249,255,.82)); box-shadow: 0 30px 90px rgba(91,72,176,.13), inset 0 1px 0 rgba(255,255,255,.92); color: var(--sp-ink-700); backdrop-filter: blur(18px); }
 .sd-journey-hero::before, .sd-journey-hero::after { content: ''; position: absolute; z-index: -1; border-radius: 50%; filter: blur(4px); }
 .sd-journey-hero::before { inline-size: 410px; block-size: 410px; inset-block-start: -250px; inset-inline-start: -100px; background: rgba(76,201,240,.1); }
 .sd-journey-hero::after { inline-size: 340px; block-size: 340px; inset-block-end: -240px; inset-inline-end: 34%; background: rgba(159,122,254,.1); }
 .sd-journey-hero__glow { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(circle 240px at var(--sd-pointer-x) var(--sd-pointer-y), rgba(111,91,255,calc(.11 * var(--sd-pointer-opacity))), transparent 72%), radial-gradient(circle at 19% 46%, rgba(111,91,255,.1), transparent 31%), radial-gradient(circle at 83% 70%, rgba(76,201,240,.06), transparent 28%); transition: opacity 260ms var(--sp-ease); }
-.sd-journey-hero__content { display: flex; flex-direction: column; justify-content: center; gap: 26px; min-inline-size: 0; padding: 20px clamp(30px, 4vw, 72px) 0 16px; }
+.sd-journey-hero__content { display: flex; flex-direction: column; justify-content: space-between; gap: 16px; min-inline-size: 0; padding: 6px 0; }
+.sd-journey-hero__name { font-weight: 900; background: linear-gradient(115deg, var(--sp-primary-600) 8%, #4cc9f0 92%); -webkit-background-clip: text; background-clip: text; color: transparent; padding-inline: 1px; letter-spacing: .01em; }
+[data-theme='dark'] .sd-journey-hero__name { background: linear-gradient(115deg, #b9a5ff 8%, #6fe0ff 92%); -webkit-background-clip: text; background-clip: text; }
 .sd-journey-hero__head { display: flex; flex-direction: column; }
-.sd-journey-hero__eyebrow { display: inline-flex; align-items: center; align-self: flex-start; gap: 7px; order: -1; margin-block-end: 12px; padding: 5px 12px; border: 1px solid rgba(111,91,255,.16); border-radius: var(--sp-radius-pill); background: rgba(111,91,255,.07); color: var(--sp-primary-600); font-size: var(--sp-fs-xs); font-weight: 750; letter-spacing: .01em; }
-.sd-journey-hero__eyebrow .sp-icon { color: var(--sp-primary-500); }
-.sd-journey-hero__welcome { margin: 0 0 4px; color: var(--sp-ink-700); font-size: clamp(24px, 2.4vw, 34px); font-weight: 700; line-height: 1.2; }
-.sd-journey-hero__title { max-inline-size: 680px; margin: 14px 0 0; color: #342e68; font-size: clamp(40px, 4.2vw, 62px); font-weight: 800; line-height: 1.08; letter-spacing: -.035em; }
+.sd-journey-hero__welcome { margin: 0 0 2px; color: var(--sp-ink-700); font-size: clamp(19px, 1.8vw, 25px); font-weight: 700; line-height: 1.2; }
+.sd-journey-hero__title { max-inline-size: 680px; margin: 8px 0 0; color: #342e68; font-size: clamp(27px, 2.6vw, 38px); font-weight: 800; line-height: 1.1; letter-spacing: -.03em; }
 .sd-journey-hero__reason { max-inline-size: 620px; margin: 24px 0 0; color: var(--sp-ink-400); font-size: var(--sp-fs-md); line-height: 1.65; }
-.sd-journey-hero__meta { display: flex; flex-wrap: wrap; gap: 8px; margin-block-start: 18px; }
-.sd-journey-hero__meta .sp-pill { border-color: rgba(111,91,255,.1); background: rgba(111,91,255,.08); color: var(--sp-primary-700); }
-.sd-journey-hero__meta .sp-pill__dot { background: var(--sp-primary-500); }
-.sd-journey-hero__progress { display: grid; gap: 9px; max-inline-size: 400px; }
-.sd-journey-hero__progress-head { display: flex; align-items: center; justify-content: space-between; color: var(--sp-ink-400); font-size: var(--sp-fs-xs); font-weight: 650; }
-.sd-journey-hero__progress-head span:last-child { color: var(--sp-primary-600); font-weight: 800; font-variant-numeric: tabular-nums; }
-.sd-journey-hero__progress-track { block-size: 9px; overflow: hidden; border-radius: var(--sp-radius-pill); background: rgba(111,91,255,.12); }
-.sd-journey-hero__progress-fill { block-size: 100%; min-inline-size: 9px; border-radius: inherit; background: linear-gradient(90deg, #6f5bff, #4cc9f0); transition: inline-size 640ms var(--sp-ease); }
-.sd-journey-hero__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+/* Title + start button share one line, button right next to the title. */
+.sd-journey-hero__title-row { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-block-start: 8px; }
+.sd-journey-hero__title-row .sd-journey-hero__title { margin: 0; flex: 0 1 auto; }
+.sd-journey-hero__title-row .sd-button { flex: none; min-inline-size: 0; }
 .sd-journey-hero__error { margin: 12px 0 0; color: var(--sp-warn-600); font-size: var(--sp-fs-xs); }
 .sd-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-block-size: 46px; padding-inline: 20px; border: 1px solid transparent; border-radius: var(--sp-radius-pill); font: 700 var(--sp-fs-sm)/1 var(--sp-font); cursor: pointer; transition: transform var(--sp-dur-fast) var(--sp-ease), box-shadow var(--sp-dur) var(--sp-ease); }
 .sd-button:hover:not(:disabled) { transform: translateY(-2px); }
 .sd-button:focus-visible { outline: none; box-shadow: var(--sp-ring); }
 .sd-button:disabled { cursor: wait; opacity: .72; }
 .sd-button--primary { min-inline-size: 220px; background: linear-gradient(135deg, #6f5bff, #5336ef); color: #fff; box-shadow: 0 13px 30px rgba(83,54,239,.25); }
+.sd-button--primary:hover:not(:disabled) { box-shadow: 0 18px 44px rgba(83,54,239,.42); }
 .sd-button--quiet { min-inline-size: 200px; border-color: rgba(111,91,255,.42); background: rgba(255,255,255,.62); color: var(--sp-primary-600); }
 [dir='rtl'] .sd-button--directional .sp-icon { transform: scaleX(-1); }
 .sp-state .sd-button--primary { background: var(--sp-primary-600); color: #fff; }
-.sd-journey-hero__tip { display: flex; align-items: flex-start; gap: 10px; max-inline-size: 560px; margin-block-start: auto; padding: 15px 19px; border: 1px solid rgba(111,91,255,.1); border-radius: 22px; background: linear-gradient(100deg, rgba(111,91,255,.06), rgba(255,255,255,.74)); color: var(--sp-ink-400); box-shadow: 0 9px 24px rgba(81,62,160,.06); }
-.sd-journey-hero__tip > .sp-icon { flex: none; margin-block-start: 2px; color: var(--sp-primary-500); }
+.sd-journey-hero__tip { display: flex; align-items: flex-start; gap: 11px; max-inline-size: 560px; margin-block-start: 4px; padding: 14px 18px; border: 1px solid rgba(234,163,46,.26); border-radius: 20px; background: linear-gradient(100deg, rgba(240,182,52,.14), rgba(255,251,242,.72)); color: var(--sp-ink-400); box-shadow: 0 9px 24px rgba(180,130,20,.09); }
 .sd-journey-hero__tip div { display: grid; gap: 3px; }
-.sd-journey-hero__tip strong { color: var(--sp-primary-600); font-size: 11px; letter-spacing: .03em; }
+.sd-journey-hero__tip strong { color: #a9740c; font-size: 11px; letter-spacing: .03em; }
+/* A "lit" amber bulb: soft glow behind, light rays gently pulsing outward. */
+.sd-journey-hero__tip-bulb { position: relative; flex: none; display: grid; place-items: center; inline-size: 30px; block-size: 30px; margin-block-start: -1px; color: #eaa32e; }
+.sd-journey-hero__tip-bulb::before { content: ''; position: absolute; inset: -5px; border-radius: 50%; background: radial-gradient(circle, rgba(240,182,52,.5), transparent 68%); filter: blur(2.5px); z-index: 0; }
+.sd-journey-hero__tip-bulb svg { position: relative; z-index: 1; inline-size: 22px; block-size: 22px; }
+.sd-journey-hero__tip-bulb .sd-tip-rays { transform-origin: 12px 12px; animation: sd-tip-glow 2.4s ease-in-out infinite; }
+@keyframes sd-tip-glow { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sd-journey-hero__tip-bulb .sd-tip-rays { animation: none; opacity: .85; } }
+[data-theme='dark'] .sd-journey-hero__tip-bulb { color: #f4bd54; }
 .sd-journey-hero__tip span { font-size: var(--sp-fs-xs); line-height: 1.5; }
-.sd-journey-hero__visual { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; place-items: center; gap: 24px; min-block-size: 100%; padding: 0; }
-.sd-lesson-illustration { position: relative; display: grid; place-items: center; inline-size: 100%; min-block-size: 336px; margin: 0; overflow: visible; border: 1px solid rgba(111,91,255,.12); border-radius: 28px; background: linear-gradient(145deg, rgba(255,255,255,.78), rgba(238,239,255,.68)); box-shadow: inset 0 1px 0 rgba(255,255,255,.9); }
-.sd-lesson-illustration::after { content: ''; position: absolute; inset: 0; z-index: 0; border-radius: inherit; opacity: .32; background-image: linear-gradient(rgba(111,91,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(111,91,255,.06) 1px, transparent 1px); background-size: 26px 26px; mask-image: linear-gradient(to top, #000, transparent 76%); pointer-events: none; }
-.sd-lesson-illustration img { position: relative; z-index: 1; display: block; inline-size: min(94%, 520px); block-size: auto; aspect-ratio: 16 / 9; object-fit: contain; filter: drop-shadow(0 16px 24px rgba(63,48,142,.1)); }
-.sd-lesson-illustration__badge { position: absolute; z-index: 3; inset-block-start: -4px; inset-inline-end: -42px; display: inline-flex; align-items: center; gap: 8px; min-block-size: 44px; padding-inline: 17px; border: 1px solid rgba(111,91,255,.2); border-radius: var(--sp-radius-pill); background: rgba(255,255,255,.9); box-shadow: 0 10px 25px rgba(83,54,170,.12); color: var(--sp-primary-600); font-size: var(--sp-fs-xs); font-weight: 750; white-space: nowrap; backdrop-filter: blur(14px); }
-.sd-lesson-illustration__ai { position: absolute; z-index: 3; inset-block-end: 12px; inset-inline-end: 16px; display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border-radius: var(--sp-radius-pill); background: rgba(255,255,255,.72); color: var(--sp-ink-300); font-size: 9px; backdrop-filter: blur(8px); }
-.sd-orbit-wrap { position: relative; display: grid; place-items: center; inline-size: 290px; block-size: 270px; }
-.sd-orbit { position: absolute; border: 1px solid rgba(255,255,255,.24); border-radius: 50%; }
-.sd-orbit--outer { inline-size: 270px; block-size: 270px; }
-.sd-orbit--inner { inline-size: 180px; block-size: 180px; border-style: dashed; }
-.sd-orbit__center { display: grid; place-items: center; inline-size: 108px; block-size: 108px; border: 1px solid rgba(255,255,255,.36); border-radius: 32px; background: rgba(255,255,255,.18); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 22px 44px rgba(41,29,116,.22); backdrop-filter: blur(12px); }
-.sd-orbit__node { position: absolute; display: grid; place-items: center; inline-size: 42px; block-size: 42px; border-radius: 50%; box-shadow: 0 10px 24px rgba(38,27,105,.22); }
-.sd-orbit__node--done { inset-block-start: 22px; inset-inline-start: 58px; background: #dff8ee; color: var(--sp-success-600); }
-.sd-orbit__node--current { inset-inline-end: 5px; background: #fff; color: var(--sp-primary-700); }
-.sd-orbit__node--next { inset-block-end: 26px; inset-inline-start: 58px; background: #e7f8fd; color: var(--sp-teal-600); }
-.sd-journey-hero__stats { direction: ltr; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; inline-size: 100%; margin: 0; }
-.sd-journey-hero__stats div { direction: rtl; position: relative; display: grid; align-content: center; gap: 8px; min-inline-size: 0; min-block-size: 102px; padding: 16px; overflow: hidden; border: 1px solid rgba(111,91,255,.09); border-radius: 20px; background: rgba(255,255,255,.82); box-shadow: 0 10px 27px rgba(79,61,154,.07); text-align: center; }
-.sd-journey-hero__stats div::after { content: ''; position: absolute; inset-inline: 14px; inset-block-end: 10px; block-size: 4px; border-radius: var(--sp-radius-pill); background: linear-gradient(90deg, var(--sp-primary-500) 58%, rgba(111,91,255,.1) 58%); }
+.sd-journey-hero__visual { position: relative; display: grid; place-items: center; min-inline-size: 0; block-size: 100%; padding: 0; padding-inline-start: clamp(16px, 2vw, 30px); border-inline-start: 1px solid rgba(111, 91, 255, .12); }
+[data-theme='dark'] .sd-journey-hero__visual { border-inline-start-color: rgba(159, 122, 254, .16); }
+.sd-journey-hero__visual .sd-hero-viz { block-size: 100%; justify-content: center; align-content: center; }
+
+/* ── Interactive hero visual — frameless, fills the whole column ─────────── */
+.sd-hero-viz { position: relative; inline-size: 100%; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; justify-items: center; }
+/* Fill the column width (aspect preserved via block-size:auto); the SVG grows
+   with the column and the column stretches to the hero's full height. */
+.sd-hero-viz > svg { inline-size: 100%; max-inline-size: 470px; block-size: auto; display: block; overflow: visible; touch-action: none; }
+/* Prominent, kid-readable interaction hint */
+.sd-hero-viz__hint { display: inline-flex; align-items: center; gap: 8px; margin: 4px 0 0; padding: 9px 18px; border: 1px solid rgba(111, 91, 255, .18); border-radius: var(--sp-radius-pill); background: rgba(111, 91, 255, .1); color: var(--sp-primary-600); font-size: var(--sp-fs-sm); font-weight: 750; text-align: center; }
+.sd-hero-viz__hint .sp-icon { flex: none; color: var(--sp-primary-500); }
+[data-theme='dark'] .sd-hero-viz__hint { border-color: rgba(159, 122, 254, .3); background: rgba(159, 122, 254, .16); color: #d8d1ff; }
+[data-theme='dark'] .sd-hero-viz__hint .sp-icon { color: #b9a5ff; }
+.sd-viz-grid { stroke: rgba(111, 91, 255, .08); stroke-width: 1; }
+.sd-viz-ray { stroke: rgba(84, 70, 160, .45); stroke-width: 7; stroke-linecap: round; }
+.sd-viz-vertex { fill: #4a3f8f; }
+.sd-viz-handle { cursor: grab; outline: none; }
+.sd-viz-handle:active { cursor: grabbing; }
+.sd-viz-handle:focus-visible .sd-viz-handle__dot,
+.sd-viz-handle:focus-visible .sd-viz-comet { stroke: var(--sp-primary-600); stroke-width: 4; }
+.sd-viz-handle__dot { filter: drop-shadow(0 6px 14px rgba(46, 33, 110, .35)); transition: r .15s var(--sp-ease); }
+.sd-viz-handle:hover .sd-viz-handle__dot { r: 14; }
+.sd-viz-readout { pointer-events: none; }
+.sd-viz-readout__value { font: 800 34px/1 var(--sp-font); fill: #342e68; }
+.sd-viz-readout__label { font: 750 15px/1 var(--sp-font); }
+.sd-viz-plate { fill: rgba(111, 91, 255, .06); stroke: rgba(111, 91, 255, .16); stroke-width: 1.5; }
+.sd-viz-slice { fill: rgba(111, 91, 255, .1); stroke: #fff; stroke-width: 2.5; cursor: pointer; transition: fill .18s var(--sp-ease), transform .18s var(--sp-ease); transform-box: fill-box; transform-origin: center; outline: none; }
+.sd-viz-slice:hover { fill: rgba(111, 91, 255, .22); }
+.sd-viz-slice.is-on { fill: #6f5bff; }
+.sd-viz-slice.is-on:hover { fill: #5b48e0; }
+.sd-viz-slice:focus-visible { stroke: var(--sp-teal-600); stroke-width: 3.5; }
+.sd-hero-viz [data-scene] .sd-viz-readout { color: #342e68; }
+.sd-viz-orbit-path { fill: none; stroke: rgba(111, 91, 255, .28); stroke-width: 1.6; }
+.sd-viz-orbit-path--inner { stroke-dasharray: 5 7; stroke: rgba(76, 201, 240, .4); }
+.sd-viz-star { fill: rgba(111, 91, 255, .16); }
+.sd-viz-star__core { fill: #6f5bff; }
+.sd-viz-comet { fill: #4cc9f0; filter: drop-shadow(0 4px 12px rgba(35, 150, 200, .5)); }
+[data-theme='dark'] .sd-viz-grid { stroke: rgba(159, 122, 254, .12); }
+[data-theme='dark'] .sd-viz-ray { stroke: rgba(216, 209, 255, .4); }
+[data-theme='dark'] .sd-viz-vertex { fill: #d8d1ff; }
+[data-theme='dark'] .sd-viz-readout__value { fill: #f1efff; }
+[data-theme='dark'] .sd-viz-slice { stroke: #1c2044; }
+[data-theme='dark'] .sd-viz-plate { fill: rgba(159, 122, 254, .09); stroke: rgba(159, 122, 254, .25); }
+[data-theme='dark'] .sd-hero-viz__hint { color: rgba(214, 216, 245, .55); }
+/* Borderless: the illustration floats on the hero itself — no card frame. */
+.sd-journey-hero__stats { direction: ltr; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; inline-size: 100%; max-inline-size: 560px; margin: 0; }
+.sd-journey-hero__stats div { direction: rtl; position: relative; display: grid; align-content: center; gap: 8px; min-inline-size: 0; min-block-size: 104px; padding: 16px 18px 20px; overflow: hidden; border: 1px solid rgba(111,91,255,.1); border-radius: 18px; background: rgba(255,255,255,.82); box-shadow: 0 12px 30px rgba(79,61,154,.09); text-align: center; }
+.sd-journey-hero__stats div::after { content: ''; position: absolute; inset-inline: 16px; inset-block-end: 12px; block-size: 4px; border-radius: var(--sp-radius-pill); background: linear-gradient(90deg, var(--sp-primary-500) 58%, rgba(111,91,255,.1) 58%); }
 .sd-journey-hero__stats div:nth-child(2)::after { background: linear-gradient(90deg, var(--sp-success-600) 60%, rgba(37,185,132,.1) 60%); }
 [dir='rtl'] .sd-journey-hero__stats div::after { background: linear-gradient(270deg, var(--sp-primary-500) 58%, rgba(111,91,255,.1) 58%); }
 [dir='rtl'] .sd-journey-hero__stats div:nth-child(2)::after { background: linear-gradient(270deg, var(--sp-success-600) 60%, rgba(37,185,132,.1) 60%); }
-.sd-journey-hero__stats dt { display: inline-flex; align-items: center; justify-content: center; gap: 7px; color: var(--sp-ink-400); font-size: 10px; white-space: nowrap; }
+.sd-journey-hero__stats dt { display: inline-flex; align-items: center; justify-content: center; gap: 7px; color: var(--sp-ink-400); font-size: 12px; white-space: nowrap; }
 .sd-journey-hero__stats dt .sp-icon { color: var(--sp-primary-600); }
 .sd-journey-hero__stats div:nth-child(2) dt .sp-icon { color: var(--sp-success-600); }
-.sd-journey-hero__stats dd { margin: 0 0 7px; color: var(--sp-primary-600); font-size: clamp(22px, 2vw, 31px); font-weight: 750; }
+.sd-journey-hero__stats dd { margin: 0 0 8px; color: var(--sp-primary-600); font-size: clamp(17px, 1.45vw, 22px); font-weight: 800; line-height: 1.15; }
 .sd-journey-hero__stats div:nth-child(2) dd { color: var(--sp-success-600); }
-
-/* Quiet interaction field: a hovered group gently illuminates its children
-   without turning the learning hero into a decorative animation. */
-.sd-lesson-illustration,
-.sd-lesson-illustration img,
-.sd-lesson-illustration__badge,
-.sd-lesson-illustration__ai,
-.sd-journey-hero__meta .sp-pill,
-.sd-journey-hero__tip,
-.sd-journey-hero__tip > .sp-icon,
-.sd-journey-hero__stats div,
-.sd-journey-hero__stats dt .sp-icon,
-.sd-journey-hero__stats dd,
-.sd-journey-hero__stats div::after {
-  transition: transform 220ms var(--sp-ease), border-color 220ms var(--sp-ease), background-color 220ms var(--sp-ease), box-shadow 220ms var(--sp-ease), filter 220ms var(--sp-ease), opacity 220ms var(--sp-ease);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .sd-lesson-illustration:hover,
-  .sd-lesson-illustration:focus-within { border-color: rgba(111,91,255,.24); box-shadow: inset 0 1px 0 rgba(255,255,255,.94), 0 16px 36px rgba(79,61,154,.09); }
-  .sd-lesson-illustration:hover img,
-  .sd-lesson-illustration:focus-within img { transform: translateY(-2px); filter: drop-shadow(0 19px 27px rgba(63,48,142,.16)) saturate(1.04); }
-  .sd-lesson-illustration:hover .sd-lesson-illustration__badge,
-  .sd-lesson-illustration:focus-within .sd-lesson-illustration__badge { border-color: rgba(111,91,255,.34); box-shadow: 0 12px 28px rgba(83,54,170,.16); }
-  .sd-lesson-illustration:hover .sd-lesson-illustration__ai,
-  .sd-lesson-illustration:focus-within .sd-lesson-illustration__ai { background-color: rgba(255,255,255,.9); color: var(--sp-ink-400); }
-  .sd-journey-hero__meta:hover .sp-pill { border-color: rgba(111,91,255,.2); background: rgba(111,91,255,.11); }
-  .sd-journey-hero__meta .sp-pill:hover { transform: translateY(-1px); box-shadow: 0 7px 16px rgba(83,54,170,.09); }
-  .sd-journey-hero__tip:hover { border-color: rgba(111,91,255,.2); box-shadow: 0 12px 29px rgba(81,62,160,.09); }
-  .sd-journey-hero__tip:hover > .sp-icon { transform: scale(1.08); filter: drop-shadow(0 0 7px rgba(111,91,255,.28)); }
-  .sd-journey-hero__stats:hover > div { border-color: rgba(111,91,255,.14); }
-  .sd-journey-hero__stats > div:hover { transform: translateY(-2px); border-color: rgba(111,91,255,.24); box-shadow: 0 14px 31px rgba(79,61,154,.11); }
-  .sd-journey-hero__stats > div:hover dt .sp-icon { transform: scale(1.1); filter: drop-shadow(0 0 6px rgba(111,91,255,.24)); }
-  .sd-journey-hero__stats > div:hover dd { filter: saturate(1.12); }
-  .sd-journey-hero__stats > div:hover::after { filter: saturate(1.15); opacity: 1; }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .sd-journey-hero { --sd-pointer-opacity: 0 !important; }
-  .sd-lesson-illustration,
-  .sd-lesson-illustration img,
-  .sd-lesson-illustration__badge,
-  .sd-lesson-illustration__ai,
-  .sd-journey-hero__meta .sp-pill,
-  .sd-journey-hero__tip,
-  .sd-journey-hero__tip > .sp-icon,
-  .sd-journey-hero__stats div,
-  .sd-journey-hero__stats dt .sp-icon,
-  .sd-journey-hero__stats dd,
-  .sd-journey-hero__stats div::after { transition: none; }
 }
 
 [data-theme='dark'] .sd-journey-hero { border-color: rgba(159,122,254,.2); background: linear-gradient(135deg, rgba(21,25,55,.96), rgba(28,27,67,.92)); box-shadow: 0 30px 90px rgba(0,2,18,.35); }
 [data-theme='dark'] .sd-journey-hero__title { color: #f1efff; }
 [data-theme='dark'] .sd-journey-hero__welcome, [data-theme='dark'] .sd-journey-hero__reason { color: var(--sp-ink-400); }
-[data-theme='dark'] .sd-journey-hero__meta .sp-pill { border-color: rgba(159,122,254,.25); background: rgba(159,122,254,.12); color: #d8d1ff; }
 [data-theme='dark'] .sd-button--quiet { border-color: rgba(159,122,254,.4); background: rgba(255,255,255,.04); color: #d8d1ff; }
-[data-theme='dark'] .sd-lesson-illustration { border-color: rgba(159,122,254,.2); background: linear-gradient(145deg, rgba(35,39,82,.9), rgba(23,27,62,.78)); }
-[data-theme='dark'] .sd-lesson-illustration__badge, [data-theme='dark'] .sd-lesson-illustration__ai { border-color: rgba(159,122,254,.22); background: rgba(28,32,68,.88); }
 [data-theme='dark'] .sd-journey-hero__stats div { border-color: rgba(159,122,254,.16); background: rgba(26,30,66,.84); }
-[data-theme='dark'] .sd-journey-hero__tip { border-color: rgba(159,122,254,.17); background: linear-gradient(100deg, rgba(111,91,255,.12), rgba(29,33,70,.78)); }
+[data-theme='dark'] .sd-journey-hero__tip { border-color: rgba(240,185,60,.24); background: linear-gradient(100deg, rgba(240,185,60,.13), rgba(38,32,20,.55)); }
+[data-theme='dark'] .sd-journey-hero__tip strong { color: #f0c264; }
 
 .sd-section { margin-block-start: clamp(42px, 6vw, 72px); }
+
+/* ── Two-column layout (landing-style glass cards) ─────────────────────────
+   Main column: the learner's own activity (lessons, goals). Side rail: the
+   learning map, sticky under the app bar so strengths/reinforcements stay in
+   view while scrolling. RTL flips automatically (grid + logical properties). */
+.sd-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
+  gap: clamp(18px, 2.2vw, 28px);
+  align-items: start;
+  margin-block-start: clamp(30px, 4.4vw, 54px);
+}
+/* minmax(0,1fr) is load-bearing: the default auto track sizes to the widest
+   child's max-content (the lesson carousel), letting sections escape the
+   column and span the page. */
+.sd-grid__main,
+.sd-grid__rail { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(18px, 2.2vw, 28px); min-inline-size: 0; }
+.sd-grid__rail { position: sticky; inset-block-start: calc(var(--mapping-app-bar-height, 73px) + 18px); }
+
+/* Sections inside the grid are cards themselves — kill the stacked-page rhythm. */
+.sd-grid .sd-section { margin-block-start: 0; }
+.sd-grid .sd-section__heading { align-items: center; margin-block-end: 16px; }
+
+/* One card language for all three panels: soft glass, top sheen, same radius. */
+.sd-grid .sd-lessons,
+.sd-grid .sd-goals,
+.sd-grid .sd-lmap {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, .88);
+  border-radius: 28px;
+  background: linear-gradient(150deg, rgba(255, 255, 255, .9), rgba(250, 249, 255, .74));
+  box-shadow: 0 22px 60px rgba(91, 72, 176, .11), inset 0 1px 0 rgba(255, 255, 255, .9);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.sd-grid .sd-lessons { padding: clamp(20px, 3vw, 30px); overflow: clip; }
+
+/* In the narrow rail the map's two status columns stack vertically. */
+.sd-grid__rail .sd-lmap__grid { grid-template-columns: 1fr; }
+
+@media (max-width: 1080px) {
+  .sd-grid { grid-template-columns: 1fr; }
+  .sd-grid__rail { position: static; }
+}
 .sd-section__heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-block-end: 20px; }
 .sd-section__kicker { display: block; margin-block-end: 6px; color: var(--sp-primary-600); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .sd-section__heading h2, .sd-reflection h2 { margin: 0; color: var(--sp-ink-900); font-size: var(--sp-fs-2xl); line-height: var(--sp-lh-tight); }
@@ -317,22 +351,47 @@
 [dir="rtl"] .sd-carousel-nav--next .sp-icon { transform: scaleX(-1); }
 
 /* ── Card ──────────────────────────────────────────────────────────────── */
+/* Compact vertical card: wide glyph strip on top · title + slim bar · CTA.
+   ~250px tall — taller than the flat row, far from the old ~430px tower. */
 .sd-lesson-card {
   --sd-lesson: var(--sp-primary-600);
   --sd-lesson-soft: color-mix(in srgb, var(--sd-lesson), transparent 86%);
   position: relative;
   display: flex;
-  flex: 0 0 clamp(250px, 31%, 322px);
   flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  /* Narrower cards — three per view inside the main column (gap = 18px). */
+  flex: 0 0 clamp(228px, calc(33.333% - 12px), 320px);
+  padding: 14px;
   overflow: hidden;
   scroll-snap-align: start;
   border: 1px solid var(--sp-border);
-  border-radius: 24px;
+  border-radius: 22px;
   background: #fff;
   box-shadow: var(--sp-shadow-sm);
   transition: transform .34s cubic-bezier(.22, 1, .36, 1), box-shadow .34s ease, border-color .34s ease;
   will-change: transform;
 }
+
+/* Subject tabs above the carousel — math / science are never interleaved. */
+.sd-lessons__filters { display: flex; flex-wrap: wrap; gap: 8px; margin-block-end: 14px; }
+.sd-lessons__filter {
+  padding: 8px 16px;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: transparent;
+  color: var(--sp-ink-400);
+  font: 700 var(--sp-fs-xs)/1 var(--sp-font);
+  cursor: pointer;
+  transition: background .15s var(--sp-ease), color .15s var(--sp-ease), border-color .15s var(--sp-ease);
+}
+.sd-lessons__filter:hover { color: var(--sp-primary-600); border-color: rgba(111,91,255,.3); }
+.sd-lessons__filter.is-active { background: var(--sp-primary-600); border-color: var(--sp-primary-600); color: #fff; }
+.sd-lessons__filter:focus-visible { outline: 3px solid rgba(111,91,255,.26); outline-offset: 2px; }
+[data-theme='dark'] .sd-lessons__filter { border-color: rgba(159,122,254,.24); color: rgba(214,216,245,.72); }
+[data-theme='dark'] .sd-lessons__filter:hover { color: #d8d1ff; }
+[data-theme='dark'] .sd-lessons__filter.is-active { background: #6f5bff; border-color: #6f5bff; color: #fff; }
 .sd-lesson-card--violet { --sd-lesson: #7c5cff; }
 .sd-lesson-card--sky { --sd-lesson: #2e9bf0; }
 .sd-lesson-card--emerald { --sd-lesson: #22b06c; }
@@ -340,11 +399,8 @@
 .sd-lesson-card--rose { --sd-lesson: #ec5f92; }
 .sd-lesson-card--teal { --sd-lesson: var(--sp-teal-600); }
 
-.sd-lesson-card:hover { transform: translateY(-6px); box-shadow: var(--sp-shadow-md); }
-.sd-lesson-card.is-primary {
-  border-color: color-mix(in srgb, var(--sd-lesson), transparent 46%);
-  box-shadow: 0 20px 44px -24px color-mix(in srgb, var(--sd-lesson), transparent 40%), var(--sp-shadow-md);
-}
+/* Cards stay in place on hover — shadow only, no lift. */
+.sd-lesson-card:hover { box-shadow: var(--sp-shadow-md); }
 
 /* Entry stagger — keyframe (not a transition) so the per-card delay only
    applies on load and never slows the hover lift. */
@@ -358,42 +414,49 @@
   to { opacity: 1; translate: 0 0; }
 }
 
-/* ── Media ─────────────────────────────────────────────────────────────── */
+/* ── Media: a wide glyph strip on top of the card ──────────────────────── */
 .sd-lesson-card__media {
   position: relative;
   display: grid;
   place-items: center;
-  block-size: 148px;
-  overflow: hidden;
+  flex: none;
+  inline-size: 100%;
+  block-size: 96px;
+  overflow: visible;
+  border-radius: 16px;
   background:
     radial-gradient(120% 130% at 78% 12%, color-mix(in srgb, var(--sd-lesson), transparent 68%), transparent 62%),
     linear-gradient(160deg, var(--sd-lesson-soft), color-mix(in srgb, var(--sd-lesson-soft), #fff 55%));
 }
+.sd-lesson-card__media > svg { inline-size: 68px; block-size: 68px; }
 .sd-lesson-card__badge {
   position: absolute;
-  inset-block-start: 12px;
-  inset-inline-end: 12px;
+  inset-block-start: -5px;
+  inset-inline-end: -5px;
   display: grid;
   place-items: center;
-  inline-size: 34px;
-  block-size: 34px;
+  inline-size: 22px;
+  block-size: 22px;
+  border: 2px solid #fff;
   border-radius: 50%;
   background: var(--sd-lesson);
   color: #fff;
-  box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--sd-lesson), transparent 20%);
+  box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--sd-lesson), transparent 20%);
 }
 .sd-lesson-card__badge--completed { background: var(--sp-success-600); }
 [dir="rtl"] .sd-lesson-card__badge--active .sp-icon,
 [dir="rtl"] .sd-lesson-card__badge--notStarted .sp-icon { transform: scaleX(-1); }
 
-/* ── Body ──────────────────────────────────────────────────────────────── */
+/* ── Body: start-aligned, one-line title, slim progress ─────────────────── */
 .sd-lesson-card__body {
   display: flex;
   flex: 1;
   flex-direction: column;
-  align-items: center;
-  padding: 18px 18px 20px;
-  text-align: center;
+  align-items: flex-start;
+  gap: 3px;
+  min-inline-size: 0;
+  padding: 0;
+  text-align: start;
 }
 .sd-lesson-card__subject {
   display: inline-flex;
@@ -404,52 +467,41 @@
   font-size: 11px;
   font-weight: 700;
 }
-.sd-lesson-card__title { margin: 12px 0 4px; color: var(--sp-ink-900); font-size: var(--sp-fs-lg); line-height: var(--sp-lh-tight); }
-
-.sd-lesson-card__ring { position: relative; inline-size: 100px; block-size: 100px; margin-block: 12px 16px; }
-.sd-lesson-card__ring svg { inline-size: 100%; block-size: 100%; transform: rotate(-90deg); }
-.sd-ring__track { fill: none; stroke: var(--sp-bg-subtle); stroke-width: 6; }
-.sd-ring__fill {
-  fill: none;
-  stroke: var(--sd-lesson);
-  stroke-width: 6;
-  stroke-linecap: round;
-  transition: stroke-dashoffset 1s cubic-bezier(.22, 1, .36, 1);
-  transition-delay: calc(var(--sd-lesson-index) * 90ms + 220ms);
+.sd-lesson-card__title {
+  max-inline-size: 100%;
+  margin: 2px 0 4px;
+  overflow: hidden;
+  color: var(--sp-ink-900);
+  font-size: var(--sp-fs-md);
+  line-height: var(--sp-lh-tight);
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
-.sd-lesson-card__ring-label { position: absolute; inset: 0; display: grid; place-content: center; gap: 1px; }
-.sd-lesson-card__ring-label strong { color: var(--sp-ink-900); font-size: 22px; font-weight: 800; line-height: 1; }
-.sd-lesson-card__ring-label small { color: var(--sp-ink-400); font-size: 10px; font-weight: 600; }
 
-.sd-lesson-card__track-row { inline-size: 100%; display: grid; justify-items: center; gap: 7px; margin-block-end: 18px; }
-.sd-lesson-card__bar { inline-size: 100%; block-size: 7px; overflow: hidden; border-radius: var(--sp-radius-pill); background: var(--sp-bg-subtle); }
-.sd-lesson-card__bar span { display: block; block-size: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--sd-lesson), color-mix(in srgb, var(--sd-lesson), white 30%)); }
+.sd-lesson-card__track-row { inline-size: 100%; display: grid; align-items: center; gap: 8px; }
+.sd-lesson-card__bar { inline-size: 100%; block-size: 6px; overflow: hidden; border-radius: var(--sp-radius-pill); background: var(--sp-bg-subtle); }
+.sd-lesson-card__bar span { display: block; block-size: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--sd-lesson), color-mix(in srgb, var(--sd-lesson), white 30%)); transition: inline-size 1s cubic-bezier(.22, 1, .36, 1); transition-delay: calc(var(--sd-lesson-index) * 90ms + 220ms); }
 .sd-lesson-card__steps { color: var(--sp-ink-400); font-size: var(--sp-fs-xs); font-weight: 600; }
+.sd-lesson-card__steps strong { color: var(--sd-lesson); font-weight: 800; }
 
 .sd-lesson-card__cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  inline-size: 100%;
-  margin-block-start: auto;
-  padding: 11px 16px;
+  gap: 7px;
+  flex: none;
+  align-self: stretch;
+  margin-block-start: 2px;
+  padding: 10px 15px;
   border: 1.5px solid color-mix(in srgb, var(--sd-lesson), transparent 60%);
-  border-radius: 14px;
+  border-radius: var(--sp-radius-pill);
   background: transparent;
   color: var(--sd-lesson);
   font: 700 var(--sp-fs-sm)/1 var(--sp-font);
   cursor: pointer;
   transition: background var(--sp-dur-fast), box-shadow var(--sp-dur-fast), transform var(--sp-dur-fast);
 }
-.sd-lesson-card.is-primary .sd-lesson-card__cta {
-  border-color: transparent;
-  background: var(--sd-lesson);
-  color: #fff;
-  box-shadow: 0 12px 26px -12px color-mix(in srgb, var(--sd-lesson), transparent 30%);
-}
 .sd-lesson-card__cta:hover { background: color-mix(in srgb, var(--sd-lesson), transparent 88%); transform: translateY(-1px); }
-.sd-lesson-card.is-primary .sd-lesson-card__cta:hover { background: color-mix(in srgb, var(--sd-lesson), black 8%); }
 .sd-lesson-card__cta:disabled { opacity: .5; cursor: not-allowed; }
 .sd-lesson-card__cta:focus-visible { outline: 3px solid var(--sd-lesson-soft); outline-offset: 2px; }
 [dir="rtl"] .sd-lesson-card__cta .sp-icon { transform: scaleX(-1); }
@@ -481,6 +533,28 @@
 @keyframes sd-glyph-pulse { 0%, 60% { transform: scale(1); } 75% { transform: scale(1.5); } 100% { transform: scale(1); } }
 
 [data-theme='dark'] .sd-lesson-card { border-color: rgba(159, 122, 254, .16); background: rgba(26, 30, 66, .84); }
+/* Dark media tile: deep accent tint instead of the light pastel wash, and the
+   glyph strokes/fills brightened toward white so the icon stays readable. */
+[data-theme='dark'] .sd-lesson-card { --sd-lesson-soft: color-mix(in srgb, var(--sd-lesson), transparent 76%); }
+[data-theme='dark'] .sd-lesson-card__media {
+  background:
+    radial-gradient(120% 130% at 78% 12%, color-mix(in srgb, var(--sd-lesson), transparent 55%), transparent 62%),
+    color-mix(in srgb, var(--sd-lesson), #10142e 74%);
+}
+[data-theme='dark'] .sd-lesson-card__subject { color: color-mix(in srgb, var(--sd-lesson), white 38%); }
+[data-theme='dark'] .sd-lesson-glyph [class^='sd-glyph'] { stroke: color-mix(in srgb, var(--sd-lesson), white 42%); }
+[data-theme='dark'] .sd-glyph-dot,
+[data-theme='dark'] .sd-glyph-core,
+[data-theme='dark'] .sd-glyph-planet,
+[data-theme='dark'] .sd-glyph-slice { fill: color-mix(in srgb, var(--sd-lesson), white 42%); stroke: none; }
+[data-theme='dark'] .sd-glyph-slice { fill: color-mix(in srgb, var(--sd-lesson), white 10%); }
+[data-theme='dark'] .sd-glyph-ray--base,
+[data-theme='dark'] .sd-glyph-ring,
+[data-theme='dark'] .sd-glyph-orbit { stroke: color-mix(in srgb, var(--sd-lesson), white 12%); }
+[data-theme='dark'] .sd-lesson-card__badge { border-color: rgba(26, 30, 66, .95); }
+[data-theme='dark'] .sd-lesson-card__title { color: #eef0ff; }
+[data-theme='dark'] .sd-lesson-card__steps { color: rgba(214, 216, 245, .62); }
+[data-theme='dark'] .sd-lesson-card__bar { background: rgba(255, 255, 255, .1); }
 [data-theme='dark'] .sd-carousel-nav { border-color: rgba(159, 122, 254, .2); background: #1b2048; color: var(--sp-ink-200, #cfd3f5); }
 
 
@@ -491,6 +565,31 @@
 .sd-goals__head-icon { display: grid; place-items: center; inline-size: 44px; block-size: 44px; border-radius: 14px; background: var(--sp-primary-100); color: var(--sp-primary-600); }
 .sd-goals__heading h2 { margin: 0; color: var(--sp-ink-900); font-size: var(--sp-fs-xl); line-height: var(--sp-lh-tight); }
 .sd-goals__heading p { margin: 4px 0 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
+.sd-goals__head-actions { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.sd-goals__help { display: grid; place-items: center; inline-size: 34px; block-size: 34px; border: 1px solid var(--sp-border); border-radius: 50%; background: #fff; color: var(--sp-ink-400); cursor: pointer; transition: background .15s var(--sp-ease), color .15s var(--sp-ease); }
+.sd-goals__help:hover { background: var(--sp-primary-100); color: var(--sp-primary-600); }
+.sd-goals__help:focus-visible { outline: 3px solid rgba(111,91,255,.24); outline-offset: 2px; }
+
+/* "What are goals?" explainer dialog */
+.sd-goals-help { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 20px; background: rgba(16,14,44,.42); backdrop-filter: blur(6px); }
+.sd-goals-help__card { position: relative; inline-size: min(440px, 100%); max-block-size: min(86vh, 560px); overflow-y: auto; display: grid; gap: 10px; padding: 24px; border: 1px solid var(--sp-border); border-radius: 24px; background: #fff; box-shadow: 0 34px 90px rgba(35,22,96,.28); }
+.sd-goals-help__close { position: absolute; inset-block-start: 14px; inset-inline-end: 14px; display: grid; place-items: center; inline-size: 32px; block-size: 32px; border: 1px solid var(--sp-border); border-radius: 50%; background: transparent; color: var(--sp-ink-400); cursor: pointer; }
+.sd-goals-help__close:hover { background: var(--sp-bg-subtle, #f6f5ff); color: var(--sp-ink-700); }
+.sd-goals-help__icon { display: grid; place-items: center; inline-size: 46px; block-size: 46px; border-radius: 14px; background: var(--sp-primary-100); color: var(--sp-primary-600); }
+.sd-goals-help__card h3 { margin: 2px 0 0; color: var(--sp-ink-900); font-size: var(--sp-fs-lg); line-height: var(--sp-lh-tight); }
+.sd-goals-help__card h4 { margin: 8px 0 0; color: var(--sp-ink-900); font-size: var(--sp-fs-xs); font-weight: 800; letter-spacing: .02em; }
+.sd-goals-help__card p { margin: 0; color: var(--sp-ink-600); font-size: var(--sp-fs-sm); line-height: 1.6; }
+.sd-goals-help__card ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.sd-goals-help__card li { display: flex; align-items: flex-start; gap: 8px; color: var(--sp-ink-600); font-size: var(--sp-fs-sm); line-height: 1.55; }
+.sd-goals-help__card li .sp-icon { flex: none; margin-block-start: 3px; color: var(--sp-primary-500); }
+[data-theme='dark'] .sd-goals-help { background: rgba(4,4,18,.6); }
+[data-theme='dark'] .sd-goals-help__card { border-color: rgba(159,122,254,.22); background: #171b3e; box-shadow: 0 34px 90px rgba(0,2,18,.55); }
+[data-theme='dark'] .sd-goals-help__card h3, [data-theme='dark'] .sd-goals-help__card h4 { color: #eef0ff; }
+[data-theme='dark'] .sd-goals-help__card p, [data-theme='dark'] .sd-goals-help__card li { color: rgba(214,216,245,.78); }
+[data-theme='dark'] .sd-goals-help__close { border-color: rgba(255,255,255,.14); color: rgba(214,216,245,.6); }
+[data-theme='dark'] .sd-goals-help__icon { background: rgba(159,122,254,.18); color: #b9a5ff; }
+[data-theme='dark'] .sd-goals__help { border-color: rgba(159,122,254,.28); background: rgba(159,122,254,.1); color: #b9a5ff; }
+
 .sd-goals__see-all { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; padding: 9px 15px; border: 1px solid var(--sp-border); border-radius: var(--sp-radius-pill); background: #fff; color: var(--sp-primary-600); font: 700 var(--sp-fs-xs)/1 var(--sp-font); cursor: pointer; transition: background .15s var(--sp-ease), border-color .15s var(--sp-ease); }
 .sd-goals__see-all:hover { background: var(--sp-primary-100); border-color: var(--sp-primary-200, rgba(111,91,255,.28)); }
 .sd-goals__see-all:focus-visible { outline: 3px solid rgba(111,91,255,.24); outline-offset: 2px; }
@@ -582,6 +681,14 @@
 [dir='rtl'] .sd-goal-drawer__panel { margin-inline-start: 0; margin-inline-end: auto; box-shadow: 24px 0 60px rgba(60, 44, 130, .2); animation-name: sd-goal-slide-rtl; }
 
 [data-theme='dark'] .sd-goals { border-color: rgba(159, 122, 254, .16); background: rgba(26, 30, 66, .84); }
+/* The unified grid cards share one dark glass treatment. */
+[data-theme='dark'] .sd-grid .sd-lessons,
+[data-theme='dark'] .sd-grid .sd-goals,
+[data-theme='dark'] .sd-grid .sd-lmap {
+  border-color: rgba(159, 122, 254, .16);
+  background: linear-gradient(150deg, rgba(30, 34, 74, .92), rgba(22, 25, 58, .86));
+  box-shadow: 0 22px 60px rgba(4, 8, 32, .5), inset 0 1px 0 rgba(159, 122, 254, .1);
+}
 [data-theme='dark'] .sd-goal-row:hover { background: rgba(159, 122, 254, .1); }
 [data-theme='dark'] .sd-goal-drawer__panel { background: #171638; }
 
@@ -607,12 +714,9 @@
 .sd-last-updated { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 26px 0 0; color: var(--sp-ink-300); font-size: var(--sp-fs-xs); }
 
 @media (max-width: 980px) {
-  .sd-journey-hero { grid-template-columns: 1fr; min-block-size: 0; padding: 34px; border-radius: 38px; }
-  .sd-journey-hero__content { padding: 10px 10px 32px; }
-  .sd-journey-hero__tip { margin-block-start: 28px; }
-  .sd-journey-hero__visual { min-block-size: 0; }
-  .sd-lesson-illustration { min-block-size: 310px; }
-  .sd-lesson-illustration__badge { inset-inline-end: 18px; }
+  .sd-journey-hero { grid-template-columns: 1fr; padding: 26px; border-radius: 30px; }
+  .sd-journey-hero__content { padding: 4px 0 10px; }
+  .sd-journey-hero__tip { margin-block-start: 14px; }
   .sd-today-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sd-focus-card--challenge { grid-column: 1 / -1; }
   .sd-learning-profile { grid-template-columns: 1fr; gap: 30px; }
@@ -620,26 +724,22 @@
 }
 @media (max-width: 760px) {
   .sd-dashboard { inline-size: min(100% - 28px, 680px); padding-block-start: 18px; }
-  .sd-journey-hero { grid-template-columns: 1fr; min-block-size: 0; padding: 24px; border-radius: 28px; }
-  .sd-journey-hero__content { padding: 20px 4px 30px; }
-  .sd-journey-hero__visual { min-block-size: 220px; margin: 0; padding: 0; }
-  .sd-lesson-illustration { min-block-size: 260px; border-radius: 22px; }
-  .sd-orbit-wrap { transform: scale(.72); margin-block: -38px; }
+  .sd-journey-hero { grid-template-columns: 1fr; padding: 20px; border-radius: 26px; }
+  .sd-journey-hero__content { padding: 6px 0 12px; }
+  .sd-journey-hero__visual { margin: 0; padding: 0; }
   .sd-today-grid { grid-template-columns: 1fr; }
   .sd-focus-card--challenge { grid-column: auto; }
   .sd-section__heading { align-items: flex-start; }
 }
 @media (max-width: 540px) {
   .sd-dashboard { inline-size: calc(100% - 20px); padding-block-end: 140px; }
-  .sd-journey-hero__title { font-size: 34px; }
-  .sd-journey-hero__actions { flex-direction: column; }
+  .sd-journey-hero__title { font-size: 27px; }
+  .sd-journey-hero__title-row .sd-button { inline-size: 100%; }
   .sd-journey-hero__stats { grid-template-columns: 1fr; gap: 10px; }
   .sd-journey-hero__stats div { grid-template-columns: 1fr auto; align-items: center; min-block-size: 74px; padding: 14px 18px; text-align: start; }
   .sd-journey-hero__stats div::after { inset-inline: 18px; }
   .sd-journey-hero__stats dd { grid-column: 2; grid-row: 1; margin: 0 0 7px; font-size: 24px; }
   .sd-journey-hero__stats dt { white-space: normal; }
-  .sd-lesson-illustration__badge { inset-block-start: 10px; inset-inline-end: 10px; min-block-size: 38px; }
-  .sd-lesson-illustration__ai { inset-inline-end: 10px; max-inline-size: calc(100% - 20px); }
   .sd-button { inline-size: 100%; }
   .sd-section__heading { flex-direction: column; }
   .sd-lesson-card { flex-basis: clamp(220px, 82%, 262px); }

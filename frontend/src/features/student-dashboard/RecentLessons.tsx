@@ -49,9 +49,6 @@ const STATUS_ICON: Record<LessonStatus, string> = {
 /** Distinct accent per card position so the row feels lively (mockup colours). */
 const PALETTE = ['violet', 'sky', 'emerald', 'amber', 'rose', 'teal'] as const
 
-const RING_RADIUS = 26
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
-
 function buildLessonView(unit: LearningUnitDTO): LessonView {
   const components = unit.components ?? []
   const total = components.length
@@ -86,13 +83,29 @@ export function RecentLessons({
   const trackRef = useRef<HTMLUListElement>(null)
   const [scrollState, setScrollState] = useState({ canPrev: false, canNext: false })
 
-  const lessons = useMemo(() => {
+  const [subjectFilter, setSubjectFilter] = useState<string | null>(null)
+
+  const allLessons = useMemo(() => {
     return units
       .map(buildLessonView)
       .filter((lesson) => lesson.total > 0)
       .sort((a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status])
-      .slice(0, 8)
+      .slice(0, 12)
   }, [units])
+
+  // Subject tabs so math / science lessons are not interleaved in one row.
+  const subjects = useMemo(() => {
+    const seen: string[] = []
+    for (const lesson of allLessons) {
+      if (!seen.includes(lesson.unit.subject)) seen.push(lesson.unit.subject)
+    }
+    return seen
+  }, [allLessons])
+
+  const lessons = useMemo(() => {
+    if (!subjectFilter || !subjects.includes(subjectFilter)) return allLessons
+    return allLessons.filter((lesson) => lesson.unit.subject === subjectFilter)
+  }, [allLessons, subjectFilter, subjects])
 
   const primaryUnitId = useMemo(() => {
     const primary = lessons.find((lesson) => lesson.status === 'active')
@@ -156,6 +169,32 @@ export function RecentLessons({
         </button>
       </div>
 
+      {subjects.length > 1 && (
+        <div className="sd-lessons__filters" role="tablist" aria-label={t('sdash.lessons.filter')}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={subjectFilter === null}
+            className={`sd-lessons__filter${subjectFilter === null ? ' is-active' : ''}`}
+            onClick={() => setSubjectFilter(null)}
+          >
+            {t('sdash.lessons.filter.all')}
+          </button>
+          {subjects.map((subject) => (
+            <button
+              key={subject}
+              type="button"
+              role="tab"
+              aria-selected={subjectFilter === subject}
+              className={`sd-lessons__filter${subjectFilter === subject ? ' is-active' : ''}`}
+              onClick={() => setSubjectFilter(subject)}
+            >
+              {t(`learning.subject.${subject}`)}
+            </button>
+          ))}
+        </div>
+      )}
+
       {lessons.length === 0 ? (
         <div className="sd-lessons-empty">
           <p>{t('sdash.lessons.empty')}</p>
@@ -185,10 +224,6 @@ export function RecentLessons({
                 lesson.unit.sub_topic,
                 lesson.unit.subject,
               )
-              const ringOffset = revealed
-                ? RING_CIRCUMFERENCE * (1 - lesson.progress / 100)
-                : RING_CIRCUMFERENCE
-
               return (
                 <li
                   key={lesson.unit.id}
@@ -198,7 +233,7 @@ export function RecentLessons({
                   <div className="sd-lesson-card__media" aria-hidden="true">
                     <LessonGlyph variant={glyphVariant} />
                     <span className={`sd-lesson-card__badge sd-lesson-card__badge--${lesson.status}`}>
-                      <Icon name={STATUS_ICON[lesson.status]} size={16} />
+                      <Icon name={STATUS_ICON[lesson.status]} size={12} />
                     </span>
                   </div>
 
@@ -207,46 +242,31 @@ export function RecentLessons({
                       {t(`learning.subject.${lesson.unit.subject}`)}
                     </span>
                     <h3 className="sd-lesson-card__title" dir="auto">{lesson.unit.title}</h3>
-
-                    <div className="sd-lesson-card__ring">
-                      <svg viewBox="0 0 64 64" role="img" aria-label={t('sdash.lessons.progress', { completed: lesson.completed, total: lesson.total })}>
-                        <circle className="sd-ring__track" cx="32" cy="32" r={RING_RADIUS} />
-                        <circle
-                          className="sd-ring__fill"
-                          cx="32"
-                          cy="32"
-                          r={RING_RADIUS}
-                          style={{
-                            strokeDasharray: RING_CIRCUMFERENCE,
-                            strokeDashoffset: ringOffset,
-                          }}
-                        />
-                      </svg>
-                      <span className="sd-lesson-card__ring-label">
-                        <strong>{lesson.progress}%</strong>
-                        <small>{t('sdash.lessons.ringLabel')}</small>
-                      </span>
-                    </div>
-
-                    <div className="sd-lesson-card__track-row">
+                    <div
+                      className="sd-lesson-card__track-row"
+                      role="img"
+                      aria-label={t('sdash.lessons.progress', { completed: lesson.completed, total: lesson.total })}
+                    >
                       <div className="sd-lesson-card__bar">
-                        <span style={{ inlineSize: `${lesson.progress}%` }} />
+                        <span style={{ inlineSize: revealed ? `${lesson.progress}%` : 0 }} />
                       </div>
                       <span className="sd-lesson-card__steps">
+                        <strong>{lesson.progress}%</strong>
+                        {' · '}
                         {t('sdash.lessons.progress', { completed: lesson.completed, total: lesson.total })}
                       </span>
                     </div>
-
-                    <button
-                      className="sd-lesson-card__cta"
-                      type="button"
-                      disabled={!lesson.target}
-                      onClick={() => lesson.target && onOpenComponent(lesson.unit, lesson.target)}
-                    >
-                      <span>{t(`sdash.lessons.cta.${CTA_BY_STATUS[lesson.status]}`)}</span>
-                      <Icon name="arrow" size={16} />
-                    </button>
                   </div>
+
+                  <button
+                    className="sd-lesson-card__cta"
+                    type="button"
+                    disabled={!lesson.target}
+                    onClick={() => lesson.target && onOpenComponent(lesson.unit, lesson.target)}
+                  >
+                    <span>{t(`sdash.lessons.cta.${CTA_BY_STATUS[lesson.status]}`)}</span>
+                    <Icon name="arrow" size={15} />
+                  </button>
                 </li>
               )
             })}

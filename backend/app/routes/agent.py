@@ -17,7 +17,12 @@ from app.auth.dependencies import require_learner, require_learner_session
 from app.agents import safety
 from app.agents import sessions
 from app.agents.coach import run_coach_stream
-from app.agents.manim_visual import plan_manim_visual, render_manim_visual, split_visual_response
+from app.agents.manim_visual import (
+    plan_manim_visual,
+    render_manim_visual,
+    should_offer_visual,
+    split_visual_response,
+)
 from app.agents.pedagogical import select_next, route_after_fail
 from app.agents import reflection
 from app.core.localization import normalize_language
@@ -116,6 +121,50 @@ class CoachSupportRequest(BaseModel):
     support: Literal["hint", "explanation"]
     language: str = Field(default="he", max_length=8)
     surface: CoachSurfaceContext = Field(default_factory=CoachSurfaceContext)
+
+
+class CompetencyChatMessage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    role: Literal["user", "assistant"]
+    text: str = Field(min_length=1, max_length=1500)
+
+
+class VisualizeRequest(BaseModel):
+    """On-demand visual: the learner tapped 'show me a video / image' under a
+    text-only reply. `assistant_text` is our own prior model output; both texts
+    are safety-screened before the planner sees them. Never sent to the LRS."""
+
+    model_config = ConfigDict(extra="forbid")
+    user_message: str = Field(min_length=1, max_length=4000)
+    assistant_text: str = Field(min_length=1, max_length=6000)
+    mode: Literal["image", "video"] = "image"
+    language: str = Field(default="he", max_length=8)
+    conversation_id: str = Field(default="default", min_length=1, max_length=120)
+
+
+class CompetencyChatRequest(BaseModel):
+    """Ephemeral learning-map topic chat: the client holds the transcript,
+    the server persists nothing to conversation history."""
+
+    competency: Literal[
+        "motivation_relevance", "growth_mindset", "initiative_responsibility",
+        "self_regulation", "self_awareness", "support_emotional",
+    ]
+    language: str = Field(default="he", max_length=8)
+    conversation_id: str = Field(default="default", min_length=1, max_length=120)
+    messages: list[CompetencyChatMessage] = Field(min_length=1, max_length=16)
+
+
+class ActivenessChangeRequest(BaseModel):
+    """Ask why one activeness domain moved since the learner last opened the map.
+    Returns a short verbal, non-numeric explanation (no scores leaked)."""
+
+    competency: Literal[
+        "motivation_relevance", "growth_mindset", "initiative_responsibility",
+        "self_regulation", "self_awareness", "support_emotional",
+    ]
+    direction: Literal["up", "down"]
+    language: str = Field(default="he", max_length=8)
 
 
 _SPEECH_UNAVAILABLE = {
@@ -306,13 +355,22 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
         # The Coach may invoke the visual tool after its verbal explanation.
         # Only a bounded scene specification reaches the renderer; no generated
         # Python is ever executed. Tool failure never blocks the conversation.
+        response_text = "".join(response_parts)
+        screened_message = message
+        scene = None
+        will_plan = False
         try:
-            screened_message = safety.screen_input(message, language).text
-            response_text = "".join(response_parts)
-            scene = None if (
+            screened_message = safety.screen_input(message, language).text or message
+            will_plan = not (
                 safety.is_safety_redirect(response_text)
                 or not _worth_visual_planning(screened_message, response_text)
-            ) else await plan_manim_visual(
+            )
+            if will_plan:
+                # Early signal, BEFORE the planner model runs: the client can
+                # show "preparing a visual" on the message immediately instead
+                # of the message looking finished and then suddenly growing.
+                yield f"data: {json.dumps({'visual_status': 'planning'}, ensure_ascii=False)}\n\n"
+            scene = None if not will_plan else await plan_manim_visual(  # noqa: F841 (read after try)
                 screened_message,
                 response_text,
                 language,
@@ -328,6 +386,9 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
                 ),
                 text_filter=lambda text: safety.screen_output(text, language).text,
             )
+            if will_plan and not scene:
+                # Planner declined — clear the loader so the message closes.
+                yield f"data: {json.dumps({'visual_status': 'none'}, ensure_ascii=False)}\n\n"
             if scene:
                 text_before, text_after = split_visual_response(response_text)
                 status = {
@@ -350,6 +411,38 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
                 yield f"data: {json.dumps({'visual': visual}, ensure_ascii=False)}\n\n"
         except Exception as exc:  # pragma: no cover - optional visual support
             print(f"⚠️ Coach visual tool failed: {exc}")
+            # Never leave the client stuck on a "preparing a visual" loader.
+            yield f"data: {json.dumps({'visual_status': 'none'}, ensure_ascii=False)}\n\n"
+
+        # Whether to offer the on-demand "show me a video / image" buttons — an
+        # LLM decides if this reply is an explanation a visual would help. Skipped
+        # when a visual was already produced, on redirects, or when the math
+        # planner already ran and declined (it is the same judgment).
+        can_visualize = False
+        try:
+            if (
+                scene is None
+                and not will_plan
+                and len(response_text.strip()) >= 30
+                and not safety.is_safety_redirect(response_text)
+            ):
+                can_visualize = await should_offer_visual(
+                    screened_message, response_text, language,
+                    usage_context=UsageContext(
+                        actor_id=learner_id,
+                        actor_type="learner",
+                        endpoint="/api/agent/coach/stream",
+                        feature="feature_3_learning_companion",
+                        operation="coach.visual_offer",
+                        source="coach_visual_tool",
+                        session_id=conversation_id,
+                        exchange_id=exchange_id,
+                    ),
+                )
+        except Exception as exc:  # pragma: no cover
+            print(f"⚠️ visual-offer classify failed: {exc}")
+        yield f"data: {json.dumps({'can_visualize': can_visualize}, ensure_ascii=False)}\n\n"
+
         if moe_sid:  # the bot's turn of this exchange
             await lrs_reporter.report_conversation_interacted(
                 learner_id, moe_sid, conversation_id,
@@ -504,6 +597,147 @@ async def coach_proactive(request: CoachProactiveRequest, session=Depends(requir
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@router.post("/activeness/change-explain")
+async def activeness_change_explain(
+    request: ActivenessChangeRequest, learner_id: str = Depends(require_learner)
+):
+    """Why did one activeness domain move since last visit? A short verbal blurb.
+
+    Learner id comes from the session (never the client). The reply is verbal
+    only — activeness scores never enter the prompt or the response."""
+    from app.agents.competency_coach import run_change_explanation
+
+    text = await run_change_explanation(
+        learner_id,
+        request.competency,
+        request.direction,
+        normalize_language(request.language),
+    )
+    return JSONResponse(content={"text": text})
+
+
+@router.post("/competency-chat")
+async def competency_chat(
+    request: CompetencyChatRequest, session=Depends(require_learner_session)
+):
+    """Focused, history-less chat about one learning-map competency (F4).
+
+    The transcript never enters `sessions` (a deliberate privacy boundary for
+    weakness talk); the memory consolidator still runs so durable facts land
+    in the brain. MoE conversation `interacted` events are reported per turn —
+    chat text is never sent."""
+    from app.agents.competency_coach import run_competency_chat_stream
+
+    learner_id = session["sub"]
+    language = normalize_language(request.language)
+    if request.messages[-1].role != "user":
+        raise HTTPException(status_code=422, detail="last message must be from the learner")
+    conversation_id = sessions.normalize_session_id(
+        f"lmap-{request.competency}-{request.conversation_id}"
+    )
+    exchange_id = uuid4().hex
+
+    moe_sid = session.get("sid")
+    if moe_sid:
+        await lrs_reporter.report_conversation_interacted(
+            learner_id, moe_sid, conversation_id,
+            speaker="student", conversation_trigger="student-request",
+        )
+
+    async def event_generator():
+        yield f"data: {json.dumps({'disclosure': safety.disclosure(language)}, ensure_ascii=False)}\n\n"
+        reply_parts = []
+        async for chunk in run_competency_chat_stream(
+            learner_id,
+            request.competency,
+            [m.model_dump() for m in request.messages],
+            language,
+            conversation_id=conversation_id,
+            exchange_id=exchange_id,
+        ):
+            reply_parts.append(chunk)
+            yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
+
+        # LLM-gated on-demand visual offer (same rule as the main coach).
+        reply_text = "".join(reply_parts)
+        can_visualize = False
+        try:
+            if len(reply_text.strip()) >= 30 and not safety.is_safety_redirect(reply_text):
+                can_visualize = await should_offer_visual(
+                    request.messages[-1].text, reply_text, language,
+                    usage_context=UsageContext(
+                        actor_id=learner_id,
+                        actor_type="learner",
+                        endpoint="/api/agent/competency-chat",
+                        feature="feature_4_dashboard",
+                        operation="coach.visual_offer",
+                        source="competency_coach_agent",
+                        session_id=conversation_id,
+                        exchange_id=exchange_id,
+                    ),
+                )
+        except Exception as exc:  # pragma: no cover
+            print(f"⚠️ visual-offer classify failed: {exc}")
+        yield f"data: {json.dumps({'can_visualize': can_visualize}, ensure_ascii=False)}\n\n"
+
+        if moe_sid:
+            await lrs_reporter.report_conversation_interacted(
+                learner_id, moe_sid, conversation_id,
+                speaker="bot", conversation_trigger="student-request",
+            )
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post("/visualize")
+async def visualize(request: VisualizeRequest, session=Depends(require_learner_session)):
+    """On-demand visual for a text-only reply (both chats). The learner asks to
+    see the explanation as an image or a short animation; we plan a bounded
+    scene and render it. Model-authored Python is never executed. Returns
+    {"visual": ...} or {"visual": null} when no useful scene could be built."""
+    learner_id = session["sub"]
+    language = normalize_language(request.language)
+    conversation_id = sessions.normalize_session_id(request.conversation_id)
+    exchange_id = uuid4().hex
+
+    screened_message = safety.screen_input(request.user_message, language).text or request.user_message
+    prefer_animation = request.mode == "video"
+    try:
+        scene = await plan_manim_visual(
+            screened_message,
+            request.assistant_text,
+            language,
+            usage_context=UsageContext(
+                actor_id=learner_id,
+                actor_type="learner",
+                endpoint="/api/agent/visualize",
+                feature="feature_3_learning_companion",
+                operation="coach.visual_ondemand",
+                source="coach_visual_tool",
+                session_id=conversation_id,
+                exchange_id=exchange_id,
+            ),
+            text_filter=lambda text: safety.screen_output(text, language).text,
+            prefer_animation=prefer_animation,
+            force_visual=True,
+        )
+        if not scene:
+            return JSONResponse(content={"visual": None})
+        # Honour the button the learner pressed: a video request animates, an
+        # image request renders the composed still even if the planner staged it.
+        scene["animated"] = prefer_animation
+        visual = await render_manim_visual(scene)
+    except Exception as exc:  # pragma: no cover - optional visual support
+        print(f"⚠️ On-demand visual failed: {exc}")
+        return JSONResponse(content={"visual": None})
+    return JSONResponse(content={"visual": visual})
 
 
 @router.post("/coach/support")

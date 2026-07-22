@@ -153,12 +153,22 @@ def _project_subjects(brain: dict, language: str) -> list[dict[str, Any]]:
     return out
 
 
-def _project_competencies(brain: dict, language: str) -> list[dict[str, Any]]:
-    activeness = (brain.get("profile") or {}).get("activeness") or {}
+def _project_competencies(
+    brain: dict, language: str, effective: dict[str, dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """Project the six activeness competencies for the learner UI.
+
+    `effective` (from app.brain.activeness) carries the dynamic score — the
+    questionnaire base nudged by recent activity — plus per-domain "cause" tags
+    that drive state-aware improve tips. When absent, we fall back to the raw
+    onboarding base so the projection never depends on live signals being ready.
+    """
+    base = (brain.get("profile") or {}).get("activeness") or {}
     out = []
     for key in COMPETENCY_ORDER:
         meta = COMPETENCY_META[key]
-        value = int(activeness.get(key, 0))
+        eff = (effective or {}).get(key) or {}
+        value = int(eff.get("value", base.get(key, 0)))
         tone = "strong" if value >= 70 else "steady" if value >= 45 else "support"
         out.append({
             "key": key,
@@ -169,6 +179,8 @@ def _project_competencies(brain: dict, language: str) -> list[dict[str, Any]]:
             "value": value,
             "descriptor": _t(BAND_WORDS, tone, language),
             "tone": tone,
+            # State-aware "how to improve" cause tags (behavioural, no numbers).
+            "improve": list(eff.get("causes") or []),
         })
     return out
 
@@ -263,8 +275,15 @@ def project_hero_metrics(brain: dict, events: list[dict[str, Any]]) -> dict[str,
     }
 
 
-def project_dashboard(brain: dict, name: str, language: str = "he") -> dict[str, Any]:
-    """Project the brain into the dashboard DTO (real numbers only)."""
+def project_dashboard(
+    brain: dict, name: str, language: str = "he",
+    effective_activeness: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Project the brain into the dashboard DTO (real numbers only).
+
+    `effective_activeness` is the dynamic competency map (base + live signals);
+    when omitted the projection uses the raw onboarding base.
+    """
     profile = brain.get("profile") or {}
     display_name = (brain.get("identity") or {}).get("display_name") or name or "תלמיד/ה"
 
@@ -359,7 +378,7 @@ def project_dashboard(brain: dict, name: str, language: str = "he") -> dict[str,
         "difficulties": difficulties,
         "goals": goals,
         "mapping": mapping,
-        "competencies": _project_competencies(brain, language),
+        "competencies": _project_competencies(brain, language, effective_activeness),
         "reflectionPreview": reflection_preview,
         "selfAwarenessNote": self_awareness_note,
         "updatedAt": brain.get("updated_at"),

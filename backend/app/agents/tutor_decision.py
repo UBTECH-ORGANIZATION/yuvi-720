@@ -153,6 +153,21 @@ async def record_hint_level(learner_id: str, component_id: Optional[str], level:
         pass
 
 
+async def recent_tutor_decisions(learner_id: str, limit: int = 300) -> list[dict[str, Any]]:
+    """Recent coach decisions (hint/explain/worked-example + hint_level) for a
+    learner — best-effort evidence for the activeness help/hint signals. Returns
+    an empty list when the collection is unavailable (never raises)."""
+    try:
+        from app.brain.repository import _get_collection_named
+        collection = _get_collection_named("tutor_decisions")
+        if collection is None:
+            return []
+        cursor = collection.find({"learner_id": learner_id}).sort("at", -1).limit(limit)
+        return [d async for d in cursor]
+    except Exception:
+        return []
+
+
 async def log_decision(
     learner_id: str,
     decision: dict[str, str],

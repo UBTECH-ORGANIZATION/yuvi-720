@@ -98,13 +98,19 @@ async def read_dashboard(learner_id: str, lang: str = "he", actor: dict = Depend
             brain = await get_brain(safe_id)
         except Exception as exc:
             print(f"⚠️ dashboard onboarding seed failed: {exc}")
+    events = await get_learner_events(safe_id)
+    # Dynamic activeness: the questionnaire base nudged by recent activity.
+    from app.brain.activeness import effective_activeness
+    from app.agents.tutor_decision import recent_tutor_decisions
+    decisions = await recent_tutor_decisions(safe_id)
+    effective = effective_activeness(brain, events, decisions)
     dashboard = project_dashboard(
         brain,
         brain.get("identity", {}).get("display_name") or "",
         lang,
+        effective_activeness=effective,
     )
     hero = dashboard["hero"]
-    events = await get_learner_events(safe_id)
     hero["stats"] = project_hero_metrics(brain, events)
     if hero.get("mode") != "complete":
         asset = await find_for_lesson(hero.get("objectiveId"), hero.get("componentId"))

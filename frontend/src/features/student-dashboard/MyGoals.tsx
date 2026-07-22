@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Icon } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
 import type { DashboardDTO } from '../../services/brain'
@@ -76,6 +76,16 @@ const STATUS_RANK: Record<string, number> = {
 export function MyGoals({ goals, onSeeAll, onAddGoal }: MyGoalsProps) {
   const { t, language } = useI18n()
   const [openGoal, setOpenGoal] = useState<Goal | null>(null)
+  const [helpOpen, setHelpOpen] = useState(false)
+
+  useEffect(() => {
+    if (!helpOpen) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setHelpOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [helpOpen])
 
   const formatDeadline = (value?: string | null) => {
     if (!value) return null
@@ -109,12 +119,22 @@ export function MyGoals({ goals, onSeeAll, onAddGoal }: MyGoalsProps) {
           <p>{t('sdash.goalsCard.subtitle')}</p>
         </div>
       </div>
-      {goals.length > 0 && (
-        <button type="button" className="sd-goals__see-all" onClick={onSeeAll}>
-          <span>{t('sdash.goalsCard.seeAll')}</span>
-          <Icon name="chevronLeft" size={16} />
+      <div className="sd-goals__head-actions">
+        {goals.length > 0 && (
+          <button type="button" className="sd-goals__see-all" onClick={onSeeAll}>
+            <span>{t('sdash.goalsCard.seeAll')}</span>
+            <Icon name="chevronLeft" size={16} />
+          </button>
+        )}
+        <button
+          type="button"
+          className="sd-goals__help"
+          onClick={() => setHelpOpen(true)}
+          aria-label={t('sdash.goalsCard.help.aria')}
+        >
+          <Icon name="help" size={17} />
         </button>
-      )}
+      </div>
     </div>
   )
 
@@ -210,6 +230,39 @@ export function MyGoals({ goals, onSeeAll, onAddGoal }: MyGoalsProps) {
             <Icon name="plus" size={16} />
             <span>{t('sdash.goalsCard.add')}</span>
           </button>
+        </div>
+      )}
+
+      {helpOpen && (
+        <div className="sd-goals-help" role="presentation" onClick={() => setHelpOpen(false)}>
+          <div
+            className="sd-goals-help__card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sd-goals-help-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="sd-goals-help__close"
+              onClick={() => setHelpOpen(false)}
+              aria-label={t('sdash.goalsCard.help.close')}
+              autoFocus
+            >
+              <Icon name="close" size={16} />
+            </button>
+            <span className="sd-goals-help__icon" aria-hidden="true"><Icon name="target" size={22} /></span>
+            <h3 id="sd-goals-help-title">{t('sdash.goalsCard.help.title')}</h3>
+            <p dir="auto">{t('sdash.goalsCard.help.what')}</p>
+            <h4>{t('sdash.goalsCard.help.how.title')}</h4>
+            <ul>
+              <li dir="auto"><Icon name="teacher" size={15} /><span>{t('sdash.goalsCard.help.how.teacher')}</span></li>
+              <li dir="auto"><Icon name="spark" size={15} /><span>{t('sdash.goalsCard.help.how.self')}</span></li>
+              <li dir="auto"><Icon name="message" size={15} /><span>{t('sdash.goalsCard.help.how.yuvi')}</span></li>
+            </ul>
+            <h4>{t('sdash.goalsCard.help.progress.title')}</h4>
+            <p dir="auto">{t('sdash.goalsCard.help.progress.body')}</p>
+          </div>
         </div>
       )}
 
