@@ -61,6 +61,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const root = document.documentElement
     root.dataset.theme = theme
     root.style.colorScheme = theme
+    // The preference is known synchronously (user document or cookie), so the
+    // first applied theme is already the right one — uncloak the page and drop
+    // the boot screen only after it is on the DOM, never in the wrong theme.
+    root.classList.remove('theme-pending')
+    document.getElementById('app-boot-screen')?.remove()
   }, [theme])
 
   useEffect(() => {

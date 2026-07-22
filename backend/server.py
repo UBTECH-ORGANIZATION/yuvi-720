@@ -27,6 +27,7 @@ from app.routes.learner_mapping import router as learner_mapping_router
 from app.routes.learner_state import router as learner_state_router
 from app.routes.learning_catalog import router as learning_catalog_router
 from app.routes.learning_content import router as learning_content_router
+from app.routes.illustrations import router as illustrations_router
 from app.routes.mapping_chat import router as mapping_chat_router
 from app.routes.profile import router as profile_router
 from app.routes.static_pages import mount_static_assets, router as static_pages_router
@@ -90,6 +91,7 @@ def create_app() -> FastAPI:
     app.include_router(brain_router)
     app.include_router(xapi_router)
     app.include_router(learning_catalog_router)
+    app.include_router(illustrations_router)
     app.include_router(agent_router)
     app.include_router(teacher_router)
     app.include_router(mentoring_router)

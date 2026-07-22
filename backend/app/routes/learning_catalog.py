@@ -12,6 +12,7 @@ from app.services import content_provider
 from app.services.learning_sessions import create_provider_session
 from app.services.learning_progress import project_unit_roadmap
 from app.services.learning_timing import summarize_session
+from app.services.lesson_illustrations import find_for_lesson, localized_alt, public_metadata
 from app.services.events import get_session_events, verify_launch
 
 
@@ -26,11 +27,22 @@ class LearningSessionRequest(BaseModel):
 
 
 @router.get("/catalog")
-async def read_catalog(learner_id: str = Depends(require_learner)) -> dict:
-    """Return provider-owned units and components through Spark's stable facade."""
+async def read_catalog(lang: str = "he", learner_id: str = Depends(require_learner)) -> dict:
+    """Return provider-owned units and components through Spark's stable facade.
+
+    The learner comes from the session cookie only (a client-supplied
+    learner_id is never accepted). Each unit carries the cached AI lesson
+    illustration (read-only; never generated here) so the dashboard can render
+    a topic visual per lesson, localized by ``lang``.
+    """
     try:
         units = await content_provider.list_units()
-        units = [await project_unit_roadmap(unit, learner_id) for unit in units]
+        projected = []
+        for unit in units:
+            roadmap = await project_unit_roadmap(unit, learner_id)
+            roadmap["illustration"] = await _unit_illustration(roadmap, lang)
+            projected.append(roadmap)
+        units = projected
     except content_provider.ContentProviderError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
     return {
@@ -38,6 +50,19 @@ async def read_catalog(learner_id: str = Depends(require_learner)) -> dict:
         "provider_status": "online",
         "units": units,
     }
+
+
+async def _unit_illustration(unit: dict, lang: str) -> Optional[dict]:
+    """Return cached illustration metadata for a unit, or ``None`` when absent."""
+    asset = await find_for_lesson(
+        unit.get("objective_id"),
+        unit.get("current_component_id") or unit.get("next_component_id"),
+    )
+    if not asset:
+        return None
+    meta = public_metadata(asset, lang)
+    meta["alt"] = localized_alt(lang, unit.get("title") or "", unit.get("subject") or "")
+    return meta
 
 
 @router.post("/sessions")

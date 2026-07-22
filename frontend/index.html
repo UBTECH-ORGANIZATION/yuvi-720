@@ -4,8 +4,59 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
+    <style>
+      html.theme-pending #root { visibility: hidden; }
+      body { margin: 0; }
+      .app-boot-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 18% 18%, rgba(76, 201, 240, .18), transparent 30%),
+          radial-gradient(circle at 82% 76%, rgba(159, 122, 254, .2), transparent 34%),
+          linear-gradient(145deg, #fbfaff 0%, #f2efff 52%, #f6fbff 100%);
+      }
+      .app-boot-screen__mark {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 112px;
+        height: 112px;
+        border: 1px solid rgba(111, 91, 255, .2);
+        border-radius: 50%;
+        animation: app-boot-spin 2s linear infinite;
+      }
+      .app-boot-screen__mark::before {
+        content: '';
+        position: absolute;
+        inset: -1px;
+        border: 3px solid transparent;
+        border-block-start-color: #6f5bff;
+        border-inline-end-color: #4cc9f0;
+        border-radius: inherit;
+      }
+      .app-boot-screen__core {
+        width: 52px;
+        height: 52px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #6f5bff, #9f7afe 58%, #4cc9f0 135%);
+        box-shadow: 0 16px 38px rgba(111, 91, 255, .3);
+        transform: rotate(45deg);
+      }
+      @keyframes app-boot-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) {
+        .app-boot-screen__mark { animation-duration: 6s; }
+      }
+    </style>
     <script>
       (function () {
+        // theme-pending suppresses transition flashes until ThemeProvider
+        // hydrates and removes it; the sp_theme cookie is the user's saved
+        // preference (system falls back to the OS scheme).
+        document.documentElement.classList.add('theme-pending')
         var m = document.cookie.match(/(?:^|;\s*)sp_theme=(light|dark|system)/)
         var pref = m ? m[1] : 'dark'
         var dark = pref === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches : pref === 'dark'
@@ -16,6 +67,9 @@
     <title>Yuvilab Spark</title>
   </head>
   <body>
+    <div id="app-boot-screen" class="app-boot-screen" aria-hidden="true">
+      <div class="app-boot-screen__mark"><span class="app-boot-screen__core"></span></div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -114,6 +114,7 @@ img, svg, video, canvas { max-inline-size: 100%; }
 
   .app-bar.is-compact .app-bar-menu {
     position: fixed;
+    grid-column: 1 / -1;
     inset-block-start: calc(var(--mapping-app-bar-height, 73px) + 10px);
     inset-inline: var(--sp-gutter);
     z-index: 4;

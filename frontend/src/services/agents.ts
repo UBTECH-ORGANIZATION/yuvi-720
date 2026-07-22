@@ -14,8 +14,8 @@ export interface CoachVisualScene {
 
 export interface CoachVisual {
   id: string
-  type: 'image'
-  mime_type: 'image/png' | 'image/svg+xml'
+  type: 'image' | 'video'
+  mime_type: 'image/png' | 'image/svg+xml' | 'video/mp4'
   data_url: string
   title: string
   alt: string
@@ -25,9 +25,12 @@ export interface CoachVisual {
 }
 
 export interface CoachVisualStatus {
-  status: 'rendering'
-  textBefore: string
-  textAfter: string
+  /** planning: a visual was chosen and is being planned (show the loader
+   *  before the message looks finished); rendering: scene is being drawn;
+   *  none: no visual after all — clear the loader. */
+  status: 'planning' | 'rendering' | 'none'
+  textBefore?: string
+  textAfter?: string
 }
 
 export interface CoachConversation {
@@ -69,6 +72,8 @@ export interface CoachStreamHandlers {
   onPhase?: (phase: 'thinking' | 'speaking') => void
   onVisualStatus?: (event: CoachVisualStatus) => void
   onVisual?: (visual: CoachVisual) => void
+  /** LLM decided whether to offer the on-demand "video / image" buttons. */
+  onCanVisualize?: (canVisualize: boolean) => void
   signal?: AbortSignal
 }
 
@@ -143,10 +148,11 @@ async function streamAgent(
         const parsed = JSON.parse(payload) as {
           text?: string
           disclosure?: string
-          visual_status?: 'rendering'
+          visual_status?: 'planning' | 'rendering' | 'none'
           text_before?: string
           text_after?: string
           visual?: CoachVisual
+          can_visualize?: boolean
           phase?: 'thinking' | 'speaking'
         }
         if (parsed.disclosure) handlers.onDisclosure?.(parsed.disclosure)
@@ -155,19 +161,79 @@ async function streamAgent(
           handlers.onText(parsed.text)
         }
         if (parsed.phase) handlers.onPhase?.(parsed.phase)
-        if (parsed.visual_status === 'rendering') {
+        if (parsed.visual_status) {
           handlers.onVisualStatus?.({
             status: parsed.visual_status,
-            textBefore: parsed.text_before || '',
-            textAfter: parsed.text_after || '',
+            textBefore: parsed.text_before,
+            textAfter: parsed.text_after,
           })
         }
         if (parsed.visual) handlers.onVisual?.(parsed.visual)
+        if (typeof parsed.can_visualize === 'boolean') handlers.onCanVisualize?.(parsed.can_visualize)
       } catch {
         continue
       }
     }
   }
+}
+
+export interface CompetencyChatMessage {
+  role: 'user' | 'assistant'
+  text: string
+}
+
+export type VisualMode = 'image' | 'video'
+
+/** On-demand visual: the learner asked to see a text-only reply as an image or
+ * a short animation. Returns the rendered visual, or null when none could be
+ * built. Rendering can take ~15–90s (planner + manim + encode). */
+export async function requestVisualization(
+  userMessage: string,
+  assistantText: string,
+  mode: VisualMode,
+  language: string,
+  conversationId: string = 'default'
+): Promise<CoachVisual | null> {
+  const result = await apiPost<{ visual: CoachVisual | null }>('/api/agent/visualize', {
+    user_message: userMessage,
+    assistant_text: assistantText,
+    mode,
+    language,
+    conversation_id: conversationId,
+  })
+  return result.visual ?? null
+}
+
+/** Why did one activeness domain move since the learner last opened the map?
+ * Returns a short verbal, non-numeric blurb (or null when none could be built). */
+export async function explainActivenessChange(
+  competency: string,
+  direction: 'up' | 'down',
+  language: string,
+): Promise<string | null> {
+  const result = await apiPost<{ text: string | null }>('/api/agent/activeness/change-explain', {
+    competency,
+    direction,
+    language,
+  })
+  return result.text ?? null
+}
+
+/** Ephemeral learning-map topic chat: the transcript lives only in the client
+ * (never saved to conversation history); memory capture still runs server-side. */
+export function streamCompetencyChat(
+  competency: string,
+  messages: CompetencyChatMessage[],
+  conversationId: string,
+  language: string,
+  handlers: CoachStreamHandlers
+): Promise<void> {
+  return streamAgent('/api/agent/competency-chat', {
+    competency,
+    messages,
+    conversation_id: conversationId,
+    language,
+  }, handlers)
 }
 
 export function streamCoach(
