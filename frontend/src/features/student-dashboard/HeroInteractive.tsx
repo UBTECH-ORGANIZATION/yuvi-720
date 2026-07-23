@@ -113,12 +113,42 @@ function AngleScene() {
             <stop offset="0" stopColor={color} />
             <stop offset="1" stopColor="#6f5bff" />
           </linearGradient>
+          {/* soft violet halo, brightest at the vertex — makes the angle sit in
+              its own pool of light rather than on a flat plane */}
+          <radialGradient id="sd-viz-halo" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stopColor={color} stopOpacity="0.22" />
+            <stop offset="0.45" stopColor="#6f5bff" stopOpacity="0.1" />
+            <stop offset="1" stopColor="#6f5bff" stopOpacity="0" />
+          </radialGradient>
+          {/* bright bloom at the arm tip — reads as a small light source */}
+          <radialGradient id="sd-viz-spark" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stopColor="#eafcff" stopOpacity="0.9" />
+            <stop offset="0.4" stopColor={color} stopOpacity="0.5" />
+            <stop offset="1" stopColor={color} stopOpacity="0" />
+          </radialGradient>
+          {/* gentle line glow so rays and arc feel lit, not printed */}
+          <filter id="sd-viz-glow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
         </defs>
 
-        {/* soft floor grid — kept minimal so the angle stays the focus */}
-        {[1, 2].map((i) => (
-          <line key={i} x1={20} y1={68 + i * 47} x2={380} y2={68 + i * 47} className="sd-viz-grid" />
-        ))}
+        {/* perspective floor — receding lines that fall back toward a vanishing
+            point above the base, giving the scene depth without a flat grid */}
+        <g className="sd-viz-floor" aria-hidden="true">
+          {[40, 120, 200, 280, 360].map((x) => (
+            <line key={`v${x}`} x1={x} y1={cy} x2={200} y2={104} />
+          ))}
+          {[{ y: cy, o: 0.5 }, { y: 188, o: 0.34 }, { y: 168, o: 0.22 }, { y: 152, o: 0.13 }].map(({ y, o }) => (
+            <line key={`h${y}`} x1={20} y1={y} x2={380} y2={y} opacity={o} />
+          ))}
+        </g>
+
+        {/* pool of light the angle lives in */}
+        <ellipse cx={cx} cy={cy} rx="180" ry="140" fill="url(#sd-viz-halo)" />
 
         {/* angle fill wedge */}
         <path
@@ -131,8 +161,9 @@ function AngleScene() {
           d={`M ${cx + arcRadius} ${cy} A ${arcRadius} ${arcRadius} 0 ${largeArc} 0 ${arcX} ${arcY}`}
           fill="none"
           stroke={color}
-          strokeWidth="4"
+          strokeWidth="4.5"
           strokeLinecap="round"
+          filter="url(#sd-viz-glow)"
         />
         {/* right-angle marker */}
         {kind === 'right' && (
@@ -147,7 +178,7 @@ function AngleScene() {
         {/* fixed base ray */}
         <line x1={cx} y1={cy} x2={cx + armLength} y2={cy} className="sd-viz-ray" />
         {/* movable arm */}
-        <line x1={cx} y1={cy} x2={armX} y2={armY} stroke="url(#sd-viz-arm)" strokeWidth="7" strokeLinecap="round" />
+        <line x1={cx} y1={cy} x2={armX} y2={armY} stroke="url(#sd-viz-arm)" strokeWidth="7.5" strokeLinecap="round" filter="url(#sd-viz-glow)" />
         <circle cx={cx} cy={cy} r="9" className="sd-viz-vertex" />
 
         {/* drag handle */}
@@ -166,6 +197,7 @@ function AngleScene() {
           }}
           onKeyDown={onKeyDown}
         >
+          <circle cx={armX} cy={armY} r="34" fill="url(#sd-viz-spark)" />
           <circle cx={armX} cy={armY} r="22" fill="transparent" />
           <circle cx={armX} cy={armY} r="12" fill={color} className="sd-viz-handle__dot" />
           <circle cx={armX} cy={armY} r="12" fill="none" stroke="#fff" strokeWidth="2.5" opacity="0.85" />
