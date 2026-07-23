@@ -291,9 +291,9 @@
 }
 
 /* Dark mode */
-[data-theme='dark'] .sd-lmap-modal { background: rgba(4, 4, 18, .6); }
-[data-theme='dark'] .sd-lmap-detail { border-color: rgba(159, 122, 254, .22); background: #171b3e; box-shadow: 0 34px 90px rgba(0, 2, 18, .55); }
-[data-theme='dark'] .sd-lmap-detail__close { border-color: rgba(255, 255, 255, .14); color: rgba(214, 216, 245, .6); }
+[data-theme='dark'] .sd-lmap-modal { background: rgba(18, 12, 40, .62); }
+[data-theme='dark'] .sd-lmap-detail { border-color: rgba(198, 180, 255, .26); background: linear-gradient(180deg, #362c60 0%, #2b2450 100%); box-shadow: 0 34px 90px rgba(20, 10, 46, .5); }
+[data-theme='dark'] .sd-lmap-detail__close { border-color: rgba(255, 255, 255, .16); color: rgba(226, 224, 250, .68); }
 [data-theme='dark'] .sd-lmap-detail__close:hover { background: rgba(255, 255, 255, .07); color: #eef0ff; }
 [data-theme='dark'] .sd-lmap-detail__head h3 { color: #eef0ff; }
 [data-theme='dark'] .sd-lmap-detail__meaning { color: rgba(214, 216, 245, .78); }
