@@ -143,6 +143,8 @@
 
 /* Hero + recent lessons live in one card — a single "what's next" panel. */
 .sd-hero-card {
+  position: relative;
+  isolation: isolate;
   margin-block-start: clamp(18px, 3vw, 30px);
   padding: clamp(20px, 3vw, 34px);
   border: 1px solid rgba(255, 255, 255, .88);
@@ -152,6 +154,19 @@
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
+/* Depth wash lives ON the card and is clipped to its rounded frame, so it can
+   never bleed past the corners. Brightest near the illustration up top, fading
+   down through the lessons so hero + lessons read as one continuous surface. */
+.sd-hero-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(120% 78% at 72% 20%, rgba(111, 91, 255, .09), transparent 62%);
+}
+[dir='rtl'] .sd-hero-card::before { background: radial-gradient(120% 78% at 28% 20%, rgba(111, 91, 255, .09), transparent 62%); }
 /* The lessons half sits below the hero, parted by a hairline, not a gap alone. */
 .sd-hero-card .sd-lessons { margin-block-start: clamp(16px, 2.4vw, 26px); padding-block-start: clamp(16px, 2.4vw, 26px); border-block-start: 1px solid rgba(111, 91, 255, .12); }
 [data-theme='dark'] .sd-hero-card {
@@ -159,22 +174,30 @@
   background: var(--sdd-card-bg);
   box-shadow: var(--sdd-card-shadow);
 }
+[data-theme='dark'] .sd-hero-card::before { background: radial-gradient(120% 78% at 72% 20%, rgba(146, 112, 250, .16), transparent 62%); }
+[dir='rtl'] [data-theme='dark'] .sd-hero-card::before,
+[data-theme='dark'] [dir='rtl'] .sd-hero-card::before { background: radial-gradient(120% 78% at 28% 20%, rgba(146, 112, 250, .16), transparent 62%); }
 [data-theme='dark'] .sd-hero-card .sd-lessons { border-block-start-color: var(--sdd-card-border); }
 
 /* Compact hero: content (title → progress → CTA → KPI row) is the main area;
    the illustration sits alone in the second column (inline-end = left in RTL).
    Height follows content — no forced min-block-size. */
-.sd-journey-hero { --sd-pointer-x: 50%; --sd-pointer-y: 50%; --sd-pointer-opacity: 0; position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(380px, 1fr); gap: 10px clamp(18px, 2.4vw, 34px); align-items: stretch; padding: clamp(6px, 1.2vw, 14px) 0; overflow: visible; color: var(--sp-ink-700); }
-.sd-journey-hero::before, .sd-journey-hero::after { display: none; }
+.sd-journey-hero { --sd-pointer-x: 50%; --sd-pointer-y: 50%; --sd-pointer-opacity: 0; position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 0.86fr) minmax(400px, 1.06fr); gap: 10px clamp(20px, 2.6vw, 40px); align-items: stretch; padding: clamp(6px, 1.2vw, 14px) 0; overflow: visible; color: var(--sp-ink-700); }
+/* Depth is carried by the card wash (.sd-hero-card::before) so it stays inside
+   the rounded frame; the hero itself paints no bleeding background layer. */
+.sd-journey-hero::before { display: none; }
+[dir='rtl'] .sd-journey-hero::before { display: none; }
+.sd-journey-hero::after { display: none; }
 .sd-journey-hero__glow { display: none; }
 .sd-journey-hero__content { display: flex; flex-direction: column; justify-content: center; gap: 18px; min-inline-size: 0; inline-size: min(100%, 540px); justify-self: center; padding: 6px 0; }
 .sd-journey-hero__name { font-weight: 900; background: linear-gradient(115deg, var(--sp-primary-600) 8%, #4cc9f0 92%); -webkit-background-clip: text; background-clip: text; color: transparent; padding-inline: 1px; letter-spacing: .01em; }
 [data-theme='dark'] .sd-journey-hero__name { background: linear-gradient(115deg, #b9a5ff 8%, #6fe0ff 92%); -webkit-background-clip: text; background-clip: text; }
 .sd-journey-hero__head { display: flex; flex-direction: column; }
-.sd-journey-hero__welcome { margin: 0 0 2px; color: var(--sp-ink-700); font-size: clamp(21px, 2vw, 28px); font-weight: 700; line-height: 1.2; }
-.sd-journey-hero__title { max-inline-size: 680px; margin: 6px 0 0; color: #342e68; font-size: clamp(32px, 3.1vw, 46px); font-weight: 800; line-height: 1.08; letter-spacing: -.03em; }
+.sd-journey-hero__welcome { margin: 0 0 2px; color: var(--sp-ink-400); font-size: clamp(15px, 1.2vw, 18px); font-weight: 600; line-height: 1.35; letter-spacing: .01em; }
+.sd-journey-hero__title { max-inline-size: 680px; margin: 10px 0 0; color: #342e68; font-size: clamp(34px, 3.3vw, 50px); font-weight: 800; line-height: 1.06; letter-spacing: -.03em; }
 .sd-journey-hero__lead { max-inline-size: 560px; margin: 12px 0 0; color: var(--sp-ink-400); font-size: clamp(16px, 1.3vw, 19px); line-height: 1.5; }
-.sd-journey-hero__head .sd-button--primary { align-self: flex-start; margin-block-start: 20px; }
+.sd-journey-hero__head .sd-button--primary { align-self: flex-start; margin-block-start: 26px; min-block-size: 54px; padding-inline: 34px; font-size: var(--sp-fs-md); background: radial-gradient(120% 160% at 50% -30%, rgba(255,255,255,.34), transparent 60%), linear-gradient(135deg, #6f5bff, #5336ef); box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 16px 38px rgba(83,54,239,.32); }
+.sd-journey-hero__head .sd-button--primary:hover:not(:disabled) { box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 22px 50px rgba(83,54,239,.46); }
 .sd-journey-hero__reason { max-inline-size: 620px; margin: 24px 0 0; color: var(--sp-ink-400); font-size: var(--sp-fs-md); line-height: 1.65; }
 /* Title + start button share one line, button right next to the title. */
 .sd-journey-hero__title-row { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-block-start: 8px; }
@@ -190,7 +213,7 @@
 .sd-button--quiet { min-inline-size: 200px; border-color: rgba(111,91,255,.42); background: rgba(255,255,255,.62); color: var(--sp-primary-600); }
 [dir='rtl'] .sd-button--directional .sp-icon { transform: scaleX(-1); }
 .sp-state .sd-button--primary { background: var(--sp-primary-600); color: #fff; }
-.sd-journey-hero__tip { display: flex; align-items: center; gap: 8px; max-inline-size: 470px; margin-block-start: 4px; padding: 8px 12px; border: 1px solid rgba(234,163,46,.2); border-radius: 12px; background: rgba(240,182,52,.08); color: var(--sp-ink-400); }
+.sd-journey-hero__tip { display: inline-flex; align-items: center; gap: 8px; max-inline-size: 470px; margin-block-start: 14px; padding: 7px 13px; border: 1px solid rgba(90, 78, 150, .16); border-radius: var(--sp-radius-pill); background: rgba(244, 243, 252, .7); color: var(--sp-ink-400); }
 .sd-journey-hero__tip-text { min-inline-size: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--sp-fs-xs); line-height: 1.45; }
 .sd-journey-hero__tip strong { color: #a9740c; font-weight: 700; }
 /* A "lit" amber bulb: soft glow behind, light rays gently pulsing outward. */
@@ -202,22 +225,27 @@
 @media (prefers-reduced-motion: reduce) { .sd-journey-hero__tip-bulb .sd-tip-rays { animation: none; opacity: .85; } }
 [data-theme='dark'] .sd-journey-hero__tip-bulb { color: #f4bd54; }
 .sd-journey-hero__tip span { font-size: var(--sp-fs-xs); line-height: 1.5; }
-.sd-journey-hero__visual { position: relative; display: grid; place-items: center; min-inline-size: 0; block-size: 100%; padding: 0; padding-inline-start: clamp(16px, 2vw, 30px); border-inline-start: 1px solid rgba(111, 91, 255, .12); }
-[data-theme='dark'] .sd-journey-hero__visual { border-inline-start-color: rgba(159, 122, 254, .16); }
-.sd-journey-hero__visual .sd-hero-viz { block-size: 100%; justify-content: center; align-content: center; }
+.sd-journey-hero__visual { position: relative; display: grid; place-items: center; min-inline-size: 0; block-size: 100%; padding: 0; padding-inline-start: clamp(16px, 2vw, 30px); }
+/* Radial depth behind the angle — dark, brightest right behind the vertex. */
+.sd-journey-hero__visual::before { content: ''; position: absolute; inset: 4% 0; z-index: 0; pointer-events: none; background: radial-gradient(48% 52% at 50% 58%, rgba(111, 91, 255, .12), transparent 70%); }
+.sd-journey-hero__visual .sd-hero-viz { position: relative; z-index: 1; block-size: 100%; justify-content: center; align-content: center; }
 
 /* ── Interactive hero visual — frameless, fills the whole column ─────────── */
 .sd-hero-viz { position: relative; inline-size: 100%; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; justify-items: center; }
 /* Fill the column width (aspect preserved via block-size:auto); the SVG grows
    with the column and the column stretches to the hero's full height. */
-.sd-hero-viz > svg { inline-size: 100%; max-inline-size: 470px; block-size: auto; display: block; overflow: visible; touch-action: none; }
+.sd-hero-viz > svg { inline-size: 100%; max-inline-size: 580px; block-size: auto; display: block; overflow: visible; touch-action: none; }
 /* Helper text, not an action: plain and muted, no chip or button look. */
 .sd-hero-viz__hint { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 0; padding: 0; border: 0; background: none; color: var(--sp-ink-400); font-size: var(--sp-fs-xs); font-weight: 500; text-align: center; }
 .sd-hero-viz__hint .sp-icon { flex: none; color: var(--sp-primary-500); opacity: .8; }
 [data-theme='dark'] .sd-hero-viz__hint .sp-icon { color: #b9a5ff; }
 .sd-viz-grid { stroke: rgba(111, 91, 255, .08); stroke-width: 1; }
-.sd-viz-ray { stroke: rgba(84, 70, 160, .45); stroke-width: 7; stroke-linecap: round; }
-.sd-viz-vertex { fill: #4a3f8f; }
+/* Perspective floor — faint receding lines, fading out toward the edges so it
+   reads as depth under the angle, not a chart grid. */
+.sd-viz-floor { stroke: rgba(111, 91, 255, .1); stroke-width: 1; }
+.sd-viz-floor line { mask-image: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent); }
+.sd-viz-ray { stroke: rgba(84, 70, 160, .5); stroke-width: 7.5; stroke-linecap: round; }
+.sd-viz-vertex { fill: #4a3f8f; filter: drop-shadow(0 0 6px rgba(111, 91, 255, .5)); }
 .sd-viz-handle { cursor: grab; outline: none; }
 .sd-viz-handle:active { cursor: grabbing; }
 .sd-viz-handle:focus-visible .sd-viz-handle__dot,
@@ -225,7 +253,7 @@
 .sd-viz-handle__dot { filter: drop-shadow(0 6px 14px rgba(46, 33, 110, .35)); transition: r .15s var(--sp-ease); }
 .sd-viz-handle:hover .sd-viz-handle__dot { r: 14; }
 .sd-viz-readout { pointer-events: none; }
-.sd-viz-readout__value { font: 800 38px/1 var(--sp-font); fill: #342e68; }
+.sd-viz-readout__value { font: 800 42px/1 var(--sp-font); fill: #342e68; }
 .sd-viz-readout__label { font: 750 15px/1 var(--sp-font); }
 .sd-viz-plate { fill: rgba(111, 91, 255, .06); stroke: rgba(111, 91, 255, .16); stroke-width: 1.5; }
 .sd-viz-slice { fill: rgba(111, 91, 255, .1); stroke: #fff; stroke-width: 2.5; cursor: pointer; transition: fill .18s var(--sp-ease), transform .18s var(--sp-ease); transform-box: fill-box; transform-origin: center; outline: none; }
@@ -240,8 +268,9 @@
 .sd-viz-star__core { fill: #6f5bff; }
 .sd-viz-comet { fill: #4cc9f0; filter: drop-shadow(0 4px 12px rgba(35, 150, 200, .5)); }
 [data-theme='dark'] .sd-viz-grid { stroke: rgba(150, 170, 240, .07); }
-[data-theme='dark'] .sd-viz-ray { stroke: rgba(216, 209, 255, .4); }
-[data-theme='dark'] .sd-viz-vertex { fill: #d8d1ff; }
+[data-theme='dark'] .sd-viz-floor { stroke: rgba(150, 170, 240, .12); }
+[data-theme='dark'] .sd-viz-ray { stroke: rgba(216, 209, 255, .45); }
+[data-theme='dark'] .sd-viz-vertex { fill: #eae6ff; filter: drop-shadow(0 0 8px rgba(146, 112, 250, .6)); }
 [data-theme='dark'] .sd-viz-readout__value { fill: #f1efff; }
 [data-theme='dark'] .sd-viz-slice { stroke: #1c2044; }
 [data-theme='dark'] .sd-viz-plate { fill: rgba(159, 122, 254, .09); stroke: rgba(159, 122, 254, .25); }
@@ -260,8 +289,8 @@
 [data-theme='dark'] .sd-journey-hero__welcome, [data-theme='dark'] .sd-journey-hero__reason { color: var(--sp-ink-400); }
 [data-theme='dark'] .sd-button--quiet { border-color: rgba(159,122,254,.4); background: rgba(255,255,255,.04); color: #d8d1ff; }
 [data-theme='dark'] .sd-journey-hero__stats span:not(.sd-journey-hero__stats-sep) { color: #cfd2ee; }
-[data-theme='dark'] .sd-journey-hero__tip { border-color: var(--sdd-card-border); background: rgba(255, 255, 255, .03); box-shadow: none; }
-[data-theme='dark'] .sd-journey-hero__tip strong { color: #f0c264; }
+[data-theme='dark'] .sd-journey-hero__tip { border-color: rgba(198, 180, 255, .22); background: rgba(255, 255, 255, .07); box-shadow: none; }
+[data-theme='dark'] .sd-journey-hero__tip strong { color: #ffce6b; }
 
 .sd-section { margin-block-start: clamp(42px, 6vw, 72px); }
 
@@ -318,11 +347,16 @@
 .sd-lessons { --sd-lesson: var(--sp-primary-600); }
 .sd-lessons__carousel { position: relative; }
 
+/* Region head reads as one unit: title + intro + secondary action on the same
+   row, filters tucked just beneath, and the cards pulled up close. */
+.sd-lessons .sd-section__heading { align-items: center; margin-block-end: 12px; }
+.sd-lessons .sd-section__heading .sd-text-action { align-self: center; }
+
 .sd-lesson-track {
   display: flex;
   gap: 22px;
   margin: 0;
-  padding: 6px 4px 10px;
+  padding: 12px 4px 8px;
   list-style: none;
   overflow-x: auto;
   scroll-snap-type: inline mandatory;
@@ -366,21 +400,21 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 14px;
-  /* Narrower cards — three per view inside the main column (gap = 18px). */
-  flex: 0 0 clamp(228px, calc(33.333% - 12px), 320px);
+  gap: 16px;
+  /* Narrower, taller "balloon" cards — more per view, softer rounded frame. */
+  flex: 0 0 clamp(196px, calc(25% - 17px), 246px);
   padding: 18px;
   overflow: hidden;
   scroll-snap-align: start;
   border: 1px solid var(--sp-border);
-  border-radius: 22px;
+  border-radius: 28px;
   background: #fff;
   box-shadow: var(--sp-shadow-sm);
   transition: transform .34s cubic-bezier(.22, 1, .36, 1), box-shadow .34s ease, border-color .34s ease;
   will-change: transform;
 }
 /* Subject tabs above the carousel — math / science are never interleaved. */
-.sd-lessons__filters { display: flex; flex-wrap: wrap; gap: 8px; margin-block-end: 14px; }
+.sd-lessons__filters { display: flex; flex-wrap: wrap; gap: 8px; margin-block-end: 4px; }
 .sd-lessons__filter {
   padding: 6px 13px;
   border: 1px solid var(--sp-border);
@@ -407,6 +441,74 @@
 /* Cards stay in place on hover — shadow only, no lift. */
 .sd-lesson-card:hover { box-shadow: var(--sp-shadow-md); }
 
+/* ── Primary lesson: the system's main recommendation ───────────────────── */
+/* Not just "selected" — lifted, slightly larger, ringed and glowing so it
+   reads at a glance as "continue here". */
+.sd-lesson-card.is-primary {
+  flex-basis: clamp(214px, calc(27% - 17px), 268px);
+  margin-block-start: -6px;
+  border-color: color-mix(in srgb, var(--sd-lesson), transparent 52%);
+  box-shadow:
+    0 14px 28px -22px color-mix(in srgb, var(--sd-lesson), transparent 46%),
+    0 0 0 1px color-mix(in srgb, var(--sd-lesson), transparent 68%) inset;
+}
+.sd-lesson-card.is-primary:hover { box-shadow: 0 18px 34px -22px color-mix(in srgb, var(--sd-lesson), transparent 40%), 0 0 0 1px color-mix(in srgb, var(--sd-lesson), transparent 62%) inset; }
+.sd-lesson-card.is-primary .sd-lesson-card__media > svg { inline-size: 104px; block-size: 104px; }
+.sd-lesson-card.is-primary .sd-lesson-card__cta {
+  background: var(--sd-lesson);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 10px 22px -10px color-mix(in srgb, var(--sd-lesson), transparent 30%);
+}
+.sd-lesson-card.is-primary .sd-lesson-card__cta:hover { background: color-mix(in srgb, var(--sd-lesson), black 8%); }
+
+/* Actions mirror lesson state, not four identical buttons.
+   notStarted → quiet outline (base style) · completed → a small, light link. */
+.sd-lesson-card__cta--completed {
+  align-self: center;
+  padding: 7px 16px;
+  border-color: transparent;
+  color: var(--sp-ink-400);
+  font-size: var(--sp-fs-xs);
+}
+.sd-lesson-card__cta--completed:hover { background: var(--sp-bg-subtle); color: var(--sd-lesson); transform: none; }
+
+/* "ממשיכים מכאן" ribbon — an overlay pill so it labels the card without
+   pushing the media/title down (keeps rows aligned with the other cards). */
+.sd-lesson-card__ribbon {
+  position: absolute;
+  inset-block-start: 14px;
+  inset-inline-start: 16px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: var(--sp-radius-pill);
+  background: var(--sd-lesson);
+  color: #fff;
+  font: 800 11px/1 var(--sp-font);
+  letter-spacing: .01em;
+  box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--sd-lesson), transparent 30%);
+}
+[dir="rtl"] .sd-lesson-card__ribbon .sp-icon { transform: scaleX(-1); }
+/* Ribbon already signals the status, so the corner badge is redundant here. */
+.sd-lesson-card.is-primary .sd-lesson-card__badge { display: none; }
+
+/* Step + time-left chips — the useful "why continue" detail. */
+.sd-lesson-card__meta { display: flex; flex-wrap: wrap; gap: 8px; margin-block-start: 2px; }
+.sd-lesson-card__meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--sp-radius-pill);
+  background: var(--sd-lesson-soft);
+  color: var(--sd-lesson);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 /* Entry stagger — keyframe (not a transition) so the per-card delay only
    applies on load and never slows the hover lift. */
 .sd-lesson-track .sd-lesson-card { opacity: 0; translate: 0 18px; }
@@ -426,14 +528,18 @@
   place-items: center;
   flex: none;
   inline-size: 100%;
-  block-size: 96px;
+  block-size: 168px;
   overflow: visible;
-  border-radius: 16px;
+  border-radius: 20px;
   background:
     radial-gradient(120% 130% at 78% 12%, color-mix(in srgb, var(--sd-lesson), transparent 68%), transparent 62%),
     linear-gradient(160deg, var(--sd-lesson-soft), color-mix(in srgb, var(--sd-lesson-soft), #fff 55%));
 }
-.sd-lesson-card__media > svg { inline-size: 68px; block-size: 68px; }
+.sd-lesson-card__media > svg {
+  inline-size: 90px;
+  block-size: 90px;
+  filter: drop-shadow(0 6px 14px color-mix(in srgb, var(--sd-lesson), transparent 66%));
+}
 .sd-lesson-card__badge {
   position: absolute;
   inset-block-start: -5px;
@@ -488,6 +594,8 @@
 .sd-lesson-card__bar span { display: block; block-size: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--sd-lesson), color-mix(in srgb, var(--sd-lesson), white 30%)); transition: inline-size 1s cubic-bezier(.22, 1, .36, 1); transition-delay: calc(var(--sd-lesson-index) * 90ms + 220ms); }
 .sd-lesson-card__steps { color: var(--sp-ink-400); font-size: var(--sp-fs-xs); font-weight: 600; }
 .sd-lesson-card__steps strong { color: var(--sd-lesson); font-weight: 800; }
+.sd-lesson-card__steps--active { color: var(--sd-lesson); font-weight: 700; }
+.sd-lesson-card__steps--completed { color: var(--sp-success-600); font-weight: 700; }
 
 .sd-lesson-card__cta {
   display: inline-flex;
@@ -560,7 +668,7 @@
    local — a transparent radial spotlight behind it that fades to nothing. */
 [data-theme='dark'] .sd-lesson-card__media {
   position: relative;
-  block-size: 122px;
+  block-size: 150px;
   background: none;
   border-radius: 0;
   overflow: visible;
@@ -569,15 +677,15 @@
 [data-theme='dark'] .sd-lesson-card__media::before {
   content: '';
   position: absolute;
-  inline-size: 176px;
-  block-size: 176px;
+  inline-size: 208px;
+  block-size: 208px;
   border-radius: 50%;
   background: radial-gradient(circle,
-    color-mix(in srgb, var(--sd-lesson), transparent 78%) 0%,
-    color-mix(in srgb, var(--sd-lesson), transparent 90%) 32%,
-    transparent 68%);
-  filter: blur(9px);
-  opacity: .42;
+    color-mix(in srgb, var(--sd-lesson), transparent 72%) 0%,
+    color-mix(in srgb, var(--sd-lesson), transparent 86%) 32%,
+    transparent 70%);
+  filter: blur(10px);
+  opacity: .5;
   z-index: 0;
   pointer-events: none;
 }
@@ -598,9 +706,9 @@
 [data-theme='dark'] .sd-lesson-card__media > svg {
   position: relative;
   z-index: 1;
-  inline-size: 96px;
-  block-size: 96px;
-  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--sd-lesson), transparent 62%));
+  inline-size: 126px;
+  block-size: 126px;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--sd-lesson), transparent 56%));
 }
 [data-theme='dark'] .sd-lesson-card__badge { display: none; }
 
@@ -624,6 +732,8 @@
 [data-theme='dark'] .sd-lesson-card__bar span { background: linear-gradient(90deg, #8b7aff, #6fb0ff); }
 [data-theme='dark'] .sd-lesson-card__steps { color: rgba(203, 206, 235, .5); }
 [data-theme='dark'] .sd-lesson-card__steps strong { color: rgba(232, 233, 255, .85); font-weight: 700; }
+[data-theme='dark'] .sd-lesson-card__steps--active { color: color-mix(in srgb, var(--sd-lesson), white 22%); font-weight: 700; }
+[data-theme='dark'] .sd-lesson-card__steps--completed { color: #57d3a0; font-weight: 700; }
 
 /* Secondary CTA — a subtle accent LED outline in the card's own colour. */
 [data-theme='dark'] .sd-lesson-card__cta {
@@ -637,12 +747,17 @@
   background: color-mix(in srgb, var(--sd-lesson), transparent 90%);
   box-shadow: 0 0 10px color-mix(in srgb, var(--sd-lesson), transparent 72%), inset 0 0 6px color-mix(in srgb, var(--sd-lesson), transparent 84%);
 }
+/* Completed action stays a quiet, small link — no LED outline. */
+[data-theme='dark'] .sd-lesson-card__cta--completed { border-color: transparent; box-shadow: none; color: rgba(203, 206, 235, .66); }
+[data-theme='dark'] .sd-lesson-card__cta--completed:hover { border-color: transparent; background: rgba(255, 255, 255, .06); box-shadow: none; color: color-mix(in srgb, var(--sd-lesson), white 22%); }
 
 /* The one relevant lesson: subtle purple ring, soft glow, full primary CTA. */
 [data-theme='dark'] .sd-lesson-card.is-primary {
-  border-color: rgba(198, 186, 255, .95);
+  border-color: rgba(198, 186, 255, .58);
   background: linear-gradient(180deg, #272249 0%, #1c1a3b 100%);
-  box-shadow: 0 0 6px rgba(174, 152, 255, .75), inset 0 0 5px rgba(174, 152, 255, .35);
+  box-shadow:
+    0 14px 30px -22px rgba(126, 92, 255, .5),
+    inset 0 0 0 1px rgba(198, 186, 255, .32);
 }
 [data-theme='dark'] .sd-lesson-card.is-primary .sd-lesson-card__cta {
   border-color: transparent;
@@ -653,7 +768,8 @@
 [data-theme='dark'] .sd-lesson-card.is-primary .sd-lesson-card__cta:hover { background: linear-gradient(135deg, #8977ff 0%, #a888ff 58%, #ceb4ff 128%); }
 
 /* The one relevant lesson lights its stage a touch brighter, too. */
-[data-theme='dark'] .sd-lesson-card.is-primary .sd-lesson-card__media::before { opacity: .45; }
+[data-theme='dark'] .sd-lesson-card.is-primary .sd-lesson-card__media::before { opacity: .42; }
+[data-theme='dark'] .sd-lesson-card.is-primary .sd-lesson-card__media > svg { inline-size: 148px; block-size: 148px; }
 [data-theme='dark'] .sd-carousel-nav { border-color: rgba(159, 122, 254, .2); background: #1b2048; color: var(--sp-ink-200, #cfd3f5); }
 
 

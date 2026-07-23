@@ -874,25 +874,37 @@
    behind the content column. The unified dark card tokens live here so every
    panel on the page speaks the landing's surface language. */
 [data-theme='dark'] .sd-page {
-  --sdd-card-bg: linear-gradient(180deg, #221f40 0%, #191830 100%);
-  --sdd-card-border: rgba(255, 255, 255, .09);
-  --sdd-card-border-strong: rgba(255, 255, 255, .14);
-  --sdd-card-shadow: 0 20px 48px rgba(0, 0, 0, .3), inset 0 1px rgba(255, 255, 255, .06);
-  --sdd-card-radius: 24px;
+  /* Cards lifted to a warm twilight violet so panels read as clearly separated,
+     friendly surfaces — not near-black cutouts. Visible warm borders and a soft
+     shadow with an inner top highlight give a gentle, un-sunken depth. */
+  --sdd-card-bg: linear-gradient(180deg, #362c60 0%, #2b2450 100%);
+  --sdd-card-border: rgba(188, 168, 255, .18);
+  --sdd-card-border-strong: rgba(200, 182, 255, .28);
+  --sdd-card-shadow: 0 18px 44px rgba(24, 12, 52, .34), inset 0 1px rgba(255, 255, 255, .09);
+  --sdd-card-radius: 26px;
+
+  /* Warm shared surfaces, scoped to the dashboard only so chips, bars, markers
+     and nav match the lifted twilight without leaking into other dark screens. */
+  --sp-surface: #2f2758;
+  --sp-surface-2: #3a3169;
+  --sp-border: #453b73;
+  --sp-border-strong: #574b8a;
+  --sp-bg-subtle: #251e4a;
 
   position: relative;
   isolation: isolate;
-  background-color: #0f0b24;
-  /* Depth without clutter: a wide purple-blue halo crowning the Hero, a very
-     faint cyan pool on the opposite side by the lessons band, and a weak violet
-     glow low on the page to break the vertical sameness. Large, transparent
-     radials only — the centre column stays dark so cards and text stay clear. */
+  background-color: #221a45;
+  /* Warm playful twilight: a broad violet dawn crowning the Hero, a soft coral
+     glow warming the upper-right, a gentle cyan pool for depth on the lessons
+     band, and a low violet wash to break the vertical sameness. Large, very
+     transparent radials only — the centre column stays calm so text stays clear. */
   background-image:
-    radial-gradient(1300px 720px at 50% -4%, rgba(139, 108, 255, .24), transparent 60%),
-    radial-gradient(820px 560px at 6% 4%, rgba(104, 118, 245, .13), transparent 58%),
-    radial-gradient(760px 540px at 97% 30%, rgba(76, 201, 240, .07), transparent 60%),
-    radial-gradient(1080px 640px at 26% 97%, rgba(129, 100, 235, .13), transparent 62%),
-    linear-gradient(180deg, #141031 0%, #0f0b24 58%, #0b0819 100%);
+    radial-gradient(1300px 720px at 50% -4%, rgba(160, 126, 255, .30), transparent 60%),
+    radial-gradient(900px 620px at 92% 6%, rgba(255, 148, 120, .12), transparent 58%),
+    radial-gradient(820px 560px at 6% 8%, rgba(126, 138, 255, .16), transparent 58%),
+    radial-gradient(760px 540px at 97% 34%, rgba(96, 214, 245, .09), transparent 60%),
+    radial-gradient(1080px 640px at 26% 97%, rgba(158, 124, 250, .16), transparent 62%),
+    linear-gradient(180deg, #2a2052 0%, #221a45 56%, #1b1539 100%);
 }
 
 /* One thin decorative arc crowning the Hero — the same soft-line language as the
@@ -949,32 +961,11 @@
   box-shadow: none;
 }
 
-/* Whisper-faint grid, only behind the visual side — texture, not decoration. */
-[data-theme='dark'] .sd-journey-hero::before {
-  inset: 0;
-  inline-size: auto;
-  block-size: auto;
-  border: 0;
-  border-radius: 0;
-  background:
-    linear-gradient(rgba(150, 170, 240, .028) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(150, 170, 240, .028) 1px, transparent 1px);
-  background-size: 46px 46px;
-  mask-image: linear-gradient(90deg, transparent, #000 42%, transparent 94%);
-}
-
-/* One soft violet halo centred on the visual — no hard ring, no strong bloom. */
+/* One continuous wash — no separate dark block behind the text. Brightest near
+   the angle, fading to a soft tail on the text side, all on one surface. */
+[data-theme='dark'] .sd-journey-hero::before,
 [data-theme='dark'] .sd-journey-hero::after {
-  inline-size: 460px;
-  block-size: 460px;
-  inset-block-start: 50%;
-  inset-block-end: auto;
-  inset-inline-end: 6%;
-  transform: translateY(-50%);
-  border: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(146, 112, 250, .11), transparent 68%);
-  box-shadow: none;
+  display: none;
 }
 
 [data-theme='dark'] .sd-journey-hero__glow {
@@ -994,23 +985,40 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 18px 38px rgba(126, 92, 255, .5);
 }
 [data-theme='dark'] .sd-journey-hero .sd-button--primary {
-  min-block-size: 50px;
-  padding-inline: 28px;
+  min-block-size: 54px;
+  padding-inline: 34px;
+  font-size: var(--sp-fs-md);
+  background:
+    radial-gradient(120% 160% at 50% -30%, rgba(255, 255, 255, .32), transparent 60%),
+    linear-gradient(135deg, #7d6bff 0%, #9f7cff 58%, #c3a7ff 128%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 16px 38px rgba(126, 92, 255, .48);
+}
+[data-theme='dark'] .sd-journey-hero .sd-button--primary:hover:not(:disabled) {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55), 0 22px 50px rgba(126, 92, 255, .6);
 }
 
 /* The angle is the panel's visual anchor: give it a touch more room, a slightly
    softer divider, fainter grid lines and a bolder central readout. */
 [data-theme='dark'] .sd-journey-hero__visual { border-inline-start-color: var(--sdd-card-border); }
-[data-theme='dark'] .sd-journey-hero__visual .sd-hero-viz > svg { max-inline-size: 540px; }
-[data-theme='dark'] .sd-viz-readout__value { font-size: 46px; }
+[data-theme='dark'] .sd-journey-hero__visual .sd-hero-viz > svg { max-inline-size: 640px; }
+[data-theme='dark'] .sd-viz-readout__value { font-size: 50px; filter: drop-shadow(0 2px 10px rgba(146, 112, 250, .45)); }
+
+/* Tip becomes a quiet supporting status pill — dark, faint border, well below
+   the CTA in weight so it never competes with the primary action. */
+[data-theme='dark'] .sd-journey-hero__tip {
+  border-color: rgba(198, 180, 255, .22);
+  background: rgba(255, 255, 255, .07);
+  color: rgba(226, 224, 250, .82);
+}
+[data-theme='dark'] .sd-journey-hero__tip strong { color: #ffce6b; }
 
 [data-theme='dark'] .sd-journey-hero__eyebrow {
   inline-size: fit-content;
   padding: 7px 11px;
-  border: 1px solid rgba(117, 230, 251, .2);
+  border: 1px solid rgba(130, 234, 253, .28);
   border-radius: var(--sp-radius-pill);
-  background: rgba(8, 30, 56, .52);
-  color: #bff5ff;
+  background: rgba(38, 74, 104, .5);
+  color: #d3f8ff;
 }
 
 [data-theme='dark'] .sd-journey-hero__meta .sp-pill {
