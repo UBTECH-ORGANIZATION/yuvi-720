@@ -294,12 +294,14 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             go.AddComponent<MeshFilter>().sharedMesh = sheet;
             var mr = go.AddComponent<MeshRenderer>();
             mr.sharedMaterial = GroundingAssetWriter.GetWaterMaterial("MAT_YW_Dressing_River",
-                new Color(0.07f, 0.34f, 0.44f), new Color(0.34f, 0.72f, 0.74f), new Color(0.92f, 0.97f, 0.99f),
-                waveAmp: 0.045f, waveLen: 4f, foamAmount: 0.16f, ripple: 0f,
-                // A shallow stream is nearly all shallow-water colour and takes far less sky than open sea;
-                // the shore terms are tightened so the whole ribbon does not turn into foam.
-                choppy: 0.35f, detail: 0.5f, reflectivity: 0.7f, scatter: 0.5f,
-                shoreFade: 0.9f, shoreFoam: 0.22f, glossiness: 0.88f);
+                new Color(0.06f, 0.26f, 0.32f), new Color(0.30f, 0.62f, 0.62f), new Color(0.92f, 0.97f, 0.99f),
+                waveAmp: 0.05f, waveLen: 3.2f, foamAmount: 0.16f, ripple: 0f,
+                // A stream carries no swell, so ALL of its life has to come from micro-relief. Left flat it
+                // behaves like a mirror and smears the sun into one big white blob, because the half-vector
+                // barely changes across a flat plane. Gloss is dropped for the same reason: a broad, soft
+                // sheen instead of one hard lobe.
+                choppy: 0.5f, detail: 1.4f, reflectivity: 0.85f, scatter: 0.5f,
+                shoreFade: 0.9f, shoreFoam: 0.22f, glossiness: 0.6f);
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             go.AddComponent<WaterTimeDriver>();
         }
