@@ -185,11 +185,16 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
 
         /// <summary>
         /// Animated water material (Yuvi/Water shader). waveAmp/waveLen drive the open ocean; set
-        /// ripple &gt; 0 for the small radial fountain ripples. Falls back to a solid material if the
+        /// ripple &gt; 0 for the small radial fountain ripples. The optional tail controls the
+        /// stylised-realism terms — crest choppiness, micro-chop normals, Fresnel sky reflection,
+        /// subsurface scatter and the depth-driven shoreline. Defaults are tuned for open sea; small
+        /// enclosed pools want a much lower detail/shore setting. Falls back to a solid material if the
         /// shader is missing so builds never break.
         /// </summary>
         public static Material GetWaterMaterial(string assetName, Color deep, Color shallow, Color foam,
-            float waveAmp, float waveLen, float foamAmount, float ripple)
+            float waveAmp, float waveLen, float foamAmount, float ripple,
+            float choppy = 1f, float detail = 1f, float reflectivity = 1f, float scatter = 1f,
+            float shoreFade = 3f, float shoreFoam = 1.1f, float glossiness = 0.92f, float puddle = 0f)
         {
             EnsureOutputFolders();
             var path = $"{MaterialFolder}/{Sanitize(assetName)}.mat";
@@ -209,9 +214,30 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             material.SetFloat("_WaveLen", waveLen);
             material.SetFloat("_FoamAmount", foamAmount);
             material.SetFloat("_RippleStrength", ripple);
+            material.SetFloat("_Choppy", choppy);
+            material.SetFloat("_DetailStrength", detail);
+            material.SetFloat("_Reflectivity", reflectivity);
+            material.SetFloat("_Scatter", scatter);
+            material.SetFloat("_ShoreFade", shoreFade);
+            material.SetFloat("_ShoreFoam", shoreFoam);
+            material.SetFloat("_Glossiness", glossiness);
+            // Every property has to be written on EVERY call, never left to the shader default. Material
+            // assets are reused across builds and keep whatever value was serialised into them, so a
+            // property that is only defaulted in the shader silently keeps its old value forever — which is
+            // exactly how a leftover "puddle" mask ended up painting foam blobs across the open sea.
+            material.SetFloat("_PuddleAmount", puddle);
+            // The reflected sky is reconstructed in-shader, so it has to be handed the same colours the
+            // procedural skybox uses — otherwise the sea mirrors a sky that is not the one overhead.
+            material.SetColor("_SkyZenith", SkyZenith);
+            material.SetColor("_SkyHorizon", SkyHorizon);
             EditorUtility.SetDirty(material);
             return material;
         }
+
+        /// Kept in sync with BuildSkyMaterial()/RenderSettings.fogColor in ArrivalProductionBuilder.
+        public static readonly Color SkyZenith = new Color(0.22f, 0.42f, 0.78f);
+        public static readonly Color SkyHorizon = new Color(0.58f, 0.72f, 0.86f);
+
 
         private static Shader ResolveGroundShader()
         {

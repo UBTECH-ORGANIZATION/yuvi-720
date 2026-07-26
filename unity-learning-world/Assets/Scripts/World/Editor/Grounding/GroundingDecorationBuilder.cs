@@ -90,7 +90,12 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             get
             {
                 var m = GroundingAssetWriter.GetWaterMaterial("MAT_YW_Dressing_FountainWater",
-                    RGB(0x2C8FA6), RGB(0x6FC7D6), RGB(0xEAF8FA), 0.02f, 2.0f, 0.10f, 0.24f);
+                    RGB(0x2C8FA6), RGB(0x6FC7D6), RGB(0xEAF8FA),
+                    waveAmp: 0.02f, waveLen: 2.0f, foamAmount: 0.10f, ripple: 0.24f,
+                    // A basin is a mirror, not a sea: no chop, barely any micro-detail, and a shore band
+                    // narrow enough that it only kisses the stonework instead of foaming the whole pool.
+                    choppy: 0.2f, detail: 0.3f, reflectivity: 0.85f, scatter: 0.35f,
+                    shoreFade: 0.4f, shoreFoam: 0.1f, glossiness: 0.9f);
                 if (m.HasProperty("_PuddleAmount")) m.SetFloat("_PuddleAmount", 0f);
                 return m;
             }
