@@ -80,6 +80,9 @@ async def report_agency_answered(
     response: str,
     score_raw: Optional[float] = None,
     phase: str = "pre",
+    *,
+    question_id: Optional[str] = None,
+    answer_id: Optional[str] = None,
 ) -> None:
     await _report(
         statements.agency_answered,
@@ -89,6 +92,8 @@ async def report_agency_answered(
         response,
         score_raw=score_raw,
         phase=phase,
+        question_id=question_id,
+        answer_id=answer_id,
     )
 
 
