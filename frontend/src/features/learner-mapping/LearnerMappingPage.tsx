@@ -6,7 +6,7 @@ import { useI18n } from '../../i18n/I18nProvider'
 import { useAuth } from '../../providers/AuthProvider'
 import { useResponsive } from '../../hooks/useResponsive'
 import { apiGet, apiPatch, apiPost } from '../../services/api'
-import type { ChatMessage, QuestionLocation, Questionnaire, QuestionnaireOptionQuestion } from './types'
+import type { ChatMessage, LearnerGender, QuestionLocation, Questionnaire, QuestionnaireOptionQuestion } from './types'
 import { YuviRobot3D, Yuvi_INTRO_READY_DELAY_MS } from './YuviRobot3D'
 import { PHASE_REWARDS, getAsset } from '../Yuvi-studio/YuviAssets'
 import { useStudioTransition } from '../Yuvi-studio/StudioTransitionProvider'
@@ -81,6 +81,13 @@ export function LearnerMappingPage() {
   const [transitionYuvi, setTransitionYuvi] = useState<{ style: CSSProperties } | null>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<Answers>({})
+  // Gender drives the official male/female phrasing (defaults to male, with an
+  // optional toggle on the intro screen); persisted to MongoDB-backed state.
+  const [gender, setGender] = useState<LearnerGender>('male')
+  const genderRef = useRef<LearnerGender>('male')
+  // Bumped by the intro gender toggle to force a silent questionnaire refetch
+  // in the requested gender without resetting the learner's place.
+  const [genderReloadTick, setGenderReloadTick] = useState(0)
   const [lastSectionContext, setLastSectionContext] = useState('')
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
   const [reflectQuestions, setReflectQuestions] = useState<ReflectQuestion[]>([])
@@ -97,6 +104,8 @@ export function LearnerMappingPage() {
   const [booting, setBooting] = useState(true)
   // Phase reward: the asset just unlocked by completing a section (toast).
   const [rewardAssetId, setRewardAssetId] = useState<string | null>(null)
+  // Compliance reminder when a submit is attempted with unanswered questions.
+  const [showIncompleteReminder, setShowIncompleteReminder] = useState(false)
   // Already-earned unlocks, loaded once so a reward isn't re-announced on resume.
   const unlockedRef = useRef<Set<string>>(new Set())
   const chatSequenceRunRef = useRef(0)
@@ -148,7 +157,12 @@ export function LearnerMappingPage() {
     void (async () => {
       let nextQuestionnaire: Questionnaire | null = null
       try {
-        nextQuestionnaire = await apiGet<Questionnaire>(`/api/questionnaire?lang=${encodeURIComponent(language)}`)
+        // First load: let the backend resolve the learner's stored gender.
+        // Later loads (a gender toggle) pass the explicit choice.
+        const genderQuery = isFirstLoad ? '' : `&gender=${encodeURIComponent(genderRef.current)}`
+        nextQuestionnaire = await apiGet<Questionnaire>(
+          `/api/questionnaire?lang=${encodeURIComponent(language)}${genderQuery}`
+        )
       } catch {
         if (!cancelled) {
           setQuestionnaire(null)
@@ -157,6 +171,10 @@ export function LearnerMappingPage() {
         return
       }
       if (cancelled || !nextQuestionnaire) return
+      // Keep the toggle in sync with the phrasing the backend actually served.
+      const servedGender = (nextQuestionnaire.gender as LearnerGender) || 'male'
+      genderRef.current = servedGender
+      setGender(servedGender)
 
       // Subsequent runs (e.g. a language switch) only refresh the localized
       // questionnaire — they must never reset the learner to the intro scene.
@@ -210,7 +228,17 @@ export function LearnerMappingPage() {
     return () => {
       cancelled = true
     }
-  }, [language, isLoading])
+  }, [language, isLoading, genderReloadTick])
+
+  function handleGenderChange(next: LearnerGender) {
+    if (next === genderRef.current) return
+    genderRef.current = next
+    setGender(next)
+    // Persist to backend state (720: no localStorage for learner profile).
+    void apiPatch('/api/learner-state', { gender: next }).catch(() => {})
+    // Trigger a silent refetch of the questionnaire in the chosen phrasing.
+    setGenderReloadTick((tick) => tick + 1)
+  }
 
   function restoreProgress(progress: MappingProgress) {
     setActiveStep(progress.activeStep ?? 1)
@@ -254,7 +282,12 @@ export function LearnerMappingPage() {
   useEffect(() => {
     if (!questionnaire || isLoading || booting) return
     if (skipIntroRef.current) return
-    const messages = [1, 2, 3].map((index) => t(`intro.${index}`, { studentName: displayName }))
+    // Show the exact official intro wording (already gender + language adapted
+    // by the backend): a short greeting bubble then the full explanation.
+    const intro = questionnaire.intro
+    const messages = intro?.description
+      ? [intro.greeting, intro.description].filter(Boolean)
+      : [1, 2, 3].map((index) => t(`intro.${index}`, { studentName: displayName }))
     void playChatSequence(messages, 'intro')
     return () => {
       chatSequenceRunRef.current += 1
@@ -1055,6 +1088,19 @@ export function LearnerMappingPage() {
   }
 
   async function submitQuestionnaire() {
+    // Compliance gate: the questionnaire may not be submitted until every
+    // question is answered. If any are missing, jump the learner to the first
+    // unanswered question and show the official reminder (§ תזכורת לשאלות שלא נענו).
+    const firstMissing = flattened.questions.findIndex((q) => answers[q.id] === undefined)
+    if (firstMissing >= 0) {
+      setShowIncompleteReminder(true)
+      setScreen('question')
+      setChatMode('section')
+      setActiveStep(1)
+      setCurrentIndex(firstMissing)
+      setReflectionPhase('thinking')
+      return
+    }
     // Keep the final reflection scene visible while Yuvi processes the answers;
     // the results route continues the same robot-led transition without an
     // unrelated completion card in between.
@@ -1066,6 +1112,7 @@ export function LearnerMappingPage() {
       const freeTextLines = chatHistory.filter((m) => m.role === 'user').map((m) => m.content)
       await apiPost('/api/submit', {
         student_name: displayName,
+        gender,
         answers,
         language,
         free_text: freeTextLines.join('\n')
@@ -1102,6 +1149,16 @@ export function LearnerMappingPage() {
           />
         )
       })()}
+      {showIncompleteReminder && (
+        <Toast
+          variant="info"
+          icon="!"
+          title={t('mapping.incomplete.title')}
+          body={t(`mapping.incomplete.${gender}`)}
+          onDismiss={() => setShowIncompleteReminder(false)}
+          dismissLabel={t('mapping.incomplete.dismiss')}
+        />
+      )}
       <main className="stage" id="mainContent">
         {booting && (
           <section className="screen active">
@@ -1124,6 +1181,11 @@ export function LearnerMappingPage() {
                 canStart={Boolean(questionnaire)}
                 isHandoff={introHandoff}
                 hideOrbit={Boolean(transitionYuvi)}
+                gender={gender}
+                onGenderChange={handleGenderChange}
+                genderLabel={t('mapping.gender.label')}
+                genderMaleLabel={t('mapping.gender.male')}
+                genderFemaleLabel={t('mapping.gender.female')}
                 onStart={() => setShowIntegrityDialog(true)}
                 editTooltip={t('YuviStudio.launcher')}
                 onEdit={(el) => (studioTransition ? studioTransition.openStudio(el) : navigate('/yuvi-studio'))}
@@ -1446,7 +1508,8 @@ function YuviFloater({
 
 function IntroNarrative({
   messages, isTyping, startLabel, reassureLabel, durationLabel, trustLabel, robotLabel, lightweight,
-  isSpeakingText, canStart, isHandoff, hideOrbit, onStart, editTooltip, onEdit,
+  isSpeakingText, canStart, isHandoff, hideOrbit, gender, onGenderChange,
+  genderLabel, genderMaleLabel, genderFemaleLabel, onStart, editTooltip, onEdit,
 }: {
   messages: ChatMessage[]
   isTyping: boolean
@@ -1460,6 +1523,11 @@ function IntroNarrative({
   canStart: boolean
   isHandoff: boolean
   hideOrbit: boolean
+  gender: LearnerGender
+  onGenderChange: (next: LearnerGender) => void
+  genderLabel: string
+  genderMaleLabel: string
+  genderFemaleLabel: string
   onStart: () => void
   editTooltip: string
   onEdit: (sourceEl: HTMLElement) => void
@@ -1505,6 +1573,27 @@ function IntroNarrative({
           <div className="intro-reveal">
             <div className="intro-reassure">
               <span>{reassureLabel}</span>
+            </div>
+            <div className="intro-gender" role="group" aria-label={genderLabel}>
+              <span className="intro-gender__label">{genderLabel}</span>
+              <div className="intro-gender__options">
+                <button
+                  type="button"
+                  className={`intro-gender__opt${gender === 'male' ? ' is-active' : ''}`}
+                  aria-pressed={gender === 'male'}
+                  onClick={() => onGenderChange('male')}
+                >
+                  {genderMaleLabel}
+                </button>
+                <button
+                  type="button"
+                  className={`intro-gender__opt${gender === 'female' ? ' is-active' : ''}`}
+                  aria-pressed={gender === 'female'}
+                  onClick={() => onGenderChange('female')}
+                >
+                  {genderFemaleLabel}
+                </button>
+              </div>
             </div>
             <div className="intro-cta">
               <span className="intro-duration">
