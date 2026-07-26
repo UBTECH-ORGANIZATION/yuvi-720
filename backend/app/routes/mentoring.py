@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.auth.dependencies import optional_user, require_learner, require_learner_session
@@ -39,15 +39,16 @@ async def create_mentoring(data: dict, session=Depends(require_learner_session))
             meeting_date=record["date"],
             mentoring_phase=record.get("meeting_stage") or None,
         )
-        if record.get("visibility") == "shared" and record.get("next_steps"):
-            await lrs_reporter.report_student_goal(
-                learner_id,
-                session["sid"],
-                "initialized",
-                record["id"],
-                "academic",
-                instructor_exid=stub_exid if record.get("author") == "teacher" else None,
-            )
+        if record.get("visibility") == "shared":
+            for goal in record.get("goals", []):
+                await lrs_reporter.report_student_goal(
+                    learner_id,
+                    session["sid"],
+                    "initialized",
+                    goal["id"],
+                    "academic",
+                    instructor_exid=stub_exid if record.get("author") == "teacher" else None,
+                )
     return JSONResponse(content=record)
 
 
@@ -56,6 +57,116 @@ async def list_mentoring(role: str = "teacher", learner_id: str = Depends(requir
     """List a learner's mentoring conversations (learner hides teacher-only notes)."""
     rows = await mentoring.list_conversations(learner_id, role)
     return JSONResponse(content={"conversations": rows})
+
+
+@router.post("/mentoring/assist")
+async def mentoring_assist(data: dict, session=Depends(require_learner_session)):
+    """Yuvi (LLM) guided-writing helper: builds a draft + next question/options (F5)."""
+    from app.services import mentoring_assist as assist
+    result = await assist.guide_documentation(
+        session["sub"],
+        language=data.get("language", "he"),
+        qa=data.get("qa"),
+        notes=data.get("notes", ""),
+        feeling=data.get("feeling", ""),
+        more=bool(data.get("more")),
+    )
+    return JSONResponse(content=result)
+
+
+@router.post("/mentoring/recommend-goal")
+async def mentoring_recommend_goal(data: dict, session=Depends(require_learner_session)):
+    """Yuvi suggests ONE goal (within a one-week window) from the documented talk (F5).
+
+    The suggestion is stored for every documented talk (status ``suggested``),
+    whether or not the learner takes it, for future teacher-side surfacing.
+    """
+    from app.services import mentoring_assist as assist
+    rec = await assist.recommend_goal(
+        session["sub"],
+        language=data.get("language", "he"),
+        notes=data.get("notes", ""),
+        feeling=data.get("feeling", ""),
+    )
+    rec["feeling"] = data.get("feeling", "")
+    stored = await mentoring.save_goal_recommendation(session["sub"], rec)
+    return JSONResponse(content={
+        "id": stored["id"],
+        "title": rec["title"],
+        "next_steps": rec["next_steps"],
+        "deadline": rec["deadline"],
+        "rationale": rec.get("rationale", ""),
+        "ai": rec.get("ai", False),
+    })
+
+
+@router.post("/mentoring/recommend-goal/{rec_id}/status")
+async def mentoring_recommend_goal_status(
+    rec_id: str, data: dict, session=Depends(require_learner_session)
+):
+    """Record whether the learner accepted or dismissed Yuvi's goal (kept either way)."""
+    result = await mentoring.update_recommendation_status(session["sub"], rec_id, data.get("status", ""))
+    if result is None:
+        raise HTTPException(status_code=404, detail="Recommendation was not found")
+    return JSONResponse(content=result)
+
+
+@router.post("/mentoring/{conversation_id}/goals/{goal_id}/progress")
+async def update_mentoring_goal_progress(
+    conversation_id: str,
+    goal_id: str,
+    data: dict,
+    session=Depends(require_learner_session),
+):
+    """Advance the progress stage of one goal inside a conversation."""
+    record = await mentoring.update_goal_progress(
+        session["sub"], conversation_id, goal_id, data.get("progress_stage", "")
+    )
+    if record is None:
+        raise HTTPException(status_code=404, detail="Mentoring goal was not found")
+    return JSONResponse(content=record)
+
+
+@router.post("/mentoring/{conversation_id}/goals/{goal_id}/help")
+async def request_mentoring_goal_help(
+    conversation_id: str,
+    goal_id: str,
+    session=Depends(require_learner_session),
+):
+    """Flag a goal as "struggling" to escalate to the teacher later (stored in DB)."""
+    record = await mentoring.request_goal_help(session["sub"], conversation_id, goal_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Mentoring goal was not found")
+    return JSONResponse(content=record)
+
+
+@router.delete("/mentoring/{conversation_id}/goals/{goal_id}")
+async def delete_mentoring_goal(
+    conversation_id: str,
+    goal_id: str,
+    session=Depends(require_learner_session),
+):
+    """Soft-delete one learner-authored goal (teacher-documented goals are protected)."""
+    result = await mentoring.delete_goal(session["sub"], conversation_id, goal_id)
+    if result == "not_found":
+        raise HTTPException(status_code=404, detail="Mentoring goal was not found")
+    if result == "forbidden":
+        raise HTTPException(status_code=403, detail="Only learner-created goals can be deleted")
+    return JSONResponse(content={"ok": True, "id": goal_id})
+
+
+@router.delete("/mentoring/{conversation_id}")
+async def delete_mentoring_conversation(
+    conversation_id: str,
+    session=Depends(require_learner_session),
+):
+    """Soft-delete a whole learner-authored conversation (teacher talks are protected)."""
+    result = await mentoring.delete_conversation(session["sub"], conversation_id)
+    if result == "not_found":
+        raise HTTPException(status_code=404, detail="Mentoring conversation was not found")
+    if result == "forbidden":
+        raise HTTPException(status_code=403, detail="Only learner-created conversations can be deleted")
+    return JSONResponse(content={"ok": True, "id": conversation_id})
 
 
 _FB_FALLBACK = Path(__file__).resolve().parents[2] / ".runtime" / "feedback.json"
