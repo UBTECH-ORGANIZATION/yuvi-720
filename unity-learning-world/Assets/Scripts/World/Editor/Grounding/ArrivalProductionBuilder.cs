@@ -172,6 +172,11 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             foreach (var rig in Object.FindObjectsByType<IsometricCameraRig>(FindObjectsSortMode.None))
                 rig.enabled = false;
 
+            // The water shader reads scene depth to work out the water column thickness, which is what
+            // produces the turquoise shelf and the foam line at the shore. Without this the sea still
+            // renders, it just reads as uniformly deep right up to the sand.
+            cam.depthTextureMode |= DepthTextureMode.Depth;
+
             // Whole-island survey (orthographic). The in-game camera is a zoomed follow rig that never shows
             // this much at once — this framing exists to review the layout, not to represent what a player sees.
             cam.orthographic = true; cam.orthographicSize = 30f;
@@ -189,6 +194,13 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
                 new Vector3(-10f, 1.1f, -2f) - Quaternion.Euler(30f, 45f, 0f) * Vector3.forward * 40f,
                 Quaternion.Euler(30f, 45f, 0f));
             Capture(cam, $"{CaptureFolder}/02-Arrival-Fountain.png", 1760, 1040);
+
+            // Sea study: a low grazing angle across the water toward the island. Water is judged at grazing
+            // incidence — that is where Fresnel hands the surface over to the sky reflection — so a top-down
+            // survey shot tells you almost nothing about whether the ocean is working.
+            cam.orthographic = false; cam.fieldOfView = 46f;
+            cam.transform.SetPositionAndRotation(new Vector3(-58f, 3.2f, -40f), Quaternion.Euler(4.5f, 44f, 0f));
+            Capture(cam, $"{CaptureFolder}/03-Arrival-Sea.png", 1760, 1040);
 
             AssetDatabase.Refresh();
             Debug.Log("✅ Dressed Arrival captures saved.");
@@ -210,8 +222,11 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
         // Large subdivided plane at the waterline running the Yuvi/Water shader (animated waves + foam).
         private static void BuildOceanPlane(Transform parent)
         {
-            const float y = -1.5f, cell = 2f;
-            const float xMin = -72f, xMax = 84f, zMin = -44f, zMax = 74f;
+            // The plane reaches far past the island so the sea meets a real horizon instead of ending in a
+            // visible edge. The cell only has to resolve the metre-scale SWELL — centimetre chop is added
+            // per-pixel by the shader's micro-normals, so there is no point tessellating below ~1.5 m.
+            const float y = -1.5f, cell = 1.25f;
+            const float xMin = -110f, xMax = 125f, zMin = -95f, zMax = 120f;
             var nx = Mathf.RoundToInt((xMax - xMin) / cell);
             var nz = Mathf.RoundToInt((zMax - zMin) / cell);
             var verts = new Vector3[(nx + 1) * (nz + 1)];
@@ -240,9 +255,17 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             go.transform.SetParent(parent, false);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var mr = go.AddComponent<MeshRenderer>();
+            // Real sea water is very dark when you look INTO it and gets its brightness almost entirely from
+            // the reflected sky, so the deep tone has to be genuinely deep — a mid-teal "deep" colour is what
+            // makes stylised water read as poster paint. The turquoise only appears over the shallow shelf,
+            // where _ShoreFade decides how wide that band is.
             mr.sharedMaterial = GroundingAssetWriter.GetWaterMaterial("MAT_YW_Dressing_Ocean",
-                new Color(0.05f, 0.30f, 0.40f), new Color(0.12f, 0.56f, 0.63f), new Color(0.86f, 0.97f, 0.99f),
-                0.17f, 8.5f, 0.12f, 0f);   // cyan, not dark navy
+                new Color(0.014f, 0.088f, 0.135f),   // deep: open water, nearly black-teal
+                new Color(0.16f, 0.62f, 0.63f),      // shallow: turquoise over the sand shelf
+                new Color(0.95f, 0.98f, 0.99f),      // foam
+                waveAmp: 0.20f, waveLen: 11f, foamAmount: 0.34f, ripple: 0f,
+                choppy: 1.05f, detail: 1f, reflectivity: 1f, scatter: 1.1f,
+                shoreFade: 6f, shoreFoam: 2.2f, glossiness: 0.94f);
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             go.AddComponent<WaterTimeDriver>(); // drives continuous wave/fountain animation (edit + play)
         }
@@ -271,8 +294,12 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             go.AddComponent<MeshFilter>().sharedMesh = sheet;
             var mr = go.AddComponent<MeshRenderer>();
             mr.sharedMaterial = GroundingAssetWriter.GetWaterMaterial("MAT_YW_Dressing_River",
-                new Color(0.10f, 0.46f, 0.56f), new Color(0.30f, 0.70f, 0.74f), new Color(0.90f, 0.97f, 0.99f),
-                0.05f, 4f, 0.14f, 0f);   // cyan stream
+                new Color(0.07f, 0.34f, 0.44f), new Color(0.34f, 0.72f, 0.74f), new Color(0.92f, 0.97f, 0.99f),
+                waveAmp: 0.045f, waveLen: 4f, foamAmount: 0.16f, ripple: 0f,
+                // A shallow stream is nearly all shallow-water colour and takes far less sky than open sea;
+                // the shore terms are tightened so the whole ribbon does not turn into foam.
+                choppy: 0.35f, detail: 0.5f, reflectivity: 0.7f, scatter: 0.5f,
+                shoreFade: 0.9f, shoreFoam: 0.22f, glossiness: 0.88f);
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             go.AddComponent<WaterTimeDriver>();
         }
