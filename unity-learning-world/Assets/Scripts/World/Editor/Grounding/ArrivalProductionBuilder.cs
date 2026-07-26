@@ -112,11 +112,14 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             // downloaded) and fades when this section is completed (revealsSectionId → RevealSection).
             var curtainGo = new GameObject("CloudCurtain-East");
             curtainGo.transform.SetParent(dressing, false);
-            curtainGo.transform.SetPositionAndRotation(new Vector3(20f, Plaza - 1f, 0f), Quaternion.Euler(0f, -90f, 0f));
+            curtainGo.transform.SetPositionAndRotation(new Vector3(26f, Plaza - 1f, 0f), Quaternion.Euler(0f, -90f, 0f));
             var curtain = curtainGo.AddComponent<CloudCurtain>();
-            curtain.width = 52f; curtain.height = 18f; curtain.columns = 15; curtain.rows = 6;
-            curtain.puffSize = 4.2f;
-            curtain.cloudColor = new Color(0.93f, 0.94f, 0.97f, 0.72f);
+            // Fewer, bigger, softer puffs set further out: a hazy bank on the horizon rather than a close-up
+            // wall of white balls stacked over the market.
+            curtain.width = 58f; curtain.height = 15f; curtain.columns = 9; curtain.rows = 3;
+            curtain.puffSize = 7.4f;
+            curtain.depthJitter = 3.2f;
+            curtain.cloudColor = new Color(0.95f, 0.965f, 0.99f, 0.5f);
             curtain.revealsSectionId = "archive";
 
             EditorSceneManager.SaveScene(sectionScene, SectionArrivalPath);
@@ -368,12 +371,11 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
                 var x = Mathf.Lerp(-46f, 24f, i / (float)(mtnCount - 1));
                 var shore = NorthShoreZ(x);
                 var far = i % 2 == 0;
-                // Near row stands just off the measured shore — close enough that its stone collar (radius ~5)
-                // still reaches back over the strip of water to the beach, far enough that the collar does not
-                // climb inland across the village. The far row fills the skyline gaps behind it. Columns that
-                // miss the island fall back to its northern extent so the range still closes the horizon.
-                var z = (float.IsNaN(shore) ? 12f : shore) + (far ? 7.5f : 3.5f) + Jit(i * 5 + 1) * 0.8f;
-                var scale = (far ? 1.1f : 0.9f) + 0.2f * Mathf.Abs(Jit(i * 3 + 2));
+                // Near row stands off the measured shore; the far row fills the skyline gaps behind it. Both
+                // rows sit well back — at the old +3.5/+7.5 the range crowded the beach and every peak read at
+                // full size, which is what made the horizon look like a row of cardboard cutouts.
+                var z = (float.IsNaN(shore) ? 12f : shore) + (far ? 22f : 12f) + Jit(i * 5 + 1) * 1.6f;
+                var scale = (far ? 1.7f : 1.25f) + 0.3f * Mathf.Abs(Jit(i * 3 + 2));
                 Place(GroundingDecorationBuilder.CreateMountain($"Mountain-{i}", scale, i * 17 + 3), root, V(x, -2f, z), Jit(i) * 90f, 1f);
             }
 
@@ -852,8 +854,9 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             "Band-broad-valley-plaza-Top", "Band-broad-valley-plaza-Lip",
             "Band-rear-overlook-bluff-Top", "Band-rear-overlook-bluff-Lip",
         };
-        // The island rim + bluff cliffs — recoloured to a dark-brown timber embankment (the "ramp"/edge the
-        // player asked to be wood, not flat tan). The mesh's built-in horizontal AO strata read as stacked boards.
+        // The island rim + bluff cliffs. Skinned as layered SANDSTONE: the mesh's built-in horizontal AO strata
+        // read as sedimentary courses, which is what a real coastal shelf looks like. (The previous dark-timber
+        // skin turned the whole island edge into a flat chocolate-brown wall.)
         private static readonly string[] CliffBands =
         {
             "Band-broad-valley-plaza-Boundary", "Band-rear-overlook-bluff-Boundary",
@@ -871,12 +874,12 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
                 var n = mr.gameObject.name;
                 if (System.Array.IndexOf(CliffBands, n) >= 0) { mr.sharedMaterial = wood; c++; }
             }
-            Debug.Log($"Arrival ground: grass kept flat theme-green; {c} cliffs → dark timber.");
+            Debug.Log($"Arrival ground: grass kept flat theme-green; {c} cliffs → layered sandstone.");
         }
 
-        // Dark-brown timber via the vendored TRIPLANAR shader: planks project onto the vertical cliff faces
-        // correctly instead of the world-XZ smear, so the island rim reads as a solid wooden embankment.
-        private static Material GetArrivalCliffMaterial() => GroundingTextureFactory.WoodTriplanar(new Color(0.42f, 0.29f, 0.17f));
+        // Warm sedimentary rock via the vendored TRIPLANAR shader, so the stone projects onto the vertical
+        // cliff faces correctly instead of smearing top-down.
+        private static Material GetArrivalCliffMaterial() => GroundingTextureFactory.StoneTriplanar(new Color(0.76f, 0.68f, 0.56f));
 
         private static Material GetArrivalGroundMaterial()
         {
@@ -1091,7 +1094,10 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             mat.SetFloat("_SunSizeConvergence", 4f);
             mat.SetFloat("_AtmosphereThickness", 0.85f); // clean, not hazy-hot
             mat.SetColor("_SkyTint", new Color(0.55f, 0.68f, 0.86f));
-            mat.SetColor("_GroundColor", new Color(0.56f, 0.58f, 0.55f));
+            // The isometric camera looks DOWN, so most of the visible backdrop sits below the skybox horizon:
+            // an earthy _GroundColor there paints a flat olive band behind the island. Matching it to the fog
+            // haze turns that band into believable distance instead.
+            mat.SetColor("_GroundColor", new Color(0.74f, 0.82f, 0.89f));
             mat.SetFloat("_Exposure", 1.22f);
             EditorUtility.SetDirty(mat);
             return mat;

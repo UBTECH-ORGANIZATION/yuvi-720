@@ -227,15 +227,17 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             // Stylized shader controls; harmless no-ops on the Standard fallback.
             if (material.HasProperty("_WrapAmount")) material.SetFloat("_WrapAmount", family == "cliff" ? .42f : family == "connector" ? .48f : .58f);
             if (material.HasProperty("_AmbientBoost")) material.SetFloat("_AmbientBoost", family == "water" ? .16f : family == "connector" ? .18f : .12f);
-            if (material.HasProperty("_VColorStrength")) material.SetFloat("_VColorStrength", family == "water" ? 0f : 1f);
+            if (material.HasProperty("_VColorStrength")) material.SetFloat("_VColorStrength", family == "water" ? 0f : .34f);
             if (material.HasProperty("_Glossiness")) material.SetFloat("_Glossiness", .08f);
             if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", 0f);
             // Grass blade detail on the walkable tops only (cliffs / water / connectors stay untextured).
+            // Scale 1.05 puts roughly one blade cluster per metre; at the old .22 the detail was smeared over
+            // 4.5m tiles, so the only thing the eye could see was the mesh triangulation.
             if (material.HasProperty("_MainTex"))
             {
                 var isTop = family != "cliff" && family != "water" && family != "connector";
                 material.SetTexture("_MainTex", isTop ? GroundingTextureFactory.GrassTexture() : null);
-                if (material.HasProperty("_MainTexScale")) material.SetFloat("_MainTexScale", isTop ? .22f : 0f);
+                if (material.HasProperty("_MainTexScale")) material.SetFloat("_MainTexScale", isTop ? 1.05f : 0f);
             }
         }
 

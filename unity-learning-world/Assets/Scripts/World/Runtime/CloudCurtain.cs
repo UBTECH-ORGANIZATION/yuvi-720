@@ -61,6 +61,13 @@ namespace Yuvi720.LearningWorld.World
                 _mat = new Material(Shader.Find("Standard")) { hideFlags = HideFlags.HideAndDontSave };
                 MakeTransparent(_mat);
                 _mat.color = cloudColor;
+                // Fully matte + self-lit. With the default gloss each sphere caught a hard specular hotspot,
+                // so the bank read as a stack of shiny eggs instead of soft vapour; killing the highlight and
+                // lifting the shaded side with emission is what turns the puffs into cloud.
+                if (_mat.HasProperty("_Glossiness")) _mat.SetFloat("_Glossiness", 0f);
+                if (_mat.HasProperty("_Metallic")) _mat.SetFloat("_Metallic", 0f);
+                _mat.EnableKeyword("_EMISSION");
+                _mat.SetColor("_EmissionColor", new Color(cloudColor.r, cloudColor.g, cloudColor.b) * 0.45f);
             }
             for (var r = 0; r < rows; r++)
             for (var c = 0; c < columns; c++)

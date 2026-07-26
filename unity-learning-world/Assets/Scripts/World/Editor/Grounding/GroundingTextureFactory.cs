@@ -31,22 +31,24 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
         public static Material Sand(Color tint) => Mat($"Sand_{Hex(tint)}", tint, 1.3f, .04f, () => SandTex(256), sharedTex: "Sand", bump: 0.7f);
         /// <summary>Banded, mottled rock for the background mountains (planar-UV Standard material).</summary>
         public static Material Stone(Color tint) => Mat($"Stone_{Hex(tint)}", tint, 0.9f, .05f, () => StoneTex(256), sharedTex: "Stone", bump: 1.2f);
-        /// <summary>Rounded cobblestones with dark mortar grooves (seamless), for the plaza paths. Tuned so
-        /// ~7 stones fill each ~4.5m tile. Planar-UV Standard material; tint sets the stone colour.</summary>
-        public static Material CobblePath(Color tint) => Mat($"Cobble_{Hex(tint)}", tint, 0.22f, .12f, () => Cobble(256), sharedTex: "Cobble", bump: 1.8f);
+        /// <summary>Rounded cobblestones with dark mortar grooves (seamless), for the plaza paths. Tiling is
+        /// set so a single stone reads ~18cm across at world scale — at the old 0.22 the "cobbles" were a
+        /// metre wide and the plaza looked like dark camouflage. Planar-UV; tint sets the stone colour.</summary>
+        public static Material CobblePath(Color tint) => Mat($"Cobble_{Hex(tint)}", tint, 0.90f, .12f, () => Cobble(256), sharedTex: "Cobble", bump: 1.8f);
 
         /// <summary>Modern asphalt: fine aggregate with a faint roller sheen. The main road surface.</summary>
-        public static Material Asphalt(Color tint) => Mat($"Asphalt_{Hex(tint)}", tint, 0.30f, .17f, () => AsphaltTex(256), sharedTex: "Asphalt", bump: 0.9f);
-        /// <summary>Large sawn paving slabs with tight joints — plaza aprons, pavements, kerb tops.</summary>
-        public static Material Paving(Color tint) => Mat($"Paving_{Hex(tint)}", tint, 0.34f, .16f, () => PavingTex(256), sharedTex: "Paving", bump: 1.3f);
+        public static Material Asphalt(Color tint) => Mat($"Asphalt_{Hex(tint)}", tint, 1.15f, .17f, () => AsphaltTex(256), sharedTex: "Asphalt", bump: 0.9f);
+        /// <summary>Large sawn paving slabs with tight joints — plaza aprons, pavements, kerb tops. 4×4 slabs
+        /// per tile at 0.62 tiling ≈ 40cm slabs, which is what a real civic plaza reads like.</summary>
+        public static Material Paving(Color tint) => Mat($"Paving_{Hex(tint)}", tint, 0.62f, .16f, () => PavingTex(256), sharedTex: "Paving", bump: 1.3f);
         /// <summary>Barrel clay roof tiles — deep rounded courses, the big upgrade over flat shingles.</summary>
         public static Material ClayRoof(Color tint) => Mat($"ClayTile_{Hex(tint)}", tint, 0.42f, .22f, () => ClayTileTex(256), sharedTex: "ClayTile", bump: 2.0f);
         /// <summary>Fine modern render/stucco — flatter and cleaner than village plaster, for new-build walls.</summary>
         public static Material Stucco(Color tint) => Mat($"Stucco_{Hex(tint)}", tint, 1.2f, .09f, () => StuccoTex(256), sharedTex: "Stucco", bump: 0.6f);
         /// <summary>Poured concrete with faint form lines — plinths, kerbs, fountain structure.</summary>
-        public static Material Concrete(Color tint) => Mat($"Concrete_{Hex(tint)}", tint, 0.55f, .13f, () => ConcreteTex(256), sharedTex: "Concrete", bump: 0.6f);
+        public static Material Concrete(Color tint) => Mat($"Concrete_{Hex(tint)}", tint, 0.90f, .13f, () => ConcreteTex(256), sharedTex: "Concrete", bump: 0.6f);
         /// <summary>Honed masonry blocks — fountain basin, retaining walls, pavilion base.</summary>
-        public static Material Masonry(Color tint) => Mat($"Masonry_{Hex(tint)}", tint, 0.55f, .20f, () => MasonryTex(256), sharedTex: "Masonry", bump: 1.4f);
+        public static Material Masonry(Color tint) => Mat($"Masonry_{Hex(tint)}", tint, 0.85f, .20f, () => MasonryTex(256), sharedTex: "Masonry", bump: 1.4f);
         /// <summary>Rock for the mountains via the vendored TRIPLANAR shader — projects the stone texture onto
         /// steep faces instead of smearing it top-down, so the peaks read as chiselled rock, not flat shards.</summary>
         public static Material StoneTriplanar(Color tint) => Triplanar($"StoneTP_{Hex(tint)}", tint, () => StoneTex(256), "Stone", 0.16f, 0.1f, 0.22f);
