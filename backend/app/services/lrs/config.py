@@ -47,7 +47,7 @@ def xapi_version() -> str:
 
 def supplier_domain() -> str:
     """Base IRI for every object/grouping id (no trailing slash)."""
-    return _get("LRS_SUPPLIER_DOMAIN", "https://720.example.co.il").rstrip("/")
+    return _get("LRS_SUPPLIER_DOMAIN").rstrip("/")
 
 
 def program_iri() -> str:
@@ -84,4 +84,10 @@ def is_enabled() -> bool:
     """Reporting is on only when explicitly enabled AND fully configured."""
     if _get("LRS_ENABLED").lower() not in _TRUTHY:
         return False
-    return bool(token_url() and statements_url() and client_id() and client_secret())
+    return bool(
+        token_url()
+        and statements_url()
+        and client_id()
+        and client_secret()
+        and supplier_domain()
+    )
