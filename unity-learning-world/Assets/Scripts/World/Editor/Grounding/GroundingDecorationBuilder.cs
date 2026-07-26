@@ -65,8 +65,10 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
         private static Material PavingWarmMat => GroundingTextureFactory.Paving(RGB(0xD5CDBC));
         // Cooler, mid-tone stone for the fountain drum. Every fountain part used to be the same cream, so the
         // whole centrepiece flattened into one white blob; the basin now reads darker than its coping.
-        private static Material FountainStoneMat => GroundingTextureFactory.Masonry(RGB(0xC6BCA8));
-        private static Material FountainApronMat => GroundingTextureFactory.Concrete(RGB(0xE3DBC9));
+        private static Material FountainStoneMat => GroundingTextureFactory.Masonry(RGB(0xB6AA93));
+        // Apron sits a clear step darker than the white coping. With all three tones near-white the whole
+        // fountain flattened into a single blank disc from the review camera.
+        private static Material FountainApronMat => GroundingTextureFactory.Concrete(RGB(0xC9C0AD));
         private static Material AsphaltMat => GroundingTextureFactory.Asphalt(RGB(0x9AA0A4));
         private static Material MasonryMat => GroundingTextureFactory.Masonry(RGB(0xD3CCBE));
         private static Material MasonryDarkMat => GroundingTextureFactory.Masonry(RGB(0xA9A296));
@@ -88,7 +90,7 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             get
             {
                 var m = GroundingAssetWriter.GetWaterMaterial("MAT_YW_Dressing_FountainWater",
-                    RGB(0x145663), RGB(0x2E8FA0), RGB(0xDDF0F2), 0.02f, 2.0f, 0.10f, 0.24f);
+                    RGB(0x2C8FA6), RGB(0x6FC7D6), RGB(0xEAF8FA), 0.02f, 2.0f, 0.10f, 0.24f);
                 if (m.HasProperty("_PuddleAmount")) m.SetFloat("_PuddleAmount", 0f);
                 return m;
             }
@@ -599,10 +601,10 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             // ground instead of being dropped on it. Kept tight to the basin — the wider apron it replaced
             // read as a big blank plate that made the fountain itself look like a bollard sitting on a lid.
             var apron = new MeshB();
-            apron.Cylinder(new Vector3(0, -0.02f, 0), 3.62f, 3.62f, 0.14f, sides, 0.86f, 0.94f, true);
-            apron.Ring(new Vector3(0, 0.12f, 0), 3.05f, 3.62f, sides, 0.9f);
-            apron.Cylinder(new Vector3(0, 0.12f, 0), 3.05f, 3.05f, 0.14f, sides, 0.9f, 0.98f, true);
-            apron.Ring(new Vector3(0, 0.26f, 0), 2.55f, 3.05f, sides, 0.94f);
+            apron.Cylinder(new Vector3(0, -0.02f, 0), 3.28f, 3.28f, 0.14f, sides, 0.86f, 0.94f, true);
+            apron.Ring(new Vector3(0, 0.12f, 0), 2.98f, 3.28f, sides, 0.9f);
+            apron.Cylinder(new Vector3(0, 0.12f, 0), 2.98f, 2.98f, 0.14f, sides, 0.9f, 0.98f, true);
+            apron.Ring(new Vector3(0, 0.26f, 0), 2.55f, 2.98f, sides, 0.94f);
             Add(root, "Apron", apron, FountainApronMat);
 
             // ── Basin: a low, thick-walled drum. Bench height (~0.45) with a broad coping so it doubles as
@@ -632,7 +634,7 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
 
             // ── Water. Brimming pools sitting just under each rim, animated by the Yuvi/Water shader.
             var water = new MeshB();
-            water.Disc(new Vector3(0, 0.80f, 0), 2.26f, sides);   // main basin
+            water.Disc(new Vector3(0, 0.90f, 0), 2.28f, sides);   // main basin, brimming just under the coping
             water.Disc(new Vector3(0, 2.32f, 0), 1.24f, sides);   // upper dish
             Add(root, "Water", water, FountainWater);
 
