@@ -1,5 +1,5 @@
-"""Pure statement builders — one per 720 event, golden-sourced from
-`docs/LRS/postman/720-LRS.postman_collection.json` (30 statement bodies).
+"""Pure statement builders — one per 720 event, derived from the official
+MoE integration document at `docs/LRS/מסמך התממשקות LRS.md`.
 
 Every builder returns a complete xAPI statement dict with a server-generated
 `id` (uuid4). That id is generated ONCE and persisted by the outbox; retries
@@ -631,12 +631,15 @@ def selected(
     *,
     object_id: str,
     object_type: str,
-    selection_type: str,   # → context.contextActivities.category (per guidelines)
+    selection_type: str,
     response: str,
 ) -> dict[str, Any]:
     obj = activity(object_id, object_type)
-    stmt = _base(identity, "selected", obj, session_id, result={"response": response})
-    stmt["context"]["contextActivities"]["category"] = [
-        {"objectType": "Activity", "id": f"{_domain()}/selection-type/{selection_type}"}
-    ]
-    return stmt
+    return _base(
+        identity,
+        "selected",
+        obj,
+        session_id,
+        result={"response": response},
+        context_extra={"extensions": extensions({"selectionType": selection_type})},
+    )
