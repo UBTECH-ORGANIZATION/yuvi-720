@@ -66,7 +66,7 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
         // Cooler, mid-tone stone for the fountain drum. Every fountain part used to be the same cream, so the
         // whole centrepiece flattened into one white blob; the basin now reads darker than its coping.
         private static Material FountainStoneMat => GroundingTextureFactory.Masonry(RGB(0xC6BCA8));
-        private static Material FountainApronMat => GroundingTextureFactory.Paving(RGB(0xE2DACA));
+        private static Material FountainApronMat => GroundingTextureFactory.Concrete(RGB(0xE3DBC9));
         private static Material AsphaltMat => GroundingTextureFactory.Asphalt(RGB(0x9AA0A4));
         private static Material MasonryMat => GroundingTextureFactory.Masonry(RGB(0xD3CCBE));
         private static Material MasonryDarkMat => GroundingTextureFactory.Masonry(RGB(0xA9A296));
@@ -346,11 +346,10 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             // Sized for the ZOOMED isometric follow-camera, which frames roughly 22 world units of height.
             // These are a coastal backdrop ridge, not alps: the old 10.5×4.8 peaks with a 3.4r apron measured
             // ~25 units across and buried the village in grey rock the moment they were placed on the shore.
-            // Broad and weathered rather than spiky: at h/r ~1.25 the silhouette reads as a coastal ridge.
-            // The old 1.8 ratio produced sharp isosceles cones, which is exactly the "paper shard" look the
-            // stylised-realism pass is meant to remove.
-            var h = 5.4f * scale;
-            var r = 4.3f * scale;
+            // Broad and weathered rather than spiky. At h/r ~0.7 the silhouette reads as rolling coastal
+            // hills; anything near 1.5+ renders as the row of sharp cardboard pyramids this pass is removing.
+            var h = 4.4f * scale;
+            var r = 3.9f * scale;
             // Stone shelf at the foot — the "stone ground" under each peak that hides the strip of sea between
             // the range and the shore. This MUST be a Cylinder, not a Cone: a Cone tapers to a point, so its
             // height fell below the -1.5 waterline well before its rim and neighbouring aprons drowned exactly
@@ -361,7 +360,7 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             // from above (the same quirk that made a bare Box invisible from overhead). Without it the shelf is
             // geometrically present but see-through from the play camera, so the sea reads straight through it
             // and the range looks detached from the coast no matter how close the peaks are moved.
-            body.Cylinder(Vector3.zero, r * 1.8f, r * 1.5f, 1.9f, 18, 0.7f, 0.92f, doubleSided: true);
+            body.Cylinder(Vector3.zero, r * 0.7f, r * 0.55f, 1.1f, 18, 0.7f, 0.92f, doubleSided: true);
             // Many more sides + much gentler jitter → rounded, weathered ridges instead of sharp paper
             // shards. This is the single biggest thing separating "low-poly backdrop" from "distant hills".
             body.RidgeCone(Vector3.zero, r, h, 22, seed, 0.11f);
@@ -372,16 +371,11 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             // Cool blue-grey rock through the vendored TRIPLANAR shader, so the chiselled stone texture projects
             // onto the steep faces (it used to smear top-down and read flat). The tint is pushed toward the fog
             // colour — aerial perspective, so the range recedes into the sky instead of sitting on top of it.
-            var rockCol = (seed % 2 == 0) ? RGB(0xBAC6D6) : RGB(0xAEBCCE);
+            var rockCol = (seed % 2 == 0) ? RGB(0xC4D0DE) : RGB(0xB9C7D8);
             Add(root, "Rock", body, GroundingTextureFactory.StoneTriplanar(rockCol), flat: true);
 
-            // Snow only on the upper third of each peak. Caps that started at half height turned the whole
-            // range white, which is what made the backdrop shout instead of receding into the haze.
-            var cap = new MeshB();
-            cap.RidgeCone(new Vector3(0f, h * 0.68f, 0f), r * 0.34f, h * 0.34f, 16, seed, 0.14f);
-            cap.RidgeCone(new Vector3(r * 0.72f, h * 0.46f, -r * 0.22f), r * 0.19f, h * 0.22f, 13, seed + 4, 0.13f);
-            cap.RidgeCone(new Vector3(-r * 0.66f, h * 0.36f, r * 0.18f), r * 0.15f, h * 0.17f, 12, seed + 9, 0.13f);
-            Add(root, "Snow", cap, Snow, flat: true);
+            // No snow. These are 5m coastal hills, not alps — white caps on every peak turned the horizon
+            // into a row of bright triangles that fought the village for attention instead of receding.
             return root;
         }
 
@@ -390,11 +384,12 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
         // Natural, modern surfacing: sawn paving slabs on the plaza, a warm asphalt/hoggin path for the
         // spurs, and a REAL raised kerb (a top course with a visible vertical face) framing both. The old
         // kerbs were coplanar strips, which is why the paths read as decals printed on the grass.
-        // Plaza field: pale warm limestone. The generated slab texture already averages ~0.7, so the tint has
-        // to sit near white or the finished plaza reads as a dark hole punched in the green.
-        private static Material PlazaPavingMat => GroundingTextureFactory.Paving(RGB(0xF2ECE0));
+        // Plaza field: pale warm limestone. Built on the CONCRETE surface set rather than the paving one —
+        // the paving generator's heavy relief (bump 1.3 at a 0.62 tiling) reads as dark scales across a
+        // 15-metre disc, which is what kept turning the plaza into a charcoal hole in the middle of the map.
+        private static Material PlazaPavingMat => GroundingTextureFactory.Concrete(RGB(0xEFE8DA));
         // Banding course: a half-step darker than the plaza field, never near-black.
-        private static Material PlazaBandMat => GroundingTextureFactory.Paving(RGB(0xD2C9B7));
+        private static Material PlazaBandMat => GroundingTextureFactory.Concrete(RGB(0xD3C9B4));
         private static Material CobblePathMat => GroundingTextureFactory.CobblePath(new Color(0.74f, 0.72f, 0.68f));
         private static Material PathTopMat => GroundingTextureFactory.Asphalt(new Color(0.78f, 0.75f, 0.70f));
         private static Material KerbStoneMat => GroundingTextureFactory.Paving(new Color(0.86f, 0.85f, 0.82f));
@@ -723,7 +718,7 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
         // Desaturated toward real render/limewash tones so the street reads modern-rural, not toy-bright.
         private static readonly int[] WallPalette = { 0xEDE7D9, 0xE2DCD0, 0xE8DFC6, 0xDFE4DB, 0xE3D7C3, 0xD9E0E4, 0xE7D5CB, 0xE1DACC };
         // cream / warm-grey / pale-yellow / sage / sand / soft blue-grey / blush / stone
-        private static readonly int[] RoofPalette = { 0xA8564A, 0xB3684A, 0x8F5546, 0x6B7379, 0x8A6E52, 0x9A5153, 0xB07A4C };
+        private static readonly int[] RoofPalette = { 0xA8564A, 0xB3684A, 0x8F5546, 0x93A0A8, 0x8A6E52, 0x9A5153, 0xB07A4C };
         // terracotta / clay / brown-red / natural slate / ochre / rose-clay / amber
 
         public static Transform CreateHouse(string name, float scale, int seed, int style)
@@ -1507,22 +1502,29 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
                 T(c0, c1, ap); T(c1, c2, ap); T(c2, c3, ap); T(c3, c0, ap);
             }
 
+            // Flat, ground-hugging fills. The underside copy is dropped a hair BELOW the top face: emitting both
+            // windings at the same height made the two coplanar sets z-fight, and because the underside is lit
+            // from behind it renders near-black — which is what turned the whole plaza into a charcoal disc.
+            private const float FaceGap = 0.006f;
+
             public void Disc(Vector3 center, float radius, int sides, float ao = 1f)
             {
+                var d = Vector3.down * FaceGap;
                 for (var i = 0; i < sides; i++)
                 {
                     var a0 = (i / (float)sides) * Mathf.PI * 2f;
                     var a1 = ((i + 1) / (float)sides) * Mathf.PI * 2f;
                     var o0 = center + new Vector3(Mathf.Cos(a0) * radius, 0, Mathf.Sin(a0) * radius);
                     var o1 = center + new Vector3(Mathf.Cos(a1) * radius, 0, Mathf.Sin(a1) * radius);
-                    Tri(center, o0, o1, ao, ao, ao);        // both windings so the surface shows from any side
-                    Tri(center, o1, o0, ao, ao, ao);
+                    Tri(center, o0, o1, ao, ao, ao);                        // top face (normal up)
+                    Tri(center + d, o1 + d, o0 + d, ao, ao, ao);            // underside, tucked just below
                 }
             }
 
-            // Flat annulus (a ring on the ground) — used for the sand plaza path around the fountain.
+            // Flat annulus (a ring on the ground) — the plaza surface, kerb courses and gravel skirts.
             public void Ring(Vector3 center, float innerR, float outerR, int sides, float ao = 1f)
             {
+                var d = Vector3.down * FaceGap;
                 for (var i = 0; i < sides; i++)
                 {
                     var a0 = (i / (float)sides) * Mathf.PI * 2f;
@@ -1531,8 +1533,12 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
                     var i1 = center + new Vector3(Mathf.Cos(a1) * innerR, 0, Mathf.Sin(a1) * innerR);
                     var o0 = center + new Vector3(Mathf.Cos(a0) * outerR, 0, Mathf.Sin(a0) * outerR);
                     var o1 = center + new Vector3(Mathf.Cos(a1) * outerR, 0, Mathf.Sin(a1) * outerR);
-                    Quad(i0, o0, o1, i1, ao, ao, ao, ao);   // top face
-                    Quad(i1, o1, o0, i0, ao, ao, ao, ao);   // underside (double-sided)
+                    // The two windings used to be emitted at the SAME height. Nothing is welded here (every
+                    // Quad appends fresh vertices), so the up-facing and down-facing copies simply z-fought,
+                    // and wherever the unlit underside won the plaza rendered charcoal. Separating them by a
+                    // few millimetres lets the top face win everywhere while still closing the surface.
+                    Quad(i0, o0, o1, i1, ao, ao, ao, ao);                   // top face (normal up)
+                    Quad(i1 + d, o1 + d, o0 + d, i0 + d, ao, ao, ao, ao);   // underside, tucked just below
                 }
             }
 
