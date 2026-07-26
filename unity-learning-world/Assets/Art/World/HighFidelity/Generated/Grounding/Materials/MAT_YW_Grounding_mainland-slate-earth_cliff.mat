@@ -32,7 +32,7 @@ Material:
     - _AmbientBoost: 0.12
     - _MainTexScale: 0
     - _RimPower: 3
-    - _VColorStrength: 1
+    - _VColorStrength: 0.34
     - _WrapAmount: 0.42
     m_Colors:
     - _Color: {r: 0.43137255, g: 0.39215687, b: 0.33333334, a: 1}

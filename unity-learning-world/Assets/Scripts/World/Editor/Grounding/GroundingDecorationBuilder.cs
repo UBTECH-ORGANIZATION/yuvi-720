@@ -36,7 +36,7 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
         private static Material RockDark => Veg("RockDark", 0x5D656C);
         private static Material MountainCool => Veg("MountainCool", 0xA3B3C4); // hazy aerial blue-grey
         private static Material MountainDark => Veg("MountainDark", 0x8496AB);
-        private static Material Snow => Veg("Snow", 0xEDF2F7);
+        private static Material Snow => Veg("Snow", 0xD9E2EC);              // haze-tinted, not paper white
 
         // Buildings — warm, realistic island village: cream walls, red/terracotta roofs, wood + stone.
         private static Material StoneWhite => Hard("StoneWhite", 0xEDE7DA, .26f, .03f);      // warm white stone
@@ -63,6 +63,10 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
         private static Material RoofTileMat(int hex) => GroundingTextureFactory.ClayRoof(RGB(hex));
         private static Material PavingMat => GroundingTextureFactory.Paving(RGB(0xC9C6BE));
         private static Material PavingWarmMat => GroundingTextureFactory.Paving(RGB(0xD5CDBC));
+        // Cooler, mid-tone stone for the fountain drum. Every fountain part used to be the same cream, so the
+        // whole centrepiece flattened into one white blob; the basin now reads darker than its coping.
+        private static Material FountainStoneMat => GroundingTextureFactory.Masonry(RGB(0xC6BCA8));
+        private static Material FountainApronMat => GroundingTextureFactory.Paving(RGB(0xE2DACA));
         private static Material AsphaltMat => GroundingTextureFactory.Asphalt(RGB(0x9AA0A4));
         private static Material MasonryMat => GroundingTextureFactory.Masonry(RGB(0xD3CCBE));
         private static Material MasonryDarkMat => GroundingTextureFactory.Masonry(RGB(0xA9A296));
@@ -342,9 +346,11 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             // Sized for the ZOOMED isometric follow-camera, which frames roughly 22 world units of height.
             // These are a coastal backdrop ridge, not alps: the old 10.5×4.8 peaks with a 3.4r apron measured
             // ~25 units across and buried the village in grey rock the moment they were placed on the shore.
-            // Squatter than a spire (h/r ~1.8): steep narrow cones read as flat paper shards at this zoom.
-            var h = 6.5f * scale;
-            var r = 3.6f * scale;
+            // Broad and weathered rather than spiky: at h/r ~1.25 the silhouette reads as a coastal ridge.
+            // The old 1.8 ratio produced sharp isosceles cones, which is exactly the "paper shard" look the
+            // stylised-realism pass is meant to remove.
+            var h = 5.4f * scale;
+            var r = 4.3f * scale;
             // Stone shelf at the foot — the "stone ground" under each peak that hides the strip of sea between
             // the range and the shore. This MUST be a Cylinder, not a Cone: a Cone tapers to a point, so its
             // height fell below the -1.5 waterline well before its rim and neighbouring aprons drowned exactly
@@ -369,14 +375,12 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             var rockCol = (seed % 2 == 0) ? RGB(0xBAC6D6) : RGB(0xAEBCCE);
             Add(root, "Rock", body, GroundingTextureFactory.StoneTriplanar(rockCol), flat: true);
 
-            // Snow caps on EVERY peak (the shoulders used to have none, so only one tip in three read white).
-            // Each cap starts halfway up its own cone and flares wider than that cone's radius at the same
-            // height — otherwise it sits buried inside the rock and no white shows. Low jitter keeps the
-            // snowline soft rather than jagged.
+            // Snow only on the upper third of each peak. Caps that started at half height turned the whole
+            // range white, which is what made the backdrop shout instead of receding into the haze.
             var cap = new MeshB();
-            cap.RidgeCone(new Vector3(0f, h * 0.5f, 0f), r * 0.58f, h * 0.52f, 16, seed, 0.14f);
-            cap.RidgeCone(new Vector3(r * 0.72f, h * 0.33f, -r * 0.22f), r * 0.36f, h * 0.35f, 13, seed + 4, 0.13f);
-            cap.RidgeCone(new Vector3(-r * 0.66f, h * 0.25f, r * 0.18f), r * 0.29f, h * 0.27f, 12, seed + 9, 0.13f);
+            cap.RidgeCone(new Vector3(0f, h * 0.68f, 0f), r * 0.34f, h * 0.34f, 16, seed, 0.14f);
+            cap.RidgeCone(new Vector3(r * 0.72f, h * 0.46f, -r * 0.22f), r * 0.19f, h * 0.22f, 13, seed + 4, 0.13f);
+            cap.RidgeCone(new Vector3(-r * 0.66f, h * 0.36f, r * 0.18f), r * 0.15f, h * 0.17f, 12, seed + 9, 0.13f);
             Add(root, "Snow", cap, Snow, flat: true);
             return root;
         }
@@ -386,7 +390,11 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
         // Natural, modern surfacing: sawn paving slabs on the plaza, a warm asphalt/hoggin path for the
         // spurs, and a REAL raised kerb (a top course with a visible vertical face) framing both. The old
         // kerbs were coplanar strips, which is why the paths read as decals printed on the grass.
-        private static Material PlazaPavingMat => PavingWarmMat;
+        // Plaza field: pale warm limestone. The generated slab texture already averages ~0.7, so the tint has
+        // to sit near white or the finished plaza reads as a dark hole punched in the green.
+        private static Material PlazaPavingMat => GroundingTextureFactory.Paving(RGB(0xF2ECE0));
+        // Banding course: a half-step darker than the plaza field, never near-black.
+        private static Material PlazaBandMat => GroundingTextureFactory.Paving(RGB(0xD2C9B7));
         private static Material CobblePathMat => GroundingTextureFactory.CobblePath(new Color(0.74f, 0.72f, 0.68f));
         private static Material PathTopMat => GroundingTextureFactory.Asphalt(new Color(0.78f, 0.75f, 0.70f));
         private static Material KerbStoneMat => GroundingTextureFactory.Paving(new Color(0.86f, 0.85f, 0.82f));
@@ -403,11 +411,13 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             var surf = new MeshB();
             surf.Ring(new Vector3(0f, 0.02f, 0f), innerR, outerR, sides, 0.92f);
             Add(root, "Path", surf, PlazaPavingMat, flat: true);
-            // A darker banding course just inside the outer kerb — a designed plaza, not a plain donut.
+            // A slightly darker paving course just inside each kerb — a designed plaza, not a plain donut.
+            // The band sits 4cm proud rather than 5mm: at 5mm it z-fought the main surface and the DARK band
+            // material won across the entire ring, turning the plaza into a black hole in the middle of the map.
             var band = new MeshB();
-            band.Ring(new Vector3(0f, 0.025f, 0f), outerR - 0.75f, outerR - 0.15f, sides, 0.86f);
-            band.Ring(new Vector3(0f, 0.025f, 0f), innerR + 0.15f, innerR + 0.6f, sides, 0.86f);
-            Add(root, "PathBand", band, CobblePathMat, flat: true);
+            band.Ring(new Vector3(0f, 0.06f, 0f), outerR - 0.75f, outerR - 0.15f, sides, 0.86f);
+            band.Ring(new Vector3(0f, 0.06f, 0f), innerR + 0.15f, innerR + 0.6f, sides, 0.86f);
+            Add(root, "PathBand", band, PlazaBandMat, flat: true);
 
             // Raised kerb frames, outside and inside, each with a real vertical face.
             var top = new MeshB(); var face = new MeshB();
@@ -591,13 +601,14 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             const int sides = 40;      // high enough that the basin reads as a true circle, not a polygon
 
             // ── Apron: two shallow paved steps spreading into the plaza, so the fountain grows out of the
-            // ground instead of being dropped on it.
+            // ground instead of being dropped on it. Kept tight to the basin — the wider apron it replaced
+            // read as a big blank plate that made the fountain itself look like a bollard sitting on a lid.
             var apron = new MeshB();
-            apron.Cylinder(new Vector3(0, -0.02f, 0), 4.30f, 4.30f, 0.14f, sides, 0.86f, 0.94f, true);
-            apron.Disc(new Vector3(0, 0.12f, 0), 4.29f, sides, 0.9f);
-            apron.Cylinder(new Vector3(0, 0.12f, 0), 3.55f, 3.55f, 0.14f, sides, 0.9f, 0.98f, true);
-            apron.Disc(new Vector3(0, 0.26f, 0), 3.54f, sides, 0.94f);
-            Add(root, "Apron", apron, PavingWarmMat);
+            apron.Cylinder(new Vector3(0, -0.02f, 0), 3.62f, 3.62f, 0.14f, sides, 0.86f, 0.94f, true);
+            apron.Ring(new Vector3(0, 0.12f, 0), 3.05f, 3.62f, sides, 0.9f);
+            apron.Cylinder(new Vector3(0, 0.12f, 0), 3.05f, 3.05f, 0.14f, sides, 0.9f, 0.98f, true);
+            apron.Ring(new Vector3(0, 0.26f, 0), 2.55f, 3.05f, sides, 0.94f);
+            Add(root, "Apron", apron, FountainApronMat);
 
             // ── Basin: a low, thick-walled drum. Bench height (~0.45) with a broad coping so it doubles as
             // seating around the water — the community feel the plaza is meant to have.
@@ -605,7 +616,7 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             stone.Cylinder(new Vector3(0, 0.26f, 0), 2.62f, 2.58f, 0.62f, sides, 0.62f, 0.9f, true);   // outer wall
             stone.Cylinder(new Vector3(0, 0.30f, 0), 2.30f, 2.30f, 0.56f, sides, 0.5f, 0.84f, true);   // inner wall
             stone.Disc(new Vector3(0, 0.32f, 0), 2.29f, sides, 0.44f);                                  // basin floor
-            Add(root, "Basin", stone, MasonryMat);
+            Add(root, "Basin", stone, FountainStoneMat);
 
             // Broad honed coping ring — the seat, and the crisp highlight that reads as polished stone.
             var coping = new MeshB();
@@ -619,7 +630,7 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             stem.Cylinder(new Vector3(0, 0.58f, 0), 0.42f, 0.26f, 1.62f, 24, 0.58f, 0.96f, true);       // tapered shaft
             stem.Cylinder(new Vector3(0, 2.20f, 0), 1.28f, 1.28f, 0.16f, sides, 0.72f, 1f, true);       // dish wall
             stem.Disc(new Vector3(0, 2.22f, 0), 1.26f, sides, 0.62f);                                    // dish floor
-            Add(root, "Stem", stem, MasonryMat);
+            Add(root, "Stem", stem, FountainStoneMat);
             var dishRim = new MeshB();
             dishRim.Cylinder(new Vector3(0, 2.36f, 0), 1.34f, 1.30f, 0.09f, sides, 0.92f, 1f, true);
             Add(root, "DishRim", dishRim, StoneWhite);
@@ -630,14 +641,15 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             water.Disc(new Vector3(0, 2.32f, 0), 1.24f, sides);   // upper dish
             Add(root, "Water", water, FountainWater);
 
-            // Sheeting curtain from the dish lip into the basin — a thin, even veil, not a fat cone.
+            // Sheeting curtain spilling over the dish lip. Kept SHORT and tight to the rim: the full-height
+            // cone it replaced swallowed the stem and read as a solid teal lampshade rather than falling water.
             var cascade = new MeshB();
-            cascade.Cylinder(new Vector3(0, 0.84f, 0), 1.46f, 1.32f, 1.52f, sides, 0.78f, 1f, true);
+            cascade.Cylinder(new Vector3(0, 1.86f, 0), 1.33f, 1.27f, 0.50f, sides, 0.72f, 1f, true);
             var cascadeT = Add(root, "Cascade", cascade, WaterSheet);
             if (cascadeT != null)
             {
                 var fs = cascadeT.gameObject.AddComponent<Yuvi720.LearningWorld.World.FlowScroll>();
-                fs.speed = 0.55f; fs.tiling = new Vector2(9f, 2.6f);
+                fs.speed = 0.55f; fs.tiling = new Vector2(9f, 1.2f);
             }
 
             // Central jet + a ring of four low arcing side jets, so the water has movement across the dish.
@@ -658,13 +670,13 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             drop.Facet(new Vector3(0, 3.74f, 0), 0.15f, 3, 0.08f, 7, 4, 0.75f);
             Add(root, "SpoutTop", drop, WaterPale, flat: true);
 
-            // Four planters set back on the apron — soft green punctuation around hard stone.
+            // Four planters spaced around the paved ring — soft green punctuation against hard stone.
             for (var i = 0; i < 4; i++)
             {
                 var a = i / 4f * Mathf.PI * 2f + Mathf.PI * 0.25f;
                 var p = CreatePlanter($"Planter-{i}", 1f, 40 + i * 7);
                 p.SetParent(root, false);
-                p.localPosition = new Vector3(Mathf.Cos(a) * 3.9f, 0.26f, Mathf.Sin(a) * 3.9f);
+                p.localPosition = new Vector3(Mathf.Cos(a) * 5.9f, 0.05f, Mathf.Sin(a) * 5.9f);
                 p.localEulerAngles = new Vector3(0f, a * Mathf.Rad2Deg, 0f);
             }
             return root;

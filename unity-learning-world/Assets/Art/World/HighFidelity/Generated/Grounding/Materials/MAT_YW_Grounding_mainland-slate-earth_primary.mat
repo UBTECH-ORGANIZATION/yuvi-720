@@ -30,9 +30,9 @@ Material:
     m_Ints: []
     m_Floats:
     - _AmbientBoost: 0.12
-    - _MainTexScale: 0.22
+    - _MainTexScale: 1.05
     - _RimPower: 3
-    - _VColorStrength: 1
+    - _VColorStrength: 0.34
     - _WrapAmount: 0.58
     m_Colors:
     - _Color: {r: 0.34901962, g: 0.38039216, b: 0.3647059, a: 1}
