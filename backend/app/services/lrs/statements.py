@@ -199,17 +199,20 @@ def agency_answered(
     response: str,
     *,
     score_raw: Optional[float] = None,
-    score_min: float = 0,
+    score_min: float = 1,
     score_max: float = 5,
     phase: str = "pre",
     question_he: Optional[str] = None,
+    question_id: Optional[str] = None,
+    answer_id: Optional[str] = None,
 ) -> dict[str, Any]:
-    obj = activity(
-        f"{_domain()}/agency/question/{question_number}",
-        "question",
-        question_he or f"שאלה {question_number}",
-    )
-    result: dict[str, Any] = {"response": response}
+    # Prefer the official MoE question/answer URL ids so the statement is scored
+    # against the ministry catalog; fall back to the local activity id.
+    object_id = question_id or f"{_domain()}/agency/question/{question_number}"
+    obj = activity(object_id, "question", question_he or f"שאלה {question_number}")
+    # The official answer id (URL) is the canonical response; keep the numeric
+    # value (1–5) as the scaled score.
+    result: dict[str, Any] = {"response": answer_id or response}
     if score_raw is not None:
         result["score"] = {"min": score_min, "max": score_max, "raw": score_raw}
     return _base(

@@ -555,6 +555,44 @@
   line-height: 1.6;
 }
 .intro-cta { display: flex; flex-direction: column; gap: 5px; }
+/* Gender wording toggle — the official questionnaire has masculine/feminine
+   phrasing; a calm segmented control lets the learner pick without emojis. */
+.intro-gender {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--m-primary) 22%, var(--m-border));
+  background: color-mix(in srgb, var(--m-card) 88%, transparent);
+}
+.intro-gender__label { font-size: clamp(12px, .95vw, 14px); font-weight: 600; color: var(--m-text-soft, var(--m-text)); }
+.intro-gender__options {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--m-primary) 8%, transparent);
+}
+.intro-gender__opt {
+  border: 0;
+  cursor: pointer;
+  padding: 7px 18px;
+  border-radius: 999px;
+  font-size: clamp(12px, .95vw, 14px);
+  font-weight: 700;
+  color: var(--m-text);
+  background: transparent;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+.intro-gender__opt.is-active {
+  background: var(--m-primary);
+  color: #fff;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--m-primary) 32%, transparent);
+}
+.intro-gender__opt:not(.is-active):hover { background: color-mix(in srgb, var(--m-primary) 14%, transparent); }
 .intro-duration {
   display: inline-flex;
   align-items: center;
