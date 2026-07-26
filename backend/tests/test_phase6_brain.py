@@ -188,7 +188,7 @@ def test_explicit_success_wins_over_low_scaled():
 def test_grouping_dedupes_second_session_by_type():
     """A2#7: a content-relayed session grouping can't add a 2nd session entry."""
     import os
-    os.environ.setdefault("LRS_SUPPLIER_DOMAIN", "https://720.example.co.il")
+    os.environ.setdefault("LRS_SUPPLIER_DOMAIN", "https://test.spark.invalid")
     from app.services.lrs.context import build_grouping, session_activity, ACTIVITY
     extra = [session_activity("OTHER-SID"),   # different session id, same type
              {"objectType": "Activity", "id": "https://x/tag/1",

@@ -5,7 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-os.environ.setdefault("LRS_SUPPLIER_DOMAIN", "https://720.example.co.il")
+os.environ.setdefault("LRS_SUPPLIER_DOMAIN", "https://test.spark.invalid")
 
 from app.services.lrs.statements import enriched_content_statement  # noqa: E402
 
