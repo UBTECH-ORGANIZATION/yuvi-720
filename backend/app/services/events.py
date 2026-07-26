@@ -33,11 +33,11 @@ from app.brain.repository import (
 from learner_state import normalize_learner_id  # type: ignore
 
 
-# ── MoE LXP closed verb list (wire verbs; no Initialized/Selected/Requested) ──
+# ── MoE LXP closed verb list for inbound learning-content statements ─────────
 VERB_IRI_BASE = "https://lxp.education.gov.il/xapi/moe/verbs/"
 ACTIVITY_IRI_BASE = "https://lxp.education.gov.il/xapi/moe/activities/"
 MOE_VERBS = {
-    "enter", "exit", "attempted", "answered", "scored", "completed", "submitted",
+    "enter", "exit", "initialized", "attempted", "answered", "scored", "completed", "skipped", "submitted",
     "read", "watched", "listened", "played", "paused", "play", "downloaded",
     "install", "assigned", "created", "joined", "leave", "voided",
 }
