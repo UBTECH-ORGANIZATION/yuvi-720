@@ -1,0 +1,1738 @@
+[
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/1",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/1",
+    "text": {
+      "male": {
+        "he-IL": "לרוב הלמידה בבית הספר מעניינת אותי",
+        "ar-IL": "في أَغْلَبِ الأَحْيانِ، التَّعَلُّمُ في المَدْرَسَةِ يُثيرُ اهْتِمامِي"
+      },
+      "female": {
+        "he-IL": "לרוב הלמידה בבית הספר מעניינת אותי",
+        "ar-IL": "في أَغْلَبِ الأَحْيانِ، التَّعَلُّمُ في المَدْرَسَةِ يُثيرُ اهْتِمامِي"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/2",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/1",
+    "text": {
+      "male": {
+        "he-IL": "קיים קשר בין מה שאני לומד לחיי היום יום שלי",
+        "ar-IL": "هُناكَ عَلاقَة بَيْنَ ما أَتَعَلَّمُهُ وَبَيْنَ حَياتِي اليَوْمِيَّة"
+      },
+      "female": {
+        "he-IL": "קיים קשר בין מה שאני לומדת לחיי היום יום שלי",
+        "ar-IL": "هُناكَ عَلاقَةٌ بَيْنَ ما أَتَعَلَّمُهُ وَبَيْنَ حَياتي اليَوْمِيَّةِ"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/3",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/1",
+    "text": {
+      "male": {
+        "he-IL": "אני מרוצה מהדרך שבה אני לומד בכיתה",
+        "ar-IL": "أَنا راضٍ عَن طَريقَةِ تَعَلُّمِي فِي الصَّفّ"
+      },
+      "female": {
+        "he-IL": "אני מרוצה מהדרך שבה אני לומדת בכיתה",
+        "ar-IL": "أَنا راضِيَةٌ عَنْ طَريقَةِ تَعَلُّمِي فِي الصَّفِّ"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/4",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/1",
+    "text": {
+      "male": {
+        "he-IL": "יש נושא מסוים שלמדנו לאחרונה שהיה מעניין עבורי",
+        "ar-IL": "هُناكَ مَوْضوعٌ مُعَيَّنٌ تَعَلَّمْتُهُ مُؤَخَّرًا، وَكانَ مُثيرًا لِلِاهْتِمامِ بِالنِّسْبَةِ لِي"
+      },
+      "female": {
+        "he-IL": "יש נושא מסוים שלמדנו לאחרונה שהיה מעניין עבורי",
+        "ar-IL": "هُناكَ مَوْضوعٌ مُعَيَّنٌ تَعَلَّمْتُهُ مُؤَخَّرًا، وَكانَ مُثيرًا لِلِاهْتِمامِ بِالنِّسْبَةِ لِي"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/5",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/1",
+    "text": {
+      "male": {
+        "he-IL": "עד כמה חשוב לך להצליח בלימודים?",
+        "ar-IL": "إِلى أَيِّ دَرَجَة يهمّك أَنْ تنجح فِي التعليم؟"
+      },
+      "female": {
+        "he-IL": "עד כמה חשוב לך להצליח בלימודים?",
+        "ar-IL": "إِلى أَيِّ دَرَجَةٍ يَهُمُّكِ أَنْ تَنْجَحي فِي الدِّراسَةِ؟"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/extent_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "במידה רבה מאוד", "ar-IL": "بِدَرَجَةٍ كَبيرةٍ جِدًّا" },
+          "female": { "he-IL": "במידה רבה מאוד", "ar-IL": "بِدَرَجَةٍ كَبيرةٍ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/extent_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "במידה רבה", "ar-IL": "بِدَرَجَةٍ كَبيرة" },
+          "female": { "he-IL": "במידה רבה", "ar-IL": "بِدَرَجَةٍ كَبيرة" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/extent_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "במידה בינונית", "ar-IL": "بِدَرَجَةٍ مُتَوَسِّطَة" },
+          "female": { "he-IL": "במידה בינונית", "ar-IL": "بِدَرَجَةٍ مُتَوَسِّطَة" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/extent_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "במידה מועטה", "ar-IL": "بِدَرَجَةٍ قَليلة" },
+          "female": { "he-IL": "במידה מועטה", "ar-IL": "بِدَرَجَةٍ قَليلة" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/extent_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "כלל לא", "ar-IL": "أَبَدًا" },
+          "female": { "he-IL": "כלל לא", "ar-IL": "أَبَدًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/6",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/1",
+    "text": {
+      "male": {
+        "he-IL": "באיזו תדירות אתה לומד חומר לימודי נוסף, גם כשהמורה לא ביקשה?",
+        "ar-IL": "ما وَتيرَةُ دِراسَتِكَ لِمَوادَّ تَعْليميَّةٍ إِضافِيَّةٍ، حتّى عِندَما لا يَطلُبُ مِنكَ المُعَلِّمُ ذٰلِكَ؟"
+      },
+      "female": {
+        "he-IL": "באיזו תדירות את לומדת חומר לימודי נוסף, גם כשהמורה לא ביקשה?",
+        "ar-IL": "ما وَتيرَةُ دِراسَتِكِ لِمَوادَّ تَعْليميَّةٍ إِضافِيَّةٍ، حتّى عِندَما لا يَطلُبُ مِنكِ المُعَلِّمُ ذٰلِكَ؟"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/freq_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "לעיתים קרובות מאוד", "ar-IL": "غَالِبًا جِدًّا" },
+          "female": { "he-IL": "לעיתים קרובות מאוד", "ar-IL": "غَالِبًا جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/freq_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "לעיתים קרובות", "ar-IL": "غَالِبًا" },
+          "female": { "he-IL": "לעיתים קרובות", "ar-IL": "غَالِبًا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/freq_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לעיתים", "ar-IL": "أَحيانًا" },
+          "female": { "he-IL": "לעיתים", "ar-IL": "أَحيانًا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/freq_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לעיתים רחוקות", "ar-IL": "نادِرًا" },
+          "female": { "he-IL": "לעיתים רחוקות", "ar-IL": "نادِرًا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/freq_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "אף פעם", "ar-IL": "أَبَدًا" },
+          "female": { "he-IL": "אף פעם", "ar-IL": "أَبَدًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/7",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/2",
+    "text": {
+      "male": {
+        "he-IL": "אני מאמין שאם אשקיע מאמץ, אוכל להשתפר בכל נושא",
+        "ar-IL": "أُومِنُ أَنَّهُ إِذا بَذَلْتُ جُهْدًا، فَسَأَتَحَسَّنُ فِي كلّ مَوْضوع"
+      },
+      "female": {
+        "he-IL": "אני מאמינה שאם אשקיע מאמץ, אוכל להשתפר בכל נושא",
+        "ar-IL": "أُؤْمِنُ أَنَّهُ إِذا بَذَلْتُ جُهْدًا، فَسَأَتَحَسَّنُ فِي كُلِّ مَوْضوعٍ"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/8",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/2",
+    "text": {
+      "male": {
+        "he-IL": "אני לומד מטעויות",
+        "ar-IL": "أَتَعَلَّمُ مِن أَخْطائِي"
+      },
+      "female": {
+        "he-IL": "אני לומדת מטעויות",
+        "ar-IL": "أَتَعَلَّمُ مِنْ أَخْطائِي"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/9",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/2",
+    "text": {
+      "male": {
+        "he-IL": "כשיש לי קושי במשימה, אני ממשיך לנסות",
+        "ar-IL": "عِنْدَما أُواجِهُ صُعُوبَة فِي المَهَمَّة، أَسْتَمِرُّ بِالمُحاوَلَة"
+      },
+      "female": {
+        "he-IL": "כשיש לי קושי במשימה, אני ממשיכה לנסות",
+        "ar-IL": "عِنْدَما أُواجِهُ صُعوبَةً فِي المَهَمَّةِ، أَسْتَمِرُّ فِي المُحاوَلَةِ"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/10",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/2",
+    "text": {
+      "male": {
+        "he-IL": "אני יודע שאם אשקיע מאמץ, אני אצליח להשתפר גם בדברים שקשים לי עכשיו",
+        "ar-IL": "أَنَا أَعْرِفُ أَنَّهُ إِذا بَذَلْتُ جُهْدًا، سَأَتَحَسَّنُ حَتّى في الأُمورِ الَّتي هِيَ صَعْبَةٌ عَلَيَّ الآنَ"
+      },
+      "female": {
+        "he-IL": "אני יודעת שאם אשקיע מאמץ, אני אצליח להשתפר גם בדברים שקשים לי עכשיו",
+        "ar-IL": "أَنا أَعْرِفُ أَنَّهُ إِذا بَذَلْتُ جُهْدًا، سَأَتَحَسَّنُ حَتّى فِي الأُمورِ الَّتي هِيَ صَعْبَةٌ عَلَيَّ الآنَ"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/11",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/2",
+    "text": {
+      "male": {
+        "he-IL": "גם כשמשימה קשה לי מאוד, אני מאמין/ה שאצליח לבצע אותה אם אתאמץ",
+        "ar-IL": "حَتّى عِنْدَما تَكونُ المُهِمَّةُ صَعْبَةً جِدًّا عَلَيَّ، أَنَا أُؤْمِنُ أَنَّني سَأَنْجَحُ في تَنْفيذِها إِذا بَذَلْتُ جُهْدًا"
+      },
+      "female": {
+        "he-IL": "גם כשמשימה קשה לי מאוד, אני מאמינה שאצליח לבצע אותה אם אתאמץ",
+        "ar-IL": "حَتّى عِنْدَما تَكونُ المُهِمَّةُ صَعْبَةً جِدًّا عَلَيَّ، أَنا أُؤْمِنُ أَنَّني سَأَنْجَحُ فِي تَنْفيذِها إِذا بَذَلْتُ جُهْدًا"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/12",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/2",
+    "text": {
+      "male": {
+        "he-IL": "אני מאמין שטעויות עוזרות לי להשתפר, גם אם הן מתסכלות לעיתים",
+        "ar-IL": "أَنَا أُؤْمِنُ أَنَّ الأَخْطاءَ تُساعِدُني عَلى التَّحَسُّنِ، حَتّى لَوْ كانَتْ تُسَبِّبُ لي الإِحْباطَ أَحيانًا"
+      },
+      "female": {
+        "he-IL": "אני מאמינה שטעויות עוזרות לי להשתפר, גם אם הן מתסכלות לעיתים",
+        "ar-IL": "أَنا أُؤْمِنُ أَنَّ الأَخْطاءَ تُساعِدُني عَلَى التَّحَسُّنِ، حَتّى لَوْ كانَتْ تُسَبِّبُ لي الإِحْباطَ أَحيانًا"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/13",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/3",
+    "text": {
+      "male": {
+        "he-IL": "אני מציב לעצמי מטרות בנושאים שאני לומד ומשתדל להשיג אותן",
+        "ar-IL": "أَضَعُ لِنَفْسِي أَهْدافًا فِي الْمَواضِيعِ الَّتِي أَدْرُسُها، وَأَسْعَى إِلَى تَحْقِيقِها"
+      },
+      "female": {
+        "he-IL": "אני מציבה לעצמי מטרות בנושאים שאני לומדת ומשתדלת להשיג אותן",
+        "ar-IL": "أَضَعُ لِنَفْسِي أَهْدافًا فِي الْمَواضِيعِ الَّتِي أَدْرُسُها، وَأَسْعَى إِلَى تَحْقِيقِها"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/14",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/3",
+    "text": {
+      "male": {
+        "he-IL": "כשיש לי בעיה בלמידה, אני קודם מנסה לפתור בעצמי, ואם צריך אני מבקש עזרה",
+        "ar-IL": "عِنْدَما تُواجِهُني مُشْكِلَة فِي التَّعَلُّم، أُحاوِلُ حَلَّها بنفسي أَوَّلًا، وَإِذا اِحْتَجْتُ أَطْلُبُ مُساعَدَة"
+      },
+      "female": {
+        "he-IL": "כשיש לי בעיה בלמידה, אני קודם מנסה לפתור בעצמי, ואם צריך אני מבקשת עזרה",
+        "ar-IL": "عِنْدَما تواجِهُني مُشْكِلَةٌ فِي التَّعَلُّمِ، أُحاوِلُ حَلَّها بِنَفْسي أَوَّلًا، وَإِذا اِحْتَجْتُ أَطْلُبُ مُساعَدَةً"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/15",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/3",
+    "text": {
+      "male": {
+        "he-IL": "אני מרגיש שאני האחראי המרכזי ללמידה שלי",
+        "ar-IL": "أَشْعُرُ أَنِّي المَسْؤول الأَساسِيّ عَن تَعَلُّمِي"
+      },
+      "female": {
+        "he-IL": "אני מרגישה שאני האחראית המרכזית ללמידה שלי",
+        "ar-IL": "أَشْعُرُ أَنِّي المَسْؤولةُ الأَساسِيَّةُ عَنْ تَعَلُّمِي"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/16",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/3",
+    "text": {
+      "male": {
+        "he-IL": "אני עומד בזמני התכנון ללמידה שקבעתי לעצמי",
+        "ar-IL": "أَلْتَزِمُ بِالجَدْوَلِ الدِّراسِيِّ الَّذِي وَضَعْتُهُ لِنَفْسِي"
+      },
+      "female": {
+        "he-IL": "אני עומדת בזמני התכנון ללמידה שקבעתי לעצמי",
+        "ar-IL": "أَلْتَزِمُ بِالجَدْوَلِ الدِّراسِيِّ الَّذِي وَضَعْتُهُ لِنَفْسِي"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/freq_alt_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "לעיתים קרובות מאוד", "ar-IL": "غَالِبًا جِدًّا" },
+          "female": { "he-IL": "לעיתים קרובות מאוד", "ar-IL": "غَالِبًا جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/freq_alt_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "לעיתים קרובות", "ar-IL": "غَالِبًا" },
+          "female": { "he-IL": "לעיתים קרובות", "ar-IL": "غَالِبًا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/freq_alt_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לפעמים", "ar-IL": "أَحيانًا" },
+          "female": { "he-IL": "לפעמים", "ar-IL": "أَحيانًا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/freq_alt_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לעיתים רחוקות", "ar-IL": "نادِرًا" },
+          "female": { "he-IL": "לעיתים רחוקות", "ar-IL": "نادِرًا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/freq_alt_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "אף פעם", "ar-IL": "أَبَدًا" },
+          "female": { "he-IL": "אף פעם", "ar-IL": "أَبَدًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/17",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/4",
+    "text": {
+      "male": {
+        "he-IL": "עד כמה אתה משקיע בלימודים?",
+        "ar-IL": "إِلى أَيِّ دَرَجَة تبذل جُهْدًا فِي التعليم؟"
+      },
+      "female": {
+        "he-IL": "עד כמה את משקיעה בלימודים?",
+        "ar-IL": "إِلى أَيِّ دَرَجَةٍ تَبْذُلينَ جُهْدًا فِي الدِّراسَةِ؟"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/extent_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "במידה רבה מאוד", "ar-IL": "بِدَرَجَةٍ كَبيرةٍ جِدًّا" },
+          "female": { "he-IL": "במידה רבה מאוד", "ar-IL": "بِدَرَجَةٍ كَبيرةٍ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/extent_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "במידה רבה", "ar-IL": "بِدَرَجَةٍ كَبيرة" },
+          "female": { "he-IL": "במידה רבה", "ar-IL": "بِدَرَجَةٍ كَبيرة" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/extent_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "במידה בינונית", "ar-IL": "بِدَرَجَةٍ مُتَوَسِّطَة" },
+          "female": { "he-IL": "במידה בינונית", "ar-IL": "بِدَرَجَةٍ مُتَوَسِّطَة" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/extent_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "במידה מועטה", "ar-IL": "بِدَرَجَةٍ قَليلة" },
+          "female": { "he-IL": "במידה מועטה", "ar-IL": "بِدَرَجَةٍ قَليلة" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/extent_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "כלל לא", "ar-IL": "أَبَدًا" },
+          "female": { "he-IL": "כלל לא", "ar-IL": "أَبَدًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/18",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/4",
+    "text": {
+      "male": {
+        "he-IL": "במהלך הלמידה אני עוצר ובודק אם הבנתי את החומר",
+        "ar-IL": "خِلالَ التَّعَلُّم أَتَوَقَّفُ وَأَفْحَصُ إِذا فَهِمْتُ المادَّة"
+      },
+      "female": {
+        "he-IL": "במהלך הלמידה אני עוצרת ובודקת אם הבנתי את החומר",
+        "ar-IL": "خِلالَ التَّعَلُّمِ أَتَوَقَّفُ وَأَفْحَصُ إِذا فَهِمْتُ المادَّةَ"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/19",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/4",
+    "text": {
+      "male": {
+        "he-IL": "אני מתכנן איך אבצע משימות לפני שאני מתחיל",
+        "ar-IL": "أُخَطِّطُ كَيْفَ سَأُنَفِّذُ المَهَمَّة قَبْلَ أَنْ أَبْدَأ"
+      },
+      "female": {
+        "he-IL": "אני מתכננת איך אבצע משימות לפני שאני מתחילה",
+        "ar-IL": "أُخَطِّطُ كَيْفَ سَأُنَفِّذُ المَهَمّاتِ قَبْلَ أَنْ أَبْدَأَ"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/20",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/4",
+    "text": {
+      "male": {
+        "he-IL": "כשאני מתוסכל בזמן שאני מתמודד עם קושי בלימודים, אני יודע להרגיע את עצמי ולנסות שוב",
+        "ar-IL": "عِنْدَما أَشْعُرُ بِالإِحْباطِ أَثْناءَ مُواجَهَتِي صُعوبَةً فِي الدِّراسَةِ، أَعْرِفُ كَيْفَ أُهَدِّئُ نَفْسِي وَأُحاوِلُ مَرَّةً أُخْرَى"
+      },
+      "female": {
+        "he-IL": "כשאני מתוסכלת בזמן שאני מתמודדת עם קושי בלימודים, אני יודעת להרגיע את עצמי ולנסות שוב",
+        "ar-IL": "عِنْدَما أَشْعُرُ بِالإِحْباطِ أَثْناءَ مُواجَهَتِي صُعوبَةً فِي الدِّراسَةِ، أَعْرِفُ كَيْفَ أُهَدِّئُ نَفْسِي وَأُحاوِلُ مَرَّةً أُخْرَى"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/21",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/5",
+    "text": {
+      "male": {
+        "he-IL": "אני יודע מה עוזר לי בלמידה",
+        "ar-IL": "أَعْرِفُ ما الَّذي يُساعِدُني فِي التَّعَلُّم"
+      },
+      "female": {
+        "he-IL": "אני יודעת מה עוזר לי בלמידה",
+        "ar-IL": "أَعْرِفُ ما الَّذي يُساعِدُني فِي التَّعَلُّمِ"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/22",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/5",
+    "text": {
+      "male": {
+        "he-IL": "אני חושב על הצלחות וכישלונות בלמידה, ולומד מהם כדי להשתפר בפעם הבאה",
+        "ar-IL": "أُفَكِّرُ فِي نَجاحاتِي وَإِخْفاقاتِي فِي التَّعَلُّمِ، وَأَتَعَلَّمُ مِنْها لِأَتَحَسَّنَ فِي الْمَرَّةِ الْقادِمَةِ"
+      },
+      "female": {
+        "he-IL": "אני חושבת על הצלחות וכישלונות בלמידה, ולומדת מהם כדי להשתפר בפעם הבאה",
+        "ar-IL": "أُفَكِّرُ فِي نَجاحاتِي وَإِخْفاقاتِي فِي التَّعَلُّمِ، وَأَتَعَلَّمُ مِنْها لِأَتَحَسَّنَ فِي الْمَرَّةِ الْقادِمَةِ"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/23",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/5",
+    "text": {
+      "male": {
+        "he-IL": "כשאני לא מצליח לענות על שאלה, אני יודע מה בדיוק לא ברור לי",
+        "ar-IL": "عِنْدَما لا أَنْجَحُ في الإِجابَةِ عَنْ سُؤالٍ، أَعْرِفُ بِالضَّبْطِ ما الَّذي لَيْسَ واضِحًا لي"
+      },
+      "female": {
+        "he-IL": "כשאני לא מצליחה לענות על שאלה, אני יודעת מה בדיוק לא ברור לי",
+        "ar-IL": "عِنْدَما لا أَنْجَحُ فِي الإِجابَةِ عَنْ سُؤالٍ، أَعْرِفُ بِالضَّبْطِ ما الَّذي لَيْسَ واضِحًا لي"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/24",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/5",
+    "text": {
+      "male": {
+        "he-IL": "בסוף משימה מאתגרת, אני יודע לומר לעצמי בדיוק מה היה לי קשה",
+        "ar-IL": "فِي نِهايَةِ مُهِمَّةٍ صَعْبَةٍ وَمُثِيرَةٍ لِلتَّحَدِّي، أَسْتَطِيعُ أَنْ أُحَدِّدَ بِدِقَّةٍ ما كانَ صَعْبًا عَلَيَّ"
+      },
+      "female": {
+        "he-IL": "בסוף משימה מאתגרת, אני יודעת לומר לעצמי בדיוק מה היה לי קשה",
+        "ar-IL": "فِي نِهايَةِ مُهِمَّةٍ صَعْبَةٍ وَمُثِيرَةٍ لِلتَّحَدِّي، أَسْتَطِيعُ أَنْ أُحَدِّدَ بِدِقَّةٍ ما كانَ صَعْبًا عَلَيَّ"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/25",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/6",
+    "text": {
+      "male": {
+        "he-IL": "בזמן השיעור, אני מנסה להוסיף רעיונות משלי או לשאול דברים שמעניינים אותי",
+        "ar-IL": "خِلالَ الدَّرْسِ، أُحاوِلُ أَنْ أُضيفَ أَفْكارًا مِنْ عِنْدي أَوْ أَسْأَلَ عَنْ أَشْياءَ تُهِمُّني"
+      },
+      "female": {
+        "he-IL": "בזמן השיעור, אני מנסה להוסיף רעיונות משלי או לשאול דברים שמעניינים אותי",
+        "ar-IL": "خِلالَ الدَّرْسِ، أُحاوِلُ أَنْ أُضيفَ أَفْكارًا مِنْ عِنْدي أَوْ أَسْأَلَ عَنْ أَشْياءَ تَهُمُّني"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/26",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/6",
+    "text": {
+      "male": {
+        "he-IL": "אם אתקשה בלימודים אני מרגיש שהמורה שלי יעזור לי",
+        "ar-IL": "إِذا واجهتُ صعوبة في التَّعَلُّم، أَشْعُرُ أَنَّ مُعَلِّمي سَيُساعِدُني"
+      },
+      "female": {
+        "he-IL": "אם אתקשה בלימודים אני מרגישה שהמורה שלי יעזור לי",
+        "ar-IL": "إِذا واجَهْتُ صُعوبَةً فِي الدِّراسَةِ، أَشْعُرُ أَنَّ مُعَلِّمي سَيُساعِدُني"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/27",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/6",
+    "text": {
+      "male": {
+        "he-IL": "המורה שלי מבינה אותי ויודעת מה מעניין אותי",
+        "ar-IL": "مُعَلِّمَتِي تَفْهَمُنِي وَتَعْرِفُ ما يُهِمُّنِي وَيُثِيرُ اهْتِمامِي"
+      },
+      "female": {
+        "he-IL": "המורה שלי מבינה אותי ויודעת מה מעניין אותי",
+        "ar-IL": "مُعَلِّمَتِي تَفْهَمُنِي وَتَعْرِفُ ما يُهِمُّنِي وَيُثِيرُ اهْتِمامِي"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/28",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/6",
+    "text": {
+      "male": {
+        "he-IL": "כשאני מתקשה אני פונה לחברים בכיתה לקבלת עזרה",
+        "ar-IL": "عِنْدَما أُواجِهُ صُعوبَةً، أَتَوَجَّهُ إِلى أَصْدِقائي في الصَّفِّ لِطَلَبِ المُساعَدَةِ"
+      },
+      "female": {
+        "he-IL": "כשאני מתקשה אני פונה לחברים בכיתה לקבלת עזרה",
+        "ar-IL": "عِنْدَما أُواجِهُ صُعوبَةً، أَتَوَجَّهُ إِلى أَصْدِقائي فِي الصَّفِّ لِطَلَبِ المُساعَدَةِ"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/29",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/7",
+    "text": {
+      "male": {
+        "he-IL": "אני מעדיף מחשב על פני מחברות וספרים",
+        "ar-IL": "أُفَضِّلُ الحاسوبَ عَلَى الدَّفاتِرِ وَالكُتُبِ"
+      },
+      "female": {
+        "he-IL": "אני מעדיפה מחשב על פני מחברות וספרים",
+        "ar-IL": "أُفَضِّلُ الحاسوبَ عَلَى الدَّفاتِرِ وَالكُتُبِ"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/30",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/7",
+    "text": {
+      "male": {
+        "he-IL": "קשה לי לעבוד עם מחשב ואני צריך עזרה כדי להשתמש בו",
+        "ar-IL": "يَصْعُبُ عَلَيَّ العَمَلُ عَلَى الحاسوبِ، وَأَحْتاجُ إِلى مُساعَدَةٍ لاِسْتِخْدامِهِ"
+      },
+      "female": {
+        "he-IL": "קשה לי לעבוד עם מחשב ואני צריכה עזרה כדי להשתמש בו",
+        "ar-IL": "يَصْعُبُ عَلَيَّ العَمَلُ عَلَى الحاسوبِ، وَأَحْتاجُ إِلى مُساعَدَةٍ لاِسْتِخْدامِهِ"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_rev_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_rev_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_rev_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_rev_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_rev_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/questions/31",
+    "measure_id": "https://moe.gov.il/720-agency-mapping/measures/7",
+    "text": {
+      "male": {
+        "he-IL": "יותר קשה לי להתרכז כשאנחנו לומדים עם מחשב מאשר בלי",
+        "ar-IL": "أَجِدُ صُعُوبَةً أَكْبَرَ فِي التَّرْكِيزِ عِنْدَما نَتَعَلَّمُ بِاسْتِخْدامِ الْحاسوبِ مُقارَنَةً بِالتَّعَلُّمِ مِنْ دُونِهِ"
+      },
+      "female": {
+        "he-IL": "יותר קשה לי להתרכז כשאנחנו לומדים עם מחשב מאשר בלי",
+        "ar-IL": "أَجِدُ صُعُوبَةً أَكْبَرَ فِي التَّرْكِيزِ عِنْدَما نَتَعَلَّمُ بِاسْتِخْدامِ الْحاسوبِ مُقارَنَةً بِالتَّعَلُّمِ مِنْ دُونِهِ"
+      }
+    },
+    "answers": [
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_rev_1",
+        "value": 1,
+        "display_text": {
+          "male": { "he-IL": "מסכים מאוד", "ar-IL": "مُوافِق جِدًّا" },
+          "female": { "he-IL": "מסכימה מאוד", "ar-IL": "مُوافِقَةٌ جِدًّا" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_rev_2",
+        "value": 2,
+        "display_text": {
+          "male": { "he-IL": "מסכים", "ar-IL": "مُوافِق" },
+          "female": { "he-IL": "מסכימה", "ar-IL": "مُوافِقَةٌ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_rev_3",
+        "value": 3,
+        "display_text": {
+          "male": { "he-IL": "לא בטוח", "ar-IL": "غَيْر مُتَأَكِّد" },
+          "female": { "he-IL": "לא בטוחה", "ar-IL": "غَيْرُ مُتَأَكِّدَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_rev_4",
+        "value": 4,
+        "display_text": {
+          "male": { "he-IL": "לא מסכים", "ar-IL": "غَيْر مُوافِق" },
+          "female": { "he-IL": "לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ" }
+        }
+      },
+      {
+        "id": "https://moe.gov.il/720-agency-mapping/answers/agree_rev_5",
+        "value": 5,
+        "display_text": {
+          "male": { "he-IL": "בכלל לא מסכים", "ar-IL": "غَيْر مُوافِق إِطْلاقًا" },
+          "female": { "he-IL": "בכלל לא מסכימה", "ar-IL": "غَيْرُ مُوافِقَةٍ إِطْلاقًا" }
+        }
+      }
+    ]
+  }
+]

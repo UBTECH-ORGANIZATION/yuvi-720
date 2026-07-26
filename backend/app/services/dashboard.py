@@ -53,6 +53,18 @@ COMPETENCY_META = {
 }
 COMPETENCY_ORDER = list(COMPETENCY_META.keys())
 
+# Each activeness competency maps 1:1 to an official MoE agency measure (1–6);
+# measure 7 (attitude to computer learning) has no competency domain. Used to
+# surface the rubric level (1–5) per domain on the activeness map.
+COMPETENCY_TO_MEASURE = {
+    "motivation_relevance": 1,
+    "growth_mindset": 2,
+    "initiative_responsibility": 3,
+    "self_regulation": 4,
+    "self_awareness": 5,
+    "support_emotional": 6,
+}
+
 BAND_WORDS = {
     "strong": {"he": "מוכן/ה לאתגר", "en": "Ready for a challenge", "ar": "جاهز/ة للتحدي"},
     "steady": {"he": "מתקדם/ת יפה", "en": "Progressing steadily", "ar": "يتقدّم/تتقدّم بثبات"},
@@ -166,12 +178,21 @@ def _project_competencies(
     from app.brain.activeness import MIN_CAUSE_CONF
 
     base = (brain.get("profile") or {}).get("activeness") or {}
+    # Official rubric level (1–5) per measure from the mapping, keyed by measure
+    # number → the map shows each domain's self-reported agency level (verbal).
+    measures = (brain.get("profile") or {}).get("mapping_measures") or []
+    level_by_measure: dict[int, dict[str, Any]] = {}
+    if isinstance(measures, list):
+        for m in measures:
+            if isinstance(m, dict) and isinstance(m.get("measure"), int):
+                level_by_measure[m["measure"]] = m
     out = []
     for key in COMPETENCY_ORDER:
         meta = COMPETENCY_META[key]
         eff = (effective or {}).get(key) or {}
         value = int(eff.get("value", base.get(key, 0)))
         tone = "strong" if value >= 70 else "steady" if value >= 45 else "support"
+        measure_row = level_by_measure.get(COMPETENCY_TO_MEASURE.get(key, 0))
         out.append({
             "key": key,
             "icon": meta["icon"],
@@ -181,6 +202,11 @@ def _project_competencies(
             "value": value,
             "descriptor": _t(BAND_WORDS, tone, language),
             "tone": tone,
+            # Official rubric level (1–5) + its key for the map's verbal reflection
+            # (localized on the client via `mapping.level.<key>`). Null until the
+            # learner completes the mapping questionnaire.
+            "mappingLevel": (measure_row or {}).get("level") or None,
+            "mappingLevelKey": (measure_row or {}).get("level_key") or None,
             # State-aware "how to improve" cause tags (behavioural, no numbers).
             "improve": list(eff.get("causes") or []),
             # True only when there's enough real activity to name *why* the score
