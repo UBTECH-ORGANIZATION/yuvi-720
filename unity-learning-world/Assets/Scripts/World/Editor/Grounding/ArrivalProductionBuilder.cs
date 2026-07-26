@@ -112,14 +112,14 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             // downloaded) and fades when this section is completed (revealsSectionId → RevealSection).
             var curtainGo = new GameObject("CloudCurtain-East");
             curtainGo.transform.SetParent(dressing, false);
-            curtainGo.transform.SetPositionAndRotation(new Vector3(26f, Plaza - 1f, 0f), Quaternion.Euler(0f, -90f, 0f));
+            curtainGo.transform.SetPositionAndRotation(new Vector3(26f, Plaza - 3.5f, 0f), Quaternion.Euler(0f, -90f, 0f));
             var curtain = curtainGo.AddComponent<CloudCurtain>();
-            // Fewer, bigger, softer puffs set further out: a hazy bank on the horizon rather than a close-up
-            // wall of white balls stacked over the market.
-            curtain.width = 58f; curtain.height = 15f; curtain.columns = 9; curtain.rows = 3;
-            curtain.puffSize = 7.4f;
-            curtain.depthJitter = 3.2f;
-            curtain.cloudColor = new Color(0.95f, 0.965f, 0.99f, 0.5f);
+            // A LOW bank of sea mist hugging the water, not a stack of pancakes hanging in the sky. Wide, thin
+            // and mostly transparent so it veils the locked route without dominating the vista.
+            curtain.width = 34f; curtain.height = 5f; curtain.columns = 9; curtain.rows = 3;
+            curtain.puffSize = 3.4f;
+            curtain.depthJitter = 3f;
+            curtain.cloudColor = new Color(0.95f, 0.965f, 0.99f, 0.22f);
             curtain.revealsSectionId = "archive";
 
             EditorSceneManager.SaveScene(sectionScene, SectionArrivalPath);
@@ -365,7 +365,7 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             // band of open water between them and the island. The coast is now sampled per column, so the range
             // follows whatever the authored polygon actually produces and a reshape cannot re-open that gap.
             Physics.SyncTransforms();
-            const int mtnCount = 18;
+            const int mtnCount = 12;
             for (var i = 0; i < mtnCount; i++)
             {
                 var x = Mathf.Lerp(-46f, 24f, i / (float)(mtnCount - 1));
