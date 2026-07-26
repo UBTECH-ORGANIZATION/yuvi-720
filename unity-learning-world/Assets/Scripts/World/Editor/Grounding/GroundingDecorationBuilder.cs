@@ -5,13 +5,15 @@ using UnityEngine.Rendering;
 namespace Yuvi720.LearningWorld.Editor.Grounding
 {
     /// <summary>
-    /// Sharp, semi-realistic dressing kit for the Yuvi learning world. The art direction is a
-    /// clean, cool, faceted island — crisp low-poly forms, cool greens and slate stone, and neon
-    /// cyan accents that echo the glossy grey/white Yuvi robot (chest ring, ear pods, antenna).
-    /// Vegetation/rock use the half-Lambert ground shader (baked AO vertex colors); buildings and
-    /// glow accents use hard-surface / emissive Standard materials for a crisper plastic sheen.
-    /// Assets are self-contained roots (some carry their own cyan point light). Purely visual — no
-    /// colliders — so walkability stays authored by the grounding traversal surfaces.
+    /// Stylized-realism dressing kit for the Yuvi learning world. The art direction is a calm,
+    /// contemporary rural village: believable materials (render, clay tile, honed masonry, asphalt,
+    /// sawn paving, timber), soft natural daylight, layered planting and quiet, balanced colour —
+    /// polished and immersive rather than toy-like, while staying bright, safe and child-friendly.
+    /// Surfaces carry real relief through the normal-mapped materials in
+    /// <see cref="GroundingTextureFactory"/>; vegetation and rock keep the half-Lambert ground shader
+    /// (baked AO vertex colours) so foliage stays soft. Assets are self-contained roots (some carry
+    /// their own light). Purely visual — no colliders — so walkability stays authored by the grounding
+    /// traversal surfaces.
     /// </summary>
     internal static class GroundingDecorationBuilder
     {
@@ -54,6 +56,26 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
         // Warm cozy glow (lamps, lit windows) — replaces the cyan tech accents.
         private static Material WarmGlow => Glow("WarmGlow", 0xFFC271, 1.8f);
         private const int WarmGlowRGB = 0xFFB74D;
+
+        // ---- Stylized-realism surface set --------------------------------------------------
+        // Textured, normal-mapped surfaces. These are what stop walls, roofs, kerbs and paving from
+        // reading as flat coloured cardboard: each one has real relief lit by the daylight rig.
+        private static Material RoofTileMat(int hex) => GroundingTextureFactory.ClayRoof(RGB(hex));
+        private static Material PavingMat => GroundingTextureFactory.Paving(RGB(0xC9C6BE));
+        private static Material PavingWarmMat => GroundingTextureFactory.Paving(RGB(0xD5CDBC));
+        private static Material AsphaltMat => GroundingTextureFactory.Asphalt(RGB(0x9AA0A4));
+        private static Material MasonryMat => GroundingTextureFactory.Masonry(RGB(0xD3CCBE));
+        private static Material MasonryDarkMat => GroundingTextureFactory.Masonry(RGB(0xA9A296));
+        private static Material ConcreteMat => GroundingTextureFactory.Concrete(RGB(0xC4C1BA));
+        private static Material ConcreteDarkMat => GroundingTextureFactory.Concrete(RGB(0x9C9A94));
+
+        // Real glass: dark, smooth and reflective in daylight rather than a glowing yellow panel.
+        // (The warm interior glow is kept as a thin backing pane so windows still read as lived-in
+        // once LampNightLight dims the world.)
+        private static Material GlassDay => Hard("GlassDay", 0x2E3B44, .92f, .12f);
+        private static Material MetalDark => Hard("MetalDark", 0x3D4247, .55f, .70f);   // modern lamp/railing steel
+        private static Material MetalWarmGrey => Hard("MetalWarmGrey", 0x6E7176, .5f, .6f);
+        private static Material TimberDeck => GroundingTextureFactory.Wood(RGB(0x9A7B55));
 
         // Animated water (Yuvi/Water shader): a calm, always-filled teal pool with gentle concentric
         // ripples — puddles OFF so the water never appears/disappears.
@@ -103,47 +125,110 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
         }
         private static Material PineDeepTex => FoliageMat("PineDeep", 0x2E4F37);
         private static Material PineMidTex => FoliageMat("PineMid", 0x3C6A46);
+        private static Material PineWarmTex => FoliageMat("PineWarm", 0x4A7A4E);
         private static Material LeafDeepTex => FoliageMat("LeafDeep", 0x3A5E33);
         private static Material LeafCoolTex => FoliageMat("LeafCool", 0x4F7A42);
         private static Material LeafLightTex => FoliageMat("LeafLight", 0x6FA054);
+        private static Material LeafGoldTex => FoliageMat("LeafGold", 0x7E9B47);
         private static Material BarkTexMat => GroundingTextureFactory.Bark(RGB(0x5B4A38));
+        private static Material BarkPaleMat => GroundingTextureFactory.Bark(RGB(0x6E5C46));
+        private static Material UndergrowthMat => FoliageMat("Undergrowth", 0x44693A);
+
+        /// <summary>
+        /// Applies per-instance yaw/tilt WITHOUT touching the root transform. Placement code owns the root
+        /// rotation, so the variation is pushed onto an inserted "Rig" child that the placer never writes to.
+        /// </summary>
+        private static void VaryInstance(Transform root, float yaw, float tilt)
+        {
+            var rig = new GameObject("Rig").transform;
+            rig.SetParent(root, false);
+            for (var i = root.childCount - 1; i >= 0; i--)
+            {
+                var child = root.GetChild(i);
+                if (child == rig) continue;
+                child.SetParent(rig, true);
+            }
+            rig.localEulerAngles = new Vector3(tilt, yaw, tilt * 0.6f);
+        }
+
+        /// <summary>
+        /// A low skirt of grass and leaf litter around a plant's base. Vegetation that meets the ground on
+        /// a hard edge looks pushed into the terrain ("ננעצת"); a soft collar hides that seam.
+        /// </summary>
+        private static void AddRootSkirt(Transform root, float radius, int seed, Material mat)
+        {
+            var m = new MeshB();
+            var tufts = 7;
+            for (var i = 0; i < tufts; i++)
+            {
+                var a = i / (float)tufts * Mathf.PI * 2f + Hash(seed + i) * 0.9f;
+                var rr = radius * (0.75f + 0.4f * Hash(seed + i * 3));
+                var p = new Vector3(Mathf.Cos(a) * rr, 0.01f, Mathf.Sin(a) * rr);
+                m.Facet(p, radius * 0.42f, seed + i * 5, 0.24f, 5, 2, 0.34f);
+            }
+            Add(root, "Skirt", m, mat, flat: true);
+        }
 
         // Sharp conifer — the primary silhouette. Stacked faceted cones, textured needles.
         public static Transform CreateConifer(string name, float scale, int seed)
         {
             var root = new GameObject(name).transform;
+            // Per-instance variation: no two conifers share a height, girth or hue, so a stand of trees
+            // stops looking like one prefab stamped in a row.
+            var v = 0.82f + 0.42f * Hash01(seed * 7 + 3);
+            var s = scale * v;
+            var lean = (Hash(seed * 5) * 4.5f);
             var trunk = new MeshB();
-            trunk.Cylinder(Vector3.zero, 0.13f * scale, 0.09f * scale, 0.6f * scale, 6, 0.4f, 0.85f);
-            Add(root, "Trunk", trunk, BarkTexMat);
+            trunk.Cylinder(Vector3.zero, 0.15f * s, 0.09f * s, 0.62f * s, 7, 0.4f, 0.85f);
+            // Flared root buttress so the trunk grows out of the ground instead of being poked into it.
+            trunk.Cylinder(new Vector3(0, -0.02f * s, 0), 0.24f * s, 0.15f * s, 0.16f * s, 7, 0.32f, 0.7f);
+            Add(root, "Trunk", trunk, (seed % 4 == 0) ? BarkPaleMat : BarkTexMat);
 
             var canopy = new MeshB();
-            // three overlapping 6-sided cones, tightening toward a crisp tip
-            canopy.Cone(new Vector3(0, 0.42f * scale, 0), 1.02f * scale, 1.35f * scale, 6, 0.55f, 0.98f);
-            canopy.Cone(new Vector3(0, 1.12f * scale, 0), 0.80f * scale, 1.25f * scale, 6, 0.6f, 0.98f);
-            canopy.Cone(new Vector3(0, 1.85f * scale, 0), 0.52f * scale, 1.15f * scale, 6, 0.62f, 1f);
-            Add(root, "Canopy", canopy, (seed % 3 == 0) ? PineMidTex : PineDeepTex, flat: true);
+            // Four overlapping cones with per-tree jitter, tightening toward a crisp tip. The extra tier and
+            // the varied radii give a fuller, less geometric silhouette.
+            var j = 0.9f + 0.2f * Hash01(seed * 3 + 11);
+            canopy.Cone(new Vector3(0, 0.34f * s, 0), 1.12f * s * j, 1.20f * s, 7, 0.52f, 0.96f);
+            canopy.Cone(new Vector3(0, 0.92f * s, 0), 0.94f * s * j, 1.24f * s, 7, 0.56f, 0.98f);
+            canopy.Cone(new Vector3(0, 1.55f * s, 0), 0.72f * s * j, 1.20f * s, 6, 0.6f, 0.98f);
+            canopy.Cone(new Vector3(0, 2.16f * s, 0), 0.45f * s * j, 1.10f * s, 6, 0.64f, 1f);
+            var needle = (seed % 3 == 0) ? PineMidTex : (seed % 5 == 0) ? PineWarmTex : PineDeepTex;
+            Add(root, "Canopy", canopy, needle, flat: true);
+            AddRootSkirt(root, 0.42f * s, seed, LeafDeepTex);
+            VaryInstance(root, Hash01(seed) * 360f, lean * 0.3f);
+
             return root;
         }
 
-        // Faceted broadleaf — secondary silhouette. Crisp low-poly canopy, textured leaves.
+        // Broadleaf tree — secondary silhouette. Layered canopy with per-instance variation, boughs and a
+        // root skirt, so a row of them reads as planting rather than repeated props.
         public static Transform CreateTree(string name, float scale, int seed)
         {
             var root = new GameObject(name).transform;
-            var h = 2.1f * scale;
+            var v = 0.80f + 0.48f * Hash01(seed * 11 + 5);
+            var s = scale * v;
+            var h = 2.1f * s;
             var trunk = new MeshB();
-            trunk.Cylinder(Vector3.zero, 0.17f * scale, 0.12f * scale, h * 0.5f, 6, 0.4f, 0.88f);
-            // a couple of angular boughs where the canopy meets the trunk
-            Add(root, "Trunk", trunk, BarkTexMat);
+            trunk.Cylinder(Vector3.zero, 0.19f * s, 0.12f * s, h * 0.55f, 7, 0.4f, 0.88f);
+            trunk.Cylinder(new Vector3(0, -0.02f * s, 0), 0.29f * s, 0.19f * s, 0.18f * s, 7, 0.3f, 0.68f); // root flare
+            // Two angular boughs reaching into the canopy so the trunk doesn't just stop.
+            trunk.Cylinder(new Vector3(0.10f * s, h * 0.42f, 0.04f * s), 0.075f * s, 0.045f * s, 0.42f * s, 5, 0.45f, 0.8f);
+            trunk.Cylinder(new Vector3(-0.09f * s, h * 0.46f, -0.05f * s), 0.065f * s, 0.04f * s, 0.36f * s, 5, 0.45f, 0.8f);
+            Add(root, "Trunk", trunk, (seed % 3 == 0) ? BarkPaleMat : BarkTexMat);
 
             var canopy = new MeshB();
-            var cr = 0.95f * scale;
-            canopy.Facet(new Vector3(0f, h * 0.72f, 0f), cr, seed, 0.18f, 6, 4, 0.5f);
-            canopy.Facet(new Vector3(cr * 0.55f, h * 0.6f, cr * 0.15f), cr * 0.62f, seed + 3, 0.2f, 5, 3, 0.45f);
-            canopy.Facet(new Vector3(-cr * 0.5f, h * 0.64f, -cr * 0.2f), cr * 0.6f, seed + 7, 0.2f, 5, 3, 0.45f);
-            Add(root, "Canopy", canopy, (seed % 2 == 0) ? LeafCoolTex : LeafLightTex, flat: true);
+            var cr = 0.98f * s;
+            canopy.Facet(new Vector3(0f, h * 0.78f, 0f), cr, seed, 0.16f, 7, 4, 0.5f);
+            canopy.Facet(new Vector3(cr * 0.55f, h * 0.62f, cr * 0.15f), cr * 0.64f, seed + 3, 0.18f, 6, 3, 0.45f);
+            canopy.Facet(new Vector3(-cr * 0.5f, h * 0.66f, -cr * 0.2f), cr * 0.62f, seed + 7, 0.18f, 6, 3, 0.45f);
+            canopy.Facet(new Vector3(cr * 0.12f, h * 0.95f, -cr * 0.28f), cr * 0.5f, seed + 13, 0.2f, 6, 3, 0.55f);
+            var leaf = (seed % 3 == 0) ? LeafCoolTex : (seed % 5 == 0) ? LeafGoldTex : LeafLightTex;
+            Add(root, "Canopy", canopy, leaf, flat: true);
             var under = new MeshB();
-            under.Facet(new Vector3(0f, h * 0.58f, 0f), cr * 0.6f, seed + 11, 0.16f, 5, 3, 0.32f);
+            under.Facet(new Vector3(0f, h * 0.6f, 0f), cr * 0.66f, seed + 11, 0.14f, 6, 3, 0.3f);
             Add(root, "CanopyUnder", under, LeafDeepTex, flat: true);
+            AddRootSkirt(root, 0.46f * s, seed + 2, UndergrowthMat);
+            VaryInstance(root, Hash01(seed * 3) * 360f, 0f);
             return root;
         }
 
@@ -151,11 +236,38 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
         {
             var root = new GameObject(name).transform;
             var m = new MeshB();
-            var r = 0.55f * scale;
-            m.Facet(new Vector3(0f, r * 0.65f, 0f), r, seed, 0.2f, 6, 3, 0.4f);
-            m.Facet(new Vector3(r * 0.7f, r * 0.5f, 0f), r * 0.72f, seed + 2, 0.22f, 5, 3, 0.4f);
-            m.Facet(new Vector3(-r * 0.6f, r * 0.48f, r * 0.3f), r * 0.68f, seed + 5, 0.22f, 5, 3, 0.4f);
-            Add(root, "Bush", m, (seed % 2 == 0) ? LeafCool : LeafDeep, flat: true);
+            // Varied size and an extra lobe: bushes now differ in mass and outline instead of being clones.
+            var r = 0.55f * scale * (0.78f + 0.5f * Hash01(seed * 9 + 1));
+            m.Facet(new Vector3(0f, r * 0.68f, 0f), r, seed, 0.2f, 7, 3, 0.4f);
+            m.Facet(new Vector3(r * 0.72f, r * 0.5f, 0f), r * 0.74f, seed + 2, 0.22f, 6, 3, 0.4f);
+            m.Facet(new Vector3(-r * 0.6f, r * 0.48f, r * 0.3f), r * 0.7f, seed + 5, 0.22f, 6, 3, 0.4f);
+            m.Facet(new Vector3(r * 0.08f, r * 0.42f, -r * 0.62f), r * 0.6f, seed + 8, 0.24f, 5, 3, 0.36f);
+            var leaf = (seed % 3 == 0) ? LeafCool : (seed % 5 == 0) ? LeafGoldTex : LeafDeep;
+            Add(root, "Bush", m, leaf, flat: true);
+            AddRootSkirt(root, r * 0.85f, seed + 4, UndergrowthMat);
+            VaryInstance(root, Hash01(seed * 5) * 360f, 0f);
+            return root;
+        }
+
+        /// <summary>
+        /// A clipped hedge run — the low green wall that edges gardens and frontages. Length is in world
+        /// units; the crown is broken up per segment so it never reads as an extruded box.
+        /// </summary>
+        public static Transform CreateHedge(string name, float length, int seed)
+        {
+            var root = new GameObject(name).transform;
+            var m = new MeshB();
+            var segs = Mathf.Max(2, Mathf.RoundToInt(length / 0.7f));
+            for (var i = 0; i < segs; i++)
+            {
+                var x = -length * 0.5f + (i + 0.5f) * (length / segs);
+                var hgt = 0.62f + 0.12f * Hash01(seed + i * 3);
+                m.Facet(new Vector3(x, hgt * 0.62f, 0f), 0.46f, seed + i, 0.16f, 6, 3, 0.42f);
+            }
+            Add(root, "Hedge", m, (seed % 2 == 0) ? LeafDeepTex : LeafCoolTex, flat: true);
+            var soil = new MeshB();
+            soil.Box(new Vector3(0, 0.04f, 0), new Vector3(length + 0.3f, 0.08f, 0.72f), 0.55f, 0.45f, 0.45f, 0.35f, true);
+            Add(root, "Bed", soil, GroundingTextureFactory.Sand(new Color(0.36f, 0.31f, 0.25f)));
             return root;
         }
 
@@ -163,8 +275,14 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
         {
             var root = new GameObject(name).transform;
             var m = new MeshB();
-            m.FacetRock(Vector3.zero, 0.7f * scale, seed);
+            var s = scale * (0.8f + 0.45f * Hash01(seed * 13 + 2));
+            m.FacetRock(Vector3.zero, 0.7f * s, seed);
+            // A couple of small companion stones bed the boulder into the ground.
+            m.FacetRock(new Vector3(0.62f * s, -0.12f * s, 0.28f * s), 0.22f * s, seed + 17);
+            m.FacetRock(new Vector3(-0.55f * s, -0.14f * s, -0.3f * s), 0.18f * s, seed + 23);
             Add(root, "Rock", m, (seed % 3 == 0) ? RockDark : Rock, flat: true);
+            AddRootSkirt(root, 0.66f * s, seed + 6, UndergrowthMat);
+            VaryInstance(root, Hash01(seed * 7) * 360f, 0f);
             return root;
         }
 
@@ -172,16 +290,21 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
         {
             var root = new GameObject(name).transform;
             var m = new MeshB();
-            var blades = 8;
+            // Denser, taller and more varied: real meadow tufts rather than a sparse asterisk of blades.
+            var s = scale * (0.75f + 0.6f * Hash01(seed * 3 + 7));
+            var blades = 14;
             for (var i = 0; i < blades; i++)
             {
-                var ang = (i / (float)blades) * Mathf.PI * 2f + Hash(seed + i) * 0.7f;
-                var spread = (0.12f + 0.09f * Hash(seed + i * 5)) * scale;
+                var ang = (i / (float)blades) * Mathf.PI * 2f + Hash(seed + i) * 0.9f;
+                var spread = (0.10f + 0.13f * Hash01(seed + i * 5)) * s;
                 var dir = new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * spread;
-                var tip = dir * 1.5f + Vector3.up * (0.5f + 0.26f * Hash(seed + i * 2)) * scale;
-                m.Blade(dir, tip, 0.05f * scale);
+                // Blades arc over instead of standing straight, so the tuft catches light on its flanks.
+                var bend = 1.4f + 0.9f * Hash01(seed + i * 11);
+                var tip = dir * bend + Vector3.up * (0.42f + 0.42f * Hash01(seed + i * 2)) * s;
+                m.Blade(dir, tip, (0.035f + 0.03f * Hash01(seed + i * 13)) * s);
             }
-            Add(root, "Grass", m, (seed % 2 == 0) ? LeafLight : LeafCool, flat: true);
+            Add(root, "Grass", m, (seed % 3 == 0) ? LeafLight : (seed % 5 == 0) ? LeafGoldTex : LeafCool, flat: true);
+            VaryInstance(root, Hash01(seed * 9) * 360f, 0f);
             return root;
         }
 
@@ -190,17 +313,22 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             var root = new GameObject(name).transform;
             var stems = new MeshB();
             var heads = new MeshB();
-            var count = 5;
+            var leaves = new MeshB();
+            // A planted clump: more stems, varied heights, a low leaf base — reads as a flower bed patch.
+            var count = 9;
             var mat = FlowerMat(seed);
             for (var i = 0; i < count; i++)
             {
-                var off = new Vector3(Hash(seed + i) * 0.32f, 0f, Hash(seed + i * 3) * 0.32f);
-                var top = off + Vector3.up * (0.4f + 0.13f * Hash(seed + i));
-                stems.Cylinder(off, 0.022f, 0.022f, top.y, 4, 0.6f, 0.9f);
-                heads.Facet(top, 0.11f, seed + i, 0.1f, 5, 3, 0.7f);
+                var off = new Vector3(Hash(seed + i) * 0.4f, 0f, Hash(seed + i * 3) * 0.4f);
+                var top = off + Vector3.up * (0.32f + 0.28f * Hash01(seed + i * 7));
+                stems.Cylinder(off, 0.02f, 0.016f, top.y, 4, 0.6f, 0.9f);
+                heads.Facet(top, 0.085f + 0.05f * Hash01(seed + i * 5), seed + i, 0.1f, 6, 3, 0.75f);
+                leaves.Facet(off + Vector3.up * 0.07f, 0.17f, seed + i * 9, 0.22f, 5, 2, 0.34f);
             }
+            Add(root, "Leaves", leaves, LeafDeepTex, flat: true);
             Add(root, "Stems", stems, LeafDeep);
             Add(root, "Heads", heads, mat, flat: true);
+            VaryInstance(root, Hash01(seed * 11) * 360f, 0f);
             return root;
         }
 
@@ -227,48 +355,71 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             // from above (the same quirk that made a bare Box invisible from overhead). Without it the shelf is
             // geometrically present but see-through from the play camera, so the sea reads straight through it
             // and the range looks detached from the coast no matter how close the peaks are moved.
-            body.Cylinder(Vector3.zero, r * 1.8f, r * 1.5f, 1.9f, 14, 0.7f, 0.92f, doubleSided: true);
-            // More sides + gentler jitter than before → rounded, layered rock instead of sharp paper shards.
-            body.RidgeCone(Vector3.zero, r, h, 13, seed, 0.20f);
-            // Two shoulder peaks (both sides) for a natural, layered range silhouette rather than a lone cone.
-            body.RidgeCone(new Vector3(r * 0.72f, 0f, -r * 0.22f), r * 0.62f, h * 0.66f, 11, seed + 4, 0.18f);
-            body.RidgeCone(new Vector3(-r * 0.66f, 0f, r * 0.18f), r * 0.5f, h * 0.5f, 10, seed + 9, 0.16f);
+            body.Cylinder(Vector3.zero, r * 1.8f, r * 1.5f, 1.9f, 18, 0.7f, 0.92f, doubleSided: true);
+            // Many more sides + much gentler jitter → rounded, weathered ridges instead of sharp paper
+            // shards. This is the single biggest thing separating "low-poly backdrop" from "distant hills".
+            body.RidgeCone(Vector3.zero, r, h, 22, seed, 0.11f);
+            // Shoulder peaks (both sides) for a natural, layered range silhouette rather than a lone cone.
+            body.RidgeCone(new Vector3(r * 0.72f, 0f, -r * 0.22f), r * 0.62f, h * 0.66f, 18, seed + 4, 0.10f);
+            body.RidgeCone(new Vector3(-r * 0.66f, 0f, r * 0.18f), r * 0.5f, h * 0.5f, 16, seed + 9, 0.09f);
+            body.RidgeCone(new Vector3(r * 0.15f, 0f, r * 0.55f), r * 0.44f, h * 0.38f, 14, seed + 15, 0.09f); // foothill
             // Cool blue-grey rock through the vendored TRIPLANAR shader, so the chiselled stone texture projects
-            // onto the steep faces (it used to smear top-down and read flat). Faint emission built into the
-            // shader keeps back-lit slopes from crushing to black.
-            var rockCol = (seed % 2 == 0) ? RGB(0xB4C2D4) : RGB(0xA6B6CB);
+            // onto the steep faces (it used to smear top-down and read flat). The tint is pushed toward the fog
+            // colour — aerial perspective, so the range recedes into the sky instead of sitting on top of it.
+            var rockCol = (seed % 2 == 0) ? RGB(0xBAC6D6) : RGB(0xAEBCCE);
             Add(root, "Rock", body, GroundingTextureFactory.StoneTriplanar(rockCol), flat: true);
 
             // Snow caps on EVERY peak (the shoulders used to have none, so only one tip in three read white).
             // Each cap starts halfway up its own cone and flares wider than that cone's radius at the same
-            // height — otherwise it sits buried inside the rock and no white shows.
+            // height — otherwise it sits buried inside the rock and no white shows. Low jitter keeps the
+            // snowline soft rather than jagged.
             var cap = new MeshB();
-            cap.RidgeCone(new Vector3(0f, h * 0.5f, 0f), r * 0.58f, h * 0.52f, 9, seed, 0.24f);
-            cap.RidgeCone(new Vector3(r * 0.72f, h * 0.33f, -r * 0.22f), r * 0.36f, h * 0.35f, 8, seed + 4, 0.22f);
-            cap.RidgeCone(new Vector3(-r * 0.66f, h * 0.25f, r * 0.18f), r * 0.29f, h * 0.27f, 7, seed + 9, 0.22f);
+            cap.RidgeCone(new Vector3(0f, h * 0.5f, 0f), r * 0.58f, h * 0.52f, 16, seed, 0.14f);
+            cap.RidgeCone(new Vector3(r * 0.72f, h * 0.33f, -r * 0.22f), r * 0.36f, h * 0.35f, 13, seed + 4, 0.13f);
+            cap.RidgeCone(new Vector3(-r * 0.66f, h * 0.25f, r * 0.18f), r * 0.29f, h * 0.27f, 12, seed + 9, 0.13f);
             Add(root, "Snow", cap, Snow, flat: true);
             return root;
         }
 
-        // ---- Plaza sand path ---------------------------------------------------------------
+        // ---- Roads, paths and kerbs ---------------------------------------------------------
 
-        // Cobblestone paths with a raised light-stone kerb frame on both edges (see the reference: cobbles
-        // inside, stone border tiles along the sides). Cool blue-grey to sit with the world's slate/robot palette.
-        private static Material CobblePathMat => GroundingTextureFactory.CobblePath(new Color(0.68f, 0.73f, 0.78f));
-        private static Material KerbStoneMat => GroundingTextureFactory.Stone(new Color(0.82f, 0.83f, 0.86f));
+        // Natural, modern surfacing: sawn paving slabs on the plaza, a warm asphalt/hoggin path for the
+        // spurs, and a REAL raised kerb (a top course with a visible vertical face) framing both. The old
+        // kerbs were coplanar strips, which is why the paths read as decals printed on the grass.
+        private static Material PlazaPavingMat => PavingWarmMat;
+        private static Material CobblePathMat => GroundingTextureFactory.CobblePath(new Color(0.74f, 0.72f, 0.68f));
+        private static Material PathTopMat => GroundingTextureFactory.Asphalt(new Color(0.78f, 0.75f, 0.70f));
+        private static Material KerbStoneMat => GroundingTextureFactory.Paving(new Color(0.86f, 0.85f, 0.82f));
+        private static Material KerbFaceMat => GroundingTextureFactory.Concrete(new Color(0.72f, 0.71f, 0.68f));
+        // Loose gravel skirt: softens the hard line where a path edge meets the grass so nothing looks
+        // stamped on top of the ground.
+        private static Material PathSkirtMat => GroundingTextureFactory.Sand(new Color(0.70f, 0.68f, 0.62f));
+
+        private const float KerbHeight = 0.11f;   // how far the kerb top stands above the path surface
 
         public static Transform CreatePathRing(string name, float innerR, float outerR, int sides)
         {
             var root = new GameObject(name).transform;
             var surf = new MeshB();
             surf.Ring(new Vector3(0f, 0.02f, 0f), innerR, outerR, sides, 0.92f);
-            Add(root, "Path", surf, CobblePathMat, flat: true);
-            // Flat stone frame band flush with the surface, just outside the outer edge and inside the inner edge.
-            var kerb = new MeshB();
+            Add(root, "Path", surf, PlazaPavingMat, flat: true);
+            // A darker banding course just inside the outer kerb — a designed plaza, not a plain donut.
+            var band = new MeshB();
+            band.Ring(new Vector3(0f, 0.025f, 0f), outerR - 0.75f, outerR - 0.15f, sides, 0.86f);
+            band.Ring(new Vector3(0f, 0.025f, 0f), innerR + 0.15f, innerR + 0.6f, sides, 0.86f);
+            Add(root, "PathBand", band, CobblePathMat, flat: true);
+
+            // Raised kerb frames, outside and inside, each with a real vertical face.
+            var top = new MeshB(); var face = new MeshB();
             const float kw = 0.34f;
-            KerbRingEdge(kerb, outerR, outerR + kw, 0.02f, sides);
-            KerbRingEdge(kerb, innerR - kw, innerR, 0.02f, sides);
-            Add(root, "Kerb", kerb, KerbStoneMat, flat: true);
+            KerbRingEdge(top, face, outerR, outerR + kw, 0.02f, sides);
+            KerbRingEdge(top, face, innerR - kw, innerR, 0.02f, sides);
+            Add(root, "Kerb", top, KerbStoneMat, flat: true);
+            Add(root, "KerbFace", face, KerbFaceMat);
+            // Gravel skirt bedding the kerb into the grass.
+            var skirt = new MeshB();
+            skirt.Ring(new Vector3(0f, 0.008f, 0f), outerR + kw, outerR + kw + 0.42f, sides, 0.8f);
+            Add(root, "Skirt", skirt, PathSkirtMat, flat: true);
             return root;
         }
 
@@ -297,14 +448,18 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             return pts;
         }
 
-        // Builds a cobblestone ribbon following a centreline, with a raised stone kerb along each edge.
-        // Per-vertex perpendiculars (central difference) keep the ribbon continuous around the curves.
+        // Builds a surfaced ribbon following a centreline, with a RAISED kerb along each edge and a gravel
+        // skirt bedding it into the grass. Per-vertex perpendiculars (central difference) keep the ribbon
+        // continuous around the curves.
         public static Transform CreatePathRibbon(string name, List<Vector3> center, float halfW, bool kerb)
         {
             var root = new GameObject(name).transform;
             var surf = new MeshB();
             var rail = new MeshB();
-            const float kw = 0.32f;                 // frame width; laid FLAT, level with the path surface
+            var railFace = new MeshB();
+            var skirt = new MeshB();
+            const float kw = 0.32f;                 // kerb course width
+            const float sw = 0.40f;                 // gravel skirt width outside the kerb
             var n = center.Count;
             var perp = new Vector3[n];
             for (var i = 0; i < n; i++)
@@ -322,35 +477,68 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
                 surf.Quad(l1, r1, r0, l0, 0.92f, 0.92f, 0.92f, 0.92f);
                 if (kerb)
                 {
-                    AddKerbRail(rail, l0, l1, -perp[i], -perp[i + 1], kw);
-                    AddKerbRail(rail, r0, r1, perp[i], perp[i + 1], kw);
+                    AddKerbRail(rail, railFace, l0, l1, -perp[i], -perp[i + 1], kw);
+                    AddKerbRail(rail, railFace, r0, r1, perp[i], perp[i + 1], kw);
+                    AddSkirt(skirt, l0 - perp[i] * kw, l1 - perp[i + 1] * kw, -perp[i], -perp[i + 1], sw);
+                    AddSkirt(skirt, r0 + perp[i] * kw, r1 + perp[i + 1] * kw, perp[i], perp[i + 1], sw);
                 }
             }
-            Add(root, "Surface", surf, CobblePathMat, flat: true);
-            if (kerb) Add(root, "Kerb", rail, KerbStoneMat, flat: true);
+            Add(root, "Surface", surf, PathTopMat, flat: true);
+            if (kerb)
+            {
+                Add(root, "Kerb", rail, KerbStoneMat, flat: true);
+                Add(root, "KerbFace", railFace, KerbFaceMat);
+                Add(root, "Skirt", skirt, PathSkirtMat, flat: true);
+            }
             return root;
         }
 
-        // A FLAT frame strip running along a path edge e0→e1, w wide outward, coplanar with the path surface
-        // (a stone border laid flush, not a raised kerb). Double-sided.
-        private static void AddKerbRail(MeshB m, Vector3 e0, Vector3 e1, Vector3 out0, Vector3 out1, float w)
+        // A RAISED kerb course running along a path edge e0→e1, w wide outward: a top face lifted
+        // <see cref="KerbHeight"/> above the path plus the vertical faces on both sides. The vertical faces
+        // are what catch the sun and cast the shadow line that makes a path sit IN the ground rather than
+        // on top of it — a coplanar strip (the previous behaviour) never can.
+        private static void AddKerbRail(MeshB top, MeshB face, Vector3 e0, Vector3 e1, Vector3 out0, Vector3 out1, float w)
         {
+            var up = Vector3.up * KerbHeight;
             Vector3 i0 = e0, i1 = e1, o0 = e0 + out0 * w, o1 = e1 + out1 * w;
-            m.Quad(i0, o0, o1, i1, 1f, 1f, 1f, 1f);
-            m.Quad(i1, o1, o0, i0, 1f, 1f, 1f, 1f);
+            Vector3 i0t = i0 + up, i1t = i1 + up, o0t = o0 + up, o1t = o1 + up;
+            top.Quad(i0t, o0t, o1t, i1t, 1f, 1f, 1f, 1f);
+            top.Quad(i1t, o1t, o0t, i0t, 1f, 1f, 1f, 1f);
+            // inner face (toward the path) — shaded, reads as the kerb upstand
+            face.Quad(i0, i0t, i1t, i1, 0.6f, 0.86f, 0.86f, 0.6f);
+            face.Quad(i1, i1t, i0t, i0, 0.6f, 0.86f, 0.86f, 0.6f);
+            // outer face (toward the grass)
+            face.Quad(o1, o1t, o0t, o0, 0.6f, 0.86f, 0.86f, 0.6f);
+            face.Quad(o0, o0t, o1t, o1, 0.6f, 0.86f, 0.86f, 0.6f);
         }
 
-        // A FLAT stone frame band between two radii, coplanar with the plaza ring surface.
-        private static void KerbRingEdge(MeshB m, float rIn, float rOut, float y, int sides)
+        // A thin loose-gravel apron just outside the kerb, dropped fractionally below the grass line so the
+        // transition never shows a hard cut.
+        private static void AddSkirt(MeshB m, Vector3 e0, Vector3 e1, Vector3 out0, Vector3 out1, float w)
         {
+            var drop = Vector3.up * -0.012f;
+            Vector3 i0 = e0 + drop, i1 = e1 + drop, o0 = e0 + out0 * w + drop, o1 = e1 + out1 * w + drop;
+            m.Quad(i0, o0, o1, i1, 0.95f, 0.78f, 0.78f, 0.95f);
+            m.Quad(i1, o1, o0, i0, 0.95f, 0.78f, 0.78f, 0.95f);
+        }
+
+        // A raised stone kerb band between two radii around the plaza ring.
+        private static void KerbRingEdge(MeshB top, MeshB face, float rIn, float rOut, float y, int sides)
+        {
+            var yt = y + KerbHeight;
             for (var i = 0; i < sides; i++)
             {
                 var a0 = i / (float)sides * Mathf.PI * 2f;
                 var a1 = (i + 1) / (float)sides * Mathf.PI * 2f;
-                Vector3 Pt(float r, float a) => new Vector3(Mathf.Cos(a) * r, y, Mathf.Sin(a) * r);
-                Vector3 iA = Pt(rIn, a0), iB = Pt(rIn, a1), oA = Pt(rOut, a0), oB = Pt(rOut, a1);
-                m.Quad(iA, oA, oB, iB, 1f, 1f, 1f, 1f);
-                m.Quad(iB, oB, oA, iA, 1f, 1f, 1f, 1f);
+                Vector3 Pt(float r, float a, float h) => new Vector3(Mathf.Cos(a) * r, h, Mathf.Sin(a) * r);
+                Vector3 iA = Pt(rIn, a0, yt), iB = Pt(rIn, a1, yt), oA = Pt(rOut, a0, yt), oB = Pt(rOut, a1, yt);
+                top.Quad(iA, oA, oB, iB, 1f, 1f, 1f, 1f);
+                top.Quad(iB, oB, oA, iA, 1f, 1f, 1f, 1f);
+                Vector3 iAb = Pt(rIn, a0, y), iBb = Pt(rIn, a1, y), oAb = Pt(rOut, a0, y), oBb = Pt(rOut, a1, y);
+                face.Quad(iAb, iA, iB, iBb, 0.6f, 0.86f, 0.86f, 0.6f);
+                face.Quad(iBb, iB, iA, iAb, 0.6f, 0.86f, 0.86f, 0.6f);
+                face.Quad(oBb, oB, oA, oAb, 0.6f, 0.86f, 0.86f, 0.6f);
+                face.Quad(oAb, oA, oB, oBb, 0.6f, 0.86f, 0.86f, 0.6f);
             }
         }
 
@@ -391,57 +579,125 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
 
         // ---- Fountain centerpiece (inside the plaza) --------------------------------------
 
+        /// <summary>
+        /// The plaza centrepiece. Reworked as a contemporary civic fountain: a wide paved apron with a
+        /// stepped approach, a low honed-masonry basin you could actually sit on, a slim tapered stem and
+        /// a shallow upper dish. Clean water, a soft rim highlight and a quiet cascade — impressive and
+        /// inviting rather than ornamental clutter.
+        /// </summary>
         public static Transform CreateFountain(string name)
         {
             var root = new GameObject(name).transform;
-            var sides = 18;
+            const int sides = 40;      // high enough that the basin reads as a true circle, not a polygon
 
-            // Solid, double-sided drums so the basin reads as a real tiered fountain from any angle;
-            // matte teal pools sit inset below each rim, and only the jet uses the cyan glow.
+            // ── Apron: two shallow paved steps spreading into the plaza, so the fountain grows out of the
+            // ground instead of being dropped on it.
+            var apron = new MeshB();
+            apron.Cylinder(new Vector3(0, -0.02f, 0), 4.30f, 4.30f, 0.14f, sides, 0.86f, 0.94f, true);
+            apron.Disc(new Vector3(0, 0.12f, 0), 4.29f, sides, 0.9f);
+            apron.Cylinder(new Vector3(0, 0.12f, 0), 3.55f, 3.55f, 0.14f, sides, 0.9f, 0.98f, true);
+            apron.Disc(new Vector3(0, 0.26f, 0), 3.54f, sides, 0.94f);
+            Add(root, "Apron", apron, PavingWarmMat);
+
+            // ── Basin: a low, thick-walled drum. Bench height (~0.45) with a broad coping so it doubles as
+            // seating around the water — the community feel the plaza is meant to have.
             var stone = new MeshB();
-            stone.Cylinder(Vector3.zero, 2.55f, 2.5f, 0.3f, sides, 0.5f, 0.82f, true);            // plinth
-            stone.Cylinder(new Vector3(0, 0.3f, 0), 2.4f, 2.4f, 1.0f, sides, 0.5f, 0.9f, true);   // bowl wall
-            stone.Disc(new Vector3(0, 0.35f, 0), 2.38f, sides, 0.45f);                            // bowl floor
-            stone.Cylinder(new Vector3(0, 1.3f, 0), 0.6f, 0.55f, 1.0f, sides, 0.55f, 0.95f, true);// pedestal
-            stone.Cylinder(new Vector3(0, 2.3f, 0), 1.05f, 1.05f, 0.28f, sides, 0.6f, 0.95f, true);// upper bowl wall
-            stone.Disc(new Vector3(0, 2.32f, 0), 1.03f, sides, 0.6f);                             // upper floor
-            Add(root, "Stone", stone, StoneGrey);
+            stone.Cylinder(new Vector3(0, 0.26f, 0), 2.62f, 2.58f, 0.62f, sides, 0.62f, 0.9f, true);   // outer wall
+            stone.Cylinder(new Vector3(0, 0.30f, 0), 2.30f, 2.30f, 0.56f, sides, 0.5f, 0.84f, true);   // inner wall
+            stone.Disc(new Vector3(0, 0.32f, 0), 2.29f, sides, 0.44f);                                  // basin floor
+            Add(root, "Basin", stone, MasonryMat);
 
-            var rim = new MeshB();
-            rim.Cylinder(new Vector3(0, 1.28f, 0), 2.48f, 2.48f, 0.12f, sides, 0.85f, 1f, true);  // lower coping
-            rim.Cylinder(new Vector3(0, 2.55f, 0), 1.12f, 1.12f, 0.1f, sides, 0.85f, 1f, true);   // upper coping
-            Add(root, "Rim", rim, StoneWhite);
+            // Broad honed coping ring — the seat, and the crisp highlight that reads as polished stone.
+            var coping = new MeshB();
+            coping.Cylinder(new Vector3(0, 0.88f, 0), 2.70f, 2.70f, 0.14f, sides, 0.9f, 1f, true);
+            coping.Ring(new Vector3(0, 1.02f, 0), 2.26f, 2.70f, sides, 1f);
+            Add(root, "Coping", coping, StoneWhite);
 
-            // Pools sit just above the copings (the stone drums are capped) so the water reads as a
-            // filled, brimming pool with a stone rim around it. Animated by the Yuvi/Water shader.
+            // ── Stem + upper dish: slim, tapered and modern rather than a fat classical baluster.
+            var stem = new MeshB();
+            stem.Cylinder(new Vector3(0, 0.34f, 0), 0.72f, 0.62f, 0.24f, sides, 0.6f, 0.88f, true);     // base moulding
+            stem.Cylinder(new Vector3(0, 0.58f, 0), 0.42f, 0.26f, 1.62f, 24, 0.58f, 0.96f, true);       // tapered shaft
+            stem.Cylinder(new Vector3(0, 2.20f, 0), 1.28f, 1.28f, 0.16f, sides, 0.72f, 1f, true);       // dish wall
+            stem.Disc(new Vector3(0, 2.22f, 0), 1.26f, sides, 0.62f);                                    // dish floor
+            Add(root, "Stem", stem, MasonryMat);
+            var dishRim = new MeshB();
+            dishRim.Cylinder(new Vector3(0, 2.36f, 0), 1.34f, 1.30f, 0.09f, sides, 0.92f, 1f, true);
+            Add(root, "DishRim", dishRim, StoneWhite);
+
+            // ── Water. Brimming pools sitting just under each rim, animated by the Yuvi/Water shader.
             var water = new MeshB();
-            water.Disc(new Vector3(0, 1.42f, 0), 2.2f, sides);   // lower pool
-            water.Disc(new Vector3(0, 2.68f, 0), 0.92f, sides);  // upper pool
+            water.Disc(new Vector3(0, 0.80f, 0), 2.26f, sides);   // main basin
+            water.Disc(new Vector3(0, 2.32f, 0), 1.24f, sides);   // upper dish
             Add(root, "Water", water, FountainWater);
 
-            // Falling-water curtain sheeting from the upper bowl down into the lower pool — the texture
-            // scrolls DOWNWARD (FlowScroll) so it reads as real cascading water.
+            // Sheeting curtain from the dish lip into the basin — a thin, even veil, not a fat cone.
             var cascade = new MeshB();
-            cascade.Cylinder(new Vector3(0, 1.48f, 0), 2.02f, 1.14f, 1.12f, sides, 0.75f, 1f, true); // wide bottom → narrow top
+            cascade.Cylinder(new Vector3(0, 0.84f, 0), 1.46f, 1.32f, 1.52f, sides, 0.78f, 1f, true);
             var cascadeT = Add(root, "Cascade", cascade, WaterSheet);
             if (cascadeT != null)
             {
                 var fs = cascadeT.gameObject.AddComponent<Yuvi720.LearningWorld.World.FlowScroll>();
-                fs.speed = 0.5f; fs.tiling = new Vector2(7f, 2.4f); // downward flow
+                fs.speed = 0.55f; fs.tiling = new Vector2(9f, 2.6f);
             }
 
-            // Central jet: a rising water column from the spout (texture scrolls UP) + a droplet cap.
+            // Central jet + a ring of four low arcing side jets, so the water has movement across the dish.
             var jet = new MeshB();
-            jet.Cylinder(new Vector3(0, 2.68f, 0), 0.16f, 0.09f, 1.05f, 8, 0.8f, 1f, true);
+            jet.Cylinder(new Vector3(0, 2.32f, 0), 0.15f, 0.07f, 1.35f, 10, 0.82f, 1f, true);
+            for (var i = 0; i < 4; i++)
+            {
+                var a = i / 4f * Mathf.PI * 2f + 0.4f;
+                jet.Cylinder(new Vector3(Mathf.Cos(a) * 0.86f, 2.32f, Mathf.Sin(a) * 0.86f), 0.075f, 0.04f, 0.52f, 8, 0.8f, 1f, true);
+            }
             var jetT = Add(root, "Spout", jet, WaterSheet);
             if (jetT != null)
             {
                 var fs = jetT.gameObject.AddComponent<Yuvi720.LearningWorld.World.FlowScroll>();
-                fs.speed = -0.9f; fs.tiling = new Vector2(3f, 3f); // upward jet
+                fs.speed = -0.95f; fs.tiling = new Vector2(3f, 3.2f);
             }
             var drop = new MeshB();
-            drop.Facet(new Vector3(0, 3.78f, 0), 0.17f, 3, 0.1f, 6, 4, 0.7f);
+            drop.Facet(new Vector3(0, 3.74f, 0), 0.15f, 3, 0.08f, 7, 4, 0.75f);
             Add(root, "SpoutTop", drop, WaterPale, flat: true);
+
+            // Four planters set back on the apron — soft green punctuation around hard stone.
+            for (var i = 0; i < 4; i++)
+            {
+                var a = i / 4f * Mathf.PI * 2f + Mathf.PI * 0.25f;
+                var p = CreatePlanter($"Planter-{i}", 1f, 40 + i * 7);
+                p.SetParent(root, false);
+                p.localPosition = new Vector3(Mathf.Cos(a) * 3.9f, 0.26f, Mathf.Sin(a) * 3.9f);
+                p.localEulerAngles = new Vector3(0f, a * Mathf.Rad2Deg, 0f);
+            }
+            return root;
+        }
+
+        /// <summary>
+        /// A modern square planter: honed concrete box, a soil bed set below the rim and a mound of low
+        /// shrub and flowers. Used to green the plaza and building frontages.
+        /// </summary>
+        public static Transform CreatePlanter(string name, float scale, int seed)
+        {
+            var root = new GameObject(name).transform;
+            var s = scale;
+            var box = new MeshB();
+            box.Box(new Vector3(0, 0.30f * s, 0), new Vector3(1.05f * s, 0.60f * s, 1.05f * s), 0.95f, 0.72f, 0.74f, 0.5f, true);
+            box.Box(new Vector3(0, 0.62f * s, 0), new Vector3(1.16f * s, 0.07f * s, 1.16f * s), 1f, 0.78f, 0.78f, 0.55f, true);  // coping
+            box.Box(new Vector3(0, 0.03f * s, 0), new Vector3(0.92f * s, 0.06f * s, 0.92f * s), 0.8f, 0.6f, 0.6f, 0.42f, true); // recessed foot (shadow gap)
+            Add(root, "Box", box, ConcreteMat);
+            var soil = new MeshB();
+            soil.Box(new Vector3(0, 0.52f * s, 0), new Vector3(0.98f * s, 0.06f * s, 0.98f * s), 0.5f, 0.4f, 0.4f, 0.3f, true);
+            Add(root, "Soil", soil, GroundingTextureFactory.Sand(new Color(0.34f, 0.29f, 0.24f)));
+            var green = new MeshB();
+            green.Facet(new Vector3(0f, 0.72f * s, 0f), 0.44f * s, seed, 0.2f, 6, 3, 0.5f);
+            green.Facet(new Vector3(0.26f * s, 0.66f * s, 0.14f * s), 0.3f * s, seed + 3, 0.22f, 5, 3, 0.48f);
+            green.Facet(new Vector3(-0.24f * s, 0.66f * s, -0.16f * s), 0.28f * s, seed + 6, 0.22f, 5, 3, 0.48f);
+            Add(root, "Shrub", green, (seed % 2 == 0) ? LeafCool : LeafDeep, flat: true);
+            var blooms = new MeshB();
+            for (var i = 0; i < 5; i++)
+            {
+                var a = i / 5f * Mathf.PI * 2f + Hash(seed + i);
+                blooms.Facet(new Vector3(Mathf.Cos(a) * 0.34f * s, (0.80f + 0.08f * Hash(seed + i * 3)) * s, Mathf.Sin(a) * 0.34f * s), 0.09f * s, seed + i, 0.1f, 5, 3, 0.75f);
+            }
+            Add(root, "Blooms", blooms, FlowerMat(seed), flat: true);
             return root;
         }
 
@@ -452,17 +708,23 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             Hard($"Shutter{Mathf.Abs(seed) % 3}", (seed % 3 == 0) ? 0x5E7E86 : (seed % 3 == 1) ? 0x6E8B5A : 0x9C4536, .2f, 0f);
 
         // Distinct-but-believable village colours so every house reads differently (liveliness, not neon).
-        private static readonly int[] WallPalette = { 0xF1EADA, 0xE7E0D0, 0xF3E7C6, 0xE4EADF, 0xEADBC6, 0xDCE6EC, 0xF1DBD2, 0xE9E2D2 };
+        // Desaturated toward real render/limewash tones so the street reads modern-rural, not toy-bright.
+        private static readonly int[] WallPalette = { 0xEDE7D9, 0xE2DCD0, 0xE8DFC6, 0xDFE4DB, 0xE3D7C3, 0xD9E0E4, 0xE7D5CB, 0xE1DACC };
         // cream / warm-grey / pale-yellow / sage / sand / soft blue-grey / blush / stone
-        private static readonly int[] RoofPalette = { 0xB2483A, 0xC2643E, 0x9C5040, 0x6E7E86, 0x8A6D4B, 0xA8474F, 0xC77F3E };
-        // red / terracotta / brown-red / muted slate / ochre / rose-red / amber
+        private static readonly int[] RoofPalette = { 0xA8564A, 0xB3684A, 0x8F5546, 0x6B7379, 0x8A6E52, 0x9A5153, 0xB07A4C };
+        // terracotta / clay / brown-red / natural slate / ochre / rose-clay / amber
 
         public static Transform CreateHouse(string name, float scale, int seed, int style)
         {
             var root = new GameObject(name).transform;
             var wallCol = RGB(WallPalette[Mathf.Abs(seed) % WallPalette.Length]);
-            var wall = (seed % 3 == 1) ? GroundingTextureFactory.WallTimber(wallCol) : GroundingTextureFactory.WallPlaster(wallCol);
-            var roof = GroundingTextureFactory.Roof(RGB(RoofPalette[Mathf.Abs(seed * 3 + 1) % RoofPalette.Length]));
+            // Three wall finishes now, not two: modern render, village plaster and half-timber, so a
+            // street of houses varies in surface as well as colour.
+            var wall = (seed % 3 == 1) ? GroundingTextureFactory.WallTimber(wallCol)
+                     : (seed % 3 == 2) ? GroundingTextureFactory.Stucco(wallCol)
+                     : GroundingTextureFactory.WallPlaster(wallCol);
+            // Barrel clay tiles instead of flat shingles — deep courses that actually catch the sun.
+            var roof = RoofTileMat(RoofPalette[Mathf.Abs(seed * 3 + 1) % RoofPalette.Length]);
             var brick = GroundingTextureFactory.Brick(RGB(0x9C4536));
             switch (style)
             {
@@ -480,12 +742,24 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             var w = 3.0f * s; var d = 2.6f * s; var h = 2.2f * s; var rH = 1.15f * s;
             var walls = new MeshB(); walls.Box(new Vector3(0, h * 0.5f, 0), new Vector3(w, h, d), 0.95f, 0.72f, 0.74f, 0.4f, true);
             Add(root, "Walls", walls, wall);
-            var rm = new MeshB(); rm.Gable(new Vector3(0, h, 0), w + 0.5f * s, d + 0.5f * s, rH, 0.6f, 0.98f, true);
+            AddWallDepth(root, s, w, d, h, 0.34f * s, MasonryMat);
+            var rm = new MeshB(); rm.Gable(new Vector3(0, h, 0), w + 0.78f * s, d + 0.78f * s, rH, 0.6f, 0.98f, true);
             Add(root, "Roof", rm, roof, flat: true);
-            var chim = new MeshB(); chim.Box(new Vector3(w * 0.28f, h + rH * 0.9f, -d * 0.18f), new Vector3(0.42f * s, 0.95f * s, 0.42f * s), 0.9f, 0.7f, 0.7f, 0.4f, true);
+            // Fascia board closing the eave, and a ridge cap along the top of the gable.
+            var fascia = new MeshB();
+            fascia.Box(new Vector3(0, h + 0.03f * s, (d + 0.78f * s) * 0.5f), new Vector3(w + 0.86f * s, 0.13f * s, 0.07f * s), 1f, 0.8f, 0.8f, 0.6f, true);
+            fascia.Box(new Vector3(0, h + 0.03f * s, -(d + 0.78f * s) * 0.5f), new Vector3(w + 0.86f * s, 0.13f * s, 0.07f * s), 1f, 0.8f, 0.8f, 0.6f, true);
+            fascia.Box(new Vector3(0, h + rH + 0.02f * s, 0), new Vector3(w + 0.82f * s, 0.10f * s, 0.16f * s), 1f, 0.82f, 0.82f, 0.6f, true); // ridge
+            Add(root, "Fascia", fascia, WindowFrame);
+            AddRainwaterGoods(root, s, w, d, h);
+            var chim = new MeshB();
+            chim.Box(new Vector3(w * 0.28f, h + rH * 0.9f, -d * 0.18f), new Vector3(0.42f * s, 0.95f * s, 0.42f * s), 0.9f, 0.7f, 0.7f, 0.4f, true);
             Add(root, "Chimney", chim, brick);
+            var chimCap = new MeshB();
+            chimCap.Box(new Vector3(w * 0.28f, h + rH * 0.9f + 0.5f * s, -d * 0.18f), new Vector3(0.54f * s, 0.09f * s, 0.54f * s), 1f, 0.78f, 0.78f, 0.55f, true);
+            Add(root, "ChimneyCap", chimCap, MasonryMat);
             AddSmoke(root, new Vector3(w * 0.28f, h + rH * 0.9f + 0.55f * s, -d * 0.18f), s);
-            BuildOpenings(root, s, seed, d * 0.5f, new[] { (-w * 0.3f, h * 0.6f), (w * 0.3f, h * 0.6f) }, 0f, true);
+            BuildOpenings(root, s, seed, d * 0.5f, new[] { (-w * 0.32f, h * 0.62f), (w * 0.32f, h * 0.62f) }, 0f, true);
         }
 
         // Style 1 — tall two-storey townhouse: hip roof, string-course, 4 windows.
@@ -495,14 +769,27 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             var walls = new MeshB();
             walls.Box(new Vector3(0, h * 0.5f, 0), new Vector3(w, h, d), 0.95f, 0.72f, 0.74f, 0.4f, true);
             Add(root, "Walls", walls, wall);
+            AddWallDepth(root, s, w, d, h, 0.36f * s, MasonryMat);
             var band = new MeshB();
-            band.Box(new Vector3(0, h * 0.5f, 0), new Vector3(w + 0.08f, 0.16f * s, d + 0.08f), 0.9f, 0.72f, 0.72f, 0.5f, true);
-            band.Box(new Vector3(0, 0.05f * s, 0), new Vector3(w + 0.14f, 0.24f * s, d + 0.14f), 0.9f, 0.7f, 0.7f, 0.5f, true); // plinth
-            Add(root, "Trim-Stone", band, StoneWhite);
-            var rm = new MeshB(); rm.Hip(new Vector3(0, h, 0), w + 0.5f * s, d + 0.5f * s, 1.3f * s, 0.5f, 0.96f, true);
+            // Storey band with a real projecting nose, so it throws a shadow instead of being a painted line.
+            band.Box(new Vector3(0, h * 0.5f, 0), new Vector3(w + 0.22f * s, 0.18f * s, d + 0.22f * s), 0.9f, 0.72f, 0.72f, 0.5f, true);
+            band.Box(new Vector3(0, h * 0.5f + 0.12f * s, 0), new Vector3(w + 0.12f * s, 0.06f * s, d + 0.12f * s), 0.95f, 0.74f, 0.74f, 0.5f, true);
+            Add(root, "Trim-Stone", band, MasonryMat);
+            var rm = new MeshB(); rm.Hip(new Vector3(0, h, 0), w + 0.72f * s, d + 0.72f * s, 1.3f * s, 0.5f, 0.96f, true);
             Add(root, "Roof", rm, roof, flat: true);
+            AddRainwaterGoods(root, s, w, d, h);
+            // A shallow first-floor balcony with a slim steel railing — a modern-rural cue.
+            var balcony = new MeshB();
+            balcony.Box(new Vector3(0, h * 0.55f, d * 0.5f + 0.28f * s), new Vector3(w * 0.8f, 0.09f * s, 0.56f * s), 1f, 0.76f, 0.76f, 0.5f, true);
+            Add(root, "Balcony", balcony, ConcreteMat);
+            var rail = new MeshB();
+            var bz = d * 0.5f + 0.54f * s; var by = h * 0.55f;
+            rail.Box(new Vector3(0, by + 0.46f * s, bz), new Vector3(w * 0.8f, 0.045f * s, 0.045f * s), 1f, 0.85f, 0.85f, 0.7f, true);
+            for (var i = 0; i <= 6; i++)
+                rail.Box(new Vector3(-w * 0.4f + i * (w * 0.8f / 6f), by + 0.24f * s, bz), new Vector3(0.03f * s, 0.44f * s, 0.03f * s), 1f, 0.8f, 0.8f, 0.65f, true);
+            Add(root, "BalconyRail", rail, MetalDark);
             BuildOpenings(root, s, seed, d * 0.5f,
-                new[] { (-w * 0.28f, h * 0.72f), (w * 0.28f, h * 0.72f), (-w * 0.28f, h * 0.4f), (w * 0.28f, h * 0.4f) }, 0f, true);
+                new[] { (-w * 0.28f, h * 0.76f), (w * 0.28f, h * 0.76f), (-w * 0.28f, h * 0.30f), (w * 0.28f, h * 0.30f) }, 0f, true);
         }
 
         // Style 2 — long farmhouse with a covered front porch (reads as one clean building).
@@ -511,69 +798,166 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             var w = 3.7f * s; var d = 2.5f * s; var h = 2.2f * s;
             var walls = new MeshB(); walls.Box(new Vector3(0, h * 0.5f, 0), new Vector3(w, h, d), 0.95f, 0.72f, 0.74f, 0.4f, true);
             Add(root, "Walls", walls, wall);
-            var rm = new MeshB(); rm.Gable(new Vector3(0, h, 0), w + 0.5f * s, d + 0.5f * s, 1.15f * s, 0.6f, 0.98f, true);
+            AddWallDepth(root, s, w, d, h, 0.34f * s, MasonryMat);
+            var rm = new MeshB(); rm.Gable(new Vector3(0, h, 0), w + 0.78f * s, d + 0.78f * s, 1.15f * s, 0.6f, 0.98f, true);
             Add(root, "Roof", rm, roof, flat: true);
+            AddRainwaterGoods(root, s, w, d, h);
             var chim = new MeshB(); chim.Box(new Vector3(-w * 0.34f, h + 0.9f * s, 0), new Vector3(0.42f * s, 1.0f * s, 0.42f * s), 0.9f, 0.7f, 0.7f, 0.4f, true);
             Add(root, "Chimney", chim, brick);
             AddSmoke(root, new Vector3(-w * 0.34f, h + 0.9f * s + 0.58f * s, 0), s);
 
-            // Covered veranda across the front: posts + a shingled lean roof.
+            // Covered veranda across the front: posts on stone pads, a boarded deck and a lean roof with
+            // its own fascia — a place that looks lived in rather than a slab on sticks.
             var porchZ = d * 0.5f + 0.9f * s; var porchY = 1.95f * s;
+            var deck = new MeshB();
+            deck.Box(new Vector3(0, 0.10f * s, d * 0.5f + 0.55f * s), new Vector3(w + 0.2f * s, 0.14f * s, 1.4f * s), 0.95f, 0.72f, 0.72f, 0.5f, true);
+            Add(root, "PorchDeck", deck, TimberDeck);
+            var pads = new MeshB();
             var posts = new MeshB();
             for (var i = -1; i <= 1; i++)
-                posts.Box(new Vector3(i * w * 0.34f, porchY * 0.5f, porchZ), new Vector3(0.14f * s, porchY, 0.14f * s), 0.85f, 0.65f, 0.65f, 0.4f, true);
+            {
+                pads.Box(new Vector3(i * w * 0.34f, 0.20f * s, porchZ), new Vector3(0.28f * s, 0.12f * s, 0.28f * s), 0.95f, 0.72f, 0.72f, 0.5f, true);
+                posts.Box(new Vector3(i * w * 0.34f, porchY * 0.5f + 0.24f * s, porchZ), new Vector3(0.15f * s, porchY, 0.15f * s), 0.85f, 0.65f, 0.65f, 0.4f, true);
+                posts.Box(new Vector3(i * w * 0.34f, porchY + 0.18f * s, porchZ), new Vector3(0.24f * s, 0.09f * s, 0.24f * s), 0.95f, 0.7f, 0.7f, 0.5f, true); // capital
+            }
+            Add(root, "PorchPads", pads, MasonryMat);
             Add(root, "PorchPosts", posts, DoorWood);
             var porchRoof = new MeshB();
-            porchRoof.Box(new Vector3(0, porchY + 0.06f * s, d * 0.5f + 0.45f * s), new Vector3(w + 0.3f * s, 0.12f * s, 1.05f * s), 0.9f, 0.7f, 0.7f, 0.5f, true);
+            porchRoof.Box(new Vector3(0, porchY + 0.30f * s, d * 0.5f + 0.45f * s), new Vector3(w + 0.44f * s, 0.13f * s, 1.25f * s), 0.9f, 0.7f, 0.7f, 0.5f, true);
             Add(root, "PorchRoof", porchRoof, roof);
+            var porchFascia = new MeshB();
+            porchFascia.Box(new Vector3(0, porchY + 0.24f * s, d * 0.5f + 1.06f * s), new Vector3(w + 0.48f * s, 0.12f * s, 0.06f * s), 1f, 0.8f, 0.8f, 0.6f, true);
+            Add(root, "PorchFascia", porchFascia, WindowFrame);
 
-            BuildOpenings(root, s, seed, d * 0.5f, new[] { (-w * 0.3f, h * 0.58f), (w * 0.3f, h * 0.58f) }, 0f, false);
+            BuildOpenings(root, s, seed, d * 0.5f, new[] { (-w * 0.32f, h * 0.60f), (w * 0.32f, h * 0.60f) }, 0f, false);
         }
 
         // Style 3 — small round hut with a conical roof.
         private static void BuildRoundHut(Transform root, float s, int seed, Material wall, Material roof)
         {
             var r = 1.35f * s; var h = 1.8f * s;
-            var walls = new MeshB(); walls.Cylinder(Vector3.zero, r, r, h, 14, 0.55f, 0.9f, true);
+            var walls = new MeshB(); walls.Cylinder(Vector3.zero, r, r, h, 18, 0.55f, 0.9f, true);
             Add(root, "Walls", walls, wall);
-            var rm = new MeshB(); rm.Cone(new Vector3(0, h, 0), r + 0.35f * s, 1.5f * s, 14, 0.55f, 0.98f, true);
+            // Stone plinth + eaves ring give the drum the same thickness cues as the boxy styles.
+            var trim = new MeshB();
+            trim.Cylinder(new Vector3(0, 0f, 0), r + 0.14f * s, r + 0.10f * s, 0.22f * s, 18, 0.9f, 0.7f, true);
+            trim.Cylinder(new Vector3(0, h - 0.10f * s, 0), r + 0.20f * s, r + 0.20f * s, 0.13f * s, 18, 1f, 0.78f, true);
+            Add(root, "Masonry", trim, MasonryMat);
+            var rm = new MeshB(); rm.Cone(new Vector3(0, h, 0), r + 0.48f * s, 1.55f * s, 18, 0.55f, 0.98f, true);
             Add(root, "Roof", rm, roof, flat: true);
             // Two windows flanking the door symmetrically. Kept at ±0.52r (not further out) so the flat
             // window panels stay close to the curved wall instead of floating off it.
             BuildOpenings(root, s, seed, r, new[] { (-r * 0.52f, h * 0.62f), (r * 0.52f, h * 0.62f) }, 0f, false);
         }
 
-        // Door + framed/shuttered windows on the front (+z) wall; panes go to the warm-glow "Windows" mesh.
+        // Door + framed/shuttered windows on the front (+z) wall.
+        //
+        // DEPTH IS THE POINT HERE. The old openings were 4-6 cm decals stuck flat on the wall, which is
+        // what made the houses read as printed cardboard. Every opening is now built as a real assembly:
+        //   • a dark REVEAL liner sitting just proud of the wall (the shadowed box behind the glass),
+        //   • the GLASS set back inside that liner,
+        //   • a four-bar FRAME (head, sill, two jambs) standing ~10 cm proud of the wall,
+        //   • a projecting SILL with a drip edge, and a moulded LINTEL over the head.
+        // The frame's own shadow falls across the glass, so the eye reads a genuine recess even though
+        // the wall itself is never cut.
         private static void BuildOpenings(Transform root, float s, int seed, float frontZ, (float x, float y)[] windows, float doorX, bool shutters)
         {
-            var frame = new MeshB(); var pane = new MeshB(); var muntin = new MeshB(); var shutterM = new MeshB();
+            var frame = new MeshB(); var glass = new MeshB(); var pane = new MeshB();
+            var reveal = new MeshB(); var muntin = new MeshB(); var shutterM = new MeshB(); var stoneTrim = new MeshB();
 
-            // Door: recessed wood door + white frame + lintel canopy.
-            frame.Box(new Vector3(doorX, 0.66f * s, frontZ + 0.03f), new Vector3(0.9f * s, 1.42f * s, 0.06f), 0.9f, 0.7f, 0.7f, 0.5f, true);
-            frame.Box(new Vector3(doorX, 1.42f * s, frontZ + 0.16f), new Vector3(1.0f * s, 0.1f * s, 0.34f * s), 0.95f, 0.7f, 0.7f, 0.5f, true); // canopy
+            // ── Door: stone surround, set-back leaf, threshold step and a moulded hood.
+            const float rev = 0.055f;      // how far the reveal/liner stands proud (its side faces = the shadow)
+            var proud = 0.11f * s;         // how far the frame stands proud of the wall
+            var dw = 0.92f * s; var dh = 1.5f * s; var dy = 0.75f * s;
+            reveal.Box(new Vector3(doorX, dy, frontZ + rev * 0.5f), new Vector3(dw - 0.1f * s, dh - 0.08f * s, rev), 0.42f, 0.34f, 0.34f, 0.22f, true);
+            stoneTrim.Box(new Vector3(doorX - dw * 0.5f, dy, frontZ + proud * 0.5f), new Vector3(0.15f * s, dh + 0.16f * s, proud), 0.95f, 0.72f, 0.72f, 0.5f, true); // jamb L
+            stoneTrim.Box(new Vector3(doorX + dw * 0.5f, dy, frontZ + proud * 0.5f), new Vector3(0.15f * s, dh + 0.16f * s, proud), 0.95f, 0.72f, 0.72f, 0.5f, true); // jamb R
+            stoneTrim.Box(new Vector3(doorX, dy + dh * 0.5f, frontZ + proud * 0.5f), new Vector3(dw + 0.3f * s, 0.16f * s, proud), 0.95f, 0.74f, 0.74f, 0.5f, true);  // head
+            stoneTrim.Box(new Vector3(doorX, dy + dh * 0.5f + 0.20f * s, frontZ + 0.19f * s), new Vector3(dw + 0.52f * s, 0.10f * s, 0.42f * s), 1f, 0.76f, 0.76f, 0.5f, true); // hood
+            stoneTrim.Box(new Vector3(doorX, 0.04f * s, frontZ + 0.28f * s), new Vector3(dw + 0.36f * s, 0.08f * s, 0.62f * s), 0.98f, 0.7f, 0.7f, 0.5f, true);       // threshold step
             var door = new MeshB();
-            door.Box(new Vector3(doorX, 0.62f * s, frontZ + 0.05f), new Vector3(0.66f * s, 1.24f * s, 0.06f), 0.85f, 0.6f, 0.6f, 0.4f, true);
+            door.Box(new Vector3(doorX, dy, frontZ + rev * 0.9f), new Vector3(dw - 0.2f * s, dh - 0.12f * s, 0.05f * s), 0.86f, 0.62f, 0.62f, 0.42f, true);
+            // Two recessed panels + a handle plate so the leaf isn't a blank slab.
+            door.Box(new Vector3(doorX, dy + dh * 0.22f, frontZ + rev * 0.9f + 0.03f * s), new Vector3(dw - 0.42f * s, dh * 0.30f, 0.02f * s), 0.72f, 0.5f, 0.5f, 0.35f, true);
+            door.Box(new Vector3(doorX, dy - dh * 0.22f, frontZ + rev * 0.9f + 0.03f * s), new Vector3(dw - 0.42f * s, dh * 0.30f, 0.02f * s), 0.72f, 0.5f, 0.5f, 0.35f, true);
             Add(root, "Door", door, DoorWood);
+            var handle = new MeshB();
+            handle.Box(new Vector3(doorX + dw * 0.28f, dy, frontZ + rev * 0.9f + 0.05f * s), new Vector3(0.05f * s, 0.22f * s, 0.04f * s), 1f, 0.9f, 0.9f, 0.8f, true);
+            Add(root, "DoorFurniture", handle, MetalDark);
 
-            var ww = 0.55f * s; var wh = 0.6f * s;
+            // ── Windows.
+            var ww = 0.62f * s; var wh = 0.72f * s;
+            var bar = 0.075f * s;          // frame bar thickness
             foreach (var (x, y) in windows)
             {
-                frame.Box(new Vector3(x, y, frontZ + 0.03f), new Vector3(ww + 0.16f * s, wh + 0.16f * s, 0.06f), 0.95f, 0.75f, 0.75f, 0.5f, true);          // casing
-                frame.Box(new Vector3(x, y - wh * 0.5f - 0.06f * s, frontZ + 0.06f), new Vector3(ww + 0.28f * s, 0.1f * s, 0.16f * s), 0.95f, 0.7f, 0.7f, 0.5f, true); // sill
-                pane.Box(new Vector3(x, y, frontZ + 0.055f), new Vector3(ww, wh, 0.04f), 1f, 0.9f, 0.9f, 0.8f, true);
-                muntin.Box(new Vector3(x, y, frontZ + 0.075f), new Vector3(0.045f * s, wh, 0.02f), 1f, 0.9f, 0.9f, 0.9f, true);   // vertical
-                muntin.Box(new Vector3(x, y, frontZ + 0.075f), new Vector3(ww, 0.045f * s, 0.02f), 1f, 0.9f, 0.9f, 0.9f, true);   // horizontal
+                // Shadowed liner: slightly SMALLER than the frame opening so its side walls read as a reveal.
+                reveal.Box(new Vector3(x, y, frontZ + rev * 0.5f), new Vector3(ww, wh, rev), 0.40f, 0.32f, 0.32f, 0.2f, true);
+                // Glass set back inside the liner — dark and glossy in daylight, so it reads as real glazing.
+                glass.Box(new Vector3(x, y, frontZ + rev * 0.75f), new Vector3(ww - 0.03f * s, wh - 0.03f * s, 0.02f * s), 1f, 0.92f, 0.92f, 0.85f, true);
+                // Warm interior backing, visible only as a hint by day and as lit rooms once the sun drops.
+                pane.Box(new Vector3(x, y, frontZ + rev * 0.35f), new Vector3(ww - 0.10f * s, wh - 0.10f * s, 0.015f * s), 1f, 0.9f, 0.9f, 0.8f, true);
+                // Four-bar frame standing proud — head, sill rail and two jambs.
+                frame.Box(new Vector3(x - ww * 0.5f, y, frontZ + proud * 0.5f), new Vector3(bar, wh + bar * 2f, proud), 0.96f, 0.76f, 0.76f, 0.55f, true);
+                frame.Box(new Vector3(x + ww * 0.5f, y, frontZ + proud * 0.5f), new Vector3(bar, wh + bar * 2f, proud), 0.96f, 0.76f, 0.76f, 0.55f, true);
+                frame.Box(new Vector3(x, y + wh * 0.5f, frontZ + proud * 0.5f), new Vector3(ww + bar * 2f, bar, proud), 0.98f, 0.78f, 0.78f, 0.55f, true);
+                frame.Box(new Vector3(x, y - wh * 0.5f, frontZ + proud * 0.5f), new Vector3(ww + bar * 2f, bar, proud), 0.9f, 0.7f, 0.7f, 0.5f, true);
+                // Glazing bars, kept inside the reveal so they sit behind the frame face.
+                muntin.Box(new Vector3(x, y, frontZ + rev * 0.85f), new Vector3(0.035f * s, wh - 0.04f * s, 0.02f * s), 1f, 0.9f, 0.9f, 0.9f, true);
+                muntin.Box(new Vector3(x, y, frontZ + rev * 0.85f), new Vector3(ww - 0.04f * s, 0.035f * s, 0.02f * s), 1f, 0.9f, 0.9f, 0.9f, true);
+                // Projecting stone sill with a drip nose, and a flat lintel band over the head.
+                stoneTrim.Box(new Vector3(x, y - wh * 0.5f - 0.09f * s, frontZ + 0.13f * s), new Vector3(ww + 0.36f * s, 0.09f * s, 0.30f * s), 0.98f, 0.72f, 0.72f, 0.5f, true);
+                stoneTrim.Box(new Vector3(x, y + wh * 0.5f + 0.10f * s, frontZ + 0.09f * s), new Vector3(ww + 0.30f * s, 0.10f * s, 0.22f * s), 1f, 0.75f, 0.75f, 0.5f, true);
                 if (shutters)
                 {
-                    var sx = ww * 0.5f + 0.13f * s;
-                    shutterM.Box(new Vector3(x - sx, y, frontZ + 0.04f), new Vector3(0.2f * s, wh + 0.06f * s, 0.05f), 0.9f, 0.7f, 0.7f, 0.5f, true);
-                    shutterM.Box(new Vector3(x + sx, y, frontZ + 0.04f), new Vector3(0.2f * s, wh + 0.06f * s, 0.05f), 0.9f, 0.7f, 0.7f, 0.5f, true);
+                    var sx = ww * 0.5f + 0.17f * s;
+                    // Shutters hang OUTSIDE the frame on their own hinges, angled slightly open.
+                    shutterM.Box(new Vector3(x - sx, y, frontZ + 0.07f * s), new Vector3(0.26f * s, wh + 0.10f * s, 0.05f * s), 0.9f, 0.68f, 0.68f, 0.48f, true);
+                    shutterM.Box(new Vector3(x + sx, y, frontZ + 0.07f * s), new Vector3(0.26f * s, wh + 0.10f * s, 0.05f * s), 0.9f, 0.68f, 0.68f, 0.48f, true);
+                    for (var b = -1; b <= 1; b++)
+                    {
+                        shutterM.Box(new Vector3(x - sx, y + b * wh * 0.3f, frontZ + 0.10f * s), new Vector3(0.24f * s, 0.035f * s, 0.02f * s), 1f, 0.8f, 0.8f, 0.6f, true);
+                        shutterM.Box(new Vector3(x + sx, y + b * wh * 0.3f, frontZ + 0.10f * s), new Vector3(0.24f * s, 0.035f * s, 0.02f * s), 1f, 0.8f, 0.8f, 0.6f, true);
+                    }
                 }
             }
+            Add(root, "Reveal", reveal, ConcreteDarkMat);
             Add(root, "Trim", frame, WindowFrame);
+            Add(root, "StoneTrim", stoneTrim, MasonryMat);
             Add(root, "Muntins", muntin, WindowFrame);
             if (shutters) Add(root, "Shutters", shutterM, Shutter(seed));
+            Add(root, "Glass", glass, GlassDay);
             Add(root, "Windows", pane, WarmGlow);
+        }
+
+        /// <summary>
+        /// Shared architectural depth for the rectangular house styles: a stone plinth the walls sit on,
+        /// corner pilasters, and a projecting eaves band with a fascia under the roof. Without these the
+        /// wall/roof junction is a single hard line and the building reads as a extruded rectangle.
+        /// </summary>
+        private static void AddWallDepth(Transform root, float s, float w, float d, float h, float eaveOver, Material trim)
+        {
+            var m = new MeshB();
+            // Plinth: the building meets the ground on a wider stone base, with a chamfer course above it.
+            m.Box(new Vector3(0, 0.11f * s, 0), new Vector3(w + 0.26f * s, 0.22f * s, d + 0.26f * s), 0.92f, 0.7f, 0.72f, 0.48f, true);
+            m.Box(new Vector3(0, 0.25f * s, 0), new Vector3(w + 0.14f * s, 0.07f * s, d + 0.14f * s), 0.96f, 0.72f, 0.74f, 0.5f, true);
+            // Corner pilasters — vertical quoin strips that catch the sun and give the walls thickness.
+            for (var sx = -1; sx <= 1; sx += 2)
+                for (var sz = -1; sz <= 1; sz += 2)
+                    m.Box(new Vector3(sx * w * 0.5f, h * 0.5f + 0.14f * s, sz * d * 0.5f),
+                        new Vector3(0.20f * s, h - 0.28f * s, 0.20f * s), 0.95f, 0.72f, 0.74f, 0.5f, true);
+            // Eaves: a projecting band + fascia so the roof visibly oversails the walls and casts a shadow
+            // line across the top of the render.
+            m.Box(new Vector3(0, h - 0.06f * s, 0), new Vector3(w + eaveOver, 0.12f * s, d + eaveOver), 1f, 0.76f, 0.78f, 0.52f, true);
+            Add(root, "Masonry", m, trim);
+        }
+
+        /// <summary>Cast-iron downpipe with a gutter run along one eave — a small, quiet realism cue.</summary>
+        private static void AddRainwaterGoods(Transform root, float s, float w, float d, float h)
+        {
+            var m = new MeshB();
+            m.Box(new Vector3(0, h + 0.02f * s, d * 0.5f + 0.24f * s), new Vector3(w + 0.4f * s, 0.09f * s, 0.10f * s), 1f, 0.8f, 0.8f, 0.6f, true);
+            m.Cylinder(new Vector3(w * 0.5f + 0.2f * s, 0f, d * 0.5f + 0.24f * s), 0.05f * s, 0.05f * s, h, 6, 0.5f, 0.9f);
+            Add(root, "Rainwater", m, MetalWarmGrey);
         }
 
         // ---- Entry portal / gate (clean modern landmark) -----------------------------------
@@ -705,47 +1089,115 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
 
         // ---- Props -------------------------------------------------------------------------
 
+        /// <summary>
+        /// A designed wayfinding sign: slim tapered steel post on a base plate, a routed board with a header
+        /// band and a small arrow blade. Reads as considered signage rather than a plank on a stick.
+        /// </summary>
         public static Transform CreateSignpost(string name)
         {
             var root = new GameObject(name).transform;
             var post = new MeshB();
-            post.Cylinder(Vector3.zero, 0.09f, 0.08f, 1.6f, 6, 0.4f, 0.9f);
-            Add(root, "Post", post, Timber);
-            var boards = new MeshB();
-            boards.Box(new Vector3(0.25f, 1.25f, 0), new Vector3(0.7f, 0.28f, 0.06f), 0.95f, 0.6f, 0.6f, 0.5f);
-            boards.Box(new Vector3(-0.2f, 0.9f, 0), new Vector3(0.6f, 0.24f, 0.06f), 0.95f, 0.6f, 0.6f, 0.5f);
-            Add(root, "Boards", boards, StoneWhite);
+            post.Cylinder(new Vector3(0, 0.04f, 0), 0.19f, 0.15f, 0.07f, 12, 0.5f, 0.85f);  // base plate
+            post.Cylinder(new Vector3(0, 0.10f, 0), 0.075f, 0.055f, 1.75f, 10, 0.45f, 0.95f);
+            Add(root, "Post", post, MetalDark);
+            var board = new MeshB();
+            board.Box(new Vector3(0.30f, 1.34f, 0), new Vector3(0.86f, 0.44f, 0.05f), 0.98f, 0.7f, 0.7f, 0.55f, true);
+            board.Box(new Vector3(-0.16f, 0.92f, 0), new Vector3(0.62f, 0.26f, 0.05f), 0.95f, 0.68f, 0.68f, 0.52f, true);
+            Add(root, "Boards", board, StoneWhite);
+            var accent = new MeshB();
+            accent.Box(new Vector3(0.30f, 1.52f, 0.005f), new Vector3(0.86f, 0.09f, 0.055f), 1f, 0.8f, 0.8f, 0.6f, true); // header band
+            accent.Box(new Vector3(-0.16f, 1.02f, 0.005f), new Vector3(0.62f, 0.05f, 0.055f), 1f, 0.8f, 0.8f, 0.6f, true);
+            Add(root, "Accent", accent, AwningRed);
             return root;
         }
 
-        // Classic wrought-metal lamp with a warm cozy lantern.
+        /// <summary>
+        /// A contemporary street lamp: tapered pole on a shrouded base, a short cantilevered arm and a flat
+        /// angled luminaire head. The warm emissive lens stays — same night behaviour, modern hardware.
+        /// </summary>
         public static Transform CreateLamp(string name)
         {
             var root = new GameObject(name).transform;
             var post = new MeshB();
-            post.Cylinder(Vector3.zero, 0.07f, 0.05f, 2.1f, 8, 0.4f, 0.9f);
-            Add(root, "Post", post, MetalTrim);
-            var lantern = new MeshB();
-            lantern.Box(new Vector3(0, 2.15f, 0), new Vector3(0.24f, 0.32f, 0.24f), 1f, 0.9f, 0.9f, 0.8f);
-            Add(root, "Lantern", lantern, WarmGlow);
-            AddLight(root, "Glow", new Vector3(0, 2.15f, 0), WarmGlowRGB, 1.0f, 5f);
+            post.Cylinder(new Vector3(0, 0.0f, 0), 0.17f, 0.14f, 0.16f, 12, 0.45f, 0.8f);    // base shroud
+            post.Cylinder(new Vector3(0, 0.16f, 0), 0.075f, 0.045f, 2.60f, 10, 0.45f, 0.95f); // tapered pole
+            post.Box(new Vector3(0.19f, 2.74f, 0), new Vector3(0.42f, 0.07f, 0.09f), 0.9f, 0.7f, 0.7f, 0.6f, true); // arm
+            post.Box(new Vector3(0.40f, 2.68f, 0), new Vector3(0.34f, 0.10f, 0.22f), 0.95f, 0.72f, 0.72f, 0.6f, true); // head shell
+            Add(root, "Post", post, MetalDark);
+            var lens = new MeshB();
+            lens.Box(new Vector3(0.40f, 2.615f, 0), new Vector3(0.29f, 0.035f, 0.18f), 1f, 0.95f, 0.95f, 0.9f, true);
+            Add(root, "Lantern", lens, WarmGlow);
+            AddLight(root, "Glow", new Vector3(0.40f, 2.55f, 0), WarmGlowRGB, 1.0f, 6f);
             // Night behaviour: the glow swells (intensity + range) as the sun cycle darkens, pooling warm
             // light on the ground below — see LampNightLight.
             root.Find("Glow").gameObject.AddComponent<Yuvi720.LearningWorld.World.LampNightLight>();
             return root;
         }
 
+        /// <summary>
+        /// A modern park bench: a slatted timber seat and back on a dark steel frame, with a visible gap
+        /// between every slat so the sun rakes through it.
+        /// </summary>
         public static Transform CreateBench(string name)
         {
             var root = new GameObject(name).transform;
             var m = new MeshB();
-            m.Box(new Vector3(0, 0.42f, 0), new Vector3(1.5f, 0.1f, 0.45f), 0.95f, 0.6f, 0.6f, 0.4f);
-            m.Box(new Vector3(0, 0.72f, -0.18f), new Vector3(1.5f, 0.5f, 0.08f), 0.9f, 0.6f, 0.6f, 0.4f);
-            Add(root, "Slats", m, Timber);
-            var legs = new MeshB();
-            legs.Box(new Vector3(-0.6f, 0.2f, 0), new Vector3(0.09f, 0.4f, 0.4f), 0.7f, 0.5f, 0.5f, 0.35f);
-            legs.Box(new Vector3(0.6f, 0.2f, 0), new Vector3(0.09f, 0.4f, 0.4f), 0.7f, 0.5f, 0.5f, 0.35f);
-            Add(root, "Legs", legs, MetalTrim);
+            // Five seat slats and three back slats rather than two solid boards — the shadow lines between
+            // them are what make a bench read as real furniture at any distance.
+            for (var i = 0; i < 5; i++)
+                m.Box(new Vector3(0, 0.44f, -0.20f + i * 0.105f), new Vector3(1.55f, 0.055f, 0.085f), 0.95f, 0.62f, 0.62f, 0.42f, true);
+            for (var i = 0; i < 3; i++)
+                m.Box(new Vector3(0, 0.66f + i * 0.145f, -0.26f), new Vector3(1.55f, 0.11f, 0.05f), 0.92f, 0.6f, 0.6f, 0.4f, true);
+            m.Box(new Vector3(0, 0.485f, 0.235f), new Vector3(1.55f, 0.05f, 0.06f), 1f, 0.7f, 0.7f, 0.5f, true); // front nose rail
+            Add(root, "Slats", m, TimberDeck);
+            var frame = new MeshB();
+            foreach (var x in new[] { -0.62f, 0.62f })
+            {
+                frame.Box(new Vector3(x, 0.21f, 0.06f), new Vector3(0.06f, 0.42f, 0.05f), 0.7f, 0.5f, 0.5f, 0.35f, true);   // front leg
+                frame.Box(new Vector3(x, 0.21f, -0.22f), new Vector3(0.06f, 0.42f, 0.05f), 0.7f, 0.5f, 0.5f, 0.35f, true);  // rear leg
+                frame.Box(new Vector3(x, 0.415f, 0.0f), new Vector3(0.055f, 0.05f, 0.52f), 0.8f, 0.55f, 0.55f, 0.4f, true); // seat bearer
+                frame.Box(new Vector3(x, 0.71f, -0.29f), new Vector3(0.055f, 0.62f, 0.05f), 0.8f, 0.55f, 0.55f, 0.4f, true); // back stile
+                frame.Box(new Vector3(x, 0.02f, -0.08f), new Vector3(0.10f, 0.04f, 0.60f), 0.6f, 0.45f, 0.45f, 0.3f, true);  // foot plate
+            }
+            Add(root, "Frame", frame, MetalDark);
+            return root;
+        }
+
+        /// <summary>
+        /// A soft billboard cloud: several overlapping alpha puffs, half of them cross-rotated so the cloud
+        /// still has body when the isometric camera swings. Replaces the old faceted low-poly cloud blobs.
+        /// </summary>
+        public static Transform CreateSkyCloud(string name, float scale, int seed)
+        {
+            var root = new GameObject(name).transform;
+            var tex = GroundingTextureFactory.CloudPuffTexture();
+            var mat = GroundingAssetWriter.GetSoftCloudMaterial(
+                "MAT_YW_Dressing_SkyCloud", tex, new Color(0.98f, 0.99f, 1f, 0.85f));
+            var puffs = 6;
+            for (var i = 0; i < puffs; i++)
+            {
+                var m = new MeshB();
+                var w = scale * (1.5f + 1.3f * Hash01(seed + i * 7));
+                var h = w * (0.42f + 0.18f * Hash01(seed + i * 3));
+                var c = new Vector3(
+                    (Hash(seed + i * 5)) * scale * 1.5f,
+                    (Hash(seed + i * 11)) * scale * 0.28f,
+                    (Hash(seed + i * 17)) * scale * 0.5f);
+                var right = Vector3.right * (w * 0.5f);
+                var up = Vector3.up * (h * 0.5f);
+                m.Quad(c - right - up, c + right - up, c + right + up, c - right + up, 1f, 1f, 1f, 1f);
+                m.Quad(c - right + up, c + right + up, c + right - up, c - right - up, 1f, 1f, 1f, 1f);
+                var t = Add(root, $"Puff-{i}", m, mat, flat: true);
+                if (t == null) continue;
+                // Cross-rotate every other card so the cloud has volume from oblique angles.
+                if (i % 2 == 1) t.localEulerAngles = new Vector3(0f, 68f + Hash(seed + i) * 14f, 0f);
+                var mr = t.GetComponent<MeshRenderer>();
+                if (mr != null)
+                {
+                    mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    mr.receiveShadows = false;
+                }
+            }
             return root;
         }
 
@@ -941,6 +1393,13 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
         {
             var v = Mathf.Sin(n * 12.9898f) * 43758.5453f;
             return (v - Mathf.Floor(v)) * 2f - 1f;
+        }
+
+        /// <summary>Deterministic 0..1 hash — used for per-instance size/rotation/tint variation.</summary>
+        private static float Hash01(int n)
+        {
+            var v = Mathf.Sin(n * 12.9898f) * 43758.5453f;
+            return v - Mathf.Floor(v);
         }
 
         private static Color RGB(int hex) =>
@@ -1220,6 +1679,9 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
                     else uv[i] = new Vector2(p.x, p.y);
                 }
                 m.uv = uv;
+                // Tangents are required for the normal-mapped stylized-realism materials (plaster, clay
+                // tiles, masonry, asphalt). Without them every _BumpMap would light incorrectly.
+                m.RecalculateTangents();
                 m.RecalculateBounds();
                 return m;
             }

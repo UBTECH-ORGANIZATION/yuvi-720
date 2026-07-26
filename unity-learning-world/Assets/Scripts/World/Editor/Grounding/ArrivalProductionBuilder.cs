@@ -542,6 +542,20 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             for (var i = 0; i < ringTrees.Length; i++)
                 Place(GroundingDecorationBuilder.CreateTree($"Tree-Ring-{i}", 0.7f + 0.16f * Jit(i), i * 7 + 4), root, NudgeClear(ringTrees[i], false), Jit(i) * 180f, 1f, collide: 2);
 
+            // ── Designed planting: clipped hedges edging the frontages and concrete planters punctuating the
+            // plaza approach. This is what turns scattered props into a landscaped public space.
+            var hedges = new[]
+            {
+                (pos: V(-12f, Plaza, 8.6f), yaw: 0f, len: 5.5f),
+                (pos: V(-27f, Plaza, 7.4f), yaw: 165f, len: 4.2f),
+                (pos: V(11f, Plaza, 2.6f), yaw: 250f, len: 4.6f),
+            };
+            for (var i = 0; i < hedges.Length; i++)
+                Place(GroundingDecorationBuilder.CreateHedge($"Hedge-{i}", hedges[i].len, i * 13 + 3), root, hedges[i].pos, hedges[i].yaw, 1f);
+            var planters = new[] { V(-18.4f, Plaza, -1f), V(-7.6f, Plaza, -1f), V(-13f, Plaza, 6.2f) };
+            for (var i = 0; i < planters.Length; i++)
+                Place(GroundingDecorationBuilder.CreatePlanter($"Planter-Plaza-{i}", 0.95f, i * 9 + 11), root, planters[i], Jit(i) * 45f, 1f);
+
             // ── Rocks: a few along the stream banks + scattered accents (kept off the channel and the paths) ──
             var rocks = new[] { V(-1.5f, Plaza, 5f), V(8f, Plaza, 4f), V(-2f, Plaza, -8f), V(8f, Plaza, -11f), V(-18f, Plaza, 4f) };
             var rockScale = new[] { 0.8f, 0.75f, 0.85f, 0.8f, 0.9f };
@@ -573,10 +587,16 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
                 Place(GroundingDecorationBuilder.CreateGrassTuft($"Grass-{i}", 0.85f + 0.4f * Jit(i), i * 11 + 2), root, p, Jit(i) * 360f, 1f);
             }
 
-            // --- Atmosphere: a few faint high clouds for a clean sky (mountains carry the backdrop). ---
-            var clouds = new[] { V(-30, 15, 26), V(-8, 16, 28), V(8, 14, 24) };
+            // --- Atmosphere: soft billboard clouds drifting high over the range. These are alpha puff cards
+            // (see CreateSkyCloud), not faceted blobs — a low-poly cloud is the single loudest "prototype"
+            // tell in a stylised sky, so the shape now comes from the texture, not the mesh.
+            var clouds = new[]
+            {
+                V(-34, 15.5f, 28), V(-16, 17.0f, 30), V(2, 15.0f, 27),
+                V(18, 16.5f, 25), V(-26, 18.5f, 34), V(10, 19.0f, 33),
+            };
             for (var i = 0; i < clouds.Length; i++)
-                Place(GroundingDecorationBuilder.CreateBush($"Cloud-{i}", 3.0f + Jit(i), i * 13), root, clouds[i], Jit(i) * 360f, 1f, cloud: true);
+                Place(GroundingDecorationBuilder.CreateSkyCloud($"Cloud-{i}", 2.6f + 1.1f * Jit(i), i * 13 + 5), root, clouds[i], Jit(i) * 30f, 1f);
 
             // Cloud bank standing on the path that connects this section to the next, just past the island's
             // east coast — dense enough to actually hide the crossing rather than veil it. In the streamed
@@ -999,39 +1019,82 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             var camObj = new GameObject("Main Camera") { tag = "MainCamera" };
             var cam = camObj.AddComponent<Camera>();
             camObj.AddComponent<AudioListener>();
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.55f, 0.69f, 0.79f); // clean cool sky
+            // A real atmospheric sky instead of a flat fill colour: the procedural skybox gives a graded
+            // horizon, a soft sun glow and genuine depth behind the mountains.
+            cam.clearFlags = CameraClearFlags.Skybox;
+            cam.backgroundColor = new Color(0.62f, 0.76f, 0.86f);
             cam.nearClipPlane = .1f; cam.farClipPlane = 320f; cam.allowMSAA = true;
             // Zoomed isometric view that FOLLOWS Yuvi (see IsometricCameraRig, wired by the caller): only a
             // slice of the island is ever on screen, so the world reads as much larger than its footprint.
             cam.orthographic = true; cam.orthographicSize = 11f;
             camObj.transform.SetPositionAndRotation(new Vector3(-6f, 16f, -24f), Quaternion.Euler(30f, 45f, 0f));
 
+            // ── Key light: soft mid-morning sun. Warm but not orange, angled low enough that roofs, eaves
+            //    and window reveals all throw readable shadows without the scene going contrasty.
             var keyObj = new GameObject("Directional Light");
             var key = keyObj.AddComponent<Light>();
-            key.type = LightType.Directional; key.color = new Color(1f, 0.97f, 0.9f); key.intensity = 1.28f;
-            key.shadows = LightShadows.Soft; key.shadowStrength = 0.78f; key.shadowBias = 0.05f; key.shadowNormalBias = 0.9f;
-            keyObj.transform.rotation = Quaternion.Euler(46f, -34f, 0f);
+            key.type = LightType.Directional; key.color = new Color(1f, 0.955f, 0.876f); key.intensity = 1.12f;
+            key.shadows = LightShadows.Soft; key.shadowStrength = 0.62f;
+            key.shadowBias = 0.03f; key.shadowNormalBias = 0.55f; key.shadowNearPlane = 0.2f;
+            keyObj.transform.rotation = Quaternion.Euler(42f, -38f, 0f);
             // Dynamic sun: animates this key light along a smooth day arc at runtime so shadows sweep the
             // map (edit-time keeps the static rotation above for deterministic captures).
             keyObj.AddComponent<Yuvi720.LearningWorld.World.SunCycle>();
 
+            // ── Sky fill: cool light from the opposite quarter, standing in for skylight on shaded walls.
             var fillObj = new GameObject("Fill Light");
             var fill = fillObj.AddComponent<Light>();
-            fill.type = LightType.Directional; fill.color = new Color(0.62f, 0.74f, 0.86f); fill.intensity = 0.4f; fill.shadows = LightShadows.None;
-            fillObj.transform.rotation = Quaternion.Euler(58f, 150f, 0f);
+            fill.type = LightType.Directional; fill.color = new Color(0.70f, 0.80f, 0.92f); fill.intensity = 0.30f; fill.shadows = LightShadows.None;
+            fillObj.transform.rotation = Quaternion.Euler(52f, 148f, 0f);
 
+            // ── Bounce light: a faint upward-facing warm-green light standing in for sunlight bouncing off
+            //    the grass and paving. This is what stops undersides — eaves, balconies, the fountain rim,
+            //    tree canopies — from going flat and dead, without any GI bake.
+            var bounceObj = new GameObject("Bounce Light");
+            var bounce = bounceObj.AddComponent<Light>();
+            bounce.type = LightType.Directional; bounce.color = new Color(0.74f, 0.79f, 0.62f); bounce.intensity = 0.18f; bounce.shadows = LightShadows.None;
+            bounceObj.transform.rotation = Quaternion.Euler(-38f, -20f, 0f);   // shining upward
+
+            RenderSettings.skybox = BuildSkyMaterial();
+            RenderSettings.sun = key;
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.72f, 0.8f, 0.88f);
-            RenderSettings.ambientEquatorColor = new Color(0.56f, 0.59f, 0.62f);
-            RenderSettings.ambientGroundColor = new Color(0.3f, 0.32f, 0.35f);
+            RenderSettings.ambientSkyColor = new Color(0.66f, 0.75f, 0.86f);
+            RenderSettings.ambientEquatorColor = new Color(0.62f, 0.63f, 0.60f);
+            RenderSettings.ambientGroundColor = new Color(0.34f, 0.35f, 0.30f);
             RenderSettings.ambientIntensity = 1f;
+            // Aerial perspective: squared-exponential haze so nearby detail stays crisp and the far ridge
+            // line washes gently into the sky colour, giving the island real depth.
             RenderSettings.fog = true;
-            RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = new Color(0.62f, 0.73f, 0.82f);
-            RenderSettings.fogStartDistance = 55f;
-            RenderSettings.fogEndDistance = 200f;
+            RenderSettings.fogMode = FogMode.ExponentialSquared;
+            RenderSettings.fogColor = new Color(0.72f, 0.81f, 0.88f);
+            RenderSettings.fogDensity = 0.0075f;
+            QualitySettings.shadowDistance = 90f;
+            QualitySettings.shadowResolution = ShadowResolution.VeryHigh;
+            QualitySettings.shadowCascades = 2;
+            QualitySettings.shadowProjection = ShadowProjection.StableFit;
             return cam;
+        }
+
+        // Procedural atmospheric skybox — bright, friendly daylight with a graded horizon. Saved as an
+        // asset so the scene reference survives into the build (and the shader is pulled in with it).
+        private static Material BuildSkyMaterial()
+        {
+            const string path = "Assets/Art/World/HighFidelity/Generated/Grounding/Materials/MAT_YW_Sky_Daylight.mat";
+            var shader = Shader.Find("Skybox/Procedural");
+            if (shader == null) return null;
+            GroundingAssetWriter.EnsureFolder(Path.GetDirectoryName(path).Replace('\\', '/'));
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (mat == null) { mat = new Material(shader) { name = "MAT_YW_Sky_Daylight" }; AssetDatabase.CreateAsset(mat, path); }
+            if (mat.shader != shader) mat.shader = shader;
+            mat.SetFloat("_SunDisk", 2f);              // high-quality sun, softly convergent
+            mat.SetFloat("_SunSize", 0.035f);
+            mat.SetFloat("_SunSizeConvergence", 4f);
+            mat.SetFloat("_AtmosphereThickness", 0.85f); // clean, not hazy-hot
+            mat.SetColor("_SkyTint", new Color(0.55f, 0.68f, 0.86f));
+            mat.SetColor("_GroundColor", new Color(0.56f, 0.58f, 0.55f));
+            mat.SetFloat("_Exposure", 1.22f);
+            EditorUtility.SetDirty(mat);
+            return mat;
         }
 
         private static void Capture(Camera camera, string assetPath, int width, int height)

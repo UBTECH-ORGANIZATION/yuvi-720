@@ -96,6 +96,43 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
         }
 
         /// <summary>
+        /// Soft alpha-blended material for the sky cloud billboards and other feathered sprites. Standard
+        /// in Fade mode with no specular, no shadow contribution and a lifted emission floor so the puffs
+        /// stay bright and airy even on their shaded side.
+        /// </summary>
+        public static Material GetSoftCloudMaterial(string assetName, Texture2D tex, Color color)
+        {
+            EnsureOutputFolders();
+            var path = $"{MaterialFolder}/{Sanitize(assetName)}.mat";
+            var shader = Shader.Find("Standard");
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                material = new Material(shader) { name = Sanitize(assetName) };
+                AssetDatabase.CreateAsset(material, path);
+            }
+            if (material.shader != shader) material.shader = shader;
+            material.SetTexture("_MainTex", tex);
+            material.color = color;
+            material.SetFloat("_Mode", 2f);   // Fade
+            material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            material.SetInt("_ZWrite", 0);
+            material.DisableKeyword("_ALPHATEST_ON");
+            material.EnableKeyword("_ALPHABLEND_ON");
+            material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            material.renderQueue = 3000;
+            if (material.HasProperty("_Glossiness")) material.SetFloat("_Glossiness", 0f);
+            if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", 0f);
+            material.EnableKeyword("_EMISSION");
+            material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+            if (material.HasProperty("_EmissionColor"))
+                material.SetColor("_EmissionColor", new Color(color.r, color.g, color.b) * 0.30f);
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        /// <summary>
         /// Emissive accent material (Standard shader) for the cyan "tech" glow that ties dressing
         /// props to the Yuvi robot's neon palette — beacon lanterns, fountain water, crystal accents.
         /// </summary>
