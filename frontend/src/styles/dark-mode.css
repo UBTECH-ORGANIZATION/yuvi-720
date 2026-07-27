@@ -1971,3 +1971,170 @@
 }
 
 
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LANDING — A BACKGROUND THAT TRAVELS  (dark)
+
+   Even after the chapters were built, the page still *felt* like one colour.
+   The reason was not the chapters — it was the canvas underneath them: the
+   ambient light pools were `background-attachment: fixed`, so the exact same
+   violet wash sat over the viewport at every scroll position. You could
+   scroll the whole page and the light never moved, which reads as "the same
+   purple everywhere" no matter what the sections do on top of it.
+
+   Two fixes:
+     1. The canvas scrolls with the page and drifts through hues from top to
+        bottom, so the background at the agents chapter is genuinely a
+        different colour than at the closing call to action.
+     2. Every chapter gets a real, visible band, and the bands are made tall
+        enough to *overlap* their neighbours. Because each band is faded at
+        both ends, overlapping is what produces the blend — one chapter's
+        colour dies out inside the next one instead of at a seam.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+[data-theme='dark'] .landing720 {
+  background-color: #0c0f2b;
+  background-image:
+    /* star field */
+    radial-gradient(1.3px 1.3px at 22% 18%, rgba(255, 255, 255, .40), transparent 60%),
+    radial-gradient(1.1px 1.1px at 68% 34%, rgba(206, 226, 255, .32), transparent 60%),
+    radial-gradient(1.4px 1.4px at 44% 72%, rgba(255, 255, 255, .24), transparent 60%),
+    radial-gradient(1.1px 1.1px at 84% 82%, rgba(255, 236, 205, .28), transparent 60%),
+    /* film grain, so the flat areas are never plastic */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.03 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E"),
+    /* Side light that also travels down the page rather than hovering over
+       the viewport — warm on one flank, cool on the other. */
+    radial-gradient(1100px 900px at 4% 12%, rgba(138, 108, 255, .20), transparent 60%),
+    radial-gradient(900px 900px at 98% 34%, rgba(58, 146, 224, .16), transparent 60%),
+    radial-gradient(1000px 900px at 2% 62%, rgba(255, 164, 108, .09), transparent 58%),
+    radial-gradient(900px 900px at 96% 84%, rgba(56, 200, 206, .10), transparent 60%),
+    /* The journey itself: indigo → cold blue night → indigo → a warmer shelf
+       → cool neutral → deep quiet → brand violet at the close. */
+    linear-gradient(180deg,
+      #1b1a55 0%,
+      #171a4e 8%,
+      #0b1236 17%,
+      #091031 24%,
+      #121649 31%,
+      #171a4c 37%,
+      #1d1b47 45%,
+      #1b1a44 54%,
+      #101638 63%,
+      #0d1434 71%,
+      #0b1130 79%,
+      #141150 89%,
+      #221a63 100%);
+  background-size:
+    300px 300px, 420px 420px, 360px 360px, 500px 500px,
+    120px 120px,
+    auto, auto, auto, auto,
+    100% 100%;
+  background-repeat:
+    repeat, repeat, repeat, repeat,
+    repeat,
+    no-repeat, no-repeat, no-repeat, no-repeat,
+    no-repeat;
+  /* Nothing is `fixed` any more. Fixed light is what made the page look like
+     one endless purple room. */
+  background-attachment:
+    scroll, scroll, scroll, scroll,
+    scroll,
+    scroll, scroll, scroll, scroll,
+    scroll;
+}
+
+/* The two blurred corner pools are anchored to the very top and very bottom of
+   the page, so they should not both be violet — that is the "same colour at
+   both ends" effect again. */
+[data-theme='dark'] .landing720::before {
+  background: radial-gradient(circle, rgba(150, 120, 255, .46), transparent 70%);
+}
+
+[data-theme='dark'] .landing720::after {
+  background: radial-gradient(circle, rgba(84, 196, 220, .34), transparent 70%);
+}
+
+/* ---- Chapter bands, now tall enough to bleed into each other ----
+   The generous negative inset is deliberate: neighbouring bands overlap by
+   roughly a third of a screen, and since each is masked to nothing at its
+   edges, the overlap is where one chapter's colour hands over to the next. */
+[data-theme='dark'] .landing720 [data-chapter]::before {
+  inset-block: clamp(-260px, -16vw, -140px);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 20%, #000 80%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 20%, #000 80%, transparent);
+}
+
+/* Hero — indigo stage, violet key light from the low side, a cool rim. */
+[data-theme='dark'] .landing720 [data-chapter='hero']::before {
+  background:
+    radial-gradient(1000px 660px at 18% 76%, rgba(140, 108, 255, .24), transparent 66%),
+    radial-gradient(760px 520px at 94% 8%, rgba(78, 168, 240, .16), transparent 64%);
+}
+
+/* Proof — the hinge between the violet hero and the blue agents room. */
+[data-theme='dark'] .landing720 [data-chapter='proof']::before {
+  background:
+    radial-gradient(700px 380px at 22% 50%, rgba(126, 104, 246, .16), transparent 68%),
+    radial-gradient(700px 380px at 78% 50%, rgba(64, 158, 232, .16), transparent 68%);
+}
+
+/* Agents — the deepest, coolest room. Going darker here is what makes the
+   hero above it read as lit and forward. */
+[data-theme='dark'] .landing720 [data-chapter='agents']::before {
+  background:
+    radial-gradient(940px 560px at 50% 40%, rgba(62, 156, 246, .22), transparent 68%),
+    radial-gradient(700px 480px at 10% 92%, rgba(58, 214, 224, .14), transparent 70%),
+    radial-gradient(620px 420px at 92% 96%, rgba(96, 122, 255, .12), transparent 70%),
+    linear-gradient(180deg, rgba(4, 7, 24, 0) 0%, rgba(4, 7, 24, .72) 34%, rgba(4, 7, 24, .68) 70%, rgba(4, 7, 24, 0) 100%);
+}
+
+/* Journey — the page starts turning from machine toward learner: indigo on
+   one side, the first real warmth on the other. */
+[data-theme='dark'] .landing720 [data-chapter='journey']::before {
+  background:
+    radial-gradient(820px 500px at 88% 12%, rgba(255, 164, 104, .16), transparent 66%),
+    radial-gradient(880px 540px at 10% 94%, rgba(128, 104, 255, .18), transparent 66%);
+}
+
+/* Scenes — a raised, warm glass shelf. Lighter than the page, so the
+   photography belongs to the design instead of sitting on top of it. */
+[data-theme='dark'] .landing720 [data-chapter='scenes']::before {
+  background:
+    radial-gradient(1000px 560px at 20% 8%, rgba(255, 170, 114, .17), transparent 62%),
+    radial-gradient(900px 560px at 86% 62%, rgba(92, 190, 238, .14), transparent 64%),
+    radial-gradient(800px 520px at 30% 96%, rgba(255, 140, 160, .08), transparent 66%),
+    linear-gradient(180deg, rgba(255, 255, 255, .075), rgba(255, 255, 255, .03) 55%, rgba(255, 255, 255, 0));
+}
+
+/* Audience — cool and factual; the warmth drains out again. */
+[data-theme='dark'] .landing720 [data-chapter='audience']::before {
+  background:
+    radial-gradient(900px 500px at 50% 6%, rgba(58, 132, 216, .20), transparent 66%),
+    radial-gradient(700px 460px at 14% 92%, rgba(52, 196, 186, .12), transparent 68%),
+    linear-gradient(180deg, rgba(5, 8, 26, .34), rgba(5, 8, 26, .1));
+}
+
+/* Standards — the most sober band on the page: teal-leaning, almost grey. */
+[data-theme='dark'] .landing720 [data-chapter='standards']::before {
+  background:
+    radial-gradient(860px 480px at 78% 10%, rgba(54, 190, 190, .15), transparent 66%),
+    radial-gradient(760px 460px at 16% 88%, rgba(64, 120, 200, .13), transparent 68%),
+    linear-gradient(180deg, rgba(5, 8, 26, .4), rgba(5, 8, 26, .16));
+}
+
+/* FAQ — quiet and dark, so the closing call to action lands harder. */
+[data-theme='dark'] .landing720 [data-chapter='faq']::before {
+  background:
+    radial-gradient(820px 460px at 26% 20%, rgba(70, 108, 200, .13), transparent 68%),
+    linear-gradient(180deg, rgba(4, 7, 24, .46), rgba(4, 7, 24, .2));
+}
+
+/* CTA — brand violet back at full strength, where it finally means something. */
+[data-theme='dark'] .landing720 [data-chapter='cta']::before {
+  background:
+    radial-gradient(820px 460px at 50% 34%, rgba(150, 112, 255, .34), transparent 68%),
+    radial-gradient(560px 340px at 88% 90%, rgba(92, 204, 238, .16), transparent 70%),
+    radial-gradient(520px 320px at 10% 96%, rgba(255, 158, 108, .1), transparent 70%),
+    linear-gradient(180deg, rgba(20, 14, 54, 0), rgba(32, 20, 84, .6));
+}
