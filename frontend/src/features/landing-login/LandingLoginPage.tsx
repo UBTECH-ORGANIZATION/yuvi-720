@@ -19,7 +19,7 @@ const FAQ_KEYS = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6']
 /* Proof points shown under the hero. Each one is a real property of the
    platform (agent count, supported languages, xAPI reporting, no identifying
    data sent to the model) — no invented numbers. */
-const METRIC_KEYS = ['agents', 'languages', 'events', 'privacy'] as const
+const METRIC_KEYS = ['agents', 'languages', 'support', 'privacy'] as const
 
 /* The learner journey, end to end — the section the nav's "how it works" link
    pointed at but that never existed. */
@@ -213,15 +213,6 @@ function AccessibilityIcon(props: SVGProps<SVGSVGElement>) {
       <path d="M4.8 8.6c2.3.9 4.7 1.4 7.2 1.4s4.9-.5 7.2-1.4" />
       <path d="M12 10v4.2" />
       <path d="m12 14.2-2.6 6M12 14.2l2.6 6" />
-    </Icon>
-  )
-}
-
-function CloudIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <Icon {...props}>
-      <path d="M7.2 18.5A4.2 4.2 0 0 1 7 10.1a5.2 5.2 0 0 1 9.9-1.3 3.9 3.9 0 0 1-.6 9.7Z" />
-      <path d="m10.4 14.2 1.6 1.6 3-3" />
     </Icon>
   )
 }
@@ -482,11 +473,11 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
         <div className="landing720-standards-grid">
           {[
             { key: 'program', Glyph: ClipboardCheckIcon },
-            { key: 'xapi', Glyph: ActivityIcon },
+            { key: 'progress', Glyph: ActivityIcon },
             { key: 'privacy', Glyph: LockIcon },
             { key: 'explain', Glyph: EyeIcon },
             { key: 'access', Glyph: AccessibilityIcon },
-            { key: 'cloud', Glyph: CloudIcon }
+            { key: 'safety', Glyph: ShieldIcon }
           ].map(({ key, Glyph }) => (
             <article className="landing720-standard" key={key}>
               <span className="landing720-standard__icon">
