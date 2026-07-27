@@ -135,12 +135,20 @@ function buildHood() {
   peak.scale.set(1, 0.7, 1.3); peak.position.set(0, 0.42, -0.44); g.add(peak)
   const brim = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.06, 12, 40, Math.PI * 1.15), fabric('#2b2a63'))
   brim.position.set(0, 0.02, -0.02); brim.rotation.set(0, 0, Math.PI * 0.42); g.add(brim)
+  // Neck opening: without it the cowl floats like a halo instead of sitting on
+  // the shoulders.
+  const neck = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.085, 12, 34), fabric('#232253'))
+  neck.rotation.x = Math.PI / 2; neck.position.set(0, -0.5, -0.06); neck.scale.set(1, 1.06, 1); g.add(neck)
+  const trimMat = holo(NEON, 0.45)
+  const trim = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.016, 10, 34), trimMat)
+  trim.rotation.x = Math.PI / 2; trim.position.set(0, -0.42, -0.06); trim.scale.set(1, 1.06, 1); g.add(trim)
   for (const side of [-1, 1]) {
-    const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.34, 8), fabric('#d8dcff'))
-    cord.position.set(0.34 * side, -0.42, 0.36); cord.rotation.z = 0.12 * side; g.add(cord)
-    const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.05, 12), metal(STEEL))
-    tip.position.set(0.34 * side, -0.6, 0.36); g.add(tip)
+    const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.26, 8), fabric('#c9d2ff'))
+    cord.position.set(0.24 * side, -0.62, 0.3); cord.rotation.z = 0.16 * side; g.add(cord)
+    const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.05, 12), metal(STEEL))
+    tip.position.set(0.26 * side, -0.75, 0.3); g.add(tip)
   }
+  g.userData.animate = (t: number) => { trimMat.opacity = 0.32 + Math.sin(t * 2) * 0.14 }
   return g
 }
 function buildHeadset() {
@@ -659,7 +667,7 @@ function buildEnergyWings() {
   for (const side of [-1, 1]) {
     const wing = new THREE.Group()
     for (let i = 0; i < 3; i++) {
-      const material = holo(i === 1 ? VIOLET : NEON, 0.26 - i * 0.05)
+      const material = holo(i === 1 ? VIOLET : NEON, 0.38 - i * 0.07)
       const panel = new THREE.Mesh(new THREE.ShapeGeometry(shape), material)
       panel.scale.setScalar(1 - i * 0.16); panel.position.set(0.04 * i, -0.06 * i, -0.05 * i)
       panel.rotation.z = -0.12 * i
@@ -670,7 +678,7 @@ function buildEnergyWings() {
       rib.position.set(0.32 - i * 0.02, 0.16 - i * 0.13, 0.01); rib.rotation.z = -0.16 - i * 0.16
       wing.add(rib)
     }
-    wing.scale.x = side; wing.position.set(0.12 * side, 0.06, -0.06)
+    wing.scale.set(1.34 * side, 1.34, 1.34); wing.position.set(0.14 * side, 0.1, -0.06)
     wing.rotation.y = -0.34 * side
     g.add(wing); wings.push(wing)
   }
@@ -682,9 +690,9 @@ function buildEnergyWings() {
     wings.forEach((wing, i) => {
       const side = i === 0 ? -1 : 1
       wing.rotation.y = (-0.34 + Math.sin(t * 1.5) * 0.12) * side
-      wing.position.y = 0.06 + Math.sin(t * 1.5 + 0.4) * 0.02
+      wing.position.y = 0.1 + Math.sin(t * 1.5 + 0.4) * 0.025
     })
-    panelMats.forEach((m, i) => { m.opacity = 0.18 + Math.abs(Math.sin(t * 1.7 + i * 0.5)) * 0.14 })
+    panelMats.forEach((m, i) => { m.opacity = 0.26 + Math.abs(Math.sin(t * 1.7 + i * 0.5)) * 0.18 })
   }
   return g
 }
