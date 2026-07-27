@@ -22,6 +22,7 @@ from app.routes.brain import router as brain_router
 from app.routes.agent import router as agent_router
 from app.routes.teacher import router as teacher_router
 from app.routes.mentoring import router as mentoring_router
+from app.routes.rewards import router as rewards_router
 from app.routes.contact import router as contact_router
 from app.routes.dashboard import router as dashboard_router
 from app.routes.learner_mapping import router as learner_mapping_router
@@ -97,6 +98,7 @@ def create_app() -> FastAPI:
     app.include_router(agent_router)
     app.include_router(teacher_router)
     app.include_router(mentoring_router)
+    app.include_router(rewards_router)
     app.include_router(profile_router)
     app.include_router(dashboard_router)
     app.include_router(mapping_chat_router)

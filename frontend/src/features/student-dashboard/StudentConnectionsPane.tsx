@@ -64,13 +64,15 @@ export function StudentConnectionsPane({ mode, studentName }: StudentConnections
           teacher: row.teacher_name,
         })
       }
-      if (row.deadline && row.next_steps) {
-        items.push({
-          date: row.deadline,
-          kind: 'goal',
-          title: row.next_steps,
-          teacher: row.teacher_name,
-        })
+      for (const goal of row.goals || []) {
+        if (goal.deadline && (goal.title || goal.next_steps)) {
+          items.push({
+            date: goal.deadline,
+            kind: 'goal',
+            title: goal.title || goal.next_steps || '',
+            teacher: row.teacher_name,
+          })
+        }
       }
     }
     return items.sort((a, b) => a.date.localeCompare(b.date))
@@ -128,7 +130,9 @@ export function StudentConnectionsPane({ mode, studentName }: StudentConnections
                   <article className="sd-chat-summary" key={row.id || `${row.date}-${row.meeting_stage}`}>
                     <span>{formatDate(row.date)}</span>
                     <p dir="auto">{row.notes}</p>
-                    {row.next_steps && <small dir="auto">{t('sdash.chat.nextStep')}: {row.next_steps}</small>}
+                    {(row.goals || []).map((goal) => (
+                      <small key={goal.id || goal.title} dir="auto">{t('sdash.chat.nextStep')}: {goal.title || goal.next_steps}</small>
+                    ))}
                   </article>
                 )) : (
                   <EmptyState icon="message" title={t('sdash.chat.empty')} body={t('sdash.chat.emptyBody')} />

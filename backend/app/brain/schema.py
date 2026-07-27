@@ -50,6 +50,7 @@ def empty_brain(learner_id: str, locale: str = DEFAULT_LOCALE) -> dict[str, Any]
         "profile": {            # F2 Onboarding output
             "activeness": {},   # the 6 MoE פעלנות components (0-100 internal, never shown)
             "mapping_scores": None,
+            "mapping_measures": None,   # official 7 measures + rubric level (1-5) per measure
             "learning_style": None,
             "interests": [],
             "characteristics": [],      # soft self-described traits (mapping reflection)
@@ -156,7 +157,7 @@ def flatten_updates(updates: dict[str, Any], prefix: str = "") -> dict[str, Any]
     return flat
 
 
-_OPAQUE_LEAF_KEYS = {"resume_token", "mapping_scores", "next_recommendations"}
+_OPAQUE_LEAF_KEYS = {"resume_token", "mapping_scores", "mapping_measures", "next_recommendations"}
 _OPAQUE_PARENT_KEYS = {"mastery", "progress"}
 
 

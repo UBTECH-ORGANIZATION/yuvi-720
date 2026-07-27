@@ -16,6 +16,9 @@ export type Theme = 'light' | 'dark' | 'system'
 
 export interface UserPreferences {
   theme: Theme
+  /** Epoch ms of the click that chose `theme` — lets ThemeProvider decide
+      whether this or the browser's `sp_theme` cookie was written last. */
+  theme_updated_at: number
   language: 'he' | 'en' | 'ar'
   reduced_motion: boolean
 }

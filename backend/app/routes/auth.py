@@ -37,6 +37,9 @@ class LoginRequest(BaseModel):
 
 class PreferencesRequest(BaseModel):
     theme: Optional[str] = Field(default=None, pattern="^(light|dark|system)$")
+    # Epoch ms of the click that chose `theme`. Sent when the browser promotes a
+    # choice made before login, so the newer of (cookie, user document) wins.
+    theme_updated_at: Optional[int] = Field(default=None, ge=0)
     language: Optional[str] = Field(default=None, pattern="^(he|en|ar)$")
     reduced_motion: Optional[bool] = None
 
@@ -183,6 +186,9 @@ async def patch_preferences(
         for key, value in payload.model_dump(exclude_none=True).items()
         if key in ALLOWED_PREFERENCES
     }
+    # A stamp on its own means nothing — it only dates a theme choice.
+    if "theme" not in updates:
+        updates.pop("theme_updated_at", None)
     if not updates:
         raise HTTPException(status_code=400, detail="no_supported_preferences")
 

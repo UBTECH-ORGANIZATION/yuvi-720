@@ -179,7 +179,15 @@ export function MyGoals({ goals, onSeeAll, onAddGoal, onUpdateStatus }: MyGoalsP
 
                       <span className="sd-goal-row__body">
                         <span className="sd-goal-row__title" dir="auto">{goal.text}</span>
-                        <span className="sd-goal-row__source">{t(`sdash.goalsCard.source.${sourceKey(goal)}`)}</span>
+                        <span className="sd-goal-row__meta">
+                          <span className="sd-goal-row__source">{t(`sdash.goalsCard.source.${sourceKey(goal)}`)}</span>
+                          {goal.rewardValue ? (
+                            <span className="sd-goal-row__worth" title={t('rewards.goal.worthHint')}>
+                              <Icon name="spark" size={11} />
+                              {t('rewards.goal.worth', { count: goal.rewardValue })}
+                            </span>
+                          ) : null}
+                        </span>
                       </span>
 
                       <span className="sd-goal-row__progress">
