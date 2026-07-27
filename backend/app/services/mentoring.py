@@ -37,6 +37,10 @@ def _write_fallback(rows: list[dict[str, Any]]) -> None:
         print(f"⚠️ mentoring fallback write failed: {exc}")
 
 
+# How many legacy goals we let one listing request price (see _backfill_goal_prices).
+_PRICE_BACKFILL_LIMIT = 6
+
+
 def _new_goal(data: dict[str, Any]) -> dict[str, Any]:
     """Build one goal object from client/legacy input."""
     stage = data.get("progress_stage", "chosen")
@@ -348,6 +352,35 @@ async def delete_conversation(learner_id: str, conversation_id: str) -> str:
     return "deleted"
 
 
+async def _backfill_goal_prices(lid: str, rows: list[dict[str, Any]]) -> None:
+    """Price goals created before Yuvi valued them, a few per request.
+
+    Goals documented earlier have no `reward_value`, so the learner would see a
+    goal with no worth. We price the newest unpriced ones on read, persist the
+    result, and let the next load pick up the rest — bounded so a page load
+    never fans out into dozens of model calls.
+    """
+    pending: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    for row in rows:
+        for goal in _active_goals(row):
+            if not goal.get("reward_value"):
+                pending.append((row, goal))
+    if not pending:
+        return
+    for row, goal in pending[:_PRICE_BACKFILL_LIMIT]:
+        priced = await rewards.price_goal(
+            lid,
+            title=goal.get("title", ""),
+            next_steps=goal.get("next_steps", ""),
+            deadline=goal.get("deadline") or "",
+            language="he",
+        )
+        goal["reward_value"] = priced["value"]
+        goal["reward_why"] = priced["why"]
+        await _save_conversation(lid, row)
+    await _project_goals(lid)
+
+
 async def list_conversations(learner_id: str, viewer_role: str = "teacher") -> list[dict[str, Any]]:
     """List a learner's conversations, each with its active (non-deleted) goals.
 
@@ -357,9 +390,11 @@ async def list_conversations(learner_id: str, viewer_role: str = "teacher") -> l
     lid = normalize_learner_id(learner_id)
     rows = await _raw_conversations(lid)
     rows.sort(key=lambda r: r.get("created_at", ""), reverse=True)
-    result: list[dict[str, Any]] = []
     for row in rows:
         _ensure_goals(row)
+    await _backfill_goal_prices(lid, rows)
+    result: list[dict[str, Any]] = []
+    for row in rows:
         conversation = dict(row)
         conversation["goals"] = _active_goals(conversation)
         if viewer_role != "teacher":
