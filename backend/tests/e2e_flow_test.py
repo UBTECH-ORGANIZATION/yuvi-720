@@ -343,12 +343,14 @@ async def main():
         fail_ext = {"objective_id": "math-angles-vertical", "subject": "math", "misconception": "adjacent_vs_vertical"}
         for i in range(3):
             await c.post(url, json=stmt(slx, f"t{i}", "answered", succ=False, scaled=0.0, ext=fail_ext), headers=h)
-        await c.post("/api/agent/triggers/idle", json={"learner_id": LID, "objective_id": "math-angles-vertical"})
+        # Idle is server-watchdog driven now (no client endpoint); the watchdog's
+        # callback is publish_idle — invoke it directly to exercise the SSE path.
+        triggers.publish_idle(LID, "math-angles-vertical")
         await asyncio.sleep(0.3)
         task.cancel()
         types = [t["type"] for t in got]
         check("misconception trigger after 3 fails", "misconception" in types, str(types))
-        check("idle trigger (client-reported)", "idle" in types, str(types))
+        check("idle trigger (watchdog)", "idle" in types, str(types))
 
         disc_p, nudge = await sse_collect(c, "/api/agent/coach/proactive", {
             "learner_id": LID, "language": "he", "trigger": "misconception",

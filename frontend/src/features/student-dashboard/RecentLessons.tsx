@@ -7,6 +7,7 @@ import type {
   LearningUnitDTO,
 } from '../../services/learning'
 import { LessonGlyph, pickGlyphVariant } from './LessonGlyph'
+import { subTopicLabel } from './subjectLabels'
 
 interface RecentLessonsProps {
   units: LearningUnitDTO[]
@@ -115,13 +116,14 @@ export function RecentLessons({
   onOpenLearning,
   onOpenComponent,
 }: RecentLessonsProps) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
   const [revealed, setRevealed] = useState(false)
   const trackRef = useRef<HTMLUListElement>(null)
   const [scrollState, setScrollState] = useState({ canPrev: false, canNext: false })
 
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null)
+  const [subTopicFilter, setSubTopicFilter] = useState<string | null>(null)
 
   const allLessons = useMemo(() => {
     return units
@@ -140,10 +142,33 @@ export function RecentLessons({
     return seen
   }, [allLessons])
 
-  const lessons = useMemo(() => {
+  // Lessons for the selected subject (before the sub-topic sub-filter).
+  const subjectLessons = useMemo(() => {
     if (!subjectFilter || !subjects.includes(subjectFilter)) return allLessons
     return allLessons.filter((lesson) => lesson.unit.subject === subjectFilter)
   }, [allLessons, subjectFilter, subjects])
+
+  // Sub-subjects (dotted sub-topic keys) present within the selected subject —
+  // the second navigation tier the learner drills into.
+  const subTopics = useMemo(() => {
+    const seen: string[] = []
+    for (const lesson of subjectLessons) {
+      const key = lesson.unit.sub_topic
+      if (key && !seen.includes(key)) seen.push(key)
+    }
+    return seen
+  }, [subjectLessons])
+
+  // Reset the sub-topic drill-down whenever the subject changes or it no longer
+  // applies (e.g. switched back to "all").
+  useEffect(() => {
+    if (subTopicFilter && !subTopics.includes(subTopicFilter)) setSubTopicFilter(null)
+  }, [subTopics, subTopicFilter])
+
+  const lessons = useMemo(() => {
+    if (!subTopicFilter) return subjectLessons
+    return subjectLessons.filter((lesson) => lesson.unit.sub_topic === subTopicFilter)
+  }, [subjectLessons, subTopicFilter])
 
   const primaryUnitId = useMemo(() => {
     const primary = lessons.find((lesson) => lesson.status === 'active')
@@ -214,7 +239,7 @@ export function RecentLessons({
             role="tab"
             aria-selected={subjectFilter === null}
             className={`sd-lessons__filter${subjectFilter === null ? ' is-active' : ''}`}
-            onClick={() => setSubjectFilter(null)}
+            onClick={() => { setSubjectFilter(null); setSubTopicFilter(null) }}
           >
             {t('sdash.lessons.filter.all')}
           </button>
@@ -225,9 +250,36 @@ export function RecentLessons({
               role="tab"
               aria-selected={subjectFilter === subject}
               className={`sd-lessons__filter${subjectFilter === subject ? ' is-active' : ''}`}
-              onClick={() => setSubjectFilter(subject)}
+              onClick={() => { setSubjectFilter(subject); setSubTopicFilter(null) }}
             >
               {t(`learning.subject.${subject}`)}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {subTopics.length > 1 && (
+        <div className="sd-lessons__subfilters" role="tablist" aria-label={t('sdash.lessons.subFilter')}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={subTopicFilter === null}
+            className={`sd-lessons__subfilter${subTopicFilter === null ? ' is-active' : ''}`}
+            onClick={() => setSubTopicFilter(null)}
+          >
+            {t('sdash.lessons.filter.all')}
+          </button>
+          {subTopics.map((key) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={subTopicFilter === key}
+              className={`sd-lessons__subfilter${subTopicFilter === key ? ' is-active' : ''}`}
+              onClick={() => setSubTopicFilter(key)}
+              dir="auto"
+            >
+              {subTopicLabel(key, language)}
             </button>
           ))}
         </div>
@@ -284,6 +336,14 @@ export function RecentLessons({
                   <div className="sd-lesson-card__body">
                     <span className="sd-lesson-card__subject" dir="auto">
                       {t(`learning.subject.${lesson.unit.subject}`)}
+                      {lesson.unit.sub_topic && (
+                        <>
+                          {' · '}
+                          <span className="sd-lesson-card__subtopic">
+                            {subTopicLabel(lesson.unit.sub_topic, language)}
+                          </span>
+                        </>
+                      )}
                     </span>
                     <h3 className="sd-lesson-card__title" dir="auto">{lesson.unit.title}</h3>
                     <div
@@ -327,7 +387,7 @@ export function RecentLessons({
                             {t('sdash.lessons.stepOf', { step: lesson.currentStep, total: lesson.total })}
                           </span>
                         )}
-                        {lesson.status !== 'notStarted' && lesson.minutesLeft != null && lesson.minutesLeft > 0 && (
+                        {lesson.minutesLeft != null && lesson.minutesLeft > 0 && (
                           <span className="sd-lesson-card__meta-chip">
                             <Icon name="clock" size={12} />
                             {t('sdash.lessons.minutesLeft', { count: lesson.minutesLeft })}

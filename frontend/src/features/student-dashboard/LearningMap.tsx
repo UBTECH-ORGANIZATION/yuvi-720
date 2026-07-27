@@ -32,13 +32,6 @@ function visualFor(key: string) {
 /** Keep the dashboard card compact — at most four topics per column. */
 const MAX_PER_COLUMN = 4
 
-/**
- * Demo-only placeholder topics for the "needs reinforcement" column so the card
- * shows how it looks even when the brain has no real support-band competencies yet.
- * Not derived from real data — labels/descriptors are localized copy.
- */
-const DEMO_REINFORCE_KEYS = ['growth_mindset', 'self_regulation', 'self_awareness'] as const
-
 interface ColumnRowProps {
   competency: Competency
   side: 'good' | 'reinforce'
@@ -200,19 +193,8 @@ export function LearningMap({ competencies }: LearningMapProps) {
     return { good: good.slice(0, MAX_PER_COLUMN), reinforce: reinforce.slice(0, MAX_PER_COLUMN) }
   }, [competencies])
 
-  // Demo fallback: when there is no real support-band topic, show placeholder
-  // topics so the column still demonstrates its intended look.
-  const reinforceDisplay = useMemo<Competency[]>(() => {
-    if (reinforce.length > 0) return reinforce
-    return DEMO_REINFORCE_KEYS.map((key) => ({
-      key,
-      icon: visualFor(key).icon,
-      label: t(`sdash.learningMap.demo.${key}.label`),
-      value: 0,
-      descriptor: t(`sdash.learningMap.demo.${key}.desc`),
-      tone: 'support' as const,
-    }))
-  }, [reinforce, t])
+  // Only real support-band competencies — no fabricated placeholder topics.
+  const reinforceDisplay = reinforce
 
   if (good.length === 0 && reinforce.length === 0) return null
 

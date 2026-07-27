@@ -34,7 +34,7 @@ export interface LearningUnitDTO {
   subject: LearningSubject
   languages: Language[]
   components: LearningComponentDTO[]
-  source: 'content_provider'
+  source: 'kata' | 'content_provider'
   current_component_id: string | null
   next_component_id: string | null
   illustration?: LessonIllustrationDTO | null
@@ -53,7 +53,7 @@ export interface LessonIllustrationDTO {
 }
 
 export interface LearningCatalogDTO {
-  source: 'content_provider'
+  source: 'kata' | 'content_provider'
   provider_status: 'online'
   units: LearningUnitDTO[]
 }
@@ -76,7 +76,7 @@ export interface LearningSessionDTO {
   session_id: string
   timing_url: string
   resume_token: unknown
-  source: 'content_provider'
+  source: 'kata' | 'content_provider'
 }
 
 export interface QuestionTimingDTO {
@@ -115,11 +115,13 @@ export function createLearningSession(
   componentId: string,
   unitId: string | null,
   language: Language,
+  restart = false,
 ) {
   return apiPost<LearningSessionDTO>('/api/learning/sessions', {
     component_id: componentId,
     unit_id: unitId,
     language,
+    restart,
   })
 }
 

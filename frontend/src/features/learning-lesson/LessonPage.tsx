@@ -15,7 +15,7 @@ import {
   type LearningTimingDTO,
   type LearningUnitDTO,
 } from '../../services/learning'
-import { LearningRoadmap } from '../learning-portal/LearningRoadmap'
+import { BadgeMoments } from '../badges/BadgeMoments'
 import { ReflectionPanel } from './ReflectionPanel'
 import { playProgressionAudio } from '../../services/progressionAudio'
 import './lesson-workspace.css'
@@ -28,6 +28,9 @@ interface ProviderMessage {
 
 type FrameState = 'loading' | 'ready' | 'error'
 const PROVIDER_READY_TIMEOUT_MS = 15000
+// How often to poll the catalog for a Kata-relayed completion while a lesson is
+// open (cross-origin content can't postMessage us — see the completion effect).
+const COMPLETION_POLL_MS = 5000
 
 function isProviderMessage(value: unknown): value is ProviderMessage {
   return typeof value === 'object' && value !== null
@@ -56,9 +59,21 @@ export function LessonPage() {
   const [roadmap, setRoadmap] = useState<LearningUnitDTO | null>(null)
   const [travellingFromId, setTravellingFromId] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
+  // 720 §6: on re-entry to an ALREADY-completed component, the learner chooses
+  // "view performance" or "redo". Until they choose, we hold a light overlay
+  // over the (resumed) content. Only "redo" launches a fresh attempt (restart).
+  const [reentryOpen, setReentryOpen] = useState(false)
+  // Consumed by the session effect: the next (re)launch is an explicit redo, so
+  // the backend resets our coach thread + one-shot hint state for a fresh run.
+  const restartPendingRef = useRef(false)
+  // Bumped once a completion is confirmed so BadgeMoments re-checks for a newly
+  // earned badge (celebration) or a progress bump (toast).
+  const [badgeCheck, setBadgeCheck] = useState(0)
   const completionActionRef = useRef<HTMLButtonElement>(null)
   const completionDialogRef = useRef<HTMLElement>(null)
   const completionPendingRef = useRef(false)
+  const completedRef = useRef(false)
+  useEffect(() => { completedRef.current = completed }, [completed])
 
   useEffect(() => {
     let active = true
@@ -72,7 +87,9 @@ export function LessonPage() {
     setLoading(true)
     setError(false)
     setFrameState('loading')
-    createLearningSession(selection.componentId, selection.unitId, language)
+    const isRedo = restartPendingRef.current
+    restartPendingRef.current = false
+    createLearningSession(selection.componentId, selection.unitId, language, isRedo)
       .then((nextSession) => {
         if (active) {
           setSession(nextSession)
@@ -81,6 +98,15 @@ export function LessonPage() {
           setProgressionReady(false)
           setTravellingFromId(null)
           completionPendingRef.current = false
+          // §6 re-entry: if this component is already completed and we're NOT
+          // mid-redo, offer the view/redo choice over the resumed content.
+          const persisted = nextSession.roadmap.components.find(
+            (component) => component.id === nextSession.component.id,
+          )
+          setReentryOpen(!isRedo && persisted?.progress_state === 'completed')
+          // Re-resolve the companion thread: the SAME open thread on a resume,
+          // or the freshly reset one after a redo.
+          window.dispatchEvent(new CustomEvent('yuvilab:lesson-session-created'))
         }
       })
       .catch(() => {
@@ -134,6 +160,7 @@ export function LessonPage() {
             setCompleted(true)
             refreshBrain()
             window.dispatchEvent(new CustomEvent('yuvilab:brain-updated'))
+            setBadgeCheck((count) => count + 1)
             getLearningTiming(session, controller.signal)
               .then(setTiming)
               .catch(() => undefined)
@@ -166,10 +193,42 @@ export function LessonPage() {
       }
     }
     window.addEventListener('message', handleProviderMessage)
+
+    // Fast path: the backend pushes a `completion` trigger over the coach SSE
+    // the moment the component-level `completed` statement is ingested (Kata
+    // relay → our ingest → triggers). Finalize instantly instead of waiting for
+    // the next poll tick; confirmPersistedCompletion still verifies the flip to
+    // 'completed' in the catalog, so this only removes latency, not the guard.
+    const handleXapiCompletion = (event: Event) => {
+      const detail = (event as CustomEvent<{ componentId?: string | null }>).detail
+      if (detail?.componentId && detail.componentId !== session.component.id) return
+      if (completionPendingRef.current || completedRef.current) return
+      void confirmPersistedCompletion()
+    }
+    window.addEventListener('yuvilab:xapi-completion', handleXapiCompletion)
+
+    // Kata content is hosted cross-origin (lomdot.education.gov.il) and never
+    // postMessages us — completion arrives via xAPI → Kata relay → our ingest →
+    // the catalog's progress_state. Poll while the lesson is open so we detect
+    // the flip to 'completed' and run the same finalize path as the message.
+    const pollTimer = window.setInterval(async () => {
+      if (controller.signal.aborted || completionPendingRef.current || completedRef.current) return
+      try {
+        const catalog = await getLearningCatalog(controller.signal)
+        const unit = catalog.units.find((candidate) => candidate.id === session.unit.id)
+        const persisted = unit?.components.find((c) => c.id === session.component.id)
+        if (persisted?.progress_state === 'completed') void confirmPersistedCompletion()
+      } catch {
+        /* transient catalog/network error — the next tick retries */
+      }
+    }, COMPLETION_POLL_MS)
+
     return () => {
       controller.abort()
       timers.forEach((timer) => window.clearTimeout(timer))
+      window.clearInterval(pollTimer)
       window.removeEventListener('message', handleProviderMessage)
+      window.removeEventListener('yuvilab:xapi-completion', handleXapiCompletion)
     }
   }, [learnerId, refreshBrain, session])
 
@@ -242,6 +301,18 @@ export function LessonPage() {
     navigate(`/learning/lesson?${params}`)
   }
 
+  // §6 "view performance": keep the resumed content + our chat/hint state; just
+  // dismiss the choice. The content itself shows the review on re-entry.
+  const viewCompletedPerformance = () => setReentryOpen(false)
+
+  // §6 "redo the component": fresh attempt — the next launch resets our coach
+  // thread + one-shot hint state and reloads the content.
+  const redoCompletedComponent = () => {
+    setReentryOpen(false)
+    restartPendingRef.current = true
+    setReloadKey((key) => key + 1)
+  }
+
   const closeCompletion = () => {
     if (!progressionReady) return
     setCompleted(false)
@@ -266,6 +337,7 @@ export function LessonPage() {
 
   return (
     <div className="learning-lesson-page">
+      <BadgeMoments trigger={badgeCheck} />
       <LearnerAppBar />
       <main className="learning-lesson-main">
         <header className="learning-lesson-toolbar">
@@ -336,6 +408,23 @@ export function LessonPage() {
                 allow="autoplay"
                 onLoad={() => setFrameState('ready')}
               />
+              {reentryOpen && (
+                <div className="learning-reentry" role="dialog" aria-modal="true" aria-labelledby="learning-reentry-title">
+                  <div className="learning-reentry__card">
+                    <div className="learning-reentry__icon"><Icon name="check" size={22} /></div>
+                    <h2 id="learning-reentry-title">{t('learning.lesson.reentry.title')}</h2>
+                    <p>{t('learning.lesson.reentry.body')}</p>
+                    <div className="learning-reentry__actions">
+                      <button className="learning-primary-button" type="button" onClick={viewCompletedPerformance}>
+                        {t('learning.lesson.reentry.view')}
+                      </button>
+                      <button className="learning-secondary-button" type="button" onClick={redoCompletedComponent}>
+                        {t('learning.lesson.reentry.redo')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
         )}
@@ -369,18 +458,6 @@ export function LessonPage() {
                   ×
                 </button>
               </header>
-
-              <div className="learning-completion-dialog__journey">
-                <LearningRoadmap
-                  unit={roadmap}
-                  activeComponentId={session?.component.id}
-                  travellingFromId={travellingFromId}
-                  cinematic
-                  onTravelComplete={() => {
-                    setTravellingFromId(null)
-                  }}
-                />
-              </div>
 
               <ReflectionPanel
                 componentId={session?.component.id || null}

@@ -20,13 +20,21 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Manim's Cairo/Pango renderer and still/video export dependencies.
+# fonts-noto-core has NO Hebrew/Arabic glyphs — those live in the separate
+# fonts-noto-hebrew / fonts-noto-arabic packages. Without them, Manim's Pango
+# text falls back to a glyphless font and Hebrew/Arabic labels render as tofu
+# boxes (see app/agents/manim_worker.py:font_for). fc-cache -f makes the newly
+# installed families visible to Pango/manimpango at runtime.
 RUN apt-get update && apt-get install -y --no-install-recommends \
 	build-essential \
 	ffmpeg \
 	fonts-noto-core \
+	fonts-noto-hebrew \
+	fonts-noto-arabic \
 	libcairo2-dev \
 	libpango1.0-dev \
 	pkg-config \
+	&& fc-cache -f \
 	&& rm -rf /var/lib/apt/lists/*
 
 # Install Python deps first for better layer caching.

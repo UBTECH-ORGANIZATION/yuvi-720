@@ -247,35 +247,40 @@ async def build_coach_bundle(
     metadata) lets the Coach give item-specific help; `recent_events` let it
     detect struggle. Content/event lookups are imported lazily to avoid cycles.
     """
-    from app.brain.curriculum import get_component, localized_objective_title
     from app.brain.memory import (
         active_themes,
         build_learner_portrait,
         classify_query_intent,
         memory_defaults,
     )
-    from app.services.content_catalog import information_to_bot
-    from app.services import content_provider
+    from app.services import kata_catalog, kata_client
+    from app.services.kata_catalog import get_component, localized_objective_title
     from app.services.events import get_recent_events
 
+    await kata_catalog.ensure_loaded()
     brain = await view_for("coach", learner_id)
     goals = get_path(brain, "goals") or []
     component_id = get_path(brain, "current_state.component_id")
     unit_id = get_path(brain, "current_state.unit_id")
     item_id = get_path(brain, "current_state.item_id")
+    question_id = get_path(brain, "current_state.question_id")
     resume_token = get_path(brain, "current_state.resume_token")
     pace = get_path(brain, "current_state.pace")
     component = get_component(component_id) if component_id else None
     provider_unit: Optional[dict[str, Any]] = None
     provider_component: Optional[dict[str, Any]] = None
     if component_id and component is None:
+        # Fall back to a live Kata fetch for a component outside the cached spine.
         try:
-            provider_unit, provider_component = await content_provider.resolve_component(
+            provider_unit, provider_component = await kata_client.resolve_component(
                 component_id, unit_id
             )
-        except content_provider.ContentProviderError:
+        except kata_client.KataError:
             pass
-    objective_id = (component or {}).get("objective_id") or (provider_unit or {}).get("objective_id")
+    objective_id = (
+        (component or {}).get("objective_id")
+        or (provider_unit or {}).get("objective_id")
+    )
     locale = get_path(brain, "identity.locale") or "he"
     intent = query_intent or classify_query_intent(user_message or "", locale)
     screen = (surface_context or {}).get("screen")
@@ -389,6 +394,24 @@ async def build_coach_bundle(
     clarifications = labels(get_path(brain, "profile.mapping_clarifications") or [], limit=3)
 
     recent = await get_recent_events(learner_id or "", objective_id=objective_id, limit=5)
+
+    # Reconcile a Kata PLAYER screen id lingering in current_state to the CATALOG
+    # sub-content id (ingest fixes this going forward; this covers a value stored
+    # before the fix or mid-navigation). Without it the coach grounds hints on the
+    # NEXT item (player `-002` == catalog `-001`). Anchored by the current
+    # question id + recent runtime ids; a no-op once current_state holds a catalog id.
+    if component_id and item_id:
+        reconciled = kata_catalog.resolve_catalog_item_id(
+            component_id,
+            item_id,
+            question_id=question_id,
+            seen_item_ids=[
+                e.get("runtime_item_id") for e in recent if e.get("runtime_item_id")
+            ],
+        )
+        if reconciled and reconciled != item_id:
+            item_id = reconciled
+
     recent_view = [
         {
             "verb": safe_text(e.get("verb"), 60),
@@ -403,6 +426,28 @@ async def build_coach_bundle(
         }
         for e in recent
     ]
+
+    # Exact current question (text/options/correct answer) for the sub-item the
+    # learner is on — server-only ground truth so the coach guides accurately
+    # without revealing the answer. Prefer the current question_id, else the
+    # item's first question.
+    current_questions = (
+        (provider_component or {}).get("questions_by_item", {}).get(item_id)
+        if provider_component
+        else kata_catalog.questions_for_item(component_id, item_id)
+    ) or []
+    current_question: dict[str, Any] = {}
+    if current_questions:
+        chosen = next(
+            (q for q in current_questions if q.get("questionId") == question_id),
+            current_questions[0],
+        )
+        current_question = {
+            "text": safe_text(chosen.get("questionText"), 600),
+            "type": safe_text(chosen.get("questionType"), 40),
+            "options": [safe_text(a, 200) for a in (chosen.get("answers") or []) if a][:12],
+            "correct": [safe_text(a, 200) for a in (chosen.get("correctAnswers") or []) if a][:12],
+        }
 
     interests_view = memory_interests or labels(
         get_path(brain, "profile.interests") or [], limit=6
@@ -463,12 +508,24 @@ async def build_coach_bundle(
             ),
             "pace": safe_text(pace, 30),
             "informationToBot": safe_text(
-                (provider_component or {}).get("information_to_bot")
-                or information_to_bot(component_id),
+                (
+                    # Prefer the exact sub-content item the learner is on (Kata
+                    # keeps per-item mistake/strategy notes) → sharper hints.
+                    (provider_component or {}).get("information_by_item", {}).get(item_id)
+                    or (provider_component or {}).get("information_to_bot")
+                    if provider_component else
+                    kata_catalog.information_for_item(component_id, item_id)
+                ),
                 900,
             ),
+            "question": current_question,
             "hint_ladder": get_path(brain, "current_state.hint_ladder") or {},
             "recent_events": recent_view,
+            # Ids for the per-question message key (chat scoping), so a stored
+            # turn is tagged with the same question the support buttons gate on.
+            "component_id": component_id,
+            "item_id": item_id,
+            "question_id": question_id,
         },
         "query_intent": intent,
         "portrait": (

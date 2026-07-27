@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.auth.dependencies import require_learner
-from app.services import content_provider
+from app.services import kata_client as content_provider
 from app.services.learning_sessions import create_provider_session
 from app.services.learning_progress import project_unit_roadmap
 from app.services.learning_timing import summarize_session
@@ -24,6 +24,10 @@ class LearningSessionRequest(BaseModel):
     component_id: str = Field(min_length=1, max_length=160)
     unit_id: Optional[str] = Field(default=None, max_length=160)
     language: Literal["he", "ar", "en"] = "he"
+    # 720 §6 explicit "redo the component" on re-entry after completion: a fresh
+    # attempt that resets our coach thread + one-shot hint state. Default is
+    # resume/continuity (never reset on an ordinary relaunch).
+    restart: bool = False
 
 
 @router.get("/catalog")
@@ -36,17 +40,23 @@ async def read_catalog(lang: str = "he", learner_id: str = Depends(require_learn
     a topic visual per lesson, localized by ``lang``.
     """
     try:
-        units = await content_provider.list_units()
+        units = await content_provider.list_units(language=lang)
         projected = []
         for unit in units:
             roadmap = await project_unit_roadmap(unit, learner_id)
             roadmap["illustration"] = await _unit_illustration(roadmap, lang)
+            # Per-item bot notes + question snapshots (with correct answers) are
+            # server-only coach context; keep them off the client payload — the
+            # aggregate ``information_to_bot`` stays for DTO parity.
+            for component in roadmap.get("components") or []:
+                component.pop("information_by_item", None)
+                component.pop("questions_by_item", None)
             projected.append(roadmap)
         units = projected
     except content_provider.ContentProviderError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
     return {
-        "source": "content_provider",
+        "source": "kata",
         "provider_status": "online",
         "units": units,
     }
@@ -79,6 +89,7 @@ async def create_learning_session(
             unit_id=data.unit_id,
             language=data.language,
             request_base_url=str(request.base_url),
+            restart=data.restart,
         )
     except content_provider.ContentProviderError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc

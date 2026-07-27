@@ -66,6 +66,27 @@ function normalizeInlineMarkers(md: string): string {
     .replace(/([.!?׃:：])[ \t]+(?=\d+[.)][ \t]\S)/g, '$1\n')
 }
 
+/** A semicolon joining two clauses reads clunky in Yuvi's short Hebrew/Arabic
+ * messages (nudges especially). Present such joins as two sentences instead.
+ * Only "clause; clause" style joins (a non-semicolon char, then `; ` + text) are
+ * touched — HTML entities have no trailing space, and any rare math renders
+ * best-effort (KaTeX is throwOnError:false). */
+function splitClauseSemicolons(md: string): string {
+  return md.replace(/([^\s;])\s*;[ \t]+/g, '$1. ')
+}
+
+/* Yuvi answers only in Hebrew / Arabic / English (plus math + emoji). The model
+ * occasionally leaks a stray CJK/Japanese/Korean token mid-sentence (e.g. a
+ * Chinese gloss of the adjacent Hebrew word). Those scripts are never legitimate
+ * here, so drop any run of them and heal the whitespace. Hebrew (U+0590–5FF),
+ * Arabic (U+0600–6FF), Latin, Greek, punctuation, and emoji are all outside
+ * these ranges and untouched. */
+const FOREIGN_SCRIPTS = /[\u1100-\u11ff\u3000-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uac00-\ud7af\uff00-\uffef]+/g
+
+function stripForeignScripts(md: string): string {
+  return md.replace(FOREIGN_SCRIPTS, '').replace(/[ \t]{2,}/g, ' ')
+}
+
 function tableCells(line: string): string[] {
   let s = line.trim()
   if (s.startsWith('|')) s = s.slice(1)
@@ -186,7 +207,9 @@ function parseBlocks(md: string): ReactNode[] {
 /** Render one Yuvi reply as markdown. Fenced code blocks (used internally to
  * carry diagram specs) are stripped first, matching the prior behavior. */
 export function CoachMarkdown({ text }: { text: string }) {
-  const safeText = normalizeInlineMarkers(text.replace(FENCED_BLOCK, '')).trim()
+  const safeText = splitClauseSemicolons(
+    stripForeignScripts(normalizeInlineMarkers(text.replace(FENCED_BLOCK, '')))
+  ).trim()
   if (!safeText) return null
   return (
     <div className="sp-companion__prose" dir="auto">

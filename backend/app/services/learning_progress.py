@@ -11,7 +11,7 @@ from copy import deepcopy
 from typing import Any
 
 from app.brain.repository import get_brain
-from app.services.events import get_unit_events
+from app.services.events import get_unit_events, is_component_completion
 from learner_state import normalize_learner_id  # type: ignore
 
 
@@ -36,9 +36,12 @@ async def project_unit_roadmap(
     completed: dict[str, str] = {}
     recovery_ids: set[str] = set()
     for event in events:
-        component_id = str(event.get("launch") or "")
-        if not component_id or event.get("verb") != "completed":
+        # Only a COMPONENT-level `completed` finishes a component — a per-screen
+        # `completed` (object == a sub-item) is item progress and must NOT flip
+        # the node to done / remove it from the roadmap mid-lesson.
+        if not is_component_completion(event):
             continue
+        component_id = str(event.get("launch") or "")
         result = event.get("result") or {}
         component = next((row for row in components if row.get("id") == component_id), None)
         if component and component.get("is_assessment") and result.get("success") is False:

@@ -21,6 +21,8 @@ import tempfile
 from typing import Callable, Optional
 from uuid import uuid4
 
+from app.agents.molecule import validate_molecule
+from app.agents.visual_layout import solve_scene_layout
 from app.services.ai_usage import UsageContext
 from app.services.llm import call_llm
 
@@ -97,7 +99,20 @@ Allowed elements:
 - {"type":"axes","position":[x,y],"x_range":[-5,5,1],"y_range":[-3,3,1],"x_label":"x","y_label":"y","color":"ink"}
 - {"type":"text","position":[x,y],"label":"short text","color":"ink"}
 - {"type":"brace","points":[[x1,y1],[x2,y2]],"label":"3","color":"ink"}  (curly measuring brace along the segment; label on its outer side)
-- {"type":"number_line","position":[x,y],"range":[0,10,1],"marks":[2,7],"label":"optional","color":"ink"}  (horizontal number line centered at position; marks are highlighted values)
+- {"type":"number_line","position":[x,y],"range":[0,10,1],"marks":[2,7],"label":"optional","color":"ink"}  (horizontal number line centered at position; marks are highlighted values. When a number_line is present, the x of EVERY other element is a VALUE on that line's range — e.g. text near the mark 12.1 uses position [12.1, 0.6], never canvas coordinates. Do not add text that repeats a mark's number; marks are labeled automatically. A caption ABOUT a
+particular mark must use that mark's exact value as its x — a caption about the mark at 8 sits at
+[8, 0.9], not at 6.5, or it will point at empty line. Keep captions ABOVE the line (positive y
+relative to it): the row below carries the tick numbers. A brace must span from one mark to
+another — its endpoints are mark values, not approximations.)
+CHEMISTRY — for molecules use, INSTEAD of the geometry primitives above:
+- {"type":"molecule","smiles":"CC(=O)Oc1ccccc1C(=O)O","label":"אספירין","view":"2d","highlight":"C(=O)O"}
+Emit ONLY the SMILES string; never coordinates, never a formula, never a molecular mass —
+those are computed for you and shown to the learner, so anything you assert would be
+overwritten or would make the visual be rejected. An invalid SMILES produces NO visual at
+all, so write only structures you are certain of. "highlight" is an optional SMARTS or
+SMILES substructure (a functional group) that will be emphasised — use it to point at the
+part under discussion. "view":"3d" only when molecular SHAPE is the lesson (VSEPR, bond
+angles, isomers); otherwise "2d". Do not mix molecule elements with geometry elements.
 Colors: primary, secondary, accent, success, warning, ink, muted, white.
 ANIMATION — prefer it whenever the idea unfolds over time (construction, change, motion,
 comparison, sweep, accumulation). Set scene-level "animated": true, then stage the reveal:
@@ -106,6 +121,16 @@ comparison, sweep, accumulation). Set scene-level "animated": true, then stage t
   to draw attention), "slide" (glides from "from":[x,y] to its place — use for motion/change),
   or "none" (already on screen at its step).
 Stage the scene like a teacher at a board: givens first, construction next, the insight last.
+INTERACTIVITY — decide this yourself, do not wait to be asked. Add
+"interactive":{"handles":[{"element":<index>,"vertex":<i>}]} when the scene teaches a
+RELATIONSHIP that should survive being changed — a theorem, a dependency, an invariant,
+a classification. Dragging turns "this triangle is right-angled" into "right-angledness is
+a property I can destroy and restore", which a picture cannot do.
+Do NOT add handles when the scene states a single fixed fact (one labelled diagram, one
+plotted point, a specific worked value) — moving it would make the labels lie.
+A handle may only reference a "point" element, or a "polygon" vertex by index. At most 4.
+Handles are additive: the same scene must still read correctly as a still image, so never
+rely on dragging to communicate the idea.
 Choose the MOST EXPLANATORY scene you can express with these primitives, not the simplest —
 an animated step-by-step construction beats a static picture whenever a process is involved.
 A static scene (animated:false or omitted) is still right for a single unchanging fact.
@@ -928,6 +953,133 @@ def _canonical_similar_triangles_scene(request: str, language: str) -> Optional[
     })
 
 
+def _normalize_number_line_scene(elements: list[dict]) -> None:
+    """Force ONE coherent coordinate space on a number-line scene.
+
+    The planner routinely mixes spaces: the line's ticks live in DATA coords
+    (range e.g. 11..13) while it drops annotations at generic scene coords near
+    the origin. The shared fit then dumps those annotations in a heap far from
+    the line, squeezes the line into a corner, and stacks text on text
+    (observed live). Deterministic repair, applied when the scene has exactly
+    one number line and no axes:
+      - numeric text matching a highlighted mark duplicates the tick label → drop;
+        other in-range numeric text snaps to its value above the line
+      - out-of-span captions move to ordered caption rows above the line center
+      - arrows re-anchor to point down at the marks (or keep an in-span tip x)
+      - points snap onto the line; stray decorations far from the span drop
+    Everything then lives near the line's span, so the fit gives the line the
+    full frame width and tick labels breathe.
+    """
+    lines = [e for e in elements if e["type"] == "number_line"]
+    if len(lines) != 1 or any(e["type"] == "axes" for e in elements):
+        return
+    line = lines[0]
+    start, end, step = line["range"]
+    height = line["position"][1]
+    lo, hi = start - step, end + step
+    center_x = (start + end) / 2
+    marks = line.get("marks") or []
+    anchor_x = sum(marks) / len(marks) if marks else center_x
+
+    def in_span(x: float) -> bool:
+        return lo <= x <= hi
+
+    caption_rows = 0
+    kept: list[dict] = []
+    for element in elements:
+        kind = element["type"]
+        if element is line:
+            kept.append(element)
+            continue
+        if kind == "text":
+            label = str(element.get("label") or "")
+            try:
+                value: Optional[float] = float(label.replace("−", "-"))
+            except ValueError:
+                value = None
+            if value is not None and in_span(value):
+                if any(abs(value - m) <= step / 2 + 1e-9 for m in marks):
+                    continue   # the tick/mark label already says this number
+                element["position"] = [value, height + 0.55]
+            elif in_span(element["position"][0]):
+                element["position"][1] = min(
+                    max(element["position"][1], height - 1.4), height + 1.8
+                )
+            else:
+                element["position"] = [center_x, height + 1.15 + 0.62 * caption_rows]
+                caption_rows += 1
+            kept.append(element)
+            continue
+        if kind == "arrow":
+            tip = element["points"][-1]
+            tip_x = tip[0] if in_span(tip[0]) else anchor_x
+            element["points"] = [[tip_x, height + 0.8], [tip_x, height + 0.16]]
+            kept.append(element)
+            continue
+        if kind == "point":
+            x = element["points"][0][0]
+            if in_span(x):
+                element["points"] = [[x, height]]
+                kept.append(element)
+            continue   # a dot far from the line decorates nothing — drop
+        if kind == "brace":
+            if all(in_span(p[0]) for p in element["points"]):
+                kept.append(element)
+            continue
+        points = element.get("points") or (
+            [element["center"]] if "center" in element else []
+        )
+        if points and not any(in_span(p[0]) for p in points):
+            continue
+        kept.append(element)
+    elements[:] = kept
+
+
+# Only shapes a learner can meaningfully grab. A handle on a sampled curve or
+# an axis would move a point with no semantics behind it.
+_DRAGGABLE_KINDS = {"point", "polygon"}
+MAX_HANDLES = 4
+
+
+def _sanitize_interactive(
+    raw: object,
+    elements: list[dict],
+    index_map: dict[int, int],
+) -> Optional[dict]:
+    """Validate planner-requested drag handles against the surviving elements.
+
+    Interactivity is additive and must never be load-bearing: a renderer that
+    ignores ``interactive`` still draws a correct static picture, which is why
+    handles carry no geometry of their own — only a reference to a vertex that
+    already exists.
+    """
+    if not isinstance(raw, dict):
+        return None
+
+    handles: list[dict] = []
+    for candidate in (raw.get("handles") or [])[:MAX_HANDLES]:
+        if not isinstance(candidate, dict):
+            continue
+        target = index_map.get(candidate.get("element"))
+        if target is None:
+            continue                                  # pointed at a dropped element
+        element = elements[target]
+        if element.get("type") not in _DRAGGABLE_KINDS:
+            continue
+        handle: dict = {"element": target}
+        if element["type"] == "polygon":
+            vertex = candidate.get("vertex")
+            if not isinstance(vertex, int) or not 0 <= vertex < len(element["points"]):
+                continue
+            handle["vertex"] = vertex
+        if handle not in handles:
+            handles.append(handle)
+
+    if not handles:
+        return None
+    return {"handles": handles}
+
+
 def sanitize_scene(
     raw: object,
     text_filter: Optional[Callable[[str], str]] = None,
@@ -944,17 +1096,31 @@ def sanitize_scene(
         isinstance(candidate, dict) and candidate.get("type") == "axes"
         for candidate in raw_elements[:MAX_ELEMENTS]
     )
-    diagram_point = _data_point if has_axes else _point
+    # A number line defines a data space exactly as axes do: its range is the
+    # meaning of x, so an annotation at the value 8 of a 0..10 line is valid
+    # even though 8 is outside the canvas. Clamping those to canvas bounds
+    # silently dragged every annotation past 6.6 back to 6.6 — a caption about
+    # the mark at 8 pointed at 6.6, and a brace spanning to 8 stopped short
+    # (both visible in a live render, and neither was the planner's fault).
+    has_number_line = any(
+        isinstance(candidate, dict) and candidate.get("type") == "number_line"
+        for candidate in raw_elements[:MAX_ELEMENTS]
+    )
+    diagram_point = _data_point if (has_axes or has_number_line) else _point
 
     elements: list[dict] = []
-    for candidate in raw_elements[:MAX_ELEMENTS]:
+    # Anchors reference elements by the planner's own index, but invalid
+    # elements are dropped below — so record where each surviving element
+    # landed and remap anchors once the list is final.
+    index_map: dict[int, int] = {}
+    for source_index, candidate in enumerate(raw_elements[:MAX_ELEMENTS]):
         if not isinstance(candidate, dict):
             continue
         kind = candidate.get("type")
         if kind not in {
             "polygon", "polyline", "line", "arrow", "point", "circle",
             "rectangle", "arc", "angle", "right_angle", "axes", "text",
-            "brace", "number_line",
+            "brace", "number_line", "molecule",
         }:
             continue
         color = candidate.get("color") if candidate.get("color") in COLORS else "primary"
@@ -1016,6 +1182,23 @@ def sanitize_scene(
             if position is None:
                 continue
             clean["position"] = position
+            # A label may name a piece of geometry instead of guessing a
+            # coordinate; the placement solver turns that into a position.
+            anchor = candidate.get("anchor")
+            if isinstance(anchor, dict) and isinstance(anchor.get("element"), int):
+                at = anchor.get("at")
+                clean["anchor"] = {
+                    "element": anchor["element"],
+                    "at": at if isinstance(at, str) and len(at) <= 24 else "center",
+                }
+        elif kind == "molecule":
+            # RDKit decides whether this is a molecule at all. An unparseable
+            # string is dropped here and never reaches a renderer.
+            verified = validate_molecule(candidate.get("smiles"), candidate.get("highlight"))
+            if verified is None:
+                continue
+            clean.update(verified)
+            clean["view"] = "3d" if candidate.get("view") == "3d" else "2d"
         elif kind == "number_line":
             position = diagram_point(candidate.get("position", [0, 0]))
             value_range = _range(candidate.get("range"))
@@ -1068,25 +1251,66 @@ def sanitize_scene(
         slide_from = diagram_point(candidate.get("from"))
         if slide_from is not None:
             clean["from"] = slide_from
+        index_map[source_index] = len(elements)
         elements.append(clean)
 
     if not elements:
         return None
+
+    # Anchors were written against the planner's indices; drop any that pointed
+    # at an element we rejected rather than letting them alias a different one.
+    for element in elements:
+        anchor = element.get("anchor")
+        if not isinstance(anchor, dict):
+            continue
+        remapped = index_map.get(anchor.get("element"))
+        if remapped is None:
+            element.pop("anchor", None)
+        else:
+            anchor["element"] = remapped
+
+    interactive = _sanitize_interactive(raw.get("interactive"), elements, index_map)
+
     title = _short_text(raw.get("title"), text_filter, 90)
     _dedupe_scene_text(elements, title)
     _prune_text_annotations(elements)
     _drop_container_rect_labels(elements)
     _align_triangle_side_measures(elements)
     _bind_semantic_geometry_labels(elements)
+    _normalize_number_line_scene(elements)
     _fit_axes_to_elements(elements)
-    return {
+    has_molecule = any(item["type"] == "molecule" for item in elements)
+    if has_molecule:
+        # The contract forbids mixing molecules with geometry, and the chemistry
+        # renderer only draws molecules — so a stray geometry element would be
+        # dropped on the client anyway, silently and after the layout solver had
+        # already been skipped for it. Drop it here instead, where it is visible
+        # in the scene the rest of the pipeline reasons about.
+        dropped = [item["type"] for item in elements if item["type"] != "molecule"]
+        if dropped:
+            print(f"ℹ️ Molecule scene: dropped non-molecule elements {dropped}")
+        elements = [item for item in elements if item["type"] == "molecule"]
+    scene = {
         "use_visual": True,
+        # Derived from what survived validation, not from what the planner
+        # claimed: a scene whose only molecule was rejected is not a molecule
+        # scene, and must not be routed to the chemistry renderer.
+        "render": "molecule" if has_molecule else "geometry",
         "animated": raw.get("animated") is True,
+        **({"interactive": interactive} if interactive else {}),
         "title": title,
         "alt": _short_text(raw.get("alt"), text_filter, 240),
         "caption": _short_text(raw.get("caption"), text_filter, 180),
         "elements": elements,
     }
+    # Molecules carry no coordinates — the chemistry toolkit does their layout —
+    # so the geometry solver has nothing to place.
+    if has_molecule:
+        return scene
+    # Solve label placement last: every normalizer above can move geometry, and
+    # the solver must see the final coordinates. Renderers that ignore `layout`
+    # keep working from the original fields, so this stays additive.
+    return solve_scene_layout(scene)
 
 
 _ON_DEMAND_DIRECTIVE = {
@@ -1211,6 +1435,52 @@ def _svg_point(point: list[float]) -> tuple[float, float]:
     return ((point[0] + 7.0) / 14.0 * 960.0, (4.0 - point[1]) / 8.0 * 540.0)
 
 
+_SVG_LABEL_XY = re.compile(r'^(<text x=")(-?[\d.]+)(" y=")(-?[\d.]+)("[^>]*>)(.*?)(</text>)$')
+# Rough per-class glyph metrics (px) for collision estimates — the fallback has
+# no text shaper, so labels that would stack ("50.00" over "50", a duplicated
+# caption) are detected by box overlap and nudged apart vertically instead.
+_SVG_LABEL_METRICS = {"tick": (10.0, 17.0), "side-label": (13.5, 23.0)}
+
+
+def _spread_svg_labels(label_rows: list[str]) -> list[str]:
+    """Nudge overlapping SVG text labels apart (greedy, top of file order wins)."""
+    parsed: list[Optional[tuple[list[str], float, float, float, float]]] = []
+    for row in label_rows:
+        match = _SVG_LABEL_XY.match(row)
+        if not match:
+            parsed.append(None)
+            continue
+        parts = list(match.groups())
+        char_w, line_h = 14.0, 25.0   # .label / default 25px font
+        for cls, (cw, lh) in _SVG_LABEL_METRICS.items():
+            if cls in parts[4]:
+                char_w, line_h = cw, lh
+        visible = re.sub(r"<[^>]+>", "", parts[5])
+        parsed.append((parts, float(parts[1]), float(parts[3]), max(len(visible), 1) * char_w, line_h))
+
+    placed: list[tuple[float, float, float, float]] = []
+    out: list[str] = []
+    for row, item in zip(label_rows, parsed):
+        if item is None:
+            out.append(row)
+            continue
+        parts, x, y, width, height = item
+        for _ in range(8):   # bounded: push below the collider until clear
+            hit = next(
+                (p for p in placed
+                 if abs(x - p[0]) < (width + p[2]) / 2 + 4
+                 and abs(y - p[1]) < (height + p[3]) / 2 + 2),
+                None,
+            )
+            if hit is None:
+                break
+            y = hit[1] + (hit[3] + height) / 2 + 3
+        placed.append((x, y, width, height))
+        parts[3] = f"{y:.1f}"
+        out.append("".join(parts))
+    return out
+
+
 def _svg_fallback(scene: dict) -> bytes:
     """Render the safe primitive set as SVG when Manim is unavailable."""
     shapes: list[str] = []
@@ -1230,6 +1500,29 @@ def _svg_fallback(scene: dict) -> bytes:
         for element in scene["elements"]
         if element["type"] in {"circle", "rectangle", "arc"}
     )
+    # A number line's ticks live at data [value, height]; feeding its endpoints
+    # into the fit keeps svg_point consistent for it AND for the texts/arrows the
+    # planner placed relative to those values (otherwise they drift apart).
+    has_number_line = any(
+        element["type"] == "number_line" for element in scene["elements"]
+    )
+    geometry_points.extend(
+        point
+        for element in scene["elements"]
+        if element["type"] == "number_line"
+        for point in (
+            [element["range"][0], element["position"][1]],
+            [element["range"][1], element["position"][1]],
+        )
+    )
+    # Number-line scenes were normalized into one data space; caption rows are
+    # real layout and must bound the fit (else a generous scale ejects them).
+    if has_number_line:
+        geometry_points.extend(
+            element["position"]
+            for element in scene["elements"]
+            if element["type"] == "text"
+        )
     has_formula_annotation = any(
         element["type"] == "text" and _FORMULA_TEXT.search(element.get("label", ""))
         for element in scene["elements"]
@@ -1254,7 +1547,8 @@ def _svg_fallback(scene: dict) -> bytes:
         drawing_scale = min(
             (target_right - target_left) / source_width,
             (target_bottom - target_top) / source_height,
-            115.0,
+            # A number line's span is the story — allow it most of the width.
+            260.0 if has_number_line else 115.0,
         )
         drawing_center = ((target_left + target_right) / 2, (target_top + target_bottom) / 2)
         source_center = ((min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2)
@@ -1474,28 +1768,58 @@ def _svg_fallback(scene: dict) -> bytes:
                     f'direction="auto" unicode-bidi="plaintext">{escape(element["label"])}</text>'
                 )
         elif kind == "number_line":
-            ox, oy = svg_point(element["position"])
             start, end, step = element["range"]
-            span = end - start
-            half = 380.0
+            height = element["position"][1]
+            # Ticks live at data [value, height] and go through the SAME
+            # svg_point mapping as every other element — the old private
+            # centered mapping put planner-placed texts/arrows far from the
+            # tick they pointed at (the fit above includes the line's span).
+            x_start, oy = svg_point([start, height])
+            x_end, _ = svg_point([end, height])
             def nl_x(value: float) -> float:
-                return ox - half + (value - start) / span * half * 2
-            shapes.append(f'<line x1="{ox - half - 14:.1f}" y1="{oy:.1f}" x2="{ox + half + 14:.1f}" y2="{oy:.1f}" stroke="{color}" stroke-width="3" marker-end="url(#arrow)"/>')
+                return x_start + (value - start) / (end - start) * (x_end - x_start)
+            shapes.append(f'<line x1="{x_start - 14:.1f}" y1="{oy:.1f}" x2="{x_end + 14:.1f}" y2="{oy:.1f}" stroke="{color}" stroke-width="3" marker-end="url(#arrow)"/>')
+            tick_values: list[float] = []
             value = start
             while value <= end + 1e-9:
-                px = nl_x(value)
-                shapes.append(f'<line x1="{px:.1f}" y1="{oy - 7:.1f}" x2="{px:.1f}" y2="{oy + 7:.1f}" stroke="{color}" stroke-width="2"/>')
-                labels.append(f'<text x="{px:.1f}" y="{oy + 28:.1f}" class="tick">{value:g}</text>')
+                tick_values.append(value)
                 value += step
+            # WIDTH-aware label selection (mirrors the Manim worker): marks are
+            # always labeled; endpoints and strided ticks appear only where the
+            # widest label clears the actual per-tick pixel spacing.
+            mark_values = [float(m) for m in element.get("marks", [])]
+            last_index = len(tick_values) - 1
+            per_tick = abs(x_end - x_start) / max(last_index, 1)
+            widest_px = max(len(f"{v:g}") for v in tick_values) * 10.0 + 8.0
+            min_gap = max(1, math.ceil(widest_px / max(per_tick, 1.0)))
+            selected = [
+                i for i, v in enumerate(tick_values)
+                if any(abs(v - m) < 1e-6 for m in mark_values)
+            ]
+            for candidate in (0, last_index):
+                if all(abs(candidate - s) >= min_gap for s in selected):
+                    selected.append(candidate)
+            for candidate in range(0, len(tick_values), min_gap):
+                if all(abs(candidate - s) >= min_gap for s in selected):
+                    selected.append(candidate)
+            labelled = set(selected)
+            for tick_index, tick_value in enumerate(tick_values):
+                px = nl_x(tick_value)
+                shapes.append(f'<line x1="{px:.1f}" y1="{oy - 7:.1f}" x2="{px:.1f}" y2="{oy + 7:.1f}" stroke="{color}" stroke-width="2"/>')
+                if tick_index in labelled:
+                    labels.append(f'<text x="{px:.1f}" y="{oy + 28:.1f}" class="tick">{tick_value:g}</text>')
             for mark in element.get("marks", []):
                 shapes.append(f'<circle cx="{nl_x(mark):.1f}" cy="{oy:.1f}" r="8" fill="{COLORS["accent"]}"/>')
             if element.get("label"):
-                labels.append(f'<text x="{ox:.1f}" y="{oy - 26:.1f}" class="label backed-label" direction="auto" unicode-bidi="plaintext">{escape(element["label"])}</text>')
+                # Above the start end — the center is where arrows/marks land.
+                labels.append(f'<text x="{x_start + (x_end - x_start) * 0.1:.1f}" y="{oy - 26:.1f}" class="label backed-label" direction="auto" unicode-bidi="plaintext">{escape(element["label"])}</text>')
+
+    labels = _spread_svg_labels(labels)
 
     svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img">
 <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#302b4a"/></marker></defs>
 <rect width="960" height="540" rx="30" fill="#fbfaff"/>
-<g>{''.join(shapes)}</g><g font-family="Arial, sans-serif" font-size="25" font-weight="700" text-anchor="middle"><style>.label,.side-label{{fill:#302b4a}}.side-label{{font-size:23px}}.angle-label{{font-size:24px;font-weight:800}}.formula-label{{font-size:31px;font-weight:600}}.backed-label{{paint-order:stroke;stroke:#fbfaff;stroke-width:10px;stroke-linejoin:round}}.tick{{fill:#77718f;font-size:17px;font-weight:500}}</style>{''.join(labels)}</g>
+<g>{''.join(shapes)}</g><g font-family="Arial, 'Noto Sans Hebrew', 'Noto Sans Arabic', 'Segoe UI', sans-serif" font-size="25" font-weight="700" text-anchor="middle"><style>.label,.side-label,.angle-label{{unicode-bidi:plaintext}}.label,.side-label{{fill:#302b4a}}.side-label{{font-size:23px}}.angle-label{{font-size:24px;font-weight:800}}.formula-label{{font-size:31px;font-weight:600}}.backed-label{{paint-order:stroke;stroke:#fbfaff;stroke-width:10px;stroke-linejoin:round}}.tick{{fill:#77718f;font-size:17px;font-weight:500}}</style>{''.join(labels)}</g>
 </svg>'''
     return svg.encode("utf-8")
 
@@ -1504,6 +1828,47 @@ def _svg_fallback(scene: dict) -> bytes:
 ANIMATED_RENDER_TIMEOUT_SECONDS = 90
 # A chat payload guard: beyond this the still frame ships instead of the movie.
 MAX_VIDEO_BYTES = 3_500_000
+
+
+def build_scene_visual(scene: dict) -> dict:
+    """Package a scene for in-browser rendering — no subprocess, no Manim.
+
+    The still-image path used to cost a Manim cold start (up to 45s) and shipped
+    a base64 PNG in the chat payload, even though the sanitized scene was
+    already being sent alongside it. The browser can draw the scene directly, so
+    for anything not animated we send the scene and skip the render entirely.
+
+    ``data_url`` still carries the deterministic SVG fallback. It is pure Python
+    and costs a few KB, and it means a renderer that throws — an element type
+    the client does not know, a bad bundle — degrades to a correct picture
+    instead of a blank bubble. Cheap insurance for the whole client-render path.
+    """
+    payload = _svg_fallback(scene)
+    encoded = base64.b64encode(payload).decode("ascii")
+    return {
+        "id": f"visual-{uuid4().hex}",
+        "type": "scene",
+        "mime_type": "image/svg+xml",
+        "data_url": f"data:image/svg+xml;base64,{encoded}",
+        "title": scene.get("title") or "",
+        "alt": scene.get("alt") or scene.get("title") or "",
+        "caption": scene.get("caption") or "",
+        "renderer": "mafs" if scene.get("render", "geometry") == "geometry" else "molecule",
+        "scene": scene,
+    }
+
+
+async def render_visual(scene: dict) -> dict:
+    """Route a scene to the renderer that suits its output type.
+
+    Animated scenes are video and stay with Manim. Everything else is drawn in
+    the browser from the scene spec. Both paths carry the same solved ``layout``
+    from ``visual_layout``, so a still and its animated twin place labels
+    identically.
+    """
+    if scene.get("animated") is True:
+        return await render_manim_visual(scene)
+    return build_scene_visual(scene)
 
 
 async def render_manim_visual(scene: dict) -> dict:

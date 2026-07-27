@@ -8,6 +8,7 @@ import { LessonPage } from '../features/learning-lesson/LessonPage'
 import { LomdaCreatorPage } from '../features/learning-create/LomdaCreatorPage'
 import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
 import { YuviStudioPage } from '../features/Yuvi-studio/YuviStudioPage'
+import { BadgesPage } from '../features/badges/BadgesPage'
 import { CompanionChat } from '../components/CompanionChat'
 import { YuviCompanionDock } from '../components/YuviCompanionDock'
 import { useEffect } from 'react'
@@ -28,7 +29,8 @@ const PROTECTED_ROUTES = [
   '/yuvi-studio',
   '/student-dashboard',
   '/mentoring',
-  '/learning'
+  '/learning',
+  '/badges'
 ]
 const TEACHER_ROUTES = ['/teacher-view']
 
@@ -56,6 +58,7 @@ function pageForRoute(pathname: string) {
   if (pathname.startsWith('/results')) return <ResultsPage />
   if (pathname.startsWith('/yuvi-studio')) return <YuviStudioPage />
   if (pathname.startsWith('/student-dashboard')) return <StudentDashboardPage />
+  if (pathname.startsWith('/badges')) return <BadgesPage />
   if (pathname.startsWith('/teacher-view')) return <TeacherViewPage />
   if (pathname.startsWith('/mentoring')) return <MentoringPage />
   if (pathname.startsWith('/learning/lesson')) return <LessonPage />
@@ -71,7 +74,8 @@ function isLearnerRoute(pathname: string) {
   return (
     pathname.startsWith('/student-dashboard') ||
     pathname.startsWith('/mentoring') ||
-    pathname.startsWith('/learning')
+    pathname.startsWith('/learning') ||
+    pathname.startsWith('/badges')
   )
 }
 

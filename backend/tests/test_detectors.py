@@ -5,9 +5,13 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+import unittest  # noqa: E402
+
 from app.brain.detectors import (  # noqa: E402
     count_recent_rapid_guesses,
     detect_answer_cycling,
+    detect_recovery,
+    detect_sustained_effort,
     is_probable_slip,
     is_rapid_guess,
     learner_median_rt,
@@ -16,6 +20,48 @@ from app.brain.detectors import (  # noqa: E402
     response_seconds,
     wheel_spinning_state,
 )
+
+
+def _ans(success, effortful=True):
+    return {"verb": "answered", "effortful": effortful, "result": {"success": success}}
+
+
+class MotivationDetectorTests(unittest.TestCase):
+    def test_recovery_after_two_fails(self):
+        prior = [_ans(False), _ans(False)]              # newest-first, excl. current
+        self.assertTrue(detect_recovery(prior, _ans(True)))
+
+    def test_no_recovery_after_single_fail(self):
+        self.assertFalse(detect_recovery([_ans(False)], _ans(True)))
+
+    def test_recovery_ignores_rapid_guesses_and_prior_success(self):
+        # a rapid-guess fail isn't evidence; a prior success ends the fail run
+        self.assertFalse(detect_recovery([_ans(False, effortful=False), _ans(True)], _ans(True)))
+
+    def test_recovery_requires_effortful_success(self):
+        self.assertFalse(detect_recovery([_ans(False), _ans(False)], _ans(True, effortful=False)))
+
+    def test_sustained_effort_needs_enough_events_and_span(self):
+        base = "2026-07-26T10:0{}:00+00:00"
+        events = [
+            {"verb": "answered", "effortful": True, "occurred_at": base.format(i)}
+            for i in range(6)                            # 6 answers over ~5 min
+        ]
+        self.assertTrue(detect_sustained_effort(events))
+
+    def test_sustained_effort_false_when_too_few(self):
+        events = [
+            {"verb": "answered", "effortful": True, "occurred_at": f"2026-07-26T10:0{i}:00+00:00"}
+            for i in range(3)
+        ]
+        self.assertFalse(detect_sustained_effort(events))
+
+    def test_sustained_effort_false_when_too_brief(self):
+        events = [
+            {"verb": "answered", "effortful": True, "occurred_at": f"2026-07-26T10:00:0{i}+00:00"}
+            for i in range(6)                            # 6 answers in <10 seconds
+        ]
+        self.assertFalse(detect_sustained_effort(events))
 
 
 def _event(success=False, seconds=None, verb="answered", response=None, **kwargs):

@@ -1,20 +1,58 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
-import { useCompanion } from '../providers/CompanionProvider'
+import { useCompanion, type CoachMessage } from '../providers/CompanionProvider'
 import { YuviAvatar3D } from '../features/Yuvi-studio/YuviAvatar3D'
 import { useYuviDesign } from '../features/Yuvi-studio/YuviDesignProvider'
 import { Icon } from './primitives'
 import { CoachMarkdown } from './CoachMarkdown'
 import { VisualCTA } from './VisualCTA'
 import { YuviHeadIcon } from './YuviHeadIcon'
+import { QuestionExplainer } from './QuestionExplainer'
 import type { VisualMode } from '../services/agents'
 import type { CoachVisual } from '../services/agents'
+import { rateCoachConversation, saveHelpedAttribution, type HelpMethod } from '../services/agents'
 import { playCoachSpeech, stopCoachSpeech, type SpeechState } from '../services/speech'
 import { navigate, useRoute } from '../app/router'
 import { useLessonRoadmap } from '../providers/LessonRoadmapProvider'
 import { LearningRoadmap } from '../features/learning-portal/LearningRoadmap'
 import 'katex/dist/katex.min.css'
+import SceneRenderer from '../features/visuals/SceneRenderer'
 import './companion.css'
+
+interface MessageGroup {
+  key: string
+  /** Screen (item) + sub-question these messages belong to. */
+  item: string
+  question: string
+  messages: CoachMessage[]
+}
+
+function keyParts(key: string | null | undefined): { item: string; question: string } {
+  const parts = (key || '').split('|')
+  return { item: parts[1] || '', question: parts[2] || '' }
+}
+
+// Group a continuous thread into per-question sections. A message merges into the
+// current section when it's the same SCREEN (item) AND either the same
+// sub-question OR one side has no concrete question yet: the arrival intro is
+// tagged `…|item|` (no qN) and is the intro FOR the first sub-question, so the
+// first answer that resolves qN joins it — a mistake on that question does NOT
+// open a new section. Two concrete sub-questions on one screen (q1 vs q2) stay
+// separate. Keyed by the first message id so a section's collapse state survives.
+function groupByQuestion(messages: CoachMessage[]): MessageGroup[] {
+  const groups: MessageGroup[] = []
+  for (const m of messages) {
+    const { item, question } = keyParts(m.questionKey)
+    const last = groups[groups.length - 1]
+    if (last && last.item === item && (last.question === question || !last.question || !question)) {
+      last.messages.push(m)
+      if (!last.question && question) last.question = question   // …|item| upgrades to the resolved qN
+    } else {
+      groups.push({ key: m.id, item, question, messages: [m] })
+    }
+  }
+  return groups
+}
 
 const FENCED_BLOCK = /```[^\n]*\n?[\s\S]*?```/g
 const SUGGESTION_KEYS = [
@@ -49,6 +87,29 @@ function conversationPreview(text: string) {
     .replace(/\*\*|`/g, '')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+/* Per-message timestamp, always in Israel time (Asia/Jerusalem) regardless of
+   the device clock — the 720 audience is Israeli. Today shows the time only;
+   any other day prefixes the date in dd/mm/yy. "Same day" is also evaluated in
+   Israel time so a late-evening UTC message doesn't read as yesterday. */
+const ISRAEL_TZ = 'Asia/Jerusalem'
+function israelYMD(date: Date) {
+  // en-CA yields YYYY-MM-DD, easy to compare and to slice for dd/mm/yy.
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: ISRAEL_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(date)
+}
+function formatMessageTime(value: string, language: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const time = new Intl.DateTimeFormat(language, {
+    timeZone: ISRAEL_TZ, hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(date)
+  const ymd = israelYMD(date)
+  if (ymd === israelYMD(new Date())) return time
+  const [y, m, d] = ymd.split('-')
+  return `${d}/${m}/${y.slice(-2)} ${time}`
 }
 
 function ThinkingIndicator({ label }: { label: string }) {
@@ -89,6 +150,11 @@ export function CompanionChat() {
     canStartNewConversation,
     send,
     requestSupport,
+    supportUsed,
+    pendingAlternative,
+    openExplainer,
+    closeExplainer,
+    explainerOpen,
     requestVisual,
     selectConversation,
     startNewConversation,
@@ -115,6 +181,26 @@ export function CompanionChat() {
     messageId: null,
     state: 'idle',
   })
+  // Per-message like/dislike (MoE `conversation/rated`); local echo of what the
+  // learner tapped so the choice stays visible. Report-and-forget server-side.
+  const [messageRatings, setMessageRatings] = useState<Record<string, 'like' | 'dislike'>>({})
+  // "What helped you?" chip selections per success message (green when picked).
+  // Multi-select; each toggle re-saves the full set (idempotent upsert server-side).
+  const [helpedPicks, setHelpedPicks] = useState<Record<string, HelpMethod[]>>({})
+  // Per-question section grouping for the lesson thread (kept above the early
+  // return below so hook order stays stable — Rules of Hooks).
+  const messageGroups = useMemo(() => groupByQuestion(messages), [messages])
+  // Label each section: a group with no screen (item) is the lesson Introduction
+  // (welcome); groups tied to a screen are the questions, numbered in order.
+  const sections = useMemo(() => {
+    let questionNumber = 0
+    return messageGroups.map((group) => {
+      const isIntro = group.item === ''
+      if (!isIntro) questionNumber += 1
+      return { group, isIntro, questionNumber }
+    })
+  }, [messageGroups])
+  const [sectionOverrides, setSectionOverrides] = useState<Record<string, boolean>>({})
   const bodyRef = useRef<HTMLDivElement>(null)
   const historyRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -277,6 +363,53 @@ export function CompanionChat() {
     ).catch(() => setSpeech({ messageId: null, state: 'idle' }))
   }
 
+  const rateMessage = (messageId: string, rating: 'like' | 'dislike') => {
+    setMessageRatings((current) => ({ ...current, [messageId]: rating }))
+    // The conversation is the MoE rating object; repeated ratings are fine
+    // (latest wins). Failure is silent — the local echo still reflects the tap.
+    void rateCoachConversation(activeConversationId || 'default', rating).catch(() => {})
+  }
+
+  const HELPED_ORDER: HelpMethod[] = ['hint', 'explanation', 'yuvi_chat']
+
+  const toggleHelped = (messageId: string, attribution: NonNullable<CoachMessage['attribution']>, method: HelpMethod) => {
+    setHelpedPicks((current) => {
+      const picked = current[messageId] ?? []
+      const next = picked.includes(method) ? picked.filter((m) => m !== method) : [...picked, method]
+      const [component_id, item_id, question_id] = (attribution.questionKey || '').split('|')
+      // Latest full set wins server-side; local echo keeps the green state even if it fails.
+      void saveHelpedAttribution({ component_id, item_id, question_id, methods: next }).catch(() => {})
+      return { ...current, [messageId]: next }
+    })
+  }
+
+  const helpedChips = (key: string, attribution: NonNullable<CoachMessage['attribution']>) => {
+    const methods = HELPED_ORDER.filter((m) => attribution.methods.includes(m))
+    if (!methods.length) return null
+    const picked = helpedPicks[key] ?? []
+    return (
+      <div className="sp-companion__helped" role="group" aria-label={t('companion.helped.title')}>
+        <p className="sp-companion__helped-title">{t('companion.helped.title')}</p>
+        <div className="sp-companion__helped-chips">
+          {methods.map((method) => (
+            <button
+              key={method}
+              type="button"
+              className={`sp-companion__helped-chip${picked.includes(method) ? ' is-picked' : ''}`}
+              onClick={() => toggleHelped(key, attribution, method)}
+              aria-pressed={picked.includes(method)}
+            >
+              <span className="sp-companion__helped-check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false"><path d="m5 13 4 4L19 7" /></svg>
+              </span>
+              <span>{t(`companion.helped.${method}`)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   const assistantMessage = (
     text: string,
     key?: string,
@@ -286,6 +419,8 @@ export function CompanionChat() {
     isComplete = true,
     visualFailed?: boolean,
     canVisualize?: boolean,
+    createdAt?: string,
+    attribution?: CoachMessage['attribution'],
   ) => (
     <div
       className="sp-companion__message-row sp-companion__message-row--assistant"
@@ -347,18 +482,7 @@ export function CompanionChat() {
                 onClick={() => setExpandedVisual(visual)}
                 aria-label={t('companion.visual.open')}
               >
-                {visual.type === 'video' ? (
-                  <video
-                    src={visual.data_url}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    aria-label={visual.alt || visual.title}
-                  />
-                ) : (
-                  <img src={visual.data_url} alt={visual.alt || visual.title} />
-                )}
+                <SceneRenderer visual={visual} />
                 <span className="sp-companion__visual-zoom" aria-hidden="true">
                   <svg viewBox="0 0 24 24" focusable="false">
                     <circle cx="10.5" cy="10.5" r="5.5" />
@@ -378,9 +502,73 @@ export function CompanionChat() {
             />
           )}
         </div>
+        {text && (createdAt || (isComplete && key)) && (
+          <div className="sp-companion__msg-footer">
+            {createdAt && (
+              <time className="sp-companion__msg-time" dateTime={createdAt}>
+                {formatMessageTime(createdAt, language)}
+              </time>
+            )}
+            {isComplete && key && (
+              <span className="sp-companion__rate" role="group" aria-label={t('companion.rate.label')}>
+                <button
+                  type="button"
+                  className={messageRatings[key] === 'like' ? 'is-active' : ''}
+                  onClick={() => rateMessage(key, 'like')}
+                  aria-label={t('companion.rate.like')}
+                  aria-pressed={messageRatings[key] === 'like'}
+                  title={t('companion.rate.like')}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M7 10.5v9M7 19.5H4.6a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1H7m0 9 3.2.9a6 6 0 0 0 1.6.2h4.3a2 2 0 0 0 2-1.6l1.1-5.2a1.6 1.6 0 0 0-1.6-1.9h-4.4l.7-3.4a1.9 1.9 0 0 0-3.4-1.5L7 10.5" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className={messageRatings[key] === 'dislike' ? 'is-active' : ''}
+                  onClick={() => rateMessage(key, 'dislike')}
+                  aria-label={t('companion.rate.dislike')}
+                  aria-pressed={messageRatings[key] === 'dislike'}
+                  title={t('companion.rate.dislike')}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" style={{ transform: 'rotate(180deg)' }}>
+                    <path d="M7 10.5v9M7 19.5H4.6a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1H7m0 9 3.2.9a6 6 0 0 0 1.6.2h4.3a2 2 0 0 0 2-1.6l1.1-5.2a1.6 1.6 0 0 0-1.6-1.9h-4.4l.7-3.4a1.9 1.9 0 0 0-3.4-1.5L7 10.5" />
+                  </svg>
+                </button>
+              </span>
+            )}
+          </div>
+        )}
+        {isComplete && key && attribution && helpedChips(key, attribution)}
       </div>
     </div>
   )
+
+  const renderMessage = (m: CoachMessage) => (
+    m.role === 'assistant'
+      ? assistantMessage(m.text, m.id, m.visual, m.isVisualizing, m.textAfter, m.isComplete, m.visualFailed, m.canVisualize, m.createdAt, m.attribution)
+      : (
+        <div key={m.id} className="sp-companion__message-row sp-companion__message-row--user">
+          <div className="sp-companion__message-stack sp-companion__message-stack--user">
+            <div className="sp-companion__msg sp-companion__msg--user" dir="auto">{m.text}</div>
+            {m.createdAt && (
+              <time className="sp-companion__msg-time" dateTime={m.createdAt}>
+                {formatMessageTime(m.createdAt, language)}
+              </time>
+            )}
+          </div>
+        </div>
+      )
+  )
+
+  // Per-question sections for the lesson thread. Default: only the current
+  // (last) section is open; earlier ones collapse to their header. The learner
+  // can toggle any section. (messageGroups/sectionOverrides are declared with the
+  // other hooks above the early return — Rules of Hooks.)
+  const lastGroupKey = messageGroups.length ? messageGroups[messageGroups.length - 1].key : ''
+  const isSectionOpen = (g: MessageGroup) => sectionOverrides[g.key] ?? (g.key === lastGroupKey)
+  const toggleSection = (key: string, open: boolean) =>
+    setSectionOverrides((prev) => ({ ...prev, [key]: open }))
 
   return (
     <>
@@ -659,18 +847,6 @@ export function CompanionChat() {
             </div>
             <button type="button" onClick={() => setHistoryOpen(true)}>{t('companion.history.open')}</button>
           </div>}
-          {isTaskMode && taskView === 'chat' && (
-            <div className="sp-companion__task-actions" aria-label={t('companion.task.actions')}>
-              <button type="button" disabled={isStreaming} onClick={() => void requestSupport('hint')}>
-                <Icon name="lightbulb" size={17} />
-                <span>{t('companion.task.hint')}</span>
-              </button>
-              <button type="button" disabled={isStreaming} onClick={() => void requestSupport('explanation')}>
-                <Icon name="book" size={17} />
-                <span>{t('companion.task.explain')}</span>
-              </button>
-            </div>
-          )}
           {isTaskMode && taskView === 'roadmap' && lessonRoadmap ? (
             <div className="sp-companion__roadmap-view" role="tabpanel">
               <LearningRoadmap
@@ -701,41 +877,105 @@ export function CompanionChat() {
                 {t('companion.history.loadingMessages')}
               </div>
             )}
-            {hasMoreMessages && !isLoadingMessages && (
+            {/* In a lesson the view is this launch's live turns only — a
+                "scroll up for older messages" hint would be noise there. */}
+            {!isTaskMode && hasMoreMessages && !isLoadingMessages && (
               <p className="sp-companion__more-hint">{t('companion.history.scrollForMore')}</p>
             )}
-            {!isLoadingMessages && messages.length === 0 && assistantMessage(t('companion.greeting'))}
-            {messages.map((m) => (
-              m.role === 'assistant'
-                ? assistantMessage(m.text, m.id, m.visual, m.isVisualizing, m.textAfter, m.isComplete, m.visualFailed, m.canVisualize)
-                : (
-                  <div
-                    key={m.id}
-                    className="sp-companion__message-row sp-companion__message-row--user"
-                  >
-                    <div className="sp-companion__msg sp-companion__msg--user" dir="auto">{m.text}</div>
-                  </div>
-                )
-            ))}
+            {/* In a lesson, the welcome / per-question intro carries the greeting,
+                so the generic greeting only shows in the general companion. */}
+            {!isTaskMode && !isLoadingMessages && messages.length === 0 && assistantMessage(t('companion.greeting'))}
+            {isTaskMode
+              ? sections.map(({ group, isIntro, questionNumber }, gi) => {
+                  const open = isSectionOpen(group)
+                  const isCurrent = gi === sections.length - 1
+                  return (
+                    <section
+                      key={group.key}
+                      className={`sp-companion__qsection${isCurrent ? ' is-current' : ''}${open ? '' : ' is-collapsed'}`}
+                    >
+                      {sections.length > 1 && (
+                        <button
+                          type="button"
+                          className="sp-companion__qdivider"
+                          onClick={() => toggleSection(group.key, !open)}
+                          aria-expanded={open}
+                        >
+                          <span className="sp-companion__qdivider-rule" aria-hidden="true" />
+                          <span className="sp-companion__qdivider-chip">
+                            <svg
+                              className={`sp-companion__qchevron${open ? ' is-open' : ''}`}
+                              viewBox="0 0 24 24" aria-hidden="true" focusable="false"
+                            >
+                              <path d="m6 9 6 6 6-6" />
+                            </svg>
+                            <span>{isIntro ? t('companion.thread.intro') : t('companion.thread.question', { n: questionNumber })}</span>
+                            {!open && <span className="sp-companion__qcount">{group.messages.length}</span>}
+                          </span>
+                          <span className="sp-companion__qdivider-rule" aria-hidden="true" />
+                        </button>
+                      )}
+                      {open && group.messages.map(renderMessage)}
+                    </section>
+                  )
+                })
+              : messages.map(renderMessage)}
           </div>}
         </>
       )}
 
       {!historyOpen && (!isTaskMode || taskView === 'chat') && (
         <div className="sp-companion__composer-shell">
-          {!isStreaming && !draft.trim() && messages.length > 0 && (
-            <div className="sp-companion__suggestions" role="group" aria-label={t('companion.suggestions.label')}>
-              {SUGGESTION_KEYS.map((key) => (
-                <button
-                  type="button"
-                  key={key}
-                  className="sp-companion__suggestion"
-                  onClick={() => void send(t(key))}
-                >
-                  {t(key)}
-                </button>
-              ))}
-            </div>
+          {isTaskMode ? (
+            !isStreaming && (pendingAlternative || !supportUsed.hint || !supportUsed.explanation) && (
+              <div className="sp-companion__support-options" role="group" aria-label={t('companion.task.actions')}>
+                {pendingAlternative && (
+                  <button
+                    type="button"
+                    className="sp-companion__support-option sp-companion__support-option--alt"
+                    onClick={openExplainer}
+                  >
+                    <Icon name="spark" size={16} />
+                    <span>{t('companion.task.altSwitch')}</span>
+                  </button>
+                )}
+                {!supportUsed.hint && (
+                  <button
+                    type="button"
+                    className="sp-companion__support-option"
+                    onClick={() => void requestSupport('hint')}
+                  >
+                    <Icon name="lightbulb" size={16} />
+                    <span>{t('companion.task.hintAsk')}</span>
+                  </button>
+                )}
+                {!supportUsed.explanation && (
+                  <button
+                    type="button"
+                    className="sp-companion__support-option"
+                    onClick={() => void requestSupport('explanation')}
+                  >
+                    <Icon name="book" size={16} />
+                    <span>{t('companion.task.explain')}</span>
+                  </button>
+                )}
+              </div>
+            )
+          ) : (
+            !isStreaming && !draft.trim() && messages.length > 0 && (
+              <div className="sp-companion__suggestions" role="group" aria-label={t('companion.suggestions.label')}>
+                {SUGGESTION_KEYS.map((key) => (
+                  <button
+                    type="button"
+                    key={key}
+                    className="sp-companion__suggestion"
+                    onClick={() => void send(t(key))}
+                  >
+                    {t(key)}
+                  </button>
+                ))}
+              </div>
+            )
           )}
           <form className="sp-companion__composer" onSubmit={submit}>
             <input
@@ -785,12 +1025,25 @@ export function CompanionChat() {
               controls
               aria-label={expandedVisual.alt || expandedVisual.title}
             />
+          ) : expandedVisual.type === 'scene' ? (
+            // Enlarging must show the SAME picture, bigger. This used to render
+            // `data_url` — the SVG fallback — so the preview and the "large"
+            // view were the output of two different renderers.
+            <SceneRenderer visual={expandedVisual} />
           ) : (
             <img src={expandedVisual.data_url} alt={expandedVisual.alt || expandedVisual.title} />
           )}
           {expandedVisual.caption && <figcaption dir="auto">{expandedVisual.caption}</figcaption>}
         </figure>
       </div>
+    )}
+
+    {explainerOpen && (
+      <QuestionExplainer
+        componentId={lessonRoadmap?.activeComponentId ?? null}
+        language={language}
+        onClose={closeExplainer}
+      />
     )}
     </>
   )

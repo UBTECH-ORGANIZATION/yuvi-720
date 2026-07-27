@@ -188,14 +188,15 @@ async def start_reflection(
     info_to_bot = ""
     if component_id:
         try:
-            from app.services.content_catalog import information_to_bot
-            info_to_bot = information_to_bot(component_id) or ""
+            from app.services import kata_catalog
+            await kata_catalog.ensure_loaded()
+            info_to_bot = kata_catalog.information_for_item(component_id, None) or ""
         except Exception:
             info_to_bot = ""
         if not info_to_bot:
             try:
-                from app.services import content_provider
-                _unit, component = await content_provider.resolve_component(component_id, None)
+                from app.services import kata_client
+                _unit, component = await kata_client.resolve_component(component_id, None)
                 info_to_bot = (component or {}).get("information_to_bot") or ""
             except Exception:
                 info_to_bot = ""

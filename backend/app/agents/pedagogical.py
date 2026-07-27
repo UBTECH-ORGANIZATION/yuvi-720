@@ -14,8 +14,9 @@ from typing import Any, Optional
 
 from app.brain.context_engine import apply_writes
 from app.brain.repository import get_brain
-from app.services import content_catalog
-from app.services.planner import plan_next
+from app.services import content_catalog, kata_catalog
+from app.services.events import get_learner_events
+from app.services.planner import next_focus, plan_next
 
 
 def _now() -> str:
@@ -24,27 +25,29 @@ def _now() -> str:
 
 async def select_next(learner_id: str, locale: str = "he") -> dict[str, Any]:
     """Choose the next objective + component and record it in the brain (F1)."""
+    await kata_catalog.ensure_loaded()
     brain = await get_brain(learner_id)
-    plan = plan_next(brain)
+    # Cross-subject focus: global review-due first, else most-behind subject.
+    focus = next_focus(brain)
+    plan = focus["plan"]
     next_recommendations = {**plan, "computed_at": _now()}
-
-    # Focus: earliest subject that still has a frontier objective.
-    focus_subject, objective_id = None, None
-    for subject, info in plan.items():
-        if info["next"]:
-            focus_subject, objective_id = subject, info["next"][0]
-            break
+    focus_subject, objective_id, focus_mode = focus["subject"], focus["objective_id"], focus["mode"]
 
     component = None
     if objective_id:
-        candidates = content_catalog.list_available_content(
-            objective_id, brain.get("mastery"), locale
+        from app.brain.mastery import entry_for
+        events = await get_learner_events(learner_id)
+        component = content_catalog.select_component(
+            objective_id,
+            mastery_entry=entry_for(brain.get("mastery"), objective_id),
+            completed_ids=content_catalog.completed_component_ids(events),
+            signals=content_catalog.learner_signals(brain),
+            locale=locale,
         )
-        component = candidates[0] if candidates else None
 
     updates: dict[str, Any] = {"next_recommendations": next_recommendations}
     if component:
-        updates["current_state.unit_id"] = component["id"].rsplit("-", 1)[0]
+        updates["current_state.unit_id"] = component.get("unit_id") or None
         updates["current_state.component_id"] = component["id"]
         updates["current_state.item_id"] = None
         updates["current_state.resume_token"] = None
@@ -54,20 +57,24 @@ async def select_next(learner_id: str, locale: str = "he") -> dict[str, Any]:
         "subject": focus_subject,
         "objective_id": objective_id,
         "component": component,
+        "difficulty": (component or {}).get("_band"),
+        "reason": (component or {}).get("_reason"),
         "plan": plan,
-        # Explainable: review-due beats new material; else earliest unmastered.
+        # Explainable: review-due (any subject) beats new material; new material
+        # goes to the most-behind / least-recently-practiced subject.
         "explanation": (
             f"next = {objective_id} — spaced-review due (mastered skill decayed or "
             f"failed after mastery) in {focus_subject}"
-            if objective_id in ((plan.get(focus_subject) or {}).get("review_due") or [])
-            else f"next = {objective_id} — earliest unmastered objective in "
-                 f"{focus_subject} with prerequisites met"
+            if focus_mode == "review"
+            else f"next = {objective_id} — new material in {focus_subject} "
+                 f"(most-behind / least-recently-practiced subject), prerequisites met"
         ) if objective_id else "all enrolled objectives mastered",
     }
 
 
 async def route_after_fail(learner_id: str, locale: str = "he") -> Optional[dict[str, Any]]:
     """Route to the `recommendedAfterFail` alternative for the current component."""
+    await kata_catalog.ensure_loaded()
     brain = await get_brain(learner_id)
     current = brain.get("current_state") or {}
     component_id = current.get("component_id")

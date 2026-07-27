@@ -17,6 +17,7 @@ from app.core.env import ensure_env_loaded
 ensure_env_loaded()
 
 from app.routes.auth import router as auth_router
+from app.routes.badges import router as badges_router
 from app.routes.brain import router as brain_router
 from app.routes.agent import router as agent_router
 from app.routes.teacher import router as teacher_router
@@ -89,6 +90,7 @@ def create_app() -> FastAPI:
     app.include_router(learner_mapping_router)
     app.include_router(learner_state_router)
     app.include_router(brain_router)
+    app.include_router(badges_router)
     app.include_router(xapi_router)
     app.include_router(learning_catalog_router)
     app.include_router(illustrations_router)

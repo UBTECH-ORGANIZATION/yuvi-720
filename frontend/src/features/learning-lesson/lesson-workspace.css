@@ -5,13 +5,28 @@
     var(--sp-bg);
   color: var(--sp-ink-700);
 }
+/* --sp-bg intentionally stays light in dark mode (tokens.css); painting it here
+   flooded the whole lesson pane light. In dark, keep only the soft purple glow
+   and let the themed midnight body-canvas show through, like the rest of the app. */
+[data-theme='dark'] .learning-lesson-page {
+  background:
+    radial-gradient(circle at 85% 5%, rgba(159, 122, 254, .16), transparent 30%),
+    radial-gradient(760px 560px at 4% 46%, rgba(120, 92, 240, .10), transparent 58%),
+    var(--sp-bg-subtle);
+}
 
 .learning-lesson-main {
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);
+  /* Fill exactly the space under the app bar and NEVER exceed it, so the page
+     itself never scrolls — the workspace fits any viewport height. No fixed
+     min-block-size: on a short viewport it forced main taller than the screen
+     and the whole page scrolled. The roadmap/toolbar keep their intrinsic size;
+     the player (flex:1) absorbs the rest and shrinks, with the iframe scrolling
+     its OWN content when the frame gets small. */
   block-size: calc(100dvh - var(--mapping-app-bar-height, 73px));
-  min-block-size: 680px;
+  min-block-size: 0;
   padding: var(--sp-4) var(--sp-gutter) var(--sp-5);
   overflow: hidden;
 }
@@ -153,9 +168,56 @@ html[dir='rtl'] .learning-lesson-back .sp-icon { transform: none; }
   display: block;
   inline-size: 100%;
   block-size: 100%;
-  min-block-size: 420px;
+  /* No fixed min: the frame shrinks with its flex parent so it never pushes the
+     workspace past the viewport. The embedded content scrolls inside the iframe
+     when the frame is short. (The mobile rule below still gives it a tall floor,
+     where the page is allowed to scroll.) */
+  min-block-size: 0;
   border: 0;
   background: #fff;
+}
+
+/* §6 re-entry-after-completion choice — held over the resumed content. */
+.learning-reentry {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--sp-surface-2) 82%, transparent);
+  backdrop-filter: blur(3px);
+}
+.learning-reentry__card {
+  max-inline-size: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 26px;
+  text-align: center;
+  background: var(--sp-surface, #fff);
+  border: 1px solid var(--sp-border);
+  border-radius: 22px;
+  box-shadow: 0 24px 60px rgba(28, 20, 84, .22);
+}
+.learning-reentry__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 46px;
+  block-size: 46px;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--sp-primary-500, #6f5bff);
+}
+.learning-reentry__card h2 { margin: 0; font: 800 18px/1.25 var(--sp-font); }
+.learning-reentry__card p { margin: 0; color: var(--sp-muted, #6b7280); font: 500 13.5px/1.5 var(--sp-font); }
+.learning-reentry__actions {
+  display: flex;
+  gap: 10px;
+  margin-block-start: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 .learning-player-loading {
   position: absolute;
@@ -230,9 +292,9 @@ html[dir='rtl'] .learning-lesson-back .sp-icon { transform: none; }
 }
 .learning-completion-dialog {
   display: grid;
-  grid-template-rows: auto minmax(300px, 1fr) auto;
-  inline-size: min(920px, 100%);
-  max-block-size: min(94dvh, 790px);
+  grid-template-rows: auto minmax(0, auto) auto;
+  inline-size: min(600px, 100%);
+  max-block-size: min(94dvh, 720px);
   border: 1px solid color-mix(in srgb, var(--sp-primary-500) 30%, var(--sp-border));
   border-radius: 28px;
   background: color-mix(in srgb, var(--sp-surface) 95%, var(--sp-primary-050));
@@ -280,8 +342,6 @@ html[dir='rtl'] .learning-lesson-back .sp-icon { transform: none; }
   cursor: pointer;
 }
 .learning-completion-dialog__close:disabled { opacity: .34; cursor: wait; }
-.learning-completion-dialog__journey { min-block-size: 0; background: #111832; overflow: auto; }
-.learning-completion-dialog__journey .learning-roadmap--cinematic { border: 0; border-radius: 0; }
 .learning-completion-dialog__footer {
   justify-content: space-between;
   border-block-start: 1px solid var(--sp-border);
@@ -312,7 +372,6 @@ html[dir='rtl'] .learning-lesson-back .sp-icon { transform: none; }
   .learning-lesson-actions { grid-column: 1 / -1; justify-content: space-between; }
   .learning-completion-banner { grid-template-columns: auto minmax(0, 1fr); }
   .learning-completion-banner button { grid-column: 1 / -1; inline-size: 100%; }
-  .learning-completion-dialog { grid-template-rows: auto minmax(280px, 1fr) auto; }
   .learning-completion-dialog__header,
   .learning-completion-dialog__footer { padding: var(--sp-3); }
   .learning-completion-dialog__footer { align-items: stretch; flex-direction: column; }
@@ -330,7 +389,6 @@ html[dir='rtl'] .learning-lesson-back .sp-icon { transform: none; }
   .learning-lesson-duration { display: none; }
   .learning-completion-backdrop { padding: 8px; }
   .learning-completion-dialog { max-block-size: 96dvh; border-radius: 20px; }
-  .learning-completion-dialog__journey .learning-roadmap--cinematic { block-size: 390px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -338,16 +396,20 @@ html[dir='rtl'] .learning-lesson-back .sp-icon { transform: none; }
   .learning-completion-dialog { animation: none; }
 }
 
-/* ── Post-lesson reflection (F4) ─────────────────────────────────────────── */
+/* ── Post-lesson reflection (F4) ─────────────────────────────────────────────
+   Theme-aware via --sp-* tokens so it matches the completion dialog in both
+   light and dark (previously used undefined --surface-2/--accent → light grey
+   on the dark dialog). This is now the dialog's only body content. */
 .lesson-reflection {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin: 0 26px;
-  padding: 14px 18px;
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--surface-2, #f3f6fb) 88%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent, #22d3ee) 24%, transparent);
+  gap: 11px;
+  margin: 18px 24px 22px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  color: var(--sp-ink-700);
+  background: color-mix(in srgb, var(--sp-primary-500) 5%, var(--sp-surface-2));
+  border: 1px solid var(--sp-border);
 }
 
 .lesson-reflection[role='status'] {
@@ -370,15 +432,18 @@ html[dir='rtl'] .learning-lesson-back .sp-icon { transform: none; }
   gap: 12px;
 }
 
+.lesson-reflection__header strong { font-size: 0.98rem; color: var(--sp-ink-900); }
+
 .lesson-reflection__step {
   font-size: 0.78rem;
-  opacity: 0.65;
+  color: var(--sp-ink-400);
 }
 
 .lesson-reflection__question {
   margin: 0;
   font-size: 0.95rem;
   line-height: 1.45;
+  color: var(--sp-ink-700);
 }
 
 .lesson-reflection__rating {
@@ -390,16 +455,21 @@ html[dir='rtl'] .learning-lesson-back .sp-icon { transform: none; }
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--accent, #22d3ee) 35%, transparent);
-  background: transparent;
+  border: 1px solid var(--sp-border-strong);
+  background: var(--sp-surface);
+  color: var(--sp-ink-700);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
 }
 
+.lesson-reflection__rating button:hover { border-color: var(--sp-primary-500); transform: translateY(-1px); }
+
 .lesson-reflection__rating button.is-selected {
-  background: var(--accent, #22d3ee);
-  color: #04222b;
+  border-color: transparent;
+  background: var(--sp-primary-500);
+  color: #fff;
 }
 
 .lesson-reflection__input {
@@ -407,11 +477,14 @@ html[dir='rtl'] .learning-lesson-back .sp-icon { transform: none; }
   resize: vertical;
   min-height: 56px;
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--accent, #22d3ee) 25%, transparent);
+  border: 1px solid var(--sp-border);
   padding: 10px 12px;
   font: inherit;
-  background: transparent;
+  color: var(--sp-ink-700);
+  background: var(--sp-surface);
 }
+
+.lesson-reflection__input:focus-visible { outline: none; border-color: var(--sp-primary-500); box-shadow: var(--sp-ring); }
 
 .lesson-reflection__actions {
   display: flex;
@@ -423,16 +496,18 @@ html[dir='rtl'] .learning-lesson-back .sp-icon { transform: none; }
   background: transparent;
   border: none;
   cursor: pointer;
-  opacity: 0.7;
+  color: var(--sp-ink-400);
   font: inherit;
 }
+
+.lesson-reflection__skip:hover { color: var(--sp-ink-700); }
 
 .lesson-reflection__send {
   border: none;
   border-radius: 10px;
   padding: 8px 20px;
-  background: var(--accent, #22d3ee);
-  color: #04222b;
+  background: var(--sp-gradient);
+  color: #fff;
   font-weight: 700;
   cursor: pointer;
 }

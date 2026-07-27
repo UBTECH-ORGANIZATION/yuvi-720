@@ -1,0 +1,1059 @@
+{
+ "pythagoras": {
+  "id": "visual-eeb10f3eb7414e278af6c4c3cbf666cc",
+  "type": "scene",
+  "mime_type": "image/svg+xml",
+  "data_url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5NjAiIGhlaWdodD0iNTQwIiB2aWV3Qm94PSIwIDAgOTYwIDU0MCIgcm9sZT0iaW1nIj4KPGRlZnM+PG1hcmtlciBpZD0iYXJyb3ciIG1hcmtlcldpZHRoPSIxMCIgbWFya2VySGVpZ2h0PSIxMCIgcmVmWD0iOCIgcmVmWT0iMyIgb3JpZW50PSJhdXRvIj48cGF0aCBkPSJNMCwwIEwwLDYgTDksMyB6IiBmaWxsPSIjMzAyYjRhIi8+PC9tYXJrZXI+PC9kZWZzPgo8cmVjdCB3aWR0aD0iOTYwIiBoZWlnaHQ9IjU0MCIgcng9IjMwIiBmaWxsPSIjZmJmYWZmIi8+CjxnPjxwb2x5Z29uIHBvaW50cz0iMjUwLjAsNDQyLjUgNzEwLjAsNDQyLjUgNzEwLjAsOTcuNSIgZmlsbD0iIzZmNWJmZiIgZmlsbC1vcGFjaXR5PSIwLjA4IiBzdHJva2U9IiM2ZjViZmYiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjxwYXRoIGQ9Ik0gNjg2LjAgNDQyLjUgTCA2ODYuMCA0MTguNSBMIDcxMC4wIDQxOC41IiBmaWxsPSJub25lIiBzdHJva2U9IiNmMmE5MWIiIHN0cm9rZS13aWR0aD0iNCIvPjwvZz48ZyBmb250LWZhbWlseT0iQXJpYWwsICdOb3RvIFNhbnMgSGVicmV3JywgJ05vdG8gU2FucyBBcmFiaWMnLCAnU2Vnb2UgVUknLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI1IiBmb250LXdlaWdodD0iNzAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj48c3R5bGU+LmxhYmVsLC5zaWRlLWxhYmVsLC5hbmdsZS1sYWJlbHt1bmljb2RlLWJpZGk6cGxhaW50ZXh0fS5sYWJlbCwuc2lkZS1sYWJlbHtmaWxsOiMzMDJiNGF9LnNpZGUtbGFiZWx7Zm9udC1zaXplOjIzcHh9LmFuZ2xlLWxhYmVse2ZvbnQtc2l6ZToyNHB4O2ZvbnQtd2VpZ2h0OjgwMH0uZm9ybXVsYS1sYWJlbHtmb250LXNpemU6MzFweDtmb250LXdlaWdodDo2MDB9LmJhY2tlZC1sYWJlbHtwYWludC1vcmRlcjpzdHJva2U7c3Ryb2tlOiNmYmZhZmY7c3Ryb2tlLXdpZHRoOjEwcHg7c3Ryb2tlLWxpbmVqb2luOnJvdW5kfS50aWNre2ZpbGw6Izc3NzE4Zjtmb250LXNpemU6MTdweDtmb250LXdlaWdodDo1MDB9PC9zdHlsZT48dGV4dCB4PSIyMzEuMyIgeT0iNDU2LjUiIGNsYXNzPSJsYWJlbCI+QTwvdGV4dD48dGV4dCB4PSI3MjYuMCIgeT0iNDYxLjUiIGNsYXNzPSJsYWJlbCI+QjwvdGV4dD48dGV4dCB4PSI3MjEuMSIgeT0iODcuOSIgY2xhc3M9ImxhYmVsIj5DPC90ZXh0Pjx0ZXh0IHg9IjQ4MC4wIiB5PSI0NzkuNSIgY2xhc3M9InNpZGUtbGFiZWwgYmFja2VkLWxhYmVsIiBkaXJlY3Rpb249ImF1dG8iIHVuaWNvZGUtYmlkaT0icGxhaW50ZXh0IiBkYXRhLWVkZ2UtaW5kZXg9IjAiPjQ8L3RleHQ+PHRleHQgeD0iNzQwLjAiIHk9IjI3Ny4wIiBjbGFzcz0ic2lkZS1sYWJlbCBiYWNrZWQtbGFiZWwiIGRpcmVjdGlvbj0iYXV0byIgdW5pY29kZS1iaWRpPSJwbGFpbnRleHQiIGRhdGEtZWRnZS1pbmRleD0iMSI+MzwvdGV4dD48dGV4dCB4PSI0NjIuMCIgeT0iMjUzLjAiIGNsYXNzPSJzaWRlLWxhYmVsIGJhY2tlZC1sYWJlbCIgZGlyZWN0aW9uPSJhdXRvIiB1bmljb2RlLWJpZGk9InBsYWludGV4dCIgZGF0YS1lZGdlLWluZGV4PSIyIj7Xmdeq16g8L3RleHQ+PC9nPgo8L3N2Zz4=",
+  "title": "משפט פיתגורס",
+  "alt": "משפט פיתגורס",
+  "caption": "",
+  "renderer": "mafs",
+  "scene": {
+   "use_visual": true,
+   "render": "geometry",
+   "animated": false,
+   "title": "משפט פיתגורס",
+   "alt": "",
+   "caption": "",
+   "elements": [
+    {
+     "type": "polygon",
+     "color": "primary",
+     "points": [
+      [
+       -2.0,
+       -1.5
+      ],
+      [
+       2.0,
+       -1.5
+      ],
+      [
+       2.0,
+       1.5
+      ]
+     ],
+     "labels": [
+      "A",
+      "B",
+      "C"
+     ],
+     "side_labels": [
+      "4",
+      "3",
+      "יתר"
+     ],
+     "fill_opacity": 0.08,
+     "layout": {
+      "labels:0": [
+       -3.5611,
+       -2.62
+      ],
+      "labels:1": [
+       3.5611,
+       -2.62
+      ],
+      "labels:2": [
+       3.4367,
+       2.7444
+      ],
+      "side_labels:0": [
+       -0.0,
+       -2.79
+      ],
+      "side_labels:1": [
+       3.6067,
+       0.0
+      ],
+      "side_labels:2": [
+       -0.26,
+       0.4503
+      ]
+     }
+    },
+    {
+     "type": "right_angle",
+     "color": "accent",
+     "points": [
+      [
+       -2.0,
+       -1.5
+      ],
+      [
+       2.0,
+       -1.5
+      ],
+      [
+       2.0,
+       1.5
+      ]
+     ]
+    }
+   ],
+   "canvas": {
+    "scale_x": 1.633333,
+    "scale_y": 1.633333,
+    "offset_x": 0.0,
+    "offset_y": 0.0,
+    "space": "canvas"
+   },
+   "layout_version": 1
+  }
+ },
+ "midpoint": {
+  "id": "visual-a23bc0b342544793906db273f9fae4e0",
+  "type": "scene",
+  "mime_type": "image/svg+xml",
+  "data_url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5NjAiIGhlaWdodD0iNTQwIiB2aWV3Qm94PSIwIDAgOTYwIDU0MCIgcm9sZT0iaW1nIj4KPGRlZnM+PG1hcmtlciBpZD0iYXJyb3ciIG1hcmtlcldpZHRoPSIxMCIgbWFya2VySGVpZ2h0PSIxMCIgcmVmWD0iOCIgcmVmWT0iMyIgb3JpZW50PSJhdXRvIj48cGF0aCBkPSJNMCwwIEwwLDYgTDksMyB6IiBmaWxsPSIjMzAyYjRhIi8+PC9tYXJrZXI+PC9kZWZzPgo8cmVjdCB3aWR0aD0iOTYwIiBoZWlnaHQ9IjU0MCIgcng9IjMwIiBmaWxsPSIjZmJmYWZmIi8+CjxnPjxsaW5lIHgxPSIxNjAuMCIgeTE9IjQ2MC4wIiB4Mj0iODAwLjAiIHkyPSI0NjAuMCIgc3Ryb2tlPSIjMzAyYjRhIiBzdHJva2Utd2lkdGg9IjMiIG1hcmtlci1lbmQ9InVybCgjYXJyb3cpIi8+PGxpbmUgeDE9IjE2MC4wIiB5MT0iNDYwLjAiIHgyPSIxNjAuMCIgeTI9IjgwLjAiIHN0cm9rZT0iIzMwMmI0YSIgc3Ryb2tlLXdpZHRoPSIzIiBtYXJrZXItZW5kPSJ1cmwoI2Fycm93KSIvPjxsaW5lIHgxPSIxNjAuMCIgeTE9IjQ1NC4wIiB4Mj0iMTYwLjAiIHkyPSI0NjYuMCIgc3Ryb2tlPSIjMzAyYjRhIiBzdHJva2Utd2lkdGg9IjIiLz48bGluZSB4MT0iMjY2LjciIHkxPSI0NTQuMCIgeDI9IjI2Ni43IiB5Mj0iNDY2LjAiIHN0cm9rZT0iIzMwMmI0YSIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjM3My4zIiB5MT0iNDU0LjAiIHgyPSIzNzMuMyIgeTI9IjQ2Ni4wIiBzdHJva2U9IiMzMDJiNGEiIHN0cm9rZS13aWR0aD0iMiIvPjxsaW5lIHgxPSI0ODAuMCIgeTE9IjQ1NC4wIiB4Mj0iNDgwLjAiIHkyPSI0NjYuMCIgc3Ryb2tlPSIjMzAyYjRhIiBzdHJva2Utd2lkdGg9IjIiLz48bGluZSB4MT0iNTg2LjciIHkxPSI0NTQuMCIgeDI9IjU4Ni43IiB5Mj0iNDY2LjAiIHN0cm9rZT0iIzMwMmI0YSIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjY5My4zIiB5MT0iNDU0LjAiIHgyPSI2OTMuMyIgeTI9IjQ2Ni4wIiBzdHJva2U9IiMzMDJiNGEiIHN0cm9rZS13aWR0aD0iMiIvPjxsaW5lIHgxPSI4MDAuMCIgeTE9IjQ1NC4wIiB4Mj0iODAwLjAiIHkyPSI0NjYuMCIgc3Ryb2tlPSIjMzAyYjRhIiBzdHJva2Utd2lkdGg9IjIiLz48bGluZSB4MT0iMTU0LjAiIHkxPSI0NjAuMCIgeDI9IjE2Ni4wIiB5Mj0iNDYwLjAiIHN0cm9rZT0iIzMwMmI0YSIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjE1NC4wIiB5MT0iMzY1LjAiIHgyPSIxNjYuMCIgeTI9IjM2NS4wIiBzdHJva2U9IiMzMDJiNGEiIHN0cm9rZS13aWR0aD0iMiIvPjxsaW5lIHgxPSIxNTQuMCIgeTE9IjI3MC4wIiB4Mj0iMTY2LjAiIHkyPSIyNzAuMCIgc3Ryb2tlPSIjMzAyYjRhIiBzdHJva2Utd2lkdGg9IjIiLz48bGluZSB4MT0iMTU0LjAiIHkxPSIxNzUuMCIgeDI9IjE2Ni4wIiB5Mj0iMTc1LjAiIHN0cm9rZT0iIzMwMmI0YSIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjE1NC4wIiB5MT0iODAuMCIgeDI9IjE2Ni4wIiB5Mj0iODAuMCIgc3Ryb2tlPSIjMzAyYjRhIiBzdHJva2Utd2lkdGg9IjIiLz48bGluZSB4MT0iMjY2LjciIHkxPSIzNjUuMCIgeDI9IjY5My4zIiB5Mj0iMTc1LjAiIHN0cm9rZT0iIzZmNWJmZiIgc3Ryb2tlLXdpZHRoPSI0Ii8+PGNpcmNsZSBjeD0iMjY2LjciIGN5PSIzNjUuMCIgcj0iNyIgZmlsbD0iIzZmNWJmZiIvPjxjaXJjbGUgY3g9IjY5My4zIiBjeT0iMTc1LjAiIHI9IjciIGZpbGw9IiM2ZjViZmYiLz48Y2lyY2xlIGN4PSI0ODAuMCIgY3k9IjI3MC4wIiByPSI3IiBmaWxsPSIjZjJhOTFiIi8+PC9nPjxnIGZvbnQtZmFtaWx5PSJBcmlhbCwgJ05vdG8gU2FucyBIZWJyZXcnLCAnTm90byBTYW5zIEFyYWJpYycsICdTZWdvZSBVSScsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjUiIGZvbnQtd2VpZ2h0PSI3MDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjxzdHlsZT4ubGFiZWwsLnNpZGUtbGFiZWwsLmFuZ2xlLWxhYmVse3VuaWNvZGUtYmlkaTpwbGFpbnRleHR9LmxhYmVsLC5zaWRlLWxhYmVse2ZpbGw6IzMwMmI0YX0uc2lkZS1sYWJlbHtmb250LXNpemU6MjNweH0uYW5nbGUtbGFiZWx7Zm9udC1zaXplOjI0cHg7Zm9udC13ZWlnaHQ6ODAwfS5mb3JtdWxhLWxhYmVse2ZvbnQtc2l6ZTozMXB4O2ZvbnQtd2VpZ2h0OjYwMH0uYmFja2VkLWxhYmVse3BhaW50LW9yZGVyOnN0cm9rZTtzdHJva2U6I2ZiZmFmZjtzdHJva2Utd2lkdGg6MTBweDtzdHJva2UtbGluZWpvaW46cm91bmR9LnRpY2t7ZmlsbDojNzc3MThmO2ZvbnQtc2l6ZToxN3B4O2ZvbnQtd2VpZ2h0OjUwMH08L3N0eWxlPjx0ZXh0IHg9IjI2Ni43IiB5PSI0ODYuMCIgY2xhc3M9InRpY2siPjE8L3RleHQ+PHRleHQgeD0iMzczLjMiIHk9IjQ4Ni4wIiBjbGFzcz0idGljayI+MjwvdGV4dD48dGV4dCB4PSI0ODAuMCIgeT0iNDg2LjAiIGNsYXNzPSJ0aWNrIj4zPC90ZXh0Pjx0ZXh0IHg9IjU4Ni43IiB5PSI0ODYuMCIgY2xhc3M9InRpY2siPjQ8L3RleHQ+PHRleHQgeD0iNjkzLjMiIHk9IjQ4Ni4wIiBjbGFzcz0idGljayI+NTwvdGV4dD48dGV4dCB4PSI4MDAuMCIgeT0iNDg2LjAiIGNsYXNzPSJ0aWNrIj42PC90ZXh0Pjx0ZXh0IHg9IjEzOC4wIiB5PSIzNzIuMCIgY2xhc3M9InRpY2siPjE8L3RleHQ+PHRleHQgeD0iMTM4LjAiIHk9IjI3Ny4wIiBjbGFzcz0idGljayI+MjwvdGV4dD48dGV4dCB4PSIxMzguMCIgeT0iMTgyLjAiIGNsYXNzPSJ0aWNrIj4zPC90ZXh0Pjx0ZXh0IHg9IjEzOC4wIiB5PSI4Ny4wIiBjbGFzcz0idGljayI+NDwvdGV4dD48dGV4dCB4PSI4MjIuMCIgeT0iNDUwLjAiIGNsYXNzPSJsYWJlbCI+eDwvdGV4dD48dGV4dCB4PSIxODAuMCIgeT0iNjguMCIgY2xhc3M9ImxhYmVsIj55PC90ZXh0Pjx0ZXh0IHg9IjI4MS43IiB5PSIzNTMuMCIgY2xhc3M9ImxhYmVsIj5BPSgxLDEpPC90ZXh0Pjx0ZXh0IHg9IjcwOC4zIiB5PSIxNjMuMCIgY2xhc3M9ImxhYmVsIj5CPSg1LDMpPC90ZXh0Pjx0ZXh0IHg9IjQ5NS4wIiB5PSIyNTguMCIgY2xhc3M9ImxhYmVsIj5NPSgzLDIpPC90ZXh0PjwvZz4KPC9zdmc+",
+  "title": "נקודת אמצע",
+  "alt": "נקודת אמצע",
+  "caption": "",
+  "renderer": "mafs",
+  "scene": {
+   "use_visual": true,
+   "render": "geometry",
+   "animated": false,
+   "title": "נקודת אמצע",
+   "alt": "",
+   "caption": "",
+   "elements": [
+    {
+     "type": "axes",
+     "color": "ink",
+     "position": [
+      0.0,
+      0.0
+     ],
+     "x_range": [
+      0.0,
+      6.0,
+      1.0
+     ],
+     "y_range": [
+      0.0,
+      4.0,
+      1.0
+     ],
+     "x_label": "x",
+     "y_label": "y"
+    },
+    {
+     "type": "line",
+     "color": "primary",
+     "points": [
+      [
+       1.0,
+       1.0
+      ],
+      [
+       5.0,
+       3.0
+      ]
+     ],
+     "dashed": false
+    },
+    {
+     "type": "point",
+     "color": "primary",
+     "points": [
+      [
+       1.0,
+       1.0
+      ]
+     ],
+     "label": "A=(1,1)",
+     "layout": {
+      "label": [
+       -3.1667,
+       -0.83
+      ]
+     }
+    },
+    {
+     "type": "point",
+     "color": "primary",
+     "points": [
+      [
+       5.0,
+       3.0
+      ]
+     ],
+     "label": "B=(5,3)",
+     "layout": {
+      "label": [
+       3.4267,
+       1.8003
+      ]
+     }
+    },
+    {
+     "type": "point",
+     "color": "accent",
+     "points": [
+      [
+       3.0,
+       2.0
+      ]
+     ],
+     "label": "M=(3,2)",
+     "layout": {
+      "label": [
+       0.0,
+       0.52
+      ]
+     }
+    }
+   ],
+   "canvas": {
+    "scale_x": 1.583333,
+    "scale_y": 1.35,
+    "offset_x": -4.75,
+    "offset_y": -2.7,
+    "space": "data"
+   },
+   "layout_version": 1
+  }
+ },
+ "sine": {
+  "id": "visual-8020be7a34a74abe86587d4e5ff9c6fd",
+  "type": "scene",
+  "mime_type": "image/svg+xml",
+  "data_url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5NjAiIGhlaWdodD0iNTQwIiB2aWV3Qm94PSIwIDAgOTYwIDU0MCIgcm9sZT0iaW1nIj4KPGRlZnM+PG1hcmtlciBpZD0iYXJyb3ciIG1hcmtlcldpZHRoPSIxMCIgbWFya2VySGVpZ2h0PSIxMCIgcmVmWD0iOCIgcmVmWT0iMyIgb3JpZW50PSJhdXRvIj48cGF0aCBkPSJNMCwwIEwwLDYgTDksMyB6IiBmaWxsPSIjMzAyYjRhIi8+PC9tYXJrZXI+PC9kZWZzPgo8cmVjdCB3aWR0aD0iOTYwIiBoZWlnaHQ9IjU0MCIgcng9IjMwIiBmaWxsPSIjZmJmYWZmIi8+CjxnPjxsaW5lIHgxPSIxNjAuMCIgeTE9IjI3MC4wIiB4Mj0iODAwLjAiIHkyPSIyNzAuMCIgc3Ryb2tlPSIjMzAyYjRhIiBzdHJva2Utd2lkdGg9IjMiIG1hcmtlci1lbmQ9InVybCgjYXJyb3cpIi8+PGxpbmUgeDE9IjQ4MC4wIiB5MT0iNDYwLjAiIHgyPSI0ODAuMCIgeTI9IjgwLjAiIHN0cm9rZT0iIzMwMmI0YSIgc3Ryb2tlLXdpZHRoPSIzIiBtYXJrZXItZW5kPSJ1cmwoI2Fycm93KSIvPjxsaW5lIHgxPSIxNjAuMCIgeTE9IjI2NC4wIiB4Mj0iMTYwLjAiIHkyPSIyNzYuMCIgc3Ryb2tlPSIjMzAyYjRhIiBzdHJva2Utd2lkdGg9IjIiLz48bGluZSB4MT0iMjQwLjAiIHkxPSIyNjQuMCIgeDI9IjI0MC4wIiB5Mj0iMjc2LjAiIHN0cm9rZT0iIzMwMmI0YSIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjMyMC4wIiB5MT0iMjY0LjAiIHgyPSIzMjAuMCIgeTI9IjI3Ni4wIiBzdHJva2U9IiMzMDJiNGEiIHN0cm9rZS13aWR0aD0iMiIvPjxsaW5lIHgxPSI0MDAuMCIgeTE9IjI2NC4wIiB4Mj0iNDAwLjAiIHkyPSIyNzYuMCIgc3Ryb2tlPSIjMzAyYjRhIiBzdHJva2Utd2lkdGg9IjIiLz48bGluZSB4MT0iNDgwLjAiIHkxPSIyNjQuMCIgeDI9IjQ4MC4wIiB5Mj0iMjc2LjAiIHN0cm9rZT0iIzMwMmI0YSIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjU2MC4wIiB5MT0iMjY0LjAiIHgyPSI1NjAuMCIgeTI9IjI3Ni4wIiBzdHJva2U9IiMzMDJiNGEiIHN0cm9rZS13aWR0aD0iMiIvPjxsaW5lIHgxPSI2NDAuMCIgeTE9IjI2NC4wIiB4Mj0iNjQwLjAiIHkyPSIyNzYuMCIgc3Ryb2tlPSIjMzAyYjRhIiBzdHJva2Utd2lkdGg9IjIiLz48bGluZSB4MT0iNzIwLjAiIHkxPSIyNjQuMCIgeDI9IjcyMC4wIiB5Mj0iMjc2LjAiIHN0cm9rZT0iIzMwMmI0YSIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjgwMC4wIiB5MT0iMjY0LjAiIHgyPSI4MDAuMCIgeTI9IjI3Ni4wIiBzdHJva2U9IiMzMDJiNGEiIHN0cm9rZS13aWR0aD0iMiIvPjxsaW5lIHgxPSI0NzQuMCIgeTE9IjQ2MC4wIiB4Mj0iNDg2LjAiIHkyPSI0NjAuMCIgc3Ryb2tlPSIjMzAyYjRhIiBzdHJva2Utd2lkdGg9IjIiLz48bGluZSB4MT0iNDc0LjAiIHkxPSIzOTYuNyIgeDI9IjQ4Ni4wIiB5Mj0iMzk2LjciIHN0cm9rZT0iIzMwMmI0YSIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjQ3NC4wIiB5MT0iMzMzLjMiIHgyPSI0ODYuMCIgeTI9IjMzMy4zIiBzdHJva2U9IiMzMDJiNGEiIHN0cm9rZS13aWR0aD0iMiIvPjxsaW5lIHgxPSI0NzQuMCIgeTE9IjI3MC4wIiB4Mj0iNDg2LjAiIHkyPSIyNzAuMCIgc3Ryb2tlPSIjMzAyYjRhIiBzdHJva2Utd2lkdGg9IjIiLz48bGluZSB4MT0iNDc0LjAiIHkxPSIyMDYuNyIgeDI9IjQ4Ni4wIiB5Mj0iMjA2LjciIHN0cm9rZT0iIzMwMmI0YSIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjQ3NC4wIiB5MT0iMTQzLjMiIHgyPSI0ODYuMCIgeTI9IjE0My4zIiBzdHJva2U9IiMzMDJiNGEiIHN0cm9rZS13aWR0aD0iMiIvPjxsaW5lIHgxPSI0NzQuMCIgeTE9IjgwLjAiIHgyPSI0ODYuMCIgeTI9IjgwLjAiIHN0cm9rZT0iIzMwMmI0YSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBvbHlsaW5lIHBvaW50cz0iMTYwLjAsMjY5LjYgMTcyLjcsMjM4LjMgMTg1LjUsMjA4LjkgMTk4LjIsMTgzLjQgMjExLjAsMTYzLjIgMjIzLjcsMTQ5LjcgMjM2LjQsMTQzLjYgMjQ5LjIsMTQ1LjQgMjYxLjksMTU1LjAgMjc0LjYsMTcxLjcgMjg3LjQsMTk0LjUgMzAwLjEsMjIyLjAgMzEyLjksMjUyLjUgMzI1LjYsMjg0LjEgMzM4LjMsMzE0LjggMzUxLjEsMzQyLjcgMzYzLjgsMzY2LjEgMzc2LjYsMzgzLjUgMzg5LjMsMzkzLjkgNDAyLjAsMzk2LjYgNDE0LjgsMzkxLjMgNDI3LjUsMzc4LjYgNDQwLjMsMzU5LjEgNDUzLjAsMzM0LjAgNDY1LjcsMzA1LjAgNDc4LjUsMjczLjggNDkxLjIsMjQyLjQgNTAzLjksMjEyLjYgNTE2LjcsMTg2LjUgNTI5LjQsMTY1LjUgNTQyLjIsMTUxLjAgNTU0LjksMTQ0LjAgNTY3LjYsMTQ0LjcgNTgwLjQsMTUzLjMgNTkzLjEsMTY5LjEgNjA1LjksMTkxLjIgNjE4LjYsMjE4LjIgNjMxLjMsMjQ4LjQgNjQ0LjEsMjc5LjkgNjU2LjgsMzEwLjkgNjY5LjYsMzM5LjIgNjgyLjMsMzYzLjMgNjk1LjAsMzgxLjYgNzA3LjgsMzkzLjAgNzIwLjUsMzk2LjcgNzMzLjIsMzkyLjUgNzQ2LjAsMzgwLjcgNzU4LjcsMzYyLjAgNzcxLjUsMzM3LjYgNzg0LjIsMzA5LjAgNzk2LjksMjc4LjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzZmNWJmZiIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48Y2lyY2xlIGN4PSI2NDAuMCIgY3k9IjI3MC4wIiByPSI3IiBmaWxsPSIjZjJhOTFiIi8+PC9nPjxnIGZvbnQtZmFtaWx5PSJBcmlhbCwgJ05vdG8gU2FucyBIZWJyZXcnLCAnTm90byBTYW5zIEFyYWJpYycsICdTZWdvZSBVSScsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjUiIGZvbnQtd2VpZ2h0PSI3MDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjxzdHlsZT4ubGFiZWwsLnNpZGUtbGFiZWwsLmFuZ2xlLWxhYmVse3VuaWNvZGUtYmlkaTpwbGFpbnRleHR9LmxhYmVsLC5zaWRlLWxhYmVse2ZpbGw6IzMwMmI0YX0uc2lkZS1sYWJlbHtmb250LXNpemU6MjNweH0uYW5nbGUtbGFiZWx7Zm9udC1zaXplOjI0cHg7Zm9udC13ZWlnaHQ6ODAwfS5mb3JtdWxhLWxhYmVse2ZvbnQtc2l6ZTozMXB4O2ZvbnQtd2VpZ2h0OjYwMH0uYmFja2VkLWxhYmVse3BhaW50LW9yZGVyOnN0cm9rZTtzdHJva2U6I2ZiZmFmZjtzdHJva2Utd2lkdGg6MTBweDtzdHJva2UtbGluZWpvaW46cm91bmR9LnRpY2t7ZmlsbDojNzc3MThmO2ZvbnQtc2l6ZToxN3B4O2ZvbnQtd2VpZ2h0OjUwMH08L3N0eWxlPjx0ZXh0IHg9IjE2MC4wIiB5PSIyOTYuMCIgY2xhc3M9InRpY2siPi02LjI4PC90ZXh0Pjx0ZXh0IHg9IjI0MC4wIiB5PSIyOTYuMCIgY2xhc3M9InRpY2siPi00LjcxPC90ZXh0Pjx0ZXh0IHg9IjMyMC4wIiB5PSIyOTYuMCIgY2xhc3M9InRpY2siPi0zLjE0PC90ZXh0Pjx0ZXh0IHg9IjQwMC4wIiB5PSIyOTYuMCIgY2xhc3M9InRpY2siPi0xLjU3PC90ZXh0Pjx0ZXh0IHg9IjU2MC4wIiB5PSIyOTYuMCIgY2xhc3M9InRpY2siPjEuNTc8L3RleHQ+PHRleHQgeD0iNjQwLjAiIHk9IjI5Ni4wIiBjbGFzcz0idGljayI+My4xNDwvdGV4dD48dGV4dCB4PSI3MjAuMCIgeT0iMjk2LjAiIGNsYXNzPSJ0aWNrIj40LjcxPC90ZXh0Pjx0ZXh0IHg9IjgwMC4wIiB5PSIyOTYuMCIgY2xhc3M9InRpY2siPjYuMjg8L3RleHQ+PHRleHQgeD0iNDU4LjAiIHk9IjQ2Ny4wIiBjbGFzcz0idGljayI+LTEuNTwvdGV4dD48dGV4dCB4PSI0NTguMCIgeT0iNDAzLjciIGNsYXNzPSJ0aWNrIj4tMTwvdGV4dD48dGV4dCB4PSI0NTguMCIgeT0iMzQwLjMiIGNsYXNzPSJ0aWNrIj4tMC41PC90ZXh0Pjx0ZXh0IHg9IjQ1OC4wIiB5PSIyMTMuNyIgY2xhc3M9InRpY2siPjAuNTwvdGV4dD48dGV4dCB4PSI0NTguMCIgeT0iMTUwLjMiIGNsYXNzPSJ0aWNrIj4xPC90ZXh0Pjx0ZXh0IHg9IjQ1OC4wIiB5PSI4Ny4wIiBjbGFzcz0idGljayI+MS41PC90ZXh0Pjx0ZXh0IHg9IjgyMi4wIiB5PSIyNjAuMCIgY2xhc3M9ImxhYmVsIj54PC90ZXh0Pjx0ZXh0IHg9IjUwMC4wIiB5PSI2OC4wIiBjbGFzcz0ibGFiZWwiPnk8L3RleHQ+PHRleHQgeD0iNjE0LjkiIHk9IjE1MS41IiBjbGFzcz0ibGFiZWwiPnk9c2luKHgpPC90ZXh0Pjx0ZXh0IHg9IjY1NS4wIiB5PSIyNTguMCIgY2xhc3M9ImxhYmVsIj7PgDwvdGV4dD48L2c+Cjwvc3ZnPg==",
+  "title": "y=sin(x)",
+  "alt": "y=sin(x)",
+  "caption": "",
+  "renderer": "mafs",
+  "scene": {
+   "use_visual": true,
+   "render": "geometry",
+   "animated": false,
+   "title": "y=sin(x)",
+   "alt": "",
+   "caption": "",
+   "elements": [
+    {
+     "type": "axes",
+     "color": "ink",
+     "position": [
+      0.0,
+      0.0
+     ],
+     "x_range": [
+      -6.28,
+      6.28,
+      1.57
+     ],
+     "y_range": [
+      -1.5,
+      1.5,
+      0.5
+     ],
+     "x_label": "x",
+     "y_label": "y"
+    },
+    {
+     "type": "polyline",
+     "color": "primary",
+     "points": [
+      [
+       -6.28,
+       0.0031853017931379904
+      ],
+      [
+       -6.03,
+       0.2504889826270749
+      ],
+      [
+       -5.78,
+       0.48221847174493154
+      ],
+      [
+       -5.53,
+       0.6839659518769007
+      ],
+      [
+       -5.28,
+       0.8431877418564168
+      ],
+      [
+       -5.03,
+       0.9499842019607608
+      ],
+      [
+       -4.78,
+       0.9977152455608933
+      ],
+      [
+       -4.53,
+       0.9834131875473108
+      ],
+      [
+       -4.28,
+       0.9079672606164054
+      ],
+      [
+       -4.03,
+       0.7760683270883323
+      ],
+      [
+       -3.7800000000000002,
+       0.5959172238077642
+      ],
+      [
+       -3.5300000000000002,
+       0.37871487382899804
+      ],
+      [
+       -3.2800000000000002,
+       0.13796586727122728
+      ],
+      [
+       -3.0300000000000002,
+       -0.11136118868664958
+      ],
+      [
+       -2.7800000000000002,
+       -0.3537643453011427
+      ],
+      [
+       -2.5300000000000002,
+       -0.5741721483545723
+      ],
+      [
+       -2.2800000000000002,
+       -0.7588807081809218
+      ],
+      [
+       -2.0300000000000002,
+       -0.8964057411515598
+      ],
+      [
+       -1.7800000000000002,
+       -0.9781966068080447
+      ],
+      [
+       -1.5300000000000002,
+       -0.999167945271476
+      ],
+      [
+       -1.2800000000000002,
+       -0.958015860289225
+      ],
+      [
+       -1.0300000000000002,
+       -0.8572989891886035
+      ],
+      [
+       -0.7800000000000002,
+       -0.7032794192004104
+      ],
+      [
+       -0.5300000000000002,
+       -0.5055333412048472
+      ],
+      [
+       -0.28000000000000025,
+       -0.276355648564114
+      ],
+      [
+       -0.03000000000000025,
+       -0.02999550020249591
+      ],
+      [
+       0.21999999999999975,
+       0.21822962308086907
+      ],
+      [
+       0.46999999999999975,
+       0.45288628537906805
+      ],
+      [
+       0.7199999999999998,
+       0.659384671971473
+      ],
+      [
+       0.9699999999999998,
+       0.82488571333845
+      ],
+      [
+       1.2199999999999998,
+       0.9390993563190675
+      ],
+      [
+       1.4699999999999998,
+       0.9949243497775808
+      ],
+      [
+       1.7199999999999998,
+       0.9888897660047015
+      ],
+      [
+       1.9699999999999998,
+       0.9213708061913954
+      ],
+      [
+       2.2199999999999998,
+       0.7965654722360868
+      ],
+      [
+       2.4699999999999998,
+       0.622233555319305
+      ],
+      [
+       2.7199999999999998,
+       0.40921416967201774
+      ],
+      [
+       2.9699999999999998,
+       0.17075182895114577
+      ],
+      [
+       3.2199999999999998,
+       -0.07832703347086485
+      ],
+      [
+       3.4699999999999998,
+       -0.32253590032247853
+      ],
+      [
+       3.7199999999999998,
+       -0.5466910470692868
+      ],
+      [
+       3.9699999999999998,
+       -0.736855592364383
+      ],
+      [
+       4.22,
+       -0.8812060258283253
+      ],
+      [
+       4.47,
+       -0.9707673366582883
+      ],
+      [
+       4.72,
+       -0.9999710363300245
+      ],
+      [
+       4.97,
+       -0.967001380243766
+      ],
+      [
+       5.22,
+       -0.8739082619290224
+      ],
+      [
+       5.47,
+       -0.7264797605934131
+      ],
+      [
+       5.72,
+       -0.5338822663916443
+      ],
+      [
+       5.97,
+       -0.3080905586823781
+      ],
+      [
+       6.22,
+       -0.06314327224661277
+      ]
+     ],
+     "label": "y=sin(x)",
+     "dashed": false,
+     "layout": {
+      "label": [
+       3.3928,
+       -2.0018
+      ]
+     }
+    },
+    {
+     "type": "point",
+     "color": "accent",
+     "points": [
+      [
+       3.14,
+       0.0
+      ]
+     ],
+     "label": "π",
+     "layout": {
+      "label": [
+       2.545,
+       0.2944
+      ]
+     }
+    }
+   ],
+   "canvas": {
+    "scale_x": 0.756369,
+    "scale_y": 1.8,
+    "offset_x": 0.0,
+    "offset_y": 0.0,
+    "space": "data"
+   },
+   "layout_version": 1
+  }
+ },
+ "circle_arc": {
+  "id": "visual-7ea24898892247bfadd75efd0dc7248e",
+  "type": "scene",
+  "mime_type": "image/svg+xml",
+  "data_url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5NjAiIGhlaWdodD0iNTQwIiB2aWV3Qm94PSIwIDAgOTYwIDU0MCIgcm9sZT0iaW1nIj4KPGRlZnM+PG1hcmtlciBpZD0iYXJyb3ciIG1hcmtlcldpZHRoPSIxMCIgbWFya2VySGVpZ2h0PSIxMCIgcmVmWD0iOCIgcmVmWT0iMyIgb3JpZW50PSJhdXRvIj48cGF0aCBkPSJNMCwwIEwwLDYgTDksMyB6IiBmaWxsPSIjMzAyYjRhIi8+PC9tYXJrZXI+PC9kZWZzPgo8cmVjdCB3aWR0aD0iOTYwIiBoZWlnaHQ9IjU0MCIgcng9IjMwIiBmaWxsPSIjZmJmYWZmIi8+CjxnPjxlbGxpcHNlIGN4PSIzNTMuNSIgY3k9IjI3MC4wIiByeD0iMjUzLjAiIHJ5PSIyNTMuMCIgZmlsbD0iIzZmNWJmZiIgZmlsbC1vcGFjaXR5PSIuMDYiIHN0cm9rZT0iIzZmNWJmZiIgc3Ryb2tlLXdpZHRoPSI0Ii8+PHBhdGggZD0iTSA0NjguNSAyNzAuMCBBIDExNS4wIDExNS4wIDAgMCAwIDM5NS4yIDE2Mi44IiBmaWxsPSJub25lIiBzdHJva2U9IiNmMmE5MWIiIHN0cm9rZS13aWR0aD0iNCIvPjxjaXJjbGUgY3g9IjM1My41IiBjeT0iMjcwLjAiIHI9IjciIGZpbGw9IiNmMmE5MWIiLz48bGluZSB4MT0iMzUzLjUiIHkxPSIyNzAuMCIgeDI9IjYwNi41IiB5Mj0iMjcwLjAiIHN0cm9rZT0iIzMzYjhjZiIgc3Ryb2tlLXdpZHRoPSI0Ii8+PC9nPjxnIGZvbnQtZmFtaWx5PSJBcmlhbCwgJ05vdG8gU2FucyBIZWJyZXcnLCAnTm90byBTYW5zIEFyYWJpYycsICdTZWdvZSBVSScsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjUiIGZvbnQtd2VpZ2h0PSI3MDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjxzdHlsZT4ubGFiZWwsLnNpZGUtbGFiZWwsLmFuZ2xlLWxhYmVse3VuaWNvZGUtYmlkaTpwbGFpbnRleHR9LmxhYmVsLC5zaWRlLWxhYmVse2ZpbGw6IzMwMmI0YX0uc2lkZS1sYWJlbHtmb250LXNpemU6MjNweH0uYW5nbGUtbGFiZWx7Zm9udC1zaXplOjI0cHg7Zm9udC13ZWlnaHQ6ODAwfS5mb3JtdWxhLWxhYmVse2ZvbnQtc2l6ZTozMXB4O2ZvbnQtd2VpZ2h0OjYwMH0uYmFja2VkLWxhYmVse3BhaW50LW9yZGVyOnN0cm9rZTtzdHJva2U6I2ZiZmFmZjtzdHJva2Utd2lkdGg6MTBweDtzdHJva2UtbGluZWpvaW46cm91bmR9LnRpY2t7ZmlsbDojNzc3MThmO2ZvbnQtc2l6ZToxN3B4O2ZvbnQtd2VpZ2h0OjUwMH08L3N0eWxlPjx0ZXh0IHg9IjM1My41IiB5PSIzLjAiIGNsYXNzPSJsYWJlbCI+cj0yLjI8L3RleHQ+PHRleHQgeD0iNDY5LjAiIHk9IjE5MS4wIiBjbGFzcz0ibGFiZWwiPten16nXqjwvdGV4dD48dGV4dCB4PSIzNjguNSIgeT0iMjU4LjAiIGNsYXNzPSJsYWJlbCI+TzwvdGV4dD48dGV4dCB4PSI0ODAuMCIgeT0iMjU1LjAiIGNsYXNzPSJzaWRlLWxhYmVsIj7XqNeT15nXldehPC90ZXh0PjwvZz4KPC9zdmc+",
+  "title": "מעגל",
+  "alt": "מעגל",
+  "caption": "",
+  "renderer": "mafs",
+  "scene": {
+   "use_visual": true,
+   "render": "geometry",
+   "animated": false,
+   "title": "מעגל",
+   "alt": "",
+   "caption": "",
+   "elements": [
+    {
+     "type": "circle",
+     "color": "primary",
+     "center": [
+      0.0,
+      0.0
+     ],
+     "radius": 2.2,
+     "label": "r=2.2",
+     "layout": {
+      "label": [
+       0.0,
+       2.79
+      ]
+     }
+    },
+    {
+     "type": "arc",
+     "color": "accent",
+     "center": [
+      0.0,
+      0.0
+     ],
+     "radius": 1.0,
+     "start_angle": 0.0,
+     "angle": 1.2,
+     "label": "קשת",
+     "layout": {
+      "label": [
+       1.2136,
+       0.7988
+      ]
+     }
+    },
+    {
+     "type": "point",
+     "color": "accent",
+     "points": [
+      [
+       0.0,
+       0.0
+      ]
+     ],
+     "label": "O",
+     "layout": {
+      "label": [
+       0.17,
+       0.2944
+      ]
+     }
+    },
+    {
+     "type": "line",
+     "color": "secondary",
+     "points": [
+      [
+       0.0,
+       0.0
+      ],
+      [
+       2.2,
+       0.0
+      ]
+     ],
+     "label": "רדיוס",
+     "dashed": false,
+     "layout": {
+      "label": [
+       1.741,
+       0.2944
+      ]
+     }
+    }
+   ],
+   "canvas": {
+    "scale_x": 1.113636,
+    "scale_y": 1.113636,
+    "offset_x": 0.0,
+    "offset_y": 0.0,
+    "space": "canvas"
+   },
+   "layout_version": 1
+  }
+ },
+ "arabic": {
+  "id": "visual-68cd2fd771b04757aabdd56e8666006b",
+  "type": "scene",
+  "mime_type": "image/svg+xml",
+  "data_url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5NjAiIGhlaWdodD0iNTQwIiB2aWV3Qm94PSIwIDAgOTYwIDU0MCIgcm9sZT0iaW1nIj4KPGRlZnM+PG1hcmtlciBpZD0iYXJyb3ciIG1hcmtlcldpZHRoPSIxMCIgbWFya2VySGVpZ2h0PSIxMCIgcmVmWD0iOCIgcmVmWT0iMyIgb3JpZW50PSJhdXRvIj48cGF0aCBkPSJNMCwwIEwwLDYgTDksMyB6IiBmaWxsPSIjMzAyYjRhIi8+PC9tYXJrZXI+PC9kZWZzPgo8cmVjdCB3aWR0aD0iOTYwIiBoZWlnaHQ9IjU0MCIgcng9IjMwIiBmaWxsPSIjZmJmYWZmIi8+CjxnPjxwb2x5Z29uIHBvaW50cz0iMjUwLjAsNDQyLjUgNzEwLjAsNDQyLjUgNzEwLjAsOTcuNSIgZmlsbD0iIzZmNWJmZiIgZmlsbC1vcGFjaXR5PSIwLjA4IiBzdHJva2U9IiM2ZjViZmYiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjxwYXRoIGQ9Ik0gNjg2LjAgNDQyLjUgTCA2ODYuMCA0MTguNSBMIDcxMC4wIDQxOC41IiBmaWxsPSJub25lIiBzdHJva2U9IiNmMmE5MWIiIHN0cm9rZS13aWR0aD0iNCIvPjwvZz48ZyBmb250LWZhbWlseT0iQXJpYWwsICdOb3RvIFNhbnMgSGVicmV3JywgJ05vdG8gU2FucyBBcmFiaWMnLCAnU2Vnb2UgVUknLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI1IiBmb250LXdlaWdodD0iNzAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj48c3R5bGU+LmxhYmVsLC5zaWRlLWxhYmVsLC5hbmdsZS1sYWJlbHt1bmljb2RlLWJpZGk6cGxhaW50ZXh0fS5sYWJlbCwuc2lkZS1sYWJlbHtmaWxsOiMzMDJiNGF9LnNpZGUtbGFiZWx7Zm9udC1zaXplOjIzcHh9LmFuZ2xlLWxhYmVse2ZvbnQtc2l6ZToyNHB4O2ZvbnQtd2VpZ2h0OjgwMH0uZm9ybXVsYS1sYWJlbHtmb250LXNpemU6MzFweDtmb250LXdlaWdodDo2MDB9LmJhY2tlZC1sYWJlbHtwYWludC1vcmRlcjpzdHJva2U7c3Ryb2tlOiNmYmZhZmY7c3Ryb2tlLXdpZHRoOjEwcHg7c3Ryb2tlLWxpbmVqb2luOnJvdW5kfS50aWNre2ZpbGw6Izc3NzE4Zjtmb250LXNpemU6MTdweDtmb250LXdlaWdodDo1MDB9PC9zdHlsZT48dGV4dCB4PSIyMzEuMyIgeT0iNDU2LjUiIGNsYXNzPSJsYWJlbCI+2KM8L3RleHQ+PHRleHQgeD0iNzI2LjAiIHk9IjQ2MS41IiBjbGFzcz0ibGFiZWwiPtioPC90ZXh0Pjx0ZXh0IHg9IjcyMS4xIiB5PSI4Ny45IiBjbGFzcz0ibGFiZWwiPtisPC90ZXh0Pjx0ZXh0IHg9IjQ4MC4wIiB5PSI0NzkuNSIgY2xhc3M9InNpZGUtbGFiZWwgYmFja2VkLWxhYmVsIiBkaXJlY3Rpb249ImF1dG8iIHVuaWNvZGUtYmlkaT0icGxhaW50ZXh0IiBkYXRhLWVkZ2UtaW5kZXg9IjAiPtmkPC90ZXh0Pjx0ZXh0IHg9Ijc0MC4wIiB5PSIyNzcuMCIgY2xhc3M9InNpZGUtbGFiZWwgYmFja2VkLWxhYmVsIiBkaXJlY3Rpb249ImF1dG8iIHVuaWNvZGUtYmlkaT0icGxhaW50ZXh0IiBkYXRhLWVkZ2UtaW5kZXg9IjEiPtmjPC90ZXh0Pjx0ZXh0IHg9IjQ2Mi4wIiB5PSIyNTMuMCIgY2xhc3M9InNpZGUtbGFiZWwgYmFja2VkLWxhYmVsIiBkaXJlY3Rpb249ImF1dG8iIHVuaWNvZGUtYmlkaT0icGxhaW50ZXh0IiBkYXRhLWVkZ2UtaW5kZXg9IjIiPtin2YTZiNiq2LE8L3RleHQ+PC9nPgo8L3N2Zz4=",
+  "title": "مثلث",
+  "alt": "مثلث",
+  "caption": "",
+  "renderer": "mafs",
+  "scene": {
+   "use_visual": true,
+   "render": "geometry",
+   "animated": false,
+   "title": "مثلث",
+   "alt": "",
+   "caption": "",
+   "elements": [
+    {
+     "type": "polygon",
+     "color": "primary",
+     "points": [
+      [
+       -2.0,
+       -1.5
+      ],
+      [
+       2.0,
+       -1.5
+      ],
+      [
+       2.0,
+       1.5
+      ]
+     ],
+     "labels": [
+      "أ",
+      "ب",
+      "ج"
+     ],
+     "side_labels": [
+      "٤",
+      "٣",
+      "الوتر"
+     ],
+     "fill_opacity": 0.08,
+     "layout": {
+      "labels:0": [
+       -3.5611,
+       -2.62
+      ],
+      "labels:1": [
+       3.5611,
+       -2.62
+      ],
+      "labels:2": [
+       3.4367,
+       2.7444
+      ],
+      "side_labels:0": [
+       -0.0,
+       -2.79
+      ],
+      "side_labels:1": [
+       3.6067,
+       0.0
+      ],
+      "side_labels:2": [
+       -0.39,
+       0.6755
+      ]
+     }
+    },
+    {
+     "type": "right_angle",
+     "color": "accent",
+     "points": [
+      [
+       -2.0,
+       -1.5
+      ],
+      [
+       2.0,
+       -1.5
+      ],
+      [
+       2.0,
+       1.5
+      ]
+     ]
+    }
+   ],
+   "canvas": {
+    "scale_x": 1.633333,
+    "scale_y": 1.633333,
+    "offset_x": 0.0,
+    "offset_y": 0.0,
+    "space": "canvas"
+   },
+   "layout_version": 1
+  }
+ },
+ "crowded": {
+  "id": "visual-a7744400632f455abf1cd3f76ada933d",
+  "type": "scene",
+  "mime_type": "image/svg+xml",
+  "data_url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5NjAiIGhlaWdodD0iNTQwIiB2aWV3Qm94PSIwIDAgOTYwIDU0MCIgcm9sZT0iaW1nIj4KPGRlZnM+PG1hcmtlciBpZD0iYXJyb3ciIG1hcmtlcldpZHRoPSIxMCIgbWFya2VySGVpZ2h0PSIxMCIgcmVmWD0iOCIgcmVmWT0iMyIgb3JpZW50PSJhdXRvIj48cGF0aCBkPSJNMCwwIEwwLDYgTDksMyB6IiBmaWxsPSIjMzAyYjRhIi8+PC9tYXJrZXI+PC9kZWZzPgo8cmVjdCB3aWR0aD0iOTYwIiBoZWlnaHQ9IjU0MCIgcng9IjMwIiBmaWxsPSIjZmJmYWZmIi8+CjxnPjxwb2x5Z29uIHBvaW50cz0iNzUuMCw0MzUuNyAyMjIuMywyMTQuOCAzNjkuNSw0MzUuNyIgZmlsbD0iIzZmNWJmZiIgZmlsbC1vcGFjaXR5PSIwLjA4IiBzdHJva2U9IiM2ZjViZmYiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjxwb2x5Z29uIHBvaW50cz0iNDQzLjIsNDM1LjcgNjY0LjEsMTA0LjMgODg1LjAsNDM1LjciIGZpbGw9IiMzM2I4Y2YiIGZpbGwtb3BhY2l0eT0iMC4wOCIgc3Ryb2tlPSIjMzNiOGNmIiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L2c+PGcgZm9udC1mYW1pbHk9IkFyaWFsLCAnTm90byBTYW5zIEhlYnJldycsICdOb3RvIFNhbnMgQXJhYmljJywgJ1NlZ29lIFVJJywgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNSIgZm9udC13ZWlnaHQ9IjcwMCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+PHN0eWxlPi5sYWJlbCwuc2lkZS1sYWJlbCwuYW5nbGUtbGFiZWx7dW5pY29kZS1iaWRpOnBsYWludGV4dH0ubGFiZWwsLnNpZGUtbGFiZWx7ZmlsbDojMzAyYjRhfS5zaWRlLWxhYmVse2ZvbnQtc2l6ZToyM3B4fS5hbmdsZS1sYWJlbHtmb250LXNpemU6MjRweDtmb250LXdlaWdodDo4MDB9LmZvcm11bGEtbGFiZWx7Zm9udC1zaXplOjMxcHg7Zm9udC13ZWlnaHQ6NjAwfS5iYWNrZWQtbGFiZWx7cGFpbnQtb3JkZXI6c3Ryb2tlO3N0cm9rZTojZmJmYWZmO3N0cm9rZS13aWR0aDoxMHB4O3N0cm9rZS1saW5lam9pbjpyb3VuZH0udGlja3tmaWxsOiM3NzcxOGY7Zm9udC1zaXplOjE3cHg7Zm9udC13ZWlnaHQ6NTAwfTwvc3R5bGU+PHRleHQgeD0iNTcuMSIgeT0iNDUxLjYiIGNsYXNzPSJsYWJlbCI+QTwvdGV4dD48dGV4dCB4PSIyMjIuMyIgeT0iMjAxLjgiIGNsYXNzPSJsYWJlbCI+QjwvdGV4dD48dGV4dCB4PSIzODcuNCIgeT0iNDUxLjYiIGNsYXNzPSJsYWJlbCI+QzwvdGV4dD48dGV4dCB4PSIxMjMuNyIgeT0iMzE1LjYiIGNsYXNzPSJzaWRlLWxhYmVsIGJhY2tlZC1sYWJlbCIgZGlyZWN0aW9uPSJhdXRvIiB1bmljb2RlLWJpZGk9InBsYWludGV4dCIgZGF0YS1lZGdlLWluZGV4PSIwIj4zPC90ZXh0Pjx0ZXh0IHg9IjMyMC45IiB5PSIzMTUuNiIgY2xhc3M9InNpZGUtbGFiZWwgYmFja2VkLWxhYmVsIiBkaXJlY3Rpb249ImF1dG8iIHVuaWNvZGUtYmlkaT0icGxhaW50ZXh0IiBkYXRhLWVkZ2UtaW5kZXg9IjEiPjU8L3RleHQ+PHRleHQgeD0iMjIyLjMiIHk9IjQ3Mi43IiBjbGFzcz0ic2lkZS1sYWJlbCBiYWNrZWQtbGFiZWwiIGRpcmVjdGlvbj0iYXV0byIgdW5pY29kZS1iaWRpPSJwbGFpbnRleHQiIGRhdGEtZWRnZS1pbmRleD0iMiI+NDwvdGV4dD48dGV4dCB4PSI0MjUuMyIgeT0iNDc5LjYiIGNsYXNzPSJsYWJlbCI+QSYjeDI3OzwvdGV4dD48dGV4dCB4PSI2NjQuMSIgeT0iOTEuMyIgY2xhc3M9ImxhYmVsIj5CJiN4Mjc7PC90ZXh0Pjx0ZXh0IHg9IjkwMi45IiB5PSI0NTEuNiIgY2xhc3M9ImxhYmVsIj5DJiN4Mjc7PC90ZXh0Pjx0ZXh0IHg9IjUyOC43IiB5PSIyNjAuNCIgY2xhc3M9InNpZGUtbGFiZWwgYmFja2VkLWxhYmVsIiBkaXJlY3Rpb249ImF1dG8iIHVuaWNvZGUtYmlkaT0icGxhaW50ZXh0IiBkYXRhLWVkZ2UtaW5kZXg9IjAiPjQuNTwvdGV4dD48dGV4dCB4PSI3OTkuNSIgeT0iMjYwLjQiIGNsYXNzPSJzaWRlLWxhYmVsIGJhY2tlZC1sYWJlbCIgZGlyZWN0aW9uPSJhdXRvIiB1bmljb2RlLWJpZGk9InBsYWludGV4dCIgZGF0YS1lZGdlLWluZGV4PSIxIj43LjU8L3RleHQ+PHRleHQgeD0iNjY0LjEiIHk9IjQ3Mi43IiBjbGFzcz0ic2lkZS1sYWJlbCBiYWNrZWQtbGFiZWwiIGRpcmVjdGlvbj0iYXV0byIgdW5pY29kZS1iaWRpPSJwbGFpbnRleHQiIGRhdGEtZWRnZS1pbmRleD0iMiI+NjwvdGV4dD48dGV4dCB4PSI0ODAuMCIgeT0iNjcuNSIgY2xhc3M9ImxhYmVsIGJhY2tlZC1sYWJlbCIgZmlsbD0iIzMwMmI0YSIgZGlyZWN0aW9uPSJhdXRvIiB1bmljb2RlLWJpZGk9InBsYWludGV4dCI+w5cxLjU8L3RleHQ+PC9nPgo8L3N2Zz4=",
+  "title": "משולשים דומים",
+  "alt": "משולשים דומים",
+  "caption": "",
+  "renderer": "mafs",
+  "scene": {
+   "use_visual": true,
+   "render": "geometry",
+   "animated": false,
+   "title": "משולשים דומים",
+   "alt": "",
+   "caption": "",
+   "elements": [
+    {
+     "type": "polygon",
+     "color": "primary",
+     "points": [
+      [
+       -5.0,
+       -2.0
+      ],
+      [
+       -3.0,
+       1.0
+      ],
+      [
+       -1.0,
+       -2.0
+      ]
+     ],
+     "labels": [
+      "A",
+      "B",
+      "C"
+     ],
+     "side_labels": [
+      "3",
+      "5",
+      "4"
+     ],
+     "fill_opacity": 0.08,
+     "layout": {
+      "labels:0": [
+       -5.6444,
+       -2.3586
+      ],
+      "labels:1": [
+       -3.4045,
+       1.0695
+      ],
+      "labels:2": [
+       -1.1646,
+       -2.3586
+      ],
+      "side_labels:0": [
+       -4.6717,
+       -0.5595
+      ],
+      "side_labels:1": [
+       -2.1374,
+       -0.5595
+      ],
+      "side_labels:2": [
+       -3.4045,
+       -2.5286
+      ]
+     }
+    },
+    {
+     "type": "polygon",
+     "color": "secondary",
+     "points": [
+      [
+       0.0,
+       -2.0
+      ],
+      [
+       3.0,
+       2.5
+      ],
+      [
+       6.0,
+       -2.0
+      ]
+     ],
+     "labels": [
+      "A'",
+      "B'",
+      "C'"
+     ],
+     "side_labels": [
+      "4.5",
+      "7.5",
+      "6"
+     ],
+     "fill_opacity": 0.08,
+     "layout": {
+      "labels:0": [
+       -0.4864,
+       -2.5286
+      ],
+      "labels:1": [
+       2.4318,
+       2.5286
+      ],
+      "labels:2": [
+       5.6444,
+       -2.3586
+      ],
+      "side_labels:0": [
+       0.5224,
+       0.26
+      ],
+      "side_labels:1": [
+       4.3412,
+       0.26
+      ],
+      "side_labels:2": [
+       2.4318,
+       -2.5286
+      ]
+     }
+    },
+    {
+     "type": "text",
+     "color": "ink",
+     "position": [
+      0.5,
+      3.0
+     ],
+     "label": "×1.5",
+     "layout": {
+      "position": [
+       0.0,
+       2.675
+      ]
+     }
+    }
+   ],
+   "canvas": {
+    "scale_x": 0.972727,
+    "scale_y": 0.972727,
+    "offset_x": -0.486364,
+    "offset_y": -0.243182,
+    "space": "canvas"
+   },
+   "layout_version": 1
+  }
+ },
+ "drag_pythagoras": {
+  "id": "visual-a571ded77f7a49c1be8a720554c1e202",
+  "type": "scene",
+  "mime_type": "image/svg+xml",
+  "data_url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5NjAiIGhlaWdodD0iNTQwIiB2aWV3Qm94PSIwIDAgOTYwIDU0MCIgcm9sZT0iaW1nIj4KPGRlZnM+PG1hcmtlciBpZD0iYXJyb3ciIG1hcmtlcldpZHRoPSIxMCIgbWFya2VySGVpZ2h0PSIxMCIgcmVmWD0iOCIgcmVmWT0iMyIgb3JpZW50PSJhdXRvIj48cGF0aCBkPSJNMCwwIEwwLDYgTDksMyB6IiBmaWxsPSIjMzAyYjRhIi8+PC9tYXJrZXI+PC9kZWZzPgo8cmVjdCB3aWR0aD0iOTYwIiBoZWlnaHQ9IjU0MCIgcng9IjMwIiBmaWxsPSIjZmJmYWZmIi8+CjxnPjxwb2x5Z29uIHBvaW50cz0iMjUwLjAsNDQyLjUgNzEwLjAsNDQyLjUgNzEwLjAsOTcuNSIgZmlsbD0iIzZmNWJmZiIgZmlsbC1vcGFjaXR5PSIwLjA4IiBzdHJva2U9IiM2ZjViZmYiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjxwYXRoIGQ9Ik0gNjg2LjAgNDQyLjUgTCA2ODYuMCA0MTguNSBMIDcxMC4wIDQxOC41IiBmaWxsPSJub25lIiBzdHJva2U9IiNmMmE5MWIiIHN0cm9rZS13aWR0aD0iNCIvPjwvZz48ZyBmb250LWZhbWlseT0iQXJpYWwsICdOb3RvIFNhbnMgSGVicmV3JywgJ05vdG8gU2FucyBBcmFiaWMnLCAnU2Vnb2UgVUknLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI1IiBmb250LXdlaWdodD0iNzAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj48c3R5bGU+LmxhYmVsLC5zaWRlLWxhYmVsLC5hbmdsZS1sYWJlbHt1bmljb2RlLWJpZGk6cGxhaW50ZXh0fS5sYWJlbCwuc2lkZS1sYWJlbHtmaWxsOiMzMDJiNGF9LnNpZGUtbGFiZWx7Zm9udC1zaXplOjIzcHh9LmFuZ2xlLWxhYmVse2ZvbnQtc2l6ZToyNHB4O2ZvbnQtd2VpZ2h0OjgwMH0uZm9ybXVsYS1sYWJlbHtmb250LXNpemU6MzFweDtmb250LXdlaWdodDo2MDB9LmJhY2tlZC1sYWJlbHtwYWludC1vcmRlcjpzdHJva2U7c3Ryb2tlOiNmYmZhZmY7c3Ryb2tlLXdpZHRoOjEwcHg7c3Ryb2tlLWxpbmVqb2luOnJvdW5kfS50aWNre2ZpbGw6Izc3NzE4Zjtmb250LXNpemU6MTdweDtmb250LXdlaWdodDo1MDB9PC9zdHlsZT48dGV4dCB4PSIyMzEuMyIgeT0iNDU2LjUiIGNsYXNzPSJsYWJlbCI+QTwvdGV4dD48dGV4dCB4PSI3MjYuMCIgeT0iNDYxLjUiIGNsYXNzPSJsYWJlbCI+QjwvdGV4dD48dGV4dCB4PSI3MjEuMSIgeT0iODcuOSIgY2xhc3M9ImxhYmVsIj5DPC90ZXh0Pjx0ZXh0IHg9IjQ4MC4wIiB5PSI0NzkuNSIgY2xhc3M9InNpZGUtbGFiZWwgYmFja2VkLWxhYmVsIiBkaXJlY3Rpb249ImF1dG8iIHVuaWNvZGUtYmlkaT0icGxhaW50ZXh0IiBkYXRhLWVkZ2UtaW5kZXg9IjAiPjQ8L3RleHQ+PHRleHQgeD0iNzQwLjAiIHk9IjI3Ny4wIiBjbGFzcz0ic2lkZS1sYWJlbCBiYWNrZWQtbGFiZWwiIGRpcmVjdGlvbj0iYXV0byIgdW5pY29kZS1iaWRpPSJwbGFpbnRleHQiIGRhdGEtZWRnZS1pbmRleD0iMSI+MzwvdGV4dD48dGV4dCB4PSI0NjIuMCIgeT0iMjUzLjAiIGNsYXNzPSJzaWRlLWxhYmVsIGJhY2tlZC1sYWJlbCIgZGlyZWN0aW9uPSJhdXRvIiB1bmljb2RlLWJpZGk9InBsYWludGV4dCIgZGF0YS1lZGdlLWluZGV4PSIyIj41PC90ZXh0PjwvZz4KPC9zdmc+",
+  "title": "משפט פיתגורס",
+  "alt": "משפט פיתגורס",
+  "caption": "",
+  "renderer": "mafs",
+  "scene": {
+   "use_visual": true,
+   "render": "geometry",
+   "animated": false,
+   "interactive": {
+    "handles": [
+     {
+      "element": 0,
+      "vertex": 2
+     }
+    ]
+   },
+   "title": "משפט פיתגורס",
+   "alt": "",
+   "caption": "",
+   "elements": [
+    {
+     "type": "polygon",
+     "color": "primary",
+     "points": [
+      [
+       -2.0,
+       -1.5
+      ],
+      [
+       2.0,
+       -1.5
+      ],
+      [
+       2.0,
+       1.5
+      ]
+     ],
+     "labels": [
+      "A",
+      "B",
+      "C"
+     ],
+     "side_labels": [
+      "4",
+      "3",
+      "5"
+     ],
+     "fill_opacity": 0.08,
+     "layout": {
+      "labels:0": [
+       -3.5611,
+       -2.62
+      ],
+      "labels:1": [
+       3.5611,
+       -2.62
+      ],
+      "labels:2": [
+       3.4367,
+       2.7444
+      ],
+      "side_labels:0": [
+       -0.0,
+       -2.79
+      ],
+      "side_labels:1": [
+       3.6067,
+       0.0
+      ],
+      "side_labels:2": [
+       -0.17,
+       0.2944
+      ]
+     }
+    },
+    {
+     "type": "right_angle",
+     "color": "accent",
+     "points": [
+      [
+       -2.0,
+       -1.5
+      ],
+      [
+       2.0,
+       -1.5
+      ],
+      [
+       2.0,
+       1.5
+      ]
+     ]
+    }
+   ],
+   "canvas": {
+    "scale_x": 1.633333,
+    "scale_y": 1.633333,
+    "offset_x": 0.0,
+    "offset_y": 0.0,
+    "space": "canvas"
+   },
+   "layout_version": 1
+  }
+ },
+ "chem_aspirin": {
+  "id": "visual-2c34ee261bea403a879365cb8c06ad97",
+  "type": "scene",
+  "mime_type": "image/svg+xml",
+  "data_url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5NjAiIGhlaWdodD0iNTQwIiB2aWV3Qm94PSIwIDAgOTYwIDU0MCIgcm9sZT0iaW1nIj4KPGRlZnM+PG1hcmtlciBpZD0iYXJyb3ciIG1hcmtlcldpZHRoPSIxMCIgbWFya2VySGVpZ2h0PSIxMCIgcmVmWD0iOCIgcmVmWT0iMyIgb3JpZW50PSJhdXRvIj48cGF0aCBkPSJNMCwwIEwwLDYgTDksMyB6IiBmaWxsPSIjMzAyYjRhIi8+PC9tYXJrZXI+PC9kZWZzPgo8cmVjdCB3aWR0aD0iOTYwIiBoZWlnaHQ9IjU0MCIgcng9IjMwIiBmaWxsPSIjZmJmYWZmIi8+CjxnPjwvZz48ZyBmb250LWZhbWlseT0iQXJpYWwsICdOb3RvIFNhbnMgSGVicmV3JywgJ05vdG8gU2FucyBBcmFiaWMnLCAnU2Vnb2UgVUknLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI1IiBmb250LXdlaWdodD0iNzAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj48c3R5bGU+LmxhYmVsLC5zaWRlLWxhYmVsLC5hbmdsZS1sYWJlbHt1bmljb2RlLWJpZGk6cGxhaW50ZXh0fS5sYWJlbCwuc2lkZS1sYWJlbHtmaWxsOiMzMDJiNGF9LnNpZGUtbGFiZWx7Zm9udC1zaXplOjIzcHh9LmFuZ2xlLWxhYmVse2ZvbnQtc2l6ZToyNHB4O2ZvbnQtd2VpZ2h0OjgwMH0uZm9ybXVsYS1sYWJlbHtmb250LXNpemU6MzFweDtmb250LXdlaWdodDo2MDB9LmJhY2tlZC1sYWJlbHtwYWludC1vcmRlcjpzdHJva2U7c3Ryb2tlOiNmYmZhZmY7c3Ryb2tlLXdpZHRoOjEwcHg7c3Ryb2tlLWxpbmVqb2luOnJvdW5kfS50aWNre2ZpbGw6Izc3NzE4Zjtmb250LXNpemU6MTdweDtmb250LXdlaWdodDo1MDB9PC9zdHlsZT48L2c+Cjwvc3ZnPg==",
+  "title": "אספירין",
+  "alt": "אספירין",
+  "caption": "",
+  "renderer": "molecule",
+  "scene": {
+   "use_visual": true,
+   "render": "molecule",
+   "animated": false,
+   "title": "אספירין",
+   "alt": "",
+   "caption": "",
+   "elements": [
+    {
+     "type": "molecule",
+     "color": "primary",
+     "smiles": "CC(=O)Oc1ccccc1C(=O)O",
+     "formula": "C9H8O4",
+     "mass": 180.16,
+     "highlight": [
+      1,
+      2,
+      3,
+      10,
+      11,
+      12
+     ],
+     "view": "2d",
+     "label": "אספירין"
+    }
+   ]
+  }
+ },
+ "chem_caffeine": {
+  "id": "visual-b11ab67b92e24b40b1648e35c32626a5",
+  "type": "scene",
+  "mime_type": "image/svg+xml",
+  "data_url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5NjAiIGhlaWdodD0iNTQwIiB2aWV3Qm94PSIwIDAgOTYwIDU0MCIgcm9sZT0iaW1nIj4KPGRlZnM+PG1hcmtlciBpZD0iYXJyb3ciIG1hcmtlcldpZHRoPSIxMCIgbWFya2VySGVpZ2h0PSIxMCIgcmVmWD0iOCIgcmVmWT0iMyIgb3JpZW50PSJhdXRvIj48cGF0aCBkPSJNMCwwIEwwLDYgTDksMyB6IiBmaWxsPSIjMzAyYjRhIi8+PC9tYXJrZXI+PC9kZWZzPgo8cmVjdCB3aWR0aD0iOTYwIiBoZWlnaHQ9IjU0MCIgcng9IjMwIiBmaWxsPSIjZmJmYWZmIi8+CjxnPjwvZz48ZyBmb250LWZhbWlseT0iQXJpYWwsICdOb3RvIFNhbnMgSGVicmV3JywgJ05vdG8gU2FucyBBcmFiaWMnLCAnU2Vnb2UgVUknLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI1IiBmb250LXdlaWdodD0iNzAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj48c3R5bGU+LmxhYmVsLC5zaWRlLWxhYmVsLC5hbmdsZS1sYWJlbHt1bmljb2RlLWJpZGk6cGxhaW50ZXh0fS5sYWJlbCwuc2lkZS1sYWJlbHtmaWxsOiMzMDJiNGF9LnNpZGUtbGFiZWx7Zm9udC1zaXplOjIzcHh9LmFuZ2xlLWxhYmVse2ZvbnQtc2l6ZToyNHB4O2ZvbnQtd2VpZ2h0OjgwMH0uZm9ybXVsYS1sYWJlbHtmb250LXNpemU6MzFweDtmb250LXdlaWdodDo2MDB9LmJhY2tlZC1sYWJlbHtwYWludC1vcmRlcjpzdHJva2U7c3Ryb2tlOiNmYmZhZmY7c3Ryb2tlLXdpZHRoOjEwcHg7c3Ryb2tlLWxpbmVqb2luOnJvdW5kfS50aWNre2ZpbGw6Izc3NzE4Zjtmb250LXNpemU6MTdweDtmb250LXdlaWdodDo1MDB9PC9zdHlsZT48L2c+Cjwvc3ZnPg==",
+  "title": "קפאין",
+  "alt": "קפאין",
+  "caption": "",
+  "renderer": "molecule",
+  "scene": {
+   "use_visual": true,
+   "render": "molecule",
+   "animated": false,
+   "title": "קפאין",
+   "alt": "",
+   "caption": "",
+   "elements": [
+    {
+     "type": "molecule",
+     "color": "primary",
+     "smiles": "Cn1c(=O)c2c(ncn2C)n(C)c1=O",
+     "formula": "C8H10N4O2",
+     "mass": 194.19,
+     "view": "2d",
+     "label": "קפאין"
+    }
+   ]
+  }
+ },
+ "chem_glucose": {
+  "id": "visual-f1173e82414a406c9620c7310eea5a36",
+  "type": "scene",
+  "mime_type": "image/svg+xml",
+  "data_url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5NjAiIGhlaWdodD0iNTQwIiB2aWV3Qm94PSIwIDAgOTYwIDU0MCIgcm9sZT0iaW1nIj4KPGRlZnM+PG1hcmtlciBpZD0iYXJyb3ciIG1hcmtlcldpZHRoPSIxMCIgbWFya2VySGVpZ2h0PSIxMCIgcmVmWD0iOCIgcmVmWT0iMyIgb3JpZW50PSJhdXRvIj48cGF0aCBkPSJNMCwwIEwwLDYgTDksMyB6IiBmaWxsPSIjMzAyYjRhIi8+PC9tYXJrZXI+PC9kZWZzPgo8cmVjdCB3aWR0aD0iOTYwIiBoZWlnaHQ9IjU0MCIgcng9IjMwIiBmaWxsPSIjZmJmYWZmIi8+CjxnPjwvZz48ZyBmb250LWZhbWlseT0iQXJpYWwsICdOb3RvIFNhbnMgSGVicmV3JywgJ05vdG8gU2FucyBBcmFiaWMnLCAnU2Vnb2UgVUknLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI1IiBmb250LXdlaWdodD0iNzAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj48c3R5bGU+LmxhYmVsLC5zaWRlLWxhYmVsLC5hbmdsZS1sYWJlbHt1bmljb2RlLWJpZGk6cGxhaW50ZXh0fS5sYWJlbCwuc2lkZS1sYWJlbHtmaWxsOiMzMDJiNGF9LnNpZGUtbGFiZWx7Zm9udC1zaXplOjIzcHh9LmFuZ2xlLWxhYmVse2ZvbnQtc2l6ZToyNHB4O2ZvbnQtd2VpZ2h0OjgwMH0uZm9ybXVsYS1sYWJlbHtmb250LXNpemU6MzFweDtmb250LXdlaWdodDo2MDB9LmJhY2tlZC1sYWJlbHtwYWludC1vcmRlcjpzdHJva2U7c3Ryb2tlOiNmYmZhZmY7c3Ryb2tlLXdpZHRoOjEwcHg7c3Ryb2tlLWxpbmVqb2luOnJvdW5kfS50aWNre2ZpbGw6Izc3NzE4Zjtmb250LXNpemU6MTdweDtmb250LXdlaWdodDo1MDB9PC9zdHlsZT48L2c+Cjwvc3ZnPg==",
+  "title": "גלוקוז",
+  "alt": "גלוקוז",
+  "caption": "",
+  "renderer": "molecule",
+  "scene": {
+   "use_visual": true,
+   "render": "molecule",
+   "animated": false,
+   "title": "גלוקוז",
+   "alt": "",
+   "caption": "",
+   "elements": [
+    {
+     "type": "molecule",
+     "color": "primary",
+     "smiles": "OC[C@H]1OC(O)[C@H](O)[C@@H](O)[C@@H]1O",
+     "formula": "C6H12O6",
+     "mass": 180.16,
+     "view": "2d",
+     "label": "גלוקוז"
+    }
+   ]
+  }
+ }
+}

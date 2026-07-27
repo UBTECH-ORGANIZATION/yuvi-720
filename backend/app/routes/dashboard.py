@@ -7,6 +7,7 @@ from app.agents.onboarding import run_onboarding
 from app.auth.dependencies import require_learner_session
 from app.brain.repository import get_brain
 from app.core.localization import normalize_language
+from app.services import kata_catalog
 from app.services.dashboard import project_dashboard
 from app.services.lrs import reporter as lrs_reporter
 
@@ -32,6 +33,7 @@ async def generate_dashboard(data: dict, session=Depends(require_learner_session
     scores = data.get("scores", {})
     language = normalize_language(data.get("language"))
 
+    await kata_catalog.ensure_loaded()
     brain = await get_brain(learner_id)
     if scores and not (brain.get("profile") or {}).get("activeness"):
         try:
