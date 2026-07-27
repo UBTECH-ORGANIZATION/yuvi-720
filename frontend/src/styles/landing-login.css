@@ -4589,3 +4589,151 @@
     max-inline-size: 90%;
   }
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LANDING — FULL-WIDTH LAYOUT
+
+   The page was capped at 1240px and centred, so on any normal laptop a wide
+   empty margin ran down both sides and the content looked like a column
+   floating on a background rather than a page. The cap is now generous enough
+   that on a laptop the layout genuinely fills the screen, with only a small
+   breathing gutter, while an ultra-wide monitor still stops short of turning
+   headlines into unreadable single lines.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.landing720 {
+  padding-inline: clamp(18px, 3vw, 56px);
+}
+
+.landing720 > *,
+.landing720-Yuvi-stop {
+  inline-size: 100%;
+  max-inline-size: min(1920px, 100%);
+}
+
+/* The grids inside now have real room, so let them use it. */
+@media (min-width: 1440px) {
+  .landing720-metrics {
+    gap: clamp(18px, 1.8vw, 30px);
+  }
+
+  .landing720-hero {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: clamp(32px, 4vw, 72px);
+    padding: clamp(38px, 3.6vw, 64px);
+  }
+
+  .landing720-feature-row {
+    gap: clamp(40px, 5vw, 96px);
+  }
+
+  .landing720-standards-grid {
+    column-gap: clamp(24px, 3vw, 56px);
+  }
+
+  /* A grid rather than CSS columns: an accordion that opens must not shove
+     the questions below it into the other column. */
+  .landing720-faq-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: clamp(14px, 1.4vw, 22px) clamp(24px, 3vw, 56px);
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LANDING — ONE ROOM PER CHAPTER (light)
+
+   Light mode had a single flat lavender wash from top to bottom, so the page
+   read as one very long screen. It now gets the same chapter structure as the
+   dark theme, in the same brand family — purple, blue and light purple — with
+   consecutive bands swinging between the two hues and between deeper and
+   paler, so no two neighbouring sections look alike.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.landing720 [data-chapter] {
+  position: relative;
+  isolation: isolate;
+}
+
+.landing720 [data-chapter]::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset-block: clamp(-300px, -18vw, -160px);
+  /* Full-bleed, even though every landing child is width-capped. */
+  inset-inline: calc(50% - 50vw);
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 24%, #000 76%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 24%, #000 76%, transparent);
+}
+
+/* 1. Hero — lavender. */
+.landing720 [data-chapter='hero']::before {
+  background:
+    radial-gradient(900px 600px at 16% 80%, rgba(159, 122, 254, .3), transparent 66%),
+    radial-gradient(760px 520px at 92% 6%, rgba(96, 165, 250, .22), transparent 64%),
+    linear-gradient(180deg, rgba(232, 224, 255, .96), rgba(226, 217, 253, .96));
+}
+
+/* 2. Proof — blue. Short section, so a short overhang or the neighbours
+   would swallow it. */
+.landing720 [data-chapter='proof']::before {
+  inset-block: clamp(-150px, -9vw, -90px);
+  background:
+    radial-gradient(760px 400px at 74% 42%, rgba(72, 150, 255, .26), transparent 68%),
+    linear-gradient(180deg, rgba(214, 231, 255, .97), rgba(208, 228, 255, .97));
+}
+
+/* 3. Agents — the deepest violet in light mode, so the six agents read as
+   their own room rather than more of the hero. */
+.landing720 [data-chapter='agents']::before {
+  background:
+    radial-gradient(940px 560px at 50% 40%, rgba(139, 108, 246, .26), transparent 68%),
+    radial-gradient(700px 480px at 8% 92%, rgba(96, 165, 250, .18), transparent 70%),
+    linear-gradient(180deg, rgba(221, 211, 251, .96), rgba(214, 203, 249, .96));
+}
+
+/* 4. Journey — pale sky. */
+.landing720 [data-chapter='journey']::before {
+  background:
+    radial-gradient(860px 520px at 10% 12%, rgba(64, 140, 255, .2), transparent 66%),
+    linear-gradient(180deg, rgba(220, 236, 255, .97), rgba(226, 240, 255, .97));
+}
+
+/* 5. Scenes — the palest lilac on the page, so the product stills sit in the
+   most light. */
+.landing720 [data-chapter='scenes']::before {
+  background:
+    radial-gradient(1000px 580px at 22% 6%, rgba(178, 150, 255, .18), transparent 62%),
+    linear-gradient(180deg, rgba(246, 241, 255, .97), rgba(243, 238, 255, .97));
+}
+
+/* 6. Audience — periwinkle, halfway between the blue and the purple. */
+.landing720 [data-chapter='audience']::before {
+  background:
+    radial-gradient(900px 520px at 50% 8%, rgba(120, 140, 250, .22), transparent 66%),
+    linear-gradient(180deg, rgba(223, 224, 252, .97), rgba(218, 220, 251, .97));
+}
+
+/* 7. Standards — cool slate blue. The most sober band on the page. */
+.landing720 [data-chapter='standards']::before {
+  background:
+    radial-gradient(840px 460px at 80% 10%, rgba(96, 132, 200, .16), transparent 66%),
+    linear-gradient(180deg, rgba(224, 234, 246, .97), rgba(219, 231, 245, .97));
+}
+
+/* 8. FAQ — near white. The page holds its breath before the ending. */
+.landing720 [data-chapter='faq']::before {
+  background: linear-gradient(180deg, rgba(251, 250, 255, .98), rgba(248, 247, 255, .98));
+}
+
+/* 9. CTA — the strongest light purple, right after the palest band. */
+.landing720 [data-chapter='cta']::before {
+  background:
+    radial-gradient(860px 480px at 50% 34%, rgba(139, 108, 246, .3), transparent 68%),
+    radial-gradient(560px 340px at 88% 92%, rgba(76, 201, 240, .18), transparent 70%),
+    linear-gradient(180deg, rgba(219, 205, 253, .96), rgba(212, 196, 252, .96));
+}

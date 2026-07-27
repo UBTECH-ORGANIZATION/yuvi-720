@@ -2383,3 +2383,215 @@
   background: rgba(150, 180, 210, .14);
   color: #dbe6f2;
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LANDING — THE BACKMOST CANVAS: PURPLE, BLUE, LIGHT PURPLE  (dark)
+
+   Correction from the client: the palette should stay in the brand family —
+   purple, blue and light purple — but every chapter must get a background
+   that is clearly, completely different from its neighbours. So the previous
+   petrol / clay / pine detour is dropped, and separation now comes from
+   swinging between two poles inside the family:
+
+     purple  <-->  blue          (hue)
+     deep    <-->  light         (value)
+
+   Consecutive chapters never sit on the same side of both axes, which is what
+   makes each band read as its own room while the whole page still reads as
+   one brand.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+[data-theme='dark'] .landing720 {
+  background-color: #100a2e;
+  background-image:
+    radial-gradient(1.3px 1.3px at 22% 18%, rgba(255, 255, 255, .42), transparent 60%),
+    radial-gradient(1.1px 1.1px at 68% 34%, rgba(214, 226, 255, .34), transparent 60%),
+    radial-gradient(1.4px 1.4px at 44% 72%, rgba(255, 255, 255, .26), transparent 60%),
+    radial-gradient(1.1px 1.1px at 84% 82%, rgba(226, 214, 255, .3), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.03 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E"),
+    /* deep purple → blue → light purple → blue → light purple → navy → ink → purple */
+    linear-gradient(180deg,
+      #2a1a72 0%,
+      #241a6c 8%,
+      #14286e 15%,
+      #12296f 23%,
+      #4b3aa8 30%,
+      #4e3cae 36%,
+      #16256a 43%,
+      #142668 51%,
+      #5744b4 58%,
+      #5a47b8 65%,
+      #131b52 72%,
+      #101749 78%,
+      #16104a 84%,
+      #2f1a90 92%,
+      #3d20a8 100%);
+  background-size:
+    300px 300px, 420px 420px, 360px 360px, 500px 500px,
+    120px 120px,
+    100% 100%;
+  background-repeat:
+    repeat, repeat, repeat, repeat,
+    repeat,
+    no-repeat;
+  background-attachment:
+    scroll, scroll, scroll, scroll,
+    scroll,
+    scroll;
+}
+
+[data-theme='dark'] .landing720::before {
+  background: radial-gradient(circle, rgba(150, 116, 255, .5), transparent 70%);
+}
+
+[data-theme='dark'] .landing720::after {
+  background: radial-gradient(circle, rgba(110, 150, 255, .38), transparent 70%);
+}
+
+/* ---- One room per chapter ----
+   Each band is nearly opaque so the colour is guaranteed at any page height,
+   and neighbours overlap by roughly a third of a screen. Both ends of every
+   band fade to nothing, so the overlap itself is the cross-fade. */
+[data-theme='dark'] .landing720 [data-chapter]::before {
+  inset-block: clamp(-320px, -19vw, -170px);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 24%, #000 76%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 24%, #000 76%, transparent);
+}
+
+/* 1. Hero — deep royal purple. The brand at full voice. */
+[data-theme='dark'] .landing720 [data-chapter='hero']::before {
+  background:
+    radial-gradient(1000px 660px at 16% 78%, rgba(168, 122, 255, .4), transparent 66%),
+    radial-gradient(780px 540px at 94% 6%, rgba(96, 150, 255, .26), transparent 64%),
+    linear-gradient(180deg, rgba(45, 27, 122, .93), rgba(36, 24, 104, .93));
+}
+
+/* 2. Proof — electric blue. Straight off the purple: the sharpest turn on
+   the page, so the four numbers land as a different kind of statement. */
+[data-theme='dark'] .landing720 [data-chapter='proof']::before {
+  background:
+    radial-gradient(900px 480px at 74% 40%, rgba(64, 150, 255, .32), transparent 68%),
+    radial-gradient(760px 420px at 14% 84%, rgba(72, 206, 240, .2), transparent 70%),
+    linear-gradient(180deg, rgba(18, 42, 118, .92), rgba(15, 40, 112, .92));
+}
+
+/* 3. Agents — light purple. Much brighter than anything around it, so the
+   six agents feel like they are standing in an open lit room. */
+[data-theme='dark'] .landing720 [data-chapter='agents']::before {
+  background:
+    radial-gradient(1000px 600px at 50% 40%, rgba(186, 156, 255, .34), transparent 68%),
+    radial-gradient(720px 500px at 8% 92%, rgba(120, 170, 255, .22), transparent 70%),
+    linear-gradient(180deg, rgba(84, 64, 180, .92), rgba(76, 58, 168, .92));
+}
+
+/* 4. Journey — deep blue night. Back down and back to blue, so the four
+   steps read as the quiet, methodical part. */
+[data-theme='dark'] .landing720 [data-chapter='journey']::before {
+  background:
+    radial-gradient(880px 540px at 10% 10%, rgba(58, 120, 255, .28), transparent 66%),
+    radial-gradient(820px 520px at 90% 92%, rgba(60, 200, 232, .16), transparent 68%),
+    linear-gradient(180deg, rgba(18, 36, 104, .94), rgba(15, 33, 96, .94));
+}
+
+/* 5. Scenes — the lightest purple on the page. The product stills need light
+   around them, and this is the top of the brightness curve. */
+[data-theme='dark'] .landing720 [data-chapter='scenes']::before {
+  background:
+    radial-gradient(1040px 600px at 22% 6%, rgba(206, 178, 255, .34), transparent 62%),
+    radial-gradient(900px 560px at 88% 62%, rgba(150, 170, 255, .26), transparent 66%),
+    linear-gradient(180deg, rgba(98, 76, 196, .92), rgba(86, 66, 180, .92));
+}
+
+/* 6. Audience — periwinkle, halfway between blue and purple, mid-bright. */
+[data-theme='dark'] .landing720 [data-chapter='audience']::before {
+  background:
+    radial-gradient(940px 540px at 50% 6%, rgba(130, 160, 255, .3), transparent 66%),
+    radial-gradient(720px 480px at 12% 94%, rgba(172, 146, 255, .22), transparent 68%),
+    linear-gradient(180deg, rgba(48, 54, 148, .93), rgba(42, 48, 136, .93));
+}
+
+/* 7. Standards — deep navy. The most sober band: compliance is not a party. */
+[data-theme='dark'] .landing720 [data-chapter='standards']::before {
+  background:
+    radial-gradient(880px 480px at 80% 8%, rgba(96, 132, 220, .2), transparent 66%),
+    linear-gradient(180deg, rgba(17, 26, 78, .95), rgba(14, 22, 68, .95));
+}
+
+/* 8. FAQ — near-black violet ink. The page holds its breath. */
+[data-theme='dark'] .landing720 [data-chapter='faq']::before {
+  background:
+    radial-gradient(840px 460px at 26% 18%, rgba(120, 110, 220, .16), transparent 68%),
+    linear-gradient(180deg, rgba(21, 15, 60, .95), rgba(16, 11, 46, .95));
+}
+
+/* 9. CTA — vivid brand purple, the loudest colour on the page, right after
+   the darkest. That contrast is the whole point of the ending. */
+[data-theme='dark'] .landing720 [data-chapter='cta']::before {
+  background:
+    radial-gradient(900px 500px at 50% 32%, rgba(178, 132, 255, .5), transparent 68%),
+    radial-gradient(600px 360px at 88% 92%, rgba(96, 190, 255, .24), transparent 70%),
+    linear-gradient(180deg, rgba(54, 26, 158, .93), rgba(62, 32, 176, .93));
+}
+
+/* The hero card: a purple stage lit from two sides. */
+[data-theme='dark'] .landing720-hero {
+  background:
+    radial-gradient(circle at 78% 24%, rgba(110, 180, 255, .24), transparent 36%),
+    radial-gradient(circle at 20% 86%, rgba(178, 130, 255, .32), transparent 44%),
+    linear-gradient(146deg, #35217f 0%, #2a1b6a 42%, #1d1550 74%, #150f3c 100%);
+}
+
+/* ---- Cards stay colourless ----
+   This is what lets a section actually change colour: the cards no longer
+   carry a hard-coded purple of their own, they simply take on whatever
+   chapter they are standing in. On the light bands they read as frosted
+   glass, on the dark bands as a faint lift. */
+[data-theme='dark'] .landing720-metric,
+[data-theme='dark'] .landing720-journey-step,
+[data-theme='dark'] .landing720-audience-card,
+[data-theme='dark'] .landing720-hub-node {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .1), rgba(8, 6, 28, .18));
+  border-color: rgba(255, 255, 255, .16);
+}
+
+/* Eyebrows follow their chapter instead of all being one violet. */
+[data-theme='dark'] [data-chapter='proof'] .landing720-eyebrow,
+[data-theme='dark'] [data-chapter='journey'] .landing720-eyebrow {
+  border-color: rgba(150, 186, 255, .42);
+  background: rgba(80, 140, 240, .2);
+  color: #d4e2ff;
+}
+
+[data-theme='dark'] [data-chapter='agents'] .landing720-eyebrow,
+[data-theme='dark'] [data-chapter='scenes'] .landing720-eyebrow {
+  border-color: rgba(212, 190, 255, .46);
+  background: rgba(174, 140, 255, .22);
+  color: #ece1ff;
+}
+
+[data-theme='dark'] [data-chapter='audience'] .landing720-eyebrow {
+  border-color: rgba(176, 190, 255, .42);
+  background: rgba(126, 146, 245, .2);
+  color: #dfe4ff;
+}
+
+[data-theme='dark'] [data-chapter='standards'] .landing720-section-head .landing720-eyebrow {
+  border-color: rgba(150, 176, 226, .38);
+  background: rgba(96, 132, 200, .18);
+  color: #dce7f7;
+}
+
+
+/* The proof strip is only about two hundred pixels tall, so with the standard
+   band overhang its neighbours swallowed it entirely. It gets a much shorter
+   overhang and a stronger blue, so it reads as its own blue seam between the
+   purple hero and the light-purple agents room. */
+[data-theme='dark'] .landing720 [data-chapter='proof']::before {
+  inset-block: clamp(-150px, -9vw, -90px);
+  background:
+    radial-gradient(820px 420px at 74% 40%, rgba(58, 142, 255, .42), transparent 68%),
+    radial-gradient(700px 380px at 14% 84%, rgba(64, 206, 245, .26), transparent 70%),
+    linear-gradient(180deg, rgba(14, 40, 124, .95), rgba(12, 38, 118, .95));
+}
