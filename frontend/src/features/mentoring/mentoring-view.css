@@ -312,6 +312,12 @@
 [dir='rtl'] .mt-fgoal__step > svg { transform: rotate(180deg); }
 .mt-fgoal__extra { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4); }
 .mt-fgoal__extra:empty { display: none; }
+/* What Yuvi decided this goal is worth, and why — shown on the goal itself. */
+.mt-fgoal__worth { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: var(--sp-radius-pill); background: color-mix(in srgb, var(--sp-accent-500, #f0a202) 16%, transparent); color: var(--sp-ink-700); font-size: var(--sp-fs-xs); font-weight: var(--sp-fw-medium); white-space: nowrap; }
+.mt-fgoal__worth > svg { flex: none; color: var(--sp-accent-600, #c07d00); }
+.mt-fgoal__why { display: flex; align-items: flex-start; gap: 7px; margin: 0; color: var(--sp-ink-600); font-size: var(--sp-fs-sm); line-height: 1.6; }
+.mt-fgoal__why > svg { flex: none; margin-block-start: 3px; color: var(--sp-accent-600, #c07d00); }
+.mt-fgoal__payout { margin: 0; color: var(--sp-ink-500); font-size: var(--sp-fs-xs); }
 .mt-fgoal__advance { flex: none; display: inline-flex; align-items: center; gap: 6px; min-block-size: 36px; padding-inline: var(--sp-4); border: 0; border-radius: var(--sp-radius-md); background: var(--sp-primary-600); color: #fff; font: inherit; font-size: var(--sp-fs-sm); font-weight: var(--sp-fw-medium); cursor: pointer; transition: background 140ms ease, transform 140ms ease; }
 .mt-fgoal__advance:hover:not(:disabled) { background: var(--sp-primary-700); transform: translateY(-1px); }
 .mt-fgoal__advance:disabled { opacity: .55; cursor: default; }

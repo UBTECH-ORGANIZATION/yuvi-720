@@ -1,3 +1,6 @@
+/* Anchor for the wallet panel that opens under the chip. */
+.wallet-chip-wrap { position: relative; display: inline-flex; }
+
 .wallet-chip {
   display: inline-flex;
   align-items: center;

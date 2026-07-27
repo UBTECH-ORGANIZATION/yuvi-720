@@ -10,6 +10,31 @@ export interface SparkWallet {
   lifetimeSpent: number
   dailyEarned: number
   dailyCap: number
+  dailyGoals?: number
+  dailyGoalCap?: number
+  /** How earning works. Goal payouts are per-goal (Yuvi prices each goal), so
+      what is fixed is the split across stages and the flat help reward. */
+  rules?: SparkRules
+}
+
+export type RewardStage = 'started' | 'progressed' | 'summarized'
+
+export interface SparkRules {
+  stageShares: Record<string, number>
+  help: number
+  goalValueRange: [number, number]
+}
+
+/** Default share split, used only until the wallet (with the real rules) loads. */
+const FALLBACK_SHARES: Record<string, number> = { started: 0.25, progressed: 0.25, summarized: 0.5 }
+const FALLBACK_GOAL_VALUE = 30
+
+/** Display-only mirror of the server split, so a goal card can say what the
+    next move pays. The server stays the only authority on what is granted. */
+export function stageAmount(goalValue: number | undefined, stage: RewardStage, rules?: SparkRules): number {
+  const share = (rules?.stageShares || FALLBACK_SHARES)[stage]
+  if (!share) return 0
+  return Math.max(1, Math.round((goalValue || FALLBACK_GOAL_VALUE) * share))
 }
 
 /** One shop row. `price` comes from the server catalog, never from the client. */

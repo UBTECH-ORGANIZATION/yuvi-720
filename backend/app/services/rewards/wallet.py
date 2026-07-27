@@ -21,6 +21,12 @@ from typing import Any, Optional
 
 from app.brain.repository import _get_collection_named
 from app.services.rewards.catalog import price_of
+from app.services.rewards.pricing import (
+    GOAL_VALUE_MAX,
+    GOAL_VALUE_MIN,
+    STAGE_SHARE,
+    stage_amount,
+)
 from learner_state import (  # type: ignore
     get_learner_state,
     grant_avatar_unlock,
@@ -29,17 +35,13 @@ from learner_state import (  # type: ignore
 
 _FALLBACK = Path(__file__).resolve().parents[3] / ".runtime" / "rewards.json"
 
-# Sparks per mentoring-goal progress stage (F5). `chosen` is the creation state
-# and never pays, so opening a goal cannot be farmed.
-EARN_RULES: dict[str, int] = {
-    "started": 8,
-    "progressed": 12,
-    "summarized": 30,
-}
-# Asking for help is a self-regulation win, not a failure — it is rewarded once.
+# Asking for help is a self-regulation win, not a failure — it is rewarded once,
+# at a flat rate, because its worth does not depend on the goal.
 HELP_REWARD = 5
 
-DAILY_SPARK_CAP = 60
+# A safety net against farming, not a budget: one goal priced at the top of the
+# band still pays out in full on the day it is finished.
+DAILY_SPARK_CAP = 150
 DAILY_GOAL_CAP = 4
 
 
@@ -72,6 +74,24 @@ def _public(wallet: dict[str, Any]) -> dict[str, Any]:
         "lifetimeSpent": int(wallet.get("lifetime_spent") or 0),
         "dailyEarned": int(daily.get("earned") or 0) if fresh else 0,
         "dailyCap": DAILY_SPARK_CAP,
+        "dailyGoals": len(daily.get("goal_ids") or []) if fresh else 0,
+        "dailyGoalCap": DAILY_GOAL_CAP,
+        # Shipped with every wallet so the learner can always see, up front,
+        # what each action is worth — the price list is never guessed client-side.
+        "rules": earn_rules(),
+    }
+
+
+def earn_rules() -> dict[str, Any]:
+    """How earning works, so the UI can state it without hardcoding numbers.
+
+    Goal payouts are per-goal (Yuvi prices each one), so what is fixed — and
+    therefore publishable — is the split across stages and the help reward.
+    """
+    return {
+        "stageShares": dict(STAGE_SHARE),
+        "help": HELP_REWARD,
+        "goalValueRange": [GOAL_VALUE_MIN, GOAL_VALUE_MAX],
     }
 
 
@@ -248,10 +268,18 @@ async def _grant(
     return {"granted": payable, "reason": reason, "wallet": _public(wallet)}
 
 
-async def grant_goal_stage(learner_id: str, goal_id: str, stage: str) -> dict[str, Any]:
-    """Reward advancing one mentoring goal to ``stage`` (once per goal+stage)."""
-    amount = EARN_RULES.get(stage)
+async def grant_goal_stage(
+    learner_id: str, goal_id: str, stage: str, goal_value: Optional[int] = None
+) -> dict[str, Any]:
+    """Reward advancing one mentoring goal to ``stage`` (once per goal+stage).
+
+    ``goal_value`` is the price Yuvi put on that specific goal; the share paid
+    for this stage is computed server-side, never sent by the client.
+    """
+    amount = stage_amount(goal_value, stage)
     if not amount:
+        # `chosen` is the creation state and pays nothing, so opening goals
+        # cannot be farmed.
         return {"granted": 0, "wallet": await get_wallet(learner_id)}
     lid = normalize_learner_id(learner_id)
     return await _grant(

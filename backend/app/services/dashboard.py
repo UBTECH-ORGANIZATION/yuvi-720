@@ -357,6 +357,7 @@ def project_dashboard(
             "steps": _goal_steps(g),
             "done": g.get("status") == "done",
             "deadline": g.get("deadline"),
+            "rewardValue": g.get("reward_value"),
         }
         for g in (brain.get("goals") or [])
         if isinstance(g, dict) and g.get("visible_to_learner", True)

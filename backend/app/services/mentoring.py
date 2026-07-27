@@ -52,6 +52,10 @@ def _new_goal(data: dict[str, Any]) -> dict[str, Any]:
         "from_yuvi": bool(data.get("from_yuvi")),
         "needs_help": bool(data.get("needs_help")),
         "help_requested_at": data.get("help_requested_at"),
+        # What this goal is worth in sparks. Set by Yuvi at creation and never
+        # accepted from the client, so the reward cannot be self-assigned.
+        "reward_value": rewards.clamp_goal_value(data.get("reward_value")),
+        "reward_why": (data.get("reward_why") or "").strip(),
         "deleted": False,
     }
 
@@ -98,6 +102,9 @@ def _brain_goal_entry(conversation: dict[str, Any], goal: dict[str, Any]) -> dic
         "progress_stage": stage,
         "from_yuvi": bool(goal.get("from_yuvi")),
         "needs_help": bool(goal.get("needs_help")),
+        # Carried into the dashboard so the goal's spark worth is visible
+        # wherever the goal itself is.
+        "reward_value": goal.get("reward_value"),
         "visible_to_learner": conversation.get("visibility", "shared") == "shared",
     }
 
@@ -197,6 +204,21 @@ async def create_conversation(data: dict[str, Any]) -> dict[str, Any]:
     else:
         goals = []
 
+    # Yuvi reads every new goal and decides what the learning behind it is worth.
+    # Failures fall back to the default value inside `price_goal`, so a slow or
+    # missing model never blocks documenting a conversation.
+    language = data.get("language") or "he"
+    for goal in goals:
+        priced = await rewards.price_goal(
+            learner_id,
+            title=goal["title"],
+            next_steps=goal["next_steps"],
+            deadline=goal.get("deadline") or "",
+            language=language,
+        )
+        goal["reward_value"] = priced["value"]
+        goal["reward_why"] = priced["why"]
+
     record = {
         "id": f"ment_{uuid.uuid4().hex[:10]}",
         "learner_id": learner_id,
@@ -246,8 +268,9 @@ async def update_goal_progress(
     await _save_conversation(lid, record)
     await _project_goals(lid)
     # Sparks reward the *action* of moving a goal forward (F5 → F3 effort
-    # encouragement). Idempotent per goal+stage, so re-saving pays nothing.
-    reward = await rewards.grant_goal_stage(lid, goal_id, progress_stage)
+    # encouragement). The amount is this goal's own price, split by stage, and
+    # is idempotent per goal+stage, so re-saving pays nothing.
+    reward = await rewards.grant_goal_stage(lid, goal_id, progress_stage, goal.get("reward_value"))
     record = dict(record)
     record.pop("teacher_only_note", None)
     record["goals"] = _active_goals(record)
