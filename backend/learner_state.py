@@ -84,7 +84,6 @@ def _empty_state(learner_id: str) -> dict[str, Any]:
         "learner_id": learner_id,
         "language": "he",
         "gender": None,
-        "theme": None,
         "mapping_results": None,
         "mapping_progress": None,
         "profile_summary_progress": None,
@@ -125,8 +124,10 @@ async def update_learner_state(learner_id: Optional[str], updates: dict[str, Any
     safe_id = normalize_learner_id(learner_id)
     # `avatar_unlocks` is deliberately NOT here: cosmetics are earned, so only
     # the server may grant them (see grant_avatar_unlock / services.rewards).
+    # `theme` is NOT here either: it lives on the user document
+    # (`preferences.theme`) so one account keeps one theme across devices.
     allowed = {
-        "language", "gender", "theme", "mapping_results", "mapping_progress", "profile_summary_progress",
+        "language", "gender", "mapping_results", "mapping_progress", "profile_summary_progress",
         "profile_cache", "dashboard_cache", "game_progress", "avatar",
         "activeness_map", "mentoring_draft",
     }

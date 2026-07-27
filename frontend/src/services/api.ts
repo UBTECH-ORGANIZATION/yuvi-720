@@ -62,7 +62,6 @@ export function apiDelete<T>(path: string): Promise<T> {
 export interface LearnerState {
   learner_id: string
   language?: 'he' | 'en' | 'ar'
-  theme?: 'light' | 'dark'
   mapping_results?: unknown
   mapping_progress?: unknown
   profile_summary_progress?: unknown
