@@ -1,0 +1,38 @@
+/* Anchor for the wallet panel that opens under the chip. */
+.wallet-chip-wrap { position: relative; display: inline-flex; }
+
+.wallet-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-block-size: 36px;
+  padding-inline: 12px;
+  border: 1px solid rgba(111, 91, 255, .16);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-surface);
+  color: var(--sp-primary-700);
+  font: 700 var(--sp-fs-xs)/1 var(--sp-font);
+  cursor: pointer;
+  transition: box-shadow .18s ease, transform .18s ease;
+}
+
+.wallet-chip:hover { box-shadow: var(--sp-shadow-sm); }
+.wallet-chip:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+
+.wallet-chip-amount { font-variant-numeric: tabular-nums; }
+.wallet-chip-label { color: var(--sp-ink-400); font-weight: 600; }
+
+/* A short, non-looping pulse when the balance changes — a nudge, not a slot machine. */
+.wallet-chip.is-earning { animation: wallet-chip-pulse .5s ease; }
+
+@keyframes wallet-chip-pulse {
+  50% { transform: scale(1.08); box-shadow: var(--sp-shadow-sm); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wallet-chip.is-earning { animation: none; }
+}
+
+@media (max-width: 720px) {
+  .wallet-chip-label { display: none; }
+}

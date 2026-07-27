@@ -3771,3 +3771,428 @@
     transition: none;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   Landing — credibility sections (metrics · journey · audience ·
+   standards · footer). Light mode; dark overrides live in dark-mode.css.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Shared head used by the journey / audience / standards sections. Mirrors
+   .landing720-feature-rows__head so every section reads the same. */
+.landing720-section-head {
+  text-align: center;
+  max-inline-size: 760px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.landing720-section-head .landing720-eyebrow {
+  color: var(--l720-purple);
+  background: var(--l720-purple-bg);
+  border: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.landing720-section-head h2 {
+  margin: 0;
+  font-size: clamp(26px, 3.2vw, 42px);
+  font-weight: 800;
+  line-height: 1.12;
+  color: var(--l720-navy);
+}
+
+.landing720-section-head p {
+  margin: 0;
+  font-size: clamp(15px, 1.5vw, 19px);
+  line-height: 1.6;
+  color: var(--l720-navy-soft);
+}
+
+/* ---- Proof band under the hero ---- */
+.landing720-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--l720-border);
+  border: 1px solid var(--l720-border);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: var(--l720-shadow-sm);
+}
+
+.landing720-metric {
+  background: var(--l720-card);
+  padding: clamp(18px, 2.4vw, 26px) clamp(14px, 2vw, 22px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.landing720-metric strong {
+  font-size: clamp(26px, 3vw, 38px);
+  font-weight: 800;
+  line-height: 1;
+  background-image: linear-gradient(120deg, var(--l720-blue), var(--l720-purple) 55%, var(--l720-teal));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.landing720-metric span {
+  font-size: clamp(13px, 1.2vw, 15px);
+  line-height: 1.45;
+  color: var(--l720-navy-soft);
+  max-inline-size: 22ch;
+}
+
+/* ---- Learning journey (the #how anchor) ---- */
+.landing720-journey {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(26px, 3.4vw, 44px);
+}
+
+.landing720-journey-track {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(16px, 2vw, 24px);
+  position: relative;
+}
+
+/* The thread that ties the four stages together. */
+.landing720-journey-track::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 26px;
+  inset-inline: 8%;
+  block-size: 2px;
+  background: linear-gradient(
+    to left,
+    transparent,
+    var(--l720-border) 12%,
+    var(--l720-border) 88%,
+    transparent
+  );
+  z-index: 0;
+}
+
+.landing720-journey-step {
+  position: relative;
+  z-index: 1;
+  background: var(--l720-card);
+  border: 1px solid var(--l720-border);
+  border-radius: 20px;
+  padding: clamp(18px, 2.2vw, 26px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: var(--l720-shadow-sm);
+  transition: transform 0.28s ease, box-shadow 0.28s ease;
+}
+
+.landing720-journey-step:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--l720-shadow);
+}
+
+.landing720-journey-step__num {
+  inline-size: 38px;
+  block-size: 38px;
+  border-radius: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, var(--l720-blue), var(--l720-purple));
+  box-shadow: 0 6px 16px rgba(43, 86, 245, 0.25);
+}
+
+.landing720-journey-step h3 {
+  margin: 0;
+  font-size: clamp(17px, 1.7vw, 20px);
+  font-weight: 700;
+  color: var(--l720-navy);
+}
+
+.landing720-journey-step p {
+  margin: 0;
+  font-size: clamp(14px, 1.3vw, 16px);
+  line-height: 1.6;
+  color: var(--l720-navy-soft);
+}
+
+.landing720-journey-step__meta {
+  margin-block-start: auto;
+  padding-block-start: 10px;
+  border-block-start: 1px dashed var(--l720-border);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--l720-navy-faint);
+}
+
+/* ---- Who it is for ---- */
+.landing720-audience {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(26px, 3.4vw, 44px);
+}
+
+.landing720-audience-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(16px, 2.2vw, 26px);
+}
+
+.landing720-audience-card {
+  background: var(--l720-card);
+  border: 1px solid var(--l720-border);
+  border-radius: 22px;
+  padding: clamp(20px, 2.4vw, 28px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--l720-shadow-sm);
+  transition: transform 0.28s ease, box-shadow 0.28s ease;
+}
+
+.landing720-audience-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--l720-shadow);
+}
+
+.landing720-audience-card h3 {
+  margin: 0;
+  font-size: clamp(18px, 1.9vw, 22px);
+  font-weight: 700;
+  color: var(--l720-navy);
+}
+
+.landing720-audience-card > p {
+  margin: 0;
+  font-size: clamp(14px, 1.3vw, 16px);
+  line-height: 1.6;
+  color: var(--l720-navy-soft);
+}
+
+.landing720-audience-card ul {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.landing720-audience-card li {
+  position: relative;
+  padding-inline-start: 24px;
+  font-size: clamp(13.5px, 1.25vw, 15.5px);
+  line-height: 1.5;
+  color: var(--l720-navy);
+}
+
+.landing720-audience-card li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 6px;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--l720-blue), var(--l720-purple));
+}
+
+/* ---- Standards / trust grid ---- */
+.landing720-standards {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(26px, 3.4vw, 44px);
+  padding: clamp(26px, 3.6vw, 48px) clamp(20px, 3vw, 40px);
+  border-radius: 28px;
+  border: 1px solid var(--l720-border);
+  background:
+    radial-gradient(680px 300px at 12% 0%, rgba(110, 91, 214, 0.07), transparent 65%),
+    radial-gradient(620px 300px at 92% 100%, rgba(13, 143, 130, 0.07), transparent 65%),
+    linear-gradient(180deg, #ffffff, #fafbff);
+  box-shadow: var(--l720-shadow-sm);
+}
+
+.landing720-standards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(14px, 2vw, 24px);
+}
+
+.landing720-standard {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: clamp(14px, 1.8vw, 20px);
+  border-radius: 18px;
+  border: 1px solid var(--l720-border);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.landing720-standard__icon {
+  flex: none;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--l720-blue);
+  background: var(--l720-blue-bg);
+}
+
+.landing720-standard h3 {
+  margin: 0 0 5px;
+  font-size: clamp(15.5px, 1.5vw, 17.5px);
+  font-weight: 700;
+  color: var(--l720-navy);
+}
+
+.landing720-standard p {
+  margin: 0;
+  font-size: clamp(13.5px, 1.25vw, 15.5px);
+  line-height: 1.55;
+  color: var(--l720-navy-soft);
+}
+
+/* Rotate the accent so the grid does not read as one flat block. */
+.landing720-standard:nth-child(3n + 2) .landing720-standard__icon {
+  color: var(--l720-purple);
+  background: var(--l720-purple-bg);
+}
+
+.landing720-standard:nth-child(3n) .landing720-standard__icon {
+  color: var(--l720-teal);
+  background: var(--l720-teal-bg);
+}
+
+/* ---- Footer ---- */
+.landing720-footer {
+  margin-block-start: 10px;
+  padding-block: clamp(28px, 3.4vw, 44px) 6px;
+  border-block-start: 1px solid var(--l720-border);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.landing720-footer__main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr);
+  gap: clamp(20px, 3vw, 48px);
+  align-items: start;
+}
+
+.landing720-footer__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.landing720-footer__brand .yuvi-brand-logo {
+  inline-size: 148px;
+  block-size: 52px;
+}
+
+.landing720-footer__brand p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--l720-navy-soft);
+  max-inline-size: 40ch;
+}
+
+.landing720-footer__links {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(16px, 2.4vw, 32px);
+}
+
+.landing720-footer__links > div {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.landing720-footer__links h4 {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--l720-navy);
+}
+
+.landing720-footer__links a {
+  font-size: 14px;
+  color: var(--l720-navy-soft);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  inline-size: fit-content;
+}
+
+.landing720-footer__links a:hover {
+  color: var(--l720-blue);
+}
+
+.landing720-footer__bottom {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  padding-block-start: 16px;
+  border-block-start: 1px solid var(--l720-border);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--l720-navy-faint);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 1000px) {
+  .landing720-journey-track,
+  .landing720-standards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .landing720-journey-track::before {
+    display: none;
+  }
+
+  .landing720-audience-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .landing720-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .landing720-journey-track,
+  .landing720-standards-grid,
+  .landing720-footer__main,
+  .landing720-footer__links {
+    grid-template-columns: 1fr;
+  }
+
+  .landing720-footer__links {
+    gap: 18px;
+  }
+}

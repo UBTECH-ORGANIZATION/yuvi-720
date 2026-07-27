@@ -6,6 +6,7 @@ import { AuthProvider } from './providers/AuthProvider'
 import { BrainProvider } from './providers/BrainProvider'
 import { CompanionProvider } from './providers/CompanionProvider'
 import { OnboardingProvider } from './providers/OnboardingProvider'
+import { RewardsProvider } from './providers/RewardsProvider'
 import { LessonRoadmapProvider } from './providers/LessonRoadmapProvider'
 import { ThemeProvider } from './providers/ThemeProvider'
 import { StudioTransitionProvider } from './features/Yuvi-studio/StudioTransitionProvider'
@@ -30,6 +31,7 @@ createRoot(document.getElementById('root') as HTMLElement).render(
       <ThemeProvider>
         <I18nProvider>
           <BrainProvider>
+            <RewardsProvider>
             <OnboardingProvider>
             <CompanionProvider>
               <YuviDesignProvider>
@@ -41,6 +43,7 @@ createRoot(document.getElementById('root') as HTMLElement).render(
               </YuviDesignProvider>
             </CompanionProvider>
             </OnboardingProvider>
+            </RewardsProvider>
           </BrainProvider>
         </I18nProvider>
       </ThemeProvider>

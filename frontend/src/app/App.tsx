@@ -10,6 +10,7 @@ import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
 import { YuviStudioPage } from '../features/Yuvi-studio/YuviStudioPage'
 import { CompanionChat } from '../components/CompanionChat'
 import { YuviCompanionDock } from '../components/YuviCompanionDock'
+import { SparkToast } from '../components/SparkToast'
 import { useEffect } from 'react'
 import { ErrorState, LoadingState } from '../components/primitives'
 import { useI18n } from '../i18n/I18nProvider'
@@ -48,6 +49,10 @@ function isProtected(pathname: string) {
 
 function isTeacherRoute(pathname: string) {
   return TEACHER_ROUTES.some((route) => pathname.startsWith(route))
+}
+
+function isLandingRoute(pathname: string) {
+  return pathname === '/' || pathname === ''
 }
 
 function pageForRoute(pathname: string) {
@@ -101,9 +106,22 @@ export function App() {
     if (!pathname.startsWith(target)) navigate(target)
   }, [user, stage, pathname, isTeacher])
 
+  // The landing page is for visitors. A signed-in user who reaches it (typed the
+  // root URL, opened a bookmark, hit Back) goes straight into the product — the
+  // onboarding effect above then moves them on if their setup isn't finished.
+  // Accounts often carry both roles, so the learner dashboard is home unless
+  // this account can only teach.
+  useEffect(() => {
+    if (!user || !isLandingRoute(pathname)) return
+    const home = user.roles.includes('learner') ? '/student-dashboard' : '/teacher-view'
+    navigate(home, { replace: true })
+  }, [user, pathname])
+
   const guarded = (() => {
     const needsAuth = isProtected(pathname) || isTeacherRoute(pathname)
     if (needsAuth && !user) return <LandingLoginPage initialDialog={isTeacherRoute(pathname) ? 'teacher' : 'student'} />
+    // Hold the frame it takes the redirect effect above to leave the landing page.
+    if (user && isLandingRoute(pathname)) return <LoadingState title={t('auth.guard.resuming')} />
     if (isTeacherRoute(pathname) && !isTeacher) {
       return <ErrorState title={t('auth.guard.teacherOnly')} />
     }
@@ -131,6 +149,7 @@ export function App() {
         </div>
       ) : routePage}
       {learnerRoute && !isStudioRoute && !isActiveTaskRoute && !isLearningWorldRoute && <YuviCompanionDock />}
+      {learnerRoute && <SparkToast />}
     </>
   )
 }

@@ -161,6 +161,8 @@ export interface DashboardDTO {
     steps?: { done: number; total: number } | null
     done: boolean
     deadline?: string | null
+    /** Sparks this goal is worth, priced by Yuvi when the goal was set. */
+    rewardValue?: number | null
   }[]
   mapping: {
     interests: string[]; learningStyle: string; preferences: string[]
