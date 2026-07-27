@@ -40,9 +40,8 @@ async def purchase(data: dict, learner_id: str = Depends(require_learner)):
     if not asset_id:
         raise HTTPException(status_code=400, detail="assetId is required")
     result = await rewards.purchase_asset(learner_id, asset_id)
-    if not result.get("ok"):
-        reason = result.get("reason")
-        if reason == "not_for_sale":
-            raise HTTPException(status_code=404, detail="Item is not for sale")
-        return JSONResponse(status_code=409, content=result)
+    if result.get("reason") == "not_for_sale":
+        raise HTTPException(status_code=404, detail="Item is not for sale")
+    # `owned` / `insufficient` are ordinary UI states, not transport errors, so
+    # they come back as 200 with `ok: false` and enough context to explain them.
     return JSONResponse(content=result)

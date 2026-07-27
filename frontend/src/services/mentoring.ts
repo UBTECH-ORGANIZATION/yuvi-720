@@ -2,6 +2,7 @@
    teacher, learner, meeting stage, notes, next steps, deadline. */
 
 import { apiDelete, apiGet, apiPost } from './api'
+import type { RewardGrant } from './rewards'
 
 export type GoalProgressStage = 'chosen' | 'started' | 'progressed' | 'summarized'
 
@@ -32,6 +33,8 @@ export interface MentoringConversation {
   visibility?: 'shared' | 'teacher_only'
   teacher_only_note?: string
   created_at?: string
+  /** Sparks granted by the action that returned this record (progress/help). */
+  reward?: RewardGrant
 }
 
 export function createMentoring(conv: MentoringConversation) {

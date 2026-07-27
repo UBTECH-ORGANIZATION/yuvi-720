@@ -4,6 +4,7 @@ import {
   Icon, LoadingState, ErrorState,
 } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
+import { useRewards } from '../../providers/RewardsProvider'
 import { getLearnerState, updateLearnerState } from '../../services/api'
 import {
   createMentoring, deleteGoal, deleteConversation, listMentoring, updateGoalProgress, assistMentoring,
@@ -100,6 +101,7 @@ export function MentoringPage() {
 
 function StudentGoalsPage() {
   const { t, language } = useI18n()
+  const { applyGrant } = useRewards()
   const [rows, setRows] = useState<MentoringConversation[] | null>(null)
   const [error, setError] = useState(false)
   const [composerOpen, setComposerOpen] = useState(false)
@@ -162,6 +164,7 @@ function StudentGoalsPage() {
     setUpdatingId(goal.id)
     try {
       const updated = await updateGoalProgress(conversation.id, goal.id, STATUS_TO_STAGE[status])
+      applyGrant(updated.reward)
       setRows((currentRows) => currentRows?.map((row) => row.id === updated.id ? updated : row) ?? null)
     } finally {
       setUpdatingId(null)
@@ -175,6 +178,7 @@ function StudentGoalsPage() {
     setHelpingId(goal.id)
     try {
       const updated = await requestGoalHelp(conversation.id, goal.id)
+      applyGrant(updated.reward)
       setRows((currentRows) => currentRows?.map((row) => row.id === updated.id ? updated : row) ?? null)
     } finally {
       setHelpingId(null)
