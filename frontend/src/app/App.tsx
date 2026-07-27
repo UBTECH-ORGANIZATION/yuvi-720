@@ -10,6 +10,7 @@ import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
 import { YuviStudioPage } from '../features/Yuvi-studio/YuviStudioPage'
 import { CompanionChat } from '../components/CompanionChat'
 import { YuviCompanionDock } from '../components/YuviCompanionDock'
+import { SparkToast } from '../components/SparkToast'
 import { useEffect } from 'react'
 import { ErrorState, LoadingState } from '../components/primitives'
 import { useI18n } from '../i18n/I18nProvider'
@@ -131,6 +132,7 @@ export function App() {
         </div>
       ) : routePage}
       {learnerRoute && !isStudioRoute && !isActiveTaskRoute && !isLearningWorldRoute && <YuviCompanionDock />}
+      {learnerRoute && <SparkToast />}
     </>
   )
 }
