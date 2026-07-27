@@ -878,18 +878,10 @@
   box-shadow: 0 8px 20px rgba(122, 96, 235, .38);
 }
 
-/* Each stage keeps its own hue so the row reads as a journey, not a list. */
-[data-theme='dark'] .landing720-journey-step:nth-child(2) .landing720-journey-step__num {
-  background: linear-gradient(135deg, #a98cff, #d9a7f5);
-}
-
-[data-theme='dark'] .landing720-journey-step:nth-child(3) .landing720-journey-step__num {
-  background: linear-gradient(135deg, #5fc7c0, #7fb6ff);
-}
-
-[data-theme='dark'] .landing720-journey-step:nth-child(4) .landing720-journey-step__num {
-  background: linear-gradient(135deg, #ffbe8a, #f0a3c8);
-}
+/* Each stage keeps its own hue so the row reads as a journey, not a list.
+   The hue now comes from the step's `tone-*` class (see the chapters layer at
+   the end of this file), so the badge, the top rule and the card glow can't
+   drift apart the way position-based colours did. */
 
 [data-theme='dark'] .landing720-journey-step h3 { color: #f2effd; }
 [data-theme='dark'] .landing720-journey-step p { color: #c4bfda; }
@@ -1645,3 +1637,337 @@
 [data-theme='dark'] input:focus,
 [data-theme='dark'] textarea:focus,
 [data-theme='dark'] select:focus { outline-color: var(--sp-primary-500); }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LANDING — FIVE CHAPTERS, ONE WORLD  (dark)
+
+   The page used to be purple on purple: purple canvas, purple cards, purple
+   borders, purple glow, purple buttons, purple frames around the artwork.
+   With everything in one hue nothing sat in front of anything else, every
+   band was built the same way (title → line → cards) and the whole thing read
+   as one long screen.
+
+   This layer keeps violet as the *brand* colour and rebuilds the page in
+   three layers:
+     1. base    — a neutral blue-black indigo canvas, not a saturated purple
+     2. chapters— each section gets its own temperature, elevation and rhythm
+     3. accents — exactly two supporting hues: cyan (data / AI) and
+                  peach (the learner, warmth, progress)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ---- Layer 1: a neutral base the brand colour can sit on top of ---- */
+[data-theme='dark'] .landing720 {
+  --l720d-cyan: #6fd9f5;
+  --l720d-peach: #ffbe95;
+  --l720d-violet: #b3a2ff;
+  --l720d-void: #080a1e;
+
+  background-color: #0e1130;
+  background-image:
+    radial-gradient(1.3px 1.3px at 22% 18%, rgba(255, 255, 255, .42), transparent 60%),
+    radial-gradient(1.1px 1.1px at 68% 34%, rgba(206, 226, 255, .34), transparent 60%),
+    radial-gradient(1.4px 1.4px at 44% 72%, rgba(255, 255, 255, .24), transparent 60%),
+    radial-gradient(1.1px 1.1px at 84% 82%, rgba(255, 236, 205, .28), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.03 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(1200px 820px at 10% -6%, rgba(128, 104, 255, .20), transparent 62%),
+    radial-gradient(900px 640px at 92% 6%, rgba(56, 132, 222, .15), transparent 60%),
+    radial-gradient(820px 600px at 2% 58%, rgba(46, 178, 194, .09), transparent 58%),
+    radial-gradient(980px 700px at 98% 98%, rgba(255, 158, 104, .07), transparent 62%),
+    linear-gradient(170deg, #151a46 0%, #101338 46%, #090b23 100%);
+}
+
+/* Two supporting accents. Violet stays the brand; these carry meaning. */
+[data-theme='dark'] .landing720 .tone-violet { --l720-accent: #b3a2ff; --l720-accent-bg: rgba(150, 124, 255, .18); --l720-accent-rgb: 150, 124, 255; }
+[data-theme='dark'] .landing720 .tone-cyan   { --l720-accent: #6fd9f5; --l720-accent-bg: rgba(84, 190, 235, .16); --l720-accent-rgb: 84, 190, 235; }
+[data-theme='dark'] .landing720 .tone-peach  { --l720-accent: #ffbe95; --l720-accent-bg: rgba(255, 158, 108, .16); --l720-accent-rgb: 255, 158, 108; }
+[data-theme='dark'] .landing720 .tone-teal   { --l720-accent: #7fe3d3; --l720-accent-bg: rgba(68, 206, 186, .15); --l720-accent-rgb: 68, 206, 186; }
+
+[data-theme='dark'] .landing720-feature-icon.tone-violet,
+[data-theme='dark'] .landing720-feature-icon.tone-cyan,
+[data-theme='dark'] .landing720-feature-icon.tone-peach,
+[data-theme='dark'] .landing720-feature-icon.tone-teal {
+  color: var(--l720-accent);
+  background: var(--l720-accent-bg);
+  border: 1px solid rgba(var(--l720-accent-rgb), .3);
+}
+
+/* ---- Layer 2: chapter ambience ----
+   Every section paints its own full-bleed band behind itself. The bands are
+   not different colours — they are different *temperatures* and depths of the
+   same world, faded at both edges so chapters dissolve into each other. */
+[data-theme='dark'] .landing720 [data-chapter] {
+  position: relative;
+  isolation: isolate;
+}
+
+[data-theme='dark'] .landing720 [data-chapter]::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset-block: clamp(-96px, -6vw, -40px);
+  /* Full-bleed even though every landing child is capped at 1240px. */
+  inset-inline: calc(50% - 50vw);
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent);
+}
+
+/* Chapter: the agents — the deepest, coolest room on the page. Going *darker*
+   here is what makes the hero above it read as lit and forward. */
+[data-theme='dark'] .landing720 [data-chapter='agents']::before {
+  background:
+    radial-gradient(900px 520px at 50% 42%, rgba(70, 156, 235, .13), transparent 68%),
+    radial-gradient(620px 420px at 12% 90%, rgba(64, 200, 220, .08), transparent 70%),
+    linear-gradient(180deg, rgba(6, 8, 26, .0) 0%, rgba(6, 8, 26, .62) 30%, rgba(6, 8, 26, .62) 72%, rgba(6, 8, 26, 0) 100%);
+}
+
+/* Chapter: the four stages — neutral indigo with a first hint of warmth, so
+   the page starts turning from "machine" toward "learner". */
+[data-theme='dark'] .landing720 [data-chapter='journey']::before {
+  background:
+    radial-gradient(760px 440px at 84% 8%, rgba(255, 168, 112, .09), transparent 66%),
+    radial-gradient(820px 480px at 14% 96%, rgba(132, 110, 255, .12), transparent 66%);
+}
+
+/* Chapter: the product scenes — a raised glass shelf. Lighter than the page,
+   warm, so the photography belongs to the design instead of being dropped on
+   top of a purple background. */
+[data-theme='dark'] .landing720 [data-chapter='scenes']::before {
+  border-radius: 0;
+  background:
+    radial-gradient(1000px 520px at 22% 6%, rgba(255, 176, 122, .1), transparent 62%),
+    radial-gradient(900px 520px at 84% 88%, rgba(96, 190, 235, .09), transparent 64%),
+    linear-gradient(180deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .022) 55%, rgba(255, 255, 255, 0));
+  border-block: 1px solid rgba(255, 255, 255, .07);
+}
+
+/* Chapter: who it is for / standards — cool, quiet, factual. */
+[data-theme='dark'] .landing720 [data-chapter='audience']::before,
+[data-theme='dark'] .landing720 [data-chapter='standards']::before {
+  background:
+    radial-gradient(880px 460px at 50% 0%, rgba(64, 128, 210, .11), transparent 66%),
+    linear-gradient(180deg, rgba(6, 8, 26, .38), rgba(6, 8, 26, .12));
+}
+
+/* Chapter: the closing call to action — this is where the brand purple is
+   allowed to come back at full strength, because now it means something. */
+[data-theme='dark'] .landing720 [data-chapter='cta']::before {
+  background:
+    radial-gradient(760px 420px at 50% 30%, rgba(150, 116, 255, .26), transparent 68%),
+    radial-gradient(520px 320px at 88% 92%, rgba(96, 200, 235, .12), transparent 70%),
+    linear-gradient(180deg, rgba(20, 14, 54, .0), rgba(28, 18, 74, .55));
+}
+
+/* ---- Chapter 1: the hero ----
+   Bigger, deeper, asymmetric. The artwork stops being a small picture beside
+   a headline and becomes the product itself, sitting in front of a dark
+   indigo stage instead of inside a flat purple rectangle. */
+[data-theme='dark'] .landing720-hero {
+  background:
+    radial-gradient(circle at 76% 26%, rgba(96, 200, 240, .2), transparent 34%),
+    radial-gradient(circle at 22% 84%, rgba(150, 116, 255, .26), transparent 42%),
+    linear-gradient(146deg, #221a5c 0%, #171245 40%, #101033 72%, #0b1130 100%);
+  box-shadow:
+    0 60px 130px rgba(4, 6, 22, .6),
+    inset 0 1px rgba(255, 255, 255, .1);
+}
+
+@media (min-width: 1100px) {
+  [data-theme='dark'] .landing720-hero {
+    min-block-size: min(680px, calc(100dvh - 96px));
+    grid-template-columns: minmax(0, .96fr) minmax(420px, 1.04fr);
+  }
+
+  [data-theme='dark'] .landing720-hero-visual {
+    min-block-size: 560px;
+  }
+
+  /* ~24% larger, and pushed slightly past the hero's edge so the composition
+     stops being a tidy symmetrical box. */
+  [data-theme='dark'] .landing720-Yuvi-artwork {
+    inline-size: min(56vw, 770px);
+    aspect-ratio: 1.4;
+  }
+}
+
+[data-theme='dark'] .landing720-hero-chip {
+  border-color: rgba(255, 255, 255, .14);
+  background: rgba(24, 22, 58, .72);
+  color: #ece9fb;
+  box-shadow: 0 22px 46px rgba(4, 6, 22, .55), inset 0 1px rgba(255, 255, 255, .1);
+}
+
+[data-theme='dark'] .landing720-hero-chip--a svg { color: var(--l720d-violet); }
+[data-theme='dark'] .landing720-hero-chip--b svg { color: var(--l720d-cyan); }
+[data-theme='dark'] .landing720-hero-chip--c svg { color: var(--l720d-peach); }
+
+/* ---- Chapter 2: the proof band ----
+   Was a thin purple strip welded to the hero; now four separated glass cards
+   that overlap the hero's edge and physically break the page in two. */
+[data-theme='dark'] .landing720-metrics {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+[data-theme='dark'] .landing720-metric {
+  border-color: rgba(255, 255, 255, .1);
+  background: linear-gradient(180deg, rgba(40, 37, 84, .92), rgba(24, 22, 56, .92));
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 26px 56px rgba(4, 6, 22, .5), inset 0 1px rgba(255, 255, 255, .08);
+}
+
+[data-theme='dark'] .landing720-metric:hover {
+  border-color: rgba(var(--l720-accent-rgb), .4);
+  box-shadow:
+    0 32px 66px rgba(4, 6, 22, .58),
+    0 0 0 1px rgba(var(--l720-accent-rgb), .18),
+    inset 0 1px rgba(255, 255, 255, .1);
+}
+
+[data-theme='dark'] .landing720-metric strong {
+  background-image: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  color: var(--l720-accent);
+  text-shadow: 0 0 26px rgba(var(--l720-accent-rgb), .35);
+}
+
+[data-theme='dark'] .landing720-metric__icon {
+  color: var(--l720-accent);
+  background: var(--l720-accent-bg);
+  border: 1px solid rgba(var(--l720-accent-rgb), .28);
+}
+
+[data-theme='dark'] .landing720-metric__label { color: #c3bed9; }
+
+/* ---- Chapter 3: the agent ring ----
+   One card is allowed to sit forward of the ring, the others step back, and
+   the fibres run cyan→violet instead of violet→violet. */
+[data-theme='dark'] .landing720-hub-node {
+  background: linear-gradient(180deg, rgba(46, 44, 92, .72) 0%, rgba(22, 21, 52, .72) 100%);
+  border-color: rgba(255, 255, 255, .09);
+  box-shadow: 0 18px 40px rgba(4, 6, 22, .45);
+}
+
+[data-theme='dark'] .landing720-hub-node.is-lead {
+  border-color: rgba(179, 162, 255, .38);
+  background: linear-gradient(180deg, rgba(66, 56, 128, .92) 0%, rgba(32, 27, 74, .92) 100%);
+  box-shadow:
+    0 30px 66px rgba(4, 6, 22, .6),
+    0 0 0 1px rgba(179, 162, 255, .18),
+    0 0 44px rgba(150, 116, 255, .26);
+}
+
+[data-theme='dark'] .landing720-hub-orbit { stroke: rgba(110, 200, 255, .18); }
+
+/* ---- Chapter 4: the four stages ---- */
+[data-theme='dark'] .landing720-journey-step {
+  background: linear-gradient(180deg, rgba(36, 33, 76, .82), rgba(21, 20, 50, .82));
+  border-color: rgba(255, 255, 255, .09);
+  box-shadow: 0 18px 42px rgba(4, 6, 22, .4);
+}
+
+[data-theme='dark'] .landing720-journey-step.is-lead {
+  background:
+    radial-gradient(520px 260px at 86% 0%, rgba(var(--l720-accent-rgb), .16), transparent 70%),
+    linear-gradient(180deg, rgba(48, 43, 100, .92), rgba(25, 23, 60, .92));
+  border-color: rgba(var(--l720-accent-rgb), .32);
+  box-shadow:
+    0 34px 72px rgba(4, 6, 22, .55),
+    0 0 0 1px rgba(var(--l720-accent-rgb), .16);
+}
+
+[data-theme='dark'] .landing720-journey-step__num {
+  color: #0d1030;
+  background: var(--l720-accent);
+  box-shadow: 0 8px 22px rgba(var(--l720-accent-rgb), .38);
+}
+
+[data-theme='dark'] .landing720-journey-step__meta {
+  border-block-start-color: rgba(255, 255, 255, .1);
+  color: #a49fbe;
+}
+
+/* ---- Chapter 5: the product scenes ----
+   Consistent frames, a UI layer above the still, ambient light that matches
+   the chapter, and an oversized stage number that bleeds out of the
+   container so the rhythm changes here. */
+[data-theme='dark'] .landing720-feature-row__stage {
+  color: rgba(var(--l720-accent-rgb), .2);
+  text-shadow: 0 0 60px rgba(var(--l720-accent-rgb), .22);
+}
+
+[data-theme='dark'] .landing720-feature-row__media img {
+  border-color: rgba(255, 255, 255, .12);
+  box-shadow:
+    0 44px 90px rgba(4, 6, 22, .62),
+    0 0 0 1px rgba(255, 255, 255, .05);
+}
+
+[data-theme='dark'] .landing720-feature-row__media:hover img {
+  box-shadow:
+    0 54px 108px rgba(4, 6, 22, .7),
+    0 0 0 1px rgba(var(--l720-accent-rgb), .22);
+}
+
+/* The photography is warm and bright; this is the light that ties it to the
+   dark page instead of letting it look pasted in from another language. */
+[data-theme='dark'] .landing720-feature-row__glare {
+  background:
+    linear-gradient(168deg, rgba(255, 255, 255, .16) 0%, transparent 38%),
+    linear-gradient(0deg, rgba(10, 12, 38, .5) 0%, rgba(10, 12, 38, .06) 42%, transparent 62%),
+    linear-gradient(0deg, rgba(var(--l720-accent-rgb), .2), transparent 60%);
+  mix-blend-mode: normal;
+  opacity: .8;
+}
+
+[data-theme='dark'] .landing720-feature-row__overlay {
+  border-color: rgba(255, 255, 255, .14);
+  background: rgba(20, 19, 52, .82);
+  color: #ece9fb;
+  box-shadow: 0 26px 56px rgba(4, 6, 22, .62), inset 0 1px rgba(255, 255, 255, .1);
+}
+
+[data-theme='dark'] .landing720-feature-row__overlay-icon {
+  color: var(--l720-accent);
+  background: var(--l720-accent-bg);
+  border: 1px solid rgba(var(--l720-accent-rgb), .3);
+}
+
+[data-theme='dark'] .landing720-feature-row__points li::before {
+  background: var(--l720-accent);
+}
+
+[data-theme='dark'] .landing720-feature-rows__head .landing720-eyebrow {
+  border-color: rgba(255, 190, 149, .3);
+  background: rgba(255, 158, 108, .14);
+  color: var(--l720d-peach);
+}
+
+/* Section eyebrows pick up their chapter's temperature instead of all being
+   the same violet pill. */
+[data-theme='dark'] [data-chapter='agents'] .landing720-eyebrow {
+  border-color: rgba(111, 217, 245, .3);
+  background: rgba(84, 190, 235, .14);
+  color: var(--l720d-cyan);
+}
+
+[data-theme='dark'] [data-chapter='standards'] .landing720-section-head .landing720-eyebrow {
+  border-color: rgba(127, 227, 211, .28);
+  background: rgba(68, 206, 186, .13);
+  color: #8fe8d8;
+}
+
+/* ---- Chapter 6: the closing CTA — brand violet at full strength ---- */
+[data-theme='dark'] .landing720-contact {
+  border-color: rgba(179, 162, 255, .22);
+  background:
+    radial-gradient(620px 320px at 18% 0%, rgba(150, 116, 255, .2), transparent 66%),
+    linear-gradient(180deg, rgba(44, 34, 102, .88), rgba(24, 20, 62, .92));
+  box-shadow: 0 40px 90px rgba(4, 6, 22, .55), inset 0 1px rgba(255, 255, 255, .09);
+}
+
+
