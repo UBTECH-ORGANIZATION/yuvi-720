@@ -17,6 +17,10 @@ export interface MentoringGoal {
   from_yuvi?: boolean
   needs_help?: boolean
   help_requested_at?: string | null
+  /** Sparks this goal is worth. Yuvi prices it when the goal is created. */
+  reward_value?: number
+  /** Yuvi's one-line reason for that price, shown to the learner. */
+  reward_why?: string
 }
 
 /** A documented conversation (the object of record) plus the goals set in it. */

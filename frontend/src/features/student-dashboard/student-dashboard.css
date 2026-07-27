@@ -819,6 +819,10 @@
 .sd-goal-row__body { grid-area: body; display: grid; gap: 4px; min-inline-size: 0; }
 .sd-goal-row__title { color: var(--sp-ink-900); font-size: var(--sp-fs-md); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sd-goal-row__source { color: var(--sp-ink-400); font-size: var(--sp-fs-xs); }
+.sd-goal-row__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+/* What Yuvi priced this goal at, shown next to the goal everywhere it appears. */
+.sd-goal-row__worth { display: inline-flex; align-items: center; gap: 3px; color: var(--sp-ink-500); font-size: var(--sp-fs-xs); font-weight: 600; white-space: nowrap; }
+.sd-goal-row__worth > svg { flex: none; color: var(--sp-accent-600, #c07d00); }
 .sd-goal-row__progress { grid-area: progress; display: flex; align-items: center; gap: 12px; min-inline-size: 0; }
 .sd-goal-row__status { flex-shrink: 0; color: var(--sd-status-color); font-size: var(--sp-fs-xs); font-weight: 700; }
 .sd-goal-row__bar { position: relative; flex: 1 1 auto; min-inline-size: 60px; block-size: 7px; border-radius: var(--sp-radius-pill); background: var(--sp-bg-subtle, #eee9ff); overflow: hidden; }

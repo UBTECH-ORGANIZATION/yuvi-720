@@ -5,6 +5,7 @@ import {
 } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useRewards } from '../../providers/RewardsProvider'
+import { stageAmount } from '../../services/rewards'
 import { getLearnerState, updateLearnerState } from '../../services/api'
 import {
   createMentoring, deleteGoal, deleteConversation, listMentoring, updateGoalProgress, assistMentoring,
@@ -530,23 +531,33 @@ function FocusGoal({ goal, language, updating, helping, open, onToggle, onStatus
   onStatus: (status: GoalStatus) => void; onHelp: () => void
 }) {
   const { t } = useI18n()
+  const { wallet } = useRewards()
   const status = goalStatus(goal)
   const isDone = status === 'done'
   const overdue = isOverdue(goal)
   // The title may already be the step itself, and then there is nothing to add.
   const step = goal.title && goal.next_steps ? goal.next_steps : ''
-  const hasDetail = Boolean(step) || goal.from_yuvi || !isDone
+  const hasDetail = Boolean(step) || goal.from_yuvi || goal.reward_why || !isDone
   const panelId = `mt-goal-panel-${goal.id}`
   // A single forward move, never a row of look-alike statuses to decode.
   const advance: GoalStatus = status === 'new' ? 'in_progress' : status === 'in_progress' ? 'done' : 'in_progress'
   const advanceLabel = status === 'new'
     ? t('mentoring.student.status.start')
     : status === 'in_progress' ? t('mentoring.student.status.finish') : t('mentoring.student.status.reopen')
+  // What this goal is worth, and what the very next move pays — the pull
+  // towards finishing is always visible on the goal itself.
+  const worth = goal.reward_value || 0
+  const nextPayout = isDone ? 0 : stageAmount(goal.reward_value, advance === 'done' ? 'summarized' : 'started', wallet?.rules)
 
   const summary = (
     <>
       <span className="mt-fgoal__top">
         <span className="mt-fgoal__title" dir="auto">{goal.title || goal.next_steps}</span>
+        {worth > 0 && (
+          <span className="mt-fgoal__worth" title={t('rewards.goal.worthHint')}>
+            <Icon name="spark" size={12} />{t('rewards.goal.worth', { count: worth })}
+          </span>
+        )}
         <span className={`mt-fgoal__status is-${status}`}>
           {isDone && <Icon name="check" size={11} />}{t(`mentoring.student.status.${status}`)}
         </span>
@@ -598,6 +609,16 @@ function FocusGoal({ goal, language, updating, helping, open, onToggle, onStatus
           {step && (
             <p className="mt-fgoal__step" dir="auto">
               <Icon name="arrow" size={13} />{step}
+            </p>
+          )}
+          {goal.reward_why && (
+            <p className="mt-fgoal__why" dir="auto">
+              <Icon name="spark" size={13} />{goal.reward_why}
+            </p>
+          )}
+          {nextPayout > 0 && (
+            <p className="mt-fgoal__payout">
+              {t(advance === 'done' ? 'rewards.goal.finishPays' : 'rewards.goal.startPays', { count: nextPayout })}
             </p>
           )}
           <div className="mt-fgoal__extra">
