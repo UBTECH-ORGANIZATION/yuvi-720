@@ -308,6 +308,22 @@ def project_hero_metrics(brain: dict, events: list[dict[str, Any]]) -> dict[str,
     }
 
 
+# A mentoring goal advances through three visible steps after being chosen, so
+# the learner-facing progress bar reflects real self-reported progress.
+_GOAL_STEP_DONE = {"chosen": 0, "started": 1, "progressed": 2, "summarized": 3}
+
+
+def _goal_steps(goal: dict[str, Any]) -> dict[str, Any] | None:
+    """Derive `{done, total}` from the goal's progress stage."""
+    stage = goal.get("progress_stage")
+    if isinstance(stage, str) and stage in _GOAL_STEP_DONE:
+        return {"done": _GOAL_STEP_DONE[stage], "total": 3}
+    if goal.get("status") == "done":
+        return {"done": 3, "total": 3}
+    steps = goal.get("steps")
+    return steps if isinstance(steps, dict) else None
+
+
 def project_dashboard(
     brain: dict, name: str, language: str = "he",
     effective_activeness: dict[str, dict[str, Any]] | None = None,
@@ -338,7 +354,7 @@ def project_dashboard(
             "meta": g.get("source", ""),
             "source": g.get("source", ""),
             "status": g.get("status", ""),
-            "steps": g.get("steps") if isinstance(g.get("steps"), dict) else None,
+            "steps": _goal_steps(g),
             "done": g.get("status") == "done",
             "deadline": g.get("deadline"),
         }

@@ -811,6 +811,8 @@
   "mentoring.student.composer.deadlineRequired": "اختر تاريخ الهدف — لا يوجد هدف بلا تاريخ.",
   "mentoring.student.composer.deadlineMissing": "التاريخ مطلوب",
   "mentoring.student.goal.yuviTag": "اقتراح يوفي",
+  "mentoring.student.goal.more": "عرض تفاصيل الهدف",
+  "mentoring.student.goal.less": "إخفاء تفاصيل الهدف",
   "mentoring.student.composer.cancel": "إلغاء",
   "mentoring.student.composer.close.title": "الخروج من التوثيق؟",
   "mentoring.student.composer.close.body": "لن يُحفظ ما بدأته، وسنبدأ من جديد في المرة القادمة.",

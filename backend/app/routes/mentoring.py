@@ -124,6 +124,17 @@ async def update_mentoring_goal_progress(
     )
     if record is None:
         raise HTTPException(status_code=404, detail="Mentoring goal was not found")
+    # MoE 720 family 7: a moved goal is `updated`, a finished one `completed`.
+    # No new verb is invented for the spark grant itself (internal telemetry).
+    if session.get("sid"):
+        stage = data.get("progress_stage", "")
+        await lrs_reporter.report_student_goal(
+            session["sub"],
+            session["sid"],
+            "completed" if stage == "summarized" else "updated",
+            goal_id,
+            "academic",
+        )
     return JSONResponse(content=record)
 
 

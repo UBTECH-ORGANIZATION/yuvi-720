@@ -290,9 +290,8 @@ function YuviTag() {
 // dates is noise for a child. The window slides around the talk in focus.
 const STRIP_WINDOW = 7
 
-// A quiet switcher instead of a heavy timeline: one small dot per documented
-// talk, the current one opening into a date pill. It stays out of the way so
-// the three focus cards below carry the meaning.
+// A timeline of the talks the child has had, not a date picker: a single line
+// runs through every talk, and the one in focus is marked by colour alone.
 function ConversationSwitch({ conversations, index, language, onPick }: {
   conversations: MentoringConversation[]; index: number; language: string; onPick: (next: number) => void
 }) {
@@ -306,7 +305,7 @@ function ConversationSwitch({ conversations, index, language, onPick }: {
 
   // Keep the talk in focus visible without the child having to drag the strip.
   useEffect(() => {
-    const active = stripRef.current?.querySelector<HTMLElement>('.mt-tcard.is-on')
+    const active = stripRef.current?.querySelector<HTMLElement>('.mt-tnode.is-on')
     active?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
   }, [index])
 
@@ -319,6 +318,7 @@ function ConversationSwitch({ conversations, index, language, onPick }: {
           disabled={index === 0}
           onClick={() => onPick(index - 1)}
           aria-label={t('mentoring.student.journey.newer')}
+          title={t('mentoring.student.journey.newer')}
         >
           <Icon name="chevronLeft" size={20} />
         </button>
@@ -337,16 +337,16 @@ function ConversationSwitch({ conversations, index, language, onPick }: {
           }}
         >
           {visible.map((conversation, offset) => (
-            <li key={conversation.id}>
-              <TalkCard
-                conversation={conversation}
-                language={language}
-                active={start + offset === index}
-                position={start + offset}
-                total={total}
-                onPick={() => onPick(start + offset)}
-              />
-            </li>
+            <TalkCard
+              key={conversation.id}
+              conversation={conversation}
+              language={language}
+              active={start + offset === index}
+              opening={start + offset === total - 1}
+              position={start + offset}
+              total={total}
+              onPick={() => onPick(start + offset)}
+            />
           ))}
         </ol>
         <button
@@ -355,6 +355,7 @@ function ConversationSwitch({ conversations, index, language, onPick }: {
           disabled={index >= total - 1}
           onClick={() => onPick(index + 1)}
           aria-label={t('mentoring.student.journey.older')}
+          title={t('mentoring.student.journey.older')}
         >
           <Icon name="chevronLeft" size={20} />
         </button>
@@ -363,50 +364,54 @@ function ConversationSwitch({ conversations, index, language, onPick }: {
   )
 }
 
-const RING = 2 * Math.PI * 19
-
-/** One talk as a picture a child can read at a glance: nothing but the date
- * inside a ring that fills as the goals of that talk get done. */
-function TalkCard({ conversation, language, active, position, total, onPick }: {
-  conversation: MentoringConversation; language: string; active: boolean
+/** One stop on the timeline: a dot on the line, the date, and one short line
+ * saying what that talk was — so the row reads as a story, not as a calendar. */
+function TalkCard({ conversation, language, active, opening, position, total, onPick }: {
+  conversation: MentoringConversation; language: string; active: boolean; opening: boolean
   position: number; total: number; onPick: () => void
 }) {
   const { t } = useI18n()
   const { day, month } = shortDate(conversation.date, language)
   const goals = conversation.goals || []
   const done = goals.filter((goal) => goalStatus(goal) === 'done').length
-  const ratio = goals.length ? done / goals.length : 0
   const allDone = goals.length > 0 && done === goals.length
+
+  const context = opening
+    ? t('mentoring.student.journey.kind.opening')
+    : goals.length === 1
+      ? t('mentoring.student.journey.goalsCount.one')
+      : goals.length > 1
+        ? t('mentoring.student.journey.goalsCount.many', { count: goals.length })
+        : t('mentoring.student.journey.kind.followUp')
 
   const label = [
     t('mentoring.student.journey.talkTag'),
     formatDate(conversation.date, language),
+    context,
     t('mentoring.student.journey.position', { index: position + 1, total }),
     goals.length ? t('mentoring.student.journey.goalsProgress', { done, total: goals.length }) : '',
   ].filter(Boolean).join(' — ')
 
   return (
-    <button
-      type="button"
-      className={`mt-tcard${active ? ' is-on' : ''}${allDone ? ' is-complete' : ''}`}
-      onClick={onPick}
-      aria-current={active ? 'true' : undefined}
-      aria-label={label}
-      title={label}
-    >
-      <span className="mt-tcard__disc">
-        <svg viewBox="0 0 44 44" aria-hidden="true">
-          <circle className="mt-tcard__track" cx="22" cy="22" r="19" />
-          <circle
-            className="mt-tcard__fill"
-            cx="22" cy="22" r="19"
-            style={{ strokeDasharray: `${(ratio * RING).toFixed(2)} ${RING.toFixed(2)}` }}
-          />
-        </svg>
-        <span className="mt-tcard__day" aria-hidden="true">{day}</span>
+    <li className={`mt-tnode${active ? ' is-on' : ''}${allDone ? ' is-complete' : ''}`}>
+      <span className="mt-tnode__dot" aria-hidden="true">
+        {allDone ? <Icon name="check" size={9} /> : null}
       </span>
-      <span className="mt-tcard__month" aria-hidden="true">{month}</span>
-    </button>
+      <button
+        type="button"
+        className="mt-tcard"
+        onClick={onPick}
+        aria-current={active ? 'true' : undefined}
+        aria-label={label}
+        title={label}
+      >
+        <span className="mt-tcard__date" aria-hidden="true">
+          <span className="mt-tcard__day">{day}</span>
+          <span className="mt-tcard__month">{month}</span>
+        </span>
+        <span className="mt-tcard__ctx" aria-hidden="true">{context}</span>
+      </button>
+    </li>
   )
 }
 
@@ -423,6 +428,11 @@ function ConversationFocus({ conversation, language, updating, helping, onStatus
   const [expanded, setExpanded] = useState(false)
   // Long notes are hard for a child to scan, so they open on request only.
   const long = notes.length > 170
+  // The goals are an accordion: everything stays scannable, and the goal that
+  // still needs work is the one already open when the talk is picked.
+  const firstActive = goals.find((goal) => goalStatus(goal) !== 'done')?.id ?? null
+  const [openGoal, setOpenGoal] = useState<string | null>(firstActive)
+  useEffect(() => { setOpenGoal(firstActive) }, [conversation.id, firstActive])
 
   return (
     <div className="mt-focus">
@@ -481,6 +491,8 @@ function ConversationFocus({ conversation, language, updating, helping, onStatus
                   language={language}
                   updating={updating === goal.id}
                   helping={helping === goal.id}
+                  open={openGoal === goal.id}
+                  onToggle={() => setOpenGoal((current) => (current === goal.id ? null : goal.id ?? null))}
                   onStatus={(status) => onStatus(goal, status)}
                   onHelp={() => onHelp(goal)}
                 />
@@ -505,62 +517,96 @@ function ConversationFocus({ conversation, language, updating, helping, onStatus
   )
 }
 
-// One goal reads as a small card with a clear order: status, name, the step I
-// actually do, when it is due, and exactly one thing to press.
-function FocusGoal({ goal, language, updating, helping, onStatus, onHelp }: {
+// One goal is one compact row a child can scan in a second: name, status, due
+// date, the next step in a single line, and one button. Everything else waits
+// inside the card until it is opened.
+function FocusGoal({ goal, language, updating, helping, open, onToggle, onStatus, onHelp }: {
   goal: MentoringGoal; language: string; updating: boolean; helping: boolean
+  open: boolean; onToggle: () => void
   onStatus: (status: GoalStatus) => void; onHelp: () => void
 }) {
   const { t } = useI18n()
   const status = goalStatus(goal)
   const isDone = status === 'done'
   const overdue = isOverdue(goal)
+  // The title may already be the step itself, and then there is nothing to add.
+  const step = goal.title && goal.next_steps ? goal.next_steps : ''
+  const hasDetail = Boolean(step) || goal.from_yuvi || !isDone
+  const panelId = `mt-goal-panel-${goal.id}`
   // A single forward move, never a row of look-alike statuses to decode.
   const advance: GoalStatus = status === 'new' ? 'in_progress' : status === 'in_progress' ? 'done' : 'in_progress'
   const advanceLabel = status === 'new'
     ? t('mentoring.student.status.start')
     : status === 'in_progress' ? t('mentoring.student.status.finish') : t('mentoring.student.status.reopen')
 
-  return (
-    <li className={`mt-goal${isDone ? ' is-done' : ''}${overdue ? ' is-overdue' : ''}`}>
-      <div className="mt-goal__head">
-        <span className={`mt-goal__status is-${status}`}>
-          {isDone && <Icon name="check" size={12} />}{t(`mentoring.student.status.${status}`)}
+  const summary = (
+    <>
+      <span className="mt-fgoal__top">
+        <span className="mt-fgoal__title" dir="auto">{goal.title || goal.next_steps}</span>
+        <span className={`mt-fgoal__status is-${status}`}>
+          {isDone && <Icon name="check" size={11} />}{t(`mentoring.student.status.${status}`)}
         </span>
-        {goal.from_yuvi && <YuviTag />}
-      </div>
-      <h3 className="mt-goal__title" dir="auto">{goal.title || goal.next_steps}</h3>
-      {goal.title && goal.next_steps && (
-        <div className="mt-goal__stepbox">
-          <span className="mt-goal__steplabel"><Icon name="arrow" size={13} />{t('mentoring.student.active.nextStep')}</span>
-          <p className="mt-goal__step" dir="auto">{goal.next_steps}</p>
-        </div>
-      )}
-      <div className="mt-goal__foot">
         {goal.deadline && (
-          <span className={`mt-jgoal__when${overdue ? ' is-overdue' : ''}`}>
-            <Icon name="calendar" size={14} />
+          <span className={`mt-fgoal__when${overdue ? ' is-overdue' : ''}`}>
+            <Icon name="calendar" size={13} />
             {t('mentoring.student.goal.due', { date: formatDate(goal.deadline, language) })}
             {overdue && ` · ${t('mentoring.student.status.overdue')}`}
           </span>
         )}
-        <div className="mt-goal__actions">
-          {!isDone && (goal.needs_help
-            ? <span className="mt-jgoal__helped"><Icon name="check" size={13} />{t('mentoring.student.status.helpSent')}</span>
-            : <button className="mt-text-button mt-jgoal__help" type="button" disabled={helping} onClick={onHelp}>
-                <Icon name="alert" size={14} />{t('mentoring.student.status.hard')}
-              </button>
-          )}
+      </span>
+      {step && (
+        <span className="mt-fgoal__stepline" dir="auto">
+          <span className="mt-fgoal__steplabel">{t('mentoring.student.active.nextStep')}:</span> {step}
+        </span>
+      )}
+    </>
+  )
+
+  return (
+    <li className={`mt-fgoal${isDone ? ' is-done' : ''}${overdue ? ' is-overdue' : ''}${open ? ' is-open' : ''}`}>
+      <div className="mt-fgoal__bar">
+        {hasDetail ? (
           <button
-            className={`mt-goal__advance${isDone ? ' is-quiet' : ''}`}
             type="button"
-            disabled={updating}
-            onClick={() => onStatus(advance)}
+            className="mt-fgoal__toggle"
+            aria-expanded={open}
+            aria-controls={panelId}
+            title={t(open ? 'mentoring.student.goal.less' : 'mentoring.student.goal.more')}
+            onClick={onToggle}
           >
-            {advanceLabel}
+            {summary}
+            <Icon name="chevronUp" size={16} className="mt-fgoal__chev" />
           </button>
-        </div>
+        ) : (
+          <span className="mt-fgoal__toggle is-static">{summary}</span>
+        )}
+        <button
+          className={`mt-fgoal__advance${isDone ? ' is-quiet' : ''}`}
+          type="button"
+          disabled={updating}
+          onClick={() => onStatus(advance)}
+        >
+          {advanceLabel}
+        </button>
       </div>
+      {hasDetail && (
+        <div className="mt-fgoal__panel" id={panelId} hidden={!open}>
+          {step && (
+            <p className="mt-fgoal__step" dir="auto">
+              <Icon name="arrow" size={13} />{step}
+            </p>
+          )}
+          <div className="mt-fgoal__extra">
+            {goal.from_yuvi && <YuviTag />}
+            {!isDone && (goal.needs_help
+              ? <span className="mt-jgoal__helped"><Icon name="check" size={13} />{t('mentoring.student.status.helpSent')}</span>
+              : <button className="mt-text-button mt-jgoal__help" type="button" disabled={helping} onClick={onHelp}>
+                  <Icon name="alert" size={14} />{t('mentoring.student.status.hard')}
+                </button>
+            )}
+          </div>
+        </div>
+      )}
     </li>
   )
 }
