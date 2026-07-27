@@ -684,6 +684,289 @@
     linear-gradient(180deg, rgba(26, 22, 52, .6), rgba(15, 12, 32, .55));
 }
 
+/* ── Landing — friendlier night ───────────────────────────────────────────
+   Feedback: the dark landing read as gloomy and monotone ("dry", too dark for
+   students). This closing layer keeps the calm, premium night but makes it a
+   *lit* night: a lighter indigo canvas instead of near-black, four ambient
+   pools in different hues (violet, royal blue, teal, one warm dawn), a faint
+   star field for depth, brighter surfaces and text, and restrained hue variety
+   back in the icons — so each section has its own colour instead of one
+   uniform purple. Still no cartoon colours, no heavy shadows. */
+[data-theme='dark'] .landing720 {
+  --l720d-surface: #221f45;
+  --l720d-surface-2: #2b2856;
+  --l720d-border: rgba(255, 255, 255, .12);
+  --l720d-border-strong: rgba(255, 255, 255, .18);
+  --l720d-text-soft: #cbc7de;
+  --l720d-text-muted: #9a95b4;
+
+  /* Lighter indigo base + a faint star field over the ambient pools. Stars are
+     two sparse dot grids at different scales, so they read as depth rather than
+     a pattern. */
+  background-color: #17123a;
+  background-image:
+    radial-gradient(1.3px 1.3px at 22% 18%, rgba(255, 255, 255, .42), transparent 60%),
+    radial-gradient(1.1px 1.1px at 68% 34%, rgba(206, 226, 255, .34), transparent 60%),
+    radial-gradient(1.4px 1.4px at 44% 72%, rgba(255, 255, 255, .26), transparent 60%),
+    radial-gradient(1.1px 1.1px at 84% 82%, rgba(255, 236, 205, .3), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.03 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(1100px 780px at 12% -4%, rgba(150, 122, 255, .30), transparent 60%),
+    radial-gradient(820px 600px at 88% 8%, rgba(72, 150, 235, .16), transparent 60%),
+    radial-gradient(760px 560px at 4% 62%, rgba(58, 190, 190, .11), transparent 58%),
+    radial-gradient(900px 640px at 96% 96%, rgba(255, 170, 110, .09), transparent 62%),
+    linear-gradient(168deg, #211a52 0%, #191343 52%, #130f33 100%);
+  background-size:
+    300px 300px, 420px 420px, 360px 360px, 500px 500px,
+    120px 120px,
+    auto, auto, auto, auto, auto;
+  background-repeat:
+    repeat, repeat, repeat, repeat,
+    repeat,
+    no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+  /* Stars scroll with the page (a real sky with depth); the ambient pools stay
+     fixed so the light feels like it belongs to the room, not the content. */
+  background-attachment:
+    scroll, scroll, scroll, scroll,
+    fixed,
+    fixed, fixed, fixed, fixed, fixed;
+}
+
+/* The two drifting light pools carry more presence and a second hue. */
+[data-theme='dark'] .landing720::before,
+[data-theme='dark'] .landing720::after { opacity: .55; }
+
+[data-theme='dark'] .landing720::before {
+  background: radial-gradient(circle, rgba(160, 128, 255, .5), transparent 70%);
+}
+
+[data-theme='dark'] .landing720::after {
+  background: radial-gradient(circle, rgba(72, 190, 215, .3), transparent 70%);
+}
+
+/* One warm spark at the end of the headline accent — the page stops being a
+   single cold hue without turning playful. */
+[data-theme='dark'] .landing720-accent {
+  /* Must stay background-image (not the shorthand) — the shorthand resets
+     background-clip and the gradient would paint as a solid block behind the
+     word instead of inside the glyphs. */
+  background-image: linear-gradient(96deg, #ffd9ae 0%, #e6bcff 30%, #a98cff 62%, #6fd8e8 100%);
+  background-size: 260% auto;
+}
+
+[data-theme='dark'] .landing720-eyebrow {
+  border-color: rgba(184, 166, 255, .34);
+  background: rgba(136, 116, 250, .18);
+  color: #ded3ff;
+}
+
+/* Cards sit a step above the canvas so content, not the void, holds the eye. */
+[data-theme='dark'] .landing720-feature-card {
+  border-color: rgba(255, 255, 255, .11);
+  background: linear-gradient(180deg, #2a2652 0%, #201d40 100%);
+  box-shadow: 0 20px 48px rgba(6, 4, 20, .34), inset 0 1px rgba(255, 255, 255, .08);
+}
+
+[data-theme='dark'] .landing720-hub-node {
+  background: linear-gradient(180deg, rgba(66, 60, 116, .62) 0%, rgba(38, 34, 70, .5) 100%);
+}
+
+/* Each icon keeps its own colour — the section reads as six distinct agents /
+   three distinct capabilities instead of one repeated purple chip. */
+[data-theme='dark'] .landing720-feature-icon.icon-purple { color: #cbb9ff; background: rgba(148, 120, 255, .20); }
+[data-theme='dark'] .landing720-feature-icon.icon-blue { color: #9cc6ff; background: rgba(88, 148, 255, .18); }
+[data-theme='dark'] .landing720-feature-icon.icon-teal { color: #86e5d6; background: rgba(64, 200, 180, .17); }
+
+[data-theme='dark'] .tone-purple .landing720-hub-icon { color: #cbb9ff; background: rgba(148, 120, 255, .20); }
+[data-theme='dark'] .tone-indigo .landing720-hub-icon { color: #b0bcff; background: rgba(112, 132, 255, .18); }
+[data-theme='dark'] .tone-blue .landing720-hub-icon { color: #9cc6ff; background: rgba(88, 148, 255, .18); }
+[data-theme='dark'] .tone-teal .landing720-hub-icon { color: #86e5d6; background: rgba(64, 200, 180, .17); }
+[data-theme='dark'] .tone-pink .landing720-hub-icon { color: #f5b6d2; background: rgba(240, 130, 180, .16); }
+[data-theme='dark'] .tone-orange .landing720-hub-icon { color: #ffcb96; background: rgba(255, 168, 96, .16); }
+
+/* A soft dawn above the capability cards balances the cool hero. */
+[data-theme='dark'] .landing720-feature-grid {
+  background:
+    radial-gradient(1100px 420px at 18% -12%, rgba(255, 176, 116, .07), transparent 60%),
+    radial-gradient(1000px 420px at 78% -10%, rgba(150, 116, 255, .09), transparent 62%);
+}
+
+/* Body copy and secondary text lift off the dark instead of fading into it. */
+[data-theme='dark'] .landing720-hub-text span,
+[data-theme='dark'] .landing720-feature-card p,
+[data-theme='dark'] .landing720-faq-answer { color: #c4bfda; }
+
+[data-theme='dark'] .landing720-login-btn.teacher {
+  color: #f0eefb;
+  background: rgba(58, 53, 104, .8);
+  border-color: rgba(255, 255, 255, .18);
+}
+
+[data-theme='dark'] .landing720-login-btn.teacher:hover {
+  background: rgba(72, 66, 126, .9);
+  border-color: rgba(184, 166, 255, .38);
+}
+
+/* The closing zone was the darkest block on the page — a heavy slab under a
+   now-lighter canvas. Lift it and warm one corner so the page ends on light. */
+[data-theme='dark'] .landing720-contact {
+  background:
+    radial-gradient(920px 500px at 84% 2%, rgba(150, 122, 255, .22), transparent 62%),
+    radial-gradient(760px 460px at 6% 96%, rgba(255, 172, 112, .10), transparent 60%),
+    linear-gradient(180deg, rgba(46, 40, 90, .58), rgba(30, 25, 62, .5));
+}
+
+[data-theme='dark'] .landing720-contact-field input,
+[data-theme='dark'] .landing720-contact-field textarea {
+  border-color: rgba(255, 255, 255, .14);
+  background: rgba(24, 21, 52, .7);
+}
+
+/* ── Landing — credibility sections (metrics · journey · audience ·
+   standards · footer). Same friendlier-night palette: lifted violet
+   surfaces, soft borders, multi-hue accents. ── */
+
+[data-theme='dark'] .landing720-section-head h2 { color: #f2effd; }
+[data-theme='dark'] .landing720-section-head p { color: #c4bfda; }
+
+[data-theme='dark'] .landing720-section-head .landing720-eyebrow {
+  color: #d8c9ff;
+  background: rgba(150, 122, 255, .16);
+}
+
+/* Proof band. Gradient text: use background-image only — the `background`
+   shorthand resets background-clip and would paint a solid block. */
+[data-theme='dark'] .landing720-metrics {
+  background: rgba(255, 255, 255, .1);
+  border-color: var(--l720d-border);
+  box-shadow: 0 14px 34px rgba(8, 5, 26, .32);
+}
+
+[data-theme='dark'] .landing720-metric {
+  background: linear-gradient(180deg, #2a2652, #211e42);
+}
+
+[data-theme='dark'] .landing720-metric strong {
+  background-image: linear-gradient(120deg, #ffd9ae, #e6bcff 34%, #a98cff 66%, #6fd8e8);
+}
+
+[data-theme='dark'] .landing720-metric span { color: #b8b3d0; }
+
+/* Journey */
+[data-theme='dark'] .landing720-journey-track::before {
+  background: linear-gradient(
+    to left,
+    transparent,
+    rgba(255, 255, 255, .16) 12%,
+    rgba(255, 255, 255, .16) 88%,
+    transparent
+  );
+}
+
+[data-theme='dark'] .landing720-journey-step {
+  background: linear-gradient(180deg, #2a2652, #201d40);
+  border-color: var(--l720d-border);
+  box-shadow: 0 14px 34px rgba(8, 5, 26, .34);
+}
+
+[data-theme='dark'] .landing720-journey-step:hover {
+  border-color: var(--l720d-border-strong);
+  box-shadow: 0 20px 44px rgba(8, 5, 26, .44);
+}
+
+[data-theme='dark'] .landing720-journey-step__num {
+  background: linear-gradient(135deg, #7d92ff, #a98cff);
+  box-shadow: 0 8px 20px rgba(122, 96, 235, .38);
+}
+
+/* Each stage keeps its own hue so the row reads as a journey, not a list. */
+[data-theme='dark'] .landing720-journey-step:nth-child(2) .landing720-journey-step__num {
+  background: linear-gradient(135deg, #a98cff, #d9a7f5);
+}
+
+[data-theme='dark'] .landing720-journey-step:nth-child(3) .landing720-journey-step__num {
+  background: linear-gradient(135deg, #5fc7c0, #7fb6ff);
+}
+
+[data-theme='dark'] .landing720-journey-step:nth-child(4) .landing720-journey-step__num {
+  background: linear-gradient(135deg, #ffbe8a, #f0a3c8);
+}
+
+[data-theme='dark'] .landing720-journey-step h3 { color: #f2effd; }
+[data-theme='dark'] .landing720-journey-step p { color: #c4bfda; }
+
+[data-theme='dark'] .landing720-journey-step__meta {
+  border-block-start-color: rgba(255, 255, 255, .13);
+  color: #948fb0;
+}
+
+/* Audience */
+[data-theme='dark'] .landing720-audience-card {
+  background: linear-gradient(180deg, #2a2652, #201d40);
+  border-color: var(--l720d-border);
+  box-shadow: 0 14px 34px rgba(8, 5, 26, .34);
+}
+
+[data-theme='dark'] .landing720-audience-card:hover {
+  border-color: var(--l720d-border-strong);
+  box-shadow: 0 20px 44px rgba(8, 5, 26, .44);
+}
+
+[data-theme='dark'] .landing720-audience-card h3 { color: #f2effd; }
+[data-theme='dark'] .landing720-audience-card > p { color: #c4bfda; }
+[data-theme='dark'] .landing720-audience-card li { color: #ddd9ec; }
+
+[data-theme='dark'] .landing720-audience-card li::before {
+  background: linear-gradient(135deg, #a98cff, #7fb6ff);
+}
+
+/* Standards */
+[data-theme='dark'] .landing720-standards {
+  border-color: var(--l720d-border);
+  background:
+    radial-gradient(720px 320px at 10% 0%, rgba(150, 122, 255, .2), transparent 64%),
+    radial-gradient(680px 320px at 94% 100%, rgba(255, 172, 112, .1), transparent 62%),
+    linear-gradient(180deg, rgba(46, 40, 90, .55), rgba(30, 25, 62, .48));
+  box-shadow: 0 18px 44px rgba(8, 5, 26, .3);
+}
+
+[data-theme='dark'] .landing720-standard {
+  background: rgba(255, 255, 255, .045);
+  border-color: rgba(255, 255, 255, .1);
+}
+
+[data-theme='dark'] .landing720-standard h3 { color: #f2effd; }
+[data-theme='dark'] .landing720-standard p { color: #c0bbd7; }
+
+[data-theme='dark'] .landing720-standard__icon {
+  color: #9cc6ff;
+  background: rgba(120, 160, 255, .16);
+}
+
+[data-theme='dark'] .landing720-standard:nth-child(3n + 2) .landing720-standard__icon {
+  color: #cbb9ff;
+  background: rgba(160, 128, 255, .16);
+}
+
+[data-theme='dark'] .landing720-standard:nth-child(3n) .landing720-standard__icon {
+  color: #86e5d6;
+  background: rgba(72, 190, 175, .15);
+}
+
+/* Footer */
+[data-theme='dark'] .landing720-footer {
+  border-block-start-color: rgba(255, 255, 255, .12);
+}
+
+[data-theme='dark'] .landing720-footer__brand p { color: #b8b3d0; }
+[data-theme='dark'] .landing720-footer__links h4 { color: #ece8fb; }
+[data-theme='dark'] .landing720-footer__links a { color: #b8b3d0; }
+[data-theme='dark'] .landing720-footer__links a:hover { color: #cbb9ff; }
+
+[data-theme='dark'] .landing720-footer__bottom {
+  border-block-start-color: rgba(255, 255, 255, .1);
+  color: #8e89ab;
+}
+
 /* Learner mapping */
 [data-theme='dark'] .learner-mapping-page { color: var(--sp-ink-700); }
 [data-theme='dark'] .integrity-dialog,

@@ -24,6 +24,13 @@ namespace Yuvi720.LearningWorld.World
         {
             var t = Application.isPlaying ? Time.time : Time.realtimeSinceStartup;
             Shader.SetGlobalFloat(TimeId, t * speed);
+
+            // The water shader reads scene depth to derive the water column thickness — that is what gives
+            // the turquoise shallow shelf and the foam line where the sea meets the shore. Built-in RP only
+            // renders _CameraDepthTexture on demand, so the request has to be made on the camera itself.
+            var cam = Camera.main;
+            if (cam != null && (cam.depthTextureMode & DepthTextureMode.Depth) == 0)
+                cam.depthTextureMode |= DepthTextureMode.Depth;
         }
     }
 }

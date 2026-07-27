@@ -84,7 +84,6 @@ def _empty_state(learner_id: str) -> dict[str, Any]:
         "learner_id": learner_id,
         "language": "he",
         "gender": None,
-        "theme": None,
         "mapping_results": None,
         "mapping_progress": None,
         "profile_summary_progress": None,
@@ -94,6 +93,7 @@ def _empty_state(learner_id: str) -> dict[str, Any]:
         "avatar": None,
         "avatar_unlocks": [],
         "activeness_map": None,
+        "mentoring_draft": None,
     }
 
 
@@ -122,10 +122,14 @@ async def get_learner_state(learner_id: Optional[str] = None) -> dict[str, Any]:
 
 async def update_learner_state(learner_id: Optional[str], updates: dict[str, Any]) -> dict[str, Any]:
     safe_id = normalize_learner_id(learner_id)
+    # `avatar_unlocks` is deliberately NOT here: cosmetics are earned, so only
+    # the server may grant them (see grant_avatar_unlock / services.rewards).
+    # `theme` is NOT here either: it lives on the user document
+    # (`preferences.theme`) so one account keeps one theme across devices.
     allowed = {
-        "language", "gender", "theme", "mapping_results", "mapping_progress", "profile_summary_progress",
-        "profile_cache", "dashboard_cache", "game_progress", "avatar", "avatar_unlocks",
-        "activeness_map",
+        "language", "gender", "mapping_results", "mapping_progress", "profile_summary_progress",
+        "profile_cache", "dashboard_cache", "game_progress", "avatar",
+        "activeness_map", "mentoring_draft",
     }
     now = datetime.now(timezone.utc).isoformat()
     set_data = {key: value for key, value in updates.items() if key in allowed}
@@ -146,3 +150,41 @@ async def update_learner_state(learner_id: Optional[str], updates: dict[str, Any
     data[safe_id] = current
     _write_fallback(data)
     return _public_state(current, safe_id)
+
+
+async def grant_avatar_unlock(learner_id: Optional[str], asset_id: str) -> list[str]:
+    """Server-only write path for earned cosmetics.
+
+    Kept out of `update_learner_state`'s allow-list so a client cannot grant
+    itself a locked item; the rewards service is the single caller.
+    """
+    safe_id = normalize_learner_id(learner_id)
+    now = datetime.now(timezone.utc).isoformat()
+
+    collection = _get_collection()
+    if collection is not None:
+        try:
+            await collection.update_one(
+                {"_id": safe_id},
+                {
+                    "$addToSet": {"avatar_unlocks": asset_id},
+                    "$set": {"learner_id": safe_id, "updated_at": now},
+                },
+                upsert=True,
+            )
+            state = await get_learner_state(safe_id)
+            return list(state.get("avatar_unlocks") or [])
+        except Exception as exc:
+            print(f"⚠️ Mongo avatar unlock write failed, using fallback: {exc}")
+
+    data = _read_fallback()
+    current = data.get(safe_id) or _empty_state(safe_id)
+    unlocks = list(current.get("avatar_unlocks") or [])
+    if asset_id not in unlocks:
+        unlocks.append(asset_id)
+    current["avatar_unlocks"] = unlocks
+    current["learner_id"] = safe_id
+    current["updated_at"] = now
+    data[safe_id] = current
+    _write_fallback(data)
+    return unlocks

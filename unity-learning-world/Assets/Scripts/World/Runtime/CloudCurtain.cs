@@ -61,6 +61,13 @@ namespace Yuvi720.LearningWorld.World
                 _mat = new Material(Shader.Find("Standard")) { hideFlags = HideFlags.HideAndDontSave };
                 MakeTransparent(_mat);
                 _mat.color = cloudColor;
+                // Fully matte + self-lit. With the default gloss each sphere caught a hard specular hotspot,
+                // so the bank read as a stack of shiny eggs instead of soft vapour; killing the highlight and
+                // lifting the shaded side with emission is what turns the puffs into cloud.
+                if (_mat.HasProperty("_Glossiness")) _mat.SetFloat("_Glossiness", 0f);
+                if (_mat.HasProperty("_Metallic")) _mat.SetFloat("_Metallic", 0f);
+                _mat.EnableKeyword("_EMISSION");
+                _mat.SetColor("_EmissionColor", new Color(cloudColor.r, cloudColor.g, cloudColor.b) * 0.45f);
             }
             for (var r = 0; r < rows; r++)
             for (var c = 0; c < columns; c++)
@@ -78,17 +85,21 @@ namespace Yuvi720.LearningWorld.World
 
                 var u = columns > 1 ? c / (float)(columns - 1) : 0.5f;
                 var v = rows > 1 ? r / (float)(rows - 1) : 0.5f;
-                // Break the grid with deterministic per-puff jitter so it billows like cloud instead of
-                // stacking into tidy rows of capsules.
-                var jx = (Mathf.PerlinNoise(c * 3.1f, r * 1.7f) - 0.5f) * (width / Mathf.Max(1, columns)) * 1.5f;
-                var jy = (Mathf.PerlinNoise(c * 1.3f, r * 2.9f) - 0.5f) * (height / Mathf.Max(1, rows)) * 1.3f;
+                // Break the grid with deterministic per-puff HASH noise. Perlin sampled on the integer grid is
+                // itself smooth and regular, so it kept the puffs in tidy rows — the "flying saucers on a
+                // chessboard" look. A hash decorrelates neighbours, which is what makes a bank read as cloud.
+                float H(int salt) => Frac(Mathf.Sin((c * 127.1f + r * 311.7f + salt * 74.7f)) * 43758.5453f);
+                var jx = (H(1) - 0.5f) * (width / Mathf.Max(1, columns)) * 2.2f;
+                var jy = (H(2) - 0.5f) * (height / Mathf.Max(1, rows)) * 1.8f;
                 var x = (u - 0.5f) * width + jx;
                 var y = v * height + jy;
-                var z = (Mathf.PerlinNoise(c * 2.3f, r * 3.7f) - 0.5f) * depthJitter * 2f;
+                var z = (H(3) - 0.5f) * depthJitter * 2f;
                 var home = new Vector3(x, y, z);
                 go.transform.localPosition = home;
-                var s = puffSize * (0.6f + 0.8f * Mathf.PerlinNoise(u * 4f + 11f, v * 4f + 7f));
-                go.transform.localScale = new Vector3(s * 1.15f, s * 0.82f, s);
+                go.transform.localRotation = Quaternion.Euler((H(4) - 0.5f) * 22f, H(5) * 360f, (H(6) - 0.5f) * 22f);
+                var s = puffSize * (0.55f + 1.1f * H(7));
+                // Strongly flattened: a sphere reads as an egg, a squashed ellipsoid reads as a cloud deck.
+                go.transform.localScale = new Vector3(s * 1.7f, s * 0.34f, s * 1.25f);
                 _puffs.Add(go.transform);
                 _home.Add(home);
             }
@@ -137,6 +148,8 @@ namespace Yuvi720.LearningWorld.World
             m.renderQueue = 3000;
             if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", 0.05f);
         }
+
+        private static float Frac(float v) => v - Mathf.Floor(v);
 
         private static void DestroyObj(Object o)
         {

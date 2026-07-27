@@ -96,6 +96,43 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
         }
 
         /// <summary>
+        /// Soft alpha-blended material for the sky cloud billboards and other feathered sprites. Standard
+        /// in Fade mode with no specular, no shadow contribution and a lifted emission floor so the puffs
+        /// stay bright and airy even on their shaded side.
+        /// </summary>
+        public static Material GetSoftCloudMaterial(string assetName, Texture2D tex, Color color)
+        {
+            EnsureOutputFolders();
+            var path = $"{MaterialFolder}/{Sanitize(assetName)}.mat";
+            var shader = Shader.Find("Standard");
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                material = new Material(shader) { name = Sanitize(assetName) };
+                AssetDatabase.CreateAsset(material, path);
+            }
+            if (material.shader != shader) material.shader = shader;
+            material.SetTexture("_MainTex", tex);
+            material.color = color;
+            material.SetFloat("_Mode", 2f);   // Fade
+            material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            material.SetInt("_ZWrite", 0);
+            material.DisableKeyword("_ALPHATEST_ON");
+            material.EnableKeyword("_ALPHABLEND_ON");
+            material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            material.renderQueue = 3000;
+            if (material.HasProperty("_Glossiness")) material.SetFloat("_Glossiness", 0f);
+            if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", 0f);
+            material.EnableKeyword("_EMISSION");
+            material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+            if (material.HasProperty("_EmissionColor"))
+                material.SetColor("_EmissionColor", new Color(color.r, color.g, color.b) * 0.30f);
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        /// <summary>
         /// Emissive accent material (Standard shader) for the cyan "tech" glow that ties dressing
         /// props to the Yuvi robot's neon palette — beacon lanterns, fountain water, crystal accents.
         /// </summary>
@@ -148,11 +185,16 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
 
         /// <summary>
         /// Animated water material (Yuvi/Water shader). waveAmp/waveLen drive the open ocean; set
-        /// ripple &gt; 0 for the small radial fountain ripples. Falls back to a solid material if the
+        /// ripple &gt; 0 for the small radial fountain ripples. The optional tail controls the
+        /// stylised-realism terms — crest choppiness, micro-chop normals, Fresnel sky reflection,
+        /// subsurface scatter and the depth-driven shoreline. Defaults are tuned for open sea; small
+        /// enclosed pools want a much lower detail/shore setting. Falls back to a solid material if the
         /// shader is missing so builds never break.
         /// </summary>
         public static Material GetWaterMaterial(string assetName, Color deep, Color shallow, Color foam,
-            float waveAmp, float waveLen, float foamAmount, float ripple)
+            float waveAmp, float waveLen, float foamAmount, float ripple,
+            float choppy = 1f, float detail = 1f, float reflectivity = 1f, float scatter = 1f,
+            float shoreFade = 3f, float shoreFoam = 1.1f, float glossiness = 0.92f, float puddle = 0f)
         {
             EnsureOutputFolders();
             var path = $"{MaterialFolder}/{Sanitize(assetName)}.mat";
@@ -172,9 +214,30 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             material.SetFloat("_WaveLen", waveLen);
             material.SetFloat("_FoamAmount", foamAmount);
             material.SetFloat("_RippleStrength", ripple);
+            material.SetFloat("_Choppy", choppy);
+            material.SetFloat("_DetailStrength", detail);
+            material.SetFloat("_Reflectivity", reflectivity);
+            material.SetFloat("_Scatter", scatter);
+            material.SetFloat("_ShoreFade", shoreFade);
+            material.SetFloat("_ShoreFoam", shoreFoam);
+            material.SetFloat("_Glossiness", glossiness);
+            // Every property has to be written on EVERY call, never left to the shader default. Material
+            // assets are reused across builds and keep whatever value was serialised into them, so a
+            // property that is only defaulted in the shader silently keeps its old value forever — which is
+            // exactly how a leftover "puddle" mask ended up painting foam blobs across the open sea.
+            material.SetFloat("_PuddleAmount", puddle);
+            // The reflected sky is reconstructed in-shader, so it has to be handed the same colours the
+            // procedural skybox uses — otherwise the sea mirrors a sky that is not the one overhead.
+            material.SetColor("_SkyZenith", SkyZenith);
+            material.SetColor("_SkyHorizon", SkyHorizon);
             EditorUtility.SetDirty(material);
             return material;
         }
+
+        /// Kept in sync with BuildSkyMaterial()/RenderSettings.fogColor in ArrivalProductionBuilder.
+        public static readonly Color SkyZenith = new Color(0.22f, 0.42f, 0.78f);
+        public static readonly Color SkyHorizon = new Color(0.58f, 0.72f, 0.86f);
+
 
         private static Shader ResolveGroundShader()
         {
@@ -190,15 +253,17 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             // Stylized shader controls; harmless no-ops on the Standard fallback.
             if (material.HasProperty("_WrapAmount")) material.SetFloat("_WrapAmount", family == "cliff" ? .42f : family == "connector" ? .48f : .58f);
             if (material.HasProperty("_AmbientBoost")) material.SetFloat("_AmbientBoost", family == "water" ? .16f : family == "connector" ? .18f : .12f);
-            if (material.HasProperty("_VColorStrength")) material.SetFloat("_VColorStrength", family == "water" ? 0f : 1f);
+            if (material.HasProperty("_VColorStrength")) material.SetFloat("_VColorStrength", family == "water" ? 0f : .34f);
             if (material.HasProperty("_Glossiness")) material.SetFloat("_Glossiness", .08f);
             if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", 0f);
             // Grass blade detail on the walkable tops only (cliffs / water / connectors stay untextured).
+            // Scale 1.05 puts roughly one blade cluster per metre; at the old .22 the detail was smeared over
+            // 4.5m tiles, so the only thing the eye could see was the mesh triangulation.
             if (material.HasProperty("_MainTex"))
             {
                 var isTop = family != "cliff" && family != "water" && family != "connector";
                 material.SetTexture("_MainTex", isTop ? GroundingTextureFactory.GrassTexture() : null);
-                if (material.HasProperty("_MainTexScale")) material.SetFloat("_MainTexScale", isTop ? .22f : 0f);
+                if (material.HasProperty("_MainTexScale")) material.SetFloat("_MainTexScale", isTop ? 1.05f : 0f);
             }
         }
 

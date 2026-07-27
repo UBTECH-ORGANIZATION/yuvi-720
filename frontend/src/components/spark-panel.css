@@ -1,0 +1,154 @@
+/* Popover anchored under the wallet chip. Explains the balance: what actions
+   pay, and where the recent sparks came from. */
+
+.spark-panel {
+  position: absolute;
+  inset-block-start: calc(100% + 8px);
+  inset-inline-end: 0;
+  z-index: 60;
+  inline-size: min(320px, calc(100vw - 24px));
+  padding: 14px;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-lg, 16px);
+  background: var(--sp-surface);
+  box-shadow: var(--sp-shadow-lg, 0 18px 48px rgba(24, 18, 64, .18));
+  text-align: start;
+  animation: spark-panel-in .16s ease;
+}
+
+@keyframes spark-panel-in {
+  from { opacity: 0; transform: translateY(-4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spark-panel { animation: none; }
+}
+
+.spark-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.spark-panel__balance {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--sp-primary-700);
+  font: 600 var(--sp-fs-sm)/1 var(--sp-font);
+}
+
+.spark-panel__balance strong {
+  font-size: var(--sp-fs-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.spark-panel__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 26px;
+  block-size: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--sp-ink-400);
+  cursor: pointer;
+}
+
+.spark-panel__close:hover { background: var(--sp-surface-2); }
+
+.spark-panel__lede {
+  margin: 8px 0 0;
+  color: var(--sp-ink-500);
+  font: 400 var(--sp-fs-xs)/1.5 var(--sp-font);
+}
+
+.spark-panel__heading {
+  margin: 14px 0 6px;
+  color: var(--sp-ink-700);
+  font: 700 var(--sp-fs-xs)/1 var(--sp-font);
+}
+
+.spark-panel__rules,
+.spark-panel__history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+
+.spark-panel__rules li,
+.spark-panel__history li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: var(--sp-surface-2);
+  font: 500 var(--sp-fs-xs)/1.4 var(--sp-font);
+  color: var(--sp-ink-600);
+}
+
+.spark-panel__ruleText,
+.spark-panel__historyText { min-inline-size: 0; }
+
+.spark-panel__ruleAmount,
+.spark-panel__delta {
+  flex: none;
+  color: var(--sp-primary-700);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.spark-panel__delta.is-spend { color: var(--sp-ink-400); }
+
+.spark-panel__historyMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  color: var(--sp-ink-400);
+  font-weight: 500;
+}
+
+.spark-panel__empty {
+  margin: 0;
+  color: var(--sp-ink-400);
+  font: 400 var(--sp-fs-xs)/1.5 var(--sp-font);
+}
+
+.spark-panel__cta {
+  margin-block-start: 14px;
+  inline-size: 100%;
+  min-block-size: 38px;
+  border: 0;
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-primary-600, #6f5bff);
+  color: #fff;
+  font: 700 var(--sp-fs-xs)/1 var(--sp-font);
+  cursor: pointer;
+}
+
+.spark-panel__cta:hover { filter: brightness(1.05); }
+.spark-panel__cta:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+
+/* The pull forward: how close the next unlock is, and the way to get there. */
+.spark-panel__nudge {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--sp-primary-500, #6f5bff) 10%, transparent);
+  color: var(--sp-ink-700);
+  font: 400 var(--sp-fs-xs)/1.5 var(--sp-font);
+}
+
+.spark-panel__cta.is-quiet {
+  margin-block-start: 8px;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--sp-primary-500, #6f5bff) 30%, transparent);
+  color: var(--sp-primary-700, #4a37cc);
+}
