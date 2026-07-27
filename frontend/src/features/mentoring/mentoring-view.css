@@ -256,34 +256,63 @@
 @keyframes mt-card-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .mt-focus__label { display: inline-flex; align-items: center; gap: 6px; color: var(--sp-ink-400); font-size: var(--sp-fs-xs); font-weight: var(--sp-fw-medium); letter-spacing: .01em; }
 
-/* 1 — the talk, kept deliberately quiet and short (two lines). */
-.mt-focus__talk { display: grid; gap: var(--sp-2); padding: var(--sp-4) var(--sp-5); border: 1px solid var(--sp-border); border-radius: 14px; background: var(--sp-surface); }
-.mt-focus__notes { margin: 0; color: var(--sp-ink-700); font-size: var(--sp-fs-sm); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.mt-focus__talk-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+/* 1 — what I said in the talk. Long notes stay clamped until asked for. */
+.mt-focus__talk { display: grid; gap: var(--sp-3); padding: var(--sp-5); border: 1px solid var(--sp-border); border-radius: 14px; background: var(--sp-surface); }
+.mt-focus__talk-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.mt-focus__notes { margin: 0; color: var(--sp-ink-700); font-size: var(--sp-fs-base, var(--sp-fs-sm)); line-height: 1.7; }
+.mt-focus__notes.is-clamped { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.mt-focus__talk-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2) var(--sp-4); }
+.mt-focus__talk-actions { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4); }
+.mt-focus__feeling { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: var(--sp-radius-pill); background: var(--sp-bg-subtle); color: var(--sp-ink-600); font-size: var(--sp-fs-xs); }
 .mt-focus__meta { color: var(--sp-ink-400); font-size: var(--sp-fs-xs); }
 
-/* 2 — the goals of that talk. They carry no priority between them, so they are
-   rendered identically: what the goal is, what I actually do, one status. */
-.mt-focus__goals { display: grid; gap: var(--sp-3); margin-block-start: var(--sp-2); }
-.mt-goals { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); }
-.mt-goal { display: grid; gap: var(--sp-2); padding: clamp(var(--sp-4), 2.4vw, var(--sp-5)); border: 1px solid var(--sp-border); border-inline-start: 3px solid var(--sp-primary-500); border-radius: 14px; background: var(--sp-surface); box-shadow: var(--sp-shadow-sm); }
+/* 2 — the bridge: these goals came out of that talk, so the eye travels down. */
+.mt-flow-link { display: grid; justify-items: center; gap: var(--sp-1); margin-block: var(--sp-1); }
+.mt-flow-link__line { inline-size: 2px; block-size: 14px; border-radius: 2px; background: linear-gradient(var(--sp-border-strong), color-mix(in srgb, var(--sp-primary-500) 55%, transparent)); }
+.mt-flow-link__pill { display: inline-flex; align-items: center; gap: 7px; margin: 0; padding: 6px var(--sp-4); border: 1px solid color-mix(in srgb, var(--sp-primary-500) 35%, var(--sp-border)); border-radius: var(--sp-radius-pill); background: color-mix(in srgb, var(--sp-primary-500) 8%, var(--sp-surface)); color: var(--sp-primary-700); font-size: var(--sp-fs-sm); font-weight: var(--sp-fw-medium); }
+
+/* 3 — the goals of that talk. They carry no priority between them, so they are
+   rendered identically: what the goal is, what I actually do, one next move. */
+.mt-focus__goals { display: grid; gap: var(--sp-3); }
+.mt-goals { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-4); }
+.mt-goal { display: grid; gap: var(--sp-3); padding: clamp(var(--sp-5), 2.6vw, var(--sp-6)); border: 1px solid var(--sp-border); border-inline-start: 3px solid var(--sp-primary-500); border-radius: 14px; background: var(--sp-surface); box-shadow: var(--sp-shadow-sm); }
 .mt-goal.is-overdue { border-inline-start-color: #a52d3a; }
 .mt-goal.is-done { border-inline-start-color: #2f9e5e; background: var(--sp-bg-subtle); box-shadow: none; }
 .mt-goal__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
-.mt-goal__head h3 { margin: 0; color: var(--sp-ink-800); font-size: var(--sp-fs-lg); line-height: 1.35; }
-.mt-goal.is-done .mt-goal__head h3 { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--sp-ink-400) 55%, transparent); }
-.mt-goal__step { margin: 0; color: var(--sp-ink-600); font-size: var(--sp-fs-sm); line-height: 1.55; }
-.mt-goal__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2) var(--sp-4); }
-.mt-goal .mt-jstatus { background: var(--sp-bg-subtle); }
+.mt-goal__status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: var(--sp-radius-pill); background: var(--sp-bg-subtle); color: var(--sp-ink-500); font-size: var(--sp-fs-xs); font-weight: var(--sp-fw-medium); }
+.mt-goal__status.is-in_progress { background: color-mix(in srgb, var(--sp-primary-500) 14%, transparent); color: var(--sp-primary-700); }
+.mt-goal__status.is-done { background: color-mix(in srgb, #2f9e5e 16%, transparent); color: #1f7a47; }
+.mt-goal__title { margin: 0; color: var(--sp-ink-800); font-size: var(--sp-fs-xl); line-height: 1.3; }
+.mt-goal.is-done .mt-goal__title { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--sp-ink-400) 55%, transparent); }
+.mt-goal__stepbox { display: grid; gap: 5px; padding: var(--sp-3) var(--sp-4); border-radius: 12px; background: var(--sp-bg-subtle); }
+.mt-goal.is-done .mt-goal__stepbox { background: color-mix(in srgb, var(--sp-surface) 70%, transparent); }
+.mt-goal__steplabel { display: inline-flex; align-items: center; gap: 6px; color: var(--sp-ink-400); font-size: var(--sp-fs-xs); font-weight: var(--sp-fw-medium); }
+[dir='rtl'] .mt-goal__steplabel > svg { transform: rotate(180deg); }
+.mt-goal__step { margin: 0; color: var(--sp-ink-700); font-size: var(--sp-fs-sm); line-height: 1.6; }
+.mt-goal__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3) var(--sp-4); }
+.mt-goal__actions { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4); }
+.mt-goal__advance { display: inline-flex; align-items: center; gap: 6px; min-block-size: 40px; padding-inline: var(--sp-5); border: 0; border-radius: var(--sp-radius-md); background: var(--sp-primary-600); color: #fff; font: inherit; font-size: var(--sp-fs-sm); font-weight: var(--sp-fw-medium); cursor: pointer; transition: background 140ms ease, transform 140ms ease; }
+.mt-goal__advance:hover:not(:disabled) { background: var(--sp-primary-700); transform: translateY(-1px); }
+.mt-goal__advance:disabled { opacity: .55; cursor: default; }
+.mt-goal__advance.is-quiet { background: transparent; border: 1px solid var(--sp-border-strong); color: var(--sp-ink-600); }
+.mt-goal__advance.is-quiet:hover:not(:disabled) { border-color: var(--sp-primary-500); color: var(--sp-primary-700); }
+
+/* 4 — Yuvi closes the page next to the action it belongs to. */
+.mt-focus__foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3) var(--sp-4); margin-block-start: var(--sp-4); padding: var(--sp-4) var(--sp-5); border: 1px dashed color-mix(in srgb, var(--sp-primary-500) 40%, var(--sp-border)); border-radius: 16px; background: color-mix(in srgb, var(--sp-primary-500) 5%, var(--sp-surface)); }
+.mt-focus__yuvi { flex: none; display: grid; place-items: center; inline-size: 44px; block-size: 44px; border-radius: 50%; background: var(--sp-gradient, linear-gradient(150deg, var(--sp-primary-600), var(--sp-purple-500))); color: #fff; }
+.mt-focus__foot > p { flex: 1 1 220px; margin: 0; color: var(--sp-ink-700); font-size: var(--sp-fs-sm); }
+.mt-focus__cta { display: inline-flex; align-items: center; gap: var(--sp-2); min-block-size: 46px; padding-inline: var(--sp-5); border: 0; border-radius: var(--sp-radius-md); background: var(--sp-primary-600); color: #fff; box-shadow: var(--sp-shadow-sm); font: inherit; font-size: var(--sp-fs-sm); font-weight: var(--sp-fw-medium); cursor: pointer; }
+.mt-focus__cta:hover { background: var(--sp-primary-700); }
 @media (prefers-reduced-motion: reduce) {
   .mt-focus { animation: none; }
-  .mt-tcard, .mt-tcard__fill, .mt-strip__nav { transition: none; }
+  .mt-tcard, .mt-tcard__fill, .mt-strip__nav, .mt-goal__advance { transition: none; }
   .mt-tcard.is-on { transform: none; }
   .mt-tcard:hover:not(.is-on) { transform: none; }
 }
 @media (max-width: 640px) {
   .mt-tcard { inline-size: 74px; }
   .mt-strip__nav { inline-size: 36px; block-size: 36px; }
+  .mt-goal__actions { inline-size: 100%; justify-content: space-between; }
 }
 
 .mt-journey__empty { margin: 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
