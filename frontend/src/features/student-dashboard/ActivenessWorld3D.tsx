@@ -74,8 +74,8 @@ const SLOTS: { angle: number; y: number; scale: number }[] = [
   { angle: Math.PI / 2 + 0.62, y: -0.5, scale: 0.9 },
   { angle: Math.PI / 2 - 0.62, y: -0.5, scale: 0.9 },
 ]
-const RX = 6.05
-const RZ = 4.05
+const RX = 4.55
+const RZ = 2.95
 
 function toneFor(value: number): Tone {
   if (value >= 70) return 'strong'
@@ -283,13 +283,16 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
 
     const width = Math.max(1, mount.clientWidth)
     const height = Math.max(1, mount.clientHeight)
+    // Live viewport size — kept in sync by the resize observer so the HTML
+    // labels stay glued to their islands.
+    const vp = { w: width, h: height }
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', alpha: true })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, reduced ? 1.25 : 2))
     renderer.setSize(width, height)
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.02
+    renderer.toneMappingExposure = 0.92
     renderer.shadowMap.enabled = !reduced
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     mount.appendChild(renderer.domElement)
@@ -302,16 +305,18 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     const env = pmrem.fromScene(new RoomEnvironment(), 0.04)
     scene.environment = env.texture
 
+    // Shift the diorama away from the side detail panel so nothing hides behind it.
+    const shiftX = direction === 'rtl' ? 2.2 : -2.2
     const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 200)
-    camera.position.set(0, 6.1, 14.8)
+    camera.position.set(shiftX, 5.6, 21)
 
     const controls = new OrbitControls(camera, renderer.domElement)
-    controls.target.set(0, 0.55, -0.2)
+    controls.target.set(shiftX, 0.4, -0.2)
     controls.enableDamping = true
     controls.dampingFactor = 0.075
     controls.enablePan = false
-    controls.minDistance = 9.5
-    controls.maxDistance = 20
+    controls.minDistance = 13
+    controls.maxDistance = 26
     controls.minPolarAngle = 0.95
     controls.maxPolarAngle = 1.44
     controls.minAzimuthAngle = -0.6
@@ -320,8 +325,8 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     controls.zoomSpeed = 0.6
 
     /* lighting — a bright, airy afternoon */
-    scene.add(new THREE.HemisphereLight(new THREE.Color('#f3efff'), new THREE.Color('#a99ad8'), 1.25))
-    const sun = new THREE.DirectionalLight(new THREE.Color('#fff6e6'), 2.5)
+    scene.add(new THREE.HemisphereLight(new THREE.Color('#f3efff'), new THREE.Color('#a99ad8'), 0.95))
+    const sun = new THREE.DirectionalLight(new THREE.Color('#fff6e6'), 2.1)
     sun.position.set(-6.5, 11, 7.5)
     if (!reduced) {
       sun.castShadow = true
@@ -337,10 +342,10 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       sun.shadow.radius = 2.5
     }
     scene.add(sun)
-    const fill = new THREE.DirectionalLight(new THREE.Color('#cfd8ff'), 0.75)
+    const fill = new THREE.DirectionalLight(new THREE.Color('#cfd8ff'), 0.55)
     fill.position.set(7, 4, 6)
     scene.add(fill)
-    const rim = new THREE.DirectionalLight(new THREE.Color('#ffd9f2'), 0.7)
+    const rim = new THREE.DirectionalLight(new THREE.Color('#ffd9f2'), 0.5)
     rim.position.set(2, 5, -12)
     scene.add(rim)
 
@@ -355,10 +360,10 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     podium.position.set(0, -0.1, 0.4)
     scene.add(podium)
     const mascot = buildMascot()
-    mascot.position.set(0, 0.35, 0.4)
-    mascot.scale.setScalar(0.92)
+    mascot.position.set(0, 0.1, 0.4)
+    mascot.scale.setScalar(0.85)
     scene.add(mascot)
-    const mascotLight = new THREE.PointLight(new THREE.Color('#a98cff'), 3.2, 7, 2)
+    const mascotLight = new THREE.PointLight(new THREE.Color('#a98cff'), 1.6, 6, 2)
     mascotLight.position.set(0, 1.4, 1.4)
     scene.add(mascotLight)
 
@@ -384,7 +389,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       const slot = SLOTS[slots[d.key] ?? i] ?? SLOTS[i]
       const color = new THREE.Color(d.color)
       const variant = VARIANT[d.tone]
-      const radius = (0.94 + d.level * 0.3) * slot.scale
+      const radius = (0.8 + d.level * 0.24) * slot.scale
       const group = new THREE.Group()
       group.position.set(Math.cos(slot.angle) * RX, slot.y, Math.sin(slot.angle) * RZ)
 
@@ -461,7 +466,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     composer.addPass(new RenderPass(scene, camera))
     let bloom: UnrealBloomPass | null = null
     if (!reduced) {
-      bloom = new UnrealBloomPass(new THREE.Vector2(width, height), 0.34, 0.72, 0.94)
+      bloom = new UnrealBloomPass(new THREE.Vector2(width, height), 0.12, 0.45, 0.99)
       composer.addPass(bloom)
     }
     composer.addPass(new OutputPass())
@@ -509,8 +514,8 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     let tween: { from: THREE.Vector3; to: THREE.Vector3; camFrom: THREE.Vector3; camTo: THREE.Vector3; t: number } | null = null
     const focusDomain = (key: string | null) => {
       const n = nodes.find((x) => x.key === key)
-      const target = n ? new THREE.Vector3(n.home.x * 0.42, n.home.y * 0.4 + 0.6, n.home.z * 0.42) : new THREE.Vector3(0, 0.55, -0.2)
-      const dist = n ? 12.4 : 14.8
+      const target = n ? new THREE.Vector3(n.home.x * 0.42 + shiftX, n.home.y * 0.4 + 0.6, n.home.z * 0.42) : new THREE.Vector3(shiftX, 0.4, -0.2)
+      const dist = n ? 17 : 21
       const dir = camera.position.clone().sub(controls.target).normalize()
       tween = {
         from: controls.target.clone(),
@@ -550,9 +555,16 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       projected.copy(world).project(camera)
       const behind = projected.z > 1
       if (hidden || behind) { el.style.opacity = '0'; el.style.pointerEvents = 'none'; return }
-      const x = (projected.x * 0.5 + 0.5) * width
-      const y = (-projected.y * 0.5 + 0.5) * height
-      el.style.transform = `translate(-50%, -100%) translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`
+      const x = (projected.x * 0.5 + 0.5) * vp.w
+      const y = (-projected.y * 0.5 + 0.5) * vp.h
+      // Keep labels clear of the rail and the side detail panel.
+      const railGap = 205
+      const panelGap = 372
+      const minX = direction === 'rtl' ? railGap : panelGap
+      const maxX = direction === 'rtl' ? vp.w - panelGap : vp.w - railGap
+      const cx = Math.min(Math.max(x, Math.min(minX, maxX)), Math.max(minX, maxX))
+      const cy = Math.min(Math.max(y, 96), vp.h - 118)
+      el.style.transform = `translate(-50%, -100%) translate(${cx.toFixed(1)}px, ${cy.toFixed(1)}px)`
       el.style.opacity = '1'
       el.style.pointerEvents = 'auto'
     }
@@ -576,17 +588,17 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
 
       // companion
       const head = mascot.userData.head
-      mascot.position.y = 0.35 + Math.sin(time * 1.1) * 0.075
+      mascot.position.y = 0.1 + Math.sin(time * 1.1) * 0.075
       mascot.rotation.y = Math.sin(time * 0.42) * 0.16
       if (head) head.rotation.z = Math.sin(time * 0.9) * 0.045
       mascot.userData.hands?.forEach((h: THREE.Mesh, i: number) => {
         h.position.y = 0.34 + Math.sin(time * 1.4 + i * 2.1) * 0.05
       })
       if (mascot.userData.bulb) {
-        mascot.userData.bulb.material.emissiveIntensity = 1.2 + Math.sin(time * 2.4) * 0.5
+        mascot.userData.bulb.material.emissiveIntensity = 0.7 + Math.sin(time * 2.4) * 0.25
       }
       if (podium.userData.rim) {
-        podium.userData.rim.material.emissiveIntensity = 0.85 + Math.sin(time * 1.6) * 0.25
+        podium.userData.rim.material.emissiveIntensity = 0.5 + Math.sin(time * 1.6) * 0.15
       }
 
       // islands
@@ -673,6 +685,8 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     const onResize = () => {
       const w = Math.max(1, mount.clientWidth)
       const h = Math.max(1, mount.clientHeight)
+      vp.w = w
+      vp.h = h
       camera.aspect = w / h
       camera.updateProjectionMatrix()
       renderer.setSize(w, h)
@@ -707,7 +721,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signature, reduced, view])
+  }, [signature, reduced, view, direction])
 
   /* ── overlay helpers ────────────────────────────────────────────────── */
 
