@@ -2595,3 +2595,138 @@
     radial-gradient(700px 380px at 14% 84%, rgba(64, 206, 245, .26), transparent 70%),
     linear-gradient(180deg, rgba(14, 40, 124, .95), rgba(12, 38, 118, .95));
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LANDING — STEP 1: KILL THE UNIFORM PURPLE  (dark)
+
+   Client brief: the whole page sat on one purple hue from top to bottom, so
+   nothing separated the sections, every element drowned in the same colour,
+   and violet stopped meaning anything because it was everywhere. The big
+   gradients read as stains rather than as lighting.
+
+   New rule: the wall is a deep, almost-neutral blue-black. Purple is no
+   longer paint — it is LIGHT, and light only exists where something is
+   worth lighting (the hero, the agent hub, the closing call to action).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+[data-theme='dark'] .landing720 {
+  background-color: #090d26;
+  background-image:
+    /* stars stay, at roughly a third of their old strength */
+    radial-gradient(1.3px 1.3px at 22% 18%, rgba(255, 255, 255, .13), transparent 60%),
+    radial-gradient(1.1px 1.1px at 68% 34%, rgba(214, 226, 255, .1), transparent 60%),
+    radial-gradient(1.4px 1.4px at 44% 72%, rgba(255, 255, 255, .08), transparent 60%),
+    radial-gradient(1.1px 1.1px at 84% 82%, rgba(226, 214, 255, .09), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.03 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E"),
+    /* one very quiet vertical drift — no hue swings, only depth */
+    linear-gradient(180deg,
+      #0a0e2a 0%,
+      #101641 22%,
+      #0b1233 45%,
+      #111947 68%,
+      #080c24 100%);
+  background-size:
+    300px 300px, 420px 420px, 360px 360px, 500px 500px,
+    120px 120px,
+    100% 100%;
+  background-repeat:
+    repeat, repeat, repeat, repeat,
+    repeat,
+    no-repeat;
+  background-attachment:
+    scroll, scroll, scroll, scroll,
+    scroll,
+    scroll;
+}
+
+/* The two huge blurred circles pinned to the page corners are gone. They were
+   never attached to anything on screen, so they only ever read as smudges. */
+[data-theme='dark'] .landing720::before,
+[data-theme='dark'] .landing720::after {
+  content: none;
+}
+
+/* ---- Section separation is now depth, not colour ----
+   Chapters alternate between a slight lift and a slight sink of the SAME
+   blue-black. No hue change, so no hard blue↔purple seams — but the eye
+   still gets a floor edge at every section boundary. */
+[data-theme='dark'] .landing720 [data-chapter]::before {
+  inset-block: clamp(-220px, -13vw, -120px);
+  background: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 26%, #000 74%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 26%, #000 74%, transparent);
+}
+
+[data-theme='dark'] .landing720 [data-chapter='scenes']::before,
+[data-theme='dark'] .landing720 [data-chapter='standards']::before {
+  background: linear-gradient(180deg, rgba(76, 98, 190, .12), rgba(76, 98, 190, .08));
+}
+
+[data-theme='dark'] .landing720 [data-chapter='proof']::before,
+[data-theme='dark'] .landing720 [data-chapter='journey']::before,
+[data-theme='dark'] .landing720 [data-chapter='audience']::before,
+[data-theme='dark'] .landing720 [data-chapter='faq']::before {
+  background: linear-gradient(180deg, rgba(4, 7, 24, .38), rgba(4, 7, 24, .3));
+}
+
+/* ---- Purple, used as light ----
+   Three places earn it: where the promise is made, where the product is
+   shown working, and where we ask for the click. Each pool is sized in
+   pixels and parked behind a real element, so it looks like something on
+   the page is glowing rather than like the wall was painted. */
+[data-theme='dark'] .landing720 [data-chapter='hero']::before {
+  background:
+    radial-gradient(760px 460px at 50% 34%, rgba(113, 72, 255, .2), transparent 70%),
+    radial-gradient(620px 380px at 78% 66%, rgba(80, 105, 255, .12), transparent 68%);
+}
+
+[data-theme='dark'] .landing720 [data-chapter='agents']::before {
+  background:
+    radial-gradient(820px 520px at 50% 48%, rgba(113, 72, 255, .17), transparent 70%);
+}
+
+[data-theme='dark'] .landing720 [data-chapter='cta']::before {
+  background:
+    radial-gradient(900px 480px at 50% 52%, rgba(113, 72, 255, .22), transparent 72%),
+    radial-gradient(520px 340px at 82% 30%, rgba(80, 105, 255, .12), transparent 68%);
+}
+
+/* The hero card is the one lit object on the page, not a violet slab. */
+[data-theme='dark'] .landing720-hero {
+  background:
+    radial-gradient(circle at 76% 16%, rgba(113, 72, 255, .22), transparent 46%),
+    radial-gradient(circle at 14% 92%, rgba(80, 105, 255, .14), transparent 44%),
+    linear-gradient(158deg, #151b48 0%, #101538 50%, #0b1030 100%);
+}
+
+/* Eyebrows go back to the tone system — with no coloured rooms left there is
+   nothing for a per-chapter hue to match. */
+[data-theme='dark'] [data-chapter='proof'] .landing720-eyebrow,
+[data-theme='dark'] [data-chapter='journey'] .landing720-eyebrow,
+[data-theme='dark'] [data-chapter='agents'] .landing720-eyebrow,
+[data-theme='dark'] [data-chapter='scenes'] .landing720-eyebrow,
+[data-theme='dark'] [data-chapter='audience'] .landing720-eyebrow,
+[data-theme='dark'] [data-chapter='standards'] .landing720-section-head .landing720-eyebrow {
+  color: #c3bdf0;
+  background: rgba(255, 255, 255, .05);
+  border-color: rgba(255, 255, 255, .1);
+}
+
+/* proof is only ~200px tall — with the standard overhang its neighbours eat it */
+[data-theme='dark'] .landing720 [data-chapter='proof']::before {
+  inset-block: clamp(-120px, -7vw, -70px);
+}
+
+/* The "lead" cards were still filled violet slabs, which is exactly the habit
+   we are breaking. They keep their prominence — but from a lit rim and a
+   glow, the way a real highlighted object behaves, not from being painted. */
+[data-theme='dark'] .landing720-journey-step.is-lead,
+[data-theme='dark'] .landing720-hub-node.is-lead {
+  background:
+    radial-gradient(130% 120% at 50% 0%, rgba(var(--l720-accent-rgb, 113, 72, 255), .1), transparent 68%),
+    linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .03));
+  border-color: rgba(var(--l720-accent-rgb, 113, 72, 255), .45);
+  box-shadow:
+    0 30px 66px rgba(3, 5, 20, .55),
+    0 0 34px rgba(var(--l720-accent-rgb, 113, 72, 255), .16);
+}
