@@ -18,14 +18,32 @@ const FAQ_KEYS = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6']
 
 /* Proof points shown under the hero. Each one is a real property of the
    platform (agent count, supported languages, xAPI reporting, no identifying
-   data sent to the model) — no invented numbers. */
-const METRIC_KEYS = ['agents', 'languages', 'support', 'privacy'] as const
+   data sent to the model) — no invented numbers.
+   `tone` rotates the accent so the band reads as four distinct facts instead
+   of one flat purple strip. */
+const METRICS = [
+  { key: 'agents', tone: 'violet', Glyph: SparkleIcon },
+  { key: 'languages', tone: 'cyan', Glyph: GlobeIcon },
+  { key: 'support', tone: 'peach', Glyph: CompassIcon },
+  { key: 'privacy', tone: 'teal', Glyph: ShieldIcon }
+] as const
 
 /* The learner journey, end to end — the section the nav's "how it works" link
-   pointed at but that never existed. */
+   pointed at but that never existed. The first stage is the lead card: it is
+   where every learner actually starts, so it gets the visual weight. */
 const JOURNEY_KEYS = ['map', 'path', 'guide', 'insight'] as const
+const JOURNEY_TONES = ['violet', 'cyan', 'peach', 'teal'] as const
 
 const AUDIENCE_KEYS = ['students', 'teachers', 'leaders'] as const
+
+/* Each capability gets its own "scene": a large product still, a translucent
+   stage number, a local ambience and one overlay card lifted off the image so
+   the picture reads as product, not stock art. */
+const FEATURE_SCENES = [
+  { key: 'profile', tone: 'violet', Glyph: CompassIcon, image: userMappingImage },
+  { key: 'adaptive', tone: 'cyan', Glyph: LayersIcon, image: userAdaptiveImage },
+  { key: 'analytics', tone: 'peach', Glyph: InsightsIcon, image: teacherInsightImage }
+] as const
 
 function Icon({ children, ...props }: SVGProps<SVGSVGElement>) {
   return (
@@ -290,7 +308,7 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
         </div>
       </header>
 
-      <section className="landing720-hero" id="about" data-Yuvi-stop="hero" data-Yuvi-reveal>
+      <section className="landing720-hero" id="about" data-chapter="hero" data-Yuvi-stop="hero" data-Yuvi-reveal>
         <article className="landing720-copy">
           <span className="landing720-eyebrow">
             <SparkleIcon width={16} height={16} />
@@ -336,23 +354,52 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
 
         <div className="landing720-hero-visual" aria-hidden="true">
           <LandingYuviArtwork />
+
+          {/* Floating UI chips that break the artwork out of its frame, so the
+              hero reads as the product running rather than a picture beside a
+              headline. Copy is reused from the trust pills — no invented claims. */}
+          <span className="landing720-hero-chip landing720-hero-chip--a">
+            <CompassIcon width={15} height={15} />
+            {t('landing.pills.personalized')}
+          </span>
+          <span className="landing720-hero-chip landing720-hero-chip--b">
+            <GlobeIcon width={15} height={15} />
+            {t('landing.pills.languages')}
+          </span>
+          <span className="landing720-hero-chip landing720-hero-chip--c">
+            <ShieldIcon width={15} height={15} />
+            {t('landing.metrics.privacy.label')}
+          </span>
         </div>
       </section>
 
-      <section className="landing720-metrics" aria-label={t('landing.metrics.aria')} data-Yuvi-reveal>
-        {METRIC_KEYS.map((key) => (
-          <article className="landing720-metric" key={key}>
+      <section
+        className="landing720-metrics"
+        aria-label={t('landing.metrics.aria')}
+        data-chapter="proof"
+        data-Yuvi-reveal
+      >
+        {METRICS.map(({ key, tone, Glyph }) => (
+          <article className={`landing720-metric tone-${tone}`} key={key}>
+            <span className="landing720-metric__icon">
+              <Glyph width={18} height={18} />
+            </span>
             <strong>{t(`landing.metrics.${key}.value`)}</strong>
-            <span>{t(`landing.metrics.${key}.label`)}</span>
+            <span className="landing720-metric__label">{t(`landing.metrics.${key}.label`)}</span>
           </article>
         ))}
       </section>
 
-      <div className="landing720-Yuvi-stop landing720-Yuvi-stop--hub" data-Yuvi-stop="hub" data-Yuvi-reveal>
+      <div
+        className="landing720-Yuvi-stop landing720-Yuvi-stop--hub"
+        data-chapter="agents"
+        data-Yuvi-stop="hub"
+        data-Yuvi-reveal
+      >
         <AgentsDiagram />
       </div>
 
-      <section className="landing720-journey" id="how" data-Yuvi-reveal>
+      <section className="landing720-journey" id="how" data-chapter="journey" data-Yuvi-reveal>
         <header className="landing720-section-head">
           <span className="landing720-eyebrow">{t('landing.journey.eyebrow')}</span>
           <h2>{t('landing.journey.title')}</h2>
@@ -361,7 +408,10 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
 
         <ol className="landing720-journey-track">
           {JOURNEY_KEYS.map((key, index) => (
-            <li className="landing720-journey-step" key={key}>
+            <li
+              className={`landing720-journey-step tone-${JOURNEY_TONES[index]}${index === 0 ? ' is-lead' : ''}`}
+              key={key}
+            >
               <span className="landing720-journey-step__num">{index + 1}</span>
               <h3>{t(`landing.journey.${key}.title`)}</h3>
               <p>{t(`landing.journey.${key}.desc`)}</p>
@@ -371,69 +421,59 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
         </ol>
       </section>
 
-      <section className="landing720-feature-rows" data-Yuvi-stop="features" data-Yuvi-reveal>
+      <section
+        className="landing720-feature-rows"
+        data-chapter="scenes"
+        data-Yuvi-stop="features"
+        data-Yuvi-reveal
+      >
         <header className="landing720-feature-rows__head">
           <span className="landing720-eyebrow">{t('landing.features.sectionEyebrow')}</span>
           <h2>{t('landing.features.sectionTitle')}</h2>
           <p>{t('landing.features.sectionSubtitle')}</p>
         </header>
 
-        <article className="landing720-feature-row">
-          <div className="landing720-feature-row__media">
-            <img src={userMappingImage} alt={t('landing.features.profile.title')} loading="lazy" />
-          </div>
-          <div className="landing720-feature-row__text">
-            <span className="landing720-feature-icon icon-purple">
-              <CompassIcon />
+        {FEATURE_SCENES.map(({ key, tone, Glyph, image }, index) => (
+          <article
+            className={`landing720-feature-row tone-${tone}${index % 2 === 1 ? ' is-reversed' : ''}`}
+            key={key}
+          >
+            {/* Oversized, translucent stage number: gives the section a beat
+                and lets the eye track the sequence without extra chrome. */}
+            <span className="landing720-feature-row__stage" aria-hidden="true">
+              {String(index + 1).padStart(2, '0')}
             </span>
-            <h3>{t('landing.features.profile.title')}</h3>
-            <p>{t('landing.features.profile.desc')}</p>
-            <ul className="landing720-feature-row__points">
-              <li>{t('landing.features.profile.point1')}</li>
-              <li>{t('landing.features.profile.point2')}</li>
-              <li>{t('landing.features.profile.point3')}</li>
-            </ul>
-          </div>
-        </article>
 
-        <article className="landing720-feature-row is-reversed">
-          <div className="landing720-feature-row__media">
-            <img src={userAdaptiveImage} alt={t('landing.features.adaptive.title')} loading="lazy" />
-          </div>
-          <div className="landing720-feature-row__text">
-            <span className="landing720-feature-icon icon-blue">
-              <LayersIcon />
-            </span>
-            <h3>{t('landing.features.adaptive.title')}</h3>
-            <p>{t('landing.features.adaptive.desc')}</p>
-            <ul className="landing720-feature-row__points">
-              <li>{t('landing.features.adaptive.point1')}</li>
-              <li>{t('landing.features.adaptive.point2')}</li>
-              <li>{t('landing.features.adaptive.point3')}</li>
-            </ul>
-          </div>
-        </article>
+            <div className="landing720-feature-row__media">
+              <img src={image} alt={t(`landing.features.${key}.title`)} loading="lazy" />
+              <span className="landing720-feature-row__glare" aria-hidden="true" />
+              {/* One insight card lifted off the still, so the image reads as a
+                  live screen instead of a photo dropped onto the page. */}
+              <span className="landing720-feature-row__overlay">
+                <span className="landing720-feature-row__overlay-icon">
+                  <Glyph width={16} height={16} />
+                </span>
+                {t(`landing.features.${key}.outcome`)}
+              </span>
+            </div>
 
-        <article className="landing720-feature-row">
-          <div className="landing720-feature-row__media">
-            <img src={teacherInsightImage} alt={t('landing.features.analytics.title')} loading="lazy" />
-          </div>
-          <div className="landing720-feature-row__text">
-            <span className="landing720-feature-icon icon-teal">
-              <InsightsIcon />
-            </span>
-            <h3>{t('landing.features.analytics.title')}</h3>
-            <p>{t('landing.features.analytics.desc')}</p>
-            <ul className="landing720-feature-row__points">
-              <li>{t('landing.features.analytics.point1')}</li>
-              <li>{t('landing.features.analytics.point2')}</li>
-              <li>{t('landing.features.analytics.point3')}</li>
-            </ul>
-          </div>
-        </article>
+            <div className="landing720-feature-row__text">
+              <span className={`landing720-feature-icon tone-${tone}`}>
+                <Glyph />
+              </span>
+              <h3>{t(`landing.features.${key}.title`)}</h3>
+              <p>{t(`landing.features.${key}.desc`)}</p>
+              <ul className="landing720-feature-row__points">
+                <li>{t(`landing.features.${key}.point1`)}</li>
+                <li>{t(`landing.features.${key}.point2`)}</li>
+                <li>{t(`landing.features.${key}.point3`)}</li>
+              </ul>
+            </div>
+          </article>
+        ))}
       </section>
 
-      <section className="landing720-audience" id="audience" data-Yuvi-reveal>
+      <section className="landing720-audience" id="audience" data-chapter="audience" data-Yuvi-reveal>
         <header className="landing720-section-head">
           <span className="landing720-eyebrow">{t('landing.audience.eyebrow')}</span>
           <h2>{t('landing.audience.title')}</h2>
@@ -463,7 +503,7 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
         </div>
       </section>
 
-      <section className="landing720-standards" id="standards" data-Yuvi-reveal>
+      <section className="landing720-standards" id="standards" data-chapter="standards" data-Yuvi-reveal>
         <header className="landing720-section-head">
           <span className="landing720-eyebrow">{t('landing.standards.eyebrow')}</span>
           <h2>{t('landing.standards.title')}</h2>
@@ -492,7 +532,7 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
         </div>
       </section>
 
-      <section className="landing720-faq" id="faq" data-Yuvi-stop="faq" data-Yuvi-reveal>
+      <section className="landing720-faq" id="faq" data-chapter="faq" data-Yuvi-stop="faq" data-Yuvi-reveal>
         <div className="landing720-faq-head">
           <h2>{t('landing.faq.title')}</h2>
           <p>{t('landing.faq.subtitle')}</p>
@@ -518,7 +558,7 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
         </div>
       </section>
 
-      <section className="landing720-contact" id="contact" data-Yuvi-stop="contact" data-Yuvi-reveal>
+      <section className="landing720-contact" id="contact" data-chapter="cta" data-Yuvi-stop="contact" data-Yuvi-reveal>
         <div className="landing720-contact-head">
           <span className="landing720-feature-icon icon-purple">
             <MailIcon />

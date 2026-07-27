@@ -4196,3 +4196,396 @@
     gap: 18px;
   }
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   Landing chapters — hierarchy, depth, rhythm and accent variety.
+   The page used to be one long surface in a single hue: every section had
+   the same background, the same card, the same glow, so nothing read as
+   more or less important. This layer keeps the brand colour but demotes it
+   from "the colour of everything" to "the colour of the brand", adds two
+   supporting accents (cyan for data/AI, peach for the learner), and gives
+   each chapter its own ambience, elevation and composition.
+   Dark-theme counterparts live in dark-mode.css.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.landing720 {
+  --l720-cyan: #0d7f99;
+  --l720-cyan-bg: rgba(13, 127, 153, 0.11);
+  --l720-peach: #bd5f2c;
+  --l720-peach-bg: rgba(189, 95, 44, 0.1);
+}
+
+/* One accent token per tone, so icons, numbers, rules and glows in a card
+   can all reference the same hue without repeating colour values. */
+.landing720 .tone-violet { --l720-accent: #6e5bd6; --l720-accent-bg: rgba(110, 91, 214, 0.12); --l720-accent-rgb: 110, 91, 214; }
+.landing720 .tone-cyan   { --l720-accent: var(--l720-cyan); --l720-accent-bg: var(--l720-cyan-bg); --l720-accent-rgb: 13, 127, 153; }
+.landing720 .tone-peach  { --l720-accent: var(--l720-peach); --l720-accent-bg: var(--l720-peach-bg); --l720-accent-rgb: 189, 95, 44; }
+.landing720 .tone-teal   { --l720-accent: #0d8f82; --l720-accent-bg: rgba(13, 143, 130, 0.12); --l720-accent-rgb: 13, 143, 130; }
+
+.landing720-feature-icon.tone-violet,
+.landing720-feature-icon.tone-cyan,
+.landing720-feature-icon.tone-peach,
+.landing720-feature-icon.tone-teal {
+  color: var(--l720-accent);
+  background: var(--l720-accent-bg);
+}
+
+/* ---- Chapter 1: hero — floating product chips ----
+   Small pieces of UI that escape the artwork's bounding box, so the first
+   screen reads as a running product and not a headline beside a picture. */
+.landing720-hero-visual {
+  overflow: visible;
+}
+
+.landing720-hero-chip {
+  position: absolute;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-inline-size: 15.5rem;
+  padding: 9px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.82);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--l720-navy);
+  box-shadow: 0 16px 34px rgba(31, 21, 97, 0.22);
+  pointer-events: none;
+  animation: l720-chip-float 7s ease-in-out infinite;
+}
+
+.landing720-hero-chip svg { flex: none; color: var(--l720-purple); }
+.landing720-hero-chip--a { inset-block-start: 14%; inset-inline-start: 4%; animation-delay: -1.4s; }
+.landing720-hero-chip--b { inset-block-start: 46%; inset-inline-end: 1%; animation-delay: -3.6s; }
+.landing720-hero-chip--b svg { color: var(--l720-cyan); }
+.landing720-hero-chip--c { inset-block-end: 14%; inset-inline-start: 8%; animation-delay: -5.1s; }
+.landing720-hero-chip--c svg { color: var(--l720-teal); }
+
+/* Below the two-column hero the artwork already fills the width; floating
+   chips there would land on top of the headline or spill out of the card. */
+@media (max-width: 1099px) {
+  .landing720-hero-chip { display: none; }
+}
+
+@keyframes l720-chip-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-9px); }
+}
+
+/* ---- Chapter 2: proof band — separated glass cards ----
+   Was a hairline-divided strip that melted into the hero; now four lifted
+   cards that overlap the hero's lower edge and physically break the page. */
+.landing720-metrics {
+  margin-block-start: clamp(-40px, -3vw, -18px);
+  gap: clamp(12px, 1.6vw, 20px);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  box-shadow: none;
+}
+
+.landing720-metric {
+  position: relative;
+  isolation: isolate;
+  align-items: flex-start;
+  text-align: start;
+  gap: 10px;
+  border-radius: 22px;
+  border: 1px solid var(--l720-border);
+  background: linear-gradient(180deg, #ffffff, #fbfaff);
+  box-shadow: 0 20px 44px rgba(31, 21, 97, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.landing720-metric::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 22px;
+  block-size: 3px;
+  border-radius: 0 0 4px 4px;
+  background: var(--l720-accent);
+  opacity: 0.85;
+}
+
+.landing720-metric:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 28px 56px rgba(31, 21, 97, 0.16);
+}
+
+.landing720-metric__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: 12px;
+  color: var(--l720-accent);
+  background: var(--l720-accent-bg);
+  max-inline-size: none;
+}
+
+.landing720-metric strong {
+  background-image: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  color: var(--l720-accent);
+}
+
+.landing720-metric__label {
+  color: var(--l720-navy-soft);
+  max-inline-size: 26ch;
+}
+
+/* ---- Chapter 4: the four stages — one lead card, three supporting ----
+   Four identical tiles gave the eye no entry point. The first stage (where
+   every learner actually starts) now spans two tracks and carries the
+   accent; the rest step back. */
+.landing720-journey-track {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.landing720-journey-step {
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.landing720-journey-step::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: 3px;
+  background: var(--l720-accent);
+  opacity: 0.7;
+}
+
+.landing720-journey-step.is-lead {
+  grid-column: span 2;
+  padding: clamp(22px, 2.6vw, 32px);
+  background:
+    radial-gradient(420px 220px at 88% 0%, rgba(var(--l720-accent-rgb), 0.1), transparent 70%),
+    var(--l720-card);
+  box-shadow: 0 24px 52px rgba(31, 21, 97, 0.12);
+}
+
+.landing720-journey-step.is-lead h3 {
+  font-size: clamp(20px, 2.1vw, 26px);
+}
+
+.landing720-journey-step.is-lead p {
+  font-size: clamp(15px, 1.45vw, 17.5px);
+  max-inline-size: 46ch;
+}
+
+.landing720-journey-step__num {
+  background: var(--l720-accent);
+  box-shadow: 0 6px 16px rgba(var(--l720-accent-rgb), 0.3);
+}
+
+.landing720-journey-step.is-lead .landing720-journey-step__num {
+  inline-size: 48px;
+  block-size: 48px;
+  border-radius: 16px;
+  font-size: 21px;
+}
+
+/* ---- Chapter 5: capability scenes ----
+   Each capability gets a stage of its own: a big translucent number that
+   bleeds past the container, a framed still with a lifted insight card, and
+   a local wash so the row does not sit on the same flat page background. */
+.landing720-feature-rows {
+  gap: clamp(48px, 6vw, 96px);
+}
+
+.landing720-feature-row {
+  position: relative;
+  padding-block: clamp(14px, 2vw, 26px);
+  gap: clamp(28px, 4.4vw, 68px);
+}
+
+/* Local ambience: a soft, tone-tinted pool behind the row only. */
+.landing720-feature-row::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset-block: -6%;
+  inset-inline: -8%;
+  border-radius: 48px;
+  background: radial-gradient(58% 74% at 50% 40%, rgba(var(--l720-accent-rgb), 0.07), transparent 72%);
+  pointer-events: none;
+}
+
+.landing720-feature-row__stage {
+  position: absolute;
+  z-index: 3;
+  inset-block-start: -0.42em;
+  inset-inline-start: -0.12em;
+  font-size: clamp(72px, 10vw, 152px);
+  font-weight: 800;
+  line-height: 0.8;
+  letter-spacing: -0.04em;
+  color: rgba(var(--l720-accent-rgb), 0.16);
+  direction: ltr;
+  unicode-bidi: isolate;
+  pointer-events: none;
+  user-select: none;
+}
+
+.landing720-feature-row__media {
+  position: relative;
+  overflow: visible;
+  border-radius: 26px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.landing720-feature-row__media img {
+  border-radius: 26px;
+  border: 1px solid var(--l720-border);
+  box-shadow:
+    0 30px 60px rgba(31, 21, 97, 0.16),
+    0 4px 12px rgba(31, 21, 97, 0.08);
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.landing720-feature-row__media:hover img {
+  transform: translateY(-6px);
+  box-shadow: 0 40px 74px rgba(31, 21, 97, 0.2);
+}
+
+/* Ambient light tuned to the chapter, so the warm photography is lit by the
+   page instead of being pasted on top of it. */
+.landing720-feature-row__glare {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  border-radius: 26px;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.3) 0%, transparent 34%),
+    linear-gradient(0deg, rgba(var(--l720-accent-rgb), 0.14), transparent 55%);
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
+
+.landing720-feature-row__overlay {
+  position: absolute;
+  z-index: 4;
+  inset-block-end: -18px;
+  inset-inline-end: -14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-inline-size: min(78%, 22rem);
+  padding: 12px 15px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.88);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  backdrop-filter: blur(16px) saturate(160%);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--l720-navy);
+  box-shadow: 0 18px 40px rgba(31, 21, 97, 0.2);
+}
+
+.landing720-feature-row__overlay-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 30px;
+  block-size: 30px;
+  border-radius: 10px;
+  color: var(--l720-accent);
+  background: var(--l720-accent-bg);
+}
+
+/* Reversed rows run LTR so the grid can mirror. The insight card has to opt
+   out twice: `direction` restores Hebrew flow *and* re-resolves the logical
+   inset, so the card keeps hanging off the media's inner edge (facing the
+   text) instead of flipping to the outer edge of the page. */
+.landing720-feature-row.is-reversed .landing720-feature-row__overlay {
+  direction: rtl;
+  inset-inline-end: auto;
+  inset-inline-start: -14px;
+}
+
+.landing720-feature-row__points li::before {
+  background: var(--l720-accent);
+}
+
+/* ---- Chapter 3: the agent ring — one card forward ----
+   Six identical cards evenly spaced read as an org chart. Sizing them
+   differently and pulling one forward makes it read as a live system. */
+.landing720-hub-node.is-lead {
+  z-index: 6;
+  inline-size: clamp(180px, 23vw, 230px);
+  padding: 15px 17px;
+  /* The base card floats with translate(-50%,-50%); the scale has to live in
+     the keyframes or the animation would wipe it out every frame. */
+  animation-name: l720-hub-fade, l720-hub-float-lead;
+}
+
+@keyframes l720-hub-float-lead {
+  0%, 100% { transform: translate(-50%, -50%) scale(1.06); }
+  50%      { transform: translate(-50%, calc(-50% - 7px)) scale(1.06); }
+}
+
+.landing720-hub-node.is-lead .landing720-hub-icon {
+  inline-size: 46px;
+  block-size: 46px;
+}
+
+.landing720-hub-node.tone-blue,
+.landing720-hub-node.tone-orange {
+  inline-size: clamp(148px, 18vw, 178px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing720-hero-chip { animation: none; }
+}
+
+@media (max-width: 1000px) {
+  .landing720-journey-track {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .landing720-journey-step.is-lead {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 760px) {
+  .landing720-metrics {
+    margin-block-start: 0;
+  }
+
+  .landing720-journey-track {
+    grid-template-columns: 1fr;
+  }
+
+  .landing720-journey-step.is-lead {
+    grid-column: auto;
+  }
+
+  .landing720-hero-chip--c { display: none; }
+
+  /* Stacked rows are all RTL again, so every card sits on the same side. */
+  .landing720-feature-row__overlay,
+  .landing720-feature-row.is-reversed .landing720-feature-row__overlay {
+    inset-inline-start: auto;
+    inset-inline-end: 0;
+    inset-block-end: -14px;
+    max-inline-size: 90%;
+  }
+}
