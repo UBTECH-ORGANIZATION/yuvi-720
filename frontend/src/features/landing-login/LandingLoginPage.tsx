@@ -5,7 +5,6 @@ import { BrandLogo } from '../../components/BrandLogo'
 import { ThemeSwitcher } from '../../components/ThemeSwitcher'
 import { UserMenu } from '../../components/UserMenu'
 import { useI18n } from '../../i18n/I18nProvider'
-import { useAuth } from '../../providers/AuthProvider'
 import { apiPost } from '../../services/api'
 import { AgentsDiagram } from './AgentsDiagram'
 import { LandingYuviArtwork, LandingYuviJourney } from './LandingYuviJourney'
@@ -225,7 +224,6 @@ type LoginIntent = 'student' | 'teacher'
    open, instead of navigating away and losing the URL the user asked for. */
 export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginIntent } = {}) {
   const { t, language } = useI18n()
-  const { user, isTeacher, logout } = useAuth()
   const [loginIntent, setLoginIntent] = useState<LoginIntent | null>(initialDialog ?? null)
   const [openFaq, setOpenFaq] = useState<string | null>(FAQ_KEYS[0])
   const [contactName, setContactName] = useState('')
@@ -303,34 +301,13 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
           <p className="landing720-subtitle">{t('landing.hero.subtitle')}</p>
           <p className="landing720-note">{t('landing.hero.note')}</p>
 
+          {/* Only visitors ever see this page — App redirects a signed-in user
+              into the product — so sign-in is the single call to action. */}
           <aside className="landing720-login">
-            {user ? (
-              <p>{t('auth.status.signedInAs').replace('{name}', user.display_name)}</p>
-            ) : null}
-
-            {user ? (
-              <>
-                <button className="landing720-login-btn student" onClick={() => navigate(afterLogin)}>
-                  <GraduationCapIcon />
-                  <span>{t('auth.action.continue')}</span>
-                </button>
-                {isTeacher ? (
-                  <button className="landing720-login-btn teacher" onClick={() => navigate('/teacher-view')}>
-                    <UserCheckIcon />
-                    <span>{t('landing.login.teacher')}</span>
-                  </button>
-                ) : null}
-                <button className="landing720-login-btn secure" onClick={() => void logout()}>
-                  <ShieldIcon />
-                  <span>{t('auth.action.logout')}</span>
-                </button>
-              </>
-            ) : (
-              <button className="landing720-login-btn student" onClick={() => setLoginIntent('student')}>
-                <GraduationCapIcon />
-                <span>{t('landing.login.student')}</span>
-              </button>
-            )}
+            <button className="landing720-login-btn student" onClick={() => setLoginIntent('student')}>
+              <GraduationCapIcon />
+              <span>{t('landing.login.student')}</span>
+            </button>
           </aside>
         </article>
 

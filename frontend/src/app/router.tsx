@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 
-export function navigate(path: string) {
+export function navigate(path: string, options: { replace?: boolean } = {}) {
   if (`${window.location.pathname}${window.location.search}` === path) return
-  window.history.pushState({}, '', path)
+  // `replace` is for automatic redirects: it keeps the route we bounced away
+  // from out of history, so Back doesn't land on it and bounce again.
+  if (options.replace) window.history.replaceState({}, '', path)
+  else window.history.pushState({}, '', path)
   window.dispatchEvent(new PopStateEvent('popstate'))
 }
 
