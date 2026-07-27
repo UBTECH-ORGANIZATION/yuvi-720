@@ -25,7 +25,14 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 FALLBACK_USERS_FILE = BASE_DIR / ".runtime" / "users.json"
 
 DEFAULT_PREFERENCES: dict[str, Any] = {
-    "theme": "dark",
+    # 'system' rather than a hard 'dark': a brand-new account should follow the
+    # device instead of overriding a choice the visitor may already have made on
+    # the landing screen.
+    "theme": "system",
+    # Epoch milliseconds of the last explicit theme choice. The browser keeps the
+    # same stamp in the `sp_theme` cookie, so signed-out and signed-in writes are
+    # comparable and the *later* one wins — see ThemeProvider.
+    "theme_updated_at": 0,
     "language": "he",
     "reduced_motion": False,
 }
@@ -34,6 +41,10 @@ ALLOWED_PREFERENCES = set(DEFAULT_PREFERENCES)
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _now_ms() -> int:
+    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _collection() -> Optional[Any]:
@@ -156,6 +167,10 @@ async def update_preferences(user_id: str, updates: dict[str, Any]) -> dict[str,
         for key, value in updates.items()
         if key in ALLOWED_PREFERENCES
     }
+    if "preferences.theme" in fields and "preferences.theme_updated_at" not in fields:
+        # A theme write always carries a stamp; clients that promote a choice made
+        # while signed out send their own (the moment of that click).
+        fields["preferences.theme_updated_at"] = _now_ms()
     fields["updated_at"] = _now()
     document = await _set_fields(user_id, fields)
     return {**DEFAULT_PREFERENCES, **((document or {}).get("preferences") or {})}
