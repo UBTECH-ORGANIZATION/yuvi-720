@@ -24,7 +24,9 @@ const RewardsContext = createContext<RewardsContextValue | null>(null)
 
 export function RewardsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
-  const isLearner = Boolean(user) && !user?.roles.includes('teacher')
+  // Anyone with a learner role has a wallet — demo/staff accounts often carry
+  // both roles, and a teacher-only account simply has no learner surfaces.
+  const isLearner = Boolean(user?.roles.includes('learner'))
   const [wallet, setWalletState] = useState<SparkWallet | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [lastGrant, setLastGrant] = useState<RewardGrant | null>(null)
