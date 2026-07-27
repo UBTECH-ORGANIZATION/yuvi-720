@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from app.brain.repository import _get_collection_named, apply_brain_updates, get_brain
+from app.services import rewards
 from learner_state import normalize_learner_id  # type: ignore
 
 _FALLBACK = Path(__file__).resolve().parents[2] / ".runtime" / "mentoring.json"
@@ -244,9 +245,13 @@ async def update_goal_progress(
     goal["status"] = "done" if progress_stage == "summarized" else "open"
     await _save_conversation(lid, record)
     await _project_goals(lid)
+    # Sparks reward the *action* of moving a goal forward (F5 → F3 effort
+    # encouragement). Idempotent per goal+stage, so re-saving pays nothing.
+    reward = await rewards.grant_goal_stage(lid, goal_id, progress_stage)
     record = dict(record)
     record.pop("teacher_only_note", None)
     record["goals"] = _active_goals(record)
+    record["reward"] = reward
     return record
 
 
@@ -269,9 +274,12 @@ async def request_goal_help(
     goal["help_requested_at"] = datetime.now(timezone.utc).isoformat()
     await _save_conversation(lid, record)
     await _project_goals(lid)
+    # Asking for help is a self-regulation win, so it earns sparks (once).
+    reward = await rewards.grant_help_request(lid, goal_id)
     record = dict(record)
     record.pop("teacher_only_note", None)
     record["goals"] = _active_goals(record)
+    record["reward"] = reward
     return record
 
 

@@ -811,6 +811,8 @@
   "mentoring.student.composer.deadlineRequired": "Pick a target date — a goal always needs a date.",
   "mentoring.student.composer.deadlineMissing": "Date needed",
   "mentoring.student.goal.yuviTag": "Yuvi suggested",
+  "mentoring.student.goal.more": "Show goal details",
+  "mentoring.student.goal.less": "Hide goal details",
   "mentoring.student.composer.cancel": "Cancel",
   "mentoring.student.composer.close.title": "Leave the documentation?",
   "mentoring.student.composer.close.body": "What you started won't be saved, and next time we'll start fresh.",

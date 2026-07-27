@@ -811,6 +811,8 @@
   "mentoring.student.composer.deadlineRequired": "צריך לבחור תאריך יעד — אין יעד בלי תאריך.",
   "mentoring.student.composer.deadlineMissing": "חסר תאריך",
   "mentoring.student.goal.yuviTag": "יובי המליץ",
+  "mentoring.student.goal.more": "פתיחת פרטי היעד",
+  "mentoring.student.goal.less": "סגירת פרטי היעד",
   "mentoring.student.composer.cancel": "ביטול",
   "mentoring.student.composer.close.title": "לצאת מהתיעוד?",
   "mentoring.student.composer.close.body": "התיעוד שהתחלת לא יישמר, ובפעם הבאה נתחיל מהתחלה.",
