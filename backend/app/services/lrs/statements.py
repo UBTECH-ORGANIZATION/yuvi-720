@@ -1,5 +1,5 @@
-"""Pure statement builders — one per 720 event, golden-sourced from
-`docs/LRS/postman/720-LRS.postman_collection.json` (30 statement bodies).
+"""Pure statement builders — one per 720 event, derived from the official
+MoE integration document at `docs/LRS/מסמך התממשקות LRS.md`.
 
 Every builder returns a complete xAPI statement dict with a server-generated
 `id` (uuid4). That id is generated ONCE and persisted by the outbox; retries
@@ -199,17 +199,20 @@ def agency_answered(
     response: str,
     *,
     score_raw: Optional[float] = None,
-    score_min: float = 0,
+    score_min: float = 1,
     score_max: float = 5,
     phase: str = "pre",
     question_he: Optional[str] = None,
+    question_id: Optional[str] = None,
+    answer_id: Optional[str] = None,
 ) -> dict[str, Any]:
-    obj = activity(
-        f"{_domain()}/agency/question/{question_number}",
-        "question",
-        question_he or f"שאלה {question_number}",
-    )
-    result: dict[str, Any] = {"response": response}
+    # Prefer the official MoE question/answer URL ids so the statement is scored
+    # against the ministry catalog; fall back to the local activity id.
+    object_id = question_id or f"{_domain()}/agency/question/{question_number}"
+    obj = activity(object_id, "question", question_he or f"שאלה {question_number}")
+    # The official answer id (URL) is the canonical response; keep the numeric
+    # value (1–5) as the scaled score.
+    result: dict[str, Any] = {"response": answer_id or response}
     if score_raw is not None:
         result["score"] = {"min": score_min, "max": score_max, "raw": score_raw}
     return _base(
@@ -631,12 +634,15 @@ def selected(
     *,
     object_id: str,
     object_type: str,
-    selection_type: str,   # → context.contextActivities.category (per guidelines)
+    selection_type: str,
     response: str,
 ) -> dict[str, Any]:
     obj = activity(object_id, object_type)
-    stmt = _base(identity, "selected", obj, session_id, result={"response": response})
-    stmt["context"]["contextActivities"]["category"] = [
-        {"objectType": "Activity", "id": f"{_domain()}/selection-type/{selection_type}"}
-    ]
-    return stmt
+    return _base(
+        identity,
+        "selected",
+        obj,
+        session_id,
+        result={"response": response},
+        context_extra={"extensions": extensions({"selectionType": selection_type})},
+    )

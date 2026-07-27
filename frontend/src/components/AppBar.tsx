@@ -12,9 +12,11 @@ import { UserMenu } from './UserMenu'
 interface AppBarProps {
   activeStep?: number
   center?: ReactNode
+  /** Rendered just before the user menu (e.g. the learner's spark balance). */
+  trailing?: ReactNode
 }
 
-export function AppBar({ activeStep, center }: AppBarProps) {
+export function AppBar({ activeStep, center, trailing }: AppBarProps) {
   const { t } = useI18n()
   const [isNavigationOpen, setIsNavigationOpen] = useState(false)
   const [isCompact, setIsCompact] = useState(false)
@@ -93,6 +95,7 @@ export function AppBar({ activeStep, center }: AppBarProps) {
         </button>
       )}
       <div className="app-bar-user">
+        {trailing}
         <UserMenu />
       </div>
       {hasNavigation && (

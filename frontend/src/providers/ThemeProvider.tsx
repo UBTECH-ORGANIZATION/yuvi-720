@@ -1,10 +1,19 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useAuth } from './AuthProvider'
 
-/* Theme follows the *person*, not the browser: it is stored on the user document
-   and arrives with the session in GET /api/auth/me, so it survives a reload and
-   moves between devices. (No localStorage — see the app-wide rule that learner
-   state lives in the backend.)
+/* One theme preference, two caches.
+
+   A visitor can choose a theme on the landing screen (no user document yet) and
+   again after signing in. Those used to be two disconnected states, so logging
+   in silently discarded the landing choice. They are now the same preference
+   held in two places, each carrying the epoch-ms stamp of the click that set it:
+
+     - cookie `sp_theme` = "<value>|<stamp>"  (read by index.html before React)
+     - user document `preferences.theme` + `preferences.theme_updated_at`
+
+   Whichever was written LAST wins, regardless of where the choice was made, and
+   the loser is brought up to date. (No localStorage — see the app-wide rule that
+   learner state lives in the backend.)
 
    'system' is a real, persisted value, not the absence of a choice: it means
    "keep tracking prefers-color-scheme". */
@@ -21,19 +30,23 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
-// Signed-out visitors (the landing/login screen) have no user document to hold
-// their choice, so a UI-only cookie keeps light/dark across reloads. It is not
-// learner state — the boot script in index.html reads the same cookie to paint
-// the right theme before React mounts, which avoids a flash.
 const THEME_COOKIE = 'sp_theme'
 
-function readThemeCookie(): ThemePreference | null {
-  const match = document.cookie.match(/(?:^|;\s*)sp_theme=(light|dark|system)/)
-  return (match?.[1] as ThemePreference | undefined) ?? null
+interface StoredTheme {
+  value: ThemePreference
+  updatedAt: number
 }
 
-function writeThemeCookie(value: ThemePreference): void {
-  document.cookie = `${THEME_COOKIE}=${value}; path=/; max-age=31536000; SameSite=Lax`
+function readThemeCookie(): StoredTheme | null {
+  // The stamp is optional so cookies written by an older build still parse —
+  // they just date to 0 and therefore lose to any stored user preference.
+  const match = document.cookie.match(/(?:^|;\s*)sp_theme=(light|dark|system)(?:\|(\d+))?/)
+  if (!match) return null
+  return { value: match[1] as ThemePreference, updatedAt: Number(match[2] ?? 0) }
+}
+
+function writeThemeCookie(value: ThemePreference, updatedAt: number): void {
+  document.cookie = `${THEME_COOKIE}=${value}|${updatedAt}; path=/; max-age=31536000; SameSite=Lax`
 }
 
 function systemTheme(): Theme {
@@ -42,18 +55,48 @@ function systemTheme(): Theme {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const { user, updatePreferences } = useAuth()
-  // AuthProvider gates the tree on /me, so the stored preference is already
+  const [cookie, setCookie] = useState<StoredTheme | null>(readThemeCookie)
+
+  const serverValue = (user?.preferences.theme as ThemePreference | undefined) ?? null
+  const serverAt = user?.preferences.theme_updated_at ?? 0
+  // Signed out there is only the cookie; signed in, the newer of the two wins.
+  // Falling back to 'system' (not a fixed 'dark') means an untouched account
+  // follows the device instead of overriding it.
+  const cookieWins = Boolean(user) && cookie !== null && cookie.updatedAt > serverAt
+  const winner: ThemePreference = !user
+    ? cookie?.value ?? 'system'
+    : cookieWins
+      ? (cookie as StoredTheme).value
+      : serverValue ?? cookie?.value ?? 'system'
+
+  // AuthProvider gates the tree on /me, so the winning preference is already
   // known on the very first render — no intermediate paint in the wrong theme.
-  // Signed out, fall back to the visitor's own cookie choice, then to 'dark'
-  // (the product default) rather than tracking the OS.
-  const stored = user?.preferences.theme ?? readThemeCookie() ?? 'dark'
-  const [preference, setPreferenceState] = useState<ThemePreference>(stored)
+  const [preference, setPreferenceState] = useState<ThemePreference>(winner)
   const [systemValue, setSystemValue] = useState<Theme>(systemTheme)
 
   // A different user signing in adopts their own theme.
   useEffect(() => {
-    setPreferenceState(stored)
-  }, [stored])
+    setPreferenceState(winner)
+  }, [winner])
+
+  // Reconcile the two caches so the next boot — which paints from the cookie
+  // before React exists — already agrees with the user document.
+  const promotedStamp = useRef<number | null>(null)
+  useEffect(() => {
+    if (!user) return
+    if (cookieWins) {
+      const pending = cookie as StoredTheme
+      if (promotedStamp.current === pending.updatedAt) return
+      promotedStamp.current = pending.updatedAt
+      void updatePreferences({ theme: pending.value, theme_updated_at: pending.updatedAt }).catch(
+        () => undefined
+      )
+      return
+    }
+    if (cookie?.value === winner && cookie.updatedAt === serverAt) return
+    writeThemeCookie(winner, serverAt)
+    setCookie({ value: winner, updatedAt: serverAt })
+  }, [user, cookie, cookieWins, winner, serverAt, updatePreferences])
 
   const theme: Theme = preference === 'system' ? systemValue : preference
 
@@ -75,14 +118,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return () => query.removeEventListener('change', handleChange)
   }, [])
 
-  const setPreference = (next: ThemePreference) => {
-    setPreferenceState(next)
-    // Fire-and-forget: AuthProvider already applied it optimistically and
-    // reverts its own copy on failure. A failed write must never block the UI.
-    if (user) void updatePreferences({ theme: next }).catch(() => undefined)
-    // Signed out, persist the choice in the visitor cookie so it survives reload.
-    else writeThemeCookie(next)
-  }
+  const setPreference = useCallback(
+    (next: ThemePreference) => {
+      const stamp = Date.now()
+      setPreferenceState(next)
+      // Always write the cookie, signed in or not: it is what paints the page on
+      // the next load, and its stamp is what makes "last choice wins" decidable.
+      writeThemeCookie(next, stamp)
+      setCookie({ value: next, updatedAt: stamp })
+      promotedStamp.current = stamp
+      // Fire-and-forget: AuthProvider already applied it optimistically and
+      // reverts its own copy on failure. A failed write must never block the UI.
+      if (user) void updatePreferences({ theme: next, theme_updated_at: stamp }).catch(() => undefined)
+    },
+    [user, updatePreferences]
+  )
 
   const toggleTheme = () => setPreference(theme === 'light' ? 'dark' : 'light')
 

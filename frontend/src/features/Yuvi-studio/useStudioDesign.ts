@@ -2,6 +2,8 @@
 /* eslint-disable */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getLearnerState, updateLearnerState } from '../../services/api'
+import { getShop, purchaseAsset, type PurchaseResult, type ShopItem } from '../../services/rewards'
+import { useRewards } from '../../providers/RewardsProvider'
 import type { YuviAvatarHandle } from './YuviAvatar3D'
 import {
   DEFAULT_DESIGN, cloneDesign, normalizeDesign,
@@ -19,10 +21,13 @@ export function useStudioDesign(autoLoad = true) {
     refresh: refreshSavedDesign,
     applySavedDesign,
   } = useYuviDesign()
+  const { wallet, setWallet } = useRewards()
   const avatarRef = useRef<YuviAvatarHandle | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [design, setDesign] = useState<YuviDesign>(() => cloneDesign(DEFAULT_DESIGN))
   const [unlockedIds, setUnlockedIds] = useState<Set<string>>(() => new Set())
+  const [shop, setShop] = useState<Record<string, ShopItem>>({})
+  const [buying, setBuying] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<YuviSlot | 'colors'>('headTop')
   const [muted, setMuted] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
@@ -37,12 +42,42 @@ export function useStudioDesign(autoLoad = true) {
       setDesign(savedDesign)
       setUnlockedIds(new Set(Array.isArray(state.avatar_unlocks) ? state.avatar_unlocks : []))
     } catch { /* keep default */ }
+    try {
+      // The shop is the only source of prices — the client never sets one.
+      const catalog = await getShop()
+      setShop(Object.fromEntries(catalog.items.map((item) => [item.id, item])))
+      setWallet(catalog.wallet)
+    } catch { /* shop simply stays unavailable */ }
     setLoaded(true)
-  }, [refreshSavedDesign])
+  }, [refreshSavedDesign, setWallet])
 
   useEffect(() => { if (autoLoad) void load() }, [autoLoad, load])
 
   const isLocked = (asset: YuviAsset) => Boolean(asset.requirementKey) && !unlockedIds.has(asset.id)
+  /** Sparks price for a locked item, or null when it can only be earned. */
+  const priceOf = (assetId: string): number | null => shop[assetId]?.price ?? null
+  const canAfford = (assetId: string) => {
+    const price = priceOf(assetId)
+    return price !== null && (wallet?.balance ?? 0) >= price
+  }
+
+  /** Spend sparks on one item; the server charges and grants, we mirror it. */
+  const buy = async (assetId: string): Promise<PurchaseResult | null> => {
+    if (buying) return null
+    setBuying(assetId)
+    try {
+      const result = await purchaseAsset(assetId)
+      setWallet(result.wallet)
+      if (result.ok) {
+        setUnlockedIds((prev) => new Set(prev).add(assetId))
+      }
+      return result
+    } catch {
+      return null
+    } finally {
+      setBuying(null)
+    }
+  }
 
   const equip = (slot: YuviSlot, id: string | null) => {
     setDesign((prev) => ({ ...prev, equipped: { ...prev.equipped, [slot]: id } }))
@@ -79,6 +114,7 @@ export function useStudioDesign(autoLoad = true) {
   return {
     avatarRef, loaded, design, unlockedIds, activeTab, setActiveTab,
     muted, setMuted, justSaved, saving, isLocked, equip, setVariant, setColor, reset, save, load,
+    wallet, priceOf, canAfford, buy, buying,
   }
 }
 

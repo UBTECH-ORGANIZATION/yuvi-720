@@ -79,7 +79,7 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0
-    - _VColorStrength: 1
+    - _VColorStrength: 0.34
     - _WrapAmount: 0.42
     - _ZWrite: 1
     m_Colors:

@@ -1,0 +1,51 @@
+[
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/measures/1",
+    "name": {
+      "he-IL": "מוטיבציה ורלוונטיות",
+      "ar-IL": "الدافعية والصلة"
+    }
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/measures/2",
+    "name": {
+      "he-IL": "תודעת צמיחה",
+      "ar-IL": "عقلية النمو"
+    }
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/measures/3",
+    "name": {
+      "he-IL": "יוזמה ואחריות",
+      "ar-IL": "المبادرة والمسؤولية"
+    }
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/measures/4",
+    "name": {
+      "he-IL": "ויסות עצמי",
+      "ar-IL": "التنظيم الذاتي"
+    }
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/measures/5",
+    "name": {
+      "he-IL": "מודעות עצמית",
+      "ar-IL": "الوعي الذاتي"
+    }
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/measures/6",
+    "name": {
+      "he-IL": "תמיכה וחוויות רגשיות",
+      "ar-IL": "الدعم والتجارب العاطفية"
+    }
+  },
+  {
+    "id": "https://moe.gov.il/720-agency-mapping/measures/7",
+    "name": {
+      "he-IL": "עמדה כלפי למידה עם מחשב",
+      "ar-IL": "موقف من التعلم بالحاسوب"
+    }
+  }
+]
