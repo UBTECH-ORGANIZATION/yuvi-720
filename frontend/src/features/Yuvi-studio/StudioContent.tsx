@@ -18,10 +18,10 @@ const TABS: Tab[] = ['headTop', 'face', 'body', 'handR', 'back', 'colors']
 const PREVIEW_ALL = false
 
 const COLOR_OPTIONS: Record<keyof YuviColors, string[]> = {
-  body: ['#85878C', '#9cc1e8', '#ff9ec4', '#b5f2c9', '#ffd27a', '#c9b6ff', '#8ee6f2', '#ff8f8f', '#9ad0ff'],
+  body: ['#F1F2FB', '#9cc1e8', '#ff9ec4', '#b5f2c9', '#ffd27a', '#c9b6ff', '#8ee6f2', '#ff8f8f', '#9ad0ff'],
   eyes: ['#4eeef0', '#7c5cff', '#ff5d73', '#ffd166', '#5ce67e', '#ff8fd0'],
   smile: ['#74f7ff', '#7c5cff', '#ff5d73', '#3fd9e0', '#ffd166', '#ff8fd0'],
-  glow: ['#3fd9e0', '#7c5cff', '#ff5d73', '#ffd166', '#aef7ff'],
+  glow: ['#7C6BFF', '#3fd9e0', '#ff5d73', '#ffd166', '#aef7ff'],
 }
 
 /**
