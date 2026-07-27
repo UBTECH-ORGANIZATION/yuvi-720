@@ -142,9 +142,9 @@ function sparkleCloud(count: number, radius: number, color: string, size = 0.075
 /* ── floating island ───────────────────────────────────────────────────── */
 
 const ISLAND_PALETTE: Record<IslandVariant, { grass: [string, string]; rock: [string, string]; tuft: string }> = {
-  lush: { grass: ['#7ad06a', '#31703c'], rock: ['#6d6483', '#443c5c'], tuft: '#8fdc74' },
-  growing: { grass: ['#c9b463', '#6a6a35'], rock: ['#6e6580', '#463e5b'], tuft: '#cbc06a' },
-  dormant: { grass: ['#8e8aa4', '#4c4a63'], rock: ['#6a677e', '#403e55'], tuft: '#9d9ab2' },
+  lush: { grass: ['#7fd36c', '#337a41'], rock: ['#948aa3', '#5d5473'], tuft: '#93e07c' },
+  growing: { grass: ['#a6d773', '#4c7d3d'], rock: ['#8f8599', '#5a516d'], tuft: '#b6e089' },
+  dormant: { grass: ['#a9a5c0', '#5f5c79'], rock: ['#8c8a9d', '#57546c'], tuft: '#b2afc6' },
 }
 
 /**
@@ -158,10 +158,10 @@ export function buildIsland(variant: IslandVariant, tint: THREE.Color, seed: num
   const grass = grassMaps(pal.grass[0], pal.grass[1], seed)
 
   // Underside — a tapering, craggy stone keel.
-  const keelGeo = craggify(new THREE.ConeGeometry(radius * 0.98, radius * 1.85, 40, 7), 0.16, 7, seed)
+  const keelGeo = craggify(new THREE.ConeGeometry(radius * 0.98, radius * 1.24, 40, 8), 0.24, 7, seed)
   const keel = new THREE.Mesh(keelGeo, surface(rock, { roughness: 1 }))
   keel.rotation.x = Math.PI
-  keel.position.y = -radius * 0.92
+  keel.position.y = -radius * 0.62
   g.add(keel)
 
   // Soil band right under the grass — hides the cone/dome seam.
@@ -223,17 +223,17 @@ export function buildIsland(variant: IslandVariant, tint: THREE.Color, seed: num
 
   // Coloured light pooling beneath the island (never casts, purely optical).
   const glow = new THREE.Mesh(
-    new THREE.PlaneGeometry(radius * 4.6, radius * 4.6),
+    new THREE.PlaneGeometry(radius * 3.4, radius * 3.4),
     new THREE.MeshBasicMaterial({
       map: radialSprite(`rgba(${Math.round(tint.r * 255)},${Math.round(tint.g * 255)},${Math.round(tint.b * 255)},0.75)`),
       transparent: true,
-      opacity: variant === 'dormant' ? 0.16 : 0.5,
+      opacity: variant === 'dormant' ? 0.07 : 0.2,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
   )
   glow.rotation.x = -Math.PI / 2
-  glow.position.y = -radius * 0.5
+  glow.position.y = -radius * 1.5
   glow.userData.islandGlow = true
   g.add(glow)
 
@@ -572,7 +572,7 @@ function compass(tint: THREE.Color): THREE.Group {
 
   const dome = new THREE.Mesh(
     new THREE.SphereGeometry(0.46, 40, 24, 0, TAU, 0, Math.PI * 0.34),
-    new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#eaf2ff'), roughness: 0.03, metalness: 0, transmission: 0.9, thickness: 0.2, ior: 1.45, transparent: true, opacity: 0.5, clearcoat: 1 }),
+    new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#dfe8fb'), roughness: 0.4, metalness: 0, transmission: 0.85, thickness: 0.2, ior: 1.35, transparent: true, opacity: 0.3, clearcoat: 0.3, clearcoatRoughness: 0.5 }),
   )
   dome.rotation.x = Math.PI / 2
   dome.position.z = 0.06
@@ -623,14 +623,14 @@ export function buildMetaphor(kind: string, tint: THREE.Color, variant: IslandVa
 export function buildMascot(): THREE.Group {
   const g = new THREE.Group()
   const shell = new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color('#c3ddf3'),
-    roughness: 0.28,
+    color: new THREE.Color('#9fc6e6'),
+    roughness: 0.34,
     metalness: 0.08,
-    clearcoat: 0.9,
-    clearcoatRoughness: 0.18,
-    envMapIntensity: 1.1,
+    clearcoat: 0.8,
+    clearcoatRoughness: 0.2,
+    envMapIntensity: 0.5,
   })
-  const trim = new THREE.MeshStandardMaterial({ color: new THREE.Color('#9bc6e6'), roughness: 0.34, metalness: 0.2, envMapIntensity: 1 })
+  const trim = new THREE.MeshStandardMaterial({ color: new THREE.Color('#6ea6cf'), roughness: 0.4, metalness: 0.2, envMapIntensity: 0.5 })
 
   const head = new THREE.Group()
   head.position.y = 0.96
@@ -648,7 +648,7 @@ export function buildMascot(): THREE.Group {
       map: mascotFace(),
       emissiveMap: mascotFace(),
       emissive: new THREE.Color('#ffffff'),
-      emissiveIntensity: 0.55,
+      emissiveIntensity: 0.3,
       roughness: 0.12,
       metalness: 0.1,
       clearcoat: 1,
@@ -663,7 +663,7 @@ export function buildMascot(): THREE.Group {
     head.add(ear)
     const dot = new THREE.Mesh(
       new THREE.SphereGeometry(0.038, 18, 14),
-      new THREE.MeshStandardMaterial({ color: new THREE.Color('#7ee6ff'), emissive: new THREE.Color('#4cc9f0'), emissiveIntensity: 1.1, roughness: 0.2 }),
+      new THREE.MeshStandardMaterial({ color: new THREE.Color('#7ee6ff'), emissive: new THREE.Color('#4cc9f0'), emissiveIntensity: 0.6, roughness: 0.2 }),
     )
     dot.position.set(s * 0.545, -0.02, 0.05)
     head.add(dot)
@@ -674,7 +674,7 @@ export function buildMascot(): THREE.Group {
   head.add(stalk)
   const bulb = new THREE.Mesh(
     new THREE.SphereGeometry(0.075, 24, 18),
-    new THREE.MeshStandardMaterial({ color: new THREE.Color('#9defff'), emissive: new THREE.Color('#4cc9f0'), emissiveIntensity: 1.6, roughness: 0.16 }),
+    new THREE.MeshStandardMaterial({ color: new THREE.Color('#9defff'), emissive: new THREE.Color('#4cc9f0'), emissiveIntensity: 0.85, roughness: 0.16 }),
   )
   bulb.position.y = 0.72
   head.add(bulb)
@@ -688,7 +688,7 @@ export function buildMascot(): THREE.Group {
   g.add(torso)
   const chest = new THREE.Mesh(
     new THREE.CircleGeometry(0.12, 32),
-    new THREE.MeshStandardMaterial({ color: new THREE.Color('#a98cff'), emissive: new THREE.Color('#7c6cff'), emissiveIntensity: 0.9, roughness: 0.2 }),
+    new THREE.MeshStandardMaterial({ color: new THREE.Color('#a98cff'), emissive: new THREE.Color('#7c6cff'), emissiveIntensity: 0.5, roughness: 0.2 }),
   )
   chest.position.set(0, 0.44, 0.245)
   g.add(chest)
@@ -719,10 +719,10 @@ export function buildPodium(accent: string): THREE.Group {
     thickness: 0.6,
     ior: 1.42,
     transparent: true,
-    opacity: 0.62,
+    opacity: 0.78,
     clearcoat: 1,
     clearcoatRoughness: 0.04,
-    envMapIntensity: 1.4,
+    envMapIntensity: 0.9,
   })
   const disc = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.42, 0.3, 96), glass)
   disc.position.y = -0.15
@@ -738,18 +738,18 @@ export function buildPodium(accent: string): THREE.Group {
 
   const rim = new THREE.Mesh(
     new THREE.TorusGeometry(1.5, 0.035, 16, 160),
-    new THREE.MeshStandardMaterial({ color: new THREE.Color(accent).lerp(new THREE.Color('#ffffff'), 0.35), emissive: new THREE.Color(accent), emissiveIntensity: 1.05, roughness: 0.25, metalness: 0.3 }),
+    new THREE.MeshStandardMaterial({ color: new THREE.Color(accent).lerp(new THREE.Color('#ffffff'), 0.35), emissive: new THREE.Color(accent), emissiveIntensity: 0.6, roughness: 0.25, metalness: 0.3 }),
   )
   rim.rotation.x = -Math.PI / 2
   rim.position.y = 0
   g.add(rim)
 
   const halo = new THREE.Mesh(
-    new THREE.PlaneGeometry(6.4, 6.4),
-    new THREE.MeshBasicMaterial({ map: radialSprite('rgba(150,120,255,0.6)'), transparent: true, opacity: 0.42, depthWrite: false, blending: THREE.AdditiveBlending }),
+    new THREE.PlaneGeometry(5.2, 5.2),
+    new THREE.MeshBasicMaterial({ map: radialSprite('rgba(150,120,255,0.6)'), transparent: true, opacity: 0.2, depthWrite: false, blending: THREE.AdditiveBlending }),
   )
   halo.rotation.x = -Math.PI / 2
-  halo.position.y = -0.62
+  halo.position.y = -0.78
   g.add(halo)
 
   g.userData.rim = rim
@@ -852,11 +852,11 @@ export function buildLightPath(color: THREE.Color, dotted = 42): LightPath {
 export function buildBackdropIslands(): THREE.Group {
   const g = new THREE.Group()
   const spots: [number, number, number, number][] = [
-    [-13, 4.4, -16, 0.75],
-    [12.5, 5.6, -18, 0.62],
-    [-9, 7.2, -22, 0.5],
-    [16, 2.6, -13, 0.45],
-    [3, 8.4, -24, 0.4],
+    [-15, 1.2, -20, 0.7],
+    [14.5, 2.4, -22, 0.58],
+    [-10, 4.2, -27, 0.48],
+    [18, -1.4, -17, 0.44],
+    [3, 5.4, -30, 0.4],
   ]
   for (let i = 0; i < spots.length; i += 1) {
     const [x, y, z, s] = spots[i]

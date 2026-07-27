@@ -398,13 +398,14 @@
 .aworld__banner {
   position: absolute;
   inset-block-end: 22px;
-  inset-inline-start: 50%;
+  /* physical centring so RTL and LTR land in the same place */
+  left: 50%;
   transform: translateX(-50%);
   z-index: 6;
   display: flex;
   align-items: center;
   gap: 14px;
-  max-inline-size: min(560px, 70vw);
+  max-inline-size: min(520px, 46vw);
   padding: 11px 12px 11px 18px;
   padding-inline: 18px 12px;
   border-radius: 999px;
