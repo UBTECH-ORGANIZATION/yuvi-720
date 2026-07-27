@@ -163,7 +163,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     if (avatarRoot) avatarRoot.dataset.webglState = 'ready'
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, performanceMode === 'low' ? 1.25 : 2))
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 0.98
+    renderer.toneMappingExposure = 1.06
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.domElement.style.display = 'block'
     renderer.domElement.style.width = '100%'
@@ -172,16 +172,21 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
 
     const scene = new THREE.Scene()
     const pmrem = new THREE.PMREMGenerator(renderer)
-    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.035).texture
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.028).texture
     pmrem.dispose()
 
     const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100)
     camera.position.set(0, 0, orbit ? 6.3 : 5.4)
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xd6e0f5, 0.85))
-    const key = new THREE.DirectionalLight(0xffffff, 1.3); key.position.set(3, 7, 6); scene.add(key)
-    const fill = new THREE.DirectionalLight(0xbcd7ef, 0.5); fill.position.set(-5, 2, 3); scene.add(fill)
-    const rim = new THREE.DirectionalLight(0xdcecff, 0.5); rim.position.set(0, 3, -6); scene.add(rim)
+    // Studio-style rig: one soft key, a cool fill, and two coloured rims
+    // (violet + cyan) that trace the silhouette. The coloured edge light is
+    // what separates a modern character render from flat toy plastic.
+    scene.add(new THREE.HemisphereLight(0xf4f6ff, 0xa192e6, 0.62))
+    const key = new THREE.DirectionalLight(0xffffff, 1.55); key.position.set(2.6, 6.4, 5.6); scene.add(key)
+    const fill = new THREE.DirectionalLight(0xc7d8ff, 0.42); fill.position.set(-5, 1.8, 3.4); scene.add(fill)
+    const rim = new THREE.DirectionalLight(0x8f6cff, 1.45); rim.position.set(-3.6, 2.8, -5.2); scene.add(rim)
+    const rimCool = new THREE.DirectionalLight(0x4eeef0, 1.05); rimCool.position.set(3.8, 1.4, -4.8); scene.add(rimCool)
+    const bounce = new THREE.PointLight(0xa78bfa, 0.45, 9); bounce.position.set(0, -2.4, 2.6); scene.add(bounce)
 
     const design: YuviDesign = {
       version: initialDesign.version,
@@ -191,10 +196,21 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     }
 
     // ── Materials (identical palette to the start-scene YuviRobot3D) ──
-    const blueMat = new THREE.MeshStandardMaterial({ color: 0x717378, roughness: 0.3, metalness: 0.14, envMapIntensity: 0.7 })
-    const jointMat = new THREE.MeshStandardMaterial({ color: 0x5c5e62, roughness: 0.34, metalness: 0.1, envMapIntensity: 0.65 })
-    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.26, metalness: 0.08, envMapIntensity: 0.85 })
-    const faceMat = new THREE.MeshBasicMaterial({ color: 0x050711 })
+    // Yuvi 2.0: soft-ceramic shell with a real clearcoat and a whisper of
+    // iridescence over a deep indigo inner core — no flat grey plastic.
+    const CORE_COLOR = new THREE.Color(0x2b2560)
+    const blueMat = new THREE.MeshPhysicalMaterial({
+      color: 0xf1f2fb, roughness: 0.24, metalness: 0,
+      clearcoat: 1, clearcoatRoughness: 0.13,
+      sheen: 0.55, sheenColor: new THREE.Color(0xb9a8ff), sheenRoughness: 0.55,
+      iridescence: 0.22, iridescenceIOR: 1.35,
+      envMapIntensity: 1.2,
+    })
+    const jointMat = new THREE.MeshPhysicalMaterial({ color: 0x2b2560, roughness: 0.34, metalness: 0.75, envMapIntensity: 1.15, clearcoat: 0.5, clearcoatRoughness: 0.28 })
+    // Formerly plain white — now the dark inner suit the shell plates sit on.
+    const whiteMat = new THREE.MeshPhysicalMaterial({ color: 0x342c6d, roughness: 0.4, metalness: 0.3, envMapIntensity: 1.05, clearcoat: 0.7, clearcoatRoughness: 0.24, sheen: 0.4, sheenColor: new THREE.Color(0x7c6bff) })
+    const faceMat = new THREE.MeshPhysicalMaterial({ color: 0x07061a, roughness: 0.07, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 1.5 })
+    const visorSheenMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.085, depthTest: false, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending })
     const ringMat = new THREE.MeshStandardMaterial({ color: 0x3fd9e0, emissive: 0x3fd9e0, emissiveIntensity: 1.8, roughness: 0.3, toneMapped: false })
     const earCapMat = new THREE.MeshStandardMaterial({ color: 0x3fd9e0, emissive: 0x3fd9e0, emissiveIntensity: 0.6, roughness: 0.3, toneMapped: false })
     const antennaTipMat = new THREE.MeshStandardMaterial({ color: 0x4eeef0, emissive: 0x4eeef0, emissiveIntensity: 2.2, toneMapped: false, roughness: 0.25 })
@@ -365,21 +381,29 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     // ── Head ──
     const head = new THREE.Group(); head.position.y = 1.59; head.scale.setScalar(0.9); robot.add(head)
     const helmet = new THREE.Mesh(new RoundedBoxGeometry(1.12, 1.02, 0.94, 10, 0.42), blueMat); helmet.scale.set(1, 1.0, 0.95); head.add(helmet)
-    const antenna = new THREE.Group(); antenna.position.set(0, 0.52, 0.02); head.add(antenna)
-    const antennaRod = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.018, 0.22, 14), jointMat); antennaRod.position.y = 0.11; antenna.add(antennaRod)
-    const antennaTip = new THREE.Mesh(new THREE.SphereGeometry(0.052, 20, 18), antennaTipMat); antennaTip.position.y = 0.24; antenna.add(antennaTip)
-    const antennaLight = new THREE.PointLight(0x4eeef0, 0.35, 1.3); antennaLight.position.y = 0.24; antenna.add(antennaLight)
-    const screen = makeFlatRoundedRect(0.82, 0.62, 0.13, faceMat); screen.position.set(0, -0.03, 0.455); head.add(screen)
+    // A floating halo replaces the old rod-and-bulb antenna: it reads as a
+    // modern AI companion instead of a toy robot aerial.
+    const antenna = new THREE.Group(); antenna.position.set(0, 0.6, 0.02); head.add(antenna)
+    const antennaTip = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.018, 14, 48), antennaTipMat); antennaTip.rotation.x = Math.PI / 2; antenna.add(antennaTip)
+    const haloGlowMat = new THREE.MeshBasicMaterial({ color: 0x4eeef0, transparent: true, opacity: 0.2, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending })
+    const antennaHalo = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.055, 10, 40), haloGlowMat); antennaHalo.rotation.x = Math.PI / 2; antenna.add(antennaHalo)
+    const antennaLight = new THREE.PointLight(0x4eeef0, 0.35, 1.3); antenna.add(antennaLight)
+    // Wide wrap-around glass visor with an inset bezel and a glass sheen streak.
+    const bezel = makeFlatRoundedRect(1.0, 0.72, 0.3, jointMat); bezel.position.set(0, -0.03, 0.451); head.add(bezel)
+    const screen = makeFlatRoundedRect(0.94, 0.66, 0.27, faceMat); screen.position.set(0, -0.03, 0.457); head.add(screen)
     const faceLight = makeFaceLightTexture()
     const faceLightMat = new THREE.MeshBasicMaterial({ map: faceLight.texture, transparent: true, opacity: 0.95, depthTest: false, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending })
     const faceLights = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 0.62), faceLightMat); faceLights.position.set(0, -0.03, 0.468); faceLights.renderOrder = 7; head.add(faceLights)
+    const visorSheen = makeFlatRoundedRect(0.78, 0.11, 0.055, visorSheenMat); visorSheen.position.set(-0.05, 0.14, 0.472); visorSheen.rotation.z = -0.2; visorSheen.renderOrder = 9; head.add(visorSheen)
     const faceGlow = new THREE.PointLight(0x4eeef0, 0.28, 1.1); faceGlow.position.set(0, -0.02, 0.62); head.add(faceGlow)
     const earGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.12, 30)
     const earL = new THREE.Mesh(earGeo, blueMat); earL.rotation.z = Math.PI / 2; earL.position.set(-0.56, -0.02, 0.02); head.add(earL)
     const earR = earL.clone(); earR.position.x = 0.56; head.add(earR)
-    const earCapL = new THREE.Mesh(new THREE.CircleGeometry(0.07, 26), earCapMat); earCapL.rotation.y = -Math.PI / 2; earCapL.position.set(-0.623, -0.02, 0.02); head.add(earCapL)
-    const earCapR = earCapL.clone(); earCapR.rotation.y = Math.PI / 2; earCapR.position.x = 0.623; head.add(earCapR)
-    const nativeEarParts = [earL, earR, earCapL, earCapR]
+    const earCapL = new THREE.Mesh(new THREE.TorusGeometry(0.076, 0.017, 12, 30), earCapMat); earCapL.rotation.y = Math.PI / 2; earCapL.position.set(-0.625, -0.02, 0.02); head.add(earCapL)
+    const earCapR = earCapL.clone(); earCapR.position.x = 0.625; head.add(earCapR)
+    const earDiscL = new THREE.Mesh(new THREE.CircleGeometry(0.07, 26), faceMat); earDiscL.rotation.y = -Math.PI / 2; earDiscL.position.set(-0.622, -0.02, 0.02); head.add(earDiscL)
+    const earDiscR = earDiscL.clone(); earDiscR.rotation.y = Math.PI / 2; earDiscR.position.x = 0.622; head.add(earDiscR)
+    const nativeEarParts = [earL, earR, earCapL, earCapR, earDiscL, earDiscR]
 
     robot.position.y = -1.35
 
@@ -428,11 +452,16 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       design.colors = { ...colors }
       const b = new THREE.Color(colors.body)
       blueMat.color.copy(b)
-      jointMat.color.copy(b.clone().multiplyScalar(0.82))
+      // Joints and the inner suit stay a deep indigo so the shell always reads
+      // as a bright plate over a dark core, whatever colour the learner picks.
+      jointMat.color.copy(b.clone().lerp(CORE_COLOR, 0.84))
+      whiteMat.color.copy(CORE_COLOR.clone().lerp(b, 0.14))
       const g = new THREE.Color(colors.glow)
+      blueMat.sheenColor.copy(g.clone().lerp(new THREE.Color(0xffffff), 0.45))
       ringMat.color.copy(g); ringMat.emissive.copy(g)
       earCapMat.color.copy(g); earCapMat.emissive.copy(g)
       antennaTipMat.color.copy(g); antennaTipMat.emissive.copy(g)
+      haloGlowMat.color.copy(g)
       antennaLight.color.copy(g); faceGlow.color.copy(g)
       faceLight.draw()
       if (animate) playTransform()
@@ -704,6 +733,13 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       faceLightMat.opacity = 0.9 + Math.sin(t * 1.8) * 0.05
       antennaTipMat.emissiveIntensity = 1.8 + Math.sin(t * 2.2) * 0.4
       antennaLight.intensity = 0.28 + Math.sin(t * 2.2) * 0.06
+      // The halo precesses slowly and breathes with the glow pulse.
+      if (!reduceMotion) {
+        antenna.rotation.y += dt * 0.5
+        antenna.rotation.z = Math.sin(t * 0.9) * 0.12
+        antenna.position.y = 0.6 + Math.sin(t * 1.6) * 0.014
+      }
+      haloGlowMat.opacity = 0.16 + Math.sin(t * 2.2) * 0.05
       earCapMat.emissiveIntensity = 0.4 + Math.sin(t * 2.0) * 0.16
       ringMat.emissiveIntensity = 1.6 + Math.sin(t * 2.4) * 0.4
       faceGlow.intensity = 0.24 + Math.sin(t * 1.8) * 0.05
