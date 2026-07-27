@@ -670,12 +670,11 @@ export function YuviRobot3D({
         delete equippedObjects[slot]
       }
       activeDesign.equipped[slot] = id
+      const asset = id ? getAsset(id) : null
       if (slot === 'headTop') {
         antenna.visible = !id
-        nativeEarParts.forEach((part) => { part.visible = id !== 'headphones' })
+        nativeEarParts.forEach((part) => { part.visible = !asset?.hideEars })
       }
-      if (!id) return
-      const asset = getAsset(id)
       if (!asset) return
       const object = asset.build()
       anchor.add(object)
@@ -773,6 +772,7 @@ export function YuviRobot3D({
     let armLZ = 0
     let armRX = 0.08
     let armRZ = 0.095
+    let lastAccessoryT = 0
     let frame = 0
     const loop = () => {
       frame = requestAnimationFrame(loop)
@@ -954,6 +954,16 @@ export function YuviRobot3D({
       haloGlowMat.opacity = 0.16 + Math.sin(t * 2.2) * 0.05 + (isCelebrating ? 0.08 : 0)
       antennaTipMat.emissiveIntensity = 1.8 + Math.sin(t * (isThinking ? 4.2 : 2.2)) * 0.4 + (isCelebrating ? 0.7 : 0)
       antennaLight.intensity = 0.28 + Math.sin(t * 2.2) * 0.06 + (isCelebrating ? 0.14 : 0)
+
+      // Accessory motion: every asset exposes its own `userData.animate(t, dt)`.
+      const accessoryDt = Math.min(0.1, Math.max(0, t - lastAccessoryT))
+      lastAccessoryT = t
+      if (!reduceMotion) {
+        for (const key of Object.keys(equippedObjects)) {
+          const animate = (equippedObjects as any)[key]?.userData?.animate
+          if (animate) animate(t, accessoryDt)
+        }
+      }
 
       renderer.render(scene, camera)
     }
