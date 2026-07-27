@@ -51,15 +51,15 @@ const shell = (color: number | string, opts: Record<string, unknown> = {}) =>
 const metal = (color: number | string, opts: Record<string, unknown> = {}) =>
   new THREE.MeshPhysicalMaterial({ color, roughness: 0.24, metalness: 0.92, envMapIntensity: 1.35, ...opts })
 const fabric = (color: number | string, opts: Record<string, unknown> = {}) =>
-  new THREE.MeshPhysicalMaterial({ color, roughness: 0.86, metalness: 0, sheen: 0.7, sheenColor: new THREE.Color('#cdd6ff'), sheenRoughness: 0.7, envMapIntensity: 0.55, ...opts })
+  new THREE.MeshPhysicalMaterial({ color, roughness: 0.88, metalness: 0, sheen: 0.32, sheenColor: new THREE.Color('#8fa0d8'), sheenRoughness: 0.85, envMapIntensity: 0.35, ...opts })
 const glass = (color: number | string, opacity = 0.42, opts: Record<string, unknown> = {}) =>
   new THREE.MeshPhysicalMaterial({ color, transparent: true, opacity, roughness: 0.05, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 1.7, ...opts })
 /** Additive surface — reads as emitted light, never as painted plastic. */
 const holo = (color: number | string, opacity = 0.36, opts: Record<string, unknown> = {}) =>
   new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false, toneMapped: false, ...opts })
 
-const CARBON = '#141230'
-const GRAPHITE = '#242348'
+const CARBON = '#232152'
+const GRAPHITE = '#3a3878'
 const STEEL = '#9fb0d6'
 const NEON = '#4eeef0'
 const VIOLET = '#7c5cff'
@@ -69,47 +69,68 @@ const decal = (material: THREE.Material) => { material.depthTest = false; return
 // ── head gear (head-local: the helmet spans y ±0.51, x ±0.56, z ±0.45) ──
 function buildSnapback() {
   const g = new THREE.Group()
-  const cloth = fabric(CARBON)
-  const crown = new THREE.Mesh(new THREE.SphereGeometry(0.585, 32, 20, 0, Math.PI * 2, 0, Math.PI / 2), cloth)
-  crown.scale.set(1, 0.6, 1); crown.position.y = 0.42; g.add(crown)
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.588, 0.588, 0.12, 34, 1, true), fabric(GRAPHITE))
-  band.position.y = 0.45; g.add(band)
+  // The crown has to reach down past the head's widest point (y ~0.1) or it
+  // reads as a floating disc instead of a cap.
+  const crown = new THREE.Mesh(new THREE.SphereGeometry(0.62, 34, 22, 0, Math.PI * 2, 0, Math.PI / 2), fabric('#312f7d'))
+  crown.scale.set(1, 0.8, 1); crown.position.y = 0.09; g.add(crown)
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.628, 0.628, 0.16, 36, 1, true), fabric('#1d1b48'))
+  band.position.y = 0.14; g.add(band)
+  const seam = new THREE.Mesh(new THREE.TorusGeometry(0.628, 0.012, 8, 40), emissive(VIOLET, 1.5))
+  seam.rotation.x = Math.PI / 2; seam.position.y = 0.22; g.add(seam)
   // Worn backwards: the brim points behind and the closure strap sits up front.
-  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, 0.045, 34, 1, false, Math.PI / 2, Math.PI), shell(GRAPHITE))
-  brim.position.set(0, 0.44, 0); brim.rotation.x = -0.14; g.add(brim)
-  const strap = new THREE.Mesh(new RoundedBoxGeometry(0.2, 0.1, 0.05, 4, 0.02), shell(CARBON))
-  strap.position.set(0, 0.45, 0.5); g.add(strap)
-  const buckle = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.011, 8, 20), emissive(NEON, 1.4))
-  buckle.position.set(0, 0.45, 0.54); g.add(buckle)
-  const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.05), holo(VIOLET, 0.5))
-  tag.position.set(0.34, 0.5, 0.4); tag.rotation.y = -0.7; g.add(tag)
+  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 0.82, 0.055, 44, 1, false, Math.PI - 0.95, 1.9), shell('#1b1940'))
+  brim.scale.set(0.8, 1, 1)
+  brim.position.set(0, 0.13, 0.04); brim.rotation.x = 0.1; g.add(brim)
+  const brimGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.83, 0.83, 0.014, 44, 1, false, Math.PI - 0.95, 1.9), holo(NEON, 0.55))
+  brimGlow.scale.set(0.8, 1, 1)
+  brimGlow.position.set(0, 0.098, 0.04); brimGlow.rotation.x = 0.1; g.add(brimGlow)
+  const strap = new THREE.Mesh(new RoundedBoxGeometry(0.22, 0.11, 0.05, 4, 0.02), shell(CARBON))
+  strap.position.set(0, 0.16, 0.56); g.add(strap)
+  const buckle = new THREE.Mesh(new THREE.TorusGeometry(0.038, 0.012, 8, 22), emissive(NEON, 1.6))
+  buckle.position.set(0, 0.16, 0.6); g.add(buckle)
+  const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.055), holo(VIOLET, 0.55))
+  tag.position.set(0.44, 0.24, 0.32); tag.rotation.y = -0.8; g.add(tag)
   return g
 }
 function buildBeanie() {
   const g = new THREE.Group()
-  const knit = fabric('#2f2f6e', { roughness: 0.95 })
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.6, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.52), knit)
-  dome.scale.set(1, 0.72, 1); dome.position.y = 0.34; g.add(dome)
+  const knit = fabric('#2a2a72', { roughness: 0.95 })
+  // Pulled down over the head, not perched on top of it.
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.63, 34, 22, 0, Math.PI * 2, 0, Math.PI * 0.54), knit)
+  dome.scale.set(1, 0.92, 1); dome.position.y = 0.05; g.add(dome)
   // Chunky folded rim — the detail that makes knitwear read as knitwear.
-  const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.615, 0.615, 0.17, 34), fabric('#3a3a86', { roughness: 0.95 }))
-  rim.position.y = 0.4; g.add(rim)
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2
-    const rib = new THREE.Mesh(new RoundedBoxGeometry(0.03, 0.16, 0.03, 3, 0.012), fabric('#31317a', { roughness: 0.98 }))
-    rib.position.set(Math.sin(a) * 0.62, 0.4, Math.cos(a) * 0.62); rib.rotation.y = -a; g.add(rib)
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.655, 0.645, 0.22, 36), fabric('#3d3d99', { roughness: 0.95 }))
+  rim.position.y = 0.02; g.add(rim)
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2
+    const rib = new THREE.Mesh(new RoundedBoxGeometry(0.035, 0.21, 0.035, 3, 0.014), fabric('#33338c', { roughness: 0.98 }))
+    rib.position.set(Math.sin(a) * 0.665, 0.02, Math.cos(a) * 0.665); rib.rotation.y = -a; g.add(rib)
   }
-  const label = new THREE.Mesh(new RoundedBoxGeometry(0.15, 0.07, 0.02, 3, 0.014), shell(CARBON))
-  label.position.set(0.24, 0.4, 0.56); label.rotation.y = -0.42; g.add(label)
-  const spark = new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.02), holo(NEON, 0.7))
-  spark.position.set(0.245, 0.4, 0.575); spark.rotation.y = -0.42; g.add(spark)
+  // Cable-knit ridges running over the crown.
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2
+    const cable = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.022, 8, 26, Math.PI * 0.52), fabric('#35358f', { roughness: 0.98 }))
+    cable.position.y = 0.05; cable.rotation.set(Math.PI / 2, 0, 0); cable.rotation.y = a
+    cable.scale.set(1, 0.94, 1); g.add(cable)
+  }
+  const pom = new THREE.Mesh(new THREE.SphereGeometry(0.15, 20, 16), fabric('#cfd6ff', { roughness: 1 }))
+  pom.position.y = 0.66; g.add(pom)
+  const label = new THREE.Mesh(new RoundedBoxGeometry(0.17, 0.08, 0.02, 3, 0.014), shell(CARBON))
+  label.position.set(0.26, 0.02, 0.6); label.rotation.y = -0.42; g.add(label)
+  const spark = new THREE.Mesh(new THREE.PlaneGeometry(0.07, 0.024), holo(NEON, 0.8))
+  spark.position.set(0.267, 0.02, 0.615); spark.rotation.y = -0.42; g.add(spark)
+  g.userData.animate = (t: number) => {
+    pom.position.y = 0.66 + Math.sin(t * 2.2) * 0.012
+    pom.rotation.z = Math.sin(t * 1.6) * 0.12
+  }
   return g
 }
 function buildHood() {
   const g = new THREE.Group()
   const cloth = fabric('#1d1c44', { side: THREE.DoubleSide })
   // Sphere slice open toward +Z: the face stays clear, the fabric wraps behind.
-  const cowl = new THREE.Mesh(new THREE.SphereGeometry(0.82, 40, 28, Math.PI / 2 + 0.66, Math.PI * 2 - 1.32, 0, Math.PI * 0.72), cloth)
-  cowl.scale.set(1, 0.98, 1.04); cowl.position.set(0, 0.02, -0.05); g.add(cowl)
+  const cowl = new THREE.Mesh(new THREE.SphereGeometry(0.8, 40, 28, Math.PI / 2 + 1.18, Math.PI * 2 - 2.36, 0, Math.PI * 0.74), cloth)
+  cowl.scale.set(1.02, 1, 1.08); cowl.position.set(0, 0.02, -0.12); g.add(cowl)
   const peak = new THREE.Mesh(new THREE.SphereGeometry(0.34, 20, 14), cloth)
   peak.scale.set(1, 0.7, 1.3); peak.position.set(0, 0.42, -0.44); g.add(peak)
   const brim = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.06, 12, 40, Math.PI * 1.15), fabric('#2b2a63'))
@@ -295,18 +316,21 @@ function buildBattleHelmet() {
 function buildShades() {
   const g = new THREE.Group()
   // One-piece wrap lens cut from a cylinder wall so it hugs the visor curve.
+  // Everything here is a decal: the robot's own face lights always draw on top.
   const lens = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.53, 0.53, 0.19, 44, 1, true, -0.66, 1.32),
-    shell('#07091c', { metalness: 0.7, roughness: 0.06, side: THREE.DoubleSide, iridescence: 0.5, iridescenceIOR: 1.5 }),
+    new THREE.CylinderGeometry(0.6, 0.6, 0.3, 48, 1, true, -0.92, 1.84),
+    decal(shell('#07091c', { metalness: 0.75, roughness: 0.06, side: THREE.DoubleSide, iridescence: 0.6, iridescenceIOR: 1.5 })),
   )
-  lens.position.set(0, 0.07, 0); g.add(lens)
-  const browLine = new THREE.Mesh(new THREE.CylinderGeometry(0.535, 0.535, 0.028, 44, 1, true, -0.66, 1.32), emissive(VIOLET, 1.8))
-  browLine.position.set(0, 0.175, 0); g.add(browLine)
-  const shine = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.045), holo('#ffffff', 0.18))
-  shine.position.set(-0.13, 0.1, 0.53); shine.rotation.set(0, 0.25, -0.18); g.add(shine)
+  lens.position.set(0, 0.07, 0); lens.renderOrder = 11; g.add(lens)
+  const browLine = new THREE.Mesh(new THREE.CylinderGeometry(0.607, 0.607, 0.045, 48, 1, true, -0.94, 1.88), decal(emissive(VIOLET, 2.2)))
+  browLine.position.set(0, 0.235, 0); browLine.renderOrder = 12; g.add(browLine)
+  const bridge = new THREE.Mesh(new RoundedBoxGeometry(0.1, 0.05, 0.05, 3, 0.02), decal(shell(CARBON)))
+  bridge.position.set(0, 0.06, 0.6); bridge.renderOrder = 12; g.add(bridge)
+  const shine = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.05), decal(holo('#ffffff', 0.22)))
+  shine.position.set(-0.16, 0.13, 0.6); shine.rotation.set(0, 0.32, -0.16); shine.renderOrder = 13; g.add(shine)
   for (const side of [-1, 1]) {
-    const temple = new THREE.Mesh(new RoundedBoxGeometry(0.04, 0.05, 0.22, 3, 0.015), shell(CARBON))
-    temple.position.set(0.5 * side, 0.07, 0.24); temple.rotation.y = 0.5 * side; g.add(temple)
+    const temple = new THREE.Mesh(new RoundedBoxGeometry(0.05, 0.06, 0.3, 3, 0.02), decal(shell(CARBON)))
+    temple.position.set(0.52 * side, 0.07, 0.3); temple.rotation.y = 0.62 * side; temple.renderOrder = 11; g.add(temple)
   }
   return g
 }
@@ -435,8 +459,9 @@ function buildSkate() {
       wheelMats.push(material)
     }
   }
-  g.rotation.set(0, 0.24, Math.PI / 2)
-  g.position.set(0.02, -0.12, 0.12); g.scale.setScalar(0.92)
+  // Held upright at the side, deck turned toward the viewer.
+  g.rotation.set(0, Math.PI / 2 - 0.38, Math.PI / 2)
+  g.position.set(0.06, -0.02, 0.16); g.scale.setScalar(0.8)
   g.userData.animate = (t: number) => {
     wheelMats.forEach((m, i) => { m.emissiveIntensity = 1.1 + Math.sin(t * 2.6 + i) * 0.5 })
   }
@@ -712,23 +737,41 @@ const FRONT = Math.PI / 2
 
 function buildJacket() {
   const g = new THREE.Group()
-  const cloth = fabric('#242c66', { side: THREE.DoubleSide })
-  const lining = fabric('#12142f', { side: THREE.DoubleSide })
+  // Classic bomber: deep blue body, cream ribbed collar/hem, contrast sleeves
+  // and a neon zip running past the chest badge.
+  const cloth = fabric('#2a39a0', { side: THREE.DoubleSide })
+  const trimCloth = fabric('#b9c4f2', { roughness: 0.95 })
+  const lining = fabric('#101534', { side: THREE.DoubleSide })
   for (const side of [-1, 1]) {
-    const start = side > 0 ? FRONT + 0.34 : FRONT - 1.84
-    g.add(torsoShell(0.3, start, 1.5, cloth))
-    g.add(torsoShell(0.292, start, 1.5, lining))
-    const piping = torsoShell(0.303, side > 0 ? FRONT + 0.32 : FRONT + 1.62, 0.05, emissive(side > 0 ? NEON : VIOLET, 1.6))
-    g.add(piping)
-    const sleeve = new THREE.Mesh(new THREE.SphereGeometry(0.16, 22, 16), cloth)
-    sleeve.scale.set(1, 0.9, 1); sleeve.position.set(0.3 * side, 0.18, -0.04); g.add(sleeve)
-    const cuff = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.028, 10, 24), fabric('#151a3d'))
-    cuff.rotation.set(Math.PI / 2, 0, 0.2 * side); cuff.position.set(0.32 * side, 0.09, -0.04); g.add(cuff)
+    const start = side > 0 ? FRONT + 0.3 : FRONT - 1.86
+    g.add(torsoShell(0.302, start, 1.56, cloth))
+    g.add(torsoShell(0.292, start, 1.56, lining))
+    // Sleeve caps shaped like a shoulder, not a ball stuck to the torso.
+    const sleeve = new THREE.Mesh(new THREE.SphereGeometry(0.175, 26, 18, 0, Math.PI * 2, 0, Math.PI * 0.68), fabric('#151b46'))
+    sleeve.scale.set(0.92, 1.05, 0.92); sleeve.position.set(0.3 * side, 0.13, -0.04); sleeve.rotation.z = 0.26 * side; g.add(sleeve)
+    const stripe = new THREE.Mesh(new THREE.TorusGeometry(0.152, 0.014, 10, 28), emissive(side > 0 ? NEON : VIOLET, 1.7))
+    stripe.rotation.set(Math.PI / 2, 0, 0.26 * side); stripe.position.set(0.315 * side, 0.055, -0.04); g.add(stripe)
+    const cuff = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.032, 10, 26), trimCloth)
+    cuff.rotation.set(Math.PI / 2, 0, 0.26 * side); cuff.position.set(0.322 * side, 0.005, -0.04); g.add(cuff)
   }
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.045, 12, 30, Math.PI * 1.35), fabric('#151a3d'))
-  collar.position.set(0, 0.24, -0.04); collar.rotation.set(Math.PI / 2, 0, Math.PI * 0.82); g.add(collar)
-  const hem = new THREE.Mesh(new THREE.TorusGeometry(0.235, 0.032, 10, 34), fabric('#151a3d'))
-  hem.rotation.x = Math.PI / 2; hem.position.set(0, -0.24, -0.04); hem.scale.set(1, 0.88, 1); g.add(hem)
+  // Open zip line — two teeth rails with a glowing gap between them.
+  for (const side of [-1, 1]) {
+    const rail = torsoShell(0.309, FRONT + 0.055 * side - 0.022, 0.045, shell('#0e1230'))
+    g.add(rail)
+  }
+  const zipGlow = torsoShell(0.307, FRONT - 0.02, 0.04, holo(NEON, 0.55))
+  g.add(zipGlow)
+  const pull = new THREE.Mesh(new RoundedBoxGeometry(0.05, 0.07, 0.03, 3, 0.014), metal(STEEL))
+  pull.position.set(0, -0.17, 0.2); g.add(pull)
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.176, 0.042, 12, 30, Math.PI * 1.4), trimCloth)
+  collar.position.set(0, 0.235, -0.04); collar.rotation.set(Math.PI / 2, 0, Math.PI * 0.8); g.add(collar)
+  const hem = new THREE.Mesh(new THREE.TorusGeometry(0.216, 0.034, 10, 34), trimCloth)
+  hem.rotation.x = Math.PI / 2; hem.position.set(0, -0.238, -0.04); hem.scale.set(1, 0.88, 1); g.add(hem)
+  // Sleeve patch high on the right side, like an embroidered badge.
+  const patch = new THREE.Mesh(new THREE.CircleGeometry(0.055, 22), fabric('#e5b64a'))
+  patch.position.set(0.2, 0.1, 0.19); patch.rotation.y = 0.75; g.add(patch)
+  const patchGlow = new THREE.Mesh(new THREE.CircleGeometry(0.03, 18), holo('#ffd98a', 0.7))
+  patchGlow.position.set(0.207, 0.1, 0.196); patchGlow.rotation.y = 0.75; g.add(patchGlow)
   return g
 }
 function buildJersey() {
@@ -757,30 +800,33 @@ function buildJersey() {
 }
 function buildUtilityRig() {
   const g = new THREE.Group()
-  const webbing = shell('#1a1940')
+  const webbing = fabric('#1b1e46')
+  const strapMat = fabric('#2b2f6b')
   for (const side of [-1, 1]) {
-    const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0.2 * side, 0.24, -0.08),
-      new THREE.Vector3(0.17 * side, 0.16, 0.12),
-      new THREE.Vector3(0.03 * side, -0.02, 0.2),
-      new THREE.Vector3(-0.15 * side, -0.18, 0.14),
-      new THREE.Vector3(-0.22 * side, -0.26, -0.06),
-    ])
-    g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 30, 0.03, 10, false), webbing))
-    const pouch = new THREE.Mesh(new RoundedBoxGeometry(0.13, 0.14, 0.09, 5, 0.03), fabric('#262a5e'))
-    pouch.position.set(0.21 * side, -0.14, 0.11); pouch.rotation.y = -0.4 * side; g.add(pouch)
-    const clip = new THREE.Mesh(new RoundedBoxGeometry(0.06, 0.04, 0.04, 3, 0.014), metal('#8e97c9'))
-    clip.position.set(0.21 * side, -0.05, 0.14); g.add(clip)
-    const light = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.014), holo(side > 0 ? NEON : VIOLET, 0.8))
-    light.position.set(0.21 * side, -0.2, 0.16); light.rotation.y = -0.4 * side; g.add(light)
+    // Straight shoulder strap over the collarbone — readable at thumbnail size.
+    const strap = torsoShell(0.303, FRONT + 0.42 * side - 0.055, 0.11, strapMat, 0.34, 1.5)
+    g.add(strap)
+    const edge = torsoShell(0.306, FRONT + 0.42 * side - 0.07, 0.02, emissive(side > 0 ? NEON : VIOLET, 1.6), 0.36, 1.44)
+    g.add(edge)
+    const pouch = new THREE.Mesh(new RoundedBoxGeometry(0.12, 0.15, 0.08, 5, 0.028), webbing)
+    pouch.position.set(0.215 * side, -0.13, 0.1); pouch.rotation.y = -0.5 * side; g.add(pouch)
+    const flap = new THREE.Mesh(new RoundedBoxGeometry(0.125, 0.05, 0.085, 4, 0.02), fabric('#3b4088'))
+    flap.position.set(0.215 * side, -0.06, 0.1); flap.rotation.y = -0.5 * side; g.add(flap)
+    const clip = new THREE.Mesh(new RoundedBoxGeometry(0.05, 0.035, 0.035, 3, 0.012), metal('#95a0d6'))
+    clip.position.set(0.222 * side, -0.09, 0.135); clip.rotation.y = -0.5 * side; g.add(clip)
+    const light = new THREE.Mesh(new THREE.PlaneGeometry(0.075, 0.014), holo(side > 0 ? NEON : VIOLET, 0.85))
+    light.position.set(0.222 * side, -0.185, 0.135); light.rotation.y = -0.5 * side; g.add(light)
   }
+  // Horizontal chest strap tying the two shoulder straps together.
+  const chest = torsoShell(0.305, FRONT - 0.62, 1.24, strapMat, 0.92, 0.11)
+  g.add(chest)
   // Buckle ring frames the chest badge instead of covering it.
   const ringMat = emissive(NEON, 2.2)
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.018, 12, 36), ringMat)
   ring.position.set(0, 0.025, 0.19); g.add(ring)
   const ringBase = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.032, 12, 36), shell('#1a1940'))
   ringBase.position.set(0, 0.025, 0.175); g.add(ringBase)
-  const belt = new THREE.Mesh(new THREE.TorusGeometry(0.235, 0.028, 10, 34), shell('#1a1940'))
+  const belt = new THREE.Mesh(new THREE.TorusGeometry(0.235, 0.03, 10, 34), fabric('#1a1940'))
   belt.rotation.x = Math.PI / 2; belt.position.set(0, -0.24, -0.04); belt.scale.set(1, 0.88, 1); g.add(belt)
   g.userData.animate = (t: number) => { ringMat.emissiveIntensity = 1.8 + Math.sin(t * 2.4) * 0.6 }
   return g
@@ -873,7 +919,7 @@ export interface YuviAsset {
 export const Yuvi_CATALOG: YuviAsset[] = [
   // ── head ──
   { id: 'snapback', slot: 'headTop', labelKey: 'YuviStudio.item.snapback', build: buildSnapback },
-  { id: 'beanie', slot: 'headTop', labelKey: 'YuviStudio.item.beanie', build: buildBeanie },
+  { id: 'beanie', slot: 'headTop', labelKey: 'YuviStudio.item.beanie', build: buildBeanie, hideEars: true },
   { id: 'hood', slot: 'headTop', labelKey: 'YuviStudio.item.hood', build: buildHood, hideEars: true },
   { id: 'headset', slot: 'headTop', labelKey: 'YuviStudio.item.headset', build: buildHeadset, hideEars: true },
   { id: 'neoncrest', slot: 'headTop', labelKey: 'YuviStudio.item.neoncrest', build: buildNeonCrest },
