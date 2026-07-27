@@ -178,3 +178,60 @@ def count_recent_rapid_guesses(recent_events: list[dict[str, Any]], window: int 
     return sum(
         1 for e in recent_events[:window] if e.get("effortful") is False
     )
+
+
+# ── Motivation signals (720: encourage on recovery + sustained effort) ────────
+RECOVERY_MIN_FAILS = 2       # a success ending ≥2 effortful fails = "improvement"
+SUSTAINED_MIN_EVENTS = 5     # effortful answers …
+SUSTAINED_MIN_MINUTES = 5.0  # … spanning this long = a "work streak"
+
+
+def detect_recovery(
+    prior_events: list[dict[str, Any]], current_event: dict[str, Any]
+) -> bool:
+    """True when the current success ends a run of ≥2 effortful failures on the
+    same objective — the 720 "improvement after a streak of errors" moment.
+
+    ``prior_events`` = the objective's recent events (newest first), EXCLUDING
+    the current one. A rapid guess isn't evidence either way (skipped)."""
+    if (current_event.get("result") or {}).get("success") is not True:
+        return False
+    if current_event.get("verb") not in ("answered", "attempted", "completed"):
+        return False
+    if current_event.get("effortful") is False:
+        return False
+    fails = 0
+    for event in prior_events:
+        if event.get("verb") not in ("answered", "attempted"):
+            continue
+        if event.get("effortful") is False:
+            continue
+        success = (event.get("result") or {}).get("success")
+        if success is False:
+            fails += 1
+        elif success is True:
+            break                       # an earlier success ends the fail run
+    return fails >= RECOVERY_MIN_FAILS
+
+
+def detect_sustained_effort(session_events: list[dict[str, Any]]) -> bool:
+    """True when the learner kept up steady effort this session — ≥N effortful
+    answers spanning ≥T minutes (720 "work streak over time"). Celebrated once
+    per session to reinforce persistence, never invented."""
+    effortful = [
+        event for event in session_events
+        if event.get("verb") in ("answered", "attempted")
+        and event.get("effortful") is not False
+    ]
+    if len(effortful) < SUSTAINED_MIN_EVENTS:
+        return False
+    from app.services.learning_timing import parse_timestamp
+
+    stamps = [
+        stamp for event in effortful
+        if (stamp := parse_timestamp(event.get("occurred_at") or event.get("stored_at")))
+    ]
+    if len(stamps) < 2:
+        return False
+    span_minutes = (max(stamps) - min(stamps)).total_seconds() / 60.0
+    return span_minutes >= SUSTAINED_MIN_MINUTES

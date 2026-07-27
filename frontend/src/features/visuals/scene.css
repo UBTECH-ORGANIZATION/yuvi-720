@@ -1,0 +1,77 @@
+/* Mafs ships a dark theme and declares its tokens ON .MafsView, so a value set
+   on a parent element loses to them. This descendant selector out-specifies
+   that declaration and lets the diagram sit inside the chat bubble instead of
+   punching a black rectangle through it. */
+
+.sp-visual-scene .MafsView {
+  --mafs-bg: transparent;
+  --mafs-fg: #302b4a;
+  --mafs-line-color: #d9d5ee;
+  --mafs-origin-color: #b9b2dd;
+  background: transparent;
+}
+
+.sp-visual-scene {
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fbfaff;
+}
+
+.sp-visual-scene .MafsView text {
+  /* Hebrew and Arabic labels come straight from the scene; let the browser
+     shape and order them rather than forcing a direction. */
+  unicode-bidi: plaintext;
+}
+
+/* Deliberately NOT theme-aware. A scene's element colours come from the spec
+   and are shared with Manim, which always renders onto a light frame — so a
+   dark surface here left ink-coloured geometry (#302b4a) on #191630, i.e. an
+   almost invisible diagram, and made the in-browser still look nothing like
+   the video of the same scene. The figure is a figure in both themes, the way
+   a photograph in a dark UI stays a photograph. */
+
+/* --- chemistry ----------------------------------------------------------- */
+
+.sp-visual-scene--molecule {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  padding: 12px;
+}
+
+.sp-molecule {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sp-molecule__drawing svg { max-width: 100%; height: auto; }
+
+.sp-molecule__loading {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  color: #77718f;
+  font-size: 24px;
+}
+
+.sp-molecule__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-size: 14px;
+  color: #45405e;
+}
+
+.sp-molecule__formula { font-variant-numeric: tabular-nums; font-weight: 600; }
+.sp-molecule__mass { color: #77718f; }
+
+/* Molecules sit on the same light figure surface, so they keep the light
+   palette in both themes for the same reason the geometry above does. */

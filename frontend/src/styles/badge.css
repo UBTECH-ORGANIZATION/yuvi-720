@@ -1,0 +1,30 @@
+/* Yuvi badge coin — flat, theme-aware. Component: components/Badge.tsx. */
+.yv-badge {
+  position: relative;
+  display: inline-block;
+  width: 120px;
+  line-height: 0;
+}
+.yv-badge svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+.yv-badge--mini {
+  width: 100%;
+}
+
+/* When a badge stands in for a fixed-size avatar chip, fill the chip. */
+.user-avatar .yv-badge { width: 100%; }
+
+/* Locked coins read as a goal, not a reward: desaturated + dimmed. */
+.yv-badge--locked svg .yv-badge__medallion {
+  filter: grayscale(0.85) brightness(0.94);
+  opacity: 0.62;
+}
+
+/* The in-progress ring animates when its stroke-dashoffset changes. */
+.yv-badge__ring {
+  transition: stroke-dashoffset 1.05s cubic-bezier(0.4, 0, 0.2, 1);
+}

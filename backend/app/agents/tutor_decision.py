@@ -153,6 +153,60 @@ async def record_hint_level(learner_id: str, component_id: Optional[str], level:
         pass
 
 
+# ── One-shot support gating (hint/explanation once per question) ─────────────
+def support_question_key(
+    current_state: dict[str, Any], surface_component_id: Optional[str]
+) -> str:
+    """Identity of "the question the learner is on" for support gating and the
+    screen_change push.
+
+    Built from the event-derived current_state: component + sub-item SCREEN +
+    question. It INCLUDES question_id so that two sub-questions on ONE screen
+    (e.g. סעיף א = …/q1 and סעיף ב = …/q2) are distinct — moving q1→q2 must
+    re-key the chat and re-arm one-shot buttons. Oscillation is prevented
+    UPSTREAM: `_apply_event_to_brain` keeps `current_state.question_id` STICKY
+    across bare screen re-emits (question=None), so this key never flips
+    `…|q1` ↔ `…|` on the same question.
+    """
+    state = current_state or {}
+    component = state.get("component_id") or surface_component_id or ""
+    return "|".join(
+        str(part or "") for part in (component, state.get("item_id"), state.get("question_id"))
+    )
+
+
+def support_used(
+    current_state: dict[str, Any], question_key: str
+) -> dict[str, bool]:
+    """Which support modes were already used on this question."""
+    used = (current_state or {}).get("support_used") or {}
+    if used.get("question_key") != question_key:
+        return {"hint": False, "explanation": False}
+    return {"hint": bool(used.get("hint")), "explanation": bool(used.get("explanation"))}
+
+
+async def record_support_used(
+    learner_id: str, question_key: str, support_mode: str
+) -> None:
+    """Persist one support use for this question (trusted lane, never blocks)."""
+    try:
+        from app.brain.repository import apply_brain_operators, get_brain
+
+        brain = await get_brain(learner_id)
+        state = brain.get("current_state") or {}
+        used = support_used(state, question_key)
+        used[support_mode] = True
+        await apply_brain_operators(learner_id, {
+            "current_state.support_used": {
+                "question_key": question_key,
+                **used,
+                "updated_at": _now(),
+            },
+        })
+    except Exception:
+        pass
+
+
 async def recent_tutor_decisions(learner_id: str, limit: int = 300) -> list[dict[str, Any]]:
     """Recent coach decisions (hint/explain/worked-example + hint_level) for a
     learner — best-effort evidence for the activeness help/hint signals. Returns

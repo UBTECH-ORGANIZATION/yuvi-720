@@ -67,6 +67,8 @@ def _trailing_fail_streak(events: list[dict[str, Any]]) -> int:
 
 async def student_insights(learner_id: str, language: str = "he") -> dict[str, Any]:
     """Explainable per-student insight — struggle, progress, attention + evidence."""
+    from app.services import kata_catalog
+    await kata_catalog.ensure_loaded()
     brain = await get_brain(learner_id)
     recent = await get_recent_events(learner_id, limit=20)
     plan = plan_next(brain)

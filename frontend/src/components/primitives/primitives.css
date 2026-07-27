@@ -608,9 +608,57 @@
   box-shadow: var(--sp-shadow-lg);
   animation: spMenuIn .16s ease both;
 }
-.user-menu__head { display: flex; flex-direction: column; gap: 2px; }
+.user-menu__head { display: flex; flex-direction: row; align-items: center; gap: 12px; }
+.user-menu__head-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .user-menu__head-name { font-size: 15px; font-weight: 800; color: var(--sp-ink-900); }
 .user-menu__head-handle { font-size: 12px; color: var(--sp-ink-300); }
+
+/* Big avatar with an edit pencil — the entry to the badge/avatar picker. */
+.user-menu__avatar-edit {
+  position: relative;
+  flex: 0 0 auto;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 16px;
+}
+.user-menu__avatar-edit:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+.user-menu__head-avatar {
+  display: grid;
+  place-items: center;
+  inline-size: 54px;
+  block-size: 54px;
+  border-radius: 16px;
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--sp-gradient);
+  box-shadow: inset 0 0 0 1px var(--sp-border-strong);
+  overflow: hidden;
+  transition: transform .18s var(--sp-ease, ease);
+}
+.user-menu__avatar-edit:hover .user-menu__head-avatar { transform: scale(1.04); }
+.user-menu__head-avatar .yv-badge { width: 100%; }
+.user-menu__pencil {
+  position: absolute;
+  inset-block-end: -4px;
+  inset-inline-end: -4px;
+  inline-size: 22px;
+  block-size: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--sp-surface);
+  color: var(--sp-primary-600);
+  border: 1px solid var(--sp-border);
+  box-shadow: var(--sp-shadow-sm);
+}
+.user-menu__pencil svg { width: 13px; height: 13px; }
+
+.user-menu__row-chevron { width: 16px; height: 16px; opacity: .5; margin-inline-start: auto; }
+.user-menu__row--link { color: var(--sp-ink-700); }
+.user-menu__row--link:hover { color: var(--sp-primary-600); }
 
 .user-menu__group { display: flex; flex-direction: column; gap: 6px; }
 .user-menu__label {

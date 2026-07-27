@@ -4,23 +4,75 @@
 
 import { apiDelete, apiGet, apiPost } from './api'
 
+/** Solved label positions, in renderer CANVAS units (x -7.1..7.1, y -4..4).
+ *  Produced by the backend's visual_layout solver and shared by every
+ *  renderer, so a still and its animated twin place labels identically.
+ *  Keys are slots: 'label', 'position', 'labels:0', 'side_labels:2', ... */
+export type CoachVisualLayout = Record<string, [number, number]>
+
+export interface CoachVisualElement {
+  type: string
+  layout?: CoachVisualLayout
+  /** Molecule elements only. All four are produced by RDKit on the backend —
+   *  the planner emits nothing but a SMILES string, so none of these are the
+   *  model's assertions. `highlight` is atom indices, already resolved from a
+   *  substructure pattern. */
+  smiles?: string
+  formula?: string
+  mass?: number
+  highlight?: number[]
+  [key: string]: unknown
+}
+
 export interface CoachVisualScene {
   use_visual: true
+  /** Discriminates the element vocabulary. Absent on scenes stored before
+   *  the field existed — treat a missing value as 'geometry'. */
+  render?: 'geometry' | 'molecule'
+  animated?: boolean
   title: string
   alt: string
   caption: string
-  elements: Array<{ type: string; [key: string]: unknown }>
+  elements: CoachVisualElement[]
+  /** The renderer transform, solved once on the backend and published so every
+   *  renderer draws shapes in the same space its labels were solved in.
+   *  `space: 'data'` means element coords are axis data coords (the frontend
+   *  uses the axes' own viewbox); `'canvas'` means they need this fit applied. */
+  canvas?: {
+    scale_x: number
+    scale_y: number
+    offset_x: number
+    offset_y: number
+    space: 'data' | 'canvas'
+  }
+  /** The region the scene actually occupies, `[x0, y0, x1, y1]` in canvas
+   *  units, solved by the backend (it is the only place that knows every label
+   *  box). A renderer crops to this so a small preview spends its pixels on the
+   *  drawing rather than on the empty parts of a 14.2x8 frame. */
+  content?: [number, number, number, number]
+  /** Planner-chosen drag handles. Purely additive: a renderer that ignores
+   *  this still draws a correct static picture. A handle references a `point`
+   *  element, or a `polygon` vertex by index — never geometry of its own. */
+  interactive?: {
+    handles: Array<{ element: number; vertex?: number }>
+  }
+  layout_version?: number
 }
 
 export interface CoachVisual {
   id: string
-  type: 'image' | 'video'
+  /** 'scene' renders in the browser from `scene`; 'image'/'video' are
+   *  server-rendered and only exist for the Manim video path and for
+   *  conversation history stored before client rendering existed. */
+  type: 'image' | 'video' | 'scene'
   mime_type: 'image/png' | 'image/svg+xml' | 'video/mp4'
+  /** Always present. For type 'scene' this is the deterministic SVG fallback,
+   *  used when the client renderer cannot draw the scene. */
   data_url: string
   title: string
   alt: string
   caption: string
-  renderer: 'manim' | 'svg-fallback'
+  renderer: 'manim' | 'svg-fallback' | 'mafs' | 'molecule'
   scene: CoachVisualScene
 }
 
@@ -52,6 +104,9 @@ export interface CoachHistoryMessage {
   text_after: string
   at: string
   visual?: CoachVisual
+  /** The question this message belongs to (component|item|question); lets the
+   *  companion scope the visible thread per question and restore it on resume. */
+  question_key?: string | null
 }
 
 export interface CoachConversationPage {
@@ -119,7 +174,13 @@ export function coachSurfaceForPath(pathname: string): CoachSurfaceContext {
 async function streamAgent(
   path: string,
   body: Record<string, unknown>,
-  handlers: CoachStreamHandlers
+  handlers: CoachStreamHandlers,
+  // Safety net for a stalled stream: if the server sends NOTHING for this long
+  // (e.g. it hangs after the last token, before `[DONE]`), cancel the reader so
+  // the caller's `finally` runs and the panel never freezes. Off by default —
+  // only text-only streams (proactive/intro) opt in; the main coach stream can
+  // render a visual inline with a legitimately long silent gap.
+  inactivityMs?: number
 ): Promise<void> {
   const response = await fetch(path, {
     method: 'POST',
@@ -134,46 +195,60 @@ async function streamAgent(
   const decoder = new TextDecoder()
   let buffer = ''
 
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop() || ''
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue
-      const payload = line.slice(6)
-      if (payload === '[DONE]') return
-      try {
-        const parsed = JSON.parse(payload) as {
-          text?: string
-          disclosure?: string
-          visual_status?: 'planning' | 'rendering' | 'none'
-          text_before?: string
-          text_after?: string
-          visual?: CoachVisual
-          can_visualize?: boolean
-          phase?: 'thinking' | 'speaking'
+  let watchdog: ReturnType<typeof setTimeout> | undefined
+  const armWatchdog = () => {
+    if (!inactivityMs) return
+    if (watchdog) clearTimeout(watchdog)
+    // cancel() makes the pending read() resolve done → loop breaks cleanly.
+    watchdog = setTimeout(() => { void reader.cancel() }, inactivityMs)
+  }
+
+  try {
+    armWatchdog()
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      armWatchdog()
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        const payload = line.slice(6)
+        if (payload === '[DONE]') return
+        try {
+          const parsed = JSON.parse(payload) as {
+            text?: string
+            disclosure?: string
+            visual_status?: 'planning' | 'rendering' | 'none'
+            text_before?: string
+            text_after?: string
+            visual?: CoachVisual
+            can_visualize?: boolean
+            phase?: 'thinking' | 'speaking'
+          }
+          if (parsed.disclosure) handlers.onDisclosure?.(parsed.disclosure)
+          if (parsed.text) {
+            handlers.onPhase?.('speaking')
+            handlers.onText(parsed.text)
+          }
+          if (parsed.phase) handlers.onPhase?.(parsed.phase)
+          if (parsed.visual_status) {
+            handlers.onVisualStatus?.({
+              status: parsed.visual_status,
+              textBefore: parsed.text_before,
+              textAfter: parsed.text_after,
+            })
+          }
+          if (parsed.visual) handlers.onVisual?.(parsed.visual)
+          if (typeof parsed.can_visualize === 'boolean') handlers.onCanVisualize?.(parsed.can_visualize)
+        } catch {
+          continue
         }
-        if (parsed.disclosure) handlers.onDisclosure?.(parsed.disclosure)
-        if (parsed.text) {
-          handlers.onPhase?.('speaking')
-          handlers.onText(parsed.text)
-        }
-        if (parsed.phase) handlers.onPhase?.(parsed.phase)
-        if (parsed.visual_status) {
-          handlers.onVisualStatus?.({
-            status: parsed.visual_status,
-            textBefore: parsed.text_before,
-            textAfter: parsed.text_after,
-          })
-        }
-        if (parsed.visual) handlers.onVisual?.(parsed.visual)
-        if (typeof parsed.can_visualize === 'boolean') handlers.onCanVisualize?.(parsed.can_visualize)
-      } catch {
-        continue
       }
     }
+  } finally {
+    if (watchdog) clearTimeout(watchdog)
   }
 }
 
@@ -260,11 +335,64 @@ export function streamProactive(
   return streamAgent(
     '/api/agent/coach/proactive',
     { conversation_id: conversationId, trigger, language, surface },
-    handlers
+    handlers,
+    // Proactive nudges and question intros are a few short sentences of text —
+    // no inline visual render, so tokens arrive within ~1s of each other. If the
+    // server goes silent for 20s the stream has stalled (e.g. it hung persisting
+    // the turn before `[DONE]` — a transient DB blip blocks on the driver's ~30s
+    // server-selection timeout); cancel so the panel's `isStreaming` gate is
+    // released instead of freezing the whole chat behind it.
+    20000
   )
 }
 
 export type CoachSupportMode = 'hint' | 'explanation'
+
+/** One-shot hint/explanation availability for the question the learner is on.
+ * `question_key` changes when the learner progresses, re-arming the buttons. */
+export interface CoachSupportState {
+  question_key: string
+  hint_used: boolean
+  explanation_used: boolean
+}
+
+export function getCoachSupportState(
+  componentId?: string | null,
+  signal?: AbortSignal
+): Promise<CoachSupportState> {
+  const params = new URLSearchParams()
+  if (componentId) params.set('component_id', componentId)
+  const query = params.toString()
+  return apiGet<CoachSupportState>(
+    `/api/agent/coach/support/state${query ? `?${query}` : ''}`,
+    { cache: 'no-store', signal }
+  )
+}
+
+/** Learner rates the coach conversation (MoE `conversation/rated`). */
+export function rateCoachConversation(
+  conversationId: string,
+  rating: 'like' | 'dislike'
+): Promise<{ ok: boolean }> {
+  return apiPost<{ ok: boolean }>('/api/agent/coach/rate', {
+    conversation_id: conversationId,
+    rating,
+  })
+}
+
+/** The help affordances a learner can self-attribute after solving a question. */
+export type HelpMethod = 'hint' | 'explanation' | 'yuvi_chat'
+
+/** Persist the learner's answer to "what helped you understand this?" for a
+ *  solved question. Latest set wins server-side; safe to call on every toggle. */
+export function saveHelpedAttribution(payload: {
+  component_id?: string | null
+  item_id?: string | null
+  question_id?: string | null
+  methods: HelpMethod[]
+}): Promise<{ methods: HelpMethod[] }> {
+  return apiPost<{ methods: HelpMethod[] }>('/api/agent/coach/helped', payload)
+}
 
 export function streamCoachSupport(
   support: CoachSupportMode,
@@ -322,9 +450,30 @@ export function deleteCoachConversation(
   )
 }
 
+export interface TriggerAlternative {
+  component_id: string
+  unit_id?: string | null
+  title?: string | null
+  media_format?: string | null
+}
+
 export interface Trigger {
-  type: 'idle' | 'misconception' | 'slow_progress' | 'success' | '_heartbeat'
+  type:
+    | 'idle' | 'misconception' | 'mistake' | 'slow_progress' | 'success'
+    | 'rapid_guessing' | 'wheel_spinning' | 'completion' | 'screen_change'
+    | '_heartbeat'
+  /** 720 misconception response: a same-objective component in a different
+   *  representation the learner can switch to (video instead of text, …). */
+  alternative?: TriggerAlternative
   objective_id?: string | null
+  /** `completion` only: the component that just finished (720 §"Completed") —
+   *  a UI state signal to finalize the lesson without polling the catalog. */
+  component_id?: string | null
+  unit_id?: string | null
+  /** `screen_change` only: the question key (`component|item`) the learner is now
+   *  on. Pushed the instant an ingested xAPI event advances current_state, so the
+   *  companion re-keys immediately instead of waiting for its support-state poll. */
+  question_key?: string | null
   misconception?: string | null
   elapsed_seconds?: number | null
   timing_quality?: 'elapsed_between_events' | 'unavailable'
@@ -346,13 +495,51 @@ export function selectNextRoute(
   })
 }
 
-/** Subscribe to proactive triggers via SSE (EventSource). Returns a closer. */
+/** One slide of a generated per-question explainer ("learn it another way"). */
+export interface ExplainerSlide {
+  title: string
+  body: string
+  visual?: CoachVisual
+}
+
+export interface ExplainerDeck {
+  question_key: string
+  locale: string
+  slides: ExplainerSlide[]
+  created_at: string
+}
+
+export interface ExplainerResponse {
+  status: 'ready' | 'generating' | 'unavailable'
+  deck?: ExplainerDeck
+}
+
+/** Fetch (or start generating) the current question's explainer. Cached across
+ *  all learners by question, so poll this until `status === 'ready'`. */
+export function getQuestionExplainer(
+  componentId: string | null,
+  language: string,
+  first = false,
+): Promise<ExplainerResponse> {
+  return apiPost<ExplainerResponse>('/api/agent/coach/explainer', {
+    component_id: componentId,
+    language,
+    first,
+  })
+}
+
+/** Subscribe to proactive triggers via SSE (EventSource). Returns a closer.
+ *  `onOpen` fires on the initial connect AND on every native auto-reconnect —
+ *  the caller re-syncs support state on it, since triggers published during a
+ *  reconnect gap are not replayed by the server. */
 export function subscribeTriggers(
-  onTrigger: (t: Trigger) => void
+  onTrigger: (t: Trigger) => void,
+  onOpen?: () => void
 ): () => void {
   // Same-origin through the Vite proxy today, but be explicit: the SSE stream
   // is session-scoped and must carry the auth cookie.
   const source = new EventSource('/api/agent/triggers/subscribe', { withCredentials: true })
+  if (onOpen) source.onopen = () => onOpen()
   source.onmessage = (e) => {
     try {
       const t = JSON.parse(e.data) as Trigger
@@ -362,16 +549,6 @@ export function subscribeTriggers(
     }
   }
   return () => source.close()
-}
-
-/** Report learner idle (absence isn't an event) so the trigger engine can nudge. */
-export function reportIdle(objectiveId?: string): void {
-  void fetch('/api/agent/triggers/idle', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ objective_id: objectiveId }),
-  }).catch(() => {})
 }
 
 /* ── Post-lesson personalized reflection (F4) ─────────────────────────────── */

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.brain.curriculum import objectives_for
+from app.services.kata_catalog import objectives_for
 
 DEFAULT_SUBJECTS = ("math", "science")
 
@@ -78,3 +78,68 @@ def plan_next(brain: dict[str, Any], subjects: tuple[str, ...] = DEFAULT_SUBJECT
             "total": len(objectives),
         }
     return plan
+
+
+def _subject_last_activity(subject: str, mastery: dict[str, Any]) -> str:
+    """Most-recent evidence timestamp across a subject's objectives ('' if never).
+
+    Lexicographic ISO comparison == chronological; '' sorts first, so a subject
+    never practiced reads as the most overdue for attention.
+    """
+    from app.brain.mastery import entry_for
+    stamps = [
+        entry_for(mastery, o["id"]).get("last_evidence_at")
+        for o in objectives_for(subject)
+    ]
+    stamps = [s for s in stamps if s]
+    return max(stamps) if stamps else ""
+
+
+def next_focus(brain: dict[str, Any], subjects: tuple[str, ...] = DEFAULT_SUBJECTS) -> dict[str, Any]:
+    """Choose the focus objective ACROSS subjects (720 leaves this to the platform).
+
+    Order of preference — deterministic + explainable:
+      1. Global spaced review — any objective due for review, across all subjects,
+         most-overdue first. (A science skill due today beats brand-new math.)
+      2. New material — the subject that is **most behind** (lowest mastered/total),
+         tie-broken by **least-recently practiced**, then fixed subject order for
+         stability (so it can't ping-pong every session).
+    Returns ``{subject, objective_id, mode, plan}`` with ``mode`` in
+    ``review | new | complete``.
+    """
+    from app.brain.mastery import entry_for
+    mastery = brain.get("mastery") or {}
+    plan = plan_next(brain, subjects)
+
+    # 1. Global review-due, most overdue first.
+    review: list[tuple[str, str, str]] = []
+    for subject in subjects:
+        for oid in (plan.get(subject) or {}).get("review_due") or []:
+            due = entry_for(mastery, oid).get("review_due") or ""
+            review.append((str(due), subject, oid))
+    if review:
+        review.sort(key=lambda r: r[0])   # earliest due date = most overdue
+        _due, subject, oid = review[0]
+        return {"subject": subject, "objective_id": oid, "mode": "review", "plan": plan}
+
+    # 2. New material — most behind, then least-recently practiced, then order.
+    candidates = [s for s in subjects if (plan.get(s) or {}).get("next")]
+    if not candidates:
+        return {"subject": None, "objective_id": None, "mode": "complete", "plan": plan}
+
+    def ratio(subject: str) -> float:
+        info = plan.get(subject) or {}
+        total = int(info.get("total") or 0)
+        return (int(info.get("mastered") or 0) / total) if total else 0.0
+
+    order_index = {s: i for i, s in enumerate(subjects)}
+    chosen = min(
+        candidates,
+        key=lambda s: (ratio(s), _subject_last_activity(s, mastery), order_index[s]),
+    )
+    return {
+        "subject": chosen,
+        "objective_id": (plan[chosen]["next"][0]),
+        "mode": "new",
+        "plan": plan,
+    }

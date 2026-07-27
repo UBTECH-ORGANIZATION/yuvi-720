@@ -11,6 +11,7 @@ import {
   type CompetencyChatMessage,
   type VisualMode,
 } from '../services/agents'
+import SceneRenderer from '../features/visuals/SceneRenderer'
 import './competency-chat.css'
 
 const FENCED_BLOCK = /```[^\n]*\n?[\s\S]*?```/g
@@ -65,11 +66,7 @@ function AssistantChatBubble({
           {bubble.visual && (
             <figure className="sp-companion__visual" data-renderer={bubble.visual.renderer}>
               <button type="button" className="sp-companion__visual-open" onClick={() => onExpand(bubble.visual!)} aria-label={t('companion.visual.open')}>
-                {bubble.visual.type === 'video' ? (
-                  <video src={bubble.visual.data_url} autoPlay muted loop playsInline aria-label={bubble.visual.alt || bubble.visual.title} />
-                ) : (
-                  <img src={bubble.visual.data_url} alt={bubble.visual.alt || bubble.visual.title} />
-                )}
+                <SceneRenderer visual={bubble.visual} />
               </button>
               {bubble.visual.caption && <figcaption dir="auto">{bubble.visual.caption}</figcaption>}
             </figure>

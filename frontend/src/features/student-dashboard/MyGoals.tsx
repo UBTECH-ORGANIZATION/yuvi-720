@@ -11,6 +11,9 @@ interface MyGoalsProps {
   onSeeAll: () => void
   /** Starts a flow to add / define a new goal. */
   onAddGoal: () => void
+  /** Learner marks a goal in-progress/achieved (reports MoE student-goal
+   *  updated/completed). Absent → the status buttons are hidden. */
+  onUpdateStatus?: (goalId: string, status: 'in_progress' | 'done') => Promise<void> | void
 }
 
 const MAX_VISIBLE = 3
@@ -73,7 +76,7 @@ const STATUS_RANK: Record<string, number> = {
   done: 9,
 }
 
-export function MyGoals({ goals, onSeeAll, onAddGoal }: MyGoalsProps) {
+export function MyGoals({ goals, onSeeAll, onAddGoal, onUpdateStatus }: MyGoalsProps) {
   const { t, language } = useI18n()
   const [openGoal, setOpenGoal] = useState<Goal | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
@@ -277,6 +280,10 @@ export function MyGoals({ goals, onSeeAll, onAddGoal }: MyGoalsProps) {
             setOpenGoal(null)
             onSeeAll()
           }}
+          onUpdateStatus={onUpdateStatus && openGoal.id ? async (status) => {
+            await onUpdateStatus(openGoal.id as string, status)
+            setOpenGoal(null)
+          } : undefined}
         />
       )}
     </section>
@@ -290,12 +297,23 @@ interface GoalDrawerProps {
   deadline: string | null
   onClose: () => void
   onOpenSpace: () => void
+  onUpdateStatus?: (status: 'in_progress' | 'done') => Promise<void> | void
 }
 
-function GoalDrawer({ goal, statusKey, sourceKey, deadline, onClose, onOpenSpace }: GoalDrawerProps) {
+function GoalDrawer({ goal, statusKey, sourceKey, deadline, onClose, onOpenSpace, onUpdateStatus }: GoalDrawerProps) {
   const { t } = useI18n()
+  const [saving, setSaving] = useState(false)
   const steps = goal.steps
   const percent = steps && steps.total > 0 ? Math.round((steps.done / steps.total) * 100) : null
+  const changeStatus = async (status: 'in_progress' | 'done') => {
+    if (!onUpdateStatus || saving) return
+    setSaving(true)
+    try {
+      await onUpdateStatus(status)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="sd-goal-drawer" role="dialog" aria-modal="true" aria-labelledby="sd-goal-drawer-title">
@@ -335,6 +353,31 @@ function GoalDrawer({ goal, statusKey, sourceKey, deadline, onClose, onOpenSpace
                 style={{ inlineSize: `${percent ?? 0}%` }}
               />
             </span>
+          </div>
+        )}
+
+        {onUpdateStatus && statusKey !== 'done' && (
+          <div className="sd-goal-drawer__status-actions">
+            {statusKey === 'new' && (
+              <button
+                type="button"
+                className="sd-button sd-goal-drawer__status-btn"
+                disabled={saving}
+                onClick={() => void changeStatus('in_progress')}
+              >
+                <Icon name="play" size={15} />
+                {t('sdash.goalsCard.detail.markStarted')}
+              </button>
+            )}
+            <button
+              type="button"
+              className="sd-button sd-goal-drawer__status-btn sd-goal-drawer__status-btn--done"
+              disabled={saving}
+              onClick={() => void changeStatus('done')}
+            >
+              <Icon name="check" size={15} />
+              {t('sdash.goalsCard.detail.markDone')}
+            </button>
           </div>
         )}
 

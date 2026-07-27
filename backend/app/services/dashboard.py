@@ -10,13 +10,13 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from app.brain.curriculum import (
+from app.services import content_catalog
+from app.services.kata_catalog import (
     get_component,
     localized_objective_title,
     objectives_for,
 )
-from app.services import content_catalog
-from app.services.planner import plan_next
+from app.services.planner import next_focus, plan_next
 
 # Scope for תשפ"ז — the two Ministry subjects (§8.6).
 DEFAULT_SUBJECTS = ("math", "science")
@@ -192,7 +192,9 @@ def _project_competencies(
     return out
 
 
-def _hero(brain: dict, language: str) -> dict[str, Any]:
+def _hero(
+    brain: dict, language: str, completed_ids: frozenset[str] | set[str] = frozenset()
+) -> dict[str, Any]:
     """Build a read-only resume/next preview; never mutate current_state."""
     mastery = brain.get("mastery") or {}
     current = brain.get("current_state") or {}
@@ -222,18 +224,20 @@ def _hero(brain: dict, language: str) -> dict[str, Any]:
             "pace": _t(PACE_WORDS, current.get("pace"), language) if current.get("pace") else None,
         }
 
-    plan = plan_next(brain)
-    subject = None
-    objective_id = None
-    for subject_key in DEFAULT_SUBJECTS:
-        next_ids = (plan.get(subject_key) or {}).get("next") or []
-        if next_ids:
-            subject, objective_id = subject_key, next_ids[0]
-            break
+    # Cross-subject focus: global review-due first, else most-behind subject.
+    focus = next_focus(brain)
+    subject = focus["subject"]
+    objective_id = focus["objective_id"]
 
     if objective_id:
-        candidates = content_catalog.list_available_content(objective_id, mastery, language)
-        component = candidates[0] if candidates else None
+        from app.brain.mastery import entry_for
+        component = content_catalog.select_component(
+            objective_id,
+            mastery_entry=entry_for(mastery, objective_id),
+            completed_ids=completed_ids,
+            signals=content_catalog.learner_signals(brain),
+            locale=language,
+        )
         return {
             "mode": "next",
             "subjectKey": subject,
@@ -285,6 +289,7 @@ def project_hero_metrics(brain: dict, events: list[dict[str, Any]]) -> dict[str,
 def project_dashboard(
     brain: dict, name: str, language: str = "he",
     effective_activeness: dict[str, dict[str, Any]] | None = None,
+    completed_component_ids: frozenset[str] | set[str] = frozenset(),
 ) -> dict[str, Any]:
     """Project the brain into the dashboard DTO (real numbers only).
 
@@ -380,7 +385,7 @@ def project_dashboard(
         "hasLearningEvidence": bool(brain.get("mastery")),
         "name": display_name,
         "avatar": display_name[0] if display_name else "ת",
-        "hero": _hero(brain, language),
+        "hero": _hero(brain, language, completed_component_ids),
         "subjects": _project_subjects(brain, language),
         "difficulties": difficulties,
         "goals": goals,

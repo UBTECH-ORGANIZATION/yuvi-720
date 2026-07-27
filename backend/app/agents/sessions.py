@@ -207,6 +207,7 @@ def _message_payload(document: dict[str, Any]) -> dict[str, Any]:
         "text": document.get("content") or "",
         "text_after": document.get("text_after") or "",
         "at": document.get("at") or _now(),
+        "question_key": document.get("question_key"),
     }
     if isinstance(document.get("visual"), dict):
         payload["visual"] = document["visual"]
@@ -438,6 +439,57 @@ async def create_conversation(
     history["conversations"][document["_id"]] = document
     _write_history_fallback(history)
     return _conversation_payload(document)
+
+
+async def reset_activity_conversations(
+    learner_id: str,
+    unit_id: object,
+    component_id: object,
+    role: str = "coach",
+) -> int:
+    """Relaunch reset: the learner restarted the activity, so prior open
+    threads must not resurface in the fresh session (the content itself starts
+    over from the first question). Threads with messages close — and summarize —
+    exactly like a completion; empty open threads are soft-deleted instead of
+    surviving as clutter in the history list."""
+    safe_id = normalize_learner_id(learner_id)
+    safe_unit = normalize_activity_id(unit_id)
+    safe_component = normalize_activity_id(component_id)
+    if not safe_unit or not safe_component:
+        return 0
+    empty_query = {
+        "learner_id": safe_id,
+        "role": role,
+        "activity_unit_id": safe_unit,
+        "activity_component_id": safe_component,
+        "activity_status": "open",
+        "is_deleted": {"$ne": True},
+        "message_count": {"$lte": 0},
+    }
+    collection = _get_collection_named("agent_conversations")
+    if collection is not None:
+        try:
+            await collection.update_many(empty_query, {"$set": {"is_deleted": True}})
+        except Exception as exc:
+            print(f"⚠️ empty activity thread cleanup failed: {exc}")
+    else:
+        history = _read_history_fallback()
+        pruned = 0
+        for document in history["conversations"].values():
+            if (
+                document.get("learner_id") == safe_id
+                and document.get("role") == role
+                and document.get("activity_unit_id") == safe_unit
+                and document.get("activity_component_id") == safe_component
+                and document.get("activity_status") == "open"
+                and document.get("is_deleted") is not True
+                and int(document.get("message_count") or 0) <= 0
+            ):
+                document["is_deleted"] = True
+                pruned += 1
+        if pruned:
+            _write_history_fallback(history)
+    return await close_activity_conversations(learner_id, unit_id, component_id, role)
 
 
 async def close_activity_conversations(
@@ -819,8 +871,14 @@ async def append_turn(
     include_user_in_history: bool = True,
     conversation_title: Optional[str] = None,
     title_source: Optional[str] = None,
+    question_key: Optional[str] = None,
 ) -> None:
-    """Append an exchange to bounded prompt memory and durable transcript."""
+    """Append an exchange to bounded prompt memory and durable transcript.
+
+    ``question_key`` (component|item|question) tags both messages with the
+    question the learner was on, so the chat can scope messages per question and
+    restore the current question's thread on resume.
+    """
     await _ensure_indexes()
     safe_id = normalize_learner_id(learner_id)
     safe_session = normalize_session_id(session_id)
@@ -872,6 +930,7 @@ async def append_turn(
             "content": user,
             "text_after": "",
             "at": now,
+            "question_key": question_key,
         })
     message_documents.append({
         "_id": f"{safe_exchange}:1",
@@ -882,6 +941,7 @@ async def append_turn(
         "content": assistant,
         "text_after": "",
         "at": assistant_at,
+        "question_key": question_key,
     })
     title = " ".join((conversation_title or "").split())[:72]
     resolved_title_source = title_source if title and title_source in {"model", "fallback"} else "pending"

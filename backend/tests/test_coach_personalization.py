@@ -42,7 +42,20 @@ class CoachPersonalizationTests(unittest.IsolatedAsyncioTestCase):
         with (
             patch("app.brain.context_engine.view_for", new=AsyncMock(return_value=scoped_view)),
             patch("app.services.events.get_recent_events", new=AsyncMock(return_value=recent)),
-            patch("app.services.content_catalog.information_to_bot", return_value="להבחין בין סוגי זוויות"),
+            patch("app.services.kata_catalog.ensure_loaded", new=AsyncMock(return_value=None)),
+            patch(
+                "app.services.kata_catalog.get_component",
+                return_value={
+                    "id": "YuviDori-math-angles-0001-lesson",
+                    "objective_id": "math-angles",
+                    "information_by_item": {},
+                    "information_to_bot": "להבחין בין סוגי זוויות",
+                },
+            ),
+            patch(
+                "app.services.kata_catalog.localized_objective_title",
+                return_value="סוגי זוויות והגדרות",
+            ),
         ):
             bundle = await build_coach_bundle(
                 "learner-pseudonym", {"screen": "student_dashboard"}
@@ -71,6 +84,7 @@ class CoachPersonalizationTests(unittest.IsolatedAsyncioTestCase):
         with (
             patch("app.brain.context_engine.view_for", new=AsyncMock(return_value=scoped_view)),
             patch("app.services.events.get_recent_events", new=AsyncMock(return_value=[])),
+            patch("app.services.kata_catalog.ensure_loaded", new=AsyncMock(return_value=None)),
         ):
             bundle = await build_coach_bundle(
                 "learner-pseudonym", {"screen": "<script>arbitrary page text</script>"}
@@ -105,9 +119,10 @@ class CoachPersonalizationTests(unittest.IsolatedAsyncioTestCase):
         }]
         with (
             patch("app.brain.context_engine.view_for", new=AsyncMock(return_value=scoped_view)),
-            patch("app.brain.curriculum.get_component", return_value=None),
+            patch("app.services.kata_catalog.ensure_loaded", new=AsyncMock(return_value=None)),
+            patch("app.services.kata_catalog.get_component", return_value=None),
             patch(
-                "app.services.content_provider.resolve_component",
+                "app.services.kata_client.resolve_component",
                 new=AsyncMock(return_value=(provider_unit, provider_component)),
             ),
             patch("app.services.events.get_recent_events", new=AsyncMock(return_value=recent)),

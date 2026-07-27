@@ -3,7 +3,7 @@ import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { EmptyState, ErrorState, Icon } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useBrain } from '../../providers/BrainProvider'
-import { getDashboard, type DashboardDTO } from '../../services/brain'
+import { getDashboard, updateGoalStatus, type DashboardDTO } from '../../services/brain'
 import {
   getLearningCatalog,
   type LearningComponentDTO,
@@ -191,6 +191,11 @@ export function StudentDashboardPage() {
                   goals={dashboard.goals}
                   onSeeAll={() => navigate('/mentoring')}
                   onAddGoal={() => navigate('/mentoring')}
+                  onUpdateStatus={async (goalId, status) => {
+                    if (!learnerId) return
+                    await updateGoalStatus(learnerId, goalId, status)
+                    setReloadKey((key) => key + 1)
+                  }}
                 />
               </div>
             </div>

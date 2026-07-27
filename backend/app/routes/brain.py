@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from app.auth.dependencies import assert_can_read_learner, current_user
 from app.brain.context_engine import build_coach_bundle, view_for, AgentScopeError
 from app.brain.repository import get_brain, apply_brain_updates
+from app.services import kata_catalog
 from app.services.dashboard import project_dashboard, project_hero_metrics
 from app.services.events import get_learner_events
 from app.services.lesson_illustrations import find_for_lesson, localized_alt, public_metadata
@@ -75,6 +76,59 @@ async def create_activeness_goal(learner_id: str, data: dict, actor: dict = Depe
     }
     goals.append(goal)
     await apply_brain_updates(safe_id, {"goals": goals[-12:]})
+    await _report_goal_event(safe_id, "initialized", goal)
+    return JSONResponse(content=goal)
+
+
+async def _report_goal_event(learner_id: str, action: str, goal: dict[str, Any]) -> None:
+    """MoE 720 `student-goal` initialized/updated/completed from the REAL goal
+    workflow (creation + status changes in the dashboard card). Report-and-forget;
+    grouped under the learner's active MoE login session like content forwards."""
+    try:
+        from app.auth.repository import get_user_by_id
+        from app.services.lrs import reporter as lrs_reporter
+
+        user = await get_user_by_id(learner_id)
+        session_id = (user or {}).get("current_moe_session_id")
+        if not session_id or not goal.get("id"):
+            return
+        await lrs_reporter.report_student_goal(
+            learner_id, session_id, action, str(goal["id"]),
+            goal.get("type") or "academic",
+        )
+    except Exception as exc:  # reporting must never break the goal workflow
+        print(f"⚠️ student-goal report skipped: {type(exc).__name__}")
+
+
+@router.post("/{learner_id}/goals/{goal_id}/status")
+async def update_goal_status(
+    learner_id: str, goal_id: str, data: dict, actor: dict = Depends(current_user)
+):
+    """Learner updates a goal's progress from the "My goals" card.
+
+    `in_progress` reports MoE `student-goal/updated`; `done` reports
+    `student-goal/completed` — both from this real product action.
+    """
+    safe_id = _authorized_id(actor, learner_id)
+    status = (data.get("status") or "").strip()
+    if status not in {"in_progress", "done"}:
+        return JSONResponse(status_code=400, content={"error": "invalid status"})
+    brain = await get_brain(safe_id)
+    goals = list(brain.get("goals") or [])
+    goal = next(
+        (g for g in goals if isinstance(g, dict) and str(g.get("id")) == goal_id),
+        None,
+    )
+    if goal is None:
+        return JSONResponse(status_code=404, content={"error": "goal not found"})
+    goal["status"] = status
+    if status == "done":
+        goal["done"] = True
+        steps = goal.get("steps")
+        if isinstance(steps, dict) and steps.get("total"):
+            steps["done"] = steps["total"]
+    await apply_brain_updates(safe_id, {"goals": goals})
+    await _report_goal_event(safe_id, "completed" if status == "done" else "updated", goal)
     return JSONResponse(content=goal)
 
 
@@ -87,6 +141,7 @@ async def read_dashboard(learner_id: str, lang: str = "he", actor: dict = Depend
     competencies/strengths render (same behavior as POST /generate-dashboard).
     """
     safe_id = _authorized_id(actor, learner_id)
+    await kata_catalog.ensure_loaded()
     brain = await get_brain(safe_id)
     scores = (brain.get("profile") or {}).get("mapping_scores")
     if isinstance(scores, dict) and "scores" in scores and "academic" not in scores:
@@ -104,11 +159,13 @@ async def read_dashboard(learner_id: str, lang: str = "he", actor: dict = Depend
     from app.agents.tutor_decision import recent_tutor_decisions
     decisions = await recent_tutor_decisions(safe_id)
     effective = effective_activeness(brain, events, decisions)
+    from app.services.content_catalog import completed_component_ids
     dashboard = project_dashboard(
         brain,
         brain.get("identity", {}).get("display_name") or "",
         lang,
         effective_activeness=effective,
+        completed_component_ids=completed_component_ids(events),
     )
     hero = dashboard["hero"]
     hero["stats"] = project_hero_metrics(brain, events)

@@ -53,6 +53,29 @@ async def _report_onboarding_completed(session: dict) -> None:
 async def patch_learner_state(data: dict, session=Depends(require_learner_session)):
     """Persist learner UI state such as language, mapping, profile, dashboard, or progress."""
     learner_id = session["sub"]
+    # A badge chosen as the profile picture must actually be earned — the picker
+    # only offers earned coins, so this rejects tampering, not normal use.
+    avatar = data.get("avatar")
+    if isinstance(avatar, dict) and avatar.get("kind") == "badge":
+        badge = avatar.get("badge") or {}
+        try:
+            from app.brain.repository import get_brain
+            from app.services import kata_catalog
+            from app.services.badges import project_badges
+            from app.services.events import get_learner_events
+            await kata_catalog.ensure_loaded()
+            brain = await get_brain(learner_id)
+            # MUST pass events — return-over-days milestones (streak/dedicated) are
+            # only "earned" with the event history, exactly like GET /api/badges.
+            try:
+                events = await get_learner_events(learner_id)
+            except Exception:
+                events = []
+            earned = {(b["subject"], b["tier"]) for b in project_badges(brain, events=events) if b["earned"]}
+        except Exception:
+            earned = set()
+        if (badge.get("subject"), badge.get("tier")) not in earned:
+            return JSONResponse(status_code=400, content={"error": "badge not earned"})
     # Detect the onboarding-completed transition BEFORE writing the new state.
     finishing_onboarding = False
     if session.get("sid") and _completed(data.get("profile_summary_progress")):

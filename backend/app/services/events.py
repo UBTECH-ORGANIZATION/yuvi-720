@@ -17,6 +17,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import secrets
 import time
 from datetime import datetime, timezone
@@ -44,9 +45,11 @@ MOE_VERBS = {
 # Verbs that carry a scored result we fold into mastery.
 SCORING_VERBS = {"answered", "attempted", "scored", "completed"}
 
-# The deployed provider simulator currently emits standard ADL verbs. They are
-# accepted only for launches explicitly minted for that provider, then mapped
-# into the MoE wire vocabulary while retaining the original IRI for audit.
+# Launches minted for an external content provider (Kata) may carry standard ADL
+# verbs instead of the MoE wire slugs. They are accepted only for those launches,
+# then mapped into the MoE vocabulary while retaining the original IRI for audit.
+# The exact set the real Kata content emits is confirmed by launch+solve capture;
+# this map is the documented ADL↔MoE bridge and is pruned to reality thereafter.
 ADL_PROVIDER_VERB_MAP = {
     "http://adlnet.gov/expapi/verbs/initialized": "enter",
     "http://adlnet.gov/expapi/verbs/answered": "answered",
@@ -55,10 +58,14 @@ ADL_PROVIDER_VERB_MAP = {
     "http://adlnet.gov/expapi/verbs/exited": "exit",
     "http://id.tincanapi.com/verb/selected": "selected",
     "http://id.tincanapi.com/verb/requested": "requested",
+    "http://id.tincanapi.com/verb/skipped": "skipped",
     "https://w3id.org/xapi/video/verbs/played": "played",
     "https://w3id.org/xapi/video/verbs/paused": "paused",
 }
-PROVIDER_INTERACTION_VERBS = {"selected", "requested"}
+PROVIDER_INTERACTION_VERBS = {"selected", "requested", "skipped"}
+# Non-native launch sources whose content reports through the relay (Kata) or the
+# retired local simulator; both may use the ADL-compat verb bridge + scope check.
+PROVIDER_SOURCES = {"kata", "content_provider"}
 
 
 def _now() -> str:
@@ -159,7 +166,7 @@ def _provider_verb_slug(statement: dict[str, Any], launch: dict[str, Any]) -> tu
     slug = _verb_slug(statement)
     if slug in MOE_VERBS:
         return slug, False
-    if launch.get("src") != "content_provider":
+    if launch.get("src") not in PROVIDER_SOURCES:
         return None, False
     verb = statement.get("verb") or {}
     iri = verb.get("id") if isinstance(verb, dict) else None
@@ -175,17 +182,142 @@ def statement_matches_launch(statement: dict[str, Any], launch: dict[str, Any]) 
     if actor_name and actor_name != launch.get("lid"):
         return False
 
-    if launch.get("src") != "content_provider":
+    src = launch.get("src")
+    if src not in PROVIDER_SOURCES:
         return True
+
     obj = statement.get("object") or {}
     object_id = str(obj.get("id") or "") if isinstance(obj, dict) else ""
     component_id = str(launch.get("cmp") or "")
     unit_id = str(launch.get("unit") or "")
-    # Provider item/question ids may be short (e.g. q1). Reject only an obvious
-    # attempt to report a different provider component or unit.
-    if "YuviDori-" in object_id and component_id not in object_id and unit_id not in object_id:
-        return False
+
+    if src == "content_provider":
+        # Legacy simulator ids are YuviDori-prefixed and self-describing — reject
+        # an obvious attempt to report a DIFFERENT provider component/unit.
+        if "YuviDori-" in object_id and component_id not in object_id and unit_id not in object_id:
+            return False
+        return True
+
+    # Kata: content reports through the signed per-launch token (verified before
+    # we get here) and Kata relays only this launch's statements. The token +
+    # actor match ARE the boundary — the object-id format is content-defined, so
+    # we don't reject on it (a strict guess would drop real events).
     return True
+
+
+# Kata question objects are `…/{subContentId}/q{N}` (or `#q{N}`). Question ids
+# repeat across sub-content items (`q1` in nearly every screen), so the SUB-ITEM
+# id — not the question id — is the identity of "the question the learner is on".
+_ITEM_QUESTION_TAIL = re.compile(
+    r"(?:^|[/#])(?P<item>[^/#]+)[/#](?P<question>q\d+)$", re.IGNORECASE
+)
+
+
+def split_item_question(object_id: Any) -> tuple[Optional[str], Optional[str]]:
+    """Parse a provider object id into (sub_item_id, question_id), else (None, None)."""
+    if not isinstance(object_id, str) or not object_id:
+        return None, None
+    match = _ITEM_QUESTION_TAIL.search(object_id.rstrip("/"))
+    if match:
+        return match.group("item"), match.group("question").lower()
+    return None, None
+
+
+def resolve_item_question(
+    object_id: Any, component_id: Optional[str]
+) -> tuple[Optional[str], Optional[str]]:
+    """Resolve (sub_item_id, question_id) from any provider object id.
+
+    Two shapes reach us:
+    - ANSWER objects: ``…/{sub_item}/q{N}`` → ``(sub_item, qN)`` (via
+      :func:`split_item_question`).
+    - NAVIGATION objects (Kata emits ``initialized`` per screen): ``…/{sub_item}``
+      with NO question tail. The tail IS the screen sub-item id — it extends the
+      launched component id (``…-01-02`` → ``…-01-02-002``). Detecting it lets
+      ``current_state`` advance when the learner *navigates*, not only when they
+      *answer* — the difference between the coach knowing the current question or
+      lagging a screen behind. A tail equal to the component id is component-level
+      (no sub-item).
+    """
+    item, question = split_item_question(object_id)
+    if item:
+        return item, question
+    tail = _object_tail(object_id)
+    if component_id and tail and tail.startswith(f"{component_id}-"):
+        return tail, None
+    return None, None
+
+
+def _object_tail(object_id: Any) -> str:
+    if not isinstance(object_id, str):
+        return ""
+    return object_id.rstrip("/").rsplit("/", 1)[-1].rsplit("#", 1)[-1]
+
+
+async def _reconcile_sub_item_id(event: dict[str, Any]) -> None:
+    """Rewrite ``event['sub_item_id']`` from the Kata player screen id to the
+    catalog sub-content id (see ``kata_catalog.resolve_catalog_item_id``).
+
+    Uses this session's already-visited screens to anchor the ordinal offset for
+    question-ambiguous screens. Best-effort: any failure leaves the id untouched.
+    """
+    runtime_item = event.get("sub_item_id")
+    component_id = event.get("launch")
+    if not runtime_item or not component_id:
+        return
+    # Preserve the raw PLAYER id: `sub_item_id` becomes the catalog id, so the
+    # ordinal anchor for LATER events must read runtime suffixes from here (prior
+    # `sub_item_id`s are already catalog ids and would corrupt the offset math).
+    event["runtime_item_id"] = runtime_item
+    try:
+        from app.services import kata_catalog
+
+        await kata_catalog.ensure_loaded()
+        seen: list[str] = []
+        session_id = event.get("session_id")
+        if session_id:
+            prior = await get_session_events(event["learner_id"], session_id)
+            seen = [
+                e.get("runtime_item_id") or e.get("sub_item_id")
+                for e in prior
+                if e.get("runtime_item_id") or e.get("sub_item_id")
+            ]
+        resolved = kata_catalog.resolve_catalog_item_id(
+            component_id,
+            runtime_item,
+            question_id=event.get("question_id"),
+            seen_item_ids=seen,
+        )
+        if resolved and resolved != runtime_item:
+            event["sub_item_id"] = resolved
+    except Exception as exc:  # reconciliation must never block ingest
+        print(f"⚠️ sub-item reconciliation skipped: {type(exc).__name__}")
+
+
+def is_component_completion(event: dict[str, Any]) -> bool:
+    """True only for a COMPONENT-level ``completed`` (720 §"Completed").
+
+    Kata may emit ``completed`` per screen/item as well as for the whole
+    component. Only the component-level one ("object == the component") should
+    remove the component from the roadmap, close the coach thread, or compute
+    pace — a per-screen ``completed`` (object == a sub-item, e.g. ``…-04-001``
+    or ``…/q1``) is item progress, not "the lesson is done". Sub-item ids are
+    ``{component}-NNN`` so a prefix match would false-positive; we match the
+    exact object tail against the launched component id.
+    """
+    if event.get("verb") != "completed":
+        return False
+    component_id = str(event.get("launch") or "")
+    if not component_id or event.get("sub_item_id"):
+        return False
+    object_id = event.get("object_id")
+    # A `completed` with no explicit object is the historical component-level
+    # shape (seed/native reference content) — treat it as component completion.
+    # A per-screen `completed` always carries a sub-item object, so it is caught
+    # by the exact tail check below and correctly excluded.
+    if not object_id:
+        return True
+    return _object_tail(object_id) == component_id
 
 
 def _context_extensions(statement: dict[str, Any]) -> dict[str, Any]:
@@ -223,7 +355,8 @@ def normalize_statement(
     original_verb = statement.get("verb") or {}
     original_verb_iri = original_verb.get("id") if isinstance(original_verb, dict) else None
     object_id = obj.get("id")
-    question_id = ext.get("question_id")
+    sub_item_id, parsed_question_id = resolve_item_question(object_id, launch.get("cmp"))
+    question_id = ext.get("question_id") or parsed_question_id
     if not question_id and slug == "answered" and isinstance(object_id, str):
         tail = object_id.rstrip("/").rsplit("/", 1)[-1].rsplit("#", 1)[-1]
         if tail.lower().startswith("q") and tail[1:].isdigit():
@@ -240,6 +373,7 @@ def normalize_statement(
         "normalization": "provider_adl_compat" if compatibility_used else "moe_native",
         "object_id": object_id,
         "object_type": obj_type,
+        "sub_item_id": sub_item_id,
         "objective_id": ext.get("objective_id") or launch.get("obj"),
         "subject": ext.get("subject") or launch.get("subj"),
         "question_id": question_id,
@@ -397,11 +531,27 @@ async def ingest_statement(
     A replayed statement (same `id`) is acked WITHOUT re-counting attempts,
     moving mastery, or re-firing downstream effects (R14).
     """
+    # Phase 0 raw audit: record EXACTLY what arrived, before any scope/verb
+    # filtering, so out-of-scope statements and verbs outside the MoE list are
+    # still captured (needed for verb-map extension + idle-signal discovery).
+    try:
+        from app.services import xapi_audit
+
+        xapi_audit.capture(statement, launch)
+    except Exception:
+        pass
     if not statement_matches_launch(statement, launch):
         return {"stored": False, "reason": "statement_outside_launch_scope"}
     event = normalize_statement(statement, launch)
     if event is None:
         return {"stored": False, "reason": "verb_not_in_moe_list"}
+
+    # Reconcile the Kata PLAYER screen id to the CATALOG sub-content id before
+    # storing/folding, so the event, current_state, AND teacher analytics all key
+    # on the catalog item — otherwise the coach grounds hints on the NEXT item
+    # (player `-002` == catalog `-001`, a leading-cover offset). Self-anchored
+    # from the catalog + this session's visited screens; best-effort, never fatal.
+    await _reconcile_sub_item_id(event)
 
     await _attach_timing_evidence(event)
     await _attach_effort_evidence(event)
@@ -428,12 +578,13 @@ async def ingest_statement(
         # stored, ack it as a duplicate, and lose the mastery update forever
         # (and drop later statements in the same batch). Store-then-fold means
         # the event is preserved; a fold failure is logged, not fatal.
+        effective_state: Optional[dict[str, Any]] = None
         try:
             await _update_item_stats(event)
-            await _apply_event_to_brain(event)
+            effective_state = await _apply_event_to_brain(event)
         except Exception as exc:
             print(f"⚠️ brain fold failed for {event.get('_id')}: {type(exc).__name__}")
-        if event.get("verb") == "completed":
+        if is_component_completion(event):
             try:
                 from app.agents import sessions
                 await sessions.close_activity_conversations(
@@ -446,6 +597,25 @@ async def ingest_statement(
         # Proactivity: evaluate triggers from the real event (lazy import — cycle).
         try:
             from app.services import triggers
+            # Push the screen key FIRST so the companion re-keys before any nudge
+            # from this same event (a wrong answer that also advances the screen
+            # must land the client on the new screen, then react). Built from the
+            # FOLDED state (sticky question included) so q1→q2 on one screen is a
+            # real change; the same-key dedupe inside publish_screen_change makes
+            # bare re-emits cheap.
+            if event.get("sub_item_id"):
+                from app.agents import tutor_decision
+                key_state = effective_state or {
+                    "component_id": event.get("launch"),
+                    "item_id": event["sub_item_id"],
+                    "question_id": event.get("question_id"),
+                }
+                triggers.publish_screen_change(
+                    event["learner_id"],
+                    tutor_decision.support_question_key(key_state, event.get("launch")),
+                    component_id=event.get("launch"),
+                    unit_id=event.get("unit_id"),
+                )
             await triggers.evaluate(event["learner_id"], event)
         except Exception as exc:  # never block ingest on trigger evaluation
             print(f"⚠️ trigger evaluation failed: {exc}")
@@ -544,10 +714,13 @@ async def _compute_pace(event: dict[str, Any]) -> Optional[str]:
     if not component_id:
         return None
     try:
-        from app.services import content_provider
-        _unit, component = await content_provider.resolve_component(
-            component_id, event.get("unit_id")
-        )
+        from app.services import kata_catalog, kata_client
+        await kata_catalog.ensure_loaded()
+        component = kata_catalog.get_component(component_id)
+        if component is None:
+            _unit, component = await kata_client.resolve_component(
+                component_id, event.get("unit_id")
+            )
     except Exception:
         return None
     estimated_minutes = (component or {}).get("estimated_minutes")
@@ -619,7 +792,7 @@ def _sync_evidence_challenges(
     return challenges[-20:] if changed else None
 
 
-async def _apply_event_to_brain(event: dict[str, Any]) -> None:
+async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
     """Fold a real event into the brain — mastery/current_state/progress only.
 
     Chat never sets mastery; only these event verbs do (§5.7). This is the trusted
@@ -634,16 +807,41 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> None:
     set_updates: dict[str, Any] = {}
     inc_updates: dict[str, float] = {}
 
-    # Live "where am I" — always advance current_state for resume (F1.6).
-    if event.get("object_id"):
-        set_updates["current_state.item_id"] = event["object_id"]
+    # Read prior state once (reused by the scoring block below) so the sticky
+    # question rule can compare against where the learner just was.
+    brain = await get_brain(learner_id)
+    prior_state = brain.get("current_state") or {}
+
+    # Live "where am I" — advance current_state on both navigation AND answers.
+    # A resolvable sub-item marks a real screen/question object. STICKY question:
+    # a Kata `initialized` re-emits the screen (sub_item, question=None) mid-task,
+    # which used to CLEAR question_id and make the support/screen key oscillate
+    # (`…|q1` ↔ `…|`). It also erased the q1↔q2 distinction when TWO sub-questions
+    # (e.g. סעיף א/ב) live on ONE screen — so moving q1→q2 produced no screen
+    # change and no reaction. Rule: adopt the event's question only on a NEW
+    # screen (item changed) or when a specific question (non-None) arrives;
+    # otherwise keep the sticky question so a bare re-emit is a no-op.
+    # Component-level objects (enter/completed at the root) have no sub-item and
+    # must NOT overwrite item_id with a bare URL (would strand the coach a screen
+    # behind, grounding hints on the wrong question).
+    if event.get("sub_item_id"):
+        new_item = event["sub_item_id"]
+        set_updates["current_state.item_id"] = new_item
+        incoming_question = event.get("question_id")
+        if new_item != prior_state.get("item_id"):
+            set_updates["current_state.question_id"] = incoming_question
+        elif incoming_question is not None:
+            set_updates["current_state.question_id"] = incoming_question
+        # else: same screen, no question (bare re-emit) — keep sticky question_id.
+    elif event.get("question_id"):
+        set_updates["current_state.question_id"] = event["question_id"]
     if event.get("launch"):
         set_updates["current_state.component_id"] = event["launch"]
     if event.get("unit_id"):
         set_updates["current_state.unit_id"] = event["unit_id"]
     if event.get("resume_token") is not None:
         set_updates["current_state.resume_token"] = event["resume_token"]
-    if verb == "completed":
+    if is_component_completion(event):
         try:
             pace = await _compute_pace(event)
         except Exception:
@@ -655,7 +853,6 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> None:
 
     if objective_id and verb in SCORING_VERBS:
         now = event.get("occurred_at") or _now()
-        brain = await get_brain(learner_id)
         objective_key = mastery_model.mastery_key(objective_id)
         prior_entry = dict(mastery_model.entry_for(brain.get("mastery"), objective_id))
         recent = await get_recent_events(learner_id, objective_id, limit=20)
@@ -720,6 +917,15 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> None:
 
     if set_updates or inc_updates:
         await apply_brain_operators(learner_id, set_updates, inc_updates)
+
+    # Effective "where am I now" after this fold — the caller builds the
+    # screen_change key from this (sticky question included), so q1→q2 on one
+    # screen registers as a real question change.
+    return {
+        "component_id": event.get("launch") or prior_state.get("component_id"),
+        "item_id": set_updates.get("current_state.item_id", prior_state.get("item_id")),
+        "question_id": set_updates.get("current_state.question_id", prior_state.get("question_id")),
+    }
 
 
 def _rollup_progress(

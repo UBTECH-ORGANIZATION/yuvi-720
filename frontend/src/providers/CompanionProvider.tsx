@@ -3,6 +3,7 @@ import {
   createCoachConversation,
   coachSurfaceForPath,
   deleteCoachConversation,
+  getCoachSupportState,
   listCoachConversations,
   listCoachMessages,
   streamCoach,
@@ -10,10 +11,13 @@ import {
   streamProactive,
   subscribeTriggers,
   requestVisualization,
+  saveHelpedAttribution,
   type CoachConversation,
   type CoachHistoryMessage,
   type CoachVisual,
   type CoachSupportMode,
+  type HelpMethod,
+  type TriggerAlternative,
   type VisualMode,
 } from '../services/agents'
 import { useI18n } from '../i18n/I18nProvider'
@@ -35,6 +39,33 @@ export interface CoachMessage {
   canVisualize?: boolean
   isComplete: boolean
   createdAt?: string
+  /** The question (component|item|question) this message belongs to, so the
+   *  panel can scope the thread per question. Null = untagged (always shown). */
+  questionKey?: string | null
+  /** Epoch ms at creation / completion — drive the visibility grace window so a
+   *  reaction stays readable for a few seconds even after Kata auto-advances the
+   *  screen out from under it (replaces the old `sticky` flag). */
+  createdAtMs?: number
+  completedAtMs?: number
+  /** Success nudges only: the help methods the learner actually used on this
+   *  question, offered as "what helped you?" chips. Absent = no reflection UI. */
+  attribution?: { methods: HelpMethod[]; questionKey: string | null }
+}
+
+/** A single queued turn of Yuvi's voice. The worker plays these one at a time. */
+export type ChatActionKind = 'user-message' | 'support' | 'intro' | 'nudge' | 'welcome'
+export interface ChatAction {
+  kind: ChatActionKind
+  /** nudge only — the trigger type (`mistake` | `idle` | `success` | …). */
+  trigger?: string
+  /** user-message only. */
+  text?: string
+  /** support only. */
+  support?: CoachSupportMode
+  /** The screen the learner was on when this was enqueued (staleness anchor). */
+  targetQuestionKey: string | null
+  enqueuedAt: number
+  activitySeq: number
 }
 
 export type CompanionActivity = 'idle' | 'thinking' | 'speaking'
@@ -66,6 +97,20 @@ interface CompanionContextValue {
   canStartNewConversation: boolean
   send: (text: string) => Promise<void>
   requestSupport: (support: CoachSupportMode) => Promise<void>
+  /** One-shot per question: which support buttons were already used on the
+   *  question the learner is currently on (re-armed on progression). */
+  supportUsed: { hint: boolean; explanation: boolean }
+  /** True when the learner is on a real question screen (not the iframe's
+   *  intro/cover). Used to suppress the generic greeting there — the
+   *  per-question intro carries the welcome instead. */
+  onQuestionFrame: boolean
+  /** 720 misconception response: a different-representation component the learner
+   *  can switch to, offered after a repeated misconception (null when none). */
+  pendingAlternative: TriggerAlternative | null
+  openExplainer: () => void
+  closeExplainer: () => void
+  explainerOpen: boolean
+  dismissAlternative: () => void
   requestVisual: (messageId: string, mode: VisualMode) => Promise<void>
   selectConversation: (conversationId: string) => Promise<void>
   startNewConversation: () => Promise<void>
@@ -92,12 +137,40 @@ function historyMessage(message: CoachHistoryMessage): CoachMessage {
     visual: message.visual,
     isComplete: true,
     createdAt: message.at,
+    questionKey: message.question_key ?? null,
   }
 }
 
 function mergeUnique<T extends { id: string }>(current: T[], incoming: T[]): T[] {
   const seen = new Set(current.map((item) => item.id))
   return [...current, ...incoming.filter((item) => !seen.has(item.id))]
+}
+
+// A question key is `component|item|question`. One SCREEN (item) can host several
+// sub-questions (…/q1, …/q2 — e.g. סעיף א/ב) that differ only by the question
+// field, so intro de-dup is question-aware, not just per screen.
+function introParts(key: string | null | undefined): { item: string; question: string } {
+  const parts = (key || '').split('|')
+  return { item: parts[1] || '', question: parts[2] || '' }
+}
+function itemHasAnyQuestionIntro(introducedQuestions: Set<string>, item: string): boolean {
+  const prefix = `${item}|`
+  for (const k of introducedQuestions) if (k.startsWith(prefix)) return true
+  return false
+}
+// Whether a screen/question deserves a fresh intro. The arrival (question='')
+// intro grounds on the screen's FIRST question, so the first specific question to
+// land afterwards is already 'covered'; a SUBSEQUENT sub-question (q2) is 'new'.
+function introDisposition(
+  item: string,
+  question: string,
+  introducedItems: Set<string>,
+  introducedQuestions: Set<string>,
+): 'new' | 'covered' | 'done' {
+  if (!question) return introducedItems.has(item) ? 'done' : 'new'
+  if (introducedQuestions.has(`${item}|${question}`)) return 'done'
+  if (introducedItems.has(item) && !itemHasAnyQuestionIntro(introducedQuestions, item)) return 'covered'
+  return 'new'
 }
 
 export function CompanionProvider({ children }: { children: ReactNode }) {
@@ -127,19 +200,142 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const [activity, setActivity] = useState<CompanionActivity>('idle')
   const [unreadCount, setUnreadCount] = useState(0)
   const [disclosure, setDisclosure] = useState<string | null>(null)
+  const [supportUsed, setSupportUsed] = useState({ hint: false, explanation: false })
+  // Read the freshest support flags inside the serial worker (no stale closure).
+  const supportUsedRef = useRef(supportUsed)
+  useEffect(() => { supportUsedRef.current = supportUsed }, [supportUsed])
+  const [currentQuestionKey, setCurrentQuestionKey] = useState<string | null>(null)
+  const [explainerOpen, setExplainerOpen] = useState(false)
+  const [pendingAlternative, setPendingAlternative] = useState<TriggerAlternative | null>(null)
+  // Bumped when the lesson page (re)creates a provider session — on an ordinary
+  // relaunch this just re-resolves the SAME open activity thread (continuity,
+  // 720 §6); on an explicit redo the backend already reset it, so re-resolving
+  // lands on the fresh thread and re-reads the cleared one-shot support state.
+  const [lessonEpoch, setLessonEpoch] = useState(0)
+  useEffect(() => {
+    const onLessonSession = () => setLessonEpoch((epoch) => epoch + 1)
+    window.addEventListener('yuvilab:lesson-session-created', onLessonSession)
+    return () => window.removeEventListener('yuvilab:lesson-session-created', onLessonSession)
+  }, [])
   const counter = useRef(0)
   const messageRequest = useRef(0)
   const conversationLoading = useRef(false)
   const messageLoading = useRef(false)
   const liveTurnInProgress = useRef(false)
+  // The question the learner is currently on (server `question_key`). Messages
+  // are scoped to it: the panel shows the current question's thread (+ untagged
+  // messages), live turns are tagged with it, and moving between questions
+  // filters rather than deletes — so coming back restores that question's
+  // thread. The ref mirrors the state for tagging inside async callbacks.
+  const currentQuestionKeyRef = useRef<string | null>(null)
+  // Mirrors activeConversationId so a serial queue turn reuses the id the
+  // previous turn created without waiting for a re-render.
+  const activeConversationIdRef = useRef<string | null>(null)
+  // Items (question SCREENS) whose arrival intro has played this launch, and the
+  // specific sub-questions (`item|question`) intro'd within them — so each
+  // sub-question on a multi-question screen (q1→q2) gets one starting message and
+  // none of them re-intro on a poll re-tick.
+  const introducedItemsRef = useRef<Set<string>>(new Set())
+  const introducedQuestionsRef = useRef<Set<string>>(new Set())
   const isOpenRef = useRef(false)
   const isClosingRef = useRef(false)
   const openingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // ── Chat-action queue (the orchestrator) ────────────────────────────────────
+  // ONE serial worker owns Yuvi's voice: every intro / nudge / hint / user turn
+  // is enqueued and streamed one-at-a-time, in order. This replaces the old web
+  // of per-path `isStreaming` guards + a one-slot pending-trigger that silently
+  // dropped a nudge arriving mid-stream (the "chat disconnected after idle" bug).
+  // Nothing received is dropped except by the explicit staleness rules in
+  // `shouldPlay`; because display is now guaranteed, the server's one-shot
+  // dedupes (e.g. `_last_mistake_key`) are finally safe.
+  const queueRef = useRef<ChatAction[]>([])
+  const workerRunningRef = useRef(false)
+  // Bumped on any evidence the learner is engaged (navigation, answer-evidence
+  // nudge, send, support) — a queued `idle` nudge is dropped if this moved since
+  // it was enqueued, so idle never fires onto an already-active learner.
+  const activitySeqRef = useRef(0)
+  // Per-nudge-type last-played clock (spam guard, evaluated at play time).
+  const lastNudgePlayedAtRef = useRef<Record<string, number>>({})
+  // Bumped on each `screen_change` push; the poll snapshots it before its fetch
+  // and applies its (possibly stale) key only if no push landed meanwhile.
+  const pushSeqRef = useRef(0)
+  // "Latest closure" refs so the []-dep worker/subscription always call the
+  // freshest implementations (fresh activeConversationId / language / surface)
+  // without re-subscribing the SSE or re-creating the worker.
+  const playActionRef = useRef<((action: ChatAction) => Promise<void>) | undefined>(undefined)
+  const shouldPlayRef = useRef<((action: ChatAction) => boolean) | undefined>(undefined)
+  const applyQuestionKeyRef = useRef<((key: string | null, source: 'push' | 'poll') => void) | undefined>(undefined)
+  const syncSupportStateRef = useRef<(() => Promise<void>) | undefined>(undefined)
+
   useEffect(() => { messagesRef.current = messages }, [messages])
+  useEffect(() => { activeConversationIdRef.current = activeConversationId }, [activeConversationId])
+  // A relaunch is a fresh start — re-arm the per-question intro, and drop any
+  // queued non-user actions from the previous screen/launch.
+  useEffect(() => {
+    introducedItemsRef.current = new Set()
+    introducedQuestionsRef.current = new Set()
+    queueRef.current = queueRef.current.filter(
+      (a) => a.kind === 'user-message' || a.kind === 'support'
+    )
+  }, [lessonEpoch])
+
+  const welcomedEpochRef = useRef(-1)
 
   const nextId = () => `live-${Date.now()}-${counter.current++}`
+
+  // Drain the queue serially: exactly one stream at a time, staleness re-checked
+  // at DEQUEUE (a nudge queued behind a long intro may no longer be worth
+  // playing). `workerRunningRef` makes it re-entrant/StrictMode safe.
+  const runWorker = useCallback(async () => {
+    if (workerRunningRef.current) return
+    workerRunningRef.current = true
+    try {
+      while (queueRef.current.length > 0) {
+        const action = queueRef.current.shift()!
+        if (!shouldPlayRef.current?.(action)) continue
+        await playActionRef.current?.(action)
+      }
+    } finally {
+      workerRunningRef.current = false
+    }
+  }, [])
+
+  // Enqueue + kick the worker. Coalescing keeps the queue honest under bursts:
+  // a newer intro replaces a queued one (latest screen wins); a duplicate nudge
+  // type is dropped; user turns jump ahead of pending proactive chatter.
+  const enqueueChatAction = useCallback(
+    (action: Omit<ChatAction, 'enqueuedAt' | 'activitySeq'>, opts?: { front?: boolean }) => {
+      const item: ChatAction = { ...action, enqueuedAt: Date.now(), activitySeq: activitySeqRef.current }
+      const q = queueRef.current
+      if (item.kind === 'intro') {
+        queueRef.current = [...q.filter((a) => a.kind !== 'intro'), item]
+      } else if (item.kind === 'nudge') {
+        if (q.some((a) => a.kind === 'nudge' && a.trigger === item.trigger)) return
+        q.push(item)
+      } else if (opts?.front) {
+        let i = 0
+        while (i < q.length && (q[i].kind === 'user-message' || q[i].kind === 'support')) i += 1
+        q.splice(i, 0, item)
+      } else {
+        q.push(item)
+      }
+      void runWorker()
+    },
+    [runWorker]
+  )
+
+  // Fire the lesson welcome once per launch, when the learner opens a lesson on
+  // the cover frame (no question yet). If they resume straight onto a question,
+  // the per-question intro greets instead, so we skip the welcome.
+  useEffect(() => {
+    if (!activityScoped || !surface.component_id) return
+    if (welcomedEpochRef.current === lessonEpoch) return
+    if (introParts(currentQuestionKeyRef.current).question) return
+    welcomedEpochRef.current = lessonEpoch
+    enqueueChatAction({ kind: 'welcome', targetQuestionKey: currentQuestionKeyRef.current })
+  }, [activityScoped, surface.component_id, lessonEpoch, currentQuestionKey, enqueueChatAction])
 
   const finishOpening = useCallback(() => {
     if (openingTimer.current) clearTimeout(openingTimer.current)
@@ -196,8 +392,28 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     if (closingTimer.current) clearTimeout(closingTimer.current)
   }, [])
 
+  // The chat auto-opens (docked) on the lesson. When the learner LEAVES the
+  // lesson, close it — the task-docked chat must not linger as a floating panel
+  // on other screens. Only on the transition off the lesson, so a chat the
+  // learner opened themselves on a normal screen is left untouched. Immediate
+  // (no travelling animation) since they've already navigated away.
+  const wasOnLessonRef = useRef(false)
   useEffect(() => {
-    if (pathname.startsWith('/learning/lesson')) open()
+    const onLesson = pathname.startsWith('/learning/lesson')
+    if (onLesson) {
+      open()
+    } else if (wasOnLessonRef.current) {
+      if (openingTimer.current) clearTimeout(openingTimer.current)
+      if (closingTimer.current) clearTimeout(closingTimer.current)
+      openingTimer.current = null
+      closingTimer.current = null
+      isClosingRef.current = false
+      isOpenRef.current = false
+      setIsOpening(false)
+      setIsClosing(false)
+      setIsOpen(false)
+    }
+    wasOnLessonRef.current = onLesson
   }, [open, pathname])
 
   const selectConversation = useCallback(async (conversationId: string) => {
@@ -285,7 +501,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       active = false
       messageRequest.current += 1
     }
-  }, [activityScoped, pathname, selectConversation, surface])
+  }, [activityScoped, lessonEpoch, pathname, selectConversation, surface])
 
   const loadMoreConversations = useCallback(async () => {
     if (!hasMoreConversations || !conversationCursor || conversationLoading.current) return
@@ -380,130 +596,296 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     }
   }, [activeConversationId, conversations, isStreaming, selectConversation, surface])
 
-  const send = useCallback(
-    async (text: string) => {
-      const trimmed = text.trim()
-      if (!trimmed || isStreaming) return
-      liveTurnInProgress.current = true
+  // Ensure a conversation exists (mirrored in a ref so serial queue turns reuse
+  // the id the previous turn created, without waiting for a re-render).
+  const ensureConversationId = useCallback(async (): Promise<string | null> => {
+    if (activeConversationIdRef.current) return activeConversationIdRef.current
+    try {
+      const conversation = await createCoachConversation(surface)
+      activeConversationIdRef.current = conversation.id
+      setActiveConversationId(conversation.id)
+      setConversations((current) => [conversation, ...current.filter((c) => c.id !== conversation.id)])
+      return conversation.id
+    } catch {
+      return null
+    }
+  }, [surface])
 
-      let conversationId = activeConversationId
-      if (!conversationId) {
-        try {
-          const conversation = await createCoachConversation(surface)
-          conversationId = conversation.id
-          setActiveConversationId(conversation.id)
-          setConversations((current) => [conversation, ...current])
-        } catch {
-          setHistoryError(true)
-          liveTurnInProgress.current = false
-          return
-        }
-      }
+  // Mark the streamed assistant row complete and stamp it for the grace window.
+  const completeAssistant = useCallback((assistantId: string) => {
+    const at = Date.now()
+    setMessages((prev) => prev.map((m) => (
+      m.id === assistantId ? { ...m, isComplete: true, completedAtMs: at } : m
+    )))
+  }, [])
 
-      // A learner may send immediately while the selected thread is still
-      // loading. Invalidate that older read before adding the live turn so its
-      // eventual response cannot replace the optimistic user/assistant rows.
-      messageRequest.current += 1
-      messageLoading.current = false
-      setIsLoadingMessages(false)
+  // ── Play functions: the four kinds of Yuvi turn. Called ONLY by the worker
+  // (serialized), so none of them needs a concurrency guard — they just stream.
 
-      const assistantId = nextId()
-      setMessages((prev) => [
-        ...prev,
-        { id: nextId(), role: 'user', text: trimmed, isComplete: true },
-        { id: assistantId, role: 'assistant', text: '', isComplete: false },
-      ])
-      setIsStreaming(true)
-      setActiveAssistantId(assistantId)
-      setActivity('thinking')
-
-      try {
-        await streamCoach(trimmed, language, {
-          onDisclosure: (value) => setDisclosure(value),
-          onPhase: setActivity,
-          onText: (chunk) =>
-            setMessages((prev) =>
-              prev.map((message) => (
-                message.id === assistantId ? { ...message, text: message.text + chunk } : message
-              ))
-            ),
-          onVisualStatus: ({ status, textBefore, textAfter }) =>
-            setMessages((prev) =>
-              prev.map((message) => {
-                if (message.id !== assistantId) return message
-                // planning: loader appears while the text still streams/settles
-                // — the message never looks finished and then suddenly grows.
-                if (status === 'planning') return { ...message, isVisualizing: true }
-                if (status === 'none') return { ...message, isVisualizing: false }
-                return {
-                  ...message,
-                  text: textBefore ?? message.text,
-                  textAfter,
-                  isVisualizing: true,
-                }
-              })
-            ),
-          onVisual: (visual) =>
-            setMessages((prev) =>
-              prev.map((message) => (
-                message.id === assistantId ? { ...message, visual, isVisualizing: false } : message
-              ))
-            ),
-          onCanVisualize: (canVisualize) =>
-            setMessages((prev) =>
-              prev.map((message) => (
-                message.id === assistantId ? { ...message, canVisualize } : message
-              ))
-            ),
-        }, conversationId, surface)
-      } catch {
-        setMessages((prev) =>
-          prev.map((message) =>
-            message.id === assistantId && !message.text
-              ? { ...message, text: '…', isVisualizing: false }
-              : message.id === assistantId
-                ? { ...message, isVisualizing: false }
-                : message
-          )
-        )
-      } finally {
-        setMessages((prev) =>
-          prev.map((message) =>
-            message.id === assistantId ? { ...message, isComplete: true } : message
-          )
-        )
-        setIsStreaming(false)
-        setActiveAssistantId(null)
-        setActivity('idle')
-        await reloadHistory()
-        liveTurnInProgress.current = false
-        window.dispatchEvent(new CustomEvent('yuvilab:brain-updated'))
-      }
-    },
-    [activeConversationId, isStreaming, language, reloadHistory, surface]
-  )
-
-  const requestSupport = useCallback(async (support: CoachSupportMode) => {
-    if (isStreaming) return
+  const playUserMessage = useCallback(async (action: ChatAction) => {
+    const trimmed = (action.text || '').trim()
+    if (!trimmed) return
     liveTurnInProgress.current = true
-    let conversationId = activeConversationId
+    const conversationId = await ensureConversationId()
     if (!conversationId) {
-      try {
-        const conversation = await createCoachConversation(surface)
-        conversationId = conversation.id
-        setActiveConversationId(conversation.id)
-        setConversations((current) => [conversation, ...current])
-      } catch {
-        setHistoryError(true)
-        liveTurnInProgress.current = false
-        return
+      setHistoryError(true)
+      liveTurnInProgress.current = false
+      return
+    }
+    // A learner may send while the selected thread is still loading. Invalidate
+    // that older read before adding the live turn so its eventual response can't
+    // replace the optimistic user/assistant rows.
+    messageRequest.current += 1
+    messageLoading.current = false
+    setIsLoadingMessages(false)
+
+    const assistantId = nextId()
+    const nowIso = new Date().toISOString()
+    const nowMs = Date.now()
+    setMessages((prev) => [
+      ...prev,
+      { id: nextId(), role: 'user', text: trimmed, isComplete: true, createdAt: nowIso, createdAtMs: nowMs, questionKey: currentQuestionKeyRef.current },
+      { id: assistantId, role: 'assistant', text: '', isComplete: false, createdAt: nowIso, createdAtMs: nowMs, questionKey: currentQuestionKeyRef.current },
+    ])
+    setIsStreaming(true)
+    setActiveAssistantId(assistantId)
+    setActivity('thinking')
+    try {
+      await streamCoach(trimmed, language, {
+        onDisclosure: (value) => setDisclosure(value),
+        onPhase: setActivity,
+        onText: (chunk) =>
+          setMessages((prev) => prev.map((m) => (
+            m.id === assistantId ? { ...m, text: m.text + chunk } : m
+          ))),
+        onVisualStatus: ({ status, textBefore, textAfter }) =>
+          setMessages((prev) => prev.map((m) => {
+            if (m.id !== assistantId) return m
+            if (status === 'planning') return { ...m, isVisualizing: true }
+            if (status === 'none') return { ...m, isVisualizing: false }
+            return { ...m, text: textBefore ?? m.text, textAfter, isVisualizing: true }
+          })),
+        onVisual: (visual) =>
+          setMessages((prev) => prev.map((m) => (
+            m.id === assistantId ? { ...m, visual, isVisualizing: false } : m
+          ))),
+        onCanVisualize: (canVisualize) =>
+          setMessages((prev) => prev.map((m) => (
+            m.id === assistantId ? { ...m, canVisualize } : m
+          ))),
+      }, conversationId, surface)
+    } catch {
+      setMessages((prev) => prev.map((m) => (
+        m.id === assistantId && !m.text
+          ? { ...m, text: '…', isVisualizing: false }
+          : m.id === assistantId ? { ...m, isVisualizing: false } : m
+      )))
+    } finally {
+      completeAssistant(assistantId)
+      setIsStreaming(false)
+      setActiveAssistantId(null)
+      setActivity('idle')
+      await reloadHistory()
+      liveTurnInProgress.current = false
+      window.dispatchEvent(new CustomEvent('yuvilab:brain-updated'))
+    }
+  }, [completeAssistant, ensureConversationId, language, reloadHistory, surface])
+
+  const send = useCallback(async (text: string) => {
+    const trimmed = text.trim()
+    if (!trimmed) return
+    activitySeqRef.current += 1   // an explicit turn is engagement
+    enqueueChatAction({ kind: 'user-message', text: trimmed, targetQuestionKey: currentQuestionKeyRef.current }, { front: true })
+  }, [enqueueChatAction])
+
+  // Per-question intro: when the learner ARRIVES at a new question screen, Yuvi
+  // opens with a short, question-grounded orientation ending in an offer to help
+  // — instead of the generic greeting. Staleness (still on this screen, not yet
+  // introduced) is checked by `shouldPlay` at dequeue; here we commit the dedup
+  // and stream. The backend stays silent when there is no question (the iframe's
+  // intro/cover frame), so an empty reply is dropped and the dedup released.
+  const playIntro = useCallback(async (action: ChatAction) => {
+    const questionKey = action.targetQuestionKey || ''
+    const { item, question } = introParts(questionKey)
+    if (!item) return
+    const qkey = question ? `${item}|${question}` : ''
+    // Commit the dedup — shouldPlay already gated. A screen (arrival) intro marks
+    // the item; a sub-question intro marks the specific question.
+    introducedItemsRef.current.add(item)
+    if (qkey) introducedQuestionsRef.current.add(qkey)
+    const rollback = () => {
+      if (qkey) introducedQuestionsRef.current.delete(qkey)
+      else introducedItemsRef.current.delete(item)
+    }
+    const conversationId = await ensureConversationId()
+    if (!conversationId) { rollback(); return }
+    const assistantId = nextId()
+    setMessages((prev) => [
+      ...prev,
+      { id: assistantId, role: 'assistant', text: '', isComplete: false, createdAt: new Date().toISOString(), createdAtMs: Date.now(), questionKey },
+    ])
+    setIsStreaming(true)
+    setActiveAssistantId(assistantId)
+    setActivity('thinking')
+    try {
+      await streamProactive('question_intro', language, {
+        onDisclosure: (value) => setDisclosure(value),
+        onPhase: setActivity,
+        onText: (chunk) =>
+          setMessages((prev) => prev.map((m) => (
+            m.id === assistantId ? { ...m, text: m.text + chunk } : m
+          ))),
+      }, conversationId, surface)
+    } catch {
+      /* An intro must never disrupt the learner. */
+    } finally {
+      // Silent intro (no question resolved yet) → drop the empty bubble AND
+      // release the dedup so a later push/poll retries once the question lands.
+      let dropped = false
+      setMessages((prev) => {
+        const message = prev.find((m) => m.id === assistantId)
+        if (message && !message.text.trim()) {
+          dropped = true
+          return prev.filter((m) => m.id !== assistantId)
+        }
+        return prev.map((m) => (m.id === assistantId ? { ...m, isComplete: true, completedAtMs: Date.now() } : m))
+      })
+      if (dropped) rollback()
+      setIsStreaming(false)
+      setActiveAssistantId(null)
+      setActivity('idle')
+      await reloadHistory()
+    }
+  }, [ensureConversationId, language, reloadHistory, surface])
+
+  // One-time lesson welcome: when the learner opens a lesson (cover frame, before
+  // any question) Yuvi greets them with what THIS lesson is about + an offer to
+  // help — grounded in `current_objective` — replacing the generic greeting. A
+  // silent/empty reply is dropped like an intro.
+  const playWelcome = useCallback(async (_action: ChatAction) => {
+    const conversationId = await ensureConversationId()
+    if (!conversationId) return
+    // Untagged (no screen) so the welcome always forms its own "Introduction"
+    // section, never merged into the first question's section.
+    const questionKey = null
+    const assistantId = nextId()
+    setMessages((prev) => [
+      ...prev,
+      { id: assistantId, role: 'assistant', text: '', isComplete: false, createdAt: new Date().toISOString(), createdAtMs: Date.now(), questionKey },
+    ])
+    setIsStreaming(true)
+    setActiveAssistantId(assistantId)
+    setActivity('thinking')
+    try {
+      await streamProactive('lesson_welcome', language, {
+        onDisclosure: (value) => setDisclosure(value),
+        onPhase: setActivity,
+        onText: (chunk) =>
+          setMessages((prev) => prev.map((m) => (
+            m.id === assistantId ? { ...m, text: m.text + chunk } : m
+          ))),
+      }, conversationId, surface)
+    } catch {
+      /* A welcome must never disrupt the learner. */
+    } finally {
+      setMessages((prev) => {
+        const message = prev.find((m) => m.id === assistantId)
+        if (message && !message.text.trim()) return prev.filter((m) => m.id !== assistantId)
+        return prev.map((m) => (m.id === assistantId ? { ...m, isComplete: true, completedAtMs: Date.now() } : m))
+      })
+      setIsStreaming(false)
+      setActiveAssistantId(null)
+      setActivity('idle')
+      await reloadHistory()
+    }
+  }, [ensureConversationId, language, reloadHistory, surface])
+
+  // Enqueue an intro for a freshly-arrived screen. Guards: real item present and
+  // not already introduced this launch (the worker re-checks at dequeue too, so
+  // a screen that changes again before the intro plays is handled there).
+  const maybeEnqueueIntro = useCallback((questionKey: string | null) => {
+    const { item, question } = introParts(questionKey)
+    if (!item) return
+    const disposition = introDisposition(
+      item, question, introducedItemsRef.current, introducedQuestionsRef.current
+    )
+    if (disposition === 'covered') {
+      // The screen intro already grounds on this first question — record it so a
+      // later sub-question (q2) is recognised as new, but stay silent here.
+      introducedQuestionsRef.current.add(`${item}|${question}`)
+      return
+    }
+    if (disposition === 'done') return
+    enqueueChatAction({ kind: 'intro', targetQuestionKey: questionKey })
+  }, [enqueueChatAction])
+
+  // Adopt a new current screen key (from the instant `screen_change` push, or
+  // the reconciling poll). Re-arms support optimistically on a push, marks
+  // engagement, and schedules the screen's intro.
+  const applyQuestionKey = useCallback((key: string | null, source: 'push' | 'poll') => {
+    if (key === currentQuestionKeyRef.current) return
+    currentQuestionKeyRef.current = key
+    setCurrentQuestionKey(key)
+    if (source === 'push') {
+      pushSeqRef.current += 1
+      setSupportUsed({ hint: false, explanation: false })   // poll is authoritative
+    }
+    activitySeqRef.current += 1
+    maybeEnqueueIntro(key)
+  }, [maybeEnqueueIntro])
+  useEffect(() => { applyQuestionKeyRef.current = applyQuestionKey }, [applyQuestionKey])
+
+  // One-shot support state: poll while a lesson is open. The `screen_change` SSE
+  // push is the PRIMARY "which question" signal now (instant); this poll is the
+  // reconciler — it heals a missed push and carries the authoritative hint/
+  // explanation re-arm flags. A poll response that started before a push landed
+  // must not regress the key (pushSeq snapshot guard).
+  const syncSupportState = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const seenPush = pushSeqRef.current
+      const state = await getCoachSupportState(surface.component_id, signal)
+      setSupportUsed({ hint: state.hint_used, explanation: state.explanation_used })
+      if (pushSeqRef.current === seenPush) {
+        applyQuestionKey(state.question_key || null, 'poll')
       }
+    } catch {
+      /* transient — next tick retries */
+    }
+  }, [applyQuestionKey, surface.component_id])
+  useEffect(() => { syncSupportStateRef.current = () => syncSupportState() }, [syncSupportState])
+
+  useEffect(() => {
+    if (!activityScoped) {
+      setSupportUsed({ hint: false, explanation: false })
+      currentQuestionKeyRef.current = null
+      setCurrentQuestionKey(null)
+      return
+    }
+    const controller = new AbortController()
+    void syncSupportState(controller.signal)
+    const timer = window.setInterval(() => void syncSupportState(controller.signal), 2500)
+    return () => {
+      controller.abort()
+      window.clearInterval(timer)
+    }
+  }, [activityScoped, lessonEpoch, syncSupportState])
+
+  const playSupport = useCallback(async (action: ChatAction) => {
+    const support = action.support
+    if (!support) return
+    liveTurnInProgress.current = true
+    const conversationId = await ensureConversationId()
+    if (!conversationId) {
+      setHistoryError(true)
+      liveTurnInProgress.current = false
+      setSupportUsed((current) => ({ ...current, [support]: false }))   // give the one-shot back
+      return
     }
     messageRequest.current += 1
     const assistantId = nextId()
     setMessages((current) => [
       ...current,
-      { id: assistantId, role: 'assistant', text: '', isComplete: false },
+      { id: assistantId, role: 'assistant', text: '', isComplete: false, createdAt: new Date().toISOString(), createdAtMs: Date.now(), questionKey: currentQuestionKeyRef.current },
     ])
     setIsStreaming(true)
     setActiveAssistantId(assistantId)
@@ -512,25 +894,48 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       await streamCoachSupport(support, language, {
         onDisclosure: setDisclosure,
         onPhase: setActivity,
-        onText: (chunk) => setMessages((current) => current.map((message) => (
-          message.id === assistantId ? { ...message, text: message.text + chunk } : message
+        onText: (chunk) => setMessages((current) => current.map((m) => (
+          m.id === assistantId ? { ...m, text: m.text + chunk } : m
         ))),
+        onVisualStatus: ({ status, textBefore, textAfter }) =>
+          setMessages((current) => current.map((m) => {
+            if (m.id !== assistantId) return m
+            if (status === 'planning') return { ...m, isVisualizing: true }
+            if (status === 'none') return { ...m, isVisualizing: false }
+            return { ...m, text: textBefore ?? m.text, textAfter, isVisualizing: true }
+          })),
+        onVisual: (visual) =>
+          setMessages((current) => current.map((m) => (
+            m.id === assistantId ? { ...m, visual, isVisualizing: false } : m
+          ))),
+        onCanVisualize: (canVisualize) =>
+          setMessages((current) => current.map((m) => (
+            m.id === assistantId ? { ...m, canVisualize } : m
+          ))),
       }, conversationId, surface)
     } catch {
-      setMessages((current) => current.map((message) => (
-        message.id === assistantId && !message.text ? { ...message, text: '…' } : message
+      setMessages((current) => current.map((m) => (
+        m.id === assistantId && !m.text
+          ? { ...m, text: '…', isVisualizing: false }
+          : m.id === assistantId ? { ...m, isVisualizing: false } : m
       )))
     } finally {
-      setMessages((current) => current.map((message) => (
-        message.id === assistantId ? { ...message, isComplete: true } : message
-      )))
+      completeAssistant(assistantId)
       setIsStreaming(false)
       setActiveAssistantId(null)
       setActivity('idle')
       await reloadHistory()
       liveTurnInProgress.current = false
     }
-  }, [activeConversationId, isStreaming, language, reloadHistory, surface])
+  }, [completeAssistant, ensureConversationId, language, reloadHistory, surface])
+
+  const requestSupport = useCallback(async (support: CoachSupportMode) => {
+    if (supportUsed[support]) return
+    // Optimistic button feedback + dup-guard at enqueue (server also 409s a dup).
+    setSupportUsed((current) => ({ ...current, [support]: true }))
+    activitySeqRef.current += 1
+    enqueueChatAction({ kind: 'support', support, targetQuestionKey: currentQuestionKeyRef.current }, { front: true })
+  }, [enqueueChatAction, supportUsed])
 
   // On-demand visual: the learner tapped "show me a video / image" under a
   // text-only reply. We plan + render from that message's text plus its
@@ -578,69 +983,190 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
 
   // Proactive nudges stream into the active thread without taking control of
   // the screen. Only the learner-visible assistant message enters history.
-  const lastProactive = useRef(0)
-  const receiveProactive = useCallback(
-    async (trigger: string) => {
-      const now = Date.now()
-      if (isStreaming || now - lastProactive.current < 15000) return
-      lastProactive.current = now
-      if (!isOpen) setUnreadCount((count) => count + 1)
-      let conversationId = activeConversationId
-      if (!conversationId) {
-        try {
-          const conversation = await createCoachConversation(surface)
-          conversationId = conversation.id
-          setActiveConversationId(conversation.id)
-          setConversations((current) => [
-            conversation,
-            ...current.filter((item) => item.id !== conversation.id),
-          ])
-        } catch {
+  const playNudge = useCallback(async (action: ChatAction) => {
+    const trigger = action.trigger
+    if (!trigger) return
+    lastNudgePlayedAtRef.current[trigger] = Date.now()
+    if (!isOpenRef.current) setUnreadCount((count) => count + 1)
+    const conversationId = await ensureConversationId()
+    if (!conversationId) return
+    const assistantId = nextId()
+    setMessages((prev) => [...prev, {
+      id: assistantId, role: 'assistant', text: '', isComplete: false,
+      createdAt: new Date().toISOString(), createdAtMs: Date.now(),
+      questionKey: currentQuestionKeyRef.current,
+    }])
+    setIsStreaming(true)
+    setActiveAssistantId(assistantId)
+    setActivity('thinking')
+    try {
+      await streamProactive(trigger, language, {
+        onDisclosure: (value) => setDisclosure(value),
+        onPhase: setActivity,
+        onText: (chunk) =>
+          setMessages((prev) => prev.map((m) => (
+            m.id === assistantId ? { ...m, text: m.text + chunk } : m
+          ))),
+      }, conversationId, surface)
+    } catch {
+      /* Proactivity must never disrupt the learner. */
+    } finally {
+      completeAssistant(assistantId)
+      // On a success nudge, offer "what helped you?" chips for the help the
+      // learner actually used on THIS question (hint / explanation / chatted).
+      // Computed here from the live thread so message + chips always agree.
+      if (trigger === 'success') {
+        setMessages((prev) => {
+          const target = prev.find((m) => m.id === assistantId)
+          const qk = target?.questionKey ?? null
+          const methods: HelpMethod[] = []
+          if (supportUsedRef.current.hint) methods.push('hint')
+          if (supportUsedRef.current.explanation) methods.push('explanation')
+          if (prev.some((m) => m.role === 'user' && m.questionKey === qk)) methods.push('yuvi_chat')
+          if (!methods.length) return prev
+          return prev.map((m) => (
+            m.id === assistantId ? { ...m, attribution: { methods, questionKey: qk } } : m
+          ))
+        })
+      }
+      setIsStreaming(false)
+      setActiveAssistantId(null)
+      setActivity('idle')
+      await reloadHistory()
+      window.dispatchEvent(new CustomEvent('yuvilab:brain-updated'))
+    }
+  }, [completeAssistant, ensureConversationId, language, reloadHistory, surface])
+
+  // Dequeue-time staleness policy. Evaluated by the worker just before playing —
+  // a nudge queued behind a long intro may no longer be worth showing.
+  const shouldPlay = useCallback((action: ChatAction): boolean => {
+    const now = Date.now()
+    if (action.kind === 'user-message' || action.kind === 'support') return true
+    // Welcome is enqueued once per launch at lesson entry; play it only while the
+    // learner is still at the start (no question intro'd yet) so a late welcome
+    // can't land after they're already deep in the lesson.
+    if (action.kind === 'welcome') {
+      return introducedItemsRef.current.size === 0 && introducedQuestionsRef.current.size === 0
+    }
+    if (action.kind === 'intro') {
+      const { item, question } = introParts(action.targetQuestionKey)
+      if (!item) return false
+      const cur = introParts(currentQuestionKeyRef.current)
+      if (cur.item !== item) return false                       // moved to another screen
+      if (question && cur.question && cur.question !== question) return false  // moved to another sub-question
+      // Coverage resolved at DEQUEUE (the arrival intro may have played after
+      // this one was queued): a first sub-question covered by the screen intro
+      // is marked and skipped; only a genuinely new one plays.
+      const disposition = introDisposition(
+        item, question, introducedItemsRef.current, introducedQuestionsRef.current
+      )
+      if (disposition === 'covered') {
+        introducedQuestionsRef.current.add(`${item}|${question}`)
+        return false
+      }
+      return disposition === 'new'
+    }
+    // nudge
+    const trig = action.trigger || ''
+    if (trig === 'idle') {
+      // Only if the learner is STILL idle: no engagement evidence since enqueue.
+      return now - action.enqueuedAt <= 30000 && action.activitySeq === activitySeqRef.current
+    }
+    if (now - action.enqueuedAt > 45000) return false          // a stale reaction reads as random
+    if (now - (lastNudgePlayedAtRef.current[trig] ?? 0) < 15000) return false   // per-type spam guard
+    return true
+  }, [])
+
+  const playAction = useCallback(async (action: ChatAction) => {
+    switch (action.kind) {
+      case 'user-message': return playUserMessage(action)
+      case 'support': return playSupport(action)
+      case 'intro': return playIntro(action)
+      case 'welcome': return playWelcome(action)
+      case 'nudge': return playNudge(action)
+    }
+  }, [playUserMessage, playSupport, playIntro, playWelcome, playNudge])
+
+  // Publish the freshest closures to the worker / SSE handler (both []-dep).
+  playActionRef.current = playAction
+  shouldPlayRef.current = shouldPlay
+
+  const NUDGE_TYPES = useMemo(() => new Set([
+    'misconception', 'mistake', 'slow_progress', 'idle', 'success', 'rapid_guessing', 'wheel_spinning',
+  ]), [])
+
+  // Trigger SSE — []-dep so it is NOT torn down and rebuilt on every nudge (a
+  // rebuild could drop a trigger landing in the reconnect gap). Reads only refs.
+  useEffect(() => {
+    const close = subscribeTriggers(
+      (trigger) => {
+        // Component-level completion is a STATE signal, not a coach nudge: hand
+        // it to the lesson page to finalize instantly (720 §"Completed").
+        if (trigger.type === 'completion') {
+          window.dispatchEvent(new CustomEvent('yuvilab:xapi-completion', {
+            detail: { componentId: trigger.component_id, unitId: trigger.unit_id },
+          }))
+          activitySeqRef.current += 1
           return
         }
-      }
-      const assistantId = nextId()
-      setMessages((prev) => [...prev, { id: assistantId, role: 'assistant', text: '', isComplete: false }])
-      setIsStreaming(true)
-      setActiveAssistantId(assistantId)
-      setActivity('thinking')
-      try {
-        await streamProactive(trigger, language, {
-          onDisclosure: (value) => setDisclosure(value),
-          onPhase: setActivity,
-          onText: (chunk) =>
-            setMessages((prev) =>
-              prev.map((message) => (
-                message.id === assistantId ? { ...message, text: message.text + chunk } : message
-              ))
-            ),
-        }, conversationId, surface)
-      } catch {
-        /* Proactivity must never disrupt the learner. */
-      } finally {
-        setMessages((prev) =>
-          prev.map((message) =>
-            message.id === assistantId ? { ...message, isComplete: true } : message
-          )
-        )
-        setIsStreaming(false)
-        setActiveAssistantId(null)
-        setActivity('idle')
-        await reloadHistory()
-        window.dispatchEvent(new CustomEvent('yuvilab:brain-updated'))
-      }
-    },
-    [activeConversationId, isOpen, isStreaming, language, reloadHistory, surface]
-  )
-
-  useEffect(() => {
-    const close = subscribeTriggers((trigger) => {
-      if (['misconception', 'slow_progress', 'idle', 'success', 'rapid_guessing', 'wheel_spinning'].includes(trigger.type)) {
-        void receiveProactive(trigger.type)
-      }
-    })
+        // The learner moved to a new screen — re-key instantly (schedules intro).
+        if (trigger.type === 'screen_change') {
+          applyQuestionKeyRef.current?.(trigger.question_key ?? null, 'push')
+          return
+        }
+        if (NUDGE_TYPES.has(trigger.type)) {
+          if (trigger.type !== 'idle') activitySeqRef.current += 1   // answer-evidence = engagement
+          // A repeated misconception carries an alternative representation to
+          // offer (720: serve it in a different form, not just talk).
+          if (
+            (trigger.type === 'misconception' || trigger.type === 'wheel_spinning')
+            && trigger.alternative?.component_id
+          ) {
+            setPendingAlternative(trigger.alternative)
+          }
+          enqueueChatAction({ kind: 'nudge', trigger: trigger.type, targetQuestionKey: currentQuestionKeyRef.current })
+        }
+      },
+      // On (re)connect, re-sync support state — triggers published during a
+      // reconnect gap are not replayed by the server.
+      () => { void syncSupportStateRef.current?.() },
+    )
     return close
-  }, [receiveProactive])
+  }, [NUDGE_TYPES, enqueueChatAction])
+
+  // The offer is scoped to the question it was raised on — drop it when the
+  // learner moves to a new screen or component (including after accepting it),
+  // so a stale "want to see it another way?" never trails into the next question.
+  useEffect(() => { setPendingAlternative(null) }, [surface.component_id, currentQuestionKey])
+
+  // "Learn it another way" now opens a generated, per-question explainer (slides
+  // + Manim) instead of navigating to another Kata activity. The deck is cached
+  // per question across all learners, so it is generated once and reused.
+  const openExplainer = useCallback(() => {
+    setPendingAlternative(null)
+    setExplainerOpen(true)
+  }, [])
+  const closeExplainer = useCallback(() => setExplainerOpen(false), [])
+
+  const dismissAlternative = useCallback(() => setPendingAlternative(null), [])
+
+  // The explainer is scoped to the current question — close it when the learner
+  // moves to a different question or component.
+  useEffect(() => { setExplainerOpen(false) }, [surface.component_id, currentQuestionKey])
+
+  // Lesson thread: ONE continuous view of THIS launch's live turns (`live-` ids;
+  // a relaunch starts clean, history panel keeps the rest). The view no longer
+  // clears on navigation — the panel groups these into collapsible per-question
+  // sections (each tagged with its `questionKey`), so the learner keeps full
+  // context with dividers marking where each question began.
+  const visibleMessages = useMemo(() => {
+    if (!activityScoped) return messages
+    return messages.filter((m) => m.id.startsWith('live-'))
+  }, [messages, activityScoped])
+
+  // On a real question screen (item part of the key present), the per-question
+  // intro replaces the generic greeting; on the cover frame it stays.
+  const onQuestionFrame = activityScoped && Boolean(currentQuestionKey && currentQuestionKey.split('|')[1])
 
   return (
     <CompanionContext.Provider
@@ -654,7 +1180,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         finishOpening,
         close,
         toggle,
-        messages,
+        messages: visibleMessages,
         conversations,
         activeConversationId,
         isStreaming,
@@ -673,6 +1199,13 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           && !conversations.some((conversation) => conversation.message_count === 0),
         send,
         requestSupport,
+        supportUsed,
+        onQuestionFrame,
+        pendingAlternative,
+        openExplainer,
+        closeExplainer,
+        explainerOpen,
+        dismissAlternative,
         requestVisual,
         selectConversation,
         startNewConversation,

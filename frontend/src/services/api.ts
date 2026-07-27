@@ -89,6 +89,13 @@ export function updateLearnerState(updates: Partial<LearnerState>) {
   return apiPatch<LearnerState>('/api/learner-state', updates)
 }
 
+export function getBadges(lang = 'he', signal?: AbortSignal) {
+  return apiGet<import('../features/badges/types').BadgeDTO[]>(
+    `/api/badges?lang=${encodeURIComponent(lang)}`,
+    signal ? { signal } : undefined,
+  )
+}
+
 export async function streamPost(
   path: string,
   body: unknown,

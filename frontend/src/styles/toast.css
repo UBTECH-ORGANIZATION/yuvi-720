@@ -70,3 +70,19 @@
     max-width: none;
   }
 }
+
+/* ── Progress variant — a badge ring that animates forward on task-complete.
+   Component: components/ProgressToast.tsx. ── */
+.app-toast--progress .app-toast__icon {
+  inline-size: 54px;
+  block-size: 54px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
+.app-toast--progress .app-toast__icon .yv-badge { width: 54px; }
+.app-toast__text span b {
+  color: var(--sp-success-600, #1f9d6b);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

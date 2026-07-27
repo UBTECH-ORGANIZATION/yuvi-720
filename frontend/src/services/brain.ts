@@ -209,3 +209,16 @@ export function createActivenessGoal(
     payload,
   )
 }
+
+/** Learner updates a goal's progress from the "My goals" card (reports MoE
+ *  student-goal updated/completed). */
+export function updateGoalStatus(
+  learnerId: string,
+  goalId: string,
+  status: 'in_progress' | 'done',
+) {
+  return apiPost<GoalEntry>(
+    `/api/brain/${encodeURIComponent(learnerId)}/goals/${encodeURIComponent(goalId)}/status`,
+    { status },
+  )
+}

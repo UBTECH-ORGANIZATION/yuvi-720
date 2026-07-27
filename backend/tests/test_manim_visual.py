@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import base64
 import math
 import unittest
+import unittest.mock
 
 from app.agents.manim_visual import (
     _canonical_function_scene,
+    build_scene_visual,
+    render_visual,
     _canonical_midpoint_scene,
     _canonical_similar_triangles_scene,
     _ensure_parallel_angle_markers,
@@ -257,3 +261,215 @@ class SafeFunctionGraphTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class RenderRoutingTests(unittest.IsolatedAsyncioTestCase):
+    """Still images render in the browser; only video still costs a subprocess."""
+
+    STILL = {
+        "use_visual": True,
+        "elements": [
+            {"type": "polygon", "color": "primary",
+             "points": [[-2, -1.5], [2, -1.5], [2, 1.5]],
+             "labels": ["A", "B", "C"], "side_labels": ["4", "3", "יתר"],
+             "fill_opacity": 0.08},
+        ],
+    }
+
+    async def test_still_scene_skips_manim_entirely(self) -> None:
+        scene = sanitize_scene(dict(self.STILL))
+        assert scene is not None
+        visual = await render_visual(scene)
+        self.assertEqual(visual["type"], "scene")
+        self.assertEqual(visual["renderer"], "mafs")
+        self.assertEqual(visual["scene"], scene)
+
+    async def test_animated_scene_still_goes_to_manim(self) -> None:
+        """Guard the split: video must not silently become a client render."""
+        scene = sanitize_scene({**self.STILL, "animated": True})
+        assert scene is not None
+        self.assertTrue(scene["animated"])
+        calls: list[dict] = []
+
+        async def fake_manim(spec: dict) -> dict:
+            calls.append(spec)
+            return {"type": "video", "renderer": "manim"}
+
+        with unittest.mock.patch("app.agents.manim_visual.render_manim_visual", fake_manim):
+            visual = await render_visual(scene)
+        self.assertEqual(len(calls), 1, "animated scene did not reach the Manim renderer")
+        self.assertEqual(visual["type"], "video")
+
+    def test_scene_payload_carries_an_svg_fallback(self) -> None:
+        """If the client renderer throws, the <img> must still show the diagram."""
+        scene = sanitize_scene(dict(self.STILL))
+        assert scene is not None
+        visual = build_scene_visual(scene)
+        self.assertTrue(visual["data_url"].startswith("data:image/svg+xml;base64,"))
+        decoded = base64.b64decode(visual["data_url"].split(",", 1)[1]).decode("utf-8")
+        self.assertIn("<svg", decoded)
+        self.assertIn("יתר", decoded)
+
+    def test_scene_payload_carries_the_solved_layout(self) -> None:
+        """The client renderer must inherit the same placement as the video."""
+        scene = sanitize_scene(dict(self.STILL))
+        assert scene is not None
+        visual = build_scene_visual(scene)
+        self.assertIn("layout", visual["scene"]["elements"][0])
+
+
+class InteractivityTests(unittest.TestCase):
+    """Handles are additive, validated, and never load-bearing."""
+
+    TRIANGLE = {
+        "use_visual": True,
+        "elements": [
+            {"type": "polygon", "color": "primary",
+             "points": [[-2, -1.5], [2, -1.5], [2, 1.5]],
+             "labels": ["A", "B", "C"], "side_labels": ["4", "3", "5"]},
+            {"type": "point", "color": "accent", "points": [[0, 2]], "label": "P"},
+        ],
+    }
+
+    def test_valid_handles_survive(self) -> None:
+        scene = sanitize_scene({**self.TRIANGLE,
+                                "interactive": {"handles": [{"element": 0, "vertex": 2},
+                                                            {"element": 1}]}})
+        assert scene is not None
+        self.assertEqual(
+            scene["interactive"]["handles"],
+            [{"element": 0, "vertex": 2}, {"element": 1}],
+        )
+
+    def test_a_polygon_handle_needs_a_valid_vertex(self) -> None:
+        for vertex in (9, -1, "2", None):
+            with self.subTest(vertex=vertex):
+                scene = sanitize_scene({**self.TRIANGLE,
+                                        "interactive": {"handles": [{"element": 0, "vertex": vertex}]}})
+                assert scene is not None
+                self.assertNotIn("interactive", scene)
+
+    def test_handles_on_undraggable_kinds_are_dropped(self) -> None:
+        scene = sanitize_scene({
+            "use_visual": True,
+            "elements": [{"type": "line", "color": "primary", "points": [[-1, 0], [1, 0]]}],
+            "interactive": {"handles": [{"element": 0}]},
+        })
+        assert scene is not None
+        self.assertNotIn("interactive", scene)
+
+    def test_handle_indices_follow_dropped_elements(self) -> None:
+        """The planner indexes its own array; invalid elements shift everything."""
+        scene = sanitize_scene({
+            "use_visual": True,
+            "elements": [
+                {"type": "polygon", "color": "primary", "points": [[0, 0]]},   # too few points
+                {"type": "point", "color": "accent", "points": [[1, 1]], "label": "P"},
+            ],
+            "interactive": {"handles": [{"element": 1}]},
+        })
+        assert scene is not None
+        self.assertEqual(scene["interactive"]["handles"], [{"element": 0}])
+
+    def test_handles_are_capped(self) -> None:
+        scene = sanitize_scene({**self.TRIANGLE, "interactive": {
+            "handles": [{"element": 0, "vertex": i % 3} for i in range(12)]}})
+        assert scene is not None
+        self.assertLessEqual(len(scene["interactive"]["handles"]), 4)
+
+    def test_duplicate_handles_are_collapsed(self) -> None:
+        scene = sanitize_scene({**self.TRIANGLE, "interactive": {
+            "handles": [{"element": 0, "vertex": 1}, {"element": 0, "vertex": 1}]}})
+        assert scene is not None
+        self.assertEqual(len(scene["interactive"]["handles"]), 1)
+
+    def test_junk_interactive_blocks_are_ignored(self) -> None:
+        for junk in ("yes", 5, [], {"handles": "all"}, {"handles": [7]}):
+            with self.subTest(junk=junk):
+                scene = sanitize_scene({**self.TRIANGLE, "interactive": junk})
+                assert scene is not None
+                self.assertNotIn("interactive", scene)
+
+    def test_an_interactive_scene_still_renders_statically(self) -> None:
+        """The degradation guarantee: handles must never be load-bearing."""
+        interactive = sanitize_scene({**self.TRIANGLE,
+                                      "interactive": {"handles": [{"element": 0, "vertex": 2}]}})
+        plain = sanitize_scene(dict(self.TRIANGLE))
+        assert interactive is not None and plain is not None
+        self.assertEqual(interactive["elements"], plain["elements"])
+        self.assertEqual(interactive["canvas"], plain["canvas"])
+
+
+class MoleculeTests(unittest.TestCase):
+    """RDKit is the gate: an unparseable SMILES is not a molecule."""
+
+    def _scene(self, **element):
+        return sanitize_scene({
+            "use_visual": True,
+            "elements": [{"type": "molecule", "color": "primary", **element}],
+        })
+
+    def test_a_real_molecule_is_verified_and_enriched(self) -> None:
+        scene = self._scene(smiles="CC(=O)Oc1ccccc1C(=O)O", label="אספירין")
+        assert scene is not None
+        element = scene["elements"][0]
+        self.assertEqual(element["formula"], "C9H8O4")
+        self.assertAlmostEqual(element["mass"], 180.16, places=2)
+        self.assertEqual(element["label"], "אספירין")
+        self.assertEqual(scene["render"], "molecule")
+
+    def test_smiles_is_canonicalised(self) -> None:
+        """The same molecule written two ways must compare and cache as one."""
+        a = self._scene(smiles="OCC")
+        b = self._scene(smiles="CCO")
+        assert a is not None and b is not None
+        self.assertEqual(a["elements"][0]["smiles"], b["elements"][0]["smiles"])
+
+    def test_unparseable_smiles_never_becomes_a_visual(self) -> None:
+        for bad in ("C1CC", "not a molecule", "", "   ", "[[[", "C" * 500):
+            with self.subTest(smiles=bad):
+                self.assertIsNone(self._scene(smiles=bad))
+
+    def test_non_string_smiles_is_rejected(self) -> None:
+        for bad in (None, 42, ["CCO"], {"smiles": "CCO"}):
+            with self.subTest(smiles=bad):
+                self.assertIsNone(self._scene(smiles=bad))
+
+    def test_absurdly_large_molecules_are_rejected(self) -> None:
+        self.assertIsNone(self._scene(smiles="C" * 120))
+
+    def test_substructure_highlight_resolves_to_atom_indices(self) -> None:
+        scene = self._scene(smiles="CC(=O)O", highlight="C(=O)O")
+        assert scene is not None
+        self.assertTrue(scene["elements"][0]["highlight"])
+        self.assertTrue(all(isinstance(i, int) for i in scene["elements"][0]["highlight"]))
+
+    def test_a_bad_highlight_does_not_invalidate_the_molecule(self) -> None:
+        scene = self._scene(smiles="CCO", highlight="!!!not a pattern!!!")
+        assert scene is not None
+        self.assertNotIn("highlight", scene["elements"][0])
+        self.assertEqual(scene["elements"][0]["formula"], "C2H6O")
+
+    def test_view_defaults_to_2d_and_only_accepts_3d(self) -> None:
+        self.assertEqual(self._scene(smiles="C")["elements"][0]["view"], "2d")
+        self.assertEqual(self._scene(smiles="C", view="3d")["elements"][0]["view"], "3d")
+        self.assertEqual(self._scene(smiles="C", view="hologram")["elements"][0]["view"], "2d")
+
+    def test_render_discriminator_follows_what_survived_validation(self) -> None:
+        """A scene whose only molecule was rejected is not a molecule scene."""
+        scene = sanitize_scene({
+            "use_visual": True,
+            "render": "molecule",
+            "elements": [
+                {"type": "molecule", "color": "primary", "smiles": "C1CC"},   # invalid
+                {"type": "point", "color": "primary", "points": [[0, 0]], "label": "P"},
+            ],
+        })
+        assert scene is not None
+        self.assertEqual(scene["render"], "geometry")
+        self.assertEqual([e["type"] for e in scene["elements"]], ["point"])
+
+    def test_molecule_scenes_skip_the_geometry_solver(self) -> None:
+        scene = self._scene(smiles="CCO", label="אתנול")
+        assert scene is not None
+        self.assertNotIn("layout", scene["elements"][0])
+        self.assertNotIn("canvas", scene)

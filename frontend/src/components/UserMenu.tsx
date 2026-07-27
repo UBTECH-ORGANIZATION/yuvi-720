@@ -3,6 +3,7 @@ import { navigate } from '../app/router'
 import { useI18n, type Language } from '../i18n/I18nProvider'
 import { useAuth } from '../providers/AuthProvider'
 import { useTheme } from '../providers/ThemeProvider'
+import { ProfileAvatar } from '../features/badges/ProfileAvatar'
 
 /* The avatar is the account surface: who you are, plus the preferences that
    belong to you (language, light/dark) and sign-out. Those settings live on the
@@ -56,6 +57,11 @@ export function UserMenu() {
     navigate('/')
   }
 
+  const goBadges = () => {
+    setOpen(false)
+    navigate('/badges')
+  }
+
   return (
     <div className="user-menu" ref={rootRef}>
       <button
@@ -66,7 +72,7 @@ export function UserMenu() {
         aria-label={t('auth.menu.open')}
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="user-avatar" aria-hidden="true">{initialsOf(user.display_name)}</span>
+        <ProfileAvatar className="user-avatar" fallback={initialsOf(user.display_name)} />
         <span className="user-menu__name" dir="auto">{user.display_name}</span>
         <svg className="user-menu__chevron" viewBox="0 0 24 24" aria-hidden="true">
           <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -76,8 +82,31 @@ export function UserMenu() {
       {open && (
         <div className="user-menu__pop" role="menu">
           <div className="user-menu__head">
-            <span className="user-menu__head-name" dir="auto">{user.display_name}</span>
-            <span className="user-menu__head-handle" dir="ltr">@{user.username}</span>
+            <button
+              className="user-menu__avatar-edit"
+              type="button"
+              onClick={goBadges}
+              aria-label={t('badges.menuEdit')}
+              title={t('badges.menuEdit')}
+            >
+              <ProfileAvatar className="user-menu__head-avatar" fallback={initialsOf(user.display_name)} />
+              <span className="user-menu__pencil" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path
+                    d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3z"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+            </button>
+            <div className="user-menu__head-meta">
+              <span className="user-menu__head-name" dir="auto">{user.display_name}</span>
+              <span className="user-menu__head-handle" dir="ltr">@{user.username}</span>
+            </div>
           </div>
 
           <div className="user-menu__group">
@@ -111,6 +140,18 @@ export function UserMenu() {
               <span className={`user-menu__switch${theme === 'dark' ? ' is-on' : ''}`} aria-hidden="true" />
             </button>
           </div>
+
+          <button
+            className="user-menu__row user-menu__row--link"
+            type="button"
+            role="menuitem"
+            onClick={goBadges}
+          >
+            <span>{t('badges.menuTitle')}</span>
+            <svg className="user-menu__row-chevron" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
 
           <button
             className="user-menu__row user-menu__row--danger"
