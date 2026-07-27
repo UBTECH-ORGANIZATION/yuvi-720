@@ -821,6 +821,152 @@
   background: rgba(24, 21, 52, .7);
 }
 
+/* ── Landing — credibility sections (metrics · journey · audience ·
+   standards · footer). Same friendlier-night palette: lifted violet
+   surfaces, soft borders, multi-hue accents. ── */
+
+[data-theme='dark'] .landing720-section-head h2 { color: #f2effd; }
+[data-theme='dark'] .landing720-section-head p { color: #c4bfda; }
+
+[data-theme='dark'] .landing720-section-head .landing720-eyebrow {
+  color: #d8c9ff;
+  background: rgba(150, 122, 255, .16);
+}
+
+/* Proof band. Gradient text: use background-image only — the `background`
+   shorthand resets background-clip and would paint a solid block. */
+[data-theme='dark'] .landing720-metrics {
+  background: rgba(255, 255, 255, .1);
+  border-color: var(--l720d-border);
+  box-shadow: 0 14px 34px rgba(8, 5, 26, .32);
+}
+
+[data-theme='dark'] .landing720-metric {
+  background: linear-gradient(180deg, #2a2652, #211e42);
+}
+
+[data-theme='dark'] .landing720-metric strong {
+  background-image: linear-gradient(120deg, #ffd9ae, #e6bcff 34%, #a98cff 66%, #6fd8e8);
+}
+
+[data-theme='dark'] .landing720-metric span { color: #b8b3d0; }
+
+/* Journey */
+[data-theme='dark'] .landing720-journey-track::before {
+  background: linear-gradient(
+    to left,
+    transparent,
+    rgba(255, 255, 255, .16) 12%,
+    rgba(255, 255, 255, .16) 88%,
+    transparent
+  );
+}
+
+[data-theme='dark'] .landing720-journey-step {
+  background: linear-gradient(180deg, #2a2652, #201d40);
+  border-color: var(--l720d-border);
+  box-shadow: 0 14px 34px rgba(8, 5, 26, .34);
+}
+
+[data-theme='dark'] .landing720-journey-step:hover {
+  border-color: var(--l720d-border-strong);
+  box-shadow: 0 20px 44px rgba(8, 5, 26, .44);
+}
+
+[data-theme='dark'] .landing720-journey-step__num {
+  background: linear-gradient(135deg, #7d92ff, #a98cff);
+  box-shadow: 0 8px 20px rgba(122, 96, 235, .38);
+}
+
+/* Each stage keeps its own hue so the row reads as a journey, not a list. */
+[data-theme='dark'] .landing720-journey-step:nth-child(2) .landing720-journey-step__num {
+  background: linear-gradient(135deg, #a98cff, #d9a7f5);
+}
+
+[data-theme='dark'] .landing720-journey-step:nth-child(3) .landing720-journey-step__num {
+  background: linear-gradient(135deg, #5fc7c0, #7fb6ff);
+}
+
+[data-theme='dark'] .landing720-journey-step:nth-child(4) .landing720-journey-step__num {
+  background: linear-gradient(135deg, #ffbe8a, #f0a3c8);
+}
+
+[data-theme='dark'] .landing720-journey-step h3 { color: #f2effd; }
+[data-theme='dark'] .landing720-journey-step p { color: #c4bfda; }
+
+[data-theme='dark'] .landing720-journey-step__meta {
+  border-block-start-color: rgba(255, 255, 255, .13);
+  color: #948fb0;
+}
+
+/* Audience */
+[data-theme='dark'] .landing720-audience-card {
+  background: linear-gradient(180deg, #2a2652, #201d40);
+  border-color: var(--l720d-border);
+  box-shadow: 0 14px 34px rgba(8, 5, 26, .34);
+}
+
+[data-theme='dark'] .landing720-audience-card:hover {
+  border-color: var(--l720d-border-strong);
+  box-shadow: 0 20px 44px rgba(8, 5, 26, .44);
+}
+
+[data-theme='dark'] .landing720-audience-card h3 { color: #f2effd; }
+[data-theme='dark'] .landing720-audience-card > p { color: #c4bfda; }
+[data-theme='dark'] .landing720-audience-card li { color: #ddd9ec; }
+
+[data-theme='dark'] .landing720-audience-card li::before {
+  background: linear-gradient(135deg, #a98cff, #7fb6ff);
+}
+
+/* Standards */
+[data-theme='dark'] .landing720-standards {
+  border-color: var(--l720d-border);
+  background:
+    radial-gradient(720px 320px at 10% 0%, rgba(150, 122, 255, .2), transparent 64%),
+    radial-gradient(680px 320px at 94% 100%, rgba(255, 172, 112, .1), transparent 62%),
+    linear-gradient(180deg, rgba(46, 40, 90, .55), rgba(30, 25, 62, .48));
+  box-shadow: 0 18px 44px rgba(8, 5, 26, .3);
+}
+
+[data-theme='dark'] .landing720-standard {
+  background: rgba(255, 255, 255, .045);
+  border-color: rgba(255, 255, 255, .1);
+}
+
+[data-theme='dark'] .landing720-standard h3 { color: #f2effd; }
+[data-theme='dark'] .landing720-standard p { color: #c0bbd7; }
+
+[data-theme='dark'] .landing720-standard__icon {
+  color: #9cc6ff;
+  background: rgba(120, 160, 255, .16);
+}
+
+[data-theme='dark'] .landing720-standard:nth-child(3n + 2) .landing720-standard__icon {
+  color: #cbb9ff;
+  background: rgba(160, 128, 255, .16);
+}
+
+[data-theme='dark'] .landing720-standard:nth-child(3n) .landing720-standard__icon {
+  color: #86e5d6;
+  background: rgba(72, 190, 175, .15);
+}
+
+/* Footer */
+[data-theme='dark'] .landing720-footer {
+  border-block-start-color: rgba(255, 255, 255, .12);
+}
+
+[data-theme='dark'] .landing720-footer__brand p { color: #b8b3d0; }
+[data-theme='dark'] .landing720-footer__links h4 { color: #ece8fb; }
+[data-theme='dark'] .landing720-footer__links a { color: #b8b3d0; }
+[data-theme='dark'] .landing720-footer__links a:hover { color: #cbb9ff; }
+
+[data-theme='dark'] .landing720-footer__bottom {
+  border-block-start-color: rgba(255, 255, 255, .1);
+  color: #8e89ab;
+}
+
 /* Learner mapping */
 [data-theme='dark'] .learner-mapping-page { color: var(--sp-ink-700); }
 [data-theme='dark'] .integrity-dialog,

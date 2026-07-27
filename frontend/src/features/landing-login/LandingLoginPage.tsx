@@ -16,6 +16,17 @@ import teacherInsightImage from '../../assets/teacher-insight-image.png'
 
 const FAQ_KEYS = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6']
 
+/* Proof points shown under the hero. Each one is a real property of the
+   platform (agent count, supported languages, xAPI reporting, no identifying
+   data sent to the model) — no invented numbers. */
+const METRIC_KEYS = ['agents', 'languages', 'events', 'privacy'] as const
+
+/* The learner journey, end to end — the section the nav's "how it works" link
+   pointed at but that never existed. */
+const JOURNEY_KEYS = ['map', 'path', 'guide', 'insight'] as const
+
+const AUDIENCE_KEYS = ['students', 'teachers', 'leaders'] as const
+
 function Icon({ children, ...props }: SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -136,6 +147,85 @@ function MailIcon(props: SVGProps<SVGSVGElement>) {
   )
 }
 
+function UsersIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3.6 19.5c0-3 2.4-5.2 5.4-5.2s5.4 2.2 5.4 5.2" />
+      <path d="M16.4 5.2a3.2 3.2 0 0 1 0 6.1" />
+      <path d="M17.6 14.6c1.8.7 2.9 2.3 2.9 4.4" />
+    </Icon>
+  )
+}
+
+function BuildingIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M4 20.5V6.2L12 3.5v17" />
+      <path d="M12 9.4l7.5 2.3v8.8" />
+      <path d="M2.6 20.5h18.8" />
+      <path d="M7.4 9.2v.01M7.4 13v.01M7.4 16.8v.01M15.7 14.4v.01M15.7 17.6v.01" />
+    </Icon>
+  )
+}
+
+function ClipboardCheckIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M9 4.5h6a1.5 1.5 0 0 1 1.5 1.5v.4H7.5V6A1.5 1.5 0 0 1 9 4.5Z" />
+      <path d="M16.5 6h1.9a1.6 1.6 0 0 1 1.6 1.6v11.3a1.6 1.6 0 0 1-1.6 1.6H5.6A1.6 1.6 0 0 1 4 18.9V7.6A1.6 1.6 0 0 1 5.6 6h1.9" />
+      <path d="m9 13.6 2.1 2.1 4.2-4.4" />
+    </Icon>
+  )
+}
+
+function ActivityIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M2.8 12.4h4L9 7l3.4 10L15 12.4h6.2" />
+    </Icon>
+  )
+}
+
+function LockIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <rect x="4.5" y="10.2" width="15" height="10.3" rx="2.4" />
+      <path d="M8 10.2V7.8a4 4 0 0 1 8 0v2.4" />
+      <path d="M12 14.2v2.6" />
+    </Icon>
+  )
+}
+
+function EyeIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M2.6 12S6 6.4 12 6.4 21.4 12 21.4 12 18 17.6 12 17.6 2.6 12 2.6 12Z" />
+      <circle cx="12" cy="12" r="2.8" />
+    </Icon>
+  )
+}
+
+function AccessibilityIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="4.8" r="1.8" />
+      <path d="M4.8 8.6c2.3.9 4.7 1.4 7.2 1.4s4.9-.5 7.2-1.4" />
+      <path d="M12 10v4.2" />
+      <path d="m12 14.2-2.6 6M12 14.2l2.6 6" />
+    </Icon>
+  )
+}
+
+function CloudIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M7.2 18.5A4.2 4.2 0 0 1 7 10.1a5.2 5.2 0 0 1 9.9-1.3 3.9 3.9 0 0 1-.6 9.7Z" />
+      <path d="m10.4 14.2 1.6 1.6 3-3" />
+    </Icon>
+  )
+}
+
 type ContactStatus = 'idle' | 'sending' | 'success' | 'error'
 
 type LoginIntent = 'student' | 'teacher'
@@ -197,6 +287,7 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
         <nav className="landing720-nav" aria-label={t('landing.nav.aria')}>
           <a href="#about">{t('landing.nav.about')}</a>
           <a href="#how">{t('landing.nav.how')}</a>
+          <a href="#standards">{t('landing.nav.standards')}</a>
           <a href="#faq">{t('landing.nav.faq')}</a>
           <a href="#contact">{t('landing.nav.contact')}</a>
         </nav>
@@ -257,9 +348,37 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
         </div>
       </section>
 
+      <section className="landing720-metrics" aria-label={t('landing.metrics.aria')} data-Yuvi-reveal>
+        {METRIC_KEYS.map((key) => (
+          <article className="landing720-metric" key={key}>
+            <strong>{t(`landing.metrics.${key}.value`)}</strong>
+            <span>{t(`landing.metrics.${key}.label`)}</span>
+          </article>
+        ))}
+      </section>
+
       <div className="landing720-Yuvi-stop landing720-Yuvi-stop--hub" data-Yuvi-stop="hub" data-Yuvi-reveal>
         <AgentsDiagram />
       </div>
+
+      <section className="landing720-journey" id="how" data-Yuvi-reveal>
+        <header className="landing720-section-head">
+          <span className="landing720-eyebrow">{t('landing.journey.eyebrow')}</span>
+          <h2>{t('landing.journey.title')}</h2>
+          <p>{t('landing.journey.subtitle')}</p>
+        </header>
+
+        <ol className="landing720-journey-track">
+          {JOURNEY_KEYS.map((key, index) => (
+            <li className="landing720-journey-step" key={key}>
+              <span className="landing720-journey-step__num">{index + 1}</span>
+              <h3>{t(`landing.journey.${key}.title`)}</h3>
+              <p>{t(`landing.journey.${key}.desc`)}</p>
+              <span className="landing720-journey-step__meta">{t(`landing.journey.${key}.meta`)}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
 
       <section className="landing720-feature-rows" data-Yuvi-stop="features" data-Yuvi-reveal>
         <header className="landing720-feature-rows__head">
@@ -321,6 +440,65 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
             </ul>
           </div>
         </article>
+      </section>
+
+      <section className="landing720-audience" id="audience" data-Yuvi-reveal>
+        <header className="landing720-section-head">
+          <span className="landing720-eyebrow">{t('landing.audience.eyebrow')}</span>
+          <h2>{t('landing.audience.title')}</h2>
+          <p>{t('landing.audience.subtitle')}</p>
+        </header>
+
+        <div className="landing720-audience-grid">
+          {AUDIENCE_KEYS.map((key) => {
+            const AudienceIcon =
+              key === 'students' ? GraduationCapIcon : key === 'teachers' ? UsersIcon : BuildingIcon
+            const tone = key === 'students' ? 'icon-purple' : key === 'teachers' ? 'icon-teal' : 'icon-blue'
+            return (
+              <article className="landing720-audience-card" key={key}>
+                <span className={`landing720-feature-icon ${tone}`}>
+                  <AudienceIcon />
+                </span>
+                <h3>{t(`landing.audience.${key}.title`)}</h3>
+                <p>{t(`landing.audience.${key}.desc`)}</p>
+                <ul>
+                  <li>{t(`landing.audience.${key}.point1`)}</li>
+                  <li>{t(`landing.audience.${key}.point2`)}</li>
+                  <li>{t(`landing.audience.${key}.point3`)}</li>
+                </ul>
+              </article>
+            )
+          })}
+        </div>
+      </section>
+
+      <section className="landing720-standards" id="standards" data-Yuvi-reveal>
+        <header className="landing720-section-head">
+          <span className="landing720-eyebrow">{t('landing.standards.eyebrow')}</span>
+          <h2>{t('landing.standards.title')}</h2>
+          <p>{t('landing.standards.subtitle')}</p>
+        </header>
+
+        <div className="landing720-standards-grid">
+          {[
+            { key: 'program', Glyph: ClipboardCheckIcon },
+            { key: 'xapi', Glyph: ActivityIcon },
+            { key: 'privacy', Glyph: LockIcon },
+            { key: 'explain', Glyph: EyeIcon },
+            { key: 'access', Glyph: AccessibilityIcon },
+            { key: 'cloud', Glyph: CloudIcon }
+          ].map(({ key, Glyph }) => (
+            <article className="landing720-standard" key={key}>
+              <span className="landing720-standard__icon">
+                <Glyph width={20} height={20} />
+              </span>
+              <div>
+                <h3>{t(`landing.standards.${key}.title`)}</h3>
+                <p>{t(`landing.standards.${key}.desc`)}</p>
+              </div>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="landing720-faq" id="faq" data-Yuvi-stop="faq" data-Yuvi-reveal>
@@ -420,6 +598,38 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
           {t('landing.pills.languages')}
         </span>
       </section>
+
+      <footer className="landing720-footer">
+        <div className="landing720-footer__main">
+          <div className="landing720-footer__brand">
+            <BrandLogo />
+            <p>{t('landing.footer.tagline')}</p>
+          </div>
+
+          <nav className="landing720-footer__links" aria-label={t('landing.footer.navAria')}>
+            <div>
+              <h4>{t('landing.footer.platform')}</h4>
+              <a href="#about">{t('landing.nav.about')}</a>
+              <a href="#how">{t('landing.nav.how')}</a>
+              <a href="#audience">{t('landing.audience.eyebrow')}</a>
+            </div>
+            <div>
+              <h4>{t('landing.footer.trust')}</h4>
+              <a href="#standards">{t('landing.standards.eyebrow')}</a>
+              <a href="#faq">{t('landing.nav.faq')}</a>
+            </div>
+            <div>
+              <h4>{t('landing.footer.contactHead')}</h4>
+              <a href="#contact">{t('landing.nav.contact')}</a>
+            </div>
+          </nav>
+        </div>
+
+        <div className="landing720-footer__bottom">
+          <span>{t('landing.footer.rights').replace('{year}', String(new Date().getFullYear()))}</span>
+          <span>{t('landing.footer.note')}</span>
+        </div>
+      </footer>
 
       <LoginDialog
         open={loginIntent !== null}
