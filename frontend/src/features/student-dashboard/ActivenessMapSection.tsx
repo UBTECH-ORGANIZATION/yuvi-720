@@ -2,14 +2,13 @@ import { Suspense, lazy, useEffect, useRef, useState, type CSSProperties } from 
 import { useReducedMotion } from 'motion/react'
 import { animate, stagger } from 'animejs'
 import { Icon } from '../../components/primitives'
-import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { useI18n } from '../../i18n/I18nProvider'
 import { getLearnerState, updateLearnerState } from '../../services/api'
 import type { DashboardDTO } from '../../services/brain'
 import './activeness-map.css'
 
-const ActivenessMap = lazy(() =>
-  import('./ActivenessMap').then((m) => ({ default: m.ActivenessMap })),
+const ActivenessWorld = lazy(() =>
+  import('./ActivenessWorld3D').then((m) => ({ default: m.ActivenessWorld3D })),
 )
 
 interface ActivenessMapSectionProps {
@@ -175,17 +174,13 @@ export function ActivenessMapSection({ competencies, studentName }: ActivenessMa
       </button>
 
       {mounted && (
-        <div className={`amap-overlay${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}>
-          <div className="amap__nav">
-            <LearnerAppBar studentName={studentName} />
-          </div>
+        <div className={`amap-overlay amap-overlay--world${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}>
           <div className="amap__sheet">
             <Suspense fallback={null}>
-              <ActivenessMap
+              <ActivenessWorld
                 competencies={competencies}
                 studentName={studentName}
                 initial={initial}
-                revealed={open}
                 onClose={close}
               />
             </Suspense>
