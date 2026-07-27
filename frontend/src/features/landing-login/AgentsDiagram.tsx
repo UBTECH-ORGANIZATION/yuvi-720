@@ -80,15 +80,13 @@ function SafetyIcon(props: SVGProps<SVGSVGElement>) {
   )
 }
 
-/* `lead` marks the learning companion — the highest-weight 720 capability and
-   the one card that is allowed to sit forward of the ring. */
 const AGENTS = [
-  { key: 'mapping', Icon: MappingIcon, tone: 'blue', lead: false },
-  { key: 'learning', Icon: LearningIcon, tone: 'teal', lead: false },
-  { key: 'guide', Icon: GuideIcon, tone: 'purple', lead: true },
-  { key: 'motivation', Icon: MotivationIcon, tone: 'orange', lead: false },
-  { key: 'insights', Icon: InsightsIcon, tone: 'indigo', lead: false },
-  { key: 'safety', Icon: SafetyIcon, tone: 'pink', lead: false }
+  { key: 'mapping', Icon: MappingIcon, tone: 'blue' },
+  { key: 'learning', Icon: LearningIcon, tone: 'teal' },
+  { key: 'guide', Icon: GuideIcon, tone: 'purple' },
+  { key: 'motivation', Icon: MotivationIcon, tone: 'orange' },
+  { key: 'insights', Icon: InsightsIcon, tone: 'indigo' },
+  { key: 'safety', Icon: SafetyIcon, tone: 'pink' }
 ] as const
 
 const RADIUS = 38
@@ -340,7 +338,7 @@ export function AgentsDiagram() {
         {nodes.map((node) => (
           <article
             key={node.key}
-            className={`landing720-hub-node tone-${node.tone}${node.lead ? ' is-lead' : ''}`}
+            className={`landing720-hub-node tone-${node.tone}`}
             style={{
               '--x': `${node.cx}%`,
               '--y': `${node.cy}%`,
