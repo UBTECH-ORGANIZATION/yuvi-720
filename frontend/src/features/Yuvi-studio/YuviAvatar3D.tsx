@@ -433,13 +433,13 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       const anchor = anchors[slot]
       if (equippedObjects[slot]) { anchor.remove(equippedObjects[slot]!); disposeGroup(equippedObjects[slot]!); delete equippedObjects[slot] }
       design.equipped[slot] = id
+      const asset = id ? getAsset(id) : null
       if (slot === 'headTop') {
         antenna.visible = !id
-        const showNativeEars = id !== 'headphones'
+        const showNativeEars = !asset?.hideEars
         nativeEarParts.forEach((part) => { part.visible = showNativeEars })
       }
-      if (!id) return
-      const asset = getAsset(id); if (!asset) return
+      if (!asset) return
       const g = asset.build(); anchor.add(g); equippedObjects[slot] = g
       if (animate) playTransform(g)
     }
@@ -744,13 +744,13 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       ringMat.emissiveIntensity = 1.6 + Math.sin(t * 2.4) * 0.4
       faceGlow.intensity = 0.24 + Math.sin(t * 1.8) * 0.05
 
-      // accessory motion
-      const prop = (equippedObjects.headTop as any)?.userData?.spin
-      if (prop) prop.rotation.y += dt * 8
-      const flames = (equippedObjects.back as any)?.userData?.flames as THREE.Object3D[] | undefined
-      if (flames) flames.forEach((f, i) => { f.scale.y = 1 + Math.sin(t * 20 + i) * 0.25 })
-      const cape = (equippedObjects.back as any)?.userData?.wave as THREE.Mesh | undefined
-      if (cape) { const p = cape.geometry.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i); p.setZ(i, -Math.cos(x * 3 + t * 3) * 0.06 - 0.05 + Math.sin(y * 4 + t * 2) * 0.02) } p.needsUpdate = true }
+      // Accessory motion: every asset exposes its own `userData.animate(t, dt)`.
+      if (!reduceMotion) {
+        for (const key of Object.keys(equippedObjects)) {
+          const anim = (equippedObjects as any)[key]?.userData?.animate
+          if (anim) anim(t, dt)
+        }
+      }
       // interactive Y pop
       if (interactiveY) {
         badgeScale += ((hoveredY ? 1.32 : 1) - badgeScale) * 0.2

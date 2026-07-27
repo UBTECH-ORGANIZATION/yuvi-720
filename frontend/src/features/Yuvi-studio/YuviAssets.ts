@@ -42,82 +42,347 @@ const mat = (color: number | string, opts: Record<string, unknown> = {}) =>
 const emissive = (color: number | string, intensity = 1.6) =>
   new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: intensity, roughness: 0.3, toneMapped: false })
 
-// ── head accessories (authored in head-local space; helmet spans y ±0.5) ──
-function buildCap() {
+/* ── material vocabulary ───────────────────────────────────────────────────
+   Every item is built from the same five looks — moulded shell, brushed
+   metal, technical fabric, glass and additive "energy" — so the gear reads as
+   one product family instead of a bag of toys. */
+const shell = (color: number | string, opts: Record<string, unknown> = {}) =>
+  new THREE.MeshPhysicalMaterial({ color, roughness: 0.28, metalness: 0.06, clearcoat: 1, clearcoatRoughness: 0.12, envMapIntensity: 1.15, ...opts })
+const metal = (color: number | string, opts: Record<string, unknown> = {}) =>
+  new THREE.MeshPhysicalMaterial({ color, roughness: 0.24, metalness: 0.92, envMapIntensity: 1.35, ...opts })
+const fabric = (color: number | string, opts: Record<string, unknown> = {}) =>
+  new THREE.MeshPhysicalMaterial({ color, roughness: 0.86, metalness: 0, sheen: 0.7, sheenColor: new THREE.Color('#cdd6ff'), sheenRoughness: 0.7, envMapIntensity: 0.55, ...opts })
+const glass = (color: number | string, opacity = 0.42, opts: Record<string, unknown> = {}) =>
+  new THREE.MeshPhysicalMaterial({ color, transparent: true, opacity, roughness: 0.05, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 1.7, ...opts })
+/** Additive surface — reads as emitted light, never as painted plastic. */
+const holo = (color: number | string, opacity = 0.36, opts: Record<string, unknown> = {}) =>
+  new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false, toneMapped: false, ...opts })
+
+const CARBON = '#141230'
+const GRAPHITE = '#242348'
+const STEEL = '#9fb0d6'
+const NEON = '#4eeef0'
+const VIOLET = '#7c5cff'
+/** Face decals sit in front of the visor's own additive face lights. */
+const decal = (material: THREE.Material) => { material.depthTest = false; return material }
+
+// ── head gear (head-local: the helmet spans y ±0.51, x ±0.56, z ±0.45) ──
+function buildSnapback() {
   const g = new THREE.Group()
-  const crown = new THREE.Mesh(new THREE.SphereGeometry(0.5, 28, 20, 0, Math.PI * 2, 0, Math.PI / 2), mat('#ff5d73'))
-  crown.scale.set(1, 0.62, 1); crown.position.y = 0.46; g.add(crown)
-  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.05, 28, 1, false, 0, Math.PI), mat('#e8455c'))
-  brim.position.set(0, 0.44, 0.42); brim.rotation.x = -0.08; g.add(brim)
-  const btn = new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 12), mat('#ffd166'))
-  btn.position.y = 0.78; g.add(btn)
+  const cloth = fabric(CARBON)
+  const crown = new THREE.Mesh(new THREE.SphereGeometry(0.585, 32, 20, 0, Math.PI * 2, 0, Math.PI / 2), cloth)
+  crown.scale.set(1, 0.6, 1); crown.position.y = 0.42; g.add(crown)
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.588, 0.588, 0.12, 34, 1, true), fabric(GRAPHITE))
+  band.position.y = 0.45; g.add(band)
+  // Worn backwards: the brim points behind and the closure strap sits up front.
+  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, 0.045, 34, 1, false, Math.PI / 2, Math.PI), shell(GRAPHITE))
+  brim.position.set(0, 0.44, 0); brim.rotation.x = -0.14; g.add(brim)
+  const strap = new THREE.Mesh(new RoundedBoxGeometry(0.2, 0.1, 0.05, 4, 0.02), shell(CARBON))
+  strap.position.set(0, 0.45, 0.5); g.add(strap)
+  const buckle = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.011, 8, 20), emissive(NEON, 1.4))
+  buckle.position.set(0, 0.45, 0.54); g.add(buckle)
+  const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.05), holo(VIOLET, 0.5))
+  tag.position.set(0.34, 0.5, 0.4); tag.rotation.y = -0.7; g.add(tag)
   return g
 }
-function buildWizardHat() {
+function buildBeanie() {
   const g = new THREE.Group()
-  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.66, 0.06, 30), mat('#5a3fd6'))
-  brim.position.y = 0.48; g.add(brim)
-  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.42, 1.0, 26), mat('#6a4cf0'))
-  cone.position.y = 1.0; g.add(cone)
-  const star = new THREE.Mesh(new THREE.IcosahedronGeometry(0.09, 0), emissive('#ffd166', 1.4))
-  star.position.set(0.14, 1.05, 0.36); g.add(star)
-  return g
-}
-function buildCrown() {
-  const g = new THREE.Group()
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.18, 26, 1, true), mat('#ffd166', { metalness: 0.5, roughness: 0.25 }))
-  band.position.y = 0.55; g.add(band)
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2
-    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.22, 12), mat('#ffcf4d', { metalness: 0.5, roughness: 0.25 }))
-    spike.position.set(Math.cos(a) * 0.44, 0.72, Math.sin(a) * 0.44); g.add(spike)
-    const gem = new THREE.Mesh(new THREE.IcosahedronGeometry(0.045, 0), emissive('#ff5d73', 1.2))
-    gem.position.set(Math.cos(a) * 0.44, 0.55, Math.sin(a) * 0.44 + 0.02); g.add(gem)
+  const knit = fabric('#2f2f6e', { roughness: 0.95 })
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.6, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.52), knit)
+  dome.scale.set(1, 0.72, 1); dome.position.y = 0.34; g.add(dome)
+  // Chunky folded rim — the detail that makes knitwear read as knitwear.
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.615, 0.615, 0.17, 34), fabric('#3a3a86', { roughness: 0.95 }))
+  rim.position.y = 0.4; g.add(rim)
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2
+    const rib = new THREE.Mesh(new RoundedBoxGeometry(0.03, 0.16, 0.03, 3, 0.012), fabric('#31317a', { roughness: 0.98 }))
+    rib.position.set(Math.sin(a) * 0.62, 0.4, Math.cos(a) * 0.62); rib.rotation.y = -a; g.add(rib)
   }
+  const label = new THREE.Mesh(new RoundedBoxGeometry(0.15, 0.07, 0.02, 3, 0.014), shell(CARBON))
+  label.position.set(0.24, 0.4, 0.56); label.rotation.y = -0.42; g.add(label)
+  const spark = new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.02), holo(NEON, 0.7))
+  spark.position.set(0.245, 0.4, 0.575); spark.rotation.y = -0.42; g.add(spark)
   return g
 }
-function buildHeadphones() {
+function buildHood() {
   const g = new THREE.Group()
-  const band = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.045, 12, 30, Math.PI), mat('#2a2350'))
-  band.position.y = 0.12; g.add(band)
+  const cloth = fabric('#1d1c44', { side: THREE.DoubleSide })
+  // Sphere slice open toward +Z: the face stays clear, the fabric wraps behind.
+  const cowl = new THREE.Mesh(new THREE.SphereGeometry(0.82, 40, 28, Math.PI / 2 + 0.66, Math.PI * 2 - 1.32, 0, Math.PI * 0.72), cloth)
+  cowl.scale.set(1, 0.98, 1.04); cowl.position.set(0, 0.02, -0.05); g.add(cowl)
+  const peak = new THREE.Mesh(new THREE.SphereGeometry(0.34, 20, 14), cloth)
+  peak.scale.set(1, 0.7, 1.3); peak.position.set(0, 0.42, -0.44); g.add(peak)
+  const brim = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.06, 12, 40, Math.PI * 1.15), fabric('#2b2a63'))
+  brim.position.set(0, 0.02, -0.02); brim.rotation.set(0, 0, Math.PI * 0.42); g.add(brim)
   for (const side of [-1, 1]) {
-    const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.12, 20), mat('#3a3266'))
-    cup.rotation.z = Math.PI / 2; cup.position.set(0.56 * side, 0.0, 0); g.add(cup)
-    const pad = new THREE.Mesh(new THREE.CircleGeometry(0.13, 20), emissive('#3fd9e0', 0.8))
-    pad.rotation.y = (-Math.PI / 2) * side; pad.position.set(0.62 * side, 0.0, 0); g.add(pad)
+    const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.34, 8), fabric('#d8dcff'))
+    cord.position.set(0.34 * side, -0.42, 0.36); cord.rotation.z = 0.12 * side; g.add(cord)
+    const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.05, 12), metal(STEEL))
+    tip.position.set(0.34 * side, -0.6, 0.36); g.add(tip)
   }
   return g
 }
-function buildPropeller() {
+function buildHeadset() {
   const g = new THREE.Group()
-  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.46, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2), mat('#3fd9e0'))
-  cap.scale.set(1, 0.5, 1); cap.position.y = 0.46; g.add(cap)
-  const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.16, 10), mat('#2a2350'))
-  stalk.position.y = 0.72; g.add(stalk)
-  const prop = new THREE.Group()
+  const band = new THREE.Mesh(new THREE.TorusGeometry(0.63, 0.045, 14, 40, Math.PI), shell(CARBON))
+  band.position.y = 0.04; g.add(band)
+  const padding = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.035, 12, 32, Math.PI * 0.8), fabric('#33326d'))
+  padding.position.y = 0.04; padding.rotation.z = Math.PI * 0.1; g.add(padding)
+  const rings: THREE.MeshStandardMaterial[] = []
+  for (const side of [-1, 1]) {
+    const arm = new THREE.Mesh(new RoundedBoxGeometry(0.07, 0.2, 0.09, 4, 0.03), metal('#5b5f8e'))
+    arm.position.set(0.63 * side, -0.02, 0); g.add(arm)
+    const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.19, 0.14, 28), shell(CARBON))
+    cup.rotation.z = Math.PI / 2; cup.position.set(0.68 * side, -0.06, 0); g.add(cup)
+    const cushion = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.045, 12, 28), fabric('#2a2a5e'))
+    cushion.rotation.y = Math.PI / 2; cushion.position.set(0.62 * side, -0.06, 0); g.add(cushion)
+    const ledMat = emissive(NEON, 2.4)
+    const led = new THREE.Mesh(new THREE.TorusGeometry(0.155, 0.022, 12, 32), ledMat)
+    led.rotation.y = Math.PI / 2; led.position.set(0.755 * side, -0.06, 0); g.add(led)
+    rings.push(ledMat)
+    const plate = new THREE.Mesh(new THREE.CircleGeometry(0.14, 26), shell(GRAPHITE))
+    plate.rotation.y = (Math.PI / 2) * side; plate.position.set(0.757 * side, -0.06, 0); g.add(plate)
+  }
+  // Mic boom sweeping forward from the left cup.
+  const boom = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.7, -0.14, 0.04), new THREE.Vector3(-0.62, -0.3, 0.3),
+    new THREE.Vector3(-0.42, -0.34, 0.5), new THREE.Vector3(-0.2, -0.3, 0.56),
+  ])
+  const boomMesh = new THREE.Mesh(new THREE.TubeGeometry(boom, 24, 0.019, 8, false), shell(CARBON)); g.add(boomMesh)
+  const mic = new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 0.05, 6, 14), shell(GRAPHITE))
+  mic.position.set(-0.19, -0.3, 0.57); mic.rotation.z = Math.PI / 2; g.add(mic)
+  const micLed = emissive(VIOLET, 2)
+  const micDot = new THREE.Mesh(new THREE.SphereGeometry(0.022, 12, 10), micLed)
+  micDot.position.set(-0.15, -0.3, 0.6); g.add(micDot)
+  g.userData.animate = (t: number) => {
+    const pulse = 1.7 + Math.sin(t * 2.4) * 0.7
+    rings.forEach((m, i) => { m.emissiveIntensity = pulse + i * 0.15 })
+    micLed.emissiveIntensity = 1.6 + Math.sin(t * 5) * 0.5
+  }
+  return g
+}
+function buildNeonCrest() {
+  const g = new THREE.Group()
+  const blades: THREE.Mesh[] = []
+  const glowMats: THREE.MeshBasicMaterial[] = []
+  const rail = new THREE.Mesh(new RoundedBoxGeometry(0.1, 0.06, 0.92, 4, 0.028), shell(CARBON))
+  rail.position.y = 0.5; g.add(rail)
+  for (let i = 0; i < 7; i++) {
+    const k = i / 6
+    const height = 0.16 + Math.sin(k * Math.PI) * 0.34
+    const z = -0.38 + k * 0.76
+    const core = new THREE.Mesh(new THREE.ConeGeometry(0.05, height, 3), emissive(i % 2 ? NEON : VIOLET, 2.6))
+    core.scale.z = 0.3; core.position.set(0, 0.52 + height / 2, z); core.rotation.y = Math.PI / 2
+    g.add(core); blades.push(core)
+    const aura = new THREE.Mesh(new THREE.ConeGeometry(0.09, height * 1.24, 3), holo(i % 2 ? NEON : VIOLET, 0.3))
+    aura.scale.z = 0.3; aura.position.copy(core.position); aura.rotation.y = Math.PI / 2
+    g.add(aura); glowMats.push(aura.material as THREE.MeshBasicMaterial)
+  }
+  g.userData.animate = (t: number) => {
+    blades.forEach((b, i) => { b.scale.y = 1 + Math.sin(t * 3.4 + i * 0.7) * 0.11 })
+    glowMats.forEach((m, i) => { m.opacity = 0.24 + Math.sin(t * 3.4 + i * 0.7) * 0.12 })
+  }
+  return g
+}
+function buildLightCrown() {
+  const g = new THREE.Group()
+  const ring = new THREE.Group(); ring.position.y = 0.78; g.add(ring)
+  const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.012, 10, 56), emissive('#ffd98a', 2.2))
+  hoop.rotation.x = Math.PI / 2; ring.add(hoop)
+  const haze = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.05, 8, 40), holo('#ffd98a', 0.22))
+  haze.rotation.x = Math.PI / 2; ring.add(haze)
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2
+    const tall = i % 2 === 0
+    const shard = new THREE.Mesh(new THREE.ConeGeometry(0.045, tall ? 0.3 : 0.18, 4), emissive('#fff0c2', 2))
+    shard.position.set(Math.cos(a) * 0.42, (tall ? 0.15 : 0.09), Math.sin(a) * 0.42)
+    shard.rotation.y = -a; ring.add(shard)
+    const aura = new THREE.Mesh(new THREE.ConeGeometry(0.08, tall ? 0.38 : 0.24, 4), holo('#ffe6a8', 0.2))
+    aura.position.copy(shard.position); aura.rotation.y = -a; ring.add(aura)
+  }
+  g.userData.animate = (t: number, dt: number) => {
+    ring.rotation.y += dt * 0.5
+    ring.position.y = 0.78 + Math.sin(t * 1.5) * 0.02
+    ;(haze.material as THREE.MeshBasicMaterial).opacity = 0.18 + Math.sin(t * 2.2) * 0.06
+  }
+  return g
+}
+function buildCompanionDrone() {
+  const g = new THREE.Group()
+  const craft = new THREE.Group(); craft.position.y = 1.02; g.add(craft)
+  const body = new THREE.Mesh(new RoundedBoxGeometry(0.3, 0.11, 0.34, 6, 0.05), shell(CARBON))
+  craft.add(body)
+  const spine = new THREE.Mesh(new RoundedBoxGeometry(0.16, 0.05, 0.2, 4, 0.02), metal(STEEL))
+  spine.position.y = 0.07; craft.add(spine)
+  const lens = new THREE.Mesh(new THREE.SphereGeometry(0.06, 18, 14), glass('#08122a', 0.85))
+  lens.position.set(0, -0.03, 0.18); craft.add(lens)
+  const eyeMat = emissive(NEON, 2.6)
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.028, 14, 12), eyeMat)
+  eye.position.set(0, -0.03, 0.21); craft.add(eye)
+  const rotors: THREE.Group[] = []
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    const armMesh = new THREE.Mesh(new RoundedBoxGeometry(0.24, 0.035, 0.05, 3, 0.016), shell(GRAPHITE))
+    armMesh.position.set(0.13 * sx, 0, 0.14 * sz); armMesh.rotation.y = (Math.PI / 4) * -sx * sz; craft.add(armMesh)
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.05, 14), metal('#6a6fa4'))
+    hub.position.set(0.24 * sx, 0.03, 0.24 * sz); craft.add(hub)
+    const rotor = new THREE.Group(); rotor.position.set(0.24 * sx, 0.07, 0.24 * sz); craft.add(rotor); rotors.push(rotor)
+    for (let b = 0; b < 2; b++) {
+      const blade = new THREE.Mesh(new RoundedBoxGeometry(0.24, 0.008, 0.05, 3, 0.004), holo('#cfe6ff', 0.5))
+      blade.position.x = 0.12; const holder = new THREE.Group(); holder.rotation.y = b * Math.PI; holder.add(blade); rotor.add(holder)
+    }
+  }
+  const beam = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.34, 18, 1, true), holo(NEON, 0.11))
+  beam.position.set(0, -0.24, 0.06); beam.rotation.x = Math.PI; craft.add(beam)
+  g.userData.animate = (t: number, dt: number) => {
+    rotors.forEach((r) => { r.rotation.y += dt * 26 })
+    craft.position.y = 1.02 + Math.sin(t * 1.9) * 0.035
+    craft.rotation.z = Math.sin(t * 1.3) * 0.06
+    eyeMat.emissiveIntensity = 2.2 + Math.sin(t * 4) * 0.7
+  }
+  return g
+}
+function buildAstroHelmet() {
+  const g = new THREE.Group()
+  const back = new THREE.Mesh(new THREE.SphereGeometry(0.72, 36, 26), shell('#f2f4ff'))
+  back.scale.set(1, 1, 1.02); back.position.y = 0.02; g.add(back)
+  // Dark iridescent visor wrapping the front, cut from the same sphere.
+  const visor = new THREE.Mesh(new THREE.SphereGeometry(0.735, 40, 28, Math.PI / 2 - 0.95, 1.9, 0.55, 1.15), glass('#0a0b22', 0.94, { iridescence: 0.75, iridescenceIOR: 1.6, side: THREE.DoubleSide }))
+  visor.scale.set(1, 1, 1.02); visor.position.y = 0.02; g.add(visor)
+  const trim = new THREE.Mesh(new THREE.TorusGeometry(0.63, 0.035, 12, 44), metal(STEEL))
+  trim.rotation.x = Math.PI / 2; trim.position.y = -0.36; g.add(trim)
+  for (const side of [-1, 1]) {
+    const vent = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.1, 20), metal('#7b86b4'))
+    vent.rotation.z = Math.PI / 2; vent.position.set(0.69 * side, -0.06, -0.14); g.add(vent)
+    const led = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.014, 10, 22), emissive(NEON, 2))
+    led.rotation.y = Math.PI / 2; led.position.set(0.74 * side, -0.06, -0.14); g.add(led)
+  }
+  const fin = new THREE.Mesh(new RoundedBoxGeometry(0.06, 0.16, 0.5, 4, 0.025), shell('#e3e7fb'))
+  fin.position.set(0, 0.66, -0.16); g.add(fin)
+  const sheen = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.09), holo('#ffffff', 0.12))
+  sheen.position.set(-0.1, 0.24, 0.68); sheen.rotation.z = -0.24; g.add(sheen)
+  return g
+}
+function buildBattleHelmet() {
+  const g = new THREE.Group()
+  const dome = new THREE.Mesh(new RoundedBoxGeometry(1.2, 0.62, 1.06, 10, 0.3), shell(CARBON))
+  dome.position.y = 0.32; g.add(dome)
+  const jaw = new THREE.Mesh(new RoundedBoxGeometry(1.1, 0.42, 0.98, 8, 0.26), shell(GRAPHITE))
+  jaw.position.y = -0.24; g.add(jaw)
+  const brow = new THREE.Mesh(new RoundedBoxGeometry(1.06, 0.11, 0.14, 4, 0.045), metal('#8d7cff'))
+  brow.position.set(0, 0.26, 0.5); g.add(brow)
+  const slitMat = emissive(NEON, 2.8)
+  const slit = new THREE.Mesh(new RoundedBoxGeometry(0.78, 0.09, 0.05, 4, 0.03), slitMat)
+  slit.position.set(0, 0.06, 0.53); g.add(slit)
+  const slitGlow = new THREE.Mesh(new THREE.PlaneGeometry(0.92, 0.22), holo(NEON, 0.28))
+  slitGlow.position.set(0, 0.06, 0.56); g.add(slitGlow)
+  const crest = new THREE.Mesh(new RoundedBoxGeometry(0.09, 0.2, 0.86, 4, 0.035), metal('#8d7cff'))
+  crest.position.set(0, 0.6, -0.02); g.add(crest)
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < 3; i++) {
+      const vent = new THREE.Mesh(new RoundedBoxGeometry(0.05, 0.05, 0.26, 3, 0.02), metal('#5f6698'))
+      vent.position.set(0.6 * side, -0.02 - i * 0.11, -0.1); g.add(vent)
+    }
+    const cheek = new THREE.Mesh(new RoundedBoxGeometry(0.12, 0.3, 0.24, 4, 0.05), shell('#2c2a58'))
+    cheek.position.set(0.52 * side, -0.16, 0.34); cheek.rotation.y = -0.2 * side; g.add(cheek)
+  }
+  g.userData.animate = (t: number) => {
+    slitMat.emissiveIntensity = 2.4 + Math.sin(t * 2.6) * 0.7
+    ;(slitGlow.material as THREE.MeshBasicMaterial).opacity = 0.22 + Math.sin(t * 2.6) * 0.08
+  }
+  return g
+}
+// ── face (anchor sits at the visor centre; the eyes read around y 0.05, z 0.47) ──
+function buildShades() {
+  const g = new THREE.Group()
+  // One-piece wrap lens cut from a cylinder wall so it hugs the visor curve.
+  const lens = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.53, 0.53, 0.19, 44, 1, true, -0.66, 1.32),
+    shell('#07091c', { metalness: 0.7, roughness: 0.06, side: THREE.DoubleSide, iridescence: 0.5, iridescenceIOR: 1.5 }),
+  )
+  lens.position.set(0, 0.07, 0); g.add(lens)
+  const browLine = new THREE.Mesh(new THREE.CylinderGeometry(0.535, 0.535, 0.028, 44, 1, true, -0.66, 1.32), emissive(VIOLET, 1.8))
+  browLine.position.set(0, 0.175, 0); g.add(browLine)
+  const shine = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.045), holo('#ffffff', 0.18))
+  shine.position.set(-0.13, 0.1, 0.53); shine.rotation.set(0, 0.25, -0.18); g.add(shine)
+  for (const side of [-1, 1]) {
+    const temple = new THREE.Mesh(new RoundedBoxGeometry(0.04, 0.05, 0.22, 3, 0.015), shell(CARBON))
+    temple.position.set(0.5 * side, 0.07, 0.24); temple.rotation.y = 0.5 * side; g.add(temple)
+  }
+  return g
+}
+function buildHudVisor() {
+  const g = new THREE.Group()
+  const arm = new THREE.Mesh(new RoundedBoxGeometry(0.34, 0.035, 0.05, 3, 0.016), shell(CARBON))
+  arm.position.set(0.4, 0.16, 0.34); arm.rotation.set(0, 0.62, -0.12); g.add(arm)
+  const mount = new THREE.Mesh(new RoundedBoxGeometry(0.06, 0.1, 0.06, 3, 0.02), metal('#6f78ad'))
+  mount.position.set(0.31, 0.11, 0.46); g.add(mount)
+  const frame = new THREE.Mesh(new RoundedBoxGeometry(0.34, 0.21, 0.012, 4, 0.02), shell(GRAPHITE))
+  frame.position.set(0.16, 0.06, 0.5); frame.rotation.y = -0.2; g.add(frame)
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.17), decal(holo(NEON, 0.3)))
+  panel.position.set(0.16, 0.06, 0.512); panel.rotation.y = -0.2; panel.renderOrder = 12; g.add(panel)
+  const scan = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.012), decal(holo('#d8fbff', 0.85)))
+  scan.position.set(0.16, 0.06, 0.517); scan.rotation.y = -0.2; scan.renderOrder = 13; g.add(scan)
+  const ticks: THREE.Mesh[] = []
   for (let i = 0; i < 3; i++) {
-    const blade = new THREE.Mesh(new RoundedBoxGeometry(0.34, 0.02, 0.09, 3, 0.01), mat(['#ff5d73', '#ffd166', '#6a4cf0'][i]))
-    blade.position.x = 0.17
-    const holder = new THREE.Group(); holder.rotation.y = (i / 3) * Math.PI * 2; holder.add(blade); prop.add(holder)
+    const tick = new THREE.Mesh(new THREE.PlaneGeometry(0.05 + i * 0.03, 0.012), decal(holo(NEON, 0.75)))
+    tick.position.set(0.07 + i * 0.005, 0.11 - i * 0.045, 0.516); tick.rotation.y = -0.2; tick.renderOrder = 13
+    g.add(tick); ticks.push(tick)
   }
-  prop.position.y = 0.82; g.add(prop)
-  g.userData.spin = prop
+  g.userData.animate = (t: number) => {
+    scan.position.y = 0.06 + Math.sin(t * 1.6) * 0.07
+    ticks.forEach((tick, i) => { (tick.material as THREE.MeshBasicMaterial).opacity = 0.4 + Math.abs(Math.sin(t * 2 + i)) * 0.5 })
+  }
   return g
 }
-// ── face ──
-function buildSunglasses() {
+function buildWarPaint() {
   const g = new THREE.Group()
-  const frameMat = mat('#1a1730', { metalness: 0.3, roughness: 0.3 })
+  const strips: THREE.MeshBasicMaterial[] = []
   for (const side of [-1, 1]) {
-    const lens = new THREE.Mesh(new THREE.CircleGeometry(0.16, 24), new THREE.MeshStandardMaterial({ color: '#0a0a14', roughness: 0.1, metalness: 0.6 }))
-    lens.position.set(0.17 * side, 0.05, 0.5); g.add(lens)
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.02, 10, 24), frameMat)
-    rim.position.set(0.17 * side, 0.05, 0.5); g.add(rim)
+    for (let i = 0; i < 3; i++) {
+      const material = decal(holo(i === 1 ? VIOLET : NEON, 0.8))
+      const streak = new THREE.Mesh(new THREE.PlaneGeometry(0.022, 0.1 + i * 0.03), material)
+      streak.position.set((0.13 + i * 0.045) * side, -0.07 - i * 0.012, 0.478)
+      streak.rotation.z = 0.22 * side; streak.renderOrder = 11
+      g.add(streak); strips.push(material)
+    }
+    const chevron = new THREE.Mesh(new THREE.PlaneGeometry(0.11, 0.016), decal(holo(NEON, 0.7)))
+    chevron.position.set(0.06 * side, 0.19, 0.478); chevron.rotation.z = -0.4 * side; chevron.renderOrder = 11
+    g.add(chevron); strips.push(chevron.material as THREE.MeshBasicMaterial)
   }
-  const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.02, 0.02), frameMat)
-  bridge.position.set(0, 0.05, 0.51); g.add(bridge)
+  g.userData.animate = (t: number) => {
+    strips.forEach((m, i) => { m.opacity = 0.5 + Math.sin(t * 2.2 + i * 0.5) * 0.28 })
+  }
   return g
 }
+function buildCyberMask() {
+  const g = new THREE.Group()
+  const plate = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.5, 0.4, 0.36, 40, 1, true, -0.8, 1.6),
+    shell('#191734', { side: THREE.DoubleSide }),
+  )
+  plate.position.set(0, -0.19, 0); g.add(plate)
+  const edge = new THREE.Mesh(new THREE.CylinderGeometry(0.505, 0.505, 0.02, 40, 1, true, -0.8, 1.6), metal('#727ab0'))
+  edge.position.set(0, -0.02, 0); g.add(edge)
+  const grillMats: THREE.MeshStandardMaterial[] = []
+  for (let i = 0; i < 3; i++) {
+    const material = emissive(NEON, 2)
+    const slat = new THREE.Mesh(new RoundedBoxGeometry(0.22 - i * 0.04, 0.022, 0.03, 3, 0.01), material)
+    slat.position.set(0, -0.16 - i * 0.055, 0.47); g.add(slat); grillMats.push(material)
+  }
+  for (const side of [-1, 1]) {
+    const filter = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.09, 22), metal('#5d64a0'))
+    filter.rotation.z = Math.PI / 2; filter.position.set(0.42 * side, -0.2, 0.28); filter.rotation.y = -0.5 * side; g.add(filter)
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.014, 10, 22), emissive(VIOLET, 1.8))
+    ring.position.set(0.47 * side, -0.2, 0.28); ring.rotation.y = (Math.PI / 2) - 0.5 * side; g.add(ring)
+  }
+  const strap = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.018, 8, 34), shell(CARBON))
+  strap.position.set(0, -0.14, 0); strap.rotation.set(0.1, Math.PI / 2, 0); strap.scale.set(1, 0.9, 1); g.add(strap)
+  g.userData.animate = (t: number) => {
+    grillMats.forEach((m, i) => { m.emissiveIntensity = 1.4 + Math.abs(Math.sin(t * 1.7 + i * 0.6)) * 1.2 })
+  }
+  return g
+}
+/** Kept for the girl variant bundle only — brows are no longer a shop item. */
 function buildEyebrows() {
   const g = new THREE.Group()
   for (const side of [-1, 1]) {
@@ -145,288 +410,449 @@ export function buildBlondeHair() {
   g.position.y = 0.28
   return g
 }
-// ── hand ──
-function buildSkateboard() {
+// ── hand (anchor sits in the right palm) ──
+function buildSkate() {
   const g = new THREE.Group()
-  const deck = new THREE.Mesh(new RoundedBoxGeometry(0.72, 0.05, 0.22, 5, 0.06), mat('#ff5d73')); g.add(deck)
-  const grip = new THREE.Mesh(new RoundedBoxGeometry(0.68, 0.01, 0.2, 4, 0.04), mat('#2a2350', { roughness: 0.9 }))
-  grip.position.y = 0.031; g.add(grip)
+  const deck = new THREE.Mesh(new RoundedBoxGeometry(0.8, 0.045, 0.24, 6, 0.055), shell('#1b1a3e'))
+  g.add(deck)
+  const grip = new THREE.Mesh(new RoundedBoxGeometry(0.76, 0.012, 0.21, 4, 0.02), fabric('#0d0c22', { roughness: 0.99 }))
+  grip.position.y = 0.03; g.add(grip)
+  // Graphic + underglow are what make it read as a 2020s board, not a toy.
+  const artA = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.16), holo(VIOLET, 0.6))
+  artA.rotation.x = Math.PI / 2; artA.position.set(-0.14, -0.026, 0); g.add(artA)
+  const artB = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.16), holo(NEON, 0.6))
+  artB.rotation.x = Math.PI / 2; artB.position.set(0.2, -0.026, 0); g.add(artB)
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(0.68, 0.2), holo(NEON, 0.25))
+  glow.rotation.x = Math.PI / 2; glow.position.y = -0.07; g.add(glow)
+  const wheelMats: THREE.MeshStandardMaterial[] = []
+  for (const sx of [-1, 1]) {
+    const truck = new THREE.Mesh(new RoundedBoxGeometry(0.09, 0.06, 0.2, 4, 0.02), metal('#8e97c9'))
+    truck.position.set(0.26 * sx, -0.05, 0); g.add(truck)
+    for (const sz of [-1, 1]) {
+      const material = emissive(sx > 0 ? NEON : VIOLET, 1.4)
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.055, 20), material)
+      wheel.rotation.x = Math.PI / 2; wheel.position.set(0.28 * sx, -0.08, 0.09 * sz); g.add(wheel)
+      wheelMats.push(material)
+    }
+  }
+  g.rotation.set(0, 0.24, Math.PI / 2)
+  g.position.set(0.02, -0.12, 0.12); g.scale.setScalar(0.92)
+  g.userData.animate = (t: number) => {
+    wheelMats.forEach((m, i) => { m.emissiveIntensity = 1.1 + Math.sin(t * 2.6 + i) * 0.5 })
+  }
+  return g
+}
+function buildHandDrone() {
+  const g = new THREE.Group()
+  const craft = new THREE.Group(); craft.position.set(0.04, 0.26, 0.16); g.add(craft)
+  const body = new THREE.Mesh(new RoundedBoxGeometry(0.22, 0.08, 0.26, 5, 0.04), shell(CARBON)); craft.add(body)
+  const cap = new THREE.Mesh(new RoundedBoxGeometry(0.12, 0.045, 0.16, 4, 0.02), metal(STEEL))
+  cap.position.y = 0.055; craft.add(cap)
+  const eyeMat = emissive(NEON, 2.6)
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.032, 14, 12), eyeMat)
+  eye.position.set(0, -0.02, 0.14); craft.add(eye)
+  const rotors: THREE.Group[] = []
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.05, 18), mat('#ffd166'))
-    wheel.rotation.x = Math.PI / 2; wheel.position.set(0.26 * sx, -0.08, 0.08 * sz); g.add(wheel)
+    const armMesh = new THREE.Mesh(new RoundedBoxGeometry(0.18, 0.028, 0.04, 3, 0.012), shell(GRAPHITE))
+    armMesh.position.set(0.1 * sx, 0, 0.11 * sz); armMesh.rotation.y = (Math.PI / 4) * -sx * sz; craft.add(armMesh)
+    const rotor = new THREE.Group(); rotor.position.set(0.18 * sx, 0.05, 0.18 * sz); craft.add(rotor); rotors.push(rotor)
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.036, 0.04, 12), metal('#6a6fa4')); rotor.add(hub)
+    for (let b = 0; b < 2; b++) {
+      const blade = new THREE.Mesh(new RoundedBoxGeometry(0.18, 0.006, 0.04, 3, 0.003), holo('#cfe6ff', 0.5))
+      blade.position.x = 0.09
+      const holder = new THREE.Group(); holder.rotation.y = b * Math.PI; holder.add(blade); rotor.add(holder)
+    }
   }
-  g.rotation.z = Math.PI / 2; g.rotation.y = 0.2
-  g.position.set(0, -0.1, 0.1); g.scale.setScalar(0.9)
-  return g
-}
-// ── back ──
-function buildCape() {
-  const g = new THREE.Group()
-  const cape = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.95, 8, 8), new THREE.MeshStandardMaterial({ color: '#6a4cf0', side: THREE.DoubleSide, roughness: 0.6 }))
-  cape.position.set(0, -0.3, -0.02)
-  const pos = cape.geometry.attributes.position
-  for (let i = 0; i < pos.count; i++) { const x = pos.getX(i); pos.setZ(i, -Math.cos(x * 3) * 0.06 - 0.05) }
-  pos.needsUpdate = true; cape.geometry.computeVertexNormals()
-  g.add(cape)
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.03, 10, 22, Math.PI), mat('#5a3fd6'))
-  collar.position.set(0, 0.16, 0.02); collar.rotation.x = Math.PI / 2; g.add(collar)
-  g.userData.wave = cape
-  return g
-}
-function buildJetpack() {
-  const g = new THREE.Group()
-  for (const side of [-1, 1]) {
-    const tank = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.34, 8, 16), mat('#c9d4e6', { metalness: 0.5, roughness: 0.3 }))
-    tank.position.set(0.16 * side, -0.1, -0.16); g.add(tank)
-    const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.11, 0.1, 16), mat('#4a4a5a'))
-    nozzle.position.set(0.16 * side, -0.36, -0.16); g.add(nozzle)
-    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.22, 14), emissive('#ff9d3f', 1.8))
-    flame.position.set(0.16 * side, -0.52, -0.16); flame.rotation.x = Math.PI; flame.userData.flame = true; g.add(flame)
+  const link = new THREE.Mesh(new THREE.PlaneGeometry(0.02, 0.24), holo(NEON, 0.2))
+  link.position.set(0.04, 0.12, 0.16); g.add(link)
+  g.userData.animate = (t: number, dt: number) => {
+    rotors.forEach((r) => { r.rotation.y += dt * 28 })
+    craft.position.y = 0.26 + Math.sin(t * 2.1) * 0.03
+    craft.rotation.z = Math.sin(t * 1.5) * 0.08
+    eyeMat.emissiveIntensity = 2.2 + Math.sin(t * 4.2) * 0.7
   }
-  g.userData.flames = g.children.filter((c) => (c as THREE.Mesh).userData.flame)
   return g
 }
-// ── body ──
-function buildIronmanSuit() {
+function buildGuitar() {
   const g = new THREE.Group()
-  const plate = new THREE.Mesh(new THREE.SphereGeometry(0.31, 32, 24), new THREE.MeshStandardMaterial({ color: '#c0392b', metalness: 0.7, roughness: 0.25 }))
-  plate.scale.set(0.92, 1.04, 0.8); g.add(plate)
-  const goldMat = new THREE.MeshStandardMaterial({ color: '#f1c40f', metalness: 0.8, roughness: 0.2 })
+  const bodyMat = shell('#c4133f', { clearcoatRoughness: 0.04 })
+  const body = new THREE.Mesh(new RoundedBoxGeometry(0.34, 0.4, 0.07, 8, 0.11), bodyMat)
+  body.position.y = -0.12; g.add(body)
+  const horn = new THREE.Mesh(new THREE.SphereGeometry(0.11, 18, 14), bodyMat)
+  horn.scale.set(1, 1.1, 0.35); horn.position.set(-0.13, 0.03, 0); g.add(horn)
+  const pickguard = new THREE.Mesh(new RoundedBoxGeometry(0.19, 0.24, 0.02, 4, 0.05), shell('#0f0e26'))
+  pickguard.position.set(0.03, -0.14, 0.045); pickguard.rotation.z = 0.22; g.add(pickguard)
+  for (let i = 0; i < 2; i++) {
+    const pickup = new THREE.Mesh(new RoundedBoxGeometry(0.15, 0.035, 0.03, 3, 0.012), metal('#c9ced8'))
+    pickup.position.set(0, -0.05 - i * 0.13, 0.055); g.add(pickup)
+  }
+  const neck = new THREE.Mesh(new RoundedBoxGeometry(0.075, 0.62, 0.045, 4, 0.018), shell('#4b2f1d'))
+  neck.position.y = 0.36; g.add(neck)
+  const board = new THREE.Mesh(new RoundedBoxGeometry(0.078, 0.6, 0.012, 3, 0.006), shell('#241428'))
+  board.position.set(0, 0.36, 0.028); g.add(board)
+  for (let i = 0; i < 7; i++) {
+    const fret = new THREE.Mesh(new THREE.BoxGeometry(0.078, 0.006, 0.004), metal('#d8dce8'))
+    fret.position.set(0, 0.12 + i * 0.085, 0.035); g.add(fret)
+  }
+  const head = new THREE.Mesh(new RoundedBoxGeometry(0.11, 0.17, 0.035, 4, 0.02), shell('#3b2416'))
+  head.position.set(0.01, 0.74, 0); head.rotation.z = -0.12; g.add(head)
+  const stringMat = emissive('#e9f1ff', 0.9)
+  for (let i = 0; i < 4; i++) {
+    const s = new THREE.Mesh(new THREE.CylinderGeometry(0.0035, 0.0035, 0.95, 6), stringMat)
+    s.position.set(-0.024 + i * 0.016, 0.28, 0.042); g.add(s)
+  }
+  const strap = new THREE.Mesh(new RoundedBoxGeometry(0.05, 0.5, 0.014, 3, 0.006), fabric('#2b2a63'))
+  strap.position.set(-0.12, 0.2, -0.05); strap.rotation.z = 0.24; g.add(strap)
+  g.rotation.set(0.12, 0.3, -0.55)
+  g.position.set(0.04, -0.14, 0.16); g.scale.setScalar(0.86)
+  return g
+}
+function buildHoloPad() {
+  const g = new THREE.Group()
+  const pad = new THREE.Group(); pad.position.set(0.02, 0.06, 0.2); g.add(pad)
+  const frame = new THREE.Mesh(new RoundedBoxGeometry(0.4, 0.28, 0.018, 5, 0.022), shell(CARBON)); pad.add(frame)
+  const rim = new THREE.Mesh(new RoundedBoxGeometry(0.42, 0.3, 0.006, 4, 0.02), emissive(VIOLET, 1.2))
+  rim.position.z = -0.012; pad.add(rim)
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 0.23), holo(NEON, 0.34))
+  screen.position.z = 0.014; pad.add(screen)
+  const bars: THREE.Mesh[] = []
+  for (let i = 0; i < 4; i++) {
+    const bar = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.02), holo('#d8fbff', 0.75))
+    bar.position.set(-0.12 + i * 0.08, -0.06, 0.02); pad.add(bar); bars.push(bar)
+  }
+  const panels: THREE.Mesh[] = []
+  for (let i = 0; i < 2; i++) {
+    const panel = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.1), holo(VIOLET, 0.3))
+    panel.position.set(0.3, 0.16 - i * 0.24, 0.16); panel.rotation.y = -0.5
+    g.add(panel); panels.push(panel)
+  }
+  g.rotation.set(-0.25, -0.3, 0)
+  g.userData.animate = (t: number) => {
+    bars.forEach((bar, i) => { bar.scale.y = 0.5 + Math.abs(Math.sin(t * 2.4 + i * 0.8)) * 1.6 })
+    panels.forEach((panel, i) => {
+      panel.position.y = (0.16 - i * 0.24) + Math.sin(t * 1.5 + i) * 0.02
+      ;(panel.material as THREE.MeshBasicMaterial).opacity = 0.22 + Math.sin(t * 2 + i) * 0.1
+    })
+    ;(screen.material as THREE.MeshBasicMaterial).opacity = 0.3 + Math.sin(t * 1.8) * 0.06
+  }
+  return g
+}
+function buildPlasmaBlade() {
+  const g = new THREE.Group()
+  const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.034, 0.24, 18), metal('#5f6796'))
+  grip.position.y = -0.06; g.add(grip)
+  for (let i = 0; i < 4; i++) {
+    const wrap = new THREE.Mesh(new THREE.TorusGeometry(0.039, 0.008, 8, 20), shell(CARBON))
+    wrap.rotation.x = Math.PI / 2; wrap.position.y = -0.14 + i * 0.05; g.add(wrap)
+  }
+  const guard = new THREE.Mesh(new RoundedBoxGeometry(0.17, 0.03, 0.06, 3, 0.012), metal('#8e97c9'))
+  guard.position.y = 0.08; g.add(guard)
+  const coreMat = emissive('#dff9ff', 2.8)
+  const blade = new THREE.Mesh(new THREE.ConeGeometry(0.034, 0.72, 4), coreMat)
+  blade.scale.z = 0.26; blade.position.y = 0.46; blade.rotation.y = Math.PI / 4; g.add(blade)
+  const auraMat = holo(NEON, 0.35)
+  const aura = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.78, 4), auraMat)
+  aura.scale.z = 0.26; aura.position.y = 0.47; aura.rotation.y = Math.PI / 4; g.add(aura)
+  const edge = new THREE.Mesh(new THREE.PlaneGeometry(0.03, 0.7), holo(VIOLET, 0.4))
+  edge.position.y = 0.46; g.add(edge)
+  g.rotation.z = -0.18
+  g.position.set(0.02, -0.06, 0.12)
+  g.userData.animate = (t: number) => {
+    coreMat.emissiveIntensity = 2.4 + Math.sin(t * 6) * 0.5
+    auraMat.opacity = 0.28 + Math.sin(t * 4) * 0.1
+  }
+  return g
+}
+// ── back (anchor sits just behind the torso; shoulders are ~y 0.12) ──
+function buildBackpack() {
+  const g = new THREE.Group()
+  const body = new THREE.Mesh(new RoundedBoxGeometry(0.46, 0.54, 0.28, 8, 0.09), fabric('#20204c'))
+  body.position.set(0, -0.14, -0.17); g.add(body)
+  const flap = new THREE.Mesh(new RoundedBoxGeometry(0.47, 0.24, 0.29, 6, 0.08), fabric('#2c2c66'))
+  flap.position.set(0, 0.06, -0.17); g.add(flap)
+  const patch = new THREE.Mesh(new RoundedBoxGeometry(0.16, 0.16, 0.02, 4, 0.03), shell(CARBON))
+  patch.position.set(0, -0.1, -0.032); g.add(patch)
+  const patchGlow = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.1), holo(NEON, 0.55))
+  patchGlow.position.set(0, -0.1, -0.019); g.add(patchGlow)
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.018, 8, 20, Math.PI), fabric('#3a3a86'))
+  handle.position.set(0, 0.18, -0.17); handle.rotation.x = Math.PI / 2; g.add(handle)
   for (const side of [-1, 1]) {
-    const collar = new THREE.Mesh(new RoundedBoxGeometry(0.13, 0.12, 0.2, 5, 0.04), goldMat)
-    collar.position.set(0.14 * side, 0.16, 0.13); collar.rotation.z = -0.2 * side; g.add(collar)
-    const rib = new THREE.Mesh(new RoundedBoxGeometry(0.07, 0.28, 0.16, 5, 0.035), goldMat)
-    rib.position.set(0.21 * side, -0.02, 0.12); rib.rotation.z = -0.12 * side; g.add(rib)
+    const strap = new THREE.Mesh(new RoundedBoxGeometry(0.09, 0.44, 0.05, 4, 0.022), fabric('#2c2c66'))
+    strap.position.set(0.19 * side, 0.02, 0.01); strap.rotation.x = -0.1; g.add(strap)
+    const buckle = new THREE.Mesh(new RoundedBoxGeometry(0.07, 0.05, 0.05, 3, 0.016), metal('#8e97c9'))
+    buckle.position.set(0.19 * side, -0.1, 0.03); g.add(buckle)
+    const pocket = new THREE.Mesh(new RoundedBoxGeometry(0.1, 0.22, 0.16, 5, 0.04), fabric('#2c2c66'))
+    pocket.position.set(0.25 * side, -0.16, -0.18); g.add(pocket)
+    const zip = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.3, 0.012), emissive(VIOLET, 1.2))
+    zip.position.set(0.15 * side, -0.16, -0.032); g.add(zip)
+  }
+  g.userData.animate = (t: number) => {
+    ;(patchGlow.material as THREE.MeshBasicMaterial).opacity = 0.45 + Math.sin(t * 2) * 0.15
+  }
+  return g
+}
+function buildHoverboard() {
+  const g = new THREE.Group()
+  const board = new THREE.Group()
+  board.position.set(0, -0.08, -0.2); board.rotation.z = 0.62; g.add(board)
+  const deck = new THREE.Mesh(new RoundedBoxGeometry(0.86, 0.06, 0.28, 8, 0.05), shell('#1b1a3e')); board.add(deck)
+  const top = new THREE.Mesh(new RoundedBoxGeometry(0.8, 0.014, 0.24, 4, 0.02), fabric('#0d0c22', { roughness: 0.99 }))
+  top.position.y = 0.036; board.add(top)
+  const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.05), holo(VIOLET, 0.6))
+  stripe.rotation.x = -Math.PI / 2; stripe.position.y = 0.046; board.add(stripe)
+  const underMat = holo(NEON, 0.3)
+  const under = new THREE.Mesh(new THREE.PlaneGeometry(0.74, 0.24), underMat)
+  under.rotation.x = Math.PI / 2; under.position.y = -0.06; board.add(under)
+  const padMats: THREE.MeshStandardMaterial[] = []
+  for (const sx of [-1, 1]) {
+    const pod = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.07, 24), metal('#7d86bd'))
+    pod.position.set(0.3 * sx, -0.04, 0); board.add(pod)
+    const material = emissive(NEON, 1.8)
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.016, 10, 26), material)
+    ring.rotation.x = Math.PI / 2; ring.position.set(0.3 * sx, -0.08, 0); board.add(ring)
+    padMats.push(material)
+  }
+  for (const side of [-1, 1]) {
+    const clamp = new THREE.Mesh(new RoundedBoxGeometry(0.07, 0.16, 0.12, 4, 0.03), fabric('#2c2c66'))
+    clamp.position.set(0.2 * side, 0.02 - 0.16 * side, -0.12); g.add(clamp)
+  }
+  g.userData.animate = (t: number) => {
+    underMat.opacity = 0.24 + Math.sin(t * 2.2) * 0.1
+    padMats.forEach((m, i) => { m.emissiveIntensity = 1.5 + Math.sin(t * 2.6 + i) * 0.6 })
+  }
+  return g
+}
+function buildEnergyWings() {
+  const g = new THREE.Group()
+  const shape = new THREE.Shape()
+  shape.moveTo(0, 0.14)
+  shape.quadraticCurveTo(0.52, 0.5, 0.98, 0.16)
+  shape.quadraticCurveTo(0.6, 0.06, 0.46, -0.42)
+  shape.quadraticCurveTo(0.22, -0.1, 0, 0.14)
+  const wings: THREE.Group[] = []
+  const panelMats: THREE.MeshBasicMaterial[] = []
+  for (const side of [-1, 1]) {
+    const wing = new THREE.Group()
+    for (let i = 0; i < 3; i++) {
+      const material = holo(i === 1 ? VIOLET : NEON, 0.26 - i * 0.05)
+      const panel = new THREE.Mesh(new THREE.ShapeGeometry(shape), material)
+      panel.scale.setScalar(1 - i * 0.16); panel.position.set(0.04 * i, -0.06 * i, -0.05 * i)
+      panel.rotation.z = -0.12 * i
+      wing.add(panel); panelMats.push(material)
+    }
+    for (let i = 0; i < 4; i++) {
+      const rib = new THREE.Mesh(new RoundedBoxGeometry(0.62 - i * 0.09, 0.016, 0.016, 3, 0.006), emissive(i % 2 ? NEON : VIOLET, 2.2))
+      rib.position.set(0.32 - i * 0.02, 0.16 - i * 0.13, 0.01); rib.rotation.z = -0.16 - i * 0.16
+      wing.add(rib)
+    }
+    wing.scale.x = side; wing.position.set(0.12 * side, 0.06, -0.06)
+    wing.rotation.y = -0.34 * side
+    g.add(wing); wings.push(wing)
+  }
+  const spine = new THREE.Mesh(new RoundedBoxGeometry(0.14, 0.4, 0.1, 5, 0.04), shell(CARBON))
+  spine.position.set(0, -0.02, -0.1); g.add(spine)
+  const spineGlow = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.3), holo(NEON, 0.7))
+  spineGlow.position.set(0, -0.02, -0.04); g.add(spineGlow)
+  g.userData.animate = (t: number) => {
+    wings.forEach((wing, i) => {
+      const side = i === 0 ? -1 : 1
+      wing.rotation.y = (-0.34 + Math.sin(t * 1.5) * 0.12) * side
+      wing.position.y = 0.06 + Math.sin(t * 1.5 + 0.4) * 0.02
+    })
+    panelMats.forEach((m, i) => { m.opacity = 0.18 + Math.abs(Math.sin(t * 1.7 + i * 0.5)) * 0.14 })
+  }
+  return g
+}
+function buildThrusters() {
+  const g = new THREE.Group()
+  const spine = new THREE.Mesh(new RoundedBoxGeometry(0.2, 0.46, 0.16, 6, 0.055), shell(CARBON))
+  spine.position.set(0, -0.06, -0.12); g.add(spine)
+  const spineTrim = new THREE.Mesh(new RoundedBoxGeometry(0.07, 0.34, 0.02, 3, 0.012), emissive(VIOLET, 1.6))
+  spineTrim.position.set(0, -0.06, -0.03); g.add(spineTrim)
+  const flames: THREE.Mesh[] = []
+  const haloMats: THREE.MeshStandardMaterial[] = []
+  for (const side of [-1, 1]) {
+    const nacelle = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.135, 0.44, 26), shell('#e9ecfb'))
+    nacelle.position.set(0.24 * side, -0.06, -0.16); g.add(nacelle)
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.125, 0.026, 12, 26), metal('#7d86bd'))
+    collar.rotation.x = Math.PI / 2; collar.position.set(0.24 * side, 0.16, -0.16); g.add(collar)
+    const intakeMat = emissive(NEON, 2)
+    const intake = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.016, 10, 24), intakeMat)
+    intake.rotation.x = Math.PI / 2; intake.position.set(0.24 * side, 0.19, -0.16); g.add(intake)
+    haloMats.push(intakeMat)
+    const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.1, 0.11, 24), metal('#5f6796'))
+    nozzle.position.set(0.24 * side, -0.33, -0.16); g.add(nozzle)
+    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.095, 0.3, 18), holo('#9ff0ff', 0.55))
+    flame.position.set(0.24 * side, -0.53, -0.16); flame.rotation.x = Math.PI; g.add(flame); flames.push(flame)
+    const core = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.18, 14), emissive('#ffffff', 2.4))
+    core.position.set(0.24 * side, -0.47, -0.16); core.rotation.x = Math.PI; g.add(core); flames.push(core)
+    const strut = new THREE.Mesh(new RoundedBoxGeometry(0.14, 0.06, 0.08, 3, 0.02), shell(GRAPHITE))
+    strut.position.set(0.14 * side, 0.02, -0.14); g.add(strut)
+  }
+  g.userData.animate = (t: number) => {
+    flames.forEach((f, i) => {
+      f.scale.y = 1 + Math.sin(t * 18 + i) * 0.22
+      f.scale.x = f.scale.z = 1 + Math.sin(t * 23 + i) * 0.08
+    })
+    haloMats.forEach((m, i) => { m.emissiveIntensity = 1.7 + Math.sin(t * 3 + i) * 0.6 })
+  }
+  return g
+}
+/* ── body (anchor at the torso centre) ─────────────────────────────────────
+   The chest badge sits at local (0, 0.025, 0.19) and always draws on top, so
+   torso gear is designed to *frame* the logo rather than hide it. Shells are
+   sphere slices scaled to the torso ellipsoid (half-extents ~0.24/0.28/0.21). */
+const TORSO_SCALE: [number, number, number] = [0.94, 1.06, 0.84]
+function torsoShell(radius: number, phiStart: number, phiLength: number, material: THREE.Material, thetaStart = 0.38, thetaLength = 1.72) {
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 44, 30, phiStart, phiLength, thetaStart, thetaLength), material)
+  mesh.scale.set(...TORSO_SCALE); mesh.position.set(0, 0, -0.04)
+  return mesh
+}
+const FRONT = Math.PI / 2
+
+function buildJacket() {
+  const g = new THREE.Group()
+  const cloth = fabric('#242c66', { side: THREE.DoubleSide })
+  const lining = fabric('#12142f', { side: THREE.DoubleSide })
+  for (const side of [-1, 1]) {
+    const start = side > 0 ? FRONT + 0.34 : FRONT - 1.84
+    g.add(torsoShell(0.3, start, 1.5, cloth))
+    g.add(torsoShell(0.292, start, 1.5, lining))
+    const piping = torsoShell(0.303, side > 0 ? FRONT + 0.32 : FRONT + 1.62, 0.05, emissive(side > 0 ? NEON : VIOLET, 1.6))
+    g.add(piping)
+    const sleeve = new THREE.Mesh(new THREE.SphereGeometry(0.16, 22, 16), cloth)
+    sleeve.scale.set(1, 0.9, 1); sleeve.position.set(0.3 * side, 0.18, -0.04); g.add(sleeve)
+    const cuff = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.028, 10, 24), fabric('#151a3d'))
+    cuff.rotation.set(Math.PI / 2, 0, 0.2 * side); cuff.position.set(0.32 * side, 0.09, -0.04); g.add(cuff)
+  }
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.045, 12, 30, Math.PI * 1.35), fabric('#151a3d'))
+  collar.position.set(0, 0.24, -0.04); collar.rotation.set(Math.PI / 2, 0, Math.PI * 0.82); g.add(collar)
+  const hem = new THREE.Mesh(new THREE.TorusGeometry(0.235, 0.032, 10, 34), fabric('#151a3d'))
+  hem.rotation.x = Math.PI / 2; hem.position.set(0, -0.24, -0.04); hem.scale.set(1, 0.88, 1); g.add(hem)
+  return g
+}
+function buildJersey() {
+  const g = new THREE.Group()
+  g.add(torsoShell(0.298, FRONT - 1.78, 3.56, fabric('#1c2568', { side: THREE.DoubleSide }), 0.34, 1.78))
+  for (const side of [-1, 1]) {
+    const stripe = torsoShell(0.303, side > 0 ? FRONT + 1.02 : FRONT - 1.09, 0.07, emissive(side > 0 ? NEON : VIOLET, 1.5), 0.4, 1.6)
+    g.add(stripe)
+    const shoulder = torsoShell(0.302, side > 0 ? FRONT + 0.42 : FRONT - 0.5, 0.08, fabric('#3949b5'), 0.34, 0.5)
+    g.add(shoulder)
+  }
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.185, 0.03, 10, 30), fabric('#0f1436'))
+  collar.rotation.x = Math.PI / 2; collar.position.set(0, 0.24, -0.04); collar.scale.set(1, 0.9, 1); g.add(collar)
+  const vee = new THREE.Mesh(new RoundedBoxGeometry(0.14, 0.03, 0.03, 3, 0.012), fabric('#0f1436'))
+  vee.position.set(0, 0.18, 0.19); g.add(vee)
+  // Sponsor-style light bars under the badge stand in for a squad number.
+  const bars: THREE.Mesh[] = []
+  for (let i = 0; i < 3; i++) {
+    const bar = new THREE.Mesh(new THREE.PlaneGeometry(0.13 - i * 0.03, 0.02), holo(i === 1 ? VIOLET : NEON, 0.7))
+    bar.position.set(0, -0.08 - i * 0.045, 0.2); g.add(bar); bars.push(bar)
+  }
+  g.userData.animate = (t: number) => {
+    bars.forEach((bar, i) => { (bar.material as THREE.MeshBasicMaterial).opacity = 0.45 + Math.sin(t * 2 + i * 0.7) * 0.25 })
+  }
+  return g
+}
+function buildUtilityRig() {
+  const g = new THREE.Group()
+  const webbing = shell('#1a1940')
+  for (const side of [-1, 1]) {
+    const curve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0.2 * side, 0.24, -0.08),
+      new THREE.Vector3(0.17 * side, 0.16, 0.12),
+      new THREE.Vector3(0.03 * side, -0.02, 0.2),
+      new THREE.Vector3(-0.15 * side, -0.18, 0.14),
+      new THREE.Vector3(-0.22 * side, -0.26, -0.06),
+    ])
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 30, 0.03, 10, false), webbing))
+    const pouch = new THREE.Mesh(new RoundedBoxGeometry(0.13, 0.14, 0.09, 5, 0.03), fabric('#262a5e'))
+    pouch.position.set(0.21 * side, -0.14, 0.11); pouch.rotation.y = -0.4 * side; g.add(pouch)
+    const clip = new THREE.Mesh(new RoundedBoxGeometry(0.06, 0.04, 0.04, 3, 0.014), metal('#8e97c9'))
+    clip.position.set(0.21 * side, -0.05, 0.14); g.add(clip)
+    const light = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.014), holo(side > 0 ? NEON : VIOLET, 0.8))
+    light.position.set(0.21 * side, -0.2, 0.16); light.rotation.y = -0.4 * side; g.add(light)
+  }
+  // Buckle ring frames the chest badge instead of covering it.
+  const ringMat = emissive(NEON, 2.2)
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.018, 12, 36), ringMat)
+  ring.position.set(0, 0.025, 0.19); g.add(ring)
+  const ringBase = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.032, 12, 36), shell('#1a1940'))
+  ringBase.position.set(0, 0.025, 0.175); g.add(ringBase)
+  const belt = new THREE.Mesh(new THREE.TorusGeometry(0.235, 0.028, 10, 34), shell('#1a1940'))
+  belt.rotation.x = Math.PI / 2; belt.position.set(0, -0.24, -0.04); belt.scale.set(1, 0.88, 1); g.add(belt)
+  g.userData.animate = (t: number) => { ringMat.emissiveIntensity = 1.8 + Math.sin(t * 2.4) * 0.6 }
+  return g
+}
+function buildExoArmor() {
+  const g = new THREE.Group()
+  const plateMat = shell('#e7ebfa')
+  const underMat = shell('#20214a')
+  g.add(torsoShell(0.302, FRONT - 1.6, 3.2, plateMat, 0.34, 1.1))
+  g.add(torsoShell(0.298, FRONT - 1.35, 2.7, underMat, 1.4, 0.7))
+  for (const side of [-1, 1]) {
+    const seam = torsoShell(0.306, side > 0 ? FRONT + 0.68 : FRONT - 0.75, 0.055, emissive(NEON, 1.8), 0.36, 1.05)
+    g.add(seam)
+    const pauldron = new THREE.Mesh(new THREE.SphereGeometry(0.19, 26, 18, 0, Math.PI * 2, 0, Math.PI * 0.62), plateMat)
+    pauldron.scale.set(1, 0.85, 1); pauldron.position.set(0.3 * side, 0.16, -0.04); pauldron.rotation.z = 0.3 * side; g.add(pauldron)
+    const trim = new THREE.Mesh(new THREE.TorusGeometry(0.185, 0.016, 10, 28), metal('#7d86bd'))
+    trim.rotation.set(Math.PI / 2, 0, 0.3 * side); trim.position.set(0.3 * side, 0.13, -0.04); g.add(trim)
+    for (let i = 0; i < 3; i++) {
+      const vent = new THREE.Mesh(new RoundedBoxGeometry(0.09, 0.02, 0.03, 3, 0.008), metal('#6e77ab'))
+      vent.position.set(0.11 * side, -0.1 - i * 0.05, 0.19); g.add(vent)
+    }
+  }
+  const collarRing = new THREE.Mesh(new THREE.TorusGeometry(0.185, 0.028, 12, 32), metal('#7d86bd'))
+  collarRing.rotation.x = Math.PI / 2; collarRing.position.set(0, 0.25, -0.04); collarRing.scale.set(1, 0.9, 1); g.add(collarRing)
+  const halo = new THREE.Mesh(new THREE.TorusGeometry(0.125, 0.014, 12, 36), emissive(VIOLET, 2))
+  halo.position.set(0, 0.025, 0.195); g.add(halo)
+  return g
+}
+function buildReactorCore() {
+  const g = new THREE.Group()
+  const armor = shell('#171636')
+  const trimMat = metal('#8d7cff')
+  g.add(torsoShell(0.304, FRONT - 1.65, 3.3, armor, 0.32, 1.8))
+  for (const side of [-1, 1]) {
+    const clavicle = torsoShell(0.31, side > 0 ? FRONT + 0.2 : FRONT - 0.72, 0.52, trimMat, 0.34, 0.22)
+    g.add(clavicle)
+    const block = new THREE.Mesh(new RoundedBoxGeometry(0.2, 0.16, 0.22, 6, 0.05), armor)
+    block.position.set(0.29 * side, 0.18, -0.04); block.rotation.z = 0.2 * side; g.add(block)
+    const blockLight = new THREE.Mesh(new THREE.PlaneGeometry(0.11, 0.018), holo(NEON, 0.8))
+    blockLight.position.set(0.29 * side, 0.13, 0.08); g.add(blockLight)
+    const piston = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.24, 14), metal('#6e77ab'))
+    piston.position.set(0.23 * side, -0.06, 0.06); piston.rotation.z = 0.18 * side; g.add(piston)
+  }
+  // Power core: a static housing with a slowly counter-rotating inner ring.
+  const housing = new THREE.Mesh(new THREE.TorusGeometry(0.145, 0.045, 16, 44), metal('#6e77ab'))
+  housing.position.set(0, 0.025, 0.16); g.add(housing)
+  const coreMat = emissive('#b9a8ff', 2.4)
+  const core = new THREE.Mesh(new THREE.TorusGeometry(0.125, 0.02, 14, 40), coreMat)
+  core.position.set(0, 0.025, 0.185); g.add(core)
+  const spinner = new THREE.Group(); spinner.position.set(0, 0.025, 0.19); g.add(spinner)
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2
+    const blade = new THREE.Mesh(new RoundedBoxGeometry(0.075, 0.014, 0.012, 3, 0.005), emissive(NEON, 2))
+    blade.position.set(Math.cos(a) * 0.075, Math.sin(a) * 0.075, 0); blade.rotation.z = a; spinner.add(blade)
+  }
+  const auraMat = holo('#b9a8ff', 0.3)
+  const aura = new THREE.Mesh(new THREE.CircleGeometry(0.16, 32), auraMat)
+  aura.position.set(0, 0.025, 0.155); g.add(aura)
+  const vents: THREE.Mesh[] = []
+  for (let i = 0; i < 3; i++) {
+    const vent = new THREE.Mesh(new THREE.PlaneGeometry(0.16 - i * 0.03, 0.016), holo(VIOLET, 0.6))
+    vent.position.set(0, -0.14 - i * 0.045, 0.2); g.add(vent); vents.push(vent)
+  }
+  g.userData.animate = (t: number, dt: number) => {
+    spinner.rotation.z -= dt * 1.1
+    coreMat.emissiveIntensity = 2.1 + Math.sin(t * 2.2) * 0.6
+    auraMat.opacity = 0.24 + Math.sin(t * 2.2) * 0.08
+    vents.forEach((v, i) => { (v.material as THREE.MeshBasicMaterial).opacity = 0.4 + Math.sin(t * 1.9 + i * 0.6) * 0.22 })
   }
   return g
 }
 
-// ═══════════════ additional accessories ═══════════════
-// head-local: helmet spans y ±0.5, x ±0.56, z ±0.47; hats sit ~y0.45 and grow up.
-function buildCowboyHat() {
-  const g = new THREE.Group()
-  const tan = mat('#c8863f', { roughness: 0.7 })
-  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.78, 0.05, 32), tan)
-  brim.scale.set(1, 1, 0.82); brim.position.y = 0.5; g.add(brim)
-  const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.4, 0.4, 24), tan); crown.position.y = 0.72; g.add(crown)
-  const top = new THREE.Mesh(new THREE.SphereGeometry(0.34, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), tan)
-  top.scale.set(1, 0.4, 1); top.position.y = 0.9; g.add(top)
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.41, 0.41, 0.09, 24), mat('#5a3c1e')); band.position.y = 0.58; g.add(band)
-  return g
-}
-function buildPartyHat() {
-  const g = new THREE.Group()
-  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.34, 0.9, 24), mat('#ff5d9e')); cone.position.y = 0.94; g.add(cone)
-  for (let i = 0; i < 3; i++) {
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.22 - i * 0.06, 0.02, 8, 24), emissive(['#ffd166', '#4cc9f0', '#7c5cff'][i], 0.6))
-    ring.rotation.x = Math.PI / 2; ring.position.y = 0.6 + i * 0.22; g.add(ring)
-  }
-  const pom = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 12), mat('#fff')); pom.position.y = 1.4; g.add(pom)
-  return g
-}
-function buildHalo() {
-  const g = new THREE.Group()
-  const halo = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.05, 14, 32), emissive('#ffe37a', 1.8))
-  halo.rotation.x = Math.PI / 2; halo.position.y = 0.8; g.add(halo)
-  return g
-}
-function buildBeanie() {
-  const g = new THREE.Group()
-  const knit = mat('#5a6cff', { roughness: 0.85 })
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.54, 28, 18, 0, Math.PI * 2, 0, Math.PI * 0.48), knit)
-  dome.scale.set(1, 0.7, 1); dome.position.y = 0.43; g.add(dome)
-  const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.57, 0.57, 0.13, 30), mat('#4351d6', { roughness: 0.9 }))
-  rim.position.y = 0.47; g.add(rim)
-  const seam = new THREE.Mesh(new THREE.TorusGeometry(0.54, 0.018, 8, 30), mat('#7785ff', { roughness: 0.9 }))
-  seam.rotation.x = Math.PI / 2; seam.position.y = 0.54; g.add(seam)
-  const pom = new THREE.Mesh(new THREE.SphereGeometry(0.105, 16, 12), mat('#fff', { roughness: 0.9 }))
-  pom.position.y = 0.82; g.add(pom)
-  return g
-}
-function buildTopHat() {
-  const g = new THREE.Group()
-  const blk = mat('#22203a', { roughness: 0.4, metalness: 0.2 })
-  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.05, 32), blk); brim.position.y = 0.5; g.add(brim)
-  const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.68, 28), blk); tube.position.y = 0.85; g.add(tube)
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.41, 0.41, 0.1, 28), mat('#ff5d73')); band.position.y = 0.58; g.add(band)
-  return g
-}
-function buildCatEars() {
-  const g = new THREE.Group()
-  const fur = mat('#9cc1e8')
-  for (const side of [-1, 1]) {
-    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.3, 4), fur); ear.position.set(0.28 * side, 0.56, 0); ear.rotation.y = Math.PI / 4; g.add(ear)
-    const inner = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.18, 4), mat('#ff9ec4')); inner.position.set(0.28 * side, 0.57, 0.03); inner.rotation.y = Math.PI / 4; g.add(inner)
-  }
-  return g
-}
-function buildChefHat() {
-  const g = new THREE.Group()
-  const w = mat('#fdfdff', { roughness: 0.8 })
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.22, 26), w); band.position.y = 0.56; g.add(band)
-  const puff = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 16), w); puff.scale.set(1.1, 0.9, 1.1); puff.position.y = 0.82; g.add(puff)
-  return g
-}
-function buildIronHelmet() {
-  const g = new THREE.Group()
-  const red = mat('#c0392b', { metalness: 0.55, roughness: 0.3 })
-  const gold = mat('#f1c40f', { metalness: 0.8, roughness: 0.25 })
-  const dome = new THREE.Mesh(new RoundedBoxGeometry(1.16, 0.5, 1.04, 8, 0.26), red); dome.position.y = 0.42; g.add(dome)
-  const brow = new THREE.Mesh(new RoundedBoxGeometry(1.0, 0.1, 0.14, 4, 0.04), gold); brow.position.set(0, 0.24, 0.5); g.add(brow)
-  const crest = new THREE.Mesh(new RoundedBoxGeometry(0.07, 0.42, 0.72, 4, 0.03), gold); crest.position.set(0, 0.52, 0); g.add(crest)
-  const gem = new THREE.Mesh(new THREE.CircleGeometry(0.05, 18), emissive('#aef7ff', 2)); gem.position.set(0, 0.44, 0.53); g.add(gem)
-  return g
-}
-function buildAstroHelmet() {
-  const g = new THREE.Group()
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.66, 28, 20), new THREE.MeshStandardMaterial({ color: '#bfe6ff', transparent: true, opacity: 0.26, roughness: 0.05, metalness: 0.1 }))
-  dome.position.y = 0.06; g.add(dome)
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.09, 16, 32), mat('#fdfdff', { metalness: 0.3, roughness: 0.4 })); ring.rotation.x = Math.PI / 2; ring.position.y = -0.3; g.add(ring)
-  const tank = new THREE.Mesh(new THREE.CapsuleGeometry(0.08, 0.16, 6, 12), mat('#e6ecf5', { metalness: 0.4 })); tank.position.set(0, 0.62, 0); g.add(tank)
-  return g
-}
-// ── face (anchor at head centre; eyes ~y0.05, z0.5) ──
-function buildRoundGlasses() {
-  const g = new THREE.Group()
-  const frame = mat('#2a2350', { metalness: 0.3, roughness: 0.3 })
-  for (const side of [-1, 1]) {
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.018, 10, 24), frame); rim.position.set(0.17 * side, 0.05, 0.5); g.add(rim)
-    const lens = new THREE.Mesh(new THREE.CircleGeometry(0.11, 22), new THREE.MeshStandardMaterial({ color: '#bfe6ff', transparent: true, opacity: 0.3, roughness: 0.1 })); lens.position.set(0.17 * side, 0.05, 0.49); g.add(lens)
-  }
-  const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.02, 0.02), frame); bridge.position.set(0, 0.05, 0.5); g.add(bridge)
-  return g
-}
-function buildEyepatch() {
-  const g = new THREE.Group()
-  const blk = mat('#1a1730', { roughness: 0.6 })
-  const patch = new THREE.Mesh(new THREE.CircleGeometry(0.13, 22), blk); patch.position.set(0.17, 0.05, 0.5); g.add(patch)
-  const strap = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.015, 8, 30), blk); strap.position.set(0, 0.05, 0); strap.rotation.y = Math.PI / 2; strap.scale.set(1, 0.55, 1); g.add(strap)
-  return g
-}
-function buildHeroMask() {
-  const g = new THREE.Group()
-  const m = mat('#7c5cff', { roughness: 0.35 })
-  for (const side of [-1, 1]) {
-    const frame = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.035, 10, 22), m); frame.position.set(0.17 * side, 0.05, 0.5); g.add(frame)
-    const point = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.13, 10), m); point.position.set(0.31 * side, 0.11, 0.49); point.rotation.z = -1.15 * side; g.add(point)
-  }
-  const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.05, 0.03), m); bridge.position.set(0, 0.05, 0.5); g.add(bridge)
-  return g
-}
-// ── body (anchor at torso; z ~0.24 forward) ──
-function buildBowtie() {
-  const g = new THREE.Group()
-  const m = mat('#ff5d73')
-  for (const side of [-1, 1]) { const w = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.16, 4), m); w.rotation.z = (Math.PI / 2) * side; w.rotation.x = Math.PI / 2; w.position.set(0.09 * side, 0, 0.24); g.add(w) }
-  const knot = new THREE.Mesh(new RoundedBoxGeometry(0.06, 0.08, 0.06, 3, 0.02), mat('#d63d52')); knot.position.set(0, 0, 0.26); g.add(knot)
-  g.position.y = 0.21
-  return g
-}
-function buildMedal() {
-  const g = new THREE.Group()
-  const ribbon = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.16, 0.02), mat('#4361d6')); ribbon.position.set(0, 0.14, 0.22); g.add(ribbon)
-  const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.03, 24), mat('#ffd166', { metalness: 0.7, roughness: 0.25 })); disc.rotation.x = Math.PI / 2; disc.position.set(0, 0.02, 0.24); g.add(disc)
-  const star = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.035, 5), emissive('#fff6c0', 0.7)); star.rotation.x = Math.PI / 2; star.position.set(0, 0.02, 0.26); g.add(star)
-  g.position.set(-0.15, 0.08, 0)
-  g.scale.setScalar(0.78)
-  return g
-}
-function buildHeroArmor() {
-  const g = new THREE.Group()
-  const steel = mat('#8fa3bf', { metalness: 0.7, roughness: 0.3 })
-  const chest = new THREE.Mesh(new THREE.SphereGeometry(0.3, 24, 18), steel); chest.scale.set(0.95, 1.05, 0.72); g.add(chest)
-  for (const side of [-1, 1]) { const pad = new THREE.Mesh(new THREE.SphereGeometry(0.16, 20, 14), steel); pad.scale.set(1, 0.7, 1); pad.position.set(0.34 * side, 0.24, 0); g.add(pad) }
-  return g
-}
-function buildSpiderEmblem() {
-  const g = new THREE.Group()
-  const red = mat('#d92d4f', { metalness: 0.15, roughness: 0.5 })
-  const web = emissive('#eaf7ff', 0.55)
-  const shell = new THREE.Mesh(new THREE.SphereGeometry(0.31, 28, 20), red)
-  shell.scale.set(0.92, 1.04, 0.78); g.add(shell)
-  for (const side of [-1, 1]) {
-    for (let i = 0; i < 3; i++) {
-      const strand = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.2 + i * 0.025, 6), web)
-      strand.position.set((0.16 + i * 0.035) * side, 0.06 - i * 0.11, 0.225)
-      strand.rotation.z = (0.18 + i * 0.16) * side; g.add(strand)
-    }
-  }
-  return g
-}
-// ── handR (anchor at right hand) ──
-function buildSword() {
-  const g = new THREE.Group()
-  const blade = new THREE.Mesh(new RoundedBoxGeometry(0.06, 0.55, 0.02, 3, 0.01), mat('#dfe7f0', { metalness: 0.75, roughness: 0.18 })); blade.position.y = 0.32; g.add(blade)
-  const guard = new THREE.Mesh(new RoundedBoxGeometry(0.24, 0.05, 0.06, 3, 0.02), mat('#ffd166', { metalness: 0.6 })); guard.position.y = 0.06; g.add(guard)
-  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.16, 12), mat('#7a4a2a')); handle.position.y = -0.04; g.add(handle)
-  g.position.set(0, -0.05, 0.08)
-  return g
-}
-function buildWand() {
-  const g = new THREE.Group()
-  const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.026, 0.4, 12), mat('#3a2a4a')); stick.position.y = 0.16; g.add(stick)
-  const star = new THREE.Mesh(new THREE.IcosahedronGeometry(0.08, 0), emissive('#ffd166', 1.8)); star.position.y = 0.4; g.add(star)
-  g.position.set(0, -0.05, 0.08)
-  return g
-}
-function buildLightsaber() {
-  const g = new THREE.Group()
-  const hilt = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.2, 16), mat('#9aa5b5', { metalness: 0.8, roughness: 0.2 })); hilt.position.y = -0.02; g.add(hilt)
-  const blade = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.6, 16), emissive('#4cff8a', 1.8)); blade.position.y = 0.4; g.add(blade)
-  g.position.set(0, -0.05, 0.08)
-  return g
-}
-function buildShield() {
-  const g = new THREE.Group()
-  const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.05, 32), mat('#4361d6', { metalness: 0.4, roughness: 0.4 })); disc.rotation.x = Math.PI / 2; g.add(disc)
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.02, 10, 32), mat('#fff')); ring.position.z = 0.03; g.add(ring)
-  const star = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.06, 5), mat('#fdfdff')); star.rotation.x = Math.PI / 2; star.position.z = 0.03; g.add(star)
-  g.position.set(0.04, -0.06, 0.14); g.rotation.y = 0.35
-  return g
-}
-// ── back (anchor behind torso) ──
-function buildAngelWings() {
-  const g = new THREE.Group()
-  const w = mat('#fdfdff', { roughness: 0.7 })
-  for (const side of [-1, 1]) {
-    const wing = new THREE.Group()
-    for (let i = 0; i < 4; i++) {
-      const f = new THREE.Mesh(new THREE.SphereGeometry(0.2 - i * 0.02, 12, 8), w)
-      f.scale.set(0.5, 1.2, 0.3); f.position.set(0.16 + i * 0.15, 0.2 - i * 0.14, 0)
-      wing.add(f)
-    }
-    wing.scale.x = side; wing.position.set(0.1 * side, 0.12, 0)
-    g.add(wing)
-  }
-  return g
-}
-function buildDragonWings() {
-  const g = new THREE.Group()
-  const skin = new THREE.MeshStandardMaterial({ color: '#7c5cff', side: THREE.DoubleSide, roughness: 0.5 })
-  const bone = mat('#4a3a6a')
-  for (const side of [-1, 1]) {
-    const wing = new THREE.Group()
-    for (let i = 0; i < 3; i++) {
-      const panel = new THREE.Mesh(new THREE.CircleGeometry(0.32 - i * 0.05, 3), skin)
-      panel.position.set(0.1 + i * 0.14, 0.2 - i * 0.14, -0.03); panel.rotation.z = (0.5 + i * 0.4)
-      wing.add(panel)
-      const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.4, 8), bone)
-      rib.position.set(0.14 + i * 0.14, 0.14 - i * 0.12, -0.02); rib.rotation.z = -0.7 - i * 0.3; wing.add(rib)
-    }
-    wing.scale.x = side; wing.position.set(0.06 * side, 0.16, 0); g.add(wing)
-  }
-  return g
-}
-function buildRocketPack() {
-  const g = new THREE.Group()
-  for (const side of [-1, 1]) {
-    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.4, 8, 16), mat('#ff5d73', { metalness: 0.3, roughness: 0.4 })); body.position.set(0.17 * side, -0.05, -0.14); g.add(body)
-    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.16, 16), mat('#fdfdff')); cone.position.set(0.17 * side, 0.24, -0.14); g.add(cone)
-    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.24, 14), emissive('#ff9d3f', 1.8)); flame.position.set(0.17 * side, -0.4, -0.14); flame.rotation.x = Math.PI; flame.userData.flame = true; g.add(flame)
-  }
-  g.userData.flames = g.children.filter((c) => (c as THREE.Mesh).userData.flame)
-  return g
-}
 
 export interface YuviAsset {
   id: string
@@ -436,48 +862,47 @@ export interface YuviAsset {
   build: () => THREE.Group
   /** When set, the item is locked until the requirement is met (progress-derived). */
   requirementKey?: string
+  /** Hide the robot's native ear pods (helmets / headsets cover them). */
+  hideEars?: boolean
 }
 
+/* Purchasable ids (astro, heromask, ironhelmet, lightsaber, heroarmor,
+   dragonwings) and milestone ids (crown, jetpack, ironman, propeller) are kept
+   stable so backend pricing and already-unlocked items stay valid — only the
+   builders and labels were redesigned. */
 export const Yuvi_CATALOG: YuviAsset[] = [
   // ── head ──
-  { id: 'cap', slot: 'headTop', labelKey: 'YuviStudio.item.cap', build: buildCap },
-  { id: 'wizard', slot: 'headTop', labelKey: 'YuviStudio.item.wizard', build: buildWizardHat },
-  { id: 'headphones', slot: 'headTop', labelKey: 'YuviStudio.item.headphones', build: buildHeadphones },
-  { id: 'cowboy', slot: 'headTop', labelKey: 'YuviStudio.item.cowboy', build: buildCowboyHat },
-  { id: 'party', slot: 'headTop', labelKey: 'YuviStudio.item.party', build: buildPartyHat },
+  { id: 'snapback', slot: 'headTop', labelKey: 'YuviStudio.item.snapback', build: buildSnapback },
   { id: 'beanie', slot: 'headTop', labelKey: 'YuviStudio.item.beanie', build: buildBeanie },
-  { id: 'tophat', slot: 'headTop', labelKey: 'YuviStudio.item.tophat', build: buildTopHat },
-  { id: 'chef', slot: 'headTop', labelKey: 'YuviStudio.item.chef', build: buildChefHat },
-  { id: 'catears', slot: 'headTop', labelKey: 'YuviStudio.item.catears', build: buildCatEars },
-  { id: 'halo', slot: 'headTop', labelKey: 'YuviStudio.item.halo', build: buildHalo },
-  { id: 'astro', slot: 'headTop', labelKey: 'YuviStudio.item.astro', build: buildAstroHelmet, requirementKey: 'YuviStudio.unlock.achievement' },
-  { id: 'ironhelmet', slot: 'headTop', labelKey: 'YuviStudio.item.ironhelmet', build: buildIronHelmet, requirementKey: 'YuviStudio.unlock.achievement' },
-  { id: 'crown', slot: 'headTop', labelKey: 'YuviStudio.item.crown', build: buildCrown, requirementKey: 'YuviStudio.unlock.section4' },
-  { id: 'propeller', slot: 'headTop', labelKey: 'YuviStudio.item.propeller', build: buildPropeller, requirementKey: 'YuviStudio.unlock.challenges3' },
+  { id: 'hood', slot: 'headTop', labelKey: 'YuviStudio.item.hood', build: buildHood, hideEars: true },
+  { id: 'headset', slot: 'headTop', labelKey: 'YuviStudio.item.headset', build: buildHeadset, hideEars: true },
+  { id: 'neoncrest', slot: 'headTop', labelKey: 'YuviStudio.item.neoncrest', build: buildNeonCrest },
+  { id: 'astro', slot: 'headTop', labelKey: 'YuviStudio.item.astro', build: buildAstroHelmet, requirementKey: 'YuviStudio.unlock.achievement', hideEars: true },
+  { id: 'ironhelmet', slot: 'headTop', labelKey: 'YuviStudio.item.ironhelmet', build: buildBattleHelmet, requirementKey: 'YuviStudio.unlock.achievement', hideEars: true },
+  { id: 'crown', slot: 'headTop', labelKey: 'YuviStudio.item.crown', build: buildLightCrown, requirementKey: 'YuviStudio.unlock.section4' },
+  { id: 'propeller', slot: 'headTop', labelKey: 'YuviStudio.item.propeller', build: buildCompanionDrone, requirementKey: 'YuviStudio.unlock.challenges3' },
   // ── face ──
-  { id: 'sunglasses', slot: 'face', labelKey: 'YuviStudio.item.sunglasses', build: buildSunglasses },
-  { id: 'eyebrows', slot: 'face', labelKey: 'YuviStudio.item.eyebrows', build: buildEyebrows },
-  { id: 'roundglasses', slot: 'face', labelKey: 'YuviStudio.item.roundglasses', build: buildRoundGlasses },
-  { id: 'eyepatch', slot: 'face', labelKey: 'YuviStudio.item.eyepatch', build: buildEyepatch },
-  { id: 'heromask', slot: 'face', labelKey: 'YuviStudio.item.heromask', build: buildHeroMask, requirementKey: 'YuviStudio.unlock.achievement' },
+  { id: 'shades', slot: 'face', labelKey: 'YuviStudio.item.shades', build: buildShades },
+  { id: 'hud', slot: 'face', labelKey: 'YuviStudio.item.hud', build: buildHudVisor },
+  { id: 'warpaint', slot: 'face', labelKey: 'YuviStudio.item.warpaint', build: buildWarPaint },
+  { id: 'heromask', slot: 'face', labelKey: 'YuviStudio.item.heromask', build: buildCyberMask, requirementKey: 'YuviStudio.unlock.achievement' },
   // ── body ──
-  { id: 'bowtie', slot: 'body', labelKey: 'YuviStudio.item.bowtie', build: buildBowtie },
-  { id: 'medal', slot: 'body', labelKey: 'YuviStudio.item.medal', build: buildMedal },
-  { id: 'spideremblem', slot: 'body', labelKey: 'YuviStudio.item.spideremblem', build: buildSpiderEmblem },
-  { id: 'heroarmor', slot: 'body', labelKey: 'YuviStudio.item.heroarmor', build: buildHeroArmor, requirementKey: 'YuviStudio.unlock.achievement' },
-  { id: 'ironman', slot: 'body', labelKey: 'YuviStudio.item.ironman', build: buildIronmanSuit, requirementKey: 'YuviStudio.unlock.section6' },
+  { id: 'jacket', slot: 'body', labelKey: 'YuviStudio.item.jacket', build: buildJacket },
+  { id: 'jersey', slot: 'body', labelKey: 'YuviStudio.item.jersey', build: buildJersey },
+  { id: 'rig', slot: 'body', labelKey: 'YuviStudio.item.rig', build: buildUtilityRig },
+  { id: 'heroarmor', slot: 'body', labelKey: 'YuviStudio.item.heroarmor', build: buildExoArmor, requirementKey: 'YuviStudio.unlock.achievement' },
+  { id: 'ironman', slot: 'body', labelKey: 'YuviStudio.item.ironman', build: buildReactorCore, requirementKey: 'YuviStudio.unlock.section6' },
   // ── hand ──
-  { id: 'skateboard', slot: 'handR', labelKey: 'YuviStudio.item.skateboard', build: buildSkateboard },
-  { id: 'sword', slot: 'handR', labelKey: 'YuviStudio.item.sword', build: buildSword },
-  { id: 'wand', slot: 'handR', labelKey: 'YuviStudio.item.wand', build: buildWand },
-  { id: 'shield', slot: 'handR', labelKey: 'YuviStudio.item.shield', build: buildShield },
-  { id: 'lightsaber', slot: 'handR', labelKey: 'YuviStudio.item.lightsaber', build: buildLightsaber, requirementKey: 'YuviStudio.unlock.achievement' },
+  { id: 'skate', slot: 'handR', labelKey: 'YuviStudio.item.skate', build: buildSkate },
+  { id: 'drone', slot: 'handR', labelKey: 'YuviStudio.item.drone', build: buildHandDrone },
+  { id: 'guitar', slot: 'handR', labelKey: 'YuviStudio.item.guitar', build: buildGuitar },
+  { id: 'holopad', slot: 'handR', labelKey: 'YuviStudio.item.holopad', build: buildHoloPad },
+  { id: 'lightsaber', slot: 'handR', labelKey: 'YuviStudio.item.lightsaber', build: buildPlasmaBlade, requirementKey: 'YuviStudio.unlock.achievement' },
   // ── back ──
-  { id: 'cape', slot: 'back', labelKey: 'YuviStudio.item.cape', build: buildCape },
-  { id: 'angelwings', slot: 'back', labelKey: 'YuviStudio.item.angelwings', build: buildAngelWings },
-  { id: 'rocketpack', slot: 'back', labelKey: 'YuviStudio.item.rocketpack', build: buildRocketPack },
-  { id: 'dragonwings', slot: 'back', labelKey: 'YuviStudio.item.dragonwings', build: buildDragonWings, requirementKey: 'YuviStudio.unlock.achievement' },
-  { id: 'jetpack', slot: 'back', labelKey: 'YuviStudio.item.jetpack', build: buildJetpack, requirementKey: 'YuviStudio.unlock.section5' },
+  { id: 'backpack', slot: 'back', labelKey: 'YuviStudio.item.backpack', build: buildBackpack },
+  { id: 'hoverboard', slot: 'back', labelKey: 'YuviStudio.item.hoverboard', build: buildHoverboard },
+  { id: 'dragonwings', slot: 'back', labelKey: 'YuviStudio.item.dragonwings', build: buildEnergyWings, requirementKey: 'YuviStudio.unlock.achievement' },
+  { id: 'jetpack', slot: 'back', labelKey: 'YuviStudio.item.jetpack', build: buildThrusters, requirementKey: 'YuviStudio.unlock.section5' },
 ]
 
 export function getAsset(id: string | null): YuviAsset | null {
