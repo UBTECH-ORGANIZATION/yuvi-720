@@ -5,10 +5,11 @@
  *
  * The studio used to be a robot floating on a flat gradient. This builds a real
  * space around him: floor, walls, ceiling, a lit upgrade platform with LED
- * rings, a workbench, shelves of spare parts, hologram readouts and side
- * consoles. It knows nothing about Yuvi himself, so the same room can later
- * host the shop, an achievement reveal, or any other "step into Yuvi's world"
- * screen — just add your own character on top of `deckY`.
+ * rings, a workbench, shelves of spare parts, volumetric hologram projectors, a
+ * ceiling service arm and side consoles. It knows nothing about Yuvi himself,
+ * so the same room can later host the shop, an achievement reveal, or any other
+ * "step into Yuvi's world" screen — just add your own character on top of
+ * `deckY`.
  *
  * Performance rules of the house:
  *  - one shadow-casting light, everything else is baked into emissive/additive
@@ -28,11 +29,21 @@ export interface LabRoomOptions {
   accent?: THREE.ColorRepresentation
 }
 
+export interface LabRoomBounds {
+  halfX: number
+  backZ: number
+  frontZ: number
+  floorY: number
+  ceilY: number
+}
+
 export interface LabRoom {
   group: THREE.Group
   quality: LabRoomQuality
   /** Y the platform deck sits at, so callers can plant a character on it. */
   deckY: number
+  /** Interior extents — keep a free camera inside these and it never clips out. */
+  bounds: LabRoomBounds
   /** The one light that casts a shadow — callers point it at their character. */
   keyLight: THREE.SpotLight
   update: (t: number, dt: number) => void
@@ -79,6 +90,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const CEIL_Y = FLOOR_Y + 4.7
   const DEPTH = FRONT_Z - BACK_Z
   const MID_Z = (FRONT_Z + BACK_Z) / 2
+  const bounds: LabRoomBounds = { halfX: HALF_X, backZ: BACK_Z, frontZ: FRONT_Z, floorY: FLOOR_Y, ceilY: CEIL_Y }
 
   const group = new THREE.Group()
   scene.add(group)
@@ -261,6 +273,18 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     halo.rotation.x = Math.PI / 2
     halo.position.set(0, bar.position.y - 0.12, bar.position.z)
     group.add(halo)
+  }
+
+  // Recessed channels cut into the back wall. Light as architecture reads far
+  // more current than decals or screens bolted onto a flat surface.
+  const channelMat = track(new THREE.MeshBasicMaterial({ color: 0x93a8ff, toneMapped: false }))
+  for (const x of rich ? [-3.35, -1.2, 1.2, 3.35] : [-2.2, 2.2]) {
+    addStrip(channelMat, [0.035, 2.15, 0.04], [x, FLOOR_Y + 1.6, BACK_Z + 0.06])
+  }
+  addStrip(coolStripMat, [HALF_X * 1.42, 0.028, 0.04], [0, FLOOR_Y + 2.95, BACK_Z + 0.06])
+  // Approach lines inlaid in the floor, guiding the eye to the platform.
+  for (const x of [-1.62, 1.62]) {
+    addStrip(coolStripMat, [0.03, 0.012, 5.4], [x, FLOOR_Y + 0.012, 3.2])
   }
 
   // ────────────────────────────────────────────────────────────────────────
@@ -448,80 +472,224 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     }
   }
 
-  /** Small emissive readout used on the console desks. */
+  // ── Ceiling service arm ───────────────────────────────────────────────────
+  // A slim articulated arm parked beside the platform. Nothing says "upgrade
+  // bay" like real robotics hanging over the deck, and it idles rather than
+  // performing, so it never competes with the character.
+  let gantry: {
+    shoulder: THREE.Group; elbow: THREE.Group; wrist: THREE.Group; tipMat: THREE.MeshBasicMaterial
+  } | null = null
+  if (rich) {
+    const mount = new THREE.Group()
+    mount.position.set(-2.0, CEIL_Y - 0.12, -1.2)
+    group.add(mount)
+    addBox(mount, metalMat, [0.52, 0.14, 0.52], [0, -0.07, 0])
+
+    const shoulder = new THREE.Group()
+    shoulder.position.y = -0.14
+    mount.add(shoulder)
+    addBox(shoulder, metalMat, [0.15, 1.2, 0.15], [0, -0.6, 0])
+    addBox(shoulder, coolStripMat, [0.03, 0.9, 0.17], [0, -0.6, 0])
+
+    const elbow = new THREE.Group()
+    elbow.position.y = -1.2
+    shoulder.add(elbow)
+    const elbowJoint = new THREE.Mesh(sphereGeo, darkMat)
+    elbowJoint.scale.setScalar(0.26)
+    elbow.add(elbowJoint)
+    addBox(elbow, metalMat, [0.12, 0.95, 0.12], [0, -0.5, 0])
+
+    const wrist = new THREE.Group()
+    wrist.position.y = -0.95
+    elbow.add(wrist)
+    const wristJoint = new THREE.Mesh(sphereGeo, darkMat)
+    wristJoint.scale.setScalar(0.2)
+    wrist.add(wristJoint)
+    const tipRing = new THREE.Mesh(torusGeo, accentStripMat)
+    tipRing.scale.set(0.5, 0.5, 0.24)
+    tipRing.rotation.x = Math.PI / 2
+    tipRing.position.y = -0.18
+    wrist.add(tipRing)
+    const tipMat = track(new THREE.MeshBasicMaterial({
+      color: 0xe6ecff, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending,
+      depthWrite: false, toneMapped: false,
+    }))
+    const tipGlow = new THREE.Mesh(sphereGeo, tipMat)
+    tipGlow.scale.setScalar(0.18)
+    tipGlow.position.y = -0.2
+    wrist.add(tipGlow)
+
+    gantry = { shoulder, elbow, wrist, tipMat }
+  }
+
+  /**
+   * Console readout. Deliberately minimal — hairline rules, corner ticks and a
+   * single soft trace. Chunky bar charts and thick chrome bezels are exactly
+   * what makes a sci-fi screen look twenty years old.
+   */
   function consoleScreenMat() {
-    const { canvas, ctx } = canvasOf(256, 136)
-    ctx.fillStyle = 'rgba(10,14,44,1)'
-    ctx.fillRect(0, 0, 256, 136)
-    ctx.strokeStyle = 'rgba(120,200,255,0.75)'
-    ctx.lineWidth = 2
-    ctx.beginPath()
-    for (let x = 0; x <= 256; x += 8) {
-      const y = 68 + Math.sin(x / 18) * 22 + Math.sin(x / 7) * 7
-      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+    const W = 320, H = 176
+    const { canvas, ctx } = canvasOf(W, H)
+    ctx.fillStyle = 'rgba(8,11,34,1)'
+    ctx.fillRect(0, 0, W, H)
+
+    ctx.strokeStyle = 'rgba(150,180,255,0.10)'
+    ctx.lineWidth = 1
+    for (let i = 1; i < 4; i++) {
+      const y = (H / 4) * i
+      ctx.beginPath(); ctx.moveTo(20, y); ctx.lineTo(W - 20, y); ctx.stroke()
     }
+
+    const points: Array<[number, number]> = []
+    for (let x = 20; x <= W - 20; x += 4) {
+      const p = (x - 20) / (W - 40)
+      const v = 0.46 + Math.sin(p * 4.3) * 0.3 + Math.sin(p * 9.1 + 1.4) * 0.09
+      points.push([x, H - 28 - v * (H - 74)])
+    }
+    const wash = ctx.createLinearGradient(0, 18, 0, H - 22)
+    wash.addColorStop(0, 'rgba(126,220,255,0.30)')
+    wash.addColorStop(1, 'rgba(126,220,255,0)')
+    ctx.beginPath()
+    ctx.moveTo(points[0][0], H - 24)
+    for (const [x, y] of points) ctx.lineTo(x, y)
+    ctx.lineTo(points[points.length - 1][0], H - 24)
+    ctx.closePath()
+    ctx.fillStyle = wash
+    ctx.fill()
+    ctx.beginPath()
+    points.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)))
+    ctx.strokeStyle = 'rgba(178,238,255,0.95)'
+    ctx.lineWidth = 2
+    ctx.shadowColor = 'rgba(126,220,255,0.9)'
+    ctx.shadowBlur = 10
     ctx.stroke()
-    ctx.fillStyle = 'rgba(126,92,255,0.55)'
-    for (let i = 0; i < 7; i++) ctx.fillRect(14 + i * 34, 108 - i % 3 * 10, 20, 18)
-    ctx.fillStyle = 'rgba(160,200,255,0.5)'
-    ctx.fillRect(12, 12, 60, 8)
-    ctx.fillRect(12, 26, 34, 6)
+    ctx.shadowBlur = 0
+
+    // Corner ticks instead of a frame — the current visual language.
+    ctx.strokeStyle = 'rgba(160,188,255,0.4)'
+    ctx.lineWidth = 1.5
+    const arm = 11, inset = 12
+    const corners: Array<[number, number, number, number]> = [
+      [inset, inset, 1, 1], [W - inset, inset, -1, 1],
+      [inset, H - inset, 1, -1], [W - inset, H - inset, -1, -1],
+    ]
+    for (const [x, y, sx, sy] of corners) {
+      ctx.beginPath(); ctx.moveTo(x + sx * arm, y); ctx.lineTo(x, y); ctx.lineTo(x, y + sy * arm); ctx.stroke()
+    }
+    ctx.fillStyle = 'rgba(150,120,255,0.85)'
+    for (let i = 0; i < 3; i++) ctx.fillRect(W - 58 + i * 13, 18, 5, 5)
+
     const texture = new THREE.CanvasTexture(canvas)
     texture.colorSpace = THREE.SRGBColorSpace
     track(texture)
     return track(new THREE.MeshBasicMaterial({
-      map: texture, transparent: true, opacity: 0.85, toneMapped: false, side: THREE.DoubleSide,
+      map: texture, transparent: true, opacity: 0.9, toneMapped: false, side: THREE.DoubleSide,
     }))
   }
 
-  // ── Hologram readouts ────────────────────────────────────────────────────
-  // Abstract "the lab is measuring him" shapes. Never learner data, always
-  // cropped by the frame so they stay ambience.
-  const holoTexture = (accentCss: string, seed: number) => {
-    const { canvas, ctx } = canvasOf(256, 168)
-    ctx.strokeStyle = accentCss
-    ctx.shadowColor = accentCss
-    ctx.shadowBlur = 8
-    ctx.lineWidth = 3
-    ctx.strokeRect(8, 8, 240, 152)
-    ctx.lineWidth = 2
-    ctx.beginPath(); ctx.moveTo(8, 38); ctx.lineTo(248, 38); ctx.stroke()
-    ctx.fillStyle = accentCss
-    for (let i = 0; i < 4; i++) ctx.fillRect(22 + i * 16, 18, 8, 12)
-    const bars = [0.5, 0.78, 0.34, 0.92, 0.62, 0.44, 0.85]
-    bars.forEach((v, i) => {
-      const h = v * (60 + seed * 18)
-      ctx.globalAlpha = 0.5
-      ctx.fillRect(26 + i * 30, 142 - h, 16, h)
-      ctx.globalAlpha = 1
-    })
-    ctx.globalAlpha = 0.14
-    for (let y = 44; y < 156; y += 5) ctx.fillRect(10, y, 236, 1)
-    ctx.globalAlpha = 1
-    const texture = new THREE.CanvasTexture(canvas)
-    texture.colorSpace = THREE.SRGBColorSpace
-    return track(texture)
+  // ── Holographic projectors ───────────────────────────────────────────────
+  // Not flat "HUD panels" pinned to the wall — that reads as a 2005 screensaver.
+  // Each station is an emitter puck, a light column above it, and a real
+  // volumetric wireframe turning inside the beam. Abstract geometry only: this
+  // is ambience, never learner data.
+  interface Projector {
+    form: THREE.Group
+    lines: THREE.LineSegments
+    lineMat: THREE.LineBasicMaterial
+    shellMat: THREE.MeshBasicMaterial
+    ringA: THREE.Mesh
+    ringB: THREE.Mesh
+    columnMat: THREE.MeshBasicMaterial
+    baseY: number
+    phase: number
+    spin: number
   }
+  const projectors: Projector[] = []
 
-  const holograms: Array<{ mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; baseY: number; phase: number }> = []
-  const holoSpecs = [
-    { css: 'rgba(150,205,255,0.95)', pos: [-2.75, 1.5, -5.0], rot: 0.52, size: [1.9, 1.24], phase: 0, seed: 1 },
-    { css: 'rgba(190,165,255,0.95)', pos: [2.85, 1.1, -4.75], rot: -0.55, size: [1.7, 1.12], phase: 1.9, seed: 0 },
-    { css: 'rgba(126,220,255,0.9)', pos: [0, 2.28, -6.4], rot: 0, size: [3.4, 1.35], phase: 3.1, seed: 2 },
-  ].slice(0, rich ? 3 : 1)
-  for (const spec of holoSpecs) {
-    const map = holoTexture(spec.css, spec.seed)
-    const geo = track(new THREE.PlaneGeometry(spec.size[0], spec.size[1]))
-    const mat = track(new THREE.MeshBasicMaterial({
-      map, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending,
+  const emitterGeo = track(new THREE.CylinderGeometry(0.3, 0.36, 0.08, 28))
+  const emitterRimGeo = track(new THREE.TorusGeometry(0.29, 0.012, 8, 40))
+  const holoRingGeo = track(new THREE.TorusGeometry(1, 0.007, 6, 72))
+
+  const buildProjector = (spec: {
+    pos: [number, number, number]
+    radius: number
+    height: number
+    color: number
+    detail: number
+    spin: number
+    phase: number
+  }) => {
+    const station = new THREE.Group()
+    station.position.set(spec.pos[0], spec.pos[1], spec.pos[2])
+    group.add(station)
+
+    const puck = new THREE.Mesh(emitterGeo, metalMat)
+    puck.position.y = 0.04
+    station.add(puck)
+    const rimMat = track(new THREE.MeshBasicMaterial({ color: spec.color, toneMapped: false }))
+    const rim = new THREE.Mesh(emitterRimGeo, rimMat)
+    rim.rotation.x = Math.PI / 2
+    rim.position.y = 0.085
+    station.add(rim)
+
+    // The beam: a wide-open cone that fades out before it reaches the ceiling.
+    const columnGeo = track(new THREE.CylinderGeometry(spec.radius * 1.5, spec.radius * 0.55, spec.height, 24, 1, true))
+    fadeVertically(columnGeo, spec.height / 2, 1.15)
+    const columnMat = track(new THREE.MeshBasicMaterial({
+      color: spec.color, transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending,
+      depthWrite: false, toneMapped: false, side: THREE.DoubleSide, vertexColors: true,
+    }))
+    const column = new THREE.Mesh(columnGeo, columnMat)
+    column.position.y = 0.1 + spec.height / 2
+    station.add(column)
+
+    const formY = 0.1 + spec.height * 0.68
+    const form = new THREE.Group()
+    form.position.y = formY
+    station.add(form)
+
+    // Geodesic wireframe — the shape reads as "scanned volume", not "picture".
+    const solidGeo = track(new THREE.IcosahedronGeometry(spec.radius, spec.detail))
+    const wireGeo = track(new THREE.WireframeGeometry(solidGeo))
+    const lineMat = track(new THREE.LineBasicMaterial({
+      color: spec.color, transparent: true, opacity: 0.6,
+      blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
+    }))
+    const lines = new THREE.LineSegments(wireGeo, lineMat)
+    form.add(lines)
+
+    // A whisper of surface so the wireframe has volume instead of floating hairs.
+    const shellMat = track(new THREE.MeshBasicMaterial({
+      color: spec.color, transparent: true, opacity: 0.055, blending: THREE.AdditiveBlending,
       depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
     }))
-    const mesh = new THREE.Mesh(geo, mat)
-    mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2])
-    mesh.rotation.y = spec.rot
-    group.add(mesh)
-    holograms.push({ mesh, mat, baseY: spec.pos[1], phase: spec.phase })
+    form.add(new THREE.Mesh(solidGeo, shellMat))
+
+    // Two hairline gyroscope rings on different axes.
+    const ringMat = track(new THREE.MeshBasicMaterial({
+      color: spec.color, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending,
+      depthWrite: false, toneMapped: false,
+    }))
+    const ringA = new THREE.Mesh(holoRingGeo, ringMat)
+    ringA.scale.setScalar(spec.radius * 1.45)
+    ringA.rotation.x = Math.PI / 2
+    form.add(ringA)
+    const ringB = new THREE.Mesh(holoRingGeo, ringMat)
+    ringB.scale.setScalar(spec.radius * 1.72)
+    ringB.rotation.set(0.9, 0, 0.5)
+    form.add(ringB)
+
+    projectors.push({
+      form, lines, lineMat, shellMat, ringA, ringB, columnMat,
+      baseY: formY, phase: spec.phase, spin: spec.spin,
+    })
   }
+
+  const projectorSpecs = [
+    { pos: [-3.05, FLOOR_Y, -4.45] as [number, number, number], radius: 0.52, height: 1.75, color: 0x7fe4ff, detail: 1, spin: 0.22, phase: 0 },
+    { pos: [2.35, FLOOR_Y, -4.2] as [number, number, number], radius: 0.4, height: 1.35, color: 0xa896ff, detail: 0, spin: -0.31, phase: 1.9 },
+  ].slice(0, rich ? 2 : 1)
+  for (const spec of projectorSpecs) buildProjector(spec)
 
   // ────────────────────────────────────────────────────────────────────────
   // Lighting — one shadow caster plus two cheap accent fills
@@ -651,9 +819,21 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       coneMat.opacity = 0.045 + Math.sin(t * 0.6) * 0.015
       gridMat.opacity = 0.27 + Math.sin(t * 0.7) * 0.05
       accentLight.intensity = (rich ? 6.4 : 3.6) + Math.sin(t * 1.5) * 0.9
-      for (const holo of holograms) {
-        holo.mesh.position.y = holo.baseY + Math.sin(t * 0.6 + holo.phase) * 0.07
-        holo.mat.opacity = 0.42 + Math.abs(Math.sin(t * 0.85 + holo.phase)) * 0.15
+      for (const p of projectors) {
+        p.form.rotation.y = t * p.spin
+        p.form.position.y = p.baseY + Math.sin(t * 0.55 + p.phase) * 0.07
+        p.ringA.rotation.z = t * p.spin * -2.1
+        p.ringB.rotation.y = t * p.spin * 1.6
+        const breath = 0.5 + Math.abs(Math.sin(t * 0.7 + p.phase)) * 0.22
+        p.lineMat.opacity = breath
+        p.shellMat.opacity = 0.04 + breath * 0.03
+        p.columnMat.opacity = 0.055 + Math.sin(t * 0.9 + p.phase) * 0.018
+      }
+      if (gantry) {
+        gantry.shoulder.rotation.z = Math.sin(t * 0.23) * 0.14
+        gantry.elbow.rotation.z = Math.sin(t * 0.29 + 1.1) * 0.26
+        gantry.wrist.rotation.x = Math.sin(t * 0.37 + 2.2) * 0.22
+        gantry.tipMat.opacity = 0.5 + Math.abs(Math.sin(t * 1.7)) * 0.4
       }
       if (motes && moteSpeeds) {
         const array = (motes.geometry.attributes.position as THREE.BufferAttribute).array as Float32Array
@@ -702,5 +882,5 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     if (keyLight.shadow?.map) keyLight.shadow.map.dispose()
   }
 
-  return { group, quality, deckY, keyLight, update, burst, setAccent, dispose }
+  return { group, quality, deckY, bounds, keyLight, update, burst, setAccent, dispose }
 }
