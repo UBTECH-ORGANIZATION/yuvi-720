@@ -1,16 +1,28 @@
 // @ts-nocheck
 /* eslint-disable */
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { StudioContent } from './StudioContent'
 import { useStudioDesign } from './useStudioDesign'
+import { navigate } from '../../app/router'
 import '../../styles/Yuvi-studio.css'
 
 type Phase = 'closed' | 'opening' | 'open' | 'closing'
+
+/** The studio always owns this URL, whether it opened as an overlay or a route. */
+export const STUDIO_PATH = '/yuvi-studio'
+const STUDIO_FALLBACK_PATH = '/student-dashboard'
 
 interface StudioTransitionValue {
   /** Fly Yuvi from a source robot canvas into the studio (shared-element). */
   openStudio: (sourceEl: HTMLElement | null) => void
   isOpen: boolean
+  /**
+   * The route the overlay was opened from. While the overlay is up the address
+   * bar says `/yuvi-studio` (so a reload reopens the studio instead of dropping
+   * the learner on the dashboard), and the app keeps rendering this path behind
+   * the overlay so closing it costs no remount.
+   */
+  backgroundPath: string | null
 }
 
 const StudioTransitionCtx = createContext<StudioTransitionValue | null>(null)
@@ -36,8 +48,25 @@ function mapTransform(natural: DOMRect, target: DOMRect): string {
 export function StudioTransitionProvider({ children }: { children: ReactNode }) {
   const studio = useStudioDesign(false) // loaded on demand when the studio opens
   const [phase, setPhase] = useState<Phase>('closed')
+  const [backgroundPath, setBackgroundPath] = useState<string | null>(null)
   const sourceElRef = useRef<HTMLElement | null>(null)
   const runRef = useRef(0)
+
+  const currentPath = () => `${window.location.pathname}${window.location.search}`
+
+  // Back/forward out of the studio URL closes the overlay instead of leaving a
+  // studio hanging over a different route.
+  useEffect(() => {
+    if (phase === 'closed') return
+    const onPopState = () => {
+      if (window.location.pathname.startsWith(STUDIO_PATH)) return
+      runRef.current++
+      setBackgroundPath(null)
+      setPhase('closed')
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [phase])
 
   const stageEl = () => document.querySelector('.studio-overlay .ys-stage__canvas') as HTMLElement | null
 
@@ -56,6 +85,9 @@ export function StudioTransitionProvider({ children }: { children: ReactNode }) 
     if (phase !== 'closed') return
     const run = ++runRef.current
     sourceElRef.current = sourceEl
+    const from = currentPath()
+    setBackgroundPath(from.startsWith(STUDIO_PATH) ? null : from)
+    navigate(STUDIO_PATH)
     await studio.load()
     if (runRef.current !== run) return
 
@@ -86,6 +118,11 @@ export function StudioTransitionProvider({ children }: { children: ReactNode }) 
     const el = stageEl()
     const natural = el?.getBoundingClientRect()
     const sourceEl = sourceElRef.current
+    // Hand the URL back before the flight so the page behind is already the one
+    // Yuvi lands on.
+    const back = backgroundPath ?? STUDIO_FALLBACK_PATH
+    setBackgroundPath(null)
+    navigate(back, { replace: true })
     if (prefersReducedMotion() || !el || !natural || !sourceEl) {
       setPhase('closed'); return
     }
@@ -100,13 +137,13 @@ export function StudioTransitionProvider({ children }: { children: ReactNode }) 
     el.classList.remove('ys-flying-out')
     el.style.removeProperty('--ys-to')
     setPhase('closed')
-  }, [])
+  }, [backgroundPath])
 
   const overlayMounted = phase !== 'closed'
   const overlayVisible = phase === 'opening' || phase === 'open'
 
   return (
-    <StudioTransitionCtx.Provider value={{ openStudio, isOpen: overlayMounted }}>
+    <StudioTransitionCtx.Provider value={{ openStudio, isOpen: overlayMounted, backgroundPath }}>
       {children}
       {overlayMounted && (
         <div className={`studio-overlay${overlayVisible ? ' is-visible' : ''}`}>
