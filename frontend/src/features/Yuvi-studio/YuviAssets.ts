@@ -918,6 +918,8 @@ export interface YuviAsset {
   requirementKey?: string
   /** Hide the robot's native ear pods (helmets / headsets cover them). */
   hideEars?: boolean
+  /** Curated "new drop" flag powering the studio's חדשים filter. */
+  isNew?: boolean
 }
 
 /* Purchasable ids (astro, heromask, ironhelmet, lightsaber, heroarmor,
@@ -927,21 +929,21 @@ export interface YuviAsset {
 export const Yuvi_CATALOG: YuviAsset[] = [
   // ── head ──
   { id: 'snapback', slot: 'headTop', labelKey: 'YuviStudio.item.snapback', build: buildSnapback },
-  { id: 'beanie', slot: 'headTop', labelKey: 'YuviStudio.item.beanie', build: buildBeanie, hideEars: true },
+  { id: 'beanie', slot: 'headTop', labelKey: 'YuviStudio.item.beanie', build: buildBeanie, hideEars: true, isNew: true },
   { id: 'hood', slot: 'headTop', labelKey: 'YuviStudio.item.hood', build: buildHood, hideEars: true },
   { id: 'headset', slot: 'headTop', labelKey: 'YuviStudio.item.headset', build: buildHeadset, hideEars: true },
-  { id: 'neoncrest', slot: 'headTop', labelKey: 'YuviStudio.item.neoncrest', build: buildNeonCrest },
+  { id: 'neoncrest', slot: 'headTop', labelKey: 'YuviStudio.item.neoncrest', build: buildNeonCrest, isNew: true },
   { id: 'astro', slot: 'headTop', labelKey: 'YuviStudio.item.astro', build: buildAstroHelmet, requirementKey: 'YuviStudio.unlock.achievement', hideEars: true },
   { id: 'ironhelmet', slot: 'headTop', labelKey: 'YuviStudio.item.ironhelmet', build: buildBattleHelmet, requirementKey: 'YuviStudio.unlock.achievement', hideEars: true },
   { id: 'crown', slot: 'headTop', labelKey: 'YuviStudio.item.crown', build: buildLightCrown, requirementKey: 'YuviStudio.unlock.section4' },
   { id: 'propeller', slot: 'headTop', labelKey: 'YuviStudio.item.propeller', build: buildCompanionDrone, requirementKey: 'YuviStudio.unlock.challenges3' },
   // ── face ──
   { id: 'shades', slot: 'face', labelKey: 'YuviStudio.item.shades', build: buildShades },
-  { id: 'hud', slot: 'face', labelKey: 'YuviStudio.item.hud', build: buildHudVisor },
+  { id: 'hud', slot: 'face', labelKey: 'YuviStudio.item.hud', build: buildHudVisor, isNew: true },
   { id: 'warpaint', slot: 'face', labelKey: 'YuviStudio.item.warpaint', build: buildWarPaint },
   { id: 'heromask', slot: 'face', labelKey: 'YuviStudio.item.heromask', build: buildCyberMask, requirementKey: 'YuviStudio.unlock.achievement' },
   // ── body ──
-  { id: 'jacket', slot: 'body', labelKey: 'YuviStudio.item.jacket', build: buildJacket },
+  { id: 'jacket', slot: 'body', labelKey: 'YuviStudio.item.jacket', build: buildJacket, isNew: true },
   { id: 'jersey', slot: 'body', labelKey: 'YuviStudio.item.jersey', build: buildJersey },
   { id: 'rig', slot: 'body', labelKey: 'YuviStudio.item.rig', build: buildUtilityRig },
   { id: 'heroarmor', slot: 'body', labelKey: 'YuviStudio.item.heroarmor', build: buildExoArmor, requirementKey: 'YuviStudio.unlock.achievement' },
@@ -950,11 +952,11 @@ export const Yuvi_CATALOG: YuviAsset[] = [
   { id: 'skate', slot: 'handR', labelKey: 'YuviStudio.item.skate', build: buildSkate },
   { id: 'drone', slot: 'handR', labelKey: 'YuviStudio.item.drone', build: buildHandDrone },
   { id: 'guitar', slot: 'handR', labelKey: 'YuviStudio.item.guitar', build: buildGuitar },
-  { id: 'holopad', slot: 'handR', labelKey: 'YuviStudio.item.holopad', build: buildHoloPad },
+  { id: 'holopad', slot: 'handR', labelKey: 'YuviStudio.item.holopad', build: buildHoloPad, isNew: true },
   { id: 'lightsaber', slot: 'handR', labelKey: 'YuviStudio.item.lightsaber', build: buildPlasmaBlade, requirementKey: 'YuviStudio.unlock.achievement' },
   // ── back ──
   { id: 'backpack', slot: 'back', labelKey: 'YuviStudio.item.backpack', build: buildBackpack },
-  { id: 'hoverboard', slot: 'back', labelKey: 'YuviStudio.item.hoverboard', build: buildHoverboard },
+  { id: 'hoverboard', slot: 'back', labelKey: 'YuviStudio.item.hoverboard', build: buildHoverboard, isNew: true },
   { id: 'dragonwings', slot: 'back', labelKey: 'YuviStudio.item.dragonwings', build: buildEnergyWings, requirementKey: 'YuviStudio.unlock.achievement' },
   { id: 'jetpack', slot: 'back', labelKey: 'YuviStudio.item.jetpack', build: buildThrusters, requirementKey: 'YuviStudio.unlock.section5' },
 ]

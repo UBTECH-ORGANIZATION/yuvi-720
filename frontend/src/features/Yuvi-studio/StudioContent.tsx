@@ -1,6 +1,6 @@
 // @ts-nocheck
 /* eslint-disable */
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../../i18n/I18nProvider'
 import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { Icon } from '../../components/primitives'
@@ -12,6 +12,19 @@ import '../../styles/Yuvi-studio.css'
 
 type Tab = YuviSlot | 'colors'
 const TABS: Tab[] = ['headTop', 'face', 'body', 'handR', 'back', 'colors']
+
+// Picking a category glides the lab camera to the part being edited.
+const FOCUS_BY_TAB: Record<Tab, string> = {
+  headTop: 'head',
+  face: 'face',
+  body: 'body',
+  handR: 'hand',
+  back: 'back',
+  colors: 'full',
+}
+
+type Filter = 'all' | 'owned' | 'new' | 'special'
+const FILTERS: Filter[] = ['all', 'owned', 'new', 'special']
 
 // Locked items are real again: they are bought with sparks or earned at a
 // milestone, which is the whole point of the reward loop.
@@ -41,11 +54,45 @@ export function StudioContent({
   const thumbnails = useMemo(() => getThumbnails(), [])
   const [pending, setPending] = useState<YuviAsset | null>(null)
   const [purchaseError, setPurchaseError] = useState<string | null>(null)
+  const [filter, setFilter] = useState<Filter>('all')
+  // Try-before-you-buy: a locked item can be worn on the stage without being
+  // owned, so sparks are never spent on a guess.
+  const [preview, setPreview] = useState<YuviAsset | null>(null)
   const {
     avatarRef, loaded, design, activeTab, setActiveTab, muted, setMuted, justSaved,
     saving, isLocked, equip, setVariant, setColor, reset, save,
     wallet, priceOf, buy, buying,
   } = studio
+
+  const clearPreview = (worn: YuviAsset | null = preview) => {
+    if (!worn) return
+    avatarRef.current?.equip(worn.slot, design.equipped[worn.slot] ?? null, true)
+    setPreview(null)
+  }
+  const goToTab = (tab: Tab) => {
+    clearPreview()
+    setActiveTab(tab)
+    setFilter('all')
+    avatarRef.current?.focus(FOCUS_BY_TAB[tab])
+  }
+
+  // Frame the current category as soon as the WebGL controller is alive.
+  const framedRef = useRef(false)
+  useEffect(() => {
+    if (!loaded || framedRef.current) return
+    framedRef.current = true
+    const id = window.setTimeout(() => avatarRef.current?.focus(FOCUS_BY_TAB[activeTab]), 260)
+    return () => window.clearTimeout(id)
+  }, [loaded, activeTab, avatarRef])
+
+  const slotAssets = activeTab === 'colors' ? [] : assetsForSlot(activeTab as YuviSlot)
+  const visibleAssets = slotAssets.filter((asset) => {
+    const locked = PREVIEW_ALL ? false : isLocked(asset)
+    if (filter === 'owned') return !locked
+    if (filter === 'new') return Boolean(asset.isNew)
+    if (filter === 'special') return Boolean(asset.requirementKey)
+    return true
+  })
 
   return (
     <div className="Yuvi-studio">
@@ -72,7 +119,7 @@ export function StudioContent({
               role="tab"
               aria-selected={activeTab === tab}
               className={`ys-tab${activeTab === tab ? ' is-active' : ''}`}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => goToTab(tab)}
             >
               {t(`YuviStudio.tab.${tab}`)}
             </button>
@@ -84,6 +131,25 @@ export function StudioContent({
             <ColorsPanel design={design} onPick={setColor} t={t} />
           ) : (
             <>
+              <div className="ys-cat">
+                <h2>{t(`YuviStudio.category.${activeTab}`)}</h2>
+                <span className="ys-cat__count">
+                  {t('YuviStudio.itemCount').replace('{count}', String(slotAssets.length))}
+                </span>
+              </div>
+              <div className="ys-filters" role="group" aria-label={t(`YuviStudio.category.${activeTab}`)}>
+                {FILTERS.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`ys-filter${filter === key ? ' is-active' : ''}`}
+                    aria-pressed={filter === key}
+                    onClick={() => setFilter(key)}
+                  >
+                    {t(`YuviStudio.filter.${key}`)}
+                  </button>
+                ))}
+              </div>
               {activeTab === 'headTop' && (
                 <div className="ys-variant-row">
                   {(['classic', 'girl'] as YuviVariant[]).map((v) => (
@@ -99,46 +165,91 @@ export function StudioContent({
                 </div>
               )}
               <div className="ys-grid">
-                <Card
-                  equipped={design.equipped[activeTab as YuviSlot] === null}
-                  onClick={() => equip(activeTab as YuviSlot, null)}
-                  label={t('YuviStudio.none')}
-                  none
-                />
-                {assetsForSlot(activeTab as YuviSlot).map((asset) => {
+                {filter === 'all' && (
+                  <Card
+                    equipped={design.equipped[activeTab as YuviSlot] === null && !preview}
+                    onClick={() => { clearPreview(); equip(activeTab as YuviSlot, null) }}
+                    label={t('YuviStudio.none')}
+                    none
+                  />
+                )}
+                {visibleAssets.map((asset) => {
                   const locked = PREVIEW_ALL ? false : isLocked(asset)
                   const price = locked ? priceOf(asset.id) : null
+                  const previewing = preview?.id === asset.id
                   return (
                     <Card
                       key={asset.id}
-                      equipped={design.equipped[asset.slot] === asset.id}
+                      equipped={!preview && design.equipped[asset.slot] === asset.id}
+                      previewing={previewing}
                       locked={locked}
+                      isNew={Boolean(asset.isNew)}
                       price={price}
                       thumb={thumbnails[asset.id]}
                       label={t(asset.labelKey)}
                       tip={locked && asset.requirementKey ? t(asset.requirementKey) : undefined}
                       onClick={() => {
-                        if (!locked) return equip(asset.slot, asset.id)
-                        // Buyable items open the shop prompt; milestone-only
-                        // items keep explaining how they are earned.
-                        if (price !== null) {
-                          setPurchaseError(null)
-                          setPending(asset)
+                        if (!locked) {
+                          clearPreview()
+                          return equip(asset.slot, asset.id)
                         }
+                        // Locked items are worn first and paid for after — the
+                        // preview bar carries the buy action.
+                        clearPreview()
+                        avatarRef.current?.equip(asset.slot, asset.id, true)
+                        avatarRef.current?.focus(FOCUS_BY_TAB[asset.slot as Tab])
+                        setPreview(asset)
                       }}
                     />
                   )
                 })}
+                {visibleAssets.length === 0 && filter !== 'all' && (
+                  <p className="ys-empty">{t('YuviStudio.filter.empty')}</p>
+                )}
               </div>
             </>
           )}
         </div>
+
+        {preview && (
+          <div className="ys-preview">
+            <span className="ys-preview__tag">{t('YuviStudio.preview.tag')}</span>
+            <div className="ys-preview__info">
+              <strong>{t(preview.labelKey)}</strong>
+              {priceOf(preview.id) !== null ? (
+                <span className="ys-preview__price">
+                  <Icon name="spark" size={13} />
+                  {priceOf(preview.id)}
+                </span>
+              ) : (
+                <span className="ys-preview__earn">
+                  {preview.requirementKey ? t(preview.requirementKey) : ''}
+                </span>
+              )}
+            </div>
+            <div className="ys-preview__actions">
+              {priceOf(preview.id) !== null && (
+                <button
+                  type="button"
+                  className="ys-btn ys-btn--primary ys-btn--sm"
+                  onClick={() => { setPurchaseError(null); setPending(preview) }}
+                >
+                  {t('YuviStudio.preview.buy')}
+                </button>
+              )}
+              <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => clearPreview()}>
+                {t('YuviStudio.preview.cancel')}
+              </button>
+            </div>
+          </div>
+        )}
       </aside>
 
       <section className="ys-stage">
+        <div className="ys-stage__backdrop" aria-hidden />
         <div className={`ys-stage__canvas${robotHidden ? ' is-flight-hidden' : ''}`}>
           {loaded && (
-            <YuviAvatar3D ref={avatarRef} initialDesign={design} muted={muted} orbit label={t('YuviStudio.avatarAlt')} />
+            <YuviAvatar3D ref={avatarRef} initialDesign={design} muted={muted} orbit stage label={t('YuviStudio.avatarAlt')} />
           )}
         </div>
         <div className="ys-hint">{justSaved ? t('YuviStudio.saved') : t('YuviStudio.hint')}</div>
@@ -165,6 +276,7 @@ export function StudioContent({
           onConfirm={async () => {
             const result = await buy(pending.id)
             if (result?.ok) {
+              setPreview(null)
               equip(pending.slot, pending.id)
               setPending(null)
               return
@@ -245,10 +357,12 @@ function PurchaseDialog({
 }
 
 function Card({
-  equipped, locked, price, thumb, label, tip, none, onClick,
+  equipped, previewing, locked, isNew, price, thumb, label, tip, none, onClick,
 }: {
   equipped?: boolean
+  previewing?: boolean
   locked?: boolean
+  isNew?: boolean
   price?: number | null
   thumb?: string
   label: string
@@ -257,18 +371,27 @@ function Card({
   onClick: () => void
 }) {
   const buyable = Boolean(locked) && typeof price === 'number'
+  const classes = [
+    'ys-card',
+    equipped ? 'is-equipped' : '',
+    previewing ? 'is-previewing' : '',
+    locked ? 'is-locked' : '',
+    buyable ? 'is-buyable' : '',
+  ].filter(Boolean).join(' ')
   return (
     <button
       type="button"
-      className={`ys-card${equipped ? ' is-equipped' : ''}${locked ? ' is-locked' : ''}${buyable ? ' is-buyable' : ''}`}
+      className={classes}
       onClick={onClick}
       aria-pressed={equipped}
-      disabled={Boolean(locked) && !buyable}
+      disabled={Boolean(locked) && !buyable && !tip}
     >
       <span className="ys-card__thumb">
         {none ? <span className="ys-card__none" /> : thumb ? <img src={thumb} alt={label} /> : <span className="ys-card__none" />}
       </span>
       <span className="ys-card__label">{label}</span>
+      {equipped && <span className="ys-card__check" aria-hidden><Icon name="check" size={12} /></span>}
+      {isNew && !locked && !equipped && <span className="ys-card__new" aria-hidden />}
       {buyable && (
         <span className="ys-card__price">
           <Icon name="spark" size={13} />

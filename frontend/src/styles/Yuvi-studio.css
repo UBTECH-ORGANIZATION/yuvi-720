@@ -43,29 +43,61 @@
 
 .ys-panels { padding: 14px 16px 18px; overflow-y: auto; min-height: 0; flex: 1; }
 
-.ys-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+/* Category header — the drawer reads as a gear locker, not a settings form. */
+.ys-cat { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.ys-cat h2 { margin: 0; font-size: 16px; font-weight: 800; color: var(--sp-ink-900, #241f3d); }
+.ys-cat__count { font-size: 12px; color: var(--sp-ink-400, #6b6880); font-variant-numeric: tabular-nums; }
+
+.ys-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.ys-filter {
+  border: 1px solid var(--sp-border, #e8e2f7); background: transparent;
+  color: var(--sp-ink-400, #6b6880); cursor: pointer; font: inherit;
+  font-size: 12px; font-weight: 600; padding: 5px 11px;
+  border-radius: var(--sp-radius-pill, 999px);
+  transition: background .14s ease, color .14s ease, border-color .14s ease;
+}
+.ys-filter:hover { border-color: rgba(111, 91, 255, .4); color: var(--sp-primary-700, #4c39d6); }
+.ys-filter.is-active {
+  background: rgba(111, 91, 255, .12); border-color: rgba(111, 91, 255, .5);
+  color: var(--sp-primary-700, #4c39d6);
+}
+.ys-empty { grid-column: 1 / -1; margin: 18px 0; text-align: center; font-size: 13px; color: var(--sp-ink-400, #6b6880); }
+
+.ys-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 
 .ys-card {
   position: relative;
   background: var(--sp-surface-2, #f7f5ff);
   border: 2px solid transparent;
-  border-radius: 14px;
-  padding: 10px 6px 8px;
+  border-radius: 16px;
+  padding: 14px 8px 11px;
   text-align: center;
   cursor: pointer;
   font: inherit;
   display: flex; flex-direction: column; align-items: center;
-  transition: transform .12s ease, border-color .12s ease, background .12s ease;
+  transition: transform .12s ease, border-color .12s ease, background .12s ease, box-shadow .12s ease;
 }
-.ys-card:hover:not(:disabled) { transform: translateY(-2px); background: #f0ecff; }
+.ys-card:hover:not(:disabled) { transform: translateY(-3px); background: #f0ecff; box-shadow: 0 10px 22px rgba(80, 60, 160, .14); }
 .ys-card.is-equipped { border-color: var(--sp-primary-600, #6f5bff); background: #efe9ff; }
-.ys-card.is-locked { cursor: not-allowed; opacity: .72; }
-.ys-card__thumb { height: 54px; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; }
-.ys-card__thumb img { width: 54px; height: 54px; object-fit: contain; filter: drop-shadow(0 4px 7px rgba(80, 60, 160, .2)); }
-.ys-card__none { width: 40px; height: 40px; border-radius: 50%; border: 2px dashed #cfc7ea; position: relative; }
+.ys-card.is-previewing { border-color: #3fd9e0; background: rgba(63, 217, 224, .12); }
+.ys-card.is-locked { opacity: .82; }
+.ys-card:disabled { cursor: not-allowed; }
+.ys-card__thumb { height: 82px; margin-bottom: 6px; display: flex; align-items: center; justify-content: center; }
+.ys-card__thumb img { width: 82px; height: 82px; object-fit: contain; filter: drop-shadow(0 5px 9px rgba(80, 60, 160, .2)); }
+.ys-card__none { width: 52px; height: 52px; border-radius: 50%; border: 2px dashed #cfc7ea; position: relative; }
 .ys-card__none::after { content: ''; position: absolute; inset-block: 50%; inset-inline: 4px; height: 2px; background: #cfc7ea; transform: rotate(-45deg); }
-.ys-card__label { font-size: 12px; font-weight: 600; color: var(--sp-ink-900, #241f3d); }
+.ys-card__label { font-size: 12.5px; font-weight: 600; color: var(--sp-ink-900, #241f3d); }
 .ys-card.is-locked .ys-card__label { color: var(--sp-ink-400, #6b6880); }
+.ys-card__check {
+  position: absolute; inset-inline-end: 8px; inset-block-start: 8px;
+  display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--sp-primary-600, #6f5bff); color: #fff;
+}
+.ys-card__new {
+  position: absolute; inset-inline-start: 9px; inset-block-start: 9px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #3fd9e0; box-shadow: 0 0 0 3px rgba(63, 217, 224, .22);
+}
 .ys-card__lock { position: absolute; inset-inline-end: 6px; inset-block-start: 6px; font-size: 13px; }
 .ys-card__tip {
   position: absolute; inset-block-end: calc(100% + 6px); inset-inline-start: 50%;
@@ -140,13 +172,27 @@
 .ys-swatch:hover { transform: scale(1.08); }
 .ys-swatch.is-active { box-shadow: 0 0 0 3px var(--sp-primary-600, #6f5bff); }
 
-/* ── Right stage ── */
+/* ── Right stage: the Yuvi Lab ── */
 .ys-stage {
   position: relative;
-  background: linear-gradient(160deg, #efeaff 0%, #e3dcff 100%);
+  background: #efeaff;
   border-radius: var(--sp-radius-xl, 22px);
   box-shadow: 0 18px 44px rgba(70, 50, 160, 0.16);
   overflow: hidden;
+}
+/* Layered bay: warm ceiling wash, a cool floor plane, a violet key haze and a
+   vignette. Layers (not one flat purple) are what give the room depth. */
+.ys-stage__backdrop {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(62% 44% at 50% 98%, rgba(93, 62, 226, .38), transparent 72%),
+    radial-gradient(36% 28% at 16% 14%, rgba(60, 200, 220, .3), transparent 72%),
+    radial-gradient(44% 32% at 86% 10%, rgba(150, 120, 250, .34), transparent 74%),
+    linear-gradient(180deg, #f7f2ff 0%, #e4dcff 40%, #c4b8f0 74%, #9d8fdc 100%);
+}
+.ys-stage__backdrop::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 44%, transparent 36%, rgba(38, 26, 92, .34) 100%);
 }
 .ys-stage__canvas { position: absolute; inset: 0; }
 .Yuvi-avatar-canvas { width: 100%; height: 100%; }
@@ -189,9 +235,35 @@
 .ys-btn--primary { background: var(--sp-primary-600, #6f5bff); color: #fff; }
 .ys-btn--ghost { background: #fff; color: var(--sp-primary-700, #5a45f0); }
 .ys-btn--mute { background: #fff; color: var(--sp-ink-400, #6b6880); }
+.ys-btn--sm { padding: 9px 15px; font-size: 13px; box-shadow: none; }
+
+/* Preview bar: a locked item is worn first, and only then paid for. */
+.ys-preview {
+  border-block-start: 1px solid var(--sp-border, #e8e2f7);
+  padding: 12px 16px 14px;
+  background: linear-gradient(180deg, rgba(63, 217, 224, .1), rgba(111, 91, 255, .09));
+  display: flex; flex-direction: column; gap: 8px;
+}
+.ys-preview__tag {
+  align-self: flex-start;
+  font-size: 11px; font-weight: 800; letter-spacing: .04em;
+  color: #0f7d86; background: rgba(63, 217, 224, .2);
+  padding: 3px 9px; border-radius: var(--sp-radius-pill, 999px);
+}
+.ys-preview__info { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ys-preview__info strong { font-size: 14px; color: var(--sp-ink-900, #241f3d); }
+.ys-preview__price {
+  display: inline-flex; align-items: center; gap: 4px;
+  color: var(--sp-primary-700, #4c39d6); font-size: 13px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.ys-preview__earn { font-size: 12px; color: var(--sp-ink-400, #6b6880); text-align: end; }
+.ys-preview__actions { display: flex; gap: 8px; }
+.ys-preview__actions .ys-btn { flex: 1; }
 
 .ys-tab:focus-visible,
 .ys-card:focus-visible,
+.ys-filter:focus-visible,
 .ys-variant:focus-visible,
 .ys-swatch:focus-visible,
 .ys-btn:focus-visible {
@@ -332,6 +404,47 @@
 }
 
 [data-theme='dark'] .ys-stage__canvas { z-index: 1; }
+
+/* Night lab: the same layered bay, tuned to the dark scene. */
+[data-theme='dark'] .ys-stage__backdrop {
+  background:
+    radial-gradient(58% 40% at 50% 97%, rgba(124, 92, 255, .26), transparent 72%),
+    radial-gradient(36% 28% at 16% 14%, rgba(78, 238, 240, .12), transparent 74%),
+    radial-gradient(44% 32% at 86% 10%, rgba(140, 116, 255, .16), transparent 76%);
+}
+
+[data-theme='dark'] .ys-stage__backdrop::after {
+  background: radial-gradient(circle at 50% 46%, transparent 44%, rgba(2, 5, 24, .5) 100%);
+}
+
+[data-theme='dark'] .ys-cat h2 { color: var(--sp-ink-900); }
+[data-theme='dark'] .ys-cat__count { color: var(--sp-ink-400); }
+
+[data-theme='dark'] .ys-filter {
+  border-color: rgba(174, 164, 232, .18);
+  color: var(--sp-ink-400);
+}
+
+[data-theme='dark'] .ys-filter.is-active {
+  border-color: rgba(150, 132, 255, .5);
+  background: rgba(118, 101, 245, .22);
+  color: #d8d0ff;
+}
+
+[data-theme='dark'] .ys-card.is-previewing {
+  border-color: rgba(99, 225, 249, .6);
+  background: rgba(61, 213, 236, .12);
+}
+
+[data-theme='dark'] .ys-preview {
+  border-block-start-color: rgba(174, 164, 232, .16);
+  background: linear-gradient(180deg, rgba(61, 213, 236, .1), rgba(118, 101, 245, .12));
+}
+
+[data-theme='dark'] .ys-preview__tag { color: #baf3ff; background: rgba(61, 213, 236, .18); }
+[data-theme='dark'] .ys-preview__info strong { color: var(--sp-ink-900); }
+[data-theme='dark'] .ys-preview__price { color: #cfc4ff; }
+[data-theme='dark'] .ys-preview__earn { color: var(--sp-ink-400); }
 
 [data-theme='dark'] .ys-hint,
 [data-theme='dark'] .ys-toolbar {
