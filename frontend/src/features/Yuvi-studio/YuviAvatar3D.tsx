@@ -224,6 +224,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       // Aerial haze: the far wall sits back, the platform stays forward.
       scene.fog = new THREE.FogExp2(0x090c26, 0.04)
     }
+    const roomBounds = room?.bounds ?? null
 
     // Only solid shell parts cast into the room's single shadow map — glowing
     // visor sheens and additive light planes would smear it.
@@ -255,6 +256,22 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     const camPosTarget = camPos.clone()
     const camLookTarget = camLook.clone()
     let yawTarget: number | null = 0
+
+    // ── Free camera ──
+    // The category frame is only a starting point: the learner's own orbit,
+    // dolly and pan ride on top of it as signed offsets, so walking around the
+    // bay never fights the automatic framing and picking a tab re-centres.
+    let userYaw = 0, userPitch = 0, userZoom = 1
+    let userPanX = 0, userPanY = 0, velYaw = 0
+    const YAW_LIMIT = 1.15
+    const resetUserView = () => {
+      userYaw = 0; userPitch = 0; userZoom = 1
+      userPanX = 0; userPanY = 0; velYaw = 0
+    }
+    const camOffset = new THREE.Vector3()
+    const camRight = new THREE.Vector3()
+    const camSpherical = new THREE.Spherical()
+
     if (orbit) {
       camera.position.copy(camPos)
       camera.lookAt(camLook)
@@ -559,6 +576,8 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       camPosTarget.set(...frame.pos)
       camLookTarget.set(...frame.look)
       yawTarget = frame.yaw
+      // Choosing a category is a request for that exact shot.
+      resetUserView()
     }
     controllerRef.current = { equip, setColors, setVariant, applyDesign, focus }
     applyDesign(design, false)
@@ -619,30 +638,47 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       renderer.domElement.addEventListener('click', onClick)
     }
 
-    // ── orbit drag (studio): grab to spin Yuvi and see him from any angle ──
-    let dragging = false, lastX = 0, lastY = 0
-    let orbitYaw = 0, orbitPitch = 0, velYaw = 0
+    // ── Free camera input (studio) ──
+    // Drag to walk around the bay, wheel to move in and out, right/middle drag
+    // (or shift-drag) to slide the framing, double click to go back to the shot.
+    let dragging: 'orbit' | 'pan' | null = null
+    let lastX = 0, lastY = 0
+    let robotYaw = 0
     const onOrbitDown = (event: PointerEvent) => {
-      dragging = true; lastX = event.clientX; lastY = event.clientY; velYaw = 0
-      // A deliberate drag always beats the automatic category framing.
-      yawTarget = null
-      renderer.domElement.style.cursor = 'grabbing'
+      dragging = event.button === 0 && !event.shiftKey ? 'orbit' : 'pan'
+      lastX = event.clientX; lastY = event.clientY; velYaw = 0
+      renderer.domElement.style.cursor = dragging === 'pan' ? 'move' : 'grabbing'
     }
     const onOrbitMove = (event: PointerEvent) => {
       if (!dragging) return
       const dx = event.clientX - lastX, dy = event.clientY - lastY
       lastX = event.clientX; lastY = event.clientY
-      orbitYaw += dx * 0.01
-      orbitPitch = Math.max(-0.45, Math.min(0.45, orbitPitch + dy * 0.006))
-      velYaw = dx * 0.01
+      if (dragging === 'pan') {
+        userPanX = THREE.MathUtils.clamp(userPanX - dx * 0.006, -1.6, 1.6)
+        userPanY = THREE.MathUtils.clamp(userPanY + dy * 0.006, -1.1, 1.1)
+      } else {
+        userYaw = THREE.MathUtils.clamp(userYaw - dx * 0.007, -YAW_LIMIT, YAW_LIMIT)
+        userPitch = THREE.MathUtils.clamp(userPitch + dy * 0.004, -0.5, 0.62)
+        velYaw = -dx * 0.007
+      }
     }
     const onOrbitUp = () => {
-      dragging = false
+      dragging = null
       renderer.domElement.style.cursor = 'grab'
     }
+    const onOrbitWheel = (event: WheelEvent) => {
+      // The canvas fills the stage, so the page must not scroll underneath it.
+      event.preventDefault()
+      userZoom = THREE.MathUtils.clamp(userZoom * Math.exp(event.deltaY * 0.0011), 0.42, 1.85)
+    }
+    const onOrbitReset = () => resetUserView()
+    const onOrbitContext = (event: Event) => event.preventDefault()
     if (orbit) {
       renderer.domElement.style.cursor = 'grab'
       renderer.domElement.addEventListener('pointerdown', onOrbitDown)
+      renderer.domElement.addEventListener('wheel', onOrbitWheel, { passive: false })
+      renderer.domElement.addEventListener('dblclick', onOrbitReset)
+      renderer.domElement.addEventListener('contextmenu', onOrbitContext)
       window.addEventListener('pointermove', onOrbitMove)
       window.addEventListener('pointerup', onOrbitUp)
     }
@@ -718,29 +754,54 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       const t = (frameAt - animationStartedAt) / 1000
       previousFrameAt = frameAt
       if (orbit) {
-        // Studio: drag-controlled turntable (with gentle inertia) + framed higher.
-        if (yawTarget !== null && !dragging) {
+        // Yuvi still turns on his own axis for the category framing — that is
+        // how "back" shows his back without sending the camera through a wall.
+        if (yawTarget !== null) {
           // Shortest path so "back" never spins the long way around.
-          let delta = (yawTarget - orbitYaw) % (Math.PI * 2)
+          let delta = (yawTarget - robotYaw) % (Math.PI * 2)
           if (delta > Math.PI) delta -= Math.PI * 2
           if (delta < -Math.PI) delta += Math.PI * 2
-          orbitYaw += delta * 0.09
-          orbitPitch += (0 - orbitPitch) * 0.09
-          velYaw = 0
-          if (Math.abs(delta) < 0.002) { orbitYaw = yawTarget; yawTarget = null }
-        } else if (!dragging) { velYaw *= 0.94; orbitYaw += velYaw }
+          robotYaw += delta * 0.09
+          if (Math.abs(delta) < 0.002) { robotYaw = yawTarget; yawTarget = null }
+        }
+        // Flick inertia on the free look.
+        if (!dragging && Math.abs(velYaw) > 0.00004) {
+          velYaw *= 0.9
+          userYaw = THREE.MathUtils.clamp(userYaw + velYaw, -YAW_LIMIT, YAW_LIMIT)
+        }
         camPos.lerp(camPosTarget, 0.075)
         camLook.lerp(camLookTarget, 0.075)
+        // The framed shot becomes an orbit around the framed target, and the
+        // learner's yaw / pitch / dolly ride on top of it.
+        camOffset.copy(camPos).sub(camLook)
+        camSpherical.setFromVector3(camOffset)
+        camSpherical.theta += userYaw
+        camSpherical.phi = THREE.MathUtils.clamp(camSpherical.phi - userPitch, 0.45, 1.98)
+        camSpherical.radius = Math.max(0.95, camSpherical.radius * userZoom)
+        camOffset.setFromSpherical(camSpherical)
+        // Pan slides eye and target together along the camera's own right axis.
+        camRight.set(camOffset.z, 0, -camOffset.x).normalize().multiplyScalar(userPanX)
         // Pointer lean plus a slow idle sway; both are tiny on purpose, they
-        // should register as "the room is alive", never as camera shake.
+        // should register as "the room is alive", never as camera shake. While
+        // the learner is driving, the sway gets out of the way.
         const idleX = reduceMotion ? 0 : Math.sin(t * 0.21) * 0.13
         const idleY = reduceMotion ? 0 : Math.sin(t * 0.17 + 1.1) * 0.06
-        parallaxX += (parallaxTargetX * 0.34 + idleX - parallaxX) * 0.045
-        parallaxY += (parallaxTargetY * 0.18 + idleY - parallaxY) * 0.045
-        camera.position.set(camPos.x + parallaxX, camPos.y - parallaxY, camPos.z)
-        camera.lookAt(camLook.x + parallaxX * 0.22, camLook.y - parallaxY * 0.12, camLook.z)
-        robot.rotation.y = orbitYaw
-        robot.rotation.x = orbitPitch
+        const leanScale = dragging ? 0 : 1
+        parallaxX += ((parallaxTargetX * 0.22 + idleX) * leanScale - parallaxX) * 0.045
+        parallaxY += ((parallaxTargetY * 0.12 + idleY) * leanScale - parallaxY) * 0.045
+        const lookX = camLook.x + camRight.x
+        const lookY = camLook.y + userPanY
+        const lookZ = camLook.z + camRight.z
+        camera.position.set(lookX + camOffset.x + parallaxX, lookY + camOffset.y - parallaxY, lookZ + camOffset.z)
+        if (roomBounds) {
+          // Never let a free camera poke through the room it is standing in.
+          camera.position.x = THREE.MathUtils.clamp(camera.position.x, -roomBounds.halfX + 0.55, roomBounds.halfX - 0.55)
+          camera.position.y = THREE.MathUtils.clamp(camera.position.y, roomBounds.floorY + 0.4, roomBounds.ceilY - 0.4)
+          camera.position.z = THREE.MathUtils.clamp(camera.position.z, roomBounds.backZ + 0.8, roomBounds.frontZ - 0.5)
+        }
+        camera.lookAt(lookX + parallaxX * 0.22, lookY - parallaxY * 0.12, lookZ)
+        robot.rotation.y = robotYaw
+        robot.rotation.x = 0
         robot.position.y = -0.82 + Math.sin(t * 1.4) * 0.02
         head.rotation.y = 0
         head.rotation.x = 0
@@ -967,6 +1028,9 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       renderer.domElement.removeEventListener('pointerleave', onPointerLeave)
       renderer.domElement.removeEventListener('click', onClick)
       renderer.domElement.removeEventListener('pointerdown', onOrbitDown)
+      renderer.domElement.removeEventListener('wheel', onOrbitWheel)
+      renderer.domElement.removeEventListener('dblclick', onOrbitReset)
+      renderer.domElement.removeEventListener('contextmenu', onOrbitContext)
       window.removeEventListener('pointermove', onOrbitMove)
       window.removeEventListener('pointerup', onOrbitUp)
       window.removeEventListener('pointermove', onParallaxMove)
