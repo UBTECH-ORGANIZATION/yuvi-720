@@ -295,6 +295,219 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         stageDisposables.push(geo)
       }
 
+      // ── Holographic bay ──
+      // Depth comes from cheap additive layers rather than a painted backdrop:
+      // a hex "cell" curtain wrapping the bay, a perspective floor grid, and a
+      // couple of readout panels peeking in from the sides. Everything fades
+      // out at its edges so nothing ever competes with Yuvi himself.
+
+      // Seamlessly tiling pointy-top hex lattice. Tile is sqrt(3)R x 3R, which
+      // is exactly two staggered rows, so RepeatWrapping has no visible seam.
+      const makeHexTexture = () => {
+        const W = 256
+        const R = W / Math.sqrt(3)
+        const H = Math.round(3 * R)
+        const canvas = document.createElement('canvas')
+        canvas.width = W; canvas.height = H
+        const ctx = canvas.getContext('2d')!
+        ctx.lineWidth = 2.5
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)'
+        ctx.shadowColor = 'rgba(255,255,255,0.9)'
+        ctx.shadowBlur = 9
+        for (let row = -1; row <= 3; row++) {
+          const cy = row * 1.5 * R
+          const dx = row % 2 === 0 ? 0 : W / 2
+          for (let col = -1; col <= 2; col++) {
+            const cx = col * W + dx
+            ctx.beginPath()
+            for (let i = 0; i < 6; i++) {
+              const a = ((-90 + 60 * i) * Math.PI) / 180
+              const px = cx + R * Math.cos(a)
+              const py = cy + R * Math.sin(a)
+              if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py)
+            }
+            ctx.closePath()
+            ctx.stroke()
+          }
+        }
+        const texture = new THREE.CanvasTexture(canvas)
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping
+        texture.colorSpace = THREE.SRGBColorSpace
+        return texture
+      }
+
+      // Per-vertex alpha via vertex colours: additive blending multiplies by
+      // the colour, so black edges simply dissolve into the backdrop.
+      const fadeVertically = (geo: THREE.BufferGeometry, halfHeight: number, power: number) => {
+        const position = geo.attributes.position
+        const colors = new Float32Array(position.count * 3)
+        for (let i = 0; i < position.count; i++) {
+          const k = Math.pow(Math.max(0, 1 - Math.abs(position.getY(i)) / halfHeight), power)
+          colors[i * 3] = colors[i * 3 + 1] = colors[i * 3 + 2] = k
+        }
+        geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+      }
+
+      const fadeRadially = (geo: THREE.BufferGeometry, maxRadius: number, power: number) => {
+        const position = geo.attributes.position
+        const colors = new Float32Array(position.count * 3)
+        for (let i = 0; i < position.count; i++) {
+          const d = Math.hypot(position.getX(i), position.getY(i)) / maxRadius
+          const k = Math.pow(Math.max(0, 1 - d), power)
+          colors[i * 3] = colors[i * 3 + 1] = colors[i * 3 + 2] = k
+        }
+        geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+      }
+
+      const hexTex = makeHexTexture()
+      stageDisposables.push(hexTex)
+
+      // Two curtains at different radii and scales: the parallax between them
+      // is what makes the bay feel like a room instead of a wallpaper. The near
+      // one is pure fill rate, so low-power devices only get the far wall.
+      const curtains: { mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; drift: number }[] = []
+      const curtainSpecs = [
+        { radius: 9.2, height: 15, cells: 46, color: 0x6a4fd6, opacity: 0.34, drift: 0.006 },
+        { radius: 7.7, height: 12, cells: 32, color: 0x35c8dc, opacity: 0.18, drift: -0.011 },
+      ].slice(0, performanceMode === 'low' ? 1 : 2)
+      for (const spec of curtainSpecs) {
+        const geo = new THREE.CylinderGeometry(spec.radius, spec.radius, spec.height, 72, 1, true)
+        fadeVertically(geo, spec.height / 2, 1.7)
+        const map = hexTex.clone()
+        map.needsUpdate = true
+        map.wrapS = map.wrapT = THREE.RepeatWrapping
+        // One tile is sqrt(3)R wide by 3R tall, so the vertical repeat has to
+        // follow the horizontal one or the hexagons come out squashed.
+        const tileWidth = (2 * Math.PI * spec.radius) / spec.cells
+        map.repeat.set(spec.cells, spec.height / (tileWidth * Math.sqrt(3)))
+        const mat = new THREE.MeshBasicMaterial({
+          map, color: spec.color, transparent: true, opacity: spec.opacity,
+          blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
+          side: THREE.BackSide, vertexColors: true,
+        })
+        const mesh = new THREE.Mesh(geo, mat)
+        mesh.position.y = 0.6
+        scene.add(mesh)
+        curtains.push({ mesh, mat, drift: spec.drift })
+        stageDisposables.push(geo, map, mat)
+      }
+
+      // A scan sweep that rises through the cell wall every few seconds — the
+      // detail that turns a static pattern into a bay that is doing something.
+      const sweepGeo = new THREE.CylinderGeometry(9.05, 9.05, 1.5, 72, 1, true)
+      fadeVertically(sweepGeo, 0.75, 1.4)
+      const sweepMat = new THREE.MeshBasicMaterial({
+        color: 0x9ce8ff, transparent: true, opacity: 0.12,
+        blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
+        side: THREE.BackSide, vertexColors: true,
+      })
+      const sweep = new THREE.Mesh(sweepGeo, sweepMat)
+      scene.add(sweep)
+      stageDisposables.push(sweepGeo, sweepMat)
+
+      // Perspective floor grid running out to the horizon under the podium.
+      const gridCanvas = document.createElement('canvas')
+      gridCanvas.width = gridCanvas.height = 128
+      const gridCtx = gridCanvas.getContext('2d')!
+      gridCtx.strokeStyle = 'rgba(255,255,255,0.9)'
+      gridCtx.shadowColor = 'rgba(255,255,255,0.8)'
+      gridCtx.shadowBlur = 6
+      gridCtx.lineWidth = 2
+      gridCtx.beginPath()
+      gridCtx.moveTo(1, 0); gridCtx.lineTo(1, 128)
+      gridCtx.moveTo(0, 1); gridCtx.lineTo(128, 1)
+      gridCtx.stroke()
+      const gridTex = new THREE.CanvasTexture(gridCanvas)
+      gridTex.wrapS = gridTex.wrapT = THREE.RepeatWrapping
+      gridTex.repeat.set(18, 18)
+      gridTex.colorSpace = THREE.SRGBColorSpace
+      const gridGeo = new THREE.PlaneGeometry(26, 26, 28, 28)
+      fadeRadially(gridGeo, 11, 2.1)
+      const gridMat = new THREE.MeshBasicMaterial({
+        map: gridTex, color: 0x7f6bff, transparent: true, opacity: 0.42,
+        blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
+        vertexColors: true,
+      })
+      const grid = new THREE.Mesh(gridGeo, gridMat)
+      grid.rotation.x = -Math.PI / 2
+      grid.position.y = FLOOR_Y - 0.11
+      scene.add(grid)
+      stageDisposables.push(gridTex, gridGeo, gridMat)
+
+      // Readout panels: abstract "the lab is measuring him" shapes, never real
+      // learner data, and always cropped by the frame so they read as ambience.
+      const makePanelTexture = (accent: string) => {
+        const canvas = document.createElement('canvas')
+        canvas.width = 256; canvas.height = 168
+        const ctx = canvas.getContext('2d')!
+        ctx.strokeStyle = accent
+        ctx.shadowColor = accent
+        ctx.shadowBlur = 8
+        ctx.lineWidth = 3
+        ctx.strokeRect(8, 8, 240, 152)
+        ctx.lineWidth = 2
+        ctx.beginPath(); ctx.moveTo(8, 38); ctx.lineTo(248, 38); ctx.stroke()
+        ctx.fillStyle = accent
+        for (let i = 0; i < 4; i++) ctx.fillRect(22 + i * 16, 18, 8, 12)
+        // Bar readout
+        const bars = [0.5, 0.78, 0.34, 0.92, 0.62, 0.44, 0.85]
+        bars.forEach((v, i) => {
+          const h = v * 78
+          ctx.globalAlpha = 0.55
+          ctx.fillRect(26 + i * 30, 142 - h, 16, h)
+          ctx.globalAlpha = 1
+        })
+        // Scan lines
+        ctx.globalAlpha = 0.16
+        for (let y = 44; y < 156; y += 5) ctx.fillRect(10, y, 236, 1)
+        ctx.globalAlpha = 1
+        const texture = new THREE.CanvasTexture(canvas)
+        texture.colorSpace = THREE.SRGBColorSpace
+        return texture
+      }
+
+      const panelSpecs = [
+        { accent: 'rgba(150,205,255,0.95)', pos: [-2.35, 1.2, -3.4] as const, rot: 0.5, size: [1.7, 1.12] as const, phase: 0 },
+        { accent: 'rgba(190,165,255,0.95)', pos: [2.62, 0.5, -3.5] as const, rot: -0.55, size: [1.55, 1.02] as const, phase: 1.9 },
+      ]
+      const panels: { mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; baseY: number; phase: number }[] = []
+      for (const spec of panelSpecs) {
+        const map = makePanelTexture(spec.accent)
+        const geo = new THREE.PlaneGeometry(spec.size[0], spec.size[1])
+        const mat = new THREE.MeshBasicMaterial({
+          map, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending,
+          depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
+        })
+        const mesh = new THREE.Mesh(geo, mat)
+        mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2])
+        mesh.rotation.y = spec.rot
+        scene.add(mesh)
+        panels.push({ mesh, mat, baseY: spec.pos[1], phase: spec.phase })
+        stageDisposables.push(map, geo, mat)
+      }
+
+      stageParts.push({
+        animate: (t: number) => {
+          for (const curtain of curtains) {
+            const map = curtain.mat.map!
+            map.offset.x = (map.offset.x + curtain.drift * 0.016) % 1
+            map.offset.y = (map.offset.y - curtain.drift * 0.004) % 1
+          }
+          // A slow breathing pulse across the cell wall — "the bay is alive".
+          curtains[0].mat.opacity = 0.3 + Math.sin(t * 0.55) * 0.07
+          if (curtains[1]) curtains[1].mat.opacity = 0.15 + Math.sin(t * 0.42 + 1.2) * 0.05
+          gridMat.opacity = 0.38 + Math.sin(t * 0.7) * 0.06
+          // Sweep rises through the wall, then rests below it before repeating.
+          const cycle = (t % 9) / 9
+          sweep.position.y = -6.4 + cycle * 14
+          sweepMat.opacity = cycle > 0.86 || cycle < 0.04 ? 0 : 0.14
+          for (const panel of panels) {
+            panel.mesh.position.y = panel.baseY + Math.sin(t * 0.6 + panel.phase) * 0.07
+            panel.mat.opacity = 0.44 + Math.abs(Math.sin(t * 0.9 + panel.phase)) * 0.14
+          }
+        },
+      })
+
       // Ambient motes: sparse, slow, and unmistakably "energy", not glitter.
       const MOTES = reduceMotion ? 0 : 90
       if (MOTES > 0) {
@@ -350,7 +563,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       face: { pos: [0, 0.7, 3.5], look: [0, 0.74, 0], yaw: 0 },
       body: { pos: [0, 0.02, 4.7], look: [0, 0.02, 0], yaw: 0 },
       hand: { pos: [0.75, -0.18, 4.5], look: [0.3, -0.2, 0], yaw: 0.35 },
-      back: { pos: [0, 0.28, 5.1], look: [0, 0.16, 0], yaw: Math.PI },
+      back: { pos: [0, 0.34, 5.7], look: [0, 0.1, 0], yaw: Math.PI },
     }
     const camPos = new THREE.Vector3(...FRAMES.full.pos)
     const camLook = new THREE.Vector3(...FRAMES.full.look)
