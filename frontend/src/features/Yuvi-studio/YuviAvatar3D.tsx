@@ -7,6 +7,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import yuviFaviconUrl from '../../assets/yuvi-favicon.png'
 import type { YuviColors, YuviDesign, YuviSlot, YuviVariant } from './YuviDesign'
 import { getAsset, buildBlondeHair, buildEyebrowsBundle } from './YuviAssets'
+import { createYuviLabRoom, detectLabQuality, type LabRoom, type LabRoomQuality } from './YuviLabRoom'
 
 /** Camera framings the studio can request when the learner switches category. */
 export type YuviFocus = 'full' | 'head' | 'face' | 'body' | 'hand' | 'back'
@@ -196,361 +197,45 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     const rimCool = new THREE.DirectionalLight(0x4eeef0, 1.05); rimCool.position.set(3.8, 1.4, -4.8); scene.add(rimCool)
     const bounce = new THREE.PointLight(0xa78bfa, 0.45, 9); bounce.position.set(0, -2.4, 2.6); scene.add(bounce)
 
-    // ── Yuvi Lab stage ──
-    // A real upgrade bay instead of a flat backdrop: a lit podium, a soft
-    // contact shadow, a floor glow that grounds him, and slow ambient motes.
-    const stageParts: { animate?: (t: number) => void }[] = []
-    const stageDisposables: (THREE.BufferGeometry | THREE.Material | THREE.Texture)[] = []
+    // ── Yuvi Lab room ──
+    // A real 3D room instead of a flat backdrop: floor, walls, ceiling, a lit
+    // upgrade platform, a workbench, shelves of parts and hologram readouts.
+    // The room lives in its own module so the shop and the reward reveal can
+    // later step into exactly the same space.
+    const roomQuality: LabRoomQuality =
+      performanceMode === 'low' || reduceMotion ? 'low' : detectLabQuality()
+    let room: LabRoom | null = null
     if (stage) {
-      // Tuned so the podium deck lands right under Yuvi's feet in orbit mode.
-      const FLOOR_Y = -0.92
-      const podium = new THREE.Group()
-      podium.position.y = FLOOR_Y
-      scene.add(podium)
-
-      const baseGeo = new THREE.CylinderGeometry(1.12, 1.16, 0.15, 64)
-      const baseMat = new THREE.MeshPhysicalMaterial({
-        color: 0x2a2a63, roughness: 0.3, metalness: 0.5,
-        clearcoat: 1, clearcoatRoughness: 0.2, envMapIntensity: 1.1,
+      renderer.shadowMap.enabled = roomQuality === 'high'
+      renderer.shadowMap.type = THREE.PCFShadowMap
+      room = createYuviLabRoom(scene, {
+        quality: roomQuality,
+        reduceMotion,
+        deckY: -0.92,
+        accent: initialDesign.colors.glow,
       })
-      const base = new THREE.Mesh(baseGeo, baseMat)
-      base.position.y = -0.09; podium.add(base)
-      stageDisposables.push(baseGeo, baseMat)
+      // The room brings its own key light from the ceiling, so the free-floating
+      // studio rig steps back to rims and fill — otherwise the bay reads flat.
+      key.intensity = 0.5
+      fill.intensity = 0.28
+      rim.intensity = 1.2
+      rimCool.intensity = 0.85
+      bounce.intensity = 0.22
+      // Aerial haze: the far wall sits back, the platform stays forward.
+      scene.fog = new THREE.FogExp2(0x090c26, 0.04)
+    }
 
-      // Dark polished deck: it mirrors the room light instead of blowing out
-      // into a white disc, so Yuvi stays the brightest thing on stage.
-      const topGeo = new THREE.CylinderGeometry(1.08, 1.08, 0.05, 64)
-      const topMat = new THREE.MeshPhysicalMaterial({
-        color: 0x1f1c46, roughness: 0.06, metalness: 0.72,
-        clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 1.35,
-      })
-      const top = new THREE.Mesh(topGeo, topMat)
-      top.position.y = 0.005; podium.add(top)
-      stageDisposables.push(topGeo, topMat)
-
-      // LED ring around the rim — the piece that sells "this is a lab".
-      const ledGeo = new THREE.TorusGeometry(1.1, 0.028, 12, 96)
-      const ledMat = new THREE.MeshStandardMaterial({
-        color: 0x7c5cff, emissive: 0x7c5cff, emissiveIntensity: 2.4,
-        roughness: 0.3, toneMapped: false,
-      })
-      const led = new THREE.Mesh(ledGeo, ledMat)
-      led.rotation.x = Math.PI / 2; led.position.y = 0.005; podium.add(led)
-      stageDisposables.push(ledGeo, ledMat)
-
-      const innerGeo = new THREE.RingGeometry(0.72, 0.9, 72)
-      const innerMat = new THREE.MeshBasicMaterial({
-        color: 0x4eeef0, transparent: true, opacity: 0.4,
-        blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
-        side: THREE.DoubleSide,
-      })
-      const inner = new THREE.Mesh(innerGeo, innerMat)
-      inner.rotation.x = -Math.PI / 2; inner.position.y = 0.036; podium.add(inner)
-      stageDisposables.push(innerGeo, innerMat)
-
-      // Radial falloff used for both the contact shadow and the floor bloom.
-      const makeRadialTexture = (inner: string, outer: string) => {
-        const canvas = document.createElement('canvas')
-        canvas.width = canvas.height = 128
-        const ctx = canvas.getContext('2d')!
-        const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64)
-        gradient.addColorStop(0, inner)
-        gradient.addColorStop(1, outer)
-        ctx.fillStyle = gradient
-        ctx.fillRect(0, 0, 128, 128)
-        const texture = new THREE.CanvasTexture(canvas)
-        texture.colorSpace = THREE.SRGBColorSpace
-        return texture
-      }
-
-      const shadowTex = makeRadialTexture('rgba(10,6,40,0.7)', 'rgba(10,6,40,0)')
-      const shadowGeo = new THREE.PlaneGeometry(1.7, 1.7)
-      const shadowMat = new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, toneMapped: false })
-      const contactShadow = new THREE.Mesh(shadowGeo, shadowMat)
-      contactShadow.rotation.x = -Math.PI / 2; contactShadow.position.y = 0.033; podium.add(contactShadow)
-      stageDisposables.push(shadowTex, shadowGeo, shadowMat)
-
-      const bloomTex = makeRadialTexture('rgba(126,96,255,0.5)', 'rgba(126,96,255,0)')
-      const bloomGeo = new THREE.PlaneGeometry(5.6, 5.6)
-      const bloomMat = new THREE.MeshBasicMaterial({
-        map: bloomTex, transparent: true, opacity: 0.6, depthWrite: false,
-        blending: THREE.AdditiveBlending, toneMapped: false,
-      })
-      const bloom = new THREE.Mesh(bloomGeo, bloomMat)
-      bloom.rotation.x = -Math.PI / 2; bloom.position.y = -0.28; podium.add(bloom)
-      stageDisposables.push(bloomTex, bloomGeo, bloomMat)
-
-      // Four calibration pillars that read as scanner posts around the bay.
-      const pillarMat = new THREE.MeshBasicMaterial({
-        color: 0x8f7cff, transparent: true, opacity: 0.1,
-        blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
-      })
-      stageDisposables.push(pillarMat)
-      for (let i = 0; i < 4; i++) {
-        const angle = (i / 4) * Math.PI * 2 + Math.PI / 4
-        const geo = new THREE.CylinderGeometry(0.05, 0.16, 3.6, 12, 1, true)
-        const pillar = new THREE.Mesh(geo, pillarMat)
-        pillar.position.set(Math.cos(angle) * 2.6, 1.8, Math.sin(angle) * 2.6)
-        podium.add(pillar)
-        stageDisposables.push(geo)
-      }
-
-      // ── Holographic bay ──
-      // Depth comes from cheap additive layers rather than a painted backdrop:
-      // a hex "cell" curtain wrapping the bay, a perspective floor grid, and a
-      // couple of readout panels peeking in from the sides. Everything fades
-      // out at its edges so nothing ever competes with Yuvi himself.
-
-      // Seamlessly tiling pointy-top hex lattice. Tile is sqrt(3)R x 3R, which
-      // is exactly two staggered rows, so RepeatWrapping has no visible seam.
-      const makeHexTexture = () => {
-        const W = 256
-        const R = W / Math.sqrt(3)
-        const H = Math.round(3 * R)
-        const canvas = document.createElement('canvas')
-        canvas.width = W; canvas.height = H
-        const ctx = canvas.getContext('2d')!
-        ctx.lineWidth = 2.5
-        ctx.strokeStyle = 'rgba(255,255,255,0.85)'
-        ctx.shadowColor = 'rgba(255,255,255,0.9)'
-        ctx.shadowBlur = 9
-        for (let row = -1; row <= 3; row++) {
-          const cy = row * 1.5 * R
-          const dx = row % 2 === 0 ? 0 : W / 2
-          for (let col = -1; col <= 2; col++) {
-            const cx = col * W + dx
-            ctx.beginPath()
-            for (let i = 0; i < 6; i++) {
-              const a = ((-90 + 60 * i) * Math.PI) / 180
-              const px = cx + R * Math.cos(a)
-              const py = cy + R * Math.sin(a)
-              if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py)
-            }
-            ctx.closePath()
-            ctx.stroke()
-          }
+    // Only solid shell parts cast into the room's single shadow map — glowing
+    // visor sheens and additive light planes would smear it.
+    const castShadows = (obj: THREE.Object3D) => {
+      if (!room || roomQuality !== 'high') return
+      obj.traverse((child: any) => {
+        if (!child.isMesh) return
+        const material = child.material
+        if (Array.isArray(material) || !material) return
+        if ((material.isMeshStandardMaterial || material.isMeshPhysicalMaterial) && !material.transparent) {
+          child.castShadow = true
         }
-        const texture = new THREE.CanvasTexture(canvas)
-        texture.wrapS = texture.wrapT = THREE.RepeatWrapping
-        texture.colorSpace = THREE.SRGBColorSpace
-        return texture
-      }
-
-      // Per-vertex alpha via vertex colours: additive blending multiplies by
-      // the colour, so black edges simply dissolve into the backdrop.
-      const fadeVertically = (geo: THREE.BufferGeometry, halfHeight: number, power: number) => {
-        const position = geo.attributes.position
-        const colors = new Float32Array(position.count * 3)
-        for (let i = 0; i < position.count; i++) {
-          const k = Math.pow(Math.max(0, 1 - Math.abs(position.getY(i)) / halfHeight), power)
-          colors[i * 3] = colors[i * 3 + 1] = colors[i * 3 + 2] = k
-        }
-        geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
-      }
-
-      const fadeRadially = (geo: THREE.BufferGeometry, maxRadius: number, power: number) => {
-        const position = geo.attributes.position
-        const colors = new Float32Array(position.count * 3)
-        for (let i = 0; i < position.count; i++) {
-          const d = Math.hypot(position.getX(i), position.getY(i)) / maxRadius
-          const k = Math.pow(Math.max(0, 1 - d), power)
-          colors[i * 3] = colors[i * 3 + 1] = colors[i * 3 + 2] = k
-        }
-        geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
-      }
-
-      const hexTex = makeHexTexture()
-      stageDisposables.push(hexTex)
-
-      // Two curtains at different radii and scales: the parallax between them
-      // is what makes the bay feel like a room instead of a wallpaper. The near
-      // one is pure fill rate, so low-power devices only get the far wall.
-      const curtains: { mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; drift: number }[] = []
-      const curtainSpecs = [
-        { radius: 9.2, height: 15, cells: 46, color: 0x6a4fd6, opacity: 0.34, drift: 0.006 },
-        { radius: 7.7, height: 12, cells: 32, color: 0x35c8dc, opacity: 0.18, drift: -0.011 },
-      ].slice(0, performanceMode === 'low' ? 1 : 2)
-      for (const spec of curtainSpecs) {
-        const geo = new THREE.CylinderGeometry(spec.radius, spec.radius, spec.height, 72, 1, true)
-        fadeVertically(geo, spec.height / 2, 1.7)
-        const map = hexTex.clone()
-        map.needsUpdate = true
-        map.wrapS = map.wrapT = THREE.RepeatWrapping
-        // One tile is sqrt(3)R wide by 3R tall, so the vertical repeat has to
-        // follow the horizontal one or the hexagons come out squashed.
-        const tileWidth = (2 * Math.PI * spec.radius) / spec.cells
-        map.repeat.set(spec.cells, spec.height / (tileWidth * Math.sqrt(3)))
-        const mat = new THREE.MeshBasicMaterial({
-          map, color: spec.color, transparent: true, opacity: spec.opacity,
-          blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
-          side: THREE.BackSide, vertexColors: true,
-        })
-        const mesh = new THREE.Mesh(geo, mat)
-        mesh.position.y = 0.6
-        scene.add(mesh)
-        curtains.push({ mesh, mat, drift: spec.drift })
-        stageDisposables.push(geo, map, mat)
-      }
-
-      // A scan sweep that rises through the cell wall every few seconds — the
-      // detail that turns a static pattern into a bay that is doing something.
-      const sweepGeo = new THREE.CylinderGeometry(9.05, 9.05, 1.5, 72, 1, true)
-      fadeVertically(sweepGeo, 0.75, 1.4)
-      const sweepMat = new THREE.MeshBasicMaterial({
-        color: 0x9ce8ff, transparent: true, opacity: 0.12,
-        blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
-        side: THREE.BackSide, vertexColors: true,
-      })
-      const sweep = new THREE.Mesh(sweepGeo, sweepMat)
-      scene.add(sweep)
-      stageDisposables.push(sweepGeo, sweepMat)
-
-      // Perspective floor grid running out to the horizon under the podium.
-      const gridCanvas = document.createElement('canvas')
-      gridCanvas.width = gridCanvas.height = 128
-      const gridCtx = gridCanvas.getContext('2d')!
-      gridCtx.strokeStyle = 'rgba(255,255,255,0.9)'
-      gridCtx.shadowColor = 'rgba(255,255,255,0.8)'
-      gridCtx.shadowBlur = 6
-      gridCtx.lineWidth = 2
-      gridCtx.beginPath()
-      gridCtx.moveTo(1, 0); gridCtx.lineTo(1, 128)
-      gridCtx.moveTo(0, 1); gridCtx.lineTo(128, 1)
-      gridCtx.stroke()
-      const gridTex = new THREE.CanvasTexture(gridCanvas)
-      gridTex.wrapS = gridTex.wrapT = THREE.RepeatWrapping
-      gridTex.repeat.set(18, 18)
-      gridTex.colorSpace = THREE.SRGBColorSpace
-      const gridGeo = new THREE.PlaneGeometry(26, 26, 28, 28)
-      fadeRadially(gridGeo, 11, 2.1)
-      const gridMat = new THREE.MeshBasicMaterial({
-        map: gridTex, color: 0x7f6bff, transparent: true, opacity: 0.42,
-        blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
-        vertexColors: true,
-      })
-      const grid = new THREE.Mesh(gridGeo, gridMat)
-      grid.rotation.x = -Math.PI / 2
-      grid.position.y = FLOOR_Y - 0.11
-      scene.add(grid)
-      stageDisposables.push(gridTex, gridGeo, gridMat)
-
-      // Readout panels: abstract "the lab is measuring him" shapes, never real
-      // learner data, and always cropped by the frame so they read as ambience.
-      const makePanelTexture = (accent: string) => {
-        const canvas = document.createElement('canvas')
-        canvas.width = 256; canvas.height = 168
-        const ctx = canvas.getContext('2d')!
-        ctx.strokeStyle = accent
-        ctx.shadowColor = accent
-        ctx.shadowBlur = 8
-        ctx.lineWidth = 3
-        ctx.strokeRect(8, 8, 240, 152)
-        ctx.lineWidth = 2
-        ctx.beginPath(); ctx.moveTo(8, 38); ctx.lineTo(248, 38); ctx.stroke()
-        ctx.fillStyle = accent
-        for (let i = 0; i < 4; i++) ctx.fillRect(22 + i * 16, 18, 8, 12)
-        // Bar readout
-        const bars = [0.5, 0.78, 0.34, 0.92, 0.62, 0.44, 0.85]
-        bars.forEach((v, i) => {
-          const h = v * 78
-          ctx.globalAlpha = 0.55
-          ctx.fillRect(26 + i * 30, 142 - h, 16, h)
-          ctx.globalAlpha = 1
-        })
-        // Scan lines
-        ctx.globalAlpha = 0.16
-        for (let y = 44; y < 156; y += 5) ctx.fillRect(10, y, 236, 1)
-        ctx.globalAlpha = 1
-        const texture = new THREE.CanvasTexture(canvas)
-        texture.colorSpace = THREE.SRGBColorSpace
-        return texture
-      }
-
-      const panelSpecs = [
-        { accent: 'rgba(150,205,255,0.95)', pos: [-2.35, 1.2, -3.4] as const, rot: 0.5, size: [1.7, 1.12] as const, phase: 0 },
-        { accent: 'rgba(190,165,255,0.95)', pos: [2.62, 0.5, -3.5] as const, rot: -0.55, size: [1.55, 1.02] as const, phase: 1.9 },
-      ]
-      const panels: { mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; baseY: number; phase: number }[] = []
-      for (const spec of panelSpecs) {
-        const map = makePanelTexture(spec.accent)
-        const geo = new THREE.PlaneGeometry(spec.size[0], spec.size[1])
-        const mat = new THREE.MeshBasicMaterial({
-          map, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending,
-          depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
-        })
-        const mesh = new THREE.Mesh(geo, mat)
-        mesh.position.set(spec.pos[0], spec.pos[1], spec.pos[2])
-        mesh.rotation.y = spec.rot
-        scene.add(mesh)
-        panels.push({ mesh, mat, baseY: spec.pos[1], phase: spec.phase })
-        stageDisposables.push(map, geo, mat)
-      }
-
-      stageParts.push({
-        animate: (t: number) => {
-          for (const curtain of curtains) {
-            const map = curtain.mat.map!
-            map.offset.x = (map.offset.x + curtain.drift * 0.016) % 1
-            map.offset.y = (map.offset.y - curtain.drift * 0.004) % 1
-          }
-          // A slow breathing pulse across the cell wall — "the bay is alive".
-          curtains[0].mat.opacity = 0.3 + Math.sin(t * 0.55) * 0.07
-          if (curtains[1]) curtains[1].mat.opacity = 0.15 + Math.sin(t * 0.42 + 1.2) * 0.05
-          gridMat.opacity = 0.38 + Math.sin(t * 0.7) * 0.06
-          // Sweep rises through the wall, then rests below it before repeating.
-          const cycle = (t % 9) / 9
-          sweep.position.y = -6.4 + cycle * 14
-          sweepMat.opacity = cycle > 0.86 || cycle < 0.04 ? 0 : 0.14
-          for (const panel of panels) {
-            panel.mesh.position.y = panel.baseY + Math.sin(t * 0.6 + panel.phase) * 0.07
-            panel.mat.opacity = 0.44 + Math.abs(Math.sin(t * 0.9 + panel.phase)) * 0.14
-          }
-        },
-      })
-
-      // Ambient motes: sparse, slow, and unmistakably "energy", not glitter.
-      const MOTES = reduceMotion ? 0 : 90
-      if (MOTES > 0) {
-        const positions = new Float32Array(MOTES * 3)
-        const speeds = new Float32Array(MOTES)
-        for (let i = 0; i < MOTES; i++) {
-          const angle = Math.random() * Math.PI * 2
-          const radius = 0.5 + Math.random() * 2.2
-          positions[i * 3] = Math.cos(angle) * radius
-          positions[i * 3 + 1] = Math.random() * 4.2
-          positions[i * 3 + 2] = Math.sin(angle) * radius
-          speeds[i] = 0.12 + Math.random() * 0.25
-        }
-        const moteGeo = new THREE.BufferGeometry()
-        moteGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-        const moteTex = makeRadialTexture('rgba(220,235,255,1)', 'rgba(180,200,255,0)')
-        const moteMat = new THREE.PointsMaterial({
-          size: 0.055, map: moteTex, transparent: true, opacity: 0.75,
-          depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
-        })
-        const motes = new THREE.Points(moteGeo, moteMat)
-        motes.position.y = FLOOR_Y
-        scene.add(motes)
-        stageDisposables.push(moteGeo, moteTex, moteMat)
-        stageParts.push({
-          animate: () => {
-            const array = moteGeo.attributes.position.array as Float32Array
-            for (let i = 0; i < MOTES; i++) {
-              array[i * 3 + 1] += speeds[i] * 0.016
-              if (array[i * 3 + 1] > 4.2) array[i * 3 + 1] = 0
-            }
-            moteGeo.attributes.position.needsUpdate = true
-          },
-        })
-      }
-
-      stageParts.push({
-        animate: (t: number) => {
-          ledMat.emissiveIntensity = 2.1 + Math.sin(t * 1.6) * 0.5
-          innerMat.opacity = 0.3 + Math.abs(Math.sin(t * 1.1)) * 0.18
-          inner.rotation.z = t * 0.22
-          bloomMat.opacity = 0.5 + Math.sin(t * 1.3) * 0.1
-        },
       })
     }
 
@@ -828,7 +513,16 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       }
       if (!asset) return
       const g = asset.build(); anchor.add(g); equippedObjects[slot] = g
-      if (animate) playTransform(g)
+      castShadows(g)
+      if (animate) {
+        playTransform(g)
+        // Assembly beat: a ring of light and a puff of energy at the slot, so
+        // an upgrade lands as an event instead of a silent swap.
+        if (room) {
+          anchor.updateWorldMatrix(true, false)
+          room.burst(anchor.getWorldPosition(new THREE.Vector3()))
+        }
+      }
     }
     function setVariant(variant: YuviVariant, animate = true) {
       design.variant = variant
@@ -850,6 +544,8 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       antennaTipMat.color.copy(g); antennaTipMat.emissive.copy(g)
       haloGlowMat.color.copy(g)
       antennaLight.color.copy(g); faceGlow.color.copy(g)
+      // The bay's LEDs, floor pool and reflection follow the learner's glow.
+      room?.setAccent(colors.glow)
       faceLight.draw()
       if (animate) playTransform()
     }
@@ -866,6 +562,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     }
     controllerRef.current = { equip, setColors, setVariant, applyDesign, focus }
     applyDesign(design, false)
+    castShadows(robot)
 
     // ── transform sound (WebAudio) ──
     let audioCtx: AudioContext | null = null
@@ -950,6 +647,19 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       window.addEventListener('pointerup', onOrbitUp)
     }
 
+    // ── Camera parallax ──
+    // The room leans a little with the pointer and keeps a slow drift of its
+    // own, so the space feels inhabited even when nothing is being edited.
+    let parallaxTargetX = 0, parallaxTargetY = 0
+    let parallaxX = 0, parallaxY = 0
+    const onParallaxMove = (event: PointerEvent) => {
+      const rect = container.getBoundingClientRect()
+      if (!rect.width || !rect.height) return
+      parallaxTargetX = THREE.MathUtils.clamp(((event.clientX - rect.left) / rect.width) * 2 - 1, -1, 1)
+      parallaxTargetY = THREE.MathUtils.clamp(((event.clientY - rect.top) / rect.height) * 2 - 1, -1, 1)
+    }
+    if (orbit && !reduceMotion) window.addEventListener('pointermove', onParallaxMove, { passive: true })
+
     // ── viewport pointer tracking ──
     // The companion can be much smaller than the page, so tracking listens at
     // window level rather than only while the pointer is over the WebGL canvas.
@@ -1021,8 +731,14 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         } else if (!dragging) { velYaw *= 0.94; orbitYaw += velYaw }
         camPos.lerp(camPosTarget, 0.075)
         camLook.lerp(camLookTarget, 0.075)
-        camera.position.copy(camPos)
-        camera.lookAt(camLook)
+        // Pointer lean plus a slow idle sway; both are tiny on purpose, they
+        // should register as "the room is alive", never as camera shake.
+        const idleX = reduceMotion ? 0 : Math.sin(t * 0.21) * 0.13
+        const idleY = reduceMotion ? 0 : Math.sin(t * 0.17 + 1.1) * 0.06
+        parallaxX += (parallaxTargetX * 0.34 + idleX - parallaxX) * 0.045
+        parallaxY += (parallaxTargetY * 0.18 + idleY - parallaxY) * 0.045
+        camera.position.set(camPos.x + parallaxX, camPos.y - parallaxY, camPos.z)
+        camera.lookAt(camLook.x + parallaxX * 0.22, camLook.y - parallaxY * 0.12, camLook.z)
         robot.rotation.y = orbitYaw
         robot.rotation.x = orbitPitch
         robot.position.y = -0.82 + Math.sin(t * 1.4) * 0.02
@@ -1158,8 +874,8 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
           const anim = (equippedObjects as any)[key]?.userData?.animate
           if (anim) anim(t, dt)
         }
-        for (const part of stageParts) part.animate?.(t)
       }
+      room?.update(t, dt)
       // interactive Y pop
       if (interactiveY) {
         badgeScale += ((hoveredY ? 1.32 : 1) - badgeScale) * 0.2
@@ -1253,12 +969,13 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       renderer.domElement.removeEventListener('pointerdown', onOrbitDown)
       window.removeEventListener('pointermove', onOrbitMove)
       window.removeEventListener('pointerup', onOrbitUp)
+      window.removeEventListener('pointermove', onParallaxMove)
       window.removeEventListener('pointermove', onGlobalPointerMove)
       window.removeEventListener('blur', resetPointerLook)
       document.documentElement.removeEventListener('mouseleave', resetPointerLook)
       controllerRef.current = null
       faceLight.texture.dispose()
-      for (const item of stageDisposables) item.dispose()
+      room?.dispose()
       renderer.dispose()
       scene.traverse((obj) => {
         const mesh = obj as THREE.Mesh
