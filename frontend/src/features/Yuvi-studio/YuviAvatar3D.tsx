@@ -8,11 +8,16 @@ import yuviFaviconUrl from '../../assets/yuvi-favicon.png'
 import type { YuviColors, YuviDesign, YuviSlot, YuviVariant } from './YuviDesign'
 import { getAsset, buildBlondeHair, buildEyebrowsBundle } from './YuviAssets'
 
+/** Camera framings the studio can request when the learner switches category. */
+export type YuviFocus = 'full' | 'head' | 'face' | 'body' | 'hand' | 'back'
+
 export interface YuviAvatarHandle {
   equip: (slot: YuviSlot, id: string | null, animate?: boolean) => void
   setColors: (colors: YuviColors, animate?: boolean) => void
   setVariant: (variant: YuviVariant, animate?: boolean) => void
   applyDesign: (design: YuviDesign, animate?: boolean) => void
+  /** Glide the studio camera to the part of Yuvi the learner is editing. */
+  focus: (view: YuviFocus) => void
 }
 
 interface Props {
@@ -27,6 +32,8 @@ interface Props {
   yTooltip?: string
   /** Studio mode: drag to orbit Yuvi, and frame him a little higher. */
   orbit?: boolean
+  /** Yuvi Lab: build the LED podium, floor glow and ambient motes around him. */
+  stage?: boolean
   /** Expressive activity states update through refs without remounting WebGL. */
   thinking?: boolean
   speaking?: boolean
@@ -84,7 +91,7 @@ function mixWhite([r, g, b]: number[], t: number): [number, number, number] {
 const rgba = ([r, g, b]: number[], a: number) => `rgba(${r}, ${g}, ${b}, ${a})`
 
 export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAvatar3D(
-  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard' },
+  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard' },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null)
@@ -140,6 +147,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     setColors: (colors, animate = false) => controllerRef.current?.setColors(colors, animate),
     setVariant: (variant, animate = true) => controllerRef.current?.setVariant(variant, animate),
     applyDesign: (design, animate = false) => controllerRef.current?.applyDesign(design, animate),
+    focus: (view) => controllerRef.current?.focus(view),
   }), [])
 
   useEffect(() => {
@@ -187,6 +195,172 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     const rim = new THREE.DirectionalLight(0x8f6cff, 1.45); rim.position.set(-3.6, 2.8, -5.2); scene.add(rim)
     const rimCool = new THREE.DirectionalLight(0x4eeef0, 1.05); rimCool.position.set(3.8, 1.4, -4.8); scene.add(rimCool)
     const bounce = new THREE.PointLight(0xa78bfa, 0.45, 9); bounce.position.set(0, -2.4, 2.6); scene.add(bounce)
+
+    // ── Yuvi Lab stage ──
+    // A real upgrade bay instead of a flat backdrop: a lit podium, a soft
+    // contact shadow, a floor glow that grounds him, and slow ambient motes.
+    const stageParts: { animate?: (t: number) => void }[] = []
+    const stageDisposables: (THREE.BufferGeometry | THREE.Material | THREE.Texture)[] = []
+    if (stage) {
+      // Tuned so the podium deck lands right under Yuvi's feet in orbit mode.
+      const FLOOR_Y = -0.92
+      const podium = new THREE.Group()
+      podium.position.y = FLOOR_Y
+      scene.add(podium)
+
+      const baseGeo = new THREE.CylinderGeometry(1.12, 1.16, 0.15, 64)
+      const baseMat = new THREE.MeshPhysicalMaterial({
+        color: 0x2a2a63, roughness: 0.3, metalness: 0.5,
+        clearcoat: 1, clearcoatRoughness: 0.2, envMapIntensity: 1.1,
+      })
+      const base = new THREE.Mesh(baseGeo, baseMat)
+      base.position.y = -0.09; podium.add(base)
+      stageDisposables.push(baseGeo, baseMat)
+
+      // Dark polished deck: it mirrors the room light instead of blowing out
+      // into a white disc, so Yuvi stays the brightest thing on stage.
+      const topGeo = new THREE.CylinderGeometry(1.08, 1.08, 0.05, 64)
+      const topMat = new THREE.MeshPhysicalMaterial({
+        color: 0x1f1c46, roughness: 0.06, metalness: 0.72,
+        clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 1.35,
+      })
+      const top = new THREE.Mesh(topGeo, topMat)
+      top.position.y = 0.005; podium.add(top)
+      stageDisposables.push(topGeo, topMat)
+
+      // LED ring around the rim — the piece that sells "this is a lab".
+      const ledGeo = new THREE.TorusGeometry(1.1, 0.028, 12, 96)
+      const ledMat = new THREE.MeshStandardMaterial({
+        color: 0x7c5cff, emissive: 0x7c5cff, emissiveIntensity: 2.4,
+        roughness: 0.3, toneMapped: false,
+      })
+      const led = new THREE.Mesh(ledGeo, ledMat)
+      led.rotation.x = Math.PI / 2; led.position.y = 0.005; podium.add(led)
+      stageDisposables.push(ledGeo, ledMat)
+
+      const innerGeo = new THREE.RingGeometry(0.72, 0.9, 72)
+      const innerMat = new THREE.MeshBasicMaterial({
+        color: 0x4eeef0, transparent: true, opacity: 0.4,
+        blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
+        side: THREE.DoubleSide,
+      })
+      const inner = new THREE.Mesh(innerGeo, innerMat)
+      inner.rotation.x = -Math.PI / 2; inner.position.y = 0.036; podium.add(inner)
+      stageDisposables.push(innerGeo, innerMat)
+
+      // Radial falloff used for both the contact shadow and the floor bloom.
+      const makeRadialTexture = (inner: string, outer: string) => {
+        const canvas = document.createElement('canvas')
+        canvas.width = canvas.height = 128
+        const ctx = canvas.getContext('2d')!
+        const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64)
+        gradient.addColorStop(0, inner)
+        gradient.addColorStop(1, outer)
+        ctx.fillStyle = gradient
+        ctx.fillRect(0, 0, 128, 128)
+        const texture = new THREE.CanvasTexture(canvas)
+        texture.colorSpace = THREE.SRGBColorSpace
+        return texture
+      }
+
+      const shadowTex = makeRadialTexture('rgba(10,6,40,0.7)', 'rgba(10,6,40,0)')
+      const shadowGeo = new THREE.PlaneGeometry(1.7, 1.7)
+      const shadowMat = new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, toneMapped: false })
+      const contactShadow = new THREE.Mesh(shadowGeo, shadowMat)
+      contactShadow.rotation.x = -Math.PI / 2; contactShadow.position.y = 0.033; podium.add(contactShadow)
+      stageDisposables.push(shadowTex, shadowGeo, shadowMat)
+
+      const bloomTex = makeRadialTexture('rgba(126,96,255,0.5)', 'rgba(126,96,255,0)')
+      const bloomGeo = new THREE.PlaneGeometry(5.6, 5.6)
+      const bloomMat = new THREE.MeshBasicMaterial({
+        map: bloomTex, transparent: true, opacity: 0.6, depthWrite: false,
+        blending: THREE.AdditiveBlending, toneMapped: false,
+      })
+      const bloom = new THREE.Mesh(bloomGeo, bloomMat)
+      bloom.rotation.x = -Math.PI / 2; bloom.position.y = -0.28; podium.add(bloom)
+      stageDisposables.push(bloomTex, bloomGeo, bloomMat)
+
+      // Four calibration pillars that read as scanner posts around the bay.
+      const pillarMat = new THREE.MeshBasicMaterial({
+        color: 0x8f7cff, transparent: true, opacity: 0.1,
+        blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
+      })
+      stageDisposables.push(pillarMat)
+      for (let i = 0; i < 4; i++) {
+        const angle = (i / 4) * Math.PI * 2 + Math.PI / 4
+        const geo = new THREE.CylinderGeometry(0.05, 0.16, 3.6, 12, 1, true)
+        const pillar = new THREE.Mesh(geo, pillarMat)
+        pillar.position.set(Math.cos(angle) * 2.6, 1.8, Math.sin(angle) * 2.6)
+        podium.add(pillar)
+        stageDisposables.push(geo)
+      }
+
+      // Ambient motes: sparse, slow, and unmistakably "energy", not glitter.
+      const MOTES = reduceMotion ? 0 : 90
+      if (MOTES > 0) {
+        const positions = new Float32Array(MOTES * 3)
+        const speeds = new Float32Array(MOTES)
+        for (let i = 0; i < MOTES; i++) {
+          const angle = Math.random() * Math.PI * 2
+          const radius = 0.5 + Math.random() * 2.2
+          positions[i * 3] = Math.cos(angle) * radius
+          positions[i * 3 + 1] = Math.random() * 4.2
+          positions[i * 3 + 2] = Math.sin(angle) * radius
+          speeds[i] = 0.12 + Math.random() * 0.25
+        }
+        const moteGeo = new THREE.BufferGeometry()
+        moteGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+        const moteTex = makeRadialTexture('rgba(220,235,255,1)', 'rgba(180,200,255,0)')
+        const moteMat = new THREE.PointsMaterial({
+          size: 0.055, map: moteTex, transparent: true, opacity: 0.75,
+          depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
+        })
+        const motes = new THREE.Points(moteGeo, moteMat)
+        motes.position.y = FLOOR_Y
+        scene.add(motes)
+        stageDisposables.push(moteGeo, moteTex, moteMat)
+        stageParts.push({
+          animate: () => {
+            const array = moteGeo.attributes.position.array as Float32Array
+            for (let i = 0; i < MOTES; i++) {
+              array[i * 3 + 1] += speeds[i] * 0.016
+              if (array[i * 3 + 1] > 4.2) array[i * 3 + 1] = 0
+            }
+            moteGeo.attributes.position.needsUpdate = true
+          },
+        })
+      }
+
+      stageParts.push({
+        animate: (t: number) => {
+          ledMat.emissiveIntensity = 2.1 + Math.sin(t * 1.6) * 0.5
+          innerMat.opacity = 0.3 + Math.abs(Math.sin(t * 1.1)) * 0.18
+          inner.rotation.z = t * 0.22
+          bloomMat.opacity = 0.5 + Math.sin(t * 1.3) * 0.1
+        },
+      })
+    }
+
+    // ── Camera framing ──
+    // Switching category glides the camera to the part being edited, which is
+    // what makes the studio read as a lab rather than a settings screen.
+    const FRAMES: Record<string, { pos: [number, number, number]; look: [number, number, number]; yaw: number | null }> = {
+      full: { pos: [0, 0.18, 6.9], look: [0, -0.34, 0], yaw: 0 },
+      head: { pos: [0, 0.72, 4.1], look: [0, 0.74, 0], yaw: 0 },
+      face: { pos: [0, 0.7, 3.5], look: [0, 0.74, 0], yaw: 0 },
+      body: { pos: [0, 0.02, 4.7], look: [0, 0.02, 0], yaw: 0 },
+      hand: { pos: [0.75, -0.18, 4.5], look: [0.3, -0.2, 0], yaw: 0.35 },
+      back: { pos: [0, 0.28, 5.1], look: [0, 0.16, 0], yaw: Math.PI },
+    }
+    const camPos = new THREE.Vector3(...FRAMES.full.pos)
+    const camLook = new THREE.Vector3(...FRAMES.full.look)
+    const camPosTarget = camPos.clone()
+    const camLookTarget = camLook.clone()
+    let yawTarget: number | null = 0
+    if (orbit) {
+      camera.position.copy(camPos)
+      camera.lookAt(camLook)
+    }
 
     const design: YuviDesign = {
       version: initialDesign.version,
@@ -471,7 +645,13 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       setVariant(next.variant, animate)
       for (const slot of Object.keys(anchors) as YuviSlot[]) equip(slot, next.equipped[slot] ?? null, animate)
     }
-    controllerRef.current = { equip, setColors, setVariant, applyDesign }
+    const focus = (view: YuviFocus) => {
+      const frame = FRAMES[view] ?? FRAMES.full
+      camPosTarget.set(...frame.pos)
+      camLookTarget.set(...frame.look)
+      yawTarget = frame.yaw
+    }
+    controllerRef.current = { equip, setColors, setVariant, applyDesign, focus }
     applyDesign(design, false)
 
     // ── transform sound (WebAudio) ──
@@ -534,6 +714,8 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     let orbitYaw = 0, orbitPitch = 0, velYaw = 0
     const onOrbitDown = (event: PointerEvent) => {
       dragging = true; lastX = event.clientX; lastY = event.clientY; velYaw = 0
+      // A deliberate drag always beats the automatic category framing.
+      yawTarget = null
       renderer.domElement.style.cursor = 'grabbing'
     }
     const onOrbitMove = (event: PointerEvent) => {
@@ -614,7 +796,20 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       previousFrameAt = frameAt
       if (orbit) {
         // Studio: drag-controlled turntable (with gentle inertia) + framed higher.
-        if (!dragging) { velYaw *= 0.94; orbitYaw += velYaw }
+        if (yawTarget !== null && !dragging) {
+          // Shortest path so "back" never spins the long way around.
+          let delta = (yawTarget - orbitYaw) % (Math.PI * 2)
+          if (delta > Math.PI) delta -= Math.PI * 2
+          if (delta < -Math.PI) delta += Math.PI * 2
+          orbitYaw += delta * 0.09
+          orbitPitch += (0 - orbitPitch) * 0.09
+          velYaw = 0
+          if (Math.abs(delta) < 0.002) { orbitYaw = yawTarget; yawTarget = null }
+        } else if (!dragging) { velYaw *= 0.94; orbitYaw += velYaw }
+        camPos.lerp(camPosTarget, 0.075)
+        camLook.lerp(camLookTarget, 0.075)
+        camera.position.copy(camPos)
+        camera.lookAt(camLook)
         robot.rotation.y = orbitYaw
         robot.rotation.x = orbitPitch
         robot.position.y = -0.82 + Math.sin(t * 1.4) * 0.02
@@ -750,6 +945,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
           const anim = (equippedObjects as any)[key]?.userData?.animate
           if (anim) anim(t, dt)
         }
+        for (const part of stageParts) part.animate?.(t)
       }
       // interactive Y pop
       if (interactiveY) {
@@ -849,6 +1045,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       document.documentElement.removeEventListener('mouseleave', resetPointerLook)
       controllerRef.current = null
       faceLight.texture.dispose()
+      for (const item of stageDisposables) item.dispose()
       renderer.dispose()
       scene.traverse((obj) => {
         const mesh = obj as THREE.Mesh
