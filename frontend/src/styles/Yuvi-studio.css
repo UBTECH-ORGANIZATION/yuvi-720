@@ -173,28 +173,57 @@
 .ys-swatch.is-active { box-shadow: 0 0 0 3px var(--sp-primary-600, #6f5bff); }
 
 /* ── Right stage: the Yuvi Lab ── */
+/* The bay stays a dark room in both themes, exactly like a real photo studio:
+   the holographic bay is additive light, so it only reads against darkness —
+   and a dark surround is what makes Yuvi the brightest thing on screen. */
 .ys-stage {
   position: relative;
-  background: #efeaff;
+  isolation: isolate;
+  border: 1px solid rgba(112, 220, 249, .17);
+  background:
+    radial-gradient(circle at 50% 43%, rgba(80, 92, 175, .38), transparent 29%),
+    radial-gradient(circle at 50% 72%, rgba(61, 213, 236, .11), transparent 28%),
+    linear-gradient(155deg, #171b3c 0%, #121731 54%, #0c1d31 100%);
   border-radius: var(--sp-radius-xl, 22px);
-  box-shadow: 0 18px 44px rgba(70, 50, 160, 0.16);
+  box-shadow: 0 22px 56px rgba(40, 26, 110, .26), inset 0 1px rgba(199, 246, 255, .07);
   overflow: hidden;
 }
-/* Layered bay: warm ceiling wash, a cool floor plane, a violet key haze and a
-   vignette. Layers (not one flat purple) are what give the room depth. */
+.ys-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(rgba(112, 220, 249, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(112, 220, 249, .035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .76), transparent 88%);
+}
+.ys-stage::after {
+  content: '';
+  position: absolute;
+  inset-inline: 15%;
+  inset-block-end: -22%;
+  block-size: 44%;
+  z-index: -1;
+  border: 1px solid rgba(99, 225, 249, .13);
+  border-radius: 50%;
+  box-shadow: 0 0 80px rgba(76, 201, 240, .1);
+}
+/* Layered bay: a violet floor wash, two cool corner keys and a vignette, so
+   the room has depth even before the WebGL hologram draws on top of it. */
 .ys-stage__backdrop {
   position: absolute; inset: 0; pointer-events: none;
   background:
-    radial-gradient(62% 44% at 50% 98%, rgba(93, 62, 226, .38), transparent 72%),
-    radial-gradient(36% 28% at 16% 14%, rgba(60, 200, 220, .3), transparent 72%),
-    radial-gradient(44% 32% at 86% 10%, rgba(150, 120, 250, .34), transparent 74%),
-    linear-gradient(180deg, #f7f2ff 0%, #e4dcff 40%, #c4b8f0 74%, #9d8fdc 100%);
+    radial-gradient(58% 40% at 50% 97%, rgba(124, 92, 255, .26), transparent 72%),
+    radial-gradient(36% 28% at 16% 14%, rgba(78, 238, 240, .12), transparent 74%),
+    radial-gradient(44% 32% at 86% 10%, rgba(140, 116, 255, .16), transparent 76%);
 }
 .ys-stage__backdrop::after {
   content: ''; position: absolute; inset: 0;
-  background: radial-gradient(circle at 50% 44%, transparent 36%, rgba(38, 26, 92, .34) 100%);
+  background: radial-gradient(circle at 50% 46%, transparent 44%, rgba(2, 5, 24, .5) 100%);
 }
-.ys-stage__canvas { position: absolute; inset: 0; }
+.ys-stage__canvas { position: absolute; inset: 0; z-index: 1; }
 .Yuvi-avatar-canvas { width: 100%; height: 100%; }
 .Yuvi-avatar-canvas__fallback {
   position: absolute;
@@ -370,51 +399,7 @@
 }
 
 [data-theme='dark'] .ys-stage {
-  isolation: isolate;
-  border: 1px solid rgba(112, 220, 249, .17);
-  background:
-    radial-gradient(circle at 50% 43%, rgba(80, 92, 175, .38), transparent 29%),
-    radial-gradient(circle at 50% 72%, rgba(61, 213, 236, .11), transparent 28%),
-    linear-gradient(155deg, #171b3c 0%, #121731 54%, #0c1d31 100%);
   box-shadow: 0 28px 72px rgba(1, 4, 22, .52), inset 0 1px rgba(199, 246, 255, .07);
-}
-
-[data-theme='dark'] .ys-stage::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background:
-    linear-gradient(rgba(112, 220, 249, .035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(112, 220, 249, .035) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .76), transparent 88%);
-}
-
-[data-theme='dark'] .ys-stage::after {
-  content: '';
-  position: absolute;
-  inset-inline: 15%;
-  inset-block-end: -22%;
-  block-size: 44%;
-  z-index: -1;
-  border: 1px solid rgba(99, 225, 249, .13);
-  border-radius: 50%;
-  box-shadow: 0 0 80px rgba(76, 201, 240, .1);
-}
-
-[data-theme='dark'] .ys-stage__canvas { z-index: 1; }
-
-/* Night lab: the same layered bay, tuned to the dark scene. */
-[data-theme='dark'] .ys-stage__backdrop {
-  background:
-    radial-gradient(58% 40% at 50% 97%, rgba(124, 92, 255, .26), transparent 72%),
-    radial-gradient(36% 28% at 16% 14%, rgba(78, 238, 240, .12), transparent 74%),
-    radial-gradient(44% 32% at 86% 10%, rgba(140, 116, 255, .16), transparent 76%);
-}
-
-[data-theme='dark'] .ys-stage__backdrop::after {
-  background: radial-gradient(circle at 50% 46%, transparent 44%, rgba(2, 5, 24, .5) 100%);
 }
 
 [data-theme='dark'] .ys-cat h2 { color: var(--sp-ink-900); }
