@@ -32,7 +32,7 @@ import {
   buildPodium,
   type IslandVariant,
 } from './world/props'
-import { buildBuddy } from './world/buddies'
+import { buildCompanion } from './world/companions'
 import { disposeTextureCache, skyTexture, statusBadge } from './world/textures'
 import './world/activeness-world.css'
 
@@ -49,17 +49,17 @@ interface ActivenessWorld3DProps {
 }
 
 /**
- * The seven 720 activeness domains: which of Yuvi's friends lives there, and
- * how the domain is read from real competencies.
+ * The seven 720 activeness domains: which of Yuvi's companions lives there,
+ * and how the domain is read from real competencies.
  */
-const DOMAINS: { key: string; buddy: string; color: string; icon: string; source: string }[] = [
-  { key: 'persistence', buddy: 'sprig', color: '#8a6cff', icon: 'leaf', source: 'growth_mindset' },
-  { key: 'autonomy', buddy: 'scout', color: '#38a1f0', icon: 'search', source: 'initiative_responsibility' },
-  { key: 'initiative', buddy: 'ember', color: '#25b483', icon: 'spark', source: 'motivation_relevance' },
-  { key: 'collaboration', buddy: 'pair', color: '#e59a3c', icon: 'orbit', source: 'support_emotional' },
-  { key: 'learning_management', buddy: 'planner', color: '#5566e0', icon: 'book', source: 'self_regulation' },
-  { key: 'reflection', buddy: 'mirror', color: '#c56ad6', icon: 'reflect', source: 'self_awareness' },
-  { key: 'decision_making', buddy: 'navigator', color: '#7f8bff', icon: 'compass', source: 'avg:self_regulation,self_awareness' },
+const DOMAINS: { key: string; companion: string; color: string; icon: string; source: string }[] = [
+  { key: 'persistence', companion: 'anchor', color: '#8a6cff', icon: 'leaf', source: 'growth_mindset' },
+  { key: 'autonomy', companion: 'scout', color: '#38a1f0', icon: 'search', source: 'initiative_responsibility' },
+  { key: 'initiative', companion: 'spark', color: '#25b483', icon: 'spark', source: 'motivation_relevance' },
+  { key: 'collaboration', companion: 'ally', color: '#e59a3c', icon: 'orbit', source: 'support_emotional' },
+  { key: 'learning_management', companion: 'planner', color: '#5566e0', icon: 'book', source: 'self_regulation' },
+  { key: 'reflection', companion: 'mirror', color: '#c56ad6', icon: 'reflect', source: 'self_awareness' },
+  { key: 'decision_making', companion: 'navigator', color: '#7f8bff', icon: 'compass', source: 'avg:self_regulation,self_awareness' },
 ]
 
 /**
@@ -535,9 +535,11 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       group.add(band)
 
       // One of Yuvi's friends lives here. Each domain has its own character,
-      // its own look and its own way of moving.
-      const prop = buildBuddy(d.buddy, color, variant)
-      const propScale = radius * (d.key === heroLocal ? 1.4 : 1.2)
+      // its own look and its own way of moving. The companion is the subject of
+      // the island, not decoration standing on it — so it is scaled to own the
+      // space above it.
+      const prop = buildCompanion(d.companion, color, variant)
+      const propScale = radius * (d.key === heroLocal ? 1.82 : 1.58)
       prop.scale.setScalar(propScale)
       prop.position.y = radius * 0.2
       group.add(prop)
@@ -643,7 +645,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     composer.addPass(new RenderPass(scene, camera))
     let bloom: UnrealBloomPass | null = null
     if (!reduced) {
-      bloom = new UnrealBloomPass(new THREE.Vector2(width, height), 0.12, 0.45, 0.99)
+      bloom = new UnrealBloomPass(new THREE.Vector2(width, height), 0.06, 0.4, 1)
       composer.addPass(bloom)
     }
     composer.addPass(new OutputPass())
