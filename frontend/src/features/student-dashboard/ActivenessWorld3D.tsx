@@ -308,14 +308,17 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     renderer.setSize(width, height)
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 0.92
+    renderer.toneMappingExposure = 0.86
     renderer.shadowMap.enabled = !reduced
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     mount.appendChild(renderer.domElement)
 
     const scene = new THREE.Scene()
-    scene.background = skyTexture(['#f7f4ff', '#efeaff', '#e2dbfb'], 'rgba(255,238,214,ALPHA)')
-    scene.fog = new THREE.Fog(new THREE.Color('#e9e3fb'), 34, 72)
+    // Dusk, not daylight: a pale sky washed the islands out and made the whole
+    // map glare. A deep twilight backdrop with one warm glow behind the row
+    // keeps the mood calm and lets every lit island read as the subject.
+    scene.background = skyTexture(['#1b1741', '#282059', '#3b2f70'], 'rgba(255,196,140,ALPHA)')
+    scene.fog = new THREE.Fog(new THREE.Color('#2b2360'), 30, 68)
 
     const pmrem = new THREE.PMREMGenerator(renderer)
     const env = pmrem.fromScene(new RoomEnvironment(), 0.04)
@@ -349,9 +352,10 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     controls.rotateSpeed = 0.5
     controls.zoomSpeed = 0.6
 
-    /* lighting — a bright, airy afternoon */
-    scene.add(new THREE.HemisphereLight(new THREE.Color('#f3efff'), new THREE.Color('#a99ad8'), 0.95))
-    const sun = new THREE.DirectionalLight(new THREE.Color('#fff6e6'), 2.1)
+    /* lighting — warm key light against a cool dusk, so contrast (not overall
+       brightness) is what makes the islands stand out */
+    scene.add(new THREE.HemisphereLight(new THREE.Color('#cfc6ff'), new THREE.Color('#2b2258'), 0.42))
+    const sun = new THREE.DirectionalLight(new THREE.Color('#ffe9c9'), 2.35)
     sun.position.set(-6.5, 11, 7.5)
     if (!reduced) {
       sun.castShadow = true
@@ -367,10 +371,10 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       sun.shadow.radius = 2.5
     }
     scene.add(sun)
-    const fill = new THREE.DirectionalLight(new THREE.Color('#cfd8ff'), 0.55)
+    const fill = new THREE.DirectionalLight(new THREE.Color('#9fb0ff'), 0.32)
     fill.position.set(7, 4, 6)
     scene.add(fill)
-    const rim = new THREE.DirectionalLight(new THREE.Color('#ffd9f2'), 0.5)
+    const rim = new THREE.DirectionalLight(new THREE.Color('#ffc9ec'), 0.62)
     rim.position.set(2, 5, -12)
     scene.add(rim)
 
@@ -389,7 +393,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     mascot.position.set(0, -1.65, 3.8)
     mascot.scale.setScalar(0.66)
     scene.add(mascot)
-    const mascotLight = new THREE.PointLight(new THREE.Color('#a98cff'), 1.6, 6, 2)
+    const mascotLight = new THREE.PointLight(new THREE.Color('#a98cff'), 2.2, 6, 2)
     mascotLight.position.set(0, -0.6, 4.8)
     scene.add(mascotLight)
 
@@ -494,7 +498,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       new THREE.MeshBasicMaterial({
         color: new THREE.Color('#ffd77a'),
         transparent: true,
-        opacity: 0.16,
+        opacity: 0.09,
         depthWrite: false,
         side: THREE.DoubleSide,
         blending: THREE.AdditiveBlending,
@@ -605,7 +609,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     let raf = 0
     let disposed = false
 
-    const placeTag = (el: HTMLElement | null, world: THREE.Vector3, hidden: boolean) => {
+    const placeTag = (el: HTMLElement | null, world: THREE.Vector3, hidden: boolean, bottomPad = 118) => {
       if (!el) return
       projected.copy(world).project(camera)
       const behind = projected.z > 1
@@ -617,7 +621,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       const minX = direction === 'rtl' ? 24 : panelGap
       const maxX = direction === 'rtl' ? vp.w - panelGap : vp.w - 24
       const cx = Math.min(Math.max(x, Math.min(minX, maxX)), Math.max(minX, maxX))
-      const cy = Math.min(Math.max(y, 84), vp.h - 118)
+      const cy = Math.min(Math.max(y, 84), vp.h - bottomPad)
       el.style.transform = `translate(-50%, -100%) translate(${cx.toFixed(1)}px, ${cy.toFixed(1)}px)`
       el.style.opacity = '1'
       el.style.pointerEvents = 'auto'
@@ -734,7 +738,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
 
       // HTML labels ride along with the islands
       for (const n of nodes) placeTag(tagRefsRef.current.current[n.key], n.anchor, intro < 0.7)
-      placeTag(captionRef.current, new THREE.Vector3(0, -3.4, 3.8), intro < 0.8)
+      placeTag(captionRef.current, new THREE.Vector3(0, -4.1, 3.8), intro < 0.8, 26)
 
       composer.render()
     }
