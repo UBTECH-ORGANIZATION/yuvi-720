@@ -128,7 +128,11 @@ export function ActivenessMapSection({ competencies, studentName }: ActivenessMa
       ? [...prior, { at: new Date().toISOString(), positions }]
       : prior
     ).slice(-24)
-    void updateLearnerState({ activeness_map: { positions, focus: initial?.focus ?? null, history } }).catch(() => undefined)
+    // Spread what is already stored: this write owns the snapshot + history
+    // only, and must not drop the learner's focus, goal or onboarding flag.
+    void updateLearnerState({
+      activeness_map: { ...(initial ?? {}), positions, focus: initial?.focus ?? null, history },
+    }).catch(() => undefined)
   }, [open, initial, competencies])
 
   useEffect(() => () => window.clearTimeout(exitTimer.current), [])
