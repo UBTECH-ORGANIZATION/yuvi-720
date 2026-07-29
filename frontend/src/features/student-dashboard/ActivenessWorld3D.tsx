@@ -95,15 +95,18 @@ function valueFor(source: string, byKey: Record<string, number>): number {
 
 const VARIANT: Record<Tone, IslandVariant> = { strong: 'lush', steady: 'growing', support: 'dormant' }
 
-/** How a domain is described to the learner — words only, never a score. */
-type Status = 'core' | 'expressed' | 'onway' | 'notyet'
+/**
+ * Exactly three readable states — a learner must be able to finish the sentence
+ * "I'm good at ___ and the next thing I want to strengthen is ___" without
+ * clicking anything. Words only, never a score.
+ */
+type Status = 'strength' | 'process' | 'next'
 const STATUS_KEY: Record<Status, string> = {
-  core: 'actmap.status.strong',
-  expressed: 'actmap.state.expressed',
-  onway: 'actmap.state.onway',
-  notyet: 'actmap.state.notyet',
+  strength: 'actmap.state.strength',
+  process: 'actmap.state.process',
+  next: 'actmap.state.next',
 }
-const STATUS_ICON: Record<Status, string> = { core: 'spark', expressed: 'check', onway: 'clock', notyet: 'lock' }
+const STATUS_ICON: Record<Status, string> = { strength: 'spark', process: 'clock', next: 'target' }
 
 export function ActivenessWorld3D({ competencies, studentName, initial, onClose }: ActivenessWorld3DProps) {
   const { t, direction } = useI18n()
@@ -135,6 +138,17 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     [domains],
   )
 
+  /**
+   * The single domain marked as "my next goal". The learner's own choice wins;
+   * otherwise it is the domain that is least expressed today. There is never
+   * more than one — a wall of "needs improvement" is not readable.
+   */
+  const suggestedNext = useMemo(() => {
+    const ranked = [...domains].sort((a, b) => a.level - b.level)
+    const first = ranked.find((d) => d.key !== heroKey) ?? ranked[0]
+    return first?.key ?? null
+  }, [domains, heroKey])
+
   /** Slot per domain: honour a saved arrangement, otherwise strongest → back. */
   const slotByKey = useMemo(() => {
     const saved = initial?.positions
@@ -145,14 +159,6 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     ranked.forEach((d, i) => { map[d.key] = i })
     return map
   }, [domains, initial])
-
-  const statusByKey = useMemo(() => {
-    const map: Record<string, Status> = {}
-    for (const d of domains) {
-      map[d.key] = d.key === heroKey ? 'core' : d.tone === 'strong' ? 'expressed' : d.tone === 'steady' ? 'onway' : 'notyet'
-    }
-    return map
-  }, [domains, heroKey])
 
   const expressedShare = useMemo(() => {
     const done = domains.filter((d) => d.tone !== 'support').length
@@ -180,10 +186,36 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
   const [sparks, setSparks] = useState<number | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
 
-  useEffect(() => { if (!selected && heroKey) setSelected(heroKey) }, [heroKey, selected])
+  /* ── the three states every learner reads in 3 seconds ──────────────── */
 
-  const active = domains.find((d) => d.key === selected) ?? domains.find((d) => d.key === heroKey) ?? domains[0]
+  /** Exactly one "next goal" domain: learner's goal → learner's focus → suggestion. */
+  const nextKey = useMemo(
+    () => (activeGoal?.domain as string | undefined) ?? myFocus ?? suggestedNext,
+    [activeGoal, myFocus, suggestedNext],
+  )
+
+  const statusByKey = useMemo(() => {
+    const map: Record<string, Status> = {}
+    for (const d of domains) {
+      map[d.key] = d.key === nextKey ? 'next' : d.key === heroKey || d.tone === 'strong' ? 'strength' : 'process'
+    }
+    return map
+  }, [domains, heroKey, nextKey])
+
+  const processCount = useMemo(
+    () => Object.values(statusByKey).filter((s) => s === 'process').length,
+    [statusByKey],
+  )
+  const strengthCount = useMemo(
+    () => Object.values(statusByKey).filter((s) => s === 'strength').length,
+    [statusByKey],
+  )
+
+  // Nothing is selected on entry: the learner first meets the map and their
+  // personal summary. Details and actions only appear once an island is picked.
+  const active = selected ? domains.find((d) => d.key === selected) ?? null : null
   const hero = domains.find((d) => d.key === heroKey) ?? domains[0]
+  const nextDomain = domains.find((d) => d.key === nextKey) ?? null
 
   // Real spark balance for the HUD — hidden entirely if the service is unavailable.
   useEffect(() => {
@@ -218,7 +250,6 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     const next = myFocus === key ? null : key
     setMyFocus(next)
     persist({ focus: next })
-    sceneApi.current?.setMyFocus(next)
     setToast(next ? t('actmap.msg.focus', { domain: t(`actmap.domain.${key}`) }) : null)
     if (next) window.setTimeout(() => setToast(null), 3600)
   }
@@ -260,7 +291,8 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
 
   const selectedRef = useRef<string | null>(selected)
   useEffect(() => { selectedRef.current = selected; sceneApi.current?.setSelected(selected) }, [selected])
-  useEffect(() => { sceneApi.current?.setMyFocus(myFocus) }, [myFocus])
+  // The spotlight in the world always marks the one "next goal" island.
+  useEffect(() => { sceneApi.current?.setMyFocus(nextKey) }, [nextKey])
   const setSelectedRef = useRef(setSelected)
   useEffect(() => { setSelectedRef.current = setSelected })
   const tagRefsRef = useRef(tagRefs)
@@ -279,6 +311,12 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       return { ...d, value, tone, level: Math.max(0, Math.min(1, value / 100)) }
     })
     const heroLocal = model.reduce((a, b) => (b.level > a.level ? b : a), model[0])?.key ?? null
+    // The one island the learner should read as "my next goal".
+    const nextLocal =
+      (initial?.goal?.domain as string | undefined) ??
+      initial?.focus ??
+      [...model].sort((a, b) => a.level - b.level).find((d) => d.key !== heroLocal)?.key ??
+      null
     const slots = slotByKey
 
     const width = Math.max(1, mount.clientWidth)
@@ -306,12 +344,14 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     scene.environment = env.texture
 
     // Shift the diorama away from the side detail panel so nothing hides behind it.
-    const shiftX = direction === 'rtl' ? 2.2 : -2.2
+    const shiftX = direction === 'rtl' ? 0.6 : -0.6
     const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 200)
     camera.position.set(shiftX, 5.6, 21)
 
     const controls = new OrbitControls(camera, renderer.domElement)
-    controls.target.set(shiftX, 0.4, -0.2)
+    // Look slightly above the diorama so the islands sit in the lower part of
+    // the frame and the personal summary owns the top of the screen.
+    controls.target.set(shiftX, 1.9, -0.2)
     controls.enableDamping = true
     controls.dampingFactor = 0.075
     controls.enablePan = false
@@ -389,7 +429,10 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       const slot = SLOTS[slots[d.key] ?? i] ?? SLOTS[i]
       const color = new THREE.Color(d.color)
       const variant = VARIANT[d.tone]
-      const radius = (0.8 + d.level * 0.24) * slot.scale
+      // Hierarchy first: the headline strength is unmistakably the biggest
+      // island, the next-goal island is second, everything else stays calm.
+      const emphasis = d.key === heroLocal ? 1.42 : d.key === nextLocal ? 1.1 : 0.82
+      const radius = (0.8 + d.level * 0.24) * slot.scale * emphasis
       const group = new THREE.Group()
       group.position.set(Math.cos(slot.angle) * RX, slot.y, Math.sin(slot.angle) * RZ)
 
@@ -443,7 +486,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       n.path.rebuild(podiumEdge.clone(), to)
     }
 
-    /* spotlight ring for the learner's chosen focus */
+    /* spotlight ring + light beam marking the one "next goal" island */
     const focusRing = new THREE.Mesh(
       new THREE.TorusGeometry(1, 0.045, 16, 120),
       new THREE.MeshStandardMaterial({
@@ -458,6 +501,21 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     focusRing.rotation.x = -Math.PI / 2
     focusRing.visible = false
     scene.add(focusRing)
+
+    // A soft shaft of light so the goal island is found without reading a word.
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.22, 1.05, 5.6, 28, 1, true),
+      new THREE.MeshBasicMaterial({
+        color: new THREE.Color('#ffd77a'),
+        transparent: true,
+        opacity: 0.16,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+      }),
+    )
+    beam.visible = false
+    scene.add(beam)
 
     /* post-processing — a whisper of bloom so gems glint without washing out */
     const composer = new EffectComposer(renderer)
@@ -514,7 +572,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     let tween: { from: THREE.Vector3; to: THREE.Vector3; camFrom: THREE.Vector3; camTo: THREE.Vector3; t: number } | null = null
     const focusDomain = (key: string | null) => {
       const n = nodes.find((x) => x.key === key)
-      const target = n ? new THREE.Vector3(n.home.x * 0.42 + shiftX, n.home.y * 0.4 + 0.6, n.home.z * 0.42) : new THREE.Vector3(shiftX, 0.4, -0.2)
+      const target = n ? new THREE.Vector3(n.home.x * 0.42 + shiftX, n.home.y * 0.4 + 1.6, n.home.z * 0.42) : new THREE.Vector3(shiftX, 1.9, -0.2)
       const dist = n ? 17 : 21
       const dir = camera.position.clone().sub(controls.target).normalize()
       tween = {
@@ -528,7 +586,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
 
     /* per-frame state pushed from React */
     let selectedNow: string | null = selectedRef.current
-    let focusNow: string | null = initial?.focus ?? null
+    let focusNow: string | null = nextLocal
 
     sceneApi.current = {
       getPositions: () => slots,
@@ -550,6 +608,9 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     let raf = 0
     let disposed = false
 
+    // Refreshed once per frame so labels can dodge the personal summary card.
+    let summaryBox: { top: number; bottom: number; left: number; right: number } | null = null
+
     const placeTag = (el: HTMLElement | null, world: THREE.Vector3, hidden: boolean) => {
       if (!el) return
       projected.copy(world).project(camera)
@@ -557,13 +618,22 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       if (hidden || behind) { el.style.opacity = '0'; el.style.pointerEvents = 'none'; return }
       const x = (projected.x * 0.5 + 0.5) * vp.w
       const y = (-projected.y * 0.5 + 0.5) * vp.h
-      // Keep labels clear of the rail and the side detail panel.
-      const railGap = 205
-      const panelGap = 372
+      // Keep labels clear of the rail and the side detail panel while they are open.
+      const railGap = selectedNow ? 205 : 24
+      const panelGap = selectedNow ? 372 : 24
       const minX = direction === 'rtl' ? railGap : panelGap
       const maxX = direction === 'rtl' ? vp.w - panelGap : vp.w - railGap
       const cx = Math.min(Math.max(x, Math.min(minX, maxX)), Math.max(minX, maxX))
-      const cy = Math.min(Math.max(y, 96), vp.h - 118)
+      let cy = Math.min(Math.max(y, 84), vp.h - 118)
+      // The personal summary owns the top of the screen: a label that would land
+      // behind it is nudged below the card instead.
+      if (summaryBox) {
+        const half = el.offsetWidth / 2
+        const overlapsX = cx + half > summaryBox.left - 12 && cx - half < summaryBox.right + 12
+        if (overlapsX && cy - el.offsetHeight < summaryBox.bottom && cy > summaryBox.top - el.offsetHeight) {
+          cy = Math.min(summaryBox.bottom + 14 + el.offsetHeight, vp.h - 118)
+        }
+      }
       el.style.transform = `translate(-50%, -100%) translate(${cx.toFixed(1)}px, ${cy.toFixed(1)}px)`
       el.style.opacity = '1'
       el.style.pointerEvents = 'auto'
@@ -633,8 +703,10 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
           o.rotation.y = time * 0.12
         })
 
-        // paths brighten toward the selected island
-        n.path.setStrength(isSelected ? 1 : isHover ? 0.8 : 0.34)
+        // paths brighten toward the selected island; the headline strength and
+        // the goal island stay lit, the rest read as quiet background.
+        const lead = n.key === heroLocal || n.key === focusNow
+        n.path.setStrength(isSelected ? 1 : isHover ? 0.8 : lead ? 0.5 : 0.16)
         n.path.update(dt)
         n.path.group.visible = intro > 0.45
 
@@ -642,7 +714,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
         n.anchor.y += n.radius * (n.key === heroLocal ? 2.35 : 2.05) * s
       }
 
-      // focus ring under the learner's chosen domain
+      // focus ring + light shaft over the one "next goal" island
       const focusNode = nodes.find((n) => n.key === focusNow)
       if (focusNode) {
         focusRing.visible = true
@@ -652,8 +724,15 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
         const mat = focusRing.material as THREE.MeshStandardMaterial
         mat.opacity = 0.55 + Math.sin(time * 2.2) * 0.2
         mat.emissiveIntensity = 1.3 + Math.sin(time * 2.2) * 0.4
+
+        beam.visible = intro > 0.6
+        beam.position.copy(focusNode.group.position)
+        beam.position.y += 2.9
+        beam.scale.set(focusNode.radius * 1.05, 1, focusNode.radius * 1.05)
+        ;(beam.material as THREE.MeshBasicMaterial).opacity = 0.13 + Math.sin(time * 1.8) * 0.05
       } else {
         focusRing.visible = false
+        beam.visible = false
       }
 
       // ambient dust drift
@@ -670,6 +749,12 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       controls.update()
 
       // HTML labels ride along with the islands
+      const summaryEl = mount.parentElement?.querySelector('.aworld__summary') as HTMLElement | null
+      if (summaryEl) {
+        const r = summaryEl.getBoundingClientRect()
+        const host = mount.getBoundingClientRect()
+        summaryBox = { top: r.top - host.top, bottom: r.bottom - host.top, left: r.left - host.left, right: r.right - host.left }
+      } else summaryBox = null
       for (const n of nodes) placeTag(tagRefsRef.current.current[n.key], n.anchor, intro < 0.7)
       placeTag(captionRef.current, new THREE.Vector3(0, -0.7, 0.4), intro < 0.8)
 
@@ -732,7 +817,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     else void el.requestFullscreen?.().catch(() => undefined)
   }
 
-  const statusOf = (key: string) => statusByKey[key] ?? 'onway'
+  const statusOf = (key: string) => statusByKey[key] ?? 'process'
   const domainName = (key: string) => t(`actmap.domain.${key}`)
 
   const railTitle: Record<RailKey, string> = {
@@ -751,6 +836,10 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
         <div className="aworld__tags" aria-hidden="true">
           {domains.map((d) => {
             const status = statusOf(d.key)
+            const isActive = selected === d.key
+            // Only the headline strength and the one goal carry a status line —
+            // everything else stays a quiet name so the hierarchy is readable.
+            const showStatus = status !== 'process' || isActive
             return (
               <button
                 key={d.key}
@@ -758,15 +847,18 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
                 ref={(el) => { tagRefs.current[d.key] = el }}
                 className="aworld__tag"
                 data-status={status}
-                data-active={selected === d.key ? 'true' : 'false'}
+                data-active={isActive ? 'true' : 'false'}
+                data-lead={d.key === heroKey ? 'true' : 'false'}
                 style={{ ['--tag-tint' as any]: d.color }}
                 onClick={() => setSelected(d.key)}
               >
                 <span className="aworld__tag-name">{domainName(d.key)}</span>
-                <span className="aworld__tag-status">
-                  <i className="aworld__tag-badge"><Icon name={STATUS_ICON[status]} size={12} /></i>
-                  {t(STATUS_KEY[status])}
-                </span>
+                {showStatus && (
+                  <span className="aworld__tag-status">
+                    <i className="aworld__tag-badge"><Icon name={STATUS_ICON[status]} size={12} /></i>
+                    {t(STATUS_KEY[status])}
+                  </span>
+                )}
               </button>
             )
           })}
@@ -793,10 +885,6 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       </header>
 
       <div className="aworld__headtools">
-        <button type="button" className="aworld__pill" onClick={() => setHowOpen(true)}>
-          <Icon name="help" size={15} />
-          {t('actmap.how')}
-        </button>
         <button
           type="button"
           className="aworld__pill"
@@ -805,29 +893,73 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
           <Icon name={view === 'world' ? 'inbox' : 'map'} size={15} />
           {view === 'world' ? t('actmap.view.list') : t('actmap.view.world')}
         </button>
-        <button type="button" className="aworld__round" onClick={onClose} aria-label={t('actmap.home')}>
-          <Icon name="chart" size={17} />
-        </button>
       </div>
 
-      {/* left rail */}
-      <nav className="aworld__rail" aria-label={t('actmap.title')}>
-        {(['focus', 'goals', 'progress', 'insights'] as RailKey[]).map((key) => (
+      {/* the answer, before any exploring: my strength and my next step */}
+      <section className="aworld__summary" data-compact={selected ? 'true' : 'false'}>
+        <p className="aworld__summary-lead">{t('actmap.summary.lead', { strengths: strengthCount, count: processCount })}</p>
+        <div className="aworld__summary-rows">
           <button
-            key={key}
             type="button"
-            className="aworld__railbtn"
-            data-active={rail === key ? 'true' : 'false'}
-            onClick={() => setRail(key)}
+            className="aworld__summary-row"
+            data-kind="strength"
+            style={{ ['--gem' as any]: hero.color }}
+            onClick={() => setSelected(hero.key)}
           >
-            <i><Icon name={key === 'focus' ? 'target' : key === 'goals' ? 'spark' : key === 'progress' ? 'chart' : 'lightbulb'} size={19} /></i>
-            <span>{railTitle[key]}</span>
+            <span className="aworld__summary-gem"><Icon name={hero.icon} size={20} /></span>
+            <span className="aworld__summary-text">
+              <span className="aworld__summary-label">{t('actmap.summary.strength')}</span>
+              <strong>{domainName(hero.key)}</strong>
+              <span className="aworld__summary-story">{t(`actmap.domain.${hero.key}.says`)}</span>
+            </span>
+            <Icon name="arrow" size={15} />
           </button>
-        ))}
-      </nav>
+
+          {nextDomain && (
+            <button
+              type="button"
+              className="aworld__summary-row"
+              data-kind="next"
+              style={{ ['--gem' as any]: nextDomain.color }}
+              onClick={() => setSelected(nextDomain.key)}
+            >
+              <span className="aworld__summary-gem"><Icon name="target" size={20} /></span>
+              <span className="aworld__summary-text">
+                <span className="aworld__summary-label">{t('actmap.summary.next')}</span>
+                <strong>{domainName(nextDomain.key)}</strong>
+                <span className="aworld__summary-story">{t('actmap.summary.nextstory', { step: t(`actmap.domain.${nextDomain.key}.nextstep`) })}</span>
+              </span>
+              <Icon name="arrow" size={15} />
+            </button>
+          )}
+        </div>
+        <p className="aworld__summary-hint">{t('actmap.summary.hint')}</p>
+      </section>
+
+      {/* left rail — only once the learner chose to explore */}
+      {selected && (
+        <nav className="aworld__rail" aria-label={t('actmap.title')}>
+          {(['focus', 'goals', 'progress', 'insights'] as RailKey[]).map((key) => (
+            <button
+              key={key}
+              type="button"
+              className="aworld__railbtn"
+              data-active={rail === key ? 'true' : 'false'}
+              onClick={() => setRail(key)}
+            >
+              <i><Icon name={key === 'focus' ? 'target' : key === 'goals' ? 'spark' : key === 'progress' ? 'chart' : 'lightbulb'} size={19} /></i>
+              <span>{railTitle[key]}</span>
+            </button>
+          ))}
+        </nav>
+      )}
 
       {/* detail panel */}
+      {selected && (
       <aside className="aworld__panel" style={{ ['--panel-tint' as any]: active?.color }}>
+        <button type="button" className="aworld__panel-close" onClick={() => setSelected(null)} aria-label={t('actmap.card.close')}>
+          <Icon name="close" size={15} />
+        </button>
         {rail === 'focus' && active && (
           <>
             <div className="aworld__panel-hero">
@@ -944,30 +1076,13 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
             <div className="aworld__insights">
               <p>{t('actmap.yubi.intro', { name: studentName })}</p>
               <p><strong>{t('actmap.yubi.strengths')}</strong> {t(`actmap.yubi.strong.${hero.key}`)}</p>
-              {(() => {
-                const grow = [...domains].sort((a, b) => a.level - b.level)[0]
-                return <p><strong>{t('actmap.yubi.growth')}</strong> {t(`actmap.yubi.grow.${grow.key}`)}</p>
-              })()}
+              {nextDomain && <p><strong>{t('actmap.yubi.growth')}</strong> {t(`actmap.yubi.grow.${nextDomain.key}`)}</p>}
               <p>{t('actmap.yubi.outro')}</p>
             </div>
           </>
         )}
       </aside>
-
-      {/* bottom message */}
-      <div className="aworld__banner">
-        <span className="aworld__banner-gem" style={{ ['--gem' as any]: hero.color }}>
-          <Icon name={hero.icon} size={16} />
-        </span>
-        <div>
-          <strong>{t('actmap.bottom.headline', { domain: domainName(hero.key) })}</strong>
-          <span>{t('actmap.bottom.sub')}</span>
-        </div>
-        <button type="button" className="aworld__banner-cta" onClick={onClose}>
-          {t('actmap.bottom.cta')}
-          <Icon name="arrow" size={14} />
-        </button>
-      </div>
+      )}
 
       {/* bottom-left tools */}
       <div className="aworld__tools">
@@ -982,19 +1097,21 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
         </button>
       </div>
 
-      {/* bottom-right hud */}
-      <div className="aworld__hud">
-        <div className="aworld__hud-progress">
-          <span>{t('actmap.hud.progress')}</span>
-          <i><b style={{ width: `${Math.round(expressedShare * 100)}%` }} /></i>
-        </div>
-        {sparks !== null && (
-          <div className="aworld__hud-sparks" title={t('actmap.hud.sparks')}>
-            <Icon name="spark" size={15} />
-            {sparks.toLocaleString()}
+      {/* bottom-right hud — secondary detail, kept out of the first read */}
+      {selected && (
+        <div className="aworld__hud">
+          <div className="aworld__hud-progress">
+            <span>{t('actmap.hud.progress')}</span>
+            <i><b style={{ width: `${Math.round(expressedShare * 100)}%` }} /></i>
           </div>
-        )}
-      </div>
+          {sparks !== null && (
+            <div className="aworld__hud-sparks" title={t('actmap.hud.sparks')}>
+              <Icon name="spark" size={15} />
+              {sparks.toLocaleString()}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* accessible list view */}
       {view === 'list' && (
