@@ -7,9 +7,9 @@
 
 .amap-overlay--world {
   background:
-    radial-gradient(900px circle at 50% 8%, rgba(255, 236, 209, .55), transparent 62%),
-    radial-gradient(760px circle at 12% 84%, rgba(196, 178, 255, .38), transparent 60%),
-    linear-gradient(170deg, #f8f6ff 0%, #f1ecfd 52%, #e6dffb 100%);
+    radial-gradient(900px circle at 50% 34%, rgba(255, 186, 128, .18), transparent 62%),
+    radial-gradient(760px circle at 12% 84%, rgba(124, 92, 255, .22), transparent 60%),
+    linear-gradient(170deg, #1b1741 0%, #262055 52%, #362b68 100%);
 }
 
 .aworld {
@@ -108,16 +108,21 @@
   align-items: center;
   gap: 14px;
 }
+/* the title sits directly on the dusk sky, so it is the one piece of chrome
+   that has to be light-on-dark (everything else is a white glass card) */
 .aworld__titles h1 {
   margin: 0;
   font-size: clamp(1.15rem, 1.7vw, 1.45rem);
   font-weight: 800;
   letter-spacing: -.01em;
+  color: #f6f3ff;
+  text-shadow: 0 2px 12px rgba(12, 8, 34, .55);
 }
 .aworld__titles p {
   margin: 3px 0 0;
   font-size: .82rem;
-  color: var(--aw-muted);
+  color: rgba(233, 228, 255, .78);
+  text-shadow: 0 2px 10px rgba(12, 8, 34, .5);
 }
 
 .aworld__headtools {
