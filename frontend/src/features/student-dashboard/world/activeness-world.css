@@ -207,6 +207,21 @@
   box-shadow: 0 14px 30px rgba(120, 84, 20, .18), 0 0 0 4px rgba(255, 196, 92, .22);
 }
 
+/* the row is compressed while the detail panel is open, so the labels shrink to
+   plain names — the panel carries the detail for the picked domain */
+.aworld--picked .aworld__tag {
+  min-inline-size: 0;
+  padding: 5px 10px 6px;
+  border-radius: 12px;
+}
+.aworld--picked .aworld__tag-name,
+.aworld--picked .aworld__tag[data-lead='true'] .aworld__tag-name,
+.aworld--picked .aworld__tag[data-status='process'] .aworld__tag-name { font-size: .74rem; }
+.aworld--picked .aworld__tag-status { display: none; }
+.aworld--picked .aworld__tag[data-active='true'] { padding: 7px 12px 8px; }
+.aworld--picked .aworld__tag[data-active='true'] .aworld__tag-name { font-size: .88rem; }
+.aworld--picked .aworld__tag[data-active='true'] .aworld__tag-status { display: inline-flex; }
+
 .aworld__caption {
   position: absolute;
   left: 0;

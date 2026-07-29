@@ -60,21 +60,21 @@ const DOMAINS: { key: string; metaphor: string; color: string; icon: string; sou
 ]
 
 /**
- * Island slots, ordered back → front. The strongest domain lands at the back
- * centre (visually the top of the frame, largest and highest), so the learner
- * reads their own headline strength first.
+ * ONE STRAIGHT ROW. A ring hid domains behind each other and made the order
+ * unreadable; laid out on a single line every domain is visible at once and the
+ * row itself carries the message — it runs from the learner's strongest domain
+ * (first in reading order) to the one they are growing into.
  */
-const SLOTS: { angle: number; y: number; scale: number }[] = [
-  { angle: -Math.PI / 2, y: 1.15, scale: 1.24 },
-  { angle: -Math.PI / 2 - 0.78, y: 0.62, scale: 1.02 },
-  { angle: -Math.PI / 2 + 0.78, y: 0.62, scale: 1.02 },
-  { angle: Math.PI, y: 0.06, scale: 0.98 },
-  { angle: 0, y: 0.06, scale: 0.98 },
-  { angle: Math.PI / 2 + 0.62, y: -0.5, scale: 0.9 },
-  { angle: Math.PI / 2 - 0.62, y: -0.5, scale: 0.9 },
-]
-const RX = 4.55
-const RZ = 2.95
+const LINE_GAP = 2.5
+const LINE_Y = 1.15
+/** Slot index → world position on the row. RTL starts the row on the right. */
+function slotPosition(index: number, count: number, rtl: boolean) {
+  const x = (index - (count - 1) / 2) * LINE_GAP * (rtl ? -1 : 1)
+  return new THREE.Vector3(x, LINE_Y, 0)
+}
+/** What the camera has to keep in frame: the whole row, plus the companion. */
+const LINE_SPAN = LINE_GAP * 6 + 3.4
+const LINE_RISE = 6.8
 
 function toneFor(value: number): Tone {
   if (value >= 70) return 'strong'
@@ -148,7 +148,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     return first?.key ?? null
   }, [domains, heroKey])
 
-  /** Slot per domain: honour a saved arrangement, otherwise strongest → back. */
+  /** Slot per domain: honour a saved arrangement, otherwise strongest first. */
   const slotByKey = useMemo(() => {
     const saved = initial?.positions
     const valid = saved && DOMAINS.every((d) => typeof saved[d.key] === 'number')
@@ -315,31 +315,38 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
 
     const scene = new THREE.Scene()
     scene.background = skyTexture(['#f7f4ff', '#efeaff', '#e2dbfb'], 'rgba(255,238,214,ALPHA)')
-    scene.fog = new THREE.Fog(new THREE.Color('#e9e3fb'), 22, 44)
+    scene.fog = new THREE.Fog(new THREE.Color('#e9e3fb'), 34, 72)
 
     const pmrem = new THREE.PMREMGenerator(renderer)
     const env = pmrem.fromScene(new RoomEnvironment(), 0.04)
     scene.environment = env.texture
 
-    // Shift the diorama away from the side detail panel so nothing hides behind it.
-    const shiftX = direction === 'rtl' ? 0.6 : -0.6
-    const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 200)
-    camera.position.set(shiftX, 5.6, 21)
+    // The row is read as a whole, so the camera stays square to it and simply
+    // pulls back far enough to hold every island on screen.
+    const homeTarget = new THREE.Vector3(0, 0.55, 0)
+    // Which way to nudge the camera so a picked island never sits behind the
+    // side detail panel (the panel is on the inline-start edge).
+    const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 240)
+    const fitDistance = () => {
+      const vFov = (camera.fov * Math.PI) / 180
+      const half = Math.tan(vFov / 2)
+      return Math.max(LINE_RISE / 2 / half, LINE_SPAN / 2 / (half * Math.max(0.4, camera.aspect)))
+    }
+    let baseDist = fitDistance()
+    camera.position.set(0, homeTarget.y + baseDist * 0.2, baseDist)
 
     const controls = new OrbitControls(camera, renderer.domElement)
-    // Look slightly above the diorama so the islands sit in the lower part of
-    // the frame and the personal summary owns the top of the screen.
-    controls.target.set(shiftX, 1.9, -0.2)
+    controls.target.copy(homeTarget)
     controls.enableDamping = true
     controls.dampingFactor = 0.075
     controls.enablePan = false
-    controls.minDistance = 13
-    controls.maxDistance = 26
-    controls.minPolarAngle = 0.95
-    controls.maxPolarAngle = 1.44
-    controls.minAzimuthAngle = -0.6
-    controls.maxAzimuthAngle = 0.6
-    controls.rotateSpeed = 0.6
+    controls.minDistance = baseDist * 0.42
+    controls.maxDistance = baseDist * 1.95
+    controls.minPolarAngle = 1.02
+    controls.maxPolarAngle = 1.5
+    controls.minAzimuthAngle = -0.34
+    controls.maxAzimuthAngle = 0.34
+    controls.rotateSpeed = 0.5
     controls.zoomSpeed = 0.6
 
     /* lighting — a bright, airy afternoon */
@@ -351,10 +358,10 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       sun.shadow.mapSize.set(2048, 2048)
       sun.shadow.camera.near = 1
       sun.shadow.camera.far = 40
-      sun.shadow.camera.left = -11
-      sun.shadow.camera.right = 11
-      sun.shadow.camera.top = 11
-      sun.shadow.camera.bottom = -11
+      sun.shadow.camera.left = -16
+      sun.shadow.camera.right = 16
+      sun.shadow.camera.top = 12
+      sun.shadow.camera.bottom = -12
       sun.shadow.bias = -0.0004
       sun.shadow.normalBias = 0.03
       sun.shadow.radius = 2.5
@@ -373,16 +380,17 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     const dust = buildAmbientDust(reduced ? 60 : 170)
     scene.add(dust)
 
-    /* the podium and the companion */
+    /* the podium and the companion — in the near foreground, below the row, so
+       the light paths rise from the learner up to every domain */
     const podium = buildPodium('#8a6cff')
-    podium.position.set(0, -0.1, 0.4)
+    podium.position.set(0, -1.85, 3.8)
     scene.add(podium)
     const mascot = buildMascot()
-    mascot.position.set(0, 0.1, 0.4)
-    mascot.scale.setScalar(0.85)
+    mascot.position.set(0, -1.65, 3.8)
+    mascot.scale.setScalar(0.66)
     scene.add(mascot)
     const mascotLight = new THREE.PointLight(new THREE.Color('#a98cff'), 1.6, 6, 2)
-    mascotLight.position.set(0, 1.4, 1.4)
+    mascotLight.position.set(0, -0.6, 4.8)
     scene.add(mascotLight)
 
     /* islands */
@@ -404,15 +412,14 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     const pickables: THREE.Object3D[] = []
 
     model.forEach((d, i) => {
-      const slot = SLOTS[slots[d.key] ?? i] ?? SLOTS[i]
       const color = new THREE.Color(d.color)
       const variant = VARIANT[d.tone]
       // Hierarchy first: the headline strength is unmistakably the biggest
       // island, the next-goal island is second, everything else stays calm.
-      const emphasis = d.key === heroLocal ? 1.42 : d.key === nextLocal ? 1.1 : 0.82
-      const radius = (0.8 + d.level * 0.24) * slot.scale * emphasis
+      const emphasis = d.key === heroLocal ? 1.3 : d.key === nextLocal ? 1.06 : 0.84
+      const radius = (0.66 + d.level * 0.22) * emphasis
       const group = new THREE.Group()
-      group.position.set(Math.cos(slot.angle) * RX, slot.y, Math.sin(slot.angle) * RZ)
+      group.position.copy(slotPosition(slots[d.key] ?? i, model.length, direction === 'rtl'))
 
       const island = buildIsland(variant, color, i * 5 + 1, radius)
       group.add(island)
@@ -455,13 +462,14 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       })
     })
 
-    // Draw the light-paths from the podium rim to each island.
-    const podiumEdge = new THREE.Vector3()
+    // Draw the light-paths from the companion in the foreground up to each island.
+    const podiumTop = new THREE.Vector3(0, -1.25, 3.8)
     for (const n of nodes) {
-      const dir = n.home.clone().setY(0).normalize()
-      podiumEdge.copy(dir).multiplyScalar(1.45).setY(0.05).add(new THREE.Vector3(0, 0, 0.4))
-      const to = n.home.clone().add(new THREE.Vector3(0, -n.radius * 0.55, 0))
-      n.path.rebuild(podiumEdge.clone(), to)
+      const lateral = n.home.clone().sub(podiumTop).setY(0)
+      if (lateral.lengthSq() > 0.0001) lateral.normalize().multiplyScalar(0.8)
+      const from = podiumTop.clone().add(lateral)
+      const to = n.home.clone().add(new THREE.Vector3(0, -n.radius * 0.6, 0))
+      n.path.rebuild(from, to)
     }
 
     /* spotlight ring + light beam marking the one "next goal" island */
@@ -546,18 +554,29 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     renderer.domElement.addEventListener('pointerup', onUp)
     renderer.domElement.style.cursor = 'grab'
 
-    /* camera focus tween */
+    /* camera move on selection — the row must stay whole, so picking a domain
+       only slides and pulls the world clear of the detail panel; it never zooms
+       into one island and hides the rest */
     let tween: { from: THREE.Vector3; to: THREE.Vector3; camFrom: THREE.Vector3; camTo: THREE.Vector3; t: number } | null = null
+    /** How far to pull back and slide so the whole row fits beside the panel. */
+    const panelFraming = () => {
+      const panelPx = Math.min(400, Math.max(230, vp.w * 0.42))
+      const free = Math.max(0.45, (vp.w - panelPx) / vp.w)
+      const dist = Math.min(baseDist / free, baseDist * 1.85)
+      const worldW = 2 * dist * Math.tan((camera.fov * Math.PI) / 360) * camera.aspect
+      const shift = ((panelPx / vp.w) * worldW) / 2
+      return { dist, shift: direction === 'rtl' ? shift : -shift }
+    }
     const focusDomain = (key: string | null) => {
-      const n = nodes.find((x) => x.key === key)
-      const target = n ? new THREE.Vector3(n.home.x * 0.42 + shiftX, n.home.y * 0.4 + 1.6, n.home.z * 0.42) : new THREE.Vector3(shiftX, 1.9, -0.2)
-      const dist = n ? 17 : 21
+      const picked = !!key && nodes.some((x) => x.key === key)
+      const frame = picked ? panelFraming() : { dist: baseDist, shift: 0 }
+      const target = new THREE.Vector3(homeTarget.x + frame.shift, homeTarget.y, homeTarget.z)
       const dir = camera.position.clone().sub(controls.target).normalize()
       tween = {
         from: controls.target.clone(),
         to: target,
         camFrom: camera.position.clone(),
-        camTo: target.clone().add(dir.multiplyScalar(dist)),
+        camTo: target.clone().add(dir.multiplyScalar(frame.dist)),
         t: 0,
       }
     }
@@ -594,7 +613,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       const x = (projected.x * 0.5 + 0.5) * vp.w
       const y = (-projected.y * 0.5 + 0.5) * vp.h
       // Keep labels clear of the side detail panel while it is open.
-      const panelGap = selectedNow ? 372 : 24
+      const panelGap = selectedNow ? 330 : 24
       const minX = direction === 'rtl' ? 24 : panelGap
       const maxX = direction === 'rtl' ? vp.w - panelGap : vp.w - 24
       const cx = Math.min(Math.max(x, Math.min(minX, maxX)), Math.max(minX, maxX))
@@ -623,7 +642,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
 
       // companion
       const head = mascot.userData.head
-      mascot.position.y = 0.1 + Math.sin(time * 1.1) * 0.075
+      mascot.position.y = -1.65 + Math.sin(time * 1.1) * 0.075
       mascot.rotation.y = Math.sin(time * 0.42) * 0.16
       if (head) head.rotation.z = Math.sin(time * 0.9) * 0.045
       mascot.userData.hands?.forEach((h: THREE.Mesh, i: number) => {
@@ -715,7 +734,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
 
       // HTML labels ride along with the islands
       for (const n of nodes) placeTag(tagRefsRef.current.current[n.key], n.anchor, intro < 0.7)
-      placeTag(captionRef.current, new THREE.Vector3(0, -0.7, 0.4), intro < 0.8)
+      placeTag(captionRef.current, new THREE.Vector3(0, -3.4, 3.8), intro < 0.8)
 
       composer.render()
     }
@@ -736,6 +755,16 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       renderer.setSize(w, h)
       composer.setSize(w, h)
       bloom?.setSize(w, h)
+      // Re-fit so the whole row stays on screen at any dock size.
+      baseDist = fitDistance()
+      controls.minDistance = baseDist * 0.42
+      controls.maxDistance = baseDist * 1.95
+      if (!tween && !selectedNow) {
+        const dir = camera.position.clone().sub(controls.target)
+        if (dir.lengthSq() > 0.0001) {
+          camera.position.copy(controls.target).add(dir.normalize().multiplyScalar(baseDist))
+        }
+      }
     }
     const ro = new ResizeObserver(onResize)
     ro.observe(mount)
