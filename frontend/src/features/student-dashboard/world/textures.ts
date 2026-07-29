@@ -376,6 +376,81 @@ export function sparkleSprite(): THREE.Texture {
 }
 
 /**
+ * A round status pin planted on an island: a coloured disc with a white,
+ * language-free glyph. The learner must be able to read every domain's state
+ * from the shapes alone, in about three seconds, without reading any label.
+ */
+export function statusBadge(kind: 'strength' | 'next' | 'process' | 'unknown', hex: string): THREE.Texture {
+  return memo(`statusbadge:${kind}:${hex}`, () => {
+    const S = 256
+    const c = canvasOf(S)
+    const ctx = c.getContext('2d')!
+    const R = S * 0.4
+    const cx = S / 2
+    const cy = S / 2
+
+    // white collar so the pin keeps its shape against grass, sky or fog
+    ctx.fillStyle = 'rgba(255,255,255,.95)'
+    ctx.beginPath(); ctx.arc(cx, cy, R * 1.16, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = hex
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill()
+
+    ctx.strokeStyle = '#ffffff'
+    ctx.fillStyle = '#ffffff'
+    ctx.lineWidth = S * 0.055
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+
+    if (kind === 'strength') {
+      // filled star — "this is already mine"
+      const spikes = 5
+      const outer = R * 0.62
+      const inner = outer * 0.46
+      ctx.beginPath()
+      for (let i = 0; i < spikes * 2; i += 1) {
+        const rr = i % 2 === 0 ? outer : inner
+        const a = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2
+        const px = cx + Math.cos(a) * rr
+        const py = cy + Math.sin(a) * rr
+        if (i === 0) ctx.moveTo(px, py)
+        else ctx.lineTo(px, py)
+      }
+      ctx.closePath(); ctx.fill()
+    } else if (kind === 'next') {
+      // target rings — "this is where I'm heading"
+      ctx.beginPath(); ctx.arc(cx, cy, R * 0.6, 0, Math.PI * 2); ctx.stroke()
+      ctx.beginPath(); ctx.arc(cx, cy, R * 0.3, 0, Math.PI * 2); ctx.stroke()
+      ctx.beginPath(); ctx.arc(cx, cy, R * 0.08, 0, Math.PI * 2); ctx.fill()
+    } else if (kind === 'process') {
+      // rising arrow — "on the way"
+      ctx.beginPath()
+      ctx.moveTo(cx, cy + R * 0.55)
+      ctx.lineTo(cx, cy - R * 0.5)
+      ctx.moveTo(cx - R * 0.36, cy - R * 0.16)
+      ctx.lineTo(cx, cy - R * 0.55)
+      ctx.lineTo(cx + R * 0.36, cy - R * 0.16)
+      ctx.stroke()
+    } else {
+      // question mark — "we have no picture of this one yet"
+      ctx.lineWidth = S * 0.062
+      ctx.beginPath()
+      ctx.arc(cx, cy - R * 0.16, R * 0.3, Math.PI * 0.92, Math.PI * 2.12)
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.moveTo(cx + R * 0.02, cy + R * 0.05)
+      ctx.lineTo(cx + R * 0.02, cy + R * 0.24)
+      ctx.stroke()
+      ctx.beginPath(); ctx.arc(cx + R * 0.02, cy + R * 0.52, R * 0.09, 0, Math.PI * 2); ctx.fill()
+    }
+
+    const tex = new THREE.CanvasTexture(c)
+    tex.colorSpace = THREE.SRGBColorSpace
+    tex.anisotropy = 8
+    return tex
+  })
+}
+
+/**
  * The world backdrop: a soft lavender sky with a warm halo behind the centre —
  * matches the product's light surfaces so the map feels part of the app.
  */

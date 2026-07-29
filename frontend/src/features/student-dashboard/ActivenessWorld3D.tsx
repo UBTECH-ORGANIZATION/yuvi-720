@@ -33,11 +33,11 @@ import {
   buildPodium,
   type IslandVariant,
 } from './world/props'
-import { disposeTextureCache, skyTexture } from './world/textures'
+import { disposeTextureCache, radialSprite, skyTexture, statusBadge } from './world/textures'
 import './world/activeness-world.css'
 
 type Competency = DashboardDTO['competencies'][number]
-type Tone = 'strong' | 'steady' | 'support'
+type Tone = 'strong' | 'steady' | 'support' | 'unknown'
 type RailKey = 'focus' | 'goals' | 'progress' | 'insights'
 
 interface ActivenessWorld3DProps {
@@ -73,39 +73,65 @@ function slotPosition(index: number, count: number, rtl: boolean) {
   return new THREE.Vector3(x, LINE_Y, 0)
 }
 /** What the camera has to keep in frame: the whole row, plus the companion. */
-const LINE_SPAN = LINE_GAP * 6 + 3.4
-const LINE_RISE = 6.8
+const LINE_SPAN = LINE_GAP * 6 + 5.2
+const LINE_RISE = 7.7
 
-function toneFor(value: number): Tone {
+function toneFor(value: number | null): Tone {
+  if (value === null) return 'unknown'
   if (value >= 70) return 'strong'
   if (value >= 45) return 'steady'
   return 'support'
 }
 
-function valueFor(source: string, byKey: Record<string, number>): number {
+/**
+ * The real competency value, or `null` when the system has simply not seen this
+ * domain yet. Never invent a middling number for it — "we don't know yet" is a
+ * state the learner is allowed to see.
+ */
+function valueFor(source: string, byKey: Record<string, number>): number | null {
   if (source.startsWith('avg:')) {
     const keys = source.slice(4).split(',')
     const vals = keys.map((k) => byKey[k]).filter((v) => typeof v === 'number')
-    if (!vals.length) return 55
+    if (!vals.length) return null
     return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
   }
-  return typeof byKey[source] === 'number' ? byKey[source] : 55
+  return typeof byKey[source] === 'number' ? byKey[source] : null
 }
 
-const VARIANT: Record<Tone, IslandVariant> = { strong: 'lush', steady: 'growing', support: 'dormant' }
+/** Geometry needs a number even when there is no data — keep it visibly low. */
+function levelOf(value: number | null): number {
+  if (value === null) return 0.18
+  return Math.max(0, Math.min(1, value / 100))
+}
+
+const VARIANT: Record<Tone, IslandVariant> = { strong: 'lush', steady: 'growing', support: 'dormant', unknown: 'dormant' }
 
 /**
- * Exactly three readable states — a learner must be able to finish the sentence
+ * Four readable states — a learner must be able to finish the sentence
  * "I'm good at ___ and the next thing I want to strengthen is ___" without
- * clicking anything. Words only, never a score.
+ * clicking anything, and must also see which domains the system has no picture
+ * of yet. Words only, never a score.
+ *
+ * Every state is carried by THREE redundant, language-free cues so the meaning
+ * survives a three-second glance: the colour of the ground ring under the
+ * island, how high the island floats on the row, and the glyph on its pin.
  */
-type Status = 'strength' | 'process' | 'next'
+type Status = 'strength' | 'process' | 'next' | 'unknown'
 const STATUS_KEY: Record<Status, string> = {
   strength: 'actmap.state.strength',
   process: 'actmap.state.process',
   next: 'actmap.state.next',
+  unknown: 'actmap.state.unknown',
 }
-const STATUS_ICON: Record<Status, string> = { strength: 'spark', process: 'clock', next: 'target' }
+const STATUS_ICON: Record<Status, string> = { strength: 'spark', process: 'clock', next: 'target', unknown: 'help' }
+/** ring colour · height on the row · island scale. */
+const STATUS_LOOK: Record<Status, { ring: string; lift: number; emphasis: number }> = {
+  strength: { ring: '#3ad898', lift: 0.62, emphasis: 1.16 },
+  next: { ring: '#ffc45c', lift: 0.18, emphasis: 1.04 },
+  process: { ring: '#6aa9ff', lift: -0.14, emphasis: 0.88 },
+  unknown: { ring: '#8f89b8', lift: -0.62, emphasis: 0.74 },
+}
+const STATUS_ORDER: Status[] = ['strength', 'next', 'process', 'unknown']
 
 export function ActivenessWorld3D({ competencies, studentName, initial, onClose }: ActivenessWorld3DProps) {
   const { t, direction } = useI18n()
@@ -128,13 +154,16 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     for (const c of competencies) byKey[c.key] = c.value
     return DOMAINS.map((d) => {
       const value = valueFor(d.source, byKey)
-      return { ...d, value, tone: toneFor(value), level: Math.max(0, Math.min(1, value / 100)) }
+      return { ...d, value, tone: toneFor(value), level: levelOf(value), known: value !== null }
     })
   }, [competencies])
 
+  /** Only domains we actually have evidence for can be named a strength or a goal. */
+  const knownDomains = useMemo(() => domains.filter((d) => d.known), [domains])
+
   const heroKey = useMemo(
-    () => domains.reduce((a, b) => (b.level > a.level ? b : a), domains[0])?.key ?? null,
-    [domains],
+    () => knownDomains.reduce((a, b) => (b.level > a.level ? b : a), knownDomains[0])?.key ?? null,
+    [knownDomains],
   )
 
   /**
@@ -143,10 +172,10 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
    * more than one — a wall of "needs improvement" is not readable.
    */
   const suggestedNext = useMemo(() => {
-    const ranked = [...domains].sort((a, b) => a.level - b.level)
+    const ranked = [...knownDomains].sort((a, b) => a.level - b.level)
     const first = ranked.find((d) => d.key !== heroKey) ?? ranked[0]
     return first?.key ?? null
-  }, [domains, heroKey])
+  }, [knownDomains, heroKey])
 
   /** Slot per domain: honour a saved arrangement, otherwise strongest first. */
   const slotByKey = useMemo(() => {
@@ -190,7 +219,13 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
   const statusByKey = useMemo(() => {
     const map: Record<string, Status> = {}
     for (const d of domains) {
-      map[d.key] = d.key === nextKey ? 'next' : d.key === heroKey || d.tone === 'strong' ? 'strength' : 'process'
+      map[d.key] = !d.known
+        ? 'unknown'
+        : d.key === nextKey
+          ? 'next'
+          : d.key === heroKey || d.tone === 'strong'
+            ? 'strength'
+            : 'process'
     }
     return map
   }, [domains, heroKey, nextKey])
@@ -286,15 +321,19 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     const model = DOMAINS.map((d) => {
       const value = valueFor(d.source, byKey)
       const tone = toneFor(value)
-      return { ...d, value, tone, level: Math.max(0, Math.min(1, value / 100)) }
+      return { ...d, value, tone, level: levelOf(value), known: value !== null }
     })
-    const heroLocal = model.reduce((a, b) => (b.level > a.level ? b : a), model[0])?.key ?? null
+    const knownModel = model.filter((d) => d.known)
+    const heroLocal = knownModel.reduce((a, b) => (b.level > a.level ? b : a), knownModel[0])?.key ?? null
     // The one island the learner should read as "my next goal".
     const nextLocal =
       (initial?.goal?.domain as string | undefined) ??
       initial?.focus ??
-      [...model].sort((a, b) => a.level - b.level).find((d) => d.key !== heroLocal)?.key ??
+      [...knownModel].sort((a, b) => a.level - b.level).find((d) => d.key !== heroLocal)?.key ??
       null
+    /** Same four states the labels show — the scene must say it without words. */
+    const statusLocal = (d: (typeof model)[number]): Status =>
+      !d.known ? 'unknown' : d.key === nextLocal ? 'next' : d.key === heroLocal || d.tone === 'strong' ? 'strength' : 'process'
     const slots = slotByKey
 
     const width = Math.max(1, mount.clientWidth)
@@ -407,6 +446,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       anchor: THREE.Vector3
       home: THREE.Vector3
       radius: number
+      labelLift: number
       path: ReturnType<typeof buildLightPath>
       phase: number
       hover: number
@@ -416,23 +456,58 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     const pickables: THREE.Object3D[] = []
 
     model.forEach((d, i) => {
-      const color = new THREE.Color(d.color)
+      const status = statusLocal(d)
+      const look = STATUS_LOOK[status]
+      // No data → no domain colour either. A grey island is itself the message.
+      const color = new THREE.Color(d.known ? d.color : '#6f6a92')
+      const ring = new THREE.Color(look.ring)
       const variant = VARIANT[d.tone]
       // Hierarchy first: the headline strength is unmistakably the biggest
       // island, the next-goal island is second, everything else stays calm.
-      const emphasis = d.key === heroLocal ? 1.3 : d.key === nextLocal ? 1.06 : 0.84
+      const emphasis = look.emphasis * (d.key === heroLocal ? 1.12 : 1)
       const radius = (0.66 + d.level * 0.22) * emphasis
       const group = new THREE.Group()
       group.position.copy(slotPosition(slots[d.key] ?? i, model.length, direction === 'rtl'))
+      // Cue #2: how high the island floats. The row becomes a skyline you can
+      // read left to right — high = strong, sunk = we have no picture yet.
+      group.position.y += look.lift
 
       const island = buildIsland(variant, color, i * 5 + 1, radius)
       group.add(island)
+
+      // Cue #1: a coloured aura around the island, readable from any distance.
+      const halo = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: radialSprite('rgba(255,255,255,0.95)'),
+          color: ring,
+          transparent: true,
+          opacity: status === 'strength' ? 0.5 : status === 'next' ? 0.44 : status === 'process' ? 0.28 : 0.14,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      )
+      halo.scale.setScalar(radius * 4.4)
+      halo.position.y = radius * 0.1
+      group.add(halo)
 
       const prop = buildMetaphor(d.metaphor, color, variant)
       const propScale = radius * (d.key === heroLocal ? 1.02 : 0.86)
       prop.scale.setScalar(propScale)
       prop.position.y = radius * 0.3
       group.add(prop)
+
+      // Cue #3: a pin with a language-free glyph — star / target / arrow / "?".
+      const badge = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: statusBadge(status, look.ring),
+          transparent: true,
+          opacity: status === 'unknown' ? 0.8 : 1,
+          depthWrite: false,
+        }),
+      )
+      badge.scale.setScalar(0.46 + radius * 0.2)
+      badge.position.set(0, radius * 0.62, radius * 0.86)
+      group.add(badge)
 
       // Invisible, generous hit target so tapping an island always works.
       const pick = new THREE.Mesh(
@@ -459,6 +534,9 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
         anchor: new THREE.Vector3(),
         home: group.position.clone(),
         radius,
+        // Neighbours on a straight row would collide, so every other label is
+        // raised — the pills stay separate without spreading the islands.
+        labelLift: (slots[d.key] ?? i) % 2 === 0 ? 0 : 0.62,
         path,
         phase: i * 1.31,
         hover: 0,
@@ -493,12 +571,14 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     scene.add(focusRing)
 
     // A soft shaft of light so the goal island is found without reading a word.
+    // Short and faint on purpose: the status pin and the amber ring already say
+    // it, the beam only has to draw the eye.
     const beam = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.22, 1.05, 5.6, 28, 1, true),
+      new THREE.CylinderGeometry(0.18, 0.95, 3.4, 28, 1, true),
       new THREE.MeshBasicMaterial({
         color: new THREE.Color('#ffd77a'),
         transparent: true,
-        opacity: 0.09,
+        opacity: 0.07,
         depthWrite: false,
         side: THREE.DoubleSide,
         blending: THREE.AdditiveBlending,
@@ -699,7 +779,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
         n.path.group.visible = intro > 0.45
 
         n.anchor.copy(n.group.position)
-        n.anchor.y += n.radius * (n.key === heroLocal ? 2.35 : 2.05) * s
+        n.anchor.y += (n.radius * (n.key === heroLocal ? 2.35 : 2.05) + n.labelLift) * s
       }
 
       // focus ring + light shaft over the one "next goal" island
@@ -715,7 +795,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
 
         beam.visible = intro > 0.6
         beam.position.copy(focusNode.group.position)
-        beam.position.y += 2.9
+        beam.position.y += 1.8
         beam.scale.set(focusNode.radius * 1.05, 1, focusNode.radius * 1.05)
         ;(beam.material as THREE.MeshBasicMaterial).opacity = 0.13 + Math.sin(time * 1.8) * 0.05
       } else {
@@ -822,9 +902,6 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
           {domains.map((d) => {
             const status = statusOf(d.key)
             const isActive = selected === d.key
-            // Only the headline strength and the one goal carry a status line —
-            // everything else stays a quiet name so the hierarchy is readable.
-            const showStatus = status !== 'process' || isActive
             return (
               <button
                 key={d.key}
@@ -838,12 +915,11 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
                 onClick={() => { setSelected(d.key); setRail('focus') }}
               >
                 <span className="aworld__tag-name">{domainName(d.key)}</span>
-                {showStatus && (
-                  <span className="aworld__tag-status">
-                    <i className="aworld__tag-badge"><Icon name={STATUS_ICON[status]} size={12} /></i>
-                    {t(STATUS_KEY[status])}
-                  </span>
-                )}
+                {/* every domain states where it stands — including "not known yet" */}
+                <span className="aworld__tag-status">
+                  <i className="aworld__tag-badge"><Icon name={STATUS_ICON[status]} size={12} /></i>
+                  {t(STATUS_KEY[status])}
+                </span>
               </button>
             )
           })}
@@ -866,6 +942,18 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
         <div className="aworld__titles">
           <h1>{t('actmap.title')}</h1>
           <p>{t('actmap.subtitle')}</p>
+          {/* the key to the colours/heights/pins in the world — without it the
+              visual language is a guessing game */}
+          {view === 'world' && (
+            <ul className="aworld__legend">
+              {STATUS_ORDER.map((s) => (
+                <li key={s} data-status={s}>
+                  <i><Icon name={STATUS_ICON[s]} size={11} /></i>
+                  {t(STATUS_KEY[s])}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </header>
 
