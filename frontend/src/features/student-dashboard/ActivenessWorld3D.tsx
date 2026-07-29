@@ -3,11 +3,14 @@
 /**
  * "מפת הפעלנות שלי" — the activeness world.
  *
- * A crafted 3D diorama: one floating island per 720 activeness domain, each
- * home to one of Yuvi's friends, all tied by glowing light-paths to a glass
- * podium where the learner's companion stands. Every visual state comes from
- * the real competency values in the learning brain — nothing here is invented,
- * and no numeric score is ever shown to the learner.
+ * A crafted 3D diorama built around one idea: Yuvi and the learner are a team.
+ * Yuvi himself stands on a glass stage in the foreground, and the friends for
+ * the domains the learner is already strong in stand there **with** him — that
+ * crew is visibly working together. Only the domains still being grown live out
+ * on distant islands, tied back to the stage by glowing light-paths; picking
+ * one sends Yuvi flying over to it. Every visual state comes from the real
+ * competency values in the learning brain — nothing here is invented, and no
+ * numeric score is ever shown to the learner.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
@@ -28,11 +31,11 @@ import {
   buildBackdropIslands,
   buildIsland,
   buildLightPath,
-  buildMascot,
   buildPodium,
   type IslandVariant,
 } from './world/props'
 import { buildCompanion } from './world/companions'
+import { buildYuvi } from './world/yuvi'
 import { disposeTextureCache, skyTexture, statusBadge } from './world/textures'
 import './world/activeness-world.css'
 
@@ -63,10 +66,10 @@ const DOMAINS: { key: string; companion: string; color: string; icon: string; so
 ]
 
 /**
- * ONE STRAIGHT ROW. A ring hid domains behind each other and made the order
- * unreadable; laid out on a single line every domain is visible at once and the
- * row itself carries the message — it runs from the learner's strongest domain
- * (first in reading order) to the one they are growing into.
+ * ONE STRAIGHT ROW of islands. A ring hid domains behind each other and made
+ * the order unreadable; laid out on a single line every island is visible at
+ * once. Only the domains the learner is still growing are out here — the
+ * strengths have moved onto the stage next to Yuvi.
  */
 const LINE_GAP = 2.5
 const LINE_Y = 1.15
@@ -75,8 +78,8 @@ function slotPosition(index: number, count: number, rtl: boolean) {
   const x = (index - (count - 1) / 2) * LINE_GAP * (rtl ? -1 : 1)
   return new THREE.Vector3(x, LINE_Y, 0)
 }
-/** What the camera has to keep in frame: the whole row, plus the companion. */
-const LINE_SPAN = LINE_GAP * 6 + 5.2
+/** What the camera has to keep in frame: the row, plus the stage below it. */
+const lineSpan = (count: number) => LINE_GAP * Math.max(2, count - 1) + 5.2
 const LINE_RISE = 7.7
 
 function toneFor(value: number | null): Tone {
@@ -375,6 +378,19 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       !d.known ? 'unknown' : d.key === nextLocal ? 'next' : d.key === heroLocal || d.tone === 'strong' ? 'strength' : 'process'
     const slots = slotByKey
 
+    // THE COMPOSITION IS THE MESSAGE. Domains the learner is already strong in
+    // are not far-away places to travel to — they are the team that already
+    // works, so their friends stand on the stage next to Yuvi. Everything the
+    // learner is still growing stays out on its own island, which is what makes
+    // the distance meaningful.
+    const crewModel = model
+      .filter((d) => statusLocal(d) === 'strength')
+      .sort((a, b) => (slots[a.key] ?? 0) - (slots[b.key] ?? 0))
+    const islandModel = model
+      .filter((d) => statusLocal(d) !== 'strength')
+      .sort((a, b) => (slots[a.key] ?? 0) - (slots[b.key] ?? 0))
+    const rowSpan = lineSpan(islandModel.length)
+
     const width = Math.max(1, mount.clientWidth)
     const height = Math.max(1, mount.clientHeight)
     // Live viewport size — kept in sync by the resize observer so the HTML
@@ -403,15 +419,16 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     scene.environment = env.texture
 
     // The row is read as a whole, so the camera stays square to it and simply
-    // pulls back far enough to hold every island on screen.
-    const homeTarget = new THREE.Vector3(0, 0.55, 0)
+    // pulls back far enough to hold every island — and the stage the team
+    // stands on below them — on screen.
+    const homeTarget = new THREE.Vector3(0, 0.3, 0.9)
     // Which way to nudge the camera so a picked island never sits behind the
     // side detail panel (the panel is on the inline-start edge).
     const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 240)
     const fitDistance = () => {
       const vFov = (camera.fov * Math.PI) / 180
       const half = Math.tan(vFov / 2)
-      return Math.max(LINE_RISE / 2 / half, LINE_SPAN / 2 / (half * Math.max(0.4, camera.aspect)))
+      return Math.max(LINE_RISE / 2 / half, rowSpan / 2 / (half * Math.max(0.4, camera.aspect)))
     }
     let baseDist = fitDistance()
     camera.position.set(0, homeTarget.y + baseDist * 0.2, baseDist)
@@ -462,18 +479,37 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     const dust = buildAmbientDust(reduced ? 60 : 170)
     scene.add(dust)
 
-    /* the podium and the companion — in the near foreground, below the row, so
-       the light paths rise from the learner up to every domain */
+    /* THE STAGE — Yuvi and the crew that already works with him, in the near
+       foreground below the row, so the light paths rise from the team up to the
+       islands that are still to be reached. */
+    // The stage grows with the team: two abreast per rank, and the disc is cut
+    // to hold exactly as many friends as the learner actually has.
+    const crewRows = Math.max(1, Math.ceil(crewModel.length / 2))
+    const crewStep = crewModel.length > 4 ? 0.8 : 0.95
+    const crewReach = 0.78 + (crewRows - 1) * crewStep
+    const STAGE = new THREE.Vector3(0, -2.2, 2.4)
     const podium = buildPodium('#8a6cff')
-    podium.position.set(0, -1.85, 3.8)
+    podium.position.copy(STAGE)
+    podium.scale.set(Math.max(1.25, (crewReach + 0.72) / 1.5), 1, 1.3)
     scene.add(podium)
-    const mascot = buildMascot()
-    mascot.position.set(0, -1.65, 3.8)
-    mascot.scale.setScalar(0.66)
-    scene.add(mascot)
-    const mascotLight = new THREE.PointLight(new THREE.Color('#a98cff'), 2.2, 6, 2)
-    mascotLight.position.set(0, -0.6, 4.8)
-    scene.add(mascotLight)
+
+    // Yuvi himself — the same character the learner meets in the mapping and in
+    // the coach, not a stand-in that merely resembles him. He stands a step in
+    // front of the crew and a head above them: this is his learner's world.
+    const yuvi = buildYuvi()
+    yuvi.scale.setScalar(1.8)
+    const yuviHome = STAGE.clone().add(new THREE.Vector3(0, 0, 0.55))
+    yuvi.position.copy(yuviHome)
+    scene.add(yuvi)
+
+    const stageLight = new THREE.PointLight(new THREE.Color('#a98cff'), 2.2, 7, 2)
+    stageLight.position.set(0, STAGE.y + 1.5, STAGE.z + 1.1)
+    scene.add(stageLight)
+
+    // Where the learner's name plaque hangs off the stage.
+    const captionAt = STAGE.clone().add(
+      new THREE.Vector3((direction === 'rtl' ? 1 : -1) * (crewReach + 1.2), -0.12, 0.8),
+    )
 
     /* islands */
     interface Node {
@@ -494,19 +530,18 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     const nodes: Node[] = []
     const pickables: THREE.Object3D[] = []
 
-    model.forEach((d, i) => {
+    islandModel.forEach((d, i) => {
       const status = statusLocal(d)
       const look = STATUS_LOOK[status]
       // No data → no domain colour either. A grey island is itself the message.
       const color = new THREE.Color(d.known ? d.color : '#6f6a92')
       const ring = new THREE.Color(look.ring)
       const variant = VARIANT[d.tone]
-      // Hierarchy first: the headline strength is unmistakably the biggest
-      // island, the next-goal island is second, everything else stays calm.
-      const emphasis = look.emphasis * (d.key === heroLocal ? 1.12 : 1)
-      const radius = (0.66 + d.level * 0.22) * emphasis
+      // Hierarchy first: the next-goal island is the biggest thing on the row,
+      // everything else stays calm.
+      const radius = (0.66 + d.level * 0.22) * look.emphasis
       const group = new THREE.Group()
-      group.position.copy(slotPosition(slots[d.key] ?? i, model.length, direction === 'rtl'))
+      group.position.copy(slotPosition(i, islandModel.length, direction === 'rtl'))
       // Cue #2: how high the island floats. The row becomes a skyline you can
       // read left to right — high = strong, sunk = we have no picture yet.
       group.position.y += look.lift
@@ -539,7 +574,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       // the island, not decoration standing on it — so it is scaled to own the
       // space above it.
       const prop = buildCompanion(d.companion, color, variant)
-      const propScale = radius * (d.key === heroLocal ? 1.82 : 1.58)
+      const propScale = radius * 1.62
       prop.scale.setScalar(propScale)
       prop.position.y = radius * 0.2
       group.add(prop)
@@ -587,7 +622,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
         radius,
         // Neighbours on a straight row would collide, so every other label is
         // raised — the pills stay separate without spreading the islands.
-        labelLift: (slots[d.key] ?? i) % 2 === 0 ? 0 : 0.62,
+        labelLift: i % 2 === 0 ? 0 : 0.62,
         path,
         phase: i * 1.31,
         hover: 0,
@@ -595,8 +630,81 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       })
     })
 
-    // Draw the light-paths from the companion in the foreground up to each island.
-    const podiumTop = new THREE.Vector3(0, -1.25, 3.8)
+    /* THE CREW — the friends of the domains that already work. They stand on
+       the stage with Yuvi, shoulder to shoulder, so "this team is strong
+       together" is read before a single word. */
+    interface Crew {
+      key: string
+      group: THREE.Group
+      prop: THREE.Group
+      anchor: THREE.Vector3
+      home: THREE.Vector3
+      labelLift: number
+      hover: number
+      phase: number
+    }
+    const crew: Crew[] = []
+    const rtl = direction === 'rtl'
+    crewModel.forEach((d, i) => {
+      const color = new THREE.Color(d.known ? d.color : '#6f6a92')
+      // Yuvi keeps the centre-front; the crew fans out beside and a little
+      // behind him, so the group reads as one formation rather than a line-up.
+      const rank = Math.floor(i / 2)
+      const side = (i % 2 === 0 ? 1 : -1) * (rtl ? -1 : 1)
+      const group = new THREE.Group()
+      group.position.set(side * (0.78 + rank * crewStep), STAGE.y, STAGE.z - 0.14 - rank * 0.4)
+      // Everyone on the stage faces the learner, turned slightly toward Yuvi.
+      group.rotation.y = -side * 0.28
+
+      const prop = buildCompanion(d.companion, color, VARIANT[d.tone])
+      prop.scale.setScalar(1.02 - rank * 0.05)
+      group.add(prop)
+
+      const pick = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.5, 0.5, 1.5, 10),
+        new THREE.MeshBasicMaterial({ visible: false }),
+      )
+      pick.position.y = 0.72
+      pick.userData.domainKey = d.key
+      group.add(pick)
+      pickables.push(pick)
+
+      // A quiet mat of light under each crew member ties them to the stage.
+      const mat = new THREE.Mesh(
+        new THREE.TorusGeometry(0.46, 0.022, 10, 40),
+        new THREE.MeshStandardMaterial({
+          color: new THREE.Color('#3ad898'),
+          emissive: new THREE.Color('#3ad898'),
+          emissiveIntensity: 0.18,
+          roughness: 0.4,
+          transparent: true,
+          opacity: 0.75,
+        }),
+      )
+      mat.rotation.x = Math.PI / 2
+      mat.position.y = 0.02
+      group.add(mat)
+
+      scene.add(group)
+      crew.push({
+        key: d.key,
+        group,
+        prop,
+        anchor: new THREE.Vector3(),
+        home: group.position.clone(),
+        labelLift: 0,
+        hover: 0,
+        phase: i * 0.83,
+      })
+    })
+    // Pills are raised in alternation by their left-to-right screen order, so
+    // neighbours on the stage never sit at the same height.
+    ;[...crew]
+      .sort((a, b) => a.home.x - b.home.x)
+      .forEach((c, i) => { c.labelLift = (i % 2) * 0.62 })
+
+    // Draw the light-paths from the stage up to every island still to be reached.
+    const podiumTop = STAGE.clone().add(new THREE.Vector3(0, 0.62, 0))
     for (const n of nodes) {
       const lateral = n.home.clone().sub(podiumTop).setY(0)
       if (lateral.lengthSq() > 0.0001) lateral.normalize().multiplyScalar(0.8)
@@ -637,6 +745,46 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     )
     beam.visible = false
     scene.add(beam)
+
+    /* YUVI TRAVELS. Picking an island is not "opening a card": Yuvi lifts off
+       the stage, flies across and lands on that island, and the detail beside
+       it is what he found there. Closing it brings him home to the crew. */
+    const landing = new THREE.Mesh(
+      new THREE.TorusGeometry(0.44, 0.026, 10, 44),
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#eef0ff'),
+        emissive: new THREE.Color('#8fe4ff'),
+        emissiveIntensity: 0.7,
+        roughness: 0.3,
+        transparent: true,
+        opacity: 0,
+      }),
+    )
+    landing.rotation.x = -Math.PI / 2
+    landing.visible = false
+    scene.add(landing)
+
+    /** Where Yuvi stands once he is on an island — beside its friend, a step
+     *  toward the learner so neither of them hides the other. */
+    const perchOffset = (n: Node) =>
+      new THREE.Vector3((rtl ? 1 : -1) * n.radius * 0.78, n.radius * 0.16, n.radius * 0.3)
+    /** The island he belongs to right now; `null` means the stage. */
+    let perch: Node | null = null
+    let flight: { from: THREE.Vector3; t: number; arc: number; dir: number } | null = null
+    const yuviGoal = new THREE.Vector3()
+
+    const sendYuvi = (node: Node | null) => {
+      if (node === perch) return
+      const to = node ? node.group.position.clone().add(perchOffset(node)) : yuviHome
+      flight = {
+        from: yuvi.position.clone(),
+        t: 0,
+        // A real arc: he rises well clear of the row before coming down.
+        arc: Math.max(1.1, yuvi.position.distanceTo(to) * 0.26),
+        dir: Math.sign(to.x - yuvi.position.x) || 1,
+      }
+      perch = node
+    }
 
     /* post-processing — a whisper of bloom so gems glint without washing out */
     const composer = new EffectComposer(renderer)
@@ -689,31 +837,44 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     renderer.domElement.addEventListener('pointerup', onUp)
     renderer.domElement.style.cursor = 'grab'
 
-    /* camera move on selection — the row must stay whole, so picking a domain
-       only slides and pulls the world clear of the detail panel; it never zooms
-       into one island and hides the rest */
+    /* camera move on selection — picking an island travels there with Yuvi and
+       settles close enough to read it as a place you went into; picking a crew
+       member stays with the team on the stage. The detail panel never covers
+       the subject. */
     let tween: { from: THREE.Vector3; to: THREE.Vector3; camFrom: THREE.Vector3; camTo: THREE.Vector3; t: number } | null = null
-    /** How far to pull back and slide so the whole row fits beside the panel. */
-    const panelFraming = () => {
+    /** How far sideways the subject has to sit so the detail panel misses it. */
+    const panelShift = (dist: number) => {
       const panelPx = Math.min(400, Math.max(230, vp.w * 0.42))
-      const free = Math.max(0.45, (vp.w - panelPx) / vp.w)
-      const dist = Math.min(baseDist / free, baseDist * 1.85)
       const worldW = 2 * dist * Math.tan((camera.fov * Math.PI) / 360) * camera.aspect
       const shift = ((panelPx / vp.w) * worldW) / 2
-      return { dist, shift: direction === 'rtl' ? shift : -shift }
+      return direction === 'rtl' ? shift : -shift
     }
     const focusDomain = (key: string | null) => {
-      const picked = !!key && nodes.some((x) => x.key === key)
-      const frame = picked ? panelFraming() : { dist: baseDist, shift: 0 }
-      const target = new THREE.Vector3(homeTarget.x + frame.shift, homeTarget.y, homeTarget.z)
+      const node = key ? nodes.find((x) => x.key === key) ?? null : null
+      const mate = key ? crew.find((x) => x.key === key) ?? null : null
+      // Close enough that the island fills the frame — the learner is meant to
+      // arrive somewhere, not to watch a card slide open — but never so close
+      // that Yuvi or the friend he came to see is cropped.
+      const dist = node || mate
+        ? Math.max(controls.minDistance * 1.02, baseDist * 0.62)
+        : baseDist
+      const shift = node || mate ? panelShift(dist) : 0
+      const target = node
+        ? new THREE.Vector3(node.home.x + shift, node.home.y + 0.55, node.home.z)
+        : mate
+          ? new THREE.Vector3(mate.home.x + shift, mate.home.y + 0.9, mate.home.z)
+          : homeTarget.clone()
       const dir = camera.position.clone().sub(controls.target).normalize()
       tween = {
         from: controls.target.clone(),
         to: target,
         camFrom: camera.position.clone(),
-        camTo: target.clone().add(dir.multiplyScalar(frame.dist)),
+        camTo: target.clone().add(dir.multiplyScalar(dist)),
         t: 0,
       }
+      // Yuvi goes where the learner looks. A crew member is already beside him,
+      // so only an island is a journey.
+      sendYuvi(node)
     }
 
     /* per-frame state pushed from React */
@@ -775,19 +936,58 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
         if (tween.t >= 1) tween = null
       }
 
-      // companion
-      const head = mascot.userData.head
-      mascot.position.y = -1.65 + Math.sin(time * 1.1) * 0.075
-      mascot.rotation.y = Math.sin(time * 0.42) * 0.16
-      if (head) head.rotation.z = Math.sin(time * 0.9) * 0.045
-      mascot.userData.hands?.forEach((h: THREE.Mesh, i: number) => {
-        h.position.y = 0.34 + Math.sin(time * 1.4 + i * 2.1) * 0.05
-      })
-      if (mascot.userData.bulb) {
-        mascot.userData.bulb.material.emissiveIntensity = 0.7 + Math.sin(time * 2.4) * 0.25
+      // Yuvi — standing with his crew, or in the air on his way to an island.
+      // He always keeps his face toward the learner: he banks into the flight
+      // instead of turning his back on them.
+      if (perch) yuviGoal.copy(perch.group.position).add(perchOffset(perch))
+      else yuviGoal.copy(yuviHome)
+      if (flight) {
+        flight.t = Math.min(1, flight.t + dt / 1.3)
+        const k = flight.t < 0.5 ? 2 * flight.t * flight.t : 1 - Math.pow(-2 * flight.t + 2, 2) / 2
+        yuvi.position.lerpVectors(flight.from, yuviGoal, k)
+        yuvi.position.y += Math.sin(k * Math.PI) * flight.arc
+        const air = Math.sin(Math.min(1, flight.t) * Math.PI)
+        yuvi.rotation.z = -flight.dir * 0.3 * air
+        yuvi.rotation.y = flight.dir * 0.34 * air
+        if (flight.t >= 1) flight = null
+      } else {
+        yuvi.position.copy(yuviGoal)
+        // Landed: turn a little toward the friend whose island this is.
+        const face = perch ? (rtl ? -0.4 : 0.4) : Math.sin(time * 0.4) * 0.09
+        yuvi.rotation.y += (face - yuvi.rotation.y) * Math.min(1, dt * 4)
+        yuvi.rotation.z += (0 - yuvi.rotation.z) * Math.min(1, dt * 4)
       }
+      yuvi.userData.setFly?.(flight ? 1 : 0)
+      // On the stage he is the tallest thing in the frame; on an island he
+      // sizes to its friend — a visitor standing with them, not a giant.
+      const yuviScale = perch ? Math.max(1.15, perch.radius * 1.72) : 1.8
+      const nowScale = yuvi.scale.x + (yuviScale - yuvi.scale.x) * Math.min(1, dt * 2.6)
+      yuvi.scale.setScalar(nowScale)
+      yuvi.userData.tick?.(time, dt)
+
+      // A ring of light marks where he has set down.
+      const landed = Boolean(perch) && !flight
+      landing.visible = landed || (landing.material as THREE.MeshStandardMaterial).opacity > 0.01
+      const landMat = landing.material as THREE.MeshStandardMaterial
+      landMat.opacity += ((landed ? 0.75 : 0) - landMat.opacity) * Math.min(1, dt * 4)
+      landing.position.copy(yuvi.position)
+      landing.position.y += 0.03
+      landing.scale.setScalar((0.62 + Math.sin(time * 2) * 0.035) * nowScale)
+
       if (podium.userData.rim) {
         podium.userData.rim.material.emissiveIntensity = 0.5 + Math.sin(time * 1.6) * 0.15
+      }
+
+      // The crew on the stage: alive, but calm — they are the settled part.
+      for (const c of crew) {
+        const isSelected = c.key === selectedNow
+        const target = isSelected || c.key === hoverKey ? 1 : 0
+        c.hover += (target - c.hover) * Math.min(1, dt * 7)
+        c.group.position.y = c.home.y + Math.sin(time * 0.7 + c.phase) * 0.03 + c.hover * 0.12 - (1 - ease) * 2.2
+        c.group.scale.setScalar((0.94 + 0.06 * ease) * (1 + c.hover * 0.05))
+        c.prop.userData.tick?.(time, dt)
+        c.anchor.copy(c.group.position)
+        c.anchor.y += 1.25 + c.labelLift
       }
 
       // islands
@@ -825,7 +1025,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
         n.path.group.visible = intro > 0.45
 
         n.anchor.copy(n.group.position)
-        n.anchor.y += (n.radius * (n.key === heroLocal ? 2.35 : 2.05) + n.labelLift) * s
+        n.anchor.y += (n.radius * 2.05 + n.labelLift) * s
       }
 
       // focus ring + light shaft over the one "next goal" island
@@ -862,9 +1062,12 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
 
       controls.update()
 
-      // HTML labels ride along with the islands
+      // HTML labels ride along with the islands and with the crew on the stage
       for (const n of nodes) placeTag(tagRefsRef.current.current[n.key], n.anchor, intro < 0.7)
-      placeTag(captionRef.current, new THREE.Vector3(0, -4.1, 3.8), intro < 0.8, 26)
+      for (const c of crew) placeTag(tagRefsRef.current.current[c.key], c.anchor, intro < 0.7, 64)
+      // The learner's plaque sits at the near corner of the stage, never in
+      // front of the team standing on it.
+      placeTag(captionRef.current, captionAt, intro < 0.8, 26)
 
       composer.render()
     }
@@ -908,6 +1111,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       renderer.domElement.removeEventListener('pointerup', onUp)
       sceneApi.current = null
       for (const n of nodes) n.path.dispose()
+      yuvi.userData.dispose?.()
       scene.traverse((o: any) => {
         if (o.isMesh || o.isPoints) {
           o.geometry?.dispose?.()
