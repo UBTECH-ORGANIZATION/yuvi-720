@@ -4,9 +4,9 @@
  * Hand-built props for the activeness world.
  *
  * Every object is procedural three.js geometry dressed with the procedural
- * surfaces from `./textures` — floating rock islands with grass caps, the Yuvi
- * mascot on a glass podium, and the glowing light-paths that tie the world
- * together. The characters that live on the islands are in `./buddies`.
+ * surfaces from `./textures` — floating rock islands with grass caps, the glass
+ * stage Yuvi and his crew stand on, and the glowing light-paths that tie the
+ * world together. Yuvi himself is in `./yuvi`, his friends in `./companions`.
  *
  * Nothing here reads product state: callers pass a `variant` (how the domain is
  * expressed in the learner's real activeness) and a tint, and get back a group.
@@ -16,7 +16,6 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import {
   fbm,
   grassMaps,
-  mascotFace,
   radialSprite,
   rockMaps,
   sparkleSprite,
@@ -270,98 +269,9 @@ export function buildCloud(scale = 1): THREE.Group {
   return g
 }
 
-/* ── the learner: mascot on a glass podium ─────────────────────────────── */
+/* ── the stage the learner's team stands on ────────────────────────────── */
 
-/** The Yuvi mascot — a friendly floating robot, built from the brand mark. */
-export function buildMascot(): THREE.Group {
-  const g = new THREE.Group()
-  const shell = new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color('#9fc6e6'),
-    roughness: 0.34,
-    metalness: 0.08,
-    clearcoat: 0.8,
-    clearcoatRoughness: 0.2,
-    envMapIntensity: 0.5,
-  })
-  const trim = new THREE.MeshStandardMaterial({ color: new THREE.Color('#6ea6cf'), roughness: 0.4, metalness: 0.2, envMapIntensity: 0.5 })
-
-  const head = new THREE.Group()
-  head.position.y = 0.96
-  const skullGeo = new THREE.SphereGeometry(0.5, 64, 48)
-  skullGeo.scale(1, 1.02, 0.9)
-  const skull = new THREE.Mesh(skullGeo, shell)
-  head.add(skull)
-
-  // Dark visor patch mapped with the face texture.
-  const visorGeo = new THREE.SphereGeometry(0.505, 64, 48, Math.PI * 0.62, Math.PI * 0.76, Math.PI * 0.24, Math.PI * 0.5)
-  visorGeo.scale(1, 1.02, 0.92)
-  const visor = new THREE.Mesh(
-    visorGeo,
-    new THREE.MeshPhysicalMaterial({
-      map: mascotFace(),
-      emissiveMap: mascotFace(),
-      emissive: new THREE.Color('#ffffff'),
-      emissiveIntensity: 0.3,
-      roughness: 0.12,
-      metalness: 0.1,
-      clearcoat: 1,
-      clearcoatRoughness: 0.06,
-    }),
-  )
-  head.add(visor)
-
-  for (const s of [1, -1]) {
-    const ear = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.16, 8, 20), trim)
-    ear.position.set(s * 0.5, -0.02, 0)
-    head.add(ear)
-    const dot = new THREE.Mesh(
-      new THREE.SphereGeometry(0.038, 18, 14),
-      new THREE.MeshStandardMaterial({ color: new THREE.Color('#7ee6ff'), emissive: new THREE.Color('#4cc9f0'), emissiveIntensity: 0.6, roughness: 0.2 }),
-    )
-    dot.position.set(s * 0.545, -0.02, 0.05)
-    head.add(dot)
-  }
-
-  const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.026, 0.22, 12), trim)
-  stalk.position.y = 0.58
-  head.add(stalk)
-  const bulb = new THREE.Mesh(
-    new THREE.SphereGeometry(0.075, 24, 18),
-    new THREE.MeshStandardMaterial({ color: new THREE.Color('#9defff'), emissive: new THREE.Color('#4cc9f0'), emissiveIntensity: 0.85, roughness: 0.16 }),
-  )
-  bulb.position.y = 0.72
-  head.add(bulb)
-  g.add(head)
-
-  // Small floating body + hands.
-  const torsoGeo = new THREE.CapsuleGeometry(0.26, 0.2, 10, 32)
-  const torso = new THREE.Mesh(torsoGeo, shell)
-  torso.position.y = 0.4
-  torso.scale.set(1, 0.94, 0.86)
-  g.add(torso)
-  const chest = new THREE.Mesh(
-    new THREE.CircleGeometry(0.12, 32),
-    new THREE.MeshStandardMaterial({ color: new THREE.Color('#a98cff'), emissive: new THREE.Color('#7c6cff'), emissiveIntensity: 0.5, roughness: 0.2 }),
-  )
-  chest.position.set(0, 0.44, 0.245)
-  g.add(chest)
-
-  const hands: THREE.Mesh[] = []
-  for (const s of [1, -1]) {
-    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.1, 26, 18), trim)
-    hand.position.set(s * 0.42, 0.34, 0.06)
-    hands.push(hand)
-    g.add(hand)
-  }
-
-  shadowsOn(g)
-  g.userData.head = head
-  g.userData.hands = hands
-  g.userData.bulb = bulb
-  return g
-}
-
-/** Translucent podium the mascot floats above. */
+/** Translucent stage Yuvi and the crew stand on. */
 export function buildPodium(accent: string): THREE.Group {
   const g = new THREE.Group()
   const glass = new THREE.MeshPhysicalMaterial({

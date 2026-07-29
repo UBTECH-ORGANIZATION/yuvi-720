@@ -92,12 +92,18 @@ export function ActivenessMapSection({ competencies, studentName }: ActivenessMa
     return () => cancelAnimationFrame(id)
   }, [mounted, reduceMotion])
 
-  // Lock the page behind the sheet while it is open.
+  // Lock the page behind the sheet while it is open. The flag also stands the
+  // docked Yuvi down: inside the map he is the character on the stage, and two
+  // Yuvis on one screen would break that.
   useEffect(() => {
     if (!mounted) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
+    document.body.dataset.aworldOpen = 'true'
+    return () => {
+      document.body.style.overflow = prev
+      delete document.body.dataset.aworldOpen
+    }
   }, [mounted])
 
   // Portal sparks teaser on the docked gate.

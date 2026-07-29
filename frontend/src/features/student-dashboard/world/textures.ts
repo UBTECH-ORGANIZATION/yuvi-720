@@ -545,32 +545,3 @@ export function pageText(): THREE.Texture {
     return tex
   })
 }
-
-/** Mascot face plate: cyan smiling eyes + soft violet smile on a dark visor. */
-export function mascotFace(): THREE.Texture {
-  return memo('mascotface', () => {
-    const W = 512
-    const H = 384
-    const c = document.createElement('canvas')
-    c.width = W; c.height = H
-    const ctx = c.getContext('2d')!
-    ctx.fillStyle = '#0b0d1c'
-    ctx.fillRect(0, 0, W, H)
-    ctx.lineCap = 'round'
-    ctx.strokeStyle = '#74f7ff'
-    ctx.lineWidth = 34
-    ctx.beginPath()
-    ctx.moveTo(112, 190); ctx.quadraticCurveTo(160, 122, 208, 190)
-    ctx.moveTo(304, 190); ctx.quadraticCurveTo(352, 122, 400, 190)
-    ctx.stroke()
-    ctx.strokeStyle = '#a98cff'
-    ctx.lineWidth = 30
-    ctx.beginPath()
-    ctx.moveTo(176, 252); ctx.quadraticCurveTo(256, 320, 336, 252)
-    ctx.stroke()
-    const tex = new THREE.CanvasTexture(c)
-    tex.colorSpace = THREE.SRGBColorSpace
-    tex.anisotropy = 16
-    return tex
-  })
-}
