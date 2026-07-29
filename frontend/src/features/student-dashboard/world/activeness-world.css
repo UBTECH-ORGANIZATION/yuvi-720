@@ -561,6 +561,44 @@
 .aworld__how li { display: flex; align-items: flex-start; gap: 11px; font-size: .86rem; line-height: 1.55; color: var(--aw-muted); }
 .aworld__how i { flex: none; display: grid; place-items: center; inline-size: 30px; block-size: 30px; border-radius: 50%; background: rgba(124, 92, 255, .11); color: #6446e0; }
 
+/* first-visit walkthrough */
+.aworld__modal--tour { background: rgba(34, 26, 70, .46); z-index: 14; }
+.aworld__sheet--tour { inline-size: min(430px, 100%); text-align: start; }
+.aworld__tour-badge {
+  display: grid;
+  place-items: center;
+  inline-size: 46px;
+  block-size: 46px;
+  margin-block-end: 14px;
+  border-radius: 16px;
+  background: linear-gradient(140deg, rgba(124, 92, 255, .16), rgba(56, 161, 240, .16));
+  color: #6446e0;
+}
+.aworld__tour-kicker { margin: 0 0 4px; font-size: .75rem; font-weight: 700; letter-spacing: .01em; color: #8b86a8; }
+.aworld__sheet--tour h2 { margin: 0 0 8px; font-size: 1.16rem; }
+.aworld__tour-body { margin: 0 0 18px; font-size: .89rem; line-height: 1.62; color: var(--aw-muted); }
+.aworld__legend--inline { margin: 0 0 18px; flex-wrap: wrap; }
+/* the same key, but sitting on the white walkthrough sheet */
+.aworld--picked .aworld__legend--inline { display: flex; }
+.aworld__legend--inline li {
+  border-color: var(--aw-line);
+  background: rgba(124, 92, 255, .07);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: #3d3560;
+}
+.aworld__tour-dots { display: flex; gap: 6px; margin-block-end: 16px; }
+.aworld__tour-dots span {
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: rgba(124, 92, 255, .22);
+  transition: inline-size .2s ease, background .2s ease;
+}
+.aworld__tour-dots span[data-on='true'] { inline-size: 20px; border-radius: 4px; background: #7c5cff; }
+.aworld__tour-nav { display: flex; align-items: center; gap: 10px; }
+.aworld__tour-nav .aworld__cta { flex: 1; justify-content: center; }
+
 .aworld__toast {
   position: absolute;
   inset-block-end: 96px;
