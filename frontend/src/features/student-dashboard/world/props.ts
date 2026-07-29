@@ -4,9 +4,9 @@
  * Hand-built props for the activeness world.
  *
  * Every object is procedural three.js geometry dressed with the procedural
- * surfaces from `./textures` — floating rock islands with grass caps, a crafted
- * metaphor per activeness domain, the Yuvi mascot on a glass podium, and the
- * glowing light-paths that tie the world together.
+ * surfaces from `./textures` — floating rock islands with grass caps, the Yuvi
+ * mascot on a glass podium, and the glowing light-paths that tie the world
+ * together. The characters that live on the islands are in `./buddies`.
  *
  * Nothing here reads product state: callers pass a `variant` (how the domain is
  * expressed in the learner's real activeness) and a tint, and get back a group.
@@ -14,14 +14,9 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import {
-  barkMaps,
-  compassFace,
   fbm,
   grassMaps,
   mascotFace,
-  metalMaps,
-  pageText,
-  paperMaps,
   radialSprite,
   rockMaps,
   sparkleSprite,
@@ -55,7 +50,7 @@ function craggify(geo: THREE.BufferGeometry, amount: number, freq: number, seed:
   return geo
 }
 
-function surface(maps: any, extra: any = {}) {
+export function surface(maps: any, extra: any = {}) {
   return new THREE.MeshStandardMaterial({
     map: maps.map,
     normalMap: maps.normalMap,
@@ -67,7 +62,7 @@ function surface(maps: any, extra: any = {}) {
 }
 
 /** Glossy painted accent — the domain colour on props. */
-function paint(hex: string | THREE.Color, extra: any = {}) {
+export function paint(hex: string | THREE.Color, extra: any = {}) {
   return new THREE.MeshStandardMaterial({
     color: new THREE.Color(hex),
     roughness: 0.34,
@@ -78,7 +73,7 @@ function paint(hex: string | THREE.Color, extra: any = {}) {
 }
 
 /** Faceted gem material — crisp highlights, inner glow, no costly transmission. */
-function crystal(hex: string | THREE.Color, glow = 0.35) {
+export function crystal(hex: string | THREE.Color, glow = 0.35) {
   const c = new THREE.Color(hex)
   return new THREE.MeshPhysicalMaterial({
     color: c,
@@ -97,7 +92,7 @@ function crystal(hex: string | THREE.Color, glow = 0.35) {
   })
 }
 
-function shadowsOn(root: THREE.Object3D, cast = true, receive = true) {
+export function shadowsOn(root: THREE.Object3D, cast = true, receive = true) {
   root.traverse((o: any) => {
     if (!o.isMesh) return
     o.castShadow = cast
@@ -106,7 +101,7 @@ function shadowsOn(root: THREE.Object3D, cast = true, receive = true) {
 }
 
 /** Points cloud of drifting sparkles around a prop. */
-function sparkleCloud(count: number, radius: number, color: string, size = 0.075) {
+export function sparkleCloud(count: number, radius: number, color: string, size = 0.075) {
   const pos = new Float32Array(count * 3)
   const seed = new Float32Array(count * 4)
   for (let i = 0; i < count; i += 1) {
@@ -271,348 +266,6 @@ export function buildCloud(scale = 1): THREE.Group {
     puff.position.set(x * scale, y * scale, z * scale)
     puff.castShadow = true
     g.add(puff)
-  }
-  return g
-}
-
-/* ── domain metaphors ──────────────────────────────────────────────────── */
-
-/** Crystal tree — persistence: deep roots, a canopy of slow-grown gems. */
-function crystalTree(tint: THREE.Color): THREE.Group {
-  const g = new THREE.Group()
-  const bark = surface(barkMaps(), { roughness: 0.95 })
-
-  const trunk = new THREE.Mesh(craggify(new THREE.CylinderGeometry(0.1, 0.19, 0.9, 20, 4), 0.06, 8, 2), bark)
-  trunk.position.y = 0.45
-  g.add(trunk)
-
-  for (const [a, tilt, len] of [[0.4, 0.8, 0.42], [3.4, -0.7, 0.36], [1.9, 0.6, 0.3]] as const) {
-    const branch = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.06, len, 12), bark)
-    branch.position.set(Math.cos(a) * 0.14, 0.74, Math.sin(a) * 0.14)
-    branch.rotation.z = tilt
-    branch.rotation.y = -a
-    g.add(branch)
-  }
-
-  const gemMat = crystal(tint, 0.55)
-  const canopy = new THREE.Group()
-  canopy.position.y = 1.24
-  const shards: [number, number, number, number][] = [
-    [0, 0.14, 0, 0.42],
-    [0.3, -0.05, 0.12, 0.3],
-    [-0.28, -0.02, -0.14, 0.32],
-    [0.1, -0.1, -0.3, 0.26],
-    [-0.14, -0.14, 0.28, 0.24],
-    [0.22, 0.24, -0.14, 0.22],
-    [-0.24, 0.2, 0.1, 0.2],
-  ]
-  for (const [x, y, z, s] of shards) {
-    const shard = new THREE.Mesh(new THREE.OctahedronGeometry(s, 0), gemMat)
-    shard.position.set(x, y, z)
-    shard.scale.set(0.72, 1.5, 0.72)
-    shard.rotation.set(x * 1.6, y * 3, z * 1.6)
-    canopy.add(shard)
-  }
-  g.add(canopy)
-  shadowsOn(g)
-
-  const dust = sparkleCloud(26, 0.72, '#e3d3ff', 0.07)
-  dust.position.y = 1.26
-  g.add(dust)
-  g.userData.spin = canopy
-  return g
-}
-
-/** Telescope — autonomy: looking ahead and choosing your own direction. */
-function telescope(tint: THREE.Color): THREE.Group {
-  const g = new THREE.Group()
-  const metal = surface(metalMaps(), { metalness: 0.85, roughness: 0.3, envMapIntensity: 1.3 })
-  const body = paint(tint, { metalness: 0.45, roughness: 0.24 })
-
-  for (let i = 0; i < 3; i += 1) {
-    const a = (i / 3) * TAU + 0.5
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.036, 0.78, 10), metal)
-    leg.position.set(Math.cos(a) * 0.16, 0.36, Math.sin(a) * 0.16)
-    leg.rotation.z = Math.cos(a) * 0.36
-    leg.rotation.x = -Math.sin(a) * 0.36
-    g.add(leg)
-  }
-  const hub = new THREE.Mesh(new THREE.SphereGeometry(0.1, 24, 16), metal)
-  hub.position.y = 0.75
-  g.add(hub)
-
-  const tube = new THREE.Group()
-  tube.position.y = 0.8
-  tube.rotation.z = Math.PI / 3.4
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.19, 0.96, 32, 1, false), body)
-  tube.add(barrel)
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.028, 12, 40), metal)
-  collar.rotation.x = Math.PI / 2
-  collar.position.y = 0.16
-  tube.add(collar)
-  const hood = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.18, 0.16, 32), metal)
-  hood.position.y = 0.55
-  tube.add(hood)
-  const lens = new THREE.Mesh(
-    new THREE.CircleGeometry(0.17, 32),
-    new THREE.MeshStandardMaterial({ color: new THREE.Color('#cfe9ff'), emissive: new THREE.Color('#7fd2ff'), emissiveIntensity: 0.9, roughness: 0.1, metalness: 0.2 }),
-  )
-  lens.position.y = 0.62
-  lens.rotation.x = -Math.PI / 2
-  tube.add(lens)
-  const eyepiece = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.26, 20), metal)
-  eyepiece.position.y = -0.58
-  tube.add(eyepiece)
-  const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.09, 16), paint('#f2d68a', { metalness: 0.7, roughness: 0.24 }))
-  knob.rotation.z = Math.PI / 2
-  knob.position.set(0.19, -0.16, 0)
-  tube.add(knob)
-  g.add(tube)
-  shadowsOn(g)
-
-  const stars = sparkleCloud(18, 0.6, '#bfe4ff', 0.06)
-  stars.position.set(0.34, 1.45, 0)
-  g.add(stars)
-  g.userData.sway = tube
-  return g
-}
-
-/** Sprout — initiative: the first move, made on your own. */
-function sprout(tint: THREE.Color): THREE.Group {
-  const g = new THREE.Group()
-  const soilMat = surface(rockMaps('#6b5741', '#3f3327', 5), { roughness: 1 })
-  const mound = new THREE.Mesh(craggify(new THREE.SphereGeometry(0.4, 32, 16, 0, TAU, 0, Math.PI / 2), 0.08, 9, 6), soilMat)
-  mound.scale.y = 0.42
-  g.add(mound)
-
-  const stemPts = [
-    new THREE.Vector3(0, 0.05, 0),
-    new THREE.Vector3(0.03, 0.32, 0.02),
-    new THREE.Vector3(-0.02, 0.6, -0.02),
-    new THREE.Vector3(0.02, 0.86, 0),
-  ]
-  const stem = new THREE.Mesh(
-    new THREE.TubeGeometry(new THREE.CatmullRomCurve3(stemPts), 24, 0.038, 10, false),
-    paint('#4bb872', { roughness: 0.6, metalness: 0 }),
-  )
-  g.add(stem)
-
-  const leafShape = new THREE.Shape()
-  leafShape.moveTo(0, 0)
-  leafShape.bezierCurveTo(0.16, 0.1, 0.34, 0.24, 0.46, 0.03)
-  leafShape.bezierCurveTo(0.32, -0.16, 0.14, -0.12, 0, 0)
-  const leafGeo = new THREE.ExtrudeGeometry(leafShape, { depth: 0.02, bevelEnabled: true, bevelSize: 0.012, bevelThickness: 0.01, bevelSegments: 2, curveSegments: 18 })
-  const leafMat = paint(tint, { roughness: 0.44, side: THREE.DoubleSide })
-  for (const s of [1, -1]) {
-    const leaf = new THREE.Mesh(leafGeo, leafMat)
-    leaf.position.set(0, 0.5 + s * 0.12, 0)
-    leaf.rotation.set(-0.5, 0, s > 0 ? 0.3 : Math.PI - 0.3)
-    leaf.scale.setScalar(s > 0 ? 1 : 0.82)
-    g.add(leaf)
-  }
-  const bud = new THREE.Mesh(new THREE.SphereGeometry(0.1, 24, 18), crystal(tint, 0.5))
-  bud.position.y = 0.92
-  bud.scale.y = 1.35
-  g.add(bud)
-  shadowsOn(g)
-  g.add(sparkleCloud(14, 0.42, '#c9ffd8', 0.055))
-  g.userData.sway = stem
-  return g
-}
-
-/** Circle of figures — collaboration: learning next to other people. */
-function circleOfFigures(tint: THREE.Color): THREE.Group {
-  const g = new THREE.Group()
-  const tones = [tint.clone(), tint.clone().offsetHSL(0.06, 0.02, 0.08), tint.clone().offsetHSL(-0.07, 0.02, -0.04)]
-  const heights = [0.66, 0.54, 0.6]
-  for (let i = 0; i < 3; i += 1) {
-    const a = (i / 3) * TAU + 0.6
-    const figure = new THREE.Group()
-    const mat = paint(tones[i], { roughness: 0.38 })
-    const bodyGeo = new THREE.CapsuleGeometry(0.15, heights[i] * 0.5, 8, 24)
-    const body = new THREE.Mesh(bodyGeo, mat)
-    body.position.y = heights[i] * 0.42
-    figure.add(body)
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.135, 28, 20), mat)
-    head.position.y = heights[i] * 0.42 + heights[i] * 0.36 + 0.1
-    figure.add(head)
-    figure.position.set(Math.cos(a) * 0.4, 0, Math.sin(a) * 0.4)
-    figure.lookAt(0, heights[i] * 0.5, 0)
-    g.add(figure)
-  }
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(0.52, 0.018, 12, 80),
-    new THREE.MeshStandardMaterial({ color: tint.clone().lerp(new THREE.Color('#ffffff'), 0.4), emissive: tint.clone(), emissiveIntensity: 0.8, roughness: 0.3, transparent: true, opacity: 0.9 }),
-  )
-  ring.rotation.x = -Math.PI / 2
-  ring.position.y = 0.78
-  g.add(ring)
-  shadowsOn(g)
-  g.add(sparkleCloud(16, 0.55, '#ffe0b8', 0.06))
-  g.userData.spin = ring
-  return g
-}
-
-/** Open book — learning management: a plan you can see. */
-function openBook(tint: THREE.Color): THREE.Group {
-  const g = new THREE.Group()
-  const paper = paperMaps()
-  const coverMat = paint(tint, { roughness: 0.42, metalness: 0.06 })
-  const pageMat = new THREE.MeshStandardMaterial({
-    map: pageText(),
-    normalMap: paper.normalMap,
-    roughness: 0.88,
-    metalness: 0,
-    side: THREE.DoubleSide,
-  })
-
-  const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.42, 0.14, 28), paint('#6d5f8f', { roughness: 0.6 }))
-  stand.position.y = 0.07
-  g.add(stand)
-
-  for (const s of [-1, 1]) {
-    const cover = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.05, 0.78), coverMat)
-    cover.position.set(s * 0.31, 0.36, 0)
-    cover.rotation.z = s * -0.22
-    g.add(cover)
-
-    const pages = new THREE.Mesh(new THREE.PlaneGeometry(0.56, 0.72, 12, 12), pageMat)
-    pages.position.set(s * 0.31, 0.42, 0)
-    pages.rotation.set(-Math.PI / 2, 0, 0)
-    pages.rotation.y = s * -0.22
-    // gentle page curl
-    const pos = pages.geometry.attributes.position
-    for (let i = 0; i < pos.count; i += 1) {
-      const x = pos.getX(i)
-      pos.setZ(i, Math.abs(x) * 0.16)
-    }
-    pos.needsUpdate = true
-    pages.geometry.computeVertexNormals()
-    g.add(pages)
-  }
-  const spine = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.8, 18), coverMat)
-  spine.rotation.x = Math.PI / 2
-  spine.position.y = 0.34
-  g.add(spine)
-
-  const bookmark = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.42), new THREE.MeshStandardMaterial({ color: new THREE.Color('#ff9c6e'), roughness: 0.6, side: THREE.DoubleSide }))
-  bookmark.position.set(0.02, 0.36, 0.3)
-  bookmark.rotation.x = -0.25
-  g.add(bookmark)
-  shadowsOn(g)
-
-  const glyphs = sparkleCloud(18, 0.5, '#cfd6ff', 0.06)
-  glyphs.position.y = 0.72
-  g.add(glyphs)
-  return g
-}
-
-/** Faceted gem cluster — reflection: turning experience over in the light. */
-function gemCluster(tint: THREE.Color): THREE.Group {
-  const g = new THREE.Group()
-  const base = new THREE.Mesh(craggify(new THREE.CylinderGeometry(0.42, 0.5, 0.2, 28, 2), 0.08, 9, 8), surface(rockMaps('#6a6084', '#443b5e', 8), { roughness: 1 }))
-  base.position.y = 0.1
-  g.add(base)
-  const mat = crystal(tint, 0.62)
-  const shards: [number, number, number, number, number][] = [
-    [0, 0.58, 0, 0.34, 1.7],
-    [0.26, 0.42, 0.12, 0.22, 1.35],
-    [-0.24, 0.4, -0.1, 0.19, 1.2],
-    [0.04, 0.36, -0.28, 0.16, 1.1],
-  ]
-  for (const [x, y, z, s, stretch] of shards) {
-    const shard = new THREE.Mesh(new THREE.OctahedronGeometry(s, 0), mat)
-    shard.position.set(x, y, z)
-    shard.scale.set(0.78, stretch, 0.78)
-    shard.rotation.set(x * 0.9, y, z * 0.9)
-    g.add(shard)
-  }
-  shadowsOn(g)
-  g.add(sparkleCloud(20, 0.6, '#f4d9ff', 0.065))
-  return g
-}
-
-/** Compass — decision making: choosing a direction and committing to it. */
-function compass(tint: THREE.Color): THREE.Group {
-  const g = new THREE.Group()
-  const metal = surface(metalMaps(), { metalness: 0.9, roughness: 0.26, envMapIntensity: 1.4 })
-
-  const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 0.12, 30), paint('#6a6294', { roughness: 0.6 }))
-  stand.position.y = 0.06
-  g.add(stand)
-
-  const body = new THREE.Group()
-  body.position.y = 0.42
-  body.rotation.x = -0.42
-  const shell = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.12, 48), metal)
-  shell.rotation.x = Math.PI / 2
-  body.add(shell)
-  const face = new THREE.Mesh(
-    new THREE.CircleGeometry(0.42, 48),
-    new THREE.MeshStandardMaterial({ map: compassFace(`#${tint.getHexString()}`), roughness: 0.55, metalness: 0.05 }),
-  )
-  face.position.z = 0.062
-  body.add(face)
-  const bezel = new THREE.Mesh(new THREE.TorusGeometry(0.46, 0.035, 14, 64), metal)
-  bezel.position.z = 0.03
-  body.add(bezel)
-
-  const needle = new THREE.Group()
-  needle.position.z = 0.085
-  const north = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.34, 4), paint('#ff6b6b', { roughness: 0.3, metalness: 0.3 }))
-  north.position.y = 0.17
-  needle.add(north)
-  const south = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.3, 4), paint('#e8e6f6', { roughness: 0.3, metalness: 0.3 }))
-  south.position.y = -0.15
-  south.rotation.z = Math.PI
-  needle.add(south)
-  const pin = new THREE.Mesh(new THREE.SphereGeometry(0.05, 20, 14), metal)
-  needle.add(pin)
-  body.add(needle)
-
-  const dome = new THREE.Mesh(
-    new THREE.SphereGeometry(0.46, 40, 24, 0, TAU, 0, Math.PI * 0.34),
-    new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#dfe8fb'), roughness: 0.4, metalness: 0, transmission: 0.85, thickness: 0.2, ior: 1.35, transparent: true, opacity: 0.3, clearcoat: 0.3, clearcoatRoughness: 0.5 }),
-  )
-  dome.rotation.x = Math.PI / 2
-  dome.position.z = 0.06
-  body.add(dome)
-  g.add(body)
-  shadowsOn(g)
-  g.userData.needle = needle
-  return g
-}
-
-const METAPHORS: Record<string, (tint: THREE.Color) => THREE.Group> = {
-  tree: crystalTree,
-  telescope,
-  sprout,
-  orbit: circleOfFigures,
-  book: openBook,
-  gem: gemCluster,
-  compass,
-}
-
-/**
- * Build the metaphor for a domain. Dormant domains are cast in cool stone so
- * the learner can still see what lives there — "not yet", never "missing".
- */
-export function buildMetaphor(kind: string, tint: THREE.Color, variant: IslandVariant): THREE.Group {
-  const make = METAPHORS[kind] ?? gemCluster
-  const g = make(tint)
-  if (variant === 'dormant') {
-    g.traverse((o: any) => {
-      if (!o.isMesh) return
-      const m = o.material
-      if (Array.isArray(m) || !m) return
-      if (m.color) m.color.lerp(new THREE.Color('#8c88a6'), 0.78)
-      if (m.emissive) m.emissiveIntensity = 0
-      if (m.metalness !== undefined) m.metalness *= 0.4
-      if (m.roughness !== undefined) m.roughness = Math.min(1, m.roughness + 0.3)
-    })
-    g.traverse((o: any) => {
-      if (o.userData?.sparkle) o.visible = false
-    })
   }
   return g
 }

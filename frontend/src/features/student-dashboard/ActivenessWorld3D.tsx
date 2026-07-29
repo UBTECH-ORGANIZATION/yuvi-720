@@ -4,10 +4,10 @@
  * "מפת הפעלנות שלי" — the activeness world.
  *
  * A crafted 3D diorama: one floating island per 720 activeness domain, each
- * carrying a metaphor object, all tied by glowing light-paths to a glass podium
- * where the learner's companion stands. Every visual state comes from the real
- * competency values in the learning brain — nothing here is invented, and no
- * numeric score is ever shown to the learner.
+ * home to one of Yuvi's friends, all tied by glowing light-paths to a glass
+ * podium where the learner's companion stands. Every visual state comes from
+ * the real competency values in the learning brain — nothing here is invented,
+ * and no numeric score is ever shown to the learner.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
@@ -29,11 +29,11 @@ import {
   buildIsland,
   buildLightPath,
   buildMascot,
-  buildMetaphor,
   buildPodium,
   type IslandVariant,
 } from './world/props'
-import { disposeTextureCache, radialSprite, skyTexture, statusBadge } from './world/textures'
+import { buildBuddy } from './world/buddies'
+import { disposeTextureCache, skyTexture, statusBadge } from './world/textures'
 import './world/activeness-world.css'
 
 type Competency = DashboardDTO['competencies'][number]
@@ -44,19 +44,22 @@ interface ActivenessWorld3DProps {
   competencies: Competency[]
   studentName: string
   /** Persisted arrangement + focus + goal (from learner state). */
-  initial?: { positions?: Record<string, number>; focus?: string | null; goal?: any } | null
+  initial?: { positions?: Record<string, number>; focus?: string | null; goal?: any; seen_intro?: boolean } | null
   onClose: () => void
 }
 
-/** The seven 720 activeness domains and how each is read from real competencies. */
-const DOMAINS: { key: string; metaphor: string; color: string; icon: string; source: string }[] = [
-  { key: 'persistence', metaphor: 'tree', color: '#8a6cff', icon: 'leaf', source: 'growth_mindset' },
-  { key: 'autonomy', metaphor: 'telescope', color: '#38a1f0', icon: 'search', source: 'initiative_responsibility' },
-  { key: 'initiative', metaphor: 'sprout', color: '#25b483', icon: 'spark', source: 'motivation_relevance' },
-  { key: 'collaboration', metaphor: 'orbit', color: '#e59a3c', icon: 'orbit', source: 'support_emotional' },
-  { key: 'learning_management', metaphor: 'book', color: '#5566e0', icon: 'book', source: 'self_regulation' },
-  { key: 'reflection', metaphor: 'gem', color: '#c56ad6', icon: 'reflect', source: 'self_awareness' },
-  { key: 'decision_making', metaphor: 'compass', color: '#7f8bff', icon: 'compass', source: 'avg:self_regulation,self_awareness' },
+/**
+ * The seven 720 activeness domains: which of Yuvi's friends lives there, and
+ * how the domain is read from real competencies.
+ */
+const DOMAINS: { key: string; buddy: string; color: string; icon: string; source: string }[] = [
+  { key: 'persistence', buddy: 'sprig', color: '#8a6cff', icon: 'leaf', source: 'growth_mindset' },
+  { key: 'autonomy', buddy: 'scout', color: '#38a1f0', icon: 'search', source: 'initiative_responsibility' },
+  { key: 'initiative', buddy: 'ember', color: '#25b483', icon: 'spark', source: 'motivation_relevance' },
+  { key: 'collaboration', buddy: 'pair', color: '#e59a3c', icon: 'orbit', source: 'support_emotional' },
+  { key: 'learning_management', buddy: 'planner', color: '#5566e0', icon: 'book', source: 'self_regulation' },
+  { key: 'reflection', buddy: 'mirror', color: '#c56ad6', icon: 'reflect', source: 'self_awareness' },
+  { key: 'decision_making', buddy: 'navigator', color: '#7f8bff', icon: 'compass', source: 'avg:self_regulation,self_awareness' },
 ]
 
 /**
@@ -133,6 +136,18 @@ const STATUS_LOOK: Record<Status, { ring: string; lift: number; emphasis: number
 }
 const STATUS_ORDER: Status[] = ['strength', 'next', 'process', 'unknown']
 
+/**
+ * First-visit walkthrough. A learner should never be dropped into a world and
+ * left to guess what it is — four short steps: what this place is, how to read
+ * it, what "we don't know yet" means, and what they can do here.
+ */
+const TOUR_STEPS: { key: string; icon: string }[] = [
+  { key: 'what', icon: 'map' },
+  { key: 'read', icon: 'search' },
+  { key: 'unknown', icon: 'help' },
+  { key: 'do', icon: 'target' },
+]
+
 export function ActivenessWorld3D({ competencies, studentName, initial, onClose }: ActivenessWorld3DProps) {
   const { t, direction } = useI18n()
   const { learnerId } = useBrain()
@@ -202,6 +217,11 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
   const [rail, setRail] = useState<RailKey>('focus')
   const [view, setView] = useState<'world' | 'list'>('world')
   const [howOpen, setHowOpen] = useState(false)
+  // First visit only: a short walkthrough of what this screen is. `null` means
+  // "not showing"; a number is the current step.
+  const [tour, setTour] = useState<number | null>(null)
+  const tourChecked = useRef(false)
+  const seenIntro = useRef(false)
   const [expanded, setExpanded] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -252,8 +272,27 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
         ...(initial ?? {}),
         focus: next.focus !== undefined ? next.focus : myFocus,
         goal: next.goal !== undefined ? next.goal : activeGoal,
+        seen_intro: seenIntro.current,
       },
     }).catch(() => undefined)
+  }
+
+  // A learner who has never been here is told what this place is before they
+  // are asked to read it. `initial` is `undefined` while learner state loads,
+  // so we wait for it instead of flashing the walkthrough at everyone.
+  useEffect(() => {
+    if (initial === undefined || tourChecked.current) return
+    tourChecked.current = true
+    seenIntro.current = Boolean(initial?.seen_intro)
+    if (!seenIntro.current) setTour(0)
+  }, [initial])
+
+  /** The walkthrough is shown once per learner — the flag lives in learner state. */
+  const endTour = () => {
+    setTour(null)
+    if (seenIntro.current) return
+    seenIntro.current = true
+    persist({})
   }
 
   const chooseFocus = (key: string) => {
@@ -475,38 +514,48 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       const island = buildIsland(variant, color, i * 5 + 1, radius)
       group.add(island)
 
-      // Cue #1: a coloured aura around the island, readable from any distance.
-      const halo = new THREE.Sprite(
-        new THREE.SpriteMaterial({
-          map: radialSprite('rgba(255,255,255,0.95)'),
+      // Cue #1: a solid coloured hoop around the island's rim. It used to be a
+      // glowing aura, which turned the whole row into glare — a painted ring
+      // says the same thing and lets the friend on top stay the brightest
+      // thing on the island.
+      const band = new THREE.Mesh(
+        new THREE.TorusGeometry(radius * 1.09, radius * 0.05, 12, 60),
+        new THREE.MeshStandardMaterial({
           color: ring,
+          roughness: 0.38,
+          metalness: 0.12,
+          emissive: ring.clone(),
+          emissiveIntensity: status === 'unknown' ? 0.06 : 0.2,
           transparent: true,
-          opacity: status === 'strength' ? 0.5 : status === 'next' ? 0.44 : status === 'process' ? 0.28 : 0.14,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending,
+          opacity: status === 'unknown' ? 0.6 : 0.96,
         }),
       )
-      halo.scale.setScalar(radius * 4.4)
-      halo.position.y = radius * 0.1
-      group.add(halo)
+      band.rotation.x = Math.PI / 2
+      band.position.y = radius * 0.04
+      group.add(band)
 
-      const prop = buildMetaphor(d.metaphor, color, variant)
-      const propScale = radius * (d.key === heroLocal ? 1.02 : 0.86)
+      // One of Yuvi's friends lives here. Each domain has its own character,
+      // its own look and its own way of moving.
+      const prop = buildBuddy(d.buddy, color, variant)
+      const propScale = radius * (d.key === heroLocal ? 1.4 : 1.2)
       prop.scale.setScalar(propScale)
-      prop.position.y = radius * 0.3
+      prop.position.y = radius * 0.2
       group.add(prop)
 
       // Cue #3: a pin with a language-free glyph — star / target / arrow / "?".
+      // It is planted at the rim, off to the side, so it never stands in front
+      // of the friend it is describing.
+      const side = direction === 'rtl' ? -1 : 1
       const badge = new THREE.Sprite(
         new THREE.SpriteMaterial({
           map: statusBadge(status, look.ring),
           transparent: true,
-          opacity: status === 'unknown' ? 0.8 : 1,
+          opacity: status === 'unknown' ? 0.85 : 1,
           depthWrite: false,
         }),
       )
-      badge.scale.setScalar(0.46 + radius * 0.2)
-      badge.position.set(0, radius * 0.62, radius * 0.86)
+      badge.scale.setScalar(0.42 + radius * 0.2)
+      badge.position.set(side * radius * 0.98, radius * 0.42, radius * 0.5)
       group.add(badge)
 
       // Invisible, generous hit target so tapping an island always works.
@@ -753,13 +802,8 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
         const s = (0.92 + 0.08 * ease) * (1 + n.hover * 0.06)
         n.group.scale.setScalar(s)
 
-        // prop life
-        const spin = n.prop.userData.spin
-        if (spin) spin.rotation.y = time * 0.35
-        const sway = n.prop.userData.sway
-        if (sway) sway.rotation.z = (sway.userData?.base ?? sway.rotation.z) + 0
-        const needle = n.prop.userData.needle
-        if (needle) needle.rotation.z = Math.sin(time * 0.5) * 0.22 + Math.sin(time * 1.7) * 0.04
+        // The friend who lives here: each character animates its own ability.
+        n.prop.userData.tick?.(time, dt)
         n.prop.traverse((o: any) => {
           if (!o.userData?.sparkle || !o.userData.sparkleSeed) return
           const arr = o.geometry.attributes.position.array as Float32Array
@@ -1132,6 +1176,52 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
             ))}
           </ul>
         </section>
+      )}
+
+      {/* first visit: what is this screen? */}
+      {tour !== null && (
+        <div className="aworld__modal aworld__modal--tour" role="dialog" aria-modal="true" aria-labelledby="aworld-tour-title">
+          <div className="aworld__sheet aworld__sheet--tour">
+            <span className="aworld__tour-badge">
+              <Icon name={TOUR_STEPS[tour].icon} size={22} />
+            </span>
+            <p className="aworld__tour-kicker">{t('actmap.tour.kicker', { name: studentName })}</p>
+            <h2 id="aworld-tour-title">{t(`actmap.tour.${TOUR_STEPS[tour].key}.title`)}</h2>
+            <p className="aworld__tour-body">{t(`actmap.tour.${TOUR_STEPS[tour].key}.body`)}</p>
+
+            {/* the legend is what step 2 is talking about — show it right here */}
+            {TOUR_STEPS[tour].key === 'read' && (
+              <ul className="aworld__legend aworld__legend--inline">
+                {STATUS_ORDER.map((s) => (
+                  <li key={s} data-status={s}>
+                    <i><Icon name={STATUS_ICON[s]} size={11} /></i>
+                    {t(STATUS_KEY[s])}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="aworld__tour-dots" aria-hidden="true">
+              {TOUR_STEPS.map((s, i) => (
+                <span key={s.key} data-on={i === tour ? 'true' : 'false'} />
+              ))}
+            </div>
+
+            <div className="aworld__tour-nav">
+              <button type="button" className="aworld__ghost" onClick={() => (tour === 0 ? endTour() : setTour(tour - 1))}>
+                {tour === 0 ? t('actmap.tour.skip') : t('actmap.tour.back')}
+              </button>
+              <button
+                type="button"
+                className="aworld__cta"
+                onClick={() => (tour === TOUR_STEPS.length - 1 ? endTour() : setTour(tour + 1))}
+              >
+                {tour === TOUR_STEPS.length - 1 ? t('actmap.tour.start') : t('actmap.tour.next')}
+                <Icon name="arrow" size={15} />
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* "how does this work?" */}
