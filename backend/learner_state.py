@@ -92,6 +92,7 @@ def _empty_state(learner_id: str) -> dict[str, Any]:
         "game_progress": {},
         "avatar": None,
         "avatar_unlocks": [],
+        "room": None,
         "activeness_map": None,
         "mentoring_draft": None,
     }
@@ -128,7 +129,7 @@ async def update_learner_state(learner_id: Optional[str], updates: dict[str, Any
     # (`preferences.theme`) so one account keeps one theme across devices.
     allowed = {
         "language", "gender", "mapping_results", "mapping_progress", "profile_summary_progress",
-        "profile_cache", "dashboard_cache", "game_progress", "avatar",
+        "profile_cache", "dashboard_cache", "game_progress", "avatar", "room",
         "activeness_map", "mentoring_draft",
     }
     now = datetime.now(timezone.utc).isoformat()

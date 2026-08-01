@@ -312,6 +312,114 @@
 .aworld__caption strong { font-size: .92rem; font-weight: 800; }
 .aworld__caption span { font-size: .72rem; color: var(--aw-muted); }
 
+/* ── first-visit coach marks ────────────────────────────────────────────── */
+/* The walkthrough is not a flat card in front of the world — each step is a
+   small bubble that pops up next to the thing it is talking about, with a
+   pulsing halo on that thing, so the learner's eye is led around the screen. */
+/* The veil only takes the world down a step — it must never hide the thing the
+   current step is pointing at, which is the whole point of a coach mark. */
+.aworld__veil {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  background: rgba(24, 18, 58, .2);
+  animation: aworld-veil .4s ease;
+}
+@keyframes aworld-veil { from { opacity: 0; } }
+
+.aworld__coach {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 9;
+  inline-size: min(300px, 72vw);
+  padding: 14px 16px 15px;
+  border-radius: 20px;
+  border: 1px solid var(--aw-line);
+  background: var(--aw-glass-strong);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 22px 46px rgba(38, 24, 92, .3);
+  opacity: 0;
+  transition: opacity .3s ease;
+  text-align: start;
+}
+/* the little beak that points at the element being explained */
+.aworld__coach::after {
+  content: '';
+  position: absolute;
+  inset-block-end: -7px;
+  inset-inline-start: 50%;
+  inline-size: 14px;
+  block-size: 14px;
+  transform: translateX(-50%) rotate(45deg);
+  background: inherit;
+  border-inline-end: 1px solid var(--aw-line);
+  border-block-end: 1px solid var(--aw-line);
+}
+/* flipped: when there is no headroom the bubble drops below its anchor, so the
+   beak has to point back up at it. */
+.aworld__coach[data-below='true']::after {
+  inset-block-end: auto;
+  inset-block-start: -7px;
+  border: 0;
+  border-inline-start: 1px solid var(--aw-line);
+  border-block-start: 1px solid var(--aw-line);
+}
+.aworld__coach-head { display: flex; align-items: center; gap: 9px; margin-block-end: 7px; }
+.aworld__coach-badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(140deg, #8a6cff, #5f8bff);
+  box-shadow: 0 6px 16px rgba(96, 70, 210, .34);
+}
+.aworld__coach h2 { margin: 0; font-size: .98rem; font-weight: 800; line-height: 1.25; color: var(--aw-ink); }
+.aworld__coach-body { margin: 0 0 10px; font-size: .8rem; line-height: 1.45; color: var(--aw-muted); }
+.aworld__coach .aworld__legend--inline { margin-block-end: 10px; }
+.aworld__coach-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.aworld__coach-dots { display: inline-flex; gap: 5px; }
+.aworld__coach-dots span {
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: rgba(96, 84, 160, .28);
+  transition: inline-size .2s ease, background .2s ease;
+}
+.aworld__coach-dots span[data-on='true'] { inline-size: 16px; border-radius: 4px; background: #7b62ff; }
+.aworld__coach-nav { display: inline-flex; align-items: center; gap: 8px; }
+.aworld__coach-skip {
+  border: 0;
+  background: none;
+  padding: 4px 2px;
+  font: inherit;
+  font-size: .74rem;
+  font-weight: 700;
+  color: var(--aw-muted);
+  cursor: pointer;
+}
+.aworld__coach-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  border-radius: 12px;
+  padding: 7px 13px;
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #7b62ff, #5f8bff);
+  box-shadow: 0 8px 18px rgba(96, 70, 210, .3);
+  cursor: pointer;
+}
+.aworld__coach-next svg { transform: scaleX(var(--aw-flip, 1)); }
+[dir='rtl'] .aworld__coach-next { --aw-flip: -1; }
+
 /* ── detail panel ───────────────────────────────────────────────────────── */
 
 .aworld__panel {
@@ -561,24 +669,8 @@
 .aworld__how li { display: flex; align-items: flex-start; gap: 11px; font-size: .86rem; line-height: 1.55; color: var(--aw-muted); }
 .aworld__how i { flex: none; display: grid; place-items: center; inline-size: 30px; block-size: 30px; border-radius: 50%; background: rgba(124, 92, 255, .11); color: #6446e0; }
 
-/* first-visit walkthrough */
-.aworld__modal--tour { background: rgba(34, 26, 70, .46); z-index: 14; }
-.aworld__sheet--tour { inline-size: min(430px, 100%); text-align: start; }
-.aworld__tour-badge {
-  display: grid;
-  place-items: center;
-  inline-size: 46px;
-  block-size: 46px;
-  margin-block-end: 14px;
-  border-radius: 16px;
-  background: linear-gradient(140deg, rgba(124, 92, 255, .16), rgba(56, 161, 240, .16));
-  color: #6446e0;
-}
-.aworld__tour-kicker { margin: 0 0 4px; font-size: .75rem; font-weight: 700; letter-spacing: .01em; color: #8b86a8; }
-.aworld__sheet--tour h2 { margin: 0 0 8px; font-size: 1.16rem; }
-.aworld__tour-body { margin: 0 0 18px; font-size: .89rem; line-height: 1.62; color: var(--aw-muted); }
-.aworld__legend--inline { margin: 0 0 18px; flex-wrap: wrap; }
-/* the same key, but sitting on the white walkthrough sheet */
+/* the status key, reused inside the walkthrough bubble */
+.aworld__legend--inline { margin: 0 0 10px; flex-wrap: wrap; gap: 5px; }
 .aworld--picked .aworld__legend--inline { display: flex; }
 .aworld__legend--inline li {
   border-color: var(--aw-line);
@@ -587,17 +679,6 @@
   backdrop-filter: none;
   color: #3d3560;
 }
-.aworld__tour-dots { display: flex; gap: 6px; margin-block-end: 16px; }
-.aworld__tour-dots span {
-  inline-size: 7px;
-  block-size: 7px;
-  border-radius: 50%;
-  background: rgba(124, 92, 255, .22);
-  transition: inline-size .2s ease, background .2s ease;
-}
-.aworld__tour-dots span[data-on='true'] { inline-size: 20px; border-radius: 4px; background: #7c5cff; }
-.aworld__tour-nav { display: flex; align-items: center; gap: 10px; }
-.aworld__tour-nav .aworld__cta { flex: 1; justify-content: center; }
 
 .aworld__toast {
   position: absolute;

@@ -141,13 +141,15 @@ const STATUS_ORDER: Status[] = ['strength', 'next', 'process', 'unknown']
 
 /**
  * First-visit walkthrough. A learner should never be dropped into a world and
- * left to guess what it is — four short steps: what this place is, how to read
- * it, what "we don't know yet" means, and what they can do here.
+ * left to guess what it is. Each step is a bubble that pops up beside the thing
+ * it names — Yuvi, the friends standing around him, an island — so the screen
+ * teaches itself instead of being described by a card in front of it.
  */
 const TOUR_STEPS: { key: string; icon: string }[] = [
-  { key: 'what', icon: 'map' },
+  { key: 'yuvi', icon: 'spark' },
+  { key: 'crew', icon: 'check' },
+  { key: 'islands', icon: 'map' },
   { key: 'read', icon: 'search' },
-  { key: 'unknown', icon: 'help' },
   { key: 'do', icon: 'target' },
 ]
 
@@ -158,6 +160,10 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
   const mountRef = useRef<HTMLDivElement | null>(null)
   const tagRefs = useRef<Record<string, HTMLButtonElement | null>>({})
   const captionRef = useRef<HTMLDivElement | null>(null)
+  // The walkthrough bubble is positioned by the renderer, so it can sit next to
+  // the very thing each step talks about.
+  const coachRef = useRef<HTMLDivElement | null>(null)
+  const tourRef = useRef<number | null>(null)
   const sceneApi = useRef<any>(null)
 
   const reduced = useMemo(
@@ -297,6 +303,12 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     seenIntro.current = true
     persist({})
   }
+
+  // The renderer needs the step so it can move the bubble and the halo.
+  useEffect(() => {
+    tourRef.current = tour
+    sceneApi.current?.setTour?.(tour)
+  }, [tour])
 
   const chooseFocus = (key: string) => {
     const next = myFocus === key ? null : key
@@ -482,15 +494,43 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     /* THE STAGE — Yuvi and the crew that already works with him, in the near
        foreground below the row, so the light paths rise from the team up to the
        islands that are still to be reached. */
-    // The stage grows with the team: two abreast per rank, and the disc is cut
-    // to hold exactly as many friends as the learner actually has.
-    const crewRows = Math.max(1, Math.ceil(crewModel.length / 2))
-    const crewStep = crewModel.length > 4 ? 0.8 : 0.95
-    const crewReach = 0.78 + (crewRows - 1) * crewStep
+    const rtl = direction === 'rtl'
     const STAGE = new THREE.Vector3(0, -2.2, 2.4)
-    const podium = buildPodium('#8a6cff')
+    // The strengths stand in a symmetric crescent AROUND Yuvi's circle, not
+    // huddled against him: a ring of friends that already came home, with room
+    // to breathe between each of them and him.
+    const crewCount = crewModel.length
+    const CREW_R = 1.72 + Math.max(0, crewCount - 4) * 0.18
+    // The arc is mirrored about the line through Yuvi, so the formation reads
+    // the same from both sides. An even crew opens a gap in the middle so
+    // nobody stands right behind him; an odd crew puts one friend on that
+    // centre line, which is what keeps the crescent symmetric.
+    const CREW_GAP = 0.34
+    const CREW_STEP = crewCount > 4 ? 0.5 : 0.62
+    /** Angle of the i-th friend, measured from straight behind Yuvi. */
+    const crewAngle = (i: number) => {
+      const off = i - (crewCount - 1) / 2
+      return off * CREW_STEP + Math.sign(off) * (crewCount % 2 === 0 ? CREW_GAP : 0)
+    }
+    /** Standing spot on the crescent, in stage-local coordinates. */
+    const crewSpot = (i: number) => {
+      const a = crewAngle(i)
+      // The ring is kept nearly round rather than squashed flat, so whoever
+      // stands at the back of the arc is genuinely further away and reads as
+      // behind Yuvi instead of stuck to him.
+      return new THREE.Vector3(Math.sin(a) * CREW_R * (rtl ? -1 : 1), 0, -Math.cos(a) * CREW_R * 0.92)
+    }
+    // The disc is cut to hold exactly the crescent the learner actually has.
+    const crewReach = crewCount
+      ? Math.max(...crewModel.map((_, i) => Math.abs(crewSpot(i).x)))
+      : 0.78
+    const WON = '#3ad898'
+    // The stage is painted in the SAME green the legend uses for "חוזקה שלי".
+    // Colour is the fastest thing a child reads: green floor, green rings,
+    // green pins — everything standing here is already his.
+    const podium = buildPodium(WON)
     podium.position.copy(STAGE)
-    podium.scale.set(Math.max(1.25, (crewReach + 0.72) / 1.5), 1, 1.3)
+    podium.scale.set(Math.max(1.3, (crewReach + 0.66) / 1.5), 1, Math.max(1.3, (CREW_R * 0.92 + 1.1) / 1.5))
     scene.add(podium)
 
     // Yuvi himself — the same character the learner meets in the mapping and in
@@ -502,7 +542,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     yuvi.position.copy(yuviHome)
     scene.add(yuvi)
 
-    const stageLight = new THREE.PointLight(new THREE.Color('#a98cff'), 2.2, 7, 2)
+    const stageLight = new THREE.PointLight(new THREE.Color('#8ff0c4'), 2.2, 7, 2)
     stageLight.position.set(0, STAGE.y + 1.5, STAGE.z + 1.1)
     scene.add(stageLight)
 
@@ -644,20 +684,16 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       phase: number
     }
     const crew: Crew[] = []
-    const rtl = direction === 'rtl'
     crewModel.forEach((d, i) => {
       const color = new THREE.Color(d.known ? d.color : '#6f6a92')
-      // Yuvi keeps the centre-front; the crew fans out beside and a little
-      // behind him, so the group reads as one formation rather than a line-up.
-      const rank = Math.floor(i / 2)
-      const side = (i % 2 === 0 ? 1 : -1) * (rtl ? -1 : 1)
+      // Yuvi keeps the centre of the circle; his strengths stand around him on
+      // the crescent, each turned inward so the ring reads as one formation.
+      const spot = crewSpot(i)
       const group = new THREE.Group()
-      group.position.set(side * (0.78 + rank * crewStep), STAGE.y, STAGE.z - 0.14 - rank * 0.4)
-      // Everyone on the stage faces the learner, turned slightly toward Yuvi.
-      group.rotation.y = -side * 0.28
+      group.position.set(STAGE.x + spot.x, STAGE.y, STAGE.z + spot.z)
+      group.rotation.y = Math.atan2(-spot.x, -spot.z + 2.2)
 
       const prop = buildCompanion(d.companion, color, VARIANT[d.tone])
-      prop.scale.setScalar(1.02 - rank * 0.05)
       group.add(prop)
 
       const pick = new THREE.Mesh(
@@ -673,8 +709,8 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       const mat = new THREE.Mesh(
         new THREE.TorusGeometry(0.46, 0.022, 10, 40),
         new THREE.MeshStandardMaterial({
-          color: new THREE.Color('#3ad898'),
-          emissive: new THREE.Color('#3ad898'),
+          color: new THREE.Color(WON),
+          emissive: new THREE.Color(WON),
           emissiveIntensity: 0.18,
           roughness: 0.4,
           transparent: true,
@@ -684,6 +720,16 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       mat.rotation.x = Math.PI / 2
       mat.position.y = 0.02
       group.add(mat)
+
+      // The SAME green star pin the islands use for "חוזקה שלי", planted over
+      // every friend on the stage. Without it a child sees a group photo; with
+      // it he sees a shelf of things he has already won.
+      const won = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: statusBadge('strength', WON), transparent: true, depthWrite: false }),
+      )
+      won.scale.setScalar(0.5)
+      won.position.set(Math.sign(spot.x || 1) * 0.34, 1.28, 0.26)
+      group.add(won)
 
       scene.add(group)
       crew.push({
@@ -697,11 +743,45 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
         phase: i * 0.83,
       })
     })
-    // Pills are raised in alternation by their left-to-right screen order, so
-    // neighbours on the stage never sit at the same height.
+    // Pills are stepped by their left-to-right screen order, so neighbours on
+    // the crescent never sit at the same height and the names stay readable.
+    const liftSteps = crew.length > 2 ? 3 : 2
     ;[...crew]
       .sort((a, b) => a.home.x - b.home.x)
-      .forEach((c, i) => { c.labelLift = (i % 2) * 0.62 })
+      .forEach((c, i) => { c.labelLift = (i % liftSteps) * 0.58 })
+
+    /* Where each walkthrough step points. The bubble is placed at these world
+       points, so the explanation always pops up next to the thing it names
+       instead of floating in front of everything. */
+    const TOUR_AT: THREE.Vector3[] = [
+      yuviHome.clone().add(new THREE.Vector3(0, 2.05, 0)),
+      (crew[0]?.home ?? yuviHome).clone().add(new THREE.Vector3(0, 1.5, 0)),
+      (nodes[0]?.home ?? homeTarget).clone().add(new THREE.Vector3(0, nodes[0] ? nodes[0].radius * 1.5 : 1, 0)),
+      (nodes[0]?.home ?? homeTarget).clone().add(new THREE.Vector3(0, nodes[0] ? nodes[0].radius * 1.5 : 1, 0)),
+      yuviHome.clone().add(new THREE.Vector3(0, 2.05, 0)),
+    ]
+    // A halo drops onto whatever the current step is talking about.
+    const halo = new THREE.Mesh(
+      new THREE.TorusGeometry(0.6, 0.03, 12, 52),
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#ffe9a8'),
+        emissive: new THREE.Color('#ffd166'),
+        emissiveIntensity: 0.7,
+        transparent: true,
+        opacity: 0,
+      }),
+    )
+    halo.rotation.x = -Math.PI / 2
+    halo.visible = false
+    scene.add(halo)
+    /** Ground point each step highlights, paired with the halo's size. */
+    const SPOT_AT: { at: THREE.Vector3; r: number }[] = [
+      { at: yuviHome.clone().setY(STAGE.y + 0.05), r: 1 },
+      { at: (crew[0]?.home ?? yuviHome).clone().setY(STAGE.y + 0.05), r: 0.85 },
+      { at: (nodes[0]?.home ?? homeTarget).clone(), r: nodes[0] ? nodes[0].radius * 1.6 : 1 },
+      { at: (nodes[0]?.home ?? homeTarget).clone(), r: nodes[0] ? nodes[0].radius * 1.6 : 1 },
+      { at: (nodes[0]?.home ?? homeTarget).clone(), r: nodes[0] ? nodes[0].radius * 1.6 : 1 },
+    ]
 
     // Draw the light-paths from the stage up to every island still to be reached.
     const podiumTop = STAGE.clone().add(new THREE.Vector3(0, 0.62, 0))
@@ -880,6 +960,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     /* per-frame state pushed from React */
     let selectedNow: string | null = selectedRef.current
     let focusNow: string | null = nextLocal
+    let tourNow: number | null = tourRef.current
 
     sceneApi.current = {
       getPositions: () => slots,
@@ -891,6 +972,7 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
         focusDomain(key)
       },
       setMyFocus: (key: string | null) => { focusNow = key },
+      setTour: (step: number | null) => { tourNow = step },
     }
 
     /* animation */
@@ -901,7 +983,12 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
     let raf = 0
     let disposed = false
 
-    const placeTag = (el: HTMLElement | null, world: THREE.Vector3, hidden: boolean, bottomPad = 118) => {
+    const placeTag = (
+      el: HTMLElement | null,
+      world: THREE.Vector3,
+      hidden: boolean,
+      bottomPad = 118,
+    ) => {
       if (!el) return
       projected.copy(world).project(camera)
       const behind = projected.z > 1
@@ -915,6 +1002,32 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       const cx = Math.min(Math.max(x, Math.min(minX, maxX)), Math.max(minX, maxX))
       const cy = Math.min(Math.max(y, 84), vp.h - bottomPad)
       el.style.transform = `translate(-50%, -100%) translate(${cx.toFixed(1)}px, ${cy.toFixed(1)}px)`
+      el.style.opacity = '1'
+      el.style.pointerEvents = 'auto'
+    }
+
+    /**
+     * The walkthrough bubble. Unlike a label it is big, so it is kept fully on
+     * screen: it normally sits above the thing it explains, and flips to sit
+     * below it when there is not enough headroom. `data-below` moves the beak.
+     */
+    const placeCoach = (world: THREE.Vector3 | null) => {
+      const el = coachRef.current
+      if (!el) return
+      if (!world) { el.style.opacity = '0'; el.style.pointerEvents = 'none'; return }
+      projected.copy(world).project(camera)
+      if (projected.z > 1) { el.style.opacity = '0'; el.style.pointerEvents = 'none'; return }
+      const w = el.offsetWidth || 300
+      const h = el.offsetHeight || 180
+      const x = (projected.x * 0.5 + 0.5) * vp.w
+      const y = (-projected.y * 0.5 + 0.5) * vp.h
+      const below = y - h - 26 < 12
+      const cx = Math.min(Math.max(x, w / 2 + 14), vp.w - w / 2 - 14)
+      const cy = below
+        ? Math.min(y + 22, vp.h - h - 14)
+        : Math.min(Math.max(y - 14, h + 14), vp.h - 14)
+      el.dataset.below = below ? 'true' : 'false'
+      el.style.transform = `translate(-50%, ${below ? '0' : '-100%'}) translate(${cx.toFixed(1)}px, ${cy.toFixed(1)}px)`
       el.style.opacity = '1'
       el.style.pointerEvents = 'auto'
     }
@@ -1065,6 +1178,21 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
       // HTML labels ride along with the islands and with the crew on the stage
       for (const n of nodes) placeTag(tagRefsRef.current.current[n.key], n.anchor, intro < 0.7)
       for (const c of crew) placeTag(tagRefsRef.current.current[c.key], c.anchor, intro < 0.7, 64)
+
+      /* walkthrough: the bubble rides the world point of the current step and a
+         halo pulses on the ground under whatever that step is about. */
+      const step = tourNow
+      if (step === null) {
+        halo.visible = false
+        placeCoach(null)
+      } else {
+        const mark = SPOT_AT[Math.min(step, SPOT_AT.length - 1)]
+        halo.visible = true
+        halo.position.copy(mark.at)
+        halo.scale.setScalar(mark.r * (1 + Math.sin(time * 2.6) * 0.06))
+        ;(halo.material as any).opacity = 0.5 + Math.sin(time * 2.6) * 0.16
+        placeCoach(intro < 0.55 ? null : TOUR_AT[Math.min(step, TOUR_AT.length - 1)])
+      }
       // The learner's plaque sits at the near corner of the stage, never in
       // front of the team standing on it.
       placeTag(captionRef.current, captionAt, intro < 0.8, 26)
@@ -1384,18 +1512,20 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
         </section>
       )}
 
-      {/* first visit: what is this screen? */}
-      {tour !== null && (
-        <div className="aworld__modal aworld__modal--tour" role="dialog" aria-modal="true" aria-labelledby="aworld-tour-title">
-          <div className="aworld__sheet aworld__sheet--tour">
-            <span className="aworld__tour-badge">
-              <Icon name={TOUR_STEPS[tour].icon} size={22} />
-            </span>
-            <p className="aworld__tour-kicker">{t('actmap.tour.kicker', { name: studentName })}</p>
-            <h2 id="aworld-tour-title">{t(`actmap.tour.${TOUR_STEPS[tour].key}.title`)}</h2>
-            <p className="aworld__tour-body">{t(`actmap.tour.${TOUR_STEPS[tour].key}.body`)}</p>
+      {/* first visit: coach marks that pop up beside what they explain */}
+      {tour !== null && view === 'world' && (
+        <>
+          <div className="aworld__veil" onClick={() => (tour === TOUR_STEPS.length - 1 ? endTour() : setTour(tour + 1))} />
+          <div className="aworld__coach" ref={coachRef} role="dialog" aria-live="polite" aria-labelledby="aworld-tour-title">
+            <div className="aworld__coach-head">
+              <span className="aworld__coach-badge">
+                <Icon name={TOUR_STEPS[tour].icon} size={17} />
+              </span>
+              <h2 id="aworld-tour-title">{t(`actmap.tour.${TOUR_STEPS[tour].key}.title`, { name: studentName })}</h2>
+            </div>
+            <p className="aworld__coach-body">{t(`actmap.tour.${TOUR_STEPS[tour].key}.body`)}</p>
 
-            {/* the legend is what step 2 is talking about — show it right here */}
+            {/* the legend is what the "how to read it" step is talking about */}
             {TOUR_STEPS[tour].key === 'read' && (
               <ul className="aworld__legend aworld__legend--inline">
                 {STATUS_ORDER.map((s) => (
@@ -1407,27 +1537,28 @@ export function ActivenessWorld3D({ competencies, studentName, initial, onClose 
               </ul>
             )}
 
-            <div className="aworld__tour-dots" aria-hidden="true">
-              {TOUR_STEPS.map((s, i) => (
-                <span key={s.key} data-on={i === tour ? 'true' : 'false'} />
-              ))}
-            </div>
-
-            <div className="aworld__tour-nav">
-              <button type="button" className="aworld__ghost" onClick={() => (tour === 0 ? endTour() : setTour(tour - 1))}>
-                {tour === 0 ? t('actmap.tour.skip') : t('actmap.tour.back')}
-              </button>
-              <button
-                type="button"
-                className="aworld__cta"
-                onClick={() => (tour === TOUR_STEPS.length - 1 ? endTour() : setTour(tour + 1))}
-              >
-                {tour === TOUR_STEPS.length - 1 ? t('actmap.tour.start') : t('actmap.tour.next')}
-                <Icon name="arrow" size={15} />
-              </button>
+            <div className="aworld__coach-foot">
+              <div className="aworld__coach-dots" aria-hidden="true">
+                {TOUR_STEPS.map((s, i) => (
+                  <span key={s.key} data-on={i === tour ? 'true' : 'false'} />
+                ))}
+              </div>
+              <div className="aworld__coach-nav">
+                <button type="button" className="aworld__coach-skip" onClick={endTour}>
+                  {t('actmap.tour.skip')}
+                </button>
+                <button
+                  type="button"
+                  className="aworld__coach-next"
+                  onClick={() => (tour === TOUR_STEPS.length - 1 ? endTour() : setTour(tour + 1))}
+                >
+                  {tour === TOUR_STEPS.length - 1 ? t('actmap.tour.start') : t('actmap.tour.next')}
+                  <Icon name="arrow" size={14} />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* "how does this work?" */}

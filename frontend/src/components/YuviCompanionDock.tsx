@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useI18n } from '../i18n/I18nProvider'
 import { useCompanion } from '../providers/CompanionProvider'
-import { navigate } from '../app/router'
 import { YuviAvatar3D, type YuviAvatarHandle } from '../features/Yuvi-studio/YuviAvatar3D'
 import { useStudioTransition } from '../features/Yuvi-studio/StudioTransitionProvider'
 import { useYuviDesign } from '../features/Yuvi-studio/YuviDesignProvider'
@@ -11,13 +10,15 @@ import './Yuvi-companion-dock.css'
 
 /**
  * One global Yuvi control for learner routes.
- * - Yuvi's body opens the Learning Coach.
- * - The permanent chest Y opens the character studio.
+ * - Yuvi does exactly one thing here: he opens the Learning Coach. The studio
+ *   used to hang off his chest badge, which meant hovering him raised two
+ *   different bubbles for two different destinations; it now has a named button
+ *   in the app bar (StudioLaunchButton) instead.
  * - Proactive messages appear as a preview instead of taking over the screen.
  */
 export function YuviCompanionDock() {
   const { t, direction } = useI18n()
-  const { isOpen, isOpening, isClosing, panelWidth, open, close, isStreaming, unreadCount, preview } = useCompanion()
+  const { isOpen, isOpening, isClosing, panelWidth, open, isStreaming, unreadCount, preview } = useCompanion()
   const transition = useStudioTransition()
   const { design, loaded } = useYuviDesign()
   const avatarRef = useRef<YuviAvatarHandle | null>(null)
@@ -47,12 +48,6 @@ export function YuviCompanionDock() {
       window.removeEventListener('scroll', onScroll, { capture: true } as EventListenerOptions)
     }
   }, [isOpen, isOpening, isClosing])
-
-  const openStudio = (sourceEl: HTMLElement) => {
-    close()
-    if (transition) transition.openStudio(sourceEl)
-    else navigate('/yuvi-studio')
-  }
 
   const previewText = isStreaming ? t('companion.thinking') : preview
   const showPreview = !isOpen && (isStreaming || unreadCount > 0) && Boolean(previewText)
@@ -96,14 +91,11 @@ export function YuviCompanionDock() {
               initialDesign={design}
               label={t('companion.launcher')}
               muted
-              interactiveY
               followPointer
               pulling={isOpening}
               pullingSide="right"
               pushing={isClosing}
               pushingSide="right"
-              yTooltip={t('YuviStudio.launcher')}
-              onYClick={openStudio}
               onAvatarClick={openImmediately}
             />
           )}

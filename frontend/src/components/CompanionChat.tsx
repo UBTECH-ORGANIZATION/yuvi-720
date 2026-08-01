@@ -103,6 +103,10 @@ export function CompanionChat() {
   const { design, loaded } = useYuviDesign()
   const [draft, setDraft] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [fullscreenAnim, setFullscreenAnim] = useState<'in' | 'out' | null>(null)
+  const fullscreenAnimTimer = useRef<number | null>(null)
+  const closeTimer = useRef<number | null>(null)
   const [deletePendingId, setDeletePendingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showLiveYuvi, setShowLiveYuvi] = useState(false)
@@ -120,6 +124,28 @@ export function CompanionChat() {
   const inputRef = useRef<HTMLInputElement>(null)
   const preserveScroll = useRef<{ height: number; top: number } | null>(null)
   const stickToBottom = useRef(true)
+
+  // Full screen swaps the panel between two very different layouts, so a wipe
+  // from the docked edge keeps the change readable instead of snapping.
+  const changeFullscreen = (next: boolean) => {
+    if (isFullscreen === next) return
+    setIsFullscreen(next)
+    setFullscreenAnim(next ? 'in' : 'out')
+    if (fullscreenAnimTimer.current) window.clearTimeout(fullscreenAnimTimer.current)
+    fullscreenAnimTimer.current = window.setTimeout(() => setFullscreenAnim(null), 420)
+  }
+
+  // Closing from full screen first shrinks back to the docked panel, so Yuvi's
+  // shove-out animation still plays where the learner can see it.
+  const requestClose = () => {
+    if (!isFullscreen) {
+      close()
+      return
+    }
+    changeFullscreen(false)
+    if (closeTimer.current) window.clearTimeout(closeTimer.current)
+    closeTimer.current = window.setTimeout(() => close(), 360)
+  }
 
   useLayoutEffect(() => {
     const body = bodyRef.current
@@ -140,12 +166,13 @@ export function CompanionChat() {
       if (event.key !== 'Escape') return
       if (expandedVisual) setExpandedVisual(null)
       else if (deletePendingId) setDeletePendingId(null)
+      else if (isFullscreen) changeFullscreen(false)
       else if (historyOpen) setHistoryOpen(false)
       else if (!isTaskMode) close()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [close, deletePendingId, expandedVisual, historyOpen, isClosing, isOpen, isOpening, isTaskMode])
+  }, [close, deletePendingId, expandedVisual, historyOpen, isClosing, isFullscreen, isOpen, isOpening, isTaskMode])
 
   useEffect(() => {
     const onResize = () => setPanelWidth(clampPanelWidth(panelWidth))
@@ -166,6 +193,7 @@ export function CompanionChat() {
       setSpeech({ messageId: null, state: 'idle' })
       setShowLiveYuvi(false)
       setSettleHeaderYuvi(false)
+      setIsFullscreen(false)
       return
     }
 
@@ -190,11 +218,23 @@ export function CompanionChat() {
     return () => window.clearTimeout(fallbackTimer)
   }, [isOpen, loaded])
 
-  useEffect(() => () => stopCoachSpeech(), [])
+  useEffect(() => () => {
+    stopCoachSpeech()
+    if (fullscreenAnimTimer.current) window.clearTimeout(fullscreenAnimTimer.current)
+    if (closeTimer.current) window.clearTimeout(closeTimer.current)
+  }, [])
 
   useEffect(() => {
     if (!isTaskMode) setTaskView('chat')
+    else setIsFullscreen(false)
   }, [isTaskMode, pathname])
+
+  // While the chat covers the page, the page behind it must not scroll.
+  useEffect(() => {
+    if (!isFullscreen) return
+    document.body.classList.add('is-companion-fullscreen')
+    return () => document.body.classList.remove('is-companion-fullscreen')
+  }, [isFullscreen])
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -243,6 +283,9 @@ export function CompanionChat() {
   }
 
   const activeConversation = conversations.find((item) => item.id === activeConversationId)
+  // Full-screen reading mode: the transcript fills the viewport and the
+  // conversation history sits permanently in a side rail.
+  const fullscreen = isFullscreen && !isTaskMode
   const newConversationDisabled = isStreaming || !canStartNewConversation
   const newConversationLabel = canStartNewConversation
     ? t('companion.history.new')
@@ -390,12 +433,12 @@ export function CompanionChat() {
       onPointerDown={close}
     />}
     <div
-      className={`sp-companion-slot${isTaskMode ? ' sp-companion-slot--task' : ''}${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}`}
+      className={`sp-companion-slot${isTaskMode ? ' sp-companion-slot--task' : ''}${fullscreen ? ' is-fullscreen' : ''}${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}`}
       style={{ '--sp-companion-width': `${panelWidth}px` } as CSSProperties}
     >
     <section
       id="Yuvi-companion-panel"
-      className={`sp-companion${isTaskMode ? ' sp-companion--task' : ''}${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}${isResizing ? ' is-resizing' : ''}`}
+      className={`sp-companion${isTaskMode ? ' sp-companion--task' : ''}${fullscreen ? ' is-fullscreen' : ''}${fullscreenAnim ? ` is-fs-${fullscreenAnim}` : ''}${isOpening ? ' is-opening' : ''}${isClosing ? ' is-closing' : ''}${isResizing ? ' is-resizing' : ''}`}
       role="dialog"
       aria-labelledby="Yuvi-companion-title"
       dir={direction}
@@ -403,7 +446,7 @@ export function CompanionChat() {
       data-closing={isClosing ? 'true' : 'false'}
       style={{ '--sp-companion-width': `${panelWidth}px` } as CSSProperties}
     >
-      {!isTaskMode && <div
+      {!isTaskMode && !fullscreen && <div
         className="sp-companion__resizer"
         role="separator"
         aria-orientation="vertical"
@@ -479,6 +522,7 @@ export function CompanionChat() {
             onClick={() => setHistoryOpen((value) => !value)}
             aria-label={t('companion.history.open')}
             data-tooltip={t('companion.history.open')}
+            hidden={fullscreen}
           >
             <Icon name="clock" size={18} />
           </button>
@@ -494,12 +538,22 @@ export function CompanionChat() {
           </button>
           <button
             type="button"
+            className={`sp-companion__head-action${fullscreen ? ' is-active' : ''}`}
+            onClick={() => changeFullscreen(!fullscreen)}
+            aria-pressed={fullscreen}
+            aria-label={fullscreen ? t('companion.collapse') : t('companion.expand')}
+            data-tooltip={fullscreen ? t('companion.collapse') : t('companion.expand')}
+          >
+            <Icon name={fullscreen ? 'collapse' : 'expand'} size={18} />
+          </button>
+          <button
+            type="button"
             className="sp-companion__close"
-            onClick={close}
+            onClick={requestClose}
             aria-label={t('companion.close')}
             data-tooltip={t('companion.close')}
           >
-            <Icon name="arrow" size={18} />
+            <Icon name="close" size={18} />
           </button>
         </div>}
       </header>
@@ -534,7 +588,7 @@ export function CompanionChat() {
         </div>
       )}
 
-      {historyOpen && !isTaskMode ? (
+      {(historyOpen || fullscreen) && !isTaskMode && (
         <section className="sp-companion__history" aria-labelledby="companion-history-title">
           <div className="sp-companion__history-heading">
             <div>
@@ -649,9 +703,10 @@ export function CompanionChat() {
             )}
           </div>
         </section>
-      ) : (
+      )}
+      {(!historyOpen || fullscreen) && (
         <>
-          {!isTaskMode && <div className="sp-companion__thread-bar">
+          {!isTaskMode && !fullscreen && <div className="sp-companion__thread-bar">
             <span><Icon name="message" size={15} /></span>
             <div>
               <small>{t('companion.history.current')}</small>
@@ -721,7 +776,7 @@ export function CompanionChat() {
         </>
       )}
 
-      {!historyOpen && (!isTaskMode || taskView === 'chat') && (
+      {(!historyOpen || fullscreen) && (!isTaskMode || taskView === 'chat') && (
         <div className="sp-companion__composer-shell">
           {!isStreaming && !draft.trim() && messages.length > 0 && (
             <div className="sp-companion__suggestions" role="group" aria-label={t('companion.suggestions.label')}>

@@ -70,6 +70,8 @@ export interface LearnerState {
   game_progress?: Record<string, unknown>
   avatar?: unknown
   avatar_unlocks?: string[]
+  /** The learner's own room: floor/wall/mood plus the props they placed. */
+  room?: unknown
   mentoring_draft?: unknown
   activeness_map?: {
     positions?: Record<string, number>
