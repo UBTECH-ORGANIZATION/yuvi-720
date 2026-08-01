@@ -9,6 +9,7 @@ import { LomdaCreatorPage } from '../features/learning-create/LomdaCreatorPage'
 import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
 import { YuviStudioPage } from '../features/Yuvi-studio/YuviStudioPage'
 import { BadgesPage } from '../features/badges/BadgesPage'
+import { useStudioTransition } from '../features/Yuvi-studio/StudioTransitionProvider'
 import { CompanionChat } from '../components/CompanionChat'
 import { YuviCompanionDock } from '../components/YuviCompanionDock'
 import { SparkToast } from '../components/SparkToast'
@@ -45,6 +46,13 @@ function isOnboardingRoute(pathname: string) {
   return ONBOARDING_ROUTES.some((route) => pathname.startsWith(route))
 }
 
+/* The mapping questionnaire is a one-time step. Results stay reachable (the
+   dashboard links back to the profile summary), but re-answering the
+   questionnaire would overwrite a finished mapping, so it is closed for good. */
+function isMappingRoute(pathname: string) {
+  return pathname.startsWith('/learner-mapping')
+}
+
 function isProtected(pathname: string) {
   return PROTECTED_ROUTES.some((route) => pathname.startsWith(route))
 }
@@ -55,6 +63,12 @@ function isTeacherRoute(pathname: string) {
 
 function isLandingRoute(pathname: string) {
   return pathname === '/' || pathname === ''
+}
+
+/* Accounts often carry both roles, so the learner dashboard is home unless this
+   account can only teach. */
+function homeRoute(roles: string[]) {
+  return roles.includes('learner') ? '/student-dashboard' : '/teacher-view'
 }
 
 function pageForRoute(pathname: string) {
@@ -85,11 +99,19 @@ function isLearnerRoute(pathname: string) {
 }
 
 export function App() {
-  const pathname = useRoute()
+  const routePath = useRoute()
   const { t, language, direction } = useI18n()
   const { user, isTeacher } = useAuth()
   const { stage } = useOnboarding()
   const { isOpen, isOpening, isClosing, panelWidth } = useCompanion()
+  const studioTransition = useStudioTransition()
+  /* The animated studio overlay owns the /yuvi-studio URL while it is up (so a
+     reload reopens the studio). The app underneath keeps rendering the route the
+     learner came from, which also means closing the overlay remounts nothing. */
+  const pathname =
+    studioTransition?.isOpen && studioTransition.backgroundPath
+      ? studioTransition.backgroundPath
+      : routePath
   const isStudioRoute = pathname.startsWith('/yuvi-studio')
   const isActiveTaskRoute = pathname.startsWith('/learning/lesson')
   const isLearningWorldRoute = pathname === '/learning' || pathname.startsWith('/learning?')
@@ -117,9 +139,16 @@ export function App() {
   // this account can only teach.
   useEffect(() => {
     if (!user || !isLandingRoute(pathname)) return
-    const home = user.roles.includes('learner') ? '/student-dashboard' : '/teacher-view'
-    navigate(home, { replace: true })
+    navigate(homeRoute(user.roles), { replace: true })
   }, [user, pathname])
+
+  // A learner who already finished the mapping questionnaire cannot open it
+  // again by typing /learner-mapping — send them home instead of re-asking the
+  // 31 questions and overwriting their saved mapping.
+  useEffect(() => {
+    if (!user || stage !== 'done' || !isMappingRoute(pathname)) return
+    navigate(homeRoute(user.roles), { replace: true })
+  }, [user, stage, pathname])
 
   const guarded = (() => {
     const needsAuth = isProtected(pathname) || isTeacherRoute(pathname)
@@ -128,6 +157,12 @@ export function App() {
     if (user && isLandingRoute(pathname)) return <LoadingState title={t('auth.guard.resuming')} />
     if (isTeacherRoute(pathname) && !isTeacher) {
       return <ErrorState title={t('auth.guard.teacherOnly')} />
+    }
+    // Hold the frame it takes the effect above to leave the finished questionnaire.
+    // Also held while the stage is still being read, so a learner who is done
+    // never sees a flash of the questionnaire before the redirect.
+    if (user && isMappingRoute(pathname) && (stage === 'done' || stage === 'loading')) {
+      return <LoadingState title={t('auth.guard.resuming')} />
     }
     // Onboarding incomplete and this route isn't part of it: hold the old page
     // for the one frame it takes the effect above to redirect.

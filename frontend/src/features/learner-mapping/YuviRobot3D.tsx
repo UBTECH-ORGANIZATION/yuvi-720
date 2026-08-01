@@ -484,7 +484,7 @@ export function YuviRobot3D({
     sparkBadge.renderOrder = 6
     robot.add(sparkBadge)
     // Invisible hit target sized to the visible "Y" so the clickable area is tight.
-    const badgeHit = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2), new THREE.MeshBasicMaterial({ visible: false }))
+    const badgeHit = new THREE.Mesh(new THREE.PlaneGeometry(0.44, 0.44), new THREE.MeshBasicMaterial({ visible: false }))
     badgeHit.position.set(0, 0.845, 0.231)
     robot.add(badgeHit)
 
@@ -747,17 +747,40 @@ export function YuviRobot3D({
     let hoveredBadge = false
     let badgeScale = 1
     const badgeWorld = new THREE.Vector3()
-    const onBadgeMove = (event: PointerEvent) => {
-      if (!editableRef.current) { hoveredBadge = false; return }
+    const badgeNormal = new THREE.Vector3()
+    const camForward = new THREE.Vector3()
+    /**
+     * Mirror of the companion dock's rule: try the geometry raycast first, then
+     * fall back to a generous disc around the badge's projected centre so the
+     * chest "Y" is not a pixel-hunt when Yuvi is rendered small. The facing test
+     * keeps it from being clickable through his back.
+     */
+    const hitsBadge = (event: { clientX: number; clientY: number }) => {
       const rect = renderer.domElement.getBoundingClientRect()
+      if (!rect.width || !rect.height) return false
       ndc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
       ndc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
       raycaster.setFromCamera(ndc, camera)
-      hoveredBadge = raycaster.intersectObject(badgeHit, false).length > 0
+      if (raycaster.intersectObject(badgeHit, false).length > 0) return true
+      badgeHit.getWorldDirection(badgeNormal)
+      camera.getWorldDirection(camForward)
+      if (badgeNormal.dot(camForward) > -0.15) return false
+      badgeHit.getWorldPosition(badgeWorld).project(camera)
+      if (badgeWorld.z > 1) return false
+      const bx = rect.left + ((badgeWorld.x + 1) / 2) * rect.width
+      const by = rect.top + ((1 - badgeWorld.y) / 2) * rect.height
+      const radius = Math.max(28, Math.min(rect.width, rect.height) * 0.16)
+      return Math.hypot(event.clientX - bx, event.clientY - by) <= radius
+    }
+    const onBadgeMove = (event: PointerEvent) => {
+      if (!editableRef.current) { hoveredBadge = false; return }
+      hoveredBadge = hitsBadge(event)
       renderer.domElement.style.cursor = hoveredBadge ? 'pointer' : 'default'
     }
     const onBadgeLeave = () => { hoveredBadge = false; renderer.domElement.style.cursor = 'default' }
-    const onBadgeClick = () => { if (editableRef.current && hoveredBadge) onEditRef.current?.(container) }
+    // A touch tap never sends the hover move that would set `hoveredBadge`, so
+    // the click re-tests the pointer position itself.
+    const onBadgeClick = (event: MouseEvent) => { if (editableRef.current && hitsBadge(event)) onEditRef.current?.(container) }
     renderer.domElement.addEventListener('pointermove', onBadgeMove)
     renderer.domElement.addEventListener('pointerleave', onBadgeLeave)
     renderer.domElement.addEventListener('click', onBadgeClick)

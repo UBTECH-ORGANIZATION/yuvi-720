@@ -4,14 +4,30 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../../i18n/I18nProvider'
 import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { Icon } from '../../components/primitives'
-import { YuviAvatar3D } from './YuviAvatar3D'
+import { YuviAvatar3D, type YuviPlacing } from './YuviAvatar3D'
 import { assetsForSlot, getThumbnails, type YuviAsset } from './YuviAssets'
 import type { YuviColors, YuviSlot, YuviVariant } from './YuviDesign'
 import type { StudioDesign } from './useStudioDesign'
+import { useRoomDesign } from './useRoomDesign'
+import { ROOM_CATEGORIES, itemsInCategory, roomItemSpec, type RoomItemCategory } from './RoomCatalog'
+import { MAX_ROOM_ITEMS, MOODS, ROOM_STYLES, WALL_STYLES } from './RoomDesign'
 import '../../styles/Yuvi-studio.css'
 
 type Tab = YuviSlot | 'colors'
 const TABS: Tab[] = ['headTop', 'face', 'body', 'handR', 'back', 'colors']
+
+/**
+ * The studio is a room, not a form. Yuvi walks around it freely; standing on a
+ * station is what opens that station's panel.
+ */
+type StudioMode = 'roam' | 'avatar' | 'room'
+
+// Where Yuvi is sent when the learner closes a station panel — clear of every
+// station ring and of the three fixed lab props.
+const STEP_OFF: [number, number] = [0, 3]
+
+// Anything the learner can recolour uses the same friendly palette.
+const ITEM_TINTS = ['#7C6BFF', '#4eeef0', '#ff5d73', '#ffd166', '#5ce67e', '#ff8fd0', '#4cc9f0', '#ff7a3d', '#f3ecdd', '#9a6b40']
 
 // Picking a category glides the lab camera to the part being edited.
 const FOCUS_BY_TAB: Record<Tab, string> = {
@@ -58,11 +74,84 @@ export function StudioContent({
   // Try-before-you-buy: a locked item can be worn on the stage without being
   // owned, so sparks are never spent on a guess.
   const [preview, setPreview] = useState<YuviAsset | null>(null)
+  // Leaving with unsaved work is the one destructive action in the studio, so it
+  // is confirmed rather than prevented.
+  const [exitAsk, setExitAsk] = useState(false)
+  const [exitError, setExitError] = useState(false)
+  // Walking is the default state of the studio; panels are something you step
+  // into, and step out of.
+  const [mode, setMode] = useState<StudioMode>('roam')
+  const [placing, setPlacing] = useState<YuviPlacing | null>(null)
+  const roomState = useRoomDesign()
+  // A stable identity: the 3D room only restyles when one of the three actually
+  // changes, not on every keystroke elsewhere in the studio.
+  const roomStyle = useMemo(
+    () => ({ floor: roomState.room.floor, wall: roomState.room.wall, mood: roomState.room.mood }),
+    [roomState.room.floor, roomState.room.wall, roomState.room.mood],
+  )
   const {
     avatarRef, loaded, design, activeTab, setActiveTab, muted, setMuted, justSaved,
-    saving, isLocked, equip, setVariant, setColor, reset, save,
+    saving, dirty, isLocked, equip, setVariant, setColor, reset, save,
     wallet, priceOf, buy, buying,
   } = studio
+
+  // Unsaved work is unsaved work, whether it is a hat or a sofa.
+  const anyDirty = dirty || roomState.dirty
+  const busy = saving || roomState.saving
+  const saveAll = async () => {
+    const results = await Promise.all([
+      dirty ? save() : Promise.resolve(true),
+      roomState.dirty ? roomState.save() : Promise.resolve(true),
+    ])
+    return results.every(Boolean)
+  }
+  const resetAll = () => {
+    setPlacing(null)
+    reset()
+    roomState.reset()
+  }
+
+  const requestClose = () => {
+    if (anyDirty) { setExitError(false); setExitAsk(true) }
+    else onClose()
+  }
+
+  /** Stepping onto a station opens it; stepping off closes it again. */
+  const handleZoneChange = (zone: 'avatar' | 'room' | null) => {
+    if (zone === 'avatar') {
+      setPlacing(null)
+      setMode('avatar')
+      avatarRef.current?.focus(FOCUS_BY_TAB[activeTab])
+      return
+    }
+    if (zone === 'room') {
+      setMode('room')
+      avatarRef.current?.focus('room')
+      return
+    }
+    setPlacing(null)
+    setMode('roam')
+    avatarRef.current?.focus('roam')
+  }
+  const leaveStation = () => {
+    setPlacing(null)
+    avatarRef.current?.walkTo(STEP_OFF[0], STEP_OFF[1])
+  }
+
+  /** The learner clicked the floor while holding a prop. */
+  const handlePlaceAt = (x: number, z: number, valid: boolean) => {
+    if (!placing || !valid) return
+    roomState.place(placing.kind, x, z, placing.rot ?? 0)
+    setPlacing(null)
+  }
+
+  // Escape drops whatever is on the cursor before it drops the studio.
+  useEffect(() => {
+    if (!placing) return
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setPlacing(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [placing])
 
   const clearPreview = (worn: YuviAsset | null = preview) => {
     if (!worn) return
@@ -81,9 +170,10 @@ export function StudioContent({
   useEffect(() => {
     if (!loaded || framedRef.current) return
     framedRef.current = true
-    const id = window.setTimeout(() => avatarRef.current?.focus(FOCUS_BY_TAB[activeTab]), 260)
+    // Arriving in the room means seeing the room, not a close-up of a hat.
+    const id = window.setTimeout(() => avatarRef.current?.focus('roam'), 260)
     return () => window.clearTimeout(id)
-  }, [loaded, activeTab, avatarRef])
+  }, [loaded, avatarRef])
 
   const slotAssets = activeTab === 'colors' ? [] : assetsForSlot(activeTab as YuviSlot)
   const visibleAssets = slotAssets.filter((asset) => {
@@ -95,13 +185,27 @@ export function StudioContent({
   })
 
   return (
-    <div className="Yuvi-studio">
+    <div className={`Yuvi-studio ys-mode-${mode}`}>
       <LearnerAppBar />
       <div className="ys-body">
+        {mode === 'room' && (
+          <RoomPanel
+            state={roomState}
+            placing={placing}
+            setPlacing={setPlacing}
+            onLeave={leaveStation}
+            t={t}
+          />
+        )}
+        {mode === 'avatar' && (
         <aside className="ys-drawer">
         <div className="ys-drawer__head">
           <h1>{t('YuviStudio.title')}</h1>
           <p>{t('YuviStudio.subtitle')}</p>
+          <button type="button" className="ys-station-leave" onClick={leaveStation}>
+            <Icon name="close" size={14} />
+            <span>{t('YuviStudio.station.leave')}</span>
+          </button>
           {wallet && (
             <p className="ys-wallet">
               <Icon name="spark" size={15} />
@@ -244,22 +348,64 @@ export function StudioContent({
           </div>
         )}
       </aside>
+      )}
 
       <section className="ys-stage">
         <div className="ys-stage__backdrop" aria-hidden />
         <div className={`ys-stage__canvas${robotHidden ? ' is-flight-hidden' : ''}`}>
           {loaded && (
-            <YuviAvatar3D ref={avatarRef} initialDesign={design} muted={muted} orbit stage label={t('YuviStudio.avatarAlt')} />
+            <YuviAvatar3D
+              ref={avatarRef}
+              initialDesign={design}
+              muted={muted}
+              orbit
+              stage
+              roam
+              onZoneChange={handleZoneChange}
+              roomItems={roomState.items}
+              roomStyle={roomStyle}
+              placing={placing}
+              onPlaceAt={handlePlaceAt}
+              lockRoam={mode !== 'roam'}
+              label={t('YuviStudio.avatarAlt')}
+            />
           )}
         </div>
-        <div className="ys-hint">{justSaved ? t('YuviStudio.saved') : t('YuviStudio.hint')}</div>
+        <div className="ys-hint">
+          {justSaved || roomState.justSaved
+            ? t('YuviStudio.saved')
+            : placing
+              ? t('YuviStudio.room.placeHint')
+              : mode === 'roam'
+                ? t('YuviStudio.roam.hint')
+                : t('YuviStudio.hint')}
+        </div>
+        {mode === 'roam' && (
+          // Two doors, always visible: dress Yuvi, or build the room.
+          <div className="ys-stations">
+            <button type="button" className="ys-station" onClick={() => avatarRef.current?.recenter()}>
+              <Icon name="spark" size={16} />
+              <span>{t('YuviStudio.zone.avatar')}</span>
+            </button>
+            <button type="button" className="ys-station" onClick={() => avatarRef.current?.walkTo(-2.2, 2.4)}>
+              <Icon name="home" size={16} />
+              <span>{t('YuviStudio.zone.room')}</span>
+            </button>
+          </div>
+        )}
+        {/* Leaving the studio is a top-level action, so it gets its own solid
+           button at the top of the bay instead of hiding at the end of a row
+           of ghost buttons where learners could not find it. */}
+        <button type="button" className="ys-exit" onClick={requestClose} disabled={busy}>
+          <Icon name="close" size={16} />
+          <span>{t('YuviStudio.back')}</span>
+        </button>
         <div className="ys-toolbar">
-          <button type="button" className="ys-btn ys-btn--primary" onClick={save} disabled={saving}>{t('YuviStudio.save')}</button>
-          <button type="button" className="ys-btn ys-btn--ghost" onClick={reset} disabled={saving}>{t('YuviStudio.reset')}</button>
+          <button type="button" className="ys-btn ys-btn--primary" onClick={saveAll} disabled={busy}>{t('YuviStudio.save')}</button>
+          <button type="button" className="ys-btn ys-btn--ghost" onClick={resetAll} disabled={busy}>{t('YuviStudio.reset')}</button>
           <button type="button" className="ys-btn ys-btn--mute" onClick={() => setMuted((m) => !m)}>
             {muted ? t('YuviStudio.sound.off') : t('YuviStudio.sound.on')}
           </button>
-          <button type="button" className="ys-btn ys-btn--ghost" onClick={onClose} disabled={saving}>{t('YuviStudio.back')}</button>
         </div>
       </section>
       </div>
@@ -284,6 +430,50 @@ export function StudioContent({
             setPurchaseError(result?.reason ?? 'unlock_failed')
           }}
         />
+      )}
+      {exitAsk && (
+        <div className="ys-shop-backdrop" role="presentation" onClick={() => setExitAsk(false)}>
+          <div
+            className="ys-shop ys-shop--confirm"
+            role="alertdialog"
+            aria-modal="true"
+            aria-label={t('YuviStudio.exit.title')}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2>{t('YuviStudio.exit.title')}</h2>
+            <p className="ys-shop__balance">{t('YuviStudio.exit.body')}</p>
+            {exitError && <p className="ys-shop__hint">{t('YuviStudio.exit.error')}</p>}
+            <div className="ys-shop__actions">
+              <button
+                type="button"
+                className="ys-btn ys-btn--primary"
+                disabled={busy}
+                onClick={async () => {
+                  const ok = await saveAll()
+                  if (ok) { setExitAsk(false); onClose() }
+                  else setExitError(true)
+                }}
+              >
+                {t('YuviStudio.exit.save')}
+              </button>
+              <button
+                type="button"
+                className="ys-btn ys-btn--ghost"
+                disabled={saving}
+                onClick={() => { setExitAsk(false); onClose() }}
+              >
+                {t('YuviStudio.exit.discard')}
+              </button>
+            </div>
+            <button
+              type="button"
+              className="ys-btn ys-btn--ghost ys-btn--sm ys-shop__stay"
+              onClick={() => setExitAsk(false)}
+            >
+              {t('YuviStudio.exit.cancel')}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )
@@ -431,5 +621,214 @@ function ColorsPanel({
         </div>
       ))}
     </>
+  )
+}
+
+/**
+ * The room-building station. Pick a prop, drop it on the floor, then keep
+ * adjusting it — the room is the learner's, so nothing here is one-shot.
+ */
+function RoomPanel({
+  state, placing, setPlacing, onLeave, t,
+}: {
+  state: import('./useRoomDesign').RoomDesignState
+  placing: YuviPlacing | null
+  setPlacing: (next: YuviPlacing | null) => void
+  onLeave: () => void
+  t: (key: string) => string
+}) {
+  const [category, setCategory] = useState<RoomItemCategory>('seating')
+  const { room, items, full, selected, setSelectedUid } = state
+  const selectedSpec = selected ? roomItemSpec(selected.kind) : null
+
+  const pick = (kind: string) => {
+    if (full) return
+    const spec = roomItemSpec(kind)
+    if (!spec) return
+    setSelectedUid(null)
+    setPlacing({ kind, tint: spec.tintable ? spec.tint : undefined, rot: 0 })
+  }
+  const spinGhost = (delta: number) => {
+    if (!placing) return
+    setPlacing({ ...placing, rot: (placing.rot ?? 0) + delta })
+  }
+
+  return (
+    <aside className="ys-drawer ys-drawer--room">
+      <div className="ys-drawer__head">
+        <h1>{t('YuviStudio.room.title')}</h1>
+        <p>{t('YuviStudio.room.subtitle')}</p>
+        <button type="button" className="ys-station-leave" onClick={onLeave}>
+          <Icon name="close" size={14} />
+          <span>{t('YuviStudio.station.leave')}</span>
+        </button>
+      </div>
+
+      <div className="ys-tabs ys-tabs--room" role="tablist" aria-label={t('YuviStudio.room.title')}>
+        {ROOM_CATEGORIES.map((id) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={category === id}
+            className={`ys-tab${category === id ? ' is-active' : ''}`}
+            onClick={() => setCategory(id)}
+          >
+            {t(`YuviStudio.room.category.${id}`)}
+          </button>
+        ))}
+      </div>
+
+      <div className="ys-panels">
+        <div className="ys-cat">
+          <h2>{t(`YuviStudio.room.category.${category}`)}</h2>
+          <span className="ys-cat__count">
+            {t('YuviStudio.room.count')
+              .replace('{count}', String(items.length))
+              .replace('{max}', String(MAX_ROOM_ITEMS))}
+          </span>
+        </div>
+
+        {full && <p className="ys-room-note">{t('YuviStudio.room.full')}</p>}
+
+        <div className="ys-room-grid">
+          {itemsInCategory(category).map((spec) => (
+            <button
+              key={spec.id}
+              type="button"
+              className={`ys-room-card${placing?.kind === spec.id ? ' is-active' : ''}`}
+              disabled={full}
+              onClick={() => pick(spec.id)}
+            >
+              <span className="ys-room-card__dot" style={{ background: spec.tint ?? 'var(--ys-accent, #7C6BFF)' }} />
+              <span className="ys-room-card__name">{t(`YuviStudio.room.item.${spec.id}`)}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Style is the fastest way to make the room feel like yours, so it
+           lives in the same panel as the props rather than behind a setting. */}
+        <div className="ys-room-style">
+          <div className="ys-swatch-group">
+            <h3>{t('YuviStudio.room.floor')}</h3>
+            <div className="ys-room-chips">
+              {ROOM_STYLES.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={`ys-room-chip${room.floor === id ? ' is-active' : ''}`}
+                  onClick={() => state.setFloor(id)}
+                >
+                  {t(`YuviStudio.room.floor.${id}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="ys-swatch-group">
+            <h3>{t('YuviStudio.room.wall')}</h3>
+            <div className="ys-room-chips">
+              {WALL_STYLES.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={`ys-room-chip${room.wall === id ? ' is-active' : ''}`}
+                  onClick={() => state.setWall(id)}
+                >
+                  {t(`YuviStudio.room.wall.${id}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="ys-swatch-group">
+            <h3>{t('YuviStudio.room.mood')}</h3>
+            <div className="ys-room-chips">
+              {MOODS.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={`ys-room-chip${room.mood === id ? ' is-active' : ''}`}
+                  onClick={() => state.setMood(id)}
+                >
+                  {t(`YuviStudio.room.mood.${id}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {items.length > 0 && (
+          <div className="ys-room-list">
+            <h3>{t('YuviStudio.room.placed')}</h3>
+            <div className="ys-room-chips">
+              {items.map((item) => (
+                <button
+                  key={item.uid}
+                  type="button"
+                  className={`ys-room-chip${selected?.uid === item.uid ? ' is-active' : ''}`}
+                  onClick={() => { setPlacing(null); setSelectedUid(item.uid) }}
+                >
+                  {t(`YuviStudio.room.item.${item.kind}`)}
+                </button>
+              ))}
+            </div>
+            <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={state.clear}>
+              {t('YuviStudio.room.clear')}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {placing && (
+        <div className="ys-preview">
+          <span className="ys-preview__tag">{t('YuviStudio.room.placing')}</span>
+          <div className="ys-preview__info">
+            <strong>{t(`YuviStudio.room.item.${placing.kind}`)}</strong>
+            <span className="ys-preview__earn">{t('YuviStudio.room.placeHint')}</span>
+          </div>
+          <div className="ys-preview__actions">
+            <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => spinGhost(Math.PI / 8)}>
+              {t('YuviStudio.room.rotate')}
+            </button>
+            <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => setPlacing(null)}>
+              {t('YuviStudio.room.cancel')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {selected && !placing && (
+        <div className="ys-preview">
+          <span className="ys-preview__tag">{t('YuviStudio.room.selected')}</span>
+          <div className="ys-preview__info">
+            <strong>{t(`YuviStudio.room.item.${selected.kind}`)}</strong>
+            {selectedSpec?.tintable && (
+              <div className="ys-swatches">
+                {ITEM_TINTS.map((hex) => (
+                  <button
+                    key={hex}
+                    type="button"
+                    aria-label={hex}
+                    className={`ys-swatch${(selected.tint ?? '').toLowerCase() === hex.toLowerCase() ? ' is-active' : ''}`}
+                    style={{ background: hex }}
+                    onClick={() => state.tint(selected.uid, hex)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="ys-preview__actions">
+            <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => state.rotate(selected.uid, Math.PI / 8)}>
+              {t('YuviStudio.room.rotate')}
+            </button>
+            <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => state.remove(selected.uid)}>
+              {t('YuviStudio.room.remove')}
+            </button>
+            <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => setSelectedUid(null)}>
+              {t('YuviStudio.room.done')}
+            </button>
+          </div>
+        </div>
+      )}
+    </aside>
   )
 }
