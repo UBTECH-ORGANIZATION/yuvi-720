@@ -25,6 +25,9 @@ export function useStudioDesign(autoLoad = true) {
   const avatarRef = useRef<YuviAvatarHandle | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [design, setDesign] = useState<YuviDesign>(() => cloneDesign(DEFAULT_DESIGN))
+  // The last design that is actually stored on the server. Anything the learner
+  // does after that is unsaved work we must not throw away silently.
+  const [baseline, setBaseline] = useState<YuviDesign>(() => cloneDesign(DEFAULT_DESIGN))
   const [unlockedIds, setUnlockedIds] = useState<Set<string>>(() => new Set())
   const [shop, setShop] = useState<Record<string, ShopItem>>({})
   const [buying, setBuying] = useState<string | null>(null)
@@ -40,6 +43,7 @@ export function useStudioDesign(autoLoad = true) {
         refreshSavedDesign(),
       ])
       setDesign(savedDesign)
+      setBaseline(cloneDesign(savedDesign))
       setUnlockedIds(new Set(Array.isArray(state.avatar_unlocks) ? state.avatar_unlocks : []))
     } catch { /* keep default */ }
     try {
@@ -100,20 +104,29 @@ export function useStudioDesign(autoLoad = true) {
     avatarRef.current?.applyDesign(next, false)
   }
   const save = async () => {
-    if (saving) return
+    if (saving) return false
     setSaving(true)
+    let ok = false
     try {
       const state = await updateLearnerState({ avatar: design })
-      applySavedDesign(normalizeDesign(state.avatar ?? design))
+      const stored = normalizeDesign(state.avatar ?? design)
+      applySavedDesign(stored)
+      setBaseline(cloneDesign(stored))
       setJustSaved(true)
       window.setTimeout(() => setJustSaved(false), 1600)
+      ok = true
     } catch { /* nothing destructive */ }
     finally { setSaving(false) }
+    return ok
   }
+
+  /** True while the stage shows something the learner has not stored yet. */
+  const dirty = loaded && JSON.stringify(design) !== JSON.stringify(baseline)
 
   return {
     avatarRef, loaded, design, unlockedIds, activeTab, setActiveTab,
-    muted, setMuted, justSaved, saving, isLocked, equip, setVariant, setColor, reset, save, load,
+    muted, setMuted, justSaved, saving, dirty,
+    isLocked, equip, setVariant, setColor, reset, save, load,
     wallet, priceOf, canAfford, buy, buying,
   }
 }

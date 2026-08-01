@@ -35,6 +35,8 @@ const ICON_PATHS: Record<string, ReactNode> = {
   chevronLeft: <path d="m14 6-6 6 6 6" />,
   chevronUp: <path d="m6 14 6-6 6 6" />,
   expand: <><path d="M8 3H4a1 1 0 0 0-1 1v4" /><path d="M16 3h4a1 1 0 0 1 1 1v4" /><path d="M16 21h4a1 1 0 0 0 1-1v-4" /><path d="M8 21H4a1 1 0 0 1-1-1v-4" /></>,
+  collapse: <><path d="M3 9h4a1 1 0 0 0 1-1V4" /><path d="M21 9h-4a1 1 0 0 1-1-1V4" /><path d="M21 15h-4a1 1 0 0 0-1 1v4" /><path d="M3 15h4a1 1 0 0 1 1 1v4" /></>,
+  home: <><path d="m3 10.5 9-7 9 7" /><path d="M5.5 9v10.5a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V9" /><path d="M10 20.5V14h4v6.5" /></>,
 }
 
 export interface IconProps extends Omit<HTMLAttributes<SVGElement>, 'children'> {
