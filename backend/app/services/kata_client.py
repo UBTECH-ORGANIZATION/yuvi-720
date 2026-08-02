@@ -319,7 +319,13 @@ def normalize_unit(unit: dict[str, Any]) -> dict[str, Any]:
     locales = sorted({locale for component in components for locale in component["languages"]})
     unit_id = str(unit.get("id") or "")
     sub_topic = str(unit.get("subTopic") or "")
-    objective_id = str(unit.get("learningObjective") or unit_id)
+    # 720 §3.4 requires a per-sub-topic SUMMARY unit that is deliberately not
+    # tied to a learning goal ("יחידת תוכן זו לא תהיה מקושרת ליעד למידה ספציפי"),
+    # and the metadata table makes `learningObjective` optional for exactly that
+    # case. Falling back to the unit id would mint a phantom goal that can never
+    # be achieved (no assessment, no scored items) and that the planner would
+    # offer forever, so an absent goal stays absent.
+    objective_id = str(unit.get("learningObjective") or "").strip() or None
     prerequisites = [
         str(value)
         for value in (unit.get("prerequisiteLearningObjective") or [])
@@ -331,7 +337,9 @@ def normalize_unit(unit: dict[str, Any]) -> dict[str, Any]:
         "titles": _title_translations(unit),
         "sub_topic": sub_topic,
         "objective_id": objective_id,
-        "subject": subject_from_objective(objective_id, sub_topic),
+        # A sub-topic summary (§3.4): a review resource, never a goal to master.
+        "is_summary": objective_id is None,
+        "subject": subject_from_objective(objective_id or "", sub_topic),
         "prerequisites": prerequisites,
         # Who the unit was authored FOR (720 closed lists מגזר / אוכלוסיית יעד).
         # Kept verbatim — no value is invented when the provider omits them.
@@ -390,6 +398,70 @@ async def _post_json(path: str, body: dict[str, Any]) -> Any:
 
 
 # ── Catalog ───────────────────────────────────────────────────────────────────
+def normalize_objective(row: dict[str, Any]) -> dict[str, Any]:
+    """One entry of the ministry's learning-goal registry.
+
+    The goal is the third level of the 720 taxonomy (נושא → תת נושא → יעד למידה)
+    and Kata publishes the whole curriculum spine, not just the goals we happen to
+    hold content for: the pedagogical description, its translations, the ministry's
+    own ``order`` — which is scoped **within a sub-topic**, exactly as the spec's
+    dictionary says ("יעדי הלמידה בתוך תת נושא מסודרים עפ״י סדר מובנה") — and the
+    hierarchy above it. There is no prerequisites field here; cross-goal
+    dependencies live on the unit (``prerequisiteLearningObjective``).
+    """
+    def _level(key: str) -> dict[str, Any]:
+        value = row.get(key)
+        if not isinstance(value, dict):
+            return {}
+        titles = {str(k): str(v) for k, v in (value.get("titleTranslations") or {}).items()}
+        return {
+            "id": str(value.get("id") or ""),
+            # Hebrew-first: the flat `title` on a curriculum row is an English
+            # machine label ("Science for 8th Grade") while the learner-facing
+            # name lives in the translations.
+            "title": titles.get("he") or str(value.get("title") or ""),
+            "titles": titles,
+        }
+
+    order = row.get("order")
+    return {
+        "id": str(row.get("id") or ""),
+        # A paragraph, not a display label — good grounding for the coach and the
+        # teacher view; the UI shows the sub-topic title instead.
+        "description": str(row.get("title") or ""),
+        "descriptions": {
+            str(k): str(v) for k, v in (row.get("titleTranslations") or {}).items()
+        },
+        "order": int(order) if isinstance(order, (int, float)) else None,
+        "curriculum": _level("curriculum"),
+        "subject_area": _level("subjectArea"),
+        "topic": _level("topic"),
+        "sub_topic": _level("subtopic"),
+    }
+
+
+async def list_objectives(language: Optional[str] = None) -> list[dict[str, Any]]:
+    """The ministry's learning-goal registry (`GET /catalog/objectives`)."""
+    out: list[dict[str, Any]] = []
+    page = 1
+    while True:
+        payload = await _get_json(
+            "/api/v1/catalog/objectives",
+            {"language": kata_language(language), "page": page, "limit": _MAX_PAGE_LIMIT},
+        )
+        if not isinstance(payload, dict):
+            raise KataError("invalid_kata_response")
+        items = payload.get("items") or []
+        for row in items:
+            if isinstance(row, dict) and row.get("id"):
+                out.append(normalize_objective(row))
+        total = int(payload.get("total") or 0)
+        if len(out) >= total or not items:
+            break
+        page += 1
+    return out
+
+
 async def get_unit(unit_id: str, language: Optional[str] = None) -> dict[str, Any]:
     safe_unit_id = _safe_id(unit_id, "unit_id")
     params = {"language": kata_language(language)} if language else None

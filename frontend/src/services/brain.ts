@@ -120,6 +120,17 @@ export interface DashboardHero {
   objectiveId: string | null
   objectiveTitle: string | null
   componentId: string | null
+  /** The unit the hero's step belongs to — so the lesson can be opened without
+   *  guessing it back out of the component id. */
+  unitId: string | null
+  pathNodeId: string | null
+  /** 0…1 through this learner's own path. Rendered as a trail, never a number. */
+  progressRatio: number | null
+  /** The goal's own words, from the ministry registry — what the hero picks its
+   *  interactive scene from, so the visual is about the lesson. */
+  subTopicTitle: string
+  topicTitle: string
+  goalDescription: string
   canResume: boolean
   reason: string
   pace: string | null

@@ -23,6 +23,7 @@ import { useI18n } from '../../i18n/I18nProvider'
 import { useYuviDesign } from '../Yuvi-studio/YuviDesignProvider'
 import { YuviAvatar3D } from '../Yuvi-studio/YuviAvatar3D'
 import type { LearningComponentDTO, LearningProgressState, LearningUnitDTO } from '../../services/learning'
+import { horizon, stationGlyph } from '../learning/pathView'
 import { buildPlatform, designFor, type RoomKind } from './track-platform'
 import './companion-track-3d.css'
 
@@ -39,6 +40,9 @@ const STATE_COLOR: Record<LearningProgressState, number> = {
   current: 0xa78bfa,
   available: 0x60a5fa,
   locked: 0x4b5563,
+  // Never drawn on the route — an optional extra lives in the details panel —
+  // but the map has to be total, and this is the tone it takes if it ever is.
+  skipped: 0x64748b,
 }
 
 /** Vertical gap between stations, in world units. Wide enough that a station
@@ -107,11 +111,14 @@ export function CompanionTrack3D({
   const [pending, setPending] = useState<LearningComponentDTO | null>(null)
 
   const components = useMemo(
-    () => [...unit.components].sort((first, second) => (
-      (first.order ?? 0) - (second.order ?? 0) || first.id.localeCompare(second.id)
-    )),
-    [unit.components],
+    // This learner's route only, and only as far as it is actually decided —
+    // the rest is fog, which is what lets an adaptive path grow a step without
+    // anything on screen having to renumber.
+    () => horizon(unit).nodes,
+    [unit],
   )
+
+  const hasHorizon = useMemo(() => horizon(unit).hasHorizon, [unit])
 
   // Station coordinates: a SWITCHBACK. Stations alternate left and right of the
   // centre line, so each room gets the full panel width to itself instead of
@@ -204,13 +211,41 @@ export function CompanionTrack3D({
     const railMat = track(new THREE.MeshBasicMaterial({ color: 0x33407a, transparent: true, opacity: 0.75 }))
     scene.add(new THREE.Mesh(railGeo, railMat))
 
-    const completedCount = components.filter((c) => c.progress_state === 'completed').length
-    if (completedCount > 0) {
-      const litEnd = Math.min(1, (completedCount - 0.5) / Math.max(1, components.length - 1))
+    // Lit as far as the SERVER says this learner has walked. Derived counts got
+    // this wrong the moment a path could skip or repeat a station.
+    if (unit.progress_ratio > 0) {
       const litGeo = track(new THREE.TubeGeometry(curve, 160, 0.075, 8, false))
-      litGeo.setDrawRange(0, Math.floor(litGeo.index!.count * Math.max(0.02, litEnd)))
+      litGeo.setDrawRange(0, Math.floor(litGeo.index!.count * Math.max(0.02, Math.min(1, unit.progress_ratio))))
       const litMat = track(new THREE.MeshBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0.9 }))
       scene.add(new THREE.Mesh(litGeo, litMat))
+    }
+
+    // ── Where the known path ends ──────────────────────────────────────────
+    // Three shrinking dashes continuing the switchback, then nothing. The tail
+    // of an adaptive path genuinely is not decided — it depends on how the next
+    // station goes — so drawing stations there would be a promise we would have
+    // to take back. Fog is the honest version, and it is the reason a path that
+    // grows can reveal a station instead of renumbering the map.
+    if (hasHorizon && points.length > 0) {
+      const last = points[points.length - 1]
+      const side = points.length % 2 === 0 ? -1 : 1
+      for (let step = 0; step < 3; step += 1) {
+        const t = step + 1
+        const dashGeo = track(new THREE.SphereGeometry(0.14 - step * 0.035, 10, 8))
+        const dashMat = track(new THREE.MeshBasicMaterial({
+          color: 0x8fa3ff, transparent: true, opacity: 0.4 - step * 0.11,
+        }))
+        const dash = new THREE.Mesh(dashGeo, dashMat)
+        dash.position.set(last.x + side * t * 0.55, last.y + t * 0.95, last.z)
+        scene.add(dash)
+      }
+      const mistGeo = track(new THREE.SphereGeometry(0.9, 16, 12))
+      const mistMat = track(new THREE.MeshBasicMaterial({
+        color: 0x9db4ff, transparent: true, opacity: 0.12,
+      }))
+      const mist = new THREE.Mesh(mistGeo, mistMat)
+      mist.position.set(last.x + side * 1.9, last.y + 3.4, last.z - 0.3)
+      scene.add(mist)
     }
 
     // ── Stations, as lit dioramas ──────────────────────────────────────────
@@ -690,12 +725,12 @@ export function CompanionTrack3D({
 
       {/* The real, focusable stations. Positioned over the canvas by the loop. */}
       <div className="ct3d__labels" ref={labelLayerRef}>
-        {components.map((component, index) => {
+        {components.map((component) => {
           const isActive = component.id === activeComponentId
           const locked = component.progress_state === 'locked'
           return (
             <button
-              key={component.id}
+              key={component.path_node_id}
               type="button"
               className={`ct3d__station is-${component.progress_state}${isActive ? ' is-active' : ''}`}
               disabled={locked}
@@ -710,9 +745,12 @@ export function CompanionTrack3D({
                 if (component.id === activeComponentId) return
                 setPending(component)
               }}
-              aria-label={`${index + 1}. ${component.title} — ${stateLabel(component.progress_state)}`}
+              aria-label={`${component.title} — ${stateLabel(component.progress_state)}`}
             >
-              <span className="ct3d__station-num" aria-hidden="true">{index + 1}</span>
+              {/* A state glyph rather than an ordinal: with a repeatable station
+                  and a skippable stage, array position stopped being a step
+                  number, and the real one is the server's `path_index`. */}
+              <span className="ct3d__station-num" aria-hidden="true">{stationGlyph(component)}</span>
               <span className="ct3d__station-card" aria-hidden="true">
                 <strong dir="auto">{component.title}</strong>
                 <small>{t(purposeKey(component))} · {stateLabel(component.progress_state)}</small>

@@ -104,7 +104,14 @@ export function DashboardHero({
 
       <div className="sd-journey-hero__visual">
         {/* Playable topic visual — fills the full column height, no card frame. */}
-        <HeroInteractive title={hero.objectiveTitle} />
+        <HeroInteractive
+          title={hero.objectiveTitle}
+          context={{
+            subTopicTitle: hero.subTopicTitle,
+            topicTitle: hero.topicTitle,
+            description: hero.goalDescription,
+          }}
+        />
       </div>
     </section>
   )

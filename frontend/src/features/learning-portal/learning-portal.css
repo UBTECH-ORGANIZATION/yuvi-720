@@ -829,6 +829,48 @@
   transform: translateX(-50%);
   white-space: nowrap;
 }
+/* Where the known path ends. Three shrinking dashes climbing away from the last
+   station, fading into mist — the tail of an adaptive path is genuinely not
+   decided yet, and drawing stations there would be a promise we might take back. */
+.learning-path__horizon {
+  position: absolute;
+  z-index: 4;
+  inset-block-start: 26px;
+  inset-inline: 0;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.learning-path__horizon-dash {
+  inline-size: 26px;
+  block-size: 5px;
+  border-radius: 999px;
+  background: var(--path-muted, #8fa3ff);
+  opacity: 0.4;
+}
+.learning-path__horizon-dash:nth-child(2) { inline-size: 18px; opacity: 0.26; }
+.learning-path__horizon-dash:nth-child(3) { inline-size: 11px; opacity: 0.14; }
+
+.learning-path__horizon-mark {
+  inline-size: 46px;
+  block-size: 46px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(157, 180, 255, 0.28), transparent 68%);
+  animation: learning-path-mist 5.5s ease-in-out infinite;
+}
+
+@keyframes learning-path-mist {
+  0%, 100% { transform: scale(1); opacity: 0.75; }
+  50% { transform: scale(1.14); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .learning-path__horizon-mark { animation: none; }
+}
+
 .learning-path__hint {
   position: absolute;
   z-index: 5;

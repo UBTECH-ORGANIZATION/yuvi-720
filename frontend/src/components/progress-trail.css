@@ -1,0 +1,44 @@
+/* The wordless progress trail. Sized by its container; the fill animates so a
+   path that grows reads as the road extending, never as the bar retracting. */
+
+.progress-trail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  inline-size: 100%;
+}
+
+.progress-trail__track {
+  position: relative;
+  block-size: 8px;
+  inline-size: 100%;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  overflow: hidden;
+}
+
+.progress-trail--sm .progress-trail__track {
+  block-size: 6px;
+}
+
+.progress-trail__fill {
+  display: block;
+  block-size: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4cc9f0, #7c6cff);
+  /* Slow enough to read as movement when a step lands, and the only thing that
+     ever animates here — the track never shortens. */
+  transition: inline-size 720ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-trail__label {
+  font-size: 0.78rem;
+  opacity: 0.75;
+  line-height: 1.35;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-trail__fill {
+    transition: none;
+  }
+}

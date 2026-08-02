@@ -460,6 +460,54 @@ html[dir='rtl'] .learning-lesson-prev .sp-icon { transform: scaleX(-1); }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* The third beat: once the reflection is sent, this stops being a link to the
+   next title and becomes what the path decided — so it earns the room to wrap. */
+.learning-completion-work__next.is-revealed > p {
+  overflow: visible;
+  color: var(--sp-ink-200);
+  font-size: var(--sp-fs-sm);
+  white-space: normal;
+}
+.learning-whatnow__title {
+  margin: 0;
+  color: var(--sp-ink-100);
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-bold);
+}
+.learning-whatnow__grew {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+  color: var(--sp-accent, #7c6cff);
+  font-size: var(--sp-fs-xs);
+}
+.learning-completion-work__choices {
+  display: grid;
+  gap: var(--sp-2);
+}
+/* The learner's own way out of the route we picked (720 §1 פעלנות) — deliberately
+   quieter than the primary, and absent when there is no extra to offer. */
+.learning-completion-alt {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  inline-size: 100%;
+  padding: 11px 18px;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: transparent;
+  color: var(--sp-ink-300);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-medium);
+  cursor: pointer;
+}
+.learning-completion-alt:hover {
+  border-color: var(--sp-accent, #7c6cff);
+  color: var(--sp-ink-100);
+}
 .learning-completion-cta {
   display: inline-flex;
   gap: 8px;

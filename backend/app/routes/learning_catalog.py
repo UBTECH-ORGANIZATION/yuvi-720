@@ -7,7 +7,7 @@ from typing import Literal, Optional
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app.auth.dependencies import require_learner
+from app.auth.dependencies import require_learner, require_teacher
 from app.services import kata_client as content_provider
 from app.services.learning_sessions import create_provider_session
 from app.services.learning_progress import project_unit_roadmap
@@ -38,12 +38,27 @@ async def read_catalog(lang: str = "he", learner_id: str = Depends(require_learn
     learner_id is never accepted). Each unit carries the cached AI lesson
     illustration (read-only; never generated here) so the dashboard can render
     a topic visual per lesson, localized by ``lang``.
+
+    Every unit is projected through the ONE path engine, so its ordinals, totals
+    and next step are the same ones the lesson flow and the launch gate use.
     """
     try:
+        from app.services import kata_catalog
+        await kata_catalog.ensure_loaded()
         units = await content_provider.list_units(language=lang)
         projected = []
         for unit in units:
-            roadmap = await project_unit_roadmap(unit, learner_id)
+            roadmap = await project_unit_roadmap(unit, learner_id, locale=lang)
+            # The ministry's own names for where this unit sits (נושא → תת נושא).
+            # The client used to map the dotted key through a hand-written table,
+            # which could only ever cover the keys someone had already seen.
+            goal = kata_catalog.get_objective(unit.get("objective_id") or "") or {}
+            roadmap["sub_topic_title"] = goal.get("title") or ""
+            roadmap["topic_title"] = goal.get("topic_title") or ""
+            # A paragraph of real pedagogy ("…ימדדו מסת מוצקים במאזני כפות/זרוע…").
+            # Not for display — it is what lets the card pick an illustration that
+            # matches the lesson instead of a generic one per subject.
+            roadmap["goal_description"] = goal.get("description") or ""
             roadmap["illustration"] = await _unit_illustration(roadmap, lang)
             # Per-item bot notes + question snapshots (with correct answers) are
             # server-only coach context; keep them off the client payload — the
@@ -93,6 +108,42 @@ async def create_learning_session(
         )
     except content_provider.ContentProviderError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+
+
+class PathChoiceRequest(BaseModel):
+    component_id: str = Field(min_length=1, max_length=160)
+    choice: Literal["more_practice"]
+
+
+@router.post("/path-choice")
+async def record_path_choice(
+    data: PathChoiceRequest, learner_id: str = Depends(require_learner),
+) -> dict:
+    """The learner asking for work their route had dropped (720 §1 פעלנות)."""
+    from app.services import kata_catalog
+    from app.services.events import record_path_choice as store
+    await kata_catalog.ensure_loaded()
+    component = kata_catalog.get_component(data.component_id) or {}
+    await store(learner_id, data.component_id, component.get("unit_id"), data.choice)
+    return {"ok": True}
+
+
+@router.get("/units/{unit_id}/path")
+async def explain_unit_path(
+    unit_id: str,
+    learner: str,
+    lang: str = "he",
+    teacher_id: str = Depends(require_teacher),
+) -> dict:
+    """Why this learner's path looks the way it does — teachers only.
+
+    The learner's own payload carries reason *codes* and nothing else (§2: levels
+    are internal, and no numeric score is shown). This is the other half: the
+    band, the EWMA, the failing event id — the evidence behind each decision, for
+    a teacher who needs to understand or challenge the route.
+    """
+    unit, _ = await content_provider.resolve_component(f"{unit_id}-01", unit_id)
+    return await project_unit_roadmap(unit, learner, locale=lang, explain=True)
 
 
 @router.get("/sessions/{session_id}/timing")

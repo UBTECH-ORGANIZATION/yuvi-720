@@ -1,5 +1,26 @@
 # Adaptive Planner Strategy (720-aligned)
 
+> **Status (2026-08-02): Layer A stands; Layer B is SUPERSEDED.**
+> The within-unit picker described below was built as `content_catalog.select_component`
+> and has been replaced by `app/services/learning_path.py` — one pure engine that
+> plans the whole path (not just the next component) and that every surface reads:
+> the roadmap, the lesson flow, the launch gate and the dashboard hero.
+> `select_component` still exists with its old signature, but is now a thin view of
+> that plan, so the hero and the roadmap can no longer disagree.
+>
+> Two decisions here were changed on contact with the real catalog:
+> - **Skip-ahead no longer drops a required `instruction` component.** `isRequired: true`
+>   is חובת ביצוע; differentiation at a required stage happens by choosing an easier or
+>   harder *equivalent* (§3.1). Only a stage where nothing is required may be dropped.
+> - **Open item #1 below is resolved.** The ministry's ordered learning-goal list is
+>   live at `GET /api/v1/catalog/objectives` (96 goals, with `order` scoped *within a
+>   sub-topic*, plus the curriculum → topic → sub-topic hierarchy and translations).
+>   `kata_catalog._order_objectives` now reads it; prerequisite depth survives only as
+>   a tie-break inside a sub-topic.
+>
+> See `docs/design/` for the path engine's own rules, and `backend/tests/test_learning_path.py`
+> for the acceptance contract (three personas → 6 / 5 / 4 steps on the live unit).
+
 ## Context
 
 After the Kata content migration, the planner decides only *which objective* is

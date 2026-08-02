@@ -1,18 +1,50 @@
-import type { LearningSubject } from '../../services/learning'
+import type { LearningSubject, LearningUnitDTO } from '../../services/learning'
 
-export type GlyphVariant = 'angle' | 'fraction' | 'graph' | 'orbit' | 'cell' | 'generic'
+export type GlyphVariant =
+  | 'angle' | 'fraction' | 'graph' | 'orbit' | 'cell'
+  | 'scale' | 'beaker' | 'particle' | 'generic'
 
-/** Pick a topic glyph from lesson text — the visual hints at the subject
- *  matter, it is not decoration. Keyword match stays intentionally small. */
-export function pickGlyphVariant(title: string, subTopic: string, subject: LearningSubject): GlyphVariant {
-  const text = `${title} ${subTopic}`.toLowerCase()
+/** Pick the illustration from what the lesson is ACTUALLY about.
+ *
+ *  This used to read the unit title plus a dotted sub-topic key, and when
+ *  neither matched it fell back to one picture per subject — so "מדידה מעשית של
+ *  מסה" (weighing solids, liquids and air on a balance) was drawn as a planet in
+ *  orbit, because it is science and nothing else matched.
+ *
+ *  Kata gives us far more to go on: the ministry's sub-topic and topic titles and
+ *  the goal's pedagogical description, which for that unit literally says
+ *  "ימדדו מסת מוצקים במאזני כפות/זרוע". The picture is a reading of the content,
+ *  so it should read the content. Order matters — the most specific object the
+ *  learner will actually handle wins over the broad field it belongs to. */
+export function pickGlyphVariant(
+  title: string,
+  subTopic: string,
+  subject: LearningSubject,
+  context: { subTopicTitle?: string; topicTitle?: string; description?: string } = {},
+): GlyphVariant {
+  const text = [
+    title, subTopic, context.subTopicTitle, context.topicTitle, context.description,
+  ].filter(Boolean).join(' ').toLowerCase()
+
+  if (/(מאזני|לשקול|שקילה|מסה|משקל|balance|scale|mass|weigh|ميزان|كتلة)/.test(text)) return 'scale'
+  if (/(נפח|נוזל|מנזורה|כלי קיבול|volume|liquid|beaker|حجم|سائل)/.test(text)) return 'beaker'
+  if (/(חלקיק|אטום|מולקול|צבירה|particle|atom|molecul|جسيم|ذرة)/.test(text)) return 'particle'
   if (/(זווי|angle|زاوية|زوايا)/.test(text)) return 'angle'
   if (/(שבר|fraction|كسر|كسور)/.test(text)) return 'fraction'
   if (/(משוו|גרף|ליניא|graph|equation|معادلة|رسم)/.test(text)) return 'graph'
   if (/(תא|dna|ביולוג|cell|خلية|أحياء)/.test(text)) return 'cell'
   if (/(אנרג|שמש|כוכב|orbit|solar|energy|طاقة|شمس|كوكب)/.test(text)) return 'orbit'
-  if (subject === 'science') return 'orbit'
+  if (subject === 'science') return 'particle'
   return subject === 'math' ? 'graph' : 'generic'
+}
+
+/** Convenience over a whole unit — every signal the catalog carries. */
+export function glyphForUnit(unit: LearningUnitDTO): GlyphVariant {
+  return pickGlyphVariant(unit.title, unit.sub_topic, unit.subject, {
+    subTopicTitle: unit.sub_topic_title,
+    topicTitle: unit.topic_title,
+    description: unit.goal_description,
+  })
 }
 
 interface LessonGlyphProps {
@@ -66,6 +98,41 @@ export function LessonGlyph({ variant }: LessonGlyphProps) {
           <path className="sd-glyph-helix" d="M60 40c20 12 20 28 40 40" />
           <path className="sd-glyph-helix sd-glyph-helix--alt" d="M100 40c-20 12-20 28-40 40" />
           <circle className="sd-glyph-core" cx="80" cy="60" r="8" />
+        </>
+      )}
+      {/* A balance with pans — the instrument the learner literally picks up in
+          "מדידה מעשית של מסה": מאזני כפות/זרוע. The beam tips gently, because a
+          balance settling IS the lesson. */}
+      {variant === 'scale' && (
+        <>
+          <path className="sd-glyph-ray sd-glyph-ray--base" d="M80 88V44" />
+          <path className="sd-glyph-ray" d="M56 92h48" />
+          <g className="sd-glyph-beam">
+            <path className="sd-glyph-arc" d="M36 44h88" />
+            <path className="sd-glyph-helix" d="M36 44v10m88-10v10" />
+            <path className="sd-glyph-arc" d="M24 54h24l-12 14zM112 54h24l-12 14z" />
+          </g>
+          <circle className="sd-glyph-core" cx="80" cy="40" r="7" />
+        </>
+      )}
+      {/* A measuring vessel with a liquid line — volume, the twin of mass in
+          this sub-topic ("מסה ונפח של גופים"). */}
+      {variant === 'beaker' && (
+        <>
+          <path className="sd-glyph-arc" d="M62 30h36v18l18 40a8 8 0 0 1-8 11H52a8 8 0 0 1-8-11l18-40z" />
+          <path className="sd-glyph-liquid" d="M52 74h56l8 18a6 6 0 0 1-6 8H50a6 6 0 0 1-6-8z" />
+          <path className="sd-glyph-ray" d="M104 56h10M104 66h10" />
+        </>
+      )}
+      {/* Particles in a lattice — states of matter and the particle model. */}
+      {variant === 'particle' && (
+        <>
+          <circle className="sd-glyph-ring" cx="80" cy="60" r="34" />
+          <circle className="sd-glyph-dot" cx="66" cy="48" r="6" />
+          <circle className="sd-glyph-dot" cx="94" cy="50" r="6" />
+          <circle className="sd-glyph-dot" cx="62" cy="74" r="6" />
+          <circle className="sd-glyph-dot" cx="92" cy="76" r="6" />
+          <circle className="sd-glyph-core" cx="80" cy="62" r="7" />
         </>
       )}
       {variant === 'generic' && (

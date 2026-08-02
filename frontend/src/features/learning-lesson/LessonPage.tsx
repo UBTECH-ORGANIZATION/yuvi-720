@@ -10,11 +10,13 @@ import {
   createLearningSession,
   getLearningCatalog,
   getLearningTiming,
+  reportPathChoice,
   type LearningComponentDTO,
   type LearningSessionDTO,
   type LearningTimingDTO,
   type LearningUnitDTO,
 } from '../../services/learning'
+import { optionalExtra as findOptionalExtra, previousStation, whatNowKey } from '../learning/pathView'
 import { useBadgeMoments } from '../badges/useBadgeMoments'
 import { LessonRewards } from './LessonRewards'
 import { ReflectionPanel } from './ReflectionPanel'
@@ -86,6 +88,13 @@ export function LessonPage() {
   const completionActionRef = useRef<HTMLButtonElement>(null)
   const completionDialogRef = useRef<HTMLElement>(null)
   const completionPendingRef = useRef(false)
+  // …and a third beat: what the path decided next. Revealed once the reflection
+  // is sent, so the learner leaves knowing where they are going and why.
+  const [whatNowOpen, setWhatNowOpen] = useState(false)
+  // How long the path was when this lesson opened. If the plan grew while they
+  // worked (a repair round, an extra they asked for), the dialog says so instead
+  // of letting the roadmap silently sprout a station.
+  const stepsAtOpenRef = useRef<number | null>(null)
   const completedRef = useRef(false)
   useEffect(() => { completedRef.current = completed }, [completed])
 
@@ -111,6 +120,8 @@ export function LessonPage() {
           setRoadmap(nextSession.roadmap)
           setCompleted(false)
           setProgressionReady(false)
+          setWhatNowOpen(false)
+          stepsAtOpenRef.current = nextSession.roadmap.steps_total ?? null
           setTravellingFromId(null)
           completionPendingRef.current = false
           // §6 re-entry: if this component is already completed and we're NOT
@@ -286,7 +297,7 @@ export function LessonPage() {
   useEffect(() => {
     if (!completed) return
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const hasNextStation = Boolean(roadmap?.next_component_id)
+    const hasNextStation = Boolean(roadmap?.next_path_node_id)
     const duration = reducedMotion ? 450 : hasNextStation ? 6800 : 2600
     const stopAudio = reducedMotion ? () => undefined : playCelebrationCheer(duration)
     const readyTimer = window.setTimeout(() => {
@@ -312,26 +323,20 @@ export function LessonPage() {
 
   const nextComponent = useMemo(() => {
     if (!roadmap || !session) return null
+    // On `path_node_id`, not `id`: a repair round puts the same component on the
+    // path twice, so the id alone no longer identifies a station.
     return roadmap.components.find(
-      (component) => component.id === roadmap.next_component_id,
+      (component) => component.path_node_id === roadmap.next_path_node_id,
     ) || null
   }, [roadmap, session])
 
-  // 720 F1 "אפשרות לחזור לתכנים קודמים": the nearest earlier station the
-  // route has opened. Skips a locked one rather than offering a dead end — the
-  // launch would refuse it anyway.
-  const previousComponent = useMemo(() => {
-    if (!roadmap || !session) return null
-    const ordered = [...roadmap.components].sort(
-      (a, b) => (a.order ?? 0) - (b.order ?? 0),
-    )
-    const index = ordered.findIndex((component) => component.id === session.component.id)
-    if (index <= 0) return null
-    for (let i = index - 1; i >= 0; i -= 1) {
-      if (ordered[i].progress_state !== 'locked') return ordered[i]
-    }
-    return null
-  }, [roadmap, session])
+  // 720 F1 "אפשרות לחזור לתכנים קודמים": the nearest earlier station on THIS
+  // learner's path. Walks `path_index` over stations they actually settled, so
+  // it can no longer offer a component they never took (or a skipped extra).
+  const previousComponent = useMemo(
+    () => (roadmap && session ? previousStation(roadmap, session.component.id) : null),
+    [roadmap, session],
+  )
 
   // What the coins did across this lesson, read once the brain has settled.
   const badgeMoments = useBadgeMoments(badgeCheck, language)
@@ -342,6 +347,22 @@ export function LessonPage() {
   // the celebration slides in beside it if a coin actually moved.
   const badgeCheckSettled = badgeCheck > 0 && badgeMoments.settledFor === badgeCheck
   const showRewardsStep = badgeCheckSettled && !badgeMoments.empty
+
+  // What the path decided, in one sentence keyed off the NEXT node's reason —
+  // never a mastery level and never a score (720 §2, §3.4).
+  const whatNowMessage = useMemo(() => {
+    if (!nextComponent) return t('learning.path.next.unit_completed_by_assessment')
+    return t(whatNowKey(nextComponent), { title: nextComponent.title })
+  }, [nextComponent, t])
+
+  // The path just got longer than it was when this lesson opened — say it out
+  // loud, so the extra station reads as the system responding, not as a glitch.
+  const pathGrew = Boolean(
+    roadmap && stepsAtOpenRef.current !== null && roadmap.steps_total > stepsAtOpenRef.current,
+  )
+
+  // An optional stage this learner's route dropped, offered as a real choice.
+  const optionalExtra = useMemo(() => (roadmap ? findOptionalExtra(roadmap) : null), [roadmap])
 
   const openRoadmapComponent = (component: LearningComponentDTO) => {
     if (!roadmap) return
@@ -572,29 +593,59 @@ export function LessonPage() {
                   <ReflectionPanel
                     componentId={session?.component.id || null}
                     sessionId={session?.session_id || null}
-                    onDone={() => undefined}
+                    onDone={() => setWhatNowOpen(true)}
                   />
                 </div>
 
-                <div className="learning-completion-work__next">
+                {/* The third beat. Answering the reflection reveals what the path
+                    decided and why — one sentence a child can read, built from the
+                    next node's reason code and never from a level or a score. */}
+                <div className={`learning-completion-work__next${whatNowOpen ? ' is-revealed' : ''}`}>
+                  {whatNowOpen && <h3 className="learning-whatnow__title">{t('learning.path.whatNow')}</h3>}
                   <p>
                     {!progressionReady
                       ? t('learning.lesson.completionDialog.progressing')
+                      : whatNowOpen
+                      ? whatNowMessage
                       : nextComponent
                       ? t('learning.lesson.completionDialog.next', { title: nextComponent.title })
                       : t('learning.lesson.completed.body')}
                   </p>
-                  <button
-                    ref={completionActionRef}
-                    className="learning-completion-cta"
-                    type="button"
-                    disabled={!progressionReady}
-                    aria-busy={!progressionReady}
-                    onClick={continueAfterCompletion}
-                  >
-                    {nextComponent ? t('learning.lesson.continueJourney') : t('learning.lesson.chooseNext')}
-                    <Icon name="arrow" size={17} />
-                  </button>
+                  {pathGrew && whatNowOpen && (
+                    <p className="learning-whatnow__grew">
+                      <Icon name="spark" size={14} />
+                      {t('learning.path.grew')}
+                    </p>
+                  )}
+                  <div className="learning-completion-work__choices">
+                    <button
+                      ref={completionActionRef}
+                      className="learning-completion-cta"
+                      type="button"
+                      disabled={!progressionReady}
+                      aria-busy={!progressionReady}
+                      onClick={continueAfterCompletion}
+                    >
+                      {nextComponent ? t('learning.path.continue') : t('learning.lesson.chooseNext')}
+                      <Icon name="arrow" size={17} />
+                    </button>
+                    {/* 720 §1 פעלנות — the learner may overrule the route. Taking
+                        an extra is recorded, so the next re-plan already knows. */}
+                    {optionalExtra && progressionReady && (
+                      <button
+                        className="learning-completion-alt"
+                        type="button"
+                        onClick={() => {
+                          void reportPathChoice(session?.component.id || null, 'more_practice')
+                          closeCompletion()
+                          openRoadmapComponent(optionalExtra)
+                        }}
+                      >
+                        <Icon name="plus" size={15} />
+                        {t('learning.path.morePractice')}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </section>

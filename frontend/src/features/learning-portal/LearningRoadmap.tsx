@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useI18n } from '../../i18n/I18nProvider'
 import type { LearningComponentDTO, LearningUnitDTO } from '../../services/learning'
+import { horizon, stationGlyph } from '../learning/pathView'
 
 interface RoadmapPoint {
   component: LearningComponentDTO
@@ -69,12 +70,12 @@ export function LearningRoadmap({
   const scrollRef = useRef<HTMLElement>(null)
   const [roadmapReady, setRoadmapReady] = useState(false)
 
-  const components = useMemo(
-    () => [...unit.components].sort((first, second) => (
-      (first.order ?? 0) - (second.order ?? 0) || first.id.localeCompare(second.id)
-    )),
-    [unit.components],
-  )
+  // Only this learner's own route, and only as far as we can honestly promise
+  // (see `horizon` — the rule and its reasoning live in one tested place).
+  const { components, hasHorizon } = useMemo(() => {
+    const { nodes, hasHorizon: fogged } = horizon(unit)
+    return { components: nodes, hasHorizon: fogged }
+  }, [unit])
 
   const debug = useMemo<RoadmapDebugState>(() => {
     const params = new URLSearchParams(window.location.search)
@@ -265,19 +266,20 @@ export function LearningRoadmap({
                 '--stage-depth': depth,
                 '--stage-scale': .76 + depth * .28,
               } as CSSProperties}
-              data-roadmap-debug={`${stageIndex + 1} · ${component.order ?? '—'}`}
+              data-roadmap-debug={`${component.path_index ?? '—'} · ${component.order ?? '—'}`}
               data-roadmap-component={component.id}
               data-roadmap-state={component.progress_state}
               disabled={disabled}
               onClick={() => onSelect?.(component)}
-              aria-label={`${stageIndex + 1}. ${component.title}. ${t(`learning.roadmap.state.${component.progress_state}`)}`}
-              key={component.id}
+              aria-label={`${component.title}. ${t(`learning.roadmap.state.${component.progress_state}`)}`}
+              key={component.path_node_id}
             >
               {isCurrent && <span className="learning-path__current-flag">{t('learning.roadmap.next')}</span>}
               <span className="learning-path__node" aria-hidden="true">
-                <span className="learning-path__node-top">
-                  {stageIndex + 1}
-                </span>
+                {/* A state glyph, not an ordinal. The number used to be the array
+                    position, which stops meaning anything once a path can repeat
+                    a station or drop an optional one. */}
+                <span className="learning-path__node-top">{stationGlyph(component)}</span>
                 <span className="learning-path__node-base" />
                 {component.progress_state === 'completed' && <span className="learning-path__completed-mark">✓</span>}
               </span>
@@ -289,6 +291,19 @@ export function LearningRoadmap({
             </button>
           )
         })}
+
+        {/* Where the known path ends. Three shrinking dashes and a marker in
+            mist — honest about a tail that has not been decided yet, and the
+            reason nothing here ever has to renumber. */}
+        {hasHorizon && (
+          <div className="learning-path__horizon" aria-hidden="true">
+            <span className="learning-path__horizon-dash" />
+            <span className="learning-path__horizon-dash" />
+            <span className="learning-path__horizon-dash" />
+            <span className="learning-path__horizon-mark" />
+          </div>
+        )}
+        {hasHorizon && <p className="sp-sr-only">{t('learning.roadmap.horizon')}</p>}
 
         <p className="learning-path__hint">{t('learning.roadmap.worldHint')}</p>
       </div>

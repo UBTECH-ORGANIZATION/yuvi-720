@@ -65,6 +65,17 @@ class RouteGateTests(unittest.IsolatedAsyncioTestCase):
         """An alternative served outside the projected list is not 'locked'."""
         await self._check("c-9", {"c-1": "completed"})
 
+    async def test_a_skipped_optional_extra_still_opens(self):
+        """The path engine drops an optional stage a learner has outgrown, but the
+        content is real and approved: the details panel offers it as an extra, and
+        a learner who wants more practice must be able to take it."""
+        await self._check("c-2", {"c-1": "completed", "c-2": "skipped", "c-3": "current"})
+
+    async def test_a_non_chosen_equal_order_equivalent_still_opens(self):
+        """§3.1 — same-`order` components are pedagogically שקולים. We pick one;
+        refusing the other would make deep-linking an alternative fail."""
+        await self._check("c-2b", {"c-2a": "current", "c-2b": "available"})
+
     async def test_a_projection_failure_never_strands_the_learner(self):
         """The route is a pedagogical order, not a security boundary. Losing the
         catalog must not lock every learner out of their lesson."""

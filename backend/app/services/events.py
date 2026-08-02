@@ -532,6 +532,45 @@ async def _events_collection():
     return _get_collection_named("learning_events")
 
 
+async def record_path_choice(
+    learner_id: str, component_id: str, unit_id: Optional[str], choice: str,
+) -> dict[str, Any]:
+    """Store a route decision the LEARNER made, not the content.
+
+    720 §1 makes פעלנות a design principle, and the selection dictionary already
+    carries the provider's version of this (`practiceDecision` / `isRepeat`) when
+    the choice is offered inside a component. This is the platform's own
+    affordance — "אני רוצה עוד תרגול" in the completion dialog — recorded as the
+    same kind of evidence so the path engine reads both through one rule.
+
+    Deliberately NOT an xAPI statement: it describes a choice about our routing,
+    not an interaction with provider content, so it is never relayed onward.
+    """
+    safe_id = normalize_learner_id(learner_id)
+    event = {
+        "_id": hashlib.sha256(
+            f"{safe_id}|{component_id}|{choice}|{datetime.now(timezone.utc).isoformat()}".encode()
+        ).hexdigest(),
+        "learner_id": safe_id,
+        "verb": "path_choice",
+        "launch": component_id,
+        "unit_id": unit_id,
+        "response": choice,
+        "source": "platform",
+        "occurred_at": datetime.now(timezone.utc).isoformat(),
+        "stored_at": datetime.now(timezone.utc).isoformat(),
+    }
+    collection = await _events_collection()
+    if collection is not None:
+        try:
+            await collection.update_one({"_id": event["_id"]}, {"$setOnInsert": event}, upsert=True)
+            return event
+        except Exception as exc:
+            print(f"⚠️ path choice write failed, using fallback: {exc}")
+    _fallback_append(event)
+    return event
+
+
 async def get_recent_events(
     learner_id: str, objective_id: Optional[str] = None, limit: int = 5
 ) -> list[dict[str, Any]]:
