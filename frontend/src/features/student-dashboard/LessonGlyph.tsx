@@ -105,14 +105,22 @@ export function LessonGlyph({ variant }: LessonGlyphProps) {
           balance settling IS the lesson. */}
       {variant === 'scale' && (
         <>
-          <path className="sd-glyph-ray sd-glyph-ray--base" d="M80 88V44" />
-          <path className="sd-glyph-ray" d="M56 92h48" />
+          {/* Column and foot — the part that does not move. */}
+          <path className="sd-glyph-ray sd-glyph-ray--base" d="M80 96V42" />
+          <path className="sd-glyph-ray sd-glyph-ray--base" d="M60 100h40" />
           <g className="sd-glyph-beam">
-            <path className="sd-glyph-arc" d="M36 44h88" />
-            <path className="sd-glyph-helix" d="M36 44v10m88-10v10" />
-            <path className="sd-glyph-arc" d="M24 54h24l-12 14zM112 54h24l-12 14z" />
+            {/* The beam, caught mid-tip: a balance at rest is the goal, not the
+                starting state. Its midpoint is the pivot, so the arm turns
+                around the post rather than drifting off it. */}
+            <path className="sd-glyph-arc" d="M33 46 127 34" />
+            {/* Strings to the rim, then a shallow pan hanging under each end.
+                The pans used to be downward triangles, which read as arrowheads
+                pointing at nothing rather than as something you load. */}
+            <path className="sd-glyph-helix" d="M33 46 17 57M33 46 49 57M127 34 111 45M127 34 143 45" />
+            <path className="sd-glyph-arc" d="M17 57q16 17 32 0" />
+            <path className="sd-glyph-arc" d="M111 45q16 17 32 0" />
           </g>
-          <circle className="sd-glyph-core" cx="80" cy="40" r="7" />
+          <circle className="sd-glyph-core" cx="80" cy="40" r="6" />
         </>
       )}
       {/* A measuring vessel with a liquid line — volume, the twin of mass in

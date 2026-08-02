@@ -948,8 +948,6 @@
   "sdash.lessons.stage": "שלב נוכחי",
   "sdash.lessons.progress": "{completed} מתוך {total} שלבים",
   "sdash.lessons.ringLabel": "הושלם",
-  "sdash.lessons.prev": "השיעורים הקודמים",
-  "sdash.lessons.next": "עוד שיעורים",
   "sdash.lessons.timeInvested": "זמן שהושקע",
   "sdash.lessons.timeEstimated": "משך משוער",
   "sdash.lessons.minutes": "{count} דק׳",
@@ -1608,5 +1606,11 @@
   "sdash.viz.balance.aria": "מאזני כפות אינטראקטיביים — גררו כדי לאזן",
   "sdash.viz.balance.handle": "המסה על המאזניים",
   "sdash.viz.balance.hint": "גררו את המסה עד שהכפות יתאזנו",
-  "sdash.viz.balance.balanced": "מאוזן! שתי הכפות באותו גובה"
+  "sdash.viz.balance.balanced": "מאוזן! שתי הכפות באותו גובה",
+  "sdash.lessons.peek.prev": "כבר עשית",
+  "sdash.lessons.peek.next": "התחנה הבאה",
+  "sdash.lessons.peek.back": "מה שכבר עשיתי",
+  "sdash.lessons.peek.forward": "מה מחכה בהמשך",
+  "sdash.lessons.peek.revisit": "לחזור לתחנה הזאת",
+  "sdash.lessons.peek.locked": "ייפתח כשתסיימו את התחנה הנוכחית"
 }
