@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from app.services import kata_catalog
+from app.services import kata_catalog, learning_path
 
 # Learner-facing mastery-level order (labels never shown to the learner).
 _LEVEL_ORDER = {"basic": 0, "intermediate": 1, "advanced": 2}
@@ -115,15 +115,16 @@ def information_to_bot(component_id: Optional[str], item_id: Optional[str] = Non
 # path, same-`order` equivalent selection, difficulty match, and the assessment
 # readiness gate. Deterministic + explainable (returns a `_reason`).
 
-_MASTERY_RANK = {"basic": 0, "intermediate": 1, "advanced": 2}
-# Thresholds (tunable — mirror the constants style in mastery.py).
-_STRUGGLE_SCORE = 0.4
-_CONFIDENT_SCORE = 0.75
-_CONFIDENT_CONF = 0.5
-_CONFIDENT_STREAK = 3
-_ASSESS_READY_STREAK = 2
-_ASSESS_READY_SCORE = 0.7
-_ASSESS_READY_CONF = 0.4
+_MASTERY_RANK = learning_path._MASTERY_RANK
+# Thresholds live with the engine now; these names are kept as aliases so
+# existing callers and tests keep reading.
+_STRUGGLE_SCORE = learning_path._STRUGGLE_SCORE
+_CONFIDENT_SCORE = learning_path._CONFIDENT_SCORE
+_CONFIDENT_CONF = learning_path._CONFIDENT_CONF
+_CONFIDENT_STREAK = learning_path._CONFIDENT_STREAK
+_ASSESS_READY_STREAK = learning_path._ASSESS_READY_STREAK
+_ASSESS_READY_SCORE = learning_path._ASSESS_READY_SCORE
+_ASSESS_READY_CONF = learning_path._ASSESS_READY_CONF
 
 
 def learner_signals(brain: dict[str, Any]) -> dict[str, Any]:
@@ -150,53 +151,53 @@ def completed_component_ids(events: list[dict[str, Any]]) -> set[str]:
     return done
 
 
-def _band(entry: dict[str, Any], signals: Optional[dict[str, Any]]) -> str:
-    """Map mastery + behaviour to a difficulty band: struggling/on_track/confident."""
-    score = entry.get("score_ewma")
-    conf = float(entry.get("confidence") or 0)
-    streak = int(entry.get("consecutive_successes") or 0)
-    failures = int(entry.get("failures") or 0)
-    level = entry.get("level") or "basic"
-    sig = signals or {}
-    struggling_signal = bool(sig.get("wheel_spinning") or sig.get("rapid_guessing")
-                             or sig.get("answer_cycling") or sig.get("answer-cycling"))
-    if (struggling_signal
-            or (score is not None and score < _STRUGGLE_SCORE)
-            or (failures >= 2 and streak == 0)):
-        return "struggling"
-    if ((score is not None and score >= _CONFIDENT_SCORE and conf >= _CONFIDENT_CONF)
-            or level in ("intermediate", "advanced")
-            or streak >= _CONFIDENT_STREAK):
-        return "confident"
-    return "on_track"
+# These were the picker's own rules. They now live in `learning_path` — the one
+# engine every surface reads — and are re-exported here so existing callers and
+# tests keep working against the same behaviour.
+_band = learning_path.band_for
+_assessment_ready = learning_path.assessment_ready
+_difficulty = learning_path.difficulty_of
+_pick_equivalent = learning_path.pick_equivalent
 
 
-def _assessment_ready(entry: dict[str, Any]) -> bool:
-    """Enough practice success to face the objective's assessment (720 §3.3)."""
-    score = entry.get("score_ewma")
-    conf = float(entry.get("confidence") or 0)
-    streak = int(entry.get("consecutive_successes") or 0)
-    level = entry.get("level") or "basic"
-    return (streak >= _ASSESS_READY_STREAK
-            or (score is not None and score >= _ASSESS_READY_SCORE and conf >= _ASSESS_READY_CONF)
-            or level in ("intermediate", "advanced"))
+def objective_plan(
+    objective_id: str,
+    *,
+    mastery_entry: Optional[dict[str, Any]] = None,
+    completed_ids: frozenset[str] | set[str] = frozenset(),
+    signals: Optional[dict[str, Any]] = None,
+    locale: str = "he",
+) -> Optional[dict[str, Any]]:
+    """The learner's plan through this objective's unit, for callers that hold a
+    mastery entry rather than a brain (the dashboard hero, the agent seam).
 
-
-def _difficulty(component: dict[str, Any]) -> float:
-    value = component.get("relative_difficulty")
-    return float(value) if isinstance(value, (int, float)) else 3.0
-
-
-def _pick_equivalent(pool: list[dict[str, Any]], band: str) -> dict[str, Any]:
-    """Choose among same-`order` pedagogically-equivalent components by learner fit
-    (720 §3.1 — 'ערך שקול ללומד'). Struggling→easiest, confident→hardest."""
-    key = lambda c: (_MASTERY_RANK.get(c.get("mastery_level") or "basic", 0), _difficulty(c))
-    if band == "struggling":
-        return min(pool, key=key)
-    if band == "confident":
-        return max(pool, key=key)
-    ordered = sorted(pool, key=key)
-    return ordered[len(ordered) // 2]  # on_track → the middle rung
+    Same engine as the roadmap, so the two cannot disagree — which is what the
+    hero and the roadmap used to do, each running its own picker.
+    """
+    components = list_available_content(objective_id, None, locale)
+    if not components:
+        return None
+    unit = {
+        "id": components[0].get("unit_id"),
+        "objective_id": objective_id,
+        "subject": components[0].get("subject"),
+        "components": components,
+    }
+    brain = {
+        "mastery": {objective_id: dict(mastery_entry or {})},
+        "behavior_signals": [
+            {"type": key} for key, value in (signals or {}).items() if value is True
+        ],
+        "current_state": {},
+    }
+    # `completed_ids` is what `completed_component_ids(events)` distilled, so
+    # replay it as the evidence the engine expects.
+    events = [
+        {"verb": "completed", "launch": cid, "object_id": cid, "unit_id": unit["id"],
+         "_id": f"replay-{cid}", "result": {"success": True, "score_scaled": None}}
+        for cid in sorted(set(completed_ids))
+    ]
+    return learning_path.project(unit, brain, events, locale=locale)
 
 
 def select_component(
@@ -207,47 +208,30 @@ def select_component(
     signals: Optional[dict[str, Any]] = None,
     locale: str = "he",
 ) -> Optional[dict[str, Any]]:
-    """Pick the next component + difficulty within the objective's unit.
+    """Pick the next component within the objective's unit — a thin view of the plan.
 
-    Returns the chosen (normalized) component with ``_reason`` and ``_band``
-    stamped, or None when everything is complete. Single-component objectives
-    (720 'closed' units) trivially return their one component — the platform
-    never sequences a closed unit's internal items. After-fail routing stays in
-    ``recommended_after_fail`` (720 ``recommendedAfterFail``), a separate path.
+    Kept for the agent seam (``route/next`` explainability). Returns None when the
+    unit is finished. A single-component ('closed') unit trivially returns its one
+    component — the platform never sequences inside one.
     """
-    entry = mastery_entry or {}
-    done = set(completed_ids)
-    candidates = [c for c in list_available_content(objective_id, None, locale) if c["id"] not in done]
-    if not candidates:
+    plan = objective_plan(objective_id, mastery_entry=mastery_entry,
+                          completed_ids=completed_ids, signals=signals, locale=locale)
+    if not plan:
         return None
-    band = _band(entry, signals)
-    ready = _assessment_ready(entry)
-
-    # 1. Assessment readiness gate — withhold the assessment until enough practice.
-    learning = [c for c in candidates if not c.get("is_assessment")]
-    if not ready and learning:
-        candidates = learning
-
-    # 2. Skip-ahead for a confident learner — don't re-walk pure instruction intros.
-    if band == "confident":
-        non_intro = [c for c in candidates if c.get("purpose") != "instruction"]
-        if non_intro:
-            candidates = non_intro
-
-    # 3. Current stage = lowest remaining `order`; pick among same-`order` equivalents.
-    orders = [c.get("order") for c in candidates if c.get("order") is not None]
-    stage = min(orders) if orders else None
-    equivalents = [c for c in candidates if c.get("order") == stage] if stage is not None else candidates
-    if len(equivalents) <= 1:
-        chosen = (equivalents or candidates)[0]
-    else:
-        required = [c for c in equivalents if c.get("is_required")]
-        chosen = _pick_equivalent(required or equivalents, band)
-
+    components = list_available_content(objective_id, None, locale)
+    next_id = plan.get("next_component_id")
+    if not next_id:
+        return None
+    chosen = next((c for c in components if c.get("id") == next_id), None)
+    if chosen is None:
+        return None
+    node = next((n for n in plan["components"]
+                 if n.get("component_id") == next_id and n.get("progress_state") == "current"), {})
+    band = plan.get("_band", "on_track")
     reason = (
         f"band={band}; stage order={chosen.get('order')}; "
         f"difficulty={chosen.get('relative_difficulty')}; "
-        + ("assessment eligible" if ready else "practice before assessment")
+        f"why={(node.get('progress_reason') or {}).get('code', 'provider_order')}"
         + ("; assessment" if chosen.get("is_assessment") else "")
     )
     return {**chosen, "_reason": reason, "_band": band}

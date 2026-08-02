@@ -90,7 +90,9 @@ def render(spec_path: Path, output_path: Path) -> None:
             print(
                 f"[manim_worker] WARNING: no {script}-capable font installed "
                 f"(looked for {candidates}); labels may render as tofu. "
-                f"Install fonts-noto-{script} on the render host.",
+                f"Install `fonts-noto-core` on the render host — it carries both "
+                f"NotoSansHebrew and NotoSansArabic (there is no per-script "
+                f"fonts-noto-hebrew/arabic package in Debian).",
                 file=sys.stderr,
             )
         return match

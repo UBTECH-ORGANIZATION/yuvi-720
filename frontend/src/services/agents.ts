@@ -524,7 +524,7 @@ export interface Trigger {
 export interface NextRouteDecision {
   subject: string | null
   objective_id: string | null
-  component: { id: string } | null
+  component: { id: string; unit_id?: string | null } | null
   explanation: string
 }
 

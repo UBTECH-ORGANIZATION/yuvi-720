@@ -1,0 +1,142 @@
+{
+ "id": "methodica-science-mass-measure-01",
+ "title": "מדידה מעשית של מסה בשלושה מצבי צבירה",
+ "titles": {},
+ "sub_topic": "MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL",
+ "objective_id": "MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.MASS-PRACTICE",
+ "subject": "science",
+ "prerequisites": [],
+ "target_sector": [
+  "arab-sector",
+  "bedouin-sector",
+  "druze-sector",
+  "orthodox",
+  "special-education",
+  "state-general",
+  "state-religious"
+ ],
+ "target_audience": [
+  "at-risk-students",
+  "disadvantaged-populations",
+  "excellent",
+  "general",
+  "new-immigrants",
+  "students-with-language-gaps",
+  "students-with-special-needs"
+ ],
+ "ecat_item_id": null,
+ "languages": [
+  "he"
+ ],
+ "components": [
+  {
+   "id": "methodica-science-mass-measure-01-01",
+   "unit_id": "methodica-science-mass-measure-01",
+   "title": "פתיחה, הקנייה ותרגול סטנדרטי א",
+   "order": 1,
+   "purpose": "both",
+   "is_assessment": false,
+   "is_required": true,
+   "relative_difficulty": 3,
+   "mastery_level": "intermediate",
+   "recommended_after_fail": [],
+   "languages": [
+    "he"
+   ],
+   "media_format": "interactive-content",
+   "estimated_minutes": 22,
+   "cognitive_level": "applying-a-model-or-procedure",
+   "depth_level": "core-curriculum-basic",
+   "skills": []
+  },
+  {
+   "id": "methodica-science-mass-measure-01-02",
+   "unit_id": "methodica-science-mass-measure-01",
+   "title": "תרגול בסיסי + סטנדרטי ב",
+   "order": 2,
+   "purpose": "practice",
+   "is_assessment": false,
+   "is_required": false,
+   "relative_difficulty": 2,
+   "mastery_level": "basic",
+   "recommended_after_fail": [
+    "methodica-science-mass-measure-01-01"
+   ],
+   "languages": [
+    "he"
+   ],
+   "media_format": "interactive-content",
+   "estimated_minutes": 8,
+   "cognitive_level": "applying-a-model-or-procedure",
+   "depth_level": "core-curriculum-basic",
+   "skills": []
+  },
+  {
+   "id": "methodica-science-mass-measure-01-03",
+   "unit_id": "methodica-science-mass-measure-01",
+   "title": "משימת כיתה",
+   "order": 3,
+   "purpose": "practice",
+   "is_assessment": false,
+   "is_required": true,
+   "relative_difficulty": 3,
+   "mastery_level": "intermediate",
+   "recommended_after_fail": [],
+   "languages": [
+    "he"
+   ],
+   "media_format": "interactive-content",
+   "estimated_minutes": 5,
+   "cognitive_level": "applying-a-model-or-procedure",
+   "depth_level": "core-curriculum-basic",
+   "skills": [
+    "MOE.SKILL.COLLAB-TASK.004",
+    "MOE.SKILL.CRIT-DIGI.001",
+    "MOE.SKILL.SELF-FLEX.003",
+    "MOE.SKILL.SELF-GOAL.001",
+    "MOE.SKILL.SELF-REG.002"
+   ]
+  },
+  {
+   "id": "methodica-science-mass-measure-01-04",
+   "unit_id": "methodica-science-mass-measure-01",
+   "title": "תרגול מתקדם ",
+   "order": 4,
+   "purpose": "practice",
+   "is_assessment": false,
+   "is_required": true,
+   "relative_difficulty": 5,
+   "mastery_level": "advanced",
+   "recommended_after_fail": [],
+   "languages": [
+    "he"
+   ],
+   "media_format": "interactive-content",
+   "estimated_minutes": 15,
+   "cognitive_level": "analyzing",
+   "depth_level": "core-curriculum-advanced",
+   "skills": []
+  },
+  {
+   "id": "methodica-science-mass-measure-01-05",
+   "unit_id": "methodica-science-mass-measure-01",
+   "title": "שאלת שיא",
+   "order": 5,
+   "purpose": "practice",
+   "is_assessment": true,
+   "is_required": true,
+   "relative_difficulty": 5,
+   "mastery_level": "intermediate",
+   "recommended_after_fail": [],
+   "languages": [
+    "he"
+   ],
+   "media_format": "interactive-content",
+   "estimated_minutes": 8,
+   "cognitive_level": "evaluating-and-justifying",
+   "depth_level": "core-curriculum-basic",
+   "skills": []
+  }
+ ],
+ "source": "kata"
+}

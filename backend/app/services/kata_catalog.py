@@ -38,12 +38,18 @@ def _now() -> float:
 
 
 def _order_objectives(objectives: dict[str, dict[str, Any]], subject: str) -> list[str]:
-    """Topologically order a subject's objectives by prerequisite depth.
+    """Order a subject's goals the way the ministry orders them.
 
-    Kata gives per-component ``order`` within a unit but no cross-objective order,
-    so we derive a stable one: prerequisite depth first (a skill never precedes
-    its prerequisite), then objective key for determinism. This is what the
-    planner's linear ``frontier`` walk relies on.
+    The authority is the registry (``GET /catalog/objectives``): a goal carries an
+    ``order`` scoped **within its sub-topic**, which is precisely the spec's
+    "יעדי הלמידה בתוך תת נושא מסודרים עפ״י סדר מובנה" — the linearity of §3 is
+    per sub-topic, not global. Sub-topics themselves have no declared order, so
+    they are walked by key for determinism.
+
+    Prerequisite depth survives only as a tie-break *inside* a sub-topic, for a
+    catalog whose registry rows have not landed yet. Before the registry was
+    wired this depth walk WAS the order — an invention that could not agree with
+    the ministry's the moment a subject had more than one goal.
     """
     ids = [oid for oid, o in objectives.items() if o["subject"] == subject]
     depth: dict[str, int] = {}
@@ -61,28 +67,62 @@ def _order_objectives(objectives: dict[str, dict[str, Any]], subject: str) -> li
 
     for oid in ids:
         _depth(oid, frozenset())
-    return sorted(ids, key=lambda oid: (depth.get(oid, 0), oid))
+
+    def sort_key(oid: str) -> tuple[str, float, int, str]:
+        obj = objectives.get(oid) or {}
+        registry_order = obj.get("registry_order")
+        return (
+            str(obj.get("sub_topic") or ""),
+            float(registry_order) if registry_order is not None else float("inf"),
+            depth.get(oid, 0),
+            oid,
+        )
+
+    return sorted(ids, key=sort_key)
 
 
-def _build_snapshot(units: list[dict[str, Any]]) -> dict[str, Any]:
+def _build_snapshot(
+    units: list[dict[str, Any]],
+    registry: Optional[list[dict[str, Any]]] = None,
+) -> dict[str, Any]:
     objectives: dict[str, dict[str, Any]] = {}
     components: dict[str, dict[str, Any]] = {}
     components_by_obj: dict[str, list[str]] = {}
     units_by_id: dict[str, dict[str, Any]] = {}
+    by_goal = {row["id"]: row for row in (registry or []) if row.get("id")}
 
     for unit in units:
         units_by_id[unit["id"]] = unit
-        objective_id = unit["objective_id"]
+        objective_id = unit.get("objective_id")
+        # A sub-topic summary (§3.4) carries no goal. It stays in the catalog as a
+        # launchable review resource but never enters the spine — it has nothing
+        # to master, so the planner would offer it forever.
+        if not objective_id:
+            for component in unit["components"]:
+                components[component["id"]] = {
+                    **component, "objective_id": None, "subject": unit["subject"],
+                    "is_summary": True,
+                }
+            continue
         entry = objectives.get(objective_id)
         if entry is None:
+            goal = by_goal.get(objective_id) or {}
+            hierarchy = goal.get("sub_topic") or {}
             entry = {
                 "id": objective_id,
                 "subject": unit["subject"],
                 "topic": unit["sub_topic"],       # dotted sub-topic key (label resolved in UI)
-                "sub_topic": unit["sub_topic"],
+                "sub_topic": hierarchy.get("id") or unit["sub_topic"],
                 "prerequisites": [],
-                "title": unit["title"],
-                "titles": dict(unit.get("titles") or {}),
+                # The unit title is the fallback only; the registry holds the real
+                # goal, its translations and the hierarchy the dashboard labels with.
+                "title": hierarchy.get("title") or unit["title"],
+                "titles": dict(hierarchy.get("titles") or unit.get("titles") or {}),
+                "description": goal.get("description") or "",
+                "descriptions": dict(goal.get("descriptions") or {}),
+                "registry_order": goal.get("order"),
+                "topic_title": (goal.get("topic") or {}).get("title") or "",
+                "curriculum_title": (goal.get("curriculum") or {}).get("title") or "",
                 "unit_ids": [],
             }
             objectives[objective_id] = entry
@@ -129,7 +169,14 @@ async def ensure_loaded(force: bool = False) -> None:
         if _SNAPSHOT["objectives"]:
             return
         raise
-    _SNAPSHOT.update(_build_snapshot(units))
+    try:
+        registry = await kata_client.list_objectives()
+    except Exception as exc:
+        # The goal registry is metadata: without it we still have every unit, so
+        # fall back to unit titles + prerequisite depth rather than serving nothing.
+        print(f"⚠️ learning-goal registry unavailable, using unit metadata: {exc}")
+        registry = []
+    _SNAPSHOT.update(_build_snapshot(units, registry))
 
 
 async def refresh() -> None:

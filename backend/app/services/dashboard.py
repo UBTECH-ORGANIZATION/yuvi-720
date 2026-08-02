@@ -218,6 +218,25 @@ def _project_competencies(
     return out
 
 
+
+def _goal_context(objective_id: Optional[str]) -> dict[str, Any]:
+    """The goal's own words, for a hero visual that matches the lesson.
+
+    The dashboard hero used to pick its interactive scene from two keywords in a
+    title and otherwise draw a planet in orbit — so a goal about weighing solids
+    on a balance opened the page with a solar system. The registry has the real
+    vocabulary; this hands it to the client.
+    """
+    if not objective_id:
+        return {"subTopicTitle": "", "topicTitle": "", "goalDescription": ""}
+    from app.services.kata_catalog import get_objective
+    goal = get_objective(objective_id) or {}
+    return {
+        "subTopicTitle": goal.get("title") or "",
+        "topicTitle": goal.get("topic_title") or "",
+        "goalDescription": goal.get("description") or "",
+    }
+
 def _hero(
     brain: dict, language: str, completed_ids: frozenset[str] | set[str] = frozenset()
 ) -> dict[str, Any]:
@@ -228,23 +247,45 @@ def _hero(
     current_component = get_component(current_component_id) if current_component_id else None
     current_objective_id = (current_component or {}).get("objective_id")
     from app.brain.mastery import entry_for
+    # Resume used to require `current_state.resume_token`, which is only ever
+    # written from an xAPI extension no provider has ever sent — so the branch
+    # was dead and a learner mid-lesson was greeted with "start something new".
+    # The real signal is the one we already have: they launched a component and
+    # have not finished it. §6 puts the position INSIDE the component on the
+    # content anyway ("שמירת התקדמות … וחזרה לאותה הנקודה"), so the token is a
+    # bonus, never the gate.
     can_resume = bool(
-        current.get("resume_token")
-        and current_component
+        current_component
+        and str(current_component_id) not in set(completed_ids)
         and not entry_for(mastery, current_objective_id).get("achieved")
     )
 
     if can_resume:
         subject = entry_for(mastery, current_objective_id).get("subject")
         if not subject:
-            subject = "science" if str(current_objective_id).startswith("sci-") else "math"
+            # `startswith("sci-")` predated the MoE ids and resolved every
+            # `MOE.SCI.…` goal to math; the catalog already knows the answer.
+            from app.services.kata_client import subject_from_objective
+            subject = subject_from_objective(
+                str(current_objective_id or ""), (current_component or {}).get("sub_topic") or "",
+            )
         return {
             "mode": "resume",
             "subjectKey": subject,
             "subjectName": _t(SUBJECT_NAMES, subject, language),
             "objectiveId": current_objective_id,
             "objectiveTitle": localized_objective_title(current_objective_id, language),
+            **_goal_context(current_objective_id),
             "componentId": current_component_id,
+            "unitId": (current_component or {}).get("unit_id") or current.get("unit_id"),
+            "pathNodeId": f"{current_component_id}#1",
+            "progressRatio": (content_catalog.objective_plan(
+                current_objective_id,
+                mastery_entry=entry_for(mastery, current_objective_id),
+                completed_ids=completed_ids,
+                signals=content_catalog.learner_signals(brain),
+                locale=language,
+            ) or {}).get("progress_ratio"),
             "canResume": True,
             "reason": _t(HERO_REASON, "resume", language),
             "pace": _t(PACE_WORDS, current.get("pace"), language) if current.get("pace") else None,
@@ -257,20 +298,28 @@ def _hero(
 
     if objective_id:
         from app.brain.mastery import entry_for
-        component = content_catalog.select_component(
+        # The SAME plan the roadmap renders — the hero used to run its own picker
+        # and could name a component the route did not consider next.
+        plan = content_catalog.objective_plan(
             objective_id,
             mastery_entry=entry_for(mastery, objective_id),
             completed_ids=completed_ids,
             signals=content_catalog.learner_signals(brain),
             locale=language,
-        )
+        ) or {}
         return {
             "mode": "next",
             "subjectKey": subject,
             "subjectName": _t(SUBJECT_NAMES, subject, language),
             "objectiveId": objective_id,
             "objectiveTitle": localized_objective_title(objective_id, language),
-            "componentId": (component or {}).get("id"),
+            **_goal_context(objective_id),
+            "componentId": plan.get("next_component_id"),
+            "unitId": plan.get("id"),
+            "pathNodeId": plan.get("next_path_node_id"),
+            # A ratio, not a count: the learner is never shown "step 3 of 5",
+            # because an adaptive path's denominator moves (§C of the design).
+            "progressRatio": plan.get("progress_ratio"),
             "canResume": False,
             "reason": _t(HERO_REASON, "next", language),
             "pace": _t(PACE_WORDS, current.get("pace"), language) if current.get("pace") else None,
@@ -282,6 +331,7 @@ def _hero(
         "subjectName": None,
         "objectiveId": None,
         "objectiveTitle": None,
+        **_goal_context(None),
         "componentId": None,
         "canResume": False,
         "reason": _t(HERO_REASON, "complete", language),

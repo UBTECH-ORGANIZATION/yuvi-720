@@ -257,13 +257,27 @@ Four layers, top to bottom:
                             "system_estimate": 0.5 } ],   // last N; self vs system comparison
 
   // ── live "where am I" state for resume + coach context ──
+  // `component_id` means where the learner IS, and has exactly TWO writers: the
+  // real launch (`learning_sessions`) and the xAPI fold (`events`). The
+  // Pedagogical agent used to write it with a *recommendation*, which the roadmap
+  // then painted as `current` — a suggestion the learner never acted on could
+  // contradict the route on screen. It publishes `next_recommendations` only.
+  //
+  // `resume_token` is a bonus, not the resume gate: no provider has ever sent one
+  // (0 occurrences in 2,900 captured statements), and §6 puts the position INSIDE
+  // a component on the content anyway. Resume is derived from an incomplete
+  // launched component.
   "current_state": {
     "unit_id": "YuviDori-math-angles-0001",
     "component_id": "YuviDori-math-angles-0001-00003",
     "item_id": "...-00003-00002",
-    "resume_token": { /* opaque, lets us resume mid-task without save/submit (F1.6) */ },
+    "resume_token": { /* opaque, optional; the content owns in-component position (F1.6) */ },
     "pace": "on_track"                    // on_track | ahead | behind
   },
+  // NOTE: the learner's PATH through a unit is not stored anywhere. It is
+  // recomputed per request by `services/learning_path.py` from the append-only
+  // events plus `mastery`, so it can never drift from the evidence that produced
+  // it — and so improving mastery mid-unit cannot renumber finished work.
 
   // ── agent working notes (short, non-identifying, human-readable scratch observations) ──
   "agent_notes": [ { "agent": "coach", "note": "responds well to sports analogies", "at": "..." } ],

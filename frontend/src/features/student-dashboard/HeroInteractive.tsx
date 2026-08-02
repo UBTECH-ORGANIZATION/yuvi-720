@@ -10,10 +10,22 @@ import { useI18n } from '../../i18n/I18nProvider'
  * (degrees, fraction parts) — never grades.
  */
 
-type SceneKind = 'angle' | 'fraction' | 'orbit'
+type SceneKind = 'angle' | 'fraction' | 'orbit' | 'balance'
 
-export function heroSceneFor(title: string | null | undefined): SceneKind {
-  const text = (title || '').toLowerCase()
+/** Pick the hero's interactive scene from what the goal is about.
+ *
+ *  It used to read the title alone against two keywords and fall through to a
+ *  planet in orbit — so "מסה ונפח של גופים", a goal about weighing solids,
+ *  liquids and air on a balance, opened the dashboard with a solar system. The
+ *  hero is the biggest thing on the page; it should be about the lesson. */
+export function heroSceneFor(
+  title: string | null | undefined,
+  context?: { subTopicTitle?: string; topicTitle?: string; description?: string } | null,
+): SceneKind {
+  const text = [
+    title, context?.subTopicTitle, context?.topicTitle, context?.description,
+  ].filter(Boolean).join(' ').toLowerCase()
+  if (/מאזני|לשקול|שקיל|מסה|משקל|balance|scale|mass|weigh|ميزان|كتلة/.test(text)) return 'balance'
   if (/זווית|זוויות|angle|زاوي/.test(text)) return 'angle'
   if (/שבר|שברים|fraction|كسر|كسور/.test(text)) return 'fraction'
   return 'orbit'
@@ -21,13 +33,116 @@ export function heroSceneFor(title: string | null | undefined): SceneKind {
 
 interface HeroInteractiveProps {
   title: string | null | undefined
+  /** Everything else the catalog knows about the goal, so the scene is chosen
+   *  from the content rather than from two keywords in a title. */
+  context?: { subTopicTitle?: string; topicTitle?: string; description?: string } | null
 }
 
-export function HeroInteractive({ title }: HeroInteractiveProps) {
-  const scene = useMemo(() => heroSceneFor(title), [title])
+export function HeroInteractive({ title, context }: HeroInteractiveProps) {
+  const scene = useMemo(() => heroSceneFor(title, context), [title, context])
+  if (scene === 'balance') return <BalanceScene />
   if (scene === 'angle') return <AngleScene />
   if (scene === 'fraction') return <FractionScene />
   return <OrbitScene />
+}
+
+/** A pan balance the learner can load — the instrument this goal is built on
+ *  ("ימדדו מסת מוצקים במאזני כפות/זרוע, כיול ודיוק"). Dragging left or right
+ *  moves mass between the pans and the beam tips accordingly; letting go with
+ *  the pans even is the thing the lesson is teaching. */
+function BalanceScene() {
+  const { t } = useI18n()
+  const svgRef = useRef<SVGSVGElement>(null)
+  /** -1 … 1 — how the load sits between the two pans. */
+  const [lean, setLean] = useState(-0.45)
+  const dragging = useRef(false)
+
+  const cx = 200
+  const pivotY = 92
+  const tilt = lean * 14              // degrees, capped so the pans never invert
+  const armY = (side: -1 | 1) => pivotY + side * Math.tan((tilt * Math.PI) / 180) * 118
+
+  const updateFromPointer = (event: ReactPointerEvent) => {
+    const svg = svgRef.current
+    if (!svg) return
+    const { x } = svgPoint(svg, event.clientX, event.clientY)
+    setLean(Math.max(-1, Math.min(1, (x - cx) / 130)))
+  }
+
+  const balanced = Math.abs(lean) < 0.08
+
+  return (
+    <div className="sd-hero-viz" data-scene="balance">
+      <svg
+        ref={svgRef}
+        viewBox="0 0 400 260"
+        role="application"
+        aria-label={t('sdash.viz.balance.aria')}
+        onPointerMove={(e) => dragging.current && updateFromPointer(e)}
+        onPointerUp={() => { dragging.current = false }}
+        onPointerLeave={() => { dragging.current = false }}
+      >
+        {/* Stand */}
+        <path d="M200 92V196" className="sd-viz-orbit-path" />
+        <path d="M150 200h100" className="sd-viz-orbit-path" />
+
+        {/* Beam + pans */}
+        <g className={`sd-viz-beam${balanced ? ' is-balanced' : ''}`}>
+          <path d={`M82 ${armY(-1)}H318`} className="sd-viz-beam__arm" />
+          {([-1, 1] as const).map((side) => {
+            const x = cx + side * 118
+            const y = armY(side)
+            return (
+              <g key={side}>
+                <path d={`M${x} ${y}v22`} className="sd-viz-orbit-path" />
+                <path
+                  d={`M${x - 30} ${y + 22}h60l-30 26z`}
+                  className="sd-viz-pan"
+                />
+              </g>
+            )
+          })}
+        </g>
+
+        <circle cx={cx} cy={pivotY} r="10" className="sd-viz-star__core" />
+
+        <g
+          className="sd-viz-handle"
+          tabIndex={0}
+          role="slider"
+          aria-label={t('sdash.viz.balance.handle')}
+          aria-valuemin={-100}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(lean * 100)}
+          onPointerDown={(e) => {
+            dragging.current = true
+            e.currentTarget.setPointerCapture?.(e.pointerId)
+            updateFromPointer(e)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowLeft') { e.preventDefault(); setLean((v) => Math.max(-1, v - 0.08)) }
+            if (e.key === 'ArrowRight') { e.preventDefault(); setLean((v) => Math.min(1, v + 0.08)) }
+          }}
+        >
+          <circle cx={cx + lean * 118} cy={armY(lean < 0 ? -1 : 1) + 34} r="24" fill="transparent" />
+          <circle cx={cx + lean * 118} cy={armY(lean < 0 ? -1 : 1) + 34} r="13" className="sd-viz-comet" />
+          <circle
+            cx={cx + lean * 118}
+            cy={armY(lean < 0 ? -1 : 1) + 34}
+            r="13"
+            fill="none"
+            stroke="#fff"
+            strokeWidth="2"
+            opacity="0.8"
+          />
+        </g>
+      </svg>
+      <p className="sd-hero-viz__hint">
+        <Icon name="click" size={15} />
+        {balanced ? t('sdash.viz.balance.balanced') : t('sdash.viz.balance.hint')}
+      </p>
+    </div>
+  )
 }
 
 /* ── Shared: pointer → svg viewBox coordinates ─────────────────────────── */

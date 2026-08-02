@@ -266,6 +266,19 @@
 .sd-viz-orbit-path--inner { stroke-dasharray: 5 7; stroke: rgba(76, 201, 240, .4); }
 .sd-viz-star { fill: rgba(111, 91, 255, .16); }
 .sd-viz-star__core { fill: #6f5bff; }
+
+/* ── Balance scene ────────────────────────────────────────────────────────
+   The instrument this goal is actually built on ("מאזני כפות/זרוע"). The beam
+   follows the drag rather than animating on its own, so the learner feels the
+   load move; when the pans level out the beam takes on the success tone —
+   balancing IS the skill being taught. */
+.sd-viz-beam__arm { fill: none; stroke: rgba(111, 91, 255, .85); stroke-width: 5; stroke-linecap: round; }
+.sd-viz-pan { fill: rgba(111, 91, 255, .18); stroke: rgba(111, 91, 255, .7); stroke-width: 2.4; stroke-linejoin: round; }
+.sd-viz-beam { transition: none; }
+.sd-viz-beam.is-balanced .sd-viz-beam__arm { stroke: #25b984; }
+.sd-viz-beam.is-balanced .sd-viz-pan { fill: rgba(37, 185, 132, .2); stroke: rgba(37, 185, 132, .8); }
+[data-theme='dark'] .sd-viz-beam__arm { stroke: rgba(167, 139, 250, .95); }
+[data-theme='dark'] .sd-viz-pan { fill: rgba(167, 139, 250, .2); stroke: rgba(167, 139, 250, .8); }
 .sd-viz-comet { fill: #4cc9f0; filter: drop-shadow(0 4px 12px rgba(35, 150, 200, .5)); }
 [data-theme='dark'] .sd-viz-grid { stroke: rgba(150, 170, 240, .07); }
 [data-theme='dark'] .sd-viz-floor { stroke: rgba(150, 170, 240, .12); }
@@ -365,30 +378,6 @@
 }
 .sd-lesson-track::-webkit-scrollbar { display: none; }
 
-.sd-carousel-nav {
-  position: absolute;
-  inset-block-start: calc(50% - 10px);
-  z-index: 6;
-  display: grid;
-  place-items: center;
-  inline-size: 44px;
-  block-size: 44px;
-  border: 1px solid var(--sp-border);
-  border-radius: 50%;
-  background: #fff;
-  color: var(--sp-ink-600);
-  box-shadow: var(--sp-shadow-md);
-  cursor: pointer;
-  transition: transform var(--sp-dur-fast), opacity var(--sp-dur-fast), color var(--sp-dur-fast);
-}
-.sd-carousel-nav--prev { inset-inline-start: -6px; }
-.sd-carousel-nav--next { inset-inline-end: -6px; }
-.sd-carousel-nav:hover { transform: translateY(-1px) scale(1.06); color: var(--sp-primary-600); }
-.sd-carousel-nav:disabled { opacity: 0; pointer-events: none; }
-.sd-carousel-nav:focus-visible { outline: 3px solid rgba(111,91,255,.32); outline-offset: 2px; }
-.sd-carousel-nav--prev .sp-icon { transform: scaleX(-1); }
-[dir="rtl"] .sd-carousel-nav--prev .sp-icon { transform: none; }
-[dir="rtl"] .sd-carousel-nav--next .sp-icon { transform: scaleX(-1); }
 
 /* ── Card ──────────────────────────────────────────────────────────────── */
 /* Compact vertical card: wide glyph strip on top · title + slim bar · CTA.
@@ -401,8 +390,10 @@
   flex-direction: column;
   align-items: stretch;
   gap: 16px;
-  /* Narrower, taller "balloon" cards — more per view, softer rounded frame. */
-  flex: 0 0 clamp(196px, calc(25% - 17px), 246px);
+  /* Wide enough for a real lesson title and the route beneath it. The old
+     clamp squeezed cards to ~200px, which truncated every title to an ellipsis
+     and left the route with nowhere to go. */
+  flex: 0 0 clamp(260px, calc(33% - 16px), 330px);
   padding: 18px;
   overflow: hidden;
   scroll-snap-align: start;
@@ -449,7 +440,38 @@
 .sd-lessons__subfilter:focus-visible { outline: 3px solid rgba(111,91,255,.26); outline-offset: 2px; }
 [data-theme='dark'] .sd-lessons__subfilter { border-color: rgba(159,122,254,.2); color: rgba(214,216,245,.66); }
 [data-theme='dark'] .sd-lessons__subfilter.is-active { background: rgba(159,122,254,.18); border-color: rgba(159,122,254,.5); color: #d8d1ff; }
-.sd-lesson-card__subtopic { opacity: .85; }
+
+
+/* ── Foot: the CTA, flanked by the way to the next lesson ─────────────────── */
+.sd-lesson-card__foot {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin-block-start: auto;
+}
+.sd-lesson-card__foot .sd-lesson-card__cta { flex: 1; }
+
+.sd-lesson-card__step {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  inline-size: 40px;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: transparent;
+  color: var(--sp-ink-500);
+  cursor: pointer;
+  transition: color .18s ease, border-color .18s ease;
+}
+.sd-lesson-card__step:hover {
+  border-color: color-mix(in srgb, var(--sd-lesson), transparent 40%);
+  color: var(--sd-lesson);
+}
+.sd-lesson-card__step:disabled { opacity: .3; pointer-events: none; }
+.sd-lesson-card__step--next .sp-icon { transform: scaleX(-1); }
+[dir="rtl"] .sd-lesson-card__step .sp-icon { transform: scaleX(-1); }
+[dir="rtl"] .sd-lesson-card__step--next .sp-icon { transform: none; }
+
 .sd-lesson-card--violet { --sd-lesson: #7c5cff; }
 .sd-lesson-card--sky { --sd-lesson: #2e9bf0; }
 .sd-lesson-card--emerald { --sd-lesson: #22b06c; }
@@ -464,7 +486,7 @@
 /* Not just "selected" — lifted, slightly larger, ringed and glowing so it
    reads at a glance as "continue here". */
 .sd-lesson-card.is-primary {
-  flex-basis: clamp(214px, calc(27% - 17px), 268px);
+  flex-basis: clamp(300px, calc(40% - 16px), 400px);
   margin-block-start: -6px;
   border-color: color-mix(in srgb, var(--sd-lesson), transparent 52%);
   box-shadow:
@@ -494,39 +516,8 @@
 
 /* "ממשיכים מכאן" ribbon — an overlay pill so it labels the card without
    pushing the media/title down (keeps rows aligned with the other cards). */
-.sd-lesson-card__ribbon {
-  position: absolute;
-  inset-block-start: 14px;
-  inset-inline-start: 16px;
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 12px;
-  border-radius: var(--sp-radius-pill);
-  background: var(--sd-lesson);
-  color: #fff;
-  font: 800 11px/1 var(--sp-font);
-  letter-spacing: .01em;
-  box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--sd-lesson), transparent 30%);
-}
-[dir="rtl"] .sd-lesson-card__ribbon .sp-icon { transform: scaleX(-1); }
-/* Ribbon already signals the status, so the corner badge is redundant here. */
+/* The subject chip owns the corner, so the status badge would crowd it. */
 .sd-lesson-card.is-primary .sd-lesson-card__badge { display: none; }
-
-/* Step + time-left chips — the useful "why continue" detail. */
-.sd-lesson-card__meta { display: flex; flex-wrap: wrap; gap: 8px; margin-block-start: 2px; }
-.sd-lesson-card__meta-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: var(--sp-radius-pill);
-  background: var(--sd-lesson-soft);
-  color: var(--sd-lesson);
-  font-size: 11px;
-  font-weight: 700;
-}
 
 /* Entry stagger — keyframe (not a transition) so the per-card delay only
    applies on load and never slows the hover lift. */
@@ -588,14 +579,38 @@
   padding: 0;
   text-align: start;
 }
-.sd-lesson-card__subject {
+/* The subject, in the corner, and a filter: tapping it narrows the rail to that
+   subject. It replaced a "recommended" ribbon that repeated what the card's own
+   prominence already said, and an eyebrow that spelled the subject a second
+   time next to a truncated sub-topic. */
+.sd-lesson-card__subject-chip {
+  position: absolute;
+  inset-block-start: 14px;
+  inset-inline-start: 16px;
+  z-index: 3;
   display: inline-flex;
-  padding: 4px 12px;
+  padding: 5px 13px;
+  border: 1px solid transparent;
   border-radius: var(--sp-radius-pill);
   background: var(--sd-lesson-soft);
   color: var(--sd-lesson);
   font-size: 11px;
   font-weight: 700;
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease;
+}
+.sd-lesson-card__subject-chip:hover { border-color: color-mix(in srgb, var(--sd-lesson), transparent 55%); }
+.sd-lesson-card__subject-chip.is-active {
+  background: var(--sd-lesson);
+  color: #fff;
+}
+
+/* The ministry's own sub-topic name, under the title. */
+.sd-lesson-card__subtopic {
+  margin: 0;
+  color: var(--sp-ink-400);
+  font-size: var(--sp-fs-xs);
+  line-height: 1.35;
 }
 .sd-lesson-card__title {
   max-inline-size: 100%;
@@ -611,10 +626,6 @@
 .sd-lesson-card__track-row { inline-size: 100%; display: grid; align-items: center; gap: 8px; }
 .sd-lesson-card__bar { inline-size: 100%; block-size: 6px; overflow: hidden; border-radius: var(--sp-radius-pill); background: var(--sp-bg-subtle); }
 .sd-lesson-card__bar span { display: block; block-size: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--sd-lesson), color-mix(in srgb, var(--sd-lesson), white 30%)); transition: inline-size 1s cubic-bezier(.22, 1, .36, 1); transition-delay: calc(var(--sd-lesson-index) * 90ms + 220ms); }
-.sd-lesson-card__steps { color: var(--sp-ink-400); font-size: var(--sp-fs-xs); font-weight: 600; }
-.sd-lesson-card__steps strong { color: var(--sd-lesson); font-weight: 800; }
-.sd-lesson-card__steps--active { color: var(--sd-lesson); font-weight: 700; }
-.sd-lesson-card__steps--completed { color: var(--sp-success-600); font-weight: 700; }
 
 .sd-lesson-card__cta {
   display: inline-flex;
@@ -659,6 +670,23 @@
 .sd-lesson-track.is-revealed .sd-glyph-dot,
 .sd-lesson-card:hover .sd-glyph-dot { animation: sd-glyph-pulse 4.5s ease-out 1 both; transform-box: fill-box; transform-origin: center; }
 
+/* The liquid in the beaker reads as a filled body, not an outline. */
+.sd-glyph-liquid { fill: color-mix(in srgb, var(--sd-lesson), transparent 62%); stroke: none; }
+/* A balance settling IS the lesson ("כיול ודיוק, 3 חזרות"), so the beam tips
+   once and comes to rest rather than looping. */
+.sd-lesson-track.is-revealed .sd-glyph-beam,
+.sd-lesson-card:hover .sd-glyph-beam {
+  animation: sd-glyph-tip 4.5s cubic-bezier(.22, 1, .36, 1) 1 both;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes sd-glyph-tip {
+  0% { transform: rotate(-7deg); }
+  45% { transform: rotate(5deg); }
+  75% { transform: rotate(-2deg); }
+  100% { transform: rotate(0deg); }
+}
 @keyframes sd-glyph-sweep { 0% { transform: rotate(38deg); } 70% { transform: rotate(-4deg); } 100% { transform: rotate(0deg); } }
 @keyframes sd-glyph-draw { 0% { stroke-dashoffset: 200; } 100% { stroke-dashoffset: 0; } }
 @keyframes sd-glyph-orbit { 0% { transform: rotate(0deg); } 100% { transform: rotate(200deg); } }
@@ -749,10 +777,6 @@
 [data-theme='dark'] .sd-lesson-card__title { color: #f1f0ff; font-size: var(--sp-fs-lg); font-weight: 800; }
 [data-theme='dark'] .sd-lesson-card__bar { background: rgba(255, 255, 255, .08); }
 [data-theme='dark'] .sd-lesson-card__bar span { background: linear-gradient(90deg, #8b7aff, #6fb0ff); }
-[data-theme='dark'] .sd-lesson-card__steps { color: rgba(203, 206, 235, .5); }
-[data-theme='dark'] .sd-lesson-card__steps strong { color: rgba(232, 233, 255, .85); font-weight: 700; }
-[data-theme='dark'] .sd-lesson-card__steps--active { color: color-mix(in srgb, var(--sd-lesson), white 22%); font-weight: 700; }
-[data-theme='dark'] .sd-lesson-card__steps--completed { color: #57d3a0; font-weight: 700; }
 
 /* Secondary CTA — a subtle accent LED outline in the card's own colour. */
 [data-theme='dark'] .sd-lesson-card__cta {
@@ -789,7 +813,6 @@
 /* The one relevant lesson lights its stage a touch brighter, too. */
 [data-theme='dark'] .sd-lesson-card.is-primary .sd-lesson-card__media::before { opacity: .42; }
 [data-theme='dark'] .sd-lesson-card.is-primary .sd-lesson-card__media > svg { inline-size: 148px; block-size: 148px; }
-[data-theme='dark'] .sd-carousel-nav { border-color: rgba(159, 122, 254, .2); background: #1b2048; color: var(--sp-ink-200, #cfd3f5); }
 
 
 /* ── היעדים שלי — a single focused goals card ─────────────────────────────── */
@@ -1010,7 +1033,6 @@
   .sd-button { inline-size: 100%; }
   .sd-section__heading { flex-direction: column; }
   .sd-lesson-card { flex-basis: clamp(220px, 82%, 262px); }
-  .sd-carousel-nav { inline-size: 40px; block-size: 40px; }
   .sd-reflection { padding: 22px 18px; }
 }
 

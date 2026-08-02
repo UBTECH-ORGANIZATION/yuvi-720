@@ -55,13 +55,39 @@ class ComponentPickerTests(unittest.TestCase):
         self.assertEqual(c["id"], "prac-easy")
         self.assertEqual(c["_band"], "struggling")
 
-    def test_confident_learner_gets_hard_equivalent_and_skips_intro(self) -> None:
-        # Confident + intro NOT completed → skip-ahead drops the instruction intro,
-        # and at the order-2 stage the harder equivalent is chosen.
+    def test_a_required_intro_is_not_skipped_however_confident_the_learner(self) -> None:
+        # The picker used to drop any `instruction` component for a confident
+        # learner. `intro` is `isRequired: true` — חובת ביצוע — so skipping it
+        # was the platform overriding the provider. Differentiation at a required
+        # stage happens by choosing an easier/harder EQUIVALENT (§3.1), and only
+        # a stage where nothing is required may be dropped entirely.
         c = pick({"score_ewma": 0.85, "confidence": 0.7, "consecutive_successes": 3,
                   "level": "intermediate"})
+        self.assertEqual(c["id"], "intro")
+        self.assertEqual(c["_band"], "confident")
+
+    def test_confident_learner_gets_the_hard_equivalent_at_the_stage(self) -> None:
+        c = pick({"score_ewma": 0.85, "confidence": 0.7, "consecutive_successes": 3,
+                  "level": "intermediate"}, completed={"intro"})
         self.assertEqual(c["id"], "prac-hard")
         self.assertEqual(c["_band"], "confident")
+
+    def test_an_optional_stage_is_dropped_for_a_learner_who_is_clear_of_it(self) -> None:
+        """The one skip the spec does sanction: `isRequired: false` on every
+        component sharing that `order`."""
+        optional_unit = [
+            comp("intro", 1, purpose="instruction"),
+            comp("extra", 2, difficulty=1, required=False),
+            comp("core", 3),
+        ]
+        with patch("app.services.content_catalog.kata_catalog.components_for",
+                   return_value=optional_unit):
+            c = content_catalog.select_component(
+                OBJ, mastery_entry={"score_ewma": 0.9, "confidence": 0.8,
+                                    "consecutive_successes": 4, "level": "intermediate"},
+                completed_ids={"intro"}, locale="he",
+            )
+        self.assertEqual(c["id"], "core")
 
     def test_assessment_gated_until_ready(self) -> None:
         # Only the assessment remains, learner NOT ready (no streak/score) → the

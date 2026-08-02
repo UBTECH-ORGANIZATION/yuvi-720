@@ -23,6 +23,7 @@ import {
 } from '../services/agents'
 import { useI18n } from '../i18n/I18nProvider'
 import { useRoute } from '../app/router'
+import { useAuth } from './AuthProvider'
 
 /* CompanionProvider — owns Yuvi's live state and paginated server history (F3).
    The prompt window and full transcript remain in Mongo/Cosmos; no localStorage. */
@@ -261,9 +262,16 @@ function introDisposition(
 
 export function CompanionProvider({ children }: { children: ReactNode }) {
   const { language } = useI18n()
+  const { user } = useAuth()
   const pathname = useRoute()
   const surface = useMemo(() => coachSurfaceForPath(pathname), [pathname])
-  const activityScoped = surface.screen === 'learning_lesson'
+  // Being on a lesson ROUTE is not enough to run the lesson machinery: a tab
+  // whose session has expired still matches the route, and every lesson-scoped
+  // effect here calls a learner-only endpoint. A stale tab left open therefore
+  // sat on the login screen polling `support/state` every 2.5s forever, taking
+  // a 401 each time — for as long as the tab existed.
+  const activityScoped = Boolean(user)
+    && surface.screen === 'learning_lesson'
     && Boolean(surface.unit_id && surface.component_id)
   const [isOpen, setIsOpen] = useState(false)
   const [isOpening, setIsOpening] = useState(false)
@@ -1169,10 +1177,21 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     }
     const controller = new AbortController()
     void syncSupportState(controller.signal)
-    const timer = window.setInterval(() => void syncSupportState(controller.signal), 2500)
+    // A hidden tab has no buttons to re-arm and no learner to follow, so polling
+    // it is pure cost — and with several lessons open in background tabs it was
+    // several requests a second against a learner nobody is watching. Sync once
+    // on return so the state is right the moment the tab is looked at again.
+    const tick = () => {
+      if (document.hidden) return
+      void syncSupportState(controller.signal)
+    }
+    const timer = window.setInterval(tick, 2500)
+    const onVisible = () => { if (!document.hidden) tick() }
+    document.addEventListener('visibilitychange', onVisible)
     return () => {
       controller.abort()
       window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
     }
   }, [activityScoped, lessonEpoch, syncSupportState])
 

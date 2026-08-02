@@ -20,22 +20,31 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Manim's Cairo/Pango renderer and still/video export dependencies.
-# fonts-noto-core has NO Hebrew/Arabic glyphs — those live in the separate
-# fonts-noto-hebrew / fonts-noto-arabic packages. Without them, Manim's Pango
-# text falls back to a glyphless font and Hebrew/Arabic labels render as tofu
-# boxes (see app/agents/manim_worker.py:font_for). fc-cache -f makes the newly
-# installed families visible to Pango/manimpango at runtime.
+#
+# `fonts-noto-core` carries the RTL faces Manim asks for — it ships both
+# NotoSansHebrew-Regular.ttf and NotoSansArabic-Regular.ttf under
+# /usr/share/fonts/truetype/noto (verified against the Debian bookworm package
+# contents). There are no `fonts-noto-hebrew` / `fonts-noto-arabic` packages in
+# Debian; requiring them failed the image build outright with "Unable to locate
+# package", which is how a fix for tofu became a fix for nothing.
+#
+# `fc-cache -f` makes the installed families visible to Pango/manimpango at
+# runtime, which is what `app/agents/manim_worker.py:font_for` probes.
 RUN apt-get update && apt-get install -y --no-install-recommends \
 	build-essential \
 	ffmpeg \
 	fonts-noto-core \
-	fonts-noto-hebrew \
-	fonts-noto-arabic \
 	libcairo2-dev \
 	libpango1.0-dev \
 	pkg-config \
 	&& fc-cache -f \
 	&& rm -rf /var/lib/apt/lists/*
+
+# Fail loudly at BUILD time if the RTL faces are missing, rather than shipping an
+# image that renders Hebrew labels as tofu boxes and only tells us in a log line.
+RUN fc-list | grep -qi "NotoSansHebrew" \
+	&& fc-list | grep -qi "NotoSansArabic" \
+	|| (echo "RTL fonts missing from the image — Manim would render tofu" && exit 1)
 
 # Install Python deps first for better layer caching.
 COPY backend/requirements.txt ./backend/requirements.txt

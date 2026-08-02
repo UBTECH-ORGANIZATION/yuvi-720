@@ -68,6 +68,30 @@ async def _assert_component_reachable(
         raise kata_client.KataError("component_locked", status_code=409)
 
 
+async def _assert_objective_reachable(learner_id: str, unit: dict[str, Any]) -> None:
+    """Refuse a goal whose prerequisites the learner has not achieved.
+
+    720 §3 closes with "יעדי הלמידה בנויים לינארית, כך שלא ניתן לבצע יעד לפני
+    שביצעו את היעד הקודם לו". The component gate above is scoped *inside* a unit,
+    so without this a pasted URL walks straight into a later goal. Dependencies
+    come from the unit's ``prerequisiteLearningObjective`` — the goal registry has
+    no prerequisites field — so a provider that declares none gates nothing.
+    """
+    prerequisites = [p for p in (unit.get("prerequisites") or []) if p]
+    if not prerequisites:
+        return
+    try:
+        from app.brain.mastery import entry_for
+        from app.brain.repository import get_brain
+        mastery = (await get_brain(learner_id)).get("mastery") or {}
+    except Exception as exc:  # pragma: no cover - defensive
+        print(f"⚠️ objective gate skipped ({type(exc).__name__}); allowing launch")
+        return
+    missing = [p for p in prerequisites if not entry_for(mastery, p).get("achieved")]
+    if missing:
+        raise kata_client.KataError("objective_locked", status_code=409)
+
+
 async def create_provider_session(
     learner_id: str,
     component_id: str,
@@ -91,6 +115,7 @@ async def create_provider_session(
     # Re-entry to a FINISHED component stays open (§6 explicitly allows
     # reviewing or redoing it), as do recovery and equal-order alternatives —
     # they all project as `completed`/`available`, never `locked`.
+    await _assert_objective_reachable(safe_learner_id, unit)
     await _assert_component_reachable(safe_learner_id, unit, component)
 
     content_language = language if language in component["languages"] else (

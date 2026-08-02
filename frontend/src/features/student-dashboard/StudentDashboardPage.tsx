@@ -98,9 +98,14 @@ export function StudentDashboardPage() {
     }
   }, [])
 
-  const routeForComponent = (componentId: string | null) => {
-    if (!componentId || !/-00001-/.test(componentId)) return '/learning'
-    return `/learning/lesson?${new URLSearchParams({ component: componentId }).toString()}`
+  // The hero now carries its unit, so the lesson opens with both ids. This used
+  // to test the component id against `/-00001-/` — one provider's numbering
+  // convention, hard-coded — and silently dumped every other unit on the portal.
+  const routeForComponent = (componentId: string | null, unitId?: string | null) => {
+    if (!componentId) return '/learning'
+    const params = new URLSearchParams({ component: componentId })
+    if (unitId) params.set('unit', unitId)
+    return `/learning/lesson?${params.toString()}`
   }
 
   const openRoadmapComponent = (unit: LearningUnitDTO, component: LearningComponentDTO) => {
@@ -112,7 +117,7 @@ export function StudentDashboardPage() {
     if (!dashboard || dashboard.hero.mode === 'complete' || isStarting) return
     setActionError(false)
     if (dashboard.hero.mode === 'resume') {
-      navigate(routeForComponent(dashboard.hero.componentId))
+      navigate(routeForComponent(dashboard.hero.componentId, dashboard.hero.unitId))
       return
     }
 
@@ -120,7 +125,10 @@ export function StudentDashboardPage() {
     try {
       const decision = await selectNextRoute(language)
       refreshBrain()
-      navigate(routeForComponent(decision.component?.id || dashboard.hero.componentId))
+      navigate(routeForComponent(
+        decision.component?.id || dashboard.hero.componentId,
+        decision.component?.unit_id || dashboard.hero.unitId,
+      ))
     } catch {
       setActionError(true)
     } finally {

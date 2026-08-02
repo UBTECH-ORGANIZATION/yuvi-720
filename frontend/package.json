@@ -12,7 +12,9 @@
     "test:companion-visuals": "node scripts/test-companion-visuals.mjs",
     "test:companion-visuals:headed": "node scripts/test-companion-visuals.mjs --headed",
     "test:companion-orchestration": "node scripts/test-companion-orchestration.mjs",
-    "test:companion-orchestration:headed": "node scripts/test-companion-orchestration.mjs --headed"
+    "test:companion-orchestration:headed": "node scripts/test-companion-orchestration.mjs --headed",
+    "test": "node --test \"tests/**/*.test.ts\"",
+    "test:path": "node --test \"tests/**/*.test.ts\""
   },
   "dependencies": {
     "@rdkit/rdkit": "^2025.3.4-1.0.0",

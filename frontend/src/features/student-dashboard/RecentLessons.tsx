@@ -1,12 +1,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Icon } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
+import { lessonCardView, onPathNodes } from '../learning/pathView'
 import { useMediaQuery } from '../../hooks/useResponsive'
 import type {
   LearningComponentDTO,
   LearningUnitDTO,
 } from '../../services/learning'
-import { LessonGlyph, pickGlyphVariant } from './LessonGlyph'
+import { LessonGlyph, glyphForUnit } from './LessonGlyph'
 import { subTopicLabel } from './subjectLabels'
 
 interface RecentLessonsProps {
@@ -22,12 +23,22 @@ interface LessonView {
   status: LessonStatus
   completed: number
   total: number
+  /** 0…1 from the server, for THIS learner's path. Never rendered as a number. */
   progress: number
   target: LearningComponentDTO | null
-  /** 1-based position of the next step to work on, within the unit. */
-  currentStep: number
-  /** Estimated minutes left across the not-yet-completed steps, or null. */
+  /** Estimated minutes left across the steps still ahead on the path, or null. */
   minutesLeft: number | null
+}
+
+/** Read the monotone ceiling the trail component keeps, so the card's own bar
+ *  cannot retract when an adaptive path grows a step under the learner. */
+function shownRatio(lesson: LessonView): number {
+  try {
+    const ceilings = JSON.parse(sessionStorage.getItem('yuvilab:progress-ceiling') || '{}')
+    return Math.max(Number(ceilings[lesson.unit.id] ?? 0), lesson.progress)
+  } catch {
+    return lesson.progress
+  }
 }
 
 const STATUS_RANK: Record<LessonStatus, number> = {
@@ -55,41 +66,27 @@ const STATUS_ICON: Record<LessonStatus, string> = {
 const PALETTE = ['violet', 'sky', 'emerald', 'amber', 'rose', 'teal'] as const
 
 function buildLessonView(unit: LearningUnitDTO): LessonView {
-  const components = unit.components ?? []
-  const total = components.length
-  const completed = components.filter((c) => c.progress_state === 'completed').length
-  const current = components.find((c) => c.progress_state === 'current') ?? null
-  const nextAvailable = components.find((c) => c.progress_state === 'available') ?? null
-
-  let status: LessonStatus
-  if (current) status = 'active'
-  else if (total > 0 && completed === total) status = 'completed'
-  else if (completed > 0) status = 'inProgress'
-  else status = 'notStarted'
-
-  const target = current ?? nextAvailable ?? components[0] ?? null
-  const targetIndex = target ? components.findIndex((c) => c.id === target.id) : -1
-  const currentStep = targetIndex >= 0 ? targetIndex + 1 : Math.min(completed + 1, Math.max(total, 1))
-  const minutesLeft = components
-    .filter((c) => c.progress_state !== 'completed')
-    .reduce<number | null>((sum, c) => {
-      if (c.estimated_minutes == null) return sum
-      return (sum ?? 0) + c.estimated_minutes
-    }, null)
-
+  // Every count comes from the server's plan for THIS learner. Deriving them
+  // from `components.length` counted skipped optionals and non-chosen
+  // equivalents, and missed a repair round entirely — so the card could promise
+  // five steps to someone walking six.
+  const view = lessonCardView(unit)
   return {
     unit,
-    status,
-    completed,
-    total,
-    progress: total > 0 ? Math.round((completed / total) * 100) : 0,
-    target,
-    currentStep,
-    minutesLeft,
+    status: view.status,
+    completed: unit.steps_completed ?? 0,
+    total: unit.steps_total ?? onPathNodes(unit).length,
+    progress: view.progress,
+    target: view.target,
+    minutesLeft: view.minutesLeft,
   }
 }
 
-/** State-aware, screen-reader label describing where the learner stands. */
+/** Screen-reader label describing where the learner stands.
+ *
+ *  No ordinal and no denominator: the total moves as the path adapts, and §3.4
+ *  keeps numeric measurement off the learner's screen. What is left is the thing
+ *  that is actually stable — how much is still ahead. */
 function progressAriaLabel(
   lesson: LessonView,
   t: (key: string, params?: Record<string, string | number>) => string,
@@ -98,15 +95,14 @@ function progressAriaLabel(
     case 'completed':
       return t('sdash.lessons.status.completed')
     case 'active':
-      return t('sdash.lessons.resumeFromStep', { step: lesson.currentStep })
+      return t('sdash.lessons.resumeHere')
     case 'inProgress':
-      return `${t('sdash.lessons.stepOf', { step: lesson.currentStep, total: lesson.total })} · ${lesson.progress}%`
+      return t('sdash.lessons.onTheWay')
     default: {
-      const steps = t('sdash.lessons.stepsCount', { count: lesson.total })
       if (lesson.minutesLeft != null && lesson.minutesLeft > 0) {
-        return `${steps} · ${t('sdash.lessons.approxMinutes', { count: lesson.minutesLeft })}`
+        return t('sdash.lessons.approxMinutes', { count: lesson.minutesLeft })
       }
-      return steps
+      return t('sdash.lessons.status.notStarted')
     }
   }
 }
@@ -295,37 +291,33 @@ export function RecentLessons({
         </div>
       ) : (
         <div className="sd-lessons__carousel">
-          <button
-            className="sd-carousel-nav sd-carousel-nav--prev"
-            type="button"
-            onClick={() => scrollByDirection('prev')}
-            disabled={!scrollState.canPrev}
-            aria-label={t('sdash.lessons.prev')}
-          >
-            <Icon name="arrow" size={20} />
-          </button>
-
           <ul ref={trackRef} className={`sd-lesson-track${revealed ? ' is-revealed' : ''}`}>
             {lessons.map((lesson, index) => {
               const tone = PALETTE[index % PALETTE.length]
               const isPrimary = lesson.unit.id === primaryUnitId
-              const glyphVariant = pickGlyphVariant(
-                lesson.unit.title,
-                lesson.unit.sub_topic,
-                lesson.unit.subject,
-              )
+              // Every signal the catalog carries, so the picture is a reading
+              // of the lesson rather than one illustration per subject.
+              const glyphVariant = glyphForUnit(lesson.unit)
               return (
                 <li
                   key={lesson.unit.id}
                   className={`sd-lesson-card sd-lesson-card--${tone} is-${lesson.status}${isPrimary ? ' is-primary' : ''}`}
                   style={{ '--sd-lesson-index': index } as CSSProperties}
                 >
-                  {isPrimary && (
-                    <span className="sd-lesson-card__ribbon">
-                      <Icon name="play" size={11} />
-                      {t('sdash.lessons.recommended')}
-                    </span>
-                  )}
+                  {/* The subject, as a chip — and as a filter. It replaces a
+                      "recommended" ribbon that said the same thing the card's
+                      own prominence already says. */}
+                  <button
+                    type="button"
+                    className={`sd-lesson-card__subject-chip sd-subject--${lesson.unit.subject}${
+                      subjectFilter === lesson.unit.subject ? ' is-active' : ''}`}
+                    onClick={() => setSubjectFilter(
+                      subjectFilter === lesson.unit.subject ? null : lesson.unit.subject,
+                    )}
+                    aria-pressed={subjectFilter === lesson.unit.subject}
+                  >
+                    {t(`learning.subject.${lesson.unit.subject}`)}
+                  </button>
                   <div className="sd-lesson-card__media" aria-hidden="true">
                     <LessonGlyph variant={glyphVariant} />
                     <span className={`sd-lesson-card__badge sd-lesson-card__badge--${lesson.status}`}>
@@ -334,18 +326,16 @@ export function RecentLessons({
                   </div>
 
                   <div className="sd-lesson-card__body">
-                    <span className="sd-lesson-card__subject" dir="auto">
-                      {t(`learning.subject.${lesson.unit.subject}`)}
-                      {lesson.unit.sub_topic && (
-                        <>
-                          {' · '}
-                          <span className="sd-lesson-card__subtopic">
-                            {subTopicLabel(lesson.unit.sub_topic, language)}
-                          </span>
-                        </>
-                      )}
-                    </span>
                     <h3 className="sd-lesson-card__title" dir="auto">{lesson.unit.title}</h3>
+                    {/* The ministry's own name for the sub-topic this belongs to
+                        ("מסה ונפח של גופים"), from the goal registry — not a
+                        dotted key run through a hand-written label table. */}
+                    {(lesson.unit.sub_topic_title || lesson.unit.sub_topic) && (
+                      <p className="sd-lesson-card__subtopic" dir="auto">
+                        {lesson.unit.sub_topic_title
+                          || subTopicLabel(lesson.unit.sub_topic, language)}
+                      </p>
+                    )}
                     <div
                       className="sd-lesson-card__track-row"
                       role="img"
@@ -353,73 +343,54 @@ export function RecentLessons({
                     >
                       {lesson.status !== 'notStarted' && (
                         <div className="sd-lesson-card__bar">
-                          <span style={{ inlineSize: revealed ? `${lesson.progress}%` : 0 }} />
+                          <span style={{ inlineSize: revealed ? `${Math.round(shownRatio(lesson) * 100)}%` : 0 }} />
                         </div>
                       )}
-                      <span className={`sd-lesson-card__steps sd-lesson-card__steps--${lesson.status}`}>
-                        {lesson.status === 'completed' && t('sdash.lessons.status.completed')}
-                        {lesson.status === 'active' && t('sdash.lessons.resumeFromStep', { step: lesson.currentStep })}
-                        {lesson.status === 'inProgress' && (
-                          <>
-                            {t('sdash.lessons.stepOf', { step: lesson.currentStep, total: lesson.total })}
-                            {' · '}
-                            <strong>{lesson.progress}%</strong>
-                          </>
-                        )}
-                        {lesson.status === 'notStarted' && (
-                          <>
-                            {t('sdash.lessons.stepsCount', { count: lesson.total })}
-                            {lesson.minutesLeft != null && lesson.minutesLeft > 0 && (
-                              <>
-                                {' · '}
-                                {t('sdash.lessons.approxMinutes', { count: lesson.minutesLeft })}
-                              </>
-                            )}
-                          </>
-                        )}
-                      </span>
                     </div>
-                    {isPrimary && (lesson.status === 'active' || (lesson.status === 'inProgress' && lesson.minutesLeft != null && lesson.minutesLeft > 0)) && (
-                      <div className="sd-lesson-card__meta">
-                        {lesson.status === 'active' && (
-                          <span className="sd-lesson-card__meta-chip">
-                            <Icon name="check" size={12} />
-                            {t('sdash.lessons.stepOf', { step: lesson.currentStep, total: lesson.total })}
-                          </span>
-                        )}
-                        {lesson.minutesLeft != null && lesson.minutesLeft > 0 && (
-                          <span className="sd-lesson-card__meta-chip">
-                            <Icon name="clock" size={12} />
-                            {t('sdash.lessons.minutesLeft', { count: lesson.minutesLeft })}
-                          </span>
-                        )}
-                      </div>
-                    )}
+
                   </div>
 
-                  <button
-                    className={`sd-lesson-card__cta sd-lesson-card__cta--${lesson.status}`}
-                    type="button"
-                    disabled={!lesson.target}
-                    onClick={() => lesson.target && onOpenComponent(lesson.unit, lesson.target)}
-                  >
-                    <span>{t(`sdash.lessons.cta.${CTA_BY_STATUS[lesson.status]}`)}</span>
-                    <Icon name={lesson.status === 'completed' ? 'reflect' : 'arrow'} size={lesson.status === 'completed' ? 13 : 15} />
-                  </button>
+                  {/* The CTA and the way to the neighbouring lessons in one row:
+                      the carousel arrows used to float over the edge of the rail,
+                      half off-card, and on a narrow screen they covered the card
+                      they were meant to move. */}
+                  <div className="sd-lesson-card__foot">
+                    {isPrimary && (
+                      <button
+                        className="sd-lesson-card__step"
+                        type="button"
+                        onClick={() => scrollByDirection('prev')}
+                        disabled={!scrollState.canPrev}
+                        aria-label={t('sdash.lessons.prev')}
+                      >
+                        <Icon name="chevronLeft" size={16} />
+                      </button>
+                    )}
+                    <button
+                      className={`sd-lesson-card__cta sd-lesson-card__cta--${lesson.status}`}
+                      type="button"
+                      disabled={!lesson.target}
+                      onClick={() => lesson.target && onOpenComponent(lesson.unit, lesson.target)}
+                    >
+                      <span>{t(`sdash.lessons.cta.${CTA_BY_STATUS[lesson.status]}`)}</span>
+                      <Icon name={lesson.status === 'completed' ? 'reflect' : 'arrow'} size={lesson.status === 'completed' ? 13 : 15} />
+                    </button>
+                    {isPrimary && (
+                      <button
+                        className="sd-lesson-card__step sd-lesson-card__step--next"
+                        type="button"
+                        onClick={() => scrollByDirection('next')}
+                        disabled={!scrollState.canNext}
+                        aria-label={t('sdash.lessons.next')}
+                      >
+                        <Icon name="chevronLeft" size={16} />
+                      </button>
+                    )}
+                  </div>
                 </li>
               )
             })}
           </ul>
-
-          <button
-            className="sd-carousel-nav sd-carousel-nav--next"
-            type="button"
-            onClick={() => scrollByDirection('next')}
-            disabled={!scrollState.canNext}
-            aria-label={t('sdash.lessons.next')}
-          >
-            <Icon name="arrow" size={20} />
-          </button>
         </div>
       )}
     </section>

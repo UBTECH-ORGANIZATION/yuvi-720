@@ -45,13 +45,14 @@ async def select_next(learner_id: str, locale: str = "he") -> dict[str, Any]:
             locale=locale,
         )
 
-    updates: dict[str, Any] = {"next_recommendations": next_recommendations}
-    if component:
-        updates["current_state.unit_id"] = component.get("unit_id") or None
-        updates["current_state.component_id"] = component["id"]
-        updates["current_state.item_id"] = None
-        updates["current_state.resume_token"] = None
-    await apply_writes("pedagogical", learner_id, updates)
+    # `current_state.component_id` means "where the learner IS", and it used to be
+    # written here — by a *recommendation*. The roadmap then painted that
+    # recommendation as `current`, so a suggestion the learner never acted on
+    # could contradict the route on screen. Only the real launch
+    # (`learning_sessions`) and the xAPI fold (`events`) write it now; this agent
+    # publishes its recommendation and nothing else.
+    await apply_writes("pedagogical", learner_id,
+                       {"next_recommendations": next_recommendations})
 
     return {
         "subject": focus_subject,
@@ -81,9 +82,7 @@ async def route_after_fail(learner_id: str, locale: str = "he") -> Optional[dict
     alt = content_catalog.recommended_after_fail(component_id, locale)
     if not alt:
         return None
-    await apply_writes("pedagogical", learner_id, {
-        "current_state.component_id": alt["id"],
-        "current_state.item_id": None,
-        "current_state.resume_token": None,
-    })
+    # Same reason as `select_next`: this names where the learner SHOULD go. The
+    # path engine already inserts the repair round from the same provider
+    # metadata, and the pointer moves when they actually launch it.
     return alt
