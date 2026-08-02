@@ -177,8 +177,20 @@ class AgentChatHistoryTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertNotEqual(next_attempt["id"], first["id"])
 
+        # Lesson threads are scoped to the lesson: they resume, rotate and close
+        # exactly as above, but they are NOT offered in the learner's chat
+        # history — that list is for the conversations they started themselves.
         history = await sessions.list_conversations(learner_id, limit=10)
-        stored = {item["id"]: item for item in history["conversations"]}
+        listed = {item["id"] for item in history["conversations"]}
+        self.assertNotIn(first["id"], listed)
+        self.assertNotIn(next_attempt["id"], listed)
+
+        # …and the closure bookkeeping the list used to prove still holds, read
+        # straight from the store since it is no longer surfaced by the list.
+        stored = {
+            document.get("session_id"): document
+            for document in sessions._read_history_fallback()["conversations"].values()
+        }
         self.assertEqual(stored[first["id"]]["activity_status"], "completed")
         self.assertEqual(stored[next_attempt["id"]]["activity_status"], "open")
 

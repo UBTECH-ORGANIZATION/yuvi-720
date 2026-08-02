@@ -57,6 +57,16 @@ VISUAL_TOOL_PROMPTS = {
         "כאשר צורה, מיקום, קשר כמותי, שינוי, חלקים, השוואה או רצף נעשים ברורים יותר במבט. "
         "אם הלומד/ת ביקש/ה במפורש גרף, שרטוט או המחשה, חובה לבחור בהמחשה. "
         "אין להוסיף המחשה קישוטית לשיחה חברתית או לתשובה עובדתית פשוטה. "
+        "תנאי חוסם שגובר על כל הנאמר לעיל: שרטוט מוצדק רק כשהמיקום, הגודל, הצורה, הכיוון "
+        "או הסדר הגודל של מה שמצויר נושאים חלק מהמשמעות. אם התמונה תהיה מילים בתוך מלבנים — "
+        "סרב/י: הגדרה, הנגדה מילולית (\"א זה כך, ב זה אחרת\"), הבחנה בין קטגוריות או כלל שנאמר במילים "
+        "אינם מתבהרים מציור — המשפט כבר אומר את זה, ומסגור המילים בקופסאות מוסיף קישוט בלבד. "
+        "שני מקרים עוברים את התנאי הזה תמיד: (1) אובייקט אמיתי שיש לו צורה מוכרת — מבנה גוף, "
+        "כלי מעבדה, איבר, מכשיר, יצור — אותו מציירים, ולא מסתפקים בשמו במילים. (2) תהליך או רצף שבו הסדר "
+        "או הכיוון הם התוכן — מחזור המים, שרשרת מזון, מערכת העיכול, שלבי ניסוי: לצייר את השלבים ואת החיצים "
+        "ביניהם מראה מה שמשפט לא מראה. "
+        "עדיף לא לצייר: העדר שרטוט לא עולה דבר, ושרטוט חלש מבזבז את תשומת הלב של הלומד/ת. "
+        "במקרה של ספק — החזר/י use_visual:false. "
         "החזר/י JSON בלבד. אם לא: {\"use_visual\":false}. אם כן: "
         "{\"use_visual\":true,\"title\":\"...\",\"alt\":\"...\",\"caption\":\"...\","
         "\"elements\":[...]}. שמור/י על למידה פעילה: הצג/י את הנתונים, לא את פתרון התרגיל הסופי."
@@ -67,6 +77,13 @@ VISUAL_TOOL_PROMPTS = {
         "أو العلاقة الكمية أو التغيّر أو الأجزاء أو المقارنة أو التسلسل أوضح بالنظر. "
         "إذا طلب المتعلم صراحة رسمًا أو مخططًا أو تمثيلًا بيانيًا، فيجب اختيار الرسم. "
         "لا تضف رسمًا زخرفيًا لمحادثة اجتماعية أو لإجابة واقعية بسيطة. "
+        "شرط حاسم يسبق ما سبق: الرسم مبرر فقط إذا كان الموضع أو الحجم أو الشكل أو الاتجاه أو المقدار "
+        "يحمل جزءًا من المعنى. إذا كانت الصورة ستكون مجرد كلمات داخل مربعات — ارفض: التعريف، "
+        "والتقابل اللفظي، والتمييز بين فئتين، والقاعدة المصوغة بالكلمات — لا تزداد وضوحًا بالرسم، والجملة تكفي. "
+        "حالتان تجتازان هذا الشرط دائمًا: (١) جسم حقيقي له شكل مميّز — عضو، أداة مختبر، جهاز، كائن حي، "
+        "آلية — ارسمه بدل أن تسمّيه. (٢) عملية أو تسلسل يكون الترتيب أو الاتجاه فيه هو المضمون — دورة الماء، "
+        "السلسلة الغذائية، الهضم، مراحل التجربة: رسم المراحل والأسهم بينها يُظهر ما لا تُظهره الجملة. "
+        "فضّل عدم الرسم: غيابه لا يكلف شيئًا، ورسم ضعيف يضيّع انتباه المتعلّم. عند الشك أعد use_visual:false. "
         "أعد JSON فقط. إن لم يلزم: {\"use_visual\":false}. وإن لزم: "
         "{\"use_visual\":true,\"title\":\"...\",\"alt\":\"...\",\"caption\":\"...\","
         "\"elements\":[...]}. حافظ على التعلم النشط: اعرض المعطيات لا الحل النهائي."
@@ -76,7 +93,20 @@ VISUAL_TOOL_PROMPTS = {
         "the learner understand the request and response. Do not wait for an explicit drawing request: "
         "on the first turn choose a visual when shape, position, quantitative relationship, change, parts, "
         "comparison, or sequence becomes clearer at a glance. Do not add a decorative visual to social "
-        "conversation or a simple factual answer. If the learner explicitly requests a graph, "
+        "conversation or a simple factual answer. "
+        "HARD BAR — apply before anything above: a drawing is warranted ONLY when the POSITION, SIZE, "
+        "SHAPE, DIRECTION or MAGNITUDE of what is drawn carries part of the meaning. If the picture "
+        "would be words inside boxes, refuse: a definition, a verbal contrast (\"A means this, B means "
+        "that\"), a category distinction, a rule stated in words, or a term being named is NOT clearer "
+        "as a diagram — the sentence already says it and drawing it adds nothing but decoration. "
+        "TWO CASES ALWAYS CLEAR THIS BAR. (1) A real object with a recognisable shape — an organ, a "
+        "piece of lab apparatus, an instrument, an organism, a mechanism: draw the thing rather than "
+        "name it. (2) A process or sequence where the ORDER or DIRECTION is the content — the water "
+        "cycle, a food chain, digestion, the stages of an experiment: drawing the stages and the "
+        "arrows between them shows what a sentence cannot. "
+        "Prefer no visual: a missing drawing costs nothing, a weak one wastes the learner's attention "
+        "and makes the whole companion look less careful. When in doubt return use_visual:false. "
+        "If the learner explicitly requests a graph, "
         "diagram, drawing, plot, or visualization, you must select a visual. Return JSON only. If not: "
         "{\"use_visual\":false}. If yes: {\"use_visual\":true,\"title\":\"...\","
         "\"alt\":\"...\",\"caption\":\"...\",\"elements\":[...]}. Preserve active learning: "
@@ -104,8 +134,7 @@ particular mark must use that mark's exact value as its x — a caption about th
 [8, 0.9], not at 6.5, or it will point at empty line. Keep captions ABOVE the line (positive y
 relative to it): the row below carries the tick numbers. A brace must span from one mark to
 another — its endpoints are mark values, not approximations.)
-CHEMISTRY — for molecules use, INSTEAD of the geometry primitives above:
-- {"type":"molecule","smiles":"CC(=O)Oc1ccccc1C(=O)O","label":"אספירין","view":"2d","highlight":"C(=O)O"}
+CHEMISTRY — for molecules use, INSTEAD of the geometry primitives above:- {"type":"molecule","smiles":"CC(=O)Oc1ccccc1C(=O)O","label":"אספירין","view":"2d","highlight":"C(=O)O"}
 Emit ONLY the SMILES string; never coordinates, never a formula, never a molecular mass —
 those are computed for you and shown to the learner, so anything you assert would be
 overwritten or would make the visual be rejected. An invalid SMILES produces NO visual at
@@ -114,6 +143,66 @@ SMILES substructure (a functional group) that will be emphasised — use it to p
 part under discussion. "view":"3d" only when molecular SHAPE is the lesson (VSEPR, bond
 angles, isomers); otherwise "2d". Do not mix molecule elements with geometry elements.
 Colors: primary, secondary, accent, success, warning, ink, muted, white.
+PROPS — real objects, drawn for you. Reach for these BEFORE the primitives above
+whenever the subject is a physical thing or a comparison of quantities. Each is
+one element: {"type":"prop","prop":"<name>","center":[x,y], ...params,
+"labels":{"<anchor>":"טקסט"}}. Labels are placed at named anchors — never park a
+separate text element next to a prop and hope it lands right.
+- "balance_scale" — two-pan beam balance. center, size, and EITHER tilt (-1..1,
+  POSITIVE dips the RIGHT pan) OR left_mass + right_mass (the tilt is derived,
+  and the heavier side goes DOWN).
+  Anchors: left_pan, right_pan, left_load, right_load, pivot.
+  Put what is being weighed IN the scale, not beside it: "left_load" and
+  "right_load" each take another prop — {"prop":"balloon","inflation":0.1} —
+  and it is built onto the pan wherever the tilt left it. Do not try to position
+  a separate prop on a pan yourself; you cannot know where the pan ended up.
+- "balloon" — center, size, inflation (0..1 — the SAME prop at two settings is
+  how you show empty vs inflated), color, string (bool), particles (how many
+  gas dots inside), seed. Anchors: top, center, bottom.
+- "particle_box" — center, width, height, shape ("box"|"circle"), state
+  ("solid" lattice | "liquid" lower half | "gas" fills it), count, particle_size,
+  seed. Anchors: top, center, bottom. Use for states of matter, gas, density,
+  diffusion, concentration.
+- "container" — a vessel: center, width, height, fill_level (0..1),
+  liquid_color, graduations (tick count). Anchors: top, center, surface.
+- "bar_comparison" — items:[{"value":3.5,"label":"מנופח","color":"primary"},...],
+  center, height, bar_width. Anchors: top:0, top:1, foot:0, foot:1.
+  THIS is how you compare magnitudes. Two words above a number line compare
+  nothing; two bars whose heights differ compare everything.
+CHOOSING: if the question is about an object, draw the object. "Why is the
+inflated balloon heavier?" is a balance_scale carrying two balloon props at
+different inflation, or a bar_comparison of the two masses — never the words
+"balloon" and "inflated balloon" floating over a number line. A number_line
+measures VALUES; if the thing you are placing on it is a word, you have chosen
+the wrong element.
+DRAWING ANYTHING ELSE — when the object you need is not in the prop list (a
+pump, a microscope, a leaf, a pulley, a bone, a kettle), draw it:
+- {"type":"drawing","center":[x,y],"size":2.2,"label":"משאבת אוויר","strokes":[
+    {"d":"M 10 40 L 10 10 L 30 10 L 30 40 Z","color":"ink","fill_opacity":0.1},
+    {"d":"M 20 10 L 20 0","color":"ink","stroke_width":6}]}
+Each stroke is one SVG path `d` (M/L/C/Q/A/Z, absolute or relative). Draw in ANY
+convenient coordinate space — 0..100 is comfortable — because the whole drawing
+is scaled to "size" and centred on "center" for you. Do NOT try to make the
+numbers match the canvas: shape is yours, placement is ours. Use several strokes
+so parts can differ in colour and fill, and put the recognisable silhouette
+first. Anchors for "labels": top, bottom, left, right, center.
+A drawing is for a REAL OBJECT with a recognisable shape. It is not a way to
+draw boxes around words, and it is not for anything the primitives above already
+express exactly (a circle is "circle", a graph is "axes").
+DATA, NOT DECORATION — a number_line and an axes are measuring instruments, never
+layout devices for words. Every mark and every coordinate must be an actual value of
+the thing under discussion: a measurement, a reading, a unit's magnitude, a quantity
+from the problem. If you cannot say what the numbers ARE ("these are four weighings
+in grams"), you may not use a number line or axes at all — a 0..10 scale with ticks at
+2, 5 and 8 carrying the words "fine" / "bigger" is a picture of nothing, and the
+learner sees a ruler measuring vocabulary. Set the range from the data (readings around
+24 g give a range like 23.5..28), never a generic 0..10.
+Likewise a "text" element holds a value, a name or a short formula — it is NEVER a
+phrase lifted from the explanation ("compare", "what changed?", "close together",
+"two sides"). If the only thing you can put on the canvas is the vocabulary of the
+sentence, the scene is decorative: say so with use_visual:false instead, unless you
+were explicitly told you must draw — in which case find the measurable claim and draw
+that with concrete numbers.
 ANIMATION — prefer it whenever the idea unfolds over time (construction, change, motion,
 comparison, sweep, accumulation). Set scene-level "animated": true, then stage the reveal:
 - per-element "step": 0..5 — elements sharing a step appear together; steps play in order.
@@ -953,6 +1042,71 @@ def _canonical_similar_triangles_scene(request: str, language: str) -> Optional[
     })
 
 
+_DIGIT = re.compile(r"\d")
+# Anything that plots something. If one of these is present the frame is doing
+# real work — a sine curve on axes needs no digit label to be about data.
+_DATA_BEARING = {
+    "polyline", "polygon", "point", "circle", "arc", "rectangle",
+    "line", "arrow", "angle", "right_angle", "brace", "molecule",
+}
+
+
+def _is_decorative_scale(elements: list[dict]) -> bool:
+    """True when a number_line/axes is being used to arrange WORDS, not data.
+
+    The observed failure: a four-rule lab protocol became a 0..10 number line
+    with ticks at 2/5/8 labelled "עדין מאוד" / "גדול יותר" / "סימון א׳". A scale is
+    a measuring instrument, so the learner reads those ticks as quantities — but
+    they measure nothing; the words are the explanation pasted onto a convenient
+    shape.
+
+    Four conditions, because each alone has honest uses and the bias must be
+    toward keeping (a wrongly dropped visual is invisible, a wrongly kept one
+    teaches something false):
+      * a text element carries a WORD — a bare line marking -7, 0, 4 is fine,
+      * nothing else is plotted — a curve, a shape or a brace means the frame
+        has a subject,
+      * no label anywhere holds a digit — nothing on the canvas is a quantity,
+      * every mark sits exactly on a tick — real readings land off the grid
+        (marks 3, 3.4, 8 are three measurements; marks 2, 5, 8 are furniture).
+    """
+    frames = [e for e in elements if e["type"] in {"number_line", "axes"}]
+    if not frames:
+        return False
+    if any(e["type"] in _DATA_BEARING for e in elements):
+        return False
+    words = False
+    for element in elements:
+        for value in (
+            element.get("label"),
+            element.get("x_label"),
+            element.get("y_label"),
+            *(element.get("labels") or []),
+            *(element.get("side_labels") or []),
+        ):
+            if not value:
+                continue
+            if _DIGIT.search(str(value)):
+                return False
+            if element["type"] == "text":
+                words = True
+    if not words:
+        return False
+    for frame in frames:
+        span = frame.get("range")
+        marks = frame.get("marks") or []
+        if not span or not marks:
+            continue
+        start, _end, step = span
+        if not step:
+            continue
+        for mark in marks:
+            offset = (mark - start) / step
+            if abs(offset - round(offset)) > 1e-6:
+                return False  # off-grid: a real measurement, not a tick
+    return True
+
+
 def _normalize_number_line_scene(elements: list[dict]) -> None:
     """Force ONE coherent coordinate space on a number-line scene.
 
@@ -1120,7 +1274,7 @@ def sanitize_scene(
         if kind not in {
             "polygon", "polyline", "line", "arrow", "point", "circle",
             "rectangle", "arc", "angle", "right_angle", "axes", "text",
-            "brace", "number_line", "molecule",
+            "brace", "number_line", "molecule", "prop", "drawing",
         }:
             continue
         color = candidate.get("color") if candidate.get("color") in COLORS else "primary"
@@ -1191,6 +1345,102 @@ def sanitize_scene(
                     "element": anchor["element"],
                     "at": at if isinstance(at, str) and len(at) <= 24 else "center",
                 }
+        elif kind == "prop":
+            # A composite object named from a fixed catalogue. Unknown names are
+            # dropped rather than approximated: a prop the renderer cannot build
+            # would leave a hole in the picture with the labels still floating
+            # where its parts should have been.
+            from app.agents.manim_props import PROP_KINDS
+
+            name = str(candidate.get("prop") or "").strip().lower()
+            if name not in PROP_KINDS:
+                continue
+            center = diagram_point(candidate.get("center", [0, 0]))
+            if center is None:
+                continue
+            clean.update({"prop": name, "center": center})
+            for key in (
+                "size", "tilt", "left_mass", "right_mass", "inflation", "width",
+                "height", "fill_level", "count", "particles", "particle_size",
+                "graduations", "seed", "bar_width",
+            ):
+                number = _number(candidate.get(key), 1000.0)
+                if number is not None:
+                    clean[key] = number
+            # A prop's `size` multiplies its footprint, and a balance at size
+            # 4.8 spans wider than the whole canvas. The planner reaches for big
+            # numbers because they read as "make it prominent"; the cap turns
+            # that into the largest size that still fits rather than a shape
+            # running off both edges.
+            if "size" in clean:
+                clean["size"] = max(0.3, min(float(clean["size"]), 1.8))
+            for key in ("state", "shape", "liquid_color", "particle_color", "pan_color"):
+                value = candidate.get(key)
+                if isinstance(value, str) and len(value) <= 24:
+                    clean[key] = value
+            if candidate.get("string"):
+                clean["string"] = True
+            # What sits ON a balance pan, built by the scale itself so it lands
+            # on the pan after the beam has tilted. One level only: a load
+            # carrying its own load is not a picture of anything.
+            for slot in ("left_load", "right_load"):
+                load = candidate.get(slot)
+                if not isinstance(load, dict) or str(load.get("prop") or "") not in PROP_KINDS:
+                    continue
+                nested: dict = {"prop": str(load["prop"])}
+                for key in ("size", "inflation", "count", "particles", "fill_level", "seed", "width", "height"):
+                    number = _number(load.get(key), 1000.0)
+                    if number is not None:
+                        nested[key] = number
+                for key in ("state", "shape", "color", "particle_color", "liquid_color"):
+                    value = load.get(key)
+                    if isinstance(value, str) and len(value) <= 24:
+                        nested[key] = value
+                clean[slot] = nested
+            labels = candidate.get("labels")
+            if isinstance(labels, dict):
+                clean["labels"] = {
+                    str(slot)[:24]: text
+                    for slot, raw in list(labels.items())[:6]
+                    if (text := _short_text(raw, text_filter))
+                }
+            items = candidate.get("items")
+            if isinstance(items, list):
+                clean["items"] = [
+                    {
+                        "value": _number(item.get("value"), 1e6) or 0.0,
+                        "label": _short_text(item.get("label"), text_filter),
+                        "color": item.get("color") if item.get("color") in COLORS else None,
+                    }
+                    for item in items[:5]
+                    if isinstance(item, dict) and _number(item.get("value"), 1e6) is not None
+                ]
+                if not clean["items"]:
+                    continue
+
+        elif kind == "drawing":
+            # Any shape the catalogue does not have. Authored in the planner's
+            # own coordinates and fitted here, so it cannot be off-canvas or
+            # the wrong scale — the planner supplies shape, never layout.
+            from app.agents.manim_drawing import clean_drawing
+
+            center = diagram_point(candidate.get("center", [0, 0]))
+            drawing = clean_drawing(
+                candidate, colors=COLORS, short_text=_short_text, text_filter=text_filter
+            )
+            if center is None or drawing is None:
+                continue
+            clean.update(drawing)
+            clean["center"] = center
+            clean["size"] = max(0.2, min(_number(candidate.get("size"), 1000.0) or 1.5, 5.0))
+            labels = candidate.get("labels")
+            if isinstance(labels, dict):
+                clean["labels"] = {
+                    str(slot)[:16]: text
+                    for slot, raw in list(labels.items())[:5]
+                    if (text := _short_text(raw, text_filter))
+                }
+
         elif kind == "molecule":
             # RDKit decides whether this is a molecule at all. An unparseable
             # string is dropped here and never reaches a renderer.
@@ -1251,6 +1501,18 @@ def sanitize_scene(
         slide_from = diagram_point(candidate.get("from"))
         if slide_from is not None:
             clean["from"] = slide_from
+        # The same prop twice in the same place is always a planner slip — it
+        # happens when the model reissues an element to add a label — and it
+        # renders as one shape at double stroke weight with two label sets
+        # printed over each other.
+        if kind == "prop" and any(
+            existing.get("type") == "prop"
+            and existing.get("prop") == clean["prop"]
+            and abs(existing["center"][0] - clean["center"][0]) < 0.25
+            and abs(existing["center"][1] - clean["center"][1]) < 0.25
+            for existing in elements
+        ):
+            continue
         index_map[source_index] = len(elements)
         elements.append(clean)
 
@@ -1290,6 +1552,11 @@ def sanitize_scene(
         if dropped:
             print(f"ℹ️ Molecule scene: dropped non-molecule elements {dropped}")
         elements = [item for item in elements if item["type"] == "molecule"]
+    if _is_decorative_scale(elements):
+        # A ruler measuring vocabulary. Better to show the learner nothing than
+        # a scale whose numbers mean nothing; the planner gets one retry.
+        print("ℹ️ Dropped scene: numeric frame carried no data (decorative scale)")
+        return None
     scene = {
         "use_visual": True,
         # Derived from what survived validation, not from what the planner
@@ -1313,18 +1580,41 @@ def sanitize_scene(
     return solve_scene_layout(scene)
 
 
+# The learner pressed "show me a visual", so refusing is not on the table. But a
+# bare "you must draw" collides with the HARD BAR above, and the planner resolves
+# that conflict the wrong way: it keeps the words and borrows a shape to hang them
+# on. Observed output for a four-rule lab protocol was a 0..10 number line with
+# ticks at 2/5/8 labelled "עדין מאוד" / "גדול יותר" — a measuring instrument used
+# as a layout device, its numbers referring to nothing. So this directive does not
+# ask for A picture; it says WHICH picture: the one measurable claim, drawn as data.
 _ON_DEMAND_DIRECTIVE = {
     "he": (
         "\nהלומד/ת ביקש/ה במפורש לראות המחשה של ההסבר הזה — חובה להחזיר "
-        "use_visual=true עם סצנה שימושית ומדויקת. אל תסרב/י."
+        "use_visual=true. לכן אסור לצייר את המילים של ההסבר. אתר/י בתוך ההסבר את הטענה "
+        "האחת שיש לה תוכן מדיד, מרחבי או כמותי, וצייר/י אותה בלבד — עם מספרים ממשיים. "
+        "אם ההסבר הוא אוסף כללים או נוהל עבודה, בחר/י את הכלל היחיד שעוסק בכמות, במיקום "
+        "או בסדר גודל, והמחיש/י אותו בדוגמה מספרית סבירה שתמציא/י — למשל שלוש מדידות "
+        "קרובות זו לזו ואחת רחוקה מהן, כך שהחריגה נראית כמרחק ולא נקראת כתווית. "
+        "שאר הכללים, אלה שלא ניתנים לציור, נשארים בטקסט ולא מגיעים לקנבס."
     ),
     "ar": (
-        "\nطلب المتعلّم صراحةً رؤية توضيح لهذا الشرح — يجب إعادة use_visual=true "
-        "بمشهد مفيد ودقيق. لا ترفض."
+        "\nطلب المتعلّم صراحةً رؤية توضيح لهذا الشرح — يجب إعادة use_visual=true. "
+        "لذلك لا ترسم كلمات الشرح. ابحث داخل الشرح عن الادّعاء الوحيد ذي المحتوى القابل "
+        "للقياس أو المكاني أو الكمّي، وارسمه وحده — بأرقام حقيقية. إذا كان الشرح مجموعة "
+        "قواعد أو إجراءً، فاختر القاعدة الوحيدة المتعلّقة بالكمية أو الموضع أو المقدار، "
+        "ووضّحها بمثال رقمي معقول تخترعه — مثلاً ثلاث قياسات متقاربة وواحدة بعيدة عنها، "
+        "فيظهر الشاذّ كمسافة لا كعنوان. أمّا القواعد غير القابلة للرسم فتبقى نصًّا لا على اللوحة."
     ),
     "en": (
         "\nThe learner explicitly asked to SEE a visual of this explanation — you "
-        "MUST return use_visual=true with a useful, accurate scene. Do not decline."
+        "MUST return use_visual=true. Therefore do NOT draw the explanation's words. "
+        "Find the ONE claim inside the explanation that has measurable, spatial or "
+        "quantitative content and draw only that — with real numbers. If the explanation "
+        "is a set of rules or a procedure, pick the single rule that is about quantity, "
+        "position or magnitude and illustrate it with a plausible numeric example you "
+        "invent — e.g. three readings close together and one far from them, so the "
+        "outlier is SEEN as distance rather than read as a label. The remaining rules, "
+        "the ones that cannot be drawn, stay in the text and never reach the canvas."
     ),
 }
 _PREFER_ANIMATION_DIRECTIVE = {

@@ -11,16 +11,18 @@ Working memory (last N turns) lives in `agent_sessions`, so the chat resumes.
 from __future__ import annotations
 
 import asyncio
+import os
 import re
 from typing import AsyncGenerator, Optional
 
+from app.agents import answer_guard
 from app.agents import safety
 from app.agents import sessions
 from app.agents.client import build_chat_client
 from app.brain.context_engine import build_coach_bundle
 from app.brain.memory import classify_query_intent, profile_answer_fallback
 from app.services.ai_usage import UsageContext
-from app.services.llm import call_llm, call_llm_stream
+from app.services.llm import LlmModelTier, call_llm, call_llm_stream
 
 
 # ── Instructions (language-keyed — §11.1; never inline learner-facing text) ──
@@ -30,6 +32,9 @@ _BARE_MARKER = re.compile(r"(?:\d+[.)]|[-*+•])")
 COACH_INSTRUCTIONS = {
     "he": (
         "אתה \"יובי\", מלווה למידה של תלמיד/ה בכיתות ז'–ט'. ענה בעברית.\n"
+        "- כלל־על: לעולם אל תמסור/י את התשובה הנכונה לשאלה הנוכחית — לא בניסוח מלא, לא בניסוח אחר, לא בחלקים, לא כ\"אישור\" לניחוש, ולא כשמבקשים ממך במפורש (\"תן לי את התשובה\"). זה תקף גם ברמז וגם בהסבר מפורט. אם מבקשים את התשובה — סרב/י בחום במשפט אחד, אמור/י שהערך הוא בלהגיע אליה לבד, ומיד הצע/י את הצעד הבא לחשיבה. מותר וכדאי: לכוון, להשוות בין האפשרויות בלי להכריע, לשאול שאלות מנחות ולהסביר את העיקרון.\n"
+        "- הכלל הזה מגן על התשובה — לא על התוכן. לסכם או לחזור על חומר שהתלמיד/ה כבר נחשף/ה אליו — סרטון שנצפה, קטע שנקרא, הסבר שניתן — זה סיוע לגיטימי ונדרש, ואין לסרב לו. כשמבקשים סיכום — סכם/י מה הוצג, והשמט/י רק את ההכרעה בין האפשרויות של השאלה הפתוחה.\n"
+        "- הכלל אוסר להכריע — לא לדון. כשהתלמיד/ה שואל/ת על אפשרות מסוימת (\"תסביר לי את תשובה ג'\") — אל תסרב/י, ואל תענה/י בנוסח חמקני כמו \"נבדוק אם היא מתאימה או לא\", שלא אומר כלום. הסבר/י מה אותה אפשרות בעצם טוענת ועל איזו אידיאה היא נשענת, ותנ/י לתלמיד/ה בדיקה קונקרטית שאפשר להפעיל עליה לבד. השמט/י רק את הפסיקה: אל תאמר/י שהיא נכונה או שגויה, ואל תרמז/י לכך דרך פסילה של האחרות.\n"
         "- דבר חם, מכבד, לא ילדותי, קצר (1–3 משפטים).\n"
         "- פנייה דקדוקית: אם התלמיד/ה כתב/ה על עצמו/ה בלשון זכר או נקבה — פנה באותה צורה בעקביות לאורך כל השיחה. אם עוד לא ברור, השתמש בניסוחים ניטרליים (\"אפשר לנסות\", \"בוא נבדוק יחד\") — לעולם אל תערבב צורות באותה הודעה.\n"
         "- התאם את דרך ההסבר, הקצב והניסוח לסגנון הלמידה ולהעדפות שבהקשר, בלי לתייג את התלמיד/ה ובלי לחשוף את נתוני הפרופיל.\n"
@@ -55,6 +60,9 @@ COACH_INSTRUCTIONS = {
     ),
     "ar": (
         "أنت \"يوفي\"، مرافق تعلّم لطالب/ة في الصفوف السابع–التاسع. أجب بالعربية.\n"
+        "- قاعدة عليا: لا تعطِ أبدًا الإجابة الصحيحة للسؤال الحالي — لا بصيغتها الكاملة، ولا بإعادة صياغة، ولا مجزّأة، ولا كتأكيد لتخمين، ولا حتى عند الطلب الصريح (\"أعطني الإجابة\"). ينطبق هذا على التلميح وعلى الشرح المفصّل معًا. إذا طُلبت الإجابة — ارفض بدفء في جملة واحدة، واذكر أن قيمتها في الوصول إليها بالنفس، ثم اقترح فورًا خطوة التفكير التالية. المسموح والمستحسن: التوجيه، والمقارنة بين الخيارات دون الحسم، وطرح أسئلة موجّهة، وشرح المبدأ.\n"
+        "- هذه القاعدة تحمي الإجابة لا المحتوى. تلخيص أو مراجعة مادة سبق أن عُرضت على المتعلّم — فيديو شاهده، أو نص قرأه، أو شرح سبق تقديمه — هو دعم مشروع ومطلوب ولا يجوز رفضه. عند طلب تلخيص، لخّص ما عُرض واحجب فقط الحسم بين خيارات السؤال المفتوح.\n"
+        "- القاعدة تمنع الحسم لا النقاش. إذا سأل الطالب/ة عن خيار محدّد (\"اشرح لي الإجابة ج\") — لا ترفض، ولا تردّ بصيغة مراوغة مثل \"لنفحص إن كان مناسبًا أم لا\"، فهي لا تقول شيئًا. اشرح ما يدّعيه ذلك الخيار وعلى أيّ فكرة يستند، ثمّ اعطِ الطالب/ة اختبارًا ملموسًا يطبّقه عليه بنفسه. احجب الحكم فقط: لا تقل إنّه صحيح أو خاطئ، ولا تلمّح إلى ذلك بإقصاء بقية الخيارات.\n"
         "- تحدّث بدفء واحترام، بإيجاز (١–٣ جمل)، وليس بأسلوب طفولي.\n"
         "- المخاطبة النحوية: إذا كتب الطالب/ة عن نفسه بصيغة المذكر أو المؤنث فخاطبه بالصيغة نفسها باتساق طوال المحادثة؛ وإن لم يتضح بعد فاستخدم صياغات محايدة، ولا تخلط الصيغ في الرسالة الواحدة.\n"
         "- كيّف طريقة الشرح والوتيرة والصياغة مع أسلوب التعلّم والتفضيلات في السياق، دون تصنيف الطالب/ة أو كشف بيانات الملف.\n"
@@ -80,6 +88,9 @@ COACH_INSTRUCTIONS = {
     ),
     "en": (
         "You are \"Yuvi\", a learning companion for a grade 7–9 student. Answer in English.\n"
+        "- OVERRIDING RULE: never give the correct answer to the current question — not in full, not reworded, not in pieces, not as confirmation of a guess, and not when asked outright (\"just tell me the answer\"). This holds for hints and for detailed explanations alike. If the answer is demanded, warmly decline in one sentence, say the value is in reaching it themselves, and immediately offer the next thinking step. Allowed and encouraged: guiding, weighing the options against each other without settling it, asking leading questions, and explaining the principle.\n"
+        "- That rule protects the ANSWER, not the CONTENT. Summarising or recapping material the learner has already been shown — a video they watched, a passage they read, an explanation already given — is legitimate, needed support and must never be refused. When a summary is asked for, summarise what was presented and withhold only the decision between the open question's options.\n"
+        "- The rule forbids a VERDICT, not a DISCUSSION. When the learner asks about one specific option (\"explain option C\"), do not refuse, and never answer with an evasion like \"let's check whether it fits or not\" — that says nothing. Explain what that option actually claims and which idea it rests on, then hand the learner a concrete test they can apply to it themselves. Withhold only the verdict: never say the option is right or wrong, and never imply it by eliminating the others.\n"
         "- Be warm, respectful, concise (1–3 sentences), not childish.\n"
         "- Adapt explanation format, pacing, and phrasing to the learning style and preferences in context, without labeling the learner or exposing profile data.\n"
         "- Use strengths and interests only when relevant; do not force a personal detail into every answer.\n"
@@ -91,6 +102,8 @@ COACH_INSTRUCTIONS = {
         "- student_description, mastery_stance, and coaching_hints guide how to approach and phrase things — apply them quietly, never quote or reveal them.\n"
         "- Use recent events and challenges to choose a small step, suitable depth, or alternate representation; never invent success, difficulty, or progress.\n"
         "- current_screen identifies the learner's present screen. For questions about 'this screen', an open task, goals, or performance, answer only from learner-visible context; if the fact is absent, say you cannot currently see it.\n"
+        "- WHAT IS IN FRONT OF THEM RIGHT NOW is current_screen_kind + current_screen_title + current_screen_stage (and current_screen_chosen_path when they picked a path). Answer 'what is here / what am I seeing / what do I do now' from those FIRST.\n"
+        "- current_question_status governs the question: when it is 'not_yet_reached_still_on_the_medium' the learner has NOT got to that question yet — describe the video, reading or activity they are actually on, and never present that question as the current task or hint at its content. When it is 'no_question_on_this_screen', this screen teaches rather than asks.\n"
         "- On a repeated difficulty or misconception, offer a different representation or a focused hint — don't give the answer immediately.\n"
         "- If the student is frustrated, encourage, normalize the difficulty, offer a small step.\n"
         "- personalization_gaps lists what is not yet known about this learner. At a natural moment — especially when an explanation isn't landing or frustration shows — weave in ONE short question to learn it (e.g., \"tell me something you're into and I'll explain through it\"). At most one such question per conversation, never an interrogation; the answer will be remembered.\n"
@@ -178,20 +191,100 @@ PROACTIVE_PROMPTS = {
     # server-side to stay silent when there is no current question (intro/cover
     # frame), so it only ever speaks on a real question.
     "question_intro": {
-        "he": "התלמיד/ה הגיע/ה לשאלה חדשה. הצג/י אותה בקצרה ובחום ב-1–2 משפטים — במה היא עוסקת או מה מבקשים למצוא — בלי לפתור, בלי לחשוף את התשובה ובלי להמציא נתונים. סיים/י בשאלה קצרה או בהצעת עזרה (למשל: \"רוצה שנתחיל יחד?\").",
-        "ar": "وصل/ت الطالب/ة إلى سؤال جديد. قدّم/يه باختصار ودفء في جملة أو جملتين — عمّ يدور أو ما المطلوب إيجاده — دون حلّه أو كشف الإجابة أو اختلاق بيانات. اختم/ي بسؤال قصير أو عرض للمساعدة (مثل: \"هل نبدأ معًا؟\").",
-        "en": "The learner has arrived at a new question. Introduce it warmly in 1–2 sentences — what it's about or what it asks to find — without solving it, revealing the answer, or inventing data. End with a short question or an offer to help (e.g., \"want to start together?\").",
+        "he": "התלמיד/ה הגיע/ה לשאלה חדשה. הצג/י אותה בקצרה ובחום ב-1–2 משפטים — במה היא עוסקת או מה מבקשים למצוא — בלי לפתור, בלי לחשוף את התשובה ובלי להמציא נתונים. סיים/י בשאלה קצרה או בהצעת עזרה (למשל: \"רוצה שנתחיל יחד?\"). "
+               "אם current_question_part מראה שזה לא הסעיף הראשון במסך (למשל 3/4) — הלומד/ת כבר נמצא/ת כאן וכבר קיבל/ה הצגה של המסך: אל תחזור/י על מה המסך כולו עוסק ואל תפתח/י כאילו הול/ה הגיע/ה. במקום זה התייחס/י לסעיף הזה בלבד — מה הוא מוסיף או מבקש עכשיו — ונסח/י את זה כהמשך של מה שכבר עשו (למשל \"עכשיו בסעיף השלישי…\"). "
+               "current_screen_parts מראה את כל סעיפי המסך (הנוכחי מסומן ב-*). הנתונים של המסך — מספרים, שמות, תיאור הניסוי — מופיעים בדרך כלל רק בסעיף הראשון, אבל הלומד/ת רואה אותם על המסך גם עכשיו. השתמש/י בהם כדי לדבר קונקרטית. "
+               "אסור להסתפק בניסוח כללי שמתאים לכל שאלה (\"צריך לברר מה השאלה מבקשת\", \"נתחיל מהנתון המרכזי\"). המשפט חייב לנקוב בדבר מסוים מהמסך — הנושא, הנתון או ההחלטה שצריך לקבל — כך שלא יוכל להתאים לשאלה אחרת.",
+        "ar": "وصل/ت الطالب/ة إلى سؤال جديد. قدّم/يه باختصار ودفء في جملة أو جملتين — عمّ يدور أو ما المطلوب إيجاده — دون حلّه أو كشف الإجابة أو اختلاق بيانات. اختم/ي بسؤال قصير أو عرض للمساعدة (مثل: \"هل نبدأ معًا؟\"). "
+               "إذا أظهر current_question_part أنّه ليس الفرع الأول في الشاشة (مثل 3/4) — فالطالب/ة هنا منذ قليل وقد تلقّى تقديمًا للشاشة: لا تعد/ي شرح موضوع الشاشة كلّها ولا تفتح/ي كأنّه وصل للتوّ. بل تحدّث/ي عن هذا الفرع وحده — ما يضيفه أو يطلبه الآن — وصغ/ي ذلك كامتداد لما أنجزوه (مثل \"الآن في الفرع الثالث…\"). "
+               "يعرض current_screen_parts جميع فروع الشاشة (الحالي معلّم بـ*). معطيات الشاشة — الأرقام والأسماء ووصف التجربة — ترد عادة في الفرع الأوّل فقط، لكنّ الطالب/ة يراها على الشاشة الآن أيضًا. استخدم/ي ها لتتحدّث بشكل ملموس. "
+               "ممنوع الاكتفاء بصياغة عامّة تصلح لأيّ سؤال (\"لنعرف ما يطلبه السؤال\"، \"لنبدأ من المعطى المركزي\"). يجب أن تذكر الجملة شيئًا محدّدًا من الشاشة — الموضوع أو المعطى أو القرار المطلوب — بحيث لا تصلح لسؤال آخر.",
+        "en": "The learner has arrived at a new question. Introduce it warmly in 1–2 sentences — what it's about or what it asks to find — without solving it, revealing the answer, or inventing data. End with a short question or an offer to help (e.g., \"want to start together?\"). "
+               "If current_question_part shows this is NOT the first part of the screen (e.g. 3/4), the learner has been here a while and has already had the screen introduced: do NOT restate what the whole screen is about and do NOT open as if they just arrived. Speak about THIS part only — what it adds or asks now — and phrase it as a continuation of what they have already done (e.g. \"now for the third one…\"). "
+               "current_screen_parts lists every part of the screen (the current one marked with *). A screen states its data — numbers, names, the setup of an experiment — usually in the FIRST part only, but the learner can still see it on screen now. Use it to be concrete. "
+               "Never settle for a generic line that would fit any question at all (\"let's work out what this question is asking\", \"let's start from the central piece of data\"). The sentence must name something specific from this screen — the subject, the actual data, or the decision to be made — so that it could not be mistaken for an intro to a different question.",
+    },
+    # Fires when the learner arrives at a screen that TEACHES instead of asking —
+    # a video, a reading, a simulation or a summary (`current.item.kind` is
+    # watch/read/step). `question_intro` stays silent on those (there is no
+    # question to introduce), which left the whole learning half of a component
+    # without a single word from Yuvi and without a thread in the chat.
+    "lesson_step_intro": {
+        "he": "התלמיד/ה הגיע/ה למסך לימוד — סרטון, קטע קריאה, סימולציה או סיכום (ראה/י current.item). הצג/י בקצרה ובחום ב-1–2 משפטים על מה השלב הזה, לפי informationToBot ו-current.item בלבד ובלי להמציא תוכן. אם זה סרטון — הזמן/י לצפות; אם זו קריאה או סימולציה — הזמן/י לקרוא או להתנסות. גם אם במסך הזה מופיעה בהמשך שאלה — אל תציג/י אותה עכשיו, אל תרמז/י על תשובתה ואל תבקש/י לענות; הלומד/ת עדיין בשלב הצפייה או הקריאה. סיים/י בהצעה קצרה להיות שם אם משהו לא ברור.",
+        "ar": "وصل/ت الطالب/ة إلى شاشة تعلّم — فيديو، نصّ للقراءة، محاكاة أو تلخيص (انظر/ي current.item). قدّم/ي باختصار ودفء في جملة أو جملتين عمّ تدور هذه الخطوة، اعتمادًا على informationToBot و-current.item فقط ودون اختلاق محتوى. إن كان فيديو — ادعُ/ي للمشاهدة؛ وإن كان قراءة أو محاكاة — ادعُ/ي للقراءة أو التجريب. وحتى إن ظهر في هذه الشاشة سؤال لاحقًا — لا تعرضه/ي الآن ولا تلمّح/ي إلى إجابته ولا تطلب/ي الإجابة؛ فالطالب/ة ما زال/ت في مرحلة المشاهدة أو القراءة. اختم/ي بعرض قصير للمساعدة إن لم يكن شيء واضحًا.",
+        "en": "The learner has arrived at a screen that TEACHES — a video, a reading, a simulation or a summary (see current.item). Introduce warmly in 1–2 sentences what this step is about, using informationToBot and current.item only, inventing nothing. If it is a video, invite them to watch; if it is a reading or simulation, invite them to read or try it. Even when this screen carries a question later on, do NOT present it now, do NOT hint at its answer and do NOT ask them to answer — they are still watching or reading. End with a short offer to be there if something is unclear.",
     },
     # Fires ONCE when the learner opens a lesson (the cover frame, before any
     # question) — a warm welcome grounded in what THIS lesson is about, replacing
     # the generic greeting. Grounds on `current_objective` (the unit/lesson
     # title); if that's missing it welcomes without inventing a topic.
     "lesson_welcome": {
-        "he": "התלמיד/ה נכנס/ה זה עתה לשיעור. קבל/י את פניו/ה בחום ובקצרה (1–2 משפטים): ציין/י במילים שלך על מה השיעור הזה לפי current_objective (אם חסר — קבל/י את פניו/ה בלי להמציא נושא), ואמור/י שאת/ה כאן כדי ללוות ולעזור לאורך הדרך. בלי לפתור, בלי רשימות, ובלי לפתוח בברכת הסכמה ריקה. סיים/י בהזמנה חמה להתחיל.",
-        "ar": "دخل/ت الطالب/ة للتوّ إلى الدرس. رحّب/ي به/ها بدفء وإيجاز (جملة أو جملتان): اذكر/ي بكلماتك عمّ يدور هذا الدرس وفق current_objective (إن غاب فرحّب/ي دون اختلاق موضوع)، وقل/قولي إنّك هنا للمرافقة والمساعدة على طول الطريق. دون حلّ، دون قوائم، ودون بدء بعبارة موافقة فارغة. اختم/ي بدعوة دافئة للبدء.",
-        "en": "The learner has just opened the lesson. Welcome them warmly and briefly (1–2 sentences): say in your own words what THIS lesson is about per current_objective (if it's missing, welcome them without inventing a topic), and that you're here to guide and help along the way. No solving, no lists, and don't open with an empty agreement phrase. End with a warm invitation to begin.",
+        "he": "התלמיד/ה נכנס/ה זה עתה לשיעור, וכבר נאמרה לו/ה שורת פתיחה אישית שפונה בשמו/ה ושואלת מה שלומו/ה היום — אל תברך/י שוב, אל תשאל/י שוב מה שלומו/ה ואל תשתמש/י בשמו/ה. המשך/י ישירות מאותה שורה, בחום ובקצרה (1–2 משפטים): ציין/י במילים שלך על מה השיעור הזה לפי current_objective (אם חסר — המשך/י בלי להמציא נושא), ואמור/י שאת/ה כאן כדי ללוות ולעזור לאורך הדרך. בלי לפתור, בלי רשימות, ובלי לפתוח בברכת הסכמה ריקה. סיים/י בהזמנה חמה להתחיל — ובאופן שמשאיר מקום לענות קודם על שאלת \"מה שלומך\", אם הוא/היא רוצה.",
+        "ar": "دخل/ت الطالب/ة للتوّ إلى الدرس، وقد قيلت له/ها سطر افتتاحيّ شخصيّ يناديه/ها باسمه/ها ويسأل عن حاله/ها اليوم — لا ترحّب/ي مجدّدًا، ولا تسأل/ي مرّة أخرى عن حاله/ها، ولا تستخدم/ي اسمه/ها. تابع/ي مباشرة من ذلك السطر بدفء وإيجاز (جملة أو جملتان): اذكر/ي بكلماتك عمّ يدور هذا الدرس وفق current_objective (إن غاب فتابع/ي دون اختلاق موضوع)، وقل/قولي إنّك هنا للمرافقة والمساعدة على طول الطريق. دون حلّ، دون قوائم، ودون عبارة موافقة فارغة. اختم/ي بدعوة دافئة للبدء تترك مجالًا للردّ أوّلًا على سؤال \"كيف حالك\" إن أراد/ت.",
+        "en": "The learner has just opened the lesson and has ALREADY been greeted by name and asked how they are today — do not greet again, do not ask how they are again, and do not use their name. Continue straight on from that line, warmly and briefly (1–2 sentences): say in your own words what THIS lesson is about per current_objective (if it's missing, continue without inventing a topic), and that you're here to guide and help along the way. No solving, no lists, no empty agreement phrase. End with a warm invitation to begin that still leaves room for them to answer the \"how are you\" first, if they want to.",
     },
 }
+
+# The one line in the whole companion that says the learner's own name.
+#
+# §4.4 keeps `identity.display_name` out of every AI prompt, and it stays out:
+# this text is composed HERE and streamed to the panel, so the name reaches the
+# learner without ever reaching the model. Kept as data (not a prompt) for the
+# same reason — a model asked to "greet them by name" would need the name.
+WELCOME_GREETING = {
+    "he": {"named": "היי {name}! שמח לראות אותך. מה שלומך היום?",
+           "plain": "היי! שמח לראות אותך. מה שלומך היום?"},
+    "ar": {"named": "أهلًا {name}! سعيد برؤيتك. كيف حالك اليوم؟",
+           "plain": "أهلًا! سعيد برؤيتك. كيف حالك اليوم؟"},
+    "en": {"named": "Hi {name}! Good to see you. How are you doing today?",
+           "plain": "Hi! Good to see you. How are you doing today?"},
+}
+
+
+async def welcome_greeting(learner_id: str, lang: str) -> str:
+    """The personal opening line of a lesson welcome, by name where we have one.
+
+    Falls back to the nameless form rather than to a placeholder: "היי תלמיד/ה"
+    is worse than a plain "היי", and guessing a name is not an option.
+    """
+    forms = WELCOME_GREETING.get(lang) or WELCOME_GREETING["he"]
+    raw = ""
+    try:
+        from app.brain.repository import get_brain
+        # The teacher's roster name first (set when the learner was mapped),
+        # then the account's own — either is the learner's real name.
+        raw = ((await get_brain(learner_id)).get("identity") or {}).get("display_name") or ""
+        if not raw:
+            from app.auth.repository import get_user_by_id
+            raw = ((await get_user_by_id(learner_id)) or {}).get("display_name") or ""
+    except Exception:  # a welcome must never fail on the name
+        raw = ""
+    # First name only — the panel is a conversation, not a register.
+    name = str(raw).strip().split(" ")[0][:24]
+    return forms["named"].format(name=name) if name else forms["plain"]
+
+# What the learner is looking at, by the item's `mediaFormat` (720 closed list).
+# Applied to every mode: a hint on a video screen should say "in the clip", and an
+# intro should invite watching — the coach used to describe every screen as if it
+# were a block of text with a question under it.
+MEDIA_AWARENESS = {
+    "video": {
+        "he": "המסך הנוכחי כולל סרטון. התייחס/י לצפייה בו כחלק מהלמידה (למשל להציע לצפות או לחזור לקטע רלוונטי), ואל תתאר/י תוכן מהסרטון שלא נמסר לך.",
+        "ar": "الشاشة الحالية تتضمّن فيديو. تعامل/ي مع المشاهدة كجزء من التعلّم (مثلًا اقتراح المشاهدة أو العودة إلى مقطع ذي صلة)، ولا تصف/ي محتوى من الفيديو لم يُعطَ لك.",
+        "en": "The current screen carries a video. Treat watching it as part of the learning (e.g. suggest watching, or returning to a relevant part), and do not describe video content you were not given.",
+    },
+    "audio": {
+        "he": "המסך הנוכחי כולל קטע שמע. התייחס/י להאזנה כחלק מהלמידה, ואל תתאר/י תוכן שלא נמסר לך.",
+        "ar": "الشاشة الحالية تتضمّن مقطعًا صوتيًا. تعامل/ي مع الاستماع كجزء من التعلّم، ولا تصف/ي محتوى لم يُعطَ لك.",
+        "en": "The current screen carries audio. Treat listening as part of the learning, and do not describe content you were not given.",
+    },
+    "animation": {
+        "he": "המסך הנוכחי כולל אנימציה. התייחס/י לצפייה בה כחלק מהלמידה, ואל תתאר/י תוכן שלא נמסר לך.",
+        "ar": "الشاشة الحالية تتضمّن رسمًا متحرّكًا. تعامل/ي مع المشاهدة كجزء من التعلّم، ولا تصف/ي محتوى لم يُعطَ لك.",
+        "en": "The current screen carries an animation. Treat watching it as part of the learning, and do not describe content you were not given.",
+    },
+}
+
 
 SUPPORT_PROMPTS = {
     "hint": {
@@ -317,6 +410,56 @@ async def generate_conversation_title(
     return candidate, "model"
 
 
+def _question_status(current: dict) -> str:
+    """Whether the question on this screen is the thing in front of the learner.
+
+    A screen can hold a medium and a question at once, and the question may come
+    LATER within it. `reached=False` means the learner is still on the medium —
+    the coach must describe that, not the question waiting behind it.
+    """
+    question = current.get("question") or {}
+    if not (question.get("text") or "").strip():
+        return "no_question_on_this_screen"
+    return "reached" if question.get("reached") else "not_yet_reached_still_on_the_medium"
+
+
+def _question_part(current: dict) -> str:
+    """Which סעיף of a SHARED screen the learner is on, as "3/4".
+
+    A screen often carries several parts of one question — the targets screen
+    holds four. Without this the arrival intro described the whole screen every
+    time a part changed, so a learner already on the third part was greeted with
+    "this question is about accuracy and reliability through 4 targets", as
+    though they had just walked in.
+
+    "—" whenever the screen holds a single question: announcing "1/1" would
+    invent a structure the learner cannot see on screen.
+    """
+    question = current.get("question") or {}
+    total = question.get("part_total")
+    position = question.get("part")
+    if not total or not position or total < 2:
+        return "—"
+    return f"{position}/{total}"
+
+
+def _screen_parts(current: dict) -> str:
+    """Every part of a shared screen, so a later part is not read in isolation.
+
+    A multi-part screen states its data once, usually in the first part. Given
+    only the current part, the coach could not see the numbers the learner is
+    looking at and fell back on filler that fit any question. Listing the parts —
+    text only, current one marked — makes the whole screen visible.
+    """
+    parts = (current.get("question") or {}).get("screen_parts") or []
+    if len(parts) < 2:
+        return "—"
+    return " | ".join(
+        f"[{part.get('part')}{'*' if part.get('current') else ''}] {part.get('text')}"
+        for part in parts
+    )
+
+
 def _render_context(bundle: dict) -> str:
     """Render the non-identifying bundle as delimited DATA (not instructions).
 
@@ -360,6 +503,27 @@ def _render_context(bundle: dict) -> str:
         f"current_objective: {current.get('objective_title') or '—'}",
         f"current_pace: {current.get('pace') or '—'}",
         f"recent_learning_evidence: {recent}",
+        # WHERE THE LEARNER IS, first and in one line, because everything below
+        # is only meaningful relative to it. A screen can carry a medium AND a
+        # question (`…-01-01-003` is a video playlist with a comprehension
+        # question part-way through); handing over the question while they were
+        # still watching made Yuvi answer "what is on this screen?" by describing
+        # content they had not reached.
+        f"current_screen_kind: {(current.get('item') or {}).get('kind') or '—'}",
+        f"current_screen_title: {(current.get('item') or {}).get('title') or '—'}",
+        f"current_screen_media: {(current.get('item') or {}).get('media_format') or '—'}",
+        f"current_screen_content_type: {(current.get('item') or {}).get('content_type') or '—'}",
+        # "listening" = they chose to watch the clip, "cards" = to flip the info
+        # cards. Talk about what they actually picked, never about the other one.
+        f"current_screen_chosen_path: {(current.get('item') or {}).get('chosen_path') or '—'}",
+        # Derived from their OWN xAPI evidence, not from the catalog.
+        f"current_screen_stage: {(current.get('item') or {}).get('stage') or '—'}",
+        f"current_question_status: {_question_status(current)}",
+        # WHICH סעיף of a shared screen this is ("3/4"), or — when the screen holds
+        # only one question. The learner sees these as parts of ONE question, so
+        # a later part must not be greeted as a brand-new question.
+        f"current_question_part: {_question_part(current)}",
+        f"current_screen_parts: {_screen_parts(current)}",
         f"current_question_text: {(current.get('question') or {}).get('text') or '—'}",
         f"current_question_options: {joined((current.get('question') or {}).get('options'))}",
         # Ground truth so the coach guides accurately — it must NEVER state this
@@ -394,16 +558,31 @@ def _build_messages(instructions: str, context_block: str, history: list, user_m
     return messages
 
 
+def _coach_tier() -> LlmModelTier:
+    """Which model the learner-facing chat streams from.
+
+    The coach is the one place a learner sits and WAITS for the model, so it is
+    tuned for latency rather than depth: it does not reason over a long context,
+    it phrases a short reply from a bundle we already assembled. `strong` was
+    costing seconds per turn for that. Overridable because the speed/quality
+    trade-off is a judgement call, not a constant — set COACH_MODEL_TIER=strong
+    to put it back without a code change.
+    """
+    choice = (os.environ.get("COACH_MODEL_TIER") or "").strip().lower()
+    return "strong" if choice == "strong" else "mini"
+
+
 async def _stream_coach_model(
     messages: list[dict[str, str]], usage_context: UsageContext
 ) -> AsyncGenerator[str, None]:
     """Stream through Agent Framework without bypassing the tracked APIM lane."""
-    client = build_chat_client(usage_context, model_tier="strong", max_tokens=700)
+    tier = _coach_tier()
+    client = build_chat_client(usage_context, model_tier=tier, max_tokens=700)
     if client is None:
         async for chunk in call_llm_stream(
             messages,
             usage_context=usage_context,
-            model_tier="strong",
+            model_tier=tier,
             max_tokens=700,
         ):
             yield chunk
@@ -429,7 +608,7 @@ async def _stream_coach_model(
             async for chunk in call_llm_stream(
                 messages,
                 usage_context=usage_context,
-                model_tier="strong",
+                model_tier=tier,
                 max_tokens=700,
             ):
                 yield chunk
@@ -445,6 +624,7 @@ async def run_coach_stream(
     endpoint: str = "/api/agent/coach/stream",
     surface_context: Optional[dict] = None,
     support_mode: Optional[str] = None,
+    pinned_question_key: Optional[str] = None,
 ) -> AsyncGenerator[str, None]:
     """Stream a Coach reply (chat or proactive), Safety-gated, then persist it."""
     lang = language if language in COACH_INSTRUCTIONS else "he"
@@ -526,6 +706,7 @@ async def run_coach_stream(
         surface_context=surface_context,
         user_message=prompt_text,
         query_intent=query_intent,
+        pinned_question_key=pinned_question_key,
     )
     # A question-intro only makes sense on a real question. On the component's
     # intro/cover frame (no current question resolved) stay SILENT — yield nothing
@@ -533,6 +714,14 @@ async def run_coach_stream(
     if trigger == "question_intro":
         current_question = (bundle.get("current") or {}).get("question") or {}
         if not (current_question.get("text") or "").strip():
+            return
+    # A teaching-step intro needs something real to introduce: the item's own
+    # notes or at least its identity (title/kind). With neither, the model would
+    # be guessing what is on screen — so stay silent instead.
+    if trigger == "lesson_step_intro":
+        current = bundle.get("current") or {}
+        item = current.get("item") or {}
+        if not ((current.get("informationToBot") or "").strip() or item.get("title") or item.get("kind")):
             return
     # The EXPLICIT request language (the UI the learner is looking at right
     # now) wins; the brain's stored locale only fills in when the request
@@ -570,6 +759,14 @@ async def run_coach_stream(
     mode_instruction = QUERY_MODE_INSTRUCTIONS.get(query_intent, {})
     if mode_instruction:
         instructions = f"{instructions}\n- {mode_instruction.get(lang) or mode_instruction['he']}"
+    # Some screens carry a video or a reading BESIDE their question (`-01-01-003`
+    # is a video playlist that ends in a question). Naming what is on screen keeps
+    # the opening line true to what the learner is looking at.
+    media_note = MEDIA_AWARENESS.get(
+        str(((bundle.get("current") or {}).get("item") or {}).get("media_format") or "")
+    )
+    if media_note:
+        instructions = f"{instructions}\n- {media_note[lang]}"
 
     # A-4b tutor decision layer: classify the moment → fixed-taxonomy strategy +
     # intention → condition the generation → log the triple (teacher-explainable).
@@ -606,7 +803,24 @@ async def run_coach_stream(
             await tutor_decision.record_hint_level(learner_id, component_for_ladder, hint_level)
     messages = _build_messages(instructions, _render_context(bundle), history, prompt_text)
 
+    # Ground truth is in the prompt so the coach can guide accurately, and a
+    # prompt rule alone does not survive "just give me the answer". Every
+    # sentence is checked BEFORE it is yielded, so a reveal never reaches the
+    # client. With the question unknown it still blocks an "the answer is …"
+    # assertion, which is never a coaching move.
+    guard = answer_guard.build((bundle.get("current") or {}).get("question"))
+    blocked = False
+
     collected = ""
+    # The welcome opens with the learner's own name and a real check-in, written
+    # here rather than by the model (the name never enters a prompt — §4.4).
+    # Seeded into `collected` so the greeting is part of the stored turn: the
+    # panel reloads its history from the server, and a client-side prefix would
+    # vanish the moment it did.
+    if trigger == "lesson_welcome":
+        greeting = await welcome_greeting(learner_id, lang)
+        collected = greeting
+        yield greeting
     pending_output = ""
     sentence_count = 0
     max_sentences = 6 if support_mode == "explanation" else 3
@@ -628,6 +842,9 @@ async def run_coach_stream(
             pending_output = pending_output[boundary.end():]
             if not sentence:
                 continue
+            if guard.reveals(sentence):
+                blocked = True
+                break
             separator = " " if collected else ""
             collected += separator + sentence
             yield separator + sentence
@@ -636,12 +853,27 @@ async def run_coach_stream(
             # sentences with real content toward the brevity cap.
             if not _BARE_MARKER.fullmatch(sentence):
                 sentence_count += 1
+        if blocked:
+            break
 
-    if sentence_count < max_sentences and pending_output.strip():
+    if not blocked and sentence_count < max_sentences and pending_output.strip():
         remainder = pending_output.strip()[:1200 if support_mode == "explanation" else 600]
+        if guard.reveals(remainder):
+            blocked = True
+        else:
+            separator = " " if collected else ""
+            collected += separator + remainder
+            yield separator + remainder
+
+    # The reveal is dropped, not trimmed around: whatever followed it was built
+    # on the answer being out. The learner gets the refusal the prompt asks for,
+    # and the stored turn matches exactly what they saw.
+    if blocked:
+        print(f"🛡️ coach answer-reveal blocked (learner={learner_id}, mode={support_mode or query_intent})")
+        redirect = answer_guard.REDIRECT.get(lang) or answer_guard.REDIRECT["he"]
         separator = " " if collected else ""
-        collected += separator + remainder
-        yield separator + remainder
+        collected += separator + redirect
+        yield separator + redirect
 
     if not collected.strip():
         collected = (

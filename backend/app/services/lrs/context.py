@@ -21,6 +21,12 @@ NMM_HOMEPAGE = f"{MOE}/identity/nmm/kvutsa"
 SCHOOL_HOMEPAGE = f"{MOE}/school"
 ECAT_ITEM_BASE = f"{MOE}/ecat/item"
 
+# 720 media dictionary. The Activity type of a media object follows the media
+# kind ("סוג ה-Activity יהיה בהתאם לסוג המדיה"). Anything outside the dictionary
+# stays `item`: inventing an activity IRI the ministry does not publish is a
+# worse failure than a generic-but-valid one.
+MEDIA_ACTIVITY_TYPES = {"video": "video", "audio": "audio", "animation": "animation"}
+
 
 def verb(slug: str) -> dict[str, Any]:
     return {"id": f"{VERB}/{slug}"}

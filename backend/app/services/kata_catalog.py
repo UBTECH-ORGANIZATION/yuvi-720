@@ -207,6 +207,222 @@ def questions_for_item(
     return (component.get("questions_by_item") or {}).get(item_id) or []
 
 
+def default_question_id(
+    component_id: Optional[str], item_id: Optional[str]
+) -> Optional[str]:
+    """The question a learner is on when the event names a screen but no question.
+
+    Kata's `initialized` carries the screen only, so `current_state.question_id`
+    stayed None until the first `answered` — which re-keyed the SAME question
+    mid-way (`…|item|` → `…|item|q1`) and split its chat thread in two. When the
+    screen holds exactly one question there is no ambiguity, so we resolve it
+    here and the key is stable from arrival. With two sub-questions on one screen
+    (סעיף א/ב) it stays None: guessing which one would be worse than waiting.
+    """
+    questions = questions_for_item(component_id, item_id)
+    if len(questions) != 1:
+        return None
+    return questions[0].get("questionId") or None
+
+
+def question_item_ordinals(component_id: Optional[str]) -> dict[str, int]:
+    """Map each QUESTION to the question number the LEARNER sees on screen.
+
+    The content numbers by SCREEN, not by sub-question. Measured 29/07 on
+    `…-01-02`: item `-001` is titled "בסיסי 1: זיהוי תוצאה חריגה (2 סעיפים)" and
+    the player's own nav shows three tabs — שאלה 1 / שאלה 2 / שאלה 3 — one per
+    item. Numbering every sub-question consecutively made the chat caption the
+    second סעיף of שאלה 1 as "שאלה 2", and then item `-002` (the content's שאלה
+    2) as "שאלה 3": from the learner's seat the companion was one question ahead
+    of the screen for the rest of the component. Same drift on `…-01-05`, where
+    the content says "שאלת השיא… יש בה ארבעה סעיפים" — ONE question — and we
+    labelled the parts "שאלה 1" through "שאלה 4".
+
+    So an item is one question number, and the parts inside it are סעיפים
+    (see :func:`question_part_indexes`). Keyed by ``item|question`` as well as by
+    bare ``item``, because a message can be stored before the question resolves.
+    """
+    component = get_component(component_id) if component_id else None
+    if not component:
+        return {}
+    by_item = component.get("questions_by_item") or {}
+    ordinals: dict[str, int] = {}
+    position = 0
+    for item_id, questions in by_item.items():
+        if not questions:
+            continue
+        position += 1
+        ordinals[item_id] = position
+        for question in questions:
+            question_id = question.get("questionId")
+            if question_id:
+                ordinals[f"{item_id}|{question_id}"] = position
+    return ordinals
+
+
+def question_part_indexes(component_id: Optional[str]) -> dict[str, int]:
+    """1-based סעיף index for questions that SHARE a screen.
+
+    Only populated where a screen really does hold several parts — a
+    single-question screen has no part to name, and captioning it "סעיף א" would
+    invent a structure the learner cannot see.
+    """
+    component = get_component(component_id) if component_id else None
+    if not component:
+        return {}
+    parts: dict[str, int] = {}
+    for item_id, questions in (component.get("questions_by_item") or {}).items():
+        questions = questions or []
+        if len(questions) < 2:
+            continue
+        for index, question in enumerate(questions, start=1):
+            question_id = question.get("questionId")
+            if question_id:
+                parts[f"{item_id}|{question_id}"] = index
+    return parts
+
+
+def non_question_items(component_id: Optional[str]) -> list[str]:
+    """Screens the component teaches on but never asks a question about.
+
+    Kata reports these as ordinary items (`…-01-04-006` carries teaching notes
+    and no question), and the chat must not caption a thread about one of them
+    with a question number it does not have. Read from the item spine when the
+    snapshot carries one (authoritative — it lists EVERY screen, including a
+    video with neither questions nor bot notes); the `information_by_item` scan
+    stays as the fallback for older snapshots.
+    """
+    component = get_component(component_id) if component_id else None
+    if not component:
+        return []
+    by_item = component.get("questions_by_item") or {}
+    items = component.get("items") or []
+    if items:
+        return [row["id"] for row in items if not row.get("question_count")]
+    prefix = f"{component.get('id') or component_id}-"
+    return [
+        key for key in (component.get("information_by_item") or {})
+        if key not in by_item and str(key).startswith(prefix)
+    ]
+
+
+# What KIND of screen a learner is standing on. `question` screens ask something
+# (and are numbered "שאלה N"); the rest teach, and the chat/coach must treat them
+# as a learning step — Yuvi introduces the step instead of introducing a question
+# that does not exist. Media buckets follow the 720 `mediaFormat` list.
+_WATCH_MEDIA = {"video", "audio", "animation"}
+_READ_MEDIA = {"text", "image", "presentation"}
+
+
+def item_profiles(component_id: Optional[str]) -> list[dict[str, Any]]:
+    """Ordered per-screen spine: id, title, content/media type, question count.
+
+    Falls back to synthesizing rows from `questions_by_item` /
+    `information_by_item` when the snapshot predates the item spine, so callers
+    never have to branch on snapshot age.
+    """
+    component = get_component(component_id) if component_id else None
+    if not component:
+        return []
+    rows = component.get("items") or []
+    if rows:
+        return [dict(row) for row in rows]
+    by_item = component.get("questions_by_item") or {}
+    prefix = f"{component.get('id') or component_id}-"
+    ids = sorted(
+        {key for key in by_item}
+        | {
+            key for key in (component.get("information_by_item") or {})
+            if str(key).startswith(prefix)
+        }
+    )
+    return [
+        {
+            "id": item_id,
+            "title": "",
+            "content_type": "",
+            "media_format": "",
+            "question_count": len(by_item.get(item_id) or []),
+        }
+        for item_id in ids
+    ]
+
+
+def plays_media(row: dict[str, Any]) -> bool:
+    """True when this screen carries something the learner watches or listens to
+    — regardless of whether it also asks a question."""
+    return str(row.get("media_format") or "") in _WATCH_MEDIA
+
+
+def kind_for_row(row: dict[str, Any]) -> str:
+    """What the screen IS: `watch` | `read` | `question` | `step`.
+
+    MEDIA WINS over "it also asks". `…-01-01-003` is a video playlist with a
+    comprehension question inside it — the learner spends that screen watching,
+    and calling it "שאלה 3" while the clip is playing describes something they
+    are not doing yet. Whether a screen ASKS is a separate fact (`question_count`),
+    and that is what gates the hint/explanation buttons and the numbering.
+    """
+    media = str(row.get("media_format") or "")
+    if media in _WATCH_MEDIA:
+        return "watch"
+    if media in _READ_MEDIA:
+        return "read"
+    if row.get("question_count"):
+        return "question"
+    return "step"
+
+
+def item_kind(component_id: Optional[str], item_id: Optional[str]) -> str:
+    """`question` | `watch` | `read` | `step` — empty when the screen is unknown."""
+    if not item_id:
+        return ""
+    for row in item_profiles(component_id):
+        if row.get("id") == item_id:
+            return kind_for_row(row)
+    return ""
+
+
+def next_item_if_watchable(
+    component_id: Optional[str], current_item_id: Optional[str]
+) -> Optional[str]:
+    """The next screen, but only when it is the one that plays media.
+
+    Kata reports `played`/`paused` against the component with no screen id, and
+    its `initialized` for the video screen can arrive long after the video starts
+    (or not at all). This is the narrowest safe reading of that signal: playback
+    while standing on a screen that has no media of its own, with the very next
+    screen being a video/audio/animation, means the learner has moved onto it.
+    Returns None whenever anything about that is uncertain — including when the
+    current screen itself plays, where the playback needs no explanation.
+    """
+    if not component_id or not current_item_id:
+        return None
+    rows = item_profiles(component_id)
+    for index, row in enumerate(rows):
+        if row.get("id") != current_item_id:
+            continue
+        # Media, not kind: `…-01-01-003` plays a clip AND asks about it, so it is
+        # a question screen that nonetheless is the one playing.
+        if plays_media(row):
+            return None                      # this screen's own media is playing
+        following = rows[index + 1] if index + 1 < len(rows) else None
+        if following and plays_media(following):
+            return following.get("id")
+        return None
+    return None
+
+
+def item_profile(component_id: Optional[str], item_id: Optional[str]) -> dict[str, Any]:
+    """One screen's profile plus its resolved `kind` (empty dict when unknown)."""
+    if not item_id:
+        return {}
+    for row in item_profiles(component_id):
+        if row.get("id") == item_id:
+            return {**row, "kind": item_kind(component_id, item_id)}
+    return {}
+
+
 # ── Player-screen → catalog-item reconciliation ──────────────────────────────
 # Kata's PLAYER numbers the screens it reports over xAPI with a leading-cover
 # offset: the first interactive screen is object `…-002`, not `…-001`. Kata's
@@ -226,6 +442,8 @@ def questions_for_item(
 import re as _re
 
 _ITEM_SUFFIX_RE = _re.compile(r"-(\d+)$")
+# How many leading cover frames the ordinal anchor is allowed to assume.
+_MAX_COVER_OFFSET = 2
 
 
 def _item_suffix(item_id: Optional[str]) -> Optional[int]:
@@ -249,7 +467,8 @@ def resolve_catalog_item_id(
     catalog_ids = list(qbi.keys())
     catalog_suffix = {cid: _item_suffix(cid) for cid in catalog_ids}
 
-    # 1. EXACT anchor: a question id owned by exactly one catalog item.
+    # 1. EXACT anchor: a question id owned by exactly one catalog item. Real
+    #    evidence about WHICH question was answered outranks the id itself.
     if question_id:
         q = question_id.lower()
         owners = [
@@ -259,18 +478,41 @@ def resolve_catalog_item_id(
         if len(owners) == 1:
             return owners[0]
 
-    # 2. Ordinal anchor: earliest visited player screen == earliest catalog item.
+    # 2. The id IS a screen of this component — take it at face value.
+    #
+    # Measured on a real session (28/07, learner on `…-01-01`): every event the
+    # player sent carried a screen id that exists in the catalog (`-001`…`-005`,
+    # runtime == catalog), so this component has NO cover offset. The ordinal
+    # anchor below still fired whenever a SESSION happened to start on `-002`
+    # (min seen 2, min catalog 1 → offset 1) and rewrote four of that session's
+    # events one screen back — which is what put Yuvi's reply on the previous
+    # question's thread and produced two threads captioned "שאלה 3". Guessing
+    # against an id the catalog recognizes is how that happened; the ordinal
+    # anchor below is for ids the catalog does NOT know.
+    known_ids = {row.get("id") for row in (component.get("items") or [])} or set(catalog_ids)
+    if runtime_item_id in known_ids:
+        return runtime_item_id
+
+    # 3. Ordinal anchor: earliest visited player screen == earliest catalog item.
     runtime_suffix = _item_suffix(runtime_item_id)
     valid_catalog = {c: s for c, s in catalog_suffix.items() if s is not None}
     if runtime_suffix is not None and valid_catalog:
         seen = [s for s in (_item_suffix(x) for x in (seen_item_ids or [])) if s is not None]
         seen.append(runtime_suffix)
         offset = min(seen) - min(valid_catalog.values())
-        target = runtime_suffix - offset
-        for cid, s in valid_catalog.items():
-            if s == target:
-                return cid
+        # "Earliest seen == earliest catalog item" only holds while the learner
+        # actually started at the beginning. It does NOT hold when they resume
+        # mid-component (the spec REQUIRES resuming where they left off) or land
+        # on a late screen — there the rule silently rewound them by however far
+        # in they were (observed: arriving at the video `…-01-04-006` stored
+        # `…-001`, five screens back). A leading cover is one frame, maybe two;
+        # anything larger is not a cover, so the id is taken at face value.
+        if 0 <= offset <= _MAX_COVER_OFFSET:
+            target = runtime_suffix - offset
+            for cid, s in valid_catalog.items():
+                if s == target:
+                    return cid
 
-    # 3. Give up gracefully — keep the runtime id (identity may already be right
+    # 4. Give up gracefully — keep the runtime id (identity may already be right
     #    for a 0-offset component; a wrong-but-present id is no worse than before).
     return runtime_item_id

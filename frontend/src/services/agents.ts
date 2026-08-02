@@ -311,6 +311,11 @@ export function streamCompetencyChat(
   }, handlers)
 }
 
+/** Silence that means a learner-facing stream has died rather than paused. The
+ * inline visual render is the long legitimate gap (planner + manim + encode), so
+ * this sits well beyond it: crossing it means nothing is coming. */
+const STREAM_STALL_MS = 120_000
+
 export function streamCoach(
   message: string,
   language: string,
@@ -321,7 +326,8 @@ export function streamCoach(
   return streamAgent(
     '/api/agent/coach/stream',
     { conversation_id: conversationId, message, language, surface },
-    handlers
+    handlers,
+    STREAM_STALL_MS,
   )
 }
 
@@ -330,11 +336,15 @@ export function streamProactive(
   language: string,
   handlers: CoachStreamHandlers,
   conversationId: string = 'default',
-  surface: CoachSurfaceContext = { screen: 'unknown' }
+  surface: CoachSurfaceContext = { screen: 'unknown' },
+  /** The question this nudge is ABOUT. Kata advances the screen the moment an
+   *  answer lands, so without this the server composes the praise from the NEXT
+   *  question's content — describing something the learner has not seen yet. */
+  questionKey?: string | null,
 ): Promise<void> {
   return streamAgent(
     '/api/agent/coach/proactive',
-    { conversation_id: conversationId, trigger, language, surface },
+    { conversation_id: conversationId, trigger, language, surface, question_key: questionKey || null },
     handlers,
     // Proactive nudges and question intros are a few short sentences of text —
     // no inline visual render, so tokens arrive within ~1s of each other. If the
@@ -354,6 +364,32 @@ export interface CoachSupportState {
   question_key: string
   hint_used: boolean
   explanation_used: boolean
+  /** `item|question` (and bare `item`) → its 1-based question number in this
+   * component, from the catalog. Lets the chat title a thread with the number
+   * the learner sees. Absent when the catalog has no snapshot. */
+  question_ordinals?: Record<string, number>
+  /** `item|question` → its 1-based סעיף index, only for shared screens. */
+  question_parts?: Record<string, number>
+  /** Screens that teach without asking anything — captioned as a step, never
+   * as "question N". */
+  teaching_items?: string[]
+  /** Every screen of the component with its kind, in learner order. A component
+   * is a sequence of פריטים and only some of them ask something — this is how
+   * the chat knows a screen is a video or a reading rather than a question. */
+  items?: LessonItemProfile[]
+  question_total?: number
+}
+
+/** `question` asks something; `watch` is video/audio/animation; `read` is
+ * text/image/presentation; `step` is anything else that teaches (simulation…). */
+export type LessonItemKind = 'question' | 'watch' | 'read' | 'step'
+
+export interface LessonItemProfile {
+  id: string
+  kind: LessonItemKind
+  media_format?: string
+  content_type?: string
+  question_count?: number
 }
 
 export function getCoachSupportState(
@@ -404,7 +440,13 @@ export function streamCoachSupport(
   return streamAgent(
     '/api/agent/coach/support',
     { conversation_id: conversationId, support, language, surface },
-    handlers
+    handlers,
+    // ONE worker owns Yuvi's voice, so a stream that never ends never ends the
+    // queue either: every intro, nudge and reaction behind it is stranded, and
+    // the panel looks like it has forgotten where the learner is. A hint or
+    // explanation can legitimately pause while a visual renders, so this is
+    // generous — it is a deadlock breaker, not a latency budget.
+    STREAM_STALL_MS,
   )
 }
 

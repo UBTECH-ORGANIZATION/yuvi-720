@@ -405,6 +405,15 @@ class PlacementTests(unittest.TestCase):
             #   - the formula card  -> _FORMULA_CARD_CENTER
             if "tick_values[tick_index]" in call or "3.35, 0.25" in call:
                 continue
+            # A drawing's caption is the third: it is placed with next_to()
+            # against the ASSEMBLED artwork. The solver cannot own this one,
+            # because a freehand drawing's true bounding box only exists after
+            # its strokes are fitted to `size` and clamped back onto the canvas
+            # at render time. A solved position would sit where the art was
+            # asked to go rather than where it actually landed — which is the
+            # caption-over-the-artwork overlap this replaced.
+            if "next_to(group" in call:
+                continue
             if "placed(" not in call:
                 line = body[:match.start()].count("\n") + body[:worker.index("def build(")].count("\n") + 1
                 unsolved.append(f"line ~{line}: {call.splitlines()[0]}")

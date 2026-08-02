@@ -375,6 +375,68 @@ def render(spec_path: Path, output_path: Path) -> None:
                         ])
                         parts.append(label_for(element["label"], placed(element, "label", position), color_name, 25))
 
+                elif kind == "drawing":
+                    # Freehand: an object the prop catalogue does not have.
+                    import manim as manim_ns
+
+                    from app.agents.manim_drawing import build_drawing
+
+                    x_scale, y_scale = scene_scales()
+                    shapes, placement = build_drawing(
+                        element,
+                        manim=manim_ns,
+                        color_for=lambda name: COLORS.get(name or "ink", COLORS["ink"]),
+                        to_scene=scene_point,
+                        unit=min(x_scale, y_scale),
+                    )
+                    parts.extend(shapes)
+                    group = placement.get("group")
+                    directions = placement.get("directions") or {}
+
+                    def name_drawing(text: str, slot: str) -> None:
+                        """Sit a caption OUTSIDE the artwork, on the named side."""
+                        if group is None:
+                            return
+                        caption = backed_label(str(text), np.array([0.0, 0.0, 0.0]), color_name, 25)
+                        caption.next_to(group, directions.get(slot, manim_ns.DOWN), buff=0.22)
+                        parts.append(caption)
+
+                    for slot, text in (element.get("labels") or {}).items():
+                        if text and str(slot) in directions:
+                            name_drawing(text, str(slot))
+                    if element.get("label"):
+                        name_drawing(element["label"], "bottom")
+
+                elif kind == "prop":
+                    # A composite object — balance, balloon, particles, vessel,
+                    # comparison bars. The factory returns shapes plus named
+                    # anchors; every piece of TEXT is still placed here, through
+                    # the same RTL-safe label path as the rest of the scene, so
+                    # Hebrew bidi is solved once rather than once per prop.
+                    import manim as manim_ns
+
+                    from app.agents.manim_props import build_prop
+
+                    x_scale, y_scale = scene_scales()
+                    built = build_prop(
+                        element,
+                        manim=manim_ns,
+                        color_for=lambda name: COLORS.get(name or "primary", COLORS["primary"]),
+                        to_scene=scene_point,
+                        unit=min(x_scale, y_scale),
+                    )
+                    if built is not None:
+                        shapes, anchors = built
+                        parts.extend(shapes)
+                        for slot, text in (element.get("labels") or {}).items():
+                            anchor = anchors.get(str(slot))
+                            if not text or anchor is None:
+                                continue
+                            parts.append(backed_label(
+                                str(text), placed(element, f"labels:{slot}", scene_point(anchor)),
+                                color_name, 25,
+                            ))
+
                 elif kind == "text" and element.get("label"):
                     text = element["label"]
                     if axes is None and formula_pattern.search(text):

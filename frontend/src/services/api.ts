@@ -39,7 +39,14 @@ async function request<T>(method: string, path: string, body?: unknown, init?: R
     throw new UnauthorizedError(path)
   }
   if (response.status === 403) throw new ForbiddenError(path)
-  if (!response.ok) throw new Error(`${method} ${path} failed with ${response.status}`)
+  if (!response.ok) {
+    // Carry the status on the error: callers that must distinguish an expected
+    // refusal (a 409 for a component the route has not opened) from a genuine
+    // failure should not have to parse the message to do it.
+    const failure = new Error(`${method} ${path} failed with ${response.status}`) as Error & { status: number }
+    failure.status = response.status
+    throw failure
+  }
   return response.json() as Promise<T>
 }
 

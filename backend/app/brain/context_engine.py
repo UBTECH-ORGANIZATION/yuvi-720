@@ -240,12 +240,21 @@ async def build_coach_bundle(
     surface_context: Optional[dict[str, Any]] = None,
     user_message: Optional[str] = None,
     query_intent: Optional[str] = None,
+    pinned_question_key: Optional[str] = None,
 ) -> dict[str, Any]:
     """Assemble the non-identifying Coach Context bundle (§4.4).
 
     Contains no name/PII. `informationToBot` (from the current component's
     metadata) lets the Coach give item-specific help; `recent_events` let it
     detect struggle. Content/event lookups are imported lazily to avoid cycles.
+
+    `pinned_question_key` grounds the bundle on a SPECIFIC question instead of
+    wherever the learner is standing right now. A nudge about an answer is
+    composed asynchronously, and Kata advances the screen the instant the answer
+    lands — measured 29/07 on `…-01-02`, the praise for סעיף ב of שאלה 1 was
+    written about שאלה 2's content, because by composition time the pointer had
+    already moved. Every AI claim must be traceable to what the learner actually
+    did, so the trigger's own question wins here.
     """
     from app.brain.memory import (
         active_themes,
@@ -264,6 +273,15 @@ async def build_coach_bundle(
     unit_id = get_path(brain, "current_state.unit_id")
     item_id = get_path(brain, "current_state.item_id")
     question_id = get_path(brain, "current_state.question_id")
+    if pinned_question_key:
+        # `component|item|question`, the shape `tutor_decision.support_question_key`
+        # publishes. Only override the parts the key actually names, so a partial
+        # key still falls back to the live pointer rather than blanking the screen.
+        parts = str(pinned_question_key).split("|")
+        parts += [""] * (3 - len(parts))
+        component_id = parts[0] or component_id
+        item_id = parts[1] or item_id
+        question_id = parts[2] or question_id
     resume_token = get_path(brain, "current_state.resume_token")
     pace = get_path(brain, "current_state.pace")
     component = get_component(component_id) if component_id else None
@@ -438,16 +456,127 @@ async def build_coach_bundle(
     ) or []
     current_question: dict[str, Any] = {}
     if current_questions:
-        chosen = next(
-            (q for q in current_questions if q.get("questionId") == question_id),
-            current_questions[0],
+        # Where the learner is, if we can actually find them. `located` stays
+        # None when the pointer names a question this screen does not list (or
+        # names none at all) — the TEXT still falls back to the first question so
+        # the coach has something to work with, but the POSITION must not: saying
+        # "now for the first part" when we could not locate them is asserting a
+        # fact we do not have, and the learner may well be on part 3.
+        located = next(
+            (index for index, q in enumerate(current_questions, start=1)
+             if q.get("questionId") == question_id),
+            None,
         )
+        chosen = current_questions[located - 1] if located else current_questions[0]
         current_question = {
             "text": safe_text(chosen.get("questionText"), 600),
             "type": safe_text(chosen.get("questionType"), 40),
             "options": [safe_text(a, 200) for a in (chosen.get("answers") or []) if a][:12],
             "correct": [safe_text(a, 200) for a in (chosen.get("correctAnswers") or []) if a][:12],
         }
+        # WHICH סעיף of the screen this is. A screen can hold several parts of one
+        # question (`…-01-02-001` holds two, the assessment holds four), and
+        # without this the arrival intro opened every one of them by describing
+        # the WHOLE screen again — so a learner already on part 3 was told "this
+        # question is about accuracy and reliability through 4 targets", as if
+        # they had just walked in. Position comes from the catalog's own ORDER,
+        # never from parsing the id, so `q1..qN`, `a/b/c` and `Q_07` all work.
+        # Only set when the screen really is shared: announcing "part 1 of 1"
+        # would invent structure the learner cannot see.
+        if located and len(current_questions) > 1:
+            current_question["part"] = located
+            current_question["part_total"] = len(current_questions)
+            # The OTHER parts sharing this screen, as plain text. A multi-part
+            # screen usually states its data ONCE, in the first part: `…-02-001`
+            # סעיף א lists the measurements, and סעיף ב is only "should they
+            # measure again?". Handed nothing but the current part, the coach was
+            # structurally blind to the numbers the learner is looking at, and
+            # its arrival intro degenerated into filler that fit any question at
+            # all — "let's find what this question asks, starting from the
+            # central datum", naming no datum because it had none.
+            #
+            # Text only, deliberately: options and correct answers of the OTHER
+            # parts stay out, so widening what the coach can SEE never widens
+            # what it could give away.
+            current_question["screen_parts"] = [
+                {
+                    "part": index,
+                    "text": safe_text(q.get("questionText"), 400),
+                    "current": index == located,
+                }
+                for index, q in enumerate(current_questions, start=1)
+                if safe_text(q.get("questionText"), 400)
+            ]
+
+    # The screen's own identity (title / contentType / mediaFormat / kind), so a
+    # video or teaching screen is recognizable as such and not read as "a
+    # question whose text we failed to load".
+    provider_rows = (provider_component or {}).get("items") or []
+    item_profile = next(
+        (
+            {**row, "kind": kata_catalog.kind_for_row(row)}
+            for row in provider_rows if row.get("id") == item_id
+        ),
+        None,
+    ) if provider_rows else kata_catalog.item_profile(component_id, item_id)
+    item_profile = item_profile or {}
+    current_item = {
+        # Which path the learner picked on a screen that offers two (720
+        # §Selected / learning-type: "listening" = the clip, "cards" = the info
+        # cards). Same screen either way as far as the events go, so without this
+        # the coach cannot tell what is in front of them.
+        "chosen_path": safe_text(get_path(brain, "current_state.learning_choice"), 40),
+        "kind": safe_text(item_profile.get("kind"), 20) or ("question" if current_question else ""),
+        "title": safe_text(item_profile.get("title"), 200),
+        "content_type": safe_text(item_profile.get("content_type"), 60),
+        "media_format": safe_text(item_profile.get("media_format"), 60),
+    } if item_profile else {}
+
+    # WHERE IN THE SCREEN the learner is, read from their own xAPI evidence.
+    #
+    # Knowing the screen is not enough. `…-01-01-003` is a video playlist that
+    # ALSO carries a comprehension question part-way through, and the bundle
+    # handed the coach that question in full while the learner was still on the
+    # clip. Asked "מה מופיע פה?" mid-video, Yuvi described the question about
+    # writing units — content the learner had not reached yet.
+    #
+    # The rule is deliberately content-agnostic, so it holds for any component
+    # Kata ships: a question counts as REACHED only once there is evidence the
+    # learner engaged with it. Until then, whatever medium the screen carries is
+    # what is in front of them.
+    _MEDIA_VERBS = {"played", "paused", "play", "watched", "listened"}
+    _ANSWER_VERBS = {"answered", "attempted", "scored", "completed"}
+    engaged_question = any(
+        e.get("verb") in _ANSWER_VERBS and e.get("sub_item_id") == item_id
+        for e in recent
+    ) if item_id else False
+    # Kata reports media against the COMPONENT with no screen id, so media
+    # evidence can only be matched at component scope — that is all the provider
+    # gives us (see the defect report, finding 8).
+    consuming_media = any(
+        e.get("verb") in _MEDIA_VERBS and e.get("launch") == component_id
+        for e in recent
+    ) if component_id else False
+    plays_media = bool(current_item) and current_item.get("kind") in {"watch", "read"}
+
+    if engaged_question:
+        screen_stage = "working_on_question"
+    elif plays_media and consuming_media:
+        screen_stage = "consuming_media"
+    elif plays_media:
+        screen_stage = "arrived_at_media"
+    elif current_question:
+        screen_stage = "working_on_question"
+    else:
+        screen_stage = "on_step"
+    if current_item:
+        current_item["stage"] = screen_stage
+    # A question the learner has not got to yet must not be described as "what is
+    # on screen". It stays in the bundle so a hint still lands correctly the
+    # moment they do reach it — only its STATUS changes.
+    question_reached = screen_stage == "working_on_question"
+    if current_question:
+        current_question["reached"] = question_reached
 
     interests_view = memory_interests or labels(
         get_path(brain, "profile.interests") or [], limit=6
@@ -519,6 +648,11 @@ async def build_coach_bundle(
                 900,
             ),
             "question": current_question,
+            # WHAT KIND of screen this is. A component is a sequence of פריטים,
+            # and only some of them ask something — a video, a reading or a
+            # simulation is a learning step. Without this the coach treated every
+            # screen as a question and had nothing to say on the others.
+            "item": current_item,
             "hint_ladder": get_path(brain, "current_state.hint_ladder") or {},
             "recent_events": recent_view,
             # Ids for the per-question message key (chat scoping), so a stored

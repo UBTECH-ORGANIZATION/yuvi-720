@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
 import { useCompanion, type CoachMessage } from '../providers/CompanionProvider'
 import { YuviAvatar3D } from '../features/Yuvi-studio/YuviAvatar3D'
@@ -14,7 +14,7 @@ import { rateCoachConversation, saveHelpedAttribution, type HelpMethod } from '.
 import { playCoachSpeech, stopCoachSpeech, type SpeechState } from '../services/speech'
 import { navigate, useRoute } from '../app/router'
 import { useLessonRoadmap } from '../providers/LessonRoadmapProvider'
-import { LearningRoadmap } from '../features/learning-portal/LearningRoadmap'
+import { CompanionTrack3D } from '../features/learning-portal/CompanionTrack3D'
 import 'katex/dist/katex.min.css'
 import SceneRenderer from '../features/visuals/SceneRenderer'
 import './companion.css'
@@ -27,32 +27,63 @@ interface MessageGroup {
   messages: CoachMessage[]
 }
 
+// Kata's catalog returned the first question of an item as a full object URL
+// while its `answered` event carried plain `q1`, so messages stored before that
+// was normalized server-side hold `…|<URL>` and would open a second thread for a
+// question that already has one. Reading the tail heals those threads.
+function questionPart(raw: string): string {
+  return raw.includes('/') ? raw.replace(/\/+$/, '').split('/').pop() || raw : raw
+}
 function keyParts(key: string | null | undefined): { item: string; question: string } {
   const parts = (key || '').split('|')
-  return { item: parts[1] || '', question: parts[2] || '' }
+  return { item: parts[1] || '', question: questionPart(parts[2] || '') }
 }
 
-// Group a continuous thread into per-question sections. A message merges into the
-// current section when it's the same SCREEN (item) AND either the same
-// sub-question OR one side has no concrete question yet: the arrival intro is
-// tagged `…|item|` (no qN) and is the intro FOR the first sub-question, so the
-// first answer that resolves qN joins it — a mistake on that question does NOT
-// open a new section. Two concrete sub-questions on one screen (q1 vs q2) stay
-// separate. Keyed by the first message id so a section's collapse state survives.
+// Group a thread into one section PER QUESTION — by identity, not adjacency.
+//
+// This used to merge only into the *last* group, so anything interleaved (a
+// lesson-level message with no screen, or a reply that landed late) started a
+// second section for a question that already had one. One question then read as
+// two, and the running "שאלה N" counter drifted from the lesson: a thread about
+// question 2 was headed "שאלה 4". Grouping by the screen itself means a question
+// has exactly one section no matter what arrives between its messages.
+//
+// Two concrete sub-questions on one screen (q1 vs q2, סעיף א/ב) stay separate.
+// A message tagged `…|item|` with no qN — the shape stored before the server
+// resolved the screen's question — belongs to that screen's first sub-question.
+// Keyed by the first message id so a section's collapse state survives.
 function groupByQuestion(messages: CoachMessage[]): MessageGroup[] {
   const groups: MessageGroup[] = []
+  const byItem = new Map<string, MessageGroup[]>()
   for (const m of messages) {
     const { item, question } = keyParts(m.questionKey)
-    const last = groups[groups.length - 1]
-    if (last && last.item === item && (last.question === question || !last.question || !question)) {
-      last.messages.push(m)
-      if (!last.question && question) last.question = question   // …|item| upgrades to the resolved qN
-    } else {
-      groups.push({ key: m.id, item, question, messages: [m] })
+    // Lesson-level messages (no screen) are the Introduction; they all belong
+    // together however far apart they arrive.
+    if (!item) {
+      const intro = groups.find((g) => !g.item)
+      if (intro) { intro.messages.push(m); continue }
+      const created: MessageGroup = { key: m.id, item, question: '', messages: [m] }
+      groups.push(created)
+      continue
     }
+    const siblings = byItem.get(item) || []
+    const target = question
+      ? siblings.find((g) => g.question === question || !g.question)
+      : siblings[0]
+    if (target) {
+      target.messages.push(m)
+      if (!target.question && question) target.question = question
+      continue
+    }
+    const created: MessageGroup = { key: m.id, item, question, messages: [m] }
+    groups.push(created)
+    byItem.set(item, [...siblings, created])
   }
   return groups
 }
+
+/** 720 `mediaFormat` values the learner WATCHES rather than reads. */
+const WATCHABLE = new Set(['video', 'audio', 'animation'])
 
 const FENCED_BLOCK = /```[^\n]*\n?[\s\S]*?```/g
 const SUGGESTION_KEYS = [
@@ -128,6 +159,16 @@ function ThinkingIndicator({ label }: { label: string }) {
    dir="auto" for mixed-language content. */
 export function CompanionChat() {
   const { t, direction, language } = useI18n()
+  // "שאלה 2" on its own, or "שאלה 1 · סעיף ב" when the screen holds several
+  // parts of one question. The part letters live in the locale because the
+  // sequence is language-specific (א/ב/ג vs a/b/c vs أ/ب/ج).
+  const questionLabel = useCallback((n: number, part?: number) => {
+    const label = t('companion.thread.question', { n })
+    if (!part) return label
+    const letters = (t('companion.thread.partLetters') || '').split(',').map((s) => s.trim()).filter(Boolean)
+    const letter = letters[part - 1] || String(part)
+    return `${label} · ${t('companion.thread.part', { part: letter })}`
+  }, [t])
   const {
     isOpen,
     isOpening,
@@ -151,6 +192,12 @@ export function CompanionChat() {
     send,
     requestSupport,
     supportUsed,
+    questionOrdinals,
+    questionParts,
+    teachingItems,
+    itemKinds,
+    itemMedia,
+    currentQuestionKey,
     pendingAlternative,
     openExplainer,
     closeExplainer,
@@ -190,16 +237,62 @@ export function CompanionChat() {
   // Per-question section grouping for the lesson thread (kept above the early
   // return below so hook order stays stable — Rules of Hooks).
   const messageGroups = useMemo(() => groupByQuestion(messages), [messages])
+  // "מה עזר לך?" is asked ONCE per question, under the message that congratulated
+  // them. A second success on the same question (or a later one, after they had
+  // gone on chatting) used to bring the chips back a second time, which reads as
+  // the chat forgetting it already asked.
+  const chipAnchors = useMemo(() => {
+    const firstPerQuestion = new Map<string, string>()
+    for (const m of messages) {
+      if (m.role !== 'assistant' || !m.attribution) continue
+      const key = m.attribution.questionKey || m.questionKey || ''
+      if (!firstPerQuestion.has(key)) firstPerQuestion.set(key, m.id)
+    }
+    return new Set(firstPerQuestion.values())
+  }, [messages])
   // Label each section: a group with no screen (item) is the lesson Introduction
   // (welcome); groups tied to a screen are the questions, numbered in order.
   const sections = useMemo(() => {
-    let questionNumber = 0
+    let seen = 0
     return messageGroups.map((group) => {
       const isIntro = group.item === ''
-      if (!isIntro) questionNumber += 1
-      return { group, isIntro, questionNumber }
+      if (!isIntro) seen += 1
+      // Not every screen asks something: a component can teach on a screen and
+      // move on (`…-01-04-006`). Captioning that "question N" invents a question
+      // the learner never saw, so those threads are a learning STEP instead.
+      // A screen that ASKS but is a video (`…-01-01-003`) is captioned for the
+      // medium too — the question lives inside the clip, and naming the thread
+      // "שאלה 3" while the video plays describes something not reached yet.
+      const kind = itemKinds[group.item]
+      const isTeaching = !isIntro && (kind ? kind !== 'question' : teachingItems.includes(group.item))
+      const asksNothing = !isIntro && teachingItems.includes(group.item)
+      // The lesson's own numbering wins: "שאלה 3" should mean the third question
+      // of the component, which is what the learner sees in the content. Keyed by
+      // item+question because one screen can carry several (…-01-05 holds q1–q4);
+      // the item-only key covers single-question screens. The encounter counter
+      // is a fallback for a component the catalog has no snapshot for — never the
+      // primary source, because it drifts the moment a question produces anything
+      // but exactly one section.
+      const catalogNumber = isIntro ? undefined : (
+        questionOrdinals[`${group.item}|${group.question}`] ?? questionOrdinals[group.item]
+      )
+      // The encounter counter is a fallback for a component the catalog has no
+      // snapshot for — NEVER a second opinion next to it. Numbering one thread
+      // by the catalog and the next by its position produced two threads both
+      // captioned "שאלה 3"; a thread the catalog cannot number is captioned as
+      // a step instead of being given a number that belongs to another question.
+      const hasCatalog = Object.keys(questionOrdinals).length > 0
+      const questionNumber = catalogNumber ?? (hasCatalog ? undefined : seen)
+      // Some screens hold several סעיפים of ONE question (`…-01-02-001` holds two,
+      // `…-01-05-001` holds four). Each part keeps its own thread — Yuvi opens
+      // each one — but the caption must say which סעיף of which question it is,
+      // because that is what the player's own nav shows the learner.
+      const partIndex = isIntro ? undefined : questionParts[`${group.item}|${group.question}`]
+      // A question screen can still be a video screen — the thread shows it.
+      const plays = WATCHABLE.has(itemMedia[group.item] || '')
+      return { group, isIntro, isTeaching, asksNothing, kind, questionNumber, partIndex, plays }
     })
-  }, [messageGroups])
+  }, [messageGroups, questionOrdinals, questionParts, teachingItems, itemKinds, itemMedia])
   const [sectionOverrides, setSectionOverrides] = useState<Record<string, boolean>>({})
   const bodyRef = useRef<HTMLDivElement>(null)
   const historyRef = useRef<HTMLDivElement>(null)
@@ -539,7 +632,7 @@ export function CompanionChat() {
             )}
           </div>
         )}
-        {isComplete && key && attribution && helpedChips(key, attribution)}
+        {isComplete && key && attribution && chipAnchors.has(key) && helpedChips(key, attribution)}
       </div>
     </div>
   )
@@ -561,12 +654,51 @@ export function CompanionChat() {
       )
   )
 
-  // Per-question sections for the lesson thread. Default: only the current
-  // (last) section is open; earlier ones collapse to their header. The learner
-  // can toggle any section. (messageGroups/sectionOverrides are declared with the
-  // other hooks above the early return — Rules of Hooks.)
-  const lastGroupKey = messageGroups.length ? messageGroups[messageGroups.length - 1].key : ''
-  const isSectionOpen = (g: MessageGroup) => sectionOverrides[g.key] ?? (g.key === lastGroupKey)
+  // Per-question sections for the lesson thread. Default: the section for the
+  // question the learner is ON is open; the rest collapse to their header. The
+  // learner can toggle any section. (messageGroups/sectionOverrides are declared
+  // with the other hooks above the early return — Rules of Hooks.)
+  //
+  // "Current" is the LIVE screen, not the last section in the list. Paging back
+  // in the iframe is a normal thing to do, and it used to leave the marker and
+  // the open accordion pinned to the furthest question the learner had reached —
+  // so going back showed them the wrong thread, and Yuvi's next message appeared
+  // to open a section ahead of where they were looking.
+  const liveItem = keyParts(currentQuestionKey).item
+  const liveGroup = liveItem ? messageGroups.find((g) => g.item === liveItem) : undefined
+  // Marked ONLY when a thread for the live screen exists. On a question Yuvi has
+  // not spoken about there is nothing to mark, and pointing at the newest thread
+  // instead would tell the learner they are somewhere they are not — the exact
+  // mismatch this whole pass is about. Nothing marked is honest; wrong is not.
+  const currentGroupKey = liveGroup?.key ?? (liveItem ? '' : messageGroups[messageGroups.length - 1]?.key ?? '')
+  // Expansion is a usability default, not a claim about position: keep the most
+  // recent thread readable when the live screen has no thread of its own.
+  const openGroupKey = currentGroupKey || messageGroups[messageGroups.length - 1]?.key || ''
+  // A thread Yuvi is still WRITING in stays open, wherever the learner has since
+  // navigated. Answering and moving straight on is normal — but the reaction to
+  // that answer belongs to the question it is about, and collapsing the thread
+  // mid-sentence left the panel "thinking" with nothing to read, as if the turn
+  // had been lost. The learner can still collapse it by hand.
+  const streamingKey = messageGroups.find(
+    (g) => g.messages.some((m) => m.role === 'assistant' && !m.isComplete),
+  )?.key
+  const isSectionOpen = (g: MessageGroup) =>
+    sectionOverrides[g.key] ?? (g.key === openGroupKey || g.key === streamingKey)
+  // A hint or a deeper explanation is help with a QUESTION, so the buttons
+  // follow the THREAD on screen: the open section has to be a section about a
+  // question. The lesson intro and a pure teaching screen (a video, a reading, a
+  // simulation) have nothing to be hinted at, and offering help there produces
+  // an answer to a question the learner cannot see.
+  //
+  // A screen that plays a video AND asks still counts — its section is captioned
+  // "סרטון · שאלה N", the question is real, and its hint has to stay.
+  const activeSection = sections.find((s) => s.group.key === (currentGroupKey || openGroupKey))
+  const openSectionAsks = activeSection
+    ? !activeSection.isIntro && !activeSection.asksNothing
+      && (activeSection.kind === 'question' || activeSection.questionNumber !== undefined)
+    // No thread yet (Yuvi has not opened the screen) — fall back to the lesson's
+    // own position rather than hiding help the learner may already need.
+    : !(Boolean(liveItem) && teachingItems.includes(liveItem))
   const toggleSection = (key: string, open: boolean) =>
     setSectionOverrides((prev) => ({ ...prev, [key]: open }))
 
@@ -849,11 +981,10 @@ export function CompanionChat() {
           </div>}
           {isTaskMode && taskView === 'roadmap' && lessonRoadmap ? (
             <div className="sp-companion__roadmap-view" role="tabpanel">
-              <LearningRoadmap
+              <CompanionTrack3D
                 unit={lessonRoadmap.unit}
                 activeComponentId={lessonRoadmap.activeComponentId}
                 travellingFromId={lessonRoadmap.travellingFromId}
-                compact
                 onSelect={(component) => {
                   const params = new URLSearchParams({
                     unit: lessonRoadmap.unit.id,
@@ -886,13 +1017,20 @@ export function CompanionChat() {
                 so the generic greeting only shows in the general companion. */}
             {!isTaskMode && !isLoadingMessages && messages.length === 0 && assistantMessage(t('companion.greeting'))}
             {isTaskMode
-              ? sections.map(({ group, isIntro, questionNumber }, gi) => {
+              ? sections.map(({ group, isIntro, isTeaching, asksNothing, kind, questionNumber, partIndex, plays }) => {
                   const open = isSectionOpen(group)
-                  const isCurrent = gi === sections.length - 1
+                  const isCurrent = group.key === currentGroupKey
                   return (
                     <section
                       key={group.key}
                       className={`sp-companion__qsection${isCurrent ? ' is-current' : ''}${open ? '' : ' is-collapsed'}`}
+                      // Which screen this thread belongs to, and the number the
+                      // learner sees for it — so a mismatch between the chat and
+                      // the content is visible in the DOM instead of guessed at.
+                      data-item={group.item || undefined}
+                      data-question-number={isIntro || asksNothing ? undefined : questionNumber}
+                      data-teaching={isTeaching ? 'true' : undefined}
+                      data-kind={kind || undefined}
                     >
                       {sections.length > 1 && (
                         <button
@@ -909,7 +1047,21 @@ export function CompanionChat() {
                             >
                               <path d="m6 9 6 6 6-6" />
                             </svg>
-                            <span>{isIntro ? t('companion.thread.intro') : t('companion.thread.question', { n: questionNumber })}</span>
+                            {plays && !isIntro && (
+                              <Icon name="play" size={12} aria-label={t('companion.thread.watch')} />
+                            )}
+                            {/* Captioned for what the screen IS. A video that also
+                                asks keeps its number alongside the medium, so the
+                                thread is honest about both. */}
+                            <span>{
+                              isIntro ? t('companion.thread.intro')
+                                : kind === 'watch' || kind === 'read' ? [
+                                    t(kind === 'watch' ? 'companion.thread.watch' : 'companion.thread.read'),
+                                    questionNumber ? questionLabel(questionNumber, partIndex) : '',
+                                  ].filter(Boolean).join(' · ')
+                                : asksNothing || !questionNumber ? t('companion.thread.step')
+                                : questionLabel(questionNumber, partIndex)
+                            }</span>
                             {!open && <span className="sp-companion__qcount">{group.messages.length}</span>}
                           </span>
                           <span className="sp-companion__qdivider-rule" aria-hidden="true" />
@@ -927,7 +1079,8 @@ export function CompanionChat() {
       {!historyOpen && (!isTaskMode || taskView === 'chat') && (
         <div className="sp-companion__composer-shell">
           {isTaskMode ? (
-            !isStreaming && (pendingAlternative || !supportUsed.hint || !supportUsed.explanation) && (
+            !isStreaming
+              && (pendingAlternative || (openSectionAsks && (!supportUsed.hint || !supportUsed.explanation))) && (
               <div className="sp-companion__support-options" role="group" aria-label={t('companion.task.actions')}>
                 {pendingAlternative && (
                   <button
@@ -939,7 +1092,7 @@ export function CompanionChat() {
                     <span>{t('companion.task.altSwitch')}</span>
                   </button>
                 )}
-                {!supportUsed.hint && (
+                {openSectionAsks && !supportUsed.hint && (
                   <button
                     type="button"
                     className="sp-companion__support-option"
@@ -949,7 +1102,7 @@ export function CompanionChat() {
                     <span>{t('companion.task.hintAsk')}</span>
                   </button>
                 )}
-                {!supportUsed.explanation && (
+                {openSectionAsks && !supportUsed.explanation && (
                   <button
                     type="button"
                     className="sp-companion__support-option"

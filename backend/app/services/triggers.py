@@ -56,8 +56,83 @@ _last_mistake_key: dict[str, str] = {}
 _last_screen_key: dict[str, str] = {}
 # Sustained-effort is celebrated once per session (learner → last streak session).
 _last_streak_session: dict[str, str] = {}
+# Screens already congratulated, per learner, keyed `session|item|question`.
+# Kata re-emits `completed` every time a learner walks back through a screen they
+# already passed (observed: paging back to question 1 and pressing "המשך" praised
+# them for it a second time, minutes later). A re-emitted completion is not new
+# evidence — a NEW `answered` still is, so a genuine second attempt is celebrated.
+_success_acknowledged: dict[str, set[str]] = {}
+_SUCCESS_MEMORY_LIMIT = 200
+
+
+def _screen_success_key(event: dict[str, Any]) -> str:
+    """Identity of "this screen, in this sitting" for the praise dedupe.
+
+    Deliberately SCREEN-level. It used to include `question_id`, but `answered`
+    carries `q1` and `completed` never carries a question at all — so the key
+    written on the answer could never match the key checked on the completion and
+    the guard never fired once (observed live: praise on `answered …-001/q1`,
+    then praise again on the re-emitted `completed …-001` minutes later). Only
+    the 120s cooldown was hiding it.
+
+    A screen with two sub-questions is unaffected: `already` is consulted for
+    `completed` alone, so answering סעיף ב is still new evidence and still earns
+    its own acknowledgement.
+    """
+    return "|".join(
+        str(part or "")
+        for part in (
+            event.get("session_id"),
+            event.get("sub_item_id") or event.get("launch"),
+        )
+    )
+
+
+async def _already_praised(learner_id: str, key: str) -> bool:
+    """Was this screen's success already acknowledged?
+
+    Process memory is the fast path, the brain is the truth: the trigger engine
+    holds no durable state, so a reload (dev `--reload`) or a second worker would
+    otherwise forget and congratulate the same screen a second time.
+    """
+    if key in _success_acknowledged.get(learner_id, set()):
+        return True
+    try:
+        from app.brain.repository import get_brain
+        stored = ((await get_brain(learner_id)).get("current_state") or {}).get("praised_screens") or []
+    except Exception:  # the guard must never break trigger evaluation
+        return False
+    if key in stored:
+        _success_acknowledged.setdefault(learner_id, set()).update(stored)
+        return True
+    return False
+
+
+async def _remember_success(learner_id: str, key: str) -> None:
+    seen = _success_acknowledged.setdefault(learner_id, set())
+    if len(seen) >= _SUCCESS_MEMORY_LIMIT:
+        seen.clear()   # a sitting never has this many screens; bound the memory
+    seen.add(key)
+    try:
+        from app.brain.repository import apply_brain_operators, get_brain
+        stored = ((await get_brain(learner_id)).get("current_state") or {}).get("praised_screens") or []
+        if key in stored:
+            return
+        await apply_brain_operators(learner_id, {
+            "current_state.praised_screens": [*stored, key][-_SUCCESS_MEMORY_LIMIT:],
+        })
+    except Exception:  # best-effort; the in-memory set still guards this process
+        pass
 # Live idle-watchdog timers, one per learner (reset on each activity event).
 _idle_handles: dict[str, asyncio.TimerHandle] = {}
+# The objective the live watchdog was armed with, so chat activity can re-arm it
+# without the caller having to know where the learner is.
+_idle_objective: dict[str, Optional[str]] = {}
+# Last time the learner and the companion exchanged anything in the CHAT
+# (learner → monotonic seconds). The watchdog only ever saw xAPI, so a learner
+# who had stopped touching the content because they were busy typing to Yuvi
+# still got "אני כאן איתך…" on top of the conversation they were already having.
+_last_chat_activity: dict[str, float] = {}
 
 
 def _on_cooldown(learner_id: str, trigger_type: str) -> bool:
@@ -78,22 +153,54 @@ def _publish(learner_id: str, trigger: dict[str, Any]) -> None:
 
 def _cancel_idle(learner_id: str) -> None:
     handle = _idle_handles.pop(learner_id, None)
+    _idle_objective.pop(learner_id, None)
     if handle is not None:
         handle.cancel()
 
 
-def _arm_idle(learner_id: str, objective_id: Optional[str]) -> None:
+def _arm_idle(
+    learner_id: str, objective_id: Optional[str], delay: Optional[float] = None
+) -> None:
     """(Re)start the idle timer from the latest activity; a new event before it
     fires resets the clock. Fires at most one idle nudge per idle stretch (the
-    next real event re-arms it), so a stuck learner is helped, not nagged."""
+    next real event re-arms it), so a stuck learner is helped, not nagged.
+
+    `delay` shortens the wait to the silence that is actually still owed — used
+    when the timer fires but the learner was talking to Yuvi in the meantime.
+    """
     _cancel_idle(learner_id)
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:  # no loop (sync test / worker) — idle handled elsewhere
         return
+    _idle_objective[learner_id] = objective_id
     _idle_handles[learner_id] = loop.call_later(
-        IDLE_SECONDS, publish_idle, learner_id, objective_id
+        IDLE_SECONDS if delay is None else max(delay, 1.0),
+        publish_idle, learner_id, objective_id,
     )
+
+
+def note_chat_activity(learner_id: str, *, by_learner: bool = True) -> None:
+    """A turn happened in the companion chat.
+
+    Idleness means "not working", and typing to Yuvi IS working: the watchdog
+    only ever watched xAPI, so a learner mid-conversation was told "אני כאן
+    איתך…" while they were plainly already with us.
+
+    `by_learner=False` is Yuvi's own turn. It only stamps the clock — it must
+    NOT restart the watchdog, or the nudge restarts the timer that produced it
+    and the learner is nudged forever. That is not hypothetical: an abandoned
+    tab collected 46 identical "רק רציתי לבדוק…" messages, one every 152s, for
+    two and a half hours.
+
+    Never arms a watchdog of its own either — only resets a running one. Idle
+    nudges belong to an open lesson; arming from chat would start nagging
+    learners chatting on the dashboard, where there is no screen to be stuck on.
+    """
+    import time
+    _last_chat_activity[learner_id] = time.monotonic()
+    if by_learner and learner_id in _idle_handles:
+        _arm_idle(learner_id, _idle_objective.get(learner_id))
 
 
 async def evaluate(learner_id: str, event: dict[str, Any]) -> Optional[dict[str, Any]]:
@@ -195,9 +302,16 @@ async def evaluate(learner_id: str, event: dict[str, Any]) -> Optional[dict[str,
         # live: a learner answered correctly and the chat said nothing at all.)
         if reason is None and verb in ("answered", "attempted") and event.get("effortful") is not False:
             reason = "correct"
+        # A completion the learner triggers by walking back through a screen they
+        # already passed is not an achievement — it is a re-emit. Praising it
+        # again reads as the chat losing track of what already happened.
+        success_key = _screen_success_key(event)
+        if reason and verb == "completed" and await _already_praised(learner_id, success_key):
+            reason = None
         if reason:
             candidates["success"] = {
                 "type": "success", "objective_id": objective_id, "reason": reason,
+                "_success_key": success_key,
             }
             if streak_session:
                 candidates["success"]["_streak_session"] = streak_session
@@ -250,7 +364,9 @@ async def evaluate(learner_id: str, event: dict[str, Any]) -> Optional[dict[str,
                 _last_mistake_key[learner_id] = trigger.get("_key")
             if trigger_type == "success" and trigger.get("_streak_session"):
                 _last_streak_session[learner_id] = trigger["_streak_session"]
-            for private in ("_key", "_streak_session"):
+            if trigger_type == "success" and trigger.get("_success_key"):
+                await _remember_success(learner_id, trigger["_success_key"])
+            for private in ("_key", "_streak_session", "_success_key"):
                 trigger.pop(private, None)
             _publish(learner_id, trigger)
             return trigger
@@ -261,8 +377,28 @@ def publish_idle(learner_id: str, objective_id: Optional[str] = None) -> None:
     """Fire an idle nudge — the callback of the server-side idle watchdog
     (`_arm_idle`): no xAPI event for IDLE_SECONDS while a lesson is open. Absence
     isn't an event (R5), so the watchdog is the honest signal (the cross-origin
-    iframe can't report idleness to the client)."""
+    iframe can't report idleness to the client).
+
+    Chat counts as activity too, and it is checked HERE as well as on the re-arm:
+    the stream that carries a chat turn can outlive the timer it reset (a long
+    answer, a visual tail), and `note_chat_activity` may run in a worker with no
+    loop to re-arm from. Rather than swallow the tick, wait out the silence the
+    conversation still owes.
+    """
+    # This watchdog is SPENT the moment it fires. `_idle_handles` used to keep
+    # the fired handle, so everything that asks "is a watchdog running?" — the
+    # chat-activity reset above all — answered yes and re-armed it, turning one
+    # nudge per idle stretch into a nudge every 2.5 minutes forever. Only a real
+    # event (or the re-arm below, which owes a specific remainder) starts a new
+    # one.
+    _idle_handles.pop(learner_id, None)
+    _idle_objective.pop(learner_id, None)
     if _on_cooldown(learner_id, "idle"):
+        return
+    import time
+    chatted_ago = time.monotonic() - _last_chat_activity.get(learner_id, float("-inf"))
+    if chatted_ago < IDLE_SECONDS:
+        _arm_idle(learner_id, objective_id, delay=IDLE_SECONDS - chatted_ago)
         return
     _publish(learner_id, {"type": "idle", "objective_id": objective_id})
 

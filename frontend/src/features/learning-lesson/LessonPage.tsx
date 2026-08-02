@@ -15,9 +15,10 @@ import {
   type LearningTimingDTO,
   type LearningUnitDTO,
 } from '../../services/learning'
-import { BadgeMoments } from '../badges/BadgeMoments'
+import { useBadgeMoments } from '../badges/useBadgeMoments'
+import { LessonRewards } from './LessonRewards'
 import { ReflectionPanel } from './ReflectionPanel'
-import { playProgressionAudio } from '../../services/progressionAudio'
+import { playCelebrationCheer } from '../../services/celebrationAudio'
 import './lesson-workspace.css'
 
 interface ProviderMessage {
@@ -54,6 +55,9 @@ export function LessonPage() {
   const [loading, setLoading] = useState(true)
   const [frameState, setFrameState] = useState<FrameState>('loading')
   const [error, setError] = useState(false)
+  // A component the route has not opened yet is refused by the server (409).
+  // That is a normal, explainable state — not the "something went wrong" card.
+  const [lockedOut, setLockedOut] = useState(false)
   const [completed, setCompleted] = useState(false)
   const [progressionReady, setProgressionReady] = useState(false)
   const [roadmap, setRoadmap] = useState<LearningUnitDTO | null>(null)
@@ -63,12 +67,22 @@ export function LessonPage() {
   // "view performance" or "redo". Until they choose, we hold a light overlay
   // over the (resumed) content. Only "redo" launches a fresh attempt (restart).
   const [reentryOpen, setReentryOpen] = useState(false)
+  // True when the launch already found this component finished. The completion
+  // POLL below only reads catalog STATE, so on re-entry it sees `completed` —
+  // which was already true — and threw the celebration dialog up a few seconds
+  // after the learner opened a lesson they had merely come back to look at.
+  // A live signal (SSE / postMessage) is evidence something JUST happened and
+  // still celebrates, which is what a redo needs.
+  const wasCompletedAtLaunchRef = useRef(false)
   // Consumed by the session effect: the next (re)launch is an explicit redo, so
   // the backend resets our coach thread + one-shot hint state for a fresh run.
   const restartPendingRef = useRef(false)
-  // Bumped once a completion is confirmed so BadgeMoments re-checks for a newly
-  // earned badge (celebration) or a progress bump (toast).
+  // Bumped once a completion is confirmed so the badge diff re-checks for a
+  // newly earned coin or a progress bump. The result opens the dialog rather
+  // than floating over it.
   const [badgeCheck, setBadgeCheck] = useState(0)
+  // The completion dialog is a two-beat moment: what you earned, then what you
+  // noticed. Reward news used to arrive as its own modal ON TOP of this one.
   const completionActionRef = useRef<HTMLButtonElement>(null)
   const completionDialogRef = useRef<HTMLElement>(null)
   const completionPendingRef = useRef(false)
@@ -86,6 +100,7 @@ export function LessonPage() {
     }
     setLoading(true)
     setError(false)
+    setLockedOut(false)
     setFrameState('loading')
     const isRedo = restartPendingRef.current
     restartPendingRef.current = false
@@ -104,13 +119,17 @@ export function LessonPage() {
             (component) => component.id === nextSession.component.id,
           )
           setReentryOpen(!isRedo && persisted?.progress_state === 'completed')
+          wasCompletedAtLaunchRef.current = persisted?.progress_state === 'completed'
           // Re-resolve the companion thread: the SAME open thread on a resume,
           // or the freshly reset one after a redo.
           window.dispatchEvent(new CustomEvent('yuvilab:lesson-session-created'))
         }
       })
-      .catch(() => {
-        if (active) setError(true)
+      .catch((reason: unknown) => {
+        if (!active) return
+        const status = (reason as { status?: number } | null)?.status
+        if (status === 409) setLockedOut(true)
+        else setError(true)
       })
       .finally(() => {
         if (active) setLoading(false)
@@ -213,6 +232,9 @@ export function LessonPage() {
     // the flip to 'completed' and run the same finalize path as the message.
     const pollTimer = window.setInterval(async () => {
       if (controller.signal.aborted || completionPendingRef.current || completedRef.current) return
+      // Nothing to detect: it was already finished when we opened it. Polling a
+      // state that never changes is how re-entry ended up celebrating.
+      if (wasCompletedAtLaunchRef.current) return
       try {
         const catalog = await getLearningCatalog(controller.signal)
         const unit = catalog.units.find((candidate) => candidate.id === session.unit.id)
@@ -266,7 +288,7 @@ export function LessonPage() {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const hasNextStation = Boolean(roadmap?.next_component_id)
     const duration = reducedMotion ? 450 : hasNextStation ? 6800 : 2600
-    const stopAudio = reducedMotion ? () => undefined : playProgressionAudio(duration)
+    const stopAudio = reducedMotion ? () => undefined : playCelebrationCheer(duration)
     const readyTimer = window.setTimeout(() => {
       setTravellingFromId(null)
       setProgressionReady(true)
@@ -295,10 +317,44 @@ export function LessonPage() {
     ) || null
   }, [roadmap, session])
 
+  // 720 F1 "אפשרות לחזור לתכנים קודמים": the nearest earlier station the
+  // route has opened. Skips a locked one rather than offering a dead end — the
+  // launch would refuse it anyway.
+  const previousComponent = useMemo(() => {
+    if (!roadmap || !session) return null
+    const ordered = [...roadmap.components].sort(
+      (a, b) => (a.order ?? 0) - (b.order ?? 0),
+    )
+    const index = ordered.findIndex((component) => component.id === session.component.id)
+    if (index <= 0) return null
+    for (let i = index - 1; i >= 0; i -= 1) {
+      if (ordered[i].progress_state !== 'locked') return ordered[i]
+    }
+    return null
+  }, [roadmap, session])
+
+  // What the coins did across this lesson, read once the brain has settled.
+  const badgeMoments = useBadgeMoments(badgeCheck, language)
+  // The column appears only when there is real news to put in it. Showing it
+  // while the diff was still loading meant the dialog opened two-column with a
+  // spinner and then collapsed to one the moment nothing had moved — a visible
+  // flinch on the most common outcome. Now the reflection is there instantly and
+  // the celebration slides in beside it if a coin actually moved.
+  const badgeCheckSettled = badgeCheck > 0 && badgeMoments.settledFor === badgeCheck
+  const showRewardsStep = badgeCheckSettled && !badgeMoments.empty
+
   const openRoadmapComponent = (component: LearningComponentDTO) => {
     if (!roadmap) return
     const params = new URLSearchParams({ unit: roadmap.id, component: component.id })
     navigate(`/learning/lesson?${params}`)
+  }
+
+  // §6 re-entry, "move on": they already finished this one, so the useful default
+  // is the next station rather than sitting on work that is done.
+  const continueFromCompleted = () => {
+    setReentryOpen(false)
+    if (nextComponent) openRoadmapComponent(nextComponent)
+    else navigate('/learning')
   }
 
   // §6 "view performance": keep the resumed content + our chat/hint state; just
@@ -318,7 +374,6 @@ export function LessonPage() {
     setCompleted(false)
     setTravellingFromId(null)
   }
-
   const continueAfterCompletion = () => {
     if (!progressionReady) return
     closeCompletion()
@@ -337,17 +392,37 @@ export function LessonPage() {
 
   return (
     <div className="learning-lesson-page">
-      <BadgeMoments trigger={badgeCheck} />
       <LearnerAppBar />
       <main className="learning-lesson-main">
         <header className="learning-lesson-toolbar">
-          <button className="learning-lesson-back" type="button" onClick={() => navigate('/learning')}>
-            <Icon name="arrow" size={17} />
-            {t('learning.lesson.back')}
-          </button>
+          {/* Both ways OUT of this lesson, in one cluster. They used to be two
+              siblings of a three-column grid, so the optional second one landed
+              in the flexible middle column and stretched across the whole bar. */}
+          <nav className="learning-lesson-nav" aria-label={t('learning.lesson.back')}>
+            {/* Leaving for the roadmap. A `map` icon, not an arrow: an arrow here
+                was the same gesture as "one step back" beside it, and two
+                identical arrows on two identical pills is a coin toss. */}
+            <button className="learning-lesson-back" type="button" onClick={() => navigate('/learning')}>
+              <Icon name="map" size={16} />
+              {t('learning.lesson.back')}
+            </button>
+            {/* Moving WITHIN the roadmap — a quiet link, not a second pill, so
+                its weight matches how often it is the right thing to press. */}
+            {previousComponent && (
+              <button
+                className="learning-lesson-prev"
+                type="button"
+                onClick={() => openRoadmapComponent(previousComponent)}
+                title={`${t('learning.lesson.previous')} · ${previousComponent.title}`}
+              >
+                <Icon name="chevronLeft" size={15} />
+                {t('learning.lesson.previous')}
+              </button>
+            )}
+          </nav>
           <div className="learning-lesson-heading">
             <span>{session?.unit.title || t('learning.lesson.eyebrow')}</span>
-            <h1>{session?.component.title || t('learning.lesson.preparing')}</h1>
+            <h1>{session?.component.title || (lockedOut ? t('learning.lesson.locked') : t('learning.lesson.preparing'))}</h1>
           </div>
           <div className="learning-lesson-actions">
             {session?.component.estimated_minutes && (
@@ -357,6 +432,19 @@ export function LessonPage() {
         </header>
 
         {loading && <LoadingState title={t('learning.lesson.loading')} body={t('learning.lesson.loading.body')} />}
+        {lockedOut && !loading && (
+          <ErrorState
+            title={t('learning.lesson.locked')}
+            body={t('learning.lesson.locked.body')}
+            action={(
+              <div className="learning-lesson-error-actions">
+                <button className="learning-primary-button" type="button" onClick={() => navigate('/learning')}>
+                  {t('learning.lesson.locked.back')}
+                </button>
+              </div>
+            )}
+          />
+        )}
         {error && !loading && (
           <ErrorState
             title={t('learning.lesson.error')}
@@ -370,7 +458,7 @@ export function LessonPage() {
           />
         )}
 
-        {session && !loading && !error && (
+        {session && !loading && !error && !lockedOut && (
           <section className="learning-player-shell" aria-label={t('learning.lesson.frameLabel')}>
             {!session.language_supported && (
               <div className="learning-player-notice" role="status">
@@ -411,12 +499,22 @@ export function LessonPage() {
               {reentryOpen && (
                 <div className="learning-reentry" role="dialog" aria-modal="true" aria-labelledby="learning-reentry-title">
                   <div className="learning-reentry__card">
+                    {/* §6 also allows REVIEWING the finished component. The two
+                        buttons are the decisions; dismissing lands on the content
+                        itself, which shows the review on re-entry. */}
+                    <button
+                      className="learning-reentry__close"
+                      type="button"
+                      onClick={viewCompletedPerformance}
+                      aria-label={t('learning.lesson.reentry.view')}
+                    >×</button>
                     <div className="learning-reentry__icon"><Icon name="check" size={22} /></div>
                     <h2 id="learning-reentry-title">{t('learning.lesson.reentry.title')}</h2>
                     <p>{t('learning.lesson.reentry.body')}</p>
                     <div className="learning-reentry__actions">
-                      <button className="learning-primary-button" type="button" onClick={viewCompletedPerformance}>
-                        {t('learning.lesson.reentry.view')}
+                      <button className="learning-primary-button" type="button" onClick={continueFromCompleted}>
+                        {nextComponent ? t('learning.lesson.reentry.next') : t('learning.lesson.chooseNext')}
+                        <Icon name="arrow" size={16} />
                       </button>
                       <button className="learning-secondary-button" type="button" onClick={redoCompletedComponent}>
                         {t('learning.lesson.reentry.redo')}
@@ -433,59 +531,72 @@ export function LessonPage() {
           <div className="learning-completion-backdrop" role="presentation">
             <section
               ref={completionDialogRef}
-              className="learning-completion-dialog"
+              className={`learning-completion-dialog${showRewardsStep ? '' : ' is-single'}`}
               role="dialog"
               aria-modal="true"
               aria-labelledby="learning-completion-title"
               aria-describedby="learning-completion-description"
             >
-              <header className="learning-completion-dialog__header">
-                <div className="learning-completion-icon"><Icon name="check" size={22} /></div>
-                <div>
-                  <span>{t('learning.lesson.completionDialog.eyebrow')}</span>
-                  <h2 id="learning-completion-title">{t('learning.lesson.completed')}</h2>
-                  <p id="learning-completion-description">
-                    {timingLabel || t('learning.lesson.completed.body')}
-                  </p>
+              <button
+                className="learning-completion-dialog__close"
+                type="button"
+                disabled={!progressionReady}
+                aria-label={t('learning.lesson.completionDialog.close')}
+                onClick={closeCompletion}
+              >
+                ×
+              </button>
+
+              {/* The reward news stands BESIDE the reflection rather than in
+                  front of it: one view, one primary action, nothing to click
+                  past. It is absent entirely when no coin moved. */}
+              {showRewardsStep && (
+                <aside className="learning-completion-celebrate" aria-label={t('learning.rewards.stepTitle')}>
+                  <LessonRewards moments={badgeMoments} />
+                </aside>
+              )}
+
+              <div className="learning-completion-work">
+                <header className="learning-completion-work__head">
+                  <div className="learning-completion-icon"><Icon name="check" size={19} /></div>
+                  <div>
+                    <span>{t('learning.lesson.completionDialog.eyebrow')}</span>
+                    <h2 id="learning-completion-title">{t('learning.lesson.completed')}</h2>
+                  </div>
+                </header>
+                <p id="learning-completion-description" className="learning-completion-work__lede">
+                  {timingLabel || t('learning.lesson.completed.body')}
+                </p>
+
+                <div className="learning-completion-work__body">
+                  <ReflectionPanel
+                    componentId={session?.component.id || null}
+                    sessionId={session?.session_id || null}
+                    onDone={() => undefined}
+                  />
                 </div>
-                <button
-                  className="learning-completion-dialog__close"
-                  type="button"
-                  disabled={!progressionReady}
-                  aria-label={t('learning.lesson.completionDialog.close')}
-                  onClick={closeCompletion}
-                >
-                  ×
-                </button>
-              </header>
 
-              <ReflectionPanel
-                componentId={session?.component.id || null}
-                sessionId={session?.session_id || null}
-                onDone={() => undefined}
-              />
-
-              <footer className="learning-completion-dialog__footer">
-                <div>
-                  <strong>{t('learning.lesson.completionDialog.evidence')}</strong>
-                  <span>
+                <div className="learning-completion-work__next">
+                  <p>
                     {!progressionReady
                       ? t('learning.lesson.completionDialog.progressing')
                       : nextComponent
                       ? t('learning.lesson.completionDialog.next', { title: nextComponent.title })
                       : t('learning.lesson.completed.body')}
-                  </span>
+                  </p>
+                  <button
+                    ref={completionActionRef}
+                    className="learning-completion-cta"
+                    type="button"
+                    disabled={!progressionReady}
+                    aria-busy={!progressionReady}
+                    onClick={continueAfterCompletion}
+                  >
+                    {nextComponent ? t('learning.lesson.continueJourney') : t('learning.lesson.chooseNext')}
+                    <Icon name="arrow" size={17} />
+                  </button>
                 </div>
-                <button
-                  ref={completionActionRef}
-                  type="button"
-                  disabled={!progressionReady}
-                  aria-busy={!progressionReady}
-                  onClick={continueAfterCompletion}
-                >
-                  {nextComponent ? t('learning.lesson.continueJourney') : t('learning.lesson.chooseNext')}
-                </button>
-              </footer>
+              </div>
             </section>
           </div>
         ), document.body)}

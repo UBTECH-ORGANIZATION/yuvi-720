@@ -24,6 +24,7 @@ _ABSOLUTE_IRI = re.compile(r"^[A-Za-z][A-Za-z0-9+.\-]*:")
 from app.services.lrs import config
 from app.services.lrs.context import (
     EXT,
+    MEDIA_ACTIVITY_TYPES,
     activity,
     build_actor,
     build_grouping,
@@ -68,13 +69,33 @@ def _base(
     result: Optional[dict[str, Any]] = None,
     parent: Optional[list[dict[str, Any]]] = None,
     timestamp: Optional[str] = None,
+    hierarchy: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
-    """Assemble the mandatory 720 envelope around one event."""
+    """Assemble the mandatory 720 envelope around one event.
+
+    `hierarchy` (from `lrs.hierarchy.build`) carries the content ancestry the MoE
+    requires on every content statement: the levels above the object in
+    `grouping`, the direct level in `parent`, and every level's metadata in
+    `context.extensions`. It never overrides an explicit `parent`/extension the
+    caller passed — it fills in what is missing.
+    """
+    hierarchy = hierarchy or {}
     context: dict[str, Any] = {
         "contextActivities": {
-            "grouping": build_grouping(session_id, ecat_item_id=ecat_item_id)
+            "grouping": build_grouping(
+                session_id,
+                ecat_item_id=ecat_item_id,
+                extra=list(hierarchy.get("grouping") or []) or None,
+            )
         }
     }
+    if hierarchy.get("parent") and not parent:
+        parent = list(hierarchy["parent"])
+    if hierarchy.get("extensions"):
+        merged = dict(extensions(hierarchy["extensions"]))
+        supplied = ((context_extra or {}).get("extensions")) or {}
+        merged.update(supplied)                 # the caller's own values win
+        context_extra = {**(context_extra or {}), "extensions": merged}
     team = build_team(identity["school"], identity["nmm"])
     if team:
         context["team"] = team
@@ -257,7 +278,9 @@ def conversation_interacted(
         {
             "speaker": speaker,
             "conversationTrigger": conversation_trigger,
-            "helpType": help_type,
+            # Required by the review, which found it missing. A turn that is not
+            # a specific kind of help is still a kind: "other". Never absent.
+            "helpType": help_type or "other",
             "componentId": component_id,
             "itemId": item_id,
         }
@@ -322,7 +345,10 @@ def reflection_answered(
     obj = activity(
         f"{_domain()}/reflection/question/{question_number}",
         "question",
-        question_he,
+        # `object.definition.name` (the question's own text) was missing — the
+        # review asked for it on both answered and skipped. Fall back to a
+        # readable label so the field is never absent, but prefer the real text.
+        question_he or f"שאלת רפלקציה {question_number}",
     )
     result: dict[str, Any]
     if response is not None:
@@ -350,7 +376,9 @@ def reflection_skipped(
     question_he: Optional[str] = None,
 ) -> dict[str, Any]:
     obj = activity(
-        f"{_domain()}/reflection/question/{question_number}", "question", question_he
+        f"{_domain()}/reflection/question/{question_number}",
+        "question",
+        question_he or f"שאלת רפלקציה {question_number}",
     )
     return _base(
         identity,
@@ -470,6 +498,7 @@ def component_initialized(
     metadata_ext: Optional[dict[str, Any]] = None,   # unit+component metadata (short keys)
     unit_grouping: Optional[dict[str, Any]] = None,   # learning-unit activity for grouping
     parent: Optional[list[dict[str, Any]]] = None,
+    hierarchy: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     obj = activity(f"{_domain()}/component/{component_id}", "component", name_he)
     stmt = _base(
@@ -482,6 +511,7 @@ def component_initialized(
             {"extensions": extensions(metadata_ext)} if metadata_ext else None
         ),
         parent=parent,
+        hierarchy=hierarchy,
     )
     if unit_grouping:
         stmt["context"]["contextActivities"]["grouping"].append(unit_grouping)
@@ -500,6 +530,7 @@ def component_completed(
     name_he: Optional[str] = None,
     metadata_ext: Optional[dict[str, Any]] = None,
     unit_grouping: Optional[dict[str, Any]] = None,
+    hierarchy: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     obj = activity(f"{_domain()}/component/{component_id}", "component", name_he)
     result: dict[str, Any] = {}
@@ -519,6 +550,7 @@ def component_completed(
         context_extra=(
             {"extensions": extensions(metadata_ext)} if metadata_ext else None
         ),
+        hierarchy=hierarchy,
     )
     if unit_grouping:
         stmt["context"]["contextActivities"]["grouping"].append(unit_grouping)
@@ -526,12 +558,142 @@ def component_completed(
 
 
 # ── Content: generic forwarded statement (Kata relay → enrich → MoE) ─────────
+def question_answered(
+    identity: ReportingIdentity,
+    session_id: str,
+    *,
+    object_id: str,
+    question_id: str,
+    response: str,
+    question_type: Optional[str] = None,
+    attempt_number: int = 1,
+    success: Optional[bool] = None,
+    score_scaled: Optional[float] = None,
+    duration_seconds: Optional[float] = None,
+    question_he: Optional[str] = None,
+    hierarchy: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    """A learner's answer to a content question (MoE §"מענה על שאלה").
+
+    The review found three extensions missing or misnamed and `result.response`
+    absent: what the learner actually chose is the whole point of the event, and
+    `questionId` (not `question_id`), `questionType` and `attemptNumber` are what
+    let the ministry group attempts of the same question together.
+    """
+    obj = activity(object_id, "question", question_he)
+    result: dict[str, Any] = {"response": response}
+    if success is not None:
+        result["success"] = success
+    if score_scaled is not None:
+        result["score"] = {"scaled": score_scaled}
+    if duration_seconds is not None:
+        result["duration"] = iso_duration(duration_seconds)
+    return _base(
+        identity,
+        "answered",
+        obj,
+        session_id,
+        result=result,
+        context_extra={
+            "extensions": extensions({
+                "questionId": question_id,
+                "questionType": question_type,
+                "attemptNumber": attempt_number,
+            })
+        },
+        hierarchy=hierarchy,
+    )
+
+
+# The media dictionary lives in `context` now — the item ACTIVITY in a content
+# hierarchy has to type itself the same way, and one table cannot live in two
+# modules and stay one table.
+_MEDIA_ACTIVITY_TYPES = MEDIA_ACTIVITY_TYPES
+
+
+def _seconds(value: Optional[float]) -> Optional[float]:
+    """mediaPosition / mediaDuration are PLAIN SECONDS, not ISO-8601.
+
+    The spec is explicit ("המיקום במדיה, בשניות") and its examples are bare
+    numbers — `"mediaPosition": 105`, `"mediaDuration": 120`. Only
+    `result.duration` is an ISO-8601 duration. We were sending `PT1M45S` for
+    both, which is the right instant expressed in a type the field does not
+    take. Whole values stay ints so the JSON reads `120`, not `120.0`.
+    """
+    if value is None:
+        return None
+    number = round(float(value), 3)
+    return int(number) if number == int(number) else number
+
+
+def media_event(
+    identity: ReportingIdentity,
+    session_id: str,
+    verb_slug: str,                      # played | paused | completed
+    *,
+    object_id: str,
+    media_format: str,                   # video | audio | animation
+    media_position_seconds: Optional[float] = None,
+    media_duration_seconds: Optional[float] = None,
+    duration_seconds: Optional[float] = None,   # result.duration (watched so far)
+    name_he: Optional[str] = None,
+    hierarchy: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    """`played` / `paused` / `completed` on a video, audio or animation.
+
+    The review: all three were missing `mediaFormat`, `mediaPosition` and
+    `mediaDuration`, and `paused`/`completed` were missing `result.duration`.
+    Position/duration are only ever what the content told us — an unknown one is
+    omitted, never guessed.
+    """
+    obj = activity(
+        object_id, _MEDIA_ACTIVITY_TYPES.get(str(media_format or "").lower(), "item"), name_he
+    )
+    result = (
+        {"duration": iso_duration(duration_seconds)}
+        if duration_seconds is not None
+        else None
+    )
+    return _base(
+        identity,
+        verb_slug,
+        obj,
+        session_id,
+        result=result,
+        context_extra={
+            "extensions": extensions({
+                "mediaFormat": media_format,
+                "mediaPosition": _seconds(media_position_seconds),
+                "mediaDuration": _seconds(media_duration_seconds),
+            })
+        },
+        hierarchy=hierarchy,
+    )
+
+
+def item_skipped(
+    identity: ReportingIdentity,
+    session_id: str,
+    *,
+    object_id: str,
+    name_he: Optional[str] = None,
+    hierarchy: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    return _base(
+        identity, "skipped", activity(object_id, "item", name_he), session_id,
+        hierarchy=hierarchy,
+    )
+
+
 def enriched_content_statement(
     identity: ReportingIdentity,
     session_id: str,
     raw_statement: dict[str, Any],
     *,
     ecat_item_id: Optional[str] = None,
+    hierarchy: Optional[dict[str, Any]] = None,
+    result_extra: Optional[dict[str, Any]] = None,
+    context_extensions: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """Wrap a content-origin statement (question/media/item events relayed via
     Kata) in the mandatory 720 envelope: replace the actor with the
@@ -539,14 +701,24 @@ def enriched_content_statement(
     grouping while preserving the content's own verb/object/result/parent
     and metadata extensions. A NEW outbound id is generated (our report ≠
     the content's internal statement id)."""
+    hierarchy = hierarchy or {}
     ctx = dict(raw_statement.get("context") or {})
     context_activities = dict(ctx.get("contextActivities") or {})
     grouping = list(context_activities.get("grouping") or [])
+    # The ancestry the ministry requires: the unit and component this item lives
+    # in, in `grouping`, and the component in `parent`. The content sends neither
+    # (it only knows its own object), so we supply them from the catalog.
+    grouping.extend(hierarchy.get("grouping") or [])
     grouping = build_grouping(session_id, ecat_item_id=ecat_item_id, extra=grouping)
     context_activities["grouping"] = grouping
+    if hierarchy.get("parent") and not context_activities.get("parent"):
+        context_activities["parent"] = list(hierarchy["parent"])
     ctx["contextActivities"] = context_activities
-    if ctx.get("extensions"):
-        ctx["extensions"] = _iri_safe_extensions(ctx["extensions"])
+    merged_extensions = dict(hierarchy.get("extensions") or {})
+    merged_extensions.update(context_extensions or {})
+    if merged_extensions or ctx.get("extensions"):
+        combined = {**(ctx.get("extensions") or {}), **merged_extensions}
+        ctx["extensions"] = _iri_safe_extensions(combined)
         if not ctx["extensions"]:
             ctx.pop("extensions")
     team = build_team(identity["school"], identity["nmm"])
@@ -571,8 +743,14 @@ def enriched_content_statement(
         "context": ctx,
         "timestamp": raw_statement.get("timestamp") or _now(),
     }
-    if raw_statement.get("result") is not None:
-        result = dict(raw_statement["result"])
+    result = dict(raw_statement.get("result") or {})
+    # `result_extra` fills the fields the review found missing on relayed events
+    # (a `duration` on paused/completed media, a `response` the content omitted).
+    # It never overwrites something the content did report.
+    for key, value in (result_extra or {}).items():
+        if value is not None and result.get(key) in (None, ""):
+            result[key] = value
+    if result:
         if result.get("extensions"):
             result["extensions"] = _iri_safe_extensions(result["extensions"])
             if not result["extensions"]:
@@ -625,7 +803,22 @@ def help_requested(
 
 
 # ── Non-learning selection ───────────────────────────────────────────────────
-SELECTION_TYPES = {"learningType", "practiceDecision", "isUnderstood", "isRepeat", "externalLearning"}
+SELECTION_TYPES = {"learning-type", "practice-decision", "is-understood", "is-repeat", "external-learning"}
+
+_CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
+
+
+def kebab(value: str) -> str:
+    """`practiceDecision` → `practice-decision`.
+
+    The MoE review rejected the camelCase value we sent for `selectionType`; the
+    720 selection dictionary is kebab-case. Callers may pass either spelling —
+    the wire format is decided here, once.
+    """
+    text = str(value or "").strip()
+    if not text:
+        return text
+    return _CAMEL_BOUNDARY.sub("-", text).replace("_", "-").replace(" ", "-").lower()
 
 
 def selected(
@@ -636,6 +829,7 @@ def selected(
     object_type: str,
     selection_type: str,
     response: str,
+    hierarchy: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     obj = activity(object_id, object_type)
     return _base(
@@ -644,5 +838,6 @@ def selected(
         obj,
         session_id,
         result={"response": response},
-        context_extra={"extensions": extensions({"selectionType": selection_type})},
+        context_extra={"extensions": extensions({"selectionType": kebab(selection_type)})},
+        hierarchy=hierarchy,
     )
