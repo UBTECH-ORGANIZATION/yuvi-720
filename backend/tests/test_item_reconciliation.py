@@ -1,8 +1,18 @@
-"""Kata player-screen ids are offset from catalog sub-content ids by a leading
-cover screen (player `-002` == catalog `-001`). `resolve_catalog_item_id` maps
-them back so the coach grounds hints on the item the learner is actually on,
-not the next one. Self-anchored: a unique question id pins the exact item, else
-the earliest visited player screen aligns to the earliest catalog item."""
+"""`resolve_catalog_item_id` decides WHICH catalog screen an event is about.
+
+Order of evidence, strongest first:
+  1. a question id owned by exactly one catalog item pins that item;
+  2. an id the catalog recognizes is taken at face value;
+  3. only for an id the catalog does NOT know, align by ordinal — the earliest
+     visited player screen maps to the earliest catalog item (a leading cover of
+     at most `_MAX_COVER_OFFSET` frames).
+
+Rule 2 is the one measured into place. The ordinal anchor used to run for every
+event, and it fired on any SESSION that happened to start on `-002`: min seen 2,
+min catalog 1 → offset 1 → four events of a real 28/07 session were stored one
+screen back. That is what put Yuvi's reply on the previous question's thread and
+left two threads captioned "שאלה 3". In that same session every id the player
+sent (`-001`…`-005`) existed in the catalog — there was nothing to reconcile."""
 
 import os
 import sys
@@ -46,23 +56,25 @@ class ReconcileItemIdTests(unittest.TestCase):
         )
 
     def test_unique_question_pins_exact_item(self):
-        # q2 exists only on -001, so player screen -002/q2 -> catalog -001.
+        # q2 exists only on -001, so an event carrying q2 is about -001 even
+        # though the id it came with (-002) is a real screen of its own.
         self.assertEqual(self.R("002", "q2"), f"{C}-001")
 
-    def test_ambiguous_q1_uses_ordinal_offset(self):
-        # q1 is on every item; the earliest visited player screen (-002) anchors
-        # the offset so -002/q1 -> -001 and a later -003/q1 -> -002.
-        self.assertEqual(self.R("002", "q1"), f"{C}-001")
-        self.assertEqual(self.R("003", "q1", seen=["002"]), f"{C}-002")
+    def test_a_known_screen_id_is_believed(self):
+        """The regression: a session that starts on -002 is on -002.
+
+        q1 exists on every screen, so it pins nothing; the ordinal anchor used to
+        step in here and rewind the learner one screen for the whole session.
+        """
+        self.assertEqual(self.R("002", "q1"), f"{C}-002")
+        self.assertEqual(self.R("003", "q1", seen=["002"]), f"{C}-003")
+        self.assertEqual(self.R("002", None), f"{C}-002")
+
+    def test_an_unknown_screen_id_is_still_aligned(self):
+        """-004 is not a screen of this component, so the anchor may reconcile it."""
         self.assertEqual(self.R("004", "q1", seen=["002", "003"]), f"{C}-003")
 
-    def test_navigation_without_question_uses_ordinal(self):
-        self.assertEqual(self.R("002", None), f"{C}-001")
-        self.assertEqual(self.R("003", None, seen=["002"]), f"{C}-002")
-
     def test_zero_offset_component_is_identity(self):
-        # A component whose player numbers screens from -001 (no cover) must not
-        # be shifted: min visited == min catalog -> offset 0.
         self.assertEqual(self.R("001", "q1"), f"{C}-001")
 
     def test_unknown_component_returns_runtime_id(self):
@@ -71,6 +83,16 @@ class ReconcileItemIdTests(unittest.TestCase):
             kata_catalog.resolve_catalog_item_id("other-comp", raw, question_id="q1"),
             raw,
         )
+
+    def test_landing_deep_in_the_component_is_not_rewound(self):
+        """Resuming (or jumping) mid-component is not a five-screen cover.
+
+        Observed: arriving at the teaching screen `…-01-04-006` — the learner's
+        first event of that launch — anchored an offset of 5 and stored `…-001`,
+        so the coach and the chat both placed the learner five screens back.
+        """
+        self.assertEqual(self.R("006"), f"{C}-006")
+        self.assertEqual(self.R("004", seen=["004"]), f"{C}-004")
 
     def test_missing_inputs_are_passthrough(self):
         self.assertIsNone(kata_catalog.resolve_catalog_item_id(C, None))

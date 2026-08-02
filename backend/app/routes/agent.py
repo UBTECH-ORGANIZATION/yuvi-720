@@ -6,7 +6,7 @@ is sent as the first SSE event so the UI always shows it (§11).
 
 import json
 import re
-from typing import Literal
+from typing import Literal, Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -173,6 +173,7 @@ _MOE_TRIGGER = {
     "rapid_guessing": "idle-time",
     "wheel_spinning": "misconception",
     "question_intro": "idle-time",
+    "lesson_step_intro": "idle-time",
     "lesson_welcome": "idle-time",
 }
 
@@ -220,10 +221,17 @@ class CoachProactiveRequest(BaseModel):
     conversation_id: str = Field(default="default", min_length=1, max_length=120)
     trigger: Literal[
         "idle", "misconception", "mistake", "slow_progress", "success",
-        "rapid_guessing", "wheel_spinning", "question_intro", "lesson_welcome",
+        "rapid_guessing", "wheel_spinning", "question_intro", "lesson_step_intro",
+        "lesson_welcome",
     ] = "idle"
     language: str = Field(default="he", max_length=8)
     surface: CoachSurfaceContext = Field(default_factory=CoachSurfaceContext)
+    # The question this nudge is ABOUT (`component|item|question`). Kata advances
+    # the screen the moment an answer lands, so by the time we compose, the live
+    # pointer is often already on the next question — and the nudge would be
+    # written about content the learner has not seen. Sent by the client from the
+    # trigger it is playing; absent, we fall back to the live pointer.
+    question_key: Optional[str] = Field(default=None, max_length=400)
 
 
 class CoachSupportRequest(BaseModel):
@@ -384,6 +392,7 @@ async def coach_helped(request: CoachHelpedRequest, learner_id: str = Depends(re
     this?"). Persisted per question for the teacher view; latest answer wins."""
     from app.services import learner_activity
 
+    triggers.note_chat_activity(learner_id)   # answering the chips is a chat turn
     stored = await learner_activity.record_helped_attribution(
         learner_id,
         request.methods,
@@ -543,6 +552,10 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
     conversation_id = sessions.normalize_session_id(request.conversation_id)
     exchange_id = uuid4().hex
 
+    # Talking to Yuvi is working: hold off the idle watchdog, which otherwise
+    # only watches the content iframe and would nudge mid-conversation.
+    triggers.note_chat_activity(learner_id)
+
     # MoE 720: one `interacted` per chat turn — the student's message now, the
     # bot's reply when the stream completes. Chat text is never sent.
     moe_sid = session.get("sid")
@@ -608,6 +621,9 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
                 speaker="bot", conversation_trigger="student-request",
                 component_id=component_iri,
             )
+        # Re-stamp on completion: the silence worth nudging starts when Yuvi
+        # stops talking, not when the learner pressed send.
+        triggers.note_chat_activity(learner_id)
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(
@@ -730,6 +746,11 @@ async def coach_proactive(request: CoachProactiveRequest, session=Depends(requir
     conversation_id = sessions.normalize_session_id(request.conversation_id)
     exchange_id = uuid4().hex
 
+    # Yuvi speaking is a chat turn too — but HIS turn, so it only stamps the
+    # clock. Letting a nudge restart the watchdog makes the nudge reschedule
+    # itself, which is how one idle stretch became a message every 2.5 minutes.
+    triggers.note_chat_activity(learner_id, by_learner=False)
+
     async def event_generator():
         # Emit the first byte BEFORE any DB/LRS work so the client is already
         # streaming (and its stall-watchdog is armed). A transient DB blip in the
@@ -758,8 +779,10 @@ async def coach_proactive(request: CoachProactiveRequest, session=Depends(requir
             exchange_id=exchange_id,
             endpoint="/api/agent/coach/proactive",
             surface_context=request.surface.model_dump(),
+            pinned_question_key=request.question_key,
         ):
             yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
+        triggers.note_chat_activity(learner_id, by_learner=False)
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
@@ -917,15 +940,55 @@ async def coach_support_state(
     + question), so moving to the next question re-arms the buttons."""
     from app.agents import tutor_decision
     from app.brain.repository import get_brain
+    from app.services import kata_catalog
 
     brain = await get_brain(learner_id)
     current = brain.get("current_state") or {}
     question_key = tutor_decision.support_question_key(current, component_id)
     used = tutor_decision.support_used(current, question_key)
+    # The learner's own question numbering, so the chat can title a thread
+    # "שאלה 3" because it IS the third question — not because it is the third
+    # section on screen. Empty when the catalog has no snapshot for this
+    # component; the client then falls back to the order it encountered them in.
+    try:
+        await kata_catalog.ensure_loaded()
+        # The caption belongs to the lesson ON SCREEN, so the requested component
+        # wins here. (`question_key` above still comes from `current_state` — that
+        # is the learner's position, which only events may move.) Falling back to
+        # the brain's component the other way round numbered a freshly-opened
+        # lesson from whichever one the learner was in before.
+        active_component = component_id or current.get("component_id")
+        ordinals = kata_catalog.question_item_ordinals(active_component)
+        question_parts = kata_catalog.question_part_indexes(active_component)
+        teaching_only = kata_catalog.non_question_items(active_component)
+        item_spine = [
+            {
+                "id": row.get("id"),
+                "kind": kata_catalog.kind_for_row(row),
+                "media_format": row.get("media_format") or "",
+                "content_type": row.get("content_type") or "",
+                "question_count": row.get("question_count") or 0,
+            }
+            for row in kata_catalog.item_profiles(active_component)
+        ]
+    except Exception:  # numbering must never break the support buttons
+        ordinals, question_parts, teaching_only, item_spine = {}, {}, [], []
     return {
         "question_key": question_key,
         "hint_used": used["hint"],
         "explanation_used": used["explanation"],
+        "question_ordinals": ordinals,
+        # Which סעיף of a shared screen this is — present only where the screen
+        # really does hold several, so the chat never invents a part.
+        "question_parts": question_parts,
+        # Screens that teach without asking — the chat captions these as a step,
+        # never as "question N".
+        "teaching_items": teaching_only,
+        # The full screen spine with its kind (question / watch / read / step), so
+        # the chat can caption a video thread "סרטון" and Yuvi can open the right
+        # kind of turn on arrival instead of assuming every screen is a question.
+        "items": item_spine,
+        "question_total": len({v for v in ordinals.values()}),
     }
 
 
@@ -936,6 +999,9 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
     language = normalize_language(request.language)
     conversation_id = sessions.normalize_session_id(request.conversation_id)
     exchange_id = uuid4().hex
+
+    # Pressing "רמז" / "הסבר" is a chat turn — reading the answer is not idling.
+    triggers.note_chat_activity(learner_id)
 
     # One-shot per question (server-enforced; the UI disables optimistically):
     # a second identical request on the same question is refused, not streamed.
@@ -1010,6 +1076,10 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
             language=language,
         ):
             yield event
+        # Re-stamp on completion: a long answer can outlive the idle timer the
+        # request reset, and the silence worth nudging starts when Yuvi stops
+        # talking, not when he started.
+        triggers.note_chat_activity(learner_id)
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

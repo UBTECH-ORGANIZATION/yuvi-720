@@ -13,9 +13,36 @@ from typing import Any, Optional
 
 from app.services.lrs import config, identity as identity_mod, outbox, statements
 
+# Remember which identity we already complained about, so a misconfigured
+# deployment logs once per value instead of once per statement.
+_warned_identities: set[str] = set()
+
+
+def _identity_is_reportable() -> bool:
+    """Refuse to send statements stamped with placeholder identifiers.
+
+    The ministry's first finding was that `grouping→lms` arrived as
+    `https://720.example.co.il` and `content-vendor` as `ECAT-720-contract` —
+    values that validate perfectly and identify nobody. `identity_problems()`
+    was written to catch exactly that but was only ever consulted by the
+    contract-report script, so nothing stopped the live path from sending the
+    same placeholders again. Silence is the right failure here: statements are
+    permanent and de-duplicated by id at the LRS, so a wrong one cannot be
+    withdrawn, whereas an unsent one is simply sent once the env is filled in.
+    """
+    problems = config.identity_problems()
+    if not problems:
+        return True
+    fingerprint = "|".join(problems)
+    if fingerprint not in _warned_identities:
+        _warned_identities.add(fingerprint)
+        for problem in problems:
+            print(f"⚠️ LRS reporting disabled — {problem}")
+    return False
+
 
 async def _report(build, learner_id: str, *args, source: str = "platform", **kwargs) -> None:
-    if not config.is_enabled():
+    if not config.is_enabled() or not _identity_is_reportable():
         return
     try:
         identity = await identity_mod.resolve_reporting_identity(learner_id)
@@ -176,6 +203,7 @@ async def report_reflection_skipped(
     session_id: str,
     questionnaire_id: str,
     question_number: int | str,
+    question_he: Optional[str] = None,
 ) -> None:
     await _report(
         statements.reflection_skipped,
@@ -183,6 +211,7 @@ async def report_reflection_skipped(
         session_id,
         questionnaire_id,
         question_number,
+        question_he=question_he,
     )
 
 
@@ -304,15 +333,23 @@ async def report_content_statement(
     session_id: str,
     raw_statement: dict[str, Any],
     ecat_item_id: Optional[str] = None,
+    *,
+    hierarchy: Optional[dict[str, Any]] = None,
+    context_extensions: Optional[dict[str, Any]] = None,
+    result_extra: Optional[dict[str, Any]] = None,
 ) -> None:
     """Forward a content-origin statement (relayed by Kata into /api/xapi):
     enrich with the 720 envelope and enqueue. Hooked after first-sight ingest
-    in events.ingest_statement()."""
+    in events.ingest_statement(). `hierarchy` carries the unit/component
+    ancestry the ministry requires above the item."""
     await _report(
         statements.enriched_content_statement,
         learner_id,
         session_id,
         raw_statement,
         ecat_item_id=ecat_item_id,
+        hierarchy=hierarchy,
+        context_extensions=context_extensions,
+        result_extra=result_extra,
         source="kata",
     )

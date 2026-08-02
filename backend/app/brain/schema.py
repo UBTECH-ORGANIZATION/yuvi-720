@@ -157,7 +157,18 @@ def flatten_updates(updates: dict[str, Any], prefix: str = "") -> dict[str, Any]
     return flat
 
 
-_OPAQUE_LEAF_KEYS = {"resume_token", "mapping_scores", "mapping_measures", "next_recommendations"}
+# `support_used` / `hint_ladder` are per-question state objects that are RESET to
+# `None` on every launch (`learning_sessions`). Deep-merging them meant Mongo got
+# `$set current_state.support_used.hint` against a **null** parent, which fails
+# with WriteError 28 ("Failed to create the field ... within the element specified
+# by {support_used: null}") — silently, into the JSON fallback that is not the
+# read path. The one-shot hint/explanation gate therefore never engaged and the
+# "מה עזר לך?" chips never offered hint/explanation. Setting them whole replaces
+# the null outright.
+_OPAQUE_LEAF_KEYS = {
+    "resume_token", "mapping_scores", "mapping_measures", "next_recommendations",
+    "support_used", "hint_ladder",
+}
 _OPAQUE_PARENT_KEYS = {"mastery", "progress"}
 
 

@@ -139,7 +139,7 @@ async function main() {
   const context = await browser.newContext()
   await context.addCookies([{ name: 'spark_session', value: cookie, url: BASE_URL }])
   const page = await context.newPage()
-  page.on('console', (m) => { if (m.type() === 'error') log(`  [browser-console-error] ${m.text().slice(0, 140)}`) })
+  page.on('console', (m) => { if (m.type() === 'error' || m.text().includes('[companion]')) log(`  [browser] ${m.text().slice(0, 160)}`) })
   // Surface which proactive trigger each stream carries + when it starts, so a
   // missing/dropped nudge is diagnosable from the timeline.
   page.on('request', (req) => {
@@ -200,6 +200,41 @@ async function main() {
     const stillThere = (await page.locator(`${ASSIST} .sp-companion__msg`).allInnerTexts())
       .some((t) => t.trim() === successText.trim())
     record('4. success stays visible across auto-advance (grace window)', stillThere, stillThere ? 'grace held' : 'success vanished')
+
+    // Scenario 5 (THE stale-intro regression) — a learner who moves FAST. An
+    // intro is triggered for one screen and the learner leaves before it can
+    // finish writing. Observed in production: question 2's orientation landed
+    // 34s later, while the learner was on question 4, reading as if the chat had
+    // gone backwards. The intro for the abandoned screen must never appear.
+    count = await assistantCount(page)
+    await navTo(launch, actor, '002')
+    await sleep(250)                       // barely enough to start the stream
+    await navTo(launch, actor, '003')      // …and gone again
+    const arrived = await waitForNewBubble(page, count, 'intro after fast navigation', 45_000)
+    // Whatever landed must describe where the learner IS. The abandoned screen's
+    // intro is identified by its section: it must not have opened one.
+    const staleSections = await page.evaluate((abandoned) => {
+      const rows = Array.from(document.querySelectorAll('.sp-companion__qsection'))
+      return rows.filter((s) => (s.getAttribute('data-item') || '') === abandoned).length
+    }, `${COMPONENT}-002`).catch(() => 0)
+    record('5. fast navigation → no intro for the abandoned screen', staleSections === 0,
+      staleSections === 0 ? `only the live screen spoke` : `${staleSections} stale section(s)`)
+    invariant(arrived.length > 1, 'no bubble at all after fast navigation')
+
+    // Scenario 6 — one question, ONE section. The chat groups by question_key,
+    // which used to change under the same question the moment the learner
+    // answered (`…|item|` → `…|item|q1`), splitting one question into two
+    // threads and pushing the "שאלה N" heading out of step with the lesson.
+    const sectionCount = await page.locator('.sp-companion__qsection').count()
+    const distinctItems = await page.evaluate(() => {
+      const items = Array.from(document.querySelectorAll('.sp-companion__qsection'))
+        .map((s) => s.getAttribute('data-item') || '')
+        .filter(Boolean)
+      return new Set(items).size
+    }).catch(() => 0)
+    const introSections = sectionCount - distinctItems
+    record('6. one question → one section', distinctItems > 0 && introSections <= 1,
+      `${sectionCount} sections / ${distinctItems} distinct screens`)
 
     await page.screenshot({ path: path.join(ARTIFACTS, 'final.png'), fullPage: true }).catch(() => {})
   } finally {

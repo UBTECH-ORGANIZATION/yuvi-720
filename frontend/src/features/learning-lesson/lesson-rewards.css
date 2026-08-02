@@ -1,0 +1,221 @@
+/* Lesson completion — the celebration column.
+   Component: features/learning-lesson/LessonRewards.tsx.
+
+   This column paints itself: it IS the coloured panel, not a card sitting on
+   one. Everything here is light-on-violet, so it uses fixed white alphas rather
+   than the --sp-ink-* ramp (which follows the theme and would go dark-on-dark
+   in light mode). */
+
+.lesson-rewards {
+  /* Flex, not grid: the hero sets `overflow: hidden` for its confetti, which
+     zeroes a grid item's automatic minimum size — the grid then squashed the
+     rows into strips. Flex items with `flex-shrink: 0` keep their height and
+     the column scrolls instead. */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: clamp(20px, 3vw, 34px) clamp(18px, 2.4vw, 30px);
+  overflow: hidden auto;
+  /* Honest affordance when the coins run past the fold: the last row fades
+     into the panel instead of being sliced flat by the dialog's clip. */
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent);
+  color: white;
+}
+.lesson-rewards > * { flex: 0 0 auto; }
+
+/* Rays behind the coin, as on the badge celebration board. Slow enough to feel
+   like light rather than motion; stopped entirely under reduced-motion. */
+.lesson-rewards__rays {
+  position: absolute;
+  z-index: 0;
+  inset-block-start: -34%;
+  inset-inline-start: 50%;
+  inline-size: 190%;
+  aspect-ratio: 1;
+  translate: -50% 0;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(255, 255, 255, .13) 0deg 6deg,
+    transparent 6deg 14deg
+  );
+  mask-image: radial-gradient(circle at 50% 32%, #000 0%, transparent 58%);
+  animation: lesson-rewards-rays 120s linear infinite;
+  pointer-events: none;
+}
+@keyframes lesson-rewards-rays { to { rotate: 360deg; } }
+
+.lesson-rewards__spinner {
+  inline-size: 30px;
+  block-size: 30px;
+  border: 3px solid rgba(255, 255, 255, .28);
+  border-block-start-color: white;
+  border-radius: 50%;
+  animation: lesson-rewards-spin 900ms linear infinite;
+}
+@keyframes lesson-rewards-spin { to { transform: rotate(360deg); } }
+
+/* ── Confetti, falling across the whole column ───────────────────────────── */
+.lesson-rewards__confetti {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.lesson-rewards__confetti i {
+  position: absolute;
+  inset-block-start: -8%;
+  inline-size: 7px;
+  block-size: 12px;
+  border-radius: 2px;
+  opacity: .92;
+  /* Loops rather than `forwards`: the dialog stays open while the learner
+     answers the reflection, and a one-shot burst had finished falling long
+     before they looked at it — the panel was simply flat violet by then. */
+  animation: lesson-rewards-fall linear infinite;
+}
+@keyframes lesson-rewards-fall {
+  0% { transform: translateY(0) rotate(0); opacity: 0; }
+  8% { opacity: .92; }
+  85% { opacity: .92; }
+  100% { transform: translateY(660px) rotate(540deg); opacity: 0; }
+}
+
+/* ── The coin that flipped to earned ─────────────────────────────────────── */
+.lesson-rewards__hero {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  margin-block: auto;
+  text-align: center;
+}
+.lesson-rewards__coin {
+  inline-size: clamp(112px, 21vw, 152px);
+  margin-block-end: var(--sp-2);
+  filter: drop-shadow(0 14px 30px rgba(6, 4, 32, .42));
+  animation: lesson-rewards-pop 700ms cubic-bezier(.2, 1.3, .4, 1) both;
+}
+/* The badge sizes itself from its own `width`; the wrapper alone does not
+   constrain it, which is how the coin ended up spilling over its card. */
+.lesson-rewards__coin .yv-badge { width: 100%; }
+@keyframes lesson-rewards-pop {
+  from { opacity: 0; transform: scale(.55) rotate(-16deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+.lesson-rewards__lead-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 58px;
+  block-size: 58px;
+  margin-block-end: var(--sp-2);
+  border: 1px solid rgba(255, 255, 255, .3);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .14);
+  color: white;
+}
+
+.lesson-rewards__eyebrow {
+  color: rgba(255, 255, 255, .78);
+  font-size: 11px;
+  font-weight: var(--sp-fw-bold);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.lesson-rewards__hero h3 {
+  margin: 0;
+  color: white;
+  font-size: clamp(22px, 3.4vw, 31px);
+  font-weight: var(--sp-fw-bold);
+  line-height: var(--sp-lh-tight);
+  text-wrap: balance;
+}
+.lesson-rewards__hero p {
+  margin: 0;
+  max-inline-size: 34ch;
+  color: rgba(255, 255, 255, .84);
+  font-size: var(--sp-fs-sm);
+  line-height: 1.5;
+}
+
+.lesson-rewards__avatar-btn {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  margin-block-start: var(--sp-3);
+  padding: 10px 20px;
+  border: 0;
+  border-radius: var(--sp-radius-pill);
+  background: white;
+  color: #3b2a86;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-bold);
+  box-shadow: 0 10px 24px rgba(6, 4, 32, .3);
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+.lesson-rewards__avatar-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 14px 30px rgba(6, 4, 32, .36); }
+.lesson-rewards__avatar-btn.is-used {
+  background: rgba(255, 255, 255, .18);
+  color: white;
+  box-shadow: none;
+  cursor: default;
+}
+
+/* ── A second coin, and coins that only moved ────────────────────────────── */
+.lesson-rewards__extra,
+.lesson-rewards__row {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--sp-3);
+  align-items: center;
+  padding: 11px 13px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .1);
+}
+.lesson-rewards__extra { grid-template-columns: auto minmax(0, 1fr); }
+.lesson-rewards__row-coin { inline-size: 42px; }
+.lesson-rewards__row-coin .yv-badge { width: 100%; }
+.lesson-rewards__row-text { display: grid; gap: 2px; min-inline-size: 0; text-align: start; }
+.lesson-rewards__row-text strong { color: white; font-size: var(--sp-fs-sm); }
+.lesson-rewards__row-text > span {
+  overflow: hidden;
+  color: rgba(255, 255, 255, .7);
+  font-size: var(--sp-fs-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lesson-rewards__row-delta { display: grid; justify-items: end; gap: 1px; }
+.lesson-rewards__row-delta b { color: #b8f5d8; font-size: var(--sp-fs-sm); }
+.lesson-rewards__row-delta > span { color: rgba(255, 255, 255, .62); font-size: 11px; white-space: nowrap; }
+
+.lesson-rewards__progress { position: relative; z-index: 2; display: grid; gap: var(--sp-2); }
+.lesson-rewards__progress h3 {
+  margin: 0;
+  color: rgba(255, 255, 255, .72);
+  font-size: 11px;
+  font-weight: var(--sp-fw-bold);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.lesson-rewards__progress ul { display: grid; gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
+
+@media (max-width: 900px) {
+  /* Stacked under the reflection the column must not eat the whole screen. */
+  .lesson-rewards { padding: var(--sp-4); }
+  .lesson-rewards__hero { margin-block: 0; }
+  .lesson-rewards__coin { inline-size: 96px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lesson-rewards__rays,
+  .lesson-rewards__coin,
+  .lesson-rewards__spinner { animation: none; }
+  .lesson-rewards__confetti { display: none; }
+}

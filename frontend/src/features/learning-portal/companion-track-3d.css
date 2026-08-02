@@ -1,0 +1,236 @@
+/* The 3D route in the companion panel.
+   Component: features/learning-portal/CompanionTrack3D.tsx.
+
+   The canvas is decorative and sits underneath; the stations are real buttons
+   in `.ct3d__labels`, positioned each frame from the projected 3D coordinates.
+   That keeps the track keyboard-navigable and screen-reader readable while the
+   scene stays purely visual. */
+
+.ct3d {
+  position: relative;
+  block-size: 100%;
+  inline-size: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 12%, rgba(139, 108, 255, .28), transparent 55%),
+    radial-gradient(circle at 20% 82%, rgba(76, 201, 240, .18), transparent 52%),
+    #0b1030;
+  opacity: 0;
+  transition: opacity 420ms ease;
+}
+.ct3d.is-ready { opacity: 1; }
+
+.ct3d__canvas { position: absolute; inset: 0; }
+.ct3d__canvas canvas { display: block; inline-size: 100%; block-size: 100%; }
+
+/* The track is taller than the panel, so it is DRAGGABLE. `touch-action: none`
+   hands vertical gestures to the pointer handlers instead of letting the panel
+   scroll underneath — without it a tablet drag scrolled the chat and the track
+   never moved. */
+.ct3d__canvas { cursor: grab; touch-action: none; }
+.ct3d.is-panning .ct3d__canvas { cursor: grabbing; }
+
+/* The projected station layer. `position: absolute` children are moved by the
+   loop with `translate3d`, so they must not participate in any layout flow. */
+.ct3d__labels { position: absolute; inset: 0; pointer-events: none; }
+.ct3d__station {
+  position: absolute;
+  /* PHYSICAL offsets, deliberately. The loop projects each station to screen
+     space and writes a physical `translate3d(x, y)`. With `inset-inline-start`
+     the origin flipped to the right edge under RTL and every station was pushed
+     a full panel-width off-screen. */
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  /* `transform` is owned by the animation loop — never set it here. */
+  will-change: transform;
+}
+.ct3d__station:disabled { cursor: default; }
+
+.ct3d__station-num {
+  display: grid;
+  place-items: center;
+  inline-size: 26px;
+  block-size: 26px;
+  border: 1.5px solid rgba(255, 255, 255, .55);
+  border-radius: 50%;
+  background: rgba(11, 16, 48, .72);
+  color: white;
+  font-size: 12px;
+  font-weight: var(--sp-fw-bold);
+  backdrop-filter: blur(3px);
+  transition: transform 160ms ease, border-color 160ms ease;
+}
+.ct3d__station.is-completed .ct3d__station-num { border-color: #34d399; color: #b8f5d8; }
+.ct3d__station.is-current .ct3d__station-num { border-color: #c4b5fd; background: #7b52e6; }
+.ct3d__station.is-locked .ct3d__station-num { border-color: rgba(255, 255, 255, .22); color: rgba(255, 255, 255, .42); }
+.ct3d__station:hover:not(:disabled) .ct3d__station-num,
+.ct3d__station:focus-visible .ct3d__station-num { transform: scale(1.18); }
+.ct3d__station:focus-visible { outline: none; }
+.ct3d__station:focus-visible .ct3d__station-num { box-shadow: 0 0 0 3px rgba(196, 181, 253, .6); }
+.ct3d__station:hover .ct3d__station-card,
+.ct3d__station:focus-visible .ct3d__station-card,
+.ct3d__station.is-active .ct3d__station-card { opacity: 1; scale: 1; }
+
+/* The title card only opens for the station being looked at, so a narrow panel
+   is not a wall of overlapping labels. The side is chosen per station by the
+   loop (`data-side`) from where there is room, not from text direction. */
+.ct3d__station-card {
+  position: absolute;
+  /* BELOW the station rather than beside it. The rooms are the thing worth
+     looking at now, and a card opening sideways sat straight across the
+     furniture — and across Yuvi, who stands in the room's open corner. */
+  top: calc(100% + 10px);
+  display: grid;
+  gap: 1px;
+  inline-size: max-content;
+  max-inline-size: 178px;
+  padding: 7px 11px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 12px;
+  background: rgba(11, 16, 48, .93);
+  text-align: center;
+  translate: -50% 0;
+  opacity: 0;
+  scale: .94;
+  transition: opacity 160ms ease, scale 160ms ease;
+  pointer-events: none;
+}
+/* Centred under the station; `data-side` now only nudges it back inside the
+   panel when a station sits near an edge. */
+.ct3d__station .ct3d__station-card { left: 50%; }
+.ct3d__station[data-side='end'] .ct3d__station-card { left: 30%; }
+.ct3d__station[data-side='start'] .ct3d__station-card { left: 70%; }
+.ct3d__station-card strong { color: white; font-size: var(--sp-fs-xs); line-height: 1.3; }
+.ct3d__station-card small { color: rgba(255, 255, 255, .62); font-size: 10px; }
+
+/* ── Pan indicator ──────────────────────────────────────────────────────────
+   The track is a canvas, so it has no scrollbar of its own and a unit taller
+   than the panel looked like it simply ended at the frame. This is a real one:
+   the render loop sizes the thumb from the share of the track on screen and
+   places it from the camera, and dragging the rail drives the camera back.
+   Physical `right`, like the legend and the station cards — the overlay is
+   positioned in projected pixels, so a logical property would flip it in RTL. */
+.ct3d__scroll {
+  position: absolute;
+  inset-block: 14px;
+  right: 6px;
+  inline-size: 10px;
+  border-radius: var(--sp-radius-pill);
+  background: rgba(255, 255, 255, .08);
+  cursor: pointer;
+  touch-action: none;
+  opacity: .55;
+  transition: opacity 160ms ease;
+}
+.ct3d:hover .ct3d__scroll { opacity: 1; }
+.ct3d__scroll[hidden] { display: none; }
+
+.ct3d__scroll-thumb {
+  position: absolute;
+  inset-inline: 2px;
+  /* `top` and `height` are owned by the render loop — never set them here. */
+  min-block-size: 24px;
+  border-radius: var(--sp-radius-pill);
+  background: rgba(196, 181, 253, .75);
+}
+.ct3d__scroll:hover .ct3d__scroll-thumb { background: rgba(196, 181, 253, .95); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ct3d__scroll { transition: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ct3d { transition: none; }
+  .ct3d__station-num,
+  .ct3d__station-card { transition: none; }
+}
+
+/* ── The learner's real Yuvi, laid over the canvas ──────────────────────────
+   Positioned by the render loop from his projected world point, anchored at his
+   FEET (translate(-50%, -100%)) so he stands on the platform deck rather than
+   floating with his centre on it. Scaled down here rather than in the avatar so
+   the figure stays byte-for-byte the studio one. */
+.ct3d__mascot {
+  position: absolute;
+  top: 0;
+  left: 0;                       /* physical: the loop writes projected pixels */
+  inline-size: 96px;
+  block-size: 96px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 260ms ease;
+  z-index: 3;
+  filter: drop-shadow(0 10px 14px rgb(4 6 22 / 0.55));
+}
+.ct3d.is-ready .ct3d__mascot { opacity: 1; }
+.ct3d__mascot > * { inline-size: 100%; block-size: 100%; }
+
+/* ── Leaving the open activity ──────────────────────────────────────────────
+   A station click is a navigation away from work in progress, so it asks first. */
+.ct3d__confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgb(6 8 26 / 0.72);
+  backdrop-filter: blur(6px);
+  animation: ct3d-confirm-in 180ms ease-out;
+}
+@keyframes ct3d-confirm-in { from { opacity: 0 } to { opacity: 1 } }
+.ct3d__confirm-card {
+  inline-size: min(320px, 100%);
+  padding: 20px 20px 16px;
+  border-radius: 18px;
+  border: 1px solid rgb(167 139 250 / 0.4);
+  background: linear-gradient(160deg, #241d4d, #171436);
+  box-shadow: 0 24px 48px rgb(2 3 14 / 0.6);
+  text-align: start;
+}
+.ct3d__confirm-card h3 {
+  margin: 0 0 8px;
+  font-size: 1.02rem;
+  color: #f3f0ff;
+}
+.ct3d__confirm-card p {
+  margin: 0 0 16px;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: #c3bde6;
+}
+.ct3d__confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+.ct3d__confirm-actions button {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 11px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 140ms ease, filter 140ms ease;
+}
+.ct3d__confirm-actions button:hover { transform: translateY(-1px); filter: brightness(1.08); }
+.ct3d__confirm-stay {
+  border: 1px solid rgb(255 255 255 / 0.18);
+  background: transparent;
+  color: #d7d2f5;
+}
+.ct3d__confirm-go {
+  border: 0;
+  background: linear-gradient(135deg, #a78bfa, #7c5cf0);
+  color: #fff;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ct3d__confirm { animation: none }
+  .ct3d__confirm-actions button:hover { transform: none }
+}

@@ -91,6 +91,21 @@ def _locales(values: object) -> list[str]:
     return sorted(locale for locale in locales if locale)
 
 
+def _string_list(values: object) -> list[str]:
+    """A 720 closed-list array, kept verbatim.
+
+    The official indexes (מגזר, אוכלוסיית יעד, מיומנויות) are the Ministry's,
+    so values are trimmed and de-duplicated but never mapped, renamed, or
+    defaulted — an absent field stays absent.
+    """
+    if isinstance(values, str):
+        values = [values]
+    if not isinstance(values, list):
+        return []
+    seen = {str(value).strip() for value in values if str(value or "").strip()}
+    return sorted(seen)
+
+
 def _title_translations(unit: dict[str, Any]) -> dict[str, str]:
     """Map Kata ``titleTranslations`` (by language label) to locale codes."""
     raw = unit.get("titleTranslations")
@@ -113,6 +128,27 @@ def _recommended_after_fail(component: dict[str, Any]) -> list[str]:
     return []
 
 
+def normalize_question_id(value: object) -> str:
+    """Reduce a catalog ``questionId`` to the id the xAPI events actually carry.
+
+    Measured 29/07 on the live catalog: Kata returns the FIRST question of every
+    item as a full object URL
+    (``…/methodica-science-mass-measure-01-01-001/q1``) while a second question on
+    the same item comes back as plain ``q2`` — the two id spaces mixed inside one
+    array. The `answered` statement for that same question carries only ``q1``,
+    so the learner's position was keyed ``…|<URL>`` on arrival and ``…|q1`` the
+    moment they answered: ONE question, two keys, therefore two chat threads (the
+    observed pair of threads both captioned "שאלה 3") and support buttons that
+    re-armed mid-question. The event side already reads the tail of the object
+    id, so the catalog is normalized to the same tail here — one id space,
+    end-to-end. A value with no separator is kept as-is.
+    """
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    return text.rstrip("/").rsplit("/", 1)[-1].rsplit("#", 1)[-1] or text
+
+
 def _question_row(question: dict[str, Any]) -> dict[str, Any]:
     """Bounded, server-only snapshot of one question (text/options/answer).
 
@@ -124,7 +160,7 @@ def _question_row(question: dict[str, Any]) -> dict[str, Any]:
         return [str(v)[:200] for v in values[:limit] if v not in (None, "")]
 
     return {
-        "questionId": str(question.get("questionId") or ""),
+        "questionId": normalize_question_id(question.get("questionId")),
         "questionType": str(question.get("questionType") or ""),
         "questionText": str(question.get("questionText") or "")[:600],
         "answers": _texts(question.get("answers"), 12),
@@ -160,7 +196,8 @@ def _sub_content_bot_index(
         rows: list[dict[str, Any]] = []
         for question in item.get("questions") or []:
             if isinstance(question, dict) and question.get("questionId"):
-                qid = str(question["questionId"])
+                # Same id space as the events (see `normalize_question_id`).
+                qid = normalize_question_id(question["questionId"])
                 question_ids.append(qid)
                 if text:
                     by_item.setdefault(qid, text)
@@ -169,6 +206,49 @@ def _sub_content_bot_index(
             questions_by_item[item_id] = rows
     aggregate = " ".join(parts)[:1800] or None
     return aggregate, by_item, question_ids, questions_by_item
+
+
+def _item_profiles(component: dict[str, Any]) -> list[dict[str, Any]]:
+    """One row per ``subContent`` item, in the order the learner meets them.
+
+    A component is NOT a list of questions: per the 720 content spec a פריט is
+    "יחידת אינטראקציה שניתן לתעד אותה כאירוע אחד" — a video, a reading, a
+    simulation or a set of questions. ``questions_by_item`` only sees the ones
+    that ask something, so a video or summary screen was invisible to everything
+    downstream (the chat opened no thread for it at all). This keeps the item's
+    own identity — ``contentType`` (הבנייה / תרגול / סרטון־מוטיבציה …) and
+    ``mediaFormat`` (video / text / interactive-content) — so the coach can talk
+    about the screen the learner is ACTUALLY on.
+    """
+    profiles: list[dict[str, Any]] = []
+    for item in component.get("subContent") or []:
+        if not isinstance(item, dict):
+            continue
+        item_id = str(item.get("id") or "").strip()
+        if not item_id:
+            continue
+        questions = [
+            q for q in (item.get("questions") or [])
+            if isinstance(q, dict) and q.get("questionId")
+        ]
+        profiles.append({
+            "id": item_id,
+            "title": str(item.get("title") or "")[:200],
+            "content_type": str(item.get("contentType") or "").strip().lower(),
+            "media_format": str(item.get("mediaFormat") or "").strip().lower(),
+            "question_count": len(questions),
+        })
+    return profiles
+
+
+def _ecat_item_id(row: dict[str, Any]) -> Optional[str]:
+    """The row's id in the MoE educational catalog, under any of the spellings a
+    provider might publish it as. Absent everywhere in Kata today."""
+    for key in ("ecatItemId", "ecatId", "ecatItem", "catalogItemId"):
+        value = str(row.get(key) or "").strip()
+        if value:
+            return value
+    return None
 
 
 def normalize_component(component: dict[str, Any]) -> dict[str, Any]:
@@ -188,10 +268,25 @@ def normalize_component(component: dict[str, Any]) -> dict[str, Any]:
         "languages": _locales(component.get("languages")),
         "estimated_minutes": component.get("estimatedTimeInMinutes"),
         "recommended_after_fail": _recommended_after_fail(component),
+        # 720 metadata table fields that were parsed away. `skills` is the
+        # מיומנויות index the component exercises, `manufacture` is the content
+        # provider (provenance across a multi-provider catalog), and the two
+        # timestamps are how a re-import knows which snapshot it holds.
+        "skills": _string_list(component.get("skills")),
+        "manufacture": str(component.get("manufacture") or "") or None,
+        "created_at": component.get("createdAt"),
+        "updated_at": component.get("updatedAt"),
         "information_to_bot": information_to_bot,
         "information_by_item": information_by_item,
         "questions_by_item": questions_by_item,
+        "items": _item_profiles(component),
         "question_ids": question_ids,
+        # The MoE catalog (ECAT) id of this component, IF the provider ever
+        # publishes one: `grouping→content-vendor` is per content item, not per
+        # vendor. Kata's catalog carries no such field today, so this is almost
+        # always None and the env map stands in — but reading it costs nothing
+        # and the mapping stops being configuration the day it appears.
+        "ecat_item_id": _ecat_item_id(component),
         "cognitive_level": component.get("cognitiveLevel"),
         "depth_level": component.get("depthLevel"),
         "media_format": (
@@ -238,6 +333,11 @@ def normalize_unit(unit: dict[str, Any]) -> dict[str, Any]:
         "objective_id": objective_id,
         "subject": subject_from_objective(objective_id, sub_topic),
         "prerequisites": prerequisites,
+        # Who the unit was authored FOR (720 closed lists מגזר / אוכלוסיית יעד).
+        # Kept verbatim — no value is invented when the provider omits them.
+        "target_sector": _string_list(unit.get("targetSector")),
+        "target_audience": _string_list(unit.get("targetAudience")),
+        "ecat_item_id": _ecat_item_id(unit),
         "languages": locales,
         "components": components,
         "source": "kata",

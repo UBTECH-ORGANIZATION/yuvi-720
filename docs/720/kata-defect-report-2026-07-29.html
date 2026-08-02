@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>דוח תקלות בתוכן — יחידת "מדידה מעשית של מסה" | Yuvilab Spark ← Kata (CET)</title>
+<style>
+  :root{
+    --ink:#12141c; --muted:#5b6070; --line:#e2e5ee; --bg:#f7f8fc; --card:#fff;
+    --crit:#c0243a; --crit-bg:#fdeef1; --high:#b45309; --high-bg:#fef4e6;
+    --med:#1d4ed8; --med-bg:#eaf0fe; --low:#4b5563; --low-bg:#f1f2f6;
+    --ok:#047857; --ok-bg:#e9f7f1;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:0 0 64px; background:var(--bg); color:var(--ink);
+    font-family:"Segoe UI","Helvetica Neue",Arial,"Noto Sans Hebrew",sans-serif;
+    font-size:16px; line-height:1.7;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px}
+  header.top{background:linear-gradient(135deg,#2b2d5c,#4b2f7a); color:#fff; padding:40px 0 32px; margin-bottom:32px}
+  header.top h1{margin:0 0 8px; font-size:28px; line-height:1.3}
+  header.top p{margin:0; opacity:.9}
+  .meta{display:flex; flex-wrap:wrap; gap:8px 28px; margin-top:20px; font-size:14px; opacity:.92}
+  .meta b{font-weight:600}
+  h2{font-size:22px; margin:40px 0 12px; padding-bottom:8px; border-bottom:2px solid var(--line)}
+  h3{font-size:17px; margin:22px 0 8px}
+  p{margin:0 0 12px}
+  code,pre{font-family:"SF Mono",Menlo,Consolas,monospace; direction:ltr; text-align:left}
+  code{background:#eceef6; padding:1px 5px; border-radius:4px; font-size:.88em; unicode-bidi:embed}
+  pre{
+    background:#1b1d29; color:#e6e8f2; padding:14px 16px; border-radius:10px;
+    overflow-x:auto; font-size:13px; line-height:1.55; margin:12px 0;
+  }
+  pre .hl{background:rgba(220,60,90,.28); display:inline-block; width:100%}
+  pre .cm{color:#8a90a8}
+  table{border-collapse:collapse; width:100%; margin:14px 0; font-size:14.5px; background:var(--card)}
+  th,td{border:1px solid var(--line); padding:9px 12px; text-align:start; vertical-align:top}
+  th{background:#eef0f8; font-weight:600}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:22px 24px; margin:18px 0}
+  .card.crit{border-inline-start:6px solid var(--crit)}
+  .card.high{border-inline-start:6px solid var(--high)}
+  .card.med{border-inline-start:6px solid var(--med)}
+  .card.low{border-inline-start:6px solid var(--low)}
+  .tag{display:inline-block; padding:2px 11px; border-radius:999px; font-size:12.5px; font-weight:700; letter-spacing:.02em}
+  .t-crit{background:var(--crit-bg); color:var(--crit)}
+  .t-high{background:var(--high-bg); color:var(--high)}
+  .t-med{background:var(--med-bg); color:var(--med)}
+  .t-low{background:var(--low-bg); color:var(--low)}
+  .t-ok{background:var(--ok-bg); color:var(--ok)}
+  .card h3{margin-top:0; display:flex; align-items:center; gap:12px; flex-wrap:wrap; font-size:19px}
+  .label{font-weight:700; color:var(--muted); font-size:13.5px; letter-spacing:.03em; margin:16px 0 4px}
+  ol,ul{margin:0 0 12px; padding-inline-start:22px}
+  li{margin-bottom:5px}
+  .ask{background:#f0fdf7; border:1px solid #b6e6d2; border-radius:9px; padding:12px 16px; margin-top:14px}
+  .ask .label{color:var(--ok); margin-top:0}
+  .note{background:#fffbeb; border:1px solid #fde68a; border-radius:9px; padding:12px 16px; margin:14px 0; font-size:14.5px}
+  .summary td:first-child{white-space:nowrap; font-weight:600}
+  footer{margin-top:48px; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:13.5px}
+  @media print{
+    body{background:#fff} header.top{background:#2b2d5c!important; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+    .card,pre,table{break-inside:avoid} pre{white-space:pre-wrap}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <h1>דוח תקלות בתוכן — יחידת «מדידה מעשית של מסה בשלושה מצבי צבירה»</h1>
+    <p>ממצאים מהרצה מלאה מקצה־לקצה של כל חמשת הרכיבים דרך פלטפורמת Yuvilab Spark</p>
+    <div class="meta">
+      <span><b>תאריך הבדיקה:</b> 29/07/2026</span>
+      <span><b>ספק התוכן:</b> Kata / CET</span>
+      <span><b>מזהה יחידה:</b> <code>methodica-science-mass-measure-01</code></span>
+      <span><b>יעד למידה:</b> <code>MOE.SCI.G7.CHEM.BODY-MAT-PROP.MASS-VOL.MASS-PRACTICE</code></span>
+      <span><b>לומד בדיקה:</b> <code>e2e-bot</code> (חשבון בדיקה בלבד)</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<h2>תקציר</h2>
+<p>
+  ביצענו הליכה מלאה בכל חמשת רכיבי היחידה (<code>-01</code> עד <code>-05</code>), כולל פתרון נכון של כל
+  השאלות עד להשגת כשירות ביעד הלמידה. במהלך ההרצה תועדו <b>12 ממצאים</b> בצד התוכן.
+  שלושה מהם חמורים ודורשים טיפול לפני פריסה לתלמידים — ובראשם <b>דליפת אסימון הכתיבה ל־LRS אל Google/YouTube</b>.
+</p>
+<p>
+  כל ממצא בדוח מלווה בעדות גולמית: הצהרת xAPI מלאה כפי שהתקבלה אצלנו, או קוד המקור של התוכן עצמו.
+  הפלטפורמה שלנו כבר הותאמה כדי לצמצם את הנזק בצד שלנו, אך <b>אלה תיקונים שרק ספק התוכן יכול לבצע בשורש</b>.
+</p>
+
+<table class="summary">
+  <tr><th>#</th><th>חומרה</th><th>ממצא</th><th>רכיב</th></tr>
+  <tr><td>1</td><td><span class="tag t-crit">קריטי · אבטחה</span></td><td>אסימון ה־Bearer ל־LRS נמסר ל־Google דרך נגן YouTube</td><td><code>-04</code>, <code>-01</code></td></tr>
+  <tr><td>2</td><td><span class="tag t-crit">קריטי · תאימות</span></td><td>שימוש בנגן YouTube — אסור לפי תקן 720</td><td><code>-04</code>, <code>-01</code></td></tr>
+  <tr><td>3</td><td><span class="tag t-crit">קריטי · חסימה</span></td><td>סיום הרכיב חסום מאחורי YouTube; חסימת רשת ⇐ הלומד תקוע</td><td><code>-04</code></td></tr>
+  <tr><td>4</td><td><span class="tag t-high">גבוה</span></td><td>התוכן מנווט בעצמו בין רכיבים, מחוץ למסלול שהפלטפורמה קובעת</td><td><code>-01→-02</code>, <code>-03→-04</code>, <code>-04→-05</code></td></tr>
+  <tr><td>5</td><td><span class="tag t-high">גבוה</span></td><td>פעלים שאינם ברשימה הסגורה של משרד החינוך</td><td>כל הרכיבים</td></tr>
+  <tr><td>6</td><td><span class="tag t-high">גבוה</span></td><td>אנימציה דקורטיבית מדווחת כנגינת מדיה — ~70 אירועים לדקה</td><td><code>-02</code> ואחרים</td></tr>
+  <tr><td>7</td><td><span class="tag t-med">בינוני</span></td><td><code>question_count</code> בקטלוג סותר את מספור השאלות בנגן</td><td><code>-02</code>, <code>-04</code>, <code>-05</code></td></tr>
+  <tr><td>8</td><td><span class="tag t-med">בינוני</span></td><td>מסכי וידאו אינם מדווחים אירוע ברמת הפריט</td><td><code>-01-003</code>, <code>-04-006</code></td></tr>
+  <tr><td>9</td><td><span class="tag t-med">בינוני</span></td><td>אין אירוע במעבר בין סעיפים בתוך אותו פריט</td><td><code>-02-001</code>, <code>-05-001</code></td></tr>
+  <tr><td>10</td><td><span class="tag t-low">נמוך</span></td><td><code>completed</code> נשלח ללא <code>questionId</code></td><td>כל הרכיבים</td></tr>
+  <tr><td>11</td><td><span class="tag t-low">נמוך</span></td><td>אזורי <code>role="status"</code> ישנים נשארים ב־DOM</td><td><code>-05</code></td></tr>
+  <tr><td>12</td><td><span class="tag t-low">לבירור</span></td><td>הנתון באיור אינו תואם לנתון בטקסט השאלה</td><td><code>-05</code> סעיף א</td></tr>
+</table>
+
+
+<h2>ממצאים קריטיים</h2>
+
+<div class="card crit">
+  <h3><span class="tag t-crit">קריטי · אבטחה</span> 1. אסימון הכתיבה ל־LRS של הלומד נמסר ל־Google</h3>
+
+  <p>
+    התוכן מקבל את הרשאות הדיווח דרך פרמטר <code>slxapi</code> <b>במחרוזת השאילתה של כתובת הדף</b>.
+    אותו דף מטמיע נגן YouTube, ו־YouTube IFrame API מוסיף אוטומטית את כתובת הדף המלאה לכתובת
+    ה־iframe בפרמטרים <code>forigin</code> ו־<code>widget_referrer</code>.
+    התוצאה: <b>אסימון ה־Bearer, כתובת ה־LRS, מזהה הלומד וה־registration נשלחים לשרתי Google בכל טעינת מסך וידאו.</b>
+  </p>
+
+  <div class="label">קוד המקור של התוכן — כך זה קורה</div>
+  <p>הפונקציה מוסיפה במפורש את הכתובת המלאה של הדף, זו שמכילה את האסימון:</p>
+<pre><span class="cm">/* lomdot.education.gov.il/…/methodica-science-mass-measure-01-04/index.html */</span>
+function ytEmbedPlayerVars() {
+  const vars = { rel: 0, modestbranding: 1, playsinline: 1,
+                 hl: 'iw', cc_lang_pref: 'iw', cc_load_policy: 1 };
+  if (/^https?:$/.test(window.location.protocol)) {
+    vars.origin          = window.location.origin;
+<span class="hl">    vars.widget_referrer = window.location.href;   // ← כולל ?slxapi={…"auth":"Bearer …"}</span>
+  }
+  return vars;
+}</pre>
+
+  <div class="label">מה ש־Google מקבל בפועל (מפוענח מכתובת ה־iframe החיה)</div>
+<pre>GET https://www.youtube-nocookie.com/embed/8AVv7XEeXF8
+      ?origin=https%3A%2F%2Flomdot.education.gov.il
+<span class="hl">      &amp;forigin=…%2Fmethodica-science-mass-measure-01-04%2Findex.html%3Fslxapi%3D%257B…%257D</span>
+<span class="hl">      &amp;widget_referrer=…</span>
+
+<span class="cm">// forigin ← slxapi, לאחר פענוח:</span>
+{
+  "actor": {
+    "account": { "name": "e2e-bot",
+                 "homePage": "https://&lt;platform-host&gt;" },
+    "mbox":    "mailto:7b25ab09-440b-4b9d-a31c-6417d25b3d84@kata.cet.ac.il",
+    "name":    "N/A",
+    "objectType": "Agent"
+  },
+<span class="hl">  "auth":     "Bearer dEv7AO03irh5Sy…3ZxTmWc",     // ← אסימון כתיבה חי ל-LRS</span>
+  "endpoint": "https://kata.cet.ac.il/api/v1/xapi/"
+}
+<span class="cm">// בנוסף: registration = 7b25ab09-440b-4b9d-a31c-6417d25b3d84</span></pre>
+
+  <div class="note">
+    האסימון מוצג כאן חלקית במכוון. הערך המלא נלכד בבדיקה ונשמר אצלנו; נעביר אותו בערוץ מאובטח לפי דרישה.
+    מומלץ להחשיב כל אסימון שהונפק עד לתיקון כ<b>חשוף</b>.
+  </div>
+
+  <div class="label">השפעה</div>
+  <ul>
+    <li>מי שמחזיק באסימון יכול לכתוב הצהרות xAPI שרירותיות בשם אותו לומד אל <code>kata.cet.ac.il</code>.</li>
+    <li>מזהה הלומד וה־<code>mbox</code> נמסרים לצד שלישי מסחרי — בניגוד להנחיות הפרטיות של תוכנית 720.</li>
+    <li>הדליפה מתרחשת גם דרך כותרת <code>Referer</code> רגילה לכל משאב חיצוני שנטען מאותו דף.</li>
+  </ul>
+
+  <div class="ask">
+    <div class="label">מה נדרש מ־Kata</div>
+    <ol>
+      <li><b>להוציא את <code>slxapi</code> ממחרוזת השאילתה.</b> להעביר את הרשאות הדיווח ב־<code>postMessage</code>
+          מהפלטפורמה המארחת, או למשוך אותן בבקשת שרת נפרדת לאחר טעינת ה־iframe.</li>
+      <li>עד לתיקון: להסיר את <code>vars.widget_referrer</code>, להוסיף
+          <code>&lt;meta name="referrer" content="no-referrer"&gt;</code> לדף התוכן, ולשלול את היכולת של
+          ה־iframe החיצוני לקרוא את כתובת האב.</li>
+      <li>לבטל ולהנפיק מחדש את כל אסימוני ה־LRS שהונפקו עד כה.</li>
+      <li>לקצר את תוקף האסימון ולהגביל את הרשאתו לכתיבה לרכיב ולרישום הספציפיים בלבד.</li>
+    </ol>
+  </div>
+</div>
+
+
+<div class="card crit">
+  <h3><span class="tag t-crit">קריטי · תאימות</span> 2. שימוש בנגן YouTube</h3>
+  <p>
+    מסמך תקני התוכן של תוכנית 720 קובע במפורש: <b>אין להשתמש בנגני YouTube</b>.
+    נמצאו שני מופעים ביחידה — ברכיב <code>-01</code> (מסך הווידאו) וברכיב <code>-04</code> (מסך הסיום).
+  </p>
+  <p>הנגן אינו מוסתר: הוא חושף בתוך סביבת הלמידה קישורים יוצאים ל־youtube.com, קישור לערוץ, מונה מנויים וכפתור העתקת קישור.</p>
+<pre>iframe src = https://www.youtube-nocookie.com/embed/8AVv7XEeXF8?…
+allow      = "accelerometer; autoplay; clipboard-write; encrypted-media;
+              gyroscope; picture-in-picture; web-share"
+sandbox    = (none)
+
+<span class="cm">// קישורים שנמצאו בתוך הנגן:</span>
+https://www.youtube.com/watch?v=8AVv7XEeXF8
+/channel/UCcoZAalDFqahuJRvmEPV-kQ        <span class="cm">("משרד החינוך - ישראל", 39.6K מנויים)</span>
+
+<span class="cm">// שגיאת קונסולה שנרשמה בטעינה:</span>
+Failed to execute 'postMessage' on 'DOMWindow': the target origin provided
+('https://www.youtube-nocookie.com') does not match the recipient window's
+origin ('https://lomdot.education.gov.il').</pre>
+  <p>הערה: אורך הסרטון הוא 39.7 שניות — עומד במגבלת שתי הדקות לחטיבת ביניים. הבעיה היא הנגן, לא התוכן.</p>
+  <div class="ask">
+    <div class="label">מה נדרש מ־Kata</div>
+    <p>לארח את קובץ הווידאו בתשתית המאושרת ולהגיש אותו ב־<code>&lt;video&gt;</code> נייטיב.
+       זה מסיר גם את ממצא 1 וגם את ממצא 3 בבת אחת.</p>
+  </div>
+</div>
+
+
+<div class="card crit">
+  <h3><span class="tag t-crit">קריטי · חסימה</span> 3. סיום הרכיב חסום מאחורי YouTube</h3>
+  <p>
+    במסך הווידאו של רכיב <code>-04</code>, כפתור «להמשיך» נשאר מנוטרל עד ש־YouTube מדווח
+    <code>PlayerState.ENDED</code>. אין מסלול חלופי.
+  </p>
+<pre>function s8Enter() {
+  const cont = document.getElementById('s8-continue');
+  if (s8Done) { cont.disabled = false; }
+<span class="hl">  else        { cont.disabled = true; … initS8Player(); }   // אין דרך אחרת לפתוח</span>
+}
+
+function initS8Player() {
+<span class="hl">  loadYouTubeApi(function () {            // ← אם הסקריפט חסום, ה-callback לא ירוץ לעולם</span>
+    s8YtPlayer = new YT.Player('s8-youtube-player', { …
+      events: {
+        onStateChange: e =&gt; { if (e.data === YT.PlayerState.ENDED) s8OnVideoEnded(); },
+<span class="hl">        onError:       () =&gt; s8OnVideoEnded()   // ← מטופל רק כשל של הנגן, לא כשל טעינת ה-API</span>
+      } });
+  });
+}</pre>
+  <p>
+    <code>onError</code> אכן משחרר את החסימה — אבל הוא רץ רק אחרי ש־<code>YT.Player</code> נבנה בהצלחה.
+    כאשר סקריפט ה־API עצמו חסום (חומת אש בית־ספרית, או מדיניות משרד החינוך שאוסרת YouTube),
+    <code>loadYouTubeApi</code> לא מסתיים, הנגן לא נבנה, ואף אחד משני ה־callbacks לא נורה.
+    <b>הלומד נתקע ואינו יכול לסיים את הרכיב — ולכן גם לא להגיע לשאלת השיא.</b>
+  </p>
+  <div class="ask">
+    <div class="label">מה נדרש מ־Kata</div>
+    <p>להוסיף timeout סביב טעינת ה־API שמשחרר את החסימה, ולהעדיף על פניו את התיקון בממצא 2 —
+       וידאו מקומי אינו יוצר תלות חיצונית כלל.</p>
+  </div>
+</div>
+
+
+<h2>ממצאים בחומרה גבוהה</h2>
+
+<div class="card high">
+  <h3><span class="tag t-high">גבוה</span> 4. התוכן מנווט בעצמו בין רכיבים</h3>
+  <p>
+    לפי דרישות 720 (מאפיין 1), <b>התהלוך בין הרכיבים מתבצע על ידי המערכת</b>.
+    בפועל, מיד לאחר <code>completed</code> של רכיב, התוכן ממשיך מעצמו לרכיב הבא —
+    בתוך אותו launch, בזמן שדיאלוג הסיום של הפלטפורמה עדיין מחכה לבחירת הלומד.
+  </p>
+
+  <div class="label">שלוש הופעות שתועדו (זמנים ב־UTC)</div>
+<pre>10:08:02   initialized  launch=-01   object=…-01-02   <span class="hl">← רכיב זר</span>
+12:15:50   completed    launch=-03   object=…-01-03
+12:15:53   initialized  launch=-03   object=…-01-04   <span class="hl">← רכיב זר, 3 שניות אחרי</span>
+12:16:25   initialized  launch=-03   object=…-01-04-001
+12:29:02   completed    launch=-04   object=…-01-04
+12:29:04   initialized  launch=-04   object=…-01-05   <span class="hl">← רכיב זר, 2 שניות אחרי</span></pre>
+
+  <div class="label">ההצהרה המלאה כפי שהתקבלה</div>
+<pre>{
+  "id": "8578438f-d0ef-4a2b-b0f6-d81e868b9d22",
+  "verb":  { "id": "http://adlnet.gov/expapi/verbs/initialized" },
+  "actor": { "name": "N/A", "objectType": "Agent",
+             "account": { "name": "e2e-bot", "homePage": "https://&lt;platform-host&gt;" } },
+<span class="hl">  "object": { "id": "https://lomdot.education.gov.il/metodica/720active/science/</span>
+<span class="hl">                     mass-measure/01/methodica-science-mass-measure-01-02" },</span>
+  "context": { "registration": "387b0d24-2a64-412e-8888-f7b7accebca0" },
+  "timestamp": "2026-07-29T10:08:02.021Z"
+}
+<span class="cm">// ה-launch שבמסגרתו הגיעה ההצהרה: methodica-science-mass-measure-01-01</span></pre>
+
+  <div class="label">שחזור</div>
+  <ol>
+    <li>לפתוח את רכיב <code>-03</code> ולסיים אותו.</li>
+    <li><b>לא</b> ללחוץ על דיאלוג הסיום של הפלטפורמה — להמשיך ללחוץ «המשך» בתוך ה־iframe.</li>
+    <li>התוכן מגיש את כל רכיב <code>-04</code> (סימולציית השקילה) בתוך launch של <code>-03</code>.</li>
+  </ol>
+
+  <div class="label">השפעה</div>
+  <ul>
+    <li>עבודה של רכיב אחד נרשמת על חשבון רכיב אחר, ומדדי הכשירות מתייחסים לרכיב הלא נכון.</li>
+    <li>הלומד עוקף את המסלול שהמערכת קבעה — כולל רכיבים שטרם נפתחו עבורו.</li>
+    <li>מסלול חלופי או תוכן תיקון שהמערכת בוחרת עבור לומד מתקשה — נעקף לחלוטין.</li>
+  </ul>
+
+  <div class="ask">
+    <div class="label">מה נדרש מ־Kata</div>
+    <p>בסיום רכיב יש לשלוח <code>completed</code> ולעצור. החזרת השליטה למארח, ללא הגשת מסכים
+       של הרכיב הבא. מסך «רגע לפני שנמשיך» השייך לרכיב הבא צריך להיטען רק ב־launch של אותו רכיב.</p>
+  </div>
+</div>
+
+
+<div class="card high">
+  <h3><span class="tag t-high">גבוה</span> 5. פעלים שאינם ברשימה הסגורה של משרד החינוך</h3>
+  <p>
+    מרשם הפעלים הרשמי (<code>https://lxp.education.gov.il/vocabulery/Verb.html</code>) הוא רשימה סגורה,
+    ואין בו <code>initialized</code>, <code>selected</code> או <code>requested</code>.
+    התוכן שולח פעלים ממרחבי שמות של ADL, ADB, AcrossX ו־Video.
+  </p>
+  <table>
+    <tr><th>מה שנשלח בפועל</th><th>הפעל התקני</th><th>הערה</th></tr>
+    <tr><td><code>http://adlnet.gov/expapi/verbs/initialized</code></td><td><code>…/moe/verbs/enter</code></td><td>—</td></tr>
+    <tr><td><code>http://adlnet.gov/expapi/verbs/answered</code></td><td><code>…/moe/verbs/answered</code></td><td>מרחב שמות שגוי</td></tr>
+    <tr><td><code>http://adlnet.gov/expapi/verbs/completed</code></td><td><code>…/moe/verbs/completed</code></td><td>מרחב שמות שגוי</td></tr>
+    <tr><td><code>https://w3id.org/xapi/adb/verbs/selected</code></td><td>—</td><td>אין פעל תקני; לדווח כטלמטריה</td></tr>
+    <tr><td><code>https://w3id.org/xapi/acrossx/verbs/requested</code></td><td>—</td><td>בקשת רמז אינה פעל תקני</td></tr>
+    <tr><td><code>https://w3id.org/xapi/video/verbs/played|paused</code></td><td><code>…/moe/verbs/played|paused</code></td><td>מרחב שמות שגוי</td></tr>
+  </table>
+  <p>
+    אנו ממפים כרגע את הפעלים הללו בצד שלנו כדי לא לאבד נתונים, אך <b>מיפוי זה לא יתקיים ב־LRS של המשרד</b>,
+    ולכן הדיווח כפי שהוא אינו תקני.
+  </p>
+</div>
+
+
+<div class="card high">
+  <h3><span class="tag t-high">גבוה</span> 6. אנימציה דקורטיבית מדווחת כנגינת מדיה</h3>
+  <p>
+    כל עוד הלומד יושב על מסך מסוים, התוכן שולח זוג <code>played</code>+<code>paused</code>
+    בערך פעם בשנייה, כנגד <b>הרכיב</b> (ללא מזהה מסך) וללא כל תוכן ב־<code>result</code>.
+    אין כאן נגינת מדיה — זו לולאת אנימציה.
+  </p>
+  <div class="label">נפח שנמדד בביקור אחד ברכיב <code>-02</code></div>
+<pre>11:41   paused 34,  played 33,  enter 2      <span class="cm">← 69 אירועים בדקה אחת</span>
+11:42   played  9,  paused  8,  answered 2
+<span class="cm">סה"כ 182 מתוך 600 האירועים האחרונים של הלומד היו רעש זה.</span></pre>
+  <div class="label">הצהרה לדוגמה</div>
+<pre>{
+  "id":    "e3bd1715-8fd5-45e5-946d-88eb0c4a0274",
+<span class="hl">  "verb":  { "id": "https://w3id.org/xapi/video/verbs/played" },</span>
+<span class="hl">  "object":{ "id": "…/methodica-science-mass-measure-01-02" },   // הרכיב, לא מסך</span>
+  "result":{ "extensions": { "https://w3id.org/xapi/video/extensions/time": 2.817485 } },
+  "context": { "registration": "2fa43143-fa07-4777-8fa8-492e5b222885" },
+  "timestamp": "2026-07-26T11:09:13.520Z"
+}</pre>
+  <div class="label">השפעה</div>
+  <ul>
+    <li>עלות אחסון וכתיבה ל־LRS גדלה בסדר גודל.</li>
+    <li>כל מדד המבוסס על ספירת אירועים (מעורבות, קצב, זמן שהייה) מזוהם.</li>
+    <li>ברכיב שיש בו וידאו אמיתי, פרץ כזה עלול להזיז את מצביע המיקום של הלומד.</li>
+  </ul>
+  <div class="ask">
+    <div class="label">מה נדרש מ־Kata</div>
+    <p>לא לדווח <code>played</code>/<code>paused</code> על אנימציות דקורטיביות. פעלי מדיה שמורים
+       לנגינה שהלומד יזם, ויש לצרף אליהם מזהה מסך ונתוני <code>result</code> אמיתיים.</p>
+  </div>
+</div>
+
+
+<h2>ממצאים בחומרה בינונית</h2>
+
+<div class="card med">
+  <h3><span class="tag t-med">בינוני</span> 7. <code>question_count</code> בקטלוג סותר את מספור השאלות בנגן</h3>
+  <p>
+    הפלטפורמה מכתירה את שיחת הליווי לפי מטא־דאטה מהקטלוג, אבל הנגן מציג ללומד מספור אחר.
+    כתוצאה מכך הצ'אט מדבר על «שאלה 5» בזמן שעל המסך כתוב «שאלה 3».
+  </p>
+  <table>
+    <tr><th>רכיב</th><th>ניווט השאלות בנגן</th><th>לפי הקטלוג</th><th>הפער</th></tr>
+    <tr><td><code>-02</code></td><td>3 לשוניות</td><td>פריט <code>-001</code> עם <code>question_count: 2</code></td><td>שני הסעיפים מוצגים כלשונית אחת</td></tr>
+    <tr><td><code>-04</code></td><td>3 לשוניות</td><td>6 פריטים נושאי שאלות</td><td>מסכי תרגול מסומנים כשאלות</td></tr>
+    <tr><td><code>-05</code></td><td>שאלה אחת, «ארבעה סעיפים»</td><td>פריט אחד עם 4 שאלות</td><td>עקבי — זו ההתנהגות הרצויה</td></tr>
+  </table>
+  <p>
+    ברכיב <code>-04</code> המסכים שכותרתם «תרגול לקראת שאלה 1» ו«תרגול לקראת שאלה 2» מסומנים
+    בקטלוג כנושאי שאלה, אך הנגן אינו סופר אותם. התאמנו את המספור שלנו לפי הנגן;
+    נשמח שהקטלוג יתיישר לאותו מקור אמת.
+  </p>
+</div>
+
+<div class="card med">
+  <h3><span class="tag t-med">בינוני</span> 8. מסכי וידאו אינם מדווחים אירוע ברמת הפריט</h3>
+  <p>
+    ברכיב <code>-04</code> יש שישה פריטים, אך לאורך כל ההרצה התקבלו אירועים עבור
+    <code>-001</code> עד <code>-005</code> בלבד. פריט <code>-006</code> (מסך הווידאו)
+    לא שלח <code>initialized</code> ולא <code>completed</code>.
+    אותה תופעה נצפתה ב־<code>-01-003</code>: 90 שניות של צפייה ללא אף אירוע ברמת המסך.
+  </p>
+  <p>
+    בלי אירוע כזה הפלטפורמה אינה יודעת שהלומד הגיע למסך, והמלווה הדיגיטלי נשאר תקוע
+    על השאלה הקודמת. זו הסיבה שנאלצנו להסיק מיקום מתוך פעלי מדיה — מה שמתנגש עם ממצא 6.
+  </p>
+</div>
+
+<div class="card med">
+  <h3><span class="tag t-med">בינוני</span> 9. אין אירוע במעבר בין סעיפים בתוך פריט</h3>
+  <p>
+    בפריט <code>-02-001</code> יש שני סעיפים. המעבר מסעיף א לסעיף ב אינו מייצר אף הצהרה —
+    הפלטפורמה מגלה את המעבר רק כאשר מגיע <code>answered</code> עם <code>q2</code>, כלומר
+    <b>אחרי</b> שהלומד כבר ענה. עד אז הליווי מציג הקשר של הסעיף הקודם.
+  </p>
+  <div class="ask">
+    <div class="label">מה נדרש מ־Kata</div>
+    <p>לשלוח <code>enter</code> עם <code>questionId</code> בכל מעבר סעיף, כפי שנשלח במעבר בין פריטים.</p>
+  </div>
+</div>
+
+
+<h2>ממצאים בחומרה נמוכה</h2>
+
+<div class="card low">
+  <h3><span class="tag t-low">נמוך</span> 10. <code>completed</code> נשלח ללא <code>questionId</code></h3>
+  <p>
+    כל שאלה מדווחת פעמיים: <code>answered</code> ואחריו <code>completed</code>.
+    ל־<code>answered</code> יש <code>questionId</code>, ל־<code>completed</code> אין.
+    במסך שנושא כמה סעיפים לא ניתן לשייך את הסיום לסעיף הנכון, ואנו נאלצים לגזור זאת מהקשר.
+  </p>
+</div>
+
+<div class="card low">
+  <h3><span class="tag t-low">נמוך</span> 11. אזורי <code>role="status"</code> ישנים נשארים ב־DOM</h3>
+  <p>
+    ברכיב <code>-05</code>, לאחר ארבעת הסעיפים, נמצאו ארבעה אזורי <code>role="status"</code> —
+    אחד גלוי והשאר מוסתרים ויזואלית אך עדיין נושאים את נוסח המשוב הישן.
+    קורא מסך מונה את כולם, כך שהלומד עלול לשמוע משוב של סעיף קודם.
+  </p>
+<pre>document.querySelectorAll('[role="status"]').length  →  4
+  [0] "התשובה נכונה. המסה הכוללת נשארה זהה משום שכל חלקי המערכת נשא…"
+  [1] "התשובה נכונה. ההפרש בין שתי המדידות מייצג את מסת הגז שהשתחרר"
+  [2] "התשובה נכונה. כאשר משנים את מה שנמצא על המאזניים, משתנה גם ס…"
+  [3] ""</pre>
+  <p>מומלץ לרוקן או להסיר אזור סטטוס של מסך שאינו פעיל.</p>
+</div>
+
+<div class="card low">
+  <h3><span class="tag t-low">לבירור</span> 12. הנתון באיור אינו תואם לנתון בטקסט</h3>
+  <p>
+    ברכיב <code>-05</code>, סעיף א, טקסט השאלה מציין שקילה של <b>682.4 גרם</b> לפני ואחרי,
+    בעוד שהאיור הנלווה מתואר כ«המאזניים מציגים <b>675.2</b> גרם».
+    ייתכן שהאיור כללי בכוונה, אך בשאלה שכל כולה קריאת ערכי שקילה זה עלול לבלבל.
+    נבקש אישור שזו התנהגות מכוונת.
+  </p>
+</div>
+
+
+<h2>מה שעובד היטב</h2>
+<p>לשם איזון — הדברים הבאים נבדקו ופעלו כמצופה לאורך כל ההרצה:</p>
+<ul>
+  <li>המשוב המילולי בתוכן ענייני, מסביר את השגיאה ומכוון קדימה — תואם את דרישות 720 למשוב מעצב.</li>
+  <li>אין ציונים מספריים בממשק הלומד.</li>
+  <li>מנגנון «אפשר רמז?» זמין בכל שאלה, ונספר נכון.</li>
+  <li>מגבלת הניסיונות וחשיפת התשובה הנכונה פועלות בעקביות.</li>
+  <li>שאלת השיא (<code>-05</code>) אכן מבססת כשירות ביעד הלמידה בסיום מוצלח.</li>
+  <li>אורך הווידאו (39.7 שניות) עומד במגבלת שתי הדקות.</li>
+</ul>
+
+<h2>סיכום ההרצה</h2>
+<table>
+  <tr><th>רכיב</th><th>כותרת</th><th>סטטוס</th><th>הערות</th></tr>
+  <tr><td><code>-01</code></td><td>פתיחה, הקנייה ותרגול סטנדרטי א</td><td><span class="tag t-ok">הושלם</span></td><td>נגן YouTube; מסך הווידאו ללא אירוע</td></tr>
+  <tr><td><code>-02</code></td><td>תרגול בסיסי + סטנדרטי ב</td><td><span class="tag t-ok">הושלם</span></td><td>רעש אנימציה; אין אירוע במעבר סעיף</td></tr>
+  <tr><td><code>-03</code></td><td>משימת כיתה</td><td><span class="tag t-ok">הושלם</span></td><td>ניווט עצמי אל <code>-04</code></td></tr>
+  <tr><td><code>-04</code></td><td>תרגול מתקדם</td><td><span class="tag t-ok">הושלם</span></td><td>דליפת אסימון; חסימת סיום; ניווט עצמי אל <code>-05</code></td></tr>
+  <tr><td><code>-05</code></td><td>שאלת שיא (הערכה)</td><td><span class="tag t-ok">הושלם</span></td><td>4/4 סעיפים נכונים; כשירות בוססה</td></tr>
+</table>
+<p>
+  בתום ההרצה נרשם ביעד הלמידה: <code>achieved: true</code>, <code>level: "advanced"</code>,
+  11 הצלחות רצופות. כלומר — <b>המסלול הפדגוגי עצמו תקין</b>, והממצאים שלעיל נוגעים
+  לתשתית הדיווח, לאבטחה ולניווט.
+</p>
+
+<footer>
+  <p>
+    הופק על ידי צוות Yuvilab Spark מתוך הרצה מלאה מקצה־לקצה בתאריך 29/07/2026.
+    כל ההצהרות בדוח נלכדו כפי שהתקבלו בנקודת הקצה שלנו לקליטת xAPI.
+    נשמח לספק את יומן ה־xAPI הגולמי המלא, הקלטת מסך של השחזור, או את ערך האסימון המלא — בערוץ מאובטח, לפי דרישה.
+  </p>
+</footer>
+
+</div>
+</body>
+</html>

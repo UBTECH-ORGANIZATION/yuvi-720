@@ -23,7 +23,14 @@ from app.brain.repository import _get_collection_named
 
 # hint / explanation / different_way are one-shot per question; yuvi_chat is a
 # repeatable turn (counts up each question-scoped message the learner sends).
-KINDS = {"hint", "explanation", "different_way", "yuvi_chat"}
+# `content_hint` is the CONTENT's own hint button ("אפשר רמז?" inside the iframe,
+# reported as xAPI `requested`) — 720 §3.3 names it explicitly as evidence
+# ("מספר הפעמים שהתלמיד השתמש ברמזים מן התוכן"), and it stayed invisible
+# while only Yuvi's own buttons were counted. Kept distinct from `hint` so a
+# teacher can tell who the learner asked.
+# `content_choice` is a 720 §Selected self-report (practiceDecision /
+# isUnderstood / isRepeat / externalLearning); the chosen value lives in `meta`.
+KINDS = {"hint", "explanation", "different_way", "yuvi_chat", "content_hint", "content_choice"}
 # The learner's own answer to "what helped you understand this?" — a self-report,
 # distinct from the objective usage counts above. Kept per question (latest wins).
 HELP_METHODS = {"hint", "explanation", "yuvi_chat"}
@@ -199,6 +206,7 @@ async def question_summary(
                 "correct": 0,
                 "time_seconds": 0.0,
                 "hints_used": 0,
+                "content_hints_used": 0,   # the content's own hint button
                 "explanations_used": 0,
                 "different_way_used": 0,
                 "chat_turns": 0,         # question-scoped messages sent to Yuvi
@@ -227,6 +235,7 @@ async def question_summary(
 
     kind_field = {
         "hint": "hints_used",
+        "content_hint": "content_hints_used",
         "explanation": "explanations_used",
         "different_way": "different_way_used",
         "yuvi_chat": "chat_turns",

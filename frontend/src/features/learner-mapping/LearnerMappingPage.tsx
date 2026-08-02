@@ -81,13 +81,10 @@ export function LearnerMappingPage() {
   const [transitionYuvi, setTransitionYuvi] = useState<{ style: CSSProperties } | null>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<Answers>({})
-  // Gender drives the official male/female phrasing (defaults to male, with an
-  // optional toggle on the intro screen); persisted to MongoDB-backed state.
+  // Gender drives the official male/female phrasing; resolved by the backend
+  // from the learner's MongoDB-backed state (defaults to male).
   const [gender, setGender] = useState<LearnerGender>('male')
   const genderRef = useRef<LearnerGender>('male')
-  // Bumped by the intro gender toggle to force a silent questionnaire refetch
-  // in the requested gender without resetting the learner's place.
-  const [genderReloadTick, setGenderReloadTick] = useState(0)
   const [lastSectionContext, setLastSectionContext] = useState('')
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
   const [reflectQuestions, setReflectQuestions] = useState<ReflectQuestion[]>([])
@@ -228,17 +225,7 @@ export function LearnerMappingPage() {
     return () => {
       cancelled = true
     }
-  }, [language, isLoading, genderReloadTick])
-
-  function handleGenderChange(next: LearnerGender) {
-    if (next === genderRef.current) return
-    genderRef.current = next
-    setGender(next)
-    // Persist to backend state (720: no localStorage for learner profile).
-    void apiPatch('/api/learner-state', { gender: next }).catch(() => {})
-    // Trigger a silent refetch of the questionnaire in the chosen phrasing.
-    setGenderReloadTick((tick) => tick + 1)
-  }
+  }, [language, isLoading])
 
   function restoreProgress(progress: MappingProgress) {
     setActiveStep(progress.activeStep ?? 1)
@@ -1181,11 +1168,6 @@ export function LearnerMappingPage() {
                 canStart={Boolean(questionnaire)}
                 isHandoff={introHandoff}
                 hideOrbit={Boolean(transitionYuvi)}
-                gender={gender}
-                onGenderChange={handleGenderChange}
-                genderLabel={t('mapping.gender.label')}
-                genderMaleLabel={t('mapping.gender.male')}
-                genderFemaleLabel={t('mapping.gender.female')}
                 onStart={() => setShowIntegrityDialog(true)}
                 editTooltip={t('YuviStudio.launcher')}
                 onEdit={(el) => (studioTransition ? studioTransition.openStudio(el) : navigate('/yuvi-studio'))}
@@ -1508,8 +1490,7 @@ function YuviFloater({
 
 function IntroNarrative({
   messages, isTyping, startLabel, reassureLabel, durationLabel, trustLabel, robotLabel, lightweight,
-  isSpeakingText, canStart, isHandoff, hideOrbit, gender, onGenderChange,
-  genderLabel, genderMaleLabel, genderFemaleLabel, onStart, editTooltip, onEdit,
+  isSpeakingText, canStart, isHandoff, hideOrbit, onStart, editTooltip, onEdit,
 }: {
   messages: ChatMessage[]
   isTyping: boolean
@@ -1523,11 +1504,6 @@ function IntroNarrative({
   canStart: boolean
   isHandoff: boolean
   hideOrbit: boolean
-  gender: LearnerGender
-  onGenderChange: (next: LearnerGender) => void
-  genderLabel: string
-  genderMaleLabel: string
-  genderFemaleLabel: string
   onStart: () => void
   editTooltip: string
   onEdit: (sourceEl: HTMLElement) => void
@@ -1574,27 +1550,6 @@ function IntroNarrative({
             <div className="intro-reassure">
               <span>{reassureLabel}</span>
             </div>
-            <div className="intro-gender" role="group" aria-label={genderLabel}>
-              <span className="intro-gender__label">{genderLabel}</span>
-              <div className="intro-gender__options">
-                <button
-                  type="button"
-                  className={`intro-gender__opt${gender === 'male' ? ' is-active' : ''}`}
-                  aria-pressed={gender === 'male'}
-                  onClick={() => onGenderChange('male')}
-                >
-                  {genderMaleLabel}
-                </button>
-                <button
-                  type="button"
-                  className={`intro-gender__opt${gender === 'female' ? ' is-active' : ''}`}
-                  aria-pressed={gender === 'female'}
-                  onClick={() => onGenderChange('female')}
-                >
-                  {genderFemaleLabel}
-                </button>
-              </div>
-            </div>
             <div className="intro-cta">
               <span className="intro-duration">
                 <ClockIcon />
@@ -1616,6 +1571,17 @@ function IntroNarrative({
       </div>
     </div>
   )
+}
+
+/* Keyboard moves on the options ring. Index 0 is the strongest option and the
+   last index sits at the bottom, so "previous" (Up/Left) walks toward 0. */
+const KEY_STEPS: Record<string, number | 'first' | 'last'> = {
+  ArrowUp: -1,
+  ArrowLeft: -1,
+  ArrowDown: 1,
+  ArrowRight: 1,
+  Home: 'first',
+  End: 'last',
 }
 
 function QuestionArena({
@@ -1727,11 +1693,23 @@ function QuestionArena({
           {isQuestionTyping && <span className="q-question-caret" aria-hidden="true" />}
         </h2>
 
+        {/* Arrow keys move the selection; the wheel deliberately does NOT.
+            React attaches `wheel` as a passive listener, so a scroll over the
+            ring could not be cancelled and still answered the question for the
+            learner — an invented answer on the questionnaire that builds their
+            profile. Keydown is not passive, so this preventDefault holds. */}
         <div
           className="q-ring"
           role="radiogroup"
           aria-label={question.text}
-          onWheel={(event) => { event.preventDefault(); nudge(event.deltaY > 0 ? 1 : -1) }}
+          onKeyDown={(event) => {
+            const step = KEY_STEPS[event.key]
+            if (step === undefined) return
+            event.preventDefault()
+            if (step === 'first') onChoose(0)
+            else if (step === 'last') onChoose(count - 1)
+            else nudge(step)
+          }}
         >
           <div className="q-ring-halo" aria-hidden="true" />
           <CircularDial count={count} value={selected} radius={33} onPick={onChoose} />

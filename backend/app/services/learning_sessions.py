@@ -45,6 +45,29 @@ def _public_base_url(request_base_url: str) -> str:
     return base
 
 
+async def _assert_component_reachable(
+    learner_id: str, unit: dict[str, Any], component: dict[str, Any]
+) -> None:
+    """Refuse a launch the learner's route has not opened yet.
+
+    Uses the SAME projection the roadmap renders, so the gate and the UI can
+    never disagree. A projection failure opens the gate rather than stranding a
+    learner mid-unit: the route is a pedagogical order, not a security boundary,
+    and losing the catalog must not lock everyone out of their lesson.
+    """
+    try:
+        roadmap = await project_unit_roadmap(unit, learner_id)
+        row = next(
+            (c for c in roadmap.get("components") or [] if c.get("id") == component["id"]),
+            None,
+        )
+    except Exception as exc:  # pragma: no cover - defensive
+        print(f"⚠️ route check skipped ({type(exc).__name__}); allowing launch")
+        return
+    if row is not None and row.get("progress_state") == "locked":
+        raise kata_client.KataError("component_locked", status_code=409)
+
+
 async def create_provider_session(
     learner_id: str,
     component_id: str,
@@ -56,6 +79,20 @@ async def create_provider_session(
 ) -> dict[str, Any]:
     safe_learner_id = normalize_learner_id(learner_id)
     unit, component = await kata_client.resolve_component(component_id, unit_id)
+
+    # 720 F1: the PLATFORM owns the route between components ("התהלוך בין
+    # הרכיבים מתבצע על ידי המערכת"). The roadmap projected that route and the UI
+    # honoured it, but the launch did not — pasting a component id in the URL
+    # minted a session for any component in the unit, locked or not. That let a
+    # learner walk straight into `…-05` (`isAssessment`), whose success
+    # establishes כשירות ביעד הלמידה under §3.3, without doing the practice the
+    # mastery is supposed to evidence.
+    #
+    # Re-entry to a FINISHED component stays open (§6 explicitly allows
+    # reviewing or redoing it), as do recovery and equal-order alternatives —
+    # they all project as `completed`/`available`, never `locked`.
+    await _assert_component_reachable(safe_learner_id, unit, component)
+
     content_language = language if language in component["languages"] else (
         component["languages"][0] if component["languages"] else None
     )
@@ -114,6 +151,20 @@ async def create_provider_session(
         "current_state.question_id": None,
         "current_state.resume_token": None,
         "current_state.support_used": None,
+        # Which screens were already congratulated. A relaunch is a new sitting,
+        # and the keys are session-scoped anyway — clearing keeps the list from
+        # growing across every launch of every lesson.
+        "current_state.praised_screens": [],
+        # …and which screen completions were already folded into mastery. Same
+        # reason: session-scoped keys, cleared with the sitting.
+        "current_state.scored_screens": [],
+        "current_state.learning_choice": None,
+        # The position clock belongs to ONE attempt. It exists so a stale or
+        # replayed statement cannot rewind the learner mid-lesson; carrying it
+        # into a new launch would instead freeze them, because the content
+        # restarts its own timeline and every fresh event would look older than
+        # the last one of the previous run.
+        "current_state.at": None,
     }
     await apply_brain_updates(safe_learner_id, updates)
 

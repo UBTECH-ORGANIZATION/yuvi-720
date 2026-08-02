@@ -303,8 +303,16 @@ async def skip_question(
         flow.setdefault("skipped", []).append(question_number)
         await _save_flow(flow)
     if flow.get("moe_session_id"):
+        # The skipped question's own text — the MoE review found
+        # `object.definition.name` missing on exactly this statement.
+        skipped_text = next(
+            (str(q.get("text") or "")[:200] for q in flow.get("questions") or []
+             if q.get("number") == question_number),
+            None,
+        )
         await lrs_reporter.report_reflection_skipped(
-            learner_id, flow["moe_session_id"], reflection_id, question_number
+            learner_id, flow["moe_session_id"], reflection_id, question_number,
+            question_he=skipped_text,
         )
     return {"ok": True}
 

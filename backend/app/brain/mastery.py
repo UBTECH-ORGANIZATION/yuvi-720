@@ -111,7 +111,12 @@ def apply_scored_event(
 
     if event.get("subject"):
         updated["subject"] = event["subject"]
-    if verb in {"answered", "attempted"}:
+    # Every piece of evidence that reaches this function is one attempt at the
+    # objective. `completed` used to be excluded, which let a component verdict
+    # add a success with no attempt behind it and produced ratios like
+    # "15 successes out of 13 attempts" in a real session. Duplicate completions
+    # never get here (`events._already_credited` drops them first).
+    if verb in {"answered", "attempted", "completed", "scored"}:
         updated["attempts"] = int(updated.get("attempts") or 0) + 1
 
     score = event_score(result)

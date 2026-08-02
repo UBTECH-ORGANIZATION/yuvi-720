@@ -41,9 +41,92 @@ MOE_VERBS = {
     "enter", "exit", "initialized", "attempted", "answered", "scored", "completed", "skipped", "submitted",
     "read", "watched", "listened", "played", "paused", "play", "downloaded",
     "install", "assigned", "created", "joined", "leave", "voided",
+    # 720 content→platform verbs (§"אינטראקציה של המשתמש עם התוכן"): a choice that is
+    # not an assessable answer, and a learner-initiated request for help. They
+    # only reached us through the ADL bridge before, so content reporting with
+    # the MoE wire slugs had both dropped on the floor.
+    "selected", "requested",
 }
 # Verbs that carry a scored result we fold into mastery.
 SCORING_VERBS = {"answered", "attempted", "scored", "completed"}
+# Media playback (720 §Played/Paused). Kata sends these against the COMPONENT
+# with no screen id, so they are the only signal that a learner is on a video.
+_MEDIA_VERBS = {"played", "paused", "play", "watched", "listened"}
+
+# ── media ticker damper ──────────────────────────────────────────────────────
+# Measured 29/07 on `…-01-02`: the content emitted a `played`+`paused` PAIR
+# roughly once a second for as long as the learner sat on the screen — 182 of
+# the 600 most recent stored events for one visit — all against the COMPONENT,
+# with no screen id and an entirely null `result`. It is a decorative animation
+# ticker on the provider side, not playback.
+#
+# We cannot ask Kata to stop, but we must not let it into the brain's evidence
+# store: it costs writes, it dilutes every count built on `learning_events`, and
+# a burst on a component that DOES hold a video could walk the pointer.
+#
+# The damper keeps the FIRST of a repeating media statement (so the pointer move
+# and the "they were on the video" evidence both survive) and drops the
+# identical repeats that follow inside the window. It only ever fires on
+# statements that carry NO result payload — a real Played/Paused with a duration,
+# a scrub position or a completion is always stored.
+#
+# Crucially the ticker is only noise while NOTHING ELSE is happening. Any
+# non-media event (an `enter`, an answer, a selection) means the learner acted,
+# so the next `played` is new information — playback on a screen Kata never
+# announced is our only signal that a video started. The epoch below re-arms the
+# damper on every such event, which is what keeps
+# `test_lesson_navigation` A3b (playback after paging back) alive.
+_MEDIA_NOISE_WINDOW_SECONDS = 5.0
+_MEDIA_NOISE_MEMORY_LIMIT = 400
+_media_last_seen: dict[str, float] = {}
+_media_epoch: dict[str, int] = {}
+
+
+def _is_empty_result(event: dict[str, Any]) -> bool:
+    result = event.get("result") or {}
+    return not any(value is not None for value in result.values())
+
+
+def _names_a_foreign_component(event: dict[str, Any]) -> bool:
+    """True when the object belongs to a DIFFERENT component of the same unit.
+
+    Kata ids are hierarchical — `…-01-04` and `…-01-04-001` both start with the
+    component id — so an ordinary item never trips this. It fires only when the
+    content walks itself into a sibling component the launch does not cover.
+    """
+    launch_component = str(event.get("launch") or "")
+    object_id = str(event.get("object_id") or "")
+    unit_id = str(event.get("unit_id") or "")
+    if not launch_component or not object_id or not unit_id:
+        return False
+    if launch_component in object_id:
+        return False
+    # Only judge ids we can actually read: an object naming this unit but not
+    # this component is a sibling. Anything else (a differently-shaped provider
+    # id) is left alone rather than guessed at.
+    return f"{unit_id}-" in object_id
+
+
+def _is_media_ticker_noise(event: dict[str, Any]) -> bool:
+    """True for a bare media repeat we have just seen, with nothing in between."""
+    learner = str(event.get("learner_id"))
+    if event.get("verb") not in _MEDIA_VERBS:
+        # The learner did something. Whatever media follows is a fresh signal.
+        _media_epoch[learner] = _media_epoch.get(learner, 0) + 1
+        return False
+    if not _is_empty_result(event):
+        return False
+    key = "|".join(str(part) for part in (
+        learner, _media_epoch.get(learner, 0), event.get("session_id"),
+        event.get("verb"), event.get("object_id"), event.get("sub_item_id"),
+    ))
+    now = time.monotonic()
+    previous = _media_last_seen.get(key)
+    _media_last_seen[key] = now
+    if len(_media_last_seen) > _MEDIA_NOISE_MEMORY_LIMIT:
+        for stale in sorted(_media_last_seen, key=_media_last_seen.get)[:_MEDIA_NOISE_MEMORY_LIMIT // 2]:
+            _media_last_seen.pop(stale, None)
+    return previous is not None and (now - previous) < _MEDIA_NOISE_WINDOW_SECONDS
 
 # Launches minted for an external content provider (Kata) may carry standard ADL
 # verbs instead of the MoE wire slugs. They are accepted only for those launches,
@@ -57,7 +140,19 @@ ADL_PROVIDER_VERB_MAP = {
     "http://adlnet.gov/expapi/verbs/attempted": "attempted",
     "http://adlnet.gov/expapi/verbs/exited": "exit",
     "http://id.tincanapi.com/verb/selected": "selected",
+    # What Kata actually sends for the 720 §Selected choice (captured live
+    # 29/07): `…adb/verbs/selected` on the COMPONENT, category
+    # `…/categories/learning-type`, `result.response` = the chosen path
+    # ("listening" / "cards"). Without this IRI the statement was dropped, so the
+    # platform never learned which representation the learner picked.
+    "https://w3id.org/xapi/adb/verbs/selected": "selected",
     "http://id.tincanapi.com/verb/requested": "requested",
+    # And what it actually sends for 720 §Requested — the content's OWN hint
+    # button ("אפשר רמז?" inside the iframe). Captured live 29/07 against the
+    # component, no screen id. Without this IRI the statement was dropped before
+    # storage, so a learner leaning entirely on the content's hints looked like a
+    # learner who never asked for help.
+    "https://w3id.org/xapi/acrossx/verbs/requested": "requested",
     "http://id.tincanapi.com/verb/skipped": "skipped",
     "https://w3id.org/xapi/video/verbs/played": "played",
     "https://w3id.org/xapi/video/verbs/paused": "paused",
@@ -248,10 +343,41 @@ def resolve_item_question(
     return None, None
 
 
+def _selection_category(statement: dict[str, Any]) -> Optional[str]:
+    """The kind of choice a `selected` statement reports (720 selection dictionary).
+
+    Kata sends `category: [{id: "http://720.edu.il/xapi/categories/learning-type"}]`
+    with `result.response` = "listening" / "cards" — which representation the
+    learner chose for a teaching screen.
+    """
+    context = statement.get("context") or {}
+    activities = context.get("contextActivities") or context
+    categories = activities.get("category") if isinstance(activities, dict) else None
+    if isinstance(categories, dict):
+        categories = [categories]
+    for entry in categories or []:
+        identifier = entry.get("id") if isinstance(entry, dict) else None
+        if isinstance(identifier, str) and identifier:
+            return _object_tail(identifier)
+    return None
+
+
 def _object_tail(object_id: Any) -> str:
     if not isinstance(object_id, str):
         return ""
     return object_id.rstrip("/").rsplit("/", 1)[-1].rsplit("#", 1)[-1]
+
+
+def is_learning_type_choice(event: dict[str, Any]) -> bool:
+    """A 720 `selected` naming which REPRESENTATION the learner picked.
+
+    Emitted the moment they commit a path on a playlist screen ("לצפות בסרטון" /
+    "להפוך קלפים"), so it is positional evidence as well as a preference.
+    """
+    return (
+        event.get("verb") == "selected"
+        and event.get("selection_category") == "learning-type"
+    )
 
 
 async def _reconcile_sub_item_id(event: dict[str, Any]) -> None:
@@ -380,6 +506,10 @@ def normalize_statement(
         "is_assessment": bool(ext.get("is_assessment", launch.get("assessment", False))),
         "misconception": ext.get("misconception"),
         "resume_token": ext.get("resume_token"),
+        # 720 §Selected: the SAME verb carries several kinds of choice
+        # (learningType / practiceDecision / isUnderstood / …), told apart only
+        # by the context category. Kept so "cards" is never read as an answer.
+        "selection_category": _selection_category(statement),
         "result": {
             "success": result.get("success"),
             "response": result.get("response"),
@@ -553,6 +683,13 @@ async def ingest_statement(
     # from the catalog + this session's visited screens; best-effort, never fatal.
     await _reconcile_sub_item_id(event)
 
+    # Drop the provider's decorative animation ticker before it reaches the
+    # evidence store. Checked AFTER reconciliation so the key matches the item
+    # the rest of the pipeline uses, and after the first of a burst has already
+    # been stored and folded.
+    if _is_media_ticker_noise(event):
+        return {"stored": False, "reason": "media_repeat_within_window"}
+
     await _attach_timing_evidence(event)
     await _attach_effort_evidence(event)
     collection = await _events_collection()
@@ -573,6 +710,21 @@ async def ingest_statement(
         is_new = _fallback_append(event)
 
     if is_new:
+        # Kata's content self-routes ACROSS component boundaries: measured
+        # 29/07, three seconds after `completed` on `…-01-03` it emitted
+        # `initialized` for `…-01-04` — still inside the launch minted for
+        # `-03`, while the platform's completion dialog was waiting for the
+        # learner to choose. 720 F1 gives the platform the route between
+        # components, so we keep the statement (it is real evidence of what the
+        # learner did, and the report to Kata needs it) but refuse to FOLD it:
+        # otherwise `-04`'s work is booked as `-03` progress and mastery accrues
+        # to the wrong component.
+        if _names_a_foreign_component(event):
+            print(
+                f"⚠️ provider self-advanced outside the launch: "
+                f"{event.get('object_id')} reported on launch {event.get('launch')}"
+            )
+            return {"stored": True, "folded": False, "reason": "foreign_component"}
         # Isolate the brain fold: a bug folding ONE event must not 500 the
         # request, because the provider would then retry, find the id already
         # stored, ack it as a duplicate, and lose the mastery update forever
@@ -584,6 +736,10 @@ async def ingest_statement(
             effective_state = await _apply_event_to_brain(event)
         except Exception as exc:
             print(f"⚠️ brain fold failed for {event.get('_id')}: {type(exc).__name__}")
+        try:
+            await _record_content_support(event, effective_state)
+        except Exception as exc:  # analytics must never break ingest
+            print(f"⚠️ content support record failed: {type(exc).__name__}")
         if is_component_completion(event):
             try:
                 from app.agents import sessions
@@ -622,35 +778,233 @@ async def ingest_statement(
         # MoE LRS forward (720): enrich the raw content statement with the
         # outbound envelope and enqueue — first sight only, never blocks ingest.
         try:
-            await _forward_to_moe_lrs(statement, launch, event["learner_id"])
+            await _forward_to_moe_lrs(statement, launch, event["learner_id"], event)
         except Exception as exc:
             print(f"⚠️ MoE LRS forward skipped: {type(exc).__name__}")
     return {"stored": True, "duplicate": not is_new, "event_id": event["_id"]}
 
 
+async def _record_content_support(
+    event: dict[str, Any], position: Optional[dict[str, Any]] = None
+) -> None:
+    """Log help and choices the learner took INSIDE the content (720 §3.3).
+
+    Two signals were reaching `learning_events` and stopping there:
+
+    - `requested` — the content's own hint button ("אפשר רמז?" inside the Kata
+      iframe). The 720 criteria name hint usage from the content explicitly as
+      evidence for the platform's routing decisions, but only Yuvi's own buttons
+      were counted, so a learner who leaned entirely on the content's hints
+      looked like a learner who never asked for help.
+    - `selected` self-reports — practiceDecision / isUnderstood / isRepeat /
+      externalLearning. `learningType` already drives the coach's grounding; the
+      other four were parsed and dropped.
+
+    Both arrive against the COMPONENT with no screen id, so the row is anchored
+    to the position the same event just folded (`position`) — otherwise every
+    help request lands in one nameless bucket instead of on the question the
+    learner was actually stuck on.
+
+    Best-effort and side-effect free for the learner.
+    """
+    from app.services import learner_activity
+
+    verb = event.get("verb")
+    if verb not in ("requested", "selected"):
+        return
+    if verb == "selected" and is_learning_type_choice(event):
+        return   # already consumed as position + chosen representation
+
+    kind = "content_hint" if verb == "requested" else "content_choice"
+    meta: Optional[dict[str, Any]] = None
+    if verb == "selected":
+        meta = {
+            "category": event.get("selection_category"),
+            "response": (event.get("result") or {}).get("response"),
+        }
+    where = position or {}
+    await learner_activity.record(
+        event["learner_id"],
+        kind,
+        component_id=event.get("launch") or where.get("component_id"),
+        item_id=event.get("sub_item_id") or where.get("item_id"),
+        question_id=event.get("question_id") or where.get("question_id"),
+        objective_id=event.get("objective_id"),
+        subject=event.get("subject"),
+        meta=meta,
+    )
+
+
 async def _forward_to_moe_lrs(
-    statement: dict[str, Any], launch: dict[str, Any], learner_id: str
+    statement: dict[str, Any],
+    launch: dict[str, Any],
+    learner_id: str,
+    event: Optional[dict[str, Any]] = None,
 ) -> None:
     """Forward one content-origin statement to the Ministry LRS.
 
     Session: the learner's active MoE login session (minted at login); the
     per-launch `sid` is only a fallback so content played outside a tracked
     login still carries *a* session grouping.
+
+    The content knows only its own object, so everything the ministry asks for
+    ABOVE it — the component and unit in `grouping`, the component in `parent`,
+    and all three levels' metadata — is resolved here from the catalog, together
+    with the per-verb fields the integration review found missing.
     """
     from app.auth.repository import get_user_by_id
     from app.services.lrs import config as lrs_config
+    from app.services.lrs import hierarchy as lrs_hierarchy
     from app.services.lrs import reporter as lrs_reporter
 
     if not lrs_config.is_enabled():
         return
     user = await get_user_by_id(learner_id)
     session_id = (user or {}).get("current_moe_session_id") or launch.get("sid")
+    event = event or {}
+    ancestry = await lrs_hierarchy.for_content(
+        event.get("launch") or launch.get("cmp"),
+        event.get("sub_item_id"),
+        unit_id=event.get("unit_id") or launch.get("unit"),
+    )
+    context_extensions, result_extra = await _content_report_fields(event, statement)
+    # The content-vendor id belongs to the CONTENT, not to the deployment: it is
+    # "מזהה הפריט בקטלוג החינוכי", so it is resolved per event from the item /
+    # component / unit this statement is about.
+    ecat_item_id = await lrs_hierarchy.ecat_item_for(
+        event.get("launch") or launch.get("cmp"),
+        event.get("sub_item_id"),
+        unit_id=event.get("unit_id") or launch.get("unit"),
+    )
     await lrs_reporter.report_content_statement(
         learner_id,
         session_id,
         statement,
-        ecat_item_id=lrs_config.kata_ecat_id() or None,
+        ecat_item_id=ecat_item_id,
+        hierarchy=ancestry,
+        context_extensions=context_extensions,
+        result_extra=result_extra,
     )
+
+
+# The xAPI Video Profile's own field names for "where in the clip" and "how long
+# the clip is", both in SECONDS — exactly what the MoE's `mediaPosition` /
+# `mediaDuration` want. Reading the STANDARD names (rather than anything Kata
+# specific) means any provider that follows the profile satisfies the ministry
+# automatically, and Kata starts complying the day it sends them.
+_VIDEO_TIME_KEYS = (
+    "https://w3id.org/xapi/video/extensions/time",
+    "https://w3id.org/xapi/video/extensions/time-to",
+)
+_VIDEO_LENGTH_KEY = "https://w3id.org/xapi/video/extensions/length"
+
+
+def _video_profile_seconds(statement: dict[str, Any]) -> dict[str, Any]:
+    """Pull position/length out of a relayed statement, if it carries them.
+
+    Both `result.extensions` and `context.extensions` are searched because the
+    profile puts `time` on the result and `length` on the context, and players
+    are inconsistent about it. Non-numeric values are ignored rather than
+    coerced — a bad number is worse than an absent one.
+    """
+    pools = [
+        (statement.get("result") or {}).get("extensions") or {},
+        (statement.get("context") or {}).get("extensions") or {},
+    ]
+
+    def pick(keys: tuple[str, ...] | str) -> Optional[float]:
+        wanted = (keys,) if isinstance(keys, str) else keys
+        for pool in pools:
+            for key in wanted:
+                value = pool.get(key)
+                if isinstance(value, bool) or not isinstance(value, (int, float)):
+                    continue
+                if value >= 0:
+                    return round(float(value), 3)
+        return None
+
+    found: dict[str, Any] = {}
+    position = pick(_VIDEO_TIME_KEYS)
+    length = pick(_VIDEO_LENGTH_KEY)
+    if position is not None:
+        found["mediaPosition"] = int(position) if position == int(position) else position
+    if length is not None:
+        found["mediaDuration"] = int(length) if length == int(length) else length
+    return found
+
+
+async def _content_report_fields(
+    event: dict[str, Any], statement: Optional[dict[str, Any]] = None
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """The per-verb fields the MoE review asked for on relayed content events.
+
+    - answered → `questionId` (not `question_id`), `questionType`, `attemptNumber`
+    - media    → `mediaFormat`, `mediaPosition`/`mediaDuration` when the player
+      reports them, and `result.duration` on paused/completed
+    Everything is read from what we already know (catalog + stored events + the
+    relayed statement). A value nobody told us — the position inside a clip that
+    Kata never reports — is left out rather than invented.
+    """
+    verb = event.get("verb")
+    component_id = event.get("launch")
+    item_id = event.get("sub_item_id")
+    extensions: dict[str, Any] = {}
+    result_extra: dict[str, Any] = {}
+
+    if verb in {"answered", "attempted"} and event.get("question_id"):
+        from app.services import kata_catalog
+
+        question_id = event["question_id"]
+        extensions["questionId"] = question_id
+        extensions["attemptNumber"] = await _attempt_number(event)
+        rows = kata_catalog.questions_for_item(component_id, item_id)
+        match = next(
+            (r for r in rows if (r.get("questionId") or "") == question_id), None
+        )
+        if match and match.get("questionType"):
+            extensions["questionType"] = match["questionType"]
+
+    if verb in {"played", "paused", "watched", "listened"} or (
+        verb == "completed" and _is_media_item(component_id, item_id)
+    ):
+        media_format = _media_format(component_id, item_id)
+        if media_format:
+            extensions["mediaFormat"] = media_format
+        extensions.update(_video_profile_seconds(statement or {}))
+        elapsed = (event.get("timing") or {}).get("elapsed_since_previous_seconds")
+        if verb in {"paused", "completed"} and isinstance(elapsed, (int, float)):
+            from app.services.lrs.statements import iso_duration
+
+            result_extra["duration"] = iso_duration(elapsed)
+    return extensions, result_extra
+
+
+def _media_format(component_id: Optional[str], item_id: Optional[str]) -> Optional[str]:
+    from app.services import kata_catalog
+
+    profile = kata_catalog.item_profile(component_id, item_id) if item_id else {}
+    media = (profile or {}).get("media_format")
+    return media if media in {"video", "audio", "animation"} else None
+
+
+def _is_media_item(component_id: Optional[str], item_id: Optional[str]) -> bool:
+    return _media_format(component_id, item_id) is not None
+
+
+async def _attempt_number(event: dict[str, Any]) -> int:
+    """How many times this learner has answered THIS question in this session."""
+    try:
+        prior = await get_session_events(event["learner_id"], event.get("session_id"))
+    except Exception:
+        return 1
+    same = [
+        e for e in prior
+        if e.get("verb") in {"answered", "attempted"}
+        and e.get("sub_item_id") == event.get("sub_item_id")
+        and e.get("question_id") == event.get("question_id")
+        and e.get("_id") != event.get("_id")
+    ]
+    return len(same) + 1
 
 
 async def _attach_effort_evidence(event: dict[str, Any]) -> None:
@@ -792,6 +1146,44 @@ def _sync_evidence_challenges(
     return challenges[-20:] if changed else None
 
 
+def _completion_credit_key(event: dict[str, Any]) -> str:
+    """Identity of "this screen finished, in this sitting" for mastery credit."""
+    return "|".join(
+        str(part or "")
+        for part in (event.get("session_id"), event.get("sub_item_id") or event.get("launch"))
+    )
+
+
+def _already_credited(event: dict[str, Any], prior_state: dict[str, Any]) -> bool:
+    """True when this screen's evidence has already been folded into mastery.
+
+    Kata reports a question TWICE: `answered …-001/q1` and then, on leaving,
+    `completed …-001`. Both are scoring verbs, but only `answered` counts an
+    attempt — so one question added two successes and one attempt. It re-emits
+    `completed success=true` again for every screen the learner pages BACK
+    through, and one walk backwards through a finished lesson added seven more.
+    Measured after a full clean run: `attempts 13 · successes 15 · failures 6`
+    — 21 verdicts over 13 attempts, which inflated confidence, the success
+    streak, and with them `achieved` and `level`. Mastery invented by navigation
+    rather than earned by evidence, which "numbers are never invented" forbids.
+
+    So a `completed` counts only when the screen has no scored evidence yet.
+    That keeps a **closed** content unit working — 720 §3.2 explicitly allows a
+    component that routes internally and reports only its own completion, and
+    that completion is its one piece of evidence — while a completion that merely
+    echoes an answer we already scored adds nothing.
+
+    An `answered` is never gated: a second genuine attempt IS new evidence.
+    """
+    if event.get("verb") != "completed":
+        return False
+    key = _completion_credit_key(event)
+    return key in ((prior_state or {}).get("scored_screens") or [])
+
+
+_CREDIT_MEMORY_LIMIT = 200
+
+
 async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
     """Fold a real event into the brain — mastery/current_state/progress only.
 
@@ -824,17 +1216,105 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
     # Component-level objects (enter/completed at the root) have no sub-item and
     # must NOT overwrite item_id with a bare URL (would strand the coach a screen
     # behind, grounding hints on the wrong question).
-    if event.get("sub_item_id"):
+    # "Where the learner is" must follow the order things HAPPENED, not the order
+    # Kata's relay delivered them. Observed in one real batch, all received in the
+    # same second: initialized -003 (12:24:23), initialized -005 (12:24:38),
+    # initialized -004 (12:24:26), initialized -003 again — out of order and
+    # duplicated. Folding by arrival left the pointer on whatever landed last, so
+    # the coach commented on a question the learner had already left, and an idle
+    # nudge opened a thread on a question they were not looking at.
+    #
+    # Rule: the pointer only moves FORWARD IN TIME. A genuinely newer event that
+    # names an earlier screen still moves it — that is the learner paging back,
+    # which must keep working — but a stale or replayed statement can never
+    # rewind them. Events with no usable timestamp fall through unguarded rather
+    # than being dropped.
+    from app.services.learning_timing import parse_timestamp
+
+    event_at = parse_timestamp(event.get("occurred_at") or event.get("stored_at"))
+    pointer_at = parse_timestamp(prior_state.get("at"))
+    # The clock is only meaningful WITHIN one component's timeline. Across a
+    # different lesson (or a relaunch, which clears it) there is nothing to
+    # compare, and comparing anyway would freeze the learner out of the new one.
+    same_component = (
+        not prior_state.get("component_id")
+        or not event.get("launch")
+        or prior_state.get("component_id") == event.get("launch")
+    )
+    pointer_is_stale = bool(
+        same_component and event_at and pointer_at and event_at < pointer_at
+    )
+
+    if event.get("sub_item_id") and pointer_is_stale:
+        pass   # older than where we already are — position is not touched
+    elif event.get("sub_item_id"):
         new_item = event["sub_item_id"]
         set_updates["current_state.item_id"] = new_item
+        if event_at:
+            set_updates["current_state.at"] = event.get("occurred_at") or event.get("stored_at")
         incoming_question = event.get("question_id")
         if new_item != prior_state.get("item_id"):
+            # Arrival. Kata's `initialized` names the screen but no question, so
+            # taking it verbatim left question_id None until the first `answered`
+            # — re-keying the SAME question mid-way and splitting its chat thread
+            # (observed: `…|001|` with 13 messages AND `…|001|q1` with 13 more).
+            # Resolve the screen's only question up front; ambiguous screens
+            # (two sub-questions) still wait for the event to say which.
+            if incoming_question is None:
+                from app.services import kata_catalog
+
+                incoming_question = kata_catalog.default_question_id(
+                    event.get("launch"), new_item
+                )
             set_updates["current_state.question_id"] = incoming_question
+            # The representation they picked belongs to the screen that offered
+            # it. Leaving it set made the coach talk about "the clip you chose"
+            # two questions later. (The `selected` branch below re-sets it in the
+            # same update when the arrival IS the choice.)
+            set_updates["current_state.learning_choice"] = None
         elif incoming_question is not None:
             set_updates["current_state.question_id"] = incoming_question
         # else: same screen, no question (bare re-emit) — keep sticky question_id.
-    elif event.get("question_id"):
+    elif event.get("question_id") and not pointer_is_stale:
         set_updates["current_state.question_id"] = event["question_id"]
+    elif (
+        event.get("verb") in _MEDIA_VERBS or is_learning_type_choice(event)
+    ) and not pointer_is_stale:
+        # The learner has stepped onto a media screen — but Kata reports both
+        # `played`/`paused` and the learning-type `selected` against the
+        # COMPONENT, with no screen, and its `initialized` for the video screen
+        # arrives late or not at all. Observed 29/07: `completed` for screen -002
+        # at 08:12:17, then eleven `played`/`paused` over the next 90s and NO
+        # `initialized` for -003 — and again at 12:04:33, a `selected` "listening"
+        # followed by FIVE MINUTES of the learner working through the -003
+        # playlist with the pointer, the chat's marked thread and the coach's
+        # grounding all still on the question they had just finished.
+        #
+        # Both are attributed only when they cannot mean anything else: the
+        # screen they are on has no media of its own, and the very NEXT screen is
+        # the one that plays. Anything looser would guess.
+        from app.services import kata_catalog
+
+        watching = kata_catalog.next_item_if_watchable(
+            event.get("launch"), prior_state.get("item_id")
+        )
+        if watching:
+            set_updates["current_state.item_id"] = watching
+            set_updates["current_state.question_id"] = kata_catalog.default_question_id(
+                event.get("launch"), watching
+            )
+            if event_at:
+                set_updates["current_state.at"] = (
+                    event.get("occurred_at") or event.get("stored_at")
+                )
+    # Which representation the learner chose for a teaching screen ("listening"
+    # = watch the clip, "cards" = flip the info cards). The screens themselves
+    # are identical to us either way, so this is the only way the coach can talk
+    # about what the learner is actually looking at.
+    if event.get("verb") == "selected" and event.get("selection_category") == "learning-type":
+        chosen = (event.get("result") or {}).get("response")
+        if chosen:
+            set_updates["current_state.learning_choice"] = str(chosen)[:40]
     if event.get("launch"):
         set_updates["current_state.component_id"] = event["launch"]
     if event.get("unit_id"):
@@ -851,8 +1331,15 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
         if (event.get("result") or {}).get("success"):
             set_updates["current_state.hint_ladder"] = {}   # fresh ladder next task
 
-    if objective_id and verb in SCORING_VERBS:
+    if objective_id and verb in SCORING_VERBS and not _already_credited(event, prior_state):
         now = event.get("occurred_at") or _now()
+        # Every scoring verb marks its screen, so the `completed` that follows an
+        # answer finds the screen already accounted for.
+        credited = list((prior_state or {}).get("scored_screens") or [])
+        credit_key = _completion_credit_key(event)
+        if credit_key not in credited:
+            credited.append(credit_key)
+            set_updates["current_state.scored_screens"] = credited[-_CREDIT_MEMORY_LIMIT:]
         objective_key = mastery_model.mastery_key(objective_id)
         prior_entry = dict(mastery_model.entry_for(brain.get("mastery"), objective_id))
         recent = await get_recent_events(learner_id, objective_id, limit=20)

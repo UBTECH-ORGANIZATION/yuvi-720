@@ -379,6 +379,9 @@ async def create_conversation(
                 sort=[("updated_at", -1), ("_id", -1)],
             )
             if existing:
+                print(f"🧵 conversation MATCH {existing.get('_id')} "
+                      f"(unit={safe_unit or '-'} comp={safe_component or '-'} "
+                      f"count={existing.get('message_count')})")
                 return _conversation_payload(existing)
         except Exception as exc:
             print(f"⚠️ empty conversation lookup failed, using fallback: {exc}")
@@ -433,6 +436,9 @@ async def create_conversation(
     if collection is not None:
         try:
             await collection.insert_one(document)
+            print(f"🧵 conversation CREATED {document['_id']} "
+                  f"(unit={safe_unit or '-'} comp={safe_component or '-'} "
+                  f"scoped={activity_scoped})")
             return _conversation_payload(document)
         except Exception as exc:
             print(f"⚠️ conversation create failed, using fallback: {exc}")
@@ -654,6 +660,13 @@ async def list_conversations(
                 "learner_id": safe_id,
                 "role": role,
                 "is_deleted": {"$ne": True},
+                # Lesson threads belong to the lesson. They are opened, scoped and
+                # closed by the activity itself, and reading one outside that
+                # context is meaningless — it is a per-question conversation about
+                # a screen the learner is no longer looking at. The history list is
+                # for the threads a learner started on their own. (`None` also
+                # matches documents where the field was never set.)
+                "activity_component_id": None,
             }
             if decoded:
                 timestamp, document_id = decoded
@@ -677,6 +690,7 @@ async def list_conversations(
             if document.get("learner_id") == safe_id
             and document.get("role") == role
             and document.get("is_deleted") is not True
+            and not document.get("activity_component_id")   # lesson threads stay in the lesson
         ]
         documents.sort(key=lambda item: (item.get("updated_at", ""), item.get("_id", "")), reverse=True)
         if decoded:
