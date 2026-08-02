@@ -272,13 +272,28 @@
    follows the drag rather than animating on its own, so the learner feels the
    load move; when the pans level out the beam takes on the success tone —
    balancing IS the skill being taught. */
-.sd-viz-beam__arm { fill: none; stroke: rgba(111, 91, 255, .85); stroke-width: 5; stroke-linecap: round; }
-.sd-viz-pan { fill: rgba(111, 91, 255, .18); stroke: rgba(111, 91, 255, .7); stroke-width: 2.4; stroke-linejoin: round; }
+.sd-viz-beam__arm { fill: none; stroke: rgba(111, 91, 255, .85); stroke-width: 6; stroke-linecap: round; }
+.sd-viz-pan { fill: rgba(111, 91, 255, .16); stroke: rgba(111, 91, 255, .7); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.sd-viz-balance-cord { fill: none; stroke: rgba(111, 91, 255, .5); stroke-width: 2.2; stroke-linecap: round; }
+.sd-viz-balance-post { fill: none; stroke: rgba(84, 70, 160, .55); stroke-width: 7; stroke-linecap: round; }
+.sd-viz-balance-base { fill: rgba(111, 91, 255, .14); stroke: rgba(84, 70, 160, .5); stroke-width: 3; stroke-linejoin: round; }
+/* A pool of light under the instrument, so it stands on something. */
+.sd-viz-balance-halo { fill: rgba(111, 91, 255, .07); }
+/* The load: one block per pan, sized by how the mass is split between them. */
+.sd-viz-mass { fill: #6f5bff; stroke: rgba(255, 255, 255, .85); stroke-width: 2; filter: drop-shadow(0 5px 12px rgba(46, 33, 110, .35)); }
+.sd-viz-mass.is-balanced { fill: #25b984; }
+.sd-viz-handle:focus-visible .sd-viz-mass { stroke: var(--sp-primary-600); stroke-width: 3.5; }
 .sd-viz-beam { transition: none; }
 .sd-viz-beam.is-balanced .sd-viz-beam__arm { stroke: #25b984; }
 .sd-viz-beam.is-balanced .sd-viz-pan { fill: rgba(37, 185, 132, .2); stroke: rgba(37, 185, 132, .8); }
 [data-theme='dark'] .sd-viz-beam__arm { stroke: rgba(167, 139, 250, .95); }
 [data-theme='dark'] .sd-viz-pan { fill: rgba(167, 139, 250, .2); stroke: rgba(167, 139, 250, .8); }
+[data-theme='dark'] .sd-viz-balance-cord { stroke: rgba(167, 139, 250, .6); }
+[data-theme='dark'] .sd-viz-balance-post { stroke: rgba(198, 186, 255, .55); }
+[data-theme='dark'] .sd-viz-balance-base { fill: rgba(167, 139, 250, .16); stroke: rgba(198, 186, 255, .5); }
+[data-theme='dark'] .sd-viz-balance-halo { fill: rgba(159, 122, 254, .1); }
+[data-theme='dark'] .sd-viz-mass { fill: #a78bfa; stroke: rgba(255, 255, 255, .7); }
+[data-theme='dark'] .sd-viz-mass.is-balanced { fill: #34d399; }
 .sd-viz-comet { fill: #4cc9f0; filter: drop-shadow(0 4px 12px rgba(35, 150, 200, .5)); }
 [data-theme='dark'] .sd-viz-grid { stroke: rgba(150, 170, 240, .07); }
 [data-theme='dark'] .sd-viz-floor { stroke: rgba(150, 170, 240, .12); }
@@ -442,35 +457,83 @@
 [data-theme='dark'] .sd-lessons__subfilter.is-active { background: rgba(159,122,254,.18); border-color: rgba(159,122,254,.5); color: #d8d1ff; }
 
 
-/* ── Foot: the CTA, flanked by the way to the next lesson ─────────────────── */
+/* ── Foot: one action, always naming what it opens ────────────────────────── */
 .sd-lesson-card__foot {
   display: flex;
-  gap: 8px;
   align-items: stretch;
   margin-block-start: auto;
 }
 .sd-lesson-card__foot .sd-lesson-card__cta { flex: 1; }
 
+/* ── Route arrows: on the card's own edges, at its vertical middle ─────────
+   They walk THIS lesson's route — back to a station already walked, forward to
+   the single step ahead — so they belong to the card, not to the rail. Placed
+   in the logical gutter (`inset-inline-*`), which puts "back" on the right in
+   Hebrew and Arabic without a second rule. */
 .sd-lesson-card__step {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 9px;
+  z-index: 4;
   display: grid;
   place-items: center;
-  flex: 0 0 auto;
-  inline-size: 40px;
+  inline-size: 34px;
+  block-size: 34px;
+  padding: 0;
+  translate: 0 -50%;
   border: 1px solid var(--sp-border);
-  border-radius: var(--sp-radius-pill);
-  background: transparent;
+  border-radius: 50%;
+  background: color-mix(in srgb, #fff, transparent 6%);
   color: var(--sp-ink-500);
+  box-shadow: 0 6px 16px -12px rgba(16, 18, 46, .5);
   cursor: pointer;
-  transition: color .18s ease, border-color .18s ease;
+  transition: color .18s ease, border-color .18s ease, background .18s ease;
 }
+.sd-lesson-card__step--next { inset-inline-start: auto; inset-inline-end: 9px; }
 .sd-lesson-card__step:hover {
   border-color: color-mix(in srgb, var(--sd-lesson), transparent 40%);
+  background: #fff;
   color: var(--sd-lesson);
 }
-.sd-lesson-card__step:disabled { opacity: .3; pointer-events: none; }
+.sd-lesson-card__step:focus-visible { outline: 3px solid var(--sd-lesson-soft); outline-offset: 2px; }
+.sd-lesson-card__step:disabled { opacity: .26; pointer-events: none; }
 .sd-lesson-card__step--next .sp-icon { transform: scaleX(-1); }
 [dir="rtl"] .sd-lesson-card__step .sp-icon { transform: scaleX(-1); }
 [dir="rtl"] .sd-lesson-card__step--next .sp-icon { transform: none; }
+
+/* ── Peeking: the card shows one station of the route ─────────────────────── */
+.sd-lesson-card__peek-kicker {
+  color: var(--sd-lesson);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+.sd-lesson-card.is-peeking .sd-lesson-card__title { color: var(--sp-ink-700); }
+/* Ahead of the learner the picture is dimmed — it is not theirs yet. */
+.sd-lesson-card.is-peeking-next .sd-lesson-glyph { opacity: .45; }
+.sd-lesson-card.is-peeking-next .sd-lesson-card__media { filter: saturate(.55); }
+.sd-lesson-card__peek-mark {
+  position: absolute;
+  inset-block-end: 12px;
+  inset-inline-end: 12px;
+  display: grid;
+  place-items: center;
+  inline-size: 30px;
+  block-size: 30px;
+  border: 1px solid var(--sp-border);
+  border-radius: 50%;
+  background: color-mix(in srgb, #fff, transparent 8%);
+  color: var(--sp-ink-400);
+  box-shadow: 0 8px 18px -12px rgba(16, 18, 46, .6);
+}
+.sd-lesson-card__peek-mark--prev { color: var(--sp-success-600); }
+.sd-lesson-card__peek-mark--redo { color: var(--sd-lesson); }
+.sd-lesson-card__cta--locked {
+  border-style: dashed;
+  border-color: var(--sp-border-strong);
+  color: var(--sp-ink-400);
+  font-size: var(--sp-fs-xs);
+}
 
 .sd-lesson-card--violet { --sd-lesson: #7c5cff; }
 .sd-lesson-card--sky { --sd-lesson: #2e9bf0; }
@@ -502,6 +565,22 @@
   box-shadow: 0 10px 22px -10px color-mix(in srgb, var(--sd-lesson), transparent 30%);
 }
 .sd-lesson-card.is-primary .sd-lesson-card__cta:hover { background: color-mix(in srgb, var(--sd-lesson), black 8%); }
+/* The primary card carries the route arrows in its gutters, so its content is
+   inset far enough that a long title can never run underneath one. */
+.sd-lesson-card.is-primary { padding-inline: 50px; }
+.sd-lesson-card.is-primary .sd-lesson-card__subject-chip { inset-inline-start: 50px; }
+/* Looking around the route is never the loud action — only "continue" is. */
+.sd-lesson-card.is-primary .sd-lesson-card__cta--completed,
+.sd-lesson-card.is-primary .sd-lesson-card__cta--locked {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--sd-lesson), transparent 62%);
+  color: var(--sd-lesson);
+  box-shadow: none;
+}
+.sd-lesson-card.is-primary .sd-lesson-card__cta--locked {
+  border-color: var(--sp-border-strong);
+  color: var(--sp-ink-400);
+}
 
 /* Actions mirror lesson state, not four identical buttons.
    notStarted → quiet outline (base style) · completed → a small, light link. */
@@ -672,6 +751,9 @@
 
 /* The liquid in the beaker reads as a filled body, not an outline. */
 .sd-glyph-liquid { fill: color-mix(in srgb, var(--sd-lesson), transparent 62%); stroke: none; }
+/* The balance hangs on strings, so they draw thinner than the beam they hang
+   from — at 4px they read as a second beam. */
+.sd-lesson-glyph--scale .sd-glyph-helix { stroke-width: 3; }
 /* A balance settling IS the lesson ("כיול ודיוק, 3 חזרות"), so the beam tips
    once and comes to rest rather than looping. */
 .sd-lesson-track.is-revealed .sd-glyph-beam,
@@ -793,6 +875,36 @@
 /* Completed action stays a quiet, small link — no LED outline. */
 [data-theme='dark'] .sd-lesson-card__cta--completed { border-color: transparent; box-shadow: none; color: rgba(203, 206, 235, .66); }
 [data-theme='dark'] .sd-lesson-card__cta--completed:hover { border-color: transparent; background: rgba(255, 255, 255, .06); box-shadow: none; color: color-mix(in srgb, var(--sd-lesson), white 22%); }
+
+/* Locked step ahead — a dashed, unlit outline: readable, clearly not pressable. */
+[data-theme='dark'] .sd-lesson-card__cta--locked,
+[data-theme='dark'] .sd-lesson-card.is-primary .sd-lesson-card__cta--locked {
+  border-style: dashed;
+  border-color: rgba(203, 206, 235, .26);
+  background: transparent;
+  color: rgba(203, 206, 235, .6);
+  box-shadow: none;
+}
+[data-theme='dark'] .sd-lesson-card.is-primary .sd-lesson-card__cta--completed {
+  background: transparent;
+  border-color: transparent;
+  color: rgba(203, 206, 235, .72);
+  box-shadow: none;
+}
+[data-theme='dark'] .sd-lesson-card__step,
+[data-theme='dark'] .sd-lesson-card__peek-mark {
+  border-color: rgba(159, 122, 254, .28);
+  background: rgba(255, 255, 255, .06);
+  color: rgba(214, 216, 245, .8);
+  box-shadow: none;
+}
+[data-theme='dark'] .sd-lesson-card__step:hover {
+  border-color: rgba(198, 186, 255, .6);
+  background: rgba(255, 255, 255, .1);
+  color: #e6e3ff;
+}
+[data-theme='dark'] .sd-lesson-card__peek-mark--prev { color: #6ee7b7; }
+[data-theme='dark'] .sd-lesson-card__peek-kicker { color: rgba(198, 186, 255, .9); }
 
 /* The one relevant lesson: subtle purple ring, soft glow, full primary CTA. */
 [data-theme='dark'] .sd-lesson-card.is-primary {
@@ -1033,6 +1145,12 @@
   .sd-button { inline-size: 100%; }
   .sd-section__heading { flex-direction: column; }
   .sd-lesson-card { flex-basis: clamp(220px, 82%, 262px); }
+  /* Narrower gutters on a phone — enough to clear the arrows, not enough to
+     eat the title. */
+  .sd-lesson-card.is-primary { padding-inline: 42px; }
+  .sd-lesson-card.is-primary .sd-lesson-card__subject-chip { inset-inline-start: 42px; }
+  .sd-lesson-card__step { inline-size: 30px; block-size: 30px; inset-inline-start: 6px; }
+  .sd-lesson-card__step--next { inset-inline-start: auto; inset-inline-end: 6px; }
   .sd-reflection { padding: 22px 18px; }
 }
 

@@ -948,8 +948,6 @@
   "sdash.lessons.stage": "المرحلة الحالية",
   "sdash.lessons.progress": "{completed} من {total} مراحل",
   "sdash.lessons.ringLabel": "مكتمل",
-  "sdash.lessons.prev": "الدروس السابقة",
-  "sdash.lessons.next": "مزيد من الدروس",
   "sdash.lessons.timeInvested": "الوقت المستثمر",
   "sdash.lessons.timeEstimated": "المدة التقديرية",
   "sdash.lessons.minutes": "{count} دقيقة",
@@ -1608,5 +1606,11 @@
   "sdash.viz.balance.aria": "ميزان كفّتين تفاعلي — اسحب لموازنته",
   "sdash.viz.balance.handle": "الكتلة على الميزان",
   "sdash.viz.balance.hint": "اسحب الكتلة حتى تتوازن الكفّتان",
-  "sdash.viz.balance.balanced": "متوازن! الكفّتان في المستوى نفسه"
+  "sdash.viz.balance.balanced": "متوازن! الكفّتان في المستوى نفسه",
+  "sdash.lessons.peek.prev": "أنجزتَها سابقًا",
+  "sdash.lessons.peek.next": "المحطة التالية",
+  "sdash.lessons.peek.back": "ما أنجزتُه سابقًا",
+  "sdash.lessons.peek.forward": "ما ينتظرني لاحقًا",
+  "sdash.lessons.peek.revisit": "العودة إلى هذه المحطة",
+  "sdash.lessons.peek.locked": "تُفتح عند إنهاء المحطة الحالية"
 }

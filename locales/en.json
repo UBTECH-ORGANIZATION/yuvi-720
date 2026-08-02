@@ -948,8 +948,6 @@
   "sdash.lessons.stage": "Current step",
   "sdash.lessons.progress": "{completed} of {total} steps",
   "sdash.lessons.ringLabel": "complete",
-  "sdash.lessons.prev": "Previous lessons",
-  "sdash.lessons.next": "More lessons",
   "sdash.lessons.timeInvested": "Time spent",
   "sdash.lessons.timeEstimated": "Estimated time",
   "sdash.lessons.minutes": "{count} min",
@@ -1608,5 +1606,11 @@
   "sdash.viz.balance.aria": "Interactive pan balance — drag to level it",
   "sdash.viz.balance.handle": "The mass on the balance",
   "sdash.viz.balance.hint": "Drag the mass until the pans level out",
-  "sdash.viz.balance.balanced": "Balanced! Both pans are level"
+  "sdash.viz.balance.balanced": "Balanced! Both pans are level",
+  "sdash.lessons.peek.prev": "You already did this",
+  "sdash.lessons.peek.next": "Next stop",
+  "sdash.lessons.peek.back": "What I already did",
+  "sdash.lessons.peek.forward": "What's coming up",
+  "sdash.lessons.peek.revisit": "Go back to this stop",
+  "sdash.lessons.peek.locked": "Opens when you finish this stop"
 }

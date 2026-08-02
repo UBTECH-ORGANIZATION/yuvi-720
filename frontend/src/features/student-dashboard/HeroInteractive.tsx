@@ -82,30 +82,38 @@ function BalanceScene() {
         onPointerUp={() => { dragging.current = false }}
         onPointerLeave={() => { dragging.current = false }}
       >
-        {/* Stand */}
-        <path d="M200 92V196" className="sd-viz-orbit-path" />
-        <path d="M150 200h100" className="sd-viz-orbit-path" />
+        {/* The pool of light the instrument stands in — without it the balance
+            floats on a flat plane, which is what made it read as a diagram. */}
+        <ellipse cx={cx} cy="182" rx="150" ry="54" className="sd-viz-balance-halo" />
 
-        {/* Beam + pans */}
+        {/* Stand: column, then a foot that actually sits on something. */}
+        <path d="M200 96V186" className="sd-viz-balance-post" />
+        <path d="M176 186h48l16 20h-80z" className="sd-viz-balance-base" />
+
+        {/* Beam + pans. The arm is drawn between the two hang points, so the
+            beam, the cords and the pans are one rigid object that tips together. */}
         <g className={`sd-viz-beam${balanced ? ' is-balanced' : ''}`}>
-          <path d={`M82 ${armY(-1)}H318`} className="sd-viz-beam__arm" />
+          <path d={`M${cx - 118} ${armY(-1)}L${cx + 118} ${armY(1)}`} className="sd-viz-beam__arm" />
           {([-1, 1] as const).map((side) => {
             const x = cx + side * 118
             const y = armY(side)
             return (
               <g key={side}>
-                <path d={`M${x} ${y}v22`} className="sd-viz-orbit-path" />
-                <path
-                  d={`M${x - 30} ${y + 22}h60l-30 26z`}
-                  className="sd-viz-pan"
-                />
+                <path d={`M${x} ${y}v28`} className="sd-viz-balance-cord" />
+                {/* A shallow bowl. It used to be a downward triangle, which read
+                    as an arrowhead rather than a pan you can put a mass in. */}
+                <path d={`M${x - 36} ${y + 28}q36 28 72 0`} className="sd-viz-pan" />
               </g>
             )
           })}
         </g>
 
-        <circle cx={cx} cy={pivotY} r="10" className="sd-viz-star__core" />
+        <circle cx={cx} cy={pivotY} r="9" className="sd-viz-star__core" />
 
+        {/* The load itself — a block in each pan, sized by how the mass is
+            split. Dragging moves mass from one pan to the other, which is the
+            whole idea: the beam is an answer, not a control. The hit area is the
+            entire instrument, because a 13px circle is not a target for a kid. */}
         <g
           className="sd-viz-handle"
           tabIndex={0}
@@ -124,17 +132,24 @@ function BalanceScene() {
             if (e.key === 'ArrowRight') { e.preventDefault(); setLean((v) => Math.min(1, v + 0.08)) }
           }}
         >
-          <circle cx={cx + lean * 118} cy={armY(lean < 0 ? -1 : 1) + 34} r="24" fill="transparent" />
-          <circle cx={cx + lean * 118} cy={armY(lean < 0 ? -1 : 1) + 34} r="13" className="sd-viz-comet" />
-          <circle
-            cx={cx + lean * 118}
-            cy={armY(lean < 0 ? -1 : 1) + 34}
-            r="13"
-            fill="none"
-            stroke="#fff"
-            strokeWidth="2"
-            opacity="0.8"
-          />
+          <rect x="40" y="40" width="320" height="180" fill="transparent" />
+          {([-1, 1] as const).map((side) => {
+            const share = (1 + side * lean) / 2      // 1 → this pan holds it all
+            const size = 14 + share * 22
+            const x = cx + side * 118
+            const y = armY(side)
+            return (
+              <rect
+                key={side}
+                className={`sd-viz-mass${balanced ? ' is-balanced' : ''}`}
+                x={x - size / 2}
+                y={y + 38 - size}
+                width={size}
+                height={size}
+                rx="6"
+              />
+            )
+          })}
         </g>
       </svg>
       <p className="sd-hero-viz__hint">

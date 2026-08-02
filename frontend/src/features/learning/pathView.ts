@@ -72,6 +72,39 @@ export function previousStation(
   return null
 }
 
+/** The three stations a card may show: what the learner already did, where they
+ *  stand, and the one step ahead.
+ *
+ *  `next` stops at the horizon by construction — exactly one station past the
+ *  current one — so peeking ahead can never promise a station the route may
+ *  still take back. It is genuinely not launchable yet (the session gate refuses
+ *  anything past the current step), which is why the card draws it locked. */
+export function stationPeek(unit: LearningUnitDTO): {
+  previous: LearningComponentDTO | null
+  current: LearningComponentDTO | null
+  next: LearningComponentDTO | null
+} {
+  const route = onPathNodes(unit)
+  const current = currentNode(unit)
+  const found = current
+    ? route.findIndex((component) => component.path_node_id === current.path_node_id)
+    : -1
+  // A finished unit (or a current node that is off the route) has no "ahead":
+  // everything settled sits behind the learner.
+  const index = found < 0 ? route.length : found
+
+  let previous: LearningComponentDTO | null = null
+  for (let i = index - 1; i >= 0; i -= 1) {
+    if (route[i].outcome !== null) { previous = route[i]; break }
+  }
+
+  return {
+    previous,
+    current,
+    next: index + 1 < route.length ? route[index + 1] : null,
+  }
+}
+
 export type LessonCardStatus = 'active' | 'inProgress' | 'completed' | 'notStarted'
 
 export interface LessonCardView {

@@ -1,7 +1,7 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { Icon } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
-import { lessonCardView, onPathNodes } from '../learning/pathView'
+import { lessonCardView, onPathNodes, stationPeek } from '../learning/pathView'
 import { useMediaQuery } from '../../hooks/useResponsive'
 import type {
   LearningComponentDTO,
@@ -17,6 +17,11 @@ interface RecentLessonsProps {
 }
 
 type LessonStatus = 'active' | 'inProgress' | 'completed' | 'notStarted'
+
+/** Which station of the primary lesson the card is showing. The arrows move
+ *  along the learner's own route — back to something they actually did, forward
+ *  to the one step ahead — rather than scrolling the rail sideways. */
+type PeekSlot = 'prev' | 'current' | 'next'
 
 interface LessonView {
   unit: LearningUnitDTO
@@ -115,8 +120,7 @@ export function RecentLessons({
   const { t, language } = useI18n()
   const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
   const [revealed, setRevealed] = useState(false)
-  const trackRef = useRef<HTMLUListElement>(null)
-  const [scrollState, setScrollState] = useState({ canPrev: false, canNext: false })
+  const [peek, setPeek] = useState<PeekSlot>('current')
 
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null)
   const [subTopicFilter, setSubTopicFilter] = useState<string | null>(null)
@@ -183,36 +187,9 @@ export function RecentLessons({
     return () => window.cancelAnimationFrame(frame)
   }, [prefersReducedMotion, lessons])
 
-  const syncScrollState = () => {
-    const el = trackRef.current
-    if (!el) return
-    const max = el.scrollWidth - el.clientWidth
-    const current = Math.abs(el.scrollLeft)
-    setScrollState({ canPrev: current > 4, canNext: max > 4 && current < max - 4 })
-  }
-
-  useLayoutEffect(syncScrollState, [lessons])
-  useEffect(() => {
-    const el = trackRef.current
-    if (!el) return
-    el.addEventListener('scroll', syncScrollState, { passive: true })
-    window.addEventListener('resize', syncScrollState)
-    return () => {
-      el.removeEventListener('scroll', syncScrollState)
-      window.removeEventListener('resize', syncScrollState)
-    }
-  }, [lessons])
-
-  const scrollByDirection = (direction: 'prev' | 'next') => {
-    const el = trackRef.current
-    if (!el) return
-    const isRtl = getComputedStyle(el).direction === 'rtl'
-    const card = el.querySelector<HTMLElement>('.sd-lesson-card')
-    const step = (card?.offsetWidth ?? el.clientWidth * 0.8) + 18
-    const towardEnd = direction === 'next'
-    const sign = (isRtl ? -1 : 1) * (towardEnd ? 1 : -1)
-    el.scrollBy({ left: sign * step, behavior: prefersReducedMotion ? 'auto' : 'smooth' })
-  }
+  // Looking around the route is a peek, not a move: whenever the recommendation
+  // itself changes, the card snaps back to where the learner actually stands.
+  useEffect(() => { setPeek('current') }, [primaryUnitId])
 
   return (
     <section className="sd-section sd-lessons" aria-labelledby="sd-lessons-title">
@@ -291,17 +268,33 @@ export function RecentLessons({
         </div>
       ) : (
         <div className="sd-lessons__carousel">
-          <ul ref={trackRef} className={`sd-lesson-track${revealed ? ' is-revealed' : ''}`}>
+          <ul className={`sd-lesson-track${revealed ? ' is-revealed' : ''}`}>
             {lessons.map((lesson, index) => {
               const tone = PALETTE[index % PALETTE.length]
               const isPrimary = lesson.unit.id === primaryUnitId
               // Every signal the catalog carries, so the picture is a reading
               // of the lesson rather than one illustration per subject.
               const glyphVariant = glyphForUnit(lesson.unit)
+
+              // The route around the current step, for the arrows. Only the
+              // primary card offers it — it is the one lesson the learner is
+              // actually standing in.
+              const stations = isPrimary ? stationPeek(lesson.unit) : null
+              const focus = stations && peek === 'prev' ? stations.previous
+                : stations && peek === 'next' ? stations.next
+                : null
+              // A refresh can settle the route while the learner is peeking (the
+              // station behind them stops being the station behind them). Falling
+              // back to `current` keeps the card from offering a CTA for a
+              // station it is no longer showing.
+              const slot: PeekSlot = focus ? peek : 'current'
+              const canGoBack = !!stations && (slot === 'next' || (slot === 'current' && !!stations.previous))
+              const canGoForward = !!stations && (slot === 'prev' || (slot === 'current' && !!stations.next))
+              const ctaTarget = slot === 'prev' ? focus : lesson.target
               return (
                 <li
                   key={lesson.unit.id}
-                  className={`sd-lesson-card sd-lesson-card--${tone} is-${lesson.status}${isPrimary ? ' is-primary' : ''}`}
+                  className={`sd-lesson-card sd-lesson-card--${tone} is-${lesson.status}${isPrimary ? ' is-primary' : ''}${focus ? ` is-peeking is-peeking-${slot}` : ''}`}
                   style={{ '--sd-lesson-index': index } as CSSProperties}
                 >
                   {/* The subject, as a chip — and as a filter. It replaces a
@@ -320,17 +313,43 @@ export function RecentLessons({
                   </button>
                   <div className="sd-lesson-card__media" aria-hidden="true">
                     <LessonGlyph variant={glyphVariant} />
-                    <span className={`sd-lesson-card__badge sd-lesson-card__badge--${lesson.status}`}>
-                      <Icon name={STATUS_ICON[lesson.status]} size={12} />
-                    </span>
+                    {focus ? (
+                      // A station they got through wears a check; one they
+                      // stumbled on wears the redo mark, not a tick it never
+                      // earned. Ahead of them: a lock, because it is one.
+                      <span className={`sd-lesson-card__peek-mark sd-lesson-card__peek-mark--${
+                        slot === 'next' ? 'next' : focus.outcome === 'failed' ? 'redo' : 'prev'}`}>
+                        <Icon
+                          name={slot === 'next' ? 'lock' : focus.outcome === 'failed' ? 'reflect' : 'check'}
+                          size={15}
+                        />
+                      </span>
+                    ) : (
+                      <span className={`sd-lesson-card__badge sd-lesson-card__badge--${lesson.status}`}>
+                        <Icon name={STATUS_ICON[lesson.status]} size={12} />
+                      </span>
+                    )}
                   </div>
 
                   <div className="sd-lesson-card__body">
-                    <h3 className="sd-lesson-card__title" dir="auto">{lesson.unit.title}</h3>
+                    {/* Peeking swaps the card onto one station of the route: the
+                        title becomes that station's, and the lesson it belongs
+                        to drops to the line beneath — so a kid looking around
+                        never loses which lesson they are in. */}
+                    {focus && (
+                      <span className="sd-lesson-card__peek-kicker">
+                        {t(`sdash.lessons.peek.${slot}`)}
+                      </span>
+                    )}
+                    <h3 className="sd-lesson-card__title" dir="auto">
+                      {focus ? focus.title : lesson.unit.title}
+                    </h3>
                     {/* The ministry's own name for the sub-topic this belongs to
                         ("מסה ונפח של גופים"), from the goal registry — not a
                         dotted key run through a hand-written label table. */}
-                    {(lesson.unit.sub_topic_title || lesson.unit.sub_topic) && (
+                    {focus ? (
+                      <p className="sd-lesson-card__subtopic" dir="auto">{lesson.unit.title}</p>
+                    ) : (lesson.unit.sub_topic_title || lesson.unit.sub_topic) && (
                       <p className="sd-lesson-card__subtopic" dir="auto">
                         {lesson.unit.sub_topic_title
                           || subTopicLabel(lesson.unit.sub_topic, language)}
@@ -350,43 +369,65 @@ export function RecentLessons({
 
                   </div>
 
-                  {/* The CTA and the way to the neighbouring lessons in one row:
-                      the carousel arrows used to float over the edge of the rail,
-                      half off-card, and on a narrow screen they covered the card
-                      they were meant to move. */}
+                  {/* One action, and it always says what tapping it does: resume
+                      the current station, go back to one already walked, or —
+                      on the step ahead — nothing at all, because it is locked
+                      until this one is finished. */}
                   <div className="sd-lesson-card__foot">
-                    {isPrimary && (
+                    {slot === 'next' && focus ? (
                       <button
-                        className="sd-lesson-card__step"
+                        className="sd-lesson-card__cta sd-lesson-card__cta--locked"
                         type="button"
-                        onClick={() => scrollByDirection('prev')}
-                        disabled={!scrollState.canPrev}
-                        aria-label={t('sdash.lessons.prev')}
+                        disabled
                       >
-                        <Icon name="chevronLeft" size={16} />
+                        <Icon name="lock" size={14} />
+                        <span>{t('sdash.lessons.peek.locked')}</span>
                       </button>
-                    )}
-                    <button
-                      className={`sd-lesson-card__cta sd-lesson-card__cta--${lesson.status}`}
-                      type="button"
-                      disabled={!lesson.target}
-                      onClick={() => lesson.target && onOpenComponent(lesson.unit, lesson.target)}
-                    >
-                      <span>{t(`sdash.lessons.cta.${CTA_BY_STATUS[lesson.status]}`)}</span>
-                      <Icon name={lesson.status === 'completed' ? 'reflect' : 'arrow'} size={lesson.status === 'completed' ? 13 : 15} />
-                    </button>
-                    {isPrimary && (
+                    ) : (
                       <button
-                        className="sd-lesson-card__step sd-lesson-card__step--next"
+                        className={`sd-lesson-card__cta sd-lesson-card__cta--${slot === 'prev' ? 'completed' : lesson.status}`}
                         type="button"
-                        onClick={() => scrollByDirection('next')}
-                        disabled={!scrollState.canNext}
-                        aria-label={t('sdash.lessons.next')}
+                        disabled={!ctaTarget}
+                        onClick={() => ctaTarget && onOpenComponent(lesson.unit, ctaTarget)}
                       >
-                        <Icon name="chevronLeft" size={16} />
+                        <span>
+                          {slot === 'prev'
+                            ? t('sdash.lessons.peek.revisit')
+                            : t(`sdash.lessons.cta.${CTA_BY_STATUS[lesson.status]}`)}
+                        </span>
+                        <Icon
+                          name={slot === 'prev' || lesson.status === 'completed' ? 'reflect' : 'arrow'}
+                          size={slot === 'prev' || lesson.status === 'completed' ? 13 : 15}
+                        />
                       </button>
                     )}
                   </div>
+
+                  {/* The route, on the card's own edges: back to what the kid
+                      already did, forward to the one step ahead. They move
+                      along THIS lesson — the rail itself scrolls on its own. */}
+                  {isPrimary && (
+                    <>
+                      <button
+                        className="sd-lesson-card__step"
+                        type="button"
+                        onClick={() => setPeek(slot === 'next' ? 'current' : 'prev')}
+                        disabled={!canGoBack}
+                        aria-label={t('sdash.lessons.peek.back')}
+                      >
+                        <Icon name="chevronLeft" size={17} />
+                      </button>
+                      <button
+                        className="sd-lesson-card__step sd-lesson-card__step--next"
+                        type="button"
+                        onClick={() => setPeek(slot === 'prev' ? 'current' : 'next')}
+                        disabled={!canGoForward}
+                        aria-label={t('sdash.lessons.peek.forward')}
+                      >
+                        <Icon name="chevronLeft" size={17} />
+                      </button>
+                    </>
+                  )}
                 </li>
               )
             })}

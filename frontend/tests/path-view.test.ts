@@ -20,6 +20,7 @@ import {
   optionalExtra,
   previousStation,
   stationGlyph,
+  stationPeek,
   whatNowKey,
 } from '../src/features/learning/pathView.ts'
 import type { LearningComponentDTO, LearningUnitDTO } from '../src/services/learning.ts'
@@ -285,6 +286,58 @@ describe('going back (720 F1 "אפשרות לחזור לתכנים קודמים"
       node({ id: 'c2', index: 1 }),
     ])
     assert.equal(previousStation(early, 'c2'), null)
+  })
+})
+
+describe('the card arrows — looking around the route', () => {
+  it('shows the station behind, the one they are on, and exactly one ahead', () => {
+    const peek = stationPeek(MIDDLE)
+    assert.equal(peek.previous?.path_node_id, 'c1#1')
+    assert.equal(peek.current?.path_node_id, 'c2#1')
+    assert.equal(peek.next?.path_node_id, 'c3#1')
+  })
+
+  it('never looks further ahead than the horizon the roadmap draws', () => {
+    // One station past the current one, and no more: the tail beyond it depends
+    // on how this step goes, so peeking at it would promise a route we may
+    // still change.
+    const peek = stationPeek(STRUGGLING)
+    assert.equal(peek.next?.path_node_id, 'c3#1')
+    assert.ok(horizon(STRUGGLING).nodes.some((n) => n.path_node_id === peek.next?.path_node_id))
+  })
+
+  it('looks back at the repair round, not at the first visit to that station', () => {
+    const afterRepair = unit([
+      node({ id: 'c1', index: 0, state: 'completed', outcome: 'passed' }),
+      node({ id: 'c2', index: 1, state: 'available', outcome: 'failed', reason: 'xapi_failed' }),
+      node({ id: 'c1', visit: 2, index: 2, state: 'completed', outcome: 'passed', reason: 'recovery_after_fail' }),
+      node({ id: 'c3', index: 3, state: 'current' }),
+    ])
+    assert.equal(stationPeek(afterRepair).previous?.path_node_id, 'c1#2')
+  })
+
+  it('never offers a skipped extra as the station behind', () => {
+    assert.equal(stationPeek(EXCELLENT).previous?.component_id, 'c1')
+  })
+
+  it('has nothing to look back at on the very first station', () => {
+    const fresh = unit([
+      node({ id: 'c1', index: 0, state: 'current' }),
+      node({ id: 'c2', index: 1 }),
+    ])
+    assert.equal(stationPeek(fresh).previous, null)
+    assert.equal(stationPeek(fresh).next?.component_id, 'c2')
+  })
+
+  it('has nothing ahead once the unit is done, and the last station behind', () => {
+    const done = unit([
+      node({ id: 'c1', index: 0, state: 'completed', outcome: 'passed' }),
+      node({ id: 'c2', index: 1, state: 'completed', outcome: 'passed' }),
+    ])
+    const peek = stationPeek(done)
+    assert.equal(peek.current, null)
+    assert.equal(peek.next, null)
+    assert.equal(peek.previous?.component_id, 'c2')
   })
 })
 
