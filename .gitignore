@@ -6,3 +6,5 @@ __pycache__/
 *.py[cod]
 frontend/node_modules/
 frontend/*.tsbuildinfo
+# macOS finder metadata
+.DS_Store

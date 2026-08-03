@@ -59,41 +59,12 @@
         if (titleKey) document.title = t(titleKey);
     }
 
-    function injectLanguageSwitcher() {
-        if (document.querySelector('.yuvi-language-switcher')) return;
-        const switcher = document.createElement('label');
-        switcher.className = 'yuvi-language-switcher';
-        switcher.dataset.i18nAriaLabel = 'language.switcherLabel';
-        switcher.setAttribute('aria-label', t('language.switcherLabel'));
-        switcher.innerHTML = `
-            <span data-i18n="language.switcherLabel">${t('language.switcherLabel')}</span>
-            <select>
-                ${Object.entries(localeMeta).map(([code, meta]) => `<option value="${code}">${meta.label}</option>`).join('')}
-            </select>
-        `;
-        const select = switcher.querySelector('select');
-        select.value = currentLanguage;
-        select.addEventListener('change', async () => {
-            await setLanguage(select.value, { reload: true });
-        });
-        const appBar = document.querySelector('.app-bar');
-        if (appBar) {
-            switcher.classList.add('yuvi-language-switcher-inline');
-            appBar.appendChild(switcher);
-        } else {
-            document.body.appendChild(switcher);
-        }
-    }
-
     async function setLanguage(language, options = {}) {
         const normalized = normalizeLanguage(language);
         localStorage.setItem('yuvi.language', normalized);
         setDocumentLanguage(normalized);
         await loadLocale(normalized);
         applyTranslations();
-        document.querySelectorAll('.yuvi-language-switcher select').forEach((select) => {
-            select.value = normalized;
-        });
         if (options.reload) window.location.reload();
     }
 
@@ -101,7 +72,6 @@
         setDocumentLanguage(currentLanguage);
         await Promise.all([loadLocale(fallbackLanguage), loadLocale(currentLanguage)]);
         applyTranslations();
-        injectLanguageSwitcher();
     }
 
     window.YuviI18n = {

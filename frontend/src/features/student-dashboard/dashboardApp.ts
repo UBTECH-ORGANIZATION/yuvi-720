@@ -121,7 +121,7 @@ export function initDashboard(t, language) {
                     <div style="font-size:48px;margin-bottom:16px;">📋</div>
                     <div style="font-size:18px;font-weight:700;color:#3a3360;margin-bottom:12px;">${t('dashboard.noData.title')}</div>
                     <div style="font-size:14px;color:#9a93b5;margin-bottom:24px;">${t('dashboard.noData.subtitle')}</div>
-                    <a href="/learner-mapping" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c5cff,#9f7afe);color:#fff;border-radius:14px;font-weight:700;text-decoration:none;">${t('dashboard.noData.cta')}</a>
+                    <a href="/learner-mapping" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6a45f0,#7a4fdd);color:#fff;border-radius:14px;font-weight:700;text-decoration:none;">${t('dashboard.noData.cta')}</a>
                 `;
                     return;
                 }
@@ -1013,10 +1013,10 @@ export function initDashboard(t, language) {
         // -------- DEEP: STRENGTHS --------
         // -------- DEEP: AGENCY ("מצפן הפעלנות") --------
         function agencyLevel(score) {
-            if (score >= 85) return { label: 'כוח-על',       color: '#2f855a', soft: 'rgba(72,187,120,0.16)' };
+            if (score >= 85) return { label: 'כוח-על',       color: '#1f6b47', soft: 'rgba(72,187,120,0.16)' };
             if (score >= 68) return { label: 'מתחזק',         color: '#5a4bd0', soft: 'rgba(99,102,241,0.14)' };
-            if (score >= 50) return { label: 'בונה',          color: '#2b86b3', soft: 'rgba(76,201,240,0.16)' };
-            return              { label: 'מתחיל לגלות', color: '#7c5cff', soft: 'rgba(159,122,254,0.16)' };
+            if (score >= 50) return { label: 'בונה',          color: '#1d6a90', soft: 'rgba(76,201,240,0.16)' };
+            return              { label: 'מתחיל לגלות', color: '#6a45f0', soft: 'rgba(159,122,254,0.16)' };
         }
 
         // Friendly, kid-safe model of the 6 "agency" components from the spec.
@@ -1551,22 +1551,52 @@ export function initDashboard(t, language) {
         let currentMode = 'dashboard';
         let activeTeacher = null;
 
+        const LEARNER_ID = 'demo-learner';
         const TEACHERS = [
             {
-                id: 'rotem', name: 'המורה רותם', subject: 'מתמטיקה', avatar: 'ר', color: '#7c5cff', online: true, unread: 1,
-                messages: [
-                    { from: 'them', text: 'היי! ראיתי שהתקדמת יפה בשברים השבוע 👏', day: 'אתמול', time: '14:20' },
-                    { from: 'me', text: 'תודה! עדיין קצת מתקשה בבעיות מילוליות 😅', day: 'אתמול', time: '14:25' },
-                    { from: 'them', text: 'בוא נעבור על זה יחד במפגש הבא. הכנתי לך דוגמאות מהחיים שיעזרו 🙂', day: 'אתמול', time: '14:31' }
-                ]
-            },
-            {
-                id: 'dana', name: 'המורה דנה', subject: 'מדעים', avatar: 'ד', color: '#48bb78', online: false, unread: 1,
-                messages: [
-                    { from: 'them', text: 'אל תשכח/י להביא את הניסוי הקטן למפגש ביום ראשון 🔬', day: 'היום', time: '09:10' }
-                ]
+                id: 'demo-teacher', name: 'המורה מיכל', subject: 'מתמטיקה', avatar: 'מ', color: '#7c5cff',
+                online: true, unread: 0, messages: []
             }
         ];
+
+        // Identifies the rendered state so polling can skip a no-op repaint.
+        function threadsSignature() {
+            return TEACHERS.map(t => {
+                const msgs = t.messages || [];
+                const last = msgs.length ? (msgs[msgs.length - 1].id || msgs[msgs.length - 1].sent_at) : '';
+                return `${t.id}:${msgs.length}:${last}:${t.unread || 0}`;
+            }).join('|');
+        }
+
+        async function refreshTeacherThreads() {
+            const before = threadsSignature();
+            for (const t of TEACHERS) {
+                try {
+                    const resp = await fetch(`/api/messages/thread?teacher_id=${encodeURIComponent(t.id)}&learner_id=${encodeURIComponent(LEARNER_ID)}`);
+                    if (!resp.ok) throw new Error('thread load failed');
+                    const data = await resp.json();
+                    t.messages = data.messages || [];
+                    t.unread = data.unread_learner || 0;
+                } catch (e) {
+                    t.messages = t.messages || [];
+                }
+            }
+            // Nothing new arrived, so leave the DOM (and any half-typed message) alone.
+            if (threadsSignature() === before) return;
+            updateChatBadge();
+            if (currentMode === 'chat') { renderTeacherList(); renderThread(); }
+        }
+
+        function msgTime(iso) {
+            const d = iso ? new Date(iso) : new Date();
+            return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+        }
+        function msgDay(iso) {
+            const d = iso ? new Date(iso) : new Date();
+            if (d.toDateString() === new Date().toDateString()) return 'היום';
+            return d.toLocaleDateString('he-IL', { day: 'numeric', month: 'long' });
+        }
+
 
         function updateTopProfile() {
             if (!currentData) return;
@@ -1585,22 +1615,28 @@ export function initDashboard(t, language) {
             else badge.style.display = 'none';
         }
 
+        function escapeHtml(s) {
+            return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
         function renderTeacherList() {
             const wrap = document.getElementById('msgTeachers');
-            wrap.innerHTML = '<div class="msg-teachers-title">המורים שלי</div>' +
+            wrap.innerHTML = '<div class="msg-teachers-title" id="msgTeachersTitle">המורים שלי</div>' +
+                `<div role="tablist" aria-labelledby="msgTeachersTitle">` +
                 TEACHERS.map(t => {
-                    const last = t.messages[t.messages.length - 1];
-                    const preview = last ? (last.from === 'me' ? 'את/ה: ' : '') + last.text : '';
-                    return `<div class="teacher-item ${activeTeacher === t.id ? 'active' : ''}" data-teacher="${t.id}">
-                        <div class="teacher-ava" style="background:linear-gradient(135deg,${t.color},${t.color}cc)">${t.avatar}</div>
-                        <div class="teacher-info">
-                            <div class="teacher-name">${t.name}</div>
-                            <div class="teacher-sub">${t.subject}</div>
-                            <div class="teacher-preview">${preview}</div>
-                        </div>
-                        ${t.unread ? `<span class="teacher-unread">${t.unread}</span>` : ''}
-                    </div>`;
-                }).join('');
+                    const msgs = t.messages || [];
+                    const last = msgs[msgs.length - 1];
+                    const preview = last ? (last.from === 'learner' ? 'את/ה: ' : '') + last.text : 'אין עדיין הודעות';
+                    return `<button type="button" role="tab" aria-selected="${activeTeacher === t.id}" class="teacher-item ${activeTeacher === t.id ? 'active' : ''}" data-teacher="${t.id}">
+                        <span class="teacher-ava" style="background:linear-gradient(135deg,${t.color},${t.color}cc)" aria-hidden="true">${t.avatar}</span>
+                        <span class="teacher-info">
+                            <span class="teacher-name">${t.name}</span>
+                            <span class="teacher-sub">${t.subject}</span>
+                            <span class="teacher-preview">${escapeHtml(preview)}</span>
+                        </span>
+                        ${t.unread ? `<span class="teacher-unread">${t.unread}</span><span class="sr-only">${t.unread} הודעות שלא נקראו</span>` : ''}
+                    </button>`;
+                }).join('') + '</div>';
             wrap.querySelectorAll('.teacher-item').forEach(el => {
                 el.addEventListener('click', () => selectTeacher(el.dataset.teacher));
             });
@@ -1608,103 +1644,149 @@ export function initDashboard(t, language) {
 
         function selectTeacher(id) {
             activeTeacher = id;
-            const t = TEACHERS.find(x => x.id === id);
-            if (t) t.unread = 0;
-            updateChatBadge();
             renderTeacherList();
             renderThread();
+            void fetch('/api/messages/thread/read', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ teacher_id: id, learner_id: LEARNER_ID, reader: 'learner' })
+            }).then(() => {
+                const t = TEACHERS.find(x => x.id === id);
+                if (t) t.unread = 0;
+                updateChatBadge();
+                renderTeacherList();
+            }).catch(() => {});
         }
 
         function renderThread() {
             const thread = document.getElementById('msgThread');
+            // A repaint replaces the input, so carry any half-typed message across.
+            const prevInput = document.getElementById('threadInput');
+            const draft = prevInput ? prevInput.value : '';
+            const draftFocused = prevInput && document.activeElement === prevInput;
+            const caret = prevInput ? prevInput.selectionStart : 0;
             const t = TEACHERS.find(x => x.id === activeTeacher);
             if (!t) {
-                thread.innerHTML = `<div class="thread-empty"><div class="te-ico">💬</div><div>בחר/י מורה כדי להתחיל לשוחח</div></div>`;
+                thread.innerHTML = `<div class="thread-empty"><div class="te-ico" aria-hidden="true">💬</div><div>בחר/י מורה כדי להתחיל לשוחח</div></div>`;
                 return;
             }
             let lastDay = '';
-            const body = t.messages.map(m => {
+            const body = (t.messages || []).map(m => {
+                const day = msgDay(m.sent_at);
                 let dayHdr = '';
-                if (m.day && m.day !== lastDay) { lastDay = m.day; dayHdr = `<div class="m-day">${m.day}</div>`; }
-                return `${dayHdr}<div class="m-bubble ${m.from}">${m.text}<span class="m-time">${m.time}</span></div>`;
-            }).join('');
+                if (day !== lastDay) { lastDay = day; dayHdr = `<div class="m-day">${day}</div>`; }
+                const side = m.from === 'learner' ? 'me' : 'them';
+                return `${dayHdr}<div class="m-bubble ${side}">${escapeHtml(m.text)}<span class="m-time">${msgTime(m.sent_at)}</span></div>`;
+            }).join('') || `<div class="thread-empty"><div>עדיין אין הודעות. אפשר לכתוב למורה 👇</div></div>`;
             thread.innerHTML = `
                 <div class="thread-head">
-                    <div class="teacher-ava" style="background:linear-gradient(135deg,${t.color},${t.color}cc)">${t.avatar}</div>
+                    <div class="teacher-ava" style="background:linear-gradient(135deg,${t.color},${t.color}cc)" aria-hidden="true">${t.avatar}</div>
                     <div>
                         <div class="th-name">${t.name}</div>
-                        <div class="th-sub">${t.online ? '<span class="live-dot"></span> מחובר/ת עכשיו' : t.subject}</div>
+                        <div class="th-sub">${t.online ? '<span class="live-dot" aria-hidden="true"></span> מחובר/ת עכשיו' : t.subject}</div>
                     </div>
                 </div>
-                <div class="thread-body" id="threadBody">${body}</div>
+                <div class="thread-body" id="threadBody" role="log" aria-live="polite" aria-label="שיחה עם ${t.name}">${body}</div>
                 <form class="thread-input" id="threadForm">
+                    <label class="sr-only" for="threadInput">הודעה ל${t.name}</label>
                     <input id="threadInput" type="text" placeholder="כתוב/כתבי ל${t.name}..." autocomplete="off">
-                    <button type="submit" aria-label="שלח">➤</button>
+                    <button type="submit" aria-label="שליחת הודעה">➤</button>
                 </form>`;
             const tb = document.getElementById('threadBody');
             tb.scrollTop = tb.scrollHeight;
+            const inputEl = document.getElementById('threadInput');
+            if (draft) {
+                inputEl.value = draft;
+                if (draftFocused) {
+                    inputEl.focus();
+                    try { inputEl.setSelectionRange(caret, caret); } catch (e) {}
+                }
+            }
             document.getElementById('threadForm').addEventListener('submit', e => {
                 e.preventDefault();
                 const inp = document.getElementById('threadInput');
-                sendTeacherMsg(inp.value);
+                const value = inp.value;
                 inp.value = '';
+                void sendTeacherMsg(value);
             });
         }
 
-        function sendTeacherMsg(text) {
+        async function sendTeacherMsg(text) {
             text = (text || '').trim();
             if (!text) return;
             const t = TEACHERS.find(x => x.id === activeTeacher);
             if (!t) return;
-            const now = new Date();
-            const hh = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-            t.messages.push({ from: 'me', text, day: 'היום', time: hh });
+            try {
+                const resp = await fetch('/api/messages/thread', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ teacher_id: t.id, learner_id: LEARNER_ID, sender: 'learner', text })
+                });
+                if (!resp.ok) throw new Error('send failed');
+                const data = await resp.json();
+                t.messages = data.messages || [];
+            } catch (e) {
+                return;
+            }
+            renderTeacherList();
             renderThread();
-            setTimeout(() => {
-                const replies = ['קיבלתי! אענה לך בהקדם 🙂', 'כל הכבוד על השאלה 👏 נדבר על זה במפגש', 'מעולה, רשמתי לי 📝', 'אחלה! ממשיכים ככה 💪'];
-                t.messages.push({ from: 'them', text: replies[Math.floor(Math.random() * replies.length)], day: 'היום', time: hh });
-                if (currentMode === 'chat' && activeTeacher === t.id) renderThread();
-            }, 1400);
         }
 
-        const CALENDAR = [
-            {
-                dnum: '21', dlabel: 'יום ראשון', dsub: '21 ביוני 2026', events: [
-                    { time: '10:00', ico: '👩‍🏫', title: 'מפגש עם המורה רותם — מתמטיקה', tag: 'מפגש', color: '#7c5cff', soft: '#f3eeff' },
-                    { time: '16:00', ico: '✏️', title: 'תרגול שברים — 15 דקות', tag: 'משימה', color: '#48bb78', soft: '#eafaf1' }
-                ]
-            },
-            {
-                dnum: '23', dlabel: 'יום שלישי', dsub: '23 ביוני 2026', events: [
-                    { time: '12:00', ico: '🔬', title: 'ניסוי מדעים עם המורה דנה', tag: 'מפגש', color: '#7c5cff', soft: '#f3eeff' }
-                ]
-            },
-            {
-                dnum: '25', dlabel: 'יום חמישי', dsub: '25 ביוני 2026', events: [
-                    { time: 'כל היום', ico: '🎯', title: 'יעד: לסיים 3 משימות קצרות', tag: 'יעד', color: '#f6ad55', soft: '#fff5e8' }
-                ]
-            }
-        ];
+        // Picks up messages the teacher sends from the teacher view.
+        setInterval(() => { if (currentMode === 'chat') void refreshTeacherThreads(); }, 5000);
 
-        function renderCalendar() {
+
+        const CAL_MONTH_NAMES = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+        const CAL_DAY_NAMES = ['יום ראשון','יום שני','יום שלישי','יום רביעי','יום חמישי','יום שישי','שבת'];
+        const STUDENT_EV_TYPES = {
+            meeting:  { ico: '👩‍🏫', tag: 'מפגש',  color: '#5a37d8', soft: '#f3eeff' },
+            talk:     { ico: '💬', tag: 'שיחה',  color: '#39649f', soft: '#eef4fd' },
+            task:     { ico: '✏️', tag: 'משימה', color: '#1f7a4c', soft: '#eafaf1' },
+            deadline: { ico: '⏰', tag: 'דדליין', color: '#a33b47', soft: '#fdf3f4' },
+            parents:  { ico: '👨‍👩‍👧', tag: 'מפגש הורים', color: '#8a5d0f', soft: '#fff5e8' },
+        };
+
+        // The learner sees the schedule their teacher publishes, read-only.
+        async function renderCalendar() {
             const wrap = document.getElementById('calAgenda');
-            wrap.innerHTML = CALENDAR.map(d => `
+            let events = [];
+            try {
+                const resp = await fetch(`/api/calendar/events?owner_id=${encodeURIComponent(TEACHERS[0].id)}`);
+                if (!resp.ok) throw new Error('calendar load failed');
+                events = (await resp.json()).events || [];
+            } catch (e) {
+                wrap.innerHTML = `<div class="cal-empty">לא הצלחנו לטעון את היומן. נסו לרענן את הדף.</div>`;
+                return;
+            }
+            if (!events.length) {
+                wrap.innerHTML = `<div class="cal-empty">אין עדיין אירועים ביומן שלך.</div>`;
+                return;
+            }
+            const byDate = {};
+            events.forEach(e => { (byDate[e.date] = byDate[e.date] || []).push(e); });
+            wrap.innerHTML = Object.keys(byDate).sort().map(ds => {
+                const [y, m, d] = ds.split('-').map(Number);
+                const dt = new Date(y, m - 1, d);
+                return `
                 <div class="cal-day">
                     <div class="cal-day-head">
-                        <div class="cal-day-num"><b>${d.dnum}</b><span>יוני</span></div>
-                        <div><div class="cal-day-label">${d.dlabel}</div><div class="cal-day-sub">${d.dsub}</div></div>
+                        <div class="cal-day-num"><b>${d}</b><span>${CAL_MONTH_NAMES[m - 1]}</span></div>
+                        <div><div class="cal-day-label">${CAL_DAY_NAMES[dt.getDay()]}</div><div class="cal-day-sub">${d} ב${CAL_MONTH_NAMES[m - 1]} ${y}</div></div>
                     </div>
                     <div class="cal-events">
-                        ${d.events.map(e => `
-                            <div class="cal-event" style="--ev-color:${e.color};--ev-soft:${e.soft}">
-                                <div class="cal-ev-time">${e.time}</div>
-                                <div class="cal-ev-ico">${e.ico}</div>
-                                <div class="cal-ev-body"><div class="cal-ev-title">${e.title}</div></div>
-                                <span class="cal-ev-tag">${e.tag}</span>
-                            </div>`).join('')}
+                        ${byDate[ds].map(e => {
+                            const meta = STUDENT_EV_TYPES[e.type] || STUDENT_EV_TYPES.meeting;
+                            return `
+                            <div class="cal-event" style="--ev-color:${meta.color};--ev-soft:${meta.soft}">
+                                <div class="cal-ev-time">${escapeHtml(e.time || 'כל היום')}</div>
+                                <div class="cal-ev-ico" aria-hidden="true">${meta.ico}</div>
+                                <div class="cal-ev-body"><div class="cal-ev-title">${escapeHtml(e.title)}</div></div>
+                                <span class="cal-ev-tag">${meta.tag}</span>
+                            </div>`;
+                        }).join('')}
                     </div>
-                </div>`).join('');
+                </div>`;
+            }).join('');
         }
+
 
         function setMode(mode) {
             currentMode = mode;
@@ -1716,15 +1798,16 @@ export function initDashboard(t, language) {
                 if (!activeTeacher && TEACHERS.length) activeTeacher = TEACHERS[0].id;
                 renderTeacherList();
                 renderThread();
+                void refreshTeacherThreads().then(() => selectTeacher(activeTeacher));
             }
-            if (mode === 'calendar') renderCalendar();
+            if (mode === 'calendar') void renderCalendar();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         document.querySelectorAll('#topTabs .tt-btn').forEach(b => {
             b.addEventListener('click', () => setMode(b.dataset.mode));
         });
-        updateChatBadge();
+        void refreshTeacherThreads();
 
         // ================================================
         // EVENTS

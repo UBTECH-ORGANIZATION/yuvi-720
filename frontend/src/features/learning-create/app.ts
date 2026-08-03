@@ -332,7 +332,7 @@ export function initLomdaCreator() {
   function heb(k){return {battery:'סוללה',switch:'מתג',resistor:'נגד',bulb:'נורה'}[k];}
   function icon(k){return {battery:'🔋',switch:'🔘',resistor:'〰️',bulb:'💡'}[k];}
 <\/script>
-<script src="/shared/i18n.js?v=1"></script>
+<script src="/shared/i18n.js?v=2"></script>
 </body>
 </html>`,
         math: `<!DOCTYPE html>

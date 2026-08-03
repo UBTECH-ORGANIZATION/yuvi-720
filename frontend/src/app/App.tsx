@@ -7,7 +7,7 @@ import { LearningPortalPage } from '../features/learning-portal/LearningPortalPa
 import { LessonPage } from '../features/learning-lesson/LessonPage'
 import { LomdaCreatorPage } from '../features/learning-create/LomdaCreatorPage'
 import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
-import { LanguageSwitcher } from '../components/LanguageSwitcher'
+import { MotionToggle } from '../components/MotionToggle'
 import { useI18n } from '../i18n/I18nProvider'
 import { useRoute } from './router'
 
@@ -27,17 +27,14 @@ function pageForRoute(pathname: string) {
 export function App() {
   const pathname = useRoute()
   const { language } = useI18n()
-  const isLandingRoute = pathname === '/' || pathname === ''
-  const isMappingRoute = pathname.startsWith('/learner-mapping')
-  const isLearningPortalRoute = pathname === '/learning' || pathname === '/learning/'
 
   return (
     <>
       {/* Keying by language forces every migrated route to remount and re-fetch
           content (and re-run its localization) whenever the language changes. */}
       <div key={language}>{pageForRoute(pathname)}</div>
-      {/* The mapping page already shows a language switcher in its own app bar. */}
-      {!isLandingRoute && !isMappingRoute && !isLearningPortalRoute && <LanguageSwitcher variant="floating" />}
+      {/* Docks into the surface's top bar when it exposes #a11ySlot (WCAG 2.2.2). */}
+      <MotionToggle />
     </>
   )
 }

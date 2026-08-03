@@ -1,6 +1,5 @@
 import { useState, type FormEvent, type SVGProps } from 'react'
 import { navigate } from '../../app/router'
-import { LanguageSwitcher } from '../../components/LanguageSwitcher'
 import { useI18n } from '../../i18n/I18nProvider'
 import { apiPost } from '../../services/api'
 import { AgentsDiagram } from './AgentsDiagram'
@@ -176,7 +175,7 @@ export function LandingLoginPage() {
         </nav>
 
         <div className="landing720-lang-wrap">
-          <LanguageSwitcher />
+          <div id="a11ySlot" />
         </div>
       </header>
 
@@ -215,7 +214,7 @@ export function LandingLoginPage() {
         </article>
 
         <div className="landing720-hero-image">
-          <img src={lpImage} alt="" />
+          <img src={lpImage} alt={t('landing.hero.imageAlt')} />
         </div>
       </section>
 

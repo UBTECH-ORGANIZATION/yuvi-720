@@ -27,6 +27,7 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
 export interface LearnerState {
   learner_id: string
   language?: 'he' | 'en' | 'ar'
+  reduce_motion?: boolean
   mapping_results?: unknown
   profile_cache?: unknown
   dashboard_cache?: unknown

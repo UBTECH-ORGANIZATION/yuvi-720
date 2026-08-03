@@ -43,7 +43,7 @@
             align-items: center;
             gap: 8px;
             font-size: 0.78rem;
-            color: #718096;
+            color: #4f5666;
             margin-inline: 20px;
             min-width: 0;
         }
@@ -51,7 +51,7 @@
         .top-bar-breadcrumb .sep { opacity: 0.4; }
         .top-bar-breadcrumb .active { color: #4a3d8f; font-weight: 600; }
         .top-bar-breadcrumb .clickable { cursor: pointer; }
-        .top-bar-breadcrumb .clickable:hover { color: #7c5cff; }
+        .top-bar-breadcrumb .clickable:hover { color: #5a37d8; }
 
         .top-bar-right {
             grid-column: 3;
@@ -67,35 +67,11 @@
         html[dir="ltr"] .top-bar-right { flex-direction: row; }
 
         .top-bar-language { display: flex; align-items: center; }
-        .top-bar-language .yuvi-language-switcher {
-            padding: 7px 10px;
-            box-shadow: none;
-            background: #f8f6ff;
-        }
-        .top-bar-language .yuvi-language-switcher span { white-space: nowrap; }
-
-        .learning-navbar-language {
-            position: fixed;
-            top: 8px;
-            right: 232px;
-            z-index: 130;
-            display: flex;
-            align-items: center;
-        }
-        .learning-navbar-language .yuvi-language-switcher {
-            padding: 7px 10px;
-            box-shadow: none;
-            background: #f8f6ff;
-        }
-        .learning-navbar-language .yuvi-language-switcher span { white-space: nowrap; }
-
-        html[dir="ltr"] .learning-navbar-language { right: 232px; left: auto; }
-        html[dir="rtl"] .learning-navbar-language { right: 232px; left: auto; }
 
         .top-bar-avatar {
             width: 32px; height: 32px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #7c5cff, #9f7afe);
+            background: linear-gradient(135deg, #6a45f0, #7a4fdd);
             display: flex; align-items: center; justify-content: center;
             color: #fff; font-size: 0.75rem; font-weight: 700;
         }
@@ -113,7 +89,7 @@
             text-decoration: none;
             font-size: 0.8rem;
             font-weight: 600;
-            color: #7c5cff;
+            color: #5a37d8;
             background: #f1ecff;
             border: 1px solid #e0d6ff;
             padding: 7px 14px;
@@ -121,9 +97,9 @@
             transition: all 0.18s ease;
         }
         .dashboard-link:hover {
-            background: #7c5cff;
+            background: #5a37d8;
             color: #fff;
-            border-color: #7c5cff;
+            border-color: #5a37d8;
             transform: translateY(-1px);
         }
 
@@ -148,7 +124,7 @@
 
         .portal-header p {
             font-size: 0.88rem;
-            color: #718096;
+            color: #4f5666;
         }
 
         .recommendation-banner {
@@ -223,7 +199,7 @@
 
         .subject-card p {
             font-size: 0.78rem;
-            color: #718096;
+            color: #4f5666;
             margin-bottom: 12px;
         }
 
@@ -242,7 +218,7 @@
 
         .subject-card-meta {
             font-size: 0.68rem;
-            color: #a0aec0;
+            color: #5a6675;
         }
 
         .subject-card .recommended-badge {
@@ -254,7 +230,7 @@
             padding: 3px 8px;
             border-radius: 6px;
             background: rgba(124,92,255,0.1);
-            color: #7c5cff;
+            color: #5a37d8;
         }
 
         /* ===== SCREEN 2: Topics/Stages ===== */
@@ -295,7 +271,7 @@
 
         .topics-header p {
             font-size: 0.82rem;
-            color: #718096;
+            color: #4f5666;
         }
 
         .topics-reason {
@@ -340,7 +316,7 @@
         }
 
         .stage-number.done { background: #48bb78; color: #fff; }
-        .stage-number.current { background: linear-gradient(135deg, #7c5cff, #9f7afe); color: #fff; }
+        .stage-number.current { background: linear-gradient(135deg, #6a45f0, #7a4fdd); color: #fff; }
         .stage-number.locked { background: #e8e4f5; color: #a0aec0; }
 
         .stage-info { flex: 1; }
@@ -383,7 +359,7 @@
 
         .yubi-chat-header {
             padding: 14px 18px;
-            background: linear-gradient(135deg, #7c5cff, #9f7afe);
+            background: linear-gradient(135deg, #6a45f0, #7a4fdd);
             color: #fff;
             display: flex;
             align-items: center;
@@ -440,7 +416,7 @@
         }
 
         .chat-bubble.user {
-            background: linear-gradient(135deg, #7c5cff, #9f7afe);
+            background: linear-gradient(135deg, #6a45f0, #7a4fdd);
             color: #fff;
             border-bottom-left-radius: 4px;
         }
@@ -492,7 +468,7 @@
             width: 34px; height: 34px;
             border-radius: 50%;
             border: none;
-            background: linear-gradient(135deg, #7c5cff, #9f7afe);
+            background: linear-gradient(135deg, #6a45f0, #7a4fdd);
             color: #fff;
             display: flex; align-items: center; justify-content: center;
             cursor: pointer;
@@ -699,7 +675,7 @@
 
         .game-progress-fill {
             height: 100%;
-            background: linear-gradient(135deg, #7c5cff, #9f7afe);
+            background: linear-gradient(135deg, #6a45f0, #7a4fdd);
             border-radius: 3px;
             transition: width 0.5s;
         }

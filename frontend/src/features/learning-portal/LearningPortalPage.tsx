@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect } from 'react'
 import { initLearningPortal } from './app'
-import { LanguageSwitcher } from '../../components/LanguageSwitcher'
 import skeleton from './skeleton.html?raw'
 import portalCss from './portal.css?inline'
 
@@ -43,9 +42,6 @@ export function LearningPortalPage() {
   return (
     <>
       <div dangerouslySetInnerHTML={{ __html: skeleton }} />
-      <div className="learning-navbar-language">
-        <LanguageSwitcher />
-      </div>
     </>
   )
 }

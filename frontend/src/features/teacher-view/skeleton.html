@@ -10,6 +10,7 @@
         </nav>
 
         <div class="topbar-right">
+            <div id="a11ySlot"></div>
             <div class="bell" onclick="showToast('אין התראות חדשות כרגע','כאן יופיעו עדכונים על תלמידים שלך')">🔔<span class="badge">3</span></div>
             <div class="userchip">
                 <div class="ava" id="topAva">מ</div>
@@ -176,15 +177,62 @@
             <p>מפגשים, שיחות אישיות, מטלות ודדליינים — הכל במקום אחד</p>
         </div>
         <div class="cal-toolbar">
-            <div class="cal-month-title" id="calMonthTitle">יוני 2026</div>
-            <div class="cal-view-toggle" id="calViewToggle">
-                <button class="cvt-btn active" data-cv="month">חודש</button>
-                <button class="cvt-btn" data-cv="list">רשימה</button>
+            <div class="cal-month-nav">
+                <button type="button" class="cal-nav-btn" id="calPrev" aria-label="לחודש הקודם">‹</button>
+                <div class="cal-month-title" id="calMonthTitle" role="status" aria-live="polite">יוני 2026</div>
+                <button type="button" class="cal-nav-btn" id="calNext" aria-label="לחודש הבא">›</button>
             </div>
+            <div class="cal-view-toggle" id="calViewToggle">
+                <button type="button" class="cvt-btn active" data-cv="month">חודש</button>
+                <button type="button" class="cvt-btn" data-cv="list">רשימה</button>
+            </div>
+            <button type="button" class="cal-add-btn" id="calAddBtn">➕ אירוע חדש</button>
         </div>
         <div id="calMonthWrap"></div>
         <div id="calListWrap" style="display:none;"></div>
     </section>
+
+    <!-- ===================== CALENDAR EVENT MODAL ===================== -->
+    <div class="overlay" id="eventOverlay">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="eventModalTitle">
+            <h2 id="eventModalTitle">📅 אירוע חדש</h2>
+            <div class="m-sub">שיבוץ מפגש, שיחה אישית, מטלה או דדליין</div>
+            <div class="m-grid">
+                <div class="mfield">
+                    <label for="evTitle">כותרת האירוע</label>
+                    <input type="text" id="evTitle" placeholder="לדוגמה: מפגש כיתה ח׳1 — מתמטיקה">
+                </div>
+                <div class="mfield">
+                    <label for="evType">סוג אירוע</label>
+                    <select id="evType">
+                        <option value="meeting">👩‍🏫 מפגש כיתה</option>
+                        <option value="talk">💬 שיחה אישית</option>
+                        <option value="task">✍️ מטלה</option>
+                        <option value="deadline">⏰ דדליין</option>
+                        <option value="parents">👨‍👩‍👧 מפגש הורים</option>
+                    </select>
+                </div>
+                <div class="mfield">
+                    <label for="evDate">תאריך</label>
+                    <input type="date" id="evDate">
+                </div>
+                <div class="mfield">
+                    <label for="evTime">שעה</label>
+                    <input type="time" id="evTime">
+                </div>
+                <div class="mfield">
+                    <label for="evNotes">הערות (רשות)</label>
+                    <textarea id="evNotes" rows="2" placeholder="פרטים נוספים על האירוע"></textarea>
+                </div>
+            </div>
+            <p class="m-error" id="evError" role="alert"></p>
+            <div class="m-actions">
+                <button type="button" class="mini-btn" id="evDelete">🗑️ מחיקה</button>
+                <button type="button" class="mini-btn" id="evCancel">ביטול</button>
+                <button type="button" class="mini-btn solid" id="evSave">שמירה</button>
+            </div>
+        </div>
+    </div>
     <div class="overlay" id="insightOverlay">
         <div class="modal">
             <h2>📝 הוספת תובנה</h2>

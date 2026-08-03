@@ -1,4 +1,3 @@
-import { LanguageSwitcher } from './LanguageSwitcher'
 import { useI18n } from '../i18n/I18nProvider'
 
 interface AppBarProps {
@@ -27,7 +26,7 @@ export function AppBar({ studentName, studentSubtitle }: AppBarProps) {
           <span className="user-sub">{studentSubtitle}</span>
         </div>
       </div>
-      <LanguageSwitcher />
+      <div id="a11ySlot" />
     </header>
   )
 }

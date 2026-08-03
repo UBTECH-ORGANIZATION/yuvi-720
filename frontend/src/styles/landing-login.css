@@ -145,13 +145,6 @@
   justify-self: end;
 }
 
-.landing720 .yuvi-language-switcher {
-  border: 1px solid var(--l720-border);
-  background: var(--l720-card);
-  color: var(--l720-navy-soft);
-  box-shadow: none;
-}
-
 .landing720-hero {
   display: grid;
   grid-template-columns: 1.08fr 0.92fr;

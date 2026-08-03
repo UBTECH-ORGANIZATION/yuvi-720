@@ -7,7 +7,7 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-    --p1: #7c5cff; --p2: #9f7afe; --cy: #22d3ee; --grn: #48bb78;
+    --p1: #6a45f0; --p2: #7a4fdd; --cy: #22d3ee; --grn: #48bb78;
     --org: #f6ad55; --red: #fc8181; --ink: #1a1a2e;
 }
 html, body { height: 100%; }
@@ -48,7 +48,7 @@ body {
 .g-prog-wrap { padding: 10px 18px 4px; flex-shrink: 0; }
 .g-prog-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .g-prog-row .step-label { font-size: 0.72rem; font-weight: 600; color: var(--p1); }
-.g-prog-row .pace { font-size: 0.66rem; color: #48bb78; font-weight: 600; }
+.g-prog-row .pace { font-size: 0.66rem; color: #1f7a4c; font-weight: 600; }
 .g-prog-track { height: 7px; background: #e8e4f5; border-radius: 4px; overflow: hidden; }
 .g-prog-fill { height: 100%; width: 0%; border-radius: 4px;
     background: linear-gradient(90deg, var(--p1), var(--cy)); transition: width 0.5s ease; }
@@ -149,10 +149,10 @@ body {
     padding: 10px 16px; border-radius: 11px; border: none; font-family: inherit;
     font-size: 0.84rem; font-weight: 600; cursor: pointer; transition: 0.18s; display: flex; align-items: center; gap: 6px;
 }
-.g-btn.ghost { background: #f5f3fa; color: #718096; }
+.g-btn.ghost { background: #f5f3fa; color: #4f5666; }
 .g-btn.ghost:hover { background: #ece8f7; }
 .g-btn.ghost:disabled { opacity: 0.4; cursor: default; }
-.g-btn.hint { background: rgba(246,173,85,0.15); color: #c05621; margin-right: auto; }
+.g-btn.hint { background: rgba(246,173,85,0.15); color: #9c4419; margin-right: auto; }
 .g-btn.primary { background: linear-gradient(135deg, var(--p1), var(--p2)); color: #fff; box-shadow: 0 4px 14px rgba(124,92,255,0.3); }
 .g-btn.primary:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
 
@@ -187,10 +187,68 @@ body {
 
 /* confetti */
 #fx { position: absolute; inset: 0; pointer-events: none; z-index: 25; }
+
+/* ===== ACCESSIBILITY ===== */
+
+/* Contrast: these greys were 2.6:1 on white. */
+.slider-hint { color: #5b6472; }
+.order-seq:empty::before { color: #5b6472; }
+.overlay p { color: #4a5568; }
+.bin { border-color: #8d97a8; }
+.order-seq { border-color: #8d97a8; }
+
+:focus-visible {
+    outline: 3px solid #4433cc;
+    outline-offset: 3px;
+    border-radius: 6px;
+}
+:focus:not(:focus-visible) { outline: none; }
+
+.sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Angle exercises: state of the draggable point (finding 4). */
+.angle-handle { transition: r 0.15s ease, fill 0.15s ease; }
+.angle-handle.on-target { fill: #1b7f4b; stroke: #ffffff; stroke-width: 3; }
+.angle-target-ring { fill: none; stroke: #1b7f4b; stroke-width: 3; opacity: 0.9; }
+.classify-chip.on-target { background: #1b7f4b !important; color: #fff; }
+.slider-wrap input[type=range].on-target::-webkit-slider-thumb { border-color: #1b7f4b; }
+.slider-wrap input[type=range].on-target::-moz-range-thumb { border-color: #1b7f4b; }
+
+/* Sort bins are real buttons so they are reachable by Tab (finding 5). */
+button.bin {
+    font-family: inherit; color: inherit; text-align: inherit;
+    width: 100%; align-items: stretch;
+}
+button.bin.armed { border-color: var(--p1); border-style: solid; background: rgba(124,92,255,0.06); }
+
+html[data-motion="reduced"] *,
+html[data-motion="reduced"] *::before,
+html[data-motion="reduced"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: -1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-delay: -1ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
 </style>
 </head>
 <body>
 <div class="game-root">
+    <p class="sr-only" id="srStatus" role="status" aria-live="polite"></p>
     <div class="g-head">
         <span class="g-icon" id="gIcon">🔢</span>
         <div class="g-titles">
@@ -393,6 +451,18 @@ function toParent(type, payload) {
 const $ = id => document.getElementById(id);
 const body = $('gBody');
 
+// The host page passes its motion preference down; the iframe is a separate document.
+if (params.get('motion') === 'reduced') document.documentElement.dataset.motion = 'reduced';
+
+let lastAnnouncement = '';
+function announce(text) {
+    const region = $('srStatus');
+    if (!region) return;
+    // Repeating identical text is ignored by screen readers, so nudge it.
+    region.textContent = text === lastAnnouncement ? text + '\u200B' : text;
+    lastAnnouncement = region.textContent;
+}
+
 async function loadLearnerState() {
     try {
         const resp = await fetch('/api/learner-state');
@@ -480,13 +550,13 @@ function render() {
 
 function updatePace() {
     const note = $('paceNote');
-    if (streak >= 3) { note.textContent = 'אתה בכיוון מצוין! 🚀'; note.style.color = '#48bb78'; }
-    else if (wrongStreak >= 2) { note.textContent = 'קח/י את הזמן, אין לחץ 💛'; note.style.color = '#ed8936'; }
-    else { note.textContent = 'בקצב שלך 🙂'; note.style.color = '#48bb78'; }
+    if (streak >= 3) { note.textContent = 'אתה בכיוון מצוין! 🚀'; note.style.color = '#1f7a4c'; }
+    else if (wrongStreak >= 2) { note.textContent = 'קח/י את הזמן, אין לחץ 💛'; note.style.color = '#9c4419'; }
+    else { note.textContent = 'בקצב שלך 🙂'; note.style.color = '#1f7a4c'; }
 }
 
 // ---- angle SVG ----
-function angleSVG(deg, showLabel) {
+function angleSVG(deg, onTarget) {
     const cx = 320, cy = 200, len = 170;
     const rad = deg * Math.PI / 180;
     const x2 = cx - len * Math.cos(rad);   // RTL: base points left
@@ -496,10 +566,17 @@ function angleSVG(deg, showLabel) {
     const ax = cx - arcR, ay = cy;
     const ax2 = cx - arcR * Math.cos(rad), ay2 = cy - arcR * Math.sin(rad);
     const large = deg > 180 ? 1 : 0;
-    return '<svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid meet">' +
+    const ring = onTarget
+        ? '<circle cx="' + x2.toFixed(1) + '" cy="' + y2.toFixed(1) + '" r="17" class="angle-target-ring"/>'
+        : '';
+    return '<svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' +
         '<path d="M ' + ax + ' ' + ay + ' A ' + arcR + ' ' + arcR + ' 0 ' + large + ' 1 ' + ax2 + ' ' + ay2 + '" fill="none" stroke="rgba(124,92,255,0.7)" stroke-width="3"/>' +
         '<line x1="' + cx + '" y1="' + cy + '" x2="' + bx + '" y2="' + cy + '" stroke="#22d3ee" stroke-width="5" stroke-linecap="round"/>' +
         '<line x1="' + cx + '" y1="' + cy + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="#9f7afe" stroke-width="5" stroke-linecap="round"/>' +
+        ring +
+        // The point the learner drags needs to be visible on the shape itself,
+        // not just as the range thumb, so its state is readable at a glance.
+        '<circle cx="' + x2.toFixed(1) + '" cy="' + y2.toFixed(1) + '" r="10" class="angle-handle' + (onTarget ? ' on-target' : '') + '" fill="#7c5cff" stroke="#fff" stroke-width="3"/>' +
         '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#fff"/>' +
         '</svg>';
 }
@@ -510,25 +587,40 @@ function classifyDeg(deg) {
     return { t: 'שטוחה', c: '#fc8181' };
 }
 
+function hitsTarget(target, d) {
+    return (target === 'acute' && d < 88) || (target === 'right' && d >= 88 && d <= 92) ||
+           (target === 'obtuse' && d > 92 && d < 178) || (target === 'straight' && d >= 178);
+}
+const TARGET_NAMES = { acute: 'חדה', right: 'ישרה', obtuse: 'קהה', straight: 'שטוחה' };
+
 function renderBuildAngle(ch) {
     const start = 40;
+    const goal = TARGET_NAMES[ch.target] || '';
     body.innerHTML =
-        '<div class="q-prompt">' + ch.prompt + '</div>' +
+        '<div class="q-prompt" id="qPrompt">' + ch.prompt + '</div>' +
         '<div class="stage"><div class="deg-read"><span id="degR">' + start + '°</span><small>מעלות</small></div>' +
-        '<div class="classify-chip" id="clsChip">זווית חדה</div><div id="svgWrap">' + angleSVG(start) + '</div></div>' +
-        '<div class="slider-wrap"><input type="range" id="angleSlider" min="10" max="180" value="' + start + '">' +
-        '<div class="slider-hint">גררו את הנקודה כדי לפתוח ולסגור את הזווית</div></div>';
+        '<div class="classify-chip" id="clsChip" role="status" aria-live="polite">זווית חדה</div><div id="svgWrap">' + angleSVG(start) + '</div></div>' +
+        '<div class="slider-wrap"><input type="range" id="angleSlider" min="10" max="180" value="' + start + '"' +
+        ' aria-label="גררו כדי לשנות את הזווית. היעד: זווית ' + goal + '">' +
+        '<div class="slider-hint">גררו את הנקודה או השתמשו במקשי החיצים כדי לפתוח ולסגור את הזווית</div></div>';
     const sl = $('angleSlider');
     const target = ch.target;
-    sl.addEventListener('input', () => {
-        const d = +sl.value;
-        $('svgWrap').innerHTML = angleSVG(d);
-        $('degR').textContent = d + '°';
+    const paint = (d, announceIt) => {
+        const ok = hitsTarget(target, d);
         const cl = classifyDeg(d);
+        $('svgWrap').innerHTML = angleSVG(d, ok);
+        $('degR').textContent = d + '°';
         const chip = $('clsChip');
-        chip.textContent = 'זווית ' + cl.t;
-        chip.style.background = cl.c;
-        // enable submit via Next acting as "check"
+        chip.classList.toggle('on-target', ok);
+        sl.classList.toggle('on-target', ok);
+        chip.textContent = ok ? 'הגעת ליעד — זווית ' + cl.t + ' ✓' : 'זווית ' + cl.t;
+        if (!ok) chip.style.background = cl.c;
+        sl.setAttribute('aria-valuetext', d + ' מעלות, זווית ' + cl.t + (ok ? ', הגעת ליעד' : ''));
+        if (announceIt) announce(d + ' מעלות, זווית ' + cl.t + (ok ? '. הגעת ליעד, אפשר לבדוק.' : ''));
+    };
+    paint(start, false);
+    sl.addEventListener('input', () => {
+        paint(+sl.value, true);
         $('nextBtn').disabled = false;
         $('nextBtn').textContent = 'בדיקה ✓';
     });
@@ -536,8 +628,7 @@ function renderBuildAngle(ch) {
     nextAction = () => {
         const d = +sl.value;
         const cl = classifyDeg(d);
-        const ok = (target === 'acute' && d < 88) || (target === 'right' && d >= 88 && d <= 92) ||
-                   (target === 'obtuse' && d > 92 && d < 178) || (target === 'straight' && d >= 178);
+        const ok = hitsTarget(target, d);
         handleResult(ok, ok ? 'מעולה! יצרת זווית ' + cl.t + ' של ' + d + '° 🎯' : 'זו זווית ' + cl.t + '. נסה/י שוב — אתה קרוב!');
     };
 }
@@ -545,21 +636,32 @@ function renderBuildAngle(ch) {
 function renderMatchAngle(ch) {
     const start = 30;
     body.innerHTML =
-        '<div class="q-prompt">' + ch.prompt + '</div>' +
+        '<div class="q-prompt" id="qPrompt">' + ch.prompt + '</div>' +
         '<div class="stage"><div class="deg-read"><span id="degR">' + start + '°</span><small>מטרה: ' + ch.targetDeg + '°</small></div>' +
-        '<div class="classify-chip" id="clsChip">המשיכו...</div><div id="svgWrap">' + angleSVG(start) + '</div></div>' +
-        '<div class="slider-wrap"><input type="range" id="angleSlider" min="10" max="180" value="' + start + '">' +
-        '<div class="slider-hint">כוונו את הזווית קרוב ככל האפשר ל-' + ch.targetDeg + '°</div></div>';
+        '<div class="classify-chip" id="clsChip" role="status" aria-live="polite">המשיכו...</div><div id="svgWrap">' + angleSVG(start) + '</div></div>' +
+        '<div class="slider-wrap"><input type="range" id="angleSlider" min="10" max="180" value="' + start + '"' +
+        ' aria-label="גררו כדי לשנות את הזווית. היעד: ' + ch.targetDeg + ' מעלות">' +
+        '<div class="slider-hint">כוונו את הזווית קרוב ככל האפשר ל-' + ch.targetDeg + '° (אפשר גם במקשי החיצים)</div></div>';
     const sl = $('angleSlider');
-    sl.addEventListener('input', () => {
-        const d = +sl.value;
-        $('svgWrap').innerHTML = angleSVG(d);
-        $('degR').textContent = d + '°';
+    const paint = (d, announceIt) => {
         const diff = Math.abs(d - ch.targetDeg);
+        const ok = diff <= ch.tol;
+        $('svgWrap').innerHTML = angleSVG(d, ok);
+        $('degR').textContent = d + '°';
         const chip = $('clsChip');
-        if (diff <= ch.tol) { chip.textContent = 'מצוין, קרוב מאוד! 🎯'; chip.style.background = '#48bb78'; }
-        else if (diff <= 20) { chip.textContent = 'כמעט שם...'; chip.style.background = '#f6ad55'; }
-        else { chip.textContent = d < ch.targetDeg ? 'פתחו עוד ➡️' : 'סגרו קצת ⬅️'; chip.style.background = 'rgba(255,255,255,0.2)'; }
+        chip.classList.toggle('on-target', ok);
+        sl.classList.toggle('on-target', ok);
+        let msg;
+        if (ok) { msg = 'הגעת ליעד! 🎯'; }
+        else if (diff <= 20) { msg = 'כמעט שם...'; chip.style.background = '#f6ad55'; }
+        else { msg = d < ch.targetDeg ? 'פתחו עוד ➡️' : 'סגרו קצת ⬅️'; chip.style.background = 'rgba(255,255,255,0.2)'; }
+        chip.textContent = msg;
+        sl.setAttribute('aria-valuetext', d + ' מעלות. ' + msg);
+        if (announceIt) announce(d + ' מעלות. ' + msg);
+    };
+    paint(start, false);
+    sl.addEventListener('input', () => {
+        paint(+sl.value, true);
         $('nextBtn').disabled = false;
         $('nextBtn').textContent = 'בדיקה ✓';
     });
@@ -573,27 +675,31 @@ function renderMatchAngle(ch) {
 function renderClassify(ch) {
     let visual = '';
     if (ch.visual.kind === 'angle') {
-        visual = '<div class="stage"><div class="deg-read" style="opacity:.0">.</div>' + angleSVG(ch.visual.deg) + '</div>';
+        // The SVG itself is aria-hidden, so the angle needs a spoken equivalent.
+        visual = '<div class="stage"><span class="sr-only">בתמונה: זווית של ' + ch.visual.deg + ' מעלות, ' + classifyDeg(ch.visual.deg).t + '.</span>' +
+            '<div class="deg-read" style="opacity:.0" aria-hidden="true">.</div>' + angleSVG(ch.visual.deg) + '</div>';
     } else {
         visual = '<div class="emoji-visual">' + ch.visual.text + '</div>';
     }
     body.innerHTML =
         '<div class="q-prompt">' + ch.prompt + '</div>' + visual +
         '<div class="opts">' + ch.options.map((o, i) =>
-            '<button class="opt" data-i="' + i + '">' + o + '</button>').join('') + '</div>';
+            '<button type="button" class="opt" data-i="' + i + '">' + o + '</button>').join('') + '</div>';
     body.querySelectorAll('.opt').forEach(btn => {
         btn.addEventListener('click', () => {
             if (answered && btn.classList.contains('dim')) return;
             const i = +btn.dataset.i;
             const ok = i === ch.correct;
             if (ok) {
-                body.querySelectorAll('.opt').forEach(b => b.classList.add('dim'));
+                body.querySelectorAll('.opt').forEach(b => { b.classList.add('dim'); b.disabled = true; });
                 btn.classList.remove('dim'); btn.classList.add('correct');
+                announce('תשובה נכונה: ' + ch.options[i]);
                 handleResult(true, 'נכון! 🎉');
             } else {
                 btn.classList.add('wrong'); btn.classList.add('dim');
                 attemptsThisQ++;
                 flashShake();
+                announce(ch.options[i] + ' — לא נכון. נסו תשובה אחרת.');
                 if (attemptsThisQ === 1) toastShow('🤔', 'כמעט! נסה/י תשובה אחרת');
                 registerWrong();
             }
@@ -606,34 +712,57 @@ function renderSort(ch) {
     body.innerHTML =
         '<div class="q-prompt">' + ch.prompt + '</div>' +
         '<div class="sort-items" id="sortItems">' + ch.items.map((it, i) =>
-            '<button class="sort-chip" data-i="' + i + '">' + it.emoji + ' ' + it.label + '</button>').join('') + '</div>' +
+            '<button type="button" class="sort-chip" data-i="' + i + '" aria-pressed="false">' + it.emoji + ' ' + it.label + '</button>').join('') + '</div>' +
+        // Bins are buttons, not divs, so the whole exercise is completable with Tab + Enter.
         '<div class="bins">' + ch.bins.map(b =>
-            '<div class="bin" data-bin="' + b.id + '"><div class="bin-title">' + b.label + '</div><div class="dropped"></div></div>').join('') + '</div>';
+            '<button type="button" class="bin" data-bin="' + b.id + '"><div class="bin-title">' + b.label + '</div><div class="dropped"></div></button>').join('') + '</div>';
     let selected = null;
     let placed = 0;
+    const bins = body.querySelectorAll('.bin');
+    const setArmed = on => bins.forEach(b => b.classList.toggle('armed', on));
     body.querySelectorAll('.sort-chip').forEach(chip => {
         chip.addEventListener('click', () => {
             if (chip.classList.contains('placed')) return;
-            body.querySelectorAll('.sort-chip').forEach(c => c.classList.remove('selected'));
+            body.querySelectorAll('.sort-chip').forEach(c => {
+                c.classList.remove('selected');
+                c.setAttribute('aria-pressed', 'false');
+            });
             chip.classList.add('selected');
+            chip.setAttribute('aria-pressed', 'true');
             selected = chip;
+            setArmed(true);
+            announce('נבחר ' + ch.items[+chip.dataset.i].label + '. עברו עם Tab אל הסל המתאים ולחצו Enter.');
         });
     });
-    body.querySelectorAll('.bin').forEach(bin => {
+    bins.forEach(bin => {
         bin.addEventListener('click', () => {
-            if (!selected) { toastShow('👆', 'קודם בחרו פריט, ואז את הסל'); return; }
+            const binLabel = ch.bins.find(b => b.id === bin.dataset.bin).label;
+            if (!selected) {
+                toastShow('👆', 'קודם בחרו פריט, ואז את הסל');
+                announce('לא נבחר פריט. בחרו קודם פריט מהרשימה.');
+                return;
+            }
             const i = +selected.dataset.i;
             const item = ch.items[i];
             if (item.bin === bin.dataset.bin) {
                 bin.querySelector('.dropped').innerHTML += '<span>' + item.emoji + ' ' + item.label + '</span>';
-                selected.classList.add('placed'); selected.classList.remove('selected');
+                selected.classList.add('placed');
+                selected.classList.remove('selected');
+                selected.setAttribute('aria-pressed', 'false');
+                selected.disabled = true;
                 selected = null; placed++;
+                setArmed(false);
                 spark();
+                announce(item.label + ' שויך ל' + binLabel + '. נותרו ' + (ch.items.length - placed) + ' פריטים.');
                 if (placed === ch.items.length) handleResult(true, 'כל הכבוד! מיינת הכול נכון 🎉');
             } else {
                 flashShake();
                 toastShow('🤔', item.label + ' לא שייך לכאן — נסה/י את הסל השני');
-                selected.classList.remove('selected'); selected = null;
+                announce(item.label + ' לא שייך ל' + binLabel + '. נסו את הסל השני.');
+                selected.classList.remove('selected');
+                selected.setAttribute('aria-pressed', 'false');
+                selected = null;
+                setArmed(false);
                 attemptsThisQ++;
                 registerWrong();
             }
@@ -648,7 +777,7 @@ function renderOrder(ch) {
         '<div class="q-prompt">' + ch.prompt + '</div>' +
         '<div class="order-seq" id="orderSeq"></div>' +
         '<div class="order-pool" id="orderPool">' + shuffled.map(o =>
-            '<button class="step-chip" data-i="' + o.i + '">' + o.s + '</button>').join('') + '</div>';
+            '<button type="button" class="step-chip" data-i="' + o.i + '">' + o.s + '</button>').join('') + '</div>';
     let next = 0;
     body.querySelectorAll('#orderPool .step-chip').forEach(chip => {
         chip.addEventListener('click', () => {
@@ -656,14 +785,17 @@ function renderOrder(ch) {
             const i = +chip.dataset.i;
             if (i === next) {
                 chip.classList.add('used');
+                chip.disabled = true;
                 const seq = $('orderSeq');
                 seq.innerHTML += '<div class="step-chip"><span class="num">' + (next + 1) + '</span>' + ch.steps[i] + '</div>';
                 next++;
                 spark();
+                announce('צעד ' + next + ': ' + ch.steps[i] + '. נותרו ' + (ch.steps.length - next) + ' צעדים.');
                 if (next === ch.steps.length) handleResult(true, 'מושלם! סידרת את כל הצעדים נכון 🎉');
             } else {
                 flashShake();
                 toastShow('🤔', 'זה לא הצעד הבא בסדר — מה בא קודם?');
+                announce('זה לא הצעד הבא בסדר. מה בא קודם?');
                 attemptsThisQ++;
                 registerWrong();
             }
@@ -689,6 +821,7 @@ function handleResult(ok, msg) {
             $('nextBtn').textContent = idx === challenges.length - 1 ? 'סיום ✓' : 'המשך →';
             nextAction = goNext;
             toastShow('🎉', msg + ' (+' + earned + '⭐)');
+            announce(msg + '. צברת ' + earned + ' כוכבים.');
             confetti();
             saveProgress();
             toParent('correct', { streak, stars });
@@ -842,6 +975,6 @@ window.addEventListener('message', (e) => {
 
 init();
 </script>
-<script src="/shared/i18n.js?v=1"></script>
+<script src="/shared/i18n.js?v=2"></script>
 </body>
 </html>

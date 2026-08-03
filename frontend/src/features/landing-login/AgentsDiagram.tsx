@@ -1,5 +1,6 @@
 import type { SVGProps } from 'react'
 import { useI18n } from '../../i18n/I18nProvider'
+import { useMotion } from '../../a11y/MotionProvider'
 
 function Icon({ children, ...props }: SVGProps<SVGSVGElement>) {
   return (
@@ -94,6 +95,7 @@ const RADIUS = 38
 
 export function AgentsDiagram() {
   const { t } = useI18n()
+  const { reduceMotion } = useMotion()
 
   const nodes = AGENTS.map((agent, index) => {
     const angle = (-90 + index * 60) * (Math.PI / 180)
@@ -133,26 +135,29 @@ export function AgentsDiagram() {
             />
           ))}
           <circle cx="50" cy="50" r={RADIUS} className="landing720-hub-orbit" />
-          {nodes.map((node) => (
-            <circle key={`out-${node.key}`} r="1.1" className="landing720-hub-packet">
-              <animateMotion
-                dur="3.4s"
-                begin={`${node.index * 0.4}s`}
-                repeatCount="indefinite"
-                path={`M50 50 L ${node.cx} ${node.cy}`}
-              />
-            </circle>
-          ))}
-          {nodes.map((node) => (
-            <circle key={`in-${node.key}`} r="0.9" className="landing720-hub-packet return">
-              <animateMotion
-                dur="3.4s"
-                begin={`${node.index * 0.4 + 1.7}s`}
-                repeatCount="indefinite"
-                path={`M${node.cx} ${node.cy} L50 50`}
-              />
-            </circle>
-          ))}
+          {/* SMIL keeps running under `animation: none`, so drop the packets entirely. */}
+          {!reduceMotion &&
+            nodes.map((node) => (
+              <circle key={`out-${node.key}`} r="1.1" className="landing720-hub-packet">
+                <animateMotion
+                  dur="3.4s"
+                  begin={`${node.index * 0.4}s`}
+                  repeatCount="indefinite"
+                  path={`M50 50 L ${node.cx} ${node.cy}`}
+                />
+              </circle>
+            ))}
+          {!reduceMotion &&
+            nodes.map((node) => (
+              <circle key={`in-${node.key}`} r="0.9" className="landing720-hub-packet return">
+                <animateMotion
+                  dur="3.4s"
+                  begin={`${node.index * 0.4 + 1.7}s`}
+                  repeatCount="indefinite"
+                  path={`M${node.cx} ${node.cy} L50 50`}
+                />
+              </circle>
+            ))}
         </svg>
 
         <div className="landing720-hub-core">

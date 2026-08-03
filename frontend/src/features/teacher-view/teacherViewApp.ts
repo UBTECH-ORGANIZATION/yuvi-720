@@ -928,165 +928,260 @@ export function initTeacherView() {
     let currentTab = 'dashboard';
     let activeMsgStudent = null;
 
-    const MSG_THREADS = {
-        ron:    { unread: 2, messages: [
-            { from:'me',   text:'היי רון, שמתי לב שלא נכנסת כמה ימים — הכל בסדר? 😊', day:'אתמול', time:'09:10' },
-            { from:'them', text:'היי המורה, היה לי קצת עומס... אני אחזור היום', day:'אתמול', time:'18:24' },
-            { from:'them', text:'אפשר עזרה במשוואות מילוליות? זה קשה לי', day:'היום', time:'08:05' },
-        ]},
-        noam:   { unread: 1, messages: [
-            { from:'me',   text:'נועם, ראיתי שהתאמצת במשימות האחרונות — כל הכבוד! 👏', day:'אתמול', time:'12:40' },
-            { from:'them', text:'תודה! אני אנסה את התרגול ששלחת', day:'היום', time:'07:50' },
-        ]},
-        shahar: { unread: 0, messages: [
-            { from:'me',   text:'שחר, שלחתי לך סרטון קצר על המרת שברים לאחוזים 🎬', day:'אתמול', time:'15:20' },
-            { from:'them', text:'מעולה, אני אצפה בערב 🙂', day:'אתמול', time:'17:02' },
-        ]},
-        maya:   { unread: 0, messages: [
-            { from:'me',   text:'מאיה, הכנתי לך אתגר חקר מתקדם — בא לך? ⭐', day:'אתמול', time:'11:00' },
-            { from:'them', text:'כן בטח! אני אוהבת אתגרים 🚀', day:'אתמול', time:'11:15' },
-        ]},
+    const TEACHER_ID = 'demo-teacher';
+    // Maps each demo student to the learner id their own dashboard runs under, so
+    // a message sent here actually lands in that learner's inbox.
+    const MSG_LEARNER_IDS = {
+        ron: 'demo-learner',
+        noam: 'demo-noam',
+        shahar: 'demo-shahar',
+        maya: 'demo-maya',
     };
     const MSG_ORDER = ['ron','noam','shahar','maya'];
-    const STU_REPLIES = ['תודה המורה! 😊','הבנתי, אני אנסה 💪','אוקיי, אני על זה','מתי המפגש הבא שלנו?','אפשר עוד דוגמה אחת?'];
+    let MSG_THREADS = {};
+
+    function emptyThread(){ return { messages: [], unread_teacher: 0 }; }
+
+    // Identifies the rendered state so polling can skip a no-op repaint.
+    function threadsSignature(){
+        return MSG_ORDER.map(id => {
+            const t = MSG_THREADS[id] || {};
+            const msgs = t.messages || [];
+            const last = msgs.length ? (msgs[msgs.length-1].id || msgs[msgs.length-1].sent_at) : '';
+            return `${id}:${msgs.length}:${last}:${t.unread_teacher || 0}`;
+        }).join('|');
+    }
+
+    async function refreshThreads(){
+        const before = threadsSignature();
+        try {
+            const resp = await fetch(`/api/messages/threads?teacher_id=${encodeURIComponent(TEACHER_ID)}`);
+            if(!resp.ok) throw new Error('threads load failed');
+            const data = await resp.json();
+            const byLearner = {};
+            (data.threads || []).forEach(t => { byLearner[t.learner_id] = t; });
+            MSG_ORDER.forEach(id => {
+                MSG_THREADS[id] = byLearner[MSG_LEARNER_IDS[id]] || emptyThread();
+            });
+        } catch(e){
+            MSG_ORDER.forEach(id => { MSG_THREADS[id] = MSG_THREADS[id] || emptyThread(); });
+        }
+        // Nothing new arrived, so leave the DOM (and any half-typed message) alone.
+        if(threadsSignature() === before) return;
+        updateMsgBadge();
+        if(currentTab === 'messages'){ renderMsgStudents(); renderMsgThread(); }
+    }
 
     function updateMsgBadge(){
-        const total = MSG_ORDER.reduce((n,id)=> n + (MSG_THREADS[id].unread||0), 0);
+        const total = MSG_ORDER.reduce((n,id)=> n + ((MSG_THREADS[id]||{}).unread_teacher||0), 0);
         const b = document.getElementById('msgBadge');
         if(total>0){ b.textContent = total; b.style.display=''; } else { b.style.display='none'; }
     }
 
-    function renderMsgStudents(){
-        const wrap = document.getElementById('msgStudents');
-        wrap.innerHTML = '<div class="msg-students-title">התלמידים שלי</div>' + MSG_ORDER.map(id=>{
-            const s = STUDENTS[id]; const t = MSG_THREADS[id];
-            const last = t.messages[t.messages.length-1];
-            const prev = (last.from==='me'?'אני: ':'') + last.text;
-            const col = avaColor(s.name);
-            return `<div class="stu-item ${id===activeMsgStudent?'active':''}" data-stu="${id}">
-                <div class="stu-ava" style="background:${col}">${s.avatar}</div>
-                <div class="stu-info">
-                    <div class="stu-name">${s.name}</div>
-                    <div class="stu-preview">${prev}</div>
-                </div>
-                ${t.unread?`<span class="stu-unread">${t.unread}</span>`:''}
-            </div>`;
-        }).join('');
-        wrap.querySelectorAll('.stu-item').forEach(el=> el.addEventListener('click', ()=> selectMsgStudent(el.dataset.stu)));
+    function lastMessageOf(id){
+        const msgs = (MSG_THREADS[id]||{}).messages || [];
+        return msgs.length ? msgs[msgs.length-1] : null;
     }
 
-    function selectMsgStudent(id){
+    function renderMsgStudents(){
+        const wrap = document.getElementById('msgStudents');
+        wrap.innerHTML = '<div class="msg-students-title" id="msgStudentsTitle">התלמידים שלי</div>' +
+            `<div role="tablist" aria-labelledby="msgStudentsTitle">` + MSG_ORDER.map(id=>{
+            const s = STUDENTS[id]; const t = MSG_THREADS[id] || emptyThread();
+            const last = lastMessageOf(id);
+            const prev = last ? (last.from==='teacher'?'אני: ':'') + last.text : 'אין עדיין הודעות';
+            const col = avaColor(s.name);
+            const unread = t.unread_teacher || 0;
+            return `<button type="button" role="tab" aria-selected="${id===activeMsgStudent}" class="stu-item ${id===activeMsgStudent?'active':''}" data-stu="${id}">
+                <span class="stu-ava" style="background:${col}" aria-hidden="true">${s.avatar}</span>
+                <span class="stu-info">
+                    <span class="stu-name">${s.name}</span>
+                    <span class="stu-preview">${escapeHtml(prev)}</span>
+                </span>
+                ${unread?`<span class="stu-unread">${unread}</span><span class="sr-only">${unread} הודעות שלא נקראו</span>`:''}
+            </button>`;
+        }).join('') + '</div>';
+        wrap.querySelectorAll('.stu-item').forEach(el=> el.addEventListener('click', ()=> void selectMsgStudent(el.dataset.stu)));
+    }
+
+    async function selectMsgStudent(id){
         activeMsgStudent = id;
-        MSG_THREADS[id].unread = 0;
+        renderMsgStudents();
+        renderMsgThread();
+        try {
+            const resp = await fetch('/api/messages/thread/read', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ teacher_id: TEACHER_ID, learner_id: MSG_LEARNER_IDS[id], reader: 'teacher' })
+            });
+            if(resp.ok) MSG_THREADS[id] = await resp.json();
+        } catch(e){ /* keep the locally rendered thread */ }
         updateMsgBadge();
         renderMsgStudents();
         renderMsgThread();
     }
 
-    function nowHM(){ const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+    function msgTime(iso){
+        const d = iso ? new Date(iso) : new Date();
+        return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    }
+    function msgDay(iso){
+        const d = iso ? new Date(iso) : new Date();
+        const today = new Date();
+        const sameDay = d.toDateString() === today.toDateString();
+        if(sameDay) return 'היום';
+        return d.toLocaleDateString('he-IL', { day:'numeric', month:'long' });
+    }
 
     function renderMsgThread(){
         const wrap = document.getElementById('msgThread');
+        // A repaint replaces the input, so carry any half-typed message across.
+        const prevInput = document.getElementById('threadInput');
+        const draft = prevInput ? prevInput.value : '';
+        const draftFocused = prevInput && document.activeElement === prevInput;
+        const caret = prevInput ? prevInput.selectionStart : 0;
         if(!activeMsgStudent){
-            wrap.innerHTML = `<div class="thread-empty"><div class="te-ico">💬</div><div>בחר/י תלמיד מהרשימה כדי להתחיל שיחה</div></div>`;
+            wrap.innerHTML = `<div class="thread-empty"><div class="te-ico" aria-hidden="true">💬</div><div>בחר/י תלמיד מהרשימה כדי להתחיל שיחה</div></div>`;
             return;
         }
-        const s = STUDENTS[activeMsgStudent]; const t = MSG_THREADS[activeMsgStudent];
+        const s = STUDENTS[activeMsgStudent];
+        const t = MSG_THREADS[activeMsgStudent] || emptyThread();
         const online = (typeof LIVE!=='undefined' && LIVE[activeMsgStudent] && LIVE[activeMsgStudent].online);
         const col = avaColor(s.name);
         let lastDay = '';
-        const body = t.messages.map(m=>{
+        const body = (t.messages||[]).map(m=>{
+            const day = msgDay(m.sent_at);
             let sep = '';
-            if(m.day && m.day!==lastDay){ sep = `<div class="m-day">${m.day}</div>`; lastDay = m.day; }
-            return `${sep}<div class="m-bubble ${m.from}">${escapeHtml(m.text)}<div class="m-time">${m.time}</div></div>`;
-        }).join('');
+            if(day!==lastDay){ sep = `<div class="m-day">${day}</div>`; lastDay = day; }
+            const side = m.from==='teacher' ? 'me' : 'them';
+            return `${sep}<div class="m-bubble ${side}">${escapeHtml(m.text)}<div class="m-time">${msgTime(m.sent_at)}</div></div>`;
+        }).join('') || `<div class="thread-empty"><div>עדיין אין הודעות. כתבו את ההודעה הראשונה 👇</div></div>`;
         wrap.innerHTML = `
             <div class="thread-head">
-                <div class="th-ava" style="background:${col}">${s.avatar}</div>
+                <div class="th-ava" style="background:${col}" aria-hidden="true">${s.avatar}</div>
                 <div><div class="th-name">${s.name}</div>
-                <div class="th-sub">${online?'<span class="live-dot2"></span> מחובר/ת עכשיו':s.grade}</div></div>
+                <div class="th-sub">${online?'<span class="live-dot2" aria-hidden="true"></span> מחובר/ת עכשיו':s.grade}</div></div>
             </div>
-            <div class="thread-body" id="threadBody">${body}</div>
+            <div class="thread-body" id="threadBody" role="log" aria-live="polite" aria-label="שיחה עם ${s.name}">${body}</div>
             <form class="thread-input" id="threadForm">
+                <label class="sr-only" for="threadInput">הודעה ל${s.name}</label>
                 <input id="threadInput" placeholder="כתוב/כתבי ל${s.name.split(' ')[0]}..." autocomplete="off">
-                <button type="submit" title="שליחה">➤</button>
+                <button type="submit" aria-label="שליחת הודעה">➤</button>
             </form>`;
         const tb = document.getElementById('threadBody'); tb.scrollTop = tb.scrollHeight;
+        const inputEl = document.getElementById('threadInput');
+        if(draft){
+            inputEl.value = draft;
+            if(draftFocused){
+                inputEl.focus();
+                try { inputEl.setSelectionRange(caret, caret); } catch(e){}
+            }
+        }
         document.getElementById('threadForm').addEventListener('submit', e=>{
             e.preventDefault();
             const inp = document.getElementById('threadInput');
             const v = inp.value.trim(); if(!v) return;
-            sendStudentMsg(v); inp.value='';
+            inp.value='';
+            void sendStudentMsg(v);
         });
     }
 
-    function sendStudentMsg(text){
+    async function sendStudentMsg(text){
         const id = activeMsgStudent; if(!id) return;
-        MSG_THREADS[id].messages.push({ from:'me', text, day:'היום', time: nowHM() });
+        try {
+            const resp = await fetch('/api/messages/thread', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ teacher_id: TEACHER_ID, learner_id: MSG_LEARNER_IDS[id], sender: 'teacher', text })
+            });
+            if(!resp.ok) throw new Error('send failed');
+            MSG_THREADS[id] = await resp.json();
+        } catch(e){
+            showToast('ההודעה לא נשלחה','בדקו את החיבור ונסו שוב');
+            return;
+        }
+        renderMsgStudents();
         renderMsgThread();
-        setTimeout(()=>{
-            const r = STU_REPLIES[Math.floor(Math.random()*STU_REPLIES.length)];
-            MSG_THREADS[id].messages.push({ from:'them', text:r, day:'היום', time: nowHM() });
-            if(activeMsgStudent===id) renderMsgThread();
-        }, 1400);
     }
 
+    // Picks up replies the learner sends from their own dashboard.
+    setInterval(()=>{ if(currentTab==='messages') void refreshThreads(); }, 5000);
+
     // ----- Calendar -----
-    const CAL_YEAR = 2026, CAL_MONTH = 5; // June (0-indexed)
     const CAL_MONTH_NAMES = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
     const CAL_WEEKDAYS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
     const CAL_DAY_NAMES = ['יום ראשון','יום שני','יום שלישי','יום רביעי','יום חמישי','יום שישי','שבת'];
     const EV_TYPES = {
-        meeting:  { color:'#7c5cff', soft:'#f3effe', ico:'👩‍🏫', tag:'מפגש כיתה' },
-        talk:     { color:'#4071b8', soft:'#eef4fd', ico:'💬', tag:'שיחה אישית' },
-        task:     { color:'#3d9466', soft:'#eefaf1', ico:'✍️', tag:'מטלה' },
-        deadline: { color:'#c25b66', soft:'#fdf3f4', ico:'⏰', tag:'דדליין' },
-        parents:  { color:'#b9842f', soft:'#fdf6ec', ico:'👨‍👩‍👧', tag:'מפגש הורים' },
+        meeting:  { color:'#5a37d8', soft:'#f3effe', ico:'👩‍🏫', tag:'מפגש כיתה' },
+        talk:     { color:'#39649f', soft:'#eef4fd', ico:'💬', tag:'שיחה אישית' },
+        task:     { color:'#1f7a4c', soft:'#eefaf1', ico:'✍️', tag:'מטלה' },
+        deadline: { color:'#a33b47', soft:'#fdf3f4', ico:'⏰', tag:'דדליין' },
+        parents:  { color:'#8a5d0f', soft:'#fdf6ec', ico:'👨‍👩‍👧', tag:'מפגש הורים' },
     };
-    const CAL_EVENTS = {
-        '2026-06-19': [ {time:'14:00', type:'talk', title:'שיחה אישית עם רון לוי'} ],
-        '2026-06-21': [ {time:'10:00', type:'meeting', title:'מפגש כיתה ח׳1 — מתמטיקה'}, {time:'13:00', type:'task', title:'בדיקת מטלות שבועיות'} ],
-        '2026-06-23': [ {time:'12:00', type:'parents', title:'מפגש הורים — נועם כהן'} ],
-        '2026-06-25': [ {time:'כל היום', type:'deadline', title:'דדליין דוחות התקדמות'} ],
-        '2026-06-28': [ {time:'09:00', type:'meeting', title:'מפגש כיתה ז׳2 — מתמטיקה'} ],
-    };
-    const CAL_TODAY = '2026-06-19';
+
+    let CAL_EVENTS = {};          // 'YYYY-MM-DD' -> [event]
+    let calYear = new Date().getFullYear();
+    let calMonth = new Date().getMonth();
+    let editingEventId = null;
+    const CAL_TODAY = dstr(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+
     function dstr(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
 
+    async function loadCalEvents(){
+        CAL_EVENTS = {};
+        try {
+            const resp = await fetch(`/api/calendar/events?owner_id=${encodeURIComponent(TEACHER_ID)}`);
+            if(!resp.ok) throw new Error('calendar load failed');
+            const data = await resp.json();
+            (data.events || []).forEach(ev => {
+                if(!ev.date) return;
+                (CAL_EVENTS[ev.date] = CAL_EVENTS[ev.date] || []).push(ev);
+            });
+        } catch(e){
+            showToast('לא הצלחנו לטעון את היומן','נסו לרענן את הדף');
+        }
+    }
+
     function renderCalMonth(){
-        const startDay = new Date(CAL_YEAR, CAL_MONTH, 1).getDay();
-        const daysInMonth = new Date(CAL_YEAR, CAL_MONTH+1, 0).getDate();
+        const startDay = new Date(calYear, calMonth, 1).getDay();
+        const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
         let cells = '';
         for(let i=0;i<startDay;i++) cells += `<div class="cal-cell blank"></div>`;
         for(let d=1; d<=daysInMonth; d++){
-            const ds = dstr(CAL_YEAR, CAL_MONTH, d);
+            const ds = dstr(calYear, calMonth, d);
             const evs = CAL_EVENTS[ds] || [];
             const chips = evs.map(e=>{
-                const m = EV_TYPES[e.type];
-                return `<div class="cal-chip" style="--ev-color:${m.color};--ev-soft:${m.soft}" title="${e.time} · ${e.title}">${m.ico} ${e.title}</div>`;
+                const m = EV_TYPES[e.type] || EV_TYPES.meeting;
+                return `<button type="button" class="cal-chip" data-event="${e.event_id}" style="--ev-color:${m.color};--ev-soft:${m.soft}">${m.ico} ${escapeHtml(e.title)}</button>`;
             }).join('');
-            cells += `<div class="cal-cell ${ds===CAL_TODAY?'today':''}"><div class="cal-cell-num">${d}</div>${chips}</div>`;
+            const label = `${d} ב${CAL_MONTH_NAMES[calMonth]}${evs.length?`, ${evs.length} אירועים`:', אין אירועים'} — הוספת אירוע`;
+            cells += `<div class="cal-cell ${ds===CAL_TODAY?'today':''}">
+                <button type="button" class="cal-cell-add" data-date="${ds}" aria-label="${label}"><span class="cal-cell-num">${d}</span></button>
+                ${chips}</div>`;
         }
         document.getElementById('calMonthWrap').innerHTML = `
             <div class="cal-grid">
                 <div class="cal-weekdays">${CAL_WEEKDAYS.map(w=>`<div>${w}</div>`).join('')}</div>
                 <div class="cal-days">${cells}</div>
             </div>`;
-        document.getElementById('calMonthTitle').textContent = `${CAL_MONTH_NAMES[CAL_MONTH]} ${CAL_YEAR}`;
+        document.getElementById('calMonthTitle').textContent = `${CAL_MONTH_NAMES[calMonth]} ${calYear}`;
     }
 
     function renderCalList(){
         const keys = Object.keys(CAL_EVENTS).sort();
+        if(!keys.length){
+            document.getElementById('calListWrap').innerHTML =
+                `<div class="cal-empty">עדיין אין אירועים ביומן. השתמשו ב"אירוע חדש" כדי לשבץ מפגש, שיחה או מטלה.</div>`;
+            return;
+        }
         const html = keys.map(ds=>{
             const [y,m,d] = ds.split('-').map(Number);
             const dt = new Date(y, m-1, d);
             const events = CAL_EVENTS[ds].map(e=>{
-                const meta = EV_TYPES[e.type];
-                return `<div class="cal-event" style="--ev-color:${meta.color};--ev-soft:${meta.soft}">
-                    <div class="cal-ev-time">${e.time}</div>
-                    <div class="cal-ev-ico">${meta.ico}</div>
-                    <div class="cal-ev-body"><div class="cal-ev-title">${e.title}</div><div class="cal-ev-tag">${meta.tag}</div></div>
-                </div>`;
+                const meta = EV_TYPES[e.type] || EV_TYPES.meeting;
+                return `<button type="button" class="cal-event" data-event="${e.event_id}" style="--ev-color:${meta.color};--ev-soft:${meta.soft}">
+                    <span class="cal-ev-time">${escapeHtml(e.time || 'כל היום')}</span>
+                    <span class="cal-ev-ico" aria-hidden="true">${meta.ico}</span>
+                    <span class="cal-ev-body"><span class="cal-ev-title">${escapeHtml(e.title)}</span><span class="cal-ev-tag">${meta.tag}</span></span>
+                </button>`;
             }).join('');
             return `<div class="cal-day">
                 <div class="cal-day-head">
@@ -1100,6 +1195,82 @@ export function initTeacherView() {
         document.getElementById('calListWrap').innerHTML = `<div class="cal-agenda">${html}</div>`;
     }
 
+    function findEvent(id){
+        for(const list of Object.values(CAL_EVENTS)){
+            const hit = list.find(e => e.event_id === id);
+            if(hit) return hit;
+        }
+        return null;
+    }
+
+    function openEventModal(eventId, presetDate){
+        editingEventId = eventId || null;
+        const ev = eventId ? findEvent(eventId) : null;
+        document.getElementById('eventModalTitle').textContent = ev ? '📅 עריכת אירוע' : '📅 אירוע חדש';
+        document.getElementById('evTitle').value = ev ? ev.title : '';
+        document.getElementById('evType').value = ev ? ev.type : 'meeting';
+        document.getElementById('evDate').value = ev ? ev.date : (presetDate || CAL_TODAY);
+        document.getElementById('evTime').value = ev ? ev.time : '';
+        document.getElementById('evNotes').value = ev ? (ev.notes || '') : '';
+        document.getElementById('evError').textContent = '';
+        document.getElementById('evDelete').style.display = ev ? '' : 'none';
+        document.getElementById('eventOverlay').classList.add('open');
+        document.getElementById('evTitle').focus();
+    }
+
+    function closeEventModal(){
+        document.getElementById('eventOverlay').classList.remove('open');
+        editingEventId = null;
+        document.getElementById('calAddBtn').focus();
+    }
+
+    async function saveEvent(){
+        const title = document.getElementById('evTitle').value.trim();
+        const date = document.getElementById('evDate').value;
+        const err = document.getElementById('evError');
+        if(!title){ err.textContent = 'צריך למלא כותרת לאירוע'; document.getElementById('evTitle').focus(); return; }
+        if(!date){ err.textContent = 'צריך לבחור תאריך'; document.getElementById('evDate').focus(); return; }
+        const payload = {
+            owner_id: TEACHER_ID,
+            title,
+            date,
+            time: document.getElementById('evTime').value,
+            type: document.getElementById('evType').value,
+            notes: document.getElementById('evNotes').value.trim(),
+        };
+        try {
+            const resp = editingEventId
+                ? await fetch(`/api/calendar/events/${editingEventId}`, {
+                    method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+                : await fetch('/api/calendar/events', {
+                    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            if(!resp.ok) throw new Error('save failed');
+        } catch(e){
+            err.textContent = 'השמירה נכשלה. נסו שוב.';
+            return;
+        }
+        closeEventModal();
+        await loadCalEvents();
+        renderCalMonth(); renderCalList();
+        showToast(editingEventId ? 'האירוע עודכן ✓' : 'האירוע נוסף ליומן ✓', title);
+    }
+
+    async function removeEvent(){
+        if(!editingEventId) return;
+        const id = editingEventId;
+        try {
+            const resp = await fetch(`/api/calendar/events/${id}?owner_id=${encodeURIComponent(TEACHER_ID)}`, { method:'DELETE' });
+            if(!resp.ok) throw new Error('delete failed');
+        } catch(e){
+            document.getElementById('evError').textContent = 'המחיקה נכשלה. נסו שוב.';
+            return;
+        }
+        closeEventModal();
+        await loadCalEvents();
+        renderCalMonth(); renderCalList();
+        showToast('האירוע נמחק','');
+    }
+
     function setTab(tab){
         currentTab = tab;
         const isDash = tab==='dashboard';
@@ -1110,11 +1281,11 @@ export function initTeacherView() {
         document.querySelectorAll('#topTabs .tt-btn').forEach(b=> b.classList.toggle('active', b.dataset.tab===tab));
         if(tab==='messages'){
             if(!activeMsgStudent) activeMsgStudent = MSG_ORDER[0];
-            MSG_THREADS[activeMsgStudent].unread = 0;
-            updateMsgBadge();
-            renderMsgStudents(); renderMsgThread();
+            void selectMsgStudent(activeMsgStudent);
         }
-        if(tab==='calendar'){ renderCalMonth(); renderCalList(); }
+        if(tab==='calendar'){
+            void loadCalEvents().then(()=>{ renderCalMonth(); renderCalList(); });
+        }
         window.scrollTo({ top:0, behavior:'smooth' });
     }
 
@@ -1129,6 +1300,32 @@ export function initTeacherView() {
         document.getElementById('calMonthWrap').style.display = month ? '' : 'none';
         document.getElementById('calListWrap').style.display = month ? 'none' : '';
     });
+    document.getElementById('calPrev').addEventListener('click', ()=>{
+        calMonth--; if(calMonth<0){ calMonth=11; calYear--; }
+        renderCalMonth();
+    });
+    document.getElementById('calNext').addEventListener('click', ()=>{
+        calMonth++; if(calMonth>11){ calMonth=0; calYear++; }
+        renderCalMonth();
+    });
+    document.getElementById('calAddBtn').addEventListener('click', ()=> openEventModal(null, null));
+    document.getElementById('calMonthWrap').addEventListener('click', e=>{
+        const chip = e.target.closest('.cal-chip');
+        if(chip){ openEventModal(chip.dataset.event, null); return; }
+        const cell = e.target.closest('.cal-cell-add');
+        if(cell) openEventModal(null, cell.dataset.date);
+    });
+    document.getElementById('calListWrap').addEventListener('click', e=>{
+        const ev = e.target.closest('.cal-event');
+        if(ev) openEventModal(ev.dataset.event, null);
+    });
+    document.getElementById('evSave').addEventListener('click', saveEvent);
+    document.getElementById('evDelete').addEventListener('click', removeEvent);
+    document.getElementById('evCancel').addEventListener('click', closeEventModal);
+    document.getElementById('eventOverlay').addEventListener('click', e=>{ if(e.target.id==='eventOverlay') closeEventModal(); });
+    document.addEventListener('keydown', e=>{
+        if(e.key==='Escape' && document.getElementById('eventOverlay').classList.contains('open')) closeEventModal();
+    });
 
     // boot
     renderShell();
@@ -1137,6 +1334,6 @@ export function initTeacherView() {
     setView('class');
     updateContextLine();
     startLive();
-    updateMsgBadge();
+    void refreshThreads();
 
 }

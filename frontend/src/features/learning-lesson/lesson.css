@@ -1,6 +1,6 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-    --p1: #7c5cff; --p2: #9f7afe; --cy: #22d3ee; --grn: #48bb78;
+    --p1: #6a45f0; --p2: #7a4fdd; --cy: #22d3ee; --grn: #48bb78;
     --org: #f6ad55; --red: #fc8181; --ink: #1a1a2e;
 }
 html, body { height: 100%; overflow: hidden; }

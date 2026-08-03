@@ -76,6 +76,7 @@ def _empty_state(learner_id: str) -> dict[str, Any]:
     return {
         "learner_id": learner_id,
         "language": "he",
+        "reduce_motion": False,
         "mapping_results": None,
         "profile_cache": None,
         "dashboard_cache": None,
@@ -108,7 +109,14 @@ async def get_learner_state(learner_id: Optional[str] = None) -> dict[str, Any]:
 
 async def update_learner_state(learner_id: Optional[str], updates: dict[str, Any]) -> dict[str, Any]:
     safe_id = normalize_learner_id(learner_id)
-    allowed = {"language", "mapping_results", "profile_cache", "dashboard_cache", "game_progress"}
+    allowed = {
+        "language",
+        "reduce_motion",
+        "mapping_results",
+        "profile_cache",
+        "dashboard_cache",
+        "game_progress",
+    }
     now = datetime.now(timezone.utc).isoformat()
     set_data = {key: value for key, value in updates.items() if key in allowed}
     set_data["learner_id"] = safe_id

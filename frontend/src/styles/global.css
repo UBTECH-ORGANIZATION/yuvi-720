@@ -5,11 +5,11 @@
   --m-soft-bg: #F5F2FF;
   --m-card: #FFFFFF;
   --m-text: #2F2F44;
-  --m-text-soft: #6b6880;
-  --m-text-light: #9893ab;
+  --m-text-soft: #5A5770;
+  --m-text-light: #635F79;
   --m-border: #E8E2F7;
-  --m-gradient: linear-gradient(135deg, #6F5BFF 0%, #9f7afe 55%, #4CC9F0 130%);
-  --m-gradient-soft: linear-gradient(135deg, #7c5cff 0%, #9f7afe 100%);
+  --m-gradient: linear-gradient(135deg, #5a3fd6 0%, #7a4fdd 55%, #1f9bb8 130%);
+  --m-gradient-soft: linear-gradient(135deg, #6a45f0 0%, #7a4fdd 100%);
   --m-shadow-sm: 0 2px 10px rgba(111, 91, 255, 0.08);
   --m-shadow-md: 0 12px 36px rgba(111, 91, 255, 0.12), 0 3px 10px rgba(47, 47, 68, 0.04);
   --m-shadow-lg: 0 24px 60px rgba(111, 91, 255, 0.16);
@@ -42,23 +42,81 @@ button:disabled {
   cursor: not-allowed;
 }
 
-.yuvi-language-switcher-floating {
+/* ===================== MOTION CONTROL (WCAG 2.2.2) ===================== */
+
+.yuvi-motion-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid rgba(111, 91, 255, 0.24);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 6px 18px rgba(111, 91, 255, 0.12);
+  color: var(--m-text);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.yuvi-motion-toggle:hover {
+  border-color: var(--m-primary);
+  background: #fff;
+}
+
+/* Fallback for surfaces that do not expose an #a11ySlot. */
+.yuvi-motion-toggle-floating {
   position: fixed;
-  inset-block-end: 20px;
-  inset-inline-start: auto;
-  inset-inline-end: auto;
-  right: 20px;
-  left: auto;
-  z-index: 1900;
+  inset-block-start: 12px;
+  inset-inline-start: 16px;
+  z-index: 1901;
 }
 
 @media (max-width: 640px) {
-  .yuvi-language-switcher-floating {
-    inset-block-end: 12px;
-    right: 12px;
-    left: auto;
-  }
-  .yuvi-language-switcher-floating span {
+  .yuvi-motion-toggle span:last-child {
     display: none;
   }
+}
+
+/*
+ * Near-zero duration with a negative delay lands every animation on its final
+ * keyframe instantly, so `forwards`/`both` fills keep their end state instead
+ * of snapping back to a hidden start frame the way `animation: none` would.
+ */
+html[data-motion="reduced"] *,
+html[data-motion="reduced"] *::before,
+html[data-motion="reduced"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: -1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: -1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ===================== KEYBOARD FOCUS ===================== */
+
+:focus-visible {
+  outline: 3px solid #4433cc;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Older engines fire :focus on click; keep the ring for keyboard users only. */
+:focus:not(:focus-visible) {
+  outline: none;
 }

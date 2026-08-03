@@ -247,7 +247,7 @@ export function initLearningPortal() {
 
             // Load the interactive game into the iframe (real learning content)
             const frame = document.getElementById('gameFrame');
-            frame.src = `/learning/game.html?subject=${encodeURIComponent(currentSubject.id)}&stage=${encodeURIComponent(stage.title)}`;
+            frame.src = `/learning/game.html?subject=${encodeURIComponent(currentSubject.id)}&stage=${encodeURIComponent(stage.title)}&motion=${document.documentElement.dataset.motion === 'reduced' ? 'reduced' : 'full'}`;
 
             // Opening message (req: opening/closing messages between content)
             document.getElementById('yubiChatBody').innerHTML = '';
