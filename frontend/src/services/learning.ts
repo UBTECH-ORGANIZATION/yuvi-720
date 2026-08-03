@@ -131,6 +131,10 @@ export interface LearningSessionDTO {
   requested_language: Language
   language_supported: boolean
   player_url: string
+  /** False when the provider's player is known not to survive being framed —
+   *  the lesson then offers it in its own tab. Absent on older payloads, which
+   *  means "frame it", the behaviour every provider had until now. */
+  embeddable?: boolean
   launch: string
   session_id: string
   timing_url: string

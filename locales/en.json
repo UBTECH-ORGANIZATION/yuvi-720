@@ -1612,5 +1612,11 @@
   "sdash.lessons.peek.back": "What I already did",
   "sdash.lessons.peek.forward": "What's coming up",
   "sdash.lessons.peek.revisit": "Go back to this stop",
-  "sdash.lessons.peek.locked": "Opens when you finish this stop"
+  "sdash.lessons.peek.locked": "Opens when you finish this stop",
+  "learning.lesson.external.title": "This activity opens in its own tab",
+  "learning.lesson.external.body": "This lesson's content can't run inside our screen, so it opens in a tab of its own. Everything you do is saved, and your route is still here waiting.",
+  "learning.lesson.external.open": "Open the activity",
+  "learning.lesson.external.reopen": "Open the activity again",
+  "learning.lesson.external.waiting": "The activity opened in another tab — come back here when you're done and we'll carry on.",
+  "learning.lesson.external.showHere": "Try showing it here anyway"
 }

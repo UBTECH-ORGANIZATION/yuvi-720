@@ -1612,5 +1612,11 @@
   "sdash.lessons.peek.back": "ما أنجزتُه سابقًا",
   "sdash.lessons.peek.forward": "ما ينتظرني لاحقًا",
   "sdash.lessons.peek.revisit": "العودة إلى هذه المحطة",
-  "sdash.lessons.peek.locked": "تُفتح عند إنهاء المحطة الحالية"
+  "sdash.lessons.peek.locked": "تُفتح عند إنهاء المحطة الحالية",
+  "learning.lesson.external.title": "يُفتح هذا النشاط في لسان تبويب خاص به",
+  "learning.lesson.external.body": "محتوى هذا الدرس لا يمكن تشغيله داخل شاشتنا، لذلك يُفتح في لسان تبويب خاص به. كل ما تنجزه محفوظ، ومسارك هنا بانتظارك.",
+  "learning.lesson.external.open": "فتح النشاط",
+  "learning.lesson.external.reopen": "فتح النشاط مجددًا",
+  "learning.lesson.external.waiting": "فُتح النشاط في لسان تبويب آخر — عُد إلى هنا عند الانتهاء ونواصل.",
+  "learning.lesson.external.showHere": "محاولة عرضه هنا رغم ذلك"
 }
