@@ -7,6 +7,7 @@ BASE_DIR = Path(__file__).resolve().parents[3]
 LEARNING_AGENT_DIR = BASE_DIR / "learning-agent"
 SHARED_DIR = BASE_DIR / "shared"
 LOCALES_DIR = BASE_DIR / "locales"
+CAMPAIGN_DIR = BASE_DIR / "campaign"
 REACT_APP_DIR = BASE_DIR / "static" / "react"
 REACT_ASSETS_DIR = REACT_APP_DIR / "assets"
 LEARNING_GAME_FILE = LEARNING_AGENT_DIR / "game.html"

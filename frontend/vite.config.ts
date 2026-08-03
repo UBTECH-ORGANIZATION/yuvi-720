@@ -14,7 +14,10 @@ export default defineConfig({
       '/api': 'http://127.0.0.1:8720',
       '/learning/game.html': 'http://127.0.0.1:8720',
       '/locales': 'http://127.0.0.1:8720',
-      '/shared': 'http://127.0.0.1:8720'
+      '/shared': 'http://127.0.0.1:8720',
+      // The 720 campaign landing page is served by FastAPI, not the SPA.
+      '/landing': 'http://127.0.0.1:8720',
+      '/campaign': 'http://127.0.0.1:8720'
     }
   }
 })

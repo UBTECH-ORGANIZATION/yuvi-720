@@ -4,7 +4,14 @@ from fastapi import APIRouter, FastAPI
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.core.paths import LEARNING_GAME_FILE, LOCALES_DIR, REACT_APP_DIR, REACT_ASSETS_DIR, SHARED_DIR
+from app.core.paths import (
+    CAMPAIGN_DIR,
+    LEARNING_GAME_FILE,
+    LOCALES_DIR,
+    REACT_APP_DIR,
+    REACT_ASSETS_DIR,
+    SHARED_DIR,
+)
 
 
 router = APIRouter(tags=["static"])
@@ -14,6 +21,8 @@ def mount_static_assets(app: FastAPI) -> None:
     """Mount shared static directories used by React and iframe content."""
     app.mount("/shared", StaticFiles(directory=str(SHARED_DIR)), name="shared")
     app.mount("/locales", StaticFiles(directory=str(LOCALES_DIR)), name="locales")
+    if CAMPAIGN_DIR.exists():
+        app.mount("/campaign", StaticFiles(directory=str(CAMPAIGN_DIR)), name="campaign")
     if REACT_ASSETS_DIR.exists():
         app.mount("/assets", StaticFiles(directory=str(REACT_ASSETS_DIR)), name="react-assets")
 
