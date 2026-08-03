@@ -23,6 +23,7 @@ from app.routes.agent import router as agent_router
 from app.routes.teacher import router as teacher_router
 from app.routes.mentoring import router as mentoring_router
 from app.routes.rewards import router as rewards_router
+from app.routes.campaign import router as campaign_router
 from app.routes.contact import router as contact_router
 from app.routes.dashboard import router as dashboard_router
 from app.routes.learner_mapping import router as learner_mapping_router
@@ -111,6 +112,7 @@ def create_app() -> FastAPI:
     app.include_router(mapping_chat_router)
     app.include_router(learning_content_router)
     app.include_router(contact_router)
+    app.include_router(campaign_router)
 
     mount_content_catalog_mcp(app)
 
