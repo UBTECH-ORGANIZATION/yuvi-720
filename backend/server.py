@@ -63,12 +63,19 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     sweeper = (
         asyncio.create_task(lrs_outbox.run_sweeper()) if lrs_config.is_enabled() else None
     )
+    # Is the address we hand Kata for xAPI relay actually reachable? A dead
+    # tunnel drops every content statement in silence, so it gets checked once
+    # at boot rather than discovered days later in an empty events collection.
+    from app.services.learning_sessions import probe_relay_base_url
+
+    relay_probe = asyncio.create_task(probe_relay_base_url())
     try:
         async with content_catalog_mcp_lifespan():
             yield
     finally:
         if sweeper:
             sweeper.cancel()
+        relay_probe.cancel()
 
 
 def create_app() -> FastAPI:

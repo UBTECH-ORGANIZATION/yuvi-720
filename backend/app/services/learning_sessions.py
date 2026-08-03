@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import os
 from typing import Any, Optional
+from urllib.parse import urlsplit
 
 from app.brain.repository import apply_brain_updates, get_brain
 from app.services import kata_client
@@ -43,6 +44,68 @@ def _public_base_url(request_base_url: str) -> str:
             "a public tunnel (e.g. `cloudflared tunnel --url http://localhost:8000`)."
         )
     return base
+
+
+# Player hosts that are known to be unusable inside our lesson frame, so we can
+# say so before the learner watches a reload storm. Configurable, because this is
+# a property of a provider's deployment on a given day — not of our code.
+#
+# Why the default is what it is (verified 2026-08-02): CET's player SPA at
+# learning.cet.ac.il boots, finds no CET SSO session (our learners authenticate
+# against 720, never against CET), and runs auth.cet.ac.il/v2/logout →
+# apigateway.cet.ac.il/AccessMngApi/logout/timeout → back to the player, once
+# every ~2.5s, forever. Its session cookies (CetState*) are SameSite=Lax, so they
+# can never reach a cross-site frame; the bounce also drops the `slxapi` query
+# parameter, losing the launch context. Reproduced in a bare <iframe> with no
+# platform code involved, with and without our sandbox attribute, and top-level
+# (where it loads exactly once). Delete this entry the day CET authenticates the
+# player from the launch `registration` instead of a browser session.
+_DEFAULT_NON_EMBEDDABLE_HOSTS = "learning.cet.ac.il"
+
+
+def _non_embeddable_hosts() -> set[str]:
+    raw = os.environ.get("NON_EMBEDDABLE_PLAYER_HOSTS", _DEFAULT_NON_EMBEDDABLE_HOSTS)
+    return {host.strip().lower() for host in raw.split(",") if host.strip()}
+
+
+def is_embeddable(player_url: str) -> bool:
+    """Can this launch be rendered in our lesson frame?
+
+    Content that cannot be framed is not broken content — it just has to open in
+    a tab of its own. Everything else about the lesson (the route, the coach, the
+    completion signal, which arrives via the Kata relay rather than the frame)
+    is unchanged, so this is a rendering decision and nothing more.
+    """
+    host = urlsplit(player_url or "").hostname or ""
+    return host.lower() not in _non_embeddable_hosts()
+
+
+async def probe_relay_base_url() -> None:
+    """Warn loudly, at startup, when the address we hand Kata is not reachable.
+
+    ``PUBLIC_APP_URL`` is what Kata relays content xAPI to. When it points at a
+    dead tunnel every statement is dropped *silently*: the lesson renders, the
+    learner works, and nothing reaches the Brain. That has happened, so the check
+    is worth a single HEAD request at boot.
+    """
+    base = (os.environ.get("PUBLIC_APP_URL") or "").rstrip("/")
+    if not base:
+        return
+    try:
+        import httpx
+
+        async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
+            response = await client.get(f"{base}/api/health")
+        if response.status_code >= 500:
+            raise RuntimeError(f"status {response.status_code}")
+        print(f"✅ xAPI relay base reachable: {base}")
+    except Exception as exc:
+        print(
+            f"⚠️ PUBLIC_APP_URL ({base}) is NOT reachable ({type(exc).__name__}: {exc}). "
+            "Kata relays content xAPI to this address — while it is down, NOTHING "
+            "the learner does reaches the Brain, the roadmap or the LRS. Restart "
+            "the tunnel and update PUBLIC_APP_URL."
+        )
 
 
 async def _assert_component_reachable(
@@ -215,6 +278,10 @@ async def create_provider_session(
         "requested_language": language,
         "language_supported": language in component["languages"],
         "player_url": context["launch_url"],
+        # False → the lesson page offers the activity in its own tab instead of
+        # framing it. The client ALSO detects a reload storm on its own, so a
+        # provider we have never met is handled without a config change.
+        "embeddable": is_embeddable(context["launch_url"]),
         "registration_id": context.get("registration_id"),
         "launch": launch["launch"],
         "session_id": launch["session_id"],

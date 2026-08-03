@@ -1612,5 +1612,11 @@
   "sdash.lessons.peek.back": "מה שכבר עשיתי",
   "sdash.lessons.peek.forward": "מה מחכה בהמשך",
   "sdash.lessons.peek.revisit": "לחזור לתחנה הזאת",
-  "sdash.lessons.peek.locked": "ייפתח כשתסיימו את התחנה הנוכחית"
+  "sdash.lessons.peek.locked": "ייפתח כשתסיימו את התחנה הנוכחית",
+  "learning.lesson.external.title": "הפעילות הזאת נפתחת בלשונית נפרדת",
+  "learning.lesson.external.body": "התוכן של השיעור הזה לא יודע לרוץ בתוך המסך שלנו, אז הוא נפתח בלשונית משלו. כל מה שתעשו נשמר, והמסלול כאן ממשיך לחכות לכם.",
+  "learning.lesson.external.open": "פתיחת הפעילות",
+  "learning.lesson.external.reopen": "פתיחת הפעילות שוב",
+  "learning.lesson.external.waiting": "הפעילות נפתחה בלשונית אחרת — כשתסיימו, חזרו לכאן ונמשיך.",
+  "learning.lesson.external.showHere": "לנסות להציג כאן בכל זאת"
 }

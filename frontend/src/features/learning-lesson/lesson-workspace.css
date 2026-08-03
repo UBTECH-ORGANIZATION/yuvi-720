@@ -215,6 +215,62 @@ html[dir='rtl'] .learning-lesson-prev .sp-icon { transform: scaleX(-1); }
   background: #fff;
 }
 
+/* Provider content that cannot be framed (see `features/learning/embedGuard.ts`).
+   Not an error state: the activity is fine, it simply opens in its own tab, so
+   this reads as a doorway rather than as a failure. */
+.learning-player-external {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 24px;
+  text-align: center;
+}
+.learning-player-external__mark {
+  display: grid;
+  place-items: center;
+  inline-size: 62px;
+  block-size: 62px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--sp-primary-600), transparent 88%);
+  color: var(--sp-primary-600);
+}
+.learning-player-external h2 {
+  margin: 4px 0 0;
+  color: var(--sp-ink-900);
+  font-size: var(--sp-fs-lg);
+}
+.learning-player-external p {
+  max-inline-size: 46ch;
+  margin: 0;
+  color: var(--sp-ink-500);
+  line-height: 1.65;
+}
+.learning-player-external__note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--sp-radius-pill);
+  background: color-mix(in srgb, var(--sp-primary-600), transparent 92%);
+  color: var(--sp-primary-600) !important;
+  font-size: var(--sp-fs-xs);
+  font-weight: 600;
+}
+/* The escape hatch when WE guessed wrong — quiet, because it is rarely right. */
+.learning-player-external__anyway {
+  border: 0;
+  background: none;
+  color: var(--sp-ink-400);
+  font: 600 var(--sp-fs-xs)/1 var(--sp-font);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.learning-player-external__anyway:hover { color: var(--sp-primary-600); }
+
 /* §6 re-entry-after-completion choice — held over the resumed content. */
 .learning-reentry {
   position: absolute;

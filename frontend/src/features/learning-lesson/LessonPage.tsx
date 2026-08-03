@@ -17,6 +17,7 @@ import {
   type LearningUnitDTO,
 } from '../../services/learning'
 import { optionalExtra as findOptionalExtra, previousStation, whatNowKey } from '../learning/pathView'
+import { noteLoad, playbackMode } from '../learning/embedGuard'
 import { useBadgeMoments } from '../badges/useBadgeMoments'
 import { LessonRewards } from './LessonRewards'
 import { ReflectionPanel } from './ReflectionPanel'
@@ -57,6 +58,13 @@ export function LessonPage() {
   const [loading, setLoading] = useState(true)
   const [frameState, setFrameState] = useState<FrameState>('loading')
   const [error, setError] = useState(false)
+  // Some providers' players cannot be framed at all (see `embedGuard`). When the
+  // server says so, or when the frame is caught reloading itself in a loop, the
+  // activity is offered in its own tab instead of strobing in place.
+  const frameLoadsRef = useRef<number[]>([])
+  const [reloadStorm, setReloadStorm] = useState(false)
+  const [forceFrame, setForceFrame] = useState(false)
+  const [openedExternally, setOpenedExternally] = useState(false)
   // A component the route has not opened yet is refused by the server (409).
   // That is a normal, explainable state — not the "something went wrong" card.
   const [lockedOut, setLockedOut] = useState(false)
@@ -118,6 +126,12 @@ export function LessonPage() {
         if (active) {
           setSession(nextSession)
           setRoadmap(nextSession.roadmap)
+          // A fresh launch is a fresh verdict on the frame: this component may
+          // be hosted by a different player than the last one in the same unit.
+          frameLoadsRef.current = []
+          setReloadStorm(false)
+          setForceFrame(false)
+          setOpenedExternally(false)
           setCompleted(false)
           setProgressionReady(false)
           setWhatNowOpen(false)
@@ -150,13 +164,34 @@ export function LessonPage() {
     }
   }, [language, learnerId, reloadKey, selection.componentId, selection.unitId])
 
+  // Frame it, or hand it to a tab of its own. Everything else about the lesson
+  // — the route, the coach, the completion signal — is identical either way;
+  // only where the activity is painted changes.
+  const playback = playbackMode(session?.embeddable, reloadStorm, forceFrame)
+
   useEffect(() => {
-    if (!session) return
+    if (!session || playback === 'tab') return
     const readyTimeout = window.setTimeout(() => {
       setFrameState((current) => current === 'loading' ? 'error' : current)
     }, PROVIDER_READY_TIMEOUT_MS)
     return () => window.clearTimeout(readyTimeout)
-  }, [session])
+  }, [playback, session])
+
+  const handleFrameLoad = () => {
+    setFrameState('ready')
+    const { loads, storm } = noteLoad(frameLoadsRef.current, Date.now())
+    frameLoadsRef.current = loads
+    if (storm) setReloadStorm(true)
+  }
+
+  const openInNewTab = () => {
+    if (!session) return
+    // `noopener` only: the referrer is left intact, because a provider may key
+    // its launch on it. The tab owns the activity; this page keeps the route,
+    // the coach and the completion watch.
+    window.open(session.player_url, '_blank', 'noopener')
+    setOpenedExternally(true)
+  }
 
   useEffect(() => {
     if (!session) return
@@ -241,7 +276,7 @@ export function LessonPage() {
     // postMessages us — completion arrives via xAPI → Kata relay → our ingest →
     // the catalog's progress_state. Poll while the lesson is open so we detect
     // the flip to 'completed' and run the same finalize path as the message.
-    const pollTimer = window.setInterval(async () => {
+    const checkPersistedCompletion = async () => {
       if (controller.signal.aborted || completionPendingRef.current || completedRef.current) return
       // Nothing to detect: it was already finished when we opened it. Polling a
       // state that never changes is how re-entry ended up celebrating.
@@ -254,12 +289,23 @@ export function LessonPage() {
       } catch {
         /* transient catalog/network error — the next tick retries */
       }
-    }, COMPLETION_POLL_MS)
+    }
+    const pollTimer = window.setInterval(() => { void checkPersistedCompletion() }, COMPLETION_POLL_MS)
+
+    // When the activity runs in its own tab, THIS page is in the background —
+    // where browsers throttle timers hard. Coming back is the strongest signal
+    // that something may have happened, so check on the way in rather than
+    // making the learner watch a throttled interval catch up.
+    const handleVisible = () => { if (!document.hidden) void checkPersistedCompletion() }
+    document.addEventListener('visibilitychange', handleVisible)
+    window.addEventListener('focus', handleVisible)
 
     return () => {
       controller.abort()
       timers.forEach((timer) => window.clearTimeout(timer))
       window.clearInterval(pollTimer)
+      document.removeEventListener('visibilitychange', handleVisible)
+      window.removeEventListener('focus', handleVisible)
       window.removeEventListener('message', handleProviderMessage)
       window.removeEventListener('yuvilab:xapi-completion', handleXapiCompletion)
     }
@@ -488,6 +534,40 @@ export function LessonPage() {
               </div>
             )}
             <div className="learning-player-frame-wrap">
+              {/* This provider's player cannot live in a frame, so it gets a tab
+                  of its own. Nothing else moves: the route, the coach and the
+                  completion signal are unchanged, because completion reaches us
+                  through the Kata relay and never through the frame. */}
+              {playback === 'tab' ? (
+                <div className="learning-player-external">
+                  <span className="learning-player-external__mark" aria-hidden="true">
+                    <Icon name="expand" size={26} />
+                  </span>
+                  <h2>{t('learning.lesson.external.title')}</h2>
+                  <p>{t('learning.lesson.external.body')}</p>
+                  <button className="learning-primary-button" type="button" onClick={openInNewTab}>
+                    {t(openedExternally ? 'learning.lesson.external.reopen' : 'learning.lesson.external.open')}
+                    <Icon name="arrow" size={16} />
+                  </button>
+                  {openedExternally && (
+                    <p className="learning-player-external__note" role="status">
+                      {t('learning.lesson.external.waiting')}
+                    </p>
+                  )}
+                  {/* Only when WE guessed. If the server knows the frame cannot
+                      work, offering it back would just restart the loop. */}
+                  {session.embeddable !== false && reloadStorm && (
+                    <button
+                      className="learning-player-external__anyway"
+                      type="button"
+                      onClick={() => { frameLoadsRef.current = []; setForceFrame(true) }}
+                    >
+                      {t('learning.lesson.external.showHere')}
+                    </button>
+                  )}
+                </div>
+              ) : (
+              <>
               {frameState === 'loading' && (
                 <div className="learning-player-loading" role="status">
                   <span className="learning-player-spinner" aria-hidden="true" />
@@ -514,9 +594,15 @@ export function LessonPage() {
                 src={session.player_url}
                 title={session.component.title}
                 sandbox="allow-scripts allow-same-origin"
-                allow="autoplay"
-                onLoad={() => setFrameState('ready')}
+                // `storage-access` grants nothing by itself: it is the embedder's
+                // half of the Storage Access API, without which a player that
+                // asks for its own cookies in a frame is refused before it can
+                // even prompt. Harmless for content that never asks.
+                allow="autoplay; storage-access"
+                onLoad={handleFrameLoad}
               />
+              </>
+              )}
               {reentryOpen && (
                 <div className="learning-reentry" role="dialog" aria-modal="true" aria-labelledby="learning-reentry-title">
                   <div className="learning-reentry__card">
