@@ -67,6 +67,10 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      # This workflow deploys an arbitrary ref, which may predate settings that
+      # current main requires (SECRET_KEY and PUBLIC_APP_URL arrived with auth).
+      # So the hard gate covers only what every vintage needs to boot; anything
+      # version-specific is reported as a warning for a human to judge.
       - name: Verify required Production settings
         run: |
           configured_settings="$(az webapp config appsettings list \
@@ -75,9 +79,6 @@ jobs:
             --output json | jq -r '.[] | select(.value != null and .value != "") | .name')"
           required_settings=(
             MONGODB_CONNECTION_STRING
-            FRONTEND_URL
-            PUBLIC_APP_URL
-            SECRET_KEY
             WEBSITES_PORT
           )
           missing_settings=()
@@ -90,11 +91,17 @@ jobs:
             printf 'Missing required Production settings: %s\n' "${missing_settings[*]}"
             exit 1
           fi
-          # The campaign lead form needs these; a missing one only breaks
-          # POST /api/leads, so warn instead of blocking the deploy.
-          for setting_name in AZURE_COMMUNICATION_CONNECTION_STRING ACS_SENDER_ADDRESS CONTACT_EMAILS; do
+          # Absent settings that only degrade part of the app: auth/redirects for
+          # newer refs, and the campaign lead form's mailer (POST /api/leads).
+          for setting_name in \
+            FRONTEND_URL \
+            PUBLIC_APP_URL \
+            SECRET_KEY \
+            AZURE_COMMUNICATION_CONNECTION_STRING \
+            ACS_SENDER_ADDRESS \
+            CONTACT_EMAILS; do
             if ! grep -qx "$setting_name" <<< "$configured_settings"; then
-              echo "::warning::$setting_name is not set on Production — /api/leads will return 502."
+              echo "::warning::$setting_name is not set on Production — required only by refs that use it."
             fi
           done
 
