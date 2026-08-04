@@ -423,8 +423,10 @@ video {
 /* Press */
 .cmp-press {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 18px;
+  max-width: 880px;
+  margin-inline: auto;
 }
 
 .cmp-press__item {
@@ -450,6 +452,21 @@ video {
   border-radius: 12px;
   margin-bottom: 4px;
   background: var(--cmp-surface-soft);
+}
+
+/* Stands in for a thumbnail on articles whose images we cannot license. */
+.cmp-press__brand {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  margin-bottom: 4px;
+  background: linear-gradient(135deg, #241a4d 0%, #3b2f8f 55%, #2b6fd6 100%);
+  color: #fff;
+  font-size: clamp(3rem, 12vw, 4.5rem);
+  font-weight: 900;
+  letter-spacing: 1px;
 }
 
 a.cmp-press__item:hover {
