@@ -1,0 +1,123 @@
+name: Hotfix — Deploy a specific ref straight to Production (spark / yuvi-720)
+
+# The normal path to production is deploy-spark.yml: push to main -> Dev slot ->
+# manual promote (Dev/Prod swap). That swap always carries *everything* on Dev.
+# This workflow exists for the case where Production must receive one isolated
+# change while the rest of Dev stays unreleased: it builds the ref you name and
+# deploys that image directly to the Production slot. The Dev slot is untouched.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref (branch, tag or SHA) to build and deploy to Production"
+        required: true
+        type: string
+      confirm:
+        description: "Type DEPLOY-PRODUCTION to confirm this bypasses the Dev slot"
+        required: true
+        type: string
+
+env:
+  ACR_NAME: yuvi720acr
+  ACR_LOGIN_SERVER: yuvi720acr.azurecr.io
+  IMAGE_NAME: yuvi-720
+  RESOURCE_GROUP: rg-yuvi-720
+  WEBAPP_NAME: ubi-yuvi-720
+
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://spark.yuvilab.ai
+    steps:
+      - name: Require explicit confirmation
+        if: inputs.confirm != 'DEPLOY-PRODUCTION'
+        run: |
+          echo "Refusing to deploy: 'confirm' must be exactly DEPLOY-PRODUCTION."
+          exit 1
+
+      - name: Checkout the requested ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Resolve deployed commit
+        id: commit
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      # Deliberately not tagged `latest`: this image is a production hotfix and
+      # must not become the default the Dev pipeline picks up.
+      - name: Build and push image
+        run: |
+          docker build --platform linux/amd64 \
+            -t ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:prod-${{ steps.commit.outputs.sha }} .
+          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:prod-${{ steps.commit.outputs.sha }}
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Verify required Production settings
+        run: |
+          configured_settings="$(az webapp config appsettings list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --output json | jq -r '.[] | select(.value != null and .value != "") | .name')"
+          required_settings=(
+            MONGODB_CONNECTION_STRING
+            FRONTEND_URL
+            PUBLIC_APP_URL
+            SECRET_KEY
+            WEBSITES_PORT
+          )
+          missing_settings=()
+          for setting_name in "${required_settings[@]}"; do
+            if ! grep -qx "$setting_name" <<< "$configured_settings"; then
+              missing_settings+=("$setting_name")
+            fi
+          done
+          if (( ${#missing_settings[@]} )); then
+            printf 'Missing required Production settings: %s\n' "${missing_settings[*]}"
+            exit 1
+          fi
+          # The campaign lead form needs these; a missing one only breaks
+          # POST /api/leads, so warn instead of blocking the deploy.
+          for setting_name in AZURE_COMMUNICATION_CONNECTION_STRING ACS_SENDER_ADDRESS CONTACT_EMAILS; do
+            if ! grep -qx "$setting_name" <<< "$configured_settings"; then
+              echo "::warning::$setting_name is not set on Production — /api/leads will return 502."
+            fi
+          done
+
+      - name: Deploy image to the Production slot
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.WEBAPP_NAME }}
+          images: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:prod-${{ steps.commit.outputs.sha }}
+
+      - name: Smoke check the landing page
+        run: |
+          for attempt in $(seq 1 20); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' https://spark.yuvilab.ai/landing || true)"
+            if [[ "$code" == "200" ]]; then
+              echo "✅ https://spark.yuvilab.ai/landing responded 200"
+              exit 0
+            fi
+            echo "attempt $attempt: got $code, retrying..."
+            sleep 15
+          done
+          echo "❌ /landing never returned 200 after the deploy"
+          exit 1
+
+      - name: Azure logout
+        run: az logout
+        if: always()
