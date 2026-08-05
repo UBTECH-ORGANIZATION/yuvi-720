@@ -81,6 +81,18 @@ jobs:
             MONGODB_CONNECTION_STRING
             WEBSITES_PORT
           )
+          # The campaign lead form is the one feature whose only failure mode is
+          # a missing setting: with the mailer unconfigured `POST /api/leads`
+          # answers 502 and the lead is lost, while /landing still serves 200 —
+          # so the smoke check below passes and the deploy looks green. If the
+          # deployed ref ships that route, its settings stop being optional.
+          if [[ -f backend/app/routes/campaign.py ]]; then
+            required_settings+=(
+              AZURE_COMMUNICATION_CONNECTION_STRING
+              ACS_SENDER_ADDRESS
+              CONTACT_EMAILS
+            )
+          fi
           missing_settings=()
           for setting_name in "${required_settings[@]}"; do
             if ! grep -qx "$setting_name" <<< "$configured_settings"; then
@@ -91,15 +103,13 @@ jobs:
             printf 'Missing required Production settings: %s\n' "${missing_settings[*]}"
             exit 1
           fi
-          # Absent settings that only degrade part of the app: auth/redirects for
-          # newer refs, and the campaign lead form's mailer (POST /api/leads).
+          # Absent settings that only degrade part of the app: auth and redirects
+          # for newer refs. The mailer settings moved to the hard gate above when
+          # the ref carries the route that needs them.
           for setting_name in \
             FRONTEND_URL \
             PUBLIC_APP_URL \
-            SECRET_KEY \
-            AZURE_COMMUNICATION_CONNECTION_STRING \
-            ACS_SENDER_ADDRESS \
-            CONTACT_EMAILS; do
+            SECRET_KEY; do
             if ! grep -qx "$setting_name" <<< "$configured_settings"; then
               echo "::warning::$setting_name is not set on Production — required only by refs that use it."
             fi
