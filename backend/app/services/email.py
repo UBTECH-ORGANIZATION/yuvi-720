@@ -38,13 +38,36 @@ def _recipients() -> list[str]:
     return [address.strip() for address in raw.split(",") if address.strip()]
 
 
+def missing_email_settings() -> list[str]:
+    """Which of the three mailer settings are absent or empty.
+
+    Named and public so a deploy check can ask the same question the sender asks,
+    instead of a human inferring it from a 502 hours later.
+    """
+    missing = []
+    if not os.environ.get("AZURE_COMMUNICATION_CONNECTION_STRING", "").strip():
+        missing.append("AZURE_COMMUNICATION_CONNECTION_STRING")
+    if not os.environ.get("ACS_SENDER_ADDRESS", "").strip():
+        missing.append("ACS_SENDER_ADDRESS")
+    if not _recipients():
+        missing.append("CONTACT_EMAILS")
+    return missing
+
+
 def _send_sync(subject: str, plain_text: str, reply_to_email: str = "", reply_to_name: str = "") -> None:
     connection_string = os.environ.get("AZURE_COMMUNICATION_CONNECTION_STRING", "")
     sender_address = os.environ.get("ACS_SENDER_ADDRESS", "")
-    recipients = _recipients()
 
-    if not connection_string or not sender_address or not recipients:
-        raise RuntimeError("Azure Communication Services is not fully configured")
+    # Name the gap. The old message said only "not fully configured", so a
+    # production 502 told you the mailer was broken but not which of three
+    # settings to go and set — and the answer is not visible from the outside.
+    missing = missing_email_settings()
+    if missing:
+        raise RuntimeError(
+            "Azure Communication Services is not fully configured — missing/empty: "
+            + ", ".join(missing)
+        )
+    recipients = _recipients()
 
     client = EmailClient.from_connection_string(connection_string)
     message_payload = {
