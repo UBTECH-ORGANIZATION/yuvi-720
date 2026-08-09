@@ -19,7 +19,7 @@
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { createRoomKit, roomItemSpec } from './RoomCatalog'
-import type { MoodId, RoomItem, RoomStyleId, WallStyleId } from './RoomDesign'
+import { DEFAULT_STATIONS, type MoodId, type RoomDesign, type RoomItem, type RoomStations, type RoomStyleId, type StationId, type WallStyleId } from './RoomDesign'
 
 export type LabRoomQuality = 'high' | 'low'
 
@@ -83,8 +83,18 @@ export interface LabRoom {
   setRoomStyle: (style: { floor: RoomStyleId; wall: WallStyleId; mood: MoodId }) => void
   /** Footprints Yuvi must walk around. */
   blockers: () => LabRoomCircle[]
-  /** Footprints nothing may be built on. */
-  noBuildZones: () => LabRoomCircle[]
+  /** Footprints nothing may be built on, minus the station being carried. */
+  noBuildZones: (exclude?: StationId) => LabRoomCircle[]
+  /** Move the walk-in stations, and everything that belongs to them. */
+  setStations: (stations: RoomStations) => void
+  /** uid of the placed prop under a ray, for right-click menus. */
+  pickItem: (raycaster: THREE.Raycaster) => string | null
+  /** The station under a ray, for right-click menus. */
+  pickStation: (raycaster: THREE.Raycaster) => StationId | null
+  /** World point just above a placed prop, for anchoring UI to it. */
+  itemAnchor: (uid: string) => THREE.Vector3 | null
+  /** World point just above a station, for anchoring UI to it. */
+  stationAnchor: (id: StationId) => THREE.Vector3
   dispose: () => void
 }
 
@@ -103,6 +113,27 @@ const VIOLET = 0x7c5cff
 const CYAN = 0x4eeef0
 const AMBER = 0xff9d5c
 const WOOD = 0x2e1d13
+
+/** Which way the room-design bench faces, and how far in front of it you stand. */
+const CREATE_ROT = 1.2
+const STAND_OFFSET = 1.95
+
+/** The spot a learner occupies to use the bench at `bench`. */
+export function roomStandingSpot(bench: { x: number; z: number }): { x: number; z: number } {
+  return {
+    x: bench.x + Math.sin(CREATE_ROT) * STAND_OFFSET,
+    z: bench.z + Math.cos(CREATE_ROT) * STAND_OFFSET,
+  }
+}
+
+/** Footprint each station needs clear around it. */
+export const STATION_RADIUS: Record<StationId, number> = { avatar: 1.5, room: 1.4 }
+
+/**
+ * Placed props are built at catalog scale and then grown, so one number covers
+ * the meshes, the contact blobs, the drop ghost and every collision radius.
+ */
+export const PROP_SCALE = 1.75
 
 /**
  * Cheap capability probe. Weak machines get the reduced-effects room instead of
@@ -127,10 +158,10 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   // Room box. The side walls converge to the edges of a 30° frame right at the
   // back wall, which is what gives the shot its one-point-perspective depth.
   const FLOOR_Y = deckY - 0.13
-  const HALF_X = 4.7
-  const BACK_Z = -6.6
-  const FRONT_Z = 8.4
-  const CEIL_Y = FLOOR_Y + 4.7
+  const HALF_X = 6.1
+  const BACK_Z = -8.6
+  const FRONT_Z = 10.9
+  const CEIL_Y = FLOOR_Y + 5.5
   const DEPTH = FRONT_Z - BACK_Z
   const MID_Z = (FRONT_Z + BACK_Z) / 2
   const bounds: LabRoomBounds = { halfX: HALF_X, backZ: BACK_Z, frontZ: FRONT_Z, floorY: FLOOR_Y, ceilY: CEIL_Y }
@@ -238,9 +269,9 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   // The back wall is built as four segments around a panoramic opening rather
   // than one flat slab. That hole is the single most important decision in the
   // room: it turns the wall behind Yuvi from dead space into the view.
-  const OPEN_HALF_X = 3.25
+  const OPEN_HALF_X = 4.2
   const OPEN_Y0 = FLOOR_Y + 0.86
-  const OPEN_Y1 = FLOOR_Y + 3.36
+  const OPEN_Y1 = FLOOR_Y + 3.9
   addWall(HALF_X * 2, OPEN_Y0 - FLOOR_Y, [0, (OPEN_Y0 + FLOOR_Y) / 2, BACK_Z], 0)
   addWall(HALF_X * 2, CEIL_Y - OPEN_Y1, [0, (CEIL_Y + OPEN_Y1) / 2, BACK_Z], 0)
   for (const side of [-1, 1]) {
@@ -266,8 +297,8 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     const sheen = ctx.createLinearGradient(0, 0, 0, 256)
     sheen.addColorStop(0, 'rgba(140,164,235,0.55)')
     sheen.addColorStop(0.22, 'rgba(74,88,150,0.2)')
-    sheen.addColorStop(0.55, 'rgba(26,30,66,0.07)')
-    sheen.addColorStop(1, 'rgba(8,9,26,0)')
+    sheen.addColorStop(0.55, 'rgba(30,35,78,0.1)')
+    sheen.addColorStop(1, 'rgba(38,44,94,0.14)')
     ctx.fillStyle = sheen
     ctx.fillRect(0, 0, 256, 256)
     // Faint horizontal banding: polished slabs, not one endless surface.
@@ -308,7 +339,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     return finish(canvas, 11, 14)
   })()
   const gridGeo = track(new THREE.PlaneGeometry(HALF_X * 2, DEPTH, 24, 24))
-  fadeRadially(gridGeo, HALF_X * 1.55, 1.8)
+  fadeRadially(gridGeo, HALF_X * 1.95, 1.5)
   // Barely there. The grid used to shout "3D software viewport"; now it is a
   // faint inlay you only notice near the platform.
   const gridMat = track(new THREE.MeshBasicMaterial({
@@ -351,7 +382,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   // Ceiling bars over the bay, hung low enough to appear when the camera lifts.
   const ceilBarMat = track(new THREE.MeshBasicMaterial({ color: 0xd7dcff, toneMapped: false }))
   const ceilBars: THREE.Mesh[] = []
-  for (const z of rich ? [-4.6, -2.2, 0.4] : [-2.2]) {
+  for (const z of rich ? [-6, -2.9, 0.5] : [-2.9]) {
     ceilBars.push(addStrip(ceilBarMat, [HALF_X * 1.5, 0.06, 0.16], [0, CEIL_Y - 0.42, z]))
   }
   const ceilHaloGeo = track(new THREE.PlaneGeometry(HALF_X * 1.7, 1.5))
@@ -368,16 +399,20 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   }
 
   // Approach lines inlaid in the floor, guiding the eye to the platform.
-  for (const x of [-1.62, 1.62]) {
-    addStrip(dimStripMat, [0.03, 0.012, 5.4], [x, FLOOR_Y + 0.012, 3.2])
+  for (const x of [-2.1, 2.1]) {
+    addStrip(dimStripMat, [0.03, 0.012, 7], [x, FLOOR_Y + 0.012, 4.2])
   }
 
   // ────────────────────────────────────────────────────────────────────────
   // The upgrade platform
   // ────────────────────────────────────────────────────────────────────────
+  // Everything the platform owns lives under one node, because the learner can
+  // pick the whole station up and put it somewhere else.
+  const platform = new THREE.Group()
+  group.add(platform)
   const podium = new THREE.Group()
   podium.position.y = deckY
-  group.add(podium)
+  platform.add(podium)
 
   const baseGeo = track(new THREE.CylinderGeometry(1.24, 1.34, 0.13, 56))
   const baseMat = track(new THREE.MeshPhysicalMaterial({
@@ -443,11 +478,11 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const reflection = new THREE.Mesh(reflectGeo, reflectMat)
   reflection.rotation.x = -Math.PI / 2
   reflection.position.set(0, FLOOR_Y + 0.008, 2.1)
-  group.add(reflection)
+  platform.add(reflection)
 
   // Floor bloom pooling out from under the platform.
   const poolTex = radialTexture('rgba(255,255,255,0.5)', 'rgba(255,255,255,0)')
-  const poolGeo = track(new THREE.PlaneGeometry(6.4, 6.4))
+  const poolGeo = track(new THREE.PlaneGeometry(9.6, 9.6))
   const poolMat = track(new THREE.MeshBasicMaterial({
     map: poolTex, color: accent.clone(), transparent: true, opacity: 0.24, depthWrite: false,
     blending: THREE.AdditiveBlending, toneMapped: false,
@@ -455,7 +490,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const pool = new THREE.Mesh(poolGeo, poolMat)
   pool.rotation.x = -Math.PI / 2
   pool.position.set(0, FLOOR_Y + 0.006, 0)
-  group.add(pool)
+  platform.add(pool)
 
   // Volumetric shaft from the ceiling bars down onto the deck.
   const coneGeo = track(new THREE.CylinderGeometry(0.95, 1.9, CEIL_Y - deckY - 0.5, 28, 1, true))
@@ -466,7 +501,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   }))
   const cone = new THREE.Mesh(coneGeo, coneMat)
   cone.position.set(0, deckY + (CEIL_Y - deckY - 0.5) / 2, 0)
-  group.add(cone)
+  platform.add(cone)
 
   // ────────────────────────────────────────────────────────────────────────
   // Props: workbench, shelves, consoles, holograms
@@ -557,27 +592,36 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   }
 
   // ────────────────────────────────────────────────────────────────────────
-  // Three content stations
+  // The room-design bench and the scenery around it
   // ────────────────────────────────────────────────────────────────────────
   // Every zone has to answer "what happens here?" — decoration that doesn't is
   // just clutter competing with Yuvi.
-  //   left        → MAKE     : bench, materials, a model on the turntable
+  //   front-left  → MAKE     : the room-design bench the learner walks up to
   //   right       → EXPLORE  : globe plinth, digital library, an artefact
   //   front-right → MISSION  : kiosk showing the active challenge
-  const CREATE_AT: [number, number] = [-3.1, -3.2]
-  const EXPLORE_AT: [number, number] = [3.2, -3.6]
-  const MISSION_AT: [number, number] = [2.0, -1.6]
+  // The lit platform in the middle of the room belongs to Yuvi himself; room
+  // decorating happens at this bench, so there is only ever one platform.
+  const EXPLORE_AT: [number, number] = [4.4, -5]
+  const MISSION_AT: [number, number] = [2.8, -2.2]
+
+  // Live station positions. `setStations` moves everything that hangs off them.
+  const stations: RoomStations = {
+    avatar: { ...DEFAULT_STATIONS.avatar },
+    room: { ...DEFAULT_STATIONS.room },
+  }
+  // The bench and its floor shadow move as one.
+  const bench = new THREE.Group()
+  bench.rotation.y = CREATE_ROT
+  group.add(bench)
 
   if (rich) {
     // ── MAKE ───────────────────────────────────────────────────────────────
     // The one warm corner in the room. Wood, amber under-light and physical
     // material pots exist to break the wall-to-wall violet/cyan.
-    const make = new THREE.Group()
-    make.position.set(CREATE_AT[0], FLOOR_Y, CREATE_AT[1])
-    make.rotation.y = 0.74
-    group.add(make)
-    addZoneRing(AMBER, CREATE_AT[0], CREATE_AT[1], 1.45, 0.4)
-    addPropShadow(3.9, 2.2, CREATE_AT[0], CREATE_AT[1])
+    const make = bench
+    const benchShadow = addPropShadow(3.4, 3.4, 0, 0)
+    benchShadow.position.set(0, 0.006, 0)
+    bench.add(benchShadow)
 
     addRounded(make, woodMat, [2.9, 0.13, 1.08], [0, 0.95, 0], 0.055)
     for (const sx of [-1.28, 1.28]) addRounded(make, brushedMat, [0.14, 0.9, 0.86], [sx, 0.45, 0], 0.04)
@@ -619,7 +663,8 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     explore.position.set(EXPLORE_AT[0], FLOOR_Y, EXPLORE_AT[1])
     explore.rotation.y = -0.7
     group.add(explore)
-    addZoneRing(CYAN, EXPLORE_AT[0], EXPLORE_AT[1], 1.35, 0.45)
+    // No lit ring here: only the platform and the room bench are walk-in
+    // stations, and a glowing pad under scenery reads as one.
     addPropShadow(3.4, 2.6, EXPLORE_AT[0], EXPLORE_AT[1])
 
     // Plinth for the holo globe: heavy base, glass collar, inset trim.
@@ -677,7 +722,6 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     mission.rotation.y = -0.72
     mission.scale.setScalar(0.82)
     group.add(mission)
-    addZoneRing(accent.getHex(), MISSION_AT[0], MISSION_AT[1], 1.0, 0.45)
     addPropShadow(2.4, 2.4, MISSION_AT[0], MISSION_AT[1])
 
     addRounded(mission, brushedMat, [1.4, 0.14, 0.92], [0, 0.07, 0], 0.05)
@@ -1239,10 +1283,12 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     detail: number
     spin: number
     phase: number
+    /** Parent, when the projector belongs to something that can be moved. */
+    parent?: THREE.Object3D
   }) => {
     const station = new THREE.Group()
     station.position.set(spec.pos[0], spec.pos[1], spec.pos[2])
-    group.add(station)
+    ;(spec.parent ?? group).add(station)
 
     const puck = new THREE.Mesh(emitterGeo, metalMat)
     puck.position.y = 0.04
@@ -1311,7 +1357,7 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   // were decoration; these are what the station is for.
   const projectorSpecs = rich
     ? [
-        { pos: [CREATE_AT[0], FLOOR_Y + 0.98, CREATE_AT[1]] as [number, number, number], radius: 0.26, height: 0.72, color: 0xffb374, detail: 0, spin: 0.3, phase: 0 },
+        { pos: [0, 0.98, 0] as [number, number, number], radius: 0.26, height: 0.72, color: 0xffb374, detail: 0, spin: 0.3, phase: 0, parent: bench },
         { pos: [EXPLORE_AT[0], FLOOR_Y + 1.08, EXPLORE_AT[1]] as [number, number, number], radius: 0.34, height: 0.9, color: 0x7fe4ff, detail: 1, spin: -0.18, phase: 1.9 },
       ]
     : [
@@ -1354,8 +1400,8 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
 
   // Zone fills. Warm on the left, cool on the right.
   const warmLight = new THREE.PointLight(AMBER, rich ? 10 : 5, 6.5, 2)
-  warmLight.position.set(CREATE_AT[0] + 0.25, FLOOR_Y + 1.7, CREATE_AT[1] + 0.55)
-  group.add(warmLight)
+  warmLight.position.set(0.25, 1.7, 0.55)
+  bench.add(warmLight)
 
   const coolLight = new THREE.PointLight(CYAN, rich ? 6 : 3, 7, 2)
   coolLight.position.set(EXPLORE_AT[0] - 0.25, FLOOR_Y + 1.65, EXPLORE_AT[1] + 0.45)
@@ -1453,13 +1499,22 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   disposables.push({ dispose: disposeItemKit })
 
   const ZONES: LabRoomZone[] = [
-    { id: 'avatar', x: 0, z: 0, radius: 1.45 },
-    { id: 'room', x: -2.2, z: 2.4, radius: 1.35 },
+    { id: 'avatar', x: stations.avatar.x, z: stations.avatar.z, radius: 1.45 },
+    { id: 'room', x: 0, z: 0, radius: 1.25 },
   ]
 
-  // Fixed furniture: Yuvi walks around it and nothing may be built on it.
-  const FIXED_BLOCKERS: LabRoomCircle[] = [
-    { x: CREATE_AT[0], z: CREATE_AT[1], radius: 1.5 },
+  // A station's pad is not always under the learner's feet: the room station is
+  // the bench, so its ring and sign sit on the bench and the standing spot in
+  // front of it stays bare floor.
+  const ZONE_PADS: Record<LabRoomZoneId, { radius: number; color: number; markerY: number }> = {
+    avatar: { radius: 1.45, color: VIOLET, markerY: FLOOR_Y + 2.1 },
+    room: { radius: 1.75, color: AMBER, markerY: FLOOR_Y + 2.45 },
+  }
+  /** Where each station's ring and sign live — under the feet, or on the bench. */
+  const padSpot = (id: LabRoomZoneId) => (id === 'avatar' ? stations.avatar : stations.room)
+
+  // Scenery Yuvi walks around that the learner cannot move.
+  const DECOR_BLOCKERS: LabRoomCircle[] = [
     { x: EXPLORE_AT[0], z: EXPLORE_AT[1], radius: 1.4 },
     { x: MISSION_AT[0], z: MISSION_AT[1], radius: 1.0 },
   ]
@@ -1468,29 +1523,33 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     ring: THREE.Mesh
     ringMat: THREE.MeshBasicMaterial
     marker: THREE.Group
+    glow: THREE.Mesh
     glowMat: THREE.MeshBasicMaterial
     color: THREE.Color
+    radius: number
+    markerY: number
   }>()
 
   const zoneGlowTex = radialTexture('rgba(255,255,255,0.75)', 'rgba(255,255,255,0)')
   for (const zone of ZONES) {
-    const color = new THREE.Color(zone.id === 'avatar' ? VIOLET : CYAN)
-    const ring = addZoneRing(color, zone.x, zone.z, zone.radius, 0.34)
+    const pad = ZONE_PADS[zone.id]
+    const color = new THREE.Color(pad.color)
+    const ring = addZoneRing(color, 0, 0, pad.radius, 0.34)
     const ringMat = ring.material as THREE.MeshBasicMaterial
 
     const glowMat = track(new THREE.MeshBasicMaterial({
       map: zoneGlowTex, color, transparent: true, opacity: 0.14,
       blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
     }))
-    const glow = new THREE.Mesh(track(new THREE.PlaneGeometry(zone.radius * 2.8, zone.radius * 2.8)), glowMat)
+    const glow = new THREE.Mesh(track(new THREE.PlaneGeometry(pad.radius * 2.8, pad.radius * 2.8)), glowMat)
     glow.rotation.x = -Math.PI / 2
-    glow.position.set(zone.x, FLOOR_Y + 0.01, zone.z)
+    glow.position.y = FLOOR_Y + 0.01
     group.add(glow)
 
     // A floating sign so the station reads as "somewhere to go" from anywhere
     // in the room, not just when you are standing on it.
     const marker = new THREE.Group()
-    marker.position.set(zone.x, FLOOR_Y + 2.1, zone.z)
+    marker.position.y = pad.markerY
     group.add(marker)
     const markerMat = track(new THREE.MeshBasicMaterial({
       color, transparent: true, opacity: 0.62, blending: THREE.AdditiveBlending,
@@ -1514,15 +1573,45 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       roof.rotation.y = Math.PI / 4
       marker.add(roof)
     }
-    const beacon = new THREE.Mesh(track(new THREE.CylinderGeometry(0.05, 0.32, 1.9, 16, 1, true)), track(new THREE.MeshBasicMaterial({
-      color, transparent: true, opacity: 0.05, blending: THREE.AdditiveBlending,
-      depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
-    })))
-    beacon.position.y = -1.05
-    marker.add(beacon)
+    if (zone.id === 'avatar') {
+      // The light column belongs to the platform; the bench is its own landmark.
+      const beacon = new THREE.Mesh(track(new THREE.CylinderGeometry(0.05, 0.32, 1.9, 16, 1, true)), track(new THREE.MeshBasicMaterial({
+        color, transparent: true, opacity: 0.05, blending: THREE.AdditiveBlending,
+        depthWrite: false, toneMapped: false, side: THREE.DoubleSide,
+      })))
+      beacon.position.y = -1.05
+      marker.add(beacon)
+    }
 
-    zonePads.set(zone.id, { ring, ringMat, marker, glowMat, color })
+    zonePads.set(zone.id, { ring, ringMat, marker, glow, glowMat, color, radius: pad.radius, markerY: pad.markerY })
   }
+
+  /**
+   * Move a station and everything that belongs to it: the object, its pad, its
+   * sign, the zone the learner walks into, and the footprint others avoid.
+   */
+  const setStations = (next: RoomStations) => {
+    stations.avatar = { ...next.avatar }
+    stations.room = { ...next.room }
+    platform.position.set(stations.avatar.x, 0, stations.avatar.z)
+    bench.position.set(stations.room.x, FLOOR_Y, stations.room.z)
+
+    const stand = roomStandingSpot(stations.room)
+    for (const zone of ZONES) {
+      const spot = zone.id === 'avatar' ? stations.avatar : stand
+      zone.x = spot.x
+      zone.z = spot.z
+      const pad = zonePads.get(zone.id)!
+      const padAt = padSpot(zone.id)
+      pad.ring.position.x = padAt.x
+      pad.ring.position.z = padAt.z
+      pad.glow.position.x = padAt.x
+      pad.glow.position.z = padAt.z
+      pad.marker.position.x = padAt.x
+      pad.marker.position.z = padAt.z
+    }
+  }
+  setStations(stations)
 
   let highlightedZone: LabRoomZoneId | null = null
   const setZoneHighlight = (id: LabRoomZoneId | null) => { highlightedZone = id }
@@ -1534,11 +1623,11 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       const pulse = reduceMotion ? 0 : Math.sin(t * 2.1 + (zone.id === 'room' ? 1.4 : 0)) * 0.5 + 0.5
       pad.ringMat.opacity += ((lit ? 0.85 : 0.28 + pulse * 0.1) - pad.ringMat.opacity) * 0.12
       pad.glowMat.opacity += ((lit ? 0.4 : 0.12) - pad.glowMat.opacity) * 0.12
-      const targetScale = zone.radius * (lit ? 1.08 : 1)
+      const targetScale = pad.radius * (lit ? 1.08 : 1)
       pad.ring.scale.setScalar(pad.ring.scale.x + (targetScale - pad.ring.scale.x) * 0.15)
       if (!reduceMotion) {
         pad.marker.rotation.y = t * 0.5
-        pad.marker.position.y = FLOOR_Y + 2.1 + Math.sin(t * 0.9 + zone.x) * 0.07
+        pad.marker.position.y = pad.markerY + Math.sin(t * 0.9 + pad.ring.position.x) * 0.07
       }
     }
   })
@@ -1561,7 +1650,8 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
     blob.rotation.x = -Math.PI / 2
     blob.position.y = 0.008
     object.add(blob)
-    return { object, radius: spec.radius }
+    object.scale.setScalar(PROP_SCALE)
+    return { object, radius: spec.radius * PROP_SCALE }
   }
 
   const setUserItems = (items: RoomItem[]) => {
@@ -1599,11 +1689,57 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   }
 
   /** Circles Yuvi must walk around. Rebuilt whenever the layout changes. */
-  const blockers = (): LabRoomCircle[] => [...FIXED_BLOCKERS, ...userBlockers]
-  /** Circles nothing may be built on — the stations plus the two doors. */
-  const noBuildZones = (): LabRoomCircle[] => [
-    ...FIXED_BLOCKERS,
-    ...ZONES.map((zone) => ({ x: zone.x, z: zone.z, radius: zone.radius + 0.2 })),
+  const blockers = (): LabRoomCircle[] => [
+    { x: stations.room.x, z: stations.room.z, radius: STATION_RADIUS.room },
+    ...DECOR_BLOCKERS,
+    ...userBlockers,
+  ]
+
+  /** The station under this ray, if the learner right-clicked one. */
+  const pickStation = (raycaster: THREE.Raycaster): StationId | null => {
+    if (raycaster.intersectObject(platform, true).length) return 'avatar'
+    if (raycaster.intersectObject(bench, true).length) return 'room'
+    return null
+  }
+
+  /** A world point just above a station, so UI can be pinned to it. */
+  const stationAnchor = (id: StationId): THREE.Vector3 => {
+    const spot = id === 'avatar' ? stations.avatar : stations.room
+    return new THREE.Vector3(spot.x, FLOOR_Y + (id === 'avatar' ? 0.9 : 2.3), spot.z)
+  }
+
+  /** The placed prop under this ray, nearest first. */
+  const pickItem = (raycaster: THREE.Raycaster): string | null => {
+    const hits = raycaster.intersectObject(userGroup, true)
+    for (const hit of hits) {
+      let node: THREE.Object3D | null = hit.object
+      while (node && node.parent !== userGroup) node = node.parent
+      if (!node) continue
+      for (const [uid, built] of builtItems) if (built.object === node) return uid
+    }
+    return null
+  }
+
+  /** A world point just above a prop, so UI can be pinned to it. */
+  const itemAnchor = (uid: string): THREE.Vector3 | null => {
+    const built = builtItems.get(uid)
+    if (!built) return null
+    const height = (roomItemSpec(built.kind)?.height ?? 0.8) * PROP_SCALE
+    return new THREE.Vector3(built.object.position.x, FLOOR_Y + height + 0.3, built.object.position.z)
+  }
+  /**
+   * Circles nothing may be built on. `exclude` drops the station being carried,
+   * so a station is never blocked by the hole it just left.
+   */
+  const noBuildZones = (exclude?: StationId): LabRoomCircle[] => [
+    ...DECOR_BLOCKERS,
+    ...(exclude === 'room' ? [] : [
+      { x: stations.room.x, z: stations.room.z, radius: STATION_RADIUS.room },
+    ]),
+    ...(exclude === 'avatar' ? [] : [
+      { x: stations.avatar.x, z: stations.avatar.z, radius: STATION_RADIUS.avatar },
+    ]),
+    ...ZONES.filter((zone) => zone.id !== exclude).map((zone) => ({ x: zone.x, z: zone.z, radius: zone.radius + 0.2 })),
   ]
 
   // ── Placement ghost ──────────────────────────────────────────────────────
@@ -1620,6 +1756,9 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   const ghostGroup = new THREE.Group()
   ghostGroup.visible = false
   group.add(ghostGroup)
+  const ghostBodyHolder = new THREE.Group()
+  ghostBodyHolder.scale.setScalar(PROP_SCALE)
+  ghostGroup.add(ghostBodyHolder)
   const ghostRing = new THREE.Mesh(zoneRingGeo, ghostOkMat)
   ghostRing.rotation.x = -Math.PI / 2
   ghostRing.position.y = 0.02
@@ -1633,12 +1772,17 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
       return
     }
     if (kind !== ghostKind) {
-      if (ghostBody) ghostGroup.remove(ghostBody)
-      const spec = roomItemSpec(kind)
+      if (ghostBody) ghostBodyHolder.remove(ghostBody)
+      // A carried station shows only its footprint: dragging a translucent copy
+      // of the whole platform around would bury the room it is landing in.
+      const station = kind.startsWith('station:') ? (kind.slice(8) as StationId) : null
+      const spec = station ? null : roomItemSpec(kind)
       ghostBody = spec ? spec.build(itemKit, new THREE.Color(tint ?? spec.tint ?? '#ffffff')) : null
       ghostKind = kind
-      if (ghostBody) ghostGroup.add(ghostBody)
-      ghostRing.scale.setScalar(spec ? spec.radius * 1.15 : 0.6)
+      if (ghostBody) ghostBodyHolder.add(ghostBody)
+      ghostRing.scale.setScalar(
+        station ? STATION_RADIUS[station] : spec ? spec.radius * PROP_SCALE * 1.15 : 0.6,
+      )
     }
     const mat = valid ? ghostOkMat : ghostBadMat
     ghostRing.material = mat
@@ -1822,5 +1966,6 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
   return {
     group, quality, deckY, bounds, keyLight, update, burst, setAccent, dispose,
     zones: ZONES, setZoneHighlight, setUserItems, setGhost, setRoomStyle, blockers, noBuildZones,
+    setStations, pickItem, pickStation, itemAnchor, stationAnchor,
   }
 }

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { getLearnerState, updateLearnerState } from '../../services/api'
 import {
   DEFAULT_ROOM, MAX_ROOM_ITEMS, cloneRoom, newItemUid, normalizeRoom, sameRoom,
-  type MoodId, type RoomDesign, type RoomItem, type RoomStyleId, type WallStyleId,
+  type MoodId, type RoomDesign, type RoomItem, type RoomStyleId, type StationId, type WallStyleId,
 } from './RoomDesign'
 import { roomItemSpec } from './RoomCatalog'
 
@@ -77,6 +77,10 @@ export function useRoomDesign(autoLoad = true) {
   const setFloor = (floor: RoomStyleId) => setRoom((prev) => ({ ...prev, floor }))
   const setWall = (wall: WallStyleId) => setRoom((prev) => ({ ...prev, wall }))
   const setMood = (mood: MoodId) => setRoom((prev) => ({ ...prev, mood }))
+  /** Stations are furniture too: the learner decides where their room's doors are. */
+  const moveStation = (id: StationId, x: number, z: number) => {
+    setRoom((prev) => ({ ...prev, stations: { ...prev.stations, [id]: { x, z } } }))
+  }
 
   const reset = () => {
     setRoom(cloneRoom(DEFAULT_ROOM))
@@ -108,7 +112,7 @@ export function useRoomDesign(autoLoad = true) {
     loaded, room, items: room.items, full, dirty, saving, justSaved,
     selectedUid, setSelectedUid, selected,
     place, move, rotate, tint, remove, clear,
-    setFloor, setWall, setMood, reset, save, load,
+    setFloor, setWall, setMood, moveStation, reset, save, load,
   }
 }
 
