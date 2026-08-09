@@ -86,3 +86,38 @@ export interface UsageFilters {
   actorId?: string
   endpoint?: string
 }
+
+export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'meeting' | 'won' | 'lost'
+
+export interface Lead {
+  lead_id: string
+  created_at: string | null
+  updated_at: string | null
+  status: LeadStatus
+  notes: string
+  full_name: string
+  role: string
+  organization: string
+  city: string
+  phone: string
+  email: string
+  grades: string
+  message: string
+  source: string
+  updated_by: string | null
+}
+
+export interface LeadBoard {
+  leads: Lead[]
+  statuses: LeadStatus[]
+  sources: string[]
+  counts_by_status: Record<string, number>
+  total: number
+}
+
+export interface LeadFilters {
+  days?: number
+  status?: LeadStatus
+  source?: string
+  search?: string
+}
