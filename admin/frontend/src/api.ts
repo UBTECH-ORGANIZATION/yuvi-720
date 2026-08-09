@@ -1,4 +1,4 @@
-import type { AuthStatus, UsageFilters, UsageSummary } from './types'
+import type { AuthStatus, Lead, LeadBoard, LeadFilters, LeadStatus, UsageFilters, UsageSummary } from './types'
 
 export class ApiError extends Error {
   constructor(public readonly status: number) {
@@ -39,5 +39,33 @@ export function getUsageSummary(filters: UsageFilters, signal?: AbortSignal): Pr
   return apiFetch<UsageSummary>(`/api/ai-usage/summary?${params}`, {
     signal,
     cache: 'no-store',
+  })
+}
+
+function leadParams(filters: LeadFilters): URLSearchParams {
+  const params = new URLSearchParams()
+  if (filters.days) params.set('days', String(filters.days))
+  if (filters.status) params.set('status', filters.status)
+  if (filters.source) params.set('source', filters.source)
+  if (filters.search) params.set('search', filters.search)
+  return params
+}
+
+export function getLeads(filters: LeadFilters, signal?: AbortSignal): Promise<LeadBoard> {
+  return apiFetch<LeadBoard>(`/api/leads?${leadParams(filters)}`, { signal, cache: 'no-store' })
+}
+
+export function leadsExportUrl(filters: LeadFilters): string {
+  return `/api/leads/export?${leadParams(filters)}`
+}
+
+export function updateLead(
+  leadId: string,
+  changes: { status?: LeadStatus; notes?: string },
+): Promise<Lead> {
+  return apiFetch<Lead>(`/api/leads/${encodeURIComponent(leadId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(changes),
   })
 }
