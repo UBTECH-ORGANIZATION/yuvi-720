@@ -1757,8 +1757,7 @@
 
 .sp-companion__composer button:disabled { background: var(--sp-border-strong); box-shadow: none; cursor: not-allowed; }
 .sp-companion__composer button .sp-icon { transform: scaleX(1); }
-[dir="rtl"] .sp-companion__composer button .sp-icon,
-[dir="rtl"] .sp-companion__close .sp-icon { transform: scaleX(-1); }
+[dir="rtl"] .sp-companion__composer button .sp-icon { transform: scaleX(-1); }
 
 @media (max-width: 767px) {
   .sp-companion-backdrop {
@@ -1831,8 +1830,156 @@
   .sp-companion-lightbox__content { max-inline-size: calc(100vw - 24px); padding: 10px; border-radius: 18px; }
 }
 
-@keyframes sp-companion-backdrop-enter {
-  0%, 40% { opacity: 0; }
+/* ---------------------------------------------------------------------------
+   Full-screen chat (like a full chat app): the transcript fills the viewport
+   and the conversation history becomes a permanent rail on the PHYSICAL left,
+   in every language. Grid tracks are placed explicitly per direction because
+   the first grid track sits on the right under RTL.
+   --------------------------------------------------------------------------- */
+
+body.is-companion-fullscreen { overflow: hidden; }
+
+.sp-companion.is-fullscreen {
+  inset: 0;
+  z-index: 1460;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(230px, 22vw, 340px);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  inline-size: 100vw;
+  max-inline-size: 100vw;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  transform-origin: center;
+}
+
+.sp-companion.is-fullscreen:not(.is-opening):not(.is-closing) {
+  animation: none;
+  transform: none;
+}
+
+.sp-companion.is-fullscreen[dir='rtl'] {
+  grid-template-columns: clamp(230px, 22vw, 340px) minmax(0, 1fr);
+}
+
+.sp-companion.is-fullscreen > .sp-companion__head,
+.sp-companion.is-fullscreen > .sp-companion__disclosure {
+  grid-column: 1 / -1;
+}
+
+.sp-companion.is-fullscreen > .sp-companion__history {
+  grid-column: 2;
+  grid-row: 3 / -1;
+  min-inline-size: 0;
+  border-inline-start: 1px solid rgba(124, 108, 255, 0.16);
+}
+
+.sp-companion.is-fullscreen > .sp-companion__body { grid-column: 1; grid-row: 3; }
+.sp-companion.is-fullscreen > .sp-companion__composer-shell { grid-column: 1; grid-row: 4; }
+
+.sp-companion.is-fullscreen[dir='rtl'] > .sp-companion__history {
+  grid-column: 1;
+  border-inline-start: 0;
+  border-inline-end: 1px solid rgba(124, 108, 255, 0.16);
+}
+
+.sp-companion.is-fullscreen[dir='rtl'] > .sp-companion__body,
+.sp-companion.is-fullscreen[dir='rtl'] > .sp-companion__composer-shell { grid-column: 2; }
+
+/* Keep long transcripts readable on a wide screen. */
+.sp-companion.is-fullscreen > .sp-companion__body {
+  padding-inline: max(20px, calc((100% - 860px) / 2));
+  padding-block: 28px;
+}
+
+.sp-companion.is-fullscreen > .sp-companion__composer-shell {
+  padding-inline: max(14px, calc((100% - 860px) / 2));
+}
+
+.sp-companion.is-fullscreen .sp-companion__history-heading { padding: 16px 14px 10px; }
+.sp-companion.is-fullscreen .sp-companion__history-heading h2 { font-size: 15px; }
+.sp-companion.is-fullscreen .sp-companion__history-heading p { display: none; }
+.sp-companion.is-fullscreen .sp-companion__history-list { padding-inline: 10px; }
+.sp-companion.is-fullscreen .sp-companion__conversation { min-block-size: 74px; }
+
+@media (max-width: 860px) {
+  .sp-companion.is-fullscreen,
+  .sp-companion.is-fullscreen[dir='rtl'] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  }
+
+  .sp-companion.is-fullscreen > .sp-companion__history,
+  .sp-companion.is-fullscreen[dir='rtl'] > .sp-companion__history {
+    grid-column: 1;
+    grid-row: 3;
+    flex: none;
+    border: 0;
+    border-block-end: 1px solid rgba(124, 108, 255, 0.16);
+    max-block-size: 32vh;
+  }
+
+  .sp-companion.is-fullscreen > .sp-companion__body,
+  .sp-companion.is-fullscreen[dir='rtl'] > .sp-companion__body { grid-column: 1; grid-row: 4; }
+
+  .sp-companion.is-fullscreen > .sp-companion__composer-shell,
+  .sp-companion.is-fullscreen[dir='rtl'] > .sp-companion__composer-shell { grid-column: 1; grid-row: 5; }
+}
+
+/* Expanding wipes the panel open from the docked edge; collapsing shrinks it
+   back to that edge, so the change is impossible to miss. */
+@keyframes sp-companion-fs-in {
+  0% {
+    clip-path: inset(0 0 0 calc(100% - var(--sp-companion-width, 430px)));
+    opacity: 0.7;
+  }
+  55% { opacity: 1; }
+  100% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+
+@keyframes sp-companion-fs-out {
+  0% {
+    opacity: 0.25;
+    transform: translateX(-46px) scaleY(1.03);
+  }
+  60% { opacity: 1; }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scaleY(1);
+  }
+}
+
+@keyframes sp-companion-fs-rail {
+  from { opacity: 0; transform: translateX(46px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes sp-companion-fs-fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sp-companion.is-fullscreen.is-fs-in:not(.is-opening):not(.is-closing) {
+  animation: sp-companion-fs-in 380ms var(--sp-ease) both;
+}
+
+.sp-companion.is-fs-out:not(.is-fullscreen):not(.is-opening):not(.is-closing) {
+  animation: sp-companion-fs-out 340ms var(--sp-ease) both;
+}
+
+.sp-companion.is-fs-in > .sp-companion__history {
+  animation: sp-companion-fs-rail 420ms var(--sp-ease) both;
+}
+
+.sp-companion.is-fs-in > .sp-companion__body,
+.sp-companion.is-fs-out > .sp-companion__body {
+  animation: sp-companion-fs-fade 340ms var(--sp-ease) both;
+}
+
+@keyframes sp-companion-backdrop-enter {  0%, 40% { opacity: 0; }
   76%, 100% { opacity: 1; }
 }
 
@@ -1847,7 +1994,12 @@
   .sp-companion-slot.is-closing { animation: none; }
   .sp-companion,
   .sp-companion.is-opening,
-  .sp-companion.is-closing { animation: none; transform: none; }
+  .sp-companion.is-closing,
+  .sp-companion.is-fs-in,
+  .sp-companion.is-fs-out { animation: none; transform: none; }
+  .sp-companion.is-fs-in > .sp-companion__history,
+  .sp-companion.is-fs-in > .sp-companion__body,
+  .sp-companion.is-fs-out > .sp-companion__body { animation: none; }
   .sp-companion.is-opening .sp-companion__yuvi-stage { opacity: 1; transform: none; }
   .sp-companion__yuvi-loader { animation-duration: 1.4s; }
   .sp-companion__thinking-orbit,

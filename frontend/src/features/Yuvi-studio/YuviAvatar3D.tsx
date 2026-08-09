@@ -7,12 +7,37 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import yuviFaviconUrl from '../../assets/yuvi-favicon.png'
 import type { YuviColors, YuviDesign, YuviSlot, YuviVariant } from './YuviDesign'
 import { getAsset, buildBlondeHair, buildEyebrowsBundle } from './YuviAssets'
+import { roomItemSpec } from './RoomCatalog'
+import { createYuviLabRoom, detectLabQuality, roomStandingSpot, PROP_SCALE, STATION_RADIUS, type LabRoom, type LabRoomQuality, type LabRoomZoneId } from './YuviLabRoom'
+import type { MoodId, RoomItem, RoomStations, RoomStyleId, StationId, WallStyleId } from './RoomDesign'
+
+/** Camera framings the studio can request when the learner switches category. */
+export type YuviFocus = 'full' | 'head' | 'face' | 'body' | 'hand' | 'back' | 'roam' | 'room'
+
+/** What the learner is about to drop into the room, if anything. */
+export interface YuviPlacing {
+  kind: string
+  tint?: string
+  rot?: number
+  /** Set when an already-placed prop is being carried rather than a new one. */
+  uid?: string
+  /** Set when a whole walk-in station is being carried. */
+  station?: StationId
+  /** The rotation it was picked up at, so a cancelled move changes nothing. */
+  rot0?: number
+}
 
 export interface YuviAvatarHandle {
   equip: (slot: YuviSlot, id: string | null, animate?: boolean) => void
   setColors: (colors: YuviColors, animate?: boolean) => void
   setVariant: (variant: YuviVariant, animate?: boolean) => void
   applyDesign: (design: YuviDesign, animate?: boolean) => void
+  /** Glide the studio camera to the part of Yuvi the learner is editing. */
+  focus: (view: YuviFocus) => void
+  /** Send Yuvi walking to a spot on the room floor. */
+  walkTo: (x: number, z: number) => void
+  /** Walk Yuvi back onto the upgrade platform. */
+  recenter: () => void
 }
 
 interface Props {
@@ -27,6 +52,8 @@ interface Props {
   yTooltip?: string
   /** Studio mode: drag to orbit Yuvi, and frame him a little higher. */
   orbit?: boolean
+  /** Yuvi Lab: build the LED podium, floor glow and ambient motes around him. */
+  stage?: boolean
   /** Expressive activity states update through refs without remounting WebGL. */
   thinking?: boolean
   speaking?: boolean
@@ -59,6 +86,26 @@ interface Props {
   headingAngle?: number
   /** Reduce pixel density and antialiasing for small, repeated roadmap avatars. */
   performanceMode?: 'standard' | 'low'
+  /** Studio roaming: the learner walks Yuvi around the room (click or WASD). */
+  roam?: boolean
+  /** Fires when Yuvi steps onto or off one of the room's stations. */
+  onZoneChange?: (zone: LabRoomZoneId | null) => void
+  /** The learner's placed props. A new array identity re-syncs the room. */
+  roomItems?: RoomItem[]
+  /** Where the two walk-in stations stand. A new identity re-syncs them. */
+  stations?: RoomStations | null
+  /** Floor, wall and lighting mood chosen by the learner. */
+  roomStyle?: { floor: RoomStyleId; wall: WallStyleId; mood: MoodId } | null
+  /** Prop currently being positioned — shown as a hologram under the pointer. */
+  placing?: YuviPlacing | null
+  /** While a station panel is open, the floor is a build surface only — a stray
+   *  tap must not walk Yuvi off the station and close the panel under the learner. */
+  lockRoam?: boolean
+  /** Fires when the learner clicks the floor while placing. */
+  onPlaceAt?: (x: number, z: number, valid: boolean) => void
+  /** Right-click on a placed prop. Passing it enables in-world prop menus;
+   *  `null` means the menu should close. */
+  onItemMenu?: (menu: { uid: string; x: number; y: number } | null) => void
 }
 
 // The chest-badge favicon is shared across every avatar instance.
@@ -84,7 +131,7 @@ function mixWhite([r, g, b]: number[], t: number): [number, number, number] {
 const rgba = ([r, g, b]: number[], a: number) => `rgba(${r}, ${g}, ${b}, ${a})`
 
 export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAvatar3D(
-  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard' },
+  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard', roam = false, onZoneChange, roomItems, stations = null, roomStyle = null, placing = null, onPlaceAt, lockRoam = false, onItemMenu },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null)
@@ -109,6 +156,15 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   const walkingRef = useRef(walking)
   const headingRef = useRef(heading)
   const headingAngleRef = useRef(headingAngle)
+  const roamRef = useRef(roam)
+  const onZoneChangeRef = useRef(onZoneChange)
+  const roomItemsRef = useRef(roomItems)
+  const stationsRef = useRef(stations)
+  const roomStyleRef = useRef(roomStyle)
+  const placingRef = useRef(placing)
+  const lockRoamRef = useRef(lockRoam)
+  const onPlaceAtRef = useRef(onPlaceAt)
+  const onItemMenuRef = useRef(onItemMenu)
   const pullingStartedAtRef = useRef(pulling ? Date.now() : 0)
   useEffect(() => { mutedRef.current = muted }, [muted])
   useEffect(() => { onYClickRef.current = onYClick }, [onYClick])
@@ -134,12 +190,24 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   useEffect(() => { walkingRef.current = walking }, [walking])
   useEffect(() => { headingRef.current = heading }, [heading])
   useEffect(() => { headingAngleRef.current = headingAngle }, [headingAngle])
+  useEffect(() => { roamRef.current = roam }, [roam])
+  useEffect(() => { onZoneChangeRef.current = onZoneChange }, [onZoneChange])
+  useEffect(() => { roomItemsRef.current = roomItems }, [roomItems])
+  useEffect(() => { stationsRef.current = stations }, [stations])
+  useEffect(() => { roomStyleRef.current = roomStyle }, [roomStyle])
+  useEffect(() => { placingRef.current = placing }, [placing])
+  useEffect(() => { lockRoamRef.current = lockRoam }, [lockRoam])
+  useEffect(() => { onPlaceAtRef.current = onPlaceAt }, [onPlaceAt])
+  useEffect(() => { onItemMenuRef.current = onItemMenu }, [onItemMenu])
 
   useImperativeHandle(ref, () => ({
     equip: (slot, id, animate = true) => controllerRef.current?.equip(slot, id, animate),
     setColors: (colors, animate = false) => controllerRef.current?.setColors(colors, animate),
     setVariant: (variant, animate = true) => controllerRef.current?.setVariant(variant, animate),
     applyDesign: (design, animate = false) => controllerRef.current?.applyDesign(design, animate),
+    focus: (view) => controllerRef.current?.focus(view),
+    walkTo: (x, z) => controllerRef.current?.walkTo(x, z),
+    recenter: () => controllerRef.current?.recenter(),
   }), [])
 
   useEffect(() => {
@@ -163,7 +231,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     if (avatarRoot) avatarRoot.dataset.webglState = 'ready'
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, performanceMode === 'low' ? 1.25 : 2))
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 0.98
+    renderer.toneMappingExposure = 1.06
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.domElement.style.display = 'block'
     renderer.domElement.style.width = '100%'
@@ -172,16 +240,227 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
 
     const scene = new THREE.Scene()
     const pmrem = new THREE.PMREMGenerator(renderer)
-    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.035).texture
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.028).texture
     pmrem.dispose()
 
     const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100)
+    const BASE_FOV = 30
     camera.position.set(0, 0, orbit ? 6.3 : 5.4)
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xd6e0f5, 0.85))
-    const key = new THREE.DirectionalLight(0xffffff, 1.3); key.position.set(3, 7, 6); scene.add(key)
-    const fill = new THREE.DirectionalLight(0xbcd7ef, 0.5); fill.position.set(-5, 2, 3); scene.add(fill)
-    const rim = new THREE.DirectionalLight(0xdcecff, 0.5); rim.position.set(0, 3, -6); scene.add(rim)
+    // Studio-style rig: one soft key, a cool fill, and two coloured rims
+    // (violet + cyan) that trace the silhouette. The coloured edge light is
+    // what separates a modern character render from flat toy plastic.
+    const hemi = new THREE.HemisphereLight(0xf4f6ff, 0xa192e6, 0.62); scene.add(hemi)
+    const key = new THREE.DirectionalLight(0xffffff, 1.55); key.position.set(2.6, 6.4, 5.6); scene.add(key)
+    const fill = new THREE.DirectionalLight(0xc7d8ff, 0.42); fill.position.set(-5, 1.8, 3.4); scene.add(fill)
+    const rim = new THREE.DirectionalLight(0x8f6cff, 1.45); rim.position.set(-3.6, 2.8, -5.2); scene.add(rim)
+    const rimCool = new THREE.DirectionalLight(0x4eeef0, 1.05); rimCool.position.set(3.8, 1.4, -4.8); scene.add(rimCool)
+    const bounce = new THREE.PointLight(0xa78bfa, 0.45, 9); bounce.position.set(0, -2.4, 2.6); scene.add(bounce)
+
+    // ── Yuvi Lab room ──
+    // A real 3D room instead of a flat backdrop: floor, walls, ceiling, a lit
+    // upgrade platform, a workbench, shelves of parts and hologram readouts.
+    // The room lives in its own module so the shop and the reward reveal can
+    // later step into exactly the same space.
+    const roomQuality: LabRoomQuality =
+      performanceMode === 'low' || reduceMotion ? 'low' : detectLabQuality()
+    let room: LabRoom | null = null
+    if (stage) {
+      renderer.shadowMap.enabled = roomQuality === 'high'
+      renderer.shadowMap.type = THREE.PCFShadowMap
+      room = createYuviLabRoom(scene, {
+        quality: roomQuality,
+        reduceMotion,
+        deckY: -0.92,
+        accent: initialDesign.colors.glow,
+      })
+      // The room brings its own key light from the ceiling, so the free-floating
+      // studio rig steps back to rims and fill — otherwise the bay reads flat.
+      // The ambient hemisphere in particular has to come most of the way down:
+      // uniform fill light is exactly what made every surface look like the
+      // same moulded plastic.
+      hemi.intensity = 0.2
+      key.intensity = 0.5
+      fill.intensity = 0.28
+      rim.intensity = 1.2
+      rimCool.intensity = 0.85
+      bounce.intensity = 0.22
+      // Aerial haze: the far wall sits back, the platform stays forward, and
+      // the view through the window reads as genuinely distant.
+      scene.fog = new THREE.FogExp2(0x05071a, 0.036)
+    }
+    const roomBounds = room?.bounds ?? null
+
+    // Only solid shell parts cast into the room's single shadow map — glowing
+    // visor sheens and additive light planes would smear it.
+    const castShadows = (obj: THREE.Object3D) => {
+      if (!room || roomQuality !== 'high') return
+      obj.traverse((child: any) => {
+        if (!child.isMesh) return
+        const material = child.material
+        if (Array.isArray(material) || !material) return
+        if ((material.isMeshStandardMaterial || material.isMeshPhysicalMaterial) && !material.transparent) {
+          child.castShadow = true
+        }
+      })
+    }
+
+    // ── Camera framing ──
+    // Switching category glides the camera to the part being edited, which is
+    // what makes the studio read as a lab rather than a settings screen.
+    const FRAMES: Record<string, { pos: [number, number, number]; look: [number, number, number]; yaw: number | null; anchored?: boolean; fov?: number; dolly?: number }> = {
+      full: { pos: [0, 0.18, 6.9], look: [0, -0.34, 0], yaw: 0 },
+      head: { pos: [0, 0.72, 4.1], look: [0, 0.74, 0], yaw: 0 },
+      face: { pos: [0, 0.7, 3.5], look: [0, 0.74, 0], yaw: 0 },
+      body: { pos: [0, 0.02, 4.7], look: [0, 0.02, 0], yaw: 0 },
+      hand: { pos: [0.75, -0.18, 4.5], look: [0.3, -0.2, 0], yaw: 0.35 },
+      back: { pos: [0, 0.34, 5.7], look: [0, 0.1, 0], yaw: Math.PI },
+      // Walking shot: a wide establishing lens lifted off the floor, so the
+      // room is the subject and Yuvi is just the character in it. He is also
+      // free to turn wherever he is heading instead of being locked facing the
+      // lens. `dolly` lets these two shots sit just outside the room's open
+      // front — far enough back to see the whole floor, still too narrow to see
+      // past a wall.
+      roam: { pos: [0, 2.5, 10.6], look: [0, -0.5, 0], yaw: null, fov: 44, dolly: 4 },
+      // Decorating is the one shot that must not follow Yuvi: the learner is
+      // looking at the floor plan, not at the robot standing on the station.
+      room: { pos: [-0.7, 3.9, 14], look: [-0.7, -1.05, -1.2], yaw: null, anchored: false, fov: 56, dolly: 4.2 },
+    }
+    // Yuvi spawns in the open floor in front of the two stations, never on one
+    // of them — otherwise the studio would open straight into a panel and the
+    // learner would never see that the room is walkable.
+    const SPAWN: [number, number] = roam ? [0, 3] : [0, 0]
+    // Roaming opens on the establishing shot. Starting on the portrait frame
+    // and easing out meant every entrance began as a close-up of Yuvi's face.
+    const openingShot = roam ? FRAMES.roam : FRAMES.full
+    const camPos = new THREE.Vector3(openingShot.pos[0] + SPAWN[0], openingShot.pos[1], openingShot.pos[2] + SPAWN[1])
+    const camLook = new THREE.Vector3(openingShot.look[0] + SPAWN[0], openingShot.look[1], openingShot.look[2] + SPAWN[1])
+    const camPosTarget = camPos.clone()
+    const camLookTarget = camLook.clone()
+    camera.fov = openingShot.fov ?? BASE_FOV
+    camera.updateProjectionMatrix()
+    let yawTarget: number | null = 0
+    // The active shot, kept as data so it can be re-anchored to Yuvi every
+    // frame while he walks instead of being baked once into the target.
+    let frameShot = openingShot
+    let appliedRoomItems: RoomItem[] | undefined
+    let appliedPlacing: YuviPlacing | null | undefined
+    let appliedStations: RoomStations | null | undefined
+    let appliedRoomStyle: { floor: RoomStyleId; wall: WallStyleId; mood: MoodId } | null | undefined
+
+    // ── Free camera ──
+    // The category frame is only a starting point: the learner's own orbit,
+    // dolly and pan ride on top of it as signed offsets, so walking around the
+    // bay never fights the automatic framing and picking a tab re-centres.
+    let userYaw = 0, userPitch = 0, userZoom = 1
+    let userPanX = 0, userPanY = 0, velYaw = 0
+    const YAW_LIMIT = 1.15
+    const resetUserView = () => {
+      userYaw = 0; userPitch = 0; userZoom = 1
+      userPanX = 0; userPanY = 0; velYaw = 0
+    }
+    const camOffset = new THREE.Vector3()
+    const camRight = new THREE.Vector3()
+    const camSpherical = new THREE.Spherical()
+
+    // ── Roaming ──
+    // The studio stops being a settings screen the moment the learner can walk
+    // Yuvi anywhere in the room. Position lives in room-floor world XZ; the
+    // camera frame rides along so the framing stays exactly as it was authored.
+    const ROAM_SPEED = 2.5          // metres per second, a relaxed walk
+    const BODY_RADIUS = 0.44        // how close Yuvi may get to a prop
+    const DECK_RADIUS = 1.1         // inside this he is standing on the platform
+    const DECK_LIFT = 0.13          // the platform is this much above the floor
+    const roamPos = new THREE.Vector2(SPAWN[0], SPAWN[1])
+    const roamTarget = new THREE.Vector2(SPAWN[0], SPAWN[1])
+    const roamStep = new THREE.Vector2()
+    const roamDir = new THREE.Vector3()
+    const roamForward = new THREE.Vector3()
+    const roamSide = new THREE.Vector3()
+    let roamSpeed = 0               // eased 0..1, drives the gait
+    let roamZone: LabRoomZoneId | null = null
+    // Set when he has just stepped onto a station and still has to turn around.
+    let faceLearnerPending = false
+    let deckBlend = roam ? 0 : 1    // 1 = on the platform, 0 = on the floor
+    const heldKeys = new Set<string>()
+    const walkLimits = roomBounds
+      ? {
+          minX: -roomBounds.halfX + 0.7, maxX: roomBounds.halfX - 0.7,
+          minZ: roomBounds.backZ + 1.1, maxZ: roomBounds.frontZ - 3.2,
+        }
+      : { minX: -4, maxX: 4, minZ: -5.5, maxZ: 5.2 }
+
+    /** Slide a candidate position out of every blocking footprint. */
+    const resolveCollisions = (point: THREE.Vector2) => {
+      const circles = room?.blockers() ?? []
+      for (const circle of circles) {
+        const dx = point.x - circle.x
+        const dz = point.y - circle.z
+        const minimum = circle.radius + BODY_RADIUS
+        const distance = Math.hypot(dx, dz)
+        if (distance >= minimum) continue
+        if (distance < 1e-4) { point.x += minimum; continue }
+        point.x = circle.x + (dx / distance) * minimum
+        point.y = circle.z + (dz / distance) * minimum
+      }
+      point.x = THREE.MathUtils.clamp(point.x, walkLimits.minX, walkLimits.maxX)
+      point.y = THREE.MathUtils.clamp(point.y, walkLimits.minZ, walkLimits.maxZ)
+    }
+
+    const walkTo = (x: number, z: number) => {
+      roamTarget.set(x, z)
+      resolveCollisions(roamTarget)
+    }
+    const recenter = () => walkTo(0, 0)
+
+    // ── Floor picking ──
+    // Both "walk here" and "drop the sofa here" are the same question: where
+    // does the pointer meet the floor?
+    const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(roomBounds?.floorY ?? -1.05))
+    const floorHit = new THREE.Vector3()
+    const pickFloor = (event: { clientX: number; clientY: number }): { x: number; z: number } | null => {
+      const rect = renderer.domElement.getBoundingClientRect()
+      if (!rect.width || !rect.height) return null
+      ndc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+      ndc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+      raycaster.setFromCamera(ndc, camera)
+      if (!raycaster.ray.intersectPlane(floorPlane, floorHit)) return null
+      return { x: floorHit.x, z: floorHit.z }
+    }
+
+    /** Footprint of a prop as it is actually built, not as it is catalogued. */
+    const propRadius = (kind: string) => (roomItemSpec(kind)?.radius ?? 0.5) * PROP_SCALE
+    /** What a carried thing needs clear around it — a prop, or a whole station. */
+    const carriedRadius = (placingNow: YuviPlacing) =>
+      placingNow.station ? STATION_RADIUS[placingNow.station] : propRadius(placingNow.kind)
+
+    /**
+     * A spot is free when it is on the floor and no footprint reaches it. The
+     * circles are hard: nothing in the room may ever intersect anything else.
+     */
+    const canBuildAt = (x: number, z: number, radius: number, station?: StationId) => {
+      if (x < walkLimits.minX || x > walkLimits.maxX) return false
+      if (z < walkLimits.minZ || z > walkLimits.maxZ) return false
+      // The bench is only a valid spot if the floor in front of it — where the
+      // learner has to stand to use it — is inside the room too.
+      if (station === 'room') {
+        const stand = roomStandingSpot({ x, z })
+        if (stand.x < walkLimits.minX || stand.x > walkLimits.maxX) return false
+        if (stand.z < walkLimits.minZ || stand.z > walkLimits.maxZ) return false
+      }
+      for (const circle of room?.noBuildZones(station) ?? []) {
+        if (Math.hypot(x - circle.x, z - circle.z) < circle.radius + radius) return false
+      }
+      for (const item of roomItemsRef.current ?? []) {
+        if (Math.hypot(x - item.x, z - item.z) < propRadius(item.kind) + radius) return false
+      }
+      return true
+    }
+
+    if (orbit) {
+      camera.position.copy(camPos)
+      camera.lookAt(camLook)
+    }
 
     const design: YuviDesign = {
       version: initialDesign.version,
@@ -191,10 +470,21 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     }
 
     // ── Materials (identical palette to the start-scene YuviRobot3D) ──
-    const blueMat = new THREE.MeshStandardMaterial({ color: 0x717378, roughness: 0.3, metalness: 0.14, envMapIntensity: 0.7 })
-    const jointMat = new THREE.MeshStandardMaterial({ color: 0x5c5e62, roughness: 0.34, metalness: 0.1, envMapIntensity: 0.65 })
-    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.26, metalness: 0.08, envMapIntensity: 0.85 })
-    const faceMat = new THREE.MeshBasicMaterial({ color: 0x050711 })
+    // Yuvi 2.0: soft-ceramic shell with a real clearcoat and a whisper of
+    // iridescence over a deep indigo inner core — no flat grey plastic.
+    const CORE_COLOR = new THREE.Color(0x2b2560)
+    const blueMat = new THREE.MeshPhysicalMaterial({
+      color: 0xf1f2fb, roughness: 0.24, metalness: 0,
+      clearcoat: 1, clearcoatRoughness: 0.13,
+      sheen: 0.55, sheenColor: new THREE.Color(0xb9a8ff), sheenRoughness: 0.55,
+      iridescence: 0.22, iridescenceIOR: 1.35,
+      envMapIntensity: 1.2,
+    })
+    const jointMat = new THREE.MeshPhysicalMaterial({ color: 0x2b2560, roughness: 0.34, metalness: 0.75, envMapIntensity: 1.15, clearcoat: 0.5, clearcoatRoughness: 0.28 })
+    // Formerly plain white — now the dark inner suit the shell plates sit on.
+    const whiteMat = new THREE.MeshPhysicalMaterial({ color: 0x342c6d, roughness: 0.4, metalness: 0.3, envMapIntensity: 1.05, clearcoat: 0.7, clearcoatRoughness: 0.24, sheen: 0.4, sheenColor: new THREE.Color(0x7c6bff) })
+    const faceMat = new THREE.MeshPhysicalMaterial({ color: 0x07061a, roughness: 0.07, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 1.5 })
+    const visorSheenMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.085, depthTest: false, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending })
     const ringMat = new THREE.MeshStandardMaterial({ color: 0x3fd9e0, emissive: 0x3fd9e0, emissiveIntensity: 1.8, roughness: 0.3, toneMapped: false })
     const earCapMat = new THREE.MeshStandardMaterial({ color: 0x3fd9e0, emissive: 0x3fd9e0, emissiveIntensity: 0.6, roughness: 0.3, toneMapped: false })
     const antennaTipMat = new THREE.MeshStandardMaterial({ color: 0x4eeef0, emissive: 0x4eeef0, emissiveIntensity: 2.2, toneMapped: false, roughness: 0.25 })
@@ -316,17 +606,21 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     }
 
     // ── Legs (chunky articulated parts with soft boots) ──
+    // The group's origin sits at the hip joint, so `rotation.x` swings the leg
+    // from the pelvis the way a stride does. With the pivot down near the ankle
+    // the hips swung out of the torso on every step and the walk fell apart.
+    const HIP_Y = 0.51
     const makeLeg = (side: number) => {
       const grp = new THREE.Group()
-      const hip = new THREE.Mesh(new THREE.SphereGeometry(0.104, 32, 24), blueMat); hip.scale.set(1.08, 0.92, 1); hip.position.set(0.014 * side, 0.39, 0.015); grp.add(hip)
-      const thigh = new THREE.Mesh(new RoundedBoxGeometry(0.16, 0.165, 0.145, 10, 0.06), blueMat); thigh.position.set(0.01 * side, 0.29, 0.018); thigh.rotation.z = 0.025 * side; grp.add(thigh)
-      const knee = new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.078, 0.052, 32), jointMat); knee.position.set(0.003 * side, 0.18, 0.025); knee.scale.set(1.05, 0.78, 1); grp.add(knee)
-      const shin = new THREE.Mesh(new RoundedBoxGeometry(0.162, 0.19, 0.145, 10, 0.06), blueMat); shin.position.set(-0.003 * side, 0.075, 0.04); shin.rotation.z = -0.015 * side; grp.add(shin)
-      const shinHighlight = new THREE.Mesh(new RoundedBoxGeometry(0.108, 0.13, 0.026, 8, 0.026), whiteMat); shinHighlight.position.set(-0.003 * side, 0.078, 0.126); shinHighlight.rotation.z = -0.015 * side; grp.add(shinHighlight)
-      const ankle = new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.078, 0.052, 32), blueMat); ankle.position.set(-0.003 * side, -0.045, 0.04); ankle.scale.set(1.12, 0.66, 1); grp.add(ankle)
-      const foot = new THREE.Mesh(new RoundedBoxGeometry(0.255, 0.125, 0.36, 10, 0.068), blueMat); foot.position.set(0.006 * side, -0.1, 0.105); foot.rotation.x = -0.09; grp.add(foot)
-      const toe = new THREE.Mesh(new RoundedBoxGeometry(0.205, 0.07, 0.17, 8, 0.04), whiteMat); toe.position.set(0.006 * side, -0.078, 0.208); toe.rotation.x = -0.1; grp.add(toe)
-      grp.position.set(0.145 * side, 0.12, 0)
+      const hip = new THREE.Mesh(new THREE.SphereGeometry(0.104, 32, 24), blueMat); hip.scale.set(1.08, 0.92, 1); hip.position.set(0.014 * side, 0, 0.015); grp.add(hip)
+      const thigh = new THREE.Mesh(new RoundedBoxGeometry(0.16, 0.165, 0.145, 10, 0.06), blueMat); thigh.position.set(0.01 * side, -0.1, 0.018); thigh.rotation.z = 0.025 * side; grp.add(thigh)
+      const knee = new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.078, 0.052, 32), jointMat); knee.position.set(0.003 * side, -0.21, 0.025); knee.scale.set(1.05, 0.78, 1); grp.add(knee)
+      const shin = new THREE.Mesh(new RoundedBoxGeometry(0.162, 0.19, 0.145, 10, 0.06), blueMat); shin.position.set(-0.003 * side, -0.315, 0.04); shin.rotation.z = -0.015 * side; grp.add(shin)
+      const shinHighlight = new THREE.Mesh(new RoundedBoxGeometry(0.108, 0.13, 0.026, 8, 0.026), whiteMat); shinHighlight.position.set(-0.003 * side, -0.312, 0.126); shinHighlight.rotation.z = -0.015 * side; grp.add(shinHighlight)
+      const ankle = new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.078, 0.052, 32), blueMat); ankle.position.set(-0.003 * side, -0.435, 0.04); ankle.scale.set(1.12, 0.66, 1); grp.add(ankle)
+      const foot = new THREE.Mesh(new RoundedBoxGeometry(0.255, 0.125, 0.36, 10, 0.068), blueMat); foot.position.set(0.006 * side, -0.49, 0.105); foot.rotation.x = -0.09; grp.add(foot)
+      const toe = new THREE.Mesh(new RoundedBoxGeometry(0.205, 0.07, 0.17, 8, 0.04), whiteMat); toe.position.set(0.006 * side, -0.468, 0.208); toe.rotation.x = -0.1; grp.add(toe)
+      grp.position.set(0.145 * side, HIP_Y, 0)
       return grp
     }
     const legL = makeLeg(-1), legR = makeLeg(1)
@@ -342,7 +636,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     sparkBadge.position.set(0, 0.845, 0.23); sparkBadge.renderOrder = 8; robot.add(sparkBadge)
     // Hit target sized to the visible "Y" (the studio/launcher robots have no
     // competing controls, so a comfortable target is fine).
-    const badgeHit = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), new THREE.MeshBasicMaterial({ visible: false }))
+    const badgeHit = new THREE.Mesh(new THREE.PlaneGeometry(0.44, 0.44), new THREE.MeshBasicMaterial({ visible: false }))
     badgeHit.position.set(0, 0.845, 0.231); robot.add(badgeHit)
 
     // ── Arms ──
@@ -365,21 +659,29 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     // ── Head ──
     const head = new THREE.Group(); head.position.y = 1.59; head.scale.setScalar(0.9); robot.add(head)
     const helmet = new THREE.Mesh(new RoundedBoxGeometry(1.12, 1.02, 0.94, 10, 0.42), blueMat); helmet.scale.set(1, 1.0, 0.95); head.add(helmet)
-    const antenna = new THREE.Group(); antenna.position.set(0, 0.52, 0.02); head.add(antenna)
-    const antennaRod = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.018, 0.22, 14), jointMat); antennaRod.position.y = 0.11; antenna.add(antennaRod)
-    const antennaTip = new THREE.Mesh(new THREE.SphereGeometry(0.052, 20, 18), antennaTipMat); antennaTip.position.y = 0.24; antenna.add(antennaTip)
-    const antennaLight = new THREE.PointLight(0x4eeef0, 0.35, 1.3); antennaLight.position.y = 0.24; antenna.add(antennaLight)
-    const screen = makeFlatRoundedRect(0.82, 0.62, 0.13, faceMat); screen.position.set(0, -0.03, 0.455); head.add(screen)
+    // A floating halo replaces the old rod-and-bulb antenna: it reads as a
+    // modern AI companion instead of a toy robot aerial.
+    const antenna = new THREE.Group(); antenna.position.set(0, 0.6, 0.02); head.add(antenna)
+    const antennaTip = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.018, 14, 48), antennaTipMat); antennaTip.rotation.x = Math.PI / 2; antenna.add(antennaTip)
+    const haloGlowMat = new THREE.MeshBasicMaterial({ color: 0x4eeef0, transparent: true, opacity: 0.2, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending })
+    const antennaHalo = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.055, 10, 40), haloGlowMat); antennaHalo.rotation.x = Math.PI / 2; antenna.add(antennaHalo)
+    const antennaLight = new THREE.PointLight(0x4eeef0, 0.35, 1.3); antenna.add(antennaLight)
+    // Wide wrap-around glass visor with an inset bezel and a glass sheen streak.
+    const bezel = makeFlatRoundedRect(1.0, 0.72, 0.3, jointMat); bezel.position.set(0, -0.03, 0.451); head.add(bezel)
+    const screen = makeFlatRoundedRect(0.94, 0.66, 0.27, faceMat); screen.position.set(0, -0.03, 0.457); head.add(screen)
     const faceLight = makeFaceLightTexture()
     const faceLightMat = new THREE.MeshBasicMaterial({ map: faceLight.texture, transparent: true, opacity: 0.95, depthTest: false, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending })
     const faceLights = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 0.62), faceLightMat); faceLights.position.set(0, -0.03, 0.468); faceLights.renderOrder = 7; head.add(faceLights)
+    const visorSheen = makeFlatRoundedRect(0.78, 0.11, 0.055, visorSheenMat); visorSheen.position.set(-0.05, 0.14, 0.472); visorSheen.rotation.z = -0.2; visorSheen.renderOrder = 9; head.add(visorSheen)
     const faceGlow = new THREE.PointLight(0x4eeef0, 0.28, 1.1); faceGlow.position.set(0, -0.02, 0.62); head.add(faceGlow)
     const earGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.12, 30)
     const earL = new THREE.Mesh(earGeo, blueMat); earL.rotation.z = Math.PI / 2; earL.position.set(-0.56, -0.02, 0.02); head.add(earL)
     const earR = earL.clone(); earR.position.x = 0.56; head.add(earR)
-    const earCapL = new THREE.Mesh(new THREE.CircleGeometry(0.07, 26), earCapMat); earCapL.rotation.y = -Math.PI / 2; earCapL.position.set(-0.623, -0.02, 0.02); head.add(earCapL)
-    const earCapR = earCapL.clone(); earCapR.rotation.y = Math.PI / 2; earCapR.position.x = 0.623; head.add(earCapR)
-    const nativeEarParts = [earL, earR, earCapL, earCapR]
+    const earCapL = new THREE.Mesh(new THREE.TorusGeometry(0.076, 0.017, 12, 30), earCapMat); earCapL.rotation.y = Math.PI / 2; earCapL.position.set(-0.625, -0.02, 0.02); head.add(earCapL)
+    const earCapR = earCapL.clone(); earCapR.position.x = 0.625; head.add(earCapR)
+    const earDiscL = new THREE.Mesh(new THREE.CircleGeometry(0.07, 26), faceMat); earDiscL.rotation.y = -Math.PI / 2; earDiscL.position.set(-0.622, -0.02, 0.02); head.add(earDiscL)
+    const earDiscR = earDiscL.clone(); earDiscR.rotation.y = Math.PI / 2; earDiscR.position.x = 0.622; head.add(earDiscR)
+    const nativeEarParts = [earL, earR, earCapL, earCapR, earDiscL, earDiscR]
 
     robot.position.y = -1.35
 
@@ -409,15 +711,24 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       const anchor = anchors[slot]
       if (equippedObjects[slot]) { anchor.remove(equippedObjects[slot]!); disposeGroup(equippedObjects[slot]!); delete equippedObjects[slot] }
       design.equipped[slot] = id
+      const asset = id ? getAsset(id) : null
       if (slot === 'headTop') {
         antenna.visible = !id
-        const showNativeEars = id !== 'headphones'
+        const showNativeEars = !asset?.hideEars
         nativeEarParts.forEach((part) => { part.visible = showNativeEars })
       }
-      if (!id) return
-      const asset = getAsset(id); if (!asset) return
+      if (!asset) return
       const g = asset.build(); anchor.add(g); equippedObjects[slot] = g
-      if (animate) playTransform(g)
+      castShadows(g)
+      if (animate) {
+        playTransform(g)
+        // Assembly beat: a ring of light and a puff of energy at the slot, so
+        // an upgrade lands as an event instead of a silent swap.
+        if (room) {
+          anchor.updateWorldMatrix(true, false)
+          room.burst(anchor.getWorldPosition(new THREE.Vector3()))
+        }
+      }
     }
     function setVariant(variant: YuviVariant, animate = true) {
       design.variant = variant
@@ -428,12 +739,19 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       design.colors = { ...colors }
       const b = new THREE.Color(colors.body)
       blueMat.color.copy(b)
-      jointMat.color.copy(b.clone().multiplyScalar(0.82))
+      // Joints and the inner suit stay a deep indigo so the shell always reads
+      // as a bright plate over a dark core, whatever colour the learner picks.
+      jointMat.color.copy(b.clone().lerp(CORE_COLOR, 0.84))
+      whiteMat.color.copy(CORE_COLOR.clone().lerp(b, 0.14))
       const g = new THREE.Color(colors.glow)
+      blueMat.sheenColor.copy(g.clone().lerp(new THREE.Color(0xffffff), 0.45))
       ringMat.color.copy(g); ringMat.emissive.copy(g)
       earCapMat.color.copy(g); earCapMat.emissive.copy(g)
       antennaTipMat.color.copy(g); antennaTipMat.emissive.copy(g)
+      haloGlowMat.color.copy(g)
       antennaLight.color.copy(g); faceGlow.color.copy(g)
+      // The bay's LEDs, floor pool and reflection follow the learner's glow.
+      room?.setAccent(colors.glow)
       faceLight.draw()
       if (animate) playTransform()
     }
@@ -442,8 +760,20 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       setVariant(next.variant, animate)
       for (const slot of Object.keys(anchors) as YuviSlot[]) equip(slot, next.equipped[slot] ?? null, animate)
     }
-    controllerRef.current = { equip, setColors, setVariant, applyDesign }
+    const focus = (view: YuviFocus) => {
+      const frame = FRAMES[view] ?? FRAMES.full
+      frameShot = frame
+      const ax = frame.anchored === false ? 0 : roamPos.x
+      const az = frame.anchored === false ? 0 : roamPos.y
+      camPosTarget.set(frame.pos[0] + ax, frame.pos[1], frame.pos[2] + az)
+      camLookTarget.set(frame.look[0] + ax, frame.look[1], frame.look[2] + az)
+      yawTarget = frame.yaw
+      // Choosing a category is a request for that exact shot.
+      resetUserView()
+    }
+    controllerRef.current = { equip, setColors, setVariant, applyDesign, focus, walkTo, recenter }
     applyDesign(design, false)
+    castShadows(robot)
 
     // ── transform sound (WebAudio) ──
     let audioCtx: AudioContext | null = null
@@ -476,21 +806,47 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     const ndc = new THREE.Vector2()
     let hoveredY = false
     let badgeScale = 1
-    const onPointerMove = (event: PointerEvent) => {
-      if (!interactiveY) return
+    const badgeWorld = new THREE.Vector3()
+    const badgeNormal = new THREE.Vector3()
+    const camForward = new THREE.Vector3()
+    /**
+     * The badge mesh is ~0.3 world units, which in the companion dock is barely
+     * a dozen pixels — learners had to hit the logo dead on. So the geometry
+     * raycast is only the first try: if it misses, accept anything inside a
+     * generous disc around the badge's projected centre, floored at a
+     * finger-sized radius. The facing test keeps the chest button from being
+     * clickable through Yuvi's back.
+     */
+    const hitsBadge = (event: { clientX: number; clientY: number }) => {
       const rect = renderer.domElement.getBoundingClientRect()
+      if (!rect.width || !rect.height) return false
       ndc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
       ndc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
       raycaster.setFromCamera(ndc, camera)
-      hoveredY = raycaster.intersectObject(badgeHit, false).length > 0
+      if (raycaster.intersectObject(badgeHit, false).length > 0) return true
+      badgeHit.getWorldDirection(badgeNormal)
+      camera.getWorldDirection(camForward)
+      if (badgeNormal.dot(camForward) > -0.15) return false
+      badgeHit.getWorldPosition(badgeWorld).project(camera)
+      if (badgeWorld.z > 1) return false
+      const bx = rect.left + ((badgeWorld.x + 1) / 2) * rect.width
+      const by = rect.top + ((1 - badgeWorld.y) / 2) * rect.height
+      const radius = Math.max(28, Math.min(rect.width, rect.height) * 0.16)
+      return Math.hypot(event.clientX - bx, event.clientY - by) <= radius
+    }
+    const onPointerMove = (event: PointerEvent) => {
+      if (!interactiveY) return
+      hoveredY = hitsBadge(event)
       renderer.domElement.style.cursor = hoveredY || Boolean(onAvatarClickRef.current) ? 'pointer' : 'default'
     }
     const onPointerLeave = () => {
       hoveredY = false
       renderer.domElement.style.cursor = onAvatarClickRef.current ? 'pointer' : 'default'
     }
-    const onClick = () => {
-      if (interactiveY && hoveredY) onYClickRef.current?.(container)
+    // Re-test on the click itself: a touch tap never sends the hover move that
+    // would have set `hoveredY`, so relying on it dropped every tap on mobile.
+    const onClick = (event: MouseEvent) => {
+      if (interactiveY && hitsBadge(event)) onYClickRef.current?.(container)
       else onAvatarClickRef.current?.()
     }
     if (interactiveY || onAvatarClickRef.current) {
@@ -500,31 +856,147 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       renderer.domElement.addEventListener('click', onClick)
     }
 
-    // ── orbit drag (studio): grab to spin Yuvi and see him from any angle ──
-    let dragging = false, lastX = 0, lastY = 0
-    let orbitYaw = 0, orbitPitch = 0, velYaw = 0
+    // ── Free camera input (studio) ──
+    // Drag to walk around the bay, wheel to move in and out, right/middle drag
+    // (or shift-drag) to slide the framing, double click to go back to the shot.
+    let dragging: 'orbit' | 'pan' | null = null
+    let lastX = 0, lastY = 0
+    let robotYaw = 0
+    // A tap is an orbit drag that never went anywhere — that is what tells
+    // "look around" apart from "walk over there".
+    let pressX = 0, pressY = 0, pressAt = 0
     const onOrbitDown = (event: PointerEvent) => {
-      dragging = true; lastX = event.clientX; lastY = event.clientY; velYaw = 0
-      renderer.domElement.style.cursor = 'grabbing'
+      dragging = event.button === 0 && !event.shiftKey ? 'orbit' : 'pan'
+      lastX = event.clientX; lastY = event.clientY; velYaw = 0
+      pressX = event.clientX; pressY = event.clientY; pressAt = performance.now()
+      renderer.domElement.style.cursor = dragging === 'pan' ? 'move' : 'grabbing'
+      // Any camera move pulls the ground out from under an anchored prop menu.
+      if (event.button === 0) onItemMenuRef.current?.(null)
     }
     const onOrbitMove = (event: PointerEvent) => {
       if (!dragging) return
       const dx = event.clientX - lastX, dy = event.clientY - lastY
       lastX = event.clientX; lastY = event.clientY
-      orbitYaw += dx * 0.01
-      orbitPitch = Math.max(-0.45, Math.min(0.45, orbitPitch + dy * 0.006))
-      velYaw = dx * 0.01
+      if (dragging === 'pan') {
+        userPanX = THREE.MathUtils.clamp(userPanX - dx * 0.006, -1.6, 1.6)
+        userPanY = THREE.MathUtils.clamp(userPanY + dy * 0.006, -1.1, 1.1)
+      } else {
+        userYaw = THREE.MathUtils.clamp(userYaw - dx * 0.007, -YAW_LIMIT, YAW_LIMIT)
+        userPitch = THREE.MathUtils.clamp(userPitch + dy * 0.004, -0.5, 0.62)
+        velYaw = -dx * 0.007
+      }
     }
-    const onOrbitUp = () => {
-      dragging = false
+    const onOrbitUp = (event: PointerEvent) => {
+      const wasOrbit = dragging === 'orbit'
+      dragging = null
       renderer.domElement.style.cursor = 'grab'
+      if (!wasOrbit || !roamRef.current) return
+      const travelled = Math.hypot(event.clientX - pressX, event.clientY - pressY)
+      if (travelled > 6 || performance.now() - pressAt > 500) return
+      const spot = pickFloor(event)
+      if (!spot) return
+      const placingNow = placingRef.current
+      if (placingNow) {
+        const valid = canBuildAt(spot.x, spot.z, carriedRadius(placingNow), placingNow.station)
+        onPlaceAtRef.current?.(spot.x, spot.z, valid)
+      } else if (!lockRoamRef.current) {
+        walkTo(spot.x, spot.z)
+      }
     }
+    // Right-click a placed prop for its own menu, Sims-style. The browser menu
+    // is always suppressed over the bay — right-drag is how you pan.
+    const onContextMenu = (event: MouseEvent) => {
+      event.preventDefault()
+      const report = onItemMenuRef.current
+      if (!report || !room) return
+      if (Math.hypot(event.clientX - pressX, event.clientY - pressY) > 6) return
+      const rect = renderer.domElement.getBoundingClientRect()
+      if (!rect.width || !rect.height) return
+      ndc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+      ndc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+      raycaster.setFromCamera(ndc, camera)
+      const uid = room.pickItem(raycaster)
+      const station = uid ? null : room.pickStation(raycaster)
+      if (!uid && !station) { report(null); return }
+      const anchor = uid ? room.itemAnchor(uid) : room.stationAnchor(station!)
+      if (!anchor) { report(null); return }
+      anchor.project(camera)
+      report({
+        uid: uid ?? `station:${station}`,
+        x: rect.left + ((anchor.x + 1) / 2) * rect.width,
+        y: rect.top + ((1 - anchor.y) / 2) * rect.height,
+      })
+    }
+    // While a prop is on the cursor, the room shows exactly where it will land.
+    let lastPointerAt: { clientX: number; clientY: number } | null = null
+    const updateGhost = (event: { clientX: number; clientY: number }) => {
+      const placingNow = placingRef.current
+      if (!room) return
+      if (!placingNow) { room.setGhost(null); return }
+      const spot = pickFloor(event)
+      if (!spot) return
+      const valid = canBuildAt(spot.x, spot.z, carriedRadius(placingNow), placingNow.station)
+      room.setGhost(placingNow.kind, spot.x, spot.z, placingNow.rot ?? 0, valid, placingNow.tint)
+    }
+    const onGhostMove = (event: PointerEvent) => {
+      lastPointerAt = { clientX: event.clientX, clientY: event.clientY }
+      updateGhost(event)
+    }
+    // Layout-independent codes, so the keys work on a Hebrew keyboard too.
+    const KEY_MAP: Record<string, string> = {
+      KeyW: 'up', ArrowUp: 'up', KeyS: 'down', ArrowDown: 'down',
+      KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right',
+    }
+    const isTypingTarget = (target: EventTarget | null) => {
+      const el = target as HTMLElement | null
+      if (!el?.tagName) return false
+      return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable
+    }
+    const onRoamKeyDown = (event: KeyboardEvent) => {
+      if (!roamRef.current || lockRoamRef.current || isTypingTarget(event.target)) return
+      const key = KEY_MAP[event.code]
+      if (!key) return
+      event.preventDefault()   // the stage fills the screen; the page must not scroll
+      heldKeys.add(key)
+    }
+    const onRoamKeyUp = (event: KeyboardEvent) => {
+      const key = KEY_MAP[event.code]
+      if (key) heldKeys.delete(key)
+    }
+    const onRoamBlur = () => heldKeys.clear()
+    const onOrbitWheel = (event: WheelEvent) => {
+      // The canvas fills the stage, so the page must not scroll underneath it.
+      event.preventDefault()
+      userZoom = THREE.MathUtils.clamp(userZoom * Math.exp(event.deltaY * 0.0011), 0.42, 1.85)
+      onItemMenuRef.current?.(null)
+    }
+    const onOrbitReset = () => resetUserView()
     if (orbit) {
       renderer.domElement.style.cursor = 'grab'
       renderer.domElement.addEventListener('pointerdown', onOrbitDown)
+      renderer.domElement.addEventListener('wheel', onOrbitWheel, { passive: false })
+      renderer.domElement.addEventListener('dblclick', onOrbitReset)
+      renderer.domElement.addEventListener('contextmenu', onContextMenu)
+      renderer.domElement.addEventListener('pointermove', onGhostMove, { passive: true })
       window.addEventListener('pointermove', onOrbitMove)
       window.addEventListener('pointerup', onOrbitUp)
+      window.addEventListener('keydown', onRoamKeyDown)
+      window.addEventListener('keyup', onRoamKeyUp)
+      window.addEventListener('blur', onRoamBlur)
     }
+
+    // ── Camera parallax ──
+    // The room leans a little with the pointer and keeps a slow drift of its
+    // own, so the space feels inhabited even when nothing is being edited.
+    let parallaxTargetX = 0, parallaxTargetY = 0
+    let parallaxX = 0, parallaxY = 0
+    const onParallaxMove = (event: PointerEvent) => {
+      const rect = container.getBoundingClientRect()
+      if (!rect.width || !rect.height) return
+      parallaxTargetX = THREE.MathUtils.clamp(((event.clientX - rect.left) / rect.width) * 2 - 1, -1, 1)
+      parallaxTargetY = THREE.MathUtils.clamp(((event.clientY - rect.top) / rect.height) * 2 - 1, -1, 1)
+    }
+    if (orbit && !reduceMotion) window.addEventListener('pointermove', onParallaxMove, { passive: true })
 
     // ── viewport pointer tracking ──
     // The companion can be much smaller than the page, so tracking listens at
@@ -553,7 +1025,6 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     let blink = 2 + Math.random() * 3, nextBlink = 2 + Math.random() * 3
     const animationStartedAt = performance.now()
     let previousFrameAt = animationStartedAt
-    const badgeWorld = new THREE.Vector3()
     const resize = () => {
       const w = container.clientWidth || 1, h = container.clientHeight || 1
       renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix()
@@ -584,13 +1055,198 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       const t = (frameAt - animationStartedAt) / 1000
       previousFrameAt = frameAt
       if (orbit) {
-        // Studio: drag-controlled turntable (with gentle inertia) + framed higher.
-        if (!dragging) { velYaw *= 0.94; orbitYaw += velYaw }
-        robot.rotation.y = orbitYaw
-        robot.rotation.x = orbitPitch
-        robot.position.y = -0.82 + Math.sin(t * 1.4) * 0.02
+        // The learner's room is data: re-sync only when the layout identity
+        // changes, so dragging a sofa costs a transform and nothing else.
+        if (room) {
+          if (roomItemsRef.current !== appliedRoomItems) {
+            appliedRoomItems = roomItemsRef.current
+            room.setUserItems(appliedRoomItems ?? [])
+          }
+          // A station takes whoever is standing at it along for the ride, so
+          // moving the one you are using never closes the panel under you.
+          if (stationsRef.current && stationsRef.current !== appliedStations) {
+            const previous = appliedStations
+            const next = stationsRef.current
+            let shiftX = 0, shiftZ = 0
+            if (previous && roamZone) {
+              const from = roamZone === 'avatar' ? previous.avatar : roomStandingSpot(previous.room)
+              const to = roamZone === 'avatar' ? next.avatar : roomStandingSpot(next.room)
+              shiftX = to.x - from.x
+              shiftZ = to.z - from.z
+            }
+            appliedStations = next
+            room.setStations(next)
+            if (shiftX || shiftZ) {
+              roamPos.set(roamPos.x + shiftX, roamPos.y + shiftZ)
+              resolveCollisions(roamPos)
+              roamTarget.copy(roamPos)
+            }
+          }
+          if (roomStyleRef.current !== appliedRoomStyle) {
+            appliedRoomStyle = roomStyleRef.current
+            if (appliedRoomStyle) room.setRoomStyle(appliedRoomStyle)
+          }
+          // The ghost belongs to what is being carried, not to pointer movement:
+          // dropping a prop has to take the hologram with it even if the mouse
+          // never moves again.
+          if (placingRef.current !== appliedPlacing) {
+            appliedPlacing = placingRef.current
+            if (!appliedPlacing) room.setGhost(null)
+            else if (lastPointerAt) updateGhost(lastPointerAt)
+          }
+        }
+        // ── Roaming ──
+        // Keyboard drives Yuvi directly and cancels any click target; a click
+        // sends him walking there on his own.
+        const roaming = roamRef.current
+        let walkAmp = 0
+        if (roaming) {
+          roamForward.copy(camOffset).setY(0)
+          if (roamForward.lengthSq() < 1e-6) roamForward.set(0, 0, 1)
+          roamForward.normalize().negate()               // from the eye toward the room
+          roamSide.set(-roamForward.z, 0, roamForward.x) // screen-right on the floor
+          roamDir.set(0, 0, 0)
+          if (lockRoamRef.current) heldKeys.clear()
+          if (heldKeys.has('up')) roamDir.add(roamForward)
+          if (heldKeys.has('down')) roamDir.sub(roamForward)
+          if (heldKeys.has('right')) roamDir.add(roamSide)
+          if (heldKeys.has('left')) roamDir.sub(roamSide)
+          if (roamDir.lengthSq() > 1e-6) {
+            roamDir.normalize()
+            roamTarget.copy(roamPos)                     // keys win over the last click
+            roamStep.set(roamDir.x, roamDir.z).multiplyScalar(ROAM_SPEED * dt)
+          } else {
+            roamStep.set(roamTarget.x - roamPos.x, roamTarget.y - roamPos.y)
+            const remaining = roamStep.length()
+            if (remaining > 0.05) roamStep.multiplyScalar(Math.min(ROAM_SPEED * dt, remaining) / remaining)
+            else roamStep.set(0, 0)
+          }
+          const moving = roamStep.lengthSq() > 1e-8
+          if (moving) {
+            roamPos.add(roamStep)
+            resolveCollisions(roamPos)
+            // Face where he is actually going, not where he was asked to go.
+            yawTarget = Math.atan2(roamStep.x, roamStep.y)
+          }
+          roamSpeed += ((moving ? 1 : 0) - roamSpeed) * 0.18
+          walkAmp = reduceMotion ? roamSpeed * 0.18 : roamSpeed * 0.5
+
+          // Standing on a station is what opens its panel — no menu needed.
+          let nextZone: LabRoomZoneId | null = null
+          for (const zone of room?.zones ?? []) {
+            if (Math.hypot(roamPos.x - zone.x, roamPos.y - zone.z) <= zone.radius) { nextZone = zone.id; break }
+          }
+          if (nextZone !== roamZone) {
+            roamZone = nextZone
+            room?.setZoneHighlight(nextZone)
+            onZoneChangeRef.current?.(nextZone)
+            if (nextZone) {
+              // Arriving at a station means standing *on* it: he walks the rest
+              // of the way to the middle instead of stopping wherever he
+              // happened to cross the ring.
+              const zone = room?.zones.find((entry) => entry.id === nextZone)
+              if (zone) { heldKeys.clear(); walkTo(zone.x, zone.z) }
+            }
+            faceLearnerPending = Boolean(nextZone)
+          }
+          // Once he is parked, he turns to the learner — the walk itself keeps
+          // overwriting the yaw with whatever direction he was heading in.
+          if (faceLearnerPending && !moving) {
+            yawTarget = frameShot.yaw ?? 0
+            faceLearnerPending = false
+          }
+          // Off the platform he stands 13cm lower, and the shadow light follows.
+          const deckAt = appliedStations?.avatar
+          const onDeck = Math.hypot(roamPos.x - (deckAt?.x ?? 0), roamPos.y - (deckAt?.z ?? 0)) < DECK_RADIUS ? 1 : 0
+          deckBlend += (onDeck - deckBlend) * 0.12
+          if (room && roomBounds) {
+            room.keyLight.position.set(roamPos.x + 0.5, roomBounds.ceilY - 0.35, roamPos.y + 2.3)
+            room.keyLight.target.position.set(roamPos.x, room.deckY + 0.7, roamPos.y)
+            room.keyLight.target.updateMatrixWorld()
+          }
+        }
+
+        // Yuvi still turns on his own axis for the category framing — that is
+        // how "back" shows his back without sending the camera through a wall.
+        if (yawTarget !== null) {
+          // Shortest path so "back" never spins the long way around.
+          let delta = (yawTarget - robotYaw) % (Math.PI * 2)
+          if (delta > Math.PI) delta -= Math.PI * 2
+          if (delta < -Math.PI) delta += Math.PI * 2
+          robotYaw += delta * (roamSpeed > 0.1 ? 0.16 : 0.09)
+          if (Math.abs(delta) < 0.002) { robotYaw = yawTarget; yawTarget = null }
+        }
+        // Flick inertia on the free look.
+        if (!dragging && Math.abs(velYaw) > 0.00004) {
+          velYaw *= 0.9
+          userYaw = THREE.MathUtils.clamp(userYaw + velYaw, -YAW_LIMIT, YAW_LIMIT)
+        }
+        // The authored frame is relative to wherever Yuvi is standing, unless
+        // the shot is a fixed overview of the room itself.
+        const anchorX = frameShot.anchored === false ? 0 : roamPos.x
+        const anchorZ = frameShot.anchored === false ? 0 : roamPos.y
+        camPosTarget.set(frameShot.pos[0] + anchorX, frameShot.pos[1], frameShot.pos[2] + anchorZ)
+        camLookTarget.set(frameShot.look[0] + anchorX, frameShot.look[1], frameShot.look[2] + anchorZ)
+        camPos.lerp(camPosTarget, 0.075)
+        camLook.lerp(camLookTarget, 0.075)
+        // Each shot carries its own lens: the close-ups stay portrait-length,
+        // the room overview opens up so the whole floor fits on screen.
+        const wantFov = frameShot.fov ?? BASE_FOV
+        if (Math.abs(camera.fov - wantFov) > 0.01) {
+          camera.fov += (wantFov - camera.fov) * 0.09
+          camera.updateProjectionMatrix()
+        }
+
+        // The framed shot becomes an orbit around the framed target, and the
+        // learner's yaw / pitch / dolly ride on top of it.
+        camOffset.copy(camPos).sub(camLook)
+        camSpherical.setFromVector3(camOffset)
+        camSpherical.theta += userYaw
+        camSpherical.phi = THREE.MathUtils.clamp(camSpherical.phi - userPitch, 0.45, 1.98)
+        camSpherical.radius = Math.max(0.95, camSpherical.radius * userZoom)
+        camOffset.setFromSpherical(camSpherical)
+        // Pan slides eye and target together along the camera's own right axis.
+        camRight.set(camOffset.z, 0, -camOffset.x).normalize().multiplyScalar(userPanX)
+        // Pointer lean plus a slow idle sway; both are tiny on purpose, they
+        // should register as "the room is alive", never as camera shake. While
+        // the learner is driving, the sway gets out of the way.
+        const idleX = reduceMotion ? 0 : Math.sin(t * 0.21) * 0.13
+        const idleY = reduceMotion ? 0 : Math.sin(t * 0.17 + 1.1) * 0.06
+        const leanScale = dragging ? 0 : 1
+        parallaxX += ((parallaxTargetX * 0.22 + idleX) * leanScale - parallaxX) * 0.045
+        parallaxY += ((parallaxTargetY * 0.12 + idleY) * leanScale - parallaxY) * 0.045
+        const lookX = camLook.x + camRight.x
+        const lookY = camLook.y + userPanY
+        const lookZ = camLook.z + camRight.z
+        camera.position.set(lookX + camOffset.x + parallaxX, lookY + camOffset.y - parallaxY, lookZ + camOffset.z)
+        if (roomBounds) {
+          // Never let a free camera poke through the room it is standing in.
+          camera.position.x = THREE.MathUtils.clamp(camera.position.x, -roomBounds.halfX + 0.55, roomBounds.halfX - 0.55)
+          camera.position.y = THREE.MathUtils.clamp(camera.position.y, roomBounds.floorY + 0.4, roomBounds.ceilY - 0.4)
+          camera.position.z = THREE.MathUtils.clamp(camera.position.z, roomBounds.backZ + 0.8, roomBounds.frontZ + (frameShot.dolly ?? -0.5))
+        }
+        camera.lookAt(lookX + parallaxX * 0.22, lookY - parallaxY * 0.12, lookZ)
+        robot.rotation.y = robotYaw
+        robot.position.x = roamPos.x
+        robot.position.z = roamPos.y
+        // On the platform he hovers; on the floor he walks, bobbing on each step.
+        const walkPhase = t * 9
+        const walkStride = Math.sin(walkPhase)
+        const groundY = -0.82 - (1 - deckBlend) * DECK_LIFT
+        robot.position.y = groundY
+          + Math.sin(t * 1.4) * 0.02 * (1 - roamSpeed)
+          + Math.abs(walkStride) * 0.03 * roamSpeed
+        robot.rotation.x = 0.06 * roamSpeed
         head.rotation.y = 0
         head.rotation.x = 0
+        // Arms and legs swing in anti-phase — the difference between "walking"
+        // and "sliding across the floor".
+        const gaitEase = 0.24
+        const armSwing = walkAmp * 0.7
+        armR.rotation.x += (-walkStride * armSwing - armR.rotation.x) * gaitEase
+        armL.rotation.x += (walkStride * armSwing - armL.rotation.x) * gaitEase
+        legR.rotation.x += (-walkStride * walkAmp - legR.rotation.x) * gaitEase
+        legL.rotation.x += (walkStride * walkAmp - legL.rotation.x) * gaitEase
       } else {
         const isThinking = thinkingRef.current
         const isSpeaking = speakingRef.current
@@ -704,17 +1360,25 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       faceLightMat.opacity = 0.9 + Math.sin(t * 1.8) * 0.05
       antennaTipMat.emissiveIntensity = 1.8 + Math.sin(t * 2.2) * 0.4
       antennaLight.intensity = 0.28 + Math.sin(t * 2.2) * 0.06
+      // The halo precesses slowly and breathes with the glow pulse.
+      if (!reduceMotion) {
+        antenna.rotation.y += dt * 0.5
+        antenna.rotation.z = Math.sin(t * 0.9) * 0.12
+        antenna.position.y = 0.6 + Math.sin(t * 1.6) * 0.014
+      }
+      haloGlowMat.opacity = 0.16 + Math.sin(t * 2.2) * 0.05
       earCapMat.emissiveIntensity = 0.4 + Math.sin(t * 2.0) * 0.16
       ringMat.emissiveIntensity = 1.6 + Math.sin(t * 2.4) * 0.4
       faceGlow.intensity = 0.24 + Math.sin(t * 1.8) * 0.05
 
-      // accessory motion
-      const prop = (equippedObjects.headTop as any)?.userData?.spin
-      if (prop) prop.rotation.y += dt * 8
-      const flames = (equippedObjects.back as any)?.userData?.flames as THREE.Object3D[] | undefined
-      if (flames) flames.forEach((f, i) => { f.scale.y = 1 + Math.sin(t * 20 + i) * 0.25 })
-      const cape = (equippedObjects.back as any)?.userData?.wave as THREE.Mesh | undefined
-      if (cape) { const p = cape.geometry.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i); p.setZ(i, -Math.cos(x * 3 + t * 3) * 0.06 - 0.05 + Math.sin(y * 4 + t * 2) * 0.02) } p.needsUpdate = true }
+      // Accessory motion: every asset exposes its own `userData.animate(t, dt)`.
+      if (!reduceMotion) {
+        for (const key of Object.keys(equippedObjects)) {
+          const anim = (equippedObjects as any)[key]?.userData?.animate
+          if (anim) anim(t, dt)
+        }
+      }
+      room?.update(t, dt)
       // interactive Y pop
       if (interactiveY) {
         badgeScale += ((hoveredY ? 1.32 : 1) - badgeScale) * 0.2
@@ -806,13 +1470,22 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       renderer.domElement.removeEventListener('pointerleave', onPointerLeave)
       renderer.domElement.removeEventListener('click', onClick)
       renderer.domElement.removeEventListener('pointerdown', onOrbitDown)
+      renderer.domElement.removeEventListener('wheel', onOrbitWheel)
+      renderer.domElement.removeEventListener('dblclick', onOrbitReset)
+      renderer.domElement.removeEventListener('contextmenu', onContextMenu)
+      renderer.domElement.removeEventListener('pointermove', onGhostMove)
       window.removeEventListener('pointermove', onOrbitMove)
       window.removeEventListener('pointerup', onOrbitUp)
+      window.removeEventListener('keydown', onRoamKeyDown)
+      window.removeEventListener('keyup', onRoamKeyUp)
+      window.removeEventListener('blur', onRoamBlur)
+      window.removeEventListener('pointermove', onParallaxMove)
       window.removeEventListener('pointermove', onGlobalPointerMove)
       window.removeEventListener('blur', resetPointerLook)
       document.documentElement.removeEventListener('mouseleave', resetPointerLook)
       controllerRef.current = null
       faceLight.texture.dispose()
+      room?.dispose()
       renderer.dispose()
       scene.traverse((obj) => {
         const mesh = obj as THREE.Mesh
@@ -823,6 +1496,12 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       })
       // sparkBadgeTexture is the shared module favicon — do not dispose it.
       if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement)
+      // `dispose()` frees three's own caches but leaves the live WebGL context
+      // attached to the (now detached) canvas until GC gets around to it. Every
+      // studio open/close would therefore strand another context, and browsers
+      // cap them at ~16 — past that the *oldest* context is killed, which is the
+      // companion dock's Yuvi on the dashboard. Hand the context back by hand.
+      renderer.forceContextLoss()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

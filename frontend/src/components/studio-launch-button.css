@@ -1,0 +1,70 @@
+/* Studio launcher in the learner app bar — deliberately louder than the wallet
+   chip next to it, because it is the only entry point to the studio now. */
+.studio-launch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-block-size: 36px;
+  padding-inline: 12px 14px;
+  border: 1px solid rgba(124, 108, 255, .28);
+  border-radius: var(--sp-radius-pill);
+  background: linear-gradient(135deg, rgba(124, 108, 255, .16), rgba(76, 201, 240, .16));
+  color: var(--sp-primary-700);
+  font: 800 var(--sp-fs-xs)/1 var(--sp-font);
+  cursor: pointer;
+  transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease;
+}
+
+.studio-launch:hover {
+  transform: translateY(-1px);
+  border-color: rgba(124, 108, 255, .5);
+  box-shadow: 0 10px 22px rgba(124, 108, 255, .22);
+}
+
+.studio-launch:active { transform: translateY(0); }
+.studio-launch:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+.studio-launch.is-active { border-color: rgba(124, 108, 255, .6); }
+
+.studio-launch__head {
+  display: inline-flex;
+  inline-size: 22px;
+  block-size: 22px;
+}
+
+.studio-launch__head svg { inline-size: 100%; block-size: 100%; }
+
+/* A slow shimmer sweeping across the pill: enough to read as "something fun
+   lives here" without turning the app bar into an ad. */
+.studio-launch::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(110deg, transparent 40%, rgba(255, 255, 255, .55) 50%, transparent 60%);
+  opacity: 0;
+  animation: studio-launch-shimmer 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes studio-launch-shimmer {
+  0%, 72% { opacity: 0; transform: translateX(-60%); }
+  80% { opacity: .8; }
+  92%, 100% { opacity: 0; transform: translateX(60%); }
+}
+
+[data-theme='dark'] .studio-launch {
+  border-color: rgba(140, 126, 255, .38);
+  background: linear-gradient(135deg, rgba(124, 108, 255, .24), rgba(76, 201, 240, .2));
+  color: #e6e2ff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-launch::after { animation: none; }
+  .studio-launch:hover { transform: none; }
+}
+
+@media (max-width: 720px) {
+  .studio-launch__label { display: none; }
+  .studio-launch { padding-inline: 10px; }
+}

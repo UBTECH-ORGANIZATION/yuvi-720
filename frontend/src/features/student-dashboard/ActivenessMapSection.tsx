@@ -2,14 +2,13 @@ import { Suspense, lazy, useEffect, useRef, useState, type CSSProperties } from 
 import { useReducedMotion } from 'motion/react'
 import { animate, stagger } from 'animejs'
 import { Icon } from '../../components/primitives'
-import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { useI18n } from '../../i18n/I18nProvider'
 import { getLearnerState, updateLearnerState } from '../../services/api'
 import type { DashboardDTO } from '../../services/brain'
 import './activeness-map.css'
 
-const ActivenessMap = lazy(() =>
-  import('./ActivenessMap').then((m) => ({ default: m.ActivenessMap })),
+const ActivenessWorld = lazy(() =>
+  import('./ActivenessWorld3D').then((m) => ({ default: m.ActivenessWorld3D })),
 )
 
 interface ActivenessMapSectionProps {
@@ -93,12 +92,18 @@ export function ActivenessMapSection({ competencies, studentName }: ActivenessMa
     return () => cancelAnimationFrame(id)
   }, [mounted, reduceMotion])
 
-  // Lock the page behind the sheet while it is open.
+  // Lock the page behind the sheet while it is open. The flag also stands the
+  // docked Yuvi down: inside the map he is the character on the stage, and two
+  // Yuvis on one screen would break that.
   useEffect(() => {
     if (!mounted) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
+    document.body.dataset.aworldOpen = 'true'
+    return () => {
+      document.body.style.overflow = prev
+      delete document.body.dataset.aworldOpen
+    }
   }, [mounted])
 
   // Portal sparks teaser on the docked gate.
@@ -129,7 +134,11 @@ export function ActivenessMapSection({ competencies, studentName }: ActivenessMa
       ? [...prior, { at: new Date().toISOString(), positions }]
       : prior
     ).slice(-24)
-    void updateLearnerState({ activeness_map: { positions, focus: initial?.focus ?? null, history } }).catch(() => undefined)
+    // Spread what is already stored: this write owns the snapshot + history
+    // only, and must not drop the learner's focus, goal or onboarding flag.
+    void updateLearnerState({
+      activeness_map: { ...(initial ?? {}), positions, focus: initial?.focus ?? null, history },
+    }).catch(() => undefined)
   }, [open, initial, competencies])
 
   useEffect(() => () => window.clearTimeout(exitTimer.current), [])
@@ -175,17 +184,13 @@ export function ActivenessMapSection({ competencies, studentName }: ActivenessMa
       </button>
 
       {mounted && (
-        <div className={`amap-overlay${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}>
-          <div className="amap__nav">
-            <LearnerAppBar studentName={studentName} />
-          </div>
+        <div className={`amap-overlay amap-overlay--world${open ? ' is-open' : ''}${closing ? ' is-closing' : ''}`}>
           <div className="amap__sheet">
             <Suspense fallback={null}>
-              <ActivenessMap
+              <ActivenessWorld
                 competencies={competencies}
                 studentName={studentName}
                 initial={initial}
-                revealed={open}
                 onClose={close}
               />
             </Suspense>
