@@ -5,6 +5,8 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 import asyncio
+import csv
+import io
 import os
 from pathlib import Path
 import secrets
@@ -12,25 +14,74 @@ from typing import Any, Optional
 
 from authlib.integrations.starlette_client import OAuth
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from starlette.middleware.sessions import SessionMiddleware
 
 from .auth import create_admin_token, decode_admin_token, is_allowed_admin, normalize_email
 from .config import Settings
 from .database import UsageEventRepository
+from .leads import LEAD_STATUSES, LeadRepository
 from .telemetry import configure_telemetry
 from .usage_report import UsageSummary, build_usage_summary
 
 
 _ADMIN_COOKIE = "spark_admin_token"
 _FRONTEND_DIST = Path(__file__).resolve().parents[1] / "frontend" / "dist"
+_LEAD_EXPORT_COLUMNS = (
+    "lead_id",
+    "created_at",
+    "status",
+    "full_name",
+    "role",
+    "organization",
+    "city",
+    "phone",
+    "email",
+    "grades",
+    "message",
+    "source",
+    "notes",
+    "updated_at",
+    "updated_by",
+)
 
 
 class AdminIdentity(BaseModel):
     email: str
     name: str
+
+
+class Lead(BaseModel):
+    lead_id: str
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    status: str = "new"
+    notes: str = ""
+    full_name: str = ""
+    role: str = ""
+    organization: str = ""
+    city: str = ""
+    phone: str = ""
+    email: str = ""
+    grades: str = ""
+    message: str = ""
+    source: str = ""
+    updated_by: Optional[str] = None
+
+
+class LeadBoard(BaseModel):
+    leads: list[Lead]
+    statuses: list[str]
+    sources: list[str]
+    counts_by_status: dict[str, int]
+    total: int
+
+
+class LeadUpdate(BaseModel):
+    status: Optional[str] = Field(default=None, max_length=40)
+    notes: Optional[str] = Field(default=None, max_length=2000)
 
 
 class AuthStatus(BaseModel):
@@ -66,6 +117,10 @@ def _settings(request: Request) -> Settings:
 
 def _repository(request: Request) -> UsageEventRepository:
     return request.app.state.usage_repository
+
+
+def _lead_repository(request: Request) -> LeadRepository:
+    return request.app.state.lead_repository
 
 
 async def admin_required(request: Request) -> dict[str, Any]:
@@ -118,6 +173,7 @@ def create_app(
         if not _FRONTEND_DIST.exists():
             raise RuntimeError("Admin frontend build is required in production")
     repository = UsageEventRepository(resolved_settings)
+    lead_repository = LeadRepository(resolved_settings)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -134,6 +190,7 @@ def create_app(
             print(f"⚠️ Admin MongoDB unavailable at startup: {type(exc).__name__}")
         yield
         repository.close()
+        lead_repository.close()
 
     app = FastAPI(
         title="Yuvilab Spark Admin",
@@ -147,6 +204,7 @@ def create_app(
     app.state.public_access = resolved_public_access
     app.state.oauth = _create_oauth(resolved_settings)
     app.state.usage_repository = repository
+    app.state.lead_repository = lead_repository
     app.add_middleware(
         SessionMiddleware,
         secret_key=resolved_settings.admin_secret_key,
@@ -303,6 +361,157 @@ def create_app(
             pricing=pricing,
             access_mode="public_preview" if resolved_public_access else "authenticated_admin",
         )
+
+    def _lead_window(days: Optional[int]) -> tuple[Optional[datetime], Optional[datetime]]:
+        if days is None:
+            return None, None
+        end = datetime.now(timezone.utc) + timedelta(seconds=1)
+        return end - timedelta(days=days), end
+
+    async def _query_leads(
+        repository: LeadRepository,
+        *,
+        days: Optional[int],
+        status: Optional[str],
+        source: Optional[str],
+        search: Optional[str],
+        limit: int,
+    ) -> list[dict[str, Any]]:
+        if status and status not in LEAD_STATUSES:
+            raise HTTPException(status_code=422, detail="unknown_lead_status")
+        start, end = _lead_window(days)
+        try:
+            return await repository.fetch_leads(
+                start=start,
+                end=end,
+                status=status,
+                source=source,
+                search=search,
+                limit=limit,
+            )
+        except Exception as exc:
+            print(f"⚠️ Admin lead query failed: {type(exc).__name__}")
+            raise HTTPException(status_code=503, detail="lead_data_unavailable") from None
+
+    @app.get("/api/leads", response_model=LeadBoard)
+    async def list_leads(
+        _: dict[str, Any] = Depends(admin_required),
+        days: Optional[int] = Query(default=None, ge=1, le=730),
+        status: Optional[str] = Query(default=None, max_length=40),
+        source: Optional[str] = Query(default=None, max_length=60),
+        search: Optional[str] = Query(default=None, max_length=120),
+        limit: int = Query(default=500, ge=1, le=2000),
+        lead_repository: LeadRepository = Depends(_lead_repository),
+    ) -> LeadBoard:
+        leads = await _query_leads(
+            lead_repository,
+            days=days,
+            status=status,
+            source=source,
+            search=search,
+            limit=limit,
+        )
+        try:
+            sources = await lead_repository.list_sources()
+        except Exception:
+            sources = sorted({str(lead.get("source") or "") for lead in leads} - {""})
+        counts = {value: 0 for value in LEAD_STATUSES}
+        for lead in leads:
+            key = str(lead.get("status") or "new")
+            counts[key] = counts.get(key, 0) + 1
+        return LeadBoard(
+            leads=[Lead(**lead) for lead in leads],
+            statuses=list(LEAD_STATUSES),
+            sources=sources,
+            counts_by_status=counts,
+            total=len(leads),
+        )
+
+    @app.get("/api/leads/export")
+    async def export_leads(
+        _: dict[str, Any] = Depends(admin_required),
+        days: Optional[int] = Query(default=None, ge=1, le=730),
+        status: Optional[str] = Query(default=None, max_length=40),
+        source: Optional[str] = Query(default=None, max_length=60),
+        search: Optional[str] = Query(default=None, max_length=120),
+        limit: int = Query(default=2000, ge=1, le=5000),
+        lead_repository: LeadRepository = Depends(_lead_repository),
+    ) -> StreamingResponse:
+        leads = await _query_leads(
+            lead_repository,
+            days=days,
+            status=status,
+            source=source,
+            search=search,
+            limit=limit,
+        )
+        buffer = io.StringIO()
+        buffer.write("\ufeff")  # BOM so Excel opens the Hebrew export as UTF-8
+        writer = csv.DictWriter(
+            buffer,
+            fieldnames=list(_LEAD_EXPORT_COLUMNS),
+            extrasaction="ignore",
+            lineterminator="\r\n",
+        )
+        writer.writeheader()
+        for lead in leads:
+            row = {column: lead.get(column, "") for column in _LEAD_EXPORT_COLUMNS}
+            for column in ("created_at", "updated_at"):
+                value = row[column]
+                row[column] = value.isoformat() if isinstance(value, datetime) else (value or "")
+            writer.writerow(row)
+        buffer.seek(0)
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
+        return StreamingResponse(
+            iter([buffer.getvalue()]),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="spark-leads-{stamp}.csv"'},
+        )
+
+    @app.get("/api/leads/{lead_id}", response_model=Lead)
+    async def get_lead(
+        lead_id: str,
+        _: dict[str, Any] = Depends(admin_required),
+        lead_repository: LeadRepository = Depends(_lead_repository),
+    ) -> Lead:
+        try:
+            lead = await lead_repository.fetch_lead(lead_id)
+        except Exception as exc:
+            print(f"⚠️ Admin lead read failed: {type(exc).__name__}")
+            raise HTTPException(status_code=503, detail="lead_data_unavailable") from None
+        if lead is None:
+            raise HTTPException(status_code=404, detail="lead_not_found")
+        return Lead(**lead)
+
+    @app.patch("/api/leads/{lead_id}", response_model=Lead)
+    async def update_lead(
+        lead_id: str,
+        payload: LeadUpdate,
+        admin: dict[str, Any] = Depends(admin_required),
+        lead_repository: LeadRepository = Depends(_lead_repository),
+    ) -> Lead:
+        updates: dict[str, Any] = {}
+        if payload.status is not None:
+            if payload.status not in LEAD_STATUSES:
+                raise HTTPException(status_code=422, detail="unknown_lead_status")
+            updates["status"] = payload.status
+        if payload.notes is not None:
+            updates["notes"] = payload.notes.strip()
+        if not updates:
+            raise HTTPException(status_code=422, detail="no_lead_changes")
+        try:
+            lead = await lead_repository.update_lead(
+                lead_id,
+                updates=updates,
+                updated_by=str(admin.get("sub") or "admin"),
+                now=datetime.now(timezone.utc),
+            )
+        except Exception as exc:
+            print(f"⚠️ Admin lead update failed: {type(exc).__name__}")
+            raise HTTPException(status_code=503, detail="lead_data_unavailable") from None
+        if lead is None:
+            raise HTTPException(status_code=404, detail="lead_not_found")
+        return Lead(**lead)
 
     if _FRONTEND_DIST.exists():
         app.mount("/", StaticFiles(directory=str(_FRONTEND_DIST), html=True), name="admin-frontend")
