@@ -10,11 +10,24 @@ import type { YuviColors, YuviSlot, YuviVariant } from './YuviDesign'
 import type { StudioDesign } from './useStudioDesign'
 import { useRoomDesign } from './useRoomDesign'
 import { ROOM_CATEGORIES, itemsInCategory, roomItemSpec, type RoomItemCategory } from './RoomCatalog'
-import { MAX_ROOM_ITEMS, MOODS, ROOM_STYLES, WALL_STYLES } from './RoomDesign'
+import { MAX_ROOM_ITEMS, MOODS, ROOM_STYLES, WALL_STYLES, type StationId } from './RoomDesign'
+import { roomStandingSpot } from './YuviLabRoom'
+import { StationPanel } from './panel/StationPanel'
+import { SegmentedNav } from './panel/SegmentedNav'
+import { ItemCard } from './panel/ItemCard'
+import { ContextBar } from './panel/ContextBar'
+import { PropMenu, type PropMenuState } from './panel/PropMenu'
 import '../../styles/Yuvi-studio.css'
 
 type Tab = YuviSlot | 'colors'
 const TABS: Tab[] = ['headTop', 'face', 'body', 'handR', 'back', 'colors']
+const TAB_ICONS: Record<Tab, string> = {
+  headTop: 'hat', face: 'face', body: 'shirt', handR: 'hand', back: 'backpack', colors: 'palette',
+}
+const ROOM_ICONS: Record<RoomItemCategory, string> = {
+  seating: 'sofa', desk: 'book', play: 'gamepad', nature: 'leaf',
+  light: 'lightbulb', tech: 'chip', wall: 'image',
+}
 
 /**
  * The studio is a room, not a form. Yuvi walks around it freely; standing on a
@@ -82,6 +95,8 @@ export function StudioContent({
   // into, and step out of.
   const [mode, setMode] = useState<StudioMode>('roam')
   const [placing, setPlacing] = useState<YuviPlacing | null>(null)
+  // Right-clicking a prop opens its own menu over it, Sims-style.
+  const [propMenu, setPropMenu] = useState<PropMenuState | null>(null)
   const roomState = useRoomDesign()
   // A stable identity: the 3D room only restyles when one of the three actually
   // changes, not on every keystroke elsewhere in the studio.
@@ -89,6 +104,18 @@ export function StudioContent({
     () => ({ floor: roomState.room.floor, wall: roomState.room.wall, mood: roomState.room.mood }),
     [roomState.room.floor, roomState.room.wall, roomState.room.mood],
   )
+  // A prop being carried is drawn as the ghost under the cursor, so the room
+  // must not also draw it standing at the spot it is being moved from.
+  const movingUid = placing?.uid ?? null
+  const visibleRoomItems = useMemo(
+    () => (movingUid ? roomState.items.filter((item) => item.uid !== movingUid) : roomState.items),
+    [roomState.items, movingUid],
+  )
+  const menuItem = propMenu ? roomState.items.find((item) => item.uid === propMenu.uid) ?? null : null
+  // Stations are addressed through the same menu, under a reserved uid.
+  const menuStation: StationId | null = propMenu?.uid.startsWith('station:')
+    ? (propMenu.uid.slice(8) as StationId)
+    : null
   const {
     avatarRef, loaded, design, activeTab, setActiveTab, muted, setMuted, justSaved,
     saving, dirty, isLocked, equip, setVariant, setColor, reset, save,
@@ -98,6 +125,7 @@ export function StudioContent({
   // Unsaved work is unsaved work, whether it is a hat or a sofa.
   const anyDirty = dirty || roomState.dirty
   const busy = saving || roomState.saving
+  const savedNow = justSaved || roomState.justSaved
   const saveAll = async () => {
     const results = await Promise.all([
       dirty ? save() : Promise.resolve(true),
@@ -118,6 +146,7 @@ export function StudioContent({
 
   /** Stepping onto a station opens it; stepping off closes it again. */
   const handleZoneChange = (zone: 'avatar' | 'room' | null) => {
+    setPropMenu(null)
     if (zone === 'avatar') {
       setPlacing(null)
       setMode('avatar')
@@ -135,14 +164,38 @@ export function StudioContent({
   }
   const leaveStation = () => {
     setPlacing(null)
+    setPropMenu(null)
     avatarRef.current?.walkTo(STEP_OFF[0], STEP_OFF[1])
   }
 
   /** The learner clicked the floor while holding a prop. */
   const handlePlaceAt = (x: number, z: number, valid: boolean) => {
     if (!placing || !valid) return
-    roomState.place(placing.kind, x, z, placing.rot ?? 0)
+    if (placing.station) {
+      roomState.moveStation(placing.station, x, z)
+    } else if (placing.uid) {
+      // Putting a carried prop back down: it keeps whatever rotation it was
+      // spun to while it was in the air.
+      roomState.move(placing.uid, x, z)
+      if (placing.rot !== placing.rot0) roomState.rotate(placing.uid, (placing.rot ?? 0) - (placing.rot0 ?? 0))
+      roomState.setSelectedUid(placing.uid)
+    } else {
+      roomState.place(placing.kind, x, z, placing.rot ?? 0)
+    }
     setPlacing(null)
+  }
+
+  /** "Move" on the prop menu picks the prop — or the whole station — up. */
+  const startMove = (uid: string) => {
+    setPropMenu(null)
+    if (uid.startsWith('station:')) {
+      setPlacing({ kind: uid, station: uid.slice(8) as StationId, rot: 0, rot0: 0 })
+      return
+    }
+    const item = roomState.items.find((entry) => entry.uid === uid)
+    if (!item) return
+    roomState.setSelectedUid(null)
+    setPlacing({ kind: item.kind, tint: item.tint, rot: item.rot, rot0: item.rot, uid })
   }
 
   // Escape drops whatever is on the cursor before it drops the studio.
@@ -184,6 +237,21 @@ export function StudioContent({
     return true
   })
 
+  // Save sits with the thing it saves, so both stations share one footer.
+  const panelFooter = (
+    <>
+      <span className={`ys-panel__state${savedNow ? ' is-saved' : anyDirty ? ' is-dirty' : ''}`}>
+        {savedNow ? t('YuviStudio.saved') : anyDirty ? t('YuviStudio.unsaved') : t('YuviStudio.allSaved')}
+      </span>
+      <button type="button" className="ys-btn ys-btn--primary ys-btn--sm" onClick={saveAll} disabled={busy || !anyDirty}>
+        {t('YuviStudio.save')}
+      </button>
+      <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={resetAll} disabled={busy}>
+        {t('YuviStudio.reset')}
+      </button>
+    </>
+  )
+
   return (
     <div className={`Yuvi-studio ys-mode-${mode}`}>
       <LearnerAppBar />
@@ -194,161 +262,146 @@ export function StudioContent({
             placing={placing}
             setPlacing={setPlacing}
             onLeave={leaveStation}
+            footer={panelFooter}
             t={t}
           />
         )}
         {mode === 'avatar' && (
-        <aside className="ys-drawer">
-        <div className="ys-drawer__head">
-          <h1>{t('YuviStudio.title')}</h1>
-          <p>{t('YuviStudio.subtitle')}</p>
-          <button type="button" className="ys-station-leave" onClick={leaveStation}>
-            <Icon name="close" size={14} />
-            <span>{t('YuviStudio.station.leave')}</span>
-          </button>
-          {wallet && (
-            <p className="ys-wallet">
-              <Icon name="spark" size={15} />
-              <strong>{wallet.balance}</strong>
-              <span>{t('rewards.currency')}</span>
-            </p>
-          )}
-        </div>
-
-        <div className="ys-tabs" role="tablist" aria-label={t('YuviStudio.title')}>
-          {TABS.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === tab}
-              className={`ys-tab${activeTab === tab ? ' is-active' : ''}`}
-              onClick={() => goToTab(tab)}
-            >
-              {t(`YuviStudio.tab.${tab}`)}
-            </button>
-          ))}
-        </div>
-
-        <div className="ys-panels">
-          {activeTab === 'colors' ? (
-            <ColorsPanel design={design} onPick={setColor} t={t} />
-          ) : (
-            <>
-              <div className="ys-cat">
-                <h2>{t(`YuviStudio.category.${activeTab}`)}</h2>
-                <span className="ys-cat__count">
-                  {t('YuviStudio.itemCount').replace('{count}', String(slotAssets.length))}
-                </span>
-              </div>
-              <div className="ys-filters" role="group" aria-label={t(`YuviStudio.category.${activeTab}`)}>
-                {FILTERS.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    className={`ys-filter${filter === key ? ' is-active' : ''}`}
-                    aria-pressed={filter === key}
-                    onClick={() => setFilter(key)}
-                  >
-                    {t(`YuviStudio.filter.${key}`)}
-                  </button>
-                ))}
-              </div>
-              {activeTab === 'headTop' && (
-                <div className="ys-variant-row">
-                  {(['classic', 'girl'] as YuviVariant[]).map((v) => (
-                    <button
-                      key={v}
-                      type="button"
-                      className={`ys-variant${design.variant === v ? ' is-active' : ''}`}
-                      onClick={() => setVariant(v)}
-                    >
-                      {t(`YuviStudio.variant.${v}`)}
+          <StationPanel
+            title={t('YuviStudio.title')}
+            closeLabel={t('YuviStudio.station.leave')}
+            onClose={leaveStation}
+            wallet={wallet && (
+              <p className="ys-wallet">
+                <Icon name="spark" size={15} />
+                <strong>{wallet.balance}</strong>
+                <span>{t('rewards.currency')}</span>
+              </p>
+            )}
+            nav={(
+              <SegmentedNav
+                label={t('YuviStudio.title')}
+                items={TABS.map((tab) => ({ id: tab, label: t(`YuviStudio.tab.${tab}`), icon: TAB_ICONS[tab] }))}
+                value={activeTab as Tab}
+                onChange={goToTab}
+              />
+            )}
+            context={preview && (
+              <ContextBar
+                tag={t('YuviStudio.preview.tag')}
+                title={t(preview.labelKey)}
+                note={priceOf(preview.id) === null && preview.requirementKey ? t(preview.requirementKey) : undefined}
+                aside={priceOf(preview.id) !== null && (
+                  <span className="ys-ctx__price">
+                    <Icon name="spark" size={13} />
+                    {priceOf(preview.id)}
+                  </span>
+                )}
+                actions={(
+                  <>
+                    {priceOf(preview.id) !== null && (
+                      <button
+                        type="button"
+                        className="ys-btn ys-btn--primary ys-btn--sm"
+                        onClick={() => { setPurchaseError(null); setPending(preview) }}
+                      >
+                        {t('YuviStudio.preview.buy')}
+                      </button>
+                    )}
+                    <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => clearPreview()}>
+                      {t('YuviStudio.preview.cancel')}
                     </button>
-                  ))}
-                </div>
-              )}
-              <div className="ys-grid">
-                {filter === 'all' && (
-                  <Card
-                    equipped={design.equipped[activeTab as YuviSlot] === null && !preview}
-                    onClick={() => { clearPreview(); equip(activeTab as YuviSlot, null) }}
-                    label={t('YuviStudio.none')}
-                    none
-                  />
+                  </>
                 )}
-                {visibleAssets.map((asset) => {
-                  const locked = PREVIEW_ALL ? false : isLocked(asset)
-                  const price = locked ? priceOf(asset.id) : null
-                  const previewing = preview?.id === asset.id
-                  return (
-                    <Card
-                      key={asset.id}
-                      equipped={!preview && design.equipped[asset.slot] === asset.id}
-                      previewing={previewing}
-                      locked={locked}
-                      isNew={Boolean(asset.isNew)}
-                      price={price}
-                      thumb={thumbnails[asset.id]}
-                      label={t(asset.labelKey)}
-                      tip={locked && asset.requirementKey ? t(asset.requirementKey) : undefined}
-                      onClick={() => {
-                        if (!locked) {
-                          clearPreview()
-                          return equip(asset.slot, asset.id)
-                        }
-                        // Locked items are worn first and paid for after — the
-                        // preview bar carries the buy action.
-                        clearPreview()
-                        avatarRef.current?.equip(asset.slot, asset.id, true)
-                        avatarRef.current?.focus(FOCUS_BY_TAB[asset.slot as Tab])
-                        setPreview(asset)
-                      }}
-                    />
-                  )
-                })}
-                {visibleAssets.length === 0 && filter !== 'all' && (
-                  <p className="ys-empty">{t('YuviStudio.filter.empty')}</p>
+              />
+            )}
+            footer={panelFooter}
+          >
+            {activeTab === 'colors' ? (
+              <ColorsPanel design={design} onPick={setColor} t={t} />
+            ) : (
+              <>
+                {activeTab === 'headTop' && (
+                  <div className="ys-variant-row">
+                    {(['classic', 'girl'] as YuviVariant[]).map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        className={`ys-variant${design.variant === v ? ' is-active' : ''}`}
+                        onClick={() => setVariant(v)}
+                      >
+                        {t(`YuviStudio.variant.${v}`)}
+                      </button>
+                    ))}
+                  </div>
                 )}
-              </div>
-            </>
-          )}
-        </div>
-
-        {preview && (
-          <div className="ys-preview">
-            <span className="ys-preview__tag">{t('YuviStudio.preview.tag')}</span>
-            <div className="ys-preview__info">
-              <strong>{t(preview.labelKey)}</strong>
-              {priceOf(preview.id) !== null ? (
-                <span className="ys-preview__price">
-                  <Icon name="spark" size={13} />
-                  {priceOf(preview.id)}
-                </span>
-              ) : (
-                <span className="ys-preview__earn">
-                  {preview.requirementKey ? t(preview.requirementKey) : ''}
-                </span>
-              )}
-            </div>
-            <div className="ys-preview__actions">
-              {priceOf(preview.id) !== null && (
-                <button
-                  type="button"
-                  className="ys-btn ys-btn--primary ys-btn--sm"
-                  onClick={() => { setPurchaseError(null); setPending(preview) }}
-                >
-                  {t('YuviStudio.preview.buy')}
-                </button>
-              )}
-              <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => clearPreview()}>
-                {t('YuviStudio.preview.cancel')}
-              </button>
-            </div>
-          </div>
+                <section className="ys-section">
+                  <div className="ys-section__head">
+                    <h2 className="ys-section__title">{t(`YuviStudio.category.${activeTab}`)}</h2>
+                    <span className="ys-section__count">
+                      {t('YuviStudio.itemCount').replace('{count}', String(slotAssets.length))}
+                    </span>
+                  </div>
+                  <div className="ys-toggles" role="group" aria-label={t(`YuviStudio.category.${activeTab}`)}>
+                    {FILTERS.map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        className={`ys-toggle${filter === key ? ' is-active' : ''}`}
+                        aria-pressed={filter === key}
+                        onClick={() => setFilter(key)}
+                      >
+                        {t(`YuviStudio.filter.${key}`)}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="ys-grid">
+                    {filter === 'all' && (
+                      <ItemCard
+                        selected={design.equipped[activeTab as YuviSlot] === null && !preview}
+                        onClick={() => { clearPreview(); equip(activeTab as YuviSlot, null) }}
+                        label={t('YuviStudio.none')}
+                        none
+                      />
+                    )}
+                    {visibleAssets.map((asset) => {
+                      const locked = PREVIEW_ALL ? false : isLocked(asset)
+                      const price = locked ? priceOf(asset.id) : null
+                      return (
+                        <ItemCard
+                          key={asset.id}
+                          selected={!preview && design.equipped[asset.slot] === asset.id}
+                          previewing={preview?.id === asset.id}
+                          locked={locked}
+                          isNew={Boolean(asset.isNew)}
+                          price={price}
+                          thumb={thumbnails[asset.id]}
+                          label={t(asset.labelKey)}
+                          tip={locked && asset.requirementKey ? t(asset.requirementKey) : undefined}
+                          onClick={() => {
+                            if (!locked) {
+                              clearPreview()
+                              return equip(asset.slot, asset.id)
+                            }
+                            // Locked items are worn first and paid for after — the
+                            // context bar carries the buy action.
+                            clearPreview()
+                            avatarRef.current?.equip(asset.slot, asset.id, true)
+                            avatarRef.current?.focus(FOCUS_BY_TAB[asset.slot as Tab])
+                            setPreview(asset)
+                          }}
+                        />
+                      )
+                    })}
+                    {visibleAssets.length === 0 && filter !== 'all' && (
+                      <p className="ys-empty">{t('YuviStudio.filter.empty')}</p>
+                    )}
+                  </div>
+                </section>
+              </>
+            )}
+          </StationPanel>
         )}
-      </aside>
-      )}
 
       <section className="ys-stage">
         <div className="ys-stage__backdrop" aria-hidden />
@@ -362,53 +415,99 @@ export function StudioContent({
               stage
               roam
               onZoneChange={handleZoneChange}
-              roomItems={roomState.items}
+              roomItems={visibleRoomItems}
+              stations={roomState.room.stations}
               roomStyle={roomStyle}
               placing={placing}
               onPlaceAt={handlePlaceAt}
+              onItemMenu={mode === 'room' && !placing ? setPropMenu : undefined}
               lockRoam={mode !== 'roam'}
               label={t('YuviStudio.avatarAlt')}
             />
           )}
         </div>
         <div className="ys-hint">
-          {justSaved || roomState.justSaved
+          {savedNow
             ? t('YuviStudio.saved')
             : placing
-              ? t('YuviStudio.room.placeHint')
-              : mode === 'roam'
-                ? t('YuviStudio.roam.hint')
-                : t('YuviStudio.hint')}
+              ? t(placing.uid || placing.station ? 'YuviStudio.room.moveHint' : 'YuviStudio.room.placeHint')
+              : mode === 'room'
+                ? t('YuviStudio.room.menuHint')
+                : mode === 'roam'
+                  ? t('YuviStudio.roam.hint')
+                  : t('YuviStudio.hint')}
         </div>
         {mode === 'roam' && (
           // Two doors, always visible: dress Yuvi, or build the room.
           <div className="ys-stations">
-            <button type="button" className="ys-station" onClick={() => avatarRef.current?.recenter()}>
+            <button
+              type="button"
+              className="ys-station"
+              onClick={() => avatarRef.current?.walkTo(roomState.room.stations.avatar.x, roomState.room.stations.avatar.z)}
+            >
               <Icon name="spark" size={16} />
               <span>{t('YuviStudio.zone.avatar')}</span>
             </button>
-            <button type="button" className="ys-station" onClick={() => avatarRef.current?.walkTo(-2.2, 2.4)}>
+            <button
+              type="button"
+              className="ys-station"
+              onClick={() => {
+                const spot = roomStandingSpot(roomState.room.stations.room)
+                avatarRef.current?.walkTo(spot.x, spot.z)
+              }}
+            >
               <Icon name="home" size={16} />
               <span>{t('YuviStudio.zone.room')}</span>
             </button>
           </div>
         )}
-        {/* Leaving the studio is a top-level action, so it gets its own solid
-           button at the top of the bay instead of hiding at the end of a row
-           of ghost buttons where learners could not find it. */}
-        <button type="button" className="ys-exit" onClick={requestClose} disabled={busy}>
-          <Icon name="close" size={16} />
-          <span>{t('YuviStudio.back')}</span>
-        </button>
-        <div className="ys-toolbar">
-          <button type="button" className="ys-btn ys-btn--primary" onClick={saveAll} disabled={busy}>{t('YuviStudio.save')}</button>
-          <button type="button" className="ys-btn ys-btn--ghost" onClick={resetAll} disabled={busy}>{t('YuviStudio.reset')}</button>
-          <button type="button" className="ys-btn ys-btn--mute" onClick={() => setMuted((m) => !m)}>
-            {muted ? t('YuviStudio.sound.off') : t('YuviStudio.sound.on')}
+        {/* Out of the studio, and sound: the only two controls the bay itself
+           owns now that saving lives in the panel doing the changing. */}
+        <div className="ys-stage-tools">
+          <button
+            type="button"
+            className={`ys-iconbtn${muted ? ' is-off' : ''}`}
+            onClick={() => setMuted((m) => !m)}
+            aria-label={muted ? t('YuviStudio.sound.off') : t('YuviStudio.sound.on')}
+            title={muted ? t('YuviStudio.sound.off') : t('YuviStudio.sound.on')}
+          >
+            <Icon name={muted ? 'mute' : 'sound'} size={18} />
+          </button>
+          <button
+            type="button"
+            className="ys-iconbtn ys-iconbtn--exit"
+            onClick={requestClose}
+            disabled={busy}
+            aria-label={t('YuviStudio.back')}
+            title={t('YuviStudio.back')}
+          >
+            <Icon name="close" size={18} />
           </button>
         </div>
+        {mode === 'roam' && anyDirty && (
+          // No panel is open out here, so unsaved work needs its own way home.
+          <div className="ys-stage-save">
+            <span>{t('YuviStudio.unsaved')}</span>
+            <button type="button" className="ys-btn ys-btn--primary ys-btn--sm" onClick={saveAll} disabled={busy}>
+              {t('YuviStudio.save')}
+            </button>
+          </div>
+        )}
       </section>
       </div>
+      {propMenu && (menuItem || menuStation) && (
+        <PropMenu
+          at={propMenu}
+          label={menuStation
+            ? t(`YuviStudio.zone.${menuStation}`)
+            : t(`YuviStudio.room.item.${menuItem!.kind}`)}
+          onMove={() => startMove(propMenu.uid)}
+          onRotate={menuStation ? undefined : () => roomState.rotate(menuItem!.uid, Math.PI / 4)}
+          onRemove={menuStation ? undefined : () => { setPropMenu(null); roomState.remove(menuItem!.uid) }}
+          onClose={() => setPropMenu(null)}
+          t={t}
+        />
+      )}
       {pending && (
         <PurchaseDialog
           asset={pending}
@@ -546,54 +645,6 @@ function PurchaseDialog({
   )
 }
 
-function Card({
-  equipped, previewing, locked, isNew, price, thumb, label, tip, none, onClick,
-}: {
-  equipped?: boolean
-  previewing?: boolean
-  locked?: boolean
-  isNew?: boolean
-  price?: number | null
-  thumb?: string
-  label: string
-  tip?: string
-  none?: boolean
-  onClick: () => void
-}) {
-  const buyable = Boolean(locked) && typeof price === 'number'
-  const classes = [
-    'ys-card',
-    equipped ? 'is-equipped' : '',
-    previewing ? 'is-previewing' : '',
-    locked ? 'is-locked' : '',
-    buyable ? 'is-buyable' : '',
-  ].filter(Boolean).join(' ')
-  return (
-    <button
-      type="button"
-      className={classes}
-      onClick={onClick}
-      aria-pressed={equipped}
-      disabled={Boolean(locked) && !buyable && !tip}
-    >
-      <span className="ys-card__thumb">
-        {none ? <span className="ys-card__none" /> : thumb ? <img src={thumb} alt={label} /> : <span className="ys-card__none" />}
-      </span>
-      <span className="ys-card__label">{label}</span>
-      {equipped && <span className="ys-card__check" aria-hidden><Icon name="check" size={12} /></span>}
-      {isNew && !locked && !equipped && <span className="ys-card__new" aria-hidden />}
-      {buyable && (
-        <span className="ys-card__price">
-          <Icon name="spark" size={13} />
-          {price}
-        </span>
-      )}
-      {locked && !buyable && <span className="ys-card__lock" aria-hidden><Icon name="lock" size={13} /></span>}
-      {locked && !buyable && tip && <span className="ys-card__tip" role="tooltip">{tip}</span>}
-    </button>
-  )
-}
-
 function ColorsPanel({
   design, onPick, t,
 }: {
@@ -604,8 +655,10 @@ function ColorsPanel({
   return (
     <>
       {(Object.keys(COLOR_OPTIONS) as (keyof YuviColors)[]).map((key) => (
-        <div key={key} className="ys-swatch-group">
-          <h3>{t(`YuviStudio.color.${key}`)}</h3>
+        <section key={key} className="ys-section">
+          <div className="ys-section__head">
+            <h2 className="ys-section__title">{t(`YuviStudio.color.${key}`)}</h2>
+          </div>
           <div className="ys-swatches">
             {COLOR_OPTIONS[key].map((hex) => (
               <button
@@ -618,7 +671,7 @@ function ColorsPanel({
               />
             ))}
           </div>
-        </div>
+        </section>
       ))}
     </>
   )
@@ -629,12 +682,13 @@ function ColorsPanel({
  * adjusting it — the room is the learner's, so nothing here is one-shot.
  */
 function RoomPanel({
-  state, placing, setPlacing, onLeave, t,
+  state, placing, setPlacing, onLeave, footer, t,
 }: {
   state: import('./useRoomDesign').RoomDesignState
   placing: YuviPlacing | null
   setPlacing: (next: YuviPlacing | null) => void
   onLeave: () => void
+  footer: React.ReactNode
   t: (key: string) => string
 }) {
   const [category, setCategory] = useState<RoomItemCategory>('seating')
@@ -653,182 +707,159 @@ function RoomPanel({
     setPlacing({ ...placing, rot: (placing.rot ?? 0) + delta })
   }
 
+  const styleGroups = [
+    { key: 'floor', options: ROOM_STYLES, value: room.floor, set: state.setFloor },
+    { key: 'wall', options: WALL_STYLES, value: room.wall, set: state.setWall },
+    { key: 'mood', options: MOODS, value: room.mood, set: state.setMood },
+  ] as const
+
   return (
-    <aside className="ys-drawer ys-drawer--room">
-      <div className="ys-drawer__head">
-        <h1>{t('YuviStudio.room.title')}</h1>
-        <p>{t('YuviStudio.room.subtitle')}</p>
-        <button type="button" className="ys-station-leave" onClick={onLeave}>
-          <Icon name="close" size={14} />
-          <span>{t('YuviStudio.station.leave')}</span>
-        </button>
-      </div>
-
-      <div className="ys-tabs ys-tabs--room" role="tablist" aria-label={t('YuviStudio.room.title')}>
-        {ROOM_CATEGORIES.map((id) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={category === id}
-            className={`ys-tab${category === id ? ' is-active' : ''}`}
-            onClick={() => setCategory(id)}
-          >
-            {t(`YuviStudio.room.category.${id}`)}
-          </button>
-        ))}
-      </div>
-
-      <div className="ys-panels">
-        <div className="ys-cat">
-          <h2>{t(`YuviStudio.room.category.${category}`)}</h2>
-          <span className="ys-cat__count">
+    <StationPanel
+      title={t('YuviStudio.room.title')}
+      closeLabel={t('YuviStudio.station.leave')}
+      onClose={onLeave}
+      nav={(
+        <SegmentedNav
+          label={t('YuviStudio.room.title')}
+          items={ROOM_CATEGORIES.map((id) => ({
+            id, label: t(`YuviStudio.room.category.${id}`), icon: ROOM_ICONS[id],
+          }))}
+          value={category}
+          onChange={setCategory}
+        />
+      )}
+      context={placing
+        ? (
+          <ContextBar
+            tag={t(placing.uid || placing.station ? 'YuviStudio.room.move' : 'YuviStudio.room.placing')}
+            title={placing.station
+              ? t(`YuviStudio.zone.${placing.station}`)
+              : t(`YuviStudio.room.item.${placing.kind}`)}
+            note={t(placing.uid || placing.station ? 'YuviStudio.room.moveHint' : 'YuviStudio.room.placeHint')}
+            actions={(
+              <>
+                {!placing.station && (
+                  <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => spinGhost(Math.PI / 8)}>
+                    {t('YuviStudio.room.rotate')}
+                  </button>
+                )}
+                <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => setPlacing(null)}>
+                  {t('YuviStudio.room.cancel')}
+                </button>
+              </>
+            )}
+          />
+        )
+        : selected
+          ? (
+            <ContextBar
+              tag={t('YuviStudio.room.selected')}
+              title={t(`YuviStudio.room.item.${selected.kind}`)}
+              aside={selectedSpec?.tintable ? (
+                <div className="ys-swatches">
+                  {ITEM_TINTS.map((hex) => (
+                    <button
+                      key={hex}
+                      type="button"
+                      aria-label={hex}
+                      className={`ys-swatch${(selected.tint ?? '').toLowerCase() === hex.toLowerCase() ? ' is-active' : ''}`}
+                      style={{ background: hex }}
+                      onClick={() => state.tint(selected.uid, hex)}
+                    />
+                  ))}
+                </div>
+              ) : undefined}
+              actions={(
+                <>
+                  <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => state.rotate(selected.uid, Math.PI / 8)}>
+                    {t('YuviStudio.room.rotate')}
+                  </button>
+                  <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => state.remove(selected.uid)}>
+                    {t('YuviStudio.room.remove')}
+                  </button>
+                  <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => setSelectedUid(null)}>
+                    {t('YuviStudio.room.done')}
+                  </button>
+                </>
+              )}
+            />
+          )
+          : null}
+      footer={footer}
+    >
+      <section className="ys-section">
+        <div className="ys-section__head">
+          <h2 className="ys-section__title">{t(`YuviStudio.room.category.${category}`)}</h2>
+          <span className="ys-section__count">
             {t('YuviStudio.room.count')
               .replace('{count}', String(items.length))
               .replace('{max}', String(MAX_ROOM_ITEMS))}
           </span>
         </div>
 
-        {full && <p className="ys-room-note">{t('YuviStudio.room.full')}</p>}
+        {full && <p className="ys-note">{t('YuviStudio.room.full')}</p>}
 
-        <div className="ys-room-grid">
+        <div className="ys-grid">
           {itemsInCategory(category).map((spec) => (
-            <button
+            <ItemCard
               key={spec.id}
-              type="button"
-              className={`ys-room-card${placing?.kind === spec.id ? ' is-active' : ''}`}
+              label={t(`YuviStudio.room.item.${spec.id}`)}
+              dot={spec.tint ?? 'var(--ys-accent)'}
+              selected={!placing?.uid && placing?.kind === spec.id}
               disabled={full}
               onClick={() => pick(spec.id)}
-            >
-              <span className="ys-room-card__dot" style={{ background: spec.tint ?? 'var(--ys-accent, #7C6BFF)' }} />
-              <span className="ys-room-card__name">{t(`YuviStudio.room.item.${spec.id}`)}</span>
-            </button>
+            />
           ))}
         </div>
+      </section>
 
-        {/* Style is the fastest way to make the room feel like yours, so it
-           lives in the same panel as the props rather than behind a setting. */}
-        <div className="ys-room-style">
-          <div className="ys-swatch-group">
-            <h3>{t('YuviStudio.room.floor')}</h3>
-            <div className="ys-room-chips">
-              {ROOM_STYLES.map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  className={`ys-room-chip${room.floor === id ? ' is-active' : ''}`}
-                  onClick={() => state.setFloor(id)}
-                >
-                  {t(`YuviStudio.room.floor.${id}`)}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="ys-swatch-group">
-            <h3>{t('YuviStudio.room.wall')}</h3>
-            <div className="ys-room-chips">
-              {WALL_STYLES.map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  className={`ys-room-chip${room.wall === id ? ' is-active' : ''}`}
-                  onClick={() => state.setWall(id)}
-                >
-                  {t(`YuviStudio.room.wall.${id}`)}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="ys-swatch-group">
-            <h3>{t('YuviStudio.room.mood')}</h3>
-            <div className="ys-room-chips">
-              {MOODS.map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  className={`ys-room-chip${room.mood === id ? ' is-active' : ''}`}
-                  onClick={() => state.setMood(id)}
-                >
-                  {t(`YuviStudio.room.mood.${id}`)}
-                </button>
-              ))}
-            </div>
-          </div>
+      {/* Style is the fastest way to make the room feel like yours, so it stays
+         in the same scroll as the props. Chips, not cards: a setting is not a
+         thing you own. */}
+      <section className="ys-section">
+        <div className="ys-section__head">
+          <h2 className="ys-section__title">{t('YuviStudio.room.style')}</h2>
         </div>
-
-        {items.length > 0 && (
-          <div className="ys-room-list">
-            <h3>{t('YuviStudio.room.placed')}</h3>
-            <div className="ys-room-chips">
-              {items.map((item) => (
+        {styleGroups.map((group) => (
+          <div key={group.key}>
+            <h3 className="ys-subhead">{t(`YuviStudio.room.${group.key}`)}</h3>
+            <div className="ys-chips">
+              {group.options.map((id) => (
                 <button
-                  key={item.uid}
+                  key={id}
                   type="button"
-                  className={`ys-room-chip${selected?.uid === item.uid ? ' is-active' : ''}`}
-                  onClick={() => { setPlacing(null); setSelectedUid(item.uid) }}
+                  className={`ys-chip${group.value === id ? ' is-active' : ''}`}
+                  onClick={() => group.set(id)}
                 >
-                  {t(`YuviStudio.room.item.${item.kind}`)}
+                  {t(`YuviStudio.room.${group.key}.${id}`)}
                 </button>
               ))}
             </div>
-            <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={state.clear}>
+          </div>
+        ))}
+      </section>
+
+      {items.length > 0 && (
+        <section className="ys-section">
+          <div className="ys-section__head">
+            <h2 className="ys-section__title">{t('YuviStudio.room.placed')}</h2>
+            <button type="button" className="ys-toggle" onClick={state.clear}>
               {t('YuviStudio.room.clear')}
             </button>
           </div>
-        )}
-      </div>
-
-      {placing && (
-        <div className="ys-preview">
-          <span className="ys-preview__tag">{t('YuviStudio.room.placing')}</span>
-          <div className="ys-preview__info">
-            <strong>{t(`YuviStudio.room.item.${placing.kind}`)}</strong>
-            <span className="ys-preview__earn">{t('YuviStudio.room.placeHint')}</span>
+          <div className="ys-grid">
+            {items.map((item) => (
+              <ItemCard
+                key={item.uid}
+                label={t(`YuviStudio.room.item.${item.kind}`)}
+                dot={item.tint ?? roomItemSpec(item.kind)?.tint ?? 'var(--ys-accent)'}
+                selected={selected?.uid === item.uid}
+                onClick={() => { setPlacing(null); setSelectedUid(item.uid) }}
+              />
+            ))}
           </div>
-          <div className="ys-preview__actions">
-            <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => spinGhost(Math.PI / 8)}>
-              {t('YuviStudio.room.rotate')}
-            </button>
-            <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => setPlacing(null)}>
-              {t('YuviStudio.room.cancel')}
-            </button>
-          </div>
-        </div>
+        </section>
       )}
-
-      {selected && !placing && (
-        <div className="ys-preview">
-          <span className="ys-preview__tag">{t('YuviStudio.room.selected')}</span>
-          <div className="ys-preview__info">
-            <strong>{t(`YuviStudio.room.item.${selected.kind}`)}</strong>
-            {selectedSpec?.tintable && (
-              <div className="ys-swatches">
-                {ITEM_TINTS.map((hex) => (
-                  <button
-                    key={hex}
-                    type="button"
-                    aria-label={hex}
-                    className={`ys-swatch${(selected.tint ?? '').toLowerCase() === hex.toLowerCase() ? ' is-active' : ''}`}
-                    style={{ background: hex }}
-                    onClick={() => state.tint(selected.uid, hex)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="ys-preview__actions">
-            <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => state.rotate(selected.uid, Math.PI / 8)}>
-              {t('YuviStudio.room.rotate')}
-            </button>
-            <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => state.remove(selected.uid)}>
-              {t('YuviStudio.room.remove')}
-            </button>
-            <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => setSelectedUid(null)}>
-              {t('YuviStudio.room.done')}
-            </button>
-          </div>
-        </div>
-      )}
-    </aside>
+    </StationPanel>
   )
 }

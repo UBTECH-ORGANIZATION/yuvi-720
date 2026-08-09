@@ -8,8 +8,8 @@ import yuviFaviconUrl from '../../assets/yuvi-favicon.png'
 import type { YuviColors, YuviDesign, YuviSlot, YuviVariant } from './YuviDesign'
 import { getAsset, buildBlondeHair, buildEyebrowsBundle } from './YuviAssets'
 import { roomItemSpec } from './RoomCatalog'
-import { createYuviLabRoom, detectLabQuality, type LabRoom, type LabRoomQuality, type LabRoomZoneId } from './YuviLabRoom'
-import type { MoodId, RoomItem, RoomStyleId, WallStyleId } from './RoomDesign'
+import { createYuviLabRoom, detectLabQuality, roomStandingSpot, PROP_SCALE, STATION_RADIUS, type LabRoom, type LabRoomQuality, type LabRoomZoneId } from './YuviLabRoom'
+import type { MoodId, RoomItem, RoomStations, RoomStyleId, StationId, WallStyleId } from './RoomDesign'
 
 /** Camera framings the studio can request when the learner switches category. */
 export type YuviFocus = 'full' | 'head' | 'face' | 'body' | 'hand' | 'back' | 'roam' | 'room'
@@ -19,6 +19,12 @@ export interface YuviPlacing {
   kind: string
   tint?: string
   rot?: number
+  /** Set when an already-placed prop is being carried rather than a new one. */
+  uid?: string
+  /** Set when a whole walk-in station is being carried. */
+  station?: StationId
+  /** The rotation it was picked up at, so a cancelled move changes nothing. */
+  rot0?: number
 }
 
 export interface YuviAvatarHandle {
@@ -86,6 +92,8 @@ interface Props {
   onZoneChange?: (zone: LabRoomZoneId | null) => void
   /** The learner's placed props. A new array identity re-syncs the room. */
   roomItems?: RoomItem[]
+  /** Where the two walk-in stations stand. A new identity re-syncs them. */
+  stations?: RoomStations | null
   /** Floor, wall and lighting mood chosen by the learner. */
   roomStyle?: { floor: RoomStyleId; wall: WallStyleId; mood: MoodId } | null
   /** Prop currently being positioned — shown as a hologram under the pointer. */
@@ -95,6 +103,9 @@ interface Props {
   lockRoam?: boolean
   /** Fires when the learner clicks the floor while placing. */
   onPlaceAt?: (x: number, z: number, valid: boolean) => void
+  /** Right-click on a placed prop. Passing it enables in-world prop menus;
+   *  `null` means the menu should close. */
+  onItemMenu?: (menu: { uid: string; x: number; y: number } | null) => void
 }
 
 // The chest-badge favicon is shared across every avatar instance.
@@ -120,7 +131,7 @@ function mixWhite([r, g, b]: number[], t: number): [number, number, number] {
 const rgba = ([r, g, b]: number[], a: number) => `rgba(${r}, ${g}, ${b}, ${a})`
 
 export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAvatar3D(
-  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard', roam = false, onZoneChange, roomItems, roomStyle = null, placing = null, onPlaceAt, lockRoam = false },
+  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard', roam = false, onZoneChange, roomItems, stations = null, roomStyle = null, placing = null, onPlaceAt, lockRoam = false, onItemMenu },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null)
@@ -148,10 +159,12 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   const roamRef = useRef(roam)
   const onZoneChangeRef = useRef(onZoneChange)
   const roomItemsRef = useRef(roomItems)
+  const stationsRef = useRef(stations)
   const roomStyleRef = useRef(roomStyle)
   const placingRef = useRef(placing)
   const lockRoamRef = useRef(lockRoam)
   const onPlaceAtRef = useRef(onPlaceAt)
+  const onItemMenuRef = useRef(onItemMenu)
   const pullingStartedAtRef = useRef(pulling ? Date.now() : 0)
   useEffect(() => { mutedRef.current = muted }, [muted])
   useEffect(() => { onYClickRef.current = onYClick }, [onYClick])
@@ -180,10 +193,12 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   useEffect(() => { roamRef.current = roam }, [roam])
   useEffect(() => { onZoneChangeRef.current = onZoneChange }, [onZoneChange])
   useEffect(() => { roomItemsRef.current = roomItems }, [roomItems])
+  useEffect(() => { stationsRef.current = stations }, [stations])
   useEffect(() => { roomStyleRef.current = roomStyle }, [roomStyle])
   useEffect(() => { placingRef.current = placing }, [placing])
   useEffect(() => { lockRoamRef.current = lockRoam }, [lockRoam])
   useEffect(() => { onPlaceAtRef.current = onPlaceAt }, [onPlaceAt])
+  useEffect(() => { onItemMenuRef.current = onItemMenu }, [onItemMenu])
 
   useImperativeHandle(ref, () => ({
     equip: (slot, id, animate = true) => controllerRef.current?.equip(slot, id, animate),
@@ -272,7 +287,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       bounce.intensity = 0.22
       // Aerial haze: the far wall sits back, the platform stays forward, and
       // the view through the window reads as genuinely distant.
-      scene.fog = new THREE.FogExp2(0x05071a, 0.046)
+      scene.fog = new THREE.FogExp2(0x05071a, 0.036)
     }
     const roomBounds = room?.bounds ?? null
 
@@ -300,25 +315,37 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       body: { pos: [0, 0.02, 4.7], look: [0, 0.02, 0], yaw: 0 },
       hand: { pos: [0.75, -0.18, 4.5], look: [0.3, -0.2, 0], yaw: 0.35 },
       back: { pos: [0, 0.34, 5.7], look: [0, 0.1, 0], yaw: Math.PI },
-      // Walking shot: a wider lens lifted off the floor, so the room is the
-      // subject and Yuvi is just the character in it. He is also free to turn
-      // wherever he is heading instead of being locked facing the lens.
-      // `dolly` lets these two shots sit just outside the room's open front —
-      // far enough back to see the floor, still too narrow to see past a wall.
-      roam: { pos: [0, 1.9, 8.8], look: [0, -0.5, 0], yaw: null, fov: 40, dolly: 2.8 },
+      // Walking shot: a wide establishing lens lifted off the floor, so the
+      // room is the subject and Yuvi is just the character in it. He is also
+      // free to turn wherever he is heading instead of being locked facing the
+      // lens. `dolly` lets these two shots sit just outside the room's open
+      // front — far enough back to see the whole floor, still too narrow to see
+      // past a wall.
+      roam: { pos: [0, 2.5, 10.6], look: [0, -0.5, 0], yaw: null, fov: 44, dolly: 4 },
       // Decorating is the one shot that must not follow Yuvi: the learner is
       // looking at the floor plan, not at the robot standing on the station.
-      room: { pos: [-0.55, 3.05, 11], look: [-0.55, -1.05, -0.8], yaw: null, anchored: false, fov: 54, dolly: 2.8 },
+      room: { pos: [-0.7, 3.9, 14], look: [-0.7, -1.05, -1.2], yaw: null, anchored: false, fov: 56, dolly: 4.2 },
     }
-    const camPos = new THREE.Vector3(...FRAMES.full.pos)
-    const camLook = new THREE.Vector3(...FRAMES.full.look)
+    // Yuvi spawns in the open floor in front of the two stations, never on one
+    // of them — otherwise the studio would open straight into a panel and the
+    // learner would never see that the room is walkable.
+    const SPAWN: [number, number] = roam ? [0, 3] : [0, 0]
+    // Roaming opens on the establishing shot. Starting on the portrait frame
+    // and easing out meant every entrance began as a close-up of Yuvi's face.
+    const openingShot = roam ? FRAMES.roam : FRAMES.full
+    const camPos = new THREE.Vector3(openingShot.pos[0] + SPAWN[0], openingShot.pos[1], openingShot.pos[2] + SPAWN[1])
+    const camLook = new THREE.Vector3(openingShot.look[0] + SPAWN[0], openingShot.look[1], openingShot.look[2] + SPAWN[1])
     const camPosTarget = camPos.clone()
     const camLookTarget = camLook.clone()
+    camera.fov = openingShot.fov ?? BASE_FOV
+    camera.updateProjectionMatrix()
     let yawTarget: number | null = 0
     // The active shot, kept as data so it can be re-anchored to Yuvi every
     // frame while he walks instead of being baked once into the target.
-    let frameShot = FRAMES.full
+    let frameShot = openingShot
     let appliedRoomItems: RoomItem[] | undefined
+    let appliedPlacing: YuviPlacing | null | undefined
+    let appliedStations: RoomStations | null | undefined
     let appliedRoomStyle: { floor: RoomStyleId; wall: WallStyleId; mood: MoodId } | null | undefined
 
     // ── Free camera ──
@@ -344,10 +371,6 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     const BODY_RADIUS = 0.44        // how close Yuvi may get to a prop
     const DECK_RADIUS = 1.1         // inside this he is standing on the platform
     const DECK_LIFT = 0.13          // the platform is this much above the floor
-    // Yuvi spawns in the open floor in front of the two stations, never on one
-    // of them — otherwise the studio would open straight into a panel and the
-    // learner would never see that the room is walkable.
-    const SPAWN: [number, number] = roam ? [0, 3] : [0, 0]
     const roamPos = new THREE.Vector2(SPAWN[0], SPAWN[1])
     const roamTarget = new THREE.Vector2(SPAWN[0], SPAWN[1])
     const roamStep = new THREE.Vector2()
@@ -356,12 +379,14 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     const roamSide = new THREE.Vector3()
     let roamSpeed = 0               // eased 0..1, drives the gait
     let roamZone: LabRoomZoneId | null = null
+    // Set when he has just stepped onto a station and still has to turn around.
+    let faceLearnerPending = false
     let deckBlend = roam ? 0 : 1    // 1 = on the platform, 0 = on the floor
     const heldKeys = new Set<string>()
     const walkLimits = roomBounds
       ? {
           minX: -roomBounds.halfX + 0.7, maxX: roomBounds.halfX - 0.7,
-          minZ: roomBounds.backZ + 1.1, maxZ: 5.2,
+          minZ: roomBounds.backZ + 1.1, maxZ: roomBounds.frontZ - 3.2,
         }
       : { minX: -4, maxX: 4, minZ: -5.5, maxZ: 5.2 }
 
@@ -403,17 +428,31 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       return { x: floorHit.x, z: floorHit.z }
     }
 
-    /** A spot is buildable when it is on the floor, off the stations, and clear. */
-    const canBuildAt = (x: number, z: number, radius: number) => {
+    /** Footprint of a prop as it is actually built, not as it is catalogued. */
+    const propRadius = (kind: string) => (roomItemSpec(kind)?.radius ?? 0.5) * PROP_SCALE
+    /** What a carried thing needs clear around it — a prop, or a whole station. */
+    const carriedRadius = (placingNow: YuviPlacing) =>
+      placingNow.station ? STATION_RADIUS[placingNow.station] : propRadius(placingNow.kind)
+
+    /**
+     * A spot is free when it is on the floor and no footprint reaches it. The
+     * circles are hard: nothing in the room may ever intersect anything else.
+     */
+    const canBuildAt = (x: number, z: number, radius: number, station?: StationId) => {
       if (x < walkLimits.minX || x > walkLimits.maxX) return false
       if (z < walkLimits.minZ || z > walkLimits.maxZ) return false
-      for (const circle of room?.noBuildZones() ?? []) {
-        if (Math.hypot(x - circle.x, z - circle.z) < circle.radius + radius * 0.6) return false
+      // The bench is only a valid spot if the floor in front of it — where the
+      // learner has to stand to use it — is inside the room too.
+      if (station === 'room') {
+        const stand = roomStandingSpot({ x, z })
+        if (stand.x < walkLimits.minX || stand.x > walkLimits.maxX) return false
+        if (stand.z < walkLimits.minZ || stand.z > walkLimits.maxZ) return false
+      }
+      for (const circle of room?.noBuildZones(station) ?? []) {
+        if (Math.hypot(x - circle.x, z - circle.z) < circle.radius + radius) return false
       }
       for (const item of roomItemsRef.current ?? []) {
-        const other = roomItemSpec(item.kind)
-        if (!other) continue
-        if (Math.hypot(x - item.x, z - item.z) < (other.radius + radius) * 0.8) return false
+        if (Math.hypot(x - item.x, z - item.z) < propRadius(item.kind) + radius) return false
       }
       return true
     }
@@ -567,17 +606,21 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     }
 
     // ── Legs (chunky articulated parts with soft boots) ──
+    // The group's origin sits at the hip joint, so `rotation.x` swings the leg
+    // from the pelvis the way a stride does. With the pivot down near the ankle
+    // the hips swung out of the torso on every step and the walk fell apart.
+    const HIP_Y = 0.51
     const makeLeg = (side: number) => {
       const grp = new THREE.Group()
-      const hip = new THREE.Mesh(new THREE.SphereGeometry(0.104, 32, 24), blueMat); hip.scale.set(1.08, 0.92, 1); hip.position.set(0.014 * side, 0.39, 0.015); grp.add(hip)
-      const thigh = new THREE.Mesh(new RoundedBoxGeometry(0.16, 0.165, 0.145, 10, 0.06), blueMat); thigh.position.set(0.01 * side, 0.29, 0.018); thigh.rotation.z = 0.025 * side; grp.add(thigh)
-      const knee = new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.078, 0.052, 32), jointMat); knee.position.set(0.003 * side, 0.18, 0.025); knee.scale.set(1.05, 0.78, 1); grp.add(knee)
-      const shin = new THREE.Mesh(new RoundedBoxGeometry(0.162, 0.19, 0.145, 10, 0.06), blueMat); shin.position.set(-0.003 * side, 0.075, 0.04); shin.rotation.z = -0.015 * side; grp.add(shin)
-      const shinHighlight = new THREE.Mesh(new RoundedBoxGeometry(0.108, 0.13, 0.026, 8, 0.026), whiteMat); shinHighlight.position.set(-0.003 * side, 0.078, 0.126); shinHighlight.rotation.z = -0.015 * side; grp.add(shinHighlight)
-      const ankle = new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.078, 0.052, 32), blueMat); ankle.position.set(-0.003 * side, -0.045, 0.04); ankle.scale.set(1.12, 0.66, 1); grp.add(ankle)
-      const foot = new THREE.Mesh(new RoundedBoxGeometry(0.255, 0.125, 0.36, 10, 0.068), blueMat); foot.position.set(0.006 * side, -0.1, 0.105); foot.rotation.x = -0.09; grp.add(foot)
-      const toe = new THREE.Mesh(new RoundedBoxGeometry(0.205, 0.07, 0.17, 8, 0.04), whiteMat); toe.position.set(0.006 * side, -0.078, 0.208); toe.rotation.x = -0.1; grp.add(toe)
-      grp.position.set(0.145 * side, 0.12, 0)
+      const hip = new THREE.Mesh(new THREE.SphereGeometry(0.104, 32, 24), blueMat); hip.scale.set(1.08, 0.92, 1); hip.position.set(0.014 * side, 0, 0.015); grp.add(hip)
+      const thigh = new THREE.Mesh(new RoundedBoxGeometry(0.16, 0.165, 0.145, 10, 0.06), blueMat); thigh.position.set(0.01 * side, -0.1, 0.018); thigh.rotation.z = 0.025 * side; grp.add(thigh)
+      const knee = new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.078, 0.052, 32), jointMat); knee.position.set(0.003 * side, -0.21, 0.025); knee.scale.set(1.05, 0.78, 1); grp.add(knee)
+      const shin = new THREE.Mesh(new RoundedBoxGeometry(0.162, 0.19, 0.145, 10, 0.06), blueMat); shin.position.set(-0.003 * side, -0.315, 0.04); shin.rotation.z = -0.015 * side; grp.add(shin)
+      const shinHighlight = new THREE.Mesh(new RoundedBoxGeometry(0.108, 0.13, 0.026, 8, 0.026), whiteMat); shinHighlight.position.set(-0.003 * side, -0.312, 0.126); shinHighlight.rotation.z = -0.015 * side; grp.add(shinHighlight)
+      const ankle = new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.078, 0.052, 32), blueMat); ankle.position.set(-0.003 * side, -0.435, 0.04); ankle.scale.set(1.12, 0.66, 1); grp.add(ankle)
+      const foot = new THREE.Mesh(new RoundedBoxGeometry(0.255, 0.125, 0.36, 10, 0.068), blueMat); foot.position.set(0.006 * side, -0.49, 0.105); foot.rotation.x = -0.09; grp.add(foot)
+      const toe = new THREE.Mesh(new RoundedBoxGeometry(0.205, 0.07, 0.17, 8, 0.04), whiteMat); toe.position.set(0.006 * side, -0.468, 0.208); toe.rotation.x = -0.1; grp.add(toe)
+      grp.position.set(0.145 * side, HIP_Y, 0)
       return grp
     }
     const legL = makeLeg(-1), legR = makeLeg(1)
@@ -827,6 +870,8 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       lastX = event.clientX; lastY = event.clientY; velYaw = 0
       pressX = event.clientX; pressY = event.clientY; pressAt = performance.now()
       renderer.domElement.style.cursor = dragging === 'pan' ? 'move' : 'grabbing'
+      // Any camera move pulls the ground out from under an anchored prop menu.
+      if (event.button === 0) onItemMenuRef.current?.(null)
     }
     const onOrbitMove = (event: PointerEvent) => {
       if (!dragging) return
@@ -852,23 +897,50 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       if (!spot) return
       const placingNow = placingRef.current
       if (placingNow) {
-        const spec = roomItemSpec(placingNow.kind)
-        const valid = !!spec && canBuildAt(spot.x, spot.z, spec.radius)
+        const valid = canBuildAt(spot.x, spot.z, carriedRadius(placingNow), placingNow.station)
         onPlaceAtRef.current?.(spot.x, spot.z, valid)
       } else if (!lockRoamRef.current) {
         walkTo(spot.x, spot.z)
       }
     }
+    // Right-click a placed prop for its own menu, Sims-style. The browser menu
+    // is always suppressed over the bay — right-drag is how you pan.
+    const onContextMenu = (event: MouseEvent) => {
+      event.preventDefault()
+      const report = onItemMenuRef.current
+      if (!report || !room) return
+      if (Math.hypot(event.clientX - pressX, event.clientY - pressY) > 6) return
+      const rect = renderer.domElement.getBoundingClientRect()
+      if (!rect.width || !rect.height) return
+      ndc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+      ndc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+      raycaster.setFromCamera(ndc, camera)
+      const uid = room.pickItem(raycaster)
+      const station = uid ? null : room.pickStation(raycaster)
+      if (!uid && !station) { report(null); return }
+      const anchor = uid ? room.itemAnchor(uid) : room.stationAnchor(station!)
+      if (!anchor) { report(null); return }
+      anchor.project(camera)
+      report({
+        uid: uid ?? `station:${station}`,
+        x: rect.left + ((anchor.x + 1) / 2) * rect.width,
+        y: rect.top + ((1 - anchor.y) / 2) * rect.height,
+      })
+    }
     // While a prop is on the cursor, the room shows exactly where it will land.
-    const onGhostMove = (event: PointerEvent) => {
+    let lastPointerAt: { clientX: number; clientY: number } | null = null
+    const updateGhost = (event: { clientX: number; clientY: number }) => {
       const placingNow = placingRef.current
       if (!room) return
       if (!placingNow) { room.setGhost(null); return }
       const spot = pickFloor(event)
       if (!spot) return
-      const spec = roomItemSpec(placingNow.kind)
-      const valid = !!spec && canBuildAt(spot.x, spot.z, spec.radius)
+      const valid = canBuildAt(spot.x, spot.z, carriedRadius(placingNow), placingNow.station)
       room.setGhost(placingNow.kind, spot.x, spot.z, placingNow.rot ?? 0, valid, placingNow.tint)
+    }
+    const onGhostMove = (event: PointerEvent) => {
+      lastPointerAt = { clientX: event.clientX, clientY: event.clientY }
+      updateGhost(event)
     }
     // Layout-independent codes, so the keys work on a Hebrew keyboard too.
     const KEY_MAP: Record<string, string> = {
@@ -896,15 +968,15 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       // The canvas fills the stage, so the page must not scroll underneath it.
       event.preventDefault()
       userZoom = THREE.MathUtils.clamp(userZoom * Math.exp(event.deltaY * 0.0011), 0.42, 1.85)
+      onItemMenuRef.current?.(null)
     }
     const onOrbitReset = () => resetUserView()
-    const onOrbitContext = (event: Event) => event.preventDefault()
     if (orbit) {
       renderer.domElement.style.cursor = 'grab'
       renderer.domElement.addEventListener('pointerdown', onOrbitDown)
       renderer.domElement.addEventListener('wheel', onOrbitWheel, { passive: false })
       renderer.domElement.addEventListener('dblclick', onOrbitReset)
-      renderer.domElement.addEventListener('contextmenu', onOrbitContext)
+      renderer.domElement.addEventListener('contextmenu', onContextMenu)
       renderer.domElement.addEventListener('pointermove', onGhostMove, { passive: true })
       window.addEventListener('pointermove', onOrbitMove)
       window.addEventListener('pointerup', onOrbitUp)
@@ -990,9 +1062,37 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
             appliedRoomItems = roomItemsRef.current
             room.setUserItems(appliedRoomItems ?? [])
           }
+          // A station takes whoever is standing at it along for the ride, so
+          // moving the one you are using never closes the panel under you.
+          if (stationsRef.current && stationsRef.current !== appliedStations) {
+            const previous = appliedStations
+            const next = stationsRef.current
+            let shiftX = 0, shiftZ = 0
+            if (previous && roamZone) {
+              const from = roamZone === 'avatar' ? previous.avatar : roomStandingSpot(previous.room)
+              const to = roamZone === 'avatar' ? next.avatar : roomStandingSpot(next.room)
+              shiftX = to.x - from.x
+              shiftZ = to.z - from.z
+            }
+            appliedStations = next
+            room.setStations(next)
+            if (shiftX || shiftZ) {
+              roamPos.set(roamPos.x + shiftX, roamPos.y + shiftZ)
+              resolveCollisions(roamPos)
+              roamTarget.copy(roamPos)
+            }
+          }
           if (roomStyleRef.current !== appliedRoomStyle) {
             appliedRoomStyle = roomStyleRef.current
             if (appliedRoomStyle) room.setRoomStyle(appliedRoomStyle)
+          }
+          // The ghost belongs to what is being carried, not to pointer movement:
+          // dropping a prop has to take the hologram with it even if the mouse
+          // never moves again.
+          if (placingRef.current !== appliedPlacing) {
+            appliedPlacing = placingRef.current
+            if (!appliedPlacing) room.setGhost(null)
+            else if (lastPointerAt) updateGhost(lastPointerAt)
           }
         }
         // ── Roaming ──
@@ -1040,9 +1140,24 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
             roamZone = nextZone
             room?.setZoneHighlight(nextZone)
             onZoneChangeRef.current?.(nextZone)
+            if (nextZone) {
+              // Arriving at a station means standing *on* it: he walks the rest
+              // of the way to the middle instead of stopping wherever he
+              // happened to cross the ring.
+              const zone = room?.zones.find((entry) => entry.id === nextZone)
+              if (zone) { heldKeys.clear(); walkTo(zone.x, zone.z) }
+            }
+            faceLearnerPending = Boolean(nextZone)
+          }
+          // Once he is parked, he turns to the learner — the walk itself keeps
+          // overwriting the yaw with whatever direction he was heading in.
+          if (faceLearnerPending && !moving) {
+            yawTarget = frameShot.yaw ?? 0
+            faceLearnerPending = false
           }
           // Off the platform he stands 13cm lower, and the shadow light follows.
-          const onDeck = Math.hypot(roamPos.x, roamPos.y) < DECK_RADIUS ? 1 : 0
+          const deckAt = appliedStations?.avatar
+          const onDeck = Math.hypot(roamPos.x - (deckAt?.x ?? 0), roamPos.y - (deckAt?.z ?? 0)) < DECK_RADIUS ? 1 : 0
           deckBlend += (onDeck - deckBlend) * 0.12
           if (room && roomBounds) {
             room.keyLight.position.set(roamPos.x + 0.5, roomBounds.ceilY - 0.35, roamPos.y + 2.3)
@@ -1357,7 +1472,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       renderer.domElement.removeEventListener('pointerdown', onOrbitDown)
       renderer.domElement.removeEventListener('wheel', onOrbitWheel)
       renderer.domElement.removeEventListener('dblclick', onOrbitReset)
-      renderer.domElement.removeEventListener('contextmenu', onOrbitContext)
+      renderer.domElement.removeEventListener('contextmenu', onContextMenu)
       renderer.domElement.removeEventListener('pointermove', onGhostMove)
       window.removeEventListener('pointermove', onOrbitMove)
       window.removeEventListener('pointerup', onOrbitUp)

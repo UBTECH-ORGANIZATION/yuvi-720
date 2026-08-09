@@ -22,12 +22,22 @@ export interface RoomItem {
   tint?: string
 }
 
+export type StationId = 'avatar' | 'room'
+
+/**
+ * Where the two walk-in stations stand. The room station's coordinate is the
+ * bench itself; the spot the learner stands on is derived from it, so moving
+ * the bench takes its doorway with it.
+ */
+export type RoomStations = Record<StationId, { x: number; z: number }>
+
 export interface RoomDesign {
   version: number
   floor: RoomStyleId
   wall: WallStyleId
   mood: MoodId
   items: RoomItem[]
+  stations: RoomStations
 }
 
 export const ROOM_STYLES: RoomStyleId[] = ['lab', 'wood', 'carpet', 'meadow', 'court']
@@ -37,12 +47,18 @@ export const MOODS: MoodId[] = ['studio', 'sunset', 'night', 'party']
 /** Hard cap. A room full of 200 props is not a design, it is a frame-rate bug. */
 export const MAX_ROOM_ITEMS = 60
 
+export const DEFAULT_STATIONS: RoomStations = {
+  avatar: { x: 0, z: 0 },
+  room: { x: -5, z: 2.6 },
+}
+
 export const DEFAULT_ROOM: RoomDesign = {
   version: 1,
   floor: 'lab',
   wall: 'lab',
   mood: 'studio',
   items: [],
+  stations: DEFAULT_STATIONS,
 }
 
 export function cloneRoom(room: RoomDesign): RoomDesign {
@@ -52,6 +68,7 @@ export function cloneRoom(room: RoomDesign): RoomDesign {
     wall: room.wall,
     mood: room.mood,
     items: room.items.map((item) => ({ ...item })),
+    stations: { avatar: { ...room.stations.avatar }, room: { ...room.stations.room } },
   }
 }
 
@@ -91,12 +108,26 @@ export function normalizeRoom(raw: unknown): RoomDesign {
       })
     }
   }
+
+  const rawStations = record.stations as Record<string, unknown> | undefined
+  if (rawStations && typeof rawStations === 'object') {
+    for (const id of ['avatar', 'room'] as StationId[]) {
+      const spot = rawStations[id] as Record<string, unknown> | undefined
+      if (!spot || typeof spot !== 'object') continue
+      if (!isFinitePoint(spot.x) || !isFinitePoint(spot.z)) continue
+      base.stations[id] = { x: spot.x, z: spot.z }
+    }
+  }
   return base
 }
 
 /** Layout equality, used for the unsaved-changes guard. */
 export function sameRoom(a: RoomDesign, b: RoomDesign): boolean {
   if (a.floor !== b.floor || a.wall !== b.wall || a.mood !== b.mood) return false
+  for (const id of ['avatar', 'room'] as StationId[]) {
+    if (Math.abs(a.stations[id].x - b.stations[id].x) > 0.001) return false
+    if (Math.abs(a.stations[id].z - b.stations[id].z) > 0.001) return false
+  }
   if (a.items.length !== b.items.length) return false
   for (let i = 0; i < a.items.length; i++) {
     const x = a.items[i]
