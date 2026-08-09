@@ -3,6 +3,7 @@ import { useI18n } from '../i18n/I18nProvider'
 import { useBrain } from '../providers/BrainProvider'
 import { AppBar } from './AppBar'
 import { Icon } from './primitives'
+import { StudioLaunchButton } from './StudioLaunchButton'
 import { WalletChip } from './WalletChip'
 import './learner-app-bar.css'
 
@@ -79,6 +80,14 @@ export function LearnerAppBar({ studentName }: LearnerAppBarProps) {
   )
 
   return (
-    <AppBar center={navigation} trailing={<WalletChip />} />
+    <AppBar
+      center={navigation}
+      trailing={(
+        <>
+          <StudioLaunchButton />
+          <WalletChip />
+        </>
+      )}
+    />
   )
 }

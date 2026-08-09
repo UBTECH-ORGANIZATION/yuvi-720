@@ -1,72 +1,191 @@
 /* Yuvi Studio — game-style character customization. RTL-first, logical props. */
 .Yuvi-studio {
+  /* One token layer for the whole studio. Dark mode overrides these values
+     instead of re-declaring every component below. */
+  --ys-panel-bg: #fff;
+  --ys-panel-border: transparent;
+  --ys-panel-shadow: 0 18px 44px rgba(70, 50, 160, .16);
+  --ys-surface: #f6f4ff;
+  --ys-surface-hover: #efeaff;
+  --ys-sunken: #f4f1ff;
+  --ys-ink: var(--sp-ink-900, #241f3d);
+  --ys-ink-soft: var(--sp-ink-400, #6b6880);
+  --ys-line: var(--sp-border, #e8e2f7);
+  --ys-accent: #6f5bff;
+  --ys-accent-ink: #4c39d6;
+  --ys-accent-soft: rgba(111, 91, 255, .12);
+  --ys-danger: #ff5d73;
+  --ys-radius-panel: var(--sp-radius-xl, 22px);
+  --ys-radius-card: 16px;
+  --ys-radius-ctl: 12px;
+
   display: flex;
   flex-direction: column;
   height: 100vh;
   background: radial-gradient(1200px 700px at 80% -10%, #f3e9ff 0%, #e7e0ff 45%, #ddd6fb 100%);
   box-sizing: border-box;
-  color: var(--sp-ink-900, #241f3d);
+  color: var(--ys-ink);
 }
 /* Grid body sits below the shared navbar. */
 .ys-body {
   display: grid;
-  grid-template-columns: 380px 1fr;
+  grid-template-columns: 360px 1fr;
   gap: var(--sp-4, 16px);
   flex: 1;
   min-height: 0;
   padding: var(--sp-4, 16px);
 }
+@media (min-width: 1180px) { .ys-body { grid-template-columns: 400px 1fr; } }
 
-/* ── Left drawer ── */
-.ys-drawer {
-  background: var(--sp-surface, #fff);
-  border-radius: var(--sp-radius-xl, 22px);
-  box-shadow: 0 18px 44px rgba(70, 50, 160, 0.16);
+/* ── Station panel ──
+   One shell for both stations: head, nav, scrolling body, sticky foot. */
+.ys-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--ys-panel-border);
+  border-radius: var(--ys-radius-panel);
+  background: var(--ys-panel-bg);
+  box-shadow: var(--ys-panel-shadow);
 }
-.ys-drawer__head { padding: 18px 20px 10px; border-bottom: 1px solid var(--sp-border, #e8e2f7); }
-.ys-drawer__head h1 { margin: 0; font-size: 20px; }
-.ys-drawer__head p { margin: 4px 0 0; font-size: 12.5px; color: var(--sp-ink-400, #6b6880); }
-
-.ys-tabs { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 16px 0; }
-.ys-tab {
-  border: none; cursor: pointer;
-  background: var(--sp-surface-2, #f3f0ff); color: var(--sp-ink-400, #6b6880);
-  padding: 8px 12px; border-radius: var(--sp-radius-pill, 999px);
-  font: inherit; font-size: 13px; font-weight: 600;
-  transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+.ys-panel__head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 18px 14px;
+  padding-inline-end: 62px;
+  border-block-end: 1px solid var(--ys-line);
 }
-.ys-tab.is-active { background: var(--sp-primary-600, #6f5bff); color: #fff; box-shadow: 0 6px 14px rgba(124, 92, 255, .35); }
+.ys-panel__title { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.2; }
+.ys-panel__title:focus-visible { outline: none; }
 
-.ys-panels { padding: 14px 16px 18px; overflow-y: auto; min-height: 0; flex: 1; }
+/* The only way out of a station, so it is a target before it is a decoration. */
+.ys-panel__close {
+  position: absolute; inset-block-start: 12px; inset-inline-end: 12px; z-index: 2;
+  inline-size: 40px; block-size: 40px; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 1px solid var(--ys-line); background: var(--ys-panel-bg);
+  color: var(--ys-ink-soft); cursor: pointer;
+  transition: color .14s ease, border-color .14s ease, background .14s ease;
+}
+.ys-panel__close:hover {
+  color: var(--ys-danger);
+  border-color: color-mix(in srgb, var(--ys-danger) 45%, transparent);
+  background: color-mix(in srgb, var(--ys-danger) 10%, transparent);
+}
 
-.ys-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+/* Icon over label: the nav stops being one more row of identical pills. */
+.ys-panel__nav {
+  display: flex; gap: 4px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-block-end: 1px solid var(--ys-line);
+}
+.ys-panel__nav::-webkit-scrollbar { display: none; }
+.ys-seg {
+  flex: 1 1 0;
+  display: inline-flex; flex-direction: column; align-items: center; gap: 4px;
+  min-inline-size: 52px; padding: 8px 6px;
+  border: 1px solid transparent; border-radius: var(--ys-radius-ctl);
+  background: transparent; color: var(--ys-ink-soft);
+  font: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer;
+  white-space: nowrap;
+  transition: background .14s ease, color .14s ease, border-color .14s ease;
+}
+.ys-seg:hover { background: var(--ys-surface); color: var(--ys-ink); }
+.ys-seg.is-active {
+  background: var(--ys-accent-soft);
+  border-color: color-mix(in srgb, var(--ys-accent) 42%, transparent);
+  color: var(--ys-accent-ink);
+}
 
+.ys-panel__body {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 16px 18px 18px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+
+/* Every block in the body has the same anatomy, which is what lets the room
+   panel stay one scroll without turning into a list of unrelated widgets. */
+.ys-section { display: flex; flex-direction: column; gap: 10px; }
+.ys-section + .ys-section { padding-block-start: 18px; border-block-start: 1px solid var(--ys-line); }
+.ys-section__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ys-section__title { margin: 0; font-size: 14px; font-weight: 800; color: var(--ys-ink); }
+.ys-section__count { font-size: 12.5px; color: var(--ys-ink-soft); font-variant-numeric: tabular-nums; }
+.ys-subhead { margin: 0 0 8px; font-size: 12.5px; font-weight: 700; color: var(--ys-ink-soft); }
+
+/* Filters are underlined text, not pills — a pill already means "category". */
+.ys-toggles { display: flex; gap: 16px; flex-wrap: wrap; }
+.ys-toggle {
+  border: none; background: none; padding: 2px 0 5px; cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 700; color: var(--ys-ink-soft);
+  border-block-end: 2px solid transparent;
+  transition: color .14s ease, border-color .14s ease;
+}
+.ys-toggle:hover { color: var(--ys-ink); }
+.ys-toggle.is-active { color: var(--ys-accent-ink); border-block-end-color: var(--ys-accent); }
+
+.ys-empty { grid-column: 1 / -1; margin: 18px 0; text-align: center; font-size: 13px; color: var(--ys-ink-soft); }
+
+.ys-note {
+  margin: 0; padding: 9px 12px;
+  border-radius: var(--ys-radius-ctl); font-size: 12.5px; font-weight: 600;
+  background: rgba(255, 157, 92, .14); color: #a3541f;
+}
+
+.ys-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(94px, 1fr)); gap: 10px; }
+
+/* One card for everything you can pick: avatar gear, room props, placed items.
+   Selection is always the same 2px accent ring plus a check badge. */
 .ys-card {
   position: relative;
-  background: var(--sp-surface-2, #f7f5ff);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 12px 8px 10px;
   border: 2px solid transparent;
-  border-radius: 14px;
-  padding: 10px 6px 8px;
-  text-align: center;
+  border-radius: var(--ys-radius-card);
+  background: var(--ys-surface);
   cursor: pointer;
   font: inherit;
-  display: flex; flex-direction: column; align-items: center;
-  transition: transform .12s ease, border-color .12s ease, background .12s ease;
+  text-align: center;
+  transition: transform .12s ease, border-color .12s ease, background .12s ease, box-shadow .12s ease;
 }
-.ys-card:hover:not(:disabled) { transform: translateY(-2px); background: #f0ecff; }
-.ys-card.is-equipped { border-color: var(--sp-primary-600, #6f5bff); background: #efe9ff; }
-.ys-card.is-locked { cursor: not-allowed; opacity: .72; }
-.ys-card__thumb { height: 54px; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; }
-.ys-card__thumb img { width: 54px; height: 54px; object-fit: contain; filter: drop-shadow(0 4px 7px rgba(80, 60, 160, .2)); }
-.ys-card__none { width: 40px; height: 40px; border-radius: 50%; border: 2px dashed #cfc7ea; position: relative; }
-.ys-card__none::after { content: ''; position: absolute; inset-block: 50%; inset-inline: 4px; height: 2px; background: #cfc7ea; transform: rotate(-45deg); }
-.ys-card__label { font-size: 12px; font-weight: 600; color: var(--sp-ink-900, #241f3d); }
-.ys-card.is-locked .ys-card__label { color: var(--sp-ink-400, #6b6880); }
-.ys-card__lock { position: absolute; inset-inline-end: 6px; inset-block-start: 6px; font-size: 13px; }
+.ys-card:hover:not(:disabled) { transform: translateY(-2px); background: var(--ys-surface-hover); box-shadow: 0 10px 22px rgba(80, 60, 160, .14); }
+.ys-card.is-selected { border-color: var(--ys-accent); background: var(--ys-accent-soft); }
+.ys-card.is-previewing { border-color: #3fd9e0; background: rgba(63, 217, 224, .12); }
+.ys-card:disabled { cursor: not-allowed; opacity: .45; }
+.ys-card__media { inline-size: 100%; block-size: 66px; display: grid; place-items: center; }
+/* A colour swatch needs far less room than a rendered item. */
+.ys-card--dot .ys-card__media { block-size: 42px; }
+.ys-card__media img { inline-size: 66px; block-size: 66px; object-fit: contain; filter: drop-shadow(0 5px 9px rgba(80, 60, 160, .2)); }
+.ys-card__dot {
+  inline-size: 34px; block-size: 34px; border-radius: 12px;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .6), 0 4px 10px rgba(80, 60, 160, .2);
+}
+.ys-card__none { inline-size: 46px; block-size: 46px; border-radius: 50%; border: 2px dashed var(--ys-line); position: relative; }
+.ys-card__none::after { content: ''; position: absolute; inset-block: 50%; inset-inline: 4px; height: 2px; background: var(--ys-line); transform: rotate(-45deg); }
+.ys-card__label {
+  font-size: 12.5px; font-weight: 700; line-height: 1.25; color: var(--ys-ink);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ys-card.is-locked .ys-card__label { color: var(--ys-ink-soft); }
+/* Every corner marker shares one badge, so a card never grows a new language. */
+.ys-card__badge {
+  position: absolute; inset-block-start: 6px; inset-inline-end: 6px;
+  min-inline-size: 22px; block-size: 22px; padding-inline: 6px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 3px;
+  border-radius: var(--sp-radius-pill, 999px);
+  font-size: 11.5px; font-weight: 800; font-variant-numeric: tabular-nums;
+  background: var(--ys-panel-bg); color: var(--ys-accent-ink);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ys-accent) 22%, transparent);
+}
+.ys-card__badge--check { inline-size: 22px; padding-inline: 0; background: var(--ys-accent); color: #fff; box-shadow: none; }
+.ys-card__badge--lock { inline-size: 22px; padding-inline: 0; color: var(--ys-ink-soft); box-shadow: 0 0 0 1px var(--ys-line); }
+.ys-card__new {
+  position: absolute; inset-inline-start: 8px; inset-block-start: 8px;
+  inline-size: 8px; block-size: 8px; border-radius: 50%;
+  background: #3fd9e0; box-shadow: 0 0 0 3px rgba(63, 217, 224, .22);
+}
 .ys-card__tip {
   position: absolute; inset-block-end: calc(100% + 6px); inset-inline-start: 50%;
   transform: translateX(50%) translateY(4px);
@@ -76,29 +195,22 @@
   z-index: 5; box-shadow: 0 8px 18px rgba(0, 0, 0, .25);
 }
 .ys-card.is-locked:hover .ys-card__tip { opacity: 1; transform: translateX(50%) translateY(0); }
-
-/* Sparks shop: a buyable item stays inviting (not greyed out) and shows its price. */
-.ys-card.is-buyable { cursor: pointer; opacity: 1; }
-.ys-card.is-buyable .ys-card__thumb img { filter: grayscale(.55) drop-shadow(0 4px 7px rgba(80, 60, 160, .16)); }
-.ys-card.is-buyable:hover .ys-card__thumb img { filter: none; }
-.ys-card__price {
-  position: absolute; inset-inline-end: 6px; inset-block-start: 6px;
-  display: inline-flex; align-items: center; gap: 3px;
-  padding: 2px 7px; border-radius: var(--sp-radius-pill, 999px);
-  background: var(--sp-surface, #fff); border: 1px solid rgba(111, 91, 255, .2);
-  color: var(--sp-primary-700, #4c39d6); font-size: 11.5px; font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
+/* A buyable item stays inviting rather than greyed out. */
+.ys-card.is-buyable .ys-card__media img { filter: grayscale(.55) drop-shadow(0 4px 7px rgba(80, 60, 160, .16)); }
+.ys-card.is-buyable:hover .ys-card__media img { filter: none; }
 
 .ys-wallet {
+  margin-inline-start: auto;
   display: inline-flex; align-items: center; gap: 6px;
-  margin-block: 10px 0 !important; padding: 4px 11px;
+  padding: 5px 11px;
   border-radius: var(--sp-radius-pill, 999px);
-  border: 1px solid rgba(111, 91, 255, .18);
-  color: var(--sp-primary-700, #4c39d6); font-size: 12.5px;
+  border: 1px solid color-mix(in srgb, var(--ys-accent) 20%, transparent);
+  background: var(--ys-accent-soft);
+  color: var(--ys-accent-ink); font-size: 12.5px;
+  white-space: nowrap;
 }
 .ys-wallet strong { font-size: 14px; font-variant-numeric: tabular-nums; }
-.ys-wallet span { color: var(--sp-ink-400, #6b6880); }
+.ys-wallet span { color: var(--ys-ink-soft); }
 
 .ys-shop-backdrop {
   position: fixed; inset: 0; z-index: 40;
@@ -107,48 +219,104 @@
 }
 .ys-shop {
   inline-size: min(360px, 100%);
-  background: var(--sp-surface, #fff); border-radius: 18px; padding: 20px;
+  background: var(--ys-panel-bg); border-radius: 18px; padding: 20px;
   box-shadow: 0 24px 60px rgba(30, 20, 80, .3);
 }
 .ys-shop__item { display: flex; align-items: center; gap: 14px; }
 .ys-shop__item img { width: 64px; height: 64px; object-fit: contain; }
-.ys-shop__item h2 { margin: 0; font-size: 17px; color: var(--sp-ink-900, #241f3d); }
-.ys-shop__price { display: inline-flex; align-items: center; gap: 5px; margin: 6px 0 0; color: var(--sp-primary-700, #4c39d6); font-size: 13px; }
-.ys-shop__price span { color: var(--sp-ink-400, #6b6880); }
-.ys-shop__balance { margin: 14px 0 0; font-size: 13px; color: var(--sp-ink-400, #6b6880); }
-.ys-shop__hint { margin: 6px 0 0; font-size: 13px; color: var(--sp-ink-900, #241f3d); }
+.ys-shop__item h2 { margin: 0; font-size: 17px; color: var(--ys-ink); }
+.ys-shop__price { display: inline-flex; align-items: center; gap: 5px; margin: 6px 0 0; color: var(--ys-accent-ink); font-size: 13px; }
+.ys-shop__price span { color: var(--ys-ink-soft); }
+.ys-shop__balance { margin: 14px 0 0; font-size: 13px; color: var(--ys-ink-soft); }
+.ys-shop__hint { margin: 6px 0 0; font-size: 13px; color: var(--ys-ink); }
 .ys-shop__actions { display: flex; gap: 10px; margin-block-start: 16px; }
 .ys-shop__actions .ys-btn { flex: 1; }
-.ys-shop__earn { margin: 14px 0 0; font-size: 12px; color: var(--sp-ink-400, #6b6880); }
+.ys-shop__earn { margin: 14px 0 0; font-size: 12px; color: var(--ys-ink-soft); }
 
-.ys-variant-row { display: flex; gap: 10px; margin-bottom: 16px; }
+/* Same shell as the purchase dialog, without the item preview: the exit guard
+   is text plus three plain choices. */
+.ys-shop--confirm { text-align: start; }
+.ys-shop--confirm h2 { margin: 0; font-size: 18px; color: var(--ys-ink); }
+.ys-shop--confirm .ys-shop__balance { margin-block-start: 10px; line-height: 1.5; }
+.ys-shop__stay { display: block; inline-size: 100%; margin-block-start: 10px; }
+
+/* Two-state control (Yuvi / Yuvi-Girl) — same grammar as the nav, inline. */
+.ys-variant-row { display: flex; gap: 8px; }
 .ys-variant {
-  flex: 1; border: 2px solid var(--sp-border, #ece7ff); background: var(--sp-surface-2, #f7f5ff);
-  border-radius: 14px; padding: 12px; cursor: pointer; font: inherit; font-weight: 700; font-size: 14px;
-  color: var(--sp-ink-900, #241f3d);
+  flex: 1; border: 1px solid var(--ys-line); background: var(--ys-surface);
+  border-radius: var(--ys-radius-ctl); padding: 10px; cursor: pointer;
+  font: inherit; font-weight: 700; font-size: 13.5px; color: var(--ys-ink);
+  transition: background .14s ease, border-color .14s ease, color .14s ease;
 }
-.ys-variant.is-active { border-color: var(--sp-primary-600, #6f5bff); background: #efe9ff; }
+.ys-variant:hover:not(.is-active) { background: var(--ys-surface-hover); }
+.ys-variant.is-active {
+  border-color: color-mix(in srgb, var(--ys-accent) 42%, transparent);
+  background: var(--ys-accent-soft); color: var(--ys-accent-ink);
+}
 
-.ys-swatch-group { margin-bottom: 14px; }
-.ys-swatch-group h3 { margin: 0 0 8px; font-size: 13px; color: var(--sp-ink-400, #6b6880); font-weight: 700; }
 .ys-swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+/* 42px + gap keeps the most-tapped control above the child-sized target floor. */
 .ys-swatch {
-  width: 34px; height: 34px; border-radius: 10px; cursor: pointer; padding: 0;
-  border: 3px solid #fff; box-shadow: 0 0 0 1px #e4dcff, 0 4px 10px rgba(80, 60, 160, .15);
+  inline-size: 42px; block-size: 42px; border-radius: 13px; cursor: pointer; padding: 0;
+  border: 3px solid var(--ys-panel-bg);
+  box-shadow: 0 0 0 1px var(--ys-line), 0 4px 10px rgba(80, 60, 160, .15);
   transition: transform .1s ease, box-shadow .1s ease;
 }
-.ys-swatch:hover { transform: scale(1.08); }
-.ys-swatch.is-active { box-shadow: 0 0 0 3px var(--sp-primary-600, #6f5bff); }
+.ys-swatch:hover { transform: scale(1.06); }
+.ys-swatch.is-active { box-shadow: 0 0 0 3px var(--ys-accent), 0 6px 14px rgba(80, 60, 160, .2); }
 
-/* ── Right stage ── */
+/* ── Right stage: the Yuvi Lab ── */
+/* The bay stays a dark room in both themes, exactly like a real photo studio:
+   the holographic bay is additive light, so it only reads against darkness —
+   and a dark surround is what makes Yuvi the brightest thing on screen. */
 .ys-stage {
   position: relative;
-  background: linear-gradient(160deg, #efeaff 0%, #e3dcff 100%);
+  isolation: isolate;
+  border: 1px solid rgba(112, 220, 249, .17);
+  background:
+    radial-gradient(circle at 50% 43%, rgba(80, 92, 175, .38), transparent 29%),
+    radial-gradient(circle at 50% 72%, rgba(61, 213, 236, .11), transparent 28%),
+    linear-gradient(155deg, #171b3c 0%, #121731 54%, #0c1d31 100%);
   border-radius: var(--sp-radius-xl, 22px);
-  box-shadow: 0 18px 44px rgba(70, 50, 160, 0.16);
+  box-shadow: 0 22px 56px rgba(40, 26, 110, .26), inset 0 1px rgba(199, 246, 255, .07);
   overflow: hidden;
 }
-.ys-stage__canvas { position: absolute; inset: 0; }
+.ys-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(rgba(112, 220, 249, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(112, 220, 249, .035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .76), transparent 88%);
+}
+.ys-stage::after {
+  content: '';
+  position: absolute;
+  inset-inline: 15%;
+  inset-block-end: -22%;
+  block-size: 44%;
+  z-index: -1;
+  border: 1px solid rgba(99, 225, 249, .13);
+  border-radius: 50%;
+  box-shadow: 0 0 80px rgba(76, 201, 240, .1);
+}
+/* Layered bay: a violet floor wash, two cool corner keys and a vignette, so
+   the room has depth even before the WebGL hologram draws on top of it. */
+.ys-stage__backdrop {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(58% 40% at 50% 97%, rgba(124, 92, 255, .26), transparent 72%),
+    radial-gradient(36% 28% at 16% 14%, rgba(78, 238, 240, .12), transparent 74%),
+    radial-gradient(44% 32% at 86% 10%, rgba(140, 116, 255, .16), transparent 76%);
+}
+.ys-stage__backdrop::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 46%, transparent 44%, rgba(2, 5, 24, .5) 100%);
+}
+.ys-stage__canvas { position: absolute; inset: 0; z-index: 1; }
 .Yuvi-avatar-canvas { width: 100%; height: 100%; }
 .Yuvi-avatar-canvas__fallback {
   position: absolute;
@@ -164,20 +332,55 @@
 .Yuvi-avatar-canvas[data-webgl-state='unavailable'] .Yuvi-avatar-canvas__fallback { display: block; }
 .Yuvi-avatar-canvas[data-webgl-state='lost'] canvas,
 .Yuvi-avatar-canvas[data-webgl-state='unavailable'] canvas { visibility: hidden; }
+/* The canvas sits on z-index 1, and the room it now renders is opaque all the
+   way to the bottom of the bay — so every piece of stage chrome has to be
+   lifted explicitly or it is painted behind the floor and disappears. */
 .ys-hint {
-  position: absolute; inset-block-start: 16px; inset-inline-start: 16px;
+  position: absolute; inset-block-start: 16px; inset-inline-start: 16px; z-index: 2;
+  max-inline-size: min(340px, 52%);
   background: rgba(255, 255, 255, .82); backdrop-filter: blur(6px);
   padding: 8px 14px; border-radius: var(--sp-radius-pill, 999px); font-size: 13px; font-weight: 600;
   color: var(--sp-primary-700, #5a45f0); box-shadow: 0 6px 16px rgba(90, 60, 180, .14);
 }
-.ys-toolbar {
-  position: absolute; inset-block-end: 16px; inset-inline: 0;
-  margin-inline: auto;
-  display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
-  width: fit-content; max-width: calc(100% - 32px);
-  padding: 8px; border-radius: var(--sp-radius-pill, 999px);
-  background: rgba(255, 255, 255, 0.55); backdrop-filter: blur(8px);
-  box-shadow: 0 8px 22px rgba(90, 60, 180, 0.14);
+/* Stage chrome is now two round buttons in one cluster: sound, and out. */
+.ys-stage-tools {
+  position: absolute; inset-block-start: 16px; inset-inline-end: 16px; z-index: 3;
+  display: flex; gap: 8px;
+}
+.ys-iconbtn {
+  inline-size: 40px; block-size: 40px; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 1px solid rgba(255, 255, 255, .34);
+  background: rgba(255, 255, 255, .86); backdrop-filter: blur(6px);
+  color: var(--sp-primary-700, #5a45f0); cursor: pointer;
+  box-shadow: 0 8px 20px rgba(20, 12, 60, .28);
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+}
+.ys-iconbtn:hover { transform: translateY(-1px); background: #fff; }
+.ys-iconbtn:active { transform: translateY(1px); }
+.ys-iconbtn:disabled { opacity: .6; cursor: default; transform: none; }
+.ys-iconbtn.is-off { color: var(--sp-ink-400, #6b6880); }
+/* Leaving the studio is the one irreversible move on this screen, so it keeps
+   the danger fill even though it is now icon-only. */
+.ys-iconbtn--exit {
+  border-color: rgba(255, 255, 255, .3);
+  background: linear-gradient(140deg, #ff7a59, #ff5d73);
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(255, 93, 115, .34);
+}
+.ys-iconbtn--exit:hover { background: linear-gradient(140deg, #ff8a6c, #ff6f83); }
+
+/* Unsaved work follows the learner out onto the floor, where there is no panel
+   footer to hold the save button. */
+.ys-stage-save {
+  position: absolute; inset-block-end: 74px; inset-inline: 0; z-index: 2;
+  margin-inline: auto; width: fit-content; max-width: calc(100% - 32px);
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 8px 8px 16px;
+  border-radius: var(--sp-radius-pill, 999px);
+  background: rgba(255, 255, 255, .62); backdrop-filter: blur(8px);
+  box-shadow: 0 8px 22px rgba(90, 60, 180, .14);
+  font-size: 13px; font-weight: 700; color: var(--sp-primary-700, #5a45f0);
 }
 .ys-btn {
   border: none; cursor: pointer; font: inherit; font-weight: 700; font-size: 14px;
@@ -186,164 +389,124 @@
   transition: transform .1s ease;
 }
 .ys-btn:active { transform: translateY(1px); }
-.ys-btn--primary { background: var(--sp-primary-600, #6f5bff); color: #fff; }
-.ys-btn--ghost { background: #fff; color: var(--sp-primary-700, #5a45f0); }
-.ys-btn--mute { background: #fff; color: var(--sp-ink-400, #6b6880); }
+.ys-btn:disabled { opacity: .6; cursor: default; }
+.ys-btn--primary { background: var(--ys-accent); color: #fff; }
+.ys-btn--ghost { background: var(--ys-panel-bg); color: var(--ys-accent-ink); box-shadow: 0 0 0 1px var(--ys-line); }
+.ys-btn--sm { padding: 9px 15px; font-size: 13px; box-shadow: none; }
 
-.ys-tab:focus-visible,
+/* ── Panel footer ──
+   Save lives next to the thing it saves, not floating over the 3D room. */
+.ys-panel__foot {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+  border-block-start: 1px solid var(--ys-line);
+  background: var(--ys-sunken);
+}
+.ys-panel__foot .ys-btn { flex: 1; }
+.ys-panel__state {
+  flex: none; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 700; color: var(--ys-ink-soft);
+}
+.ys-panel__state::before {
+  content: ''; inline-size: 8px; block-size: 8px; border-radius: 50%;
+  background: currentColor;
+}
+.ys-panel__state.is-dirty { color: #d98324; }
+.ys-panel__state.is-saved { color: #1c9e6a; }
+
+/* Contextual bar: what you are about to buy, or the prop you have selected. */
+.ys-ctx {
+  border-block-start: 1px solid var(--ys-line);
+  padding: 12px 16px 14px;
+  background: linear-gradient(180deg, var(--ys-accent-soft), transparent);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.ys-ctx__tag {
+  align-self: flex-start;
+  font-size: 11px; font-weight: 800; letter-spacing: .04em;
+  color: var(--ys-accent-ink); background: var(--ys-accent-soft);
+  padding: 3px 9px; border-radius: var(--sp-radius-pill, 999px);
+}
+.ys-ctx__info { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.ys-ctx__info strong { font-size: 14px; color: var(--ys-ink); }
+.ys-ctx__price {
+  display: inline-flex; align-items: center; gap: 4px;
+  color: var(--ys-accent-ink); font-size: 13px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.ys-ctx__note { font-size: 12px; color: var(--ys-ink-soft); text-align: end; }
+.ys-ctx__actions { display: flex; gap: 8px; }
+.ys-ctx__actions .ys-btn { flex: 1; }
+
+.ys-seg:focus-visible,
 .ys-card:focus-visible,
+.ys-toggle:focus-visible,
 .ys-variant:focus-visible,
 .ys-swatch:focus-visible,
+.ys-iconbtn:focus-visible,
+.ys-panel__close:focus-visible,
 .ys-btn:focus-visible {
   outline: none;
   box-shadow: var(--sp-ring, 0 0 0 3px rgba(111, 91, 255, .28));
 }
 
 /* ── Dark studio ──
-   The stage uses its own night-scene treatment so dark mode feels intentional
-   rather than leaving the largest surface in the light palette. */
+   Dark mode is a token swap, not a second stylesheet. Only the rules the tokens
+   cannot express (the night-scene backdrop, image filters) live below. */
 [data-theme='dark'] .Yuvi-studio {
+  --ys-panel-bg: rgba(24, 28, 58, .98);
+  --ys-panel-border: rgba(164, 151, 255, .16);
+  --ys-panel-shadow: 0 24px 64px rgba(2, 4, 20, .48), inset 0 1px rgba(255, 255, 255, .04);
+  --ys-surface: rgba(34, 39, 75, .88);
+  --ys-surface-hover: rgba(43, 50, 92, .98);
+  --ys-sunken: rgba(19, 23, 48, .92);
+  --ys-ink: var(--sp-ink-900);
+  --ys-ink-soft: var(--sp-ink-400);
+  --ys-line: rgba(174, 164, 232, .18);
+  --ys-accent: #8b78ff;
+  --ys-accent-ink: #d8d0ff;
+  --ys-accent-soft: rgba(118, 101, 245, .22);
+
   background:
     radial-gradient(circle at 78% 28%, rgba(76, 201, 240, .12), transparent 31%),
     radial-gradient(circle at 12% 6%, rgba(159, 122, 254, .2), transparent 34%),
     linear-gradient(155deg, #10142e 0%, var(--sp-bg) 52%, #090d20 100%);
-  color: var(--sp-ink-900);
+  color: var(--ys-ink);
 }
 
-[data-theme='dark'] .ys-drawer {
-  border: 1px solid rgba(164, 151, 255, .16);
-  background: linear-gradient(165deg, rgba(28, 32, 65, .98), rgba(20, 24, 51, .98));
-  box-shadow: 0 24px 64px rgba(2, 4, 20, .48), inset 0 1px rgba(255, 255, 255, .04);
-}
-
-[data-theme='dark'] .ys-drawer__head {
-  border-color: rgba(161, 151, 222, .16);
+[data-theme='dark'] .ys-panel__head {
   background: linear-gradient(135deg, rgba(157, 141, 255, .08), transparent 72%);
 }
 
-[data-theme='dark'] .ys-tab {
-  border: 1px solid transparent;
-  background: rgba(35, 40, 76, .9);
-  color: var(--sp-ink-400);
-}
-
-[data-theme='dark'] .ys-tab:hover:not(.is-active) {
-  border-color: rgba(112, 220, 249, .18);
-  background: rgba(43, 49, 91, .96);
-  color: var(--sp-ink-700);
-}
-
-[data-theme='dark'] .ys-tab.is-active {
-  border-color: rgba(205, 199, 255, .22);
-  background: linear-gradient(135deg, #7665f5, #9d78f5);
-  box-shadow: 0 8px 20px rgba(93, 70, 222, .36), inset 0 1px rgba(255, 255, 255, .18);
-}
-
-[data-theme='dark'] .ys-panels {
+[data-theme='dark'] .ys-panel__body {
   scrollbar-color: rgba(157, 141, 255, .45) transparent;
 }
 
-[data-theme='dark'] .ys-card {
-  border-color: rgba(139, 146, 202, .1);
-  background: rgba(34, 39, 75, .88);
-}
-
-[data-theme='dark'] .ys-card:hover:not(:disabled) {
-  border-color: rgba(112, 220, 249, .23);
-  background: rgba(43, 50, 92, .98);
-  box-shadow: 0 12px 24px rgba(2, 5, 24, .28), 0 0 18px rgba(76, 201, 240, .06);
-}
-
-[data-theme='dark'] .ys-card.is-equipped {
-  border-color: var(--sp-primary-600);
-  background: linear-gradient(145deg, rgba(83, 71, 160, .78), rgba(43, 45, 91, .95));
-  box-shadow: 0 0 0 1px rgba(187, 176, 255, .08), 0 10px 24px rgba(2, 4, 22, .32);
-}
-
-[data-theme='dark'] .ys-card__thumb img {
+[data-theme='dark'] .ys-card__media img {
   filter: drop-shadow(0 7px 10px rgba(2, 4, 20, .45));
 }
 
-[data-theme='dark'] .ys-card__none {
-  border-color: var(--sp-border-strong);
-}
-
-[data-theme='dark'] .ys-card__none::after {
-  background: var(--sp-border-strong);
-}
-
-[data-theme='dark'] .ys-variant {
-  border-color: var(--sp-border);
-  background: rgba(34, 39, 75, .9);
-  color: var(--sp-ink-700);
-}
-
-[data-theme='dark'] .ys-variant:hover:not(.is-active) {
-  border-color: rgba(112, 220, 249, .25);
-  background: rgba(43, 50, 92, .98);
-}
-
-[data-theme='dark'] .ys-variant.is-active {
-  border-color: var(--sp-primary-600);
-  background: rgba(74, 64, 143, .78);
-}
-
-[data-theme='dark'] .ys-swatch {
-  border-color: #252a50;
-  box-shadow: 0 0 0 1px var(--sp-border-strong), 0 7px 14px rgba(2, 4, 20, .34);
-}
-
-[data-theme='dark'] .ys-swatch.is-active {
-  box-shadow: 0 0 0 3px var(--sp-primary-600), 0 8px 18px rgba(2, 4, 20, .42);
-}
+[data-theme='dark'] .ys-note { color: #ffbe8f; }
 
 [data-theme='dark'] .ys-stage {
-  isolation: isolate;
-  border: 1px solid rgba(112, 220, 249, .17);
-  background:
-    radial-gradient(circle at 50% 43%, rgba(80, 92, 175, .38), transparent 29%),
-    radial-gradient(circle at 50% 72%, rgba(61, 213, 236, .11), transparent 28%),
-    linear-gradient(155deg, #171b3c 0%, #121731 54%, #0c1d31 100%);
   box-shadow: 0 28px 72px rgba(1, 4, 22, .52), inset 0 1px rgba(199, 246, 255, .07);
 }
 
-[data-theme='dark'] .ys-stage::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background:
-    linear-gradient(rgba(112, 220, 249, .035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(112, 220, 249, .035) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .76), transparent 88%);
-}
-
-[data-theme='dark'] .ys-stage::after {
-  content: '';
-  position: absolute;
-  inset-inline: 15%;
-  inset-block-end: -22%;
-  block-size: 44%;
-  z-index: -1;
-  border: 1px solid rgba(99, 225, 249, .13);
-  border-radius: 50%;
-  box-shadow: 0 0 80px rgba(76, 201, 240, .1);
-}
-
-[data-theme='dark'] .ys-stage__canvas { z-index: 1; }
-
 [data-theme='dark'] .ys-hint,
-[data-theme='dark'] .ys-toolbar {
+[data-theme='dark'] .ys-iconbtn,
+[data-theme='dark'] .ys-stage-save {
   z-index: 2;
   border: 1px solid rgba(145, 228, 246, .16);
   background: rgba(18, 24, 53, .72);
   box-shadow: 0 14px 34px rgba(1, 4, 22, .36), inset 0 1px rgba(255, 255, 255, .06);
   backdrop-filter: blur(14px);
+  color: #baf3ff;
 }
 
-[data-theme='dark'] .ys-hint {
-  color: #baf3ff;
+[data-theme='dark'] .ys-iconbtn--exit {
+  border-color: rgba(255, 255, 255, .22);
+  background: linear-gradient(140deg, #ff7a59, #ff5d73);
+  color: #fff;
 }
 
 [data-theme='dark'] .ys-btn {
@@ -357,8 +520,7 @@
   color: #fff;
 }
 
-[data-theme='dark'] .ys-btn--ghost,
-[data-theme='dark'] .ys-btn--mute {
+[data-theme='dark'] .ys-btn--ghost {
   background: rgba(35, 41, 77, .94);
   color: var(--sp-ink-700);
 }
@@ -379,6 +541,9 @@
   transition: opacity 380ms ease;
 }
 .studio-overlay.is-visible { opacity: 1; }
+/* Safety net: a transparent full-screen overlay must never swallow the clicks
+   and scrolling of the page behind it, however the close sequence ends. */
+.studio-overlay:not(.is-visible) { pointer-events: none; }
 .studio-overlay .Yuvi-studio { height: 100%; }
 
 /* The stage robot stays mounted (warming up) but invisible while the flight
@@ -409,7 +574,249 @@
   to { transform: var(--ys-to, none); }
 }
 
+/* ── Portal burst ──
+   Fired at the launcher button when the studio opens and again when it closes.
+   Everything is anchored to --ys-bx / --ys-by (the button's centre) so the
+   energy visibly comes out of the thing the learner just pressed. The "out"
+   variant simply runs the same keyframes in reverse, which reads as the studio
+   being sucked back into the button. */
+.ys-burst {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  pointer-events: none;
+  overflow: hidden;
+  contain: layout paint;
+}
+
+.ys-burst > * {
+  position: absolute;
+  inset-block-start: var(--ys-by, 50%);
+  inset-inline-start: auto;
+  left: var(--ys-bx, 50%);
+  translate: -50% -50%;
+}
+
+.ys-burst__flash {
+  inline-size: 120px;
+  block-size: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, .95), rgba(124, 108, 255, .55) 42%, rgba(76, 201, 240, 0) 72%);
+  animation: ys-burst-flash 620ms cubic-bezier(.15, .8, .3, 1) both;
+}
+
+@keyframes ys-burst-flash {
+  from { scale: .18; opacity: 1; }
+  60% { opacity: .5; }
+  to { scale: 4.6; opacity: 0; }
+}
+
+.ys-burst__ring {
+  inline-size: 90px;
+  block-size: 90px;
+  border-radius: 50%;
+  border: 3px solid rgba(124, 108, 255, .85);
+  box-shadow: 0 0 26px rgba(124, 108, 255, .55), inset 0 0 18px rgba(76, 201, 240, .5);
+  animation: ys-burst-ring 820ms cubic-bezier(.12, .75, .25, 1) both;
+}
+
+.ys-burst__ring:nth-of-type(3) {
+  border-color: rgba(76, 201, 240, .8);
+  animation-delay: 110ms;
+}
+
+.ys-burst__ring:nth-of-type(4) {
+  border-color: rgba(255, 180, 87, .7);
+  border-width: 2px;
+  animation-delay: 220ms;
+}
+
+@keyframes ys-burst-ring {
+  from { scale: .12; opacity: 1; }
+  to { scale: 3.4; opacity: 0; }
+}
+
+.ys-burst__spark {
+  inline-size: 9px;
+  block-size: 9px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 12px rgba(124, 108, 255, .95);
+  /* translate handles the centring, so the angle+distance can own `transform`. */
+  animation: ys-burst-spark 900ms cubic-bezier(.1, .7, .2, 1) both;
+  animation-delay: calc(var(--i) * 14ms);
+}
+
+.ys-burst__spark:nth-child(even) { background: #b3f4ff; box-shadow: 0 0 12px rgba(76, 201, 240, .95); }
+.ys-burst__spark:nth-child(3n) { inline-size: 6px; block-size: 6px; background: #ffd9a3; }
+
+@keyframes ys-burst-spark {
+  from {
+    transform: rotate(calc(var(--i) * 22.5deg)) translateX(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: rotate(calc(var(--i) * 22.5deg)) translateX(clamp(180px, 26vw, 420px)) scale(.2);
+    opacity: 0;
+  }
+}
+
+/* Closing: the same burst played backwards — sparks rush inward and the rings
+   collapse onto the button Yuvi is flying home to. */
+.ys-burst--out .ys-burst__flash,
+.ys-burst--out .ys-burst__ring,
+.ys-burst--out .ys-burst__spark {
+  animation-direction: reverse;
+}
+
+.ys-burst--out .ys-burst__flash { animation-duration: 520ms; }
+.ys-burst--out .ys-burst__ring { animation-duration: 620ms; }
+.ys-burst--out .ys-burst__spark { animation-duration: 700ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ys-burst { display: none; }
+}
+
+/* ── Roaming room ──────────────────────────────────────────────────────────
+   Yuvi walks around his own room, so the studio has three states: roaming
+   (no panel, the whole bay is the toy), standing on the avatar station, and
+   standing on the room station. The panel is a consequence of where Yuvi is
+   standing, which is why it mounts and unmounts instead of always sitting
+   there as a settings sidebar. */
+.ys-mode-roam .ys-body { grid-template-columns: 1fr; }
+
+/* Station panels arrive rather than pop. The motion is vertical on purpose:
+   a horizontal slide would have to flip between Hebrew/Arabic and English. */
+@keyframes ys-panel-in {
+  from { opacity: 0; transform: translateY(16px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+.ys-panel { animation: ys-panel-in .26s cubic-bezier(.2, .8, .3, 1) both; }
+
+/* Signposts inside the bay: even a learner who never touches the keyboard can
+   reach both stations. */
+.ys-stations {
+  position: absolute; inset-block-end: 16px; inset-inline: 0; z-index: 2;
+  margin-inline: auto; width: fit-content; max-width: calc(100% - 32px);
+  display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
+}
+.ys-station {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid rgba(255, 255, 255, .34);
+  background: rgba(255, 255, 255, .86); backdrop-filter: blur(6px);
+  color: var(--sp-primary-700, #5a45f0);
+  cursor: pointer; font: inherit; font-size: 13px; font-weight: 800;
+  padding: 9px 16px; border-radius: var(--sp-radius-pill, 999px);
+  box-shadow: 0 8px 20px rgba(20, 12, 60, .28);
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+}
+.ys-station:hover { transform: translateY(-2px); background: #fff; box-shadow: 0 12px 26px rgba(20, 12, 60, .34); }
+.ys-station:active { transform: translateY(1px); }
+
+/* A chip is a setting (floor, wall, light). A card is a thing you own. Keeping
+   those two apart is what stopped the room panel reading as one long list. */
+.ys-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ys-chip {
+  border: 1px solid var(--ys-line); background: transparent;
+  color: var(--ys-ink-soft); cursor: pointer; font: inherit;
+  font-size: 12.5px; font-weight: 700; padding: 7px 13px;
+  border-radius: var(--sp-radius-pill, 999px);
+  transition: background .14s ease, color .14s ease, border-color .14s ease;
+}
+.ys-chip:hover { border-color: color-mix(in srgb, var(--ys-accent) 40%, transparent); color: var(--ys-ink); }
+.ys-chip.is-active {
+  background: var(--ys-accent-soft);
+  border-color: color-mix(in srgb, var(--ys-accent) 50%, transparent);
+  color: var(--ys-accent-ink);
+}
+
+.ys-station:focus-visible,
+.ys-chip:focus-visible {
+  outline: none;
+  box-shadow: var(--sp-ring, 0 0 0 3px rgba(111, 91, 255, .28));
+}
+
+[data-theme='dark'] .ys-station {
+  border-color: rgba(145, 228, 246, .16);
+  background: rgba(18, 24, 53, .78);
+  color: #baf3ff;
+  backdrop-filter: blur(14px);
+}
+
+/* Right-click menu on a placed prop. It is pinned to a projected 3D point, so
+   it sits over the furniture rather than beside a list of it. */
+.ys-propmenu {
+  position: fixed; z-index: 30;
+  transform: translate(-50%, -100%);
+  min-inline-size: 148px;
+  padding: 6px;
+  display: flex; flex-direction: column; gap: 2px;
+  border: 1px solid var(--ys-line);
+  border-radius: 14px;
+  background: var(--ys-panel-bg);
+  box-shadow: 0 18px 40px rgba(20, 12, 60, .34);
+  animation: ys-propmenu-in .14s ease-out both;
+}
+@keyframes ys-propmenu-in {
+  from { opacity: 0; transform: translate(-50%, calc(-100% + 6px)) scale(.97); }
+  to { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+}
+/* The tail points back at the prop the menu belongs to. */
+.ys-propmenu::after {
+  content: '';
+  position: absolute; inset-block-start: 100%; inset-inline-start: 50%;
+  inline-size: 12px; block-size: 12px;
+  margin-inline-start: -6px; margin-block-start: -6px;
+  background: var(--ys-panel-bg);
+  border-inline-end: 1px solid var(--ys-line);
+  border-block-end: 1px solid var(--ys-line);
+  transform: rotate(45deg);
+}
+.ys-propmenu__title {
+  padding: 4px 10px 6px;
+  font-size: 11.5px; font-weight: 800; color: var(--ys-ink-soft);
+  border-block-end: 1px solid var(--ys-line);
+  margin-block-end: 2px;
+}
+.ys-propmenu__item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 10px; border: none; border-radius: 10px;
+  background: transparent; color: var(--ys-ink);
+  font: inherit; font-size: 13px; font-weight: 700;
+  cursor: pointer; text-align: start;
+  transition: background .12s ease, color .12s ease;
+}
+.ys-propmenu__item:hover { background: var(--ys-accent-soft); color: var(--ys-accent-ink); }
+.ys-propmenu__item.is-danger:hover { background: color-mix(in srgb, var(--ys-danger) 14%, transparent); color: var(--ys-danger); }
+.ys-propmenu__item:focus-visible {
+  outline: none;
+  box-shadow: var(--sp-ring, 0 0 0 3px rgba(111, 91, 255, .28));
+}
+@media (prefers-reduced-motion: reduce) {
+  .ys-propmenu { animation: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ys-panel { animation: none; }
+  .ys-station:hover,
+  .ys-card:hover:not(:disabled) { transform: none; }
+}
+
+/* Below the tablet breakpoint the panel becomes a sheet over the bay: the room
+   being decorated has to stay on screen, and a 300px strip of it is not a room. */
 @media (max-width: 860px) {
-  .ys-body { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
-  .ys-stage { min-height: 300px; }
+  .ys-body { grid-template-columns: 1fr; grid-template-rows: 1fr; padding: 10px; }
+  .ys-stage { min-height: 320px; }
+  .ys-panel {
+    position: fixed; inset-inline: 0; inset-block-end: 0; z-index: 20;
+    max-block-size: 66svh;
+    border-radius: var(--ys-radius-panel) var(--ys-radius-panel) 0 0;
+    animation-name: ys-sheet-in;
+  }
+  .ys-stations { inset-block-end: 70svh; }
+  .ys-grid { grid-template-columns: repeat(auto-fill, minmax(94px, 1fr)); }
+}
+@keyframes ys-sheet-in {
+  from { transform: translateY(100%); }
+  to { transform: none; }
 }

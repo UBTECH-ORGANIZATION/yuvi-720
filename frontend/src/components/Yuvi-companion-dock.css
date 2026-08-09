@@ -19,6 +19,15 @@
   pointer-events: none;
 }
 
+/* Inside the activeness world Yuvi is the character standing on the stage.
+   Two of him on one screen would break that, so the dock steps aside. */
+body[data-aworld-open='true'] .Yuvi-companion-dock {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(14px) scale(.92);
+  pointer-events: none;
+}
+
 .Yuvi-companion-dock.is-opening {
   z-index: 1435;
   opacity: 1;
