@@ -1,5 +1,6 @@
 """Route-boundary tests for the standalone administrator service."""
 
+from datetime import datetime, timezone
 import os
 import unittest
 from unittest.mock import patch
@@ -23,6 +24,65 @@ TEST_SETTINGS = Settings(
     port=9998,
     environment="test",
 )
+
+
+class FakeLeadRepository:
+    """In-memory stand-in for the `campaign_leads` collection."""
+
+    def __init__(self) -> None:
+        self.leads = [
+            {
+                "lead_id": "lead-1",
+                "created_at": datetime(2026, 7, 1, 9, 0, tzinfo=timezone.utc),
+                "status": "new",
+                "notes": "",
+                "full_name": "דנה כהן",
+                "role": "רכזת תקשוב",
+                "organization": "חטיבת הביניים רבין",
+                "city": "חיפה",
+                "phone": "050-1234567",
+                "email": "dana@example.org",
+                "grades": "ז-ט",
+                "message": "מעוניינים בפיילוט",
+                "source": "landing-720",
+            },
+            {
+                "lead_id": "lead-2",
+                "created_at": datetime(2026, 6, 20, 9, 0, tzinfo=timezone.utc),
+                "status": "contacted",
+                "notes": "",
+                "full_name": "עמית לוי",
+                "role": "מנהל בית ספר",
+                "organization": "עירוני א",
+                "city": "תל אביב",
+                "phone": "052-7654321",
+                "email": "amit@example.org",
+                "grades": "",
+                "message": "",
+                "source": "landing-720",
+            },
+        ]
+
+    async def fetch_leads(self, **_):
+        return list(self.leads)
+
+    async def fetch_lead(self, lead_id: str):
+        return next((lead for lead in self.leads if lead["lead_id"] == lead_id), None)
+
+    async def list_sources(self):
+        return sorted({lead["source"] for lead in self.leads})
+
+    async def update_lead(self, lead_id: str, *, updates, updated_by, now):
+        lead = await self.fetch_lead(lead_id)
+        if lead is None:
+            return None
+        lead.update(updates)
+        lead["updated_by"] = updated_by
+        lead["updated_at"] = now
+        return lead
+
+    def close(self) -> None:
+        return None
 
 
 class AdminRouteTests(unittest.TestCase):
@@ -112,6 +172,66 @@ class AdminRouteTests(unittest.TestCase):
         report = public_client.get("/api/ai-usage/summary?days=7")
         self.assertEqual(report.status_code, 200)
         self.assertEqual(report.json()["access_mode"], "public_preview")
+
+    def test_public_mode_never_exposes_campaign_leads(self) -> None:
+        public_app = create_app(TEST_SETTINGS, public_access=True)
+        public_app.state.lead_repository = FakeLeadRepository()
+        public_client = TestClient(public_app)
+
+        response = public_client.get("/api/leads")
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()["detail"], "admin_authentication_required")
+
+    def test_authenticated_lead_board_groups_statuses(self) -> None:
+        self.app.state.lead_repository = FakeLeadRepository()
+        self._sign_in()
+
+        response = self.client.get("/api/leads?days=30")
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["total"], 2)
+        self.assertEqual(body["counts_by_status"]["new"], 1)
+        self.assertEqual(body["counts_by_status"]["contacted"], 1)
+        self.assertEqual(body["sources"], ["landing-720"])
+        self.assertEqual(body["leads"][0]["full_name"], "דנה כהן")
+
+    def test_lead_export_returns_csv_attachment(self) -> None:
+        self.app.state.lead_repository = FakeLeadRepository()
+        self._sign_in()
+
+        response = self.client.get("/api/leads/export")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/csv", response.headers["content-type"])
+        self.assertIn("attachment;", response.headers["content-disposition"])
+        self.assertIn("דנה כהן", response.text)
+
+    def test_lead_status_update_rejects_unknown_status(self) -> None:
+        repository = FakeLeadRepository()
+        self.app.state.lead_repository = repository
+        self._sign_in()
+
+        rejected = self.client.patch("/api/leads/lead-1", json={"status": "archived"})
+        self.assertEqual(rejected.status_code, 422)
+
+        accepted = self.client.patch("/api/leads/lead-1", json={"status": "won"})
+        self.assertEqual(accepted.status_code, 200)
+        self.assertEqual(accepted.json()["status"], "won")
+        self.assertEqual(repository.leads[0]["updated_by"], "allowed@example.com")
+
+    def test_missing_lead_returns_not_found(self) -> None:
+        self.app.state.lead_repository = FakeLeadRepository()
+        self._sign_in()
+
+        response = self.client.get("/api/leads/unknown-lead")
+        self.assertEqual(response.status_code, 404)
+
+    def _sign_in(self) -> None:
+        token = create_admin_token(
+            email="allowed@example.com",
+            name="Admin",
+            settings=TEST_SETTINGS,
+        )
+        self.client.cookies.set("spark_admin_token", token)
 
     def test_security_headers_are_applied(self) -> None:
         response = self.client.get("/health")
