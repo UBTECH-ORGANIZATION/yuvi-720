@@ -2547,6 +2547,7 @@
   "voice.end": "End the conversation",
   "voice.close": "Close",
   "voice.hint": "Tap to start and just talk. You can answer in your own language — Yuvi will understand.",
+  "voice.fix.lead": "Here's how to say it:",
   "voice.error": "We could not connect. Check that the microphone is allowed, then try again.",
   "voice.state.idle": "Ready",
   "voice.state.connecting": "Connecting…",

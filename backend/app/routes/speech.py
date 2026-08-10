@@ -26,7 +26,7 @@ from app.agents import safety
 from app.auth.dependencies import require_learner, require_learner_session
 from app.brain.repository import apply_brain_updates, get_brain
 from app.core.localization import normalize_language
-from app.services import english_ladder, pronunciation, realtime_voice
+from app.services import english_correction, english_ladder, pronunciation, realtime_voice
 from app.services.ai_usage import UsageContext, UsageTimer, record_usage
 from app.services.lrs import reporter as lrs_reporter
 from app.services.speech import SpeechUnavailable, issue_token
@@ -340,7 +340,27 @@ async def voice_turn(
         spoke_english=_looks_english(learner_text),
         scored=False,
     )
-    return JSONResponse(content={"stage": ladder.get("stage")})
+
+    # Yuvi recasts out loud, but audio is gone the moment it is spoken. Showing
+    # the same recast in writing is what lets a child actually see the shape of
+    # the sentence they were reaching for. It never blocks the reply: if this is
+    # slow or unavailable the conversation simply carries on without it.
+    correction = None
+    if learner_text:
+        correction = await english_correction.suggest(
+            learner_text,
+            language,
+            usage_context=UsageContext(
+                actor_id=learner_id,
+                actor_type="learner",
+                endpoint="/api/agent/voice/turn",
+                feature=_FEATURE,
+                operation="english.correction",
+                source="voice_turn_route",
+            ),
+        )
+
+    return JSONResponse(content={"stage": ladder.get("stage"), "correction": correction})
 
 
 def _looks_english(text: str) -> bool:
