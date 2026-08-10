@@ -28,7 +28,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from app.core.paths import ENGLISH_PLAYER_DIR
-from app.services import native_content
+from app.services import kata_client, native_content
 from app.services.events import verify_launch
 
 router = APIRouter(prefix="/content/player", tags=["content"])
@@ -138,7 +138,10 @@ async def player_payload(component_id: str, request: Request, lang: str = "he"):
         "unit": {
             "id": unit.get("id"),
             "title": unit.get("title"),
-            "titles": unit.get("titleTranslations") or {},
+            # The authored doc keys translations by Kata's language LABELS
+            # ("Hebrew"), while the player asks by locale code ("he") — map
+            # them here or a Hebrew learner reads the English working title.
+            "titles": kata_client.title_translations(unit),
             "objectiveId": unit.get("learningObjective"),
         },
         "component": {

@@ -18,6 +18,10 @@ function learnerMappingFullReload() {
   }
 }
 
+// The dev backend usually owns 8720, but another project can be sitting on it —
+// point the whole proxy elsewhere with `VITE_BACKEND=http://127.0.0.1:8722`.
+const backend = process.env.VITE_BACKEND || 'http://127.0.0.1:8720'
+
 export default defineConfig({
   base: '/',
   plugins: [react(), learnerMappingFullReload()],
@@ -29,13 +33,15 @@ export default defineConfig({
     port: 5173,
     proxy: {
       // ws so the support chat socket upgrades through the dev server.
-      '/api': { target: 'http://127.0.0.1:8720', ws: true },
-      '/learning/game.html': 'http://127.0.0.1:8720',
-      '/locales': 'http://127.0.0.1:8720',
-      '/shared': 'http://127.0.0.1:8720',
+      '/api': { target: backend, ws: true },
+      '/learning/game.html': backend,
+      '/locales': backend,
+      '/shared': backend,
+      // Our own lomda player and its assets are served by FastAPI, not the SPA.
+      '/content': backend,
       // The 720 campaign landing page is served by FastAPI, not the SPA.
-      '/landing': 'http://127.0.0.1:8720',
-      '/campaign': 'http://127.0.0.1:8720'
+      '/landing': backend,
+      '/campaign': backend
     }
   }
 })

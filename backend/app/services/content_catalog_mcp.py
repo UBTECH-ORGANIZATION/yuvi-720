@@ -13,7 +13,7 @@ from typing import AsyncIterator, Optional
 from fastapi import FastAPI
 from mcp.server.fastmcp import FastMCP
 
-from app.services import kata_client as content_provider
+from app.services import content_providers as content_provider
 
 
 content_catalog_mcp = FastMCP(

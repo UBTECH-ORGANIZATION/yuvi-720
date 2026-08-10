@@ -180,13 +180,24 @@ async def list_objectives(language: Optional[str] = None) -> list[dict[str, Any]
     return [normalize_objective(row) for row in snapshot["objectives"].values()]
 
 
-def _normalized(unit: dict[str, Any]) -> dict[str, Any]:
-    return {**normalize_unit(unit), "source": SOURCE}
+def _normalized(unit: dict[str, Any], language: Optional[str] = None) -> dict[str, Any]:
+    """Normalize, then answer in the asked-for language.
+
+    Kata returns a unit already rendered in the requested locale, so ``title``
+    is what the platform shows. We hold every locale at once, which means the
+    top-level title has to be picked here or a Hebrew learner reads the English
+    working title of the unit.
+    """
+    normalized = {**normalize_unit(unit), "source": SOURCE}
+    title = (normalized.get("titles") or {}).get(str(language or ""))
+    if title:
+        normalized["title"] = title
+    return normalized
 
 
 async def list_units(language: Optional[str] = None, **filters: Any) -> list[dict[str, Any]]:
     snapshot = await _snapshot()
-    units = [_normalized(unit) for unit in snapshot["units"].values()]
+    units = [_normalized(unit, language) for unit in snapshot["units"].values()]
     objective = filters.get("learningObjective") or filters.get("learning_objective")
     if objective:
         units = [unit for unit in units if unit.get("objective_id") == objective]
@@ -198,7 +209,7 @@ async def get_unit(unit_id: str, language: Optional[str] = None) -> dict[str, An
     unit = snapshot["units"].get(str(unit_id))
     if not unit:
         raise NativeContentError("content_not_found", 404)
-    return _normalized(unit)
+    return _normalized(unit, language)
 
 
 async def resolve_component(
