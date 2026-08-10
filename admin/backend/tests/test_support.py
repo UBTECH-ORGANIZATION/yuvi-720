@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 import os
 import unittest
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -297,6 +298,42 @@ class SupportChatRouteTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 422)
         self.assertEqual(response.json()["detail"], "unknown_conversation_status")
+
+
+class SupportNotifyHookTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.app = create_app(TEST_SETTINGS, public_access=False)
+        self.client = TestClient(self.app)
+
+    def test_notify_is_refused_without_the_shared_secret(self) -> None:
+        with patch.dict(os.environ, {"SUPPORT_INTERNAL_TOKEN": "s3cret-value"}, clear=False):
+            unsigned = self.client.post(
+                "/internal/support/notify",
+                json={"type": "message.created", "conversation_id": "sup-1"},
+            )
+            wrong = self.client.post(
+                "/internal/support/notify",
+                json={"type": "message.created", "conversation_id": "sup-1"},
+                headers={"X-Support-Token": "not-it"},
+            )
+            signed = self.client.post(
+                "/internal/support/notify",
+                json={"type": "message.created", "conversation_id": "sup-1"},
+                headers={"X-Support-Token": "s3cret-value"},
+            )
+
+        self.assertEqual(unsigned.status_code, 403)
+        self.assertEqual(wrong.status_code, 403)
+        self.assertEqual(signed.status_code, 204)
+
+    def test_notify_is_refused_when_no_secret_is_configured(self) -> None:
+        with patch.dict(os.environ, {"SUPPORT_INTERNAL_TOKEN": ""}, clear=False):
+            response = self.client.post(
+                "/internal/support/notify",
+                json={"type": "message.created", "conversation_id": "sup-1"},
+                headers={"X-Support-Token": ""},
+            )
+        self.assertEqual(response.status_code, 403)
 
 
 if __name__ == "__main__":

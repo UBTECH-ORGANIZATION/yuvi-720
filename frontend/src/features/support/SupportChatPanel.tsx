@@ -9,11 +9,11 @@ import {
   type SupportMessage,
 } from '../../services/support'
 import './support-chat.css'
+import { useSupportSocket } from './useSupportSocket'
 
 /* Human support for teachers only: an administrator answers from the admin
-   console. Phase 2 keeps the transport plain REST with a slow poll; the
-   WebSocket layer replaces the poll without changing this component's data flow. */
-const POLL_MS = 10000
+   console. Live updates arrive over a WebSocket that carries pointers only, so
+   every event just refetches the thread. */
 
 export function SupportChatPanel() {
   const { t, direction } = useI18n()
@@ -61,14 +61,12 @@ export function SupportChatPanel() {
     void loadMessages(activeId)
   }, [activeId, loadMessages])
 
-  useEffect(() => {
-    if (!open) return
-    const timer = window.setInterval(() => {
-      void loadConversations()
-      if (activeId) void loadMessages(activeId)
-    }, POLL_MS)
-    return () => window.clearInterval(timer)
-  }, [open, activeId, loadConversations, loadMessages])
+  const refresh = useCallback(() => {
+    void loadConversations()
+    if (activeId) void loadMessages(activeId)
+  }, [activeId, loadConversations, loadMessages])
+
+  useSupportSocket('/api/support/ws', refresh)
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight })

@@ -8,10 +8,10 @@ import {
 } from '../api'
 import { useI18n } from '../i18n/I18nProvider'
 import type { ConversationStatus, SupportConversation, SupportMessage } from '../types'
+import { useSupportSocket } from './useSupportSocket'
 
-/* The teacher side polls at the same interval; the WebSocket layer will replace
-   both polls without changing this component's data flow. */
-const POLL_MS = 10000
+/* Live updates arrive over a WebSocket that carries pointers only, so every
+   event just refetches the thread. */
 const STATUSES: ConversationStatus[] = ['open', 'pending', 'closed']
 
 export function SupportChatConsole({ onUnauthorized }: { onUnauthorized: () => void }) {
@@ -69,13 +69,12 @@ export function SupportChatConsole({ onUnauthorized }: { onUnauthorized: () => v
     void loadMessages(activeId)
   }, [activeId, loadMessages])
 
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      void loadConversations()
-      if (activeId) void loadMessages(activeId)
-    }, POLL_MS)
-    return () => window.clearInterval(timer)
+  const refresh = useCallback(() => {
+    void loadConversations()
+    if (activeId) void loadMessages(activeId)
   }, [activeId, loadConversations, loadMessages])
+
+  useSupportSocket('/api/support/ws', refresh)
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight })

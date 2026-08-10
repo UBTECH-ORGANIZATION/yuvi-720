@@ -7,12 +7,13 @@ import time
 from collections import deque
 from typing import Any, Deque, Optional
 
-from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi import APIRouter, Depends, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.auth.dependencies import current_user, require_teacher_session
-from app.services import support
+from app.auth.dependencies import COOKIE_NAME, require_teacher_session, current_user
+from app.auth.tokens import decode_session_token
+from app.services import support, support_hub, support_notify
 from learner_state import normalize_learner_id  # type: ignore
 
 router = APIRouter(prefix="/api/support", tags=["support"])
@@ -173,6 +174,13 @@ async def _owned_conversation(conversation_id: str, teacher_id: str) -> Optional
     return await support.get_conversation(conversation_id, teacher_id=teacher_id)
 
 
+async def _announce(conversation_id: str, teacher_id: str, kind: str) -> None:
+    """Push to local teacher sockets and tell the admin service to do the same."""
+    event = {"type": kind, "conversation_id": conversation_id, "teacher_id": teacher_id}
+    await support_hub.broadcast(support_hub.teacher_room(teacher_id), event)
+    support_notify.notify_peer(event)
+
+
 @router.get("/conversations")
 async def teacher_conversations(
     session: dict = Depends(require_teacher_session),
@@ -204,6 +212,7 @@ async def open_conversation(
             author_name=str(session.get("username") or ""),
             body=data.message,
         )
+    await _announce(conversation["id"], teacher_id, "conversation.created")
     return JSONResponse(
         content={"conversation": conversation}, status_code=201, headers=_NO_STORE
     )
@@ -244,6 +253,7 @@ async def teacher_reply(
         return JSONResponse(
             content={"error": "support_unavailable"}, status_code=503, headers=_NO_STORE
         )
+    await _announce(conversation_id, teacher_id, "message.created")
     return JSONResponse(content={"message": message}, status_code=201, headers=_NO_STORE)
 
 
@@ -255,4 +265,55 @@ async def teacher_mark_read(
     if await _owned_conversation(conversation_id, teacher_id) is None:
         return JSONResponse(content={"error": "forbidden"}, status_code=403, headers=_NO_STORE)
     await support.mark_read(conversation_id, reader_role="teacher")
+    return Response(status_code=204, headers=_NO_STORE)
+
+
+@router.websocket("/ws")
+async def teacher_socket(websocket: WebSocket):
+    """Live thread updates for one teacher. Identity comes from the session cookie."""
+    session = decode_session_token(websocket.cookies.get(COOKIE_NAME) or "")
+    if session is None or "teacher" not in (session.get("roles") or []):
+        await websocket.close(code=4401)
+        return
+    room = support_hub.teacher_room(str(session.get("sub")))
+    await websocket.accept()
+    await support_hub.join(room, websocket)
+    try:
+        while True:
+            # The client never sends commands; this only detects a closed socket.
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    except RuntimeError:
+        pass
+    finally:
+        await support_hub.leave(room, websocket)
+
+
+internal_router = APIRouter(prefix="/internal/support", tags=["support-internal"])
+
+
+class NotifyEvent(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    type: str = Field(max_length=60)
+    conversation_id: str = Field(max_length=60)
+    teacher_id: str = Field(default="", max_length=120)
+
+
+@internal_router.post("/notify", status_code=204)
+async def receive_peer_notify(event: NotifyEvent, request: Request):
+    """Relay an admin-side event to this service's teacher sockets."""
+    if not support_notify.token_matches(request.headers.get("X-Support-Token")):
+        return JSONResponse(content={"error": "forbidden"}, status_code=403, headers=_NO_STORE)
+    # The payload is only a pointer; the client refetches the thread over HTTP.
+    conversation = await support.get_conversation(event.conversation_id)
+    if conversation is None:
+        return Response(status_code=204, headers=_NO_STORE)
+    teacher_id = str(conversation.get("teacher_id") or "")
+    if teacher_id:
+        await support_hub.broadcast(
+            support_hub.teacher_room(teacher_id),
+            {"type": event.type, "conversation_id": event.conversation_id},
+        )
     return Response(status_code=204, headers=_NO_STORE)

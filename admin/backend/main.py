@@ -13,7 +13,7 @@ import secrets
 from typing import Any, Optional
 
 from authlib.integrations.starlette_client import OAuth
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -23,6 +23,7 @@ from .auth import create_admin_token, decode_admin_token, is_allowed_admin, norm
 from .config import Settings
 from .database import UsageEventRepository
 from .leads import LEAD_STATUSES, LeadRepository
+from . import realtime
 from .support import CONVERSATION_STATUSES, MAX_MESSAGE_LENGTH, TICKET_STATUSES, SupportRepository
 from .telemetry import configure_telemetry
 from .usage_report import UsageSummary, build_usage_summary
@@ -308,7 +309,7 @@ def create_app(
         response = await call_next(request)
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; script-src 'self'; style-src 'self'; "
-            "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'"
+            "img-src 'self' data:; connect-src 'self' ws: wss:; frame-ancestors 'none'; base-uri 'self'"
         )
         response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -819,6 +820,13 @@ def create_app(
             raise HTTPException(status_code=503, detail="support_data_unavailable") from None
         if message is None:
             raise HTTPException(status_code=404, detail="conversation_not_found")
+        realtime.notify_peer(
+            {
+                "type": "message.created",
+                "conversation_id": conversation_id,
+                "teacher_id": "",
+            }
+        )
         return SupportMessage(**message)
 
     @app.patch("/api/support/conversations/{conversation_id}", response_model=SupportConversation)
@@ -840,6 +848,44 @@ def create_app(
         if conversation is None:
             raise HTTPException(status_code=404, detail="conversation_not_found")
         return SupportConversation(**conversation)
+
+    @app.websocket("/api/support/ws")
+    async def support_socket(websocket: WebSocket) -> None:
+        """Live thread updates for the console. Identity comes from the admin cookie."""
+        token = websocket.cookies.get(_ADMIN_COOKIE)
+        payload = decode_admin_token(token, resolved_settings) if token else None
+        if payload is None or resolved_public_access:
+            await websocket.close(code=4401)
+            return
+        await websocket.accept()
+        await realtime.join(websocket)
+        try:
+            while True:
+                # The client never sends commands; this only detects a closed socket.
+                await websocket.receive_text()
+        except (WebSocketDisconnect, RuntimeError):
+            pass
+        finally:
+            await realtime.leave(websocket)
+    @app.post("/internal/support/notify", status_code=204)
+    async def receive_peer_notify(request: Request) -> Response:
+        """Relay a product-side event to the console sockets."""
+        if not realtime.token_matches(request.headers.get("X-Support-Token")):
+            raise HTTPException(status_code=403, detail="forbidden")
+        try:
+            event = await request.json()
+        except Exception:
+            raise HTTPException(status_code=422, detail="invalid_event") from None
+        if not isinstance(event, dict):
+            raise HTTPException(status_code=422, detail="invalid_event")
+        # The payload is only a pointer; the console refetches over HTTP.
+        await realtime.broadcast(
+            {
+                "type": str(event.get("type") or "")[:60],
+                "conversation_id": str(event.get("conversation_id") or "")[:60],
+            }
+        )
+        return Response(status_code=204)
 
     if _FRONTEND_DIST.exists():
         app.mount("/", StaticFiles(directory=str(_FRONTEND_DIST), html=True), name="admin-frontend")

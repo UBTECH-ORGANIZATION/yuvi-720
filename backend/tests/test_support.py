@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import tempfile
 import unittest
 from unittest.mock import patch
 
 from app.routes import support as support_routes
-from app.services import support
+from app.services import support, support_hub, support_notify
 
 
 def _build(**overrides):
@@ -192,6 +193,44 @@ class SupportChatTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsNone(await support.set_conversation_status(conversation_id, "escalated"))
         self.assertIsNotNone(await support.set_conversation_status(conversation_id, "closed"))
+
+
+class SupportRealtimeTests(unittest.IsolatedAsyncioTestCase):
+    async def test_notify_token_requires_an_exact_configured_secret(self) -> None:
+        with patch.dict(os.environ, {"SUPPORT_INTERNAL_TOKEN": "s3cret-value"}, clear=False):
+            self.assertTrue(support_notify.token_matches("s3cret-value"))
+            self.assertTrue(support_notify.token_matches("  s3cret-value  "))
+            self.assertFalse(support_notify.token_matches("s3cret"))
+            self.assertFalse(support_notify.token_matches(None))
+
+    async def test_notify_is_refused_when_no_secret_is_configured(self) -> None:
+        with patch.dict(os.environ, {"SUPPORT_INTERNAL_TOKEN": ""}, clear=False):
+            self.assertFalse(support_notify.token_matches(""))
+            self.assertFalse(support_notify.token_matches("anything"))
+
+    async def test_broadcast_drops_sockets_that_have_gone_away(self) -> None:
+        class DeadSocket:
+            async def send_json(self, _event):
+                raise RuntimeError("closed")
+
+        class LiveSocket:
+            def __init__(self) -> None:
+                self.events = []
+
+            async def send_json(self, event):
+                self.events.append(event)
+
+        room = support_hub.teacher_room("teacher-a")
+        live, dead = LiveSocket(), DeadSocket()
+        await support_hub.join(room, live)
+        await support_hub.join(room, dead)
+
+        delivered = await support_hub.broadcast(room, {"type": "message.created"})
+
+        self.assertEqual(delivered, 1)
+        self.assertEqual(support_hub.room_size(room), 1)
+        self.assertEqual(live.events, [{"type": "message.created"}])
+        await support_hub.leave(room, live)
 
 
 if __name__ == "__main__":
