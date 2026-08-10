@@ -69,12 +69,19 @@ async def teacher_directive(data: dict, teacher_id: str = Depends(require_teache
 @router.get("/groups")
 async def list_groups(teacher_id: str = Depends(require_teacher)):
     """Groups the teacher may access (admin → all)."""
-    return JSONResponse(content={"groups": org.groups_for_teacher(teacher_id)})
+    return JSONResponse(content={"groups": await org.groups_for_teacher(teacher_id)})
 
 
 @router.get("/orgs")
 async def list_orgs(teacher_id: str = Depends(require_teacher)):
-    """Org overview (admin only)."""
-    if not org.is_admin(teacher_id):
+    """Org overview (admin only).
+
+    Superseded by the admin console (`/api/admin/*`); kept so existing callers
+    keep working while the console lands.
+    """
+    if not await org.is_admin(teacher_id):
         return JSONResponse(content={"error": "admin_only"}, status_code=403)
-    return JSONResponse(content={"schools": org.SCHOOLS, "teachers": org.TEACHERS, "groups": org.GROUPS})
+    return JSONResponse(content={
+        "schools": await org.list_schools(),
+        "groups": await org.groups_for_teacher(teacher_id),
+    })

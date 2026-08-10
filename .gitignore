@@ -40,3 +40,11 @@ unity-learning-world/Assets/Art/World/HighFidelity/ReviewCaptures.meta
 # Local editor prefs and scratch exports (not project source)
 .vscode/settings.json
 /Gemini_Generated_Image_*.svg
+
+# Local verification screenshots (frontend/scripts/dock-check.mjs)
+frontend/scripts/.dock-shots/
+frontend/scripts/.teacher-shots/
+
+# drawio writes these beside the diagram while it is open
+docs/**/.$*.drawio.bkp
+docs/**/.$*.drawio.dtmp

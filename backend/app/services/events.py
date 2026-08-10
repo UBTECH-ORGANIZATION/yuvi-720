@@ -814,6 +814,15 @@ async def ingest_statement(
             await triggers.evaluate(event["learner_id"], event)
         except Exception as exc:  # never block ingest on trigger evaluation
             print(f"⚠️ trigger evaluation failed: {exc}")
+        # Live presence for the teacher's classroom strip. After the event is
+        # stored, so presence can never claim activity that was not recorded,
+        # and guarded separately — a presence failure must not cost the learner
+        # their trigger evaluation or the LRS forward.
+        try:
+            from app.services import presence
+            presence.note_event(event["learner_id"], event)
+        except Exception as exc:
+            print(f"⚠️ presence update failed: {type(exc).__name__}")
         # MoE LRS forward (720): enrich the raw content statement with the
         # outbound envelope and enqueue — first sight only, never blocks ingest.
         try:

@@ -1,0 +1,378 @@
+/* Admin console. Prefix `adm-`, tokens only — a literal colour here would not
+   flip in dark mode, and every token used below is verified to exist. */
+
+.adm {
+  max-inline-size: var(--sp-container);
+  margin-inline: auto;
+  padding: var(--sp-6) var(--sp-gutter) var(--sp-12);
+  display: grid;
+  gap: var(--sp-5);
+}
+
+.adm__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.adm__head h1 { margin: 0; font-size: var(--sp-fs-2xl); color: var(--sp-ink-900); }
+.adm__subtitle { margin: var(--sp-1) 0 0; color: var(--sp-ink-500); font-size: var(--sp-fs-sm); }
+
+.adm__refreshing {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  padding-block-start: var(--sp-2);
+}
+
+/* ── tabs ─────────────────────────────────────────────────────────────────── */
+
+.adm__tabs {
+  display: flex;
+  gap: var(--sp-1);
+  flex-wrap: wrap;
+  border-block-end: 1px solid var(--sp-border);
+  padding-block-end: var(--sp-2);
+}
+
+.adm__tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  border: 0;
+  border-radius: var(--sp-radius-pill);
+  background: transparent;
+  color: var(--sp-ink-500);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-medium);
+  cursor: pointer;
+}
+
+.adm__tabs button:hover { background: var(--sp-surface-2); color: var(--sp-ink-700); }
+.adm__tabs button:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+
+.adm__tabs button.is-active {
+  background: var(--sp-primary-100);
+  color: var(--sp-primary-700);
+  font-weight: var(--sp-fw-semibold);
+}
+
+.adm-tab { display: grid; gap: var(--sp-5); }
+
+/* ── sections & panels ────────────────────────────────────────────────────── */
+
+.adm-section { display: grid; gap: var(--sp-3); }
+
+.adm-section__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.adm-section__head h2 { margin: 0; font-size: var(--sp-fs-lg); color: var(--sp-ink-900); }
+.adm-section__hint { margin: var(--sp-1) 0 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-500); }
+
+.adm-panel { display: grid; gap: var(--sp-3); padding: var(--sp-4); }
+.adm-panel h3 { margin: 0; font-size: var(--sp-fs-md); color: var(--sp-ink-900); }
+.adm-panel__hint { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-500); }
+
+/* The two "nobody is watching this" panels carry a warn accent: they are the
+   only things on Overview that are actionable problems rather than facts. */
+.adm-panel--warn { border-inline-start: 3px solid var(--sp-warn-600); }
+
+.adm-muted { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+/* ── counts ───────────────────────────────────────────────────────────────── */
+
+.adm-gapGrid,
+.adm-counts {
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+/* Size each panel to its own content: when one problem list is empty and the
+   other has ten rows, stretching them to a shared height leaves a wall of
+   whitespace next to the thing that actually needs attention. */
+.adm-gapGrid { align-items: start; }
+
+.adm-count { display: grid; gap: var(--sp-1); padding: var(--sp-4); }
+.adm-count__label { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+.adm-count__value {
+  font-size: var(--sp-fs-2xl);
+  color: var(--sp-ink-900);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── lists ────────────────────────────────────────────────────────────────── */
+
+.adm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+.adm-list__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface-2);
+  flex-wrap: wrap;
+}
+
+.adm-id {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  background: var(--sp-bg-subtle);
+  padding-inline: var(--sp-1);
+  border-radius: var(--sp-radius-sm);
+  margin-inline-start: var(--sp-2);
+}
+
+.adm-list--people { max-block-size: 420px; overflow-y: auto; }
+
+.adm-personRow {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid transparent;
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface);
+  font: inherit;
+  color: var(--sp-ink-700);
+  cursor: pointer;
+  text-align: start;
+  flex-wrap: wrap;
+}
+
+.adm-personRow:hover { background: var(--sp-surface-2); }
+.adm-personRow:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+.adm-personRow.is-active { border-color: var(--sp-primary-500); background: var(--sp-primary-050); }
+.adm-personRow__name { font-weight: var(--sp-fw-medium); }
+.adm-personRow__meta { display: inline-flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+
+/* ── filters ──────────────────────────────────────────────────────────────── */
+
+.adm-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.adm-filters__roles { display: inline-flex; gap: var(--sp-1); }
+
+.adm-filters__roles button {
+  padding: var(--sp-1) var(--sp-3);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-surface);
+  color: var(--sp-ink-500);
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  cursor: pointer;
+}
+
+.adm-filters__roles button.is-active {
+  background: var(--sp-primary-100);
+  border-color: var(--sp-primary-500);
+  color: var(--sp-primary-700);
+}
+
+.adm-search { display: inline-flex; align-items: center; gap: var(--sp-2); flex: 1 1 200px; }
+.adm-search input, .adm-search select { inline-size: 100%; }
+
+/* ── two-column layouts ───────────────────────────────────────────────────── */
+
+.adm-people,
+.adm-groups {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  align-items: start;
+}
+
+.adm-people__list,
+.adm-groups__list { display: grid; gap: var(--sp-4); min-inline-size: 0; }
+.adm-people__detail,
+.adm-groups__detail { min-inline-size: 0; }
+
+@media (max-width: 900px) {
+  .adm-people, .adm-groups { grid-template-columns: minmax(0, 1fr); }
+}
+
+.adm-detail { gap: var(--sp-4); }
+
+.adm-detail__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.adm-detail__head h2 { margin: 0; font-size: var(--sp-fs-xl); color: var(--sp-ink-900); }
+.adm-detail__roles { display: inline-flex; gap: var(--sp-2); flex-wrap: wrap; }
+
+.adm-adminGrant {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface-2);
+  justify-items: start;
+}
+
+.adm-membership {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.adm-membership__col { display: grid; gap: var(--sp-2); align-content: start; }
+.adm-membership__col h3 { margin: 0; font-size: var(--sp-fs-md); color: var(--sp-ink-700); }
+
+/* ── pickers ──────────────────────────────────────────────────────────────── */
+
+.adm-picker { display: inline-flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.adm-picker--block { display: flex; }
+.adm-picker select { min-inline-size: 160px; }
+
+/* ── refusals ─────────────────────────────────────────────────────────────── */
+
+.adm-refusal {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-danger-100);
+  border-inline-start: 3px solid var(--sp-danger-600);
+  color: var(--sp-ink-700);
+  font-size: var(--sp-fs-sm);
+}
+
+.adm-refusal p { margin: 0; }
+.adm-refusal__actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+
+/* An overridable refusal is a question, not a wall. */
+.adm-refusal--overridable {
+  background: var(--sp-warn-100);
+  border-inline-start-color: var(--sp-warn-600);
+}
+
+.adm-btn--danger { background: var(--sp-danger-600); color: #fff; border-color: var(--sp-danger-600); }
+.adm-btn--danger:hover:not(:disabled) { filter: brightness(0.94); }
+
+/* ── create / import panels ───────────────────────────────────────────────── */
+
+.adm-create { padding: var(--sp-3); }
+
+.adm-create__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  border: 0;
+  background: transparent;
+  color: var(--sp-primary-600);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  cursor: pointer;
+  padding: 0;
+  justify-self: start;
+}
+
+.adm-create__form { display: grid; gap: var(--sp-3); }
+.adm-create__form label { display: grid; gap: var(--sp-1); font-size: var(--sp-fs-sm); }
+.adm-create__form label > span { color: var(--sp-ink-500); font-size: var(--sp-fs-xs); }
+.adm-create__roles { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+.adm-checkbox { display: inline-flex !important; flex-direction: row; align-items: center; gap: var(--sp-2); }
+
+.adm-create__result {
+  display: grid;
+  gap: var(--sp-1);
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-success-100);
+  font-size: var(--sp-fs-sm);
+}
+
+.adm-create__result p { margin: 0; }
+.adm-create__password code { font-size: var(--sp-fs-md); font-weight: var(--sp-fw-bold); }
+
+.adm-import__input { font-family: monospace; font-size: var(--sp-fs-xs); inline-size: 100%; }
+.adm-import__actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.adm-import__diff { display: grid; gap: var(--sp-2); font-size: var(--sp-fs-sm); }
+.adm-import__diff p { margin: 0; }
+
+/* ── audit ────────────────────────────────────────────────────────────────── */
+
+.adm-audit { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+.adm-auditRow {
+  display: grid;
+  gap: var(--sp-1);
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+}
+
+.adm-auditRow__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.adm-auditRow__action { font-weight: var(--sp-fw-semibold); color: var(--sp-ink-900); }
+.adm-auditRow__who { font-size: var(--sp-fs-sm); color: var(--sp-ink-500); }
+.adm-auditRow__at {
+  margin-inline-start: auto;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-auditRow__target { font-size: var(--sp-fs-sm); color: var(--sp-ink-500); }
+
+.adm-auditRow__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  border: 0;
+  background: transparent;
+  color: var(--sp-primary-600);
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  cursor: pointer;
+  padding: 0;
+  justify-self: start;
+}
+
+.adm-auditRow__diff {
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  padding: var(--sp-3);
+}
+
+.adm-auditRow__diff h4 { margin: 0 0 var(--sp-1); font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+/* Raw documents are wide; they scroll inside their own box so the page never
+   scrolls horizontally. */
+.adm-auditRow__diff pre {
+  margin: 0;
+  overflow-x: auto;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-700);
+  white-space: pre-wrap;
+  word-break: break-word;
+}

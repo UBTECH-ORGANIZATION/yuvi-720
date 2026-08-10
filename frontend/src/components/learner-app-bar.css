@@ -30,3 +30,9 @@
   .learner-app-nav span { display: none; }
   .learner-app-nav button { padding-inline: 11px; }
 }
+/* Bell + wallet share the trailing slot. */
+.learner-app-bar__trailing {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}

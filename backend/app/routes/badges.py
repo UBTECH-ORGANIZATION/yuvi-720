@@ -36,5 +36,5 @@ async def read_own_badges(lang: str = Query("he"), actor: dict = Depends(current
 @router.get("/{learner_id}")
 async def read_learner_badges(learner_id: str, lang: str = Query("he"), actor: dict = Depends(current_user)):
     safe_id = normalize_learner_id(learner_id)
-    assert_can_read_learner(actor, safe_id)
+    await assert_can_read_learner(actor, safe_id)
     return JSONResponse(content=await _badges_for(safe_id, lang))

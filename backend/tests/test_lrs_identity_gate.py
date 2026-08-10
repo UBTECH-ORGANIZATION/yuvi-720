@@ -66,10 +66,19 @@ class PlaceholderIdentityGate(unittest.IsolatedAsyncioTestCase):
             await self._enqueued_with(LRS_KATA_ECAT_ID="ECAT-720-contract"), 0
         )
 
-    async def test_a_missing_ecat_id_is_refused(self):
-        """Content events must carry the provider's catalog id; absent is not
-        a value we are allowed to improvise."""
-        self.assertEqual(await self._enqueued_with(LRS_KATA_ECAT_ID=""), 0)
+    async def test_a_missing_single_ecat_id_no_longer_blocks_reporting(self):
+        """Content events must carry a content-vendor id — but since the MoE's
+        03/08 clarification that id is the SUPPLIER's ("methodica" / "10"),
+        resolved per content from the catalog's `manufacture`. With the supplier
+        map answering, an empty `LRS_KATA_ECAT_ID` is no longer a reason to hold
+        every statement back."""
+        self.assertEqual(await self._enqueued_with(LRS_KATA_ECAT_ID=""), 1)
+
+    async def test_no_vendor_and_no_ecat_id_is_still_refused(self):
+        """Improvising an identifier remains out of the question."""
+        self.assertEqual(
+            await self._enqueued_with(LRS_KATA_ECAT_ID="", LRS_CONTENT_VENDORS="{}"), 0
+        )
 
     async def test_the_warning_is_logged_once_not_per_statement(self):
         with mock.patch.dict(
