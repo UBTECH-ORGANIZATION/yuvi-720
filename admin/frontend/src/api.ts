@@ -1,4 +1,19 @@
-import type { AuthStatus, Lead, LeadBoard, LeadFilters, LeadStatus, UsageFilters, UsageSummary } from './types'
+import type {
+  AuthStatus,
+  ConversationStatus,
+  Lead,
+  LeadBoard,
+  LeadFilters,
+  LeadStatus,
+  SupportBoard,
+  SupportConversation,
+  SupportFilters,
+  SupportMessage,
+  SupportTicket,
+  TicketStatus,
+  UsageFilters,
+  UsageSummary,
+} from './types'
 
 export class ApiError extends Error {
   constructor(public readonly status: number) {
@@ -68,4 +83,91 @@ export function updateLead(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(changes),
   })
+}
+
+function supportParams(filters: SupportFilters): URLSearchParams {
+  const params = new URLSearchParams()
+  if (filters.days) params.set('days', String(filters.days))
+  if (filters.status) params.set('status', filters.status)
+  if (filters.category) params.set('category', filters.category)
+  if (filters.severity) params.set('severity', filters.severity)
+  if (filters.reporterType) params.set('reporter_type', filters.reporterType)
+  if (filters.search) params.set('search', filters.search)
+  return params
+}
+
+export function getSupportTickets(
+  filters: SupportFilters,
+  signal?: AbortSignal,
+): Promise<SupportBoard> {
+  return apiFetch<SupportBoard>(`/api/support/tickets?${supportParams(filters)}`, {
+    signal,
+    cache: 'no-store',
+  })
+}
+
+export function supportExportUrl(filters: SupportFilters): string {
+  return `/api/support/tickets/export?${supportParams(filters)}`
+}
+
+export function updateSupportTicket(
+  ticketId: string,
+  changes: { status?: TicketStatus; admin_notes?: string },
+): Promise<SupportTicket> {
+  return apiFetch<SupportTicket>(`/api/support/tickets/${encodeURIComponent(ticketId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(changes),
+  })
+}
+
+export function getSupportConversations(
+  filters: { status?: ConversationStatus; search?: string } = {},
+  signal?: AbortSignal,
+): Promise<SupportConversation[]> {
+  const params = new URLSearchParams()
+  if (filters.status) params.set('status', filters.status)
+  if (filters.search) params.set('search', filters.search)
+  return apiFetch<SupportConversation[]>(`/api/support/conversations?${params}`, {
+    signal,
+    cache: 'no-store',
+  })
+}
+
+export function getSupportMessages(
+  conversationId: string,
+  signal?: AbortSignal,
+): Promise<SupportMessage[]> {
+  return apiFetch<SupportMessage[]>(
+    `/api/support/conversations/${encodeURIComponent(conversationId)}/messages`,
+    { signal, cache: 'no-store' },
+  )
+}
+
+export function replyToConversation(
+  conversationId: string,
+  body: string,
+): Promise<SupportMessage> {
+  return apiFetch<SupportMessage>(
+    `/api/support/conversations/${encodeURIComponent(conversationId)}/messages`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body }),
+    },
+  )
+}
+
+export function updateConversationStatus(
+  conversationId: string,
+  status: ConversationStatus,
+): Promise<SupportConversation> {
+  return apiFetch<SupportConversation>(
+    `/api/support/conversations/${encodeURIComponent(conversationId)}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    },
+  )
 }

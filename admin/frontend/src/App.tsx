@@ -2,15 +2,18 @@ import { useEffect, useState } from 'react'
 import { getAuthStatus, logout } from './api'
 import { LanguageSwitcher, useI18n } from './i18n/I18nProvider'
 import { LeadsDashboard } from './leads/LeadsDashboard'
+import { SupportDashboard } from './support/SupportDashboard'
 import type { AdminIdentity, AuthStatus } from './types'
 import { UsageDashboard } from './usage/UsageDashboard'
 
 
 type LoadState = 'loading' | 'ready' | 'error'
-type Section = 'usage' | 'leads'
+type Section = 'usage' | 'leads' | 'support'
 
 function sectionFromHash(): Section {
-  return window.location.hash === '#leads' ? 'leads' : 'usage'
+  if (window.location.hash === '#leads') return 'leads'
+  if (window.location.hash === '#support') return 'support'
+  return 'usage'
 }
 
 export function App() {
@@ -128,7 +131,8 @@ function AdminShell({
   const { t } = useI18n()
   const [loggingOut, setLoggingOut] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
-  // Leads carry contact details, so they exist only for a signed-in administrator.
+  // Leads and support tickets carry contact details, so they exist only for a
+  // signed-in administrator.
   const canSeeLeads = admin !== null
   const [section, setSection] = useState<Section>(sectionFromHash)
   const activeSection: Section = canSeeLeads ? section : 'usage'
@@ -184,6 +188,17 @@ function AdminShell({
                 <LeadsIcon />
                 <span>{t('nav.leads')}</span>
               </a>
+              <p className="nav-label">{t('nav.support')}</p>
+              <a
+                className={`nav-item${activeSection === 'support' ? ' nav-item--active' : ''}`}
+                href="#support"
+                title={t('nav.tickets')}
+                aria-current={activeSection === 'support' ? 'page' : undefined}
+                onClick={() => setSection('support')}
+              >
+                <SupportIcon />
+                <span>{t('nav.tickets')}</span>
+              </a>
             </>
           ) : null}
         </nav>
@@ -211,9 +226,9 @@ function AdminShell({
             </div>
           ) : <span className="public-access-badge">{t('shell.publicAccess')}</span>}
         </header>
-        {activeSection === 'leads'
-          ? <LeadsDashboard onUnauthorized={onUnauthorized} />
-          : <UsageDashboard onUnauthorized={onUnauthorized} />}
+        {activeSection === 'leads' ? <LeadsDashboard onUnauthorized={onUnauthorized} /> : null}
+        {activeSection === 'support' ? <SupportDashboard onUnauthorized={onUnauthorized} /> : null}
+        {activeSection === 'usage' ? <UsageDashboard onUnauthorized={onUnauthorized} /> : null}
       </div>
     </div>
   )
@@ -244,6 +259,14 @@ function LeadsIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M4 5h16v14H4zM4 10h16M10 10v9" />
+    </svg>
+  )
+}
+
+function SupportIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 3a9 9 0 00-9 9v4a2 2 0 002 2h2v-6H5v-.5a7 7 0 0114 0V15h-2v6h2a2 2 0 002-2v-7a9 9 0 00-9-9z" />
     </svg>
   )
 }
