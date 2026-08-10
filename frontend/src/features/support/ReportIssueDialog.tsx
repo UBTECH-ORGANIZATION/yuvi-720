@@ -37,7 +37,7 @@ export function ReportIssueDialog() {
   const [severity, setSeverity] = useState<TicketSeverity>('normal')
   const [error, setError] = useState(false)
   const [history, setHistory] = useState<SupportTicket[] | null>(null)
-  const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [attachments, setAttachments] = useState<Array<Attachment & { label: string }>>([])
   const [attachmentError, setAttachmentError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
 
@@ -98,9 +98,16 @@ export function ReportIssueDialog() {
     setUploading(true)
     try {
       const uploaded = await uploadAttachment(file)
-      setAttachments((current) => [...current, uploaded].slice(0, MAX_ATTACHMENTS))
-    } catch {
-      setAttachmentError('support.report.attachFailed')
+      setAttachments((current) =>
+        [...current, { ...uploaded, label: file.name }].slice(0, MAX_ATTACHMENTS),
+      )
+    } catch (reason: unknown) {
+      const code = reason instanceof Error ? reason.message : ''
+      setAttachmentError(
+        code === 'attachments_unavailable'
+          ? 'support.report.attachUnavailable'
+          : 'support.report.attachFailed',
+      )
     } finally {
       setUploading(false)
     }
@@ -224,7 +231,7 @@ export function ReportIssueDialog() {
               <ul className="sp-report__attach-list">
                 {attachments.map((item) => (
                   <li key={item.blob_name}>
-                    <span dir="ltr">{item.blob_name.split('/')[1]}</span>
+                    <span dir="auto">{item.label}</span>
                     <button
                       type="button"
                       onClick={() =>

@@ -9,6 +9,7 @@ not evidence of anything.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 import re
 from typing import Optional
 from uuid import uuid4
@@ -16,6 +17,8 @@ from uuid import uuid4
 CONTAINER = "support-attachments"
 MAX_BYTES = 5 * 1024 * 1024
 MAX_PER_TICKET = 3
+
+_FALLBACK_ROOT = Path(__file__).resolve().parents[2] / ".runtime" / CONTAINER
 
 # (magic prefix, content type, extension)
 _SIGNATURES: tuple[tuple[bytes, str, str], ...] = (
@@ -61,6 +64,13 @@ def is_configured() -> bool:
     return bool(_connection_string() or _account_url())
 
 
+def _fallback_path(blob_name: str) -> Optional[Path]:
+    """Resolve a blob name under the local dev store, or None if it escapes it."""
+    candidate = (_FALLBACK_ROOT / blob_name).resolve()
+    root = _FALLBACK_ROOT.resolve()
+    return candidate if candidate.is_relative_to(root) else None
+
+
 def _container_client():
     """Build a container client, preferring managed identity over a secret."""
     from azure.storage.blob.aio import BlobServiceClient
@@ -76,12 +86,26 @@ def _container_client():
 
 
 async def upload(owner_id: str, data: bytes) -> dict[str, object]:
-    if not is_configured():
-        raise AttachmentError("attachments_unavailable")
     if len(data) > MAX_BYTES:
         raise AttachmentError("file_too_large")
     content_type, extension = sniff_image(data)
     blob_name = build_blob_name(owner_id, extension)
+
+    # Without a storage account the demo keeps working off disk, like every
+    # other repository here — never the deployed path.
+    if not is_configured():
+        target = _fallback_path(blob_name)
+        if target is None:
+            raise AttachmentError("attachments_unavailable")
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+            target.with_suffix(target.suffix + ".type").write_text(content_type, encoding="utf-8")
+        except OSError as exc:
+            print(f"⚠️ support attachment fallback write failed: {exc}")
+            raise AttachmentError("attachments_unavailable") from None
+        return {"blob_name": blob_name, "content_type": content_type, "size": len(data)}
+
     service, container = _container_client()
     try:
         from azure.storage.blob import ContentSettings
@@ -100,8 +124,24 @@ async def upload(owner_id: str, data: bytes) -> dict[str, object]:
 
 
 async def download(blob_name: str) -> Optional[tuple[bytes, str]]:
-    if not is_configured() or not is_safe_blob_name(blob_name):
+    if not is_safe_blob_name(blob_name):
         return None
+
+    if not is_configured():
+        source = _fallback_path(blob_name)
+        if source is None or not source.exists():
+            return None
+        try:
+            marker = source.with_suffix(source.suffix + ".type")
+            content_type = (
+                marker.read_text(encoding="utf-8").strip() if marker.exists()
+                else "application/octet-stream"
+            )
+            return source.read_bytes(), content_type
+        except OSError as exc:
+            print(f"⚠️ support attachment fallback read failed: {exc}")
+            return None
+
     service, container = _container_client()
     try:
         stream = await container.download_blob(blob_name)

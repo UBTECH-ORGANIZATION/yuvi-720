@@ -251,14 +251,26 @@ class SupportAttachmentTests(unittest.IsolatedAsyncioTestCase):
                 await support_media.upload("moti", b"x" * (support_media.MAX_BYTES + 1))
         self.assertEqual(str(caught.exception), "file_too_large")
 
-    async def test_upload_degrades_when_storage_is_not_configured(self) -> None:
-        with patch.dict(
-            os.environ,
-            {"SUPPORT_STORAGE_CONNECTION_STRING": "", "SUPPORT_STORAGE_ACCOUNT_URL": ""},
-        ):
-            with self.assertRaises(support_media.AttachmentError) as caught:
-                await support_media.upload("moti", b"\x89PNG\r\n\x1a\n")
-        self.assertEqual(str(caught.exception), "attachments_unavailable")
+    async def test_upload_falls_back_to_disk_when_storage_is_not_configured(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            with patch.dict(
+                os.environ,
+                {"SUPPORT_STORAGE_CONNECTION_STRING": "", "SUPPORT_STORAGE_ACCOUNT_URL": ""},
+            ), patch.object(support_media, "_FALLBACK_ROOT", Path(root)):
+                stored = await support_media.upload("moti", b"\x89PNG\r\n\x1a\nbody")
+                fetched = await support_media.download(str(stored["blob_name"]))
+
+        self.assertEqual(stored["content_type"], "image/png")
+        self.assertEqual(fetched, (b"\x89PNG\r\n\x1a\nbody", "image/png"))
+
+    async def test_fallback_reads_cannot_escape_the_local_store(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            with patch.dict(
+                os.environ,
+                {"SUPPORT_STORAGE_CONNECTION_STRING": "", "SUPPORT_STORAGE_ACCOUNT_URL": ""},
+            ), patch.object(support_media, "_FALLBACK_ROOT", Path(root)):
+                self.assertIsNone(await support_media.download("../../secret.png"))
+                self.assertIsNone(await support_media.download("moti/../../secret.png"))
 
     async def test_blob_names_are_owner_scoped_and_path_traversal_is_rejected(self) -> None:
         name = support_media.build_blob_name("moti/../admin", ".png")
