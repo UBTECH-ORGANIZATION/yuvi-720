@@ -2538,5 +2538,16 @@
   "tch.evidence.sent.onDate": "נסגר ב-{date}.",
   "tch.evidence.sent.shared": "התלמיד/ה שיתף/ה משהו שדורש תשומת לב של מבוגר.",
   "tch.evidence.sent.sharedQuote": "מה שנקלט: \"{text}\".",
-  "tch.evidence.sent.sharedHandled": "הדיווח כבר טופל."
+  "tch.evidence.sent.sharedHandled": "הדיווח כבר טופל.",
+  "voice.title": "תרגול דיבור עם יובי",
+  "voice.start": "לדבר עם יובי",
+  "voice.end": "לסיים את השיחה",
+  "voice.close": "סגירה",
+  "voice.hint": "לחצו כדי להתחיל, ופשוט דברו. אפשר לענות בעברית — יובי יבין.",
+  "voice.error": "לא הצלחנו להתחבר. בדקו שהמיקרופון מאושר, ונסו שוב.",
+  "voice.state.idle": "מוכן",
+  "voice.state.connecting": "מתחבר…",
+  "voice.state.listening": "יובי מקשיב",
+  "voice.state.speaking": "יובי מדבר",
+  "voice.state.error": "משהו השתבש"
 }

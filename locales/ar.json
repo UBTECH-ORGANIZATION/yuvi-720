@@ -2538,5 +2538,16 @@
   "tch.evidence.sent.onDate": "أُغلق في {date}.",
   "tch.evidence.sent.shared": "شارك/ت الطالب/ة أمرًا يحتاج إلى انتباه شخص بالغ.",
   "tch.evidence.sent.sharedQuote": "ما سُجّل: \"{text}\".",
-  "tch.evidence.sent.sharedHandled": "عولج هذا البلاغ سلفًا."
+  "tch.evidence.sent.sharedHandled": "عولج هذا البلاغ سلفًا.",
+  "voice.title": "تدريب المحادثة مع يوفي",
+  "voice.start": "التحدّث مع يوفي",
+  "voice.end": "إنهاء المحادثة",
+  "voice.close": "إغلاق",
+  "voice.hint": "اضغطوا للبدء وتحدّثوا ببساطة. يمكنكم الإجابة بالعربية — سيفهم يوفي.",
+  "voice.error": "لم نتمكّن من الاتصال. تأكّدوا من السماح للميكروفون وحاولوا مجدداً.",
+  "voice.state.idle": "جاهز",
+  "voice.state.connecting": "جارٍ الاتصال…",
+  "voice.state.listening": "يوفي يستمع",
+  "voice.state.speaking": "يوفي يتحدّث",
+  "voice.state.error": "حدث خلل"
 }

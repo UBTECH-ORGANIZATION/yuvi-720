@@ -11,12 +11,13 @@ import { ThinkingOrbit } from './ThinkingOrbit'
 import { QuestionExplainer } from './QuestionExplainer'
 import type { VisualMode } from '../services/agents'
 import type { CoachVisual } from '../services/agents'
-import { rateCoachConversation, saveHelpedAttribution, type HelpMethod } from '../services/agents'
+import { rateCoachConversation, saveHelpedAttribution, coachSurfaceForPath, type HelpMethod } from '../services/agents'
 import { playCoachSpeech, stopCoachSpeech, type SpeechState } from '../services/speech'
 import { navigate, useRoute } from '../app/router'
 import { formatMessageTime } from '../hooks/messageTime'
 import { useLessonRoadmap } from '../providers/LessonRoadmapProvider'
 import { CompanionTrack3D } from '../features/learning-portal/CompanionTrack3D'
+import { VoiceCallPanel } from '../features/voice/VoiceCallPanel'
 import 'katex/dist/katex.min.css'
 import SceneRenderer from '../features/visuals/SceneRenderer'
 import './companion.css'
@@ -182,6 +183,8 @@ export function CompanionChat() {
     reloadHistory,
   } = useCompanion()
   const pathname = useRoute()
+  // Spoken practice is a mode of the same conversation, not a second companion.
+  const [voiceOpen, setVoiceOpen] = useState(false)
   const isTaskMode = pathname.startsWith('/learning/lesson')
   const { snapshot: lessonRoadmap } = useLessonRoadmap()
   const { design, loaded } = useYuviDesign()
@@ -1135,6 +1138,12 @@ export function CompanionChat() {
         </div>
       )}
 
+      {voiceOpen && (
+        <div className="sp-companion__voice">
+          <VoiceCallPanel surface={coachSurfaceForPath(pathname).screen} onClose={() => setVoiceOpen(false)} />
+        </div>
+      )}
+
       {(!historyOpen || fullscreen) && (!isTaskMode || taskView === 'chat') && (
         <div className="sp-companion__composer-shell">
           {isTaskMode ? (
@@ -1190,6 +1199,16 @@ export function CompanionChat() {
             )
           )}
           <form className="sp-companion__composer" onSubmit={submit}>
+            <button
+              type="button"
+              className={`sp-companion__voice-btn${voiceOpen ? ' is-active' : ''}`}
+              onClick={() => setVoiceOpen((open) => !open)}
+              aria-pressed={voiceOpen}
+              aria-label={t('voice.start')}
+              title={t('voice.start')}
+            >
+              <Icon name="mic" size={18} />
+            </button>
             <input
               ref={inputRef}
               value={draft}

@@ -2538,5 +2538,16 @@
   "tch.evidence.sent.onDate": "Closed on {date}.",
   "tch.evidence.sent.shared": "The student shared something that needs an adult's attention.",
   "tch.evidence.sent.sharedQuote": "What was recorded: \"{text}\".",
-  "tch.evidence.sent.sharedHandled": "This report has already been handled."
+  "tch.evidence.sent.sharedHandled": "This report has already been handled.",
+  "voice.title": "Speaking practice with Yuvi",
+  "voice.start": "Talk to Yuvi",
+  "voice.end": "End the conversation",
+  "voice.close": "Close",
+  "voice.hint": "Tap to start and just talk. You can answer in your own language — Yuvi will understand.",
+  "voice.error": "We could not connect. Check that the microphone is allowed, then try again.",
+  "voice.state.idle": "Ready",
+  "voice.state.connecting": "Connecting…",
+  "voice.state.listening": "Yuvi is listening",
+  "voice.state.speaking": "Yuvi is speaking",
+  "voice.state.error": "Something went wrong"
 }

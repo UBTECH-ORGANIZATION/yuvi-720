@@ -35,6 +35,12 @@ const STR = {
     'write.checklist': 'לפני שממשיכים, בדקו את עצמכם:',
     'speak.model': 'לחצו על שורה כדי לשמוע אותה, ואז אמרו אותה בקול.',
     'speak.check': 'איך הלך?',
+    'speak.your_turn': 'עכשיו אתם',
+    'speak.record': 'לדבר',
+    'speak.retry': 'לדבר שוב',
+    'speak.listening': 'מקשיבים…',
+    'speak.again': 'לא שמענו כלום. נסו שוב, קצת יותר קרוב למיקרופון.',
+    'speak.nomic': 'המיקרופון לא זמין כרגע. אפשר להמשיך — הקריאו את המשפט בקול לעצמכם.',
     'summary.done': 'סיימתם את השלב הזה',
     'error.load': 'לא הצלחנו לטעון את התוכן. רעננו את הדף.',
     'error.auth': 'הקישור הזה כבר לא בתוקף. חזרו לשיעור ופתחו אותו שוב.',
@@ -57,6 +63,12 @@ const STR = {
     'write.checklist': 'قبل المتابعة، تحقّقوا من أنفسكم:',
     'speak.model': 'اضغطوا على سطر لسماعه، ثم قولوه بصوت مسموع.',
     'speak.check': 'كيف سار الأمر؟',
+    'speak.your_turn': 'الآن دوركم',
+    'speak.record': 'تكلّموا',
+    'speak.retry': 'تكلّموا مرّة أخرى',
+    'speak.listening': 'نستمع…',
+    'speak.again': 'لم نسمع شيئاً. حاولوا مجدداً وأقرب قليلاً من الميكروفون.',
+    'speak.nomic': 'الميكروفون غير متاح الآن. يمكنكم المتابعة — اقرأوا الجملة بصوت مسموع لأنفسكم.',
     'summary.done': 'أنهيتم هذه المرحلة',
     'error.load': 'لم نتمكّن من تحميل المحتوى. أعيدوا تحميل الصفحة.',
     'error.auth': 'هذا الرابط لم يعد صالحاً. عودوا إلى الدرس وافتحوه من جديد.',
@@ -79,6 +91,12 @@ const STR = {
     'write.checklist': 'Before you continue, check yourself:',
     'speak.model': 'Tap a line to hear it, then say it out loud.',
     'speak.check': 'How did it go?',
+    'speak.your_turn': 'Now your turn',
+    'speak.record': 'Speak',
+    'speak.retry': 'Speak again',
+    'speak.listening': 'Listening…',
+    'speak.again': 'We did not hear anything. Try again, a little closer to the microphone.',
+    'speak.nomic': 'The microphone is not available right now. You can carry on — read the sentence out loud to yourself.',
     'summary.done': 'You finished this step',
     'error.load': 'We could not load the content. Please refresh the page.',
     'error.auth': 'This link has expired. Go back to the lesson and open it again.',
@@ -506,6 +524,79 @@ function renderMediation(item) {
   return el('div', {}, [block, renderWriting(item)]);
 }
 
+/* ── speaking (mic + pronunciation assessment) ──────────────────────────── */
+let sdkPromise = null;
+
+/** The Azure Speech browser SDK is vendored, not fetched from a CDN — this page
+ *  is meant to run inside someone else's platform, where an external script may
+ *  simply be blocked. Loaded on demand so a reading item never pays for it. */
+function loadSpeechSdk() {
+  if (window.SpeechSDK) return Promise.resolve(window.SpeechSDK);
+  if (!sdkPromise) {
+    sdkPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = '/content/player-assets/vendor/speech-sdk.js';
+      script.onload = () => (window.SpeechSDK ? resolve(window.SpeechSDK) : reject(new Error('sdk')));
+      script.onerror = () => reject(new Error('sdk'));
+      document.head.append(script);
+    }).catch((error) => { sdkPromise = null; throw error; });
+  }
+  return sdkPromise;
+}
+
+async function speechToken() {
+  const response = await fetch(`/content/player/${encodeURIComponent(componentId)}/speech-token`, {
+    method: 'POST',
+    headers: { Authorization: launch.auth },
+  });
+  if (!response.ok) throw new Error(String(response.status));
+  return response.json();
+}
+
+/** Record one utterance and score it against the reference sentence.
+ *  The audio goes from this page straight to Azure — it never reaches our
+ *  servers and is never stored. Only the score sheet comes back. */
+async function assessSpeech(referenceText) {
+  const [SDK, { token, region }] = await Promise.all([loadSpeechSdk(), speechToken()]);
+  const speechConfig = SDK.SpeechConfig.fromAuthorizationToken(token, region);
+  speechConfig.speechRecognitionLanguage = 'en-US';
+  const pa = new SDK.PronunciationAssessmentConfig(
+    referenceText,
+    SDK.PronunciationAssessmentGradingSystem.HundredMark,
+    SDK.PronunciationAssessmentGranularity.Phoneme,
+    true,
+  );
+  if (pa.enableProsodyAssessment) pa.enableProsodyAssessment = true;
+
+  const recognizer = new SDK.SpeechRecognizer(speechConfig, SDK.AudioConfig.fromDefaultMicrophoneInput());
+  pa.applyTo(recognizer);
+  try {
+    const result = await new Promise((resolve, reject) =>
+      recognizer.recognizeOnceAsync(resolve, reject));
+    if (result.reason !== SDK.ResultReason.RecognizedSpeech) throw new Error('no_speech');
+    const scores = SDK.PronunciationAssessmentResult.fromResult(result);
+    const detail = JSON.parse(result.properties.getProperty(
+      SDK.PropertyId.SpeechServiceResponse_JsonResult) || '{}');
+    const best = (detail.NBest || [])[0] || {};
+    return {
+      accuracyScore: scores.accuracyScore,
+      fluencyScore: scores.fluencyScore,
+      completenessScore: scores.completenessScore,
+      prosodyScore: scores.prosodyScore,
+      pronunciationScore: scores.pronunciationScore,
+      // Azure reports duration in 100-nanosecond ticks; this is the billing unit.
+      durationSeconds: result.duration ? result.duration / 10_000_000 : undefined,
+      words: (best.Words || []).map((w) => ({
+        word: w.Word,
+        accuracyScore: (w.PronunciationAssessment || {}).AccuracyScore,
+        errorType: (w.PronunciationAssessment || {}).ErrorType,
+      })),
+    };
+  } finally {
+    recognizer.close();
+  }
+}
+
 function renderSpeaking(item) {
   const p = item.presentation;
   const block = el('div', { class: 'lp-q' });
@@ -533,10 +624,73 @@ function renderSpeaking(item) {
     block.append(el('p', { class: 'lp-support', text: pick(p.support) }));
   }
 
+  // ── your turn ──
+  const reference = lines.join(' ');
+  const feedback = el('div', { class: 'lp-feedback', hidden: true });
+  const status = el('p', { class: 'lp-note', text: '' });
+  const mic = el('button', { class: 'lp-play lp-mic', type: 'button', text: `🎤  ${t('speak.record')}` });
+  let busy = false;
+
+  const paintWords = (accuracy) => {
+    list.querySelectorAll('.lp-line').forEach((node) => {
+      const spoken = (node.textContent || '').split(/\s+/).map((word) => {
+        const key = word.replace(/[^A-Za-z']/g, '').toLowerCase();
+        const score = accuracy[key];
+        const span = el('span', { class: 'lp-word', text: word + ' ' });
+        // A tint, never a number — the learner sees which word to try, not a mark.
+        if (score != null) span.dataset.said = score < 65 ? 'retry' : 'good';
+        return span;
+      });
+      node.replaceChildren(...spoken);
+    });
+  };
+
+  mic.addEventListener('click', async () => {
+    if (busy) return;
+    busy = true;
+    mic.dataset.playing = 'true';
+    mic.textContent = `● ${t('speak.listening')}`;
+    status.textContent = '';
+    try {
+      const assessment = await assessSpeech(reference);
+      const response = await fetch(`/content/player/${encodeURIComponent(componentId)}/pronunciation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: launch.auth },
+        body: JSON.stringify({
+          assessment, language: lang, referenceText: reference,
+          itemId: item.id, questionId: 'speaking',
+        }),
+      });
+      const verdict = await response.json();
+      const words = verdict.feedback?.wordAccuracy || {};
+      paintWords(Object.fromEntries(Object.entries(words).map(([k, v]) => [k.toLowerCase(), v])));
+      feedback.replaceChildren(
+        el('p', { text: verdict.feedback?.headline || '' }),
+        ...(verdict.feedback?.notes || []).map((note) => el('p', { class: 'lp-note', text: note })),
+        el('p', { class: 'lp-kicker', text: verdict.feedback?.nextStep || '' }),
+      );
+      feedback.dataset.verdict = verdict.feedback?.band === 'strong' ? 'correct' : '';
+      feedback.hidden = false;
+      report('answered', {
+        object: `${itemObject(item)}/speaking`,
+        result: { response: reference, success: verdict.feedback?.band !== 'developing' },
+      });
+    } catch (error) {
+      // Speaking must never be a dead end: if the mic or the service is not
+      // available the learner keeps going, and says so in their own words.
+      status.textContent = error?.message === 'no_speech' ? t('speak.again') : t('speak.nomic');
+    } finally {
+      busy = false;
+      mic.dataset.playing = 'false';
+      mic.textContent = `🎤  ${t('speak.retry')}`;
+    }
+  });
+
+  block.append(el('p', { class: 'lp-kicker', text: t('speak.your_turn') }), mic, status, feedback);
+
   if (p.selfCheck?.length) {
     block.append(el('p', { class: 'lp-kicker', text: t('speak.check') }));
-    // Saying it out loud cannot be graded here — the learner's own read is a
-    // self-report, which 720 models as `selected`, never as `answered`.
+    // Saying it out loud is also a self-report, which 720 models as `selected`.
     block.append(renderChoices(item, p.selfCheck, 'isUnderstood'));
   }
   return block;
