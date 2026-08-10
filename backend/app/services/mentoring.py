@@ -60,6 +60,12 @@ def _new_goal(data: dict[str, Any]) -> dict[str, Any]:
         # accepted from the client, so the reward cannot be self-assigned.
         "reward_value": rewards.clamp_goal_value(data.get("reward_value")),
         "reward_why": (data.get("reward_why") or "").strip(),
+        # Teacher approval (F6 → F5). Present from creation so every consumer can
+        # read them without an existence check; `None` means "not yet approved",
+        # which is different from "approved by nobody".
+        "approved_by": data.get("approved_by"),
+        "approved_at": data.get("approved_at"),
+        "teacher_note": (data.get("teacher_note") or "").strip(),
         "deleted": False,
     }
 
@@ -109,6 +115,11 @@ def _brain_goal_entry(conversation: dict[str, Any], goal: dict[str, Any]) -> dic
         # Carried into the dashboard so the goal's spark worth is visible
         # wherever the goal itself is.
         "reward_value": goal.get("reward_value"),
+        # Surfaced on the student dashboard so an approved goal reads as approved
+        # there too, not only in the teacher's view.
+        "approved_by": goal.get("approved_by"),
+        "approved_at": goal.get("approved_at"),
+        "assigned_by_teacher": conversation.get("author") == "teacher",
         "visible_to_learner": conversation.get("visibility", "shared") == "shared",
     }
 

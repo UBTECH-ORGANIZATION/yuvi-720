@@ -1,0 +1,44 @@
+/* Shared "Yuvi is thinking" indicator — see ThinkingOrbit.tsx.
+   Values are the companion chat's originals; both chats now import this. */
+
+.sp-thinking {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-block-size: 28px;
+  color: var(--sp-ink-400);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.sp-thinking__orbit {
+  position: relative;
+  display: block;
+  flex: none;
+  inline-size: 30px;
+  block-size: 30px;
+  border: 1px solid rgba(111, 91, 255, 0.2);
+  border-radius: 50%;
+  animation: sp-thinking-orbit 1.8s linear infinite;
+}
+
+.sp-thinking__orbit i {
+  position: absolute;
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--sp-primary-500), #4cc9f0);
+  box-shadow: 0 0 8px rgba(76, 201, 240, 0.55);
+}
+
+.sp-thinking__orbit i:nth-child(1) { inset-block-start: -3px; inset-inline-start: 12px; }
+.sp-thinking__orbit i:nth-child(2) { inset-block-end: 2px; inset-inline-end: 1px; transform: scale(0.78); }
+.sp-thinking__orbit i:nth-child(3) { inset-block-end: 2px; inset-inline-start: 1px; transform: scale(0.58); }
+
+@keyframes sp-thinking-orbit {
+  to { transform: rotate(1turn); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-thinking__orbit { animation: none; }
+}

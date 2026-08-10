@@ -1,0 +1,221 @@
+/* Moments feed + weekly digest. Chronological rows, never a ranking. */
+
+/* Flat timeline rows: the kind lives in the icon chip's colour, the rows
+   separate themselves with hairlines. No box inside the zone's card.
+   Capped height — the feed is a read, not a scroll: whatever does not fit is
+   still reachable, but it never pushes the rest of the dashboard off screen. */
+.tch-moments {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+  max-block-size: 420px;
+  overflow-y: auto;
+}
+.tch-moments__none { margin: 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
+
+.tch-moment {
+  display: flex;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-1);
+  border-block-end: 1px solid var(--sp-border);
+}
+
+.tch-moment:last-child { border-block-end: 0; }
+
+.tch-moment__icon {
+  flex: none;
+  inline-size: 30px;
+  block-size: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--tch-chip-bg);
+  color: var(--sp-primary-600);
+}
+
+.tch-moment--recovery .tch-moment__icon,
+.tch-moment--first_mastery .tch-moment__icon {
+  background: rgba(46, 174, 111, .14);
+  color: var(--sp-success-600);
+}
+
+.tch-moment--misconception_resolved .tch-moment__icon,
+.tch-moment--goal_done .tch-moment__icon {
+  background: rgba(224, 158, 42, .16);
+  color: var(--sp-warn-600);
+}
+
+.tch-moment--breakthrough .tch-moment__icon {
+  background: rgba(46, 174, 111, .18);
+  color: var(--sp-success-600);
+}
+
+/* Something a child said that needs a person: the one moment kind that is not
+   good news, and it must not read like the rest of the feed. */
+.tch-moment--wellbeing_shared .tch-moment__icon {
+  background: rgba(226, 74, 94, .16);
+  color: var(--sp-danger-600);
+}
+
+.tch-moment--wellbeing_shared .tch-moment__text { color: var(--sp-danger-600); font-weight: var(--sp-fw-semibold); }
+
+/* Headline rows carry the sentence at reading size; the routine ones stay
+   small. Same list, two levels of voice. */
+.tch-moment.is-headline .tch-moment__text {
+  font-size: var(--sp-fs-md);
+  color: var(--sp-ink-900);
+}
+
+.tch-moment.is-headline .tch-moment__icon { inline-size: 34px; block-size: 34px; }
+.tch-moment__body { flex: 1; min-width: 0; display: grid; gap: var(--sp-1); }
+
+.tch-moment__text {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+
+.tch-moment__who { color: var(--sp-ink-700); }
+
+/* when · why · praise, on one line, separated by hairline dots. */
+.tch-moment__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-xs);
+}
+
+.tch-moment__meta > * + *::before {
+  content: '·';
+  margin-inline-end: var(--sp-2);
+  color: var(--sp-ink-300, var(--sp-ink-400));
+}
+
+.tch-moment__when {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The evidence sits under the row it explains: a quiet block of text, no card,
+   no accent bar, no rule — it is the same voice as the sentence above it. */
+.tch-moment .tch-evidence__raw {
+  margin: 2px 0 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.tch-moment .tch-evidence__sentence { color: var(--sp-ink-500, var(--sp-ink-400)); }
+
+.tch-moment__praise {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  border: 0;
+  background: transparent;
+  color: var(--sp-primary-700);
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.tch-moment__praise:hover { text-decoration: underline; }
+.tch-moment__praise:focus-visible { outline: 2px solid var(--sp-primary-600); outline-offset: 2px; }
+
+.tch-moment__kudos { display: grid; gap: var(--sp-2); margin-block-start: var(--sp-1); }
+.tch-moment__kudosHint { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+.tch-moment__kudos textarea {
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+  background: var(--sp-surface-2);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-sm);
+  padding: var(--sp-2);
+  width: 100%;
+  resize: vertical;
+}
+
+.tch-moment__kudos textarea:focus-visible {
+  outline: 2px solid var(--sp-primary-600);
+  outline-offset: 1px;
+}
+
+.tch-moment__kudosActions { display: flex; gap: var(--sp-2); justify-content: flex-end; }
+
+.tch-moment__sent {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-success-600);
+  font-weight: 600;
+}
+
+.tch-moment__error { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-danger-600); }
+
+/* ── weekly digest ───────────────────────────────────────────────────────── */
+
+.tch-digest { display: grid; gap: var(--sp-3); }
+.tch-digest__none { margin: 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
+
+.tch-digest__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.tch-digest__source { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+.tch-digest__refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  border: 0;
+  background: transparent;
+  color: var(--sp-primary-700);
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  cursor: pointer;
+}
+
+.tch-digest__refresh:disabled { opacity: 0.5; cursor: default; }
+.tch-digest__refresh:focus-visible { outline: 2px solid var(--sp-primary-600); outline-offset: 2px; }
+
+.tch-digest__list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); }
+
+/* A dot marker, not another edge line — the zone already has one border. */
+.tch-digest__bullet {
+  position: relative;
+  display: grid;
+  gap: var(--sp-1);
+  padding-inline-start: var(--sp-4);
+}
+
+.tch-digest__bullet::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 4px;
+  inset-block-start: 7px;
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: var(--sp-primary-500);
+}
+
+.tch-digest__bullet p { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-700); line-height: 1.5; }
+
+.tch-digestPanel, .tch-momentsPanel { padding: var(--sp-4); }

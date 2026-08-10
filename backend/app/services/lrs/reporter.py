@@ -41,6 +41,51 @@ def _identity_is_reportable() -> bool:
     return False
 
 
+async def _content_context(
+    learner_id: str,
+    component_id: Optional[str] = None,
+    item_id: Optional[str] = None,
+    *,
+    unit_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """Ancestry + supplier id for a PLATFORM event that happened inside content.
+
+    The ministry's content rules apply to our own events too — a reflection, a
+    coach turn and a help request all sit under an item, which sits under a
+    component, which sits under a learning unit — but the callers don't carry
+    those ids around. They don't have to: the learner's position is already in
+    the Brain (`current_state`), which is precisely where the event happened.
+
+    Returns `{}` when the position is unknown, so a statement is never decorated
+    with ancestry that might belong to a different lesson.
+    """
+    if not component_id and not unit_id:
+        try:
+            from app.brain.repository import get_brain
+
+            state = (await get_brain(learner_id)).get("current_state") or {}
+            component_id = component_id or state.get("component_id")
+            item_id = item_id or state.get("item_id")
+            unit_id = unit_id or state.get("unit_id")
+        except Exception:
+            return {}
+    if not component_id and not unit_id:
+        return {}
+    try:
+        from app.services.lrs import hierarchy as hierarchy_mod
+
+        return {
+            "hierarchy": await hierarchy_mod.for_content(
+                component_id, item_id, unit_id=unit_id
+            ),
+            "ecat_item_id": await hierarchy_mod.ecat_item_for(
+                component_id, item_id, unit_id=unit_id
+            ),
+        }
+    except Exception:
+        return {}
+
+
 async def _report(build, learner_id: str, *args, source: str = "platform", **kwargs) -> None:
     if not config.is_enabled() or not _identity_is_reportable():
         return
@@ -153,6 +198,7 @@ async def report_conversation_interacted(
         help_type=help_type,
         component_id=component_id,
         item_id=item_id,
+        **await _content_context(learner_id, component_id, item_id),
     )
 
 
@@ -160,7 +206,8 @@ async def report_conversation_rated(
     learner_id: str, session_id: str, conversation_id: str, rating: str
 ) -> None:
     await _report(
-        statements.conversation_rated, learner_id, session_id, conversation_id, rating
+        statements.conversation_rated, learner_id, session_id, conversation_id, rating,
+        **await _content_context(learner_id),
     )
 
 
@@ -174,6 +221,7 @@ async def report_reflection_initialized(
         session_id,
         questionnaire_id,
         trigger,
+        **await _content_context(learner_id),
     )
 
 
@@ -195,6 +243,7 @@ async def report_reflection_answered(
         response=response,
         score_raw=score_raw,
         question_he=question_he,
+        **await _content_context(learner_id),
     )
 
 
@@ -212,6 +261,7 @@ async def report_reflection_skipped(
         questionnaire_id,
         question_number,
         question_he=question_he,
+        **await _content_context(learner_id),
     )
 
 
@@ -224,6 +274,7 @@ async def report_reflection_completed(
         session_id,
         questionnaire_id,
         duration_seconds,
+        **await _content_context(learner_id),
     )
 
 
@@ -287,6 +338,7 @@ async def report_help_requested(
         object_type=object_type,
         help_source=help_source,
         help_type=help_type,
+        **await _content_context(learner_id),
     )
 
 
@@ -306,6 +358,7 @@ async def report_selected(
         object_type=object_type,
         selection_type=selection_type,
         response=response,
+        **await _content_context(learner_id),
     )
 
 

@@ -1,0 +1,92 @@
+/* Goals tab: composer, AI drafts, approval rows. */
+
+.tch-goals { display: grid; gap: var(--sp-5); }
+.tch-goals__list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+.tch-goal {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+  justify-items: start;
+}
+
+.tch-goal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  inline-size: 100%;
+  flex-wrap: wrap;
+}
+
+.tch-goal__meta { display: inline-flex; align-items: center; gap: var(--sp-2); }
+
+.tch-goal__sparks {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-purple-600);
+  font-variant-numeric: tabular-nums;
+}
+
+.tch-goal__steps { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-500); }
+.tch-goal__deadline, .tch-goal__approved { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+/* The outcome strip states what actually happened, including "nothing". */
+.tch-goals__outcome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-success-100);
+  flex-wrap: wrap;
+}
+
+.tch-goals__outcome p { margin: 0; font-size: var(--sp-fs-sm); }
+
+/* ── composer ─────────────────────────────────────────────────────────────── */
+
+.tch-composer { display: grid; gap: var(--sp-3); padding: var(--sp-4); justify-items: start; }
+.tch-composer__form { display: grid; gap: var(--sp-2); inline-size: 100%; }
+.tch-composer__form label { display: grid; gap: var(--sp-1); }
+.tch-composer__form label > span { font-size: var(--sp-fs-xs); color: var(--sp-ink-500); }
+.tch-composer__form input, .tch-composer__form textarea { inline-size: 100%; }
+
+.tch-drafts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  inline-size: 100%;
+}
+
+/* Drafts are quiet subtly-tinted tiles, not full cards inside the composer. */
+.tch-draft__card {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  justify-items: start;
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-bg-subtle);
+  block-size: 100%;
+}
+.tch-draft__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); inline-size: 100%; flex-wrap: wrap; }
+.tch-draft__card p { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-700); }
+.tch-draft__why { color: var(--sp-ink-500) !important; font-size: var(--sp-fs-xs) !important; }
+.tch-draft__signal { font-size: var(--sp-fs-xs) !important; color: var(--sp-ink-400) !important; }
+
+.tch-draft--empty {
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface-2);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+}

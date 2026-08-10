@@ -1,0 +1,88 @@
+/* Meeting-prep drawer — full height, over the profile it prepares from. */
+
+.tch-drawer__scrim {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.42);
+  z-index: 50;
+}
+
+.tch-drawer {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  z-index: 51;
+  width: min(460px, 100vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--sp-surface);
+  border-inline-start: 1px solid var(--sp-border);
+  box-shadow: var(--sp-shadow-lg);
+}
+
+.tch-drawer__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border-block-end: 1px solid var(--sp-border);
+  background: var(--sp-surface-2);
+}
+
+.tch-drawer__head h2 { margin: 0; font-size: var(--sp-fs-lg); color: var(--sp-ink-700); }
+.tch-drawer__head p { margin: var(--sp-1) 0 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+.tch-drawer__close {
+  margin-inline-start: auto;
+  border: 0;
+  background: transparent;
+  color: var(--sp-ink-400);
+  cursor: pointer;
+  padding: var(--sp-1);
+  border-radius: var(--sp-radius-sm);
+  display: inline-flex;
+  flex: none;
+}
+
+.tch-drawer__close:hover { background: var(--sp-surface); color: var(--sp-ink-700); }
+.tch-drawer__close:focus-visible { outline: 2px solid var(--sp-primary-600); outline-offset: 1px; }
+
+.tch-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sp-4);
+  display: grid;
+  gap: var(--sp-4);
+  align-content: start;
+}
+
+.tch-drawer__empty { display: grid; gap: var(--sp-2); }
+
+.tch-prep { display: grid; gap: var(--sp-2); }
+
+.tch-prep h3 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
+  text-transform: none;
+}
+
+.tch-prep ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+.tch-prep li {
+  display: grid;
+  gap: var(--sp-1);
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface-2);
+}
+
+.tch-prep li p { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-700); line-height: 1.5; }
+
+@media (max-width: 600px) {
+  .tch-drawer { width: 100vw; }
+}

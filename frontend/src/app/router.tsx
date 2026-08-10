@@ -20,3 +20,22 @@ export function useRoute(): string {
 
   return pathname
 }
+
+/* Which landing door the user entered through, kept for exactly one login.
+   In memory on purpose: it must not survive a reload (a returning session at
+   '/' belongs at its role home, not wherever a previous visitor clicked), and
+   the project rule forbids localStorage for anything session-shaped anyway.
+   Read-once so a stale hint can never replay into a later navigation. */
+export type LoginIntent = 'student' | 'teacher'
+
+let pendingLoginIntent: LoginIntent | null = null
+
+export function recordLoginIntent(intent: LoginIntent) {
+  pendingLoginIntent = intent
+}
+
+export function consumeLoginIntent(): LoginIntent | null {
+  const intent = pendingLoginIntent
+  pendingLoginIntent = null
+  return intent
+}

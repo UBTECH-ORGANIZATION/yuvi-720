@@ -7,12 +7,14 @@ import { Icon } from './primitives'
 import { CoachMarkdown } from './CoachMarkdown'
 import { VisualCTA } from './VisualCTA'
 import { YuviHeadIcon } from './YuviHeadIcon'
+import { ThinkingOrbit } from './ThinkingOrbit'
 import { QuestionExplainer } from './QuestionExplainer'
 import type { VisualMode } from '../services/agents'
 import type { CoachVisual } from '../services/agents'
 import { rateCoachConversation, saveHelpedAttribution, type HelpMethod } from '../services/agents'
 import { playCoachSpeech, stopCoachSpeech, type SpeechState } from '../services/speech'
 import { navigate, useRoute } from '../app/router'
+import { formatMessageTime } from '../hooks/messageTime'
 import { useLessonRoadmap } from '../providers/LessonRoadmapProvider'
 import { CompanionTrack3D } from '../features/learning-portal/CompanionTrack3D'
 import 'katex/dist/katex.min.css'
@@ -120,39 +122,6 @@ function conversationPreview(text: string) {
     .trim()
 }
 
-/* Per-message timestamp, always in Israel time (Asia/Jerusalem) regardless of
-   the device clock — the 720 audience is Israeli. Today shows the time only;
-   any other day prefixes the date in dd/mm/yy. "Same day" is also evaluated in
-   Israel time so a late-evening UTC message doesn't read as yesterday. */
-const ISRAEL_TZ = 'Asia/Jerusalem'
-function israelYMD(date: Date) {
-  // en-CA yields YYYY-MM-DD, easy to compare and to slice for dd/mm/yy.
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: ISRAEL_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
-  }).format(date)
-}
-function formatMessageTime(value: string, language: string) {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  const time = new Intl.DateTimeFormat(language, {
-    timeZone: ISRAEL_TZ, hour: '2-digit', minute: '2-digit', hour12: false,
-  }).format(date)
-  const ymd = israelYMD(date)
-  if (ymd === israelYMD(new Date())) return time
-  const [y, m, d] = ymd.split('-')
-  return `${d}/${m}/${y.slice(-2)} ${time}`
-}
-
-function ThinkingIndicator({ label }: { label: string }) {
-  return (
-    <div className="sp-companion__thinking" role="status" aria-label={label}>
-      <span className="sp-companion__thinking-orbit" aria-hidden="true">
-        <i /><i /><i />
-      </span>
-      <span>{label}</span>
-    </div>
-  )
-}
 
 /* Floating Learning Coach (F3) — present on every learner screen. Mature, calm,
    emoji-free (720-UIUX). Shows the mandatory AI-use disclosure; messages use
@@ -199,6 +168,8 @@ export function CompanionChat() {
     itemMedia,
     currentQuestionKey,
     pendingAlternative,
+    pendingKudos,
+    acknowledgeKudos,
     openExplainer,
     closeExplainer,
     explainerOpen,
@@ -598,7 +569,7 @@ export function CompanionChat() {
             </button>
           )}
           {text ? <CoachMarkdown text={text} /> : (key === activeAssistantId
-            ? <ThinkingIndicator label={t('companion.thinking')} />
+            ? <ThinkingOrbit label={t('companion.thinking')} />
             : '')}
           {isVisualizing && (
             <div className="sp-companion__visual-status" role="status">
@@ -1129,6 +1100,39 @@ export function CompanionChat() {
               : messages.map(renderMessage)}
           </div>}
         </>
+      )}
+
+      {/* ── a word from a teacher ──────────────────────────────────────────
+          Not a coach turn: a card over the conversation, carrying the
+          teacher's own sentence, that stays until the child acknowledges it.
+          Praise from a named adult should not scroll away unread. */}
+      {pendingKudos && (
+        <div className="sp-companion__kudos" role="dialog" aria-modal="true"
+             aria-label={t('companion.kudos.title')}>
+          <div className="sp-companion__kudos-card">
+            <span className="sp-companion__kudos-glow" aria-hidden="true" />
+            <YuviHeadIcon width={44} height={44} className="sp-companion__kudos-face" />
+            <p className="sp-companion__kudos-eyebrow">
+              {pendingKudos.teacher_name
+                ? t('companion.kudos.fromNamed', { name: pendingKudos.teacher_name })
+                : t('companion.kudos.from')}
+            </p>
+            <p className="sp-companion__kudos-message" dir="auto">{pendingKudos.message}</p>
+            {pendingKudos.created_at && (
+              <time className="sp-companion__kudos-time" dateTime={pendingKudos.created_at}>
+                {formatMessageTime(pendingKudos.created_at, language)}
+              </time>
+            )}
+            <button
+              type="button"
+              className="sp-companion__kudos-ok"
+              onClick={() => void acknowledgeKudos()}
+              autoFocus
+            >
+              {t('companion.kudos.ok')}
+            </button>
+          </div>
+        </div>
       )}
 
       {(!historyOpen || fullscreen) && (!isTaskMode || taskView === 'chat') && (

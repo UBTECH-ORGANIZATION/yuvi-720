@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRoute } from '../../app/router'
 import { LearnerAppBar } from '../../components/LearnerAppBar'
 import {
   Icon, LoadingState, ErrorState,
@@ -95,7 +96,7 @@ function feelingLabel(t: (key: string) => string, feeling: string): string {
 }
 
 /** `/mentoring` is a learner surface: document a conversation with the teacher and
- * capture the goals set in it. Teachers have their own lane (`/teacher-view`). */
+ * capture the goals set in it. Teachers have their own lane (`/teacher`). */
 export function MentoringPage() {
   return <StudentGoalsPage />
 }
@@ -115,6 +116,7 @@ function StudentGoalsPage() {
   const [draft, setDraft] = useState<ComposerDraft | null>(null)
   // Exactly one conversation is in focus at a time; the trail moves between them.
   const [focus, setFocus] = useState(0)
+  const route = useRoute()
   const draftTimer = useRef<number | undefined>(undefined)
 
   const load = () => {
@@ -125,6 +127,35 @@ function StudentGoalsPage() {
       .then((response) => setRows(response.conversations))
       .catch(() => setError(true))
   }
+
+  /* Deep link from a notification: `/mentoring?conversation=…&goal=…`.
+     Without this the bell can only say "something happened" and leave the kid to
+     go and find it, which is the difference between a notification and an
+     announcement. Runs after the rows land, focuses that conversation and
+     flashes the goal so the eye lands on the right row. */
+  const [flashGoalId, setFlashGoalId] = useState<string | null>(null)
+  useEffect(() => {
+    if (!rows?.length) return
+    const params = new URLSearchParams(route.split('?')[1] ?? '')
+    const conversationId = params.get('conversation')
+    const goalId = params.get('goal')
+    if (!conversationId) return
+    const index = rows.findIndex((row) => row.id === conversationId)
+    if (index >= 0) setFocus(index)
+    if (!goalId) return
+    /* Deliberately NOT cleared on a timer. A timer-driven highlight is at the
+       mercy of every other re-render on this page — the goal list refetches, the
+       effect re-runs, and the marker blinks out early or twice. The CSS
+       animation runs once and ends on its own, so the class can simply stay. */
+    setFlashGoalId(goalId)
+    // Wait a frame for the focused conversation to render before scrolling.
+    const raf = window.requestAnimationFrame(() => {
+      document.querySelector(`[data-goal-id="${goalId}"]`)
+        ?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    })
+
+    return () => window.cancelAnimationFrame(raf)
+  }, [rows, route])
 
   useEffect(() => {
     load()
@@ -241,6 +272,7 @@ function StudentGoalsPage() {
               language={language}
               updating={updatingId}
               helping={helpingId}
+              flashGoalId={flashGoalId}
               onStatus={(goal, status) => changeStatus(goal, rows[current], status)}
               onHelp={(goal) => requestHelp(goal, rows[current])}
               onOpen={() => setDetail(rows[current])}
@@ -422,8 +454,10 @@ function TalkCard({ conversation, language, active, opening, position, total, on
 
 /** One screen, one story, top to bottom: what I said in the talk → how many
  * goals came out of it → the goals themselves, each with its own next step. */
-function ConversationFocus({ conversation, language, updating, helping, onStatus, onHelp, onOpen, onCompose }: {
+function ConversationFocus({ conversation, language, updating, helping, flashGoalId, onStatus, onHelp, onOpen, onCompose }: {
   conversation: MentoringConversation; language: string; updating: string | null; helping: string | null
+  /** Goal the notification deep link pointed at; briefly highlighted. */
+  flashGoalId: string | null
   onStatus: (goal: MentoringGoal, status: GoalStatus) => void; onHelp: (goal: MentoringGoal) => void
   onOpen: () => void; onCompose: () => void
 }) {
@@ -497,6 +531,7 @@ function ConversationFocus({ conversation, language, updating, helping, onStatus
                   updating={updating === goal.id}
                   helping={helping === goal.id}
                   open={openGoal === goal.id}
+                  flash={flashGoalId === goal.id}
                   onToggle={() => setOpenGoal((current) => (current === goal.id ? null : goal.id ?? null))}
                   onStatus={(status) => onStatus(goal, status)}
                   onHelp={() => onHelp(goal)}
@@ -525,9 +560,9 @@ function ConversationFocus({ conversation, language, updating, helping, onStatus
 // One goal is one compact row a child can scan in a second: name, status, due
 // date, the next step in a single line, and one button. Everything else waits
 // inside the card until it is opened.
-function FocusGoal({ goal, language, updating, helping, open, onToggle, onStatus, onHelp }: {
+function FocusGoal({ goal, language, updating, helping, open, flash, onToggle, onStatus, onHelp }: {
   goal: MentoringGoal; language: string; updating: boolean; helping: boolean
-  open: boolean; onToggle: () => void
+  open: boolean; flash: boolean; onToggle: () => void
   onStatus: (status: GoalStatus) => void; onHelp: () => void
 }) {
   const { t } = useI18n()
@@ -578,7 +613,12 @@ function FocusGoal({ goal, language, updating, helping, open, onToggle, onStatus
   )
 
   return (
-    <li className={`mt-fgoal${isDone ? ' is-done' : ''}${overdue ? ' is-overdue' : ''}${open ? ' is-open' : ''}`}>
+    <li
+      /* Anchor for the notification deep link — the bell scrolls to this and
+         flashes it, so a kid lands on the goal itself rather than on a list. */
+      data-goal-id={goal.id}
+      className={`mt-fgoal${isDone ? ' is-done' : ''}${overdue ? ' is-overdue' : ''}${open ? ' is-open' : ''}${flash ? ' is-flash' : ''}`}
+    >
       <div className="mt-fgoal__bar">
         {hasDetail ? (
           <button

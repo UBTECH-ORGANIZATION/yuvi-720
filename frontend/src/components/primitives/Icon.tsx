@@ -35,6 +35,24 @@ const ICON_PATHS: Record<string, ReactNode> = {
   chevronLeft: <path d="m14 6-6 6 6 6" />,
   chevronUp: <path d="m6 14 6-6 6 6" />,
   expand: <><path d="M8 3H4a1 1 0 0 0-1 1v4" /><path d="M16 3h4a1 1 0 0 1 1 1v4" /><path d="M16 21h4a1 1 0 0 0 1-1v-4" /><path d="M8 21H4a1 1 0 0 1-1-1v-4" /></>,
+  /* Teacher app additions (F6). Line-only, matching the set above — no emoji. */
+  users: <><circle cx="9" cy="8" r="3.2" /><path d="M2.8 20a6.2 6.2 0 0 1 12.4 0" /><path d="M16.5 5.4a3.2 3.2 0 0 1 0 5.6" /><path d="M17.5 14.4A6.2 6.2 0 0 1 21.2 20" /></>,
+  pulse: <path d="M2.5 12h4l2.5-6 4 12 2.5-6h6" />,
+  filter: <path d="M3.5 5.5h17l-6.5 7.5V20l-4-2.2v-4.8z" />,
+  bell: <><path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6" /><path d="M13.7 20a2 2 0 0 1-3.4 0" /></>,
+  note: <><path d="M6 3h9l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" /><path d="M15 3v4h4" /><path d="M8.5 12h7M8.5 16h4" /></>,
+  wand: <><path d="m4 20 10-10" /><path d="M14.5 4.5 16 3m2.5 4.5L21 6m-4 4.5 2.5 1.5M13 5.5 11.5 3" /><path d="m13 11 3-3" /></>,
+  handoff: <><path d="M3 12h11" /><path d="m10 8 4 4-4 4" /><path d="M17 4.5a3.5 3.5 0 0 1 0 15" /></>,
+  send: <><path d="M20.5 3.5 3.5 10l6.5 2.5L12.5 19z" /><path d="M20.5 3.5 10 12.5" /></>,
+  trendUp: <><path d="M3.5 17.5 9 12l3.5 3.5 7-7.5" /><path d="M14.5 8h5v5" /></>,
+  /* Learnings: a shelf of lessons. The speech bubble this used to be said
+     "conversation", which is what the messages lane means — two nav items
+     cannot share a metaphor. */
+  library: <>
+    <rect x="3.5" y="4.5" width="4.5" height="15" rx="1.2" />
+    <rect x="9.5" y="4.5" width="4.5" height="15" rx="1.2" />
+    <path d="m16.4 6.2 3.6 1 -3.1 12 -3.6-1z" />
+  </>,
   collapse: <><path d="M3 9h4a1 1 0 0 0 1-1V4" /><path d="M21 9h-4a1 1 0 0 1-1-1V4" /><path d="M21 15h-4a1 1 0 0 0-1 1v4" /><path d="M3 15h4a1 1 0 0 1 1 1v4" /></>,
   home: <><path d="m3 10.5 9-7 9 7" /><path d="M5.5 9v10.5a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V9" /><path d="M10 20.5V14h4v6.5" /></>,
   // Yuvi Studio category glyphs — avatar slots, then room prop groups.

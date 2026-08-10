@@ -131,14 +131,29 @@ class EcatItemTests(unittest.TestCase):
         }):
             self.assertEqual(config.identity_problems(), [])
 
-    def test_neither_a_map_nor_an_id_is_a_blocking_problem(self):
+    def test_the_supplier_map_alone_satisfies_content_vendor(self):
+        """Clarified by the MoE on 03/08: `grouping→content-vendor` is the content
+        SUPPLIER's id ("methodica" / "10"), resolved per content from the
+        catalog's `manufacture`. So an empty per-ITEM map is no longer a blocking
+        problem — the supplier map answers, and reporting stays on."""
         with mock.patch.dict(os.environ, {
             "LRS_SUPPLIER_DOMAIN": "https://spark.yuvilab.ai",
             "LRS_ECAT_ITEMS": "",
             "LRS_KATA_ECAT_ID": "",
             "LRS_TEST_EXIDENTIFIER": "1012345678",
         }):
-            self.assertIn("ECAT", " ".join(config.identity_problems()))
+            self.assertEqual(config.identity_problems(), [])
+
+    def test_nothing_configured_at_all_is_still_a_blocking_problem(self):
+        with mock.patch.dict(os.environ, {
+            "LRS_SUPPLIER_DOMAIN": "https://spark.yuvilab.ai",
+            "LRS_ECAT_ITEMS": "",
+            "LRS_KATA_ECAT_ID": "",
+            "LRS_CONTENT_VENDORS": "{}",
+            "LRS_TEST_EXIDENTIFIER": "1012345678",
+        }):
+            problems = " ".join(config.identity_problems())
+            self.assertIn("content-vendor", problems)
 
     def test_a_placeholder_inside_the_map_is_caught_too(self):
         with mock.patch.dict(os.environ, {

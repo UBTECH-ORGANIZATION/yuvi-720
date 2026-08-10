@@ -11,6 +11,7 @@ import { LessonRoadmapProvider } from './providers/LessonRoadmapProvider'
 import { ThemeProvider } from './providers/ThemeProvider'
 import { StudioTransitionProvider } from './features/Yuvi-studio/StudioTransitionProvider'
 import { YuviDesignProvider } from './features/Yuvi-studio/YuviDesignProvider'
+import { NotificationsProvider } from './providers/NotificationsProvider'
 import './styles/tokens.css'
 import './styles/theme.css'
 import './styles/global.css'
@@ -31,6 +32,9 @@ createRoot(document.getElementById('root') as HTMLElement).render(
       <ThemeProvider>
         <I18nProvider>
           <BrainProvider>
+            {/* Above the shells: a learner should be told their teacher set them
+                a goal wherever they are, not only on the dashboard. */}
+            <NotificationsProvider>
             <RewardsProvider>
             <OnboardingProvider>
             <CompanionProvider>
@@ -44,6 +48,7 @@ createRoot(document.getElementById('root') as HTMLElement).render(
             </CompanionProvider>
             </OnboardingProvider>
             </RewardsProvider>
+            </NotificationsProvider>
           </BrainProvider>
         </I18nProvider>
       </ThemeProvider>

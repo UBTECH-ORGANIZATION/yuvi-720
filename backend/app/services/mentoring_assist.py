@@ -299,3 +299,344 @@ async def recommend_goal(
     fallback = _GOAL_FALLBACK.get(language, _GOAL_FALLBACK["he"])
     return {**fallback, "deadline": deadline, "ai": False}
 
+
+
+# ── teacher-facing goal suggestions (F6 → F5) ────────────────────────────────
+
+_TEACHER_GOAL_SYSTEM = (
+    "You help a teacher set ONE small, concrete weekly goal for a student.\n"
+    "Write in {language}. Address the teacher, not the student.\n"
+    "Ground every suggestion ONLY in the evidence given. Do not invent a "
+    "difficulty, a topic or a behaviour that is not in it.\n"
+    "Each goal must be achievable in a week and observable — something the "
+    "student either did or did not do.\n"
+    'Return JSON: {{"goals": [{{"title": str, "next_steps": str, '
+    '"rationale": str, "signal": str}}]}} with exactly {count} goals.\n'
+    "`signal` names WHICH piece of the evidence the goal answers, copied "
+    "verbatim from the evidence keys."
+)
+
+
+def _teacher_goal_fallback(language: str, gaps: list[dict[str, Any]], deadline: str
+                           ) -> list[dict[str, Any]]:
+    """Deterministic drafts from the top unmastered objectives.
+
+    The teacher must be able to work when the model is unavailable, and a goal
+    derived from a real mastery gap is a genuinely useful suggestion — not a
+    placeholder. Every one still carries its `because`.
+    """
+    base = _GOAL_FALLBACK.get(language, _GOAL_FALLBACK["he"])
+    drafts = []
+    for gap in gaps[:3]:
+        label = gap.get("label") or gap.get("objective_id") or ""
+        drafts.append({
+            "title": f"{base['title']}: {label}".strip(": "),
+            "next_steps": base["next_steps"],
+            "rationale": base["rationale"],
+            "deadline": deadline,
+            "ai": False,
+            "because": {
+                "signal": "mastery_gap",
+                "value": gap.get("objective_id"),
+                "raw": gap,
+            },
+        })
+    if not drafts:
+        drafts.append({**base, "deadline": deadline, "ai": False,
+                       "because": {"signal": "no_evidence", "value": None,
+                                   "raw": {"reason": "no_mastery_evidence"}}})
+    return drafts
+
+
+
+def _has_description(description: Any) -> bool:
+    """True only when `student_description` actually says something.
+
+    The brain always returns the container — `{"blocks": {...}, "text": None}` —
+    so a plain truthiness test passes for a learner nobody has observed yet, and
+    the "no evidence" card never fires. Emptiness has to be checked on content.
+    """
+    if isinstance(description, str):
+        return bool(description.strip())
+    if not isinstance(description, dict):
+        return bool(description)
+    if str(description.get("text") or "").strip():
+        return True
+    blocks = description.get("blocks") or {}
+    return any(bool(value) for value in blocks.values()) if isinstance(blocks, dict) else False
+
+
+async def suggest_goals_for_teacher(
+    learner_id: str,
+    teacher_id: str,
+    *,
+    language: str = "he",
+    subject: str | None = None,
+    count: int = 3,
+) -> list[dict[str, Any]]:
+    """Three goal DRAFTS for a teacher, grounded in the brain.
+
+    Grounded differently from `recommend_goal`, deliberately. That one is built
+    from what the *child wrote*; this one is built from what the system has
+    *observed* — mastery gaps, open challenges, recent struggle items — because a
+    teacher is choosing where to intervene, not reflecting on a conversation.
+
+    Returns three candidates rather than one: the teacher picks and edits, and
+    the AI never writes a goal into a child's profile unattended. Every draft
+    carries `because`, the same explainability contract as every other AI surface
+    in the teacher app.
+    """
+    language = language if language in _LANG_NAME else "he"
+    deadline = (date.today() + timedelta(days=7)).isoformat()
+    count = max(1, min(count, 5))
+
+    # The privacy gate. `teacher_assistant` is the view without identity, raw
+    # instrument scores, or the learner's private memory.
+    from app.brain.context_engine import AgentScopeError, view_for
+    from app.services import insights
+
+    try:
+        view = await view_for("teacher_assistant", learner_id)
+    except AgentScopeError:
+        # A missing scope entry is a programming error, not a runtime condition —
+        # swallowing it once cost us a phase of silently ungrounded suggestions.
+        raise
+    except Exception:
+        view = {}       # a brain read failure degrades to the insights-only lane
+
+    student = await insights.student_insights(learner_id, language=language, subject=subject)
+    gaps = [
+        {"objective_id": item.get("objective_id"), "label": item.get("label"),
+         "evidence": item.get("evidence")}
+        for item in (student.get("struggle_items") or [])
+    ][:5]
+    challenges = [str(item) for item in (view.get("challenges") or [])][:5]
+    description = view.get("student_description") or ""
+
+    evidence = {
+        "struggle_items": gaps,
+        "challenges": challenges,
+        "student_description": description,
+    }
+
+    if not gaps and not challenges and not _has_description(description):
+        # No evidence means no grounded suggestion. Saying so is the honest
+        # answer; inventing three plausible goals would be exactly the
+        # hallucination this system is supposed to refuse.
+        return [{
+            "title": "", "next_steps": "", "rationale": "", "deadline": deadline,
+            "ai": False, "unavailable": True,
+            "because": {"signal": "no_evidence", "value": None,
+                        "raw": {"reason": "no_observations_for_this_learner"}},
+        }]
+
+    try:
+        raw = await call_llm(
+            [
+                {"role": "system", "content": _TEACHER_GOAL_SYSTEM.format(
+                    language=_LANG_NAME[language], count=count)},
+                {"role": "user", "content": json.dumps(evidence, ensure_ascii=False)},
+            ],
+            usage_context=UsageContext(
+                actor_id=teacher_id,
+                actor_type="teacher",
+                endpoint="/api/teacher/students/{id}/goals/suggest",
+                feature="feature_6_teacher_view",
+                operation="teacher.goal_suggestion",
+                source="mentoring_assist",
+            ),
+            model_tier="mini",
+            json_mode=True,
+        )
+        parsed = json.loads(raw) if isinstance(raw, str) else (raw or {})
+        drafts = []
+        for item in (parsed.get("goals") or [])[:count]:
+            title = str(item.get("title") or "").strip()
+            if not title:
+                continue
+            signal = str(item.get("signal") or "student_description")
+            drafts.append({
+                "title": title,
+                "next_steps": str(item.get("next_steps") or "").strip(),
+                "rationale": str(item.get("rationale") or "").strip(),
+                "deadline": deadline,
+                "ai": True,
+                # Mandatory. A teacher acting on a suggestion must be able to see
+                # which observation produced it.
+                "because": {
+                    "signal": signal,
+                    "value": None,
+                    "raw": evidence.get(signal) or evidence,
+                },
+            })
+        if drafts:
+            return drafts
+    except Exception as exc:
+        print(f"⚠️ teacher goal suggestion failed: {type(exc).__name__}")
+
+    return _teacher_goal_fallback(language, gaps, deadline)
+
+
+# ── meeting preparation (F5, Phase 7) ────────────────────────────────────────
+
+_MEETING_SYSTEM = """You prepare a teacher for a one-to-one conversation with a \
+student. Write in {language}.
+
+You are given only real observations about this student. Rules:
+- Every question and every insight must follow from an observation you were given. \
+Do not invent events, scores or history.
+- Questions are for the student to answer, open and non-accusatory. "What makes \
+fractions feel hard?" — not "Why did you fail three times?".
+- Never compare this student to anyone else.
+- If the observations are thin, produce fewer items rather than padding.
+
+Return JSON:
+{{"questions": [{{"text": "...", "signal": "<which observation key>"}}],
+  "insights":  [{{"text": "...", "signal": "<which observation key>"}}],
+  "goal_ideas":[{{"text": "...", "signal": "<which observation key>"}}]}}"""
+
+
+def _meeting_fallback(language: str, evidence: dict[str, Any]) -> dict[str, Any]:
+    """A usable prep sheet with no LLM — derived straight from the observations."""
+    questions, insights_out, goals = [], [], []
+
+    for item in (evidence.get("struggle_items") or [])[:2]:
+        label = item.get("label") or ""
+        questions.append({
+            "text_key": "tch.meeting.fallback.question.struggle",
+            "params": {"label": label},
+            "because": {"signal": "struggle_items", "value": label, "raw": item},
+        })
+        goals.append({
+            "text_key": "tch.meeting.fallback.goal.struggle",
+            "params": {"label": label},
+            "because": {"signal": "struggle_items", "value": label, "raw": item},
+        })
+
+    for item in (evidence.get("strengths") or [])[:1]:
+        label = item if isinstance(item, str) else str(item)
+        insights_out.append({
+            "text_key": "tch.meeting.fallback.insight.strength",
+            "params": {"label": label},
+            "because": {"signal": "strengths", "value": label, "raw": {"strength": label}},
+        })
+
+    gap = evidence.get("self_awareness_gap")
+    if gap:
+        insights_out.append({
+            "text_key": "tch.meeting.fallback.insight.awareness",
+            "params": {"kind": gap.get("kind") or ""},
+            "because": {"signal": "self_awareness_gap", "value": gap.get("kind"), "raw": gap},
+        })
+        questions.append({
+            "text_key": "tch.meeting.fallback.question.awareness",
+            "params": {},
+            "because": {"signal": "self_awareness_gap", "value": gap.get("kind"), "raw": gap},
+        })
+
+    return {"questions": questions, "insights": insights_out, "goal_ideas": goals}
+
+
+async def suggest_meeting_prep(
+    learner_id: str,
+    teacher_id: str,
+    *,
+    language: str = "he",
+) -> dict[str, Any]:
+    """What to ask, what to say, and what to aim at — each with its `because`.
+
+    Grounded in the same `teacher_assistant` brain view as the goal suggestions,
+    so a meeting sheet can never reference something the teacher cannot open.
+    """
+    language = language if language in _LANG_NAME else "he"
+
+    from app.brain.context_engine import AgentScopeError, view_for
+    from app.services import insights
+
+    try:
+        view = await view_for("teacher_assistant", learner_id)
+    except AgentScopeError:
+        raise
+    except Exception:
+        view = {}
+
+    student = await insights.student_insights(learner_id, language=language)
+
+    evidence: dict[str, Any] = {
+        "struggle_items": [
+            {"objective_id": item.get("objective_id"), "label": item.get("label"),
+             "evidence": item.get("evidence")}
+            for item in (student.get("struggle_items") or [])
+        ][:4],
+        "strengths": [
+            item.get("label") if isinstance(item, dict) else str(item)
+            for item in (student.get("strengths_detail") or [])
+        ][:3],
+        "challenges": [str(item) for item in (view.get("challenges") or [])][:4],
+        "student_description": view.get("student_description") or "",
+        "self_awareness_gap": student.get("self_awareness_gap"),
+        "open_goals": [
+            {"title": goal.get("title"), "stage": goal.get("progress_stage")}
+            for goal in (view.get("goals") or []) if not goal.get("approved_by")
+        ][:3],
+    }
+
+    has_evidence = any(evidence[key] for key in
+                       ("struggle_items", "strengths", "challenges", "open_goals")) \
+        or _has_description(evidence["student_description"])
+    if not has_evidence:
+        return {
+            "questions": [], "insights": [], "goal_ideas": [],
+            "unavailable": True,
+            "because": {"signal": "no_evidence", "value": None,
+                        "raw": {"reason": "no_observations_for_this_learner"}},
+        }
+
+    try:
+        raw = await call_llm(
+            [
+                {"role": "system",
+                 "content": _MEETING_SYSTEM.format(language=_LANG_NAME[language])},
+                {"role": "user", "content": json.dumps(evidence, ensure_ascii=False,
+                                                       default=str)},
+            ],
+            usage_context=UsageContext(
+                actor_id=teacher_id,
+                actor_type="teacher",
+                endpoint="/api/teacher/students/{id}/meeting-prep",
+                feature="feature_5_mentoring",
+                operation="teacher.meeting_prep",
+                source="mentoring_assist",
+            ),
+            model_tier="mini",
+            json_mode=True,
+        )
+        parsed = json.loads(raw) if isinstance(raw, str) else (raw or {})
+
+        from app.agents.safety import screen_output
+
+        def _rows(key: str) -> list[dict[str, Any]]:
+            out = []
+            for item in (parsed.get(key) or [])[:4]:
+                text = str(item.get("text") or "").strip()
+                signal = str(item.get("signal") or "")
+                # No citation, no row: an unattributed suggestion is the thing a
+                # teacher cannot check, and F6 makes that a defect.
+                if not text or signal not in evidence:
+                    continue
+                screened = screen_output(text, language)
+                out.append({
+                    "text": (getattr(screened, "text", None) or text).strip(),
+                    "because": {"signal": signal, "value": None,
+                                "raw": evidence.get(signal)},
+                })
+            return out
+
+        result = {"questions": _rows("questions"), "insights": _rows("insights"),
+                  "goal_ideas": _rows("goal_ideas")}
+        if any(result.values()):
+            return result
+    except Exception as exc:
+        print(f"⚠️ meeting prep suggestion failed: {type(exc).__name__}: {exc}")
+
+    return _meeting_fallback(language, evidence)

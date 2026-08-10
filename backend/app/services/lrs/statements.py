@@ -272,6 +272,8 @@ def conversation_interacted(
     help_type: Optional[str] = None,  # hint | explanation | alternative-content | other | bot-help-offer | motivation
     component_id: Optional[str] = None,
     item_id: Optional[str] = None,
+    ecat_item_id: Optional[str] = None,
+    hierarchy: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     obj = activity(f"{_domain()}/conversation/{conversation_id}", "conversation")
     ext = extensions(
@@ -286,7 +288,8 @@ def conversation_interacted(
         }
     )
     return _base(
-        identity, "interacted", obj, session_id, context_extra={"extensions": ext}
+        identity, "interacted", obj, session_id, context_extra={"extensions": ext},
+        ecat_item_id=ecat_item_id, hierarchy=hierarchy,
     )
 
 
@@ -295,6 +298,9 @@ def conversation_rated(
     session_id: str,
     conversation_id: str,
     rating: str,  # like | dislike
+    *,
+    ecat_item_id: Optional[str] = None,
+    hierarchy: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     obj = activity(f"{_domain()}/conversation/{conversation_id}", "conversation")
     return _base(
@@ -304,6 +310,8 @@ def conversation_rated(
         session_id,
         result={"response": rating},
         context_extra={"extensions": extensions({"conversationType": "bot"})},
+        ecat_item_id=ecat_item_id,
+        hierarchy=hierarchy,
     )
 
 
@@ -319,6 +327,9 @@ def reflection_initialized(
     session_id: str,
     questionnaire_id: str,
     trigger: str,  # end-of-learning-objective | end-of-learning-component | difficult-task | other
+    *,
+    ecat_item_id: Optional[str] = None,
+    hierarchy: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     return _base(
         identity,
@@ -326,6 +337,8 @@ def reflection_initialized(
         _reflection_object(questionnaire_id),
         session_id,
         context_extra={"extensions": extensions({"reflactionTrigger": trigger})},
+        ecat_item_id=ecat_item_id,
+        hierarchy=hierarchy,
     )
 
 
@@ -340,6 +353,8 @@ def reflection_answered(
     score_min: float = 1,
     score_max: float = 5,
     question_he: Optional[str] = None,
+    ecat_item_id: Optional[str] = None,
+    hierarchy: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """Exactly one of response / score_raw, per the spec."""
     obj = activity(
@@ -364,6 +379,8 @@ def reflection_answered(
         parent=[
             {"objectType": "Activity", "id": f"{_domain()}/reflection/{questionnaire_id}"}
         ],
+        ecat_item_id=ecat_item_id,
+        hierarchy=hierarchy,
     )
 
 
@@ -374,6 +391,8 @@ def reflection_skipped(
     question_number: int | str,
     *,
     question_he: Optional[str] = None,
+    ecat_item_id: Optional[str] = None,
+    hierarchy: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     obj = activity(
         f"{_domain()}/reflection/question/{question_number}",
@@ -388,6 +407,8 @@ def reflection_skipped(
         parent=[
             {"objectType": "Activity", "id": f"{_domain()}/reflection/{questionnaire_id}"}
         ],
+        ecat_item_id=ecat_item_id,
+        hierarchy=hierarchy,
     )
 
 
@@ -396,6 +417,9 @@ def reflection_completed(
     session_id: str,
     questionnaire_id: str,
     duration_seconds: float,
+    *,
+    ecat_item_id: Optional[str] = None,
+    hierarchy: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     return _base(
         identity,
@@ -403,6 +427,8 @@ def reflection_completed(
         _reflection_object(questionnaire_id),
         session_id,
         result={"completion": True, "duration": iso_duration(duration_seconds)},
+        ecat_item_id=ecat_item_id,
+        hierarchy=hierarchy,
     )
 
 
@@ -572,6 +598,7 @@ def question_answered(
     duration_seconds: Optional[float] = None,
     question_he: Optional[str] = None,
     hierarchy: Optional[dict[str, Any]] = None,
+    ecat_item_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """A learner's answer to a content question (MoE §"מענה על שאלה").
 
@@ -602,6 +629,7 @@ def question_answered(
             })
         },
         hierarchy=hierarchy,
+        ecat_item_id=ecat_item_id,
     )
 
 
@@ -638,6 +666,7 @@ def media_event(
     duration_seconds: Optional[float] = None,   # result.duration (watched so far)
     name_he: Optional[str] = None,
     hierarchy: Optional[dict[str, Any]] = None,
+    ecat_item_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """`played` / `paused` / `completed` on a video, audio or animation.
 
@@ -668,6 +697,7 @@ def media_event(
             })
         },
         hierarchy=hierarchy,
+        ecat_item_id=ecat_item_id,
     )
 
 
@@ -678,10 +708,12 @@ def item_skipped(
     object_id: str,
     name_he: Optional[str] = None,
     hierarchy: Optional[dict[str, Any]] = None,
+    ecat_item_id: Optional[str] = None,
 ) -> dict[str, Any]:
     return _base(
         identity, "skipped", activity(object_id, "item", name_he), session_id,
         hierarchy=hierarchy,
+        ecat_item_id=ecat_item_id,
     )
 
 
@@ -788,6 +820,8 @@ def help_requested(
     help_source: str,               # content | platform
     help_type: str,                 # hint | explanation
     parent: Optional[list[dict[str, Any]]] = None,
+    ecat_item_id: Optional[str] = None,
+    hierarchy: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     obj = activity(object_id, object_type)
     return _base(
@@ -799,6 +833,8 @@ def help_requested(
             "extensions": extensions({"helpSource": help_source, "helpType": help_type})
         },
         parent=parent,
+        ecat_item_id=ecat_item_id,
+        hierarchy=hierarchy,
     )
 
 
@@ -830,6 +866,7 @@ def selected(
     selection_type: str,
     response: str,
     hierarchy: Optional[dict[str, Any]] = None,
+    ecat_item_id: Optional[str] = None,
 ) -> dict[str, Any]:
     obj = activity(object_id, object_type)
     return _base(
@@ -840,4 +877,5 @@ def selected(
         result={"response": response},
         context_extra={"extensions": extensions({"selectionType": kebab(selection_type)})},
         hierarchy=hierarchy,
+        ecat_item_id=ecat_item_id,
     )

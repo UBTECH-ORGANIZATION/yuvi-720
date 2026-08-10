@@ -353,7 +353,47 @@ async def record_wellbeing_flag(
         }
         flags.append(flag)
         await apply_brain_updates(learner_id, {"wellbeing_flags": flags[-_MAX_WELLBEING_FLAGS:]})
+        await _escalate_to_teachers(learner_id, flag)
         return flag
     except Exception as exc:  # pragma: no cover - never block the reply
         print(f"⚠️ wellbeing flag not recorded: {exc}")
         return None
+
+
+async def _escalate_to_teachers(learner_id: str, flag: dict) -> None:
+    """Ring the teacher's bell, now.
+
+    This is the one alert that must not wait for a dashboard refresh: a child has
+    just said something that needs an adult. The flag is already durable in the
+    brain by the time we get here, so a failure to reach the realtime layer loses
+    the interrupt, not the record — and it is swallowed rather than raised,
+    because nothing here may block the reply the child is waiting for.
+
+    The evidence is the learner's own words. That is deliberate and narrow: the
+    teacher does not get the coach transcript, they get the sentence that
+    triggered the flag.
+    """
+    try:
+        from app.services import presence, teacher_alerts
+        presence.note_help_requested(learner_id)
+        await teacher_alerts.raise_alert(
+            learner_id,
+            "safety_flag",
+            title_key="tch.alert.safety",
+            params={"category": flag.get("category")},
+            severity=teacher_alerts.SEVERITY_URGENT,
+            bucket=teacher_alerts.default_bucket("safety_flag", flag_id=flag.get("id")),
+            evidence={
+                "label_key": "tch.evidence.learnerWords",
+                "value": flag.get("category"),
+                "raw": {
+                    "evidence": flag.get("evidence"),
+                    "category": flag.get("category"),
+                    "source": flag.get("source"),
+                    "at": flag.get("at"),
+                    "flag_id": flag.get("id"),
+                },
+            },
+        )
+    except Exception as exc:  # pragma: no cover - never block the reply
+        print(f"⚠️ safety escalation failed: {type(exc).__name__}: {exc}")

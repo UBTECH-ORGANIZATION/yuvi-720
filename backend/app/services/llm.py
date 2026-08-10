@@ -71,8 +71,21 @@ async def call_llm(
     max_tokens: int = 1200,
     json_mode: bool = False,
     model_tier: LlmModelTier = "mini",
+    tools: list | None = None,
+    tool_choice: str | dict | None = None,
 ):
-    """Call the shared Azure OpenAI model through the APIM gateway."""
+    """Call the shared Azure OpenAI model through the APIM gateway.
+
+    Return shape depends on `tools`, deliberately:
+
+    * without `tools` — the assistant text, or `None`. Every existing caller.
+    * with `tools` — the **whole** `choices[0].message` dict, because the useful
+      part of a tool-calling round is `tool_calls`, and a helper that returned
+      only `content` would drop it (`content` is `None` on a pure tool turn).
+
+    Usage recording is unchanged: one `ai_usage_events` row per provider call,
+    so an N-round tool loop writes N rows and stays attributable per round.
+    """
     timer = UsageTimer.start()
     endpoint, key, deployment, api_version = _resolve_llm_config(model_tier)
     gateway = "apim" if os.environ.get("APIM_BASE_URL") else "foundry"
@@ -103,6 +116,10 @@ async def call_llm(
     body = {"messages": messages, token_key: max_tokens}
     if json_mode:
         body["response_format"] = {"type": "json_object"}
+    if tools:
+        body["tools"] = tools
+        if tool_choice is not None:
+            body["tool_choice"] = tool_choice
 
     response = None
     error = None
@@ -115,7 +132,12 @@ async def call_llm(
                 data = response.json()
                 usage = token_usage_from_payload(data.get("usage"))
                 status = "completed"
-                content = (data.get("choices") or [{}])[0].get("message", {}).get("content")
+                message = (data.get("choices") or [{}])[0].get("message", {}) or {}
+                if tools:
+                    # A tool turn legitimately has `content: null`, so emptiness
+                    # is not a failure here — the caller inspects `tool_calls`.
+                    return message
+                content = message.get("content")
                 if content and content.strip():
                     return content.strip()
                 print("⚠️ LLM returned empty content")
@@ -143,6 +165,170 @@ async def call_llm(
             error=error,
             model_tier=model_tier,
         )
+
+
+def _merge_tool_call_deltas(
+    accumulator: dict[int, dict], deltas: list[dict],
+) -> None:
+    """Fold streamed `tool_calls` fragments into whole calls, keyed by index.
+
+    The provider splits one tool call across many chunks: the first carries the
+    id and function name, the rest append a few characters of `arguments` each.
+    Only the index is stable, which is why it — not the id — is the key here.
+    """
+    for delta in deltas or []:
+        if not isinstance(delta, dict):
+            continue
+        index = delta.get("index")
+        if not isinstance(index, int):
+            index = len(accumulator)
+        call = accumulator.setdefault(
+            index, {"id": "", "type": "function", "function": {"name": "", "arguments": ""}}
+        )
+        if delta.get("id"):
+            call["id"] = delta["id"]
+        function = delta.get("function") or {}
+        if function.get("name"):
+            call["function"]["name"] = function["name"]
+        if function.get("arguments"):
+            call["function"]["arguments"] += function["arguments"]
+
+
+async def call_llm_stream_tools(
+    messages: list,
+    *,
+    usage_context: UsageContext,
+    max_tokens: int = 900,
+    model_tier: LlmModelTier = "mini",
+    tools: list | None = None,
+    tool_choice: str | dict | None = None,
+) -> AsyncGenerator[dict, None]:
+    """Stream a tool-calling round, yielding tagged events.
+
+    `call_llm_stream` cannot serve a tool-calling agent: it yields bare strings
+    and drops `delta.tool_calls`, so a round that decides to call a tool would
+    look like an empty answer. This yields instead:
+
+        {"type": "text", "text": "..."}          per content delta, live
+        {"type": "message", "message": {...}}    terminal, assembled
+
+    The terminal event is shaped exactly like `call_llm(..., tools=...)`'s return
+    value, so a caller's tool-dispatch path needs no streaming-specific branch.
+    It is emitted on every completed round — including text-only ones — so the
+    caller always ends up with the same message dict it would have had.
+
+    Note the ordering contract: text is yielded as it arrives, *before* the
+    caller can inspect the finished message. A caller that must gate on the
+    finished answer has to buffer the text events itself.
+    """
+    timer = UsageTimer.start()
+    endpoint, key, deployment, api_version = _resolve_llm_config(model_tier)
+    gateway = "apim" if os.environ.get("APIM_BASE_URL") else "foundry"
+    if not endpoint or not key:
+        await record_usage(
+            context=usage_context,
+            timer=timer,
+            provider="azure_openai",
+            gateway=gateway,
+            deployment=deployment,
+            api_version=api_version,
+            streaming=True,
+            meter="tokens",
+            status="unavailable",
+            usage_status="unavailable",
+            model_tier=model_tier,
+        )
+        return
+
+    url = f"{endpoint}/deployments/{deployment}/chat/completions?api-version={api_version}"
+    headers = {
+        "Ocp-Apim-Subscription-Key": key,
+        "api-key": key,
+        "Content-Type": "application/json",
+    }
+    token_key = "max_completion_tokens" if deployment.startswith("gpt-5") else "max_tokens"
+    body = {
+        "messages": messages,
+        token_key: max_tokens,
+        "stream": True,
+        "stream_options": {"include_usage": True},
+    }
+    if tools:
+        body["tools"] = tools
+        if tool_choice is not None:
+            body["tool_choice"] = tool_choice
+
+    status = "cancelled"
+    usage = None
+    provider_request = None
+    error = None
+    text_parts: list[str] = []
+    tool_calls: dict[int, dict] = {}
+    try:
+        async with httpx.AsyncClient(timeout=60) as client:
+            async with client.stream("POST", url, json=body, headers=headers) as response:
+                provider_request = provider_request_id(response.headers)
+                if response.status_code != 200:
+                    status = "failed"
+                    print(f"⚠️ LLM tool stream HTTP {response.status_code}")
+                    return
+                async for line in response.aiter_lines():
+                    if not line.startswith("data: "):
+                        continue
+                    data_str = line[6:]
+                    if data_str == "[DONE]":
+                        status = "completed"
+                        break
+                    try:
+                        chunk = json.loads(data_str)
+                        chunk_usage = token_usage_from_payload(chunk.get("usage"))
+                        if chunk_usage is not None:
+                            usage = chunk_usage
+                        delta = (chunk.get("choices") or [{}])[0].get("delta", {}) or {}
+                        content = delta.get("content")
+                        if content:
+                            text_parts.append(content)
+                            yield {"type": "text", "text": content}
+                        if delta.get("tool_calls"):
+                            _merge_tool_call_deltas(tool_calls, delta["tool_calls"])
+                    except (json.JSONDecodeError, IndexError, KeyError):
+                        continue
+                else:
+                    status = "completed"
+        if status == "completed":
+            message: dict = {"role": "assistant", "content": "".join(text_parts) or None}
+            if tool_calls:
+                message["tool_calls"] = [tool_calls[i] for i in sorted(tool_calls)]
+            yield {"type": "message", "message": message}
+    except asyncio.CancelledError as exc:
+        error = exc
+        status = "cancelled"
+        raise
+    except Exception as exc:
+        error = exc
+        status = "failed"
+        print(f"⚠️ LLM tool stream error: {type(exc).__name__}")
+    finally:
+        write = asyncio.create_task(record_usage(
+            context=usage_context,
+            timer=timer,
+            provider="azure_openai",
+            gateway=gateway,
+            deployment=deployment,
+            api_version=api_version,
+            streaming=True,
+            meter="tokens",
+            status=status,
+            usage_status="exact" if usage is not None else "unavailable",
+            usage=usage,
+            provider_request=provider_request,
+            error=error,
+            model_tier=model_tier,
+        ))
+        try:
+            await asyncio.shield(write)
+        except asyncio.CancelledError:
+            pass
 
 
 async def call_llm_stream(
