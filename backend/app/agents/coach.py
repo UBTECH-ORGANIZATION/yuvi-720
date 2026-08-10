@@ -326,6 +326,32 @@ PERSONALIZATION_STYLE = {
 # plain chat already personalize via COACH_INSTRUCTIONS.
 _PERSONALIZATION_TRIGGERS = {"idle", "mistake", "slow_progress", "misconception", "wheel_spinning"}
 
+# English is the one subject where switching languages mid-sentence is the
+# pedagogy rather than a slip — נספח 1 §2.4 asks for first-language mediation
+# early on and a gradual move to English only. COACH_INSTRUCTIONS otherwise
+# pins the coach to a single output language, so English needs an explicit
+# override. The rung itself is evidence-derived (services/english_ladder.py);
+# the coach is told which one it is and never picks.
+_ENGLISH_MODE = {
+    "he": "זהו שיעור אנגלית. מותר ואף רצוי לשלב אנגלית בתוך העברית — כתבו את המילים והמשפטים באנגלית באנגלית, ואת ההסבר סביבם בשפת התלמיד/ה, לפי מדיניות השלב הבאה:",
+    "ar": "هذا درس إنجليزية. يُسمح بل يُستحسن دمج الإنجليزية داخل العربية — اكتبوا الكلمات والجمل الإنجليزية بالإنجليزية، والشرح حولها بلغة الطالب/ة، وفق سياسة المرحلة التالية:",
+    "en": "This is an English lesson. Mixing English into the learner's own language is expected — keep English words and sentences in English and the explanation around them in their language, following this stage policy:",
+}
+
+
+def _english_mode_instruction(bundle: dict, language: str) -> Optional[str]:
+    """The English-subject override, or None when this is not English."""
+    current = (bundle or {}).get("current") or {}
+    subject = str(current.get("subject") or (bundle or {}).get("subject") or "")
+    objective = str(current.get("objective_id") or "")
+    if subject != "english" and ".ENG." not in objective.upper():
+        return None
+    from app.services import english_ladder
+
+    stage = ((bundle or {}).get("profile") or {}).get("english_speaking") or {}
+    lead = _ENGLISH_MODE.get(language) or _ENGLISH_MODE["he"]
+    return f"{lead} {english_ladder.policy_for(stage.get('stage'), language)}"
+
 
 def _has_personalization(bundle: dict) -> bool:
     """True when the bundle carries any learner-style signal worth adapting to."""
@@ -690,6 +716,12 @@ async def run_coach_stream(
     )
     instructions = COACH_INSTRUCTIONS[lang]
     instructions = f"{instructions}\n- {GROUNDING_GUARDRAIL[lang]}"
+    # English is the one subject where mixing languages is the pedagogy, not a
+    # slip: נספח 1 §2.4 asks for first-language mediation early and a gradual move to
+    # English only. The rung comes from real evidence, never from the model.
+    english_note = _english_mode_instruction(bundle, lang)
+    if english_note:
+        instructions = f"{instructions}\n- {english_note}"
     if support_mode in SUPPORT_PROMPTS:
         instructions = f"{instructions}\n- {SUPPORT_PROMPTS[support_mode][lang]}"
     # On a help moment, tell the coach to adapt the FORM of help to this learner's

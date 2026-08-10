@@ -21,7 +21,9 @@ from app.brain.repository import _get_collection_named
 
 
 ActorType = Literal["learner", "teacher", "admin", "system"]
-MeterType = Literal["tokens", "characters"]
+# `seconds` is Azure Speech recognition's real billing unit — audio duration, as
+# reported by the provider. Never derived from a byte count or a wall clock.
+MeterType = Literal["tokens", "characters", "seconds"]
 UsageStatus = Literal["exact", "unavailable", "not_applicable"]
 RequestStatus = Literal["completed", "failed", "cancelled", "unavailable"]
 
@@ -265,16 +267,21 @@ async def record_usage(
         "pricing_snapshot": pricing_snapshot,
     }
     if meter == "tokens":
-        event.update(usage or {
+        event.update({
             "input_tokens": None,
             "output_tokens": None,
             "total_tokens": None,
             "cached_input_tokens": None,
+            # Realtime prices audio and text separately, so the split has to
+            # survive on the event or the cost can never be reconstructed.
+            "audio_input_tokens": None,
+            "audio_output_tokens": None,
+            **(usage or {}),
         })
     else:
         event.update({
             "quantity": quantity,
-            "quantity_unit": quantity_unit or "characters",
+            "quantity_unit": quantity_unit or ("seconds" if meter == "seconds" else "characters"),
             "response_bytes": response_bytes,
         })
 

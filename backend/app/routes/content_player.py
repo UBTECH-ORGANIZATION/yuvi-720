@@ -153,6 +153,46 @@ async def player_payload(component_id: str, request: Request, lang: str = "he"):
     }))
 
 
+@router.post("/{component_id}/speech-token")
+async def player_speech_token(component_id: str, request: Request):
+    """A short-lived Speech token for a speaking item inside the lomda.
+
+    The player has no session cookie by design, so it authenticates with the
+    same launch token it renders from. The microphone stays in the page: audio
+    goes to Azure directly and only the score sheet returns.
+    """
+    if _launch_for(request, component_id) is None:
+        return _unauthorized()
+    from app.services.speech import SpeechUnavailable, issue_token
+
+    try:
+        token = await issue_token()
+    except SpeechUnavailable as exc:
+        print(f"⚠️ player speech token unavailable: {exc}")
+        return JSONResponse(content={"error": "speech_unavailable"}, status_code=503)
+    return _embeddable(JSONResponse(content=token, headers={"Cache-Control": "no-store"}))
+
+
+@router.post("/{component_id}/pronunciation")
+async def player_pronunciation(component_id: str, request: Request):
+    launch = _launch_for(request, component_id)
+    if launch is None:
+        return _unauthorized()
+    from app.routes.speech import PronunciationRequest, assess_and_record
+
+    try:
+        payload = PronunciationRequest(**(await request.json()))
+    except Exception:
+        return JSONResponse(content={"error": "invalid_request"}, status_code=422)
+    payload.componentId = component_id
+    result = await assess_and_record(
+        launch["lid"], payload,
+        endpoint="/content/player/pronunciation",
+        session_id=launch.get("sid"),
+    )
+    return _embeddable(JSONResponse(content=result))
+
+
 class AnswerRequest(BaseModel):
     itemId: str = Field(max_length=180)
     questionId: str = Field(max_length=80)
