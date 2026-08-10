@@ -1,0 +1,86 @@
+.sp-public {
+  min-block-size: 100vh;
+  padding: 24px 20px 48px;
+  background: var(--sp-bg, #f5f4fb);
+  color: var(--sp-text, #1c1a3a);
+}
+
+.sp-public__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-inline-size: 620px;
+  margin: 0 auto 18px;
+}
+
+.sp-public__home {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--sp-accent, #6c5ce7);
+  font: inherit;
+  font-size: 0.86rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.sp-public__card {
+  max-inline-size: 620px;
+  margin: 0 auto;
+  padding: 26px 26px 30px;
+  border-radius: 20px;
+  background: var(--sp-surface, #fff);
+  box-shadow: 0 18px 44px rgba(16, 12, 48, 0.12);
+}
+
+.sp-public__card h1 { margin: 0 0 14px; font-size: 1.3rem; }
+.sp-public__intro,
+.sp-public__note { margin: 0; font-size: 0.86rem; line-height: 1.55; opacity: 0.8; }
+
+.sp-public__form { display: flex; flex-direction: column; gap: 14px; }
+.sp-public__form label { display: flex; flex-direction: column; gap: 6px; font-size: 0.82rem; font-weight: 600; }
+.sp-public__row { display: flex; flex-wrap: wrap; gap: 14px; }
+.sp-public__row label { flex: 1 1 200px; }
+
+.sp-public__form input,
+.sp-public__form textarea,
+.sp-public__form select {
+  padding: 10px 12px;
+  border: 1px solid rgba(120, 110, 200, 0.32);
+  border-radius: 12px;
+  background: var(--sp-surface-soft, rgba(255, 255, 255, 0.6));
+  color: inherit;
+  font: inherit;
+  font-weight: 400;
+}
+
+.sp-public__form textarea { resize: vertical; min-block-size: 120px; }
+
+/* Honeypot: off-screen rather than display:none, which some bots skip. */
+.sp-public__trap {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.sp-public__submit {
+  align-self: flex-start;
+  padding: 11px 24px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--sp-accent, #6c5ce7);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sp-public__submit:disabled { opacity: 0.5; cursor: default; }
+.sp-public__error { margin: 0; color: #d7385e; font-size: 0.86rem; }
+.sp-public__done { display: flex; flex-direction: column; gap: 10px; }
+.sp-public__done-title { margin: 0; font-size: 1rem; font-weight: 700; }
+.sp-public__done p { margin: 0; line-height: 1.55; }

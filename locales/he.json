@@ -1824,5 +1824,15 @@
   "support.chat.waiting": "עדיין אין הודעות בפנייה הזו.",
   "support.chat.team": "צוות התמיכה",
   "support.chat.you": "אתם",
-  "support.chat.error": "משהו השתבש. אפשר לנסות שוב."
+  "support.chat.error": "משהו השתבש. אפשר לנסות שוב.",
+  "support.public.link": "דיווח על תקלה",
+  "support.public.title": "דיווח על תקלה במערכת",
+  "support.public.intro": "הטופס הזה מיועד למי שלא מצליח להיכנס למערכת. מי שמחובר יכול לדווח ישירות מתוך המערכת.",
+  "support.public.name": "שם (לא חובה)",
+  "support.public.email": "אימייל למענה (לא חובה)",
+  "support.public.privacy": "אין למלא כאן פרטים מזהים של תלמידים. הפרטים ישמשו לטיפול בתקלה בלבד.",
+  "support.public.thanksBody": "הפנייה התקבלה. אם השארתם אימייל, נחזור אליכם.",
+  "support.public.throttled": "נשלחו הרבה דיווחים בזמן קצר. נסו שוב בעוד מספר דקות.",
+  "support.public.invalidEmail": "כתובת האימייל אינה תקינה.",
+  "support.public.backHome": "חזרה לדף הבית"
 }

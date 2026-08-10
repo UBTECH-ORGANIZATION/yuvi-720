@@ -10,6 +10,7 @@ import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
 import { YuviStudioPage } from '../features/Yuvi-studio/YuviStudioPage'
 import { BadgesPage } from '../features/badges/BadgesPage'
 import { ReportIssueDialog } from '../features/support/ReportIssueDialog'
+import { PublicReportPage } from '../features/support/PublicReportPage'
 import { SupportChatPanel } from '../features/support/SupportChatPanel'
 import { useStudioTransition } from '../features/Yuvi-studio/StudioTransitionProvider'
 import { CompanionChat } from '../components/CompanionChat'
@@ -75,6 +76,8 @@ function homeRoute(roles: string[]) {
 
 function pageForRoute(pathname: string) {
   if (pathname === '/' || pathname === '') return <LandingLoginPage />
+  // Deliberately outside PROTECTED_ROUTES: someone locked out must still reach it.
+  if (pathname.startsWith('/report')) return <PublicReportPage />
   if (pathname.startsWith('/learner-mapping')) return <LearnerMappingPage />
   if (pathname.startsWith('/results')) return <ResultsPage />
   if (pathname.startsWith('/yuvi-studio')) return <YuviStudioPage />

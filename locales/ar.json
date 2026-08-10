@@ -1824,5 +1824,15 @@
   "support.chat.waiting": "لا توجد رسائل في هذا الطلب بعد.",
   "support.chat.team": "فريق الدعم",
   "support.chat.you": "أنت",
-  "support.chat.error": "حدث خلل ما. يمكن المحاولة مجددًا."
+  "support.chat.error": "حدث خلل ما. يمكن المحاولة مجددًا.",
+  "support.public.link": "الإبلاغ عن عطل",
+  "support.public.title": "الإبلاغ عن مشكلة في المنظومة",
+  "support.public.intro": "هذا النموذج لمن لا يستطيع الدخول إلى المنظومة. من هو داخل المنظومة يمكنه الإبلاغ من داخلها مباشرة.",
+  "support.public.name": "الاسم (اختياري)",
+  "support.public.email": "بريد للرد (اختياري)",
+  "support.public.privacy": "لا تكتب هنا تفاصيل تعريفية عن الطلاب. تُستخدم التفاصيل لمعالجة العطل فقط.",
+  "support.public.thanksBody": "وصل بلاغك. إذا تركت بريدًا فسنعود إليك.",
+  "support.public.throttled": "وردت بلاغات كثيرة في وقت قصير. حاول مجددًا بعد دقائق.",
+  "support.public.invalidEmail": "عنوان البريد غير صالح.",
+  "support.public.backHome": "العودة إلى الصفحة الرئيسية"
 }

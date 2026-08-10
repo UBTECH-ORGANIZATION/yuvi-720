@@ -1824,5 +1824,15 @@
   "support.chat.waiting": "No messages in this request yet.",
   "support.chat.team": "Support team",
   "support.chat.you": "You",
-  "support.chat.error": "Something went wrong. Please try again."
+  "support.chat.error": "Something went wrong. Please try again.",
+  "support.public.link": "Report an issue",
+  "support.public.title": "Report a problem with the system",
+  "support.public.intro": "This form is for anyone who cannot sign in. If you are already signed in, report the issue from inside the product instead.",
+  "support.public.name": "Name (optional)",
+  "support.public.email": "Reply email (optional)",
+  "support.public.privacy": "Do not enter identifying details about students here. What you send is used for fault handling only.",
+  "support.public.thanksBody": "Your report was received. If you left an email, we will get back to you.",
+  "support.public.throttled": "Too many reports in a short time. Please try again in a few minutes.",
+  "support.public.invalidEmail": "That email address is not valid.",
+  "support.public.backHome": "Back to the home page"
 }

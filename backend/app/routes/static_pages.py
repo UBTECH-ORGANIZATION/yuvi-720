@@ -54,6 +54,13 @@ async def results_route(path: str = ""):
     return serve_react_app()
 
 
+@router.get("/report")
+@router.get("/report/{path:path}")
+async def report_route(path: str = ""):
+    """Serve the React app shell for the public fault report page."""
+    return serve_react_app()
+
+
 @router.get("/learner-mapping")
 @router.get("/learner-mapping/{path:path}")
 async def learner_mapping_route(path: str = ""):

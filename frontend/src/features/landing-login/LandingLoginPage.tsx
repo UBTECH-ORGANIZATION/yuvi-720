@@ -589,6 +589,7 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
             <div>
               <h4>{t('landing.footer.contactHead')}</h4>
               <a href="#contact">{t('landing.nav.contact')}</a>
+              <a href="/report">{t('support.public.link')}</a>
             </div>
           </nav>
         </div>
