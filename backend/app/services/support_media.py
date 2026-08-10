@@ -19,6 +19,7 @@ MAX_BYTES = 5 * 1024 * 1024
 MAX_PER_TICKET = 3
 
 _FALLBACK_ROOT = Path(__file__).resolve().parents[2] / ".runtime" / CONTAINER
+_container_ready = False
 
 # (magic prefix, content type, extension)
 _SIGNATURES: tuple[tuple[bytes, str, str], ...] = (
@@ -110,10 +111,14 @@ async def upload(owner_id: str, data: bytes) -> dict[str, object]:
     try:
         from azure.storage.blob import ContentSettings
 
-        try:
-            await container.create_container()
-        except Exception:
-            pass   # already there, or the credential may only write blobs
+        global _container_ready
+        if not _container_ready:
+            # One attempt per process; a 409 just means someone else made it.
+            try:
+                await container.create_container()
+            except Exception:
+                pass
+            _container_ready = True
 
         await container.upload_blob(
             blob_name,
