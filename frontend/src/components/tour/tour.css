@@ -1,0 +1,197 @@
+/* Spotlight tour.
+ *
+ * `--sp-tour-scrim` is declared per theme rather than reusing `--sp-overlay`:
+ * the mask needs an opaque colour (the transparency comes from the element's
+ * own opacity), and a spotlight wants to be darker in light mode than the modal
+ * scrim, or the highlighted panel does not read as highlighted.
+ */
+
+:root {
+  --sp-tour-scrim: #101322;
+}
+
+[data-theme='dark'] {
+  --sp-tour-scrim: #05060d;
+}
+
+.sp-tour__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;   /* above the assistant dock, below nothing else */
+  opacity: 0.72;
+}
+
+.sp-tour__scrim {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+/* The cutout animates between targets, which is what makes the tour read as one
+   continuous movement rather than a series of unrelated modals. */
+.sp-tour__hole {
+  transition: x var(--sp-dur) var(--sp-ease), y var(--sp-dur) var(--sp-ease),
+              width var(--sp-dur) var(--sp-ease), height var(--sp-dur) var(--sp-ease);
+}
+
+.sp-tour__halo {
+  position: absolute;
+  pointer-events: none;
+  box-shadow: 0 0 0 2px var(--sp-primary-500);
+  animation: sp-tour-pulse 2.4s var(--sp-ease) infinite;
+  transition: top var(--sp-dur) var(--sp-ease), left var(--sp-dur) var(--sp-ease),
+              width var(--sp-dur) var(--sp-ease), height var(--sp-dur) var(--sp-ease);
+}
+
+/* Spread only, one colour: `--sp-primary-400` does not exist in tokens.css and
+   would have failed silently to no ring at all. */
+@keyframes sp-tour-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--sp-primary-500); }
+  50%      { box-shadow: 0 0 0 5px var(--sp-primary-500); }
+}
+
+/* Reduced motion: the spotlight still moves (it has to — it is the whole
+   mechanism), it just gets there without a transition or a pulse. */
+.sp-tour__overlay.is-still .sp-tour__hole,
+.sp-tour__overlay.is-still .sp-tour__halo {
+  transition: none;
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-tour__hole,
+  .sp-tour__halo {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* ── the card ──────────────────────────────────────────────────────────────*/
+
+.sp-tour__card {
+  position: fixed;
+  z-index: 901;
+  width: 320px;
+  max-width: calc(100vw - var(--sp-6));
+  padding: var(--sp-4);
+  border-radius: var(--sp-radius-lg);
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+  box-shadow: var(--sp-shadow-lg);
+  transition: top var(--sp-dur) var(--sp-ease), left var(--sp-dur) var(--sp-ease);
+}
+
+.sp-tour__card:focus-visible,
+.sp-tour__card:focus {
+  outline: none;   /* the halo already says where we are */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-tour__card { transition: none; }
+}
+
+.sp-tour__cardHead {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+
+.sp-tour__cardHead h2 {
+  flex: 1;
+  margin: 0;
+  font-size: var(--sp-fs-lg);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-900);
+  line-height: var(--sp-lh-tight);
+}
+
+.sp-tour__yuvi { flex: 0 0 auto; }
+
+.sp-tour__close {
+  flex: 0 0 auto;
+  display: inline-flex;
+  padding: var(--sp-1);
+  border: 0;
+  border-radius: var(--sp-radius-sm);
+  background: transparent;
+  color: var(--sp-ink-400);
+  cursor: pointer;
+}
+
+.sp-tour__close:hover { color: var(--sp-ink-700); background: var(--sp-bg-subtle); }
+
+.sp-tour__body {
+  margin: 0 0 var(--sp-4);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+  line-height: var(--sp-lh);
+}
+
+.sp-tour__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.sp-tour__progress {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-tour__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.sp-tour__skip,
+.sp-tour__back {
+  border: 0;
+  background: transparent;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--sp-radius-sm);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+  cursor: pointer;
+}
+
+.sp-tour__skip:hover,
+.sp-tour__back:hover { color: var(--sp-ink-900); background: var(--sp-bg-subtle); }
+
+/* ── the app-bar button ────────────────────────────────────────────────────*/
+
+.sp-tour__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-surface);
+  color: var(--sp-ink-500);
+  cursor: pointer;
+}
+
+.sp-tour__button:hover:not(:disabled) {
+  color: var(--sp-primary-600);
+  border-color: var(--sp-primary-500);
+}
+
+.sp-tour__button:disabled { opacity: 0.5; cursor: default; }
+
+@media (max-width: 640px) {
+  .sp-tour__card {
+    /* On a phone there is no "beside the panel" — dock it to the bottom, which
+       also keeps it clear of the spotlight in almost every case. */
+    top: auto !important;
+    bottom: var(--sp-4);
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: min(360px, calc(100vw - var(--sp-6)));
+  }
+}

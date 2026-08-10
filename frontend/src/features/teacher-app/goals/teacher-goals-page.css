@@ -1,0 +1,249 @@
+@import '../shared/teacher-shared.css';
+
+.tch-goalsPage {
+  max-inline-size: 1240px;
+  margin-inline: auto;
+  padding: var(--sp-5) clamp(var(--sp-4), 3vw, var(--sp-8)) var(--sp-10);
+}
+
+.tch-goalsPage__head {
+  margin-block-end: var(--sp-5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.tch-goalsPage__head h1 { margin: 0; font-size: var(--sp-fs-2xl); color: var(--sp-ink-900); letter-spacing: -0.01em; }
+.tch-goalsPage__subtitle { margin: var(--sp-1) 0 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
+
+.tch-goalsPage__headTools { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+.tch-goalsPage__search { display: inline-flex; align-items: center; gap: var(--sp-2); color: var(--sp-ink-400); }
+.tch-goalsPage__search input { min-inline-size: 220px; }
+
+/* ── create-a-goal: student first, then the grounded composer ─────────────*/
+
+.tch-goalsPage__compose {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
+  margin-block-end: var(--sp-5);
+}
+
+.tch-goalsPage__composeWho { display: grid; gap: var(--sp-1); max-inline-size: 360px; }
+.tch-goalsPage__composeWho > span { font-size: var(--sp-fs-xs); font-weight: 600; color: var(--sp-ink-400); }
+.tch-goalsPage__composeHint { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-400); }
+
+/* Inside this card the composer is flat — remove its standalone padding. */
+.tch-goalsPage__compose .tch-composer { padding: 0; }
+
+/* The inbox carries the page's weight — it is the step only a teacher can do.
+   Weight comes from the surface, not from an edge stripe. */
+.tch-goalsPage__inbox {
+  padding: var(--sp-4) var(--sp-5);
+  margin-block-end: var(--sp-6);
+}
+
+.tch-goalsPage__outcome {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-success-600);
+}
+
+.tch-goalsPage__pendingList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+/* One student = one row that opens. Hairlines, not cards inside cards: the
+   inbox is a list of people, and only the open one shows its goals. */
+.tch-goalsPage__pendingGroup { border-block-start: 1px solid var(--sp-border); }
+.tch-goalsPage__pendingGroup:first-child { border-block-start: 0; }
+
+.tch-goalsPage__pendingHead {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-1);
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--sp-ink-900);
+  cursor: pointer;
+  text-align: start;
+}
+
+.tch-goalsPage__pendingHead:hover strong { color: var(--sp-primary-700); }
+
+.tch-goalsPage__pendingCount {
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-primary-700);
+  background: var(--sp-primary-100);
+  border-radius: 999px;
+  padding: 2px var(--sp-2);
+  white-space: nowrap;
+}
+
+.tch-goalsPage__chevron {
+  margin-inline-start: auto;
+  color: var(--sp-ink-400);
+  transform: rotate(180deg);
+  transition: transform var(--sp-dur-fast) var(--sp-ease);
+}
+.tch-goalsPage__chevron.is-open { transform: rotate(0deg); }
+
+.tch-goalsPage__pendingGoals {
+  list-style: none;
+  margin: 0 0 var(--sp-2);
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-1);
+  padding-inline-start: calc(30px + var(--sp-2));
+  max-block-size: 420px;
+  overflow-y: auto;
+}
+
+.tch-goalsPage__pendingRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: calc(var(--tch-card-radius) - 8px);
+  background: var(--sp-bg-subtle);
+}
+
+.tch-goalsPage__pendingFoot { padding-block-start: var(--sp-1); }
+
+.tch-goalsPage__who {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-primary-700);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tch-goalsPage__who:hover { text-decoration: underline; }
+
+.tch-goalsPage__goalTitle { flex: 1; min-inline-size: 0; color: var(--sp-ink-700); font-size: var(--sp-fs-sm); }
+
+.tch-goalsPage__sparks {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-warn-600);
+  font-variant-numeric: tabular-nums;
+}
+
+.tch-goalsPage__quiet {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  color: var(--sp-success-600);
+  font-size: var(--sp-fs-sm);
+}
+
+/* ── the board ─────────────────────────────────────────────────────────────*/
+
+.tch-goalsPage__board {
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  align-items: start;
+}
+
+/* `minmax(0, 1fr)`, not the implicit `auto`: a grid item's default
+   `min-width: auto` lets a row whose min-content is wide — a long goal title
+   beside a nowrap status pill — stretch the column past the card and spill out
+   of its inline-end edge. Every child is clamped to the card instead. */
+.tch-goalsPage__student {
+  padding: var(--sp-3) var(--sp-4);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-2);
+}
+
+.tch-goalsPage__studentHead {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: var(--sp-ink-900);
+  cursor: pointer;
+}
+
+.tch-goalsPage__studentHead:hover strong { color: var(--sp-primary-700); }
+
+.tch-goalsPage__avatar {
+  inline-size: 30px;
+  block-size: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--sp-gradient);
+  color: #fff;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-bold);
+  flex-shrink: 0;
+}
+
+/* Same clamp one level down: the list is a grid too, and its rows would
+   otherwise widen it from the inside. */
+.tch-goalsPage__goals {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-1);
+}
+
+.tch-goalsPage__goal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-1) 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+}
+
+.tch-goalsPage__goalText { min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The state never truncates — it is two words and it is the point of the row. */
+.tch-goalsPage__goal .sp-pill { flex: 0 0 auto; }
+
+/* The mix line: what this child's goal load looks like before any titles. */
+.tch-goalsPage__mix {
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  font-variant-numeric: tabular-nums;
+}
+
+.tch-goalsPage__more {
+  justify-self: start;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-primary-700);
+  cursor: pointer;
+}
+.tch-goalsPage__more:hover { text-decoration: underline; }

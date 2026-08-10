@@ -18,6 +18,7 @@ COOKIE_NAME = "spark_session"
 
 ROLE_LEARNER = "learner"
 ROLE_TEACHER = "teacher"
+ROLE_ADMIN = "admin"
 
 
 def _session_from_request(request: Request) -> Optional[dict[str, Any]]:
@@ -73,16 +74,42 @@ async def require_teacher_session(request: Request) -> dict[str, Any]:
     return session
 
 
-def assert_can_read_learner(actor: dict[str, Any], learner_id: str) -> None:
+async def require_admin(request: Request) -> str:
+    """Return the session user id for an administrator.
+
+    Two gates, deliberately. The JWT role is the cheap route gate; `org.is_admin`
+    re-checks the `org_admins` grant in the database, so a revoked admin loses
+    access on the very next request even though their 12-hour token still says
+    `admin` (see `app/auth/tokens.py`).
+    """
+    session = await current_user(request)
+    user_id = session["sub"]
+    if ROLE_ADMIN not in (session.get("roles") or []):
+        raise HTTPException(status_code=403, detail="admin_role_required")
+    if not await org.is_admin(user_id):
+        raise HTTPException(status_code=403, detail="admin_grant_required")
+    return user_id
+
+
+async def require_admin_session(request: Request) -> dict[str, Any]:
+    """Like `require_admin`, but returns the full session payload."""
+    await require_admin(request)
+    return await current_user(request)
+
+
+async def assert_can_read_learner(actor: dict[str, Any], learner_id: str) -> None:
     """Allow self-reads, plus teachers scoped to their own groups.
 
     Composes the existing org scoping (`app.brain.org`) rather than inventing a
-    second permission model.
+    second permission model. Async because scope is read from the database per
+    request, never from the session token — revocation must land immediately.
     """
     actor_id = actor.get("sub")
     if actor_id == learner_id:
         return
     roles = actor.get("roles") or []
-    if ROLE_TEACHER in roles and org.teacher_can_access_learner(actor_id, learner_id):
+    if ROLE_TEACHER in roles and await org.teacher_can_access_learner(actor_id, learner_id):
+        return
+    if ROLE_ADMIN in roles and await org.is_admin(actor_id):
         return
     raise HTTPException(status_code=403, detail="forbidden")

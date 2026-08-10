@@ -4,6 +4,7 @@ import { useBrain } from '../providers/BrainProvider'
 import { AppBar } from './AppBar'
 import { Icon } from './primitives'
 import { WalletChip } from './WalletChip'
+import { NotificationBell } from './NotificationBell'
 import './learner-app-bar.css'
 
 type LearnerSection = 'dashboard' | 'learning' | 'goals' | 'chat' | 'calendar'
@@ -79,6 +80,14 @@ export function LearnerAppBar({ studentName }: LearnerAppBarProps) {
   )
 
   return (
-    <AppBar center={navigation} trailing={<WalletChip />} />
+    <AppBar
+      center={navigation}
+      trailing={
+        <div className="learner-app-bar__trailing">
+          <NotificationBell />
+          <WalletChip />
+        </div>
+      }
+    />
   )
 }

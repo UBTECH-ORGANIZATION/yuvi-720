@@ -112,4 +112,42 @@ export function ErrorState({ title, body, action }: StateProps) {
   )
 }
 
+// ── Skeletons ─────────────────────────────────────────────────────────────
+/* Layout-shaped loading. A spinner says "wait"; a skeleton says "this is what
+   is coming, and it will land exactly here" — so a tab switch does not tear
+   the page down and rebuild it around a centred circle. Compose the three
+   shapes to sketch the surface being fetched. Decorative by design:
+   aria-hidden, with the busy signal carried by the container. */
+
+export function Skeleton({ w, h = 14, r }: { w?: number | string; h?: number | string; r?: number | string }) {
+  return (
+    <span
+      className="sp-skeleton"
+      aria-hidden="true"
+      style={{ inlineSize: w ?? '100%', blockSize: h, borderRadius: r }}
+    />
+  )
+}
+
+/** N text-ish lines; the last one is shorter, the way real prose ends. */
+export function SkeletonRows({ rows = 3 }: { rows?: number }) {
+  return (
+    <span className="sp-skeleton__rows" aria-hidden="true">
+      {Array.from({ length: rows }, (_, index) => (
+        <Skeleton key={index} w={index === rows - 1 ? '62%' : '100%'} />
+      ))}
+    </span>
+  )
+}
+
+/** A card-shaped placeholder: title line + body lines inside a real panel. */
+export function SkeletonCard({ rows = 3 }: { rows?: number }) {
+  return (
+    <div className="sp-panel sp-skeleton__card" aria-hidden="true">
+      <Skeleton w="38%" h={18} />
+      <SkeletonRows rows={rows} />
+    </div>
+  )
+}
+
 export { Icon } from './Icon'

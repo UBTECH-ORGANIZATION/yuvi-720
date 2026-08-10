@@ -1,0 +1,187 @@
+/* Live classroom strip + alert rows. Tokens only. */
+
+.tch-live {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border-radius: var(--sp-radius-lg);
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+}
+
+.tch-live__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.tch-live__head h3 { margin: 0; font-size: var(--sp-fs-md); color: var(--sp-ink-900); }
+.tch-live__counts { font-size: var(--sp-fs-sm); color: var(--sp-ink-500); }
+
+.tch-live__link {
+  margin-inline-start: auto;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+
+.tch-live__link.is-live { color: var(--sp-success-600); }
+.tch-live__empty { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-400); }
+
+.tch-live__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+/* ── tiles ────────────────────────────────────────────────────────────────── */
+
+.tch-tile {
+  display: grid;
+  gap: 2px;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-bg-subtle);
+  border: 1px solid transparent;
+}
+
+.tch-tile__avatar {
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--sp-gradient);
+  color: #fff;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-bold);
+  flex-shrink: 0;
+}
+
+.tch-tile__id { display: grid; min-inline-size: 0; flex: 1; text-align: start; }
+
+.tch-tile__where {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-primary-600);
+  font-weight: var(--sp-fw-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Only the ones who need something get an accent. If every tile is coloured,
+   none of them is. */
+.tch-tile.is-needing { border-color: var(--sp-danger-600); background: var(--sp-danger-100); }
+.tch-tile.is-needing .tch-tile__where { color: var(--sp-danger-600); }
+.tch-tile--offline { opacity: 0.72; }
+
+.tch-tile__main {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--sp-ink-700);
+  cursor: pointer;
+  padding: 0;
+  text-align: start;
+  inline-size: 100%;
+}
+
+.tch-tile__main:focus-visible { outline: none; box-shadow: var(--sp-ring); border-radius: var(--sp-radius-sm); }
+.tch-tile__name { font-weight: var(--sp-fw-medium); }
+
+.tch-tile__seen {
+  margin-inline-start: auto;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  white-space: nowrap;
+}
+
+.tch-tile__struggle { display: grid; gap: var(--sp-1); justify-items: start; }
+
+/* ── presence dot ─────────────────────────────────────────────────────────── */
+
+.tch-dot { display: inline-flex; align-items: center; }
+
+.tch-dot__mark {
+  inline-size: 9px;
+  block-size: 9px;
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-ink-300);
+  flex: 0 0 auto;
+}
+
+.tch-dot--online .tch-dot__mark { background: var(--sp-success-600); }
+.tch-dot--in_lesson .tch-dot__mark {
+  background: var(--sp-primary-600);
+  box-shadow: 0 0 0 3px var(--sp-primary-100);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tch-dot--in_lesson .tch-dot__mark { animation: tch-pulse 2.4s var(--sp-ease) infinite; }
+}
+
+@keyframes tch-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px var(--sp-primary-100); }
+  50%      { box-shadow: 0 0 0 6px transparent; }
+}
+
+/* ── alert rows ───────────────────────────────────────────────────────────── */
+
+/* Flat rows, matching the attention list: the severity is a dot, not a stripe. */
+.tch-alert {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-1);
+  border-block-end: 1px solid var(--sp-border);
+}
+
+.tch-alert__who::before {
+  content: '';
+  inline-size: 9px;
+  block-size: 9px;
+  border-radius: 50%;
+  background: var(--sp-info-600);
+  flex: none;
+}
+
+.tch-alert--urgent .tch-alert__who::before { background: var(--sp-danger-600); }
+.tch-alert--attention .tch-alert__who::before { background: var(--sp-warn-600); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .tch-alert--urgent .tch-alert__who::before { animation: tch-alert-pulse 2.4s var(--sp-ease) infinite; }
+}
+
+@keyframes tch-alert-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(226, 74, 94, .25); }
+  50%      { box-shadow: 0 0 0 7px transparent; }
+}
+
+/* Acknowledged means "seen, not yet done" — it stops shouting but stays. */
+.tch-alert.is-acknowledged { opacity: 0.7; }
+.tch-alert.is-acknowledged .tch-alert__who::before { animation: none; background: var(--sp-ink-300); }
+
+.tch-alert__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.tch-alert__who { display: inline-flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.tch-alert__actions { display: inline-flex; gap: var(--sp-1); flex-wrap: wrap; }
+.tch-alert__count { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+.tch-alert__title {
+  margin: 0;
+  color: var(--sp-ink-700);
+  font-size: var(--sp-fs-sm);
+  padding-inline-start: calc(9px + var(--sp-2));
+}
+
+.tch-alert > .tch-evidence__toggle { margin-inline-start: calc(9px + var(--sp-2)); }

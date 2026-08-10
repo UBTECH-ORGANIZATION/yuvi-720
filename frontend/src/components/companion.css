@@ -1129,43 +1129,6 @@
 [data-theme='dark'] .sp-companion__prose .sp-md-table th { background: rgba(159, 122, 254, .16); color: #eef0ff; }
 [data-theme='dark'] .sp-companion__prose .sp-md-table tbody tr:nth-child(even) td { background: rgba(159, 122, 254, .06); }
 
-.sp-companion__thinking {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-block-size: 28px;
-  color: var(--sp-ink-400);
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.sp-companion__thinking-orbit {
-  position: relative;
-  display: block;
-  inline-size: 30px;
-  block-size: 30px;
-  border: 1px solid rgba(111, 91, 255, 0.2);
-  border-radius: 50%;
-  animation: sp-companion-thought-orbit 1.8s linear infinite;
-}
-
-.sp-companion__thinking-orbit i {
-  position: absolute;
-  inline-size: 6px;
-  block-size: 6px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--sp-primary-500), #4cc9f0);
-  box-shadow: 0 0 8px rgba(76, 201, 240, 0.55);
-}
-
-.sp-companion__thinking-orbit i:nth-child(1) { inset-block-start: -3px; inset-inline-start: 12px; }
-.sp-companion__thinking-orbit i:nth-child(2) { inset-block-end: 2px; inset-inline-end: 1px; transform: scale(0.78); }
-.sp-companion__thinking-orbit i:nth-child(3) { inset-block-end: 2px; inset-inline-start: 1px; transform: scale(0.58); }
-
-@keyframes sp-companion-thought-orbit {
-  to { transform: rotate(1turn); }
-}
-
 .sp-companion__math {
   display: inline-block;
   direction: ltr;
@@ -1850,7 +1813,6 @@
   .sp-companion.is-closing { animation: none; transform: none; }
   .sp-companion.is-opening .sp-companion__yuvi-stage { opacity: 1; transform: none; }
   .sp-companion__yuvi-loader { animation-duration: 1.4s; }
-  .sp-companion__thinking-orbit,
   .sp-companion__message-avatar.is-thinking,
   .sp-companion__speech.is-active svg { animation: none; }
 }
@@ -2006,3 +1968,112 @@
   .sp-explainer-backdrop, .sp-explainer, .sp-explainer__slide { animation: none; }
   .sp-explainer__spinner { animation-duration: 1600ms; }
 }
+
+/* ── a word from a teacher ──────────────────────────────────────────────────
+   A מילה טובה is not a coach message. It comes from a named adult, it is short,
+   and it must not scroll past unread — so it arrives as a card over the
+   conversation and stays until the child acknowledges it. Anchored inside the
+   panel (not the page) because it belongs to this conversation. */
+.sp-companion__kudos {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-4, 16px);
+  background: rgba(20, 14, 48, 0.42);
+  backdrop-filter: blur(3px);
+  animation: sp-kudos-in 180ms var(--sp-ease, ease-out) both;
+}
+
+.sp-companion__kudos-card {
+  position: relative;
+  overflow: hidden;
+  inline-size: min(340px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 22px 20px 18px;
+  border-radius: 22px;
+  background: linear-gradient(165deg, #ffffff 0%, #f4f1ff 100%);
+  border: 1px solid rgba(124, 108, 255, 0.28);
+  box-shadow: 0 24px 60px rgba(49, 35, 116, 0.32);
+  text-align: center;
+}
+
+/* A quiet halo behind Yuvi's head — celebratory without a single emoji. */
+.sp-companion__kudos-glow {
+  position: absolute;
+  inset-block-start: -70px;
+  inline-size: 200px;
+  block-size: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124, 108, 255, 0.28), transparent 68%);
+  pointer-events: none;
+}
+
+.sp-companion__kudos-face { position: relative; }
+
+.sp-companion__kudos-eyebrow {
+  margin: 0;
+  position: relative;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #6b5bd6;
+}
+
+.sp-companion__kudos-message {
+  margin: 0;
+  position: relative;
+  font-size: 16px;
+  line-height: 1.55;
+  color: #1d1836;
+}
+
+.sp-companion__kudos-time {
+  position: relative;
+  font-size: 11px;
+  color: #7a7495;
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-companion__kudos-ok {
+  position: relative;
+  margin-block-start: 6px;
+  min-inline-size: 128px;
+  padding: 10px 22px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #7c6cff, #5b46c8);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(91, 70, 200, 0.32);
+}
+
+.sp-companion__kudos-ok:hover { filter: brightness(1.06); }
+.sp-companion__kudos-ok:focus-visible { outline: 2px solid #2b1f6b; outline-offset: 2px; }
+
+@keyframes sp-kudos-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.sp-companion__kudos-card { animation: sp-kudos-rise 220ms var(--sp-ease, ease-out) both; }
+@keyframes sp-kudos-rise {
+  from { opacity: 0; transform: translateY(10px) scale(.97); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-companion__kudos, .sp-companion__kudos-card { animation: none; }
+}
+
+[data-theme='dark'] .sp-companion__kudos-card {
+  background: linear-gradient(165deg, #2c2456 0%, #221c46 100%);
+  border-color: rgba(188, 168, 255, 0.28);
+}
+[data-theme='dark'] .sp-companion__kudos-message { color: #f2eefe; }
+[data-theme='dark'] .sp-companion__kudos-eyebrow { color: #bda9ff; }
+[data-theme='dark'] .sp-companion__kudos-time { color: #b1a8d4; }

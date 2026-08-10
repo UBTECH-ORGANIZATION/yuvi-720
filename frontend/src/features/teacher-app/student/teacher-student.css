@@ -1,0 +1,283 @@
+@import '../shared/teacher-shared.css';
+
+/* Container metrics come from teacher-shared.css. */
+
+/* The header is a hero card, not floating text: identity, flags and actions
+   share one grounded surface, matching the card language of everything below. */
+.tch-student__head {
+  display: grid;
+  gap: var(--sp-3);
+  margin-block-end: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+  border-radius: var(--tch-card-radius);
+  background: var(--tch-card-bg);
+  border: 1px solid var(--tch-card-border);
+  box-shadow: var(--tch-card-shadow);
+}
+
+.tch-student__identity { display: flex; align-items: center; gap: var(--sp-3); }
+.tch-student__identity h1 { margin: 0; font-size: var(--sp-fs-xl); color: var(--sp-ink-900); letter-spacing: -0.01em; }
+
+.tch-student__avatar {
+  inline-size: 52px;
+  block-size: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--sp-gradient);
+  color: #fff;
+  font-size: var(--sp-fs-lg);
+  font-weight: var(--sp-fw-bold);
+  box-shadow: 0 4px 14px rgba(109, 84, 233, .30);
+}
+
+.tch-student__kpis { margin-block-end: var(--sp-4); }
+.tch-student__flags { display: grid; gap: var(--sp-2); margin-block-end: var(--sp-4); }
+
+/* Segmented control instead of underline tabs — reads as one instrument. */
+.tch-tabs {
+  display: inline-flex;
+  gap: var(--sp-1);
+  padding: var(--sp-1);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-bg-subtle);
+  border: 1px solid var(--sp-border);
+  margin-block-end: var(--sp-4);
+  overflow-x: auto;
+  max-inline-size: 100%;
+}
+
+.tch-tabs button {
+  border: 0;
+  background: transparent;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--sp-radius-pill);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-400);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--sp-dur-fast) var(--sp-ease), background var(--sp-dur-fast) var(--sp-ease);
+}
+
+.tch-tabs button:hover { color: var(--sp-ink-700); }
+
+.tch-tabs button.is-active {
+  color: var(--sp-primary-700);
+  background: var(--tch-card-bg);
+  box-shadow: var(--sp-shadow-sm);
+}
+
+.tch-student__body { display: grid; gap: var(--sp-4); }
+
+.tch-progressGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--sp-3);
+}
+
+.tch-progressCard { display: grid; gap: var(--sp-3); padding: var(--sp-4); }
+.tch-progressCard__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.tch-progressCard__legend { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+.tch-struggles { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+.tch-struggle {
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  border: 1px solid var(--sp-border);
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.tch-struggle__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); flex-wrap: wrap; }
+.tch-struggle__tags { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-warn-600); }
+
+.tch-strengths { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+.tch-strength { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--sp-fs-sm); color: var(--sp-ink-700); }
+
+.tch-awareness { display: grid; gap: var(--sp-2); justify-items: start; }
+.tch-awareness p { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-500); }
+
+/* `.tch-table` now lives in teacher-shared.css — three pages use it. */
+
+/* ── notes ────────────────────────────────────────────────────────────────── */
+
+.tch-notes__form { display: grid; gap: var(--sp-3); margin-block-end: var(--sp-4); }
+.tch-notes__row { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+.tch-notes__row label { display: grid; gap: var(--sp-1); font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+.tch-notes__row select {
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-surface);
+  color: var(--sp-ink-700);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+}
+
+.tch-notes__text { resize: vertical; min-block-size: 72px; }
+
+.tch-notes__warning {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-warn-100);
+  color: var(--sp-warn-600);
+  font-size: var(--sp-fs-xs);
+}
+
+.tch-notes__hint { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+.tch-notes__list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+.tch-note {
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  border: 1px solid var(--sp-border);
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.tch-note__head { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.tch-note__head .sp-btn--icon { margin-inline-start: auto; }
+.tch-note p { margin: 0; color: var(--sp-ink-700); font-size: var(--sp-fs-sm); }
+
+@media (max-width: 600px) {
+  .tch-progressGrid { grid-template-columns: 1fr; }
+}
+
+/* ── the rebuilt header ─────────────────────────────────────────────────────*/
+
+.tch-student__topRow { display: flex; justify-content: space-between; gap: var(--sp-2); }
+
+.tch-student__badgeAvatar { flex-shrink: 0; display: grid; place-items: center; }
+
+.tch-student__who { display: grid; gap: 2px; min-inline-size: 0; }
+
+.tch-student__seen {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+
+/* Quick look: the numbers a teacher wants before opening any tab. */
+.tch-student__quick {
+  margin: 0 0 0 auto;
+  display: flex;
+  gap: var(--sp-4);
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+[dir='rtl'] .tch-student__quick { margin: 0 auto 0 0; }
+
+.tch-student__quickItem {
+  display: grid;
+  gap: 2px;
+  padding-inline-start: var(--sp-4);
+  border-inline-start: 1px solid var(--sp-border);
+}
+
+.tch-student__quickItem dt { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+.tch-student__quickItem dd {
+  margin: 0;
+  font-size: var(--sp-fs-lg);
+  font-weight: var(--sp-fw-bold);
+  color: var(--sp-ink-900);
+  font-variant-numeric: tabular-nums;
+}
+
+.tch-student__quickBadges {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+@media (max-width: 760px) {
+  .tch-student__quick { margin: 0; padding-block-start: var(--sp-2); }
+  .tch-student__quickItem { border-inline-start: 0; padding-inline-start: 0; }
+}
+
+/* ── connection tab ─────────────────────────────────────────────────────────*/
+
+.tch-connection { display: grid; gap: var(--sp-4); }
+
+.tch-connection__kudos { padding: var(--sp-4); border-inline-start: 3px solid var(--sp-teal-500); }
+
+.tch-connection__sent {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin: 0 0 var(--sp-2);
+  color: var(--sp-success-600);
+  font-size: var(--sp-fs-sm);
+}
+
+.tch-connection__composer { display: flex; gap: var(--sp-2); }
+
+.tch-connection__composer input {
+  flex: 1;
+  min-inline-size: 0;
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+  background: var(--sp-bg-subtle);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  padding: var(--sp-2) var(--sp-4);
+}
+
+.tch-connection__composer input:focus-visible {
+  outline: 2px solid var(--sp-primary-600);
+  outline-offset: 1px;
+}
+
+.tch-connection__timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+.tch-connection__entry {
+  display: flex;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: calc(var(--tch-card-radius) - 6px);
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+}
+
+.tch-connection__entryIcon {
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--tch-chip-bg);
+  color: var(--sp-primary-600);
+  flex-shrink: 0;
+}
+
+.tch-connection__entryBody { display: grid; gap: var(--sp-1); min-inline-size: 0; flex: 1; }
+.tch-connection__entryHead { display: flex; align-items: center; gap: var(--sp-2); }
+.tch-connection__date { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); font-variant-numeric: tabular-nums; }
+
+.tch-connection__goals { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-1); }
+.tch-connection__goals li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+}
+
+.tch-connection__approved {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-success-600);
+  font-weight: var(--sp-fw-semibold);
+}

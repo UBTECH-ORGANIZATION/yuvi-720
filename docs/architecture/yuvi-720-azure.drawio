@@ -1,0 +1,474 @@
+<mxfile host="Electron" agent="Claude" pages="2">
+  <diagram name="1 · Current (as deployed)" id="az-current">
+    <mxGraphModel dx="930" dy="691" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1980" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="c-title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=22;fontStyle=1;fontColor=#1A202C" value="Yuvi Spark — Azure architecture" vertex="1">
+          <mxGeometry height="32" width="1200" x="40" y="18" as="geometry" />
+        </mxCell>
+        <mxCell id="c-azure" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F2F8FE;strokeColor=#0078D4;dashed=1;dashPattern=8 4;verticalAlign=top;align=left;spacingLeft=14;spacingTop=8;fontSize=14;fontStyle=1;fontColor=#0078D4" value="Microsoft Azure" vertex="1">
+          <mxGeometry height="1010" width="1240" x="270" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="c-rg" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7FA8CE;dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontSize=12;fontStyle=1;fontColor=#356090" value="Resource group   rg-yuvi-720" vertex="1">
+          <mxGeometry height="920" width="890" x="270" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="c-datab" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFCFE;strokeColor=#B9CBDA;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontSize=11;fontStyle=1;fontColor=#5A6C7D" value="Data and platform services" vertex="1">
+          <mxGeometry height="225" width="830" x="330" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="c-netb" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFCFE;strokeColor=#B9CBDA;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontSize=11;fontStyle=1;fontColor=#5A6C7D" value="Networking — egress path to the Ministry LRS" vertex="1">
+          <mxGeometry height="300" width="570" x="330" y="745" as="geometry" />
+        </mxCell>
+        <mxCell id="c-adminb" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFCFE;strokeColor=#B9CBDA;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontSize=11;fontStyle=1;fontColor=#5A6C7D" value="Admin service" vertex="1">
+          <mxGeometry height="300" width="230" x="930" y="745" as="geometry" />
+        </mxCell>
+        <mxCell id="c-sharedb" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFCFE;strokeColor=#B9CBDA;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontSize=11;fontStyle=1;fontColor=#5A6C7D" value="AI platform — every LLM call passes through here" vertex="1">
+          <mxGeometry height="550" width="310" x="1180" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="c-pool" parent="1" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#F7FBFF;strokeColor=#0078D4;strokeWidth=1.5;verticalAlign=top;align=center;spacingTop=4;fontSize=10;fontStyle=1;fontColor=#12456E" value="Backend pool — the gateway load-balances and fails over across it" vertex="1">
+          <mxGeometry height="210" width="286" x="1192" y="528" as="geometry" />
+        </mxCell>
+        <mxCell id="c-extb" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#9AA5B1;dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontSize=12;fontStyle=1;fontColor=#616E7C" value="External systems" vertex="1">
+          <mxGeometry height="1010" width="390" x="1560" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="c-n-net" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=10;fontColor=#52606D" value="The Ministry LRS allow-lists a single egress IP, so all LRS traffic is routed through the firewall and leaves as 104.41.217.81. Only the LRS /32 goes through the tunnel — developers reach the same path over the Entra-authenticated gateway without tunnelling anything else." vertex="1">
+          <mxGeometry height="80" width="545" x="345" y="945" as="geometry" />
+        </mxCell>
+        <mxCell id="c-n-admin" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=10;fontColor=#52606D" value="Separate App Service and separate image. Google sign-in with an e-mail allow-list; reads the AI usage table read-only for cost reporting. Never exposed from the learner app." vertex="1">
+          <mxGeometry height="130" width="206" x="942" y="905" as="geometry" />
+        </mxCell>
+        <mxCell id="c-n-kata" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=10;fontColor=#52606D" value="Catalogue and xAPI launcher. Relays every content statement back to our ingest endpoint, so a wrong public URL silently drops all learning evidence — reachability is probed at boot." vertex="1">
+          <mxGeometry height="80" width="350" x="1580" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="c-n-lrs" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=10;fontColor=#52606D" value="OAuth. Outbox ledger with retry and de-duplication on the same statement id; reporting is fire-and-forget and never blocks a learner feature." vertex="1">
+          <mxGeometry height="70" width="350" x="1580" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="c-n-goog" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=10;fontColor=#52606D" value="Administrator identity for the admin service only." vertex="1">
+          <mxGeometry height="40" width="350" x="1580" y="790" as="geometry" />
+        </mxCell>
+        <mxCell id="c-users" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/identity/Users.svg;" value="Learners · Teachers&lt;br&gt;Admins" vertex="1">
+          <mxGeometry height="64" width="64" x="76" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="c-browser" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/general/Browser.svg;" value="Browser — React SPA,&lt;br&gt;Unity WebGL, content iframe" vertex="1">
+          <mxGeometry height="64" width="64" x="76" y="730" as="geometry" />
+        </mxCell>
+        <mxCell id="c-gh" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/general/Builds.svg;" value="GitHub Actions" vertex="1">
+          <mxGeometry height="64" width="64" x="76" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="c-prod" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/app_services/App_Services.svg;" value="ubi-yuvi-720&lt;br&gt;production slot" vertex="1">
+          <mxGeometry height="64" width="64" x="585.5" y="304" as="geometry" />
+        </mxCell>
+        <mxCell id="c-dev" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/app_services/App_Services.svg;" value="z" vertex="1">
+          <mxGeometry height="70" width="70" x="874" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="c-cosmos" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/databases/Azure_DocumentDB.svg;" value="Azure DocumentDB&lt;br&gt;MongoDB API · vCore · yuvi720" vertex="1">
+          <mxGeometry height="64" width="64" x="380" y="535" as="geometry" />
+        </mxCell>
+        <mxCell id="c-acr" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/containers/Container_Registries.svg;" value="Container Registry&lt;br&gt;yuvi720acr" vertex="1">
+          <mxGeometry height="64" width="64" x="620" y="535" as="geometry" />
+        </mxCell>
+        <mxCell id="c-acs" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/other/Azure_Communication_Services.svg;" value="Communication Services&lt;br&gt;transactional e-mail" vertex="1">
+          <mxGeometry height="64" width="64" x="860" y="535" as="geometry" />
+        </mxCell>
+        <mxCell id="c-ai" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/management_governance/Application_Insights.svg;" value="Application Insights&lt;br&gt;+ Azure Monitor" vertex="1">
+          <mxGeometry height="64" width="64" x="1060" y="535" as="geometry" />
+        </mxCell>
+        <mxCell id="c-vnet" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/networking/Virtual_Networks.svg;" value="Virtual Network" vertex="1">
+          <mxGeometry height="64" width="64" x="380" y="805" as="geometry" />
+        </mxCell>
+        <mxCell id="c-fw" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/networking/Firewalls.svg;" value="Azure Firewall&lt;br&gt;egress 104.41.217.81" vertex="1">
+          <mxGeometry height="64" width="64" x="580" y="805" as="geometry" />
+        </mxCell>
+        <mxCell id="c-vpn" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/networking/Virtual_Network_Gateways.svg;" value="VPN Gateway&lt;br&gt;vpng-yuvi-we · Entra ID" vertex="1">
+          <mxGeometry height="64" width="64" x="790" y="805" as="geometry" />
+        </mxCell>
+        <mxCell id="c-admin" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/app_services/App_Services.svg;" value="ubi-admin-yuvi-720" vertex="1">
+          <mxGeometry height="64" width="64" x="1013" y="805" as="geometry" />
+        </mxCell>
+        <mxCell id="c-apim" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/integration/API_Management_Services.svg;" value="API Management&lt;br&gt;AI gateway" vertex="1">
+          <mxGeometry height="64" width="64" x="1303" y="262" as="geometry" />
+        </mxCell>
+        <mxCell id="c-aoai" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=9;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/ai_machine_learning/Azure_OpenAI.svg;" value="" vertex="1">
+          <mxGeometry height="64" width="64" x="1208" y="574" as="geometry" />
+        </mxCell>
+        <mxCell id="c-aoai2" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=9;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/ai_machine_learning/Azure_OpenAI.svg;" value="" vertex="1">
+          <mxGeometry height="64" width="64" x="1303" y="574" as="geometry" />
+        </mxCell>
+        <mxCell id="c-aoai3" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=9;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/ai_machine_learning/Azure_OpenAI.svg;" value="" vertex="1">
+          <mxGeometry height="64" width="64" x="1398" y="574" as="geometry" />
+        </mxCell>
+        <mxCell id="c-n-pool" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=9;fontColor=#12456E" value="Weighted or priority round-robin across instances, with a circuit breaker that pulls a TPM-throttled endpoint out of rotation on 429 and retries the next one.&lt;br&gt;&lt;br&gt;This is why the application only ever knows ONE endpoint — capacity, region spread and failover are gateway configuration, not application code." vertex="1">
+          <mxGeometry height="57" width="266" x="1202" y="650" as="geometry" />
+        </mxCell>
+        <mxCell id="c-speech" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/ai_machine_learning/Speech_Services.svg;" value="Speech Services" vertex="1">
+          <mxGeometry height="64" width="64" x="1303" y="800" as="geometry" />
+        </mxCell>
+        <mxCell id="c-cs" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#3C2A6B;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/ai_machine_learning/Content_Safety.svg;" value="AI Content Safety" vertex="1">
+          <mxGeometry height="64" width="64" x="1226" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="c-lang" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#3C2A6B;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/ai_machine_learning/Language_Services.svg;" value="AI Language" vertex="1">
+          <mxGeometry height="64" width="64" x="1380" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="c-cs-ring" parent="1" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6B46C1;dashed=1;dashPattern=6 4;strokeWidth=2;verticalAlign=top;align=center;spacingTop=-2;fontSize=10;fontStyle=1;fontColor=#6B46C1" value="safety + privacy layer" vertex="1">
+          <mxGeometry height="130" width="266" x="1202" y="368" as="geometry" />
+        </mxCell>
+        <mxCell id="c-kata" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/general/Globe.svg;" value="Kata / CET content platform" vertex="1">
+          <mxGeometry height="64" width="64" x="1690" y="215" as="geometry" />
+        </mxCell>
+        <mxCell id="c-lrs" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/general/Globe.svg;" value="Ministry of Education LRS" vertex="1">
+          <mxGeometry height="64" width="64" x="1690" y="455" as="geometry" />
+        </mxCell>
+        <mxCell id="c-goog" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/general/Globe.svg;" value="Google Identity" vertex="1">
+          <mxGeometry height="64" width="64" x="1690" y="690" as="geometry" />
+        </mxCell>
+        <mxCell id="c-e1" edge="1" parent="1" source="c-users" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4B5A69;strokeWidth=1.5;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0" target="c-browser">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c-e2" edge="1" parent="1" source="c-browser" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4B5A69;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=10;fontColor=#3E4C59;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;" target="c-prod" value="HTTPS · session cookie · SSE">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="240" y="762" />
+              <mxPoint x="240" y="304" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c-e3" edge="1" parent="1" source="c-gh" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4B5A69;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=10;fontColor=#3E4C59;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0.5;entryY=0" target="c-dev" value="build → registry → deploy">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="732" y="202" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c-e4" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4B5A69;strokeWidth=1.5;endArrow=block;endFill=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="652" y="478" />
+              <mxPoint x="910" y="478" />
+              <mxPoint x="910" y="368" />
+            </Array>
+            <mxPoint x="652" y="539" as="sourcePoint" />
+            <mxPoint x="912" y="368" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c-e7" edge="1" parent="1" source="c-prod" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0078D4;strokeWidth=2.5;endArrow=block;endFill=1;fontSize=10;fontColor=#12456E;labelBackgroundColor=#FFFFFF;exitX=0.4;exitY=0;entryX=0.5;entryY=0" target="c-apim" value="every LLM call">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="426" y="188" />
+              <mxPoint x="1345" y="188" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c-e8" edge="1" parent="1" source="c-apim" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6B46C1;strokeWidth=2;dashed=1;endArrow=block;endFill=1;exitX=0.25;exitY=1;entryX=0.5;entryY=0" target="c-cs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c-e8b" edge="1" parent="1" source="c-apim" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6B46C1;strokeWidth=2;dashed=1;endArrow=block;endFill=1;exitX=0.75;exitY=1;entryX=0.5;entryY=0" target="c-lang">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c-e8c" edge="1" parent="1" source="c-cs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6B46C1;strokeWidth=2;dashed=1;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0.25;entryY=0" target="c-pool">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c-e8d" edge="1" parent="1" source="c-lang" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6B46C1;strokeWidth=2;dashed=1;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0.75;entryY=0" target="c-pool">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c-e10" edge="1" parent="1" source="c-prod" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4B5A69;strokeWidth=1.5;endArrow=block;endFill=1;startArrow=block;startFill=1;fontSize=10;fontColor=#3E4C59;labelBackgroundColor=#FFFFFF;entryX=0.5;entryY=0" target="c-kata" value="catalogue · launcher · xAPI relay">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="670" y="336" />
+              <mxPoint x="670" y="260" />
+              <mxPoint x="445" y="260" />
+              <mxPoint x="445" y="145" />
+              <mxPoint x="1722" y="145" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c-e12" edge="1" parent="1" source="c-vnet" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4B5A69;strokeWidth=1.5;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5" target="c-fw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c-e13" edge="1" parent="1" source="c-fw" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4B5A69;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=10;fontColor=#3E4C59;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0;entryY=0.5" target="c-lrs" value="allow-listed egress IP">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="612" y="1092" />
+              <mxPoint x="1532" y="1092" />
+              <mxPoint x="1532" y="487" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c-e14" edge="1" parent="1" source="c-admin" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4B5A69;strokeWidth=1.5;endArrow=block;endFill=1;exitX=0;exitY=0.5;entryX=0.5;entryY=1" target="c-cosmos">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="915" y="837" />
+              <mxPoint x="915" y="730" />
+              <mxPoint x="412" y="730" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c-e15" edge="1" parent="1" source="c-goog" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4B5A69;strokeWidth=1.5;dashed=1;endArrow=block;endFill=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5" target="c-admin">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1532" y="722" />
+              <mxPoint x="1532" y="837" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c-e16" edge="1" parent="1" source="c-prod" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#8895A4;strokeWidth=1.5;dashed=1;endArrow=block;endFill=1;exitX=0.75;exitY=1;entryX=0.5;entryY=0" target="c-ai">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="448" y="478" />
+              <mxPoint x="1092" y="478" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rBYJQoFmDKrFHA-aiKGB-1" edge="1" parent="1" source="c-prod" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.813;entryY=0.547;entryDx=0;entryDy=0;entryPerimeter=0;" target="c-cosmos">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="540" y="336" />
+              <mxPoint x="540" y="440" />
+              <mxPoint x="412" y="440" />
+              <mxPoint x="412" y="570" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="2 · Target" id="az-target">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1980" pageHeight="1240" math="0" shadow="0">
+      <root>
+        <mxCell id="10" />
+        <mxCell id="11" parent="10" />
+        <mxCell id="t-title" parent="11" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=22;fontStyle=1;fontColor=#1A202C" value="Yuvi Spark — target Azure architecture" vertex="1">
+          <mxGeometry height="32" width="1200" x="40" y="18" as="geometry" />
+        </mxCell>
+        <mxCell id="t-sub" parent="11" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=12;fontColor=#4A5568" value="Purple dashed = not running today.  A tick marks what already exists and carries over unchanged.  The order of work is on the right." vertex="1">
+          <mxGeometry height="34" width="1200" x="40" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="t-azure" parent="11" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F2F8FE;strokeColor=#0078D4;dashed=1;dashPattern=8 4;verticalAlign=top;align=left;spacingLeft=14;spacingTop=8;fontSize=14;fontStyle=1;fontColor=#0078D4" value="Microsoft Azure" vertex="1">
+          <mxGeometry height="1130" width="1250" x="270" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="t-rg" parent="11" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7FA8CE;dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontSize=12;fontStyle=1;fontColor=#356090" value="Resource group   rg-yuvi-720" vertex="1">
+          <mxGeometry height="1050" width="920" x="300" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="t-edgeb" parent="11" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAF6FF;strokeColor=#9F86D6;dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontSize=11;fontStyle=1;fontColor=#6B46C1" value="Edge" vertex="1">
+          <mxGeometry height="150" width="860" x="330" y="205" as="geometry" />
+        </mxCell>
+        <mxCell id="t-cab" parent="11" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAF6FF;strokeColor=#9F86D6;dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontSize=11;fontStyle=1;fontColor=#6B46C1" value="Container Apps environment — VNet integrated" vertex="1">
+          <mxGeometry height="245" width="860" x="330" y="385" as="geometry" />
+        </mxCell>
+        <mxCell id="t-stateb" parent="11" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFCFE;strokeColor=#B9CBDA;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontSize=11;fontStyle=1;fontColor=#5A6C7D" value="State" vertex="1">
+          <mxGeometry height="295" width="860" x="330" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="t-platb" parent="11" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFCFE;strokeColor=#B9CBDA;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontSize=11;fontStyle=1;fontColor=#5A6C7D" value="Identity, secrets, observability" vertex="1">
+          <mxGeometry height="195" width="860" x="330" y="985" as="geometry" />
+        </mxCell>
+        <mxCell id="t-aib" parent="11" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFCFE;strokeColor=#B9CBDA;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontSize=11;fontStyle=1;fontColor=#5A6C7D" value="AI platform" vertex="1">
+          <mxGeometry height="560" width="270" x="1240" y="205" as="geometry" />
+        </mxCell>
+        <mxCell id="t-pool" parent="11" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#F7FBFF;strokeColor=#0078D4;strokeWidth=1.5;verticalAlign=top;align=center;spacingTop=4;fontSize=10;fontStyle=1;fontColor=#12456E" value="Backend pool — load balance + failover" vertex="1">
+          <mxGeometry height="150" width="246" x="1252" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="t-extb" parent="11" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#9AA5B1;dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontSize=12;fontStyle=1;fontColor=#616E7C" value="External systems" vertex="1">
+          <mxGeometry height="1130" width="230" x="1560" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="t-fd" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/networking/Front_Doors.svg;" value="Azure Front Door" vertex="1">
+          <mxGeometry height="64" width="64" x="400" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="t-waf" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/networking/Web_Application_Firewall_Policies_WAF.svg;" value="WAF policy" vertex="1">
+          <mxGeometry height="64" width="64" x="570" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="t-n-edge" parent="11" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=10;fontColor=#52606D" value="TLS termination, WAF rules, and edge caching for the static bundle and the 26 MB Unity payload — which the application currently serves itself on every cold load." vertex="1">
+          <mxGeometry height="80" width="470" x="700" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="t-api" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/other/Container_App_Environments.svg;" value="spark-api&lt;br&gt;KEDA · HTTP concurrency" vertex="1">
+          <mxGeometry height="64" width="64" x="400" y="435" as="geometry" />
+        </mxCell>
+        <mxCell id="t-wkr" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/other/Worker_Container_App.svg;" value="spark-workers&lt;br&gt;KEDA · queue depth, scale to zero" vertex="1">
+          <mxGeometry height="64" width="64" x="670" y="435" as="geometry" />
+        </mxCell>
+        <mxCell id="t-n-split" parent="11" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=10;fontColor=#52606D" value="Split so a thirty-second rendering job never shares a process with a child waiting on a streamed answer. Both replicas are genuinely stateless — which is only true once sessions and the event bus move to Redis." vertex="1">
+          <mxGeometry height="110" width="310" x="860" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="t-n-scale" parent="11" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=10;fontColor=#6B46C1" value="Replaces the single-container App Service. Horizontal scale becomes possible for the first time." vertex="1">
+          <mxGeometry height="46" width="490" x="345" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="t-redis" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/databases/Cache_Redis.svg;" value="Azure Cache for Redis&lt;br&gt;bus · presence · cooldowns · counters" vertex="1">
+          <mxGeometry height="64" width="64" x="400" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="t-sb" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/integration/Service_Bus.svg;" value="Service Bus&lt;br&gt;LRS · renders · digests" vertex="1">
+          <mxGeometry height="64" width="64" x="670" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="t-cosmos" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/databases/Azure_DocumentDB.svg;" value="✓ Azure DocumentDB&lt;br&gt;MongoDB API · unchanged" vertex="1">
+          <mxGeometry height="64" width="64" x="940" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="t-pe" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/networking/Private_Endpoint.svg;" value="Private endpoints" vertex="1">
+          <mxGeometry height="64" width="64" x="1110" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="t-n-fb" parent="11" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=10;fontColor=#52606D" value="The file fallback stops being a production path: a database failure fails the request and raises an alert, instead of writing to local disk where nobody sees it." vertex="1">
+          <mxGeometry height="40" width="820" x="345" y="812" as="geometry" />
+        </mxCell>
+        <mxCell id="t-n-redis" parent="11" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=10;fontColor=#6B46C1" value="&lt;b&gt;This is the box that unlocks the one above it.&lt;/b&gt; Everything that pins the app to a single worker today is a module-level dict: the SSE subscriber map in &lt;i&gt;realtime.py&lt;/i&gt;, learner presence and its offline timers, the trigger cooldowns that stop the coach nudging twice for the same mistake, and the per-teacher alert sequence counters. Redis replaces all four — pub/sub for the bus, keys with TTL for presence and cooldowns, INCR for the counters. &lt;i&gt;server.py&lt;/i&gt; prints a warning at boot when WEB_CONCURRENCY &amp;gt; 1; this is what makes that warning unnecessary." vertex="1"><mxGeometry height="86" width="820" x="345" y="856" as="geometry" /></mxCell>
+        <mxCell id="t-e19" edge="1" parent="11" source="t-wkr" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6B46C1;strokeWidth=1.5;dashed=1;endArrow=block;endFill=1;exitX=0;exitY=0.75;entryX=1;entryY=0.5" target="t-redis"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="600" y="483" /><mxPoint x="600" y="732" /></Array></mxGeometry></mxCell>
+        <mxCell id="t-kv" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/security/Key_Vaults.svg;" value="Key Vault" vertex="1">
+          <mxGeometry height="64" width="64" x="380" y="1025" as="geometry" />
+        </mxCell>
+        <mxCell id="t-mi" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/identity/Managed_Identities.svg;" value="Managed identity" vertex="1">
+          <mxGeometry height="64" width="64" x="550" y="1025" as="geometry" />
+        </mxCell>
+        <mxCell id="t-law" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/management_governance/Log_Analytics_Workspaces.svg;" value="Log Analytics" vertex="1">
+          <mxGeometry height="64" width="64" x="720" y="1025" as="geometry" />
+        </mxCell>
+        <mxCell id="t-alerts" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/management_governance/Alerts.svg;" value="Alerts" vertex="1">
+          <mxGeometry height="64" width="64" x="880" y="1025" as="geometry" />
+        </mxCell>
+        <mxCell id="t-acr" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/containers/Container_Registries.svg;" value="✓ Container Registry" vertex="1">
+          <mxGeometry height="64" width="64" x="1050" y="1025" as="geometry" />
+        </mxCell>
+        <mxCell id="t-n-plat" parent="11" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=10;fontColor=#52606D" value="No long-lived credential anywhere: the workload authenticates to Key Vault, the database, Service Bus and the registry with a managed identity, and the pipeline authenticates with federated credentials rather than a stored secret." vertex="1">
+          <mxGeometry height="46" width="820" x="345" y="1122" as="geometry" />
+        </mxCell>
+        <mxCell id="t-apim" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/integration/API_Management_Services.svg;" value="✓ API Management&lt;br&gt;AI gateway" vertex="1">
+          <mxGeometry height="64" width="64" x="1343" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="t-lang" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/ai_machine_learning/Language_Services.svg;" value="AI Language&lt;br&gt;PII detection + redaction" vertex="1">
+          <mxGeometry height="64" width="64" x="1414" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="t-e9b" edge="1" parent="11" source="t-apim" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6B46C1;strokeWidth=2;dashed=1;endArrow=block;endFill=1;exitX=0.75;exitY=1;entryX=0.5;entryY=0" target="t-lang">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t-e10b" edge="1" parent="11" source="t-lang" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6B46C1;strokeWidth=2;dashed=1;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0.75;entryY=0" target="t-pool">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t-cs" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/ai_machine_learning/Content_Safety.svg;" value="AI Content Safety&lt;br&gt;input · output · jailbreak" vertex="1">
+          <mxGeometry height="64" width="64" x="1266" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="t-aoai" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=9;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/ai_machine_learning/Azure_OpenAI.svg;" value="✓ gpt-5.4 + mini" vertex="1">
+          <mxGeometry height="64" width="64" x="1274" y="572" as="geometry" />
+        </mxCell>
+        <mxCell id="t-aoai2" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=9;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/ai_machine_learning/Azure_OpenAI.svg;" value="second region&lt;br&gt;failover" vertex="1">
+          <mxGeometry height="64" width="64" x="1400" y="572" as="geometry" />
+        </mxCell>
+        <mxCell id="t-entra" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/identity/Azure_Active_Directory.svg;" value="Microsoft Entra ID" vertex="1">
+          <mxGeometry height="64" width="64" x="1343" y="830" as="geometry" />
+        </mxCell>
+        <mxCell id="t-fw" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/networking/Firewalls.svg;" value="✓ Azure Firewall&lt;br&gt;LRS egress, unchanged" vertex="1">
+          <mxGeometry height="64" width="64" x="1343" y="1070" as="geometry" />
+        </mxCell>
+        <mxCell id="t-users" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/identity/Users.svg;" value="Learners · Teachers" vertex="1">
+          <mxGeometry height="64" width="64" x="106" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="t-gh" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/general/Builds.svg;" value="GitHub Actions" vertex="1">
+          <mxGeometry height="64" width="64" x="106" y="1025" as="geometry" />
+        </mxCell>
+        <mxCell id="t-n-gh" parent="11" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=10;fontColor=#6B46C1" value="Test gate first, then build, then deploy, then a health poll before promotion. Federated credentials replace the stored service-principal secret." vertex="1">
+          <mxGeometry height="110" width="200" x="40" y="1110" as="geometry" />
+        </mxCell>
+        <mxCell id="t-kata" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/general/Globe.svg;" value="Kata / CET" vertex="1">
+          <mxGeometry height="64" width="64" x="1610" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="t-lrs" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/general/Globe.svg;" value="Ministry LRS" vertex="1">
+          <mxGeometry height="64" width="64" x="1610" y="1070" as="geometry" />
+        </mxCell>
+        <mxCell id="t-order" parent="11" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#3E4C59;strokeWidth=2;align=left;verticalAlign=top;spacingLeft=14;spacingTop=12;fontSize=11;fontColor=#1F2933" value="&lt;b&gt;Order I would do it in&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;b&gt;1 · Test gate in the pipeline.&lt;/b&gt; An afternoon. The tests exist and pass; the pattern already exists in the admin service. The largest risk reduction per hour of work on this page.&lt;br&gt;&lt;br&gt;&lt;b&gt;2 · Managed Content Safety.&lt;/b&gt; The users are children. What runs today is a solid first-party base layer — deterministic redaction, an LLM disclosure classifier, an LLM memory guardian — not a substitute for input and output filtering with jailbreak shields.&lt;br&gt;&lt;br&gt;&lt;b&gt;3 · Key Vault, managed identity, federated pipeline credentials.&lt;/b&gt; Removes every long-lived secret.&lt;br&gt;&lt;br&gt;&lt;b&gt;4 · Redis.&lt;/b&gt; Until sessions, presence and the event bus leave process memory, the service physically cannot run a second replica. Everything about scale is blocked behind this one change.&lt;br&gt;&lt;br&gt;&lt;b&gt;5 · Service Bus and the worker split.&lt;/b&gt; Gets rendering and ministry reporting off the request path.&lt;br&gt;&lt;br&gt;&lt;b&gt;6 · Container Apps with KEDA.&lt;/b&gt; Only worth doing after 4 and 5 — autoscaling a service that cannot run two replicas buys nothing.&lt;br&gt;&lt;br&gt;&lt;b&gt;7 · Retry with backoff at the gateway&lt;/b&gt;, so a transient provider failure stops degrading silently into a canned sentence.&lt;br&gt;&lt;br&gt;&lt;b&gt;8 · Front Door.&lt;/b&gt; Real, but the least urgent: it is a performance and hardening win, not a correctness or safety one.&lt;br&gt;&lt;br&gt;&lt;b&gt;Deliberately absent:&lt;/b&gt; a vector database. The content is a structured catalogue with stable identifiers, so retrieval is an id lookup. Embeddings would add a moving part and lose precision." vertex="1">
+          <mxGeometry height="1130" width="120" x="1830" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="t-e1" edge="1" parent="11" source="t-users" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4B5A69;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=10;fontColor=#3E4C59;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5" target="t-fd" value="HTTPS · SSE">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t-e2" edge="1" parent="11" source="t-fd" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6B46C1;strokeWidth=1.5;dashed=1;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5" target="t-waf">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t-e3" edge="1" parent="11" source="t-fd" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6B46C1;strokeWidth=2;dashed=1;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0" target="t-api">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t-e4" edge="1" parent="11" source="t-api" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6B46C1;strokeWidth=1.5;dashed=1;endArrow=block;endFill=1;fontSize=10;fontColor=#3C2A6B;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0.5;entryY=0" target="t-sb" value="publish">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="640" y="467" />
+              <mxPoint x="702" y="467" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t-e5" edge="1" parent="11" source="t-wkr" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6B46C1;strokeWidth=1.5;dashed=1;endArrow=block;endFill=1;fontSize=10;fontColor=#3C2A6B;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0" target="t-sb" value="consume">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t-e6" edge="1" parent="11" source="t-api" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6B46C1;strokeWidth=1.5;dashed=1;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0" target="t-redis">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t-e7" edge="1" parent="11" source="t-api" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4B5A69;strokeWidth=1.5;endArrow=block;endFill=1;exitX=1;exitY=0.7;entryX=0.5;entryY=0" target="t-cosmos">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="972" y="480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t-e8" edge="1" parent="11" source="t-api" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0078D4;strokeWidth=2.5;endArrow=block;endFill=1;fontSize=10;fontColor=#12456E;labelBackgroundColor=#FFFFFF;exitX=0.4;exitY=0;entryX=0.5;entryY=0" target="t-apim" value="all model calls">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="426" y="182" />
+              <mxPoint x="1375" y="182" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t-e9" edge="1" parent="11" source="t-apim" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6B46C1;strokeWidth=2.5;dashed=1;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0" target="t-cs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t-e10" edge="1" parent="11" source="t-cs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0078D4;strokeWidth=2.5;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0.25;entryY=0" target="t-pool">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t-e11" edge="1" parent="11" source="t-api" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6B46C1;strokeWidth=1.5;dashed=1;endArrow=block;endFill=1;exitX=0.25;exitY=1;entryX=0.5;entryY=0" target="t-kv">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="416" y="890" />
+              <mxPoint x="412" y="890" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t-e12" edge="1" parent="11" source="t-mi" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6B46C1;strokeWidth=1.5;dashed=1;endArrow=block;endFill=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5" target="t-kv">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t-e13" edge="1" parent="11" source="t-gh" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6B46C1;strokeWidth=1.5;dashed=1;endArrow=block;endFill=1;fontSize=10;fontColor=#3C2A6B;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5" target="t-acr" value="OIDC, no stored secret">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="260" y="1057" />
+              <mxPoint x="260" y="1192" />
+              <mxPoint x="1032" y="1192" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t-e14" edge="1" parent="11" source="t-api" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4B5A69;strokeWidth=1.5;endArrow=block;endFill=1;startArrow=block;startFill=1;fontSize=10;fontColor=#3E4C59;labelBackgroundColor=#FFFFFF;exitX=0.7;exitY=0;entryX=0.5;entryY=0" target="t-kata" value="catalogue · relay">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="445" y="142" />
+              <mxPoint x="1642" y="142" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t-e15" edge="1" parent="11" source="t-wkr" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4B5A69;strokeWidth=1.5;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0;entryY=0.5" target="t-fw">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="702" y="1208" />
+              <mxPoint x="1290" y="1208" />
+              <mxPoint x="1290" y="1102" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t-e16" edge="1" parent="11" source="t-fw" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4B5A69;strokeWidth=1.5;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5" target="t-lrs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t-e17" edge="1" parent="11" source="t-api" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#8895A4;strokeWidth=1.5;dashed=1;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0.5;entryY=0" target="t-law">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="752" y="467" />
+              <mxPoint x="752" y="620" />
+              <mxPoint x="1200" y="620" />
+              <mxPoint x="1200" y="1005" />
+              <mxPoint x="752" y="1005" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t-e18" edge="1" parent="11" source="t-law" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#8895A4;strokeWidth=1.5;dashed=1;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5" target="t-alerts">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

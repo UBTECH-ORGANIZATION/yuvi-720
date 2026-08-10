@@ -3,6 +3,7 @@
    only through the backend — no `localStorage`. */
 
 import { apiDelete, apiGet, apiPost } from './api'
+import { subscribe as subscribeStream } from './realtime'
 
 /** Solved label positions, in renderer CANVAS units (x -7.1..7.1, y -4..4).
  *  Produced by the backend's visual_layout solver and shared by every
@@ -129,6 +130,11 @@ export interface CoachStreamHandlers {
   onVisual?: (visual: CoachVisual) => void
   /** LLM decided whether to offer the on-demand "video / image" buttons. */
   onCanVisualize?: (canVisualize: boolean) => void
+  /** Every parsed frame, verbatim. For streams whose payload is not the coach's
+   *  — the teacher assistant sends a tool trace and a thread title down the same
+   *  pipe, and re-implementing SSE parsing to read two extra fields would be
+   *  two watchdogs and two buffer loops to keep in sync instead of one. */
+  onEvent?: (payload: Record<string, unknown>) => void
   signal?: AbortSignal
 }
 
@@ -171,7 +177,7 @@ export function coachSurfaceForPath(pathname: string): CoachSurfaceContext {
   return { screen: 'unknown' }
 }
 
-async function streamAgent(
+export async function streamAgent(
   path: string,
   body: Record<string, unknown>,
   handlers: CoachStreamHandlers,
@@ -227,6 +233,7 @@ async function streamAgent(
             can_visualize?: boolean
             phase?: 'thinking' | 'speaking'
           }
+          handlers.onEvent?.(parsed as Record<string, unknown>)
           if (parsed.disclosure) handlers.onDisclosure?.(parsed.disclosure)
           if (parsed.text) {
             handlers.onPhase?.('speaking')
@@ -503,6 +510,9 @@ export interface Trigger {
   type:
     | 'idle' | 'misconception' | 'mistake' | 'slow_progress' | 'success'
     | 'rapid_guessing' | 'wheel_spinning' | 'completion' | 'screen_change'
+    // A teacher sent praise. The frame says only that one exists — the words
+    // are fetched from the store, so nothing on the wire can forge them.
+    | 'kudos'
     | '_heartbeat'
   /** 720 misconception response: a same-objective component in a different
    *  representation the learner can switch to (video instead of text, …). */
@@ -578,19 +588,20 @@ export function subscribeTriggers(
   onTrigger: (t: Trigger) => void,
   onOpen?: () => void
 ): () => void {
-  // Same-origin through the Vite proxy today, but be explicit: the SSE stream
-  // is session-scoped and must carry the auth cookie.
-  const source = new EventSource('/api/agent/triggers/subscribe', { withCredentials: true })
-  if (onOpen) source.onopen = () => onOpen()
-  source.onmessage = (e) => {
-    try {
-      const t = JSON.parse(e.data) as Trigger
-      if (t.type && t.type !== '_heartbeat') onTrigger(t)
-    } catch {
-      /* ignore malformed */
-    }
-  }
-  return () => source.close()
+  // Rides the shared multiplexer so the learner page spends one connection, not
+  // one per feature. Behaviour is unchanged: heartbeats and malformed frames are
+  // filtered inside `realtime.subscribe`.
+  const unsubscribe = subscribeStream(
+    'learner-triggers',
+    () => '/api/agent/triggers/subscribe',
+    (frame) => onTrigger(frame as unknown as Trigger)
+  )
+  // `onOpen` used to fire on the EventSource's own open event. With a shared
+  // connection a late subscriber would never see one, so it fires on the next
+  // tick instead — the callers use it to mark "the push channel is live", which
+  // is true either way.
+  if (onOpen) queueMicrotask(onOpen)
+  return unsubscribe
 }
 
 /* ── Post-lesson personalized reflection (F4) ─────────────────────────────── */
@@ -642,4 +653,26 @@ export function skipReflection(
 
 export function completeReflection(reflectionId: string): Promise<{ ok: boolean }> {
   return apiPost<{ ok: boolean }>(`/api/agent/reflection/${reflectionId}/complete`, {})
+}
+
+
+/* ── teacher praise (A11 #4) ───────────────────────────────────────────────
+ * A מילה טובה is a card in the chat, not a coach turn: it carries the
+ * teacher's own sentence, and it stays until the child acknowledges it. The
+ * client can read its own kudos and mark it read; it can never write one.
+ */
+export interface PendingKudos {
+  id: string
+  message: string
+  created_at: string | null
+  teacher_name: string | null
+}
+
+export function getPendingKudos() {
+  return apiGet<{ kudos: PendingKudos | null }>('/api/me/kudos/pending')
+}
+
+export function acknowledgeKudos(kudosId: string) {
+  return apiPost<{ acknowledged: boolean; id: string }>(
+    `/api/me/kudos/${encodeURIComponent(kudosId)}/ack`, {})
 }

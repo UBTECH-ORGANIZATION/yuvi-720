@@ -1,0 +1,320 @@
+/* Goals tab: three AI drafts the teacher edits, and approval → sparks.
+ *
+ * Two rules the UI is built around.
+ *
+ * **The AI drafts, the teacher decides.** Suggestions arrive as editable text in
+ * a form, never as a one-click "assign this". Nothing the model produced reaches
+ * a child's profile without a person having read and confirmed it — and each
+ * draft shows the observation it came from, so confirming is an informed act.
+ *
+ * **Never claim sparks that were not granted.** Approving a goal the learner
+ * already summarized pays nothing, because the ledger row exists; the fifth
+ * approval of a day pays nothing because of the cap. Both are reported as what
+ * they are. Pretending otherwise would be easy and would make the wallet lie.
+ */
+
+import { useCallback, useEffect, useState } from 'react'
+import {
+  EmptyState, Icon, Panel, SectionHeader, SkeletonCard, StatusPill,
+} from '../../../components/primitives'
+import { useI18n } from '../../../i18n/I18nProvider'
+import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
+import {
+  approveStudentGoal, assignStudentGoal, getStudentGoals, suggestStudentGoals,
+  type ApprovalResult, type GoalConversation, type GoalDraft, type StudentGoal,
+} from '../../../services/teacher'
+import { RawEvidence, withFallback } from '../shared/EvidenceDisclosure'
+import './teacher-goals.css'
+
+interface Props { learnerId: string }
+
+export function TeacherGoals({ learnerId }: Props) {
+  const { t, language } = useI18n()
+  const { subject } = useTeacherScope()
+
+  const [conversations, setConversations] = useState<GoalConversation[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [nonce, setNonce] = useState(0)
+  const [outcome, setOutcome] = useState<ApprovalResult | null>(null)
+
+  const reload = useCallback(() => setNonce((value) => value + 1), [])
+
+  useEffect(() => {
+    let active = true
+    setIsLoading(true)
+    getStudentGoals(learnerId)
+      .then((result) => { if (active) setConversations(result.conversations ?? []) })
+      .catch(() => { if (active) setConversations([]) })
+      .finally(() => { if (active) setIsLoading(false) })
+    return () => { active = false }
+  }, [learnerId, nonce])
+
+  const rows = conversations.flatMap((conversation) =>
+    (conversation.goals ?? [])
+      .filter((goal) => goal.title || goal.next_steps)
+      .map((goal) => ({ goal, conversation })))
+
+  const pending = rows.filter(({ goal }) => !goal.approved_by)
+  const approved = rows.filter(({ goal }) => goal.approved_by)
+
+  const approve = async (goal: StudentGoal, conversationId: string) => {
+    const result = await approveStudentGoal(learnerId, goal.id, conversationId).catch(() => null)
+    if (result) { setOutcome(result); reload() }
+  }
+
+  if (isLoading) return <div aria-busy="true" style={{ display: 'grid', gap: 'var(--sp-3)' }}><SkeletonCard rows={2} /><SkeletonCard rows={3} /></div>
+
+  return (
+    <div className="tch-goals">
+      <GoalComposer
+        learnerId={learnerId}
+        language={language}
+        subject={subject ?? undefined}
+        onAssigned={reload}
+      />
+
+      {outcome ? <ApprovalOutcome result={outcome} onDismiss={() => setOutcome(null)} /> : null}
+
+      <section>
+        <SectionHeader
+          title={t('tch.goals.pending')}
+          subtitle={t('tch.goals.pending.hint', { count: pending.length })}
+        />
+        {pending.length ? (
+          <ul className="tch-goals__list">
+            {pending.map(({ goal, conversation }) => (
+              <GoalRow
+                key={goal.id}
+                goal={goal}
+                onApprove={() => void approve(goal, conversation.id)}
+              />
+            ))}
+          </ul>
+        ) : (
+          <EmptyState title={t('tch.goals.pending.none')} />
+        )}
+      </section>
+
+      {approved.length ? (
+        <section>
+          <SectionHeader title={t('tch.goals.approved')} />
+          <ul className="tch-goals__list">
+            {approved.map(({ goal }) => <GoalRow key={goal.id} goal={goal} />)}
+          </ul>
+        </section>
+      ) : null}
+    </div>
+  )
+}
+
+function GoalRow({ goal, onApprove }: { goal: StudentGoal; onApprove?: () => void }) {
+  const { t } = useI18n()
+  return (
+    <li className="tch-goal">
+      <div className="tch-goal__head">
+        <strong dir="auto">{goal.title}</strong>
+        <div className="tch-goal__meta">
+          <StatusPill tone={goal.approved_by ? 'strong' : 'neutral'}>
+            {withFallback(
+              t(`tch.goals.stage.${goal.progress_stage}`),
+              `tch.goals.stage.${goal.progress_stage}`,
+              goal.progress_stage,
+            )}
+          </StatusPill>
+          {goal.reward_value ? (
+            <span className="tch-goal__sparks">
+              <Icon name="spark" size={13} aria-hidden="true" />
+              {goal.reward_value}
+            </span>
+          ) : null}
+        </div>
+      </div>
+      {goal.next_steps ? <p className="tch-goal__steps" dir="auto">{goal.next_steps}</p> : null}
+      {goal.deadline ? (
+        <span className="tch-goal__deadline">{t('tch.goals.deadline', { date: goal.deadline })}</span>
+      ) : null}
+      {onApprove ? (
+        <button type="button" className="sp-btn sp-btn--sm" onClick={onApprove}>
+          {t('tch.goals.approve')}
+        </button>
+      ) : (
+        <span className="tch-goal__approved">
+          {t('tch.goals.approvedAt', { date: (goal.approved_at ?? '').slice(0, 10) })}
+        </span>
+      )}
+    </li>
+  )
+}
+
+/** Says exactly what happened, including when that is "nothing". */
+function ApprovalOutcome({ result, onDismiss }: {
+  result: ApprovalResult
+  onDismiss: () => void
+}) {
+  const { t } = useI18n()
+  const key = result.already_approved ? 'tch.goals.outcome.already'
+    : result.already_earned ? 'tch.goals.outcome.alreadyEarned'
+    : result.capped ? 'tch.goals.outcome.capped'
+    : 'tch.goals.outcome.granted'
+  return (
+    <div className="tch-goals__outcome" role="status">
+      <p dir="auto">{t(key, { sparks: result.granted })}</p>
+      <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm" onClick={onDismiss}>
+        {t('tch.goals.outcome.dismiss')}
+      </button>
+    </div>
+  )
+}
+
+/** Exported for the class Goals page: same composer, student chosen outside.
+ *  `framed=false` drops the Panel so a host card doesn't nest cards. */
+export function GoalComposer({ learnerId, language, subject, onAssigned, framed = true }: {
+  learnerId: string
+  language: string
+  subject?: string
+  onAssigned: () => void
+  framed?: boolean
+}) {
+  const { t } = useI18n()
+  const [drafts, setDrafts] = useState<GoalDraft[] | null>(null)
+  const [isSuggesting, setIsSuggesting] = useState(false)
+  const [title, setTitle] = useState('')
+  const [steps, setSteps] = useState('')
+  const [deadline, setDeadline] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+
+  const suggest = async () => {
+    setIsSuggesting(true)
+    const result = await suggestStudentGoals(learnerId, language, subject).catch(() => null)
+    setDrafts(result?.goals ?? [])
+    setIsSuggesting(false)
+  }
+
+  const use = (draft: GoalDraft) => {
+    setTitle(draft.title)
+    setSteps(draft.next_steps)
+    setDeadline(draft.deadline)
+  }
+
+  const assign = async () => {
+    if (!title.trim()) return
+    setIsSaving(true)
+    await assignStudentGoal(
+      learnerId, { title: title.trim(), next_steps: steps.trim(), deadline }, language
+    ).catch(() => null)
+    setTitle(''); setSteps(''); setDeadline('')
+    setIsSaving(false)
+    onAssigned()
+  }
+
+  const Frame = framed ? Panel : 'div'
+  return (
+    <Frame className="tch-composer" data-tour="teacher.goalComposer">
+      <SectionHeader title={t('tch.goals.compose')} subtitle={t('tch.goals.compose.hint')} />
+
+      <button
+        type="button"
+        className="sp-btn sp-btn--sm sp-btn--ghost"
+        onClick={() => void suggest()}
+        disabled={isSuggesting}
+      >
+        <Icon name="wand" size={15} aria-hidden="true" />
+        {isSuggesting ? t('tch.goals.suggesting') : t('tch.goals.suggest')}
+      </button>
+
+      {drafts?.length ? (
+        <ul className="tch-drafts">
+          {drafts.map((draft, index) => (
+            <DraftCard key={`${draft.title}:${index}`} draft={draft} onUse={() => use(draft)} />
+          ))}
+        </ul>
+      ) : drafts ? (
+        <EmptyState title={t('tch.goals.noSuggestions')} body={t('tch.goals.noSuggestions.body')} />
+      ) : null}
+
+      <div className="tch-composer__form">
+        <label>
+          <span>{t('tch.goals.field.title')}</span>
+          <input className="sp-input" value={title} dir="auto"
+                 onChange={(event) => setTitle(event.target.value)} />
+        </label>
+        <label>
+          <span>{t('tch.goals.field.steps')}</span>
+          <textarea className="sp-input" rows={2} value={steps} dir="auto"
+                    onChange={(event) => setSteps(event.target.value)} />
+        </label>
+        <label>
+          <span>{t('tch.goals.field.deadline')}</span>
+          <input className="sp-input" type="date" value={deadline}
+                 onChange={(event) => setDeadline(event.target.value)} />
+        </label>
+        <button
+          type="button"
+          className="sp-btn sp-btn--sm"
+          disabled={!title.trim() || isSaving}
+          onClick={() => void assign()}
+        >
+          {t('tch.goals.assign')}
+        </button>
+      </div>
+    </Frame>
+  )
+}
+
+function DraftCard({ draft, onUse }: { draft: GoalDraft; onUse: () => void }) {
+  const { t } = useI18n()
+  const [open, setOpen] = useState(false)
+
+  // No evidence means no grounded suggestion. Saying so is the honest answer;
+  // three plausible invented goals would be exactly the failure this refuses.
+  if (draft.unavailable) {
+    return (
+      <li className="tch-draft tch-draft--empty">
+        <p dir="auto">{t('tch.goals.noSuggestions.body')}</p>
+      </li>
+    )
+  }
+
+  return (
+    <li className="tch-draft">
+      <div className="tch-draft__card">
+        <div className="tch-draft__head">
+          <strong dir="auto">{draft.title}</strong>
+          <StatusPill tone={draft.ai ? 'strong' : 'neutral'}>
+            {draft.ai ? t('tch.goals.draft.ai') : t('tch.goals.draft.derived')}
+          </StatusPill>
+        </div>
+        {draft.next_steps ? <p dir="auto">{draft.next_steps}</p> : null}
+        {draft.rationale ? (
+          <p className="tch-draft__why" dir="auto">{draft.rationale}</p>
+        ) : null}
+
+        <button
+          type="button"
+          className="tch-evidence__toggle"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <Icon name={open ? 'chevronUp' : 'chevronLeft'} size={13} aria-hidden="true" />
+          {t('tch.evidence.why')}
+        </button>
+        {open ? (
+          <>
+            <p className="tch-draft__signal" dir="auto">
+              {withFallback(
+                t(`tch.signal.${draft.because.signal}`),
+                `tch.signal.${draft.because.signal}`,
+                draft.because.signal,
+              )}
+            </p>
+            <RawEvidence raw={draft.because.raw} />
+          </>
+        ) : null}
+
+        <button type="button" className="sp-btn sp-btn--sm sp-btn--ghost" onClick={onUse}>
+          {t('tch.goals.draft.use')}
+        </button>
+      </div>
+    </li>
+  )
+}
