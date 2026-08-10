@@ -19,6 +19,13 @@ _configured = False
 
 logger = logging.getLogger(__name__)
 
+# httpx logs a line per outbound request at INFO. We fan out to Kata, the LRS
+# and APIM on nearly every page, so that buries our own logs — including the
+# ones that say a provider is failing. Set HTTPX_LOG_LEVEL=info to get it back.
+logging.getLogger("httpx").setLevel(
+    getattr(logging, os.getenv("HTTPX_LOG_LEVEL", "WARNING").upper(), logging.WARNING)
+)
+
 
 def configure_telemetry(app, service_name: str = "spark-backend") -> bool:
     """Attach Azure Monitor telemetry to a FastAPI app. Safe to call once.
