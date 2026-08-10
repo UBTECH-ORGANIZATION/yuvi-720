@@ -490,8 +490,8 @@ export function LessonPage() {
             )}
           </nav>
           <div className="learning-lesson-heading">
-            <span>{session?.unit.title || t('learning.lesson.eyebrow')}</span>
-            <h1>{session?.component.title || (lockedOut ? t('learning.lesson.locked') : t('learning.lesson.preparing'))}</h1>
+            <span dir="auto">{session?.unit.title || t('learning.lesson.eyebrow')}</span>
+            <h1 dir="auto">{session?.component.title || (lockedOut ? t('learning.lesson.locked') : t('learning.lesson.preparing'))}</h1>
           </div>
           <div className="learning-lesson-actions">
             {session?.component.estimated_minutes && (
