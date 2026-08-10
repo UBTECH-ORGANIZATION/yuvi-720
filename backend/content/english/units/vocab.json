@@ -1,0 +1,819 @@
+{
+  "id": "ENG.G7.FAMILY.VOCAB",
+  "title": "Vocabulary: Family, appearance and daily routine",
+  "titleTranslations": {
+    "Hebrew": "אוצר מילים: משפחה, מראה חיצוני ושגרה יומית",
+    "Arabic": "المفردات: العائلة والمظهر والروتين اليومي",
+    "English": "Vocabulary: Family, appearance and daily routine"
+  },
+  "subTopic": "MOE.ENG.G7.PEOPLE.FAMILY",
+  "learningObjective": "MOE.ENG.G7.PEOPLE.FAMILY.VOCAB",
+  "prerequisiteLearningObjective": [],
+  "targetSector": ["כלל המגזרים"],
+  "targetAudience": ["כיתה ז'", "כיתה ח'"],
+  "components": [
+    {
+      "id": "ENG.G7.FAMILY.VOCAB-01",
+      "learningUnitId": "ENG.G7.FAMILY.VOCAB",
+      "title": "Family words you can read and use",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 2,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 9,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.VOCAB-01B"],
+      "skills": ["אוצר מילים", "זיהוי משמעות מילה"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.VOCAB-01-01",
+          "title": "Before you start",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההבנייה באוצר מילים. המטרה: להכין את הלומד לשלוש קבוצות מילים — בני משפחה (mother, father, brother, sister, grandmother, uncle, twins), מראה חיצוני (tall, short, curly hair, straight hair, wears glasses, kind) ושגרה יומית (gets up, has breakfast, goes to school, does homework, paints, cooks). מה שהלומד אמור להבין: שכל מילה שייכת לקבוצה, וההשתייכות לקבוצה עוזרת לזכור אותה. אסטרטגיה: לקרוא את המשפט כולו ולא רק את המילה — ההקשר מגלה את המשמעות. תפיסה שגויה נפוצה: לומדים מנסים לתרגם כל מילה בנפרד במקום להסתמך על ההקשר. אין כאן שאלה ואין ניקוד.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Today you meet the words we use to talk about a family.",
+              "he": "היום נכיר את המילים שבהן מדברים על משפחה.",
+              "ar": "اليوم سنتعرّف على الكلمات التي نتحدّث بها عن العائلة."
+            },
+            "goal": {
+              "en": "Three groups of words: who the people are, how they look, and what they do every day.",
+              "he": "שלוש קבוצות מילים: מי האנשים, איך הם נראים, ומה הם עושים כל יום.",
+              "ar": "ثلاث مجموعات من الكلمات: من هم الأشخاص، وكيف يبدون، وماذا يفعلون كلّ يوم."
+            },
+            "strategy": {
+              "en": "Read the whole sentence, not just the new word. The sentence around it tells you what it means.",
+              "he": "קראו את המשפט כולו, לא רק את המילה החדשה. המשפט סביבה מגלה את המשמעות.",
+              "ar": "اقرأوا الجملة كاملة، لا الكلمة الجديدة فقط. الجملة المحيطة بها تكشف معناها."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.VOCAB-01-02",
+          "title": "Maya's family in words",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט ההבנייה המרכזי. הלומד קורא חמישה משפטים על משפחת מאיה ולוחץ על כל שורה כדי לשמוע אותה. יעד: לקשר בין מילה למשמעות בתוך הקשר — בני משפחה, תיאורי מראה ופעלים של שגרה. אוצר מילים בליבה: curly hair, straight hair, tall, wears glasses, kind, gets up, has breakfast, cooks. אסטרטגיה: לקרוא שורה, ללחוץ עליה לשמיעה, ואז לחפש בה רק את המילה שהשאלה שואלת עליה. תפיסות שגויות נפוצות: (1) בלבול בין תיאור מראה (tall, curly hair) לבין פעולה יומיומית (gets up, cooks) — שתי הקבוצות מופיעות באותו טקסט; (2) 'has got' נתפס כפעולה במקום כשייכות. אם הלומד טועה, כדאי להפנות אותו לשורה אחת בלבד ולא לכל הטקסט.",
+          "presentation": {
+            "kind": "reading",
+            "prompt": {
+              "en": "Read about Maya's family. Tap any line to hear it.",
+              "he": "קראו על המשפחה של מאיה. לחצו על שורה כדי לשמוע אותה.",
+              "ar": "اقرأوا عن عائلة مايا. اضغطوا على أيّ سطر لسماعه."
+            },
+            "lines": [
+              "This is Maya. She is thirteen and she has got curly brown hair.",
+              "Her big brother Adam is sixteen. He is tall and he wears glasses.",
+              "Her little sister Noa is six. She has got short straight hair and she paints every day.",
+              "Their grandmother is old and kind. She cooks soup every Friday.",
+              "Every morning Maya gets up at seven, has breakfast and goes to school."
+            ],
+            "language": "en-US",
+            "rate": 0.85,
+            "glossary": [
+              { "word": "curly hair", "he": "שיער מתולתל", "ar": "شعر مجعّد" },
+              { "word": "straight hair", "he": "שיער חלק", "ar": "شعر ناعم" },
+              { "word": "tall", "he": "גבוה", "ar": "طويل القامة" },
+              { "word": "wears glasses", "he": "מרכיב משקפיים", "ar": "يرتدي نظّارات" },
+              { "word": "kind", "he": "טוב לב", "ar": "طيّب القلب" },
+              { "word": "gets up", "he": "קם", "ar": "يستيقظ" },
+              { "word": "has breakfast", "he": "אוכל ארוחת בוקר", "ar": "يتناول الفطور" }
+            ]
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Who has got curly brown hair?",
+              "answers": ["Maya", "Adam", "Noa", "The grandmother"],
+              "correctAnswers": ["Maya"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. The first line describes her hair.",
+                  "he": "כן. השורה הראשונה מתארת את השיער שלה.",
+                  "ar": "نعم. السطر الأوّل يصف شعرها."
+                },
+                "incorrect": {
+                  "en": "Two people in this text have their hair described. Find the word \"curly\" first, then read the name at the start of that line.",
+                  "he": "בטקסט הזה מתוארים שני אנשים עם שיער. חפשו קודם את המילה \"curly\", ואז קראו את השם בתחילת אותה שורה.",
+                  "ar": "في هذا النصّ يُوصف شعر شخصين. ابحثوا أوّلاً عن كلمة \"curly\"، ثم اقرأوا الاسم في بداية ذلك السطر."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Which words describe how a person looks?",
+              "answers": [
+                "gets up, has breakfast",
+                "tall, curly hair",
+                "soup, Friday",
+                "brother, sister"
+              ],
+              "correctAnswers": ["tall, curly hair"],
+              "feedback": {
+                "correct": {
+                  "en": "Exactly. These words answer the question \"What does the person look like?\"",
+                  "he": "בדיוק. המילים האלה עונות על השאלה \"איך האדם נראה?\"",
+                  "ar": "بالضبط. هذه الكلمات تجيب عن سؤال \"كيف يبدو الشخص؟\""
+                },
+                "incorrect": {
+                  "en": "Careful — some of these words say what a person DOES, and some say WHO a person is. Ask yourself which pair you could see in a photo.",
+                  "he": "שימו לב — חלק מהמילים אומרות מה אדם עושה, וחלק אומרות מי הוא. שאלו את עצמכם איזה זוג אפשר לראות בתמונה.",
+                  "ar": "انتبهوا — بعض هذه الكلمات تقول ماذا يفعل الشخص، وبعضها تقول من هو. اسألوا أنفسكم أيّ زوج يمكن رؤيته في صورة."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "What does Maya do at seven o'clock every morning?",
+              "answers": ["She cooks soup", "She gets up", "She wears glasses", "She paints"],
+              "correctAnswers": ["She gets up"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. \"Gets up\" means leaving the bed in the morning.",
+                  "he": "נכון. \"Gets up\" זה לקום מהמיטה בבוקר.",
+                  "ar": "صحيح. \"Gets up\" تعني النهوض من السرير صباحاً."
+                },
+                "incorrect": {
+                  "en": "Only one line in the text has a time in it. Find the line with the word \"morning\" and read it again.",
+                  "he": "רק בשורה אחת בטקסט מופיעה שעה. מצאו את השורה עם המילה \"morning\" וקראו אותה שוב.",
+                  "ar": "سطر واحد فقط في النصّ يحتوي على وقت. ابحثوا عن السطر الذي فيه كلمة \"morning\" واقرأوه ثانيةً."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.VOCAB-01-03",
+          "title": "Now use the words",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מעבר מזיהוי להפקה: הלומד בוחר את המילה הנכונה למשפט. יעד: לוודא שהמילה לא רק מוכרת אלא גם שימושית. תפיסות שגויות נפוצות: (1) 'grandmother' מול 'aunt' — לומדים מבלבלים בין דורות במשפחה; (2) הצירוף 'does homework' מתורגם מילולית מעברית כ-'makes homework', ולכן 'makes' נראה נכון; (3) 'tall' מול 'short' מתהפכות אצל לומדים שמסתמכים על צליל. אסטרטגיה: לקרוא את המשפט עם כל אפשרות ולבדוק מה נשמע הגיוני. אין להסגיר את התשובה — אפשר לכוון לקבוצת המילים הרלוונטית.",
+          "presentation": {
+            "prompt": {
+              "en": "Choose the word that completes each sentence.",
+              "he": "בחרו את המילה שמשלימה כל משפט.",
+              "ar": "اختاروا الكلمة التي تُكمل كلّ جملة."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "fill-in",
+              "questionText": "My father's mother is my ___ .",
+              "answers": ["sister", "grandmother", "aunt", "cousin"],
+              "correctAnswers": ["grandmother"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. A parent's mother is one generation above your parents.",
+                  "he": "כן. אמא של הורה היא דור אחד מעל ההורים.",
+                  "ar": "نعم. أمّ أحد الوالدين هي جيل أعلى من الوالدين."
+                },
+                "incorrect": {
+                  "en": "Draw the family as three lines: you, your parents, and the line above them. Which line is the answer on?",
+                  "he": "ציירו את המשפחה בשלוש שורות: אתם, ההורים, והשורה שמעליהם. באיזו שורה נמצאת התשובה?",
+                  "ar": "ارسموا العائلة في ثلاثة صفوف: أنتم، والداكم، والصفّ الذي فوقهما. في أيّ صفّ تقع الإجابة؟"
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Adam is the tallest boy in his class. He is very ___ .",
+              "answers": ["short", "tall", "old", "young"],
+              "correctAnswers": ["tall"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct. \"Tall\" is about height, not about age.",
+                  "he": "נכון. \"Tall\" מתייחס לגובה, לא לגיל.",
+                  "ar": "صحيح. \"Tall\" تتعلّق بالطول، لا بالعمر."
+                },
+                "incorrect": {
+                  "en": "Two of these words are about age and two are about height. The sentence talks about height — read it again.",
+                  "he": "שתיים מהמילים עוסקות בגיל ושתיים בגובה. המשפט מדבר על גובה — קראו אותו שוב.",
+                  "ar": "كلمتان تتعلّقان بالعمر وكلمتان بالطول. الجملة تتحدّث عن الطول — اقرأوها ثانيةً."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "fill-in",
+              "questionText": "After school Noa ___ her homework and then she paints.",
+              "answers": ["makes", "does", "gets", "has"],
+              "correctAnswers": ["does"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. In English, homework goes with this verb — it is a fixed pair.",
+                  "he": "כן. באנגלית שיעורי בית מגיעים עם הפועל הזה — זהו צירוף קבוע.",
+                  "ar": "نعم. في الإنجليزية تأتي الواجبات مع هذا الفعل — إنّه اقتران ثابت."
+                },
+                "incorrect": {
+                  "en": "This is a fixed pair in English, and it is not the same verb you would use in Hebrew or Arabic. Look back at the reading screen — the pair appears there.",
+                  "he": "זהו צירוף קבוע באנגלית, והוא לא אותו פועל שהייתם בוחרים בעברית או בערבית. חזרו למסך הקריאה — הצירוף מופיע שם.",
+                  "ar": "هذا اقتران ثابت في الإنجليزية، وليس الفعل نفسه الذي تختارونه بالعربية أو العبرية. عودوا إلى شاشة القراءة — الاقتران موجود هناك."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.VOCAB-01-04",
+          "title": "What worked for you?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף רכיב ההבנייה. המטרה: שהלומד יזהה איזו דרך זכירה עבדה עבורו — הקשר, תרגום, שמיעה או חזרה. אין תשובה נכונה ואין ניקוד. אם נבחר 'עדיין מתבלבל בין מילים' — כדאי להציע את הגרסה הקולית של אותו רכיב, שבה המילים נשמעות בתוך תיאור רציף, ולא לחזור על אותו טקסט.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "What helped you remember the new words?",
+              "he": "מה עזר לכם לזכור את המילים החדשות?",
+              "ar": "ما الذي ساعدكم على تذكّر الكلمات الجديدة؟"
+            },
+            "choices": [
+              {
+                "id": "context",
+                "label": {
+                  "en": "Reading the whole sentence",
+                  "he": "קריאת המשפט כולו",
+                  "ar": "قراءة الجملة كاملة"
+                }
+              },
+              {
+                "id": "glossary",
+                "label": {
+                  "en": "Looking at the word list",
+                  "he": "הסתכלות ברשימת המילים",
+                  "ar": "النظر إلى قائمة الكلمات"
+                }
+              },
+              {
+                "id": "hearing",
+                "label": {
+                  "en": "Hearing the line out loud",
+                  "he": "שמיעת השורה בקול",
+                  "ar": "سماع السطر بصوت عالٍ"
+                }
+              },
+              {
+                "id": "mixed-up",
+                "label": {
+                  "en": "I still mix some words up",
+                  "he": "אני עדיין מתבלבל בין כמה מילים",
+                  "ar": "ما زلت أخلط بين بعض الكلمات"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.VOCAB-01B",
+      "learningUnitId": "ENG.G7.FAMILY.VOCAB",
+      "title": "Family words you can hear",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": false,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 1,
+      "mediaFormat": "audio",
+      "estimatedTimeInMinutes": 7,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": [],
+      "skills": ["אוצר מילים", "זיהוי משמעות מילה"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.VOCAB-01B-01",
+          "title": "Listen to the same words",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של הייצוג החלופי. אותו יעד למידה ואותו אוצר מילים כמו הרכיב הטקסטואלי, אבל דרך האוזן: הלומד שומע את המילים בתוך תיאור רציף במקום לקרוא אותן ברשימה. מיועד ללומד שמתקשה לפענח כתיב אנגלי או שזוכר טוב יותר דרך צליל. אין להציג את הרכיב הזה כ'קל יותר' — הוא פשוט אחר.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "This time you will hear the family words instead of reading them.",
+              "he": "הפעם תשמעו את מילות המשפחה במקום לקרוא אותן.",
+              "ar": "هذه المرّة ستسمعون كلمات العائلة بدلاً من قراءتها."
+            },
+            "goal": {
+              "en": "Catch the words that describe people and the words that describe what they do.",
+              "he": "תפסו את המילים שמתארות אנשים ואת המילים שמתארות מה הם עושים.",
+              "ar": "التقطوا الكلمات التي تصف الأشخاص والكلمات التي تصف ما يفعلونه."
+            },
+            "strategy": {
+              "en": "Play it once, then open the transcript and play it again while you read.",
+              "he": "השמיעו פעם אחת, אחר כך פתחו את התמליל והשמיעו שוב תוך כדי קריאה.",
+              "ar": "شغّلوه مرّة، ثم افتحوا النصّ المكتوب وشغّلوه ثانيةً أثناء القراءة."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.VOCAB-01B-02",
+          "title": "Maya introduces her family",
+          "contentType": "הבנייה",
+          "mediaFormat": "audio",
+          "informationToBot": "פריט ההאזנה של הייצוג החלופי. אותו אוצר מילים בדיוק כמו ברכיב הטקסטואלי — tall, wears glasses, short hair, kind, gets up, has breakfast — אבל מושמע בקול איטי וברור, עם תמליל זמין. יעד: לזהות מילת מראה ומילת שגרה מתוך דיבור. תפיסות שגויות נפוצות: (1) 'small' ו-'short' נשמעות ללומדים כאותה מילה ולכן התשובה נבחרת לפי הצליל הראשון; (2) לומדים מחפשים את המילה המדויקת מהשאלה בתוך ההקלטה, ולא שמים לב שהשאלה מנוסחת אחרת. אסטרטגיה: להשמיע פעם אחת ברצף, ואז לפתוח את התמליל. פתיחת התמליל אינה רמייה ואינה מורידה מהתרגול.",
+          "presentation": {
+            "kind": "listening",
+            "prompt": {
+              "en": "Listen to Maya. You can slow it down and open the transcript.",
+              "he": "האזינו למאיה. אפשר להאט ואפשר לפתוח את התמליל.",
+              "ar": "استمعوا إلى مايا. يمكنكم إبطاء السرعة وفتح النصّ المكتوب."
+            },
+            "script": "Hello, I am Maya. Let me show you my family. My big brother Adam is tall and he wears glasses. My little sister Noa is small and she has got short hair. She paints every day. My grandmother is old, and she is very kind. Every morning I get up at seven, I have breakfast, and then I go to school with Adam.",
+            "language": "en-US",
+            "rate": 0.75,
+            "transcriptAvailable": true,
+            "support": {
+              "he": "אפשר לפתוח את התמליל ולקרוא תוך כדי האזנה. זו דרך למידה, לא קיצור דרך.",
+              "ar": "يمكنكم فتح النصّ المكتوب والقراءة أثناء الاستماع. هذه طريقة تعلّم، وليست اختصاراً."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "How does Maya describe Adam?",
+              "answers": [
+                "Tall, with glasses",
+                "Small, with short hair",
+                "Old and kind",
+                "Young and curly"
+              ],
+              "correctAnswers": ["Tall, with glasses"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. Two details in one sentence: his height and his glasses.",
+                  "he": "כן. שני פרטים במשפט אחד: הגובה שלו והמשקפיים.",
+                  "ar": "نعم. تفصيلان في جملة واحدة: طوله ونظّاراته."
+                },
+                "incorrect": {
+                  "en": "Three people are described one after the other. Adam is the big brother — listen for the sentence that names him.",
+                  "he": "שלושה אנשים מתוארים אחד אחרי השני. אדם הוא האח הגדול — האזינו למשפט שמזכיר את שמו.",
+                  "ar": "ثلاثة أشخاص يوصفون واحداً تلو الآخر. آدم هو الأخ الأكبر — استمعوا إلى الجملة التي تذكر اسمه."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "What does Maya do right after she gets up?",
+              "answers": ["She paints", "She has breakfast", "She cooks soup", "She plays football"],
+              "correctAnswers": ["She has breakfast"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. She lists her morning in order: get up, breakfast, school.",
+                  "he": "נכון. היא מונה את הבוקר שלה לפי הסדר: קימה, ארוחת בוקר, בית ספר.",
+                  "ar": "صحيح. تسرد صباحها بالترتيب: الاستيقاظ، الفطور، المدرسة."
+                },
+                "incorrect": {
+                  "en": "The last sentence lists three actions in order. Listen to the end again and follow the order.",
+                  "he": "המשפט האחרון מונה שלוש פעולות לפי סדר. האזינו שוב לסוף ועקבו אחרי הסדר.",
+                  "ar": "الجملة الأخيرة تسرد ثلاثة أفعال بالترتيب. استمعوا إلى النهاية ثانيةً وتابعوا الترتيب."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "Which word does Maya use for her grandmother?",
+              "answers": ["Tall", "Small", "Kind", "Young"],
+              "correctAnswers": ["Kind"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. \"Kind\" is not about the body — it is about how a person treats other people.",
+                  "he": "כן. \"Kind\" לא מתאר את הגוף אלא את היחס של אדם לאחרים.",
+                  "ar": "نعم. \"Kind\" لا تصف الجسد بل طريقة تعامل الشخص مع الآخرين."
+                },
+                "incorrect": {
+                  "en": "Three of these words describe a body. Only one describes a character. Listen to the sentence about the grandmother again.",
+                  "he": "שלוש מהמילים מתארות גוף. רק אחת מתארת אופי. האזינו שוב למשפט על הסבתא.",
+                  "ar": "ثلاث من هذه الكلمات تصف الجسد. واحدة فقط تصف الطباع. استمعوا ثانيةً إلى الجملة عن الجدّة."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.VOCAB-01B-03",
+          "title": "Reading or listening?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הייצוג הקולי. המטרה: שהלומד ישווה בין שני הייצוגים ויבין מה מתאים לו — מידע שימושי גם לו וגם לניתוב הבא. אין תשובה נכונה ואין ניקוד. אם נבחר 'שניהם ביחד' — זו אסטרטגיה מצוינת וכדאי לחזק אותה, לא לתקן.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "Which way was easier for you this time?",
+              "he": "איזו דרך הייתה נוחה לכם יותר הפעם?",
+              "ar": "أيّ طريقة كانت أسهل عليكم هذه المرّة؟"
+            },
+            "choices": [
+              {
+                "id": "hearing",
+                "label": {
+                  "en": "Hearing the words",
+                  "he": "לשמוע את המילים",
+                  "ar": "سماع الكلمات"
+                }
+              },
+              {
+                "id": "reading",
+                "label": {
+                  "en": "Reading the words",
+                  "he": "לקרוא את המילים",
+                  "ar": "قراءة الكلمات"
+                }
+              },
+              {
+                "id": "both",
+                "label": {
+                  "en": "Both together, with the transcript open",
+                  "he": "שניהם יחד, עם התמליל פתוח",
+                  "ar": "كلتاهما معاً، مع فتح النصّ المكتوب"
+                }
+              },
+              {
+                "id": "unsure",
+                "label": {
+                  "en": "I am not sure yet",
+                  "he": "אני עוד לא בטוח",
+                  "ar": "لست متأكّداً بعد"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.VOCAB-02",
+      "learningUnitId": "ENG.G7.FAMILY.VOCAB",
+      "title": "Practice: use the family words yourself",
+      "componentPurpose": "תרגול",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 2,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 4,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 11,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.VOCAB-01B"],
+      "skills": ["אוצר מילים", "הפקה בכתב"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.VOCAB-02-01",
+          "title": "From knowing to using",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב התרגול. המעבר כאן הוא מזיהוי להפקה: עד עכשיו הלומד זיהה מילים בתוך טקסט נתון, וכעת עליו לבחור ולכתוב אותן בעצמו. אסטרטגיה מומלצת: לחשוב על משפחה אמיתית או מדומיינת ולתאר אותה במילים שכבר נלמדו, במקום לחפש מילים חדשות במילון. תפיסה שגויה נפוצה: לומדים מנסים לכתוב משפט מורכב ונתקעים — כדאי לעודד משפטים קצרים ונכונים.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Now it is your turn to use the words.",
+              "he": "עכשיו תורכם להשתמש במילים.",
+              "ar": "الآن جاء دوركم لاستخدام الكلمات."
+            },
+            "goal": {
+              "en": "First choose the right word, then write about a family of your own.",
+              "he": "קודם בחרו את המילה הנכונה, ואחר כך כתבו על משפחה משלכם.",
+              "ar": "أوّلاً اختاروا الكلمة الصحيحة، ثم اكتبوا عن عائلة من عندكم."
+            },
+            "strategy": {
+              "en": "Short sentences that are correct are better than long sentences that get stuck.",
+              "he": "משפטים קצרים ונכונים עדיפים על משפטים ארוכים שנתקעים.",
+              "ar": "الجمل القصيرة الصحيحة أفضل من الجمل الطويلة التي تتعثّر."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.VOCAB-02-02",
+          "title": "Choose the right word",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "תרגול בחירת מילה ללא טקסט תומך לפניו — זו הקפיצה מהרכיב הקודם, שבו התשובה תמיד הופיעה בטקסט. יעד: אחזור עצמאי של אוצר המילים מהזיכרון. תפיסות שגויות נפוצות: (1) uncle מול cousin — לומדים מבלבלים בין דוד לבן דוד; (2) twins נתפס כ'אחים' סתם ולא כתאומים; (3) בקבוצת השגרה, לומדים בוחרים תיאור מראה כי שתי הקבוצות נלמדו יחד. אסטרטגיה: לקרוא את המשפט בקול עם כל אפשרות. אם הלומד טועה פעמיים, המערכת מנתבת לייצוג הקולי — ייצוג אחר, לא חזרה על אותו דבר.",
+          "presentation": {
+            "prompt": {
+              "en": "No text to look at this time — choose from what you remember.",
+              "he": "הפעם אין טקסט להסתכל בו — בחרו ממה שאתם זוכרים.",
+              "ar": "لا يوجد نصّ للنظر إليه هذه المرّة — اختاروا ممّا تتذكّرون."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "fill-in",
+              "questionText": "My mother's brother is my ___ .",
+              "answers": ["uncle", "cousin", "grandfather", "nephew"],
+              "correctAnswers": ["uncle"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes — like Uncle Sami, who drives from Haifa.",
+                  "he": "כן — כמו הדוד סמי, שנוסע מחיפה.",
+                  "ar": "نعم — مثل العمّ سامي، الذي يقود من حيفا."
+                },
+                "incorrect": {
+                  "en": "Two of these words are for the same generation as your parents, and two are not. Start by deciding which generation the answer is in.",
+                  "he": "שתיים מהמילים שייכות לדור של ההורים ושתיים לא. התחילו בלהחליט לאיזה דור התשובה שייכת.",
+                  "ar": "كلمتان من هذه الكلمات تنتميان إلى جيل الوالدين وكلمتان لا. ابدأوا بتحديد الجيل الذي تنتمي إليه الإجابة."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Sara's brothers were born on the same day. They are ___ .",
+              "answers": ["cousins", "twins", "parents", "neighbours"],
+              "correctAnswers": ["twins"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct. That is why they are both eleven.",
+                  "he": "נכון. בגלל זה שניהם בני אחת עשרה.",
+                  "ar": "صحيح. لهذا كلاهما في الحادية عشرة."
+                },
+                "incorrect": {
+                  "en": "The key detail is \"the same day\". Which word can only be true for two brothers born together?",
+                  "he": "הפרט המכריע הוא \"the same day\". איזו מילה יכולה להיות נכונה רק לשני אחים שנולדו יחד?",
+                  "ar": "التفصيل الحاسم هو \"the same day\". أيّ كلمة يمكن أن تصحّ فقط لأخوين وُلدا معاً؟"
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "Which one is part of a daily routine?",
+              "answers": ["curly hair", "brown eyes", "goes to bed", "grandmother"],
+              "correctAnswers": ["goes to bed"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. A routine is something a person does again and again.",
+                  "he": "כן. שגרה היא משהו שאדם עושה שוב ושוב.",
+                  "ar": "نعم. الروتين هو شيء يفعله الشخص مراراً وتكراراً."
+                },
+                "incorrect": {
+                  "en": "Ask yourself: can a person DO this? Two options describe a look, and one names a person.",
+                  "he": "שאלו את עצמכם: האם אפשר לעשות את זה? שתי אפשרויות מתארות מראה, ואחת מציינת אדם.",
+                  "ar": "اسألوا أنفسكم: هل يمكن للشخص أن يفعل هذا؟ خياران يصفان مظهراً، وواحد يسمّي شخصاً."
+                }
+              }
+            },
+            {
+              "questionId": "q4",
+              "questionType": "single-choice",
+              "questionText": "Which word means \"to make a picture with colours\"?",
+              "answers": ["cook", "paint", "drive", "read"],
+              "correctAnswers": ["paint"],
+              "feedback": {
+                "correct": {
+                  "en": "Right — that is what Noa does every day.",
+                  "he": "נכון — זה מה שנועה עושה כל יום.",
+                  "ar": "صحيح — هذا ما تفعله نوعا كلّ يوم."
+                },
+                "incorrect": {
+                  "en": "All four are actions, but only one uses colours. Think about what Noa does after school.",
+                  "he": "כל הארבע הן פעולות, אבל רק אחת משתמשת בצבעים. חשבו מה נועה עושה אחרי בית הספר.",
+                  "ar": "الأربع كلّها أفعال، لكن واحدة فقط تستخدم الألوان. فكّروا فيما تفعله نوعا بعد المدرسة."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.VOCAB-02-03",
+          "title": "Write about a family",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "פריט הפקה פתוח — החלק ה'הפקתי' של יעד הלמידה. הלומד כותב שלושה משפטים על משפחה: אמיתית או מדומיינת (חשוב לאפשר את שתי האפשרויות מטעמי פרטיות ורגישות). יעד: להשתמש בפועל לפחות במילה אחת מכל קבוצה — בן משפחה, מראה, שגרה. אין כאן ניקוד אוטומטי; הטקסט נשמר ומועבר למורה. תפיסות שגויות נפוצות: (1) הלומד כותב רשימת מילים במקום משפטים; (2) הלומד מתרגם משפט ארוך מעברית ומאבד את המבנה. אסטרטגיה: משפט אחד לכל קבוצת מילים. אם הלומד מבקש עזרה, אפשר להציע מבנה משפט לדוגמה — אבל לא לכתוב עבורו את המשפט.",
+          "presentation": {
+            "kind": "writing",
+            "prompt": {
+              "en": "Write three sentences about a family. It can be your family or a family you invent.",
+              "he": "כתבו שלושה משפטים על משפחה. אפשר המשפחה שלכם ואפשר משפחה שתמציאו.",
+              "ar": "اكتبوا ثلاث جمل عن عائلة. يمكن أن تكون عائلتكم أو عائلة من ابتكاركم."
+            },
+            "placeholder": {
+              "en": "I have got a sister. She is tall. She reads every evening.",
+              "he": "I have got a sister. She is tall. She reads every evening.",
+              "ar": "I have got a sister. She is tall. She reads every evening."
+            },
+            "checklist": [
+              {
+                "en": "One sentence says who the person is (sister, uncle, grandmother ...)",
+                "he": "משפט אחד אומר מי האדם (sister, uncle, grandmother ...)",
+                "ar": "جملة واحدة تقول من هو الشخص (sister, uncle, grandmother ...)"
+              },
+              {
+                "en": "One sentence says how the person looks (tall, short, curly hair ...)",
+                "he": "משפט אחד אומר איך האדם נראה (tall, short, curly hair ...)",
+                "ar": "جملة واحدة تقول كيف يبدو الشخص (tall, short, curly hair ...)"
+              },
+              {
+                "en": "One sentence says what the person does every day (gets up, cooks, paints ...)",
+                "he": "משפט אחד אומר מה האדם עושה כל יום (gets up, cooks, paints ...)",
+                "ar": "جملة واحدة تقول ماذا يفعل الشخص كلّ يوم (gets up, cooks, paints ...)"
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.VOCAB-03",
+      "learningUnitId": "ENG.G7.FAMILY.VOCAB",
+      "title": "Check: family words in a new family",
+      "componentPurpose": "הערכה",
+      "isAssessment": true,
+      "isRequired": true,
+      "order": 3,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 3,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 8,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.VOCAB-01B"],
+      "skills": ["אוצר מילים", "זיהוי משמעות מילה"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.VOCAB-03-01",
+          "title": "A short check",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההערכה ליעד אוצר המילים. תפקידו להוריד חרדה: להסביר שזו בדיקה קצרה, שאפשר לחזור אחורה, ושהיא לא מבחן ציונים. במהלך רכיב ההערכה אסור לחשוף את התשובה ואסור לרמוז עליה — מותר רק להזכיר אסטרטגיה כללית שכבר נלמדה, כמו 'לקרוא את המשפט עם כל אפשרות'.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "A short check on the family words you learned.",
+              "he": "בדיקה קצרה על מילות המשפחה שלמדתם.",
+              "ar": "فحص قصير لكلمات العائلة التي تعلّمتموها."
+            },
+            "goal": {
+              "en": "Four sentences about Sara's family. Choose the word that fits.",
+              "he": "ארבעה משפטים על המשפחה של שרה. בחרו את המילה שמתאימה.",
+              "ar": "أربع جمل عن عائلة سارة. اختاروا الكلمة المناسبة."
+            },
+            "strategy": {
+              "en": "Read each sentence to yourself with the word inside it before you choose.",
+              "he": "קראו לעצמכם כל משפט עם המילה בתוכו לפני שאתם בוחרים.",
+              "ar": "اقرأوا كلّ جملة لأنفسكم مع الكلمة داخلها قبل الاختيار."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.VOCAB-03-02",
+          "title": "Sara's family",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט ההערכה של יעד אוצר המילים. הצלחה כאן מבססת כשירות ביעד. ההקשר חדש בכוונה — משפחת שרה ולא משפחת מאיה — כדי שההצלחה תעיד על שליטה במילים ולא על זיכרון של טקסט אחד. הפריט בודק את שלוש קבוצות המילים: בני משפחה (sister, uncle), מראה (short, curly) ושגרה (does homework). במהלך ההערכה אין לתת את התשובה ואין לרמוז עליה, גם אם הלומד מבקש; מותר להציע רק אסטרטגיה כללית או לעודד לנסות שוב. הלומד רשאי לחזור אחורה בין המסכים.",
+          "presentation": {
+            "prompt": {
+              "en": "Choose the word that completes each sentence about Sara's family.",
+              "he": "בחרו את המילה שמשלימה כל משפט על המשפחה של שרה.",
+              "ar": "اختاروا الكلمة التي تُكمل كلّ جملة عن عائلة سارة."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "fill-in",
+              "questionText": "Lily is nineteen and she is Sara's older ___ .",
+              "answers": ["brother", "sister", "aunt", "cousin"],
+              "correctAnswers": ["sister"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. Lily is a girl and she is in the same generation as Sara.",
+                  "he": "כן. לילי היא בת והיא באותו דור כמו שרה.",
+                  "ar": "نعم. ليلي فتاة وهي في الجيل نفسه مثل سارة."
+                },
+                "incorrect": {
+                  "en": "Two things decide this word: is Lily a girl or a boy, and is she in Sara's generation or above it?",
+                  "he": "שני דברים קובעים את המילה: האם לילי בת או בן, והאם היא בדור של שרה או מעליו?",
+                  "ar": "أمران يحدّدان الكلمة: هل ليلي فتاة أم فتى، وهل هي في جيل سارة أم فوقه؟"
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Which pair of words describes appearance?",
+              "answers": [
+                "cooks and paints",
+                "short and curly",
+                "Friday and Sunday",
+                "school and hospital"
+              ],
+              "correctAnswers": ["short and curly"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct. Both words answer \"What does the person look like?\"",
+                  "he": "נכון. שתי המילים עונות על \"איך האדם נראה?\"",
+                  "ar": "صحيح. كلتا الكلمتين تجيبان عن \"كيف يبدو الشخص؟\""
+                },
+                "incorrect": {
+                  "en": "One pair is actions, one is days, one is places. Find the pair you could see in a photo of a person.",
+                  "he": "זוג אחד הוא פעולות, אחד ימים, ואחד מקומות. מצאו את הזוג שאפשר לראות בתמונה של אדם.",
+                  "ar": "زوج واحد أفعال، وواحد أيّام، وواحد أماكن. ابحثوا عن الزوج الذي يمكن رؤيته في صورة شخص."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "fill-in",
+              "questionText": "Every evening Sara ___ her homework and then she reads.",
+              "answers": ["makes", "does", "takes", "gets"],
+              "correctAnswers": ["does"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. This verb and \"homework\" always travel together in English.",
+                  "he": "כן. הפועל הזה ו-\"homework\" תמיד הולכים יחד באנגלית.",
+                  "ar": "نعم. هذا الفعل و\"homework\" يسيران معاً دائماً في الإنجليزية."
+                },
+                "incorrect": {
+                  "en": "Do not translate this one word by word from Hebrew or Arabic — English uses a fixed pair here. Try saying each option out loud.",
+                  "he": "אל תתרגמו את זה מילה במילה מעברית או מערבית — באנגלית יש כאן צירוף קבוע. נסו לומר כל אפשרות בקול.",
+                  "ar": "لا تترجموا هذا كلمة بكلمة من العربية أو العبرية — الإنجليزية تستخدم اقتراناً ثابتاً هنا. جرّبوا قول كلّ خيار بصوت عالٍ."
+                }
+              }
+            },
+            {
+              "questionId": "q4",
+              "questionType": "single-choice",
+              "questionText": "Uncle Sami is the brother of Sara's ___ .",
+              "answers": [
+                "mother or father",
+                "sister or brother",
+                "son or daughter",
+                "grandmother or grandfather"
+              ],
+              "correctAnswers": ["mother or father"],
+              "feedback": {
+                "correct": {
+                  "en": "Exactly. That is what makes a man an uncle.",
+                  "he": "בדיוק. זה מה שהופך גבר לדוד.",
+                  "ar": "بالضبط. هذا ما يجعل الرجل عمّاً أو خالاً."
+                },
+                "incorrect": {
+                  "en": "Go back to the family lines you drew earlier: an uncle is on the same line as your parents. Whose brother must he be?",
+                  "he": "חזרו לשורות המשפחה שציירתם קודם: דוד נמצא באותה שורה כמו ההורים. אחיו של מי הוא חייב להיות?",
+                  "ar": "عودوا إلى صفوف العائلة التي رسمتموها سابقاً: العمّ في الصفّ نفسه مع الوالدين. أخو من يجب أن يكون؟"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.VOCAB-03-03",
+          "title": "You finished this goal",
+          "contentType": "סיכום",
+          "mediaFormat": "text",
+          "informationToBot": "מסך סיום של רכיב ההערכה. מסכם במילים בלבד מה הלומד עשה ומה הצעד הבא, ללא ציון מספרי וללא השוואה ללומדים אחרים. אם ההערכה לא עברה, המסך אומר במפורש שזה לא סוף הדרך ומפנה לייצוג הקולי של אותו יעד — ייצוג אחר, לא חזרה על אותו חומר.",
+          "presentation": {
+            "kind": "summary",
+            "onSuccess": {
+              "en": "You used the family words in a family you had never met before. That is what knowing a word really means.",
+              "he": "השתמשתם במילות המשפחה על משפחה שלא הכרתם קודם. זה מה שאומר באמת להכיר מילה.",
+              "ar": "استخدمتم كلمات العائلة مع عائلة لم تعرفوها من قبل. هذا هو المعنى الحقيقي لمعرفة الكلمة."
+            },
+            "onRetry": {
+              "en": "Some words are not settled yet, and that is normal — words need to be met more than once. Next you will hear them inside a story instead of reading them.",
+              "he": "חלק מהמילים עוד לא התיישבו, וזה נורמלי — מילים צריכות להיפגש יותר מפעם אחת. בפעם הבאה תשמעו אותן בתוך סיפור במקום לקרוא אותן.",
+              "ar": "بعض الكلمات لم تستقرّ بعد، وهذا طبيعي — الكلمات تحتاج إلى لقاء أكثر من مرّة. في المرّة القادمة ستسمعونها داخل قصّة بدل قراءتها."
+            },
+            "nextHint": {
+              "en": "Next goal: listening to a family talk about itself.",
+              "he": "היעד הבא: להאזין למשפחה מספרת על עצמה.",
+              "ar": "الهدف التالي: الاستماع إلى عائلة تتحدّث عن نفسها."
+            }
+          },
+          "questions": []
+        }
+      ]
+    }
+  ]
+}

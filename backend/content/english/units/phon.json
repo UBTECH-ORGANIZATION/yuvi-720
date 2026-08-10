@@ -1,0 +1,901 @@
+{
+  "id": "ENG.G7.FAMILY.PHON",
+  "title": "Sounds and spelling: saying family words",
+  "titleTranslations": {
+    "Hebrew": "צלילים וכתיב: איך אומרים מילות משפחה",
+    "Arabic": "الأصوات والإملاء: كيف ننطق مفردات العائلة",
+    "English": "Sounds and spelling: saying family words"
+  },
+  "subTopic": "MOE.ENG.G7.PEOPLE.FAMILY",
+  "learningObjective": "MOE.ENG.G7.PEOPLE.FAMILY.PHON",
+  "prerequisiteLearningObjective": [],
+  "targetSector": ["כלל המגזרים"],
+  "targetAudience": ["כיתה ז'", "כיתה ח'"],
+  "components": [
+    {
+      "id": "ENG.G7.FAMILY.PHON-01",
+      "learningUnitId": "ENG.G7.FAMILY.PHON",
+      "title": "Listen to the th sound",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 2,
+      "mediaFormat": "audio",
+      "estimatedTimeInMinutes": 8,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.PHON-01B"],
+      "skills": ["הגייה", "אבחנה שמיעתית"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.PHON-01-01",
+          "title": "Before you listen",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההבנייה ביעד ההגייה והכתיב. המטרה: להכין את הלומד לכך שהוא הולך לשמוע את הצליל th במילות משפחה (mother, father, brother, three), ולהבין שמדובר בצליל שנוצר כשהלשון יוצאת מעט בין השיניים. אסטרטגיה מומלצת: להאזין, ואז לחזור בקול רם — גם אם אף אחד לא מקליט. תפיסות שגויות נפוצות בשלב הזה: (1) דוברי עברית חושבים ש-th זה פשוט t או d, כי הצליל הזה לא קיים בעברית; (2) לומדים חוששים שצריך 'מבטא מושלם' — היעד הוא הגייה מובנת, לא מבטא של דובר יליד. אין כאן שאלה מדורגת.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "English has one sound that Hebrew does not have: th.",
+              "he": "לאנגלית יש צליל אחד שאין בעברית: th.",
+              "ar": "في الإنجليزية صوت واحد لا يوجد في العبرية: th."
+            },
+            "goal": {
+              "en": "Your job: hear the difference between th and t, and learn how to spell the family words that have it.",
+              "he": "המשימה שלכם: לשמוע את ההבדל בין th לבין t, וללמוד לאיית נכון את מילות המשפחה שיש בהן את הצליל הזה.",
+              "ar": "مهمّتكم: سماع الفرق بين th و t، وتعلّم كتابة مفردات العائلة التي تحتوي هذا الصوت."
+            },
+            "strategy": {
+              "en": "Say every word out loud after the recording. Your mouth learns faster than your eyes.",
+              "he": "אמרו כל מילה בקול רם אחרי ההקלטה. הפה לומד מהר יותר מהעיניים.",
+              "ar": "انطقوا كلّ كلمة بصوت عالٍ بعد التسجيل. الفم يتعلّم أسرع من العين."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.PHON-01-02",
+          "title": "The th sound — slow and clear",
+          "contentType": "הבנייה",
+          "mediaFormat": "audio",
+          "informationToBot": "פריט ההבנייה המרכזי. הלומד שומע מודל איטי של הצליל th בתוך מילות משפחה: mother, father, brother, grandmother, three. יעד: לזהות את הצליל ולחקות אותו. אסטרטגיה: לשים לב שהלשון יוצאת קלות בין השיניים, ולהשמיע שוב כמה פעמים. תפיסות שגויות נפוצות בפריט הזה: (1) three נשמע ומופק כ-tree — הבדל בין th ל-t; (2) mother מופק כ-'mudder' עם d; (3) לומדים דוברי ערבית כבר מכירים את הצליל מהאותיות ث ו-ذ, וכדאי להזכיר להם שזה אותו מנגנון. אם הלומד טועה פעמיים, כדאי להציע להאזין רק למילה הבודדת ולא לכל הקטע.",
+          "presentation": {
+            "kind": "listening",
+            "prompt": {
+              "en": "Listen and say the words after me. Play it as many times as you like.",
+              "he": "האזינו ואמרו את המילים אחריי. אפשר להשמיע שוב כמה פעמים שרוצים.",
+              "ar": "استمعوا وردّدوا الكلمات بعدي. يمكنكم إعادة التشغيل كما تشاؤون."
+            },
+            "script": "Listen to the th sound. Put your tongue between your teeth: th, th, th. Now say these family words with me. Mother. Father. Brother. Grandmother. This is my mother. This is my father. My brother is sixteen. Now listen again, slowly. Mo-ther. Fa-ther. Bro-ther. The tongue comes out a little every time you say th. Try it with me one more time. Mother. Brother. Three.",
+            "language": "en-US",
+            "rate": 0.75,
+            "transcriptAvailable": true,
+            "support": {
+              "he": "אפשר לפתוח את התמליל ולראות את המילים בזמן ההאזנה. זה עוזר לחבר בין הצליל לכתיב.",
+              "ar": "يمكنكم فتح النصّ المكتوب ومشاهدة الكلمات أثناء الاستماع. هذا يساعد على ربط الصوت بالكتابة."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Which word has the th sound?",
+              "answers": ["tree", "three", "teacher", "table"],
+              "correctAnswers": ["three"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. \"Three\" starts with th — the tongue comes out. \"Tree\" starts with t — the tongue stays inside.",
+                  "he": "כן. \"Three\" מתחילה ב-th — הלשון יוצאת. \"Tree\" מתחילה ב-t — הלשון נשארת בפנים.",
+                  "ar": "نعم. \"Three\" تبدأ بـ th — اللسان يخرج قليلاً. \"Tree\" تبدأ بـ t — اللسان يبقى في الداخل."
+                },
+                "incorrect": {
+                  "en": "Look at the letters, not only at the sound. Only one of these words is written with t and h together. Find it and play the recording again.",
+                  "he": "הסתכלו על האותיות, לא רק על הצליל. רק במילה אחת כאן כתובות t ו-h יחד. מצאו אותה והשמיעו שוב.",
+                  "ar": "انظروا إلى الحروف، لا إلى الصوت فقط. كلمة واحدة فقط هنا مكتوبة بحرفَي t و h معاً. جدوها وأعيدوا التشغيل."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Where is your tongue when you say the th in \"mother\"?",
+              "answers": [
+                "Between the teeth",
+                "Behind the bottom teeth",
+                "At the back of the mouth",
+                "On the roof of the mouth"
+              ],
+              "correctAnswers": ["Between the teeth"],
+              "feedback": {
+                "correct": {
+                  "en": "Exactly. A small movement — the tip of the tongue touches the teeth and comes out a little.",
+                  "he": "בדיוק. תנועה קטנה — קצה הלשון נוגע בשיניים ויוצא מעט.",
+                  "ar": "بالضبط. حركة صغيرة — طرف اللسان يلامس الأسنان ويخرج قليلاً."
+                },
+                "incorrect": {
+                  "en": "That position gives you t or d, not th. Listen to the first seconds of the recording again and watch what your own mouth does.",
+                  "he": "המצב הזה נותן t או d, לא th. האזינו שוב לשניות הראשונות של ההקלטה ושימו לב מה הפה שלכם עושה.",
+                  "ar": "هذا الوضع يعطي t أو d، لا th. استمعوا مجدّداً إلى ثواني التسجيل الأولى ولاحظوا ما يفعله فمكم."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "Which word is the last word in the recording?",
+              "answers": ["Tree", "Three", "Free", "Sea"],
+              "correctAnswers": ["Three"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. The recording ends with \"Three\" — the same th you practised.",
+                  "he": "נכון. ההקלטה מסתיימת ב-\"Three\" — אותו th שתרגלתם.",
+                  "ar": "صحيح. ينتهي التسجيل بكلمة \"Three\" — نفس صوت th الذي تدرّبتم عليه."
+                },
+                "incorrect": {
+                  "en": "These four words sound close on purpose. Play only the end of the recording and listen for the tongue coming out.",
+                  "he": "ארבע המילים האלה נשמעות דומות בכוונה. השמיעו רק את הסוף והאזינו אם הלשון יוצאת.",
+                  "ar": "هذه الكلمات الأربع متشابهة عن قصد. شغّلوا نهاية التسجيل فقط واستمعوا هل يخرج اللسان."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.PHON-01-03",
+          "title": "How did your mouth feel?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף רכיב ההבנייה. המטרה: שהלומד יבחין בין 'אני לא שומע את ההבדל' לבין 'אני שומע אבל לא מצליח להפיק' — שתי בעיות שונות עם המשך שונה. אין תשובה נכונה ואין ניקוד. אם נבחר 'לא שמעתי את ההבדל' — כדאי להפנות לייצוג הטקסטואלי שבו רואים את האותיות; אם נבחר 'שמעתי אבל קשה לי להגיד' — כדאי לעודד חזרה בקול רם, זה תרגול מוטורי ולוקח זמן.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "You tried the th sound. What happened?",
+              "he": "ניסיתם את הצליל th. מה קרה?",
+              "ar": "جرّبتم صوت th. ماذا حدث؟"
+            },
+            "choices": [
+              {
+                "id": "easy",
+                "label": {
+                  "en": "I heard it and I could say it",
+                  "he": "שמעתי את הצליל והצלחתי להגיד אותו",
+                  "ar": "سمعت الصوت واستطعت نطقه"
+                }
+              },
+              {
+                "id": "hear-not-say",
+                "label": {
+                  "en": "I heard it, but saying it is hard",
+                  "he": "שמעתי אותו, אבל קשה לי להגיד אותו",
+                  "ar": "سمعته، لكن نطقه صعب عليّ"
+                }
+              },
+              {
+                "id": "no-difference",
+                "label": {
+                  "en": "th and t still sound the same to me",
+                  "he": "th ו-t עדיין נשמעים לי אותו דבר",
+                  "ar": "ما زال th و t يبدوان لي متشابهين"
+                }
+              },
+              {
+                "id": "known",
+                "label": {
+                  "en": "I already knew this sound",
+                  "he": "כבר הכרתי את הצליל הזה",
+                  "ar": "كنت أعرف هذا الصوت من قبل"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.PHON-01B",
+      "learningUnitId": "ENG.G7.FAMILY.PHON",
+      "title": "See the th sound — read and check",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": false,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 1,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 7,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": [],
+      "skills": ["הגייה", "כתיב"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.PHON-01B-01",
+          "title": "Before you read",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של הייצוג החלופי. כאן הלומד רואה את האותיות לפני שהוא שומע אותן — מסלול הפוך מהרכיב הקולי, למי שקשה לו לאבחן צלילים באוזן בלבד. יעד זהה: לחבר בין הצירוף th לבין הצליל שלו במילות משפחה. אסטרטגיה: לקרוא שורה, ואז ללחוץ עליה כדי לשמוע אותה. חשוב: לא לומר ללומד שזה 'רכיב קל יותר' — זה ייצוג אחר, לא רמה נמוכה יותר.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "This time you will see the sound before you hear it.",
+              "he": "הפעם תראו את הצליל לפני שתשמעו אותו.",
+              "ar": "هذه المرّة سترون الصوت قبل أن تسمعوه."
+            },
+            "goal": {
+              "en": "Your job: find the letters t and h together, and connect them to the sound.",
+              "he": "המשימה שלכם: לזהות את האותיות t ו-h יחד, ולחבר אותן לצליל.",
+              "ar": "مهمّتكم: تمييز الحرفين t و h معاً، وربطهما بالصوت."
+            },
+            "strategy": {
+              "en": "Read a line, then tap it to hear it. Read it out loud one more time after the voice.",
+              "he": "קראו שורה, ואז לחצו עליה כדי לשמוע. קראו אותה בקול רם עוד פעם אחת אחרי הקול.",
+              "ar": "اقرأوا سطراً، ثم اضغطوا عليه لسماعه. اقرأوه بصوت عالٍ مرّة أخرى بعد الصوت."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.PHON-01B-02",
+          "title": "The letters that make one sound",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט ההבנייה בייצוג טקסטואלי. הלומד רואה את המילים כתובות, כולל הצירוף th מודגש בהקשר של משפט, ויכול ללחוץ על כל שורה כדי לשמוע אותה. יעד: לקשר בין הכתיב th לצליל, ולזהות אילו מילות משפחה מכילות אותו. אסטרטגיה: לסרוק את השורה ולחפש t ואחריה h. תפיסות שגויות נפוצות: (1) לומדים חושבים ש-th זה שני צלילים נפרדים, t ואז h — זה צליל אחד; (2) בלבול בין three (מספר) לבין tree (עץ) בכתיב; (3) שכחת ה-h בסוף בכתיבה: 'moter' במקום 'mother'.",
+          "presentation": {
+            "kind": "reading",
+            "prompt": {
+              "en": "Read each line. Tap it to hear the th sound inside it.",
+              "he": "קראו כל שורה. לחצו עליה כדי לשמוע את הצליל th שבתוכה.",
+              "ar": "اقرأوا كلّ سطر. اضغطوا عليه لسماع صوت th بداخله."
+            },
+            "lines": [
+              "The letters t and h together make one sound: th.",
+              "My mother and my father are at home.",
+              "My brother Adam is sixteen and he plays football.",
+              "My grandmother makes soup for the whole family.",
+              "Three, not tree. Put your tongue out and say: three."
+            ],
+            "language": "en-US",
+            "rate": 0.85,
+            "glossary": [
+              { "word": "mother", "he": "אמא", "ar": "أمّ" },
+              { "word": "father", "he": "אבא", "ar": "أب" },
+              { "word": "brother", "he": "אח", "ar": "أخ" },
+              { "word": "grandmother", "he": "סבתא", "ar": "جدّة" },
+              { "word": "three", "he": "שלוש", "ar": "ثلاثة" }
+            ]
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Which two letters make the th sound?",
+              "answers": ["t and h", "d and h", "s and h", "f and h"],
+              "correctAnswers": ["t and h"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. Two letters, one sound. You never say the t and the h separately.",
+                  "he": "כן. שתי אותיות, צליל אחד. אף פעם לא אומרים את ה-t ואת ה-h בנפרד.",
+                  "ar": "نعم. حرفان وصوت واحد. لا ننطق الـ t والـ h بشكل منفصل أبداً."
+                },
+                "incorrect": {
+                  "en": "The answer is written in the first line. Read it again slowly.",
+                  "he": "התשובה כתובה בשורה הראשונה. קראו אותה שוב לאט.",
+                  "ar": "الإجابة مكتوبة في السطر الأوّل. اقرأوه مرّة أخرى ببطء."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "In the line about Adam, which word has the th sound?",
+              "answers": ["sixteen", "brother", "plays", "football"],
+              "correctAnswers": ["brother"],
+              "feedback": {
+                "correct": {
+                  "en": "Right — bro-th-er. The sound is in the middle of the word, not only at the start.",
+                  "he": "נכון — bro-th-er. הצליל נמצא באמצע המילה, לא רק בהתחלה.",
+                  "ar": "صحيح — bro-th-er. الصوت في وسط الكلمة، وليس في بدايتها فقط."
+                },
+                "incorrect": {
+                  "en": "Do not look for a word that starts with th. Look inside the words too — scan the line letter by letter.",
+                  "he": "אל תחפשו רק מילה שמתחילה ב-th. חפשו גם בתוך המילים — סרקו את השורה אות אחרי אות.",
+                  "ar": "لا تبحثوا فقط عن كلمة تبدأ بـ th. ابحثوا داخل الكلمات أيضاً — امسحوا السطر حرفاً حرفاً."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "true-false",
+              "questionText": "The words \"three\" and \"tree\" begin with the same sound.",
+              "answers": ["True", "False"],
+              "correctAnswers": ["False"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct. \"Tree\" has t. \"Three\" has th — one extra letter, a different sound and a different meaning.",
+                  "he": "נכון. ב-\"tree\" יש t. ב-\"three\" יש th — אות אחת נוספת, צליל אחר ומשמעות אחרת.",
+                  "ar": "صحيح. في \"tree\" حرف t، وفي \"three\" صوت th — حرف إضافي وصوت ومعنى مختلفان."
+                },
+                "incorrect": {
+                  "en": "Compare the spelling of the two words letter by letter. One of them has a letter the other does not.",
+                  "he": "השוו את הכתיב של שתי המילים אות אחרי אות. באחת מהן יש אות שאין בשנייה.",
+                  "ar": "قارنوا كتابة الكلمتين حرفاً حرفاً. في إحداهما حرف غير موجود في الأخرى."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.PHON-01B-03",
+          "title": "What helped you?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הייצוג הטקסטואלי. המטרה: שהלומד ינסח מה עזר לו — לראות את האותיות, לשמוע את השורה, או לחזור בקול. אין ניקוד ואין תשובה נכונה. אם נבחר 'עדיין מתבלבל בכתיב' — ההמשך המומלץ הוא תרגול הכתיב ברכיב התרגול, לא חזרה על אותה קריאה.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "What helped you most here?",
+              "he": "מה הכי עזר לכם כאן?",
+              "ar": "ما الذي ساعدكم أكثر هنا؟"
+            },
+            "choices": [
+              {
+                "id": "seeing",
+                "label": {
+                  "en": "Seeing the letters",
+                  "he": "לראות את האותיות",
+                  "ar": "رؤية الحروف"
+                }
+              },
+              {
+                "id": "tapping",
+                "label": {
+                  "en": "Tapping a line to hear it",
+                  "he": "ללחוץ על שורה כדי לשמוע אותה",
+                  "ar": "الضغط على السطر لسماعه"
+                }
+              },
+              {
+                "id": "aloud",
+                "label": {
+                  "en": "Reading out loud after the voice",
+                  "he": "לקרוא בקול רם אחרי הקול",
+                  "ar": "القراءة بصوت عالٍ بعد الصوت"
+                }
+              },
+              {
+                "id": "spelling-hard",
+                "label": {
+                  "en": "I still mix up the spelling",
+                  "he": "אני עדיין מתבלבל בכתיב",
+                  "ar": "ما زلت أخلط في الكتابة"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.PHON-02",
+      "learningUnitId": "ENG.G7.FAMILY.PHON",
+      "title": "Hear the difference, write the word",
+      "componentPurpose": "תרגול",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 2,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 4,
+      "mediaFormat": "audio",
+      "estimatedTimeInMinutes": 10,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.PHON-01B"],
+      "skills": ["אבחנה שמיעתית", "כתיב"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.PHON-02-01",
+          "title": "Plan your practice",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה לרכיב התרגול. המטרה: שהלומד ידע שכאן יש שני אתגרים שונים — אבחנה שמיעתית בין מילים דומות (thirteen/thirty, sixteen/sixty), וכתיב נכון של מילות המשפחה. אסטרטגיה חשובה שכדאי להזכיר: ההבדל בין thirteen ל-thirty הוא בהטעמה — thir-TEEN עם דגש בסוף, THIR-ty עם דגש בהתחלה. תפיסה שגויה נפוצה: לומדים חושבים שההבדל הוא באורך המילה או במהירות, ולא בהטעמה.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Two things to practise: hearing close words, and spelling family words.",
+              "he": "שני דברים לתרגל: לשמוע מילים דומות, ולאיית מילות משפחה.",
+              "ar": "أمران للتدريب: سماع الكلمات المتشابهة، وكتابة مفردات العائلة."
+            },
+            "goal": {
+              "en": "Your job: tell sixteen from sixty, and thirteen from thirty — and then write the words correctly.",
+              "he": "המשימה שלכם: להבחין בין sixteen ל-sixty, ובין thirteen ל-thirty — ואז לכתוב את המילים נכון.",
+              "ar": "مهمّتكم: التمييز بين sixteen و sixty، وبين thirteen و thirty — ثم كتابة الكلمات بشكل صحيح."
+            },
+            "strategy": {
+              "en": "Listen for the strong part of the word. In sixteen the end is strong: six-TEEN. In sixty the start is strong: SIX-ty.",
+              "he": "האזינו לחלק המודגש במילה. ב-sixteen הסוף מודגש: six-TEEN. ב-sixty ההתחלה מודגשת: SIX-ty.",
+              "ar": "استمعوا إلى الجزء المشدّد في الكلمة. في sixteen النبر في النهاية: six-TEEN. وفي sixty النبر في البداية: SIX-ty."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.PHON-02-02",
+          "title": "Six sentences at real speed",
+          "contentType": "תרגול",
+          "mediaFormat": "audio",
+          "informationToBot": "תרגול אבחנה שמיעתית בקצב דיבור טבעי — הקפיצה מהרכיב הקודם. הלומד שומע שישה משפטים קצרים שבהם מופיעים זוגות מילים קרובים. יעד: לזהות איזו מילה נאמרה, על סמך ההטעמה. תפיסות שגויות נפוצות: (1) sixteen נשמע כ-sixty ולהפך — ההבדל הוא בהטעמה ולא באורך; (2) Thursday נשמע כ-Tuesday, מפני ששתיהן מתחילות ב-T ובעברית אין ניגוד th/t; (3) לומדים מנסים לתרגם כל משפט ומפספסים את המשפט הבא. אין תמליל בכוונה — זו בדיוק המיומנות שמתאמנים עליה. אם הלומד נכשל פעמיים, כדאי להציע להשמיע רק את המשפט הרלוונטי.",
+          "presentation": {
+            "kind": "listening",
+            "prompt": {
+              "en": "Six short sentences, normal speed. Listen for the strong part of each word.",
+              "he": "שישה משפטים קצרים, בקצב רגיל. האזינו לחלק המודגש בכל מילה.",
+              "ar": "ستّ جمل قصيرة بسرعة عادية. استمعوا إلى الجزء المشدّد في كلّ كلمة."
+            },
+            "script": "Ready? I will say six short sentences. Listen well. One. My mother is a teacher. Two. I have three cousins in Haifa. Three. Adam is sixteen, not sixty. Four. Noa is six years old. Five. My grandmother makes soup on Thursday. Six. Maya is thirteen, not thirty. Some of these words sound very close. The strong part of the word tells you which one it is.",
+            "language": "en-US",
+            "rate": 1,
+            "transcriptAvailable": false,
+            "support": {
+              "he": "אין תמליל בתרגול הזה — זו בדיוק המיומנות שמתאמנים עליה. אפשר להשמיע שוב כמה שצריך.",
+              "ar": "لا يوجد نصّ مكتوب في هذا التمرين — هذه هي المهارة التي نتدرّب عليها. يمكنكم إعادة التشغيل كما تحتاجون."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "How old is Adam?",
+              "answers": ["Six", "Sixteen", "Sixty", "Thirteen"],
+              "correctAnswers": ["Sixteen"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes — six-TEEN, with the strong part at the end.",
+                  "he": "כן — six-TEEN, כשהחלק המודגש הוא בסוף.",
+                  "ar": "نعم — six-TEEN، والجزء المشدّد في النهاية."
+                },
+                "incorrect": {
+                  "en": "Sixteen and sixty are said in the same sentence, one after the other. Play that sentence again and listen to the first of the two.",
+                  "he": "sixteen ו-sixty נאמרות באותו משפט, אחת אחרי השנייה. השמיעו שוב את המשפט והאזינו לראשונה מביניהן.",
+                  "ar": "تُقال sixteen و sixty في الجملة نفسها، واحدة تلو الأخرى. أعيدوا تشغيل الجملة واستمعوا إلى الأولى منهما."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "How old is Maya?",
+              "answers": ["Thirty", "Thirteen", "Three", "Sixteen"],
+              "correctAnswers": ["Thirteen"],
+              "feedback": {
+                "correct": {
+                  "en": "Right — thir-TEEN. Maya is a student, so thirty would not fit either.",
+                  "he": "נכון — thir-TEEN. מאיה היא תלמידה, ולכן thirty גם לא היה מתאים.",
+                  "ar": "صحيح — thir-TEEN. مايا طالبة، لذا لم تكن thirty لتناسب أيضاً."
+                },
+                "incorrect": {
+                  "en": "Both words are in the last sentence. Listen to which one comes before the word \"not\".",
+                  "he": "שתי המילים נמצאות במשפט האחרון. האזינו איזו מהן מופיעה לפני המילה \"not\".",
+                  "ar": "الكلمتان في الجملة الأخيرة. استمعوا أيّهما تأتي قبل كلمة \"not\"."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "When does Grandmother make soup?",
+              "answers": ["On Tuesday", "On Thursday", "On Saturday", "On Sunday"],
+              "correctAnswers": ["On Thursday"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. Thursday starts with th, Tuesday starts with t — that is the whole difference.",
+                  "he": "כן. Thursday מתחילה ב-th ו-Tuesday מתחילה ב-t — זה כל ההבדל.",
+                  "ar": "نعم. Thursday تبدأ بـ th و Tuesday تبدأ بـ t — هذا هو الفرق كلّه."
+                },
+                "incorrect": {
+                  "en": "Two days of the week sound close here. Play sentence five again and check whether the tongue comes out at the start of the word.",
+                  "he": "שני ימים בשבוע נשמעים כאן דומים. השמיעו שוב את משפט חמש ובדקו אם הלשון יוצאת בתחילת המילה.",
+                  "ar": "يوما أسبوع يبدوان متشابهين هنا. أعيدوا تشغيل الجملة الخامسة وتحقّقوا إن كان اللسان يخرج في بداية الكلمة."
+                }
+              }
+            },
+            {
+              "questionId": "q4",
+              "questionType": "single-choice",
+              "questionText": "In the word \"sixty\", which part is strong?",
+              "answers": ["six", "ty", "both parts are equal", "there is no strong part"],
+              "correctAnswers": ["six"],
+              "feedback": {
+                "correct": {
+                  "en": "Exactly — SIX-ty. That is how you know it is not sixteen.",
+                  "he": "בדיוק — SIX-ty. ככה יודעים שזו לא sixteen.",
+                  "ar": "بالضبط — SIX-ty. هكذا تعرفون أنّها ليست sixteen."
+                },
+                "incorrect": {
+                  "en": "Say both words out loud, one after the other, and feel which part you push harder. The two words do not push the same part.",
+                  "he": "אמרו את שתי המילים בקול, אחת אחרי השנייה, והרגישו איזה חלק אתם מדגישים יותר. שתי המילים לא מדגישות את אותו חלק.",
+                  "ar": "انطقوا الكلمتين بصوت عالٍ واحدة تلو الأخرى، واشعروا أيّ جزء تضغطون عليه أكثر. الكلمتان لا تشدّدان الجزء نفسه."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.PHON-02-03",
+          "title": "Spell the family words",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "תרגול כתיב של מילות הליבה היצרניות: mother, father, brother, grandmother, aunt, uncle, cousin, daughter. יעד: לכתוב נכון את המילים שהלומד כבר יודע להגות. אסטרטגיה: לחלק את המילה להברות ולבדוק אם יש בה th. תפיסות שגויות נפוצות ואופייניות לדוברי עברית וערבית: (1) השמטת ה-h — 'moter', 'broter'; (2) כתיב פונטי של הצליל — 'muther', 'fader'; (3) בלבול בין aunt (דודה) לבין ant (נמלה), כי הן נשמעות כמעט זהה; (4) 'cousin' נכתב 'cusin' או 'couzin'. אם הלומד טועה, כדאי להפנות אותו לחשוב איזה צליל הוא שומע ואיזה צירוף אותיות מייצג אותו, בלי לתת את המילה.",
+          "presentation": {
+            "prompt": {
+              "en": "Now the spelling. Think about the sound, then choose the correct written word.",
+              "he": "עכשיו הכתיב. חשבו על הצליל, ואז בחרו את המילה הכתובה נכון.",
+              "ar": "الآن الإملاء. فكّروا في الصوت، ثم اختاروا الكلمة المكتوبة بشكل صحيح."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Which word is spelled correctly?",
+              "answers": ["moter", "mother", "muther", "mothar"],
+              "correctAnswers": ["mother"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. m-o-t-h-e-r. The h is easy to forget, but without it the sound changes.",
+                  "he": "כן. m-o-t-h-e-r. קל לשכוח את ה-h, אבל בלעדיה הצליל משתנה.",
+                  "ar": "نعم. m-o-t-h-e-r. من السهل نسيان الـ h، لكن بدونها يتغيّر الصوت."
+                },
+                "incorrect": {
+                  "en": "Two of these options lost a letter and one changed a vowel. Ask yourself which letters make the th sound, and check that both of them are there.",
+                  "he": "בשתיים מהאפשרויות חסרה אות ובאחת השתנתה תנועה. שאלו את עצמכם אילו אותיות יוצרות את הצליל th, ובדקו ששתיהן שם.",
+                  "ar": "في خيارين نقص حرف، وفي خيار تغيّرت حركة. اسألوا أنفسكم أيّ حرفين يصنعان صوت th، وتأكّدوا من وجودهما معاً."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Which word is spelled correctly?",
+              "answers": ["broder", "brothar", "brother", "brouther"],
+              "correctAnswers": ["brother"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. Brother and mother end the same way: -ther.",
+                  "he": "נכון. brother ו-mother נגמרות באותה צורה: ther-.",
+                  "ar": "صحيح. brother و mother تنتهيان بالطريقة نفسها: -ther."
+                },
+                "incorrect": {
+                  "en": "You already spelled mother in the question before. Use the same ending here and compare the four options again.",
+                  "he": "כבר איתרתם את הכתיב של mother בשאלה הקודמת. השתמשו באותה סיומת כאן והשוו שוב בין ארבע האפשרויות.",
+                  "ar": "لقد كتبتم mother في السؤال السابق. استخدموا النهاية نفسها هنا وقارنوا الخيارات الأربعة مجدّداً."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "Maya's father has a sister. She is Maya's ...",
+              "answers": ["ant", "aunt", "aunte", "anut"],
+              "correctAnswers": ["aunt"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. \"Aunt\" and \"ant\" sound almost the same, but only one of them is a person in your family.",
+                  "he": "כן. \"Aunt\" ו-\"ant\" נשמעות כמעט זהה, אבל רק אחת מהן היא בן משפחה.",
+                  "ar": "نعم. \"Aunt\" و\"ant\" تكادان تتشابهان في اللفظ، لكن واحدة منهما فقط هي فرد من العائلة."
+                },
+                "incorrect": {
+                  "en": "One of these options is a small insect, not a family member. Look for the option with the extra vowel letter after the a.",
+                  "he": "אחת מהאפשרויות היא חרק קטן, לא בן משפחה. חפשו את האפשרות שיש בה אות תנועה נוספת אחרי ה-a.",
+                  "ar": "أحد الخيارات حشرة صغيرة وليس فرداً من العائلة. ابحثوا عن الخيار الذي فيه حرف علّة إضافي بعد الـ a."
+                }
+              }
+            },
+            {
+              "questionId": "q4",
+              "questionType": "single-choice",
+              "questionText": "Which word is spelled correctly?",
+              "answers": ["cusin", "couzin", "cousin", "cousen"],
+              "correctAnswers": ["cousin"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes — c-o-u-s-i-n. The letter s here sounds like z, but you still write s.",
+                  "he": "כן — c-o-u-s-i-n. האות s נשמעת כאן כמו z, אבל עדיין כותבים s.",
+                  "ar": "نعم — c-o-u-s-i-n. حرف s هنا يُلفظ مثل z، لكنّنا نكتب s."
+                },
+                "incorrect": {
+                  "en": "Careful — in English you cannot always write the letter you hear. Look for the option that has ou after the c.",
+                  "he": "שימו לב — באנגלית לא תמיד כותבים את האות שנשמעת. חפשו את האפשרות שיש בה ou אחרי ה-c.",
+                  "ar": "انتبهوا — في الإنجليزية لا نكتب دائماً الحرف الذي نسمعه. ابحثوا عن الخيار الذي فيه ou بعد الـ c."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.PHON-02-04",
+          "title": "Check yourself",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי של ניטור אחרי התרגול. המטרה: שהלומד יזהה מה בדיוק עדיין קשה — האזנה, כתיב, או שניהם. אין ניקוד ואין תשובה נכונה. אם נבחר 'הכתיב' — ההמלצה היא לחזור לייצוג הטקסטואלי שבו רואים את האותיות; אם נבחר 'ההאזנה' — ההמלצה היא להאזין שוב למודל האיטי, לא לתרגול המהיר.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "Which part is still hard for you?",
+              "he": "איזה חלק עדיין קשה לכם?",
+              "ar": "أيّ جزء ما زال صعباً عليكم؟"
+            },
+            "choices": [
+              {
+                "id": "listening",
+                "label": {
+                  "en": "Hearing which word was said",
+                  "he": "לשמוע איזו מילה נאמרה",
+                  "ar": "سماع أيّ كلمة قيلت"
+                }
+              },
+              {
+                "id": "spelling",
+                "label": {
+                  "en": "Writing the words correctly",
+                  "he": "לכתוב את המילים נכון",
+                  "ar": "كتابة الكلمات بشكل صحيح"
+                }
+              },
+              {
+                "id": "both",
+                "label": {
+                  "en": "Both of them",
+                  "he": "שניהם",
+                  "ar": "كلاهما"
+                }
+              },
+              {
+                "id": "ready",
+                "label": {
+                  "en": "Neither — I am ready to go on",
+                  "he": "אף אחד מהם — אני מוכן להמשיך",
+                  "ar": "لا هذا ولا ذاك — أنا جاهز للمتابعة"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.PHON-03",
+      "learningUnitId": "ENG.G7.FAMILY.PHON",
+      "title": "Check: sounds and spelling",
+      "componentPurpose": "הערכה",
+      "isAssessment": true,
+      "isRequired": true,
+      "order": 3,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 3,
+      "mediaFormat": "audio",
+      "estimatedTimeInMinutes": 9,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.PHON-01B"],
+      "skills": ["אבחנה שמיעתית", "כתיב"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.PHON-03-01",
+          "title": "Before the check",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההערכה ליעד ההגייה והכתיב. המטרה: להסביר ללומד מה נבדק — לזהות את המילה שנאמרה, ולכתוב אותה נכון — ולהרגיע שאפשר להשמיע שוב ללא הגבלה. חשוב: מרגע זה ועד סוף הרכיב אין לחשוף את התשובה ואין לרמוז עליה. מותר רק להזכיר אסטרטגיה כללית: להאזין שוב, להתמקד במשפט אחד, לחשוב על ההטעמה.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Time to check what you can do with these sounds.",
+              "he": "הגיע הזמן לבדוק מה אתם כבר יודעים לעשות עם הצלילים האלה.",
+              "ar": "حان وقت التحقّق ممّا تستطيعون فعله بهذه الأصوات."
+            },
+            "goal": {
+              "en": "A new recording from Sara. Find the right word, then write the family words correctly.",
+              "he": "הקלטה חדשה של שרה. זהו את המילה הנכונה, ואז כתבו נכון את מילות המשפחה.",
+              "ar": "تسجيل جديد من سارة. حدّدوا الكلمة الصحيحة، ثم اكتبوا مفردات العائلة بشكل صحيح."
+            },
+            "strategy": {
+              "en": "You can play the recording as many times as you need. This checks understanding, not memory.",
+              "he": "אפשר להשמיע את ההקלטה כמה פעמים שצריך. זו בדיקה של הבנה, לא של זיכרון.",
+              "ar": "يمكنكم تشغيل التسجيل بقدر ما تحتاجون. هذا فحص للفهم لا للذاكرة."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.PHON-03-02",
+          "title": "Listen to Sara's message",
+          "contentType": "הערכה",
+          "mediaFormat": "audio",
+          "informationToBot": "פריט הערכה שמיעתי. הקטע חדש (שרה, לא מאיה) כדי שההצלחה תעיד על המיומנות ולא על זיכרון של הקטע שנלמד. יעד: לזהות מילים שנבדלות בהטעמה או בצליל th בתוך דיבור רציף. בזמן ההערכה אסור לחשוף את התשובה, אסור לרמוז עליה ואסור לצמצם את מספר האפשרויות. מותר להזכיר אסטרטגיה כללית בלבד: להשמיע שוב, להתמקד במשפט אחד, להקשיב לחלק המודגש במילה. הלומד רשאי להשמיע ללא הגבלה.",
+          "presentation": {
+            "kind": "listening",
+            "prompt": {
+              "en": "Listen to Sara and answer.",
+              "he": "האזינו לשרה וענו.",
+              "ar": "استمعوا إلى سارة وأجيبوا."
+            },
+            "script": "Hello, my name is Sara. My brother is thirty years old and he lives in Haifa. My other brother is thirteen, so he is still at school with me. My mother has three sisters, so I have a lot of cousins. On Thursday my grandmother comes to our house and we all eat together. My father says our family is never quiet. He is right.",
+            "language": "en-US",
+            "rate": 0.9,
+            "transcriptAvailable": false
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "How old is Sara's older brother?",
+              "answers": ["Thirteen", "Thirty", "Three", "Sixteen"],
+              "correctAnswers": ["Thirty"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct. Sara says both ages in the recording — you picked the one that belongs to the brother in Haifa.",
+                  "he": "נכון. שרה אומרת את שני הגילים בהקלטה — בחרתם את זה שמתאים לאח שגר בחיפה.",
+                  "ar": "صحيح. تذكر سارة كلا العمرين في التسجيل — اخترتم العمر الذي يخصّ الأخ الذي يسكن في حيفا."
+                },
+                "incorrect": {
+                  "en": "Both ages appear in this recording, one for each brother. Play the first two sentences again and listen to the strong part of each number.",
+                  "he": "שני הגילים מופיעים בהקלטה, אחד לכל אח. השמיעו שוב את שני המשפטים הראשונים והאזינו לחלק המודגש בכל מספר.",
+                  "ar": "كلا العمرين يظهران في التسجيل، واحد لكلّ أخ. أعيدوا تشغيل الجملتين الأوليين واستمعوا إلى الجزء المشدّد في كلّ رقم."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "How many sisters does Sara's mother have?",
+              "answers": ["Two", "Three", "Four", "Thirteen"],
+              "correctAnswers": ["Three"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes — and that is why Sara has a lot of cousins.",
+                  "he": "כן — ובגלל זה יש לשרה הרבה בני דודים.",
+                  "ar": "نعم — ولهذا لدى سارة الكثير من أولاد العمّ والخال."
+                },
+                "incorrect": {
+                  "en": "The number comes right before the word \"sisters\". Play that sentence again and stop after the number.",
+                  "he": "המספר מופיע ממש לפני המילה \"sisters\". השמיעו שוב את המשפט ועצרו אחרי המספר.",
+                  "ar": "الرقم يأتي مباشرة قبل كلمة \"sisters\". أعيدوا تشغيل الجملة وتوقّفوا بعد الرقم."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "When does the grandmother come to the house?",
+              "answers": ["On Tuesday", "On Thursday", "On Saturday", "On Monday"],
+              "correctAnswers": ["On Thursday"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. You heard the th at the start of the day, not a t.",
+                  "he": "נכון. שמעתם th בתחילת שם היום, ולא t.",
+                  "ar": "صحيح. سمعتم صوت th في بداية اسم اليوم، لا صوت t."
+                },
+                "incorrect": {
+                  "en": "Two of the options are days that begin with a very similar sound. Play the sentence about the grandmother again and listen only to the first sound of the day.",
+                  "he": "שתיים מהאפשרויות הן ימים שמתחילים בצליל דומה מאוד. השמיעו שוב את המשפט על הסבתא והאזינו רק לצליל הראשון של שם היום.",
+                  "ar": "خياران هما يومان يبدآن بصوت متشابه جدّاً. أعيدوا تشغيل الجملة عن الجدّة واستمعوا إلى الصوت الأوّل من اسم اليوم فقط."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.PHON-03-03",
+          "title": "Write the words",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט הערכה של הכתיב. יעד: לכתוב נכון את מילות הליבה היצרניות שנלמדו — mother, father, brother, grandmother, aunt, uncle, cousin, daughter. חשוב: זהו רכיב הערכה — אין לחשוף את הכתיב הנכון, אין לאיית את המילה ללומד ואין לצמצם את האפשרויות. מותר להנחות אסטרטגית בלבד: לחלק את המילה להברות, לבדוק אם יש th, לזכור שלא תמיד כותבים את מה ששומעים. תפיסות שגויות נפוצות שממשיכות להופיע גם כאן: השמטת ה-h, כתיב פונטי של תנועות, ובלבול aunt/ant.",
+          "presentation": {
+            "prompt": {
+              "en": "Choose the correct spelling for each family word.",
+              "he": "בחרו את הכתיב הנכון לכל מילת משפחה.",
+              "ar": "اختاروا الكتابة الصحيحة لكلّ مفردة عائلية."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Sara's mother's mother is her ...",
+              "answers": ["grandmoter", "grandmother", "granmother", "grandmuther"],
+              "correctAnswers": ["grandmother"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct — grand + mother, with both letters of the th kept.",
+                  "he": "נכון — grand ועוד mother, כששתי האותיות של ה-th נשמרות.",
+                  "ar": "صحيح — grand مع mother، مع الحفاظ على حرفَي th معاً."
+                },
+                "incorrect": {
+                  "en": "This is a long word made of two short ones. Split it in two and check each half separately.",
+                  "he": "זו מילה ארוכה שמורכבת משתי מילים קצרות. חלקו אותה לשניים ובדקו כל חצי בנפרד.",
+                  "ar": "هذه كلمة طويلة مكوّنة من كلمتين قصيرتين. قسّموها إلى نصفين وافحصوا كلّ نصف على حدة."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Sara's father's brother is her ...",
+              "answers": ["oncle", "unkle", "uncle", "uncel"],
+              "correctAnswers": ["uncle"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes — u-n-c-l-e. The c sounds like k but is written c.",
+                  "he": "כן — u-n-c-l-e. ה-c נשמעת כמו k אבל נכתבת c.",
+                  "ar": "نعم — u-n-c-l-e. حرف c يُلفظ مثل k لكنّه يُكتب c."
+                },
+                "incorrect": {
+                  "en": "Three of these are written the way the word sounds, and that is exactly the trap. Think about which letter English uses for that sound here.",
+                  "he": "שלוש מהאפשרויות כתובות כמו שהמילה נשמעת, וזו בדיוק המלכודת. חשבו באיזו אות אנגלית משתמשת לצליל הזה כאן.",
+                  "ar": "ثلاثة من الخيارات مكتوبة كما تُلفظ الكلمة، وهذا هو الفخّ بالضبط. فكّروا أيّ حرف تستخدمه الإنجليزية لهذا الصوت هنا."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "Which word is spelled correctly?",
+              "answers": ["fater", "father", "fadher", "fathr"],
+              "correctAnswers": ["father"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. Father, mother and brother all end with the same three letters.",
+                  "he": "נכון. father, mother ו-brother נגמרות באותן שלוש אותיות.",
+                  "ar": "صحيح. father و mother و brother تنتهي جميعها بالحروف الثلاثة نفسها."
+                },
+                "incorrect": {
+                  "en": "You have written two words with this same ending already. Compare this word with them before you choose again.",
+                  "he": "כבר כתבתם שתי מילים עם אותה סיומת. השוו את המילה הזו אליהן לפני שתבחרו שוב.",
+                  "ar": "لقد كتبتم كلمتين بالنهاية نفسها من قبل. قارنوا هذه الكلمة بهما قبل أن تختاروا مجدّداً."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.PHON-03-04",
+          "title": "You finished this goal",
+          "contentType": "סיכום",
+          "mediaFormat": "text",
+          "informationToBot": "מסך סיום של רכיב ההערכה. מסכם מילולית מה הלומד עשה ומה הצעד הבא, ללא ציון מספרי וללא השוואה לאחרים. אם ההערכה לא עברה, המסך אומר במפורש שזה לא סוף הדרך ומפנה לייצוג אחר של אותו יעד — לא לחזרה על אותו רכיב.",
+          "presentation": {
+            "kind": "summary",
+            "onSuccess": {
+              "en": "You heard the difference between words that sound almost the same, and you wrote the family words correctly. That is exactly what this goal is about.",
+              "he": "שמעתם את ההבדל בין מילים שנשמעות כמעט זהות, וכתבתם נכון את מילות המשפחה. זה בדיוק מה שהיעד הזה בודק.",
+              "ar": "سمعتم الفرق بين كلمات تكاد تتشابه، وكتبتم مفردات العائلة بشكل صحيح. هذا بالضبط هدف هذه المهمّة."
+            },
+            "onRetry": {
+              "en": "Some of it has not settled yet — sounds that do not exist in your first language take time. Next we will meet the same sound in a different way.",
+              "he": "חלק מזה עוד לא התיישב — צלילים שלא קיימים בשפת האם לוקחים זמן. בפעם הבאה נפגוש את אותו צליל בדרך אחרת.",
+              "ar": "بعض الأمور لم تترسّخ بعد — الأصوات غير الموجودة في لغتكم الأمّ تحتاج وقتاً. في المرّة القادمة سنلتقي بالصوت نفسه بطريقة أخرى."
+            },
+            "nextHint": {
+              "en": "Next goal: writing a short text about a family and linking your sentences.",
+              "he": "היעד הבא: כתיבת טקסט קצר על משפחה וקישור בין המשפטים.",
+              "ar": "الهدف التالي: كتابة نصّ قصير عن العائلة وربط الجمل ببعضها."
+            }
+          },
+          "questions": []
+        }
+      ]
+    }
+  ]
+}

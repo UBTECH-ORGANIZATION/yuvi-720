@@ -33,6 +33,8 @@ const STR = {
     'help.who': 'תקועים? יובי כאן, ואפשר גם לפנות למורה שלכם.',
     'write.saved': 'נשמר. אפשר להמשיך.',
     'write.checklist': 'לפני שממשיכים, בדקו את עצמכם:',
+    'speak.model': 'לחצו על שורה כדי לשמוע אותה, ואז אמרו אותה בקול.',
+    'speak.check': 'איך הלך?',
     'summary.done': 'סיימתם את השלב הזה',
     'error.load': 'לא הצלחנו לטעון את התוכן. רעננו את הדף.',
     'error.auth': 'הקישור הזה כבר לא בתוקף. חזרו לשיעור ופתחו אותו שוב.',
@@ -53,6 +55,8 @@ const STR = {
     'help.who': 'عالقون؟ يوفي هنا، ويمكنكم أيضاً التوجّه إلى معلّمكم.',
     'write.saved': 'تمّ الحفظ. يمكنكم المتابعة.',
     'write.checklist': 'قبل المتابعة، تحقّقوا من أنفسكم:',
+    'speak.model': 'اضغطوا على سطر لسماعه، ثم قولوه بصوت مسموع.',
+    'speak.check': 'كيف سار الأمر؟',
     'summary.done': 'أنهيتم هذه المرحلة',
     'error.load': 'لم نتمكّن من تحميل المحتوى. أعيدوا تحميل الصفحة.',
     'error.auth': 'هذا الرابط لم يعد صالحاً. عودوا إلى الدرس وافتحوه من جديد.',
@@ -73,6 +77,8 @@ const STR = {
     'help.who': 'Stuck? Yuvi is here, and you can also ask your teacher.',
     'write.saved': 'Saved. You can continue.',
     'write.checklist': 'Before you continue, check yourself:',
+    'speak.model': 'Tap a line to hear it, then say it out loud.',
+    'speak.check': 'How did it go?',
     'summary.done': 'You finished this step',
     'error.load': 'We could not load the content. Please refresh the page.',
     'error.auth': 'This link has expired. Go back to the lesson and open it again.',
@@ -467,10 +473,63 @@ function renderMediation(item) {
   return el('div', {}, [block, renderWriting(item)]);
 }
 
+function renderSpeaking(item) {
+  const p = item.presentation;
+  const block = el('div', { class: 'lp-q' });
+  block.append(el('p', { class: 'lp-kicker', text: t('speak.model') }));
+
+  const lines = Array.isArray(p.referenceText) ? p.referenceText : [p.referenceText].filter(Boolean);
+  const list = el('ul', { class: 'lp-lines' });
+  lines.forEach((line) => {
+    const button = el('button', { class: 'lp-line lp-en', type: 'button', text: line });
+    button.addEventListener('click', () => {
+      list.querySelectorAll('[data-speaking]').forEach((node) => node.removeAttribute('data-speaking'));
+      button.dataset.speaking = 'true';
+      report('played', { object: itemObject(item) });
+      speak(line, {
+        locale: p.language || 'en-US',
+        rate: p.rate || 0.9,
+        onEnd: () => button.removeAttribute('data-speaking'),
+      });
+    });
+    list.append(el('li', {}, [button]));
+  });
+  block.append(list);
+
+  if (p.support && pick(p.support)) {
+    block.append(el('p', { class: 'lp-support', text: pick(p.support) }));
+  }
+
+  if (p.selfCheck?.length) {
+    block.append(el('p', { class: 'lp-kicker', text: t('speak.check') }));
+    const done = el('p', { class: 'lp-feedback', hidden: true, text: t('reflect.thanks') });
+    const options = el('div', { class: 'lp-options' });
+    p.selfCheck.forEach((choice) => {
+      const option = el('button', { class: 'lp-option', type: 'button', text: pick(choice.label) });
+      option.addEventListener('click', () => {
+        options.querySelectorAll('button').forEach((node) => { node.disabled = true; });
+        option.dataset.verdict = 'correct';
+        done.hidden = false;
+        // Saying it out loud cannot be graded here — the learner's own read is a
+        // self-report, which 720 models as `selected`, never as `answered`.
+        report('selected', {
+          object: itemObject(item),
+          result: { response: choice.id },
+          category: 'isUnderstood',
+        });
+      });
+      options.append(option);
+    });
+    block.append(options, done);
+  }
+  return block;
+}
+
 function renderBody(item) {
   const kind = item.presentation?.kind;
   if (kind === 'listening') return renderAudio(item);
   if (kind === 'reading') return renderLines(item);
+  if (kind === 'speaking') return renderSpeaking(item);
   if (kind === 'reflection') return renderReflection(item);
   if (kind === 'writing') return renderWriting(item);
   if (kind === 'mediation') return renderMediation(item);

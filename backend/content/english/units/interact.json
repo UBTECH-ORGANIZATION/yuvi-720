@@ -1,0 +1,802 @@
+{
+  "id": "ENG.G7.FAMILY.INTERACT",
+  "title": "Messages: invite, reply, ask",
+  "titleTranslations": {
+    "Hebrew": "הודעות: להזמין, להשיב, לשאול",
+    "Arabic": "الرسائل: دعوة وردّ وسؤال",
+    "English": "Messages: invite, reply, ask"
+  },
+  "subTopic": "MOE.ENG.G7.PEOPLE.FAMILY",
+  "learningObjective": "MOE.ENG.G7.PEOPLE.FAMILY.INTERACT",
+  "prerequisiteLearningObjective": [],
+  "targetSector": ["כלל המגזרים"],
+  "targetAudience": ["כיתה ז'", "כיתה ח'"],
+  "components": [
+    {
+      "id": "ENG.G7.FAMILY.INTERACT-01",
+      "learningUnitId": "ENG.G7.FAMILY.INTERACT",
+      "title": "Read a real message thread",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 2,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 8,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.INTERACT-01B"],
+      "skills": ["אינטראקציה בכתב", "התאמת מסר לנמען"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.INTERACT-01-01",
+          "title": "Before you read",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההבנייה ביעד האינטראקציה בכתב. המטרה: להסביר שהודעה היא לא חיבור — היא קצרה, ותמיד יש בה נמען אחד וכוונה אחת: להזמין, להשיב או לשאול. אסטרטגיה: לפני שכותבים הודעה, לשאול 'למי אני כותב ומה אני רוצה שיקרה אחרי שהוא יקרא?'. תפיסות שגויות נפוצות: (1) לומדים כותבים הודעה ארוכה מדי ומפספסים את הכוונה; (2) לומדים עונים 'yes' בלי לומר מתי או איפה, ואז ההודעה לא באמת עונה; (3) שכחת הפרט החסר — לא שואלים על מה שלא נאמר. אין כאן שאלה מדורגת.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "A message is short. It has one reader and one purpose.",
+              "he": "הודעה היא קצרה. יש לה נמען אחד ומטרה אחת.",
+              "ar": "الرسالة قصيرة. لها قارئ واحد وهدف واحد."
+            },
+            "goal": {
+              "en": "Your job: see how people invite, how they reply, and how they ask for a detail that is missing.",
+              "he": "המשימה שלכם: לראות איך אנשים מזמינים, איך הם משיבים, ואיך הם שואלים על פרט שחסר.",
+              "ar": "مهمّتكم: ملاحظة كيف يدعو الناس، وكيف يردّون، وكيف يسألون عن تفصيل ناقص."
+            },
+            "strategy": {
+              "en": "Before you write a message, ask yourself: who reads it, and what should happen next?",
+              "he": "לפני שכותבים הודעה, שאלו את עצמכם: מי קורא אותה, ומה אמור לקרות אחר כך?",
+              "ar": "قبل كتابة رسالة، اسألوا أنفسكم: من يقرأها، وماذا يجب أن يحدث بعدها؟"
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.INTERACT-01-02",
+          "title": "Maya invites, Sara replies",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט ההבנייה המרכזי. הלומד קורא שרשור הודעות אמיתי בין מאיה לשרה: הזמנה, תשובה, ושאלה על פרט חסר. יעד: לזהות את שלושת המהלכים ולהבין מה כל אחד מהם עושה. אסטרטגיה: לקרוא הודעה הודעה ולשאול 'מה הכותב רוצה כאן?'. תפיסות שגויות נפוצות: (1) לומדים חושבים שתשובה חיובית מספיקה, ולא שמים לב ששרה עדיין לא יודעת את השעה; (2) בלבול בין הזמנה לשאלה — שתיהן מסתיימות בסימן שאלה; (3) שימוש ב-'What hour?' במקום 'What time?' בתרגום מילולי מעברית. אפשר ללחוץ על כל שורה כדי לשמוע אותה.",
+          "presentation": {
+            "kind": "reading",
+            "prompt": {
+              "en": "Read the messages. Tap any line to hear it.",
+              "he": "קראו את ההודעות. לחצו על שורה כדי לשמוע אותה.",
+              "ar": "اقرأوا الرسائل. اضغطوا على أيّ سطر لسماعه."
+            },
+            "lines": [
+              "Maya: Hi Sara! We are all going to my grandmother's house on Friday. Do you want to come?",
+              "Sara: Hi Maya! Yes, I would love to come. Thank you!",
+              "Sara: One question — what time should I be there?",
+              "Maya: Half past six. My uncle Sami will come late, but we start without him.",
+              "Sara: Great, see you on Friday. Should I bring something?"
+            ],
+            "language": "en-US",
+            "rate": 0.9,
+            "glossary": [
+              { "word": "Do you want to come?", "he": "רוצה לבוא? — הזמנה", "ar": "هل تريد أن تأتي؟ — دعوة" },
+              { "word": "I would love to", "he": "אשמח מאוד — תשובה חיובית ומנומסת", "ar": "يسعدني كثيراً — ردّ إيجابي ومهذّب" },
+              { "word": "What time", "he": "באיזו שעה", "ar": "في أيّ ساعة" },
+              { "word": "bring", "he": "להביא", "ar": "أن أُحضِر" }
+            ]
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "What is Maya's first message?",
+              "answers": ["An invitation", "A question about time", "An apology", "A thank you"],
+              "correctAnswers": ["An invitation"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. \"Do you want to come?\" invites Sara to do something with her.",
+                  "he": "כן. \"Do you want to come?\" מזמינה את שרה לעשות משהו יחד איתה.",
+                  "ar": "نعم. \"Do you want to come?\" تدعو سارة للقيام بشيء معها."
+                },
+                "incorrect": {
+                  "en": "The message ends with a question mark, but not every question mark is a question. Ask what Maya wants Sara to DO.",
+                  "he": "ההודעה מסתיימת בסימן שאלה, אבל לא כל סימן שאלה הוא שאלה. שאלו מה מאיה רוצה ששרה תעשה.",
+                  "ar": "تنتهي الرسالة بعلامة استفهام، لكن ليست كلّ علامة استفهام سؤالاً. اسألوا ماذا تريد مايا من سارة أن تفعل."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Sara says yes, and then she asks a question. Why?",
+              "answers": [
+                "Because she does not want to come",
+                "Because Maya did not say the time",
+                "Because she does not know Maya",
+                "Because she wants to invite Maya too"
+              ],
+              "correctAnswers": ["Because Maya did not say the time"],
+              "feedback": {
+                "correct": {
+                  "en": "Exactly. Saying yes is not enough if you still do not know when to be there.",
+                  "he": "בדיוק. להגיד כן זה לא מספיק אם עדיין לא יודעים מתי להגיע.",
+                  "ar": "بالضبط. قول \"نعم\" لا يكفي إذا كنتم لا تعرفون متى تحضرون."
+                },
+                "incorrect": {
+                  "en": "Read Maya's first message again and list what she told Sara. One important detail is not there.",
+                  "he": "קראו שוב את ההודעה הראשונה של מאיה ורשמו מה היא אמרה לשרה. פרט אחד חשוב לא נמצא שם.",
+                  "ar": "اقرأوا رسالة مايا الأولى مجدّداً وعدّدوا ما أخبرت به سارة. تفصيل واحد مهمّ غير موجود."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "Which sentence asks for a missing detail?",
+              "answers": [
+                "Yes, I would love to come.",
+                "What time should I be there?",
+                "Half past six.",
+                "See you on Friday."
+              ],
+              "correctAnswers": ["What time should I be there?"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. It asks for one thing only, and it is easy to answer.",
+                  "he": "נכון. היא מבקשת דבר אחד בלבד, וקל לענות עליה.",
+                  "ar": "صحيح. تطلب شيئاً واحداً فقط، ومن السهل الإجابة عنها."
+                },
+                "incorrect": {
+                  "en": "Look for the sentence that Maya has to ANSWER. The others are things Sara already knows or already decided.",
+                  "he": "חפשו את המשפט שמאיה חייבת לענות עליו. האחרים הם דברים ששרה כבר יודעת או כבר החליטה.",
+                  "ar": "ابحثوا عن الجملة التي على مايا أن تجيب عنها. البقيّة أمور تعرفها سارة أو قرّرتها بالفعل."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.INTERACT-01-03",
+          "title": "What did you notice?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף רכיב ההבנייה. המטרה: שהלומד יזהה איזה מהלך בשרשור מרגיש לו הכי קשה — להזמין, להשיב או לשאול. אין תשובה נכונה ואין ניקוד. אם נבחר 'לשאול על פרט חסר' — זה בדיוק החלק שהתרגול הבא מטפל בו; אם נבחר 'לא ידעתי שאפשר לשאול' — כדאי להרגיע שבאנגלית לשאול על פרט חסר זו התנהגות מנומסת ומקובלת, לא חוסר הבנה.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "Which part of a message thread is hardest for you?",
+              "he": "איזה חלק בשרשור הודעות הכי קשה לכם?",
+              "ar": "أيّ جزء من سلسلة الرسائل هو الأصعب عليكم؟"
+            },
+            "choices": [
+              {
+                "id": "invite",
+                "label": {
+                  "en": "Writing the invitation",
+                  "he": "לכתוב את ההזמנה",
+                  "ar": "كتابة الدعوة"
+                }
+              },
+              {
+                "id": "reply",
+                "label": {
+                  "en": "Writing a reply that is not only \"yes\"",
+                  "he": "לכתוב תשובה שהיא לא רק \"כן\"",
+                  "ar": "كتابة ردّ لا يقتصر على \"نعم\""
+                }
+              },
+              {
+                "id": "ask",
+                "label": {
+                  "en": "Asking for a detail that is missing",
+                  "he": "לשאול על פרט שחסר",
+                  "ar": "السؤال عن تفصيل ناقص"
+                }
+              },
+              {
+                "id": "new",
+                "label": {
+                  "en": "I did not know I could ask at all",
+                  "he": "לא ידעתי שבכלל אפשר לשאול",
+                  "ar": "لم أكن أعرف أنّه يمكنني السؤال أصلاً"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.INTERACT-01B",
+      "learningUnitId": "ENG.G7.FAMILY.INTERACT",
+      "title": "Hear the same messages as voice notes",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": false,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 1,
+      "mediaFormat": "audio",
+      "estimatedTimeInMinutes": 7,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": [],
+      "skills": ["אינטראקציה בכתב", "התאמת מסר לנמען"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.INTERACT-01B-01",
+          "title": "Before you listen",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של הייצוג החלופי לרכיב ההבנייה. כאן אותן הודעות מגיעות כהודעות קוליות במקום כטקסט — ייצוג שמתאים ללומד שמתקשה לעקוב אחרי שרשור כתוב, ומאפשר לשמוע את הכוונה דרך הטון. יעד זהה: לזהות הזמנה, תשובה ושאלה על פרט חסר. אסטרטגיה: להאזין לטון — הזמנה עולה בסוף, שאלה עולה בסוף, אבל הזמנה מכילה 'do you want'. אין לומר ללומד שזה 'רכיב קל יותר'.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "The same three messages — this time as voice notes.",
+              "he": "אותן שלוש הודעות — הפעם כהודעות קוליות.",
+              "ar": "الرسائل الثلاث نفسها — هذه المرّة كرسائل صوتية."
+            },
+            "goal": {
+              "en": "Your job: hear which message invites, which one replies, and which one asks.",
+              "he": "המשימה שלכם: לשמוע איזו הודעה מזמינה, איזו משיבה ואיזו שואלת.",
+              "ar": "مهمّتكم: سماع أيّ رسالة تدعو، وأيّها تردّ، وأيّها تسأل."
+            },
+            "strategy": {
+              "en": "Listen to the end of each message. A question goes up at the end. An answer goes down.",
+              "he": "האזינו לסוף כל הודעה. שאלה עולה בסוף. תשובה יורדת.",
+              "ar": "استمعوا إلى نهاية كلّ رسالة. السؤال ترتفع نبرته في النهاية، والجواب تنخفض."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.INTERACT-01B-02",
+          "title": "Three voice notes",
+          "contentType": "הבנייה",
+          "mediaFormat": "audio",
+          "informationToBot": "פריט ההבנייה בייצוג קולי. הלומד שומע את אותו שרשור כשלוש הודעות קוליות רצופות, ומזהה את הכוונה גם לפי הטון ולא רק לפי המילים. יעד: לזהות הזמנה, תשובה ושאלה על פרט חסר. אסטרטגיה: להאזין לסוף כל הודעה — עלייה בטון מסמנת שאלה. תפיסות שגויות נפוצות: (1) הלומד מזהה 'Friday' וחושב שההודעה עוסקת ביום, בעוד הכוונה היא הזמנה; (2) בלבול בין 'Do you want to come?' לבין 'What time should I be there?' — שתיהן שאלות, אבל רק אחת מבקשת פרט חסר. התמליל זמין, כי היעד כאן הוא האינטראקציה ולא ההאזנה.",
+          "presentation": {
+            "kind": "listening",
+            "prompt": {
+              "en": "Listen to the three voice notes. You can open the transcript at any time.",
+              "he": "האזינו לשלוש ההודעות הקוליות. אפשר לפתוח את התמליל בכל רגע.",
+              "ar": "استمعوا إلى الرسائل الصوتية الثلاث. يمكنكم فتح النصّ المكتوب في أيّ وقت."
+            },
+            "script": "Hi Sara, it's Maya. We are all going to my grandmother's house on Friday. Do you want to come? Hi Maya, it's Sara. Yes, I would love to come, thank you! One question — what time should I be there? Hi Sara, it's Maya again. Half past six. My uncle Sami will come late, but we start without him. See you on Friday!",
+            "language": "en-US",
+            "rate": 0.85,
+            "transcriptAvailable": true,
+            "support": {
+              "he": "אפשר לפתוח את התמליל ולקרוא בזמן ההאזנה. המטרה כאן היא ההודעות עצמן, לא ההאזנה.",
+              "ar": "يمكنكم فتح النصّ والقراءة أثناء الاستماع. الهدف هنا هو الرسائل نفسها، لا الاستماع."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "What does Maya want in the first voice note?",
+              "answers": [
+                "She wants Sara to come on Friday",
+                "She wants to know the time",
+                "She wants Sara to bring soup",
+                "She wants to say sorry"
+              ],
+              "correctAnswers": ["She wants Sara to come on Friday"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. That is an invitation — she wants Sara to do something with her.",
+                  "he": "כן. זו הזמנה — היא רוצה ששרה תעשה משהו יחד איתה.",
+                  "ar": "نعم. هذه دعوة — تريد أن تفعل سارة شيئاً معها."
+                },
+                "incorrect": {
+                  "en": "Play only the first voice note and listen to the last sentence. What is Maya asking Sara to do?",
+                  "he": "השמיעו רק את ההודעה הראשונה והאזינו למשפט האחרון. מה מאיה מבקשת משרה לעשות?",
+                  "ar": "شغّلوا الرسالة الأولى فقط واستمعوا إلى الجملة الأخيرة. ماذا تطلب مايا من سارة أن تفعل؟"
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "What detail was missing from Maya's first message?",
+              "answers": ["The day", "The place", "The time", "The name"],
+              "correctAnswers": ["The time"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. She said Friday and she said her grandmother's house, but not when.",
+                  "he": "נכון. היא אמרה יום שישי ואמרה בית של סבתא, אבל לא אמרה מתי.",
+                  "ar": "صحيح. قالت الجمعة وقالت بيت الجدّة، لكنّها لم تقل متى."
+                },
+                "incorrect": {
+                  "en": "Make a short list of what Maya told Sara. Then compare it with what Sara asks in the second voice note.",
+                  "he": "ערכו רשימה קצרה של מה שמאיה אמרה לשרה. אחר כך השוו אותה למה ששרה שואלת בהודעה השנייה.",
+                  "ar": "أعدّوا قائمة قصيرة بما أخبرت به مايا سارة. ثمّ قارنوها بما تسأله سارة في الرسالة الثانية."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "true-false",
+              "questionText": "Sara only says yes and asks nothing.",
+              "answers": ["True", "False"],
+              "correctAnswers": ["False"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct. She says yes AND asks for the time — that is what makes her reply useful.",
+                  "he": "נכון. היא אומרת כן וגם שואלת על השעה — וזה מה שהופך את התשובה שלה למועילה.",
+                  "ar": "صحيح. تقول نعم وتسأل أيضاً عن الوقت — وهذا ما يجعل ردّها مفيداً."
+                },
+                "incorrect": {
+                  "en": "Listen to the second voice note all the way to the end. Sara does not stop after \"thank you\".",
+                  "he": "האזינו להודעה השנייה עד הסוף. שרה לא עוצרת אחרי \"thank you\".",
+                  "ar": "استمعوا إلى الرسالة الثانية حتّى النهاية. سارة لا تتوقّف بعد \"thank you\"."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.INTERACT-01B-03",
+          "title": "What helped you?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הייצוג הקולי. המטרה: שהלומד יזהה האם הטון עזר לו להבין את הכוונה. אין ניקוד ואין תשובה נכונה. אם נבחר 'התבלבלתי בין הדוברים' — כדאי להציע את הייצוג הכתוב שבו רואים מי כותב כל הודעה, כי זו בעיה של מעקב ולא של הבנה.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "What helped you understand the messages?",
+              "he": "מה עזר לכם להבין את ההודעות?",
+              "ar": "ما الذي ساعدكم على فهم الرسائل؟"
+            },
+            "choices": [
+              {
+                "id": "tone",
+                "label": {
+                  "en": "The tone of the voice",
+                  "he": "הטון של הקול",
+                  "ar": "نبرة الصوت"
+                }
+              },
+              {
+                "id": "transcript",
+                "label": {
+                  "en": "Reading the transcript",
+                  "he": "קריאת התמליל",
+                  "ar": "قراءة النصّ المكتوب"
+                }
+              },
+              {
+                "id": "replay",
+                "label": {
+                  "en": "Playing it more than once",
+                  "he": "השמעה יותר מפעם אחת",
+                  "ar": "إعادة التشغيل أكثر من مرّة"
+                }
+              },
+              {
+                "id": "speakers",
+                "label": {
+                  "en": "I mixed up who was speaking",
+                  "he": "התבלבלתי בין הדוברים",
+                  "ar": "اختلط عليّ من المتحدّث"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.INTERACT-02",
+      "learningUnitId": "ENG.G7.FAMILY.INTERACT",
+      "title": "Choose the right reply, then write your own",
+      "componentPurpose": "תרגול",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 2,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 4,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 11,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.INTERACT-01B"],
+      "skills": ["אינטראקציה בכתב", "בקשת מידע חסר"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.INTERACT-02-01",
+          "title": "Plan your reply",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "מסך תכנון לפני התרגול — פיגום מטה-קוגניטיבי מסוג תכנון. המטרה: שהלומד יידע שהתרגול בנוי משני שלבים: קודם בחירת התשובה המתאימה להודעות נתונות, ואז כתיבת תשובה משלו. אסטרטגיה מומלצת: תשובה טובה עונה על מה שנשאל ומוסיפה פרט אחד או שאלה אחת. תפיסה שגויה נפוצה: לומדים כותבים 'ok' ומסיימים, וההודעה לא מקדמת את השיחה.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "First choose the best reply. Then write a reply of your own.",
+              "he": "קודם בחרו את התשובה הכי מתאימה. אחר כך כתבו תשובה משלכם.",
+              "ar": "أوّلاً اختاروا الردّ الأنسب. ثمّ اكتبوا ردّاً خاصّاً بكم."
+            },
+            "goal": {
+              "en": "Your job: write a reply that answers the message and adds one detail or one question.",
+              "he": "המשימה שלכם: לכתוב תשובה שעונה על ההודעה ומוסיפה פרט אחד או שאלה אחת.",
+              "ar": "مهمّتكم: كتابة ردّ يجيب عن الرسالة ويضيف تفصيلاً واحداً أو سؤالاً واحداً."
+            },
+            "strategy": {
+              "en": "A reply that says only \"ok\" ends the conversation. A good reply keeps it going.",
+              "he": "תשובה שאומרת רק \"ok\" מסיימת את השיחה. תשובה טובה ממשיכה אותה.",
+              "ar": "الردّ الذي يقول \"ok\" فقط ينهي المحادثة. الردّ الجيّد يبقيها مستمرّة."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.INTERACT-02-02",
+          "title": "Which reply works?",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "תרגול ממוקד בבחירת תגובה מתאימה. הלומד מקבל הודעה ובוחר את התשובה שמתאימה לכוונת השולח. יעד: לבסס את ההבחנה בין תשובה שמקדמת את השיחה לבין תשובה שסוגרת אותה, ולזהות מתי צריך לשאול על פרט חסר. אסטרטגיה: לשאול 'מה הצד השני עדיין לא יודע אחרי שיקרא את התשובה שלי?'. תפיסות שגויות נפוצות: (1) בחירת התשובה הארוכה ביותר מתוך הנחה שארוך זה מנומס; (2) תשובה נימוסית אבל לא רלוונטית, כמו 'Thank you very much' להודעה ששואלת שאלה; (3) שימוש ב-'What hour?' כתרגום מילולי מעברית במקום 'What time?'. אם הלומד טועה פעמיים, כדאי לבקש ממנו לנסח מה השולח באמת רוצה.",
+          "presentation": {
+            "prompt": {
+              "en": "Read each message. Choose the reply that really works.",
+              "he": "קראו כל הודעה. בחרו את התשובה שבאמת עובדת.",
+              "ar": "اقرأوا كلّ رسالة. اختاروا الردّ الذي ينجح فعلاً."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Adam writes: \"We are playing football on Tuesday. Do you want to join?\" What is the best reply?",
+              "answers": [
+                "Ok.",
+                "Yes, I would love to. Where do you play?",
+                "I have a brother and a sister.",
+                "Thank you very much for everything."
+              ],
+              "correctAnswers": ["Yes, I would love to. Where do you play?"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. It answers the invitation and asks for the one thing Adam did not say.",
+                  "he": "כן. היא עונה על ההזמנה ושואלת על הדבר היחיד שאדם לא אמר.",
+                  "ar": "نعم. تجيب عن الدعوة وتسأل عن الشيء الوحيد الذي لم يذكره آدم."
+                },
+                "incorrect": {
+                  "en": "Check two things: does your reply answer the invitation, and does it leave you knowing where to go? One option does both.",
+                  "he": "בדקו שני דברים: האם התשובה עונה על ההזמנה, והאם אחריה אתם יודעים לאן ללכת? אפשרות אחת עושה את שניהם.",
+                  "ar": "تحقّقوا من أمرين: هل يجيب ردّكم عن الدعوة، وهل تعرفون بعده إلى أين تذهبون؟ خيار واحد يحقّق الأمرين."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Grandma writes: \"Come at six on Friday.\" You cannot come at six. What do you write?",
+              "answers": [
+                "No.",
+                "I am sorry, I have a class until seven. Can I come after that?",
+                "Six is a nice time.",
+                "See you at six!"
+              ],
+              "correctAnswers": ["I am sorry, I have a class until seven. Can I come after that?"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. You say no, you say why, and you offer another time. That is a full reply.",
+                  "he": "נכון. אמרתם לא, הסברתם למה, והצעתם זמן אחר. זו תשובה שלמה.",
+                  "ar": "صحيح. قلتم لا، وشرحتم السبب، واقترحتم وقتاً آخر. هذا ردّ كامل."
+                },
+                "incorrect": {
+                  "en": "Saying no is allowed, but it leaves Grandma with a problem. Which reply gives her a way to solve it?",
+                  "he": "מותר להגיד לא, אבל זה משאיר את סבתא עם בעיה. איזו תשובה נותנת לה דרך לפתור אותה?",
+                  "ar": "يُسمح بقول لا، لكن ذلك يترك الجدّة أمام مشكلة. أيّ ردّ يمنحها طريقة لحلّها؟"
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "Sara writes: \"Come to my house on Saturday!\" What is the missing detail you should ask about?",
+              "answers": ["Her name", "The time", "The day", "Her family"],
+              "correctAnswers": ["The time"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. You know the day and the place, but not when to arrive.",
+                  "he": "כן. אתם יודעים את היום ואת המקום, אבל לא מתי להגיע.",
+                  "ar": "نعم. تعرفون اليوم والمكان، لكن ليس متى تصلون."
+                },
+                "incorrect": {
+                  "en": "Go through the message and mark what you already know. Whatever is left is what you need to ask.",
+                  "he": "עברו על ההודעה וסמנו מה אתם כבר יודעים. מה שנשאר הוא מה שצריך לשאול.",
+                  "ar": "راجعوا الرسالة وحدّدوا ما تعرفونه بالفعل. ما يتبقّى هو ما عليكم أن تسألوا عنه."
+                }
+              }
+            },
+            {
+              "questionId": "q4",
+              "questionType": "single-choice",
+              "questionText": "Which question is correct English?",
+              "answers": [
+                "What hour I need to come?",
+                "What time should I come?",
+                "In what hour to come?",
+                "When time I come?"
+              ],
+              "correctAnswers": ["What time should I come?"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. In English we ask \"what time\", not \"what hour\".",
+                  "he": "נכון. באנגלית שואלים \"what time\", ולא \"what hour\".",
+                  "ar": "صحيح. في الإنجليزية نسأل \"what time\" وليس \"what hour\"."
+                },
+                "incorrect": {
+                  "en": "Three of these are word-for-word translations from another language. Look for the one that uses \"time\" and puts should before I.",
+                  "he": "שלוש מהאפשרויות הן תרגום מילה במילה משפה אחרת. חפשו את זו שמשתמשת ב-\"time\" ושמה should לפני I.",
+                  "ar": "ثلاثة من الخيارات ترجمة حرفية من لغة أخرى. ابحثوا عن الخيار الذي يستخدم \"time\" ويضع should قبل I."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.INTERACT-02-03",
+          "title": "Write your own reply",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "משימת כתיבה פתוחה — הפקה של הודעה בין-אישית. הלומד מקבל הזמנה מנועה וכותב תשובה משלו. יעד: תשובה שמכילה שלושה מהלכים — פנייה, תשובה ברורה, ושאלה על פרט חסר. המשימה אינה נבדקת אוטומטית; היא נשמרת ומועברת למורה ולסוכן. רשימת התיוג היא פיגום ניטור לפני ההגשה. תפיסות שגויות נפוצות: (1) תשובה של מילה אחת; (2) שכחת השאלה על הפרט החסר; (3) פתיחה ישירה בלי פנייה, שנשמעת קרירה באנגלית. אין לכתוב את ההודעה במקום הלומד — מותר לשאול שאלה מנחה כמו 'מה עוד לא ברור לך מההזמנה?'.",
+          "presentation": {
+            "kind": "writing",
+            "prompt": {
+              "en": "Noa writes to you: \"Hi! It is my birthday on Sunday and we are having a small party at my house. Can you come?\" Write your reply.",
+              "he": "נועה כותבת לכם: \"Hi! It is my birthday on Sunday and we are having a small party at my house. Can you come?\" כתבו את התשובה שלכם.",
+              "ar": "تكتب لكم نوعا: \"Hi! It is my birthday on Sunday and we are having a small party at my house. Can you come?\" اكتبوا ردّكم."
+            },
+            "placeholder": {
+              "en": "Hi Noa, ...",
+              "he": "Hi Noa, ...",
+              "ar": "Hi Noa, ..."
+            },
+            "checklist": [
+              {
+                "en": "I started with her name.",
+                "he": "התחלתי בשם שלה.",
+                "ar": "بدأت باسمها."
+              },
+              {
+                "en": "I said clearly if I can come or not.",
+                "he": "אמרתי בבירור אם אני יכול לבוא או לא.",
+                "ar": "قلت بوضوح إن كنت أستطيع الحضور أم لا."
+              },
+              {
+                "en": "I asked about one detail that is missing.",
+                "he": "שאלתי על פרט אחד שחסר.",
+                "ar": "سألت عن تفصيل واحد ناقص."
+              },
+              {
+                "en": "My message is short — two or three sentences.",
+                "he": "ההודעה שלי קצרה — שניים או שלושה משפטים.",
+                "ar": "رسالتي قصيرة — جملتان أو ثلاث."
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.INTERACT-03",
+      "learningUnitId": "ENG.G7.FAMILY.INTERACT",
+      "title": "Check: writing a real message",
+      "componentPurpose": "הערכה",
+      "isAssessment": true,
+      "isRequired": true,
+      "order": 3,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 3,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 10,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.INTERACT-01B"],
+      "skills": ["אינטראקציה בכתב", "בקשת מידע חסר"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.INTERACT-03-01",
+          "title": "Before the check",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההערכה ליעד האינטראקציה בכתב. המטרה: להסביר שיש שני חלקים — בחירת התגובה המתאימה בהודעות חדשות, ואז כתיבת הודעה עצמאית. חשוב: מרגע זה אין לחשוף תשובות ואין לרמוז עליהן, וגם אין לנסח את ההודעה במקום הלומד. מותר להזכיר אסטרטגיה כללית בלבד: לבדוק מה השולח כבר אמר ומה עדיין חסר.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Time to check how you handle a real message.",
+              "he": "הגיע הזמן לבדוק איך אתם מתמודדים עם הודעה אמיתית.",
+              "ar": "حان وقت التحقّق من كيفية تعاملكم مع رسالة حقيقية."
+            },
+            "goal": {
+              "en": "Two parts: choose the reply that works, then write a message of your own to Uncle Sami.",
+              "he": "שני חלקים: לבחור את התשובה שעובדת, ואז לכתוב הודעה משלכם לדוד סמי.",
+              "ar": "جزآن: اختيار الردّ الناجح، ثمّ كتابة رسالة خاصّة بكم إلى العمّ سامي."
+            },
+            "strategy": {
+              "en": "Read every message twice: once for what it says, once for what it does not say.",
+              "he": "קראו כל הודעה פעמיים: פעם אחת למה שכתוב בה, ופעם אחת למה שלא כתוב בה.",
+              "ar": "اقرأوا كلّ رسالة مرّتين: مرّة لما تقوله، ومرّة لما لا تقوله."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.INTERACT-03-02",
+          "title": "New messages",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט הערכה של בחירת תגובה. ההודעות חדשות ועוסקות בסיטואציות שלא תורגלו, כדי שההצלחה תעיד על המיומנות ולא על זיכרון. יעד: לבחור תגובה שעונה לכוונת השולח ומקדמת את השיחה, ולזהות איזה פרט חסר. בזמן ההערכה אין לחשוף את התשובה, אין לרמוז עליה ואין לצמצם אפשרויות. מותר להזכיר אסטרטגיה כללית בלבד: לבדוק מה השולח כבר אמר ומה עדיין חסר.",
+          "presentation": {
+            "prompt": {
+              "en": "Read each message and choose the best answer.",
+              "he": "קראו כל הודעה ובחרו את התשובה הטובה ביותר.",
+              "ar": "اقرأوا كلّ رسالة واختاروا الإجابة الأفضل."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Lily writes: \"I am coming home from Tel Aviv this weekend!\" What is the best reply?",
+              "answers": [
+                "Ok.",
+                "That is great! What day do you arrive?",
+                "I live with my mother and father.",
+                "Tel Aviv is a big city."
+              ],
+              "correctAnswers": ["That is great! What day do you arrive?"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct. You react to her news and you ask for the detail she left out.",
+                  "he": "נכון. הגבתם לחדשות שלה ושאלתם על הפרט שהיא לא ציינה.",
+                  "ar": "صحيح. تفاعلتم مع خبرها وسألتم عن التفصيل الذي لم تذكره."
+                },
+                "incorrect": {
+                  "en": "Two of these options are true sentences but they do not answer Lily. Ask yourself what Lily would write back to each one.",
+                  "he": "שתיים מהאפשרויות הן משפטים נכונים אבל הן לא עונות ללילי. שאלו את עצמכם מה לילי הייתה עונה לכל אחת מהן.",
+                  "ar": "خياران جملتان صحيحتان لكنّهما لا تجيبان ليلي. اسألوا أنفسكم بماذا سترد ليلي على كلّ منهما."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Adam writes: \"Bring something to eat on Friday.\" Which question asks for the missing detail?",
+              "answers": [
+                "Who is coming?",
+                "What should I bring?",
+                "Where do you live?",
+                "Is Friday a good day?"
+              ],
+              "correctAnswers": ["What should I bring?"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. He said to bring something, but not what.",
+                  "he": "כן. הוא אמר להביא משהו, אבל לא אמר מה.",
+                  "ar": "نعم. قال أن تُحضِروا شيئاً، لكنّه لم يقل ماذا."
+                },
+                "incorrect": {
+                  "en": "All four are real questions, but only one is about the part of Adam's message that is not clear. Underline the unclear word.",
+                  "he": "כל ארבע הן שאלות אמיתיות, אבל רק אחת עוסקת בחלק ההודעה של אדם שלא ברור. סמנו את המילה הלא ברורה.",
+                  "ar": "الأسئلة الأربعة حقيقية، لكن واحداً فقط يتعلّق بالجزء غير الواضح من رسالة آدم. ضعوا خطّاً تحت الكلمة غير الواضحة."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "You want to invite Sara to your house on Saturday at five. Which message is complete?",
+              "answers": [
+                "Come to my house.",
+                "Do you want to come to my house on Saturday at five?",
+                "Are you free?",
+                "My house is near the school."
+              ],
+              "correctAnswers": ["Do you want to come to my house on Saturday at five?"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. A complete invitation has the place, the day and the time.",
+                  "he": "נכון. הזמנה שלמה כוללת את המקום, היום והשעה.",
+                  "ar": "صحيح. الدعوة الكاملة تتضمّن المكان واليوم والوقت."
+                },
+                "incorrect": {
+                  "en": "Imagine Sara reading your message. Would she know where to go, on which day, and at what time? Count how many of the three each option gives.",
+                  "he": "דמיינו את שרה קוראת את ההודעה שלכם. האם היא תדע לאן ללכת, באיזה יום ובאיזו שעה? ספרו כמה משלושת הפרטים כל אפשרות נותנת.",
+                  "ar": "تخيّلوا سارة تقرأ رسالتكم. هل ستعرف إلى أين تذهب، وفي أيّ يوم، وفي أيّ ساعة؟ عدّوا كم من الثلاثة يقدّم كلّ خيار."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.INTERACT-03-03",
+          "title": "Write a message to Uncle Sami",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "משימת הכתיבה המוערכת ליעד האינטראקציה. הלומד כותב הודעה קצרה לדוד סמי שכוללת הזמנה עם שלושת הפרטים (מקום, יום, שעה) ובקשה לפרט חסר. יעד: הפקה עצמאית של הודעה בין-אישית תקינה ומלאה. המשימה אינה נבדקת אוטומטית — היא נשמרת ומועברת למורה ולסוכן, ולכן חשוב במיוחד לא לנסח את ההודעה במקום הלומד ולא לתקן אותה מראש. מותר להזכיר את רשימת התיוג ולשאול שאלה מנחה. תפיסות שגויות נפוצות: הודעה בלי שעה, הודעה בלי פנייה בשם, ותרגום מילולי של 'תגיד לי' ל-'Tell to me'.",
+          "presentation": {
+            "kind": "writing",
+            "prompt": {
+              "en": "Uncle Sami always arrives late. Write him a short message: invite him to the family dinner at your grandmother's house on Friday at half past six, and ask him what time he will leave Haifa.",
+              "he": "דוד סמי תמיד מגיע מאוחר. כתבו לו הודעה קצרה: הזמינו אותו לארוחה המשפחתית בבית של סבתא ביום שישי בשש וחצי, ושאלו אותו באיזו שעה הוא ייצא מחיפה.",
+              "ar": "العمّ سامي يصل دائماً متأخّراً. اكتبوا له رسالة قصيرة: ادعوه إلى عشاء العائلة في بيت الجدّة يوم الجمعة في السادسة والنصف، واسألوه في أيّ ساعة سيغادر حيفا."
+            },
+            "placeholder": {
+              "en": "Hi Sami, ...",
+              "he": "Hi Sami, ...",
+              "ar": "Hi Sami, ..."
+            },
+            "checklist": [
+              {
+                "en": "I wrote his name at the start.",
+                "he": "כתבתי את שמו בהתחלה.",
+                "ar": "كتبت اسمه في البداية."
+              },
+              {
+                "en": "I wrote the place, the day and the time.",
+                "he": "כתבתי את המקום, היום והשעה.",
+                "ar": "كتبت المكان واليوم والوقت."
+              },
+              {
+                "en": "I asked him one question.",
+                "he": "שאלתי אותו שאלה אחת.",
+                "ar": "طرحت عليه سؤالاً واحداً."
+              },
+              {
+                "en": "I used a capital letter for names and days.",
+                "he": "השתמשתי באות גדולה בשמות ובימים.",
+                "ar": "استخدمت حرفاً كبيراً في الأسماء وأيّام الأسبوع."
+              },
+              {
+                "en": "I read my message again before I sent it.",
+                "he": "קראתי את ההודעה שלי שוב לפני ששלחתי אותה.",
+                "ar": "قرأت رسالتي مرّة أخرى قبل إرسالها."
+              }
+            ]
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.INTERACT-03-04",
+          "title": "You finished this goal",
+          "contentType": "סיכום",
+          "mediaFormat": "text",
+          "informationToBot": "מסך סיום של רכיב ההערכה. מסכם מילולית מה הלומד עשה ומה הצעד הבא, בלי ציון מספרי ובלי השוואה לאחרים. אם ההערכה לא עברה, המסך אומר במפורש שזה לא סוף הדרך ומפנה לייצוג אחר של אותו יעד. ההודעה הפתוחה נבדקת על ידי המורה, ולכן הסיכום אינו טוען שהיא 'נכונה' או 'שגויה'.",
+          "presentation": {
+            "kind": "summary",
+            "onSuccess": {
+              "en": "You chose replies that keep a conversation going, and you wrote a message with everything the reader needs. Your message is now with your teacher.",
+              "he": "בחרתם תשובות שממשיכות שיחה, וכתבתם הודעה שיש בה כל מה שהקורא צריך. ההודעה שלכם נמצאת עכשיו אצל המורה.",
+              "ar": "اخترتم ردوداً تُبقي المحادثة مستمرّة، وكتبتم رسالة فيها كلّ ما يحتاجه القارئ. رسالتكم الآن لدى معلّمكم."
+            },
+            "onRetry": {
+              "en": "Noticing what a message does NOT say is a skill on its own, and it takes practice. Next we will meet the same messages in a different way.",
+              "he": "לשים לב למה שהודעה לא אומרת זו מיומנות בפני עצמה, והיא דורשת תרגול. בפעם הבאה נפגוש את אותן הודעות בדרך אחרת.",
+              "ar": "ملاحظة ما لا تقوله الرسالة مهارة بحدّ ذاتها، وتحتاج إلى تدريب. في المرّة القادمة سنلتقي بالرسائل نفسها بطريقة أخرى."
+            },
+            "nextHint": {
+              "en": "Next goal: saying what you mean clearly when you talk with someone face to face.",
+              "he": "היעד הבא: למסור את מה שאתם מתכוונים אליו בבירור בשיחה פנים אל פנים.",
+              "ar": "الهدف التالي: إيصال ما تقصدونه بوضوح في حديث وجهاً لوجه."
+            }
+          },
+          "questions": []
+        }
+      ]
+    }
+  ]
+}

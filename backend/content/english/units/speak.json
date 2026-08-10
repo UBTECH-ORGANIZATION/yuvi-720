@@ -1,0 +1,884 @@
+{
+  "id": "ENG.G7.FAMILY.SPEAK",
+  "title": "Speaking: Tell us about your family",
+  "titleTranslations": {
+    "Hebrew": "הבעה בעל פה: מספרים על המשפחה",
+    "Arabic": "التعبير الشفوي: نتحدّث عن العائلة",
+    "English": "Speaking: Tell us about your family"
+  },
+  "subTopic": "MOE.ENG.G7.PEOPLE.FAMILY",
+  "learningObjective": "MOE.ENG.G7.PEOPLE.FAMILY.SPEAK",
+  "prerequisiteLearningObjective": [],
+  "targetSector": ["כלל המגזרים"],
+  "targetAudience": ["כיתה ז'", "כיתה ח'"],
+  "components": [
+    {
+      "id": "ENG.G7.FAMILY.SPEAK-01",
+      "learningUnitId": "ENG.G7.FAMILY.SPEAK",
+      "title": "Hear it, then say it",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 2,
+      "mediaFormat": "audio",
+      "estimatedTimeInMinutes": 9,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.SPEAK-01B"],
+      "skills": ["הבעה בעל פה", "חיקוי מודל דבור", "הגייה מובנת"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.SPEAK-01-01",
+          "title": "Before you speak",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההבנייה ביעד הדיבור. המטרה: להוריד את חרדת הדיבור לפני המשימה הראשונה. הלומד אמור להבין שהרצף הוא שמיעה ואז אמירה — קודם שומעים מודל, אחר כך חוזרים עליו. אסטרטגיה מומלצת: לומר את המשפט קודם בשקט לעצמך, ואז שוב בקול. תפיסות שגויות נפוצות: (1) לומדים חושבים שצריך לדבר מהר וברצף כדי ש'ייחשב' — לא נכון, משפט קצר ואיטי הוא דיבור לגיטימי; (2) לומדים חושבים שמישהו נותן ציון להגייה שלהם — אין כאן ציון. אם הלומד כותב שהוא מתבייש, להרגיע ולהציע להתחיל משלוש מילים בלבד.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Today you are going to speak English out loud.",
+              "he": "היום תדברו אנגלית בקול.",
+              "ar": "اليوم ستتحدّثون الإنجليزية بصوت مسموع."
+            },
+            "goal": {
+              "en": "First you listen to Maya. Then you say the same sentences yourself. Nobody is grading your voice.",
+              "he": "קודם תאזינו למאיה. אחר כך תגידו את אותם משפטים בעצמכם. אף אחד לא נותן ציון לקול שלכם.",
+              "ar": "أوّلاً تستمعون إلى مايا. ثم تقولون الجمل نفسها بأنفسكم. لا أحد يقيّم صوتكم."
+            },
+            "strategy": {
+              "en": "Say it quietly first, then say it again louder. Short sentences are enough.",
+              "he": "אמרו את זה קודם בשקט, ואז שוב חזק יותר. משפטים קצרים זה מספיק.",
+              "ar": "قولوها بهدوء أوّلاً، ثم كرّروها بصوت أعلى. الجمل القصيرة كافية."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.SPEAK-01-02",
+          "title": "Listen to Maya first",
+          "contentType": "הבנייה",
+          "mediaFormat": "audio",
+          "informationToBot": "פריט המודל הדבור. הלומד שומע את מאיה מתארת את משפחתה בארבעה-חמישה משפטים קצרים, בקצב איטי, לפני שהוא מתבקש לדבר בעצמו. יעד: לקלוט את המבנה החוזר — 'My + בן משפחה + is + גיל' ואחריו 'He/She + פועל'. אוצר מילים בליבה: brother, sister, grandmother, plays, paints, cooks, lives. אסטרטגיה: להאזין פעם אחת לרצף, ואז שוב תוך כדי חזרה בלחש. תפיסות שגויות נפוצות: (1) סדר מילים מעברית/ערבית — לומדים אומרים 'Adam brother is sixteen' במקום 'My brother Adam is sixteen'; (2) השמטת ה-s בגוף שלישי — 'She paint' במקום 'She paints'. אפשר להציע ללומד לעצור אחרי כל משפט ולחזור עליו, גם לפני שהגיע למסך הדיבור.",
+          "presentation": {
+            "kind": "listening",
+            "prompt": {
+              "en": "Listen to Maya. Notice how each sentence starts.",
+              "he": "האזינו למאיה. שימו לב איך כל משפט מתחיל.",
+              "ar": "استمعوا إلى مايا. انتبهوا كيف تبدأ كلّ جملة."
+            },
+            "script": "Hi again. I want to tell you about my family. I live with my mother, my father, my brother and my sister. My brother Adam is sixteen. He plays football on Tuesday. My sister Noa is six. She paints every day. My grandmother lives near us and she cooks very good soup. I am thirteen and I like music. That is my family.",
+            "language": "en-US",
+            "rate": 0.75,
+            "transcriptAvailable": true,
+            "support": {
+              "he": "אפשר לפתוח את התמליל ולקרוא יחד עם ההשמעה. זו דרך טובה להתכונן לדיבור.",
+              "ar": "يمكنكم فتح النص المكتوب والقراءة مع التشغيل. هذه طريقة جيّدة للاستعداد للتحدّث."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "How does Maya start when she talks about her brother?",
+              "answers": [
+                "My brother Adam is sixteen.",
+                "Adam brother is sixteen.",
+                "My brother Adam sixteen.",
+                "Brother my Adam is sixteen."
+              ],
+              "correctAnswers": ["My brother Adam is sixteen."],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. In English the order is: my + person + name + is + age.",
+                  "he": "כן. באנגלית הסדר הוא: my + בן משפחה + שם + is + גיל.",
+                  "ar": "نعم. في الإنجليزية الترتيب هو: my + الشخص + الاسم + is + العمر."
+                },
+                "incorrect": {
+                  "en": "English word order is not the same as Hebrew or Arabic, and the word \"is\" cannot disappear. Play the recording again and stop after the sentence about Adam.",
+                  "he": "סדר המילים באנגלית שונה מעברית ומערבית, והמילה \"is\" לא יכולה להיעלם. השמיעו שוב ועצרו אחרי המשפט על אדם.",
+                  "ar": "ترتيب الكلمات في الإنجليزية يختلف عن العبرية والعربية، وكلمة \"is\" لا يمكن أن تختفي. أعيدوا التشغيل وتوقّفوا بعد الجملة عن آدم."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "What does Maya say about Noa?",
+              "answers": [
+                "She paints every day",
+                "She plays football",
+                "She cooks soup",
+                "She likes music"
+              ],
+              "correctAnswers": ["She paints every day"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. And notice the small \"s\" at the end: she paint-s.",
+                  "he": "נכון. ושימו לב ל-s הקטנה בסוף: she paint-s.",
+                  "ar": "صحيح. وانتبهوا إلى حرف الـ s الصغير في النهاية: she paint-s."
+                },
+                "incorrect": {
+                  "en": "Four people are described one after the other. Find the sentence that starts with \"My sister Noa\" and listen only to that part.",
+                  "he": "מתוארים ארבעה אנשים בזה אחר זה. אתרו את המשפט שמתחיל ב-\"My sister Noa\" והאזינו רק לחלק הזה.",
+                  "ar": "يُوصف أربعة أشخاص واحداً تلو الآخر. ابحثوا عن الجملة التي تبدأ بـ \"My sister Noa\" واستمعوا إلى هذا الجزء فقط."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.SPEAK-01-03",
+          "title": "Now you say it",
+          "contentType": "הבנייה",
+          "mediaFormat": "audio",
+          "informationToBot": "פריט הדיבור הראשון ביחידה — חזרה על מודל קצר. יעד: שהלומד יפיק בקול ארבעה משפטים קצרים על משפחה, בהגייה מובנת, בלי לחץ של אלתור. מה לתרגל: המבנה 'My + בן משפחה + is + גיל' ואחריו 'He/She + פועל+s'. אסטרטגיה: להשמיע משפט, לעצור, לחזור עליו, ורק אז לעבור למשפט הבא; אם קשה — לומר קודם רק שלוש המילים הראשונות. תפיסות שגויות נפוצות: (1) לומדים חושבים שצריך לומר את כל הארבעה ברצף אחד בלי לעצור; (2) 'I have thirteen years' במקום 'I am thirteen' — העתקה ישירה מעברית/ערבית; (3) בליעת ה-s בגוף שלישי. יש כאן תמיכה בשפת האם בכוונה — זהו הרכיב המגשר עבור לומד חושש. אין ניקוד ואין הערכה של ההגייה בשלב הזה.",
+          "presentation": {
+            "kind": "speaking",
+            "prompt": {
+              "en": "Say each sentence out loud. You can listen to it again as many times as you want.",
+              "he": "אמרו כל משפט בקול. אפשר להאזין לו שוב כמה פעמים שרוצים.",
+              "ar": "قولوا كلّ جملة بصوت مسموع. يمكنكم الاستماع إليها مرّة أخرى كما تشاؤون."
+            },
+            "referenceText": [
+              "My name is Maya. I am thirteen.",
+              "I live with my mother, my father, my brother and my sister.",
+              "My brother Adam is sixteen. He plays football.",
+              "My sister Noa is six. She paints every day."
+            ],
+            "language": "en-US",
+            "rate": 0.9,
+            "support": {
+              "he": "קשה להתחיל? אמרו רק את שלוש המילים הראשונות של המשפט. גם זה דיבור, וזו בדיוק ההתחלה.",
+              "ar": "هل البداية صعبة؟ قولوا الكلمات الثلاث الأولى من الجملة فقط. هذا أيضاً تحدّث، وهذه هي البداية تماماً."
+            },
+            "selfCheck": [
+              {
+                "id": "smooth",
+                "label": {
+                  "en": "I said the whole sentence",
+                  "he": "אמרתי את כל המשפט",
+                  "ar": "قلت الجملة كاملة"
+                }
+              },
+              {
+                "id": "slow",
+                "label": {
+                  "en": "I said it slowly, but I said it",
+                  "he": "אמרתי לאט, אבל אמרתי",
+                  "ar": "قلتها ببطء، لكنّني قلتها"
+                }
+              },
+              {
+                "id": "stuck-word",
+                "label": {
+                  "en": "One word was hard to say",
+                  "he": "מילה אחת הייתה קשה להגייה",
+                  "ar": "كانت هناك كلمة واحدة صعبة النطق"
+                }
+              },
+              {
+                "id": "again",
+                "label": {
+                  "en": "I want to hear it again",
+                  "he": "אני רוצה לשמוע את זה שוב",
+                  "ar": "أريد سماعها مرّة أخرى"
+                }
+              }
+            ]
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.SPEAK-01-04",
+          "title": "How was speaking out loud?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף רכיב ההבנייה. יעד: שהלומד יזהה מה בדיוק היה הקושי בדיבור — מציאת המילים, ההגייה, או הביטחון — כי לכל אחד מהם יש מענה אחר. אין תשובה נכונה ואין ניקוד. אם נבחר 'לא ידעתי איך להגות' — להפנות ליעד ההגייה (PHON). אם נבחר 'התביישתי' — להציע את הרכיב החלופי עם המסגרות הכתובות, שבו אפשר לבנות את המשפט לפני שאומרים אותו.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "What was the hard part when you spoke?",
+              "he": "מה היה החלק הקשה כשדיברתם?",
+              "ar": "ما كان الجزء الصعب عندما تحدّثتم؟"
+            },
+            "choices": [
+              {
+                "id": "words",
+                "label": {
+                  "en": "Finding the words",
+                  "he": "למצוא את המילים",
+                  "ar": "إيجاد الكلمات"
+                }
+              },
+              {
+                "id": "pronounce",
+                "label": {
+                  "en": "Knowing how to pronounce them",
+                  "he": "לדעת איך להגות אותן",
+                  "ar": "معرفة كيفيّة نطقها"
+                }
+              },
+              {
+                "id": "shy",
+                "label": {
+                  "en": "Speaking out loud felt strange",
+                  "he": "היה מוזר לדבר בקול",
+                  "ar": "شعرت بغرابة عند التحدّث بصوت مسموع"
+                }
+              },
+              {
+                "id": "fine",
+                "label": {
+                  "en": "It went well",
+                  "he": "הלך לי טוב",
+                  "ar": "سار الأمر جيداً"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.SPEAK-01B",
+      "learningUnitId": "ENG.G7.FAMILY.SPEAK",
+      "title": "Read the model, then say it",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": false,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 1,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 8,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": [],
+      "skills": ["הבעה בעל פה", "חיקוי מודל דבור", "הגייה מובנת"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.SPEAK-01B-01",
+          "title": "The words are in front of you",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של הייצוג החלופי לרכיב ההבנייה. אותו יעד למידה — דיבור על המשפחה — אבל הדרך שונה: כאן המשפטים כתובים לפני הלומד, והוא קורא אותם בעיניים לפני שהוא אומר אותם, במקום לחקות מודל שמיעתי. זה נועד ללומד שהתקשה כשהמודל היה קולי בלבד. אסטרטגיה: לקרוא שורה בעיניים, ללחוץ עליה כדי לשמוע, ואז לומר. לא לומר ללומד שזהו רכיב 'קל יותר' — זו דרך אחרת, לא רמה נמוכה יותר.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "This time the sentences are written for you.",
+              "he": "הפעם המשפטים כתובים לפניכם.",
+              "ar": "هذه المرّة الجمل مكتوبة أمامكم."
+            },
+            "goal": {
+              "en": "Read Sara's sentences, hear them, and then say them with your own names and numbers.",
+              "he": "קראו את המשפטים של שרה, שמעו אותם, ואז אמרו אותם עם השמות והמספרים שלכם.",
+              "ar": "اقرأوا جمل سارة، واستمعوا إليها، ثم قولوها بأسمائكم وأرقامكم."
+            },
+            "strategy": {
+              "en": "Eyes first, ears second, voice third. That order makes speaking much easier.",
+              "he": "קודם העיניים, אחר כך האוזניים, ובסוף הקול. הסדר הזה עושה את הדיבור הרבה יותר קל.",
+              "ar": "العين أوّلاً، ثم الأذن، ثم الصوت. هذا الترتيب يجعل التحدّث أسهل بكثير."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.SPEAK-01B-02",
+          "title": "Sara's family, written down",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט המודל הכתוב — הייצוג החלופי של המודל הדבור. יעד: שהלומד יראה את המבנה בכתב ויקשר בין הכתוב לנשמע בלחיצה על כל שורה. מה לתרגל: 'I am ... years old', 'I have got ...', 'He/She + פועל+s'. אסטרטגיה: לקרוא שורה, ללחוץ להשמעה, ולחזור עליה בלחש. תפיסות שגויות נפוצות: (1) העתקה מעברית/ערבית — 'I have thirteen years' במקום 'I am thirteen years old'; (2) בלבול בין have got (רכוש/משפחה) ל-be (גיל וזהות). זהו רכיב הבנייה, מותר לרמוז ולהסביר בהרחבה.",
+          "presentation": {
+            "kind": "reading",
+            "prompt": {
+              "en": "Read Sara's lines. Tap any line to hear it.",
+              "he": "קראו את השורות של שרה. לחצו על שורה כדי לשמוע אותה.",
+              "ar": "اقرأوا سطور سارة. اضغطوا على أيّ سطر لسماعه."
+            },
+            "lines": [
+              "My name is Sara. I am thirteen years old.",
+              "I have got two brothers and one sister.",
+              "My brothers are twins. They are eleven.",
+              "My sister Lily is nineteen. She studies in Tel Aviv.",
+              "My father works at the hospital."
+            ],
+            "language": "en-US",
+            "rate": 0.85,
+            "glossary": [
+              { "word": "I have got", "he": "יש לי", "ar": "لديّ" },
+              { "word": "twins", "he": "תאומים", "ar": "توأمان" },
+              { "word": "studies", "he": "לומדת", "ar": "تدرس" },
+              { "word": "works at", "he": "עובד ב־", "ar": "يعمل في" }
+            ]
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Which line tells you how many brothers Sara has?",
+              "answers": [
+                "My name is Sara. I am thirteen years old.",
+                "I have got two brothers and one sister.",
+                "My brothers are twins. They are eleven.",
+                "My father works at the hospital."
+              ],
+              "correctAnswers": ["I have got two brothers and one sister."],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. \"I have got\" is how you say what you have — including family.",
+                  "he": "כן. \"I have got\" זו הדרך לומר מה יש לכם — כולל בני משפחה.",
+                  "ar": "نعم. \"I have got\" هي طريقة قول ما لديكم — بما في ذلك أفراد العائلة."
+                },
+                "incorrect": {
+                  "en": "Look for a number word first, then read that whole line. Two lines mention brothers, but only one gives the number.",
+                  "he": "חפשו קודם מילת מספר, ואז קראו את כל השורה. שתי שורות מזכירות אחים, אבל רק אחת נותנת את המספר.",
+                  "ar": "ابحثوا أوّلاً عن كلمة عدد، ثم اقرأوا السطر كاملاً. سطران يذكران الإخوة، لكن واحداً فقط يعطي العدد."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "How do you say your age in English?",
+              "answers": [
+                "I am thirteen years old.",
+                "I have thirteen years.",
+                "I am thirteen year.",
+                "My age is thirteen years old."
+              ],
+              "correctAnswers": ["I am thirteen years old."],
+              "feedback": {
+                "correct": {
+                  "en": "Exactly. English uses \"I am\" for age, not \"I have\".",
+                  "he": "בדיוק. באנגלית משתמשים ב-\"I am\" לגיל, לא ב-\"I have\".",
+                  "ar": "بالضبط. تستخدم الإنجليزية \"I am\" للعمر، وليس \"I have\"."
+                },
+                "incorrect": {
+                  "en": "In Hebrew and Arabic we say we \"have\" years — English does not. Look again at Sara's first line and copy its shape.",
+                  "he": "בעברית ובערבית אומרים שיש לנו שנים — באנגלית לא. הסתכלו שוב על השורה הראשונה של שרה והעתיקו את המבנה שלה.",
+                  "ar": "في العبرية والعربية نقول إنّ لدينا سنوات — أمّا الإنجليزية فلا. انظروا مرّة أخرى إلى سطر سارة الأوّل وقلّدوا بنيته."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.SPEAK-01B-03",
+          "title": "Read them out loud",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט הדיבור של הייצוג החלופי. יעד: הפקה בעל פה כשהטקסט עדיין לפני העיניים — קריאה בקול היא גשר לגיטימי לדיבור עצמאי. מה לתרגל: קריאה שוטפת של משפט שלם, ואז החלפת השם והמספר בשלכם. אסטרטגיה: לקרוא פעם אחת כמו שכתוב, ופעם שנייה עם הפרטים שלכם. תפיסות שגויות נפוצות: (1) לומדים מחליפים רק את השם ושוכחים להתאים את הפועל — 'My sister study' במקום 'My sister studies'; (2) לומדים חושבים שקריאה בקול 'לא נחשבת דיבור' — היא כן, וזה השלב שלפני דיבור חופשי. יש תמיכה בשפת האם בכוונה.",
+          "presentation": {
+            "kind": "speaking",
+            "prompt": {
+              "en": "Read each line out loud. Then say it again with YOUR names and numbers.",
+              "he": "קראו כל שורה בקול. אחר כך אמרו אותה שוב עם השמות והמספרים שלכם.",
+              "ar": "اقرأوا كلّ سطر بصوت مسموع. ثم قولوه مرّة أخرى بأسمائكم وأرقامكم."
+            },
+            "referenceText": [
+              "My name is Sara. I am thirteen years old.",
+              "I have got two brothers and one sister.",
+              "My father works at the hospital."
+            ],
+            "language": "en-US",
+            "rate": 0.9,
+            "support": {
+              "he": "מותר לקרוא מהמסך. אחר כך נסו שוב בלי להסתכל — רק משפט אחד.",
+              "ar": "يمكنكم القراءة من الشاشة. ثم حاولوا مرّة أخرى دون النظر — جملة واحدة فقط."
+            },
+            "selfCheck": [
+              {
+                "id": "read-aloud",
+                "label": {
+                  "en": "I read the lines out loud",
+                  "he": "קראתי את השורות בקול",
+                  "ar": "قرأت السطور بصوت مسموع"
+                }
+              },
+              {
+                "id": "changed",
+                "label": {
+                  "en": "I changed them to my own family",
+                  "he": "שיניתי אותן למשפחה שלי",
+                  "ar": "غيّرتها لتناسب عائلتي"
+                }
+              },
+              {
+                "id": "no-look",
+                "label": {
+                  "en": "I said one line without looking",
+                  "he": "אמרתי שורה אחת בלי להסתכל",
+                  "ar": "قلت سطراً واحداً دون النظر"
+                }
+              },
+              {
+                "id": "hard",
+                "label": {
+                  "en": "It was still hard for me",
+                  "he": "עדיין היה לי קשה",
+                  "ar": "ما زال الأمر صعباً عليّ"
+                }
+              }
+            ]
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.SPEAK-01B-04",
+          "title": "Which way helped you?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הייצוג החלופי. יעד: שהלומד יזהה איזה ערוץ עוזר לו יותר — לראות את המילים או לשמוע אותן. אין תשובה נכונה ואין ניקוד. התשובה חשובה למערכת: אם הלומד בוחר 'לראות את המילים', כדאי להציע לו טקסט לצד כל האזנה גם ביעדים הבאים.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "What helped you say it?",
+              "he": "מה עזר לכם לומר את זה?",
+              "ar": "ما الذي ساعدكم على قولها؟"
+            },
+            "choices": [
+              {
+                "id": "seeing",
+                "label": {
+                  "en": "Seeing the words",
+                  "he": "לראות את המילים",
+                  "ar": "رؤية الكلمات"
+                }
+              },
+              {
+                "id": "hearing",
+                "label": {
+                  "en": "Tapping a line and hearing it",
+                  "he": "ללחוץ על שורה ולשמוע אותה",
+                  "ar": "الضغط على سطر وسماعه"
+                }
+              },
+              {
+                "id": "glossary",
+                "label": {
+                  "en": "The word list in my language",
+                  "he": "רשימת המילים בשפה שלי",
+                  "ar": "قائمة الكلمات بلغتي"
+                }
+              },
+              {
+                "id": "practice",
+                "label": {
+                  "en": "Saying it more than once",
+                  "he": "לומר את זה יותר מפעם אחת",
+                  "ar": "قولها أكثر من مرّة"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.SPEAK-02",
+      "learningUnitId": "ENG.G7.FAMILY.SPEAK",
+      "title": "Say more: sentences of your own",
+      "componentPurpose": "תרגול",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 2,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 4,
+      "mediaFormat": "audio",
+      "estimatedTimeInMinutes": 10,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.SPEAK-01B"],
+      "skills": ["הבעה בעל פה", "הפקת משפטים מקושרים"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.SPEAK-02-01",
+          "title": "From copying to creating",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב התרגול. יעד: להסביר את הקפיצה — עד עכשיו חזרנו על מודל, מכאן אנחנו מפיקים משפטים משלנו. הלומד אמור להבין שהתוכן הוא המשפחה שלו, ולכן אין תשובה 'נכונה' אחת. אסטרטגיה: לחשוב על אדם אחד בלבד ולומר עליו שלושה דברים, במקום לנסות לכסות את כל המשפחה. תפיסה שגויה נפוצה: לומדים מנסים לתרגם משפט מורכב מעברית ונתקעים — עדיף שלושה משפטים קצרים ונכונים ממשפט ארוך שנשבר באמצע. שימו לב: ברכיב הזה אין תמיכה בשפת האם בכוונה — זה חלק מהתרגול.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Now the words are yours.",
+              "he": "עכשיו המילים הן שלכם.",
+              "ar": "الآن الكلمات كلماتكم."
+            },
+            "goal": {
+              "en": "First you check the language you need. Then you speak about one real person in your family.",
+              "he": "קודם תבדקו את הלשון שאתם צריכים. אחר כך תדברו על אדם אחד אמיתי מהמשפחה שלכם.",
+              "ar": "أوّلاً تتحقّقون من اللغة التي تحتاجونها. ثم تتحدّثون عن شخص حقيقي واحد من عائلتكم."
+            },
+            "strategy": {
+              "en": "Pick one person and say three short things about them. Three short sentences beat one long one.",
+              "he": "בחרו אדם אחד ואמרו עליו שלושה דברים קצרים. שלושה משפטים קצרים עדיפים על אחד ארוך.",
+              "ar": "اختاروا شخصاً واحداً وقولوا عنه ثلاثة أمور قصيرة. ثلاث جمل قصيرة أفضل من جملة طويلة واحدة."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.SPEAK-02-02",
+          "title": "The language you will need",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "פריט תרגול לשוני קצר, ממש לפני משימת הדיבור החופשית. יעד: לחזק שלושה דברים שנשברים בדיבור חופשי — ה-s בגוף שלישי, חיבור שני רעיונות עם and, ומתן סיבה עם because. מה לתרגל: לבחור את הצורה הנכונה ולהבין למה. אסטרטגיה: לקרוא את המשפט בקול לפני הבחירה — האוזן לרוב שומעת מה חסר. תפיסות שגויות נפוצות: (1) השמטת ה-s ב-he/she/it; (2) שימוש ב-because כשצריך and, כי בעברית 'ו' מכסה את שניהם; (3) הצבת מילת הקישור בסוף המשפט. זהו רכיב תרגול — מותר להסביר את הכלל, אבל עדיף להוביל את הלומד לגלות אותו בעצמו.",
+          "presentation": {
+            "kind": "practice",
+            "prompt": {
+              "en": "Three quick choices before you speak.",
+              "he": "שלוש בחירות מהירות לפני שמדברים.",
+              "ar": "ثلاثة اختيارات سريعة قبل التحدّث."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "fill-in",
+              "questionText": "My sister ___ every day.",
+              "answers": ["paint", "paints", "painting", "is paint"],
+              "correctAnswers": ["paints"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. With he, she or it we add \"s\" to the verb.",
+                  "he": "כן. עם he, she או it מוסיפים \"s\" לפועל.",
+                  "ar": "نعم. مع he أو she أو it نضيف \"s\" إلى الفعل."
+                },
+                "incorrect": {
+                  "en": "Ask yourself who does the action. \"My sister\" is like \"she\" — and that changes the end of the verb. Say the sentence out loud and listen to the ending.",
+                  "he": "שאלו את עצמכם מי מבצע את הפעולה. \"My sister\" זה כמו \"she\" — וזה משנה את סוף הפועל. אמרו את המשפט בקול והקשיבו לסיומת.",
+                  "ar": "اسألوا أنفسكم من يقوم بالفعل. \"My sister\" مثل \"she\" — وهذا يغيّر نهاية الفعل. قولوا الجملة بصوت مسموع واستمعوا إلى النهاية."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Which sentence puts two ideas together correctly?",
+              "answers": [
+                "My brother is sixteen and he plays football.",
+                "My brother is sixteen he plays football and.",
+                "And my brother is sixteen he plays football.",
+                "My brother is sixteen, he plays football and he."
+              ],
+              "correctAnswers": ["My brother is sixteen and he plays football."],
+              "feedback": {
+                "correct": {
+                  "en": "Right. \"And\" sits between the two ideas, not at the end.",
+                  "he": "נכון. \"And\" יושבת בין שני הרעיונות, לא בסוף.",
+                  "ar": "صحيح. \"And\" تقع بين الفكرتين، لا في النهاية."
+                },
+                "incorrect": {
+                  "en": "A joining word stands between the two parts it joins. Try reading each option out loud and stop where it sounds broken.",
+                  "he": "מילת קישור עומדת בין שני החלקים שהיא מחברת. נסו לקרוא כל אפשרות בקול ועצרו במקום שנשמע שבור.",
+                  "ar": "أداة الربط تقف بين الجزأين اللذين تربطهما. جرّبوا قراءة كلّ خيار بصوت مسموع وتوقّفوا حيث يبدو مكسوراً."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "You want to say WHY you like Saturday. Which word do you need?",
+              "answers": ["and", "but", "because", "also"],
+              "correctAnswers": ["because"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. \"Because\" opens a reason: I like Saturday because we eat together.",
+                  "he": "כן. \"Because\" פותחת סיבה: I like Saturday because we eat together.",
+                  "ar": "نعم. \"Because\" تفتح سبباً: I like Saturday because we eat together."
+                },
+                "incorrect": {
+                  "en": "Each of these words does a different job: adding, contrasting, or giving a reason. Which one answers the question \"why?\"",
+                  "he": "לכל אחת מהמילים האלה תפקיד אחר: להוסיף, לנגד, או לתת סיבה. איזו מהן עונה על השאלה \"למה?\"",
+                  "ar": "كلّ من هذه الكلمات لها وظيفة مختلفة: الإضافة، أو المقابلة، أو إعطاء سبب. أيّها يجيب عن سؤال \"لماذا؟\""
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.SPEAK-02-03",
+          "title": "Speak about someone in your family",
+          "contentType": "תרגול",
+          "mediaFormat": "audio",
+          "informationToBot": "משימת הדיבור העצמאית הראשונה. יעד: שלושה עד ארבעה משפטים מקושרים על אדם אחד מהמשפחה, מהראש — לא חזרה על מודל. המודל שמוצג הוא על דוד סמי, כדי להראות אורך ומבנה בלי לתת ללומד את התוכן שלו. מה לתרגל: 'This is my ...', 'He/She lives ...', 'I like ... because ...'. אסטרטגיה: לומר את שלושת המשפטים בראש פעם אחת, ואז בקול. אין כאן תמיכה בעברית/ערבית בכוונה — הלומד כבר עבר את שלב הגישור, וזה חלק מהתרגול; אם הוא מבקש עזרה, אפשר לתת מילה בודדת באנגלית או לשאול שאלה מנחה, אבל לא לתרגם לו את כל המשפט. תפיסות שגויות נפוצות: (1) ניסיון לתרגם משפט עברי מורכב ואז היתקעות באמצע; (2) שימוש ב-'is' פעמיים ('He is lives in Haifa'); (3) הפסקה מוחלטת אחרי טעות במקום המשך.",
+          "presentation": {
+            "kind": "speaking",
+            "prompt": {
+              "en": "Listen to the example once. Then say three or four sentences about ONE person in your family.",
+              "he": "האזינו לדוגמה פעם אחת. אחר כך אמרו שלושה או ארבעה משפטים על אדם אחד מהמשפחה שלכם.",
+              "ar": "استمعوا إلى المثال مرّة واحدة. ثم قولوا ثلاث أو أربع جمل عن شخص واحد من عائلتكم."
+            },
+            "referenceText": [
+              "This is my uncle. His name is Sami.",
+              "He lives in Haifa and he drives a big car.",
+              "I like him because he is funny."
+            ],
+            "language": "en-US",
+            "rate": 0.9,
+            "selfCheck": [
+              {
+                "id": "three",
+                "label": {
+                  "en": "I said three sentences or more",
+                  "he": "אמרתי שלושה משפטים או יותר",
+                  "ar": "قلت ثلاث جمل أو أكثر"
+                }
+              },
+              {
+                "id": "linked",
+                "label": {
+                  "en": "I used and, but or because",
+                  "he": "השתמשתי ב-and, but או because",
+                  "ar": "استخدمت and أو but أو because"
+                }
+              },
+              {
+                "id": "stopped",
+                "label": {
+                  "en": "I stopped in the middle",
+                  "he": "נעצרתי באמצע",
+                  "ar": "توقّفت في المنتصف"
+                }
+              },
+              {
+                "id": "own-words",
+                "label": {
+                  "en": "The sentences were really mine",
+                  "he": "המשפטים היו באמת שלי",
+                  "ar": "كانت الجمل من عندي حقاً"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.SPEAK-03",
+      "learningUnitId": "ENG.G7.FAMILY.SPEAK",
+      "title": "Check: tell us about your family",
+      "componentPurpose": "הערכה",
+      "isAssessment": true,
+      "isRequired": true,
+      "order": 3,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 3,
+      "mediaFormat": "audio",
+      "estimatedTimeInMinutes": 9,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.SPEAK-01B"],
+      "skills": ["הבעה בעל פה", "הפקת משפטים מקושרים", "הגייה מובנת"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.SPEAK-03-01",
+          "title": "This is the check",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההערכה ליעד הדיבור. יעד: להסביר ללומד מה קורה כאן — קודם שלוש שאלות לשון, ואז משימת דיבור לא מתוסרטת. חשוב מאוד: מכאן ואילך זהו רכיב הערכה. אין לחשוף תשובה, אין לרמוז עליה, ואין לתקן את הלומד באמצע. מותר להזכיר אסטרטגיה כללית בלבד (לקרוא בקול לפני הבחירה, לומר משפט קצר במקום ארוך) ולעודד. הלומד יכול לחזור אחורה ולנסות שוב — זו הערכת יכולת, לא מבחן זיכרון.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Time to show what you can do.",
+              "he": "הגיע הזמן להראות מה אתם יודעים לעשות.",
+              "ar": "حان الوقت لتُظهروا ما تستطيعون فعله."
+            },
+            "goal": {
+              "en": "Three short questions, and then you speak about your family in four sentences.",
+              "he": "שלוש שאלות קצרות, ואחר כך אתם מדברים על המשפחה שלכם בארבעה משפטים.",
+              "ar": "ثلاثة أسئلة قصيرة، ثم تتحدّثون عن عائلتكم في أربع جمل."
+            },
+            "strategy": {
+              "en": "Take your time. You can go back to any screen before you finish.",
+              "he": "קחו את הזמן. אפשר לחזור לכל מסך לפני הסיום.",
+              "ar": "خذوا وقتكم. يمكنكم العودة إلى أيّ شاشة قبل الإنهاء."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.SPEAK-03-02",
+          "title": "Say it the English way",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט הערכה לשוני. יעד: לבדוק אם הלומד שולט בשלושה מבנים שנדרשים לדיבור על משפחה — s בגוף שלישי, חיבור שני רעיונות, וניסוח גיל. זהו רכיב הערכה: אין לחשוף את התשובה ואין לרמוז עליה, גם אם הלומד מבקש במפורש. מותר לעודד, להציע לקרוא את האפשרויות בקול לעצמו, ולהזכיר שאפשר לענות ולהמשיך. אם הלומד טועה, המשוב הכתוב כבר מסביר את סוג הטעות — אין להוסיף עליו את התשובה. תפיסות שגויות שנבדקות כאן: השמטת s בגוף שלישי, מילת קישור שגויה, והעתקת 'יש לי X שנים' מעברית/ערבית.",
+          "presentation": {
+            "kind": "practice",
+            "prompt": {
+              "en": "Choose the sentence that works in English.",
+              "he": "בחרו את המשפט שעובד באנגלית.",
+              "ar": "اختاروا الجملة التي تصحّ في الإنجليزية."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Which sentence is correct?",
+              "answers": [
+                "My grandmother cook soup.",
+                "My grandmother cooks soup.",
+                "My grandmother cooking soup.",
+                "My grandmother is cook soup."
+              ],
+              "correctAnswers": ["My grandmother cooks soup."],
+              "feedback": {
+                "correct": {
+                  "en": "Correct.",
+                  "he": "נכון.",
+                  "ar": "صحيح."
+                },
+                "incorrect": {
+                  "en": "Check the end of the verb, and check whether the sentence needs an extra word before it. Read each option out loud once more before you move on.",
+                  "he": "בדקו את סוף הפועל, ובדקו אם המשפט צריך מילה נוספת לפניו. קראו כל אפשרות בקול פעם נוספת לפני שממשיכים.",
+                  "ar": "تحقّقوا من نهاية الفعل، وتحقّقوا ممّا إذا كانت الجملة تحتاج كلمة إضافية قبله. اقرأوا كلّ خيار بصوت مسموع مرّة أخرى قبل المتابعة."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Maya wants to say two facts about Adam in one sentence. Which one works?",
+              "answers": [
+                "Adam is sixteen and he plays football.",
+                "Adam is sixteen because he plays football.",
+                "Adam is sixteen but he plays football.",
+                "Adam is sixteen or he plays football."
+              ],
+              "correctAnswers": ["Adam is sixteen and he plays football."],
+              "feedback": {
+                "correct": {
+                  "en": "Correct.",
+                  "he": "נכון.",
+                  "ar": "صحيح."
+                },
+                "incorrect": {
+                  "en": "The two facts do not fight each other and one is not the reason for the other — so think about what the joining word is actually claiming.",
+                  "he": "שתי העובדות לא סותרות זו את זו, ואחת אינה הסיבה לשנייה — אז חשבו מה מילת הקישור בעצם טוענת.",
+                  "ar": "الحقيقتان لا تتعارضان، وإحداهما ليست سبباً للأخرى — ففكّروا فيما تدّعيه أداة الربط فعلاً."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "true-false",
+              "questionText": "\"I have thirteen years\" is the correct way to give your age in English.",
+              "answers": ["True", "False"],
+              "correctAnswers": ["False"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct.",
+                  "he": "נכון.",
+                  "ar": "صحيح."
+                },
+                "incorrect": {
+                  "en": "Think about which verb English uses for age. It is not the same verb we use in Hebrew or Arabic.",
+                  "he": "חשבו באיזה פועל אנגלית משתמשת לגיל. זה לא אותו פועל שאנחנו משתמשים בו בעברית או בערבית.",
+                  "ar": "فكّروا في الفعل الذي تستخدمه الإنجليزية للعمر. إنّه ليس الفعل نفسه الذي نستخدمه في العبرية أو العربية."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.SPEAK-03-03",
+          "title": "Tell us about your family",
+          "contentType": "הערכה",
+          "mediaFormat": "audio",
+          "informationToBot": "משימת הדיבור הלא מתוסרטת — ליבת ההערכה ביעד הזה. יעד: ארבעה משפטים מקושרים על המשפחה, בהגייה מובנת, בלי מודל להעתיק ממנו. מה שמוצג על המסך הן הוראות באנגלית (מה כל משפט אמור לכסות), לא משפטים לחיקוי — זו הערכה, ולכן אין דוגמה מוכנה. זהו רכיב הערכה: אין לנסח ללומד את המשפטים שלו, אין לתרגם לו משפט שלם, ואין לתקן אותו תוך כדי. מותר לעודד, להזכיר שמשפט קצר הוא משפט תקין, ולהזכיר שאפשר לומר את זה שוב. תפיסות שגויות נפוצות: (1) לומדים חושבים שצריך לספר סיפור ארוך ומרשים — לא נכון, ארבעה משפטים פשוטים עומדים ביעד במלואו; (2) לומדים עוצרים לגמרי אחרי מעידה אחת במקום להמשיך למשפט הבא. אין ציון מספרי ואין השוואה לאף לומד אחר.",
+          "presentation": {
+            "kind": "speaking",
+            "prompt": {
+              "en": "Speak for about one minute. Say four sentences about your family, in your own words.",
+              "he": "דברו כדקה אחת. אמרו ארבעה משפטים על המשפחה שלכם, במילים שלכם.",
+              "ar": "تحدّثوا لمدّة دقيقة تقريباً. قولوا أربع جمل عن عائلتكم، بكلماتكم أنتم."
+            },
+            "referenceText": [
+              "Sentence 1: who is in your family.",
+              "Sentence 2: how old one person is.",
+              "Sentence 3: what one person likes to do.",
+              "Sentence 4: something you do together."
+            ],
+            "language": "en-US",
+            "rate": 0.9,
+            "selfCheck": [
+              {
+                "id": "four",
+                "label": {
+                  "en": "I said four sentences",
+                  "he": "אמרתי ארבעה משפטים",
+                  "ar": "قلت أربع جمل"
+                }
+              },
+              {
+                "id": "kept-going",
+                "label": {
+                  "en": "I made a mistake and kept going",
+                  "he": "טעיתי והמשכתי",
+                  "ar": "أخطأت وواصلت"
+                }
+              },
+              {
+                "id": "linked",
+                "label": {
+                  "en": "I linked two ideas in one sentence",
+                  "he": "חיברתי שני רעיונות במשפט אחד",
+                  "ar": "ربطت فكرتين في جملة واحدة"
+                }
+              },
+              {
+                "id": "retry",
+                "label": {
+                  "en": "I want to say it again",
+                  "he": "אני רוצה לומר את זה שוב",
+                  "ar": "أريد قولها مرّة أخرى"
+                }
+              }
+            ]
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.SPEAK-03-04",
+          "title": "You spoke English today",
+          "contentType": "סיכום",
+          "mediaFormat": "text",
+          "informationToBot": "מסך סיום של רכיב ההערכה. מסכם מילולית מה הלומד עשה ומה הצעד הבא, ללא ציון מספרי, ללא אחוזים וללא השוואה לאף לומד אחר. אם ההערכה לא עברה, המסך אומר במפורש שזה לא סוף הדרך ומפנה לייצוג הכתוב של אותו יעד, שבו אפשר לבנות את המשפט לפני שאומרים אותו.",
+          "presentation": {
+            "kind": "summary",
+            "onSuccess": {
+              "en": "You heard English, you repeated it, and then you spoke about your own family without a script. That is exactly what this goal is about.",
+              "he": "שמעתם אנגלית, חזרתם עליה, ואז דיברתם על המשפחה שלכם בלי תסריט. זה בדיוק מה שהיעד הזה בודק.",
+              "ar": "سمعتم الإنجليزية، وكرّرتموها، ثم تحدّثتم عن عائلتكم دون نصّ جاهز. هذا بالضبط هدف هذه المهمّة."
+            },
+            "onRetry": {
+              "en": "Some of it is not ready yet, and that is normal — speaking is the slowest skill to arrive. Next we will build the sentence in writing first, and then say it.",
+              "he": "חלק מזה עוד לא מוכן, וזה נורמלי — דיבור הוא המיומנות שמגיעה הכי לאט. בפעם הבאה נבנה את המשפט קודם בכתב, ורק אז נאמר אותו.",
+              "ar": "بعض الأمور لم تجهز بعد، وهذا طبيعي — التحدّث هو أبطأ المهارات وصولاً. في المرّة القادمة سنبني الجملة كتابةً أوّلاً، ثم نقولها."
+            },
+            "nextHint": {
+              "en": "Next goal: saying yes and no politely when someone invites you.",
+              "he": "היעד הבא: לומר כן ולא בנימוס כשמזמינים אתכם.",
+              "ar": "الهدف التالي: قول نعم ولا بأدب عندما يدعوكم أحد."
+            }
+          },
+          "questions": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,836 @@
+{
+  "id": "ENG.G7.FAMILY.GRAMMAR",
+  "title": "Grammar: Who they are and what they do",
+  "titleTranslations": {
+    "Hebrew": "דקדוק: מי הם ומה הם עושים",
+    "Arabic": "القواعد: من هم وماذا يفعلون",
+    "English": "Grammar: Who they are and what they do"
+  },
+  "subTopic": "MOE.ENG.G7.PEOPLE.FAMILY",
+  "learningObjective": "MOE.ENG.G7.PEOPLE.FAMILY.GRAMMAR",
+  "prerequisiteLearningObjective": [],
+  "targetSector": ["כלל המגזרים"],
+  "targetAudience": ["כיתה ז'", "כיתה ח'"],
+  "components": [
+    {
+      "id": "ENG.G7.FAMILY.GRAMMAR-01",
+      "learningUnitId": "ENG.G7.FAMILY.GRAMMAR",
+      "title": "The -s, the 's and have got",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 2,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 10,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.GRAMMAR-01B"],
+      "skills": ["מבנים דקדוקיים", "הווה פשוט"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.GRAMMAR-01-01",
+          "title": "Three small things that change a sentence",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההבנייה בדקדוק. שלושת המבנים הנלמדים: (1) הווה פשוט עם s בגוף שלישי יחיד — he plays, she paints; (2) שייכות עם אפוסטרוף — Maya's bag; (3) have got מול has got. מה שהלומד אמור להבין: אלה שלושה סימנים קטנים שמשנים את משמעות המשפט, ולא כללים מנותקים. אסטרטגיה: קודם לזהות את הנושא (מי מבצע), ורק אחר כך להחליט על צורת הפועל. תפיסה שגויה נפוצה: לומדים חושבים שה-s בסוף הפועל מסמן רבים, כמו ב-books, בעוד שבפועל הוא מסמן דווקא יחיד. אין כאן שאלה ואין ניקוד.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Three small things change an English sentence: a little s, an apostrophe, and the words have got.",
+              "he": "שלושה דברים קטנים משנים משפט באנגלית: s קטנה, אפוסטרוף, והמילים have got.",
+              "ar": "ثلاثة أشياء صغيرة تغيّر الجملة الإنجليزية: حرف s صغير، وفاصلة عليا، وعبارة have got."
+            },
+            "goal": {
+              "en": "By the end you will know which one to use when you talk about one person or about more than one.",
+              "he": "בסוף תדעו במה להשתמש כשמדברים על אדם אחד ובמה כשמדברים על יותר מאחד.",
+              "ar": "في النهاية ستعرفون ماذا تستخدمون عند الحديث عن شخص واحد وماذا عند الحديث عن أكثر من واحد."
+            },
+            "strategy": {
+              "en": "Always look at WHO does the action first. The verb comes after that decision, not before it.",
+              "he": "תמיד הסתכלו קודם על מי מבצע את הפעולה. הפועל מגיע אחרי ההחלטה הזו, לא לפניה.",
+              "ar": "انظروا دائماً أوّلاً إلى من يقوم بالفعل. الفعل يأتي بعد هذا القرار، لا قبله."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.GRAMMAR-01-02",
+          "title": "Look at the pairs",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט ההבנייה המרכזי: הלומד רואה זוגות משפטים שנבדלים בסימן אחד בלבד (I play / Adam plays), ומגלה את הכלל בעצמו במקום לקבל אותו כרשימה. יעד: לזהות שה-s מופיע רק עם he, she, it. אסטרטגיה: להשוות בין שני משפטים באותה שורה ולשאול מה השתנה. תפיסות שגויות נפוצות: (1) ה-s בסוף פועל נתפס כסימן רבים — לומדים כותבים 'they plays'; (2) 'Maya's bag' מתפרש כ'מאיה היא תיק' או כרבים; (3) do/does מתבלבלים כי שניהם מתורגמים אותו דבר. אם הלומד טועה, כדאי לבקש ממנו לכסות את חצי השורה ולקרוא רק את הצד השני.",
+          "presentation": {
+            "kind": "reading",
+            "prompt": {
+              "en": "Each line has two sentences. Only one small thing changes. Tap a line to hear it.",
+              "he": "בכל שורה שני משפטים. רק דבר קטן אחד משתנה. לחצו על שורה כדי לשמוע אותה.",
+              "ar": "في كلّ سطر جملتان. شيء صغير واحد فقط يتغيّر. اضغطوا على السطر لسماعه."
+            },
+            "lines": [
+              "I play football. Adam plays football.",
+              "I paint every day. Noa paints every day.",
+              "I do my homework. Sara does her homework.",
+              "I have got two brothers. Sara has got two brothers.",
+              "This is my bag. This is Maya's bag."
+            ],
+            "language": "en-US",
+            "rate": 0.8,
+            "glossary": [
+              { "word": "plays", "he": "משחק (הוא/היא)", "ar": "يلعب (هو/هي)" },
+              { "word": "does", "he": "עושה (הוא/היא)", "ar": "يفعل (هو/هي)" },
+              { "word": "has got", "he": "יש לו/לה", "ar": "لديه/لديها" },
+              { "word": "Maya's", "he": "של מאיה", "ar": "لمايا، تخصّ مايا" }
+            ]
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Which sentence is correct?",
+              "answers": [
+                "Adam play football.",
+                "Adam plays football.",
+                "Adam playing football.",
+                "Adam is play football."
+              ],
+              "correctAnswers": ["Adam plays football."],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. Adam is one person, so the verb takes the extra letter.",
+                  "he": "כן. אדם הוא אדם אחד, ולכן הפועל מקבל את האות הנוספת.",
+                  "ar": "نعم. آدم شخص واحد، لذا يأخذ الفعل الحرف الإضافي."
+                },
+                "incorrect": {
+                  "en": "Look at the first line again and cover the left half. What is different about the verb when the subject is a name?",
+                  "he": "הסתכלו שוב בשורה הראשונה וכסו את החצי השמאלי. מה שונה בפועל כשהנושא הוא שם?",
+                  "ar": "انظروا إلى السطر الأوّل ثانيةً وغطّوا النصف الأيسر. ما الذي يختلف في الفعل عندما يكون الفاعل اسماً؟"
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "We add -s to the verb when we talk about ...",
+              "answers": [
+                "I and you",
+                "he, she and it",
+                "we and they",
+                "questions only"
+              ],
+              "correctAnswers": ["he, she and it"],
+              "feedback": {
+                "correct": {
+                  "en": "Exactly. One person or one thing, and not I or you.",
+                  "he": "בדיוק. אדם אחד או דבר אחד, ולא I או you.",
+                  "ar": "بالضبط. شخص واحد أو شيء واحد، وليس I أو you."
+                },
+                "incorrect": {
+                  "en": "Careful: the -s on a verb is NOT the same as the -s on \"books\". Go back to the lines and see which side of each pair has the extra letter.",
+                  "he": "שימו לב: ה-s בסוף פועל אינה כמו ה-s בסוף \"books\". חזרו לשורות ובדקו באיזה צד של כל זוג יש את האות הנוספת.",
+                  "ar": "انتبهوا: حرف s في نهاية الفعل ليس مثل s في نهاية \"books\". عودوا إلى الأسطر وانظروا في أيّ جانب من كلّ زوج يوجد الحرف الإضافي."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "\"This is Maya's bag\" means ...",
+              "answers": [
+                "The bag belongs to Maya",
+                "Maya is a bag",
+                "There are many bags",
+                "Maya wants a bag"
+              ],
+              "correctAnswers": ["The bag belongs to Maya"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. The apostrophe plus s says who owns the thing.",
+                  "he": "נכון. האפוסטרוף עם ה-s אומר של מי הדבר.",
+                  "ar": "صحيح. الفاصلة العليا مع s تقول لمن يعود الشيء."
+                },
+                "incorrect": {
+                  "en": "Compare the two halves of the last line: \"my bag\" and \"Maya's bag\". If the first one means the bag is yours, what does the second one mean?",
+                  "he": "השוו בין שני חצאי השורה האחרונה: \"my bag\" ו-\"Maya's bag\". אם הראשון אומר שהתיק שלכם, מה אומר השני?",
+                  "ar": "قارنوا بين نصفَي السطر الأخير: \"my bag\" و\"Maya's bag\". إذا كان الأوّل يعني أنّ الحقيبة لكم، فماذا يعني الثاني؟"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.GRAMMAR-01-03",
+          "title": "Try the rule",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מעבר מזיהוי הכלל לשימוש בו על משפטים חדשים. יעד: לבחור את הצורה הנכונה כשהנושא משתנה. תפיסות שגויות נפוצות: (1) לומדים מוסיפים s לפועל גם אחרי נושא ברבים (Adam and Maya goes); (2) have got מול has got — 'has' נבחר לפי צליל ולא לפי הנושא; (3) בשייכות, לומדים כותבים Adams במקום Adam's או מעתיקים מבנה עברי כמו 'the ball of Adam'. אסטרטגיה: לסמן באצבע את הנושא לפני שבוחרים. אין להסגיר את התשובה — אפשר לכוון לשאלה 'כמה אנשים?'.",
+          "presentation": {
+            "prompt": {
+              "en": "Now choose the correct form. Find the subject first.",
+              "he": "עכשיו בחרו את הצורה הנכונה. מצאו קודם את הנושא.",
+              "ar": "الآن اختاروا الصيغة الصحيحة. ابحثوا عن الفاعل أوّلاً."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "fill-in",
+              "questionText": "Noa ___ a picture every day.",
+              "answers": ["paint", "paints", "painting", "is paint"],
+              "correctAnswers": ["paints"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. Noa is one person, so the verb takes the extra letter.",
+                  "he": "כן. נועה היא אדם אחד, ולכן הפועל מקבל את האות הנוספת.",
+                  "ar": "نعم. نوعا شخص واحد، لذا يأخذ الفعل الحرف الإضافي."
+                },
+                "incorrect": {
+                  "en": "Ask the first question: how many people are doing the action here? Then decide about the verb.",
+                  "he": "שאלו את השאלה הראשונה: כמה אנשים מבצעים כאן את הפעולה? ואז החליטו על הפועל.",
+                  "ar": "اطرحوا السؤال الأوّل: كم شخصاً يقوم بالفعل هنا؟ ثم قرّروا بشأن الفعل."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "fill-in",
+              "questionText": "Sara ___ two brothers and one sister.",
+              "answers": ["have got", "has got", "have", "is got"],
+              "correctAnswers": ["has got"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. With one person, \"have\" changes its shape.",
+                  "he": "נכון. עם אדם אחד, \"have\" משנה את צורתו.",
+                  "ar": "صحيح. مع شخص واحد، تتغيّر صيغة \"have\"."
+                },
+                "incorrect": {
+                  "en": "The same rule you just learned about verbs also works here. Who is the subject of this sentence — one person or more?",
+                  "he": "אותו כלל שלמדתם עכשיו על פעלים עובד גם כאן. מי הנושא במשפט הזה — אדם אחד או יותר?",
+                  "ar": "القاعدة نفسها التي تعلّمتموها عن الأفعال تنطبق هنا أيضاً. من فاعل هذه الجملة — شخص واحد أم أكثر؟"
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "The ball belongs to Adam. Which sentence is correct?",
+              "answers": [
+                "This is Adam ball.",
+                "This is Adams ball.",
+                "This is Adam's ball.",
+                "This is ball of Adam."
+              ],
+              "correctAnswers": ["This is Adam's ball."],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. The owner comes first, then the mark, then the thing.",
+                  "he": "כן. קודם הבעלים, אחר כך הסימן, ואז החפץ.",
+                  "ar": "نعم. المالك أوّلاً، ثم العلامة، ثم الشيء."
+                },
+                "incorrect": {
+                  "en": "In English the owner comes BEFORE the thing, and a small mark sits between them. Look at the last line of the reading screen again.",
+                  "he": "באנגלית הבעלים בא לפני החפץ, ובאמצע יש סימן קטן. הסתכלו שוב בשורה האחרונה במסך הקריאה.",
+                  "ar": "في الإنجليزية يأتي المالك قبل الشيء، وبينهما علامة صغيرة. انظروا ثانيةً إلى السطر الأخير في شاشة القراءة."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.GRAMMAR-01-04",
+          "title": "Where do you still stop and think?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף רכיב ההבנייה בדקדוק. המטרה: שהלומד יאתר איזה מהשלושה עדיין לא אוטומטי אצלו — וזו בדיוק המידע שמנתב אותו הלאה. אין תשובה נכונה ואין ניקוד. אם נבחר 's של פועל' — כדאי להציע את הייצוג הקולי שבו שומעים את ההבדל; אם נבחר 'שייכות' — כדאי לחזור לזוג המשפטים האחרון.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "Which one still makes you stop and think?",
+              "he": "מה עדיין גורם לכם לעצור ולחשוב?",
+              "ar": "أيّ واحد ما زال يجعلكم تتوقّفون وتفكّرون؟"
+            },
+            "choices": [
+              {
+                "id": "verb-s",
+                "label": {
+                  "en": "The -s at the end of the verb",
+                  "he": "ה-s בסוף הפועל",
+                  "ar": "حرف s في نهاية الفعل"
+                }
+              },
+              {
+                "id": "possessive",
+                "label": {
+                  "en": "The apostrophe for who owns something",
+                  "he": "האפוסטרוף שמסמן שייכות",
+                  "ar": "الفاصلة العليا التي تدلّ على الملكية"
+                }
+              },
+              {
+                "id": "have-got",
+                "label": {
+                  "en": "Choosing have got or has got",
+                  "he": "הבחירה בין have got ל-has got",
+                  "ar": "الاختيار بين have got و has got"
+                }
+              },
+              {
+                "id": "clear",
+                "label": {
+                  "en": "All three feel clear right now",
+                  "he": "שלושתם ברורים לי כרגע",
+                  "ar": "الثلاثة واضحة لي الآن"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.GRAMMAR-01B",
+      "learningUnitId": "ENG.G7.FAMILY.GRAMMAR",
+      "title": "Hear the difference",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": false,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 1,
+      "mediaFormat": "audio",
+      "estimatedTimeInMinutes": 7,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": [],
+      "skills": ["מבנים דקדוקיים", "הווה פשוט"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.GRAMMAR-01B-01",
+          "title": "The same rule, through your ears",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של הייצוג החלופי לרכיב הדקדוק. אותו יעד ואותם שלושה מבנים, אבל דרך שמיעה במקום דרך כלל כתוב: הלומד שומע זוגות משפטים ומאתר את ההבדל באוזן. זהו מענה מוכר ללומדים שכללים מופשטים מקשים עליהם, ולומדים שמזהים תבניות טוב יותר בצליל. אין להציג את הרכיב כ'קל יותר' אלא כ'דרך אחרת'.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "This time you will hear the rule instead of reading it.",
+              "he": "הפעם תשמעו את הכלל במקום לקרוא אותו.",
+              "ar": "هذه المرّة ستسمعون القاعدة بدل قراءتها."
+            },
+            "goal": {
+              "en": "Listen for one extra sound at the end of the verb. That sound is the whole rule.",
+              "he": "האזינו לצליל אחד נוסף בסוף הפועל. הצליל הזה הוא כל הכלל.",
+              "ar": "استمعوا إلى صوت إضافي واحد في نهاية الفعل. ذلك الصوت هو القاعدة كلّها."
+            },
+            "strategy": {
+              "en": "Play it slowly. Say each pair out loud after the recording.",
+              "he": "השמיעו לאט. אמרו כל זוג בקול אחרי ההקלטה.",
+              "ar": "شغّلوه ببطء. قولوا كلّ زوج بصوت عالٍ بعد التسجيل."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.GRAMMAR-01B-02",
+          "title": "Listen to the end of the verb",
+          "contentType": "הבנייה",
+          "mediaFormat": "audio",
+          "informationToBot": "פריט ההאזנה של הייצוג החלופי. אותם שלושה מבנים כמו ברכיב הטקסטואלי — s בגוף שלישי יחיד, has got מול have got — אבל הלומד מזהה אותם באוזן. הקטע איטי ובנוי בזוגות ניגודיים, והתמליל זמין. יעד: לשייך צליל למבנה, כדי שהכלל יהפוך למשהו ששומעים ולא רק למשהו שזוכרים. תפיסות שגויות נפוצות: (1) הצליל s בסוף פועל נבלע ולא נשמע, ולכן לומדים בוחרים את המשפט הראשון בזוג; (2) has ו-have נשמעות דומות בדיבור מהיר — כאן הן מושמעות לאט בכוונה. אסטרטגיה: להשמיע בהאטה ולחזור בקול אחרי כל זוג.",
+          "presentation": {
+            "kind": "listening",
+            "prompt": {
+              "en": "Listen carefully to the end of each verb. Use the slow button.",
+              "he": "האזינו היטב לסוף כל פועל. השתמשו בכפתור ההאטה.",
+              "ar": "استمعوا جيداً إلى نهاية كلّ فعل. استخدموا زرّ الإبطاء."
+            },
+            "script": "Listen to the end of each verb. I play football. Adam plays football. I paint. Noa paints. I get up at seven. My father gets up at six. Now listen to this pair. I have got one sister. Maya has got one sister. Can you hear the small extra sound?",
+            "language": "en-US",
+            "rate": 0.75,
+            "transcriptAvailable": true,
+            "support": {
+              "he": "אפשר לפתוח את התמליל ולראות את הסימן שאתם שומעים. שילוב של אוזן ועין עובד הכי טוב כאן.",
+              "ar": "يمكنكم فتح النصّ المكتوب ورؤية العلامة التي تسمعونها. الجمع بين الأذن والعين هو الأنجع هنا."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Which one has the extra s sound at the end of the verb?",
+              "answers": ["I play", "Adam plays", "I paint", "I get up"],
+              "correctAnswers": ["Adam plays"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. The subject is one person, and you can hear it at the end of the verb.",
+                  "he": "כן. הנושא הוא אדם אחד, ואפשר לשמוע את זה בסוף הפועל.",
+                  "ar": "نعم. الفاعل شخص واحد، ويمكنكم سماع ذلك في نهاية الفعل."
+                },
+                "incorrect": {
+                  "en": "Three of these start with \"I\". Play the recording slowly and listen to the option that starts with a name.",
+                  "he": "שלוש מהאפשרויות מתחילות ב-\"I\". השמיעו לאט והאזינו לאפשרות שמתחילה בשם.",
+                  "ar": "ثلاثة من هذه الخيارات تبدأ بـ \"I\". شغّلوا التسجيل ببطء واستمعوا إلى الخيار الذي يبدأ باسم."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "fill-in",
+              "questionText": "Maya ___ one sister.",
+              "answers": ["have got", "has got", "having got", "got have"],
+              "correctAnswers": ["has got"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. You heard the same change that happens to other verbs.",
+                  "he": "נכון. שמעתם את אותו שינוי שקורה לפעלים אחרים.",
+                  "ar": "صحيح. سمعتم التغيير نفسه الذي يحدث للأفعال الأخرى."
+                },
+                "incorrect": {
+                  "en": "The last pair in the recording is exactly this sentence, said twice with two different subjects. Play the end again slowly.",
+                  "he": "הזוג האחרון בהקלטה הוא בדיוק המשפט הזה, נאמר פעמיים עם שני נושאים שונים. השמיעו את הסוף שוב לאט.",
+                  "ar": "الزوج الأخير في التسجيل هو هذه الجملة بالضبط، تُقال مرّتين بفاعلين مختلفين. شغّلوا النهاية ثانيةً ببطء."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "What time does the father get up?",
+              "answers": ["At five", "At six", "At seven", "At eight"],
+              "correctAnswers": ["At six"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. Two times are said in that pair, and this one belongs to the father.",
+                  "he": "כן. בזוג הזה נאמרות שתי שעות, וזו שייכת לאבא.",
+                  "ar": "نعم. في ذلك الزوج يُذكر وقتان، وهذا يخصّ الأب."
+                },
+                "incorrect": {
+                  "en": "That pair has two different times, one for \"I\" and one for the father. Listen again and stop after the second sentence.",
+                  "he": "בזוג הזה יש שתי שעות שונות, אחת ל-\"I\" ואחת לאבא. האזינו שוב ועצרו אחרי המשפט השני.",
+                  "ar": "في ذلك الزوج وقتان مختلفان، واحد لـ \"I\" وواحد للأب. استمعوا ثانيةً وتوقّفوا بعد الجملة الثانية."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.GRAMMAR-01B-03",
+          "title": "Could you hear it?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הייצוג הקולי. המטרה: שהלומד יבדוק אם השמיעה עזרה לו לתפוס את הכלל, ואם החזרה בקול תרמה. אין תשובה נכונה ואין ניקוד. אם נבחר 'לא הצלחתי לשמוע' — זו הזדמנות להציע את הגרסה הכתובה עם התמליל פתוח, ולא לחזור על אותה הקלטה.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "Could you hear the extra sound?",
+              "he": "הצלחתם לשמוע את הצליל הנוסף?",
+              "ar": "هل استطعتم سماع الصوت الإضافي؟"
+            },
+            "choices": [
+              {
+                "id": "clearly",
+                "label": {
+                  "en": "Yes, clearly",
+                  "he": "כן, בבירור",
+                  "ar": "نعم، بوضوح"
+                }
+              },
+              {
+                "id": "slow",
+                "label": {
+                  "en": "Only when I slowed it down",
+                  "he": "רק כשהאטתי את ההקלטה",
+                  "ar": "فقط عندما أبطأت التسجيل"
+                }
+              },
+              {
+                "id": "saying",
+                "label": {
+                  "en": "Saying it out loud myself helped",
+                  "he": "עזר לי להגיד את זה בעצמי בקול",
+                  "ar": "ساعدني قولها بصوت عالٍ بنفسي"
+                }
+              },
+              {
+                "id": "no",
+                "label": {
+                  "en": "I could not hear it yet",
+                  "he": "עוד לא הצלחתי לשמוע",
+                  "ar": "لم أستطع سماعه بعد"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.GRAMMAR-02",
+      "learningUnitId": "ENG.G7.FAMILY.GRAMMAR",
+      "title": "Practice: build the sentences yourself",
+      "componentPurpose": "תרגול",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 2,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 4,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 12,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.GRAMMAR-01B"],
+      "skills": ["מבנים דקדוקיים", "הפקה בכתב"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.GRAMMAR-02-01",
+          "title": "Harder on purpose",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב התרגול. הקפיצה מהרכיב הקודם: כאן מופיעים גם נושאים ברבים וגם משפטי שלילה ושאלה, ולא רק גוף שלישי יחיד חיובי — כלומר הלומד חייב באמת להחליט ולא רק להוסיף s אוטומטית. אסטרטגיה: לזהות את הנושא, לספור כמה אנשים, ורק אז לבחור. תפיסה שגויה נפוצה: לאחר תרגול של גוף שלישי יחיד, לומדים מוסיפים s לכל פועל.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Now the sentences mix one person with more than one, and add questions and negatives.",
+              "he": "עכשיו המשפטים מערבבים אדם אחד עם יותר מאחד, ומוסיפים שאלות ושלילה.",
+              "ar": "الآن تخلط الجمل بين شخص واحد وأكثر من شخص، وتضيف أسئلة ونفياً."
+            },
+            "goal": {
+              "en": "Do not add the -s automatically. Decide each time.",
+              "he": "אל תוסיפו את ה-s אוטומטית. החליטו בכל פעם מחדש.",
+              "ar": "لا تضيفوا حرف s تلقائياً. قرّروا في كلّ مرّة من جديد."
+            },
+            "strategy": {
+              "en": "Point at the subject with your finger before you choose an answer.",
+              "he": "הצביעו על הנושא באצבע לפני שאתם בוחרים תשובה.",
+              "ar": "أشيروا إلى الفاعل بإصبعكم قبل اختيار الإجابة."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.GRAMMAR-02-02",
+          "title": "One person or more?",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "תרגול מעורב: נושאים ביחיד וברבים, משפט חיובי, שלילה ושאלה. יעד: שהלומד יפעיל את הכלל ולא יפעל לפי הרגל. תפיסות שגויות נפוצות: (1) הכללת יתר — 'Adam and Maya goes' כי הפועל שאחרי שם פרטי תמיד קיבל s בתרגול הקודם; (2) כפילות ה-s בשלילה ובשאלה — 'doesn't paints' ו-'Does Adam plays', שהיא הטעות הנפוצה ביותר בשלב הזה, כי הסימן כבר נמצא במילת העזר; (3) 'Sara have got' — התאמת have לנושא נשכחת כי have נראה כמו מילה קבועה. אין להסגיר את התשובה — אפשר לשאול 'כמה אנשים?' או 'איפה כבר נמצא הסימן?'. אם הלומד נכשל פעמיים, המערכת מנתבת לייצוג הקולי.",
+          "presentation": {
+            "prompt": {
+              "en": "Choose the correct sentence. Look at the subject first.",
+              "he": "בחרו את המשפט הנכון. הסתכלו קודם על הנושא.",
+              "ar": "اختاروا الجملة الصحيحة. انظروا إلى الفاعل أوّلاً."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "fill-in",
+              "questionText": "My grandmother ___ soup every Friday.",
+              "answers": ["cook", "cooks", "cooking", "is cook"],
+              "correctAnswers": ["cooks"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. One grandmother, so the verb takes the extra letter.",
+                  "he": "כן. סבתא אחת, ולכן הפועל מקבל את האות הנוספת.",
+                  "ar": "نعم. جدّة واحدة، لذا يأخذ الفعل الحرف الإضافي."
+                },
+                "incorrect": {
+                  "en": "Count the people in the subject before you look at the verb. How many grandmothers are in this sentence?",
+                  "he": "ספרו את האנשים בנושא לפני שאתם מסתכלים על הפועל. כמה סבתות יש במשפט הזה?",
+                  "ar": "عُدّوا الأشخاص في الفاعل قبل النظر إلى الفعل. كم جدّة في هذه الجملة؟"
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "fill-in",
+              "questionText": "Adam and Maya ___ to school together every morning.",
+              "answers": ["goes", "go", "going", "is go"],
+              "correctAnswers": ["go"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. Two people, so no extra letter on the verb.",
+                  "he": "נכון. שני אנשים, ולכן אין אות נוספת בפועל.",
+                  "ar": "صحيح. شخصان، لذا لا حرف إضافي على الفعل."
+                },
+                "incorrect": {
+                  "en": "A name at the start of a sentence does not always mean one person. Read the subject again — how many names are there?",
+                  "he": "שם בתחילת משפט לא תמיד אומר אדם אחד. קראו שוב את הנושא — כמה שמות יש שם?",
+                  "ar": "الاسم في بداية الجملة لا يعني دائماً شخصاً واحداً. اقرأوا الفاعل ثانيةً — كم اسماً هناك؟"
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "Which sentence is correct?",
+              "answers": [
+                "Sara have got two brothers.",
+                "Sara has got two brothers.",
+                "Sara has get two brothers.",
+                "Sara got has two brothers."
+              ],
+              "correctAnswers": ["Sara has got two brothers."],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. The subject is one person, and \"got\" never changes.",
+                  "he": "כן. הנושא הוא אדם אחד, ו-\"got\" לעולם לא משתנה.",
+                  "ar": "نعم. الفاعل شخص واحد، و\"got\" لا تتغيّر أبداً."
+                },
+                "incorrect": {
+                  "en": "Two things to check here: which word matches the subject, and which word stays the same in every sentence.",
+                  "he": "שני דברים לבדוק כאן: איזו מילה מתאימה לנושא, ואיזו מילה נשארת זהה בכל משפט.",
+                  "ar": "أمران للتحقّق هنا: أيّ كلمة تطابق الفاعل، وأيّ كلمة تبقى ثابتة في كلّ جملة."
+                }
+              }
+            },
+            {
+              "questionId": "q4",
+              "questionType": "single-choice",
+              "questionText": "Which sentence is correct?",
+              "answers": [
+                "Noa doesn't paints on Monday.",
+                "Noa don't paint on Monday.",
+                "Noa doesn't paint on Monday.",
+                "Noa not paint on Monday."
+              ],
+              "correctAnswers": ["Noa doesn't paint on Monday."],
+              "feedback": {
+                "correct": {
+                  "en": "Exactly. The helper word already carries the mark, so the main verb stays plain.",
+                  "he": "בדיוק. מילת העזר כבר נושאת את הסימן, ולכן הפועל העיקרי נשאר פשוט.",
+                  "ar": "بالضبط. كلمة المساعدة تحمل العلامة أصلاً، لذا يبقى الفعل الرئيسي بسيطاً."
+                },
+                "incorrect": {
+                  "en": "In a negative sentence the mark appears only once. Find where it already is, and then look at the main verb.",
+                  "he": "במשפט שלילה הסימן מופיע רק פעם אחת. מצאו איפה הוא כבר נמצא, ואז הסתכלו על הפועל העיקרי.",
+                  "ar": "في الجملة المنفية تظهر العلامة مرّة واحدة فقط. ابحثوا عن مكانها، ثم انظروا إلى الفعل الرئيسي."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.GRAMMAR-02-03",
+          "title": "Write about one person",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "פריט הפקה פתוח בסוף התרגול. הלומד כותב שלושה משפטים על אדם אחד במשפחה — אמיתי או מדומיין (חשוב לאפשר את שתי האפשרויות מטעמי פרטיות). יעד: להשתמש בשלושת המבנים בכתיבה חופשית, שם אין אפשרויות לבחור מהן. אין ניקוד אוטומטי; הטקסט נשמר ומועבר למורה. תפיסות שגויות נפוצות: (1) הלומד כותב על עצמו ואז לא נדרש כלל ל-s; (2) הלומד מוותר על השייכות כי היא הכי פחות אוטומטית. אסטרטגיה: לכתוב על אדם אחד שאינו הכותב. אם הלומד מבקש עזרה, אפשר להציע מבנה משפט ריק לדוגמה — אך לא לכתוב עבורו את המשפט.",
+          "presentation": {
+            "kind": "writing",
+            "prompt": {
+              "en": "Write three sentences about ONE person in a family. Not about yourself this time.",
+              "he": "כתבו שלושה משפטים על אדם אחד במשפחה. הפעם לא על עצמכם.",
+              "ar": "اكتبوا ثلاث جمل عن شخص واحد في عائلة. ليس عن أنفسكم هذه المرّة."
+            },
+            "placeholder": {
+              "en": "My uncle drives a bus. He has got a big dog. This is my uncle's dog.",
+              "he": "My uncle drives a bus. He has got a big dog. This is my uncle's dog.",
+              "ar": "My uncle drives a bus. He has got a big dog. This is my uncle's dog."
+            },
+            "checklist": [
+              {
+                "en": "One sentence uses a verb with -s (drives, cooks, paints ...)",
+                "he": "משפט אחד משתמש בפועל עם s (drives, cooks, paints ...)",
+                "ar": "جملة واحدة تستخدم فعلاً مع s (drives, cooks, paints ...)"
+              },
+              {
+                "en": "One sentence uses has got",
+                "he": "משפט אחד משתמש ב-has got",
+                "ar": "جملة واحدة تستخدم has got"
+              },
+              {
+                "en": "One sentence uses 's to show who owns something",
+                "he": "משפט אחד משתמש ב-'s כדי להראות של מי משהו",
+                "ar": "جملة واحدة تستخدم 's لإظهار ملكية شيء"
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.GRAMMAR-03",
+      "learningUnitId": "ENG.G7.FAMILY.GRAMMAR",
+      "title": "Check: grammar in new sentences",
+      "componentPurpose": "הערכה",
+      "isAssessment": true,
+      "isRequired": true,
+      "order": 3,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 3,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 8,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.GRAMMAR-01B"],
+      "skills": ["מבנים דקדוקיים", "הווה פשוט"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.GRAMMAR-03-01",
+          "title": "A short check",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההערכה בדקדוק. תפקידו להוריד חרדה: ארבע שאלות, בלי הגבלת זמן, ואפשר לחזור אחורה. במהלך רכיב ההערכה אין לחשוף את התשובה ואין לרמוז עליה גם אם הלומד מבקש — מותר רק להזכיר את האסטרטגיה הכללית שנלמדה: קודם למצוא את הנושא, ואז להחליט על הפועל.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "A short check on the three things you learned.",
+              "he": "בדיקה קצרה על שלושת הדברים שלמדתם.",
+              "ar": "فحص قصير للأشياء الثلاثة التي تعلّمتموها."
+            },
+            "goal": {
+              "en": "Four new sentences about the family. No time limit, and you can go back.",
+              "he": "ארבעה משפטים חדשים על המשפחה. אין הגבלת זמן, ואפשר לחזור אחורה.",
+              "ar": "أربع جمل جديدة عن العائلة. لا حدّ زمني، ويمكنكم العودة إلى الوراء."
+            },
+            "strategy": {
+              "en": "Find the subject. Count the people. Then choose.",
+              "he": "מצאו את הנושא. ספרו את האנשים. ואז בחרו.",
+              "ar": "ابحثوا عن الفاعل. عُدّوا الأشخاص. ثم اختاروا."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.GRAMMAR-03-02",
+          "title": "Four new sentences",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט ההערכה של יעד הדקדוק. הצלחה כאן מבססת כשירות ביעד. ארבע השאלות מכסות את שלושת המבנים ומוסיפות מבנה שאלה, כדי לבדוק את הכלל ולא את ההרגל: הווה פשוט ביחיד, have got ברבים, שייכות, ומבנה שאלה עם does. המשפטים חדשים ולא הופיעו בתרגול. במהלך ההערכה אין לתת את התשובה ואין לרמוז עליה; מותר להציע רק אסטרטגיה כללית ('מצא את הנושא') או לעודד לנסות שוב. הלומד רשאי לחזור אחורה בין המסכים ללא הגבלה.",
+          "presentation": {
+            "prompt": {
+              "en": "Choose the correct form in each sentence.",
+              "he": "בחרו את הצורה הנכונה בכל משפט.",
+              "ar": "اختاروا الصيغة الصحيحة في كلّ جملة."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "fill-in",
+              "questionText": "Uncle Sami ___ from Haifa every Friday.",
+              "answers": ["drive", "drives", "driving", "is drive"],
+              "correctAnswers": ["drives"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. One person, one extra letter.",
+                  "he": "כן. אדם אחד, אות אחת נוספת.",
+                  "ar": "نعم. شخص واحد، حرف إضافي واحد."
+                },
+                "incorrect": {
+                  "en": "Start from the subject: how many people drive in this sentence? Then decide about the verb.",
+                  "he": "התחילו מהנושא: כמה אנשים נוהגים במשפט הזה? ואז החליטו על הפועל.",
+                  "ar": "ابدأوا من الفاعل: كم شخصاً يقود في هذه الجملة؟ ثم قرّروا بشأن الفعل."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "fill-in",
+              "questionText": "Sara and Lily ___ got the same brown eyes.",
+              "answers": ["has", "have", "haves", "having"],
+              "correctAnswers": ["have"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. Two sisters, so the plain form.",
+                  "he": "נכון. שתי אחיות, ולכן הצורה הפשוטה.",
+                  "ar": "صحيح. أختان، لذا الصيغة البسيطة."
+                },
+                "incorrect": {
+                  "en": "The subject here is not one person. Read the two names at the start of the sentence again.",
+                  "he": "הנושא כאן אינו אדם אחד. קראו שוב את שני השמות בתחילת המשפט.",
+                  "ar": "الفاعل هنا ليس شخصاً واحداً. اقرأوا الاسمين في بداية الجملة ثانيةً."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "The painting belongs to Noa. Which sentence is correct?",
+              "answers": [
+                "This is Noa's painting.",
+                "This is Noa painting's.",
+                "This is Noas painting.",
+                "This is painting of Noa."
+              ],
+              "correctAnswers": ["This is Noa's painting."],
+              "feedback": {
+                "correct": {
+                  "en": "Exactly. Owner, mark, thing - in that order.",
+                  "he": "בדיוק. בעלים, סימן, חפץ — בסדר הזה.",
+                  "ar": "بالضبط. المالك، العلامة، الشيء — بهذا الترتيب."
+                },
+                "incorrect": {
+                  "en": "Check three things: where the owner stands, whether the mark is there, and what the mark sits next to.",
+                  "he": "בדקו שלושה דברים: איפה עומד הבעלים, האם הסימן קיים, ולצד מה הוא נמצא.",
+                  "ar": "تحقّقوا من ثلاثة أمور: أين يقف المالك، وهل العلامة موجودة، وبجانب ماذا تقع."
+                }
+              }
+            },
+            {
+              "questionId": "q4",
+              "questionType": "single-choice",
+              "questionText": "Which question is correct?",
+              "answers": [
+                "Does Adam plays football?",
+                "Do Adam plays football?",
+                "Does Adam play football?",
+                "Adam does plays football?"
+              ],
+              "correctAnswers": ["Does Adam play football?"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. The mark is already on the helper word, so the main verb stays plain.",
+                  "he": "כן. הסימן כבר נמצא על מילת העזר, ולכן הפועל העיקרי נשאר פשוט.",
+                  "ar": "نعم. العلامة موجودة أصلاً على كلمة المساعدة، لذا يبقى الفعل الرئيسي بسيطاً."
+                },
+                "incorrect": {
+                  "en": "In a question the mark appears once, not twice. Find where it already is before you look at the main verb.",
+                  "he": "בשאלה הסימן מופיע פעם אחת ולא פעמיים. מצאו איפה הוא כבר נמצא לפני שאתם מסתכלים על הפועל העיקרי.",
+                  "ar": "في السؤال تظهر العلامة مرّة واحدة لا مرّتين. ابحثوا عن مكانها قبل النظر إلى الفعل الرئيسي."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.GRAMMAR-03-03",
+          "title": "You finished this goal",
+          "contentType": "סיכום",
+          "mediaFormat": "text",
+          "informationToBot": "מסך סיום של רכיב ההערכה. מסכם במילים בלבד מה הלומד עשה ומה הצעד הבא, ללא ציון מספרי וללא השוואה ללומדים אחרים. אם ההערכה לא עברה, המסך אומר במפורש שזה לא סוף הדרך ומפנה לייצוג הקולי של אותו יעד — שמיעת ההבדל במקום קריאת הכלל.",
+          "presentation": {
+            "kind": "summary",
+            "onSuccess": {
+              "en": "You chose the right form in sentences you had never seen, including a question. That means you are using the rule, not remembering examples.",
+              "he": "בחרתם את הצורה הנכונה במשפטים שלא ראיתם קודם, כולל שאלה. זה אומר שאתם משתמשים בכלל ולא זוכרים דוגמאות.",
+              "ar": "اخترتم الصيغة الصحيحة في جمل لم تروها من قبل، بما فيها سؤال. هذا يعني أنّكم تستخدمون القاعدة، لا تتذكّرون أمثلة."
+            },
+            "onRetry": {
+              "en": "This rule is small but it hides in many places, so it takes more than one meeting. Next you will hear the difference instead of reading it.",
+              "he": "הכלל הזה קטן אבל מסתתר בהרבה מקומות, ולכן הוא דורש יותר מפגישה אחת. בפעם הבאה תשמעו את ההבדל במקום לקרוא אותו.",
+              "ar": "هذه القاعدة صغيرة لكنّها تختبئ في أماكن كثيرة، لذا تحتاج إلى أكثر من لقاء واحد. في المرّة القادمة ستسمعون الفرق بدل قراءته."
+            },
+            "nextHint": {
+              "en": "Next goal: saying the family words clearly, including the th sound.",
+              "he": "היעד הבא: להגות בבירור את מילות המשפחה, כולל הצליל th.",
+              "ar": "الهدف التالي: نطق كلمات العائلة بوضوح، بما في ذلك صوت th."
+            }
+          },
+          "questions": []
+        }
+      ]
+    }
+  ]
+}
