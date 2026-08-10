@@ -1,11 +1,31 @@
+# Docker matches these against the context ROOT, so a bare `node_modules/` never
+# excluded frontend/node_modules — the image was carrying backend/.venv (548MB)
+# and every node_modules tree. `az acr build` also ignores `**/`, so the nested
+# copies are spelled out explicitly.
 .venv/
+backend/.venv/
+node_modules/
+frontend/node_modules/
+admin/frontend/node_modules/
+__pycache__/
+backend/__pycache__/
 .git/
 .github/
-__pycache__/
 *.pyc
 *.pyo
 .env
 backend/.env
+admin/.env
 .DS_Store
 /tmp/
-node_modules/
+
+# The Unity SOURCE project (851MB, mostly Library/ and Temp/ caches). The image
+# only needs the compiled WebGL output, which the frontend build takes from
+# frontend/public/unity-world/ — the project itself is never referenced.
+unity-learning-world/
+
+# The admin console is a separate App Service with its own Dockerfile.
+admin/
+
+# Captured build/validation reports; never part of the running app.
+artifacts/
