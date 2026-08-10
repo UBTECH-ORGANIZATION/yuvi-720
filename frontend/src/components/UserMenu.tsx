@@ -4,6 +4,7 @@ import { useI18n, type Language } from '../i18n/I18nProvider'
 import { useAuth } from '../providers/AuthProvider'
 import { useTheme } from '../providers/ThemeProvider'
 import { ProfileAvatar } from '../features/badges/ProfileAvatar'
+import { openReportIssue } from '../features/support/ReportIssueDialog'
 
 /* The avatar is the account surface: who you are, plus the preferences that
    belong to you (language, light/dark) and sign-out. Those settings live on the
@@ -148,6 +149,21 @@ export function UserMenu() {
             onClick={goBadges}
           >
             <span>{t('badges.menuTitle')}</span>
+            <svg className="user-menu__row-chevron" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+
+          <button
+            className="user-menu__row user-menu__row--link"
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false)
+              openReportIssue()
+            }}
+          >
+            <span>{t('support.report.menuTitle')}</span>
             <svg className="user-menu__row-chevron" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>

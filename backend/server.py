@@ -34,6 +34,7 @@ from app.routes.illustrations import router as illustrations_router
 from app.routes.mapping_chat import router as mapping_chat_router
 from app.routes.profile import router as profile_router
 from app.routes.static_pages import mount_static_assets, router as static_pages_router
+from app.routes.support import router as support_router
 from app.routes.xapi import router as xapi_router
 from app.core.telemetry import configure_telemetry
 from app.services.content_catalog_mcp import content_catalog_mcp_lifespan, mount_content_catalog_mcp
@@ -113,6 +114,7 @@ def create_app() -> FastAPI:
     app.include_router(learning_content_router)
     app.include_router(contact_router)
     app.include_router(campaign_router)
+    app.include_router(support_router)
 
     mount_content_catalog_mcp(app)
 

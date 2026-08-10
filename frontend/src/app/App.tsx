@@ -9,6 +9,7 @@ import { LomdaCreatorPage } from '../features/learning-create/LomdaCreatorPage'
 import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
 import { YuviStudioPage } from '../features/Yuvi-studio/YuviStudioPage'
 import { BadgesPage } from '../features/badges/BadgesPage'
+import { ReportIssueDialog } from '../features/support/ReportIssueDialog'
 import { useStudioTransition } from '../features/Yuvi-studio/StudioTransitionProvider'
 import { CompanionChat } from '../components/CompanionChat'
 import { YuviCompanionDock } from '../components/YuviCompanionDock'
@@ -189,6 +190,8 @@ export function App() {
       ) : routePage}
       {learnerRoute && !isStudioRoute && !isActiveTaskRoute && !isLearningWorldRoute && <YuviCompanionDock />}
       {learnerRoute && <SparkToast />}
+      {/* Teachers report faults from their own lane too, so this is not learner-scoped. */}
+      {user && <ReportIssueDialog />}
     </>
   )
 }

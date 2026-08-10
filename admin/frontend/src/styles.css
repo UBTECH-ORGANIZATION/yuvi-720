@@ -91,6 +91,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .lead-status--meeting { color: var(--amber); background: rgba(251, 191, 36, 0.11); }
 .lead-status--won { color: var(--emerald); background: rgba(52, 211, 153, 0.11); }
 .lead-status--lost { color: var(--rose); background: rgba(251, 113, 133, 0.1); }
+.lead-status--in_review { color: var(--indigo); background: rgba(129, 140, 248, 0.12); }
+.lead-status--in_progress { color: var(--amber); background: rgba(251, 191, 36, 0.11); }
+.lead-status--resolved { color: var(--emerald); background: rgba(52, 211, 153, 0.11); }
+.lead-status--closed { color: var(--ink-soft); background: rgba(255, 255, 255, 0.06); }
+
+.status-summary { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.severity-tag { display: inline-flex; align-items: center; padding: 0.22rem 0.5rem; border-radius: var(--radius-sm); font-size: 0.62rem; font-weight: 700; color: var(--ink-soft); background: rgba(255, 255, 255, 0.05); }
+.severity-tag--blocking { color: var(--rose); background: rgba(251, 113, 133, 0.14); }
+.severity-tag--high { color: var(--amber); background: rgba(251, 191, 36, 0.13); }
+.severity-tag--normal { color: var(--cyan); background: rgba(34, 211, 238, 0.1); }
+.severity-tag--low { color: var(--ink-soft); background: rgba(255, 255, 255, 0.05); }
 
 .kanban { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(15rem, 1fr); gap: 0.85rem; overflow-x: auto; padding-block-end: 0.6rem; }
 .kanban-column { display: flex; flex-direction: column; gap: 0.6rem; min-inline-size: 0; padding: 0.85rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-soft); }

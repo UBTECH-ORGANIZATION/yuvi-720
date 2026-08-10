@@ -121,3 +121,44 @@ export interface LeadFilters {
   source?: string
   search?: string
 }
+
+export type TicketStatus = 'new' | 'in_review' | 'in_progress' | 'resolved' | 'closed'
+export type TicketSeverity = 'low' | 'normal' | 'high' | 'blocking'
+export type TicketCategory = 'bug' | 'content' | 'access' | 'performance' | 'other'
+export type TicketReporterType = 'learner' | 'teacher' | 'guest'
+
+export interface SupportTicket {
+  ticket_id: string
+  created_at: string | null
+  updated_at: string | null
+  status: TicketStatus
+  admin_notes: string
+  updated_by: string | null
+  source: 'in_app' | 'public'
+  reporter_type: TicketReporterType
+  reporter_id: string | null
+  reporter_name: string
+  contact_email: string
+  category: TicketCategory
+  severity: TicketSeverity
+  title: string
+  description: string
+  context: Record<string, string>
+  attachments: { blob_name?: string; content_type?: string; size?: number }[]
+}
+
+export interface SupportBoard {
+  tickets: SupportTicket[]
+  statuses: TicketStatus[]
+  counts_by_status: Record<string, number>
+  total: number
+}
+
+export interface SupportFilters {
+  days?: number
+  status?: TicketStatus
+  category?: TicketCategory
+  severity?: TicketSeverity
+  reporterType?: TicketReporterType
+  search?: string
+}

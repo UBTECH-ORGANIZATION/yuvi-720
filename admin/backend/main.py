@@ -23,6 +23,7 @@ from .auth import create_admin_token, decode_admin_token, is_allowed_admin, norm
 from .config import Settings
 from .database import UsageEventRepository
 from .leads import LEAD_STATUSES, LeadRepository
+from .support import TICKET_STATUSES, SupportRepository
 from .telemetry import configure_telemetry
 from .usage_report import UsageSummary, build_usage_summary
 
@@ -43,6 +44,23 @@ _LEAD_EXPORT_COLUMNS = (
     "message",
     "source",
     "notes",
+    "updated_at",
+    "updated_by",
+)
+_TICKET_EXPORT_COLUMNS = (
+    "ticket_id",
+    "created_at",
+    "status",
+    "severity",
+    "category",
+    "source",
+    "reporter_type",
+    "reporter_id",
+    "reporter_name",
+    "contact_email",
+    "title",
+    "description",
+    "admin_notes",
     "updated_at",
     "updated_by",
 )
@@ -84,6 +102,38 @@ class LeadUpdate(BaseModel):
     notes: Optional[str] = Field(default=None, max_length=2000)
 
 
+class SupportTicket(BaseModel):
+    ticket_id: str
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    status: str = "new"
+    admin_notes: str = ""
+    updated_by: Optional[str] = None
+    source: str = ""
+    reporter_type: str = ""
+    reporter_id: Optional[str] = None
+    reporter_name: str = ""
+    contact_email: str = ""
+    category: str = ""
+    severity: str = ""
+    title: str = ""
+    description: str = ""
+    context: dict[str, Any] = Field(default_factory=dict)
+    attachments: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class SupportBoard(BaseModel):
+    tickets: list[SupportTicket]
+    statuses: list[str]
+    counts_by_status: dict[str, int]
+    total: int
+
+
+class SupportTicketUpdate(BaseModel):
+    status: Optional[str] = Field(default=None, max_length=40)
+    admin_notes: Optional[str] = Field(default=None, max_length=4000)
+
+
 class AuthStatus(BaseModel):
     authenticated: bool
     admin: Optional[AdminIdentity] = None
@@ -121,6 +171,10 @@ def _repository(request: Request) -> UsageEventRepository:
 
 def _lead_repository(request: Request) -> LeadRepository:
     return request.app.state.lead_repository
+
+
+def _support_repository(request: Request) -> SupportRepository:
+    return request.app.state.support_repository
 
 
 async def admin_required(request: Request) -> dict[str, Any]:
@@ -174,6 +228,7 @@ def create_app(
             raise RuntimeError("Admin frontend build is required in production")
     repository = UsageEventRepository(resolved_settings)
     lead_repository = LeadRepository(resolved_settings)
+    support_repository = SupportRepository(resolved_settings)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -191,6 +246,7 @@ def create_app(
         yield
         repository.close()
         lead_repository.close()
+        support_repository.close()
 
     app = FastAPI(
         title="Yuvilab Spark Admin",
@@ -205,6 +261,7 @@ def create_app(
     app.state.oauth = _create_oauth(resolved_settings)
     app.state.usage_repository = repository
     app.state.lead_repository = lead_repository
+    app.state.support_repository = support_repository
     app.add_middleware(
         SessionMiddleware,
         secret_key=resolved_settings.admin_secret_key,
@@ -512,6 +569,156 @@ def create_app(
         if lead is None:
             raise HTTPException(status_code=404, detail="lead_not_found")
         return Lead(**lead)
+
+    async def _query_tickets(
+        repository: SupportRepository,
+        *,
+        days: Optional[int],
+        status: Optional[str],
+        category: Optional[str],
+        severity: Optional[str],
+        reporter_type: Optional[str],
+        search: Optional[str],
+        limit: int,
+    ) -> list[dict[str, Any]]:
+        if status and status not in TICKET_STATUSES:
+            raise HTTPException(status_code=422, detail="unknown_ticket_status")
+        start, end = _lead_window(days)
+        try:
+            return await repository.fetch_tickets(
+                start=start,
+                end=end,
+                status=status,
+                category=category,
+                severity=severity,
+                reporter_type=reporter_type,
+                search=search,
+                limit=limit,
+            )
+        except Exception as exc:
+            print(f"⚠️ Admin support query failed: {type(exc).__name__}")
+            raise HTTPException(status_code=503, detail="support_data_unavailable") from None
+
+    @app.get("/api/support/tickets", response_model=SupportBoard)
+    async def list_tickets(
+        _: dict[str, Any] = Depends(admin_required),
+        days: Optional[int] = Query(default=None, ge=1, le=730),
+        status: Optional[str] = Query(default=None, max_length=40),
+        category: Optional[str] = Query(default=None, max_length=40),
+        severity: Optional[str] = Query(default=None, max_length=40),
+        reporter_type: Optional[str] = Query(default=None, max_length=40),
+        search: Optional[str] = Query(default=None, max_length=120),
+        limit: int = Query(default=500, ge=1, le=2000),
+        support_repository: SupportRepository = Depends(_support_repository),
+    ) -> SupportBoard:
+        tickets = await _query_tickets(
+            support_repository,
+            days=days,
+            status=status,
+            category=category,
+            severity=severity,
+            reporter_type=reporter_type,
+            search=search,
+            limit=limit,
+        )
+        counts = {value: 0 for value in TICKET_STATUSES}
+        for ticket in tickets:
+            key = str(ticket.get("status") or "new")
+            counts[key] = counts.get(key, 0) + 1
+        return SupportBoard(
+            tickets=[SupportTicket(**ticket) for ticket in tickets],
+            statuses=list(TICKET_STATUSES),
+            counts_by_status=counts,
+            total=len(tickets),
+        )
+
+    @app.get("/api/support/tickets/export")
+    async def export_tickets(
+        _: dict[str, Any] = Depends(admin_required),
+        days: Optional[int] = Query(default=None, ge=1, le=730),
+        status: Optional[str] = Query(default=None, max_length=40),
+        category: Optional[str] = Query(default=None, max_length=40),
+        severity: Optional[str] = Query(default=None, max_length=40),
+        reporter_type: Optional[str] = Query(default=None, max_length=40),
+        search: Optional[str] = Query(default=None, max_length=120),
+        limit: int = Query(default=2000, ge=1, le=5000),
+        support_repository: SupportRepository = Depends(_support_repository),
+    ) -> StreamingResponse:
+        tickets = await _query_tickets(
+            support_repository,
+            days=days,
+            status=status,
+            category=category,
+            severity=severity,
+            reporter_type=reporter_type,
+            search=search,
+            limit=limit,
+        )
+        buffer = io.StringIO()
+        buffer.write("\ufeff")  # BOM so Excel opens the Hebrew export as UTF-8
+        writer = csv.DictWriter(
+            buffer,
+            fieldnames=list(_TICKET_EXPORT_COLUMNS),
+            extrasaction="ignore",
+            lineterminator="\r\n",
+        )
+        writer.writeheader()
+        for ticket in tickets:
+            writer.writerow(
+                {column: ticket.get(column, "") or "" for column in _TICKET_EXPORT_COLUMNS}
+            )
+        buffer.seek(0)
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
+        return StreamingResponse(
+            iter([buffer.getvalue()]),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="spark-support-{stamp}.csv"'},
+        )
+
+    @app.get("/api/support/tickets/{ticket_id}", response_model=SupportTicket)
+    async def get_ticket(
+        ticket_id: str,
+        _: dict[str, Any] = Depends(admin_required),
+        support_repository: SupportRepository = Depends(_support_repository),
+    ) -> SupportTicket:
+        try:
+            ticket = await support_repository.fetch_ticket(ticket_id)
+        except Exception as exc:
+            print(f"⚠️ Admin support read failed: {type(exc).__name__}")
+            raise HTTPException(status_code=503, detail="support_data_unavailable") from None
+        if ticket is None:
+            raise HTTPException(status_code=404, detail="ticket_not_found")
+        return SupportTicket(**ticket)
+
+    @app.patch("/api/support/tickets/{ticket_id}", response_model=SupportTicket)
+    async def update_ticket(
+        ticket_id: str,
+        payload: SupportTicketUpdate,
+        admin: dict[str, Any] = Depends(admin_required),
+        support_repository: SupportRepository = Depends(_support_repository),
+    ) -> SupportTicket:
+        updates: dict[str, Any] = {}
+        if payload.status is not None:
+            if payload.status not in TICKET_STATUSES:
+                raise HTTPException(status_code=422, detail="unknown_ticket_status")
+            updates["status"] = payload.status
+        if payload.admin_notes is not None:
+            updates["admin_notes"] = payload.admin_notes.strip()
+        if not updates:
+            raise HTTPException(status_code=422, detail="no_ticket_changes")
+        try:
+            ticket = await support_repository.update_ticket(
+                ticket_id,
+                updates=updates,
+                updated_by=str(admin.get("sub") or "admin"),
+                now=datetime.now(timezone.utc),
+            )
+        except Exception as exc:
+            print(f"⚠️ Admin support update failed: {type(exc).__name__}")
+            raise HTTPException(status_code=503, detail="support_data_unavailable") from None
+        if ticket is None:
+            raise HTTPException(status_code=404, detail="ticket_not_found")
+        return SupportTicket(**ticket)
 
     if _FRONTEND_DIST.exists():
         app.mount("/", StaticFiles(directory=str(_FRONTEND_DIST), html=True), name="admin-frontend")
