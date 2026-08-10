@@ -762,7 +762,9 @@ function renderHead() {
 
   return el('header', { class: 'lp-head' }, [
     el('h1', { class: 'lp-head__title' }, [
-      document.createTextNode(state.payload.component.title || ''),
+      // The component title is an internal English label for authors; the unit
+      // carries the learner-facing translations.
+      document.createTextNode(pick(state.payload.unit.titles) || state.payload.unit.title || ''),
       el('small', { text: t('step.of', { n: state.index + 1, total }) }),
     ]),
     strip,
