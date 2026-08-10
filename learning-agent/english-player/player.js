@@ -114,9 +114,18 @@ document.documentElement.dir = RTL.has(lang) ? 'rtl' : 'ltr';
 
 const root = document.getElementById('root');
 
-/* ── xAPI transport (fire-and-forget, retried, never blocks the learner) ── */
-const outbox = [];
-let draining = false;
+/* ── xAPI transport ──────────────────────────────────────────────────────
+ * Fire-and-forget, retried, and never in the learner's way. Statements go out
+ * CONCURRENTLY: our ingest folds each one into the brain and forwards it to the
+ * MoE LRS before answering, so a strictly serial queue fell seconds behind a
+ * learner who was still clicking — and a component completion that has not left
+ * the page yet is a component completion that can be lost on close. Order does
+ * not need the queue: every statement carries its own timestamp, and the
+ * platform's position clock is what resolves them.
+ */
+const MAX_IN_FLIGHT = 4;
+const queue = [];
+let inFlight = 0;
 
 function report(verb, { object, result, extensions, category } = {}) {
   if (!launch?.endpoint || !launch?.auth) return;
@@ -131,32 +140,36 @@ function report(verb, { object, result, extensions, category } = {}) {
   if (extensions) context.extensions = extensions;
   if (category) context.contextActivities = { category: [{ id: `${CATEGORY}${category}` }] };
   if (Object.keys(context).length) statement.context = context;
-  outbox.push({ statement, tries: 0 });
-  drain();
+  queue.push({ statement, tries: 0 });
+  pump();
 }
 
-async function drain() {
-  if (draining || !outbox.length) return;
-  draining = true;
-  while (outbox.length) {
-    const job = outbox[0];
-    try {
-      const response = await fetch(`${launch.endpoint.replace(/\/$/, '')}/statements`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: launch.auth },
-        body: JSON.stringify(job.statement),
-      });
-      if (!response.ok && response.status < 500) { outbox.shift(); continue; }
-      if (!response.ok) throw new Error(String(response.status));
-      outbox.shift();
-    } catch {
-      job.tries += 1;
-      if (job.tries > 5) { outbox.shift(); continue; }
-      // Mandated retry policy: back off, stay invisible to the learner.
-      await new Promise((resolve) => setTimeout(resolve, Math.min(15000, 800 * 2 ** job.tries)));
-    }
+function pump() {
+  while (inFlight < MAX_IN_FLIGHT && queue.length) {
+    const job = queue.shift();
+    inFlight += 1;
+    send(job).finally(() => { inFlight -= 1; pump(); });
   }
-  draining = false;
+}
+
+async function send(job) {
+  try {
+    const response = await fetch(`${launch.endpoint.replace(/\/$/, '')}/statements`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: launch.auth },
+      body: JSON.stringify(job.statement),
+      // Survives the tab closing mid-flight — a completion must not depend on
+      // the learner staying on the page long enough for us to finish.
+      keepalive: true,
+    });
+    if (!response.ok && response.status >= 500) throw new Error(String(response.status));
+  } catch {
+    job.tries += 1;
+    if (job.tries > 5) return;
+    // Mandated retry policy: back off, stay invisible to the learner.
+    await new Promise((resolve) => setTimeout(resolve, Math.min(15000, 800 * 2 ** job.tries)));
+    queue.push(job);
+  }
 }
 
 /* ── speech (read-aloud + listening items) ──────────────────────────────── */
@@ -199,7 +212,10 @@ const state = {
   payload: null,
   index: 0,
   visited: new Set(),
-  answered: new Map(),   // `${itemId}|${questionId}` -> boolean
+  // `${itemId}|${questionId}` -> {correct, feedback, response}. Kept whole so a
+  // learner who walks back to a finished screen sees what they answered and
+  // what they were told, instead of a blank question (720 §1.5).
+  answered: new Map(),
   written: new Map(),
   startedAt: Date.now(),
   breakOffered: false,
@@ -207,6 +223,7 @@ const state = {
   scale: 'normal',
   contrast: false,
   readingAloud: false,
+  reported: false,
 };
 
 const items = () => state.payload?.items || [];
@@ -249,20 +266,25 @@ function maybeOfferBreak() {
 }
 
 async function finish() {
-  const graded = [...state.answered.values()];
+  const graded = [...state.answered.values()].map((entry) => entry.correct);
   const success = graded.length ? graded.filter(Boolean).length / graded.length >= 0.6 : true;
-  report('completed', {
-    result: {
-      completion: true,
-      success,
-      // Collected for routing and analysis, never shown to the learner.
-      score: graded.length ? { scaled: graded.filter(Boolean).length / graded.length } : undefined,
-    },
-    extensions: { [`${CATEGORY}isAssessment`]: !!state.payload?.component?.isAssessment },
-  });
   state.finished = success ? 'success' : 'retry';
+  // One sitting reports one completion. Re-reading the closing card must not
+  // look to the platform like the learner finished the component again.
+  if (!state.reported) {
+    state.reported = true;
+    report('completed', {
+      result: {
+        completion: true,
+        success,
+        // Collected for routing and analysis, never shown to the learner.
+        score: graded.length ? { scaled: graded.filter(Boolean).length / graded.length } : undefined,
+      },
+      extensions: { [`${CATEGORY}isAssessment`]: !!state.payload?.component?.isAssessment },
+    });
+    window.parent?.postMessage({ type: 'yuvilab:component-complete', componentId, success }, '*');
+  }
   render();
-  window.parent?.postMessage({ type: 'yuvilab:component-complete', componentId, success }, '*');
 }
 
 /* ── renderers ──────────────────────────────────────────────────────────── */
@@ -363,17 +385,28 @@ function renderLines(item) {
 
 function renderQuestion(item, question) {
   const key = `${item.id}|${question.questionId}`;
+  const previous = state.answered.get(key);
   const block = el('div', { class: 'lp-q' });
   block.append(el('p', { class: 'lp-q__text lp-en', text: question.questionText }));
 
   const feedback = el('p', { class: 'lp-feedback', hidden: true });
   const options = el('div', { class: 'lp-options' });
 
+  const settle = (option, verdict, response) => {
+    const correct = verdict.correct === true;
+    state.answered.set(key, { correct, feedback: verdict.feedback, response });
+    option.dataset.verdict = correct ? 'correct' : 'incorrect';
+    options.querySelectorAll('button').forEach((node) => { node.disabled = true; });
+    feedback.textContent = pick(verdict.feedback);
+    feedback.dataset.verdict = correct ? 'correct' : 'incorrect';
+    feedback.hidden = !feedback.textContent;
+  };
+
   (question.answers || []).forEach((answer) => {
     const option = el('button', { class: 'lp-option lp-en', type: 'button', text: answer });
     option.addEventListener('click', async () => {
       if (state.answered.has(key)) return;
-      let verdict = null;
+      let verdict;
       try {
         const response = await fetch(`/content/player/${encodeURIComponent(componentId)}/answer`, {
           method: 'POST',
@@ -384,51 +417,52 @@ function renderQuestion(item, question) {
       } catch {
         verdict = { correct: null, feedback: {} };
       }
-      const correct = verdict.correct === true;
-      state.answered.set(key, correct);
-      option.dataset.verdict = correct ? 'correct' : 'incorrect';
-      options.querySelectorAll('button').forEach((node) => { node.disabled = true; });
-      feedback.textContent = pick(verdict.feedback);
-      feedback.dataset.verdict = correct ? 'correct' : 'incorrect';
-      feedback.hidden = !feedback.textContent;
+      settle(option, verdict, answer);
       report('answered', {
         object: `${itemObject(item)}/${question.questionId}`,
-        result: { response: answer, success: correct, score: { scaled: correct ? 1 : 0 } },
+        result: { response: answer, success: verdict.correct === true, score: { scaled: verdict.correct === true ? 1 : 0 } },
       });
       renderFooter();
     });
+    if (previous && answer === previous.response) settle(option, previous, answer);
     options.append(option);
   });
+
+  if (previous) options.querySelectorAll('button').forEach((node) => { node.disabled = true; });
 
   block.append(options, feedback);
   return block;
 }
 
-function renderReflection(item) {
-  const p = item.presentation;
-  const block = el('div', { class: 'lp-q' });
-  const done = el('p', { class: 'lp-feedback', hidden: true, text: t('reflect.thanks') });
+/** A self-report row (reflection / speaking self-check) — chosen once, and still
+ *  visibly chosen if the learner walks back to the screen. */
+function renderChoices(item, choices, category) {
+  const key = `${item.id}|${category}`;
+  const done = el('p', { class: 'lp-feedback', hidden: !state.written.has(key), text: t('reflect.thanks') });
   const options = el('div', { class: 'lp-options' });
-  (p.choices || []).forEach((choice) => {
+  choices.forEach((choice) => {
     const option = el('button', { class: 'lp-option', type: 'button', text: pick(choice.label) });
-    option.addEventListener('click', () => {
-      options.querySelectorAll('button').forEach((node) => {
-        node.disabled = true;
-        node.removeAttribute('data-verdict');
-      });
+    const settle = () => {
+      options.querySelectorAll('button').forEach((node) => { node.disabled = true; });
       option.dataset.verdict = 'correct';
       done.hidden = false;
+    };
+    option.addEventListener('click', () => {
+      if (state.written.has(key)) return;
+      state.written.set(key, choice.id);
+      settle();
       // A self-report, not an assessed answer — 720 models that as `selected`.
-      report('selected', {
-        object: itemObject(item),
-        result: { response: choice.id },
-        category: 'isUnderstood',
-      });
+      report('selected', { object: itemObject(item), result: { response: choice.id }, category });
     });
+    if (state.written.get(key) === choice.id) settle();
     options.append(option);
   });
-  block.append(options, done);
-  return block;
+  if (state.written.has(key)) options.querySelectorAll('button').forEach((node) => { node.disabled = true; });
+  return el('div', { class: 'lp-q' }, [options, done]);
+}
+
+function renderReflection(item) {
+  return renderChoices(item, item.presentation.choices || [], 'isUnderstood');
 }
 
 function renderWriting(item) {
@@ -455,12 +489,11 @@ function renderWriting(item) {
   submit.addEventListener('click', () => {
     const text = (area.value || '').trim();
     if (!text) return;
-    state.answered.set(`${item.id}|written`, true);
     saved.hidden = false;
     // Open writing is submitted, not auto-scored — the response goes to the
-    // platform, and the teacher/agent read it there.
+    // platform, and the teacher/agent read it there. It must stay out of the
+    // component score, which only reflects what was actually graded.
     report('submitted', { object: itemObject(item), result: { response: text.slice(0, 1000) } });
-    renderFooter();
   });
   block.append(submit, saved);
   return block;
@@ -502,25 +535,9 @@ function renderSpeaking(item) {
 
   if (p.selfCheck?.length) {
     block.append(el('p', { class: 'lp-kicker', text: t('speak.check') }));
-    const done = el('p', { class: 'lp-feedback', hidden: true, text: t('reflect.thanks') });
-    const options = el('div', { class: 'lp-options' });
-    p.selfCheck.forEach((choice) => {
-      const option = el('button', { class: 'lp-option', type: 'button', text: pick(choice.label) });
-      option.addEventListener('click', () => {
-        options.querySelectorAll('button').forEach((node) => { node.disabled = true; });
-        option.dataset.verdict = 'correct';
-        done.hidden = false;
-        // Saying it out loud cannot be graded here — the learner's own read is a
-        // self-report, which 720 models as `selected`, never as `answered`.
-        report('selected', {
-          object: itemObject(item),
-          result: { response: choice.id },
-          category: 'isUnderstood',
-        });
-      });
-      options.append(option);
-    });
-    block.append(options, done);
+    // Saying it out loud cannot be graded here — the learner's own read is a
+    // self-report, which 720 models as `selected`, never as `answered`.
+    block.append(renderChoices(item, p.selfCheck, 'isUnderstood'));
   }
   return block;
 }
@@ -613,7 +630,10 @@ function renderFooter() {
 
   const next = el('button', {
     class: 'lp-btn', type: 'button',
-    text: last ? t('nav.finish') : (state.index === 0 ? t('nav.start') : t('nav.next')),
+    // "Start" belongs on a framing card, not on a screen that already asks
+    // something — there the learner is continuing, not starting.
+    text: last ? t('nav.finish')
+      : (item.presentation?.kind === 'intro' ? t('nav.start') : t('nav.next')),
     disabled: blocked,
   });
   next.addEventListener('click', () => (last ? finish() : goTo(state.index + 1)));
@@ -647,7 +667,8 @@ function renderCard() {
   const p = item.presentation || {};
   const card = el('section', { class: 'lp-card', 'aria-label': item.title || '' });
 
-  if (item.title) card.append(el('p', { class: 'lp-kicker', text: item.title }));
+  // The authored item `title` is an internal English label for authors and the
+  // agent — the learner's heading is the localized prompt.
   if (pick(p.prompt)) card.append(el('h2', { class: 'lp-prompt', text: pick(p.prompt) }));
   if (pick(p.goal)) card.append(el('p', { class: 'lp-note', text: pick(p.goal) }));
   if (pick(p.strategy)) card.append(el('p', { class: 'lp-support', text: pick(p.strategy) }));
