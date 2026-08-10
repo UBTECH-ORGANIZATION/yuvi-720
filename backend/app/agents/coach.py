@@ -341,73 +341,14 @@ FALLBACK_REPLY = {
     "en": "I'm here with you. Let's try one small step together — what's the trickiest part right now?",
 }
 
-TITLE_INSTRUCTIONS = {
-    "he": (
-        "צור כותרת קצרה בעברית, בת 2–6 מילים, לנושא השיחה של התלמיד/ה. "
-        "הכותרת חייבת להיות צירוף שמני מסכם ולא העתק, ציטוט או ניסוח מחדש של השאלה. "
-        "אל תוסיף מרכאות, נקודתיים, הסבר או סימן שאלה. החזר רק את הכותרת."
-    ),
-    "ar": (
-        "أنشئ عنوانًا عربيًا قصيرًا من كلمتين إلى ست كلمات لموضوع محادثة الطالب/ة. "
-        "يجب أن يكون عبارة اسمية تلخّص الموضوع، لا نسخة أو اقتباسًا أو إعادة صياغة للسؤال. "
-        "لا تضف علامات اقتباس أو نقطتين أو شرحًا أو علامة استفهام. أعد العنوان فقط."
-    ),
-    "en": (
-        "Create a concise 2–6 word English title for the learner's conversation topic. "
-        "Use a summarizing noun phrase, never a copy, quotation, or restatement of the question. "
-        "Do not add quotes, a label, an explanation, or a question mark. Return only the title."
-    ),
-}
-
-TITLE_FALLBACK = {
-    "he": "למידה עם יובי",
-    "ar": "التعلّم مع يوفي",
-    "en": "Learning with Yuvi",
-}
-
-
-def _normalized_title_text(value: str) -> str:
-    return re.sub(r"[^\w\u0590-\u05ff\u0600-\u06ff]+", "", value.casefold())
-
-
-async def generate_conversation_title(
-    user_message: str,
-    language: str,
-    usage_context: Optional[UsageContext] = None,
-) -> tuple[str, str]:
-    """Use the mini model once to name a new thread without copying its first message."""
-    lang = language if language in TITLE_INSTRUCTIONS else "he"
-    result = await call_llm(
-        [
-            {"role": "system", "content": TITLE_INSTRUCTIONS[lang]},
-            {"role": "user", "content": f"<first_message>{user_message}</first_message>"},
-        ],
-        usage_context=usage_context or UsageContext(
-            actor_id="system",
-            actor_type="system",
-            endpoint="internal:coach-title",
-            feature="feature_3_learning_companion",
-            operation="coach.title",
-            source="coach_agent",
-        ),
-        max_tokens=48,
-        model_tier="mini",
-    )
-    candidate = safety.screen_output(result or "", lang).text
-    candidate = re.sub(
-        r"^(?:title|conversation title|כותרת|عنوان)\s*[:：-]\s*",
-        "",
-        candidate.strip(),
-        flags=re.IGNORECASE,
-    )
-    candidate = candidate.splitlines()[0].strip(" \t\"'`“”‘’*-–—:：?.!؟")[:72]
-    if (
-        not candidate
-        or _normalized_title_text(candidate) == _normalized_title_text(user_message)
-        or len(candidate.split()) > 8
-    ):
-        return TITLE_FALLBACK[lang], "fallback"
-    return candidate, "model"
+# Thread naming lives in `conversation_titles` — the teacher assistant names its
+# threads the same way, and it must not import this module to do it. Re-exported
+# here because `coach.generate_conversation_title` is the established call site.
+from app.agents.conversation_titles import (  # noqa: E402,F401
+    TITLE_FALLBACK,
+    TITLE_INSTRUCTIONS,
+    generate_conversation_title,
+)
 
 
 def _question_status(current: dict) -> str:

@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type SVGProps } from 'react'
-import { navigate } from '../../app/router'
+import { recordLoginIntent } from '../../app/router'
 import { LanguageSwitcher } from '../../components/LanguageSwitcher'
 import { BrandLogo } from '../../components/BrandLogo'
 import { ThemeSwitcher } from '../../components/ThemeSwitcher'
@@ -51,6 +51,16 @@ function GraduationCapIcon(props: SVGProps<SVGSVGElement>) {
       <path d="M12 3 2 8l10 5 10-5-10-5Z" />
       <path d="M6 10.5V16c0 1.4 2.7 3 6 3s6-1.6 6-3v-5.5" />
       <path d="M22 8v6" />
+    </Icon>
+  )
+}
+
+function TeacherDeskIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="7.5" r="3.2" />
+      <path d="M5.5 20a6.5 6.5 0 0 1 13 0" />
+      <path d="M3 20h18" />
     </Icon>
   )
 }
@@ -231,17 +241,15 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
   const [contactMessage, setContactMessage] = useState('')
   const [contactStatus, setContactStatus] = useState<ContactStatus>('idle')
 
-  const afterLogin = '/student-dashboard'
-
   const onLoginSuccess = () => {
-    const intent = loginIntent
+    /* Record which door was used and stop — App's landing-route effect does the
+       actual navigation once the user state has committed. This page used to
+       navigate here itself, but navigate()'s synthetic popstate flushes at
+       discrete-event priority, so the URL changed one render before `user`
+       did — and the auth guard read that frame as a signed-out visit to a
+       protected page and bounced the login back to the landing. */
+    if (loginIntent) recordLoginIntent(loginIntent)
     setLoginIntent(null)
-    // Guard mode: the router is already sitting on the page the user asked for,
-    // so authenticating is enough — navigating would throw that destination away.
-    if (initialDialog) return
-    // Head for the dashboard and let the onboarding gate redirect to whichever
-    // step this learner is actually on — it is the single source of truth.
-    navigate(intent === 'teacher' ? '/teacher-view' : afterLogin)
   }
 
   async function submitContactForm(event: FormEvent) {
@@ -302,11 +310,21 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
           <p className="landing720-note">{t('landing.hero.note')}</p>
 
           {/* Only visitors ever see this page — App redirects a signed-in user
-              into the product — so sign-in is the single call to action. */}
+              into the product — so signing in is the call to action. Two doors,
+              because a teacher landing here needs their own way in: the copy
+              key existed from the start but nothing rendered it, so the teacher
+              lane was only reachable by deep-linking while signed out. */}
           <aside className="landing720-login">
             <button className="landing720-login-btn student" onClick={() => setLoginIntent('student')}>
               <GraduationCapIcon />
               <span>{t('landing.login.student')}</span>
+            </button>
+            <button
+              className="landing720-login-btn teacher"
+              onClick={() => setLoginIntent('teacher')}
+            >
+              <TeacherDeskIcon />
+              <span>{t('landing.login.teacher')}</span>
             </button>
           </aside>
         </article>

@@ -1,0 +1,355 @@
+/* Shared teacher-app surfaces: the card language, zones, evidence, recommendations.
+ *
+ * Design system, scoped to `.sp-teacher-shell` (the admin console shares it):
+ *
+ *   - Cards are borderless-first: elevation comes from a background shift and a
+ *     soft shadow, with a hairline border that only really works in dark mode.
+ *     (2026 dashboard practice: density and calm over outlines everywhere.)
+ *   - One accent (the brand violet); status colours appear only as small chips
+ *     and 3px edge accents, never as whole surfaces.
+ *   - Dark mode mirrors the student dashboard's twilight (`.sd-page`): lifted
+ *     violet cards in the #24–#36 range, warm borders, an inner top highlight —
+ *     not near-black cutouts.
+ */
+
+.sp-teacher-shell {
+  --tch-card-bg: #ffffff;
+  --tch-card-border: rgba(122, 104, 210, .12);
+  --tch-card-shadow: 0 6px 22px rgba(64, 46, 140, .07), inset 0 1px rgba(255, 255, 255, .8);
+  --tch-card-radius: 18px;
+  --tch-chip-bg: #f2effc;
+  --tch-hover-ring: rgba(139, 122, 255, .35);
+}
+
+[data-theme='dark'] .sp-teacher-shell {
+  --tch-card-bg: linear-gradient(180deg, #332a5e 0%, #292250 100%);
+  --tch-card-border: rgba(188, 168, 255, .16);
+  --tch-card-shadow: 0 14px 36px rgba(16, 8, 40, .35), inset 0 1px rgba(255, 255, 255, .08);
+  --tch-chip-bg: rgba(139, 122, 255, .14);
+  --tch-hover-ring: rgba(173, 156, 255, .45);
+
+  /* Scoped surface overrides, exactly as `.sd-page` does: chips, inputs and
+     nested panels pick these up without dark rules leaking elsewhere. */
+  --sp-surface: #2c2456;
+  --sp-surface-2: #362d63;
+  --sp-bg-subtle: #241d4b;
+  --sp-border: rgba(188, 168, 255, .14);
+  --sp-border-strong: rgba(200, 182, 255, .30);
+}
+
+/* Every Panel/Card primitive inside the shell speaks the same language. */
+.sp-teacher-shell .sp-panel,
+.sp-teacher-shell .sp-card {
+  background: var(--tch-card-bg);
+  border: 1px solid var(--tch-card-border);
+  border-radius: var(--tch-card-radius);
+  box-shadow: var(--tch-card-shadow);
+}
+
+/* ── page scaffold ─────────────────────────────────────────────────────────*/
+
+/* Pages breathe with the viewport instead of floating as a skinny strip on a
+   wide monitor: the assistant column already bounds the line length. */
+.tch-home,
+.tch-roster,
+.tch-student {
+  max-inline-size: 1240px;
+  margin-inline: auto;
+  padding: var(--sp-5) clamp(var(--sp-4), 3vw, var(--sp-8)) var(--sp-10);
+}
+
+/* ── zones ─────────────────────────────────────────────────────────────────*/
+
+.tch-zone {
+  display: grid;
+  gap: var(--sp-3);
+  margin-block-end: var(--sp-5);
+}
+
+/* Zone 1 carries weight through its header and the coloured status dots on its
+   rows — not through an edge stripe or a red slab. One calm card, loud rows. */
+.tch-zone--urgent {
+  padding: var(--sp-4);
+  border-radius: var(--tch-card-radius);
+  background: var(--tch-card-bg);
+  border: 1px solid var(--tch-card-border);
+  box-shadow: var(--tch-card-shadow);
+}
+
+/* Collapsible zones hold flat content directly — no Panel inside a card. */
+.tch-zone__body { padding: 0 var(--sp-4) var(--sp-4); display: grid; gap: var(--sp-3); }
+
+.tch-zone--quiet > details {
+  border-radius: var(--tch-card-radius);
+  background: var(--tch-card-bg);
+  border: 1px solid var(--tch-card-border);
+  box-shadow: var(--tch-card-shadow);
+}
+
+.tch-zone__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  cursor: pointer;
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-700);
+  list-style: none;
+  border-radius: var(--tch-card-radius);
+}
+
+.tch-zone__summary:hover { color: var(--sp-ink-900); }
+.tch-zone__summary::-webkit-details-marker { display: none; }
+
+.tch-zone__count {
+  min-inline-size: 22px;
+  text-align: center;
+  padding-inline: var(--sp-2);
+  border-radius: var(--sp-radius-pill);
+  background: var(--tch-chip-bg);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-primary-600);
+}
+
+/* ── KPI strip ─────────────────────────────────────────────────────────────
+   Horizontal cards, icon beside number: the value reads first, the label
+   explains it, the hint qualifies it. Shared by Home, the student profile and
+   the learnings screen so the "top numbers" language is one language. */
+
+.tch-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--sp-3);
+}
+
+.tch-stat {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  text-align: start;
+  padding: var(--sp-3) var(--sp-4);
+  transition: transform var(--sp-dur-fast) var(--sp-ease), box-shadow var(--sp-dur-fast) var(--sp-ease);
+}
+
+.tch-stat:hover { transform: translateY(-2px); }
+
+.tch-stat__icon {
+  flex: none;
+  inline-size: 40px;
+  block-size: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+}
+
+.tch-stat__icon--primary { background: var(--tch-chip-bg); color: var(--sp-primary-600); }
+.tch-stat__icon--success { background: rgba(46, 174, 111, .14); color: var(--sp-success-600); }
+.tch-stat__icon--danger  { background: rgba(226, 74, 94, .14); color: var(--sp-danger-600); }
+.tch-stat__icon--warn    { background: rgba(224, 158, 42, .16); color: var(--sp-warn-600); }
+
+.tch-stat__ring { flex: none; }
+
+.tch-stat__text { display: grid; gap: 1px; min-inline-size: 0; }
+
+.tch-stat__label {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+  font-weight: var(--sp-fw-semibold);
+  text-transform: none;
+}
+
+.tch-stat__value {
+  font-size: var(--sp-fs-xl);
+  font-weight: var(--sp-fw-bold);
+  color: var(--sp-ink-900);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.tch-stat__hint { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+/* A KPI that demands action carries the accent the inbox does. */
+.tch-stat--alert { border-inline-start: 3px solid var(--sp-danger-600); }
+.tch-stat--live  { border-inline-start: 3px solid var(--sp-primary-500); }
+
+/* ── attention rows ────────────────────────────────────────────────────────*/
+
+/* Flat list rows: a coloured status dot, the name, the signal, the evidence —
+   separated by hairlines, not boxed. Boxes-in-a-box read as chrome; a list
+   reads as students. */
+.tch-attention {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: var(--sp-3);
+  row-gap: var(--sp-1);
+  padding: var(--sp-3) var(--sp-1);
+  background: transparent;
+  border: 0;
+  border-block-end: 1px solid var(--sp-border);
+}
+
+.tch-attention:last-child { border-block-end: 0; }
+
+/* The severity lives in one dot, start of the row. */
+.tch-attention__who::before {
+  content: '';
+  inline-size: 9px;
+  block-size: 9px;
+  border-radius: 50%;
+  background: var(--sp-ink-300);
+  flex: none;
+}
+
+.tch-attention--wellbeing .tch-attention__who::before,
+.tch-attention--help_requested .tch-attention__who::before { background: var(--sp-danger-600); }
+.tch-attention--inactivity .tch-attention__who::before,
+.tch-attention--low_success .tch-attention__who::before,
+.tch-attention--wheel_spinning .tch-attention__who::before,
+.tch-attention--rapid_guessing .tch-attention__who::before { background: var(--sp-warn-600); }
+
+/* The head dissolves into the row grid so its two children (identity, action)
+   can sit in separate columns while the evidence flows under the identity. */
+.tch-attention__head { display: contents; }
+
+.tch-attention__who {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  min-inline-size: 0;
+}
+
+.tch-attention__who > strong { font-size: var(--sp-fs-md); color: var(--sp-ink-900); }
+
+/* The action hugs the far edge and centres across the text rows. */
+.tch-attention__head > .sp-btn {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  white-space: nowrap;
+}
+
+.tch-attention__evidence {
+  grid-column: 1;
+  grid-row: 2;
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+  /* aligned under the name, past the status dot */
+  padding-inline-start: calc(9px + var(--sp-2));
+}
+
+.tch-attention > .tch-evidence__toggle { margin-inline-start: calc(9px + var(--sp-2)); }
+
+.tch-attention > .tch-evidence__toggle { grid-column: 1; grid-row: 3; }
+.tch-attention > .tch-evidence__raw { grid-column: 1 / -1; grid-row: 4; }
+
+/* ── selection chips ───────────────────────────────────────────────────────
+   A person (or option) you toggle on and off. Pressed = filled + check. */
+
+.tch-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--sp-radius-pill);
+  border: 1px solid var(--sp-border-strong);
+  background: transparent;
+  color: var(--sp-ink-700);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  cursor: pointer;
+  transition: background var(--sp-dur-fast) var(--sp-ease),
+              border-color var(--sp-dur-fast) var(--sp-ease),
+              color var(--sp-dur-fast) var(--sp-ease);
+}
+
+.tch-chip:hover { border-color: var(--sp-primary-500); color: var(--sp-primary-700); }
+.tch-chip:focus-visible { outline: 2px solid var(--sp-primary-600); outline-offset: 2px; }
+
+.tch-chip.is-on {
+  background: var(--tch-chip-bg);
+  border-color: var(--sp-primary-500);
+  color: var(--sp-primary-700);
+  font-weight: var(--sp-fw-semibold);
+}
+
+/* ── evidence disclosure ───────────────────────────────────────────────────*/
+
+.tch-evidence__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  border: 0;
+  background: transparent;
+  color: var(--sp-primary-600);
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  cursor: pointer;
+  padding: 0;
+  justify-self: start;
+}
+
+.tch-evidence__toggle:hover { color: var(--sp-primary-700); text-decoration: underline; }
+
+/* The datum reads as an explanation, so it looks like text — a quiet block,
+   not a callout card with an accent bar down its edge. */
+.tch-evidence__raw {
+  display: grid;
+  gap: var(--sp-1);
+  margin: var(--sp-1) 0 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-bg-subtle);
+  font-size: var(--sp-fs-xs);
+}
+
+/* Free-text lines, not key–value pairs — the datum reads as an explanation. */
+.tch-evidence__sentence {
+  margin: 0;
+  color: var(--sp-ink-700);
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── recommendations ───────────────────────────────────────────────────────*/
+
+.tch-recs { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+.tch-rec {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: calc(var(--tch-card-radius) - 6px);
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+}
+
+.tch-rec__text { margin: 0; color: var(--sp-ink-700); }
+
+.tch-rec__because {
+  display: grid;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+
+.tch-rec__because p { margin: 0; }
+
+/* ── tables ───────────────────────────────────────────────────────────────── */
+/* Shared by the student profile, the learning detail and the roster. Lived in
+   `teacher-student.css` while two pages used it; a third made that a lie. */
+
+/* Wide content scrolls inside its own box; the page never scrolls sideways. */
+.tch-tableWrap { overflow-x: auto; }
+
+.tch-table { inline-size: 100%; border-collapse: collapse; font-size: var(--sp-fs-sm); }
+.tch-table th, .tch-table td { padding: var(--sp-2) var(--sp-3); text-align: start; white-space: nowrap; }
+.tch-table th { color: var(--sp-ink-400); font-weight: var(--sp-fw-semibold); font-size: var(--sp-fs-xs); }
+.tch-table tbody tr { border-block-start: 1px solid var(--sp-border); }
+.tch-table td { color: var(--sp-ink-700); font-variant-numeric: tabular-nums; }

@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import AsyncMock, patch
 
-from app.agents import coach, sessions
+from app.agents import coach, conversation_titles, sessions
 
 
 class AgentChatHistoryTests(unittest.IsolatedAsyncioTestCase):
@@ -220,8 +220,10 @@ class AgentChatHistoryTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_model_title_is_short_and_never_copies_the_first_message(self) -> None:
         first_message = "Please explain how to identify similar triangles"
+        # Titles moved to `conversation_titles` so the teacher assistant can name
+        # its threads without importing the coach; patch where the call now lives.
         with patch.object(
-            coach,
+            conversation_titles,
             "call_llm",
             new=AsyncMock(return_value="Recognizing Similar Triangles"),
         ):
@@ -230,7 +232,7 @@ class AgentChatHistoryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(source, "model")
 
         with patch.object(
-            coach,
+            conversation_titles,
             "call_llm",
             new=AsyncMock(return_value=first_message),
         ):

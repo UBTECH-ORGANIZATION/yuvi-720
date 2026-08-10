@@ -14,8 +14,10 @@ from app.auth.dependencies import COOKIE_NAME, current_user, optional_user
 from app.auth.passwords import burn_timing, verify_password
 from app.auth.repository import (
     ALLOWED_PREFERENCES,
+    TOUR_SLUGS,
     get_user_by_id,
     get_user_by_username,
+    mark_tours_completed,
     public_user,
     set_current_moe_session,
     touch_last_login,
@@ -42,6 +44,19 @@ class PreferencesRequest(BaseModel):
     theme_updated_at: Optional[int] = Field(default=None, ge=0)
     language: Optional[str] = Field(default=None, pattern="^(he|en|ar)$")
     reduced_motion: Optional[bool] = None
+    # Tours the client has just finished. Sent as a list, applied as a union —
+    # see `mark_tours_completed`. Bounded so a crafted PATCH cannot make the
+    # server iterate an arbitrarily long body.
+    tours_completed: Optional[list[str]] = Field(default=None, max_length=20)
+    # Roster view + visible columns. Bounded and pattern-checked for the same
+    # reason as the tour list: these round-trip on every /api/auth/me.
+    teacher_roster_view: Optional[str] = Field(default=None, pattern="^(table|cards)$")
+    teacher_roster_columns: Optional[list[str]] = Field(default=None, max_length=12)
+    # The class a teacher is currently looking at. Stored so the choice survives
+    # a reload and a new tab; it is a view preference, not an access grant —
+    # every teacher endpoint still re-checks the group against org scoping, so a
+    # stale or crafted id here buys nothing.
+    teacher_group_id: Optional[str] = Field(default=None, max_length=128)
 
 
 def _cookie_is_secure() -> bool:
@@ -189,10 +204,26 @@ async def patch_preferences(
     # A stamp on its own means nothing — it only dates a theme choice.
     if "theme" not in updates:
         updates.pop("theme_updated_at", None)
-    if not updates:
+
+    # Tours are append-only and slug-validated, so they leave the generic `$set`
+    # lane entirely. An unknown slug is a hard 400 rather than a silent drop: a
+    # client that thinks it recorded a tour and did not would re-open it forever.
+    tours = updates.pop("tours_completed", None)
+    if tours is not None:
+        unknown = sorted({slug for slug in tours if slug not in TOUR_SLUGS})
+        if unknown:
+            raise HTTPException(status_code=400, detail=f"unknown_tour:{unknown[0]}")
+
+    if not updates and tours is None:
         raise HTTPException(status_code=400, detail="no_supported_preferences")
 
-    preferences = await update_preferences(session["sub"], updates)
+    preferences: dict[str, Any] = {}
+    if updates:
+        preferences = await update_preferences(session["sub"], updates)
+    if tours is not None:
+        # Last, and it returns the full set — so a tour-only PATCH costs one
+        # write and no read at all.
+        preferences = await mark_tours_completed(session["sub"], tours)
     if "language" in updates:
         # Mirror into learner_state so the existing I18nProvider path keeps
         # resolving the same value.

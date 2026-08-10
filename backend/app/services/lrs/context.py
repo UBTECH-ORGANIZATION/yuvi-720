@@ -20,6 +20,11 @@ EXIDENTIFIER_HOMEPAGE = f"{MOE}/identity/exidentifier"
 NMM_HOMEPAGE = f"{MOE}/identity/nmm/kvutsa"
 SCHOOL_HOMEPAGE = f"{MOE}/school"
 ECAT_ITEM_BASE = f"{MOE}/ecat/item"
+# `grouping→content-vendor` identifies the content SUPPLIER (MoE, 03/08), which
+# is not the same thing as a catalog ITEM id — so it gets its own IRI space. An
+# xAPI activity id must be an IRI, and the ministry's interim values ("10",
+# "methodica") are bare tokens, so they are namespaced rather than sent raw.
+CONTENT_VENDOR_BASE = f"{MOE}/content-vendor"
 
 # 720 media dictionary. The Activity type of a media object follows the media
 # kind ("סוג ה-Activity יהיה בהתאם לסוג המדיה"). Anything outside the dictionary
@@ -82,9 +87,14 @@ def build_grouping(
     if session_id:
         grouping.append(session_activity(session_id))
     if ecat_item_id:
-        grouping.append(
-            activity(f"{ECAT_ITEM_BASE}/{ecat_item_id}", "content-vendor")
+        # Already an IRI (the supplier id, namespaced by `hierarchy`) → sent as
+        # it is; a bare catalog item id is namespaced here.
+        identifier = (
+            ecat_item_id
+            if str(ecat_item_id).startswith(("http://", "https://"))
+            else f"{ECAT_ITEM_BASE}/{ecat_item_id}"
         )
+        grouping.append(activity(identifier, "content-vendor"))
     grouping.append(activity(config.program_iri(), "program"))
     if extra:
         # De-dupe so content-origin statements can't add a SECOND lms/session/

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { navigate } from '../app/router'
+import { navigate, useRoute } from '../app/router'
 import { useI18n, type Language } from '../i18n/I18nProvider'
 import { useAuth } from '../providers/AuthProvider'
 import { useTheme } from '../providers/ThemeProvider'
@@ -33,6 +33,11 @@ export function UserMenu() {
   const { theme, toggleTheme } = useTheme()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  /* Badge avatars are a learner thing. In the teacher/admin app the same menu
+     drops both badge affordances — a teacher grading a class has no badge
+     gallery to edit, and offering one was learner chrome leaking through. */
+  const route = useRoute()
+  const inTeacherApp = route.startsWith('/teacher') || route.startsWith('/admin')
 
   useEffect(() => {
     if (!open) return
@@ -83,27 +88,31 @@ export function UserMenu() {
       {open && (
         <div className="user-menu__pop" role="menu">
           <div className="user-menu__head">
-            <button
-              className="user-menu__avatar-edit"
-              type="button"
-              onClick={goBadges}
-              aria-label={t('badges.menuEdit')}
-              title={t('badges.menuEdit')}
-            >
+            {inTeacherApp ? (
               <ProfileAvatar className="user-menu__head-avatar" fallback={initialsOf(user.display_name)} />
-              <span className="user-menu__pencil" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path
-                    d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3z"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </span>
-            </button>
+            ) : (
+              <button
+                className="user-menu__avatar-edit"
+                type="button"
+                onClick={goBadges}
+                aria-label={t('badges.menuEdit')}
+                title={t('badges.menuEdit')}
+              >
+                <ProfileAvatar className="user-menu__head-avatar" fallback={initialsOf(user.display_name)} />
+                <span className="user-menu__pencil" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path
+                      d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3z"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+              </button>
+            )}
             <div className="user-menu__head-meta">
               <span className="user-menu__head-name" dir="auto">{user.display_name}</span>
               <span className="user-menu__head-handle" dir="ltr">@{user.username}</span>
@@ -142,17 +151,19 @@ export function UserMenu() {
             </button>
           </div>
 
-          <button
-            className="user-menu__row user-menu__row--link"
-            type="button"
-            role="menuitem"
-            onClick={goBadges}
-          >
-            <span>{t('badges.menuTitle')}</span>
-            <svg className="user-menu__row-chevron" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
+          {!inTeacherApp ? (
+            <button
+              className="user-menu__row user-menu__row--link"
+              type="button"
+              role="menuitem"
+              onClick={goBadges}
+            >
+              <span>{t('badges.menuTitle')}</span>
+              <svg className="user-menu__row-chevron" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          ) : null}
 
           <button
             className="user-menu__row user-menu__row--link"

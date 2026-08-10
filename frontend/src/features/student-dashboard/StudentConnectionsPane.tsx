@@ -5,6 +5,7 @@ import { EmptyState, ErrorState, Icon, LoadingState } from '../../components/pri
 import { useI18n } from '../../i18n/I18nProvider'
 import { useBrain } from '../../providers/BrainProvider'
 import { listMentoring, type MentoringConversation } from '../../services/mentoring'
+import { getMyTeachers, type MyTeacher } from '../../services/me'
 import './student-connections.css'
 
 interface StudentConnectionsPaneProps {
@@ -23,6 +24,7 @@ export function StudentConnectionsPane({ mode, studentName }: StudentConnections
   const { learnerId } = useBrain()
   const { t, language } = useI18n()
   const [rows, setRows] = useState<MentoringConversation[] | null>(null)
+  const [roster, setRoster] = useState<MyTeacher[]>([])
   const [error, setError] = useState(false)
 
   useEffect(() => {
@@ -38,13 +40,29 @@ export function StudentConnectionsPane({ mode, studentName }: StudentConnections
       .catch(() => {
         if (active) setError(true)
       })
+
+    // The roster is the authority on who my teachers are. It loads separately
+    // and never fails the page: if it is unavailable the pane degrades to the
+    // old conversation-derived list rather than showing nothing.
+    getMyTeachers()
+      .then((response) => { if (active) setRoster(response.teachers) })
+      .catch(() => { if (active) setRoster([]) })
+
     return () => { active = false }
   }, [learnerId])
 
   const teachers = useMemo(() => {
-    const names = (rows || []).map((row) => row.teacher_name.trim()).filter(Boolean)
+    // Roster first, in roster order — a newly enrolled learner sees their
+    // teachers on day one, before anyone has written a single note.
+    const names = roster.map((teacher) => teacher.display_name.trim()).filter(Boolean)
+    // Then anyone who wrote to this learner but is no longer linked. Their
+    // history stays readable; losing access is not the same as never existing.
+    for (const row of rows || []) {
+      const name = row.teacher_name.trim()
+      if (name && !names.includes(name)) names.push(name)
+    }
     return [...new Set(names)]
-  }, [rows])
+  }, [roster, rows])
   const [selectedTeacher, setSelectedTeacher] = useState('')
   const activeTeacher = selectedTeacher || teachers[0] || t('sdash.chat.teacherFallback')
 

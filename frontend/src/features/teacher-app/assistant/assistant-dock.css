@@ -1,0 +1,471 @@
+/* The teaching assistant — a workspace column, not a popup.
+ *
+ * Two modes, one component:
+ *
+ *   ≥1100px  in-flow column inside `.sp-teacher-shell__work`, full height,
+ *            pinned to the PHYSICAL right in both text directions — the same
+ *            standing as the student's chat panel. Pages scroll beside it;
+ *            it scrolls itself.
+ *   <1100px  fixed overlay drawer from the right edge, full height.
+ *
+ * Closed in either mode → the floating launcher.
+ */
+
+.tch-dock__launcher {
+  position: fixed;
+  inset-block-end: var(--sp-4);
+  inset-inline-end: var(--sp-4);
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  border: 0;
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-primary-600);
+  color: #fff;
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  box-shadow: var(--sp-shadow-md);
+  cursor: pointer;
+  transition: transform var(--sp-dur-fast) var(--sp-ease), background var(--sp-dur-fast) var(--sp-ease);
+}
+
+.tch-dock__launcher:hover { background: var(--sp-primary-700); transform: translateY(-1px); }
+.tch-dock__launcher:focus-visible { outline: 2px solid var(--sp-primary-700); outline-offset: 2px; }
+
+/* ── the panel ─────────────────────────────────────────────────────────────*/
+
+.tch-dock {
+  display: flex;
+  flex-direction: column;
+  background: var(--tch-card-bg, var(--sp-surface));
+  border-inline-start: 1px solid var(--tch-card-border, var(--sp-border));
+  overflow: hidden;
+}
+
+/* Desktop: a real column. Physical right regardless of direction — in RTL the
+   flex row starts at the right, so first place wins; in LTR last place does. */
+@media (min-width: 1100px) {
+  .tch-dock {
+    order: 2;
+    flex: 0 0 clamp(340px, 26vw, 420px);
+    min-block-size: 0;
+    box-shadow: var(--sp-shadow-sm);
+  }
+  [dir='rtl'] .tch-dock {
+    order: -1;
+    border-inline-start: 0;
+    border-inline-end: 1px solid var(--tch-card-border, var(--sp-border));
+  }
+}
+
+/* Narrow: an overlay drawer on the physical right, full height. */
+@media (max-width: 1099.98px) {
+  .tch-dock {
+    position: fixed;
+    inset-block: 0;
+    right: 0;
+    z-index: 70;
+    width: min(420px, calc(100vw - var(--sp-6)));
+    border-radius: 0;
+    box-shadow: var(--sp-shadow-lg);
+    border-inline-start: 1px solid var(--tch-card-border, var(--sp-border));
+  }
+}
+
+@media (max-width: 600px) {
+  .tch-dock { width: 100vw; border-inline-start: 0; }
+}
+
+/* ── header ────────────────────────────────────────────────────────────────*/
+
+.tch-dock__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-block-end: 1px solid var(--tch-card-border, var(--sp-border));
+  flex: 0 0 auto;
+}
+
+.tch-dock__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-inline-size: 0;
+}
+
+.tch-dock__titleText {
+  display: grid;
+  line-height: var(--sp-lh-tight);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-900);
+  font-size: var(--sp-fs-sm);
+  min-inline-size: 0;
+}
+
+/* A model-written thread name can run long; the header must not grow with it. */
+.tch-dock__titleText strong,
+.tch-dock__titleText small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tch-dock__titleText strong { font-weight: inherit; }
+
+.tch-dock__titleText small {
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-regular);
+  color: var(--sp-ink-400);
+}
+
+.tch-dock__spacer { flex: 1; }
+
+.tch-dock__iconButton {
+  display: inline-flex;
+  padding: var(--sp-1);
+  border: 0;
+  border-radius: var(--sp-radius-sm);
+  background: transparent;
+  color: var(--sp-ink-400);
+  cursor: pointer;
+}
+
+.tch-dock__iconButton:hover { background: var(--sp-bg-subtle); color: var(--sp-ink-700); }
+.tch-dock__iconButton:focus-visible { outline: 2px solid var(--sp-primary-600); outline-offset: 1px; }
+.tch-dock__iconButton.is-active { background: var(--sp-primary-050); color: var(--sp-primary-700); }
+.tch-dock__iconButton:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── threads ───────────────────────────────────────────────────────────────
+   A drawer under the header rather than a separate screen: switching threads is
+   a glance-and-click, and pushing a route for it would lose the teacher's page. */
+
+.tch-dock__threads {
+  flex: 0 0 auto;
+  max-block-size: 40%;
+  overflow-y: auto;
+  padding: var(--sp-2);
+  border-block-end: 1px solid var(--tch-card-border, var(--sp-border));
+  background: var(--sp-bg-subtle);
+}
+
+.tch-dock__threads ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+
+.tch-dock__threads li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  border-radius: var(--sp-radius-sm);
+}
+
+.tch-dock__threads li:hover { background: var(--sp-surface); }
+.tch-dock__threads li.is-active { background: var(--sp-primary-050); }
+
+.tch-dock__threads li > button:first-child {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+  text-align: start;
+  cursor: pointer;
+}
+
+.tch-dock__threads li > button:first-child span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tch-dock__threads time {
+  flex: none;
+  font-size: var(--sp-fs-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-ink-400);
+}
+
+.tch-dock__threadDelete {
+  flex: none;
+  display: inline-flex;
+  padding: var(--sp-1);
+  border: 0;
+  border-radius: var(--sp-radius-sm);
+  background: transparent;
+  color: var(--sp-ink-400);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.tch-dock__threads li:hover .tch-dock__threadDelete,
+.tch-dock__threadDelete:focus-visible { opacity: 1; }
+.tch-dock__threadDelete:hover { color: var(--sp-danger-600); }
+
+.tch-dock__threadsEmpty {
+  margin: 0;
+  padding: var(--sp-3);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
+}
+
+/* ── conversation ──────────────────────────────────────────────────────────*/
+
+.tch-dock__body {
+  flex: 1;
+  min-block-size: 0;
+  overflow-y: auto;
+  padding: var(--sp-4);
+  display: grid;
+  gap: var(--sp-4);
+  align-content: start;
+}
+
+.tch-dock__intro {
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-bg-subtle);
+  border: 1px dashed var(--sp-border-strong);
+  color: var(--sp-ink-500);
+  font-size: var(--sp-fs-sm);
+  line-height: 1.55;
+}
+
+/* Two voices, two lanes — the same anatomy as the learner's chat, so a teacher
+   who has watched a child use Yuvi already knows how to read this.
+
+   Lanes are PHYSICAL: Yuvi always left, the teacher always right, in Hebrew as
+   in English. Only the text inside a bubble flips, via dir="auto". A mirrored
+   conversation is a different conversation to the eye, and the two products
+   would stop looking like one. */
+.tch-dock__row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sp-2);
+  inline-size: 100%;
+  direction: ltr;
+}
+
+.tch-dock__row--assistant { justify-content: flex-start; }
+.tch-dock__row--user { justify-content: flex-end; }
+
+/* A run of same-sender messages sits closer than a change of speaker. */
+.tch-dock__row--assistant + .tch-dock__row--assistant,
+.tch-dock__row--user + .tch-dock__row--user { margin-block-start: calc(var(--sp-4) * -0.6); }
+
+/* Yuvi's head marks the first bubble of a run, not every message. */
+.tch-dock__row--assistant + .tch-dock__row--assistant .tch-dock__avatar { visibility: hidden; }
+
+/* No card, no plate — just Yuvi. The head mark is already a finished object
+   with its own outline and colour; framing it in a tile made the assistant look
+   like a badge in a list rather than someone in the conversation. */
+.tch-dock__avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 30px;
+  block-size: 30px;
+  background: transparent;
+}
+
+.tch-dock__avatar svg { inline-size: 30px; block-size: 30px; }
+.tch-dock__avatar.is-thinking { animation: tch-dock-head-think 1.25s ease-in-out infinite; }
+
+@keyframes tch-dock-head-think {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-3px) rotate(2deg); }
+}
+
+.tch-dock__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-inline-size: 84%;
+  min-inline-size: 0;
+}
+
+.tch-dock__row--user .tch-dock__stack { align-items: flex-end; }
+
+.tch-dock__bubble {
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--sp-radius-lg);
+  border-start-start-radius: var(--sp-radius-sm);
+  background: var(--sp-bg-subtle);
+  border: 1px solid var(--sp-border);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-900);
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.tch-dock__bubble--user {
+  border-start-start-radius: var(--sp-radius-lg);
+  border-end-end-radius: var(--sp-radius-sm);
+  background: linear-gradient(135deg, var(--sp-primary-600), var(--sp-primary-700));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(91, 70, 200, .25);
+}
+
+.tch-dock__bubble--error { color: var(--sp-danger-600); }
+
+/* An answer with nothing behind it must not look like every other answer. */
+.tch-dock__bubble--ungrounded { border-inline-start: 3px solid var(--sp-warn-600); }
+
+/* Prose inside a bubble: paragraphs and short lists, nothing else renders. */
+.tch-dock__para { margin: 0; }
+.tch-dock__para + .tch-dock__para,
+.tch-dock__para + .tch-dock__list,
+.tch-dock__list + .tch-dock__para { margin-block-start: var(--sp-2); }
+
+.tch-dock__list {
+  margin: 0;
+  padding-inline-start: var(--sp-4);
+  display: grid;
+  gap: 2px;
+}
+
+/* Small, quiet, and tabular so a column of them does not jitter. */
+.tch-dock__time {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-ink-400);
+  padding-inline: var(--sp-1);
+}
+
+.tch-dock__bubble .tch-trace { margin-block-start: var(--sp-2); }
+
+/* Student references resolve client-side and act as links to the profile. */
+.tch-studentRef {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--sp-primary-700);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tch-studentRef:focus-visible { outline: 2px solid var(--sp-primary-600); outline-offset: 2px; }
+
+/* ── the trace ─────────────────────────────────────────────────────────────*/
+
+.tch-trace { font-size: var(--sp-fs-xs); }
+
+.tch-trace summary {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  color: var(--sp-ink-400);
+  padding: var(--sp-1) 0;
+}
+
+.tch-trace summary::marker { content: ''; }
+.tch-trace__count {
+  font-variant-numeric: tabular-nums;
+  background: var(--sp-surface-2);
+  border-radius: var(--sp-radius-pill);
+  padding: 0 var(--sp-2);
+}
+
+.tch-trace ul { list-style: none; margin: var(--sp-1) 0 0; padding: 0; display: grid; gap: var(--sp-1); }
+
+.tch-trace__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  color: var(--sp-ink-400);
+}
+
+.tch-trace__row code {
+  font-family: var(--sp-font-mono, ui-monospace, monospace);
+  color: var(--sp-ink-700);
+}
+
+.tch-trace__row.is-ok { color: var(--sp-success-600); }
+.tch-trace__row.is-empty { color: var(--sp-ink-400); }
+.tch-trace__row.is-error { color: var(--sp-danger-600); }
+
+.tch-trace__status { font-weight: 600; }
+.tch-trace__reason { opacity: 0.8; }
+
+.tch-trace--none {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin: 0;
+  color: var(--sp-warn-600);
+}
+
+/* ── composer ──────────────────────────────────────────────────────────────*/
+
+.tch-dock__composer {
+  display: flex;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border-block-start: 1px solid var(--tch-card-border, var(--sp-border));
+  flex: 0 0 auto;
+}
+
+.tch-dock__composer input {
+  flex: 1;
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+  background: var(--sp-bg-subtle);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  padding: var(--sp-2) var(--sp-4);
+  min-width: 0;
+}
+
+.tch-dock__composer input::placeholder { color: var(--sp-ink-400); }
+
+.tch-dock__composer input:focus-visible {
+  outline: 2px solid var(--sp-primary-600);
+  outline-offset: 1px;
+}
+
+/* The send action: a filled round button the size of the input, icon-only —
+   the composer already says what it does, the button just has to look pressable. */
+.tch-dock__send {
+  flex: none;
+  inline-size: 40px;
+  block-size: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--sp-primary-600), var(--sp-primary-700));
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(91, 70, 200, .3);
+  transition: transform var(--sp-dur-fast) var(--sp-ease), box-shadow var(--sp-dur-fast) var(--sp-ease);
+}
+
+/* The plane points the way the text flows. */
+[dir='rtl'] .tch-dock__send .sp-icon { transform: scaleX(-1); }
+
+.tch-dock__send:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(91, 70, 200, .4); }
+.tch-dock__send:focus-visible { outline: 2px solid var(--sp-primary-700); outline-offset: 2px; }
+.tch-dock__send:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tch-dock, .tch-dock__launcher { transition: none; }
+}

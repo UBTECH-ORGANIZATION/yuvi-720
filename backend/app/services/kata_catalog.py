@@ -211,6 +211,18 @@ def get_unit(unit_id: str) -> Optional[dict[str, Any]]:
     return _SNAPSHOT["units"].get(unit_id)
 
 
+def all_units() -> list[dict[str, Any]]:
+    """Every unit in the snapshot. For catalogue-wide teacher views, which have
+    to show material nobody has opened yet — absence of activity is exactly the
+    thing those screens report."""
+    return list(_SNAPSHOT["units"].values())
+
+
+def all_components() -> list[dict[str, Any]]:
+    """Every component (a "learning"), including summary units' components."""
+    return list(_SNAPSHOT["components"].values())
+
+
 def unit_type(unit_id: str) -> str:
     """Infer the 720 unit structure (720 §3.2): 'closed' | 'modular'.
 

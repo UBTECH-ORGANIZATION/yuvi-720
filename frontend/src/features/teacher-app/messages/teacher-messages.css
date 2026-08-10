@@ -1,0 +1,190 @@
+@import '../shared/teacher-shared.css';
+
+.tch-messages {
+  max-inline-size: 1240px;
+  margin-inline: auto;
+  padding: var(--sp-5) clamp(var(--sp-4), 3vw, var(--sp-8)) var(--sp-10);
+}
+
+.tch-messages__head { margin-block-end: var(--sp-4); }
+.tch-messages__head h1 { margin: 0; font-size: var(--sp-fs-2xl); color: var(--sp-ink-900); letter-spacing: -0.01em; }
+.tch-messages__subtitle { margin: var(--sp-1) 0 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
+
+/* One card, two columns: people | thread. */
+.tch-messages__layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  min-block-size: 480px;
+  block-size: calc(100dvh - 240px);
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .tch-messages__layout { grid-template-columns: 1fr; block-size: auto; }
+  .tch-messages__people { flex-direction: row; overflow-x: auto; border-inline-end: 0; border-block-end: 1px solid var(--sp-border); }
+}
+
+/* ── the people rail ───────────────────────────────────────────────────────*/
+
+.tch-messages__people {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  border-inline-end: 1px solid var(--sp-border);
+  padding: var(--sp-2);
+  gap: 2px;
+}
+
+.tch-messages__person {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 0;
+  border-radius: var(--sp-radius-md);
+  background: transparent;
+  font: inherit;
+  color: var(--sp-ink-700);
+  cursor: pointer;
+  text-align: start;
+}
+
+.tch-messages__person:hover { background: var(--sp-bg-subtle); }
+.tch-messages__person.is-active { background: var(--tch-chip-bg); color: var(--sp-primary-700); }
+.tch-messages__person:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+
+.tch-messages__avatar {
+  inline-size: 30px;
+  block-size: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--sp-gradient);
+  color: #fff;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-bold);
+  flex: none;
+}
+
+.tch-messages__personText { display: grid; min-inline-size: 0; flex: 1; }
+.tch-messages__personText span { font-weight: var(--sp-fw-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tch-messages__personText small { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+/* ── the thread ────────────────────────────────────────────────────────────*/
+
+.tch-thread { display: flex; flex-direction: column; min-block-size: 0; }
+
+.tch-thread__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-block-end: 1px solid var(--sp-border);
+  flex: none;
+}
+
+.tch-thread__head strong { font-size: var(--sp-fs-md); color: var(--sp-ink-900); }
+
+.tch-thread__how {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  border-block-end: 1px dashed var(--sp-border);
+  flex: none;
+}
+
+.tch-thread__body {
+  flex: 1;
+  min-block-size: 0;
+  overflow-y: auto;
+  padding: var(--sp-4);
+  display: grid;
+  gap: var(--sp-3);
+  align-content: start;
+}
+
+.tch-thread__event { display: grid; }
+
+/* The teacher's words: an outgoing bubble, same voice as the dock. */
+.tch-thread__bubble {
+  justify-self: end;
+  max-inline-size: 78%;
+  display: grid;
+  gap: 2px;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--sp-radius-lg);
+  border-end-end-radius: var(--sp-radius-sm);
+  background: linear-gradient(135deg, var(--sp-primary-600), var(--sp-primary-700));
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(91, 70, 200, .22);
+}
+
+.tch-thread__bubble p { margin: 0; font-size: var(--sp-fs-sm); line-height: 1.5; }
+.tch-thread__bubble .tch-thread__meta { color: rgba(255, 255, 255, .75); }
+
+/* System events (goals) sit centred and quiet. */
+.tch-thread__system {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-bg-subtle);
+  border: 1px solid var(--sp-border);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+
+.tch-thread__meta { font-size: var(--sp-fs-xs); font-variant-numeric: tabular-nums; }
+
+/* The clock sits under the bubble, aligned with it, quiet — the learner's chat
+   does exactly this and a teacher reading the thread should recognise it. */
+.tch-thread__time {
+  justify-self: end;
+  margin-block-start: 2px;
+  padding-inline: var(--sp-1);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  font-variant-numeric: tabular-nums;
+}
+.tch-thread__time--system { justify-self: center; }
+.tch-thread__system .tch-thread__meta { color: var(--sp-ink-400); }
+
+.tch-thread__empty { margin: 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); text-align: center; padding-block: var(--sp-6); }
+
+/* ── composer ──────────────────────────────────────────────────────────────*/
+
+.tch-thread__composer {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-block-start: 1px solid var(--sp-border);
+  flex: none;
+}
+
+.tch-thread__modes { display: flex; gap: var(--sp-1); }
+
+.tch-thread__inputRow { display: flex; gap: var(--sp-2); align-items: center; }
+
+.tch-thread__inputRow input {
+  flex: 1;
+  min-inline-size: 0;
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+  background: var(--sp-bg-subtle);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  padding: var(--sp-2) var(--sp-4);
+}
+
+.tch-thread__inputRow input::placeholder { color: var(--sp-ink-400); }
+.tch-thread__inputRow input:focus-visible { outline: 2px solid var(--sp-primary-600); outline-offset: 1px; }
+
+.tch-thread__failed { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-danger-600); }

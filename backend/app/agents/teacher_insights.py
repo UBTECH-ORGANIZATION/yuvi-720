@@ -22,13 +22,13 @@ class AccessDenied(PermissionError):
 
 
 async def student_view(teacher_id: str, learner_id: str, language: str = "he") -> dict[str, Any]:
-    if not teacher_can_access_learner(teacher_id, learner_id):
+    if not await teacher_can_access_learner(teacher_id, learner_id):
         raise AccessDenied(f"teacher {teacher_id!r} may not access learner")
     return await insights.student_insights(learner_id, language)
 
 
 async def group_view(teacher_id: str, group_id: str, language: str = "he") -> dict[str, Any]:
-    if not teacher_can_access_group(teacher_id, group_id):
+    if not await teacher_can_access_group(teacher_id, group_id):
         raise AccessDenied(f"teacher {teacher_id!r} may not access group {group_id!r}")
     return await insights.group_insights(group_id, language)
 
@@ -45,7 +45,7 @@ async def add_directive(
 
     Steers agent DECISIONS at top precedence (§5.7) — never mastery/progress.
     """
-    if not teacher_can_access_learner(teacher_id, learner_id):
+    if not await teacher_can_access_learner(teacher_id, learner_id):
         raise AccessDenied(f"teacher {teacher_id!r} may not write to learner")
 
     directive = {
