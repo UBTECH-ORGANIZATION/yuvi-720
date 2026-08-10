@@ -5,6 +5,10 @@ import {
   collectReportContext,
   listMyReports,
   submitReport,
+  uploadAttachment,
+  MAX_ATTACHMENTS,
+  MAX_ATTACHMENT_BYTES,
+  type Attachment,
   type SupportTicket,
   type TicketCategory,
   type TicketSeverity,
@@ -33,6 +37,9 @@ export function ReportIssueDialog() {
   const [severity, setSeverity] = useState<TicketSeverity>('normal')
   const [error, setError] = useState(false)
   const [history, setHistory] = useState<SupportTicket[] | null>(null)
+  const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [attachmentError, setAttachmentError] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
 
   const close = useCallback(() => setOpen(false), [])
 
@@ -45,6 +52,8 @@ export function ReportIssueDialog() {
       setCategory('bug')
       setSeverity('normal')
       setHistory(null)
+      setAttachments([])
+      setAttachmentError(null)
       setOpen(true)
     }
     window.addEventListener(OPEN_EVENT, onOpen)
@@ -80,6 +89,23 @@ export function ReportIssueDialog() {
     [title, description, phase],
   )
 
+  const addAttachment = async (file: File) => {
+    setAttachmentError(null)
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setAttachmentError('support.report.attachTooLarge')
+      return
+    }
+    setUploading(true)
+    try {
+      const uploaded = await uploadAttachment(file)
+      setAttachments((current) => [...current, uploaded].slice(0, MAX_ATTACHMENTS))
+    } catch {
+      setAttachmentError('support.report.attachFailed')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!canSubmit) return
@@ -89,6 +115,7 @@ export function ReportIssueDialog() {
       await submitReport(
         { title: title.trim(), description: description.trim(), category, severity },
         collectReportContext(language, theme),
+        attachments.map((item) => item.blob_name),
       )
       setPhase('sent')
     } catch {
@@ -175,6 +202,47 @@ export function ReportIssueDialog() {
             </div>
 
             <p className="sp-report__note" role="note">{t('support.report.privacy')}</p>
+
+            <div className="sp-report__attachments">
+              <label className="sp-report__attach">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  disabled={uploading || attachments.length >= MAX_ATTACHMENTS}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0]
+                    event.target.value = ''
+                    if (file) void addAttachment(file)
+                  }}
+                />
+                <span>{t('support.report.attach')}</span>
+              </label>
+              <span className="sp-report__attach-hint">{t('support.report.attachHint')}</span>
+            </div>
+
+            {attachments.length > 0 ? (
+              <ul className="sp-report__attach-list">
+                {attachments.map((item) => (
+                  <li key={item.blob_name}>
+                    <span dir="ltr">{item.blob_name.split('/')[1]}</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAttachments((current) =>
+                          current.filter((entry) => entry.blob_name !== item.blob_name),
+                        )
+                      }
+                    >
+                      {t('support.report.attachRemove')}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            {attachmentError ? (
+              <p className="sp-report__error" role="alert">{t(attachmentError)}</p>
+            ) : null}
 
             {error ? <p className="sp-report__error" role="alert">{t('support.report.error')}</p> : null}
 

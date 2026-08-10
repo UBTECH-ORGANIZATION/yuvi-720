@@ -23,7 +23,7 @@ from .auth import create_admin_token, decode_admin_token, is_allowed_admin, norm
 from .config import Settings
 from .database import UsageEventRepository
 from .leads import LEAD_STATUSES, LeadRepository
-from . import realtime
+from . import attachments, realtime
 from .support import CONVERSATION_STATUSES, MAX_MESSAGE_LENGTH, TICKET_STATUSES, SupportRepository
 from .telemetry import configure_telemetry
 from .usage_report import UsageSummary, build_usage_summary
@@ -848,6 +848,29 @@ def create_app(
         if conversation is None:
             raise HTTPException(status_code=404, detail="conversation_not_found")
         return SupportConversation(**conversation)
+
+    @app.get("/api/support/attachments/{owner}/{name}")
+    async def read_attachment(
+        owner: str,
+        name: str,
+        _: dict[str, Any] = Depends(admin_required),
+    ) -> Response:
+        blob_name = f"{owner}/{name}"
+        if not attachments.is_safe_blob_name(blob_name):
+            raise HTTPException(status_code=404, detail="attachment_not_found")
+        result = await attachments.download(blob_name)
+        if result is None:
+            raise HTTPException(status_code=404, detail="attachment_not_found")
+        data, content_type = result
+        return Response(
+            content=data,
+            media_type=content_type,
+            headers={
+                "Cache-Control": "private, no-store",
+                "X-Content-Type-Options": "nosniff",
+                "Content-Disposition": f'attachment; filename="{name}"',
+            },
+        )
 
     @app.websocket("/api/support/ws")
     async def support_socket(websocket: WebSocket) -> None:

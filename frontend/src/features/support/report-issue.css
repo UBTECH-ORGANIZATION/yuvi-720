@@ -102,6 +102,46 @@
 
 .sp-report__error { margin: 0; color: #d7385e; font-size: 0.86rem; }
 
+.sp-report__attachments { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+.sp-report__attach {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border: 1px dashed rgba(120, 110, 200, 0.5);
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sp-report__attach input { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; }
+.sp-report__attach:has(input:disabled) { opacity: 0.5; cursor: default; }
+.sp-report__attach-hint { font-size: 0.76rem; opacity: 0.7; }
+
+.sp-report__attach-list { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+
+.sp-report__attach-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(120, 110, 200, 0.1);
+  font-size: 0.8rem;
+}
+
+.sp-report__attach-list button {
+  border: 0;
+  background: transparent;
+  color: #d7385e;
+  font: inherit;
+  font-size: 0.76rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .sp-report__done { display: flex; flex-direction: column; gap: 10px; }
 .sp-report__done-title { margin: 0; font-size: 1rem; font-weight: 700; }
 .sp-report__done p { margin: 0; line-height: 1.55; }

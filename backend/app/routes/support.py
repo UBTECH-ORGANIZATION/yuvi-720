@@ -7,13 +7,23 @@ import time
 from collections import deque
 from typing import Any, Deque, Optional
 
-from fastapi import APIRouter, Depends, Query, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.auth.dependencies import COOKIE_NAME, require_teacher_session, current_user
 from app.auth.tokens import decode_session_token
-from app.services import support, support_hub, support_notify
+from app.services import support, support_hub, support_media, support_notify
 from learner_state import normalize_learner_id  # type: ignore
 
 router = APIRouter(prefix="/api/support", tags=["support"])
@@ -46,6 +56,7 @@ class TicketRequest(BaseModel):
     category: str = Field(default=support.DEFAULT_TICKET_CATEGORY, max_length=40)
     severity: str = Field(default=support.DEFAULT_TICKET_SEVERITY, max_length=40)
     context: Optional[ReportContext] = None
+    attachments: list[str] = Field(default_factory=list, max_length=support_media.MAX_PER_TICKET)
 
 
 class PublicTicketRequest(TicketRequest):
@@ -91,6 +102,14 @@ def _context_dict(context: Optional[ReportContext]) -> dict[str, Any]:
     return context.model_dump() if context is not None else {}
 
 
+def _owned_attachments(names: list[str], owner_id: str) -> list[str]:
+    """Keep only well-formed blob names this reporter actually uploaded."""
+    return [
+        name for name in names[: support_media.MAX_PER_TICKET]
+        if support_media.is_safe_blob_name(name) and support_media.owner_of(name) == owner_id
+    ]
+
+
 @router.post("/tickets", status_code=201)
 async def submit_ticket(data: TicketRequest, actor: dict = Depends(current_user)):
     """File a fault report on behalf of the signed-in learner or teacher."""
@@ -109,6 +128,7 @@ async def submit_ticket(data: TicketRequest, actor: dict = Depends(current_user)
         title=data.title.strip(),
         description=data.description.strip(),
         context=_context_dict(data.context),
+        attachments=_owned_attachments(data.attachments, reporter_id),
     )
     ticket_id = await support.create_ticket(document)
     if ticket_id is None:
@@ -126,6 +146,45 @@ async def my_tickets(actor: dict = Depends(current_user)):
     reporter_id = normalize_learner_id(actor.get("sub"))
     tickets = await support.list_tickets_for_reporter(reporter_id)
     return JSONResponse(content={"tickets": tickets}, headers=_NO_STORE)
+
+
+@router.post("/attachments", status_code=201)
+async def upload_attachment(
+    file: UploadFile = File(...), actor: dict = Depends(current_user)
+):
+    """Store one screenshot in the private container and return its blob name."""
+    owner_id = normalize_learner_id(actor.get("sub"))
+    data = await file.read(support_media.MAX_BYTES + 1)
+    try:
+        result = await support_media.upload(owner_id, data)
+    except support_media.AttachmentError as exc:
+        code = str(exc)
+        status = 503 if code == "attachments_unavailable" else 422
+        return JSONResponse(content={"error": code}, status_code=status, headers=_NO_STORE)
+    return JSONResponse(content=result, status_code=201, headers=_NO_STORE)
+
+
+@router.get("/attachments/{owner}/{name}")
+async def read_attachment(owner: str, name: str, actor: dict = Depends(current_user)):
+    """Serve an attachment to its uploader only; administrators use their own console."""
+    blob_name = f"{owner}/{name}"
+    if not support_media.is_safe_blob_name(blob_name):
+        return JSONResponse(content={"error": "not_found"}, status_code=404, headers=_NO_STORE)
+    if support_media.owner_of(blob_name) != normalize_learner_id(actor.get("sub")):
+        return JSONResponse(content={"error": "forbidden"}, status_code=403, headers=_NO_STORE)
+    result = await support_media.download(blob_name)
+    if result is None:
+        return JSONResponse(content={"error": "not_found"}, status_code=404, headers=_NO_STORE)
+    data, content_type = result
+    return Response(
+        content=data,
+        media_type=content_type,
+        headers={
+            **_NO_STORE,
+            "X-Content-Type-Options": "nosniff",
+            "Content-Disposition": f'attachment; filename="{name}"',
+        },
+    )
 
 
 @router.post("/public/tickets", status_code=201)

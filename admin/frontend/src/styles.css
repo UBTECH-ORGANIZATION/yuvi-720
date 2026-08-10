@@ -103,8 +103,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .severity-tag--normal { color: var(--cyan); background: rgba(34, 211, 238, 0.1); }
 .severity-tag--low { color: var(--ink-soft); background: rgba(255, 255, 255, 0.05); }
 
-.support-console { display: flex; flex-direction: column; gap: 0.85rem; }
-.support-console__head h2 { margin: 0; font-size: 1rem; }
+.support-attachments { display: flex; flex-direction: column; gap: 0.3rem; margin: 0; padding: 0; list-style: none; font-size: 0.78rem; }
+.support-attachments a { color: var(--accent-light); }
+
+.support-console { display: flex; flex-direction: column; gap: 0.85rem; }.support-console__head h2 { margin: 0; font-size: 1rem; }
 .support-console__head p { margin: 0.15rem 0 0; font-size: 0.8rem; color: var(--ink-soft); }
 .support-console__body { display: grid; grid-template-columns: minmax(0, 17rem) minmax(0, 1fr); gap: 0.85rem; min-block-size: 26rem; }
 .support-console__threads { display: flex; flex-direction: column; gap: 0.4rem; margin: 0; padding: 0; max-block-size: 32rem; overflow-y: auto; list-style: none; }

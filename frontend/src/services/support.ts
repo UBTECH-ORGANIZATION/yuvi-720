@@ -31,6 +31,30 @@ export interface ReportDraft {
   severity: TicketSeverity
 }
 
+export const MAX_ATTACHMENTS = 3
+export const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
+
+export interface Attachment {
+  blob_name: string
+  content_type: string
+  size: number
+}
+
+export async function uploadAttachment(file: File): Promise<Attachment> {
+  const body = new FormData()
+  body.append('file', file)
+  const response = await fetch('/api/support/attachments', {
+    method: 'POST',
+    credentials: 'include',
+    body,
+  })
+  if (!response.ok) {
+    const detail = (await response.json().catch(() => null)) as { error?: string } | null
+    throw new Error(detail?.error ?? 'attachment_failed')
+  }
+  return (await response.json()) as Attachment
+}
+
 /** Technical context the console needs to reproduce a fault — never learner identity. */
 export function collectReportContext(language: string, theme: string): ReportContext {
   return {
@@ -46,8 +70,13 @@ export function collectReportContext(language: string, theme: string): ReportCon
 export function submitReport(
   draft: ReportDraft,
   context: ReportContext,
+  attachments: string[] = [],
 ): Promise<{ ticket: SupportTicket }> {
-  return apiPost<{ ticket: SupportTicket }>('/api/support/tickets', { ...draft, context })
+  return apiPost<{ ticket: SupportTicket }>('/api/support/tickets', {
+    ...draft,
+    context,
+    attachments,
+  })
 }
 
 export function listMyReports(): Promise<{ tickets: SupportTicket[] }> {

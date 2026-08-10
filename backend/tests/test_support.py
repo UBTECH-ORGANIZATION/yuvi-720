@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from app.routes import support as support_routes
-from app.services import support, support_hub, support_notify
+from app.services import support, support_hub, support_media, support_notify
 
 
 def _build(**overrides):
@@ -231,6 +231,50 @@ class SupportRealtimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(support_hub.room_size(room), 1)
         self.assertEqual(live.events, [{"type": "message.created"}])
         await support_hub.leave(room, live)
+
+
+class SupportAttachmentTests(unittest.IsolatedAsyncioTestCase):
+    async def test_file_type_is_decided_by_magic_bytes_not_the_upload_name(self) -> None:
+        self.assertEqual(support_media.sniff_image(b"\x89PNG\r\n\x1a\n rest"), ("image/png", ".png"))
+        self.assertEqual(support_media.sniff_image(b"\xff\xd8\xff\xe0 rest"), ("image/jpeg", ".jpg"))
+        self.assertEqual(
+            support_media.sniff_image(b"RIFF\x00\x00\x00\x00WEBPVP8 "), ("image/webp", ".webp")
+        )
+        with self.assertRaises(support_media.AttachmentError):
+            support_media.sniff_image(b"MZ\x90\x00 windows executable")
+
+    async def test_oversized_uploads_are_rejected_before_any_storage_call(self) -> None:
+        with patch.dict(
+            os.environ, {"SUPPORT_STORAGE_CONNECTION_STRING": "UseDevelopmentStorage=true"}
+        ):
+            with self.assertRaises(support_media.AttachmentError) as caught:
+                await support_media.upload("moti", b"x" * (support_media.MAX_BYTES + 1))
+        self.assertEqual(str(caught.exception), "file_too_large")
+
+    async def test_upload_degrades_when_storage_is_not_configured(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"SUPPORT_STORAGE_CONNECTION_STRING": "", "SUPPORT_STORAGE_ACCOUNT_URL": ""},
+        ):
+            with self.assertRaises(support_media.AttachmentError) as caught:
+                await support_media.upload("moti", b"\x89PNG\r\n\x1a\n")
+        self.assertEqual(str(caught.exception), "attachments_unavailable")
+
+    async def test_blob_names_are_owner_scoped_and_path_traversal_is_rejected(self) -> None:
+        name = support_media.build_blob_name("moti/../admin", ".png")
+
+        self.assertTrue(support_media.is_safe_blob_name(name))
+        self.assertEqual(support_media.owner_of(name), "motiadmin")
+        for bad in ("../secret.png", "moti/../../etc/passwd", "moti/file.exe", "moti/a.png/b"):
+            self.assertFalse(support_media.is_safe_blob_name(bad))
+
+    async def test_a_ticket_only_keeps_attachments_the_reporter_owns(self) -> None:
+        mine = support_media.build_blob_name("moti", ".png")
+        theirs = support_media.build_blob_name("someone-else", ".png")
+
+        kept = support_routes._owned_attachments([mine, theirs, "../evil.png"], "moti")
+
+        self.assertEqual(kept, [mine])
 
 
 if __name__ == "__main__":

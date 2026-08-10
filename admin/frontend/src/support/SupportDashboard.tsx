@@ -399,6 +399,25 @@ function TicketDetail({
         </dl>
       ) : null}
 
+      {ticket.attachments.length > 0 ? (
+        <div className="lead-detail__control">
+          <span>{t('support.attachments')}</span>
+          <ul className="support-attachments">
+            {ticket.attachments.map((item) => (
+              <li key={item.blob_name}>
+                <a
+                  href={`/api/support/attachments/${item.blob_name}`}
+                  download
+                  dir="ltr"
+                >
+                  {item.blob_name?.split('/')[1]}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       <label className="lead-detail__control">
         <span>{t('support.status')}</span>
         <select

@@ -124,6 +124,7 @@ def build_ticket_document(
     title: str,
     description: str,
     context: object,
+    attachments: Optional[list[str]] = None,
 ) -> dict[str, Any]:
     now = _now()
     return {
@@ -139,7 +140,7 @@ def build_ticket_document(
         "title": title[:160],
         "description": description[:4000],
         "context": _clean_context(context),
-        "attachments": [],
+        "attachments": list(attachments or []),
         "status": DEFAULT_TICKET_STATUS,
         "admin_notes": "",
         "updated_by": "",
