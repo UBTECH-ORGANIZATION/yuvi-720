@@ -195,7 +195,9 @@ export function LessonPage() {
 
   useEffect(() => {
     if (!session) return
-    const providerOrigin = new URL(session.player_url).origin
+    // Content we author ourselves is served from this origin, so its launch is a
+    // relative path — resolve against the page before reading the origin.
+    const providerOrigin = new URL(session.player_url, window.location.origin).origin
     const controller = new AbortController()
     const timers = new Set<number>()
     const wait = (delay: number) => new Promise<void>((resolve) => {

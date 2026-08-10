@@ -211,6 +211,32 @@
       "manufacture": "Yuvilab",
       "subContent": [
         {
+          "id": "ENG.G7.FAMILY.LISTEN-01B-00",
+          "title": "Read it, then hear it",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של הייצוג החלופי. המטרה: להסביר איך עובדים כאן — קוראים שורה ואז לוחצים עליה כדי לשמוע אותה, וכך נבנה הקשר בין הכתוב לנשמע. חשוב: אין להציג את הרכיב הזה כ'קל יותר' או כ'למי שלא הצליח' — זו דרך אחרת לפגוש את אותו תוכן.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "The same story — this time you can see the words.",
+              "he": "אותו סיפור — הפעם אפשר גם לראות את המילים.",
+              "ar": "القصّة نفسها — هذه المرّة يمكنكم رؤية الكلمات أيضاً."
+            },
+            "goal": {
+              "en": "Find the same details: names, ages, and what each person likes to do.",
+              "he": "מצאו את אותם פרטים: שמות, גילים, ומה כל אחד אוהב לעשות.",
+              "ar": "جدوا التفاصيل نفسها: الأسماء والأعمار وما يحبّ كلّ شخص فعله."
+            },
+            "strategy": {
+              "en": "Read a line, then tap it to hear it. Seeing and hearing together makes the sounds stick.",
+              "he": "קראו שורה, ואז לחצו עליה כדי לשמוע אותה. הראייה והשמיעה יחד מקבעות את הצלילים.",
+              "ar": "اقرأوا سطراً ثم اضغطوا عليه لسماعه. الرؤية والسماع معاً يثبّتان الأصوات."
+            }
+          },
+          "questions": []
+        },
+        {
           "id": "ENG.G7.FAMILY.LISTEN-01B-01",
           "title": "Maya's family — read along",
           "contentType": "הבנייה",
@@ -306,6 +332,32 @@
       "depthLevel": "מתקדם",
       "manufacture": "Yuvilab",
       "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.LISTEN-02-00",
+          "title": "Ready for real speed?",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב התרגול. המטרה: להגדיר ציפייה לפני הקפיצה לקצב דיבור טבעי — הלומד צריך לדעת מראש שזה יישמע מהר יותר ושזה בסדר. אין כאן שאלה. אם הלומד מביע חשש, כדאי להזכיר שאפשר להשמיע שוב ללא הגבלה.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Now the same family, at real speed.",
+              "he": "עכשיו אותה משפחה, בקצב אמיתי.",
+              "ar": "الآن العائلة نفسها، بسرعة حقيقية."
+            },
+            "goal": {
+              "en": "Two people on the phone. You are listening for a time, a place, and who is coming.",
+              "he": "שני אנשים בטלפון. אתם מחפשים זמן, מקום, ומי מגיע.",
+              "ar": "شخصان في الهاتف. أنتم تبحثون عن وقت ومكان ومن سيأتي."
+            },
+            "strategy": {
+              "en": "Do not translate in your head. Catch the three details and let the rest go.",
+              "he": "אל תתרגמו בראש. תפסו את שלושת הפרטים ותנו לשאר לעבור.",
+              "ar": "لا تترجموا في رؤوسكم. التقطوا التفاصيل الثلاثة ودعوا الباقي يمر."
+            }
+          },
+          "questions": []
+        },
         {
           "id": "ENG.G7.FAMILY.LISTEN-02-01",
           "title": "A call about the weekend",
@@ -478,6 +530,32 @@
       "depthLevel": "מתקדם",
       "manufacture": "Yuvilab",
       "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.LISTEN-03-00",
+          "title": "Show what you can hear",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההערכה. המטרה: להבהיר ללומד מה עומד לקרות — משפחה חדשה, אפשר להשמיע שוב כמה שצריך, ואין שעון עוצר. ברכיב הזה הסוכן לא נותן תשובות ולא רומז עליהן — מותר להזכיר אסטרטגיה כללית בלבד.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "One more family, and then this goal is yours.",
+              "he": "עוד משפחה אחת, והיעד הזה שלכם.",
+              "ar": "عائلة أخرى فقط، ويصبح هذا الهدف لكم."
+            },
+            "goal": {
+              "en": "You will hear Sara. Find the details, the way you practised.",
+              "he": "תשמעו את שרה. מצאו את הפרטים, כמו שתירגלתם.",
+              "ar": "ستسمعون سارة. جدوا التفاصيل كما تدرّبتم."
+            },
+            "strategy": {
+              "en": "There is no timer. Play it as many times as you need.",
+              "he": "אין שעון עוצר. השמיעו כמה פעמים שצריך.",
+              "ar": "لا يوجد مؤقّت. أعيدوا التشغيل بقدر ما تحتاجون."
+            }
+          },
+          "questions": []
+        },
         {
           "id": "ENG.G7.FAMILY.LISTEN-03-01",
           "title": "Listen to Sara",

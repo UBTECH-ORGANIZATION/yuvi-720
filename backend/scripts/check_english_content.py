@@ -78,7 +78,13 @@ async def structure(objectives: list[dict]) -> bool:
 
     units = [u for u in kata_catalog.all_units() if u.get("subject") == "english"]
     passed &= _ok("no English content fell through to subject='other'", bool(units))
-    for unit in units:
+    for unit in sorted(units, key=lambda u: u["id"]):
+        if unit.get("is_summary"):
+            # 720 §3.4 — the sub-topic summary unit is a review resource: no goal,
+            # no practice, no assessment. Judging it by the goal-unit rules would
+            # demand exactly what the spec forbids.
+            _ok(f"{unit['id']}: sub-topic summary unit, exempt by §3.4", True)
+            continue
         stages: dict[float, list[dict]] = {}
         for component in unit["components"]:
             stages.setdefault(float(component.get("order") or 0), []).append(component)
@@ -106,6 +112,45 @@ async def structure(objectives: list[dict]) -> bool:
             f"{unit['id']}: has an assessment component",
             any(c.get("is_assessment") for c in unit["components"]),
         )
+    return await framing() and passed
+
+
+async def framing() -> bool:
+    """720 §1.4 — a learner must be told what is starting and what just ended."""
+    print("\nOpening and closing messages (נספח 1 §1.4)\n")
+    passed = True
+    for unit in sorted(
+        (u for u in kata_catalog.all_units() if u.get("subject") == "english"),
+        key=lambda u: u["id"],
+    ):
+        raw = await native_content.get_raw_unit(unit["id"])
+        for component in raw["components"]:
+            items = component.get("subContent") or []
+            kinds = [(i.get("presentation") or {}).get("kind") for i in items]
+            passed &= _ok(
+                f"{component['id']}: opens with an opening card",
+                kinds[:1] == ["intro"],
+                f"opens on {kinds[0]!r}" if kinds[:1] != ["intro"] else "",
+            )
+            if component.get("isAssessment"):
+                passed &= _ok(
+                    f"{component['id']}: closes with a closing card",
+                    kinds[-1:] == ["summary"],
+                    f"closes on {kinds[-1]!r}" if kinds[-1:] != ["summary"] else "",
+                )
+            questioned = [i for i in items if i.get("questions")]
+            passed &= _ok(
+                f"{component['id']}: every question has exactly one key inside its options",
+                all(
+                    len(q.get("correctAnswers") or []) == 1
+                    and q["correctAnswers"][0] in (q.get("answers") or [])
+                    for i in questioned for q in i["questions"]
+                ),
+            )
+            passed &= _ok(
+                f"{component['id']}: every item carries bot context",
+                all(str(i.get("informationToBot") or "").strip() for i in items),
+            )
     return passed
 
 
