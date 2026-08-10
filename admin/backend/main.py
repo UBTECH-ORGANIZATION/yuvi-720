@@ -16,7 +16,7 @@ from authlib.integrations.starlette_client import OAuth
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from starlette.middleware.sessions import SessionMiddleware
 
 from .auth import create_admin_token, decode_admin_token, is_allowed_admin, normalize_email
@@ -121,6 +121,20 @@ class SupportTicket(BaseModel):
     description: str = ""
     context: dict[str, Any] = Field(default_factory=dict)
     attachments: list[dict[str, Any]] = Field(default_factory=list)
+
+    @field_validator("attachments", mode="before")
+    @classmethod
+    def _normalize_attachments(cls, value: Any) -> list[dict[str, Any]]:
+        # Tickets store attachments as bare blob names; the admin UI expects objects.
+        if not isinstance(value, list):
+            return []
+        normalized: list[dict[str, Any]] = []
+        for item in value:
+            if isinstance(item, str):
+                normalized.append({"blob_name": item})
+            elif isinstance(item, dict):
+                normalized.append(item)
+        return normalized
 
 
 class SupportBoard(BaseModel):
@@ -862,13 +876,15 @@ def create_app(
         if result is None:
             raise HTTPException(status_code=404, detail="attachment_not_found")
         data, content_type = result
+        # Images render inline so the console can show a thumbnail; nosniff keeps it safe.
+        disposition = "inline" if content_type.startswith("image/") else "attachment"
         return Response(
             content=data,
             media_type=content_type,
             headers={
                 "Cache-Control": "private, no-store",
                 "X-Content-Type-Options": "nosniff",
-                "Content-Disposition": f'attachment; filename="{name}"',
+                "Content-Disposition": f'{disposition}; filename="{name}"',
             },
         )
 

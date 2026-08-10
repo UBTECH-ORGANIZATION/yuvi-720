@@ -37,7 +37,7 @@ export function ReportIssueDialog() {
   const [severity, setSeverity] = useState<TicketSeverity>('normal')
   const [error, setError] = useState(false)
   const [history, setHistory] = useState<SupportTicket[] | null>(null)
-  const [attachments, setAttachments] = useState<Array<Attachment & { label: string }>>([])
+  const [attachments, setAttachments] = useState<Array<Attachment & { label: string; preview: string }>>([])
   const [attachmentError, setAttachmentError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
 
@@ -52,7 +52,10 @@ export function ReportIssueDialog() {
       setCategory('bug')
       setSeverity('normal')
       setHistory(null)
-      setAttachments([])
+      setAttachments((current) => {
+        current.forEach((item) => URL.revokeObjectURL(item.preview))
+        return []
+      })
       setAttachmentError(null)
       setOpen(true)
     }
@@ -99,7 +102,10 @@ export function ReportIssueDialog() {
     try {
       const uploaded = await uploadAttachment(file)
       setAttachments((current) =>
-        [...current, { ...uploaded, label: file.name }].slice(0, MAX_ATTACHMENTS),
+        [...current, { ...uploaded, label: file.name, preview: URL.createObjectURL(file) }].slice(
+          0,
+          MAX_ATTACHMENTS,
+        ),
       )
     } catch (reason: unknown) {
       const code = reason instanceof Error ? reason.message : ''
@@ -231,13 +237,15 @@ export function ReportIssueDialog() {
               <ul className="sp-report__attach-list">
                 {attachments.map((item) => (
                   <li key={item.blob_name}>
+                    <img className="sp-report__attach-thumb" src={item.preview} alt="" />
                     <span dir="auto">{item.label}</span>
                     <button
                       type="button"
                       onClick={() =>
-                        setAttachments((current) =>
-                          current.filter((entry) => entry.blob_name !== item.blob_name),
-                        )
+                        setAttachments((current) => {
+                          URL.revokeObjectURL(item.preview)
+                          return current.filter((entry) => entry.blob_name !== item.blob_name)
+                        })
                       }
                     >
                       {t('support.report.attachRemove')}

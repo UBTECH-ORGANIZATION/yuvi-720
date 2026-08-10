@@ -155,6 +155,22 @@
   cursor: pointer;
 }
 
+.sp-report__attach-thumb {
+  inline-size: 44px;
+  block-size: 32px;
+  flex: none;
+  object-fit: cover;
+  border-radius: var(--sp-radius-sm);
+  border: 1px solid var(--sp-surface-3, rgba(0, 0, 0, 0.08));
+}
+
+.sp-report__attach-list li > span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .sp-report__done { display: flex; flex-direction: column; gap: 10px; }
 .sp-report__done-title { margin: 0; color: var(--sp-ink-900); font-size: 1rem; font-weight: 700; }
 .sp-report__done p { margin: 0; color: var(--sp-ink-500); line-height: 1.55; }

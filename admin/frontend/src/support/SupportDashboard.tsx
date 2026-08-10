@@ -407,10 +407,12 @@ function TicketDetail({
               <li key={item.blob_name}>
                 <a
                   href={`/api/support/attachments/${item.blob_name}`}
-                  download
+                  target="_blank"
+                  rel="noreferrer"
                   dir="ltr"
                 >
-                  {item.blob_name?.split('/')[1]}
+                  <img src={`/api/support/attachments/${item.blob_name}`} alt="" loading="lazy" />
+                  <span>{item.blob_name?.split('/')[1]}</span>
                 </a>
               </li>
             ))}
