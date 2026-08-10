@@ -1803,5 +1803,21 @@
   "support.status.in_review": "In review",
   "support.status.in_progress": "In progress",
   "support.status.resolved": "Resolved",
-  "support.status.closed": "Closed"
+  "support.status.closed": "Closed",
+  "support.chat.launch": "Support",
+  "support.chat.title": "Support for teaching staff",
+  "support.chat.humanNote": "A person from the support team is on the other side, not an AI agent.",
+  "support.chat.threads": "Earlier requests",
+  "support.chat.untitled": "Untitled request",
+  "support.chat.subject": "Subject",
+  "support.chat.firstMessage": "Details (you can add more later)",
+  "support.chat.start": "Open a request",
+  "support.chat.cancel": "Cancel",
+  "support.chat.newThread": "New request",
+  "support.chat.placeholder": "Write a message…",
+  "support.chat.send": "Send",
+  "support.chat.waiting": "No messages in this request yet.",
+  "support.chat.team": "Support team",
+  "support.chat.you": "You",
+  "support.chat.error": "Something went wrong. Please try again."
 }

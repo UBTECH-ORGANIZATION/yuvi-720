@@ -23,7 +23,7 @@ from .auth import create_admin_token, decode_admin_token, is_allowed_admin, norm
 from .config import Settings
 from .database import UsageEventRepository
 from .leads import LEAD_STATUSES, LeadRepository
-from .support import TICKET_STATUSES, SupportRepository
+from .support import CONVERSATION_STATUSES, MAX_MESSAGE_LENGTH, TICKET_STATUSES, SupportRepository
 from .telemetry import configure_telemetry
 from .usage_report import UsageSummary, build_usage_summary
 
@@ -132,6 +132,38 @@ class SupportBoard(BaseModel):
 class SupportTicketUpdate(BaseModel):
     status: Optional[str] = Field(default=None, max_length=40)
     admin_notes: Optional[str] = Field(default=None, max_length=4000)
+
+
+class SupportConversation(BaseModel):
+    conversation_id: str
+    teacher_id: str = ""
+    teacher_name: str = ""
+    subject: str = ""
+    status: str = "open"
+    last_message_at: Optional[str] = None
+    last_message_preview: str = ""
+    message_count: int = 0
+    unread_admin: int = 0
+    unread_teacher: int = 0
+    linked_ticket_id: Optional[str] = None
+    created_at: Optional[str] = None
+
+
+class SupportMessage(BaseModel):
+    message_id: str
+    conversation_id: str
+    author_role: str
+    author_name: str = ""
+    body: str = ""
+    at: Optional[str] = None
+
+
+class SupportMessageRequest(BaseModel):
+    body: str = Field(min_length=1, max_length=MAX_MESSAGE_LENGTH)
+
+
+class SupportConversationUpdate(BaseModel):
+    status: str = Field(max_length=40)
 
 
 class AuthStatus(BaseModel):
@@ -719,6 +751,95 @@ def create_app(
         if ticket is None:
             raise HTTPException(status_code=404, detail="ticket_not_found")
         return SupportTicket(**ticket)
+
+    @app.get("/api/support/conversations", response_model=list[SupportConversation])
+    async def list_conversations(
+        _: dict[str, Any] = Depends(admin_required),
+        status: Optional[str] = Query(default=None, max_length=40),
+        search: Optional[str] = Query(default=None, max_length=120),
+        limit: int = Query(default=200, ge=1, le=500),
+        support_repository: SupportRepository = Depends(_support_repository),
+    ) -> list[SupportConversation]:
+        if status and status not in CONVERSATION_STATUSES:
+            raise HTTPException(status_code=422, detail="unknown_conversation_status")
+        try:
+            conversations = await support_repository.fetch_conversations(
+                status=status, search=search, limit=limit
+            )
+        except Exception as exc:
+            print(f"⚠️ Admin support conversation list failed: {type(exc).__name__}")
+            raise HTTPException(status_code=503, detail="support_data_unavailable") from None
+        return [SupportConversation(**item) for item in conversations]
+
+    @app.get(
+        "/api/support/conversations/{conversation_id}/messages",
+        response_model=list[SupportMessage],
+    )
+    async def list_conversation_messages(
+        conversation_id: str,
+        _: dict[str, Any] = Depends(admin_required),
+        limit: int = Query(default=200, ge=1, le=500),
+        support_repository: SupportRepository = Depends(_support_repository),
+    ) -> list[SupportMessage]:
+        try:
+            if await support_repository.fetch_conversation(conversation_id) is None:
+                raise HTTPException(status_code=404, detail="conversation_not_found")
+            messages = await support_repository.fetch_messages(conversation_id, limit=limit)
+            await support_repository.mark_conversation_read(conversation_id)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            print(f"⚠️ Admin support message read failed: {type(exc).__name__}")
+            raise HTTPException(status_code=503, detail="support_data_unavailable") from None
+        return [SupportMessage(**item) for item in messages]
+
+    @app.post(
+        "/api/support/conversations/{conversation_id}/messages",
+        response_model=SupportMessage,
+        status_code=201,
+    )
+    async def reply_to_conversation(
+        conversation_id: str,
+        payload: SupportMessageRequest,
+        admin: dict[str, Any] = Depends(admin_required),
+        support_repository: SupportRepository = Depends(_support_repository),
+    ) -> SupportMessage:
+        body = payload.body.strip()
+        if not body:
+            raise HTTPException(status_code=422, detail="empty_message")
+        try:
+            message = await support_repository.append_message(
+                conversation_id,
+                body=body,
+                author_id=str(admin.get("sub") or "admin"),
+                now=datetime.now(timezone.utc),
+            )
+        except Exception as exc:
+            print(f"⚠️ Admin support reply failed: {type(exc).__name__}")
+            raise HTTPException(status_code=503, detail="support_data_unavailable") from None
+        if message is None:
+            raise HTTPException(status_code=404, detail="conversation_not_found")
+        return SupportMessage(**message)
+
+    @app.patch("/api/support/conversations/{conversation_id}", response_model=SupportConversation)
+    async def update_conversation(
+        conversation_id: str,
+        payload: SupportConversationUpdate,
+        _: dict[str, Any] = Depends(admin_required),
+        support_repository: SupportRepository = Depends(_support_repository),
+    ) -> SupportConversation:
+        if payload.status not in CONVERSATION_STATUSES:
+            raise HTTPException(status_code=422, detail="unknown_conversation_status")
+        try:
+            conversation = await support_repository.set_conversation_status(
+                conversation_id, status=payload.status, now=datetime.now(timezone.utc)
+            )
+        except Exception as exc:
+            print(f"⚠️ Admin support conversation update failed: {type(exc).__name__}")
+            raise HTTPException(status_code=503, detail="support_data_unavailable") from None
+        if conversation is None:
+            raise HTTPException(status_code=404, detail="conversation_not_found")
+        return SupportConversation(**conversation)
 
     if _FRONTEND_DIST.exists():
         app.mount("/", StaticFiles(directory=str(_FRONTEND_DIST), html=True), name="admin-frontend")

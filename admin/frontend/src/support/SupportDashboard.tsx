@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { ApiError, getSupportTickets, supportExportUrl, updateSupportTicket } from '../api'
 import { useI18n } from '../i18n/I18nProvider'
+import { SupportChatConsole } from './SupportChatConsole'
 import type {
   SupportBoard,
   SupportFilters,
@@ -32,6 +33,7 @@ export function SupportDashboard({ onUnauthorized }: { onUnauthorized: () => voi
   const [saveError, setSaveError] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [requestKey, setRequestKey] = useState(0)
+  const [view, setView] = useState<'tickets' | 'chat'>('tickets')
 
   useEffect(() => {
     const controller = new AbortController()
@@ -125,6 +127,27 @@ export function SupportDashboard({ onUnauthorized }: { onUnauthorized: () => voi
         ) : null}
       </header>
 
+      <div className="view-switch" role="group" aria-label={t('support.viewLabel')}>
+        <button
+          type="button"
+          className={`button button--small${view === 'tickets' ? ' button--primary' : ' button--quiet'}`}
+          aria-pressed={view === 'tickets'}
+          onClick={() => setView('tickets')}
+        >
+          {t('support.view.tickets')}
+        </button>
+        <button
+          type="button"
+          className={`button button--small${view === 'chat' ? ' button--primary' : ' button--quiet'}`}
+          aria-pressed={view === 'chat'}
+          onClick={() => setView('chat')}
+        >
+          {t('support.view.chat')}
+        </button>
+      </div>
+
+      {view === 'chat' ? <SupportChatConsole onUnauthorized={onUnauthorized} /> : (
+       <>
       <form className="toolbar-panel" onSubmit={submit}>
         <label>
           <span>{t('leads.period')}</span>
@@ -244,6 +267,8 @@ export function SupportDashboard({ onUnauthorized }: { onUnauthorized: () => voi
           onSave={(changes) => void save(selected.ticket_id, changes)}
         />
       ) : null}
+       </>
+      )}
     </main>
   )
 }

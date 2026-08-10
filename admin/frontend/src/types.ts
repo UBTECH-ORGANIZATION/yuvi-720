@@ -162,3 +162,29 @@ export interface SupportFilters {
   reporterType?: TicketReporterType
   search?: string
 }
+
+export type ConversationStatus = 'open' | 'pending' | 'closed'
+
+export interface SupportConversation {
+  conversation_id: string
+  teacher_id: string
+  teacher_name: string
+  subject: string
+  status: ConversationStatus
+  last_message_at: string | null
+  last_message_preview: string
+  message_count: number
+  unread_admin: number
+  unread_teacher: number
+  linked_ticket_id: string | null
+  created_at: string | null
+}
+
+export interface SupportMessage {
+  message_id: string
+  conversation_id: string
+  author_role: 'teacher' | 'admin'
+  author_name: string
+  body: string
+  at: string | null
+}

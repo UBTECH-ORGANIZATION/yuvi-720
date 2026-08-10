@@ -67,6 +67,32 @@ class FakeSupportRepository:
                 "attachments": [],
             },
         ]
+        self.conversations = [
+            {
+                "conversation_id": "sup-000000000001",
+                "teacher_id": "moti",
+                "teacher_name": "moti",
+                "subject": "הכיתה לא נטענת",
+                "status": "pending",
+                "last_message_at": "2026-08-02T09:00:00+00:00",
+                "last_message_preview": "המסך תקוע",
+                "message_count": 1,
+                "unread_admin": 1,
+                "unread_teacher": 0,
+                "linked_ticket_id": None,
+                "created_at": "2026-08-02T09:00:00+00:00",
+            },
+        ]
+        self.messages = [
+            {
+                "message_id": "msg-000000000001",
+                "conversation_id": "sup-000000000001",
+                "author_role": "teacher",
+                "author_name": "moti",
+                "body": "המסך תקוע",
+                "at": "2026-08-02T09:00:00+00:00",
+            },
+        ]
 
     async def fetch_tickets(self, **_):
         return list(self.tickets)
@@ -82,6 +108,47 @@ class FakeSupportRepository:
         ticket["updated_by"] = updated_by
         ticket["updated_at"] = now.isoformat()
         return ticket
+
+    async def fetch_conversations(self, **_):
+        return list(self.conversations)
+
+    async def fetch_conversation(self, conversation_id: str):
+        return next(
+            (item for item in self.conversations if item["conversation_id"] == conversation_id),
+            None,
+        )
+
+    async def fetch_messages(self, conversation_id: str, **_):
+        return [item for item in self.messages if item["conversation_id"] == conversation_id]
+
+    async def append_message(self, conversation_id: str, *, body, author_id, now):
+        conversation = await self.fetch_conversation(conversation_id)
+        if conversation is None:
+            return None
+        message = {
+            "message_id": "msg-new",
+            "conversation_id": conversation_id,
+            "author_role": "admin",
+            "author_name": author_id,
+            "body": body,
+            "at": now.isoformat(),
+        }
+        self.messages.append(message)
+        conversation["unread_teacher"] += 1
+        conversation["unread_admin"] = 0
+        return message
+
+    async def set_conversation_status(self, conversation_id: str, *, status, now):
+        conversation = await self.fetch_conversation(conversation_id)
+        if conversation is None:
+            return None
+        conversation["status"] = status
+        return conversation
+
+    async def mark_conversation_read(self, conversation_id: str) -> None:
+        conversation = await self.fetch_conversation(conversation_id)
+        if conversation is not None:
+            conversation["unread_admin"] = 0
 
     def close(self) -> None:
         return None
@@ -171,6 +238,65 @@ class SupportRouteTests(unittest.TestCase):
             ).status_code,
             401,
         )
+        self.assertEqual(public_client.get("/api/support/conversations").status_code, 401)
+
+
+class SupportChatRouteTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.app = create_app(TEST_SETTINGS, public_access=False)
+        self.repository = FakeSupportRepository()
+        self.app.state.support_repository = self.repository
+        self.client = TestClient(self.app)
+        token = create_admin_token(
+            email="allowed@example.com", name="Allowed Admin", settings=TEST_SETTINGS
+        )
+        self.client.cookies.set("spark_admin_token", token)
+
+    def test_conversations_require_an_admin_cookie(self) -> None:
+        anonymous = TestClient(self.app)
+        self.assertEqual(anonymous.get("/api/support/conversations").status_code, 401)
+        self.assertEqual(
+            anonymous.post(
+                "/api/support/conversations/sup-000000000001/messages", json={"body": "hi"}
+            ).status_code,
+            401,
+        )
+
+    def test_reading_messages_clears_the_admin_unread_count(self) -> None:
+        response = self.client.get("/api/support/conversations/sup-000000000001/messages")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(self.repository.conversations[0]["unread_admin"], 0)
+
+    def test_reply_is_attributed_to_the_signed_in_admin(self) -> None:
+        response = self.client.post(
+            "/api/support/conversations/sup-000000000001/messages",
+            json={"body": "בודקים ונחזור אליך"},
+        )
+        self.assertEqual(response.status_code, 201)
+        message = response.json()
+        self.assertEqual(message["author_role"], "admin")
+        self.assertEqual(message["author_name"], "allowed@example.com")
+        self.assertEqual(self.repository.conversations[0]["unread_teacher"], 1)
+
+    def test_reply_to_a_missing_conversation_is_not_found(self) -> None:
+        response = self.client.post(
+            "/api/support/conversations/sup-missing/messages", json={"body": "hello"}
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_blank_reply_is_rejected(self) -> None:
+        response = self.client.post(
+            "/api/support/conversations/sup-000000000001/messages", json={"body": "   "}
+        )
+        self.assertEqual(response.status_code, 422)
+
+    def test_unknown_conversation_status_is_rejected(self) -> None:
+        response = self.client.patch(
+            "/api/support/conversations/sup-000000000001", json={"status": "escalated"}
+        )
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.json()["detail"], "unknown_conversation_status")
 
 
 if __name__ == "__main__":

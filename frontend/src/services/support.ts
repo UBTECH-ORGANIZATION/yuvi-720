@@ -53,3 +53,60 @@ export function submitReport(
 export function listMyReports(): Promise<{ tickets: SupportTicket[] }> {
   return apiGet<{ tickets: SupportTicket[] }>('/api/support/tickets/mine')
 }
+
+export type ConversationStatus = 'open' | 'pending' | 'closed'
+
+export interface SupportConversation {
+  id: string
+  teacher_id: string
+  teacher_name: string
+  subject: string
+  status: ConversationStatus
+  last_message_at: string
+  last_message_preview: string
+  message_count: number
+  unread_admin: number
+  unread_teacher: number
+  linked_ticket_id: string | null
+  created_at: string
+}
+
+export interface SupportMessage {
+  id: string
+  author_role: 'teacher' | 'admin'
+  author_name: string
+  body: string
+  at: string
+}
+
+export function listConversations(): Promise<{
+  conversations: SupportConversation[]
+  next_cursor: string | null
+  has_more: boolean
+}> {
+  return apiGet('/api/support/conversations')
+}
+
+export function openConversation(
+  subject: string,
+  message: string,
+): Promise<{ conversation: SupportConversation }> {
+  return apiPost('/api/support/conversations', { subject, message })
+}
+
+export function listConversationMessages(conversationId: string): Promise<{
+  messages: SupportMessage[]
+  next_cursor: string | null
+  has_more: boolean
+}> {
+  return apiGet(`/api/support/conversations/${encodeURIComponent(conversationId)}/messages`)
+}
+
+export function sendConversationMessage(
+  conversationId: string,
+  body: string,
+): Promise<{ message: SupportMessage }> {
+  return apiPost(`/api/support/conversations/${encodeURIComponent(conversationId)}/messages`, {
+    body,
+  })
+}

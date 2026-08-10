@@ -7,11 +7,11 @@ import time
 from collections import deque
 from typing import Any, Deque, Optional
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.auth.dependencies import current_user
+from app.auth.dependencies import current_user, require_teacher_session
 from app.services import support
 from learner_state import normalize_learner_id  # type: ignore
 
@@ -52,6 +52,20 @@ class PublicTicketRequest(TicketRequest):
     reporter_name: str = Field(default="", max_length=120)
     # Hidden honeypot field; real people leave it empty.
     company: str = Field(default="", max_length=200)
+
+
+class ConversationRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    subject: str = Field(default="", max_length=160)
+    message: str = Field(default="", max_length=support.MAX_MESSAGE_LENGTH)
+    linked_ticket_id: Optional[str] = Field(default=None, max_length=40)
+
+
+class MessageRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    body: str = Field(min_length=1, max_length=support.MAX_MESSAGE_LENGTH)
 
 
 def _client_key(request: Request) -> str:
@@ -149,3 +163,96 @@ async def submit_public_ticket(data: PublicTicketRequest, request: Request):
             content={"error": "support_unavailable"}, status_code=503, headers=_NO_STORE
         )
     return JSONResponse(content={"ok": True}, status_code=201, headers=_NO_STORE)
+
+
+# --- teacher support chat ----------------------------------------------------
+# Human support, teachers only. A learner never reaches these endpoints.
+
+
+async def _owned_conversation(conversation_id: str, teacher_id: str) -> Optional[dict[str, Any]]:
+    return await support.get_conversation(conversation_id, teacher_id=teacher_id)
+
+
+@router.get("/conversations")
+async def teacher_conversations(
+    session: dict = Depends(require_teacher_session),
+    limit: int = Query(default=20, ge=1, le=support.MAX_CONVERSATION_PAGE),
+    cursor: Optional[str] = Query(default=None, max_length=400),
+):
+    result = await support.list_conversations(
+        teacher_id=str(session.get("sub")), limit=limit, cursor=cursor
+    )
+    return JSONResponse(content=result, headers=_NO_STORE)
+
+
+@router.post("/conversations", status_code=201)
+async def open_conversation(
+    data: ConversationRequest, session: dict = Depends(require_teacher_session)
+):
+    teacher_id = str(session.get("sub"))
+    conversation = await support.create_conversation(
+        teacher_id,
+        teacher_name=str(session.get("username") or ""),
+        subject=data.subject.strip(),
+        linked_ticket_id=data.linked_ticket_id,
+    )
+    if data.message.strip():
+        await support.append_message(
+            conversation["id"],
+            author_role="teacher",
+            author_id=teacher_id,
+            author_name=str(session.get("username") or ""),
+            body=data.message,
+        )
+    return JSONResponse(
+        content={"conversation": conversation}, status_code=201, headers=_NO_STORE
+    )
+
+
+@router.get("/conversations/{conversation_id}/messages")
+async def teacher_messages(
+    conversation_id: str,
+    session: dict = Depends(require_teacher_session),
+    limit: int = Query(default=50, ge=1, le=support.MAX_CONVERSATION_PAGE),
+    cursor: Optional[str] = Query(default=None, max_length=400),
+):
+    teacher_id = str(session.get("sub"))
+    if await _owned_conversation(conversation_id, teacher_id) is None:
+        return JSONResponse(content={"error": "forbidden"}, status_code=403, headers=_NO_STORE)
+    result = await support.list_messages(conversation_id, limit=limit, cursor=cursor)
+    await support.mark_read(conversation_id, reader_role="teacher")
+    return JSONResponse(content=result, headers=_NO_STORE)
+
+
+@router.post("/conversations/{conversation_id}/messages", status_code=201)
+async def teacher_reply(
+    conversation_id: str,
+    data: MessageRequest,
+    session: dict = Depends(require_teacher_session),
+):
+    teacher_id = str(session.get("sub"))
+    if await _owned_conversation(conversation_id, teacher_id) is None:
+        return JSONResponse(content={"error": "forbidden"}, status_code=403, headers=_NO_STORE)
+    message = await support.append_message(
+        conversation_id,
+        author_role="teacher",
+        author_id=teacher_id,
+        author_name=str(session.get("username") or ""),
+        body=data.body,
+    )
+    if message is None:
+        return JSONResponse(
+            content={"error": "support_unavailable"}, status_code=503, headers=_NO_STORE
+        )
+    return JSONResponse(content={"message": message}, status_code=201, headers=_NO_STORE)
+
+
+@router.post("/conversations/{conversation_id}/read", status_code=204)
+async def teacher_mark_read(
+    conversation_id: str, session: dict = Depends(require_teacher_session)
+):
+    teacher_id = str(session.get("sub"))
+    if await _owned_conversation(conversation_id, teacher_id) is None:
+        return JSONResponse(content={"error": "forbidden"}, status_code=403, headers=_NO_STORE)
+    await support.mark_read(conversation_id, reader_role="teacher")
+    return Response(status_code=204, headers=_NO_STORE)

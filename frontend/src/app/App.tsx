@@ -10,6 +10,7 @@ import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
 import { YuviStudioPage } from '../features/Yuvi-studio/YuviStudioPage'
 import { BadgesPage } from '../features/badges/BadgesPage'
 import { ReportIssueDialog } from '../features/support/ReportIssueDialog'
+import { SupportChatPanel } from '../features/support/SupportChatPanel'
 import { useStudioTransition } from '../features/Yuvi-studio/StudioTransitionProvider'
 import { CompanionChat } from '../components/CompanionChat'
 import { YuviCompanionDock } from '../components/YuviCompanionDock'
@@ -192,6 +193,8 @@ export function App() {
       {learnerRoute && <SparkToast />}
       {/* Teachers report faults from their own lane too, so this is not learner-scoped. */}
       {user && <ReportIssueDialog />}
+      {/* Support chat is staff-only, and accounts often carry both roles — hence the route check. */}
+      {isTeacher && isTeacherRoute(pathname) && <SupportChatPanel />}
     </>
   )
 }

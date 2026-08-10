@@ -1803,5 +1803,21 @@
   "support.status.in_review": "בבדיקה",
   "support.status.in_progress": "בטיפול",
   "support.status.resolved": "נפתר",
-  "support.status.closed": "סגור"
+  "support.status.closed": "סגור",
+  "support.chat.launch": "תמיכה",
+  "support.chat.title": "תמיכה לצוות ההוראה",
+  "support.chat.humanNote": "בצד השני יושב אדם מצוות התמיכה, לא סוכן AI.",
+  "support.chat.threads": "פניות קודמות",
+  "support.chat.untitled": "פנייה ללא נושא",
+  "support.chat.subject": "נושא הפנייה",
+  "support.chat.firstMessage": "פירוט (אפשר להשלים אחר כך)",
+  "support.chat.start": "פתיחת פנייה",
+  "support.chat.cancel": "ביטול",
+  "support.chat.newThread": "פנייה חדשה",
+  "support.chat.placeholder": "כתבו הודעה…",
+  "support.chat.send": "שליחה",
+  "support.chat.waiting": "עדיין אין הודעות בפנייה הזו.",
+  "support.chat.team": "צוות התמיכה",
+  "support.chat.you": "אתם",
+  "support.chat.error": "משהו השתבש. אפשר לנסות שוב."
 }

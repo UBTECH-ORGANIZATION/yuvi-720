@@ -1803,5 +1803,21 @@
   "support.status.in_review": "قيد الفحص",
   "support.status.in_progress": "قيد المعالجة",
   "support.status.resolved": "تمت المعالجة",
-  "support.status.closed": "مغلق"
+  "support.status.closed": "مغلق",
+  "support.chat.launch": "الدعم",
+  "support.chat.title": "دعم للطاقم التعليمي",
+  "support.chat.humanNote": "على الطرف الآخر شخص من فريق الدعم، وليس وكيل ذكاء اصطناعي.",
+  "support.chat.threads": "طلبات سابقة",
+  "support.chat.untitled": "طلب بلا عنوان",
+  "support.chat.subject": "الموضوع",
+  "support.chat.firstMessage": "التفاصيل (يمكن إكمالها لاحقًا)",
+  "support.chat.start": "فتح طلب",
+  "support.chat.cancel": "إلغاء",
+  "support.chat.newThread": "طلب جديد",
+  "support.chat.placeholder": "اكتب رسالة…",
+  "support.chat.send": "إرسال",
+  "support.chat.waiting": "لا توجد رسائل في هذا الطلب بعد.",
+  "support.chat.team": "فريق الدعم",
+  "support.chat.you": "أنت",
+  "support.chat.error": "حدث خلل ما. يمكن المحاولة مجددًا."
 }

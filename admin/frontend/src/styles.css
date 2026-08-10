@@ -103,6 +103,52 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .severity-tag--normal { color: var(--cyan); background: rgba(34, 211, 238, 0.1); }
 .severity-tag--low { color: var(--ink-soft); background: rgba(255, 255, 255, 0.05); }
 
+.support-console { display: flex; flex-direction: column; gap: 0.85rem; }
+.support-console__head h2 { margin: 0; font-size: 1rem; }
+.support-console__head p { margin: 0.15rem 0 0; font-size: 0.8rem; color: var(--ink-soft); }
+.support-console__body { display: grid; grid-template-columns: minmax(0, 17rem) minmax(0, 1fr); gap: 0.85rem; min-block-size: 26rem; }
+.support-console__threads { display: flex; flex-direction: column; gap: 0.4rem; margin: 0; padding: 0; max-block-size: 32rem; overflow-y: auto; list-style: none; }
+
+.support-console__thread {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  inline-size: 100%;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.support-console__thread.is-active { border-color: var(--accent); background: rgba(124, 92, 252, 0.1); }
+.support-console__thread-top { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; }
+.support-console__thread-meta,
+.support-console__thread-preview { font-size: 0.7rem; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.support-console__dot { inline-size: 0.5rem; block-size: 0.5rem; border-radius: 50%; background: var(--amber); }
+
+.support-console__thread-view { display: flex; flex-direction: column; gap: 0.6rem; min-inline-size: 0; padding: 0.85rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-soft); }
+.support-console__thread-bar { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
+.support-console__log { display: flex; flex-direction: column; gap: 0.5rem; flex: 1 1 auto; max-block-size: 24rem; overflow-y: auto; }
+
+.support-console__msg { max-inline-size: 80%; padding: 0.5rem 0.7rem; border-radius: var(--radius-md); background: rgba(255, 255, 255, 0.05); font-size: 0.82rem; }
+.support-console__msg p { margin: 0.15rem 0; line-height: 1.5; white-space: pre-wrap; }
+.support-console__msg time { font-size: 0.66rem; color: var(--ink-soft); }
+.support-console__msg-author { font-size: 0.68rem; font-weight: 700; color: var(--ink-soft); }
+.support-console__msg--admin { align-self: flex-end; background: rgba(124, 92, 252, 0.14); }
+.support-console__msg--teacher { align-self: flex-start; }
+
+.support-console__composer { display: flex; align-items: flex-end; gap: 0.5rem; }
+.support-console__composer textarea { flex: 1 1 auto; }
+
+@media (max-width: 820px) {
+  .support-console__body { grid-template-columns: minmax(0, 1fr); }
+  .support-console__threads { max-block-size: 12rem; }
+}
+
 .kanban { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(15rem, 1fr); gap: 0.85rem; overflow-x: auto; padding-block-end: 0.6rem; }
 .kanban-column { display: flex; flex-direction: column; gap: 0.6rem; min-inline-size: 0; padding: 0.85rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-soft); }
 .kanban-column--over { border-color: rgba(124, 92, 252, 0.55); background: rgba(124, 92, 252, 0.07); }
