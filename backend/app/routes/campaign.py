@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from app.core.paths import CAMPAIGN_DIR
 from app.services.email import send_lead_email
+from app.services.leads import store_lead
 
 
 router = APIRouter(tags=["campaign"])
@@ -72,6 +73,9 @@ async def submit_lead(data: LeadRequest):
         "message": data.message.strip(),
         "source": data.source.strip(),
     }
+
+    # Persist first so a mail outage never loses the lead.
+    await store_lead(lead)
 
     try:
         await send_lead_email(lead)

@@ -149,7 +149,7 @@ export function YuviRobot3D({
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 0.98
+    renderer.toneMappingExposure = 1.06
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.domElement.style.display = 'block'
     renderer.domElement.style.width = '100%'
@@ -162,7 +162,7 @@ export function YuviRobot3D({
 
     const scene = new THREE.Scene()
     const pmrem = new THREE.PMREMGenerator(renderer)
-    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.035).texture
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.028).texture
     pmrem.dispose()
 
     const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100)
@@ -170,23 +170,37 @@ export function YuviRobot3D({
 
     const activeDesign = normalizeDesign(savedDesignRef.current)
 
-    // ── Lighting: soft studio key + cool fill for glossy plastic ──
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xd6e0f5, 0.85))
-    const key = new THREE.DirectionalLight(0xffffff, 1.3)
-    key.position.set(3, 7, 6)
+    // ── Lighting: soft key + cool fill + two coloured rims (violet / cyan) ──
+    scene.add(new THREE.HemisphereLight(0xf4f6ff, 0xa192e6, 0.62))
+    const key = new THREE.DirectionalLight(0xffffff, 1.55)
+    key.position.set(2.6, 6.4, 5.6)
     scene.add(key)
-    const fill = new THREE.DirectionalLight(0xbcd7ef, 0.5)
-    fill.position.set(-5, 2, 3)
+    const fill = new THREE.DirectionalLight(0xc7d8ff, 0.42)
+    fill.position.set(-5, 1.8, 3.4)
     scene.add(fill)
-    const rim = new THREE.DirectionalLight(0xdcecff, 0.5)
-    rim.position.set(0, 3, -6)
+    const rim = new THREE.DirectionalLight(0x8f6cff, 1.45)
+    rim.position.set(-3.6, 2.8, -5.2)
     scene.add(rim)
+    const rimCool = new THREE.DirectionalLight(0x4eeef0, 1.05)
+    rimCool.position.set(3.8, 1.4, -4.8)
+    scene.add(rimCool)
+    const bounce = new THREE.PointLight(0xa78bfa, 0.45, 9)
+    bounce.position.set(0, -2.4, 2.6)
+    scene.add(bounce)
 
-    // ── Materials: glossy two-tone plastic (graphite grey + white) ──
-    const blueMat = new THREE.MeshStandardMaterial({ color: 0x85878c, roughness: 0.3, metalness: 0.14, envMapIntensity: 0.7 })
-    const jointMat = new THREE.MeshStandardMaterial({ color: 0x5c5e62, roughness: 0.34, metalness: 0.1, envMapIntensity: 0.65 })
-    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.26, metalness: 0.08, envMapIntensity: 0.85 })
-    const faceMat = new THREE.MeshBasicMaterial({ color: 0x050711 })
+    // ── Materials: soft-ceramic shell over a deep indigo core ──
+    const CORE_COLOR = new THREE.Color(0x2b2560)
+    const blueMat = new THREE.MeshPhysicalMaterial({
+      color: 0xf1f2fb, roughness: 0.24, metalness: 0,
+      clearcoat: 1, clearcoatRoughness: 0.13,
+      sheen: 0.55, sheenColor: new THREE.Color(0xb9a8ff), sheenRoughness: 0.55,
+      iridescence: 0.22, iridescenceIOR: 1.35,
+      envMapIntensity: 1.2,
+    })
+    const jointMat = new THREE.MeshPhysicalMaterial({ color: 0x2b2560, roughness: 0.34, metalness: 0.75, envMapIntensity: 1.15, clearcoat: 0.5, clearcoatRoughness: 0.28 })
+    const whiteMat = new THREE.MeshPhysicalMaterial({ color: 0x342c6d, roughness: 0.4, metalness: 0.3, envMapIntensity: 1.05, clearcoat: 0.7, clearcoatRoughness: 0.24, sheen: 0.4, sheenColor: new THREE.Color(0x7c6bff) })
+    const faceMat = new THREE.MeshPhysicalMaterial({ color: 0x07061a, roughness: 0.07, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 1.5 })
+    const visorSheenMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.085, depthTest: false, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending })
     const glowMat = new THREE.MeshBasicMaterial({ color: 0x4eeef0 })
     const ringMat = new THREE.MeshStandardMaterial({ color: 0x3fd9e0, emissive: 0x3fd9e0, emissiveIntensity: 1.8, roughness: 0.3, toneMapped: false })
     const earCapMat = new THREE.MeshStandardMaterial({ color: 0x3fd9e0, emissive: 0x3fd9e0, emissiveIntensity: 0.6, roughness: 0.3, toneMapped: false })
@@ -470,7 +484,7 @@ export function YuviRobot3D({
     sparkBadge.renderOrder = 6
     robot.add(sparkBadge)
     // Invisible hit target sized to the visible "Y" so the clickable area is tight.
-    const badgeHit = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2), new THREE.MeshBasicMaterial({ visible: false }))
+    const badgeHit = new THREE.Mesh(new THREE.PlaneGeometry(0.44, 0.44), new THREE.MeshBasicMaterial({ visible: false }))
     badgeHit.position.set(0, 0.845, 0.231)
     robot.add(badgeHit)
 
@@ -537,23 +551,28 @@ export function YuviRobot3D({
     helmet.scale.set(1, 1.0, 0.95)
     head.add(helmet)
 
+    // A floating halo replaces the old rod-and-bulb antenna.
     const antenna = new THREE.Group()
-    antenna.position.set(0, 0.52, 0.02)
+    antenna.position.set(0, 0.6, 0.02)
     head.add(antenna)
-    const antennaRod = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.018, 0.22, 14), jointMat)
-    antennaRod.position.y = 0.11
-    antenna.add(antennaRod)
     const antennaTipMat = new THREE.MeshStandardMaterial({ color: 0x4eeef0, emissive: 0x4eeef0, emissiveIntensity: 2.2, toneMapped: false, roughness: 0.25 })
-    const antennaTip = new THREE.Mesh(new THREE.SphereGeometry(0.052, 20, 18), antennaTipMat)
-    antennaTip.position.y = 0.24
+    const antennaTip = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.018, 14, 48), antennaTipMat)
+    antennaTip.rotation.x = Math.PI / 2
     antenna.add(antennaTip)
+    const haloGlowMat = new THREE.MeshBasicMaterial({ color: 0x4eeef0, transparent: true, opacity: 0.2, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending })
+    const antennaHalo = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.055, 10, 40), haloGlowMat)
+    antennaHalo.rotation.x = Math.PI / 2
+    antenna.add(antennaHalo)
     const antennaLight = new THREE.PointLight(0x4eeef0, 0.35, 1.3)
-    antennaLight.position.y = 0.24
     antenna.add(antennaLight)
 
-    // Clean flat black screen recessed into the front; no reflections or 3D stroke overlap.
-    const screen = makeFlatRoundedRect(0.82, 0.62, 0.13, faceMat)
-    screen.position.set(0, -0.03, 0.455)
+    // Wide wrap-around glass visor: a dark bezel, glossy black glass and a
+    // subtle sheen streak so it reads as a screen rather than a painted panel.
+    const bezel = makeFlatRoundedRect(1.0, 0.72, 0.3, jointMat)
+    bezel.position.set(0, -0.03, 0.451)
+    head.add(bezel)
+    const screen = makeFlatRoundedRect(0.94, 0.66, 0.27, faceMat)
+    screen.position.set(0, -0.03, 0.457)
     head.add(screen)
 
     // Neon face lights: a transparent glow texture composited over the black screen.
@@ -573,11 +592,17 @@ export function YuviRobot3D({
     faceLights.renderOrder = 7
     head.add(faceLights)
 
+    const visorSheen = makeFlatRoundedRect(0.78, 0.11, 0.055, visorSheenMat)
+    visorSheen.position.set(-0.05, 0.14, 0.472)
+    visorSheen.rotation.z = -0.2
+    visorSheen.renderOrder = 9
+    head.add(visorSheen)
+
     const faceGlow = new THREE.PointLight(0x4eeef0, 0.28, 1.1)
     faceGlow.position.set(0, -0.02, 0.62)
     head.add(faceGlow)
 
-    // Side ear pods (blue) with glowing cyan centers
+    // Side ear pods with glowing accent rings
     const earGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.12, 30)
     const earL = new THREE.Mesh(earGeo, blueMat)
     earL.rotation.z = Math.PI / 2
@@ -586,15 +611,22 @@ export function YuviRobot3D({
     const earR = earL.clone()
     earR.position.x = 0.56
     head.add(earR)
-    const earCapL = new THREE.Mesh(new THREE.CircleGeometry(0.07, 26), earCapMat)
-    earCapL.rotation.y = -Math.PI / 2
-    earCapL.position.set(-0.623, -0.02, 0.02)
+    const earCapL = new THREE.Mesh(new THREE.TorusGeometry(0.076, 0.017, 12, 30), earCapMat)
+    earCapL.rotation.y = Math.PI / 2
+    earCapL.position.set(-0.625, -0.02, 0.02)
     head.add(earCapL)
     const earCapR = earCapL.clone()
-    earCapR.rotation.y = Math.PI / 2
-    earCapR.position.x = 0.623
+    earCapR.position.x = 0.625
     head.add(earCapR)
-    const nativeEarParts = [earL, earR, earCapL, earCapR]
+    const earDiscL = new THREE.Mesh(new THREE.CircleGeometry(0.07, 26), faceMat)
+    earDiscL.rotation.y = -Math.PI / 2
+    earDiscL.position.set(-0.622, -0.02, 0.02)
+    head.add(earDiscL)
+    const earDiscR = earDiscL.clone()
+    earDiscR.rotation.y = Math.PI / 2
+    earDiscR.position.x = 0.622
+    head.add(earDiscR)
+    const nativeEarParts = [earL, earR, earCapL, earCapR, earDiscL, earDiscR]
 
     // ── Persisted studio design ──
     // These anchors mirror YuviAvatar3D so the same equipment catalog fits the
@@ -638,12 +670,11 @@ export function YuviRobot3D({
         delete equippedObjects[slot]
       }
       activeDesign.equipped[slot] = id
+      const asset = id ? getAsset(id) : null
       if (slot === 'headTop') {
         antenna.visible = !id
-        nativeEarParts.forEach((part) => { part.visible = id !== 'headphones' })
+        nativeEarParts.forEach((part) => { part.visible = !asset?.hideEars })
       }
-      if (!id) return
-      const asset = getAsset(id)
       if (!asset) return
       const object = asset.build()
       anchor.add(object)
@@ -665,14 +696,17 @@ export function YuviRobot3D({
       activeDesign.colors = { ...colors }
       const bodyColor = new THREE.Color(colors.body)
       blueMat.color.copy(bodyColor)
-      jointMat.color.copy(bodyColor.clone().multiplyScalar(0.82))
+      jointMat.color.copy(bodyColor.clone().lerp(CORE_COLOR, 0.84))
+      whiteMat.color.copy(CORE_COLOR.clone().lerp(bodyColor, 0.14))
       const glowColor = new THREE.Color(colors.glow)
+      blueMat.sheenColor.copy(glowColor.clone().lerp(new THREE.Color(0xffffff), 0.45))
       ringMat.color.copy(glowColor)
       ringMat.emissive.copy(glowColor)
       earCapMat.color.copy(glowColor)
       earCapMat.emissive.copy(glowColor)
       antennaTipMat.color.copy(glowColor)
       antennaTipMat.emissive.copy(glowColor)
+      haloGlowMat.color.copy(glowColor)
       antennaLight.color.copy(glowColor)
       faceGlow.color.copy(glowColor)
       faceLight.draw()
@@ -713,17 +747,40 @@ export function YuviRobot3D({
     let hoveredBadge = false
     let badgeScale = 1
     const badgeWorld = new THREE.Vector3()
-    const onBadgeMove = (event: PointerEvent) => {
-      if (!editableRef.current) { hoveredBadge = false; return }
+    const badgeNormal = new THREE.Vector3()
+    const camForward = new THREE.Vector3()
+    /**
+     * Mirror of the companion dock's rule: try the geometry raycast first, then
+     * fall back to a generous disc around the badge's projected centre so the
+     * chest "Y" is not a pixel-hunt when Yuvi is rendered small. The facing test
+     * keeps it from being clickable through his back.
+     */
+    const hitsBadge = (event: { clientX: number; clientY: number }) => {
       const rect = renderer.domElement.getBoundingClientRect()
+      if (!rect.width || !rect.height) return false
       ndc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
       ndc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
       raycaster.setFromCamera(ndc, camera)
-      hoveredBadge = raycaster.intersectObject(badgeHit, false).length > 0
+      if (raycaster.intersectObject(badgeHit, false).length > 0) return true
+      badgeHit.getWorldDirection(badgeNormal)
+      camera.getWorldDirection(camForward)
+      if (badgeNormal.dot(camForward) > -0.15) return false
+      badgeHit.getWorldPosition(badgeWorld).project(camera)
+      if (badgeWorld.z > 1) return false
+      const bx = rect.left + ((badgeWorld.x + 1) / 2) * rect.width
+      const by = rect.top + ((1 - badgeWorld.y) / 2) * rect.height
+      const radius = Math.max(28, Math.min(rect.width, rect.height) * 0.16)
+      return Math.hypot(event.clientX - bx, event.clientY - by) <= radius
+    }
+    const onBadgeMove = (event: PointerEvent) => {
+      if (!editableRef.current) { hoveredBadge = false; return }
+      hoveredBadge = hitsBadge(event)
       renderer.domElement.style.cursor = hoveredBadge ? 'pointer' : 'default'
     }
     const onBadgeLeave = () => { hoveredBadge = false; renderer.domElement.style.cursor = 'default' }
-    const onBadgeClick = () => { if (editableRef.current && hoveredBadge) onEditRef.current?.(container) }
+    // A touch tap never sends the hover move that would set `hoveredBadge`, so
+    // the click re-tests the pointer position itself.
+    const onBadgeClick = (event: MouseEvent) => { if (editableRef.current && hitsBadge(event)) onEditRef.current?.(container) }
     renderer.domElement.addEventListener('pointermove', onBadgeMove)
     renderer.domElement.addEventListener('pointerleave', onBadgeLeave)
     renderer.domElement.addEventListener('click', onBadgeClick)
@@ -738,6 +795,7 @@ export function YuviRobot3D({
     let armLZ = 0
     let armRX = 0.08
     let armRZ = 0.095
+    let lastAccessoryT = 0
     let frame = 0
     const loop = () => {
       frame = requestAnimationFrame(loop)
@@ -911,9 +969,24 @@ export function YuviRobot3D({
       faceLight.draw(eyeOpen, mouth)
       faceLightMat.opacity = 0.9 + Math.sin(t * 1.8) * 0.05
       faceGlow.intensity = 0.24 + Math.sin(t * 1.8) * 0.05 + speakAmt * 0.08 + (isCelebrating ? 0.16 : 0)
-      antenna.rotation.z = Math.sin(t * (isThinking ? 2.8 : 1.4)) * (isThinking ? 0.1 : 0.06)
+      antenna.rotation.z = Math.sin(t * (isThinking ? 2.8 : 1.4)) * (isThinking ? 0.14 : 0.1)
+      if (!reduceMotion) {
+        antenna.rotation.y += 0.008 + (isThinking ? 0.012 : 0)
+        antenna.position.y = 0.6 + Math.sin(t * 1.6) * 0.014
+      }
+      haloGlowMat.opacity = 0.16 + Math.sin(t * 2.2) * 0.05 + (isCelebrating ? 0.08 : 0)
       antennaTipMat.emissiveIntensity = 1.8 + Math.sin(t * (isThinking ? 4.2 : 2.2)) * 0.4 + (isCelebrating ? 0.7 : 0)
       antennaLight.intensity = 0.28 + Math.sin(t * 2.2) * 0.06 + (isCelebrating ? 0.14 : 0)
+
+      // Accessory motion: every asset exposes its own `userData.animate(t, dt)`.
+      const accessoryDt = Math.min(0.1, Math.max(0, t - lastAccessoryT))
+      lastAccessoryT = t
+      if (!reduceMotion) {
+        for (const key of Object.keys(equippedObjects)) {
+          const animate = (equippedObjects as any)[key]?.userData?.animate
+          if (animate) animate(t, accessoryDt)
+        }
+      }
 
       renderer.render(scene, camera)
     }
