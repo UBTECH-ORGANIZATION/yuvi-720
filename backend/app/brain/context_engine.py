@@ -71,6 +71,26 @@ AGENT_VIEWS: dict[str, dict[str, list[str]]] = {
         "read": ["progress", "mastery", "strengths", "challenges", "enrollments", "wellbeing_flags"],
         "write": [],                # never writes the learner brain (read-only)
     },
+    "teacher_assistant": {
+        # F6. The teacher's AI reads a wider slice than `teacher_insights` because it
+        # answers open questions ("how is this student doing?"), but three exclusions
+        # are deliberate and load-bearing:
+        #   `identity.*`            — PII never reaches an LLM prompt (§4.1). The
+        #                             assistant refers to learners by pseudonymous id
+        #                             and the client substitutes the name at render.
+        #   `profile.mapping_scores` — raw onboarding instrument scores are not a
+        #                             teacher-facing artifact; `student_description`
+        #                             is the curated, provenance-carrying projection.
+        #   `memory`                — the learner's private soft model. The companion
+        #                             only stays trustworthy to the child if it is not
+        #                             a surveillance channel (A10).
+        "read": [
+            "progress", "mastery", "strengths", "challenges", "enrollments",
+            "wellbeing_flags", "goals", "teacher_directives", "reflections_recent",
+            "student_description", "current_state",
+        ],
+        "write": [],                # read-only: no AI write into a child's brain
+    },
     "safety": {
         "read": ["identity.locale"],
         "write": ["wellbeing_flags"],

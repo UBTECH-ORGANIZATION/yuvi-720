@@ -20,7 +20,13 @@ from app.routes.auth import router as auth_router
 from app.routes.badges import router as badges_router
 from app.routes.brain import router as brain_router
 from app.routes.agent import router as agent_router
+from app.routes.admin_org import router as admin_org_router
 from app.routes.teacher import router as teacher_router
+from app.routes.teacher_students import router as teacher_students_router
+from app.routes.teacher_live import router as teacher_live_router
+from app.routes.notifications import router as notifications_router
+from app.routes.me import router as me_router
+from app.routes.teacher_assistant import router as teacher_assistant_router
 from app.routes.mentoring import router as mentoring_router
 from app.routes.rewards import router as rewards_router
 from app.routes.campaign import router as campaign_router
@@ -55,6 +61,28 @@ def _allowed_origins() -> list[str]:
     return origins + [o for o in _DEV_ORIGINS if o not in origins]
 
 
+async def run_index_steps(steps) -> list[str]:
+    """Run each index-creation step in isolation; return the labels that failed.
+
+    A named function rather than an inline loop so the isolation is *testable*:
+    these steps used to share one `try`, which meant the first failure silently
+    skipped every index after it — the slowest possible failure mode, and one no
+    source-shape assertion reliably catches. A test can now make step one raise
+    and check step two still ran.
+
+    Never raises: a missing index makes the product slow, not broken, and must
+    never stop a boot.
+    """
+    failed: list[str] = []
+    for label, step in steps:
+        try:
+            await step()
+        except Exception as exc:  # pragma: no cover - best effort by design
+            failed.append(label)
+            print(f"⚠️ {label} index setup skipped: {type(exc).__name__}")
+    return failed
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Start shared application resources, including the MCP session manager."""
@@ -70,6 +98,51 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     from app.services.learning_sessions import probe_relay_base_url
 
     relay_probe = asyncio.create_task(probe_relay_base_url())
+    # Presence listens to the bus's connect/disconnect hooks. Not an index step,
+    # but it has to happen before the first SSE connection either way.
+    from app.services import presence
+
+    presence.install_hooks()
+
+    # Index setup for every collection the teacher lane introduced.
+    #
+    # Best-effort per module, and deliberately one try *each*: these used to
+    # share a single `except`, so the first failure silently skipped every
+    # index after it — the slowest possible failure mode, and invisible.
+    # A missing index is slow, never broken, and must never stop a boot.
+    from app.agents.teacher_tools import registry as teacher_tool_registry
+    from app.services import (
+        daily_brief, kudos, notifications, org_repository, teacher_alerts,
+        teacher_insights_store, weekly_digest,
+    )
+
+    index_steps = (
+        # Authorization hot path: every teacher read resolves links + enrollments.
+        ("org", org_repository.ensure_indexes),
+        # The replay cursor query, (teacher_id, seq).
+        ("teacher_alerts", teacher_alerts.ensure_indexes),
+        ("notifications", notifications.ensure_indexes),
+        ("kudos", kudos.ensure_indexes),
+        # Read on every open of a student's Notes tab.
+        ("teacher_insights", teacher_insights_store.ensure_indexes),
+        ("group_digests", weekly_digest.ensure_indexes),
+        ("teacher_briefs", daily_brief.ensure_indexes),
+        # The assistant's audit trail — the only unbounded collection here.
+        ("teacher_tool_calls", teacher_tool_registry.ensure_indexes),
+    )
+    await run_index_steps(index_steps)
+
+    # The bus is in-process, so with more than one worker a learner's events and
+    # their teacher's stream can land on different processes and simply never
+    # meet. Warn loudly rather than let it look like a flaky feature.
+    workers = os.environ.get("WEB_CONCURRENCY")
+    if workers and workers.isdigit() and int(workers) > 1:
+        print(
+            f"⚠️ WEB_CONCURRENCY={workers}: the realtime bus is in-process, so "
+            "presence and teacher alerts will fragment across workers. Run a "
+            "single worker, or move `app.services.realtime` onto a shared bus."
+        )
+
     try:
         async with content_catalog_mcp_lifespan():
             yield
@@ -105,6 +178,12 @@ def create_app() -> FastAPI:
     app.include_router(illustrations_router)
     app.include_router(agent_router)
     app.include_router(teacher_router)
+    app.include_router(teacher_students_router)
+    app.include_router(teacher_live_router)
+    app.include_router(notifications_router)
+    app.include_router(me_router)
+    app.include_router(teacher_assistant_router)
+    app.include_router(admin_org_router)
     app.include_router(mentoring_router)
     app.include_router(rewards_router)
     app.include_router(profile_router)

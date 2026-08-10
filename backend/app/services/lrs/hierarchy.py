@@ -23,10 +23,11 @@ nothing here is invented: a field we do not have is a field we do not send.
 
 from __future__ import annotations
 
+import re
 from typing import Any, Optional
 
 from app.services.lrs import config
-from app.services.lrs.context import MEDIA_ACTIVITY_TYPES, activity
+from app.services.lrs.context import CONTENT_VENDOR_BASE, MEDIA_ACTIVITY_TYPES, activity
 
 
 def _iri(kind: str, identifier: str) -> str:
@@ -62,7 +63,7 @@ def unit_metadata(unit: Optional[dict[str, Any]]) -> dict[str, Any]:
         "subTopic": unit.get("sub_topic"),
         "learningObjective": unit.get("objective_id"),
         "subject": unit.get("subject"),
-        "prerequisiteLearningObjective": unit.get("prerequisites") or None,
+        "prerequisiteLearningObjective": unit.get("prerequisites") or [],
         # Who the unit was authored FOR — both are in the spec's unit table and
         # both are already normalized off the catalog, they were simply never
         # mapped through to the statement.
@@ -91,11 +92,11 @@ def component_metadata(component: Optional[dict[str, Any]]) -> dict[str, Any]:
         # component-level one too would collide with it inside a single
         # extensions map and the item's — the specific one — would be the one
         # lost, on exactly the media events that need it.
-        "recommendedAfterFail": component.get("recommended_after_fail") or None,
+        "recommendedAfterFail": component.get("recommended_after_fail") or [],
         # The last two rows of the spec's component table: the מיומנויות the
         # component exercises, and the provider it came from (provenance in a
         # multi-provider catalog).
-        "skills": component.get("skills") or None,
+        "skills": component.get("skills") or [],
         "manufacture": component.get("manufacture"),
     })
 
@@ -148,8 +149,23 @@ def item_metadata(
     })
 
 
+# Spec-listed list fields that are reported even when the content has none.
+# An absent key reads as "not implemented" — which is exactly what the 28/07
+# review wrote against fields we do map — whereas `[]` says "reported, and this
+# content has none". Everything else is still dropped when empty.
+_ALWAYS_REPORTED: tuple[str, ...] = (
+    "prerequisiteLearningObjective",
+    "recommendedAfterFail",
+    "skills",
+)
+
+
 def _clean(values: dict[str, Any]) -> dict[str, Any]:
-    return {k: v for k, v in values.items() if v not in (None, "", [], {})}
+    return {
+        k: v
+        for k, v in values.items()
+        if v not in (None, "", [], {}) or (k in _ALWAYS_REPORTED and v == [])
+    }
 
 
 class ContentHierarchy(dict):
@@ -214,6 +230,7 @@ async def ecat_item_for(
     of truth), then the configured map, then the single-id fallback.
     """
     published: Optional[str] = None
+    vendor: str = ""
     try:
         from app.services import kata_catalog
 
@@ -223,11 +240,48 @@ async def ecat_item_for(
         unit = kata_catalog.get_unit(resolved_unit_id) if resolved_unit_id else None
         published = (component or {}).get("ecat_item_id") or (unit or {}).get("ecat_item_id")
         unit_id = resolved_unit_id or unit_id
+        # The supplier, straight from the catalog — no hand-maintained list of
+        # which unit belongs to whom (MoE, 03/08: "לא אמורה להעשות שום עבודה ידנית").
+        # `manufacture` is published per component, so a unit-level statement
+        # reads it from the unit's own components — one supplier makes a unit.
+        unit_manufacture = (unit or {}).get("manufacture") or next(
+            (
+                row.get("manufacture")
+                for row in ((unit or {}).get("components") or [])
+                if row.get("manufacture")
+            ),
+            None,
+        )
+        vendor = config.content_vendor_id(
+            (component or {}).get("manufacture") or unit_manufacture,
+            subject=(unit or {}).get("subject") or (component or {}).get("subject"),
+            grade=_grade_of(unit, component),
+        )
     except Exception:  # the catalog is an optimization here, never a gate
         published = None
-    return published or config.ecat_item_id(
+    configured = config.ecat_item_id(
         item_id=item_id, component_id=component_id, unit_id=unit_id
-    ) or None
+    )
+    if published or configured:
+        return published or configured
+    # A vendor id is not a catalog item id, so it is emitted as its own IRI and
+    # passed through by `build_grouping` untouched.
+    return f"{CONTENT_VENDOR_BASE}/{vendor}" if vendor else None
+
+
+def _grade_of(unit: Optional[dict[str, Any]], component: Optional[dict[str, Any]]) -> str:
+    """Grade number out of a ministry objective id (`…​.G7.…` → "7").
+
+    The ministry will issue a different supplier number per subject area AND
+    grade; this is the grade half of that key, read from the id the catalog
+    already carries rather than from a table of our own.
+    """
+    for source in (unit, component):
+        objective = ((source or {}).get("objective_id") or "")
+        match = re.search(r"\.G(\d+)\.", objective)
+        if match:
+            return match.group(1)
+    return ""
 
 
 async def for_content(

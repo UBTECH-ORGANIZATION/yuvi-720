@@ -12,10 +12,12 @@ import asyncio
 import os
 from typing import Any, AsyncGenerator, Optional
 
+from app.services import realtime
 from app.services.learning_timing import PROLONGED_INTERACTION_SECONDS
 
-# learner_id → set of subscriber queues (proactive push channel — an interface).
-_subscribers: dict[str, set[asyncio.Queue]] = {}
+
+def _topic(learner_id: str) -> str:
+    return f"learner:{learner_id}"
 
 MISCONCEPTION_STREAK = 3   # K consecutive fails on the same objective
 # No event for this long while a lesson is open → nudge. The iframe is
@@ -142,13 +144,16 @@ def _on_cooldown(learner_id: str, trigger_type: str) -> bool:
 
 
 def _publish(learner_id: str, trigger: dict[str, Any]) -> None:
+    """Stamp the cooldown clock, then hand the frame to the bus.
+
+    The stamp stays HERE and happens unconditionally, including when nobody is
+    listening: the cooldown ladder is about how often this engine is willing to
+    fire, not about whether anyone saw it. Moving it into the bus would make
+    every cooldown depend on the learner having a tab open.
+    """
     import time
     _last_published[(learner_id, str(trigger.get("type")))] = time.monotonic()
-    for queue in list(_subscribers.get(learner_id, ())):
-        try:
-            queue.put_nowait(trigger)
-        except asyncio.QueueFull:  # pragma: no cover
-            pass
+    realtime.publish(_topic(learner_id), trigger)
 
 
 def _cancel_idle(learner_id: str) -> None:
@@ -199,6 +204,11 @@ def note_chat_activity(learner_id: str, *, by_learner: bool = True) -> None:
     """
     import time
     _last_chat_activity[learner_id] = time.monotonic()
+    if by_learner:
+        # Typing to Yuvi is a sign of life for the teacher's live strip too.
+        # Yuvi's own turn is not — it would keep a learner who left "online".
+        from app.services import presence
+        presence.note_activity(learner_id)
     if by_learner and learner_id in _idle_handles:
         _arm_idle(learner_id, _idle_objective.get(learner_id))
 
@@ -369,6 +379,14 @@ async def evaluate(learner_id: str, event: dict[str, Any]) -> Optional[dict[str,
             for private in ("_key", "_streak_session", "_success_key"):
                 trigger.pop(private, None)
             _publish(learner_id, trigger)
+            # Mirror into the teacher's live view. Guarded: the learner's nudge
+            # has already been delivered and must not be undone by a roster
+            # lookup or an alert write failing.
+            try:
+                from app.services import teacher_alerts
+                await teacher_alerts.escalate_trigger(learner_id, trigger)
+            except Exception as exc:
+                print(f"⚠️ teacher escalation failed: {type(exc).__name__}: {exc}")
             return trigger
     return None
 
@@ -401,6 +419,16 @@ def publish_idle(learner_id: str, objective_id: Optional[str] = None) -> None:
         _arm_idle(learner_id, objective_id, delay=IDLE_SECONDS - chatted_ago)
         return
     _publish(learner_id, {"type": "idle", "objective_id": objective_id})
+    # Idle is published straight from the watchdog, not through `evaluate`'s
+    # priority loop, so the teacher escalation there never saw it. A learner
+    # sitting on one screen doing nothing is exactly what the live strip is for.
+    # Presence only — an idle stretch is not a teacher interrupt.
+    try:
+        from app.services import presence
+        presence.note_struggle(learner_id, "idle", {"idle_seconds": IDLE_SECONDS,
+                                                    "objective_id": objective_id})
+    except Exception as exc:
+        print(f"⚠️ idle presence update failed: {type(exc).__name__}")
 
 
 def publish_screen_change(
@@ -439,19 +467,24 @@ def publish_screen_change(
     })
 
 
+def subscriber_count(learner_id: str) -> int:
+    """How many live connections this learner currently holds.
+
+    Public because it is the only honest way to ask "is anyone listening?" from
+    outside — presence needs it, and tests must not have to reach into the
+    queue map to find out.
+    """
+    return realtime.subscriber_count(_topic(learner_id))
+
+
 async def subscribe(learner_id: str, heartbeat: float = 20.0) -> AsyncGenerator[dict[str, Any], None]:
-    """Yield triggers for a learner (SSE). Heartbeats keep the connection alive."""
-    queue: asyncio.Queue = asyncio.Queue()
-    _subscribers.setdefault(learner_id, set()).add(queue)
-    try:
-        while True:
-            try:
-                yield await asyncio.wait_for(queue.get(), timeout=heartbeat)
-            except asyncio.TimeoutError:
-                yield {"type": "_heartbeat"}
-    finally:
-        subs = _subscribers.get(learner_id)
-        if subs:
-            subs.discard(queue)
-            if not subs:
-                _subscribers.pop(learner_id, None)
+    """Yield triggers for a learner (SSE). Heartbeats keep the connection alive.
+
+    Subscribes to the learner's own `user:` topic as well, so notifications
+    addressed to them ride the connection the coach already holds instead of
+    opening a second EventSource against the ~6-per-origin browser cap.
+    """
+    async for event in realtime.subscribe(
+        _topic(learner_id), f"user:{learner_id}", heartbeat=heartbeat
+    ):
+        yield event

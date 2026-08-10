@@ -531,6 +531,28 @@ async def reflection_complete(
     return JSONResponse(content=result)
 
 
+@router.post("/coach/handoff")
+async def coach_handoff(data: dict, learner_id: str = Depends(require_learner)):
+    """Escalate from Yuvi to a human, carrying what Yuvi already tried.
+
+    Learner-authenticated on purpose: this is the child (or the coach acting for
+    them) asking for a person. The recipients are resolved server-side from the
+    roster, so the request cannot address a teacher of its own choosing.
+    """
+    from app.services import coach_handoff as handoff
+
+    alerts = await handoff.hand_off(
+        learner_id,
+        reason=str(data.get("reason") or "stuck")[:40],
+        objective_id=data.get("objective_id"),
+        component_id=data.get("component_id"),
+    )
+    # `notified: 0` is the orphan case — a learner in no staffed group. Reported
+    # honestly so the UI can say "we could not reach a teacher" rather than
+    # promising help that is not coming.
+    return JSONResponse(content={"notified": len(alerts)})
+
+
 @router.get("/triggers/subscribe")
 async def triggers_subscribe(learner_id: str = Depends(require_learner)):
     """SSE stream of proactive triggers for a learner (idle/misconception/success)."""

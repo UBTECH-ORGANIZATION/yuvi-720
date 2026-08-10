@@ -21,6 +21,19 @@ export interface UserPreferences {
   theme_updated_at: number
   language: 'he' | 'en' | 'ar'
   reduced_motion: boolean
+  /** Onboarding tours already finished or skipped, by slug. The server applies
+      a PATCH of this field as a union, so sending `['teacher']` adds it rather
+      than replacing the list. */
+  tours_completed: string[]
+  /** The class a teacher last looked at. A view preference, so it survives a
+      reload; access is still re-checked server-side on every request. */
+  teacher_group_id: string | null
+  /** How a teacher reads their roster. Table by default — a card wall stops
+      being scannable at about fifteen students. */
+  teacher_roster_view: 'table' | 'cards'
+  /** Visible roster columns, by key. Empty means "the defaults": a teacher who
+      never opened the chooser has no opinion to freeze against future columns. */
+  teacher_roster_columns: string[]
 }
 
 export interface AuthUser {
@@ -134,7 +147,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser((current) => {
       previous = current
       if (!current) return current
-      return { ...current, preferences: { ...current.preferences, ...partial } }
+      const merged = { ...current.preferences, ...partial }
+      // `tours_completed` is a union server-side, so mirror that locally — a
+      // plain spread would briefly show the *only* tour just finished and drop
+      // every earlier one, and anything reading it in that window (the tour
+      // auto-start) would draw the wrong conclusion.
+      if (partial.tours_completed) {
+        merged.tours_completed = Array.from(new Set([
+          ...(current.preferences.tours_completed ?? []),
+          ...partial.tours_completed,
+        ]))
+      }
+      return { ...current, preferences: merged }
     })
     try {
       const data = await apiPatch<{ preferences: UserPreferences }>('/api/auth/preferences', partial)

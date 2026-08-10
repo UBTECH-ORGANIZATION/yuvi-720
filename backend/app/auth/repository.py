@@ -35,8 +35,32 @@ DEFAULT_PREFERENCES: dict[str, Any] = {
     "theme_updated_at": 0,
     "language": "he",
     "reduced_motion": False,
+    # Onboarding tours this user has finished or skipped, by slug. Server-side
+    # rather than localStorage (project rule) and on the *user* rather than
+    # learner_state: a teacher-only account has no learner_state to write to.
+    # Because `preferences` already round-trips through /api/auth/me, the client
+    # knows on first render whether to open a tour — no extra fetch, no flash.
+    "tours_completed": [],
+    # The class a teacher last looked at, so the selection survives a reload
+    # instead of snapping back to whichever group sorts first. A view preference
+    # only: authorization is re-derived from org scoping on every request.
+    "teacher_group_id": None,
+    # How a teacher reads their roster. Table is the default: a card wall is
+    # scannable at twelve students and unusable at thirty, and comparing children
+    # is a columns job. Stored per user rather than per browser so a teacher who
+    # picked cards keeps them on the classroom machine too.
+    "teacher_roster_view": "table",
+    # Which roster columns are visible, by key. Empty list means "the defaults" —
+    # a teacher who has never opened the chooser has no opinion to store, and
+    # persisting the default set would freeze it against future columns.
+    "teacher_roster_columns": [],
 }
 ALLOWED_PREFERENCES = set(DEFAULT_PREFERENCES)
+
+# The only tours that may be recorded. An unknown slug is rejected rather than
+# stored, so a client bug (or a crafted PATCH) cannot grow this list without
+# bound in a document we read on every single request.
+TOUR_SLUGS = frozenset({"teacher"})
 
 
 def _now() -> str:
@@ -114,6 +138,44 @@ async def get_user_by_username(username: str) -> Optional[dict[str, Any]]:
     return None
 
 
+async def list_users(
+    *, role: Optional[str] = None, query: Optional[str] = None, limit: int = 500
+) -> list[dict[str, Any]]:
+    """All accounts, optionally narrowed by role or a name/username substring.
+
+    Admin-only by construction — every caller must sit behind `require_admin`,
+    and every row still goes out through `public_user` so credentials never
+    leave this module.
+    """
+    documents: list[dict[str, Any]] = []
+    collection = _collection()
+    if collection is not None:
+        try:
+            selector: dict[str, Any] = {}
+            if role:
+                selector["roles"] = role
+            documents = await collection.find(selector).to_list(length=limit)
+        except Exception as exc:
+            print(f"⚠️ Mongo users list failed, using fallback: {exc}")
+            documents = []
+    if not documents:
+        documents = [
+            document for document in _read_fallback().values()
+            if not role or role in (document.get("roles") or [])
+        ]
+
+    needle = (query or "").strip().lower()
+    if needle:
+        documents = [
+            document for document in documents
+            if needle in (document.get("username") or "").lower()
+            or needle in (document.get("display_name") or "").lower()
+            or needle in str(document.get("_id") or "").lower()
+        ]
+    documents.sort(key=lambda document: (document.get("display_name") or "").lower())
+    return documents[:limit]
+
+
 async def upsert_user(document: dict[str, Any]) -> dict[str, Any]:
     user_id = document["_id"]
     payload = {**document, "updated_at": _now()}
@@ -176,8 +238,61 @@ async def update_preferences(user_id: str, updates: dict[str, Any]) -> dict[str,
     return {**DEFAULT_PREFERENCES, **((document or {}).get("preferences") or {})}
 
 
+async def mark_tours_completed(user_id: str, slugs: list[str]) -> dict[str, Any]:
+    """Record finished tours as a *union*, never a replace.
+
+    A plain `$set` of the whole list would let a stale client — one that booted
+    before another tab finished a tour — silently un-complete it, and the tour
+    would re-open on the next login. `$addToSet` makes the write idempotent and
+    order-independent, which is exactly the semantics of "I have seen this".
+    """
+    allowed = [slug for slug in slugs if slug in TOUR_SLUGS]
+    if not allowed:
+        return await get_preferences(user_id)
+
+    collection = _collection()
+    if collection is not None:
+        try:
+            await collection.update_one(
+                {"_id": user_id},
+                {"$addToSet": {"preferences.tours_completed": {"$each": allowed}},
+                 "$set": {"updated_at": _now()}},
+            )
+            document = await get_user_by_id(user_id)
+            return {**DEFAULT_PREFERENCES, **((document or {}).get("preferences") or {})}
+        except Exception as exc:
+            print(f"⚠️ Mongo tour write failed, using fallback: {exc}")
+
+    current = await get_preferences(user_id)
+    merged = list(current.get("tours_completed") or [])
+    for slug in allowed:
+        if slug not in merged:
+            merged.append(slug)
+    document = await _set_fields(
+        user_id, {"preferences.tours_completed": merged, "updated_at": _now()})
+    return {**DEFAULT_PREFERENCES, **((document or {}).get("preferences") or {})}
+
+
+async def get_preferences(user_id: str) -> dict[str, Any]:
+    document = await get_user_by_id(user_id)
+    return {**DEFAULT_PREFERENCES, **((document or {}).get("preferences") or {})}
+
+
 async def touch_last_login(user_id: str) -> None:
-    await _set_fields(user_id, {"last_login_at": _now()})
+    """Stamp this login, and keep the one before it.
+
+    `previous_login_at` exists because "what happened since you were last here"
+    is unanswerable once `last_login_at` has been overwritten — by the time the
+    dashboard asks, the current session IS the last login. Carrying the old
+    value across is the cheapest way to keep the question answerable, and it is
+    the window the teacher's daily brief is written against.
+    """
+    document = await get_user_by_id(user_id) or {}
+    fields = {"last_login_at": _now()}
+    previous = document.get("last_login_at")
+    if previous:
+        fields["previous_login_at"] = previous
+    await _set_fields(user_id, fields)
 
 
 async def set_current_moe_session(user_id: str, session_id: Optional[str]) -> None:

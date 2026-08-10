@@ -1,0 +1,221 @@
+@import '../shared/teacher-shared.css';
+
+/* Container metrics come from teacher-shared.css. */
+
+.tch-roster__head h1 { margin: 0; font-size: var(--sp-fs-2xl); color: var(--sp-ink-900); }
+.tch-roster__subtitle { margin: var(--sp-1) 0 var(--sp-4); color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
+
+.tch-roster__controls {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-block-end: var(--sp-4);
+}
+
+.tch-roster__filters { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.tch-roster__filters .is-active { background: var(--sp-primary-100); color: var(--sp-primary-700); }
+
+.tch-roster__search { display: inline-flex; align-items: center; gap: var(--sp-2); color: var(--sp-ink-400); }
+.tch-roster__search input { min-inline-size: 200px; }
+
+.tch-roster__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--sp-3);
+}
+
+.tch-studentCard {
+  display: grid;
+  gap: var(--sp-2);
+  align-content: start;
+  padding: var(--sp-4);
+  block-size: 100%;
+  cursor: pointer;
+  transition: transform var(--sp-dur-fast) var(--sp-ease),
+              box-shadow var(--sp-dur-fast) var(--sp-ease),
+              border-color var(--sp-dur-fast) var(--sp-ease);
+}
+
+.tch-studentCard:hover {
+  transform: translateY(-2px);
+  border-color: var(--tch-hover-ring);
+  box-shadow: var(--sp-shadow-md);
+}
+
+.tch-studentCard.is-flagged { border-inline-start: 3px solid var(--sp-warn-600); }
+
+/* Never started: the card stays fully readable but stops looking like an
+   active learner. Muted, not alarming — this is a gap to close, not a fault. */
+.tch-studentCard.is-idle .tch-studentCard__avatar {
+  background: var(--sp-ink-100);
+  color: var(--sp-ink-400);
+}
+
+.tch-studentCard__head { display: flex; align-items: center; gap: var(--sp-2); }
+
+.tch-studentCard__avatar {
+  inline-size: 38px;
+  block-size: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--sp-gradient);
+  color: #fff;
+  font-weight: var(--sp-fw-bold);
+  flex-shrink: 0;
+}
+
+.tch-studentCard__evidence {
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+
+@media (max-width: 600px) {
+  .tch-roster__grid { grid-template-columns: 1fr; }
+  .tch-roster__search input { min-inline-size: 0; inline-size: 100%; }
+}
+
+/* Presence on the roster card. The timestamp is not decoration — it is what
+   keeps the dot from claiming more than the server actually knows. */
+.tch-studentCard__presence {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.tch-studentCard__seen {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  white-space: nowrap;
+}
+
+/* ── the live board ───────────────────────────────────────────────────────── */
+/* Moved here from Home: "who is in the room right now" is a question about the
+   class list, and on the dashboard it competed with the attention inbox. */
+.tch-roster__live { margin-block-end: var(--sp-4); }
+
+/* ── controls ─────────────────────────────────────────────────────────────── */
+
+.tch-roster__tools { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
+
+.tch-roster__views { display: inline-flex; gap: var(--sp-1); }
+.tch-roster__views .is-active { background: var(--sp-primary-100); color: var(--sp-primary-700); }
+
+.tch-roster__columns { position: relative; }
+.tch-roster__columns .is-active { background: var(--sp-primary-100); color: var(--sp-primary-700); }
+
+.tch-roster__columnMenu {
+  position: absolute;
+  z-index: 20;
+  inset-block-start: calc(100% + var(--sp-1));
+  inset-inline-end: 0;
+  min-inline-size: 190px;
+  display: grid;
+  gap: 2px;
+  padding: var(--sp-2);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface);
+  box-shadow: var(--sp-shadow-md);
+}
+
+.tch-roster__columnMenu label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--sp-radius-sm);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+  cursor: pointer;
+}
+
+.tch-roster__columnMenu label:hover { background: var(--sp-bg-subtle); }
+
+/* Value filters sit below the chips rather than inside the header cells: a <th>
+   that is both a sort button and a select is a keyboard trap, and these narrow
+   the card view too. */
+.tch-roster__colFilters {
+  display: flex;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-block-end: var(--sp-4);
+}
+
+.tch-roster__colFilters label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+
+.tch-roster__colFilters select { font-size: var(--sp-fs-sm); padding-block: var(--sp-1); }
+
+/* ── the table view ───────────────────────────────────────────────────────── */
+
+.tch-roster__tableWrap {
+  border: 1px solid var(--tch-card-border, var(--sp-border));
+  border-radius: var(--sp-radius-md);
+  background: var(--tch-card-bg, var(--sp-surface));
+}
+
+.tch-roster__table th { position: sticky; inset-block-start: 0; background: inherit; z-index: 1; }
+
+.tch-roster__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.tch-roster__sortIcon { opacity: 0; transition: opacity var(--sp-dur-fast) var(--sp-ease); }
+.tch-roster__sort:hover .tch-roster__sortIcon { opacity: .5; }
+.tch-roster__sortIcon.is-active { opacity: 1; color: var(--sp-primary-600); }
+
+.tch-roster__row { cursor: pointer; }
+.tch-roster__row:hover { background: var(--sp-bg-subtle); }
+.tch-roster__row:focus-visible { outline: 2px solid var(--sp-primary-600); outline-offset: -2px; }
+.tch-roster__row.is-flagged td:first-child { box-shadow: inset 3px 0 0 var(--sp-warn-600); }
+
+.tch-roster__nameCell { display: flex; align-items: center; gap: var(--sp-2); }
+
+.tch-roster__avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 26px;
+  block-size: 26px;
+  border-radius: 50%;
+  background: var(--sp-primary-100);
+  color: var(--sp-primary-700);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+}
+
+/* The status cell is a pill AND its evidence — the pill never travels alone. */
+.tch-roster__statusCell { white-space: normal; max-inline-size: 340px; }
+.tch-roster__evidence {
+  display: block;
+  margin-block-start: 2px;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+
+.tch-roster__presenceCell { display: flex; align-items: center; gap: var(--sp-2); }
+
+/* Seven days without a trace is the number the product already treats as a
+   dropped-off child, so the column says it rather than making the teacher count. */
+.tch-roster__table td.is-stale { color: var(--sp-warn-600); font-weight: var(--sp-fw-semibold); }

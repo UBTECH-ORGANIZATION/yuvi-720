@@ -125,26 +125,32 @@ async def build_all(identity: dict, session_id: str) -> list[tuple[str, str, dic
         identity, session_id, conversation_id,
         speaker="bot", conversation_trigger="student-request", help_type="hint",
         component_id=COMPONENT_ID, item_id=QUESTION_ITEM_ID,
+        ecat_item_id=ecat, hierarchy=question_level,
     ))
     add("conversation", "rated", statements.conversation_rated(
         identity, session_id, conversation_id, "like",
+        ecat_item_id=ecat, hierarchy=question_level,
     ))
 
     # ── Reflection (question statements carry their own text) ─────────────────
     reflection_id = str(uuid.uuid4())
     add("questionnaire (reflection)", "initialized", statements.reflection_initialized(
         identity, session_id, reflection_id, "end-of-learning-component",
+        ecat_item_id=ecat, hierarchy=question_level,
     ))
     add("question (reflection)", "answered", statements.reflection_answered(
         identity, session_id, reflection_id, 1, score_raw=4,
         question_he="עד כמה הרגשת שהצלחת במשימה?",
+        ecat_item_id=ecat, hierarchy=question_level,
     ))
     add("question (reflection)", "skipped", statements.reflection_skipped(
         identity, session_id, reflection_id, 2,
         question_he="מה היה החלק הכי מאתגר?",
+        ecat_item_id=ecat, hierarchy=question_level,
     ))
     add("questionnaire (reflection)", "completed", statements.reflection_completed(
         identity, session_id, reflection_id, 180,
+        ecat_item_id=ecat, hierarchy=question_level,
     ))
 
     # ── Mentoring + goals ─────────────────────────────────────────────────────
@@ -185,31 +191,31 @@ async def build_all(identity: dict, session_id: str) -> list[tuple[str, str, dic
         question_he=question.get("questionText"),
         response="מאזני כפות | מאזניים דיגיטליים",
         attempt_number=2, success=True, score_scaled=1.0, duration_seconds=41,
-        hierarchy=question_level,
+        ecat_item_id=ecat, hierarchy=question_level,
     ))
 
     # ── Item skipped ──────────────────────────────────────────────────────────
     add("item", "skipped", statements.item_skipped(
         identity, session_id,
         object_id=f"{CONTENT_BASE}/{COMPONENT_ID}/{QUESTION_ITEM_ID}",
-        hierarchy=question_level,
+        ecat_item_id=ecat, hierarchy=question_level,
     ))
 
     # ── Media (all three carry format/position/duration) ──────────────────────
     media_object = f"{CONTENT_BASE}/{COMPONENT_ID}/{MEDIA_ITEM_ID}"
     add("video / audio / animation (media)", "played", statements.media_event(
         identity, session_id, "played", object_id=media_object, media_format="video",
-        media_position_seconds=0, media_duration_seconds=73, hierarchy=media_level,
+        media_position_seconds=0, media_duration_seconds=73, ecat_item_id=ecat, hierarchy=media_level,
     ))
     add("video / audio / animation (media)", "paused", statements.media_event(
         identity, session_id, "paused", object_id=media_object, media_format="video",
         media_position_seconds=38, media_duration_seconds=73, duration_seconds=38,
-        hierarchy=media_level,
+        ecat_item_id=ecat, hierarchy=media_level,
     ))
     add("video / audio / animation (media)", "completed", statements.media_event(
         identity, session_id, "completed", object_id=media_object, media_format="video",
         media_position_seconds=73, media_duration_seconds=73, duration_seconds=73,
-        hierarchy=media_level,
+        ecat_item_id=ecat, hierarchy=media_level,
     ))
 
     # ── Help request + non-learning selection (kebab-case selectionType) ──────
@@ -218,12 +224,13 @@ async def build_all(identity: dict, session_id: str) -> list[tuple[str, str, dic
         object_id=f"{CONTENT_BASE}/{COMPONENT_ID}/{QUESTION_ITEM_ID}",
         object_type="item", help_source="platform", help_type="hint",
         parent=question_level.get("parent") or None,
+        ecat_item_id=ecat, hierarchy=question_level,
     ))
     add("item", "selected", statements.selected(
         identity, session_id,
         object_id=f"{CONTENT_BASE}/{COMPONENT_ID}/{MEDIA_ITEM_ID}",
         object_type="item", selection_type="learningType", response="listening",
-        hierarchy=media_level,
+        ecat_item_id=ecat, hierarchy=media_level,
     ))
     # The unit level is reported by its own statements too (content rules §1).
     add("learning-unit", "initialized", statements.enriched_content_statement(
@@ -264,20 +271,15 @@ async def main(dry_run: bool, only: str | None) -> int:
                 status = str(response["status"])
             except Exception as exc:  # keep going: one rejection is not the run
                 status = f"error: {type(exc).__name__}"
-        sent.append({
-            "Object Type": kind,
-            "Verb": verb,
-            "Id": statement["id"],
-            "Status": status,
-            "Object Id": (statement.get("object") or {}).get("id", ""),
-        })
+        # The ministry's table is exactly three columns; the post status and the
+        # object id are run diagnostics for us, so they stay on the console and
+        # out of the deliverable.
+        sent.append({"Object Type": kind, "Verb": verb, "Id": statement["id"]})
         print(f"{status:>8}  {kind:<34} {verb:<12} {statement['id']}")
 
     csv_path = ARTIFACTS / "lrs-contract-report.csv"
     with csv_path.open("w", newline="", encoding="utf-8-sig") as handle:
-        writer = csv.DictWriter(
-            handle, fieldnames=["Object Type", "Verb", "Id", "Status", "Object Id"]
-        )
+        writer = csv.DictWriter(handle, fieldnames=["Object Type", "Verb", "Id"])
         writer.writeheader()
         writer.writerows(sent)
     json_path = ARTIFACTS / "lrs-contract-report.json"

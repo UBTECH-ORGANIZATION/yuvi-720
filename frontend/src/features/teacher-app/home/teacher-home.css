@@ -1,0 +1,213 @@
+@import '../shared/teacher-shared.css';
+
+/* Container metrics come from teacher-shared.css — only page-specific layout
+   lives here, so the three pages cannot drift apart on width or padding. */
+
+.tch-home__head { margin-block-end: var(--sp-5); }
+.tch-home__head h1 { margin: 0; font-size: var(--sp-fs-2xl); color: var(--sp-ink-900); letter-spacing: -0.01em; }
+.tch-home__subtitle { margin: var(--sp-1) 0 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
+.tch-home__dot { unicode-bidi: isolate; white-space: pre; }
+
+/* The class picker IS the page title: same type, plus an affordance chevron.
+   A teacher switches class here, on the dashboard — not in the chrome. */
+.tch-home__classPick { position: relative; display: inline-flex; align-items: center; }
+
+.tch-home__classPick select {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: var(--sp-fs-2xl);
+  font-weight: var(--sp-fw-bold);
+  color: var(--sp-ink-900);
+  letter-spacing: -0.01em;
+  padding: 0 var(--sp-1);
+  padding-inline-end: 26px;
+  cursor: pointer;
+  border-radius: var(--sp-radius-sm);
+}
+
+.tch-home__classPick select:hover { background: var(--sp-bg-subtle); }
+.tch-home__classPick select:focus-visible { outline: 2px solid var(--sp-primary-600); outline-offset: 2px; }
+
+.tch-home__classChevron {
+  position: absolute;
+  inset-inline-end: 4px;
+  color: var(--sp-ink-400);
+  pointer-events: none;
+  transform: rotate(180deg);
+}
+
+/* Flat lists: rows separate themselves with hairlines, the container adds none. */
+.tch-home__attention { display: grid; gap: 0; }
+
+/* Two short reads share a row where there is room; the row collapses cleanly. */
+.tch-home__row {
+  display: grid;
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+@media (min-width: 980px) {
+  .tch-home__row { grid-template-columns: 1fr 1fr; }
+  .tch-home__row .tch-zone { margin-block-end: var(--sp-5); }
+  /* One panel left in this row since the weekly digest was superseded by the
+     brief at the top of the page — a lone card in a 1fr 1fr grid is a card and
+     an equal column of nothing. */
+  .tch-home__row--single { grid-template-columns: 1fr; }
+}
+
+/* Quiet-panel subtitle — replaces the old stuttering double header. */
+.tch-panelSub {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+
+
+/* KPI strip styles live in teacher-shared.css (`.tch-stats` / `.tch-stat`) —
+   the same cards head Home, the student profile and the learnings screen. */
+
+/* ── the inbox ────────────────────────────────────────────────────────────── */
+
+/* Was a two-column split with the live board beside it. The live board moved to
+   the roster — "who is here right now" is a question about the class list — and
+   the inbox took the full width rather than leaving a 2fr column of air. */
+.tch-home__cols {
+  display: grid;
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+/* The inbox scrolls inside its card: five students visible, the rest a wheel
+   away — the page keeps its shape no matter how loud the week was. */
+.tch-home__inboxScroll {
+  display: grid;
+  gap: var(--sp-2);
+  max-block-size: 460px;
+  overflow-y: auto;
+  padding-inline-end: 2px;
+}
+
+/* Gap rows: flat, hairline-separated, each carrying its own inline meter —
+   the picture the old bar chart drew lives on the row itself now. */
+.tch-gaps__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+
+.tch-gap {
+  padding: var(--sp-3) var(--sp-1);
+  display: grid;
+  gap: var(--sp-2);
+  border-block-end: 1px solid var(--sp-border);
+}
+
+.tch-gap:last-child { border-block-end: 0; }
+
+.tch-gap__head { display: flex; justify-content: space-between; gap: var(--sp-2); flex-wrap: wrap; }
+.tch-gap__head strong { color: var(--sp-ink-900); }
+.tch-gap__share { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); font-variant-numeric: tabular-nums; }
+
+.tch-gap__meter {
+  display: block;
+  block-size: 7px;
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-bg-subtle);
+  overflow: hidden;
+}
+
+.tch-gap__meterFill {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: var(--sp-warn-600);
+  transition: inline-size var(--sp-dur) var(--sp-ease);
+}
+
+.tch-gap--strength .tch-gap__meterFill { background: var(--sp-success-600); }
+
+.tch-groupRecs { display: grid; gap: var(--sp-2); padding-block-start: var(--sp-2); }
+.tch-groupRecs ul { margin: 0; padding-inline-start: var(--sp-4); display: grid; gap: var(--sp-2); }
+.tch-groupRecs li { color: var(--sp-ink-700); font-size: var(--sp-fs-sm); }
+
+@media (max-width: 600px) {
+  .tch-home { padding-block-start: var(--sp-4); }
+  .tch-stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+}
+
+/* Realtime alerts sit above the derived attention flags: minutes old outranks
+   days old. */
+.tch-home__alerts { display: grid; gap: 0; }
+
+/* ── sub-group goal assignment ─────────────────────────────────────────────
+   Collapsed by default: the gap itself is the information, assigning is the
+   optional follow-up. Names are listed unnumbered and unscored — a selection
+   set, never a ranking (MoE C5). */
+
+.tch-subgroup { margin-block-start: var(--sp-2); }
+
+.tch-subgroup__summary {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--sp-fs-xs);
+  font-weight: 600;
+  color: var(--sp-primary-700);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--sp-radius-sm);
+}
+
+.tch-subgroup__summary:hover { background: var(--sp-primary-050); }
+.tch-subgroup__summary::marker { content: ''; }
+
+/* The open form is an indented flat section — the row is its container. */
+.tch-subgroup__body {
+  display: grid;
+  gap: var(--sp-3);
+  margin-block-start: var(--sp-2);
+  padding: var(--sp-2) 0 var(--sp-1);
+  border-block-start: 1px dashed var(--sp-border-strong);
+}
+
+.tch-subgroup__people { display: grid; gap: var(--sp-1); }
+
+.tch-subgroup__peopleLabel {
+  font-size: var(--sp-fs-xs);
+  font-weight: 600;
+  color: var(--sp-ink-400);
+}
+
+.tch-subgroup__people ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+
+.tch-subgroup__grid {
+  display: grid;
+  gap: var(--sp-2) var(--sp-3);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.tch-subgroup__field { display: grid; gap: var(--sp-1); align-content: start; }
+.tch-subgroup__field--wide { grid-column: 1 / -1; }
+
+.tch-subgroup__field label {
+  font-size: var(--sp-fs-xs);
+  font-weight: 600;
+  color: var(--sp-ink-400);
+}
+
+.tch-subgroup__field textarea { resize: vertical; }
+
+.tch-subgroup__actions { display: flex; justify-content: flex-end; }
+
+.tch-subgroup__outcome { margin: 0; font-size: var(--sp-fs-sm); }
+.tch-subgroup__outcome--ok { color: var(--sp-success-600); }
+.tch-subgroup__outcome--error { color: var(--sp-danger-600); }
+
+/* Mixed-direction rows: the separator must stay neutral and not be absorbed
+   into whichever run the bidi algorithm resolves around it. */
+.tch-groupRecs__sep { unicode-bidi: isolate; white-space: pre; }

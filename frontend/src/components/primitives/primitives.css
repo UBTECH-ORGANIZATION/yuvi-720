@@ -735,3 +735,35 @@
 @media (prefers-reduced-motion: reduce) {
   .user-menu__pop { animation: none; }
 }
+
+/* ── skeletons ─────────────────────────────────────────────────────────────*/
+
+.sp-skeleton {
+  display: block;
+  border-radius: var(--sp-radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--sp-surface-2) 25%,
+    var(--sp-bg-subtle) 42%,
+    var(--sp-surface-2) 60%
+  );
+  background-size: 220% 100%;
+  animation: sp-skeleton-sweep 1.4s ease-in-out infinite;
+}
+
+.sp-skeleton__rows { display: grid; gap: var(--sp-2); }
+
+.sp-skeleton__card {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+}
+
+@keyframes sp-skeleton-sweep {
+  0% { background-position: 180% 0; }
+  100% { background-position: -40% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-skeleton { animation: none; }
+}

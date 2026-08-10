@@ -161,6 +161,49 @@ button:disabled {
   direction: ltr;
 }
 
+/* Teacher lane. Simpler than the learner shell — no companion rail to lay out
+   around, just chrome above a scrolling page. */
+/* Teacher workspace: a fixed-height shell whose columns scroll independently —
+   the pages in one, the assistant panel in the other. The background is scoped
+   here (like `.sd-page` does for the student side) because the global `--sp-bg`
+   token deliberately never flips in dark mode; without this the dark teacher
+   app was dark cards floating on a light page. */
+.sp-teacher-shell {
+  block-size: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: clip;
+  background:
+    radial-gradient(900px 520px at 88% -6%, rgba(159, 122, 254, .10), transparent 60%),
+    radial-gradient(760px 480px at 4% 4%, rgba(76, 201, 240, .08), transparent 55%),
+    linear-gradient(180deg, #f8f7ff 0%, var(--sp-bg) 46%, #f3f0fd 100%);
+}
+
+.sp-teacher-shell__work {
+  flex: 1;
+  min-block-size: 0;
+  display: flex;
+}
+
+.sp-teacher-shell__main {
+  flex: 1;
+  min-inline-size: 0;
+  overflow-y: auto;
+  overflow-x: clip;
+}
+
+/* Twilight, matching the student dashboard's dark language (dark-mode.css
+   `.sd-page`) but calmer — this is a work surface, so the glows are fewer and
+   the base sits in the #14–#22 violet range rather than near-black. */
+[data-theme='dark'] .sp-teacher-shell {
+  background-color: #1d1740;
+  background-image:
+    radial-gradient(1100px 640px at 55% -8%, rgba(150, 118, 255, .22), transparent 60%),
+    radial-gradient(780px 520px at 4% 10%, rgba(96, 190, 245, .10), transparent 58%),
+    radial-gradient(900px 620px at 96% 88%, rgba(158, 124, 250, .12), transparent 62%),
+    linear-gradient(180deg, #251d4e 0%, #1d1740 52%, #171233 100%);
+}
+
 .sp-learner-shell__content {
   flex: 1 1 auto;
   min-inline-size: 0;

@@ -1,9 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
+  acknowledgeKudos,
   createCoachConversation,
   coachSurfaceForPath,
   deleteCoachConversation,
   getCoachSupportState,
+  getPendingKudos,
   listCoachConversations,
   listCoachMessages,
   streamCoach,
@@ -18,6 +20,7 @@ import {
   type CoachSupportMode,
   type HelpMethod,
   type LessonItemKind,
+  type PendingKudos,
   type TriggerAlternative,
   type VisualMode,
 } from '../services/agents'
@@ -186,6 +189,11 @@ interface CompanionContextValue {
    *  intro/cover). Used to suppress the generic greeting there — the
    *  per-question intro carries the welcome instead. */
   onQuestionFrame: boolean
+  /** A מילה טובה from a teacher, waiting to be read. Shown as a card inside the
+   *  chat — the teacher's own words, not Yuvi's paraphrase — and it stays until
+   *  the child acknowledges it. */
+  pendingKudos: PendingKudos | null
+  acknowledgeKudos: () => Promise<void>
   /** 720 misconception response: a different-representation component the learner
    *  can switch to, offered after a repeated misconception (null when none). */
   pendingAlternative: TriggerAlternative | null
@@ -276,6 +284,11 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isOpening, setIsOpening] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
+  /* Teacher praise waiting to be read. Held here rather than in the chat panel
+     because it must survive the panel being closed and re-opened — the child
+     has not seen it until they say they have. */
+  const [pendingKudos, setPendingKudos] = useState<PendingKudos | null>(null)
+  const loadKudosRef = useRef<((options?: { open?: boolean }) => void) | null>(null)
   const [panelWidth, setPanelWidth] = useState(430)
   const [messages, setMessages] = useState<CoachMessage[]>([])
   // Latest messages for handlers that must read them without being re-created.
@@ -1444,11 +1457,22 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
 
   const NUDGE_TYPES = useMemo(() => new Set([
     'misconception', 'mistake', 'slow_progress', 'idle', 'success', 'rapid_guessing', 'wheel_spinning',
+    // `kudos` is deliberately NOT here. Teacher praise is not a tutoring nudge:
+    // it is a named adult saying something to a child, and Yuvi paraphrasing it
+    // into a new conversation both changed the words and let them scroll away.
+    // It comes back as a card instead — see `pendingKudos` below.
   ]), [])
 
   // Trigger SSE — []-dep so it is NOT torn down and rebuilt on every nudge (a
   // rebuild could drop a trigger landing in the reconnect gap). Reads only refs.
+  // Only a learner has a trigger stream. A teacher- or admin-only account gets
+  // 403 from this endpoint, and EventSource retries a failed connection forever
+  // — one wasted connection slot and a request every three seconds, for the life
+  // of the tab. The provider is mounted app-wide, so the guard belongs here.
+  const canReceiveTriggers = Boolean(user?.roles?.includes('learner'))
+
   useEffect(() => {
+    if (!canReceiveTriggers) return
     const close = subscribeTriggers(
       (trigger) => {
         // Component-level completion is a STATE signal, not a coach nudge: hand
@@ -1463,6 +1487,13 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         // The learner moved to a new screen — re-key instantly (schedules intro).
         if (trigger.type === 'screen_change') {
           applyQuestionKeyRef.current?.(trigger.question_key ?? null, 'push')
+          return
+        }
+        // A teacher just sent praise while the child is in the app: fetch the
+        // words and put the card up. The trigger carries no text — a client
+        // that could supply it could forge a message from a teacher.
+        if (trigger.type === 'kudos') {
+          loadKudosRef.current?.({ open: true })
           return
         }
         if (NUDGE_TYPES.has(trigger.type)) {
@@ -1483,7 +1514,40 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       () => { void syncSupportStateRef.current?.() },
     )
     return close
-  }, [NUDGE_TYPES, enqueueChatAction])
+  }, [NUDGE_TYPES, enqueueChatAction, canReceiveTriggers])
+
+  /* ── teacher praise ───────────────────────────────────────────────────────
+     Three ways in, one card: on load (it may have arrived while they were
+     away), on the live trigger, and from the bell — whose deep link carries
+     `?kudos=`, which opens the panel and shows whatever is waiting. */
+  const loadKudos = useCallback((options: { open?: boolean } = {}) => {
+    if (!user?.roles?.includes('learner')) return
+    getPendingKudos()
+      .then((result) => {
+        if (!result.kudos) return
+        setPendingKudos(result.kudos)
+        if (options.open) open()
+      })
+      .catch(() => { /* praise is not worth an error state */ })
+  }, [user, open])
+  loadKudosRef.current = loadKudos
+
+  useEffect(() => { loadKudos() }, [loadKudos])
+
+  useEffect(() => {
+    if (!pathname.includes('kudos=')) return
+    loadKudos({ open: true })
+  }, [pathname, loadKudos])
+
+  const ackKudos = useCallback(async () => {
+    const current = pendingKudos
+    setPendingKudos(null)          // optimistic: the child pressed OK
+    if (!current) return
+    await acknowledgeKudos(current.id).catch(() => { /* server retries on reload */ })
+    // Praise queues oldest-first, so a child who was away for a week reads one
+    // card at a time rather than being handed a stack.
+    loadKudos()
+  }, [pendingKudos, loadKudos])
 
   // The offer is scoped to the question it was raised on — drop it when the
   // learner moves to a new screen or component (including after accepting it),
@@ -1559,6 +1623,8 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         currentQuestionKey,
         onQuestionFrame,
         pendingAlternative,
+        pendingKudos,
+        acknowledgeKudos: ackKudos,
         openExplainer,
         closeExplainer,
         explainerOpen,

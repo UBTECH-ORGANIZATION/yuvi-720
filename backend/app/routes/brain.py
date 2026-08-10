@@ -26,14 +26,14 @@ import uuid
 router = APIRouter(prefix="/api/brain", tags=["brain"])
 
 
-def _authorized_id(actor: dict[str, Any], learner_id: str) -> str:
+async def _authorized_id(actor: dict[str, Any], learner_id: str) -> str:
     """Sanitize the path id and prove the caller may read it.
 
     Every route in this router takes `learner_id` from the URL, so without this
     check any authenticated caller could read any learner's brain.
     """
     safe_id = normalize_learner_id(learner_id)
-    assert_can_read_learner(actor, safe_id)
+    await assert_can_read_learner(actor, safe_id)
     return safe_id
 
 
@@ -46,7 +46,7 @@ async def read_own_brain(actor: dict = Depends(current_user)):
 @router.get("/{learner_id}")
 async def read_brain(learner_id: str, actor: dict = Depends(current_user)):
     """Return the brain document for UI rendering (dashboards, results, teacher)."""
-    brain = await get_brain(_authorized_id(actor, learner_id))
+    brain = await get_brain(await _authorized_id(actor, learner_id))
     return JSONResponse(content=brain)
 
 
@@ -57,7 +57,7 @@ async def create_activeness_goal(learner_id: str, data: dict, actor: dict = Depe
     Writes a `visible_to_learner` goal into `brain.goals` so it appears in the
     dashboard "My goals" card, tagged with its source activeness `domain`.
     """
-    safe_id = _authorized_id(actor, learner_id)
+    safe_id = await _authorized_id(actor, learner_id)
     text = (data.get("text") or "").strip()
     if not text:
         return JSONResponse(status_code=400, content={"error": "text required"})
@@ -109,7 +109,7 @@ async def update_goal_status(
     `in_progress` reports MoE `student-goal/updated`; `done` reports
     `student-goal/completed` — both from this real product action.
     """
-    safe_id = _authorized_id(actor, learner_id)
+    safe_id = await _authorized_id(actor, learner_id)
     status = (data.get("status") or "").strip()
     if status not in {"in_progress", "done"}:
         return JSONResponse(status_code=400, content={"error": "invalid status"})
@@ -140,7 +140,7 @@ async def read_dashboard(learner_id: str, lang: str = "he", actor: dict = Depend
     learner migrated from legacy state), seed it via the Onboarding agent so
     competencies/strengths render (same behavior as POST /generate-dashboard).
     """
-    safe_id = _authorized_id(actor, learner_id)
+    safe_id = await _authorized_id(actor, learner_id)
     await kata_catalog.ensure_loaded()
     brain = await get_brain(safe_id)
     scores = (brain.get("profile") or {}).get("mapping_scores")
@@ -193,7 +193,7 @@ async def read_coach_bundle(learner_id: str, actor: dict = Depends(current_user)
     Useful for verification: this payload is exactly what the Coach agent will
     see, and it must contain no name/PII (§4.1, §11).
     """
-    bundle = await build_coach_bundle(_authorized_id(actor, learner_id))
+    bundle = await build_coach_bundle(await _authorized_id(actor, learner_id))
     return JSONResponse(content=bundle)
 
 
@@ -201,7 +201,7 @@ async def read_coach_bundle(learner_id: str, actor: dict = Depends(current_user)
 async def read_agent_view(learner_id: str, agent: str, actor: dict = Depends(current_user)):
     """Return an agent's scoped read view — demonstrates least-context (§5.8)."""
     try:
-        view = await view_for(agent, _authorized_id(actor, learner_id))
+        view = await view_for(agent, await _authorized_id(actor, learner_id))
     except AgentScopeError as exc:
         return JSONResponse(content={"error": str(exc)}, status_code=404)
     return JSONResponse(content=view)

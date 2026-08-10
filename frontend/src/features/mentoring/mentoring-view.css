@@ -570,3 +570,27 @@
   .mt-modal-backdrop { padding: var(--sp-3); }
   .mt-modal { padding: var(--sp-6) var(--sp-5); }
 }
+
+/* Arrived here from a notification: flash the goal so the eye lands on the row
+   the bell was talking about.
+
+   The fade is the ANIMATION's job, not a timer's. A JS timer that removes the
+   class is at the mercy of every other re-render on this page; the animation
+   runs once and ends by itself, so the class is free to stay. */
+.mt-fgoal.is-flash { border-radius: var(--sp-radius-md); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .mt-fgoal.is-flash { animation: mt-goal-flash 2.4s var(--sp-ease); }
+}
+
+/* Without animation there is nothing to fade, so the marker simply stays — for
+   a reader who arrived here to find one specific goal, that is the right
+   behaviour rather than a flash they may have missed. */
+@media (prefers-reduced-motion: reduce) {
+  .mt-fgoal.is-flash { box-shadow: var(--sp-ring); }
+}
+
+@keyframes mt-goal-flash {
+  0%, 60% { box-shadow: var(--sp-ring); }
+  100%    { box-shadow: none; }
+}

@@ -113,7 +113,11 @@ async def cleanup():
 
 
 async def main():
-    org.ENROLLMENTS.append({"learner_id": LID, "group_id": GROUP})
+    # Enrollments live in Mongo now (`org_*` collections), not in module
+    # constants — enroll through the repository so the scoping path under test
+    # is the real one.
+    from app.services import org_repository
+    await org_repository.enroll_learner(LID, GROUP)
     await cleanup()
 
     transport = ASGITransport(app=app)
@@ -450,7 +454,7 @@ async def main():
         check("chat never set mastery (no fake objective)", "x" not in (await get_brain(LID))["mastery"])
 
     await cleanup()
-    org.ENROLLMENTS[:] = [e for e in org.ENROLLMENTS if e["learner_id"] != LID]
+    await org_repository.unenroll_learner(LID, GROUP)
 
     print(f"\n{'='*60}\nRESULT: {len(PASS)} passed · {len(FAIL)} failed")
     if FAIL:
