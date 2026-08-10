@@ -16,10 +16,14 @@ const SEGMENT_LABELS: Record<string, Trilingual> = {
   // Domains (subjects)
   SCI: { he: 'מדע וטכנולוגיה', ar: 'العلوم والتكنولوجيا', en: 'Science & Technology' },
   MATH: { he: 'מתמטיקה', ar: 'الرياضيات', en: 'Mathematics' },
+  ENG: { he: 'אנגלית', ar: 'الإنجليزية', en: 'English' },
   // Science chapters
   CHEM: { he: 'כימיה', ar: 'الكيمياء', en: 'Chemistry' },
   PHYS: { he: 'פיזיקה', ar: 'الفيزياء', en: 'Physics' },
   BIO: { he: 'ביולוגיה', ar: 'الأحياء', en: 'Biology' },
+  // English chapters + sub-topics
+  PEOPLE: { he: 'אנשים וזהות', ar: 'الناس والهوية', en: 'People and identity' },
+  FAMILY: { he: 'משפחה מודרנית', ar: 'العائلة العصرية', en: 'Modern family' },
   // Sub-topics seen in the current catalog
   'BODY-MAT-PROP': { he: 'תכונות החומר', ar: 'خصائص المادة', en: 'Properties of matter' },
   'MASS-VOL': { he: 'מסה ונפח', ar: 'الكتلة والحجم', en: 'Mass & volume' },

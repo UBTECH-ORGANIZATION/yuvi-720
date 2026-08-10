@@ -17,7 +17,7 @@ from __future__ import annotations
 import time
 from typing import Any, Optional
 
-from app.services import kata_client
+from app.services import kata_client, native_content
 
 # Time source is injected so tests / offline runs stay deterministic; falls back
 # to wall clock. (No Date.now-style hidden state in the accessors themselves.)
@@ -30,6 +30,7 @@ _SNAPSHOT: dict[str, Any] = {
     "components": {},         # component_id -> normalized component
     "components_by_obj": {},  # objective_id -> [component_id, …]
     "units": {},              # unit_id -> normalized unit
+    "registry": [],           # last good Kata goal registry (survives an outage)
 }
 
 
@@ -156,27 +157,52 @@ def _build_snapshot(
     }
 
 
+async def _native() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """The Yuvilab-authored catalog (English). Local, so it never fails hard."""
+    try:
+        return (
+            await native_content.list_units(),
+            await native_content.list_objectives(),
+        )
+    except Exception as exc:  # authored content must never take the spine down
+        print(f"⚠️ authored catalog unavailable: {type(exc).__name__}: {exc}")
+        return [], []
+
+
 async def ensure_loaded(force: bool = False) -> None:
     """Refresh the snapshot if stale/empty. Safe to call on every async entry."""
     fresh = (_now() - _SNAPSHOT["loaded_at"]) < _TTL_SECONDS and _SNAPSHOT["objectives"]
     if fresh and not force:
         return
+
+    native_units, native_registry = await _native()
     try:
         units = await kata_client.list_units()
     except kata_client.KataError:
-        # Keep serving the last good snapshot on a transient Kata outage; only a
-        # cold cache surfaces empty (callers already tolerate an empty spine).
-        if _SNAPSHOT["objectives"]:
-            return
-        raise
-    try:
-        registry = await kata_client.list_objectives()
-    except Exception as exc:
-        # The goal registry is metadata: without it we still have every unit, so
-        # fall back to unit titles + prerequisite depth rather than serving nothing.
-        print(f"⚠️ learning-goal registry unavailable, using unit metadata: {exc}")
-        registry = []
-    _SNAPSHOT.update(_build_snapshot(units, registry))
+        # A Kata outage (or simply no API key in a local/English-only run) must
+        # not hide the catalog we author ourselves. Keep the last good Kata units
+        # + registry and merge the fresh authored ones over them; only a cold
+        # cache with nothing authored surfaces the error.
+        if not native_units and not _SNAPSHOT["objectives"]:
+            raise
+        units = [
+            unit for unit in _SNAPSHOT["units"].values()
+            if unit.get("source") != native_content.SOURCE
+        ]
+        registry = list(_SNAPSHOT["registry"])
+        if not units:
+            print("⚠️ Kata unavailable — serving the Yuvilab-authored catalog only")
+    else:
+        try:
+            registry = await kata_client.list_objectives()
+        except Exception as exc:
+            # The goal registry is metadata: without it we still have every unit, so
+            # fall back to unit titles + prerequisite depth rather than serving nothing.
+            print(f"⚠️ learning-goal registry unavailable, using unit metadata: {exc}")
+            registry = []
+
+    _SNAPSHOT.update(_build_snapshot(units + native_units, registry + native_registry))
+    _SNAPSHOT["registry"] = registry
 
 
 async def refresh() -> None:

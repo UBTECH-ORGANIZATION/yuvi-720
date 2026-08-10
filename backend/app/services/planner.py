@@ -16,7 +16,7 @@ from typing import Any
 
 from app.services.kata_catalog import objectives_for
 
-DEFAULT_SUBJECTS = ("math", "science")
+DEFAULT_SUBJECTS = ("math", "science", "english")
 
 
 def _mastered(objective_id: str, mastery: dict[str, Any]) -> bool:

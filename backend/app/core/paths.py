@@ -12,3 +12,5 @@ REACT_APP_DIR = BASE_DIR / "static" / "react"
 REACT_ASSETS_DIR = REACT_APP_DIR / "assets"
 UNITY_WORLD_DIR = REACT_APP_DIR / "unity-world"
 LEARNING_GAME_FILE = LEARNING_AGENT_DIR / "game.html"
+# The Yuvilab lomda player — a standalone document, framed by us and by 720.
+ENGLISH_PLAYER_DIR = LEARNING_AGENT_DIR / "english-player"

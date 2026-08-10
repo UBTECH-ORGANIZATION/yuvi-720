@@ -20,6 +20,7 @@ SVG_NS = "http://www.w3.org/2000/svg"
 _SUBJECT_LABELS = {
     "math": {"he": "מתמטיקה", "ar": "الرياضيات", "en": "mathematics"},
     "science": {"he": "מדע", "ar": "العلوم", "en": "science"},
+    "english": {"he": "אנגלית", "ar": "الإنجليزية", "en": "English"},
     "biology": {"he": "ביולוגיה", "ar": "الأحياء", "en": "biology"},
     "physics": {"he": "פיזיקה", "ar": "الفيزياء", "en": "physics"},
     "astronomy": {"he": "אסטרונומיה", "ar": "علم الفلك", "en": "astronomy"},
