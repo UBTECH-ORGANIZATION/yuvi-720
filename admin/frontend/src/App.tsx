@@ -1,11 +1,17 @@
 import { useEffect, useState } from 'react'
 import { getAuthStatus, logout } from './api'
 import { LanguageSwitcher, useI18n } from './i18n/I18nProvider'
+import { LeadsDashboard } from './leads/LeadsDashboard'
 import type { AdminIdentity, AuthStatus } from './types'
 import { UsageDashboard } from './usage/UsageDashboard'
 
 
 type LoadState = 'loading' | 'ready' | 'error'
+type Section = 'usage' | 'leads'
+
+function sectionFromHash(): Section {
+  return window.location.hash === '#leads' ? 'leads' : 'usage'
+}
 
 export function App() {
   const { t } = useI18n()
@@ -121,9 +127,21 @@ function AdminShell({
 }) {
   const { t } = useI18n()
   const [loggingOut, setLoggingOut] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
+  // Leads carry contact details, so they exist only for a signed-in administrator.
+  const canSeeLeads = admin !== null
+  const [section, setSection] = useState<Section>(sectionFromHash)
+  const activeSection: Section = canSeeLeads ? section : 'usage'
+
+  useEffect(() => {
+    const onHashChange = () => setSection(sectionFromHash())
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
   return (
     <div className="admin-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}`}>
         <div className="sidebar-brand">
           <BrandMark compact />
           <div>
@@ -131,12 +149,43 @@ function AdminShell({
             <span>{t('app.admin')}</span>
           </div>
         </div>
+        <button
+          className="sidebar-toggle"
+          type="button"
+          aria-expanded={!collapsed}
+          title={t(collapsed ? 'nav.expand' : 'nav.collapse')}
+          onClick={() => setCollapsed((value) => !value)}
+        >
+          <ChevronIcon />
+          <span>{t('nav.collapse')}</span>
+        </button>
         <nav aria-label={t('nav.operations')}>
           <p className="nav-label">{t('nav.operations')}</p>
-          <a className="nav-item nav-item--active" href="#usage" aria-current="page">
+          <a
+            className={`nav-item${activeSection === 'usage' ? ' nav-item--active' : ''}`}
+            href="#usage"
+            title={t('nav.aiUsage')}
+            aria-current={activeSection === 'usage' ? 'page' : undefined}
+            onClick={() => setSection('usage')}
+          >
             <UsageIcon />
             <span>{t('nav.aiUsage')}</span>
           </a>
+          {canSeeLeads ? (
+            <>
+              <p className="nav-label">{t('nav.growth')}</p>
+              <a
+                className={`nav-item${activeSection === 'leads' ? ' nav-item--active' : ''}`}
+                href="#leads"
+                title={t('nav.leads')}
+                aria-current={activeSection === 'leads' ? 'page' : undefined}
+                onClick={() => setSection('leads')}
+              >
+                <LeadsIcon />
+                <span>{t('nav.leads')}</span>
+              </a>
+            </>
+          ) : null}
         </nav>
       </aside>
       <div className="admin-workspace">
@@ -162,7 +211,9 @@ function AdminShell({
             </div>
           ) : <span className="public-access-badge">{t('shell.publicAccess')}</span>}
         </header>
-        <UsageDashboard onUnauthorized={onUnauthorized} />
+        {activeSection === 'leads'
+          ? <LeadsDashboard onUnauthorized={onUnauthorized} />
+          : <UsageDashboard onUnauthorized={onUnauthorized} />}
       </div>
     </div>
   )
@@ -185,6 +236,22 @@ function UsageIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M4 19V9M10 19V5M16 19v-7M22 19H2" />
+    </svg>
+  )
+}
+
+function LeadsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 5h16v14H4zM4 10h16M10 10v9" />
+    </svg>
+  )
+}
+
+function ChevronIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M15 6l-6 6 6 6" />
     </svg>
   )
 }

@@ -68,6 +68,13 @@ async def student_dashboard_route(path: str = ""):
     return serve_react_app()
 
 
+@router.get("/yuvi-studio")
+@router.get("/yuvi-studio/{path:path}")
+async def yuvi_studio_route(path: str = ""):
+    """Serve the React app shell for the Yuvi studio route."""
+    return serve_react_app()
+
+
 @router.get("/teacher-view")
 @router.get("/teacher-view/{path:path}")
 async def teacher_view_route(path: str = ""):

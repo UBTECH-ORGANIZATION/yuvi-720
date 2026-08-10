@@ -25,11 +25,13 @@ export const Yuvi_SLOTS: YuviSlot[] = ['headTop', 'face', 'back', 'handR', 'body
 export const DEFAULT_DESIGN: YuviDesign = {
   version: 1,
   variant: 'classic',
-  colors: { body: '#85878C', eyes: '#4eeef0', smile: '#74f7ff', glow: '#3fd9e0' },
+  colors: { body: '#F1F2FB', eyes: '#4eeef0', smile: '#74f7ff', glow: '#7C6BFF' },
   equipped: { headTop: null, face: null, back: null, handR: null, body: null },
 }
 
-const LEGACY_DEFAULT_BODY_COLOR = '#717378'
+// Both retired grey shells are promoted to the current pearl default so saved
+// avatars pick up the refreshed look instead of staying flat grey.
+const LEGACY_DEFAULT_BODY_COLORS = ['#717378', '#85878C']
 
 export function cloneDesign(design: YuviDesign): YuviDesign {
   return {
@@ -54,7 +56,7 @@ export function normalizeDesign(raw: unknown): YuviDesign {
     for (const key of ['body', 'eyes', 'smile', 'glow'] as const) {
       if (typeof colors[key] !== 'string') continue
       const color = colors[key] as string
-      base.colors[key] = key === 'body' && color.toUpperCase() === LEGACY_DEFAULT_BODY_COLOR
+      base.colors[key] = key === 'body' && LEGACY_DEFAULT_BODY_COLORS.includes(color.toUpperCase())
         ? DEFAULT_DESIGN.colors.body
         : color
     }

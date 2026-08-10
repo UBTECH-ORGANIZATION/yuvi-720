@@ -53,6 +53,20 @@ const ICON_PATHS: Record<string, ReactNode> = {
     <rect x="9.5" y="4.5" width="4.5" height="15" rx="1.2" />
     <path d="m16.4 6.2 3.6 1 -3.1 12 -3.6-1z" />
   </>,
+  collapse: <><path d="M3 9h4a1 1 0 0 0 1-1V4" /><path d="M21 9h-4a1 1 0 0 1-1-1V4" /><path d="M21 15h-4a1 1 0 0 0-1 1v4" /><path d="M3 15h4a1 1 0 0 1 1 1v4" /></>,
+  home: <><path d="m3 10.5 9-7 9 7" /><path d="M5.5 9v10.5a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V9" /><path d="M10 20.5V14h4v6.5" /></>,
+  // Yuvi Studio category glyphs — avatar slots, then room prop groups.
+  hat: <><path d="M7 15.5a5 5 0 0 1 10 0" /><path d="M3.5 15.5h14a3.5 3.5 0 0 0 3.5-3.5" /></>,
+  face: <><circle cx="12" cy="12" r="8.5" /><path d="M9 10.5h.01M15 10.5h.01" /><path d="M8.8 14.5a4.2 4.2 0 0 0 6.4 0" /></>,
+  shirt: <path d="M9 3.5 12 6l3-2.5 4 2v5h-3v10H8V10.5H5v-5z" />,
+  hand: <><path d="M9 11.5V5.5a1.5 1.5 0 0 1 3 0V11" /><path d="M12 10.5V4.8a1.5 1.5 0 0 1 3 0V11" /><path d="M15 11V7.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1a5 5 0 0 1-4.3-2.5L5 15c-.6-1 .5-2.1 1.6-1.6L9 14.6" /></>,
+  backpack: <><rect x="5" y="7" width="14" height="14" rx="4" /><path d="M9 7V6a3 3 0 0 1 6 0v1" /><path d="M9.5 13h5v3.5h-5z" /></>,
+  palette: <><path d="M12 3.5a8.5 8.5 0 0 0 0 17c1.4 0 2-.9 2-1.8 0-1.2-1.1-1.6-1.1-2.7 0-.8.7-1.5 1.6-1.5H16a4.5 4.5 0 0 0 4.5-4.5c0-3.7-3.8-6.5-8.5-6.5z" /><path d="M7.5 12h.01M9.5 8.5h.01M14 7.5h.01" /></>,
+  sofa: <><path d="M5 11.5V9a2.5 2.5 0 0 1 5 0v2.5" /><path d="M14 11.5V9a2.5 2.5 0 0 1 5 0v2.5" /><rect x="3.5" y="11.5" width="17" height="6" rx="2" /><path d="M6.5 17.5V19m11-1.5V19" /></>,
+  gamepad: <><rect x="2.5" y="7.5" width="19" height="9" rx="4.5" /><path d="M7 10.5v3M5.5 12h3" /><path d="M15.5 11h.01M18 13h.01" /></>,
+  chip: <><rect x="7" y="7" width="10" height="10" rx="2" /><path d="M10 3v4m4-4v4M10 17v4m4-4v4M3 10h4m-4 4h4m10-4h4m-4 4h4" /></>,
+  sound: <><path d="M4 9.5h3L11.5 6v12L7 14.5H4z" /><path d="M15 9.5a4 4 0 0 1 0 5" /><path d="M17.8 7a7.5 7.5 0 0 1 0 10" /></>,
+  mute: <><path d="M4 9.5h3L11.5 6v12L7 14.5H4z" /><path d="m15.5 10 4 4m0-4-4 4" /></>,
 }
 
 export interface IconProps extends Omit<HTMLAttributes<SVGElement>, 'children'> {
