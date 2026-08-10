@@ -112,7 +112,10 @@ class RealtimeUnavailable(RuntimeError):
 
 
 def is_configured() -> bool:
-    return bool(_endpoint() and _key() and _deployment())
+    # The WebRTC URL counts as configuration: without it we can still mint a
+    # session, but the browser has nowhere to send its offer and the learner
+    # just sees "couldn't connect". Better to report the feature unavailable.
+    return bool(_endpoint() and _key() and _deployment() and _webrtc_url())
 
 
 def _endpoint() -> str:
