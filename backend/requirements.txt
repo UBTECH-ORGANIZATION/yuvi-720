@@ -1,5 +1,7 @@
 fastapi
 uvicorn
+websockets
+python-multipart
 httpx
 mcp>=1.28,<2
 agent-framework-core==1.11.0
@@ -8,6 +10,9 @@ certifi
 defusedxml>=0.7,<1
 PyJWT>=2.9.0,<3.0
 azure-communication-email
+azure-storage-blob>=12.20,<13
+aiohttp>=3.10,<4
+azure-identity>=1.17,<2
 azure-monitor-opentelemetry>=1.6,<2
 opentelemetry-instrumentation-fastapi
 manim>=0.19,<0.20
