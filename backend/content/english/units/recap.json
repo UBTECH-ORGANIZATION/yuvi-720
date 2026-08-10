@@ -1,0 +1,123 @@
+{
+  "id": "ENG.G7.FAMILY.RECAP",
+  "title": "Modern Family — everything in one place",
+  "titleTranslations": {
+    "Hebrew": "משפחה מודרנית — הכול במקום אחד",
+    "Arabic": "العائلة العصرية — كلّ شيء في مكان واحد",
+    "English": "Modern Family — everything in one place"
+  },
+  "subTopic": "MOE.ENG.G7.PEOPLE.FAMILY",
+  "prerequisiteLearningObjective": [],
+  "targetSector": ["כלל המגזרים"],
+  "targetAudience": ["כיתה ז'", "כיתה ח'"],
+  "_comment": "720 §3.4 — the sub-topic summary unit carries NO learningObjective on purpose: it is a review resource, never a goal to master, so the planner must not offer it forever. No practice and no assessment, per the content-development guidance.",
+  "components": [
+    {
+      "id": "ENG.G7.FAMILY.RECAP-01",
+      "learningUnitId": "ENG.G7.FAMILY.RECAP",
+      "title": "Look back at Modern Family",
+      "componentPurpose": "סיכום",
+      "isAssessment": false,
+      "isRequired": false,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 1,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 6,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": [],
+      "skills": ["סיכום", "ארגון ידע"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.RECAP-01-01",
+          "title": "The whole unit in one look",
+          "contentType": "סיכום",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של יחידת הסיכום לתת-הנושא 'משפחה מודרנית'. זו יחידת חזרה בלבד — אין בה תרגול ואין הערכה, ולכן אין ממה להיכשל ואין מה לתקן. המטרה: לתת ללומד מפה של כל מה שעבר, כדי שיוכל לחזור לנקודה שרוצה לפני מבחן או לפני שיחה עם המורה. אם הלומד שואל 'מה עליי לעשות כאן', התשובה היא: לקרוא, לשמוע, ולבחור לאן לחזור.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Everything you met in Modern Family, in one place.",
+              "he": "כל מה שפגשתם ביחידה 'משפחה מודרנית', במקום אחד.",
+              "ar": "كلّ ما التقيتم به في وحدة \"العائلة العصرية\"، في مكان واحد."
+            },
+            "goal": {
+              "en": "Nothing to answer here. Read, listen, and decide what you want to go back to.",
+              "he": "אין כאן על מה לענות. קראו, האזינו, והחליטו לאן בא לכם לחזור.",
+              "ar": "لا شيء للإجابة عنه هنا. اقرأوا، استمعوا، وقرّروا إلى أين تريدون العودة."
+            },
+            "strategy": {
+              "en": "A good way to use this page: read a line, and if it does not feel clear yet, open that goal again.",
+              "he": "דרך טובה להשתמש בדף הזה: קראו שורה, ואם היא עוד לא מרגישה ברורה — פתחו שוב את היעד הזה.",
+              "ar": "طريقة جيّدة لاستعمال هذه الصفحة: اقرأوا سطراً، وإن لم يكن واضحاً بعد — افتحوا ذلك الهدف من جديد."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.RECAP-01-02",
+          "title": "The language of this unit",
+          "contentType": "סיכום",
+          "mediaFormat": "text",
+          "informationToBot": "מסך הסיכום הלשוני. מרכז את המשפטים המרכזיים שהופיעו לאורך היחידה: הצגה עצמית, בני משפחה, שגרה, שייכות, ומילות קישור. כל שורה ניתנת להשמעה. יעד: חזרה מרוכזת לפני הערכה או לפני משימת דיבור. אין ניקוד. אם הלומד מתקשה בשורה מסוימת, כדאי להציע לו את יעד הלמידה שממנו היא הגיעה — אוצר מילים, דקדוק, או הגייה — במקום להסביר את השורה לבד.",
+          "presentation": {
+            "kind": "reading",
+            "prompt": {
+              "en": "Tap any line to hear it again.",
+              "he": "לחצו על שורה כדי לשמוע אותה שוב.",
+              "ar": "اضغطوا على أيّ سطر لسماعه من جديد."
+            },
+            "lines": [
+              "My name is Maya. I am thirteen years old.",
+              "I have got one brother and one sister.",
+              "My brother's name is Adam. He plays football every Tuesday.",
+              "My little sister Noa is six, and she paints all day.",
+              "My grandmother lives near us and she cooks the best soup.",
+              "I like our Saturdays, but they are always very noisy.",
+              "We meet at Grandma's place because everyone can walk there."
+            ],
+            "language": "en-US",
+            "rate": 0.9,
+            "glossary": [
+              { "word": "have got", "he": "יש לי", "ar": "لديّ" },
+              { "word": "every Tuesday", "he": "בכל יום שלישי", "ar": "كلّ يوم ثلاثاء" },
+              { "word": "but", "he": "אבל", "ar": "لكن" },
+              { "word": "because", "he": "כי", "ar": "لأنّ" },
+              { "word": "near us", "he": "לידנו", "ar": "بقربنا" }
+            ]
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.RECAP-01-03",
+          "title": "Where do you want to go back to?",
+          "contentType": "סיכום",
+          "mediaFormat": "text",
+          "informationToBot": "מסך הסיום של יחידת הסיכום. אין כאן שאלות. אם הלומד מבקש המלצה לאן לחזור, יש להסתמך על ההתקדמות האמיתית שלו ביעדי היחידה ולא להמציא — ולנסח את זה כבחירה שלו, לא כתיקון של חולשה.",
+          "presentation": {
+            "kind": "summary",
+            "onSuccess": {
+              "en": "You have met listening, reading, words, grammar, sounds, speaking, writing, messages and mediation — all around one family.",
+              "he": "פגשתם האזנה, קריאה, מילים, דקדוק, צלילים, דיבור, כתיבה, הודעות ותיווך — הכול סביב משפחה אחת.",
+              "ar": "التقيتم بالاستماع والقراءة والمفردات والقواعد والأصوات والمحادثة والكتابة والرسائل والوساطة — كلّه حول عائلة واحدة."
+            },
+            "onRetry": {
+              "en": "You have met listening, reading, words, grammar, sounds, speaking, writing, messages and mediation — all around one family.",
+              "he": "פגשתם האזנה, קריאה, מילים, דקדוק, צלילים, דיבור, כתיבה, הודעות ותיווך — הכול סביב משפחה אחת.",
+              "ar": "التقيتم بالاستماع والقراءة والمفردات والقواعد والأصوات والمحادثة والكتابة والرسائل والوساطة — كلّه حول عائلة واحدة."
+            },
+            "nextHint": {
+              "en": "Any goal in this unit stays open. Pick the one you want to feel stronger in.",
+              "he": "כל יעד ביחידה נשאר פתוח. בחרו את זה שבא לכם להרגיש בו חזקים יותר.",
+              "ar": "كلّ هدف في هذه الوحدة يبقى مفتوحاً. اختاروا الهدف الذي تريدون أن تشعروا فيه بقوّة أكبر."
+            }
+          },
+          "questions": []
+        }
+      ]
+    }
+  ]
+}

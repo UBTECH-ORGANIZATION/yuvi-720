@@ -1,0 +1,832 @@
+{
+  "id": "ENG.G7.FAMILY.PRAGMA",
+  "title": "Saying it right: invite, accept, refuse",
+  "titleTranslations": {
+    "Hebrew": "אומרים את זה נכון: להזמין, להסכים ולסרב",
+    "Arabic": "نقولها كما يجب: الدعوة والقبول والاعتذار",
+    "English": "Saying it right: invite, accept, refuse"
+  },
+  "subTopic": "MOE.ENG.G7.PEOPLE.FAMILY",
+  "learningObjective": "MOE.ENG.G7.PEOPLE.FAMILY.PRAGMA",
+  "prerequisiteLearningObjective": [],
+  "targetSector": ["כלל המגזרים"],
+  "targetAudience": ["כיתה ז'", "כיתה ח'"],
+  "components": [
+    {
+      "id": "ENG.G7.FAMILY.PRAGMA-01",
+      "learningUnitId": "ENG.G7.FAMILY.PRAGMA",
+      "title": "and, but, because — and a polite no",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 2,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 9,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.PRAGMA-01B"],
+      "skills": ["פרגמטיקה", "קישור רעיונות", "נימוס לשוני"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.PRAGMA-01-01",
+          "title": "Before you read",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההבנייה ביעד הפרגמטיקה. המטרה: להסביר שהיעד כאן אינו 'אנגלית נכונה' אלא 'אנגלית שמעבירה את הכוונה' — איך אומרים לא בלי לפגוע, ואיך מחברים שני רעיונות כך שהמאזין מבין את הקשר. הלומד אמור לשים לב לשלוש מילות הקישור and, but, because ולנוסחת הסירוב המנומס. אסטרטגיה: לקרוא את השיחה פעם אחת ולשאול 'מה כל אחד רוצה כאן', ורק אז להסתכל על המילים. תפיסה שגויה נפוצה: לומדים חושבים ש-'No' לבד זו תשובה תקינה באנגלית כמו 'לא' בעברית — באנגלית זה נשמע חד ולא מנומס, וצריך תודה וסיבה.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Sometimes the words are correct, but they still sound wrong.",
+              "he": "לפעמים המילים נכונות, ובכל זאת זה נשמע לא בסדר.",
+              "ar": "أحياناً تكون الكلمات صحيحة، ومع ذلك تبدو غير مناسبة."
+            },
+            "goal": {
+              "en": "You are going to see how people invite, say yes, and say no without hurting anyone.",
+              "he": "אתם הולכים לראות איך אנשים מזמינים, אומרים כן, ואומרים לא בלי לפגוע באף אחד.",
+              "ar": "ستَرَون كيف يدعو الناس، وكيف يقولون نعم، وكيف يقولون لا دون أن يجرحوا أحداً."
+            },
+            "strategy": {
+              "en": "Read the conversation once and ask: what does each person want here?",
+              "he": "קראו את השיחה פעם אחת ושאלו: מה כל אחד רוצה כאן?",
+              "ar": "اقرأوا المحادثة مرّة واحدة واسألوا: ماذا يريد كلّ شخص هنا؟"
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.PRAGMA-01-02",
+          "title": "Maya invites Sara",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט ההבנייה המרכזי. הלומד קורא שיחה קצרה שבה מאיה מזמינה את שרה לארוחה משפחתית ושרה מסרבת בנימוס. יעד: לזהות את שלוש מילות הקישור ואת מבנה הסירוב המנומס — תודה, סירוב, סיבה. אוצר מילים בליבה: Would you like to, I can't come, because, Maybe next time. אסטרטגיה: לחפש קודם את המילה שמופיעה לפני הסיבה, ואז לבדוק מה בא לפניה. תפיסות שגויות נפוצות: (1) בלבול בין but ל-because — בעברית ובערבית אפשר לחבר הרבה משפטים ב'ו', ולכן לומדים בוחרים את מילת הקישור לפי הרגל ולא לפי משמעות; (2) לומדים חושבים ש-'Thank you' פירושו שהתשובה חיובית, בעוד שכאן הוא רק ריכוך לפני סירוב. זהו רכיב הבנייה — מותר להסביר בהרחבה ולתת דוגמאות נוספות.",
+          "presentation": {
+            "kind": "reading",
+            "prompt": {
+              "en": "Read the conversation. Tap any line to hear it.",
+              "he": "קראו את השיחה. לחצו על שורה כדי לשמוע אותה.",
+              "ar": "اقرأوا المحادثة. اضغطوا على أيّ سطر لسماعه."
+            },
+            "lines": [
+              "Maya: Hi Sara! We are having a family lunch on Saturday.",
+              "Maya: Would you like to come? My grandmother is making her soup.",
+              "Sara: Thank you, but I can't come on Saturday.",
+              "Sara: I can't come because my cousin is getting married that day.",
+              "Maya: No problem! Maybe next time."
+            ],
+            "language": "en-US",
+            "rate": 0.9,
+            "glossary": [
+              { "word": "Would you like to ...?", "he": "האם תרצה/י ל...?", "ar": "هل تودّ/ين أن...؟" },
+              { "word": "I can't come", "he": "אני לא יכול/ה להגיע", "ar": "لا أستطيع الحضور" },
+              { "word": "because", "he": "כי, מפני ש־", "ar": "لأنّ" },
+              { "word": "Maybe next time", "he": "אולי בפעם הבאה", "ar": "ربّما في المرّة القادمة" }
+            ]
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Which word does Sara use to give her reason?",
+              "answers": ["and", "but", "because", "maybe"],
+              "correctAnswers": ["because"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. \"Because\" always opens the reason.",
+                  "he": "כן. \"Because\" תמיד פותחת את הסיבה.",
+                  "ar": "نعم. \"Because\" تفتح السبب دائماً."
+                },
+                "incorrect": {
+                  "en": "A reason answers the question \"why?\". Find the line where Sara explains why she cannot come, and look at the word right before the explanation.",
+                  "he": "סיבה עונה על השאלה \"למה?\". אתרו את השורה שבה שרה מסבירה למה היא לא יכולה להגיע, והסתכלו על המילה שממש לפני ההסבר.",
+                  "ar": "السبب يجيب عن سؤال \"لماذا؟\". ابحثوا عن السطر الذي تشرح فيه سارة سبب عدم قدرتها على الحضور، وانظروا إلى الكلمة التي تسبق الشرح مباشرة."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Sara says \"Thank you, but I can't come.\" Why does she say \"thank you\" first?",
+              "answers": [
+                "To say that she is coming",
+                "To be polite before she says no",
+                "To ask Maya a question",
+                "To change the day of the lunch"
+              ],
+              "correctAnswers": ["To be polite before she says no"],
+              "feedback": {
+                "correct": {
+                  "en": "Exactly. In English a \"no\" almost always starts with a thank you.",
+                  "he": "בדיוק. באנגלית סירוב כמעט תמיד מתחיל בתודה.",
+                  "ar": "بالضبط. في الإنجليزية يبدأ الرفض دائماً تقريباً بشكر."
+                },
+                "incorrect": {
+                  "en": "Read to the end of Sara's line before you decide. The word right after \"thank you\" changes everything.",
+                  "he": "קראו עד סוף השורה של שרה לפני שאתם מחליטים. המילה שמיד אחרי \"thank you\" משנה הכול.",
+                  "ar": "اقرأوا سطر سارة حتى نهايته قبل أن تقرّروا. الكلمة التي تلي \"thank you\" مباشرةً تغيّر كلّ شيء."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "\"I want to come ___ I am busy.\" Which word fits?",
+              "answers": ["and", "but", "because", "so"],
+              "correctAnswers": ["but"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. The two parts pull in different directions, and \"but\" shows that.",
+                  "he": "נכון. שני החלקים מושכים לכיוונים שונים, ו-\"but\" מראה את זה.",
+                  "ar": "صحيح. الجزءان يتجاذبان في اتّجاهين مختلفين، و\"but\" تُظهر ذلك."
+                },
+                "incorrect": {
+                  "en": "Ask yourself whether the second part agrees with the first part or works against it. That decides the word.",
+                  "he": "שאלו את עצמכם אם החלק השני מסכים עם הראשון או פועל נגדו. זה מה שקובע את המילה.",
+                  "ar": "اسألوا أنفسكم هل الجزء الثاني يتّفق مع الأوّل أم يعاكسه. هذا ما يحدّد الكلمة."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.PRAGMA-01-03",
+          "title": "How do you invite, and how do you answer?",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט הבנייה שני, שעובר מזיהוי בטקסט לבחירה עצמאית של ניסוח. יעד: להבחין בין הוראה לבין הזמנה, ובין תשובה חיובית חמימה לבין תשובה שנשמעת אדישה. מה לתרגל: 'Would you like to ...?' כנוסחת הזמנה, ו-'Thank you, I'd love to' כתשובה חיובית. אסטרטגיה: לדמיין מי מקבל את המשפט ואיך הוא מרגיש כשקורא אותו. תפיסות שגויות נפוצות: (1) לומדים חושבים שמשפט ציווי קצר ('Come to my house') הוא הזמנה — באנגלית זה נשמע כמו הוראה; (2) לומדים בוחרים תשובת סירוב מנומסת גם כשהתרחיש אומר שהם כן יכולים לבוא, כי הם זוכרים את הנוסחה ולא את המצב. כדאי להחזיר אותם לשאלה 'מה המצב כאן — כן או לא'.",
+          "presentation": {
+            "kind": "practice",
+            "prompt": {
+              "en": "Two situations. Choose the words that fit.",
+              "he": "שני מצבים. בחרו את המילים שמתאימות.",
+              "ar": "موقفان. اختاروا الكلمات المناسبة."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Which one is a polite invitation?",
+              "answers": [
+                "Come to my house on Saturday.",
+                "Would you like to come to my house on Saturday?",
+                "You come Saturday.",
+                "My house, Saturday."
+              ],
+              "correctAnswers": ["Would you like to come to my house on Saturday?"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. An invitation asks — it does not tell.",
+                  "he": "כן. הזמנה שואלת — היא לא מצווה.",
+                  "ar": "نعم. الدعوة تسأل — ولا تأمر."
+                },
+                "incorrect": {
+                  "en": "Look at which option ends with a question mark and leaves the other person free to say no. That is what makes it an invitation.",
+                  "he": "הסתכלו איזו אפשרות מסתיימת בסימן שאלה ומשאירה לצד השני חופש לסרב. זה מה שהופך אותה להזמנה.",
+                  "ar": "انظروا أيّ خيار ينتهي بعلامة استفهام ويترك للطرف الآخر حرّية الرفض. هذا ما يجعله دعوة."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Your friend invites you and you CAN come. What do you say?",
+              "answers": [
+                "Thank you, I'd love to come!",
+                "Thank you, but I can't come.",
+                "No problem, maybe next time.",
+                "I can't come because I am busy."
+              ],
+              "correctAnswers": ["Thank you, I'd love to come!"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. \"I'd love to\" says yes and sounds happy about it.",
+                  "he": "נכון. \"I'd love to\" אומר כן ונשמע שמח על זה.",
+                  "ar": "صحيح. \"I'd love to\" تقول نعم وتبدو سعيدة بذلك."
+                },
+                "incorrect": {
+                  "en": "Three of these answers are ways of saying no. Read the situation again — can you come or not?",
+                  "he": "שלוש מהתשובות האלה הן דרכים לומר לא. קראו שוב את המצב — אתם יכולים לבוא או לא?",
+                  "ar": "ثلاث من هذه الإجابات هي طرق لقول لا. اقرأوا الموقف مرّة أخرى — هل تستطيعون الحضور أم لا؟"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.PRAGMA-01-04",
+          "title": "What surprised you?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף רכיב ההבנייה. יעד: שהלומד ישים לב שהחוקים החברתיים של השפה שונים משפת האם שלו, ולא רק המילים. אין תשובה נכונה ואין ניקוד. אם נבחר 'מילות הקישור מבלבלות אותי' — כדאי לחזק את ההבחנה בין and/but/because לפני התרגול. אם נבחר 'הסירוב נשמע לי ארוך מדי' — זו הזדמנות להסביר שבאנגלית האורך הוא הנימוס עצמו.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "What was new for you here?",
+              "he": "מה היה חדש עבורכם כאן?",
+              "ar": "ما الذي كان جديداً بالنسبة لكم هنا؟"
+            },
+            "choices": [
+              {
+                "id": "connectors",
+                "label": {
+                  "en": "The joining words are confusing",
+                  "he": "מילות הקישור מבלבלות אותי",
+                  "ar": "أدوات الربط تربكني"
+                }
+              },
+              {
+                "id": "long-no",
+                "label": {
+                  "en": "Saying no takes so many words",
+                  "he": "לומר לא לוקח כל כך הרבה מילים",
+                  "ar": "قول لا يتطلّب كلمات كثيرة"
+                }
+              },
+              {
+                "id": "invite",
+                "label": {
+                  "en": "An invitation has to be a question",
+                  "he": "הזמנה חייבת להיות שאלה",
+                  "ar": "الدعوة يجب أن تكون سؤالاً"
+                }
+              },
+              {
+                "id": "known",
+                "label": {
+                  "en": "I already knew most of this",
+                  "he": "כבר הכרתי את רוב זה",
+                  "ar": "كنت أعرف معظم هذا مسبقاً"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.PRAGMA-01B",
+      "learningUnitId": "ENG.G7.FAMILY.PRAGMA",
+      "title": "Hear the invitation",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": false,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 1,
+      "mediaFormat": "audio",
+      "estimatedTimeInMinutes": 8,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": [],
+      "skills": ["פרגמטיקה", "קישור רעיונות", "נימוס לשוני"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.PRAGMA-01B-01",
+          "title": "Listen to the tone, not only the words",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של הייצוג החלופי לרכיב ההבנייה. אותו יעד — הזמנה, הסכמה וסירוב מנומס — אבל בערוץ אחר: כאן שומעים את השיחה במקום לקרוא אותה, כי נימוס נשמע בטון ולא רק במילים. מיועד ללומד שהטקסט הכתוב לא הבהיר לו למה 'No' לבד נשמע חד. אסטרטגיה: להאזין פעם אחת רק לטון ולזהות מי מרוצה ומי מתנצל, ורק אז להאזין למילים. לא לומר ללומד שזה רכיב 'קל יותר' — זו דרך אחרת להגיע לאותו יעד.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "This time you will hear the conversation instead of reading it.",
+              "he": "הפעם תשמעו את השיחה במקום לקרוא אותה.",
+              "ar": "هذه المرّة ستسمعون المحادثة بدل قراءتها."
+            },
+            "goal": {
+              "en": "Listen for two things: who invites, and how the other person says no without being rude.",
+              "he": "האזינו לשני דברים: מי מזמין, ואיך הצד השני אומר לא בלי להיות גס.",
+              "ar": "استمعوا إلى أمرين: من يدعو، وكيف يقول الطرف الآخر لا دون أن يكون فظّاً."
+            },
+            "strategy": {
+              "en": "Listen once for the feeling in the voices. Then listen again for the words.",
+              "he": "האזינו פעם אחת לתחושה בקולות. אחר כך האזינו שוב למילים.",
+              "ar": "استمعوا مرّة للإحساس في الأصوات. ثم استمعوا مرّة أخرى للكلمات."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.PRAGMA-01B-02",
+          "title": "A phone call from Maya",
+          "contentType": "הבנייה",
+          "mediaFormat": "audio",
+          "informationToBot": "פריט ההבנייה בייצוג הקולי. אותה שיחה כמו בייצוג הכתוב, אבל נשמעת: מאיה מזמינה, שרה מסרבת בנימוס ומנמקת. יעד: לזהות באוזן את מהלך ההזמנה והסירוב ואת מילת הסיבה. אסטרטגיה: התמליל פתוח בכוונה — כאן היעד אינו הבנת הנשמע אלא הפרגמטיקה, ולכן אין סיבה להסתיר את המילים. תפיסות שגויות נפוצות: (1) לומדים שומעים 'Thank you' ומסיקים שהתשובה חיובית; (2) לומדים מפספסים את הסיבה כי היא נאמרת אחרי הסירוב ולא לפניו, בניגוד להרגל בעברית ובערבית שבו הסיבה לעיתים קודמת. מותר להסביר בהרחבה — זה רכיב הבנייה.",
+          "presentation": {
+            "kind": "listening",
+            "prompt": {
+              "en": "Listen to Maya and Sara. You can open the transcript any time.",
+              "he": "האזינו למאיה ולשרה. אפשר לפתוח את התמליל בכל רגע.",
+              "ar": "استمعوا إلى مايا وسارة. يمكنكم فتح النصّ المكتوب في أيّ وقت."
+            },
+            "script": "Hi Sara, it's Maya. We are having a family lunch on Saturday at my grandmother's house. Would you like to come? Oh, thank you! That sounds really nice, but I can't come on Saturday. Really? Why not? Because my cousin is getting married that day. I am so sorry. No problem! Maybe next time. I will send you a photo of the soup.",
+            "language": "en-US",
+            "rate": 0.85,
+            "transcriptAvailable": true,
+            "support": {
+              "he": "התמליל פתוח בכוונה. כאן לא בודקים אם שמעתם כל מילה, אלא אם הבנתם איך אומרים לא בנימוס.",
+              "ar": "النصّ المكتوب متاح عن قصد. هنا لا نفحص إن سمعتم كلّ كلمة، بل إن فهمتم كيف يُقال لا بأدب."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "What does Maya want?",
+              "answers": [
+                "She wants Sara to come to a family lunch",
+                "She wants to visit Sara on Saturday",
+                "She wants a photo of Sara's cousin",
+                "She wants Sara to make soup"
+              ],
+              "correctAnswers": ["She wants Sara to come to a family lunch"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes — that is the invitation, and it comes in the first few seconds.",
+                  "he": "כן — זו ההזמנה, והיא מגיעה בשניות הראשונות.",
+                  "ar": "نعم — هذه هي الدعوة، وتأتي في الثواني الأولى."
+                },
+                "incorrect": {
+                  "en": "Several things are mentioned near the end, but the request comes at the start. Listen again and stop after Maya's question.",
+                  "he": "כמה דברים מוזכרים לקראת הסוף, אבל הבקשה מגיעה בהתחלה. האזינו שוב ועצרו אחרי השאלה של מאיה.",
+                  "ar": "تُذكر أمور عدّة قرب النهاية، لكنّ الطلب يأتي في البداية. استمعوا مرّة أخرى وتوقّفوا بعد سؤال مايا."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Does Sara say yes or no?",
+              "answers": [
+                "She says yes",
+                "She says no, and she gives a reason",
+                "She does not answer",
+                "She says she will decide later"
+              ],
+              "correctAnswers": ["She says no, and she gives a reason"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. A polite \"no\" in English usually comes with a reason.",
+                  "he": "נכון. סירוב מנומס באנגלית מגיע בדרך כלל עם סיבה.",
+                  "ar": "صحيح. الرفض المهذّب في الإنجليزية يأتي عادةً مع سبب."
+                },
+                "incorrect": {
+                  "en": "Sara starts with warm words, so it is easy to hear a yes. Keep listening to the end of her sentence.",
+                  "he": "שרה פותחת במילים חמות, ולכן קל לשמוע שם כן. המשיכו להאזין עד סוף המשפט שלה.",
+                  "ar": "تبدأ سارة بكلمات لطيفة، لذا من السهل سماع موافقة. تابعوا الاستماع حتّى نهاية جملتها."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "Which word comes just before the reason?",
+              "answers": ["but", "because", "and", "really"],
+              "correctAnswers": ["because"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. \"Because\" is the signal that a reason is coming.",
+                  "he": "כן. \"Because\" היא הסימן שסיבה מגיעה.",
+                  "ar": "نعم. \"Because\" هي الإشارة إلى أنّ سبباً قادم."
+                },
+                "incorrect": {
+                  "en": "All four words appear in the call. Find the moment Maya asks \"Why not?\" and listen to the first word of the answer.",
+                  "he": "כל ארבע המילים מופיעות בשיחה. אתרו את הרגע שבו מאיה שואלת \"Why not?\" והאזינו למילה הראשונה בתשובה.",
+                  "ar": "الكلمات الأربع كلّها ترد في المكالمة. حدّدوا اللحظة التي تسأل فيها مايا \"Why not?\" واستمعوا إلى أوّل كلمة في الجواب."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.PRAGMA-01B-03",
+          "title": "Which one told you more?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הייצוג החלופי. יעד: שהלומד יבחין מה נתן לו את המידע — הטון, המילים, או התמליל. אין תשובה נכונה ואין ניקוד. אם נבחר 'הטון' — סימן שהערוץ הקולי עובד לו, וכדאי להציע לו האזנה גם ביעדים הבאים.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "What told you that Sara was saying no?",
+              "he": "מה גילה לכם ששרה אומרת לא?",
+              "ar": "ما الذي دلّكم على أنّ سارة تقول لا؟"
+            },
+            "choices": [
+              {
+                "id": "tone",
+                "label": {
+                  "en": "Her tone of voice",
+                  "he": "טון הדיבור שלה",
+                  "ar": "نبرة صوتها"
+                }
+              },
+              {
+                "id": "words",
+                "label": {
+                  "en": "The words \"but\" and \"can't\"",
+                  "he": "המילים \"but\" ו-\"can't\"",
+                  "ar": "الكلمتان \"but\" و\"can't\""
+                }
+              },
+              {
+                "id": "transcript",
+                "label": {
+                  "en": "Reading the transcript",
+                  "he": "קריאת התמליל",
+                  "ar": "قراءة النصّ المكتوب"
+                }
+              },
+              {
+                "id": "unsure",
+                "label": {
+                  "en": "I was not sure at first",
+                  "he": "בהתחלה לא הייתי בטוח/ה",
+                  "ar": "لم أكن متأكّداً في البداية"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.PRAGMA-02",
+      "learningUnitId": "ENG.G7.FAMILY.PRAGMA",
+      "title": "Choose your words",
+      "componentPurpose": "תרגול",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 2,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 4,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 11,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.PRAGMA-01B"],
+      "skills": ["פרגמטיקה", "קישור רעיונות", "הפקה כתובה קצרה"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.PRAGMA-02-01",
+          "title": "Now it is your turn to answer",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב התרגול. יעד: להסביר שהמעבר כאן הוא מזיהוי להפקה — עד עכשיו זיהינו ניסוחים בטקסט, מכאן בוחרים ומנסחים בעצמנו. אסטרטגיה: לפני כל בחירה לשאול 'מה אני רוצה שהצד השני ירגיש', ולא רק 'מה נכון דקדוקית'. תפיסה שגויה נפוצה: לומדים בוחרים את התשובה הארוכה ביותר בהנחה שארוך יותר משמעו מנומס יותר — לא תמיד; מה שקובע הוא שיש בה תודה, עמדה ברורה, וסיבה.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Four choices, and then a message you write yourself.",
+              "he": "ארבע בחירות, ואחר כך הודעה שאתם כותבים בעצמכם.",
+              "ar": "أربعة اختيارات، ثم رسالة تكتبونها بأنفسكم."
+            },
+            "goal": {
+              "en": "Say what you mean, give a reason, and stay friendly — all in two or three lines.",
+              "he": "לומר מה שאתם מתכוונים, לתת סיבה, ולהישאר נחמדים — הכול בשתיים-שלוש שורות.",
+              "ar": "قولوا ما تقصدونه، وأعطوا سبباً، وابقوا ودودين — كلّ ذلك في سطرين أو ثلاثة."
+            },
+            "strategy": {
+              "en": "Before each choice, ask: how will the other person feel when they read this?",
+              "he": "לפני כל בחירה שאלו: איך הצד השני ירגיש כשיקרא את זה?",
+              "ar": "قبل كلّ اختيار اسألوا: كيف سيشعر الطرف الآخر عندما يقرأ هذا؟"
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.PRAGMA-02-02",
+          "title": "The right word in the right place",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "פריט התרגול המרכזי. יעד: בחירה עצמאית של מילת קישור לפי משמעות, ובחירה של ניסוח מנומס וברור בשני תרחישים. מה לתרגל: because לסיבה, but לניגוד, ותשובה שמכילה תודה + עמדה + סיבה. אסטרטגיה: לקרוא את שני חצאי המשפט בנפרד ולשאול אם הם מסכימים או מתנגשים. תפיסות שגויות נפוצות: (1) בחירת and כברירת מחדל לכל חיבור, כי בעברית ובערבית 'ו' משמשת גם לניגוד; (2) לומדים חושבים ש-'Maybe' זו תשובה מנומסת, בעוד שבאנגלית תשובה מעורפלת נחשבת פחות מכבדת מסירוב ברור; (3) לומדים משמיטים את הסיבה כי היא נשמעת להם 'תירוץ'. אם הלומד טועה פעמיים באותה מילת קישור, כדאי להחזיר אותו לייצוג הקולי שבו שומעים את הניגוד בטון.",
+          "presentation": {
+            "kind": "practice",
+            "prompt": {
+              "en": "Choose the word or the answer that fits the situation.",
+              "he": "בחרו את המילה או את התשובה שמתאימה למצב.",
+              "ar": "اختاروا الكلمة أو الإجابة التي تناسب الموقف."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "fill-in",
+              "questionText": "I like my cousin ___ he makes me laugh.",
+              "answers": ["and", "but", "because", "or"],
+              "correctAnswers": ["because"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. The second part explains the first part.",
+                  "he": "כן. החלק השני מסביר את החלק הראשון.",
+                  "ar": "نعم. الجزء الثاني يشرح الجزء الأوّل."
+                },
+                "incorrect": {
+                  "en": "Cover the first half and ask: is the second half a reason, an addition, or the opposite? Then choose.",
+                  "he": "כסו את החצי הראשון ושאלו: החצי השני הוא סיבה, תוספת, או ההפך? ואז בחרו.",
+                  "ar": "غطّوا النصف الأوّل واسألوا: هل النصف الثاني سبب أم إضافة أم عكس؟ ثم اختاروا."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "fill-in",
+              "questionText": "Adam plays football ___ he does not play basketball.",
+              "answers": ["and", "because", "but", "so"],
+              "correctAnswers": ["but"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. One sport yes, one sport no — that is a contrast.",
+                  "he": "נכון. ספורט אחד כן, אחד לא — זה ניגוד.",
+                  "ar": "صحيح. رياضة نعم وأخرى لا — هذا تضادّ."
+                },
+                "incorrect": {
+                  "en": "Look at the word \"not\" in the second half. It is pushing against the first half, so the joining word has to show that.",
+                  "he": "הסתכלו על המילה \"not\" בחצי השני. היא דוחפת נגד החצי הראשון, ולכן מילת הקישור צריכה להראות את זה.",
+                  "ar": "انظروا إلى كلمة \"not\" في النصف الثاني. إنّها تعاكس النصف الأوّل، لذا على أداة الربط أن تُظهر ذلك."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "Your aunt invites you, but you have a test on Monday. Which answer is polite AND clear?",
+              "answers": [
+                "No.",
+                "Thank you, but I can't come. I have a test on Monday.",
+                "I don't want to come.",
+                "Maybe. I don't know."
+              ],
+              "correctAnswers": ["Thank you, but I can't come. I have a test on Monday."],
+              "feedback": {
+                "correct": {
+                  "en": "Yes — thank you, a clear no, and a reason. That is the whole pattern.",
+                  "he": "כן — תודה, סירוב ברור, וסיבה. זה כל המבנה.",
+                  "ar": "نعم — شكر، ورفض واضح، وسبب. هذا هو النمط كلّه."
+                },
+                "incorrect": {
+                  "en": "A good refusal does three jobs at once: it thanks, it answers clearly, and it explains. Check which option is missing one of the three.",
+                  "he": "סירוב טוב עושה שלושה דברים בבת אחת: מודה, עונה בבירור, ומסביר. בדקו לאיזו אפשרות חסר אחד מהשלושה.",
+                  "ar": "الرفض الجيّد يؤدّي ثلاث وظائف معاً: يشكر، ويجيب بوضوح، ويشرح. تحقّقوا أيّ خيار ينقصه أحد الثلاثة."
+                }
+              }
+            },
+            {
+              "questionId": "q4",
+              "questionType": "single-choice",
+              "questionText": "Which sentence sounds friendly when you say yes?",
+              "answers": [
+                "Okay.",
+                "Yes I come.",
+                "Thank you! I'd love to come.",
+                "If I must."
+              ],
+              "correctAnswers": ["Thank you! I'd love to come."],
+              "feedback": {
+                "correct": {
+                  "en": "Exactly. Saying yes warmly matters as much as saying no politely.",
+                  "he": "בדיוק. לומר כן בחום חשוב בדיוק כמו לומר לא בנימוס.",
+                  "ar": "بالضبط. قول نعم بدفء لا يقلّ أهمّية عن قول لا بأدب."
+                },
+                "incorrect": {
+                  "en": "Read each option as if someone sent it to you. Which one would make you happy to have invited them?",
+                  "he": "קראו כל אפשרות כאילו מישהו שלח אותה אליכם. איזו מהן תגרום לכם לשמוח שהזמנתם?",
+                  "ar": "اقرأوا كلّ خيار كأنّ أحداً أرسله إليكم. أيّها يجعلكم سعداء لأنّكم دعوتموه؟"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.PRAGMA-02-03",
+          "title": "Answer Uncle Sami",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "פריט הפקה כתובה קצרה. יעד: שהלומד יכתוב תשובה אמיתית להזמנה — כן או לא — עם סיבה ובנימוס. מה לתרגל: הנוסחה תודה + עמדה ברורה + because + סיבה. אסטרטגיה: לכתוב קודם שתי מילים בלבד (כן/לא ולמה) ורק אז לנסח משפט שלם. תפיסות שגויות נפוצות: (1) לומדים כותבים רק את הסיבה בלי לומר כן או לא, וההודעה נשארת מעורפלת; (2) לומדים מתחילים ישר ב-'I can't' בלי תודה. אין תשובה נכונה אחת — התשובה נשלחת לפלטפורמה ולמורה, ולא נבדקת אוטומטית. אין ציון מספרי. אפשר לעזור בניסוח ובאיות, כי זהו רכיב תרגול ולא הערכה.",
+          "presentation": {
+            "kind": "writing",
+            "prompt": {
+              "en": "Uncle Sami invites you to a family picnic on Friday. Write your answer: say yes or no, and give one reason.",
+              "he": "דוד סמי מזמין אתכם לפיקניק משפחתי ביום שישי. כתבו את התשובה שלכם: אמרו כן או לא, ותנו סיבה אחת.",
+              "ar": "العمّ سامي يدعوكم إلى نزهة عائلية يوم الجمعة. اكتبوا إجابتكم: قولوا نعم أو لا، وأعطوا سبباً واحداً."
+            },
+            "placeholder": {
+              "en": "Hi Sami, thank you for ...",
+              "he": "Hi Sami, thank you for ...",
+              "ar": "Hi Sami, thank you for ..."
+            },
+            "checklist": [
+              {
+                "en": "I said yes or no clearly.",
+                "he": "אמרתי כן או לא בבירור.",
+                "ar": "قلت نعم أو لا بوضوح."
+              },
+              {
+                "en": "I used \"because\" to give a reason.",
+                "he": "השתמשתי ב-\"because\" כדי לתת סיבה.",
+                "ar": "استخدمت \"because\" لإعطاء سبب."
+              },
+              {
+                "en": "I started with a thank you.",
+                "he": "פתחתי בתודה.",
+                "ar": "بدأت بالشكر."
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.PRAGMA-03",
+      "learningUnitId": "ENG.G7.FAMILY.PRAGMA",
+      "title": "Check: a message from Uncle Sami",
+      "componentPurpose": "הערכה",
+      "isAssessment": true,
+      "isRequired": true,
+      "order": 3,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 3,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 9,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.PRAGMA-01B"],
+      "skills": ["פרגמטיקה", "קישור רעיונות", "נימוס לשוני"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.PRAGMA-03-01",
+          "title": "This is the check",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההערכה ביעד הפרגמטיקה. יעד: להסביר ללומד שהוא קורא הודעה אמיתית ובוחר את התגובות המתאימות. חשוב מאוד: מכאן ואילך זהו רכיב הערכה. אין לחשוף תשובה, אין לרמוז עליה, ואין לצמצם את מספר האפשרויות עבור הלומד. מותר להזכיר אסטרטגיה כללית בלבד — לקרוא את ההודעה עד הסוף לפני שמחליטים, ולשאול מה הצד השני צריך — ולעודד. אפשר לחזור אחורה ולשנות תשובה לפני הסיום.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Read a real message and choose how you would answer.",
+              "he": "קראו הודעה אמיתית ובחרו איך הייתם עונים.",
+              "ar": "اقرأوا رسالة حقيقية واختاروا كيف كنتم ستجيبون."
+            },
+            "goal": {
+              "en": "Show that you can find what someone needs from you, and answer clearly and politely.",
+              "he": "הראו שאתם יודעים לזהות מה מישהו צריך מכם, ולענות בבירור ובנימוס.",
+              "ar": "أظهِروا أنّكم تستطيعون تحديد ما يحتاجه أحدهم منكم، وأن تجيبوا بوضوح وأدب."
+            },
+            "strategy": {
+              "en": "Read the whole message before you choose anything.",
+              "he": "קראו את כל ההודעה לפני שאתם בוחרים משהו.",
+              "ar": "اقرأوا الرسالة كاملةً قبل أن تختاروا أيّ شيء."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.PRAGMA-03-02",
+          "title": "Friday breakfast in Haifa",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט ההערכה המרכזי. הלומד קורא הודעה קצרה מדוד סמי ובוחר תגובות. יעד: לבדוק שלושה דברים — זיהוי מה מבקשים ממנו, זיהוי מילת הסיבה, ובחירת תגובה מנומסת וברורה גם לסירוב וגם להסכמה. ההודעה חדשה ולא הופיעה ברכיבי ההבנייה, כדי שההצלחה תעיד על המיומנות ולא על זיכרון. זהו רכיב הערכה: אין לחשוף את התשובה, אין לרמוז עליה, ואין לומר אילו אפשרויות לפסול, גם אם הלומד מבקש במפורש. מותר לעודד ולהציע לקרוא את ההודעה שוב. תפיסות שגויות שנבדקות: התייחסות ל-'Maybe' כתשובה מנומסת, השמטת הסיבה, ובחירת מילת קישור לפי הרגל.",
+          "presentation": {
+            "kind": "reading",
+            "prompt": {
+              "en": "Uncle Sami sent this message. Read it, then answer.",
+              "he": "דוד סמי שלח את ההודעה הזו. קראו אותה, ואז ענו.",
+              "ar": "أرسل العمّ سامي هذه الرسالة. اقرأوها، ثم أجيبوا."
+            },
+            "lines": [
+              "Hi! We are making a big family breakfast on Friday at eight.",
+              "It is at my house in Haifa, and my mother is coming too.",
+              "Can you come? Please tell me today, because I need to buy the food."
+            ],
+            "language": "en-US",
+            "rate": 0.9
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "What does Sami need from you?",
+              "answers": ["Money", "An answer today", "Food for the table", "A photo"],
+              "correctAnswers": ["An answer today"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct.",
+                  "he": "נכון.",
+                  "ar": "صحيح."
+                },
+                "incorrect": {
+                  "en": "Food is mentioned, but read carefully who is buying it. Look for the sentence that asks you to do something.",
+                  "he": "אוכל אכן מוזכר, אבל קראו בעיון מי קונה אותו. חפשו את המשפט שמבקש מכם לעשות משהו.",
+                  "ar": "الطعام مذكور فعلاً، لكن اقرأوا بتمعّن من سيشتريه. ابحثوا عن الجملة التي تطلب منكم فعل شيء."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Which word tells you WHY he needs an answer today?",
+              "answers": ["and", "but", "because", "too"],
+              "correctAnswers": ["because"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct.",
+                  "he": "נכון.",
+                  "ar": "صحيح."
+                },
+                "incorrect": {
+                  "en": "Three of these words appear in the message. Only one of them opens an explanation — check the last line again.",
+                  "he": "שלוש מהמילים האלה מופיעות בהודעה. רק אחת מהן פותחת הסבר — בדקו שוב את השורה האחרונה.",
+                  "ar": "ثلاث من هذه الكلمات ترد في الرسالة. واحدة فقط منها تفتح شرحاً — راجعوا السطر الأخير."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "You cannot come. Which answer is polite and clear?",
+              "answers": [
+                "I can't.",
+                "Thank you, but I can't come because I am at my cousin's house on Friday.",
+                "No, sorry.",
+                "Maybe I come, maybe not."
+              ],
+              "correctAnswers": ["Thank you, but I can't come because I am at my cousin's house on Friday."],
+              "feedback": {
+                "correct": {
+                  "en": "Correct.",
+                  "he": "נכון.",
+                  "ar": "صحيح."
+                },
+                "incorrect": {
+                  "en": "Sami has to buy food today, so he needs to know what you decided and why. Check which option leaves him guessing.",
+                  "he": "סמי צריך לקנות אוכל היום, ולכן הוא צריך לדעת מה החלטתם ולמה. בדקו איזו אפשרות משאירה אותו בחוסר ודאות.",
+                  "ar": "على سامي شراء الطعام اليوم، لذا يحتاج أن يعرف ما قرّرتموه ولماذا. تحقّقوا أيّ خيار يتركه في حيرة."
+                }
+              }
+            },
+            {
+              "questionId": "q4",
+              "questionType": "single-choice",
+              "questionText": "You can come. Which answer is best?",
+              "answers": [
+                "Ok bye.",
+                "Yes, thank you! I'd love to come, and I can bring bread.",
+                "I come Friday.",
+                "Yes, but no."
+              ],
+              "correctAnswers": ["Yes, thank you! I'd love to come, and I can bring bread."],
+              "feedback": {
+                "correct": {
+                  "en": "Correct.",
+                  "he": "נכון.",
+                  "ar": "صحيح."
+                },
+                "incorrect": {
+                  "en": "Think about what a good yes contains: a clear answer, warm words, and full sentences. One option has all three.",
+                  "he": "חשבו מה מכילה תשובה חיובית טובה: תשובה ברורה, מילים חמות, ומשפטים שלמים. באפשרות אחת יש את שלושתם.",
+                  "ar": "فكّروا فيما تحتويه الموافقة الجيّدة: إجابة واضحة، وكلمات ودودة، وجمل كاملة. أحد الخيارات يجمعها كلّها."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.PRAGMA-03-03",
+          "title": "You know how to answer now",
+          "contentType": "סיכום",
+          "mediaFormat": "text",
+          "informationToBot": "מסך סיום של רכיב ההערכה. מסכם מילולית מה הלומד עשה ומה הצעד הבא, ללא ציון מספרי וללא השוואה לאף לומד אחר. אם ההערכה לא עברה, המסך אומר במפורש שזה לא סוף הדרך ומפנה לייצוג הקולי של אותו יעד, שבו שומעים את הנימוס בטון הדיבור.",
+          "presentation": {
+            "kind": "summary",
+            "onSuccess": {
+              "en": "You found what someone needed from you, you gave a reason, and you stayed friendly in both a yes and a no. That is what this goal is about.",
+              "he": "זיהיתם מה מבקשים מכם, נתתם סיבה, ונשארתם נחמדים גם בכן וגם בלא. זה בדיוק מה שהיעד הזה בודק.",
+              "ar": "حدّدتم ما طُلب منكم، وأعطيتم سبباً، وبقيتم ودودين في الموافقة والرفض معاً. هذا هو هدف هذه المهمّة."
+            },
+            "onRetry": {
+              "en": "Politeness in a new language is a set of habits, and habits take a few tries. Next we will listen to the same conversation, because the tone of voice makes it much clearer.",
+              "he": "נימוס בשפה חדשה הוא אוסף של הרגלים, והרגלים דורשים כמה ניסיונות. בפעם הבאה נאזין לאותה שיחה, כי טון הדיבור עושה את זה הרבה יותר ברור.",
+              "ar": "الأدب في لغة جديدة مجموعة من العادات، والعادات تحتاج بضع محاولات. في المرّة القادمة سنستمع إلى المحادثة نفسها، لأنّ نبرة الصوت تجعلها أوضح بكثير."
+            },
+            "nextHint": {
+              "en": "Next goal: taking a family message written in Hebrew and passing it on in English.",
+              "he": "היעד הבא: לקחת הודעה משפחתית שנכתבה בעברית ולמסור אותה באנגלית.",
+              "ar": "الهدف التالي: أخذ رسالة عائلية مكتوبة بالعبرية ونقلها بالإنجليزية."
+            }
+          },
+          "questions": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,934 @@
+{
+  "id": "ENG.G7.FAMILY.READ",
+  "title": "Reading: Finding the details in family texts",
+  "titleTranslations": {
+    "Hebrew": "הבנת הנקרא: מוצאים את הפרטים בטקסטים משפחתיים",
+    "Arabic": "فهم المقروء: نجد التفاصيل في النصوص العائلية",
+    "English": "Reading: Finding the details in family texts"
+  },
+  "subTopic": "MOE.ENG.G7.PEOPLE.FAMILY",
+  "learningObjective": "MOE.ENG.G7.PEOPLE.FAMILY.READ",
+  "prerequisiteLearningObjective": [],
+  "targetSector": ["כלל המגזרים"],
+  "targetAudience": ["כיתה ז'", "כיתה ח'"],
+  "components": [
+    {
+      "id": "ENG.G7.FAMILY.READ-01",
+      "learningUnitId": "ENG.G7.FAMILY.READ",
+      "title": "A profile and a weekly schedule",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 2,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 10,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.READ-01B"],
+      "skills": ["הבנת הנקרא", "איתור מידע מפורש"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.READ-01-01",
+          "title": "Before you read",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההבנייה בהבנת הנקרא. המטרה: להסביר ללומד שהמשימה כאן היא איתור מידע ולא הבנה מלאה של כל מילה. הלומד יפגוש שני סוגי טקסט מעשיים — כרטיס פרופיל ולוח זמנים שבועי — שבשניהם המידע מסודר בשדות ולא בפסקה רציפה. אסטרטגיה מרכזית: לקרוא קודם את השאלה, לזהות איזה סוג פרט מחפשים (שם, שעה, מקום, יום), ואז לסרוק את הטקסט רק אחרי הפרט הזה. תפיסה שגויה נפוצה: לומדים קוראים את כל הטקסט מההתחלה לסוף ומנסים לתרגם — וזה מבזבז זמן ומייצר עומס. אין כאן שאלה ואין ניקוד.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "You are going to read two short family texts: a profile card and a weekly schedule.",
+              "he": "עוד רגע תקראו שני טקסטים משפחתיים קצרים: כרטיס פרופיל ולוח זמנים שבועי.",
+              "ar": "بعد قليل ستقرأون نصّين عائليّين قصيرين: بطاقة تعريف وجدولاً أسبوعياً."
+            },
+            "goal": {
+              "en": "Your job is to FIND details, not to understand every word: a name, a place, a day, a time.",
+              "he": "המשימה שלכם היא למצוא פרטים, לא להבין כל מילה: שם, מקום, יום, שעה.",
+              "ar": "مهمّتكم أن تجدوا تفاصيل، لا أن تفهموا كلّ كلمة: اسم، مكان، يوم، وقت."
+            },
+            "strategy": {
+              "en": "Read the question first. Then look only for that kind of detail in the text.",
+              "he": "קראו קודם את השאלה. אחר כך חפשו בטקסט רק את סוג הפרט הזה.",
+              "ar": "اقرأوا السؤال أوّلاً. ثم ابحثوا في النصّ عن ذلك النوع من التفاصيل فقط."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.READ-01-02",
+          "title": "Maya's profile card",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט קריאה ראשון: כרטיס פרופיל בנוי בשדות (NAME, AGE, FAMILY, LIVES IN, FAVOURITE DAY). יעד: לאתר פרט מפורש שמופיע בשדה מסומן. אסטרטגיה: לקרוא את שם השדה בצד ימין של הטקסט האנגלי ולהתאים אותו לשאלה — השאלה 'איפה' מפנה לשדה LIVES IN, השאלה 'למה' מפנה לשדה שיש בו because. תפיסות שגויות נפוצות: (1) בשאלה על מספר הילדים, לומדים סופרים רק את האחים ושוכחים לספור את מאיה עצמה; (2) שמות ערים מוכרים כמו Tel Aviv נבחרים כי הם מוכרים, גם כשהם לא מופיעים בטקסט. אם הלומד טועה, כדאי להפנות אותו לשדה אחד ולא לכל הכרטיס.",
+          "presentation": {
+            "kind": "reading",
+            "prompt": {
+              "en": "Read Maya's profile card. Tap any line to hear it.",
+              "he": "קראו את כרטיס הפרופיל של מאיה. לחצו על שורה כדי לשמוע אותה.",
+              "ar": "اقرأوا بطاقة تعريف مايا. اضغطوا على أيّ سطر لسماعه."
+            },
+            "lines": [
+              "NAME: Maya Cohen",
+              "AGE: 13",
+              "FAMILY: one big brother, Adam, and one little sister, Noa",
+              "LIVES IN: Netanya",
+              "FAVOURITE DAY: Friday, because Grandma cooks soup for everyone"
+            ],
+            "language": "en-US",
+            "rate": 0.85,
+            "glossary": [
+              { "word": "age", "he": "גיל", "ar": "العمر" },
+              { "word": "lives in", "he": "גר ב", "ar": "يسكن في" },
+              { "word": "favourite", "he": "אהוב ביותר", "ar": "المفضّل" },
+              { "word": "because", "he": "כי", "ar": "لأنّ" }
+            ]
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Where does Maya live?",
+              "answers": ["Haifa", "Netanya", "Tel Aviv", "Jerusalem"],
+              "correctAnswers": ["Netanya"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. The card has a line that starts with \"LIVES IN\".",
+                  "he": "כן. בכרטיס יש שורה שמתחילה ב-\"LIVES IN\".",
+                  "ar": "نعم. في البطاقة سطر يبدأ بـ \"LIVES IN\"."
+                },
+                "incorrect": {
+                  "en": "Do not choose the city you know best — choose the one written on the card. Look for the line that starts with \"LIVES IN\".",
+                  "he": "אל תבחרו את העיר שאתם מכירים הכי טוב — בחרו את זו שכתובה בכרטיס. חפשו את השורה שמתחילה ב-\"LIVES IN\".",
+                  "ar": "لا تختاروا المدينة التي تعرفونها أكثر — اختاروا المكتوبة في البطاقة. ابحثوا عن السطر الذي يبدأ بـ \"LIVES IN\"."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "How many children are there in Maya's family?",
+              "answers": ["One", "Two", "Three", "Four"],
+              "correctAnswers": ["Three"],
+              "feedback": {
+                "correct": {
+                  "en": "Right — Adam, Noa and Maya herself.",
+                  "he": "נכון — אדם, נועה, ומאיה עצמה.",
+                  "ar": "صحيح — آدم ونوعا ومايا نفسها."
+                },
+                "incorrect": {
+                  "en": "The FAMILY line names the brother and the sister. Whose card is this? Remember to count that person too.",
+                  "he": "שורת ה-FAMILY מציינת את האח ואת האחות. של מי הכרטיס הזה? זכרו לספור גם אותה.",
+                  "ar": "سطر FAMILY يذكر الأخ والأخت. لمن هذه البطاقة؟ تذكّروا أن تعدّوا ذلك الشخص أيضاً."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "Why is Friday Maya's favourite day?",
+              "answers": [
+                "She plays football",
+                "Grandma cooks soup for everyone",
+                "She paints with Noa",
+                "There is no school in Netanya"
+              ],
+              "correctAnswers": ["Grandma cooks soup for everyone"],
+              "feedback": {
+                "correct": {
+                  "en": "Exactly. The word \"because\" tells you the reason is coming next.",
+                  "he": "בדיוק. המילה \"because\" מסמנת שהסיבה מגיעה מיד אחריה.",
+                  "ar": "بالضبط. كلمة \"because\" تدلّ على أنّ السبب يأتي بعدها مباشرة."
+                },
+                "incorrect": {
+                  "en": "When a question asks WHY, look for the word \"because\" and read what comes after it.",
+                  "he": "כששאלה שואלת למה, חפשו את המילה \"because\" וקראו מה בא אחריה.",
+                  "ar": "عندما يسأل السؤال \"لماذا\"، ابحثوا عن كلمة \"because\" واقرأوا ما يأتي بعدها."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.READ-01-03",
+          "title": "The family week",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט קריאה שני: לוח זמנים שבועי. סוג טקסט שונה מהפרופיל — כאן המידע מאורגן לפי ימים, וכל שורה מכילה שלושה פרטים (יום, אדם, פעילות ושעה). יעד: להצליב בין שני פרטים באותה שורה, למשל 'מי' ו'מתי'. אסטרטגיה: לזהות קודם את עמודת המפתח שהשאלה מדברת עליה — יום, אדם או שעה — ואז לסרוק רק אותה. תפיסות שגויות נפוצות: (1) לומדים בוחרים את השעה הראשונה שהם רואים במקום את השעה שבאותה שורה עם השם הנכון; (2) 'free' לא מזוהה כ'אין פעילות'. אם הלומד טועה, כדאי לבקש ממנו למצוא קודם את השורה של האדם או של היום, ורק אז לקרוא את שאר השורה.",
+          "presentation": {
+            "kind": "reading",
+            "prompt": {
+              "en": "This is the family's week. Tap any line to hear it.",
+              "he": "זהו השבוע של המשפחה. לחצו על שורה כדי לשמוע אותה.",
+              "ar": "هذا هو أسبوع العائلة. اضغطوا على أيّ سطر لسماعه."
+            },
+            "lines": [
+              "MONDAY: Noa has a painting class at 4 p.m.",
+              "TUESDAY: Adam plays football at 5 p.m.",
+              "WEDNESDAY: Maya goes to the English club at 4 p.m.",
+              "THURSDAY: free - no classes for anyone",
+              "FRIDAY: dinner at Grandma's house at 6:30 p.m."
+            ],
+            "language": "en-US",
+            "rate": 0.85,
+            "glossary": [
+              { "word": "class", "he": "חוג, שיעור", "ar": "حصّة، درس" },
+              { "word": "free", "he": "פנוי", "ar": "فارغ، بلا مواعيد" },
+              { "word": "dinner", "he": "ארוחת ערב", "ar": "العشاء" }
+            ]
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "What time does Adam play football?",
+              "answers": ["4 p.m.", "5 p.m.", "6:30 p.m.", "Thursday"],
+              "correctAnswers": ["5 p.m."],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. You found his name first and then read his time.",
+                  "he": "כן. מצאתם קודם את שמו ואז קראתם את השעה שלו.",
+                  "ar": "نعم. وجدتم اسمه أوّلاً ثم قرأتم وقته."
+                },
+                "incorrect": {
+                  "en": "There are three different times in this schedule. Find the line with Adam's name first, and read only that line.",
+                  "he": "בלוח הזה יש שלוש שעות שונות. מצאו קודם את השורה עם השם של אדם, וקראו רק אותה.",
+                  "ar": "في هذا الجدول ثلاثة أوقات مختلفة. ابحثوا أوّلاً عن السطر الذي فيه اسم آدم، واقرأوا ذلك السطر فقط."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "On which day does nobody have a class?",
+              "answers": ["Monday", "Wednesday", "Thursday", "Friday"],
+              "correctAnswers": ["Thursday"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. \"Free\" here means there is nothing planned.",
+                  "he": "נכון. \"Free\" כאן פירושו שאין שום דבר מתוכנן.",
+                  "ar": "صحيح. \"Free\" هنا تعني أنّه لا يوجد شيء مخطّط."
+                },
+                "incorrect": {
+                  "en": "Four of the days have a person and an activity in the line. One day does not. Scan the lines for the short one.",
+                  "he": "בארבעה מהימים מופיעים אדם ופעילות באותה שורה. ביום אחד לא. סרקו את השורות וחפשו את הקצרה.",
+                  "ar": "في أربعة أيّام يظهر شخص ونشاط في السطر. في يوم واحد لا. امسحوا الأسطر وابحثوا عن القصير."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "Who goes to the English club?",
+              "answers": ["Noa", "Adam", "Maya", "Grandma"],
+              "correctAnswers": ["Maya"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes — Wednesday at 4 p.m.",
+                  "he": "כן — ביום רביעי בשעה 4 אחר הצהריים.",
+                  "ar": "نعم — يوم الأربعاء الساعة الرابعة بعد الظهر."
+                },
+                "incorrect": {
+                  "en": "Two activities happen at 4 p.m., so the time will not help you here. Look for the words \"English club\" and read the name at the start of that line.",
+                  "he": "שתי פעילויות מתקיימות בשעה 4, ולכן השעה לא תעזור כאן. חפשו את המילים \"English club\" וקראו את השם בתחילת אותה שורה.",
+                  "ar": "نشاطان يجريان في الساعة الرابعة، لذا الوقت لن يساعدكم هنا. ابحثوا عن عبارة \"English club\" واقرأوا الاسم في بداية ذلك السطر."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.READ-01-04",
+          "title": "How did you find the answers?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף רכיב ההבנייה. המטרה: שהלומד יבחין בין קריאה סורקת (חיפוש פרט) לבין קריאה רציפה (הבנת הכול) — ההבחנה הזו היא לב יעד הלמידה. אין תשובה נכונה ואין ניקוד. אם נבחר 'תרגמתי הכול בראש' — זו הזדמנות להסביר שסריקה מהירה יעילה יותר למשימות מהסוג הזה, בלי לבקר את הלומד. אם נבחר 'היה לי קשה' — כדאי להציע את הייצוג הקולי של אותו רכיב.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "How did you look for the answers?",
+              "he": "איך חיפשתם את התשובות?",
+              "ar": "كيف بحثتم عن الإجابات؟"
+            },
+            "choices": [
+              {
+                "id": "scan",
+                "label": {
+                  "en": "I looked only for the detail in the question",
+                  "he": "חיפשתי רק את הפרט שבשאלה",
+                  "ar": "بحثت فقط عن التفصيل الوارد في السؤال"
+                }
+              },
+              {
+                "id": "read-all",
+                "label": {
+                  "en": "I read the whole text every time",
+                  "he": "קראתי את כל הטקסט בכל פעם",
+                  "ar": "قرأت النصّ كاملاً في كلّ مرّة"
+                }
+              },
+              {
+                "id": "translate",
+                "label": {
+                  "en": "I translated every word in my head",
+                  "he": "תרגמתי כל מילה בראש",
+                  "ar": "ترجمت كلّ كلمة في ذهني"
+                }
+              },
+              {
+                "id": "hard",
+                "label": {
+                  "en": "It was hard to find things in the text",
+                  "he": "היה לי קשה למצוא דברים בטקסט",
+                  "ar": "كان من الصعب عليّ إيجاد الأشياء في النصّ"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.READ-01B",
+      "learningUnitId": "ENG.G7.FAMILY.READ",
+      "title": "Hear the profile, then find the facts",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": false,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 1,
+      "mediaFormat": "audio",
+      "estimatedTimeInMinutes": 7,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": [],
+      "skills": ["הבנת הנקרא", "איתור מידע מפורש"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.READ-01B-01",
+          "title": "The same details, through your ears",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של הייצוג החלופי. אותו יעד ואותם פרטים כמו ברכיב הטקסטואלי, אבל הטקסט מגיע ראשית דרך האוזן ורק אחר כך דרך העין (התמליל זמין). זהו מענה מוכר ללומדי אנגלית שמתקשים בפענוח כתיב אנגלי אך מבינים היטב בשמיעה. חשוב לא להציג את הרכיב כ'קל יותר' אלא כ'דרך אחרת'.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "This time you will hear the profile before you see it written.",
+              "he": "הפעם תשמעו את הפרופיל לפני שתראו אותו כתוב.",
+              "ar": "هذه المرّة ستسمعون بطاقة التعريف قبل أن تروها مكتوبة."
+            },
+            "goal": {
+              "en": "The details are exactly the same: a name, a place, a family and a favourite day.",
+              "he": "הפרטים בדיוק אותם פרטים: שם, מקום, משפחה ויום אהוב.",
+              "ar": "التفاصيل هي نفسها تماماً: اسم، مكان، عائلة، ويوم مفضّل."
+            },
+            "strategy": {
+              "en": "Listen once. Then open the transcript and listen again while you read along.",
+              "he": "האזינו פעם אחת. אחר כך פתחו את התמליל והאזינו שוב תוך כדי קריאה.",
+              "ar": "استمعوا مرّة. ثم افتحوا النصّ المكتوب واستمعوا ثانيةً أثناء القراءة معه."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.READ-01B-02",
+          "title": "Maya's profile, read aloud",
+          "contentType": "הבנייה",
+          "mediaFormat": "audio",
+          "informationToBot": "פריט ההאזנה של הייצוג החלופי. אותם פרטים בדיוק כמו בכרטיס הפרופיל הכתוב — שם משפחה Cohen, גיל 13, מגורים בנתניה, יום שישי אהוב בגלל ארוחת ערב אצל הסבתא — אבל מוגשים כטקסט רציף מדובר, עם תמליל זמין. יעד: איתור אותם פרטים כשההצפנה היא קולית ולא כתובה. תפיסות שגויות נפוצות: (1) שם פרטי מול שם משפחה — לומדים בוחרים 'Maya' כשנשאלים על family name; (2) שמות מקומות נשמעים דומים ונבחרים לפי היכרות ולא לפי מה שנאמר. אסטרטגיה: להאזין פעם אחת ברצף ואז לפתוח את התמליל; פתיחת התמליל היא חלק מהלמידה ולא קיצור דרך.",
+          "presentation": {
+            "kind": "listening",
+            "prompt": {
+              "en": "Listen to Maya's profile. The transcript is there if you want it.",
+              "he": "האזינו לפרופיל של מאיה. התמליל זמין אם תרצו בו.",
+              "ar": "استمعوا إلى بطاقة تعريف مايا. النصّ المكتوب متاح إن أردتموه."
+            },
+            "script": "Here is Maya's profile. Her name is Maya Cohen and she is thirteen years old. She lives in Netanya with her mother, her father, her big brother Adam and her little sister Noa. Her favourite day is Friday, because on Friday the whole family has dinner at her grandmother's house, and her grandmother always cooks soup.",
+            "language": "en-US",
+            "rate": 0.8,
+            "transcriptAvailable": true,
+            "support": {
+              "he": "אפשר לפתוח את התמליל ולקרוא תוך כדי האזנה — כך הצליל והכתיב מתחברים.",
+              "ar": "يمكنكم فتح النصّ المكتوب والقراءة أثناء الاستماع — هكذا يترابط الصوت مع الكتابة."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "What is Maya's family name?",
+              "answers": ["Maya", "Cohen", "Netanya", "Friday"],
+              "correctAnswers": ["Cohen"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. In English the family name comes after the first name.",
+                  "he": "כן. באנגלית שם המשפחה בא אחרי השם הפרטי.",
+                  "ar": "نعم. في الإنجليزية يأتي اسم العائلة بعد الاسم الأوّل."
+                },
+                "incorrect": {
+                  "en": "Two words in the recording are names, one is a place and one is a day. Which name comes second?",
+                  "he": "שתי מילים בהקלטה הן שמות, אחת היא מקום ואחת היא יום. איזה שם נאמר שני?",
+                  "ar": "كلمتان في التسجيل اسمان، وواحدة مكان وواحدة يوم. أيّ اسم يُذكر ثانياً؟"
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Who does Maya live with?",
+              "answers": [
+                "Only her grandmother",
+                "Her mother, her father, Adam and Noa",
+                "Only her brother Adam",
+                "Her uncle Sami"
+              ],
+              "correctAnswers": ["Her mother, her father, Adam and Noa"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. The grandmother is important to her, but she has her own house.",
+                  "he": "נכון. הסבתא חשובה לה, אבל יש לה בית משלה.",
+                  "ar": "صحيح. الجدّة مهمّة بالنسبة لها، لكن لها بيتها الخاصّ."
+                },
+                "incorrect": {
+                  "en": "The grandmother is mentioned, but listen again to where the family goes for dinner. Living with someone and visiting them are not the same.",
+                  "he": "הסבתא אכן מוזכרת, אבל האזינו שוב לאן המשפחה הולכת לארוחת ערב. לגור עם מישהו ולבקר אצלו זה לא אותו דבר.",
+                  "ar": "الجدّة مذكورة فعلاً، لكن استمعوا ثانيةً إلى أين تذهب العائلة للعشاء. السكن مع أحد وزيارته ليسا الأمر نفسه."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "What happens on Friday?",
+              "answers": [
+                "Football practice",
+                "A painting class",
+                "Dinner at the grandmother's house",
+                "The English club"
+              ],
+              "correctAnswers": ["Dinner at the grandmother's house"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes, and that is why it is her favourite day.",
+                  "he": "כן, ובגלל זה זה היום האהוב עליה.",
+                  "ar": "نعم، ولهذا هو يومها المفضّل."
+                },
+                "incorrect": {
+                  "en": "The word \"because\" comes just before the answer. Listen to the last sentence again.",
+                  "he": "המילה \"because\" מופיעה ממש לפני התשובה. האזינו שוב למשפט האחרון.",
+                  "ar": "كلمة \"because\" تأتي قبل الإجابة مباشرة. استمعوا ثانيةً إلى الجملة الأخيرة."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.READ-01B-03",
+          "title": "Ears or eyes?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הייצוג הקולי. המטרה: שהלומד יזהה איזה ערוץ עוזר לו יותר, ושהצירוף של השניים הוא אסטרטגיה לגיטימית ומומלצת. אין תשובה נכונה ואין ניקוד. הבחירה מדווחת כ-selected ולא כ-answered.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "Which helped you more this time?",
+              "he": "מה עזר לכם יותר הפעם?",
+              "ar": "ما الذي ساعدكم أكثر هذه المرّة؟"
+            },
+            "choices": [
+              {
+                "id": "audio",
+                "label": {
+                  "en": "Hearing the text",
+                  "he": "לשמוע את הטקסט",
+                  "ar": "سماع النصّ"
+                }
+              },
+              {
+                "id": "transcript",
+                "label": {
+                  "en": "Reading along with the transcript",
+                  "he": "לקרוא יחד עם התמליל",
+                  "ar": "القراءة مع النصّ المكتوب"
+                }
+              },
+              {
+                "id": "repeat",
+                "label": {
+                  "en": "Playing it more than once",
+                  "he": "להשמיע יותר מפעם אחת",
+                  "ar": "إعادة التشغيل أكثر من مرّة"
+                }
+              },
+              {
+                "id": "hard",
+                "label": {
+                  "en": "It was still hard for me",
+                  "he": "עדיין היה לי קשה",
+                  "ar": "ما زال الأمر صعباً عليّ"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.READ-02",
+      "learningUnitId": "ENG.G7.FAMILY.READ",
+      "title": "Practice: an invitation and a message",
+      "componentPurpose": "תרגול",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 2,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 4,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 11,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.READ-01B"],
+      "skills": ["הבנת הנקרא", "סריקת טקסט מעשי"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.READ-02-01",
+          "title": "Two real texts",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב התרגול. הקפיצה מהרכיב הקודם: הפרטים כבר לא מסודרים בשדות מסומנים אלא מוטמעים בתוך משפטים רגילים, ולפעמים המידע מפוזר בין שני טקסטים — הזמנה והודעה. יעד: לצרף בין שני מקורות. אסטרטגיה: לזהות בשאלה איזה סוג פרט מבקשים, ואז לבדוק באיזה מהטקסטים הפרט הזה סביר להימצא. תפיסה שגויה נפוצה: לומדים מחפשים כל תשובה בטקסט הראשון בלבד.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Two texts this time: an invitation to a party and a message between friends.",
+              "he": "הפעם שני טקסטים: הזמנה למסיבה והודעה בין חברות.",
+              "ar": "نصّان هذه المرّة: دعوة إلى حفلة ورسالة بين صديقتين."
+            },
+            "goal": {
+              "en": "Now the details are inside normal sentences, not in a neat list. Find them anyway.",
+              "he": "עכשיו הפרטים נמצאים בתוך משפטים רגילים ולא ברשימה מסודרת. מצאו אותם בכל זאת.",
+              "ar": "الآن التفاصيل داخل جمل عادية، لا في قائمة مرتّبة. جدوها رغم ذلك."
+            },
+            "strategy": {
+              "en": "Ask yourself which of the two texts would hold that kind of detail, and look there first.",
+              "he": "שאלו את עצמכם באיזה משני הטקסטים סביר שיימצא סוג הפרט הזה, וחפשו שם קודם.",
+              "ar": "اسألوا أنفسكم في أيّ النصّين يُرجَّح وجود هذا النوع من التفاصيل، وابحثوا هناك أوّلاً."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.READ-02-02",
+          "title": "An invitation to Noa's party",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "טקסט מעשי מסוג הזמנה. יעד: לאתר מי, מתי, איפה ומה להביא — ארבעת הפרטים שכל הזמנה נושאת. אסטרטגיה: לזהות את מילות המפתח WHEN, WHERE, ואת משפטי ההוראה בסוף. תפיסות שגויות נפוצות: (1) 'seventh birthday' מתפרש כגיל שש כי נועה הייתה בת שש בטקסטים קודמים — כאן זו מסיבת יום ההולדת השביעי; (2) המשפט 'Do not bring food' נקרא בטעות כהוראה להביא אוכל, כי המילה food בולטת; (3) הכתובת נקראת כבית של מאיה כי מאיה היא הדמות המוכרת. אם הלומד טועה, כדאי להפנות אותו לשורה אחת ולבקש לקרוא אותה עד הסוף.",
+          "presentation": {
+            "kind": "reading",
+            "prompt": {
+              "en": "Read the invitation. Tap any line to hear it.",
+              "he": "קראו את ההזמנה. לחצו על שורה כדי לשמוע אותה.",
+              "ar": "اقرأوا الدعوة. اضغطوا على أيّ سطر لسماعه."
+            },
+            "lines": [
+              "YOU ARE INVITED!",
+              "It is Noa's seventh birthday party.",
+              "WHEN: Sunday, 12 June, at 5 p.m.",
+              "WHERE: Grandma's garden, 8 Herzl Street, Netanya.",
+              "Please bring a hat, because the garden is very sunny.",
+              "Do not bring food - Grandma is cooking for everyone."
+            ],
+            "language": "en-US",
+            "rate": 0.9,
+            "glossary": [
+              { "word": "invited", "he": "מוזמן", "ar": "مدعوّ" },
+              { "word": "bring", "he": "להביא", "ar": "أن تُحضِروا" },
+              { "word": "garden", "he": "גינה", "ar": "حديقة" },
+              { "word": "sunny", "he": "שטוף שמש", "ar": "مشمس" }
+            ]
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "How old will Noa be?",
+              "answers": ["Six", "Seven", "Eight", "Thirteen"],
+              "correctAnswers": ["Seven"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. \"Seventh birthday\" is the birthday when a child turns that age.",
+                  "he": "כן. \"Seventh birthday\" הוא יום ההולדת שבו הילד מגיע לגיל הזה.",
+                  "ar": "نعم. \"Seventh birthday\" هو عيد الميلاد الذي يبلغ فيه الطفل ذلك العمر."
+                },
+                "incorrect": {
+                  "en": "Careful — you may remember Noa's age from another text. Read the second line of THIS invitation and look at the word before \"birthday\".",
+                  "he": "שימו לב — ייתכן שאתם זוכרים את הגיל של נועה מטקסט אחר. קראו את השורה השנייה בהזמנה הזו והסתכלו על המילה שלפני \"birthday\".",
+                  "ar": "انتبهوا — قد تتذكّرون عمر نوعا من نصّ آخر. اقرأوا السطر الثاني من هذه الدعوة وانظروا إلى الكلمة التي تسبق \"birthday\"."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Where is the party?",
+              "answers": [
+                "At Maya's house",
+                "In Grandma's garden",
+                "At the school",
+                "In Haifa"
+              ],
+              "correctAnswers": ["In Grandma's garden"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. The WHERE line gives the place and the street.",
+                  "he": "נכון. שורת ה-WHERE נותנת את המקום ואת הרחוב.",
+                  "ar": "صحيح. سطر WHERE يعطي المكان والشارع."
+                },
+                "incorrect": {
+                  "en": "One line starts with the word WHERE. Read that line to the end before you choose.",
+                  "he": "שורה אחת מתחילה במילה WHERE. קראו את השורה הזו עד הסוף לפני שאתם בוחרים.",
+                  "ar": "سطر واحد يبدأ بكلمة WHERE. اقرأوا ذلك السطر حتى النهاية قبل الاختيار."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "What does the invitation ask you to bring?",
+              "answers": ["Food", "A hat", "Soup", "A painting"],
+              "correctAnswers": ["A hat"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes — because the garden is sunny.",
+                  "he": "כן — כי הגינה שטופת שמש.",
+                  "ar": "نعم — لأنّ الحديقة مشمسة."
+                },
+                "incorrect": {
+                  "en": "Two lines use the word \"bring\", and one of them starts with \"Do not\". Read both lines carefully before you choose.",
+                  "he": "בשתי שורות מופיעה המילה \"bring\", ואחת מהן מתחילה ב-\"Do not\". קראו את שתי השורות בעיון לפני שאתם בוחרים.",
+                  "ar": "سطران يستخدمان كلمة \"bring\"، وأحدهما يبدأ بـ \"Do not\". اقرأوا السطرين بعناية قبل الاختيار."
+                }
+              }
+            },
+            {
+              "questionId": "q4",
+              "questionType": "true-false",
+              "questionText": "The guests should bring food to the party.",
+              "answers": ["True", "False"],
+              "correctAnswers": ["False"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct. The invitation says the opposite, and gives the reason too.",
+                  "he": "נכון. ההזמנה אומרת בדיוק את ההפך, וגם נותנת את הסיבה.",
+                  "ar": "صحيح. الدعوة تقول العكس تماماً، وتعطي السبب أيضاً."
+                },
+                "incorrect": {
+                  "en": "A sentence can start with \"Do not\" and still contain the word \"food\". Read the whole last line, from its first word.",
+                  "he": "משפט יכול להתחיל ב-\"Do not\" ועדיין להכיל את המילה \"food\". קראו את כל השורה האחרונה, מהמילה הראשונה שלה.",
+                  "ar": "يمكن أن تبدأ الجملة بـ \"Do not\" وتحتوي مع ذلك على كلمة \"food\". اقرأوا السطر الأخير كاملاً، من كلمته الأولى."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.READ-02-03",
+          "title": "A message to Sara",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "טקסט מעשי שני: הודעה אישית קצרה שמוסיפה פרטים שאינם בהזמנה — שעת מפגש מוקדמת, סיבה לאיחור של דוד סמי, ומועד אחרון לתשובה. יעד: להבין שטקסט שני יכול להשלים ואפילו לסתור לכאורה את הראשון, ושצריך לקרוא את שניהם. תפיסות שגויות נפוצות: (1) בלבול בין 4:30 (שעת המפגש הפרטי) ל-5:00 (שעת תחילת המסיבה) — שתי השעות מופיעות באותו משפט; (2) 'before Saturday' נקרא כ'בשבת'. אסטרטגיה: לשים לב למילות קישור כמו but ו-so, שמסמנות שהמידע החשוב מגיע מיד אחריהן.",
+          "presentation": {
+            "kind": "reading",
+            "prompt": {
+              "en": "Maya sends Sara a message about the same party. Tap any line to hear it.",
+              "he": "מאיה שולחת לשרה הודעה על אותה מסיבה. לחצו על שורה כדי לשמוע אותה.",
+              "ar": "ترسل مايا رسالة إلى سارة عن الحفلة نفسها. اضغطوا على أيّ سطر لسماعه."
+            },
+            "lines": [
+              "Hi Sara! Can you come to Noa's party on Sunday?",
+              "It starts at 5, but I can meet you at 4:30 near the bus stop.",
+              "Uncle Sami is coming too, so we will not be only children there.",
+              "He is driving from Haifa, so he will arrive late.",
+              "Please text me before Saturday, so Grandma knows how much soup to make."
+            ],
+            "language": "en-US",
+            "rate": 0.9,
+            "glossary": [
+              { "word": "bus stop", "he": "תחנת אוטובוס", "ar": "موقف الحافلة" },
+              { "word": "arrive", "he": "להגיע", "ar": "يصل" },
+              { "word": "text me", "he": "שלחי לי הודעה", "ar": "أرسلي لي رسالة" }
+            ]
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "What time can Sara meet Maya at the bus stop?",
+              "answers": ["4:30", "5:00", "6:30", "On Saturday"],
+              "correctAnswers": ["4:30"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. The word \"but\" separates the two times in that sentence.",
+                  "he": "כן. המילה \"but\" מפרידה בין שתי השעות באותו משפט.",
+                  "ar": "نعم. كلمة \"but\" تفصل بين الوقتين في تلك الجملة."
+                },
+                "incorrect": {
+                  "en": "That sentence has two times in it. One is when the party starts and one is when the girls meet. Read what comes after the word \"but\".",
+                  "he": "באותו משפט יש שתי שעות. אחת היא מתי המסיבה מתחילה והשנייה מתי הבנות נפגשות. קראו מה בא אחרי המילה \"but\".",
+                  "ar": "في تلك الجملة وقتان. أحدهما بداية الحفلة والآخر موعد لقاء الفتاتين. اقرأوا ما يأتي بعد كلمة \"but\"."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Why will Uncle Sami arrive late?",
+              "answers": [
+                "He is cooking the soup",
+                "He is driving from Haifa",
+                "He has a football game",
+                "He is at the bus stop"
+              ],
+              "correctAnswers": ["He is driving from Haifa"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. The word \"so\" links the reason to the result.",
+                  "he": "נכון. המילה \"so\" מקשרת בין הסיבה לתוצאה.",
+                  "ar": "صحيح. كلمة \"so\" تربط السبب بالنتيجة."
+                },
+                "incorrect": {
+                  "en": "Find the line with the word \"late\", then read what comes BEFORE the word \"so\" in that line.",
+                  "he": "מצאו את השורה עם המילה \"late\", ואז קראו מה בא לפני המילה \"so\" באותה שורה.",
+                  "ar": "ابحثوا عن السطر الذي فيه كلمة \"late\"، ثم اقرأوا ما يأتي قبل كلمة \"so\" في ذلك السطر."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "When does Sara need to answer?",
+              "answers": ["Before Saturday", "On Sunday", "After the party", "At 4:30"],
+              "correctAnswers": ["Before Saturday"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes, and the message even explains why the answer is needed early.",
+                  "he": "כן, וההודעה אפילו מסבירה למה צריך את התשובה מוקדם.",
+                  "ar": "نعم، والرسالة تشرح حتّى لماذا تُطلب الإجابة مبكراً."
+                },
+                "incorrect": {
+                  "en": "The word \"before\" changes everything in this sentence. Look at the last line and read the two words together.",
+                  "he": "המילה \"before\" משנה את כל המשפט. הסתכלו בשורה האחרונה וקראו את שתי המילים יחד.",
+                  "ar": "كلمة \"before\" تغيّر معنى الجملة كلّها. انظروا إلى السطر الأخير واقرأوا الكلمتين معاً."
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.READ-03",
+      "learningUnitId": "ENG.G7.FAMILY.READ",
+      "title": "Check: a school notice for families",
+      "componentPurpose": "הערכה",
+      "isAssessment": true,
+      "isRequired": true,
+      "order": 3,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 3,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 8,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.READ-01B"],
+      "skills": ["הבנת הנקרא", "איתור מידע מפורש"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.READ-03-01",
+          "title": "A short check",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההערכה בהבנת הנקרא. תפקידו להסביר שהטקסט חדש בכוונה, שאפשר לחזור אחורה בין המסכים, ושאין הגבלת זמן. במהלך ההערכה אין לחשוף את התשובה ואין לרמוז עליה — מותר רק להזכיר את האסטרטגיה הכללית שנלמדה: לקרוא קודם את השאלה ואז לסרוק אחרי סוג הפרט המבוקש.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "A new text you have not seen before: a notice from a school.",
+              "he": "טקסט חדש שלא ראיתם קודם: הודעה מבית ספר.",
+              "ar": "نصّ جديد لم تروه من قبل: إعلان من مدرسة."
+            },
+            "goal": {
+              "en": "Four questions. Every answer is somewhere in the notice.",
+              "he": "ארבע שאלות. כל תשובה נמצאת אי שם בהודעה.",
+              "ar": "أربعة أسئلة. كلّ إجابة موجودة في مكان ما داخل الإعلان."
+            },
+            "strategy": {
+              "en": "Read the question, decide what kind of detail it wants, then look for it. Take your time.",
+              "he": "קראו את השאלה, החליטו איזה סוג פרט היא מבקשת, ואז חפשו אותו. קחו את הזמן.",
+              "ar": "اقرأوا السؤال، وحدّدوا نوع التفصيل المطلوب، ثم ابحثوا عنه. خذوا وقتكم."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.READ-03-02",
+          "title": "Family Day at school",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט ההערכה של יעד הבנת הנקרא. הצלחה כאן מבססת כשירות ביעד. הטקסט חדש בכוונה — הודעה בית ספרית ולא פרופיל או הזמנה מוכרים — כדי שההצלחה תעיד על מיומנות איתור מידע ולא על זיכרון. שתיים מהשאלות דורשות חישוב קטן או הצלבה בין שתי שורות, ולא העתקה ישירה. במהלך ההערכה אין לתת את התשובה ואין לרמוז עליה גם אם הלומד מבקש; מותר להציע רק אסטרטגיה כללית או לעודד לנסות שוב. הלומד רשאי לחזור אחורה ולקרוא מחדש ללא הגבלה — זו הערכת הבנה ולא מבחן זיכרון.",
+          "presentation": {
+            "kind": "reading",
+            "prompt": {
+              "en": "Read the notice and answer the four questions.",
+              "he": "קראו את ההודעה וענו על ארבע השאלות.",
+              "ar": "اقرأوا الإعلان وأجيبوا عن الأسئلة الأربعة."
+            },
+            "lines": [
+              "FAMILY DAY AT OUR SCHOOL",
+              "WHEN: Thursday, 20 June, from 9 a.m. to 12 p.m.",
+              "WHO CAN COME: parents, grandparents, brothers and sisters.",
+              "WHERE: the school garden. If it rains, we will move to the big hall.",
+              "Sara's mother is a teacher here, so she will help all morning.",
+              "Please tell your teacher by Monday if your family is coming."
+            ],
+            "language": "en-US",
+            "rate": 0.9,
+            "glossary": [
+              { "word": "notice", "he": "הודעה", "ar": "إعلان" },
+              { "word": "grandparents", "he": "סבא וסבתא", "ar": "الأجداد" },
+              { "word": "hall", "he": "אולם", "ar": "قاعة" }
+            ]
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "How long is Family Day?",
+              "answers": ["One hour", "Two hours", "Three hours", "All day"],
+              "correctAnswers": ["Three hours"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. You used both times in the WHEN line, not just one.",
+                  "he": "כן. השתמשתם בשתי השעות בשורת ה-WHEN, ולא רק באחת.",
+                  "ar": "نعم. استخدمتم كلا الوقتين في سطر WHEN، لا واحداً فقط."
+                },
+                "incorrect": {
+                  "en": "The WHEN line gives a start time and an end time. The question asks about the distance between them.",
+                  "he": "שורת ה-WHEN נותנת שעת התחלה ושעת סיום. השאלה שואלת על המרחק ביניהן.",
+                  "ar": "سطر WHEN يعطي وقت البداية ووقت النهاية. السؤال يسأل عن المسافة بينهما."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Where will Family Day be if it rains?",
+              "answers": [
+                "In the school garden",
+                "In the big hall",
+                "At Sara's house",
+                "At the hospital"
+              ],
+              "correctAnswers": ["In the big hall"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. The word \"if\" tells you this is the second plan.",
+                  "he": "נכון. המילה \"if\" מסמנת שזו התוכנית השנייה.",
+                  "ar": "صحيح. كلمة \"if\" تدلّ على أنّ هذه هي الخطّة الثانية."
+                },
+                "incorrect": {
+                  "en": "The WHERE line has two places in it. The word \"if\" marks the one that is only for rain.",
+                  "he": "בשורת ה-WHERE יש שני מקומות. המילה \"if\" מסמנת את זה שמיועד רק לגשם.",
+                  "ar": "في سطر WHERE مكانان. كلمة \"if\" تحدّد المكان المخصّص للمطر فقط."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "Who can come to Family Day?",
+              "answers": [
+                "Only parents",
+                "Only teachers",
+                "Parents, grandparents, brothers and sisters",
+                "Only students from Sara's class"
+              ],
+              "correctAnswers": ["Parents, grandparents, brothers and sisters"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. The notice lists the whole family, not only the parents.",
+                  "he": "כן. ההודעה מפרטת את כל המשפחה, לא רק את ההורים.",
+                  "ar": "نعم. الإعلان يذكر العائلة كلّها، لا الوالدين فقط."
+                },
+                "incorrect": {
+                  "en": "One line starts with WHO CAN COME. Read that whole line, including the words after the first comma.",
+                  "he": "שורה אחת מתחילה ב-WHO CAN COME. קראו את כל השורה, כולל המילים שאחרי הפסיק הראשון.",
+                  "ar": "سطر واحد يبدأ بـ WHO CAN COME. اقرأوا السطر كاملاً، بما في ذلك الكلمات بعد الفاصلة الأولى."
+                }
+              }
+            },
+            {
+              "questionId": "q4",
+              "questionType": "single-choice",
+              "questionText": "Why will Sara's mother help all morning?",
+              "answers": [
+                "She is a teacher at the school",
+                "She works at the hospital",
+                "She is Sara's grandmother",
+                "She is bringing the soup"
+              ],
+              "correctAnswers": ["She is a teacher at the school"],
+              "feedback": {
+                "correct": {
+                  "en": "Exactly. The word \"so\" links her job to what she will do.",
+                  "he": "בדיוק. המילה \"so\" מקשרת בין העבודה שלה לבין מה שהיא תעשה.",
+                  "ar": "بالضبط. كلمة \"so\" تربط عملها بما ستفعله."
+                },
+                "incorrect": {
+                  "en": "Find the line with her name, then read the part BEFORE the word \"so\". That part holds the reason.",
+                  "he": "מצאו את השורה עם שמה, ואז קראו את החלק שלפני המילה \"so\". שם נמצאת הסיבה.",
+                  "ar": "ابحثوا عن السطر الذي فيه اسمها، ثم اقرأوا الجزء الذي يسبق كلمة \"so\". هناك يكمن السبب."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.READ-03-03",
+          "title": "You finished this goal",
+          "contentType": "סיכום",
+          "mediaFormat": "text",
+          "informationToBot": "מסך סיום של רכיב ההערכה. מסכם במילים בלבד מה הלומד עשה ומה הצעד הבא, ללא ציון מספרי וללא השוואה ללומדים אחרים. אם ההערכה לא עברה, המסך אומר במפורש שזה לא סוף הדרך ומפנה לייצוג הקולי של אותו יעד — טקסט שנשמע לפני שהוא נקרא, ולא חזרה על אותו חומר.",
+          "presentation": {
+            "kind": "summary",
+            "onSuccess": {
+              "en": "You found details in four different kinds of text: a profile, a schedule, an invitation and a notice. That is a skill you will use outside English lessons too.",
+              "he": "מצאתם פרטים בארבעה סוגי טקסט שונים: פרופיל, לוח זמנים, הזמנה והודעה. זו מיומנות שתשמש אתכם גם מחוץ לשיעורי אנגלית.",
+              "ar": "وجدتم تفاصيل في أربعة أنواع مختلفة من النصوص: بطاقة تعريف، جدول، دعوة، وإعلان. هذه مهارة ستستخدمونها خارج دروس الإنجليزية أيضاً."
+            },
+            "onRetry": {
+              "en": "Finding one detail inside a long text takes practice, and it does not depend on knowing every word. Next you will meet a family text through your ears first.",
+              "he": "למצוא פרט אחד בתוך טקסט ארוך דורש תרגול, וזה לא תלוי בהכרת כל מילה. בפעם הבאה תפגשו טקסט משפחתי קודם כול דרך האוזן.",
+              "ar": "إيجاد تفصيل واحد داخل نصّ طويل يحتاج إلى تدريب، ولا يعتمد على معرفة كلّ كلمة. في المرّة القادمة ستلتقون بنصّ عائلي عبر السمع أوّلاً."
+            },
+            "nextHint": {
+              "en": "Next goal: the grammar that holds these sentences together.",
+              "he": "היעד הבא: הדקדוק שמחזיק את המשפטים האלה יחד.",
+              "ar": "الهدف التالي: القواعد التي تربط هذه الجمل معاً."
+            }
+          },
+          "questions": []
+        }
+      ]
+    }
+  ]
+}

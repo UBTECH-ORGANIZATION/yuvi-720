@@ -1,0 +1,812 @@
+{
+  "id": "ENG.G7.FAMILY.MEDIATE",
+  "title": "Pass it on: from Hebrew to English",
+  "titleTranslations": {
+    "Hebrew": "מוסרים את המידע: מעברית לאנגלית",
+    "Arabic": "ننقل المعلومة: من العبرية إلى الإنجليزية",
+    "English": "Pass it on: from Hebrew to English"
+  },
+  "subTopic": "MOE.ENG.G7.PEOPLE.FAMILY",
+  "learningObjective": "MOE.ENG.G7.PEOPLE.FAMILY.MEDIATE",
+  "prerequisiteLearningObjective": [],
+  "targetSector": ["כלל המגזרים"],
+  "targetAudience": ["כיתה ז'", "כיתה ח'"],
+  "components": [
+    {
+      "id": "ENG.G7.FAMILY.MEDIATE-01",
+      "learningUnitId": "ENG.G7.FAMILY.MEDIATE",
+      "title": "A family invitation in Hebrew",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 2,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 10,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.MEDIATE-01B"],
+      "skills": ["תיווך טקסט", "איתור מידע קונקרטי", "הפקה כתובה קצרה"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.MEDIATE-01-01",
+          "title": "Before you pass it on",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההבנייה ביעד התיווך. המטרה: להסביר מהו תיווך — לוקחים טקסט בשפה אחת ומוסרים את העיקר בשפה אחרת, בשביל מישהו שלא קורא את המקור. הלומד אמור להבין שהמשימה אינה תרגום מילה במילה אלא מסירה של הפרטים שחשובים לנמען. אסטרטגיה: לסמן ארבעה פרטים בלבד — מתי, איפה, כמה, ומה להביא. תפיסות שגויות נפוצות: (1) לומדים חושבים שצריך לתרגם כל שורה, ואז נתקעים על מילה אחת ומפסיקים; (2) לומדים משמיטים את המספרים כי הם מתמקדים במילים. אם הלומד מבקש עזרה — להזכיר שהמשימה היא ארבעה פרטים, לא כל הטקסט.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Sometimes you are the only one in the room who can read both languages.",
+              "he": "לפעמים אתם היחידים בחדר שקוראים את שתי השפות.",
+              "ar": "أحياناً تكونون الوحيدين في الغرفة الذين يقرأون اللغتين."
+            },
+            "goal": {
+              "en": "Read an invitation in Hebrew, and pass on the important details in English.",
+              "he": "קראו הזמנה בעברית, ומסרו את הפרטים החשובים באנגלית.",
+              "ar": "اقرأوا دعوة بالعبرية، وانقلوا التفاصيل المهمّة بالإنجليزية."
+            },
+            "strategy": {
+              "en": "Do not translate every word. Find four things: when, where, how much, and what to bring.",
+              "he": "אל תתרגמו כל מילה. אתרו ארבעה דברים: מתי, איפה, כמה, ומה להביא.",
+              "ar": "لا تترجموا كلّ كلمة. ابحثوا عن أربعة أمور: متى، وأين، وكم، وماذا تُحضِرون."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.MEDIATE-01-02",
+          "title": "Grandma's birthday invitation",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט התיווך המרכזי. הלומד קורא הזמנה אמיתית בעברית ליום ההולדת של הסבתא, ומוסר את עיקרה באנגלית לשרה, שאינה קוראת עברית. יעד: לאתר ארבעה פרטים — תאריך ויום, שעה, מקום, ועלות ומה מביאים — ולנסח אותם באנגלית פשוטה. אוצר מילים בליבה: party, Saturday, half past six, community club, one dish, shekels. אסטרטגיה: לענות קודם על שאלות האיתור, ורק אז לכתוב — כך ההודעה נבנית מפרטים שכבר אומתו. תפיסות שגויות נפוצות: (1) המרת 18:30 ל-'eight thirty' בגלל הספרה 8 בכתיב העברי של השעה; (2) לומדים מתרגמים את הכותרת החגיגית ומשמיטים את הפרטים המעשיים; (3) בלבול בין 25 ₪ למשפחה לבין 25 ₪ לאדם. זהו רכיב הבנייה — מותר להסביר, לתת מילה באנגלית, ולעזור בניסוח.",
+          "presentation": {
+            "kind": "mediation",
+            "source": "הזמנה למסיבת יום ההולדת ה-70 של סבתא רחל!\nמתי: יום שבת, 14 במרץ, בשעה 18:30\nאיפה: מועדון הקהילה, רחוב הזית 12, רמת גן\nכל משפחה מביאה מנה אחת לשולחן.\nהשתתפות בהוצאות: 25 ₪ למשפחה.\nנא לאשר הגעה לסמי עד יום רביעי.",
+            "prompt": {
+              "en": "Sara does not read Hebrew. Write her a short message in English with the important details.",
+              "he": "שרה לא קוראת עברית. כתבו לה הודעה קצרה באנגלית עם הפרטים החשובים.",
+              "ar": "سارة لا تقرأ العبرية. اكتبوا لها رسالة قصيرة بالإنجليزية تتضمّن التفاصيل المهمّة."
+            },
+            "placeholder": {
+              "en": "Hi Sara! There is a party for ...",
+              "he": "Hi Sara! There is a party for ...",
+              "ar": "Hi Sara! There is a party for ..."
+            },
+            "checklist": [
+              {
+                "en": "I wrote the day and the date.",
+                "he": "כתבתי את היום ואת התאריך.",
+                "ar": "كتبت اليوم والتاريخ."
+              },
+              {
+                "en": "I wrote the time.",
+                "he": "כתבתי את השעה.",
+                "ar": "كتبت الوقت."
+              },
+              {
+                "en": "I wrote where it is.",
+                "he": "כתבתי איפה זה מתקיים.",
+                "ar": "كتبت أين سيُقام."
+              },
+              {
+                "en": "I wrote the money and what each family brings.",
+                "he": "כתבתי את הסכום ומה כל משפחה מביאה.",
+                "ar": "كتبت المبلغ وما تُحضِره كلّ عائلة."
+              }
+            ]
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "What time does the party start?",
+              "answers": [
+                "Half past six in the evening",
+                "Half past eight in the evening",
+                "Half past six in the morning",
+                "Half past five in the evening"
+              ],
+              "correctAnswers": ["Half past six in the evening"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. 18:30 is 6:30 in the evening — half past six.",
+                  "he": "כן. 18:30 זה 6:30 בערב — half past six.",
+                  "ar": "نعم. 18:30 هي 6:30 مساءً — half past six."
+                },
+                "incorrect": {
+                  "en": "The invitation uses a 24-hour clock. Take away twelve from the first number, and then decide if it is morning or evening.",
+                  "he": "ההזמנה משתמשת בשעון של 24 שעות. הורידו שתים-עשרה מהמספר הראשון, ואז החליטו אם זה בוקר או ערב.",
+                  "ar": "الدعوة تستخدم نظام 24 ساعة. اطرحوا اثنتي عشرة من الرقم الأوّل، ثم قرّروا إن كان صباحاً أم مساءً."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "How much does each family pay?",
+              "answers": ["14 shekels", "25 shekels", "70 shekels", "Nothing"],
+              "correctAnswers": ["25 shekels"],
+              "feedback": {
+                "correct": {
+                  "en": "Right — 25 shekels for a whole family, not for each person.",
+                  "he": "נכון — 25 ₪ למשפחה שלמה, לא לכל אדם.",
+                  "ar": "صحيح — 25 شيكلاً للعائلة كاملةً، لا لكلّ شخص."
+                },
+                "incorrect": {
+                  "en": "There are three numbers in this invitation and each one means something different. Find the line that talks about money.",
+                  "he": "יש שלושה מספרים בהזמנה הזו וכל אחד מהם אומר משהו אחר. אתרו את השורה שמדברת על כסף.",
+                  "ar": "في هذه الدعوة ثلاثة أرقام ولكلّ منها معنى مختلف. ابحثوا عن السطر الذي يتحدّث عن المال."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "What does every family bring?",
+              "answers": ["A present", "One dish of food", "A chair", "Nothing"],
+              "correctAnswers": ["One dish of food"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. That is a detail Sara really needs — she has to prepare something.",
+                  "he": "כן. זה פרט ששרה באמת צריכה — היא צריכה להכין משהו.",
+                  "ar": "نعم. هذه تفصيلة تحتاجها سارة فعلاً — عليها أن تحضّر شيئاً."
+                },
+                "incorrect": {
+                  "en": "Look for the line about the table. It says what each family has to bring with them.",
+                  "he": "חפשו את השורה על השולחן. היא אומרת מה כל משפחה צריכה להביא איתה.",
+                  "ar": "ابحثوا عن السطر الذي يتحدّث عن المائدة. يذكر ما على كلّ عائلة إحضاره معها."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.MEDIATE-01-03",
+          "title": "What did you leave out?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף רכיב ההבנייה. יעד: שהלומד ישים לב שתיווך הוא בחירה — מה נכנס להודעה ומה לא — ולא תרגום מלא. אין תשובה נכונה ואין ניקוד. אם נבחר 'ניסיתי לתרגם הכול' — כדאי להחזיר אותו לכלל ארבעת הפרטים. אם נבחר 'לא הייתי בטוח מה חשוב' — כדאי להציע את הרכיב המודרך, שבו מאתרים פרט אחד בכל פעם.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "How did you decide what to write?",
+              "he": "איך החלטתם מה לכתוב?",
+              "ar": "كيف قرّرتم ماذا تكتبون؟"
+            },
+            "choices": [
+              {
+                "id": "four-details",
+                "label": {
+                  "en": "I looked for the four details",
+                  "he": "חיפשתי את ארבעת הפרטים",
+                  "ar": "بحثت عن التفاصيل الأربعة"
+                }
+              },
+              {
+                "id": "translated-all",
+                "label": {
+                  "en": "I tried to translate everything",
+                  "he": "ניסיתי לתרגם הכול",
+                  "ar": "حاولت ترجمة كلّ شيء"
+                }
+              },
+              {
+                "id": "unsure",
+                "label": {
+                  "en": "I was not sure what was important",
+                  "he": "לא הייתי בטוח/ה מה חשוב",
+                  "ar": "لم أكن متأكّداً ما المهمّ"
+                }
+              },
+              {
+                "id": "words",
+                "label": {
+                  "en": "I knew what to say but not the English words",
+                  "he": "ידעתי מה לומר אבל לא את המילים באנגלית",
+                  "ar": "عرفت ماذا أقول لكن لم أعرف الكلمات بالإنجليزية"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.MEDIATE-01B",
+      "learningUnitId": "ENG.G7.FAMILY.MEDIATE",
+      "title": "Step by step: one detail at a time",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": false,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 1,
+      "mediaFormat": "interactive-content",
+      "estimatedTimeInMinutes": 9,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": [],
+      "skills": ["תיווך טקסט", "איתור מידע קונקרטי", "הפקה כתובה קצרה"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.MEDIATE-01B-01",
+          "title": "One detail at a time",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של הייצוג החלופי לרכיב ההבנייה. אותו יעד — תיווך של הזמנה משפחתית — אבל בדרך אחרת: המקור כאן בערבית, והמשימה מפורקת לפרטים בודדים שנאספים אחד-אחד לפני הכתיבה, במקום כתיבה של הודעה שלמה בבת אחת. מיועד ללומד שנעצר מול טקסט מקור שלם. אסטרטגיה: לענות על שאלה אחת, לסמן את הפרט במקור, ורק אז לעבור לשאלה הבאה. לא לומר ללומד שזה רכיב 'קל יותר' — זו דרך אחרת, מפורקת יותר, לאותו יעד.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "The same invitation, in Arabic this time — and we will take it apart together.",
+              "he": "אותה הזמנה, הפעם בערבית — ונפרק אותה יחד.",
+              "ar": "الدعوة نفسها، بالعربية هذه المرّة — وسنفكّكها معاً."
+            },
+            "goal": {
+              "en": "Find one detail at a time. At the end you write only ONE sentence in English.",
+              "he": "מאתרים פרט אחד בכל פעם. בסוף כותבים רק משפט אחד באנגלית.",
+              "ar": "نجد تفصيلة واحدة في كلّ مرّة. في النهاية تكتبون جملة واحدة فقط بالإنجليزية."
+            },
+            "strategy": {
+              "en": "Answer a question, point to that detail in the text, and only then move on.",
+              "he": "ענו על שאלה, הצביעו על הפרט בטקסט, ורק אז המשיכו.",
+              "ar": "أجيبوا عن سؤال، وأشيروا إلى تلك التفصيلة في النصّ، ثم انتقلوا."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.MEDIATE-01B-02",
+          "title": "Find each detail, then write one sentence",
+          "contentType": "הבנייה",
+          "mediaFormat": "interactive-content",
+          "informationToBot": "פריט התיווך המודרך. אותה הזמנה כמו ברכיב המקביל, אבל המקור בערבית והמשימה מפורקת: ארבע שאלות איתור ממוקדות — יום, שעה, מקום, ומה מביאים — ורק אחריהן משפט אחד בכתב. יעד: שהלומד יחווה הצלחה בכל פרט בנפרד לפני שהוא נדרש להפקה. אסטרטגיה: להצמיד כל שאלה לשורה אחת במקור. תפיסות שגויות נפוצות: (1) 18:30 נקרא כ-'eight thirty' בגלל הספרה 8; (2) לומדים מחפשים את התשובה בכל הטקסט במקום בשורה שבה מופיע סוג הפרט (זמן, מקום, כסף); (3) לומדים חושבים שאם המקור בערבית, ההודעה צריכה להיות תרגום מדויק — לא, היא צריכה להיות שימושית. זהו רכיב הבנייה — מותר להסביר ולעזור בניסוח.",
+          "presentation": {
+            "kind": "mediation",
+            "source": "دعوة إلى حفلة عيد الميلاد السبعين للجدّة راحيل!\nالموعد: يوم السبت، 14 آذار، الساعة 18:30\nالمكان: نادي الحيّ، شارع الزيتون 12، رمات چان\nكلّ عائلة تُحضِر طبقاً واحداً إلى المائدة.\nالمشاركة في التكاليف: 25 شيكلاً لكلّ عائلة.\nيُرجى تأكيد الحضور لسامي حتّى يوم الأربعاء.",
+            "prompt": {
+              "en": "Answer the four questions first. Then write ONE sentence in English about the party.",
+              "he": "ענו קודם על ארבע השאלות. אחר כך כתבו משפט אחד באנגלית על המסיבה.",
+              "ar": "أجيبوا عن الأسئلة الأربعة أوّلاً. ثم اكتبوا جملة واحدة بالإنجليزية عن الحفلة."
+            },
+            "placeholder": {
+              "en": "The party is on ...",
+              "he": "The party is on ...",
+              "ar": "The party is on ..."
+            },
+            "checklist": [
+              {
+                "en": "My sentence has the day in it.",
+                "he": "במשפט שלי יש את היום.",
+                "ar": "جملتي تتضمّن اليوم."
+              },
+              {
+                "en": "My sentence has the time in it.",
+                "he": "במשפט שלי יש את השעה.",
+                "ar": "جملتي تتضمّن الوقت."
+              }
+            ]
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Which day is the party?",
+              "answers": ["Wednesday", "Saturday", "Sunday", "Friday"],
+              "correctAnswers": ["Saturday"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. That is the first detail Sara will ask about.",
+                  "he": "כן. זה הפרט הראשון ששרה תשאל עליו.",
+                  "ar": "نعم. هذه أوّل تفصيلة ستسأل عنها سارة."
+                },
+                "incorrect": {
+                  "en": "Two days are written in this invitation, and one of them is only the deadline for answering. Look at the line that starts the details.",
+                  "he": "כתובים כאן שני ימים, ואחד מהם הוא רק המועד האחרון לאישור הגעה. הסתכלו על השורה שפותחת את הפרטים.",
+                  "ar": "يُذكر يومان في هذه الدعوة، وأحدهما هو الموعد النهائي لتأكيد الحضور فقط. انظروا إلى السطر الذي يبدأ التفاصيل."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "How do you say 18:30 in English?",
+              "answers": ["half past six", "half past eight", "six o'clock", "half past five"],
+              "correctAnswers": ["half past six"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. 18 minus 12 is 6, and 30 minutes is \"half past\".",
+                  "he": "נכון. 18 פחות 12 זה 6, ו-30 דקות זה \"half past\".",
+                  "ar": "صحيح. 18 ناقص 12 يساوي 6، و30 دقيقة هي \"half past\"."
+                },
+                "incorrect": {
+                  "en": "The digit 8 is inside 18, but it is not the hour. Do the subtraction first, then say the minutes.",
+                  "he": "הספרה 8 נמצאת בתוך 18, אבל היא לא השעה. עשו קודם את החיסור, ורק אז אמרו את הדקות.",
+                  "ar": "الرقم 8 موجود داخل 18، لكنّه ليس الساعة. أجروا الطرح أوّلاً، ثم اذكروا الدقائق."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "The party is at a ...",
+              "answers": ["school", "community club", "hospital", "restaurant"],
+              "correctAnswers": ["community club"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. The street and the city come right after it.",
+                  "he": "כן. הרחוב והעיר מופיעים מיד אחריו.",
+                  "ar": "نعم. الشارع والمدينة يأتيان بعده مباشرةً."
+                },
+                "incorrect": {
+                  "en": "Find the line that gives a street name. The place is written at the beginning of that same line.",
+                  "he": "אתרו את השורה שנותנת שם רחוב. המקום כתוב בתחילת אותה שורה.",
+                  "ar": "ابحثوا عن السطر الذي يذكر اسم شارع. المكان مكتوب في بداية السطر نفسه."
+                }
+              }
+            },
+            {
+              "questionId": "q4",
+              "questionType": "single-choice",
+              "questionText": "Every family brings ...",
+              "answers": ["one dish of food", "a cake", "a chair", "a photo"],
+              "correctAnswers": ["one dish of food"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes — one dish for the table, from each family.",
+                  "he": "כן — מנה אחת לשולחן, מכל משפחה.",
+                  "ar": "نعم — طبق واحد للمائدة، من كلّ عائلة."
+                },
+                "incorrect": {
+                  "en": "The word for \"table\" appears in one line only. Read that line to the end.",
+                  "he": "המילה \"שולחן\" מופיעה בשורה אחת בלבד. קראו את השורה הזו עד סופה.",
+                  "ar": "كلمة \"مائدة\" ترد في سطر واحد فقط. اقرأوا ذلك السطر حتّى نهايته."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.MEDIATE-01B-03",
+          "title": "Did taking it apart help?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הייצוג החלופי. יעד: שהלומד יבחין אם הפירוק לפרטים עזר לו, ואם כן — שיאמץ את זה כאסטרטגיה קבועה מול טקסט מקור. אין תשובה נכונה ואין ניקוד. אם נבחר 'עדיין קשה לי לכתוב באנגלית' — הבעיה אינה בתיווך אלא בהפקה, וכדאי להפנות ליעד הכתיבה.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "Did it help to find one detail at a time?",
+              "he": "האם עזר לאתר פרט אחד בכל פעם?",
+              "ar": "هل ساعدكم إيجاد تفصيلة واحدة في كلّ مرّة؟"
+            },
+            "choices": [
+              {
+                "id": "helped",
+                "label": {
+                  "en": "Yes, the text stopped feeling big",
+                  "he": "כן, הטקסט הפסיק להרגיש גדול",
+                  "ar": "نعم، لم يعد النصّ يبدو كبيراً"
+                }
+              },
+              {
+                "id": "numbers",
+                "label": {
+                  "en": "The numbers were the hard part",
+                  "he": "המספרים היו החלק הקשה",
+                  "ar": "الأرقام كانت الجزء الصعب"
+                }
+              },
+              {
+                "id": "writing",
+                "label": {
+                  "en": "Finding was fine, writing in English was hard",
+                  "he": "לאתר היה בסדר, לכתוב באנגלית היה קשה",
+                  "ar": "الإيجاد كان جيّداً، لكن الكتابة بالإنجليزية كانت صعبة"
+                }
+              },
+              {
+                "id": "prefer-whole",
+                "label": {
+                  "en": "I prefer to read the whole text at once",
+                  "he": "אני מעדיף/ה לקרוא את כל הטקסט בבת אחת",
+                  "ar": "أفضّل قراءة النصّ كاملاً دفعةً واحدة"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.MEDIATE-02",
+      "learningUnitId": "ENG.G7.FAMILY.MEDIATE",
+      "title": "A change of plan",
+      "componentPurpose": "תרגול",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 2,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 4,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 11,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.MEDIATE-01B"],
+      "skills": ["תיווך טקסט", "איתור שינוי במידע", "הפקה כתובה קצרה"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.MEDIATE-02-01",
+          "title": "This time something changed",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב התרגול. יעד: להסביר את הקפיצה — עד עכשיו מסרנו פרטים מטקסט חדש, מכאן צריך לזהות מה השתנה לעומת מה שכבר היה ידוע. זו משימת תיווך קשה יותר, כי הטקסט מכיל גם מידע ישן וגם חדש. אסטרטגיה: לעבור על ההודעה ולסמן רק את מה שכתוב לידו 'חדש', 'עבר', או 'השתנה'. תפיסה שגויה נפוצה: לומדים מוסרים את כל הפרטים ולא רק את השינויים, וההודעה נעשית ארוכה ולא ברורה לנמענת.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "A message arrived, and the plan is not the same any more.",
+              "he": "הגיעה הודעה, והתוכנית כבר לא אותה תוכנית.",
+              "ar": "وصلت رسالة، ولم تعد الخطّة كما كانت."
+            },
+            "goal": {
+              "en": "Tell Lily what CHANGED. She only reads English.",
+              "he": "ספרו ללילי מה השתנה. היא קוראת רק אנגלית.",
+              "ar": "أخبِروا ليلي بما تغيّر. هي تقرأ الإنجليزية فقط."
+            },
+            "strategy": {
+              "en": "Mark only the parts that are new. The rest she already knows.",
+              "he": "סמנו רק את החלקים החדשים. את השאר היא כבר יודעת.",
+              "ar": "علّموا الأجزاء الجديدة فقط. الباقي تعرفه مسبقاً."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.MEDIATE-02-02",
+          "title": "The new plan, in English",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "פריט התיווך המרכזי בתרגול. הלומד קורא הודעה בעברית על שינוי בתוכניות ומוסר את השינויים באנגלית ללילי. יעד: לאתר שלושה שינויים — יום, שעה ומקום — וכן פרט מבטל אחד (לא צריך להביא אוכל), ולנסח אותם בשלושה-ארבעה משפטים. אסטרטגיה: לכתוב קודם רשימה של שלוש מילים בעברית, ורק אז לנסח באנגלית. תפיסות שגויות נפוצות: (1) לומדים מוסרים את התוכנית הישנה במקום את החדשה, כי היא מוזכרת בהודעה; (2) המרת 17:00 מתבצעת נכון אבל 16:15 מתורגם כ-'quarter to four'; (3) לומדים משמיטים את המשפט על האוכל כי הוא מנוסח בשלילה. אין תשובה נכונה אחת — הכתיבה נשלחת לפלטפורמה ולמורה ואינה נבדקת אוטומטית, ואין ציון מספרי. מותר לעזור בניסוח ובאיות — זהו רכיב תרגול.",
+          "presentation": {
+            "kind": "mediation",
+            "source": "היי, שינוי קטן בתוכניות!\nהמפגש המשפחתי עבר מיום שבת ליום ראשון.\nהשעה החדשה: 17:00, שעה וחצי מוקדם יותר.\nגם המקום השתנה: נפגשים בפארק הירקון ליד הכניסה הצפונית, ולא במועדון.\nמי שאין לו הסעה — סמי אוסף מרמת גן ב-16:15.\nלא צריך להביא אוכל הפעם.",
+            "prompt": {
+              "en": "Write Lily the new plan in three or four sentences.",
+              "he": "כתבו ללילי את התוכנית החדשה בשלושה-ארבעה משפטים.",
+              "ar": "اكتبوا لليلي الخطّة الجديدة في ثلاث أو أربع جمل."
+            },
+            "placeholder": {
+              "en": "Hi Lily, the family meeting changed. Now it is ...",
+              "he": "Hi Lily, the family meeting changed. Now it is ...",
+              "ar": "Hi Lily, the family meeting changed. Now it is ..."
+            },
+            "checklist": [
+              {
+                "en": "I wrote the new day.",
+                "he": "כתבתי את היום החדש.",
+                "ar": "كتبت اليوم الجديد."
+              },
+              {
+                "en": "I wrote the new time.",
+                "he": "כתבתי את השעה החדשה.",
+                "ar": "كتبت الوقت الجديد."
+              },
+              {
+                "en": "I wrote the new place.",
+                "he": "כתבתי את המקום החדש.",
+                "ar": "كتبت المكان الجديد."
+              },
+              {
+                "en": "I wrote what happens with the food.",
+                "he": "כתבתי מה קורה עם האוכל.",
+                "ar": "كتبت ما الأمر بخصوص الطعام."
+              }
+            ]
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.MEDIATE-02-03",
+          "title": "Lily has three questions",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "פריט תרגול שבודק אם ההודעה שנמסרה באמת שימושית. הלומד עונה על שאלות שלילי שואלת אחרי שקראה את ההודעה. יעד: לוודא שהלומד קלט את השינויים ולא את התוכנית הישנה, ושהוא יודע להמיר שעות משעון 24 שעות. אסטרטגיה: לחזור למקור בעברית לפני כל תשובה — תיווך טוב תמיד מאמת מול המקור. תפיסות שגויות נפוצות: (1) מסירת התוכנית הישנה; (2) 16:15 מתורגם כ-'quarter to four' במקום 'quarter past four', בגלל בלבול בין past ל-to; (3) לומדים חושבים שאם המקור אומר 'לא צריך', אין מה למסור — אבל דווקא ביטול הוא מידע קריטי. זהו רכיב תרגול — מותר להסביר ולהדגים.",
+          "presentation": {
+            "kind": "practice",
+            "prompt": {
+              "en": "Lily read your message. Now she asks — can you answer?",
+              "he": "לילי קראה את ההודעה שלכם. עכשיו היא שואלת — תוכלו לענות?",
+              "ar": "قرأت ليلي رسالتكم. والآن تسأل — هل تستطيعون الإجابة؟"
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Lily asks: \"Do I need to bring food?\"",
+              "answers": [
+                "Yes, one dish",
+                "No, not this time",
+                "Yes, a cake",
+                "The message does not say"
+              ],
+              "correctAnswers": ["No, not this time"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. A cancelled instruction is still information she needs.",
+                  "he": "נכון. הוראה שבוטלה היא עדיין מידע שהיא צריכה.",
+                  "ar": "صحيح. التعليمة الملغاة تبقى معلومة تحتاجها."
+                },
+                "incorrect": {
+                  "en": "The last line of the Hebrew message is short and easy to skip. Read it again — it is written in the negative.",
+                  "he": "השורה האחרונה בהודעה בעברית קצרה וקל לפספס אותה. קראו אותה שוב — היא כתובה בשלילה.",
+                  "ar": "السطر الأخير في الرسالة العبرية قصير ومن السهل تخطّيه. اقرأوه مرّة أخرى — إنّه مكتوب بصيغة النفي."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "What changed in the plan?",
+              "answers": [
+                "Only the day",
+                "Only the place",
+                "The day, the time and the place",
+                "Only the time"
+              ],
+              "correctAnswers": ["The day, the time and the place"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes — three changes. If you pass on only one, Lily arrives at the wrong place.",
+                  "he": "כן — שלושה שינויים. אם תמסרו רק אחד, לילי תגיע למקום הלא נכון.",
+                  "ar": "نعم — ثلاثة تغييرات. إن نقلتم واحداً فقط، ستصل ليلي إلى المكان الخطأ."
+                },
+                "incorrect": {
+                  "en": "Go back to the Hebrew message and count the lines that say something is new or moved.",
+                  "he": "חזרו להודעה בעברית וספרו את השורות שאומרות שמשהו חדש או עבר.",
+                  "ar": "عودوا إلى الرسالة العبرية وعُدّوا الأسطر التي تقول إنّ شيئاً جديد أو تغيّر."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "Sami leaves Ramat Gan at 16:15. In English that is ...",
+              "answers": [
+                "a quarter past four",
+                "a quarter to four",
+                "four o'clock",
+                "half past four"
+              ],
+              "correctAnswers": ["a quarter past four"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. 15 minutes AFTER the hour is \"a quarter past\".",
+                  "he": "כן. 15 דקות אחרי השעה זה \"a quarter past\".",
+                  "ar": "نعم. 15 دقيقة بعد الساعة هي \"a quarter past\"."
+                },
+                "incorrect": {
+                  "en": "\"Past\" means after the hour and \"to\" means before it. Decide which one 16:15 is, and then choose.",
+                  "he": "\"Past\" זה אחרי השעה ו-\"to\" זה לפניה. החליטו מה מהם 16:15, ואז בחרו.",
+                  "ar": "\"Past\" تعني بعد الساعة و\"to\" تعني قبلها. قرّروا أيّهما تمثّل 16:15، ثم اختاروا."
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.MEDIATE-03",
+      "learningUnitId": "ENG.G7.FAMILY.MEDIATE",
+      "title": "Check: the school family day",
+      "componentPurpose": "הערכה",
+      "isAssessment": true,
+      "isRequired": true,
+      "order": 3,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 3,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 10,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.MEDIATE-01B"],
+      "skills": ["תיווך טקסט", "איתור מידע קונקרטי", "הפקה כתובה קצרה"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.MEDIATE-03-01",
+          "title": "This is the check",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההערכה ביעד התיווך. יעד: להסביר ללומד שהוא מקבל הודעה בית-ספרית אמיתית בעברית וצריך למסור אותה באנגלית לתלמיד חדש. חשוב מאוד: מכאן ואילך זהו רכיב הערכה. אין לחשוף תשובה, אין לרמוז עליה, אין לתרגם ללומד שורה מהמקור ואין לומר אילו אפשרויות לפסול, גם אם הלומד מבקש במפורש. מותר להזכיר אסטרטגיה כללית בלבד — לחזור למקור לפני כל תשובה, לאתר את סוג הפרט המבוקש — ולעודד. הלומד יכול לחזור אחורה ולשנות תשובה לפני הסיום.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "A notice came home from school, in Hebrew.",
+              "he": "הגיעה הודעה מבית הספר, בעברית.",
+              "ar": "وصلت رسالة من المدرسة، بالعبرية."
+            },
+            "goal": {
+              "en": "There is a new student in your class who does not read Hebrew. Pass the notice on to them in English.",
+              "he": "יש תלמיד חדש בכיתה שלכם שלא קורא עברית. מסרו לו את ההודעה באנגלית.",
+              "ar": "هناك طالب جديد في صفّكم لا يقرأ العبرية. انقلوا له الرسالة بالإنجليزية."
+            },
+            "strategy": {
+              "en": "Go back to the notice before every answer. Good mediation always checks the source.",
+              "he": "חזרו להודעה לפני כל תשובה. תיווך טוב תמיד מאמת מול המקור.",
+              "ar": "عودوا إلى الرسالة قبل كلّ إجابة. التوسّط الجيّد يتحقّق دائماً من المصدر."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.MEDIATE-03-02",
+          "title": "The notice from school",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט ההערכה המרכזי ליעד התיווך. הלומד קורא הודעה בית-ספרית בעברית על יום המשפחה, עונה על ארבע שאלות איתור, וכותב הודעה קצרה באנגלית לתלמיד חדש. הטקסט חדש ולא הופיע ברכיבי ההבנייה, כדי שההצלחה תעיד על המיומנות ולא על זיכרון. הפרטים שנבדקים: יום ותאריך, מספר בני משפחה מוזמנים, מה קורה בגשם, ומחיר. זהו רכיב הערכה: אין לחשוף את התשובה, אין לרמוז עליה, אין לתרגם שורה מהמקור ואין לצמצם אפשרויות עבור הלומד. מותר לעודד ולהציע לחזור למקור. תפיסות שגויות שנבדקות: בלבול בין מועד האירוע למועד ההרשמה, בלבול בין מספר בני המשפחה למספרים אחרים בטקסט, והתעלמות מהתרחיש החלופי בגשם.",
+          "presentation": {
+            "kind": "mediation",
+            "source": "הודעה להורים ולתלמידים\nיום המשפחה הבית-ספרי יתקיים ביום חמישי, 22 במאי, בין השעות 16:00 ל-19:00, בחצר בית הספר.\nכל תלמיד יכול להזמין שני בני משפחה.\nיהיה דוכן אוכל: כריך ושתייה ב-15 ₪.\nבמקרה של גשם המפגש יעבור לאולם הספורט.\nלהרשמה: לפנות למחנכת עד יום שני.",
+            "prompt": {
+              "en": "Answer the four questions, then write a short message in English for the new student.",
+              "he": "ענו על ארבע השאלות, ואז כתבו הודעה קצרה באנגלית לתלמיד החדש.",
+              "ar": "أجيبوا عن الأسئلة الأربعة، ثم اكتبوا رسالة قصيرة بالإنجليزية للطالب الجديد."
+            },
+            "placeholder": {
+              "en": "Hi! On Thursday our school has ...",
+              "he": "Hi! On Thursday our school has ...",
+              "ar": "Hi! On Thursday our school has ..."
+            },
+            "checklist": [
+              {
+                "en": "I wrote the day, the date and the hours.",
+                "he": "כתבתי את היום, התאריך והשעות.",
+                "ar": "كتبت اليوم والتاريخ والساعات."
+              },
+              {
+                "en": "I wrote how many family members he can invite.",
+                "he": "כתבתי כמה בני משפחה הוא יכול להזמין.",
+                "ar": "كتبت كم فرداً من العائلة يمكنه دعوته."
+              },
+              {
+                "en": "I wrote what happens if it rains.",
+                "he": "כתבתי מה קורה אם יורד גשם.",
+                "ar": "كتبت ما يحدث إذا هطل المطر."
+              },
+              {
+                "en": "I wrote how to sign up and by when.",
+                "he": "כתבתי איך נרשמים ועד מתי.",
+                "ar": "كتبت كيف يتمّ التسجيل وحتّى متى."
+              }
+            ]
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "When is the family day?",
+              "answers": [
+                "Monday, 22 May",
+                "Thursday, 22 May",
+                "Thursday, 16 May",
+                "Monday, 16 May"
+              ],
+              "correctAnswers": ["Thursday, 22 May"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct.",
+                  "he": "נכון.",
+                  "ar": "صحيح."
+                },
+                "incorrect": {
+                  "en": "Two days are mentioned in this notice and they are not the same event. Check which line describes the family day itself.",
+                  "he": "מוזכרים בהודעה שני ימים והם לא אותו אירוע. בדקו איזו שורה מתארת את יום המשפחה עצמו.",
+                  "ar": "يُذكر يومان في هذه الرسالة وهما ليسا الحدث نفسه. تحقّقوا أيّ سطر يصف يوم العائلة ذاته."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "How many family members can each student invite?",
+              "answers": ["One", "Two", "Three", "As many as they want"],
+              "correctAnswers": ["Two"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct.",
+                  "he": "נכון.",
+                  "ar": "صحيح."
+                },
+                "incorrect": {
+                  "en": "There are several numbers in this notice — hours, a date and a price. Find the line that talks about people.",
+                  "he": "יש בהודעה כמה מספרים — שעות, תאריך ומחיר. אתרו את השורה שמדברת על אנשים.",
+                  "ar": "في هذه الرسالة أرقام عدّة — ساعات وتاريخ وسعر. ابحثوا عن السطر الذي يتحدّث عن الأشخاص."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "What happens if it rains?",
+              "answers": [
+                "The day is cancelled",
+                "It moves to the sports hall",
+                "It moves to Monday",
+                "Nothing changes"
+              ],
+              "correctAnswers": ["It moves to the sports hall"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct.",
+                  "he": "נכון.",
+                  "ar": "صحيح."
+                },
+                "incorrect": {
+                  "en": "One line in the notice starts with a condition. Read that whole line before you decide.",
+                  "he": "שורה אחת בהודעה פותחת בתנאי. קראו את כל השורה הזו לפני שאתם מחליטים.",
+                  "ar": "أحد أسطر الرسالة يبدأ بشرط. اقرأوا ذلك السطر كاملاً قبل أن تقرّروا."
+                }
+              }
+            },
+            {
+              "questionId": "q4",
+              "questionType": "single-choice",
+              "questionText": "How much is a sandwich and a drink?",
+              "answers": ["15 shekels", "16 shekels", "19 shekels", "They are free"],
+              "correctAnswers": ["15 shekels"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct.",
+                  "he": "נכון.",
+                  "ar": "صحيح."
+                },
+                "incorrect": {
+                  "en": "Two of these numbers are times, not prices. Find the line about the food stand.",
+                  "he": "שניים מהמספרים האלה הם שעות, לא מחירים. אתרו את השורה על דוכן האוכל.",
+                  "ar": "رقمان من هذه الأرقام هما ساعات، لا أسعار. ابحثوا عن السطر الذي يتحدّث عن كشك الطعام."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.MEDIATE-03-03",
+          "title": "You made the message useful",
+          "contentType": "סיכום",
+          "mediaFormat": "text",
+          "informationToBot": "מסך סיום של רכיב ההערכה. מסכם מילולית מה הלומד עשה ומה הצעד הבא, ללא ציון מספרי, ללא אחוזים וללא השוואה לאף לומד אחר. אם ההערכה לא עברה, המסך אומר במפורש שזה לא סוף הדרך ומפנה לרכיב המודרך של אותו יעד, שבו מאתרים פרט אחד בכל פעם.",
+          "presentation": {
+            "kind": "summary",
+            "onSuccess": {
+              "en": "You read Hebrew, chose what really mattered, and passed it on in English so someone else could use it. That is mediation, and that is exactly this goal.",
+              "he": "קראתם עברית, בחרתם מה באמת חשוב, ומסרתם באנגלית כך שמישהו אחר יוכל להשתמש בזה. זה תיווך, וזה בדיוק היעד הזה.",
+              "ar": "قرأتم العبرية، واخترتم ما يهمّ فعلاً، ونقلتموه بالإنجليزية ليتمكّن غيركم من استخدامه. هذا هو التوسّط، وهذا بالضبط هدف هذه المهمّة."
+            },
+            "onRetry": {
+              "en": "Some details slipped through, and that happens when a text has many numbers. Next we will take a notice apart one detail at a time.",
+              "he": "כמה פרטים חמקו, וזה קורה כשיש בטקסט הרבה מספרים. בפעם הבאה נפרק הודעה לפרט אחד בכל פעם.",
+              "ar": "أفلتت بعض التفاصيل، وهذا يحدث عندما يحتوي النصّ أرقاماً كثيرة. في المرّة القادمة سنفكّك رسالة تفصيلةً تلو الأخرى."
+            },
+            "nextHint": {
+              "en": "Next: a summary of everything the Modern Family unit covered.",
+              "he": "הבא בתור: סיכום של כל מה שלמדנו ביחידת המשפחה המודרנית.",
+              "ar": "التالي: ملخّص لكلّ ما تناولته وحدة العائلة العصرية."
+            }
+          },
+          "questions": []
+        }
+      ]
+    }
+  ]
+}

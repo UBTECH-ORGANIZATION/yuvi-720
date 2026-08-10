@@ -1,0 +1,767 @@
+{
+  "id": "ENG.G7.FAMILY.WRITE",
+  "title": "Writing: my family in a few sentences",
+  "titleTranslations": {
+    "Hebrew": "כתיבה: המשפחה שלי בכמה משפטים",
+    "Arabic": "الكتابة: عائلتي في بضع جمل",
+    "English": "Writing: my family in a few sentences"
+  },
+  "subTopic": "MOE.ENG.G7.PEOPLE.FAMILY",
+  "learningObjective": "MOE.ENG.G7.PEOPLE.FAMILY.WRITE",
+  "prerequisiteLearningObjective": [],
+  "targetSector": ["כלל המגזרים"],
+  "targetAudience": ["כיתה ז'", "כיתה ח'"],
+  "components": [
+    {
+      "id": "ENG.G7.FAMILY.WRITE-01",
+      "learningUnitId": "ENG.G7.FAMILY.WRITE",
+      "title": "Read a model text and find the linking words",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 2,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 9,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.WRITE-01B"],
+      "skills": ["הבעה בכתב", "שימוש במילות קישור"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.WRITE-01-01",
+          "title": "Before you write",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההבנייה ביעד הכתיבה. המטרה: להסביר שלפני שכותבים, קוראים טקסט מודל ולומדים ממנו איך מחברים משפטים. שלוש מילות הקישור בליבה: and (מוסיף מידע), but (ניגוד), because (סיבה). אסטרטגיה: לקרוא קודם את הטקסט כולו, ואז לחפש את מילות הקישור. תפיסות שגויות נפוצות: (1) לומדים חושבים שטקסט טוב הוא טקסט ארוך — כאן המדד הוא בהירות וקישור, לא אורך; (2) שימוש ב-and בין כל שני משפטים, גם כשיש ניגוד או סיבה. אין כאן שאלה מדורגת.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Good writing is not long writing. It is writing that connects.",
+              "he": "כתיבה טובה היא לא כתיבה ארוכה. היא כתיבה שמחברת בין רעיונות.",
+              "ar": "الكتابة الجيّدة ليست الكتابة الطويلة، بل الكتابة التي تربط بين الأفكار."
+            },
+            "goal": {
+              "en": "Your job: read Maya's text and find the three words she uses to join her ideas — and, but, because.",
+              "he": "המשימה שלכם: לקרוא את הטקסט של מאיה ולזהות את שלוש המילים שהיא משתמשת בהן כדי לחבר רעיונות — and, but, because.",
+              "ar": "مهمّتكم: قراءة نصّ مايا وتحديد الكلمات الثلاث التي تستخدمها لربط أفكارها — and و but و because."
+            },
+            "strategy": {
+              "en": "Read the whole text once. Then read it again and stop at every linking word.",
+              "he": "קראו את כל הטקסט פעם אחת. אחר כך קראו שוב ועצרו בכל מילת קישור.",
+              "ar": "اقرأوا النصّ كاملاً مرّة واحدة. ثمّ اقرأوه ثانيةً وتوقّفوا عند كلّ أداة ربط."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.WRITE-01-02",
+          "title": "Maya's text — the model",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט ההבנייה המרכזי. הלומד קורא פסקה קצרה של מאיה על המשפחה שלה, שבה כל אחת משלוש מילות הקישור מופיעה בהקשר ברור. יעד: להבין מה כל מילת קישור עושה — and מוסיף, but מנגיד, because נותן סיבה. אסטרטגיה: להסתכל על שני צדי המשפט ולשאול 'האם זה מוסיף, מנגיד או מסביר?'. תפיסות שגויות נפוצות: (1) בלבול בין but ל-because — because עונה על 'למה', but מציג הפתעה או ניגוד; (2) לומדים דוברי עברית נוטים לתרגם 'כי' ל-'that' במקום ל-'because'; (3) שימוש ב-because בתחילת משפט עצמאי בלי המשך. אפשר ללחוץ על כל שורה כדי לשמוע אותה — זה עוזר לחוש את הפסקה שלפני מילת הקישור.",
+          "presentation": {
+            "kind": "reading",
+            "prompt": {
+              "en": "Read Maya's text. Tap any line to hear it.",
+              "he": "קראו את הטקסט של מאיה. לחצו על שורה כדי לשמוע אותה.",
+              "ar": "اقرأوا نصّ مايا. اضغطوا على أيّ سطر لسماعه."
+            },
+            "lines": [
+              "I live with my mother, my father and my two brothers and sisters.",
+              "My brother Adam is sixteen and he plays football every Tuesday.",
+              "My little sister Noa is six, but she already paints better than me.",
+              "I like Friday evening because all the family eats at my grandmother's house.",
+              "My grandmother makes soup, and my uncle Sami always comes late."
+            ],
+            "language": "en-US",
+            "rate": 0.9,
+            "glossary": [
+              { "word": "and", "he": "וגם — מוסיף מידע", "ar": "و — تضيف معلومة" },
+              { "word": "but", "he": "אבל — מציג ניגוד", "ar": "لكن — تُظهر تناقضاً" },
+              { "word": "because", "he": "כי — נותן סיבה", "ar": "لأنّ — تعطي سبباً" },
+              { "word": "already", "he": "כבר", "ar": "بالفعل" }
+            ]
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Maya writes: \"Noa is six, ___ she already paints better than me.\" Which word did she use?",
+              "answers": ["and", "but", "because", "so"],
+              "correctAnswers": ["but"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. It is a surprise — she is very young, and still she paints well. \"But\" shows that surprise.",
+                  "he": "כן. יש כאן הפתעה — היא קטנה מאוד, ובכל זאת מציירת יפה. \"But\" מציגה את ההפתעה הזו.",
+                  "ar": "نعم. هناك مفاجأة — إنّها صغيرة جدّاً ومع ذلك ترسم ببراعة. \"But\" تُظهر هذه المفاجأة."
+                },
+                "incorrect": {
+                  "en": "Ask yourself what the two halves do to each other. Do they simply add up, or does the second half surprise you after the first?",
+                  "he": "שאלו את עצמכם מה שני חצאי המשפט עושים זה לזה. האם הם פשוט מצטברים, או שהחצי השני מפתיע אחרי הראשון?",
+                  "ar": "اسألوا أنفسكم ما علاقة نصفَي الجملة ببعضهما. هل يضيف أحدهما إلى الآخر، أم أنّ النصف الثاني يفاجئكم بعد الأوّل؟"
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Which word tells you WHY Maya likes Friday evening?",
+              "answers": ["and", "but", "because", "every"],
+              "correctAnswers": ["because"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. \"Because\" always answers the question \"why?\".",
+                  "he": "נכון. \"Because\" תמיד עונה על השאלה \"למה?\".",
+                  "ar": "صحيح. \"Because\" تجيب دائماً عن سؤال \"لماذا؟\"."
+                },
+                "incorrect": {
+                  "en": "Try reading the sentence as a question and an answer: \"Why does Maya like Friday evening?\" The word you need comes right before the answer.",
+                  "he": "נסו לקרוא את המשפט כשאלה ותשובה: \"למה מאיה אוהבת את ערב שישי?\" המילה שאתם מחפשים מופיעה ממש לפני התשובה.",
+                  "ar": "حاولوا قراءة الجملة كسؤال وجواب: \"لماذا تحبّ مايا مساء الجمعة؟\" الكلمة المطلوبة تأتي مباشرة قبل الجواب."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "In the last line, what does \"and\" do?",
+              "answers": [
+                "It adds another piece of information",
+                "It shows a contrast",
+                "It gives a reason",
+                "It ends the text"
+              ],
+              "correctAnswers": ["It adds another piece of information"],
+              "feedback": {
+                "correct": {
+                  "en": "Exactly. Two facts about the same evening, one after the other.",
+                  "he": "בדיוק. שתי עובדות על אותו ערב, אחת אחרי השנייה.",
+                  "ar": "بالضبط. حقيقتان عن المساء نفسه، واحدة تلو الأخرى."
+                },
+                "incorrect": {
+                  "en": "Read the two halves of the last line on their own. Does the second half argue with the first, explain it, or just add to it?",
+                  "he": "קראו כל חצי של השורה האחרונה בנפרד. האם החצי השני מתנגד לראשון, מסביר אותו, או פשוט מוסיף עליו?",
+                  "ar": "اقرأوا كلّ نصف من السطر الأخير على حدة. هل يعارض النصف الثاني الأوّل، أم يفسّره، أم يضيف إليه فقط؟"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.WRITE-01-03",
+          "title": "Which word is yours?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף רכיב ההבנייה. המטרה: שהלומד יזהה איזו מילת קישור כבר מרגישה לו טבעית ואיזו עדיין לא. אין תשובה נכונה ואין ניקוד. אם נבחר 'because עדיין מבלבל אותי' — כדאי להזכיר שהיא תמיד עונה על 'למה', ולהציע לנסח שאלה לפני שכותבים. אם נבחר 'אני משתמש רק ב-and' — זו בדיוק הנקודה שהתרגול הבא מטפל בה.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "Which linking word feels natural to you already?",
+              "he": "איזו מילת קישור כבר מרגישה לכם טבעית?",
+              "ar": "أيّ أداة ربط تبدو لكم طبيعية بالفعل؟"
+            },
+            "choices": [
+              {
+                "id": "and",
+                "label": {
+                  "en": "and — I use it a lot",
+                  "he": "and — אני משתמש בה הרבה",
+                  "ar": "and — أستخدمها كثيراً"
+                }
+              },
+              {
+                "id": "but",
+                "label": {
+                  "en": "but — I understand when to use it",
+                  "he": "but — אני מבין מתי להשתמש בה",
+                  "ar": "but — أفهم متى أستخدمها"
+                }
+              },
+              {
+                "id": "because",
+                "label": {
+                  "en": "because — this one still confuses me",
+                  "he": "because — היא עדיין מבלבלת אותי",
+                  "ar": "because — ما زالت تربكني"
+                }
+              },
+              {
+                "id": "only-and",
+                "label": {
+                  "en": "I only ever use and",
+                  "he": "אני משתמש רק ב-and",
+                  "ar": "أستخدم and فقط دائماً"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.WRITE-01B",
+      "learningUnitId": "ENG.G7.FAMILY.WRITE",
+      "title": "Hear how the sentences join",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": false,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 1,
+      "mediaFormat": "audio",
+      "estimatedTimeInMinutes": 8,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": [],
+      "skills": ["הבעה בכתב", "שימוש במילות קישור"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.WRITE-01B-01",
+          "title": "Before you listen",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של הייצוג החלופי לרכיב ההבנייה. כאן הלומד שומע את הטקסט במקום לקרוא אותו, ולומד את מילות הקישור דרך האוזן — מסלול שמתאים למי שהעומס של טקסט כתוב מפריע לו להבחין במבנה. יעד זהה לחלוטין לרכיב הקריאה: להבין מה עושה כל מילת קישור. אסטרטגיה: להאזין לעצירה הקטנה שלפני מילת הקישור — היא מסמנת שמגיע חיבור. אין לומר ללומד שזה 'רכיב קל יותר'.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "This time you will hear the text instead of reading it.",
+              "he": "הפעם תשמעו את הטקסט במקום לקרוא אותו.",
+              "ar": "هذه المرّة ستسمعون النصّ بدلاً من قراءته."
+            },
+            "goal": {
+              "en": "Your job: notice the small pause before and, but and because. That pause is where two ideas are joined.",
+              "he": "המשימה שלכם: לשים לב לעצירה הקטנה שלפני and, but ו-because. שם מתחברים שני רעיונות.",
+              "ar": "مهمّتكم: الانتباه إلى التوقّف القصير قبل and و but و because. هناك يلتقي فكرتان."
+            },
+            "strategy": {
+              "en": "Listen once for the story. Then listen again only for the joining words.",
+              "he": "האזינו פעם אחת לסיפור. אחר כך האזינו שוב רק למילות החיבור.",
+              "ar": "استمعوا مرّة إلى القصّة. ثمّ استمعوا مرّة أخرى إلى أدوات الربط فقط."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.WRITE-01B-02",
+          "title": "Maya reads her text aloud",
+          "contentType": "הבנייה",
+          "mediaFormat": "audio",
+          "informationToBot": "פריט ההבנייה בייצוג קולי. מאיה מקריאה את אותו טקסט מודל, והלומד שומע את הפסקה הקצרה שלפני כל מילת קישור. יעד: לזהות באוזן מה כל מילת קישור עושה. אסטרטגיה: להאזין למנגינה של המשפט — עלייה קלה לפני and, נפילה לפני but. תפיסות שגויות נפוצות: (1) הלומד תופס את כל הפסקה כמשפט אחד ארוך ולא מזהה את הגבולות; (2) בלבול בין but ל-because בהאזנה, כי שתיהן מגיעות באמצע המשפט. התמליל זמין — כאן הוא כלי תמיכה לגיטימי ולא קיצור דרך, כי היעד הוא הקישור ולא ההאזנה.",
+          "presentation": {
+            "kind": "listening",
+            "prompt": {
+              "en": "Listen to Maya read her text. You can open the transcript at any time.",
+              "he": "האזינו למאיה מקריאה את הטקסט שלה. אפשר לפתוח את התמליל בכל רגע.",
+              "ar": "استمعوا إلى مايا وهي تقرأ نصّها. يمكنكم فتح النصّ المكتوب في أيّ وقت."
+            },
+            "script": "I live with my mother, my father and my two brothers and sisters. My brother Adam is sixteen and he plays football every Tuesday. My little sister Noa is six, but she already paints better than me. I like Friday evening because all the family eats at my grandmother's house. My grandmother makes soup, and my uncle Sami always comes late.",
+            "language": "en-US",
+            "rate": 0.85,
+            "transcriptAvailable": true,
+            "support": {
+              "he": "אפשר לפתוח את התמליל ולראות את מילות הקישור בזמן ההאזנה. המטרה כאן היא הקישור, לא ההאזנה עצמה.",
+              "ar": "يمكنكم فتح النصّ ومشاهدة أدوات الربط أثناء الاستماع. الهدف هنا هو الربط، لا الاستماع بحدّ ذاته."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Which word joins the two ideas about Noa?",
+              "answers": ["and", "but", "because", "when"],
+              "correctAnswers": ["but"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. Noa is very young, and still she paints well — that needs \"but\".",
+                  "he": "כן. נועה קטנה מאוד, ובכל זאת מציירת יפה — לזה צריך \"but\".",
+                  "ar": "نعم. نوعا صغيرة جدّاً ومع ذلك ترسم ببراعة — هذا يحتاج \"but\"."
+                },
+                "incorrect": {
+                  "en": "Play the sentence about Noa again and stop right after her age. Listen to the very next word.",
+                  "he": "השמיעו שוב את המשפט על נועה ועצרו מיד אחרי הגיל שלה. האזינו למילה שבאה מיד אחריו.",
+                  "ar": "أعيدوا تشغيل الجملة عن نوعا وتوقّفوا مباشرة بعد ذكر عمرها. استمعوا إلى الكلمة التالية مباشرة."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Why does Maya like Friday evening?",
+              "answers": [
+                "Because Adam plays football",
+                "Because the whole family eats together",
+                "Because Noa paints",
+                "Because Uncle Sami is late"
+              ],
+              "correctAnswers": ["Because the whole family eats together"],
+              "feedback": {
+                "correct": {
+                  "en": "Right — and the reason comes straight after the word \"because\".",
+                  "he": "נכון — והסיבה מופיעה מיד אחרי המילה \"because\".",
+                  "ar": "صحيح — والسبب يأتي مباشرة بعد كلمة \"because\"."
+                },
+                "incorrect": {
+                  "en": "All four options are true things in the text, but only one comes after \"because\". Listen for that word and for what follows it.",
+                  "he": "כל ארבע האפשרויות נכונות בטקסט, אבל רק אחת מהן מופיעה אחרי \"because\". חפשו את המילה הזו ומה בא אחריה.",
+                  "ar": "الخيارات الأربعة كلّها صحيحة في النصّ، لكن واحداً فقط يأتي بعد \"because\". ابحثوا عن هذه الكلمة وما يليها."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "true-false",
+              "questionText": "Maya uses the same linking word in every sentence.",
+              "answers": ["True", "False"],
+              "correctAnswers": ["False"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct. She uses three different ones, and that is what makes the text easy to follow.",
+                  "he": "נכון. היא משתמשת בשלוש מילים שונות, וזה מה שהופך את הטקסט לקל למעקב.",
+                  "ar": "صحيح. تستخدم ثلاث أدوات مختلفة، وهذا ما يجعل النصّ سهل المتابعة."
+                },
+                "incorrect": {
+                  "en": "Listen once more and count how many different joining words you hear. More than one means the answer changes.",
+                  "he": "האזינו עוד פעם וספרו כמה מילות חיבור שונות אתם שומעים. יותר מאחת משנה את התשובה.",
+                  "ar": "استمعوا مرّة أخرى وعدّوا كم أداة ربط مختلفة تسمعون. أكثر من واحدة تغيّر الإجابة."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.WRITE-01B-03",
+          "title": "What did you hear?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הייצוג הקולי. המטרה: שהלומד יבחין האם ההאזנה עזרה לו לזהות את מבנה הפסקה. אין ניקוד ואין תשובה נכונה. אם נבחר 'שמעתי משפט אחד ארוך' — ההמלצה היא לחזור לייצוג הכתוב ולראות את הגבולות בעיניים, כי זו בעיה של תפיסת מבנה ולא של אוצר מילים.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "After listening, what is clearer to you?",
+              "he": "אחרי ההאזנה, מה יותר ברור לכם?",
+              "ar": "بعد الاستماع، ما الذي أصبح أوضح لديكم؟"
+            },
+            "choices": [
+              {
+                "id": "borders",
+                "label": {
+                  "en": "Where one sentence ends and the next begins",
+                  "he": "איפה נגמר משפט אחד ומתחיל הבא",
+                  "ar": "أين تنتهي جملة وتبدأ التي تليها"
+                }
+              },
+              {
+                "id": "meaning",
+                "label": {
+                  "en": "What each joining word means",
+                  "he": "מה המשמעות של כל מילת חיבור",
+                  "ar": "ما معنى كلّ أداة ربط"
+                }
+              },
+              {
+                "id": "one-long",
+                "label": {
+                  "en": "I heard it as one long sentence",
+                  "he": "שמעתי את זה כמשפט אחד ארוך",
+                  "ar": "سمعته كجملة واحدة طويلة"
+                }
+              },
+              {
+                "id": "ready",
+                "label": {
+                  "en": "I am ready to write my own",
+                  "he": "אני מוכן לכתוב בעצמי",
+                  "ar": "أنا جاهز للكتابة بنفسي"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.WRITE-02",
+      "learningUnitId": "ENG.G7.FAMILY.WRITE",
+      "title": "Choose the linking word, then write your own text",
+      "componentPurpose": "תרגול",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 2,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 4,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 12,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.WRITE-01B"],
+      "skills": ["הבעה בכתב", "שימוש במילות קישור"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.WRITE-02-01",
+          "title": "Plan before you write",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "מסך תכנון לפני הכתיבה — פיגום מטה-קוגניטיבי מסוג תכנון, לא רפלקציה. המטרה: שהלומד יידע מראש שהתרגול בנוי משני שלבים: קודם בחירת מילת הקישור הנכונה במשפטים מוכנים, ואז כתיבה עצמאית קצרה. אסטרטגיה מומלצת שכדאי להזכיר: לחשוב על שלושה בני משפחה לפני שמתחילים לכתוב, ולנסח משפט אחד על כל אחד. תפיסה שגויה נפוצה: לומדים מתחילים לכתוב בלי לתכנן ואז נתקעים אחרי משפט אחד.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "First you choose the linking words. Then you write your own short text.",
+              "he": "קודם תבחרו את מילות הקישור. אחר כך תכתבו טקסט קצר משלכם.",
+              "ar": "أوّلاً تختارون أدوات الربط. ثمّ تكتبون نصّاً قصيراً خاصّاً بكم."
+            },
+            "goal": {
+              "en": "Your job: write three or four sentences about a family, and join at least two of them.",
+              "he": "המשימה שלכם: לכתוב שלושה או ארבעה משפטים על משפחה, ולחבר לפחות שניים מהם.",
+              "ar": "مهمّتكم: كتابة ثلاث أو أربع جمل عن عائلة، وربط اثنتين منها على الأقلّ."
+            },
+            "strategy": {
+              "en": "Before you write, think of three people. One sentence for each. Then join two of them.",
+              "he": "לפני שכותבים, חשבו על שלושה אנשים. משפט אחד לכל אחד. אחר כך חברו שניים מהם.",
+              "ar": "قبل الكتابة، فكّروا في ثلاثة أشخاص. جملة لكلّ واحد. ثمّ اربطوا اثنتين منها."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.WRITE-02-02",
+          "title": "Which word joins these two ideas?",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "תרגול ממוקד בבחירת מילת הקישור. הלומד מקבל שני חצאי משפט וצריך לבחור את המילה שמתאימה ליחס ביניהם. יעד: לבסס את ההבחנה בין הוספה (and), ניגוד (but) וסיבה (because) לפני הכתיבה החופשית. אסטרטגיה: לשאול על כל משפט — האם החצי השני מוסיף, מפתיע או מסביר? תפיסות שגויות נפוצות: (1) שימוש אוטומטי ב-and בכל מקום; (2) שימוש ב-because כשצריך but, כי לומדים מזהים 'קשר בין דברים' ולא את סוג הקשר; (3) שימוש ב-so במקום because כשהסדר של הסיבה והתוצאה מתהפך. אם הלומד טועה פעמיים באותה הבחנה, כדאי להציע לו לקרוא בקול את שני חצאי המשפט בנפרד.",
+          "presentation": {
+            "prompt": {
+              "en": "Read both halves. Then choose the word that joins them correctly.",
+              "he": "קראו את שני חצאי המשפט. אחר כך בחרו את המילה שמחברת ביניהם נכון.",
+              "ar": "اقرأوا نصفَي الجملة. ثمّ اختاروا الكلمة التي تربطهما بشكل صحيح."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Adam is sixteen ___ he plays football every Tuesday.",
+              "answers": ["and", "but", "because", "or"],
+              "correctAnswers": ["and"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. Two facts about Adam, one added to the other.",
+                  "he": "כן. שתי עובדות על אדם, אחת מתווספת לשנייה.",
+                  "ar": "نعم. حقيقتان عن آدم، إحداهما تُضاف إلى الأخرى."
+                },
+                "incorrect": {
+                  "en": "There is no surprise here and no reason here — just two facts. Which word simply adds one thing to another?",
+                  "he": "אין כאן הפתעה ואין כאן סיבה — רק שתי עובדות. איזו מילה פשוט מוסיפה דבר אחד לשני?",
+                  "ar": "لا مفاجأة هنا ولا سبب — مجرّد حقيقتين. أيّ كلمة تضيف ببساطة شيئاً إلى آخر؟"
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Noa is only six ___ she paints very well.",
+              "answers": ["and", "but", "because", "so"],
+              "correctAnswers": ["but"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. The second half is a surprise after the first one.",
+                  "he": "נכון. החצי השני מפתיע אחרי הראשון.",
+                  "ar": "صحيح. النصف الثاني مفاجئ بعد الأوّل."
+                },
+                "incorrect": {
+                  "en": "The word \"only\" is a clue. It prepares you for something unexpected. Which linking word carries a surprise?",
+                  "he": "המילה \"only\" היא רמז. היא מכינה אתכם למשהו לא צפוי. איזו מילת קישור נושאת הפתעה?",
+                  "ar": "كلمة \"only\" دليل. إنّها تهيّئكم لشيء غير متوقّع. أيّ أداة ربط تحمل مفاجأة؟"
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "We eat at my grandmother's house ___ she makes the best soup.",
+              "answers": ["and", "but", "because", "when"],
+              "correctAnswers": ["because"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. The second half explains why the first half happens.",
+                  "he": "כן. החצי השני מסביר למה החצי הראשון קורה.",
+                  "ar": "نعم. النصف الثاني يفسّر لماذا يحدث النصف الأوّل."
+                },
+                "incorrect": {
+                  "en": "Turn the first half into a question starting with \"why\". If the second half answers it, you need the word that gives a reason.",
+                  "he": "הפכו את החצי הראשון לשאלה שמתחילה ב\"למה\". אם החצי השני עונה עליה, צריך את המילה שנותנת סיבה.",
+                  "ar": "حوّلوا النصف الأوّل إلى سؤال يبدأ بـ\"لماذا\". إذا أجاب النصف الثاني عنه، فأنتم بحاجة إلى الكلمة التي تعطي سبباً."
+                }
+              }
+            },
+            {
+              "questionId": "q4",
+              "questionType": "single-choice",
+              "questionText": "Uncle Sami wants to come early ___ he always arrives late.",
+              "answers": ["and", "but", "because", "so"],
+              "correctAnswers": ["but"],
+              "feedback": {
+                "correct": {
+                  "en": "Exactly. What he wants and what happens are not the same — that is a contrast.",
+                  "he": "בדיוק. מה שהוא רוצה ומה שקורה זה לא אותו דבר — זה ניגוד.",
+                  "ar": "بالضبط. ما يريده وما يحدث ليسا الشيء نفسه — هذا تناقض."
+                },
+                "incorrect": {
+                  "en": "Compare what Sami wants with what he actually does. If the two do not match, the linking word has to show that.",
+                  "he": "השוו בין מה שסמי רוצה לבין מה שהוא באמת עושה. אם השניים לא מתאימים, מילת הקישור צריכה להראות את זה.",
+                  "ar": "قارنوا بين ما يريده سامي وما يفعله فعلاً. إذا لم يتطابقا، فعلى أداة الربط أن تُظهر ذلك."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.WRITE-02-03",
+          "title": "Now write about a family",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "משימת כתיבה פתוחה — הליבה של יעד הלמידה. הלומד כותב שלושה עד ארבעה משפטים על משפחה (שלו או מומצאת) ומקשר לפחות שניים מהם. יעד: הפקה, לא זיהוי. המשימה אינה נבדקת אוטומטית; היא נשמרת ומועברת למורה ולסוכן. רשימת התיוג היא פיגום ניטור — הלומד בודק את עצמו לפי קריטריונים גלויים לפני שהוא מגיש. אסטרטגיה: לכתוב קודם משפטים קצרים ורק אז לחבר. תפיסות שגויות נפוצות: (1) משפט ארוך אחד עם and חוזר; (2) שכחת אות גדולה בתחילת משפט ובשמות פרטיים; (3) תרגום מילולי מעברית של 'יש לי' ל-'is to me' במקום 'I have'. אין להשלים את הטקסט במקום הלומד — מותר להציע התחלה או שאלה מנחה בלבד.",
+          "presentation": {
+            "kind": "writing",
+            "prompt": {
+              "en": "Write three or four sentences about a family. It can be your family, or a family you invent.",
+              "he": "כתבו שלושה או ארבעה משפטים על משפחה. זו יכולה להיות המשפחה שלכם, או משפחה שאתם ממציאים.",
+              "ar": "اكتبوا ثلاث أو أربع جمل عن عائلة. يمكن أن تكون عائلتكم أو عائلة من ابتكاركم."
+            },
+            "placeholder": {
+              "en": "In my family there are ...",
+              "he": "In my family there are ...",
+              "ar": "In my family there are ..."
+            },
+            "checklist": [
+              {
+                "en": "I wrote at least three sentences.",
+                "he": "כתבתי לפחות שלושה משפטים.",
+                "ar": "كتبت ثلاث جمل على الأقلّ."
+              },
+              {
+                "en": "I started every sentence with a capital letter.",
+                "he": "התחלתי כל משפט באות גדולה.",
+                "ar": "بدأت كلّ جملة بحرف كبير."
+              },
+              {
+                "en": "I joined two ideas with and, but or because.",
+                "he": "חיברתי שני רעיונות בעזרת and, but או because.",
+                "ar": "ربطت فكرتين بواسطة and أو but أو because."
+              },
+              {
+                "en": "I wrote one sentence that says WHY someone does something.",
+                "he": "כתבתי משפט אחד שאומר למה מישהו עושה משהו.",
+                "ar": "كتبت جملة واحدة تقول لماذا يفعل شخص ما شيئاً."
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.WRITE-03",
+      "learningUnitId": "ENG.G7.FAMILY.WRITE",
+      "title": "Check: writing about a family",
+      "componentPurpose": "הערכה",
+      "isAssessment": true,
+      "isRequired": true,
+      "order": 3,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 3,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 11,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.WRITE-01B"],
+      "skills": ["הבעה בכתב", "שימוש במילות קישור"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.WRITE-03-01",
+          "title": "Before the check",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב ההערכה ליעד הכתיבה. המטרה: להסביר שיש כאן שני חלקים — בחירת מילת קישור במשפטים חדשים, ואז כתיבה עצמאית. חשוב: מרגע זה אין לחשוף תשובות ואין לרמוז עליהן, וגם אין לכתוב במקום הלומד בחלק הפתוח. מותר להזכיר אסטרטגיה כללית: לקרוא את שני חצאי המשפט בנפרד, ולעבור על רשימת התיוג לפני ההגשה.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Time to check what you can write on your own.",
+              "he": "הגיע הזמן לבדוק מה אתם כבר יודעים לכתוב בעצמכם.",
+              "ar": "حان وقت التحقّق ممّا تستطيعون كتابته بأنفسكم."
+            },
+            "goal": {
+              "en": "Two parts: choose the right linking word in new sentences, then write a short text about Sara's family.",
+              "he": "שני חלקים: לבחור את מילת הקישור הנכונה במשפטים חדשים, ואז לכתוב טקסט קצר על המשפחה של שרה.",
+              "ar": "جزآن: اختيار أداة الربط الصحيحة في جمل جديدة، ثمّ كتابة نصّ قصير عن عائلة سارة."
+            },
+            "strategy": {
+              "en": "Take your time. You can go back to a sentence and change it before you finish.",
+              "he": "קחו את הזמן. אפשר לחזור למשפט ולשנות אותו לפני הסיום.",
+              "ar": "خذوا وقتكم. يمكنكم العودة إلى جملة وتغييرها قبل الانتهاء."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.WRITE-03-02",
+          "title": "New sentences to join",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "פריט הערכה של בחירת מילת הקישור. המשפטים חדשים ועוסקים במשפחה של שרה, כדי שההצלחה תעיד על ההבחנה עצמה ולא על זיכרון המשפטים שתורגלו. יעד: להבחין נכון בין הוספה, ניגוד וסיבה. בזמן ההערכה אין לחשוף את התשובה, אין לרמוז עליה ואין לצמצם אפשרויות. מותר להזכיר אסטרטגיה כללית בלבד: לקרוא כל חצי משפט בנפרד ולשאול מה היחס ביניהם.",
+          "presentation": {
+            "prompt": {
+              "en": "Sara is writing about her family. Choose the word that joins each pair of ideas.",
+              "he": "שרה כותבת על המשפחה שלה. בחרו את המילה שמחברת כל זוג רעיונות.",
+              "ar": "سارة تكتب عن عائلتها. اختاروا الكلمة التي تربط كلّ زوج من الأفكار."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "My brothers are twins ___ they are not the same at all.",
+              "answers": ["and", "but", "because", "so"],
+              "correctAnswers": ["but"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct. Twins are usually alike, so \"not the same at all\" is the surprise.",
+                  "he": "נכון. תאומים בדרך כלל דומים, ולכן \"not the same at all\" זו ההפתעה.",
+                  "ar": "صحيح. التوأمان عادةً متشابهان، لذا \"not the same at all\" هي المفاجأة."
+                },
+                "incorrect": {
+                  "en": "Think about what people expect from twins, and then read the second half again. Does it match that expectation?",
+                  "he": "חשבו מה אנשים מצפים מתאומים, ואז קראו שוב את החצי השני. האם הוא מתאים לציפייה הזו?",
+                  "ar": "فكّروا فيما يتوقّعه الناس من التوأمين، ثمّ اقرأوا النصف الثاني مجدّداً. هل يطابق ذلك التوقّع؟"
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "We only see Lily at the weekend ___ she studies in Tel Aviv.",
+              "answers": ["and", "but", "because", "or"],
+              "correctAnswers": ["because"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. The second half is the reason for the first half.",
+                  "he": "כן. החצי השני הוא הסיבה לחצי הראשון.",
+                  "ar": "نعم. النصف الثاني هو سبب النصف الأوّل."
+                },
+                "incorrect": {
+                  "en": "Ask \"why do they only see her at the weekend?\" and check whether the second half answers your question.",
+                  "he": "שאלו \"למה רואים אותה רק בסוף השבוע?\" ובדקו אם החצי השני עונה על השאלה.",
+                  "ar": "اسألوا \"لماذا لا يرونها إلّا في نهاية الأسبوع؟\" وتحقّقوا إن كان النصف الثاني يجيب عن سؤالكم."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "My mother is a teacher ___ my father works at the hospital.",
+              "answers": ["and", "but", "because", "when"],
+              "correctAnswers": ["and"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. Two jobs, two people, no contrast and no reason.",
+                  "he": "נכון. שתי עבודות, שני אנשים, בלי ניגוד ובלי סיבה.",
+                  "ar": "صحيح. وظيفتان وشخصان، بلا تناقض وبلا سبب."
+                },
+                "incorrect": {
+                  "en": "Neither half explains the other and neither one is surprising. What is left for a linking word to do here?",
+                  "he": "אף חצי לא מסביר את השני ואף אחד מהם לא מפתיע. מה נשאר למילת הקישור לעשות כאן?",
+                  "ar": "لا نصف يفسّر الآخر ولا أحدهما مفاجئ. ماذا يبقى لأداة الربط أن تفعل هنا؟"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.WRITE-03-03",
+          "title": "Write about Sara's family",
+          "contentType": "הערכה",
+          "mediaFormat": "text",
+          "informationToBot": "משימת הכתיבה המוערכת. הלומד מקבל פרטים על משפחת שרה וכותב עליהם טקסט קצר ומקושר. יעד: הפקה עצמאית של שלושה עד ארבעה משפטים עם לפחות שתי מילות קישור שונות. המשימה אינה נבדקת אוטומטית — היא נשמרת ומועברת למורה ולסוכן, ולכן חשוב במיוחד לא לכתוב במקום הלומד ולא להכתיב לו ניסוח. מותר להזכיר את רשימת התיוג ולשאול שאלה מנחה כמו 'על מי עוד אפשר לכתוב?'. תפיסות שגויות שכדאי לדעת עליהן: שרשור אינסופי של and, שכחת אות גדולה, ונטייה להעתיק את הפרטים כרשימה במקום לכתוב משפטים.",
+          "presentation": {
+            "kind": "writing",
+            "prompt": {
+              "en": "Sara has two twin brothers aged eleven, a big sister Lily who studies in Tel Aviv, a mother who is a teacher and a father who works at the hospital. Write three or four sentences about her family.",
+              "he": "לשרה יש שני אחים תאומים בני אחת עשרה, אחות גדולה בשם לילי שלומדת בתל אביב, אמא שהיא מורה ואבא שעובד בבית חולים. כתבו שלושה או ארבעה משפטים על המשפחה שלה.",
+              "ar": "لدى سارة أخوان توأمان في الحادية عشرة، وأخت كبرى اسمها ليلي تدرس في تل أبيب، وأمّ معلّمة، وأب يعمل في المستشفى. اكتبوا ثلاث أو أربع جمل عن عائلتها."
+            },
+            "placeholder": {
+              "en": "Sara has ...",
+              "he": "Sara has ...",
+              "ar": "Sara has ..."
+            },
+            "checklist": [
+              {
+                "en": "I wrote about at least three people.",
+                "he": "כתבתי על שלושה אנשים לפחות.",
+                "ar": "كتبت عن ثلاثة أشخاص على الأقلّ."
+              },
+              {
+                "en": "I used a capital letter for every name and at the start of every sentence.",
+                "he": "השתמשתי באות גדולה בכל שם וגם בתחילת כל משפט.",
+                "ar": "استخدمت حرفاً كبيراً في كلّ اسم وفي بداية كلّ جملة."
+              },
+              {
+                "en": "I used two different linking words, not only and.",
+                "he": "השתמשתי בשתי מילות קישור שונות, לא רק ב-and.",
+                "ar": "استخدمت أداتَي ربط مختلفتين، لا and فقط."
+              },
+              {
+                "en": "I used because at least once to explain something.",
+                "he": "השתמשתי ב-because לפחות פעם אחת כדי להסביר משהו.",
+                "ar": "استخدمت because مرّة واحدة على الأقلّ لتفسير شيء ما."
+              },
+              {
+                "en": "I read my text again before I sent it.",
+                "he": "קראתי את הטקסט שלי שוב לפני ששלחתי אותו.",
+                "ar": "قرأت نصّي مرّة أخرى قبل إرساله."
+              }
+            ]
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.WRITE-03-04",
+          "title": "You finished this goal",
+          "contentType": "סיכום",
+          "mediaFormat": "text",
+          "informationToBot": "מסך סיום של רכיב ההערכה. מסכם מילולית מה הלומד עשה ומה הצעד הבא, בלי ציון מספרי ובלי השוואה לאחרים. אם ההערכה לא עברה, המסך אומר במפורש שזה לא סוף הדרך ומפנה לייצוג אחר של אותו יעד — לא לחזרה על אותו רכיב. חשוב: הטקסט הפתוח נבדק על ידי המורה, ולכן הסיכום לא טוען שהכתיבה 'נכונה' או 'שגויה'.",
+          "presentation": {
+            "kind": "summary",
+            "onSuccess": {
+              "en": "You chose the right linking words and you wrote your own text about a family. Your text is now with your teacher.",
+              "he": "בחרתם את מילות הקישור הנכונות וכתבתם טקסט משלכם על משפחה. הטקסט שלכם נמצא עכשיו אצל המורה.",
+              "ar": "اخترتم أدوات الربط الصحيحة وكتبتم نصّكم الخاصّ عن عائلة. نصّكم الآن لدى معلّمكم."
+            },
+            "onRetry": {
+              "en": "Joining ideas takes practice, and the difference between but and because is a real one. Next we will meet the same text in a different way.",
+              "he": "חיבור בין רעיונות דורש תרגול, וההבדל בין but ל-because הוא הבדל אמיתי. בפעם הבאה נפגוש את אותו טקסט בדרך אחרת.",
+              "ar": "ربط الأفكار يحتاج تدريباً، والفرق بين but و because فرق حقيقي. في المرّة القادمة سنلتقي بالنصّ نفسه بطريقة أخرى."
+            },
+            "nextHint": {
+              "en": "Next goal: writing short messages to other people — inviting, replying and asking a question.",
+              "he": "היעד הבא: כתיבת הודעות קצרות לאנשים אחרים — להזמין, להשיב ולשאול שאלה.",
+              "ar": "الهدف التالي: كتابة رسائل قصيرة للآخرين — دعوة وردّ وطرح سؤال."
+            }
+          },
+          "questions": []
+        }
+      ]
+    }
+  ]
+}
