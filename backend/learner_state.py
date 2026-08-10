@@ -92,6 +92,7 @@ def _empty_state(learner_id: str) -> dict[str, Any]:
         "game_progress": {},
         "avatar": None,
         "avatar_unlocks": [],
+        "room_unlocks": [],
         "badges": [],
         "room": None,
         "activeness_map": None,
@@ -126,6 +127,8 @@ async def update_learner_state(learner_id: Optional[str], updates: dict[str, Any
     safe_id = normalize_learner_id(learner_id)
     # `avatar_unlocks` is deliberately NOT here: cosmetics are earned, so only
     # the server may grant them (see grant_avatar_unlock / services.rewards).
+    # `room_unlocks` is out for the same reason — and because `room` itself is
+    # writable, the room items are additionally screened on the way in.
     # `theme` is NOT here either: it lives on the user document
     # (`preferences.theme`) so one account keeps one theme across devices.
     # `badges` is NOT here: they are a projection of the brain computed by
@@ -158,10 +161,21 @@ async def update_learner_state(learner_id: Optional[str], updates: dict[str, Any
 
 
 async def grant_avatar_unlock(learner_id: Optional[str], asset_id: str) -> list[str]:
-    """Server-only write path for earned cosmetics.
+    """Server-only write path for earned Yuvi cosmetics."""
+    return await _grant_unlock(learner_id, "avatar_unlocks", asset_id)
 
-    Kept out of `update_learner_state`'s allow-list so a client cannot grant
-    itself a locked item; the rewards service is the single caller.
+
+async def grant_room_unlock(learner_id: Optional[str], item_id: str) -> list[str]:
+    """Server-only write path for earned room furniture."""
+    return await _grant_unlock(learner_id, "room_unlocks", item_id)
+
+
+async def _grant_unlock(learner_id: Optional[str], field: str, asset_id: str) -> list[str]:
+    """Add one earned id to a server-owned list.
+
+    These fields are kept out of `update_learner_state`'s allow-list so a client
+    cannot grant itself a locked item; the rewards/unlocks services are the only
+    callers.
     """
     safe_id = normalize_learner_id(learner_id)
     now = datetime.now(timezone.utc).isoformat()
@@ -172,22 +186,22 @@ async def grant_avatar_unlock(learner_id: Optional[str], asset_id: str) -> list[
             await collection.update_one(
                 {"_id": safe_id},
                 {
-                    "$addToSet": {"avatar_unlocks": asset_id},
+                    "$addToSet": {field: asset_id},
                     "$set": {"learner_id": safe_id, "updated_at": now},
                 },
                 upsert=True,
             )
             state = await get_learner_state(safe_id)
-            return list(state.get("avatar_unlocks") or [])
+            return list(state.get(field) or [])
         except Exception as exc:
-            print(f"⚠️ Mongo avatar unlock write failed, using fallback: {exc}")
+            print(f"⚠️ Mongo {field} write failed, using fallback: {exc}")
 
     data = _read_fallback()
     current = data.get(safe_id) or _empty_state(safe_id)
-    unlocks = list(current.get("avatar_unlocks") or [])
+    unlocks = list(current.get(field) or [])
     if asset_id not in unlocks:
         unlocks.append(asset_id)
-    current["avatar_unlocks"] = unlocks
+    current[field] = unlocks
     current["learner_id"] = safe_id
     current["updated_at"] = now
     data[safe_id] = current

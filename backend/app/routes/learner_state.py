@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 
 from app.auth.dependencies import require_learner, require_learner_session
 from app.auth.repository import get_user_by_id, set_agency_started_at
+from app.services import unlock_sync, unlocks
 from app.services.lrs import reporter as lrs_reporter
 from learner_state import get_learner_state, update_learner_state
 
@@ -49,10 +50,46 @@ async def _report_onboarding_completed(session: dict) -> None:
     await set_agency_started_at(learner_id, None)  # next mapping = a new journey
 
 
+async def _screen_room_items(learner_id: str, data: dict) -> None:
+    """Drop earned furniture the learner has not earned, in place.
+
+    `room` is client-writable, so hiding a locked prop in the studio would
+    otherwise be the only thing standing between a learner and a hand-written
+    PATCH. Unearned items are stripped rather than rejected: the rest of the
+    room is legitimate, and failing the whole write would lose it.
+    """
+    room = data.get("room")
+    if not isinstance(room, dict):
+        return
+    items = room.get("items")
+    if not isinstance(items, list):
+        return
+    gated = {
+        str(item.get("kind"))
+        for item in items
+        if isinstance(item, dict) and unlocks.is_gated_prop(str(item.get("kind")))
+    }
+    if not gated:
+        return
+    try:
+        held = await unlock_sync.held_props(learner_id)
+    except Exception:
+        held = set()
+    if gated <= held:
+        return
+    room["items"] = [
+        item for item in items
+        if not (isinstance(item, dict)
+                and unlocks.is_gated_prop(str(item.get("kind")))
+                and str(item.get("kind")) not in held)
+    ]
+
+
 @router.patch("/learner-state")
 async def patch_learner_state(data: dict, session=Depends(require_learner_session)):
     """Persist learner UI state such as language, mapping, profile, dashboard, or progress."""
     learner_id = session["sub"]
+    await _screen_room_items(learner_id, data)
     # A badge chosen as the profile picture must actually be earned — the picker
     # only offers earned coins, so this rejects tampering, not normal use.
     avatar = data.get("avatar")

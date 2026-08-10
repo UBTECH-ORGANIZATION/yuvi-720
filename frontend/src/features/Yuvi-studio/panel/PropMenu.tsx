@@ -18,7 +18,7 @@ export function PropMenu({
   at: PropMenuState
   label: string
   onMove: () => void
-  /** Stations only move — they have no meaningful rotation and cannot be removed. */
+  /** Stations turn too, but they are part of the room and cannot be removed. */
   onRotate?: () => void
   onRemove?: () => void
   onClose: () => void

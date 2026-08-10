@@ -62,12 +62,29 @@ export interface LedgerEntry {
   at: string
 }
 
+/** One earned-cosmetic row: what exists, what it costs in effort, what is held. */
+export interface UnlockRow {
+  id: string
+  kind: 'avatar' | 'prop'
+  /** Locale key describing the badge or streak that grants it. */
+  requirementKey: string
+  owned: boolean
+}
+
 export function getWallet() {
   return apiGet<SparkWallet>('/api/rewards/wallet')
 }
 
 export function getShop() {
-  return apiGet<{ items: ShopItem[]; wallet: SparkWallet }>('/api/rewards/catalog')
+  return apiGet<{
+    items: ShopItem[]
+    wallet: SparkWallet
+    unlocks: UnlockRow[]
+    roomUnlocks: string[]
+    /** Current consecutive-day learning streak. */
+    streak: number
+    newlyUnlocked: string[]
+  }>('/api/rewards/catalog')
 }
 
 export function getLedger(limit = 20) {

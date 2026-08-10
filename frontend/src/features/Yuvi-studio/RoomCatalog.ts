@@ -1036,11 +1036,242 @@ export const ROOM_ITEMS: RoomItemSpec[] = [
       return group
     },
   },
+
+  /* ── earned ───────────────────────────────────────────────────────────────
+     Furniture you cannot buy. Each of these is granted by the server when the
+     badge or streak behind it is real (see `backend/app/services/unlocks.py`),
+     so a room that has one is a room that says something true about its owner. */
+  {
+    id: 'trophyShelf', category: 'wall', placement: 'wall', radius: 0.5, height: 2,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const gold = kit.mat('metal', 0xe8c86a)
+      // Two shelves, so the collection has somewhere to grow into.
+      for (const y of [1.34, 1.82]) {
+        group.add(at(kit.rbox(1.15, 0.05, 0.26, 0.02, kit.mat('wood', DARKWOOD)), 0, y, 0.11))
+        group.add(at(kit.box(1.1, 0.012, 0.02, kit.mat('emissive', 0xffe6b0)), 0, y + 0.03, 0.23))
+      }
+      const coin = (x: number, y: number, color: number) => {
+        const disc = at(kit.cyl(0.11, 0.11, 0.02, kit.mat('metal', color), 20), x, y, 0.11)
+        disc.rotation.x = Math.PI / 2
+        group.add(disc)
+        group.add(at(kit.tor(0.115, 0.014, gold), x, y, 0.11))
+        const spark = at(kit.sph(0.035, kit.mat('emissive', 0xfff6d8)), x, y, 0.135)
+        group.add(spark)
+      }
+      coin(-0.34, 1.49, 0xe1954e)
+      coin(0, 1.51, 0xa9b7cc)
+      coin(0.34, 1.49, 0xf3c64c)
+      coin(-0.18, 1.97, 0xa9b7cc)
+      coin(0.2, 1.97, 0xf3c64c)
+      return group
+    },
+  },
+  {
+    id: 'podium', category: 'play', placement: 'floor', radius: 0.72, height: 0.7,
+    build: (kit) => {
+      const group = new THREE.Group()
+      const stone = kit.mat('matte', 0x2a3170)
+      // A real three-step podium: first in the middle, and it is standable.
+      const steps: Array<[number, number, number]> = [[0, 0.62, 0xf3c64c], [-0.46, 0.44, 0xa9b7cc], [0.46, 0.32, 0xe1954e]]
+      for (const [x, h, color] of steps) {
+        group.add(at(kit.rbox(0.44, h, 0.44, 0.03, stone), x, h / 2, 0))
+        group.add(at(kit.rbox(0.47, 0.04, 0.47, 0.02, kit.mat('gloss', color)), x, h + 0.02, 0))
+        group.add(at(flat(kit.halo(0.8, color, 0.3)), x, h + 0.05, 0))
+      }
+      group.add(at(kit.rbox(1.5, 0.06, 0.6, 0.03, kit.mat('matte', CHARCOAL)), 0, 0.03, 0))
+      return group
+    },
+  },
+  {
+    id: 'observatory', category: 'tech', placement: 'floor', radius: 0.55, height: 1.6,
+    tintable: true, tint: '#4cc9f0',
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      const brass = kit.mat('metal', 0xc9a227)
+      const HUB = 0.94
+      // Each leg hangs off its own yaw pivot, so the tripod splays evenly
+      // instead of every leg leaning the same way in world space.
+      for (let i = 0; i < 3; i++) {
+        const pivot = new THREE.Group()
+        pivot.rotation.y = (i / 3) * Math.PI * 2
+        group.add(pivot)
+        const leg = at(kit.cyl(0.028, 0.036, HUB + 0.14, brass, 8), 0, (HUB + 0.14) / 2 - 0.04, 0.17)
+        leg.rotation.x = -0.32
+        pivot.add(leg)
+        pivot.add(at(kit.sph(0.045, kit.mat('matte', CHARCOAL)), 0, 0.02, 0.44))
+      }
+      group.add(at(kit.cyl(0.1, 0.115, 0.11, brass, 14), 0, HUB, 0))
+      // Tube, lens and eyepiece all ride one tilting head, so they can never
+      // drift off the optical axis.
+      const head = new THREE.Group()
+      head.position.set(0, HUB + 0.14, 0)
+      head.rotation.x = -0.5
+      group.add(head)
+      const barrel = kit.cyl(0.13, 0.16, 0.92, kit.mat('gloss', tint), 18)
+      barrel.rotation.x = Math.PI / 2
+      head.add(barrel)
+      for (const z of [-0.28, 0.3]) {
+        const band = at(kit.tor(0.15, 0.022, brass), 0, 0, z)
+        head.add(band)
+      }
+      const lens = kit.cyl(0.12, 0.12, 0.03, kit.mat('emissive', 0xdff4ff), 18)
+      lens.rotation.x = Math.PI / 2
+      lens.position.z = 0.47
+      head.add(lens)
+      const eyepiece = kit.cyl(0.05, 0.055, 0.2, brass, 10)
+      eyepiece.rotation.x = Math.PI / 2
+      eyepiece.position.z = -0.54
+      head.add(eyepiece)
+      const finder = kit.cyl(0.035, 0.035, 0.32, brass, 8)
+      finder.rotation.x = Math.PI / 2
+      finder.position.set(0.13, 0.15, 0.12)
+      head.add(finder)
+      return group
+    },
+  },
+  {
+    id: 'rocketModel', category: 'play', placement: 'floor', radius: 0.45, height: 1.6,
+    tintable: true, tint: '#ff5d73',
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      const shell = kit.mat('gloss', tint)
+      group.add(at(kit.cyl(0.28, 0.3, 0.06, kit.mat('metal', STEEL), 20), 0, 0.03, 0))
+      for (let i = 0; i < 3; i++) {
+        const angle = (i / 3) * Math.PI * 2
+        group.add(at(kit.cyl(0.02, 0.02, 0.22, kit.mat('metal', STEEL), 8), Math.sin(angle) * 0.17, 0.16, Math.cos(angle) * 0.17))
+      }
+      group.add(at(kit.cyl(0.17, 0.19, 0.82, shell, 20), 0, 0.68, 0))
+      group.add(at(kit.cone(0.18, 0.42, kit.mat('gloss', CREAM)), 0, 1.3, 0))
+      group.add(at(kit.tor(0.185, 0.02, kit.mat('metal', STEEL)), 0, 0.95, 0))
+      // Porthole, facing whoever is looking at it.
+      const port = at(kit.cyl(0.075, 0.075, 0.03, kit.mat('emissive', 0x9fd8ff), 14), 0, 0.92, 0.18)
+      port.rotation.x = Math.PI / 2
+      group.add(port)
+      for (let i = 0; i < 3; i++) {
+        const angle = (i / 3) * Math.PI * 2 + 0.5
+        const fin = at(kit.box(0.04, 0.3, 0.22, kit.mat('matte', CREAM)), Math.sin(angle) * 0.19, 0.42, Math.cos(angle) * 0.19)
+        fin.rotation.y = -angle
+        group.add(fin)
+      }
+      group.add(at(kit.cone(0.13, 0.26, kit.sheer(0xffb374, 0.55, true)), 0, 0.16, 0).rotateZ(Math.PI))
+      return group
+    },
+  },
+  {
+    id: 'mathBoard', category: 'desk', placement: 'wall', radius: 0.5, height: 2,
+    build: (kit) => {
+      const group = new THREE.Group()
+      group.add(at(kit.rbox(1.4, 0.9, 0.06, 0.03, kit.mat('wood', DARKWOOD)), 0, 1.6, 0))
+      group.add(at(kit.rbox(1.28, 0.78, 0.02, 0.01, kit.mat('matte', 0x1c3d2e)), 0, 1.6, 0.035))
+      // Chalk marks as thin bars — legible shapes at a distance, no text.
+      const chalk = kit.mat('emissive', 0xdfeee6)
+      const marks: Array<[number, number, number, number]> = [
+        [-0.42, 1.86, 0.3, 0.02], [-0.42, 1.78, 0.18, 0.02],
+        [0.06, 1.86, 0.02, 0.16], [0.06, 1.86, 0.16, 0.02],
+        [0.46, 1.84, 0.22, 0.02], [0.46, 1.76, 0.22, 0.02],
+        [-0.3, 1.5, 0.44, 0.02], [-0.34, 1.4, 0.3, 0.02],
+        [0.3, 1.46, 0.26, 0.02], [0.3, 1.36, 0.4, 0.02],
+        [-0.2, 1.24, 0.5, 0.02],
+      ]
+      for (const [x, y, w, h] of marks) group.add(at(kit.plane(w, h, chalk), x, y, 0.05))
+      group.add(at(kit.rbox(1.3, 0.05, 0.12, 0.02, kit.mat('wood', OAK)), 0, 1.14, 0.06))
+      group.add(at(kit.cyl(0.02, 0.02, 0.12, kit.mat('matte', CREAM), 8), 0.4, 1.18, 0.08).rotateZ(Math.PI / 2))
+      return group
+    },
+  },
+  {
+    id: 'championBanner', category: 'wall', placement: 'wall', radius: 0.5, height: 2.5,
+    tintable: true, tint: '#7C6BFF',
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      const gold = kit.mat('metal', 0xe8c86a)
+      group.add(at(kit.cyl(0.03, 0.03, 1.3, gold, 10), 0, 2.42, 0.02).rotateZ(Math.PI / 2))
+      for (const sx of [-0.62, 0.62]) group.add(at(kit.sph(0.055, gold), sx, 2.42, 0.02))
+      group.add(at(kit.plane(1.14, 1.66, kit.mat('fabric', tint)), 0, 1.56, 0.02))
+      group.add(at(kit.plane(1.02, 1.54, kit.sheer(0xffe6b0, 0.22, true)), 0, 1.56, 0.028))
+      // A laurel around a world coin: the capstone, not just another pennant.
+      const coin = at(kit.cyl(0.24, 0.24, 0.03, gold, 24), 0, 1.72, 0.04)
+      coin.rotation.x = Math.PI / 2
+      group.add(coin)
+      group.add(at(kit.tor(0.25, 0.025, kit.mat('metal', 0xfff0c0)), 0, 1.72, 0.05))
+      for (const side of [-1, 1]) {
+        for (let i = 0; i < 5; i++) {
+          const leaf = at(kit.sph(0.055, kit.mat('matte', 0x5ce67e)), side * (0.3 + i * 0.03), 1.56 + i * 0.09, 0.05)
+          leaf.scale.set(0.5, 1.3, 0.3)
+          leaf.rotation.z = side * (0.5 - i * 0.16)
+          group.add(leaf)
+        }
+      }
+      // A tail split into two points, so it reads as a pennant not a poster.
+      for (const side of [-1, 1]) {
+        const tail = at(kit.plane(0.55, 0.42, kit.mat('fabric', tint)), side * 0.28, 0.62, 0.02)
+        tail.rotation.z = side * -0.34
+        group.add(tail)
+      }
+      return group
+    },
+  },
+  {
+    id: 'streakCalendar', category: 'wall', placement: 'wall', radius: 0.5, height: 1.9,
+    build: (kit) => {
+      const group = new THREE.Group()
+      group.add(at(kit.rbox(1.05, 0.86, 0.05, 0.03, kit.mat('gloss', CREAM)), 0, 1.6, 0))
+      group.add(at(kit.rbox(1.05, 0.16, 0.055, 0.03, kit.mat('matte', 0xff7a3d)), 0, 1.95, 0.004))
+      // A month of days; the lit ones are the run the learner is on.
+      const lit = new Set([7, 8, 9, 13, 14, 15, 16, 19, 20, 21, 22, 23])
+      for (let i = 0; i < 28; i++) {
+        const col = i % 7
+        const row = Math.floor(i / 7)
+        const x = -0.4 + col * 0.134
+        const y = 1.78 - row * 0.15
+        const on = lit.has(i)
+        group.add(at(kit.rbox(0.11, 0.11, 0.02, 0.02, kit.mat(on ? 'emissive' : 'matte', on ? 0xffb374 : 0xd8d3ea)), x, y, 0.03))
+      }
+      group.add(at(flat(kit.halo(1.1, 0xffb374, 0.22)), 0, 1.2, 0.1))
+      return group
+    },
+  },
+  {
+    id: 'auroraLamp', category: 'light', placement: 'floor', radius: 0.42, height: 1.75,
+    tintable: true, tint: '#4eeef0',
+    build: (kit, tint) => {
+      const group = new THREE.Group()
+      group.add(at(kit.cyl(0.26, 0.3, 0.07, kit.mat('metal', 0x39406e), 20), 0, 0.035, 0))
+      group.add(at(kit.cyl(0.035, 0.035, 0.86, kit.mat('metal', STEEL), 10), 0, 0.47, 0))
+      group.add(at(kit.cyl(0.2, 0.22, 0.05, kit.mat('metal', 0x39406e), 18), 0, 0.92, 0))
+      // A ring of tall, wide ribbons at mixed radii, heights and opacities.
+      // Open shells read as a box from the side; uneven upright ribbons read as
+      // light. The variance is what stops it looking like a bundle of pipes.
+      for (let i = 0; i < 7; i++) {
+        const angle = (i / 7) * Math.PI * 2
+        const h = 0.52 + ((i * 5) % 4) * 0.16
+        const r = 0.1 + ((i * 3) % 3) * 0.05
+        const ribbon = at(
+          kit.plane(0.26, h, kit.sheer(i % 3 === 1 ? 0xa896ff : tint, 0.24 + ((i * 7) % 5) * 0.07, true)),
+          Math.sin(angle) * r, 0.99 + h / 2, Math.cos(angle) * r,
+        )
+        ribbon.rotation.y = -angle + ((i % 2) ? 0.35 : -0.35)
+        group.add(ribbon)
+      }
+      group.add(at(kit.sph(0.11, kit.mat('emissive', 0xf2fbff)), 0, 1.02, 0))
+      group.add(at(flat(kit.halo(1.4, tint, 0.4)), 0, 0.99, 0))
+      group.add(at(flat(kit.halo(2.2, tint, 0.3)), 0, 0.02, 0))
+      return group
+    },
+  },
 ]
 
 export const ROOM_CATEGORIES: RoomItemCategory[] = ['seating', 'desk', 'play', 'nature', 'light', 'tech', 'wall']
 
 const BY_ID = new Map(ROOM_ITEMS.map((spec) => [spec.id, spec]))
+if (import.meta.env?.DEV && BY_ID.size !== ROOM_ITEMS.length) {
+  // A reused id silently shadows the original prop and, once ids are gated,
+  // can lock furniture a learner has already placed.
+  const seen = new Set<string>()
+  const dupes = ROOM_ITEMS.map((s) => s.id).filter((id) => (seen.has(id) ? true : (seen.add(id), false)))
+  console.error(`RoomCatalog: duplicate item ids — ${[...new Set(dupes)].join(', ')}`)
+}
 
 export function roomItemSpec(id: string): RoomItemSpec | undefined {
   return BY_ID.get(id)

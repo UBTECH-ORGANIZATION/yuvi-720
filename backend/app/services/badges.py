@@ -18,6 +18,7 @@ from typing import Any, Callable
 from app.brain.mastery import entry_for
 from app.services import kata_catalog
 from app.services.planner import DEFAULT_SUBJECTS, plan_next
+from app.services.streaks import active_days as _active_days, longest_day_streak as _longest_day_streak
 
 # ── localized copy helper ──
 Str = dict[str, str]
@@ -99,34 +100,6 @@ def _subjects_with_mastery(mastery: dict[str, Any], subjects: tuple[str, ...]) -
         if any(entry_for(mastery, oid).get("achieved") for oid in ids):
             count += 1
     return count
-
-
-def _active_days(events: list[dict[str, Any]] | None) -> set[str]:
-    """Distinct calendar days (YYYY-MM-DD) the learner was active, from events."""
-    return {str(e.get("occurred_at"))[:10] for e in (events or []) if e.get("occurred_at")}
-
-
-def _longest_day_streak(days: set[str]) -> int:
-    """Longest run of consecutive calendar days present in ``days``."""
-    from datetime import date
-    parsed = []
-    for d in days:
-        try:
-            parsed.append(date.fromisoformat(d))
-        except ValueError:
-            continue
-    if not parsed:
-        return 0
-    parsed.sort()
-    best = run = 1
-    for prev, cur in zip(parsed, parsed[1:]):
-        gap = (cur - prev).days
-        if gap == 1:
-            run += 1
-            best = max(best, run)
-        elif gap > 1:
-            run = 1
-    return best
 
 
 # ── milestone predicates: (mastery, subjects, stats) -> (state, progress) ──

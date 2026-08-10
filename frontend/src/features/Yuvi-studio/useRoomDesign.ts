@@ -1,6 +1,6 @@
 // @ts-nocheck
 /* eslint-disable */
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { getLearnerState, updateLearnerState } from '../../services/api'
 import {
   DEFAULT_ROOM, MAX_ROOM_ITEMS, cloneRoom, newItemUid, normalizeRoom, sameRoom,
@@ -22,6 +22,10 @@ export function useRoomDesign(autoLoad = true) {
   const [selectedUid, setSelectedUid] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
+  // `completeTutorial` is reached from a memoised card, so it must not read the
+  // room out of a closure that may be a few edits behind.
+  const roomRef = useRef(room)
+  useEffect(() => { roomRef.current = room }, [room])
 
   const load = useCallback(async () => {
     try {
@@ -78,8 +82,23 @@ export function useRoomDesign(autoLoad = true) {
   const setWall = (wall: WallStyleId) => setRoom((prev) => ({ ...prev, wall }))
   const setMood = (mood: MoodId) => setRoom((prev) => ({ ...prev, mood }))
   /** Stations are furniture too: the learner decides where their room's doors are. */
-  const moveStation = (id: StationId, x: number, z: number) => {
-    setRoom((prev) => ({ ...prev, stations: { ...prev.stations, [id]: { x, z } } }))
+  const moveStation = (id: StationId, x: number, z: number, rot?: number) => {
+    setRoom((prev) => ({
+      ...prev,
+      stations: {
+        ...prev.stations,
+        [id]: { x, z, rot: rot ?? prev.stations[id].rot },
+      },
+    }))
+  }
+  const rotateStation = (id: StationId, delta: number) => {
+    setRoom((prev) => ({
+      ...prev,
+      stations: {
+        ...prev.stations,
+        [id]: { ...prev.stations[id], rot: prev.stations[id].rot + delta },
+      },
+    }))
   }
 
   const reset = () => {
@@ -87,13 +106,14 @@ export function useRoomDesign(autoLoad = true) {
     setSelectedUid(null)
   }
 
-  const save = async () => {
+  const save = async (next?: RoomDesign) => {
     if (saving) return false
+    const payload = next ?? room
     setSaving(true)
     let ok = false
     try {
-      const state = await updateLearnerState({ room })
-      const stored = normalizeRoom(state.room ?? room)
+      const state = await updateLearnerState({ room: payload })
+      const stored = normalizeRoom(state.room ?? payload)
       setRoom(stored)
       setBaseline(cloneRoom(stored))
       setJustSaved(true)
@@ -104,6 +124,17 @@ export function useRoomDesign(autoLoad = true) {
     return ok
   }
 
+  /**
+   * The walkthrough is over. It is written straight through rather than left
+   * for the next save, because a learner who skips it and walks away must not
+   * be handed the same tutorial again on their next visit.
+   */
+  const completeTutorial = async () => {
+    const next = { ...cloneRoom(roomRef.current), tutorialDone: true }
+    setRoom(next)
+    return save(next)
+  }
+
   /** True while the room on screen is not the room on the server. */
   const dirty = loaded && !sameRoom(room, baseline)
   const selected = room.items.find((item) => item.uid === selectedUid) ?? null
@@ -112,7 +143,7 @@ export function useRoomDesign(autoLoad = true) {
     loaded, room, items: room.items, full, dirty, saving, justSaved,
     selectedUid, setSelectedUid, selected,
     place, move, rotate, tint, remove, clear,
-    setFloor, setWall, setMood, moveStation, reset, save, load,
+    setFloor, setWall, setMood, moveStation, rotateStation, completeTutorial, reset, save, load,
   }
 }
 

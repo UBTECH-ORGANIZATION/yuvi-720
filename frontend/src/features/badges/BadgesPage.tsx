@@ -68,7 +68,7 @@ function sameBadge(choice: AvatarChoice, b: BadgeDTO): boolean {
 }
 
 export function BadgesPage() {
-  const { language } = useI18n()
+  const { language, t: tr } = useI18n()
   const { brain } = useBrain()
   const { user } = useAuth()
   const t = COPY[language === 'en' ? 'en' : 'he']
@@ -211,6 +211,19 @@ export function BadgesPage() {
                           <p className="badge-card__howto">
                             <span className="badge-card__howto-label">{t.howTo}</span>
                             {b.howToEarn}
+                          </p>
+                        )}
+
+                        {/* A coin is worth something concrete: say what, so the
+                            effort has a picture attached to it. */}
+                        {(b.unlocks?.length ?? 0) > 0 && (
+                          <p className="badge-card__unlocks">
+                            <span className="badge-card__howto-label">{tr('badges.unlocks')}</span>
+                            {b.unlocks!
+                              .map((u) => tr(u.kind === 'prop'
+                                ? `YuviStudio.room.item.${u.id}`
+                                : `YuviStudio.item.${u.id}`))
+                              .join(' · ')}
                           </p>
                         )}
 
