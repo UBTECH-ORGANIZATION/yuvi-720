@@ -1688,7 +1688,7 @@
   min-block-size: 48px;
   border: 1px solid var(--sp-border-strong);
   border-radius: 18px;
-  padding-inline: 18px 56px;
+  padding-inline: 18px 98px;
   background: var(--sp-bg);
   color: var(--sp-ink-700);
   font: 400 var(--sp-fs-sm)/1 var(--sp-font);
@@ -1721,6 +1721,29 @@
 .sp-companion__composer button:disabled { background: var(--sp-border-strong); box-shadow: none; cursor: not-allowed; }
 .sp-companion__composer button .sp-icon { transform: scaleX(1); }
 [dir="rtl"] .sp-companion__composer button .sp-icon { transform: scaleX(-1); }
+
+/* The rule above was written when send was the only button in the composer, so
+   it pins anything here to the same spot. The mic gets its own slot beside it,
+   and stays quiet — it is an alternative way to talk, not a second send. */
+.sp-companion__composer .sp-companion__voice-btn {
+  inset-inline-end: 50px;
+  background: none;
+  box-shadow: none;
+  color: var(--sp-ink-400);
+}
+
+.sp-companion__composer .sp-companion__voice-btn:hover {
+  background: var(--sp-surface-2);
+  color: var(--sp-primary-600);
+}
+
+.sp-companion__composer .sp-companion__voice-btn.is-active {
+  background: var(--sp-info-100);
+  color: var(--sp-primary-600);
+}
+
+/* A microphone is not directional — mirroring it in RTL only makes it odd. */
+[dir="rtl"] .sp-companion__composer .sp-companion__voice-btn .sp-icon { transform: none; }
 
 @media (max-width: 767px) {
   .sp-companion-backdrop {
