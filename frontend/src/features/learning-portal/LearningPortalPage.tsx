@@ -30,7 +30,7 @@ import type { LearningWorldHandle, LearningWorldStats } from './learningWorldRen
 import './learning-portal.css'
 import './learning-world.css'
 
-const SUBJECT_ORDER: LearningSubject[] = ['math', 'science', 'other']
+const SUBJECT_ORDER: LearningSubject[] = ['math', 'science', 'english', 'other']
 
 function purposeKey(component: LearningComponentDTO) {
   if (component.is_assessment) return 'learning.component.assessment'

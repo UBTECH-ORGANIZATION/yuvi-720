@@ -22,7 +22,7 @@ from typing import Any, Optional
 from urllib.parse import urlsplit
 
 from app.brain.repository import apply_brain_updates, get_brain
-from app.services import kata_client
+from app.services import content_providers, kata_client, native_content
 from app.services.events import mint_launch
 from app.services.learning_progress import project_unit_roadmap
 from learner_state import normalize_learner_id  # type: ignore
@@ -165,7 +165,8 @@ async def create_provider_session(
     restart: bool = False,
 ) -> dict[str, Any]:
     safe_learner_id = normalize_learner_id(learner_id)
-    unit, component = await kata_client.resolve_component(component_id, unit_id)
+    unit, component = await content_providers.resolve_component(component_id, unit_id)
+    native = content_providers.is_native(unit)
 
     # 720 F1: the PLATFORM owns the route between components ("התהלוך בין
     # הרכיבים מתבצע על ידי המערכת"). The roadmap projected that route and the UI
@@ -184,7 +185,9 @@ async def create_provider_session(
     content_language = language if language in component["languages"] else (
         component["languages"][0] if component["languages"] else None
     )
-    public_base = _public_base_url(request_base_url)
+    # Our own player is served from this origin and reports to this origin, so a
+    # native launch needs no public relay address at all — only Kata does.
+    public_base = "" if native else _public_base_url(request_base_url)
 
     launch = mint_launch(
         safe_learner_id,
@@ -193,19 +196,29 @@ async def create_provider_session(
         unit_id=unit["id"],
         subject=unit["subject"],
         is_assessment=component["is_assessment"],
-        source="kata",
-        reporting_base_url=public_base,
+        source=unit.get("source") or "kata",
+        reporting_base_url=public_base or None,
     )
 
-    # Kata relays content xAPI to our ingest. studentId MUST equal the launch id
-    # so the forwarded actor.account.name matches what the ingest scopes against.
-    context = await kata_client.create_launch_context(
-        component_id=component["id"],
-        student_id=launch["slxapi"]["actor"]["account"]["name"],
-        platform_url=public_base,
-        lrs_endpoint=launch["slxapi"]["endpoint"],
-        lrs_auth=launch["slxapi"]["auth"],
-    )
+    if native:
+        context = await native_content.create_launch_context(
+            component_id=component["id"],
+            student_id=launch["slxapi"]["actor"]["account"]["name"],
+            platform_url=public_base,
+            lrs_endpoint=launch["slxapi"]["endpoint"],
+            lrs_auth=launch["slxapi"]["auth"],
+            slxapi=launch["slxapi"],
+        )
+    else:
+        # Kata relays content xAPI to our ingest. studentId MUST equal the launch id
+        # so the forwarded actor.account.name matches what the ingest scopes against.
+        context = await kata_client.create_launch_context(
+            component_id=component["id"],
+            student_id=launch["slxapi"]["actor"]["account"]["name"],
+            platform_url=public_base,
+            lrs_endpoint=launch["slxapi"]["endpoint"],
+            lrs_auth=launch["slxapi"]["auth"],
+        )
 
     # Continuity is the default (720 §6: "save the student's progress and return
     # to the same point" — the CONTENT owns position, keyed by the stable
@@ -254,6 +267,13 @@ async def create_provider_session(
         # the last one of the previous run.
         "current_state.at": None,
     }
+    if native and not restart:
+        # Our own player DOES resume (720 §1.7 / §6 — "closed the window mid-task
+        # → continue from that point"), and it restores from exactly these
+        # fields. Wiping them here would delete the position we are about to be
+        # asked for. An explicit redo still starts clean.
+        for key in ("item_id", "question_id", "resume_token", "at"):
+            updates.pop(f"current_state.{key}")
     await apply_brain_updates(safe_learner_id, updates)
 
     roadmap = await project_unit_roadmap(unit, safe_learner_id)

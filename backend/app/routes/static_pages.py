@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.paths import (
     CAMPAIGN_DIR,
+    ENGLISH_PLAYER_DIR,
     LEARNING_GAME_FILE,
     LOCALES_DIR,
     REACT_APP_DIR,
@@ -28,6 +29,12 @@ def mount_static_assets(app: FastAPI) -> None:
         app.mount("/assets", StaticFiles(directory=str(REACT_ASSETS_DIR)), name="react-assets")
     if UNITY_WORLD_DIR.exists():
         app.mount("/unity-world", StaticFiles(directory=str(UNITY_WORLD_DIR)), name="unity-world")
+    if ENGLISH_PLAYER_DIR.exists():
+        app.mount(
+            "/content/player-assets",
+            StaticFiles(directory=str(ENGLISH_PLAYER_DIR)),
+            name="content-player-assets",
+        )
 
 
 def serve_react_app():

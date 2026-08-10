@@ -1,0 +1,653 @@
+/**
+ * Yuvilab lomda player.
+ *
+ * Standalone 720 content: launched with `slxapi`, authenticated only by that
+ * token, reporting xAPI back to the endpoint it was handed. It renders content
+ * and nothing else, so the same URL works inside our lesson frame and inside a
+ * 720 platform's frame.
+ *
+ * It also owns the parts of נספח 1 §1 that belong to the content rather than to
+ * the platform: opening and closing cards between items, learner-owned pace with
+ * backward navigation, a break offer, resume-where-you-stopped, and read-aloud.
+ */
+
+const VERB = 'https://lxp.education.gov.il/xapi/moe/verbs/';
+const OBJECT = 'https://yuvilab.spark/xapi/content/';
+const CATEGORY = 'https://yuvilab.spark/xapi/categories/';
+
+const DEFAULT_BREAK_MINUTES = 10;
+
+/* ── strings ────────────────────────────────────────────────────────────── */
+const STR = {
+  he: {
+    'nav.back': 'חזרה', 'nav.next': 'ממשיכים', 'nav.finish': 'סיימתי',
+    'nav.start': 'מתחילים', 'nav.check': 'בדיקה',
+    'step.of': 'שלב {n} מתוך {total}',
+    'audio.play': 'השמעה', 'audio.stop': 'עצירה', 'audio.slow': 'לאט יותר',
+    'audio.transcript': 'תמליל',
+    'read.aloud': 'הקראה', 'read.stop': 'הפסקת הקראה',
+    'a11y.text': 'גודל טקסט', 'a11y.contrast': 'ניגודיות גבוהה',
+    'break.title': 'עבדתם יפה כבר כמה דקות. רוצים הפסקה קצרה?',
+    'break.take': 'הפסקה של דקה', 'break.continue': 'ממשיכים',
+    'break.back': 'חוזרים ללמידה',
+    'help.who': 'תקועים? יובי כאן, ואפשר גם לפנות למורה שלכם.',
+    'write.saved': 'נשמר. אפשר להמשיך.',
+    'write.checklist': 'לפני שממשיכים, בדקו את עצמכם:',
+    'summary.done': 'סיימתם את השלב הזה',
+    'error.load': 'לא הצלחנו לטעון את התוכן. רעננו את הדף.',
+    'error.auth': 'הקישור הזה כבר לא בתוקף. חזרו לשיעור ופתחו אותו שוב.',
+    'reflect.thanks': 'תודה — זה עוזר לנו להתאים לכם את ההמשך.',
+    'glossary.title': 'מילים שיעזרו',
+  },
+  ar: {
+    'nav.back': 'رجوع', 'nav.next': 'متابعة', 'nav.finish': 'أنهيت',
+    'nav.start': 'لنبدأ', 'nav.check': 'تحقّق',
+    'step.of': 'المرحلة {n} من {total}',
+    'audio.play': 'تشغيل', 'audio.stop': 'إيقاف', 'audio.slow': 'أبطأ',
+    'audio.transcript': 'النص المكتوب',
+    'read.aloud': 'قراءة بصوت', 'read.stop': 'إيقاف القراءة',
+    'a11y.text': 'حجم النص', 'a11y.contrast': 'تباين عالٍ',
+    'break.title': 'تعملون منذ عدّة دقائق. هل تريدون استراحة قصيرة؟',
+    'break.take': 'استراحة دقيقة', 'break.continue': 'نتابع',
+    'break.back': 'نعود إلى التعلّم',
+    'help.who': 'عالقون؟ يوفي هنا، ويمكنكم أيضاً التوجّه إلى معلّمكم.',
+    'write.saved': 'تمّ الحفظ. يمكنكم المتابعة.',
+    'write.checklist': 'قبل المتابعة، تحقّقوا من أنفسكم:',
+    'summary.done': 'أنهيتم هذه المرحلة',
+    'error.load': 'لم نتمكّن من تحميل المحتوى. أعيدوا تحميل الصفحة.',
+    'error.auth': 'هذا الرابط لم يعد صالحاً. عودوا إلى الدرس وافتحوه من جديد.',
+    'reflect.thanks': 'شكراً — هذا يساعدنا على ملاءمة التتمّة لكم.',
+    'glossary.title': 'كلمات تساعدكم',
+  },
+  en: {
+    'nav.back': 'Back', 'nav.next': 'Continue', 'nav.finish': 'I am done',
+    'nav.start': 'Start', 'nav.check': 'Check',
+    'step.of': 'Step {n} of {total}',
+    'audio.play': 'Play', 'audio.stop': 'Stop', 'audio.slow': 'Slower',
+    'audio.transcript': 'Transcript',
+    'read.aloud': 'Read aloud', 'read.stop': 'Stop reading',
+    'a11y.text': 'Text size', 'a11y.contrast': 'High contrast',
+    'break.title': 'You have been working for a few minutes. Want a short break?',
+    'break.take': 'One minute break', 'break.continue': 'Keep going',
+    'break.back': 'Back to learning',
+    'help.who': 'Stuck? Yuvi is here, and you can also ask your teacher.',
+    'write.saved': 'Saved. You can continue.',
+    'write.checklist': 'Before you continue, check yourself:',
+    'summary.done': 'You finished this step',
+    'error.load': 'We could not load the content. Please refresh the page.',
+    'error.auth': 'This link has expired. Go back to the lesson and open it again.',
+    'reflect.thanks': 'Thanks — this helps us fit what comes next to you.',
+    'glossary.title': 'Words that help',
+  },
+};
+
+const RTL = new Set(['he', 'ar']);
+
+/* ── launch context ─────────────────────────────────────────────────────── */
+const url = new URL(window.location.href);
+const componentId = decodeURIComponent(url.pathname.split('/').filter(Boolean).pop() || '');
+const lang = ['he', 'ar', 'en'].includes(url.searchParams.get('lang')) ? url.searchParams.get('lang') : 'he';
+const t = (key, vars) =>
+  Object.entries(vars || {}).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, value),
+    (STR[lang] || STR.he)[key] || key,
+  );
+const pick = (value) => {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  return value[lang] || value.en || value.he || '';
+};
+
+let launch = null;
+try {
+  launch = JSON.parse(url.searchParams.get('slxapi') || 'null');
+} catch { launch = null; }
+
+document.documentElement.lang = lang;
+document.documentElement.dir = RTL.has(lang) ? 'rtl' : 'ltr';
+
+const root = document.getElementById('root');
+
+/* ── xAPI transport (fire-and-forget, retried, never blocks the learner) ── */
+const outbox = [];
+let draining = false;
+
+function report(verb, { object, result, extensions, category } = {}) {
+  if (!launch?.endpoint || !launch?.auth) return;
+  const statement = {
+    actor: launch.actor,
+    verb: { id: `${VERB}${verb}` },
+    object: { id: object || `${OBJECT}${componentId}` },
+    timestamp: new Date().toISOString(),
+  };
+  if (result) statement.result = result;
+  const context = {};
+  if (extensions) context.extensions = extensions;
+  if (category) context.contextActivities = { category: [{ id: `${CATEGORY}${category}` }] };
+  if (Object.keys(context).length) statement.context = context;
+  outbox.push({ statement, tries: 0 });
+  drain();
+}
+
+async function drain() {
+  if (draining || !outbox.length) return;
+  draining = true;
+  while (outbox.length) {
+    const job = outbox[0];
+    try {
+      const response = await fetch(`${launch.endpoint.replace(/\/$/, '')}/statements`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: launch.auth },
+        body: JSON.stringify(job.statement),
+      });
+      if (!response.ok && response.status < 500) { outbox.shift(); continue; }
+      if (!response.ok) throw new Error(String(response.status));
+      outbox.shift();
+    } catch {
+      job.tries += 1;
+      if (job.tries > 5) { outbox.shift(); continue; }
+      // Mandated retry policy: back off, stay invisible to the learner.
+      await new Promise((resolve) => setTimeout(resolve, Math.min(15000, 800 * 2 ** job.tries)));
+    }
+  }
+  draining = false;
+}
+
+/* ── speech (read-aloud + listening items) ──────────────────────────────── */
+const synth = window.speechSynthesis;
+let speaking = null;
+
+function speak(text, { locale = 'en-US', rate = 1, onEnd } = {}) {
+  stopSpeaking();
+  if (!synth || !text) { onEnd?.(); return; }
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = locale;
+  utterance.rate = rate;
+  utterance.onend = () => { speaking = null; onEnd?.(); };
+  utterance.onerror = () => { speaking = null; onEnd?.(); };
+  speaking = utterance;
+  synth.speak(utterance);
+}
+
+function stopSpeaking() {
+  if (synth?.speaking || synth?.pending) synth.cancel();
+  speaking = null;
+}
+
+/* ── DOM helpers ────────────────────────────────────────────────────────── */
+function el(tag, props = {}, children = []) {
+  const node = document.createElement(tag);
+  Object.entries(props).forEach(([key, value]) => {
+    if (value == null || value === false) return;
+    if (key === 'class') node.className = value;
+    else if (key === 'text') node.textContent = value;
+    else if (key.startsWith('on')) node.addEventListener(key.slice(2).toLowerCase(), value);
+    else node.setAttribute(key, value === true ? '' : String(value));
+  });
+  (Array.isArray(children) ? children : [children]).filter(Boolean).forEach((child) => node.append(child));
+  return node;
+}
+
+/* ── state ──────────────────────────────────────────────────────────────── */
+const state = {
+  payload: null,
+  index: 0,
+  visited: new Set(),
+  answered: new Map(),   // `${itemId}|${questionId}` -> boolean
+  written: new Map(),
+  startedAt: Date.now(),
+  breakOffered: false,
+  onBreak: false,
+  scale: 'normal',
+  contrast: false,
+  readingAloud: false,
+};
+
+const items = () => state.payload?.items || [];
+const current = () => items()[state.index];
+const itemObject = (item) => `${OBJECT}${item.id}`;
+
+function questionsDone(item) {
+  return (item.questions || []).every((q) => state.answered.has(`${item.id}|${q.questionId}`));
+}
+
+/** Every screen the learner has finished with, for the progress strip. */
+function stepState(index) {
+  if (index === state.index) return 'current';
+  const item = items()[index];
+  return state.visited.has(item.id) && questionsDone(item) ? 'done' : 'todo';
+}
+
+/* ── navigation ─────────────────────────────────────────────────────────── */
+function goTo(index, { report: shouldReport = true } = {}) {
+  if (index < 0 || index >= items().length) return;
+  stopSpeaking();
+  state.index = index;
+  const item = current();
+  const first = !state.visited.has(item.id);
+  state.visited.add(item.id);
+  // `initialized` per screen is what moves the platform's position pointer, so
+  // it is also what makes resume work after a mid-task close.
+  if (shouldReport) report('initialized', { object: itemObject(item) });
+  if (first) maybeOfferBreak();
+  render();
+  root.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+
+function maybeOfferBreak() {
+  if (state.breakOffered) return;
+  const minutes = state.payload?.component?.breakAfterMinutes || DEFAULT_BREAK_MINUTES;
+  if (Date.now() - state.startedAt < minutes * 60_000) return;
+  state.breakOffered = true;
+  state.onBreak = true;
+}
+
+async function finish() {
+  const graded = [...state.answered.values()];
+  const success = graded.length ? graded.filter(Boolean).length / graded.length >= 0.6 : true;
+  report('completed', {
+    result: {
+      completion: true,
+      success,
+      // Collected for routing and analysis, never shown to the learner.
+      score: graded.length ? { scaled: graded.filter(Boolean).length / graded.length } : undefined,
+    },
+    extensions: { [`${CATEGORY}isAssessment`]: !!state.payload?.component?.isAssessment },
+  });
+  state.finished = success ? 'success' : 'retry';
+  render();
+  window.parent?.postMessage({ type: 'yuvilab:component-complete', componentId, success }, '*');
+}
+
+/* ── renderers ──────────────────────────────────────────────────────────── */
+function renderAudio(item) {
+  const p = item.presentation;
+  const wrap = el('div', { class: 'lp-audio' });
+  let slow = false;
+  let playing = false;
+
+  const button = el('button', {
+    class: 'lp-play', type: 'button', 'data-playing': 'false',
+    text: `▶  ${t('audio.play')}`,
+  });
+  const play = () => {
+    if (playing) {
+      stopSpeaking();
+      playing = false;
+      button.dataset.playing = 'false';
+      button.textContent = `▶  ${t('audio.play')}`;
+      report('paused', { object: itemObject(item) });
+      return;
+    }
+    playing = true;
+    button.dataset.playing = 'true';
+    button.textContent = `■  ${t('audio.stop')}`;
+    report('played', { object: itemObject(item) });
+    speak(p.script, {
+      locale: p.language || 'en-US',
+      rate: (p.rate || 1) * (slow ? 0.7 : 1),
+      onEnd: () => {
+        playing = false;
+        button.dataset.playing = 'false';
+        button.textContent = `▶  ${t('audio.play')}`;
+      },
+    });
+  };
+  button.addEventListener('click', play);
+  wrap.append(button);
+
+  const slower = el('button', {
+    class: 'lp-chip', type: 'button', 'aria-pressed': 'false', text: t('audio.slow'),
+  });
+  slower.addEventListener('click', () => {
+    slow = !slow;
+    slower.setAttribute('aria-pressed', String(slow));
+    if (playing) { playing = false; play(); }
+  });
+  wrap.append(slower);
+
+  const block = el('div', { class: 'lp-q' }, [wrap]);
+
+  if (p.transcriptAvailable) {
+    const transcript = el('p', { class: 'lp-note lp-en', text: p.script, hidden: true });
+    const toggle = el('button', {
+      class: 'lp-chip', type: 'button', 'aria-pressed': 'false', text: t('audio.transcript'),
+    });
+    toggle.addEventListener('click', () => {
+      const show = transcript.hasAttribute('hidden');
+      transcript.toggleAttribute('hidden', !show);
+      toggle.setAttribute('aria-pressed', String(show));
+      if (show) report('requested', { object: itemObject(item), category: 'transcript' });
+    });
+    wrap.append(toggle);
+    block.append(transcript);
+  }
+  if (p.support && pick(p.support)) {
+    block.append(el('p', { class: 'lp-support', text: pick(p.support) }));
+  }
+  return block;
+}
+
+function renderLines(item) {
+  const p = item.presentation;
+  const list = el('ul', { class: 'lp-lines' });
+  (p.lines || []).forEach((line) => {
+    const button = el('button', { class: 'lp-line lp-en', type: 'button', text: line });
+    button.addEventListener('click', () => {
+      list.querySelectorAll('[data-speaking]').forEach((node) => node.removeAttribute('data-speaking'));
+      button.dataset.speaking = 'true';
+      report('read', { object: itemObject(item) });
+      speak(line, {
+        locale: p.language || 'en-US',
+        rate: p.rate || 1,
+        onEnd: () => button.removeAttribute('data-speaking'),
+      });
+    });
+    list.append(el('li', {}, [button]));
+  });
+
+  const block = el('div', { class: 'lp-q' }, [list]);
+  if (p.glossary?.length) {
+    block.append(el('p', { class: 'lp-kicker', text: t('glossary.title') }));
+    block.append(el('ul', { class: 'lp-glossary' }, p.glossary.map((entry) =>
+      el('li', { text: `${entry.word} — ${entry[lang] || entry.he || ''}` }))));
+  }
+  return block;
+}
+
+function renderQuestion(item, question) {
+  const key = `${item.id}|${question.questionId}`;
+  const block = el('div', { class: 'lp-q' });
+  block.append(el('p', { class: 'lp-q__text lp-en', text: question.questionText }));
+
+  const feedback = el('p', { class: 'lp-feedback', hidden: true });
+  const options = el('div', { class: 'lp-options' });
+
+  (question.answers || []).forEach((answer) => {
+    const option = el('button', { class: 'lp-option lp-en', type: 'button', text: answer });
+    option.addEventListener('click', async () => {
+      if (state.answered.has(key)) return;
+      let verdict = null;
+      try {
+        const response = await fetch(`/content/player/${encodeURIComponent(componentId)}/answer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: launch.auth },
+          body: JSON.stringify({ itemId: item.id, questionId: question.questionId, response: answer }),
+        });
+        verdict = await response.json();
+      } catch {
+        verdict = { correct: null, feedback: {} };
+      }
+      const correct = verdict.correct === true;
+      state.answered.set(key, correct);
+      option.dataset.verdict = correct ? 'correct' : 'incorrect';
+      options.querySelectorAll('button').forEach((node) => { node.disabled = true; });
+      feedback.textContent = pick(verdict.feedback);
+      feedback.dataset.verdict = correct ? 'correct' : 'incorrect';
+      feedback.hidden = !feedback.textContent;
+      report('answered', {
+        object: `${itemObject(item)}/${question.questionId}`,
+        result: { response: answer, success: correct, score: { scaled: correct ? 1 : 0 } },
+      });
+      renderFooter();
+    });
+    options.append(option);
+  });
+
+  block.append(options, feedback);
+  return block;
+}
+
+function renderReflection(item) {
+  const p = item.presentation;
+  const block = el('div', { class: 'lp-q' });
+  const done = el('p', { class: 'lp-feedback', hidden: true, text: t('reflect.thanks') });
+  const options = el('div', { class: 'lp-options' });
+  (p.choices || []).forEach((choice) => {
+    const option = el('button', { class: 'lp-option', type: 'button', text: pick(choice.label) });
+    option.addEventListener('click', () => {
+      options.querySelectorAll('button').forEach((node) => {
+        node.disabled = true;
+        node.removeAttribute('data-verdict');
+      });
+      option.dataset.verdict = 'correct';
+      done.hidden = false;
+      // A self-report, not an assessed answer — 720 models that as `selected`.
+      report('selected', {
+        object: itemObject(item),
+        result: { response: choice.id },
+        category: 'isUnderstood',
+      });
+    });
+    options.append(option);
+  });
+  block.append(options, done);
+  return block;
+}
+
+function renderWriting(item) {
+  const p = item.presentation;
+  const block = el('div', { class: 'lp-write' });
+  const area = el('textarea', {
+    class: 'lp-en',
+    rows: '6',
+    placeholder: pick(p.placeholder) || '',
+    'aria-label': pick(p.prompt),
+  });
+  area.value = state.written.get(item.id) || '';
+  area.addEventListener('input', () => state.written.set(item.id, area.value));
+  block.append(area);
+
+  if (p.checklist?.length) {
+    block.append(el('p', { class: 'lp-kicker', text: t('write.checklist') }));
+    block.append(el('ul', { class: 'lp-checklist' }, p.checklist.map((entry) =>
+      el('li', {}, [el('label', {}, [el('input', { type: 'checkbox' }), el('span', { text: pick(entry) })])]))));
+  }
+
+  const saved = el('p', { class: 'lp-feedback', hidden: true, text: t('write.saved') });
+  const submit = el('button', { class: 'lp-btn lp-btn--ghost', type: 'button', text: t('nav.check') });
+  submit.addEventListener('click', () => {
+    const text = (area.value || '').trim();
+    if (!text) return;
+    state.answered.set(`${item.id}|written`, true);
+    saved.hidden = false;
+    // Open writing is submitted, not auto-scored — the response goes to the
+    // platform, and the teacher/agent read it there.
+    report('submitted', { object: itemObject(item), result: { response: text.slice(0, 1000) } });
+    renderFooter();
+  });
+  block.append(submit, saved);
+  return block;
+}
+
+function renderMediation(item) {
+  const p = item.presentation;
+  const block = el('div', { class: 'lp-write' });
+  block.append(el('div', { class: 'lp-support', text: p.source || '' }));
+  return el('div', {}, [block, renderWriting(item)]);
+}
+
+function renderBody(item) {
+  const kind = item.presentation?.kind;
+  if (kind === 'listening') return renderAudio(item);
+  if (kind === 'reading') return renderLines(item);
+  if (kind === 'reflection') return renderReflection(item);
+  if (kind === 'writing') return renderWriting(item);
+  if (kind === 'mediation') return renderMediation(item);
+  return null;
+}
+
+/* ── chrome ─────────────────────────────────────────────────────────────── */
+function renderHead() {
+  const total = items().length;
+  const strip = el('div', { class: 'lp-steps', role: 'group', 'aria-label': t('step.of', { n: state.index + 1, total }) });
+  items().forEach((item, index) => {
+    const step = el('button', {
+      class: 'lp-step', type: 'button', 'data-state': stepState(index),
+      'aria-label': t('step.of', { n: index + 1, total }),
+      // 720 §1.5 — going BACK to finished content is always allowed; jumping
+      // ahead is the platform's decision, not a click.
+      disabled: index > state.index && !state.visited.has(item.id),
+    });
+    step.addEventListener('click', () => goTo(index));
+    strip.append(step);
+  });
+
+  const tools = el('div', { class: 'lp-tools' });
+
+  const aloud = el('button', {
+    class: 'lp-tool', type: 'button', 'aria-pressed': String(state.readingAloud),
+    'aria-label': t('read.aloud'), title: t('read.aloud'), text: '🔊',
+  });
+  aloud.addEventListener('click', () => {
+    if (state.readingAloud) { stopSpeaking(); state.readingAloud = false; aloud.setAttribute('aria-pressed', 'false'); return; }
+    state.readingAloud = true;
+    aloud.setAttribute('aria-pressed', 'true');
+    const item = current();
+    const text = [pick(item.presentation?.prompt), pick(item.presentation?.goal), item.presentation?.script,
+      ...(item.questions || []).map((q) => q.questionText)].filter(Boolean).join('. ');
+    report('requested', { object: itemObject(item), category: 'read-aloud' });
+    speak(text, { locale: 'en-US', rate: 0.95, onEnd: () => { state.readingAloud = false; aloud.setAttribute('aria-pressed', 'false'); } });
+  });
+
+  const size = el('button', {
+    class: 'lp-tool', type: 'button', 'aria-label': t('a11y.text'), title: t('a11y.text'), text: 'A',
+  });
+  size.addEventListener('click', () => {
+    state.scale = { normal: 'large', large: 'xlarge', xlarge: 'normal' }[state.scale];
+    root.dataset.scale = state.scale;
+  });
+
+  const contrast = el('button', {
+    class: 'lp-tool', type: 'button', 'aria-pressed': String(state.contrast),
+    'aria-label': t('a11y.contrast'), title: t('a11y.contrast'), text: '◐',
+  });
+  contrast.addEventListener('click', () => {
+    state.contrast = !state.contrast;
+    contrast.setAttribute('aria-pressed', String(state.contrast));
+    root.dataset.contrast = state.contrast ? 'high' : '';
+  });
+
+  tools.append(aloud, size, contrast);
+
+  return el('header', { class: 'lp-head' }, [
+    el('h1', { class: 'lp-head__title' }, [
+      document.createTextNode(state.payload.component.title || ''),
+      el('small', { text: t('step.of', { n: state.index + 1, total }) }),
+    ]),
+    strip,
+    tools,
+  ]);
+}
+
+function renderFooter() {
+  const existing = root.querySelector('.lp-foot');
+  const item = current();
+  const last = state.index === items().length - 1;
+  const blocked = (item.questions || []).length > 0 && !questionsDone(item);
+
+  const back = el('button', {
+    class: 'lp-btn lp-btn--ghost', type: 'button', text: t('nav.back'),
+    disabled: state.index === 0,
+  });
+  back.addEventListener('click', () => goTo(state.index - 1));
+
+  const next = el('button', {
+    class: 'lp-btn', type: 'button',
+    text: last ? t('nav.finish') : (state.index === 0 ? t('nav.start') : t('nav.next')),
+    disabled: blocked,
+  });
+  next.addEventListener('click', () => (last ? finish() : goTo(state.index + 1)));
+
+  const foot = el('footer', { class: 'lp-foot' }, [
+    back,
+    el('p', { class: 'lp-help', text: t('help.who') }),
+    el('div', { class: 'lp-foot__spacer' }),
+    next,
+  ]);
+  if (existing) existing.replaceWith(foot);
+  return foot;
+}
+
+function renderBreak() {
+  const banner = el('div', { class: 'lp-break' }, [el('p', { text: t('break.title') })]);
+  const take = el('button', { class: 'lp-btn lp-btn--ghost', type: 'button', text: t('break.take') });
+  take.addEventListener('click', () => {
+    banner.replaceChildren(el('p', { text: t('break.back') }), back);
+  });
+  const back = el('button', { class: 'lp-btn', type: 'button', text: t('break.back') });
+  back.addEventListener('click', () => { state.onBreak = false; state.startedAt = Date.now(); render(); });
+  const cont = el('button', { class: 'lp-btn', type: 'button', text: t('break.continue') });
+  cont.addEventListener('click', () => { state.onBreak = false; state.startedAt = Date.now(); render(); });
+  banner.append(take, cont);
+  return banner;
+}
+
+function renderCard() {
+  const item = current();
+  const p = item.presentation || {};
+  const card = el('section', { class: 'lp-card', 'aria-label': item.title || '' });
+
+  if (item.title) card.append(el('p', { class: 'lp-kicker', text: item.title }));
+  if (pick(p.prompt)) card.append(el('h2', { class: 'lp-prompt', text: pick(p.prompt) }));
+  if (pick(p.goal)) card.append(el('p', { class: 'lp-note', text: pick(p.goal) }));
+  if (pick(p.strategy)) card.append(el('p', { class: 'lp-support', text: pick(p.strategy) }));
+
+  if (p.kind === 'summary') {
+    const outcome = state.finished === 'retry' ? p.onRetry : p.onSuccess;
+    card.append(el('h2', { class: 'lp-prompt', text: pick(outcome) || t('summary.done') }));
+    if (pick(p.nextHint)) card.append(el('p', { class: 'lp-note', text: pick(p.nextHint) }));
+  }
+
+  const body = renderBody(item);
+  if (body) card.append(body);
+  (item.questions || []).forEach((question) => card.append(renderQuestion(item, question)));
+  return card;
+}
+
+function render() {
+  root.replaceChildren();
+  root.dataset.scale = state.scale;
+  if (state.contrast) root.dataset.contrast = 'high';
+  root.append(renderHead());
+  if (state.onBreak) { root.append(renderBreak()); return; }
+  root.append(renderCard(), renderFooter());
+}
+
+function fail(messageKey) {
+  root.replaceChildren(el('div', { class: 'lp-error', text: t(messageKey) }));
+}
+
+/* ── boot ───────────────────────────────────────────────────────────────── */
+async function boot() {
+  if (!launch?.auth) { fail('error.auth'); return; }
+  let payload;
+  try {
+    const response = await fetch(
+      `/content/player/${encodeURIComponent(componentId)}/payload?lang=${lang}`,
+      { headers: { Authorization: launch.auth } },
+    );
+    if (response.status === 401) { fail('error.auth'); return; }
+    if (!response.ok) { fail('error.load'); return; }
+    payload = await response.json();
+  } catch {
+    fail('error.load');
+    return;
+  }
+  if (!payload.items?.length) { fail('error.load'); return; }
+
+  state.payload = payload;
+  report('enter');
+
+  // 720 §1.7 — reopen where the learner stopped, not at the top.
+  const resumeIndex = payload.items.findIndex((item) => item.id === payload.resume?.itemId);
+  payload.items.slice(0, Math.max(resumeIndex, 0)).forEach((item) => state.visited.add(item.id));
+  goTo(resumeIndex > 0 ? resumeIndex : 0);
+}
+
+window.addEventListener('pagehide', () => {
+  stopSpeaking();
+  report('exit');
+});
+
+boot();

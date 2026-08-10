@@ -289,7 +289,11 @@ def normalize_component(component: dict[str, Any]) -> dict[str, Any]:
         "ecat_item_id": _ecat_item_id(component),
         "cognitive_level": component.get("cognitiveLevel"),
         "depth_level": component.get("depthLevel"),
-        "media_format": (
+        # What the component IS, for after-fail routing to a different
+        # representation. A provider may declare it; otherwise we infer it from
+        # the first screen — which is wrong whenever a component opens on a
+        # framing card, so an explicit value always wins.
+        "media_format": component.get("mediaFormat") or (
             (component.get("subContent") or [{}])[0].get("mediaFormat")
             if component.get("subContent") else None
         ),
@@ -299,14 +303,17 @@ def normalize_component(component: dict[str, Any]) -> dict[str, Any]:
 def subject_from_objective(objective_key: str, sub_topic: str = "") -> str:
     """Derive the learner-facing subject from the dotted MOE key.
 
-    ``MOE.SCI.…`` → science, ``MOE.MATH.…`` → math, else ``other``. Never guess
-    from the (opaque) unit id — the domain lives in the objective/sub-topic key.
+    ``MOE.SCI.…`` → science, ``MOE.MATH.…`` → math, ``MOE.ENG.…`` → english,
+    else ``other``. Never guess from the (opaque) unit id — the domain lives in
+    the objective/sub-topic key.
     """
     key = f"{objective_key or ''} {sub_topic or ''}".upper()
     if re.search(r"\bMOE\.SCI\b|\.SCI\.|\bSCI\b", key):
         return "science"
     if re.search(r"\bMOE\.MATH\b|\.MATH\.|\bMATH\b", key):
         return "math"
+    if re.search(r"\bMOE\.ENG\b|\.ENG\.|\bENG\b", key):
+        return "english"
     return "other"
 
 

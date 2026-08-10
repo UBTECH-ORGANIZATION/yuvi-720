@@ -41,6 +41,12 @@ _SUBJECT_META: dict[str, dict[str, Any]] = {
         "howto": {"he": "התקדמו בכל יעדי הלמידה במתמטיקה. כשמסיימים את כולם — המטבע שלכם.",
                   "en": "Progress through every math goal. Finish them all to earn the coin."},
     },
+    "english": {
+        "glyph": "book", "motif": "rays",
+        "badge": {"he": "אמן/ית מילים", "en": "Word Weaver"},
+        "howto": {"he": "התקדמו בכל יעדי הלמידה באנגלית — הקשבה, קריאה, כתיבה ודיבור. כשמסיימים את כולם — המטבע שלכם.",
+                  "en": "Progress through every English goal — listening, reading, writing and speaking. Finish them all to earn the coin."},
+    },
 }
 _DEFAULT_GLYPH = "gear"
 
@@ -50,7 +56,6 @@ _WORLD_HOWTO = {"he": "סיימו את כל המקצועות כדי לזכות �
 
 # Subjects Kata does not carry yet — shown locked so the shelf feels whole.
 _COMING: list[dict[str, Any]] = [
-    {"subject": "language", "glyph": "book", "title": {"he": "אמן/ית מילים", "en": "Word Weaver"}},
     {"subject": "discovery", "glyph": "planet", "title": {"he": "חוקר/ת חלל", "en": "Cosmic Explorer"}},
     {"subject": "stem", "glyph": "gear", "title": {"he": "יוצר/ת", "en": "Maker Spark"}},
 ]

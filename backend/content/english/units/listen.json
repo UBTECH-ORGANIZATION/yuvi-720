@@ -1,0 +1,612 @@
+{
+  "id": "ENG.G7.FAMILY.LISTEN",
+  "title": "Listening: Meet the families",
+  "titleTranslations": {
+    "Hebrew": "הבנת הנשמע: מכירים את המשפחות",
+    "Arabic": "فهم المسموع: نتعرّف على العائلات",
+    "English": "Listening: Meet the families"
+  },
+  "subTopic": "MOE.ENG.G7.PEOPLE.FAMILY",
+  "learningObjective": "MOE.ENG.G7.PEOPLE.FAMILY.LISTEN",
+  "prerequisiteLearningObjective": [],
+  "targetSector": ["כלל המגזרים"],
+  "targetAudience": ["כיתה ז'", "כיתה ח'"],
+  "components": [
+    {
+      "id": "ENG.G7.FAMILY.LISTEN-01",
+      "learningUnitId": "ENG.G7.FAMILY.LISTEN",
+      "title": "Listen and meet the Cohen family",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 2,
+      "mediaFormat": "audio",
+      "estimatedTimeInMinutes": 8,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.LISTEN-01B"],
+      "skills": ["הבנת הנשמע", "זיהוי מידע קונקרטי"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.LISTEN-01-01",
+          "title": "Before you listen",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של הרכיב. המטרה: להכין את הלומד לפני ההאזנה — מה הוא הולך לשמוע (תיאור קצר של משפחה), ומה הוא אמור לאתר (שמות, גילים, מה כל אחד אוהב לעשות). אסטרטגיה מומלצת: לקרוא את השאלות לפני ההאזנה, ולהאזין פעם ראשונה בלי לעצור. תפיסה שגויה נפוצה: לומדים חושבים שהם חייבים להבין כל מילה — כאן מספיק לאתר פרטים בודדים. אין כאן שאלה מדורגת.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "You are going to hear Maya talk about her family.",
+              "he": "עוד רגע תשמעו את מאיה מספרת על המשפחה שלה.",
+              "ar": "بعد قليل ستسمعون مايا تتحدّث عن عائلتها."
+            },
+            "goal": {
+              "en": "Your job: catch the names, the ages, and what each person likes to do. You do not need to understand every word.",
+              "he": "המשימה שלכם: לתפוס את השמות, הגילים, ומה כל אחד אוהב לעשות. לא צריך להבין כל מילה.",
+              "ar": "مهمّتكم: التقاط الأسماء والأعمار وما يحبّ كلّ شخص فعله. لا داعي لفهم كلّ كلمة."
+            },
+            "strategy": {
+              "en": "Listen once without stopping. Then read the questions and listen again.",
+              "he": "האזינו פעם אחת ברצף. אחר כך קראו את השאלות והאזינו שוב.",
+              "ar": "استمعوا مرّة واحدة دون توقّف. ثم اقرأوا الأسئلة واستمعوا مرّة أخرى."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.LISTEN-01-02",
+          "title": "Maya's family — slow and clear",
+          "contentType": "הבנייה",
+          "mediaFormat": "audio",
+          "informationToBot": "פריט האזרה מרכזי. הלומד שומע קטע איטי וברור שבו מאיה מציגה ארבעה בני משפחה. יעד: לאתר מידע קונקרטי — שם, גיל, תחביב. אוצר מילים בליבה: brother, sister, grandmother, twins, plays football, paints, cooks. אסטרטגיה: אפשר להאזין שוב כמה פעמים, וכפתור האטה זמין. תפיסות שגויות נפוצות: (1) בלבול בין sister ל-brother כי שתי המילים מופיעות באותו משפט; (2) שמיעת 'thirteen' כ-'thirty' — ההבדל הוא בהטעמה. אם הלומד טועה פעמיים באותה שאלה, כדאי להציע להאזין רק למשפט הרלוונטי במקום לחזור על כל הקטע.",
+          "presentation": {
+            "kind": "listening",
+            "prompt": {
+              "en": "Listen to Maya. You can play it as many times as you want.",
+              "he": "האזינו למאיה. אפשר להשמיע שוב כמה פעמים שרוצים.",
+              "ar": "استمعوا إلى مايا. يمكنكم إعادة التشغيل كما تشاؤون."
+            },
+            "script": "Hi! My name is Maya. I am thirteen years old. I live with my mother, my father, my big brother and my little sister. My brother is sixteen. His name is Adam and he plays football every Tuesday. My little sister is six. Her name is Noa and she paints all day. My grandmother lives near us. She cooks the best soup in the world.",
+            "language": "en-US",
+            "rate": 0.75,
+            "transcriptAvailable": true,
+            "support": {
+              "he": "אפשר לפתוח את התמליל אם קשה לשמוע. זה לא מוריד מהתרגול.",
+              "ar": "يمكنكم فتح النص المكتوب إذا كان السماع صعباً. هذا لا يقلّل من التمرين."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "How old is Maya?",
+              "answers": ["Six", "Thirteen", "Sixteen", "Thirty"],
+              "correctAnswers": ["Thirteen"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. She says \"I am thirteen years old\" right at the start.",
+                  "he": "בדיוק. היא אומרת \"I am thirteen years old\" כבר בהתחלה.",
+                  "ar": "بالضبط. تقول \"I am thirteen years old\" في البداية."
+                },
+                "incorrect": {
+                  "en": "Not yet. \"Thirteen\" and \"thirty\" sound close — thirteen has the stress at the end: thir-TEEN. Play it again and listen to the first sentence only.",
+                  "he": "עוד לא. \"Thirteen\" ו-\"thirty\" נשמעות דומות — ב-thirteen ההטעמה בסוף: thir-TEEN. השמיעו שוב והאזינו רק למשפט הראשון.",
+                  "ar": "ليس بعد. \"Thirteen\" و\"thirty\" متشابهتان — في thirteen النبر في النهاية: thir-TEEN. أعيدوا التشغيل واستمعوا للجملة الأولى فقط."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "What does Adam do on Tuesdays?",
+              "answers": ["He paints", "He cooks soup", "He plays football", "He goes to his grandmother"],
+              "correctAnswers": ["He plays football"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. Adam is the big brother, and he plays football every Tuesday.",
+                  "he": "נכון. אדם הוא האח הגדול, והוא משחק כדורגל בכל יום שלישי.",
+                  "ar": "صحيح. آدم هو الأخ الأكبر، ويلعب كرة القدم كلّ يوم ثلاثاء."
+                },
+                "incorrect": {
+                  "en": "Careful — three people are described one after the other. Adam is the brother. Find the sentence that starts with \"His name is Adam\".",
+                  "he": "שימו לב — שלושה אנשים מתוארים אחד אחרי השני. אדם הוא האח. חפשו את המשפט שמתחיל ב-\"His name is Adam\".",
+                  "ar": "انتبهوا — ثلاثة أشخاص يوصفون واحداً تلو الآخر. آدم هو الأخ. ابحثوا عن الجملة التي تبدأ بـ \"His name is Adam\"."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "Who cooks the soup?",
+              "answers": ["Maya", "Noa", "The grandmother", "The father"],
+              "correctAnswers": ["The grandmother"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes — the grandmother lives near them and cooks the best soup.",
+                  "he": "כן — הסבתא גרה לידם ומבשלת את המרק הכי טוב.",
+                  "ar": "نعم — الجدّة تسكن قربهم وتطبخ أفضل حساء."
+                },
+                "incorrect": {
+                  "en": "The answer is in the last sentence. Listen to the end of the recording again.",
+                  "he": "התשובה נמצאת במשפט האחרון. האזינו שוב לסוף ההקלטה.",
+                  "ar": "الإجابة في الجملة الأخيرة. استمعوا مرّة أخرى إلى نهاية التسجيل."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.LISTEN-01-03",
+          "title": "What did you notice?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הרכיב (הערכה עצמית אחרי המשימה). המטרה: שהלומד ינסח לעצמו מה עזר לו בהאזנה. אין תשובה נכונה ואין ניקוד. אם הלומד בוחר 'היה לי קשה' — כדאי להציע לו את הרכיב החלופי בייצוג טקסטואלי, לא לחזור על אותו קטע.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "What helped you understand?",
+              "he": "מה עזר לכם להבין?",
+              "ar": "ما الذي ساعدكم على الفهم؟"
+            },
+            "choices": [
+              {
+                "id": "again",
+                "label": {
+                  "en": "Listening more than once",
+                  "he": "האזנה יותר מפעם אחת",
+                  "ar": "الاستماع أكثر من مرّة"
+                }
+              },
+              {
+                "id": "questions-first",
+                "label": {
+                  "en": "Reading the questions first",
+                  "he": "קריאת השאלות לפני ההאזנה",
+                  "ar": "قراءة الأسئلة قبل الاستماع"
+                }
+              },
+              {
+                "id": "transcript",
+                "label": {
+                  "en": "Opening the transcript",
+                  "he": "פתיחת התמליל",
+                  "ar": "فتح النص المكتوب"
+                }
+              },
+              {
+                "id": "hard",
+                "label": {
+                  "en": "It was still hard for me",
+                  "he": "עדיין היה לי קשה",
+                  "ar": "ما زال الأمر صعباً عليّ"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.LISTEN-01B",
+      "learningUnitId": "ENG.G7.FAMILY.LISTEN",
+      "title": "Read and meet the Cohen family",
+      "componentPurpose": "הבנייה",
+      "isAssessment": false,
+      "isRequired": false,
+      "order": 1,
+      "masteryLevel": "basic",
+      "relativeDifficulty": 1,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 7,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": [],
+      "skills": ["הבנת הנשמע", "זיהוי מידע קונקרטי"],
+      "cognitiveLevel": "הבנה",
+      "depthLevel": "בסיסי",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.LISTEN-01B-01",
+          "title": "Maya's family — read along",
+          "contentType": "הבנייה",
+          "mediaFormat": "text",
+          "informationToBot": "זהו הייצוג החלופי של רכיב ההבנייה: אותו יעד למידה, אותו תוכן, אבל בטקסט מסומן במקום בהאזנה בלבד. מיועד ללומד שנתקע בגרסה הקולית. יעד: לאתר את אותם פרטים (שם, גיל, תחביב) כשהטקסט לפניו, ואז לשמוע אותו. אסטרטגיה: לקרוא שורה, ואז ללחוץ על ההשמעה של אותה שורה — כך נבנה הקשר בין הכתוב לנשמע. לא להזכיר ללומד שזה 'רכיב קל יותר'.",
+          "presentation": {
+            "kind": "reading",
+            "prompt": {
+              "en": "Read Maya's story. Tap any line to hear it.",
+              "he": "קראו את הסיפור של מאיה. לחצו על שורה כדי לשמוע אותה.",
+              "ar": "اقرأوا قصّة مايا. اضغطوا على أيّ سطر لسماعه."
+            },
+            "lines": [
+              "Hi! My name is Maya. I am thirteen years old.",
+              "I live with my mother, my father, my big brother and my little sister.",
+              "My brother is sixteen. His name is Adam and he plays football every Tuesday.",
+              "My little sister is six. Her name is Noa and she paints all day.",
+              "My grandmother lives near us. She cooks the best soup in the world."
+            ],
+            "language": "en-US",
+            "rate": 0.85,
+            "glossary": [
+              { "word": "big brother", "he": "אח גדול", "ar": "أخ أكبر" },
+              { "word": "little sister", "he": "אחות קטנה", "ar": "أخت صغيرة" },
+              { "word": "grandmother", "he": "סבתא", "ar": "جدّة" },
+              { "word": "cooks", "he": "מבשלת", "ar": "تطبخ" }
+            ]
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Which sentence tells you Adam's age?",
+              "answers": [
+                "Hi! My name is Maya. I am thirteen years old.",
+                "My brother is sixteen.",
+                "My little sister is six.",
+                "My grandmother lives near us."
+              ],
+              "correctAnswers": ["My brother is sixteen."],
+              "feedback": {
+                "correct": {
+                  "en": "Exactly. Adam is the brother, so the sentence about the brother has his age.",
+                  "he": "בדיוק. אדם הוא האח, ולכן המשפט על האח הוא זה שמכיל את הגיל שלו.",
+                  "ar": "بالضبط. آدم هو الأخ، لذا الجملة عن الأخ هي التي تحتوي عمره."
+                },
+                "incorrect": {
+                  "en": "Look for the word \"brother\" first, then read that whole sentence.",
+                  "he": "חפשו קודם את המילה \"brother\", ואז קראו את כל המשפט הזה.",
+                  "ar": "ابحثوا أوّلاً عن كلمة \"brother\"، ثم اقرأوا الجملة كاملة."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Noa is Maya's ...",
+              "answers": ["mother", "grandmother", "little sister", "big brother"],
+              "correctAnswers": ["little sister"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. \"My little sister is six. Her name is Noa.\"",
+                  "he": "נכון. \"My little sister is six. Her name is Noa.\"",
+                  "ar": "صحيح. \"My little sister is six. Her name is Noa.\""
+                },
+                "incorrect": {
+                  "en": "\"Her name\" points back to the person in the sentence before it. Read the two sentences together.",
+                  "he": "\"Her name\" מתייחס לאדם שהוזכר במשפט שלפני. קראו את שני המשפטים יחד.",
+                  "ar": "\"Her name\" تعود إلى الشخص المذكور في الجملة السابقة. اقرأوا الجملتين معاً."
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.LISTEN-02",
+      "learningUnitId": "ENG.G7.FAMILY.LISTEN",
+      "title": "Real speed: a family phone call",
+      "componentPurpose": "תרגול",
+      "isAssessment": false,
+      "isRequired": true,
+      "order": 2,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 4,
+      "mediaFormat": "audio",
+      "estimatedTimeInMinutes": 10,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.LISTEN-01B"],
+      "skills": ["הבנת הנשמע", "האזנה בקצב טבעי"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.LISTEN-02-01",
+          "title": "A call about the weekend",
+          "contentType": "תרגול",
+          "mediaFormat": "audio",
+          "informationToBot": "תרגול בקצב דיבור טבעי — הקפיצה המשמעותית מהרכיב הקודם. שני דוברים בשיחת טלפון קצרה על סוף שבוע משפחתי. יעד: לאתר זמן, מקום ומי מגיע, גם כשהדיבור מהיר ויש מילים מקושרות. תפיסות שגויות: (1) לומדים מנסים לתרגם בראש כל מילה ומפסידים את המשפט הבא — כדאי להזכיר להאזין לרעיון הכללי; (2) 'half past six' מתפרש כ-6:30 ולא כ-5:30 (נכון: 6:30) — טעות נפוצה היא לחשוב שזה חצי שעה לפני. אם הלומד נכשל פעמיים, המערכת מנתבת לרכיב הטקסטואלי — זה ייצוג אחר, לא חזרה על אותו דבר.",
+          "presentation": {
+            "kind": "listening",
+            "prompt": {
+              "en": "Two people are talking on the phone. Listen for the time, the place and who is coming.",
+              "he": "שני אנשים משוחחים בטלפון. האזינו לזמן, למקום, ולמי מגיע.",
+              "ar": "شخصان يتحدّثان في الهاتف. استمعوا إلى الوقت والمكان ومن سيأتي."
+            },
+            "script": "Hi Dad, it's Adam. Listen, Grandma wants everyone at her place on Saturday. Saturday? What time? Half past six, she said. And she's making the soup. Okay, but Noa has a painting class until six. That's fine, we can pick her up on the way. Great. Is Uncle Sami coming? He is, but he's coming late. He's driving from Haifa.",
+            "language": "en-US",
+            "rate": 1,
+            "transcriptAvailable": false,
+            "support": {
+              "he": "אין תמליל בתרגול הזה — זו בדיוק המיומנות שמתאמנים עליה. אפשר להשמיע שוב כמה שצריך.",
+              "ar": "لا يوجد نصّ مكتوب في هذا التمرين — هذه هي المهارة التي نتدرّب عليها. يمكنكم إعادة التشغيل كما تحتاجون."
+            }
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "When is the family meeting?",
+              "answers": ["Saturday at 6:30", "Saturday at 5:30", "Sunday at 6:30", "Tuesday at 6:00"],
+              "correctAnswers": ["Saturday at 6:30"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. \"Half past six\" means 6:30 — half an hour after six.",
+                  "he": "כן. \"Half past six\" זה 6:30 — חצי שעה אחרי שש.",
+                  "ar": "نعم. \"Half past six\" تعني 6:30 — نصف ساعة بعد السادسة."
+                },
+                "incorrect": {
+                  "en": "\"Half past six\" is AFTER six, not before it. Listen again and stop right after Adam says the time.",
+                  "he": "\"Half past six\" זה אחרי שש, לא לפני. האזינו שוב ועצרו מיד אחרי שאדם אומר את השעה.",
+                  "ar": "\"Half past six\" تعني بعد السادسة، لا قبلها. استمعوا ثانيةً وتوقّفوا بعد أن يقول آدم الوقت."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Where is everyone meeting?",
+              "answers": ["At Adam's house", "At Grandma's place", "At the painting class", "In Haifa"],
+              "correctAnswers": ["At Grandma's place"],
+              "feedback": {
+                "correct": {
+                  "en": "Right — \"Grandma wants everyone at her place\".",
+                  "he": "נכון — \"Grandma wants everyone at her place\".",
+                  "ar": "صحيح — \"Grandma wants everyone at her place\"."
+                },
+                "incorrect": {
+                  "en": "Haifa is where Uncle Sami drives FROM, not where they meet. The place is said in the very first thing Adam asks about.",
+                  "he": "חיפה היא המקום שממנו דוד סמי נוסע, לא מקום המפגש. המקום נאמר כבר בדבר הראשון שאדם מספר.",
+                  "ar": "حيفا هي المكان الذي يقود منه العمّ سامي، وليست مكان اللقاء. المكان يُذكر في أوّل ما يقوله آدم."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "Why can't Noa come early?",
+              "answers": ["She is painting at a class", "She is in Haifa", "She is making soup", "She is playing football"],
+              "correctAnswers": ["She is painting at a class"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes — \"Noa has a painting class until six\".",
+                  "he": "כן — \"Noa has a painting class until six\".",
+                  "ar": "نعم — \"Noa has a painting class until six\"."
+                },
+                "incorrect": {
+                  "en": "Football is Adam's. Listen for the sentence that says \"Noa has ...\".",
+                  "he": "כדורגל זה של אדם. חפשו את המשפט שמתחיל ב-\"Noa has ...\".",
+                  "ar": "كرة القدم لآدم. ابحثوا عن الجملة التي تبدأ بـ \"Noa has ...\"."
+                }
+              }
+            },
+            {
+              "questionId": "q4",
+              "questionType": "true-false",
+              "questionText": "Uncle Sami is not coming at all.",
+              "answers": ["True", "False"],
+              "correctAnswers": ["False"],
+              "feedback": {
+                "correct": {
+                  "en": "Correct. He IS coming — just late.",
+                  "he": "נכון. הוא כן מגיע — רק מאוחר.",
+                  "ar": "صحيح. هو قادم بالفعل — لكن متأخّراً."
+                },
+                "incorrect": {
+                  "en": "\"He is, but he's coming late\" — the first two words already answer it. Late is not the same as not coming.",
+                  "he": "\"He is, but he's coming late\" — שתי המילים הראשונות כבר עונות. מאוחר זה לא כמו לא מגיע.",
+                  "ar": "\"He is, but he's coming late\" — الكلمتان الأوليان تجيبان بالفعل. متأخّر ليس مثل غير قادم."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.LISTEN-02-02",
+          "title": "How did that go?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "פיגום מטה-קוגניטיבי אחרי התרגול בקצב טבעי. יעד: שהלומד יבחין בין 'לא הבנתי מילה' לבין 'לא הספקתי' — שתי בעיות שונות עם פתרונות שונים. אם נבחר 'לא הספקתי', ההמלצה היא להאזין לרעיון הכללי ולא לתרגם; אם נבחר 'מילים לא מוכרות', ההמלצה היא רכיב אוצר המילים.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "The fast version — what was the hard part?",
+              "he": "בגרסה המהירה — מה היה החלק הקשה?",
+              "ar": "في النسخة السريعة — ما كان الجزء الصعب؟"
+            },
+            "choices": [
+              {
+                "id": "speed",
+                "label": {
+                  "en": "They spoke too fast for me",
+                  "he": "הם דיברו מהר מדי בשבילי",
+                  "ar": "تحدّثوا بسرعة كبيرة بالنسبة لي"
+                }
+              },
+              {
+                "id": "words",
+                "label": {
+                  "en": "There were words I did not know",
+                  "he": "היו מילים שלא הכרתי",
+                  "ar": "كانت هناك كلمات لا أعرفها"
+                }
+              },
+              {
+                "id": "two-speakers",
+                "label": {
+                  "en": "Two speakers confused me",
+                  "he": "שני דוברים בלבלו אותי",
+                  "ar": "المتحدّثان أربكاني"
+                }
+              },
+              {
+                "id": "fine",
+                "label": {
+                  "en": "It went well",
+                  "he": "הלך לי טוב",
+                  "ar": "سار الأمر جيداً"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
+      "id": "ENG.G7.FAMILY.LISTEN-03",
+      "learningUnitId": "ENG.G7.FAMILY.LISTEN",
+      "title": "Check: listening to a new family",
+      "componentPurpose": "הערכה",
+      "isAssessment": true,
+      "isRequired": true,
+      "order": 3,
+      "masteryLevel": "intermediate",
+      "relativeDifficulty": 3,
+      "mediaFormat": "audio",
+      "estimatedTimeInMinutes": 8,
+      "languages": ["Hebrew", "Arabic", "English"],
+      "recommendedAfterFail": ["ENG.G7.FAMILY.LISTEN-01B"],
+      "skills": ["הבנת הנשמע", "זיהוי מידע קונקרטי"],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.LISTEN-03-01",
+          "title": "Listen to Sara",
+          "contentType": "הערכה",
+          "mediaFormat": "audio",
+          "informationToBot": "רכיב הערכה ליעד הלמידה 'הבנת הנשמע — משפחה'. הצלחה כאן מבססת כשירות ביעד. הקטע חדש (משפחה אחרת) כדי שההצלחה תעיד על המיומנות ולא על זיכרון. בזמן ההערכה אין לתת את התשובה ואין לרמוז עליה — מותר להזכיר אסטרטגיה כללית בלבד (להאזין שוב, להתמקד במשפט אחד). הלומד רשאי להשמיע שוב ללא הגבלה; זו הערכת הבנה, לא מבחן זיכרון.",
+          "presentation": {
+            "kind": "listening",
+            "prompt": {
+              "en": "A new family. Listen and answer.",
+              "he": "משפחה חדשה. האזינו וענו.",
+              "ar": "عائلة جديدة. استمعوا وأجيبوا."
+            },
+            "script": "My name is Sara and I have got a big family. I have got two brothers and one sister. My brothers are twins, so they are the same age — they are eleven. My sister Lily is the oldest. She is nineteen and she studies in Tel Aviv, so we only see her at the weekend. My father works at the hospital and my mother is a teacher at my school. That is a little strange sometimes.",
+            "language": "en-US",
+            "rate": 0.9,
+            "transcriptAvailable": false
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "How many children are there in Sara's family?",
+              "answers": ["Two", "Three", "Four", "Five"],
+              "correctAnswers": ["Four"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes — two brothers, one sister, and Sara herself.",
+                  "he": "כן — שני אחים, אחות אחת, וגם שרה עצמה.",
+                  "ar": "نعم — أخوان وأخت واحدة، وسارة نفسها."
+                },
+                "incorrect": {
+                  "en": "Count again — and remember to count Sara too.",
+                  "he": "ספרו שוב — וזכרו לספור גם את שרה.",
+                  "ar": "عُدّوا مرّة أخرى — وتذكّروا أن تعدّوا سارة أيضاً."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "Why are the brothers the same age?",
+              "answers": ["They are twins", "They are in the same class", "They were born in Tel Aviv", "They go to the same school"],
+              "correctAnswers": ["They are twins"],
+              "feedback": {
+                "correct": {
+                  "en": "Right. \"Twins\" means born together, so they are the same age.",
+                  "he": "נכון. \"Twins\" זה תאומים — נולדו יחד, ולכן באותו גיל.",
+                  "ar": "صحيح. \"Twins\" تعني توأمين — وُلدا معاً، لذا هما في العمر نفسه."
+                },
+                "incorrect": {
+                  "en": "Sara gives the reason in the same sentence, right before she says their age.",
+                  "he": "שרה נותנת את הסיבה באותו משפט, ממש לפני שהיא אומרת את הגיל שלהם.",
+                  "ar": "تعطي سارة السبب في الجملة نفسها، قبل أن تذكر عمرهما مباشرة."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "Where does Lily study?",
+              "answers": ["At Sara's school", "At the hospital", "In Tel Aviv", "At home"],
+              "correctAnswers": ["In Tel Aviv"],
+              "feedback": {
+                "correct": {
+                  "en": "Yes, and that is why they only see her at the weekend.",
+                  "he": "כן, וזו הסיבה שרואים אותה רק בסוף השבוע.",
+                  "ar": "نعم، ولهذا لا يرونها إلّا في نهاية الأسبوع."
+                },
+                "incorrect": {
+                  "en": "Three places are mentioned: a school, a hospital and a city. Only one of them belongs to Lily.",
+                  "he": "מוזכרים שלושה מקומות: בית ספר, בית חולים ועיר. רק אחד מהם שייך ללילי.",
+                  "ar": "تُذكر ثلاثة أماكن: مدرسة ومستشفى ومدينة. واحد فقط منها يخصّ ليلي."
+                }
+              }
+            },
+            {
+              "questionId": "q4",
+              "questionType": "single-choice",
+              "questionText": "What is a little strange for Sara?",
+              "answers": [
+                "Her sister is nineteen",
+                "Her mother teaches at her school",
+                "Her brothers are twins",
+                "Her father works at the hospital"
+              ],
+              "correctAnswers": ["Her mother teaches at her school"],
+              "feedback": {
+                "correct": {
+                  "en": "Exactly — \"my mother is a teacher at my school. That is a little strange sometimes.\"",
+                  "he": "בדיוק — \"my mother is a teacher at my school. That is a little strange sometimes.\"",
+                  "ar": "بالضبط — \"my mother is a teacher at my school. That is a little strange sometimes.\""
+                },
+                "incorrect": {
+                  "en": "The word \"strange\" comes in the very last sentence. What was said just before it?",
+                  "he": "המילה \"strange\" מופיעה במשפט האחרון. מה נאמר בדיוק לפניה?",
+                  "ar": "كلمة \"strange\" تأتي في الجملة الأخيرة. ما الذي قيل قبلها مباشرة؟"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.LISTEN-03-02",
+          "title": "You finished this goal",
+          "contentType": "סיכום",
+          "mediaFormat": "text",
+          "informationToBot": "מסך סיום של רכיב ההערכה. מסכם מילולית מה הלומד עשה ומה הצעד הבא, ללא ציון מספרי וללא השוואה. אם ההערכה נכשלה, המסך אומר במפורש שזה לא סוף הדרך ומפנה לייצוג אחר של אותו יעד.",
+          "presentation": {
+            "kind": "summary",
+            "onSuccess": {
+              "en": "You listened to two different families at two different speeds and found the details. That is exactly what this goal is about.",
+              "he": "האזנתם לשתי משפחות שונות בשני קצבים שונים, ומצאתם את הפרטים. זה בדיוק מה שהיעד הזה בודק.",
+              "ar": "استمعتم إلى عائلتين مختلفتين بسرعتين مختلفتين ووجدتم التفاصيل. هذا بالضبط هدف هذه المهمّة."
+            },
+            "onRetry": {
+              "en": "Some of it did not land yet — that is normal with fast speech. Next we will meet the same story in a different way.",
+              "he": "חלק מזה עוד לא נכנס — וזה נורמלי בדיבור מהיר. בפעם הבאה נפגוש את אותו סיפור בדרך אחרת.",
+              "ar": "بعض الأمور لم تترسّخ بعد — وهذا طبيعي مع الكلام السريع. في المرّة القادمة سنلتقي بالقصّة نفسها بطريقة أخرى."
+            },
+            "nextHint": {
+              "en": "Next goal: reading a family invitation and finding the details yourself.",
+              "he": "היעד הבא: קריאת הזמנה משפחתית ואיתור הפרטים בעצמכם.",
+              "ar": "الهدف التالي: قراءة دعوة عائلية والعثور على التفاصيل بأنفسكم."
+            }
+          },
+          "questions": []
+        }
+      ]
+    }
+  ]
+}

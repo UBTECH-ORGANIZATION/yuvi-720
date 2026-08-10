@@ -18,19 +18,26 @@ from app.services.kata_catalog import (
 )
 from app.services.planner import next_focus, plan_next
 
-# Scope for תשפ"ז — the two Ministry subjects (§8.6).
-DEFAULT_SUBJECTS = ("math", "science")
+# Scope for תשפ"ז — the two Ministry subjects (§8.6) plus English, whose content
+# we author ourselves ("אנגלית לכולם").
+DEFAULT_SUBJECTS = ("math", "science", "english")
 
 SUBJECT_NAMES = {
     "math":    {"he": "מתמטיקה", "en": "Mathematics", "ar": "الرياضيات"},
     "science": {"he": "מדע וטכנולוגיה", "en": "Science & Technology", "ar": "العلوم والتكنولوجيا"},
+    "english": {"he": "אנגלית", "en": "English", "ar": "الإنجليزية"},
 }
-SUBJECT_ICON = {"math": "📐", "science": "🔬"}
+SUBJECT_ICON = {"math": "📐", "science": "🔬", "english": "🔤"}
 SUBJECT_GRADIENT = {
     "math": "linear-gradient(135deg, #7c5cff, #9f7afe)",
     "science": "linear-gradient(135deg, #4CC9F0, #4299e1)",
+    "english": "linear-gradient(135deg, #22B573, #4ad9a0)",
 }
-SUBJECT_ICON_BG = {"math": "rgba(124,92,255,0.1)", "science": "rgba(76,201,240,0.12)"}
+SUBJECT_ICON_BG = {
+    "math": "rgba(124,92,255,0.1)",
+    "science": "rgba(76,201,240,0.12)",
+    "english": "rgba(34,181,115,0.12)",
+}
 
 LEVEL_WORDS = {
     "great":    {"he": "בהתקדמות מצוינת", "en": "Progressing excellently", "ar": "تقدّم ممتاز"},

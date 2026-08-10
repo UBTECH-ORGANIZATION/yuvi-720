@@ -1,7 +1,7 @@
 import { apiGet, apiPost } from './api'
 import type { Language } from '../i18n/I18nProvider'
 
-export type LearningSubject = 'math' | 'science' | 'other'
+export type LearningSubject = 'math' | 'science' | 'english' | 'other'
 /** `skipped` is an optional stage this learner has outgrown, or one cut short by
  *  a passed assessment (720 §3.3). It is never `locked` — the content is real and
  *  approved, so it stays launchable as an extra. */

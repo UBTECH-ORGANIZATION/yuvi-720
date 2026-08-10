@@ -1844,6 +1844,7 @@
   "tch.scope.allSubjects": "All subjects",
   "tch.subject.math": "Mathematics",
   "tch.subject.science": "Science",
+  "tch.subject.english": "English",
   "tch.title": "Teacher workspace",
   "tch.loading": "Loading data…",
   "tch.error": "We couldn't load the data",

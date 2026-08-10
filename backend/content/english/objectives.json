@@ -1,0 +1,145 @@
+{
+  "_comment": [
+    "Learning-goal registry for English (\"אנגלית לכולם\"), authored by Yuvilab.",
+    "Rows are in the SAME raw shape kata_client.normalize_objective consumes, so the",
+    "English spine and the ministry's math/science spine are one namespace end-to-end.",
+    "",
+    "No `subtopic` level is declared on purpose: kata_catalog._build_snapshot falls back",
+    "to the UNIT's title for the goal's display name when the registry carries no",
+    "sub-topic hierarchy, which is what we want here — the sub-topic is the unit of study",
+    "(\"Modern Family\") and each of the ten נספח 2 areas is a goal inside it. It also puts",
+    "the whole sequence under `order`, instead of alphabetical sub-topic keys.",
+    "",
+    "Levels are NOT CEFR-tagged; difficulty is carried per component by masteryLevel +",
+    "relativeDifficulty, written for heterogeneous ז'-ח' classes."
+  ],
+  "curriculum": {
+    "id": "MOE.ENG.G7",
+    "title": "English for Middle School",
+    "titleTranslations": {
+      "he": "אנגלית לחטיבת הביניים",
+      "ar": "الإنجليزية للمرحلة الإعدادية",
+      "en": "English for Middle School"
+    }
+  },
+  "subjectArea": {
+    "id": "MOE.ENG",
+    "title": "English",
+    "titleTranslations": {
+      "he": "אנגלית",
+      "ar": "الإنجليزية",
+      "en": "English"
+    }
+  },
+  "topic": {
+    "id": "MOE.ENG.G7.PEOPLE",
+    "title": "People and identity",
+    "titleTranslations": {
+      "he": "אנשים וזהות",
+      "ar": "الناس والهوية",
+      "en": "People and identity"
+    }
+  },
+  "objectives": [
+    {
+      "id": "MOE.ENG.G7.PEOPLE.FAMILY.VOCAB",
+      "order": 1,
+      "title": "לזהות ולהשתמש באוצר מילים על משפחה, מראה חיצוני ושגרה יומית — הן בזיהוי והן בהפקה.",
+      "titleTranslations": {
+        "he": "לזהות ולהשתמש באוצר מילים על משפחה, מראה חיצוני ושגרה יומית — הן בזיהוי והן בהפקה.",
+        "ar": "التعرّف على مفردات العائلة والمظهر والروتين اليومي واستخدامها فهماً وإنتاجاً.",
+        "en": "Recognise and use vocabulary for family, appearance and daily routine, both receptively and productively."
+      }
+    },
+    {
+      "id": "MOE.ENG.G7.PEOPLE.FAMILY.LISTEN",
+      "order": 2,
+      "title": "להבין מידע קונקרטי בתיאור דבור קצר על בני משפחה ועל שגרה, כשהדיבור ברור ומופק היטב.",
+      "titleTranslations": {
+        "he": "להבין מידע קונקרטי בתיאור דבור קצר על בני משפחה ועל שגרה, כשהדיבור ברור ומופק היטב.",
+        "ar": "فهم معلومات محسوسة في وصف شفوي قصير عن أفراد العائلة والروتين، عندما يكون النطق واضحاً.",
+        "en": "Understand concrete information in a short spoken description of family members and routines when speech is clearly articulated."
+      }
+    },
+    {
+      "id": "MOE.ENG.G7.PEOPLE.FAMILY.READ",
+      "order": 3,
+      "title": "לאתר מידע מסוים בטקסטים מעשיים וצפויים על משפחה — פרופיל, לוח זמנים, הזמנה.",
+      "titleTranslations": {
+        "he": "לאתר מידע מסוים בטקסטים מעשיים וצפויים על משפחה — פרופיל, לוח זמנים, הזמנה.",
+        "ar": "تحديد معلومات معيّنة في نصوص عملية متوقّعة عن العائلة — ملف تعريفي، جدول، دعوة.",
+        "en": "Locate specific information in practical, predictable family texts — a profile, a schedule, an invitation."
+      }
+    },
+    {
+      "id": "MOE.ENG.G7.PEOPLE.FAMILY.GRAMMAR",
+      "order": 4,
+      "title": "להשתמש בהווה פשוט, בשייכות וב-have got כדי לתאר מי אנשים ומה הם עושים.",
+      "titleTranslations": {
+        "he": "להשתמש בהווה פשוט, בשייכות וב-have got כדי לתאר מי אנשים ומה הם עושים.",
+        "ar": "استخدام المضارع البسيط والملكية و have got لوصف الأشخاص وما يفعلونه.",
+        "en": "Use the present simple, possessives and 'have got' to describe who people are and what they do."
+      }
+    },
+    {
+      "id": "MOE.ENG.G7.PEOPLE.FAMILY.PHON",
+      "order": 5,
+      "title": "להגות בבירור מילות משפחה נפוצות, כולל הצליל th, ולאיית נכון את מילות הליבה.",
+      "titleTranslations": {
+        "he": "להגות בבירור מילות משפחה נפוצות, כולל הצליל th, ולאיית נכון את מילות הליבה.",
+        "ar": "نطق مفردات العائلة الشائعة بوضوح، بما في ذلك صوت th، وكتابتها إملائياً بشكل صحيح.",
+        "en": "Pronounce common family words intelligibly, including the 'th' sound, and spell the core words correctly."
+      }
+    },
+    {
+      "id": "MOE.ENG.G7.PEOPLE.FAMILY.SPEAK",
+      "order": 6,
+      "title": "לתאר בעל פה את המשפחה ואת השגרה במשפטים פשוטים ומקושרים, בהגייה מובנת.",
+      "titleTranslations": {
+        "he": "לתאר בעל פה את המשפחה ואת השגרה במשפטים פשוטים ומקושרים, בהגייה מובנת.",
+        "ar": "وصف العائلة والروتين شفوياً بجمل بسيطة مترابطة ونطق مفهوم.",
+        "en": "Describe your family and routine aloud in simple connected sentences with intelligible pronunciation."
+      }
+    },
+    {
+      "id": "MOE.ENG.G7.PEOPLE.FAMILY.WRITE",
+      "order": 7,
+      "title": "לכתוב טקסט קצר על משפחה, ולקשר משפטים באמצעות and, but ו-because.",
+      "titleTranslations": {
+        "he": "לכתוב טקסט קצר על משפחה, ולקשר משפטים באמצעות and, but ו-because.",
+        "ar": "كتابة نص قصير عن العائلة، وربط الجمل بواسطة and و but و because.",
+        "en": "Write a short text about a family, linking sentences with 'and', 'but' and 'because'."
+      }
+    },
+    {
+      "id": "MOE.ENG.G7.PEOPLE.FAMILY.INTERACT",
+      "order": 8,
+      "title": "לכתוב הודעות בין-אישיות קצרות בנושא מוכר — להזמין, להשיב, לבקש פרט חסר.",
+      "titleTranslations": {
+        "he": "לכתוב הודעות בין-אישיות קצרות בנושא מוכר — להזמין, להשיב, לבקש פרט חסר.",
+        "ar": "كتابة رسائل شخصية قصيرة في موضوع مألوف — دعوة، ردّ، طلب معلومة ناقصة.",
+        "en": "Write short interpersonal messages on a familiar topic — invite, reply, ask for a missing detail."
+      }
+    },
+    {
+      "id": "MOE.ENG.G7.PEOPLE.FAMILY.PRAGMA",
+      "order": 9,
+      "title": "למסור את הכוונה בבירור בחילופי מידע ישירים, ולקשר רעיונות בעזרת מילות קישור פשוטות.",
+      "titleTranslations": {
+        "he": "למסור את הכוונה בבירור בחילופי מידע ישירים, ולקשר רעיונות בעזרת מילות קישור פשוטות.",
+        "ar": "إيصال القصد بوضوح في تبادل معلومات مباشر، وربط الأفكار بأدوات ربط بسيطة.",
+        "en": "Convey intended meaning in a direct exchange of information, linking ideas with simple connectors."
+      }
+    },
+    {
+      "id": "MOE.ENG.G7.PEOPLE.FAMILY.MEDIATE",
+      "order": 10,
+      "title": "למסור באנגלית פרטים מרכזיים מתוך טקסט משפחתי קצר שנכתב בעברית או בערבית.",
+      "titleTranslations": {
+        "he": "למסור באנגלית פרטים מרכזיים מתוך טקסט משפחתי קצר שנכתב בעברית או בערבית.",
+        "ar": "نقل التفاصيل الأساسية بالإنجليزية من نص عائلي قصير مكتوب بالعبرية أو العربية.",
+        "en": "Relay key details in English from a short family text written in Hebrew or Arabic."
+      }
+    }
+  ]
+}
