@@ -37,9 +37,20 @@ export function VoiceCallPanel({ surface, onClose }: { surface?: string; onClose
           <p className="vcall__hint">{t('voice.hint')}</p>
         ) : (
           turns.map((turn, index) => (
-            <p key={index} className={`vcall__turn vcall__turn--${turn.role}`} dir="auto">
-              {turn.text}
-            </p>
+            <div key={index} className="vcall__row">
+              <p className={`vcall__turn vcall__turn--${turn.role}`} dir="auto">
+                {turn.text}
+              </p>
+              {turn.correction ? (
+                <div className="vcall__fix" dir="auto">
+                  <p className="vcall__fix-lead">{t('voice.fix.lead')}</p>
+                  <p className="vcall__fix-say" dir="ltr" lang="en">{turn.correction.say}</p>
+                  {turn.correction.note ? (
+                    <p className="vcall__fix-note">{turn.correction.note}</p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           ))
         )}
         <div ref={tail} />

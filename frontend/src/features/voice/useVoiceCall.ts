@@ -21,7 +21,8 @@ type VoiceSession = {
   sessionId?: string
 }
 
-export type VoiceTurn = { role: 'learner' | 'yuvi'; text: string }
+export type VoiceCorrection = { say: string; note: string }
+export type VoiceTurn = { role: 'learner' | 'yuvi'; text: string; correction?: VoiceCorrection }
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -68,12 +69,29 @@ export function useVoiceCall(language: string, surface?: string) {
     const pending = pendingRef.current
     if (!pending.learner && !pending.yuvi) return
     pendingRef.current = {}
-    postJson<{ stage?: string }>('/api/agent/voice/turn', {
-      learnerText: pending.learner || '',
+    const said = pending.learner || ''
+    postJson<{ stage?: string; correction?: VoiceCorrection | null }>('/api/agent/voice/turn', {
+      learnerText: said,
       coachText: pending.yuvi || '',
       language,
     })
-      .then((result) => { if (result.stage) setStage(result.stage) })
+      .then((result) => {
+        if (result.stage) setStage(result.stage)
+        // Hang the written recast on the line it belongs to, so the learner
+        // reads it next to their own words instead of as a separate verdict.
+        if (result.correction && said) {
+          setTurns((previous) => {
+            let index = -1
+            for (let i = previous.length - 1; i >= 0; i -= 1) {
+              if (previous[i].role === 'learner' && previous[i].text === said) { index = i; break }
+            }
+            if (index < 0) return previous
+            const next = [...previous]
+            next[index] = { ...next[index], correction: result.correction as VoiceCorrection }
+            return next
+          })
+        }
+      })
       .catch(() => { /* a lost transcript must never interrupt the conversation */ })
   }, [language])
 
