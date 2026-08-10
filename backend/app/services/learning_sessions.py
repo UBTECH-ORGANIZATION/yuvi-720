@@ -287,7 +287,10 @@ async def create_provider_session(
     return {
         "unit": {
             "id": unit["id"],
-            "title": unit["title"],
+            # The lesson chrome is in the learner's language even when the
+            # content it frames is not (an English unit is still introduced in
+            # Hebrew), so the title is picked per locale where we hold one.
+            "title": (unit.get("titles") or {}).get(language) or unit["title"],
             "sub_topic": unit["sub_topic"],
             "objective_id": unit["objective_id"],
             "subject": unit["subject"],

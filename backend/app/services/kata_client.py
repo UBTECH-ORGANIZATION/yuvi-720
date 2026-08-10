@@ -106,7 +106,7 @@ def _string_list(values: object) -> list[str]:
     return sorted(seen)
 
 
-def _title_translations(unit: dict[str, Any]) -> dict[str, str]:
+def title_translations(unit: dict[str, Any]) -> dict[str, str]:
     """Map Kata ``titleTranslations`` (by language label) to locale codes."""
     raw = unit.get("titleTranslations")
     if not isinstance(raw, dict):
@@ -117,6 +117,10 @@ def _title_translations(unit: dict[str, Any]) -> dict[str, str]:
         if locale and text:
             out[locale] = str(text)
     return out
+
+
+# Kept as the module-private name the normalizers already read through.
+_title_translations = title_translations
 
 
 def _recommended_after_fail(component: dict[str, Any]) -> list[str]:

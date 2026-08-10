@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.auth.dependencies import require_learner, require_teacher
-from app.services import kata_client as content_provider
+from app.services import content_providers as content_provider
 from app.services.learning_sessions import create_provider_session
 from app.services.learning_progress import project_unit_roadmap
 from app.services.learning_timing import summarize_session
@@ -53,7 +53,9 @@ async def read_catalog(lang: str = "he", learner_id: str = Depends(require_learn
             # The client used to map the dotted key through a hand-written table,
             # which could only ever cover the keys someone had already seen.
             goal = kata_catalog.get_objective(unit.get("objective_id") or "") or {}
-            roadmap["sub_topic_title"] = goal.get("title") or ""
+            # The registry holds every locale at once, so the label is picked
+            # here — otherwise a Hebrew learner reads the goal's English key.
+            roadmap["sub_topic_title"] = (goal.get("titles") or {}).get(lang) or goal.get("title") or ""
             roadmap["topic_title"] = goal.get("topic_title") or ""
             # A paragraph of real pedagogy ("…ימדדו מסת מוצקים במאזני כפות/זרוע…").
             # Not for display — it is what lets the card pick an illustration that

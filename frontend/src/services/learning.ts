@@ -70,7 +70,9 @@ export interface LearningUnitDTO {
   subject: LearningSubject
   languages: Language[]
   components: LearningComponentDTO[]
-  source: 'kata' | 'content_provider'
+  /** Who authored this unit: the ministry's provider, or our own catalog
+   *  (English, which we author ourselves). */
+  source: 'kata' | 'content_provider' | 'yuvilab'
   current_component_id: string | null
   next_component_id: string | null
   next_path_node_id: string | null
