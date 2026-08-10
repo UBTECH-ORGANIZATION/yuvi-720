@@ -110,6 +110,11 @@ async def upload(owner_id: str, data: bytes) -> dict[str, object]:
     try:
         from azure.storage.blob import ContentSettings
 
+        try:
+            await container.create_container()
+        except Exception:
+            pass   # already there, or the credential may only write blobs
+
         await container.upload_blob(
             blob_name,
             data,

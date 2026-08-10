@@ -10,4 +10,5 @@ itsdangerous>=2.2.0,<3.0
 azure-monitor-opentelemetry>=1.6,<2
 opentelemetry-instrumentation-fastapi
 azure-storage-blob>=12.20,<13
+aiohttp>=3.10,<4
 azure-identity>=1.17,<2
