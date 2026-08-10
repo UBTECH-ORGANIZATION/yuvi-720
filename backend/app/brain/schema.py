@@ -57,6 +57,9 @@ def empty_brain(learner_id: str, locale: str = DEFAULT_LOCALE) -> dict[str, Any]
             "mapping_clarifications": [],  # student clarifications on their answers (provenance; raw scores untouched)
             "preferences": [],
             "environment": None,
+            # L1→English ladder for spoken practice, derived from real pronunciation
+            # evidence (services/english_ladder.py). Stored whole.
+            "english_speaking": None,
             "source": None,
             "updated_at": None,
         },
@@ -167,7 +170,7 @@ def flatten_updates(updates: dict[str, Any], prefix: str = "") -> dict[str, Any]
 # the null outright.
 _OPAQUE_LEAF_KEYS = {
     "resume_token", "mapping_scores", "mapping_measures", "next_recommendations",
-    "support_used", "hint_ladder",
+    "support_used", "hint_ladder", "english_speaking",
 }
 _OPAQUE_PARENT_KEYS = {"mastery", "progress"}
 

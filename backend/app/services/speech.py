@@ -180,6 +180,34 @@ def voice_for(language: str, avatar_variant: str) -> tuple[str, str]:
     return VOICES[lang][variant]
 
 
+async def issue_token() -> dict[str, str]:
+    """A ~10-minute Speech token for the BROWSER.
+
+    Pronunciation assessment has to run where the microphone is, and the browser
+    must be able to authenticate without ever holding our subscription key. This
+    is also what keeps learner audio off our servers entirely: it goes from the
+    child's tab straight to Azure, is scored there, and only the score sheet
+    comes back to us.
+
+    No usage is recorded here — a token is not a metered request. The utterance
+    it later pays for is metered in `services/pronunciation.py`.
+    """
+    key = os.getenv("AZURE_SPEECH_KEY", "").strip()
+    region = os.getenv("AZURE_SPEECH_REGION", "").strip()
+    if not key or not region:
+        raise SpeechUnavailable("Azure Speech is not configured")
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                f"https://{region}.api.cognitive.microsoft.com/sts/v1.0/issueToken",
+                headers={"Ocp-Apim-Subscription-Key": key},
+            )
+        response.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise SpeechUnavailable("Azure Speech token request failed") from exc
+    return {"token": response.text, "region": region}
+
+
 async def synthesize_speech(
     text: str,
     language: str,

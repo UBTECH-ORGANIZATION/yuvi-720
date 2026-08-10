@@ -57,7 +57,7 @@ AGENT_VIEWS: dict[str, dict[str, list[str]]] = {
             "identity.locale", "profile.interests",
             "profile.characteristics", "profile.learning_style",
             "profile.preferences", "profile.environment", "profile.activeness",
-            "profile.mapping_clarifications", "strengths",
+            "profile.mapping_clarifications", "profile.english_speaking", "strengths",
             "challenges", "strategies", "goals", "current_state",
             "teacher_directives", "memory", "mastery", "student_description",
         ],

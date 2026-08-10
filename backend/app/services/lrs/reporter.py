@@ -381,6 +381,13 @@ async def report_component_completed(
     )
 
 
+async def report_spoken_attempt(
+    learner_id: str, session_id: str, **kwargs: Any
+) -> None:
+    """A spoken English practice attempt, with its pronunciation evidence."""
+    await _report(statements.spoken_attempt, learner_id, session_id, source="yuvilab", **kwargs)
+
+
 async def report_content_statement(
     learner_id: str,
     session_id: str,

@@ -639,6 +639,63 @@ def question_answered(
 _MEDIA_ACTIVITY_TYPES = MEDIA_ACTIVITY_TYPES
 
 
+def spoken_attempt(
+    identity: ReportingIdentity,
+    session_id: str,
+    *,
+    object_id: str,
+    question_id: str,
+    reference_text: Optional[str] = None,
+    success: Optional[bool] = None,
+    score_scaled: Optional[float] = None,
+    duration_seconds: Optional[float] = None,
+    accuracy: Optional[float] = None,
+    fluency: Optional[float] = None,
+    completeness: Optional[float] = None,
+    prosody: Optional[float] = None,
+    spoken_language: Optional[str] = None,
+    hierarchy: Optional[dict[str, Any]] = None,
+    ecat_item_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """One spoken practice attempt (נספח 1 §2.4 — תרגול שפה דבורה).
+
+    Reported as `answered`, not as an invented verb: the MoE list is closed, and
+    a speaking task IS a question the learner answered — with their voice. The
+    pronunciation dimensions ride in context extensions so the ministry can see
+    the evidence behind an English speaking claim.
+
+    `result.response` deliberately carries the REFERENCE sentence, never a
+    transcript of the child's voice.
+    """
+    result: dict[str, Any] = {"response": (reference_text or "")[:250]}
+    if success is not None:
+        result["success"] = success
+    if score_scaled is not None:
+        result["score"] = {"scaled": score_scaled}
+    if duration_seconds is not None:
+        result["duration"] = iso_duration(duration_seconds)
+    return _base(
+        identity,
+        "answered",
+        activity(object_id, "question"),
+        session_id,
+        result=result,
+        context_extra={
+            "extensions": extensions({
+                "questionId": question_id,
+                "questionType": "speaking",
+                "pronunciationAccuracy": accuracy,
+                "pronunciationFluency": fluency,
+                "pronunciationCompleteness": completeness,
+                "pronunciationProsody": prosody,
+                "spokenLanguage": spoken_language,
+            })
+        },
+        hierarchy=hierarchy,
+        ecat_item_id=ecat_item_id,
+    )
+
+
 def _seconds(value: Optional[float]) -> Optional[float]:
     """mediaPosition / mediaDuration are PLAIN SECONDS, not ISO-8601.
 
