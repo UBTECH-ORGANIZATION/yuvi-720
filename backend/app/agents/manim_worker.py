@@ -381,19 +381,24 @@ def render(spec_path: Path, output_path: Path) -> None:
                     # Freehand: an object the prop catalogue does not have.
                     import manim as manim_ns
 
-                    from app.agents.manim_drawing import build_drawing
+                    from app.agents.visuals.manim_shapes import to_mobjects
+                    from app.agents.visuals.shapes import build_drawing
 
                     x_scale, y_scale = scene_scales()
-                    shapes, placement = build_drawing(
+                    canvas_shapes, _ = build_drawing(
                         element,
-                        manim=manim_ns,
                         color_for=lambda name: COLORS.get(name or "ink", COLORS["ink"]),
-                        to_scene=scene_point,
-                        unit=min(x_scale, y_scale),
+                    )
+                    shapes = to_mobjects(
+                        canvas_shapes, manim=manim_ns,
+                        to_scene=scene_point, unit=min(x_scale, y_scale),
                     )
                     parts.extend(shapes)
-                    group = placement.get("group")
-                    directions = placement.get("directions") or {}
+                    group = manim_ns.VGroup(*shapes) if shapes else None
+                    directions = {
+                        "top": manim_ns.UP, "bottom": manim_ns.DOWN,
+                        "left": manim_ns.LEFT, "right": manim_ns.RIGHT,
+                    } if shapes else {}
 
                     def name_drawing(text: str, slot: str) -> None:
                         """Sit a caption OUTSIDE the artwork, on the named side."""
@@ -417,19 +422,20 @@ def render(spec_path: Path, output_path: Path) -> None:
                     # Hebrew bidi is solved once rather than once per prop.
                     import manim as manim_ns
 
-                    from app.agents.manim_props import build_prop
+                    from app.agents.visuals.manim_shapes import to_mobjects
+                    from app.agents.visuals.shapes import build_prop
 
                     x_scale, y_scale = scene_scales()
                     built = build_prop(
                         element,
-                        manim=manim_ns,
                         color_for=lambda name: COLORS.get(name or "primary", COLORS["primary"]),
-                        to_scene=scene_point,
-                        unit=min(x_scale, y_scale),
                     )
                     if built is not None:
-                        shapes, anchors = built
-                        parts.extend(shapes)
+                        canvas_shapes, anchors = built
+                        parts.extend(to_mobjects(
+                            canvas_shapes, manim=manim_ns,
+                            to_scene=scene_point, unit=min(x_scale, y_scale),
+                        ))
                         for slot, text in (element.get("labels") or {}).items():
                             anchor = anchors.get(str(slot))
                             if not text or anchor is None:

@@ -8,17 +8,19 @@ import unittest
 import unittest.mock
 
 from app.agents.manim_visual import (
-    _canonical_function_scene,
     build_scene_visual,
     render_visual,
-    _canonical_midpoint_scene,
-    _canonical_similar_triangles_scene,
-    _ensure_parallel_angle_markers,
-    _normalize_identity_line,
-    _normalize_safe_function_graph,
     _svg_fallback,
     _visual_benefit_signal,
     sanitize_scene,
+)
+from app.agents.visuals.maths import (
+    canonical_function_scene as _canonical_function_scene,
+    canonical_midpoint_scene as _canonical_midpoint_scene,
+    canonical_similar_triangles_scene as _canonical_similar_triangles_scene,
+    ensure_parallel_angle_markers as _ensure_parallel_angle_markers,
+    normalize_identity_line as _normalize_identity_line,
+    normalize_safe_function_graph as _normalize_safe_function_graph,
 )
 
 

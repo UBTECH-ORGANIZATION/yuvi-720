@@ -32,20 +32,48 @@ from app.services.speech import SpeechUnavailable, synthesize_speech
 from app.services import triggers
 
 
-_VISUAL_HINT = re.compile(
-    r"[\d=+×÷/%°]|משולש|זווית|שבר|גרף|צורה|מרובע|מעגל|ציר|נוסח|שטח|היקף|"
-    r"مثلث|زاوية|كسر|رسم|شكل|دائرة|مساحة|triangle|angle|fraction|graph|shape|equation"
+# The gate used to be a list of MATHS words — triangle, angle, fraction, graph,
+# area, perimeter — so a question about the water cycle, a cell, a circuit or a
+# series of weighings never reached the planner at all. Whether a picture helps
+# is not a property of the subject's vocabulary, so the gate no longer tries to
+# recognise topics. It is a cheap NEGATIVE filter: reject the turns that can
+# never want a drawing, and let the planner (which can actually judge) see the
+# rest. Being wrong here is asymmetric — a needless planner call costs tokens,
+# a wrongly blocked turn costs the learner the picture.
+_SOCIAL_TURN = {
+    "he": re.compile(r"^\W*(?:תודה|תודה רבה|היי|הי|שלום|אהלן|בוקר טוב|ערב טוב|ביי|להתראות|"
+                     r"מה נשמע|מה שלומ|סבבה|אוקיי|אוקי|כן|לא|מגניב|יאללה)\b"),
+    "ar": re.compile(r"^\W*(?:شكرا|شكرًا|مرحبا|أهلا|اهلا|السلام|صباح الخير|مساء الخير|"
+                     r"مع السلامة|كيف حالك|تمام|حسنا|نعم|لا)\b"),
+    "en": re.compile(r"^\W*(?:thanks|thank you|thx|hi|hey|hello|good morning|good evening|"
+                     r"bye|goodbye|how are you|ok|okay|yes|no|cool|nice)\b", re.IGNORECASE),
+}
+# A reply that never wants a diagram whatever it is about.
+_NON_EXPLANATORY_REPLY = re.compile(
+    r"^\W*(?:בשמחה|כיף|נעים|אין בעיה|הכל טוב|בכיף|"
+    r"على الرحب|بكل سرور|لا مشكلة|"
+    r"you're welcome|no problem|glad to)\b",
+    re.IGNORECASE,
 )
+# Enough substance to be worth a planning call. Below this the reply is an
+# acknowledgement, not an explanation.
+_MIN_EXPLANATION_CHARS = 80
+_MIN_QUESTION_CHARS = 8
 
 
 def _worth_visual_planning(message: str, response_text: str) -> bool:
-    """Cheap gate before the visual-planner LLM call — a 'thanks!' turn or a
-    short non-mathematical reply never justifies a full planning request."""
-    if len(response_text.strip()) < 80:
+    """Cheap gate before the visual-planner LLM call — a social turn or a short
+    acknowledgement never justifies a full planning request. Everything that
+    reads as an explanation is passed on for the planner to judge."""
+    question = message.strip()
+    reply = response_text.strip()
+    if len(reply) < _MIN_EXPLANATION_CHARS:
         return False
-    if len(message.strip()) < 8 and not _VISUAL_HINT.search(message):
+    if _NON_EXPLANATORY_REPLY.match(reply):
         return False
-    return bool(_VISUAL_HINT.search(message) or _VISUAL_HINT.search(response_text))
+    if any(pattern.match(question) for pattern in _SOCIAL_TURN.values()):
+        return False
+    return len(question) >= _MIN_QUESTION_CHARS
 
 
 async def _stream_visual_tail(

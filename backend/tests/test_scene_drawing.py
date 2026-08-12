@@ -20,8 +20,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app.agents.manim_drawing import MAX_COMMANDS, clean_path  # noqa: E402
 from app.agents.manim_visual import sanitize_scene  # noqa: E402
+from app.agents.visuals.drawing import MAX_COMMANDS, clean_path  # noqa: E402
 
 LEAF = "M 50 5 C 12 32 12 74 50 95 C 88 74 88 32 50 5 Z"
 
@@ -106,11 +106,15 @@ class PlacementIsOurs(unittest.TestCase):
     def _bounds(self, strokes, size, center):
         import manim as manim_ns
 
-        from app.agents.manim_drawing import build_drawing
+        from app.agents.visuals.manim_shapes import to_mobjects
+        from app.agents.visuals.shapes import build_drawing
 
-        shapes, _ = build_drawing(
+        canvas_shapes, _ = build_drawing(
             {"strokes": strokes, "size": size, "center": center},
-            manim=manim_ns, color_for=lambda n: "#000000",
+            color_for=lambda n: "#000000",
+        )
+        shapes = to_mobjects(
+            canvas_shapes, manim=manim_ns,
             to_scene=lambda p: manim_ns.np.array([p[0], p[1], 0.0]), unit=1.0,
         )
         group = manim_ns.VGroup(*shapes)
@@ -143,12 +147,16 @@ class PlacementIsOurs(unittest.TestCase):
         against every other convention."""
         import manim as manim_ns
 
-        from app.agents.manim_drawing import build_drawing
+        from app.agents.visuals.manim_shapes import to_mobjects
+        from app.agents.visuals.shapes import build_drawing
 
         # A wide base at SVG y=100 (visually LOW) and a point at y=0 (HIGH).
-        shapes, _ = build_drawing(
+        canvas_shapes, _ = build_drawing(
             {"strokes": [{"d": "M 0 100 L 100 100 L 50 0 Z"}], "size": 2.0, "center": [0, 0]},
-            manim=manim_ns, color_for=lambda n: "#000000",
+            color_for=lambda n: "#000000",
+        )
+        shapes = to_mobjects(
+            canvas_shapes, manim=manim_ns,
             to_scene=lambda p: manim_ns.np.array([p[0], p[1], 0.0]), unit=1.0,
         )
         points = manim_ns.VGroup(*shapes).get_all_points()
