@@ -96,6 +96,30 @@ async def teacher_view_route(path: str = ""):
     return serve_react_app()
 
 
+# `/teacher` is where the React router actually lives; `/teacher-view` above is
+# the legacy path. Without this, a teacher who refreshes or opens a shared link
+# gets a raw JSON 404 instead of the app.
+@router.get("/teacher")
+@router.get("/teacher/{path:path}")
+async def teacher_route(path: str = ""):
+    """Serve the React app shell for the teacher app routes."""
+    return serve_react_app()
+
+
+@router.get("/admin")
+@router.get("/admin/{path:path}")
+async def admin_route(path: str = ""):
+    """Serve the React app shell for the org administration routes."""
+    return serve_react_app()
+
+
+@router.get("/badges")
+@router.get("/badges/{path:path}")
+async def badges_route(path: str = ""):
+    """Serve the React app shell for the badges route."""
+    return serve_react_app()
+
+
 @router.get("/mentoring")
 @router.get("/mentoring/{path:path}")
 async def mentoring_route(path: str = ""):
