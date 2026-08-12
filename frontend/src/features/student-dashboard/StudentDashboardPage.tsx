@@ -15,6 +15,7 @@ import { DashboardHero } from './DashboardHero'
 import { DashboardLoadingScreen } from './DashboardLoadingScreen'
 import { LearningMap } from './LearningMap'
 import { MyGoals } from './MyGoals'
+import { MyTasks } from './MyTasks'
 import { RecentLessons } from './RecentLessons'
 import { ActivenessMapSection } from './ActivenessMapSection'
 import { StudentConnectionsPane } from './StudentConnectionsPane'
@@ -195,6 +196,8 @@ export function StudentDashboardPage() {
                 <LearningMap competencies={dashboard.competencies} />
               </aside>
               <div className="sd-grid__main">
+                {/* Renders nothing when nothing is outstanding — see MyTasks. */}
+                <MyTasks />
                 <MyGoals
                   goals={dashboard.goals}
                   onSeeAll={() => navigate('/mentoring')}

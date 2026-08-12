@@ -102,27 +102,43 @@
 
 .tch-gap:last-child { border-block-end: 0; }
 
-.tch-gap__head { display: flex; justify-content: space-between; gap: var(--sp-2); flex-wrap: wrap; }
-.tch-gap__head strong { color: var(--sp-ink-900); }
-.tch-gap__share { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); font-variant-numeric: tabular-nums; }
+/* Two headed lists rather than one interleaved list sorted by struggle share,
+   so a strength and a gap are never adjacent rows distinguished only by the
+   colour of a bar. */
+.tch-gaps__group + .tch-gaps__group { margin-block-start: var(--sp-4); }
 
-.tch-gap__meter {
-  display: block;
-  block-size: 7px;
-  border-radius: var(--sp-radius-pill);
-  background: var(--sp-bg-subtle);
-  overflow: hidden;
+.tch-gaps__groupTitle {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-400);
+  text-transform: none;
 }
 
-.tch-gap__meterFill {
-  display: block;
-  block-size: 100%;
-  border-radius: inherit;
-  background: var(--sp-warn-600);
-  transition: inline-size var(--sp-dur) var(--sp-ease);
+.tch-gap__label { color: var(--sp-ink-900); }
+
+/* The row's whole meaning, in words: which way it points, how many, and out of
+   what. `--start` is the only colour cue left, and it is now redundant rather
+   than load-bearing. */
+.tch-gap__sentence {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  line-height: 1.55;
+  color: var(--sp-ink-700);
 }
 
-.tch-gap--strength .tch-gap__meterFill { background: var(--sp-success-600); }
+.tch-gap__classSize { color: var(--sp-ink-400); }
+
+.tch-gap { border-inline-start: 3px solid transparent; padding-inline-start: var(--sp-3); }
+.tch-gap--gap { border-inline-start-color: var(--sp-warn-600); }
+.tch-gap--strength { border-inline-start-color: var(--sp-success-600); }
+
+.tch-gap__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
 
 .tch-groupRecs { display: grid; gap: var(--sp-2); padding-block-start: var(--sp-2); }
 .tch-groupRecs ul { margin: 0; padding-inline-start: var(--sp-4); display: grid; gap: var(--sp-2); }
@@ -138,35 +154,26 @@
 .tch-home__alerts { display: grid; gap: 0; }
 
 /* ── sub-group goal assignment ─────────────────────────────────────────────
-   Collapsed by default: the gap itself is the information, assigning is the
-   optional follow-up. Names are listed unnumbered and unscored — a selection
-   set, never a ranking (MoE C5). */
+   A centred dialog. It used to expand in place, which nested a chip grid and
+   three fields inside a gap row that was already a sentence plus a disclosure.
+   Names are listed unnumbered and unscored — a selection set, never a ranking
+   (MoE C5). */
 
-.tch-subgroup { margin-block-start: var(--sp-2); }
+.tch-subgroup__modal { width: min(620px, 100%); max-block-size: min(86vh, 860px); }
+.tch-subgroup__heading { margin: 0; font-size: 1.32rem; font-weight: 700; }
 
-.tch-subgroup__summary {
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-1);
-  font-size: var(--sp-fs-xs);
-  font-weight: 600;
-  color: var(--sp-primary-700);
-  padding: var(--sp-1) var(--sp-2);
-  border-radius: var(--sp-radius-sm);
-}
-
-.tch-subgroup__summary:hover { background: var(--sp-primary-050); }
-.tch-subgroup__summary::marker { content: ''; }
-
-/* The open form is an indented flat section — the row is its container. */
+/* Only the form scrolls; the heading and the action row stay put, so the
+   assign button is reachable however many names are in the sub-group. */
 .tch-subgroup__body {
   display: grid;
   gap: var(--sp-3);
-  margin-block-start: var(--sp-2);
-  padding: var(--sp-2) 0 var(--sp-1);
-  border-block-start: 1px dashed var(--sp-border-strong);
+  overflow-y: auto;
+  padding-inline-end: var(--sp-2);
+  margin-inline-end: calc(var(--sp-2) * -1);
 }
+
+/* Naming a kept sub-group, in a labelled field rather than `window.prompt`. */
+.tch-subgroup__spacer { flex: 1; }
 
 .tch-subgroup__people { display: grid; gap: var(--sp-1); }
 

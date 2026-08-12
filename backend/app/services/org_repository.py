@@ -10,6 +10,7 @@ Shape (architecture doc §4.3, F8):
     org_groups         _id = group_id
     org_teacher_links  _id = "{teacher_id}:{group_id}"   teacher → group
     org_enrollments    _id = "{learner_id}:{group_id}"   learner → group
+    org_subgroups      _id = subgroup_id                 a named slice of one group
     org_admins         _id = user_id
     org_audit          append-only record of every membership mutation
 
@@ -38,6 +39,7 @@ SCHOOLS = "org_schools"
 GROUPS = "org_groups"
 TEACHER_LINKS = "org_teacher_links"
 ENROLLMENTS = "org_enrollments"
+SUBGROUPS = "org_subgroups"
 ADMINS = "org_admins"
 AUDIT = "org_audit"
 
@@ -46,6 +48,7 @@ _FALLBACK_KEYS = {
     GROUPS: "groups",
     TEACHER_LINKS: "teacher_links",
     ENROLLMENTS: "enrollments",
+    SUBGROUPS: "subgroups",
     ADMINS: "admins",
     AUDIT: "audit",
 }
@@ -174,6 +177,7 @@ async def ensure_indexes() -> None:
         GROUPS: [("school_id", 1), ("active", 1)],
         TEACHER_LINKS: [("teacher_id", 1), ("group_id", 1), ("active", 1)],
         ENROLLMENTS: [("learner_id", 1), ("group_id", 1), ("active", 1)],
+        SUBGROUPS: [("group_id", 1), ("active", 1)],
         AUDIT: [("at", -1)],
     }
     for collection, keys in plans.items():
@@ -245,6 +249,58 @@ async def archive_group(group_id: str) -> Optional[dict[str, Any]]:
     if group is None:
         return None
     return await _upsert(GROUPS, {**group, "_id": group_id, "active": False})
+
+
+# ── sub-groups ───────────────────────────────────────────────────────────────
+# A named slice of ONE group, and deliberately not a group itself. Making it a
+# real group would need a second `org_enrollments` row per learner, and every
+# learner in a sub-group would then be counted twice by `learners_in_group`,
+# `students_total`, every engagement percentage and `unassigned_learners`.
+#
+# So membership is a list on the sub-group, and the parent group stays the only
+# teacher↔learner join. Authorization is therefore not a new path: whoever may
+# read the parent may read its slices.
+
+
+async def list_subgroups(
+    *, group_id: Optional[str] = None, active_only: bool = True
+) -> list[dict[str, Any]]:
+    query: dict[str, Any] = {}
+    if group_id:
+        query["group_id"] = group_id
+    if active_only:
+        query["active"] = True
+    return await _find(SUBGROUPS, query)
+
+
+async def get_subgroup(subgroup_id: str) -> Optional[dict[str, Any]]:
+    return await _find_one(SUBGROUPS, subgroup_id)
+
+
+async def upsert_subgroup(
+    subgroup_id: str,
+    *,
+    group_id: str,
+    name: str,
+    learner_ids: list[str],
+    created_by: str,
+    active: bool = True,
+    created_at: Optional[str] = None,
+) -> dict[str, Any]:
+    return await _upsert(SUBGROUPS, {
+        "_id": subgroup_id, "group_id": group_id, "name": name,
+        "learner_ids": learner_ids, "created_by": created_by, "active": active,
+        "created_at": created_at or _now(),
+    })
+
+
+async def archive_subgroup(subgroup_id: str) -> Optional[dict[str, Any]]:
+    """Archived, not deleted — same rule as groups. A goal or a task assigned to
+    a sub-group keeps a readable referent after the teacher stops using it."""
+    subgroup = await get_subgroup(subgroup_id)
+    if subgroup is None:
+        return None
+    return await _upsert(SUBGROUPS, {**subgroup, "_id": subgroup_id, "active": False})
 
 
 # ── teacher links ────────────────────────────────────────────────────────────

@@ -20,12 +20,16 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode,
 } from 'react'
 import { getTeacherRoster, type RosterEntry } from '../services/teacher'
+import type { AvatarChoice } from '../features/badges/types'
 import { useAuth } from './AuthProvider'
 
 interface TeacherRosterValue {
   students: RosterEntry[]
   /** The name, or null when this learner has none — never a guess. */
   nameOf: (learnerId: string) => string | null
+  /** The learner's chosen avatar, or null when they have not picked one.
+   *  Fetched with the roster so a badge coin costs no extra request per row. */
+  avatarOf: (learnerId: string) => AvatarChoice | null
   /** For components that still take a Map (SubGroupAssign, MomentsFeed). */
   names: Map<string, string | null>
   isLoading: boolean
@@ -63,9 +67,17 @@ export function TeacherRosterProvider({ children }: { children: ReactNode }) {
     (learnerId: string) => names.get(learnerId) ?? null, [names]
   )
 
+  const avatars = useMemo(
+    () => new Map(students.map((row) => [row.learner_id, row.avatar ?? null])),
+    [students]
+  )
+  const avatarOf = useCallback(
+    (learnerId: string) => avatars.get(learnerId) ?? null, [avatars]
+  )
+
   const value = useMemo<TeacherRosterValue>(
-    () => ({ students, names, nameOf, isLoading }),
-    [students, names, nameOf, isLoading]
+    () => ({ students, names, nameOf, avatarOf, isLoading }),
+    [students, names, nameOf, avatarOf, isLoading]
   )
 
   return (
@@ -77,4 +89,14 @@ export function useTeacherRoster(): TeacherRosterValue {
   const value = useContext(TeacherRosterContext)
   if (!value) throw new Error('useTeacherRoster must be used inside TeacherRosterProvider')
   return value
+}
+
+/** The roster when there is one, `null` when there is not — for the handful of
+ *  components that render on BOTH sides of the app.
+ *
+ *  The notification bell is the case: it is the same component for a learner
+ *  and a teacher, so it cannot require a teacher-only provider, but it still
+ *  wants to turn "a learner id" into "Moti" when a teacher is the one reading. */
+export function useOptionalTeacherRoster(): TeacherRosterValue | null {
+  return useContext(TeacherRosterContext)
 }

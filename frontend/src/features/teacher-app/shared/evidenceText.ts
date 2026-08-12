@@ -10,6 +10,10 @@
  * explain nothing to a teacher, and the honest number next to them does.
  */
 
+/* Extension spelled out: `node --test` loads this module directly and resolves
+   imports literally. See the note in tsconfig.json. */
+import { subjectLabel } from './subjectLabel.ts'
+
 type Translate = (key: string, params?: Record<string, string | number>) => string
 
 /** Machine identifiers: real evidence to us, noise to a teacher. */
@@ -72,6 +76,66 @@ const num = (value: unknown): number | null =>
   typeof value === 'number' && Number.isFinite(value) ? value : null
 
 const TEMPLATES: Template[] = [
+  /* ── the coach's own detectors, mirrored onto a teacher alert ─────────────
+     `teacher_alerts.escalate_trigger` stores the trigger payload verbatim as
+     the alert's evidence, so "why?" opened onto the detector's internals:
+
+         type: wheel_spinning
+         early warning: כן
+         alternative: title Hear the difference, media format audio
+
+     A teacher reading that cannot tell what was counted, what "failure" means
+     here, or what Yuvi did about it. All three are answerable — the counters
+     are in the payload and the rule is ours — so they are answered. */
+  {
+    needs: ['type'],
+    consumes: ['type', 'objective_id', 'question_id', 'session_id',
+      'misconception', 'streak', 'opportunities', 'early_warning', 'reason'],
+    render: (raw, t) => {
+      const kind = String(raw.type || '')
+      const parts: string[] = []
+
+      if (kind === 'misconception') {
+        const streak = num(raw.streak)
+        parts.push(streak === null
+          ? t('tch.evidence.sent.det.misconception')
+          : t('tch.evidence.sent.det.misconceptionN', { count: streak }))
+        const tag = typeof raw.misconception === 'string' ? raw.misconception.trim() : ''
+        if (tag) parts.push(t('tch.evidence.sent.det.pattern', { tag }))
+        // What "failure" means here, said once and in the same breath as the
+        // count — a number of failures is only readable next to its definition.
+        parts.push(t('tch.evidence.sent.det.whatCounts'))
+      } else if (kind === 'wheel_spinning') {
+        parts.push(t('tch.evidence.sent.det.wheel', {
+          count: num(raw.opportunities) ?? 0,
+        }))
+        if (raw.early_warning === true) parts.push(t('tch.evidence.sent.det.early'))
+        parts.push(t('tch.evidence.sent.det.whatCounts'))
+      } else if (kind === 'rapid_guessing') {
+        parts.push(t('tch.evidence.sent.det.rapid'))
+      } else {
+        // A detector kind nobody has written a sentence for yet. The label
+        // exists (it is what the alert's own pill uses), so this stays prose.
+        const label = t(`tch.evidence.detector.${kind}`)
+        if (label !== `tch.evidence.detector.${kind}`) parts.push(label)
+      }
+      return parts.length ? parts.join(' ') : null
+    },
+  },
+  { // what Yuvi offered instead — the 720 "different representation" response
+    needs: ['alternative'],
+    consumes: ['alternative'],
+    render: (raw, t) => {
+      const alternative = raw.alternative as
+        { title?: string; media_format?: string } | null
+      const title = String(alternative?.title || '').trim()
+      if (!title) return null
+      const format = String(alternative?.media_format || '').trim()
+      return format
+        ? t('tch.evidence.sent.det.alternativeAs', { title, format })
+        : t('tch.evidence.sent.det.alternative', { title })
+    },
+  },
   { // struggle counters (mastery entry)
     needs: ['attempts', 'successes'],
     consumes: ['attempts', 'successes', 'failures', 'score_ewma', 'level', 'needs_review'],
@@ -123,12 +187,21 @@ const TEMPLATES: Template[] = [
       window: num(raw.window) ?? 5,
     }),
   },
-  { // wheel spinning
+  { /* wheel spinning, as the daily insight computes it (no `type` key — the
+       alert path above catches the detector's own payload first). `mastered`
+       and `early_warning` are consumed here too: left over, they printed as
+       "early warning: כן" under a sentence that had already said it. */
     needs: ['opportunities'],
-    consumes: ['opportunities', 'spinning', 'successes'],
-    render: (raw, t) => t('tch.evidence.sent.wheelSpinning', {
-      count: num(raw.opportunities) ?? 0,
-    }),
+    consumes: ['opportunities', 'spinning', 'successes', 'mastered', 'early_warning'],
+    render: (raw, t) => {
+      const sentence = t('tch.evidence.sent.wheelSpinning', {
+        count: num(raw.opportunities) ?? 0,
+      })
+      const parts = [sentence]
+      if (raw.early_warning === true) parts.push(t('tch.evidence.sent.det.early'))
+      parts.push(t('tch.evidence.sent.det.whatCounts'))
+      return parts.join(' ')
+    },
   },
   { // prolonged time on one question
     needs: ['elapsed_seconds'],
@@ -265,6 +338,113 @@ const TEMPLATES: Template[] = [
     },
   },
 ]
+
+/* ── why a recommendation was made ──────────────────────────────────────────
+ *
+ * `describeEvidence` is shape-driven, which is right for a flag: the same
+ * counters mean the same thing wherever they come from. A recommendation is
+ * different — it already knows its own `signal`, and the signal names the
+ * sentence exactly. Shape-matching it produced the screenshot a teacher
+ * actually saw under "why?":
+ *
+ *     subject: science / objectives total: 1 / objectives mastered: 1 /
+ *     objectives in progress: 0 / percent: 100
+ *
+ * which is the reason expressed as a payload. One signal, one sentence.
+ */
+type SignalSentence = (
+  raw: Record<string, unknown>,
+  value: unknown,
+  t: Translate,
+  language: string,
+) => string | null
+
+const SIGNAL_SENTENCE: Record<string, SignalSentence> = {
+  days_inactive: (raw, value, t, language) => {
+    const days = num(raw.days_inactive) ?? num(value) ?? 0
+    const last = typeof raw.last_activity_at === 'string'
+      ? formatDate(raw.last_activity_at, language) : null
+    return t(last ? 'tch.why.inactiveSince' : 'tch.why.inactive', {
+      days, threshold: num(raw.threshold) ?? days, date: last ?? '',
+    })
+  },
+  trailing_fail_streak: (raw, value, t) => {
+    const count = num(raw.fail_streak) ?? num(value) ?? 0
+    const topic = typeof raw.objective_title === 'string' ? raw.objective_title.trim() : ''
+    return t(topic ? 'tch.why.failStreakAt' : 'tch.why.failStreak', { count, topic })
+  },
+  distress_with_failure: (raw, value, t) => t('tch.why.distressWithFailure', {
+    count: num(raw.fail_streak) ?? num(value) ?? 0,
+    flags: num(raw.open_flags) ?? 1,
+  }),
+  prolonged_interaction: (raw, value, t) => {
+    const seconds = num(raw.elapsed_seconds) ?? num(value)
+    if (seconds === null) return null
+    return t('tch.why.prolonged', { minutes: Math.max(1, Math.round(seconds / 60)) })
+  },
+  subject_mastery_percent: (raw, value, t) => t('tch.why.subjectMastery', {
+    subject: subjectLabel(raw.subject as string | null | undefined, t),
+    mastered: num(raw.objectives_mastered) ?? 0,
+    total: num(raw.objectives_total) ?? 0,
+    percent: num(raw.percent) ?? num(value) ?? 0,
+  }),
+  existing_strength: (raw, value, t) => {
+    const labels = Array.isArray(raw.labels)
+      ? raw.labels.map((entry) => String(entry).trim()).filter(Boolean) : []
+    return labels.length
+      ? t('tch.why.strengths', { list: labels.join(' · ') })
+      : t('tch.why.strengthsCount', { count: num(value) ?? 0 })
+  },
+  /* The three a teacher goal draft can be grounded in. The backend now sends
+     the few words behind each — the objective labels, the challenges, one line
+     of the description — instead of the evidence object it handed the model. */
+  struggle_items: (raw, _value, t) => {
+    const labels = list(raw.labels)
+    return labels.length ? t('tch.why.goalGaps', { list: labels.join(' · ') }) : null
+  },
+  challenges: (raw, _value, t) => {
+    const items = list(raw.challenges)
+    return items.length ? t('tch.why.goalChallenges', { list: items.join(' · ') }) : null
+  },
+  student_description: (raw, _value, t) => {
+    const observation = typeof raw.observation === 'string' ? raw.observation.trim() : ''
+    return observation ? t('tch.why.goalDescription', { observation }) : null
+  },
+  no_evidence: (_raw, _value, t) => t('tch.why.noEvidence'),
+  // The engine emitted no signal at all — say so, rather than dressing a
+  // default up as a finding.
+  default: (_raw, _value, t) => t('tch.why.noSignal'),
+}
+
+/** A string list from raw evidence, trimmed and de-blanked. */
+function list(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.map((entry) => String(entry).trim()).filter(Boolean)
+    : []
+}
+
+/** The one-sentence reason behind a recommendation.
+ *
+ * Falls back to the generic evidence rendering for a signal nobody has written
+ * a sentence for yet — a new backend signal degrades to readable prose rather
+ * than to a missing "why?". */
+export function describeSignal(
+  signal: string,
+  value: unknown,
+  raw: Record<string, unknown> | null | undefined,
+  t: Translate,
+  language: string,
+): string[] {
+  const write = SIGNAL_SENTENCE[signal]
+  if (write) {
+    const sentence = write(raw ?? {}, value, t, language)
+    if (sentence) return [sentence]
+  }
+  const label = t(`tch.signal.${signal}`)
+  const head = label === `tch.signal.${signal}` ? null
+    : value === null || value === undefined ? label : `${label}: ${scalarText(value, t, language)}`
+  return [head, ...describeEvidence(raw, t, language)].filter((line): line is string => !!line)
+}
 
 /** Turn a raw-evidence object into localized sentences. Never returns braces. */
 export function describeEvidence(

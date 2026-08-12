@@ -12,8 +12,9 @@ feeling label.
 
 from __future__ import annotations
 
+import hashlib
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from app.services.ai_usage import UsageContext
@@ -335,11 +336,7 @@ def _teacher_goal_fallback(language: str, gaps: list[dict[str, Any]], deadline: 
             "rationale": base["rationale"],
             "deadline": deadline,
             "ai": False,
-            "because": {
-                "signal": "mastery_gap",
-                "value": gap.get("objective_id"),
-                "raw": gap,
-            },
+            "because": _because("mastery_gap", {"struggle_items": [gap]}),
         })
     if not drafts:
         drafts.append({**base, "deadline": deadline, "ai": False,
@@ -366,30 +363,67 @@ def _has_description(description: Any) -> bool:
     return any(bool(value) for value in blocks.values()) if isinstance(blocks, dict) else False
 
 
-async def suggest_goals_for_teacher(
-    learner_id: str,
-    teacher_id: str,
-    *,
-    language: str = "he",
-    subject: str | None = None,
-    count: int = 3,
-) -> list[dict[str, Any]]:
-    """Three goal DRAFTS for a teacher, grounded in the brain.
+def _description_line(description: Any, limit: int = 220) -> str:
+    """The description as ONE readable line.
 
-    Grounded differently from `recommend_goal`, deliberately. That one is built
-    from what the *child wrote*; this one is built from what the system has
-    *observed* — mastery gaps, open challenges, recent struggle items — because a
-    teacher is choosing where to intervene, not reflecting on a conversation.
-
-    Returns three candidates rather than one: the teacher picks and edits, and
-    the AI never writes a goal into a child's profile unattended. Every draft
-    carries `because`, the same explainability contract as every other AI surface
-    in the teacher app.
+    The brain hands back a container — `{"blocks": {...}, "text": …, "stale":
+    …, "events_since_generation": …}` — and passing that straight through as
+    evidence is how a teacher ended up reading `blocks [object Object]` and
+    `events since generation 4` in a panel that was supposed to explain a
+    suggestion. Only the prose comes out, and only as much as a person reads.
     """
-    language = language if language in _LANG_NAME else "he"
-    deadline = (date.today() + timedelta(days=7)).isoformat()
-    count = max(1, min(count, 5))
+    if isinstance(description, str):
+        text = description
+    elif isinstance(description, dict):
+        text = str(description.get("text") or "").strip()
+        if not text:
+            blocks = description.get("blocks")
+            parts = [str(value).strip() for value in blocks.values()
+                     if isinstance(blocks, dict) and str(value or "").strip()]
+            text = " · ".join(parts)
+    else:
+        text = str(description or "")
+    text = " ".join(text.split())
+    return text[:limit].rstrip() + "…" if len(text) > limit else text
 
+
+def _because(signal: str, evidence: dict[str, Any]) -> dict[str, Any]:
+    """The grounding a teacher can read, not the payload it came from.
+
+    Explainability (MoE F6) asks for the datum behind a suggestion. It does not
+    ask for the request body: a list of dicts and a description container
+    rendered as `label: value` lines is technically the evidence and is not an
+    explanation of anything. Each signal gets the few words that answer "why
+    this goal, for this child".
+    """
+    labels = [str(gap.get("label") or gap.get("objective_id") or "").strip()
+              for gap in (evidence.get("struggle_items") or [])]
+    labels = [label for label in labels if label][:3]
+    challenges = [item for item in (evidence.get("challenges") or []) if str(item).strip()][:3]
+    line = _description_line(evidence.get("student_description"))
+
+    if signal in ("struggle_items", "mastery_gap") and labels:
+        return {"signal": "struggle_items", "value": None, "raw": {"labels": labels}}
+    if signal == "challenges" and challenges:
+        return {"signal": "challenges", "value": None, "raw": {"challenges": challenges}}
+    if signal == "student_description" and line:
+        return {"signal": "student_description", "value": None, "raw": {"observation": line}}
+
+    # The model named a key that carries nothing, or none at all. Fall to the
+    # strongest evidence there actually is rather than shipping everything.
+    if labels:
+        return {"signal": "struggle_items", "value": None, "raw": {"labels": labels}}
+    if challenges:
+        return {"signal": "challenges", "value": None, "raw": {"challenges": challenges}}
+    if line:
+        return {"signal": "student_description", "value": None, "raw": {"observation": line}}
+    return {"signal": "no_evidence", "value": None, "raw": {}}
+
+
+async def _goal_evidence(
+    learner_id: str, language: str, subject: str | None,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """What the system has observed about this learner, for goal setting."""
     # The privacy gate. `teacher_assistant` is the view without identity, raw
     # instrument scores, or the learner's private memory.
     from app.brain.context_engine import AgentScopeError, view_for
@@ -410,14 +444,55 @@ async def suggest_goals_for_teacher(
          "evidence": item.get("evidence")}
         for item in (student.get("struggle_items") or [])
     ][:5]
-    challenges = [str(item) for item in (view.get("challenges") or [])][:5]
+    # A challenge is `{"label": …, "status": "working"}` in this scope, and
+    # `str()` on it put `{'label': …, 'status': 'working'}` in front of a teacher
+    # — and in the model's prompt. Only the words come out.
+    challenges: list[str] = []
+    for item in (view.get("challenges") or [])[:5]:
+        text = (item.get("label") or item.get("text") or "") if isinstance(item, dict) else item
+        text = " ".join(str(text).split())
+        if text:
+            challenges.append(text)
+
     description = view.get("student_description") or ""
 
-    evidence = {
+    return {
         "struggle_items": gaps,
         "challenges": challenges,
         "student_description": description,
-    }
+    }, gaps
+
+
+async def suggest_goals_for_teacher(
+    learner_id: str,
+    teacher_id: str,
+    *,
+    language: str = "he",
+    subject: str | None = None,
+    count: int = 3,
+) -> list[dict[str, Any]]:
+    """Three goal DRAFTS for a teacher, grounded in the brain.
+
+    Grounded differently from `recommend_goal`, deliberately. That one is built
+    from what the *child wrote*; this one is built from what the system has
+    *observed* — mastery gaps, open challenges, recent struggle items — because a
+    teacher is choosing where to intervene, not reflecting on a conversation.
+
+    Returns three candidates rather than one: the teacher picks and edits, and
+    the AI never writes a goal into a child's profile unattended. Every draft
+    carries `because`, the same explainability contract as every other AI surface
+    in the teacher app.
+
+    Generates every time it is called. `goal_suggestions` is the cached door in
+    front of it, and the one the routes use.
+    """
+    language = language if language in _LANG_NAME else "he"
+    deadline = (date.today() + timedelta(days=7)).isoformat()
+    count = max(1, min(count, 5))
+
+    evidence, gaps = await _goal_evidence(learner_id, language, subject)
+    description = evidence["student_description"]
+    challenges = evidence["challenges"]
 
     if not gaps and not challenges and not _has_description(description):
         # No evidence means no grounded suggestion. Saying so is the honest
@@ -462,12 +537,9 @@ async def suggest_goals_for_teacher(
                 "deadline": deadline,
                 "ai": True,
                 # Mandatory. A teacher acting on a suggestion must be able to see
-                # which observation produced it.
-                "because": {
-                    "signal": signal,
-                    "value": None,
-                    "raw": evidence.get(signal) or evidence,
-                },
+                # which observation produced it — as a sentence, not as the blob
+                # the model was handed.
+                "because": _because(signal, evidence),
             })
         if drafts:
             return drafts
@@ -475,6 +547,154 @@ async def suggest_goals_for_teacher(
         print(f"⚠️ teacher goal suggestion failed: {type(exc).__name__}")
 
     return _teacher_goal_fallback(language, gaps, deadline)
+
+
+# ── the cache in front of them ───────────────────────────────────────────────
+#
+# Goal suggestions were regenerated on every press of the button, which is wrong
+# in three ways at once. It spends a model call on a question whose answer has
+# not changed. It gives a teacher three different answers to the same question
+# within a minute, which is the fastest way to teach someone that none of them
+# mean anything. And it invites re-rolling until the wording is agreeable —
+# turning a grounded suggestion into a slot machine.
+#
+# So they are generated once and kept, and the only thing that brings new ones
+# is new evidence. What counts as new evidence is the fingerprint below: the
+# objectives the child is struggling with, the open challenges, and the text of
+# the description. Not the timestamps around them, not the order they arrive in,
+# and not the teacher's patience.
+#
+# Deliberately NOT in the fingerprint: goals already assigned. Assigning one
+# does not change what the child needs, and regenerating on every assignment
+# would put the spend back exactly where it was removed from.
+
+GOAL_SUGGESTION_COLLECTION = "goal_suggestions"
+
+
+def _goal_cache_id(learner_id: str, language: str, subject: str | None) -> str:
+    """Language and subject key the row rather than the fingerprint: they change
+    which suggestions are wanted, not whether the old ones are still true."""
+    return f"{learner_id}|{language}|{subject or 'all'}"
+
+
+def _goal_fingerprint(evidence: dict[str, Any]) -> str:
+    """What the suggestions were grounded in, canonicalised.
+
+    Sorted, so a reordered struggle list is not new evidence. Labels and ids
+    only — `evidence` strings under a struggle item carry counts that move on
+    every answered question, and a suggestion does not stop being right because
+    a child got one more sum wrong.
+    """
+    material = {
+        "objectives": sorted(
+            str(gap.get("objective_id") or gap.get("label") or "")
+            for gap in (evidence.get("struggle_items") or [])),
+        "challenges": sorted(str(item) for item in (evidence.get("challenges") or [])),
+        "description": _description_line(evidence.get("student_description"), limit=400),
+    }
+    blob = json.dumps(material, ensure_ascii=False, sort_keys=True)
+    return hashlib.sha1(blob.encode("utf-8")).hexdigest()[:16]
+
+
+async def _load_goal_suggestions(cache_id: str) -> dict[str, Any] | None:
+    from app.brain.repository import _get_collection_named
+    collection = _get_collection_named(GOAL_SUGGESTION_COLLECTION)
+    if collection is None:
+        return None
+    try:
+        return await collection.find_one({"_id": cache_id})
+    except Exception:  # pragma: no cover - a cache miss is not an error
+        return None
+
+
+async def _store_goal_suggestions(cache_id: str, document: dict[str, Any]) -> None:
+    from app.brain.repository import _get_collection_named
+    collection = _get_collection_named(GOAL_SUGGESTION_COLLECTION)
+    if collection is None:
+        return
+    try:
+        await collection.update_one({"_id": cache_id},
+                                    {"$set": {"_id": cache_id, **document}}, upsert=True)
+    except Exception as exc:  # pragma: no cover - never fail the request
+        print(f"⚠️ goal suggestions not cached: {type(exc).__name__}: {exc}")
+
+
+async def goal_suggestions(
+    learner_id: str,
+    teacher_id: str,
+    *,
+    language: str = "he",
+    subject: str | None = None,
+    count: int = 3,
+    allow_generate: bool = True,
+) -> dict[str, Any]:
+    """The cached door in front of `suggest_goals_for_teacher`.
+
+    ``allow_generate=False`` never calls the model: it answers from the cache or
+    says there is nothing, which is what a page opening asks. The teacher's
+    button asks with it True — and only when there is nothing cached, or when
+    the evidence has moved since.
+
+    Returns ``{goals, cached, generated_at, stale, evidence}`` where `stale`
+    means "these are real, and something has happened since". The screen shows
+    them anyway and offers new ones; it does not quietly hide a grounded
+    suggestion because a fingerprint changed.
+    """
+    language = language if language in _LANG_NAME else "he"
+    cache_id = _goal_cache_id(learner_id, language, subject)
+
+    evidence, _ = await _goal_evidence(learner_id, language, subject)
+    fingerprint = _goal_fingerprint(evidence)
+    has_evidence = bool(
+        evidence["struggle_items"] or evidence["challenges"]
+        or _has_description(evidence["student_description"]))
+
+    cached = await _load_goal_suggestions(cache_id)
+    if cached and cached.get("goals"):
+        stale = str(cached.get("fingerprint") or "") != fingerprint
+        if not stale or not allow_generate:
+            return {
+                "goals": cached["goals"],
+                "cached": True,
+                "generated_at": cached.get("generated_at"),
+                "stale": stale,
+                "has_evidence": has_evidence,
+            }
+
+    if not allow_generate:
+        return {"goals": [], "cached": False, "generated_at": None,
+                "stale": False, "has_evidence": has_evidence}
+
+    goals = await suggest_goals_for_teacher(
+        learner_id, teacher_id, language=language, subject=subject, count=count)
+    generated_at = datetime.now(timezone.utc).isoformat()
+
+    # An "no evidence for this learner" card is a true answer, not a result to
+    # keep: the day an observation arrives, the button must produce real ones.
+    if goals and not any(goal.get("unavailable") for goal in goals):
+        await _store_goal_suggestions(cache_id, {
+            "learner_id": learner_id,
+            "language": language,
+            "subject": subject,
+            "fingerprint": fingerprint,
+            "generated_at": generated_at,
+            "generated_by": teacher_id,
+            "goals": goals,
+        })
+
+    return {"goals": goals, "cached": False, "generated_at": generated_at,
+            "stale": False, "has_evidence": has_evidence}
+
+
+async def ensure_goal_suggestion_indexes() -> None:
+    from app.brain.repository import _get_collection_named
+    collection = _get_collection_named(GOAL_SUGGESTION_COLLECTION)
+    if collection is None:
+        return
+    try:
+        await collection.create_index([("learner_id", 1)])
+    except Exception as exc:  # pragma: no cover
+        print(f"⚠️ goal suggestion indexes: {type(exc).__name__}: {exc}")
 
 
 # ── meeting preparation (F5, Phase 7) ────────────────────────────────────────

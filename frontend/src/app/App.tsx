@@ -23,6 +23,11 @@ import { LomdaCreatorPage } from '../features/learning-create/LomdaCreatorPage'
 import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
 import { YuviStudioPage } from '../features/Yuvi-studio/YuviStudioPage'
 import { BadgesPage } from '../features/badges/BadgesPage'
+import { MyTasksPage } from '../features/student-tasks/MyTasksPage'
+import { SolveTaskPage } from '../features/student-tasks/SolveTaskPage'
+import { TeacherTasksPage } from '../features/teacher-app/tasks/TeacherTasksPage'
+import { TaskReviewPage } from '../features/teacher-app/tasks/TaskReviewPage'
+import { TaskTrackingPage } from '../features/teacher-app/tasks/TaskTrackingPage'
 import { useStudioTransition } from '../features/Yuvi-studio/StudioTransitionProvider'
 import { CompanionChat } from '../components/CompanionChat'
 import { YuviCompanionDock } from '../components/YuviCompanionDock'
@@ -49,7 +54,8 @@ const PROTECTED_ROUTES = [
   '/student-dashboard',
   '/mentoring',
   '/learning',
-  '/badges'
+  '/badges',
+  '/tasks'
 ]
 const TEACHER_ROUTES = ['/teacher']   // covers /teacher and the legacy /teacher-view
 /* The control plane. Guarded separately from the teacher lane: every teacher may
@@ -98,7 +104,7 @@ function isLandingRoute(pathname: string) {
    route effect and pageForRoute cannot drift apart silently. */
 const KNOWN_ROUTES = [
   '/learner-mapping', '/results', '/yuvi-studio', '/student-dashboard',
-  '/badges', '/teacher', '/admin', '/mentoring', '/learning',
+  '/badges', '/teacher', '/admin', '/mentoring', '/learning', '/tasks',
 ]
 
 function isKnownRoute(pathname: string) {
@@ -155,6 +161,13 @@ function pageForRoute(pathname: string) {
   if (pathname.startsWith('/yuvi-studio')) return <YuviStudioPage />
   if (pathname.startsWith('/student-dashboard')) return <StudentDashboardPage />
   if (pathname.startsWith('/badges')) return <BadgesPage />
+  // Solve before list, or `/tasks/:id` resolves to the list — the same
+  // ordering trap the teacher lane below documents.
+  if (pathname.startsWith('/tasks/')) {
+    const taskId = decodeURIComponent(pathname.slice('/tasks/'.length)).split(/[/?#]/)[0]
+    return taskId ? <SolveTaskPage taskId={taskId} /> : <MyTasksPage />
+  }
+  if (pathname.startsWith('/tasks')) return <MyTasksPage />
   // Teacher lane. Order matters: the student detail prefix must be tested
   // before the bare `/teacher` prefix or every route resolves to Home.
   if (pathname.startsWith('/teacher/student/')) {
@@ -191,6 +204,19 @@ function pageForRoute(pathname: string) {
   if (pathname.startsWith('/teacher/messages')) {
     return <TeacherMessagesPage />
   }
+  if (pathname.startsWith('/teacher/tasks/')) {
+    const rest = decodeURIComponent(pathname.slice('/teacher/tasks/'.length)).split(/[?#]/)[0]
+    const [taskId, tail] = rest.split('/')
+    // `/review` is the pre-launch screen, `/{id}` alone is tracking. They are
+    // different jobs on the same task: reading what Yuvi wrote before anyone
+    // has it, versus reading what the class did with it afterwards.
+    if (taskId && tail === 'review') return <TaskReviewPage taskId={taskId} />
+    if (taskId) return <TaskTrackingPage taskId={taskId} />
+    return <TeacherTasksPage />
+  }
+  if (pathname.startsWith('/teacher/tasks')) {
+    return <TeacherTasksPage />
+  }
   if (pathname.startsWith('/teacher')) {
     return <TeacherHomePage />
   }
@@ -215,7 +241,11 @@ function isLearnerRoute(pathname: string) {
     pathname.startsWith('/student-dashboard') ||
     pathname.startsWith('/mentoring') ||
     pathname.startsWith('/learning') ||
-    pathname.startsWith('/badges')
+    pathname.startsWith('/badges') ||
+    /* Both task screens sit in the learner shell. The solve screen is a focus
+       surface, and `isActiveTaskRoute` collapses the chrome around it — the
+       same arrangement a lesson already uses, rather than a second one. */
+    pathname.startsWith('/tasks')
   )
 }
 
@@ -235,7 +265,10 @@ export function App() {
       ? studioTransition.backgroundPath
       : routePath
   const isStudioRoute = pathname.startsWith('/yuvi-studio')
+  /* Focus surfaces: a lesson, and now solving a task. Both are screens where
+     the surrounding chrome is a way to lose work, so the shell collapses. */
   const isActiveTaskRoute = pathname.startsWith('/learning/lesson')
+    || pathname.startsWith('/tasks/')
   const isLearningWorldRoute = pathname === '/learning' || pathname.startsWith('/learning?')
   // While signed out the guard renders the landing page, so the learner shell
   // and its companion must not wrap it.

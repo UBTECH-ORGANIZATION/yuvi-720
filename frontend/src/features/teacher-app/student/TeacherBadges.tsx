@@ -10,19 +10,14 @@
  */
 
 import { useEffect, useState } from 'react'
-import { EmptyState, ErrorState, Panel, SectionHeader, SkeletonCard, StatusPill } from '../../../components/primitives'
+import {
+  EmptyState, ErrorState, Panel, SectionHeader, SkeletonCard,
+} from '../../../components/primitives'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { Badge, type BadgeGlyph, type BadgeTier } from '../../../components/Badge'
 import { getStudentBadges, type TeacherBadge } from '../../../services/teacher'
+import '../../badges/badges-page.css'
 import './teacher-badges.css'
-
-/* Real values from the `StatusTone` union — it has no `success`, and an unknown
-   tone silently renders as the default pill. */
-const TONE: Record<string, 'strong' | 'support' | 'neutral'> = {
-  earned: 'strong',
-  inprogress: 'support',
-  locked: 'neutral',
-}
 
 export function TeacherBadges({ learnerId }: { learnerId: string }) {
   const { t, language } = useI18n()
@@ -56,57 +51,64 @@ export function TeacherBadges({ learnerId }: { learnerId: string }) {
         title={t('tch.badges.title')}
         subtitle={t('tch.badges.subtitle')}
       />
-      <ul className="tch-badges__list">
+      {/* Square cards, in the SAME language the child's own badges screen uses
+          (`badge-card` from `features/badges`), rather than a second layout for
+          the same objects. A teacher and a student talking about a badge should
+          be looking at the same thing.
+
+          And "how to earn it" is on every card, not only on the locked ones. A
+          teacher asked "how does she get this?" about a badge at 50% needs the
+          answer as much as about one at 0% — arguably more, because that is the
+          conversation worth having. */}
+      <ul className="tch-badges__grid badges-grid">
         {ordered.map((badge) => (
           <li key={`${badge.category}:${badge.subject}:${badge.title}`}
-              className={`tch-badge is-${badge.state}`}>
+              className={`badge-card tch-badgeCard is-${badge.state}`}>
             {/* The real coin, not the glyph's name. `badge.glyph` is a key
                 (`math`, `flame`, …) that only `Badge` knows how to draw — and
                 rendering it as text printed "math" next to the title. */}
-            <span className="tch-badge__glyph" aria-hidden="true">
+            <span className="badge-card__coin" aria-hidden="true">
               <Badge
                 subject={badge.subject}
                 glyph={badge.glyph as BadgeGlyph}
                 tier={badge.tier as BadgeTier}
                 state={badge.state}
                 progress={badge.progress}
-                size={52}
-                mini
+                size={120}
               />
             </span>
 
-            <div className="tch-badge__body">
-              <div className="tch-badge__head">
-                <strong dir="auto">{badge.title}</strong>
-                <StatusPill tone={TONE[badge.state] ?? 'neutral'}>
-                  {t(`tch.badges.${badge.state}`)}
-                </StatusPill>
-              </div>
+            <h3 className="badge-card__title" dir="auto">{badge.title}</h3>
 
+            <span className={`badge-card__state badge-card__state--${badge.state}`}>
+              {t(`tch.badges.${badge.state}`)}
               {badge.state === 'inprogress' ? (
-                <p className="tch-badge__progress">
-                  {t('tch.badges.progress', { percent: Math.round(badge.progress * 100) })}
-                </p>
+                <span className="badge-card__pct">
+                  {Math.round(badge.progress * 100)}%
+                </span>
               ) : null}
+            </span>
 
-              {/* The evidence: what this badge says the student can do. */}
-              {badge.certifies?.length ? (
-                <details className="tch-badge__certifies">
-                  <summary>{t('tch.badges.certifies')}</summary>
-                  <ul>
-                    {badge.certifies.map((objective) => (
-                      <li key={objective} dir="auto">{objective}</li>
-                    ))}
-                  </ul>
-                </details>
-              ) : null}
+            {badge.howToEarn ? (
+              <p className="badge-card__howto" dir="auto">
+                <span className="badge-card__howto-label">{t('tch.badges.howTo')}</span>
+                {badge.howToEarn}
+              </p>
+            ) : null}
 
-              {badge.state === 'locked' && badge.howToEarn ? (
-                <p className="tch-badge__howto" dir="auto">
-                  <span>{t('tch.badges.howTo')}: </span>{badge.howToEarn}
-                </p>
-              ) : null}
-            </div>
+            {/* The evidence: what this badge says the student can do. Folded,
+                because it is a list of objective titles and the card is a
+                glance — but present, which is the teacher-side difference. */}
+            {badge.certifies?.length ? (
+              <details className="tch-badge__certifies">
+                <summary>{t('tch.badges.certifies')}</summary>
+                <ul>
+                  {badge.certifies.map((objective) => (
+                    <li key={objective} dir="auto">{objective}</li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
           </li>
         ))}
       </ul>

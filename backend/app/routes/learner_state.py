@@ -20,8 +20,36 @@ router = APIRouter(prefix="/api", tags=["learner-state"])
 
 @router.get("/learner-state")
 async def read_learner_state(learner_id: str = Depends(require_learner)):
-    """Return persisted learner UI state from MongoDB, with local fallback."""
-    return JSONResponse(content=await get_learner_state(learner_id))
+    """Return persisted learner UI state from MongoDB, with local fallback.
+
+    `avatar` is filled in when the learner has never chosen one: their best
+    earned badge, exactly as the teacher's roster derives it, so a child sees
+    the same coin their teacher sees. Derived, never stored — the moment they
+    earn a better one it changes, and picking one still overwrites it for good.
+    """
+    state = await get_learner_state(learner_id)
+    # ANY saved choice wins, including `{"kind": "initial"}` — that one is a
+    # learner who pressed "back to my letter", and re-deriving over it would
+    # make the reset button do nothing.
+    avatar = state.get("avatar")
+    if not (isinstance(avatar, dict) and avatar.get("kind")):
+        state = {**state, "avatar": await _earned_avatar(learner_id)}
+    return JSONResponse(content=state)
+
+
+async def _earned_avatar(learner_id: str):
+    """The learner's best earned coin, or `None`. Never raises: an avatar is
+    decoration, and a failure here must not take the whole state read down."""
+    try:
+        from app.brain.repository import get_brain
+        from app.services import kata_catalog
+        from app.services.badges import best_badge
+
+        await kata_catalog.ensure_loaded()
+        return best_badge(await get_brain(learner_id))
+    except Exception as exc:      # pragma: no cover — an initial is a fine avatar
+        print(f"⚠️ derived avatar skipped: {type(exc).__name__}")
+        return None
 
 
 def _completed(progress) -> bool:

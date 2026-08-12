@@ -46,13 +46,37 @@
   box-shadow: var(--tch-card-shadow);
 }
 
+/* A skeleton is a placeholder for content, not a card in its own right.
+   `SkeletonCard` renders `.sp-panel`, so the rule above gave every loading
+   placeholder a border and a shadow — and a `<Panel>` containing two of them
+   drew a bordered card holding two more bordered cards, which is the doubled
+   card visible on Messages, Goals and Home while they load. */
+.sp-teacher-shell .sp-skeleton__card {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
 /* ── page scaffold ─────────────────────────────────────────────────────────*/
 
 /* Pages breathe with the viewport instead of floating as a skinny strip on a
-   wide monitor: the assistant column already bounds the line length. */
+   wide monitor: the assistant column already bounds the line length.
+   `.sp-teacher-shell__main` deliberately has no padding of its own — a page
+   needs to be able to run a band edge to edge — so the frame is the page's.
+   EVERY teacher page root belongs in this list. It was previously copied
+   byte-for-byte into six separate stylesheets, and the tasks page shipped
+   without its copy: content flush against the chrome on all four sides.
+   `tests/teacher-page-frame.test.ts` fails if a page root is missing here. */
 .tch-home,
 .tch-roster,
-.tch-student {
+.tch-student,
+.tch-tasks,
+.tch-track,
+.tch-review,
+.tch-messages,
+.tch-goalsPage,
+.tch-learnings,
+.tch-learningDetail {
   max-inline-size: 1240px;
   margin-inline: auto;
   padding: var(--sp-5) clamp(var(--sp-4), 3vw, var(--sp-8)) var(--sp-10);
@@ -148,8 +172,6 @@
 .tch-stat__icon--danger  { background: rgba(226, 74, 94, .14); color: var(--sp-danger-600); }
 .tch-stat__icon--warn    { background: rgba(224, 158, 42, .16); color: var(--sp-warn-600); }
 
-.tch-stat__ring { flex: none; }
-
 .tch-stat__text { display: grid; gap: 1px; min-inline-size: 0; }
 
 .tch-stat__label {
@@ -178,11 +200,17 @@
 /* Flat list rows: a coloured status dot, the name, the signal, the evidence —
    separated by hairlines, not boxed. Boxes-in-a-box read as chrome; a list
    reads as students. */
+/* The text column sizes to its content and the action sits immediately after
+   it. With `1fr` the identity was pinned to one edge of a 1240px page and
+   "פתיחת פרופיל" to the other, with a hand-span of nothing between them — the
+   row read as two unrelated things rather than one child and what to do about
+   them. */
 .tch-attention {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, max-content) auto;
+  justify-content: start;
   align-items: center;
-  column-gap: var(--sp-3);
+  column-gap: var(--sp-4);
   row-gap: var(--sp-1);
   padding: var(--sp-3) var(--sp-1);
   background: transparent;
@@ -353,3 +381,119 @@
 .tch-table th { color: var(--sp-ink-400); font-weight: var(--sp-fw-semibold); font-size: var(--sp-fs-xs); }
 .tch-table tbody tr { border-block-start: 1px solid var(--sp-border); }
 .tch-table td { color: var(--sp-ink-700); font-variant-numeric: tabular-nums; }
+
+/* ── the learner's face ───────────────────────────────────────────────────── */
+/* One avatar, everywhere. Replaces eight near-identical classes at six sizes,
+   two fills and two border radii. `StudentAvatar` sets the size inline, so this
+   only owns the shape — which is a circle, because it is a person. */
+
+.tch-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  background: var(--sp-gradient);
+  color: #fff;
+  font-weight: var(--sp-fw-semibold);
+  line-height: 1;
+  overflow: hidden;
+}
+
+/* A chosen badge is already a finished coin — the gradient behind it would
+   only show as a rim. */
+.tch-avatar--badge { background: none; }
+.tch-avatar--badge .yv-badge { display: block; inline-size: 100%; block-size: 100%; }
+
+/* A learner who has not been seen recently keeps their coin but loses the
+   gradient, matching how the card already dims. */
+.tch-studentCard.is-idle .tch-avatar:not(.tch-avatar--badge) {
+  background: var(--sp-ink-100);
+  color: var(--sp-ink-400);
+}
+
+/* The profile header's placeholder, before the learner's avatar is known. */
+.tch-avatar--pending { background: var(--sp-ink-100); }
+
+/* ── PromptDialog ──────────────────────────────────────────────────────────
+   One question, one field. Replaces `window.prompt`, which had no theme, no
+   RTL, and buttons labelled in the browser's language rather than the
+   teacher's. */
+.tch-prompt { width: min(420px, 100%); }
+.tch-prompt__title { margin: 0; font-size: 1.15rem; font-weight: 700; }
+.tch-prompt__actions { display: flex; justify-content: flex-end; gap: var(--sp-2); }
+
+/* ── an objective, named and openable ──────────────────────────────────────
+   Every screen here referred to objectives and none of them could say what one
+   IS. The reference is deliberately quiet — it sits inside running prose — but
+   it is a button, and the question mark says so. */
+.tch-objectiveRef {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--sp-primary-700, var(--sp-primary-600));
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.tch-objectiveRef:hover { text-decoration-style: solid; }
+.tch-objectiveRef:focus-visible { outline: 2px solid var(--sp-primary-600); outline-offset: 2px; }
+.tch-objectiveRef .sp-icon { flex: none; opacity: .65; }
+
+.tch-objective__modal { width: min(520px, 100%); max-block-size: min(84vh, 780px); }
+.tch-objective__title { margin: 0; font-size: 1.15rem; font-weight: 700; }
+.tch-objective { display: grid; gap: var(--sp-3); overflow-y: auto; }
+
+.tch-objective__where {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
+}
+
+.tch-objective__body { margin: 0; line-height: 1.6; color: var(--sp-ink-700); }
+.tch-objective__none { margin: 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
+
+.tch-objective__section { display: grid; gap: var(--sp-1); }
+.tch-objective__section h3 {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  font-weight: 600;
+  color: var(--sp-ink-500);
+}
+
+.tch-objective__list {
+  margin: 0;
+  padding-inline-start: var(--sp-4);
+  display: grid;
+  gap: 2px;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+}
+
+.tch-objective__format {
+  margin-inline-start: var(--sp-2);
+  padding: 0 var(--sp-2);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-bg-subtle);
+  color: var(--sp-ink-400);
+  font-size: var(--sp-fs-xs);
+}
+
+.tch-objective__actions { display: flex; justify-content: flex-end; }
+
+/* Which objective an alert or a flag is actually about. Its own line under the
+   sentence rather than inside it: the name resolves from the catalogue a beat
+   later, and growing a paragraph mid-read is worse than a line that fills in. */
+.tch-alert__objective {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+}
+.tch-alert__objectiveLabel { color: var(--sp-ink-400); }

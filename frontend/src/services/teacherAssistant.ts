@@ -16,6 +16,74 @@ export interface ToolTraceEntry {
   reason?: string | null
 }
 
+/* Actions the answer offered.
+ *
+ * These come from the TOOL layer, never from the model's prose — so every
+ * `learner_id` in one has already passed the server-side scope check, and every
+ * label is a locale key rather than a sentence the model wrote. The teacher
+ * presses the button; the browser then calls the same endpoint the goals screen
+ * calls. Nothing here has written anything. */
+export type ActionKind =
+  | 'navigate' | 'draft_goal' | 'draft_note' | 'draft_kudos' | 'draft_task'
+  | 'approve_goals' | 'ack_alerts' | 'followups'
+
+export interface PendingGoal {
+  learner_id: string
+  goal_id: string
+  conversation_id: string
+  title: string
+  reward_value?: number | null
+}
+
+export interface OpenAlert {
+  alert_id: string
+  learner_id?: string | null
+  kind?: string | null
+  severity?: string | null
+}
+
+export interface AssistantAction {
+  id: string
+  kind: ActionKind
+  /** A locale key. Empty for `followups`, whose chips are their own labels. */
+  label_key: string
+  params?: Record<string, string | number>
+  icon?: string
+  /* navigate */
+  route?: string
+  /* draft_goal */
+  learner_ids?: string[]
+  title?: string
+  next_steps?: string
+  deadline?: string
+  /** Required fields the model could not fill — the form flags these. */
+  missing?: string[]
+  /* draft_note / draft_kudos */
+  learner_id?: string
+  text?: string
+  note_kind?: string
+  message?: string
+  /* draft_task — `title` above is shared with draft_goal */
+  topic?: string
+  subject?: string
+  components?: string[]
+  difficulty?: string
+  /** The catalogue lesson the task is built on, as an id. Ids rather than the
+   *  lesson text, for the same reason `TaskSpecInput.source` holds ids. */
+  source_component_id?: string
+  /* approve_goals / ack_alerts / followups */
+  goals?: PendingGoal[]
+  alerts?: OpenAlert[]
+  questions?: string[]
+}
+
+/** What the teacher did with an action, once they have done it. */
+export interface ActionOutcome {
+  status: 'done' | 'dismissed' | 'failed'
+  summary?: string
+  at?: string
+}
+
 export interface AssistantAnswer {
   /** The model's text, or null when a deterministic refusal applies. */
   text: string | null
@@ -24,6 +92,7 @@ export interface AssistantAnswer {
   tools: ToolTraceEntry[]
   /** False when nothing was fetched — the UI must flag it. */
   grounded: boolean
+  actions?: AssistantAction[]
 }
 
 export interface AssistantTurn {
@@ -54,6 +123,13 @@ export interface AssistantMessage {
   role: 'user' | 'assistant'
   text: string
   at: string
+  /** Actions this answer offered, and what became of them. Persisted, so a
+   *  reopened thread shows a completed row rather than a live button that
+   *  would happily assign the same goal a second time. */
+  meta?: {
+    actions?: AssistantAction[]
+    outcomes?: Record<string, ActionOutcome>
+  } | null
 }
 
 interface AskOptions {
@@ -84,6 +160,8 @@ export interface AssistantStreamHandlers {
   onTrace?: (tools: ToolTraceEntry[]) => void
   /** The thread's model-written name, once, on its first turn. */
   onTitle?: (title: string) => void
+  /** Buttons the answer is offering — arrives with the trace, before the text. */
+  onActions?: (actions: AssistantAction[]) => void
   /** The same payload `askAssistant` resolves to, as the final frame. */
   onDone?: (answer: AssistantAnswer) => void
   signal?: AbortSignal
@@ -105,6 +183,7 @@ export function streamAssistant(
       onText: handlers.onText,
       onEvent: (payload) => {
         if (Array.isArray(payload.trace)) handlers.onTrace?.(payload.trace as ToolTraceEntry[])
+        if (Array.isArray(payload.actions)) handlers.onActions?.(payload.actions as AssistantAction[])
         if (typeof payload.title === 'string') handlers.onTitle?.(payload.title)
         // The final payload arrives nested, never spread: its `text` is the
         // whole reply, and the shared reader treats a top-level `text` as one
@@ -135,6 +214,23 @@ export function listAssistantMessages(conversationId: string, limit = 30) {
   return apiGet<{ messages: AssistantMessage[]; next_cursor?: string | null }>(
     `/api/teacher/assistant/conversations/${encodeURIComponent(conversationId)}/messages?limit=${limit}`
   )
+}
+
+/** Record what the teacher did with an offered action.
+ *
+ * Best-effort by design: the real write has already happened through its own
+ * endpoint by the time this is called. Losing the receipt costs a stale-looking
+ * button on the next reload, not a lost goal — so a failure here is swallowed
+ * rather than surfaced as an error on a successful assignment. */
+export function recordActionOutcome(
+  conversationId: string, messageId: string,
+  actionId: string, status: ActionOutcome['status'], summary?: string,
+) {
+  return apiPost<{ ok: boolean }>(
+    `/api/teacher/assistant/conversations/${encodeURIComponent(conversationId)}`
+    + `/messages/${encodeURIComponent(messageId)}/outcome`,
+    { action_id: actionId, status, summary: summary ?? null },
+  ).catch(() => ({ ok: false }))
 }
 
 export function deleteAssistantThread(conversationId: string) {

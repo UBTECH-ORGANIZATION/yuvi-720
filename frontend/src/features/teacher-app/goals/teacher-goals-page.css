@@ -1,11 +1,5 @@
 @import '../shared/teacher-shared.css';
 
-.tch-goalsPage {
-  max-inline-size: 1240px;
-  margin-inline: auto;
-  padding: var(--sp-5) clamp(var(--sp-4), 3vw, var(--sp-8)) var(--sp-10);
-}
-
 .tch-goalsPage__head {
   margin-block-end: var(--sp-5);
   display: flex;
@@ -189,19 +183,6 @@
 
 .tch-goalsPage__studentHead:hover strong { color: var(--sp-primary-700); }
 
-.tch-goalsPage__avatar {
-  inline-size: 30px;
-  block-size: 30px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--sp-gradient);
-  color: #fff;
-  font-size: var(--sp-fs-sm);
-  font-weight: var(--sp-fw-bold);
-  flex-shrink: 0;
-}
-
 /* Same clamp one level down: the list is a grid too, and its rows would
    otherwise widen it from the inside. */
 .tch-goalsPage__goals {
@@ -247,3 +228,95 @@
   cursor: pointer;
 }
 .tch-goalsPage__more:hover { text-decoration: underline; }
+
+/* A learner nobody has set a goal for. Shown, not hidden: the compose picker
+   lists them, so a board that silently dropped them made a child the teacher
+   had just chosen disappear. */
+.tch-goalsPage__none {
+  margin: 0;
+  padding: var(--sp-2) 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
+}
+
+/* ── setting a goal, with the reason for it beside it ──────────────────────
+   Wide, two columns: the reading on one side, the decision on the other. Below
+   900px they stack, reading first — a teacher on a laptop still gets the
+   context before the fields. */
+.tch-goalDialog { width: min(1000px, 100%); max-block-size: min(88vh, 900px); }
+.tch-goalDialog__who { max-inline-size: 22rem; }
+
+.tch-goalDialog__body {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) 1fr;
+  gap: var(--sp-4);
+  overflow-y: auto;
+  align-items: start;
+}
+
+.tch-goalDialog__compose { min-inline-size: 0; }
+
+@media (max-width: 900px) {
+  .tch-goalDialog__body { grid-template-columns: 1fr; }
+}
+
+.tch-goalRead {
+  display: grid;
+  gap: var(--sp-3);
+  align-content: start;
+  padding: var(--sp-3);
+  border: 1px solid var(--sp-border);
+  border-radius: 14px;
+  background: var(--sp-surface-2);
+  font-size: var(--sp-fs-sm);
+}
+
+.tch-goalRead__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+.tch-goalRead__head strong {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  color: var(--sp-ink-900);
+}
+
+.tch-goalRead__loading { display: grid; gap: var(--sp-2); }
+.tch-goalRead__block { display: grid; gap: var(--sp-1); }
+.tch-goalRead__block h3 {
+  margin: 0;
+  font-size: var(--sp-fs-xs, 0.78rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  color: var(--sp-ink-300);
+}
+.tch-goalRead__block ul {
+  margin: 0;
+  padding-inline-start: var(--sp-4);
+  display: grid;
+  gap: var(--sp-1);
+  color: var(--sp-ink-700);
+  line-height: 1.5;
+}
+.tch-goalRead__block p { margin: 0; color: var(--sp-ink-700); line-height: 1.5; }
+
+.tch-goalRead__none { margin: 0; color: var(--sp-ink-400); }
+
+.tch-goalRead__suggestion {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: 10px;
+  background: var(--sp-primary-050, var(--sp-surface));
+  color: var(--sp-primary-700, var(--sp-primary-600));
+  line-height: 1.5;
+}
+.tch-goalRead__suggestion svg { flex: none; margin-block-start: 3px; }
+
+.tch-goalRead__when { margin: 0; font-size: var(--sp-fs-xs, 0.78rem); color: var(--sp-ink-300); }

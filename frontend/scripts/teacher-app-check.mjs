@@ -93,8 +93,21 @@ try {
   if (whyButtons > 0) {
     await page.locator('.tch-evidence__toggle').first().click()
     await page.waitForTimeout(400)
-    const raw = await page.locator('.tch-evidence__raw').count()
-    check('expanding "why?" reveals the raw datum', raw > 0)
+    /* Three surfaces answer "why?" and each renders its own element: the
+       shared evidence block, the brief's own one-line reason, and a
+       recommendation's signal sentence. Pinning to `.tch-evidence__raw` alone
+       failed on whichever one happened to be first on the page — the datum was
+       there, under a different class.
+       What actually matters is asserted below: that it reads as words. */
+    const revealed = page.locator(
+      '.tch-evidence__raw, .tch-brief__why, .tch-rec__because').first()
+    const shown = await revealed.count() > 0
+    check('expanding "why?" reveals the datum', shown)
+    if (shown) {
+      const text = (await revealed.innerText()).trim()
+      check('and it reads as a sentence, not a payload',
+            text.length > 8 && !/[{}[\]]/.test(text), text)
+    }
     await page.screenshot({ path: `${OUT}/04-evidence.png` })
   }
 
@@ -111,22 +124,28 @@ try {
         await page.locator('.teacher-app-scope select').count() === 0)
 
   // ── roster ────────────────────────────────────────────────────────────────
+  /* The roster has two views and remembers which one this teacher chose, so a
+     check pinned to `.tch-studentCard` only ever ran for an account whose
+     stored preference happened to be `cards` — and the default is `table`.
+     This waited 30s for a node that cannot exist and then threw, taking every
+     assertion below it with it. One selector spanning both views. */
+  const ROW = '.tch-studentCard, .tch-roster__row'
   await page.locator('.teacher-app-nav button').nth(1).click()
-  await page.waitForSelector('.tch-studentCard', { timeout: 30000 })
-  const cards = await page.locator('.tch-studentCard').count()
+  await page.waitForSelector(ROW, { timeout: 30000 })
+  const cards = await page.locator(ROW).count()
   check('roster lists the class', cards > 0, `${cards} students`)
   await page.screenshot({ path: `${OUT}/05-roster.png`, fullPage: true })
 
   // filter to "needs attention"
   await page.locator('.tch-roster__filters button').nth(1).click()
   await page.waitForTimeout(600)
-  const flagged = await page.locator('.tch-studentCard').count()
+  const flagged = await page.locator(ROW).count()
   check('attention filter narrows the roster', flagged > 0 && flagged <= cards,
         `${flagged} of ${cards}`)
   await page.screenshot({ path: `${OUT}/06-roster-filtered.png` })
 
   // ── student profile ───────────────────────────────────────────────────────
-  await page.locator('.tch-studentCard').first().click()
+  await page.locator(ROW).first().click()
   await page.waitForSelector('.tch-progressCard', { timeout: 30000 })
   check('opened a student profile', page.url().includes('/teacher/student/'), page.url())
   await page.screenshot({ path: `${OUT}/07-student-overview.png`, fullPage: true })

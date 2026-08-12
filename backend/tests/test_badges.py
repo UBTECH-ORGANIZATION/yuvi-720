@@ -173,5 +173,61 @@ class BadgeProjectionTests(unittest.TestCase):
         self.assertIn("math", out)
 
 
+class TheCoinThatStandsForALearner(unittest.TestCase):
+    """`best_badge` — the avatar a learner gets without choosing one.
+
+    Every learner in the demo class rendered as a grey letter on every teacher
+    screen, one of them holding a gold science coin, because an avatar had to be
+    picked to exist. This picks a default; picking one still overrules it.
+    """
+
+    def test_nothing_earned_means_no_coin_rather_than_an_empty_one(self) -> None:
+        objs = {"science": [obj("s1")]}
+        with with_catalog(objs):
+            self.assertIsNone(badges.best_badge({"mastery": {}}, subjects=("science",)))
+
+    def test_a_mastered_subject_becomes_the_picture(self) -> None:
+        # Two subjects, one finished: the subject coin is the best thing earned,
+        # since the world capstone needs every subject.
+        objs = {"science": [obj("s1")], "math": [obj("m1", subject="math")]}
+        brain = {"mastery": {"s1": mastered("advanced")}}
+        with with_catalog(objs):
+            choice = badges.best_badge(brain, subjects=("math", "science"))
+        self.assertEqual(choice["kind"], "badge")
+        # Three fields, and only three — `<Badge mini>` draws no more, and the
+        # roster ships this for thirty learners at a time.
+        self.assertEqual(set(choice["badge"]), {"subject", "glyph", "tier"})
+        self.assertEqual(choice["badge"]["subject"], "science")
+        self.assertEqual(choice["badge"]["tier"], "gold")
+
+    def test_the_world_capstone_outranks_a_subject_coin(self) -> None:
+        objs = {"math": [obj("m1", subject="math")], "science": [obj("s1")]}
+        brain = {"mastery": {"m1": mastered("advanced"), "s1": mastered("advanced")}}
+        with with_catalog(objs):
+            choice = badges.best_badge(brain, subjects=("math", "science"))
+        self.assertEqual(choice["badge"]["subject"], "world")
+
+    def test_a_milestone_carries_a_learner_with_no_subject_coin_yet(self) -> None:
+        # First Steps is earned on one mastered objective; the subject coin
+        # needs all of them. A child between the two is not a grey letter.
+        objs = {"science": [obj("s1"), obj("s2", 2, ["s1"])]}
+        brain = {"mastery": {"s1": mastered("advanced")}}
+        with with_catalog(objs):
+            choice = badges.best_badge(brain, subjects=("science",))
+        self.assertEqual(choice["badge"]["subject"], "spark")
+
+    def test_it_reads_no_events_and_so_claims_no_streak(self) -> None:
+        # The roster derives this for a whole class; an events read per learner
+        # is what makes a name lookup expensive. The cost is that the two
+        # return-over-days milestones cannot be the derived picture.
+        objs = {"science": [obj("s1")]}
+        brain = {"mastery": {"s1": mastered("advanced")}}
+        with with_catalog(objs):
+            everything = badges.project_badges(brain, subjects=("science",))
+        by_key = {b["subject"]: b for b in everything}
+        self.assertFalse(by_key["streak"]["earned"])
+        self.assertFalse(by_key["devote"]["earned"])
+
+
 if __name__ == "__main__":
     unittest.main()

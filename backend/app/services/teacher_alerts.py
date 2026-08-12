@@ -188,6 +188,7 @@ async def raise_alert(
     group_id: Optional[str] = None,
     bucket: Optional[str] = None,
     severity: Optional[str] = None,
+    route: Optional[str] = None,
 ) -> list[dict[str, Any]]:
     """Raise `kind` for `learner_id` to every teacher who may see them.
 
@@ -217,10 +218,19 @@ async def raise_alert(
         key = alert_id(teacher_id, learner_id, kind, resolved_bucket)
         existing = await _load(key)
         if existing and existing.get("status") != STATUS_RESOLVED:
-            # Same condition, still live: count it and refresh the evidence.
+            # Same condition, still live: count it and refresh the reading.
+            #
+            # The SENTENCE is refreshed alongside the evidence, which it was not.
+            # Two different detectors escalate to `struggling` and both bucket on
+            # the objective, so a wheel-spinning recurrence landed on a row still
+            # headed "three consecutive failures" while the evidence underneath it
+            # had become opportunity counts. The row disagreed with its own
+            # disclosure, and the disclosure was right.
             document = {
                 **existing,
                 "occurrences": int(existing.get("occurrences") or 1) + 1,
+                "title_key": title_key,
+                "params": params or {},
                 "evidence": evidence,
                 "updated_at": at,
             }
@@ -277,7 +287,12 @@ async def raise_alert(
                 params=params or {},
                 actions=[{
                     "label_key": "notif.action.openStudent",
-                    "route": f"/teacher/student/{learner_id}",
+                    # The caller may name the exact thing this is about — a
+                    # safety flag passes the flag's own id, so the bell opens
+                    # the disclosure rather than the profile that contains it.
+                    # A notification's action is stored once and never
+                    # rewritten, so a vague route here is vague forever.
+                    "route": route or f"/teacher/student/{learner_id}?focus=flags",
                 }],
                 recipient_role=notifications.ROLE_TEACHER,
                 actor_id=learner_id,

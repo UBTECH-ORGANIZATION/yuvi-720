@@ -1,9 +1,11 @@
-/* The live classroom: who is here, who is working, who is stuck.
+/* Presence, and the alert row.
  *
- * Zone 1 of Home, above the attention inbox, because during a lesson this is
- * the screen a teacher actually stands in front of.
+ * This used to also carry `LiveNowStrip`, a board of one tile per child. It was
+ * removed because the roster said the same thing twice: presence is already a
+ * column, a filter and a KPI on that screen, and the strip sat a hundred pixels
+ * above them repeating it in a third shape.
  *
- * Two rules run through everything here:
+ * Two rules survive it and still run through everything here:
  *
  * **Never a bare dot.** Every status is rendered with "last seen X ago" beside
  * it. A dropped SSE connection is usually a sleeping laptop, so a green dot on
@@ -19,6 +21,7 @@ import { Icon, StatusPill } from '../../../components/primitives'
 import { useI18n } from '../../../i18n/I18nProvider'
 import type { Presence, PresenceStatus, TeacherAlert } from '../../../services/teacher'
 import { RawEvidence, withFallback } from '../shared/EvidenceDisclosure'
+import { ObjectiveLine } from '../shared/ObjectiveRef'
 import './live-now.css'
 
 /** Coarse "how long ago", in whole units. Deliberately imprecise: presence is a
@@ -34,8 +37,6 @@ export function agoLabel(iso: string | null, t: Translate): string {
   return t('tch.live.ago.days', { count: Math.floor(seconds / 86400) })
 }
 
-const STATUS_ORDER: Record<PresenceStatus, number> = { in_lesson: 0, online: 1, offline: 2 }
-
 export function PresenceDot({ presence }: { presence?: Presence | null }) {
   const { t } = useI18n()
   const status: PresenceStatus = presence?.status ?? 'offline'
@@ -45,122 +46,6 @@ export function PresenceDot({ presence }: { presence?: Presence | null }) {
       <span className="tch-dot__mark" aria-hidden="true" />
       <span className="sp-sr-only">{label}</span>
     </span>
-  )
-}
-
-interface LiveNowProps {
-  presence: Presence[]
-  nameFor: (learnerId: string) => string
-  onOpen: (learnerId: string) => void
-  isConnected: boolean
-}
-
-export function LiveNowStrip({ presence, nameFor, onOpen, isConnected }: LiveNowProps) {
-  const { t } = useI18n()
-
-  const rows = [...presence].sort((a, b) => {
-    // Anyone who needs something comes first, then by how present they are.
-    const needsA = a.help_requested_at || a.struggling ? 0 : 1
-    const needsB = b.help_requested_at || b.struggling ? 0 : 1
-    if (needsA !== needsB) return needsA - needsB
-    const byStatus = STATUS_ORDER[a.status] - STATUS_ORDER[b.status]
-    if (byStatus !== 0) return byStatus
-    return nameFor(a.learner_id).localeCompare(nameFor(b.learner_id))
-  })
-
-  const inLesson = rows.filter((row) => row.status === 'in_lesson').length
-  const online = rows.filter((row) => row.status !== 'offline').length
-
-  return (
-    <div className="tch-live" data-tour="teacher.liveNow">
-      <div className="tch-live__head">
-        <h3>{t('tch.live.title')}</h3>
-        <span className="tch-live__counts">
-          {t('tch.live.counts', { inLesson, online, total: rows.length })}
-        </span>
-        {/* Honest about the channel itself: a stale board that looks live is
-            worse than one that admits it is stale. */}
-        <span className={`tch-live__link${isConnected ? ' is-live' : ''}`}>
-          {isConnected ? t('tch.live.connected') : t('tch.live.reconnecting')}
-        </span>
-      </div>
-
-      {rows.length ? (
-        <ul className="tch-live__grid">
-          {rows.map((row) => (
-            <LiveTile key={row.learner_id} presence={row}
-                      name={nameFor(row.learner_id)} onOpen={() => onOpen(row.learner_id)} />
-          ))}
-        </ul>
-      ) : (
-        <p className="tch-live__empty">{t('tch.live.none')}</p>
-      )}
-    </div>
-  )
-}
-
-function LiveTile({ presence, name, onOpen }: {
-  presence: Presence
-  name: string
-  onOpen: () => void
-}) {
-  const { t } = useI18n()
-  const [open, setOpen] = useState(false)
-  const needs = Boolean(presence.help_requested_at || presence.struggling)
-
-  /* WHERE, not just "in a lesson": the subject and the objective the child is
-     sitting in right now, resolved server-side from the catalog. A teacher
-     glancing at the strip mid-class wants "מתמטיקה · מערכת צירים", and when a
-     tile turns red it must still say where the trouble is. */
-  const location = presence.status === 'in_lesson'
-    ? [
-        presence.subject ? t(`tch.subject.${presence.subject}`) : null,
-        presence.objective_title || presence.unit_title || null,
-      ].filter(Boolean).join(' · ')
-    : ''
-
-  return (
-    <li className={`tch-tile tch-tile--${presence.status}${needs ? ' is-needing' : ''}`}>
-      <button type="button" className="tch-tile__main" onClick={onOpen}>
-        <span className="tch-tile__avatar" aria-hidden="true">{name.slice(0, 1)}</span>
-        <span className="tch-tile__id">
-          <span className="tch-tile__name" dir="auto">{name}</span>
-          {location ? (
-            <span className="tch-tile__where" dir="auto">{location}</span>
-          ) : (
-            /* The rule: never a bare dot. */
-            <span className="tch-tile__seen">{agoLabel(presence.last_seen_at, t)}</span>
-          )}
-        </span>
-        <PresenceDot presence={presence} />
-      </button>
-
-      {presence.help_requested_at ? (
-        <StatusPill tone="support">{t('tch.live.helpRequested')}</StatusPill>
-      ) : null}
-
-      {presence.struggling ? (
-        <div className="tch-tile__struggle">
-          <StatusPill tone="steady">
-            {withFallback(
-              t(`tch.attention.kind.${presence.struggling.kind}`),
-              `tch.attention.kind.${presence.struggling.kind}`,
-              presence.struggling.kind,
-            )}
-          </StatusPill>
-          <button
-            type="button"
-            className="tch-evidence__toggle"
-            aria-expanded={open}
-            onClick={() => setOpen((value) => !value)}
-          >
-            <Icon name={open ? 'chevronUp' : 'chevronLeft'} size={13} aria-hidden="true" />
-            {t('tch.evidence.why')}
-          </button>
-          {open ? <RawEvidence raw={presence.struggling.evidence} /> : null}
-        </div>
-      ) : null}
-    </li>
   )
 }
 
@@ -185,6 +70,14 @@ export function AlertRow({ alert, name, onOpen, onAcknowledge, onResolve }: Aler
       .filter(([, value]) => typeof value === 'string' || typeof value === 'number')
   ) as Record<string, string | number>
   const title = t(alert.title_key, params)
+  /* The alert names its objective in `params` (and the detector payload keeps
+     it too, for alerts raised before that was true). Read as a string only —
+     `params` is `unknown`-valued on the wire. */
+  const objectiveId = typeof alert.params?.objective_id === 'string'
+    ? alert.params.objective_id
+    : typeof (alert.evidence?.raw as Record<string, unknown> | undefined)?.objective_id === 'string'
+      ? String((alert.evidence?.raw as Record<string, unknown>).objective_id)
+      : null
 
   return (
     <div className={`tch-alert tch-alert--${alert.severity} is-${alert.status}`}>
@@ -200,16 +93,22 @@ export function AlertRow({ alert, name, onOpen, onAcknowledge, onResolve }: Aler
             </span>
           ) : null}
         </div>
+        {/* Both of these change what happens to the row and neither said so.
+            "ראיתי" and "טופל" are one word each and a teacher pressing the
+            wrong one either loses a live condition off their list or keeps a
+            handled one on it, so each carries the sentence that says which. */}
         <div className="tch-alert__actions">
           <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm" onClick={onOpen}>
             {t('tch.attention.open')}
           </button>
           {alert.status === 'open' ? (
-            <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm" onClick={onAcknowledge}>
+            <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
+                    title={t('tch.alert.ackHint')} onClick={onAcknowledge}>
               {t('tch.alert.ack')}
             </button>
           ) : null}
-          <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm" onClick={onResolve}>
+          <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
+                  title={t('tch.alert.resolveHint')} onClick={onResolve}>
             {t('tch.alert.resolve')}
           </button>
         </div>
@@ -218,6 +117,12 @@ export function AlertRow({ alert, name, onOpen, onAcknowledge, onResolve }: Aler
       <p className="tch-alert__title" dir="auto">
         {title === alert.title_key ? t('tch.alert.fallback') : title}
       </p>
+
+      {/* WHICH objective. "three consecutive failures on the same objective"
+          named no objective at all, so the row asked a teacher to act on a
+          thing it would not identify. The name opens the catalogue's account
+          of the goal, because knowing its title is only half the question. */}
+      <ObjectiveLine objectiveId={objectiveId} />
 
       <button
         type="button"

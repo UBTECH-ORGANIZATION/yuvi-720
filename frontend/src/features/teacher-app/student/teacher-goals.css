@@ -81,7 +81,18 @@
 .tch-draft__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); inline-size: 100%; flex-wrap: wrap; }
 .tch-draft__card p { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-700); }
 .tch-draft__why { color: var(--sp-ink-500) !important; font-size: var(--sp-fs-xs) !important; }
-.tch-draft__signal { font-size: var(--sp-fs-xs) !important; color: var(--sp-ink-400) !important; }
+
+/* The grounding, once it is one sentence rather than a column of fields. */
+.tch-draft__because { display: grid; gap: var(--sp-1); inline-size: 100%; }
+.tch-draft__because p {
+  margin: 0;
+  font-size: var(--sp-fs-xs) !important;
+  color: var(--sp-ink-400) !important;
+  line-height: 1.6;
+}
+
+/* When they were made, and that they will not change until the data does. */
+.tch-composer__made { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
 
 .tch-draft--empty {
   padding: var(--sp-3);

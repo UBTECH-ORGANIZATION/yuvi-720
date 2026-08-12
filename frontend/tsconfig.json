@@ -14,6 +14,12 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    /* `npm test` is `node --test` over the real source modules, and Node's type
+       stripping resolves imports literally — an extensionless `./subjectLabel`
+       is a module-not-found there while tsc and Vite both resolve it. So a src
+       module that another src module imports AND a test loads spells the
+       extension out. Safe with `noEmit`, which tsc requires for this flag. */
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx"
   },
   "include": ["src"]

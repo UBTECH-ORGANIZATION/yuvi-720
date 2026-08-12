@@ -15,8 +15,12 @@
 .sd-chat-window__teachers strong, .sd-chat-window__teachers small, .sd-chat-thread__header strong, .sd-chat-thread__header small { display: block; }
 .sd-chat-window__teachers strong, .sd-chat-thread__header strong { color: var(--sp-ink-800); font-size: var(--sp-fs-sm); }
 .sd-chat-window__teachers small, .sd-chat-thread__header small { margin-block-start: 4px; color: var(--sp-ink-300); font-size: var(--sp-fs-xs); }
-.sd-chat-window__avatar { display: grid; place-items: center; inline-size: 42px; block-size: 42px; border-radius: 14px; background: var(--sp-gradient); color: #fff; font-weight: 800; }
-.sd-chat-thread { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-inline-size: 0; }
+/* A circle, like every other person in the product. This was the one squircle,
+   and it made the same teacher look like a different kind of thing here than in
+   the app bar. (No badge coin: this is a teacher, who has no learner avatar.) */
+.sd-chat-window__avatar { display: grid; place-items: center; inline-size: 42px; block-size: 42px; border-radius: 50%; background: var(--sp-gradient); color: #fff; font-weight: 800; }
+/* Four rows now, not three: header, thread, the child's own box, footer. */
+.sd-chat-thread { display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; min-inline-size: 0; }
 .sd-chat-thread__header { display: flex; align-items: center; gap: 12px; min-block-size: 78px; padding: 14px 20px; border-block-end: 1px solid var(--sp-border); }
 .sd-chat-thread__body { display: grid; align-content: start; gap: 14px; padding: clamp(18px, 3vw, 30px); overflow-y: auto; background: radial-gradient(circle at 85% 15%, rgba(111, 91, 255, .07), transparent 32%); }
 .sd-chat-thread__body > .sp-state { align-self: center; }
@@ -25,6 +29,94 @@
 .sd-chat-summary span { color: var(--sp-primary-600); font-size: var(--sp-fs-xs); font-weight: 700; }
 .sd-chat-summary p { margin: 8px 0; color: var(--sp-ink-700); font-size: var(--sp-fs-sm); line-height: 1.6; }
 .sd-chat-summary small { color: var(--sp-ink-400); font-size: var(--sp-fs-xs); line-height: 1.5; }
+/* ── messages, both directions ─────────────────────────────────────────────
+   Mirrored bubbles: the teacher's arrive on the reading-start side like the
+   summaries above them, the child's own sit opposite in the app's own colour.
+   Logical properties throughout, so the mirror is direction-correct in Hebrew
+   and Arabic without a second rule. */
+.sd-chat-bubble {
+  max-inline-size: min(560px, 84%);
+  padding: 12px 16px;
+  border-radius: 18px;
+  font-size: var(--sp-fs-sm);
+  line-height: 1.6;
+}
+.sd-chat-bubble p { margin: 0; }
+
+.sd-chat-bubble--them {
+  justify-self: start;
+  border: 1px solid var(--sp-border);
+  border-end-start-radius: 6px;
+  background: var(--sp-surface);
+  color: var(--sp-ink-700);
+  box-shadow: var(--sp-shadow-sm);
+}
+
+.sd-chat-bubble--me {
+  justify-self: end;
+  border-end-end-radius: 6px;
+  background: var(--sp-primary-600);
+  color: #fff;
+}
+
+/* ── the child's composer ──────────────────────────────────────────────────*/
+
+.sd-chat-compose {
+  display: grid;
+  gap: 6px;
+  padding: 12px 20px;
+  border-block-start: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+}
+
+.sd-chat-compose__label { color: var(--sp-ink-400); font-size: var(--sp-fs-xs); }
+
+.sd-chat-compose__row { display: flex; align-items: flex-end; gap: 10px; }
+
+.sd-chat-compose textarea {
+  flex: 1;
+  min-inline-size: 0;
+  /* Two lines by default and growable by hand. An answer to a teacher is often
+     longer than a chat line, and a single-line field that scrolls sideways is
+     where a child abandons the sentence halfway through. */
+  min-block-size: 52px;
+  max-block-size: 160px;
+  resize: vertical;
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  line-height: 1.5;
+  color: var(--sp-ink-800);
+  background: var(--sp-bg-subtle);
+  border: 1px solid var(--sp-border);
+  border-radius: 16px;
+  padding: 10px 14px;
+}
+.sd-chat-compose textarea::placeholder { color: var(--sp-ink-300); }
+.sd-chat-compose textarea:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+.sd-chat-compose textarea:disabled { opacity: .6; cursor: not-allowed; }
+
+.sd-chat-compose__send {
+  display: grid;
+  place-items: center;
+  inline-size: 46px;
+  block-size: 46px;
+  flex: none;
+  border: 0;
+  border-radius: 50%;
+  background: var(--sp-primary-600);
+  color: #fff;
+  cursor: pointer;
+}
+/* The send glyph points forward, which is leftward in Hebrew and Arabic. */
+[dir='rtl'] .sd-chat-compose__send .sp-icon { transform: scaleX(-1); }
+.sd-chat-compose__send:disabled { opacity: .45; cursor: not-allowed; }
+.sd-chat-compose__send:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+
+.sd-chat-compose__failed { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-danger-600); }
+/* Refused is not broken: the words were declined, and the draft is still in the
+   box. A red error would tell a child something went wrong with the app. */
+.sd-chat-compose__failed.is-refused { color: var(--sp-ink-600, var(--sp-ink-500)); }
+
 .sd-chat-thread__footer { padding: 14px 20px; border-block-start: 1px solid var(--sp-border); background: var(--sp-surface); }
 .sd-chat-thread__footer button, .sd-connections__action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-block-size: 44px; padding-inline: 18px; border: 0; border-radius: var(--sp-radius-pill); background: var(--sp-primary-600); color: #fff; font: 700 var(--sp-fs-xs)/1 var(--sp-font); cursor: pointer; }
 

@@ -119,3 +119,95 @@ async def acknowledge_kudos(
     if delivered is None:
         raise HTTPException(status_code=404, detail="kudos_not_found")
     return {"acknowledged": True, "id": kudos_id}
+
+
+# ── the child's half of the message channel ──────────────────────────────────
+# Same shape as the teacher lane and the same service behind it. The learner is
+# always the session, never a parameter — the only id in these paths is the
+# teacher being written to, and `direct_messages.assert_pair` decides whether
+# this child is allowed to write to them.
+
+
+@router.get("/messages/{teacher_id}")
+async def my_messages(
+    response: Response,
+    teacher_id: str = Path(max_length=120),
+    session=Depends(current_user),
+) -> dict[str, Any]:
+    response.headers.update(_NO_STORE)
+    from app.services import direct_messages
+
+    learner_id = session["sub"]
+    try:
+        await direct_messages.assert_pair(
+            teacher_id, learner_id, sender=direct_messages.SENDER_LEARNER)
+    except direct_messages.DirectMessageError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.code)
+
+    rows = await direct_messages.list_thread(teacher_id, learner_id)
+    return {"messages": [
+        {
+            "id": row["_id"],
+            "sender": row.get("sender"),
+            "text": row.get("text") or "",
+            "created_at": row.get("created_at"),
+            "read_at": row.get("read_at"),
+        }
+        for row in rows
+    ]}
+
+
+@router.post("/messages/{teacher_id}")
+async def send_my_message(
+    response: Response,
+    data: dict,
+    teacher_id: str = Path(max_length=120),
+    session=Depends(current_user),
+) -> dict[str, Any]:
+    """The child writes back.
+
+    Screened exactly as the teacher's side is, with one difference that matters:
+    a message that trips the self-harm patterns is refused AND raises the
+    existing urgent teacher alert. The words do not travel; the fact that a
+    child wrote them does. That branch lives in `direct_messages`, not here, so
+    it cannot be forgotten by a second caller.
+    """
+    response.headers.update(_NO_STORE)
+    from app.services import direct_messages
+
+    try:
+        record = await direct_messages.send_message(
+            sender=direct_messages.SENDER_LEARNER,
+            teacher_id=teacher_id,
+            learner_id=session["sub"],
+            text=str(data.get("text") or ""),
+            language=str(data.get("language") or "he"),
+        )
+    except direct_messages.DirectMessageError as exc:
+        # A string detail is a moderation refusal; FastAPI's own 422 detail is
+        # an array. The client branches on that to tell the two apart.
+        raise HTTPException(status_code=exc.status_code, detail=exc.code)
+    return {
+        "id": record["_id"], "text": record["text"],
+        "sender": record["sender"], "created_at": record["created_at"],
+    }
+
+
+@router.patch("/messages/{teacher_id}/read")
+async def mark_my_messages_read(
+    response: Response,
+    teacher_id: str = Path(max_length=120),
+    session=Depends(current_user),
+) -> dict[str, Any]:
+    response.headers.update(_NO_STORE)
+    from app.services import direct_messages
+
+    learner_id = session["sub"]
+    try:
+        await direct_messages.assert_pair(
+            teacher_id, learner_id, sender=direct_messages.SENDER_LEARNER)
+    except direct_messages.DirectMessageError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.code)
+    changed = await direct_messages.mark_read(
+        teacher_id, learner_id, reader=direct_messages.SENDER_LEARNER)
+    return {"read": changed}

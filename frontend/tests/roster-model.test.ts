@@ -151,4 +151,98 @@ describe('counting for the filter chips', () => {
   it('counts every status', () => {
     assert.deepEqual(countByStatus(ROWS), { attention: 1, not_started: 1, active: 2 })
   })
+
+  /* The chip count is a promise: "press me and you get this many rows". It was
+     computed from the unfiltered roster, so with a search or a presence filter
+     also on, a chip could read "(2)" and then produce an empty table — the
+     teacher pressing it has no way to tell whether that is a bug or the truth.
+     Counting the rows every OTHER filter leaves is what makes it a preview. */
+  it('counts what pressing the chip would actually show', () => {
+    const filters = { ...NO_FILTERS, presence: 'online' as const }
+    const counts = countByStatus(filterRows(ROWS, { ...filters, status: 'all' }))
+
+    for (const status of ['attention', 'not_started', 'active'] as const) {
+      assert.equal(
+        counts[status],
+        filterRows(ROWS, { ...filters, status }).length,
+        `the ${status} chip promises a row count it does not deliver`
+      )
+    }
+  })
+
+  it('the old behaviour really was wrong, so this test can fail', () => {
+    // Guards the guard: if the fixture stops making the two disagree, the test
+    // above passes for free and stops meaning anything.
+    const filters = { ...NO_FILTERS, presence: 'online' as const }
+    assert.notDeepEqual(
+      countByStatus(ROWS),
+      countByStatus(filterRows(ROWS, { ...filters, status: 'all' }))
+    )
+  })
+})
+
+describe('sub-group scoping', () => {
+  const SLICE = ['kid-online', 'kid-tal']
+
+  it('narrows the roster to the named slice', () => {
+    const rows = filterRows(ROWS, { ...NO_FILTERS, subgroup: SLICE })
+    assert.deepEqual(rows.map((row) => row.learner_id).sort(), [...SLICE].sort())
+  })
+
+  it('combines with the other filters rather than replacing them', () => {
+    const rows = filterRows(ROWS, { ...NO_FILTERS, subgroup: SLICE, status: 'attention' })
+    for (const row of rows) {
+      assert.equal(row.status, 'attention')
+      assert.ok(SLICE.includes(row.learner_id))
+    }
+  })
+
+  /* A sub-group is a SCOPE, like the class picker — not a filter. If pressing a
+     KPI or "clear filters" dropped it, the teacher would be looking at the whole
+     class while the switcher still said "קבוצת חיזוק". */
+  it('an empty selection means the whole class, not an empty class', () => {
+    assert.equal(filterRows(ROWS, { ...NO_FILTERS, subgroup: null }).length, ROWS.length)
+  })
+
+  it('a slice naming nobody present yields nothing, rather than everything', () => {
+    assert.equal(filterRows(ROWS, { ...NO_FILTERS, subgroup: ['ghost'] }).length, 0)
+  })
+})
+
+/* The four numbers above the table describe whoever is selected, not always the
+ * whole class. They were counted from every row, so choosing "קשויי הבנה" left
+ * "0 דורשים תשומת לב" sitting above a list showing a flagged child — the card
+ * contradicting the rows underneath it.
+ *
+ * The KPIs are computed in the page, but the set they are computed over is
+ * this: everything scoped by the sub-group and by nothing else, which is what
+ * keeps a KPI a preview of the class rather than of the current search box. */
+describe('the set the KPI cards count', () => {
+  const SLICE = ['kid-tal', 'kid-ari']
+  const inScope = (subgroup: string[] | null) =>
+    filterRows(ROWS, { ...NO_FILTERS, subgroup })
+
+  it('is the sub-group when one is selected', () => {
+    const rows = inScope(SLICE)
+    assert.equal(rows.filter((row) => row.status === 'attention').length, 1)
+    assert.equal(rows.filter((row) => row.status === 'not_started').length, 1)
+    assert.equal(rows.length, 2)
+  })
+
+  it('is the whole class when none is', () => {
+    assert.equal(inScope(null).length, ROWS.length)
+  })
+
+  it('ignores the search box, so a KPI still previews what pressing it shows', () => {
+    const rows = filterRows(ROWS, { ...NO_FILTERS, subgroup: SLICE, query: 'zzz' })
+    assert.equal(rows.length, 0)
+    // ...while the KPI set, built without the query, still has both.
+    assert.equal(inScope(SLICE).length, 2)
+  })
+
+  it('counts "engaged this week" the same way the column reports it', () => {
+    const engaged = inScope(null)
+      .filter((row) => row.daysInactive !== null && row.daysInactive < 7)
+    assert.deepEqual(engaged.map((row) => row.learner_id), ['kid-online', 'kid-tal'])
+  })
 })

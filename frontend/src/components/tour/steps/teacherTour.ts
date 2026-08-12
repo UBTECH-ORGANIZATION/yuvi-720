@@ -62,7 +62,11 @@ export const teacherTourSteps: TourStep[] = [
   {
     id: 'live',
     target: 'teacher.liveNow',
-    route: '/teacher',
+    // The live strip moved to the roster a round ago and this step kept
+    // pointing at /teacher, so it silently did nothing: an unresolved target is
+    // skipped without an error. It now points at the roster's live KPI, which
+    // is where "who is in a lesson right now" actually lives.
+    route: '/teacher/students',
     titleKey: 'tour.teacher.live.title',
     bodyKey: 'tour.teacher.live.body',
     placement: 'bottom',

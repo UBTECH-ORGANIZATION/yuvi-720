@@ -88,6 +88,19 @@ def _question_label(component_id: str, item_id: Optional[str],
     }
 
 
+def _objective_title(objective_id: Optional[str], language: str) -> Optional[str]:
+    """The objective's localized title, or ``None`` — never the dotted key.
+
+    Thin wrapper over `kata_catalog.objective_title`, kept because this module's
+    tests pin the behaviour and because the name reads better at the call sites
+    below. `localized_objective_title` falls back to the key itself, which is
+    the right answer for a log line and the wrong one for a screen.
+    """
+    from app.services import kata_catalog
+
+    return kata_catalog.objective_title(objective_id, language)
+
+
 def _catalog_spine(language: str) -> dict[str, dict[str, Any]]:
     """Every publishable learning, keyed by component id, activity-free."""
     from app.services import kata_catalog
@@ -103,13 +116,21 @@ def _catalog_spine(language: str) -> dict[str, dict[str, Any]]:
         questions = component.get("questions_by_item") or {}
         spine[component_id] = {
             "component_id": component_id,
-            "title": component.get("title") or component_id,
+            # Through the accessor, not off the row: Kata ships
+            # `titleTranslations: null` on every component, so the name here is
+            # a single Hebrew string and the locale-specific one lives in the
+            # translation store. Reading the row directly is what put a Hebrew
+            # lesson name on an English screen.
+            "title": kata_catalog.component_title(component_id, language) or component_id,
             "unit_id": unit_id,
-            "unit_title": ((unit or {}).get("titles") or {}).get(language)
-            or (unit or {}).get("title") or unit_id,
+            # No `or unit_id` tail: an untitled unit used to hand its raw id to
+            # the screen as a section heading. `unit_id` travels in its own
+            # field, so a client that wants it still has it — and a client that
+            # wants a HEADING gets a null it can label instead of an id it
+            # cannot read.
+            "unit_title": kata_catalog.unit_title(unit_id, language),
             "objective_id": objective_id,
-            "objective_title": kata_catalog.localized_objective_title(objective_id, language)
-            if objective_id else None,
+            "objective_title": _objective_title(objective_id, language),
             "subject": component.get("subject") or (unit or {}).get("subject"),
             "estimated_minutes": component.get("estimated_minutes"),
             "is_assessment": bool(component.get("is_assessment")),
@@ -256,6 +277,72 @@ def _question_rows(component_id: str, questions: dict[str, dict[str, Any]]) -> l
     return rows
 
 
+# The vendor opens every `informationToBot` with the same label. Repeated down
+# a list of twenty items it is the widest column on the screen and says nothing
+# — the panel is already headed "what each screen taught".
+_TEACHES_PREFIXES = ("מטרת הפריט:", "מטרת הפעילות:", "Item goal:", "Purpose:")
+
+
+def _teaches(raw: Optional[str]) -> Optional[str]:
+    """The content's description of an item, without the boilerplate opener."""
+    text = (raw or "").strip()
+    for prefix in _TEACHES_PREFIXES:
+        if text.startswith(prefix):
+            text = text[len(prefix):].strip()
+            break
+    return text or None
+
+
+def label_learner_rows(
+    rows: list[dict[str, Any]], *, language: str = "he",
+) -> list[dict[str, Any]]:
+    """Attach what each per-question row IS, for a teacher reading one child.
+
+    The rows come out of `learner_activity.question_summary` carrying provider
+    ids and nothing else, and the profile printed them: `q1`, `q1`, `q1` — the
+    same three characters for three different questions, because the content
+    numbers questions WITHIN a screen — and `ENG.G7.FAMILY.GRAMMAR-01-04` for a
+    screen the child only read. A teacher could see that something went badly
+    and not what it was.
+
+    Everything attached here is authored content read out of the catalogue:
+    the learning's title, the objective it serves, the question number the
+    LEARNER sees on screen (`_question_label`, the same resolver the class-wide
+    learnings page uses, so both screens number the same question the same way),
+    the screen's own heading, and `teaches` — the content's own
+    `informationToBot` description of that item. None of it is inferred and none
+    of it is generated; where the catalogue is silent the field is null and the
+    client says so.
+    """
+    from app.services import kata_catalog
+
+    titles: dict[str, dict[str, Any]] = {}
+    labelled: list[dict[str, Any]] = []
+    for row in rows:
+        component_id = row.get("component_id") or ""
+        if component_id not in titles:
+            component = kata_catalog.get_component(component_id) or {}
+            titles[component_id] = {
+                # Empty rather than the id: the client owns the "untitled"
+                # wording, and it already has one (Phase 5's `learningName`).
+                "learning_title": kata_catalog.component_title(component_id, language) or "",
+                "unit_title": kata_catalog.unit_title(component.get("unit_id"), language),
+            }
+        label = _question_label(component_id, row.get("item_id"), row.get("question_id"))
+        teaches = _teaches(kata_catalog.information_for_item(component_id, row.get("item_id")))
+        labelled.append({
+            **row,
+            **titles[component_id],
+            **label,
+            "objective_title": _objective_title(row.get("objective_id"), language),
+            # The content's own description of what this item is about. Long —
+            # the client truncates — and the single most direct answer to "what
+            # was this child actually working on".
+            "teaches": teaches,
+        })
+    return labelled
+
+
 def _activity_view(component_id: str, agg: dict[str, Any], group_size: int) -> dict[str, Any]:
     timing_available = agg["timed_learners"] > 0
     hard = [
@@ -322,10 +409,16 @@ async def group_learnings(
     for component_id, agg in folded.items():
         if component_id in spine:
             continue
+        # The component is gone from the catalogue, but its OBJECTIVE usually is
+        # not — and that title is the only human name such a row can ever have.
+        # It used to be hard-coded `None`, which is why these rows reached the
+        # teacher wearing their component id as a title.
+        objective_id = agg.get("objective_id")
         results.append({
             "component_id": component_id, "title": component_id,
             "unit_id": None, "unit_title": None,
-            "objective_id": agg.get("objective_id"), "objective_title": None,
+            "objective_id": objective_id,
+            "objective_title": _objective_title(objective_id, language),
             "subject": agg.get("subject"), "estimated_minutes": None,
             "is_assessment": False, "order": None,
             "screens_total": 0, "questions_total": 0,
@@ -420,9 +513,21 @@ async def learning_detail(
             ) if attempts else None,
         })
 
+    # Off the catalogue, the objective is the only human name the row can carry —
+    # the same fallback the listing builds, so the card and the page it opens
+    # agree on what this learning is called.
+    off_catalogue = {
+        "component_id": component_id,
+        "title": component_id,
+        "unit_id": None,
+        "unit_title": None,
+        "objective_id": (agg or {}).get("objective_id"),
+        "objective_title": _objective_title((agg or {}).get("objective_id"), language),
+        "subject": (agg or {}).get("subject"),
+    }
     return {
         "group_id": group_id,
-        "learning": {**(spine or {"component_id": component_id, "title": component_id}), **activity},
+        "learning": {**(spine or off_catalogue), **activity},
         "questions": questions,
         "screens": screens,
     }

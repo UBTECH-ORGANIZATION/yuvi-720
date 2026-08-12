@@ -259,6 +259,57 @@ def _subject_badge(subject: str, info: dict[str, Any], mastery: dict[str, Any], 
     }
 
 
+#: Which earned coin represents a learner when they have not chosen one. The
+#: world capstone first because it is the rarest thing here; then the subject
+#: coins, which certify actual learning; then the behavioural milestones.
+_AVATAR_CATEGORY_ORDER = {"world": 0, "subject": 1, "milestone": 2}
+_AVATAR_TIER_ORDER = {"gold": 0, "silver": 1, "bronze": 2}
+
+
+def best_badge(
+    brain: dict[str, Any],
+    *,
+    subjects: tuple[str, ...] = DEFAULT_SUBJECTS,
+    events: list[dict[str, Any]] | None = None,
+) -> dict[str, Any] | None:
+    """The coin that stands for this learner, or `None` when they have earned none.
+
+    A profile picture that has to be chosen is a profile picture almost nobody
+    has: every learner in the demo class was still a grey initial on every
+    teacher screen, including one who has mastered a whole subject. So a learner
+    who has not picked gets their best EARNED badge, and a learner who has
+    picked keeps what they picked — the choice always wins.
+
+    `None` is a real answer, not a failure. A child who has earned nothing yet
+    must render a letter, never an empty coin: the coin means something, and one
+    handed out for turning up would stop meaning it.
+
+    Cheap on purpose — pure over `mastery` plus the primed catalogue, no events
+    read. Without events the two return-over-days milestones cannot be earned,
+    which only matters if they are a learner's *only* badge; the fully-featured
+    projection behind `GET /api/badges` is unchanged.
+    """
+    earned = [
+        badge for badge in project_badges(brain, subjects=subjects, events=events)
+        if badge.get("earned")
+    ]
+    if not earned:
+        return None
+    earned.sort(key=lambda badge: (
+        _AVATAR_CATEGORY_ORDER.get(badge.get("category"), 9),
+        _AVATAR_TIER_ORDER.get(badge.get("tier"), 9),
+        badge.get("subject") or "",
+    ))
+    winner = earned[0]
+    # The three fields `<Badge mini>` draws, and no more — see
+    # `teacher_roster._badge_choice` for why the whole document must not travel.
+    return {"kind": "badge", "badge": {
+        "subject": winner.get("subject"),
+        "glyph": winner.get("glyph"),
+        "tier": winner.get("tier"),
+    }}
+
+
 def project_badges(
     brain: dict[str, Any],
     *,

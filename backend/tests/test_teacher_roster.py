@@ -91,5 +91,56 @@ class RosterTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(roster["groups"], [])
 
 
+class TheAvatarOnEveryRow(unittest.IsolatedAsyncioTestCase):
+    """A chosen coin wins; an earned coin fills in; a letter is a real answer.
+
+    The roster is where a learner's picture reaches every teacher screen at
+    once, so this is where the precedence has to hold.
+    """
+
+    COIN = {"kind": "badge", "badge": {"subject": "science", "glyph": "flask",
+                                       "tier": "gold"}}
+    DERIVED = {"kind": "badge", "badge": {"subject": "math", "glyph": "math",
+                                          "tier": "silver"}}
+
+    async def _roster(self, *, chosen, decided, derived):
+        group_patch, member_patch, name_patch = _patches()
+        with group_patch, member_patch, name_patch, \
+             patch.object(teacher_roster, "_avatars_for",
+                          AsyncMock(return_value=(chosen, decided))), \
+             patch.object(teacher_roster, "_earned_avatars_for",
+                          AsyncMock(return_value=derived)) as earned:
+            roster = await teacher_roster.roster_for_teacher("teacher-a")
+        return roster, earned
+
+    def _row(self, roster, learner_id):
+        return next(r for r in roster["students"] if r["learner_id"] == learner_id)
+
+    async def test_a_chosen_coin_is_what_shows(self):
+        roster, earned = await self._roster(
+            chosen={MINE_A: self.COIN}, decided={MINE_A}, derived={})
+        self.assertEqual(self._row(roster, MINE_A)["avatar"], self.COIN)
+        # And nothing was derived for them — a default must not overrule a choice.
+        self.assertNotIn(MINE_A, earned.await_args.args[0])
+
+    async def test_a_learner_who_chose_nothing_gets_their_best_earned_coin(self):
+        roster, _ = await self._roster(
+            chosen={}, decided=set(), derived={MINE_B: self.DERIVED})
+        self.assertEqual(self._row(roster, MINE_B)["avatar"], self.DERIVED)
+
+    async def test_choosing_the_plain_letter_is_a_choice_and_survives(self):
+        # `{"kind": "initial"}` draws no coin but IS a decision — the learner
+        # pressed "back to my letter". Deriving over it would make that button
+        # appear to do nothing.
+        roster, earned = await self._roster(
+            chosen={}, decided={MINE_A}, derived={MINE_B: self.DERIVED})
+        self.assertIsNone(self._row(roster, MINE_A)["avatar"])
+        self.assertNotIn(MINE_A, earned.await_args.args[0])
+
+    async def test_a_learner_with_nothing_earned_keeps_their_letter(self):
+        roster, _ = await self._roster(chosen={}, decided=set(), derived={})
+        self.assertIsNone(self._row(roster, MINE_A)["avatar"])
+
+
 if __name__ == "__main__":
     unittest.main()

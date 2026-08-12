@@ -17,7 +17,7 @@ from __future__ import annotations
 import time
 from typing import Any, Optional
 
-from app.services import kata_client
+from app.services import catalog_i18n, kata_client
 
 # Time source is injected so tests / offline runs stay deterministic; falls back
 # to wall clock. (No Date.now-style hidden state in the accessors themselves.)
@@ -177,6 +177,10 @@ async def ensure_loaded(force: bool = False) -> None:
         print(f"⚠️ learning-goal registry unavailable, using unit metadata: {exc}")
         registry = []
     _SNAPSHOT.update(_build_snapshot(units, registry))
+    # Names for the rows the vendor ships in one language only. Read-side is
+    # sync and never awaits, so the map is primed here with the catalogue it
+    # describes. A failure leaves every name at its vendor string.
+    await catalog_i18n.load()
 
 
 async def refresh() -> None:
@@ -237,10 +241,98 @@ def unit_type(unit_id: str) -> str:
 
 
 def localized_objective_title(objective_id: str, locale: str = "he") -> str:
-    """Localized unit title for an objective; falls back to Hebrew then the key."""
+    """Localized unit title for an objective; falls back to Hebrew then the key.
+
+    The key fallback is right for a log line, a prompt and a sort key, and wrong
+    for anything a person reads — `MOE.ENG.G7.PEOPLE.FAMILY.WRITE` reached a
+    teacher's moments feed as the name of what a child had just achieved. Use
+    `objective_title` where the string is going on a screen.
+    """
     obj = _SNAPSHOT["objectives"].get(objective_id) or {}
     titles = obj.get("titles") or {}
     return titles.get(locale) or obj.get("title") or objective_id
+
+
+def objective_title(objective_id: Optional[str], locale: str = "he") -> Optional[str]:
+    """The objective's title, or ``None`` — never the dotted key.
+
+    The screen-facing half of the pair above. A null is something a client can
+    label ("this learning", "a goal"); an id is something it can only print.
+    """
+    if not objective_id:
+        return None
+    obj = get_objective(objective_id) or {}
+    return catalog_i18n.title(
+        "objective", objective_id, locale,
+        vendor=obj.get("titles") or {}, fallback=obj.get("title"),
+    )
+
+
+def unit_title(unit_id: Optional[str], locale: str = "he") -> Optional[str]:
+    """A unit's name in this locale, or ``None``.
+
+    Never the id: a unit with no title has no name, and `unit_id` travels in
+    its own field for the caller that wants it.
+    """
+    if not unit_id:
+        return None
+    # Through the accessor, not the raw snapshot: every other reader goes
+    # through `get_unit`, and a second read path is a second thing to patch.
+    unit = get_unit(unit_id) or {}
+    return catalog_i18n.title(
+        "unit", unit_id, locale,
+        vendor=unit.get("titles") or {}, fallback=unit.get("title"),
+    )
+
+
+def component_title(component_id: Optional[str], locale: str = "he") -> Optional[str]:
+    """A learning's name in this locale, or ``None``.
+
+    Kata ships `titleTranslations: null` on every component, so the vendor leg
+    of the ladder is always empty here and this is the accessor that most needs
+    the stored translations.
+    """
+    if not component_id:
+        return None
+    component = get_component(component_id) or {}
+    raw = component.get("title")
+    # `_catalog_spine` used to write `title or component_id`, so an untitled
+    # component arrived carrying its own id as a name. A name that IS the id is
+    # not a name, and translating it would be translating an identifier.
+    if not raw or str(raw).strip() == str(component_id).strip():
+        return None
+    return catalog_i18n.title(
+        "component", component_id, locale,
+        vendor=component.get("titles") or {}, fallback=raw,
+    )
+
+
+def translatable_rows(locale_source: str = "he") -> list[dict[str, Any]]:
+    """Every catalogue name that can be translated, in the shape
+    `catalog_i18n.gaps` and the fill script both read.
+
+    One place builds this list, so "what is missing" and "what gets filled" can
+    never drift apart.
+    """
+    rows: list[dict[str, Any]] = []
+    for unit in _SNAPSHOT["units"].values():
+        if unit.get("title"):
+            rows.append({"kind": "unit", "id": unit["id"], "source_text": unit["title"],
+                         "vendor": unit.get("titles") or {},
+                         "context": unit.get("subject") or ""})
+    for component in _SNAPSHOT["components"].values():
+        raw = component.get("title")
+        if raw and str(raw).strip() != str(component.get("id") or "").strip():
+            unit = _SNAPSHOT["units"].get(component.get("unit_id") or "") or {}
+            rows.append({"kind": "component", "id": component["id"], "source_text": raw,
+                         "vendor": component.get("titles") or {},
+                         "context": unit.get("title") or component.get("subject") or ""})
+    for objective_id, obj in _SNAPSHOT["objectives"].items():
+        if obj.get("title"):
+            rows.append({"kind": "objective", "id": objective_id, "source_text": obj["title"],
+                         "vendor": obj.get("titles") or {},
+                         "context": obj.get("subject") or ""})
+    return rows
 
 
 def information_for_item(component_id: Optional[str], item_id: Optional[str]) -> Optional[str]:

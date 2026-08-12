@@ -36,10 +36,14 @@ export interface RosterFilters {
   /** Minimum days without activity, or null for "any". */
   minDaysInactive: number | null
   query: string
+  /** Learner ids of the selected sub-group, or null for the whole class.
+   *  Held as ids rather than a sub-group id so this stays a pure predicate —
+   *  the membership was already resolved against the live roster server-side. */
+  subgroup: string[] | null
 }
 
 export const NO_FILTERS: RosterFilters = {
-  status: 'all', presence: 'all', minDaysInactive: null, query: '',
+  status: 'all', presence: 'all', minDaysInactive: null, query: '', subgroup: null,
 }
 
 /** Thresholds the teacher can pick from. Coarse on purpose — the question is
@@ -89,7 +93,9 @@ export function toRosterRows(
 
 export function filterRows(rows: RosterRow[], filters: RosterFilters): RosterRow[] {
   const needle = filters.query.trim().toLowerCase()
+  const inSubgroup = filters.subgroup ? new Set(filters.subgroup) : null
   return rows.filter((row) => {
+    if (inSubgroup && !inSubgroup.has(row.learner_id)) return false
     if (filters.status !== 'all' && row.status !== filters.status) return false
     if (filters.presence === 'online' && !row.isOnline) return false
     if (filters.presence === 'offline' && row.isOnline) return false

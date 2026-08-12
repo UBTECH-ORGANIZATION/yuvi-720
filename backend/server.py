@@ -23,6 +23,11 @@ from app.routes.agent import router as agent_router
 from app.routes.admin_org import router as admin_org_router
 from app.routes.teacher import router as teacher_router
 from app.routes.teacher_students import router as teacher_students_router
+from app.routes.teacher_catalog import router as teacher_catalog_router
+from app.routes.teacher_subgroups import router as teacher_subgroups_router
+from app.routes.teacher_wellbeing import router as teacher_wellbeing_router
+from app.routes.teacher_tasks import router as teacher_tasks_router
+from app.routes.student_tasks import router as student_tasks_router
 from app.routes.teacher_live import router as teacher_live_router
 from app.routes.notifications import router as notifications_router
 from app.routes.me import router as me_router
@@ -112,8 +117,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # A missing index is slow, never broken, and must never stop a boot.
     from app.agents.teacher_tools import registry as teacher_tool_registry
     from app.services import (
-        daily_brief, kudos, notifications, org_repository, teacher_alerts,
-        teacher_insights_store, weekly_digest,
+        daily_brief, direct_messages, kudos, mentoring_assist, notifications,
+        org_repository, teacher_alerts, teacher_insights_store, weekly_digest,
+        wellbeing,
     )
 
     index_steps = (
@@ -123,12 +129,19 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         ("teacher_alerts", teacher_alerts.ensure_indexes),
         ("notifications", notifications.ensure_indexes),
         ("kudos", kudos.ensure_indexes),
+        # The message thread: read by (conversation, created_at) on every open,
+        # and by (conversation, sender, read_at) on every mark-read.
+        ("direct_messages", direct_messages.ensure_indexes),
         # Read on every open of a student's Notes tab.
         ("teacher_insights", teacher_insights_store.ensure_indexes),
         ("group_digests", weekly_digest.ensure_indexes),
         ("teacher_briefs", daily_brief.ensure_indexes),
         # The assistant's audit trail — the only unbounded collection here.
         ("teacher_tool_calls", teacher_tool_registry.ensure_indexes),
+        # Read by (learner_id, at) every time a teacher opens the wellbeing tab.
+        ("wellbeing_flags", wellbeing.ensure_indexes),
+        # Cleared per learner when a teacher's suggestions are invalidated.
+        ("goal_suggestions", mentoring_assist.ensure_goal_suggestion_indexes),
     )
     await run_index_steps(index_steps)
 
@@ -179,6 +192,11 @@ def create_app() -> FastAPI:
     app.include_router(agent_router)
     app.include_router(teacher_router)
     app.include_router(teacher_students_router)
+    app.include_router(teacher_subgroups_router)
+    app.include_router(teacher_wellbeing_router)
+    app.include_router(teacher_catalog_router)
+    app.include_router(teacher_tasks_router)
+    app.include_router(student_tasks_router)
     app.include_router(teacher_live_router)
     app.include_router(notifications_router)
     app.include_router(me_router)

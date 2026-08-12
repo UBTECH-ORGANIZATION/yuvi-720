@@ -232,8 +232,18 @@ class KudosTests(unittest.IsolatedAsyncioTestCase):
         self.store = _KudosStore()
         self._patch = patch.object(kudos, "_collection", lambda: self.store)
         self._patch.start()
+        # Praise now passes the message content screen, whose second half is a
+        # model. `None` is what an unconfigured provider returns, and the screen
+        # fails open on it — so these tests exercise the keyword floor, and no
+        # test in this suite reaches a provider.
+        from app.services import content_review
+
+        content_review.reset_cache()
+        self._llm = patch("app.services.llm.call_llm", AsyncMock(return_value=None))
+        self._llm.start()
 
     def tearDown(self):
+        self._llm.stop()
         self._patch.stop()
 
     async def _send(self, message="כל הכבוד על ההתמדה", teacher="teacher-a"):

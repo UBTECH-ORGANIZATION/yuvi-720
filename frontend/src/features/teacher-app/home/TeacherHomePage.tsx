@@ -27,7 +27,8 @@ import {
 import { useTeacherLive } from '../../../providers/TeacherLiveProvider'
 import { AlertRow } from '../live/LiveNow'
 import { AttentionRow, EvidenceToggle } from '../shared/EvidenceDisclosure'
-import { SubGroupAssign } from './SubGroupAssign'
+import { countKey } from '../shared/countLabel'
+import { putSeed } from '../tasks/taskSeed'
 import { DailyBriefHero } from './DailyBrief'
 import { MomentsFeed } from '../moments/MomentsFeed'
 import './teacher-home.css'
@@ -47,6 +48,7 @@ export function TeacherHomePage() {
   const [recommendations, setRecommendations] = useState<GroupRecommendation[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(false)
+  /** Which gap's assignment dialog is open, by objective id. One at a time. */
 
   useEffect(() => {
     if (!groupId) { setIsLoading(false); return }
@@ -151,10 +153,17 @@ export function TeacherHomePage() {
           <h1><Skeleton w={220} h={26} /></h1>
           <p className="tch-home__subtitle"><Skeleton w={180} h={14} /></p>
         </header>
+        {/* Same order as the loaded page, or the layout jumps as data lands:
+            the numbers first, then the hero that talks about them. */}
         <section className="tch-zone" aria-label={t('tch.pulse.title')}>
           <div className="tch-stats">
             {[0, 1, 2, 3].map((index) => <SkeletonCard key={index} rows={1} />)}
           </div>
+        </section>
+        {/* The hero holds its own space here. Without it the whole page jumped
+            down the moment the scope resolved and the real hero mounted. */}
+        <section className="tch-brief is-loading" aria-hidden="true">
+          <div className="tch-brief__aurora"><i /><i /><i /></div>
         </section>
         <div className="tch-home__cols">
           <section className="tch-zone tch-zone--urgent"><SkeletonCard rows={4} /></section>
@@ -169,9 +178,9 @@ export function TeacherHomePage() {
 
   return (
     <div className="tch-home">
-      {/* The front door. Everything below is the filing cabinet it summarises. */}
-      <DailyBriefHero groupId={groupId} />
-
+      {/* Which class, and which day. This sits ABOVE the brief because it is the
+          frame the brief is read inside: a summary with no class name on it is a
+          summary of nothing in particular. */}
       <header className="tch-home__head">
         {/* Switching class is a dashboard act — the picker lives here, on the
             title itself, not as a dropdown in the chrome. */}
@@ -235,21 +244,33 @@ export function TeacherHomePage() {
             </span>
           </Card>
 
-          {/* Red only when someone actually needs something — a quiet inbox is
-              a green fact, not a grey one. */}
-          <Card className={`tch-stat${needsCount ? ' tch-stat--alert' : ''}`}>
-            <span
-              className={`tch-stat__icon ${needsCount ? 'tch-stat__icon--danger' : 'tch-stat__icon--success'}`}
-              aria-hidden="true"
-            >
-              <Icon name={needsCount ? 'alert' : 'check'} size={18} />
+          {/* "Needs attention" used to be a KPI here AND the header of the
+              inbox immediately below it — the same number, twice, a centimetre
+              apart. The inbox keeps it, because that is where the teacher acts
+              on it, and this slot says something no other tile on the page
+              does: who has never started at all. They are invisible in every
+              engagement percentage, because they generate no events to be a
+              percentage of. */}
+          <Card
+            interactive
+            className="tch-stat"
+            role="link"
+            tabIndex={0}
+            onClick={() => navigate('/teacher/students?filter=not_started')}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                navigate('/teacher/students?filter=not_started')
+              }
+            }}
+          >
+            <span className="tch-stat__icon tch-stat__icon--primary" aria-hidden="true">
+              <Icon name="clock" size={18} />
             </span>
             <span className="tch-stat__text">
-              <strong className="tch-stat__value">{needsCount}</strong>
-              <span className="tch-stat__label">{t('tch.kpi.needsAttention')}</span>
-              <span className="tch-stat__hint">
-                {needsCount ? t('tch.kpi.needsAttentionHint') : t('tch.attention.none')}
-              </span>
+              <strong className="tch-stat__value">{trends?.not_started ?? 0}</strong>
+              <span className="tch-stat__label">{t('tch.students.filter.notStarted')}</span>
+              <span className="tch-stat__hint">{t('tch.students.kpi.notStartedHint')}</span>
             </span>
           </Card>
 
@@ -292,6 +313,14 @@ export function TeacherHomePage() {
 
         </div>
       </section>
+
+      {/* The front door, under the numbers it talks about.
+          It used to sit above them, and carried its own row of three stats —
+          every one of which was already on this page: "טרם התחילו" twice over,
+          "דורשים תשומת לב" beside the inbox that heads with it, and
+          "היו פעילים 2/6" beside a KPI whose own hint reads "2 מתוך 6".
+          The strip owns the numbers; the hero owns the sentence about them. */}
+      <DailyBriefHero groupId={groupId} />
 
       {/* ── needs you now · beside the live board ──────────────────────────── */}
       {/* Two columns on purpose: mid-class the teacher's question is "who is
@@ -373,52 +402,84 @@ export function TeacherHomePage() {
           <div className="tch-zone__body">
             {gaps.length ? (
               <>
-                {/* Flat rows: the meter carries the picture the old bar chart
-                    duplicated, and the evidence waits behind "why?". */}
-                <ul className="tch-gaps__list">
-                  {gaps.map((gap) => {
-                    const share = gap.with_evidence
-                      ? (gap.kind === 'gap' ? gap.struggling_count : gap.mastered_count)
-                        / gap.with_evidence
-                      : 0
-                    return (
-                      <li key={gap.objective_id} className={`tch-gap tch-gap--${gap.kind}`}>
-                        <div className="tch-gap__head">
-                          <strong dir="auto">{gap.label}</strong>
-                          <span className="tch-gap__share">
-                            {t('tch.gaps.share', {
-                              count: gap.kind === 'gap' ? gap.struggling_count : gap.mastered_count,
-                              total: gap.with_evidence,
-                            })}
-                          </span>
-                        </div>
-                        <span className="tch-gap__meter" role="presentation">
-                          <span
-                            className="tch-gap__meterFill"
-                            style={{ inlineSize: `${Math.round(share * 100)}%` }}
-                          />
-                        </span>
-                        <EvidenceToggle
-                          raw={{
-                            struggling_count: gap.struggling_count,
-                            mastered_count: gap.mastered_count,
-                            with_evidence: gap.with_evidence,
-                            group_size: gap.group_size,
-                          }}
-                        />
-                        {gap.kind === 'gap' ? (
-                          <SubGroupAssign
-                            candidates={gap.learner_ids}
-                            id={gap.objective_id}
-                            defaultTitle={t('tch.subgroup.defaultTitle', { label: gap.label })}
-                            groupId={groupId}
-                            names={rosterNames}
-                          />
-                        ) : null}
-                      </li>
-                    )
-                  })}
-                </ul>
+                {/* Two headed lists, and a sentence per row.
+                    The bar this replaces was polymorphic — it filled with
+                    `struggling / with_evidence` on one row and
+                    `mastered / with_evidence` on the next, so the same length
+                    meant opposite things on adjacent lines and only a colour
+                    said which. The fraction beside it had no noun, and its
+                    denominator was not the class but "the learners with any
+                    evidence on this objective", which nothing on screen said.
+                    A sentence can carry all three, and colour stops being the
+                    only thing distinguishing a strength from a gap. */}
+                {(['gap', 'strength'] as const).map((kind) => {
+                  const rows = gaps.filter((gap) => gap.kind === kind)
+                  if (!rows.length) return null
+                  return (
+                    <div key={kind} className="tch-gaps__group">
+                      <h4 className="tch-gaps__groupTitle">
+                        {t(kind === 'gap' ? 'tch.gaps.group.gaps' : 'tch.gaps.group.strengths')}
+                      </h4>
+                      <ul className="tch-gaps__list">
+                        {rows.map((gap) => (
+                          <li key={gap.objective_id} className={`tch-gap tch-gap--${gap.kind}`}>
+                            <strong className="tch-gap__label" dir="auto">{gap.label}</strong>
+                            <p className="tch-gap__sentence" dir="auto">
+                              {gap.with_evidence
+                                ? t(kind === 'gap'
+                                    ? 'tch.gaps.sentence.gap' : 'tch.gaps.sentence.strength', {
+                                  count: kind === 'gap' ? gap.struggling_count : gap.mastered_count,
+                                  tried: gap.with_evidence,
+                                })
+                                : t('tch.gaps.noneTried')}
+                              {' '}
+                              <span className="tch-gap__classSize">
+                                {t('tch.gaps.classSize', { size: gap.group_size })}
+                              </span>
+                            </p>
+                            {/* A gap's answer is material, not a goal.
+                                This used to open the sub-group goal dialog —
+                                a title, next steps and a date, which is a note
+                                to the teacher's future self rather than
+                                anything a child receives. What actually closes
+                                a gap is work on it, so the button now starts a
+                                task about this objective, with the children it
+                                is a gap FOR carried through to the send. */}
+                            <div className="tch-gap__actions">
+                              <EvidenceToggle
+                                raw={{
+                                  struggling_count: gap.struggling_count,
+                                  mastered_count: gap.mastered_count,
+                                  with_evidence: gap.with_evidence,
+                                  group_size: gap.group_size,
+                                }}
+                              />
+                              {gap.kind === 'gap' ? (
+                                <button
+                                  type="button"
+                                  className="sp-btn sp-btn--ghost sp-btn--sm"
+                                  onClick={() => {
+                                    putSeed({
+                                      title: t('tch.gaps.taskTitle', { label: gap.label }),
+                                      topic: gap.label,
+                                      objectiveId: gap.objective_id,
+                                      learnerIds: gap.learner_ids,
+                                    })
+                                    navigate('/teacher/tasks')
+                                  }}
+                                >
+                                  <Icon name="backpack" size={14} aria-hidden />
+                                  {t(countKey('tch.gaps.buildTask', gap.learner_ids.length),
+                                     { count: gap.learner_ids.length })}
+                                </button>
+                              ) : null}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )
+                })}
 
                 {recommendations.length ? (
                   <div className="tch-groupRecs">
@@ -433,7 +494,13 @@ export function TeacherHomePage() {
                               run and the two words collide: "masteryמערכת". */}
                           <strong dir="auto">{recommendation.text}</strong>
                           <span className="tch-groupRecs__sep"> — </span>
-                          <bdi dir="auto">{recommendation.label}</bdi>
+                          {/* An objective the catalogue cannot name renders as
+                              nothing rather than as its dotted MOE key — and
+                              the em dash goes with it, so the sentence does not
+                              end mid-air. */}
+                          {recommendation.label ? (
+                            <bdi dir="auto">{recommendation.label}</bdi>
+                          ) : null}
                         </li>
                       ))}
                     </ul>

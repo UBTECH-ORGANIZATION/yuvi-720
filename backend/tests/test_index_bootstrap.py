@@ -120,10 +120,13 @@ class IndexBootstrap(unittest.TestCase):
             "teacher_alerts": {"teacher_alerts"},
             "notifications": {"notifications"},
             "kudos": {"teacher_kudos"},
+            "direct_messages": {"dm_messages", "dm_conversations"},
             "teacher_insights": {"teacher_insights"},
             "group_digests": {"group_digests"},
             "teacher_briefs": {"teacher_briefs"},
             "teacher_tool_calls": {"teacher_tool_calls"},
+            "wellbeing_flags": {"wellbeing_flags"},
+            "goal_suggestions": {"goal_suggestions"},
         }
         self.assertEqual(
             steps, set(owned), "server.py index_steps changed — update `owned` here too")

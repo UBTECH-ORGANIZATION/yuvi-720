@@ -1,11 +1,5 @@
 @import '../shared/teacher-shared.css';
 
-.tch-learnings {
-  max-inline-size: 1240px;
-  margin-inline: auto;
-  padding: var(--sp-5) clamp(var(--sp-4), 3vw, var(--sp-8)) var(--sp-10);
-}
-
 .tch-learnings__head { margin-block-end: var(--sp-5); }
 .tch-learnings__head h1 { margin: 0; font-size: var(--sp-fs-2xl); color: var(--sp-ink-900); letter-spacing: -0.01em; }
 .tch-learnings__subtitle { margin: var(--sp-1) 0 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
@@ -107,6 +101,18 @@
   color: var(--sp-primary-600);
 }
 
+/* The pinned group. A quiet header and one warm icon — a red wall would make
+   the screen unreadable in exactly the week it matters most. */
+.tch-learnings__unit--attention .tch-learnings__unitTitle .sp-icon {
+  color: var(--sp-danger-600);
+}
+
+.tch-learnings__unitNote {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+
 /* ── learning cards ────────────────────────────────────────────────────────*/
 
 .tch-learnings__grid {
@@ -146,15 +152,6 @@
   color: var(--sp-ink-400);
 }
 
-.tch-learning__foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-2);
-  padding-block-start: var(--sp-2);
-  border-block-start: 1px solid var(--sp-border);
-}
-
 /* A learning with strugglers carries the inbox's accent — same red, same rule. */
 .tch-learning--hot { border-inline-start: 3px solid var(--sp-danger-600); }
 
@@ -167,6 +164,24 @@
 
 .tch-learning__titles { display: grid; gap: 1px; min-inline-size: 0; }
 .tch-learning__titles strong { color: var(--sp-ink-900); font-size: var(--sp-fs-md); }
+
+/* A title that is really an identifier, dressed as one: monospace, smaller,
+   `ltr` so a dotted ASCII id keeps its dots at the end in Hebrew. It stays in
+   the title slot because it is the only thing telling untitled rows apart.
+   Both selectors carry the surrounding one so this wins on specificity rather
+   than on where it happens to sit in the file. */
+.tch-learning__titles strong.tch-learning__idTitle,
+.tch-learningDetail__titles h1.tch-learning__idTitle {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-700);
+  direction: ltr;
+  unicode-bidi: isolate;
+  overflow-wrap: anywhere;
+}
+
+.tch-learningDetail__titles h1.tch-learning__idTitle { font-size: var(--sp-fs-lg); }
 
 .tch-learning__meta {
   font-size: var(--sp-fs-xs);
@@ -185,76 +200,11 @@
   white-space: nowrap;
 }
 
-/* success bar */
-.tch-learning__rate { display: flex; align-items: center; gap: var(--sp-2); }
+.tch-learning__line--rate.is-success strong { color: var(--sp-success-600); }
+.tch-learning__line--rate.is-warn strong { color: var(--sp-warn-600); }
+.tch-learning__line--rate.is-danger strong { color: var(--sp-danger-600); }
+.tch-learning__line--rate.is-none strong { color: var(--sp-ink-400); }
 
-.tch-learning__ratePct {
-  font-weight: var(--sp-fw-bold);
-  font-size: var(--sp-fs-lg);
-  font-variant-numeric: tabular-nums;
-  min-inline-size: 3.2ch;
-}
-
-.tch-learning__ratePct.is-success { color: var(--sp-success-600); }
-.tch-learning__ratePct.is-warn { color: var(--sp-warn-600); }
-.tch-learning__ratePct.is-danger { color: var(--sp-danger-600); }
-.tch-learning__ratePct.is-none { color: var(--sp-ink-400); }
-
-.tch-learning__bar {
-  flex: 1;
-  block-size: 8px;
-  border-radius: var(--sp-radius-pill);
-  background: var(--sp-bg-subtle);
-  overflow: hidden;
-}
-
-.tch-learning__barFill {
-  display: block;
-  block-size: 100%;
-  border-radius: inherit;
-  background: var(--sp-success-600);
-  transition: inline-size var(--sp-dur) var(--sp-ease);
-}
-
-.tch-learning__barFill.is-warn { background: var(--sp-warn-600); }
-.tch-learning__barFill.is-danger { background: var(--sp-danger-600); }
-
-.tch-learning__rateOf {
-  font-size: var(--sp-fs-xs);
-  color: var(--sp-ink-400);
-  white-space: nowrap;
-}
-
-/* facts row */
-.tch-learning__facts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-  gap: var(--sp-2);
-  margin: 0;
-}
-
-.tch-learning__facts > div {
-  display: grid;
-  gap: 1px;
-  padding: var(--sp-2);
-  border-radius: var(--sp-radius-sm);
-  background: var(--sp-bg-subtle);
-}
-
-.tch-learning__facts dt {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-1);
-  font-size: var(--sp-fs-xs);
-  color: var(--sp-ink-400);
-}
-
-.tch-learning__facts dd {
-  margin: 0;
-  font-weight: var(--sp-fw-semibold);
-  color: var(--sp-ink-900);
-  font-variant-numeric: tabular-nums;
-}
 
 .tch-learning__struggling {
   display: flex;
@@ -266,26 +216,7 @@
   color: var(--sp-danger-600);
 }
 
-/* hard questions */
-.tch-learning__hard { display: grid; gap: var(--sp-1); }
-
-.tch-learning__hardTitle {
-  font-size: var(--sp-fs-xs);
-  font-weight: var(--sp-fw-semibold);
-  color: var(--sp-ink-400);
-}
-
-.tch-learning__hard ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-1); }
-.tch-learning__hard li { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
-.tch-learning__hardFacts { font-size: var(--sp-fs-xs); color: var(--sp-ink-500); font-variant-numeric: tabular-nums; }
-
 /* ── the drill-down: one learning, opened up ───────────────────────────────*/
-
-.tch-learningDetail {
-  max-inline-size: 1240px;
-  margin-inline: auto;
-  padding: var(--sp-5) clamp(var(--sp-4), 3vw, var(--sp-8)) var(--sp-10);
-}
 
 .tch-learningDetail__head { display: grid; gap: var(--sp-3); margin-block-end: var(--sp-5); justify-items: start; }
 .tch-learningDetail__titles h1 { margin: 0; font-size: var(--sp-fs-2xl); color: var(--sp-ink-900); letter-spacing: -0.01em; }
@@ -356,3 +287,39 @@
 .tch-spine__rate.is-warn { color: var(--sp-warn-600); }
 .tch-spine__rate.is-danger { color: var(--sp-danger-600); }
 .tch-spine__rate.is-none { color: var(--sp-ink-400); font-weight: var(--sp-fw-regular); font-size: var(--sp-fs-xs); }
+
+/* Two lines and an optional flag — the card's whole body.
+   `--rate` keeps the tone colour; the bar that repeated it is gone. */
+.tch-learning__lines { display: grid; gap: var(--sp-1); }
+
+.tch-learning__line {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+}
+
+.tch-learning__line--rate strong { font-size: var(--sp-fs-lg); font-variant-numeric: tabular-nums; }
+
+.tch-learning__when {
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+
+/* The objective a lesson serves, as its own line and as a button. Outside the
+   card's open button by necessity — nesting one is invalid — and that turns
+   out to be the right reading order anyway: what the lesson IS, then what it
+   is FOR. */
+.tch-learning__objective,
+.tch-learningDetail .tch-learning__objective {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+}
+.tch-learning__objectiveLabel { color: var(--sp-ink-400); }

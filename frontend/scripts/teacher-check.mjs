@@ -45,17 +45,26 @@ await page.evaluate(async () => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ teacher_roster_view: 'table', teacher_roster_columns: [] }),
   })
-  // Pin the class too: a previous run's class switch is persisted, and the two
-  // demo groups have different data.
-  const groups = await (await fetch('/api/teacher/groups', { credentials: 'include' })).json()
-  if (groups.groups?.[0]) {
-    await fetch('/api/auth/preferences', {
-      method: 'PATCH', credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ teacher_group_id: groups.groups[0].id }),
-    })
-  }
 })
+
+/* Pin the class, and remember which one.
+ *
+ * This used to read `/api/teacher/groups`, which does not exist — it 404s, so
+ * the pin was a silent no-op and each run inherited whatever class the previous
+ * one left selected. That is why the same assertion passed and failed on
+ * alternate runs. `/api/teacher/roster` is the endpoint the app itself uses. */
+const pinnedGroup = await page.evaluate(async () => {
+  const roster = await (await fetch('/api/teacher/roster', { credentials: 'include' })).json()
+  const groupId = roster.groups?.[0]?.id
+  if (!groupId) throw new Error('no groups on this account')
+  await fetch('/api/auth/preferences', {
+    method: 'PATCH', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teacher_group_id: groupId }),
+  })
+  return groupId
+})
+console.log(`  · pinned class: ${pinnedGroup}`)
 
 // ── the daily brief ─────────────────────────────────────────────────────────
 console.log('\n— daily brief —')
@@ -83,9 +92,12 @@ const assign = page.locator('.tch-brief__action[aria-expanded]').first()
 if (await assign.count()) {
   await assign.click()
   await page.waitForTimeout(800)
-  const form = await page.locator('.tch-brief__form .tch-subgroup__people .tch-chip').count()
-  if (form) ok(`the assign form opens prefilled with ${form} student(s)`)
-  else bad('the assign form opens prefilled')
+  // A centred dialog now, not a form growing inside the hero.
+  const form = await page.locator('.tch-subgroup__modal .tch-subgroup__people .tch-chip').count()
+  if (form) ok(`the assign dialog opens prefilled with ${form} student(s)`)
+  else bad('the assign dialog opens prefilled')
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
 } else {
   console.log('  · no assignment action for this class (no learning gap above threshold)')
 }
@@ -118,8 +130,32 @@ await page.waitForTimeout(2500)
 if (page.url().includes('/teacher/students')) ok('the live KPI navigates to the roster')
 else bad(`the live KPI navigates to the roster (at ${page.url()})`)
 
-if (await page.locator('.tch-roster__live .tch-live').count()) ok('the live board is on the roster')
-else bad('the live board is on the roster')
+/* The live *strip* is gone: presence was a column, a filter and a board on one
+   screen, saying the same thing three ways a hundred pixels apart. What
+   survives is the KPI, which is the entry point and a saved filter. */
+if (await page.locator('.tch-roster .tch-live').count()) {
+  bad('the duplicated live strip is gone from the roster')
+} else ok('the duplicated live strip is gone from the roster')
+
+const kpis = await page.locator('.tch-roster .tch-stat').count()
+if (kpis >= 3) ok(`${kpis} KPIs above the roster`)
+else bad(`the roster leads with its KPIs (got ${kpis})`)
+
+/* A chip that promises a count must deliver those rows. The count used to come
+   from the unfiltered roster, so it could promise five and show none. */
+const chipRows = await page.locator('.tch-roster__filters button').all()
+for (const chip of chipRows.slice(1)) {
+  const label = (await chip.innerText()).trim()
+  const promised = Number((label.match(/\((\d+)\)/) || [])[1])
+  if (!Number.isFinite(promised)) continue
+  await chip.click()
+  await page.waitForTimeout(500)
+  const shown = await page.locator('.tch-roster__row').count()
+  if (shown === promised) ok(`"${label}" shows exactly ${shown}`)
+  else bad(`"${label}" promised ${promised} rows and showed ${shown}`)
+}
+await page.locator('.tch-roster__filters button').first().click()
+await page.waitForTimeout(500)
 
 // ── table by default, and the filters bite ──────────────────────────────────
 await page.goto(`${base}/teacher/students`, { waitUntil: 'load' })
@@ -134,18 +170,41 @@ else bad(`status is a column (got ${JSON.stringify(headers)})`)
 const allRows = await page.locator('.tch-roster__row').count()
 ok(`${allRows} rows before filtering`)
 
-// Per-column filter: days inactive ≥ 7.
-await page.selectOption('.tch-roster__colFilters select >> nth=1', '7')
+/* Per-column filter: days inactive.
+ *
+ * Asserting "the count went down" was wrong, and passed only by luck of which
+ * class the run pinned: every learner in the demo class is 7+ days idle, so the
+ * correct answer there is "all of them". Compute what the rule should return
+ * from the same data the table is built from, and assert that exact number —
+ * which also catches a filter that narrows by the wrong amount. */
+const threshold = 14
+const expectedStale = await page.evaluate(async ([groupId, min]) => {
+  const snapshot = await (await fetch(
+    `/api/teacher/groups/${groupId}/snapshot?language=he`, { credentials: 'include' }
+  )).json()
+  return (snapshot.students ?? []).filter((student) => {
+    const days = student.activity?.days_inactive ?? null
+    // A learner who never started has no number and is the most inactive
+    // person in the class — `filterRows` counts them in, deliberately.
+    if (days === null) return (student.activity?.last_event_at ?? null) === null
+    return days >= min
+  }).length
+}, [pinnedGroup, threshold])
+
+await page.click('.tch-roster__more > button')
+await page.waitForTimeout(400)
+await page.selectOption('.tch-roster__moreMenu select >> nth=1', String(threshold))
 await page.waitForTimeout(600)
 const staleRows = await page.locator('.tch-roster__row').count()
-if (staleRows < allRows) ok(`the days-inactive filter narrows ${allRows} → ${staleRows}`)
-else bad(`the days-inactive filter narrows rows (${allRows} → ${staleRows})`)
-await page.selectOption('.tch-roster__colFilters select >> nth=1', '')
+if (staleRows === expectedStale) {
+  ok(`the days-inactive filter (≥${threshold}) returns exactly ${staleRows} of ${allRows}`)
+} else {
+  bad(`days-inactive ≥${threshold}: table shows ${staleRows}, data says ${expectedStale}`)
+}
+await page.selectOption('.tch-roster__moreMenu select >> nth=1', '')
 await page.waitForTimeout(400)
 
-// Column chooser.
-await page.click('.tch-roster__columns > button')
-await page.waitForTimeout(400)
+// Column chooser — now inside the same "more" menu, already open.
 const before = await page.locator('.tch-roster__table thead th').count()
 await page.locator('.tch-roster__columnMenu input').nth(1).uncheck()
 await page.waitForTimeout(800)
@@ -154,6 +213,17 @@ if (after === before - 1) ok(`the column chooser hides a column (${before} → $
 else bad(`the column chooser hides a column (${before} → ${after})`)
 await page.locator('.tch-roster__columnMenu input').nth(1).check()
 await page.waitForTimeout(600)
+
+/* Close the panel before touching the table. It overlays the header, and
+   `useDismiss` closes it on an outside pointerdown — but Playwright refuses to
+   click an element that is covered at the moment it tries, so the dismissal has
+   to be its own act here. A person gets the same behaviour: one click to
+   dismiss, then the sort. */
+await page.keyboard.press('Escape')
+await page.waitForTimeout(400)
+if (await page.locator('.tch-roster__moreMenu').count()) {
+  bad('Escape closes the filters panel')
+} else ok('Escape closes the filters panel')
 
 // Sorting.
 await page.click('.tch-roster__table thead th >> nth=0 >> button')
@@ -227,6 +297,24 @@ else {
 }
 
 await page.screenshot({ path: `${shots}/chat.png`, fullPage: false })
+
+// ── the messages skeleton ───────────────────────────────────────────────────
+/* `SkeletonCard` renders `.sp-panel`, and the shell gives every `.sp-panel` a
+   border, a radius and a shadow — so a `<Panel>` holding two of them drew a
+   card containing two more cards, and below 900px the grid collapsed to one
+   column and stacked them literally on top of each other. Checked at both
+   widths because only the narrow one showed the overlap. */
+console.log('\n— messages —')
+for (const width of [1440, 800]) {
+  await page.setViewportSize({ width, height: 950 })
+  await page.goto(`${base}/teacher/messages`, { waitUntil: 'commit' })
+  await page.waitForSelector('.tch-messages__layout', { timeout: 30_000 })
+  const nested = await page.evaluate(() =>
+    document.querySelectorAll('.tch-messages .sp-panel').length)
+  if (nested === 0) ok(`no nested panel while loading at ${width}px`)
+  else bad(`no nested panel while loading at ${width}px (found ${nested})`)
+}
+await page.setViewportSize({ width: 1440, height: 950 })
 
 // ── dark ────────────────────────────────────────────────────────────────────
 await page.goto(`${base}/teacher`, { waitUntil: 'load' })

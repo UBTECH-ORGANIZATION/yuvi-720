@@ -25,18 +25,19 @@ import { PresenceDot, agoLabel } from '../live/LiveNow'
 import { withFallback } from '../shared/EvidenceDisclosure'
 import type { Presence } from '../../../services/teacher'
 import type { RosterRow, RosterStatus, SortKey } from './rosterModel'
+import { StudentAvatar } from '../shared/StudentAvatar'
 
 /* Exactly what the group snapshot actually carries. A column the payload
    cannot fill is worse than no column: it reads as "no data for this child"
    when the truth is "this product does not measure that here". */
 export const COLUMN_KEYS = [
-  'name', 'status', 'presence', 'lastActivity', 'daysInactive',
+  'name', 'status', 'subgroups', 'presence', 'lastActivity', 'daysInactive',
 ] as const
 export type ColumnKey = (typeof COLUMN_KEYS)[number]
 
 /** Name is not in here on purpose: a row with no name is not a row. */
 export const OPTIONAL_COLUMNS: ColumnKey[] = [
-  'status', 'presence', 'lastActivity', 'daysInactive',
+  'status', 'subgroups', 'presence', 'lastActivity', 'daysInactive',
 ]
 
 export const DEFAULT_COLUMNS: ColumnKey[] = [...COLUMN_KEYS]
@@ -57,9 +58,17 @@ interface Props {
   presence: Record<string, Presence>
   sort: { key: SortKey; direction: 'asc' | 'desc' }
   onSort: (key: SortKey) => void
+  /** Learner id → the named slices they belong to. A learner may be in several. */
+  subgroupsOf?: Map<string, string[]>
 }
 
-export function RosterTable({ rows, columns, presence, sort, onSort }: Props) {
+/* No selection mode. Choosing who is in a sub-group used to turn this table
+   into a checkbox grid, which replaced the status and last-seen columns with
+   ticks — taking away the columns a teacher picks a group ON. That job moved
+   into its own dialog, over the roster rather than instead of it. */
+export function RosterTable({
+  rows, columns, presence, sort, onSort, subgroupsOf,
+}: Props) {
   const { t } = useI18n()
   const visible = useMemo(
     () => COLUMN_KEYS.filter((key) => columns.includes(key)),
@@ -107,10 +116,9 @@ export function RosterTable({ rows, columns, presence, sort, onSort }: Props) {
               role="link"
               onClick={() => navigate(`/teacher/student/${row.learner_id}`)}
               onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault()
-                  navigate(`/teacher/student/${row.learner_id}`)
-                }
+                if (event.key !== 'Enter' && event.key !== ' ') return
+                event.preventDefault()
+                navigate(`/teacher/student/${row.learner_id}`)
               }}
             >
               {visible.map((key) => (
@@ -119,6 +127,7 @@ export function RosterTable({ rows, columns, presence, sort, onSort }: Props) {
                   column={key}
                   row={row}
                   presence={presence[row.learner_id]}
+                  subgroups={subgroupsOf?.get(row.learner_id) ?? []}
                   t={t}
                 />
               ))}
@@ -131,17 +140,18 @@ export function RosterTable({ rows, columns, presence, sort, onSort }: Props) {
 }
 
 function Cell({
-  column, row, presence, t,
+  column, row, presence, subgroups, t,
 }: {
   column: ColumnKey
   row: RosterRow
   presence: Presence | undefined
+  subgroups: string[]
   t: Translate
 }) {
   if (column === 'name') {
     return (
       <td className="tch-roster__nameCell">
-        <span className="tch-roster__avatar" aria-hidden="true">{row.name.slice(0, 1)}</span>
+        <StudentAvatar learnerId={row.learner_id} name={row.name} size={26} />
         <strong dir="auto">{row.name}</strong>
       </td>
     )
@@ -153,6 +163,16 @@ function Cell({
         <StatusPill tone={TONE[row.status]}>{statusLabel(row, t)}</StatusPill>
         {/* The pill never travels alone — this is what it is derived from. */}
         <span className="tch-roster__evidence" dir="auto">{statusEvidence(row, t)}</span>
+      </td>
+    )
+  }
+
+  if (column === 'subgroups') {
+    return (
+      <td className="tch-roster__subgroupCell">
+        {subgroups.length ? subgroups.map((name) => (
+          <span key={name} className="tch-roster__subgroupTag" dir="auto">{name}</span>
+        )) : <span className="tch-roster__none">—</span>}
       </td>
     )
   }

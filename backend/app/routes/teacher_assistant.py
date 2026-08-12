@@ -52,6 +52,16 @@ class AssistantRequest(BaseModel):
     conversation_id: Optional[str] = Field(default=None, max_length=80)
 
 
+class ActionOutcomeRequest(BaseModel):
+    """The receipt for an action the teacher took from a chat message."""
+
+    action_id: str = Field(max_length=120)
+    status: str = Field(pattern=r"^(done|dismissed|failed)$")
+    #: A short human line for the completed row — "יעד נוצר ל-6 תלמידים".
+    #: Rendered as-is, so it is length-capped and never interpolated as HTML.
+    summary: Optional[str] = Field(default=None, max_length=200)
+
+
 def _clean_history(history: Optional[list[dict[str, Any]]]) -> list[dict[str, Any]]:
     """Only role and content survive from client history.
 
@@ -231,6 +241,34 @@ async def conversation_messages(
     )
 
 
+@router.post("/conversations/{conversation_id}/messages/{message_id}/outcome")
+async def record_outcome(
+    conversation_id: str,
+    message_id: str,
+    payload: ActionOutcomeRequest,
+    session=Depends(require_teacher_session),
+) -> JSONResponse:
+    """Record what the teacher did with an action this answer offered.
+
+    Deliberately dumb: it stores a result the browser already produced by
+    calling a real, dependency-guarded endpoint. Nothing here writes a goal, a
+    note or a kudos — this is the receipt, not the transaction.
+    """
+    from app.agents import sessions
+
+    stored = await sessions.record_action_outcome(
+        session["sub"],
+        sessions.normalize_session_id(conversation_id),
+        message_id,
+        payload.action_id,
+        {"status": payload.status, "summary": payload.summary or ""},
+        role=ROLE,
+    )
+    if not stored:
+        raise HTTPException(status_code=404, detail="Message not found")
+    return JSONResponse(content={"ok": True}, headers=_NO_STORE)
+
+
 @router.delete("/conversations/{conversation_id}")
 async def delete_conversation(
     conversation_id: str, session=Depends(require_teacher_session)
@@ -313,6 +351,7 @@ async def _persist(
     try:
         from app.agents import sessions
 
+        actions = result.get("actions") or []
         await sessions.append_turn(
             teacher_id,
             ROLE,
@@ -321,6 +360,9 @@ async def _persist(
             session_id=sessions.normalize_session_id(conversation_id),
             conversation_title=title,
             title_source=title_source,
+            # The buttons this answer offered, so a reopened thread shows what
+            # was on the table — and, once `outcomes` is stamped, what was taken.
+            assistant_meta={"actions": actions} if actions else None,
         )
     except Exception as exc:      # pragma: no cover — persistence is not critical
         print(f"⚠️ teacher assistant transcript skipped: {type(exc).__name__}")

@@ -75,6 +75,18 @@ async def send_kudos(
     screened = safety.screen_output(text, language)
     text = (getattr(screened, "text", None) or text).strip()
 
+    # ...and the same content screen a direct message passes. `screen_output` is
+    # PII redaction only — it has never judged what the sentence SAYS. This is
+    # free-text an adult writes into a child's chat, which is the one place in
+    # the product where "the sender is a teacher" is the weakest argument for
+    # skipping a check, not the strongest.
+    from app.services import content_review
+
+    verdict = await content_review.screen(
+        text, actor_id=teacher_id, actor_type="teacher", language=language)
+    if verdict.flagged:
+        raise KudosError("moderation")
+
     kudos_id = f"kudos_{uuid.uuid4().hex[:10]}"
     document = {
         "_id": kudos_id,

@@ -261,6 +261,11 @@ async def evaluate(learner_id: str, event: dict[str, Any]) -> Optional[dict[str,
                 break
         if streak >= MISCONCEPTION_STREAK:
             candidates["misconception"] = {"type": "misconception", "objective_id": objective_id,
+                                           # The count itself, not just the fact
+                                           # that it crossed the line: the teacher's
+                                           # alert says "N wrong in a row" and had
+                                           # to hardcode the threshold to say it.
+                                           "streak": streak,
                                            "misconception": event.get("misconception")}
 
         # First effortful mistake on a question — the gentlest nudge, so the kid

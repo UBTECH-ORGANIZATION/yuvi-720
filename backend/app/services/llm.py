@@ -33,6 +33,44 @@ ensure_env_loaded()
 LlmModelTier = Literal["strong", "mini"]
 
 
+class LlmError(Exception):
+    """A provider refusal a caller asked to SEE rather than to be spared.
+
+    Every caller here treats a failure the same way — `None`, degrade, carry on
+    — and that is right for a feature. It is wrong for a screen: when the
+    provider's own content filter refuses to process a message, *that refusal is
+    a finding about the message*, and a screen that receives it as `None` is a
+    screen that reports "nothing to worry about" precisely when there was.
+
+    Raised only when a caller passes `raise_on_error=True`, so nothing else in
+    the codebase changes shape.
+    """
+
+    def __init__(self, status_code: int, code: str = "", payload: dict | None = None):
+        super().__init__(f"llm_http_{status_code}")
+        self.status_code = status_code
+        self.code = code
+        self.payload = payload or {}
+
+    @property
+    def content_filtered(self) -> bool:
+        return self.status_code == 400 and self.code == "content_filter"
+
+    def filtered_categories(self) -> set[str]:
+        """Azure's own harm labels on the INPUT, when it filtered one.
+
+        `jailbreak` and `indirect_attack` are deliberately not here: they say
+        the prompt looked like an attack on the model, which is not the same
+        claim as "this text would harm the person receiving it".
+        """
+        inner = (self.payload.get("error") or {}).get("innererror") or {}
+        result = inner.get("content_filter_result") or {}
+        return {
+            name for name in ("sexual", "violence", "hate", "self_harm")
+            if isinstance(result.get(name), dict) and result[name].get("filtered")
+        }
+
+
 def _deployment_for_tier(model_tier: LlmModelTier) -> str:
     if model_tier == "strong":
         return (
@@ -73,6 +111,7 @@ async def call_llm(
     model_tier: LlmModelTier = "mini",
     tools: list | None = None,
     tool_choice: str | dict | None = None,
+    raise_on_error: bool = False,
 ):
     """Call the shared Azure OpenAI model through the APIM gateway.
 
@@ -143,10 +182,25 @@ async def call_llm(
                 print("⚠️ LLM returned empty content")
                 return None
             print(f"⚠️ LLM HTTP {response.status_code}")
+            if raise_on_error:
+                try:
+                    payload = response.json()
+                except ValueError:
+                    payload = {}
+                error = LlmError(
+                    response.status_code,
+                    str((payload.get("error") or {}).get("code") or ""),
+                    payload,
+                )
+                raise error
             return None
+    except LlmError:
+        raise
     except Exception as exc:
         error = exc
         print(f"⚠️ LLM request failed: {type(exc).__name__}")
+        if raise_on_error:
+            raise
         return None
     finally:
         await record_usage(

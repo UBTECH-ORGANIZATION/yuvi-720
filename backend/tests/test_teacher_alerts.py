@@ -69,7 +69,12 @@ class TeacherAlertsTest(unittest.IsolatedAsyncioTestCase):
         args, kwargs = notify.await_args
         self.assertEqual(args[0], "teacher-a")
         self.assertEqual(kwargs["recipient_role"], "teacher")
-        self.assertTrue(kwargs["actions"][0]["route"].endswith("/kid-1"))
+        # The route names the learner AND says what on their page to land on.
+        # A bell that drops a teacher at the top of a four-tab profile, for an
+        # alert about one sentence a child wrote, has not delivered them to it.
+        route = kwargs["actions"][0]["route"]
+        self.assertIn("/teacher/student/kid-1", route)
+        self.assertIn("focus=flags", route)
 
     async def test_an_attention_alert_does_not_ring_the_bell(self):
         """Only urgent. Every attention-level condition already lives in the

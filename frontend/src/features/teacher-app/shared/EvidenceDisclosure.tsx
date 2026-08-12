@@ -10,7 +10,8 @@ import { useState } from 'react'
 import { Icon, StatusPill } from '../../../components/primitives'
 import { useI18n } from '../../../i18n/I18nProvider'
 import type { AttentionFlag, TeacherRecommendation } from '../../../services/teacher'
-import { describeEvidence } from './evidenceText'
+import { describeEvidence, describeSignal } from './evidenceText'
+import { ObjectiveLine } from './ObjectiveRef'
 
 /** `t()` returns the raw key when a translation is missing, which would render
  *  `tch.evidence.field.score_ewma` to a teacher. Evidence keys come from the
@@ -92,6 +93,8 @@ export function AttentionRow({ flag, title, onOpen }: AttentionRowProps) {
   const [open, setOpen] = useState(false)
   const kind = flag.kind ?? 'unknown'
   const hasRaw = Boolean(flag.raw_evidence && Object.keys(flag.raw_evidence).length)
+  const objectiveId = typeof flag.raw_evidence?.objective_id === 'string'
+    ? flag.raw_evidence.objective_id : null
 
   return (
     <div className={`tch-attention tch-attention--${kind}`}>
@@ -111,6 +114,11 @@ export function AttentionRow({ flag, title, onOpen }: AttentionRowProps) {
 
       {/* The evidence sentence is always visible — it is the reason, not a detail. */}
       <p className="tch-attention__evidence" dir="auto">{flag.evidence}</p>
+
+      {/* And which objective it happened on, when the flag knows. Same reason
+          as the alert row: "consecutive failures" with no subject names a
+          symptom and withholds the only thing a teacher can act on. */}
+      <ObjectiveLine objectiveId={objectiveId} />
 
       {hasRaw ? (
         <>
@@ -139,8 +147,18 @@ const CATEGORY_TONE: Record<string, 'strong' | 'steady' | 'support' | 'neutral'>
 }
 
 export function RecommendationCard({ recommendation }: { recommendation: TeacherRecommendation }) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const [open, setOpen] = useState(false)
+  /* One sentence, keyed off the signal — the reason a teacher can read. The
+     shape-matched rendering underneath it printed the recommendation's raw
+     payload as a column of `label: value` lines. */
+  const why = describeSignal(
+    recommendation.because.signal,
+    recommendation.because.value,
+    recommendation.because.raw,
+    t,
+    language,
+  )
   return (
     <li className="tch-rec">
       <div className="tch-rec__head">
@@ -160,17 +178,9 @@ export function RecommendationCard({ recommendation }: { recommendation: Teacher
       </button>
       {open ? (
         <div className="tch-rec__because">
-          <p dir="auto">
-            {withFallback(
-              t(`tch.signal.${recommendation.because.signal}`),
-              `tch.signal.${recommendation.because.signal}`,
-              recommendation.because.signal,
-            )}
-            {recommendation.because.value !== null && recommendation.because.value !== undefined
-              ? `: ${String(recommendation.because.value)}`
-              : ''}
-          </p>
-          <RawEvidence raw={recommendation.because.raw} />
+          {why.map((sentence, index) => (
+            <p key={index} dir="auto">{sentence}</p>
+          ))}
         </div>
       ) : null}
     </li>

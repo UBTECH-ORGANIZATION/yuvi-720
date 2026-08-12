@@ -1161,3 +1161,57 @@
   .sd-lesson-glyph [class^='sd-glyph'] { animation: none !important; }
   [data-theme='dark'] .sd-page::before { animation: none; }
 }
+
+/* ── the task card ──────────────────────────────────────────────────────────
+   A pointer to /tasks, not a second list. It is absent rather than empty when
+   there is nothing outstanding. */
+
+.sd-tasks {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-5);
+  border-radius: 18px;
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+  margin-block-end: var(--sp-4);
+}
+
+.sd-tasks__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.sd-tasks__head h2 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-md);
+  color: var(--sp-ink-900);
+}
+
+.sd-tasks__list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+.sd-tasks__list button {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  background: var(--sp-surface);
+  text-align: start;
+  font: inherit;
+  color: var(--sp-ink-700);
+  cursor: pointer;
+}
+
+.sd-tasks__list button:hover { border-color: var(--sp-primary-500); background: var(--sp-primary-050); }
+.sd-tasks__title { font-weight: 500; }
+
+.sd-tasks__tag {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-primary-100);
+  color: var(--sp-primary-700);
+  font-size: var(--sp-fs-sm);
+}

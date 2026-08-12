@@ -115,3 +115,73 @@
 @media (max-width: 600px) {
   .sp-chart-bars__row { grid-template-columns: minmax(0, 1fr) 1.4fr auto; }
 }
+
+/* ── DualLine ─────────────────────────────────────────────────────────────── */
+
+.sp-chart-dual { display: grid; gap: var(--sp-2); }
+.sp-chart-dual svg { inline-size: 100%; block-size: 110px; overflow: visible; }
+
+.sp-chart-dual__axis { stroke: var(--sp-border); stroke-width: .5; stroke-dasharray: 2 2; }
+
+/* `vector-effect` keeps the stroke 2px after `preserveAspectRatio: none`
+   stretches the viewBox — without it the line thins out as the card widens. */
+.sp-chart-dual__a, .sp-chart-dual__b {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.sp-chart-dual__a { stroke: var(--sp-primary-600); }
+.sp-chart-dual__b { stroke: var(--sp-teal-600, var(--sp-success-600)); stroke-dasharray: 4 3; }
+
+.sp-chart-dual__dotA { fill: var(--sp-primary-600); vector-effect: non-scaling-stroke; }
+.sp-chart-dual__dotB { fill: var(--sp-teal-600, var(--sp-success-600)); }
+
+.sp-chart-dual__legend {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+.sp-chart-dual__key {
+  inline-size: 14px;
+  block-size: 3px;
+  border-radius: var(--sp-radius-pill);
+  margin-inline-start: var(--sp-2);
+}
+.sp-chart-dual__legend .sp-chart-dual__key:first-child { margin-inline-start: 0; }
+.sp-chart-dual__key.is-a { background: var(--sp-primary-600); }
+.sp-chart-dual__key.is-b { background: var(--sp-teal-600, var(--sp-success-600)); }
+
+/* ── a sparkline you can interrogate ───────────────────────────────────────
+   The plain `Sparkline` carries every label in one `<title>`, which the browser
+   renders as a thirty-line tooltip — in practice a chart with no numbers on it.
+   This one prints the point under the pointer. */
+/* The top strip is RESERVED for the readout rather than borrowed from
+   whatever is above the chart — floating it over the previous element put it on
+   top of the line that says what the chart counts. */
+.sp-spark { position: relative; display: block; padding-block-start: 22px; }
+
+.sp-spark__readout {
+  position: absolute;
+  inset-block-start: 0;
+  z-index: 2;
+  display: grid;
+  gap: 0;
+  padding: 2px var(--sp-2);
+  border-radius: 8px;
+  background: var(--sp-ink-900);
+  color: var(--sp-surface);
+  font-size: var(--sp-fs-xs, 0.78rem);
+  line-height: 1.35;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.sp-spark__readout b { font-weight: 700; }
+.sp-spark__readout small { opacity: .72; }
+
+.sp-spark__rule { stroke: var(--sp-primary-600); stroke-width: 1; opacity: .35; }
+.sp-spark__dot { fill: var(--sp-primary-600); }

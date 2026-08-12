@@ -15,7 +15,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import {
-  labelFor, parseAnswerBlocks, parseStudentRefs, trimPartialMarkers,
+  isSafeAssistantRoute, labelFor, parseAnswerBlocks, parseStudentRefs, trimPartialMarkers,
 } from '../src/features/teacher-app/assistant/studentRefs.ts'
 
 describe('finding student references in assistant text', () => {
@@ -159,5 +159,26 @@ describe('text arriving one chunk at a time', () => {
   it('does not eat a finished answer', () => {
     const text = 'טל לא נכנס כבר שישה ימים.'
     assert.equal(trimPartialMarkers(text), text)
+  })
+})
+
+describe('routes a chat action may navigate to', () => {
+  it('accepts the teacher lane', () => {
+    assert.ok(isSafeAssistantRoute('/teacher/students?filter=attention'))
+    assert.ok(isSafeAssistantRoute('/teacher'))
+    assert.ok(isSafeAssistantRoute('/admin'))
+  })
+
+  it('rejects a protocol-relative URL, which a naive slash check lets through', () => {
+    // `//evil.example/x` starts with "/" and is an absolute cross-origin URL.
+    assert.equal(isSafeAssistantRoute('//evil.example/teacher'), false)
+  })
+
+  it('rejects anything outside the teacher lane', () => {
+    assert.equal(isSafeAssistantRoute('https://evil.example'), false)
+    assert.equal(isSafeAssistantRoute('/student-dashboard'), false)
+    assert.equal(isSafeAssistantRoute('/teacherX'), false)
+    assert.equal(isSafeAssistantRoute(undefined), false)
+    assert.equal(isSafeAssistantRoute(''), false)
   })
 })

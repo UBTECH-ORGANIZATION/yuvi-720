@@ -78,7 +78,10 @@ def alternate_representation(
         return {
             "component_id": component.get("id"),
             "unit_id": component.get("unit_id"),
-            "title": component.get("title"),
+            # Through the accessor: this title is offered to a CHILD ("try this
+            # instead"), and the component row itself only ever carries Hebrew.
+            "title": kata_catalog.component_title(component.get("id"), locale)
+            or component.get("title"),
             "media_format": component.get("media_format"),
         }
 

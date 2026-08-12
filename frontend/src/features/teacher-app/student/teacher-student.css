@@ -18,21 +18,24 @@
 .tch-student__identity { display: flex; align-items: center; gap: var(--sp-3); }
 .tch-student__identity h1 { margin: 0; font-size: var(--sp-fs-xl); color: var(--sp-ink-900); letter-spacing: -0.01em; }
 
-.tch-student__avatar {
-  inline-size: 52px;
-  block-size: 52px;
-  border-radius: 50%;
+.tch-student__kpis { margin-block-end: var(--sp-4); }
+.tch-student__flags {
   display: grid;
-  place-items: center;
-  background: var(--sp-gradient);
-  color: #fff;
-  font-size: var(--sp-fs-lg);
-  font-weight: var(--sp-fw-bold);
-  box-shadow: 0 4px 14px rgba(109, 84, 233, .30);
+  gap: var(--sp-2);
+  margin-block-end: var(--sp-4);
+  border-radius: 16px;
+  transition: box-shadow var(--sp-dur-slow, 400ms) var(--sp-ease);
 }
 
-.tch-student__kpis { margin-block-end: var(--sp-4); }
-.tch-student__flags { display: grid; gap: var(--sp-2); margin-block-end: var(--sp-4); }
+/* Two seconds of "this is the thing the bell meant", then gone. A permanent
+   marker would still be there next week, claiming urgency it no longer has. */
+.tch-student__flags.is-focused {
+  box-shadow: 0 0 0 3px var(--sp-primary-600), 0 0 0 9px var(--sp-primary-050, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tch-student__flags { transition: none; }
+}
 
 /* Segmented control instead of underline tabs — reads as one instrument. */
 .tch-tabs {
@@ -78,8 +81,49 @@
 }
 
 .tch-progressCard { display: grid; gap: var(--sp-3); padding: var(--sp-4); }
-.tch-progressCard__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
-.tch-progressCard__legend { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+.tch-progressCard__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+.tch-progressCard__head strong { font-size: var(--sp-fs-sm); color: var(--sp-ink-800); }
+.tch-progressCard__score { display: flex; align-items: baseline; gap: var(--sp-2); }
+.tch-progressCard__score b {
+  font-size: var(--sp-fs-xl);
+  line-height: 1;
+  font-weight: var(--sp-fw-bold);
+  color: var(--sp-ink-900);
+  font-variant-numeric: tabular-nums;
+}
+.tch-progressCard__score small { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+.tch-progressCard__idle { color: var(--sp-ink-300); }
+
+/* Only the segments that exist. Two thirds of this legend was "0 בתהליך ·
+   0 טרם התחילו" — counts of nothing, in the same weight as the count of
+   something. The dot ties each label to its band in the strip above. */
+.tch-progressCard__legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-3);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+/* `display: flex` above beats the UA's `[hidden] { display: none }`, so the
+   attribute has to be honoured explicitly or it does nothing. */
+.tch-progressCard__legend[hidden] { display: none; }
+.tch-progressCard__legend li { display: flex; align-items: center; gap: 6px; }
+.tch-progressCard__legend i {
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 2px;
+  background: var(--sp-border-strong);
+}
+.tch-progressCard__legend .is-mastered i { background: var(--sp-success-600); }
+.tch-progressCard__legend .is-progress i { background: var(--sp-primary-600); }
 
 .tch-struggles { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
 
@@ -87,6 +131,10 @@
   padding: var(--sp-3);
   border-radius: var(--sp-radius-md);
   border: 1px solid var(--sp-border);
+  /* The evidence list is a list of difficulties; the stripe says so at a
+     glance, the same vocabulary the worked-on list uses. */
+  border-inline-start: 3px solid var(--sp-warn-600);
+  background: var(--sp-bg-subtle);
   display: grid;
   gap: var(--sp-2);
 }
@@ -94,8 +142,151 @@
 .tch-struggle__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); flex-wrap: wrap; }
 .tch-struggle__tags { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-warn-600); }
 
+/* Strengths and the self-described traits were bare text rows in a bordered
+   box — nothing to catch the eye, no icon, no shape, and in a panel of three
+   they read as a list of nothing in particular. They are cards now, with the
+   marker that says which KIND of claim each one is doing the work the border
+   was not. */
 .tch-strengths { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
-.tch-strength { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--sp-fs-sm); color: var(--sp-ink-700); }
+.tch-strength {
+  display: grid;
+  gap: 2px;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  border: 1px solid var(--sp-border);
+  border-inline-start: 3px solid var(--sp-success-600);
+  background: var(--sp-bg-subtle);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+}
+.tch-strength__label { font-weight: var(--sp-fw-medium); }
+.tch-strength__note { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+/* ── strengths beside difficulties ──────────────────────────────────────────
+   Two columns and a rule, so the two readings are one glance apart. The rule
+   is a real grid track rather than a border on a column: at the narrow
+   breakpoint it becomes the horizontal divider between the stacked halves,
+   which a border-inline-start cannot do without changing sides in RTL. */
+.tch-balance__cols {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  gap: var(--sp-4);
+  align-items: start;
+}
+.tch-balance__rule { background: var(--sp-border); align-self: stretch; min-block-size: 100%; }
+.tch-balance__col { display: grid; gap: var(--sp-3); align-content: start; }
+.tch-balance__title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-600);
+}
+.tch-balance__col--strong .tch-balance__title .sp-icon { color: var(--sp-success-600); }
+.tch-balance__col--soft   .tch-balance__title .sp-icon { color: var(--sp-warn-600); }
+/* An empty column states that it is empty. A half-card with one side missing
+   reads as if the question was never asked. */
+.tch-balance__none {
+  margin: 0;
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  border: 1px dashed var(--sp-border);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
+}
+/* Provenance shared by every row in the column, said once. */
+.tch-balance__caption {
+  margin: calc(-1 * var(--sp-2)) 0 0;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+.tch-balance__foot {
+  margin: var(--sp-3) 0 0;
+  padding-block-start: var(--sp-3);
+  border-block-start: 1px solid var(--sp-border);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-300);
+}
+
+@media (max-width: 760px) {
+  .tch-balance__cols { grid-template-columns: 1fr; }
+  .tch-balance__rule { min-block-size: 1px; block-size: 1px; }
+}
+
+/* ── the portrait ───────────────────────────────────────────────────────────
+   Prose, deliberately: this is the one panel on the page that is not a number.
+   Blocks are labeled because "how to reach them" and "what frustrates them"
+   are different kinds of advice and a teacher scans for one of them. */
+/* Four facets in two columns, one current sentence each. A teacher opens this
+   to decide how to start a conversation, and nine bulleted sentences under
+   four headings is a document, not an answer. */
+/* Exactly two columns, because there are exactly four facets — `auto-fit` gave
+   three on a wide monitor and left the fourth alone on its own row. */
+.tch-portrait__facets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3);
+}
+@media (max-width: 760px) {
+  .tch-portrait__facets { grid-template-columns: 1fr; }
+}
+.tch-portrait__facet {
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  border: 1px solid var(--sp-border);
+  background: var(--sp-bg-subtle);
+  display: grid;
+  gap: var(--sp-1);
+  align-content: start;
+}
+.tch-portrait__facet h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  letter-spacing: .02em;
+  color: var(--sp-primary-600);
+}
+.tch-portrait__facet p {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  line-height: 1.55;
+  color: var(--sp-ink-700);
+}
+/* The superseded-but-still-active sentences, revealed together. Quieter than
+   the current one, because that is what they are. */
+.tch-portrait__more {
+  padding-block-start: var(--sp-1);
+  border-block-start: 1px solid var(--sp-border);
+  color: var(--sp-ink-400) !important;
+}
+.tch-portrait__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-block-start: var(--sp-3);
+}
+.tch-portrait__provenance { font-size: var(--sp-fs-xs); color: var(--sp-ink-300); }
+/* What the child said about themselves, before anything was observed. Quiet,
+   and clearly not a finding: no stripe, no severity, no counters. */
+.tch-portrait__said {
+  margin: var(--sp-3) 0 0;
+  padding-block-start: var(--sp-3);
+  border-block-start: 1px solid var(--sp-border);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+}
+.tch-portrait__saidLabel {
+  color: var(--sp-ink-400);
+  font-size: var(--sp-fs-xs);
+  margin-inline-end: var(--sp-2);
+}
 
 .tch-awareness { display: grid; gap: var(--sp-2); justify-items: start; }
 .tch-awareness p { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-500); }
@@ -279,5 +470,446 @@
 .tch-connection__approved {
   font-size: var(--sp-fs-xs);
   color: var(--sp-success-600);
+  font-weight: var(--sp-fw-semibold);
+}
+
+/* ── the month, in one strip ───────────────────────────────────────────────*/
+
+.tch-trend { display: grid; gap: var(--sp-3); }
+
+.tch-trend__charts {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.tch-trend__chart { display: grid; gap: var(--sp-1); min-inline-size: 0; }
+
+.tch-trend__chartLabel {
+  font-size: var(--sp-fs-sm);
+  font-weight: 600;
+  color: var(--sp-ink-700);
+}
+
+/* What the line counts. The card's whole problem was that its charts and its
+   numbers were unlabelled shapes — "3" under "longest run" is three of what? */
+.tch-trend__chartHint {
+  font-size: var(--sp-fs-xs, 0.78rem);
+  color: var(--sp-ink-300);
+  line-height: 1.4;
+}
+
+.tch-trend__facts {
+  margin: 0;
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.tch-trend__facts > div {
+  display: grid;
+  gap: 1px;
+  align-content: start;
+  padding: var(--sp-3);
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  background: var(--sp-surface-2);
+}
+.tch-trend__facts dt { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+.tch-trend__facts dd {
+  margin: 0;
+  font-size: var(--sp-fs-md, 1rem);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-900);
+  font-variant-numeric: tabular-nums;
+}
+.tch-trend__facts p {
+  margin: 2px 0 0;
+  font-size: var(--sp-fs-xs, 0.78rem);
+  color: var(--sp-ink-300);
+  line-height: 1.4;
+}
+
+.tch-trend__mastered {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-success-600);
+}
+
+.tch-trend__quiet { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-400); }
+
+/* ── activity tab ──────────────────────────────────────────────────────────*/
+
+.tch-student__support {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── what they worked on, lesson by lesson ─────────────────────────────────
+   Replaces a nine-column table whose first column was `q1` four times over.
+   Nothing was dropped — attempts, correct, hints, explanations, chat, what
+   helped and when are all still here, said as a sentence instead of counted
+   across a row of zeros. */
+
+.tch-worked { display: grid; gap: var(--sp-2); }
+
+/* Every lesson is closed by default. Twenty lessons, each with up to ten items
+   and a paragraph on what each one teaches, is a page nobody reaches the end
+   of — and the question a teacher arrives with is WHICH lesson to open, which
+   the summary line answers without opening anything. */
+.tch-worked__lesson {
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-bg-subtle);
+  overflow: hidden;
+}
+.tch-worked__lesson.is-attention { border-inline-start: 3px solid var(--sp-warn-600); }
+
+.tch-worked__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  padding: var(--sp-3);
+  cursor: pointer;
+  list-style: none;
+}
+.tch-worked__summary::-webkit-details-marker { display: none; }
+.tch-worked__summary:hover { background: var(--sp-bg-hover, transparent); }
+.tch-worked__summary:focus-visible {
+  outline: 2px solid var(--sp-primary-600);
+  outline-offset: -2px;
+}
+/* The caret points along the reading direction and turns down when open —
+   `chevronLeft` is mirrored by the RTL sheet, so this rotates rather than
+   swapping glyphs. */
+.tch-worked__caret { color: var(--sp-ink-300); transition: transform .15s ease; }
+.tch-worked__lesson[open] .tch-worked__caret { transform: rotate(-90deg); }
+
+.tch-worked__title {
+  flex: 1 1 12rem;
+  min-inline-size: 0;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-800);
+}
+.tch-worked__counts {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  white-space: nowrap;
+}
+/* One dot per item, in the order they were met: the shape of the lesson
+   before it is opened. */
+.tch-worked__dots { display: flex; gap: 3px; align-items: center; }
+.tch-worked__dots i {
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: var(--sp-border);
+}
+.tch-worked__dots i.is-danger  { background: var(--sp-danger-600); }
+.tch-worked__dots i.is-warn    { background: var(--sp-warn-600); }
+.tch-worked__dots i.is-success { background: var(--sp-success-600); }
+
+.tch-worked__objective {
+  margin: 0;
+  padding: 0 var(--sp-3) var(--sp-2);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+.tch-worked__lesson[open] .tch-worked__items { padding: 0 var(--sp-3) var(--sp-3); }
+
+.tch-student__floor {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+
+.tch-worked__items { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+/* A tone stripe on the reading-start edge: a teacher scanning a long lesson
+   sees where it went wrong before reading a word. */
+.tch-worked__item {
+  display: grid;
+  gap: var(--sp-1);
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  border: 1px solid var(--sp-border);
+  border-inline-start: 3px solid var(--sp-border);
+  background: var(--sp-bg-subtle);
+}
+.tch-worked__item.is-danger  { border-inline-start-color: var(--sp-danger-600); }
+.tch-worked__item.is-warn    { border-inline-start-color: var(--sp-warn-600); }
+.tch-worked__item.is-success { border-inline-start-color: var(--sp-success-600); }
+
+.tch-worked__itemHead {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.tch-worked__itemHead strong {
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-800);
+  font-weight: var(--sp-fw-semibold);
+  min-inline-size: 0;
+}
+.tch-worked__score {
+  margin-inline-start: auto;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The content's own description of the item. Clamped: these run several
+   sentences, and the row is a summary, not the lesson plan. */
+.tch-worked__teaches {
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  line-height: 1.6;
+  color: var(--sp-ink-500);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tch-worked__support { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+.tch-worked__helped { color: var(--sp-success-600); margin-inline-start: var(--sp-2); }
+.tch-worked__when { font-size: var(--sp-fs-xs); color: var(--sp-ink-300); }
+
+/* The self-described traits are now a quiet line at the foot of the portrait
+   (`.tch-portrait__said`) rather than a panel of their own — three noun
+   phrases under their own heading read as a section with nothing in it. */
+
+/* ── reflections in their own words ────────────────────────────────────────*/
+
+.tch-reflections { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+.tch-reflection {
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  border: 1px solid var(--sp-border);
+  background: var(--sp-bg-subtle);
+}
+.tch-reflection p { margin: 0; font-size: var(--sp-fs-sm); line-height: 1.6; color: var(--sp-ink-800); }
+.tch-reflection__meta {
+  display: block;
+  margin-block-start: var(--sp-1);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+
+.tch-awareness__thin { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+/* ── a disclosure, and what was done about it ─────────────────────────────── */
+
+/* The count rides ON the tab, because an open disclosure is the one thing on
+   this page a teacher must not have to click to discover.
+
+   Said the way software says "there is something here": a filled red disc with
+   a slow halo, the shape a person already reads as unread. `--sp-danger-600` is
+   a salmon in dark mode — correct for an inline warning, too soft for a badge
+   whose whole job is to be spotted in peripheral vision — so this keeps its own
+   red and holds it in both themes. */
+.tch-tabs {
+  /* Not the token: see above. Deliberately the one saturated red on the page. */
+  --tch-alert: #e5484d;
+}
+:root[data-theme='dark'] .tch-tabs { --tch-alert: #ff5a5a; }
+
+.tch-tabs button { position: relative; }
+
+/* An unopened tab that carries one reads as unread rather than as ordinary. */
+.tch-tabs button.has-alert:not(.is-active) { color: var(--sp-ink-700); }
+
+.tch-tabs__count {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  margin-inline-start: var(--sp-2);
+  min-inline-size: 18px;
+  block-size: 18px;
+  padding-inline: 5px;
+  border-radius: var(--sp-radius-pill);
+  background: var(--tch-alert);
+  color: #fff;
+  font-size: 11px;
+  font-weight: var(--sp-fw-bold);
+  line-height: 1;
+  /* Separates the disc from whatever the tab sits on, in either theme. */
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tch-alert) 26%, transparent);
+  /* The halo is a second shadow rather than a scaled pseudo-element: the tab
+     strip scrolls (`overflow-x: auto`), which clips a transformed child, and a
+     `z-index: -1` ring would sit behind the active tab's own background. */
+  animation: tch-alertPulse 2.4s var(--sp-ease) infinite;
+}
+
+@keyframes tch-alertPulse {
+  0% {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tch-alert) 26%, transparent),
+                0 0 0 0 color-mix(in srgb, var(--tch-alert) 52%, transparent);
+  }
+  70%, 100% {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tch-alert) 26%, transparent),
+                0 0 0 6px transparent;
+  }
+}
+
+/* The badge is the signal; the pulse is only emphasis, so the pulse goes and
+   the badge — ring included — stays exactly as it was. */
+@media (prefers-reduced-motion: reduce) {
+  .tch-tabs__count { animation: none; }
+}
+
+.tch-wellbeing { display: grid; gap: var(--sp-4); }
+
+.tch-wellbeing__missing {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: var(--sp-3);
+  border: 1px dashed var(--sp-border-strong);
+  border-radius: var(--sp-radius-md);
+  color: var(--sp-ink-400);
+  font-size: var(--sp-fs-sm);
+}
+
+.tch-flag {
+  position: relative;
+  display: grid;
+  gap: var(--sp-3);
+  /* The card is bordered on its inline-start edge in the tone of the thing it
+     is: this is a person, not a metric, and the page should look different
+     here than it does over the charts. */
+  border-inline-start: 3px solid var(--sp-danger-600, #d1495b);
+}
+.tch-flag.is-closed { border-inline-start-color: var(--sp-border-strong); opacity: 0.86; }
+
+/* The scroll anchor sits above the card's own padding, so "centred in the
+   viewport" centres the card and not its first line. */
+.tch-flag__anchor { position: absolute; inset-block-start: calc(var(--sp-6) * -1); }
+
+.tch-flag.is-ringing {
+  animation: tch-flag-ring 2.4s var(--sp-ease);
+}
+@keyframes tch-flag-ring {
+  0%, 100% { box-shadow: var(--sp-shadow-md); }
+  15%, 60% { box-shadow: 0 0 0 3px var(--sp-primary-500); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tch-flag.is-ringing { animation: none; box-shadow: 0 0 0 3px var(--sp-primary-500); }
+}
+
+.tch-flag__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.tch-flag__when { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+.tch-flag__where {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+}
+.tch-flag__blocked {
+  padding-inline: var(--sp-2);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-warn-100);
+  color: var(--sp-warn-600);
+  font-size: var(--sp-fs-xs);
+}
+
+/* The child's own words, and they read as quoted words: bigger than the
+   furniture around them, never truncated, never styled as data. */
+.tch-flag__words {
+  margin: 0;
+  padding: var(--sp-4);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface-2);
+  font-size: var(--sp-fs-md);
+  line-height: 1.6;
+  color: var(--sp-ink-900);
+}
+
+.tch-flag__reply { display: grid; gap: 2px; }
+.tch-flag__replyLabel { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+.tch-flag__reply p {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+  line-height: 1.55;
+}
+
+.tch-flag__notified,
+.tch-flag__claimed,
+.tch-flag__closed,
+.tch-flag__legacy {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+}
+.tch-flag__legacy { color: var(--sp-ink-400); font-style: italic; }
+
+.tch-flag__log { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+.tch-flag__log li {
+  padding: var(--sp-2) var(--sp-3);
+  border-inline-start: 2px solid var(--sp-border);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-600);
+}
+.tch-flag__log small { display: block; font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+.tch-flag__actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+.tch-flag__panel {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface-2);
+}
+.tch-flag__panelLead { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-500); }
+.tch-flag__panelActions { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+.tch-flag__panelHint { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+.tch-flag__suggest { display: grid; gap: var(--sp-2); justify-items: start; }
+.tch-flag__options { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); inline-size: 100%; }
+.tch-flag__options li button,
+.tch-flag__options li span {
+  display: block;
+  inline-size: 100%;
+  text-align: start;
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  border: 1px dashed var(--sp-border-strong);
+  background: var(--sp-surface);
+  color: var(--sp-ink-700);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  line-height: 1.5;
+}
+.tch-flag__options li button { cursor: pointer; }
+.tch-flag__options li button:hover {
+  border-color: var(--sp-primary-500);
+  color: var(--sp-primary-600);
+}
+.tch-flag__suggestNote { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+/* The one line here that is not the model's to phrase. */
+.tch-flag__protocol {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
   font-weight: var(--sp-fw-semibold);
 }

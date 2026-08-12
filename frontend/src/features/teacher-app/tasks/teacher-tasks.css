@@ -1,0 +1,894 @@
+/* Teacher tasks + tracking.
+ *
+ * Reuses `.tch-stats` / `.tch-stat` and `.tch-chip` from the shared teacher
+ * sheet rather than inventing a second KPI or chip language — the portal spent
+ * a whole phase removing exactly that kind of duplication.
+ */
+
+.tch-tasks, .tch-track { display: grid; gap: var(--sp-5); }
+.tch-tasks__loading { display: grid; gap: var(--sp-2); }
+.tch-tasks__list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+.tch-task {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  padding: var(--sp-4);
+  border: 1px solid var(--sp-border);
+  border-radius: 16px;
+  background: var(--sp-surface);
+}
+
+.tch-task__main { display: grid; gap: var(--sp-2); min-inline-size: 0; flex: 1; }
+
+.tch-task__title {
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: start;
+  font: inherit;
+  font-weight: 600;
+  color: var(--sp-ink-900);
+  cursor: pointer;
+}
+
+.tch-task__title:hover { color: var(--sp-primary-600); }
+
+.tch-task__meta {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
+}
+
+.tch-task__failed {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-warn-600);
+}
+
+.tch-task__actions { display: flex; gap: var(--sp-2); align-items: center; }
+.tch-task__working {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
+}
+
+/* ── the builder ────────────────────────────────────────────────────────── */
+
+/* The builder as a centred dialog.
+ *
+ * Wider than the 440px `sp-modal` default because the form has paired fields
+ * (`__row` is two columns). It used to be a dozen controls in one scrolling
+ * column, which put the create button below the fold on a laptop — the teacher
+ * filled in a form and then had to go looking for the way out of it.
+ *
+ * Now the height is a budget the layout keeps to. The dialog is capped at the
+ * room the window actually has; the title, the dots and the buttons are fixed
+ * rows; and one section's fields sit between them. Measured at 1440×{950 →
+ * 560}, worst case (every part selected, so every count field on screen): no
+ * section scrolls at any of them. Below that the fields scroll and the buttons
+ * still do not, which is the property that has to hold at any size. */
+/* The window minus the backdrop's own padding — the space that actually
+   exists, rather than the `86vh` guess that was here before, which on a short
+   laptop screen left the dialog taller than the room it had. `100%` cannot do
+   this job: the backdrop is a centred grid whose track is content-sized, and a
+   percentage against an indefinite track resolves to nothing at all.
+
+   `dvh`, not `vh`: on a phone `vh` is the height with the browser's chrome
+   retracted, which is not the height the dialog is in when the chrome is out. */
+.tch-builder__modal {
+  width: min(680px, 100%);
+  max-block-size: calc(100dvh - var(--sp-6) * 2);
+  /* Tighter than the shared dialog padding: this is the tallest dialog in the
+     product, and 32px of chrome on each edge is two fields' worth of height. */
+  padding: var(--sp-5) var(--sp-6);
+  gap: var(--sp-3);
+}
+.tch-builder__modalTitle { margin: 0; font-size: 1.32rem; font-weight: 700; }
+
+/* The controls that let you leave, or move on, are never the thing that
+   scrolls away. Only the step's own fields do — and the sections are sized so
+   that on an ordinary window they do not either.
+
+   `min-block-size: 0` on both is what makes this work: a flex child defaults
+   to `min-height: auto`, which means "as tall as my content" and quietly
+   defeats every `overflow` set on it. */
+.tch-builder__modal .tch-builder { flex: 1; min-block-size: 0; }
+
+.tch-builder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.tch-builder__steps, .tch-builder__restored,
+.tch-builder__needs, .tch-builder__actions, .tch-builder__failed { flex: none; }
+
+.tch-builder__field { display: grid; gap: var(--sp-2); border: 0; margin: 0; padding: 0; }
+/* Scoped to the wizard: `.tch-builder__field` is borrowed by the launch and
+   sub-group dialogs, which have four fields and all the room in the world. */
+.tch-builder__step .tch-builder__field { gap: var(--sp-1); }
+.tch-builder__field > span, .tch-builder__field > legend {
+  font-size: var(--sp-fs-sm);
+  font-weight: 600;
+  color: var(--sp-ink-700);
+  padding: 0;
+}
+
+.tch-builder__row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+
+/* The parts fieldset: the legend and the chips were touching, which read as
+   one control rather than as a question and its answers. */
+.tch-builder__parts { gap: var(--sp-3); }
+.tch-builder__parts > legend {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-block-end: var(--sp-2);
+}
+.tch-builder__chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+/* The bubble used to be pinned to this trigger's edge, because the dialog's
+   scrolling form clipped anything centred near its inline-start edge. That
+   workaround is gone with its cause: the tooltip renders into the body now and
+   is positioned in viewport coordinates, so nothing between it and the window
+   can crop it and it needs no per-site placement. */
+
+.tch-builder__partsHelp { display: grid; gap: var(--sp-2); }
+.tch-builder__partsHelp ul {
+  margin: 0;
+  padding-inline-start: var(--sp-4);
+  display: grid;
+  gap: var(--sp-1);
+}
+.tch-builder__partsHelp b { font-weight: 700; }
+
+.tch-builder__hint {
+  font-size: var(--sp-fs-xs, 0.78rem);
+  color: var(--sp-ink-400);
+  line-height: 1.5;
+}
+
+/* The guidance note under the dialog title. Quiet, but the teacher must read
+   it once: what they type below IS the brief the generator works from. */
+.tch-builder__head { display: grid; gap: var(--sp-2); }
+.tch-builder__note {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  /* Guidance, not a field: it earns less room than the things it explains. */
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: 12px;
+  background: var(--sp-surface-2);
+  border: 1px solid var(--sp-border);
+  font-size: var(--sp-fs-xs, 0.78rem);
+  color: var(--sp-ink-400);
+  line-height: 1.5;
+}
+.tch-builder__note svg { flex: none; margin-block-start: 2px; color: var(--sp-primary-600); }
+
+.tch-builder__restored {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+}
+.tch-builder__discard {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--sp-primary-600);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.tch-builder__notesHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.tch-builder__notesHead > label {
+  font-size: var(--sp-fs-sm);
+  font-weight: 600;
+  color: var(--sp-ink-700);
+}
+/* Blocked, not disabled — it has to stay hoverable to say why. */
+.tch-builder__suggest .sp-btn.is-blocked { opacity: 0.55; cursor: not-allowed; }
+
+.tch-builder__counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--sp-3);
+}
+
+.tch-builder__count { display: grid; gap: var(--sp-1); font-size: var(--sp-fs-sm); }
+/* A count is a quantity, so it reads left-to-right in every language. */
+.tch-builder__count input { direction: ltr; text-align: start; }
+
+/* ── the deck's own options ──────────────────────────────────────────────
+   Boxed and tinted, because these seven appear and disappear with one chip
+   above them: a block that arrives unannounced in the middle of a form needs
+   to read as "these belong to the thing you just ticked". */
+.tch-builder__deck {
+  display: grid;
+  /* The rows inside are three different kinds of control — two selects, a row
+     of chips, a text field — and at `sp-3` they read as one dense block with
+     the chips crushed between the selects above and the label below. */
+  gap: var(--sp-5);
+  padding: var(--sp-5) var(--sp-4) var(--sp-4);
+  border: 1px solid var(--sp-border);
+  border-radius: 14px;
+  background: var(--sp-bg-subtle, var(--sp-primary-050));
+}
+.tch-builder__deck > legend {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  /* Inline padding so the tinted ground does not run under the border it sits
+     on; the block padding is what keeps the first row off the legend. */
+  padding-inline: var(--sp-2);
+  margin-inline-start: calc(var(--sp-2) * -1);
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-700);
+}
+.tch-builder__deckRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--sp-4);
+}
+.tch-builder__deckRow label,
+.tch-builder__deckConcepts { display: grid; gap: var(--sp-2); font-size: var(--sp-fs-sm); }
+.tch-builder__deckRow > label > span,
+.tch-builder__deckConcepts > span { color: var(--sp-ink-500); font-size: var(--sp-fs-xs); }
+
+/* The chips are the middle row and the one that was cramped: they need air on
+   both sides, not the same gap as two fields stacked. */
+.tch-builder__deck .tch-builder__chips { gap: var(--sp-2) var(--sp-3); row-gap: var(--sp-2); }
+
+/* ── the three sections, and the dots that place you in them ──────────────
+   A dozen controls in one column answered three unrelated questions at once —
+   what the task is about, what is in it, how Yuvi should write it — and the
+   sentence that matters most (the brief) sat at the bottom, below the fold on
+   a laptop. Sectioning is not decoration here: it is what lets each screen ask
+   one question, and it puts the brief on the screen where the teacher is
+   writing prose rather than filling boxes.
+
+   The dots are BUTTONS. A stepper that only goes forwards turns "let me fix
+   the title" into cancelling a form the teacher has spent minutes on. */
+.tch-builder__steps {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding-block-end: var(--sp-1);
+}
+.tch-builder__dot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  border: 0;
+  background: none;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: 999px;
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
+  cursor: pointer;
+  transition: color var(--sp-dur-fast) var(--sp-ease),
+              background var(--sp-dur-fast) var(--sp-ease);
+}
+.tch-builder__dot:disabled { cursor: default; opacity: 0.6; }
+.tch-builder__dot:not(:disabled):hover { background: var(--sp-surface-2); }
+
+.tch-builder__dotMark {
+  inline-size: 9px;
+  block-size: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--sp-border-strong, var(--sp-ink-100));
+  transition: background var(--sp-dur-fast) var(--sp-ease),
+              border-color var(--sp-dur-fast) var(--sp-ease),
+              inline-size var(--sp-dur-fast) var(--sp-ease);
+}
+.tch-builder__dot.is-done .tch-builder__dotMark {
+  background: var(--sp-primary-600);
+  border-color: var(--sp-primary-600);
+}
+.tch-builder__dot.is-current { color: var(--sp-ink-900); font-weight: 600; }
+/* The current step's dot stretches into a bar — position readable at a glance
+   without depending on colour alone. */
+.tch-builder__dot.is-current .tch-builder__dotMark {
+  inline-size: 22px;
+  border-radius: 999px;
+  background: var(--sp-primary-600);
+  border-color: var(--sp-primary-600);
+}
+
+/* Names collapse before the dots do: on a narrow dialog the dots still say
+   where you are, and the section heading right below says which one. */
+@media (max-width: 560px) {
+  .tch-builder__dotName { display: none; }
+  .tch-builder__dot.is-current .tch-builder__dotName { display: inline; }
+}
+
+.tch-builder__step {
+  display: grid;
+  align-content: start;
+  gap: var(--sp-3);
+  outline: none;
+  /* The only part that may scroll, and only on a window too short to hold one
+     section. Room for focus rings, which a flush overflow container clips. */
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow-y: auto;
+  padding-inline-end: var(--sp-2);
+  margin-inline-end: calc(var(--sp-2) * -1);
+}
+/* "שלב 1 מתוך 3" is what the dots already say, in a line of its own. Kept for
+   screen readers, where the dots are a row of buttons and the count is not
+   otherwise spoken. */
+.tch-builder__stepOf {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.tch-builder__summary {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+  padding: var(--sp-3);
+  border-radius: 12px;
+  border: 1px dashed var(--sp-border);
+}
+.tch-builder__needs {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
+  text-align: end;
+}
+
+/* On a short window, the guidance gives up its room before the fields do. The
+   note is still there — one line instead of three — and the picker's footnote
+   goes, because the label above it already says the lesson is optional. This is
+   what keeps every section whole down to a 13" laptop with a dock and a
+   bookmarks bar, rather than falling back to a scrollbar at the first squeeze. */
+@media (max-height: 720px) {
+  .tch-builder__modal { padding: var(--sp-4) var(--sp-5); }
+  .tch-builder, .tch-builder__step { gap: var(--sp-2); }
+  .tch-builder__note { padding: var(--sp-1) var(--sp-2); line-height: 1.4; }
+  .tch-builder__note svg { display: none; }
+  .tch-builder__pickerHint { display: none; }
+  .tch-builder__dotName { font-size: var(--sp-fs-xs, 0.78rem); }
+}
+
+.tch-builder__actions { display: flex; justify-content: flex-end; gap: var(--sp-2); }
+/* Cancel stays on the far side from the two step controls: leaving and moving
+   on are opposite intentions and must not sit shoulder to shoulder. */
+.tch-builder__actionsGap { flex: 1; }
+/* The arrow is drawn pointing right, so under `dir=rtl` "continue" points back
+   the way the teacher came. Scoped to this one button — the wand beside
+   "build" is not directional and must not be flipped with it. Same fix and
+   same reason as the player's next button. */
+[dir="rtl"] .tch-builder__next .sp-icon { transform: scaleX(-1); }
+.tch-builder__failed { margin: 0; color: var(--sp-danger-600, #d1495b); font-size: var(--sp-fs-sm); }
+
+/* ── tracking ───────────────────────────────────────────────────────────── */
+
+.tch-track__scope { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+.tch-track__stale {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: 12px;
+  background: var(--sp-warn-100);
+  color: var(--sp-warn-600);
+  font-size: var(--sp-fs-sm);
+}
+
+.tch-track__prose { display: grid; gap: var(--sp-3); }
+.tch-track__prose h3 { margin: 0; font-size: var(--sp-fs-lg, 18px); color: var(--sp-ink-900); }
+.tch-track__prose p  { margin: 0; color: var(--sp-ink-500); line-height: 1.7; }
+.tch-track__prose ul { margin: 0; padding-inline-start: var(--sp-5); display: grid; gap: var(--sp-2); }
+.tch-track__why summary { cursor: pointer; color: var(--sp-primary-600); font-size: var(--sp-fs-sm); }
+.tch-track__why p { margin-block-start: var(--sp-2); font-size: var(--sp-fs-sm); }
+.tch-track__actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+.tch-track__questions, .tch-track__learners {
+  list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2);
+}
+
+.tch-track__qHead {
+  inline-size: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr 120px auto;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  background: none;
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: start;
+  color: inherit;
+}
+
+.tch-track__qNum { color: var(--sp-ink-300); unicode-bidi: isolate; }
+.tch-track__qText { min-inline-size: 0; }
+.tch-track__qCount { font-size: var(--sp-fs-sm); color: var(--sp-ink-400); unicode-bidi: isolate; }
+
+/* Proportional, and never colour alone — the count beside it carries the same
+   fact for anyone who cannot separate the hues. */
+.tch-track__qBar { display: flex; block-size: 8px; border-radius: 99px; overflow: hidden; gap: 1px; }
+.tch-track__qBar .is-correct { background: var(--sp-success-600); }
+.tch-track__qBar .is-partial { background: var(--sp-warn-600); }
+.tch-track__qBar .is-wrong   { background: var(--sp-danger-600, #d1495b); }
+.tch-track__qBar .is-skipped { background: var(--sp-border-strong); }
+
+.tch-track__qBuckets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+}
+
+.tch-track__bucket h4 { margin: 0 0 var(--sp-2); font-size: var(--sp-fs-sm); }
+.tch-track__bucket ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.tch-track__bucket button {
+  background: none; border: 0; padding: 0; font: inherit; cursor: pointer;
+  color: var(--sp-primary-600); text-align: start;
+}
+.tch-track__bucket.is-correct h4 { color: var(--sp-success-600); }
+.tch-track__bucket.is-partial h4 { color: var(--sp-warn-600); }
+.tch-track__bucket.is-wrong h4   { color: var(--sp-danger-600, #d1495b); }
+.tch-track__bucket.is-skipped h4 { color: var(--sp-ink-300); }
+
+.tch-track__learner {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: start;
+  color: inherit;
+}
+
+.tch-track__learner:hover { background: var(--sp-primary-050); border-color: var(--sp-border); }
+.tch-track__name { flex: 1; font-weight: 500; }
+.tch-track__score { font-variant-numeric: tabular-nums; unicode-bidi: isolate; }
+.tch-track__flag { color: var(--sp-warn-600); }
+
+/* ── one child's paper ──────────────────────────────────────────────────── */
+
+.tch-paper {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-5);
+}
+
+.tch-paper__scrim { position: absolute; inset: 0; background: rgba(20, 16, 45, 0.5); }
+
+.tch-paper__panel {
+  position: relative;
+  inline-size: min(100%, 720px);
+  max-block-size: 86vh;
+  overflow: auto;
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.tch-paper__head { display: flex; align-items: center; gap: var(--sp-3); }
+.tch-paper__head h3 { margin: 0; flex: 1; font-size: var(--sp-fs-md); }
+.tch-paper__score { font-weight: 700; font-variant-numeric: tabular-nums; unicode-bidi: isolate; }
+
+.tch-paper__said {
+  margin: 0;
+  display: flex;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: 12px;
+  background: var(--sp-primary-050);
+  color: var(--sp-ink-500);
+  font-size: var(--sp-fs-sm);
+  line-height: 1.6;
+}
+
+.tch-paper__questions { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+.tch-paper__q {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: 12px;
+  border-inline-start: 3px solid var(--sp-border);
+  background: var(--sp-bg-subtle, var(--sp-primary-050));
+}
+
+.tch-paper__q.is-correct { border-inline-start-color: var(--sp-success-600); }
+.tch-paper__q.is-partial { border-inline-start-color: var(--sp-warn-600); }
+.tch-paper__q.is-wrong   { border-inline-start-color: var(--sp-danger-600, #d1495b); }
+.tch-paper__q.is-skipped { border-inline-start-color: var(--sp-border-strong); }
+
+.tch-paper__qNum  { color: var(--sp-ink-300); unicode-bidi: isolate; }
+.tch-paper__qBody { display: grid; gap: var(--sp-2); min-inline-size: 0; }
+.tch-paper__prompt { color: var(--sp-ink-900); }
+
+.tch-paper__given {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+}
+
+.tch-paper__given > span:first-child { color: var(--sp-ink-300); }
+.tch-paper__multi { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+.tch-paper__qSaid { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-primary-700); }
+.tch-paper__mark  { font-variant-numeric: tabular-nums; unicode-bidi: isolate; font-size: var(--sp-fs-sm); }
+
+/* ── list filters ───────────────────────────────────────────────────────── */
+
+.tch-tasks__filters {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.tch-tasks__search { max-inline-size: 22rem; flex: 1 1 14rem; }
+
+/* A heading now, not a button — where the title took you used to be a guess. */
+.tch-task__title {
+  margin: 0;
+  font-size: var(--sp-fs-md, 1rem);
+  font-weight: 600;
+  color: var(--sp-ink-900);
+}
+
+/* ── the lesson picker ──────────────────────────────────────────────────── */
+
+.tch-picker__list {
+  list-style: none;
+  margin: var(--sp-1) 0 0;
+  padding: var(--sp-1);
+  display: grid;
+  gap: 2px;
+  max-block-size: 15rem;
+  overflow-y: auto;
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  background: var(--sp-surface-2);
+}
+
+.tch-picker__row {
+  inline-size: 100%;
+  display: grid;
+  gap: 1px;
+  text-align: start;
+  padding: var(--sp-2) var(--sp-3);
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+.tch-picker__row:hover, .tch-picker__row:focus-visible {
+  background: var(--sp-primary-050);
+}
+.tch-picker__row small { color: var(--sp-ink-300); font-size: var(--sp-fs-xs, 0.78rem); }
+
+.tch-picker__picked {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: 12px;
+  border: 1px solid var(--sp-primary-200, var(--sp-border));
+  background: var(--sp-primary-050);
+}
+.tch-picker__picked > div { display: grid; gap: 2px; min-inline-size: 0; }
+
+/* ── the launch dialog ──────────────────────────────────────────────────── */
+
+.tch-launch__modal { width: min(560px, 100%); max-block-size: min(86vh, 860px); }
+.tch-launch { display: grid; gap: var(--sp-4); overflow-y: auto; }
+.tch-launch__modes { display: flex; gap: var(--sp-2); }
+
+.tch-launch__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  font-size: var(--sp-fs-sm);
+  font-weight: 600;
+  color: var(--sp-ink-700);
+}
+
+.tch-launch__list {
+  list-style: none;
+  margin: var(--sp-2) 0 0;
+  padding: var(--sp-1);
+  display: grid;
+  gap: 2px;
+  max-block-size: 14rem;
+  overflow-y: auto;
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+}
+
+.tch-launch__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.tch-launch__row:hover { background: var(--sp-surface-2); }
+
+/* The count sits with the actions, first in the row, because it is the thing
+   to read immediately before pressing send. */
+.tch-launch__count {
+  margin-inline-end: auto;
+  font-size: var(--sp-fs-sm);
+  font-weight: 600;
+  color: var(--sp-primary-700, var(--sp-primary-600));
+}
+
+/* ── openings ───────────────────────────────────────────────────────────── */
+
+.tch-track__openings { display: grid; gap: var(--sp-2); }
+.tch-track__openingActions { display: flex; gap: var(--sp-2); }
+
+/* ── review, before it goes out ─────────────────────────────────────────── */
+
+.tch-review { display: grid; gap: var(--sp-5); }
+/* One band: who this is, and every action on it. Sticky, because "send" is
+   the reason a teacher is on this page and a forty-question task is a long
+   scroll away from a button at the top of the document. */
+.tch-review__bar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: 16px;
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+  box-shadow: var(--sp-shadow-sm);
+}
+.tch-review__id { display: grid; gap: var(--sp-1); min-inline-size: 0; }
+.tch-review__id h1 { margin: 0; font-size: 1.2rem; font-weight: 700; }
+.tch-review__sub {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
+}
+.tch-review__nav { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+
+.tch-review__working {
+  margin: 0 0 var(--sp-3);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--sp-ink-500);
+}
+
+.tch-review__sent {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: 12px;
+  background: var(--sp-surface-2);
+  border: 1px solid var(--sp-border);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+}
+
+.tch-review__parts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--sp-3);
+}
+
+.tch-review__part {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border: 1px solid var(--sp-border);
+  border-radius: 14px;
+  background: var(--sp-surface);
+}
+.tch-review__part.is-working { opacity: 0.6; }
+.tch-review__partHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.tch-review__partBtns { display: flex; gap: var(--sp-1); }
+.tch-review__edit { display: grid; gap: var(--sp-2); justify-items: end; }
+.tch-review__edit textarea { inline-size: 100%; }
+
+/* The one toolbar above the stage: how to view it, whether to show the key,
+   and the button that opens the rewriting controls. */
+.tch-review__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.tch-review__modes { display: flex; gap: var(--sp-2); }
+/* The hint takes the slack, so the switch and the edit button sit together at
+   the far end rather than drifting with the length of the sentence. */
+.tch-review__hint {
+  flex: 1 1 12rem;
+  margin: 0;
+  font-size: var(--sp-fs-xs, 0.78rem);
+  color: var(--sp-ink-300);
+}
+.tch-review__switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-sm);
+  font-weight: 600;
+  color: var(--sp-ink-700);
+  cursor: pointer;
+}
+
+.tch-review__key h3 { margin: 0 0 var(--sp-3); font-size: var(--sp-fs-md, 1rem); }
+.tch-review__key ol { margin: 0; padding-inline-start: var(--sp-5); display: grid; gap: var(--sp-2); }
+.tch-review__key li { display: grid; gap: 2px; }
+.tch-review__keyWhere { font-size: var(--sp-fs-xs, 0.78rem); color: var(--sp-ink-300); }
+/* `justify-self`, because the answer carries `dir="auto"` — a purely Latin key
+   like "L / mL" resolves to LTR and would otherwise align itself to the far
+   side of the row, a hand's width from the question it answers. The text still
+   reads left-to-right; only the box stays put. */
+.tch-review__keyAnswer {
+  justify-self: start;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-success-600);
+  font-weight: 600;
+}
+
+/* The stage is the child's screen, so it is bounded like one rather than
+   running the full width of a teacher's monitor. */
+.tch-review__stage { padding: var(--sp-4); }
+.tch-review__stage .yv-player { max-inline-size: 900px; margin-inline: auto; }
+
+.tch-review__done {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--sp-success-600);
+  font-size: var(--sp-fs-sm);
+}
+
+@media (max-width: 720px) {
+  .tch-builder__row { grid-template-columns: 1fr; }
+  .tch-track__qHead { grid-template-columns: auto 1fr; }
+  .tch-track__qBar, .tch-track__qCount { grid-column: 1 / -1; }
+}
+
+/* ── the quality report ─────────────────────────────────────────────────────
+   Sits above the content because its job is to say where to look in it.
+   Deliberately quiet: it is a reviewer's checklist, not a verdict, and nothing
+   in it disables the send button. */
+
+.tch-quality { display: grid; gap: var(--sp-3); }
+
+.tch-quality__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.tch-quality__score { display: flex; align-items: center; gap: var(--sp-2); }
+.tch-quality__headActions { display: flex; align-items: center; gap: var(--sp-3); }
+
+.tch-quality__lede { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-700); }
+
+.tch-quality__findings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+.tch-quality__findings li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: 10px;
+  background: var(--sp-surface-2);
+  font-size: var(--sp-fs-sm);
+  line-height: 1.5;
+}
+.tch-quality__findings svg { flex: none; margin-block-start: 3px; color: var(--sp-warn-600); }
+
+.tch-quality__note {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-xs, 0.78rem);
+  color: var(--sp-ink-400);
+}
+
+.tch-quality__detail { display: grid; gap: var(--sp-3); }
+
+.tch-quality__dim {
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) auto 1fr;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-sm);
+}
+.tch-quality__dimName { font-weight: 600; color: var(--sp-ink-700); }
+.tch-quality__dim p { margin: 0; color: var(--sp-ink-500); }
+
+.tch-quality__checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-1);
+  font-size: var(--sp-fs-sm);
+}
+.tch-quality__checks li { display: flex; align-items: center; gap: var(--sp-2); }
+.tch-quality__checks li svg { flex: none; }
+.tch-quality__checks li.is-ok svg { color: var(--sp-success-600); }
+.tch-quality__checks li.is-bad svg { color: var(--sp-warn-600); }
+/* Not a pass. A check with nothing to check on is dimmed and says so — a tick
+   here would read as "we looked", which is the one thing it did not do. */
+.tch-quality__checks li.is-skipped { opacity: .55; }
+.tch-quality__checks small { color: var(--sp-ink-300); }
+
+@media (max-width: 720px) {
+  .tch-quality__dim { grid-template-columns: 1fr; }
+}

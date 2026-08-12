@@ -216,8 +216,10 @@ async def _generate(
                     # directly: the explainer asks for animation, but a
                     # planner that returns a still must still get the
                     # in-browser path rather than a forced video.
-                    slide["visual"] = await render_visual(scene)
-                    visuals_made += 1
+                    rendered = await render_visual(scene)
+                    if rendered:
+                        slide["visual"] = rendered
+                        visuals_made += 1
             except Exception as exc:  # a failed animation must not fail the deck
                 print(f"⚠️ explainer visual render failed: {type(exc).__name__}")
         slide.pop("_animate", None)

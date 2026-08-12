@@ -28,21 +28,26 @@ import { navigate } from '../../../app/router'
 import { Icon } from '../../../components/primitives'
 import { YuviHeadIcon } from '../../../components/YuviHeadIcon'
 import { useI18n } from '../../../i18n/I18nProvider'
+import { useAuth } from '../../../providers/AuthProvider'
 import { useTeacherRoster } from '../../../providers/TeacherRosterProvider'
-import { getDailyBrief, type BriefAction, type DailyBrief as Brief, type DigestBullet }
+import { getDailyBrief, type BriefAction, type BriefBullet, type DailyBrief as Brief }
   from '../../../services/teacher'
-import { EvidenceToggle } from '../shared/EvidenceDisclosure'
+import { YuviScene } from '../../../components/yuvi-scenes/YuviScene'
+import { propFor } from '../../../components/yuvi-scenes/scenes'
+import { ratePercent } from '../learnings/TeacherLearningsPage'
+import { countKey } from '../shared/countLabel'
+import { BriefBulletRow } from './BriefBulletRow'
 import { SubGroupAssign } from './SubGroupAssign'
 import './daily-brief.css'
 
 export function DailyBriefHero({ groupId }: { groupId: string | null }) {
   const { t, language } = useI18n()
+  const { user } = useAuth()
   const { names } = useTeacherRoster()
   const [brief, setBrief] = useState<Brief | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
   const [openAction, setOpenAction] = useState<string | null>(null)
-  const heroRef = useRef<HTMLElement | null>(null)
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
   const [condensed, setCondensed] = useState(false)
 
   useEffect(() => {
@@ -56,30 +61,44 @@ export function DailyBriefHero({ groupId }: { groupId: string | null }) {
     return () => { active = false }
   }, [groupId, language])
 
-  /* Condense on scroll via an observer on a sentinel, never a scroll listener:
-     a listener on this page fires on every frame of the inbox's own scroll too. */
+  /* Condense on scroll via an observer on a zero-height SENTINEL above the
+     hero, never a scroll listener: a listener on this page fires on every frame
+     of the inbox's own scroll too.
+
+     The sentinel matters. Observing the hero element itself meant a hero taller
+     than the viewport could never reach `intersectionRatio 0.6`, so it rendered
+     permanently condensed on a laptop and never condensed on a tall monitor. A
+     zero-height marker either is or is not on screen, at any hero height. */
   useEffect(() => {
-    const node = heroRef.current
+    const node = sentinelRef.current
     if (!node || typeof IntersectionObserver === 'undefined') return
     const observer = new IntersectionObserver(
-      ([entry]) => setCondensed(entry.intersectionRatio < 0.6),
-      { threshold: [0.6] }
+      ([entry]) => setCondensed(!entry.isIntersecting),
+      { threshold: [0] }
     )
     observer.observe(node)
     return () => observer.disconnect()
   }, [brief])
 
-  async function refresh() {
-    if (!groupId || isRefreshing) return
-    setIsRefreshing(true)
-    try {
-      setBrief(await getDailyBrief(groupId, language, true))
-    } catch {
-      /* keep whatever is on screen — a failed refresh is not a reason to blank */
-    } finally {
-      setIsRefreshing(false)
-    }
-  }
+  /* There is no refresh control on this card, deliberately. The brief describes
+     a WINDOW — everything since the teacher last logged in — so re-asking for it
+     a minute later is the same window and the same answer, at the cost of a
+     model call. It reloads when the page does, which is when the window has
+     actually moved. `getDailyBrief`'s `force` flag survives for the admin path
+     that regenerates one on demand. */
+
+  /* Deterministic, and rendered before the brief resolves.
+     A greeting is a lookup, not an inference — asking a model for it would cost
+     tokens, a round trip and three chances to get a name wrong in three
+     languages, and would make the whole hero blank until generation finished. */
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours()
+    const part = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'
+    const name = (user?.display_name || user?.username || '').trim()
+    return name
+      ? t(`tch.brief.greeting.${part}`, { name })
+      : t(`tch.brief.greetingPlain.${part}`)
+  }, [user, t])
 
   const windowLabel = useMemo(() => {
     if (!brief) return ''
@@ -90,15 +109,18 @@ export function DailyBriefHero({ groupId }: { groupId: string | null }) {
 
   if (!groupId) return null
 
+  /* Everything deterministic renders immediately; only the prose waits. The
+     hero used to be one blank block until the generation returned. */
   if (isLoading) {
     return (
       <section className="tch-brief is-loading" aria-busy="true">
-        <div className="tch-brief__aurora" aria-hidden="true" />
+        <div className="tch-brief__aurora" aria-hidden="true"><i /><i /><i /></div>
         <div className="tch-brief__inner">
           <span className="tch-brief__eyebrow">
             <YuviHeadIcon width={22} height={22} />
             {t('tch.brief.eyebrow')}
           </span>
+          <h2 className="tch-brief__greeting" dir="auto">{greeting}</h2>
           <p className="tch-brief__thinking">{t('tch.brief.loading')}</p>
         </div>
       </section>
@@ -108,8 +130,10 @@ export function DailyBriefHero({ groupId }: { groupId: string | null }) {
   if (!brief || brief.source === 'empty') return null
 
   return (
+    <>
+    {/* Zero-height. The observer above watches this, not the hero. */}
+    <div ref={sentinelRef} className="tch-brief__sentinel" aria-hidden="true" />
     <section
-      ref={heroRef}
       className={`tch-brief${condensed ? ' is-condensed' : ''}`}
       aria-label={t('tch.brief.eyebrow')}
       data-tour="teacher.brief"
@@ -121,6 +145,7 @@ export function DailyBriefHero({ groupId }: { groupId: string | null }) {
       </div>
 
       <div className="tch-brief__inner">
+        <div className="tch-brief__prose">
         <header className="tch-brief__head">
           <span className="tch-brief__eyebrow">
             <YuviHeadIcon width={22} height={22} />
@@ -133,46 +158,38 @@ export function DailyBriefHero({ groupId }: { groupId: string | null }) {
           {brief.source === 'fallback' ? (
             <span className="tch-brief__badge">{t('tch.brief.computed')}</span>
           ) : null}
-          <button
-            type="button"
-            className="tch-brief__refresh"
-            onClick={() => void refresh()}
-            disabled={isRefreshing}
-            aria-label={t('tch.brief.refresh')}
-            title={t('tch.brief.refresh')}
-          >
-            <Icon name="reflect" size={15} aria-hidden />
-          </button>
         </header>
 
+        <h2 className="tch-brief__greeting" dir="auto">{greeting}</h2>
+
         {brief.headline ? (
-          <h2 className="tch-brief__headline" dir="auto">
+          <p className="tch-brief__headline" dir="auto">
             <BulletText bullet={brief.headline} t={t} />
-          </h2>
+          </p>
+        ) : null}
+
+        {/* The part a teacher actually reads. Model-written, and the only place
+            in the card where more than one sentence is allowed. */}
+        {brief.summary ? (
+          <p className="tch-brief__summary" dir="auto">{brief.summary}</p>
         ) : null}
 
         {brief.bullets.length ? (
           <ul className="tch-brief__bullets">
             {brief.bullets.map((bullet, index) => (
-              <li key={index}>
-                <span dir="auto"><BulletText bullet={bullet} t={t} /></span>
-                <EvidenceToggle raw={bullet.because?.raw} />
-              </li>
+              <BriefBulletRow key={index} bullet={bullet} t={t} />
             ))}
           </ul>
         ) : null}
 
-        <dl className="tch-brief__stats">
-          {brief.stats.filter((stat) => stat.value !== null).map((stat) => (
-            <div key={stat.key}>
-              <dt>{t(`tch.brief.stat.${stat.key}`)}</dt>
-              <dd>
-                {stat.value}
-                {stat.total != null ? <small>{` / ${stat.total}`}</small> : null}
-              </dd>
-            </div>
-          ))}
-        </dl>
+        {/* The hero no longer prints its own numbers.
+            `brief.stats` is still on the payload — it is the deterministic
+            half of the contract and the fallback path is built from it — but
+            all three of its values are rendered elsewhere on this page, and
+            the KPI strip now sits directly above. Two rows of the same three
+            figures, a centimetre apart, is the bug this file's neighbour
+            already documents removing once. Numbers belong to the strip;
+            the sentence about them belongs here. */}
 
         {brief.actions.length ? (
           <div className="tch-brief__actions">
@@ -192,26 +209,78 @@ export function DailyBriefHero({ groupId }: { groupId: string | null }) {
           </div>
         ) : null}
 
-        {/* The assignment form opens under the row rather than in a modal: the
-            teacher is choosing people and editing a goal, which is a task, not
-            a confirmation. */}
-        {brief.actions
-          .filter((action) => actionId(action) === openAction && action.kind === 'assign_subgroup')
-          .map((action) => (
-            <div className="tch-brief__form" key={actionId(action)}>
-              <SubGroupAssign
-                candidates={action.learner_ids}
-                id={actionId(action)}
-                defaultTitle={t('tch.subgroup.defaultTitle', { label: action.label ?? '' })}
-                openLabel={t('tch.brief.assignOpen', { count: action.learner_ids.length })}
-                groupId={groupId}
-                names={names}
-                defaultOpen
-              />
+        </div>
+
+        {/* The other half of the card, which used to be empty aurora.
+            Not a generated image: the model picked a MOOD from a closed set and
+            this draws the matching hand-authored composition. A model asked for
+            markup returns off-palette, broken geometry into the most-looked-at
+            rectangle in the portal, with nobody reviewing it first.
+
+            A real grid column rather than a positioned panel — in `en` the gap
+            is on the other side, and a `left:` would put the robot on top of
+            the sentence the moment the teacher switches language. */}
+        <div className="tch-brief__scene">
+          <YuviScene
+            scene={brief.scene}
+            prop={propFor(brief.worked_on?.subject)}
+            label={t(`tch.brief.scene.${brief.scene ?? 'thinking'}`)}
+          />
+          {/* The material the class actually spent the window on — already
+              computed for the prompt, and discarded before the payload until
+              now. It is the one thing on this card no KPI can say. */}
+          {/* A lesson name and a percentage, with nothing saying what either
+              one is. "פתיחה, הקנייה ותרגול סטנדרטי א · 52% הצלחה" is a
+              catalogue title a teacher does not recognise next to a figure that
+              could be anything — attendance, completion, a mark. Both get a
+              label, and the number says what it counted. */}
+          {brief.worked_on?.title ? (
+            <div className="tch-brief__worked" dir="auto">
+              <span className="tch-brief__workedLabel">{t('tch.brief.workedLabel')}</span>
+              <bdi className="tch-brief__workedTitle">{brief.worked_on.title}</bdi>
+              {/* `success_rate` is a 0–1 fraction everywhere in this codebase,
+                  and every other screen renders it through this one helper.
+                  Printed raw it reads "0.516% הצלחה". */}
+              {brief.worked_on.success_rate != null ? (
+                <span className="tch-brief__workedRate">
+                  {brief.worked_on.attempts
+                    ? t('tch.brief.workedRateOf', {
+                        rate: ratePercent(brief.worked_on.success_rate),
+                        attempts: brief.worked_on.attempts,
+                      })
+                    : t('tch.brief.workedRate', {
+                        rate: ratePercent(brief.worked_on.success_rate),
+                      })}
+                </span>
+              ) : null}
             </div>
+          ) : null}
+        </div>
+
+        {/* The assignment form opens in a centred dialog.
+            It used to expand under the row, on the reasoning that choosing
+            people and editing a goal is a task rather than a confirmation.
+            That reasoning was right about the weight and wrong about the
+            placement: a form growing inside the hero pushes the whole
+            dashboard down while the teacher fills it in, and the hero is the
+            one object on this page that is supposed to hold still. */}
+        {brief.actions
+          .filter((action) => action.kind === 'assign_subgroup')
+          .map((action) => (
+            <SubGroupAssign
+              key={actionId(action)}
+              candidates={action.learner_ids}
+              id={actionId(action)}
+              defaultTitle={t('tch.subgroup.defaultTitle', { label: action.label ?? '' })}
+              groupId={groupId}
+              names={names}
+              open={openAction === actionId(action)}
+              onClose={() => setOpenAction(null)}
+            />
           ))}
       </div>
     </section>
+    </>
   )
 }
 
@@ -220,7 +289,7 @@ function actionId(action: BriefAction): string {
 }
 
 function ActionButton({
-  action, isOpen, onToggle, t,
+  action, isOpen, onToggle, names, t,
 }: {
   action: BriefAction
   isOpen: boolean
@@ -229,6 +298,13 @@ function ActionButton({
   names: Map<string, string | null>
   t: (key: string, params?: Record<string, string | number>) => string
 }) {
+  /* At exactly one child the label names them. `t()` has no plural engine, so
+     the shared key rendered "משימה ל-1 תלמידים" — and a name is better than a
+     fixed singular anyway: a teacher about to write for one child should read
+     who, not how many. */
+  const count = action.learner_ids.length
+  const only = count === 1 ? action.learner_ids[0] : null
+  const name = only ? (names.get(only) || only) : ''
   if (action.kind === 'open_roster') {
     return (
       <button
@@ -237,7 +313,7 @@ function ActionButton({
         onClick={() => navigate(`/teacher/students?filter=${action.filter ?? 'attention'}`)}
       >
         <Icon name="users" size={15} aria-hidden />
-        {t('tch.brief.action.openRoster', { count: action.learner_ids.length })}
+        {t(countKey('tch.brief.action.openRoster', count), { count, name })}
       </button>
     )
   }
@@ -250,8 +326,8 @@ function ActionButton({
       onClick={onToggle}
     >
       <Icon name="wand" size={15} aria-hidden />
-      {t('tch.brief.action.assign', {
-        count: action.learner_ids.length, label: action.label ?? '',
+      {t(countKey('tch.brief.action.assign', count), {
+        count, name, label: action.label ?? '',
       })}
     </button>
   )
@@ -261,7 +337,7 @@ function ActionButton({
 function BulletText({
   bullet, t,
 }: {
-  bullet: DigestBullet
+  bullet: BriefBullet
   t: (key: string, params?: Record<string, string | number>) => string
 }) {
   if (bullet.text) return <>{bullet.text}</>

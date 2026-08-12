@@ -65,6 +65,20 @@ async def is_admin(user_id: str) -> bool:
     return await org_repository.get_admin(user_id) is not None
 
 
+def _ordered(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """A stable order, by the name the teacher actually reads.
+
+    `list_groups` has no sort, so the driver returned natural order — which for
+    an admin (who gets every group) meant the class picker defaulted to a
+    different class on different page loads, and the dashboard silently changed
+    which class it was describing. Sorted here rather than at each call site
+    because this is the one funnel every caller goes through.
+    """
+    return sorted(groups, key=lambda group: (
+        str(group.get("name") or "").casefold(), str(group.get("id") or group.get("_id") or "")
+    ))
+
+
 async def groups_for_teacher(teacher_id: str) -> list[dict[str, Any]]:
     """Groups the teacher may access (admin → all, school-admins → their schools)."""
     admin = await org_repository.get_admin(teacher_id)
@@ -73,8 +87,10 @@ async def groups_for_teacher(teacher_id: str) -> list[dict[str, Any]]:
             scoped: list[dict[str, Any]] = []
             for school_id in admin["school_ids"]:
                 scoped.extend(await org_repository.list_groups(school_id=school_id))
-            return [_public_group(group) for group in scoped]
-        return [_public_group(group) for group in await org_repository.list_groups()]
+            return _ordered([_public_group(group) for group in scoped])
+        return _ordered(
+            [_public_group(group) for group in await org_repository.list_groups()]
+        )
 
     links = await org_repository.list_teacher_links(teacher_id=teacher_id)
     groups = []
@@ -82,7 +98,7 @@ async def groups_for_teacher(teacher_id: str) -> list[dict[str, Any]]:
         group = await org_repository.get_group(link["group_id"])
         if group is not None and group.get("active") is not False:
             groups.append(_public_group(group))
-    return groups
+    return _ordered(groups)
 
 
 async def learners_in_group(group_id: str) -> list[str]:

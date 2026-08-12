@@ -48,10 +48,19 @@ REQUIRED_INDEXES: dict[str, list[tuple[str, ...]]] = {
     "teacher_alerts": [("teacher_id", "seq"), ("learner_id",), ("status",)],
     "notifications": [("recipient_id", "created_at")],
     "teacher_kudos": [("learner_id", "delivered_at")],
+    # The message thread. Read by (conversation, created_at) on every open and
+    # by (conversation, sender, read_at) on every mark-read.
+    "dm_messages": [("conversation_id", "created_at"), ("conversation_id", "sender", "read_at")],
+    "dm_conversations": [("teacher_id", "last_message_at")],
     "teacher_insights": [("learner_id", "deleted")],
     "group_digests": [("week",)],
     "teacher_briefs": [("generated_at",)],
     "teacher_tool_calls": [("teacher_id", "at")],
+    # A child's disclosure and what was done about it. Read by (learner, at)
+    # every time a teacher opens the wellbeing tab.
+    "wellbeing_flags": [("learner_id", "at"), ("status",)],
+    # Cached goal suggestions, read by _id and cleared per learner.
+    "goal_suggestions": [("learner_id",)],
 }
 
 # Brain paths the teacher assistant must never be able to read.

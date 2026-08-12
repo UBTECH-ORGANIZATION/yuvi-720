@@ -1,0 +1,71 @@
+/* Motion for the hero scenes.
+ *
+ * Every animation here is a *derived* variant of one still composition: the
+ * scene is designed to read correctly with all of this switched off, which is
+ * what makes the reduced-motion block at the bottom a one-liner rather than a
+ * second set of assets to maintain.
+ */
+
+.yv-scene {
+  inline-size: 100%;
+  block-size: auto;
+  max-block-size: 320px;
+  overflow: visible;
+}
+
+/* A slow breath, so the robot is alive without being busy. */
+.yv-scene__figure {
+  transform-origin: 200px 200px;
+  animation: yv-breathe 7s ease-in-out infinite;
+}
+
+@keyframes yv-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-6px) scale(1.012); }
+}
+
+/* The antenna bulb is the one bright point on the robot; a slow pulse makes it
+   read as "powered" rather than as a dot. */
+.yv-scene__bulb { animation: yv-pulse 3.4s ease-in-out infinite; transform-origin: center; }
+
+@keyframes yv-pulse {
+  0%, 100% { opacity: .75; }
+  50% { opacity: 1; }
+}
+
+.yv-scene__sparks { animation: yv-twinkle 4.2s ease-in-out infinite; }
+
+@keyframes yv-twinkle {
+  0%, 100% { opacity: .35; transform: scale(.94); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+
+.yv-scene__point { animation: yv-nudge 2.6s ease-in-out infinite; }
+
+@keyframes yv-nudge {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(7px); }
+}
+
+.yv-scene__zzz { animation: yv-drift 6s ease-in-out infinite; }
+
+@keyframes yv-drift {
+  0%, 100% { transform: translateY(0); opacity: .5; }
+  50% { transform: translateY(-9px); opacity: .9; }
+}
+
+.yv-scene__thoughts { animation: yv-drift 5.2s ease-in-out infinite; }
+
+/* The composition is designed as a still, so this is a full stop rather than a
+   softening. Nothing is hidden — the art is the point, the motion is not. */
+@media (prefers-reduced-motion: reduce) {
+  .yv-scene__figure,
+  .yv-scene__bulb,
+  .yv-scene__sparks,
+  .yv-scene__point,
+  .yv-scene__zzz,
+  .yv-scene__thoughts {
+    animation: none;
+    transform: none;
+  }
+}

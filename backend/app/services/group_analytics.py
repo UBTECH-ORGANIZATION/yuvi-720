@@ -191,7 +191,10 @@ async def learning_gaps(
             gaps.append({
                 "objective_id": objective_id,
                 "subject": subject_id,
-                "label": kata_catalog.localized_objective_title(objective_id, "he"),
+                # The screen-facing accessor: empty rather than the dotted MOE key,
+                # which is what reached the dashboard's gaps list. The clients
+                # below already drop an empty label instead of printing it.
+                "label": kata_catalog.objective_title(objective_id, "he") or "",
                 "struggling_count": len(struggling),
                 "mastered_count": mastered,
                 "with_evidence": with_evidence,

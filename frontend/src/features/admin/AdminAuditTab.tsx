@@ -13,6 +13,7 @@ import { useI18n } from '../../i18n/I18nProvider'
 import { listAudit, type AuditEntry, type Person } from '../../services/admin'
 import type { AdminData } from './AdminConsolePage'
 import { AdminSection, nameOf } from './AdminShared'
+import { formatDayTime } from '../../i18n/dates'
 
 export function AdminAuditTab({ data }: { data: AdminData }) {
   const { t } = useI18n()
@@ -100,7 +101,7 @@ export function AuditRow({ entry, people }: { entry: AuditEntry; people: Person[
           {t('adm.audit.by', { actor: nameOf(people, entry.actor_id) })}
         </span>
         <time className="adm-auditRow__at" dateTime={entry.at}>
-          {new Date(entry.at).toLocaleString()}
+          {formatDayTime(entry.at)}
         </time>
       </div>
       <div className="adm-auditRow__target">

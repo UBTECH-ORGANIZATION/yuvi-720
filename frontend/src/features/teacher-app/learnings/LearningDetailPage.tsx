@@ -25,6 +25,9 @@ import { useI18n } from '../../../i18n/I18nProvider'
 import {
   getLearningDetail, type HardQuestion, type LearningDetail,
 } from '../../../services/teacher'
+import { ObjectiveLine } from '../shared/ObjectiveRef'
+import { subjectLabel } from '../shared/subjectLabel'
+import { learningName } from './learningRows'
 import { questionLabel, ratePercent, rateTone } from './TeacherLearningsPage'
 import './teacher-learnings.css'
 
@@ -84,6 +87,7 @@ export function LearningDetailPage({ groupId, componentId }: {
   if (error || !view) return <ErrorState title={t('tch.error')} />
 
   const learning = view.learning
+  const name = learningName(learning)
   const questions = view.questions
   // Hardest first: the reason a teacher opened this page.
   const ranked = [...questions].sort(
@@ -102,14 +106,29 @@ export function LearningDetailPage({ groupId, componentId }: {
           {t('tch.learnings.backToList')}
         </button>
         <div className="tch-learningDetail__titles">
-          <h1 dir="auto">{learning.title}</h1>
+          {/* Same naming rule as the card that opened this page, so the two
+              agree — including the untitled case, where the id is shown as an
+              id rather than in the slot a name belongs in. */}
+          <h1 dir="auto" className={name.named ? undefined : 'tch-learning__idTitle'}>
+            {name.title}
+          </h1>
           <p className="tch-learningDetail__meta" dir="auto">
             {[
-              learning.subject ? t(`tch.subject.${learning.subject}`) : null,
+              subjectLabel(learning.subject, t),
+              name.named ? null : t('tch.learnings.unnamed'),
+              name.rawId,
               learning.unit_title,
-              learning.objective_title,
             ].filter(Boolean).join(' · ')}
           </p>
+          {/* The objective, openable. This page reports how the lesson went;
+              the goal it serves — and what that goal asks a child to be able
+              to do — was a name at the end of a meta line. */}
+          {name.title !== learning.objective_title ? (
+            <ObjectiveLine
+              objectiveId={learning.objective_id}
+              fallback={learning.objective_title ?? undefined}
+            />
+          ) : null}
         </div>
       </header>
 

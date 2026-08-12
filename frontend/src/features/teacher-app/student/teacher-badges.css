@@ -63,3 +63,32 @@
   position: absolute;
   inset-inline-start: calc(var(--sp-3) * -1);
 }
+
+/* ── the card grid ─────────────────────────────────────────────────────────
+   The layout is `badge-card` from the child's own badges screen — imported
+   rather than re-drawn, so a teacher and a student looking at the same badge
+   are looking at the same object. What is added here is teacher-only: the list
+   of objectives the badge certifies. */
+.tch-badges__grid { list-style: none; margin: 0; padding: 0; }
+
+.tch-badgeCard { block-size: 100%; }
+.tch-badgeCard.is-locked { opacity: .82; }
+
+.tch-badgeCard .tch-badge__certifies {
+  inline-size: 100%;
+  margin-block-start: var(--sp-2);
+  font-size: var(--sp-fs-xs, 0.78rem);
+  text-align: start;
+}
+.tch-badgeCard .tch-badge__certifies summary {
+  cursor: pointer;
+  color: var(--sp-primary-600);
+  text-align: center;
+}
+.tch-badgeCard .tch-badge__certifies ul {
+  margin: var(--sp-2) 0 0;
+  padding-inline-start: var(--sp-4);
+  display: grid;
+  gap: 2px;
+  color: var(--sp-ink-500);
+}

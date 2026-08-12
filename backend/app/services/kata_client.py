@@ -106,16 +106,30 @@ def _string_list(values: object) -> list[str]:
     return sorted(seen)
 
 
-def _title_translations(unit: dict[str, Any]) -> dict[str, str]:
-    """Map Kata ``titleTranslations`` (by language label) to locale codes."""
-    raw = unit.get("titleTranslations")
+def title_translations(row: dict[str, Any]) -> dict[str, str]:
+    """Kata ``titleTranslations`` as a locale-keyed map.
+
+    Kata keys this field **by locale code** — ``{"he": …, "ar": …, "en": …}`` —
+    not by the language label it uses for ``languages`` ("Hebrew"). This mapped
+    only the labels, so every key missed, the map came back empty, and the unit
+    fell back to its flat ``title``. That flat title is an English machine label
+    on the CET rows, so a Hebrew teacher read "Writing coordinates of a point"
+    as the name of a lesson called "כתיבת שיעורי נקודה - 1א" — the Hebrew was
+    in the payload the whole time.
+
+    Both spellings are accepted, because the two shapes come from the same
+    provider and a field that changes which one it uses must not silently empty
+    the map again.
+    """
+    raw = row.get("titleTranslations")
     if not isinstance(raw, dict):
         return {}
     out: dict[str, str] = {}
     for label, text in raw.items():
-        locale = _KATA_LANGUAGE_TO_LOCALE.get(str(label).strip().casefold())
-        if locale and text:
-            out[locale] = str(text)
+        key = str(label).strip().casefold()
+        locale = _KATA_LANGUAGE_TO_LOCALE.get(key) or (key if key in _LOCALE_TO_KATA_LANGUAGE else None)
+        if locale and str(text or "").strip():
+            out[locale] = str(text).strip()
     return out
 
 
@@ -334,7 +348,7 @@ def normalize_unit(unit: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": unit_id,
         "title": str(unit.get("title") or ""),
-        "titles": _title_translations(unit),
+        "titles": title_translations(unit),
         "sub_topic": sub_topic,
         "objective_id": objective_id,
         # A sub-topic summary (§3.4): a review resource, never a goal to master.
@@ -413,7 +427,11 @@ def normalize_objective(row: dict[str, Any]) -> dict[str, Any]:
         value = row.get(key)
         if not isinstance(value, dict):
             return {}
-        titles = {str(k): str(v) for k, v in (value.get("titleTranslations") or {}).items()}
+        # The same helper the units use. These two normalizers read the same
+        # provider field and used to disagree about how it is keyed, which is
+        # how one of them shipped a broken map for months while the other
+        # worked.
+        titles = title_translations(value)
         return {
             "id": str(value.get("id") or ""),
             # Hebrew-first: the flat `title` on a curriculum row is an English
@@ -429,9 +447,7 @@ def normalize_objective(row: dict[str, Any]) -> dict[str, Any]:
         # A paragraph, not a display label — good grounding for the coach and the
         # teacher view; the UI shows the sub-topic title instead.
         "description": str(row.get("title") or ""),
-        "descriptions": {
-            str(k): str(v) for k, v in (row.get("titleTranslations") or {}).items()
-        },
+        "descriptions": title_translations(row),
         "order": int(order) if isinstance(order, (int, float)) else None,
         "curriculum": _level("curriculum"),
         "subject_area": _level("subjectArea"),

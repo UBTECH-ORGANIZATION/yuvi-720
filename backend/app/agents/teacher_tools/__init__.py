@@ -24,10 +24,11 @@ def install() -> None:
     """Register every tool. Safe to call repeatedly."""
     if registry.all_tools():
         return
-    from app.agents.teacher_tools import data_tools, help_tools
+    from app.agents.teacher_tools import action_tools, data_tools, help_tools
 
     data_tools.register_all()
     help_tools.register_all()
+    action_tools.register_all()
 
 
 install()

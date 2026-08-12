@@ -109,6 +109,11 @@ async def _stream_visual_tail(
             }
             yield f"data: {json.dumps(status, ensure_ascii=False)}\n\n"
             visual = await render_visual(scene)
+            # None means the still renderers had nothing to draw. The message
+            # stands on its own; an empty bubble would be worse than no bubble.
+            if visual is None:
+                yield f"data: {json.dumps({'visual_status': 'none'}, ensure_ascii=False)}\n\n"
+                return
             attached = await sessions.attach_visual(
                 learner_id,
                 conversation_id,

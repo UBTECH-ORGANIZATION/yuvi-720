@@ -20,10 +20,12 @@ import {
 import { useI18n } from '../../../i18n/I18nProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import {
-  approveStudentGoal, assignStudentGoal, getStudentGoals, suggestStudentGoals,
+  approveStudentGoal, assignStudentGoal, getGoalSuggestions, getStudentGoals,
+  suggestStudentGoals,
   type ApprovalResult, type GoalConversation, type GoalDraft, type StudentGoal,
 } from '../../../services/teacher'
-import { RawEvidence, withFallback } from '../shared/EvidenceDisclosure'
+import { withFallback } from '../shared/EvidenceDisclosure'
+import { describeSignal } from '../shared/evidenceText'
 import './teacher-goals.css'
 
 interface Props { learnerId: string }
@@ -177,16 +179,37 @@ export function GoalComposer({ learnerId, language, subject, onAssigned, framed 
 }) {
   const { t } = useI18n()
   const [drafts, setDrafts] = useState<GoalDraft[] | null>(null)
+  const [madeAt, setMadeAt] = useState<string | null>(null)
+  const [stale, setStale] = useState(false)
   const [isSuggesting, setIsSuggesting] = useState(false)
   const [title, setTitle] = useState('')
   const [steps, setSteps] = useState('')
   const [deadline, setDeadline] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
+  /* What was suggested last time, if anything — read only, no model call. A
+     teacher who was here yesterday sees the same three today, immediately,
+     instead of a button that spends a request to say the same thing. */
+  useEffect(() => {
+    let active = true
+    setDrafts(null); setMadeAt(null); setStale(false)
+    getGoalSuggestions(learnerId, language, subject)
+      .then((result) => {
+        if (!active || !result.goals?.length) return
+        setDrafts(result.goals)
+        setMadeAt(result.generated_at)
+        setStale(result.stale)
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [learnerId, language, subject])
+
   const suggest = async () => {
     setIsSuggesting(true)
     const result = await suggestStudentGoals(learnerId, language, subject).catch(() => null)
     setDrafts(result?.goals ?? [])
+    setMadeAt(result?.generated_at ?? null)
+    setStale(false)
     setIsSuggesting(false)
   }
 
@@ -212,15 +235,35 @@ export function GoalComposer({ learnerId, language, subject, onAssigned, framed 
     <Frame className="tch-composer" data-tour="teacher.goalComposer">
       <SectionHeader title={t('tch.goals.compose')} subtitle={t('tch.goals.compose.hint')} />
 
-      <button
-        type="button"
-        className="sp-btn sp-btn--sm sp-btn--ghost"
-        onClick={() => void suggest()}
-        disabled={isSuggesting}
-      >
-        <Icon name="wand" size={15} aria-hidden="true" />
-        {isSuggesting ? t('tch.goals.suggesting') : t('tch.goals.suggest')}
-      </button>
+      {/* Asked for once. There is no button to press again for a different
+          answer to the same question: three grounded suggestions that change on
+          every press are three suggestions a teacher learns to disbelieve, and
+          the re-roll is paid for each time. New observations bring new ones —
+          nothing else does. */}
+      {!drafts?.length || stale ? (
+        <button
+          type="button"
+          className="sp-btn sp-btn--sm sp-btn--ghost"
+          onClick={() => void suggest()}
+          disabled={isSuggesting}
+        >
+          <Icon name="wand" size={15} aria-hidden="true" />
+          {isSuggesting ? t('tch.goals.suggesting')
+            : stale ? t('tch.goals.suggest.again') : t('tch.goals.suggest')}
+        </button>
+      ) : null}
+
+      {drafts?.length && madeAt ? (
+        <p className="tch-composer__made" dir="auto">
+          {t(stale ? 'tch.goals.suggest.moved' : 'tch.goals.suggest.made', {
+            /* The page's language, not the browser's: `8/12/2026` inside a
+               Hebrew sentence is an American date nobody on this screen reads. */
+            date: new Date(madeAt).toLocaleDateString(
+              language === 'he' ? 'he-IL' : language === 'ar' ? 'ar' : 'en-GB',
+              { day: 'numeric', month: 'short' }),
+          })}
+        </p>
+      ) : null}
 
       {drafts?.length ? (
         <ul className="tch-drafts">
@@ -262,7 +305,7 @@ export function GoalComposer({ learnerId, language, subject, onAssigned, framed 
 }
 
 function DraftCard({ draft, onUse }: { draft: GoalDraft; onUse: () => void }) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const [open, setOpen] = useState(false)
 
   // No evidence means no grounded suggestion. Saying so is the honest answer;
@@ -298,17 +341,18 @@ function DraftCard({ draft, onUse }: { draft: GoalDraft; onUse: () => void }) {
           <Icon name={open ? 'chevronUp' : 'chevronLeft'} size={13} aria-hidden="true" />
           {t('tch.evidence.why')}
         </button>
+        {/* One sentence, keyed off the signal — the same treatment a
+            recommendation gets. This used to print the whole evidence payload
+            the model was given: the struggle list, the challenge dicts and the
+            description CONTAINER, rendered as `label: value` lines. A teacher
+            asking "why this goal?" was answered with `blocks [object Object]`
+            and `events since generation 4`. */}
         {open ? (
-          <>
-            <p className="tch-draft__signal" dir="auto">
-              {withFallback(
-                t(`tch.signal.${draft.because.signal}`),
-                `tch.signal.${draft.because.signal}`,
-                draft.because.signal,
-              )}
-            </p>
-            <RawEvidence raw={draft.because.raw} />
-          </>
+          <div className="tch-draft__because">
+            {describeSignal(draft.because.signal, draft.because.value,
+                            draft.because.raw, t, language)
+              .map((sentence, index) => <p key={index} dir="auto">{sentence}</p>)}
+          </div>
         ) : null}
 
         <button type="button" className="sp-btn sp-btn--sm sp-btn--ghost" onClick={onUse}>

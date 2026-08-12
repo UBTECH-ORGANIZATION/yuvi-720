@@ -211,6 +211,8 @@ def _message_payload(document: dict[str, Any]) -> dict[str, Any]:
     }
     if isinstance(document.get("visual"), dict):
         payload["visual"] = document["visual"]
+    if isinstance(document.get("meta"), dict):
+        payload["meta"] = document["meta"]
     return payload
 
 
@@ -886,12 +888,18 @@ async def append_turn(
     conversation_title: Optional[str] = None,
     title_source: Optional[str] = None,
     question_key: Optional[str] = None,
+    assistant_meta: Optional[dict] = None,
 ) -> None:
     """Append an exchange to bounded prompt memory and durable transcript.
 
     ``question_key`` (component|item|question) tags both messages with the
     question the learner was on, so the chat can scope messages per question and
     restore the current question's thread on resume.
+
+    ``assistant_meta`` rides on the assistant message only. The teacher
+    assistant uses it for the action buttons an answer offered, and for whether
+    the teacher took one: a restored thread that showed a live button again
+    would happily write a second goal.
     """
     await _ensure_indexes()
     safe_id = normalize_learner_id(learner_id)
@@ -956,6 +964,7 @@ async def append_turn(
         "text_after": "",
         "at": assistant_at,
         "question_key": question_key,
+        "meta": assistant_meta if isinstance(assistant_meta, dict) else None,
     })
     title = " ".join((conversation_title or "").split())[:72]
     resolved_title_source = title_source if title and title_source in {"model", "fallback"} else "pending"
@@ -1074,6 +1083,61 @@ async def attach_visual(
         and message.get("conversation_id") == safe_session
     ):
         message.update({"visual": visual, "content": text, "text_after": text_after})
+        _write_history_fallback(history)
+        return True
+    return False
+
+
+async def record_action_outcome(
+    owner_id: str,
+    session_id: str,
+    message_id: str,
+    action_id: str,
+    outcome: dict[str, Any],
+    role: str = "coach",
+) -> bool:
+    """Stamp what the teacher did with one offered action, on its own message.
+
+    This is what makes a restored thread safe. The alternative — rendering the
+    buttons again on reload — invites a second goal for the same child, because
+    nothing on the page would know the first one had already been assigned.
+
+    Ownership is part of the query, not checked after the read: another
+    teacher's conversation id must not be writable even by accident.
+    """
+    safe_id = normalize_learner_id(owner_id)
+    safe_session = normalize_session_id(session_id)
+    stamped = {**outcome, "at": _now()}
+
+    collection = _get_collection_named("agent_messages")
+    if collection is not None:
+        try:
+            result = await collection.update_one(
+                {
+                    "_id": message_id,
+                    "learner_id": safe_id,
+                    "conversation_id": safe_session,
+                    "agent_role": role,
+                },
+                {"$set": {f"meta.outcomes.{action_id}": stamped}},
+            )
+            if result.matched_count:
+                return True
+        except Exception as exc:
+            print(f"⚠️ action outcome write failed, using fallback: {exc}")
+
+    history = _read_history_fallback()
+    message = history["messages"].get(message_id)
+    if (
+        message
+        and message.get("learner_id") == safe_id
+        and message.get("conversation_id") == safe_session
+    ):
+        meta = message.get("meta") or {}
+        outcomes = dict(meta.get("outcomes") or {})
+        outcomes[action_id] = stamped
+        meta["outcomes"] = outcomes
+        message["meta"] = meta
         _write_history_fallback(history)
         return True
     return False

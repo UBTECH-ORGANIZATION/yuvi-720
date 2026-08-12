@@ -246,6 +246,7 @@ async def student_activity(
     learner_id: str,
     component_id: Optional[str] = Query(None),
     subject: Optional[str] = Query(None),
+    language: str = Query("he"),
     session=Depends(require_teacher_session),
 ):
     """Per-question support usage — hints, explanations, chat turns, time.
@@ -256,11 +257,35 @@ async def student_activity(
     safe_id = await _guard_learner(session, learner_id)
     if safe_id is None:
         return _denied()
-    from app.services import learner_activity
+    from app.services import kata_catalog, learner_activity, learning_analytics
+
     rows = await learner_activity.question_summary(
         safe_id, component_id=component_id, subject=subject
     )
-    return _ok({"questions": rows})
+    # The catalogue is what turns `q1` into "שאלה 2 · סעיף א" and a component id
+    # into a lesson name, so it has to be loaded before the rows are labelled.
+    # A failure degrades to unlabelled rows rather than to no activity at all.
+    try:
+        await kata_catalog.ensure_loaded()
+    except Exception:
+        pass
+    return _ok({"questions": learning_analytics.label_learner_rows(
+        rows, language=normalize_language(language))})
+
+
+@router.get("/students/{learner_id}/trends")
+async def student_trends(
+    learner_id: str,
+    days: int = Query(30, ge=7, le=120),
+    session=Depends(require_teacher_session),
+):
+    """The series behind the profile's charts — one learner, never a group."""
+    from app.services import learner_trends
+
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    return _ok(await learner_trends.learner_trends(safe_id, days=days))
 
 
 @router.get("/students/{learner_id}/badges")
@@ -365,6 +390,30 @@ async def list_student_goals(learner_id: str, session=Depends(require_teacher_se
     return _ok({"conversations": await mentoring.list_conversations(safe_id, "teacher")})
 
 
+@router.get("/students/{learner_id}/goals/suggest")
+async def cached_student_goal_suggestions(
+    learner_id: str,
+    language: str = "he",
+    subject: str | None = None,
+    session=Depends(require_teacher_session),
+):
+    """What was already suggested for this learner. Never generates.
+
+    The goals tab opens with this, so a teacher who has been here before sees
+    the same three suggestions they saw last time, immediately and for nothing.
+    """
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    from app.services import mentoring_assist
+    return _ok(await mentoring_assist.goal_suggestions(
+        safe_id, session["sub"],
+        language=normalize_language(language),
+        subject=subject,
+        allow_generate=False,
+    ))
+
+
 @router.post("/students/{learner_id}/goals/suggest")
 async def suggest_student_goals(
     learner_id: str, data: dict, session=Depends(require_teacher_session)
@@ -374,17 +423,19 @@ async def suggest_student_goals(
     Drafts only — nothing is written to the learner's profile here. The teacher
     edits and then calls the assign endpoint, so the model can never put a goal
     in front of a child unattended.
+
+    Cached: this returns what is stored unless the evidence behind it has moved.
+    There is no way to ask for a different answer to the same question.
     """
     safe_id = await _guard_learner(session, learner_id)
     if safe_id is None:
         return _denied()
     from app.services import mentoring_assist
-    goals = await mentoring_assist.suggest_goals_for_teacher(
+    return _ok(await mentoring_assist.goal_suggestions(
         safe_id, session["sub"],
         language=normalize_language(data.get("language")),
         subject=data.get("subject"),
-    )
-    return _ok({"goals": goals})
+    ))
 
 
 @router.post("/students/{learner_id}/goals")
@@ -541,6 +592,80 @@ async def list_kudos(
     ]})
 
 
+# ── direct messages ──────────────────────────────────────────────────────────
+# The teacher's half of the screened channel. The learner's half is in
+# `routes/me.py`, where every other learner-scoped route lives — one service
+# behind both, so there is exactly one place a message can be written.
+
+
+@router.get("/students/{learner_id}/messages")
+async def list_messages(
+    learner_id: str, session=Depends(require_teacher_session)
+):
+    """This pair's thread, oldest first."""
+    from app.services import direct_messages
+
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    rows = await direct_messages.list_thread(session["sub"], safe_id)
+    return _ok({"messages": [
+        {
+            "id": row["_id"],
+            "sender": row.get("sender"),
+            "text": row.get("text") or "",
+            "created_at": row.get("created_at"),
+            "read_at": row.get("read_at"),
+        }
+        for row in rows
+    ]})
+
+
+@router.post("/students/{learner_id}/messages")
+async def send_message(
+    learner_id: str, data: dict, session=Depends(require_teacher_session)
+):
+    """Write to one learner. Screened before it is stored; 422 if it is refused.
+
+    No `_guard_learner` call here on purpose: `send_message` asserts the pair
+    itself, so the check cannot be skipped by a future second caller. Doing it
+    twice would also make the 403 depend on which check happened to run first.
+    """
+    from app.services import direct_messages
+
+    try:
+        record = await direct_messages.send_message(
+            sender=direct_messages.SENDER_TEACHER,
+            teacher_id=session["sub"],
+            learner_id=normalize_learner_id(learner_id),
+            text=str(data.get("text") or ""),
+            language=normalize_language(data.get("language")),
+        )
+    except direct_messages.DirectMessageError as exc:
+        # `detail` is a STRING for a moderation refusal, which is how the client
+        # tells it apart from FastAPI's own 422 (whose detail is an array).
+        return JSONResponse(content={"detail": exc.code},
+                            status_code=exc.status_code, headers=_NO_STORE)
+    return _ok({
+        "id": record["_id"], "text": record["text"],
+        "sender": record["sender"], "created_at": record["created_at"],
+    })
+
+
+@router.patch("/students/{learner_id}/messages/read")
+async def mark_messages_read(
+    learner_id: str, session=Depends(require_teacher_session)
+):
+    from app.services import direct_messages
+
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    changed = await direct_messages.mark_read(
+        session["sub"], safe_id, reader=direct_messages.SENDER_TEACHER)
+    return _ok({"read": changed})
+
+
 @router.get("/groups/{group_id}/digest")
 async def group_digest(
     group_id: str,
@@ -573,3 +698,32 @@ async def student_meeting_prep(
     prep = await mentoring_assist.suggest_meeting_prep(
         safe_id, session["sub"], language=normalize_language(language))
     return _ok(prep)
+
+
+@router.get("/students/{learner_id}/read")
+async def learner_read(
+    learner_id: str,
+    language: str = Query("he"),
+    refresh: bool = Query(False),
+    session=Depends(require_teacher_session),
+):
+    """What Yuvi makes of this student, in words. Cached per child per day.
+
+    The goal composer's left-hand column. Not a draft of a goal — that is
+    `/goals/suggest` — but the reading a teacher would otherwise have to
+    assemble themselves from four panels on the profile.
+    """
+    from app.services import learner_read as reads
+
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    try:
+        return _ok(await reads.get(
+            safe_id, session["sub"],
+            language=normalize_language(language), refresh=refresh,
+        ))
+    except reads.LearnerReadError:
+        # A blank panel that says why beats an error page over a dialog the
+        # teacher opened to do something else entirely.
+        return _ok({"unavailable": True})

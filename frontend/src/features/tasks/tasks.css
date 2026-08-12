@@ -1,0 +1,961 @@
+/* The math isolate — half of the Hebrew+math contract.
+ *
+ * `isolate`, NOT `embed` and NOT `override`. Isolation takes the formula out of
+ * the surrounding paragraph's bidi run entirely, so `3 + 4 = 7` keeps its own
+ * operators in its own order inside a Hebrew sentence — unisolated it renders
+ * `7=4+3`. `embed` leaves it participating in the parent run; `override` forces
+ * every character LTR and mangles any Hebrew that slips in.
+ *
+ * Measured, not assumed: `MathText` ALSO sets `dir="ltr"` on the element, and
+ * the HTML default stylesheet gives any element with a `dir` attribute
+ * `unicode-bidi: isolate`. Either mechanism is sufficient on its own — verified
+ * both ways in `scripts/math-rtl-check.mjs`. They are both kept because they
+ * fail independently: a refactor that drops the attribute keeps the class, and
+ * a stylesheet that fails to load keeps the attribute. Neither is decoration.
+ *
+ * Only formulas with no strong-LTR character reverse — `3 + 4 = 7` and `-4` do,
+ * `x² - 5x + 6 = 0` never does, because its leading `x` anchors the run. That
+ * is why the check's fixtures are all pure arithmetic: a formula with a letter
+ * in it cannot demonstrate the bug, and a check that cannot fail reports
+ * success forever.
+ *
+ * `white-space: nowrap` keeps an equation from breaking across a line, which
+ * would put half of it at the end of one line and half at the start of the
+ * next — in RTL, on opposite sides of the page.
+ *
+ * The tiny inline margin is deliberate: bidi collapses the visual gap where a
+ * Hebrew word meets a formula, so without it the words run into the numbers.
+ * `mathSegments` also inserts a real space; the two together survive the cases
+ * where one of them is not enough.
+ */
+
+.yv-math {
+  unicode-bidi: isolate;
+  direction: ltr;
+  white-space: nowrap;
+  margin-inline: 0.1em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Inside a math run, a stacked fraction reads better than "3/4" — but only
+   where there is room. Kept as a modifier so the plain form is the default. */
+.yv-math--display {
+  display: inline-block;
+  font-size: 1.05em;
+}
+
+/* ── the player ─────────────────────────────────────────────────────────────
+ *
+ * Everything below is laid out with logical properties (`inline-start`,
+ * `margin-inline`) rather than left/right. The whole app runs at `dir=rtl` by
+ * default and mirrors to LTR for English — a physical `left` here is a bug
+ * that only shows up in one language.
+ */
+
+.yv-player {
+  display: grid;
+  gap: var(--sp-5);
+  max-inline-size: 760px;
+  margin-inline: auto;
+  padding-block-end: var(--sp-8);
+}
+
+.yv-player__steps {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.yv-player__step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-surface);
+  color: var(--sp-ink-400);
+  font-size: var(--sp-fs-sm);
+  cursor: pointer;
+}
+
+.yv-player__step.is-at {
+  background: var(--sp-primary-100);
+  border-color: transparent;
+  color: var(--sp-primary-700);
+  font-weight: 600;
+}
+
+.yv-player__questions { display: grid; gap: var(--sp-4); }
+
+.yv-player__limit {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--sp-warn-600);
+  font-size: var(--sp-fs-sm);
+  margin: 0;
+}
+
+.yv-player__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+/* "Forward" is a direction, and in Hebrew it is the other one. The glyph is
+   drawn pointing right, so under `dir=rtl` it was an arrow back sitting on the
+   button that goes on — read literally, the deck's own controls disagreed with
+   the page they were on. Flipped here rather than in the icon set: the same
+   glyph is a rotated up/down in the ordering question two files away, where a
+   direction-aware flip would be wrong. */
+[dir="rtl"] .yv-player__next .sp-icon { transform: scaleX(-1); }
+
+.yv-player__confirm {
+  display: grid;
+  gap: var(--sp-2);
+  justify-items: end;
+}
+
+.yv-player__confirm p { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-400); }
+.yv-player__confirmBtns { display: flex; gap: var(--sp-2); }
+
+/* ── a question ─────────────────────────────────────────────────────────── */
+
+.yv-q {
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+  border-radius: 18px;
+  padding: var(--sp-5);
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.yv-q.is-correct { border-color: var(--sp-success-600); }
+.yv-q.is-partial { border-color: var(--sp-warn-600); }
+.yv-q.is-wrong   { border-color: var(--sp-danger-600, #d1495b); }
+
+.yv-q__head { display: flex; gap: var(--sp-3); align-items: flex-start; }
+
+.yv-q__num {
+  flex: none;
+  inline-size: 26px;
+  block-size: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--sp-primary-100);
+  color: var(--sp-primary-700);
+  font-size: var(--sp-fs-sm);
+  font-weight: 600;
+  /* A bare numeral takes the paragraph's direction otherwise, which puts the
+     2 of "12" on the wrong side in Hebrew. */
+  unicode-bidi: isolate;
+}
+
+.yv-q__prompt { font-size: var(--sp-fs-md); color: var(--sp-ink-900); line-height: 1.6; }
+.yv-q__note { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-300); }
+
+.yv-opts { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+.yv-opts--pair { grid-template-columns: 1fr 1fr; }
+
+.yv-opt {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--sp-border);
+  border-radius: 14px;
+  background: var(--sp-surface);
+  text-align: start;
+  cursor: pointer;
+  color: var(--sp-ink-700);
+}
+
+.yv-opt:hover:not(:disabled) { border-color: var(--sp-primary-500); }
+.yv-opt:disabled { cursor: default; }
+.yv-opt.is-picked { background: var(--sp-primary-050); border-color: var(--sp-primary-500); }
+
+.yv-opt__mark {
+  flex: none;
+  inline-size: 18px;
+  block-size: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--sp-border-strong);
+}
+
+.yv-opt__mark--box { border-radius: 5px; }
+.yv-opt.is-picked .yv-opt__mark {
+  border-color: var(--sp-primary-600);
+  background: var(--sp-primary-600);
+  box-shadow: inset 0 0 0 3px var(--sp-surface);
+}
+
+.yv-blanks { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+/* Answers are formulas more often than words, so a blank reads left-to-right
+   and gets tabular figures — the same treatment `.yv-math` gets. */
+.yv-blank {
+  inline-size: 160px;
+  direction: ltr;
+  text-align: start;
+  font-variant-numeric: tabular-nums;
+}
+
+.yv-open { inline-size: 100%; resize: vertical; }
+
+.yv-order { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+.yv-order__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  background: var(--sp-surface);
+}
+
+.yv-order__pos {
+  flex: none;
+  inline-size: 22px;
+  text-align: center;
+  color: var(--sp-ink-300);
+  unicode-bidi: isolate;
+}
+
+.yv-order__text { flex: 1; }
+.yv-order__moves { display: flex; gap: 2px; }
+/* One arrow glyph, rotated — two icons would be two things to keep in step. */
+.yv-order__up   { transform: rotate(-90deg); }
+.yv-order__down { transform: rotate(90deg); }
+
+.yv-match { display: grid; gap: var(--sp-2); }
+.yv-match__row {
+  display: grid;
+  grid-template-columns: 1fr minmax(140px, 40%);
+  gap: var(--sp-3);
+  align-items: center;
+}
+.yv-match__term { font-weight: 500; }
+
+.yv-q__hint, .yv-q__verdict {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+}
+
+.yv-q__hint { color: var(--sp-warn-600); }
+.yv-q__hintBtn { align-self: start; }
+.yv-q__verdict.is-correct { color: var(--sp-success-600); }
+.yv-q__verdict.is-partial { color: var(--sp-warn-600); }
+.yv-q__verdict.is-wrong   { color: var(--sp-danger-600, #d1495b); }
+.yv-q__verdict.is-skipped { color: var(--sp-ink-300); }
+.yv-q__said { color: var(--sp-ink-500); }
+
+.yv-q__why {
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: 12px;
+  background: var(--sp-bg-subtle, var(--sp-primary-050));
+  color: var(--sp-ink-500);
+  font-size: var(--sp-fs-sm);
+  line-height: 1.6;
+}
+
+/* ── the deck ───────────────────────────────────────────────────────────── */
+
+.yv-deck { display: grid; gap: var(--sp-4); }
+
+/* ── the stage ──────────────────────────────────────────────────────────────
+ *
+ * The slide is laid out at 1280×720 and scaled by a transform on the element
+ * itself; this frame is what the observer measures and what reserves the right
+ * amount of vertical space (the scaled height, set inline).
+ *
+ * A transformed element still occupies its untransformed box, so without the
+ * explicit height the page would reserve 720px for a slide drawn at 400.
+ */
+.yv-stage {
+  position: relative;
+  inline-size: 100%;
+  overflow: hidden;
+}
+.yv-stage > .yv-slide {
+  position: absolute;
+  inset-block-start: 0;
+  /* Logical, so the origin is the leading edge in both directions — with a
+     physical `left` a scaled RTL slide detaches from the side it started on. */
+  inset-inline-start: 0;
+  transform-origin: top var(--yv-origin, left);
+}
+[dir='rtl'] .yv-stage > .yv-slide { --yv-origin: right; }
+
+/* The phone. The slide keeps every layout, every ground and every accent — it
+   simply is not scaled, so the type is the type. A deck cannot be projected or
+   printed from a phone, which is what the fixed stage buys. */
+.yv-stage.is-flow { overflow: visible; }
+.yv-stage.is-flow > .yv-slide {
+  position: static;
+  inline-size: 100%;
+  block-size: auto;
+  min-block-size: 380px;
+  transform: none;
+  padding: var(--sp-5);
+}
+.yv-stage.is-flow .yv-slide__title { font-size: 1.6rem; }
+.yv-stage.is-flow .yv-slide__body { font-size: 1.05rem; }
+.yv-stage.is-flow .yv-slide__bullets li { font-size: 1rem; padding-inline-start: 34px; }
+.yv-stage.is-flow .yv-slide__figure { font-size: 4.5rem; }
+.yv-stage.is-flow .yv-slide__quote p { font-size: 1.5rem; }
+.yv-stage.is-flow .yv-slide__cover,
+.yv-stage.is-flow .yv-slide__sides,
+.yv-stage.is-flow .yv-slide__split { grid-template-columns: 1fr; }
+.yv-stage.is-flow .yv-slide__tiles { grid-template-columns: 1fr; }
+
+/* Every type size on a slide multiplies by this. The fit loop steps it down
+   when the content overflows the stage, so a full slide shrinks its text
+   instead of scrolling or clipping. */
+.yv-slide { --yv-text-fit: 1; }
+
+/* ── slides ─────────────────────────────────────────────────────────────────
+ *
+ * A slide is the one screen in this product a child looks at for a minute at a
+ * time without being asked to do anything, and it was a form card: one flat
+ * surface, one hairline border, no accent, no depth, no motion.
+ *
+ * What it gets instead, and deliberately in CSS rather than in generated
+ * markup — `features/tasks` renders model output as React and never as HTML,
+ * so a "richer slide" cannot mean handing a model the markup:
+ *
+ *   · an accent per layout, so a fact does not look like a comparison
+ *   · a layered ground (gradient + a woven pattern) instead of a flat fill
+ *   · a staggered entrance, which is most of what reads as "made"
+ *
+ * All of it from tokens, so dark mode costs nothing, and all of the motion
+ * behind `prefers-reduced-motion` — the composition survives without it.
+ */
+
+.yv-slide {
+  --yv-accent: var(--sp-primary-600);
+  --yv-accent-soft: var(--sp-primary-100, var(--sp-primary-050));
+  position: relative;
+  isolation: isolate;
+  padding: 56px 64px;
+  border-radius: 24px;
+  border: 1px solid var(--sp-border);
+  background:
+    radial-gradient(120% 85% at 100% 0%,
+                    color-mix(in srgb, var(--yv-accent) 14%, transparent), transparent 60%),
+    linear-gradient(160deg,
+                    color-mix(in srgb, var(--yv-accent) 6%, var(--sp-surface)),
+                    var(--sp-surface) 55%);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.04),
+    0 12px 32px -18px color-mix(in srgb, var(--yv-accent) 55%, transparent);
+  container-type: inline-size;
+  overflow: hidden;
+}
+
+/* The woven ground. One repeating-gradient rather than an asset: it is
+   decoration, it must not cost a request, and it tints with the accent. */
+.yv-slide__wash {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.5;
+  background-image:
+    repeating-linear-gradient(45deg,
+      color-mix(in srgb, var(--yv-accent) 5%, transparent) 0 1px,
+      transparent 1px 14px);
+  -webkit-mask-image: radial-gradient(80% 60% at 85% 10%, #000, transparent 70%);
+  mask-image: radial-gradient(80% 60% at 85% 10%, #000, transparent 70%);
+}
+
+.yv-slide__inner {
+  display: grid;
+  /* `safe center`, not `start`: a slide is a fixed-height stage and a two-line
+     one left a third of a metre of empty card under it. `safe` is what keeps a
+     bullet-heavy slide that overflows anchored at the top instead of centring
+     its overflow off both edges. */
+  align-content: safe center;
+  gap: calc(var(--sp-4) * var(--yv-text-fit));
+  block-size: 100%;
+}
+
+/* One accent per layout. A slide that states a fact and a slide that compares
+   two things are different kinds of thing, and looking identical was what made
+   a deck read as a list of paragraphs. */
+.yv-slide[data-layout='big_number'],
+.yv-slide[data-layout='fact'] {
+  --yv-accent: var(--sp-teal-600, #0f9b8e);
+  --yv-accent-soft: var(--sp-teal-100, #d7f3f0);
+}
+.yv-slide[data-layout='compare'] {
+  --yv-accent: var(--sp-info-600);
+  --yv-accent-soft: var(--sp-info-100);
+}
+.yv-slide[data-layout='timeline'] {
+  --yv-accent: var(--sp-warn-600);
+  --yv-accent-soft: var(--sp-warn-100);
+}
+.yv-slide[data-layout='summary'] {
+  --yv-accent: var(--sp-success-600);
+  --yv-accent-soft: var(--sp-success-100);
+}
+
+/* Type is written in px against the 1280×720 stage, not in `rem` or `cqi`.
+   That is the whole reason the stage is fixed: one number per element, chosen
+   at the size it will be projected, multiplied by the fit when a slide is too
+   full. A `clamp()` here would be a second, invisible scaling system fighting
+   the first. */
+.yv-slide__title {
+  margin: 0;
+  font-size: calc(44px * var(--yv-text-fit));
+  line-height: 1.2;
+  font-weight: 800;
+  color: var(--sp-ink-900);
+  letter-spacing: -0.015em;
+}
+
+/* The rule under the title is the accent's main appearance in a text slide. */
+.yv-slide__title::after {
+  content: '';
+  display: block;
+  inline-size: 88px;
+  block-size: 4px;
+  margin-block-start: 18px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--yv-accent), transparent);
+}
+
+.yv-slide__body {
+  margin: 0;
+  font-size: calc(23px * var(--yv-text-fit));
+  line-height: 1.7;
+  color: var(--sp-ink-700);
+  max-inline-size: 62ch;
+}
+
+/* The entrance. Each child a beat behind the one before — this is the part
+   that reads as "someone built this" rather than "a template rendered". */
+@media (prefers-reduced-motion: no-preference) {
+  .yv-slide__inner > * {
+    animation: yv-slide-rise 0.42s cubic-bezier(0.22, 0.68, 0.32, 1) both;
+  }
+  .yv-slide__inner > :nth-child(1) { animation-delay: 0.02s; }
+  .yv-slide__inner > :nth-child(2) { animation-delay: 0.09s; }
+  .yv-slide__inner > :nth-child(3) { animation-delay: 0.16s; }
+  .yv-slide__inner > :nth-child(4) { animation-delay: 0.23s; }
+  .yv-slide__bullets li {
+    animation: yv-slide-rise 0.4s cubic-bezier(0.22, 0.68, 0.32, 1) both;
+  }
+  .yv-slide__bullets li:nth-child(1) { animation-delay: 0.20s; }
+  .yv-slide__bullets li:nth-child(2) { animation-delay: 0.27s; }
+  .yv-slide__bullets li:nth-child(3) { animation-delay: 0.34s; }
+  .yv-slide__bullets li:nth-child(4) { animation-delay: 0.41s; }
+  .yv-slide__bullets li:nth-child(n+5) { animation-delay: 0.48s; }
+}
+
+@keyframes yv-slide-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* The number IS the slide: sized to the card, weighted, and tinted with the
+   accent rather than sitting in body colour. */
+.yv-slide__figure {
+  margin: 0;
+  font-size: calc(190px * var(--yv-text-fit));
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  letter-spacing: -0.03em;
+  background: linear-gradient(160deg, var(--yv-accent),
+                              color-mix(in srgb, var(--yv-accent) 55%, var(--sp-ink-900)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Bullets as cards rather than as list markers — each one is a point, and a
+   disc in the margin gave them all the weight of a shopping list. */
+.yv-slide__bullets {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--sp-2);
+}
+.yv-slide__bullets li {
+  position: relative;
+  padding: calc(14px * var(--yv-text-fit)) 22px;
+  padding-inline-start: 46px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--yv-accent) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--yv-accent) 14%, transparent);
+  font-size: calc(21px * var(--yv-text-fit));
+  line-height: 1.55;
+}
+.yv-slide__bullets li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: var(--sp-4);
+  inset-block-start: 1.05em;
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: var(--yv-accent);
+}
+
+.yv-slide__sides { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+.yv-slide__side {
+  padding: var(--sp-4);
+  border-radius: 16px;
+  background: var(--sp-surface-2);
+  border: 1px solid var(--sp-border);
+  border-block-start: 3px solid var(--yv-accent);
+}
+/* The second side takes the counter-accent, so a comparison reads as two
+   things rather than as one thing printed twice. */
+.yv-slide__side:nth-child(2) { border-block-start-color: var(--sp-ink-300); }
+.yv-slide__sideTitle { margin: 0 0 var(--sp-2); font-size: var(--sp-fs-md); font-weight: 700; }
+.yv-slide__side ul { margin: 0; padding-inline-start: var(--sp-5); display: grid; gap: var(--sp-1); }
+
+/* A rail behind the step numbers, so a timeline looks like a sequence. */
+.yv-slide__steps {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-4);
+}
+.yv-slide__steps::before {
+  content: '';
+  position: absolute;
+  inset-block: 13px;
+  inset-inline-start: 13px;
+  inline-size: 2px;
+  background: linear-gradient(var(--yv-accent), transparent);
+  opacity: 0.35;
+}
+.yv-slide__steps li { display: flex; gap: var(--sp-3); align-items: flex-start; }
+.yv-slide__steps h4 { margin: 0; font-weight: 700; }
+.yv-slide__steps p  { margin: 0; color: var(--sp-ink-500); line-height: 1.6; }
+
+.yv-slide__stepNum {
+  flex: none;
+  inline-size: 26px;
+  block-size: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--yv-accent, var(--sp-primary-600));
+  color: #fff;
+  font-size: var(--sp-fs-sm);
+  font-weight: 700;
+  unicode-bidi: isolate;
+  /* Above the rail behind it, and opaque so the line stops at the circle. */
+  position: relative;
+  z-index: 1;
+}
+
+.yv-slide__split { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); align-items: center; }
+.yv-slide__img, .yv-slide__visual { inline-size: 100%; border-radius: 14px; }
+
+.yv-slide__fact {
+  padding: var(--sp-5);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--yv-accent) 10%, var(--sp-surface));
+  border: 1px solid color-mix(in srgb, var(--yv-accent) 22%, transparent);
+  border-inline-start: 5px solid var(--yv-accent);
+  font-size: calc(27px * var(--yv-text-fit));
+  line-height: 1.6;
+}
+
+.yv-slide__assembled { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-300); }
+
+.yv-deck__nav { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); }
+.yv-deck__dots { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; }
+
+.yv-deck__dots button {
+  inline-size: 9px;
+  block-size: 9px;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  background: var(--sp-border-strong);
+  cursor: pointer;
+}
+
+.yv-deck__dots .is-seen { background: var(--sp-primary-500); }
+.yv-deck__dots .is-at   { background: var(--sp-primary-700); transform: scale(1.35); }
+
+/* ── the subject grounds ────────────────────────────────────────────────────
+ *
+ * A maths deck should not look like a history deck. The reference implementation
+ * gets this right and is the one idea worth taking wholesale: graph paper behind
+ * an equation, a hex grid behind a cell, ruled parchment behind a timeline.
+ *
+ * Two differences. The subject is chosen by CODE from the task's own spec, never
+ * by the model — a model picking its own theme is how two decks on the same
+ * subject end up unrelated. And the palette is ours: the ground changes the
+ * pattern and the accent, never the surface colour, so every deck is still
+ * recognisably this product and dark mode costs nothing.
+ */
+
+.yv-deck[data-ground='math'] .yv-slide {
+  --yv-accent: var(--sp-success-600);
+  --yv-accent-soft: var(--sp-success-100);
+}
+.yv-deck[data-ground='math'] .yv-slide__wash {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--yv-accent) 16%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--yv-accent) 16%, transparent) 1px, transparent 1px);
+  background-size: 40px 40px;
+  -webkit-mask-image: linear-gradient(200deg, #000, transparent 78%);
+  mask-image: linear-gradient(200deg, #000, transparent 78%);
+}
+
+.yv-deck[data-ground='science'] .yv-slide {
+  --yv-accent: var(--sp-teal-600, #0f9b8e);
+  --yv-accent-soft: var(--sp-teal-100, #d7f3f0);
+}
+/* The hex grid, as a data URI rather than a file: it is decoration and must
+   not cost a request. `currentColor` cannot reach inside a background image,
+   so the stroke is the one hard-coded colour on a slide — at 10% it reads as
+   texture in both themes. */
+.yv-deck[data-ground='science'] .yv-slide__wash {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='48'%3E%3Cpath d='M28 0 56 12v24L28 48 0 36V12z' fill='none' stroke='%230f9b8e' stroke-opacity='.28'/%3E%3C/svg%3E");
+  -webkit-mask-image: radial-gradient(90% 70% at 88% 6%, #000, transparent 72%);
+  mask-image: radial-gradient(90% 70% at 88% 6%, #000, transparent 72%);
+}
+/* The scanline. One element's worth of identity for the whole subject. */
+.yv-deck[data-ground='science'] .yv-slide::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 12%;
+  block-size: 2px;
+  background: linear-gradient(90deg, transparent, var(--yv-accent), transparent);
+  filter: blur(0.5px);
+}
+
+.yv-deck[data-ground='history'] .yv-slide {
+  --yv-accent: var(--sp-warn-600);
+  --yv-accent-soft: var(--sp-warn-100);
+}
+.yv-deck[data-ground='history'] .yv-slide__wash {
+  background-image: repeating-linear-gradient(
+    0deg, transparent 0 33px,
+    color-mix(in srgb, var(--yv-accent) 22%, transparent) 33px 34px);
+  -webkit-mask-image: linear-gradient(#000, transparent 88%);
+  mask-image: linear-gradient(#000, transparent 88%);
+}
+
+.yv-deck[data-ground='nature'] .yv-slide {
+  --yv-accent: #3fa66b;
+  --yv-accent-soft: var(--sp-success-100);
+}
+.yv-deck[data-ground='nature'] .yv-slide__wash {
+  background-image:
+    radial-gradient(closest-side, color-mix(in srgb, var(--yv-accent) 20%, transparent), transparent),
+    radial-gradient(closest-side, color-mix(in srgb, var(--yv-accent) 14%, transparent), transparent);
+  background-size: 340px 340px, 220px 220px;
+  background-position: 88% -14%, 8% 108%;
+  background-repeat: no-repeat;
+  opacity: 0.9;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.yv-deck[data-ground='language'] .yv-slide {
+  --yv-accent: var(--sp-purple-600, var(--sp-primary-600));
+  --yv-accent-soft: var(--sp-purple-100, var(--sp-primary-100));
+}
+.yv-deck[data-ground='language'] .yv-slide__wash {
+  background-image: repeating-linear-gradient(
+    0deg, transparent 0 41px,
+    color-mix(in srgb, var(--yv-accent) 14%, transparent) 41px 42px);
+  -webkit-mask-image: linear-gradient(190deg, #000, transparent 70%);
+  mask-image: linear-gradient(190deg, #000, transparent 70%);
+}
+
+/* The per-layout accent still wins over the ground: the subject says which
+   deck this is, the layout says which KIND of slide. Declared after the grounds
+   for that reason. */
+.yv-deck .yv-slide[data-layout='summary'] {
+  --yv-accent: var(--sp-success-600);
+  --yv-accent-soft: var(--sp-success-100);
+}
+.yv-deck .yv-slide[data-layout='quote'] {
+  --yv-accent: var(--sp-purple-600, var(--sp-primary-600));
+}
+
+/* ── the layouts added with the stage ───────────────────────────────────── */
+
+/* Separate small ideas, each in its own tile. This is what `bullets` kept
+   trying to be whenever the points did not build on one another. */
+.yv-slide__tiles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.yv-slide__tiles[data-count='2'] { grid-template-columns: repeat(2, 1fr); }
+.yv-slide__tiles[data-count='4'] { grid-template-columns: repeat(2, 1fr); }
+.yv-slide__tiles li {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 22px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--yv-accent) 7%, var(--sp-surface));
+  border: 1px solid color-mix(in srgb, var(--yv-accent) 18%, transparent);
+  font-size: calc(19px * var(--yv-text-fit));
+  line-height: 1.5;
+}
+.yv-slide__tiles strong { font-size: calc(22px * var(--yv-text-fit)); color: var(--sp-ink-900); }
+.yv-slide__tiles span   { color: var(--sp-ink-500); }
+.yv-tile__emoji { font-size: calc(34px * var(--yv-text-fit)); line-height: 1; }
+
+/* Click to check yourself. Not scored, not reported — the deck is where a
+   child is allowed to just look at something. */
+.yv-slide__reveal {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 16px;
+}
+.yv-reveal {
+  inline-size: 100%;
+  min-block-size: calc(120px * var(--yv-text-fit));
+  padding: 20px;
+  display: grid;
+  gap: 8px;
+  align-content: center;
+  text-align: center;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--yv-accent) 22%, transparent);
+  background: color-mix(in srgb, var(--yv-accent) 5%, var(--sp-surface));
+  font-size: calc(20px * var(--yv-text-fit));
+  cursor: pointer;
+  transition: transform var(--sp-dur-fast) var(--sp-ease);
+}
+.yv-reveal:hover { transform: translateY(-2px); }
+.yv-reveal.is-open {
+  background: color-mix(in srgb, var(--yv-accent) 14%, var(--sp-surface));
+  border-color: var(--yv-accent);
+}
+.yv-reveal__front { font-weight: 700; color: var(--sp-ink-900); }
+.yv-reveal__back  { color: var(--sp-ink-700); font-size: calc(18px * var(--yv-text-fit)); }
+.yv-reveal__cue   { color: var(--sp-ink-300); font-size: calc(15px * var(--yv-text-fit)); }
+
+/* One sentence, at the size a sentence worth remembering deserves. */
+.yv-slide__quote {
+  margin: 0;
+  display: grid;
+  gap: 20px;
+  justify-items: center;
+  text-align: center;
+  padding-inline: 6%;
+}
+.yv-slide__quote p {
+  margin: 0;
+  font-size: calc(46px * var(--yv-text-fit));
+  line-height: 1.3;
+  font-weight: 700;
+  color: var(--sp-ink-900);
+  text-wrap: balance;
+}
+.yv-slide__quote cite {
+  font-style: normal;
+  font-size: calc(19px * var(--yv-text-fit));
+  color: var(--sp-ink-400);
+}
+.yv-slide__quote::before {
+  content: '"';
+  font-size: calc(120px * var(--yv-text-fit));
+  line-height: 0.6;
+  color: color-mix(in srgb, var(--yv-accent) 45%, transparent);
+}
+
+/* The opening slide: words on one side, the topic's authored art on the other.
+   `1fr auto` rather than two equal columns — the art is 960×540 and a half-slide
+   of it would dwarf a two-line title. */
+.yv-slide__cover {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 48px;
+  align-items: center;
+}
+.yv-slide__cover > div { display: grid; gap: 20px; align-content: center; }
+.yv-slide__cover .yv-slide__title { font-size: calc(58px * var(--yv-text-fit)); }
+.yv-slide__art { inline-size: 100%; max-block-size: 460px; object-fit: contain; }
+
+/* Two or three figures side by side — "3 מתוך 4" is two numbers, and one
+   number per slide is what made a deck of statistics repeat itself. */
+.yv-slide__figures {
+  display: flex;
+  justify-content: center;
+  align-items: end;
+  gap: 6%;
+  text-align: center;
+}
+.yv-slide__figures .yv-slide__figure { font-size: calc(120px * var(--yv-text-fit)); }
+.yv-slide__figures small { color: var(--sp-ink-500); font-size: calc(19px * var(--yv-text-fit)); }
+
+/* A diagram sits inside the slide's own space rather than beside it: the
+   scene renderer draws to its container, and a fixed height here is what stops
+   a tall figure pushing the text off a stage that cannot scroll. */
+.yv-slide__visual {
+  /* Block, NOT `grid` + `place-items: center`: the scene renderer measures its
+     own host to choose a height, and a centred grid item is sized to its
+     max-content — which for a self-measuring element is zero. It rendered as an
+     empty white box, which is a worse failure than not rendering at all. */
+  display: block;
+  inline-size: 100%;
+  min-block-size: 0;
+  overflow: hidden;
+}
+.yv-slide__visual > * { inline-size: 100%; }
+.yv-slide__visual video { inline-size: 100%; border-radius: 14px; }
+/* The figure keeps its own light ground in both themes, the same way the
+   coach's does — the element colours come from the scene spec and are shared
+   with the Manim renderer, which always draws onto a light frame. */
+.yv-slide__visual .sp-visual-scene {
+  border: 1px solid color-mix(in srgb, var(--yv-accent) 20%, transparent);
+}
+
+/* ── the teacher's half ─────────────────────────────────────────────────── */
+
+.yv-deck__teacher {
+  display: grid;
+  gap: var(--sp-3);
+  padding-block-start: var(--sp-2);
+  border-block-start: 1px solid var(--sp-border);
+}
+.yv-deck__tools { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; }
+.yv-deck__count { color: var(--sp-ink-300); font-size: var(--sp-fs-xs); }
+
+.yv-deck__notes {
+  display: grid;
+  gap: 4px;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: 12px;
+  background: var(--sp-bg-subtle, var(--sp-primary-050));
+  border-inline-start: 3px solid var(--sp-primary-500);
+}
+.yv-deck__notes strong { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+.yv-deck__notes p { margin: 0; font-size: var(--sp-fs-sm); line-height: 1.6; color: var(--sp-ink-700); }
+
+/* ── presenting ─────────────────────────────────────────────────────────── */
+
+.yv-deck.is-presenting {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  padding: var(--sp-4);
+  background: var(--sp-bg, var(--sp-bg-subtle));
+  align-content: center;
+}
+/* On a projector the deck is the only thing in the room. The dots stay — a
+   presenter needs to know where they are — everything else goes. */
+.yv-deck.is-presenting .yv-deck__notes,
+.yv-deck.is-presenting .yv-deck__tools { display: none; }
+
+/* ── on paper ───────────────────────────────────────────────────────────── */
+
+/* Off screen entirely, and the only thing on paper. Rendered rather than
+   screenshotted server-side: printing this way keeps the real fonts, the real
+   bidi and vector diagrams, and needs no browser in the API image. */
+.yv-print { display: none; }
+
+@media print {
+  /* `visibility` rather than `display`, because the deck is nested deep in the
+     app shell and hiding an ancestor would hide the deck with it. */
+  body * { visibility: hidden; }
+  .yv-print, .yv-print * { visibility: visible; }
+  .yv-print {
+    display: block;
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    inline-size: 100%;
+  }
+  .yv-print .yv-slide {
+    inline-size: 100%;
+    block-size: auto;
+    aspect-ratio: 16 / 9;
+    border-radius: 0;
+    border: 0;
+    box-shadow: none;
+    break-after: page;
+    page-break-after: always;
+  }
+  .yv-print .yv-slide:last-child { break-after: auto; page-break-after: auto; }
+  /* The cue is an instruction to click, and paper does not. */
+  .yv-print .yv-reveal__cue { display: none; }
+  @page { size: landscape; margin: 0; }
+}
+
+/* ── study blocks ───────────────────────────────────────────────────────── */
+
+.yv-study { display: grid; gap: var(--sp-3); }
+.yv-study__prompt { margin: 0; color: var(--sp-ink-500); }
+.yv-study__cards {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.yv-card {
+  inline-size: 100%;
+  min-block-size: 96px;
+  padding: var(--sp-4);
+  border-radius: 14px;
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+  display: grid;
+  gap: var(--sp-2);
+  align-content: center;
+  text-align: center;
+  cursor: pointer;
+}
+
+.yv-card.is-open { background: var(--sp-primary-050); border-color: var(--sp-primary-500); }
+.yv-card__front { font-weight: 600; }
+.yv-card__back  { color: var(--sp-ink-500); font-size: var(--sp-fs-sm); }
+.yv-card__cue   { color: var(--sp-ink-300); font-size: var(--sp-fs-sm); }
+
+@media (max-width: 720px) {
+  .yv-slide__sides, .yv-slide__split, .yv-opts--pair { grid-template-columns: 1fr; }
+  .yv-match__row { grid-template-columns: 1fr; }
+}
+
+/* A blank that knows what it is: `x = [ ]`. Two bare boxes for the
+   coordinates of a point are two boxes a child can fill in the wrong order
+   without ever being told which was which. */
+.yv-blank__pair { display: inline-flex; align-items: center; gap: var(--sp-2); }
+.yv-blank__label {
+  font-weight: 700;
+  color: var(--sp-ink-700);
+  unicode-bidi: isolate;
+  white-space: nowrap;
+}
+
+/* The teacher's rehearsal: mark, or start over. Nothing is sent. */
+.yv-player__demo { display: flex; align-items: center; gap: var(--sp-3); }
+.yv-player__demoScore {
+  font-weight: 700;
+  color: var(--sp-primary-700, var(--sp-primary-600));
+  unicode-bidi: isolate;
+}

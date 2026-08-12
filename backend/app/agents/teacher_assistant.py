@@ -46,6 +46,10 @@ _LANG_NAME = {"he": "Hebrew", "en": "English", "ar": "Arabic"}
 UNKNOWN_NO_DATA = "tch.assistant.unknown.noData"
 UNKNOWN_OUT_OF_SCOPE = "tch.assistant.unknown.outOfScope"
 UNKNOWN_NOT_ENOUGH = "tch.assistant.unknown.notEnoughEvidence"
+# The model offered a card and wrote nothing to go with it. Distinct from the
+# line above because the two are opposite situations: one has no answer, the
+# other has a ready-to-press action and no sentence introducing it.
+UNKNOWN_OFFER_ONLY = "tch.assistant.unknown.offerOnly"
 UNAVAILABLE = "tch.assistant.unavailable"
 
 
@@ -72,6 +76,10 @@ reason code itself. `learner_has_no_activity` becomes "לא נרשמה פעיל�
 4. Call `list_students` before assuming any learner id exists. Never invent one.
 5. If a tool returns an error of `not_authorized`, tell the teacher that student is not in \
 one of their groups. Do not speculate about the student.
+6. Before telling a teacher you cannot find a student, look in EVERY group they teach — \
+call `list_my_groups` and `list_students` with no group id. A teacher asks about their \
+children, not about whichever class is selected on screen. Saying a real child does not \
+exist is worse than any other mistake you can make here.
 
 REFERRING TO STUDENTS:
 Tools return learner ids, never names — that is deliberate, you are not given student names. \
@@ -106,6 +114,50 @@ the child with their {{{{student:<id>}}}} reference, or use a neutral noun. "א�
 next step. Never a numbered menu of options.
 - The only markdown that renders is `-` bullets and **bold**. Nothing else — no headings, no \
 tables, no code spans.
+
+ACTIONS — you hand the teacher doors, you never walk them through one:
+- When there is somewhere in the app that answers the rest of the question, call `navigate` \
+and let the teacher press it. Never write "go to the students screen" in your answer — the \
+button IS the sentence. Do not describe a button you just offered; that says it twice.
+- ALWAYS write a sentence. Every answer has prose in it, including the ones that offer a \
+card — the card is a control, not a reply, and a teacher who gets buttons and no words \
+has not been answered.
+- What you must not do is *draw* the button. NEVER type button-like markup — not \
+`[navigate_button: ...]`, not `[[action:...]]`, not `[כפתור: ...]`, not any bracketed \
+pseudo-widget. Say what you are proposing ("הכנתי יעד לארבעת התלמידים שלא נכנסו השבוע"); \
+do not restate its caption and do not tell the teacher to press it.
+- When a next step would be a goal, a note or a good word, call `draft_goal`, `draft_note` \
+or `draft_kudos`. These write NOTHING: they put a filled-in form in front of the teacher, \
+who confirms it. Say what you are proposing in one sentence, not what the form contains.
+- RESOLVE BEFORE YOU DRAFT. When the teacher describes a *set* of students rather than \
+naming one — "the inactive ones", "whoever needs attention", "the students who have not \
+started" — call `list_students` with the matching `filter` first. That tool returns every \
+id in the set. Then draft for ALL of them. Never draft for one child out of a described \
+set, and never say you have no way to find them: that is what the filter is for.
+- If the resolved set is empty, say so plainly instead of drafting for someone else. If \
+the description is genuinely ambiguous — it could mean two different groups, or the \
+teacher named a number you cannot verify — ask ONE short question and draft nothing that \
+turn. A draft aimed at the wrong people costs the teacher more than a question does.
+- If a draft tool reports a field in `missing` that you cannot infer from the data, ask the \
+teacher for exactly that one thing, in one short question. Never offer a form you already \
+know is incomplete, and never ask for something you could have inferred.
+- When two or three follow-up questions would genuinely help, call `suggest_followups` \
+instead of listing them in prose. That is what keeps the one-offer rule and a useful set of \
+next steps both true.
+- A TASK is the step you have that changes what the class actually does next. When the \
+evidence you just fetched points at one — a lesson most of them failed, a question that \
+went wrong across the class, a goal nobody is practising — end your answer with ONE short \
+question asking whether to build a task on it ("רוצה שנכין על זה משימה?"). Ask; do not \
+draft yet.
+- When the teacher says yes, or asks for a task outright, call `draft_task` — and fill it \
+in from THIS conversation. You already know what went wrong, in which lesson and in whose \
+words; a form the teacher has to retype all of that into is worse than no offer. Pass the \
+lesson's `component_id` as `source_component_id` whenever the task is about material they \
+studied, so the questions land on that lesson rather than on the topic in general.
+- Never offer a task twice in one answer, and never both ask about one and draft it in the \
+same turn. Offering is a question, drafting is an answer to it.
+- A good word is read by a CHILD, in their teacher's name. Warm, specific, about something \
+that actually happened — never generic praise.
 
 {screen_line}
 
@@ -193,9 +245,23 @@ async def _round(
 
 async def _run_tools(
     message: dict[str, Any], context: TeacherToolContext, trace: list[dict[str, Any]],
+    offers: Optional[list[dict[str, Any]]] = None,
 ) -> list[dict[str, Any]]:
-    """Dispatch every tool call in one assistant message, appending tool results."""
+    """Dispatch every tool call in one assistant message, appending tool results.
+
+    Two things are harvested, not one. `trace` is the grounding proof the teacher
+    can open; `offers` is what the browser turns into buttons. Both come from the
+    tool layer rather than from the model's prose, so both inherit the scope
+    check and the audit row that `registry.dispatch` performs.
+    """
     results: list[dict[str, Any]] = []
+    # Derived from the accumulator rather than kept locally, so the dedupe holds
+    # across every tool round in the turn, not just within one message.
+    seen_offers = {
+        json.dumps({k: v for k, v in offer.items() if k != "id"},
+                   sort_keys=True, default=str)
+        for offer in (offers or [])
+    }
     for call in (message.get("tool_calls") or []):
         function = call.get("function") or {}
         name = function.get("name") or ""
@@ -213,11 +279,45 @@ async def _run_tools(
                       "empty" if result.get("data") is None else "ok",
             "reason": result.get("reason") or result.get("error"),
         })
+
+        offer = result.get("offer")
+        if offers is not None and isinstance(offer, dict):
+            # Two identical chips is what a model calling `draft_goal` twice in
+            # one turn looks like to the teacher, and pressing either writes the
+            # same goal. Compared on content, not on the tool name, because the
+            # same draft can arrive from more than one route.
+            fingerprint = json.dumps(offer, sort_keys=True, default=str)
+            if fingerprint not in seen_offers:
+                seen_offers.add(fingerprint)
+                # Ids are stable within a turn so the client can key rows and
+                # record an outcome against exactly the button pressed.
+                offers.append({"id": f"{name}:{len(offers)}", **offer})
+
+        # The offer's *payload* is for the browser, not the model: echoing it
+        # back invites the model to describe the button in prose as well, which
+        # is the duplicated-offer failure the VOICE rules already fight.
+        #
+        # But deleting it outright was worse. The model then had no evidence in
+        # its own transcript that a button existed at all — while the prompt
+        # told it "the button IS the sentence" — so it did the only thing left
+        # and typed one, which is where `[navigate_button: ...]` came from. A
+        # stub says a card rendered without saying what is on it.
+        # Mirrors the harvest condition above rather than testing `offer` alone:
+        # with no accumulator there is no card, and claiming one would be a lie
+        # the model cannot check.
+        echoed = {k: v for k, v in result.items() if k != "offer"}
+        if offers is not None and isinstance(offer, dict):
+            echoed["offer_rendered"] = True
+            echoed["offer_note"] = (
+                "An action card with its button is already visible to the teacher. "
+                "Still write your one sentence saying what you are proposing — "
+                "but do not draw the button in text or restate its caption."
+            )
         results.append({
             "role": "tool",
             "tool_call_id": call.get("id"),
             "name": name,
-            "content": json.dumps(result, ensure_ascii=False, default=str),
+            "content": json.dumps(echoed, ensure_ascii=False, default=str),
         })
     return results
 
@@ -256,6 +356,7 @@ async def run_assistant(
     messages = _opening_messages(context, user_message, history)
 
     trace: list[dict[str, Any]] = []
+    offers: list[dict[str, Any]] = []
     text: Optional[str] = None
 
     for index in range(teacher_tools.MAX_ROUNDS):
@@ -266,7 +367,7 @@ async def run_assistant(
 
         if message.get("tool_calls"):
             messages.append(message)
-            messages.extend(await _run_tools(message, context, trace))
+            messages.extend(await _run_tools(message, context, trace, offers))
             if context.budget_exhausted():
                 break
             continue
@@ -279,7 +380,7 @@ async def run_assistant(
         forced = await _round(messages, context, index=teacher_tools.MAX_ROUNDS, force_tools=True)
         if isinstance(forced, dict) and forced.get("tool_calls"):
             messages.append(forced)
-            messages.extend(await _run_tools(forced, context, trace))
+            messages.extend(await _run_tools(forced, context, trace, offers))
             final = await _round(messages, context, index=teacher_tools.MAX_ROUNDS + 1)
             text = (final or {}).get("content") if isinstance(final, dict) else None
             text = (text or "").strip() or None
@@ -288,7 +389,16 @@ async def run_assistant(
             return {"text_key": UNKNOWN_NO_DATA, "text": None, "tools": trace, "grounded": False}
 
     if not text:
-        return {"text_key": UNKNOWN_NOT_ENOUGH, "text": None, "tools": trace, "grounded": False}
+        # A model that drafted a card and then said nothing has still done the
+        # work: the offer passed the scope check and is ready to press. Throwing
+        # it away and printing "not enough evidence" tells the teacher their
+        # request failed when it succeeded. Say the honest thing instead and
+        # keep the card. (The prompt requires prose; this is the net under it.)
+        return {
+            "text_key": UNKNOWN_OFFER_ONLY if offers else UNKNOWN_NOT_ENOUGH,
+            "text": None, "tools": trace, "grounded": False,
+            "actions": list(offers),
+        }
 
     return {
         "text": text,
@@ -296,6 +406,7 @@ async def run_assistant(
         "tools": trace,
         # The teacher-visible claim: this answer stands on tool results.
         "grounded": bool(trace),
+        "actions": list(offers),
     }
 
 
@@ -332,6 +443,7 @@ async def run_assistant_stream(
     messages = _opening_messages(context, user_message, history)
 
     trace: list[dict[str, Any]] = []
+    offers: list[dict[str, Any]] = []
     text: Optional[str] = None
     streamed = False
     holder: list[dict[str, Any]] = []
@@ -370,8 +482,10 @@ async def run_assistant_stream(
 
         if message.get("tool_calls"):
             messages.append(message)
-            messages.extend(await _run_tools(message, context, trace))
+            messages.extend(await _run_tools(message, context, trace, offers))
             yield {"trace": list(trace)}
+            if offers:
+                yield {"actions": list(offers)}
             if context.budget_exhausted():
                 break
             continue
@@ -387,8 +501,10 @@ async def run_assistant_stream(
         forced = holder[0] if holder else None
         if isinstance(forced, dict) and forced.get("tool_calls"):
             messages.append(forced)
-            messages.extend(await _run_tools(forced, context, trace))
+            messages.extend(await _run_tools(forced, context, trace, offers))
             yield {"trace": list(trace)}
+            if offers:
+                yield {"actions": list(offers)}
             text = None
             async for event in play_round(teacher_tools.MAX_ROUNDS + 1):
                 yield event
@@ -402,8 +518,13 @@ async def run_assistant_stream(
             return
 
     if not text:
+        # Same reasoning as the non-streaming path: a drafted card is work the
+        # teacher asked for, and discarding it behind "not enough evidence"
+        # reports a failure that did not happen.
         yield {"done": {
-            "text_key": UNKNOWN_NOT_ENOUGH, "text": None, "tools": trace, "grounded": False,
+            "text_key": UNKNOWN_OFFER_ONLY if offers else UNKNOWN_NOT_ENOUGH,
+            "text": None, "tools": trace, "grounded": False,
+            "actions": list(offers),
         }}
         return
 
@@ -413,4 +534,8 @@ async def run_assistant_stream(
 
     yield {"done": {
         "text": text, "text_key": None, "tools": trace, "grounded": bool(trace),
+        # Repeated in the terminal frame so the route can persist them with the
+        # message: a reopened thread must show what was offered, and whether the
+        # teacher took it, or a stale button would write a second goal.
+        "actions": list(offers),
     }}

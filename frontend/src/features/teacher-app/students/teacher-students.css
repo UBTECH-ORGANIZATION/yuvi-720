@@ -5,6 +5,10 @@
 .tch-roster__head h1 { margin: 0; font-size: var(--sp-fs-2xl); color: var(--sp-ink-900); }
 .tch-roster__subtitle { margin: var(--sp-1) 0 var(--sp-4); color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
 
+/* The KPI strip is the first thing on the page after the title, so it owns the
+   gap down to the controls rather than the controls owning a gap upward. */
+.tch-roster .tch-stats { margin-block-end: var(--sp-4); }
+
 .tch-roster__controls {
   display: flex;
   gap: var(--sp-3);
@@ -49,26 +53,20 @@
 
 .tch-studentCard.is-flagged { border-inline-start: 3px solid var(--sp-warn-600); }
 
+.tch-studentCard__subgroups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin: 0;
+}
+
+/* The tag carries its own trailing margin for the table cell, which has no
+   gap of its own; inside the card the flex gap already spaces them. */
+.tch-studentCard__subgroups .tch-roster__subgroupTag { margin-inline-end: 0; }
+
 /* Never started: the card stays fully readable but stops looking like an
    active learner. Muted, not alarming — this is a gap to close, not a fault. */
-.tch-studentCard.is-idle .tch-studentCard__avatar {
-  background: var(--sp-ink-100);
-  color: var(--sp-ink-400);
-}
-
 .tch-studentCard__head { display: flex; align-items: center; gap: var(--sp-2); }
-
-.tch-studentCard__avatar {
-  inline-size: 38px;
-  block-size: 38px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--sp-gradient);
-  color: #fff;
-  font-weight: var(--sp-fw-bold);
-  flex-shrink: 0;
-}
 
 .tch-studentCard__evidence {
   margin: 0;
@@ -99,8 +97,6 @@
 /* ── the live board ───────────────────────────────────────────────────────── */
 /* Moved here from Home: "who is in the room right now" is a question about the
    class list, and on the dashboard it competed with the attention inbox. */
-.tch-roster__live { margin-block-end: var(--sp-4); }
-
 /* ── controls ─────────────────────────────────────────────────────────────── */
 
 .tch-roster__tools { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
@@ -108,22 +104,48 @@
 .tch-roster__views { display: inline-flex; gap: var(--sp-1); }
 .tch-roster__views .is-active { background: var(--sp-primary-100); color: var(--sp-primary-700); }
 
-.tch-roster__columns { position: relative; }
-.tch-roster__columns .is-active { background: var(--sp-primary-100); color: var(--sp-primary-700); }
+.tch-roster__more { position: relative; }
+.tch-roster__more .is-active { background: var(--sp-primary-100); color: var(--sp-primary-700); }
 
-.tch-roster__columnMenu {
+/* Everything that used to be a control of its own on the toolbar. Three things
+   stay outside — search, the status chips, the view toggle — because those are
+   the ones a teacher touches on most visits. */
+.tch-roster__moreMenu {
   position: absolute;
-  z-index: 20;
+  /* Above the assistant dock, which is a later sibling and would otherwise
+     paint over the part of the menu that reaches its edge. */
+  z-index: 60;
   inset-block-start: calc(100% + var(--sp-1));
-  inset-inline-end: 0;
-  min-inline-size: 190px;
+  /* Anchored to the START of the button so the panel opens INTO the page. With
+     `inset-inline-end` it grew toward the dock, and at 260px wide the last
+     hundred pixels — including the column checkboxes — sat underneath it and
+     could not be clicked. */
+  inset-inline-start: 0;
+  min-inline-size: 260px;
   display: grid;
-  gap: 2px;
-  padding: var(--sp-2);
+  gap: var(--sp-2);
+  padding: var(--sp-3);
   border: 1px solid var(--sp-border);
   border-radius: var(--sp-radius-md);
   background: var(--sp-surface);
   box-shadow: var(--sp-shadow-md);
+}
+
+.tch-roster__moreRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+
+.tch-roster__moreRow--stack { display: grid; justify-items: stretch; gap: var(--sp-1); }
+.tch-roster__moreRow select { font-size: var(--sp-fs-sm); padding-block: var(--sp-1); }
+
+.tch-roster__columnMenu {
+  display: grid;
+  gap: 2px;
 }
 
 .tch-roster__columnMenu label {
@@ -138,26 +160,6 @@
 }
 
 .tch-roster__columnMenu label:hover { background: var(--sp-bg-subtle); }
-
-/* Value filters sit below the chips rather than inside the header cells: a <th>
-   that is both a sort button and a select is a keyboard trap, and these narrow
-   the card view too. */
-.tch-roster__colFilters {
-  display: flex;
-  gap: var(--sp-3);
-  flex-wrap: wrap;
-  margin-block-end: var(--sp-4);
-}
-
-.tch-roster__colFilters label {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
-  font-size: var(--sp-fs-xs);
-  color: var(--sp-ink-400);
-}
-
-.tch-roster__colFilters select { font-size: var(--sp-fs-sm); padding-block: var(--sp-1); }
 
 /* ── the table view ───────────────────────────────────────────────────────── */
 
@@ -192,19 +194,6 @@
 
 .tch-roster__nameCell { display: flex; align-items: center; gap: var(--sp-2); }
 
-.tch-roster__avatar {
-  display: grid;
-  place-items: center;
-  flex: none;
-  inline-size: 26px;
-  block-size: 26px;
-  border-radius: 50%;
-  background: var(--sp-primary-100);
-  color: var(--sp-primary-700);
-  font-size: var(--sp-fs-xs);
-  font-weight: var(--sp-fw-semibold);
-}
-
 /* The status cell is a pill AND its evidence — the pill never travels alone. */
 .tch-roster__statusCell { white-space: normal; max-inline-size: 340px; }
 .tch-roster__evidence {
@@ -219,3 +208,130 @@
 /* Seven days without a trace is the number the product already treats as a
    dropped-off child, so the column says it rather than making the teacher count. */
 .tch-roster__table td.is-stale { color: var(--sp-warn-600); font-weight: var(--sp-fw-semibold); }
+
+/* ── sub-groups ───────────────────────────────────────────────────────────── */
+/* The class subtitle, promoted. It says which slice of the class everything
+   below is about, so it carries the weight of a control rather than a caption. */
+
+/* ── the class's named slices, as cards ────────────────────────────────────
+   A row of chips with a hidden caret menu said "filter" and hid "manage". These
+   say "objects you own": size, who is in them, and both actions in the open.
+   Selecting one is still what scopes the page. */
+.tch-subgroups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: var(--sp-2);
+  margin-block-start: var(--sp-3);
+  /* The scope control and the numbers it scopes were touching, so the group
+     cards read as part of the KPI strip rather than as the thing above it. */
+  margin-block-end: var(--sp-5);
+}
+
+.tch-subgroup {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: var(--sp-3);
+  border: 1px solid var(--sp-border);
+  border-radius: 14px;
+  background: var(--sp-surface);
+  text-align: start;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color var(--sp-dur-fast) var(--sp-ease),
+              box-shadow var(--sp-dur-fast) var(--sp-ease);
+}
+.tch-subgroup:hover { border-color: var(--tch-hover-ring, var(--sp-primary-500)); }
+.tch-subgroup.is-active {
+  border-color: var(--sp-primary-600);
+  box-shadow: 0 0 0 1px var(--sp-primary-600) inset;
+}
+
+/* The named card is a container, so its own selection lives on an inner button
+   — the two actions must not be nested inside the thing that selects. */
+.tch-subgroup--named { padding: 0; }
+.tch-subgroup__pick {
+  display: grid;
+  gap: 2px;
+  padding: var(--sp-3);
+  padding-inline-end: calc(var(--sp-3) + 56px);
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  text-align: start;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tch-subgroup__name { font-weight: 600; color: var(--sp-ink-900); }
+.tch-subgroup__count {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
+  font-variant-numeric: tabular-nums;
+}
+.tch-subgroup__dropped { color: var(--sp-warn-600); font-size: var(--sp-fs-xs); }
+
+/* Who is in it. One line, clipped — the card is a glance, and the dialog is
+   where the full list lives. */
+.tch-subgroup__who {
+  font-size: var(--sp-fs-xs, 0.78rem);
+  color: var(--sp-ink-300);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tch-subgroup__actions {
+  position: absolute;
+  inset-block-start: var(--sp-2);
+  inset-inline-end: var(--sp-2);
+  display: flex;
+  gap: 2px;
+}
+.tch-subgroup__action {
+  display: inline-flex;
+  padding: 5px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--sp-ink-300);
+  cursor: pointer;
+}
+.tch-subgroup__action:hover { background: var(--sp-bg-subtle); color: var(--sp-primary-600); }
+.tch-subgroup__action--danger:hover { color: var(--sp-danger-600, #d1495b); }
+
+.tch-subgroup--new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  border-style: dashed;
+  background: none;
+  color: var(--sp-primary-600);
+}
+.tch-subgroup--new .tch-subgroup__name { color: inherit; }
+
+/* ── the dialog that makes one ─────────────────────────────────────────────── */
+.tch-subgroupDialog { width: min(520px, 100%); max-block-size: min(86vh, 820px); }
+.tch-subgroupDialog__body { display: grid; gap: var(--sp-4); overflow-y: auto; }
+
+.tch-confirm { width: min(440px, 100%); }
+.tch-confirm__body { margin: 0; color: var(--sp-ink-500); line-height: 1.6; }
+
+.tch-roster__subgroupCell { white-space: normal; }
+
+.tch-roster__subgroupTag {
+  display: inline-block;
+  margin-inline-end: var(--sp-1);
+  padding: 1px var(--sp-2);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-bg-subtle);
+  color: var(--sp-ink-500);
+  font-size: var(--sp-fs-xs);
+}
+
+.tch-roster__none { color: var(--sp-ink-300, var(--sp-ink-400)); }

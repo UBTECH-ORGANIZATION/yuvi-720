@@ -57,6 +57,128 @@ async def _names_for(learner_ids: list[str]) -> dict[str, Optional[str]]:
     }
 
 
+async def _avatars_for(learner_ids: list[str]) -> tuple[dict[str, Any], set[str]]:
+    """Chosen avatars, and everyone who has chosen at all, in one projected query.
+
+    Two return values because they answer different questions. The first is what
+    to draw. The second is who has *decided* — including the learners who chose
+    `{"kind": "initial"}`, their own letter, and the ones on the Yuvi studio
+    avatar, which this roster cannot draw. Deriving a coin for either of those
+    would overrule a choice, so the caller needs to know a choice exists even
+    when it produces nothing to render here.
+
+    `ProfileAvatar` resolves this per learner, which is right for one profile and
+    absurd for a thirty-row roster — thirty round trips to render thirty coins.
+    Fetched with the names instead, so a badge avatar is available on every
+    teacher screen for the cost of one extra read.
+
+    A learner who has chosen nothing is simply absent, and `_earned_avatars_for`
+    then offers their best earned coin. The empty branch has to stay real: a
+    child who has earned no badge yet must show a letter, never an empty coin.
+    """
+    if not learner_ids:
+        return {}, set()
+
+    try:
+        from learner_state import _get_collection      # type: ignore
+
+        collection = _get_collection()
+    except Exception:      # pragma: no cover — no driver configured
+        collection = None
+
+    if collection is not None:
+        try:
+            cursor = collection.find({"_id": {"$in": learner_ids}}, {"avatar": 1})
+            documents = await cursor.to_list(length=len(learner_ids))
+            chosen: dict[str, Any] = {}
+            decided: set[str] = set()
+            for document in documents:
+                learner_id = str(document.get("_id"))
+                avatar = document.get("avatar")
+                if isinstance(avatar, dict) and avatar.get("kind"):
+                    decided.add(learner_id)
+                choice = _badge_choice(avatar)
+                if choice:
+                    chosen[learner_id] = choice
+            return chosen, decided
+        except Exception as exc:      # pragma: no cover — an initial is a fine avatar
+            print(f"⚠️ roster avatar read failed: {type(exc).__name__}")
+
+    return {}, set()
+
+
+async def _earned_avatars_for(learner_ids: list[str]) -> dict[str, Any]:
+    """Best earned coin per learner, for everyone who has not chosen one.
+
+    An avatar nobody sets is an avatar nobody has: every learner in the class was
+    a grey letter on every teacher screen, one of them having mastered a whole
+    subject. The badge system already knew that; the roster had no way to ask.
+
+    One projected read of `mastery` for the whole roster, then a pure projection
+    per learner — `badges.best_badge` touches no database and no events. A
+    learner with nothing earned is absent from the result and keeps their letter.
+    """
+    if not learner_ids:
+        return {}
+
+    from app.services import kata_catalog
+    from app.services.badges import best_badge
+
+    try:
+        # The coins are cut from the catalogue's objectives. Without it primed,
+        # every learner would score zero mastered out of zero and lose a badge
+        # they have — so a failure here means no derived avatars at all, not
+        # wrong ones.
+        await kata_catalog.ensure_loaded()
+    except Exception as exc:      # pragma: no cover — letters are a fine fallback
+        print(f"⚠️ roster badge avatars skipped, catalogue unavailable: {type(exc).__name__}")
+        return {}
+
+    collection = _get_collection_named("learners")
+    documents: list[dict[str, Any]] = []
+    if collection is not None:
+        try:
+            cursor = collection.find({"_id": {"$in": learner_ids}}, {"mastery": 1})
+            documents = await cursor.to_list(length=len(learner_ids))
+        except Exception as exc:      # pragma: no cover — fall through to the file
+            print(f"⚠️ roster mastery read failed: {type(exc).__name__}")
+            documents = []
+    if not documents:
+        data = _read_fallback()
+        documents = [
+            {"_id": learner_id, "mastery": (data.get(learner_id) or {}).get("mastery") or {}}
+            for learner_id in learner_ids if learner_id in data
+        ]
+
+    earned: dict[str, Any] = {}
+    for document in documents:
+        choice = best_badge({"mastery": document.get("mastery") or {}})
+        if choice:
+            earned[str(document.get("_id"))] = choice
+    return earned
+
+
+def _badge_choice(avatar: Any) -> Optional[dict[str, Any]]:
+    """Just the badge coin, or nothing.
+
+    `learner_state.avatar` holds whichever shape the learner last saved, and one
+    of them is the full Yuvi studio design — a nested document of colours and
+    equipped slots. Shipping that for thirty learners to draw thirty 26px
+    circles would put kilobytes of robot on the wire that the roster cannot
+    render anyway. Only the three fields `<Badge mini>` needs cross over.
+    """
+    if not isinstance(avatar, dict) or avatar.get("kind") != "badge":
+        return None
+    badge = avatar.get("badge")
+    if not isinstance(badge, dict) or not badge.get("glyph"):
+        return None
+    return {"kind": "badge", "badge": {
+        "subject": badge.get("subject"),
+        "glyph": badge.get("glyph"),
+        "tier": badge.get("tier"),
+    }}
+
+
 async def roster_for_teacher(teacher_id: str) -> dict[str, Any]:
     """Every learner across every group this teacher teaches.
 
@@ -80,10 +202,16 @@ async def roster_for_teacher(teacher_id: str) -> dict[str, Any]:
             order.append(learner_id)
 
     names = await _names_for(order)
+    chosen, decided = await _avatars_for(order)
+    # Only for the learners who have not chosen: the derivation is a default,
+    # and a default that overrode a choice would be a bug wearing a feature's
+    # clothes.
+    derived = await _earned_avatars_for([lid for lid in order if lid not in decided])
     return {
         "students": [
             {"learner_id": learner_id,
              "display_name": names.get(learner_id),
+             "avatar": chosen.get(learner_id) or derived.get(learner_id),
              "group_id": group_of[learner_id]}
             for learner_id in order
         ],

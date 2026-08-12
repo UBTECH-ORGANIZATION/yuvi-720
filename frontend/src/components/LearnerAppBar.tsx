@@ -8,7 +8,7 @@ import { WalletChip } from './WalletChip'
 import { NotificationBell } from './NotificationBell'
 import './learner-app-bar.css'
 
-type LearnerSection = 'dashboard' | 'learning' | 'goals' | 'chat' | 'calendar'
+type LearnerSection = 'dashboard' | 'learning' | 'tasks' | 'goals' | 'chat' | 'calendar'
 
 interface LearnerAppBarProps {
   studentName?: string
@@ -19,6 +19,7 @@ function sectionForRoute(pathname: string): LearnerSection | null {
   if (pathname.startsWith('/student-dashboard/calendar')) return 'calendar'
   if (pathname.startsWith('/student-dashboard')) return 'dashboard'
   if (pathname.startsWith('/learning')) return 'learning'
+  if (pathname.startsWith('/tasks')) return 'tasks'
   if (pathname.startsWith('/mentoring')) return 'goals'
   return null
 }
@@ -49,6 +50,15 @@ export function LearnerAppBar({ studentName }: LearnerAppBarProps) {
       >
         <Icon name="book" size={16} />
         <span>{t('sdash.nav.learning')}</span>
+      </button>
+      <button
+        className={activeSection === 'tasks' ? 'is-active' : ''}
+        type="button"
+        aria-current={activeSection === 'tasks' ? 'page' : undefined}
+        onClick={() => navigate('/tasks')}
+      >
+        <Icon name="backpack" size={16} />
+        <span>{t('sdash.nav.tasks')}</span>
       </button>
       <button
         className={activeSection === 'goals' ? 'is-active' : ''}

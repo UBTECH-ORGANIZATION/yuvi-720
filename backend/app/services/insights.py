@@ -43,12 +43,76 @@ REASON = {
     "slow_progress": {"he": "זמן ממושך בשאלה", "ar": "وقت طويل في السؤال", "en": "Long question interval"},
     "wellbeing": {"he": "שיתף/ה מצוקה — דורש תשומת לב", "ar": "شارك ضائقة — يتطلب انتباهًا", "en": "Shared distress — needs attention"},
 }
+# Recommendation sentences.
+#
+# Each key comes in two shapes: a NAMED one that interpolates the thing this
+# child's data actually points at, and the bare one it falls back to when the
+# catalogue cannot name it. The bare ones are what a teacher used to get every
+# time — "תרגול ממוקד בנושא שבו יש קושי" is true of every struggling child in
+# the country, so it told this teacher nothing about this child. A named
+# recommendation is the same pedagogy with the subject of the sentence filled
+# in, which is the whole difference between advice and a slogan.
+#
+# `{...}` fields are `str.format` params supplied at the call site; a template
+# whose params cannot be resolved must not be selected (see `_recommendation`).
 REC = {
     "reach_out": {"he": "צור/צרי קשר והצע/י משימה קצרה לחזרה", "ar": "تواصل واقترح مهمة قصيرة", "en": "Reach out and offer a short re-entry task"},
+    "reach_out_days": {
+        "he": "{days} ימים ללא פעילות — צור/צרי קשר והצע/י משימה קצרה לחזרה",
+        "ar": "{days} أيام دون نشاط — تواصل واقترح مهمة قصيرة للعودة",
+        "en": "{days} days without activity — reach out and offer a short re-entry task",
+    },
     "targeted": {"he": "תרגול ממוקד בנושא שבו יש קושי", "ar": "تدريب مركّز على النقطة الصعبة", "en": "Targeted practice on the struggling objective"},
+    "targeted_at": {
+        "he": "תרגול ממוקד ב\"{topic}\" — שם נמצא הקושי",
+        "ar": "تدريب مركّز على \"{topic}\" — هناك تكمن الصعوبة",
+        "en": "Targeted practice on \"{topic}\" — that is where the difficulty is",
+    },
     "alt_rep": {"he": "הצע/י ייצוג חלופי (וידאו/סימולציה)", "ar": "اقترح تمثيلًا بديلًا", "en": "Offer an alternative representation"},
+    "alt_rep_at": {
+        "he": "הסבר חוזר לא עבד ב\"{topic}\" — הצע/י ייצוג אחר: הדגמה, סרטון או סימולציה",
+        "ar": "لم يُجدِ الشرح المتكرر في \"{topic}\" — اقترح تمثيلًا آخر: عرضًا عمليًا أو فيديو أو محاكاة",
+        "en": "Re-explaining has not worked on \"{topic}\" — offer another representation: a demo, a video or a simulation",
+    },
     "build_strength": {"he": "בסס/י על חוזקה קיימת", "ar": "ابنِ على نقطة قوة", "en": "Build on an existing strength"},
+    "build_strength_named": {
+        "he": "\"{strength}\" היא כבר חוזקה מתועדת — כדאי לפתוח ממנה אל החומר הקשה",
+        "ar": "\"{strength}\" نقطة قوة موثّقة بالفعل — يُنصح بالانطلاق منها إلى المادة الصعبة",
+        "en": "\"{strength}\" is already a recorded strength — open from there into the hard material",
+    },
     "check_in": {"he": "בדוק/י אם כדאי לפרק את המשימה לצעד קטן או להציע רמז", "ar": "تحقق إن كان من المفيد تقسيم المهمة أو تقديم تلميح", "en": "Check whether to break the task into a smaller step or offer a hint"},
+    "check_in_minutes": {
+        "he": "שאלה אחת לקחה כ-{minutes} דקות — כדאי לפרק אותה לצעד קטן או להציע רמז",
+        "ar": "استغرق سؤال واحد نحو {minutes} دقيقة — يُنصح بتقسيمه إلى خطوة صغيرة أو تقديم تلميح",
+        "en": "One question took about {minutes} minutes — break it into a smaller step or offer a hint",
+    },
+    "deepen_subject": {
+        "he": "{subject}: {mastered} מתוך {total} היעדים הושגו — כדאי אתגר מעבר לתוכנית",
+        "ar": "{subject}: تحقّق {mastered} من {total} أهداف — يُنصح بتحدٍّ يتجاوز المنهاج",
+        "en": "{subject}: {mastered} of {total} objectives achieved — offer a challenge beyond the syllabus",
+    },
+    # "1 מתוך 1 היעדים הושגו" is arithmetic, not Hebrew. When the fraction is
+    # whole there is a word for it.
+    "deepen_subject_all": {
+        "he": "{subject}: כל היעדים הושגו — כדאי אתגר מעבר לתוכנית",
+        "ar": "{subject}: تحقّقت كل الأهداف — يُنصح بتحدٍّ يتجاوز المنهاج",
+        "en": "{subject}: every objective achieved — offer a challenge beyond the syllabus",
+    },
+    "refer_distress": {
+        "he": "{count} כישלונות רצופים יחד עם פנייה שסומנה לתשומת לב — כדאי שיחה אישית, לא עוד תרגול",
+        "ar": "{count} إخفاقات متتالية مع بلاغ مُعلَّم للانتباه — يُفضّل حديث شخصي لا مزيد من التمارين",
+        "en": "{count} consecutive failures alongside a flagged disclosure — this calls for a conversation, not more drill",
+    },
+}
+
+# Subject names, server-side, because the recommendation sentence is composed
+# here. The frontend has the same four in `locales/*.json` under `tch.subject.*`
+# and a parity test keeps the two tables from drifting.
+SUBJECT_LABEL = {
+    "math": {"he": "מתמטיקה", "ar": "الرياضيات", "en": "Mathematics"},
+    "science": {"he": "מדעים", "ar": "العلوم", "en": "Science"},
+    "english": {"he": "אנגלית", "ar": "الإنجليزية", "en": "English"},
+    "other": {"he": "כללי", "ar": "عام", "en": "General"},
 }
 
 # The five pedagogical categories the MoE spec names (F6, student level §2):
@@ -86,6 +150,48 @@ def _days_since(iso: str | None) -> int | None:
         return None
 
 
+async def _days_inactive(
+    learner_id: str, recent: list[dict[str, Any]]
+) -> tuple[int | None, str | None, str | None]:
+    """Days since this learner last did anything — across BOTH stores.
+
+    `learning_events` is the Kata/xAPI record and is the only source this used
+    to consult. Teacher-authored tasks deliberately write nothing to it: they
+    are not Kata objectives, and forcing them into that taxonomy would distort
+    mastery, the coach and the MoE report.
+
+    The consequence, if only one store is read, is a portal that contradicts
+    itself — "10 ימים ללא פעילות" beside three tasks the child completed this
+    week. So the count is the smaller of the two gaps.
+
+    Compared as day counts rather than as timestamps on purpose: the two stores
+    format their ISO strings independently, and `"...Z"` sorts above
+    `"...+00:00"` in a plain string comparison whatever the actual instants.
+
+    Returns the gap, the stamp it was measured from, and which store that stamp
+    came from — so the evidence a teacher opens names the activity it counted
+    rather than a learning event that may be older than the real one.
+    """
+    from app.services.tasks import store as task_store
+
+    candidates: list[tuple[int, str, str]] = []
+    if recent and recent[0].get("stored_at"):
+        gap = _days_since(recent[0]["stored_at"])
+        if gap is not None:
+            candidates.append((gap, recent[0]["stored_at"], "learning_event"))
+    try:
+        completed = await task_store.latest_completion(learner_id)
+        gap = _days_since(completed)
+        if gap is not None and completed:
+            candidates.append((gap, completed, "task"))
+    except Exception as exc:  # the task store must never break the insight
+        print(f"⚠️ task activity lookup failed: {type(exc).__name__}")
+
+    if not candidates:
+        return None, None, None
+    return min(candidates, key=lambda entry: entry[0])
+
+
 def _trailing_fail_streak(events: list[dict[str, Any]]) -> int:
     """Consecutive most-recent failures. ANY success (including a passed
     `completed` assessment) breaks the streak — a recovery must reset it."""
@@ -102,19 +208,55 @@ def _trailing_fail_streak(events: list[dict[str, Any]]) -> int:
     return streak
 
 
+def _subject_label(subject: str | None, language: str) -> str:
+    """A subject a teacher reads. Unknown subjects come back as themselves
+    rather than as a blank, so a new vendor subject degrades to its own name."""
+    if not subject:
+        return ""
+    entry = SUBJECT_LABEL.get(str(subject).lower())
+    if not entry:
+        return str(subject).replace("_", " ").replace("-", " ").strip().title()
+    return entry.get(language) or entry["he"]
+
+
 def _recommendation(
     category: str, text_key: str, language: str, *,
     signal: str, value: Any, raw: dict[str, Any] | None = None,
+    params: dict[str, Any] | None = None, fallback_key: str | None = None,
 ) -> dict[str, Any]:
     """One pedagogical recommendation, carrying the datum that produced it.
 
     `because` is not decoration: F6 requires that anything the system tells a
     teacher can be traced to the raw evidence behind it.
+
+    A named template is used only when every `{...}` it needs resolves to
+    something non-empty; otherwise the bare `fallback_key` sentence is used.
+    The failure this guards is specific and would be shipped to a teacher: a
+    catalogue miss rendering `תרגול ממוקד ב"{topic}"` on screen, which is worse
+    than the generic line it was meant to improve on.
     """
+    text = _t(REC, text_key, language)
+    if params is not None:
+        if not fallback_key:
+            # Static per call site, so this fires in the test suite and never in
+            # front of a teacher — and it is the only thing standing between a
+            # catalogue miss and a literal `{topic}` on screen.
+            raise ValueError(f"{text_key!r} interpolates but names no fallback")
+        usable = all(
+            value_ is not None and str(value_).strip()
+            for value_ in params.values()
+        )
+        if usable:
+            try:
+                text = text.format(**params)
+            except (KeyError, IndexError, ValueError):
+                usable = False
+        if not usable:
+            text = _t(REC, fallback_key, language)
     return {
         "category": category,
         "category_label": _t(CATEGORY_LABEL, category, language),
-        "text": _t(REC, text_key, language),
+        "text": text,
         "because": {"signal": signal, "value": value, "raw": raw or {}},
     }
 
@@ -181,7 +323,7 @@ def _strengths_detail(
             if entry.get("achieved") and (entry.get("score_ewma") or 0) >= 0.8:
                 rows.append({
                     "kind": "success_area",
-                    "label": kata_catalog.localized_objective_title(objective["id"], language),
+                    "label": kata_catalog.objective_title(objective["id"], language) or "",
                     "objective_id": objective["id"],
                     "subject": subject_id,
                     "evidence": {
@@ -203,7 +345,7 @@ def _strengths_detail(
                 if detectors.detect_recovery(list(reversed(ordered[:index])), event):
                     rows.append({
                         "kind": "consistent_improvement",
-                        "label": kata_catalog.localized_objective_title(objective_id, language),
+                        "label": kata_catalog.objective_title(objective_id, language) or "",
                         "objective_id": objective_id,
                         "evidence": {"event_id": event.get("_id"), "at": event.get("stored_at")},
                     })
@@ -221,6 +363,60 @@ def _strengths_detail(
     return rows[:12]
 
 
+# The order the portrait reads in. Not the storage order: a teacher opening a
+# profile asks "how do I reach this child" before "what motivates them", and
+# `render_text` already uses this same order for the coach's prompt.
+PORTRAIT_ORDER = ("how_to_reach", "what_frustrates", "learning_preferences", "motivational_patterns")
+
+
+def _portrait(brain: dict[str, Any]) -> dict[str, Any] | None:
+    """The paragraph the system can already write about this learner.
+
+    `student_description` (A-5) is built continuously from observed evidence —
+    a mini-tier reconcile pass that runs lazily off the coach bundle, debounced,
+    never on this request. So the teacher-facing portrait costs nothing beyond
+    reading it: no call here, no call on page load, no per-teacher generation.
+
+    Only ACTIVE entries are shown. The block history keeps superseded sentences
+    with an `invalid_at` for provenance, and a belief the learner has since
+    taken back must not be described to their teacher as a current trait.
+
+    Returns `None` rather than an empty shell when nothing has been observed
+    yet, so the UI can stay silent instead of drawing an empty card.
+    """
+    from app.brain.description import active_entries
+
+    description = brain.get("student_description") or {}
+    if not isinstance(description, dict):
+        return None
+    stored = description.get("blocks") or {}
+
+    blocks: list[dict[str, Any]] = []
+    evidence_keys: set[str] = set()
+    for key in PORTRAIT_ORDER:
+        lines = []
+        for entry in active_entries(stored.get(key)):
+            text = str(entry.get("text") or "").strip()
+            if not text:
+                continue
+            # The evidence keys are internal paths (`mastery.X`, `activeness.Y`).
+            # The COUNT is honest provenance a teacher can read; the paths are
+            # not, and they would leak objective ids onto the screen.
+            evidence_keys.update(
+                str(item) for item in (entry.get("evidence") or []) if item)
+            lines.append(text)
+        if lines:
+            blocks.append({"key": key, "lines": lines})
+
+    if not blocks:
+        return None
+    return {
+        "blocks": blocks,
+        "evidence_count": len(evidence_keys),
+        "updated_at": description.get("last_generated_at") or description.get("updated_at"),
+    }
+
+
 async def student_insights(
     learner_id: str, language: str = "he", subject: str | None = None
 ) -> dict[str, Any]:
@@ -231,7 +427,7 @@ async def student_insights(
     recent = await get_recent_events(learner_id, limit=20)
     plan = plan_next(brain)
 
-    days_inactive = _days_since(recent[0]["stored_at"]) if recent else None
+    days_inactive, last_activity_at, activity_source = await _days_inactive(learner_id, recent)
     fail_streak = _trailing_fail_streak(recent)
     prolonged_events = [
         event for event in recent
@@ -261,6 +457,18 @@ async def student_insights(
             "label": challenge.get("label"),
             "objective_id": objective_id,
             "subject": item_subject,
+            # Two kinds of row have always shared this list and they are not the
+            # same claim. An EVIDENCE row means "this child answered these
+            # questions and got them wrong"; a QUESTIONNAIRE row is a trait the
+            # child described about themselves during onboarding ("לזהות מה
+            # עוזר לי ללמוד") — real signal, no objective behind it, and nothing
+            # that ever retires it. Under one heading called "difficulties" the
+            # second kind reads as a permanent deficiency the system detected.
+            #
+            # Tagged rather than filtered: the questionnaire answers are worth
+            # showing, just not here. The presence of an objective id is the
+            # discriminator, because that is exactly what the two differ by.
+            "source": "evidence" if objective_id else "questionnaire",
             "evidence": entry.get("misconceptions"),
             # The raw counters behind "the system says they struggle here".
             "raw_evidence": {
@@ -305,6 +513,10 @@ async def student_insights(
                      "raw_evidence": {
                          "days_inactive": days_inactive,
                          "threshold": INACTIVITY_DAYS,
+                         # The activity the count was actually measured from,
+                         # which is not always the last learning event.
+                         "last_activity_at": last_activity_at,
+                         "last_activity_source": activity_source,
                          "last_event_at": recent[0].get("stored_at") if recent else None,
                          "last_event_id": recent[0].get("_id") if recent else None,
                      }}
@@ -349,60 +561,93 @@ async def student_insights(
     progress_by_subject = objectives_progress(brain, subject=subject)
     recommendations: list[dict[str, Any]] = []
 
+    # The objective the recent failures are actually in — the thing "תרגול
+    # ממוקד בנושא שבו יש קושי" was silently referring to and never naming.
+    struggling_objective_id = recent[0].get("objective_id") if recent else None
+    struggling_topic = (
+        kata_catalog.objective_title(struggling_objective_id, language)
+        if struggling_objective_id else None
+    )
+
     if (days_inactive or 0) >= INACTIVITY_DAYS:
         recommendations.append(_recommendation(
-            CATEGORY_REFER, "reach_out", language,
+            CATEGORY_REFER, "reach_out_days", language,
             signal="days_inactive", value=days_inactive,
-            raw={"threshold": INACTIVITY_DAYS,
-                 "last_event_at": recent[0]["stored_at"] if recent else None},
+            params={"days": days_inactive}, fallback_key="reach_out",
+            raw={"days_inactive": days_inactive,
+                 "threshold": INACTIVITY_DAYS,
+                 "last_activity_at": last_activity_at,
+                 "last_activity_source": activity_source},
         ))
     if fail_streak >= 2:
+        streak_raw = {
+            "fail_streak": fail_streak,
+            "threshold": LOW_SUCCESS_STREAK,
+            "objective_id": struggling_objective_id,
+            "objective_title": struggling_topic,
+        }
         recommendations.append(_recommendation(
-            CATEGORY_EXTRA_PRACTICE, "targeted", language,
+            CATEGORY_EXTRA_PRACTICE, "targeted_at", language,
             signal="trailing_fail_streak", value=fail_streak,
-            raw={"threshold": LOW_SUCCESS_STREAK,
-                 "objective_id": recent[0].get("objective_id") if recent else None},
+            params={"topic": struggling_topic}, fallback_key="targeted",
+            raw=dict(streak_raw),
         ))
         recommendations.append(_recommendation(
-            CATEGORY_REINFORCE, "alt_rep", language,
+            CATEGORY_REINFORCE, "alt_rep_at", language,
             signal="trailing_fail_streak", value=fail_streak,
-            raw={"representation": "alternative"},
+            params={"topic": struggling_topic}, fallback_key="alt_rep",
+            raw=dict(streak_raw),
         ))
     if fail_streak >= LOW_SUCCESS_STREAK and open_distress:
         # Repeated failure *and* a distress disclosure is the case the spec
         # explicitly names for referral, not for more drill.
         recommendations.append(_recommendation(
-            CATEGORY_REFER, "reach_out", language,
+            CATEGORY_REFER, "refer_distress", language,
             signal="distress_with_failure", value=fail_streak,
-            raw={"wellbeing_flags": len(open_distress)},
+            params={"count": fail_streak}, fallback_key="reach_out",
+            raw={"fail_streak": fail_streak, "open_flags": len(open_distress)},
         ))
     if prolonged_events:
         latest_prolonged = prolonged_events[0]
+        elapsed = (latest_prolonged.get("timing") or {}).get("elapsed_since_previous_seconds")
         recommendations.append(_recommendation(
-            CATEGORY_REINFORCE, "check_in", language,
-            signal="prolonged_interaction",
-            value=(latest_prolonged.get("timing") or {}).get("elapsed_since_previous_seconds"),
-            raw={"event_id": latest_prolonged.get("_id"),
+            CATEGORY_REINFORCE, "check_in_minutes", language,
+            signal="prolonged_interaction", value=elapsed,
+            params={"minutes": max(1, round(elapsed / 60)) if elapsed else None},
+            fallback_key="check_in",
+            raw={"elapsed_seconds": elapsed,
+                 "event_id": latest_prolonged.get("_id"),
                  "question_id": latest_prolonged.get("question_id")},
         ))
     # Mastered everything in a subject → deepen, then enrich. A learner who is
     # ahead is a teaching decision too, not just an absence of problems.
     for subject_id, stats in progress_by_subject.items():
         if stats["objectives_total"] and stats["percent"] >= 80:
+            whole = stats["objectives_mastered"] >= stats["objectives_total"]
             recommendations.append(_recommendation(
-                CATEGORY_DEEPEN, "targeted", language,
+                CATEGORY_DEEPEN, "deepen_subject_all" if whole else "deepen_subject", language,
                 signal="subject_mastery_percent", value=stats["percent"],
+                params={"subject": _subject_label(subject_id, language),
+                        "mastered": stats["objectives_mastered"],
+                        "total": stats["objectives_total"]},
+                fallback_key="targeted",
                 raw={"subject": subject_id, **stats},
             ))
             break
-    if brain.get("strengths"):
+    strength_labels = [
+        str(s.get("label")).strip()
+        for s in (brain.get("strengths") or [])
+        if isinstance(s, dict) and str(s.get("label") or "").strip()
+        and s.get("learner_feedback") != "inaccurate"
+    ]
+    if strength_labels:
         recommendations.append(_recommendation(
-            CATEGORY_ENRICH, "build_strength", language,
-            signal="existing_strength", value=len(brain.get("strengths") or []),
-            raw={"labels": [
-                s.get("label") for s in (brain.get("strengths") or [])
-                if isinstance(s, dict)
-            ][:3]},
+            CATEGORY_ENRICH, "build_strength_named", language,
+            signal="existing_strength", value=len(strength_labels),
+            # The first one, not all three: a recommendation naming three things
+            # to build on is a list, and a teacher cannot act on a list.
+            params={"strength": strength_labels[0]}, fallback_key="build_strength",
+            raw={"labels": strength_labels[:3]},
         ))
     recommendations = recommendations[:5] or [_recommendation(
         CATEGORY_EXTRA_PRACTICE, "targeted", language,
@@ -500,6 +745,8 @@ async def student_insights(
         "subject_filter": subject,
         "next": {s: plan[s]["next_titles"] for s in plan},
         "struggle_items": struggle_items,
+        # How the system sees this learner, in sentences it has already written.
+        "portrait": _portrait(brain),
         "strengths_detail": _strengths_detail(brain, recent, language),
         "attention_all": attention_all,
         "strengths": [

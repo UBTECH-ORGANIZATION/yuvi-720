@@ -1,27 +1,39 @@
 @import '../shared/teacher-shared.css';
 
-.tch-messages {
-  max-inline-size: 1240px;
-  margin-inline: auto;
-  padding: var(--sp-5) clamp(var(--sp-4), 3vw, var(--sp-8)) var(--sp-10);
-}
-
 .tch-messages__head { margin-block-end: var(--sp-4); }
 .tch-messages__head h1 { margin: 0; font-size: var(--sp-fs-2xl); color: var(--sp-ink-900); letter-spacing: -0.01em; }
 .tch-messages__subtitle { margin: var(--sp-1) 0 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
 
 /* One card, two columns: people | thread. */
+/* Two panes straight on the page background rather than inside one big card.
+   The outer `Panel` added `--sp-8` of padding that left the rail's divider
+   floating in mid-air, and a fixed `100dvh - 240px` that fought whatever the
+   thread actually contained. Each pane owns its own surface instead. */
 .tch-messages__layout {
   display: grid;
   grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: var(--sp-3);
   min-block-size: 480px;
   block-size: calc(100dvh - 240px);
-  overflow: hidden;
 }
+
+.tch-messages__people,
+.tch-messages__thread,
+.tch-messages__layout > .tch-thread,
+.tch-messages__layout > .sp-state {
+  background: var(--tch-card-bg);
+  border: 1px solid var(--tch-card-border);
+  border-radius: var(--tch-card-radius);
+  box-shadow: var(--tch-card-shadow);
+  min-block-size: 0;
+}
+
+/* The loading thread is a pane of quiet lines, the same size as the real one. */
+.tch-messages__thread { padding: var(--sp-4); overflow-y: auto; }
 
 @media (max-width: 900px) {
   .tch-messages__layout { grid-template-columns: 1fr; block-size: auto; }
-  .tch-messages__people { flex-direction: row; overflow-x: auto; border-inline-end: 0; border-block-end: 1px solid var(--sp-border); }
+  .tch-messages__people { flex-direction: row; overflow-x: auto; }
 }
 
 /* ── the people rail ───────────────────────────────────────────────────────*/
@@ -30,7 +42,6 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  border-inline-end: 1px solid var(--sp-border);
   padding: var(--sp-2);
   gap: 2px;
 }
@@ -52,19 +63,6 @@
 .tch-messages__person:hover { background: var(--sp-bg-subtle); }
 .tch-messages__person.is-active { background: var(--tch-chip-bg); color: var(--sp-primary-700); }
 .tch-messages__person:focus-visible { outline: none; box-shadow: var(--sp-ring); }
-
-.tch-messages__avatar {
-  inline-size: 30px;
-  block-size: 30px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--sp-gradient);
-  color: #fff;
-  font-size: var(--sp-fs-xs);
-  font-weight: var(--sp-fw-bold);
-  flex: none;
-}
 
 .tch-messages__personText { display: grid; min-inline-size: 0; flex: 1; }
 .tch-messages__personText span { font-weight: var(--sp-fw-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -168,7 +166,6 @@
   flex: none;
 }
 
-.tch-thread__modes { display: flex; gap: var(--sp-1); }
 
 .tch-thread__inputRow { display: flex; gap: var(--sp-2); align-items: center; }
 
@@ -188,3 +185,157 @@
 .tch-thread__inputRow input:focus-visible { outline: 2px solid var(--sp-primary-600); outline-offset: 1px; }
 
 .tch-thread__failed { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-danger-600); }
+
+/* A refused message is not an error. The teacher's connection is fine and their
+   send worked; the words were declined. Amber, not red — and the draft is still
+   in the box behind it, waiting to be edited. */
+.tch-thread__failed.is-refused { color: var(--sp-warn-700, #8a5b00); }
+
+/* ── the "+" menu ──────────────────────────────────────────────────────────*/
+
+.tch-thread__more { position: relative; flex: none; }
+
+.tch-thread__moreBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 34px;
+  block-size: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--sp-border);
+  background: var(--sp-bg-subtle);
+  color: var(--sp-ink-500);
+  cursor: pointer;
+}
+.tch-thread__moreBtn:hover { color: var(--sp-primary-600); border-color: var(--sp-primary-600); }
+.tch-thread__moreBtn:focus-visible { outline: 2px solid var(--sp-primary-600); outline-offset: 2px; }
+
+/* Opens UPWARD: the composer is pinned to the bottom of the pane, so a menu
+   dropping down would render past the edge of the card. */
+.tch-thread__menu {
+  position: absolute;
+  inset-block-end: calc(100% + var(--sp-2));
+  inset-inline-start: 0;
+  z-index: 5;
+  min-inline-size: 190px;
+  display: grid;
+  padding: var(--sp-1);
+  border-radius: var(--sp-radius-md);
+  border: 1px solid var(--sp-border);
+  /* `--sp-bg` is the APP background and is deliberately left light in dark
+     mode (tokens.css) — so `var(--sp-bg-raised, var(--sp-bg))` painted this
+     menu white on a dark page, with `--sp-ink-700` text on it. `--sp-surface`
+     is the token that means "a panel", and it is themed. */
+  background: var(--sp-surface);
+  box-shadow: var(--sp-shadow-md);
+}
+
+.tch-thread__menu button {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 0;
+  border-radius: var(--sp-radius-sm);
+  background: transparent;
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+  text-align: start;
+  cursor: pointer;
+}
+.tch-thread__menu button:hover { background: var(--sp-bg-subtle); color: var(--sp-primary-600); }
+
+/* ── incoming messages ─────────────────────────────────────────────────────*/
+/* The child's own words, mirrored: quiet surface, opposite side, so a glance at
+   the thread shows who spoke without reading a word of it. */
+
+.tch-thread__event--message_in .tch-thread__bubble {
+  justify-self: start;
+  background: var(--sp-bg-subtle);
+  border: 1px solid var(--sp-border);
+  color: var(--sp-ink-700);
+  border-end-end-radius: var(--sp-radius-lg);
+  border-end-start-radius: var(--sp-radius-sm);
+  box-shadow: none;
+}
+
+.tch-thread__event--message_in .tch-thread__time { justify-self: start; }
+
+/* ── the kudos / note dialog ───────────────────────────────────────────────*/
+
+.tch-laneDialog { display: grid; gap: var(--sp-3); max-inline-size: 460px; }
+
+.tch-laneDialog__title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-md);
+  color: var(--sp-ink-900);
+}
+.tch-laneDialog__title small { color: var(--sp-ink-400); font-weight: var(--sp-fw-regular); }
+.tch-laneDialog__title .sp-icon { color: var(--sp-primary-600); }
+
+.tch-laneDialog__how { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+.tch-laneDialog__field { display: grid; gap: var(--sp-1); }
+.tch-laneDialog__field span { font-size: var(--sp-fs-xs); color: var(--sp-ink-500); }
+/* On a dark panel `--sp-bg-subtle` is nearly black and `--sp-border` nearly
+   invisible against it, so the field read as an unstyled hole with a resize
+   grip rather than as an input. A lifted surface and the strong border give it
+   the same edge every other field in the product has. */
+.tch-laneDialog__field textarea {
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-800);
+  background: var(--sp-surface-2);
+  border: 1px solid var(--sp-border-strong);
+  border-radius: var(--sp-radius-md);
+  padding: var(--sp-3);
+  min-block-size: 6.5rem;
+  resize: vertical;
+}
+.tch-laneDialog__field textarea::placeholder { color: var(--sp-ink-300); }
+.tch-laneDialog__field textarea:focus-visible {
+  outline: 2px solid var(--sp-primary-600);
+  outline-offset: 1px;
+}
+
+.tch-laneDialog__actions { display: flex; justify-content: flex-end; gap: var(--sp-2); }
+
+/* ── the rail, now holding two kinds of correspondent ─────────────────────── */
+
+.tch-messages__railHead {
+  margin: var(--sp-2) 0 var(--sp-1);
+  padding-inline: var(--sp-2);
+  font-size: var(--sp-fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--sp-ink-300);
+}
+.tch-messages__railHead:first-child { margin-block-start: 0; }
+
+/* A group has no face, so it gets a mark in the same slot the avatar sits in —
+   the rail's rhythm survives and the two kinds stay tellable apart. */
+.tch-messages__groupIcon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 30px;
+  block-size: 30px;
+  border-radius: 50%;
+  background: var(--sp-primary-050, var(--sp-surface-2));
+  color: var(--sp-primary-600);
+}
+
+.tch-thread__members {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

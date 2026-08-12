@@ -10,8 +10,9 @@
  *   Every answer carries its trace. `ToolTrace` renders under each reply, and
  *   an ungrounded answer is visibly marked rather than quietly plausible.
  *
- *   The assistant never acts. It has no write tools, so the strongest thing it
- *   can produce is a suggestion and a button — the teacher does the doing.
+ *   The assistant never acts. Its tools cannot write; the strongest thing it can
+ *   produce is a filled-in form and a button, and the teacher presses it. The
+ *   write that follows is the same service call the goals screen makes.
  *
  *   One question at a time. The send button is the gate, not the input: the
  *   teacher can keep typing their next question while this one is answering,
@@ -35,9 +36,13 @@ import { useTeacherRoster } from '../../../providers/TeacherRosterProvider'
 import { useRoute } from '../../../app/router'
 import {
   createAssistantThread, deleteAssistantThread, listAssistantMessages,
-  listAssistantThreads, streamAssistant,
-  type AssistantThread, type AssistantTurn, type ScreenContext, type ToolTraceEntry,
+  listAssistantThreads, recordActionOutcome, streamAssistant,
+  type ActionOutcome, type AssistantAction, type AssistantThread, type AssistantTurn,
+  type ScreenContext, type ToolTraceEntry,
 } from '../../../services/teacherAssistant'
+import { AssistantTaskForm } from './AssistantTaskForm'
+import { MessageActions } from './MessageActions'
+import { actionIdOf, actionKey } from './actionKey'
 import { renderAnswer } from './StudentRef'
 import { trimPartialMarkers } from './studentRefs'
 import { ToolTrace } from './ToolTrace'
@@ -54,6 +59,11 @@ interface DockMessage {
   grounded?: boolean
   streaming?: boolean
   failed?: boolean
+  /** Buttons this answer offered, and what the teacher did with each. Both are
+   *  persisted on the message, so a reopened thread shows a completed row
+   *  instead of a live button that would assign the same goal twice. */
+  actions?: AssistantAction[]
+  outcomes?: Record<string, ActionOutcome>
 }
 
 /** A stored refusal round-trips as `[tch.assistant.unknown.noData]`. */
@@ -112,6 +122,9 @@ export function AssistantDock() {
      faster than it completes. Until it settles, sending would file the question
      under the wrong thread — so the send button waits, and the input does not. */
   const [isReady, setIsReady] = useState(false)
+  /* One open form at a time, across the whole thread. Two half-filled goal
+     forms on screen is two chances to assign the wrong one. */
+  const [openAction, setOpenAction] = useState<string | null>(null)
   const bodyRef = useRef<HTMLDivElement | null>(null)
   const nextId = useRef(1)
 
@@ -164,6 +177,8 @@ export function AssistantDock() {
           text: stored ? '' : message.text,
           textKey: stored ? stored[1] : null,
           at: message.at,
+          actions: message.meta?.actions ?? undefined,
+          outcomes: message.meta?.outcomes ?? undefined,
         }
       })
       // Never let a late history response overwrite a question the teacher has
@@ -188,7 +203,10 @@ export function AssistantDock() {
     if (isOpen && bodyRef.current) {
       bodyRef.current.scrollTop = bodyRef.current.scrollHeight
     }
-  }, [messages, isOpen, isBusy])
+    // `openAction` is a dependency because expanding a form grows the panel
+    // after the message list has already settled — without it the confirm
+    // button opens below the fold and the teacher has to hunt for it.
+  }, [messages, isOpen, isBusy, openAction])
 
   async function selectThread(id: string) {
     if (isBusy) return
@@ -228,8 +246,8 @@ export function AssistantDock() {
     }
   }
 
-  async function send() {
-    const question = draft.trim()
+  async function send(text?: string) {
+    const question = (text ?? draft).trim()
     if (!question || isBusy) return
 
     const now = new Date().toISOString()
@@ -262,12 +280,14 @@ export function AssistantDock() {
               message.id === answerId ? { ...message, text: message.text + chunk } : message
             )),
           onTrace: (tools) => patch({ tools }),
+          onActions: (actions) => patch({ actions }),
           onTitle: (next) => setTitle(next),
           onDone: (answer) => patch({
             text: answer.text ?? '',
             textKey: answer.text_key,
             tools: answer.tools,
             grounded: answer.grounded,
+            actions: answer.actions,
           }),
         }
       )
@@ -277,6 +297,22 @@ export function AssistantDock() {
       patch({ streaming: false })
       setIsBusy(false)
       void refreshThreads()
+    }
+  }
+
+  /* Record what the teacher did with an offered action, and show it as done.
+     The write itself already happened inside the form through its own endpoint
+     — this is the receipt, so a reopened thread does not offer the same button
+     again. A failed receipt costs a stale button, never a lost goal. */
+  function completeAction(messageId: string, actionId: string, summary: string) {
+    setMessages((current) => current.map((message) => (
+      message.id === messageId
+        ? { ...message, outcomes: { ...(message.outcomes ?? {}), [actionId]: { status: 'done', summary } } }
+        : message
+    )))
+    setOpenAction(null)
+    if (conversationId && !messageId.startsWith('local-')) {
+      void recordActionOutcome(conversationId, messageId, actionId, 'done', summary)
     }
   }
 
@@ -388,8 +424,36 @@ export function AssistantDock() {
                 <YuviHeadIcon />
               </span>
             ) : null}
+            {/* Actions and forms are siblings of the bubble, not children of
+                it: `.tch-dock__bubble` is `fit-content`, so a form inside it
+                would be squeezed to the width of the sentence above. */}
             <div className="tch-dock__stack">
               <MessageBubble message={message} nameOf={nameOf} t={t} />
+              {message.actions?.length && !message.streaming ? (
+                <MessageActions
+                  actions={message.actions}
+                  outcomes={message.outcomes ?? {}}
+                  messageId={message.id}
+                  openId={openAction}
+                  onToggle={(id) => setOpenAction((current) => (current === id ? null : id))}
+                  onAsk={(question) => void send(question)}
+                  busy={isBusy}
+                  nameOf={nameOf}
+                />
+              ) : null}
+              {message.actions?.find(
+                (action) => actionKey(message.id, action.id) === openAction) && groupId ? (
+                <AssistantTaskForm
+                  action={message.actions.find(
+                    (action) => actionKey(message.id, action.id) === openAction)!}
+                  groupId={groupId}
+                  language={language}
+                  nameOf={nameOf}
+                  onDone={(summary) => completeAction(
+                    message.id, actionIdOf(openAction!, message.id), summary)}
+                  onCancel={() => setOpenAction(null)}
+                />
+              ) : null}
               <time className="tch-dock__time" dateTime={message.at}>
                 {formatMessageTime(message.at, language)}
               </time>

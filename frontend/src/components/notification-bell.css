@@ -159,3 +159,13 @@
   color: var(--sp-ink-500);
   cursor: pointer;
 }
+
+/* WHO the row is about. A notification that names no child is an announcement:
+   with six classes, "a student wrote something" is not something a teacher can
+   act on. Its own line above the sentence, so the sentence still reads. */
+.notif__who {
+  display: block;
+  font-size: var(--sp-fs-xs, 0.78rem);
+  font-weight: 700;
+  color: var(--sp-primary-600);
+}

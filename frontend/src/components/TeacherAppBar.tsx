@@ -17,11 +17,16 @@ import { TourButton } from './tour/TourButton'
 import { Icon } from './primitives'
 import './teacher-app-bar.css'
 
-type TeacherSection = 'home' | 'students' | 'learnings' | 'goals' | 'messages'
+type TeacherSection = 'home' | 'students' | 'learnings' | 'tasks' | 'goals' | 'messages'
 
+/* Order matters: every branch must be tested before the bare `/teacher`
+   catch-all, or a new section highlights "home" while the teacher stands on
+   it. That is what `/teacher/tasks` did — the route existed, the screen
+   worked, and nothing in the nav either led to it or lit up on it. */
 function sectionForRoute(pathname: string): TeacherSection | null {
   if (pathname.startsWith('/teacher/goals')) return 'goals'
   if (pathname.startsWith('/teacher/learnings')) return 'learnings'
+  if (pathname.startsWith('/teacher/tasks')) return 'tasks'
   if (pathname.startsWith('/teacher/messages')) return 'messages'
   if (pathname.startsWith('/teacher/students') || pathname.startsWith('/teacher/student/')) {
     return 'students'
@@ -66,6 +71,16 @@ export function TeacherAppBar() {
       >
         <Icon name="library" size={16} />
         <span>{t('tch.nav.learnings')}</span>
+      </button>
+      <button
+        type="button"
+        className={active === 'tasks' ? 'is-active' : ''}
+        aria-current={active === 'tasks' ? 'page' : undefined}
+        onClick={() => navigate('/teacher/tasks')}
+        data-tour="teacher.nav.tasks"
+      >
+        <Icon name="backpack" size={16} />
+        <span>{t('tch.nav.tasks')}</span>
       </button>
       <button
         type="button"

@@ -2120,6 +2120,32 @@ ANIMATED_RENDER_TIMEOUT_SECONDS = 90
 MAX_VIDEO_BYTES = 3_500_000
 
 
+#: Element types the STILL renderers can draw — the deterministic SVG here and
+#: `MafsScene` in the browser, which implement the same thirteen.
+#:
+#: `prop` (balance scale, balloon, particle box, container, bar comparison) and
+#: `drawing` are in the scene contract, are planned by the model, survive
+#: sanitization and layout — and are drawn by Manim ALONE. A non-animated scene
+#: made only of props therefore produced a valid payload containing an empty
+#: picture: `<g></g>`, a white rounded rectangle, and nothing else. It shipped,
+#: it stored, and it rendered as a blank panel in the chat and on a slide.
+_STILL_DRAWABLE = frozenset({
+    "polygon", "polyline", "line", "arrow", "point", "circle", "rectangle",
+    "arc", "angle", "right_angle", "brace", "number_line", "axes", "text",
+})
+
+
+def scene_draws_something(scene: dict) -> bool:
+    """True when the still renderers can actually put ink on this scene.
+
+    A molecule scene draws through RDKit and is never empty by this measure.
+    """
+    if scene.get("render") == "molecule":
+        return True
+    return any(str(element.get("type")) in _STILL_DRAWABLE
+               for element in (scene.get("elements") or []))
+
+
 def build_scene_visual(scene: dict) -> dict:
     """Package a scene for in-browser rendering — no subprocess, no Manim.
 
@@ -2148,16 +2174,25 @@ def build_scene_visual(scene: dict) -> dict:
     }
 
 
-async def render_visual(scene: dict) -> dict:
+async def render_visual(scene: dict) -> Optional[dict]:
     """Route a scene to the renderer that suits its output type.
 
     Animated scenes are video and stay with Manim. Everything else is drawn in
     the browser from the scene spec. Both paths carry the same solved ``layout``
     from ``visual_layout``, so a still and its animated twin place labels
     identically.
+
+    Returns None when the still path would produce an empty picture — a scene
+    of props, which only Manim can draw. No picture is a better answer than a
+    blank white panel where a diagram is promised, and the caller already treats
+    a visual as optional.
     """
     if scene.get("animated") is True:
         return await render_manim_visual(scene)
+    if not scene_draws_something(scene):
+        print(f"⚠️ scene has nothing the still renderers can draw: "
+              f"{sorted({str(e.get('type')) for e in (scene.get('elements') or [])})}")
+        return None
     return build_scene_visual(scene)
 
 

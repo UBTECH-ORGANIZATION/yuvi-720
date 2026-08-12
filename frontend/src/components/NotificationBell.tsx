@@ -13,9 +13,11 @@ import { useEffect, useRef, useState } from 'react'
 import { navigate } from '../app/router'
 import { useI18n } from '../i18n/I18nProvider'
 import { useNotifications } from '../providers/NotificationsProvider'
+import { useOptionalTeacherRoster } from '../providers/TeacherRosterProvider'
 import { listNotifications, type AppNotification } from '../services/notifications'
 import { Icon } from './primitives'
 import './notification-bell.css'
+import { formatDay } from '../i18n/dates'
 
 function scalarParams(params: Record<string, unknown>): Record<string, string | number> {
   return Object.fromEntries(
@@ -31,6 +33,10 @@ export function NotificationBell() {
     dismiss, undoDismiss, dismissAll,
   } = useNotifications()
   const [open, setOpen] = useState(false)
+  /* Null for a learner, and that is the point — this is the same component on
+     both sides of the app. When a teacher is reading, it turns the `actor_id`
+     every notification already carries into the child's name. */
+  const roster = useOptionalTeacherRoster()
   const [showDismissed, setShowDismissed] = useState(false)
   const [dismissedRows, setDismissedRows] = useState<AppNotification[]>([])
   const panelRef = useRef<HTMLDivElement>(null)
@@ -58,9 +64,26 @@ export function NotificationBell() {
       .catch(() => {})
   }, [showDismissed, open])
 
+  /* A notification's action is written when it is raised and never rewritten,
+     so every improvement to where a row lands leaves the existing rows behind.
+     Safety alerts have now been through two of those: a bare profile link, then
+     `?focus=flags`, and now the tab and the flag id. The ones already in a
+     teacher's bell still carry the old routes — and this is the alert where
+     landing in the wrong place matters most.
+     So the destination is repaired on the way out, by kind: a safety row with
+     no tab in its route is sent to the tab that holds disclosures. It cannot
+     name WHICH one — that id was never stored — and the tab says so rather
+     than scrolling nowhere. */
+  const destination = (row: AppNotification): string | undefined => {
+    const route = row.actions?.[0]?.route
+    if (!route || row.title_key !== 'tch.alert.safety') return route
+    if (route.includes('tab=') || route.includes('focus=')) return route
+    return `${route}${route.includes('?') ? '&' : '?'}tab=wellbeing`
+  }
+
   const openRow = (row: AppNotification) => {
     void markRead([row._id])
-    const route = row.actions?.[0]?.route
+    const route = destination(row)
     if (route) { setOpen(false); navigate(route) }
   }
 
@@ -117,6 +140,11 @@ export function NotificationBell() {
             <ul className="notif__list">
               {rows.map((row) => {
                 const title = t(row.title_key, scalarParams(row.params))
+                /* WHO. "A student wrote something that needs an adult" is a
+                   sentence a teacher cannot act on: with six classes it does
+                   not say which child, and the row was the only place that
+                   knew. `actor_id` has been on every notification all along. */
+                const who = row.actor_id ? roster?.nameOf(row.actor_id) ?? null : null
                 return (
                   <li
                     key={row._id}
@@ -125,11 +153,12 @@ export function NotificationBell() {
                     <button type="button" className="notif__rowMain" onClick={() => openRow(row)}>
                       {!row.read_at ? <span className="notif__dot" aria-hidden="true" /> : null}
                       <span className="notif__text" dir="auto">
+                        {who ? <strong className="notif__who"><bdi>{who}</bdi></strong> : null}
                         {/* A new backend kind must not surface as a raw key. */}
                         {title === row.title_key ? t('notif.fallback') : title}
                       </span>
                       <time className="notif__at" dateTime={row.created_at}>
-                        {new Date(row.created_at).toLocaleDateString()}
+                        {formatDay(row.created_at)}
                       </time>
                     </button>
                     {!row.dismissed_at ? (

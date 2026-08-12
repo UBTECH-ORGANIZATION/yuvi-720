@@ -53,6 +53,13 @@ def _catalog_patches(stack: ExitStack):
     stack.enter_context(patch(p + "ensure_loaded", AsyncMock()))
     stack.enter_context(patch(p + "all_components", return_value=CATALOG))
     stack.enter_context(patch(p + "get_unit", side_effect=lambda uid: UNITS.get(uid)))
+    # Lesson names now resolve through `component_title`, which reads the
+    # catalogue through `get_component` and then the translation store — Kata
+    # ships `titleTranslations: null` on every component, so the locale-specific
+    # name cannot come off the row.
+    stack.enter_context(patch(
+        p + "get_component",
+        side_effect=lambda cid: next((c for c in CATALOG if c["id"] == cid), None)))
     stack.enter_context(patch(
         p + "item_profiles",
         side_effect=lambda cid: [{"id": "item-1", "title": "מסך ראשון", "question_count": 2}]))
@@ -65,6 +72,9 @@ def _catalog_patches(stack: ExitStack):
     stack.enter_context(patch(p + "question_part_indexes", return_value={}))
     stack.enter_context(patch(
         p + "localized_objective_title", side_effect=lambda oid, lang: f"title:{oid}"))
+    # The screen-facing half. Everything a teacher reads goes through this one.
+    stack.enter_context(patch(
+        p + "objective_title", side_effect=lambda oid, lang=None: f"title:{oid}"))
 
 
 class GroupLearnings(unittest.IsolatedAsyncioTestCase):
@@ -176,6 +186,164 @@ class LearningDetail(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([screen["item_id"] for screen in view["screens"]], ["item-1"])
         self.assertEqual(view["screens"][0]["attempts"], 6)
         self.assertNotIn("kid-a", json.dumps(view))
+
+
+class NamesReachTheScreen(unittest.IsolatedAsyncioTestCase):
+    """Nothing internal may leave here wearing the costume of a name.
+
+    Three of these shipped: an untitled component handed over its component id,
+    an untitled unit handed over its unit id, and an objective the catalogue did
+    not know handed over its dotted MOE key — because
+    ``localized_objective_title`` falls back to the key, which is right for a
+    log line and wrong for a heading.
+    """
+
+    async def _run(self, per_learner, *, catalog=None, units=None):
+        from app.services import learning_analytics
+
+        async def _summary(learner_id, subject=None, component_id=None):
+            return per_learner.get(learner_id, [])
+
+        with ExitStack() as stack:
+            stack.enter_context(patch("app.brain.org.learners_in_group",
+                                      AsyncMock(return_value=list(per_learner))))
+            stack.enter_context(patch("app.services.learner_activity.question_summary",
+                                      side_effect=_summary))
+            _catalog_patches(stack)
+            if catalog is not None:
+                stack.enter_context(patch("app.services.kata_catalog.all_components",
+                                          return_value=catalog))
+            if units is not None:
+                stack.enter_context(patch("app.services.kata_catalog.get_unit",
+                                          side_effect=lambda uid: units.get(uid)))
+            return await learning_analytics.group_learnings("g1", language="he")
+
+    async def test_an_untitled_unit_does_not_become_a_section_heading(self):
+        view = await self._run(
+            {"kid-a": [_row("cmp-1", "q1", attempts=1, correct=1)]},
+            units={"unit-1": {"id": "unit-1", "title": "", "titles": {}, "subject": "math"}})
+        row = next(r for r in view["learnings"] if r["component_id"] == "cmp-1")
+        # Null, not "unit-1": the id still travels in its own field, and the
+        # client can label a null. It cannot label an id.
+        self.assertIsNone(row["unit_title"])
+        self.assertEqual(row["unit_id"], "unit-1")
+
+    async def test_an_unknown_objective_is_null_not_its_dotted_key(self):
+        # Against the REAL catalogue accessor, not a stub of it: the guard now
+        # lives in `kata_catalog.objective_title`, and a test that patched the
+        # thing under test would prove nothing.
+        from app.services import kata_catalog, learning_analytics
+
+        unknown = "MOE.ENG.G7.PEOPLE.FAMILY.SPEAK"
+        with patch.dict(kata_catalog._SNAPSHOT, {"objectives": {}}, clear=False):
+            # This is what the OTHER accessor still does, and why the pair exists.
+            self.assertEqual(kata_catalog.localized_objective_title(unknown, "he"), unknown)
+            self.assertIsNone(learning_analytics._objective_title(unknown, "he"))
+
+        known = {unknown: {"titles": {"he": "דיבור על המשפחה"}}}
+        with patch.dict(kata_catalog._SNAPSHOT, {"objectives": known}, clear=False):
+            self.assertEqual(
+                learning_analytics._objective_title(unknown, "he"), "דיבור על המשפחה")
+
+        self.assertIsNone(learning_analytics._objective_title(None, "he"))
+
+    async def test_a_row_off_the_catalogue_still_gets_its_objective_title(self):
+        # The class worked in a component the catalogue no longer publishes, so
+        # `title` can only be the id — but the OBJECTIVE is usually still known,
+        # and that title is the only human name such a row can ever carry. It
+        # used to be hard-coded None, which is how `ENG.G7.FAMILY.SPEAK-01`
+        # reached a teacher as a title.
+        view = await self._run({"kid-a": [_row("gone-1", "q1", attempts=2, correct=0)]})
+        row = next(r for r in view["learnings"] if r["component_id"] == "gone-1")
+        self.assertEqual(row["title"], "gone-1")
+        self.assertEqual(row["objective_title"], "title:obj-1")
+        self.assertEqual(row["subject"], "math")
+        self.assertTrue(row["started"])
+
+    async def test_the_detail_page_names_an_off_catalogue_learning_the_same_way(self):
+        from app.services import learning_analytics
+
+        rows = {"kid-a": [_row("gone-1", "q1", attempts=2, correct=0)]}
+
+        async def _summary(learner_id, subject=None, component_id=None):
+            return rows.get(learner_id, [])
+
+        with ExitStack() as stack:
+            stack.enter_context(patch("app.brain.org.learners_in_group",
+                                      AsyncMock(return_value=list(rows))))
+            stack.enter_context(patch("app.services.learner_activity.question_summary",
+                                      side_effect=_summary))
+            _catalog_patches(stack)
+            view = await learning_analytics.learning_detail("g1", "gone-1", language="he")
+
+        # The card and the page it opens must agree on what this is called.
+        self.assertEqual(view["learning"]["objective_title"], "title:obj-1")
+        self.assertEqual(view["learning"]["subject"], "math")
+        self.assertIsNone(view["learning"]["unit_title"])
+
+
+class OneLearnersRowsAreLabelled(unittest.IsolatedAsyncioTestCase):
+    """`q1` is not the name of a question.
+
+    The content numbers questions WITHIN a screen, so `q1` names a different
+    question in every screen of a lesson — the student profile printed it four
+    times down one table and a teacher could see that something went badly and
+    not what it was. Everything attached here is authored content read out of
+    the catalogue; nothing is inferred and nothing is generated.
+    """
+
+    def _labelled(self, rows):
+        from app.services import learning_analytics
+
+        with ExitStack() as stack:
+            _catalog_patches(stack)
+            stack.enter_context(patch(
+                "app.services.kata_catalog.get_component",
+                side_effect=lambda cid: next((c for c in CATALOG if c["id"] == cid), None)))
+            stack.enter_context(patch(
+                "app.services.kata_catalog.information_for_item",
+                side_effect=lambda cid, iid: "מטרת הפריט: להבין מהי מסה"))
+            return learning_analytics.label_learner_rows(rows, language="he")
+
+    def test_a_row_carries_the_lesson_it_belongs_to(self):
+        row = self._labelled([_row("cmp-1", "q1", attempts=2, correct=1)])[0]
+        self.assertEqual(row["learning_title"], "הקנייה א")
+        self.assertEqual(row["objective_title"], "title:obj-1")
+
+    def test_the_question_number_is_the_one_on_screen(self):
+        # `q-hard` on `item-1` is the content's third screen; the raw id says
+        # nothing about that.
+        row = self._labelled([_row("cmp-1", "q-hard", attempts=1, correct=0)])[0]
+        self.assertEqual(row["ordinal"], 3)
+        self.assertEqual(row["screen_title"], "מסך ראשון")
+
+    def test_the_content_says_what_the_item_is_for(self):
+        row = self._labelled([_row("cmp-1", "q1", attempts=1, correct=1)])[0]
+        self.assertEqual(row["teaches"], "להבין מהי מסה")
+
+    def test_an_untitled_lesson_hands_over_nothing_rather_than_its_id(self):
+        # The client owns the "untitled" wording and already has one.
+        row = self._labelled([_row("gone-1", "q1", attempts=1, correct=1)])[0]
+        self.assertEqual(row["learning_title"], "")
+        self.assertNotIn("gone-1", str(row["learning_title"]))
+
+    def test_the_original_row_survives_intact(self):
+        # Labels are added, never substituted: the counters are what the tab is
+        # actually about.
+        original = _row("cmp-1", "q1", attempts=4, correct=3, hints=2)
+        row = self._labelled([original])[0]
+        for key, value in original.items():
+            self.assertEqual(row[key], value, key)
+
+    def test_the_vendor_boilerplate_opener_is_dropped(self):
+        from app.services.learning_analytics import _teaches
+
+        self.assertEqual(_teaches("מטרת הפריט: להבין מהי מסה"), "להבין מהי מסה")
+        self.assertEqual(_teaches("Item goal: understand mass"), "understand mass")
+        # Only the opener, and only when it IS the opener.
+        self.assertEqual(_teaches("להבין מהי מטרת הפריט: כאן"), "להבין מהי מטרת הפריט: כאן")
+        self.assertIsNone(_teaches(None))
+        self.assertIsNone(_teaches("   "))
 
 
 class GroupLearningsRoute(unittest.IsolatedAsyncioTestCase):

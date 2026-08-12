@@ -28,8 +28,9 @@ import {
   approveStudentGoal, getGroupGoals, getGroupSnapshot,
   type GoalConversation, type StudentGoal,
 } from '../../../services/teacher'
-import { GoalComposer } from '../student/TeacherGoals'
+import { GoalDialog } from './GoalDialog'
 import './teacher-goals-page.css'
+import { StudentAvatar } from '../shared/StudentAvatar'
 
 interface LearnerGoals {
   learner_id: string
@@ -113,10 +114,6 @@ export function TeacherGoalsPage() {
   /* The board. Goals are ordered by what a teacher needs to read first, and the
      card shows the head of that list — never the whole tail. */
   const RANK: Record<string, number> = { help: 0, done: 1, active: 2, approved: 3 }
-  const stateOf = (goal: StudentGoal) =>
-    goal.approved_by ? 'approved'
-      : goal.progress_stage === 'summarized' ? 'done'
-        : goal.needs_help ? 'help' : 'active'
 
   const board = useMemo(() => (rows ?? [])
     .map((learner) => {
@@ -131,9 +128,13 @@ export function TeacherGoalsPage() {
         goals: [...goals].sort((a, b) => RANK[stateOf(a)] - RANK[stateOf(b)]),
       }
     })
-    .filter((learner) => learner.goals.length > 0)
+    // A learner with no goals stays on the board, as an explicit empty card:
+    // hiding them let the compose picker offer a child who then disappeared,
+    // and "nobody has set them a goal yet" is exactly what this screen is for.
+    // Under a search they are dropped, because they match nothing.
+    .filter((learner) => learner.goals.length > 0 || !query.trim())
     .sort((a, b) => nameOf(a.learnerId).localeCompare(nameOf(b.learnerId))),
-  [rows, matches, nameOf])
+  [rows, matches, nameOf, query])
 
   const busy = scopeLoading || (rows === null && !error)
   if (error) return <ErrorState title={t('tch.error')} />
@@ -191,37 +192,20 @@ export function TeacherGoalsPage() {
         </div>
       </header>
 
-      {/* ── create: pick the child, then the same AI-assisted composer the
-          profile uses — grounded drafts from their data, every field editable,
-          nothing assigned without the teacher confirming it. ─────────────── */}
-      {isComposing ? (
-        <Panel className="tch-goalsPage__compose">
-          <label className="tch-goalsPage__composeWho">
-            <span>{t('tch.goalsPage.composeFor')}</span>
-            <select
-              className="sp-input"
-              value={composeFor}
-              onChange={(event) => setComposeFor(event.target.value)}
-            >
-              <option value="">{t('tch.goalsPage.composePick')}</option>
-              {[...names.entries()].map(([learnerId, displayName]) => (
-                <option key={learnerId} value={learnerId}>{displayName ?? learnerId}</option>
-              ))}
-            </select>
-          </label>
-          {composeFor ? (
-            <GoalComposer
-              key={composeFor}
-              learnerId={composeFor}
-              language={language}
-              framed={false}
-              onAssigned={() => { setIsComposing(false); setComposeFor(''); load() }}
-            />
-          ) : (
-            <p className="tch-goalsPage__composeHint">{t('tch.goalsPage.composeHint')}</p>
-          )}
-        </Panel>
-      ) : null}
+      {/* Creating a goal is a dialog now, with the reason for the goal beside
+          the goal. Inline, it pushed the whole board down the page while the
+          teacher filled it in — and there was nowhere to put the context that
+          makes the decision a decision. */}
+      <GoalDialog
+        open={isComposing}
+        learnerId={composeFor}
+        candidates={[...names.entries()].map(([learnerId, displayName]) => ({
+          id: learnerId, name: displayName ?? learnerId,
+        }))}
+        onPick={setComposeFor}
+        onClose={() => { setIsComposing(false); setComposeFor('') }}
+        onAssigned={() => { setIsComposing(false); setComposeFor(''); load() }}
+      />
 
       {/* ── waiting for the teacher — the only step nobody else can do ────── */}
       <Panel className="tch-goalsPage__inbox" data-tour="teacher.goalInbox">
@@ -250,9 +234,8 @@ export function TeacherGoalsPage() {
                     onClick={() => setToggled(
                       (state) => ({ ...state, [group.learnerId]: !open }))}
                   >
-                    <span className="tch-goalsPage__avatar" aria-hidden="true">
-                      {nameOf(group.learnerId).slice(0, 1)}
-                    </span>
+                    <StudentAvatar learnerId={group.learnerId}
+                                   name={nameOf(group.learnerId)} size={30} />
                     <strong dir="auto">{nameOf(group.learnerId)}</strong>
                     <span className="tch-goalsPage__pendingCount">
                       {t('tch.goalsPage.pendingCount', { count: group.goals.length })}
@@ -269,7 +252,7 @@ export function TeacherGoalsPage() {
                       {group.goals.map((row) => (
                         <li key={row.goal.id} className="tch-goalsPage__pendingRow">
                           <span className="tch-goalsPage__goalTitle" dir="auto">
-                            {row.goal.title}
+                            {goalTitle(row.goal, t)}
                           </span>
                           {row.goal.reward_value ? (
                             <span className="tch-goalsPage__sparks">
@@ -326,34 +309,29 @@ export function TeacherGoalsPage() {
                   className="tch-goalsPage__studentHead"
                   onClick={() => navigate(`/teacher/student/${learner.learnerId}`)}
                 >
-                  <span className="tch-goalsPage__avatar" aria-hidden="true">
-                    {nameOf(learner.learnerId).slice(0, 1)}
-                  </span>
+                  <StudentAvatar learnerId={learner.learnerId}
+                                 name={nameOf(learner.learnerId)} size={30} />
                   <strong dir="auto">{nameOf(learner.learnerId)}</strong>
                   <Icon name="chevronLeft" size={14} aria-hidden />
                 </button>
                 {/* The mix first — the shape of this child's goal load in one
                     line, so the four titles below are a sample, not a summary. */}
-                <p className="tch-goalsPage__mix">
+                <p className="tch-goalsPage__mix" hidden={!learner.goals.length}>
                   {t('tch.goalsPage.mix', {
                     active: learner.counts.active + learner.counts.help,
                     pending: learner.counts.done,
                     approved: learner.counts.approved,
                   })}
                 </p>
+                {learner.goals.length ? null : (
+                  <p className="tch-goalsPage__none">{t('tch.goalsPage.noGoalsYet')}</p>
+                )}
                 <ul className="tch-goalsPage__goals">
                   {learner.goals.slice(0, BOARD_PREVIEW).map((goal) => (
                     <li key={goal.id} className="tch-goalsPage__goal" dir="auto">
-                      <span className="tch-goalsPage__goalText">{goal.title}</span>
-                      <StatusPill tone={
-                        goal.approved_by ? 'strong'
-                          : goal.progress_stage === 'summarized' ? 'steady'
-                            : goal.needs_help ? 'support' : 'neutral'
-                      }>
-                        {goal.approved_by ? t('tch.goalsPage.state.approved')
-                          : goal.progress_stage === 'summarized' ? t('tch.goalsPage.state.done')
-                            : goal.needs_help ? t('tch.goalsPage.state.help')
-                              : t('tch.goalsPage.state.active')}
+                      <span className="tch-goalsPage__goalText">{goalTitle(goal, t)}</span>
+                      <StatusPill tone={STATE_TONE[stateOf(goal)]}>
+                        {t(`tch.goalsPage.state.${stateOf(goal)}`)}
                       </StatusPill>
                     </li>
                   ))}
@@ -379,4 +357,38 @@ export function TeacherGoalsPage() {
       )}
     </div>
   )
+}
+
+/** The one definition of what state a goal is in.
+ *
+ *  It was written twice — once for the sort and the counts, once inline in the
+ *  pill — so the board could rank a goal as "needs help" and label it "active".
+ */
+export type GoalState = 'approved' | 'done' | 'help' | 'active'
+
+export function stateOf(goal: StudentGoal): GoalState {
+  if (goal.approved_by) return 'approved'
+  if (goal.progress_stage === 'summarized') return 'done'
+  if (goal.needs_help) return 'help'
+  return 'active'
+}
+
+const STATE_TONE: Record<GoalState, 'strong' | 'steady' | 'support' | 'neutral'> = {
+  approved: 'strong', done: 'steady', help: 'support', active: 'neutral',
+}
+
+/** A goal whose title is a bare identifier is labelled, never printed raw.
+ *
+ *  Seed and imported goals arrive titled "בדיקת לולאת יעדים 1785912066705".
+ *  Rendering that verbatim puts a database key in front of a teacher as if it
+ *  were the name of something a child is working on.
+ */
+export function goalTitle(
+  goal: StudentGoal, t: (key: string, params?: Record<string, string | number>) => string,
+): string {
+  const title = (goal.title ?? '').trim()
+  if (!title) return t('tch.goalsPage.untitled')
+  // A long run of digits is an id, not a name a person typed.
+  const cleaned = title.replace(/\s*\b\d{10,}\b\s*/g, ' ').trim()
+  return cleaned || t('tch.goalsPage.untitled')
 }

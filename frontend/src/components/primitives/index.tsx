@@ -151,3 +151,4 @@ export function SkeletonCard({ rows = 3 }: { rows?: number }) {
 }
 
 export { Icon } from './Icon'
+export { Hint, Tooltip } from './Tooltip'

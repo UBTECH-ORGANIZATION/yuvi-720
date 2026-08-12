@@ -30,7 +30,15 @@ from app.brain.repository import _get_collection_named
 # teacher can tell who the learner asked.
 # `content_choice` is a 720 §Selected self-report (practiceDecision /
 # isUnderstood / isRepeat / externalLearning); the chosen value lives in `meta`.
-KINDS = {"hint", "explanation", "different_way", "yuvi_chat", "content_hint", "content_choice"}
+# `task` is a completed teacher-authored task. It is NOT a support signal like
+# the rest — it is here because the task store is deliberately separate from
+# `learning_events`, and this is the durable per-learner record that a task was
+# done. It carries no component/item/question, so `question_summary` skips it;
+# the identifier lives in `meta.task_id`.
+KINDS = {"hint", "explanation", "different_way", "yuvi_chat", "content_hint",
+         "content_choice", "task"}
+#: Kinds that are not per-question and must never open a `question_summary` row.
+NON_QUESTION_KINDS = {"task"}
 # The learner's own answer to "what helped you understand this?" — a self-report,
 # distinct from the objective usage counts above. Kept per question (latest wins).
 HELP_METHODS = {"hint", "explanation", "yuvi_chat"}
@@ -241,6 +249,11 @@ async def question_summary(
         "yuvi_chat": "chat_turns",
     }
     for activity in await _activity_rows(learner_id):
+        # A task row has no question to belong to. Without this it would open a
+        # slot keyed `"||"` and put one empty row, with no title and no numbers,
+        # at the top of every teacher's per-question view.
+        if activity.get("kind") in NON_QUESTION_KINDS:
+            continue
         slot = _slot(activity.get("component_id"), activity.get("item_id"), activity.get("question_id"))
         slot["objective_id"] = slot["objective_id"] or activity.get("objective_id")
         slot["subject"] = slot["subject"] or activity.get("subject")

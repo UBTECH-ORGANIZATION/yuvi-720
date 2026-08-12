@@ -147,6 +147,15 @@
   color: var(--sp-ink-400);
   border: 1px dashed var(--sp-border-strong);
 }
+
+/* The button that destroys something. Its own colour, so a confirmation dialog
+   has two buttons a teacher can tell apart without reading either. */
+.sp-btn--danger {
+  background: var(--sp-danger-600, #d1495b);
+  border-color: var(--sp-danger-600, #d1495b);
+  color: #fff;
+}
+.sp-btn--danger:hover:not(:disabled) { filter: brightness(1.08); }
 .sp-btn--ghost:hover:not(:disabled) {
   background: var(--sp-primary-050);
   color: var(--sp-primary-600);
@@ -182,6 +191,25 @@
               box-shadow var(--sp-dur) var(--sp-ease);
 }
 .sp-input::placeholder { color: var(--sp-ink-300); }
+
+/* Where the cursor sits in an EMPTY field.
+ *
+ * `dir="auto"` is implemented as `unicode-bidi: plaintext`: the text is laid out
+ * in the direction of its first strong character, and text with no strong
+ * character at all falls back to the element's `direction` — which, unset, is
+ * LTR. So every empty field on a Hebrew screen put the caret on the left while
+ * its own placeholder sat on the right, and the first Hebrew keystroke jumped it
+ * across the box.
+ *
+ * `:placeholder-shown` is the whole point of the selector: this applies ONLY
+ * while the field is empty. The moment anything is typed the rule stops
+ * matching and `dir="auto"` decides for itself — Hebrew right-to-left, English
+ * left-to-right, in the same box, which is what it was put there for. (Scoping
+ * it matters for `<input>` in particular: unlike `<textarea>`, a single-line
+ * field aligns by its `direction` rather than by the direction of its content,
+ * so a permanent `direction: rtl` would right-align an English answer.) */
+input[dir="auto"]:placeholder-shown,
+textarea[dir="auto"]:placeholder-shown { direction: inherit; }
 .sp-input:focus-visible { border-color: var(--sp-primary-500); box-shadow: var(--sp-ring); }
 .sp-input:disabled { opacity: 0.6; }
 .sp-input--pill { border-radius: var(--sp-radius-pill); }
@@ -767,3 +795,71 @@
 @media (prefers-reduced-motion: reduce) {
   .sp-skeleton { animation: none; }
 }
+
+/* ── tooltip ───────────────────────────────────────────────────────────────
+   One absolutely-positioned bubble centred on its trigger. Logical properties
+   throughout, so RTL is the same code path rather than a mirrored copy. */
+
+.sp-tip { position: relative; display: inline-flex; align-items: center; }
+
+/* Wraps a control rather than sitting beside one, so it must be invisible to
+   the layout: `contents` would remove the box a flex row needs to measure, and
+   a block would break the row, so it is a flex item that behaves exactly like
+   the button it holds. */
+.sp-hint { display: inline-flex; }
+.sp-hint > * { flex: 1 1 auto; }
+
+.sp-tip__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 18px;
+  block-size: 18px;
+  padding: 0;
+  border: 1px solid var(--sp-border-strong);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--sp-ink-400);
+  cursor: help;
+  line-height: 1;
+}
+.sp-tip__trigger:hover,
+.sp-tip__trigger[aria-expanded='true'] {
+  color: var(--sp-primary-600);
+  border-color: var(--sp-primary-600);
+}
+.sp-tip__trigger:focus-visible { outline: 2px solid var(--sp-primary-600); outline-offset: 2px; }
+
+/* Positioned by the component, in viewport coordinates, because it is rendered
+   into `document.body` — the only way a bubble on a control inside a scrolling
+   panel is not cut off by that panel. `fixed` and a plain `z-index: 140` are
+   enough to clear a modal now that the bubble is a sibling of its backdrop
+   (z-index 120) rather than a descendant of it. */
+.sp-tip__bubble {
+  position: fixed;
+  z-index: 140;
+  /* Wide enough for a sentence per item, capped so it never spans the dialog. */
+  inline-size: max-content;
+  max-inline-size: min(22rem, 80vw);
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  border: 1px solid var(--sp-border-strong);
+  background: var(--sp-surface-2);
+  color: var(--sp-ink-700);
+  box-shadow: var(--sp-shadow-md);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-regular);
+  line-height: 1.6;
+  text-align: start;
+  white-space: normal;
+  pointer-events: none;
+}
+.sp-tip__bubble.is-interactive { pointer-events: auto; }
+/* Explicit, because a bubble that is always in the DOM (kept there so
+   `aria-describedby` resolves) relies on `[hidden]` and nothing else. */
+.sp-tip__bubble[hidden] { display: none; }
+
+.sp-tip__bubble dl { margin: 0; display: grid; gap: var(--sp-2); }
+.sp-tip__bubble dt { font-weight: var(--sp-fw-semibold); color: var(--sp-ink-800); }
+.sp-tip__bubble dd { margin: 0; color: var(--sp-ink-500); }
+.sp-tip__bubble ul { margin: 0; padding-inline-start: var(--sp-4); display: grid; gap: 4px; }

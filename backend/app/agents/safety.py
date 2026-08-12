@@ -325,6 +325,35 @@ def _extract_category(raw: str) -> str:
     return str(obj.get("category") or "none").strip().lower()
 
 
+#: What the child was told back, per source. A teacher walking into this
+#: conversation needs to know what the child has already heard — "we told them
+#: to talk to an adult they trust" changes the first sentence you say.
+#:
+#: Derived here rather than passed in by four call sites: this module owns both
+#: halves (it writes the redirect the child sees), and a caller that forgot to
+#: pass it would leave the teacher guessing.
+def _reply_shown_to_learner(source: str, category: str, language: str) -> str:
+    if source == "direct_message":
+        # The message was refused, not delivered — and the child was told so.
+        return _DM_DISTRESS_REPLY.get(language, _DM_DISTRESS_REPLY["he"])
+    return redirect_message(category, language)
+
+
+#: The learner-facing copy `direct_messages` answers a blocked distress message
+#: with, kept beside its siblings. Mirrors `moderation.distress` in the locales;
+#: the string is repeated rather than imported because the frontend renders that
+#: key and the backend has no access to the locale tables.
+_DM_DISTRESS_REPLY = {
+    "he": ("מה שכתבת נשמע קשה, ואנחנו לא רוצים שתישאר/י עם זה לבד. ההודעה לא "
+           "נשלחה, אבל דיווחנו למורה שלך כדי שמישהו יהיה איתך."),
+    "ar": ("ما كتبته يبدو صعبًا، ولا نريدك أن تبقى مع هذا وحدك. لم تُرسَل "
+           "الرسالة، لكننا أبلغنا معلّمك كي يكون أحد إلى جانبك."),
+    "en": ("What you wrote sounds hard, and we don't want you to be alone with "
+           "it. The message wasn't sent, but we told your teacher so someone "
+           "can be there with you."),
+}
+
+
 async def record_wellbeing_flag(
     learner_id: str,
     evidence: str,
@@ -332,17 +361,32 @@ async def record_wellbeing_flag(
     source: str = "mapping_reflection",
     category: str = "distress",
 ) -> Optional[dict]:
-    """Append a distress signal to the brain for the teacher (single writer here).
+    """Record a distress signal for the teacher (single writer here).
 
     `evidence` is the learner's own words (raw, for F6 explainability). Non-fatal:
     any failure returns None so the learner-facing reply is never blocked.
+
+    Written twice, deliberately, to two stores with two different jobs:
+
+    * ``wellbeing_flags`` (its own collection) is the RECORD — durable, never
+      trimmed, and the thing the teacher's bell links at. It carries state a
+      human changes: claimed by whom, closed by whom, and why.
+    * ``brain.wellbeing_flags`` is CONTEXT — inside the coach's read scope, and
+      what `insights` and `moments` compute the "needs attention" strip from.
+
+    They were one array until a notification outlived its own evidence: the bell
+    still held the alert days after the array had been trimmed away, so clicking
+    it landed on a profile with nothing on it.
     """
     try:
         from app.brain.repository import apply_brain_updates, get_brain  # lazy
+        from app.services import wellbeing
+
+        flag_id = wellbeing.new_flag_id()
         brain = await get_brain(learner_id)
         flags = list(brain.get("wellbeing_flags") or [])
         flag = {
-            "id": f"wb_{datetime.now(timezone.utc).timestamp():.0f}",
+            "id": flag_id,
             "category": category,
             "evidence": (evidence or "").strip()[:400],
             "language": language,
@@ -353,6 +397,17 @@ async def record_wellbeing_flag(
         }
         flags.append(flag)
         await apply_brain_updates(learner_id, {"wellbeing_flags": flags[-_MAX_WELLBEING_FLAGS:]})
+        await wellbeing.record(
+            learner_id,
+            evidence=flag["evidence"],
+            category=category,
+            source=source,
+            language=language,
+            reply=_reply_shown_to_learner(source, category, language),
+            # A blocked message reached nobody. Anything else was said and seen.
+            delivered=source != "direct_message",
+            flag_id=flag_id,
+        )
         await _escalate_to_teachers(learner_id, flag)
         return flag
     except Exception as exc:  # pragma: no cover - never block the reply
@@ -374,9 +429,9 @@ async def _escalate_to_teachers(learner_id: str, flag: dict) -> None:
     triggered the flag.
     """
     try:
-        from app.services import presence, teacher_alerts
+        from app.services import presence, teacher_alerts, wellbeing
         presence.note_help_requested(learner_id)
-        await teacher_alerts.raise_alert(
+        raised = await teacher_alerts.raise_alert(
             learner_id,
             "safety_flag",
             title_key="tch.alert.safety",
@@ -394,6 +449,18 @@ async def _escalate_to_teachers(learner_id: str, flag: dict) -> None:
                     "flag_id": flag.get("id"),
                 },
             },
+            # The bell must land ON the disclosure, not at the top of a profile
+            # with seven tabs. The flag id travels in the route because a
+            # notification's action is written once and never rewritten — a
+            # link that only says "open the student" can never be improved
+            # later, as every alert raised before this line still proves.
+            route=f"/teacher/student/{learner_id}?tab=wellbeing&flag={flag.get('id')}",
+        )
+        # Who was told. The single most useful line on the card when two
+        # teachers share a class and each assumes the other went.
+        await wellbeing.note_notified(
+            str(flag.get("id") or ""),
+            [str(alert.get("teacher_id")) for alert in raised if alert.get("teacher_id")],
         )
     except Exception as exc:  # pragma: no cover - never block the reply
         print(f"⚠️ safety escalation failed: {type(exc).__name__}: {exc}")

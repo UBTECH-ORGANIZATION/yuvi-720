@@ -1,0 +1,143 @@
+/* The learner's task screens.
+ *
+ * Logical properties throughout — the app is RTL by default and mirrors for
+ * English, so a physical `left` here is a bug visible in exactly one language.
+ */
+
+.st-wrap {
+  inline-size: min(100%, 860px);
+  margin-inline: auto;
+  padding: var(--sp-6) var(--sp-gutter, var(--sp-5)) var(--sp-8);
+  display: grid;
+  gap: var(--sp-6);
+}
+
+.st-hero { display: grid; gap: var(--sp-2); }
+.st-hero__eyebrow {
+  margin: 0;
+  color: var(--sp-primary-600);
+  font-size: var(--sp-fs-sm);
+  font-weight: 600;
+}
+.st-hero h1 { margin: 0; font-size: var(--sp-fs-2xl); color: var(--sp-ink-900); }
+.st-hero p  { margin: 0; color: var(--sp-ink-400); }
+
+.st-section { display: grid; gap: var(--sp-3); }
+.st-section h2 { margin: 0; font-size: var(--sp-fs-lg, 18px); color: var(--sp-ink-700); }
+
+.st-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+.st-list--quiet { opacity: 0.82; }
+
+.st-row {
+  border: 1px solid var(--sp-border);
+  border-radius: 16px;
+  background: var(--sp-surface);
+  overflow: hidden;
+}
+
+.st-row.is-overdue { border-color: var(--sp-warn-600); }
+.st-row.is-done    { background: var(--sp-bg-subtle, var(--sp-primary-050)); }
+
+.st-row__hit {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-4);
+  background: none;
+  border: 0;
+  text-align: start;
+  cursor: pointer;
+  color: inherit;
+}
+
+.st-row__hit:hover { background: var(--sp-primary-050); }
+
+.st-row__icon {
+  flex: none;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--sp-primary-100);
+  color: var(--sp-primary-700);
+}
+
+.st-row.is-done .st-row__icon { background: var(--sp-success-100); color: var(--sp-success-600); }
+
+.st-row__text  { flex: 1; display: grid; gap: 4px; min-inline-size: 0; }
+.st-row__title { font-weight: 600; color: var(--sp-ink-900); }
+
+.st-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
+}
+
+.st-row__meta .is-overdue { color: var(--sp-warn-600); font-weight: 600; }
+
+.st-row__tag {
+  padding: 1px 8px;
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-primary-100);
+  color: var(--sp-primary-700);
+}
+
+.st-row__said { font-size: var(--sp-fs-sm); color: var(--sp-ink-500); }
+/* The arrow points the way the reader travels, which is the other way in RTL. */
+.st-row__go { flex: none; color: var(--sp-ink-300); }
+[dir="rtl"] .st-row__go { transform: scaleX(-1); }
+
+/* ── solving ────────────────────────────────────────────────────────────── */
+
+.st-solve {
+  inline-size: min(100%, 960px);
+  margin-inline: auto;
+  padding: var(--sp-5) var(--sp-gutter, var(--sp-5)) var(--sp-8);
+  display: grid;
+  gap: var(--sp-5);
+}
+
+.st-solve__bar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.st-solve__title {
+  margin: 0;
+  font-size: var(--sp-fs-lg, 18px);
+  text-align: center;
+  color: var(--sp-ink-900);
+}
+
+.st-solve__spacer { inline-size: 1px; }
+[dir="rtl"] .st-solve__back { transform: scaleX(-1); }
+
+.st-done {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-6);
+  border-radius: 20px;
+  background: var(--sp-gradient-soft);
+  color: #fff;
+  text-align: center;
+}
+
+.st-done__mark {
+  inline-size: 56px;
+  block-size: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.st-done__said   { margin: 0; font-size: var(--sp-fs-md); line-height: 1.6; max-inline-size: 44ch; }
+.st-done__sparks { margin: 0; display: flex; align-items: center; gap: var(--sp-2); font-weight: 600; }
+.st-done .sp-btn { background: rgba(255, 255, 255, 0.18); color: #fff; border-color: transparent; }

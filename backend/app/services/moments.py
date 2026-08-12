@@ -100,10 +100,16 @@ def _stamp(event: dict[str, Any]) -> Optional[datetime]:
 
 
 def _label(objective_id: Optional[str], language: str) -> str:
-    if not objective_id:
-        return ""
+    """The objective's title, or empty — never its dotted key.
+
+    This used to fall back to the id, so a teacher's moments feed read
+    "הצלחה ראשונה בMOE.ENG.G7.PEOPLE.FAMILY.WRITE אחרי 6 ניסיונות". The empty
+    string is not a loss: every moment template has an unnamed variant that
+    simply omits the clause, which says the same true thing without the id.
+    """
     from app.services import kata_catalog
-    return kata_catalog.localized_objective_title(objective_id, language) or objective_id
+
+    return kata_catalog.objective_title(objective_id, language) or ""
 
 
 def _moment(kind: str, at: datetime, *, raw: dict[str, Any],

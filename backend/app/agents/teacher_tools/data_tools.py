@@ -18,7 +18,7 @@ zero is the exact failure this phase is built to prevent.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
 from app.agents.teacher_tools.registry import TeacherTool, TeacherToolContext, register
 
@@ -55,11 +55,43 @@ async def _list_my_groups(context: TeacherToolContext, args: dict) -> dict:
     ]}
 
 
+#: Filters that turn a description of a set into the actual ids in it.
+#:
+#: This exists because of an observed failure: asked about "the inactive
+#: students", the assistant said it had no way to list them — untrue, the data
+#: was two tool calls away — and then drafted a goal for one arbitrary child.
+#: Nothing named a source for "who matches this description", so the model
+#: guessed. `help_tools.ROSTER_FILTERS` deep-links the roster with these same
+#: four words; a contract test keeps the two sets from drifting.
+ROSTER_FILTERS = {"attention", "not_started", "active", "inactive"}
+
+#: What "hasn't been here in a while" means when the teacher doesn't say.
+DEFAULT_INACTIVE_DAYS = 7
+
+
+def _matches(student: dict[str, Any], wanted: str, days: int) -> bool:
+    """Whether one snapshot row is in the described set.
+
+    `inactive` is deliberately not a status. The three statuses are about a
+    learner's standing (needs attention / never started / progressing) and are
+    mutually exclusive; "has not been seen in N days" cuts across all three — an
+    `attention` learner is usually also inactive, and both facts are true.
+    """
+    if wanted == "inactive":
+        elapsed = (student.get("activity") or {}).get("days_inactive")
+        return isinstance(elapsed, (int, float)) and elapsed >= days
+    return student.get("status") == wanted
+
+
 async def _list_students(context: TeacherToolContext, args: dict) -> dict:
     """Ids only. The model needs to know who exists, not who they are.
 
     Also the guard against invented ids: the prompt instructs the model to call
     this before assuming any learner id, so a hallucinated id fails closed.
+
+    With a `filter`, it answers the harder question — *which* of them match a
+    description the teacher gave. Ids only there too: this resolves a set, and
+    the per-student evidence behind it lives in `get_group_snapshot`.
     """
     from app.brain import org
 
@@ -70,8 +102,55 @@ async def _list_students(context: TeacherToolContext, args: dict) -> dict:
     )
     if not learner_ids:
         return empty("group_has_no_students" if group_id else "teacher_has_no_students")
-    return {"data": [{"learner_id": learner_id} for learner_id in learner_ids],
-            "note": "refer to a student as {{student:<learner_id>}}"}
+
+    wanted = str(args.get("filter") or "").strip().lower()
+    if not wanted:
+        return {"data": [{"learner_id": learner_id} for learner_id in learner_ids],
+                "note": "refer to a student as {{student:<learner_id>}}"}
+
+    if wanted not in ROSTER_FILTERS:
+        # Named, not silently ignored: a filter the model invented must not come
+        # back looking like the whole class matched it.
+        return empty("unknown_filter", filter=wanted,
+                     supported=sorted(ROSTER_FILTERS))
+
+    try:
+        days = int(args.get("days") or DEFAULT_INACTIVE_DAYS)
+    except (TypeError, ValueError):
+        days = DEFAULT_INACTIVE_DAYS
+    days = max(1, min(90, days))
+
+    from app.services import insights
+
+    # One snapshot per group the teacher owns, then filtered. Bounded by the
+    # staff member's group list, and `group_insights` is the same call
+    # `get_group_snapshot` makes — so the two tools can never disagree about
+    # who is inactive.
+    group_ids = [str(group_id)] if group_id else sorted(context.allowed_group_ids)
+    allowed = set(learner_ids)
+    matched: list[str] = []
+    seen: set[str] = set()
+    for gid in group_ids:
+        snapshot = await insights.group_insights(gid, language=context.language)
+        for student in (snapshot.get("students") or []):
+            student_id = student.get("learner_id")
+            if not student_id or student_id in seen or student_id not in allowed:
+                continue
+            if _matches(student, wanted, days):
+                seen.add(student_id)
+                matched.append(student_id)
+
+    if not matched:
+        return empty("no_students_match_filter", filter=wanted,
+                     **({"days": days} if wanted == "inactive" else {}))
+
+    return {
+        "data": [{"learner_id": learner_id} for learner_id in matched],
+        "filter": wanted,
+        **({"days": days} if wanted == "inactive" else {}),
+        "note": "these are ALL the students matching that description — "
+                "draft for all of them, or ask the teacher which ones",
+    }
 
 
 async def _get_group_snapshot(context: TeacherToolContext, args: dict) -> dict:
@@ -107,6 +186,180 @@ async def _get_group_learning_gaps(context: TeacherToolContext, args: dict) -> d
     return {"data": [
         {k: v for k, v in scrub(gap).items() if k != "learner_ids"} for gap in gaps
     ]}
+
+
+# ── learnings ────────────────────────────────────────────────────────────────
+# The lesson-shaped question — "which learning did they struggle with most?" —
+# had no tool behind it, so the assistant answered "אין מספיק נתונים" about a
+# screen the teacher can open in two clicks. `/teacher/learnings` was reading
+# `learning_analytics` the whole time; the model simply had no door to it.
+
+#: The catalogue is the listing's spine, so most rows are lessons nobody has
+#: opened. Untouched rows are the answer to "what haven't they done yet" and
+#: noise for anything else, so they are counted rather than listed.
+MAX_LEARNING_ROWS = 12
+MAX_HARD_QUESTIONS = 3
+
+
+def _learning_title(row: dict[str, Any]) -> Optional[str]:
+    """A name a teacher would recognise, never an id worn as a title.
+
+    A learning the class worked that the catalogue no longer publishes carries
+    its own component id in `title` — that is the listing's deliberate fallback,
+    because the row must still appear. Read aloud in an answer it becomes
+    "הלומדה שהכי התקשו בה היא ENG.G7.FAMILY.GRAMMAR-01", which tells a teacher
+    nothing. The objective behind it usually does survive, and it is a name.
+    """
+    title = str(row.get("title") or "").strip()
+    component_id = str(row.get("component_id") or "").strip()
+    if title and title != component_id:
+        return title
+    for key in ("objective_title", "unit_title"):
+        fallback = str(row.get(key) or "").strip()
+        if fallback:
+            return fallback
+    return title or None
+
+
+def _learning_row(row: dict[str, Any]) -> dict[str, Any]:
+    """One learning, trimmed to what an answer can be built from.
+
+    Everything numeric here is quoted from `learning_analytics`, never derived:
+    the prompt forbids arithmetic on tool output, and a success rate the model
+    computed from attempts and correct would be exactly that.
+    """
+    hard = [
+        {"question": (question.get("label") or {}).get("question")
+                     or question.get("question_id"),
+         "screen": (question.get("label") or {}).get("screen"),
+         "attempts": question.get("attempts"),
+         "correct": question.get("correct"),
+         "success_rate": question.get("success_rate")}
+        for question in (row.get("hard_questions") or [])[:MAX_HARD_QUESTIONS]
+    ]
+    rate = row.get("success_rate")
+    return {
+        "component_id": row.get("component_id"),
+        "title": _learning_title(row),
+        "unit_title": row.get("unit_title"),
+        "objective_title": row.get("objective_title"),
+        "subject": row.get("subject"),
+        "is_assessment": row.get("is_assessment"),
+        "learners_engaged": row.get("learners_engaged"),
+        "group_size": row.get("group_size"),
+        "attempts": row.get("attempts"),
+        "correct": row.get("correct"),
+        "success_rate": rate,
+        # The same number as a percentage, computed HERE. The prompt forbids the
+        # model doing arithmetic on tool output, which left it quoting "הצלחה של
+        # 0.0" at a teacher — technically faithful and unreadable. A figure a
+        # person would say is part of the tool's job, not the model's.
+        "success_percent": None if rate is None else round(rate * 100),
+        "struggling_count": row.get("struggling_count"),
+        "hints_used": row.get("hints_used"),
+        "explanations_used": row.get("explanations_used"),
+        "avg_minutes_per_learner": row.get("avg_minutes_per_learner"),
+        "timing_available": row.get("timing_available"),
+        "last_activity_at": row.get("last_activity_at"),
+        "hard_questions": hard,
+    }
+
+
+#: How the caller wants the list cut. Named orderings rather than a free-text
+#: sort field: "hardest" has one definition in this product and the tool holds
+#: it, so two teachers asking the same question get the same lesson back.
+LEARNING_SORTS = {"hardest", "most_recent", "most_worked"}
+
+
+def _sorted(rows: list[dict[str, Any]], sort: str) -> list[dict[str, Any]]:
+    if sort == "most_recent":
+        return sorted(rows, key=lambda row: row.get("last_activity_at") or "", reverse=True)
+    if sort == "most_worked":
+        return sorted(rows, key=lambda row: row.get("attempts") or 0, reverse=True)
+    # Hardest = lowest success first, and among equals the one with more
+    # evidence behind it. A row with no rate at all is not "hardest" — nobody
+    # answered anything in it — so it sorts LAST rather than first, which is
+    # where a naive ascending sort on `None or 0` would have put it.
+    return sorted(rows, key=lambda row: (
+        1 if row.get("success_rate") is None else 0,
+        row.get("success_rate") or 0,
+        -(row.get("attempts") or 0),
+    ))
+
+
+async def _get_group_learnings(context: TeacherToolContext, args: dict) -> dict:
+    """What the class did in each lesson — the per-learning picture.
+
+    This is the tool behind "which learning are they struggling with", and the
+    honest answer to it is a *ranking of lessons*, which is allowed. Ranking
+    students is not, and nothing here carries a learner id.
+    """
+    from app.services import learning_analytics
+
+    view = await learning_analytics.group_learnings(
+        str(args["group_id"]), subject=args.get("subject") or None,
+        language=context.language,
+    )
+    started = [row for row in (view.get("learnings") or []) if row.get("started")]
+    if not started:
+        # Named separately from an empty group: "nobody has opened a lesson yet"
+        # and "this class has no students" are different things to be told.
+        return empty("no_learning_activity_yet",
+                     catalog_total=(view.get("totals") or {}).get("catalog_total"))
+
+    sort = str(args.get("sort") or "hardest").strip().lower()
+    if sort not in LEARNING_SORTS:
+        sort = "hardest"
+    ordered = _sorted(started, sort)
+
+    rows = [_learning_row(row) for row in ordered[:MAX_LEARNING_ROWS]]
+    untouched = len(view.get("learnings") or []) - len(started)
+    return {
+        "data": {
+            "sorted_by": sort,
+            "learnings": scrub(rows),
+            "totals": view.get("totals") or {},
+            "subjects": view.get("subjects") or [],
+            "not_started_in_catalog": max(0, untouched),
+        },
+        "note": "Say the figure as `success_percent` — it is already computed. "
+                "Name a lesson by its `title`, never by its component_id. "
+                "A ranking of LESSONS is fine; a ranking of students is not.",
+    }
+
+
+async def _get_learning_detail(context: TeacherToolContext, args: dict) -> dict:
+    """One lesson opened up: which questions inside it went wrong."""
+    from app.services import learning_analytics
+
+    view = await learning_analytics.learning_detail(
+        str(args["group_id"]), str(args["component_id"]), language=context.language,
+    )
+    learning = view.get("learning") or {}
+    if not learning.get("started"):
+        return empty("nobody_has_opened_this_learning",
+                     component_id=args.get("component_id"))
+
+    questions = sorted(
+        (row for row in (view.get("questions") or []) if row.get("attempts")),
+        key=lambda row: (row.get("success_rate") if row.get("success_rate") is not None else 2,
+                         -(row.get("attempts") or 0)),
+    )[:8]
+    return {"data": scrub({
+        "learning": _learning_row(learning),
+        "hardest_questions": [
+            {"question": (row.get("label") or {}).get("question") or row.get("question_id"),
+             "screen": (row.get("label") or {}).get("screen"),
+             "teaches": row.get("teaches"),
+             "learners": row.get("learners"),
+             "attempts": row.get("attempts"),
+             "correct": row.get("correct"),
+             "success_rate": row.get("success_rate"),
+             "hints_used": row.get("hints_used"),
+             "explanations_used": row.get("explanations_used")}
+            for row in questions
+        ],
+    })}
 
 
 # ── student ──────────────────────────────────────────────────────────────────
@@ -203,7 +456,25 @@ async def _get_my_alerts(context: TeacherToolContext, args: dict) -> dict:
     )
     if not alerts:
         return empty("no_open_alerts")
-    return {"data": scrub(alerts)}
+
+    # An alert the teacher has now read is one they can close from here. The
+    # offer carries ids only; acknowledging is a real POST from the browser.
+    open_alerts = [
+        {"alert_id": str(alert.get("_id")), "learner_id": alert.get("learner_id"),
+         "kind": alert.get("kind"), "severity": alert.get("severity")}
+        for alert in alerts if alert.get("status") == teacher_alerts.STATUS_OPEN
+    ][:6]
+
+    result: dict[str, Any] = {"data": scrub(alerts)}
+    if open_alerts:
+        result["offer"] = {
+            "kind": "ack_alerts",
+            "label_key": "tch.assistant.action.ackAlerts",
+            "alerts": open_alerts,
+            "params": {"count": len(open_alerts)},
+            "icon": "bell",
+        }
+    return result
 
 
 async def _get_live_classroom(context: TeacherToolContext, args: dict) -> dict:
@@ -233,9 +504,28 @@ def register_all() -> None:
         name="list_students",
         description=(
             "Learner ids in a group, or across all the teacher's groups. "
-            "Call this before assuming any learner id exists."
+            "Call this before assuming any learner id exists.\n"
+            "THIS IS ALSO HOW YOU RESOLVE A DESCRIPTION INTO PEOPLE. When the "
+            "teacher says 'the inactive students', 'whoever needs attention', "
+            "'the ones who haven't started', pass `filter` and you get exactly "
+            "that set — never guess at it and never act on a subset of it."
         ),
-        parameters={"type": "object", "properties": dict(_GROUP_ID)},
+        parameters={"type": "object", "properties": {
+            **_GROUP_ID,
+            "filter": {
+                "type": "string", "enum": sorted(ROSTER_FILTERS),
+                "description": (
+                    "Optional. `attention` = flagged as needing attention; "
+                    "`not_started` = enrolled but never produced any activity; "
+                    "`active` = progressing; `inactive` = no activity for `days` "
+                    "days (cuts across the other three)."
+                ),
+            },
+            "days": {
+                "type": "integer",
+                "description": f"`inactive` only. Default {DEFAULT_INACTIVE_DAYS}.",
+            },
+        }},
         handler=_list_students, group_args=("group_id",),
     ))
     register(TeacherTool(
@@ -264,6 +554,45 @@ def register_all() -> None:
             "subject": {"type": "string", "description": "Optional subject filter."},
         }, "required": ["group_id"]},
         handler=_get_group_learning_gaps, group_args=("group_id",),
+    ))
+    register(TeacherTool(
+        name="get_group_learnings",
+        description=(
+            "What the class did in each LESSON (learning): how many worked on it, "
+            "success rate, time, hint and explanation use, and the questions inside "
+            "it that went worst.\n"
+            "THIS IS THE TOOL FOR ANY QUESTION ABOUT LESSONS — 'which learning did "
+            "they struggle with most', 'what should we go over again', 'which lesson "
+            "took the longest', 'what have they not opened yet'. Ranking lessons is "
+            "allowed; ranking students is not, and this returns no learner ids."
+        ),
+        parameters={"type": "object", "properties": {
+            **_GROUP_ID,
+            "subject": {"type": "string", "description": "Optional subject filter."},
+            "sort": {
+                "type": "string", "enum": sorted(LEARNING_SORTS),
+                "description": (
+                    "`hardest` (default) = lowest success rate first; "
+                    "`most_recent` = last worked on first; "
+                    "`most_worked` = most answers first."
+                ),
+            },
+        }, "required": ["group_id"]},
+        handler=_get_group_learnings, group_args=("group_id",),
+    ))
+    register(TeacherTool(
+        name="get_learning_detail",
+        description=(
+            "One lesson opened up: the questions inside it, worst first, with how "
+            "many tried each and what support they used. Call it after "
+            "get_group_learnings when the teacher asks what went wrong INSIDE a lesson."
+        ),
+        parameters={"type": "object", "properties": {
+            **_GROUP_ID,
+            "component_id": {"type": "string",
+                             "description": "A component_id from get_group_learnings."},
+        }, "required": ["group_id", "component_id"]},
+        handler=_get_learning_detail, group_args=("group_id",),
     ))
     register(TeacherTool(
         name="get_student_overview",

@@ -1,7 +1,8 @@
 /* Teacher view + org clients (F6/F8). Every insight/flag carries raw evidence;
    access is group-scoped server-side. */
 
-import { apiDelete, apiGet, apiPost } from './api'
+import { apiDelete, apiGet, apiPatch, apiPost } from './api'
+import type { AvatarChoice } from '../features/badges/types'
 
 export interface AttentionFlag {
   reason: string
@@ -21,7 +22,10 @@ export interface TeacherRecommendation {
   text: string
   because: { signal: string; value: unknown; raw: Record<string, unknown> }
 }
-export interface WellbeingFlag { evidence: string; at?: string; source?: string }
+/** The thin projection the student-detail payload carries — the open flags, for
+ *  the "needs attention" strip. The full record, with its state and its
+ *  history, is `WellbeingFlag` below and comes from its own endpoint. */
+export interface WellbeingSnippet { evidence: string; at?: string; source?: string }
 export interface StudentInsight {
   learner_id: string
   display_name: string | null
@@ -30,7 +34,7 @@ export interface StudentInsight {
   struggle_items: StruggleItem[]
   strengths: string[]
   attention: AttentionFlag | null
-  wellbeing_flags: WellbeingFlag[]
+  wellbeing_flags: WellbeingSnippet[]
   /**
    * Pedagogical recommendations, tagged with one of the five MoE categories
    * (reinforce · extra_practice · deepen · enrich · refer_intervention). Each
@@ -84,6 +88,11 @@ export interface StruggleItem {
   label?: string
   objective_id?: string
   subject?: string | null
+  /** `evidence` — the child answered questions and got them wrong.
+   *  `questionnaire` — a trait they described about themselves at onboarding.
+   *  Tagged server-side (`insights.py`) by whether an objective is behind it.
+   *  Both are real signal; only the first is a difficulty the system detected. */
+  source?: 'evidence' | 'questionnaire'
   evidence?: { tag?: string; count?: number; resolved?: boolean }[] | null
   raw_evidence?: {
     attempts?: number; successes?: number; failures?: number
@@ -100,14 +109,31 @@ export interface StrengthDetail {
   evidence?: Record<string, unknown>
 }
 
+/** The four labeled blocks `student_description` is built from (brain A-5). */
+export type PortraitBlock =
+  'how_to_reach' | 'what_frustrates' | 'learning_preferences' | 'motivational_patterns'
+
+/** How the system sees this learner, in sentences it has already written.
+ *
+ *  Not generated for the teacher: `student_description` is maintained lazily
+ *  off the learner's own coach bundle, so this is a read of existing state and
+ *  costs no model call on this screen. `null` when nothing has been observed. */
+export interface StudentPortrait {
+  blocks: { key: PortraitBlock; lines: string[] }[]
+  /** Distinct evidence keys behind the sentences — provenance, not a score. */
+  evidence_count: number
+  updated_at: string | null
+}
+
 /** Full student view. Extends the legacy shape rather than replacing it. */
 export interface StudentDetail extends StudentInsight {
   objectives_progress: Record<string, SubjectProgress>
   subject_filter: string | null
+  portrait: StudentPortrait | null
   strengths_detail: StrengthDetail[]
   /** Every criterion that fired, not just the highest-priority one. */
   attention_all: AttentionFlag[]
-  self_awareness: { reading: string; gap: number; samples: unknown[] } | null
+  self_awareness: { reading: string; gap: number; samples: AwarenessSample[] } | null
 }
 
 export interface Engagement {
@@ -166,6 +192,29 @@ export interface QuestionRow {
   helped_reported: string[]
   first_at?: string
   last_at?: string
+
+  /* ── what this row IS, resolved from the catalogue server-side ───────────
+     Attached by `learning_analytics.label_learner_rows`. All authored content,
+     none of it inferred: where the catalogue is silent the field is null and
+     the client says so rather than printing the provider id. */
+
+  /** The lesson this belongs to. Empty when the vendor never titled it. */
+  learning_title?: string
+  unit_title?: string | null
+  objective_title?: string | null
+  /** The question number the LEARNER sees on screen — not the provider's id.
+   *  `q1` appears once per screen, so the raw id names three different
+   *  questions in one lesson. */
+  ordinal?: number | string | null
+  /** 1-based סעיף, only where a screen really holds several parts. */
+  part?: number | null
+  /** The screen's own heading. */
+  screen_title?: string | null
+  kind?: string | null
+  /** The content's own description of what this item is for
+   *  (`informationToBot`) — the most direct answer to "what were they working
+   *  on", written by whoever wrote the lesson. */
+  teaches?: string | null
 }
 
 export type InsightKind = 'strength' | 'weakness' | 'challenge' | 'note'
@@ -189,6 +238,9 @@ export interface RosterEntry {
   learner_id: string
   /** Null for a learner who never finished mapping — render the id, not a guess. */
   display_name: string | null
+  /** The learner's own avatar choice, or null when they have not made one.
+   *  Same shape as `learner_state.avatar`; `StudentAvatar` resolves it. */
+  avatar?: AvatarChoice | null
   group_id: string
 }
 
@@ -245,10 +297,71 @@ export function getStudentBadges(learnerId: string, lang: string) {
   )
 }
 
+/** One reflection the learner wrote at the end of a session. `text` is their
+ *  own words, which is why this tab exists at all — it was fetched and thrown
+ *  away, and the screen rendered `samples.length` instead. */
+export interface StudentReflection {
+  at?: string | null
+  self_rating?: number | null
+  system_estimate?: number | null
+  text?: string | null
+  note?: string | null
+  mood?: string | null
+  objective_id?: string | null
+}
+
+export interface AwarenessSample {
+  /** The learner's own 1–5 answer. */
+  self_rating: number
+  /** The server's 0–1 success rate for the same session. */
+  system_estimate: number
+  at?: string | null
+}
+
 export function getStudentReflections(learnerId: string) {
-  return apiGet<{ reflections: unknown[]; self_awareness: StudentDetail['self_awareness'] }>(
-    `/api/teacher/students/${learnerId}/reflections`
-  )
+  return apiGet<{
+    reflections: StudentReflection[]
+    self_awareness:
+      { reading: string; gap: number; samples: AwarenessSample[] } | null
+  }>(`/api/teacher/students/${learnerId}/reflections`)
+}
+
+/* ── trends: the series behind the profile's charts ───────────────────────── */
+
+export interface TrendDay {
+  date: string
+  attempts: number
+  correct: number
+  minutes: number
+  /** Null on a day with no attempts — never a zero, which would draw a crash. */
+  success_rate: number | null
+}
+
+export interface SubjectTrend {
+  subject: string
+  attempts: number
+  success_rate: number | null
+  series: { date: string; attempts: number; success_rate: number | null }[]
+}
+
+export interface LearnerTrends {
+  learner_id: string
+  days: number
+  from: string
+  to: string
+  per_day: TrendDay[]
+  per_subject: SubjectTrend[]
+  active_days: number
+  streak: number
+  totals: {
+    attempts: number; correct: number; minutes: number; success_rate: number | null
+  }
+  mastered_steps: { at: string; objective_id: string; level: string }[]
+}
+
+export function getStudentTrends(learnerId: string, days = 30) {
+  return apiGet<LearnerTrends>(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/trends?days=${days}`)
 }
 
 /* ── teacher-authored insights (MUST S3) ──────────────────────────────────── */
@@ -411,8 +524,31 @@ export function getStudentGoals(learnerId: string) {
   )
 }
 
+/** Suggestions and what is true about them.
+ *
+ *  They are generated once and kept: `cached` says these were not paid for
+ *  again, and `stale` says the observations behind them have moved since — the
+ *  only condition under which asking for new ones is offered.
+ */
+export interface GoalSuggestions {
+  goals: GoalDraft[]
+  cached: boolean
+  generated_at: string | null
+  stale: boolean
+  has_evidence: boolean
+}
+
+/** What is already stored. Never generates, so a tab opening costs nothing. */
+export function getGoalSuggestions(learnerId: string, language: string, subject?: string) {
+  const query = new URLSearchParams({ language })
+  if (subject) query.set('subject', subject)
+  return apiGet<GoalSuggestions>(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/goals/suggest?${query}`
+  )
+}
+
 export function suggestStudentGoals(learnerId: string, language: string, subject?: string) {
-  return apiPost<{ goals: GoalDraft[] }>(
+  return apiPost<GoalSuggestions>(
     `/api/teacher/students/${encodeURIComponent(learnerId)}/goals/suggest`,
     { language, subject }
   )
@@ -545,15 +681,46 @@ export interface BriefStat {
   total?: number | null
 }
 
+/** A bullet in the brief.
+ *
+ * `why` is the model's own explanation of what the claim rests on, in the
+ * teacher's language. It replaces `describeEvidence` for AI briefs, which — fed
+ * a one-key `{signal: value}` raw that matched no template — was rendering
+ * `active in window: 10` in English inside an RTL card. The deterministic
+ * fallback keeps `text_key` + `because.raw` and still goes through the template. */
+export interface BriefBullet extends DigestBullet {
+  why?: string
+  /** Who this claim is about, attached server-side AFTER generation from the
+   *  same evidence the actions use. Empty for claims about the material rather
+   *  than about people. The model is never given a learner id. */
+  learner_ids?: string[]
+}
+
 export interface DailyBrief {
   /** Start of the window this brief covers — the previous brief, or last login. */
   since: string | null
   generated_at: string | null
   window_days: number
-  headline: DigestBullet | null
-  bullets: DigestBullet[]
+  headline: BriefBullet | null
+  /** Two or three sentences tying the window together. Model-written. */
+  summary?: string
+  bullets: BriefBullet[]
+  /** Still on the payload — the deterministic half of the contract, and what
+   *  the fallback path is built from — but no longer rendered by the hero:
+   *  every value is on the KPI strip directly above it. */
   stats: BriefStat[]
   actions: BriefAction[]
+  /** The mood, from a closed set. Selects a hand-drawn scene; never markup. */
+  scene: string | null
+  /** What the class actually spent the window on, or null. */
+  worked_on: {
+    title: string | null
+    subject: string | null
+    attempts: number | null
+    success_rate: number | null
+    learners_engaged: number | null
+    struggling_count: number | null
+  } | null
   source: 'ai' | 'fallback' | 'empty'
   cached: boolean
   reason?: string
@@ -579,26 +746,6 @@ export interface TeacherBadge {
   howToEarn?: string
 }
 
-export interface MeetingPrepRow {
-  text?: string
-  text_key?: string
-  params?: Record<string, unknown>
-  because: { signal: string; value: unknown; raw: unknown }
-}
-
-export interface MeetingPrep {
-  questions: MeetingPrepRow[]
-  insights: MeetingPrepRow[]
-  goal_ideas: MeetingPrepRow[]
-  unavailable?: boolean
-  because?: { signal: string; value: unknown; raw: unknown }
-}
-
-export function getMeetingPrep(learnerId: string, language: string) {
-  return apiGet<MeetingPrep>(
-    `/api/teacher/students/${encodeURIComponent(learnerId)}/meeting-prep?language=${language}`
-  )
-}
 
 /* ── learnings analytics ──────────────────────────────────────────────────── */
 
@@ -716,4 +863,158 @@ export function getGroupGoals(groupId: string) {
   return apiGet<{ learners: { learner_id: string; conversations: GoalConversation[] }[] }>(
     `/api/teacher/groups/${encodeURIComponent(groupId)}/goals`
   )
+}
+
+/* ── sub-groups ─────────────────────────────────────────────────────────────
+   A named slice of one class. Not a group: membership is a list resolved
+   against the live roster on every read, so a learner who leaves the class
+   leaves every sub-group without a migration. */
+
+export interface Subgroup {
+  id: string
+  group_id: string
+  name: string
+  learner_ids: string[]
+  size: number
+  /** Members who are no longer enrolled in the parent class. Shown, not hidden:
+   *  a selection of six rendering five needs a reason. */
+  dropped: string[]
+  created_by?: string
+  created_at?: string
+}
+
+export interface SubgroupWrite extends Subgroup {
+  /** Ids refused because they are not in the parent class. */
+  skipped?: { learner_id: string; reason: string }[]
+}
+
+export function listSubgroups(groupId: string) {
+  return apiGet<{ subgroups: Subgroup[] }>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/subgroups`
+  )
+}
+
+export function createSubgroup(groupId: string, name: string, learnerIds: string[]) {
+  return apiPost<SubgroupWrite>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/subgroups`,
+    { name, learner_ids: learnerIds }
+  )
+}
+
+export function updateSubgroup(
+  subgroupId: string, changes: { name?: string; learner_ids?: string[] }
+) {
+  return apiPatch<SubgroupWrite>(
+    `/api/teacher/subgroups/${encodeURIComponent(subgroupId)}`, changes
+  )
+}
+
+export function deleteSubgroup(subgroupId: string) {
+  return apiDelete<{ id: string; archived: boolean }>(
+    `/api/teacher/subgroups/${encodeURIComponent(subgroupId)}`
+  )
+}
+
+/* ── what Yuvi makes of one student ────────────────────────────────────────── */
+
+/** A read of one child in words: what is hard, what has got better, how engaged
+ *  they are, and one thing worth doing next.
+ *
+ *  Cached server-side for a day — see `learner_read.py`. `generated_at` is shown
+ *  because a teacher acting on this is entitled to know how old it is, and
+ *  `stale` means a refresh was attempted and failed. */
+export interface LearnerRead {
+  difficulties?: string[]
+  improvements?: string[]
+  involvement?: string
+  suggestion?: string
+  generated_at?: string
+  cached?: boolean
+  stale?: boolean
+  /** No read could be produced at all — render the blank state, not an error. */
+  unavailable?: boolean
+}
+
+export function getLearnerRead(learnerId: string, language: string, refresh = false) {
+  const params = new URLSearchParams({ language })
+  if (refresh) params.set('refresh', 'true')
+  return apiGet<LearnerRead>(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/read?${params}`)
+}
+
+/* ── a disclosure, and what was done about it ──────────────────────────────── */
+
+/** A child said something that needs an adult.
+ *
+ *  Durable, never deleted, and carrying the state a human changes: who claimed
+ *  it, what they did, who closed it and why. `legacy` marks a row projected out
+ *  of the old brain array — readable, but nothing can act on it, because there
+ *  is no record to write the action into. */
+export interface WellbeingFlag {
+  _id: string
+  learner_id: string
+  category: string
+  /** The child's own words. */
+  evidence: string
+  /** What the child was told back, so an adult knows what they already heard. */
+  reply: string
+  source: 'coach_chat' | 'competency_chat' | 'direct_message' | 'mapping_reflection' | string
+  /** False when what they wrote never reached anyone — a blocked message. */
+  delivered: boolean
+  at: string
+  status: 'open' | 'acknowledged' | 'closed'
+  /** Every teacher who was rung about it. */
+  notified: string[]
+  acknowledged_by: string | null
+  acknowledged_at: string | null
+  closed_by: string | null
+  closed_at: string | null
+  close_reason: string | null
+  close_note: string | null
+  actions: { id: string; kind: string; text: string; by: string; at: string }[]
+  legacy?: boolean
+}
+
+export interface WellbeingResponse {
+  flags: WellbeingFlag[]
+  close_reasons: string[]
+  action_kinds: string[]
+}
+
+export function listWellbeingFlags(learnerId: string, signal?: AbortSignal) {
+  return apiGet<WellbeingResponse>(
+    `/api/teacher/student/${encodeURIComponent(learnerId)}/wellbeing`, { signal })
+}
+
+const flagUrl = (flagId: string, verb: string) =>
+  `/api/teacher/wellbeing/${encodeURIComponent(flagId)}/${verb}`
+
+export function acknowledgeWellbeingFlag(flagId: string) {
+  return apiPost<{ flag: WellbeingFlag }>(flagUrl(flagId, 'acknowledge'), {})
+}
+
+export function logWellbeingAction(flagId: string, kind: string, text: string) {
+  return apiPost<{ flag: WellbeingFlag }>(flagUrl(flagId, 'log'), { kind, text })
+}
+
+export function closeWellbeingFlag(flagId: string, reason: string, note: string) {
+  return apiPost<{ flag: WellbeingFlag }>(flagUrl(flagId, 'close'), { reason, note })
+}
+
+export function reopenWellbeingFlag(flagId: string) {
+  return apiPost<{ flag: WellbeingFlag }>(flagUrl(flagId, 'reopen'), {})
+}
+
+/** Words to start from. Advisory: the teacher edits them, and nothing is sent
+ *  or written by asking. `generated` is false when the model was unreachable
+ *  and the written fallbacks are what came back — the UI says which. */
+export interface WellbeingSuggestion {
+  intent: string
+  options: string[]
+  generated: boolean
+  protocol_key: string
+}
+
+export function suggestWellbeing(flagId: string, intent: 'message' | 'handle' | 'close') {
+  return apiPost<WellbeingSuggestion>(flagUrl(flagId, 'suggest'), { intent })
 }

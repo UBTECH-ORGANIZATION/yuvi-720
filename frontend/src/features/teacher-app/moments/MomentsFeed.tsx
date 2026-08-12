@@ -22,6 +22,8 @@ import { Icon } from '../../../components/primitives/Icon'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { sendKudos, type Moment } from '../../../services/teacher'
 import { RawEvidence } from '../shared/EvidenceDisclosure'
+import { StudentAvatar } from '../shared/StudentAvatar'
+import { momentSentence } from './momentText'
 import './moments-feed.css'
 
 const ICON: Record<string, string> = {
@@ -68,13 +70,16 @@ export function MomentsFeed({ moments, nameOf, showLearner = false }: Props) {
           key={`${moment.kind}-${moment.at}-${moment.learner_id ?? ''}-${index}`}
           moment={moment}
           name={showLearner && moment.learner_id ? nameOf?.(moment.learner_id) ?? moment.learner_id : null}
+          showAvatar={showLearner}
         />
       ))}
     </ul>
   )
 }
 
-function MomentRow({ moment, name }: { moment: Moment; name: string | null }) {
+function MomentRow({ moment, name, showAvatar }: {
+  moment: Moment; name: string | null; showAvatar: boolean
+}) {
   const { t, language } = useI18n()
   const [isPraising, setIsPraising] = useState(false)
   /* The "why?" state is owned here rather than by `EvidenceToggle` because the
@@ -86,7 +91,13 @@ function MomentRow({ moment, name }: { moment: Moment; name: string | null }) {
   const [draft, setDraft] = useState('')
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle')
 
-  const sentence = t(moment.text_key, moment.params as Record<string, string | number>)
+  /* A moment missing a word its sentence needs gets the variant without that
+     clause — see `momentText.ts`. What shipped before was
+     "הצלחה ראשונה בMOE.ENG.G7.PEOPLE.FAMILY.WRITE אחרי 6 ניסיונות", then, once
+     the backend stopped emitting the id, "הצלחה ראשונה ב אחרי 6 ניסיונות", and
+     for a goal with no title "סיימו את היעד:" — a colon with nothing after it. */
+  const params = moment.params as Record<string, string | number>
+  const sentence = momentSentence(moment.text_key, params, t)
 
   async function praise() {
     if (!moment.learner_id || !draft.trim() || state === 'sending') return
@@ -103,13 +114,38 @@ function MomentRow({ moment, name }: { moment: Moment; name: string | null }) {
 
   return (
     <li className={`tch-moment tch-moment--${moment.kind}${moment.headline ? ' is-headline' : ''}`}>
-      <span className="tch-moment__icon" aria-hidden="true">
-        <Icon name={ICON[moment.kind] ?? 'pulse'} size={16} />
-      </span>
+      {/* A child is a face and a name, not a bare bold word. The feed used to
+          open each row with a kind glyph and print the name inline in the
+          sentence, so twelve rows read as twelve identical icons — the one
+          thing a teacher scans this list for was the hardest thing to find.
+          The avatar leads; the kind glyph is demoted to a marker on the
+          identity line, where it labels the row without competing with it. */}
+      {showAvatar && moment.learner_id ? (
+        <StudentAvatar
+          learnerId={moment.learner_id}
+          name={name ?? moment.learner_id}
+          size={moment.headline ? 34 : 30}
+        />
+      ) : (
+        <span className="tch-moment__icon" aria-hidden="true">
+          <Icon name={ICON[moment.kind] ?? 'pulse'} size={16} />
+        </span>
+      )}
 
       <div className="tch-moment__body">
+        {name ? (
+          /* `dir` stays the page's, and only the NAME is isolated. `dir="auto"`
+             on the line itself resolves from its first strong character, so a
+             Latin name flipped the whole identity row to LTR and it sat on the
+             opposite edge from the Hebrew sentence directly beneath it. */
+          <p className="tch-moment__identity">
+            <strong className="tch-moment__who"><bdi dir="auto">{name}</bdi></strong>
+            <span className="tch-moment__kind" aria-hidden="true">
+              <Icon name={ICON[moment.kind] ?? 'pulse'} size={13} />
+            </span>
+          </p>
+        ) : null}
         <p className="tch-moment__text" dir="auto">
-          {name ? <strong className="tch-moment__who">{name}</strong> : null}
           <span>{sentence}</span>
         </p>
 
@@ -132,7 +168,7 @@ function MomentRow({ moment, name }: { moment: Moment; name: string | null }) {
           {moment.learner_id && state !== 'sent' && !isPraising ? (
             <button
               type="button"
-              className="tch-moment__praise"
+              className="sp-btn sp-btn--ghost sp-btn--sm tch-moment__praise"
               onClick={() => setIsPraising(true)}
             >
               <Icon name="spark" size={13} aria-hidden />

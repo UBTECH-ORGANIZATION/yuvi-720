@@ -80,7 +80,55 @@
   gap: var(--sp-1);
 }
 
-.tch-moment__who { color: var(--sp-ink-700); }
+/* ── identity line ─────────────────────────────────────────────────────────
+   The child leads the row: avatar, then name at reading weight, then the kind
+   glyph demoted to a small marker beside it. Before this the row opened with
+   the kind glyph and the name was one bold word inside the sentence, so a feed
+   of twelve rows read as twelve identical icons and the one thing a teacher
+   scans for was the hardest to find. */
+
+.tch-moment__identity {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  line-height: 1.2;
+}
+
+.tch-moment__who {
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-900);
+}
+
+.tch-moment.is-headline .tch-moment__who { font-size: var(--sp-fs-md); }
+
+/* Subdued: it labels the row, it does not announce it. */
+.tch-moment__kind {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 20px;
+  block-size: 20px;
+  border-radius: 50%;
+  background: var(--tch-chip-bg);
+  color: var(--sp-primary-600);
+}
+
+.tch-moment--recovery .tch-moment__kind,
+.tch-moment--first_mastery .tch-moment__kind,
+.tch-moment--breakthrough .tch-moment__kind {
+  background: rgba(46, 174, 111, .14); color: var(--sp-success-600);
+}
+.tch-moment--misconception_resolved .tch-moment__kind,
+.tch-moment--goal_done .tch-moment__kind {
+  background: rgba(224, 158, 42, .16); color: var(--sp-warn-600);
+}
+.tch-moment--wellbeing_shared .tch-moment__kind {
+  background: rgba(226, 74, 94, .16); color: var(--sp-danger-600);
+}
+
+/* The avatar keeps the slot the kind glyph used to hold. */
+.tch-moment > .tch-avatar { flex: none; }
 
 /* when · why · praise, on one line, separated by hairline dots. */
 .tch-moment__meta {
@@ -91,7 +139,11 @@
   font-size: var(--sp-fs-xs);
 }
 
-.tch-moment__meta > * + *::before {
+/* The separator joins the quiet things only. "לפני 2 שע׳ · למה? · שליחת מילה
+   טובה" gave a timestamp, a disclosure and the one action on the row exactly
+   equal weight, so the only thing a teacher can actually *do* here read as
+   punctuation. */
+.tch-moment__meta > * + *:not(.sp-btn)::before {
   content: '·';
   margin-inline-end: var(--sp-2);
   color: var(--sp-ink-300, var(--sp-ink-400));
@@ -115,22 +167,13 @@
 
 .tch-moment .tch-evidence__sentence { color: var(--sp-ink-500, var(--sp-ink-400)); }
 
-.tch-moment__praise {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-1);
-  border: 0;
-  background: transparent;
-  color: var(--sp-primary-700);
-  font: inherit;
-  font-size: var(--sp-fs-xs);
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0;
-}
-
-.tch-moment__praise:hover { text-decoration: underline; }
-.tch-moment__praise:focus-visible { outline: 2px solid var(--sp-primary-600); outline-offset: 2px; }
+/* Pushed to the far end of the row and given its own edge, so the one thing a
+   teacher can act on stops looking like the third footnote after the
+   timestamp. */
+/* A real `sp-btn--ghost sp-btn--sm`, so it looks like every other action in
+   the app rather than like a hand-rolled pill that only exists here. All this
+   rule still does is push it to the far end of the row. */
+.tch-moment__praise { margin-inline-start: auto; }
 
 .tch-moment__kudos { display: grid; gap: var(--sp-2); margin-block-start: var(--sp-1); }
 .tch-moment__kudosHint { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }

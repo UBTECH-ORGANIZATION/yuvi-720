@@ -68,6 +68,8 @@ const IDENTICAL_BY_DESIGN = new Set([
   // A multiplication sign and a number. There is nothing to translate, and
   // inventing a word here would make the badge wider in two languages.
   'tch.alert.occurrences',
+  // A score out of ten. Same reason: digits and a slash, in every language.
+  'tch.quality.score',
 ])
 
 /* The two namespaces added for the teacher/admin system. Both are large and both

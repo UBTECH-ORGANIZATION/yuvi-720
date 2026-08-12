@@ -326,3 +326,24 @@ body.is-resizing-companion * {
   white-space: nowrap;
   border: 0;
 }
+
+/* ── an empty field follows the page, not its (absent) value ────────────────
+ *
+ * `dir="auto"` is right for a field once someone has typed in it: the value
+ * decides, so a Hebrew name and an English one each lay out correctly in the
+ * same box. It is wrong while the field is EMPTY. `auto` resolves direction
+ * from the value, an empty value has no first strong character, and the UA
+ * falls back to LTR — so every Hebrew placeholder in the product rendered
+ * left-to-right, with its ellipsis on the wrong side and the caret in the
+ * wrong corner.
+ *
+ * `:placeholder-shown` is exactly the state that goes wrong — empty and
+ * showing its hint — so this is scoped to it, and the `dir="auto"` behaviour
+ * everyone wanted comes back the moment a character is typed. Done here rather
+ * than at thirty call sites so a new field cannot be added without it.
+ */
+[dir='rtl'] input:placeholder-shown,
+[dir='rtl'] textarea:placeholder-shown {
+  direction: rtl;
+  text-align: start;
+}

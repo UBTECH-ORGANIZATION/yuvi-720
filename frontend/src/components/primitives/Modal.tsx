@@ -20,9 +20,19 @@ interface ModalProps {
   /** Dim the page behind. Off when the modal is meant to sit *within* the scene
    *  rather than on top of it. */
   overlay?: boolean
+  /** Whether a click on the backdrop closes it. Default yes.
+   *
+   *  Off for dialogs holding work in progress — a mis-click a pixel outside a
+   *  long form should not throw the form away. Escape still closes: it is the
+   *  keyboard's only exit and pressing it is deliberate in a way that clicking
+   *  past the edge of a dialog is not. Callers that turn this off should be
+   *  keeping the draft anyway, so neither exit loses anything. */
+  dismissible?: boolean
 }
 
-export function Modal({ open, onClose, titleId, children, className, overlay = true }: ModalProps) {
+export function Modal({
+  open, onClose, titleId, children, className, overlay = true, dismissible = true,
+}: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
   const returnFocusRef = useRef<HTMLElement | null>(null)
   const { direction } = useI18n()
@@ -49,6 +59,19 @@ export function Modal({ open, onClose, titleId, children, className, overlay = t
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        // Escape closes the innermost open thing. A tooltip inside the dialog
+        // listens on `window` too, and both handlers fire — so without this,
+        // dismissing "what is a פעילות?" also threw away the form behind it.
+        // Checked by looking rather than by coordinating: anything that opens
+        // on Escape can rely on it without registering anywhere.
+        //
+        // Document-wide, not `dialogRef.querySelector`: a tooltip renders into
+        // the body so that no scroll box can crop it, which means it is no
+        // longer a descendant of the dialog it belongs to. Scoping the lookup
+        // to the dialog silently stopped finding it, and Escape went back to
+        // throwing away the form behind the bubble. Nothing else is open at the
+        // time — a pointer or a key elsewhere dismisses a tooltip first.
+        if (document.querySelector('[role="tooltip"]:not([hidden])')) return
         event.preventDefault()
         onCloseRef.current()
         return
@@ -95,7 +118,7 @@ export function Modal({ open, onClose, titleId, children, className, overlay = t
     <div
       className={`sp-modal-backdrop${overlay ? '' : ' sp-modal-backdrop--bare'}`}
       role="presentation"
-      onClick={onClose}
+      onClick={dismissible ? onClose : undefined}
     >
       <div
         ref={dialogRef}

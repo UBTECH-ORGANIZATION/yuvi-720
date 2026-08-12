@@ -1,46 +1,63 @@
 /* The messages screen — the teacher's line to each student, in one place.
  *
- * This is deliberately NOT a free-form chat with a minor (excluded by design:
- * an unmoderated 1:1 channel needs a moderation and retention policy this
- * product does not claim to have). It is the structured lanes, presented the
- * way a teacher thinks about them — as a conversation per child:
+ * This file used to open with a paragraph explaining that a free-form 1:1
+ * channel with a minor was excluded by design, because it "needs a moderation
+ * and retention policy this product does not claim to have". That policy now
+ * exists and is enforced in code — `services/direct_messages.py` screens every
+ * message before it is stored, denies rather than queues, keeps an audit row,
+ * and escalates a child's distress to a teacher alert. So the exclusion is
+ * lifted and the reasoning that justified it is recorded here rather than
+ * deleted: the channel is open BECAUSE the screen exists, not instead of it.
  *
- *   מילה טובה   → stored server-side, delivered by Yuvi in the kid's own chat,
- *                 in Yuvi's voice, plus a bell notification.
+ * Four sources land in one thread, chronologically:
+ *
+ *   הודעה       → the direct channel, both directions. Chat bubbles.
+ *   מילה טובה   → delivered by Yuvi in the kid's own chat, in Yuvi's voice.
  *   עדכון        → a shared note; rings the student's bell.
- *   יעדים        → assignments and approvals appear as thread events.
+ *   יעדים        → assignments and approvals appear as system lines.
  *
- * The student's side of the conversation happens where the student lives —
- * in their goals and their talks with Yuvi — and flows back to the teacher
- * through the profile, not through this composer.
+ * The plain composer sends a MESSAGE. Kudos and notes moved behind a "+" —
+ * they are the occasional acts, and making the everyday one the default is what
+ * a teacher expects from something shaped like a chat.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { navigate } from '../../../app/router'
 import {
-  EmptyState, ErrorState, Icon, Panel, SkeletonCard,
+  EmptyState, ErrorState, Icon, Skeleton, SkeletonRows,
 } from '../../../components/primitives'
+import { Modal } from '../../../components/primitives/Modal'
 import { formatMessageTime } from '../../../hooks/messageTime'
 import { useI18n } from '../../../i18n/I18nProvider'
+import { takeMessageSeed } from './messageSeed'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import { useTeacherLive } from '../../../providers/TeacherLiveProvider'
 import { PresenceDot, agoLabel } from '../live/LiveNow'
 import {
   createTeacherInsight, getGroupSnapshot, getStudentGoals, getStudentKudos,
-  listTeacherInsights, sendKudos,
+  listSubgroups, listTeacherInsights, sendKudos, type Subgroup,
 } from '../../../services/teacher'
+import {
+  MessageRefused, listMessages, listSubgroupBroadcasts, markMessagesRead,
+  sendMessage, sendSubgroupMessage, type SubgroupBroadcast,
+} from '../../../services/directMessages'
 import './teacher-messages.css'
+import { StudentAvatar } from '../shared/StudentAvatar'
+import { useDismiss } from '../shared/useDismiss'
 
 interface ThreadEvent {
   key: string
-  kind: 'kudos' | 'note' | 'goal_assigned' | 'goal_approved'
+  kind: 'message_out' | 'message_in' | 'kudos' | 'note' | 'goal_assigned' | 'goal_approved'
   at: string
   text: string
   /** kudos only: Yuvi has already spoken it in the kid's chat. */
   delivered?: boolean
 }
 
-type ComposeMode = 'kudos' | 'note'
+/** What the "+" menu opens. The plain composer is not a mode — it is the
+ *  default, and giving it a chip alongside the others is what made the everyday
+ *  action look like one option among three. */
+type ExtraLane = 'kudos' | 'note'
 
 export function TeacherMessagesPage() {
   const { t, language } = useI18n()
@@ -49,7 +66,14 @@ export function TeacherMessagesPage() {
 
   const [students, setStudents] = useState<{ learner_id: string; display_name: string | null }[] | null>(null)
   const [error, setError] = useState(false)
+  /* One selection across two kinds of correspondent. A sub-group is prefixed so
+     an id can never be mistaken for a learner's — the rail holds both. */
   const [selected, setSelected] = useState<string | null>(null)
+  const [subgroups, setSubgroups] = useState<Subgroup[]>([])
+  /* Arriving from a disclosure: the child to write to, and the opening the
+     teacher picked. Read once, here, so the rail's default selection does not
+     overwrite it a moment later when the roster lands. */
+  const [seed] = useState(() => takeMessageSeed())
 
   useEffect(() => {
     if (!groupId) return
@@ -60,14 +84,30 @@ export function TeacherMessagesPage() {
         if (!active) return
         const rows = snapshot.students ?? []
         setStudents(rows)
-        setSelected((current) =>
-          current && rows.some((row) => row.learner_id === current)
+        setSelected((current) => {
+          // The child the teacher came here to write to wins over both the
+          // previous selection and the first row of the rail.
+          if (seed && rows.some((row) => row.learner_id === seed.learnerId)) {
+            return seed.learnerId
+          }
+          return current && rows.some((row) => row.learner_id === current)
             ? current
-            : rows[0]?.learner_id ?? null)
+            : rows[0]?.learner_id ?? null
+        })
       })
       .catch(() => { if (active) setError(true) })
     return () => { active = false }
-  }, [groupId, language])
+  }, [groupId, language, seed])
+
+  useEffect(() => {
+    if (!groupId) { setSubgroups([]); return }
+    let active = true
+    listSubgroups(groupId)
+      .then((payload) => { if (active) setSubgroups(payload.subgroups ?? []) })
+      // A class with no named groups is the ordinary case, not a failure.
+      .catch(() => { if (active) setSubgroups([]) })
+    return () => { active = false }
+  }, [groupId])
 
   if (scopeLoading || (students === null && !error)) {
     return (
@@ -78,10 +118,25 @@ export function TeacherMessagesPage() {
           <h1>{t('tch.messages.title')}</h1>
           <p className="tch-messages__subtitle">{t('tch.messages.subtitle')}</p>
         </header>
-        <Panel className="tch-messages__layout">
-          <SkeletonCard rows={6} />
-          <SkeletonCard rows={8} />
-        </Panel>
+        {/* The same two-pane frame, filled with quiet lines — not two cards
+            stacked on top of each other, which is what a `Panel` holding two
+            `SkeletonCard`s collapsed into below 900px. */}
+        <div className="tch-messages__layout">
+          <div className="tch-messages__people">
+            {Array.from({ length: 6 }, (_, i) => (
+              <div key={i} className="tch-messages__person" aria-hidden="true">
+                <Skeleton w={30} h={30} r="50%" />
+                <span className="tch-messages__personText">
+                  <Skeleton w={110} h={13} />
+                  <Skeleton w={64} h={11} />
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="tch-messages__thread" aria-hidden="true">
+            <SkeletonRows rows={7} />
+          </div>
+        </div>
       </div>
     )
   }
@@ -98,9 +153,35 @@ export function TeacherMessagesPage() {
         <p className="tch-messages__subtitle">{t('tch.messages.subtitle')}</p>
       </header>
 
-      <Panel className="tch-messages__layout" data-tour="teacher.messages">
+      <div className="tch-messages__layout" data-tour="teacher.messages">
         {/* ── who ─────────────────────────────────────────────────────────── */}
         <nav className="tch-messages__people" aria-label={t('tch.messages.pickAria')}>
+          {/* The named groups first, because they are the shortcut: "tell the
+              six who are stuck" was six identical sends before this. */}
+          {subgroups.length ? (
+            <p className="tch-messages__railHead">{t('tch.messages.groups')}</p>
+          ) : null}
+          {subgroups.map((subgroup) => (
+            <button
+              key={subgroup.id}
+              type="button"
+              className={`tch-messages__person tch-messages__person--group${
+                selected === `sub:${subgroup.id}` ? ' is-active' : ''}`}
+              onClick={() => setSelected(`sub:${subgroup.id}`)}
+            >
+              <span className="tch-messages__groupIcon" aria-hidden="true">
+                <Icon name="users" size={16} />
+              </span>
+              <span className="tch-messages__personText">
+                <span dir="auto">{subgroup.name}</span>
+                <small>{t('tch.messages.groupSize', { count: subgroup.size })}</small>
+              </span>
+            </button>
+          ))}
+
+          {subgroups.length ? (
+            <p className="tch-messages__railHead">{t('tch.messages.students')}</p>
+          ) : null}
           {students.map((student) => {
             const presence = live.presence[student.learner_id] ?? null
             return (
@@ -110,9 +191,11 @@ export function TeacherMessagesPage() {
                 className={`tch-messages__person${selected === student.learner_id ? ' is-active' : ''}`}
                 onClick={() => setSelected(student.learner_id)}
               >
-                <span className="tch-messages__avatar" aria-hidden="true">
-                  {(student.display_name ?? student.learner_id).slice(0, 1)}
-                </span>
+                <StudentAvatar
+                  learnerId={student.learner_id}
+                  name={student.display_name ?? student.learner_id}
+                  size={30}
+                />
                 <span className="tch-messages__personText">
                   <span dir="auto">{student.display_name ?? student.learner_id}</span>
                   <small>{agoLabel(presence?.last_seen_at ?? null, t)}</small>
@@ -124,33 +207,204 @@ export function TeacherMessagesPage() {
         </nav>
 
         {/* ── the thread ──────────────────────────────────────────────────── */}
-        {selected ? (
-          <Thread key={selected} learnerId={selected} name={nameOf(selected)} />
+        {selected?.startsWith('sub:') ? (
+          <SubgroupThread
+            key={selected}
+            subgroup={subgroups.find((row) => row.id === selected.slice(4)) ?? null}
+            nameOf={nameOf}
+          />
+        ) : selected ? (
+          <Thread key={selected} learnerId={selected} name={nameOf(selected)}
+                  opening={seed?.learnerId === selected ? seed.text : undefined} />
         ) : (
           <EmptyState title={t('tch.messages.pick')} />
         )}
-      </Panel>
+      </div>
     </div>
   )
 }
 
-function Thread({ learnerId, name }: { learnerId: string; name: string }) {
+/* Saying one thing to a named group.
+ *
+ * Not a room. Every copy lands in that child's own thread with this teacher, so
+ * the whole existing contract survives untouched: membership is re-checked per
+ * recipient, the words are screened, and a child's reply comes back privately.
+ * A shared channel where children read each other is a different product with a
+ * different safety model, and this screen deliberately is not it — which is why
+ * the composer says out loud where the message will arrive.
+ */
+function SubgroupThread({ subgroup, nameOf }: {
+  subgroup: Subgroup | null
+  nameOf: (learnerId: string) => string
+}) {
+  const { t, language } = useI18n()
+  const [sentSoFar, setSentSoFar] = useState<SubgroupBroadcast[] | null>(null)
+  const [draft, setDraft] = useState('')
+  const [isBusy, setIsBusy] = useState(false)
+  const [failed, setFailed] = useState<'refused' | 'network' | null>(null)
+  const [refusalKey, setRefusalKey] = useState<string | null>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
+
+  const subgroupId = subgroup?.id ?? null
+
+  const load = useCallback(() => {
+    if (!subgroupId) return
+    let active = true
+    listSubgroupBroadcasts(subgroupId)
+      .then((rows) => { if (active) setSentSoFar(rows) })
+      .catch(() => { if (active) setSentSoFar([]) })
+    return () => { active = false }
+  }, [subgroupId])
+
+  useEffect(() => { setSentSoFar(null); return load() }, [load])
+
+  useEffect(() => {
+    if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight
+  }, [sentSoFar])
+
+  if (!subgroup) return <EmptyState title={t('tch.messages.pick')} />
+
+  async function send() {
+    const message = draft.trim()
+    if (!message || isBusy || !subgroupId) return
+    setIsBusy(true)
+    setFailed(null)
+    setRefusalKey(null)
+    try {
+      await sendSubgroupMessage(subgroupId, message, language)
+      setDraft('')
+      load()
+    } catch (error) {
+      // Same three outcomes as the 1:1 composer, and the draft survives all of
+      // them — a refused message that vanishes makes the writer reconstruct it.
+      if (error instanceof MessageRefused) {
+        setFailed('refused')
+        setRefusalKey(error.key)
+      } else {
+        setFailed('network')
+      }
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
+  return (
+    <section className="tch-thread" aria-label={subgroup.name}>
+      <header className="tch-thread__head">
+        <strong dir="auto">{subgroup.name}</strong>
+        <span className="tch-thread__members" dir="auto">
+          {subgroup.learner_ids.map(nameOf).join(' · ')}
+        </span>
+      </header>
+
+      {/* Where this actually arrives. A teacher typing into something labelled
+          with a group's name will assume a group chat unless told otherwise,
+          and the difference matters to what they write. */}
+      <p className="tch-thread__how">
+        <Icon name="handoff" size={13} aria-hidden />
+        {t('tch.messages.groupHow')}
+      </p>
+
+      <div className="tch-thread__body" ref={bodyRef}>
+        {sentSoFar === null ? (
+          <div aria-busy="true"><SkeletonRows rows={3} /></div>
+        ) : sentSoFar.length ? (
+          sentSoFar.map((broadcast) => (
+            <article key={broadcast.broadcast_id} className="tch-thread__event tch-thread__event--message_out">
+              <div className="tch-thread__bubble">
+                <p dir="auto">{broadcast.text}</p>
+                <span className="tch-thread__meta">
+                  {broadcast.unread === 0
+                    ? t('tch.messages.groupAllRead', { count: broadcast.recipients.length })
+                    : t('tch.messages.groupUnread', {
+                        read: broadcast.recipients.length - broadcast.unread,
+                        count: broadcast.recipients.length,
+                      })}
+                </span>
+              </div>
+              <time className="tch-thread__time" dateTime={broadcast.created_at}>
+                {formatMessageTime(broadcast.created_at, language)}
+              </time>
+            </article>
+          ))
+        ) : (
+          <p className="tch-thread__empty">{t('tch.messages.groupEmpty', { name: subgroup.name })}</p>
+        )}
+      </div>
+
+      <form
+        className="tch-thread__composer"
+        onSubmit={(event) => { event.preventDefault(); void send() }}
+      >
+        <div className="tch-thread__inputRow">
+          <input
+            value={draft}
+            dir="auto"
+            placeholder={t('tch.messages.groupPlaceholder', { count: subgroup.size })}
+            aria-label={t('tch.messages.groupPlaceholder', { count: subgroup.size })}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+          <button
+            type="submit"
+            className="tch-dock__send"
+            disabled={!draft.trim() || isBusy || subgroup.size === 0}
+            aria-label={t('tch.messages.send')}
+            title={t('tch.messages.send')}
+          >
+            <Icon name="send" size={17} aria-hidden />
+          </button>
+        </div>
+        {failed ? (
+          <p className={`tch-thread__failed${failed === 'refused' ? ' is-refused' : ''}`}
+             role="status">
+            {failed === 'refused'
+              ? t(refusalKey || 'moderation.default')
+              : t('tch.messages.sendFailed')}
+          </p>
+        ) : null}
+      </form>
+    </section>
+  )
+}
+
+function Thread({ learnerId, name, opening }: {
+  learnerId: string
+  name: string
+  /** A sentence carried in from elsewhere — a suggested opening the teacher
+   *  picked while reading a disclosure. Editable, and never sent by arriving. */
+  opening?: string
+}) {
   const { t, language } = useI18n()
   const [events, setEvents] = useState<ThreadEvent[] | null>(null)
-  const [draft, setDraft] = useState('')
-  const [mode, setMode] = useState<ComposeMode>('kudos')
+  const [draft, setDraft] = useState(opening ?? '')
   const [isBusy, setIsBusy] = useState(false)
-  const [failed, setFailed] = useState(false)
+  const [failed, setFailed] = useState<'refused' | 'network' | null>(null)
+  const [refusalKey, setRefusalKey] = useState<string | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [lane, setLane] = useState<ExtraLane | null>(null)
+
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  useDismiss(menuRef, menuOpen, () => setMenuOpen(false))
 
   const load = useCallback(() => {
     let active = true
     Promise.all([
+      listMessages(learnerId).catch(() => [] as Awaited<ReturnType<typeof listMessages>>),
       getStudentKudos(learnerId).catch(() => ({ kudos: [] })),
       listTeacherInsights(learnerId).catch(() => ({ insights: [] })),
       getStudentGoals(learnerId).catch(() => ({ conversations: [] })),
-    ]).then(([kudos, insights, goals]) => {
+    ]).then(([messages, kudos, insights, goals]) => {
       if (!active) return
       const rows: ThreadEvent[] = []
+      for (const message of messages) {
+        rows.push({
+          key: `m:${message.id}`,
+          kind: message.sender === 'teacher' ? 'message_out' : 'message_in',
+          at: message.created_at ?? '',
+          text: message.text,
+        })
+      }
       for (const row of kudos.kudos) {
         rows.push({
           key: `k:${row.id}`,
@@ -186,29 +440,44 @@ function Thread({ learnerId, name }: { learnerId: string; name: string }) {
       }
       rows.sort((a, b) => (a.at || '').localeCompare(b.at || ''))
       setEvents(rows)
+      // Opening a thread reads it. The badge is about "did the teacher look",
+      // and by here they are looking.
+      void markMessagesRead(learnerId).catch(() => {})
     })
     return () => { active = false }
   }, [learnerId])
 
   useEffect(() => { setEvents(null); return load() }, [load])
 
+  /* Latest at the bottom, which no version of this screen did — the thread grew
+     downwards behind the fold and a teacher opened a conversation looking at
+     its oldest line. Same effect the assistant dock uses. */
+  useEffect(() => {
+    if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight
+  }, [events])
+
   async function send() {
     const message = draft.trim()
     if (!message || isBusy) return
     setIsBusy(true)
-    setFailed(false)
+    setFailed(null)
+    setRefusalKey(null)
     try {
-      if (mode === 'kudos') {
-        await sendKudos(learnerId, message, language)
-      } else {
-        await createTeacherInsight(learnerId, {
-          kind: 'note', text: message, visibility: 'shared',
-        })
-      }
+      await sendMessage(learnerId, message, language)
       setDraft('')
       load()
-    } catch {
-      setFailed(true)
+    } catch (error) {
+      /* The draft is deliberately NOT cleared on failure. The reference's
+         optimistic flow emptied the input before the request resolved, so a
+         refused message was simply gone and the writer had to remember what
+         they had said. A refusal and a dropped connection also say different
+         things — one is about the words, the other is not. */
+      if (error instanceof MessageRefused) {
+        setFailed('refused')
+        setRefusalKey(error.key)
+      } else {
+        setFailed('network')
+      }
     } finally {
       setIsBusy(false)
     }
@@ -227,20 +496,29 @@ function Thread({ learnerId, name }: { learnerId: string; name: string }) {
         </button>
       </header>
 
-      {/* Honest about the medium: this reaches the child through Yuvi and the
-          bell — their answers live in their goals and their talks with Yuvi. */}
+      {/* Honest about the medium, and now about the screen: what is typed here
+          reaches the child directly, and is checked before it is sent. */}
       <p className="tch-thread__how">
         <Icon name="handoff" size={13} aria-hidden />
         {t('tch.messages.how')}
       </p>
 
-      <div className="tch-thread__body">
+      <div className="tch-thread__body" ref={bodyRef}>
         {events === null ? (
-          <div aria-busy="true"><SkeletonCard rows={3} /></div>
+          <div aria-busy="true"><SkeletonRows rows={4} /></div>
         ) : events.length ? (
           events.map((event) => (
             <article key={event.key} className={`tch-thread__event tch-thread__event--${event.kind}`}>
-              {event.kind === 'kudos' || event.kind === 'note' ? (
+              {event.kind === 'message_out' || event.kind === 'message_in' ? (
+                <>
+                  <div className="tch-thread__bubble">
+                    <p dir="auto">{event.text}</p>
+                  </div>
+                  <time className="tch-thread__time" dateTime={event.at}>
+                    {formatMessageTime(event.at, language)}
+                  </time>
+                </>
+              ) : event.kind === 'kudos' || event.kind === 'note' ? (
                 /* Bubble, then the clock underneath it — the same shape and the
                    same Israel-time formatter the child sees in their own chat,
                    so both sides of a conversation agree on when it happened. */
@@ -285,48 +563,161 @@ function Thread({ learnerId, name }: { learnerId: string; name: string }) {
         className="tch-thread__composer"
         onSubmit={(event) => { event.preventDefault(); void send() }}
       >
-        <div className="tch-thread__modes" role="radiogroup" aria-label={t('tch.messages.modeAria')}>
-          <button
-            type="button"
-            className={`tch-chip${mode === 'kudos' ? ' is-on' : ''}`}
-            aria-pressed={mode === 'kudos'}
-            onClick={() => setMode('kudos')}
-          >
-            <Icon name="spark" size={12} aria-hidden />
-            {t('tch.messages.mode.kudos')}
-          </button>
-          <button
-            type="button"
-            className={`tch-chip${mode === 'note' ? ' is-on' : ''}`}
-            aria-pressed={mode === 'note'}
-            onClick={() => setMode('note')}
-          >
-            <Icon name="bell" size={12} aria-hidden />
-            {t('tch.messages.mode.note')}
-          </button>
-        </div>
         <div className="tch-thread__inputRow">
+          {/* The occasional acts, one level down. */}
+          <div className="tch-thread__more" ref={menuRef}>
+            <button
+              type="button"
+              className="tch-thread__moreBtn"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              aria-label={t('tch.messages.more')}
+              title={t('tch.messages.more')}
+              onClick={() => setMenuOpen((open) => !open)}
+            >
+              <Icon name="plus" size={17} aria-hidden />
+            </button>
+            {menuOpen ? (
+              <div className="tch-thread__menu" role="menu">
+                <button
+                  type="button" role="menuitem"
+                  onClick={() => { setMenuOpen(false); setLane('kudos') }}
+                >
+                  <Icon name="spark" size={14} aria-hidden />
+                  {t('tch.messages.mode.kudos')}
+                </button>
+                <button
+                  type="button" role="menuitem"
+                  onClick={() => { setMenuOpen(false); setLane('note') }}
+                >
+                  <Icon name="bell" size={14} aria-hidden />
+                  {t('tch.messages.mode.note')}
+                </button>
+              </div>
+            ) : null}
+          </div>
+
           <input
             value={draft}
             dir="auto"
-            placeholder={t(mode === 'kudos'
-              ? 'tch.messages.placeholder.kudos'
-              : 'tch.messages.placeholder.note')}
-            aria-label={t('tch.messages.modeAria')}
+            placeholder={t('tch.messages.placeholder.message')}
+            aria-label={t('tch.messages.placeholder.message')}
             onChange={(event) => setDraft(event.target.value)}
           />
           <button
             type="submit"
             className="tch-dock__send"
             disabled={!draft.trim() || isBusy}
-            aria-label={t('tch.connection.kudos.send')}
-            title={t('tch.connection.kudos.send')}
+            aria-label={t('tch.messages.send')}
+            title={t('tch.messages.send')}
           >
             <Icon name="send" size={17} aria-hidden />
           </button>
         </div>
-        {failed ? <p className="tch-thread__failed" role="status">{t('tch.kudos.failed')}</p> : null}
+        {failed ? (
+          <p className={`tch-thread__failed${failed === 'refused' ? ' is-refused' : ''}`}
+             role="status">
+            {failed === 'refused'
+              ? t(refusalKey || 'moderation.default')
+              : t('tch.messages.sendFailed')}
+          </p>
+        ) : null}
       </form>
+
+      <ExtraLaneDialog
+        lane={lane}
+        learnerId={learnerId}
+        name={name}
+        onClose={() => setLane(null)}
+        onSent={() => { setLane(null); load() }}
+      />
     </section>
+  )
+}
+
+/* Kudos and shared notes, each in its own labelled dialog.
+ *
+ * They used to be two chips that silently changed what the one input did, so
+ * the same box sent praise or a bell notification depending on a control above
+ * it — and the placeholder was the only thing that said which. A compose flow
+ * with its own consequences gets its own surface (Phase 3's rule, applied to
+ * the last two places that still worked the old way). */
+function ExtraLaneDialog({ lane, learnerId, name, onClose, onSent }: {
+  lane: ExtraLane | null
+  learnerId: string
+  name: string
+  onClose: () => void
+  onSent: () => void
+}) {
+  const { t, language } = useI18n()
+  const [text, setText] = useState('')
+  const [isBusy, setIsBusy] = useState(false)
+  const [failed, setFailed] = useState(false)
+
+  // Reset per opening: a half-typed kudos must not reappear inside the note
+  // dialog the next time the menu is used.
+  useEffect(() => { setText(''); setFailed(false) }, [lane])
+
+  if (!lane) return null
+
+  async function submit() {
+    const body = text.trim()
+    if (!body || isBusy) return
+    setIsBusy(true)
+    setFailed(false)
+    try {
+      if (lane === 'kudos') {
+        await sendKudos(learnerId, body, language)
+      } else {
+        await createTeacherInsight(learnerId, {
+          kind: 'note', text: body, visibility: 'shared',
+        })
+      }
+      onSent()
+    } catch {
+      setFailed(true)
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} titleId="tch-lane-title" className="tch-laneDialog">
+      <h2 id="tch-lane-title" className="tch-laneDialog__title">
+        <Icon name={lane === 'kudos' ? 'spark' : 'bell'} size={16} aria-hidden />
+        {t(lane === 'kudos' ? 'tch.messages.mode.kudos' : 'tch.messages.mode.note')}
+        <small dir="auto">{name}</small>
+      </h2>
+      <p className="tch-laneDialog__how">
+        {t(lane === 'kudos' ? 'tch.messages.how.kudos' : 'tch.messages.how.note')}
+      </p>
+      <label className="tch-laneDialog__field">
+        <span>{t(lane === 'kudos'
+          ? 'tch.messages.placeholder.kudos'
+          : 'tch.messages.placeholder.note')}</span>
+        <textarea
+          value={text}
+          dir="auto"
+          rows={3}
+          onChange={(event) => setText(event.target.value)}
+        />
+      </label>
+      {failed ? (
+        <p className="tch-thread__failed" role="status">{t('tch.kudos.failed')}</p>
+      ) : null}
+      <div className="tch-laneDialog__actions">
+        <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm" onClick={onClose}>
+          {t('tch.messages.cancel')}
+        </button>
+        <button
+          type="button"
+          className="sp-btn sp-btn--primary sp-btn--sm"
+          disabled={!text.trim() || isBusy}
+          onClick={() => void submit()}
+        >
+          {t('tch.messages.send')}
+        </button>
+      </div>
+    </Modal>
   )
 }

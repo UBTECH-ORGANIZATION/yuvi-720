@@ -79,6 +79,72 @@ test('every targeted element actually exists in the source', () => {
   }
 })
 
+/** Which source directory owns each teacher route's screen. */
+const ROUTE_OWNERS: Record<string, string> = {
+  '/teacher': 'features/teacher-app/home/',
+  '/teacher/students': 'features/teacher-app/students/',
+  '/teacher/learnings': 'features/teacher-app/learnings/',
+  '/teacher/goals': 'features/teacher-app/goals/',
+  '/teacher/messages': 'features/teacher-app/messages/',
+  [`/teacher/student/${STUDENT_TOKEN}`]: 'features/teacher-app/student/',
+}
+
+/** Mounted by the teacher shell, so present on every teacher route. */
+const ALWAYS_MOUNTED = ['components/', 'features/teacher-app/assistant/']
+
+/** target → the source files that render it. */
+function targetSources(): Map<string, string[]> {
+  const found = new Map<string, string[]>()
+  const walk = (dir: string, prefix: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name)
+      const relative = prefix + entry.name
+      if (entry.isDirectory()) { walk(path, relative + '/'); continue }
+      if (!/\.tsx?$/.test(entry.name)) continue
+      for (const match of readFileSync(path, 'utf8').matchAll(/data-tour="([^"]+)"/g)) {
+        found.set(match[1], [...(found.get(match[1]) ?? []), relative])
+      }
+    }
+  }
+  walk(join(ROOT, 'frontend', 'src'), '')
+  return found
+}
+
+// The step's own `route` is optional — a step without one stays wherever the
+// previous step left the tour.
+function effectiveRoute(index: number): string | null {
+  for (let at = index; at >= 0; at -= 1) {
+    const route = (teacherTourSteps[at] as TourStep).route
+    if (route) return route
+  }
+  return null
+}
+
+test('every target is rendered by the screen its step navigates to', () => {
+  // The existence check above passes as long as *some* component renders the
+  // attribute — which is how `teacher.liveNow` sat dead for a whole round,
+  // pointing at /teacher while the strip it targets lived on the roster. A tour
+  // step whose target never mounts is skipped in silence: no error, no warning.
+  const sources = targetSources()
+  for (const [index, step] of teacherTourSteps.entries()) {
+    if (!step.target) continue
+    const route = effectiveRoute(index)
+    const owner = route ? ROUTE_OWNERS[route] : null
+    assert.ok(owner, `step "${step.id}" declares route ${route}, which owns no screen`)
+
+    const files = sources.get(step.target) ?? []
+    const reachable = files.filter(
+      (file) => file.startsWith(owner as string)
+        || ALWAYS_MOUNTED.some((shared) => file.startsWith(shared))
+    )
+    assert.ok(
+      reachable.length,
+      `step "${step.id}" targets data-tour="${step.target}" on ${route}, but only `
+        + `${JSON.stringify(files)} renders it — the step will be skipped silently`
+    )
+  }
+})
+
 test('step ids are unique — the provider indexes by position, not id', () => {
   const ids = teacherTourSteps.map((step) => step.id)
   assert.equal(new Set(ids).size, ids.length)

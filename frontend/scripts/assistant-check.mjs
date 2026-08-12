@@ -55,11 +55,37 @@ try {
 
   /* Capture every assistant response body, so the PII assertion is made against
      what the browser actually received rather than what we hope was sent. */
+  /* The dock streams: `/api/teacher/assistant/stream` is a text/event-stream of
+     `data: {…}` frames, so `response.json()` throws and the capture used to end
+     up as `{}`. Every assertion below then read an empty object — including the
+     PII one, which "passed" by having nothing to look at. The frames are
+     merged back into the one answer they describe: text concatenated, the
+     terminal frame's fields (grounded, tools) kept. */
   const answers = []
   page.on('response', async (response) => {
     if (!response.url().includes('/api/teacher/assistant')) return
     if (response.request().method() !== 'POST') return
-    try { answers.push(await response.json()) } catch { /* non-JSON */ }
+    let raw = ''
+    try { raw = await response.text() } catch { return }
+    if (!raw.trim()) return
+    if (!raw.includes('data: ')) {
+      try { answers.push(JSON.parse(raw)) } catch { /* not the one-shot shape */ }
+      return
+    }
+    const merged = { text: '' }
+    for (const line of raw.split('\n')) {
+      if (!line.startsWith('data: ')) continue
+      const payload = line.slice(6)
+      if (payload === '[DONE]') continue
+      let frame
+      try { frame = JSON.parse(payload) } catch { continue }
+      const { text, answer, ...rest } = frame
+      if (typeof text === 'string') merged.text += text
+      // The terminal frame nests the whole thing: `{"answer": {…grounded, tools}}`.
+      if (answer && typeof answer === 'object') Object.assign(merged, answer)
+      Object.assign(merged, rest)
+    }
+    answers.push(merged)
   })
 
   // ── the panel is present on every teacher screen ─────────────────────────
@@ -86,10 +112,20 @@ try {
   await ensureOpen()
   check('it opens into a panel, not a route', page.url().endsWith('/teacher'))
 
-  const intro = (await page.locator('.tch-dock__intro').textContent()) ?? ''
-  check('the intro states the grounding promise up front', intro.length > 10, intro.slice(0, 60))
-  check('no raw locale key leaked into the dock',
-        !intro.includes('tch.assistant'), intro.slice(0, 40))
+  // The intro is what an EMPTY dock says. An account that has talked to the
+  // assistant before opens on its last thread instead — waiting 30s for a
+  // paragraph that is correctly absent is the script being wrong, not the app.
+  const introBox = page.locator('.tch-dock__intro')
+  if (await introBox.count()) {
+    const intro = (await introBox.textContent()) ?? ''
+    check('the intro states the grounding promise up front', intro.length > 10, intro.slice(0, 60))
+    check('no raw locale key leaked into the dock',
+          !intro.includes('tch.assistant'), intro.slice(0, 40))
+  } else {
+    const body = (await page.locator('.tch-dock__body').textContent()) ?? ''
+    check('no raw locale key leaked into the dock', !body.includes('tch.assistant'))
+    console.log('    (this account has history — the intro is correctly absent)')
+  }
 
   await page.screenshot({ path: `${OUT}/01-dock-open.png` })
 
@@ -98,13 +134,17 @@ try {
   await page.locator('.tch-dock__composer input').fill('מי צריך תשומת לב בקבוצה שלי?')
   await page.locator('.tch-dock__composer button[type=submit]').click()
 
+  /* Wait for the ANSWER, not for the absence of a pending row: on an account
+     with history the dock opens on its last thread, and the pending row takes a
+     tick to render — so "no pending row on screen" is true a millisecond after
+     the click, and the check used to declare the assistant silent while it was
+     still thinking. The captured body is the thing every assertion below reads,
+     so it is the thing to wait for. */
+  for (let i = 0; i < 1200 && answers.length === 0; i += 1) await page.waitForTimeout(100)
   await page.waitForFunction(
     () => !document.querySelector('.tch-dock__answer--pending'),
-    { timeout: 120000 }
-  )
-  // The response listener is async and can land just after the pending class
-  // clears, so wait for the captured body rather than assuming it is there.
-  for (let i = 0; i < 50 && answers.length === 0; i += 1) await page.waitForTimeout(100)
+    { timeout: 30000 }
+  ).catch(() => {})
   const elapsed = Date.now() - started
   check('the assistant answers', answers.length === 1, `${elapsed}ms`)
 
@@ -170,25 +210,42 @@ try {
 
   await page.screenshot({ path: `${OUT}/02-answer-with-trace.png` })
 
-  // ── the sub-group panel (the Phase 5 gap that was closed) ────────────────
+  // ── the gaps panel's action ──────────────────────────────────────────────
   await page.locator('.tch-dock__iconButton').last().click()
   await page.waitForTimeout(500)
 
-  const gapPanels = await page.locator('.tch-subgroup').count()
+  // A gap's answer is material, not a goal. The button used to open the
+  // sub-group goal dialog — a title, next steps and a date, which is a note to
+  // the teacher's future self rather than anything a child receives.
+  const gapButtons = page.locator('.tch-gap__actions .sp-btn--ghost',
+                                  { hasText: /משימה|task|مهمة/ })
+  const gapPanels = await gapButtons.count()
   if (gapPanels > 0) {
-    await page.locator('.tch-subgroup__summary').first().click()
-    await page.waitForSelector('.tch-subgroup__body', { timeout: 5000 })
-    // Selection is toggle chips now, not checkboxes — pressed = selected.
-    const people = await page.locator('.tch-subgroup__people .tch-chip').count()
-    const checked = await page.locator('.tch-subgroup__people .tch-chip.is-on').count()
-    check('the sub-group panel pre-selects the struggling learners',
-          people > 0 && checked === people, `${checked}/${people}`)
+    await gapButtons.first().click()
+    await page.waitForSelector('.tch-builder__modal .tch-builder', { timeout: 10_000 })
+    check('the gap opens the task builder, not a goal form',
+          page.url().includes('/teacher/tasks'), page.url())
 
-    const title = await page.locator('.tch-subgroup__field input').first().inputValue()
-    check('the goal title is pre-filled from the gap and editable', title.length > 0, title)
-    check('no raw locale key in the sub-group panel',
-          !title.includes('tch.subgroup'))
-    await page.screenshot({ path: `${OUT}/03-subgroup.png` })
+    const title = await page.locator('.tch-builder__step input.sp-input').first().inputValue()
+    check('the task title is pre-filled from the gap and editable', title.length > 0, title)
+    check('no raw locale key in the pre-filled title', !title.includes('tch.'))
+
+    // The dialog opens already typed-in, so it has to say who typed it — and
+    // how many children the send will arrive pre-ticked for.
+    const notes = (await page.locator('.tch-builder__note').allTextContents()).join(' ')
+    check('the builder says where this task came from',
+          /פער|gap|فجوة/.test(notes), notes.slice(0, 80))
+
+    // The lesson is looked up from the objective the gap names, so a teacher
+    // does not hunt for material they have just been told the name of.
+    const subject = await page.locator('.tch-builder__step select.sp-input').first().inputValue()
+    check('the subject is resolved from the objective', subject.length > 0, subject || '(none)')
+
+    await page.screenshot({ path: `${OUT}/03-gap-task.png` })
+    await page.keyboard.press('Escape')
+    await page.waitForSelector('.tch-builder__modal', { state: 'detached', timeout: 5000 })
+    await page.goto(`${BASE}/teacher`, { waitUntil: 'domcontentloaded' })
+    await page.waitForTimeout(800)
   } else {
     console.log('    (no learning gaps in this group right now — panel not exercised)')
   }

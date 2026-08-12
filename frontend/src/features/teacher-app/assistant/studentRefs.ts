@@ -97,6 +97,28 @@ export type Block =
 
 const BULLET = /^\s*[-•]\s+/
 
+/* Pseudo-widgets the model draws when it thinks it has to draw a button.
+ *
+ * Observed live: `[navigate_button: תלמידים לא פעילים]` in an answer, with no
+ * such syntax anywhere in this codebase. The prompt now forbids it and the tool
+ * result now proves a real card rendered, so this should never fire — which is
+ * exactly why it lives here and not on the server. The API-level eval must keep
+ * failing if the prompt regresses; a teacher must not see the wreckage either
+ * way. Stripping server-side would give us a clean screen and a silent bug.
+ *
+ * Narrow on purpose: a bracketed run whose LABEL is a widget word, followed by
+ * a colon. `[word_button: …]`, `[[action:…]]`, and the Hebrew and Arabic words
+ * the prompt also forbids — a model writing in Hebrew invents Hebrew syntax.
+ * Ordinary bracketed prose is not a widget and stays exactly as written, which
+ * is why this matches a label rather than "anything in brackets".
+ */
+const PSEUDO_WIDGET =
+  /\[\[?\s*(?:[\w]*_?(?:button|action)|כפתור|פעולה|زر|إجراء)\s*[:：][^\]\n]*\]?\]/gi
+
+function stripPseudoWidgets(text: string): string {
+  return text.replace(PSEUDO_WIDGET, '').replace(/[ \t]{2,}/g, ' ')
+}
+
 export function parseAnswerBlocks(text: string): Block[] {
   const blocks: Block[] = []
   let paragraph: string[] = []
@@ -113,7 +135,7 @@ export function parseAnswerBlocks(text: string): Block[] {
     items = []
   }
 
-  for (const line of (text || '').split('\n')) {
+  for (const line of stripPseudoWidgets(text || '').split('\n')) {
     if (!line.trim()) {
       flushList()
       flushParagraph()
@@ -130,4 +152,18 @@ export function parseAnswerBlocks(text: string): Block[] {
   flushList()
   flushParagraph()
   return blocks
+}
+
+/** Is this a route a chat message may send the teacher to?
+ *
+ * Lives here, in the JSX-free module, so it can be unit-tested — a guard that
+ * is only exercised by rendering a component is a guard nobody checks.
+ *
+ * The backend already builds every route from a closed table and never accepts
+ * a model-authored path. This is the second lock: it means one careless change
+ * upstream cannot turn an answer into an open redirect. Protocol-relative URLs
+ * (`//evil.example`) are the case a naive `startsWith('/')` lets through.
+ */
+export function isSafeAssistantRoute(route: unknown): route is string {
+  return typeof route === 'string' && /^\/(teacher|admin)(\/|\?|$)/.test(route)
 }

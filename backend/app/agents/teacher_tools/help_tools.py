@@ -15,6 +15,15 @@ from __future__ import annotations
 
 from typing import Any
 
+# Roster filters that are real: `students` accepts one of these as a deep link,
+# so "show me who has not been here in a week" lands on the filtered table
+# rather than on the whole class for the teacher to filter by hand.
+#
+# Imported, not restated. These are the same four words `list_students` resolves
+# into ids, and a second copy would let the two drift into a state where the
+# model can *find* a set it cannot *link to* — or link to a filter the roster
+# silently ignores, which is exactly what `inactive` did before this round.
+from app.agents.teacher_tools.data_tools import ROSTER_FILTERS
 from app.agents.teacher_tools.registry import TeacherTool, TeacherToolContext, register
 
 # The routes the teacher app actually has (A8). `navigate` validates against
@@ -23,9 +32,11 @@ ROUTES: dict[str, str] = {
     "home": "/teacher",
     "students": "/teacher/students",
     "student": "/teacher/student/{learner_id}",
+    "goals": "/teacher/goals",
+    "learnings": "/teacher/learnings",
+    "messages": "/teacher/messages",
     "admin": "/admin",
 }
-
 
 async def _how_to(context: TeacherToolContext, args: dict) -> dict:
     from app.services import teacher_help_kb
@@ -56,6 +67,7 @@ async def _navigate(context: TeacherToolContext, args: dict) -> dict:
     if template is None:
         return {"data": None, "reason": "unknown_screen", "available": sorted(ROUTES)}
 
+    learner_id = ""
     route = template
     if "{learner_id}" in template:
         learner_id = str(args.get("learner_id") or "")
@@ -64,8 +76,25 @@ async def _navigate(context: TeacherToolContext, args: dict) -> dict:
         # Scope-checked by the registry via `learner_args` before we get here.
         route = template.replace("{learner_id}", learner_id)
 
+    # A filter is only ever appended to a route that has one, and only from the
+    # closed set — the model must not be able to mint an arbitrary query string.
+    roster_filter = str(args.get("filter") or "")
+    if screen == "students" and roster_filter in ROSTER_FILTERS:
+        route = f"{route}?filter={roster_filter}"
+    else:
+        roster_filter = ""
+
     # A suggestion the client renders as a button. Not a redirect.
-    return {"data": {"screen": screen, "route": route, "action": "offer_button"}}
+    return {
+        "data": {"screen": screen, "route": route, "action": "offer_button"},
+        "offer": {
+            "kind": "navigate",
+            "label_key": f"tch.assistant.action.open.{screen}",
+            "route": route,
+            "params": {"learner_id": learner_id} if learner_id else {},
+            "icon": "student" if learner_id else "arrow",
+        },
+    }
 
 
 def register_all() -> None:
@@ -117,6 +146,10 @@ def register_all() -> None:
         parameters={"type": "object", "properties": {
             "screen": {"type": "string", "enum": sorted(ROUTES)},
             "learner_id": {"type": "string", "description": "Required for the `student` screen."},
+            "filter": {
+                "type": "string", "enum": sorted(ROSTER_FILTERS),
+                "description": "Optional, `students` only — opens the roster already filtered.",
+            },
         }, "required": ["screen"]},
         handler=_navigate, learner_args=("learner_id",),
     ))
