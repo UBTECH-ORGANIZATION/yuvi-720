@@ -48,10 +48,12 @@ TAGGED_COLLECTIONS = (
 )
 
 # One reviewer → one teacher account + one student account.
+# Labels avoid slash-in-word forms (תלמיד/ה) — MoE usability guidance §2.11 bans them
+# because screen readers stumble over them.
 REVIEWERS = [
-    {"slug": "moe-1", "email": "Matrix4moe2026@gmail.com", "label": "בודק/ת 1"},
-    {"slug": "moe-2", "email": "7204moe2026@gmail.com", "label": "בודק/ת 2"},
-    {"slug": "moe-3", "email": "startinntech@gmail.com", "label": "בודק/ת 3"},
+    {"slug": "moe-1", "email": "Matrix4moe2026@gmail.com", "label": "בדיקה 1"},
+    {"slug": "moe-2", "email": "7204moe2026@gmail.com", "label": "בדיקה 2"},
+    {"slug": "moe-3", "email": "startinntech@gmail.com", "label": "בדיקה 3"},
 ]
 
 
@@ -91,7 +93,7 @@ async def seed(password: str) -> None:
 
         await upsert_user({
             "_id": sid, "username": sid,
-            "display_name": f"תלמיד/ה · {reviewer['label']}",
+            "display_name": f"תלמיד · {reviewer['label']}",
             "roles": ["learner"], "password": hash_password(password),
             "preferences": {**DEFAULT_PREFERENCES, "language": "he"},
             "moe_email": reviewer["email"],
@@ -99,7 +101,7 @@ async def seed(password: str) -> None:
         await get_brain(sid)
         # The teacher roster reads the name off the brain, not the user document.
         await apply_brain_updates(sid, {
-            "identity.display_name": f"תלמיד/ה · {reviewer['label']}",
+            "identity.display_name": f"תלמיד · {reviewer['label']}",
             "identity.locale": "he",
         })
         await org_repository.enroll_learner(sid, GROUP, school_id=SCHOOL)
