@@ -22,9 +22,19 @@ from typing import Callable, Optional
 from uuid import uuid4
 
 from app.agents.molecule import validate_molecule
-from app.agents.visual_layout import solve_scene_layout
+from app.agents.visual_layout import BRACE_BAR, BRACE_REACH, solve_scene_layout
+from app.agents.visuals import maths, registry
 from app.services.ai_usage import UsageContext
 from app.services.llm import call_llm
+
+
+# Element types the core pipeline validates itself. Domains add to this through
+# `visuals.registry`; nothing else may introduce a type.
+_CORE_ELEMENTS = frozenset({
+    "polygon", "polyline", "line", "arrow", "point", "circle",
+    "rectangle", "arc", "angle", "right_angle", "axes", "text",
+    "brace", "number_line", "molecule", "prop", "drawing",
+})
 
 
 MAX_ELEMENTS = 24
@@ -164,7 +174,18 @@ separate text element next to a prop and hope it lands right.
   seed. Anchors: top, center, bottom. Use for states of matter, gas, density,
   diffusion, concentration.
 - "container" — a vessel: center, width, height, fill_level (0..1),
-  liquid_color, graduations (tick count). Anchors: top, center, surface.
+  liquid_color, graduations (tick count), style ("beaker" | "cup" | "jar" |
+  "box"). fill_level is LIVE — the same vessel at two levels is how you show
+  before/after, and the surface always meets the walls correctly.
+  Anchors: top, center, surface, base.
+- "balance" — a digital balance: center, size, pan_color, and "load" — another
+  prop that STANDS ON its platform, seated for you ({"prop":"container",
+  "fill_level":0.6}). Put the reading on the instrument with
+  labels:{"display":"115"}; that is where a learner reads a mass, and a number
+  parked beside the picture is not a reading of anything.
+  Anchors: pan, display, top, center, bottom.
+- "balance_scale" — two-pan beam balance, for comparing two masses rather than
+  reading one. See above.
 - "bar_comparison" — items:[{"value":3.5,"label":"מנופח","color":"primary"},...],
   center, height, bar_width. Anchors: top:0, top:1, foot:0, foot:1.
   THIS is how you compare magnitudes. Two words above a number line compare
@@ -176,16 +197,39 @@ different inflation, or a bar_comparison of the two masses — never the words
 measures VALUES; if the thing you are placing on it is a word, you have chosen
 the wrong element.
 DRAWING ANYTHING ELSE — when the object you need is not in the prop list (a
-pump, a microscope, a leaf, a pulley, a bone, a kettle), draw it:
-- {"type":"drawing","center":[x,y],"size":2.2,"label":"משאבת אוויר","strokes":[
-    {"d":"M 10 40 L 10 10 L 30 10 L 30 40 Z","color":"ink","fill_opacity":0.1},
-    {"d":"M 20 10 L 20 0","color":"ink","stroke_width":6}]}
-Each stroke is one SVG path `d` (M/L/C/Q/A/Z, absolute or relative). Draw in ANY
-convenient coordinate space — 0..100 is comfortable — because the whole drawing
-is scaled to "size" and centred on "center" for you. Do NOT try to make the
-numbers match the canvas: shape is yours, placement is ours. Use several strokes
-so parts can differ in colour and fill, and put the recognisable silhouette
-first. Anchors for "labels": top, bottom, left, right, center.
+house, a tree, a cloud, the sun, a mountain, rain, a person, a leaf), BUILD IT
+FROM PARTS. Do not attempt SVG curves; assemble named shapes instead:
+- {"type":"drawing","object":"בית","center":[x,y],"size":2.4,"parts":[
+    {"shape":"slab","at":[50,26],"w":54,"h":38,"fill_opacity":0.08},
+    {"shape":"roof","at":[50,45],"w":54,"h":22,"color":"warning","fill_opacity":0.22},
+    {"shape":"slab","at":[33,32],"w":11,"h":11,"color":"secondary","repeat":1,"step":[34,0]}]}
+Parts are authored in a local 0..100 box with y pointing UP, and the whole
+object is scaled to "size" and centred on "center" for you — shape is yours,
+placement is ours. Always set "object" to the noun being drawn.
+Available shapes and their parameters:
+- "disc" — at, r, inner (0..1 for a ring). A sun, a wheel, a cell, a ball.
+- "rays" — at, r, count, h. Spokes around a centre; use WITH a disc for a sun.
+- "puff" — at, w, h, lobes, seed. A cloud. One puff IS a whole cloud; never
+  place three discs and call it a cloud.
+- "blob" — at, w, h, lobes, jagged, seed. An organic mass: a treetop, a stone,
+  an organ, a puddle.
+- "ridge" — at, w, h, peaks, jagged, seed. Mountains or hills, one silhouette.
+- "stalk" — at, w, h, taper (0..1), bend. A trunk, a stem, a limb, a chimney.
+- "slab" — at, w, h. A wall, a shelf, a brick, a door, a window, a box.
+- "roof" — at, w, h. A gable.
+- "leaf" — at, w, h, angle. A leaf, a petal, a hull.
+- "droplet" — at, r. A drop of rain or liquid.
+- "wave" — at, w, amp, cycles. Water, a signal.
+- "person" — at, h. A figure.
+Every part also takes "color" and "fill_opacity" (0..0.85), and any part takes
+"repeat" (how many extra copies) with "step":[dx,dy] — use it for windows,
+raindrops, leaves or shelves instead of listing them one by one. Parts are drawn
+in order, so put the body first and the details after it.
+ESCAPE HATCH — only if no combination of parts can express the object, you may
+send raw SVG path strokes instead:
+  "strokes":[{"d":"M 10 40 L 10 10 L 30 10 L 30 40 Z","color":"ink","fill_opacity":0.1}]
+Each stroke is one SVG path `d` (M/L/C/Q/A/Z). Prefer parts: a hand-written path
+usually comes out as an unrecognisable shape, and parts never do.
 A drawing is for a REAL OBJECT with a recognisable shape. It is not a way to
 draw boxes around words, and it is not for anything the primitives above already
 express exactly (a circle is "circle", a graph is "axes").
@@ -200,9 +244,13 @@ learner sees a ruler measuring vocabulary. Set the range from the data (readings
 Likewise a "text" element holds a value, a name or a short formula — it is NEVER a
 phrase lifted from the explanation ("compare", "what changed?", "close together",
 "two sides"). If the only thing you can put on the canvas is the vocabulary of the
-sentence, the scene is decorative: say so with use_visual:false instead, unless you
-were explicitly told you must draw — in which case find the measurable claim and draw
-that with concrete numbers.
+sentence, you have reached for the wrong element, not the wrong idea: draw the THING
+the sentence is about — a prop for an object or a quantity comparison, a drawing for
+anything else with a recognisable shape, a staged sequence for a procedure. A question
+about matter, a body, an instrument, an organism, a device or a process is drawable
+even when it contains no number at all. Reserve use_visual:false for a reply that has
+neither a quantity nor a thing in it — a greeting, an encouragement, a rule about
+conduct — and never as an escape from a subject that simply is not geometry.
 ANIMATION — prefer it whenever the idea unfolds over time (construction, change, motion,
 comparison, sweep, accumulation). Set scene-level "animated": true, then stage the reveal:
 - per-element "step": 0..5 — elements sharing a step appear together; steps play in order.
@@ -268,74 +316,6 @@ _VISUAL_RETRY_PROMPT = {
     "he": "בחן/י שוב את הערך הפדגוגי, גם אם לא נכתב 'צייר'. הקשר כאן מתאים להבנה חזותית; החזר/י סצנה תקינה עם use_visual=true.",
     "ar": "أعد تقييم الفائدة التعليمية حتى دون كلمة «ارسم». العلاقة هنا مناسبة للفهم البصري؛ أعد مشهدًا صالحًا مع use_visual=true.",
     "en": "Re-evaluate the pedagogical value even without the word 'draw'. This relationship benefits from being seen; return a valid use_visual=true scene.",
-}
-
-_REQUESTED_HYPOTENUSE = {
-    "he": re.compile(r"\b(?:ה?יתר)\b"),
-    "ar": re.compile(r"(?:الوتر|وتر)"),
-    "en": re.compile(r"\bhypotenuse\b", re.IGNORECASE),
-}
-_HYPOTENUSE_NAME = {"he": "יתר", "ar": "الوتر", "en": "hypotenuse"}
-_REQUESTED_HYPOTENUSE_LENGTH = {
-    "he": re.compile(r"(?:ה?יתר)\s*(?:באורך\s*)?(\d+(?:\.\d+)?)"),
-    "ar": re.compile(r"(?:الوتر|وتر)\s*(?:بطول\s*)?(\d+(?:\.\d+)?)"),
-    "en": re.compile(r"\bhypotenuse\s*(?:(?:of\s+)?length|is|=|:)?\s*(\d+(?:\.\d+)?)", re.IGNORECASE),
-}
-_IDENTITY_EQUATION = re.compile(
-    r"(?<![A-Za-z])(?:x\s*=\s*y|y\s*=\s*x)(?![A-Za-z])",
-    re.IGNORECASE,
-)
-_SAFE_FUNCTION_EQUATIONS: tuple[tuple[re.Pattern[str], str], ...] = (
-    (re.compile(r"(?<![A-Za-z])y\s*=\s*x\s*(?:\^|\*\*)\s*2(?![\dA-Za-z])|y\s*=\s*x²", re.IGNORECASE), "quadratic"),
-    (re.compile(r"(?<![A-Za-z])y\s*=\s*(?:\|\s*x\s*\||abs\s*\(\s*x\s*\))", re.IGNORECASE), "absolute"),
-    (re.compile(r"(?<![A-Za-z])y\s*=\s*sin\s*\(\s*x\s*\)", re.IGNORECASE), "sine"),
-)
-_PARALLEL_TRANSVERSAL_REQUEST = {
-    "he": re.compile(r"(?:מקביל).*(?:חוצה|חותך|אלכסון|מתחלפ)|(?:מתחלפ).*(?:מקביל)", re.DOTALL),
-    "ar": re.compile(r"(?:متواز).*(?:قاطع|مائل|متبادل)|(?:متبادل).*(?:متواز)", re.DOTALL),
-    "en": re.compile(r"(?:parallel).*(?:transversal|alternate)|(?:alternate).*(?:parallel)", re.IGNORECASE | re.DOTALL),
-}
-_MIDPOINT_REQUEST = {
-    "he": re.compile(r"(?:נקודת\s+האמצע|אמצע).*(?:A|B|M|\([^)]*,[^)]*\))", re.IGNORECASE | re.DOTALL),
-    "ar": re.compile(r"(?:نقطة\s+المنتصف|منتصف).*(?:A|B|M|\([^)]*,[^)]*\))", re.IGNORECASE | re.DOTALL),
-    "en": re.compile(r"\bmidpoint\b.*(?:A|B|M|\([^)]*,[^)]*\))", re.IGNORECASE | re.DOTALL),
-}
-_SIMILAR_TRIANGLES_REQUEST = {
-    "he": re.compile(r"(?:משולשים?\s+דומים?|דמיון\s+משולשים)", re.DOTALL),
-    "ar": re.compile(r"(?:مثلث(?:ان|ين)?\s+متشابه|تشابه\s+المثلث)", re.DOTALL),
-    "en": re.compile(r"\bsimilar\s+triangles?\b", re.IGNORECASE | re.DOTALL),
-}
-
-_CANONICAL_VISUAL_TEXT = {
-    "he": {
-        "identity": ("הישר y=x", "מערכת צירים ובה הישר y=x ונקודות שלמות עליו.", "בכל נקודה על הישר ערכי x ו-y שווים."),
-        "quadratic": ("הפרבולה y=x²", "מערכת צירים ובה הפרבולה y=x², הקודקוד ונקודות סימטריות.", "הפרבולה סימטרית סביב ציר y והקודקוד שלה בראשית."),
-        "absolute": ("הגרף y=|x|", "מערכת צירים ובה גרף הערך המוחלט בצורת V ונקודות סימטריות.", "גרף הערך המוחלט בנוי משני ענפים סימטריים שנפגשים בראשית ויוצרים צורת V."),
-        "sine": ("הגרף y=sin(x)", "מערכת צירים ובה גל הסינוס לאורך שני מחזורים.", "גל הסינוס חוזר במחזוריות וחוצה את ציר x בנקודות הקבועות שלו."),
-    },
-    "ar": {
-        "identity": ("المستقيم y=x", "محورا إحداثيات مع المستقيم y=x ونقاط صحيحة عليه.", "في كل نقطة على المستقيم تتساوى قيمتا x و-y."),
-        "quadratic": ("القطع المكافئ y=x²", "محورا إحداثيات مع القطع المكافئ y=x² ورأسه ونقاط متناظرة.", "القطع المكافئ متناظر حول محور y ورأسه عند نقطة الأصل."),
-        "absolute": ("الرسم y=|x|", "محورا إحداثيات مع رسم القيمة المطلقة بشكل V ونقاط متناظرة.", "رسم القيمة المطلقة له فرعان متناظران يلتقيان عند نقطة الأصل ويشكلان حرف V."),
-        "sine": ("الرسم y=sin(x)", "محورا إحداثيات مع موجة الجيب عبر دورتين.", "تتكرر موجة الجيب دوريًا وتقطع محور x في نقاط ثابتة."),
-    },
-    "en": {
-        "identity": ("The line y=x", "Coordinate axes with the line y=x and integer points on it.", "At every point on this line, x and y have equal values."),
-        "quadratic": ("The parabola y=x²", "Coordinate axes with the parabola y=x², its vertex, and symmetric points.", "The parabola is symmetric about the y-axis and has its vertex at the origin."),
-        "absolute": ("The graph y=|x|", "Coordinate axes with the V-shaped absolute-value graph and symmetric points.", "The absolute-value graph has two symmetric branches that meet at the origin to form a V."),
-        "sine": ("The graph y=sin(x)", "Coordinate axes with the sine wave across two periods.", "The sine wave repeats periodically and crosses the x-axis at regular points."),
-    },
-}
-
-_MIDPOINT_VISUAL_TEXT = {
-    "he": ("נקודת אמצע במערכת צירים", "מערכת צירים ובה הנקודות A=(1,1), B=(5,3), ונקודת האמצע M=(3,2) על הקטע ביניהן.", "נקודת האמצע מתקבלת מממוצע ערכי x וממוצע ערכי y."),
-    "ar": ("نقطة المنتصف على المحاور", "محورا إحداثيات مع A=(1,1) وB=(5,3) ونقطة المنتصف M=(3,2) على القطعة بينهما.", "نحسب نقطة المنتصف بأخذ متوسط قيم x ومتوسط قيم y."),
-    "en": ("Midpoint on coordinate axes", "Coordinate axes with A=(1,1), B=(5,3), and midpoint M=(3,2) on the segment between them.", "The midpoint uses the average x-value and the average y-value."),
-}
-_SIMILAR_TRIANGLES_VISUAL_TEXT = {
-    "he": ("שני משולשים דומים", "שני משולשים בעלי אותה צורה; המשולש הימני הוא הגדלה פי 1.5 של המשולש השמאלי, עם זוויות מתאימות מסומנות.", "כל הצלעות המתאימות גדלו באותו גורם, ולכן הזוויות המתאימות שוות."),
-    "ar": ("مثلثان متشابهان", "مثلثان لهما الشكل نفسه؛ المثلث الأيمن تكبير للمثلث الأيسر بمعامل 1.5، مع تحديد الزوايا المتناظرة.", "تكبّرت جميع الأضلاع المتناظرة بالمعامل نفسه، لذلك الزوايا المتناظرة متساوية."),
-    "en": ("Two similar triangles", "Two triangles with the same shape; the right triangle is a 1.5-times enlargement of the left, with corresponding angles marked.", "Every corresponding side uses the same scale factor, so corresponding angles are equal."),
 }
 
 
@@ -612,442 +592,17 @@ def _fit_axes_to_elements(elements: list[dict]) -> None:
     axes["y_range"] = fitted(axes["y_range"], y_values)
 
 
-_HYPOTENUSE_LABEL = re.compile(r"^(?:יתר|היתר|الوتر|وتر|hypotenuse)(?:\s*[=:–—-]?\s*\d+(?:\.\d+)?)?$", re.IGNORECASE)
-_SIDE_ROLE_LABEL = re.compile(
-    r"^(?:מול|ליד|צלע\s+מול|צלע\s+ליד|المقابل|المجاور|ضلع\s+مقابل|ضلع\s+مجاور|opposite|adjacent)"
-    r"(?:\s*[=:–—-]?\s*\d+(?:\.\d+)?)?$",
-    re.IGNORECASE,
-)
-_SIDE_NUMBER = re.compile(r"(?<![\w.])-?\d+(?:\.\d+)?")
 _RIGHT_ANGLE_LABEL = re.compile(r"^(?:90\s*(?:°|º|degrees?)?|זווית\s+ישרה|زاوية\s+قائمة|right\s+angle)$", re.IGNORECASE)
-
-
-def _edge_lengths(triangle: dict) -> list[float]:
-    return [
-        math.dist(triangle["points"][index], triangle["points"][(index + 1) % 3])
-        for index in range(3)
-    ]
-
-
-def _side_number(label: str) -> Optional[float]:
-    match = _SIDE_NUMBER.search(label)
-    return float(match.group()) if match else None
-
-
-def _align_triangle_side_measures(elements: list[dict]) -> None:
-    """Rebind side measures to edges using the triangle's proportions.
-
-    Scene planners occasionally return the correct 3-4-5 geometry but put the
-    label ``5`` on a leg. Two or more stated measures are enough to recover the
-    intended scale deterministically without changing the mathematical data.
-    """
-    from itertools import permutations
-
-    for triangle in (
-        element for element in elements
-        if element["type"] == "polygon" and len(element["points"]) == 3
-    ):
-        labels = list(triangle.get("side_labels", []))
-        labels.extend([""] * (3 - len(labels)))
-        measured = [
-            (index, label, number)
-            for index, label in enumerate(labels)
-            if (number := _side_number(label)) is not None and number > 0
-        ]
-        if len(measured) < 2:
-            continue
-
-        lengths = _edge_lengths(triangle)
-        best: Optional[tuple[float, tuple[int, ...]]] = None
-        for targets in permutations(range(3), len(measured)):
-            scales = [measured[index][2] / lengths[target] for index, target in enumerate(targets)]
-            mean_scale = sum(scales) / len(scales)
-            if mean_scale <= 0:
-                continue
-            error = sum(((scale - mean_scale) / mean_scale) ** 2 for scale in scales)
-            if best is None or error < best[0]:
-                best = (error, targets)
-        if best is None or best[0] > 0.05:
-            continue
-
-        for original_index, _, _ in measured:
-            labels[original_index] = ""
-        for measured_item, target in zip(measured, best[1]):
-            labels[target] = measured_item[1]
-        triangle["side_labels"] = labels
-
-
-def _distance_to_segment(point: list[float], start: list[float], end: list[float]) -> float:
-    dx, dy = end[0] - start[0], end[1] - start[1]
-    denominator = dx * dx + dy * dy
-    if denominator <= 1e-12:
-        return math.dist(point, start)
-    ratio = max(0.0, min(1.0, ((point[0] - start[0]) * dx + (point[1] - start[1]) * dy) / denominator))
-    projection = [start[0] + ratio * dx, start[1] + ratio * dy]
-    return math.dist(point, projection)
-
-
-def _inferred_edge_measure(triangle: dict, edge_index: int) -> str:
-    """Infer one missing measure only when two labels establish one scale."""
-    lengths = _edge_lengths(triangle)
-    labels = list(triangle.get("side_labels", []))
-    labels.extend([""] * (3 - len(labels)))
-    scales = [
-        number / lengths[index]
-        for index, label in enumerate(labels)
-        if (number := _side_number(label)) is not None and number > 0
-    ]
-    if len(scales) < 2:
-        return ""
-    mean_scale = sum(scales) / len(scales)
-    if any(abs(scale - mean_scale) / mean_scale > 0.025 for scale in scales):
-        return ""
-    value = lengths[edge_index] * mean_scale
-    rounded = round(value)
-    if abs(value - rounded) <= 0.025:
-        return str(rounded)
-    tenth = round(value, 1)
-    return f"{tenth:g}" if abs(value - tenth) <= 0.025 else ""
-
-
-def _merge_side_label(role: str, current: str, inferred_measure: str = "") -> str:
-    role_number = _side_number(role)
-    current_number = _side_number(current)
-    if role.casefold() in current.casefold():
-        return current
-    if role_number is not None:
-        return role
-    measure = current if current_number is not None else inferred_measure
-    return f"{role} {measure}".strip()
-
-
-def _bind_semantic_geometry_labels(elements: list[dict]) -> None:
-    """Attach free-standing side roles to their edges instead of coordinates."""
-    triangles = [element for element in elements if element["type"] == "polygon" and len(element["points"]) == 3]
-    if not triangles:
-        return
-    retained: list[dict] = []
-    for element in elements:
-        label = element.get("label", "")
-        is_hypotenuse = bool(_HYPOTENUSE_LABEL.fullmatch(label))
-        is_side_role = bool(_SIDE_ROLE_LABEL.fullmatch(label))
-        if element["type"] != "text" or not (is_hypotenuse or is_side_role):
-            retained.append(element)
-            continue
-        position = element["position"]
-        triangle = min(
-            triangles,
-            key=lambda candidate: min(
-                math.dist(position, [
-                    (candidate["points"][index][0] + candidate["points"][(index + 1) % 3][0]) / 2,
-                    (candidate["points"][index][1] + candidate["points"][(index + 1) % 3][1]) / 2,
-                ])
-                for index in range(3)
-            ),
-        )
-        if is_hypotenuse:
-            edge_index = max(range(3), key=_edge_lengths(triangle).__getitem__)
-        else:
-            edge_index = min(
-                range(3),
-                key=lambda index: _distance_to_segment(
-                    position,
-                    triangle["points"][index],
-                    triangle["points"][(index + 1) % 3],
-                ),
-            )
-        side_labels = list(triangle.get("side_labels", []))
-        side_labels.extend([""] * (3 - len(side_labels)))
-        side_labels[edge_index] = _merge_side_label(
-            label,
-            side_labels[edge_index],
-            _inferred_edge_measure(triangle, edge_index),
-        )
-        triangle["side_labels"] = side_labels
-    elements[:] = retained
-
-
-def _ensure_requested_hypotenuse(scene: dict, request: str, language: str) -> None:
-    """Keep an explicitly requested side name attached to the longest edge."""
-    if not _REQUESTED_HYPOTENUSE[language].search(request):
-        return
-    triangle = next(
-        (element for element in scene["elements"] if element["type"] == "polygon" and len(element["points"]) == 3),
-        None,
-    )
-    if triangle is None:
-        return
-    lengths = _edge_lengths(triangle)
-    edge_index = max(range(3), key=lengths.__getitem__)
-    side_labels = list(triangle.get("side_labels", []))
-    side_labels.extend([""] * (3 - len(side_labels)))
-    name = _HYPOTENUSE_NAME[language]
-    current = side_labels[edge_index]
-    if name.casefold() not in current.casefold():
-        current = f"{name} {current}".strip()
-    requested_length = _REQUESTED_HYPOTENUSE_LENGTH[language].search(request)
-    if requested_length and not re.search(r"\d", current):
-        current = f"{current} {requested_length.group(1)}"
-    side_labels[edge_index] = current
-    triangle["side_labels"] = side_labels
-
-
-def _normalize_identity_line(scene: dict, request: str) -> None:
-    """Deterministically render explicit ``x=y`` / ``y=x`` identity graphs.
-
-    This is intentionally request-specific. Arbitrary polylines may be circles,
-    inverse-function branches, or parametric paths, so globally sorting or
-    rewriting their points would corrupt valid mathematical diagrams.
-    """
-    if not _IDENTITY_EQUATION.search(request or ""):
-        return
-
-    axes = next((element for element in scene["elements"] if element["type"] == "axes"), None)
-    if axes is None:
-        axes = {
-            "type": "axes", "color": "ink", "position": [0.0, 0.0],
-            "x_range": [-5.0, 5.0, 1.0], "y_range": [-5.0, 5.0, 1.0],
-            "x_label": "x", "y_label": "y",
-        }
-        scene["elements"].insert(0, axes)
-
-    low = max(axes["x_range"][0], axes["y_range"][0])
-    high = min(axes["x_range"][1], axes["y_range"][1])
-    if low >= high:
-        low, high = -5.0, 5.0
-        axes["x_range"] = [low, high, 1.0]
-        axes["y_range"] = [low, high, 1.0]
-
-    candidates = [
-        element for element in scene["elements"]
-        if element["type"] in {"line", "polyline"}
-    ]
-    graph = next(
-        (element for element in candidates if _IDENTITY_EQUATION.search(element.get("label", ""))),
-        max(candidates, key=lambda element: len(element.get("points", [])), default=None),
-    )
-    if graph is None:
-        graph = {"type": "line", "color": "primary", "dashed": False}
-        scene["elements"].append(graph)
-
-    if graph["type"] == "polyline":
-        step = (high - low) / 16
-        graph["points"] = [[low + index * step, low + index * step] for index in range(17)]
-    else:
-        graph["points"] = [[low, low], [high, high]]
-    graph["label"] = "y=x"
-    _fit_axes_to_elements(scene["elements"])
-
-
-def _normalize_safe_function_graph(scene: dict, request: str, language: str = "he") -> None:
-    """Resample a small allow-list of requested functions without executing code.
-
-    The scene planner sometimes describes the right concept while returning a
-    polyline for a different equation. These canonical functions are detected
-    from the learner request and evaluated by trusted Python functions only;
-    arbitrary model-authored expressions are never parsed or executed.
-    """
-    function_name = next(
-        (name for pattern, name in _SAFE_FUNCTION_EQUATIONS if pattern.search(request or "")),
-        None,
-    )
-    if function_name is None:
-        return
-
-    axes = next((element for element in scene["elements"] if element["type"] == "axes"), None)
-    graph = max(
-        (element for element in scene["elements"] if element["type"] == "polyline"),
-        key=lambda element: len(element.get("points", [])),
-        default=None,
-    )
-    if axes is None or graph is None:
-        return
-
-    functions: dict[str, tuple[Callable[[float], float], str]] = {
-        "quadratic": (lambda x: x * x, "y=x^2"),
-        "absolute": (abs, "y=|x|"),
-        "sine": (math.sin, "y=sin(x)"),
-    }
-    relation, label = functions[function_name]
-    x_min, x_max, _ = axes["x_range"]
-    y_min, y_max, _ = axes["y_range"]
-    sample_count = 33
-    candidates = [
-        [x_min + (x_max - x_min) * index / (sample_count - 1), 0.0]
-        for index in range(sample_count)
-    ]
-    points = [[x, relation(x)] for x, _ in candidates]
-    visible = [point for point in points if y_min - 1e-9 <= point[1] <= y_max + 1e-9]
-    if len(visible) < 5:
-        return
-    graph["points"] = visible
-    graph["label"] = label
-    graph["dashed"] = False
-    lang = language if language in _CANONICAL_VISUAL_TEXT else "he"
-    scene["caption"] = _CANONICAL_VISUAL_TEXT[lang][function_name][2]
-    _fit_axes_to_elements(scene["elements"])
-
-
-def _ensure_parallel_angle_markers(scene: dict, request: str, language: str) -> None:
-    """Add alternate-angle semantics when a valid three-line scene omits arcs."""
-    lang = language if language in _PARALLEL_TRANSVERSAL_REQUEST else "he"
-    if not _PARALLEL_TRANSVERSAL_REQUEST[lang].search(request or ""):
-        return
-    marker_count = sum(element["type"] in {"angle", "arc"} for element in scene["elements"])
-    if marker_count >= 2:
-        return
-    lines = [element for element in scene["elements"] if element["type"] == "line"]
-    if len(lines) < 3:
-        return
-
-    horizontals = [
-        line for line in lines
-        if abs(line["points"][1][1] - line["points"][0][1]) <= 0.12
-    ]
-    transversal = next((line for line in lines if line not in horizontals), None)
-    if len(horizontals) < 2 or transversal is None:
-        return
-    [[tx1, ty1], [tx2, ty2]] = transversal["points"]
-    if abs(ty2 - ty1) <= 1e-9:
-        return
-
-    intersections: list[list[float]] = []
-    for line in sorted(horizontals[:2], key=lambda item: item["points"][0][1], reverse=True):
-        y = line["points"][0][1]
-        ratio = (y - ty1) / (ty2 - ty1)
-        x = tx1 + ratio * (tx2 - tx1)
-        intersections.append([x, y])
-    upper, lower = intersections
-    scene["elements"].extend([
-        {
-            "type": "angle", "color": "accent",
-            "points": [[upper[0] + 1.0, upper[1]], upper, [upper[0] + 0.7, upper[1] - 0.8]],
-            "label": "α",
-        },
-        {
-            "type": "angle", "color": "accent",
-            "points": [[lower[0] - 1.0, lower[1]], lower, [lower[0] - 0.7, lower[1] + 0.8]],
-            "label": "α",
-        },
-    ])
-
-
-def _canonical_function_scene(request: str, language: str) -> Optional[dict]:
-    """Build a trusted fallback for recognized elementary graph requests.
-
-    This is intentionally limited to an allow-list. It guarantees that a
-    strong visual cue such as ``x=y`` receives a useful first-turn picture
-    even when the model planner declines the tool or returns invalid JSON.
-    """
-    function_name = "identity" if _IDENTITY_EQUATION.search(request or "") else next(
-        (name for pattern, name in _SAFE_FUNCTION_EQUATIONS if pattern.search(request or "")),
-        None,
-    )
-    if function_name is None:
-        return None
-
-    lang = language if language in _CANONICAL_VISUAL_TEXT else "he"
-    title, alt, caption = _CANONICAL_VISUAL_TEXT[lang][function_name]
-    configurations = {
-        "identity": (0.0, 5.0, -0.5, 5.5, lambda x: x, "y=x"),
-        "quadratic": (-3.0, 3.0, -1.0, 9.5, lambda x: x * x, "y=x^2"),
-        "absolute": (-4.0, 4.0, -1.0, 5.0, abs, "y=|x|"),
-        "sine": (-6.28, 6.28, -1.5, 1.5, math.sin, "y=sin(x)"),
-    }
-    x_min, x_max, y_min, y_max, relation, label = configurations[function_name]
-    sample_count = 33
-    points = [
-        [x_min + (x_max - x_min) * index / (sample_count - 1), 0.0]
-        for index in range(sample_count)
-    ]
-    curve = [[x, relation(x)] for x, _ in points]
-    markers = {
-        "identity": [[float(value), float(value)] for value in range(6)],
-        "quadratic": [[float(value), float(value * value)] for value in range(-2, 3)],
-        "absolute": [[-3.0, 3.0], [0.0, 0.0], [3.0, 3.0]],
-        "sine": [[-math.pi, 0.0], [0.0, 0.0], [math.pi, 0.0]],
-    }[function_name]
-    raw = {
-        "use_visual": True,
-        "title": title,
-        "alt": alt,
-        "caption": caption,
-        "elements": [
-            {
-                "type": "axes", "color": "ink", "position": [0, 0],
-                "x_range": [x_min, x_max, 1.0], "y_range": [y_min, y_max, 1.0],
-                "x_label": "x", "y_label": "y",
-            },
-            {"type": "polyline", "color": "primary", "points": curve, "label": label},
-            *(
-                {"type": "point", "color": "accent", "points": [point]}
-                for point in markers
-            ),
-        ],
-    }
-    return sanitize_scene(raw)
-
-
-def _canonical_midpoint_scene(request: str, language: str) -> Optional[dict]:
-    """Return the trusted midpoint diagram for the explicit demo contract."""
-    lang = language if language in _MIDPOINT_REQUEST else "he"
-    if not _MIDPOINT_REQUEST[lang].search(request or ""):
-        return None
-    title, alt, caption = _MIDPOINT_VISUAL_TEXT[lang]
-    return sanitize_scene({
-        "use_visual": True,
-        "title": title,
-        "alt": alt,
-        "caption": caption,
-        "elements": [
-            {
-                "type": "axes", "color": "ink", "position": [0, 0],
-                "x_range": [0, 6, 1], "y_range": [0, 4, 1],
-                "x_label": "x", "y_label": "y",
-            },
-            {"type": "line", "color": "primary", "points": [[1, 1], [5, 3]]},
-            {"type": "point", "color": "primary", "points": [[1, 1]], "label": "A=(1,1)"},
-            {"type": "point", "color": "primary", "points": [[5, 3]], "label": "B=(5,3)"},
-            {"type": "point", "color": "accent", "points": [[3, 2]], "label": "M=(3,2)"},
-        ],
-    })
-
-
-def _canonical_similar_triangles_scene(request: str, language: str) -> Optional[dict]:
-    """Return a trusted scale-factor diagram for an explicit similarity request."""
-    lang = language if language in _SIMILAR_TRIANGLES_REQUEST else "he"
-    if not _SIMILAR_TRIANGLES_REQUEST[lang].search(request or ""):
-        return None
-    title, alt, caption = _SIMILAR_TRIANGLES_VISUAL_TEXT[lang]
-    return sanitize_scene({
-        "use_visual": True,
-        "title": title,
-        "alt": alt,
-        "caption": caption,
-        "elements": [
-            {
-                "type": "polygon", "color": "primary",
-                "points": [[-5, -2], [-3, 1], [-1, -2]],
-                "labels": ["A", "B", "C"], "fill_opacity": 0.08,
-            },
-            {
-                "type": "polygon", "color": "secondary",
-                "points": [[0, -2], [3, 2.5], [6, -2]],
-                "labels": ["A′", "B′", "C′"], "fill_opacity": 0.08,
-            },
-            {"type": "angle", "color": "accent", "points": [[-4, -2], [-5, -2], [-4.4, -1.1]], "label": "α"},
-            {"type": "angle", "color": "accent", "points": [[1, -2], [0, -2], [0.9, -0.65]], "label": "α"},
-            {"type": "text", "color": "ink", "position": [0.5, 3.0], "label": "×1.5"},
-        ],
-    })
 
 
 _DIGIT = re.compile(r"\d")
 # Anything that plots something. If one of these is present the frame is doing
-# real work — a sine curve on axes needs no digit label to be about data.
+# real work — a sine curve on axes needs no digit label to be about data, and a
+# balance or a drawn object is a subject even when nothing on it is a number.
 _DATA_BEARING = {
     "polyline", "polygon", "point", "circle", "arc", "rectangle",
     "line", "arrow", "angle", "right_angle", "brace", "molecule",
+    "prop", "drawing",
 }
 
 
@@ -1237,8 +792,13 @@ def _sanitize_interactive(
 def sanitize_scene(
     raw: object,
     text_filter: Optional[Callable[[str], str]] = None,
+    subject: Optional[str] = None,
 ) -> Optional[dict]:
-    """Validate and bound an untrusted model-produced scene specification."""
+    """Validate and bound an untrusted model-produced scene specification.
+
+    ``subject`` selects which registered domains may contribute element types,
+    so a chemistry vocabulary is not accepted in a geometry lesson.
+    """
     if not isinstance(raw, dict) or raw.get("use_visual") is not True:
         return None
 
@@ -1271,11 +831,7 @@ def sanitize_scene(
         if not isinstance(candidate, dict):
             continue
         kind = candidate.get("type")
-        if kind not in {
-            "polygon", "polyline", "line", "arrow", "point", "circle",
-            "rectangle", "arc", "angle", "right_angle", "axes", "text",
-            "brace", "number_line", "molecule", "prop", "drawing",
-        }:
+        if kind not in _CORE_ELEMENTS and kind not in registry.element_types(subject):
             continue
         color = candidate.get("color") if candidate.get("color") in COLORS else "primary"
         clean: dict = {"type": kind, "color": color}
@@ -1350,7 +906,7 @@ def sanitize_scene(
             # dropped rather than approximated: a prop the renderer cannot build
             # would leave a hole in the picture with the labels still floating
             # where its parts should have been.
-            from app.agents.manim_props import PROP_KINDS
+            from app.agents.visuals.shapes import PROP_KINDS
 
             name = str(candidate.get("prop") or "").strip().lower()
             if name not in PROP_KINDS:
@@ -1374,7 +930,7 @@ def sanitize_scene(
             # running off both edges.
             if "size" in clean:
                 clean["size"] = max(0.3, min(float(clean["size"]), 1.8))
-            for key in ("state", "shape", "liquid_color", "particle_color", "pan_color"):
+            for key in ("state", "shape", "style", "liquid_color", "particle_color", "pan_color"):
                 value = candidate.get(key)
                 if isinstance(value, str) and len(value) <= 24:
                     clean[key] = value
@@ -1383,16 +939,16 @@ def sanitize_scene(
             # What sits ON a balance pan, built by the scale itself so it lands
             # on the pan after the beam has tilted. One level only: a load
             # carrying its own load is not a picture of anything.
-            for slot in ("left_load", "right_load"):
+            for slot in ("left_load", "right_load", "load"):
                 load = candidate.get(slot)
                 if not isinstance(load, dict) or str(load.get("prop") or "") not in PROP_KINDS:
                     continue
                 nested: dict = {"prop": str(load["prop"])}
-                for key in ("size", "inflation", "count", "particles", "fill_level", "seed", "width", "height"):
+                for key in ("size", "inflation", "count", "particles", "fill_level", "seed", "width", "height", "graduations"):
                     number = _number(load.get(key), 1000.0)
                     if number is not None:
                         nested[key] = number
-                for key in ("state", "shape", "color", "particle_color", "liquid_color"):
+                for key in ("state", "shape", "style", "color", "particle_color", "liquid_color"):
                     value = load.get(key)
                     if isinstance(value, str) and len(value) <= 24:
                         nested[key] = value
@@ -1422,7 +978,7 @@ def sanitize_scene(
             # Any shape the catalogue does not have. Authored in the planner's
             # own coordinates and fitted here, so it cannot be off-canvas or
             # the wrong scale — the planner supplies shape, never layout.
-            from app.agents.manim_drawing import clean_drawing
+            from app.agents.visuals.drawing import clean_drawing
 
             center = diagram_point(candidate.get("center", [0, 0]))
             drawing = clean_drawing(
@@ -1463,6 +1019,19 @@ def sanitize_scene(
                 if mark is not None and value_range[0] <= mark <= value_range[1]
             ]
             clean.update({"position": position, "range": value_range, "marks": marks})
+        else:
+            # A type contributed by a registered domain. It validates itself, and
+            # anything it will not vouch for is dropped rather than approximated.
+            validate = registry.validator_for(kind, subject)
+            validated = validate(
+                candidate,
+                point=diagram_point,
+                number=_number,
+                text=lambda value: _short_text(value, text_filter),
+            ) if validate else None
+            if not validated:
+                continue
+            clean.update(validated)
 
         label = _short_text(candidate.get("label"), text_filter)
         if label:
@@ -1537,8 +1106,10 @@ def sanitize_scene(
     _dedupe_scene_text(elements, title)
     _prune_text_annotations(elements)
     _drop_container_rect_labels(elements)
-    _align_triangle_side_measures(elements)
-    _bind_semantic_geometry_labels(elements)
+    maths.align_triangle_side_measures(elements)
+    maths.bind_semantic_geometry_labels(elements)
+    for repair in registry.normalizers(subject):
+        repair(elements)
     _normalize_number_line_scene(elements)
     _fit_axes_to_elements(elements)
     has_molecule = any(item["type"] == "molecule" for item in elements)
@@ -1557,12 +1128,16 @@ def sanitize_scene(
         # a scale whose numbers mean nothing; the planner gets one retry.
         print("ℹ️ Dropped scene: numeric frame carried no data (decorative scale)")
         return None
+    has_composite = any(item["type"] in {"prop", "drawing"} for item in elements)
     scene = {
         "use_visual": True,
         # Derived from what survived validation, not from what the planner
         # claimed: a scene whose only molecule was rejected is not a molecule
-        # scene, and must not be routed to the chemistry renderer.
-        "render": "molecule" if has_molecule else "geometry",
+        # scene, and must not be routed to the chemistry renderer. "diagram"
+        # means a composite object is present — a balance, a vessel, a freehand
+        # shape — which the in-browser geometry renderer cannot draw, so the
+        # still is served from the server SVG instead of silently losing it.
+        "render": "molecule" if has_molecule else ("diagram" if has_composite else "geometry"),
         "animated": raw.get("animated") is True,
         **({"interactive": interactive} if interactive else {}),
         "title": title,
@@ -1648,16 +1223,20 @@ async def plan_manim_visual(
     *,
     prefer_animation: Optional[bool] = None,
     force_visual: bool = False,
+    subject: Optional[str] = None,
 ) -> Optional[dict]:
     """Let the Coach choose the visual tool and return a constrained scene.
 
     ``force_visual`` (on-demand "show me a visual" button) tells the planner it
     must produce a scene; ``prefer_animation`` steers video vs. still. The final
     ``animated`` flag is still re-asserted by the caller to match the request.
+    ``subject`` selects which domain vocabularies are offered and accepted.
     """
     lang = language if language in VISUAL_TOOL_PROMPTS else "he"
 
     system_content = f"{VISUAL_TOOL_PROMPTS[lang]}\n{SCENE_CONTRACT}"
+    for fragment in registry.contract_fragments(subject):
+        system_content += f"\n{fragment}"
     if force_visual:
         system_content += _ON_DEMAND_DIRECTIVE[lang]
     if prefer_animation is True:
@@ -1700,23 +1279,23 @@ async def plan_manim_visual(
             break
         if response:
             try:
-                planned = sanitize_scene(json.loads(response), text_filter)
+                planned = sanitize_scene(json.loads(response), text_filter, subject)
                 if planned:
                     visual_context = "\n".join(
                         filter(None, (user_message, assistant_response, planned.get("alt"), planned.get("caption")))
                     )
-                    _normalize_identity_line(planned, user_message)
-                    _normalize_safe_function_graph(planned, user_message, language)
-                    _ensure_parallel_angle_markers(planned, user_message, lang)
-                    _ensure_requested_hypotenuse(planned, visual_context, lang)
+                    maths.normalize_identity_line(planned, user_message)
+                    maths.normalize_safe_function_graph(planned, user_message, language)
+                    maths.ensure_parallel_angle_markers(planned, user_message, lang)
+                    maths.ensure_requested_hypotenuse(planned, visual_context, lang)
                     return planned
             except (json.JSONDecodeError, TypeError, ValueError):
                 print("⚠️ Manim tool returned an invalid scene")
     if explicit_request or semantic_visual:
         return (
-            _canonical_function_scene(user_message, lang)
-            or _canonical_midpoint_scene(user_message, lang)
-            or _canonical_similar_triangles_scene(user_message, lang)
+            maths.canonical_function_scene(user_message, lang)
+            or maths.canonical_midpoint_scene(user_message, lang)
+            or maths.canonical_similar_triangles_scene(user_message, lang)
         )
     return None
 
@@ -1773,8 +1352,32 @@ def _spread_svg_labels(label_rows: list[str]) -> list[str]:
 
 def _svg_fallback(scene: dict) -> bytes:
     """Render the safe primitive set as SVG when Manim is unavailable."""
+    from app.agents.visuals import svg_shapes
+    from app.agents.visuals.shapes import bounds as shape_bounds
+    from app.agents.visuals.shapes import build_drawing, build_prop
+
     shapes: list[str] = []
     labels: list[str] = []
+    # Composite objects are assembled BEFORE the fit so their extent can bound
+    # it. A prop that is not measured here is a prop the scene is scaled without
+    # — the balance ends up half off the frame that was fitted to the text.
+    composites: dict[int, tuple[list[dict], dict]] = {}
+    for index, element in enumerate(scene["elements"]):
+        if element["type"] == "prop":
+            built = build_prop(
+                element,
+                color_for=lambda name: COLORS.get(name or "primary", COLORS["primary"]),
+            )
+        elif element["type"] == "drawing":
+            built = build_drawing(
+                element,
+                color_for=lambda name: COLORS.get(name or "ink", COLORS["ink"]),
+            )
+        else:
+            continue
+        if built and built[0]:
+            composites[index] = built
+
     axis_element = next(
         (element for element in scene["elements"] if element["type"] == "axes"),
         None,
@@ -1785,17 +1388,33 @@ def _svg_fallback(scene: dict) -> bytes:
         if element["type"] in {"polygon", "polyline", "line", "arrow", "point", "angle", "right_angle"}
         for point in element.get("points", [])
     ]
-    geometry_points.extend(
-        element["center"]
-        for element in scene["elements"]
-        if element["type"] in {"circle", "rectangle", "arc"}
-    )
+    # Extents, not centres: a rectangle counted as its centre point makes the
+    # fit believe the scene is smaller than it is, and the shape is then scaled
+    # up until it runs off the frame it was supposed to be fitted into.
+    for element in scene["elements"]:
+        if element["type"] not in {"circle", "rectangle", "arc"}:
+            continue
+        cx, cy = element["center"]
+        spread_x = max(element.get("radius", 0.0), element.get("width", 0.0) / 2)
+        spread_y = max(element.get("radius", 0.0), element.get("height", 0.0) / 2)
+        geometry_points.extend((
+            [cx - spread_x, cy - spread_y], [cx + spread_x, cy + spread_y],
+        ))
     # A number line's ticks live at data [value, height]; feeding its endpoints
     # into the fit keeps svg_point consistent for it AND for the texts/arrows the
     # planner placed relative to those values (otherwise they drift apart).
     has_number_line = any(
         element["type"] == "number_line" for element in scene["elements"]
     )
+    # Composite extents are canvas units, so they may only bound the fit on a
+    # bare canvas. In a number-line or axes scene the fit is in DATA units — a
+    # balance spanning ±1.5 canvas would there read as ±1.5 grams and stretch a
+    # 12..19 line back to zero.
+    if not has_number_line and not axis_element:
+        for built_shapes, _ in composites.values():
+            box = shape_bounds(built_shapes)
+            if box:
+                geometry_points.extend(([box[0], box[1]], [box[2], box[3]]))
     geometry_points.extend(
         point
         for element in scene["elements"]
@@ -1864,10 +1483,54 @@ def _svg_fallback(scene: dict) -> bytes:
         bottom, top, _ = axis_element["y_range"]
         return half_width * 2 / (right - left), half_height * 2 / (top - bottom)
 
-    for element in scene["elements"]:
+    # `visual_layout` already chose a spot for every label, avoiding the strokes
+    # and the other labels. The still used to ignore that and re-derive its own
+    # offsets, which is why a caption could land on the object it names here and
+    # nowhere else. Solved positions are canvas units, so they come back through
+    # the published transform and then through this renderer's own fit.
+    canvas = scene.get("canvas") or {}
+    canvas_scale_x = float(canvas.get("scale_x") or 1.0) or 1.0
+    canvas_scale_y = float(canvas.get("scale_y") or 1.0) or 1.0
+    canvas_offset_x = float(canvas.get("offset_x") or 0.0)
+    canvas_offset_y = float(canvas.get("offset_y") or 0.0)
+
+    def solved(element: dict, slot: str) -> Optional[tuple[float, float]]:
+        position = (element.get("layout") or {}).get(slot)
+        if not isinstance(position, (list, tuple)) or len(position) < 2:
+            return None
+        return svg_point([
+            (float(position[0]) - canvas_offset_x) / canvas_scale_x,
+            (float(position[1]) - canvas_offset_y) / canvas_scale_y,
+        ])
+
+    def placed(element: dict, slot: str, fallback: tuple[float, float]) -> tuple[float, float]:
+        return solved(element, slot) or fallback
+
+    for index, element in enumerate(scene["elements"]):
         kind = element["type"]
         color = COLORS[element["color"]]
-        if kind == "polygon":
+        if kind in {"prop", "drawing"}:
+            built = composites.get(index)
+            if not built:
+                continue
+            built_shapes, anchors = built
+            shapes.extend(svg_shapes.to_svg(built_shapes, svg_point))
+            for slot, text in (element.get("labels") or {}).items():
+                anchor = anchors.get(str(slot))
+                if not text or not isinstance(anchor, list):
+                    continue
+                x, y = placed(element, f"labels:{slot}", svg_point(anchor))
+                labels.append(
+                    f'<text x="{x:.1f}" y="{y:.1f}" class="label backed-label" fill="{color}" '
+                    f'direction="auto" unicode-bidi="plaintext">{escape(str(text))}</text>'
+                )
+            if element.get("label") and isinstance(anchors.get("bottom"), list):
+                x, y = placed(element, "label", svg_point(anchors["bottom"]))
+                labels.append(
+                    f'<text x="{x:.1f}" y="{y:.1f}" class="label backed-label" fill="{color}" '
+                    f'direction="auto" unicode-bidi="plaintext">{escape(element["label"])}</text>'
+                )
+        elif kind == "polygon":
             points = [svg_point(point) for point in element["points"]]
             joined = " ".join(f"{x:.1f},{y:.1f}" for x, y in points)
             opacity = element.get("fill_opacity", 0.08)
@@ -1999,7 +1662,7 @@ def _svg_fallback(scene: dict) -> bytes:
                     f'direction="ltr" unicode-bidi="plaintext">{escape(text)}</text>'
                 )
             else:
-                x, y = svg_point(element["position"])
+                x, y = placed(element, "position", svg_point(element["position"]))
                 labels.append(
                     f'<text x="{x:.1f}" y="{y:.1f}" class="label backed-label" fill="{color}" '
                     f'direction="auto" unicode-bidi="plaintext">{escape(text)}</text>'
@@ -2040,10 +1703,23 @@ def _svg_fallback(scene: dict) -> bytes:
             length = math.hypot(dx, dy) or 1.0
             # Outward normal (below a horizontal span in screen space).
             nx, ny = dy / length, -dx / length
-            if ny < 0:
+            if abs(ny) < 1e-6:
+                # A vertical span has no "below" to fall back on, so the sign was
+                # whatever the point order happened to give — which put the label
+                # on top of the thing the brace was measuring. Curl away from the
+                # middle of the frame instead.
+                nx, ny = (1.0 if (x1 + x2) / 2 >= 480.0 else -1.0), 0.0
+            elif ny < 0:
                 nx, ny = -nx, -ny
-            depth = 16.0
-            mid = ((x1 + x2) / 2 + nx * depth * 1.8, (y1 + y2) / 2 + ny * depth * 1.8)
+            # A brace's depth is constant, not a fraction of what it spans —
+            # that is how Manim draws it and what `visual_layout` models when it
+            # places the label. The old fixed 16px flattened long braces into a
+            # wavy line and buried short ones, because the same number meant a
+            # different thing at every fit scale.
+            scale_x, scale_y = svg_scales()
+            reach = min(max(BRACE_REACH * min(scale_x, scale_y), 18.0), 64.0)
+            depth = reach * (BRACE_BAR / BRACE_REACH)
+            mid = ((x1 + x2) / 2 + nx * reach, (y1 + y2) / 2 + ny * reach)
             a = (x1 + nx * depth, y1 + ny * depth)
             b = (x2 + nx * depth, y2 + ny * depth)
             shapes.append(
@@ -2119,6 +1795,11 @@ ANIMATED_RENDER_TIMEOUT_SECONDS = 90
 # A chat payload guard: beyond this the still frame ships instead of the movie.
 MAX_VIDEO_BYTES = 3_500_000
 
+# Which client renderer draws each scene kind. "diagram" has no client renderer
+# on purpose: composite objects are drawn once, server-side, rather than a
+# second time in TypeScript where the two would drift.
+_RENDERERS = {"geometry": "mafs", "molecule": "molecule", "diagram": "svg-diagram"}
+
 
 def build_scene_visual(scene: dict) -> dict:
     """Package a scene for in-browser rendering — no subprocess, no Manim.
@@ -2143,7 +1824,7 @@ def build_scene_visual(scene: dict) -> dict:
         "title": scene.get("title") or "",
         "alt": scene.get("alt") or scene.get("title") or "",
         "caption": scene.get("caption") or "",
-        "renderer": "mafs" if scene.get("render", "geometry") == "geometry" else "molecule",
+        "renderer": _RENDERERS.get(scene.get("render", "geometry"), "mafs"),
         "scene": scene,
     }
 

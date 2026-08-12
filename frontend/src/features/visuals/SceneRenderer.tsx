@@ -4,7 +4,8 @@
  *   type 'video'  → Manim MP4 (the animated path, unchanged)
  *   type 'image'  → server-rendered PNG/SVG, from conversation history stored
  *                   before client rendering existed
- *   type 'scene'  → drawn here in the browser from the sanitized scene spec
+ *   type 'scene'  → drawn here in the browser from the sanitized scene spec,
+ *                   unless `renderer` says the server already drew it
  *
  * Every 'scene' payload also carries the backend's deterministic SVG in
  * `data_url`. If the client renderer throws — an element type this build does
@@ -68,6 +69,11 @@ export function SceneRenderer({ visual }: { visual: CoachVisual }) {
   if (visual.type !== 'scene') return <StaticImage visual={visual} />
 
   const fallback = <StaticImage visual={visual} />
+  // Composite objects — a balance, a vessel, a freehand shape — are drawn once
+  // on the server. Re-implementing them here would mean two drawings of the
+  // same prop that drift apart; the SVG already IS the picture.
+  if (visual.renderer === 'svg-diagram') return fallback
+
   const body =
     visual.renderer === 'molecule' ? (
       <MoleculeScene scene={visual.scene} />

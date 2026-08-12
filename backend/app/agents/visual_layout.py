@@ -518,6 +518,69 @@ def _arc_segments(center: Point, radius: float, start: float, sweep: float, step
     return list(zip(points[:-1], points[1:]))
 
 
+def _composite_shapes(item: dict) -> list[dict]:
+    """The canvas shapes a prop or drawing is made of, or an empty list.
+
+    Built through the same code the renderers use, so the solver reasons about
+    the object that will actually be drawn rather than an approximation of it.
+    """
+    from app.agents.visuals import shapes as shape_builder
+
+    def colour(_name: object) -> str:
+        return "#000000"   # the solver cares about geometry, never paint
+
+    try:
+        if item.get("type") == "prop":
+            built = shape_builder.build_prop(item, color_for=colour)
+            return list(built[0]) if built else []
+        return list(shape_builder.build_drawing(item, color_for=colour)[0])
+    except Exception:
+        # A prop the solver cannot build is one the renderer will not draw
+        # either; treating it as empty space is the honest fallback.
+        return []
+
+
+def _composite_segments(
+    item: dict,
+    to_canvas: Callable[[Sequence[float]], Point],
+    transform: CanvasTransform,
+) -> list[Segment]:
+    """Outline segments for every shape in a composite object."""
+    segments: list[Segment] = []
+    for shape in _composite_shapes(item):
+        kind = shape["kind"]
+        if kind in {"polygon", "polyline"}:
+            ring = [to_canvas(p) for p in shape["points"]]
+            if kind == "polygon" and len(ring) >= 3:
+                ring = ring + [ring[0]]
+            if len(ring) >= 2:
+                segments.extend(zip(ring[:-1], ring[1:]))
+        elif kind in {"ellipse", "dot"}:
+            center = to_canvas(shape["center"])
+            rx = float(shape.get("rx", shape.get("radius", 0.0))) * transform.scale_x
+            ry = float(shape.get("ry", shape.get("radius", 0.0))) * transform.scale_y
+            steps = 16
+            ring = [
+                (center[0] + rx * math.cos(math.tau * i / steps),
+                 center[1] + ry * math.sin(math.tau * i / steps))
+                for i in range(steps + 1)
+            ]
+            segments.extend(zip(ring[:-1], ring[1:]))
+        elif kind == "path":
+            x0, y0, x1, y1 = shape["bbox"]
+            corners = [to_canvas(p) for p in
+                       ([x0, y0], [x1, y0], [x1, y1], [x0, y1])]
+            ring = corners + [corners[0]]
+            segments.extend(zip(ring[:-1], ring[1:]))
+    return segments
+
+
+def _composite_bounds(item: dict) -> Optional[tuple[float, float, float, float]]:
+    from app.agents.visuals import shapes as shape_builder
+
+    return shape_builder.bounds(_composite_shapes(item))
+
+
 def collect_obstacles(elements: Sequence[dict], transform: CanvasTransform) -> Obstacles:
     """Project every drawn stroke into canvas space as segments/boxes."""
     obstacles = Obstacles()
@@ -577,6 +640,12 @@ def collect_obstacles(elements: Sequence[dict], transform: CanvasTransform) -> O
             obstacles.segments.extend(
                 _arc_segments(center, radius, float(item["start_angle"]), float(item["angle"]))
             )
+        elif kind in {"drawing", "prop"}:
+            # Composite objects were invisible to the solver, so a caption could
+            # be placed straight through a cloud or a balance and the solver
+            # would report no collision. Their outline is projected here like
+            # any other stroke.
+            obstacles.segments.extend(_composite_segments(item, to_canvas, transform))
         elif kind == "axes":
             x0, x1, x_step = (float(v) for v in item["x_range"][:3])
             y0, y1, y_step = (float(v) for v in item["y_range"][:3])
@@ -789,6 +858,38 @@ def collect_label_requests(
             requests.append(LabelRequest(
                 text=label, font_size=25, anchor=anchor, outward=(0.0, 1.0),
                 element_index=index, slot="label", padding=BACKED_PAD,
+            ))
+
+    # A drawing names itself from its own measured box, since the planner never
+    # knows where the object ended up after fitting. Props are deliberately NOT
+    # solved: their anchors are chosen by the prop — a balance's reading belongs
+    # ON its display, and moving it to avoid the display would be nonsense.
+    for index, item in enumerate(elements):
+        if item.get("type") != "drawing":
+            continue
+        box = _composite_bounds(item)
+        if box is None:
+            continue
+        low = transform.apply([box[0], box[1]])
+        high = transform.apply([box[2], box[3]])
+        middle = ((low[0] + high[0]) / 2, (low[1] + high[1]) / 2)
+        sides: dict[str, tuple[Point, Point]] = {
+            "top": ((middle[0], high[1]), (0.0, 1.0)),
+            "bottom": ((middle[0], low[1]), (0.0, -1.0)),
+            "left": ((low[0], middle[1]), (-1.0, 0.0)),
+            "right": ((high[0], middle[1]), (1.0, 0.0)),
+            "center": (middle, (0.0, 1.0)),
+        }
+        named: list[tuple[str, object, str]] = [("label", item.get("label"), "bottom")]
+        named += [(f"labels:{slot}", text, str(slot))
+                  for slot, text in (item.get("labels") or {}).items() if text]
+        for slot, text, side in named:
+            if not text:
+                continue
+            anchor, outward = sides.get(side, sides["bottom"])
+            requests.append(LabelRequest(
+                text=str(text), font_size=25, anchor=anchor, outward=outward,
+                element_index=index, slot=slot, padding=BACKED_PAD,
             ))
 
     return requests
