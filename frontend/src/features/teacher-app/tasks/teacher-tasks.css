@@ -225,7 +225,11 @@
    Boxed and tinted, because these seven appear and disappear with one chip
    above them: a block that arrives unannounced in the middle of a form needs
    to read as "these belong to the thing you just ticked". */
-.tch-builder__deck {
+/* Two classes, not one: the wizard tightens every field it holds
+   (`.tch-builder__step .tch-builder__field`, specificity 0,2,0) and a
+   single-class rule here lost to it — the gap came out at 4px and the chips
+   were crushed between the selects above and the label below. */
+.tch-builder__deck.tch-builder__field {
   display: grid;
   /* The rows inside are three different kinds of control — two selects, a row
      of chips, a text field — and at `sp-3` they read as one dense block with
