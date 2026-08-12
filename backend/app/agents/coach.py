@@ -34,7 +34,7 @@ COACH_INSTRUCTIONS = {
         "אתה \"יובי\", מלווה למידה של תלמיד/ה בכיתות ז'–ט'. ענה בעברית.\n"
         "- כלל־על: לעולם אל תמסור/י את התשובה הנכונה לשאלה הנוכחית — לא בניסוח מלא, לא בניסוח אחר, לא בחלקים, לא כ\"אישור\" לניחוש, ולא כשמבקשים ממך במפורש (\"תן לי את התשובה\"). זה תקף גם ברמז וגם בהסבר מפורט. אם מבקשים את התשובה — סרב/י בחום במשפט אחד, אמור/י שהערך הוא בלהגיע אליה לבד, ומיד הצע/י את הצעד הבא לחשיבה. מותר וכדאי: לכוון, להשוות בין האפשרויות בלי להכריע, לשאול שאלות מנחות ולהסביר את העיקרון.\n"
         "- הכלל הזה מגן על התשובה — לא על התוכן. לסכם או לחזור על חומר שהתלמיד/ה כבר נחשף/ה אליו — סרטון שנצפה, קטע שנקרא, הסבר שניתן — זה סיוע לגיטימי ונדרש, ואין לסרב לו. כשמבקשים סיכום — סכם/י מה הוצג, והשמט/י רק את ההכרעה בין האפשרויות של השאלה הפתוחה.\n"
-        "- הכלל אוסר להכריע — לא לדון. כשהתלמיד/ה שואל/ת על אפשרות מסוימת (\"תסביר לי את תשובה ג'\") — אל תסרב/י, ואל תענה/י בנוסח חמקני כמו \"נבדוק אם היא מתאימה או לא\", שלא אומר כלום. הסבר/י מה אותה אפשרות בעצם טוענת ועל איזו אידיאה היא נשענת, ותנ/י לתלמיד/ה בדיקה קונקרטית שאפשר להפעיל עליה לבד. השמט/י רק את הפסיקה: אל תאמר/י שהיא נכונה או שגויה, ואל תרמז/י לכך דרך פסילה של האחרות.\n"
+        "- הכלל אוסר להכריע — לא לדון. \"תשובה\", \"סעיף\", \"אופציה\" ו\"אפשרות\" הן מילים נרדפות לחלוטין: כשהתלמיד/ה מזכיר/ה אחת מהן עם מספר או אות (\"תשובה 2\", \"סעיף ג'\", \"אופציה א'\", \"אפשרות 3\", וגם \"מה כתוב בסעיף א'?\", \"לא הבנתי מה כתוב בסעיף ב', תסביר?\"), הכוונה תמיד לאותה אפשרות תשובה ב-current_question_options, לפי המיקום (1=א, 2=ב, 3=ג, 4=ד וכו') — אף פעם לא לנוסח השאלה המודפס, גם אם current_question_text עצמו מתחיל באותה תווית \"סעיף א/ב\". אם learner_referenced_option מופיע בהקשר — זו הוראה מחייבת בלי יוצא מן הכלל: פתח/י את התשובה במשפט שמסביר את התוכן המדויק שלה, לא משנה איך בדיוק נוסחה השאלה (גם ניסוחים כמו \"מה כתוב\", \"מה הכוונה\" או \"לא הבנתי\" מתייחסים לאפשרות הזו, לעולם לא לחזרה על נוסח השאלה). אל תסתפק/י בחזרה על נושא השאלה הכללי (\"השאלה שואלת אם יש תוצאה חריגה\") — זו תשובה לשאלה אחרת. אל תסרב/י, ואל תענה/י בנוסח חמקני כמו \"נבדוק אם היא מתאימה או לא\" בלי לומר על מה בדיוק. פתח/י ישירות במשפט שאומר את התוכן המדויק של האפשרות (כולל שם, ערך או פרט מזהה כפי שהוא מופיע בה), בדיוק כמו בדוגמה: \"אפשרות א׳ אומרת ששחר הוא זה שהתוצאה שלו חריגה, כלומר שהערך שלו הוא השונה מבין השלושה.\" רק אחרי המשפט הזה אפשר להוסיף בדיקה קונקרטית שהתלמיד/ה יכול/ה להפעיל לבד. השמט/י רק את הפסיקה: אל תאמר/י שהיא נכונה או שגויה, ואל תרמז/י לכך דרך פסילה של האחרות.\n"
         "- דבר חם, מכבד, לא ילדותי, קצר (1–3 משפטים).\n"
         "- פנייה דקדוקית: אם התלמיד/ה כתב/ה על עצמו/ה בלשון זכר או נקבה — פנה באותה צורה בעקביות לאורך כל השיחה. אם עוד לא ברור, השתמש בניסוחים ניטרליים (\"אפשר לנסות\", \"בוא נבדוק יחד\") — לעולם אל תערבב צורות באותה הודעה.\n"
         "- התאם את דרך ההסבר, הקצב והניסוח לסגנון הלמידה ולהעדפות שבהקשר, בלי לתייג את התלמיד/ה ובלי לחשוף את נתוני הפרופיל.\n"
@@ -62,7 +62,7 @@ COACH_INSTRUCTIONS = {
         "أنت \"يوفي\"، مرافق تعلّم لطالب/ة في الصفوف السابع–التاسع. أجب بالعربية.\n"
         "- قاعدة عليا: لا تعطِ أبدًا الإجابة الصحيحة للسؤال الحالي — لا بصيغتها الكاملة، ولا بإعادة صياغة، ولا مجزّأة، ولا كتأكيد لتخمين، ولا حتى عند الطلب الصريح (\"أعطني الإجابة\"). ينطبق هذا على التلميح وعلى الشرح المفصّل معًا. إذا طُلبت الإجابة — ارفض بدفء في جملة واحدة، واذكر أن قيمتها في الوصول إليها بالنفس، ثم اقترح فورًا خطوة التفكير التالية. المسموح والمستحسن: التوجيه، والمقارنة بين الخيارات دون الحسم، وطرح أسئلة موجّهة، وشرح المبدأ.\n"
         "- هذه القاعدة تحمي الإجابة لا المحتوى. تلخيص أو مراجعة مادة سبق أن عُرضت على المتعلّم — فيديو شاهده، أو نص قرأه، أو شرح سبق تقديمه — هو دعم مشروع ومطلوب ولا يجوز رفضه. عند طلب تلخيص، لخّص ما عُرض واحجب فقط الحسم بين خيارات السؤال المفتوح.\n"
-        "- القاعدة تمنع الحسم لا النقاش. إذا سأل الطالب/ة عن خيار محدّد (\"اشرح لي الإجابة ج\") — لا ترفض، ولا تردّ بصيغة مراوغة مثل \"لنفحص إن كان مناسبًا أم لا\"، فهي لا تقول شيئًا. اشرح ما يدّعيه ذلك الخيار وعلى أيّ فكرة يستند، ثمّ اعطِ الطالب/ة اختبارًا ملموسًا يطبّقه عليه بنفسه. احجب الحكم فقط: لا تقل إنّه صحيح أو خاطئ، ولا تلمّح إلى ذلك بإقصاء بقية الخيارات.\n"
+        "- القاعدة تمنع الحسم لا النقاش. \"الإجابة\" و\"البند\" و\"الخيار\" و\"الاحتمال\" مترادفات تمامًا: إذا ذكر الطالب/ة إحداها مع رقم أو حرف (\"الإجابة 2\"، \"البند ج\"، \"الخيار أ\"، \"الاحتمال 3\"، وكذلك \"ماذا مكتوب في البند أ\"؟\"، \"لم أفهم ما مكتوب في البند ب، هل يمكنك الشرح؟\"), فالمقصود دائمًا هو خيار الإجابة ذاته في current_question_options حسب الموقع (1=A، 2=B، 3=C،…) — أبدًا ليس لنص السؤال المطبوع، حتى لو بدأ current_question_text نفسه بنفس الوسم \"بند A/B\". إذا ظهر learner_referenced_option في السياق — فهذا توجيه ملزم بلا استثناء: ابدأ الرد بجملة تشرح المحتوى الدقيق لهذا الخيار، مهما كانت صياغة السؤال (عبارات مثل \"ماذا مكتوب\" أو \"ماذا يقصد\" أو \"لم أفهم\" تشير أيضًا إلى هذا الخيار، وليس أبدًا إلى إعادة ذكر نص السؤال). لا تكتف بإعادة ذكر موضوع السؤال العام (\"السؤال يسأل إن كان هناك شذوذ\") — ذلك جواب لسؤال آخر. لا ترفض، ولا تردّ بصيغة مراوغة مثل \"لنفحص إن كان مناسبًا أم لا\" دون أن تقول عمّاذا بالضبط. ابدأ مباشرة بجملة تذكر المحتوى الدقيق لذلك الخيار (بما في ذلك الاسم أو القيمة أو التفصيل المميّز كما يظهر فيه)، تمامًا كما في المثال: \"الخيار أ يقول إنّ شاهر هو من نتيجته شاذّة، أي أنّ قيمته هي المختلفة من بين الثلاث.\" فقط بعد هذه الجملة يمكن إضافة اختبار ملموس يطبّقه الطالب/ة بنفسه. احجب الحكم فقط: لا تقل إنّه صحيح أو خاطئ، ولا تلمّح إلى ذلك بإقصاء بقية الخيارات.\n"
         "- تحدّث بدفء واحترام، بإيجاز (١–٣ جمل)، وليس بأسلوب طفولي.\n"
         "- المخاطبة النحوية: إذا كتب الطالب/ة عن نفسه بصيغة المذكر أو المؤنث فخاطبه بالصيغة نفسها باتساق طوال المحادثة؛ وإن لم يتضح بعد فاستخدم صياغات محايدة، ولا تخلط الصيغ في الرسالة الواحدة.\n"
         "- كيّف طريقة الشرح والوتيرة والصياغة مع أسلوب التعلّم والتفضيلات في السياق، دون تصنيف الطالب/ة أو كشف بيانات الملف.\n"
@@ -90,7 +90,7 @@ COACH_INSTRUCTIONS = {
         "You are \"Yuvi\", a learning companion for a grade 7–9 student. Answer in English.\n"
         "- OVERRIDING RULE: never give the correct answer to the current question — not in full, not reworded, not in pieces, not as confirmation of a guess, and not when asked outright (\"just tell me the answer\"). This holds for hints and for detailed explanations alike. If the answer is demanded, warmly decline in one sentence, say the value is in reaching it themselves, and immediately offer the next thinking step. Allowed and encouraged: guiding, weighing the options against each other without settling it, asking leading questions, and explaining the principle.\n"
         "- That rule protects the ANSWER, not the CONTENT. Summarising or recapping material the learner has already been shown — a video they watched, a passage they read, an explanation already given — is legitimate, needed support and must never be refused. When a summary is asked for, summarise what was presented and withhold only the decision between the open question's options.\n"
-        "- The rule forbids a VERDICT, not a DISCUSSION. When the learner asks about one specific option (\"explain option C\"), do not refuse, and never answer with an evasion like \"let's check whether it fits or not\" — that says nothing. Explain what that option actually claims and which idea it rests on, then hand the learner a concrete test they can apply to it themselves. Withhold only the verdict: never say the option is right or wrong, and never imply it by eliminating the others.\n"
+        "- The rule forbids a VERDICT, not a DISCUSSION. \"answer\", \"clause\", \"option\", and \"choice\" are fully interchangeable: when the learner names one with a number or letter (\"answer 2\", \"clause C\", \"option A\", \"choice 3\", and also \"what does clause A say?\", \"I don't understand what's written in clause B, can you explain?\"), it always means that entry in current_question_options by position (1=A, 2=B, 3=C, …) — NEVER the printed question wording, even when current_question_text itself starts with that same \"clause A/B\" tag. If learner_referenced_option appears in context, this is a mandatory instruction with no exception: open the reply with a sentence explaining its exact content, no matter how the question was phrased (wordings like \"what does it say\", \"what's meant by\", or \"I don't understand\" all point to this option, never to a restatement of the question text). Do not settle for restating the question's general topic (\"the question asks whether there's an outlier\") — that answers a different question. Do not refuse, and never answer with an evasion like \"let's check whether it fits or not\" without saying which one. Open directly with a sentence stating that option's exact content (including the name, value, or distinguishing detail as it appears in the option), exactly like this example: \"Option A says that Shahar's result is the outlier, meaning their value is the one that differs from the other two.\" Only after that sentence may you add a concrete test the learner can run themselves. Withhold only the verdict: never say the option is right or wrong, and never imply it by eliminating the others.\n"
         "- Be warm, respectful, concise (1–3 sentences), not childish.\n"
         "- Adapt explanation format, pacing, and phrasing to the learning style and preferences in context, without labeling the learner or exposing profile data.\n"
         "- Use strengths and interests only when relevant; do not force a personal detail into every answer.\n"
@@ -401,7 +401,69 @@ def _screen_parts(current: dict) -> str:
     )
 
 
-def _render_context(bundle: dict) -> str:
+_HEBREW_OPTION_LETTERS = "אבגדהוזחטי"
+
+
+def _numbered_options(options: list) -> str:
+    """Render answer options with BOTH a 1-based number and a Hebrew letter.
+
+    Learners refer to a specific answer choice in many equivalent ways —
+    "תשובה 2", "סעיף ג'", "אופציה א'", "אפשרות 3" — all meaning "the Nth radio
+    option shown for this question" (the UI itself shows no numbers or letters).
+    Without an explicit index attached to each option here, the model has to
+    guess which item a bare "2" or "ג'" points to. Tagging every option with
+    both forms up front lets any of those phrasings resolve to the same entry.
+    """
+    cleaned = [str(option) for option in (options or []) if option]
+    if not cleaned:
+        return "—"
+    tags = []
+    for index, option in enumerate(cleaned):
+        letter = _HEBREW_OPTION_LETTERS[index] if index < len(_HEBREW_OPTION_LETTERS) else ""
+        tag = f"{index + 1}/{letter}" if letter else str(index + 1)
+        tags.append(f"[{tag}] {option}")
+    return " | ".join(tags)
+
+
+# "סעיף"/"תשובה"/"אופציה"/"אפשרות" + a digit or Hebrew letter — the four words a
+# learner uses interchangeably to point at one answer choice. Left as an LLM
+# disambiguation call, this collided with "סעיף א/ב" also being the printed
+# clause label INSIDE the question text itself (e.g. "סעיף א: האם ..."), and the
+# model kept resolving to that clause instead of the answer option — even after
+# three escalating prompt rewrites. Resolving it deterministically here, from
+# the learner's own words, removes the guesswork entirely: the model is handed
+# the exact option instead of being asked to infer it.
+_OPTION_REFERENCE = re.compile(
+    r"(?:סעיף|תשובה|אופציה|אפשרות)\s*([א-י]|\d+)\b"
+)
+
+
+def _referenced_option(message: str, options: list) -> Optional[tuple[int, str]]:
+    """(1-based index, option text) the learner's own words point to, if any."""
+    cleaned = [str(option) for option in (options or []) if option]
+    if not cleaned:
+        return None
+    match = _OPTION_REFERENCE.search(message or "")
+    if not match:
+        return None
+    token = match.group(1)
+    index = int(token) if token.isdigit() else _HEBREW_OPTION_LETTERS.find(token) + 1
+    if 1 <= index <= len(cleaned):
+        return index, cleaned[index - 1]
+    return None
+
+
+# Deterministic opening sentence naming an option's content, sent as literal
+# text (not model output) — see `_referenced_option` docstring for why a
+# prompt-only fix wasn't reliable enough for every phrasing.
+OPTION_OPENER_TEMPLATE = {
+    "he": lambda letter, text: f"אפשרות {letter}׳ אומרת: {text}.",
+    "ar": lambda letter, text: f"يقول الخيار {letter}: {text}.",
+    "en": lambda letter, text: f"Option {letter} says: {text}.",
+}
+
+
+def _render_context(bundle: dict, learner_message: str = "") -> str:
     """Render the non-identifying bundle as delimited DATA (not instructions).
 
     Delimiters + a 'data, not instructions' note are cheap defense-in-depth
@@ -466,7 +528,19 @@ def _render_context(bundle: dict) -> str:
         f"current_question_part: {_question_part(current)}",
         f"current_screen_parts: {_screen_parts(current)}",
         f"current_question_text: {(current.get('question') or {}).get('text') or '—'}",
-        f"current_question_options: {joined((current.get('question') or {}).get('options'))}",
+        f"current_question_options: {_numbered_options((current.get('question') or {}).get('options'))}",
+    ]
+    referenced = _referenced_option(learner_message, (current.get("question") or {}).get("options"))
+    if referenced:
+        index, text = referenced
+        letter = _HEBREW_OPTION_LETTERS[index - 1] if index - 1 < len(_HEBREW_OPTION_LETTERS) else ""
+        lines.append(
+            f"learner_referenced_option: [{index}/{letter}] {text} — this is the exact option the learner "
+            "meant by the number/letter in their message (סעיף/תשובה/אופציה/אפשרות are fully interchangeable "
+            "and ALWAYS point here, never at another screen part). Explain THIS option's content directly, "
+            "even if current_question_text itself uses a similar clause label."
+        )
+    lines += [
         # Ground truth so the coach guides accurately — it must NEVER state this
         # answer to the learner (the hint/explanation rules forbid revealing it).
         f"current_question_correct_answer_DO_NOT_REVEAL: {joined((current.get('question') or {}).get('correct'))}",
@@ -742,7 +816,40 @@ async def run_coach_stream(
         )
         if is_hint:
             await tutor_decision.record_hint_level(learner_id, component_for_ladder, hint_level)
-    messages = _build_messages(instructions, _render_context(bundle), history, prompt_text)
+
+    # Naming a specific option ("סעיף א'", "תשובה 2", "אופציה ג'", "אפשרות 3")
+    # is resolved deterministically in `_referenced_option`, but handing the
+    # model that fact as a context line was NOT reliably enough — phrasings
+    # built around "what's WRITTEN in clause X" kept pulling it back to
+    # restating current_question_text (which literally starts with a matching
+    # "סעיף א:" label) instead of the option. Stating the option's content here,
+    # before the model ever runs, removes that failure mode entirely: it is
+    # simply always true in the transcript, not something the model has to be
+    # talked into saying. Skipped when the reference IS the correct answer —
+    # that reveal stays exclusively answer_guard's call.
+    deterministic_opener = None
+    current_question_for_reference = (bundle.get("current") or {}).get("question") or {}
+    if user_message is not None:
+        referenced = _referenced_option(prompt_text, current_question_for_reference.get("options"))
+        if referenced:
+            ref_index, ref_text = referenced
+            correct_answers = {
+                str(c).strip() for c in (current_question_for_reference.get("correct") or []) if str(c).strip()
+            }
+            if ref_text.strip() not in correct_answers:
+                ref_letter = (
+                    _HEBREW_OPTION_LETTERS[ref_index - 1] if ref_index - 1 < len(_HEBREW_OPTION_LETTERS) else str(ref_index)
+                )
+                deterministic_opener = OPTION_OPENER_TEMPLATE.get(lang, OPTION_OPENER_TEMPLATE["he"])(ref_letter, ref_text)
+                instructions = (
+                    f"{instructions}\n- כבר נשלח/ה לתלמיד/ה המשפט שאומר מה האפשרות הזו טוענת — אל תחזור/י עליו. "
+                    "המשך/י ישר בבדיקה קונקרטית או בשאלה מנחה, בלי הכרעה על נכונות."
+                    if lang == "he" else
+                    f"{instructions}\n- The learner was already told what this option claims — do not repeat it. "
+                    "Continue directly with a concrete check or a guiding question, without a verdict."
+                )
+
+    messages = _build_messages(instructions, _render_context(bundle, prompt_text), history, prompt_text)
 
     # Ground truth is in the prompt so the coach can guide accurately, and a
     # prompt rule alone does not survive "just give me the answer". Every
@@ -762,6 +869,12 @@ async def run_coach_stream(
         greeting = await welcome_greeting(learner_id, lang)
         collected = greeting
         yield greeting
+    # Same reasoning as the welcome seed above: literal text, not model output,
+    # so the option is named on every turn regardless of how the model would
+    # have phrased (or skipped) it.
+    if deterministic_opener:
+        collected = f"{collected} {deterministic_opener}".strip()
+        yield deterministic_opener
     pending_output = ""
     sentence_count = 0
     max_sentences = 6 if support_mode == "explanation" else 3

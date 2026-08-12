@@ -28,6 +28,9 @@ import { SolveTaskPage } from '../features/student-tasks/SolveTaskPage'
 import { TeacherTasksPage } from '../features/teacher-app/tasks/TeacherTasksPage'
 import { TaskReviewPage } from '../features/teacher-app/tasks/TaskReviewPage'
 import { TaskTrackingPage } from '../features/teacher-app/tasks/TaskTrackingPage'
+import { ReportIssueDialog } from '../features/support/ReportIssueDialog'
+import { PublicReportPage } from '../features/support/PublicReportPage'
+import { SupportChatPanel } from '../features/support/SupportChatPanel'
 import { useStudioTransition } from '../features/Yuvi-studio/StudioTransitionProvider'
 import { CompanionChat } from '../components/CompanionChat'
 import { YuviCompanionDock } from '../components/YuviCompanionDock'
@@ -156,6 +159,8 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
 
 function pageForRoute(pathname: string) {
   if (pathname === '/' || pathname === '') return <LandingLoginPage />
+  // Deliberately outside PROTECTED_ROUTES: someone locked out must still reach it.
+  if (pathname.startsWith('/report')) return <PublicReportPage />
   if (pathname.startsWith('/learner-mapping')) return <LearnerMappingPage />
   if (pathname.startsWith('/results')) return <ResultsPage />
   if (pathname.startsWith('/yuvi-studio')) return <YuviStudioPage />
@@ -419,6 +424,10 @@ export function App() {
       ) : routePage}
       {learnerRoute && !isStudioRoute && !isActiveTaskRoute && !isLearningWorldRoute && <YuviCompanionDock />}
       {learnerRoute && <SparkToast />}
+      {/* Teachers report faults from their own lane too, so this is not learner-scoped. */}
+      {user && <ReportIssueDialog />}
+      {/* Support chat is staff-only, and accounts often carry both roles — hence the route check. */}
+      {isTeacher && isTeacherRoute(pathname) && <SupportChatPanel />}
     </TourProvider>
   )
 }

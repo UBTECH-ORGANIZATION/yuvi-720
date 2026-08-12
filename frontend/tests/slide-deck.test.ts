@@ -94,27 +94,22 @@ describe('the stage is fixed, and the type fits it', () => {
   })
 })
 
-describe('a scene nobody can draw is not drawn', () => {
+describe('a composite scene is the server\'s picture, not two of them', () => {
   const renderer = read('../src/features/visuals/SceneRenderer.tsx')
-  const mafs = read('../src/features/visuals/MafsScene.tsx')
 
-  it('lists exactly what the client renderer implements', () => {
-    // `prop` and `drawing` are in the backend's scene contract and are drawn by
-    // Manim alone. The browser draws nothing for them AND THROWS NOTHING, so
-    // the error boundary never fires and the fallback image never appears.
-    const cases = [...mafs.matchAll(/^\s*case '([a-z_]+)':/gm)].map((match) => match[1])
-    assert.ok(cases.length >= 13, `only ${cases.length} element cases found`)
-    for (const kind of cases) {
-      assert.match(renderer, new RegExp(`'${kind}'`), `${kind} is drawn but not listed`)
-    }
-    for (const undrawable of ['prop', 'drawing']) {
-      assert.equal(cases.includes(undrawable), false, `${undrawable} is drawn now — update the list`)
-    }
+  it('shows the server SVG for a scene it did not draw', () => {
+    // `prop` and `drawing` — a balance, a vessel, a freehand object — are
+    // composed on the backend and arrive already drawn. Re-implementing them
+    // in Mafs would mean two drawings of the same prop that drift apart.
+    assert.match(renderer, /visual\.renderer === 'svg-diagram'/)
   })
 
-  it('renders nothing rather than an empty panel', () => {
-    // The server's SVG is no help: it implements the same thirteen types.
-    assert.match(renderer, /if \(!drawsSomething\(visual\.scene\)\) return null/)
+  it('sizes that image so it cannot take the whole stage', () => {
+    // It is 960x540 and would otherwise take whatever height its width implies,
+    // which on a half-slide column is most of the slide.
+    const rule = css.split('.yv-slide__visual img {')[1].split('}')[0]
+    assert.match(rule, /object-fit: contain/)
+    assert.match(rule, /max-block-size/)
   })
 })
 

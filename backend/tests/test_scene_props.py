@@ -18,8 +18,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app.agents.manim_props import PROP_KINDS  # noqa: E402
 from app.agents.manim_visual import sanitize_scene  # noqa: E402
+from app.agents.visuals.shapes import PROP_KINDS  # noqa: E402
 
 
 def scene_with(*elements: dict) -> dict:
@@ -91,49 +91,18 @@ class PropValidation(unittest.TestCase):
 
 
 class BalancePhysics(unittest.TestCase):
-    """Geometry checks that do not need Manim — the factory maths only."""
+    """Geometry checks on the factory maths — no renderer involved."""
 
     def _ends(self, **spec):
-        import math
+        from app.agents.visuals.shapes import build_prop
 
-        from app.agents import manim_props
-
-        captured: dict = {}
-
-        class FakeMobject:
-            def __init__(self, *points, **kwargs):
-                captured.setdefault("points", []).extend(points)
-
-            def shift(self, *_a, **_k):
-                return self
-
-            def get_bottom(self):
-                return [0.0, 0.0, 0.0]
-
-        class FakeManim:
-            Line = Polygon = Dot = Ellipse = Rectangle = FakeMobject
-            UP = [0.0, 1.0, 0.0]
-
-            class VGroup(list):
-                def __init__(self, *items):
-                    super().__init__(items)
-
-                def get_bottom(self):
-                    return [0.0, 0.0, 0.0]
-
-        points: list = []
-
-        def to_scene(point):
-            points.append(list(point))
-            return [point[0], point[1], 0.0]
-
-        manim_props.build_prop(
+        shapes, _ = build_prop(
             {"prop": "balance_scale", "center": [0, 0], **spec},
-            manim=FakeManim, color_for=lambda n: "#000000",
-            to_scene=to_scene, unit=1.0,
+            color_for=lambda name: "#000000",
         )
-        # Pick the beam ENDS out of every mapped point rather than trusting a
-        # call index: they are the pair furthest from the pillar on each side.
+        points = [point for shape in shapes for point in shape.get("points", [])]
+        # Pick the beam ENDS out of every point rather than trusting an index:
+        # they are the pair furthest from the pillar on each side.
         beam_half = 1.55  # size defaults to 1.0
         left = min((p for p in points if p[0] < -0.1), key=lambda p: abs(abs(p[0]) - beam_half))
         right = min((p for p in points if p[0] > 0.1), key=lambda p: abs(abs(p[0]) - beam_half))

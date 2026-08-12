@@ -578,9 +578,8 @@ async def _add_visuals(slides: list[dict[str, Any]], language: str,
                 hint, spec_module.segments_to_text(slide.get("body")), language, usage,
                 text_filter=lambda text: safety.screen_output(text, language).text,
             )
-            rendered = await render_visual(scene) if scene else None
-            if rendered:
-                slide["visual"] = rendered
+            if scene:
+                slide["visual"] = await render_visual(scene)
         except Exception as exc:  # a missing diagram must not cost the deck
             print(f"⚠️ task visual render failed: {type(exc).__name__}: {exc}")
 

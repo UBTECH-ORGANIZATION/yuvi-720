@@ -55,7 +55,7 @@ class CorpusShapeTests(unittest.TestCase):
                 scene = sanitize_scene(case.raw)
                 assert scene is not None
                 self.assertTrue(scene["elements"], "accepted a scene with no elements")
-                self.assertIn(scene["render"], {"geometry", "molecule"})
+                self.assertIn(scene["render"], {"geometry", "molecule", "diagram"})
                 self.assertIsInstance(scene["animated"], bool)
                 for element in scene["elements"]:
                     self.assertIn("type", element)

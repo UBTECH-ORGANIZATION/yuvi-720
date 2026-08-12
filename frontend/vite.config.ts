@@ -28,7 +28,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': 'http://127.0.0.1:8720',
+      // ws so the support chat socket upgrades through the dev server.
+      '/api': { target: 'http://127.0.0.1:8720', ws: true },
       '/learning/game.html': 'http://127.0.0.1:8720',
       '/locales': 'http://127.0.0.1:8720',
       '/shared': 'http://127.0.0.1:8720',

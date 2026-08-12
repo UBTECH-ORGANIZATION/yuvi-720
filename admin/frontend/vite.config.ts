@@ -6,7 +6,8 @@ export default defineConfig({
   server: {
     port: 5198,
     proxy: {
-      '/api': 'http://localhost:9998',
+      // ws so the support chat socket upgrades through the dev server.
+      '/api': { target: 'http://localhost:9998', ws: true },
       '/auth': 'http://localhost:9998',
     },
   },

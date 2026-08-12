@@ -73,7 +73,7 @@ export interface CoachVisual {
   title: string
   alt: string
   caption: string
-  renderer: 'manim' | 'svg-fallback' | 'mafs' | 'molecule'
+  renderer: 'manim' | 'svg-fallback' | 'mafs' | 'molecule' | 'svg-diagram'
   scene: CoachVisualScene
 }
 

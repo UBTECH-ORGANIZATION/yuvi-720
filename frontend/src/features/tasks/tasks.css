@@ -828,6 +828,16 @@
 }
 .yv-slide__visual > * { inline-size: 100%; }
 .yv-slide__visual video { inline-size: 100%; border-radius: 14px; }
+/* A composite scene — a balance, a vessel, a freehand object — is drawn once on
+   the SERVER and arrives as an image (`renderer: 'svg-diagram'`). It is 960x540
+   and would otherwise take whatever height its width implies, which on a
+   half-slide column is most of the stage. */
+.yv-slide__visual img {
+  inline-size: 100%;
+  max-block-size: 320px;
+  object-fit: contain;
+  border-radius: 14px;
+}
 /* The figure keeps its own light ground in both themes, the same way the
    coach's does — the element colours come from the scene spec and are shared
    with the Manim renderer, which always draws onto a light frame. */
