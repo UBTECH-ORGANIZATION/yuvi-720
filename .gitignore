@@ -48,3 +48,6 @@ frontend/scripts/.teacher-shots/
 # drawio writes these beside the diagram while it is open
 docs/**/.$*.drawio.bkp
 docs/**/.$*.drawio.dtmp
+
+# staging dir for tender PDF generation
+.tender-build/
