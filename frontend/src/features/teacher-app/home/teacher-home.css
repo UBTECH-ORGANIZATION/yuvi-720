@@ -143,6 +143,10 @@
 .tch-groupRecs { display: grid; gap: var(--sp-2); padding-block-start: var(--sp-2); }
 .tch-groupRecs ul { margin: 0; padding-inline-start: var(--sp-4); display: grid; gap: var(--sp-2); }
 .tch-groupRecs li { color: var(--sp-ink-700); font-size: var(--sp-fs-sm); }
+/* The faces sit at the end of the move's sentence, not on a line of their own:
+   the list is short and scanned, and a second row per item would double its
+   height for four coins. */
+.tch-groupRecs__who { margin-inline-start: var(--sp-2); }
 
 @media (max-width: 600px) {
   .tch-home { padding-block-start: var(--sp-4); }

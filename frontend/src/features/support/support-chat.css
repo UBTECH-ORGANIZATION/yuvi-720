@@ -1,11 +1,33 @@
 /* Tokens only (styles/tokens.css) so the panel follows the light/dark theme. */
+
+/* How far the support button rides above the teaching assistant's launcher, and
+   the whole of the coupling between the two.
+ *
+ * The support button and that launcher share the bottom-left corner. The lift
+ * applies only while the launcher is actually mounted — which is exactly while
+ * the assistant panel is CLOSED. Open the panel and the launcher unmounts, so
+ * the button settles back down onto its own base line.
+ *
+ * `:has()` rather than a prop or a provider: the two are siblings mounted from
+ * `App`, they share no state, and the only thing this one needs to know is
+ * whether that button is on screen. The cost is a class name reaching across
+ * features, so `tests/support-launcher.test.ts` pins it — a rename in the
+ * teacher app would otherwise drop the lift silently and re-stack the two.
+ *
+ * 45px: the launcher is a ~37px pill sitting 16px up, so its top edge is at
+ * 53px; 20px + 45px leaves a 12px gap above it. */
+:root:has(.tch-dock__launcher) { --sp-support-lift: 45px; }
+
 .sp-support-launch {
   position: fixed;
-  inset-block-end: 20px;
-  /* Physical right: inset-inline-end resolves to the left under RTL. */
-  right: 20px;
-  left: auto;
+  inset-block-end: calc(20px + var(--sp-support-lift, 0px));
+  /* Physical left in both text directions. `inset-inline-end` resolves to the
+     left under RTL only, and the assistant dock is pinned to the physical right
+     in BOTH — so on the right this button sat on top of the open panel. */
+  left: var(--sp-4);
+  right: auto;
   z-index: 1200;
+  transition: inset-block-end var(--sp-dur-fast) var(--sp-ease);
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -31,10 +53,13 @@
 
 .sp-support {
   position: fixed;
-  inset-block-end: 74px;
-  right: 20px;
-  left: auto;
+  /* Rides the same lift as its button, so the panel opens from the button
+     rather than out from under it. */
+  inset-block-end: calc(74px + var(--sp-support-lift, 0px));
+  left: var(--sp-4);
+  right: auto;
   z-index: 1200;
+  transition: inset-block-end var(--sp-dur-fast) var(--sp-ease);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -184,7 +209,9 @@
 .sp-support__error { margin: 0; color: var(--sp-danger-600); font-size: var(--sp-fs-xs); }
 
 @media (max-width: 640px) {
-  .sp-support { inset-block-end: 68px; right: 12px; inline-size: calc(100vw - 24px); }
-  .sp-support-launch { right: 12px; }
+  /* The inline edge is deliberately NOT tightened here any more: the launcher
+     stacked below has no narrow-screen override, and a 4px difference between
+     two buttons sitting one above the other reads as a mistake. */
+  .sp-support { inset-block-end: calc(68px + var(--sp-support-lift, 0px)); inline-size: calc(100vw - 32px); }
   .sp-support-launch span { display: none; }
 }

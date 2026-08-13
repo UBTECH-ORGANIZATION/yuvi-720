@@ -160,8 +160,12 @@ export interface LearningGap {
   struggle_share: number
   mastery_share: number
   kind: 'gap' | 'strength'
-  /** The actionable sub-group. Never render this as a ranking. */
+  /** The struggling sub-group — the one a gap row is about. Never render this
+   *  as a ranking; it is a set of people, in roster order and unscored. */
   learner_ids: string[]
+  /** The mastered sub-group — the one a strength row is about, and the other
+   *  half of a "split the class" move. Same rule. */
+  mastered_ids: string[]
   evidence: { sample_misconceptions: [string, number][]; threshold: number }
 }
 

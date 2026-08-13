@@ -180,11 +180,13 @@ async def _get_group_learning_gaps(context: TeacherToolContext, args: dict) -> d
     )
     if not gaps:
         return empty("no_objective_meets_the_gap_threshold")
-    # `learner_ids` is present so the teacher UI can act on the sub-group. The
-    # model has no use for it and every reason not to hold a roster slice, so
-    # it is dropped here rather than scrubbed generically.
+    # `learner_ids` / `mastered_ids` are present so the teacher UI can act on
+    # the sub-group and show whose it is. The model has no use for either and
+    # every reason not to hold a roster slice, so they are dropped here rather
+    # than scrubbed generically.
+    dropped = {"learner_ids", "mastered_ids"}
     return {"data": [
-        {k: v for k, v in scrub(gap).items() if k != "learner_ids"} for gap in gaps
+        {k: v for k, v in scrub(gap).items() if k not in dropped} for gap in gaps
     ]}
 
 

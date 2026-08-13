@@ -165,7 +165,7 @@ async def learning_gaps(
             continue
         for objective in kata_catalog.objectives_for(subject_id):
             objective_id = objective.get("id")
-            struggling, mastered, misconceptions = [], 0, {}
+            struggling, mastered, misconceptions = [], [], {}
             with_evidence = 0
             for learner_id, brain in zip(learner_ids, brains):
                 entry = entry_for((brain or {}).get("mastery"), objective_id)
@@ -173,7 +173,7 @@ async def learning_gaps(
                     continue
                 with_evidence += 1
                 if entry.get("achieved"):
-                    mastered += 1
+                    mastered.append(learner_id)
                 elif (entry.get("score_ewma") or 0) < 0.6 or entry.get("needs_review"):
                     struggling.append(learner_id)
                 for misconception in (entry.get("misconceptions") or []):
@@ -184,7 +184,7 @@ async def learning_gaps(
             if with_evidence < MIN_GROUP_EVIDENCE:
                 continue
             struggle_share = len(struggling) / with_evidence
-            mastery_share = mastered / with_evidence
+            mastery_share = len(mastered) / with_evidence
             if struggle_share < threshold and mastery_share < threshold:
                 continue
 
@@ -196,15 +196,21 @@ async def learning_gaps(
                 # below already drop an empty label instead of printing it.
                 "label": kata_catalog.objective_title(objective_id, "he") or "",
                 "struggling_count": len(struggling),
-                "mastered_count": mastered,
+                "mastered_count": len(mastered),
                 "with_evidence": with_evidence,
                 "group_size": len(learner_ids),
                 "struggle_share": round(struggle_share, 2),
                 "mastery_share": round(mastery_share, 2),
                 "kind": "gap" if struggle_share >= threshold else "strength",
                 # Present so the teacher can act on the sub-group (assign a
-                # goal, split the class). Never for ranking or display order.
+                # goal, split the class) and so the row can show WHO it is
+                # about. Both lists arrive in roster order, unscored and
+                # unnumbered — a set of names, never a ranking.
                 "learner_ids": struggling,
+                # The other half of a "split the class" move. A strength row's
+                # sub-group is the children who mastered it, and without this
+                # the only ids on the row belonged to the opposite group.
+                "mastered_ids": mastered,
                 "evidence": {
                     "sample_misconceptions": sorted(
                         misconceptions.items(), key=lambda item: -item[1]

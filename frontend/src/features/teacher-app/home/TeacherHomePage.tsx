@@ -27,6 +27,7 @@ import {
 import { useTeacherLive } from '../../../providers/TeacherLiveProvider'
 import { AlertRow } from '../live/LiveNow'
 import { AttentionRow, EvidenceToggle } from '../shared/EvidenceDisclosure'
+import { StudentFacepile } from '../shared/StudentFacepile'
 import { countKey } from '../shared/countLabel'
 import { putSeed } from '../tasks/taskSeed'
 import { DailyBriefHero } from './DailyBrief'
@@ -96,6 +97,14 @@ export function TeacherHomePage() {
   const rosterNames = new Map(
     (snapshot?.students ?? []).map((row) => [row.learner_id, row.display_name])
   )
+
+  /* The people a row is about. `learner_ids` is always the struggling set —
+     which is the sub-group of a gap row and the *opposite* one on a strength
+     row, where the children being described are the ones who mastered it. A
+     payload from before `mastered_ids` existed simply shows no faces there
+     rather than the wrong ones. */
+  const subGroupOf = (gap: LearningGap) =>
+    (gap.kind === 'gap' ? gap.learner_ids : gap.mastered_ids) ?? []
 
   /* A live alert and a derived attention flag can describe the SAME condition —
      a distress message raises a `safety_flag` alert and also becomes a
@@ -446,6 +455,20 @@ export function TeacherHomePage() {
                                 task about this objective, with the children it
                                 is a gap FOR carried through to the send. */}
                             <div className="tch-gap__actions">
+                              {/* Whose row this is. A gap row is about the
+                                  children who are stuck, a strength row about
+                                  the ones who have it — the same sentence over
+                                  two different sets of people, and neither set
+                                  had a face on it. The count answers "how
+                                  many"; only this answers "who", which is the
+                                  question a teacher acts on. */}
+                              <StudentFacepile
+                                learnerIds={subGroupOf(gap)}
+                                names={rosterNames}
+                                label={t('tch.gaps.who.aria')}
+                                heading={t(gap.kind === 'gap'
+                                  ? 'tch.gaps.who.gap' : 'tch.gaps.who.strength')}
+                              />
                               <EvidenceToggle
                                 raw={{
                                   struggling_count: gap.struggling_count,
@@ -485,7 +508,14 @@ export function TeacherHomePage() {
                   <div className="tch-groupRecs">
                     <SectionHeader title={t('tch.gaps.recommendations')} />
                     <ul>
-                      {recommendations.map((recommendation) => (
+                      {recommendations.map((recommendation) => {
+                        /* Each move comes from exactly one gap, so the people it
+                           is a move FOR are already on the page — joined on the
+                           objective rather than re-derived, so the faces here and
+                           the faces on the row above can never disagree. */
+                        const source = gaps.find(
+                          (gap) => gap.objective_id === recommendation.objective_id)
+                        return (
                         <li key={`${recommendation.action}:${recommendation.objective_id}`}>
                           {/* The move is UI text and the label is Kata content, so
                               these are routinely opposite directions (Hebrew
@@ -501,8 +531,20 @@ export function TeacherHomePage() {
                           {recommendation.label ? (
                             <bdi dir="auto">{recommendation.label}</bdi>
                           ) : null}
+                          {source ? (
+                            <StudentFacepile
+                              className="tch-groupRecs__who"
+                              learnerIds={subGroupOf(source)}
+                              names={rosterNames}
+                              label={t('tch.gaps.who.aria')}
+                              heading={t(source.kind === 'gap'
+                                ? 'tch.gaps.who.gap' : 'tch.gaps.who.strength')}
+                              size={20}
+                            />
+                          ) : null}
                         </li>
-                      ))}
+                        )
+                      })}
                     </ul>
                   </div>
                 ) : null}

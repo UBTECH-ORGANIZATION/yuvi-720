@@ -414,6 +414,72 @@
 /* The profile header's placeholder, before the learner's avatar is known. */
 .tch-avatar--pending { background: var(--sp-ink-100); }
 
+/* ── a sub-group, as faces ─────────────────────────────────────────────────
+   The trigger is a `Tooltip` button, so it has to shed the 18px circle that
+   makes a `?` a `?`. Everything else here is the overlap: each coin is pulled
+   back over the one before it by a third of its width, and a ring in the
+   surface colour cuts the one underneath so the stack reads as depth rather
+   than as a smear. */
+
+.tch-facepile { vertical-align: middle; }
+
+.tch-facepile .sp-tip__trigger {
+  inline-size: auto;
+  block-size: auto;
+  border: 0;
+  border-radius: var(--sp-radius-sm);
+  padding: 2px;
+  cursor: pointer;
+}
+.tch-facepile .sp-tip__trigger:hover .tch-facepile__face + .tch-facepile__face,
+.tch-facepile .sp-tip__trigger[aria-expanded='true'] .tch-facepile__face + .tch-facepile__face {
+  /* The stack opens a little on hover — the affordance that says the faces are
+     a control and not decoration. */
+  margin-inline-start: calc(var(--face) * -0.15);
+}
+
+.tch-facepile__stack { display: inline-flex; align-items: center; }
+
+.tch-facepile__face {
+  display: inline-flex;
+  border-radius: 50%;
+  /* Not `border`: the coin sizes itself inline, and a border would make each
+     face a different total width from the one in a table row. `--sp-surface`
+     rather than `--tch-card-bg` because the dark card is a gradient, which is
+     not a colour a shadow can take. */
+  box-shadow: 0 0 0 2px var(--sp-surface);
+  transition: margin-inline-start 120ms ease;
+}
+.tch-facepile__face + .tch-facepile__face { margin-inline-start: calc(var(--face) * -0.33); }
+
+.tch-facepile__more {
+  margin-inline-start: var(--sp-1);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.tch-facepile__heading {
+  display: block;
+  margin-block-end: var(--sp-2);
+  color: var(--sp-ink-800);
+}
+
+/* Overrides the bubble's generic `ul`, which is a bulleted list with an indent
+   — wrong for rows that already carry a coin as their marker. */
+.sp-tip__bubble .tch-facepile__names {
+  list-style: none;
+  padding-inline-start: 0;
+  gap: var(--sp-2);
+}
+.sp-tip__bubble .tch-facepile__names li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--sp-ink-700);
+}
+
 /* ── PromptDialog ──────────────────────────────────────────────────────────
    One question, one field. Replaces `window.prompt`, which had no theme, no
    RTL, and buttons labelled in the browser's language rather than the

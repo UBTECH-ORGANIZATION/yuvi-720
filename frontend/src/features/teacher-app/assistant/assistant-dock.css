@@ -8,13 +8,21 @@
  *            it scrolls itself.
  *   <1100px  fixed overlay drawer from the right edge, full height.
  *
- * Closed in either mode → the floating launcher.
+ * Closed in either mode → the floating launcher, in the bottom-LEFT corner with
+ * the support button stacked above it.
  */
 
 .tch-dock__launcher {
   position: fixed;
   inset-block-end: var(--sp-4);
-  inset-inline-end: var(--sp-4);
+  /* Physical left in both text directions, not `inset-inline-end`. The dock
+     itself is physical-right everywhere, so an inline-end launcher landed on
+     the right in LTR and the left in RTL — which put it in the same corner as
+     the support button in one language and the opposite corner in the other,
+     and there is no stacking order that is correct in both. The floating
+     buttons live on the left; the panel opens on the right. */
+  left: var(--sp-4);
+  right: auto;
   z-index: 60;
   display: inline-flex;
   align-items: center;

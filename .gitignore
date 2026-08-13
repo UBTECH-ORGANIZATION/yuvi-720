@@ -44,6 +44,7 @@ unity-learning-world/Assets/Art/World/HighFidelity/ReviewCaptures.meta
 # Local verification screenshots (frontend/scripts/dock-check.mjs)
 frontend/scripts/.dock-shots/
 frontend/scripts/.teacher-shots/
+frontend/scripts/.support-stack-shots/
 # Screenshot debris the browser checks drop beside themselves.
 frontend/scripts/.*.png
 
