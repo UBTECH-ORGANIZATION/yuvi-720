@@ -428,6 +428,15 @@ def _data_point(value: object) -> Optional[list[float]]:
     return [x, y] if x is not None and y is not None else None
 
 
+def _decimals(value: float) -> int:
+    """Decimal places a reading really carries, so 40 stays 40 and 12.0 stays 12.0."""
+    number = float(value)
+    if number.is_integer():
+        return 0
+    text = f"{number:.3f}".rstrip("0")
+    return len(text.split(".")[1])
+
+
 def _range(value: object) -> Optional[list[float]]:
     if not isinstance(value, list) or len(value) != 3:
         return None
@@ -973,6 +982,26 @@ def sanitize_scene(
                 ]
                 if not clean["items"]:
                     continue
+                # A prop's text is drawn from `labels` at named anchors, so an
+                # item's own `label` — the obvious place for a planner to put a
+                # bar's name, and where it does put it — was accepted and then
+                # silently never drawn. Observed live: three correctly
+                # proportioned bars with nothing written on any of them, which
+                # on a question about which reading differs is a picture of
+                # nothing. Promote name and value onto the anchors the renderer
+                # actually reads, without overriding a label already given.
+                promoted = dict(clean.get("labels") or {})
+                # One shared precision, taken from the most precise reading.
+                # `%g` drops trailing zeros, so 12.0 printed as "12" beside
+                # "12.1" — on a question about which readings are nearly
+                # identical, that is the comparison being erased. Whole numbers
+                # stay whole: 40 g is not "40.0 g".
+                decimals = max(_decimals(item["value"]) for item in clean["items"])
+                for position, item in enumerate(clean["items"]):
+                    if item.get("label"):
+                        promoted.setdefault(f"foot:{position}", item["label"])
+                    promoted.setdefault(f"top:{position}", f"{item['value']:.{decimals}f}")
+                clean["labels"] = promoted
 
         elif kind == "drawing":
             # Any shape the catalogue does not have. Authored in the planner's
@@ -1213,6 +1242,32 @@ _PREFER_STILL_DIRECTIVE = {
     "en": "\nReturn one clear STILL image: animated=false, no steps.",
 }
 
+# A hint is written to withhold: it names no value and no option, so planning
+# from the reply alone leaves nothing to draw. The question carries the data,
+# and putting the GIVENS on the canvas is the most useful thing a hint can do —
+# it is what the learner is looking at, not the step that solves it.
+_QUESTION_CONTEXT_DIRECTIVE = {
+    "he": (
+        "\n<current_question> הוא מה שהתלמיד/ה רואה על המסך עכשיו. המספרים, השמות והכמויות "
+        "שבו הם הנתונים האמיתיים — צייר/י אותם בדיוק כפי שהם, ואל תמציא/י ערך שלא מופיע שם. "
+        "גם כשתשובת המלווה נמנעת במכוון ממספרים (רמז), מותר ונכון לצייר את הנתונים של השאלה. "
+        "אסור לצייר את הפתרון: הצג/י את הנתונים, לא את ההכרעה בין האפשרויות."
+    ),
+    "ar": (
+        "\n<current_question> هو ما يراه الطالب/ة على الشاشة الآن. الأرقام والأسماء والكميات "
+        "فيه هي المعطيات الحقيقية — ارسمها كما هي تمامًا ولا تخترع قيمة لا ترد فيه. وحتى حين "
+        "يتجنّب ردّ المرافق الأرقام عمدًا (تلميح)، يجوز بل يُستحسن رسم معطيات السؤال. "
+        "لا ترسم الحلّ: اعرض المعطيات لا الحسم بين الخيارات."
+    ),
+    "en": (
+        "\n<current_question> is what the learner is looking at right now. Its numbers, names "
+        "and quantities are the real data — draw them exactly as given, and never invent a value "
+        "that is not there. Even when the coach's reply deliberately avoids numbers (a hint), "
+        "drawing the question's data is allowed and is usually the most useful thing to do. "
+        "Never draw the solution: show the givens, not the choice between the options."
+    ),
+}
+
 
 async def plan_manim_visual(
     user_message: str,
@@ -1224,6 +1279,7 @@ async def plan_manim_visual(
     prefer_animation: Optional[bool] = None,
     force_visual: bool = False,
     subject: Optional[str] = None,
+    question_context: Optional[str] = None,
 ) -> Optional[dict]:
     """Let the Coach choose the visual tool and return a constrained scene.
 
@@ -1231,12 +1287,20 @@ async def plan_manim_visual(
     must produce a scene; ``prefer_animation`` steers video vs. still. The final
     ``animated`` flag is still re-asserted by the caller to match the request.
     ``subject`` selects which domain vocabularies are offered and accepted.
+
+    ``question_context`` is the question the learner is actually looking at. A
+    hint is written to withhold — no values, no options — so planning from the
+    reply alone leaves nothing concrete to draw and the planner rightly
+    declines. The question is where the data lives, and drawing the GIVENS is
+    the one thing a hint most wants.
     """
     lang = language if language in VISUAL_TOOL_PROMPTS else "he"
 
     system_content = f"{VISUAL_TOOL_PROMPTS[lang]}\n{SCENE_CONTRACT}"
     for fragment in registry.contract_fragments(subject):
         system_content += f"\n{fragment}"
+    if question_context:
+        system_content += _QUESTION_CONTEXT_DIRECTIVE[lang]
     if force_visual:
         system_content += _ON_DEMAND_DIRECTIVE[lang]
     if prefer_animation is True:
@@ -1244,9 +1308,12 @@ async def plan_manim_visual(
     elif prefer_animation is False:
         system_content += _PREFER_STILL_DIRECTIVE[lang]
 
+    question_block = (
+        f"<current_question>{question_context}</current_question>\n" if question_context else ""
+    )
     messages = [
         {"role": "system", "content": system_content},
-        {"role": "user", "content": f"<learner_request>{user_message}</learner_request>\n<coach_reply>{assistant_response}</coach_reply>"},
+        {"role": "user", "content": f"{question_block}<learner_request>{user_message}</learner_request>\n<coach_reply>{assistant_response}</coach_reply>"},
     ]
     explicit_request = force_visual or bool(_EXPLICIT_VISUAL_REQUEST[lang].search(user_message))
     semantic_visual = _visual_benefit_signal(f"{user_message}\n{assistant_response}", lang)

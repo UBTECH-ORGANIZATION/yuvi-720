@@ -76,6 +76,41 @@ def _worth_visual_planning(message: str, response_text: str) -> bool:
     return len(question) >= _MIN_QUESTION_CHARS
 
 
+async def _current_question_context(learner_id: str) -> str:
+    """The question the learner is on, as text the visual planner can draw from.
+
+    The planner used to see only the learner's message and the coach's reply.
+    That is enough for "draw me a triangle" and useless for a hint, which is
+    written to withhold every value and option — so the planner had no data and
+    declined, exactly when a picture would have helped most. The question is
+    where the numbers live.
+
+    Text only. The options and the correct answer stay out: widening what the
+    planner can SEE must never widen what it could draw.
+    """
+    from app.brain.repository import get_brain
+    from app.services import kata_catalog
+
+    try:
+        brain = await get_brain(learner_id)
+        state = brain.get("current_state") or {}
+        component_id, item_id = state.get("component_id"), state.get("item_id")
+        if not component_id or not item_id:
+            return ""
+        await kata_catalog.ensure_loaded()
+        rows = kata_catalog.questions_for_item(component_id, item_id) or []
+    except Exception as exc:  # never block a reply on catalogue availability
+        print(f"ℹ️ visual question context unavailable: {exc}")
+        return ""
+
+    question_id = state.get("question_id")
+    row = next(
+        (r for r in rows if question_id and r.get("questionId") == question_id),
+        rows[0] if rows else None,
+    )
+    return str((row or {}).get("questionText") or "")[:600]
+
+
 async def _stream_visual_tail(
     *,
     learner_id: str,
@@ -109,6 +144,7 @@ async def _stream_visual_tail(
             # show "preparing a visual" on the message immediately instead
             # of the message looking finished and then suddenly growing.
             yield f"data: {json.dumps({'visual_status': 'planning'}, ensure_ascii=False)}\n\n"
+        question_context = await _current_question_context(learner_id) if will_plan else ""
         scene = None if not will_plan else await plan_manim_visual(  # noqa: F841 (read after try)
             screened_message,
             response_text,
@@ -124,6 +160,7 @@ async def _stream_visual_tail(
                 exchange_id=exchange_id,
             ),
             text_filter=lambda text: safety.screen_output(text, language).text,
+            question_context=question_context,
         )
         if will_plan and not scene:
             # Planner declined — clear the loader so the message closes.
