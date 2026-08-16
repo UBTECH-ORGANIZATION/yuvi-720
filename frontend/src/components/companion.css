@@ -1108,14 +1108,17 @@
   border-radius: 8px; color: var(--sp-ink-600);
 }
 .sp-companion__prose .sp-md-hr { border: 0; block-size: 1px; background: var(--sp-border); margin-block: 12px; }
-.sp-companion__prose .sp-md-tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/* A wide table scrolls inside its own box; it never widens the bubble, and it
+   never squeezes columns until Hebrew words break mid-letter. */
+.sp-companion__prose .sp-md-tablewrap { max-inline-size: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .sp-companion__prose .sp-md-table {
-  border-collapse: collapse; inline-size: 100%; font-size: .95em;
+  border-collapse: collapse; inline-size: max-content; min-inline-size: 100%; font-size: .95em;
   border: 1px solid var(--sp-border); border-radius: 10px; overflow: hidden;
 }
 .sp-companion__prose .sp-md-table th,
 .sp-companion__prose .sp-md-table td {
   padding: 7px 11px; border: 1px solid var(--sp-border); text-align: start; vertical-align: top;
+  white-space: normal; word-break: normal; max-inline-size: 22ch;
 }
 .sp-companion__prose .sp-md-table th { background: rgba(111, 91, 255, .08); font-weight: 750; color: var(--sp-ink-900); }
 .sp-companion__prose .sp-md-table tbody tr:nth-child(even) td { background: rgba(111, 91, 255, .03); }

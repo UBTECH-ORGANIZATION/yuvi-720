@@ -331,7 +331,8 @@
 /* An answer with nothing behind it must not look like every other answer. */
 .tch-dock__bubble--ungrounded { border-inline-start: 3px solid var(--sp-warn-600); }
 
-/* Prose inside a bubble: paragraphs and short lists, nothing else renders. */
+/* Prose inside a bubble: paragraphs, short lists, and the blocks the shared
+   renderer brings with it — a table for a comparison, a diagram for a process. */
 .tch-dock__para { margin: 0; }
 .tch-dock__para + .tch-dock__para,
 .tch-dock__para + .tch-dock__list,
@@ -342,6 +343,54 @@
   padding-inline-start: var(--sp-4);
   display: grid;
   gap: 2px;
+}
+
+.tch-dock__bubble > * + * { margin-block-start: var(--sp-2); }
+.tch-dock__bubble .sp-md-heading { margin: 0; font-weight: 750; color: var(--sp-ink-900); }
+.tch-dock__bubble .sp-md-quote {
+  margin: 0;
+  padding: 6px 12px;
+  border-inline-start: 3px solid var(--sp-primary-400);
+  background: var(--sp-primary-050, rgba(111, 91, 255, .07));
+  border-radius: var(--sp-radius-sm);
+  color: var(--sp-ink-600);
+}
+.tch-dock__bubble .sp-md-hr {
+  border: 0;
+  block-size: 1px;
+  background: var(--sp-border);
+  margin-block: var(--sp-2);
+}
+
+/* A wide table scrolls inside its own box and never widens the dock. */
+.tch-dock__bubble .sp-md-tablewrap {
+  max-inline-size: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.tch-dock__bubble .sp-md-table {
+  border-collapse: collapse;
+  inline-size: max-content;
+  min-inline-size: 100%;
+  font-size: .95em;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-sm);
+  overflow: hidden;
+}
+.tch-dock__bubble .sp-md-table th,
+.tch-dock__bubble .sp-md-table td {
+  padding: 6px 10px;
+  border: 1px solid var(--sp-border);
+  text-align: start;
+  vertical-align: top;
+  white-space: normal;
+  word-break: normal;
+  max-inline-size: 22ch;
+}
+.tch-dock__bubble .sp-md-table th {
+  background: var(--sp-primary-050, rgba(111, 91, 255, .08));
+  font-weight: 700;
+  color: var(--sp-ink-900);
 }
 
 /* Small, quiet, and tabular so a column of them does not jitter. */

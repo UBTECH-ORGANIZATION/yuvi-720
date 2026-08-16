@@ -7,7 +7,13 @@
  * The contract: tools never return a student's name, so the model writes an id
  * inside a marker and the name is substituted here, from the roster already in
  * the teacher's browser.
+ *
+ * Blocks are NOT parsed here — that grammar is shared with the learner's chat
+ * and lives in `components/richText/blocks.ts`. This file owns the inline
+ * layer, which is the half that is genuinely this surface's own.
  */
+
+import { trimIncompleteBlocks } from '../../../components/richText/blocks.ts'
 
 export type Segment =
   | { kind: 'text'; text: string }
@@ -67,35 +73,26 @@ export function labelFor(learnerId: string, name: string | null | undefined): st
 /* ── blocks ────────────────────────────────────────────────────────────────
  *
  * The answer used to be one `<p>` with `white-space: pre-wrap`, which was
- * honest when answers were dumps. Now that the assistant writes a paragraph and
- * occasionally a short list, a list has to *look* like a list.
- *
- * Still not a markdown renderer, and still must not become one: paragraphs and
- * `-` bullets are the entire grammar, because they are the entire grammar the
- * prompt permits. Anything else the model emits stays literal — visible, ugly,
- * and fixable in the prompt, which beats silently swallowing it.
+ * honest when answers were dumps. Now that the assistant writes a paragraph, a
+ * short list, and sometimes a table, each of those has to *look* like itself —
+ * so the block grammar is the shared one, and only the two rules below are
+ * this surface's own.
  */
 
-/** Hide a marker the stream has not finished writing yet.
+/** Hide anything the stream has not finished writing yet.
  *
  * Streaming renders every keystroke, so without this the teacher watches
- * `{{student:demo-t` type itself out before snapping to a name. Dropping the
- * unterminated tail costs a few characters of latency and buys a chat that
- * never shows its own template syntax. */
+ * `{{student:demo-t` type itself out before snapping to a name, and a table
+ * arrives as a row of broken pipes. Dropping the unterminated tail costs a few
+ * characters of latency and buys a chat that never shows its own syntax. */
 export function trimPartialMarkers(text: string): string {
   const open = text.lastIndexOf('{{')
   let out = open >= 0 && text.indexOf('}}', open) === -1 ? text.slice(0, open) : text
   // An odd count of `**` means the last one is an opener still waiting to close.
   const bolds = out.match(/\*\*/g)
   if (bolds && bolds.length % 2 === 1) out = out.slice(0, out.lastIndexOf('**'))
-  return out
+  return trimIncompleteBlocks(out)
 }
-
-export type Block =
-  | { kind: 'paragraph'; segments: Segment[] }
-  | { kind: 'list'; items: Segment[][] }
-
-const BULLET = /^\s*[-•]\s+/
 
 /* Pseudo-widgets the model draws when it thinks it has to draw a button.
  *
@@ -115,43 +112,8 @@ const BULLET = /^\s*[-•]\s+/
 const PSEUDO_WIDGET =
   /\[\[?\s*(?:[\w]*_?(?:button|action)|כפתור|פעולה|زر|إجراء)\s*[:：][^\]\n]*\]?\]/gi
 
-function stripPseudoWidgets(text: string): string {
+export function stripPseudoWidgets(text: string): string {
   return text.replace(PSEUDO_WIDGET, '').replace(/[ \t]{2,}/g, ' ')
-}
-
-export function parseAnswerBlocks(text: string): Block[] {
-  const blocks: Block[] = []
-  let paragraph: string[] = []
-  let items: string[] = []
-
-  const flushParagraph = () => {
-    if (!paragraph.length) return
-    blocks.push({ kind: 'paragraph', segments: parseStudentRefs(paragraph.join('\n')) })
-    paragraph = []
-  }
-  const flushList = () => {
-    if (!items.length) return
-    blocks.push({ kind: 'list', items: items.map(parseStudentRefs) })
-    items = []
-  }
-
-  for (const line of stripPseudoWidgets(text || '').split('\n')) {
-    if (!line.trim()) {
-      flushList()
-      flushParagraph()
-      continue
-    }
-    if (BULLET.test(line)) {
-      flushParagraph()
-      items.push(line.replace(BULLET, ''))
-      continue
-    }
-    flushList()
-    paragraph.push(line)
-  }
-  flushList()
-  flushParagraph()
-  return blocks
 }
 
 /** Is this a route a chat message may send the teacher to?

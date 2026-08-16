@@ -27,8 +27,44 @@ from app.services.llm import LlmModelTier, call_llm, call_llm_stream
 
 
 # ── Instructions (language-keyed — §11.1; never inline learner-facing text) ──
+# The one fenced block the Coach may emit: a validated diagram payload, drawn by
+# the client. Every other fenced block is still forbidden.
+DIAGRAM_FENCE = "```yuvi-diagram"
 # A bare list marker on its own — not a real sentence for the brevity cap.
 _BARE_MARKER = re.compile(r"(?:\d+[.)]|[-*+•])")
+# A line that is table markup rather than a line of prose.
+_TABLE_ROW = re.compile(r"^\s*\|")
+
+
+def _line_gap(whitespace: str) -> str:
+    """Rejoin two sentences the way the model separated them.
+
+    Markdown is line-sensitive: a table header, a list item and a fenced
+    diagram payload all mean something only at the start of a line. Collapsing
+    the model's newlines into a space is what turned a table into a paragraph
+    full of pipes.
+    """
+    newlines = whitespace.count("\n")
+    if newlines >= 2:
+        return "\n\n"
+    return "\n" if newlines else " "
+
+
+def _counts_as_prose(sentence: str) -> bool:
+    """Does this fragment spend one of the answer's few sentences?
+
+    Layout does not. A bare list marker, a run of table rows, or a line of a
+    diagram payload is structure the learner reads at a glance — counting it
+    would cut the answer off in the middle of its own table.
+    """
+    text = sentence.strip()
+    if not text or _BARE_MARKER.fullmatch(text):
+        return False
+    if "```" in text:
+        return False
+    lines = [line for line in text.splitlines() if line.strip()]
+    return not (lines and all(_TABLE_ROW.match(line) for line in lines))
+
 
 COACH_INSTRUCTIONS = {
     "he": (
@@ -53,9 +89,12 @@ COACH_INSTRUCTIONS = {
         "- אם התלמיד/ה מתוסכל/ת — עודד, נרמל את הקושי, הצע צעד קטן.\n"
         "- personalization_gaps מציין מה עוד לא ידוע עליו/ה. ברגע טבעי — במיוחד כשהסבר לא מתחבר או שיש תסכול — שלב שאלה קצרה אחת כדי ללמוד את זה (למשל: \"ספר/י לי על משהו שאתה מתחבר אליו ואסביר דרכו\"). לכל היותר שאלה אחת כזו בשיחה, לעולם לא חקירה, והתשובה תיזכר.\n"
         "- כששרטוט עשוי להבהיר רעיון, תאר במדויק את הנתונים או הקשרים שיש להמחיש; כלי שרטוט בטוח עשוי לצרף המחשה. אל תטען שנוצר שרטוט.\n"
-        "- אם המחשה חזותית מתאימה, אל תיצור גרסת טקסט/ASCII שלה ואל תכתוב בלוק קוד. כתוב רק הסבר מילולי קצר; ההמחשה תשתלב בתוך ההודעה.\n"
+        "- אם המחשה חזותית מתאימה, אל תיצור גרסת טקסט/ASCII שלה ואל תכתוב בלוק קוד. כתוב רק הסבר מילולי קצר; ההמחשה תשתלב בתוך ההודעה. היוצא היחיד מן הכלל הזה הוא בלוק ```yuvi-diagram המתואר בהמשך; כל בלוק מגודר אחר עדיין אסור.\n"
         "- אל תצרף תמונת Markdown, קישור תמונה או נתיב קובץ; כלי ההמחשה הנפרד מטפל בתמונה.\n"
-        "- עצב את התשובה ב-Markdown כברירת מחדל כשזה עוזר לבהירות: רשימת תבליטים (‎- ‎) או ממוספרת עם כל פריט בשורה נפרדת, טבלה קטנה להשוואה, ו-**מודגש** למונחי מפתח. אל תאריך רק בשביל העיצוב.\n"
+        "- עצב את התשובה ב-Markdown כשזה באמת עוזר לבהירות: רשימת תבליטים (‎- ‎) או ממוספרת עם כל פריט בשורה נפרדת, ו-**מודגש** למונחי מפתח. אל תאריך רק בשביל העיצוב.\n"
+        "- טבלה מתאימה רק להשוואה אמיתית בין שניים או יותר לפי כמה תכונות משותפות, או לאוסף נתונים קטן. שתי עובדות הן משפט, לא טבלה, ותשובה שהיא תמיד טבלה גרועה מתשובה כתובה. עד 4 עמודות ו-5 שורות, וכותרת קצרה לכל עמודה.\n"
+        "- בחר/י את הכלי הנכון להסבר: משהו מרחבי, גיאומטרי או של מדידה — תאר/י אותו לכלי השרטוט; השוואה או נתונים — טבלה; תהליך, מחזור או קשר בין חלקים — בלוק ```yuvi-diagram. לעולם לא יותר מאחד מהשלושה בתשובה אחת, ומילים בלבד כשהמילים מספיקות.\n"
+        "- בלוק ```yuvi-diagram מכיל JSON בלבד — לא קוד ולא ציור בתווים. המבנה: {\"kind\":\"flow\"|\"cycle\", \"title\":\"כותרת קצרה, לא חובה\", \"nodes\":[{\"id\":\"a\",\"label\":\"שלב קצר\"}], \"edges\":[{\"from\":\"a\",\"to\":\"b\",\"label\":\"לא חובה\"}]}. \"flow\" לתהליך עם התחלה וסוף, \"cycle\" לתהליך שחוזר לנקודת הפתיחה (במחזור אין צורך ב-edges — סדר ה-nodes הוא הטבעת). 2–6 צמתים, תווית של כמה מילים לכל אחד, באותה שפה שבה נכתבה התשובה. ההסבר במילים נכתב תמיד גם הוא, ולעולם אל תכתוב/י משפט על התרשים עצמו (למשל \"בתרשים אפשר לראות\") — התלמיד/ה רואה אותו.\n"
         "- לעולם אל תמציא עובדות על התלמיד/ה; הסתמך רק על ההקשר.\n"
         "- אל תציג ציונים מספריים. תן משוב מילולי ומעודד.\n"
         "- שקיפות: המערכת כבר יידעה שמדובר ב-AI; אל תתחזה לאדם."
@@ -82,9 +121,12 @@ COACH_INSTRUCTIONS = {
         "- إذا شعر/ت بالإحباط — شجّع، وطبّع الصعوبة، واقترح خطوة صغيرة.\n"
         "- يبيّن personalization_gaps ما لا يُعرف بعد عن الطالب/ة. في لحظة طبيعية — خاصة عندما لا يصل الشرح أو يظهر إحباط — ادمج سؤالًا قصيرًا واحدًا لتعلّمه (مثل: \"حدّثني عن شيء تحبه وسأشرح من خلاله\"). سؤال واحد كهذا في المحادثة على الأكثر، وليس استجوابًا، وستُحفظ الإجابة.\n"
         "- عندما يساعد الرسم على توضيح الفكرة، صِف بدقة المعطيات أو العلاقات المطلوب تمثيلها؛ قد تُرفق أداة رسم آمنة توضيحًا. لا تدّعِ أن الرسم أُنشئ.\n"
-        "- عندما يناسب الشرح المرئي، لا تنشئ نسخة نصية أو ASCII منه ولا تكتب كتلة شيفرة. اكتب شرحًا لفظيًا قصيرًا فقط؛ سيُدمج الرسم داخل الرسالة.\n"
+        "- عندما يناسب الشرح المرئي، لا تنشئ نسخة نصية أو ASCII منه ولا تكتب كتلة شيفرة. اكتب شرحًا لفظيًا قصيرًا فقط؛ سيُدمج الرسم داخل الرسالة. الاستثناء الوحيد من قاعدة كتلة الشيفرة هو كتلة ```yuvi-diagram الموصوفة أدناه؛ وكل كتلة مسيّجة أخرى تبقى ممنوعة.\n"
         "- لا تُرفق صورة Markdown أو رابط صورة أو مسار ملف؛ أداة الرسم المنفصلة تتولى الصورة.\n"
-        "- نسّق الرد بصيغة Markdown افتراضيًا عندما يساعد على الوضوح: قائمة نقطية (‎- ‎) أو مرقّمة بكل عنصر في سطر، جدول صغير للمقارنة، و**تخشين** للمصطلحات المفتاحية. لا تُطِل لأجل التنسيق فقط.\n"
+        "- نسّق الرد بصيغة Markdown عندما يساعد فعلًا على الوضوح: قائمة نقطية (‎- ‎) أو مرقّمة بكل عنصر في سطر، و**تخشين** للمصطلحات المفتاحية. لا تُطِل لأجل التنسيق فقط.\n"
+        "- الجدول مناسب فقط لمقارنة حقيقية بين شيئين أو أكثر وفق عدة خصائص مشتركة، أو لمجموعة بيانات صغيرة. حقيقتان تُكتبان جملةً لا جدولًا، وردٌّ يكون دائمًا جدولًا أسوأ من ردّ مكتوب. حتى 4 أعمدة و5 صفوف، وعنوان قصير لكل عمود.\n"
+        "- اختر الأداة الصحيحة للشرح: شيء مكاني أو هندسي أو متعلق بالقياس — صِفه لأداة الرسم؛ مقارنة أو بيانات — جدول؛ عملية أو دورة أو علاقة بين أجزاء — كتلة ```yuvi-diagram. لا تستخدم أكثر من واحدة من الثلاث في ردّ واحد، والكلمات وحدها عندما تكفي.\n"
+        "- كتلة ```yuvi-diagram تحتوي JSON فقط — لا شيفرة ولا رسمًا بالحروف. الشكل: {\"kind\":\"flow\"|\"cycle\", \"title\":\"عنوان قصير اختياري\", \"nodes\":[{\"id\":\"a\",\"label\":\"خطوة قصيرة\"}], \"edges\":[{\"from\":\"a\",\"to\":\"b\",\"label\":\"اختياري\"}]}. استخدم \"flow\" لعملية لها بداية ونهاية و\"cycle\" لعملية تعود إلى نقطة البداية (الدورة لا تحتاج edges — ترتيب nodes هو الحلقة). من 2 إلى 6 عقد، وتسمية من بضع كلمات لكل عقدة، بلغة ردّك نفسها. واكتب الشرح بالكلمات دائمًا إلى جانبه، ولا تكتب جملة عن الرسم نفسه (مثل \"كما يظهر في الرسم\") — فالطالب/ة يراه.\n"
         "- لا تختلق معلومات عن الطالب/ة؛ اعتمد على السياق فقط.\n"
         "- لا تعرض درجات رقمية. قدّم تغذية راجعة لفظية ومشجّعة.\n"
         "- الشفافية: النظام أبلغ أنّه ذكاء اصطناعي؛ لا تتظاهر بأنك إنسان."
@@ -112,9 +154,12 @@ COACH_INSTRUCTIONS = {
         "- If the student is frustrated, encourage, normalize the difficulty, offer a small step.\n"
         "- personalization_gaps lists what is not yet known about this learner. At a natural moment — especially when an explanation isn't landing or frustration shows — weave in ONE short question to learn it (e.g., \"tell me something you're into and I'll explain through it\"). At most one such question per conversation, never an interrogation; the answer will be remembered.\n"
         "- When a drawing could clarify an idea, precisely describe the givens or relationships to visualize; a safe drawing tool may attach it. Do not claim a drawing was created.\n"
-        "- When a visual is suitable, do not duplicate it as text/ASCII and do not emit a code block. Write only a short verbal explanation; the visual will be embedded in the message.\n"
+        "- When a visual is suitable, do not duplicate it as text/ASCII and do not emit a code block. Write only a short verbal explanation; the visual will be embedded in the message. The one exception to the code-block rule is the ```yuvi-diagram block described below; every other fenced block is still forbidden.\n"
         "- Do not emit a Markdown image, image link, or file path; the separate visual tool owns the image.\n"
-        "- Format your answer in Markdown by default when it aids clarity: a bulleted (- ) or numbered list with one item per line, a small table for comparisons, and **bold** for key terms. Don't pad length just to format.\n"
+        "- Format your answer in Markdown when it genuinely aids clarity: a bulleted (- ) or numbered list with one item per line, and **bold** for key terms. Don't pad length just to format.\n"
+        "- Use a table ONLY for a real comparison of two or more things across several shared attributes, or for a small dataset. Two facts are a sentence, not a table, and an answer that is always a table is worse than one written in prose. At most 4 columns and 5 rows, with a short header on every column.\n"
+        "- CHOOSE THE RIGHT TOOL for the explanation: something spatial, geometric, or about measurement → describe it for the drawing tool; a comparison or a small dataset → a table; a process, a cycle, or a relationship between parts → a ```yuvi-diagram block. Never more than one of the three in a single answer, and plain prose whenever prose is enough.\n"
+        "- A ```yuvi-diagram block holds JSON and nothing else — never code, never a picture drawn in characters. Shape: {\"kind\":\"flow\"|\"cycle\", \"title\":\"optional short title\", \"nodes\":[{\"id\":\"a\",\"label\":\"short step\"}], \"edges\":[{\"from\":\"a\",\"to\":\"b\",\"label\":\"optional\"}]}. Use \"flow\" for a process with a start and an end, and \"cycle\" for one that returns to where it began (a cycle needs no edges — the node order is the ring). 2–6 nodes, a few words per label, in the same language as your answer. Always write the explanation in words alongside it, and never write a sentence ABOUT the diagram (\"as the diagram shows…\") — the learner can see it.\n"
         "- Never invent facts about the student; rely only on the context.\n"
         "- Never show numeric grades; give verbal, encouraging feedback.\n"
         "- Transparency: the system already disclosed this is AI; do not pretend to be human."
@@ -925,6 +970,11 @@ async def run_coach_stream(
     pending_output = ""
     sentence_count = 0
     max_sentences = 6 if support_mode == "explanation" else 3
+    # The whitespace that followed the last sentence emitted. Rejoining with a
+    # flat " " is what silently broke every table: a header row glued onto the
+    # end of the preceding sentence is no longer at the start of a line, so the
+    # client read "…השוואה. | מונח | הסבר |" as prose with pipes in it.
+    pending_gap = " "
     async for chunk in _stream_coach_model(messages, usage_context):
         out = safety.screen_output(chunk, lang).text   # tier-1 on the way out
         if sentence_count >= max_sentences:
@@ -936,23 +986,25 @@ async def run_coach_stream(
             # alternative counted that as a finished sentence — hitting the cap
             # there dropped the rest and shipped unbalanced Markdown. The true
             # end of stream is handled by the remainder flush below.
-            boundary = re.match(r"^([\s\S]*?[.!?؟]+)\s+", pending_output)
+            boundary = re.match(r"^([\s\S]*?[.!?؟]+)(\s+)", pending_output)
             if boundary is None:
                 break
             sentence = boundary.group(1).strip()
+            gap = boundary.group(2)
             pending_output = pending_output[boundary.end():]
             if not sentence:
                 continue
             if guard.reveals(sentence):
                 blocked = True
                 break
-            separator = " " if collected else ""
+            separator = pending_gap if collected else ""
+            pending_gap = _line_gap(gap)
             collected += separator + sentence
             yield separator + sentence
             # A bare list marker ("1.", "-", "•") is not a sentence — otherwise a
             # numbered/bulleted list is cut off after two markers. Only count
             # sentences with real content toward the brevity cap.
-            if not _BARE_MARKER.fullmatch(sentence):
+            if _counts_as_prose(sentence):
                 sentence_count += 1
         if blocked:
             break
@@ -962,7 +1014,7 @@ async def run_coach_stream(
         if guard.reveals(remainder):
             blocked = True
         else:
-            separator = " " if collected else ""
+            separator = pending_gap if collected else ""
             collected += separator + remainder
             yield separator + remainder
 

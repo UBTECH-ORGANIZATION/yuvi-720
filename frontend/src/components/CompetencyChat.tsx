@@ -55,7 +55,7 @@ function AssistantChatBubble({
           {clean === '' ? (
             <span className="cchat__dots" aria-hidden="true">…</span>
           ) : (
-            <CoachMarkdown text={bubble.text} />
+            <CoachMarkdown text={bubble.text} streaming={streaming} />
           )}
           {bubble.isVisualizing && (
             <div className="sp-companion__visual-status" role="status">

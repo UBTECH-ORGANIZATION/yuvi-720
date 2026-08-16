@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.auth.dependencies import require_learner, require_learner_session
 from app.agents import safety
 from app.agents import sessions
-from app.agents.coach import SUPPORT_PROMPTS, run_coach_stream
+from app.agents.coach import DIAGRAM_FENCE, SUPPORT_PROMPTS, run_coach_stream
 from app.agents.manim_visual import (
     is_explicit_visual_request,
     plan_manim_visual,
@@ -153,7 +153,11 @@ async def _stream_visual_tail(
         # is told to produce one rather than left free to decline.
         asked_to_see = is_explicit_visual_request(screened_message, language)
         will_plan = (asked_to_see or auto_visual) and not (
-            safety.is_safety_redirect(response_text)
+            # The reply already carries a diagram. A second picture is one
+            # visual too many, and the placement step below would delete the
+            # first fenced block to make room for it — that diagram.
+            DIAGRAM_FENCE in response_text
+            or safety.is_safety_redirect(response_text)
             or not _worth_visual_planning(screened_message, response_text)
         )
         if will_plan:
