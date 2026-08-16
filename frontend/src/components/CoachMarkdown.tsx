@@ -1,14 +1,17 @@
 import type { ReactNode } from 'react'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
+import { mapProse, trimIncompleteBlocks } from './richText/blocks.ts'
+import { renderRichText } from './richText/RichText'
 
-/* Lightweight markdown renderer for Yuvi's replies (both the floating companion
-   and the learning-map topic chat). Supports headings, paragraphs, unordered /
-   ordered lists, tables, blockquotes, and horizontal rules, with inline bold,
-   inline code, and KaTeX math preserved. No external markdown dependency — a
-   block splitter over the existing inline tokenizer, so math never breaks. */
+/* Yuvi's replies on the learner side (the floating companion and the
+   learning-map topic chat).
 
-const FENCED_BLOCK = /```[^\n]*\n?[\s\S]*?```/g
+   Blocks — paragraphs, headings, lists, tables, quotes, diagrams — are parsed
+   by the shared renderer that the teacher's assistant uses too. What lives
+   here is the learner's own inline layer (bold, inline code, KaTeX) and the
+   text clean-ups only a model talking to a child needs. */
+
 const INLINE_FORMAT = /(\\\([^]*?\\\)|\\\[[^]*?\\\]|\$\$[^]*?\$\$|\$[^$\n]+\$|\*\*[^*]+\*\*|`[^`\n]+`)/g
 
 function inlineContent(text: string): ReactNode[] {
@@ -53,9 +56,6 @@ function inlineContent(text: string): ReactNode[] {
   return nodes
 }
 
-const TABLE_SEPARATOR = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$/
-const BLOCK_STARTER = /^\s*(?:[-*+]\s+|\d+[.)]\s+|#{1,6}\s+|>\s?|\|)/
-
 /** Models often emit list items inline ("a. - b. - c.") instead of on their own
  * lines. Put a real newline before a bullet/number marker that follows sentence
  * punctuation, so it renders as a proper list. Prose dashes ("10 - 15") and
@@ -87,133 +87,21 @@ function stripForeignScripts(md: string): string {
   return md.replace(FOREIGN_SCRIPTS, '').replace(/[ \t]{2,}/g, ' ')
 }
 
-function tableCells(line: string): string[] {
-  let s = line.trim()
-  if (s.startsWith('|')) s = s.slice(1)
-  if (s.endsWith('|')) s = s.slice(0, -1)
-  return s.split('|').map((cell) => cell.trim())
-}
-
-function parseBlocks(md: string): ReactNode[] {
-  const lines = md.split('\n')
-  const blocks: ReactNode[] = []
-  let i = 0
-  let key = 0
-
-  while (i < lines.length) {
-    const line = lines[i]
-    if (!line.trim()) { i += 1; continue }
-
-    const heading = line.match(/^(#{1,6})\s+(.*)$/)
-    if (heading) {
-      const level = Math.min(heading[1].length, 4)
-      blocks.push(
-        <p className={`sp-md-heading sp-md-heading--${level}`} key={key++} dir="auto">
-          {inlineContent(heading[2].trim())}
-        </p>
-      )
-      i += 1
-      continue
-    }
-
-    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
-      blocks.push(<hr className="sp-md-hr" key={key++} />)
-      i += 1
-      continue
-    }
-
-    if (line.includes('|') && i + 1 < lines.length && TABLE_SEPARATOR.test(lines[i + 1])) {
-      const header = tableCells(line)
-      i += 2
-      const rows: string[][] = []
-      while (i < lines.length && lines[i].trim() && lines[i].includes('|')) {
-        rows.push(tableCells(lines[i]))
-        i += 1
-      }
-      blocks.push(
-        <div className="sp-md-tablewrap" key={key++}>
-          <table className="sp-md-table">
-            <thead>
-              <tr>{header.map((cell, ci) => <th key={ci} dir="auto">{inlineContent(cell)}</th>)}</tr>
-            </thead>
-            <tbody>
-              {rows.map((row, ri) => (
-                <tr key={ri}>{header.map((_, ci) => <td key={ci} dir="auto">{inlineContent(row[ci] ?? '')}</td>)}</tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
-      continue
-    }
-
-    if (/^\s*[-*+]\s+/.test(line)) {
-      const items: ReactNode[] = []
-      while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) {
-        items.push(
-          <li key={items.length} dir="auto">
-            <span className="sp-md-li-body">{inlineContent(lines[i].replace(/^\s*[-*+]\s+/, ''))}</span>
-          </li>
-        )
-        i += 1
-      }
-      blocks.push(<ul className="sp-md-list" key={key++}>{items}</ul>)
-      continue
-    }
-
-    if (/^\s*\d+[.)]\s+/.test(line)) {
-      const items: ReactNode[] = []
-      while (i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i])) {
-        items.push(
-          <li key={items.length} dir="auto">
-            <span className="sp-md-li-body">{inlineContent(lines[i].replace(/^\s*\d+[.)]\s+/, ''))}</span>
-          </li>
-        )
-        i += 1
-      }
-      blocks.push(<ol className="sp-md-list sp-md-list--ordered" key={key++}>{items}</ol>)
-      continue
-    }
-
-    if (/^\s*>\s?/.test(line)) {
-      const quoted: string[] = []
-      while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
-        quoted.push(lines[i].replace(/^\s*>\s?/, ''))
-        i += 1
-      }
-      blocks.push(<blockquote className="sp-md-quote" key={key++} dir="auto">{inlineContent(quoted.join(' '))}</blockquote>)
-      continue
-    }
-
-    const paragraph: string[] = []
-    while (
-      i < lines.length && lines[i].trim()
-      && !BLOCK_STARTER.test(lines[i]) && !TABLE_SEPARATOR.test(lines[i])
-    ) {
-      paragraph.push(lines[i])
-      i += 1
-    }
-    if (paragraph.length) {
-      blocks.push(<p key={key++} dir="auto">{inlineContent(paragraph.join(' '))}</p>)
-    } else {
-      // A block-looking line that matched no block (e.g. a lone "|") — plain text.
-      blocks.push(<p key={key++} dir="auto">{inlineContent(line)}</p>)
-      i += 1
-    }
-  }
-  return blocks
-}
-
-/** Render one Yuvi reply as markdown. Fenced code blocks (used internally to
- * carry diagram specs) are stripped first, matching the prior behavior. */
-export function CoachMarkdown({ text }: { text: string }) {
-  const safeText = splitClauseSemicolons(
-    stripForeignScripts(normalizeInlineMarkers(text.replace(FENCED_BLOCK, '')))
+/** Render one Yuvi reply.
+ *
+ * `streaming` holds back a table or a diagram payload the model has not
+ * finished writing, so neither ever flashes as raw syntax on its way in. */
+export function CoachMarkdown({ text, streaming = false }: { text: string; streaming?: boolean }) {
+  // Every clean-up below rewrites prose and would happily edit the JSON inside
+  // a diagram fence — so the fences are held out of their way.
+  const safeText = mapProse(
+    streaming ? trimIncompleteBlocks(text) : text,
+    (segment) => splitClauseSemicolons(stripForeignScripts(normalizeInlineMarkers(segment)))
   ).trim()
   if (!safeText) return null
   return (
     <div className="sp-companion__prose" dir="auto">
-      {parseBlocks(safeText)}
+      {renderRichText(safeText, inlineContent)}
     </div>
   )
 }

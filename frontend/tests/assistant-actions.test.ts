@@ -23,7 +23,10 @@ import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
 
-import { parseAnswerBlocks } from '../src/features/teacher-app/assistant/studentRefs.ts'
+import { parseBlocks } from '../src/components/richText/blocks.ts'
+import {
+  parseStudentRefs, stripPseudoWidgets,
+} from '../src/features/teacher-app/assistant/studentRefs.ts'
 import { countKey } from '../src/features/teacher-app/shared/countLabel.ts'
 import { actionIdOf, actionKey } from '../src/features/teacher-app/assistant/actionKey.ts'
 import {
@@ -41,10 +44,11 @@ const locales = {
 
 /** The text of every paragraph and list item, flattened. */
 function plainText(answer: string): string {
-  return parseAnswerBlocks(answer)
+  return parseBlocks(stripPseudoWidgets(answer))
     .flatMap((block) =>
-      block.kind === 'paragraph' ? [block.segments] : block.items)
-    .flat()
+      block.kind === 'list' ? block.items
+        : block.kind === 'paragraph' ? [block.text] : [])
+    .flatMap((text) => parseStudentRefs(text))
     .map((segment) => ('text' in segment ? segment.text : `«${segment.learnerId}»`))
     .join(' ')
 }
@@ -78,7 +82,7 @@ describe('a model that draws its own buttons', () => {
   })
 
   it('does not leave an empty paragraph where a widget stood alone', () => {
-    const blocks = parseAnswerBlocks('שורה ראשונה\n\n[navigate_button: x]\n\nשורה שנייה')
+    const blocks = parseBlocks(stripPseudoWidgets('שורה ראשונה\n\n[navigate_button: x]\n\nשורה שנייה'))
     assert.equal(blocks.length, 2)
   })
 

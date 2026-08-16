@@ -14,8 +14,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+import { parseBlocks } from '../src/components/richText/blocks.ts'
 import {
-  isSafeAssistantRoute, labelFor, parseAnswerBlocks, parseStudentRefs, trimPartialMarkers,
+  isSafeAssistantRoute, labelFor, parseStudentRefs, trimPartialMarkers,
 } from '../src/features/teacher-app/assistant/studentRefs.ts'
 
 describe('finding student references in assistant text', () => {
@@ -105,33 +106,44 @@ describe('emphasis the model writes without being asked', () => {
 
 describe('the shape of an answer', () => {
   it('keeps a paragraph whole', () => {
-    const blocks = parseAnswerBlocks('טל לא נכנס כבר שישה ימים.\nכדאי לפנות אליו.')
+    const blocks = parseBlocks('טל לא נכנס כבר שישה ימים.\nכדאי לפנות אליו.')
     assert.equal(blocks.length, 1)
     assert.equal(blocks[0].kind, 'paragraph')
   })
 
   it('splits paragraphs on a blank line', () => {
-    const blocks = parseAnswerBlocks('שורה ראשונה.\n\nשורה שנייה.')
+    const blocks = parseBlocks('שורה ראשונה.\n\nשורה שנייה.')
     assert.deepEqual(blocks.map((b) => b.kind), ['paragraph', 'paragraph'])
   })
 
   it('turns a run of dashes into one list, not four paragraphs', () => {
     // The whole point: pre-wrap made a list look like a wall of hyphens.
-    const blocks = parseAnswerBlocks('שלושה דברים:\n- אחד\n- שניים\n- שלושה')
+    const blocks = parseBlocks('שלושה דברים:\n- אחד\n- שניים\n- שלושה')
     assert.deepEqual(blocks.map((b) => b.kind), ['paragraph', 'list'])
     assert.equal(blocks[1].kind === 'list' && blocks[1].items.length, 3)
   })
 
   it('parses student references inside a bullet', () => {
-    const blocks = parseAnswerBlocks('- {{student:kid-1}} צריך תשומת לב')
+    const blocks = parseBlocks('- {{student:kid-1}} צריך תשומת לב')
     assert.equal(blocks[0].kind, 'list')
     assert.equal(
-      blocks[0].kind === 'list' && blocks[0].items[0][0].kind, 'student'
+      blocks[0].kind === 'list' && parseStudentRefs(blocks[0].items[0])[0].kind, 'student'
+    )
+  })
+
+  it('keeps a student reference inside a table cell', () => {
+    // The teacher surface gained tables; the chips have to survive them.
+    const blocks = parseBlocks(
+      '| תלמיד | כניסה |\n| --- | --- |\n| {{student:kid-1}} | לפני שבוע |'
+    )
+    assert.equal(blocks[0].kind, 'table')
+    assert.equal(
+      blocks[0].kind === 'table' && parseStudentRefs(blocks[0].rows[0][0])[0].kind, 'student'
     )
   })
 
   it('returns nothing for an empty answer', () => {
-    assert.deepEqual(parseAnswerBlocks(''), [])
+    assert.deepEqual(parseBlocks(''), [])
   })
 })
 
@@ -158,6 +170,16 @@ describe('text arriving one chunk at a time', () => {
 
   it('does not eat a finished answer', () => {
     const text = 'טל לא נכנס כבר שישה ימים.'
+    assert.equal(trimPartialMarkers(text), text)
+  })
+
+  it('holds back a table until its separator row has arrived', () => {
+    // Otherwise the teacher watches a row of broken pipes assemble itself.
+    assert.equal(trimPartialMarkers('הנה ההשוואה:\n| תלמיד | כנ'), 'הנה ההשוואה:')
+  })
+
+  it('shows a table as soon as it is a table', () => {
+    const text = '| תלמיד | כניסה |\n| --- | --- |\n| א | ב |\n'
     assert.equal(trimPartialMarkers(text), text)
   })
 })

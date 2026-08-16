@@ -568,7 +568,7 @@ export function CompanionChat() {
               )}
             </button>
           )}
-          {text ? <CoachMarkdown text={text} /> : (key === activeAssistantId
+          {text ? <CoachMarkdown text={text} streaming={!isComplete} /> : (key === activeAssistantId
             ? <ThinkingOrbit label={t('companion.thinking')} />
             : '')}
           {isVisualizing && (
@@ -601,7 +601,7 @@ export function CompanionChat() {
               {visual.caption && <figcaption dir="auto">{visual.caption}</figcaption>}
             </figure>
           )}
-          {textAfter && <CoachMarkdown text={textAfter} />}
+          {textAfter && <CoachMarkdown text={textAfter} streaming={!isComplete} />}
           {isComplete && key && !visual && !isVisualizing && (visualFailed || canVisualize) && (
             <VisualCTA
               failed={visualFailed}
