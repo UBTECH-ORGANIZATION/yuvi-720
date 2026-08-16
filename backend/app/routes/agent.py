@@ -18,6 +18,7 @@ from app.agents import safety
 from app.agents import sessions
 from app.agents.coach import SUPPORT_PROMPTS, run_coach_stream
 from app.agents.manim_visual import (
+    is_explicit_visual_request,
     plan_manim_visual,
     render_visual,
     should_offer_visual,
@@ -69,7 +70,12 @@ def _worth_visual_planning(message: str, response_text: str) -> bool:
     reply = response_text.strip()
     if len(reply) < _MIN_EXPLANATION_CHARS:
         return False
-    if _NON_EXPLANATORY_REPLY.match(reply):
+    # "בשמחה — הנה איור…" is how Yuvi now complies with a request for a picture,
+    # so the acknowledgement opener only disqualifies a reply nobody asked to see.
+    asked_to_see = any(
+        is_explicit_visual_request(question, lang) for lang in ("he", "ar", "en")
+    )
+    if not asked_to_see and _NON_EXPLANATORY_REPLY.match(reply):
         return False
     if any(pattern.match(question) for pattern in _SOCIAL_TURN.values()):
         return False
@@ -120,12 +126,20 @@ async def _stream_visual_tail(
     user_message: str,
     response_text: str,
     language: str,
+    on_lesson_screen: bool,
+    auto_visual: bool = True,
 ):
     """SSE tail shared by chat + hint/explanation replies: the optional visual.
 
     Auto-plans a bounded Manim scene when the reply is math-shaped (no generated
     Python is ever executed), else classifies whether to offer the on-demand
-    image/video buttons. Failure never blocks the conversation."""
+    image/video buttons. Failure never blocks the conversation.
+
+    ``auto_visual`` is off for lesson chat: mid-question, a picture the learner
+    did not ask for interrupts the work in front of them, so "what does this
+    word mean?" gets an answer and the on-demand button — not a diagram. Hints
+    and explanations still draw on their own, and an explicit request always does.
+    """
     # Text generation is finished. Yuvi returns to a thinking pose while
     # the optional visual planner runs; no response text is replayed.
     yield f"data: {json.dumps({'phase': 'thinking'}, ensure_ascii=False)}\n\n"
@@ -135,7 +149,10 @@ async def _stream_visual_tail(
     will_plan = False
     try:
         screened_message = safety.screen_input(user_message, language).text or user_message
-        will_plan = not (
+        # Yuvi has just promised the picture (VISUAL_REQUEST_ACK), so the planner
+        # is told to produce one rather than left free to decline.
+        asked_to_see = is_explicit_visual_request(screened_message, language)
+        will_plan = (asked_to_see or auto_visual) and not (
             safety.is_safety_redirect(response_text)
             or not _worth_visual_planning(screened_message, response_text)
         )
@@ -144,7 +161,13 @@ async def _stream_visual_tail(
             # show "preparing a visual" on the message immediately instead
             # of the message looking finished and then suddenly growing.
             yield f"data: {json.dumps({'visual_status': 'planning'}, ensure_ascii=False)}\n\n"
-        question_context = await _current_question_context(learner_id) if will_plan else ""
+        # The pointer outlives the lesson screen, and the planner is told the
+        # question is what the learner is looking at — so off the lesson it would
+        # drag an unrelated request back to the last question's numbers.
+        question_context = (
+            await _current_question_context(learner_id)
+            if will_plan and on_lesson_screen else ""
+        )
         scene = None if not will_plan else await plan_manim_visual(  # noqa: F841 (read after try)
             screened_message,
             response_text,
@@ -159,6 +182,7 @@ async def _stream_visual_tail(
                 session_id=conversation_id,
                 exchange_id=exchange_id,
             ),
+            force_visual=asked_to_see,
             text_filter=lambda text: safety.screen_output(text, language).text,
             question_context=question_context,
         )
@@ -269,7 +293,7 @@ class CoachSurfaceContext(BaseModel):
     model_config = ConfigDict(extra="forbid")
     screen: Literal[
         "results", "student_dashboard", "mentoring", "learning_portal",
-        "learning_lesson", "learning_create", "unknown",
+        "learning_world", "learning_lesson", "learning_create", "unknown",
     ] = "unknown"
     unit_id: str | None = Field(default=None, min_length=1, max_length=180)
     component_id: str | None = Field(default=None, min_length=1, max_length=180)
@@ -505,15 +529,30 @@ async def coach_explainer(
             pass
         # MoE 720 `item/selected`: choosing the alternative-representation
         # explainer is a real non-assessed learning-type choice.
-        if session.get("sid") and component_id:
+        # MoE 720 `item/selected`: choosing the alternative-representation
+        # explainer is a real non-assessed learning-type choice. The object is
+        # the ITEM the explainer was opened for (not the component) — the
+        # integration review found the id AND the declared type disagreeing
+        # (a `/component/...` id typed as `item`); `current.get("item_id")` was
+        # already resolved above for the activity log, just never reused here.
+        item_id = current.get("item_id")
+        if session.get("sid") and (component_id or item_id):
             from app.services.lrs import config as lrs_config
+            if item_id:
+                object_id = f"{lrs_config.supplier_domain()}/item/{item_id}"
+                object_type = "item"
+            else:
+                object_id = f"{lrs_config.supplier_domain()}/component/{component_id}"
+                object_type = "component"
             await lrs_reporter.report_selected(
                 learner_id,
                 session["sid"],
-                object_id=f"{lrs_config.supplier_domain()}/component/{component_id}",
-                object_type="item",
+                object_id=object_id,
+                object_type=object_type,
                 selection_type="learningType",
                 response="alternative-explainer",
+                component_id=component_id,
+                item_id=item_id,
             )
     return result
 
@@ -699,6 +738,8 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
             user_message=message,
             response_text=response_text,
             language=language,
+            on_lesson_screen=request.surface.screen == "learning_lesson",
+            auto_visual=request.surface.screen != "learning_lesson",
         ):
             yield event
 
@@ -1132,6 +1173,11 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
             object_type="component" if component_iri else "conversation",
             help_source="platform",
             help_type=request.support,
+            # Pin the ancestry to the component the object actually is — left to
+            # the brain's full current position, it can resolve a level DEEPER
+            # (the current item), and `grouping` would then carry an item that
+            # has nothing to do with this (component-level) object.
+            component_id=request.surface.component_id if component_iri else None,
         )
 
     async def event_generator():
@@ -1161,6 +1207,7 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
             user_message=support_prompt.get(language) or support_prompt["he"],
             response_text="".join(response_parts),
             language=language,
+            on_lesson_screen=request.surface.screen == "learning_lesson",
         ):
             yield event
         # Re-stamp on completion: a long answer can outlive the idle timer the
