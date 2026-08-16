@@ -282,6 +282,17 @@ other mathematical diagram from these primitives. Keep labels short. Never inclu
 For polygon side_labels, index i labels the edge from points[i] to points[(i+1) mod n]; use an
 empty string for an unlabeled edge. Put semantic side names such as יתר on the actual side, never
 as a free-standing text element. Use right_angle instead of a floating "90°" text label.
+REAL OBJECTS — when the subject is a thing rather than a figure (a leaf, a cell, a
+vessel, a lamp, a body), draw it so a learner recognises it at a glance: give it its
+characteristic outline, and attach each part to the body it belongs to (a stem meets
+the base of its leaf) instead of leaving parts floating alongside. Draw one object per
+thing — never a shape plus a second shape standing in for the same thing.
+ARROWS — an arrow means "this goes here". Start it in open space and end it just
+OUTSIDE the outline of the shape it points at, with a clear gap; never bury a head or
+a tail inside a filled shape, and never let an arrow cross the object it is about.
+A name for something INSIDE an object (a product, an organ, a content) goes inside
+that object's outline, clear of its edge; a name for something arriving or leaving
+goes beside its arrow, on the outer side.
 LAYOUT — clarity over decoration. Labels must never overlap: leave clear empty
 space around each, and never place two labels or text elements at the same spot.
 A "text" label is SHORT — a value, a name, or a short formula — never a sentence
@@ -299,10 +310,16 @@ _FORMULA_TEXT = re.compile(
 )
 
 _EXPLICIT_VISUAL_REQUEST = {
-    "he": re.compile(r"(?:צייר|שרטט|שרטוט|גרף|המחשה|הדגמה חזותית)"),
-    "ar": re.compile(r"(?:ارسم|رسم|مخطط|بيان|تمثيل بصري|تصوّر)"),
-    "en": re.compile(r"\b(?:draw|drawing|diagram|graph|plot|visuali[sz](?:e|ation))\b", re.IGNORECASE),
+    "he": re.compile(r"(?:צייר|ציור|שרטט|שרטוט|סרטוט|גרף|המחשה|להמחיש|הדמיה|הדמייה|איור|תרשים|דיאגרמה|הדגמה חזותית)"),
+    "ar": re.compile(r"(?:ارسم|رسم|مخطط|بيان|رسمة|توضيح بصري|تمثيل بصري|تصوّر|محاكاة)"),
+    "en": re.compile(r"\b(?:draw|drawing|sketch|diagram|illustrat(?:e|ion)|graph|plot|visuali[sz](?:e|ation))\b", re.IGNORECASE),
 }
+
+
+def is_explicit_visual_request(message: str, language: str) -> bool:
+    """Did the learner ask, in so many words, to SEE something?"""
+    pattern = _EXPLICIT_VISUAL_REQUEST.get(language) or _EXPLICIT_VISUAL_REQUEST["he"]
+    return bool(pattern.search(message or ""))
 
 # Structural signals, rather than a list of school subjects. They identify a
 # relationship that is often easier to inspect than to hold entirely in text.
@@ -601,8 +618,129 @@ def _fit_axes_to_elements(elements: list[dict]) -> None:
     axes["y_range"] = fitted(axes["y_range"], y_values)
 
 
-_RIGHT_ANGLE_LABEL = re.compile(r"^(?:90\s*(?:°|º|degrees?)?|זווית\s+ישרה|زاوية\s+قائمة|right\s+angle)$", re.IGNORECASE)
+# How far an arrow stops short of the thing it points at, in scene units.
+_ARROW_CLEARANCE = 0.14
+# Below this an arrow is a dot with a head; trimming that far is a worse picture
+# than the overlap it was fixing, so the trim is abandoned instead.
+_MIN_ARROW_LENGTH = 0.3
 
+
+def _solid_regions(elements: list[dict]) -> list[Callable[[list[float]], bool]]:
+    """An `is this point inside me?` test per filled shape in the scene."""
+    tests: list[Callable[[list[float]], bool]] = []
+    for element in elements:
+        kind = element.get("type")
+        if kind == "circle":
+            cx, cy = element["center"]
+            radius = float(element.get("radius") or 0)
+            if radius > 0:
+                tests.append(
+                    lambda p, cx=cx, cy=cy, r=radius: (p[0] - cx) ** 2 + (p[1] - cy) ** 2 <= r * r
+                )
+        elif kind == "rectangle":
+            cx, cy = element["center"]
+            half_w = float(element.get("width") or 0) / 2
+            half_h = float(element.get("height") or 0) / 2
+            if half_w > 0 and half_h > 0:
+                tests.append(
+                    lambda p, cx=cx, cy=cy, w=half_w, h=half_h:
+                    abs(p[0] - cx) <= w and abs(p[1] - cy) <= h
+                )
+        elif kind == "polygon" and len(element.get("points") or []) >= 3:
+            tests.append(lambda p, poly=element["points"]: _inside_polygon(p, poly))
+    return tests
+
+
+def _inside_polygon(point: list[float], polygon: list[list[float]]) -> bool:
+    """Even-odd ray casting."""
+    x, y = point[0], point[1]
+    inside = False
+    previous = polygon[-1]
+    for current in polygon:
+        (x1, y1), (x2, y2) = previous, current
+        if (y1 > y) != (y2 > y):
+            crossing_x = x1 + (y - y1) / (y2 - y1) * (x2 - x1)
+            if x < crossing_x:
+                inside = not inside
+        previous = current
+    return inside
+
+
+def _edge_between(
+    inner: list[float], outer: list[float], is_inside: Callable[[list[float]], bool]
+) -> list[float]:
+    """Where the segment crosses the region's boundary, by bisection.
+
+    Bisection rather than per-shape algebra because it works unchanged for a
+    circle, a rectangle and an arbitrary polygon — one inside-test is all any
+    new shape has to provide.
+    """
+    low, high = 0.0, 1.0   # low is inside, high is outside
+    for _ in range(24):
+        mid = (low + high) / 2
+        probe = [inner[0] + (outer[0] - inner[0]) * mid, inner[1] + (outer[1] - inner[1]) * mid]
+        if is_inside(probe):
+            low = mid
+        else:
+            high = mid
+    return [inner[0] + (outer[0] - inner[0]) * high, inner[1] + (outer[1] - inner[1]) * high]
+
+
+def _snap_arrows_to_shapes(elements: list[dict]) -> None:
+    """Pull arrow endpoints out of the shapes they touch.
+
+    A planner writing "CO₂ enters the leaf" puts the arrowhead at the leaf's
+    centre, and the arrow is then drawn buried in the fill — measured on a
+    photosynthesis diagram where the light arrow ended inside the stem and the
+    oxygen arrow started inside the leaf. Semantically the arrow points AT the
+    shape, so it should stop just outside its edge.
+    """
+    regions = _solid_regions(elements)
+    if not regions:
+        return
+    for element in elements:
+        if element.get("type") != "arrow":
+            continue
+        points = element.get("points") or []
+        if len(points) != 2:
+            continue
+        tail, head = list(points[0]), list(points[1])
+        for is_inside in regions:
+            inside_tail, inside_head = is_inside(tail), is_inside(head)
+            # Both ends in (an arrow drawn inside an object) or both out
+            # (it merely passes over) is the planner's intent, not a slip.
+            if inside_tail == inside_head:
+                continue
+            if inside_head:
+                moved = _retracted(head, tail, is_inside)
+                if moved is not None:
+                    head = moved
+            else:
+                moved = _retracted(tail, head, is_inside)
+                if moved is not None:
+                    tail = moved
+        element["points"] = [tail, head]
+
+
+def _retracted(
+    inner: list[float], outer: list[float], is_inside: Callable[[list[float]], bool]
+) -> Optional[list[float]]:
+    """`inner` moved out to the boundary plus clearance, or None if too short."""
+    edge = _edge_between(inner, outer, is_inside)
+    dx, dy = outer[0] - inner[0], outer[1] - inner[1]
+    length = math.hypot(dx, dy)
+    if not length:
+        return None
+    snapped = [
+        edge[0] + dx / length * _ARROW_CLEARANCE,
+        edge[1] + dy / length * _ARROW_CLEARANCE,
+    ]
+    if math.hypot(outer[0] - snapped[0], outer[1] - snapped[1]) < _MIN_ARROW_LENGTH:
+        return None
+    return [round(snapped[0], 3), round(snapped[1], 3)]
+
+
+_RIGHT_ANGLE_LABEL = re.compile(r"^(?:90\s*(?:°|º|degrees?)?|זווית\s+ישרה|زاوية\s+قائمة|right\s+angle)$", re.IGNORECASE)
 
 _DIGIT = re.compile(r"\d")
 # Anything that plots something. If one of these is present the frame is doing
@@ -1140,6 +1278,7 @@ def sanitize_scene(
     for repair in registry.normalizers(subject):
         repair(elements)
     _normalize_number_line_scene(elements)
+    _snap_arrows_to_shapes(elements)
     _fit_axes_to_elements(elements)
     has_molecule = any(item["type"] == "molecule" for item in elements)
     if has_molecule:

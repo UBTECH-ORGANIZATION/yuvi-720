@@ -159,6 +159,23 @@ def test_visual_planner_gate():
         "איך מחשבים שטח של משולש?",
         "כדי לחשב שטח משולש נכפיל בסיס בגובה ונחלק בשניים. " * 3,
     )
+    # Complying with a request for a picture starts with an acknowledgement —
+    # that must not read as "this reply is only an acknowledgement".
+    assert _worth_visual_planning(
+        "תן לי הדמייה של פוטוסינתזה",
+        "בשמחה — הנה איור שמראה איך פוטוסינתזה עובדת. " * 3,
+    )
+
+
+def test_asking_to_see_something_is_recognised():
+    """The learner's own words for "show me": the visual is force-planned on these."""
+    from app.agents.manim_visual import is_explicit_visual_request
+
+    for message in ("תן לי הדמייה של פוטוסינתזה", "תציג לי המחשה", "אפשר איור?", "צייר לי משולש"):
+        assert is_explicit_visual_request(message, "he"), message
+    assert not is_explicit_visual_request("למה השמיים כחולים?", "he")
+    assert is_explicit_visual_request("can you draw that?", "en")
+    assert is_explicit_visual_request("أريد رسمًا توضيحيًا", "ar")
 
 
 # ── Review-round regression guards (H1, H2, M4, A2#1/#5/#7/#8/#13) ───────────

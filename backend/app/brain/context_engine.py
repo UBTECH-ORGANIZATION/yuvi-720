@@ -28,6 +28,7 @@ COACH_SCREEN_AREAS: dict[str, list[str]] = {
     ],
     "mentoring": ["learner_visible_goals", "next_steps", "shared_mentoring_notes"],
     "learning_portal": ["recommended_learning", "subjects", "learning_status"],
+    "learning_world": ["recommended_learning", "subjects", "learning_status"],
     "learning_lesson": ["current_learning_item", "instructions", "activity", "feedback"],
     "learning_create": ["creation_brief", "generated_learning_activity", "preview"],
     "unknown": [],
@@ -324,6 +325,12 @@ async def build_coach_bundle(
     screen = (surface_context or {}).get("screen")
     if screen not in COACH_SCREEN_AREAS:
         screen = "unknown"
+    # `current_state` is the learner's LAST lesson pointer and survives leaving the
+    # lesson, so on the dashboard the coach was handed a live question that was no
+    # longer on screen — and answered every off-topic ask by pointing back at it.
+    # A pinned key means a nudge composed about a specific question, which stays
+    # authoritative regardless of where the learner has since navigated.
+    on_lesson_screen = screen == "learning_lesson" or bool(pinned_question_key)
 
     # Every free-text value is bounded and deterministically PII-redacted before
     # entering the model prompt. Internal scores and identity fields are absent
@@ -644,6 +651,9 @@ async def build_coach_bundle(
             "visible_areas": COACH_SCREEN_AREAS[screen],
         },
         "current": {
+            # Whether everything below describes the screen in front of the
+            # learner, or where they left off last time.
+            "on_lesson_screen": on_lesson_screen,
             "objective_id": objective_id,
             "objective_title": (
                 safe_text((provider_unit or {}).get("title"), 160)
