@@ -456,6 +456,18 @@ function LandmarkDetails({
           <b>{t(`learning.roadmap.state.${component.progress_state}`)}</b>
           {component.estimated_minutes && <span>{t('learning.component.minutes', { minutes: component.estimated_minutes })}</span>}
         </div>
+        {unit.cefr && (
+          <div className="learning-world-details__cefr">
+            <span className="learning-world-details__cefr-level" title={unit.cefr.reference || undefined}>{unit.cefr.level}</span>
+            <div>
+              <b>{t(`learning.cefr.mode.${unit.cefr.mode}`)}</b>
+              <p dir="auto">{unit.cefr.can_do}</p>
+              {unit.alignment?.band && (
+                <small>{t('learning.cefr.alignment', { band: unit.alignment.band, domain: unit.alignment.domain_title })}</small>
+              )}
+            </div>
+          </div>
+        )}
         {locked && <p>{t('learning.world.blocked.body')}</p>}
         {!languageSupported && <p>{t('learning.language.fallback')}</p>}
       </div>

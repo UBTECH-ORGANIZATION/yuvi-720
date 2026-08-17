@@ -98,7 +98,30 @@ export interface LearningUnitDTO {
   goal_description?: string
   /** A sub-topic summary (§3.4): a review resource tied to no learning goal. */
   is_summary?: boolean
+  /** The framework the GOAL is written against — curriculum information, never
+   *  this learner's level. Present for language subjects, absent elsewhere. */
+  cefr?: CefrDescriptorDTO | null
+  alignment?: CurriculumAlignmentDTO | null
   illustration?: LessonIllustrationDTO | null
+}
+
+export interface CefrDescriptorDTO {
+  level: string
+  stretch?: string | null
+  mode: 'reception' | 'production' | 'interaction' | 'mediation' | string
+  scale?: string | null
+  reference?: string | null
+  /** The Can-Do statement, already localized by the server. */
+  can_do: string
+}
+
+export interface CurriculumAlignmentDTO {
+  curriculum?: string | null
+  band?: string | null
+  domain?: string | null
+  domain_title: string
+  exams: { id: string; name: string; task?: string }[]
+  national: { id: string; name: string; grade?: string }[]
 }
 
 export interface LessonIllustrationDTO {

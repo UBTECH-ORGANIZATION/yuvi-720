@@ -24,7 +24,9 @@ from learner_state import normalize_learner_id  # type: ignore
 # Fields that exist for the platform, the teacher view and the LRS — never for
 # the learner's own payload.
 _INTERNAL_UNIT_FIELDS = ("_band", "_assessment_ready")
-_INTERNAL_NODE_FIELDS = ("mastery_level", "cognitive_level", "depth_level")
+# `cefr_level` is per-RUNG, so showing it would leak the mastery level it stands
+# in for. The goal-level CEFR (on the unit) is curriculum information and stays.
+_INTERNAL_NODE_FIELDS = ("mastery_level", "cognitive_level", "depth_level", "cefr_level")
 
 
 def strip_internal(projected: dict[str, Any]) -> dict[str, Any]:

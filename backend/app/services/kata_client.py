@@ -293,6 +293,10 @@ def normalize_component(component: dict[str, Any]) -> dict[str, Any]:
         "ecat_item_id": _ecat_item_id(component),
         "cognitive_level": component.get("cognitiveLevel"),
         "depth_level": component.get("depthLevel"),
+        # The CEFR rung THIS component sits on. A goal targets one level; its
+        # equivalent components span a band (A1 → A2+), which is what lets one
+        # goal serve a heterogeneous class. Absent for providers that don't tag.
+        "cefr_level": component.get("cefrLevel"),
         # What the component IS, for after-fail routing to a different
         # representation. A provider may declare it; otherwise we infer it from
         # the first screen — which is wrong whenever a component opens on a
@@ -434,6 +438,10 @@ def normalize_objective(row: dict[str, Any]) -> dict[str, Any]:
             "titles": titles,
         }
 
+    def _mapping(key: str) -> dict[str, Any]:
+        value = row.get(key)
+        return dict(value) if isinstance(value, dict) else {}
+
     order = row.get("order")
     return {
         "id": str(row.get("id") or ""),
@@ -448,6 +456,12 @@ def normalize_objective(row: dict[str, Any]) -> dict[str, Any]:
         "subject_area": _level("subjectArea"),
         "topic": _level("topic"),
         "sub_topic": _level("subtopic"),
+        # Which external framework this goal was written against, and what it
+        # answers to. Kata publishes neither today, so both are empty for the
+        # ministry spine and populated for the language spine, where "which CEFR
+        # level is this?" is the first question anyone asks.
+        "cefr": _mapping("cefr"),
+        "alignment": _mapping("alignment"),
     }
 
 

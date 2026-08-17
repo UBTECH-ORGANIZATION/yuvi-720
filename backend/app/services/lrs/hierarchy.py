@@ -86,6 +86,7 @@ def component_metadata(component: Optional[dict[str, Any]]) -> dict[str, Any]:
         "order": component.get("order"),
         "depthLevel": component.get("depth_level"),
         "cognitiveLevel": component.get("cognitive_level"),
+        "cefrLevel": component.get("cefr_level"),
         "estimatedTimeInMinutes": component.get("estimated_minutes"),
         "languages": component.get("languages") or None,
         # `mediaFormat` belongs to the ITEM in the 720 metadata table; emitting a

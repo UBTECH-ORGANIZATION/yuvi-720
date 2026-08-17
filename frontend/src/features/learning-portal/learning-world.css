@@ -1317,6 +1317,30 @@
 .learning-world-details__meta { display: flex; align-items: center; gap: 10px; color: var(--learning-world-muted); font-size: 10px; }
 .learning-world-details__meta b { color: #dffbff; }
 
+.learning-world-details__cefr {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-block-start: 8px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--learning-world-accent) 34%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--learning-world-accent) 10%, transparent);
+}
+.learning-world-details__cefr-level {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: var(--sp-radius-pill);
+  background: color-mix(in srgb, var(--learning-world-accent-strong) 88%, #6875ff);
+  color: #061621;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+.learning-world-details__cefr b { color: #dffbff; font-size: 10px; font-weight: 750; }
+.learning-world-details__cefr p { margin: 2px 0 0; color: var(--learning-world-muted); font-size: 10px; line-height: 1.35; }
+.learning-world-details__cefr small { display: block; margin-block-start: 3px; color: var(--learning-world-accent); font-size: 9px; }
+
 .learning-world-details__actions button {
   display: inline-flex;
   align-items: center;

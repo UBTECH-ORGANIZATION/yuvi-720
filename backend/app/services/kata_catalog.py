@@ -124,6 +124,8 @@ def _build_snapshot(
                 "registry_order": goal.get("order"),
                 "topic_title": (goal.get("topic") or {}).get("title") or "",
                 "curriculum_title": (goal.get("curriculum") or {}).get("title") or "",
+                "cefr": dict(goal.get("cefr") or {}),
+                "alignment": dict(goal.get("alignment") or {}),
                 "unit_ids": [],
             }
             objectives[objective_id] = entry

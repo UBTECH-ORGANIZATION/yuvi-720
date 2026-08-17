@@ -202,6 +202,55 @@ class AnswerRequest(BaseModel):
     response: str = Field(default="", max_length=2000)
 
 
+class WritingFeedbackRequest(BaseModel):
+    itemId: str = Field(max_length=180)
+    text: str = Field(default="", max_length=2000)
+    lang: str = Field(default="he", max_length=5)
+
+
+@router.post("/{component_id}/writing-feedback")
+async def player_writing_feedback(
+    component_id: str, data: WritingFeedbackRequest, request: Request,
+):
+    """Formative feedback on a free-written text — words only, never a score.
+
+    Writing is the one productive skill the player could previously only ask the
+    learner to self-check. What the text verifiably contains is decided here;
+    the model only phrases it (see ``services.writing_feedback``).
+    """
+    launch = _launch_for(request, component_id)
+    if launch is None:
+        return _unauthorized()
+    resolved = await native_content.get_raw_component(component_id, launch.get("unit"))
+    if not resolved:
+        return JSONResponse(content={"error": "content_not_found"}, status_code=404)
+    _unit, component = resolved
+
+    item = next(
+        (i for i in component.get("subContent") or [] if str(i.get("id")) == data.itemId),
+        None,
+    )
+    presentation = (item or {}).get("presentation") or {}
+    if presentation.get("kind") != "writing":
+        return JSONResponse(content={"error": "item_not_writable"}, status_code=404)
+
+    lang = data.lang if data.lang in ("he", "ar", "en") else "he"
+    prompt = presentation.get("prompt") or {}
+    from app.services.writing_feedback import review
+
+    result = await review(
+        text=data.text,
+        task=str(prompt.get("en") or prompt.get(lang) or ""),
+        checklist=presentation.get("checklist") or [],
+        language=lang,
+        cefr_level=str(component.get("cefrLevel") or "A1"),
+        learner_id=launch["lid"],
+        component_id=component_id,
+        session_id=launch.get("sid"),
+    )
+    return _embeddable(JSONResponse(content=result))
+
+
 def _normalize(text: str) -> str:
     return " ".join(str(text or "").strip().casefold().split())
 
