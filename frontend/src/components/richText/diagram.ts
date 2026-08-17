@@ -151,16 +151,20 @@ export function parseDiagramSpec(raw: string): DiagramSpec | null {
  * error never shows.
  */
 
-const CHAR_WIDTH = 7.1
-const LINE_HEIGHT = 17
-const PAD_X = 13
-const PAD_Y = 9
-const MAX_LINE_CHARS = 18
-const MIN_BOX_WIDTH = 76
+/* Calibrated to `--sp-fs-chat-meta` (14px), the floor both chat panels use for
+ * text inside a diagram. `MAX_LINE_CHARS` is deliberately lower than the width
+ * alone would allow: it trades a wider box for a taller one, so raising the
+ * type did not make a diagram scroll sideways in a phone-width bubble. */
+const CHAR_WIDTH = 7.95
+const LINE_HEIGHT = 19
+const PAD_X = 14
+const PAD_Y = 10
+const MAX_LINE_CHARS = 16
+const MIN_BOX_WIDTH = 85
 const LEVEL_GAP = 52
 const COLUMN_GAP = 22
 const CANVAS_PAD = 12
-const TITLE_HEIGHT = 24
+const TITLE_HEIGHT = 27
 const ARROW_HEAD = 8
 
 const RTL_SCRIPT = /[\u0590-\u05FF\u0600-\u06FF\u0700-\u074F]/

@@ -1608,7 +1608,6 @@
 [data-theme='dark'] .sp-companion__suggestion {
   border-color: rgba(140, 122, 255, .26);
   background: rgba(96, 82, 190, .16);
-  color: #cbbfff;
 }
 
 [data-theme='dark'] .sp-companion__suggestion:hover {

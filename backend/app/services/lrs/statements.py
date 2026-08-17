@@ -23,6 +23,7 @@ _ABSOLUTE_IRI = re.compile(r"^[A-Za-z][A-Za-z0-9+.\-]*:")
 
 from app.services.lrs import config
 from app.services.lrs.context import (
+    ACTIVITY,
     EXT,
     MEDIA_ACTIVITY_TYPES,
     activity,
@@ -717,6 +718,28 @@ def item_skipped(
     )
 
 
+def _infer_object_type(hierarchy: dict[str, Any]) -> str:
+    """Default `object.definition.type` for a relayed content statement whose
+    own object arrived with none (real Kata statements for a learning-unit or
+    a component's own item set carry a bare `{"id": ...}` — no `definition` at
+    all; the review flagged both as "Object נשלח לא תקין").
+
+    Read off the SAME hierarchy already resolved for `grouping`: its deepest
+    entry is the level this statement's object sits at — `learning-unit`,
+    `component`, or `item` (already typed by its media format, if any). An item
+    that itself carries a `questions` digest (the component's own quiz screen)
+    is reported as `questionnaire` per the spec's item-as-content section,
+    not as a plain `item`.
+    """
+    grouping = hierarchy.get("grouping") or []
+    if not grouping:
+        return "item"
+    leaf_type = ((grouping[-1].get("definition") or {}).get("type") or "").rsplit("/", 1)[-1]
+    if leaf_type == "item" and (hierarchy.get("extensions") or {}).get("questions"):
+        return "questionnaire"
+    return leaf_type or "item"
+
+
 def enriched_content_statement(
     identity: ReportingIdentity,
     session_id: str,
@@ -726,6 +749,8 @@ def enriched_content_statement(
     hierarchy: Optional[dict[str, Any]] = None,
     result_extra: Optional[dict[str, Any]] = None,
     context_extensions: Optional[dict[str, Any]] = None,
+    default_object_type: Optional[str] = None,
+    name_he: Optional[str] = None,
 ) -> dict[str, Any]:
     """Wrap a content-origin statement (question/media/item events relayed via
     Kata) in the mandatory 720 envelope: replace the actor with the
@@ -760,12 +785,36 @@ def enriched_content_statement(
     # Object definition extensions are content-controlled too — bare keys there
     # produce the same MoE 400 rejection, so sanitize them as well.
     obj = raw_statement.get("object")
-    if isinstance(obj, dict) and isinstance(obj.get("definition"), dict) \
-            and obj["definition"].get("extensions"):
-        obj = {**obj, "definition": {**obj["definition"]}}
-        obj["definition"]["extensions"] = _iri_safe_extensions(obj["definition"]["extensions"])
-        if not obj["definition"]["extensions"]:
-            obj["definition"].pop("extensions")
+    if isinstance(obj, dict):
+        obj = dict(obj)
+        # Learning-unit statements: the review also asked that `object` be the
+        # SAME activity as its `grouping` entry. There is exactly one level with
+        # nothing beneath it to confuse — the unit itself — so the canonical
+        # unit activity `hierarchy` already put in `grouping` is authoritative;
+        # Kata's own (bare, type-less) object for this event is replaced with it
+        # rather than patched, unlike every deeper level where the content's own
+        # object is the one thing we must not invent.
+        unit_grouping = hierarchy.get("grouping") or []
+        if len(unit_grouping) == 1 and (unit_grouping[0].get("definition") or {}).get(
+            "type", ""
+        ).endswith("/learning-unit"):
+            obj = dict(unit_grouping[0])
+        obj.setdefault("objectType", "Activity")
+        definition = dict(obj.get("definition") or {})
+        # The review's recurring "Object נשלח לא תקין" — no `definition.type` at
+        # all — happens on statements Kata never had a native shape for
+        # (learning-unit init, a component's own item-quiz). Never invented when
+        # the content already declared one.
+        if not definition.get("type"):
+            definition["type"] = f"{ACTIVITY}/{default_object_type or _infer_object_type(hierarchy)}"
+        if name_he and not definition.get("name"):
+            definition["name"] = {"he": name_he}
+        if definition:
+            obj["definition"] = definition
+        if isinstance(obj.get("definition"), dict) and obj["definition"].get("extensions"):
+            obj["definition"]["extensions"] = _iri_safe_extensions(obj["definition"]["extensions"])
+            if not obj["definition"]["extensions"]:
+                obj["definition"].pop("extensions")
 
     statement = {
         "id": str(uuid.uuid4()),
