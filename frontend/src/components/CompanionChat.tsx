@@ -12,12 +12,18 @@ import { QuestionExplainer } from './QuestionExplainer'
 import type { VisualMode } from '../services/agents'
 import type { CoachVisual } from '../services/agents'
 import { rateCoachConversation, saveHelpedAttribution, coachSurfaceForPath, type HelpMethod } from '../services/agents'
-import { playCoachSpeech, stopCoachSpeech, type SpeechState } from '../services/speech'
+import {
+  beginCoachSpeech,
+  playCoachSpeech,
+  stopCoachSpeech,
+  type CoachSpeechSession,
+  type SpeechState,
+} from '../services/speech'
 import { navigate, useRoute } from '../app/router'
 import { formatMessageTime } from '../hooks/messageTime'
 import { useLessonRoadmap } from '../providers/LessonRoadmapProvider'
 import { CompanionTrack3D } from '../features/learning-portal/CompanionTrack3D'
-import { VoiceCallPanel } from '../features/voice/VoiceCallPanel'
+import { useDictation } from '../features/voice/useDictation'
 import 'katex/dist/katex.min.css'
 import SceneRenderer from '../features/visuals/SceneRenderer'
 import './companion.css'
@@ -55,6 +61,13 @@ function keyParts(key: string | null | undefined): { item: string; question: str
 // A message tagged `…|item|` with no qN — the shape stored before the server
 // resolved the screen's question — belongs to that screen's first sub-question.
 // Keyed by the first message id so a section's collapse state survives.
+/** The part of a streaming reply that is finished enough to be spoken. */
+function completeSentences(text: string): string {
+  const match = /^[\s\S]*[.!?…:\n]/.exec(text)
+  if (!match) return ''
+  return match[0].trim().length >= 8 ? match[0] : ''
+}
+
 function groupByQuestion(messages: CoachMessage[]): MessageGroup[] {
   const groups: MessageGroup[] = []
   const byItem = new Map<string, MessageGroup[]>()
@@ -186,6 +199,40 @@ export function CompanionChat() {
   const pathname = useRoute()
   // Spoken practice is a mode of the same conversation, not a second companion.
   const [voiceOpen, setVoiceOpen] = useState(false)
+  // A spoken question deserves a spoken answer; a typed one does not.
+  const awaitingSpokenReply = useRef(false)
+  // Yuvi's turn starts the moment the learner stops talking, not when he finally
+  // speaks — the mic stays shut across the whole of it so neither the thinking
+  // pause nor his own voice comes back as another turn.
+  const micRef = useRef<{ pause: () => void; resume: () => void } | null>(null)
+  const dictation = useDictation((text, spokenLanguage) => {
+    awaitingSpokenReply.current = true
+    // What Yuvi had already said before this turn, so the reply to it can be
+    // told apart from the one still on screen.
+    priorReplyId.current =
+      [...messages].reverse().find((m) => m.role === 'assistant' && m.text)?.id ?? null
+    sawStreaming.current = false
+    micRef.current?.pause()
+    void send(text, spokenLanguage)
+    // Keeps the L1→English ladder fed by what the learner actually says out
+    // loud. Report-and-forget: losing it must never cost them their answer.
+    void fetch('/api/agent/voice/turn', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ learnerText: text, language: spokenLanguage }),
+    }).catch(() => {})
+  }, {
+    // Two-word English fragments carry too little audio to be identified on
+    // their own, so the words this lesson is actually about are sent along as
+    // a hint. What Yuvi just said is the closest thing to that vocabulary.
+    vocabulary: () => {
+      const recent = messages.slice(-4).map((m) => m.text).join(' ')
+      const words = recent.match(/[A-Za-z][A-Za-z'-]{1,}/g) || []
+      return [...new Set(words)].slice(-12)
+    },
+  })
+  micRef.current = dictation
   const isTaskMode = pathname.startsWith('/learning/lesson')
   const { snapshot: lessonRoadmap } = useLessonRoadmap()
   const { design, loaded } = useYuviDesign()
@@ -207,6 +254,71 @@ export function CompanionChat() {
     messageId: null,
     state: 'idle',
   })
+  const speechSession = useRef<CoachSpeechSession | null>(null)
+  const spokenReplyId = useRef<string | null>(null)
+  const spokenText = useRef('')
+  const priorReplyId = useRef<string | null>(null)
+  const sawStreaming = useRef(false)
+  // Yuvi reads back the reply to whatever the learner just said out loud. He
+  // starts on the first finished sentence rather than waiting for the whole
+  // reply, which is where most of the silence after the learner stopped talking
+  // used to go.
+  useEffect(() => {
+    if (!awaitingSpokenReply.current) return
+    if (isStreaming) sawStreaming.current = true
+    const latest = [...messages].reverse().find((m) => m.role === 'assistant' && m.text)
+    // Until the reply to this turn exists, the newest message is the previous
+    // one; reading that out is how Yuvi ended up answering the last question.
+    const reply = latest && latest.id !== priorReplyId.current ? latest : null
+    if (!reply) {
+      // The reply never came, so this turn is over either way.
+      if (sawStreaming.current && !isStreaming) awaitingSpokenReply.current = false
+      return
+    }
+
+    if (spokenReplyId.current !== reply.id) {
+      spokenReplyId.current = reply.id
+      spokenText.current = ''
+      speechSession.current = beginCoachSpeech(
+        language,
+        (state) => setSpeech({ messageId: state === 'idle' ? null : reply.id, state }),
+        activeConversationId || 'default',
+        reply.id,
+      )
+    }
+
+    const full = reply.isComplete
+      ? [reply.text, reply.textAfter].filter(Boolean).join('\n\n')
+      : reply.text
+    // The visual pass can rewrite the reply mid-stream. If it no longer starts
+    // with what has already been spoken, say no more of it rather than repeat
+    // part of it — but still finish the turn below, or the mic never reopens.
+    if (full.startsWith(spokenText.current)) {
+      const pending = full.slice(spokenText.current.length)
+      const chunk = isStreaming ? completeSentences(pending) : pending
+      if (chunk) {
+        spokenText.current += chunk
+        speechSession.current?.push(chunk)
+      }
+    }
+    if (isStreaming) return
+
+    const session = speechSession.current
+    speechSession.current = null
+    spokenReplyId.current = null
+    awaitingSpokenReply.current = false
+    // The mic stays closed once Yuvi finishes: the learner decides when to speak
+    // again, so the room is never being listened to unasked.
+    void session?.end().catch(() => setSpeech({ messageId: null, state: 'idle' }))
+  }, [isStreaming, messages, language, activeConversationId])
+
+  // Reading a message aloud by hand mutes the mic for as long as it plays. It is
+  // not reopened afterwards — that is the learner's call.
+  const { pause: pauseMic } = dictation
+  useEffect(() => {
+    if (speech.state !== 'idle') pauseMic()
+  }, [speech.state, pauseMic])
+
   // Per-message like/dislike (MoE `conversation/rated`); local echo of what the
   // learner tapped so the choice stays visible. Report-and-forget server-side.
   const [messageRatings, setMessageRatings] = useState<Record<string, 'like' | 'dislike'>>({})
@@ -481,7 +593,6 @@ export function CompanionChat() {
     void playCoachSpeech(
       speakableText,
       language,
-      design.variant,
       (state) => setSpeech({ messageId: state === 'idle' ? null : messageId, state }),
       activeConversationId || 'default',
       messageId,
@@ -1153,9 +1264,19 @@ export function CompanionChat() {
         </div>
       )}
 
-      {voiceOpen && (
+      {voiceOpen && dictation.state !== 'idle' && (
         <div className="sp-companion__voice">
-          <VoiceCallPanel surface={coachSurfaceForPath(pathname).screen} onClose={() => setVoiceOpen(false)} />
+          <p className="sp-companion__dictation" dir="auto" data-state={dictation.state}>
+            {dictation.state === 'paused'
+              ? t('voice.state.speaking')
+              : dictation.state === 'transcribing'
+                ? t('voice.state.transcribing')
+                : dictation.state === 'error'
+                  ? t('voice.error')
+                  : dictation.state === 'starting'
+                    ? t('voice.state.connecting')
+                    : t('voice.state.listening')}
+          </p>
         </div>
       )}
 
@@ -1216,8 +1337,17 @@ export function CompanionChat() {
           <form className="sp-companion__composer" onSubmit={submit}>
             <button
               type="button"
-              className={`sp-companion__voice-btn${voiceOpen ? ' is-active' : ''}`}
-              onClick={() => setVoiceOpen((open) => !open)}
+              className={`sp-companion__voice-btn${voiceOpen ? ' is-active' : ''}${dictation.state === 'paused' ? ' is-muted' : ''}`}
+              onClick={() => {
+                // Muted after Yuvi's turn, the button reopens the mic rather
+                // than closing dictation the learner never turned off.
+                if (dictation.state === 'paused') {
+                  dictation.resume()
+                  return
+                }
+                setVoiceOpen((open) => !open)
+                dictation.toggle()
+              }}
               aria-pressed={voiceOpen}
               aria-label={t('voice.start')}
               title={t('voice.start')}

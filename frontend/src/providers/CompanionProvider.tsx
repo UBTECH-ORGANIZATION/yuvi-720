@@ -65,6 +65,10 @@ export interface ChatAction {
   trigger?: string
   /** user-message only. */
   text?: string
+  /** user-message only — the language this turn was spoken in, when dictated.
+   *  Overrides the UI language so a Hebrew sentence gets a Hebrew answer even
+   *  while the learner is working through an English lesson. */
+  language?: string
   /** support only. */
   support?: CoachSupportMode
   /** The screen the learner was on when this was enqueued (staleness anchor). */
@@ -157,7 +161,7 @@ interface CompanionContextValue {
   hasMoreMessages: boolean
   historyError: boolean
   canStartNewConversation: boolean
-  send: (text: string) => Promise<void>
+  send: (text: string, spokenLanguage?: string) => Promise<void>
   requestSupport: (support: CoachSupportMode) => Promise<void>
   /** One-shot per question: which support buttons were already used on the
    *  question the learner is currently on (re-armed on progression). */
@@ -887,7 +891,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     setActivity('thinking')
     let received = false
     try {
-      await streamWithRetry(() => streamCoach(trimmed, language, {
+      await streamWithRetry(() => streamCoach(trimmed, action.language || language, {
         onDisclosure: (value) => setDisclosure(value),
         onPhase: setActivity,
         onText: (chunk) => {
@@ -929,11 +933,16 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     }
   }, [completeAssistant, ensureConversationId, language, reloadHistory, surface])
 
-  const send = useCallback(async (text: string) => {
+  const send = useCallback(async (text: string, spokenLanguage?: string) => {
     const trimmed = text.trim()
     if (!trimmed) return
     activitySeqRef.current += 1   // an explicit turn is engagement
-    enqueueChatAction({ kind: 'user-message', text: trimmed, targetQuestionKey: currentQuestionKeyRef.current }, { front: true })
+    enqueueChatAction({
+      kind: 'user-message',
+      text: trimmed,
+      language: spokenLanguage,
+      targetQuestionKey: currentQuestionKeyRef.current,
+    }, { front: true })
   }, [enqueueChatAction])
 
   // Per-question intro: when the learner ARRIVES at a new question screen, Yuvi

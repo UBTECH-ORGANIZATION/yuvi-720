@@ -255,6 +255,42 @@ def _personalization_gaps(
     return gaps[:2]
 
 
+def _localized(value: Any, locale: str) -> str:
+    """A content string that may be authored per language."""
+    if isinstance(value, dict):
+        return str(value.get(locale) or value.get("en") or value.get("he") or "")
+    return str(value or "")
+
+
+def _presentation_text(presentation: Any, locale: str) -> str:
+    """The screen's visible text, flattened for the context block.
+
+    Content authors express a screen body as lines, a script, choices or a
+    checklist depending on what the screen does; the coach only needs to be able
+    to read them.
+    """
+    if not isinstance(presentation, dict):
+        return ""
+    parts: list[str] = []
+    for key, value in presentation.items():
+        if key == "glossary" and isinstance(value, list):
+            words = [
+                f"{item.get('word')}={_localized(item.get(locale) or item.get('he'), locale)}"
+                for item in value
+                if isinstance(item, dict) and item.get("word")
+            ]
+            if words:
+                parts.append(f"glossary: {', '.join(words)}")
+            continue
+        if isinstance(value, list):
+            rendered = " | ".join(_localized(entry, locale) for entry in value)
+        else:
+            rendered = _localized(value, locale)
+        if rendered.strip():
+            parts.append(f"{key}: {rendered.strip()}")
+    return " ⏐ ".join(parts)
+
+
 async def build_coach_bundle(
     learner_id: Optional[str],
     surface_context: Optional[dict[str, Any]] = None,
@@ -550,6 +586,9 @@ async def build_coach_bundle(
         "title": safe_text(item_profile.get("title"), 200),
         "content_type": safe_text(item_profile.get("content_type"), 60),
         "media_format": safe_text(item_profile.get("media_format"), 60),
+        # The text printed on the screen, so "what is written here" is answered
+        # from what the learner is looking at rather than from the question bank.
+        "body": safe_text(_presentation_text(item_profile.get("presentation"), locale), 1200),
     } if item_profile else {}
 
     # WHERE IN THE SCREEN the learner is, read from their own xAPI evidence.

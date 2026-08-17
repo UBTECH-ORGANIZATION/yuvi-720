@@ -1,13 +1,14 @@
-"""Spoken English practice — token minting, pronunciation scoring, voice sessions.
+"""Spoken English practice — token minting, pronunciation scoring, voice calls.
 
-Two audio paths, one rule: the learner's voice goes from their browser straight
-to Azure and never through us.
+Two audio paths:
 
   * Scored practice (a speaking item in a lomda) uses the Azure Speech SDK in the
-    page with a ~10-minute token from here; the score sheet comes back and is
-    turned into words by `services/pronunciation.py`.
-  * Free conversation with Yuvi uses a realtime session minted here; the browser
-    holds an ephemeral secret and talks to Azure over WebRTC.
+    page with a ~10-minute token from here, so that audio goes from the browser
+    straight to Azure; the score sheet comes back and is turned into words by
+    `services/pronunciation.py`.
+  * Free conversation with Yuvi runs on Voice Live, which is a WebSocket API with
+    no ephemeral secret to give a browser, so `voice_stream` relays it. That audio
+    passes through this process in memory and is never written down.
 
 Both feed the same L1→English ladder, which is derived from evidence in
 `services/english_ladder.py` and never chosen by a model.
@@ -15,19 +16,34 @@ Both feed the same L1→English ladder, which is derived from evidence in
 
 from __future__ import annotations
 
+import asyncio
+from contextlib import suppress
+import json
+import os
 from typing import Any, Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+import websockets
+from websockets.exceptions import ConnectionClosed
 
 from app.agents import safety
 from app.auth.dependencies import require_learner, require_learner_session
 from app.brain.repository import apply_brain_updates, get_brain
 from app.core.localization import normalize_language
-from app.services import english_correction, english_ladder, pronunciation, realtime_voice
-from app.services.ai_usage import UsageContext, UsageTimer, record_usage
+from app.services import english_correction, english_ladder, pronunciation, realtime_voice, transcription
+from app.services.ai_usage import UsageContext, UsageTimer, provider_request_id, record_usage
 from app.services.lrs import reporter as lrs_reporter
 from app.services.speech import SpeechUnavailable, issue_token
 
@@ -85,6 +101,74 @@ async def speech_token(learner_id: str = Depends(require_learner)):
         print(f"⚠️ Speech token unavailable: {exc}")
         raise HTTPException(status_code=503, detail="speech_unavailable") from exc
     return JSONResponse(content=token, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/speech/transcribe")
+async def speech_transcribe(
+    audio: UploadFile = File(...),
+    vocabulary: str = Form(default=""),
+    learner_id: str = Depends(require_learner),
+):
+    """Transcribe one spoken turn, preserving each language in its own script."""
+    payload = await audio.read()
+    terms = [term for term in (vocabulary or "").split(",") if term.strip()]
+    context = UsageContext(
+        actor_id=learner_id,
+        actor_type="learner",
+        endpoint="/api/speech/transcribe",
+        feature="learning_coach",
+        operation="speech_to_text",
+        source="companion_dictation",
+    )
+    timer = UsageTimer.start()
+    deployment = os.getenv("AZURE_TRANSCRIBE_DEPLOYMENT", transcription.DEFAULT_DEPLOYMENT)
+    seconds = transcription.wav_duration_seconds(payload)
+
+    try:
+        text, response = await transcription.transcribe(
+            payload,
+            filename=audio.filename or "speech.wav",
+            content_type=audio.content_type or "audio/wav",
+            vocabulary=terms,
+        )
+    except transcription.TranscriptionUnavailable as exc:
+        await record_usage(
+            context=context,
+            timer=timer,
+            provider="azure_openai",
+            gateway="azure_openai_rest",
+            deployment=deployment,
+            api_version=transcription.API_VERSION,
+            streaming=False,
+            meter="seconds",
+            status="failed",
+            usage_status="unavailable",
+            quantity=round(seconds) if seconds else None,
+            quantity_unit="seconds",
+            error=exc,
+        )
+        raise HTTPException(status_code=503, detail="transcription_unavailable") from exc
+
+    await record_usage(
+        context=context,
+        timer=timer,
+        provider="azure_openai",
+        gateway="azure_openai_rest",
+        deployment=deployment,
+        api_version=transcription.API_VERSION,
+        streaming=False,
+        meter="seconds",
+        status="completed",
+        usage_status="exact" if seconds is not None else "unavailable",
+        quantity=round(seconds) if seconds else None,
+        quantity_unit="seconds",
+        provider_request=provider_request_id(response.headers),
+    )
+
+    return JSONResponse(
+        content={"text": text, "language": transcription.dominant_language(text)},
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 # ── Pronunciation ────────────────────────────────────────────────────────────
@@ -190,39 +274,124 @@ async def voice_session(
     request: VoiceSessionRequest,
     session=Depends(require_learner_session),
 ):
-    """Mint an ephemeral realtime session briefed on THIS learner's practice."""
-    learner_id = session["sub"]
+    """Availability and the AI-use disclosure. Carries no credential."""
     language = normalize_language(request.language)
     if not realtime_voice.is_configured():
         raise HTTPException(status_code=503, detail=_UNAVAILABLE[language])
+    return JSONResponse(
+        content={"disclosure": safety.disclosure(language), "language": language},
+        headers={"Cache-Control": "no-store"},
+    )
 
+
+async def _voice_brief(
+    learner_id: str,
+    *,
+    language: str,
+    surface: Optional[str],
+    reference_text: Optional[str],
+) -> tuple[str, str]:
+    """The instructions for one call, plus the ladder rung that shaped them."""
     try:
         from app.brain.context_engine import build_coach_bundle
 
         bundle = await build_coach_bundle(
             learner_id,
-            surface_context={"screen": request.surface} if request.surface else None,
+            surface_context={"screen": surface} if surface else None,
         )
     except Exception as exc:  # a context failure must not block practice
         print(f"⚠️ voice context unavailable ({type(exc).__name__}); using a generic brief")
         bundle = {}
 
-    instructions = realtime_voice.build_instructions(
+    stage = await current_stage(learner_id)
+    return realtime_voice.build_instructions(
         bundle,
         language=language,
-        stage=await current_stage(learner_id),
-        reference_text=request.referenceText,
-    )
-    try:
-        minted = await realtime_voice.create_session(instructions=instructions, language=language)
-    except realtime_voice.RealtimeUnavailable as exc:
-        print(f"⚠️ realtime session refused: {exc}")
-        raise HTTPException(status_code=503, detail=_UNAVAILABLE[language]) from exc
+        stage=stage,
+        reference_text=reference_text,
+    ), stage
 
-    return JSONResponse(
-        content={**minted, "disclosure": safety.disclosure(language)},
-        headers={"Cache-Control": "no-store"},
+
+@router.websocket("/agent/voice/stream")
+async def voice_stream(websocket: WebSocket):
+    """Relay one spoken call between the learner's browser and Voice Live.
+
+    The relay exists because Voice Live is a WebSocket API with no ephemeral
+    secret to hand a browser, and it earns its keep by owning the one decision
+    the client must not make: which voice Yuvi answers in. Audio is forwarded
+    frame by frame in memory and never written anywhere.
+    """
+    from app.auth.dependencies import COOKIE_NAME, ROLE_LEARNER
+    from app.auth.tokens import decode_session_token
+
+    session = decode_session_token(websocket.cookies.get(COOKIE_NAME) or "")
+    if not session or ROLE_LEARNER not in (session.get("roles") or []):
+        await websocket.close(code=4401)
+        return
+    if not realtime_voice.is_configured():
+        await websocket.close(code=4503)
+        return
+
+    await websocket.accept()
+    learner_id = session["sub"]
+
+    try:
+        opening = await websocket.receive_json()
+    except (WebSocketDisconnect, ValueError):
+        return
+
+    language = normalize_language(opening.get("language") or "he")
+    instructions, stage = await _voice_brief(
+        learner_id,
+        language=language,
+        surface=(opening.get("surface") or None),
+        reference_text=(opening.get("referenceText") or None),
     )
+    spoken = realtime_voice.call_language(stage, language)
+    locale, voice = realtime_voice.voice_for_call(spoken)
+
+    try:
+        upstream = await websockets.connect(
+            realtime_voice.socket_url(),
+            additional_headers=realtime_voice.socket_headers(),
+            max_size=None,
+        )
+    except Exception as exc:
+        print(f"⚠️ voice live refused the connection ({type(exc).__name__})")
+        await websocket.close(code=4503)
+        return
+
+    async with upstream:
+        await upstream.send(json.dumps({
+            "type": "session.update",
+            "session": realtime_voice.session_payload(instructions, locale, voice),
+        }))
+        await websocket.send_json({"type": "yuvi.ready", "stage": stage, "locale": locale})
+
+        async def to_azure() -> None:
+            while True:
+                await upstream.send(await websocket.receive_text())
+
+        async def to_browser() -> None:
+            while True:
+                raw = await upstream.recv()
+                if isinstance(raw, str):
+                    await websocket.send_text(raw)
+
+        pump = [asyncio.create_task(to_azure()), asyncio.create_task(to_browser())]
+        try:
+            done, pending = await asyncio.wait(pump, return_when=asyncio.FIRST_COMPLETED)
+            for task in pending:
+                task.cancel()
+            for task in done:
+                exc = task.exception()
+                if exc and not isinstance(exc, (WebSocketDisconnect, ConnectionClosed)):
+                    print(f"⚠️ voice relay ended ({type(exc).__name__})")
+        finally:
+            for task in pump:
+                task.cancel()
+            with suppress(RuntimeError):
+                await websocket.close()
 
 
 class VoiceUsageRequest(BaseModel):
@@ -317,7 +486,10 @@ async def voice_turn(
         except Exception as exc:
             print(f"⚠️ voice safety screen degraded ({type(exc).__name__})")
 
-    if learner_text or coach_text:
+    if learner_text and coach_text:
+        # Half a turn is not a transcript. Dictation reports the learner's side
+        # alone so the ladder still sees it, while the coach stream stores the
+        # exchange itself — persisting here too would duplicate every line.
         try:
             from app.agents import sessions as agent_sessions
 
