@@ -213,9 +213,10 @@ async def synthesize_speech(
     language: str,
     *,
     avatar_variant: str = "classic",
+    output_format: str = "audio-24khz-48kbitrate-mono-mp3",
     usage_context: UsageContext,
 ) -> bytes:
-    """Return an MP3 synthesized by Azure Speech."""
+    """Return audio synthesized by Azure Speech, MP3 unless asked otherwise."""
     timer = UsageTimer.start()
     key = os.getenv("AZURE_SPEECH_KEY", "").strip()
     region = os.getenv("AZURE_SPEECH_REGION", "").strip()
@@ -252,7 +253,7 @@ async def synthesize_speech(
     headers = {
         "Ocp-Apim-Subscription-Key": key,
         "Content-Type": "application/ssml+xml",
-        "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3",
+        "X-Microsoft-OutputFormat": output_format,
         "User-Agent": "Yuvilab-Spark-Yuvi",
     }
     response = None

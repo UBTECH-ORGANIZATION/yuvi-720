@@ -1,0 +1,92 @@
+<!doctype html>
+<!-- Throwaway dev tool for the code-switching probe. Delete when done. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dev recorder</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 34rem; margin: 3rem auto; padding: 0 1rem; }
+      button { font-size: 1.1rem; padding: 0.7rem 1.4rem; border-radius: 8px; cursor: pointer; }
+      #say { background: #eef; padding: 1rem; border-radius: 8px; font-size: 1.3rem; direction: rtl; }
+      #log { white-space: pre-wrap; color: #444; margin-top: 1rem; }
+    </style>
+  </head>
+  <body>
+    <h2>Code-switch test recording</h2>
+    <p>Say this out loud, exactly as you would to Yuvi:</p>
+    <div id="say">איך אומרים נכון I play או I plays?</div>
+    <p><button id="rec">Start recording</button></p>
+    <div id="log"></div>
+
+    <script>
+      const SAMPLE_RATE = 16000;
+      const button = document.getElementById('rec');
+      const log = document.getElementById('log');
+      let recording = false;
+      let chunks = [];
+      let ctx, source, processor, stream;
+
+      function encodeWav(samples, rate) {
+        const buffer = new ArrayBuffer(44 + samples.length * 2);
+        const view = new DataView(buffer);
+        const str = (off, s) => [...s].forEach((c, i) => view.setUint8(off + i, c.charCodeAt(0)));
+        str(0, 'RIFF');
+        view.setUint32(4, 36 + samples.length * 2, true);
+        str(8, 'WAVEfmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, 1, true);
+        view.setUint32(24, rate, true);
+        view.setUint32(28, rate * 2, true);
+        view.setUint16(32, 2, true);
+        view.setUint16(34, 16, true);
+        str(36, 'data');
+        view.setUint32(40, samples.length * 2, true);
+        samples.forEach((s, i) => {
+          const v = Math.max(-1, Math.min(1, s));
+          view.setInt16(44 + i * 2, v < 0 ? v * 0x8000 : v * 0x7fff, true);
+        });
+        return new Blob([view], { type: 'audio/wav' });
+      }
+
+      async function start() {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        });
+        ctx = new AudioContext({ sampleRate: SAMPLE_RATE });
+        source = ctx.createMediaStreamSource(stream);
+        processor = ctx.createScriptProcessor(4096, 1, 1);
+        chunks = [];
+        processor.onaudioprocess = (e) => chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+        source.connect(processor);
+        processor.connect(ctx.destination);
+        recording = true;
+        button.textContent = 'Stop and save';
+        log.textContent = 'Recording... speak now.';
+      }
+
+      function stop() {
+        processor.disconnect();
+        source.disconnect();
+        stream.getTracks().forEach((t) => t.stop());
+        const total = chunks.reduce((n, c) => n + c.length, 0);
+        const merged = new Float32Array(total);
+        let offset = 0;
+        for (const c of chunks) { merged.set(c, offset); offset += c.length; }
+        const blob = encodeWav(merged, ctx.sampleRate);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'real_mixed.wav';
+        a.click();
+        recording = false;
+        button.textContent = 'Start recording';
+        log.textContent =
+          `Saved real_mixed.wav (${(total / ctx.sampleRate).toFixed(1)}s, ${ctx.sampleRate} Hz).\n` +
+          'Move it to backend/artifacts/codeswitch/ and tell me it is there.';
+      }
+
+      button.addEventListener('click', () => (recording ? stop() : start()));
+    </script>
+  </body>
+</html>
