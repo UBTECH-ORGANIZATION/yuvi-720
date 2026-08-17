@@ -376,7 +376,7 @@
   border-collapse: collapse;
   inline-size: max-content;
   min-inline-size: 100%;
-  font-size: var(--sp-fs-chat-meta);
+  font-size: .95em;
   border: 1px solid var(--sp-border);
   border-radius: var(--sp-radius-sm);
   overflow: hidden;
@@ -397,8 +397,7 @@
   color: var(--sp-ink-900);
 }
 
-/* Quiet and tabular so a column of them does not jitter — quiet is a matter of
-   weight and colour here, not of size. */
+/* Small, quiet, and tabular so a column of them does not jitter. */
 .tch-dock__time {
   font-size: var(--sp-fs-chat-meta);
   font-variant-numeric: tabular-nums;

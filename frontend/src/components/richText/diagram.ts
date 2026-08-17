@@ -283,7 +283,7 @@ function connect(from: LayoutNode, to: LayoutNode, label: string | null): Layout
           x: round((start.x + end.x) / 2),
           y: round((start.y + end.y) / 2),
           w: Math.round(label.length * CHAR_WIDTH + 12),
-          h: 21,
+          h: 18,
           text: label,
           rtl: isRtlText(label),
         }
