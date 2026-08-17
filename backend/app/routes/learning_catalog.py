@@ -64,12 +64,19 @@ async def read_catalog(lang: str = "he", learner_id: str = Depends(require_learn
             roadmap["cefr"] = _localized_cefr(goal.get("cefr") or {}, lang)
             roadmap["alignment"] = _localized_alignment(goal.get("alignment") or {}, lang)
             roadmap["illustration"] = await _unit_illustration(roadmap, lang)
+            # The registry keeps every locale at once; pick the learner's here,
+            # exactly as the lesson session does — otherwise the dashboard and
+            # the "next station" line read the authors' English working titles.
+            if isinstance(roadmap.get("titles"), dict):
+                roadmap["title"] = roadmap["titles"].get(lang) or roadmap.get("title")
             # Per-item bot notes + question snapshots (with correct answers) are
             # server-only coach context; keep them off the client payload — the
             # aggregate ``information_to_bot`` stays for DTO parity.
             for component in roadmap.get("components") or []:
                 component.pop("information_by_item", None)
                 component.pop("questions_by_item", None)
+                if isinstance(component.get("titles"), dict):
+                    component["title"] = component["titles"].get(lang) or component.get("title")
             projected.append(roadmap)
         units = projected
     except content_provider.ContentProviderError as exc:

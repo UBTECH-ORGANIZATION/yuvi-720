@@ -170,7 +170,16 @@ def _clean(values: dict[str, Any]) -> dict[str, Any]:
 
 
 class ContentHierarchy(dict):
-    """`{parent, grouping, extensions}` for one content statement."""
+    """`{parent, grouping, self, extensions}` for one content statement.
+
+    `grouping` holds the levels strictly ABOVE the statement's level; `self` is
+    the catalog activity AT that level. Integration report 3 (17/08) requires the
+    deepest grouping entry to be "אותו אובייקט בדיוק כמו ב-object" — so a
+    statement whose object IS the content (a questionnaire, a question, a media
+    item…) puts its own object there verbatim, and only statements whose object
+    lives outside the content tree (a conversation, a reflection) fall back to
+    the catalog's `self` entry.
+    """
 
 
 def build(
@@ -183,23 +192,32 @@ def build(
     """Ancestry for a statement whose object sits at `level`.
 
     `unit` / `component` are normalized Kata catalog objects; `item` is an item
-    spine row. Levels at or below the object are still listed in `grouping` (the
-    object belongs to its own grouping per the ministry's examples); `parent` is
-    the single level directly above.
+    spine row. Levels strictly above the object go to `grouping`; the object's
+    own level goes to `self` (see `ContentHierarchy` for who uses which);
+    `parent` is the single level directly above.
     """
     unit_id = (unit or {}).get("id")
     component_id = (component or {}).get("id")
     item_id = (item or {}).get("id")
 
     grouping: list[dict[str, Any]] = []
+    self_activity: Optional[dict[str, Any]] = None
     if unit_id:
-        grouping.append(unit_activity(unit_id, (unit or {}).get("title")))
+        entry = unit_activity(unit_id, (unit or {}).get("title"))
+        if level == "unit":
+            self_activity = entry
+        else:
+            grouping.append(entry)
     if component_id and level in {"component", "item"}:
-        grouping.append(component_activity(component_id, (component or {}).get("title")))
+        entry = component_activity(component_id, (component or {}).get("title"))
+        if level == "component":
+            self_activity = entry
+        else:
+            grouping.append(entry)
     if item_id and level == "item":
-        grouping.append(item_activity(
+        self_activity = item_activity(
             item_id, (item or {}).get("title"), (item or {}).get("media_format")
-        ))
+        )
 
     parent: list[dict[str, Any]] = []
     if level == "item" and component_id:
@@ -214,7 +232,14 @@ def build(
     if level == "item":
         extensions.update(item_metadata(item, component))
 
-    return ContentHierarchy(parent=parent, grouping=grouping, extensions=extensions)
+    return ContentHierarchy(
+        {
+            "parent": parent,
+            "grouping": grouping,
+            "self": self_activity,
+            "extensions": extensions,
+        }
+    )
 
 
 async def ecat_item_for(
@@ -317,4 +342,6 @@ async def for_content(
             level="item" if item_id else ("component" if component_id else "unit"),
         )
     except Exception:  # reporting must never break on catalog trouble
-        return ContentHierarchy(parent=[], grouping=[], extensions={})
+        return ContentHierarchy(
+            {"parent": [], "grouping": [], "self": None, "extensions": {}}
+        )

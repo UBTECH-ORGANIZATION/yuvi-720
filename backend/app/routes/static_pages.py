@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.paths import (
     CAMPAIGN_DIR,
+    ENGLISH_ASSETS_DIR,
     ENGLISH_PLAYER_DIR,
     LEARNING_GAME_FILE,
     LOCALES_DIR,
@@ -14,6 +15,22 @@ from app.core.paths import (
     SHARED_DIR,
     UNITY_WORLD_DIR,
 )
+
+
+class _ImmutableStaticFiles(StaticFiles):
+    """Static files that may be cached forever.
+
+    Safe only because every filename carries a hash of the prompt that produced
+    it: change the picture and you change the URL, so a browser is never asked
+    to notice that a file it already has is now different. That is what makes an
+    image on an embedded screen appear instantly on the second visit — and on
+    the first, if the previous screen preloaded it.
+    """
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
 
 
 router = APIRouter(tags=["static"])
@@ -29,6 +46,15 @@ def mount_static_assets(app: FastAPI) -> None:
         app.mount("/assets", StaticFiles(directory=str(REACT_ASSETS_DIR)), name="react-assets")
     if UNITY_WORLD_DIR.exists():
         app.mount("/unity-world", StaticFiles(directory=str(UNITY_WORLD_DIR)), name="unity-world")
+    # BEFORE the player mount below, not after: Starlette matches mounts in the
+    # order they are added, so the broader `/content/player-assets` would
+    # otherwise swallow every `/media/...` path and 404 on all of them.
+    if ENGLISH_ASSETS_DIR.exists():
+        app.mount(
+            "/content/player-assets/media",
+            _ImmutableStaticFiles(directory=str(ENGLISH_ASSETS_DIR)),
+            name="content-media",
+        )
     if ENGLISH_PLAYER_DIR.exists():
         app.mount(
             "/content/player-assets",

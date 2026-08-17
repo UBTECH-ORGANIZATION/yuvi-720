@@ -281,9 +281,18 @@ async def create_provider_session(
     # server-only coach context — never ship them to the client.
     _server_only = {"information_by_item", "questions_by_item"}
     public_component = {k: v for k, v in component.items() if k not in _server_only}
+    # Same rule as the unit title below: the chrome names the component in the
+    # learner's language where a translation exists. The authored `title` is an
+    # internal English label, and it showed as-is in the lesson header until
+    # the components learned to carry translations.
+    public_component["title"] = (
+        (component.get("titles") or {}).get(language) or component["title"]
+    )
     for row in roadmap.get("components") or []:
         for key in _server_only:
             row.pop(key, None)
+        if isinstance(row.get("titles"), dict):
+            row["title"] = row["titles"].get(language) or row.get("title")
     return {
         "unit": {
             "id": unit["id"],

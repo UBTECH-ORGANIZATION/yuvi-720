@@ -569,11 +569,29 @@ def _finalize(
     for index, node in enumerate(on_path):
         node["path_index"] = index
 
-    # Settle every node against its own visit's outcome.
+    # Settle every node against its own visit's outcome. The Nth completion
+    # settles the Nth visit — but a learner may also RETAKE a station they
+    # failed (reopening an `available` node is always allowed), and that retake
+    # appends an outcome row no later visit will ever read. Left as-is, the
+    # first failure pinned the node to `available` forever: the learner could
+    # pass the component five times and the path would never move — "clicking
+    # finish does nothing". So the LAST visit of a component settles against
+    # its whole tail of outcomes: the first pass in it wins, else the latest
+    # attempt. Earlier visits keep their historical outcome — their failure
+    # already routed the repair that follows them.
+    last_visit: dict[str, int] = {}
     for node in on_path:
-        outcome = _outcome_for(evidence, node["component_id"], node["visit"])
+        seen = last_visit.get(node["component_id"], 0)
+        last_visit[node["component_id"]] = max(seen, int(node.get("visit") or 1))
+
+    for node in on_path:
+        visit = int(node.get("visit") or 1)
+        outcome = _outcome_for(evidence, node["component_id"], visit)
         if not outcome:
             continue
+        if visit == last_visit[node["component_id"]] and not outcome["passed"]:
+            tail = ((evidence.get("outcomes") or {}).get(node["component_id"]) or [])[visit - 1:]
+            outcome = next((row for row in tail if row["passed"]), outcome)
         node["outcome"] = "passed" if outcome["passed"] else "failed"
         # A failed component is NOT complete — it stays open and re-doable. But
         # it is settled, so it is never the "current" step either: its repair is.

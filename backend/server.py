@@ -36,6 +36,7 @@ from app.routes.learner_mapping import router as learner_mapping_router
 from app.routes.learner_state import router as learner_state_router
 from app.routes.learning_catalog import router as learning_catalog_router
 from app.routes.content_player import router as content_player_router
+from app.routes.player_gallery import router as player_gallery_router
 from app.routes.learning_content import router as learning_content_router
 from app.routes.speech import router as speech_router
 from app.routes.illustrations import router as illustrations_router
@@ -194,6 +195,9 @@ def create_app() -> FastAPI:
     app.include_router(mapping_chat_router)
     app.include_router(learning_content_router)
     app.include_router(content_player_router)
+    # Dev-only review surface; the route itself 404s without a teacher session
+    # or ENABLE_PLAYER_GALLERY=1, so registering it always is safe.
+    app.include_router(player_gallery_router)
     app.include_router(speech_router)
     app.include_router(contact_router)
     app.include_router(campaign_router)

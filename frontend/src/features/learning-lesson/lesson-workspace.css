@@ -385,6 +385,9 @@ html[dir='rtl'] .learning-lesson-prev .sp-icon { transform: scaleX(-1); }
   background: var(--sp-success-600);
   color: white;
 }
+/* An attempt that did not pass the gate is news, not a celebration — brand
+   purple, never the success green and never an alarm red. */
+.learning-completion-icon.is-attempt { background: var(--sp-primary-600); }
 .learning-completion-banner div:nth-child(2) { display: grid; gap: 2px; }
 .learning-completion-banner strong { color: var(--sp-ink-700); font-size: var(--sp-fs-sm); }
 .learning-completion-banner span { color: var(--sp-ink-400); font-size: var(--sp-fs-xs); }

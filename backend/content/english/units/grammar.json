@@ -1,10 +1,10 @@
 {
   "id": "ENG.G7.FAMILY.GRAMMAR",
-  "title": "Grammar: Who they are and what they do",
+  "title": "Grammar: Present Simple, the possessive 's and have got",
   "titleTranslations": {
-    "Hebrew": "דקדוק: מי הם ומה הם עושים",
-    "Arabic": "القواعد: من هم وماذا يفعلون",
-    "English": "Grammar: Who they are and what they do"
+    "Hebrew": "דקדוק: הווה פשוט, גרש של שייכות והצירוף have got",
+    "Arabic": "القواعد: المضارع البسيط وعلامة الملكية وتركيب have got",
+    "English": "Grammar: Present Simple, the possessive 's and have got"
   },
   "subTopic": "MOE.ENG.G7.PEOPLE.FAMILY",
   "learningObjective": "MOE.ENG.G7.PEOPLE.FAMILY.GRAMMAR",
@@ -15,7 +15,8 @@
     {
       "id": "ENG.G7.FAMILY.GRAMMAR-01",
       "learningUnitId": "ENG.G7.FAMILY.GRAMMAR",
-      "title": "The -s, the 's and have got",
+      "title": "The verb -s, the possessive 's and have got",
+      "titleTranslations": { "Hebrew": "ה-s של הפועל, גרש של שייכות והצירוף have got", "Arabic": "حرف s في الفعل، وعلامة الملكية، وتركيب have got", "English": "The verb -s, the possessive 's and have got" },
       "componentPurpose": "הבנייה",
       "isAssessment": false,
       "isRequired": true,
@@ -37,12 +38,24 @@
           "title": "Three small things that change a sentence",
           "contentType": "הבנייה",
           "mediaFormat": "text",
-          "informationToBot": "מסך פתיחה של רכיב ההבנייה בדקדוק. שלושת המבנים הנלמדים: (1) הווה פשוט עם s בגוף שלישי יחיד — he plays, she paints; (2) שייכות עם אפוסטרוף — Maya's bag; (3) have got מול has got. מה שהלומד אמור להבין: אלה שלושה סימנים קטנים שמשנים את משמעות המשפט, ולא כללים מנותקים. אסטרטגיה: קודם לזהות את הנושא (מי מבצע), ורק אחר כך להחליט על צורת הפועל. תפיסה שגויה נפוצה: לומדים חושבים שה-s בסוף הפועל מסמן רבים, כמו ב-books, בעוד שבפועל הוא מסמן דווקא יחיד. אין כאן שאלה ואין ניקוד.",
+          "informationToBot": "מסך פתיחה של רכיב ההבנייה בדקדוק. שלושת המבנים הנלמדים: (1) הווה פשוט עם s בגוף שלישי יחיד — he plays, she paints; (2) שייכות עם גרש — Maya's bag; (3) have got מול has got. מה שהלומד אמור להבין: אלה שלושה סימנים קטנים שמשנים את משמעות המשפט, ולא כללים מנותקים. אסטרטגיה: קודם לזהות את הנושא (מי מבצע), ורק אחר כך להחליט על צורת הפועל. תפיסה שגויה נפוצה: לומדים חושבים שה-s בסוף הפועל מסמן רבים, כמו ב-books, בעוד שבפועל הוא מסמן דווקא יחיד. אין כאן שאלה ואין ניקוד.",
           "presentation": {
             "kind": "intro",
+            "image": {
+              "prompt": "A girl about thirteen sitting cross-legged on a rug with an open notebook on her lap, resting her chin on her hand and thinking, warm light from a window behind her.",
+              "src": "ENG.G7.FAMILY.GRAMMAR/grammar-01-01-screen-26a19d4e.jpg",
+              "srcset": "ENG.G7.FAMILY.GRAMMAR/grammar-01-01-screen-26a19d4e-480.webp 480w, ENG.G7.FAMILY.GRAMMAR/grammar-01-01-screen-26a19d4e-960.webp 960w",
+              "width": 1024,
+              "height": 1024,
+              "alt": {
+                "en": "A girl sitting with an open notebook on her lap, thinking.",
+                "he": "נערה יושבת עם מחברת פתוחה על הברכיים וחושבת.",
+                "ar": "فتاة تجلس ودفتر مفتوح على ركبتيها وهي تفكّر."
+              }
+            },
             "prompt": {
               "en": "Three small things change an English sentence: a little s, an apostrophe, and the words have got.",
-              "he": "שלושה דברים קטנים משנים משפט באנגלית: s קטנה, אפוסטרוף, והמילים have got.",
+              "he": "שלושה דברים קטנים משנים משפט באנגלית: האות s בסוף הפועל, הגרש שמסמן שייכות, והמילים have got.",
               "ar": "ثلاثة أشياء صغيرة تغيّر الجملة الإنجليزية: حرف s صغير، وفاصلة عليا، وعبارة have got."
             },
             "goal": {
@@ -150,7 +163,7 @@
               "feedback": {
                 "correct": {
                   "en": "Right. The apostrophe plus s says who owns the thing.",
-                  "he": "נכון. האפוסטרוף עם ה-s אומר של מי הדבר.",
+                  "he": "נכון. הגרש עם ה-s אומר של מי הדבר.",
                   "ar": "صحيح. الفاصلة العليا مع s تقول لمن يعود الشيء."
                 },
                 "incorrect": {
@@ -169,6 +182,7 @@
           "mediaFormat": "text",
           "informationToBot": "מעבר מזיהוי הכלל לשימוש בו על משפטים חדשים. יעד: לבחור את הצורה הנכונה כשהנושא משתנה. תפיסות שגויות נפוצות: (1) לומדים מוסיפים s לפועל גם אחרי נושא ברבים (Adam and Maya goes); (2) have got מול has got — 'has' נבחר לפי צליל ולא לפי הנושא; (3) בשייכות, לומדים כותבים Adams במקום Adam's או מעתיקים מבנה עברי כמו 'the ball of Adam'. אסטרטגיה: לסמן באצבע את הנושא לפני שבוחרים. אין להסגיר את התשובה — אפשר לכוון לשאלה 'כמה אנשים?'.",
           "presentation": {
+            "kind": "practice",
             "prompt": {
               "en": "Now choose the correct form. Find the subject first.",
               "he": "עכשיו בחרו את הצורה הנכונה. מצאו קודם את הנושא.",
@@ -179,6 +193,18 @@
             {
               "questionId": "q1",
               "questionType": "fill-in",
+              "image": {
+                "prompt": "A teenage girl about thirteen at a desk by a window, painting with watercolours on paper, two finished paintings pinned on the wall behind her.",
+                "src": "ENG.G7.FAMILY.GRAMMAR/grammar-01-03-q1-question-eb302f9d.jpg",
+                "srcset": "ENG.G7.FAMILY.GRAMMAR/grammar-01-03-q1-question-eb302f9d-480.webp 480w, ENG.G7.FAMILY.GRAMMAR/grammar-01-03-q1-question-eb302f9d-960.webp 960w",
+                "width": 1024,
+                "height": 1024,
+                "alt": {
+                  "en": "Noa painting a picture at her desk.",
+                  "he": "נועה מציירת תמונה ליד השולחן שלה.",
+                  "ar": "نوعا ترسم لوحة على مكتبها."
+                }
+              },
               "questionText": "Noa ___ a picture every day.",
               "answers": ["paint", "paints", "painting", "is paint"],
               "correctAnswers": ["paints"],
@@ -198,6 +224,18 @@
             {
               "questionId": "q2",
               "questionType": "fill-in",
+              "image": {
+                "prompt": "Four siblings relaxing together on a living-room sofa at home: a teenage girl, her two younger brothers and her sister, all chatting happily.",
+                "src": "ENG.G7.FAMILY.GRAMMAR/grammar-01-03-q2-question-fd22b1a0.jpg",
+                "srcset": "ENG.G7.FAMILY.GRAMMAR/grammar-01-03-q2-question-fd22b1a0-480.webp 480w, ENG.G7.FAMILY.GRAMMAR/grammar-01-03-q2-question-fd22b1a0-960.webp 960w",
+                "width": 1024,
+                "height": 1024,
+                "alt": {
+                  "en": "Sara at home with her two brothers and her sister.",
+                  "he": "שרה בבית עם שני האחים והאחות שלה.",
+                  "ar": "سارة في البيت مع أخوَيها وأختها."
+                }
+              },
               "questionText": "Sara ___ two brothers and one sister.",
               "answers": ["have got", "has got", "have", "is got"],
               "correctAnswers": ["has got"],
@@ -217,6 +255,18 @@
             {
               "questionId": "q3",
               "questionType": "single-choice",
+              "image": {
+                "prompt": "A teenage boy about thirteen in a schoolyard holding a football under one arm, a couple of classmates in the background.",
+                "src": "ENG.G7.FAMILY.GRAMMAR/grammar-01-03-q3-question-e2946cdd.jpg",
+                "srcset": "ENG.G7.FAMILY.GRAMMAR/grammar-01-03-q3-question-e2946cdd-480.webp 480w, ENG.G7.FAMILY.GRAMMAR/grammar-01-03-q3-question-e2946cdd-960.webp 960w",
+                "width": 1024,
+                "height": 1024,
+                "alt": {
+                  "en": "Adam holding a football in the schoolyard.",
+                  "he": "אדם מחזיק כדורגל בחצר בית הספר.",
+                  "ar": "آدم يحمل كرة قدم في ساحة المدرسة."
+                }
+              },
               "questionText": "The ball belongs to Adam. Which sentence is correct?",
               "answers": [
                 "This is Adam ball.",
@@ -239,63 +289,14 @@
               }
             }
           ]
-        },
-        {
-          "id": "ENG.G7.FAMILY.GRAMMAR-01-04",
-          "title": "Where do you still stop and think?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי בסוף רכיב ההבנייה בדקדוק. המטרה: שהלומד יאתר איזה מהשלושה עדיין לא אוטומטי אצלו — וזו בדיוק המידע שמנתב אותו הלאה. אין תשובה נכונה ואין ניקוד. אם נבחר 's של פועל' — כדאי להציע את הייצוג הקולי שבו שומעים את ההבדל; אם נבחר 'שייכות' — כדאי לחזור לזוג המשפטים האחרון.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "Which one still makes you stop and think?",
-              "he": "מה עדיין גורם לכם לעצור ולחשוב?",
-              "ar": "أيّ واحد ما زال يجعلكم تتوقّفون وتفكّرون؟"
-            },
-            "choices": [
-              {
-                "id": "verb-s",
-                "label": {
-                  "en": "The -s at the end of the verb",
-                  "he": "ה-s בסוף הפועל",
-                  "ar": "حرف s في نهاية الفعل"
-                }
-              },
-              {
-                "id": "possessive",
-                "label": {
-                  "en": "The apostrophe for who owns something",
-                  "he": "האפוסטרוף שמסמן שייכות",
-                  "ar": "الفاصلة العليا التي تدلّ على الملكية"
-                }
-              },
-              {
-                "id": "have-got",
-                "label": {
-                  "en": "Choosing have got or has got",
-                  "he": "הבחירה בין have got ל-has got",
-                  "ar": "الاختيار بين have got و has got"
-                }
-              },
-              {
-                "id": "clear",
-                "label": {
-                  "en": "All three feel clear right now",
-                  "he": "שלושתם ברורים לי כרגע",
-                  "ar": "الثلاثة واضحة لي الآن"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
     {
       "id": "ENG.G7.FAMILY.GRAMMAR-01B",
       "learningUnitId": "ENG.G7.FAMILY.GRAMMAR",
-      "title": "Hear the difference",
+      "title": "Hear the difference: verb -s or possessive 's",
+      "titleTranslations": { "Hebrew": "שומעים את ההבדל: s של פועל או גרש של שייכות", "Arabic": "نسمع الفرق: حرف s للفعل أم علامة الملكية", "English": "Hear the difference: verb -s or possessive 's" },
       "componentPurpose": "הבנייה",
       "isAssessment": false,
       "isRequired": false,
@@ -419,56 +420,6 @@
               }
             }
           ]
-        },
-        {
-          "id": "ENG.G7.FAMILY.GRAMMAR-01B-03",
-          "title": "Could you hear it?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הייצוג הקולי. המטרה: שהלומד יבדוק אם השמיעה עזרה לו לתפוס את הכלל, ואם החזרה בקול תרמה. אין תשובה נכונה ואין ניקוד. אם נבחר 'לא הצלחתי לשמוע' — זו הזדמנות להציע את הגרסה הכתובה עם התמליל פתוח, ולא לחזור על אותה הקלטה.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "Could you hear the extra sound?",
-              "he": "הצלחתם לשמוע את הצליל הנוסף?",
-              "ar": "هل استطعتم سماع الصوت الإضافي؟"
-            },
-            "choices": [
-              {
-                "id": "clearly",
-                "label": {
-                  "en": "Yes, clearly",
-                  "he": "כן, בבירור",
-                  "ar": "نعم، بوضوح"
-                }
-              },
-              {
-                "id": "slow",
-                "label": {
-                  "en": "Only when I slowed it down",
-                  "he": "רק כשהאטתי את ההקלטה",
-                  "ar": "فقط عندما أبطأت التسجيل"
-                }
-              },
-              {
-                "id": "saying",
-                "label": {
-                  "en": "Saying it out loud myself helped",
-                  "he": "עזר לי להגיד את זה בעצמי בקול",
-                  "ar": "ساعدني قولها بصوت عالٍ بنفسي"
-                }
-              },
-              {
-                "id": "no",
-                "label": {
-                  "en": "I could not hear it yet",
-                  "he": "עוד לא הצלחתי לשמוע",
-                  "ar": "لم أستطع سماعه بعد"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -476,6 +427,7 @@
       "id": "ENG.G7.FAMILY.GRAMMAR-02",
       "learningUnitId": "ENG.G7.FAMILY.GRAMMAR",
       "title": "Practice: build the sentences yourself",
+      "titleTranslations": { "Hebrew": "תרגול: בונים את המשפטים לבד", "Arabic": "تدريب: نبني الجمل بأنفسنا", "English": "Practice: build the sentences yourself" },
       "componentPurpose": "תרגול",
       "isAssessment": false,
       "isRequired": true,
@@ -525,6 +477,7 @@
           "mediaFormat": "text",
           "informationToBot": "תרגול מעורב: נושאים ביחיד וברבים, משפט חיובי, שלילה ושאלה. יעד: שהלומד יפעיל את הכלל ולא יפעל לפי הרגל. תפיסות שגויות נפוצות: (1) הכללת יתר — 'Adam and Maya goes' כי הפועל שאחרי שם פרטי תמיד קיבל s בתרגול הקודם; (2) כפילות ה-s בשלילה ובשאלה — 'doesn't paints' ו-'Does Adam plays', שהיא הטעות הנפוצה ביותר בשלב הזה, כי הסימן כבר נמצא במילת העזר; (3) 'Sara have got' — התאמת have לנושא נשכחת כי have נראה כמו מילה קבועה. אין להסגיר את התשובה — אפשר לשאול 'כמה אנשים?' או 'איפה כבר נמצא הסימן?'. אם הלומד נכשל פעמיים, המערכת מנתבת לייצוג הקולי.",
           "presentation": {
+            "kind": "practice",
             "prompt": {
               "en": "Choose the correct sentence. Look at the subject first.",
               "he": "בחרו את המשפט הנכון. הסתכלו קודם על הנושא.",
@@ -651,7 +604,7 @@
               },
               {
                 "en": "One sentence uses 's to show who owns something",
-                "he": "משפט אחד משתמש ב-'s כדי להראות של מי משהו",
+                "he": "משפט אחד משתמש בגרש כדי להראות של מי משהו",
                 "ar": "جملة واحدة تستخدم 's لإظهار ملكية شيء"
               }
             ]
@@ -664,6 +617,7 @@
       "id": "ENG.G7.FAMILY.GRAMMAR-03",
       "learningUnitId": "ENG.G7.FAMILY.GRAMMAR",
       "title": "Check: grammar in new sentences",
+      "titleTranslations": { "Hebrew": "בדיקה: דקדוק במשפטים חדשים", "Arabic": "تحقّق: القواعد في جمل جديدة", "English": "Check: grammar in new sentences" },
       "componentPurpose": "הערכה",
       "isAssessment": true,
       "isRequired": true,
@@ -713,6 +667,7 @@
           "mediaFormat": "text",
           "informationToBot": "פריט ההערכה של יעד הדקדוק. הצלחה כאן מבססת כשירות ביעד. ארבע השאלות מכסות את שלושת המבנים ומוסיפות מבנה שאלה, כדי לבדוק את הכלל ולא את ההרגל: הווה פשוט ביחיד, have got ברבים, שייכות, ומבנה שאלה עם does. המשפטים חדשים ולא הופיעו בתרגול. במהלך ההערכה אין לתת את התשובה ואין לרמוז עליה; מותר להציע רק אסטרטגיה כללית ('מצא את הנושא') או לעודד לנסות שוב. הלומד רשאי לחזור אחורה בין המסכים ללא הגבלה.",
           "presentation": {
+            "kind": "practice",
             "prompt": {
               "en": "Choose the correct form in each sentence.",
               "he": "בחרו את הצורה הנכונה בכל משפט.",

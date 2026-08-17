@@ -16,6 +16,7 @@
       "id": "ENG.G7.FAMILY.VOCAB-01",
       "learningUnitId": "ENG.G7.FAMILY.VOCAB",
       "title": "Family words you can read and use",
+      "titleTranslations": { "Hebrew": "מילות משפחה: קוראים ומשתמשים", "Arabic": "كلمات العائلة: نقرأ ونستخدم", "English": "Family words you can read and use" },
       "componentPurpose": "הבנייה",
       "isAssessment": false,
       "isRequired": true,
@@ -40,6 +41,18 @@
           "informationToBot": "מסך פתיחה של רכיב ההבנייה באוצר מילים. המטרה: להכין את הלומד לשלוש קבוצות מילים — בני משפחה (mother, father, brother, sister, grandmother, uncle, twins), מראה חיצוני (tall, short, curly hair, straight hair, wears glasses, kind) ושגרה יומית (gets up, has breakfast, goes to school, does homework, paints, cooks). מה שהלומד אמור להבין: שכל מילה שייכת לקבוצה, וההשתייכות לקבוצה עוזרת לזכור אותה. אסטרטגיה: לקרוא את המשפט כולו ולא רק את המילה — ההקשר מגלה את המשמעות. תפיסה שגויה נפוצה: לומדים מנסים לתרגם כל מילה בנפרד במקום להסתמך על ההקשר. אין כאן שאלה ואין ניקוד.",
           "presentation": {
             "kind": "intro",
+            "image": {
+              "prompt": "A cheerful family gathered around a dinner table at home, sharing a large pot of soup together. Several generations are at the table and everyone is smiling and talking. Warm evening light.",
+              "src": "ENG.G7.FAMILY.VOCAB/vocab-01-01-screen-8ae935cc.jpg",
+              "srcset": "ENG.G7.FAMILY.VOCAB/vocab-01-01-screen-8ae935cc-480.webp 480w, ENG.G7.FAMILY.VOCAB/vocab-01-01-screen-8ae935cc-960.webp 960w",
+              "width": 1024,
+              "height": 1024,
+              "alt": {
+                "en": "A family around a table at home: parents, a teenage boy, two girls, and a grandmother bringing a pot of soup.",
+                "he": "משפחה סביב שולחן בבית: הורים, נער, שתי בנות, וסבתא שמביאה סיר מרק.",
+                "ar": "عائلة حول طاولة في البيت: الوالدان، وفتى مراهق، وفتاتان، وجدّة تُحضِر قِدر حساء."
+              }
+            },
             "prompt": {
               "en": "Today you meet the words we use to talk about a family.",
               "he": "היום נכיר את המילים שבהן מדברים על משפחה.",
@@ -162,6 +175,7 @@
           "mediaFormat": "text",
           "informationToBot": "מעבר מזיהוי להפקה: הלומד בוחר את המילה הנכונה למשפט. יעד: לוודא שהמילה לא רק מוכרת אלא גם שימושית. תפיסות שגויות נפוצות: (1) 'grandmother' מול 'aunt' — לומדים מבלבלים בין דורות במשפחה; (2) הצירוף 'does homework' מתורגם מילולית מעברית כ-'makes homework', ולכן 'makes' נראה נכון; (3) 'tall' מול 'short' מתהפכות אצל לומדים שמסתמכים על צליל. אסטרטגיה: לקרוא את המשפט עם כל אפשרות ולבדוק מה נשמע הגיוני. אין להסגיר את התשובה — אפשר לכוון לקבוצת המילים הרלוונטית.",
           "presentation": {
+            "kind": "practice",
             "prompt": {
               "en": "Choose the word that completes each sentence.",
               "he": "בחרו את המילה שמשלימה כל משפט.",
@@ -227,56 +241,6 @@
               }
             }
           ]
-        },
-        {
-          "id": "ENG.G7.FAMILY.VOCAB-01-04",
-          "title": "What worked for you?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי בסוף רכיב ההבנייה. המטרה: שהלומד יזהה איזו דרך זכירה עבדה עבורו — הקשר, תרגום, שמיעה או חזרה. אין תשובה נכונה ואין ניקוד. אם נבחר 'עדיין מתבלבל בין מילים' — כדאי להציע את הגרסה הקולית של אותו רכיב, שבה המילים נשמעות בתוך תיאור רציף, ולא לחזור על אותו טקסט.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "What helped you remember the new words?",
-              "he": "מה עזר לכם לזכור את המילים החדשות?",
-              "ar": "ما الذي ساعدكم على تذكّر الكلمات الجديدة؟"
-            },
-            "choices": [
-              {
-                "id": "context",
-                "label": {
-                  "en": "Reading the whole sentence",
-                  "he": "קריאת המשפט כולו",
-                  "ar": "قراءة الجملة كاملة"
-                }
-              },
-              {
-                "id": "glossary",
-                "label": {
-                  "en": "Looking at the word list",
-                  "he": "הסתכלות ברשימת המילים",
-                  "ar": "النظر إلى قائمة الكلمات"
-                }
-              },
-              {
-                "id": "hearing",
-                "label": {
-                  "en": "Hearing the line out loud",
-                  "he": "שמיעת השורה בקול",
-                  "ar": "سماع السطر بصوت عالٍ"
-                }
-              },
-              {
-                "id": "mixed-up",
-                "label": {
-                  "en": "I still mix some words up",
-                  "he": "אני עדיין מתבלבל בין כמה מילים",
-                  "ar": "ما زلت أخلط بين بعض الكلمات"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -284,6 +248,7 @@
       "id": "ENG.G7.FAMILY.VOCAB-01B",
       "learningUnitId": "ENG.G7.FAMILY.VOCAB",
       "title": "Family words you can hear",
+      "titleTranslations": { "Hebrew": "מילות משפחה: שומעים אותן", "Arabic": "كلمات العائلة: نسمعها", "English": "Family words you can hear" },
       "componentPurpose": "הבנייה",
       "isAssessment": false,
       "isRequired": false,
@@ -412,56 +377,6 @@
               }
             }
           ]
-        },
-        {
-          "id": "ENG.G7.FAMILY.VOCAB-01B-03",
-          "title": "Reading or listening?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הייצוג הקולי. המטרה: שהלומד ישווה בין שני הייצוגים ויבין מה מתאים לו — מידע שימושי גם לו וגם לניתוב הבא. אין תשובה נכונה ואין ניקוד. אם נבחר 'שניהם ביחד' — זו אסטרטגיה מצוינת וכדאי לחזק אותה, לא לתקן.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "Which way was easier for you this time?",
-              "he": "איזו דרך הייתה נוחה לכם יותר הפעם?",
-              "ar": "أيّ طريقة كانت أسهل عليكم هذه المرّة؟"
-            },
-            "choices": [
-              {
-                "id": "hearing",
-                "label": {
-                  "en": "Hearing the words",
-                  "he": "לשמוע את המילים",
-                  "ar": "سماع الكلمات"
-                }
-              },
-              {
-                "id": "reading",
-                "label": {
-                  "en": "Reading the words",
-                  "he": "לקרוא את המילים",
-                  "ar": "قراءة الكلمات"
-                }
-              },
-              {
-                "id": "both",
-                "label": {
-                  "en": "Both together, with the transcript open",
-                  "he": "שניהם יחד, עם התמליל פתוח",
-                  "ar": "كلتاهما معاً، مع فتح النصّ المكتوب"
-                }
-              },
-              {
-                "id": "unsure",
-                "label": {
-                  "en": "I am not sure yet",
-                  "he": "אני עוד לא בטוח",
-                  "ar": "لست متأكّداً بعد"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -469,6 +384,7 @@
       "id": "ENG.G7.FAMILY.VOCAB-02",
       "learningUnitId": "ENG.G7.FAMILY.VOCAB",
       "title": "Practice: use the family words yourself",
+      "titleTranslations": { "Hebrew": "תרגול: משתמשים במילות המשפחה לבד", "Arabic": "تدريب: نستخدم كلمات العائلة بأنفسنا", "English": "Practice: use the family words yourself" },
       "componentPurpose": "תרגול",
       "isAssessment": false,
       "isRequired": true,
@@ -518,6 +434,7 @@
           "mediaFormat": "text",
           "informationToBot": "תרגול בחירת מילה ללא טקסט תומך לפניו — זו הקפיצה מהרכיב הקודם, שבו התשובה תמיד הופיעה בטקסט. יעד: אחזור עצמאי של אוצר המילים מהזיכרון. תפיסות שגויות נפוצות: (1) uncle מול cousin — לומדים מבלבלים בין דוד לבן דוד; (2) twins נתפס כ'אחים' סתם ולא כתאומים; (3) בקבוצת השגרה, לומדים בוחרים תיאור מראה כי שתי הקבוצות נלמדו יחד. אסטרטגיה: לקרוא את המשפט בקול עם כל אפשרות. אם הלומד טועה פעמיים, המערכת מנתבת לייצוג הקולי — ייצוג אחר, לא חזרה על אותו דבר.",
           "presentation": {
+            "kind": "practice",
             "prompt": {
               "en": "No text to look at this time — choose from what you remember.",
               "he": "הפעם אין טקסט להסתכל בו — בחרו ממה שאתם זוכרים.",
@@ -527,20 +444,26 @@
           "questions": [
             {
               "questionId": "q1",
-              "questionType": "fill-in",
-              "questionText": "My mother's brother is my ___ .",
-              "answers": ["uncle", "cousin", "grandfather", "nephew"],
-              "correctAnswers": ["uncle"],
+              "questionType": "match",
+              "questionText": "Match each description to the family word.",
+              "prompts": [
+                { "id": "p1", "text": "My mother's brother" },
+                { "id": "p2", "text": "My father's mother" },
+                { "id": "p3", "text": "My uncle's son" },
+                { "id": "p4", "text": "My father's sister" }
+              ],
+              "answers": ["uncle", "grandmother", "cousin", "aunt"],
+              "correctAnswers": ["p1=uncle", "p2=grandmother", "p3=cousin", "p4=aunt"],
               "feedback": {
                 "correct": {
-                  "en": "Yes — like Uncle Sami, who drives from Haifa.",
-                  "he": "כן — כמו הדוד סמי, שנוסע מחיפה.",
-                  "ar": "نعم — مثل العمّ سامي، الذي يقود من حيفا."
+                  "en": "All four. You read the description and found the word — that is exactly what these words are for.",
+                  "he": "כל הארבעה. קראתם את התיאור ומצאתם את המילה — בדיוק בשביל זה המילים האלה.",
+                  "ar": "الأربعة كلّها. قرأتم الوصف ووجدتم الكلمة — وهذا هو الغرض من هذه الكلمات تماماً."
                 },
                 "incorrect": {
-                  "en": "Two of these words are for the same generation as your parents, and two are not. Start by deciding which generation the answer is in.",
-                  "he": "שתיים מהמילים שייכות לדור של ההורים ושתיים לא. התחילו בלהחליט לאיזה דור התשובה שייכת.",
-                  "ar": "كلمتان من هذه الكلمات تنتميان إلى جيل الوالدين وكلمتان لا. ابدأوا بتحديد الجيل الذي تنتمي إليه الإجابة."
+                  "en": "Take one row at a time and ask two questions: which generation is this person in, and are they a man or a woman? Those two answers together decide the word.",
+                  "he": "קחו שורה אחת בכל פעם ושאלו שתי שאלות: לאיזה דור שייך האדם, והאם הוא גבר או אישה? שתי התשובות יחד קובעות את המילה.",
+                  "ar": "خذوا صفّاً واحداً في كلّ مرّة واسألوا سؤالين: إلى أيّ جيل ينتمي هذا الشخص، وهل هو رجل أم امرأة؟ الإجابتان معاً تحدّدان الكلمة."
                 }
               }
             },
@@ -647,6 +570,7 @@
       "id": "ENG.G7.FAMILY.VOCAB-03",
       "learningUnitId": "ENG.G7.FAMILY.VOCAB",
       "title": "Check: family words in a new family",
+      "titleTranslations": { "Hebrew": "בדיקה: מילות המשפחה במשפחה חדשה", "Arabic": "تحقّق: كلمات العائلة في عائلة جديدة", "English": "Check: family words in a new family" },
       "componentPurpose": "הערכה",
       "isAssessment": true,
       "isRequired": true,
@@ -696,6 +620,7 @@
           "mediaFormat": "text",
           "informationToBot": "פריט ההערכה של יעד אוצר המילים. הצלחה כאן מבססת כשירות ביעד. ההקשר חדש בכוונה — משפחת שרה ולא משפחת מאיה — כדי שההצלחה תעיד על שליטה במילים ולא על זיכרון של טקסט אחד. הפריט בודק את שלוש קבוצות המילים: בני משפחה (sister, uncle), מראה (short, curly) ושגרה (does homework). במהלך ההערכה אין לתת את התשובה ואין לרמוז עליה, גם אם הלומד מבקש; מותר להציע רק אסטרטגיה כללית או לעודד לנסות שוב. הלומד רשאי לחזור אחורה בין המסכים.",
           "presentation": {
+            "kind": "practice",
             "prompt": {
               "en": "Choose the word that completes each sentence about Sara's family.",
               "he": "בחרו את המילה שמשלימה כל משפט על המשפחה של שרה.",
@@ -748,9 +673,9 @@
             },
             {
               "questionId": "q3",
-              "questionType": "fill-in",
-              "questionText": "Every evening Sara ___ her homework and then she reads.",
-              "answers": ["makes", "does", "takes", "gets"],
+              "questionType": "text-entry",
+              "questionText": "Every evening Sara ___ her homework and then she reads. Write the missing word.",
+              "answers": [],
               "correctAnswers": ["does"],
               "feedback": {
                 "correct": {
@@ -759,9 +684,9 @@
                   "ar": "نعم. هذا الفعل و\"homework\" يسيران معاً دائماً في الإنجليزية."
                 },
                 "incorrect": {
-                  "en": "Do not translate this one word by word from Hebrew or Arabic — English uses a fixed pair here. Try saying each option out loud.",
-                  "he": "אל תתרגמו את זה מילה במילה מעברית או מערבית — באנגלית יש כאן צירוף קבוע. נסו לומר כל אפשרות בקול.",
-                  "ar": "لا تترجموا هذا كلمة بكلمة من العربية أو العبرية — الإنجليزية تستخدم اقتراناً ثابتاً هنا. جرّبوا قول كلّ خيار بصوت عالٍ."
+                  "en": "Do not translate this one word by word from Hebrew or Arabic — English uses a fixed pair here. Say the sentence out loud with the verb you were thinking of, then with one other verb, and listen to which one sounds like English.",
+                  "he": "אל תתרגמו את זה מילה במילה מעברית או מערבית — באנגלית יש כאן צירוף קבוע. אמרו את המשפט בקול עם הפועל שחשבתם עליו, ואז עם פועל אחר, והקשיבו מה נשמע כמו אנגלית.",
+                  "ar": "لا تترجموا هذا كلمة بكلمة من العربية أو العبرية — الإنجليزية تستخدم اقتراناً ثابتاً هنا. قولوا الجملة بصوت مسموع مع الفعل الذي فكّرتم به، ثمّ مع فعل آخر، واستمعوا أيّهما يبدو كالإنجليزية."
                 }
               }
             },
