@@ -4,19 +4,22 @@
 
 :root {
   --lp-ink: #1a1a3d;
-  --lp-ink-soft: #55536e;
-  --lp-line: #e3e4f0;
+  --lp-ink-soft: #5d5b78;
+  --lp-line: #e5e6f2;
+  --lp-line-soft: #eff0f9;
   --lp-surface: #ffffff;
-  --lp-canvas: #f5f6fc;
-  --lp-brand: #4340a8;
-  --lp-brand-soft: #eeeefb;
-  --lp-teal: #1d9e94;
-  --lp-teal-soft: #e6f6f4;
-  --lp-warn: #b4562a;
-  --lp-warn-soft: #fdf0e7;
-  --lp-radius: 16px;
-  --lp-shadow: 0 10px 34px rgba(26, 26, 61, 0.08);
-  --lp-gap: clamp(14px, 2.2vw, 26px);
+  --lp-canvas: #f3f5fc;
+  --lp-brand: #3f3ca6;
+  --lp-brand-soft: #eeeefc;
+  --lp-teal: #14867f;
+  --lp-teal-soft: #e4f5f3;
+  --lp-warn: #a8552c;
+  --lp-warn-soft: #fdf1e8;
+  --lp-radius: 18px;
+  --lp-radius-lg: 24px;
+  --lp-shadow: 0 12px 38px rgba(26, 26, 61, 0.07);
+  --lp-shadow-soft: 0 4px 16px rgba(26, 26, 61, 0.05);
+  --lp-gap: clamp(14px, 2.2vw, 24px);
 }
 
 * { box-sizing: border-box; }
@@ -25,7 +28,9 @@ html, body {
   margin: 0;
   padding: 0;
   min-block-size: 100%;
-  background: var(--lp-canvas);
+  background:
+    radial-gradient(120% 60% at 50% 0%, #ffffff 0%, rgba(255, 255, 255, 0) 60%),
+    var(--lp-canvas);
   color: var(--lp-ink);
   font-family: 'Rubik', 'Assistant', system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-size: clamp(15px, 1.05vw + 12px, 18px);
@@ -35,13 +40,20 @@ html, body {
 
 .lp {
   inline-size: 100%;
-  max-inline-size: 1080px;
+  max-inline-size: 940px;
   margin-inline: auto;
   padding: var(--lp-gap);
   display: flex;
   flex-direction: column;
-  gap: var(--lp-gap);
+  gap: 14px;
   min-block-size: 100vh;
+}
+
+/* Clean line icons — never emojis (720 UI direction). */
+.lp-i {
+  inline-size: 1.15em; block-size: 1.15em; flex: none;
+  fill: none; stroke: currentColor; stroke-width: 1.7;
+  stroke-linecap: round; stroke-linejoin: round;
 }
 
 .lp[data-scale='large'] { font-size: 1.15em; }
@@ -67,58 +79,99 @@ html, body {
 
 /* ── header: progress + accessibility (720 §1.4 / §1.5) ───────────────── */
 .lp-head {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+  position: sticky; inset-block-start: 0; z-index: 5;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px 16px;
   padding: 12px 16px;
-  background: var(--lp-surface);
+  background: rgba(255, 255, 255, .92);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--lp-line);
   border-radius: var(--lp-radius);
-  box-shadow: var(--lp-shadow);
+  box-shadow: var(--lp-shadow-soft);
 }
-.lp-head__title { margin: 0; font-size: 1em; font-weight: 600; flex: 1 1 220px; }
-.lp-head__title small { display: block; font-weight: 400; color: var(--lp-ink-soft); font-size: .82em; }
+.lp-head__title { margin: 0; font-size: .98em; font-weight: 600; min-inline-size: 0; }
+.lp-head__title span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lp-head__title small {
+  display: block; font-weight: 500; color: var(--lp-brand); font-size: .76em;
+  letter-spacing: .04em;
+}
 
-.lp-steps { display: flex; gap: 6px; flex: 1 1 160px; min-inline-size: 120px; }
+/* One segment per screen, so "where am I" is answered without counting. */
+.lp-steps { display: flex; gap: 5px; grid-column: 1 / -1; }
 .lp-step {
-  block-size: 8px; flex: 1; border-radius: 99px; background: var(--lp-line);
-  border: 0; padding: 0; cursor: pointer;
-  transition: background .2s ease, transform .2s ease;
+  block-size: 6px; flex: 1; border-radius: 99px; background: var(--lp-line);
+  border: 0; padding: 0; cursor: pointer; min-inline-size: 10px;
+  transition: background .2s ease, block-size .2s ease;
 }
-.lp-step:disabled { cursor: not-allowed; }
+.lp-step:disabled { cursor: default; }
 .lp-step[data-state='done'] { background: var(--lp-teal); }
-.lp-step[data-state='current'] { background: var(--lp-brand); transform: scaleY(1.7); }
+.lp-step[data-state='current'] { background: var(--lp-brand); block-size: 10px; margin-block: -2px; }
 .lp-step:focus-visible { outline: 3px solid var(--lp-brand); outline-offset: 3px; }
 
-.lp-tools { display: flex; gap: 6px; }
+.lp-tools { display: flex; gap: 6px; align-self: start; }
 .lp-tool {
-  inline-size: 38px; block-size: 38px; border-radius: 11px;
+  inline-size: 40px; block-size: 40px; border-radius: 12px;
   border: 1px solid var(--lp-line); background: var(--lp-surface);
-  color: var(--lp-ink); font-size: 15px; cursor: pointer; line-height: 1;
+  color: var(--lp-ink-soft); cursor: pointer; line-height: 1;
   display: grid; place-items: center;
+  transition: color .15s ease, background .15s ease, border-color .15s ease;
 }
-.lp-tool[aria-pressed='true'] { background: var(--lp-brand-soft); border-color: var(--lp-brand); }
+.lp-tool .lp-i { inline-size: 20px; block-size: 20px; }
+.lp-tool:hover { color: var(--lp-brand); border-color: var(--lp-brand); }
+.lp-tool[aria-pressed='true'] { background: var(--lp-brand-soft); border-color: var(--lp-brand); color: var(--lp-brand); }
 .lp-tool:focus-visible { outline: 3px solid var(--lp-brand); outline-offset: 2px; }
 
 /* ── card ─────────────────────────────────────────────────────────────── */
+/* Three zones, always in the same order: what to do (in the learner's language),
+   the English material, then the task. Reading a screen should never mean
+   working out which paragraph is an instruction and which is the content. */
 .lp-card {
   background: var(--lp-surface);
   border: 1px solid var(--lp-line);
-  border-radius: var(--lp-radius);
+  border-radius: var(--lp-radius-lg);
   box-shadow: var(--lp-shadow);
-  padding: clamp(16px, 3vw, 30px);
-  display: flex; flex-direction: column; gap: 18px;
-  flex: 1;
+  padding: clamp(18px, 3.2vw, 34px);
+  display: flex; flex-direction: column; gap: clamp(18px, 2.6vw, 26px);
 }
+
+.lp-brief { display: flex; flex-direction: column; gap: 10px; }
 .lp-kicker {
-  margin: 0; font-size: .78em; letter-spacing: .06em; text-transform: uppercase;
+  margin: 0; font-size: .74em; letter-spacing: .08em; text-transform: uppercase;
   color: var(--lp-brand); font-weight: 600;
 }
-.lp-prompt { margin: 0; font-size: 1.22em; font-weight: 600; }
+.lp-prompt { margin: 0; font-size: clamp(1.24em, 2.4vw, 1.5em); font-weight: 600; line-height: 1.35; }
 .lp-note { margin: 0; color: var(--lp-ink-soft); }
 
-.lp-support {
-  margin: 0; padding: 12px 14px; border-radius: 12px;
-  background: var(--lp-brand-soft); color: var(--lp-ink);
+/* The strategy line is advice, not an instruction — it reads as a quiet aside. */
+.lp-tip {
+  display: flex; gap: 10px; align-items: flex-start;
+  margin: 0; padding: 12px 14px; border-radius: 14px;
+  background: var(--lp-teal-soft); color: var(--lp-ink);
   font-size: .93em;
+}
+.lp-tip .lp-i { color: var(--lp-teal); margin-block-start: .2em; }
+
+.lp-support {
+  margin: 0; padding: 11px 14px; border-radius: 12px;
+  background: var(--lp-line-soft); color: var(--lp-ink-soft);
+  font-size: .9em;
+}
+
+/* ── stage: the English material ──────────────────────────────────────── */
+/* Framing the target language as its own surface is what stops an RTL page with
+   LTR content inside it from reading as a layout mistake. */
+.lp-stage {
+  border: 1px solid var(--lp-line);
+  border-radius: var(--lp-radius);
+  background: linear-gradient(180deg, #fbfbff, #f5f6fe);
+  padding: clamp(14px, 2.2vw, 20px);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.lp-stage__label {
+  display: flex; align-items: center; gap: 8px; margin: 0;
+  font-size: .76em; font-weight: 600; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--lp-brand);
 }
 
 /* Content in the target language reads LTR even on an RTL page. */
@@ -134,27 +187,36 @@ html, body {
 .lp-play[data-playing='true'] { background: var(--lp-warn); }
 .lp-play:focus-visible { outline: 3px solid var(--lp-ink); outline-offset: 3px; }
 .lp-chip {
-  padding: 8px 14px; border-radius: 99px; cursor: pointer; font: inherit;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 15px; border-radius: 99px; cursor: pointer; font: inherit; font-size: .92em;
   border: 1px solid var(--lp-line); background: var(--lp-surface); color: var(--lp-ink);
+  min-block-size: 44px;
 }
+.lp-chip .lp-i { color: var(--lp-ink-soft); }
 .lp-chip[aria-pressed='true'] { background: var(--lp-teal-soft); border-color: var(--lp-teal); }
+.lp-chip[aria-pressed='true'] .lp-i { color: var(--lp-teal); }
 
-.lp-lines { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.lp-lines { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .lp-line {
   text-align: start; font: inherit; cursor: pointer;
-  padding: 10px 12px; border-radius: 10px;
-  border: 1px solid transparent; background: var(--lp-canvas); color: var(--lp-ink);
+  padding: 12px 14px; border-radius: 12px; inline-size: 100%;
+  font-size: 1.06em; line-height: 1.75;
+  border: 1px solid var(--lp-line); background: var(--lp-surface); color: var(--lp-ink);
+  transition: border-color .15s ease, background .15s ease;
 }
+.lp-line:hover { border-color: var(--lp-brand); }
 .lp-line[data-speaking='true'] { border-color: var(--lp-brand); background: var(--lp-brand-soft); }
+.lp-line:focus-visible { outline: 3px solid var(--lp-brand); outline-offset: 2px; }
 
 .lp-glossary { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .lp-glossary li {
-  padding: 6px 12px; border-radius: 99px; background: var(--lp-teal-soft);
-  color: var(--lp-ink); font-size: .88em;
+  padding: 6px 12px; border-radius: 99px; background: var(--lp-surface);
+  border: 1px solid var(--lp-line); color: var(--lp-ink); font-size: .86em;
 }
 
 /* ── speaking ─────────────────────────────────────────────────────────── */
-.lp-mic { align-self: flex-start; }
+/* Hugs the inline start; `align-self` would resolve against the cross axis. */
+.lp-mic { margin-inline-end: auto; }
 .lp-mic[data-playing='true'] { background: var(--lp-warn); animation: lp-listen 1.4s ease-in-out infinite; }
 @keyframes lp-listen { 50% { box-shadow: 0 0 0 10px rgba(180, 86, 42, 0.12); } }
 
@@ -168,31 +230,51 @@ html, body {
 }
 
 /* ── questions ────────────────────────────────────────────────────────── */
+.lp-task { display: flex; flex-direction: column; gap: 14px; }
 .lp-q { display: flex; flex-direction: column; gap: 12px; }
-.lp-q + .lp-q { border-block-start: 1px solid var(--lp-line); padding-block-start: 20px; }
-.lp-q__text { margin: 0; font-weight: 600; }
+
+/* A question is a task, not another paragraph — it gets its own numbered card. */
+.lp-qcard {
+  border: 1px solid var(--lp-line);
+  border-radius: var(--lp-radius);
+  padding: clamp(14px, 2.2vw, 20px);
+  background: var(--lp-surface);
+  box-shadow: var(--lp-shadow-soft);
+}
+.lp-qnum {
+  margin: 0 0 10px; font-size: .76em; font-weight: 600;
+  letter-spacing: .05em; color: var(--lp-ink-soft);
+}
+.lp-q__text { margin: 0; font-weight: 600; font-size: 1.06em; }
 .lp-options { display: grid; gap: 10px; grid-template-columns: 1fr; }
 @media (min-width: 640px) { .lp-options { grid-template-columns: 1fr 1fr; } }
 
 .lp-option {
+  display: flex; align-items: center; gap: 10px;
   text-align: start; font: inherit; cursor: pointer;
-  padding: 14px 16px; border-radius: 12px; min-block-size: 52px;
+  padding: 14px 16px; border-radius: 12px; min-block-size: 54px;
   border: 1.5px solid var(--lp-line); background: var(--lp-surface); color: var(--lp-ink);
   transition: border-color .15s ease, background .15s ease;
 }
-.lp-option:hover:not(:disabled) { border-color: var(--lp-brand); }
+.lp-option:hover:not(:disabled) { border-color: var(--lp-brand); background: var(--lp-brand-soft); }
 .lp-option[data-verdict='correct'] { border-color: var(--lp-teal); background: var(--lp-teal-soft); }
 .lp-option[data-verdict='incorrect'] { border-color: var(--lp-warn); background: var(--lp-warn-soft); }
-.lp-option:disabled { cursor: default; opacity: .75; }
+.lp-option:disabled { cursor: default; opacity: .6; }
 .lp-option[data-verdict] { opacity: 1; }
 .lp-option:focus-visible { outline: 3px solid var(--lp-brand); outline-offset: 2px; }
 
 .lp-feedback {
+  display: flex; gap: 10px; align-items: flex-start;
   margin: 0; padding: 12px 14px; border-radius: 12px;
   background: var(--lp-brand-soft); border-inline-start: 4px solid var(--lp-brand);
 }
+.lp-feedback .lp-i { margin-block-start: .22em; }
+/* `display: flex` would otherwise beat the [hidden] attribute. */
+.lp-feedback[hidden] { display: none; }
 .lp-feedback[data-verdict='correct'] { background: var(--lp-teal-soft); border-inline-start-color: var(--lp-teal); }
+.lp-feedback[data-verdict='correct'] .lp-i { color: var(--lp-teal); }
 .lp-feedback[data-verdict='incorrect'] { background: var(--lp-warn-soft); border-inline-start-color: var(--lp-warn); }
+.lp-feedback[data-verdict='incorrect'] .lp-i { color: var(--lp-warn); }
 
 .lp-write { display: flex; flex-direction: column; gap: 10px; }
 .lp-write textarea {
@@ -203,25 +285,46 @@ html, body {
 .lp-checklist { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
 .lp-checklist label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
 
+/* Formative comment on a written text: what works, then one next step. Never a
+   score — so it is styled as a note from a teacher, not as a verdict. */
+.lp-coach {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 14px 16px; border-radius: var(--lp-radius);
+  background: var(--lp-teal-soft); border-inline-start: 4px solid var(--lp-teal);
+}
+.lp-coach[hidden] { display: none; }
+.lp-coach p { margin: 0; }
+.lp-coach__praise { font-weight: 600; }
+.lp-coach__next { display: flex; gap: 10px; align-items: flex-start; }
+.lp-coach__next .lp-i { flex: none; color: var(--lp-teal); margin-block-start: .2em; }
+.lp-coach__ai { color: var(--lp-ink-soft); font-size: .8em; }
+
 /* ── footer nav (720 §1.5 — learner owns the pace) ────────────────────── */
+/* A short screen must not stretch its card into a page of empty white \u2014 the
+   card hugs its content and the nav settles at the bottom instead. */
 .lp-foot {
-  display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+  margin-block-start: auto;
+  display: flex; flex-wrap: wrap; gap: 10px 12px; align-items: center;
   padding: 12px 16px;
   background: var(--lp-surface);
   border: 1px solid var(--lp-line);
   border-radius: var(--lp-radius);
-  box-shadow: var(--lp-shadow);
+  box-shadow: var(--lp-shadow-soft);
 }
 .lp-foot__spacer { flex: 1; }
 .lp-btn {
+  display: inline-flex; align-items: center; gap: 8px;
   padding: 12px 24px; border-radius: 99px; font: inherit; font-weight: 600;
   border: 1.5px solid var(--lp-brand); background: var(--lp-brand); color: #fff; cursor: pointer;
+  min-block-size: 48px;
 }
 .lp-btn--ghost { background: transparent; color: var(--lp-brand); }
-.lp-btn:disabled { opacity: .4; cursor: not-allowed; }
+.lp-btn:disabled { opacity: .35; cursor: not-allowed; }
 .lp-btn:focus-visible { outline: 3px solid var(--lp-ink); outline-offset: 3px; }
+/* One chevron asset, mirrored by direction. */
+html[dir='rtl'] .lp-i[data-flip] { transform: scaleX(-1); }
 
-.lp-help { color: var(--lp-ink-soft); font-size: .9em; margin: 0; }
+.lp-help { color: var(--lp-ink-soft); font-size: .86em; margin: 0; flex: 1 1 200px; }
 
 /* ── break offer (720 §1.6) ───────────────────────────────────────────── */
 .lp-break {
@@ -234,6 +337,13 @@ html, body {
 .lp-error {
   padding: 20px; border-radius: var(--lp-radius);
   background: var(--lp-warn-soft); border: 1px solid var(--lp-warn);
+}
+
+@media (max-width: 599px) {
+  /* The primary action stays a full-width target; the help line moves under it. */
+  .lp-foot .lp-btn { flex: 1 1 auto; justify-content: center; }
+  .lp-foot__spacer { display: none; }
+  .lp-help { order: 3; flex-basis: 100%; text-align: center; }
 }
 
 @media (prefers-reduced-motion: reduce) {

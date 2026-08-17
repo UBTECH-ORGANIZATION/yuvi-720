@@ -21,6 +21,7 @@
       "isRequired": false,
       "order": 1,
       "masteryLevel": "basic",
+      "cefrLevel": "A1",
       "relativeDifficulty": 1,
       "mediaFormat": "text",
       "estimatedTimeInMinutes": 6,

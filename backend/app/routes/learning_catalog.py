@@ -61,6 +61,8 @@ async def read_catalog(lang: str = "he", learner_id: str = Depends(require_learn
             # Not for display — it is what lets the card pick an illustration that
             # matches the lesson instead of a generic one per subject.
             roadmap["goal_description"] = goal.get("description") or ""
+            roadmap["cefr"] = _localized_cefr(goal.get("cefr") or {}, lang)
+            roadmap["alignment"] = _localized_alignment(goal.get("alignment") or {}, lang)
             roadmap["illustration"] = await _unit_illustration(roadmap, lang)
             # Per-item bot notes + question snapshots (with correct answers) are
             # server-only coach context; keep them off the client payload — the
@@ -76,6 +78,41 @@ async def read_catalog(lang: str = "he", learner_id: str = Depends(require_learn
         "source": "kata",
         "provider_status": "online",
         "units": units,
+    }
+
+
+def _localized_cefr(cefr: dict, lang: str) -> Optional[dict]:
+    """The goal's CEFR level + its Can-Do descriptor in the learner's language.
+
+    Curriculum information, not a mastery level: it says what the GOAL is
+    written against, never how far this learner got (720 §2).
+    """
+    if not cefr:
+        return None
+    can_do = cefr.get("canDo") or {}
+    return {
+        "level": cefr.get("level"),
+        "stretch": cefr.get("stretch"),
+        "mode": cefr.get("mode"),
+        "scale": cefr.get("scale"),
+        "reference": cefr.get("reference"),
+        "can_do": can_do.get(lang) or can_do.get("he") or can_do.get("en") or "",
+    }
+
+
+def _localized_alignment(alignment: dict, lang: str) -> Optional[dict]:
+    """Where this goal sits in the national curriculum, and what it rehearses."""
+    if not alignment:
+        return None
+    moe = alignment.get("moe") or {}
+    domain_title = moe.get("domainTitle") or {}
+    return {
+        "curriculum": moe.get("curriculum"),
+        "band": moe.get("band"),
+        "domain": moe.get("domain"),
+        "domain_title": domain_title.get(lang) or domain_title.get("he") or moe.get("domain") or "",
+        "exams": alignment.get("exams") or [],
+        "national": alignment.get("national") or [],
     }
 
 

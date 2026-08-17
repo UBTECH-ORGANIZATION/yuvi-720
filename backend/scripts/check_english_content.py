@@ -62,7 +62,47 @@ async def coverage() -> list[dict]:
             f"  {objective['order']:>2}. {area:<10} {objective['title'][:44]:<44}"
             f" {len(components):>10}  {levels:<28} {assess}"
         )
+    cefr_matrix(objectives)
     return objectives
+
+
+def cefr_matrix(objectives: list[dict]) -> None:
+    """The pedagogical slide, generated from the content instead of asserted.
+
+    One row per learning goal: the CEFR level and mode it was written against,
+    the rungs its components actually span, the national-curriculum band/domain,
+    and the international-exam task it rehearses.
+    """
+    print("\nCEFR coverage and curriculum alignment\n")
+    header = (
+        f"  {'area':<10} {'CEFR':<6} {'mode':<12} {'rungs':<12} "
+        f"{'band':<11} {'domain':<22} exam task"
+    )
+    print(header)
+    print("  " + "-" * (len(header) - 2))
+    for objective in objectives:
+        area = objective["id"].rsplit(".", 1)[-1]
+        cefr = objective.get("cefr") or {}
+        align = (objective.get("alignment") or {}).get("moe") or {}
+        exams = (objective.get("alignment") or {}).get("exams") or []
+        rungs = sorted(
+            {str(c.get("cefr_level")) for c in kata_catalog.components_for(objective["id"])}
+            - {"None"}
+        )
+        exam = f"{exams[0]['name']} — {exams[0].get('task', '')}" if exams else "—"
+        print(
+            f"  {area:<10} {str(cefr.get('level') or '—'):<6} {str(cefr.get('mode') or '—'):<12} "
+            f"{'/'.join(rungs) or '—':<12} {str(align.get('band') or '—'):<11} "
+            f"{str(align.get('domain') or '—'):<22} {exam}"
+        )
+    untagged = [o["id"] for o in objectives if not (o.get("cefr") or {}).get("level")]
+    _ok("every English goal carries a CEFR level", not untagged, ", ".join(untagged))
+    modes = {(o.get("cefr") or {}).get("mode") for o in objectives}
+    _ok(
+        "all four CEFR CV 2020 modes are represented",
+        {"reception", "production", "interaction", "mediation"} <= modes,
+        f"present: {', '.join(sorted(m for m in modes if m))}",
+    )
 
 
 async def structure(objectives: list[dict]) -> bool:

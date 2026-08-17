@@ -33,6 +33,9 @@ const STR = {
     'help.who': 'תקועים? יובי כאן, ואפשר גם לפנות למורה שלכם.',
     'write.saved': 'נשמר. אפשר להמשיך.',
     'write.checklist': 'לפני שממשיכים, בדקו את עצמכם:',
+    'write.checking': 'קורא את מה שכתבתם…',
+    'write.again': 'שלחו שוב',
+    'write.ai': 'המשוב נוסח בעזרת בינה מלאכותית.',
     'speak.model': 'לחצו על שורה כדי לשמוע אותה, ואז אמרו אותה בקול.',
     'speak.check': 'איך הלך?',
     'speak.your_turn': 'עכשיו אתם',
@@ -46,6 +49,18 @@ const STR = {
     'error.auth': 'הקישור הזה כבר לא בתוקף. חזרו לשיעור ופתחו אותו שוב.',
     'reflect.thanks': 'תודה — זה עוזר לנו להתאים לכם את ההמשך.',
     'glossary.title': 'מילים שיעזרו',
+    'tip': 'איך ניגשים לזה',
+    'q.of': 'שאלה {n} מתוך {total}',
+    'q.one': 'שאלה',
+    'stage.listening': 'קטע האזנה',
+    'stage.reading': 'קטע לקריאה',
+    'stage.speaking': 'תרגול דיבור',
+    'stage.writing': 'משימת כתיבה',
+    'stage.mediation': 'העברת מידע',
+    'stage.reflection': 'רגע של חשיבה',
+    'stage.intro': 'לפני שמתחילים',
+    'stage.summary': 'סיכום',
+    'meta.minutes': 'כ-{n} דקות',
   },
   ar: {
     'nav.back': 'رجوع', 'nav.next': 'متابعة', 'nav.finish': 'أنهيت',
@@ -61,6 +76,9 @@ const STR = {
     'help.who': 'عالقون؟ يوفي هنا، ويمكنكم أيضاً التوجّه إلى معلّمكم.',
     'write.saved': 'تمّ الحفظ. يمكنكم المتابعة.',
     'write.checklist': 'قبل المتابعة، تحقّقوا من أنفسكم:',
+    'write.checking': 'أقرأ ما كتبتموه…',
+    'write.again': 'أرسلوا مرّة أخرى',
+    'write.ai': 'صيغت هذه الملاحظة بمساعدة الذكاء الاصطناعي.',
     'speak.model': 'اضغطوا على سطر لسماعه، ثم قولوه بصوت مسموع.',
     'speak.check': 'كيف سار الأمر؟',
     'speak.your_turn': 'الآن دوركم',
@@ -74,6 +92,18 @@ const STR = {
     'error.auth': 'هذا الرابط لم يعد صالحاً. عودوا إلى الدرس وافتحوه من جديد.',
     'reflect.thanks': 'شكراً — هذا يساعدنا على ملاءمة التتمّة لكم.',
     'glossary.title': 'كلمات تساعدكم',
+    'tip': 'كيف نتعامل مع هذا',
+    'q.of': 'سؤال {n} من {total}',
+    'q.one': 'سؤال',
+    'stage.listening': 'مقطع للاستماع',
+    'stage.reading': 'نصّ للقراءة',
+    'stage.speaking': 'تمرين تحدّث',
+    'stage.writing': 'مهمّة كتابة',
+    'stage.mediation': 'نقل المعلومات',
+    'stage.reflection': 'لحظة تفكير',
+    'stage.intro': 'قبل أن نبدأ',
+    'stage.summary': 'خلاصة',
+    'meta.minutes': 'نحو {n} دقائق',
   },
   en: {
     'nav.back': 'Back', 'nav.next': 'Continue', 'nav.finish': 'I am done',
@@ -89,6 +119,9 @@ const STR = {
     'help.who': 'Stuck? Yuvi is here, and you can also ask your teacher.',
     'write.saved': 'Saved. You can continue.',
     'write.checklist': 'Before you continue, check yourself:',
+    'write.checking': 'Reading what you wrote…',
+    'write.again': 'Send again',
+    'write.ai': 'This comment was phrased with AI.',
     'speak.model': 'Tap a line to hear it, then say it out loud.',
     'speak.check': 'How did it go?',
     'speak.your_turn': 'Now your turn',
@@ -102,6 +135,18 @@ const STR = {
     'error.auth': 'This link has expired. Go back to the lesson and open it again.',
     'reflect.thanks': 'Thanks — this helps us fit what comes next to you.',
     'glossary.title': 'Words that help',
+    'tip': 'How to go about it',
+    'q.of': 'Question {n} of {total}',
+    'q.one': 'Question',
+    'stage.listening': 'Listening passage',
+    'stage.reading': 'Reading passage',
+    'stage.speaking': 'Speaking practice',
+    'stage.writing': 'Writing task',
+    'stage.mediation': 'Passing on information',
+    'stage.reflection': 'A moment to think',
+    'stage.intro': 'Before you start',
+    'stage.summary': 'Wrapping up',
+    'meta.minutes': 'about {n} minutes',
   },
 };
 
@@ -212,6 +257,38 @@ function stopSpeaking() {
 }
 
 /* ── DOM helpers ────────────────────────────────────────────────────────── */
+/* Line icons, drawn inline: this page can be framed by another platform, so it
+   cannot rely on an icon font or a CDN — and emojis render differently on every
+   device, which is exactly what a learning screen must not do. */
+const ICONS = {
+  play: '<path d="M8.5 5.6 18.5 12l-10 6.4Z"/>',
+  stop: '<rect x="7" y="7" width="10" height="10" rx="2.5"/>',
+  slower: '<circle cx="12" cy="12" r="8"/><path d="M12 7.6V12l2.9 1.9"/>',
+  transcript: '<rect x="4.5" y="4.5" width="15" height="15" rx="3.5"/><path d="M8.2 9.6h7.6M8.2 13h7.6M8.2 16.2h4.6"/>',
+  sound: '<path d="M4.5 9.5h3l4-3.2v11.4l-4-3.2h-3z"/><path d="M15.2 9.3a3.9 3.9 0 0 1 0 5.4"/><path d="M17.7 6.9a7.4 7.4 0 0 1 0 10.2"/>',
+  textsize: '<path d="M2.8 18 7.4 6.4 12 18"/><path d="M4.4 14.2h6"/><path d="M14.6 18l2.9-7.4 2.9 7.4"/><path d="M15.7 15.5h3.6"/>',
+  contrast: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16Z" fill="currentColor" stroke="none"/>',
+  mic: '<rect x="9.3" y="3.4" width="5.4" height="10" rx="2.7"/><path d="M6.2 11.4a5.8 5.8 0 0 0 11.6 0"/><path d="M12 17.3V20.6"/>',
+  tip: '<path d="M12 3.6a5.4 5.4 0 0 0-3.2 9.8c.5.4.8 1 .8 1.6h4.8c0-.6.3-1.2.8-1.6A5.4 5.4 0 0 0 12 3.6Z"/><path d="M9.8 17.8h4.4"/><path d="M10.6 20.4h2.8"/>',
+  headphones: '<path d="M4.4 14.2v-2.1a7.6 7.6 0 0 1 15.2 0v2.1"/><rect x="3.2" y="13.4" width="4.2" height="6.8" rx="2.1"/><rect x="16.6" y="13.4" width="4.2" height="6.8" rx="2.1"/>',
+  book: '<path d="M12 6.6S10 4.9 6.6 4.9H4.2v12.7h2.4C10 17.6 12 19.3 12 19.3s2-1.7 5.4-1.7h2.4V4.9h-2.4C14 4.9 12 6.6 12 6.6Z"/><path d="M12 6.6v12.7"/>',
+  pen: '<path d="M4.6 19.4h4L19 9a2.6 2.6 0 0 0-3.6-3.6L4.6 15.4z"/><path d="M14.6 6.6l2.8 2.8"/>',
+  think: '<circle cx="12" cy="12" r="8"/><path d="M9.7 9.8a2.4 2.4 0 1 1 3.2 2.3c-.6.2-.9.7-.9 1.3v.4"/><path d="M12 16.5h.01"/>',
+  check: '<path d="M5.5 12.4l4.2 4.2 8.8-9"/>',
+  retry: '<path d="M19.4 12a7.4 7.4 0 1 1-2.3-5.3"/><path d="M19.6 4.6v4.2h-4.2"/>',
+  next: '<path d="M9 5.6 15.4 12 9 18.4"/>',
+};
+
+function icon(name) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  svg.setAttribute('class', 'lp-i');
+  svg.innerHTML = ICONS[name] || '';
+  return svg;
+}
+
 function el(tag, props = {}, children = []) {
   const node = document.createElement(tag);
   Object.entries(props).forEach(([key, value]) => {
@@ -223,6 +300,16 @@ function el(tag, props = {}, children = []) {
   });
   (Array.isArray(children) ? children : [children]).filter(Boolean).forEach((child) => node.append(child));
   return node;
+}
+
+function setButtonLabel(button, iconName, text) {
+  button.replaceChildren(icon(iconName), el('span', { text }));
+}
+
+/** Marks a directional icon so RTL mirrors it. */
+function flip(svg) {
+  svg.setAttribute('data-flip', '');
+  return svg;
 }
 
 /* ── state ──────────────────────────────────────────────────────────────── */
@@ -314,20 +401,20 @@ function renderAudio(item) {
 
   const button = el('button', {
     class: 'lp-play', type: 'button', 'data-playing': 'false',
-    text: `▶  ${t('audio.play')}`,
   });
+  setButtonLabel(button, 'play', t('audio.play'));
   const play = () => {
     if (playing) {
       stopSpeaking();
       playing = false;
       button.dataset.playing = 'false';
-      button.textContent = `▶  ${t('audio.play')}`;
+      setButtonLabel(button, 'play', t('audio.play'));
       report('paused', { object: itemObject(item) });
       return;
     }
     playing = true;
     button.dataset.playing = 'true';
-    button.textContent = `■  ${t('audio.stop')}`;
+    setButtonLabel(button, 'stop', t('audio.stop'));
     report('played', { object: itemObject(item) });
     speak(p.script, {
       locale: p.language || 'en-US',
@@ -335,7 +422,7 @@ function renderAudio(item) {
       onEnd: () => {
         playing = false;
         button.dataset.playing = 'false';
-        button.textContent = `▶  ${t('audio.play')}`;
+        setButtonLabel(button, 'play', t('audio.play'));
       },
     });
   };
@@ -343,8 +430,8 @@ function renderAudio(item) {
   wrap.append(button);
 
   const slower = el('button', {
-    class: 'lp-chip', type: 'button', 'aria-pressed': 'false', text: t('audio.slow'),
-  });
+    class: 'lp-chip', type: 'button', 'aria-pressed': 'false',
+  }, [icon('slower'), el('span', { text: t('audio.slow') })]);
   slower.addEventListener('click', () => {
     slow = !slow;
     slower.setAttribute('aria-pressed', String(slow));
@@ -357,8 +444,8 @@ function renderAudio(item) {
   if (p.transcriptAvailable) {
     const transcript = el('p', { class: 'lp-note lp-en', text: p.script, hidden: true });
     const toggle = el('button', {
-      class: 'lp-chip', type: 'button', 'aria-pressed': 'false', text: t('audio.transcript'),
-    });
+      class: 'lp-chip', type: 'button', 'aria-pressed': 'false',
+    }, [icon('transcript'), el('span', { text: t('audio.transcript') })]);
     toggle.addEventListener('click', () => {
       const show = transcript.hasAttribute('hidden');
       transcript.toggleAttribute('hidden', !show);
@@ -401,23 +488,30 @@ function renderLines(item) {
   return block;
 }
 
-function renderQuestion(item, question) {
+function renderQuestion(item, question, index = 0, total = 1) {
   const key = `${item.id}|${question.questionId}`;
   const previous = state.answered.get(key);
-  const block = el('div', { class: 'lp-q' });
+  const block = el('div', { class: 'lp-q lp-qcard' });
+  block.append(el('p', {
+    class: 'lp-qnum',
+    text: total > 1 ? t('q.of', { n: index + 1, total }) : t('q.one'),
+  }));
   block.append(el('p', { class: 'lp-q__text lp-en', text: question.questionText }));
 
   const feedback = el('p', { class: 'lp-feedback', hidden: true });
-  const options = el('div', { class: 'lp-options' });
+  // Options are in the target language, so they read and order LTR even here.
+  const options = el('div', { class: 'lp-options lp-en' });
 
   const settle = (option, verdict, response) => {
     const correct = verdict.correct === true;
     state.answered.set(key, { correct, feedback: verdict.feedback, response });
     option.dataset.verdict = correct ? 'correct' : 'incorrect';
     options.querySelectorAll('button').forEach((node) => { node.disabled = true; });
-    feedback.textContent = pick(verdict.feedback);
+    const text = pick(verdict.feedback);
+    feedback.replaceChildren(icon(correct ? 'check' : 'retry'), el('span', { text }));
     feedback.dataset.verdict = correct ? 'correct' : 'incorrect';
-    feedback.hidden = !feedback.textContent;
+    block.dataset.verdict = correct ? 'correct' : 'incorrect';
+    feedback.hidden = !text;
   };
 
   (question.answers || []).forEach((answer) => {
@@ -496,15 +590,22 @@ function renderWriting(item) {
   area.addEventListener('input', () => state.written.set(item.id, area.value));
   block.append(area);
 
+  const boxes = [];
   if (p.checklist?.length) {
     block.append(el('p', { class: 'lp-kicker', text: t('write.checklist') }));
-    block.append(el('ul', { class: 'lp-checklist' }, p.checklist.map((entry) =>
-      el('li', {}, [el('label', {}, [el('input', { type: 'checkbox' }), el('span', { text: pick(entry) })])]))));
+    block.append(el('ul', { class: 'lp-checklist' }, p.checklist.map((entry) => {
+      const box = el('input', { type: 'checkbox' });
+      boxes.push(box);
+      return el('li', {}, [el('label', {}, [box, el('span', { text: pick(entry) })])]);
+    })));
   }
 
   const saved = el('p', { class: 'lp-feedback', hidden: true, text: t('write.saved') });
+  // Formative feedback on the text itself: what works, and one next step. Words
+  // only — the coach never returns a score for a piece of writing.
+  const coach = el('div', { class: 'lp-coach', hidden: true });
   const submit = el('button', { class: 'lp-btn lp-btn--ghost', type: 'button', text: t('nav.check') });
-  submit.addEventListener('click', () => {
+  submit.addEventListener('click', async () => {
     const text = (area.value || '').trim();
     if (!text) return;
     saved.hidden = false;
@@ -512,9 +613,47 @@ function renderWriting(item) {
     // platform, and the teacher/agent read it there. It must stay out of the
     // component score, which only reflects what was actually graded.
     report('submitted', { object: itemObject(item), result: { response: text.slice(0, 1000) } });
+    await requestWritingFeedback({ item, text, coach, submit, boxes });
   });
-  block.append(submit, saved);
+  block.append(submit, saved, coach);
   return block;
+}
+
+/** Ask the server to comment on a written text, then render the reply. */
+async function requestWritingFeedback({ item, text, coach, submit, boxes }) {
+  setButtonLabel(submit, 'pen', t('write.checking'));
+  submit.disabled = true;
+  let review = null;
+  try {
+    const response = await fetch(`/content/player/${encodeURIComponent(componentId)}/writing-feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: launch.auth },
+      body: JSON.stringify({ itemId: item.id, text: text.slice(0, 2000), lang }),
+    });
+    if (response.ok) review = await response.json();
+  } catch {
+    review = null;
+  }
+  submit.disabled = false;
+  setButtonLabel(submit, 'retry', t('write.again'));
+  if (!review) { coach.hidden = true; return; }
+
+  // Only lines the server could VERIFY are ticked; an undecidable line
+  // ("I read it again") stays for the learner to answer.
+  (review.checklist || []).forEach((row) => {
+    const box = boxes[row.index];
+    if (box && row.met === true) box.checked = true;
+  });
+
+  coach.replaceChildren(
+    el('p', { class: 'lp-coach__praise', text: review.praise || '' }),
+    el('p', { class: 'lp-coach__next' }, [
+      icon('tip'),
+      el('span', { text: review.next_step || '' }),
+    ]),
+    ...(review.ai_generated ? [el('p', { class: 'lp-coach__ai', text: t('write.ai') })] : []),
+  );
+  coach.hidden = false;
 }
 
 function renderMediation(item) {
@@ -628,7 +767,8 @@ function renderSpeaking(item) {
   const reference = lines.join(' ');
   const feedback = el('div', { class: 'lp-feedback', hidden: true });
   const status = el('p', { class: 'lp-note', text: '' });
-  const mic = el('button', { class: 'lp-play lp-mic', type: 'button', text: `🎤  ${t('speak.record')}` });
+  const mic = el('button', { class: 'lp-play lp-mic', type: 'button' });
+  setButtonLabel(mic, 'mic', t('speak.record'));
   let busy = false;
 
   const paintWords = (accuracy) => {
@@ -649,7 +789,7 @@ function renderSpeaking(item) {
     if (busy) return;
     busy = true;
     mic.dataset.playing = 'true';
-    mic.textContent = `● ${t('speak.listening')}`;
+    setButtonLabel(mic, 'mic', t('speak.listening'));
     status.textContent = '';
     try {
       const assessment = await assessSpeech(reference);
@@ -682,7 +822,7 @@ function renderSpeaking(item) {
     } finally {
       busy = false;
       mic.dataset.playing = 'false';
-      mic.textContent = `🎤  ${t('speak.retry')}`;
+      setButtonLabel(mic, 'retry', t('speak.retry'));
     }
   });
 
@@ -727,8 +867,8 @@ function renderHead() {
 
   const aloud = el('button', {
     class: 'lp-tool', type: 'button', 'aria-pressed': String(state.readingAloud),
-    'aria-label': t('read.aloud'), title: t('read.aloud'), text: '🔊',
-  });
+    'aria-label': t('read.aloud'), title: t('read.aloud'),
+  }, [icon('sound')]);
   aloud.addEventListener('click', () => {
     if (state.readingAloud) { stopSpeaking(); state.readingAloud = false; aloud.setAttribute('aria-pressed', 'false'); return; }
     state.readingAloud = true;
@@ -741,8 +881,8 @@ function renderHead() {
   });
 
   const size = el('button', {
-    class: 'lp-tool', type: 'button', 'aria-label': t('a11y.text'), title: t('a11y.text'), text: 'A',
-  });
+    class: 'lp-tool', type: 'button', 'aria-label': t('a11y.text'), title: t('a11y.text'),
+  }, [icon('textsize')]);
   size.addEventListener('click', () => {
     state.scale = { normal: 'large', large: 'xlarge', xlarge: 'normal' }[state.scale];
     root.dataset.scale = state.scale;
@@ -750,8 +890,8 @@ function renderHead() {
 
   const contrast = el('button', {
     class: 'lp-tool', type: 'button', 'aria-pressed': String(state.contrast),
-    'aria-label': t('a11y.contrast'), title: t('a11y.contrast'), text: '◐',
-  });
+    'aria-label': t('a11y.contrast'), title: t('a11y.contrast'),
+  }, [icon('contrast')]);
   contrast.addEventListener('click', () => {
     state.contrast = !state.contrast;
     contrast.setAttribute('aria-pressed', String(state.contrast));
@@ -764,11 +904,11 @@ function renderHead() {
     el('h1', { class: 'lp-head__title' }, [
       // The component title is an internal English label for authors; the unit
       // carries the learner-facing translations.
-      document.createTextNode(pick(state.payload.unit.titles) || state.payload.unit.title || ''),
+      el('span', { text: pick(state.payload.unit.titles) || state.payload.unit.title || '' }),
       el('small', { text: t('step.of', { n: state.index + 1, total }) }),
     ]),
-    strip,
     tools,
+    strip,
   ]);
 }
 
@@ -786,12 +926,16 @@ function renderFooter() {
 
   const next = el('button', {
     class: 'lp-btn', type: 'button',
+    disabled: blocked,
+  }, [
     // "Start" belongs on a framing card, not on a screen that already asks
     // something — there the learner is continuing, not starting.
-    text: last ? t('nav.finish')
-      : (item.presentation?.kind === 'intro' ? t('nav.start') : t('nav.next')),
-    disabled: blocked,
-  });
+    el('span', {
+      text: last ? t('nav.finish')
+        : (item.presentation?.kind === 'intro' ? t('nav.start') : t('nav.next')),
+    }),
+    last ? icon('check') : flip(icon('next')),
+  ]);
   next.addEventListener('click', () => (last ? finish() : goTo(state.index + 1)));
 
   const foot = el('footer', { class: 'lp-foot' }, [
@@ -818,16 +962,46 @@ function renderBreak() {
   return banner;
 }
 
+/* Each kind of screen names itself, so the learner can tell at a glance whether
+   this is something to listen to, to read, or to say out loud. */
+const STAGE_ICON = {
+  listening: 'headphones', reading: 'book', speaking: 'mic',
+  writing: 'pen', mediation: 'pen', reflection: 'think',
+};
+
+function renderStage(kind, body) {
+  if (!STAGE_ICON[kind]) return body;
+  return el('div', { class: 'lp-stage', 'data-kind': kind }, [
+    el('p', { class: 'lp-stage__label' }, [icon(STAGE_ICON[kind]), el('span', { text: t(`stage.${kind}`) })]),
+    body,
+  ]);
+}
+
 function renderCard() {
   const item = current();
   const p = item.presentation || {};
-  const card = el('section', { class: 'lp-card', 'aria-label': item.title || '' });
+  const card = el('section', { class: 'lp-card', 'data-kind': p.kind || '', 'aria-label': item.title || '' });
 
-  // The authored item `title` is an internal English label for authors and the
-  // agent — the learner's heading is the localized prompt.
-  if (pick(p.prompt)) card.append(el('h2', { class: 'lp-prompt', text: pick(p.prompt) }));
-  if (pick(p.goal)) card.append(el('p', { class: 'lp-note', text: pick(p.goal) }));
-  if (pick(p.strategy)) card.append(el('p', { class: 'lp-support', text: pick(p.strategy) }));
+  // Zone 1 — what to do, in the learner's language. The authored item `title`
+  // is an internal English label for authors and the agent; the learner's
+  // heading is the localized prompt.
+  const brief = el('div', { class: 'lp-brief' });
+  // A framing screen carries no material, so it says what it is instead.
+  if (p.kind === 'intro' || p.kind === 'summary') {
+    const minutes = state.payload?.component?.estimatedMinutes;
+    const parts = [t(`stage.${p.kind}`)];
+    if (p.kind === 'intro' && minutes) parts.push(t('meta.minutes', { n: minutes }));
+    brief.append(el('p', { class: 'lp-kicker', text: parts.join(' · ') }));
+  }
+  if (pick(p.prompt)) brief.append(el('h2', { class: 'lp-prompt', text: pick(p.prompt) }));
+  if (pick(p.goal)) brief.append(el('p', { class: 'lp-note', text: pick(p.goal) }));
+  if (pick(p.strategy)) {
+    brief.append(el('p', { class: 'lp-tip' }, [
+      icon('tip'),
+      el('span', {}, [el('strong', { text: `${t('tip')}: ` }), document.createTextNode(pick(p.strategy))]),
+    ]));
+  }
+  if (brief.childNodes.length) card.append(brief);
 
   if (p.kind === 'summary') {
     const outcome = state.finished === 'retry' ? p.onRetry : p.onSuccess;
@@ -835,9 +1009,18 @@ function renderCard() {
     if (pick(p.nextHint)) card.append(el('p', { class: 'lp-note', text: pick(p.nextHint) }));
   }
 
+  // Zone 2 — the English material, on its own surface.
   const body = renderBody(item);
-  if (body) card.append(body);
-  (item.questions || []).forEach((question) => card.append(renderQuestion(item, question)));
+  if (body) card.append(renderStage(p.kind, body));
+
+  // Zone 3 — the task.
+  const questions = item.questions || [];
+  if (questions.length) {
+    const task = el('div', { class: 'lp-task' });
+    questions.forEach((question, index) =>
+      task.append(renderQuestion(item, question, index, questions.length)));
+    card.append(task);
+  }
   return card;
 }
 

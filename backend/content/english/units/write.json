@@ -21,6 +21,7 @@
       "isRequired": true,
       "order": 1,
       "masteryLevel": "basic",
+      "cefrLevel": "A1",
       "relativeDifficulty": 2,
       "mediaFormat": "text",
       "estimatedTimeInMinutes": 9,
@@ -212,6 +213,7 @@
       "isRequired": false,
       "order": 1,
       "masteryLevel": "basic",
+      "cefrLevel": "A1",
       "relativeDifficulty": 1,
       "mediaFormat": "audio",
       "estimatedTimeInMinutes": 8,
@@ -396,6 +398,7 @@
       "isRequired": true,
       "order": 2,
       "masteryLevel": "intermediate",
+      "cefrLevel": "A2",
       "relativeDifficulty": 4,
       "mediaFormat": "text",
       "estimatedTimeInMinutes": 12,
@@ -570,6 +573,154 @@
       ]
     },
     {
+      "id": "ENG.G7.FAMILY.WRITE-02A",
+      "learningUnitId": "ENG.G7.FAMILY.WRITE",
+      "title": "Challenge: a paragraph with a reason and a contrast",
+      "componentPurpose": "תרגול",
+      "isAssessment": false,
+      "isRequired": false,
+      "order": 2,
+      "masteryLevel": "advanced",
+      "cefrLevel": "A2+",
+      "relativeDifficulty": 5,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 13,
+      "languages": [
+        "Hebrew",
+        "Arabic",
+        "English"
+      ],
+      "recommendedAfterFail": [
+        "ENG.G7.FAMILY.WRITE-01B"
+      ],
+      "skills": [
+        "הבעה בכתב",
+        "מילות קישור",
+        "ארגון פסקה"
+      ],
+      "cognitiveLevel": "יישום",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.WRITE-02A-01",
+          "title": "One paragraph, not a list",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב הכתיבה המתקדם (A2+). הקפיצה מהרכיב הקודם: שם התבקשו משפטים מקושרים, כאן מתבקשת פסקה אחת עם רצף — פתיחה, שני אנשים, סיבה, וניגוד. יעד: לכתוב טקסט שיש בו יחסים בין רעיונות ולא רק רצף עובדות. אסטרטגיה: לבחור מראש את שתי מילות הקישור שישמשו, ורק אז לכתוב. תפיסה שגויה נפוצה: לומדים כותבים ארבעה משפטים נפרדים ומוסיפים and ביניהם, בלי יחס אמיתי. אין כאן שאלה ואין ניקוד.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "Now you write a paragraph, not a list of sentences.",
+              "he": "עכשיו אתם כותבים פסקה, לא רשימת משפטים.",
+              "ar": "الآن تكتبون فقرة، لا قائمة جمل."
+            },
+            "goal": {
+              "en": "A paragraph has ideas that hold on to each other: this happens because of that, but this one is different.",
+              "he": "בפסקה הרעיונות אוחזים זה בזה: זה קורה בגלל זה, אבל זה אחר.",
+              "ar": "في الفقرة تتمسّك الأفكار ببعضها: هذا يحدث بسبب ذاك، لكنّ هذا مختلف."
+            },
+            "strategy": {
+              "en": "Choose your two linking words before you start writing, and build the sentences around them.",
+              "he": "בחרו את שתי מילות הקישור עוד לפני שמתחילים לכתוב, ובנו סביבן את המשפטים.",
+              "ar": "اختاروا أداتَي الربط قبل أن تبدأوا الكتابة، وابنوا الجمل حولهما."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.WRITE-02A-02",
+          "title": "Two mornings in one family",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "משימת כתיבה חופשית ברמה מתקדמת. יעד: פסקה של 5-6 משפטים שיש בה סיבה (because) וניגוד (but). הטקסט אינו מדורג בציון — הוא נשלח לשרת ומוחזר עליו משוב מילולי מעצב. אסטרטגיה: לתאר קודם אדם אחד במלואו ורק אז את השני, כדי שהניגוד יהיה ברור. תפיסות שגויות נפוצות: (1) שימוש ב-because כדי לחבר שתי עובדות שאין ביניהן סיבתיות; (2) שימוש ב-but בין שני משפטים שאומרים אותו דבר. אם הלומד נתקע, כדאי להציע לו להשלים את המשפט 'X gets up early because…'.",
+          "presentation": {
+            "kind": "writing",
+            "prompt": {
+              "en": "Write one paragraph (5-6 sentences) about two people in a family who have very different mornings. Say WHY one of them does what they do, and show how the other one is different.",
+              "he": "כתבו פסקה אחת (5-6 משפטים) על שני אנשים במשפחה שהבוקר שלהם שונה מאוד. כתבו למה אחד מהם עושה מה שהוא עושה, והראו במה השני שונה.",
+              "ar": "اكتبوا فقرة واحدة (5-6 جمل) عن شخصين في العائلة صباحهما مختلف جدّاً. اكتبوا لماذا يفعل أحدهما ما يفعله، وبيّنوا كيف يختلف الآخر."
+            },
+            "placeholder": {
+              "en": "My sister gets up at six because ...",
+              "he": "My sister gets up at six because ...",
+              "ar": "My sister gets up at six because ..."
+            },
+            "checklist": [
+              {
+                "en": "I wrote at least five sentences.",
+                "he": "כתבתי לפחות חמישה משפטים.",
+                "ar": "كتبت خمس جمل على الأقلّ."
+              },
+              {
+                "en": "I used because at least once to explain something.",
+                "he": "השתמשתי ב-because לפחות פעם אחת כדי להסביר משהו.",
+                "ar": "استخدمت because مرّة واحدة على الأقلّ لتفسير شيء ما."
+              },
+              {
+                "en": "I used two different linking words, not only and.",
+                "he": "השתמשתי בשתי מילות קישור שונות, לא רק ב-and.",
+                "ar": "استخدمت أداتَي ربط مختلفتين، لا and فقط."
+              },
+              {
+                "en": "I started every sentence with a capital letter.",
+                "he": "התחלתי כל משפט באות גדולה.",
+                "ar": "بدأت كلّ جملة بحرف كبير."
+              },
+              {
+                "en": "My paragraph shows how the two people are different, not only what they do.",
+                "he": "הפסקה שלי מראה במה שני האנשים שונים, ולא רק מה הם עושים.",
+                "ar": "فقرتي تُظهر كيف يختلف الشخصان، لا ما يفعلانه فقط."
+              }
+            ]
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.WRITE-02A-03",
+          "title": "What was the hard part?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך רפלקציה בסיום משימת הכתיבה המתקדמת. יעד: לזהות איפה בדיוק היה הקושי — ברעיון, במילות הקישור או במבנה. אין תשובה נכונה ואין ניקוד. הבחירה מסייעת לנתב את הצעד הבא: קושי ברעיון מצביע על צורך בבנק רעיונות, קושי במילות קישור מצביע על חזרה לרכיב הדקדוק.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "Which part took you the longest?",
+              "he": "איזה חלק לקח לכם הכי הרבה זמן?",
+              "ar": "أيّ جزء استغرق منكم أطول وقت؟"
+            },
+            "choices": [
+              {
+                "id": "ideas",
+                "label": {
+                  "en": "Thinking what to write about",
+                  "he": "לחשוב על מה לכתוב",
+                  "ar": "التفكير في ما أكتب عنه"
+                }
+              },
+              {
+                "id": "linkers",
+                "label": {
+                  "en": "Choosing the linking words",
+                  "he": "לבחור את מילות הקישור",
+                  "ar": "اختيار أدوات الربط"
+                }
+              },
+              {
+                "id": "english",
+                "label": {
+                  "en": "Saying it in English",
+                  "he": "לומר את זה באנגלית",
+                  "ar": "قولها بالإنجليزيّة"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
       "id": "ENG.G7.FAMILY.WRITE-03",
       "learningUnitId": "ENG.G7.FAMILY.WRITE",
       "title": "Check: writing about a family",
@@ -578,6 +729,7 @@
       "isRequired": true,
       "order": 3,
       "masteryLevel": "intermediate",
+      "cefrLevel": "A2",
       "relativeDifficulty": 3,
       "mediaFormat": "text",
       "estimatedTimeInMinutes": 11,

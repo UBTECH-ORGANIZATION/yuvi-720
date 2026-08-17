@@ -4,14 +4,16 @@
     "Rows are in the SAME raw shape kata_client.normalize_objective consumes, so the",
     "English spine and the ministry's math/science spine are one namespace end-to-end.",
     "",
-    "No `subtopic` level is declared on purpose: kata_catalog._build_snapshot falls back",
-    "to the UNIT's title for the goal's display name when the registry carries no",
-    "sub-topic hierarchy, which is what we want here — the sub-topic is the unit of study",
-    "(\"Modern Family\") and each of the ten נספח 2 areas is a goal inside it. It also puts",
-    "the whole sequence under `order`, instead of alphabetical sub-topic keys.",
+    "No `subtopic` hierarchy level is declared on purpose: kata_catalog._build_snapshot",
+    "then falls back to the UNIT's title for the goal's display name and to the unit's",
+    "subTopic for grouping — so all ten areas live under one sub-topic (\"Modern Family\")",
+    "and the registry `order` alone drives the sequence.",
     "",
-    "Levels are NOT CEFR-tagged; difficulty is carried per component by masteryLevel +",
-    "relativeDifficulty, written for heterogeneous ז'-ח' classes."
+    "Every goal carries `cefr` (level + CEFR CV 2020 mode + the descriptor scale it was",
+    "written against) and `alignment` (Israeli Revised English Curriculum band/domain,",
+    "plus the international-exam task the goal rehearses). Per-COMPONENT difficulty is",
+    "carried separately by masteryLevel + relativeDifficulty + cefrLevel, written for",
+    "heterogeneous ז'-ח' classes: a goal targets one level, its rungs span A1→A2+."
   ],
   "curriculum": {
     "id": "MOE.ENG.G7",
@@ -49,6 +51,49 @@
         "he": "לזהות ולהשתמש באוצר מילים על משפחה, מראה חיצוני ושגרה יומית — הן בזיהוי והן בהפקה.",
         "ar": "التعرّف على مفردات العائلة والمظهر والروتين اليومي واستخدامها فهماً وإنتاجاً.",
         "en": "Recognise and use vocabulary for family, appearance and daily routine, both receptively and productively."
+      },
+      "cefr": {
+        "level": "A1",
+        "stretch": "A2",
+        "mode": "reception",
+        "scale": "Vocabulary range",
+        "reference": "CEFR CV 2020 — Vocabulary range / Vocabulary control, A1",
+        "canDo": {
+          "he": "יש לי אוצר מילים בסיסי של מילים וביטויים בודדים הקשורים למצבים קונקרטיים ומוכרים.",
+          "ar": "لديّ مخزون أساسي من الكلمات والعبارات المفردة المرتبطة بمواقف محسوسة ومألوفة.",
+          "en": "I have a basic vocabulary repertoire of isolated words and phrases related to concrete, familiar situations."
+        }
+      },
+      "alignment": {
+        "moe": {
+          "curriculum": "Revised English Curriculum (Israel MoE)",
+          "band": "Foundation",
+          "domain": "Access to Information",
+          "domainTitle": {
+            "he": "גישה למידע",
+            "ar": "الوصول إلى المعلومات",
+            "en": "Access to Information"
+          }
+        },
+        "exams": [
+          {
+            "id": "cambridge.a2.key.schools",
+            "name": "A2 Key for Schools",
+            "task": "Reading & Writing Part 2 — lexical choice"
+          },
+          {
+            "id": "toefl.junior",
+            "name": "TOEFL Junior",
+            "task": "Language Form and Meaning"
+          }
+        ],
+        "national": [
+          {
+            "id": "meitzav.english",
+            "name": "מיצ״ב אנגלית",
+            "grade": "ח׳"
+          }
+        ]
       }
     },
     {
@@ -59,6 +104,49 @@
         "he": "להבין מידע קונקרטי בתיאור דבור קצר על בני משפחה ועל שגרה, כשהדיבור ברור ומופק היטב.",
         "ar": "فهم معلومات محسوسة في وصف شفوي قصير عن أفراد العائلة والروتين، عندما يكون النطق واضحاً.",
         "en": "Understand concrete information in a short spoken description of family members and routines when speech is clearly articulated."
+      },
+      "cefr": {
+        "level": "A1",
+        "stretch": "A2",
+        "mode": "reception",
+        "scale": "Overall oral comprehension",
+        "reference": "CEFR CV 2020 — Overall oral comprehension, A1",
+        "canDo": {
+          "he": "אני מבין/ה דיבור איטי וברור מאוד, עם הפסקות שמאפשרות לי לקלוט את המשמעות.",
+          "ar": "أفهم كلاماً بطيئاً وواضحاً جداً، مع فترات توقّف تتيح لي استيعاب المعنى.",
+          "en": "I can understand very slow, carefully articulated speech, with long pauses for me to assimilate meaning."
+        }
+      },
+      "alignment": {
+        "moe": {
+          "curriculum": "Revised English Curriculum (Israel MoE)",
+          "band": "Foundation",
+          "domain": "Access to Information",
+          "domainTitle": {
+            "he": "גישה למידע",
+            "ar": "الوصول إلى المعلومات",
+            "en": "Access to Information"
+          }
+        },
+        "exams": [
+          {
+            "id": "cambridge.a2.key.schools",
+            "name": "A2 Key for Schools",
+            "task": "Listening Part 1 — short dialogues"
+          },
+          {
+            "id": "toefl.junior",
+            "name": "TOEFL Junior",
+            "task": "Listening Comprehension"
+          }
+        ],
+        "national": [
+          {
+            "id": "meitzav.english",
+            "name": "מיצ״ב אנגלית",
+            "grade": "ח׳"
+          }
+        ]
       }
     },
     {
@@ -69,6 +157,49 @@
         "he": "לאתר מידע מסוים בטקסטים מעשיים וצפויים על משפחה — פרופיל, לוח זמנים, הזמנה.",
         "ar": "تحديد معلومات معيّنة في نصوص عملية متوقّعة عن العائلة — ملف تعريفي، جدول، دعوة.",
         "en": "Locate specific information in practical, predictable family texts — a profile, a schedule, an invitation."
+      },
+      "cefr": {
+        "level": "A2",
+        "stretch": "A2+",
+        "mode": "reception",
+        "scale": "Reading for orientation",
+        "reference": "CEFR CV 2020 — Reading for orientation, A2",
+        "canDo": {
+          "he": "אני מאתר/ת מידע מסוים וצפוי בחומר יומיומי פשוט, כמו מודעה, לוח זמנים או הזמנה.",
+          "ar": "أعثر على معلومات محدّدة ومتوقّعة في موادّ يوميّة بسيطة، مثل إعلان أو جدول أو دعوة.",
+          "en": "I can find specific, predictable information in simple everyday material such as an advert, a timetable or an invitation."
+        }
+      },
+      "alignment": {
+        "moe": {
+          "curriculum": "Revised English Curriculum (Israel MoE)",
+          "band": "Foundation",
+          "domain": "Access to Information",
+          "domainTitle": {
+            "he": "גישה למידע",
+            "ar": "الوصول إلى المعلومات",
+            "en": "Access to Information"
+          }
+        },
+        "exams": [
+          {
+            "id": "cambridge.a2.key.schools",
+            "name": "A2 Key for Schools",
+            "task": "Reading & Writing Parts 3–4 — comprehension"
+          },
+          {
+            "id": "toefl.junior",
+            "name": "TOEFL Junior",
+            "task": "Reading Comprehension"
+          }
+        ],
+        "national": [
+          {
+            "id": "meitzav.english",
+            "name": "מיצ״ב אנגלית",
+            "grade": "ח׳"
+          }
+        ]
       }
     },
     {
@@ -79,6 +210,49 @@
         "he": "להשתמש בהווה פשוט, בשייכות וב-have got כדי לתאר מי אנשים ומה הם עושים.",
         "ar": "استخدام المضارع البسيط والملكية و have got لوصف الأشخاص وما يفعلونه.",
         "en": "Use the present simple, possessives and 'have got' to describe who people are and what they do."
+      },
+      "cefr": {
+        "level": "A1",
+        "stretch": "A2",
+        "mode": "linguistic",
+        "scale": "Grammatical accuracy",
+        "reference": "CEFR CV 2020 — Grammatical accuracy, A1",
+        "canDo": {
+          "he": "אני משתמש/ת במבנים פשוטים שנלמדו בעל־פה, עם טעויות בסיסיות שעדיין ניתן להבין מהן את הכוונה.",
+          "ar": "أستخدم تراكيب بسيطة محفوظة، مع أخطاء أساسيّة ما زال المعنى مفهوماً معها.",
+          "en": "I can use some simple structures correctly, but still systematically make basic mistakes while meaning stays clear."
+        }
+      },
+      "alignment": {
+        "moe": {
+          "curriculum": "Revised English Curriculum (Israel MoE)",
+          "band": "Foundation",
+          "domain": "Presentation",
+          "domainTitle": {
+            "he": "הצגה והבעה",
+            "ar": "العرض والتعبير",
+            "en": "Presentation"
+          }
+        },
+        "exams": [
+          {
+            "id": "cambridge.a2.key.schools",
+            "name": "A2 Key for Schools",
+            "task": "Reading & Writing Part 5 — open cloze"
+          },
+          {
+            "id": "toefl.junior",
+            "name": "TOEFL Junior",
+            "task": "Language Form and Meaning"
+          }
+        ],
+        "national": [
+          {
+            "id": "meitzav.english",
+            "name": "מיצ״ב אנגלית",
+            "grade": "ח׳"
+          }
+        ]
       }
     },
     {
@@ -89,6 +263,38 @@
         "he": "להגות בבירור מילות משפחה נפוצות, כולל הצליל th, ולאיית נכון את מילות הליבה.",
         "ar": "نطق مفردات العائلة الشائعة بوضوح، بما في ذلك صوت th، وكتابتها إملائياً بشكل صحيح.",
         "en": "Pronounce common family words intelligibly, including the 'th' sound, and spell the core words correctly."
+      },
+      "cefr": {
+        "level": "A1",
+        "stretch": "A2",
+        "mode": "linguistic",
+        "scale": "Phonological control",
+        "reference": "CEFR CV 2020 — Overall phonological control / Orthographic control, A1",
+        "canDo": {
+          "he": "ההגייה שלי במאגר מילים וביטויים מצומצם מובנת למאזין/ה שרגיל/ה לדוברי שפתי.",
+          "ar": "نطقي لمجموعة محدودة من الكلمات والعبارات مفهوم لمستمع معتاد على أبناء لغتي.",
+          "en": "My pronunciation of a limited repertoire of words and phrases can be understood by a listener used to speakers of my language group."
+        }
+      },
+      "alignment": {
+        "moe": {
+          "curriculum": "Revised English Curriculum (Israel MoE)",
+          "band": "Foundation",
+          "domain": "Presentation",
+          "domainTitle": {
+            "he": "הצגה והבעה",
+            "ar": "العرض والتعبير",
+            "en": "Presentation"
+          }
+        },
+        "exams": [
+          {
+            "id": "cambridge.a2.key.schools",
+            "name": "A2 Key for Schools",
+            "task": "Speaking — Pronunciation assessment criterion"
+          }
+        ],
+        "national": []
       }
     },
     {
@@ -99,6 +305,43 @@
         "he": "לתאר בעל פה את המשפחה ואת השגרה במשפטים פשוטים ומקושרים, בהגייה מובנת.",
         "ar": "وصف العائلة والروتين شفوياً بجمل بسيطة مترابطة ونطق مفهوم.",
         "en": "Describe your family and routine aloud in simple connected sentences with intelligible pronunciation."
+      },
+      "cefr": {
+        "level": "A1",
+        "stretch": "A2",
+        "mode": "production",
+        "scale": "Sustained monologue: describing experience",
+        "reference": "CEFR CV 2020 — Sustained monologue: describing experience, A1–A2",
+        "canDo": {
+          "he": "אני מתאר/ת את עצמי, את משפחתי ואת השגרה שלי במשפטים קצרים ובסיסיים.",
+          "ar": "أصف نفسي وعائلتي وروتيني بجمل قصيرة وأساسيّة.",
+          "en": "I can describe myself, my family and my routine in short, basic phrases and sentences."
+        }
+      },
+      "alignment": {
+        "moe": {
+          "curriculum": "Revised English Curriculum (Israel MoE)",
+          "band": "Foundation",
+          "domain": "Presentation",
+          "domainTitle": {
+            "he": "הצגה והבעה",
+            "ar": "العرض والتعبير",
+            "en": "Presentation"
+          }
+        },
+        "exams": [
+          {
+            "id": "cambridge.a2.key.schools",
+            "name": "A2 Key for Schools",
+            "task": "Speaking Part 2 — extended turn"
+          },
+          {
+            "id": "toefl.junior.speaking",
+            "name": "TOEFL Junior Speaking",
+            "task": "Task 3 — picture narration"
+          }
+        ],
+        "national": []
       }
     },
     {
@@ -109,6 +352,44 @@
         "he": "לכתוב טקסט קצר על משפחה, ולקשר משפטים באמצעות and, but ו-because.",
         "ar": "كتابة نص قصير عن العائلة، وربط الجمل بواسطة and و but و because.",
         "en": "Write a short text about a family, linking sentences with 'and', 'but' and 'because'."
+      },
+      "cefr": {
+        "level": "A2",
+        "stretch": "A2+",
+        "mode": "production",
+        "scale": "Overall written production",
+        "reference": "CEFR CV 2020 — Overall written production / Creative writing, A2",
+        "canDo": {
+          "he": "אני כותב/ת סדרת משפטים וביטויים פשוטים המקושרים במילות קישור כמו and, but ו-because.",
+          "ar": "أكتب سلسلة من الجمل والعبارات البسيطة مترابطة بأدوات ربط مثل and و but و because.",
+          "en": "I can write a series of simple phrases and sentences linked with connectors such as 'and', 'but' and 'because'."
+        }
+      },
+      "alignment": {
+        "moe": {
+          "curriculum": "Revised English Curriculum (Israel MoE)",
+          "band": "Foundation",
+          "domain": "Presentation",
+          "domainTitle": {
+            "he": "הצגה והבעה",
+            "ar": "العرض والتعبير",
+            "en": "Presentation"
+          }
+        },
+        "exams": [
+          {
+            "id": "cambridge.a2.key.schools",
+            "name": "A2 Key for Schools",
+            "task": "Reading & Writing Part 7 — guided writing"
+          }
+        ],
+        "national": [
+          {
+            "id": "meitzav.english",
+            "name": "מיצ״ב אנגלית",
+            "grade": "ח׳"
+          }
+        ]
       }
     },
     {
@@ -119,6 +400,38 @@
         "he": "לכתוב הודעות בין-אישיות קצרות בנושא מוכר — להזמין, להשיב, לבקש פרט חסר.",
         "ar": "كتابة رسائل شخصية قصيرة في موضوع مألوف — دعوة، ردّ، طلب معلومة ناقصة.",
         "en": "Write short interpersonal messages on a familiar topic — invite, reply, ask for a missing detail."
+      },
+      "cefr": {
+        "level": "A2",
+        "stretch": "A2+",
+        "mode": "interaction",
+        "scale": "Correspondence",
+        "reference": "CEFR CV 2020 — Correspondence, A2",
+        "canDo": {
+          "he": "אני כותב/ת הודעות אישיות קצרות מאוד — להזמין, להודות, להשיב או לבקש פרט חסר.",
+          "ar": "أكتب رسائل شخصيّة قصيرة جداً — للدعوة أو الشكر أو الردّ أو طلب معلومة ناقصة.",
+          "en": "I can write very short personal messages — to invite, thank, reply or ask for a missing detail."
+        }
+      },
+      "alignment": {
+        "moe": {
+          "curriculum": "Revised English Curriculum (Israel MoE)",
+          "band": "Foundation",
+          "domain": "Social Interaction",
+          "domainTitle": {
+            "he": "אינטראקציה חברתית",
+            "ar": "التفاعل الاجتماعي",
+            "en": "Social Interaction"
+          }
+        },
+        "exams": [
+          {
+            "id": "cambridge.a2.key.schools",
+            "name": "A2 Key for Schools",
+            "task": "Reading & Writing Part 6 — short message"
+          }
+        ],
+        "national": []
       }
     },
     {
@@ -129,6 +442,38 @@
         "he": "למסור את הכוונה בבירור בחילופי מידע ישירים, ולקשר רעיונות בעזרת מילות קישור פשוטות.",
         "ar": "إيصال القصد بوضوح في تبادل معلومات مباشر، وربط الأفكار بأدوات ربط بسيطة.",
         "en": "Convey intended meaning in a direct exchange of information, linking ideas with simple connectors."
+      },
+      "cefr": {
+        "level": "A2",
+        "stretch": "A2+",
+        "mode": "interaction",
+        "scale": "Propositional precision / Coherence and cohesion",
+        "reference": "CEFR CV 2020 — Propositional precision + Coherence and cohesion, A2",
+        "canDo": {
+          "he": "אני מוסר/ת את הכוונה שלי בבירור בחילופי מידע ישירים, ומקשר/ת בין רעיונות במילות קישור פשוטות.",
+          "ar": "أوصل قصدي بوضوح في تبادل معلومات مباشر، وأربط بين الأفكار بأدوات ربط بسيطة.",
+          "en": "I can communicate what I want to say in a direct exchange of information, linking ideas with simple connectors."
+        }
+      },
+      "alignment": {
+        "moe": {
+          "curriculum": "Revised English Curriculum (Israel MoE)",
+          "band": "Foundation",
+          "domain": "Social Interaction",
+          "domainTitle": {
+            "he": "אינטראקציה חברתית",
+            "ar": "التفاعل الاجتماعي",
+            "en": "Social Interaction"
+          }
+        },
+        "exams": [
+          {
+            "id": "cambridge.a2.key.schools",
+            "name": "A2 Key for Schools",
+            "task": "Speaking Part 1 — interlocutor exchange"
+          }
+        ],
+        "national": []
       }
     },
     {
@@ -139,7 +484,65 @@
         "he": "למסור באנגלית פרטים מרכזיים מתוך טקסט משפחתי קצר שנכתב בעברית או בערבית.",
         "ar": "نقل التفاصيل الأساسية بالإنجليزية من نص عائلي قصير مكتوب بالعبرية أو العربية.",
         "en": "Relay key details in English from a short family text written in Hebrew or Arabic."
+      },
+      "cefr": {
+        "level": "A1",
+        "stretch": "A2",
+        "mode": "mediation",
+        "scale": "Relaying specific information",
+        "reference": "CEFR CV 2020 — Relaying specific information in speech/writing, A1–A2",
+        "canDo": {
+          "he": "אני מוסר/ת פרטים פשוטים (מספרים, שמות, שעות) מטקסט בשפה אחת אל האנגלית.",
+          "ar": "أنقل تفاصيل بسيطة (أرقام، أسماء، أوقات) من نصّ بلغة أخرى إلى الإنجليزيّة.",
+          "en": "I can relay simple, predictable information (numbers, names, times) from a text in another language into English."
+        }
+      },
+      "alignment": {
+        "moe": {
+          "curriculum": "Revised English Curriculum (Israel MoE)",
+          "band": "Foundation",
+          "domain": "Social Interaction",
+          "domainTitle": {
+            "he": "אינטראקציה חברתית",
+            "ar": "التفاعل الاجتماعي",
+            "en": "Social Interaction"
+          }
+        },
+        "exams": [],
+        "national": []
       }
     }
-  ]
+  ],
+  "cefrFramework": {
+    "name": "CEFR Companion Volume (2020)",
+    "levels": [
+      "A1",
+      "A2",
+      "A2+"
+    ],
+    "modes": [
+      "reception",
+      "production",
+      "interaction",
+      "mediation",
+      "linguistic"
+    ]
+  },
+  "domainTitles": {
+    "Social Interaction": {
+      "he": "אינטראקציה חברתית",
+      "ar": "التفاعل الاجتماعي",
+      "en": "Social Interaction"
+    },
+    "Access to Information": {
+      "he": "גישה למידע",
+      "ar": "الوصول إلى المعلومات",
+      "en": "Access to Information"
+    },
+    "Presentation": {
+      "he": "הצגה והבעה",
+      "ar": "العرض والتعبير",
+      "en": "Presentation"
+    }
+  }
 }

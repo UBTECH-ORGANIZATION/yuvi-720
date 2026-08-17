@@ -21,6 +21,7 @@
       "isRequired": true,
       "order": 1,
       "masteryLevel": "basic",
+      "cefrLevel": "A1",
       "relativeDifficulty": 2,
       "mediaFormat": "text",
       "estimatedTimeInMinutes": 10,
@@ -300,6 +301,7 @@
       "isRequired": false,
       "order": 1,
       "masteryLevel": "basic",
+      "cefrLevel": "A1",
       "relativeDifficulty": 1,
       "mediaFormat": "audio",
       "estimatedTimeInMinutes": 7,
@@ -489,6 +491,7 @@
       "isRequired": true,
       "order": 2,
       "masteryLevel": "intermediate",
+      "cefrLevel": "A2",
       "relativeDifficulty": 4,
       "mediaFormat": "text",
       "estimatedTimeInMinutes": 11,
@@ -735,6 +738,266 @@
       ]
     },
     {
+      "id": "ENG.G7.FAMILY.READ-02A",
+      "learningUnitId": "ENG.G7.FAMILY.READ",
+      "title": "Challenge: what the text does not say",
+      "componentPurpose": "תרגול",
+      "isAssessment": false,
+      "isRequired": false,
+      "order": 2,
+      "masteryLevel": "advanced",
+      "cefrLevel": "A2+",
+      "relativeDifficulty": 5,
+      "mediaFormat": "text",
+      "estimatedTimeInMinutes": 12,
+      "languages": [
+        "Hebrew",
+        "Arabic",
+        "English"
+      ],
+      "recommendedAfterFail": [
+        "ENG.G7.FAMILY.READ-01B"
+      ],
+      "skills": [
+        "הבנת הנקרא",
+        "הסקת מסקנות",
+        "הצלבת מקורות"
+      ],
+      "cognitiveLevel": "ניתוח",
+      "depthLevel": "מתקדם",
+      "manufacture": "Yuvilab",
+      "subContent": [
+        {
+          "id": "ENG.G7.FAMILY.READ-02A-01",
+          "title": "Reading between the lines",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "מסך פתיחה של רכיב האתגר (רמת A2+). הקפיצה מהרכיב הקודם: עד עכשיו כל תשובה הייתה כתובה במפורש באחד הטקסטים. כאן חלק מהתשובות אינן כתובות — צריך להסיק אותן משילוב של שני מקורות. יעד: הסקת מסקנה פשוטה ממידע מפוזר. אסטרטגיה: לשאול 'מה הטקסט מספר לי בוודאות' ורק אחר כך 'מה זה אומר'. תפיסה שגויה נפוצה: לומדים חזקים בוחרים תשובה שנשמעת הגיונית מהעולם שלהם במקום תשובה שנתמכת בטקסט. אין כאן שאלה ואין ניקוד.",
+          "presentation": {
+            "kind": "intro",
+            "prompt": {
+              "en": "This time some answers are not written anywhere. You work them out.",
+              "he": "הפעם חלק מהתשובות לא כתובות באף מקום. אתם מסיקים אותן.",
+              "ar": "هذه المرّة بعض الإجابات ليست مكتوبة في أيّ مكان. أنتم تستنتجونها."
+            },
+            "goal": {
+              "en": "Two short texts about the same family, written by two different people.",
+              "he": "שני טקסטים קצרים על אותה משפחה, שנכתבו בידי שני אנשים שונים.",
+              "ar": "نصّان قصيران عن العائلة نفسها، كتبهما شخصان مختلفان."
+            },
+            "strategy": {
+              "en": "Before you choose, point to the exact words that made you think so. If you cannot point, it is a guess.",
+              "he": "לפני שבוחרים, הצביעו על המילים המדויקות שגרמו לכם לחשוב כך. אם אי אפשר להצביע — זה ניחוש.",
+              "ar": "قبل الاختيار، أشيروا إلى الكلمات المحدّدة التي جعلتكم تظنّون ذلك. إن لم تستطيعوا الإشارة، فهذا تخمين."
+            }
+          },
+          "questions": []
+        },
+        {
+          "id": "ENG.G7.FAMILY.READ-02A-02",
+          "title": "A note home and a message thread",
+          "contentType": "תרגול",
+          "mediaFormat": "text",
+          "informationToBot": "שני טקסטים מעשיים על אותה משפחה: הודעה מבית הספר ושרשור הודעות במשפחה. יעד: להצליב בין שני מקורות ולהסיק פרט שאינו כתוב במפורש. אוצר מילים בליבה: trip, permission, sign, pick up, instead, on my own. אסטרטגיה: קודם לקבוע מה ידוע בוודאות מכל טקסט בנפרד, ורק אז לחבר. תפיסות שגויות נפוצות: (1) הלומד מניח שאמא אוספת את דנה כי היא האם — אבל הטקסט אומר שהיא עובדת עד חמש; (2) 'instead' נקרא כתוספת ולא כהחלפה; (3) המילה permission נתפסת כשם של מסמך ולא כאישור. אם הלומד טועה, כדאי לבקש ממנו לצטט את השורה שממנה למד את התשובה.",
+          "presentation": {
+            "kind": "reading",
+            "prompt": {
+              "en": "Read both texts. Tap any line to hear it.",
+              "he": "קראו את שני הטקסטים. לחצו על שורה כדי לשמוע אותה.",
+              "ar": "اقرأوا النصّين. اضغطوا على أيّ سطر لسماعه."
+            },
+            "lines": [
+              "SCHOOL NOTE: On Thursday, class 7B goes on a trip to the science museum.",
+              "The bus comes back to school at 4 p.m. A parent must sign the permission form.",
+              "Children who have no one to pick them up stay in the library until 5 p.m.",
+              "---",
+              "MESSAGE THREAD:",
+              "Mum: I work until five on Thursday, so I cannot come.",
+              "Adam: I finish football at half past three. I can pick Dana up instead.",
+              "Dana: Great, but do not be late! I do not want to sit in the library again."
+            ],
+            "language": "en-US",
+            "rate": 0.9,
+            "glossary": [
+              {
+                "word": "trip",
+                "he": "טיול",
+                "ar": "رحلة"
+              },
+              {
+                "word": "permission form",
+                "he": "טופס אישור",
+                "ar": "استمارة إذن"
+              },
+              {
+                "word": "pick up",
+                "he": "לאסוף",
+                "ar": "أن يأخذ / يقلّ"
+              },
+              {
+                "word": "instead",
+                "he": "במקום",
+                "ar": "بدلاً من ذلك"
+              },
+              {
+                "word": "library",
+                "he": "ספרייה",
+                "ar": "مكتبة"
+              }
+            ]
+          },
+          "questions": [
+            {
+              "questionId": "q1",
+              "questionType": "single-choice",
+              "questionText": "Who will pick Dana up on Thursday?",
+              "answers": [
+                "Mum",
+                "Adam",
+                "A teacher",
+                "Nobody"
+              ],
+              "correctAnswers": [
+                "Adam"
+              ],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. Mum says she cannot come, and Adam offers to go \"instead\".",
+                  "he": "כן. אמא אומרת שהיא לא יכולה לבוא, ואדם מציע ללכת \"instead\" — במקומה.",
+                  "ar": "نعم. الأمّ تقول إنّها لا تستطيع، وآدم يعرض الذهاب \"instead\" — بدلاً منها."
+                },
+                "incorrect": {
+                  "en": "Nobody says \"I will pick Dana up\" directly. Read Mum's line first — what does she say she cannot do? Then read who answers her.",
+                  "he": "אף אחד לא אומר \"אני אאסוף את דנה\" במפורש. קראו קודם את השורה של אמא — מה היא אומרת שהיא לא יכולה? ואז קראו מי עונה לה.",
+                  "ar": "لا أحد يقول \"سآخذ دانا\" صراحةً. اقرأوا سطر الأمّ أوّلاً — ماذا تقول إنّها لا تستطيع؟ ثمّ اقرأوا من يجيبها."
+                }
+              }
+            },
+            {
+              "questionId": "q2",
+              "questionType": "single-choice",
+              "questionText": "How long will Dana have to wait after the bus comes back?",
+              "answers": [
+                "She will not wait at all",
+                "About half an hour",
+                "About an hour",
+                "Until five o'clock"
+              ],
+              "correctAnswers": [
+                "She will not wait at all"
+              ],
+              "feedback": {
+                "correct": {
+                  "en": "Right. The bus is back at 4, and Adam is free from half past three — he can already be there.",
+                  "he": "נכון. האוטובוס חוזר ב-4, ואדם פנוי מ-3:30 — הוא כבר יכול להיות שם.",
+                  "ar": "صحيح. الحافلة تعود في الرابعة، وآدم متفرّغ من الثالثة والنصف — يمكنه أن يكون هناك بالفعل."
+                },
+                "incorrect": {
+                  "en": "Two times decide this: when the bus comes back, and when Adam finishes football. Find both, then compare them.",
+                  "he": "שתי שעות קובעות כאן: מתי האוטובוס חוזר, ומתי אדם מסיים כדורגל. מצאו את שתיהן והשוו ביניהן.",
+                  "ar": "وقتان يحدّدان ذلك: متى تعود الحافلة، ومتى ينهي آدم كرة القدم. جدوهما ثمّ قارنوا بينهما."
+                }
+              }
+            },
+            {
+              "questionId": "q3",
+              "questionType": "single-choice",
+              "questionText": "What does Dana's last line tell us about her?",
+              "answers": [
+                "She has waited in the library before",
+                "She likes reading in the library",
+                "She is not going on the trip",
+                "She does not know Adam well"
+              ],
+              "correctAnswers": [
+                "She has waited in the library before"
+              ],
+              "feedback": {
+                "correct": {
+                  "en": "Exactly. The word \"again\" is the clue — it only makes sense if it happened before.",
+                  "he": "בדיוק. המילה \"again\" היא הרמז — היא הגיונית רק אם זה קרה כבר בעבר.",
+                  "ar": "بالضبط. كلمة \"again\" هي المفتاح — لا معنى لها إلّا إذا حدث ذلك من قبل."
+                },
+                "incorrect": {
+                  "en": "One single word in her line carries the whole answer. Look for the word that means \"one more time\".",
+                  "he": "מילה אחת בשורה שלה נושאת את כל התשובה. חפשו את המילה שמשמעותה \"עוד פעם\".",
+                  "ar": "كلمة واحدة في سطرها تحمل الإجابة كلّها. ابحثوا عن الكلمة التي تعني \"مرّة أخرى\"."
+                }
+              }
+            },
+            {
+              "questionId": "q4",
+              "questionType": "single-choice",
+              "questionText": "Which detail is NOT in either text?",
+              "answers": [
+                "The name of the museum",
+                "The day of the trip",
+                "The time the bus returns",
+                "Who must sign the form"
+              ],
+              "correctAnswers": [
+                "The name of the museum"
+              ],
+              "feedback": {
+                "correct": {
+                  "en": "Yes. We are told it is a science museum, but never which one.",
+                  "he": "כן. כתוב שזה מוזיאון מדע, אבל אף פעם לא איזה מוזיאון.",
+                  "ar": "نعم. مكتوب أنّه متحف علوم، لكن لم يُذكر أيّ متحف."
+                },
+                "incorrect": {
+                  "en": "Check the three other options one by one in the school note — three of them really are there.",
+                  "he": "בדקו את שלוש האפשרויות האחרות אחת-אחת בהודעה מבית הספר — שלוש מהן באמת מופיעות שם.",
+                  "ar": "تحقّقوا من الخيارات الثلاثة الأخرى واحداً واحداً في رسالة المدرسة — ثلاثة منها موجودة فعلاً."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "ENG.G7.FAMILY.READ-02A-03",
+          "title": "How did that feel?",
+          "contentType": "רפלקציה",
+          "mediaFormat": "text",
+          "informationToBot": "מסך רפלקציה בסיום רכיב האתגר. יעד: לתת ללומד לשקף עד כמה ההסקה הרגישה בטוחה. אין תשובה נכונה ואין ניקוד — הבחירה נשמרת כדיווח עצמי בלבד. אם הלומד בוחר בתשובה שמעידה על חוסר ביטחון, כדאי להציע לו לחזור לרכיב התרגול הרגיל ולא לרכיב הבסיסי — הוא כבר הוכיח שליטה בסיסית.",
+          "presentation": {
+            "kind": "reflection",
+            "prompt": {
+              "en": "When an answer was not written in the text, how did you decide?",
+              "he": "כשתשובה לא הייתה כתובה בטקסט, איך החלטתם?",
+              "ar": "عندما لم تكن الإجابة مكتوبة في النصّ، كيف قرّرتم؟"
+            },
+            "choices": [
+              {
+                "id": "evidence",
+                "label": {
+                  "en": "I found the words that proved it",
+                  "he": "מצאתי את המילים שהוכיחו את זה",
+                  "ar": "وجدت الكلمات التي أثبتت ذلك"
+                }
+              },
+              {
+                "id": "mixed",
+                "label": {
+                  "en": "Sometimes I found them, sometimes I guessed",
+                  "he": "לפעמים מצאתי, לפעמים ניחשתי",
+                  "ar": "أحياناً وجدتها وأحياناً خمّنت"
+                }
+              },
+              {
+                "id": "guess",
+                "label": {
+                  "en": "I mostly went with what sounded right",
+                  "he": "בעיקר הלכתי לפי מה שנשמע נכון",
+                  "ar": "اعتمدت غالباً على ما بدا صحيحاً"
+                }
+              }
+            ]
+          },
+          "questions": []
+        }
+      ]
+    },
+    {
       "id": "ENG.G7.FAMILY.READ-03",
       "learningUnitId": "ENG.G7.FAMILY.READ",
       "title": "Check: a school notice for families",
@@ -743,6 +1006,7 @@
       "isRequired": true,
       "order": 3,
       "masteryLevel": "intermediate",
+      "cefrLevel": "A2",
       "relativeDifficulty": 3,
       "mediaFormat": "text",
       "estimatedTimeInMinutes": 8,

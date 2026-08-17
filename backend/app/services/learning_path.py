@@ -129,7 +129,9 @@ def pick_equivalent(pool: list[dict[str, Any]], band: str) -> dict[str, Any]:
     if band == "confident":
         return max(pool, key=key)
     ordered = sorted(pool, key=key)
-    return ordered[len(ordered) // 2]  # on_track → the middle rung
+    # Round DOWN on an even pool: with two rungs, "the middle" must be the
+    # gentler one — an on-track learner is not sent to the top rung.
+    return ordered[(len(ordered) - 1) // 2]
 
 
 # ── Evidence ─────────────────────────────────────────────────────────────────
