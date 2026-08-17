@@ -268,11 +268,16 @@ def _item_profiles(component: dict[str, Any]) -> list[dict[str, Any]]:
             q for q in (item.get("questions") or [])
             if isinstance(q, dict) and q.get("questionId")
         ]
+        presentation = item.get("presentation") if isinstance(item.get("presentation"), dict) else {}
         profiles.append({
             "id": item_id,
             "title": str(item.get("title") or "")[:200],
             "content_type": str(item.get("contentType") or "").strip().lower(),
             "media_format": str(item.get("mediaFormat") or "").strip().lower(),
+            # The authored screen role (intro / reading / practice / summary…).
+            # Kata items carry none; for native content it is what lets the
+            # coach know a cover screen from a teaching screen.
+            "screen_kind": str(presentation.get("kind") or "").strip().lower(),
             "question_count": len(questions),
             "presentation": _presentation_body(item),
         })

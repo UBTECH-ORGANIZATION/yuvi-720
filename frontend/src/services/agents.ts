@@ -389,7 +389,9 @@ export interface CoachSupportState {
 
 /** `question` asks something; `watch` is video/audio/animation; `read` is
  * text/image/presentation; `step` is anything else that teaches (simulation…). */
-export type LessonItemKind = 'question' | 'watch' | 'read' | 'step'
+// `intro` is the lesson's own cover screen — the chat folds it into the
+// Introduction section instead of opening a per-screen thread for it.
+export type LessonItemKind = 'intro' | 'question' | 'watch' | 'read' | 'step'
 
 export interface LessonItemProfile {
   id: string
