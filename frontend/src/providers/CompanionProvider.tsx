@@ -1107,6 +1107,10 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const maybeEnqueueIntro = useCallback((questionKey: string | null) => {
     const { item, question } = introParts(questionKey)
     if (!item) return
+    // The lesson's cover screen is what the WELCOME is about — opening a
+    // "learning step" thread for it beside the מבוא made the introduction look
+    // skipped before the learner had moved at all.
+    if (itemKindsRef.current[item] === 'intro') return
     const disposition = introDisposition(
       item, question, introducedItemsRef.current, introducedQuestionsRef.current
     )

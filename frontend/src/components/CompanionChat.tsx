@@ -68,11 +68,15 @@ function completeSentences(text: string): string {
   return match[0].trim().length >= 8 ? match[0] : ''
 }
 
-function groupByQuestion(messages: CoachMessage[]): MessageGroup[] {
+function groupByQuestion(messages: CoachMessage[], introItems?: Set<string>): MessageGroup[] {
   const groups: MessageGroup[] = []
   const byItem = new Map<string, MessageGroup[]>()
   for (const m of messages) {
-    const { item, question } = keyParts(m.questionKey)
+    let { item, question } = keyParts(m.questionKey)
+    // The lesson's cover screen IS the introduction: anything said there (a
+    // learner question, a nudge) belongs with the welcome, not in a thread
+    // that captions the cover as a learning step of its own.
+    if (item && introItems?.has(item)) { item = ''; question = '' }
     // Lesson-level messages (no screen) are the Introduction; they all belong
     // together however far apart they arrive.
     if (!item) {
@@ -327,7 +331,11 @@ export function CompanionChat() {
   const [helpedPicks, setHelpedPicks] = useState<Record<string, HelpMethod[]>>({})
   // Per-question section grouping for the lesson thread (kept above the early
   // return below so hook order stays stable — Rules of Hooks).
-  const messageGroups = useMemo(() => groupByQuestion(messages), [messages])
+  const introItems = useMemo(
+    () => new Set(Object.keys(itemKinds).filter((id) => itemKinds[id] === 'intro')),
+    [itemKinds],
+  )
+  const messageGroups = useMemo(() => groupByQuestion(messages, introItems), [messages, introItems])
   // "מה עזר לך?" is asked ONCE per question, under the message that congratulated
   // them. A second success on the same question (or a later one, after they had
   // gone on chatting) used to bring the chips back a second time, which reads as
