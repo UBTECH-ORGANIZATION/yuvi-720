@@ -2562,6 +2562,7 @@
   "voice.state.idle": "جاهز",
   "voice.state.connecting": "جارٍ الاتصال…",
   "voice.state.listening": "يوفي يستمع",
+  "voice.state.transcribing": "لحظة…",
   "voice.state.speaking": "يوفي يتحدّث",
   "voice.state.error": "حدث خلل"
 }

@@ -4,6 +4,7 @@ The Coach streams over the non-identifying Context bundle; the AI-use disclosure
 is sent as the first SSE event so the UI always shows it (§11).
 """
 
+import base64
 import json
 import re
 from typing import Literal, Optional
@@ -22,6 +23,7 @@ from app.agents.manim_visual import (
     render_visual,
     should_offer_visual,
     split_visual_response,
+    visuals_enabled,
 )
 from app.agents.pedagogical import select_next, route_after_fail
 from app.agents import reflection
@@ -29,6 +31,7 @@ from app.core.localization import normalize_language
 from app.services.ai_usage import UsageContext
 from app.services.lrs import reporter as lrs_reporter
 from app.services.speech import SpeechUnavailable, synthesize_speech
+from app.services.speech_segments import split_by_script
 from app.services import triggers
 
 
@@ -72,7 +75,7 @@ async def _stream_visual_tail(
     will_plan = False
     try:
         screened_message = safety.screen_input(user_message, language).text or user_message
-        will_plan = not (
+        will_plan = visuals_enabled() and not (
             safety.is_safety_redirect(response_text)
             or not _worth_visual_planning(screened_message, response_text)
         )
@@ -758,6 +761,58 @@ async def coach_tts(request: CoachSpeechRequest, learner_id: str = Depends(requi
     )
 
 
+@router.post("/coach/tts/stream")
+async def coach_tts_stream(
+    request: CoachSpeechRequest,
+    learner_id: str = Depends(require_learner),
+):
+    """Speak a reply that mixes languages, one native voice per language run.
+
+    Yuvi teaches English in Hebrew, so a single reply routinely carries both.
+    One voice cannot be native to both, so the text is cut on script and each
+    run is synthesized separately. Runs stream out as they finish, which means
+    the learner hears the first one while the rest are still being made.
+    """
+    language = normalize_language(request.language)
+    conversation_id = sessions.normalize_session_id(request.conversation_id)
+    screened_text = safety.screen_output(request.text, language).text
+    segments = split_by_script(screened_text, default_language=language)
+
+    async def event_generator():
+        for index, (segment_language, segment_text) in enumerate(segments):
+            if not segment_text.strip():
+                continue
+            try:
+                audio = await synthesize_speech(
+                    segment_text,
+                    segment_language,
+                    avatar_variant=request.avatar_variant,
+                    output_format="raw-24khz-16bit-mono-pcm",
+                    usage_context=UsageContext(
+                        actor_id=learner_id,
+                        actor_type="learner",
+                        endpoint="/api/agent/coach/tts/stream",
+                        feature="feature_3_learning_companion",
+                        operation="coach.speech",
+                        source="coach_speech_route",
+                        session_id=conversation_id,
+                        exchange_id=request.exchange_id,
+                    ),
+                )
+            except (ValueError, SpeechUnavailable) as exc:
+                # One unspeakable run must not silence the rest of the reply.
+                print(f"⚠️ speech segment {index} skipped ({type(exc).__name__})")
+                continue
+            yield "data: " + json.dumps({
+                "index": index,
+                "language": segment_language,
+                "audio": base64.b64encode(audio).decode("ascii"),
+            }) + "\n\n"
+        yield "data: " + json.dumps({"done": True}) + "\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
 @router.post("/coach/proactive")
 async def coach_proactive(request: CoachProactiveRequest, session=Depends(require_learner_session)):
     """Stream a proactive nudge (idle / misconception / success). Fired by the
@@ -920,6 +975,8 @@ async def visualize(request: VisualizeRequest, session=Depends(require_learner_s
 
     screened_message = safety.screen_input(request.user_message, language).text or request.user_message
     prefer_animation = request.mode == "video"
+    if not visuals_enabled():
+        return {"visual": None}
     try:
         scene = await plan_manim_visual(
             screened_message,

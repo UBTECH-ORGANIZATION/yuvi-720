@@ -2,6 +2,7 @@
    Azure Speech is preferred; Web Speech is the no-credentials fallback. */
 
 import type { YuviVariant } from '../features/Yuvi-studio/YuviDesign'
+import { decodeBase64, PcmPlayer, SAMPLE_RATE } from './pcmAudio'
 
 export type SpeechState = 'preparing' | 'playing' | 'idle'
 
@@ -27,11 +28,16 @@ const SPEECH_TERMS = {
 
 type SpeechLanguage = keyof typeof SPEECH_TERMS
 
+/** Yuvi speaks with the female voices — he-IL-HilaNeural and en-US-JennyNeural.
+ *  Deliberately independent of the robot the learner built in the studio: the
+ *  avatar picks how Yuvi looks, not how he sounds. */
+const SPOKEN_VARIANT: YuviVariant = 'girl'
+
 let generation = 0
 let activeController: AbortController | null = null
-let activeAudio: HTMLAudioElement | null = null
-let activeUrl: string | null = null
 let activeListener: StateListener | null = null
+let activeContext: AudioContext | null = null
+let activePlayer: PcmPlayer | null = null
 
 function languageKey(language: string): SpeechLanguage {
   return language === 'ar' || language === 'en' ? language : 'he'
@@ -79,10 +85,10 @@ export function normalizeMathForSpeech(text: string, language: string): string {
 }
 
 function cleanUpAudio() {
-  activeAudio?.pause()
-  activeAudio = null
-  if (activeUrl) URL.revokeObjectURL(activeUrl)
-  activeUrl = null
+  activePlayer?.stop()
+  activePlayer = null
+  void activeContext?.close().catch(() => {})
+  activeContext = null
 }
 
 export function stopCoachSpeech() {
@@ -93,13 +99,6 @@ export function stopCoachSpeech() {
   window.speechSynthesis?.cancel()
   activeListener?.('idle')
   activeListener = null
-}
-
-function waitForAudio(audio: HTMLAudioElement): Promise<void> {
-  return new Promise((resolve, reject) => {
-    audio.addEventListener('ended', () => resolve(), { once: true })
-    audio.addEventListener('error', () => reject(new Error('audio playback failed')), { once: true })
-  })
 }
 
 function speakInBrowser(text: string, language: string, avatarVariant: YuviVariant, run: number): Promise<void> {
@@ -126,10 +125,124 @@ function speakInBrowser(text: string, language: string, avatarVariant: YuviVaria
   })
 }
 
+type SpeechSegment = { index: number; language: string; audio: string }
+
+/** Read the segment stream, handing each one over the moment it arrives. */
+async function readSegments(
+  body: unknown,
+  signal: AbortSignal,
+  onSegment: (segment: SpeechSegment) => void,
+): Promise<void> {
+  const response = await fetch('/api/agent/coach/tts/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal,
+  })
+  if (!response.ok || !response.body) throw new Error('azure speech unavailable')
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) return
+    buffer += decoder.decode(value, { stream: true })
+    let split = buffer.indexOf('\n\n')
+    while (split !== -1) {
+      const line = buffer.slice(0, split).split('\n').find((l) => l.startsWith('data: '))
+      buffer = buffer.slice(split + 2)
+      if (line) {
+        const payload = JSON.parse(line.slice(6))
+        if (payload.done) return
+        onSegment(payload as SpeechSegment)
+      }
+      split = buffer.indexOf('\n\n')
+    }
+  }
+}
+
+export type CoachSpeechSession = {
+  /** Speak this text once everything queued before it has been spoken. */
+  push: (text: string) => void
+  /** Resolves when the last queued audio has finished playing. */
+  end: () => Promise<void>
+}
+
+/**
+ * Speak a reply while it is still being written.
+ *
+ * Waiting for the whole reply before synthesizing anything put the language
+ * model — about four seconds of it — directly into the learner's wait. Handing
+ * over one sentence at a time means Yuvi starts talking while he is still
+ * deciding what to say next.
+ */
+export function beginCoachSpeech(
+  language: string,
+  onState: StateListener,
+  conversationId: string = 'default',
+  exchangeId?: string,
+): CoachSpeechSession {
+  stopCoachSpeech()
+  const run = ++generation
+  activeListener = onState
+  const controller = new AbortController()
+  activeController = controller
+  onState('preparing')
+
+  const context = new AudioContext({ sampleRate: SAMPLE_RATE })
+  activeContext = context
+  const player = new PcmPlayer(context)
+  activePlayer = player
+  let spoke = false
+  // Sentences are synthesized one after another so they cannot arrive out of order.
+  let queue: Promise<void> = context.resume().catch(() => {})
+
+  const push = (text: string) => {
+    const trimmed = (text || '').trim()
+    if (!trimmed) return
+    queue = queue
+      .then(async () => {
+        if (run !== generation) return
+        await readSegments(
+          {
+            text: trimmed,
+            language,
+            avatar_variant: SPOKEN_VARIANT,
+            conversation_id: conversationId,
+            exchange_id: exchangeId,
+          },
+          controller.signal,
+          (segment) => {
+            if (run !== generation) return
+            if (!spoke) {
+              spoke = true
+              onState('playing')
+            }
+            player.push(decodeBase64(segment.audio))
+          },
+        )
+      })
+      // One failed sentence must not silence the rest of the reply.
+      .catch(() => {})
+  }
+
+  const end = async () => {
+    await queue
+    if (run !== generation) return
+    await new Promise((resolve) => setTimeout(resolve, player.remainingSeconds * 1000))
+    if (run !== generation) return
+    cleanUpAudio()
+    activeController = null
+    activeListener = null
+    onState('idle')
+  }
+
+  return { push, end }
+}
+
 export async function playCoachSpeech(
   text: string,
   language: string,
-  avatarVariant: YuviVariant,
   onState: StateListener,
   conversationId: string = 'default',
   exchangeId?: string,
@@ -140,31 +253,41 @@ export async function playCoachSpeech(
   activeController = new AbortController()
   onState('preparing')
 
+  let spoke = false
   try {
-    const response = await fetch('/api/agent/coach/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const context = new AudioContext({ sampleRate: SAMPLE_RATE })
+    activeContext = context
+    await context.resume()
+    const player = new PcmPlayer(context)
+    activePlayer = player
+
+    await readSegments(
+      {
         text,
         language,
-        avatar_variant: avatarVariant,
+        avatar_variant: SPOKEN_VARIANT,
         conversation_id: conversationId,
         exchange_id: exchangeId,
-      }),
-      signal: activeController.signal,
-    })
-    if (!response.ok) throw new Error('azure speech unavailable')
-    const blob = await response.blob()
+      },
+      activeController.signal,
+      (segment) => {
+        if (run !== generation) return
+        if (!spoke) {
+          spoke = true
+          onState('playing')
+        }
+        player.push(decodeBase64(segment.audio))
+      },
+    )
     if (run !== generation) return
-    activeUrl = URL.createObjectURL(blob)
-    activeAudio = new Audio(activeUrl)
-    onState('playing')
-    await activeAudio.play()
-    await waitForAudio(activeAudio)
+    // The stream is finished but the tail of it is still on the audio clock.
+    await new Promise((resolve) => setTimeout(resolve, player.remainingSeconds * 1000))
   } catch (error) {
     if (run !== generation || (error instanceof DOMException && error.name === 'AbortError')) return
-    onState('playing')
-    await speakInBrowser(text, language, avatarVariant, run)
+    if (!spoke) {
+      onState('playing')
+      await speakInBrowser(text, language, SPOKEN_VARIANT, run)
+    }
   } finally {
     if (run === generation) {
       cleanUpAudio()

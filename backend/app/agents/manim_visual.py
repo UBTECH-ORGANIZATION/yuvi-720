@@ -368,6 +368,16 @@ _VISUAL_OFFER_PROMPTS = {
 }
 
 
+def visuals_enabled() -> bool:
+    """Whether the coach may plan, render or offer visuals at all.
+
+    A single switch over both entry points — the automatic tail after a reply
+    and the on-demand /visualize route — so the tool can be taken away from the
+    agent without touching the conversation code.
+    """
+    return (os.getenv("COACH_VISUALS_ENABLED") or "0").strip().lower() in {"1", "true", "yes", "on"}
+
+
 async def should_offer_visual(
     user_message: str,
     assistant_response: str,
@@ -377,6 +387,8 @@ async def should_offer_visual(
     """LLM decision (mini tier): is this reply an explanation where a visual would
     genuinely help? Used to gate the on-demand "show me a video / image" buttons
     so they never appear on greetings, social chat, or safety redirects."""
+    if not visuals_enabled():
+        return False
     lang = language if language in _VISUAL_OFFER_PROMPTS else "he"
     messages = [
         {"role": "system", "content": _VISUAL_OFFER_PROMPTS[lang]},
