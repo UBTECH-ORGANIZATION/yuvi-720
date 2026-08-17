@@ -329,7 +329,17 @@ async def report_help_requested(
     object_type: str,
     help_source: str,
     help_type: str,
+    *,
+    component_id: Optional[str] = None,
+    item_id: Optional[str] = None,
 ) -> None:
+    # `component_id`/`item_id` pin the ancestry to the SAME level as `object`.
+    # Left unset, `_content_context` falls back to the brain's full current
+    # position, which can be a level DEEPER than the object (e.g. a
+    # component-level help request while the learner is already on a specific
+    # item) — the review read that stray, unrelated item in `grouping` as the
+    # object being wrong, when the real bug was including an ancestor the
+    # object never had.
     await _report(
         statements.help_requested,
         learner_id,
@@ -338,7 +348,7 @@ async def report_help_requested(
         object_type=object_type,
         help_source=help_source,
         help_type=help_type,
-        **await _content_context(learner_id),
+        **await _content_context(learner_id, component_id, item_id),
     )
 
 
@@ -349,6 +359,9 @@ async def report_selected(
     object_type: str,
     selection_type: str,
     response: str,
+    *,
+    component_id: Optional[str] = None,
+    item_id: Optional[str] = None,
 ) -> None:
     await _report(
         statements.selected,
@@ -358,7 +371,7 @@ async def report_selected(
         object_type=object_type,
         selection_type=selection_type,
         response=response,
-        **await _content_context(learner_id),
+        **await _content_context(learner_id, component_id, item_id),
     )
 
 
