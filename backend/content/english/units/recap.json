@@ -16,6 +16,7 @@
       "id": "ENG.G7.FAMILY.RECAP-01",
       "learningUnitId": "ENG.G7.FAMILY.RECAP",
       "title": "Look back at Modern Family",
+      "titleTranslations": { "Hebrew": "מבט לאחור: משפחה מודרנית", "Arabic": "نظرة إلى الوراء: العائلة العصرية", "English": "Look back at Modern Family" },
       "componentPurpose": "סיכום",
       "isAssessment": false,
       "isRequired": false,

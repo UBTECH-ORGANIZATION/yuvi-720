@@ -21,9 +21,10 @@ NMM_HOMEPAGE = f"{MOE}/identity/nmm/kvutsa"
 SCHOOL_HOMEPAGE = f"{MOE}/school"
 ECAT_ITEM_BASE = f"{MOE}/ecat/item"
 # `grouping→content-vendor` identifies the content SUPPLIER (MoE, 03/08), which
-# is not the same thing as a catalog ITEM id — so it gets its own IRI space. An
-# xAPI activity id must be an IRI, and the ministry's interim values ("10",
-# "methodica") are bare tokens, so they are namespaced rather than sent raw.
+# is not the same thing as a catalog ITEM id — so it gets its own IRI space.
+# The base follows the ministry's own examples page (720_xAPI_JSON_Examples,
+# refreshed 16/08): `…/xapi/moe/content-vendor/<catalog-id>` — chosen over the
+# `…/moe/ecat/content-vendor/…` spelling from the email thread, per Gal, 17/08.
 CONTENT_VENDOR_BASE = f"{MOE}/content-vendor"
 
 # 720 media dictionary. The Activity type of a media object follows the media
@@ -80,12 +81,16 @@ def build_grouping(
     ecat_item_id: Optional[str] = None,
     extra: Optional[list[dict[str, Any]]] = None,
 ) -> list[dict[str, Any]]:
-    """Mandatory grouping: lms + session + program (+ content-vendor for content)."""
+    """Mandatory grouping: lms + session + program (+ content-vendor for content).
+
+    Order follows the ministry's examples page: lms, session, program,
+    content-vendor, then the content ancestry."""
     grouping: list[dict[str, Any]] = [
         activity(config.supplier_domain(), "lms"),
     ]
     if session_id:
         grouping.append(session_activity(session_id))
+    grouping.append(activity(config.program_iri(), "program"))
     if ecat_item_id:
         # Already an IRI (the supplier id, namespaced by `hierarchy`) → sent as
         # it is; a bare catalog item id is namespaced here.
@@ -95,7 +100,6 @@ def build_grouping(
             else f"{ECAT_ITEM_BASE}/{ecat_item_id}"
         )
         grouping.append(activity(identifier, "content-vendor"))
-    grouping.append(activity(config.program_iri(), "program"))
     if extra:
         # De-dupe so content-origin statements can't add a SECOND lms/session/
         # program (the MoE would receive two `session` groupings with different

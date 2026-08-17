@@ -112,9 +112,15 @@ def ecat_items() -> dict[str, str]:
 # "מטח - תוכן"), so that field is the key. The ministry will later issue a
 # distinct number per subject area and grade; `LRS_CONTENT_VENDORS` accepts the
 # more specific keys already, so that arrives as configuration, not a patch.
+#
+# The catalog ids themselves (update sent to the ministry before integration
+# round 3, confirmed 17/08): each becomes
+# `https://lxp.education.gov.il/xapi/moe/content-vendor/<id>` on the wire
+# (base per the ministry's examples page — see CONTENT_VENDOR_BASE).
 _DEFAULT_CONTENT_VENDORS = {
-    "מתודיקה": "methodica",
-    "מטח": "10",
+    "מטח": "10",        # …/content-vendor/10
+    "קמפוס": "521",     # …/content-vendor/521
+    "מתודיקה": "310",   # …/content-vendor/310
 }
 
 

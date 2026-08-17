@@ -13,6 +13,10 @@ Two requirements, both tested here: the id identifies the SUPPLIER (not the
 content item), and it is derived from the catalog rather than from a list
 someone maintains by hand. Kata publishes the supplier per component as
 `manufacture` ("מתודיקה", "מטח - תוכן"), so that is the key.
+
+Integration round 3 (17/08) pinned the actual catalog ids — מטח 10, קמפוס 521,
+מתודיקה 310 — sent under the base the ministry's own examples page uses:
+`…/xapi/moe/content-vendor/<id>`.
 """
 
 from __future__ import annotations
@@ -29,10 +33,12 @@ from app.services.lrs import config, context  # noqa: E402
 
 
 class SupplierIdTests(unittest.TestCase):
-    def test_the_ministrys_interim_values_are_the_default(self):
+    def test_the_ministrys_catalog_ids_are_the_default(self):
+        """The ids from the catalog update (17/08): מטח 10 · קמפוס 521 · מתודיקה 310."""
         with mock.patch.dict(os.environ, {"LRS_CONTENT_VENDORS": ""}, clear=False):
-            self.assertEqual(config.content_vendor_id("מתודיקה"), "methodica")
+            self.assertEqual(config.content_vendor_id("מתודיקה"), "310")
             self.assertEqual(config.content_vendor_id("מטח - תוכן"), "10")
+            self.assertEqual(config.content_vendor_id("קמפוס"), "521")
 
     def test_the_catalogs_own_suffix_still_matches_the_vendor(self):
         """CET publishes "מטח - תוכן", not "מטח" — matching has to survive that."""
@@ -64,7 +70,7 @@ class SupplierIdTests(unittest.TestCase):
 
     def test_broken_json_falls_back_rather_than_dropping_the_grouping(self):
         with mock.patch.dict(os.environ, {"LRS_CONTENT_VENDORS": "{not json"}):
-            self.assertEqual(config.content_vendor_id("מתודיקה"), "methodica")
+            self.assertEqual(config.content_vendor_id("מתודיקה"), "310")
 
     def test_an_explicit_empty_map_is_honoured(self):
         """An operator who writes `{}` means it — that is how the identity gate
@@ -74,6 +80,23 @@ class SupplierIdTests(unittest.TestCase):
 
 
 class GroupingTests(unittest.TestCase):
+    def test_the_vendor_iri_matches_the_ministry_examples_page_exactly(self):
+        """The examples page (720_xAPI_JSON_Examples, 16/08) shows
+        `https://lxp.education.gov.il/xapi/moe/content-vendor/10` for מטח — the
+        wire value must be byte-identical to that shape."""
+        self.assertEqual(
+            f"{context.CONTENT_VENDOR_BASE}/10",
+            "https://lxp.education.gov.il/xapi/moe/content-vendor/10",
+        )
+        self.assertEqual(
+            f"{context.CONTENT_VENDOR_BASE}/{config.content_vendor_id('קמפוס')}",
+            "https://lxp.education.gov.il/xapi/moe/content-vendor/521",
+        )
+        self.assertEqual(
+            f"{context.CONTENT_VENDOR_BASE}/{config.content_vendor_id('מתודיקה')}",
+            "https://lxp.education.gov.il/xapi/moe/content-vendor/310",
+        )
+
     def test_a_supplier_iri_is_sent_as_it_is(self):
         """An xAPI activity id must be an IRI, so the bare "10" is namespaced by
         `hierarchy` — and must not then be namespaced a second time here."""

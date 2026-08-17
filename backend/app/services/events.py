@@ -932,6 +932,12 @@ async def _forward_to_moe_lrs(
         hierarchy=ancestry,
         context_extensions=context_extensions,
         result_extra=result_extra,
+        # A question-level relay (an answer to one question inside a screen)
+        # nests under its questionnaire screen in grouping/parent, per the
+        # ministry's answered example.
+        object_below_self=bool(
+            event.get("verb") in {"answered", "attempted"} and event.get("question_id")
+        ),
     )
 
 
@@ -1011,6 +1017,12 @@ async def _content_report_fields(
         )
         if match and match.get("questionType"):
             extensions["questionType"] = match["questionType"]
+
+    if verb == "completed" and not _is_media_item(component_id, item_id):
+        # The ministry's questionnaire example: a completed questionnaire
+        # reports `result.completion: true` (media completions carry only
+        # duration). Tautological on a completed event, so never invented.
+        result_extra["completion"] = True
 
     if verb in {"played", "paused", "watched", "listened"} or (
         verb == "completed" and _is_media_item(component_id, item_id)

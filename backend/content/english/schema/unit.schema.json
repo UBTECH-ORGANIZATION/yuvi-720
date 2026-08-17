@@ -1,0 +1,400 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yuvilab.co.il/schema/english/unit.schema.json",
+  "title": "Yuvilab English learning unit",
+  "description": "The authoring contract for a hand-written English unit under backend/content/english/units/. It is checked by scripts/check_english_content.py, never at runtime: the player and the catalog stay deliberately forgiving so a content mistake degrades one screen instead of failing a lesson. This file is where a mistake is supposed to be caught. Every object is closed (additionalProperties: false) on purpose — a typo like 'presentaion' or 'correctAnswer' would otherwise be silently ignored, which is exactly how the twelve kind-less items got shipped.",
+
+  "type": "object",
+  "required": ["id", "title", "titleTranslations", "subTopic", "targetSector", "targetAudience", "components"],
+  "additionalProperties": false,
+  "properties": {
+    "_comment": { "type": "string" },
+    "id": { "$ref": "#/$defs/contentId" },
+    "title": { "type": "string", "minLength": 1 },
+    "titleTranslations": { "$ref": "#/$defs/kataTitles" },
+    "subTopic": { "type": "string", "minLength": 1 },
+    "learningObjective": {
+      "description": "The goal this unit serves. Absent only on a sub-topic summary unit, which by 720 §3.4 has no goal of its own.",
+      "type": "string", "minLength": 1
+    },
+    "prerequisiteLearningObjective": {
+      "description": "Goals that must come first. An array even when empty, because the catalog treats a unit with no prerequisites and a unit whose prerequisites are unknown identically.",
+      "type": "array", "items": { "type": "string", "minLength": 1 }
+    },
+    "targetSector": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "targetAudience": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "components": {
+      "type": "array", "minItems": 1,
+      "items": { "$ref": "#/$defs/component" }
+    }
+  },
+
+  "$defs": {
+    "contentId": {
+      "description": "Dotted id. Must survive being pasted into an xAPI object IRI, so no spaces and no characters that would need escaping.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.\\-]{0,159}$"
+    },
+
+    "trilingual": {
+      "description": "Learner-facing text. All three locales are required — a missing one renders as an empty screen for that sector, not as a fallback.",
+      "type": "object",
+      "required": ["en", "he", "ar"],
+      "additionalProperties": false,
+      "properties": {
+        "en": { "type": "string", "minLength": 1 },
+        "he": { "type": "string", "minLength": 1 },
+        "ar": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "kataTitles": {
+      "description": "Unit titles keyed by Kata's language LABELS rather than locale codes — this is the provider's spelling and `kata_client.title_translations` is what maps it to he/ar/en. Do not 'fix' it to locale codes: the same reader parses real Kata units.",
+      "type": "object",
+      "required": ["English", "Hebrew", "Arabic"],
+      "additionalProperties": false,
+      "properties": {
+        "English": { "type": "string", "minLength": 1 },
+        "Hebrew": { "type": "string", "minLength": 1 },
+        "Arabic": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "supportText": {
+      "description": "Scaffolding shown to a learner who is stuck. Hebrew and Arabic are required because it talks ABOUT the English on screen; English is optional and only worth writing when the tip is itself about pronunciation or wording.",
+      "type": "object",
+      "required": ["he", "ar"],
+      "additionalProperties": false,
+      "properties": {
+        "en": { "type": "string", "minLength": 1 },
+        "he": { "type": "string", "minLength": 1 },
+        "ar": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "media": {
+      "description": "One image. It is AUTHORED as a `prompt` plus `alt`, and `scripts/generate_unit_images.py` fills in `src`/`srcset`/`width`/`height` — so the picture is described in the content and the file is a build artefact of it. `alt` is required in all three languages because the picture may BE the question (image MCQ), and a learner on a screen reader who loses it loses the item, not a decoration. `width`/`height` come with any `src` so the box is reserved before the bytes arrive and nothing shifts under a tapping finger. The check script fails a unit whose images have not been generated yet.",
+      "type": "object",
+      "required": ["alt"],
+      "anyOf": [{ "required": ["prompt"] }, { "required": ["src"] }],
+      "allOf": [{
+        "if": { "required": ["src"] },
+        "then": { "required": ["width", "height"] }
+      }],
+      "additionalProperties": false,
+      "properties": {
+        "src": {
+          "description": "Path under content/english/assets/, relative to that directory. Content-hashed by the generator, so it is safe to serve immutable.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._/\\-]{0,199}$"
+        },
+        "srcset": { "type": "string", "minLength": 1 },
+        "sizes": { "type": "string", "minLength": 1 },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "alt": { "$ref": "#/$defs/trilingual" },
+        "prompt": {
+          "description": "AUTHORING ONLY — the text the image was generated from. Stripped from the player payload; kept here so a regeneration is reproducible and so a reviewer can see what was asked for.",
+          "type": "string", "minLength": 1
+        }
+      }
+    },
+
+    "component": {
+      "type": "object",
+      "required": [
+        "id", "learningUnitId", "title", "titleTranslations", "componentPurpose",
+        "isAssessment", "isRequired", "order", "masteryLevel", "cefrLevel",
+        "relativeDifficulty", "mediaFormat", "estimatedTimeInMinutes", "languages",
+        "skills", "manufacture", "subContent"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "_comment": { "type": "string" },
+        "id": { "$ref": "#/$defs/contentId" },
+        "learningUnitId": { "$ref": "#/$defs/contentId" },
+        "title": { "type": "string", "minLength": 1 },
+        "titleTranslations": { "$ref": "#/$defs/kataTitles" },
+        "componentPurpose": { "type": "string", "minLength": 1 },
+        "isAssessment": { "type": "boolean" },
+        "isRequired": { "type": "boolean" },
+        "order": {
+          "description": "Route position. Two components MAY share one order — that is how an equivalent alternative representation is declared (720 §3.2).",
+          "type": "number"
+        },
+        "masteryLevel": { "type": "string", "minLength": 1 },
+        "cefrLevel": { "type": "string", "pattern": "^(A1|A2|B1|B2|C1|C2)\\+?$" },
+        "relativeDifficulty": { "type": "number" },
+        "mediaFormat": { "type": "string", "minLength": 1 },
+        "estimatedTimeInMinutes": { "type": "number", "exclusiveMinimum": 0 },
+        "languages": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "recommendedAfterFail": {
+          "description": "Where a failing learner goes next. Every id here must name a component in a DIFFERENT representation — re-serving the same screens is what 720 §3.3 forbids, and the check script verifies the media format actually changes.",
+          "type": "array", "items": { "$ref": "#/$defs/contentId" }
+        },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "cognitiveLevel": { "type": "string" },
+        "depthLevel": { "type": ["string", "number"] },
+        "manufacture": { "type": "string", "minLength": 1 },
+        "subContent": {
+          "type": "array", "minItems": 1,
+          "items": { "$ref": "#/$defs/item" }
+        }
+      }
+    },
+
+    "item": {
+      "description": "One screen — a פריט, 'the unit of interaction that can be recorded as a single event'. Not one question: a screen may carry several.",
+      "type": "object",
+      "required": ["id", "title", "contentType", "mediaFormat", "informationToBot", "presentation", "questions"],
+      "additionalProperties": false,
+      "properties": {
+        "_comment": { "type": "string" },
+        "id": { "$ref": "#/$defs/contentId" },
+        "title": { "type": "string", "minLength": 1 },
+        "contentType": { "type": "string", "minLength": 1 },
+        "mediaFormat": { "type": "string", "minLength": 1 },
+        "informationToBot": {
+          "description": "Server-only teaching notes for the coach: the goal, the common misconceptions, and what may NOT be said. Never reaches the browser.",
+          "type": "string", "minLength": 1
+        },
+        "presentation": { "$ref": "#/$defs/presentation" },
+        "questions": { "type": "array", "items": { "$ref": "#/$defs/question" } }
+      }
+    },
+
+    "presentation": {
+      "description": "What the screen shows before it asks anything. `kind` is required: the player tolerates its absence, but an author who omits it silently gets a bare prompt with no body, which is how twelve screens shipped degraded.",
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": ["intro", "reading", "listening", "speaking", "writing", "mediation", "practice", "match", "reflection", "summary"]
+        },
+        "prompt": { "$ref": "#/$defs/trilingual" },
+        "goal": { "$ref": "#/$defs/trilingual" },
+        "strategy": { "$ref": "#/$defs/trilingual" },
+        "image": { "$ref": "#/$defs/media" },
+        "lines": {
+          "description": "The text, one tappable line at a time. A plain string is a paragraph; the object form says what the line IS, because a real invitation has a title, a notice has fields, and a chat has speakers — and rendering all of those as identical grey paragraphs is what made these screens look like a wall of shouting.",
+          "type": "array", "minItems": 1,
+          "items": {
+            "oneOf": [
+              { "type": "string", "minLength": 1 },
+              {
+                "type": "object",
+                "required": ["role"],
+                "additionalProperties": false,
+                "properties": {
+                  "text": { "type": "string", "minLength": 1 },
+                  "role": {
+                    "description": "heading — a title. field — `LABEL: value` from a form or notice. speaker — `Name: message` in a conversation. divider — a rule between two parts of a document, and the one role that carries no text and is never read aloud.",
+                    "enum": ["heading", "field", "speaker", "divider"]
+                  }
+                },
+                "allOf": [{
+                  "if": { "properties": { "role": { "not": { "const": "divider" } } }, "required": ["role"] },
+                  "then": { "required": ["text"] }
+                }]
+              }
+            ]
+          }
+        },
+        "script": { "type": "string", "minLength": 1 },
+        "referenceText": {
+          "description": "What the learner is asked to say. An array gives one practice button per sentence; a single string is one continuous stretch, which is how a 'say it in one go' screen is authored. The player accepts both.",
+          "oneOf": [
+            { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+            { "type": "string", "minLength": 1 }
+          ]
+        },
+        "source": {
+          "description": "The text being mediated FROM. Hebrew and Arabic, because it is the learner's own language and English is what they are carrying it into — an English version would remove the task. Both are required: this text once existed in one language per component, which made the after-fail alternative and the other sector the same thing, and routed a Hebrew learner into an Arabic notice they could not read.",
+          "$ref": "#/$defs/supportText"
+        },
+        "language": { "type": "string", "pattern": "^[a-z]{2}(-[A-Z]{2})?$" },
+        "rate": { "type": "number", "minimum": 0.5, "maximum": 1.5 },
+        "transcriptAvailable": { "type": "boolean" },
+        "support": { "$ref": "#/$defs/supportText" },
+        "placeholder": { "$ref": "#/$defs/trilingual" },
+        "checklist": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/trilingual" } },
+        "glossary": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["word", "he", "ar"],
+            "additionalProperties": false,
+            "properties": {
+              "word": { "type": "string", "minLength": 1 },
+              "he": { "type": "string", "minLength": 1 },
+              "ar": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "choices": { "$ref": "#/$defs/labelledChoices" },
+        "selfCheck": { "$ref": "#/$defs/labelledChoices" },
+        "onSuccess": { "$ref": "#/$defs/trilingual" },
+        "onRetry": { "$ref": "#/$defs/trilingual" },
+        "nextHint": { "$ref": "#/$defs/trilingual" }
+      },
+
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "intro" } }, "required": ["kind"] },
+          "then": { "required": ["prompt", "goal", "strategy"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "reading" } }, "required": ["kind"] },
+          "then": { "required": ["prompt", "lines"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "listening" } }, "required": ["kind"] },
+          "then": { "required": ["prompt", "script", "transcriptAvailable"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "speaking" } }, "required": ["kind"] },
+          "then": { "required": ["prompt", "referenceText", "selfCheck"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "writing" } }, "required": ["kind"] },
+          "then": { "required": ["prompt", "placeholder", "checklist"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "mediation" } }, "required": ["kind"] },
+          "then": { "required": ["source", "prompt", "placeholder", "checklist"] }
+        },
+        {
+          "if": { "properties": { "kind": { "enum": ["practice", "match"] } }, "required": ["kind"] },
+          "then": { "required": ["prompt"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "reflection" } }, "required": ["kind"] },
+          "then": { "required": ["prompt", "choices"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "summary" } }, "required": ["kind"] },
+          "then": { "required": ["onSuccess", "onRetry"] }
+        }
+      ]
+    },
+
+    "labelledChoices": {
+      "description": "Options the learner picks for themselves — a reflection answer or a self-check. Never graded, so there is no key. It must be an ARRAY: the player reads `.length` to decide whether to draw the block at all, so a bare trilingual string here does not render as a question, it renders as nothing.",
+      "type": "array", "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["id", "label"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Stable across translations — it is what the reflection answer is recorded as, so renaming it orphans the history.",
+            "type": "string", "pattern": "^[a-z0-9][a-z0-9_\\-]{0,39}$"
+          },
+          "label": { "$ref": "#/$defs/trilingual" }
+        }
+      }
+    },
+
+    "question": {
+      "type": "object",
+      "required": ["questionId", "questionType", "questionText", "answers", "correctAnswers", "feedback"],
+      "additionalProperties": false,
+      "properties": {
+        "questionId": {
+          "description": "MUST be q1, q2, … — the xAPI object id ends in this, and both our analytics and Kata's parse it with ^q(\\d+)$. Any other spelling makes the answer invisible to the LRS.",
+          "type": "string",
+          "pattern": "^q[0-9]+$"
+        },
+        "questionType": {
+          "enum": ["single-choice", "true-false", "fill-in", "match", "text-entry"],
+          "description": "NOTE the trap: `fill-in` is a sentence with a blank whose answer is CHOSEN from options — it renders as multiple choice. Free typing is `text-entry`. An image MCQ is not a type at all: it is `single-choice` plus `image`/`answerMedia`."
+        },
+        "questionText": { "type": "string", "minLength": 1 },
+        "image": {
+          "description": "A picture the question is about — the scene in an image MCQ.",
+          "$ref": "#/$defs/media"
+        },
+        "answers": {
+          "description": "The options offered. Empty for `text-entry`, where there is nothing to choose from.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "answerMedia": {
+          "description": "Keyed by the answer string it illustrates, so picture options stay in step with `answers` even when they are reordered.",
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/media" }
+        },
+        "prompts": {
+          "description": "The left-hand side of a matching question — what gets paired TO an answer.",
+          "type": "array", "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["id"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9\\-]{0,39}$" },
+              "text": { "type": "string", "minLength": 1 },
+              "media": { "$ref": "#/$defs/media" }
+            },
+            "anyOf": [{ "required": ["text"] }, { "required": ["media"] }]
+          }
+        },
+        "correctAnswers": {
+          "description": "The key. NEVER leaves the server. Choice types: exactly one, and it must be one of `answers`. `match`: one `promptId=answer` string per prompt. `text-entry`: every spelling that should be accepted.",
+          "type": "array", "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "feedback": {
+          "description": "Words, never a score. The incorrect branch must explain the error or give a strategy — and must not give the answer away (720 §feedback).",
+          "type": "object",
+          "required": ["correct", "incorrect"],
+          "additionalProperties": false,
+          "properties": {
+            "correct": { "$ref": "#/$defs/trilingual" },
+            "incorrect": { "$ref": "#/$defs/trilingual" }
+          }
+        }
+      },
+
+      "allOf": [
+        {
+          "if": {
+            "properties": { "questionType": { "enum": ["single-choice", "true-false", "fill-in"] } },
+            "required": ["questionType"]
+          },
+          "then": {
+            "properties": {
+              "answers": { "minItems": 2 },
+              "correctAnswers": { "minItems": 1, "maxItems": 1 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "questionType": { "const": "match" } }, "required": ["questionType"] },
+          "then": {
+            "required": ["prompts"],
+            "properties": {
+              "answers": { "minItems": 2 },
+              "correctAnswers": {
+                "minItems": 2,
+                "items": { "pattern": "^[a-z0-9][a-z0-9\\-]{0,39}=.+$" }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "questionType": { "const": "text-entry" } }, "required": ["questionType"] },
+          "then": {
+            "properties": {
+              "answers": {
+                "description": "Kept for shape compatibility with every consumer that reads `answers`, but there is nothing to offer.",
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -16,6 +16,7 @@
       "id": "ENG.G7.FAMILY.INTERACT-01",
       "learningUnitId": "ENG.G7.FAMILY.INTERACT",
       "title": "Read a real message thread",
+      "titleTranslations": { "Hebrew": "קוראים שרשור הודעות אמיתי", "Arabic": "نقرأ سلسلة رسائل حقيقية", "English": "Read a real message thread" },
       "componentPurpose": "הבנייה",
       "isAssessment": false,
       "isRequired": true,
@@ -40,6 +41,18 @@
           "informationToBot": "מסך פתיחה של רכיב ההבנייה ביעד האינטראקציה בכתב. המטרה: להסביר שהודעה היא לא חיבור — היא קצרה, ותמיד יש בה נמען אחד וכוונה אחת: להזמין, להשיב או לשאול. אסטרטגיה: לפני שכותבים הודעה, לשאול 'למי אני כותב ומה אני רוצה שיקרה אחרי שהוא יקרא?'. תפיסות שגויות נפוצות: (1) לומדים כותבים הודעה ארוכה מדי ומפספסים את הכוונה; (2) לומדים עונים 'yes' בלי לומר מתי או איפה, ואז ההודעה לא באמת עונה; (3) שכחת הפרט החסר — לא שואלים על מה שלא נאמר. אין כאן שאלה מדורגת.",
           "presentation": {
             "kind": "intro",
+            "image": {
+              "prompt": "Two friends sitting side by side on a low wall outdoors, each holding a phone and smiling at the screen as they message each other. The phone screens are blank.",
+              "src": "ENG.G7.FAMILY.INTERACT/interact-01-01-screen-811d7b75.jpg",
+              "srcset": "ENG.G7.FAMILY.INTERACT/interact-01-01-screen-811d7b75-480.webp 480w, ENG.G7.FAMILY.INTERACT/interact-01-01-screen-811d7b75-960.webp 960w",
+              "width": 1024,
+              "height": 1024,
+              "alt": {
+                "en": "Two friends sitting together, each holding a phone with a blank screen.",
+                "he": "שתי חברות יושבות יחד, כל אחת מחזיקה טלפון עם מסך ריק.",
+                "ar": "صديقتان تجلسان معاً، كلّ واحدة تمسك هاتفاً بشاشة فارغة."
+              }
+            },
             "prompt": {
               "en": "A message is short. It has one reader and one purpose.",
               "he": "הודעה היא קצרה. יש לה נמען אחד ומטרה אחת.",
@@ -72,11 +85,11 @@
               "ar": "اقرأوا الرسائل. اضغطوا على أيّ سطر لسماعه."
             },
             "lines": [
-              "Maya: Hi Sara! We are all going to my grandmother's house on Friday. Do you want to come?",
-              "Sara: Hi Maya! Yes, I would love to come. Thank you!",
-              "Sara: One question — what time should I be there?",
-              "Maya: Half past six. My uncle Sami will come late, but we start without him.",
-              "Sara: Great, see you on Friday. Should I bring something?"
+              { "text": "Maya: Hi Sara! We are all going to my grandmother's house on Friday. Do you want to come?", "role": "speaker" },
+              { "text": "Sara: Hi Maya! Yes, I would love to come. Thank you!", "role": "speaker" },
+              { "text": "Sara: One question — what time should I be there?", "role": "speaker" },
+              { "text": "Maya: Half past six. My uncle Sami will come late, but we start without him.", "role": "speaker" },
+              { "text": "Sara: Great, see you on Friday. Should I bring something?", "role": "speaker" }
             ],
             "language": "en-US",
             "rate": 0.9,
@@ -156,56 +169,6 @@
               }
             }
           ]
-        },
-        {
-          "id": "ENG.G7.FAMILY.INTERACT-01-03",
-          "title": "What did you notice?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי בסוף רכיב ההבנייה. המטרה: שהלומד יזהה איזה מהלך בשרשור מרגיש לו הכי קשה — להזמין, להשיב או לשאול. אין תשובה נכונה ואין ניקוד. אם נבחר 'לשאול על פרט חסר' — זה בדיוק החלק שהתרגול הבא מטפל בו; אם נבחר 'לא ידעתי שאפשר לשאול' — כדאי להרגיע שבאנגלית לשאול על פרט חסר זו התנהגות מנומסת ומקובלת, לא חוסר הבנה.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "Which part of a message thread is hardest for you?",
-              "he": "איזה חלק בשרשור הודעות הכי קשה לכם?",
-              "ar": "أيّ جزء من سلسلة الرسائل هو الأصعب عليكم؟"
-            },
-            "choices": [
-              {
-                "id": "invite",
-                "label": {
-                  "en": "Writing the invitation",
-                  "he": "לכתוב את ההזמנה",
-                  "ar": "كتابة الدعوة"
-                }
-              },
-              {
-                "id": "reply",
-                "label": {
-                  "en": "Writing a reply that is not only \"yes\"",
-                  "he": "לכתוב תשובה שהיא לא רק \"כן\"",
-                  "ar": "كتابة ردّ لا يقتصر على \"نعم\""
-                }
-              },
-              {
-                "id": "ask",
-                "label": {
-                  "en": "Asking for a detail that is missing",
-                  "he": "לשאול על פרט שחסר",
-                  "ar": "السؤال عن تفصيل ناقص"
-                }
-              },
-              {
-                "id": "new",
-                "label": {
-                  "en": "I did not know I could ask at all",
-                  "he": "לא ידעתי שבכלל אפשר לשאול",
-                  "ar": "لم أكن أعرف أنّه يمكنني السؤال أصلاً"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -213,6 +176,7 @@
       "id": "ENG.G7.FAMILY.INTERACT-01B",
       "learningUnitId": "ENG.G7.FAMILY.INTERACT",
       "title": "Hear the same messages as voice notes",
+      "titleTranslations": { "Hebrew": "שומעים את ההודעות כהודעות קוליות", "Arabic": "نسمع الرسائل نفسها كرسائل صوتية", "English": "Hear the same messages as voice notes" },
       "componentPurpose": "הבנייה",
       "isAssessment": false,
       "isRequired": false,
@@ -341,56 +305,6 @@
               }
             }
           ]
-        },
-        {
-          "id": "ENG.G7.FAMILY.INTERACT-01B-03",
-          "title": "What helped you?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הייצוג הקולי. המטרה: שהלומד יזהה האם הטון עזר לו להבין את הכוונה. אין ניקוד ואין תשובה נכונה. אם נבחר 'התבלבלתי בין הדוברים' — כדאי להציע את הייצוג הכתוב שבו רואים מי כותב כל הודעה, כי זו בעיה של מעקב ולא של הבנה.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "What helped you understand the messages?",
-              "he": "מה עזר לכם להבין את ההודעות?",
-              "ar": "ما الذي ساعدكم على فهم الرسائل؟"
-            },
-            "choices": [
-              {
-                "id": "tone",
-                "label": {
-                  "en": "The tone of the voice",
-                  "he": "הטון של הקול",
-                  "ar": "نبرة الصوت"
-                }
-              },
-              {
-                "id": "transcript",
-                "label": {
-                  "en": "Reading the transcript",
-                  "he": "קריאת התמליל",
-                  "ar": "قراءة النصّ المكتوب"
-                }
-              },
-              {
-                "id": "replay",
-                "label": {
-                  "en": "Playing it more than once",
-                  "he": "השמעה יותר מפעם אחת",
-                  "ar": "إعادة التشغيل أكثر من مرّة"
-                }
-              },
-              {
-                "id": "speakers",
-                "label": {
-                  "en": "I mixed up who was speaking",
-                  "he": "התבלבלתי בין הדוברים",
-                  "ar": "اختلط عليّ من المتحدّث"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -398,6 +312,7 @@
       "id": "ENG.G7.FAMILY.INTERACT-02",
       "learningUnitId": "ENG.G7.FAMILY.INTERACT",
       "title": "Choose the right reply, then write your own",
+      "titleTranslations": { "Hebrew": "בוחרים תשובה מתאימה, וכותבים תשובה משלכם", "Arabic": "نختار الردّ المناسب، ثم نكتب ردّنا الخاص", "English": "Choose the right reply, then write your own" },
       "componentPurpose": "תרגול",
       "isAssessment": false,
       "isRequired": true,
@@ -447,6 +362,7 @@
           "mediaFormat": "text",
           "informationToBot": "תרגול ממוקד בבחירת תגובה מתאימה. הלומד מקבל הודעה ובוחר את התשובה שמתאימה לכוונת השולח. יעד: לבסס את ההבחנה בין תשובה שמקדמת את השיחה לבין תשובה שסוגרת אותה, ולזהות מתי צריך לשאול על פרט חסר. אסטרטגיה: לשאול 'מה הצד השני עדיין לא יודע אחרי שיקרא את התשובה שלי?'. תפיסות שגויות נפוצות: (1) בחירת התשובה הארוכה ביותר מתוך הנחה שארוך זה מנומס; (2) תשובה נימוסית אבל לא רלוונטית, כמו 'Thank you very much' להודעה ששואלת שאלה; (3) שימוש ב-'What hour?' כתרגום מילולי מעברית במקום 'What time?'. אם הלומד טועה פעמיים, כדאי לבקש ממנו לנסח מה השולח באמת רוצה.",
           "presentation": {
+            "kind": "practice",
             "prompt": {
               "en": "Read each message. Choose the reply that really works.",
               "he": "קראו כל הודעה. בחרו את התשובה שבאמת עובדת.",
@@ -596,6 +512,7 @@
       "id": "ENG.G7.FAMILY.INTERACT-03",
       "learningUnitId": "ENG.G7.FAMILY.INTERACT",
       "title": "Check: writing a real message",
+      "titleTranslations": { "Hebrew": "בדיקה: כותבים הודעה אמיתית", "Arabic": "تحقّق: كتابة رسالة حقيقية", "English": "Check: writing a real message" },
       "componentPurpose": "הערכה",
       "isAssessment": true,
       "isRequired": true,
@@ -645,6 +562,7 @@
           "mediaFormat": "text",
           "informationToBot": "פריט הערכה של בחירת תגובה. ההודעות חדשות ועוסקות בסיטואציות שלא תורגלו, כדי שההצלחה תעיד על המיומנות ולא על זיכרון. יעד: לבחור תגובה שעונה לכוונת השולח ומקדמת את השיחה, ולזהות איזה פרט חסר. בזמן ההערכה אין לחשוף את התשובה, אין לרמוז עליה ואין לצמצם אפשרויות. מותר להזכיר אסטרטגיה כללית בלבד: לבדוק מה השולח כבר אמר ומה עדיין חסר.",
           "presentation": {
+            "kind": "practice",
             "prompt": {
               "en": "Read each message and choose the best answer.",
               "he": "קראו כל הודעה ובחרו את התשובה הטובה ביותר.",
@@ -789,7 +707,7 @@
             },
             "onRetry": {
               "en": "Noticing what a message does NOT say is a skill on its own, and it takes practice. Next we will meet the same messages in a different way.",
-              "he": "לשים לב למה שהודעה לא אומרת זו מיומנות בפני עצמה, והיא דורשת תרגול. בפעם הבאה נפגוש את אותן הודעות בדרך אחרת.",
+              "he": "לשים לב למה שהודעה לא אומרת — זו מיומנות בפני עצמה, והיא דורשת תרגול. בפעם הבאה נפגוש את אותן הודעות בדרך אחרת.",
               "ar": "ملاحظة ما لا تقوله الرسالة مهارة بحدّ ذاتها، وتحتاج إلى تدريب. في المرّة القادمة سنلتقي بالرسائل نفسها بطريقة أخرى."
             },
             "nextHint": {

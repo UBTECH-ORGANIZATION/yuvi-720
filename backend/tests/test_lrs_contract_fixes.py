@@ -175,11 +175,15 @@ class HierarchyTests(unittest.TestCase):
 
     def test_an_item_carries_all_three_levels(self):
         built = hierarchy.build(unit=UNIT, component=COMPONENT, item=ITEM, level="item")
-        # The item is a VIDEO, and the spec types a media item by its media
-        # ("סוג ה-Activity יהיה בהתאם לסוג המדיה") — not `activities/item`.
+        # The strict ancestors sit in `grouping`; the item's own level is `self`
+        # (report 3: a content statement's deepest grouping entry is its OBJECT,
+        # so the catalog's item entry is kept apart for the statements whose
+        # object lives outside the content tree). The item is a VIDEO, and the
+        # spec types a media item by its media — not `activities/item`.
         self.assertEqual(_types(built["grouping"]), [
-            f"{ACTIVITY}/learning-unit", f"{ACTIVITY}/component", f"{ACTIVITY}/video",
+            f"{ACTIVITY}/learning-unit", f"{ACTIVITY}/component",
         ])
+        self.assertEqual(_types([built["self"]]), [f"{ACTIVITY}/video"])
         self.assertEqual(_types(built["parent"]), [f"{ACTIVITY}/component"])
         keys = built["extensions"]
         self.assertIn("learningUnitId", keys)      # unit level
@@ -193,7 +197,7 @@ class HierarchyTests(unittest.TestCase):
             unit=UNIT, component=COMPONENT,
             item={**ITEM, "media_format": "text"}, level="item",
         )
-        self.assertEqual(_types(built["grouping"])[-1], f"{ACTIVITY}/item")
+        self.assertEqual(_types([built["self"]]), [f"{ACTIVITY}/item"])
 
     def test_every_row_of_the_spec_s_metadata_tables_is_sent(self):
         """The tables list them; the catalog already normalizes them; they were
@@ -236,15 +240,15 @@ class HierarchyTests(unittest.TestCase):
 
     def test_a_component_carries_the_unit_above_it(self):
         built = hierarchy.build(unit=UNIT, component=COMPONENT, level="component")
-        self.assertEqual(_types(built["grouping"]), [
-            f"{ACTIVITY}/learning-unit", f"{ACTIVITY}/component",
-        ])
+        self.assertEqual(_types(built["grouping"]), [f"{ACTIVITY}/learning-unit"])
+        self.assertEqual(_types([built["self"]]), [f"{ACTIVITY}/component"])
         self.assertEqual(_types(built["parent"]), [f"{ACTIVITY}/learning-unit"])
         self.assertNotIn("itemId", built["extensions"])
 
     def test_a_unit_has_nothing_above_it(self):
         built = hierarchy.build(unit=UNIT, level="unit")
-        self.assertEqual(_types(built["grouping"]), [f"{ACTIVITY}/learning-unit"])
+        self.assertEqual(built["grouping"], [])
+        self.assertEqual(_types([built["self"]]), [f"{ACTIVITY}/learning-unit"])
         self.assertEqual(built["parent"], [])
 
     def test_the_media_format_of_the_ITEM_is_the_one_that_survives(self):
@@ -278,8 +282,11 @@ class ContentStatementTests(unittest.TestCase):
         self.assertEqual(ext["questionType"], "matching")
         self.assertEqual(ext["attemptNumber"], 2)
         self.assertNotIn("question_id", ext)          # the misnamed one is gone
-        self.assertEqual(_types(stmt["context"]["contextActivities"]["parent"]),
-                         [f"{ACTIVITY}/component"])
+        # A question nests under its questionnaire screen (the hierarchy's
+        # deepest level), not directly under the component — the ministry's
+        # answered example: parent = [questionnaire].
+        self.assertEqual(stmt["context"]["contextActivities"]["parent"],
+                         [self.hierarchy["self"]])
 
     def test_media_events_carry_format_position_and_duration(self):
         paused = statements.media_event(
@@ -378,14 +385,94 @@ class ContentStatementTests(unittest.TestCase):
             context_extensions={"questionId": "q1", "attemptNumber": 1},
             result_extra={"response": "מאזני כפות"},
         )
-        grouping_types = _types(stmt["context"]["contextActivities"]["grouping"])
-        for level in ("learning-unit", "component", "video"):   # the item is a video
+        grouping = stmt["context"]["contextActivities"]["grouping"]
+        grouping_types = _types(grouping)
+        for level in ("learning-unit", "component"):
             self.assertIn(f"{ACTIVITY}/{level}", grouping_types)
+        # Report 3: the deepest grouping entry is the statement's OWN object,
+        # verbatim — not the catalog's item entry with a different id.
+        self.assertEqual(grouping[-1], stmt["object"])
         self.assertEqual(_types(stmt["context"]["contextActivities"]["parent"]),
                          [f"{ACTIVITY}/component"])
         self.assertEqual(stmt["result"]["response"], "מאזני כפות")
         self.assertEqual(stmt["result"]["success"], True)      # the content's own survives
         self.assertEqual(_short(stmt["context"]["extensions"])["questionId"], "q1")
+
+    def test_the_questionnaires_grouping_entry_keeps_the_objects_type(self):
+        """Report 3, שאלון: the questionnaire's grouping tag was sent with type
+        `item` — "יש לשלוח type כמו ב-object, לדוג questionnaire"."""
+        raw = {
+            "verb": {"id": "http://adlnet.gov/expapi/verbs/initialized"},
+            "object": {
+                "id": "https://lomdot.education.gov.il/act/quiz-1",
+                "definition": {"type": f"{ACTIVITY}/questionnaire",
+                               "name": {"he": "תרגול: מדידת מסה"}},
+            },
+        }
+        stmt = statements.enriched_content_statement(
+            IDENTITY, SESSION, raw, hierarchy=self.hierarchy,
+        )
+        grouping = stmt["context"]["contextActivities"]["grouping"]
+        self.assertEqual(grouping[-1], stmt["object"])
+        self.assertEqual(grouping[-1]["definition"]["type"], f"{ACTIVITY}/questionnaire")
+        # The catalog's own differently-typed entry for that level must be gone.
+        self.assertNotIn(f"{ACTIVITY}/video", _types(grouping))
+
+    def test_answered_groups_the_exact_question_object(self):
+        """Report 3, מענה על שאלה: the grouping carried an item "שלא ברור מה
+        תוכנו" — different from the object. It must BE the object, nested under
+        its screen: grouping = […, component, screen, question(object)]."""
+        stmt = statements.question_answered(
+            IDENTITY, SESSION,
+            object_id="https://lomdot.education.gov.il/act/item/q1",
+            question_id="q1", response="מאזני כפות", hierarchy=self.hierarchy,
+        )
+        grouping = stmt["context"]["contextActivities"]["grouping"]
+        self.assertEqual(grouping[-1], stmt["object"])
+        self.assertEqual(grouping[-2], self.hierarchy["self"])   # the screen above it
+
+    def test_a_relayed_answer_nests_under_its_screen_too(self):
+        raw = {
+            "verb": {"id": "http://adlnet.gov/expapi/verbs/answered"},
+            "object": {"id": "https://lomdot.education.gov.il/act/item/q1"},
+        }
+        stmt = statements.enriched_content_statement(
+            IDENTITY, SESSION, raw, hierarchy=self.hierarchy,
+            object_below_self=True,
+        )
+        grouping = stmt["context"]["contextActivities"]["grouping"]
+        self.assertEqual(grouping[-1], stmt["object"])
+        self.assertEqual(grouping[-2], self.hierarchy["self"])
+        self.assertEqual(stmt["context"]["contextActivities"]["parent"],
+                         [self.hierarchy["self"]])
+
+    def test_selected_groups_the_exact_object_type_included(self):
+        """Report 3, בחירה שאינה לימודית: "הפריט עצמו ב-grouping יהיה אותו
+        אובייקט בדיוק כמו ב-object, נשלח type שונה"."""
+        stmt = statements.selected(
+            IDENTITY, SESSION,
+            object_id="https://lomdot.education.gov.il/act/item",
+            object_type="item", selection_type="learning-type", response="listening",
+            hierarchy=self.hierarchy,
+        )
+        grouping = stmt["context"]["contextActivities"]["grouping"]
+        self.assertEqual(grouping[-1], stmt["object"])
+        # The hierarchy's item entry is a VIDEO — exactly the mismatch the
+        # ministry flagged; the object's own `item` type must be what is sent.
+        self.assertEqual(grouping[-1]["definition"]["type"], f"{ACTIVITY}/item")
+        self.assertNotIn(f"{ACTIVITY}/video", _types(grouping))
+
+    def test_a_conversation_still_carries_the_catalog_item_in_grouping(self):
+        """A conversation's object lives OUTSIDE the content tree, so its
+        grouping keeps the catalog's own entry for the item it is about."""
+        stmt = statements.conversation_interacted(
+            IDENTITY, SESSION, "conv-1", speaker="bot",
+            conversation_trigger="student-request", help_type="hint",
+            hierarchy=self.hierarchy,
+        )
+        grouping = stmt["context"]["contextActivities"]["grouping"]
+        self.assertIn(f"{ACTIVITY}/video", _types(grouping))   # the catalog item
+        self.assertNotIn(stmt["object"]["id"], [g.get("id") for g in grouping])
 
     def test_the_content_keeps_its_own_result_when_it_reported_one(self):
         raw = {

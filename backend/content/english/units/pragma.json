@@ -16,6 +16,7 @@
       "id": "ENG.G7.FAMILY.PRAGMA-01",
       "learningUnitId": "ENG.G7.FAMILY.PRAGMA",
       "title": "and, but, because — and a polite no",
+      "titleTranslations": { "Hebrew": "מחברים רעיונות ואומרים לא בנימוס", "Arabic": "نربط الأفكار ونقول لا بلطف", "English": "and, but, because — and a polite no" },
       "componentPurpose": "הבנייה",
       "isAssessment": false,
       "isRequired": true,
@@ -40,6 +41,18 @@
           "informationToBot": "מסך פתיחה של רכיב ההבנייה ביעד הפרגמטיקה. המטרה: להסביר שהיעד כאן אינו 'אנגלית נכונה' אלא 'אנגלית שמעבירה את הכוונה' — איך אומרים לא בלי לפגוע, ואיך מחברים שני רעיונות כך שהמאזין מבין את הקשר. הלומד אמור לשים לב לשלוש מילות הקישור and, but, because ולנוסחת הסירוב המנומס. אסטרטגיה: לקרוא את השיחה פעם אחת ולשאול 'מה כל אחד רוצה כאן', ורק אז להסתכל על המילים. תפיסה שגויה נפוצה: לומדים חושבים ש-'No' לבד זו תשובה תקינה באנגלית כמו 'לא' בעברית — באנגלית זה נשמע חד ולא מנומס, וצריך תודה וסיבה.",
           "presentation": {
             "kind": "intro",
+            "image": {
+              "prompt": "Two teenage boys about thirteen face to face in a doorway. One is talking and looks a little unsure; the other listens with a friendly but slightly puzzled expression.",
+              "src": "ENG.G7.FAMILY.PRAGMA/pragma-01-01-screen-ac4cc753.jpg",
+              "srcset": "ENG.G7.FAMILY.PRAGMA/pragma-01-01-screen-ac4cc753-480.webp 480w, ENG.G7.FAMILY.PRAGMA/pragma-01-01-screen-ac4cc753-960.webp 960w",
+              "width": 1024,
+              "height": 1024,
+              "alt": {
+                "en": "Two teenage boys talking in a doorway; one looks unsure, the other looks puzzled.",
+                "he": "שני נערים משוחחים בפתח הדלת; אחד נראה לא בטוח והשני מבולבל.",
+                "ar": "فتيان يتحدّثان عند الباب؛ أحدهما يبدو مرتبكاً والآخر حائراً."
+              }
+            },
             "prompt": {
               "en": "Sometimes the words are correct, but they still sound wrong.",
               "he": "לפעמים המילים נכונות, ובכל זאת זה נשמע לא בסדר.",
@@ -72,11 +85,11 @@
               "ar": "اقرأوا المحادثة. اضغطوا على أيّ سطر لسماعه."
             },
             "lines": [
-              "Maya: Hi Sara! We are having a family lunch on Saturday.",
-              "Maya: Would you like to come? My grandmother is making her soup.",
-              "Sara: Thank you, but I can't come on Saturday.",
-              "Sara: I can't come because my cousin is getting married that day.",
-              "Maya: No problem! Maybe next time."
+              { "text": "Maya: Hi Sara! We are having a family lunch on Saturday.", "role": "speaker" },
+              { "text": "Maya: Would you like to come? My grandmother is making her soup.", "role": "speaker" },
+              { "text": "Sara: Thank you, but I can't come on Saturday.", "role": "speaker" },
+              { "text": "Sara: I can't come because my cousin is getting married that day.", "role": "speaker" },
+              { "text": "Maya: No problem! Maybe next time.", "role": "speaker" }
             ],
             "language": "en-US",
             "rate": 0.9,
@@ -170,6 +183,18 @@
             {
               "questionId": "q1",
               "questionType": "single-choice",
+              "image": {
+                "prompt": "A teenage girl about thirteen standing at an open front door, smiling and gesturing warmly with one hand to invite a friend inside.",
+                "src": "ENG.G7.FAMILY.PRAGMA/pragma-01-03-q1-question-0f6552bd.jpg",
+                "srcset": "ENG.G7.FAMILY.PRAGMA/pragma-01-03-q1-question-0f6552bd-480.webp 480w, ENG.G7.FAMILY.PRAGMA/pragma-01-03-q1-question-0f6552bd-960.webp 960w",
+                "width": 1024,
+                "height": 1024,
+                "alt": {
+                  "en": "A teenage girl at an open door, warmly inviting a friend in.",
+                  "he": "נערה בפתח דלת פתוחה מזמינה חברה להיכנס.",
+                  "ar": "فتاة عند باب مفتوح تدعو صديقتها للدخول."
+                }
+              },
               "questionText": "Which one is a polite invitation?",
               "answers": [
                 "Come to my house on Saturday.",
@@ -216,56 +241,6 @@
               }
             }
           ]
-        },
-        {
-          "id": "ENG.G7.FAMILY.PRAGMA-01-04",
-          "title": "What surprised you?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי בסוף רכיב ההבנייה. יעד: שהלומד ישים לב שהחוקים החברתיים של השפה שונים משפת האם שלו, ולא רק המילים. אין תשובה נכונה ואין ניקוד. אם נבחר 'מילות הקישור מבלבלות אותי' — כדאי לחזק את ההבחנה בין and/but/because לפני התרגול. אם נבחר 'הסירוב נשמע לי ארוך מדי' — זו הזדמנות להסביר שבאנגלית האורך הוא הנימוס עצמו.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "What was new for you here?",
-              "he": "מה היה חדש עבורכם כאן?",
-              "ar": "ما الذي كان جديداً بالنسبة لكم هنا؟"
-            },
-            "choices": [
-              {
-                "id": "connectors",
-                "label": {
-                  "en": "The joining words are confusing",
-                  "he": "מילות הקישור מבלבלות אותי",
-                  "ar": "أدوات الربط تربكني"
-                }
-              },
-              {
-                "id": "long-no",
-                "label": {
-                  "en": "Saying no takes so many words",
-                  "he": "לומר לא לוקח כל כך הרבה מילים",
-                  "ar": "قول لا يتطلّب كلمات كثيرة"
-                }
-              },
-              {
-                "id": "invite",
-                "label": {
-                  "en": "An invitation has to be a question",
-                  "he": "הזמנה חייבת להיות שאלה",
-                  "ar": "الدعوة يجب أن تكون سؤالاً"
-                }
-              },
-              {
-                "id": "known",
-                "label": {
-                  "en": "I already knew most of this",
-                  "he": "כבר הכרתי את רוב זה",
-                  "ar": "كنت أعرف معظم هذا مسبقاً"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -273,6 +248,7 @@
       "id": "ENG.G7.FAMILY.PRAGMA-01B",
       "learningUnitId": "ENG.G7.FAMILY.PRAGMA",
       "title": "Hear the invitation",
+      "titleTranslations": { "Hebrew": "שומעים את ההזמנה", "Arabic": "نسمع الدعوة", "English": "Hear the invitation" },
       "componentPurpose": "הבנייה",
       "isAssessment": false,
       "isRequired": false,
@@ -406,63 +382,14 @@
               }
             }
           ]
-        },
-        {
-          "id": "ENG.G7.FAMILY.PRAGMA-01B-03",
-          "title": "Which one told you more?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הייצוג החלופי. יעד: שהלומד יבחין מה נתן לו את המידע — הטון, המילים, או התמליל. אין תשובה נכונה ואין ניקוד. אם נבחר 'הטון' — סימן שהערוץ הקולי עובד לו, וכדאי להציע לו האזנה גם ביעדים הבאים.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "What told you that Sara was saying no?",
-              "he": "מה גילה לכם ששרה אומרת לא?",
-              "ar": "ما الذي دلّكم على أنّ سارة تقول لا؟"
-            },
-            "choices": [
-              {
-                "id": "tone",
-                "label": {
-                  "en": "Her tone of voice",
-                  "he": "טון הדיבור שלה",
-                  "ar": "نبرة صوتها"
-                }
-              },
-              {
-                "id": "words",
-                "label": {
-                  "en": "The words \"but\" and \"can't\"",
-                  "he": "המילים \"but\" ו-\"can't\"",
-                  "ar": "الكلمتان \"but\" و\"can't\""
-                }
-              },
-              {
-                "id": "transcript",
-                "label": {
-                  "en": "Reading the transcript",
-                  "he": "קריאת התמליל",
-                  "ar": "قراءة النصّ المكتوب"
-                }
-              },
-              {
-                "id": "unsure",
-                "label": {
-                  "en": "I was not sure at first",
-                  "he": "בהתחלה לא הייתי בטוח/ה",
-                  "ar": "لم أكن متأكّداً في البداية"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
     {
       "id": "ENG.G7.FAMILY.PRAGMA-02",
       "learningUnitId": "ENG.G7.FAMILY.PRAGMA",
-      "title": "Choose your words",
+      "title": "Choose your words: accept and refuse politely",
+      "titleTranslations": { "Hebrew": "בוחרים את המילים: מסכימים ומסרבים בנימוס", "Arabic": "نختار الكلمات: نقبل ونعتذر بلطف", "English": "Choose your words: accept and refuse politely" },
       "componentPurpose": "תרגול",
       "isAssessment": false,
       "isRequired": true,
@@ -652,6 +579,7 @@
       "id": "ENG.G7.FAMILY.PRAGMA-03",
       "learningUnitId": "ENG.G7.FAMILY.PRAGMA",
       "title": "Check: a message from Uncle Sami",
+      "titleTranslations": { "Hebrew": "בדיקה: הודעה מדוד סמי", "Arabic": "تحقّق: رسالة من العمّ سامي", "English": "Check: a message from Uncle Sami" },
       "componentPurpose": "הערכה",
       "isAssessment": true,
       "isRequired": true,
