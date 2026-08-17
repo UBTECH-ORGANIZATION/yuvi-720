@@ -13,6 +13,7 @@ at login and shared by every statement of that visit.
 
 from __future__ import annotations
 
+import copy
 import re
 import uuid
 from datetime import datetime, timezone
@@ -71,6 +72,8 @@ def _base(
     parent: Optional[list[dict[str, Any]]] = None,
     timestamp: Optional[str] = None,
     hierarchy: Optional[dict[str, Any]] = None,
+    content_object: bool = False,
+    object_below_self: bool = False,
 ) -> dict[str, Any]:
     """Assemble the mandatory 720 envelope around one event.
 
@@ -79,14 +82,35 @@ def _base(
     `grouping`, the direct level in `parent`, and every level's metadata in
     `context.extensions`. It never overrides an explicit `parent`/extension the
     caller passed — it fills in what is missing.
+
+    `content_object=True` says the statement's object IS the content itself, so
+    the deepest grouping entry is the object, verbatim — integration report 3
+    (17/08) rejected anything else ("הפריט עצמו ב-grouping צריך להיות אותו
+    אובייקט בדיוק כמו ב-object", and the questionnaire's grouping entry "יש
+    לשלוח type כמו ב-object"). When False (conversation, reflection — objects
+    outside the content tree) the catalog's own entry for that level is used.
+
+    `object_below_self=True` marks an object one level BELOW the hierarchy's
+    deepest catalog level — a question inside its questionnaire screen. The
+    ministry's examples nest it: grouping = […, component, questionnaire,
+    question(object)] and parent = [questionnaire], not [component].
     """
     hierarchy = hierarchy or {}
+    extra = list(hierarchy.get("grouping") or [])
+    if content_object:
+        if object_below_self and hierarchy.get("self"):
+            extra.append(copy.deepcopy(hierarchy["self"]))
+            if not parent:
+                parent = [copy.deepcopy(hierarchy["self"])]
+        extra.append(copy.deepcopy(obj))
+    elif hierarchy.get("self"):
+        extra.append(copy.deepcopy(hierarchy["self"]))
     context: dict[str, Any] = {
         "contextActivities": {
             "grouping": build_grouping(
                 session_id,
                 ecat_item_id=ecat_item_id,
-                extra=list(hierarchy.get("grouping") or []) or None,
+                extra=extra or None,
             )
         }
     }
@@ -243,7 +267,9 @@ def agency_answered(
         obj,
         session_id,
         result=result,
-        parent=[{"objectType": "Activity", "id": f"{_domain()}/agency/{phase.upper()}"}],
+        # The full questionnaire activity, not a bare id — the ministry's
+        # examples type every parent entry.
+        parent=[_agency_object(phase)],
     )
 
 
@@ -337,7 +363,10 @@ def reflection_initialized(
         "initialized",
         _reflection_object(questionnaire_id),
         session_id,
-        context_extra={"extensions": extensions({"reflactionTrigger": trigger})},
+        # The original spec PDF spelled this `reflactionTrigger`; the ministry's
+        # examples page (16/08) fixed it to `reflectionTrigger` and staging
+        # accepts both — the page's spelling is what reviewers compare against.
+        context_extra={"extensions": extensions({"reflectionTrigger": trigger})},
         ecat_item_id=ecat_item_id,
         hierarchy=hierarchy,
     )
@@ -377,9 +406,7 @@ def reflection_answered(
         obj,
         session_id,
         result=result,
-        parent=[
-            {"objectType": "Activity", "id": f"{_domain()}/reflection/{questionnaire_id}"}
-        ],
+        parent=[_reflection_object(questionnaire_id)],
         ecat_item_id=ecat_item_id,
         hierarchy=hierarchy,
     )
@@ -405,9 +432,7 @@ def reflection_skipped(
         "skipped",
         obj,
         session_id,
-        parent=[
-            {"objectType": "Activity", "id": f"{_domain()}/reflection/{questionnaire_id}"}
-        ],
+        parent=[_reflection_object(questionnaire_id)],
         ecat_item_id=ecat_item_id,
         hierarchy=hierarchy,
     )
@@ -539,6 +564,7 @@ def component_initialized(
         ),
         parent=parent,
         hierarchy=hierarchy,
+        content_object=True,
     )
     if unit_grouping:
         stmt["context"]["contextActivities"]["grouping"].append(unit_grouping)
@@ -578,6 +604,7 @@ def component_completed(
             {"extensions": extensions(metadata_ext)} if metadata_ext else None
         ),
         hierarchy=hierarchy,
+        content_object=True,
     )
     if unit_grouping:
         stmt["context"]["contextActivities"]["grouping"].append(unit_grouping)
@@ -631,6 +658,8 @@ def question_answered(
         },
         hierarchy=hierarchy,
         ecat_item_id=ecat_item_id,
+        content_object=True,
+        object_below_self=True,
     )
 
 
@@ -638,6 +667,25 @@ def question_answered(
 # hierarchy has to type itself the same way, and one table cannot live in two
 # modules and stay one table.
 _MEDIA_ACTIVITY_TYPES = MEDIA_ACTIVITY_TYPES
+
+# The ministry's closed verb list. Content relayed through Kata speaks ADL
+# (`http://adlnet.gov/expapi/verbs/initialized`); the ministry's examples use
+# only `…/xapi/moe/verbs/…`, so a relayed verb whose slug is on the list is
+# re-namespaced. An off-list slug is passed through untouched — inventing a
+# ministry IRI it never published would be the worse failure.
+_MOE_VERB_SLUGS = frozenset({
+    "enter", "suspend", "resume", "exit", "viewed", "initialized", "answered",
+    "completed", "updated", "interacted", "rated", "skipped", "requested",
+    "selected", "played", "paused",
+})
+
+
+def _moe_verb(raw_verb: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
+    verb_id = str((raw_verb or {}).get("id") or "")
+    slug = verb_id.rstrip("/").rsplit("/", 1)[-1].lower()
+    if slug in _MOE_VERB_SLUGS:
+        return verb(slug)
+    return raw_verb
 
 
 def _seconds(value: Optional[float]) -> Optional[float]:
@@ -699,6 +747,7 @@ def media_event(
         },
         hierarchy=hierarchy,
         ecat_item_id=ecat_item_id,
+        content_object=True,
     )
 
 
@@ -707,14 +756,19 @@ def item_skipped(
     session_id: str,
     *,
     object_id: str,
+    object_type: str = "item",
     name_he: Optional[str] = None,
     hierarchy: Optional[dict[str, Any]] = None,
     ecat_item_id: Optional[str] = None,
 ) -> dict[str, Any]:
+    """`object_type` follows what the skipped thing IS (the ministry's example
+    skips a questionnaire, typed `questionnaire`) — the same id must never be
+    typed differently across statements."""
     return _base(
-        identity, "skipped", activity(object_id, "item", name_he), session_id,
+        identity, "skipped", activity(object_id, object_type, name_he), session_id,
         hierarchy=hierarchy,
         ecat_item_id=ecat_item_id,
+        content_object=True,
     )
 
 
@@ -724,17 +778,20 @@ def _infer_object_type(hierarchy: dict[str, Any]) -> str:
     a component's own item set carry a bare `{"id": ...}` — no `definition` at
     all; the review flagged both as "Object נשלח לא תקין").
 
-    Read off the SAME hierarchy already resolved for `grouping`: its deepest
+    Read off the SAME hierarchy already resolved for the envelope: its `self`
     entry is the level this statement's object sits at — `learning-unit`,
     `component`, or `item` (already typed by its media format, if any). An item
     that itself carries a `questions` digest (the component's own quiz screen)
     is reported as `questionnaire` per the spec's item-as-content section,
     not as a plain `item`.
     """
-    grouping = hierarchy.get("grouping") or []
-    if not grouping:
+    entry = hierarchy.get("self")
+    if not entry:
+        grouping = hierarchy.get("grouping") or []
+        entry = grouping[-1] if grouping else None
+    if not entry:
         return "item"
-    leaf_type = ((grouping[-1].get("definition") or {}).get("type") or "").rsplit("/", 1)[-1]
+    leaf_type = ((entry.get("definition") or {}).get("type") or "").rsplit("/", 1)[-1]
     if leaf_type == "item" and (hierarchy.get("extensions") or {}).get("questions"):
         return "questionnaire"
     return leaf_type or "item"
@@ -751,21 +808,86 @@ def enriched_content_statement(
     context_extensions: Optional[dict[str, Any]] = None,
     default_object_type: Optional[str] = None,
     name_he: Optional[str] = None,
+    object_below_self: bool = False,
 ) -> dict[str, Any]:
     """Wrap a content-origin statement (question/media/item events relayed via
     Kata) in the mandatory 720 envelope: replace the actor with the
     exidentifier agent, and merge lms/session/program/content-vendor into
     grouping while preserving the content's own verb/object/result/parent
     and metadata extensions. A NEW outbound id is generated (our report ≠
-    the content's internal statement id)."""
+    the content's internal statement id).
+
+    `object_below_self=True` = the relayed object is a QUESTION inside the
+    hierarchy's deepest level (its questionnaire screen): that level stays in
+    grouping above the object and becomes the parent, per the ministry's
+    answered example."""
     hierarchy = hierarchy or {}
+
+    # The object is normalized FIRST — typed, named, sanitized — because the
+    # exact same dict is also copied into grouping below, and report 3 requires
+    # the two to be byte-identical.
+    obj = raw_statement.get("object")
+    if isinstance(obj, dict):
+        obj = dict(obj)
+        # Learning-unit statements: the review also asked that `object` be the
+        # SAME activity as its `grouping` entry. There is exactly one level with
+        # nothing beneath it to confuse — the unit itself — so the canonical
+        # unit activity from the hierarchy is authoritative; Kata's own (bare,
+        # type-less) object for this event is replaced with it rather than
+        # patched, unlike every deeper level where the content's own object is
+        # the one thing we must not invent.
+        self_entry = hierarchy.get("self") or {}
+        if not (hierarchy.get("grouping") or []) and (
+            (self_entry.get("definition") or {}).get("type", "")
+        ).endswith("/learning-unit"):
+            obj = dict(self_entry)
+        obj.setdefault("objectType", "Activity")
+        definition = dict(obj.get("definition") or {})
+        # The review's recurring "Object נשלח לא תקין" — no `definition.type` at
+        # all — happens on statements Kata never had a native shape for
+        # (learning-unit init, a component's own item-quiz). Never invented when
+        # the content already declared one. A question-level relay defaults to
+        # `question` — its screen's type belongs to the level above it.
+        if not definition.get("type"):
+            inferred = (
+                default_object_type
+                or ("question" if object_below_self else _infer_object_type(hierarchy))
+            )
+            definition["type"] = f"{ACTIVITY}/{inferred}"
+        if name_he and not definition.get("name"):
+            definition["name"] = {"he": name_he}
+        if definition:
+            obj["definition"] = definition
+        # Object definition extensions are content-controlled too — bare keys
+        # there produce the same MoE 400 rejection, so sanitize them as well.
+        if isinstance(obj.get("definition"), dict) and obj["definition"].get("extensions"):
+            obj["definition"]["extensions"] = _iri_safe_extensions(obj["definition"]["extensions"])
+            if not obj["definition"]["extensions"]:
+                obj["definition"].pop("extensions")
+
     ctx = dict(raw_statement.get("context") or {})
     context_activities = dict(ctx.get("contextActivities") or {})
     grouping = list(context_activities.get("grouping") or [])
     # The ancestry the ministry requires: the unit and component this item lives
     # in, in `grouping`, and the component in `parent`. The content sends neither
-    # (it only knows its own object), so we supply them from the catalog.
+    # (it only knows its own object), so we supply them from the catalog. The
+    # deepest entry is the statement's OWN object, verbatim — report 3 (17/08):
+    # "הפריט עצמו ב-grouping צריך להיות אותו אובייקט בדיוק כמו ב-object", with
+    # the object's own type (a questionnaire tags itself `questionnaire`).
     grouping.extend(hierarchy.get("grouping") or [])
+    if object_below_self and hierarchy.get("self"):
+        grouping.append(copy.deepcopy(hierarchy["self"]))
+        if not context_activities.get("parent"):
+            context_activities["parent"] = [copy.deepcopy(hierarchy["self"])]
+    if isinstance(obj, dict) and obj.get("id"):
+        # The object's copy must be the one that survives de-dup, so any entry
+        # the content already sent under the same id (possibly typed differently)
+        # is dropped first.
+        grouping = [
+            entry for entry in grouping
+            if not (isinstance(entry, dict) and entry.get("id") == obj.get("id"))
+        ]
+        grouping.append(copy.deepcopy(obj))
     grouping = build_grouping(session_id, ecat_item_id=ecat_item_id, extra=grouping)
     context_activities["grouping"] = grouping
     if hierarchy.get("parent") and not context_activities.get("parent"):
@@ -782,44 +904,10 @@ def enriched_content_statement(
     if team:
         ctx["team"] = team
 
-    # Object definition extensions are content-controlled too — bare keys there
-    # produce the same MoE 400 rejection, so sanitize them as well.
-    obj = raw_statement.get("object")
-    if isinstance(obj, dict):
-        obj = dict(obj)
-        # Learning-unit statements: the review also asked that `object` be the
-        # SAME activity as its `grouping` entry. There is exactly one level with
-        # nothing beneath it to confuse — the unit itself — so the canonical
-        # unit activity `hierarchy` already put in `grouping` is authoritative;
-        # Kata's own (bare, type-less) object for this event is replaced with it
-        # rather than patched, unlike every deeper level where the content's own
-        # object is the one thing we must not invent.
-        unit_grouping = hierarchy.get("grouping") or []
-        if len(unit_grouping) == 1 and (unit_grouping[0].get("definition") or {}).get(
-            "type", ""
-        ).endswith("/learning-unit"):
-            obj = dict(unit_grouping[0])
-        obj.setdefault("objectType", "Activity")
-        definition = dict(obj.get("definition") or {})
-        # The review's recurring "Object נשלח לא תקין" — no `definition.type` at
-        # all — happens on statements Kata never had a native shape for
-        # (learning-unit init, a component's own item-quiz). Never invented when
-        # the content already declared one.
-        if not definition.get("type"):
-            definition["type"] = f"{ACTIVITY}/{default_object_type or _infer_object_type(hierarchy)}"
-        if name_he and not definition.get("name"):
-            definition["name"] = {"he": name_he}
-        if definition:
-            obj["definition"] = definition
-        if isinstance(obj.get("definition"), dict) and obj["definition"].get("extensions"):
-            obj["definition"]["extensions"] = _iri_safe_extensions(obj["definition"]["extensions"])
-            if not obj["definition"]["extensions"]:
-                obj["definition"].pop("extensions")
-
     statement = {
         "id": str(uuid.uuid4()),
         "actor": build_actor(identity["exidentifier"]),
-        "verb": raw_statement.get("verb"),
+        "verb": _moe_verb(raw_statement.get("verb")),
         "object": obj,
         "context": ctx,
         "timestamp": raw_statement.get("timestamp") or _now(),
@@ -868,22 +956,36 @@ def help_requested(
     object_type: str,               # component | item | question ...
     help_source: str,               # content | platform
     help_type: str,                 # hint | explanation
+    name_he: Optional[str] = None,
+    question_id: Optional[str] = None,      # when help was asked ON A QUESTION —
+    question_type: Optional[str] = None,    # the ministry's example carries the
+    attempt_number: Optional[int] = None,   # question's own identifiers too
     parent: Optional[list[dict[str, Any]]] = None,
     ecat_item_id: Optional[str] = None,
     hierarchy: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
-    obj = activity(object_id, object_type)
+    obj = activity(object_id, object_type, name_he)
     return _base(
         identity,
         "requested",
         obj,
         session_id,
         context_extra={
-            "extensions": extensions({"helpSource": help_source, "helpType": help_type})
+            "extensions": extensions({
+                "helpSource": help_source,
+                "helpType": help_type,
+                "questionId": question_id,
+                "questionType": question_type,
+                "attemptNumber": attempt_number,
+            })
         },
         parent=parent,
         ecat_item_id=ecat_item_id,
         hierarchy=hierarchy,
+        content_object=True,
+        # Help asked ON A QUESTION nests under its questionnaire screen, like
+        # the ministry's example; help on an item/component sits at its level.
+        object_below_self=(object_type == "question"),
     )
 
 
@@ -927,4 +1029,5 @@ def selected(
         context_extra={"extensions": extensions({"selectionType": kebab(selection_type)})},
         hierarchy=hierarchy,
         ecat_item_id=ecat_item_id,
+        content_object=True,
     )

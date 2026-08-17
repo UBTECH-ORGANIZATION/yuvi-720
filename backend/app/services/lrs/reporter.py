@@ -403,11 +403,13 @@ async def report_content_statement(
     hierarchy: Optional[dict[str, Any]] = None,
     context_extensions: Optional[dict[str, Any]] = None,
     result_extra: Optional[dict[str, Any]] = None,
+    object_below_self: bool = False,
 ) -> None:
     """Forward a content-origin statement (relayed by Kata into /api/xapi):
     enrich with the 720 envelope and enqueue. Hooked after first-sight ingest
     in events.ingest_statement(). `hierarchy` carries the unit/component
-    ancestry the ministry requires above the item."""
+    ancestry the ministry requires above the item; `object_below_self` marks a
+    question-level statement (nested under its questionnaire screen)."""
     await _report(
         statements.enriched_content_statement,
         learner_id,
@@ -417,5 +419,6 @@ async def report_content_statement(
         hierarchy=hierarchy,
         context_extensions=context_extensions,
         result_extra=result_extra,
+        object_below_self=object_below_self,
         source="kata",
     )
