@@ -2558,6 +2558,7 @@
   "voice.state.idle": "Ready",
   "voice.state.connecting": "Connecting…",
   "voice.state.listening": "Yuvi is listening",
+  "voice.state.transcribing": "One moment…",
   "voice.state.speaking": "Yuvi is speaking",
   "voice.state.error": "Something went wrong"
 }
