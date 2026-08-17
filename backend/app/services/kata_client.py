@@ -212,6 +212,27 @@ def _sub_content_bot_index(
     return aggregate, by_item, question_ids, questions_by_item
 
 
+# What the learner can actually READ on the screen. Everything else in
+# `presentation` is rendering detail (rate, language, transcriptAvailable).
+_BODY_KEYS = (
+    "prompt", "lines", "script", "choices", "checklist",
+    "referenceText", "selfCheck", "glossary",
+)
+
+
+def _presentation_body(item: dict[str, Any]) -> dict[str, Any]:
+    """The screen's visible text, kept as authored so a locale can be picked later.
+
+    Without this the coach knew a screen's title and teaching notes but not the
+    five sentence pairs printed on it, and answered "what is written here" from
+    whichever example happened to be a question's correct answer.
+    """
+    presentation = item.get("presentation")
+    if not isinstance(presentation, dict):
+        return {}
+    return {key: presentation[key] for key in _BODY_KEYS if presentation.get(key)}
+
+
 def _item_profiles(component: dict[str, Any]) -> list[dict[str, Any]]:
     """One row per ``subContent`` item, in the order the learner meets them.
 
@@ -241,6 +262,7 @@ def _item_profiles(component: dict[str, Any]) -> list[dict[str, Any]]:
             "content_type": str(item.get("contentType") or "").strip().lower(),
             "media_format": str(item.get("mediaFormat") or "").strip().lower(),
             "question_count": len(questions),
+            "presentation": _presentation_body(item),
         })
     return profiles
 

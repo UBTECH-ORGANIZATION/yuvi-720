@@ -1745,6 +1745,32 @@
 /* A microphone is not directional — mirroring it in RTL only makes it odd. */
 [dir="rtl"] .sp-companion__composer .sp-companion__voice-btn .sp-icon { transform: none; }
 
+/* What Yuvi has heard so far. Deliberately faint and italic: it is a guess that
+   rewrites itself as the learner keeps talking, not something they said yet. */
+.sp-companion__dictation {
+  margin: 0 14px 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--sp-surface-2);
+  color: var(--sp-ink-400);
+  font-size: 13.5px;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* While Yuvi talks the mic is muted, and the line says so rather than sitting
+   there looking as though it is still listening. */
+.sp-companion__dictation[data-state="paused"] {
+  font-style: normal;
+  opacity: 0.75;
+}
+
+.sp-companion__composer .sp-companion__voice-btn.is-muted {
+  background: none;
+  color: var(--sp-ink-400);
+  opacity: 0.45;
+}
+
 @media (max-width: 767px) {
   .sp-companion-backdrop {
     position: fixed;

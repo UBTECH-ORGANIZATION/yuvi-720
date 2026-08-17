@@ -2558,6 +2558,7 @@
   "voice.state.idle": "מוכן",
   "voice.state.connecting": "מתחבר…",
   "voice.state.listening": "יובי מקשיב",
+  "voice.state.transcribing": "רגע, מבין אותך…",
   "voice.state.speaking": "יובי מדבר",
   "voice.state.error": "משהו השתבש"
 }
