@@ -164,6 +164,7 @@ export function CompanionChat() {
     supportUsed,
     questionOrdinals,
     questionParts,
+    itemOrder,
     teachingItems,
     itemKinds,
     itemMedia,
@@ -231,8 +232,22 @@ export function CompanionChat() {
   // Label each section: a group with no screen (item) is the lesson Introduction
   // (welcome); groups tied to a screen are the questions, numbered in order.
   const sections = useMemo(() => {
+    // The thread reads top-to-bottom the way the LESSON runs, like the Kata
+    // players: introduction first, then each screen in its own place — not in
+    // the order replies happened to land (a proactive question message can
+    // arrive before the welcome, which used to put "שאלה 1" above "מבוא").
+    // Groups on screens the catalog does not know keep their arrival order,
+    // after the known ones — sort() is stable, so ties never reshuffle.
+    const placeOf = new Map(itemOrder.map((id, index) => [id, index]))
+    const ordered = [...messageGroups].sort((a, b) => {
+      const rank = (g: MessageGroup) => (
+        g.item === '' ? -1 : (placeOf.get(g.item) ?? itemOrder.length)
+      )
+      return (rank(a) - rank(b))
+        || String(a.question).localeCompare(String(b.question), undefined, { numeric: true })
+    })
     let seen = 0
-    return messageGroups.map((group) => {
+    return ordered.map((group) => {
       const isIntro = group.item === ''
       if (!isIntro) seen += 1
       // Not every screen asks something: a component can teach on a screen and
@@ -270,7 +285,7 @@ export function CompanionChat() {
       const plays = WATCHABLE.has(itemMedia[group.item] || '')
       return { group, isIntro, isTeaching, asksNothing, kind, questionNumber, partIndex, plays }
     })
-  }, [messageGroups, questionOrdinals, questionParts, teachingItems, itemKinds, itemMedia])
+  }, [messageGroups, questionOrdinals, questionParts, itemOrder, teachingItems, itemKinds, itemMedia])
   const [sectionOverrides, setSectionOverrides] = useState<Record<string, boolean>>({})
   const bodyRef = useRef<HTMLDivElement>(null)
   const historyRef = useRef<HTMLDivElement>(null)

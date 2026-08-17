@@ -231,6 +231,20 @@ class StabilityTests(unittest.TestCase):
         self.assertEqual(failed["progress_state"], "available")
         self.assertNotEqual(failed["progress_state"], "locked")
 
+    def test_a_retake_that_passes_completes_the_reopened_node(self) -> None:
+        """A failed node stays open — so the learner CAN retake it, and the
+        retake's pass must settle the node. The first completion used to pin
+        the visit forever: five later passes and the path never moved."""
+        projected = plan(STRUGGLING, [
+            completion(C1, scaled=0.5),
+            completion(C2, success=False, scaled=0.4, event_id="first-fail"),
+            completion(C2, success=True, scaled=0.9, event_id="retake-pass"),
+        ])
+        retaken = node(projected, C2)
+        self.assertEqual(retaken["progress_state"], "completed")
+        self.assertEqual(retaken["outcome"], "passed")
+        self.assertEqual(retaken["progress_reason"]["evidence"]["event_id"], "retake-pass")
+
 
 class AssessmentGateTests(unittest.TestCase):
     """§3.3 — the assessment is withheld until there is practice behind it, and

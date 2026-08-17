@@ -16,6 +16,7 @@
       "id": "ENG.G7.FAMILY.READ-01",
       "learningUnitId": "ENG.G7.FAMILY.READ",
       "title": "A profile and a weekly schedule",
+      "titleTranslations": { "Hebrew": "כרטיס פרופיל ולוח זמנים שבועי", "Arabic": "بطاقة تعريف وجدول أسبوعي", "English": "A profile and a weekly schedule" },
       "componentPurpose": "הבנייה",
       "isAssessment": false,
       "isRequired": true,
@@ -40,6 +41,18 @@
           "informationToBot": "מסך פתיחה של רכיב ההבנייה בהבנת הנקרא. המטרה: להסביר ללומד שהמשימה כאן היא איתור מידע ולא הבנה מלאה של כל מילה. הלומד יפגוש שני סוגי טקסט מעשיים — כרטיס פרופיל ולוח זמנים שבועי — שבשניהם המידע מסודר בשדות ולא בפסקה רציפה. אסטרטגיה מרכזית: לקרוא קודם את השאלה, לזהות איזה סוג פרט מחפשים (שם, שעה, מקום, יום), ואז לסרוק את הטקסט רק אחרי הפרט הזה. תפיסה שגויה נפוצה: לומדים קוראים את כל הטקסט מההתחלה לסוף ומנסים לתרגם — וזה מבזבז זמן ומייצר עומס. אין כאן שאלה ואין ניקוד.",
           "presentation": {
             "kind": "intro",
+            "image": {
+              "prompt": "A teenage student sitting at a desk with an open folder of printed pages, scanning a page closely as she looks for a detail, a reading lamp beside her.",
+              "src": "ENG.G7.FAMILY.READ/read-01-01-screen-153c9f61.jpg",
+              "srcset": "ENG.G7.FAMILY.READ/read-01-01-screen-153c9f61-480.webp 480w, ENG.G7.FAMILY.READ/read-01-01-screen-153c9f61-960.webp 960w",
+              "width": 1024,
+              "height": 1024,
+              "alt": {
+                "en": "A student at a desk scanning a page in a folder, looking for information.",
+                "he": "תלמידה ליד שולחן סורקת דף בקלסר ומחפשת מידע.",
+                "ar": "طالبة إلى طاولة تتفحّص صفحة في ملفّ باحثةً عن معلومة."
+              }
+            },
             "prompt": {
               "en": "You are going to read two short family texts: a profile card and a weekly schedule.",
               "he": "עוד רגע תקראו שני טקסטים משפחתיים קצרים: כרטיס פרופיל ולוח זמנים שבועי.",
@@ -72,11 +85,11 @@
               "ar": "اقرأوا بطاقة تعريف مايا. اضغطوا على أيّ سطر لسماعه."
             },
             "lines": [
-              "NAME: Maya Cohen",
-              "AGE: 13",
-              "FAMILY: one big brother, Adam, and one little sister, Noa",
-              "LIVES IN: Netanya",
-              "FAVOURITE DAY: Friday, because Grandma cooks soup for everyone"
+              { "text": "NAME: Maya Cohen", "role": "field" },
+              { "text": "AGE: 13", "role": "field" },
+              { "text": "FAMILY: one big brother, Adam, and one little sister, Noa", "role": "field" },
+              { "text": "LIVES IN: Netanya", "role": "field" },
+              { "text": "FAVOURITE DAY: Friday, because Grandma cooks soup for everyone", "role": "field" }
             ],
             "language": "en-US",
             "rate": 0.85,
@@ -166,11 +179,11 @@
               "ar": "هذا هو أسبوع العائلة. اضغطوا على أيّ سطر لسماعه."
             },
             "lines": [
-              "MONDAY: Noa has a painting class at 4 p.m.",
-              "TUESDAY: Adam plays football at 5 p.m.",
-              "WEDNESDAY: Maya goes to the English club at 4 p.m.",
-              "THURSDAY: free - no classes for anyone",
-              "FRIDAY: dinner at Grandma's house at 6:30 p.m."
+              { "text": "MONDAY: Noa has a painting class at 4 p.m.", "role": "field" },
+              { "text": "TUESDAY: Adam plays football at 5 p.m.", "role": "field" },
+              { "text": "WEDNESDAY: Maya goes to the English club at 4 p.m.", "role": "field" },
+              { "text": "THURSDAY: free - no classes for anyone", "role": "field" },
+              { "text": "FRIDAY: dinner at Grandma's house at 6:30 p.m.", "role": "field" }
             ],
             "language": "en-US",
             "rate": 0.85,
@@ -239,56 +252,6 @@
               }
             }
           ]
-        },
-        {
-          "id": "ENG.G7.FAMILY.READ-01-04",
-          "title": "How did you find the answers?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי בסוף רכיב ההבנייה. המטרה: שהלומד יבחין בין קריאה סורקת (חיפוש פרט) לבין קריאה רציפה (הבנת הכול) — ההבחנה הזו היא לב יעד הלמידה. אין תשובה נכונה ואין ניקוד. אם נבחר 'תרגמתי הכול בראש' — זו הזדמנות להסביר שסריקה מהירה יעילה יותר למשימות מהסוג הזה, בלי לבקר את הלומד. אם נבחר 'היה לי קשה' — כדאי להציע את הייצוג הקולי של אותו רכיב.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "How did you look for the answers?",
-              "he": "איך חיפשתם את התשובות?",
-              "ar": "كيف بحثتم عن الإجابات؟"
-            },
-            "choices": [
-              {
-                "id": "scan",
-                "label": {
-                  "en": "I looked only for the detail in the question",
-                  "he": "חיפשתי רק את הפרט שבשאלה",
-                  "ar": "بحثت فقط عن التفصيل الوارد في السؤال"
-                }
-              },
-              {
-                "id": "read-all",
-                "label": {
-                  "en": "I read the whole text every time",
-                  "he": "קראתי את כל הטקסט בכל פעם",
-                  "ar": "قرأت النصّ كاملاً في كلّ مرّة"
-                }
-              },
-              {
-                "id": "translate",
-                "label": {
-                  "en": "I translated every word in my head",
-                  "he": "תרגמתי כל מילה בראש",
-                  "ar": "ترجمت كلّ كلمة في ذهني"
-                }
-              },
-              {
-                "id": "hard",
-                "label": {
-                  "en": "It was hard to find things in the text",
-                  "he": "היה לי קשה למצוא דברים בטקסט",
-                  "ar": "كان من الصعب عليّ إيجاد الأشياء في النصّ"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -296,6 +259,7 @@
       "id": "ENG.G7.FAMILY.READ-01B",
       "learningUnitId": "ENG.G7.FAMILY.READ",
       "title": "Hear the profile, then find the facts",
+      "titleTranslations": { "Hebrew": "שומעים את הפרופיל, ואז מאתרים את הפרטים", "Arabic": "نسمع البطاقة ثم نجد التفاصيل", "English": "Hear the profile, then find the facts" },
       "componentPurpose": "הבנייה",
       "isAssessment": false,
       "isRequired": false,
@@ -327,7 +291,7 @@
             },
             "goal": {
               "en": "The details are exactly the same: a name, a place, a family and a favourite day.",
-              "he": "הפרטים בדיוק אותם פרטים: שם, מקום, משפחה ויום אהוב.",
+              "he": "אותם פרטים בדיוק: שם, מקום, משפחה ויום אהוב.",
               "ar": "التفاصيل هي نفسها تماماً: اسم، مكان، عائلة، ويوم مفضّل."
             },
             "strategy": {
@@ -343,7 +307,7 @@
           "title": "Maya's profile, read aloud",
           "contentType": "הבנייה",
           "mediaFormat": "audio",
-          "informationToBot": "פריט ההאזנה של הייצוג החלופי. אותם פרטים בדיוק כמו בכרטיס הפרופיל הכתוב — שם משפחה Cohen, גיל 13, מגורים בנתניה, יום שישי אהוב בגלל ארוחת ערב אצל הסבתא — אבל מוגשים כטקסט רציף מדובר, עם תמליל זמין. יעד: איתור אותם פרטים כשההצפנה היא קולית ולא כתובה. תפיסות שגויות נפוצות: (1) שם פרטי מול שם משפחה — לומדים בוחרים 'Maya' כשנשאלים על family name; (2) שמות מקומות נשמעים דומים ונבחרים לפי היכרות ולא לפי מה שנאמר. אסטרטגיה: להאזין פעם אחת ברצף ואז לפתוח את התמליל; פתיחת התמליל היא חלק מהלמידה ולא קיצור דרך.",
+          "informationToBot": "פריט ההאזנה של הייצוג החלופי. אותם פרטים בדיוק כמו בכרטיס הפרופיל הכתוב — שם משפחה Cohen, גיל 13, מגורים בנתניה, יום שישי אהוב בגלל ארוחת ערב אצל הסבתא — אבל מוגשים כטקסט רציף מדובר, עם תמליל זמין. יעד: איתור אותם פרטים כשהמידע מגיע דרך האוזן ולא דרך העין. תפיסות שגויות נפוצות: (1) שם פרטי מול שם משפחה — לומדים בוחרים 'Maya' כשנשאלים על family name; (2) שמות מקומות נשמעים דומים ונבחרים לפי היכרות ולא לפי מה שנאמר. אסטרטגיה: להאזין פעם אחת ברצף ואז לפתוח את התמליל; פתיחת התמליל היא חלק מהלמידה ולא קיצור דרך.",
           "presentation": {
             "kind": "listening",
             "prompt": {
@@ -429,56 +393,6 @@
               }
             }
           ]
-        },
-        {
-          "id": "ENG.G7.FAMILY.READ-01B-03",
-          "title": "Ears or eyes?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הייצוג הקולי. המטרה: שהלומד יזהה איזה ערוץ עוזר לו יותר, ושהצירוף של השניים הוא אסטרטגיה לגיטימית ומומלצת. אין תשובה נכונה ואין ניקוד. הבחירה מדווחת כ-selected ולא כ-answered.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "Which helped you more this time?",
-              "he": "מה עזר לכם יותר הפעם?",
-              "ar": "ما الذي ساعدكم أكثر هذه المرّة؟"
-            },
-            "choices": [
-              {
-                "id": "audio",
-                "label": {
-                  "en": "Hearing the text",
-                  "he": "לשמוע את הטקסט",
-                  "ar": "سماع النصّ"
-                }
-              },
-              {
-                "id": "transcript",
-                "label": {
-                  "en": "Reading along with the transcript",
-                  "he": "לקרוא יחד עם התמליל",
-                  "ar": "القراءة مع النصّ المكتوب"
-                }
-              },
-              {
-                "id": "repeat",
-                "label": {
-                  "en": "Playing it more than once",
-                  "he": "להשמיע יותר מפעם אחת",
-                  "ar": "إعادة التشغيل أكثر من مرّة"
-                }
-              },
-              {
-                "id": "hard",
-                "label": {
-                  "en": "It was still hard for me",
-                  "he": "עדיין היה לי קשה",
-                  "ar": "ما زال الأمر صعباً عليّ"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -486,6 +400,7 @@
       "id": "ENG.G7.FAMILY.READ-02",
       "learningUnitId": "ENG.G7.FAMILY.READ",
       "title": "Practice: an invitation and a message",
+      "titleTranslations": { "Hebrew": "תרגול: הזמנה והודעה", "Arabic": "تدريب: دعوة ورسالة", "English": "Practice: an invitation and a message" },
       "componentPurpose": "תרגול",
       "isAssessment": false,
       "isRequired": true,
@@ -542,10 +457,10 @@
               "ar": "اقرأوا الدعوة. اضغطوا على أيّ سطر لسماعه."
             },
             "lines": [
-              "YOU ARE INVITED!",
+              { "text": "YOU ARE INVITED!", "role": "heading" },
               "It is Noa's seventh birthday party.",
-              "WHEN: Sunday, 12 June, at 5 p.m.",
-              "WHERE: Grandma's garden, 8 Herzl Street, Netanya.",
+              { "text": "WHEN: Sunday, 12 June, at 5 p.m.", "role": "field" },
+              { "text": "WHERE: Grandma's garden, 8 Herzl Street, Netanya.", "role": "field" },
               "Please bring a hat, because the garden is very sunny.",
               "Do not bring food - Grandma is cooking for everyone."
             ],
@@ -741,6 +656,7 @@
       "id": "ENG.G7.FAMILY.READ-02A",
       "learningUnitId": "ENG.G7.FAMILY.READ",
       "title": "Challenge: what the text does not say",
+      "titleTranslations": { "Hebrew": "אתגר: מה שהטקסט לא אומר", "Arabic": "تحدٍّ: ما لا يقوله النصّ", "English": "Challenge: what the text does not say" },
       "componentPurpose": "תרגול",
       "isAssessment": false,
       "isRequired": false,
@@ -807,14 +723,14 @@
               "ar": "اقرأوا النصّين. اضغطوا على أيّ سطر لسماعه."
             },
             "lines": [
-              "SCHOOL NOTE: On Thursday, class 7B goes on a trip to the science museum.",
+              { "text": "SCHOOL NOTE: On Thursday, class 7B goes on a trip to the science museum.", "role": "field" },
               "The bus comes back to school at 4 p.m. A parent must sign the permission form.",
               "Children who have no one to pick them up stay in the library until 5 p.m.",
-              "---",
-              "MESSAGE THREAD:",
-              "Mum: I work until five on Thursday, so I cannot come.",
-              "Adam: I finish football at half past three. I can pick Dana up instead.",
-              "Dana: Great, but do not be late! I do not want to sit in the library again."
+              { "role": "divider" },
+              { "text": "MESSAGE THREAD:", "role": "heading" },
+              { "text": "Mum: I work until five on Thursday, so I cannot come.", "role": "speaker" },
+              { "text": "Adam: I finish football at half past three. I can pick Dana up instead.", "role": "speaker" },
+              { "text": "Dana: Great, but do not be late! I do not want to sit in the library again.", "role": "speaker" }
             ],
             "language": "en-US",
             "rate": 0.9,
@@ -952,48 +868,6 @@
               }
             }
           ]
-        },
-        {
-          "id": "ENG.G7.FAMILY.READ-02A-03",
-          "title": "How did that feel?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "מסך רפלקציה בסיום רכיב האתגר. יעד: לתת ללומד לשקף עד כמה ההסקה הרגישה בטוחה. אין תשובה נכונה ואין ניקוד — הבחירה נשמרת כדיווח עצמי בלבד. אם הלומד בוחר בתשובה שמעידה על חוסר ביטחון, כדאי להציע לו לחזור לרכיב התרגול הרגיל ולא לרכיב הבסיסי — הוא כבר הוכיח שליטה בסיסית.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "When an answer was not written in the text, how did you decide?",
-              "he": "כשתשובה לא הייתה כתובה בטקסט, איך החלטתם?",
-              "ar": "عندما لم تكن الإجابة مكتوبة في النصّ، كيف قرّرتم؟"
-            },
-            "choices": [
-              {
-                "id": "evidence",
-                "label": {
-                  "en": "I found the words that proved it",
-                  "he": "מצאתי את המילים שהוכיחו את זה",
-                  "ar": "وجدت الكلمات التي أثبتت ذلك"
-                }
-              },
-              {
-                "id": "mixed",
-                "label": {
-                  "en": "Sometimes I found them, sometimes I guessed",
-                  "he": "לפעמים מצאתי, לפעמים ניחשתי",
-                  "ar": "أحياناً وجدتها وأحياناً خمّنت"
-                }
-              },
-              {
-                "id": "guess",
-                "label": {
-                  "en": "I mostly went with what sounded right",
-                  "he": "בעיקר הלכתי לפי מה שנשמע נכון",
-                  "ar": "اعتمدت غالباً على ما بدا صحيحاً"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -1001,6 +875,7 @@
       "id": "ENG.G7.FAMILY.READ-03",
       "learningUnitId": "ENG.G7.FAMILY.READ",
       "title": "Check: a school notice for families",
+      "titleTranslations": { "Hebrew": "בדיקה: הודעה מבית הספר למשפחות", "Arabic": "تحقّق: إعلان مدرسيّ للعائلات", "English": "Check: a school notice for families" },
       "componentPurpose": "הערכה",
       "isAssessment": true,
       "isRequired": true,
@@ -1057,10 +932,10 @@
               "ar": "اقرأوا الإعلان وأجيبوا عن الأسئلة الأربعة."
             },
             "lines": [
-              "FAMILY DAY AT OUR SCHOOL",
-              "WHEN: Thursday, 20 June, from 9 a.m. to 12 p.m.",
-              "WHO CAN COME: parents, grandparents, brothers and sisters.",
-              "WHERE: the school garden. If it rains, we will move to the big hall.",
+              { "text": "FAMILY DAY AT OUR SCHOOL", "role": "heading" },
+              { "text": "WHEN: Thursday, 20 June, from 9 a.m. to 12 p.m.", "role": "field" },
+              { "text": "WHO CAN COME: parents, grandparents, brothers and sisters.", "role": "field" },
+              { "text": "WHERE: the school garden. If it rains, we will move to the big hall.", "role": "field" },
               "Sara's mother is a teacher here, so she will help all morning.",
               "Please tell your teacher by Monday if your family is coming."
             ],

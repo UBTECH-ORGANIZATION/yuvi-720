@@ -233,15 +233,15 @@
 
 | אירוע | Verb | Object | דרישות |
 | --- | --- | --- | --- |
-| תחילת שאלון | `initialized` | השאלון | `context.extensions.reflactionTrigger`. |
+| תחילת שאלון | `initialized` | השאלון | `context.extensions.reflectionTrigger`. |
 | תשובה פתוחה | `answered` | שאלה | `result.response`; parent מצביע על השאלון. |
 | תשובת דירוג | `answered` | שאלה | `result.score.raw`, `min`, `max`; אין לשלוח `response` יחד עם score עבור אותה תשובה. |
 | דילוג | `skipped` | שאלה | parent מצביע על השאלון. |
 | סיום | `completed` | השאלון | `result.completion: true`, `result.duration`. |
 
-ערכי `reflactionTrigger`: `end-of-learning-objective`, `end-of-learning-component`, `difficult-task`, `other`.
+ערכי `reflectionTrigger`: `end-of-learning-objective`, `end-of-learning-component`, `difficult-task`, `other`.
 
-> שם ההרחבה במפרט המקורי הוא `reflactionTrigger`; יש לשמור על האיות הזה לצורך תאימות.
+> שם ההרחבה במפרט המקורי היה `reflectionTrigger` (שגיאת כתיב); דף הדוגמאות הרשמי (720_xAPI_JSON_Examples, עודכן 16/08/2026) תיקן ל-`reflectionTrigger` וזה האיות שנשלח.
 
 ### מפגש מנטור-תלמיד
 

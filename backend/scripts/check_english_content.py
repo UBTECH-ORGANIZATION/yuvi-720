@@ -20,6 +20,8 @@ from app.routes import content_player  # noqa: E402
 from app.services import content_catalog, kata_catalog, native_content  # noqa: E402
 from app.services.events import mint_launch  # noqa: E402
 
+CONTENT_DIR = Path(__file__).resolve().parents[1] / "content" / "english"
+
 AREA_TITLES = {
     "VOCAB": "Vocabulary range and control",
     "LISTEN": "Spoken reception",
@@ -155,6 +157,143 @@ async def structure(objectives: list[dict]) -> bool:
     return await framing() and passed
 
 
+_CHOICE_TYPES = {"single-choice", "true-false", "fill-in"}
+
+
+def _key_problem(question: dict) -> str:
+    """Why this question's key cannot grade it, or "" if it can.
+
+    The rule used to be "exactly one key, and it appears in the options", which
+    is right for a question you pick an answer to and wrong for the two that you
+    do not: matching carries one key per pair, and free typing carries every
+    spelling worth accepting and no options at all.
+    """
+    keys = list(question.get("correctAnswers") or [])
+    answers = list(question.get("answers") or [])
+    kind = str(question.get("questionType") or "")
+
+    if kind in _CHOICE_TYPES:
+        if len(keys) != 1:
+            return f"{kind} needs exactly one key, has {len(keys)}"
+        if keys[0] not in answers:
+            return f"key {keys[0]!r} is not one of the options"
+        return ""
+
+    if kind == "match":
+        prompts = [str(p.get("id")) for p in question.get("prompts") or [] if p.get("id")]
+        pairs = dict(
+            (part.strip(), answer)
+            for key in keys
+            for part, _, answer in [str(key).partition("=")]
+        )
+        if len(pairs) != len(keys):
+            return "two keys pair the same prompt"
+        if sorted(pairs) != sorted(prompts):
+            return f"keys cover {sorted(pairs)}, prompts are {sorted(prompts)}"
+        stray = [a for a in pairs.values() if a not in answers]
+        if stray:
+            # A pair whose answer is not on offer can never be built, so the
+            # question would be unanswerable rather than hard.
+            return f"paired answers not among the options: {stray}"
+        return ""
+
+    if kind == "text-entry":
+        if not keys:
+            return "free typing needs at least one accepted spelling"
+        if answers:
+            return "free typing must not offer options"
+        graded = {content_player._normalize_typed(k) for k in keys}
+        if len(graded) != len(keys):
+            return "two accepted spellings are the same answer once normalized"
+        return ""
+
+    return f"unknown questionType {kind!r}"
+
+
+def schema() -> bool:
+    """Validate every authored unit against the authoring contract.
+
+    This is the only check that runs before anything is loaded, because a unit
+    that breaks the schema is a unit whose failure downstream would show up as
+    something else entirely — a blank screen, a silently skipped self-check.
+    """
+    print("\nAuthoring schema\n")
+    from jsonschema import Draft202012Validator
+
+    schema_path = CONTENT_DIR / "schema" / "unit.schema.json"
+    document = json.loads(schema_path.read_text(encoding="utf-8"))
+    Draft202012Validator.check_schema(document)
+    validator = Draft202012Validator(document)
+
+    passed = True
+    for unit in sorted((CONTENT_DIR / "units").glob("*.json")):
+        errors = sorted(validator.iter_errors(json.loads(unit.read_text(encoding="utf-8"))),
+                        key=lambda e: list(e.absolute_path))
+        passed &= _ok(
+            f"{unit.name} matches unit.schema.json",
+            not errors,
+            "; ".join(
+                f"{'/'.join(str(p) for p in e.absolute_path)}: {e.message[:90]}"
+                for e in errors[:3]
+            ),
+        )
+    return passed
+
+
+def media() -> bool:
+    """Every referenced image exists on disk, and every picture option is real.
+
+    An image referenced but not committed is invisible in review — the alt text
+    renders and the screen still looks deliberate — and then ships as a broken
+    box to a learner who may have no other route into the question.
+    """
+    print("\nImagery\n")
+    passed = True
+    assets = CONTENT_DIR / "assets"
+    illustrated = 0
+    for unit_path in sorted((CONTENT_DIR / "units").glob("*.json")):
+        unit = json.loads(unit_path.read_text(encoding="utf-8"))
+        missing: list[str] = []
+        orphan: list[str] = []
+        count = 0
+        for component in unit.get("components") or []:
+            for item in component.get("subContent") or []:
+                nodes = [(item.get("presentation") or {}).get("image")]
+                for question in item.get("questions") or []:
+                    nodes.append(question.get("image"))
+                    answers = question.get("answers") or []
+                    for answer, node in (question.get("answerMedia") or {}).items():
+                        nodes.append(node)
+                        if answer not in answers:
+                            orphan.append(f"{item['id']}/{question.get('questionId')}: {answer!r}")
+                for node in nodes:
+                    if not isinstance(node, dict):
+                        continue
+                    if not node.get("src"):
+                        # Declared but never drawn. Skipping these quietly is how
+                        # ten generated files once sat in the tree with nothing
+                        # pointing at them and every screen still blank.
+                        if node.get("prompt"):
+                            count += 1
+                            missing.append(f"{item['id']}: declared, not generated")
+                        continue
+                    count += 1
+                    if not (assets / str(node["src"])).is_file():
+                        missing.append(f"{item['id']}: {node['src']}")
+        if not count and not orphan:
+            continue
+        illustrated += 1
+        passed &= _ok(f"{unit_path.name}: {count} image(s) present on disk", not missing,
+                      "; ".join(missing[:3]))
+        passed &= _ok(f"{unit_path.name}: every picture option names a real answer",
+                      not orphan, "; ".join(orphan[:3]))
+    if not illustrated:
+        # Said out loud, because a section that prints nothing reads as a
+        # section that passed rather than one that had nothing to look at.
+        print("  ----  no unit references an image yet")
+    return passed
+
+
 async def framing() -> bool:
     """720 §1.4 — a learner must be told what is starting and what just ended."""
     print("\nOpening and closing messages (נספח 1 §1.4)\n")
@@ -178,14 +317,15 @@ async def framing() -> bool:
                     kinds[-1:] == ["summary"],
                     f"closes on {kinds[-1]!r}" if kinds[-1:] != ["summary"] else "",
                 )
-            questioned = [i for i in items if i.get("questions")]
+            broken = [
+                f"{i['id']}/{q.get('questionId')}: {why}"
+                for i in items for q in i.get("questions") or []
+                if (why := _key_problem(q))
+            ]
             passed &= _ok(
-                f"{component['id']}: every question has exactly one key inside its options",
-                all(
-                    len(q.get("correctAnswers") or []) == 1
-                    and q["correctAnswers"][0] in (q.get("answers") or [])
-                    for i in questioned for q in i["questions"]
-                ),
+                f"{component['id']}: every question's key fits its question type",
+                not broken,
+                "; ".join(broken[:3]),
             )
             passed &= _ok(
                 f"{component['id']}: every item carries bot context",
@@ -255,11 +395,68 @@ async def player() -> bool:
     return passed
 
 
+def grading() -> bool:
+    """The two new answer shapes, graded directly against the marker.
+
+    These run on constructed questions rather than authored ones so the rules
+    are pinned before any content depends on them — and so the cases that matter
+    (a right pairing built in a different order, a phone's curly apostrophe) are
+    covered whether or not a unit happens to contain one.
+    """
+    print("\nGrading rules\n")
+    passed = True
+    grade = content_player._grade
+
+    match = {
+        "questionType": "match",
+        "prompts": [{"id": "p1", "text": "mother"}, {"id": "p2", "text": "father"}],
+        "answers": ["אמא", "אבא"],
+        "correctAnswers": ["p1=אמא", "p2=אבא"],
+    }
+    for label, response, expected in (
+        ("all pairs right", "p1=אמא|p2=אבא", True),
+        ("same pairs, built in the other order", "p2=אבא|p1=אמא", True),
+        ("one pair swapped", "p1=אבא|p2=אמא", False),
+        ("a pair left unbuilt", "p1=אמא", False),
+    ):
+        verdict, detail = grade(match, response)
+        passed &= _ok(f"match — {label}", verdict is expected, f"detail={detail}")
+    _verdict, detail = grade(match, "p1=אמא|p2=אמא")
+    passed &= _ok(
+        "match — the verdict says WHICH pair was wrong",
+        detail == {"p1": True, "p2": False}, str(detail),
+    )
+
+    typed = {
+        "questionType": "text-entry",
+        "answers": [],
+        "correctAnswers": ["my father's mother", "my grandmother"],
+    }
+    for label, response, expected in (
+        ("exact", "my father's mother", True),
+        ("a phone's curly apostrophe", "my father’s mother", True),
+        ("shouting, and a full stop", "  MY FATHER'S MOTHER.  ", True),
+        ("the second accepted spelling", "My Grandmother", True),
+        ("a different word", "my mother", False),
+        ("a misspelling is still wrong", "my grandmothr", False),
+    ):
+        verdict, _detail = grade(typed, response)
+        passed &= _ok(f"text-entry — {label}", verdict is expected, repr(response))
+
+    passed &= _ok(
+        "an unanswerable question grades as neither right nor wrong",
+        grade({"questionType": "single-choice", "correctAnswers": []}, "x")[0] is None,
+    )
+    return passed
+
+
 async def main() -> int:
+    schema_ok = schema()
+    media_ok = media()
     objectives = await coverage()
     structure_ok = await structure(objectives)
-    player_ok = await player()
-    passed = structure_ok and player_ok
+    player_ok = await player() and grading()
+    passed = schema_ok and media_ok and structure_ok and player_ok
     print(f"\n{'ALL CHECKS PASSED' if passed else 'SOME CHECKS FAILED'}\n")
     return 0 if passed else 1
 

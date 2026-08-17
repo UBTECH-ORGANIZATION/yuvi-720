@@ -113,9 +113,10 @@ class BadgeProjectionTests(unittest.TestCase):
         milestones = [b for b in out if b["category"] == "milestone"]
         self.assertTrue(all(b.get("motif") for b in milestones))
         self.assertEqual(len({b["subject"] for b in milestones}), len(milestones))
-        # subjects not in Kata show as locked "coming soon"
+        # subjects not in Kata show as locked "coming soon". English left this
+        # shelf when it became a real subject with Yuvilab-authored units.
         coming = {b["title"] for b in out if b["category"] == "coming"}
-        self.assertEqual(coming, {"Word Weaver", "Cosmic Explorer", "Maker Spark"})
+        self.assertEqual(coming, {"Cosmic Explorer", "Maker Spark"})
 
     def test_return_over_days_milestones(self) -> None:
         objs = {"science": [obj("s1")]}
