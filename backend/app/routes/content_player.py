@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import os
 import re
+import unicodedata
 from typing import Any, Optional
 
 from fastapi import APIRouter, Request
@@ -70,14 +71,83 @@ def _unauthorized() -> JSONResponse:
     return JSONResponse(content={"error": "invalid_or_expired_launch"}, status_code=401)
 
 
+def _public_media(media: Any) -> Optional[dict[str, Any]]:
+    """One image, as the browser may see it.
+
+    Everything here is needed to paint the picture without shifting the layout
+    under a finger — except ``prompt``, the text the image was generated from,
+    which is an authoring note and is dropped.
+    """
+    if not isinstance(media, dict) or not media.get("src"):
+        return None
+    public = {
+        "src": str(media["src"]),
+        "alt": media.get("alt") or {},
+        "width": media.get("width"),
+        "height": media.get("height"),
+    }
+    for optional in ("srcset", "sizes"):
+        if media.get(optional):
+            public[optional] = str(media[optional])
+    return public
+
+
+def _public_prompt(prompt: Any) -> Optional[dict[str, Any]]:
+    """One left-hand side of a matching question. Carries no pairing."""
+    if not isinstance(prompt, dict) or not prompt.get("id"):
+        return None
+    public: dict[str, Any] = {"id": str(prompt["id"])}
+    if prompt.get("text"):
+        public["text"] = str(prompt["text"])
+    media = _public_media(prompt.get("media"))
+    if media:
+        public["media"] = media
+    return public
+
+
 def _public_question(question: dict[str, Any]) -> dict[str, Any]:
-    """A question as the learner may see it — no key, no per-answer feedback."""
-    return {
+    """A question as the learner may see it — no key, no per-answer feedback.
+
+    This is a whitelist and must stay one: ``correctAnswers`` sits beside these
+    fields in the authored document, and the only thing keeping it out of the
+    browser is that nothing here copies it.
+    """
+    public = {
         "questionId": str(question.get("questionId") or ""),
         "questionType": str(question.get("questionType") or ""),
         "questionText": question.get("questionText") or "",
         "answers": list(question.get("answers") or []),
     }
+    image = _public_media(question.get("image"))
+    if image:
+        public["image"] = image
+    # Picture options, keyed by the answer they illustrate — so shuffling the
+    # options can never separate a word from its picture.
+    answer_media = {
+        str(answer): media
+        for answer, raw in (question.get("answerMedia") or {}).items()
+        if (media := _public_media(raw))
+    }
+    if answer_media:
+        public["answerMedia"] = answer_media
+    prompts = [p for raw in question.get("prompts") or [] if (p := _public_prompt(raw))]
+    if prompts:
+        public["prompts"] = prompts
+    return public
+
+
+def _public_presentation(presentation: Any) -> dict[str, Any]:
+    """The screen body, with any authoring-only image note removed."""
+    if not isinstance(presentation, dict):
+        return {}
+    public = dict(presentation)
+    if "image" in public:
+        image = _public_media(public["image"])
+        if image:
+            public["image"] = image
+        else:
+            public.pop("image")
+    return public
 
 
 def _public_item(item: dict[str, Any]) -> dict[str, Any]:
@@ -86,9 +156,76 @@ def _public_item(item: dict[str, Any]) -> dict[str, Any]:
         "title": item.get("title"),
         "contentType": item.get("contentType"),
         "mediaFormat": item.get("mediaFormat"),
-        "presentation": item.get("presentation") or {},
+        "presentation": _public_presentation(item.get("presentation")),
         "questions": [_public_question(q) for q in item.get("questions") or []],
     }
+
+
+async def _previous_answers(
+    learner_id: str, unit_id: Optional[str], component_id: str, component: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """This learner's graded answers for the CURRENT run of this component.
+
+    The player keeps its answered state in memory, so a reload used to forget
+    every verdict: revisited questions rendered blank, "continue" locked again,
+    and the finish verdict was computed from a nearly-empty map. The stored
+    `answered` statements are the durable record, so the payload rebuilds the
+    state from them — the same way the Kata player resumes on its own platform.
+
+    A run ends at `completed`: everything after the last completion belongs to
+    the current sitting, so a mid-lesson reload restores in full while a redo
+    of a finished component starts clean. Each response is re-graded with the
+    same `_grade` the live path uses — nothing is stored or sent that the
+    learner has not already been shown.
+    """
+    if not unit_id:
+        return []
+    try:
+        from app.services.events import get_unit_events
+
+        events = [
+            event for event in await get_unit_events(learner_id, unit_id)
+            if event.get("launch") == component_id
+        ]
+    except Exception as exc:  # a restore failure must never block the lesson
+        print(f"⚠️ answer restore skipped: {type(exc).__name__}")
+        return []
+    last_done = max(
+        (n for n, event in enumerate(events) if event.get("verb") == "completed"),
+        default=-1,
+    )
+    questions = {
+        (item.get("id"), question.get("questionId")): question
+        for item in component.get("subContent") or []
+        for question in item.get("questions") or []
+    }
+    entries: dict[tuple[str, str], dict[str, Any]] = {}
+    for event in events[last_done + 1:]:
+        if event.get("verb") != "answered":
+            continue
+        item_id, question_id = event.get("sub_item_id"), event.get("question_id")
+        question = questions.get((item_id, question_id))
+        response = (event.get("result") or {}).get("response")
+        if not question or response is None:
+            continue  # e.g. a speaking self-recording — nothing to rebuild
+        correct, detail = _grade(question, str(response))
+        if correct is None:
+            continue
+        entry = entries.setdefault((item_id, question_id), {
+            "itemId": item_id,
+            "questionId": question_id,
+            "attempts": 0,
+            # What they knew unaided — the first attempt, kept across retries.
+            "firstCorrect": bool(correct),
+        })
+        entry["attempts"] += 1
+        entry["correct"] = bool(correct)
+        entry["response"] = str(response)
+        entry["detail"] = detail or None
+        entry["feedback"] = (question.get("feedback") or {}).get(
+            "correct" if correct else "incorrect"
+        ) or {}
+    return list(entries.values())
 
 
 async def _resume_item(learner_id: str, component_id: str) -> Optional[str]:
@@ -153,6 +290,9 @@ async def player_payload(component_id: str, request: Request, lang: str = "he"):
         },
         "items": [_public_item(item) for item in component.get("subContent") or []],
         "resume": {"itemId": await _resume_item(launch["lid"], component_id)},
+        "previous": await _previous_answers(
+            launch["lid"], launch.get("unit"), component_id, component
+        ),
     }))
 
 
@@ -255,6 +395,66 @@ def _normalize(text: str) -> str:
     return " ".join(str(text or "").strip().casefold().split())
 
 
+#: Curly quotes a phone keyboard substitutes silently. A learner who types the
+#: right word must not be marked wrong because iOS chose U+2019 for them.
+_STRAIGHTEN = str.maketrans({"‘": "'", "’": "'", "“": '"', "”": '"'})
+
+#: Sentence-final punctuation. Whether a learner closed a one-word answer with a
+#: full stop says nothing about whether they know the word.
+_TERMINAL = ".,!?;:…"
+
+
+def _normalize_typed(text: str) -> str:
+    """What a TYPED answer means, once spelling noise is taken out.
+
+    Free text is graded only where the authored key lists every acceptable
+    spelling, so this deliberately forgives presentation and nothing else: case,
+    spacing, quote shape, stray accents and a trailing full stop. It does not
+    forgive a different word, a missing word or a misspelling — those are the
+    thing being assessed, and the feedback for them is already written.
+    """
+    value = unicodedata.normalize("NFKD", str(text or "")).translate(_STRAIGHTEN)
+    value = "".join(ch for ch in value if not unicodedata.combining(ch))
+    return _normalize(value).strip(_TERMINAL).strip()
+
+
+def _pairs(value: str) -> dict[str, str]:
+    """``p1=mother|p2=father`` → ``{"p1": "mother", …}``.
+
+    Matching is graded as a set of pairs, never as a string, so the order the
+    learner happened to build them in cannot make a right answer wrong.
+    """
+    pairs: dict[str, str] = {}
+    for chunk in str(value or "").split("|"):
+        prompt_id, separator, answer = chunk.partition("=")
+        prompt_id = prompt_id.strip()
+        if separator and prompt_id:
+            pairs[prompt_id] = _normalize(answer)
+    return pairs
+
+
+def _grade(question: dict[str, Any], response: str) -> tuple[Optional[bool], dict[str, bool]]:
+    """Grade one response against the authored key.
+
+    Returns the verdict and, for matching, which individual pairs were right —
+    enough for the player to mark the two rows that need another look instead of
+    resetting the whole board, and never enough to derive the key.
+    """
+    keys = [str(k) for k in question.get("correctAnswers") or []]
+    if not keys:
+        return None, {}
+
+    question_type = str(question.get("questionType") or "")
+    if question_type == "match":
+        expected = _pairs("|".join(keys))
+        given = _pairs(response)
+        detail = {pid: given.get(pid) == answer for pid, answer in expected.items()}
+        return bool(detail) and all(detail.values()) and set(given) == set(expected), detail
+    if question_type == "text-entry":
+        return _normalize_typed(response) in {_normalize_typed(k) for k in keys}, {}
+    return _normalize(response) in {_normalize(k) for k in keys}, {}
+
+
 @router.post("/{component_id}/answer")
 async def player_answer(component_id: str, data: AnswerRequest, request: Request):
     """Grade one answer. The key stays on the server; the learner gets words."""
@@ -279,12 +479,17 @@ async def player_answer(component_id: str, data: AnswerRequest, request: Request
     if question is None:
         return JSONResponse(content={"error": "question_not_found"}, status_code=404)
 
-    keys = {_normalize(value) for value in question.get("correctAnswers") or []}
-    correct = _normalize(data.response) in keys if keys else None
+    correct, detail = _grade(question, data.response)
     feedback = question.get("feedback") or {}
-    return _embeddable(JSONResponse(content={
+    body: dict[str, Any] = {
         "correct": correct,
         # 720 §feedback: effort-based, action-specific, and it explains the
         # error — never a score, and never the answer itself.
         "feedback": feedback.get("correct" if correct else "incorrect") or {},
-    }))
+    }
+    if detail:
+        # Which pairs held up, so a learner who got three of four right is asked
+        # to revisit one row rather than start the board again. Says nothing
+        # about what the right pairing would have been.
+        body["detail"] = detail
+    return _embeddable(JSONResponse(content=body))

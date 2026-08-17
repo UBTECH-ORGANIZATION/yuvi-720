@@ -16,6 +16,7 @@
       "id": "ENG.G7.FAMILY.SPEAK-01",
       "learningUnitId": "ENG.G7.FAMILY.SPEAK",
       "title": "Hear it, then say it",
+      "titleTranslations": { "Hebrew": "קודם שומעים, אחר כך אומרים", "Arabic": "نسمع أوّلاً ثم نقول", "English": "Hear it, then say it" },
       "componentPurpose": "הבנייה",
       "isAssessment": false,
       "isRequired": true,
@@ -40,6 +41,18 @@
           "informationToBot": "מסך פתיחה של רכיב ההבנייה ביעד הדיבור. המטרה: להוריד את חרדת הדיבור לפני המשימה הראשונה. הלומד אמור להבין שהרצף הוא שמיעה ואז אמירה — קודם שומעים מודל, אחר כך חוזרים עליו. אסטרטגיה מומלצת: לומר את המשפט קודם בשקט לעצמך, ואז שוב בקול. תפיסות שגויות נפוצות: (1) לומדים חושבים שצריך לדבר מהר וברצף כדי ש'ייחשב' — לא נכון, משפט קצר ואיטי הוא דיבור לגיטימי; (2) לומדים חושבים שמישהו נותן ציון להגייה שלהם — אין כאן ציון. אם הלומד כותב שהוא מתבייש, להרגיע ולהציע להתחיל משלוש מילים בלבד.",
           "presentation": {
             "kind": "intro",
+            "image": {
+              "prompt": "A teenage girl about thirteen standing confidently in a bright room, mid-sentence, speaking out loud, with a cat listening from a chair nearby.",
+              "src": "ENG.G7.FAMILY.SPEAK/speak-01-01-screen-42d80f43.jpg",
+              "srcset": "ENG.G7.FAMILY.SPEAK/speak-01-01-screen-42d80f43-480.webp 480w, ENG.G7.FAMILY.SPEAK/speak-01-01-screen-42d80f43-960.webp 960w",
+              "width": 1024,
+              "height": 1024,
+              "alt": {
+                "en": "A teenage girl standing and speaking out loud in a bright room.",
+                "he": "נערה עומדת ומדברת בקול בחדר מואר.",
+                "ar": "فتاة تقف وتتحدّث بصوت مسموع في غرفة مضيئة."
+              }
+            },
             "prompt": {
               "en": "Today you are going to speak English out loud.",
               "he": "היום תדברו אנגלית בקול.",
@@ -192,56 +205,6 @@
             ]
           },
           "questions": []
-        },
-        {
-          "id": "ENG.G7.FAMILY.SPEAK-01-04",
-          "title": "How was speaking out loud?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי בסוף רכיב ההבנייה. יעד: שהלומד יזהה מה בדיוק היה הקושי בדיבור — מציאת המילים, ההגייה, או הביטחון — כי לכל אחד מהם יש מענה אחר. אין תשובה נכונה ואין ניקוד. אם נבחר 'לא ידעתי איך להגות' — להפנות ליעד ההגייה (PHON). אם נבחר 'התביישתי' — להציע את הרכיב החלופי עם המסגרות הכתובות, שבו אפשר לבנות את המשפט לפני שאומרים אותו.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "What was the hard part when you spoke?",
-              "he": "מה היה החלק הקשה כשדיברתם?",
-              "ar": "ما كان الجزء الصعب عندما تحدّثتم؟"
-            },
-            "choices": [
-              {
-                "id": "words",
-                "label": {
-                  "en": "Finding the words",
-                  "he": "למצוא את המילים",
-                  "ar": "إيجاد الكلمات"
-                }
-              },
-              {
-                "id": "pronounce",
-                "label": {
-                  "en": "Knowing how to pronounce them",
-                  "he": "לדעת איך להגות אותן",
-                  "ar": "معرفة كيفيّة نطقها"
-                }
-              },
-              {
-                "id": "shy",
-                "label": {
-                  "en": "Speaking out loud felt strange",
-                  "he": "היה מוזר לדבר בקול",
-                  "ar": "شعرت بغرابة عند التحدّث بصوت مسموع"
-                }
-              },
-              {
-                "id": "fine",
-                "label": {
-                  "en": "It went well",
-                  "he": "הלך לי טוב",
-                  "ar": "سار الأمر جيداً"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -249,6 +212,7 @@
       "id": "ENG.G7.FAMILY.SPEAK-01B",
       "learningUnitId": "ENG.G7.FAMILY.SPEAK",
       "title": "Read the model, then say it",
+      "titleTranslations": { "Hebrew": "קוראים את הדוגמה, ואז אומרים אותה", "Arabic": "نقرأ النموذج ثم نقوله", "English": "Read the model, then say it" },
       "componentPurpose": "הבנייה",
       "isAssessment": false,
       "isRequired": false,
@@ -431,56 +395,6 @@
             ]
           },
           "questions": []
-        },
-        {
-          "id": "ENG.G7.FAMILY.SPEAK-01B-04",
-          "title": "Which way helped you?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הייצוג החלופי. יעד: שהלומד יזהה איזה ערוץ עוזר לו יותר — לראות את המילים או לשמוע אותן. אין תשובה נכונה ואין ניקוד. התשובה חשובה למערכת: אם הלומד בוחר 'לראות את המילים', כדאי להציע לו טקסט לצד כל האזנה גם ביעדים הבאים.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "What helped you say it?",
-              "he": "מה עזר לכם לומר את זה?",
-              "ar": "ما الذي ساعدكم على قولها؟"
-            },
-            "choices": [
-              {
-                "id": "seeing",
-                "label": {
-                  "en": "Seeing the words",
-                  "he": "לראות את המילים",
-                  "ar": "رؤية الكلمات"
-                }
-              },
-              {
-                "id": "hearing",
-                "label": {
-                  "en": "Tapping a line and hearing it",
-                  "he": "ללחוץ על שורה ולשמוע אותה",
-                  "ar": "الضغط على سطر وسماعه"
-                }
-              },
-              {
-                "id": "glossary",
-                "label": {
-                  "en": "The word list in my language",
-                  "he": "רשימת המילים בשפה שלי",
-                  "ar": "قائمة الكلمات بلغتي"
-                }
-              },
-              {
-                "id": "practice",
-                "label": {
-                  "en": "Saying it more than once",
-                  "he": "לומר את זה יותר מפעם אחת",
-                  "ar": "قولها أكثر من مرّة"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -488,6 +402,7 @@
       "id": "ENG.G7.FAMILY.SPEAK-02",
       "learningUnitId": "ENG.G7.FAMILY.SPEAK",
       "title": "Say more: sentences of your own",
+      "titleTranslations": { "Hebrew": "אומרים יותר: משפטים משלכם", "Arabic": "نقول أكثر: جمل من عندكم", "English": "Say more: sentences of your own" },
       "componentPurpose": "תרגול",
       "isAssessment": false,
       "isRequired": true,
@@ -519,7 +434,7 @@
             },
             "goal": {
               "en": "First you check the language you need. Then you speak about one real person in your family.",
-              "he": "קודם תבדקו את הלשון שאתם צריכים. אחר כך תדברו על אדם אחד אמיתי מהמשפחה שלכם.",
+              "he": "קודם תתרגלו את המבנים שתצטרכו. אחר כך תדברו על אדם אחד אמיתי מהמשפחה שלכם.",
               "ar": "أوّلاً تتحقّقون من اللغة التي تحتاجونها. ثم تتحدّثون عن شخص حقيقي واحد من عائلتكم."
             },
             "strategy": {
@@ -672,6 +587,7 @@
       "id": "ENG.G7.FAMILY.SPEAK-02A",
       "learningUnitId": "ENG.G7.FAMILY.SPEAK",
       "title": "Challenge: speak for longer, without stopping",
+      "titleTranslations": { "Hebrew": "אתגר: מדברים יותר זמן, בלי לעצור", "Arabic": "تحدٍّ: نتكلّم وقتاً أطول دون توقّف", "English": "Challenge: speak for longer, without stopping" },
       "componentPurpose": "תרגול",
       "isAssessment": false,
       "isRequired": false,
@@ -690,7 +606,7 @@
         "ENG.G7.FAMILY.SPEAK-01B"
       ],
       "skills": [
-        "הבעה בעל־פה",
+        "הבעה בעל פה",
         "רצף דיבור",
         "הגייה"
       ],
@@ -745,50 +661,37 @@
               "he": "הצליל th במילים they, both ו-that הוא הצליל הרך — הניחו את הלשון בין השיניים.",
               "ar": "صوت th في they و both و that هو الصوت الليّن — ضعوا اللسان بين الأسنان."
             },
-            "selfCheck": {
-              "en": "Did you say all four sentences without stopping in the middle?",
-              "he": "אמרתם את כל ארבעת המשפטים בלי לעצור באמצע?",
-              "ar": "هل قلتم الجمل الأربع دون توقّف في المنتصف؟"
-            }
-          },
-          "questions": []
-        },
-        {
-          "id": "ENG.G7.FAMILY.SPEAK-02A-03",
-          "title": "How did it go?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "מסך רפלקציה בסיום רכיב הדיבור המתקדם. יעד: לשקף את חוויית הרצף, לא את הדיוק. אין תשובה נכונה ואין ניקוד. אם הלומד מדווח שעצר הרבה, כדאי להציע לו לחזור על אותו רכיב פעם נוספת ולא לרדת לרכיב קל יותר — הקושי הוא בשטף, והוא נפתר בחזרה.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "How did speaking for longer feel?",
-              "he": "איך הרגיש לדבר יותר זמן ברצף?",
-              "ar": "كيف كان الشعور بالتحدّث لوقت أطول؟"
-            },
-            "choices": [
+            "selfCheck": [
               {
-                "id": "flowed",
+                "id": "one-go",
                 "label": {
-                  "en": "It flowed — I did not stop",
-                  "he": "זה זרם — לא עצרתי",
-                  "ar": "انساب الكلام — لم أتوقّف"
+                  "en": "I said all four sentences without stopping",
+                  "he": "אמרתי את כל ארבעת המשפטים בלי לעצור",
+                  "ar": "قلت الجمل الأربع دون توقّف"
                 }
               },
               {
-                "id": "some_stops",
+                "id": "one-pause",
                 "label": {
-                  "en": "I stopped once or twice",
-                  "he": "עצרתי פעם או פעמיים",
-                  "ar": "توقّفت مرّة أو مرّتين"
+                  "en": "I stopped once in the middle",
+                  "he": "עצרתי פעם אחת באמצע",
+                  "ar": "توقّفت مرّة واحدة في المنتصف"
                 }
               },
               {
-                "id": "many_stops",
+                "id": "th-hard",
                 "label": {
-                  "en": "I stopped a lot",
-                  "he": "עצרתי הרבה",
-                  "ar": "توقّفت كثيراً"
+                  "en": "The th sound was the hard part",
+                  "he": "הצליל th היה החלק הקשה",
+                  "ar": "كان صوت th هو الجزء الصعب"
+                }
+              },
+              {
+                "id": "again",
+                "label": {
+                  "en": "I want to hear it again",
+                  "he": "אני רוצה לשמוע את זה שוב",
+                  "ar": "أريد سماعها مرّة أخرى"
                 }
               }
             ]
@@ -801,6 +704,7 @@
       "id": "ENG.G7.FAMILY.SPEAK-03",
       "learningUnitId": "ENG.G7.FAMILY.SPEAK",
       "title": "Check: tell us about your family",
+      "titleTranslations": { "Hebrew": "בדיקה: מספרים על המשפחה שלכם", "Arabic": "تحقّق: نتحدّث عن عائلتكم", "English": "Check: tell us about your family" },
       "componentPurpose": "הערכה",
       "isAssessment": true,
       "isRequired": true,

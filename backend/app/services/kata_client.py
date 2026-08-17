@@ -163,13 +163,25 @@ def _question_row(question: dict[str, Any]) -> dict[str, Any]:
             return [] if values in (None, "") else [str(values)[:200]]
         return [str(v)[:200] for v in values[:limit] if v not in (None, "")]
 
-    return {
+    row = {
         "questionId": normalize_question_id(question.get("questionId")),
         "questionType": str(question.get("questionType") or ""),
         "questionText": str(question.get("questionText") or "")[:600],
         "answers": _texts(question.get("answers"), 12),
         "correctAnswers": _texts(question.get("correctAnswers"), 12),
     }
+    # A matching question keys its answer by prompt id (`p1=mother`), which on
+    # its own tells the coach nothing about what p1 IS. Without the prompts it
+    # cannot ground a hint, and a coach that cannot ground one declines to give
+    # it — so the learner who most needs help gets none.
+    prompts = [
+        f"{p.get('id')}: {str(p.get('text') or '').strip() or '(picture)'}"
+        for p in (question.get("prompts") or [])
+        if isinstance(p, dict) and p.get("id")
+    ]
+    if prompts:
+        row["prompts"] = prompts[:12]
+    return row
 
 
 def _sub_content_bot_index(
@@ -263,6 +275,10 @@ def normalize_component(component: dict[str, Any]) -> dict[str, Any]:
         "id": str(component.get("id") or ""),
         "unit_id": str(component.get("learningUnitId") or ""),
         "title": str(component.get("title") or ""),
+        # Learner-facing names by locale, same shape as the unit's `titles`.
+        # Our own units author them; real Kata components may not — an empty
+        # dict here just means the UI falls back to `title`.
+        "titles": _title_translations(component),
         "purpose": component.get("componentPurpose"),
         "is_assessment": bool(component.get("isAssessment")),
         "is_required": bool(component.get("isRequired", True)),

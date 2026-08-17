@@ -7,6 +7,18 @@ content ancestry (`grouping` = unit → component → item, `parent` = the level
 directly above, `context.extensions` = every level's metadata) — posts them to the
 configured LRS, and writes a CSV of what was sent.
 
+Fixes applied after integration report 3 (17/08), shaped to match the ministry's
+examples page (720_xAPI_JSON_Examples.html, refreshed 16/08):
+  · grouping→content-vendor carries the ministry catalog id as a full IRI
+    (…/xapi/moe/content-vendor/10 מטח · /521 קמפוס · /310 מתודיקה)
+  · on every content statement the deepest grouping entry is the statement's
+    OWN object, verbatim — same id, same type (a questionnaire tags itself
+    `questionnaire`, a selection tags the selected item)
+  · a question-level statement (answered) nests under its questionnaire screen:
+    grouping = […, component, questionnaire, question], parent = [questionnaire]
+  · one id, one type: the same screen is `questionnaire` in every statement
+    that references it, the media item is `video` in `selected` too
+
 Fixes applied after the 28/07 ministry review are all exercised here:
   · grouping→lms and grouping→content-vendor must be REAL ids (checked, not sent
     with a placeholder — the run aborts and tells you which env var to set)
@@ -60,13 +72,31 @@ def _identity() -> dict:
     }
 
 
-def _raw(verb_iri: str, object_id: str, **extra) -> dict:
-    """A Kata-shaped content statement, as it reaches `/api/xapi`."""
+def _raw(
+    verb_iri: str,
+    object_id: str,
+    object_type: str | None = None,
+    name_he: str | None = None,
+    **extra,
+) -> dict:
+    """A Kata-shaped content statement, as it reaches `/api/xapi`.
+
+    The object carries its own definition (type + name) exactly as the content
+    sends it — report 3 requires the grouping's deepest entry to be this object
+    verbatim, type included ("יש לשלוח type כמו ב-object, לדוג questionnaire")."""
+    obj: dict = {"id": object_id}
+    if object_type:
+        definition: dict = {
+            "type": f"https://lxp.education.gov.il/xapi/moe/activities/{object_type}"
+        }
+        if name_he:
+            definition["name"] = {"he": name_he}
+        obj["definition"] = definition
     return {
         "id": str(uuid.uuid4()),
         "actor": {"account": {"name": "student", "homePage": config.supplier_domain()}},
         "verb": {"id": verb_iri},
-        "object": {"id": object_id},
+        "object": obj,
         **extra,
     }
 
@@ -87,7 +117,8 @@ async def build_all(identity: dict, session_id: str) -> list[tuple[str, str, dic
     # ── Session ───────────────────────────────────────────────────────────────
     add("session", "enter", statements.session_enter(
         identity, session_id,
-        device={"deviceType": "Desktop", "platform": "Web", "browser": "Chrome"},
+        device={"deviceType": "Desktop", "platform": "Web",
+                "operatingSystem": "macOS", "osVersion": "15.5", "browser": "Chrome"},
     ))
     add("session", "suspend", statements.session_suspend(identity, session_id))
     add("session", "resume", statements.session_resume(identity, session_id))
@@ -168,16 +199,39 @@ async def build_all(identity: dict, session_id: str) -> list[tuple[str, str, dic
         add("student-goal", action, builder(identity, session_id, goal_id, "academic"))
 
     # ── Content questionnaire (the component's own item set) ──────────────────
+    # ONE object for the questionnaire screen, used identically everywhere it
+    # appears — as the שאלון events' object, as the answered event's grouping
+    # level and parent, and as the skipped event's object. The ministry's
+    # examples never type the same id two ways.
+    questionnaire_object = {
+        "objectType": "Activity",
+        "id": f"{CONTENT_BASE}/{COMPONENT_ID}/{QUESTION_ITEM_ID}",
+        "definition": {
+            "type": "https://lxp.education.gov.il/xapi/moe/activities/questionnaire",
+            "name": {"he": "תרגול: מדידת מסה"},
+        },
+    }
+    # For the question-level statement the questionnaire IS the hierarchy's
+    # deepest level (its `self`), so the answered event nests under it exactly
+    # like the examples: grouping […, component, questionnaire, question],
+    # parent = [questionnaire].
+    answer_level = dict(question_level)
+    answer_level["self"] = questionnaire_object
     add("questionnaire", "initialized", statements.enriched_content_statement(
         identity, session_id,
-        _raw("http://adlnet.gov/expapi/verbs/initialized", f"{CONTENT_BASE}/{COMPONENT_ID}/{QUESTION_ITEM_ID}"),
+        _raw("http://adlnet.gov/expapi/verbs/initialized",
+             f"{CONTENT_BASE}/{COMPONENT_ID}/{QUESTION_ITEM_ID}",
+             object_type="questionnaire", name_he="תרגול: מדידת מסה"),
         ecat_item_id=ecat, hierarchy=question_level,
     ))
     add("questionnaire", "completed", statements.enriched_content_statement(
         identity, session_id,
-        _raw("http://adlnet.gov/expapi/verbs/completed", f"{CONTENT_BASE}/{COMPONENT_ID}/{QUESTION_ITEM_ID}",
+        _raw("http://adlnet.gov/expapi/verbs/completed",
+             f"{CONTENT_BASE}/{COMPONENT_ID}/{QUESTION_ITEM_ID}",
+             object_type="questionnaire", name_he="תרגול: מדידת מסה",
              result={"success": True, "score": {"scaled": 1.0}, "duration": "PT41S"}),
         ecat_item_id=ecat, hierarchy=question_level,
+        result_extra={"completion": True},   # the example's questionnaire marker
     ))
 
     # ── Question answered (response + questionId/questionType/attemptNumber) ──
@@ -191,13 +245,14 @@ async def build_all(identity: dict, session_id: str) -> list[tuple[str, str, dic
         question_he=question.get("questionText"),
         response="מאזני כפות | מאזניים דיגיטליים",
         attempt_number=2, success=True, score_scaled=1.0, duration_seconds=41,
-        ecat_item_id=ecat, hierarchy=question_level,
+        ecat_item_id=ecat, hierarchy=answer_level,
     ))
 
-    # ── Item skipped ──────────────────────────────────────────────────────────
-    add("item", "skipped", statements.item_skipped(
+    # ── Item skipped (the questionnaire screen, typed as what it is) ──────────
+    add("questionnaire", "skipped", statements.item_skipped(
         identity, session_id,
         object_id=f"{CONTENT_BASE}/{COMPONENT_ID}/{QUESTION_ITEM_ID}",
+        object_type="questionnaire", name_he="תרגול: מדידת מסה",
         ecat_item_id=ecat, hierarchy=question_level,
     ))
 
@@ -219,23 +274,33 @@ async def build_all(identity: dict, session_id: str) -> list[tuple[str, str, dic
     ))
 
     # ── Help request + non-learning selection (kebab-case selectionType) ──────
+    # Help asked on the question the learner is stuck on — the ministry's
+    # example shape: object = the question, nested under its questionnaire
+    # (grouping […, questionnaire, question], parent=[questionnaire]), with the
+    # question's own identifiers in extensions.
     add("component / item", "requested", statements.help_requested(
         identity, session_id,
-        object_id=f"{CONTENT_BASE}/{COMPONENT_ID}/{QUESTION_ITEM_ID}",
-        object_type="item", help_source="platform", help_type="hint",
-        parent=question_level.get("parent") or None,
-        ecat_item_id=ecat, hierarchy=question_level,
+        object_id=f"{CONTENT_BASE}/{COMPONENT_ID}/{QUESTION_ITEM_ID}/q1",
+        object_type="question", name_he=question.get("questionText"),
+        help_source="platform", help_type="hint",
+        question_id=question.get("questionId") or "q1",
+        question_type=question.get("questionType") or "choice",
+        attempt_number=1,
+        ecat_item_id=ecat, hierarchy=answer_level,
     ))
     add("item", "selected", statements.selected(
         identity, session_id,
         object_id=f"{CONTENT_BASE}/{COMPONENT_ID}/{MEDIA_ITEM_ID}",
-        object_type="item", selection_type="learningType", response="listening",
+        # The selected thing is the video item — typed `video` exactly like the
+        # media events type the same id (the review flagged "נשלח type שונה").
+        object_type="video", selection_type="learningType", response="listening",
         ecat_item_id=ecat, hierarchy=media_level,
     ))
     # The unit level is reported by its own statements too (content rules §1).
     add("learning-unit", "initialized", statements.enriched_content_statement(
         identity, session_id,
-        _raw("http://adlnet.gov/expapi/verbs/initialized", f"{CONTENT_BASE}/{UNIT_ID}"),
+        _raw("http://adlnet.gov/expapi/verbs/initialized", f"{CONTENT_BASE}/{UNIT_ID}",
+             object_type="learning-unit", name_he="מדידה מעשית של מסה בשלושה מצבי צבירה"),
         ecat_item_id=ecat, hierarchy=unit_level,
     ))
     return rows
