@@ -1,25 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { captureMicrophone, decodeBase64, encodeBase64, PcmPlayer, SAMPLE_RATE } from './pcmAudio'
 
 /**
  * Live spoken practice with Yuvi.
  *
- * The audio path deliberately does not go through our servers: we ask the
- * backend for a short-lived secret, then open a WebRTC connection straight to
- * Azure. The learner's microphone stream never reaches a Yuvilab server and is
- * never stored — what we send back is the screened transcript of each turn and
- * the provider's own token counts, so the conversation can be metered and the
- * teacher can see that it happened without anyone keeping a child's voice.
+ * Audio is streamed to the backend, which relays it to Azure Voice Live. It goes
+ * that way round rather than peer-to-peer because Voice Live has no ephemeral
+ * secret a browser could safely hold, and because the relay is what decides
+ * which voice Yuvi answers in — Hebrew speech gets a Hebrew voice, English gets
+ * an English one. The recording itself is never stored: what comes back to us is
+ * the screened transcript of each turn and the provider's own token counts.
  */
 
 export type VoiceState = 'idle' | 'connecting' | 'listening' | 'speaking' | 'error'
-
-type VoiceSession = {
-  clientSecret: string
-  webrtcUrl: string
-  model: string
-  disclosure: string
-  sessionId?: string
-}
 
 export type VoiceCorrection = { say: string; note: string }
 export type VoiceTurn = { role: 'learner' | 'yuvi'; text: string; correction?: VoiceCorrection }
@@ -41,25 +34,28 @@ export function useVoiceCall(language: string, surface?: string) {
   const [disclosure, setDisclosure] = useState('')
   const [stage, setStage] = useState<string | null>(null)
 
-  const peerRef = useRef<RTCPeerConnection | null>(null)
+  const socketRef = useRef<WebSocket | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const channelRef = useRef<RTCDataChannel | null>(null)
-  const sessionRef = useRef<VoiceSession | null>(null)
+  const contextRef = useRef<AudioContext | null>(null)
+  const playerRef = useRef<PcmPlayer | null>(null)
+  const stopMicRef = useRef<(() => void) | null>(null)
+  const sessionIdRef = useRef<string | undefined>(undefined)
   // The learner's line and Yuvi's line arrive on different events; a turn is
   // only worth persisting once both halves exist.
   const pendingRef = useRef<{ learner?: string; yuvi?: string }>({})
 
   const hangUp = useCallback(() => {
-    channelRef.current?.close()
-    peerRef.current?.close()
+    stopMicRef.current?.()
+    playerRef.current?.clear()
+    socketRef.current?.close()
     streamRef.current?.getTracks().forEach((track) => track.stop())
-    audioRef.current?.remove()
-    channelRef.current = null
-    peerRef.current = null
+    void contextRef.current?.close().catch(() => {})
+    stopMicRef.current = null
+    playerRef.current = null
+    socketRef.current = null
     streamRef.current = null
-    audioRef.current = null
-    sessionRef.current = null
+    contextRef.current = null
+    sessionIdRef.current = undefined
     setState('idle')
   }, [])
 
@@ -100,7 +96,16 @@ export function useVoiceCall(language: string, surface?: string) {
     try { event = JSON.parse(raw) } catch { return }
 
     switch (event.type) {
+      case 'yuvi.ready':
+        if (event.stage) setStage(event.stage)
+        setState('listening')
+        break
+      case 'session.created':
+        sessionIdRef.current = event.session?.id
+        break
       case 'input_audio_buffer.speech_started':
+        // Barge-in: drop whatever Yuvi still had queued to say.
+        playerRef.current?.clear()
         setState('listening')
         break
       case 'conversation.item.input_audio_transcription.completed': {
@@ -110,7 +115,12 @@ export function useVoiceCall(language: string, surface?: string) {
         setTurns((previous) => [...previous, { role: 'learner', text }])
         break
       }
-      case 'response.audio_transcript.done': {
+      case 'response.audio.delta':
+      case 'response.output_audio.delta':
+        if (event.delta) playerRef.current?.push(decodeBase64(event.delta))
+        break
+      case 'response.audio_transcript.done':
+      case 'response.output_audio_transcript.done': {
         const text = String(event.transcript || '').trim()
         if (!text) break
         pendingRef.current.yuvi = text
@@ -122,15 +132,12 @@ export function useVoiceCall(language: string, surface?: string) {
         flushTurn()
         const usage = event.response?.usage
         if (usage) {
-          // The provider's own counts. We are the only ones who can persist
-          // them, because the response never passed through our servers.
           postJson('/api/agent/voice/usage', {
-            usage, sessionId: sessionRef.current?.sessionId, status: 'completed',
+            usage, sessionId: sessionIdRef.current, status: 'completed',
           }).catch(() => {})
         }
         break
       }
-      case 'output_audio_buffer.started':
       case 'response.created':
         setState('speaking')
         break
@@ -147,40 +154,43 @@ export function useVoiceCall(language: string, surface?: string) {
     setState('connecting')
     setTurns([])
     try {
-      const session = await postJson<VoiceSession>('/api/agent/voice/session', {
+      const session = await postJson<{ disclosure?: string }>('/api/agent/voice/session', {
         language, surface, referenceText,
       })
-      sessionRef.current = session
       setDisclosure(session.disclosure || '')
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true },
+      })
       streamRef.current = stream
 
-      const peer = new RTCPeerConnection()
-      peerRef.current = peer
+      const context = new AudioContext({ sampleRate: SAMPLE_RATE })
+      contextRef.current = context
+      await context.resume()
+      playerRef.current = new PcmPlayer(context)
 
-      const audio = document.createElement('audio')
-      audio.autoplay = true
-      audioRef.current = audio
-      peer.ontrack = (event) => { audio.srcObject = event.streams[0] }
-      stream.getTracks().forEach((track) => peer.addTrack(track, stream))
+      const socket = new WebSocket(
+        `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/agent/voice/stream`,
+      )
+      socketRef.current = socket
+      socket.addEventListener('message', (event) => onServerEvent(event.data))
+      socket.addEventListener('close', () => { if (socketRef.current === socket) hangUp() })
+      socket.addEventListener('error', () => setState('error'))
 
-      const channel = peer.createDataChannel('oai-events')
-      channelRef.current = channel
-      channel.addEventListener('message', (event) => onServerEvent(event.data))
-
-      const offer = await peer.createOffer()
-      await peer.setLocalDescription(offer)
-
-      const answer = await fetch(`${session.webrtcUrl}?model=${encodeURIComponent(session.model)}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${session.clientSecret}`, 'Content-Type': 'application/sdp' },
-        body: offer.sdp,
+      await new Promise<void>((resolve, reject) => {
+        socket.addEventListener('open', () => resolve(), { once: true })
+        socket.addEventListener('close', () => reject(new Error('closed')), { once: true })
       })
-      if (!answer.ok) throw new Error('sdp')
-      await peer.setRemoteDescription({ type: 'answer', sdp: await answer.text() })
-      setState('listening')
-    } catch (error) {
+      socket.send(JSON.stringify({ language, surface, referenceText }))
+
+      stopMicRef.current = await captureMicrophone(context, stream, (chunk) => {
+        if (socket.readyState !== WebSocket.OPEN) return
+        socket.send(JSON.stringify({
+          type: 'input_audio_buffer.append',
+          audio: encodeBase64(chunk),
+        }))
+      })
+    } catch {
       hangUp()
       setState('error')
     }

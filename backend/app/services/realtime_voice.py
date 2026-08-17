@@ -1,16 +1,23 @@
-"""Live spoken practice with Yuvi (נספח 1 §2.4) — session minting only.
+"""Live spoken practice with Yuvi (נספח 1 §2.4) — the brief and the transport.
 
-The audio path is deliberately NOT through us. This service asks Azure for a
-short-lived client secret and hands it to the browser, which then opens a WebRTC
-connection straight to Azure. Consequences that matter for the tender:
+The spoken channel runs on the Azure **Voice Live** API rather than Azure OpenAI
+Realtime, for one reason: realtime accepts only OpenAI voice names, all of which
+are English-native and give Hebrew a heavy American accent. Voice Live accepts
+Azure neural voices, so Hebrew is spoken by `he-IL-AvriNeural` — a Hebrew voice
+with a Hebrew accent — and English by `en-US-GuyNeural`.
 
-  * our subscription key never reaches the client;
-  * the learner's voice never touches a Yuvilab server and is never stored;
-  * what we keep is a redacted transcript and the provider's token counts.
+Voice Live is a WebSocket API with no ephemeral-secret minting, so the browser
+cannot hold a credential and the audio is relayed by `routes/speech.py` instead
+of going peer-to-peer. What that changes, stated plainly:
 
-What this module DOES own is the brief: who Yuvi is in this conversation, what
-the learner is working on, and — the part the tender is specific about — which
-rung of the L1→English ladder they are on. That comes from
+  * our subscription key still never reaches the client;
+  * learner audio now passes THROUGH the backend in memory. It is forwarded
+    frame by frame and never written to disk, a database or a log;
+  * what we keep is unchanged: a redacted transcript and the provider's counts.
+
+What this module owns is the brief: who Yuvi is in this conversation, what the
+learner is working on, and — the part the tender is specific about — which rung
+of the L1→English ladder they are on. That comes from
 `services/english_ladder.py`, computed from real evidence, never chosen by a model.
 """
 
@@ -19,15 +26,17 @@ from __future__ import annotations
 import os
 from typing import Any, Optional
 
-import httpx
-
 from app.agents import safety
 from app.services import english_ladder
 
-DEFAULT_API_VERSION = "2025-04-01-preview"
-DEFAULT_VOICE = "alloy"
-PROVIDER = "azure_openai"
-GATEWAY = "azure_openai_realtime"
+DEFAULT_API_VERSION = "2025-10-01"
+DEFAULT_MODEL = "gpt-realtime"
+PROVIDER = "azure_voice_live"
+GATEWAY = "azure_voice_live_ws"
+
+# 24 kHz mono PCM16 both ways — what Voice Live expects and what the browser
+# worklet produces.
+SAMPLE_RATE = 24000
 
 # The model hears these before the learner speaks. They are the same rules the
 # text coach lives by — a spoken channel is not a loophole around them.
@@ -40,6 +49,7 @@ _PERSONA = {
         "- אל תשתמשו במספרים, בציונים או באחוזים כשאתם מדברים על ההצלחה שלהם.\n"
         "- אל תשוו אותם לתלמידים אחרים, לעולם.\n"
         "- משפטים קצרים. תור אחד, רעיון אחד, ואז תנו להם לדבר.\n"
+        "- ענו באותה שפה שבה התלמיד/ה דיבר/ה, אלא אם ההנחיה שלמטה אומרת להישאר באנגלית.\n"
         "איך מתקנים — זו המלאכה שלכם כאן:\n"
         "- כשהם אומרים משפט שדובר אנגלית אחרת, חייבים בקצרה את המשפט שלהם כמו שאומרים אותו, "
         "וממשיכים את השיחה — בלי להגיד שהיא היתה טעות ובלי לעצור לשיעור דקדוק.\n"
@@ -59,6 +69,7 @@ _PERSONA = {
         "- لا تستعمل أرقاماً أو علامات أو نسباً عند الحديث عن نجاحهم.\n"
         "- لا تقارنهم بطلاب آخرين أبداً.\n"
         "- جمل قصيرة. فكرة واحدة في كل دور، ثم دعهم يتكلّمون.\n"
+        "- أجيبوا بنفس اللغة التي تحدّث بها الطالب/ة، إلّا إذا قالت التوجيهات أدناه البقاء بالإنجليزية.\n"
         "كيف تصحّح — وهذه مهمّتك هنا:\n"
         "- حين يقولون جملة يقولها المتحدّث بشكل آخر، أعد جملتهم باختصار كما تُقال، "
         "ثم تابع المحادثة — دون أن تقول إنّها كانت خاطئة ودون أن تتوقّف لدرس قواعد.\n"
@@ -78,6 +89,8 @@ _PERSONA = {
         "- Never use numbers, grades or percentages when talking about how they are doing.\n"
         "- Never compare them to another learner.\n"
         "- Short sentences. One idea per turn, then let them speak.\n"
+        "- Answer in the same language the learner just spoke, unless the guidance below "
+        "tells you to stay in English.\n"
         "How you correct — this is your job here:\n"
         "- When they say something a speaker would say differently, say their sentence back the "
         "natural way, briefly, and carry straight on with the conversation. Do not announce that "
@@ -112,10 +125,7 @@ class RealtimeUnavailable(RuntimeError):
 
 
 def is_configured() -> bool:
-    # The WebRTC URL counts as configuration: without it we can still mint a
-    # session, but the browser has nowhere to send its offer and the learner
-    # just sees "couldn't connect". Better to report the feature unavailable.
-    return bool(_endpoint() and _key() and _deployment() and _webrtc_url())
+    return bool(_endpoint() and _key())
 
 
 def _endpoint() -> str:
@@ -127,15 +137,24 @@ def _key() -> str:
 
 
 def _deployment() -> str:
-    return os.getenv("AZURE_OPENAI_REALTIME_DEPLOYMENT", "").strip()
+    """Voice Live is fully managed, so this is a model name, not a deployment."""
+    return os.getenv("AZURE_VOICE_LIVE_MODEL", DEFAULT_MODEL).strip()
 
 
 def _api_version() -> str:
-    return os.getenv("AZURE_OPENAI_REALTIME_API_VERSION", DEFAULT_API_VERSION).strip()
+    return os.getenv("AZURE_VOICE_LIVE_API_VERSION", DEFAULT_API_VERSION).strip()
 
 
-def _webrtc_url() -> str:
-    return os.getenv("AZURE_OPENAI_REALTIME_WEBRTC_URL", "").strip()
+def socket_url() -> str:
+    host = _endpoint().replace("https://", "").replace("wss://", "")
+    return (
+        f"wss://{host}/voice-live/realtime"
+        f"?api-version={_api_version()}&model={_deployment()}"
+    )
+
+
+def socket_headers() -> dict[str, str]:
+    return {"api-key": _key()}
 
 
 def build_instructions(
@@ -175,54 +194,61 @@ def build_instructions(
     return "\n\n".join(part.strip() for part in parts if part and part.strip())
 
 
-async def create_session(
-    *,
-    instructions: str,
-    voice: str = DEFAULT_VOICE,
-    language: str = "he",
-) -> dict[str, Any]:
-    """Mint an ephemeral realtime session. Returns nothing secret of ours."""
-    if not is_configured():
-        raise RealtimeUnavailable("realtime_not_configured")
+# Yuvi speaks with the female voices in the live call. Deliberately separate from
+# the avatar-driven table the read-aloud button uses, which follows whichever
+# robot the learner built for themselves.
+SPOKEN_VARIANT = "girl"
 
-    body: dict[str, Any] = {
-        "model": _deployment(),
-        "voice": voice,
-        "instructions": instructions,
-        "modalities": ["text", "audio"],
-        # Transcribing the learner's own audio is what lets us screen it for
-        # safety and keep a readable record without ever storing the voice.
-        "input_audio_transcription": {"model": "whisper-1"},
-        # The learner leads. Server-side turn detection keeps the conversation
-        # feeling like a conversation instead of a walkie-talkie.
-        "turn_detection": {"type": "server_vad", "threshold": 0.5, "silence_duration_ms": 620},
-    }
-    try:
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            response = await client.post(
-                f"{_endpoint()}/openai/realtimeapi/sessions",
-                params={"api-version": _api_version()},
-                headers={"api-key": _key(), "Content-Type": "application/json"},
-                json=body,
-            )
-        if response.status_code >= 400:
-            # Never surface the provider's body; it can echo the request.
-            raise RealtimeUnavailable("realtime_session_rejected")
-        payload = response.json()
-    except httpx.HTTPError as exc:
-        raise RealtimeUnavailable("realtime_unavailable") from exc
 
-    secret = (payload.get("client_secret") or {}).get("value")
-    if not secret:
-        raise RealtimeUnavailable("realtime_session_rejected")
+def call_language(stage: Optional[str], language: str) -> str:
+    """The one language a call is set up for — recognition and voice alike.
 
+    It has to be one language, not a per-turn decision. Azure can only identify
+    a spoken language from a candidate list using its multilingual VAD, and that
+    VAD rejects `he-IL` outright; left to detect freely it hears Hebrew as
+    German or Japanese. So the locale is pinned, and the ladder decides it: the
+    top rung is an English-only conversation, every other rung is the learner's
+    own language.
+    """
+    if stage == english_ladder.STAGE_ENGLISH:
+        return "en"
+    return language if language in ("he", "ar", "en") else "he"
+
+
+def voice_for_call(language: str) -> tuple[str, str]:
+    """The (locale, voice) a call runs on, from the table read-aloud shares."""
+    from app.services.speech import voice_for
+
+    return voice_for(language, SPOKEN_VARIANT)
+
+
+def session_payload(instructions: str, locale: str, voice: str) -> dict[str, Any]:
+    """The `session.update` that opens a call."""
     return {
-        "clientSecret": secret,
-        "expiresAt": (payload.get("client_secret") or {}).get("expires_at") or payload.get("expires_at"),
-        "sessionId": payload.get("id"),
-        "model": _deployment(),
-        "webrtcUrl": _webrtc_url(),
-        "language": language,
+        "modalities": ["text", "audio"],
+        "instructions": instructions,
+        "voice": {"type": "azure-standard", "name": voice},
+        "input_audio_format": "pcm16",
+        "output_audio_format": "pcm16",
+        "input_audio_sampling_rate": SAMPLE_RATE,
+        # Pinned, never auto-detected. Transcribing the learner's own audio is
+        # also what lets us screen it for safety and keep a readable record
+        # without ever storing the voice.
+        "input_audio_transcription": {"model": "azure-speech", "language": locale},
+        "input_audio_noise_reduction": {"type": "azure_deep_noise_suppression"},
+        "input_audio_echo_cancellation": {"type": "server_echo_cancellation"},
+        # Azure's own transcriber is only accepted alongside a semantic VAD.
+        # The silence window is longer than a chat app would use: a 12-year-old
+        # reaching for a word in a second language pauses, and being cut off
+        # mid-sentence is the fastest way to make them stop trying.
+        "turn_detection": {
+            "type": "azure_semantic_vad",
+            "threshold": 0.5,
+            "prefix_padding_ms": 400,
+            "silence_duration_ms": 900,
+            "interrupt_response": True,
+            "create_response": True,
+        },
     }
 
 

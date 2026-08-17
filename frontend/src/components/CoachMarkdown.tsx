@@ -122,6 +122,8 @@ function parseBlocks(md: string): ReactNode[] {
       continue
     }
 
+    // Tables are a visual layout, and Yuvi's visual tools are off. The rows are
+    // still shown — as plain lines — so nothing he said is lost.
     if (line.includes('|') && i + 1 < lines.length && TABLE_SEPARATOR.test(lines[i + 1])) {
       const header = tableCells(line)
       i += 2
@@ -130,19 +132,17 @@ function parseBlocks(md: string): ReactNode[] {
         rows.push(tableCells(lines[i]))
         i += 1
       }
+      const asLines = [header, ...rows]
+        .map((cells) => cells.filter((cell) => cell.trim()).join(' · '))
+        .filter(Boolean)
       blocks.push(
-        <div className="sp-md-tablewrap" key={key++}>
-          <table className="sp-md-table">
-            <thead>
-              <tr>{header.map((cell, ci) => <th key={ci} dir="auto">{inlineContent(cell)}</th>)}</tr>
-            </thead>
-            <tbody>
-              {rows.map((row, ri) => (
-                <tr key={ri}>{header.map((_, ci) => <td key={ci} dir="auto">{inlineContent(row[ci] ?? '')}</td>)}</tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ul className="sp-md-list" key={key++}>
+          {asLines.map((entry, ri) => (
+            <li key={ri} dir="auto">
+              <span className="sp-md-li-body">{inlineContent(entry)}</span>
+            </li>
+          ))}
+        </ul>
       )
       continue
     }

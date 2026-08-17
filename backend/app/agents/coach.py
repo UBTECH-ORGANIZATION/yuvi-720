@@ -19,6 +19,7 @@ from app.agents import answer_guard
 from app.agents import safety
 from app.agents import sessions
 from app.agents.client import build_chat_client
+from app.agents.manim_visual import visuals_enabled
 from app.brain.context_engine import build_coach_bundle
 from app.brain.memory import classify_query_intent, profile_answer_fallback
 from app.services.ai_usage import UsageContext
@@ -53,7 +54,7 @@ COACH_INSTRUCTIONS = {
         "- כששרטוט עשוי להבהיר רעיון, תאר במדויק את הנתונים או הקשרים שיש להמחיש; כלי שרטוט בטוח עשוי לצרף המחשה. אל תטען שנוצר שרטוט.\n"
         "- אם המחשה חזותית מתאימה, אל תיצור גרסת טקסט/ASCII שלה ואל תכתוב בלוק קוד. כתוב רק הסבר מילולי קצר; ההמחשה תשתלב בתוך ההודעה.\n"
         "- אל תצרף תמונת Markdown, קישור תמונה או נתיב קובץ; כלי ההמחשה הנפרד מטפל בתמונה.\n"
-        "- עצב את התשובה ב-Markdown כברירת מחדל כשזה עוזר לבהירות: רשימת תבליטים (‎- ‎) או ממוספרת עם כל פריט בשורה נפרדת, טבלה קטנה להשוואה, ו-**מודגש** למונחי מפתח. אל תאריך רק בשביל העיצוב.\n"
+        "- עצב את התשובה ב-Markdown כברירת מחדל כשזה עוזר לבהירות: רשימת תבליטים (‎- ‎) או ממוספרת עם כל פריט בשורה נפרדת, ו-**מודגש** למונחי מפתח. אל תשתמש בטבלאות בשום מקרה — להשוואה כתוב שורה לכל פריט. אל תאריך רק בשביל העיצוב.\n"
         "- לעולם אל תמציא עובדות על התלמיד/ה; הסתמך רק על ההקשר.\n"
         "- אל תציג ציונים מספריים. תן משוב מילולי ומעודד.\n"
         "- שקיפות: המערכת כבר יידעה שמדובר ב-AI; אל תתחזה לאדם."
@@ -81,7 +82,7 @@ COACH_INSTRUCTIONS = {
         "- عندما يساعد الرسم على توضيح الفكرة، صِف بدقة المعطيات أو العلاقات المطلوب تمثيلها؛ قد تُرفق أداة رسم آمنة توضيحًا. لا تدّعِ أن الرسم أُنشئ.\n"
         "- عندما يناسب الشرح المرئي، لا تنشئ نسخة نصية أو ASCII منه ولا تكتب كتلة شيفرة. اكتب شرحًا لفظيًا قصيرًا فقط؛ سيُدمج الرسم داخل الرسالة.\n"
         "- لا تُرفق صورة Markdown أو رابط صورة أو مسار ملف؛ أداة الرسم المنفصلة تتولى الصورة.\n"
-        "- نسّق الرد بصيغة Markdown افتراضيًا عندما يساعد على الوضوح: قائمة نقطية (‎- ‎) أو مرقّمة بكل عنصر في سطر، جدول صغير للمقارنة، و**تخشين** للمصطلحات المفتاحية. لا تُطِل لأجل التنسيق فقط.\n"
+        "- نسّق الرد بصيغة Markdown افتراضيًا عندما يساعد على الوضوح: قائمة نقطية (‎- ‎) أو مرقّمة بكل عنصر في سطر، و**تخشين** للمصطلحات المفتاحية. لا تستخدم الجداول إطلاقًا — للمقارنة اكتب سطرًا لكل عنصر. لا تُطِل لأجل التنسيق فقط.\n"
         "- لا تختلق معلومات عن الطالب/ة؛ اعتمد على السياق فقط.\n"
         "- لا تعرض درجات رقمية. قدّم تغذية راجعة لفظية ومشجّعة.\n"
         "- الشفافية: النظام أبلغ أنّه ذكاء اصطناعي؛ لا تتظاهر بأنك إنسان."
@@ -110,7 +111,7 @@ COACH_INSTRUCTIONS = {
         "- When a drawing could clarify an idea, precisely describe the givens or relationships to visualize; a safe drawing tool may attach it. Do not claim a drawing was created.\n"
         "- When a visual is suitable, do not duplicate it as text/ASCII and do not emit a code block. Write only a short verbal explanation; the visual will be embedded in the message.\n"
         "- Do not emit a Markdown image, image link, or file path; the separate visual tool owns the image.\n"
-        "- Format your answer in Markdown by default when it aids clarity: a bulleted (- ) or numbered list with one item per line, a small table for comparisons, and **bold** for key terms. Don't pad length just to format.\n"
+        "- Format your answer in Markdown by default when it aids clarity: a bulleted (- ) or numbered list with one item per line, and **bold** for key terms. Never use a table — for a comparison, write one line per item. Don't pad length just to format.\n"
         "- Never invent facts about the student; rely only on the context.\n"
         "- Never show numeric grades; give verbal, encouraging feedback.\n"
         "- Transparency: the system already disclosed this is AI; do not pretend to be human."
@@ -321,6 +322,27 @@ PERSONALIZATION_STYLE = {
     "ar": "لائم/ي شكل المساعدة مع الطريقة التي يتعلّم بها الطالب/ة على أفضل نحو وفق الملف (التفضيلات، الاهتمامات، أسلوب التعلّم، الاستراتيجيات الفعّالة المعروفة) — مثل تشبيه بصري، أو مثال من عالم يحبّه، أو تقسيم إلى خطوات — دون كشف أنّك تستخدم الملف.",
     "en": "Shape the FORM of help to how this learner learns best per the profile (preferences, interests, learning style, known effective strategies) — e.g. a visual image, an example from an interest they love, or breaking into steps — without revealing you are using the profile.",
 }
+# Rules that only make sense while the drawing tool is available. With visuals
+# switched off the coach must not offer or describe one it cannot produce.
+_VISUAL_RULE_MARKERS = (
+    "drawing tool", "visual will be embedded", "visual tool owns",
+    "ההמחשה תשתלב", "כלי ההמחשה הנפרד",
+    "أداة رسم آمنة", "سيُدمج الرسم", "أداة الرسم المنفصلة",
+)
+
+
+def _visual_aware_instructions(lang: str) -> str:
+    """The coach's rules, minus the visual ones when the tool is disabled."""
+    instructions = COACH_INSTRUCTIONS[lang]
+    if visuals_enabled():
+        return instructions
+    kept = [
+        line for line in instructions.split("\n")
+        if not any(marker in line for marker in _VISUAL_RULE_MARKERS)
+    ]
+    return "\n".join(kept)
+
+
 # Modes that get the personalization line: support (hint/explanation) always,
 # plus these guidance triggers. Warmth-only nudges (success/question_intro) and
 # plain chat already personalize via COACH_INSTRUCTIONS.
@@ -480,6 +502,9 @@ def _render_context(bundle: dict) -> str:
         f"current_screen_title: {(current.get('item') or {}).get('title') or '—'}",
         f"current_screen_media: {(current.get('item') or {}).get('media_format') or '—'}",
         f"current_screen_content_type: {(current.get('item') or {}).get('content_type') or '—'}",
+        # The text actually printed on the screen. "What is written on the third
+        # line?" is answerable only from this.
+        f"current_screen_body: {(current.get('item') or {}).get('body') or '—'}",
         # "listening" = they chose to watch the clip, "cards" = to flip the info
         # cards. Talk about what they actually picked, never about the other one.
         f"current_screen_chosen_path: {(current.get('item') or {}).get('chosen_path') or '—'}",
@@ -714,7 +739,7 @@ async def run_coach_stream(
     bundle["conversation_memory"] = await sessions.get_conversation_memory(
         learner_id, "coach", session_id=session_id
     )
-    instructions = COACH_INSTRUCTIONS[lang]
+    instructions = _visual_aware_instructions(lang)
     instructions = f"{instructions}\n- {GROUNDING_GUARDRAIL[lang]}"
     # English is the one subject where mixing languages is the pedagogy, not a
     # slip: נספח 1 §2.4 asks for first-language mediation early and a gradual move to
