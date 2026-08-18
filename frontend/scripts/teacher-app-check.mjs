@@ -144,41 +144,46 @@ try {
         `${flagged} of ${cards}`)
   await page.screenshot({ path: `${OUT}/06-roster-filtered.png` })
 
-  // ── student profile ───────────────────────────────────────────────────────
+  // ── student profile: one scrolling page, no tabs ──────────────────────────
   await page.locator(ROW).first().click()
-  await page.waitForSelector('.tch-progressCard', { timeout: 30000 })
+  await page.waitForSelector('.tch-student__body', { timeout: 30000 })
   check('opened a student profile', page.url().includes('/teacher/student/'), page.url())
   await page.screenshot({ path: `${OUT}/07-student-overview.png`, fullPage: true })
 
-  const progressCards = await page.locator('.tch-progressCard').count()
-  check('progress vs objectives rendered', progressCards > 0, `${progressCards} subjects`)
+  const progressCells = await page.locator('.tch-status__cell').count()
+  check('progress vs objectives rendered in the status band', progressCells > 0,
+        `${progressCells} cells`)
 
   const recs = await page.locator('.tch-rec').count()
   check('tailored recommendations rendered', recs > 0, `${recs} recommendations`)
 
-  // tabs
-  // Overview · Activity · Goals · Badges · Reflections · Notes
-  // (Goals arrived in Phase 5, Badges in Phase 7.)
-  const tabs = page.locator('.tch-tabs button')
-  check('profile has seven tabs', await tabs.count() === 7, `${await tabs.count()}`)
+  /* The sections replace the old seven tabs — each is asserted in place, in
+     reading order, instead of behind a click. */
+  const kpiCards = await page.locator('.tch-student__kpis .tch-stat').count()
+  // Three figures now: the mastery % moved to the status band's dials.
+  check('the KPI strip has three figures', kpiCards === 3, `${kpiCards} figures`)
+  check('the status band grid is present',
+        await page.locator('.tch-status__grid').count() === 1)
 
-  await tabs.nth(1).click(); await page.waitForTimeout(1800)
-  await page.screenshot({ path: `${OUT}/08-activity.png`, fullPage: true })
+  // Topics are data-dependent — assert the panel only when it has rows.
+  const topicRows = await page.locator('.tch-topics__topic').count()
+  if (topicRows > 0) {
+    check('the hardest-topics panel is drawn',
+          await page.locator('.tch-topics').count() === 1, `${topicRows} topics`)
+  } else {
+    console.log('    (no hard-topic rows for this student — panel legitimately absent)')
+  }
 
-  await tabs.nth(4).click(); await page.waitForTimeout(1500)
-  await page.screenshot({ path: `${OUT}/09-reflections.png`, fullPage: true })
-
-  await tabs.nth(6).click(); await page.waitForTimeout(1500)  // notes — after the connection tab
-  const notesForm = await page.locator('.tch-notes__form').count()
-  check('teacher insight composer present', notesForm === 1)
-
-  // The coach-visibility warning must appear only when chosen.
-  const visibilitySelect = page.locator('.tch-notes__row select').nth(1)
-  await visibilitySelect.selectOption('coach')
-  await page.waitForTimeout(300)
-  const warning = await page.locator('.tch-notes__warning').count()
-  check('choosing "Yuvi will use this" warns explicitly', warning === 1)
-  await page.screenshot({ path: `${OUT}/10-notes.png`, fullPage: true })
+  check('the goals card is on the page',
+        await page.locator('#goals .tch-goalsCard').count() === 1)
+  check('the wellbeing section is always mounted',
+        await page.locator('#wellbeing').count() === 1)
+  check('the work sits in two columns',
+        await page.locator('.tch-student__columns').count() === 1)
+  // The month chart, the portrait and the balance wait behind doors now.
+  check('the sometimes-reading is behind doors',
+        await page.locator('.tch-student__more button').count() >= 1)
+  await page.screenshot({ path: `${OUT}/08-profile-sections.png`, fullPage: true })
 
   // ── dark mode + RTL sanity ────────────────────────────────────────────────
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'))

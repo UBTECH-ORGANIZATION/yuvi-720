@@ -162,7 +162,7 @@ async def group_goals(group_id: str, session=Depends(require_teacher_session)):
         return _denied()
 
     from app.brain import org
-    from app.services import mentoring
+    from app.services import goal_progress, mentoring
 
     learner_ids = await org.learners_in_group(group_id)
 
@@ -173,6 +173,8 @@ async def group_goals(group_id: str, session=Depends(require_teacher_session)):
     async def _one(learner_id: str) -> dict:
         async with semaphore:
             conversations = await mentoring.list_conversations(learner_id, "teacher")
+            # Counts read nothing for learners with no action-tracked goal.
+            await goal_progress.enrich_conversations(learner_id, conversations)
         return {"learner_id": learner_id, "conversations": conversations}
 
     rows = await _asyncio.gather(*(_one(learner_id) for learner_id in learner_ids))
@@ -310,6 +312,116 @@ async def student_badges(
     return _ok({"badges": project_badges(brain, locale=lang, events=events)})
 
 
+@router.get("/students/{learner_id}/focus/roadmap")
+async def student_focus_roadmap(
+    learner_id: str,
+    language: str = Query("he"),
+    session=Depends(require_teacher_session),
+):
+    """The planner played forward: what it will serve after each completion.
+
+    Deterministic — the same ranking function the live focus uses, run over a
+    simulated mastery table. No model call, no store write."""
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    from app.brain.repository import get_brain
+    from app.services import kata_catalog, planner
+
+    try:
+        await kata_catalog.ensure_loaded()
+    except Exception:
+        pass
+    brain = await get_brain(safe_id)
+    lang = normalize_language(language)
+    steps = [
+        {**step,
+         "objective_title": kata_catalog.objective_title(step["objective_id"], lang)
+         if step.get("objective_id") else None}
+        for step in planner.focus_roadmap(brain)
+    ]
+    # Registry titles collide at sub-topic level; two identical stops on one
+    # road read as a loop. The sub-material (unit) name rides along as its own
+    # field instead of replacing the title — so every stop still says the same
+    # words as the focus card, and the subtitle is what tells twins apart.
+    for step in steps:
+        step["unit_title"] = None
+        if step.get("objective_id"):
+            unit_ids = (kata_catalog.get_objective(step["objective_id"]) or {}).get("unit_ids") or []
+            names = [n for n in (kata_catalog.unit_title(u, lang) for u in unit_ids) if n]
+            if names:
+                step["unit_title"] = " · ".join(dict.fromkeys(names))
+    return _ok({"steps": steps})
+
+
+@router.get("/students/{learner_id}/objectives")
+async def student_objectives(
+    learner_id: str,
+    subject: str = Query(...),
+    language: str = Query("he"),
+    session=Depends(require_teacher_session),
+):
+    """The list behind a status dial: every objective in the subject, in
+    curriculum order, with this child's mastery state and raw counts."""
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    from app.brain.repository import get_brain
+    from app.services import kata_catalog, learner_activity
+
+    try:
+        await kata_catalog.ensure_loaded()
+    except Exception:
+        pass
+    brain = await get_brain(safe_id)
+    # The dialog says what the child DID on each objective, not only where
+    # mastery stands — the same per-question rows the profile reads.
+    try:
+        activity_rows = await learner_activity.question_summary(safe_id, subject=subject)
+    except Exception:
+        activity_rows = []
+    return _ok({"subject": subject, "objectives": insights.objective_breakdown(
+        brain, subject=subject, language=normalize_language(language),
+        activity_rows=activity_rows)})
+
+
+@router.get("/students/{learner_id}/topics/digest")
+async def cached_topic_digest(
+    learner_id: str,
+    language: str = Query("he"),
+    subject: Optional[str] = Query(None),
+    session=Depends(require_teacher_session),
+):
+    """The stored why-was-this-hard paragraphs. Never generates, so the profile
+    can ask on every open for nothing."""
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    from app.services import topic_digest as digests
+    return _ok(await digests.topic_digest(
+        safe_id, session["sub"],
+        language=normalize_language(language), subject=subject,
+        allow_generate=False,
+    ))
+
+
+@router.post("/students/{learner_id}/topics/digest")
+async def generate_topic_digest(
+    learner_id: str, data: dict, session=Depends(require_teacher_session)
+):
+    """Write (or refresh) the digest — one mini call for all topics, cached
+    until the child's work on them moves. Same answer to the same question."""
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    from app.services import topic_digest as digests
+    return _ok(await digests.topic_digest(
+        safe_id, session["sub"],
+        language=normalize_language(data.get("language")),
+        subject=data.get("subject"),
+    ))
+
+
 @router.get("/students/{learner_id}/reflections")
 async def student_reflections(learner_id: str, session=Depends(require_teacher_session)):
     """Self-assessment vs. system assessment (nice-to-have §2)."""
@@ -386,8 +498,12 @@ async def list_student_goals(learner_id: str, session=Depends(require_teacher_se
     safe_id = await _guard_learner(session, learner_id)
     if safe_id is None:
         return _denied()
-    from app.services import mentoring
-    return _ok({"conversations": await mentoring.list_conversations(safe_id, "teacher")})
+    from app.services import goal_progress, mentoring
+    conversations = await mentoring.list_conversations(safe_id, "teacher")
+    # Goals with a platform action get their count — the number the teacher
+    # reads next to "did the child actually do this". No-op when none have one.
+    await goal_progress.enrich_conversations(safe_id, conversations)
+    return _ok({"conversations": conversations})
 
 
 @router.get("/students/{learner_id}/goals/suggest")

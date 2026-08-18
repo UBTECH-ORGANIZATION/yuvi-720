@@ -22,7 +22,8 @@ import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import {
   approveStudentGoal, assignStudentGoal, getGoalSuggestions, getStudentGoals,
   suggestStudentGoals,
-  type ApprovalResult, type GoalConversation, type GoalDraft, type StudentGoal,
+  type ApprovalResult, type GoalAction, type GoalConversation, type GoalDraft,
+  type StudentGoal,
 } from '../../../services/teacher'
 import { withFallback } from '../shared/EvidenceDisclosure'
 import { describeSignal } from '../shared/evidenceText'
@@ -132,6 +133,7 @@ function GoalRow({ goal, onApprove }: { goal: StudentGoal; onApprove?: () => voi
         </div>
       </div>
       {goal.next_steps ? <p className="tch-goal__steps" dir="auto">{goal.next_steps}</p> : null}
+      <GoalProgressLine goal={goal} />
       {goal.deadline ? (
         <span className="tch-goal__deadline">{t('tch.goals.deadline', { date: goal.deadline })}</span>
       ) : null}
@@ -145,6 +147,25 @@ function GoalRow({ goal, onApprove }: { goal: StudentGoal; onApprove?: () => voi
         </span>
       )}
     </li>
+  )
+}
+
+/** What the platform counted for an action-tracked goal: "hints used 3/5 ✓".
+ *  Exported for the class Goals page — the same number must read the same
+ *  everywhere. Goals without an action render nothing, exactly as before. */
+export function GoalProgressLine({ goal }: { goal: StudentGoal }) {
+  const { t } = useI18n()
+  const progress = goal.progress
+  if (!progress) return null
+  return (
+    <p className={`tch-goal__progress${progress.met ? ' tch-goal__progress--met' : ''}`}
+       dir="auto">
+      <Icon name={progress.met ? 'check' : 'target'} size={13} aria-hidden="true" />
+      {t(`tch.goals.action.${progress.kind}`)}
+      {' · '}
+      {t('tch.goals.action.count', { count: progress.count, target: progress.target })}
+      {progress.met ? ` · ${t('tch.goals.action.met')}` : ''}
+    </p>
   )
 }
 
@@ -185,6 +206,9 @@ export function GoalComposer({ learnerId, language, subject, onAssigned, framed 
   const [title, setTitle] = useState('')
   const [steps, setSteps] = useState('')
   const [deadline, setDeadline] = useState('')
+  /* The countable action of the draft in use. Hand-written goals carry none —
+     the platform cannot promise to count something it was never told about. */
+  const [action, setAction] = useState<GoalAction | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
   /* What was suggested last time, if anything — read only, no model call. A
@@ -217,15 +241,16 @@ export function GoalComposer({ learnerId, language, subject, onAssigned, framed 
     setTitle(draft.title)
     setSteps(draft.next_steps)
     setDeadline(draft.deadline)
+    setAction(draft.action ?? null)
   }
 
   const assign = async () => {
     if (!title.trim()) return
     setIsSaving(true)
     await assignStudentGoal(
-      learnerId, { title: title.trim(), next_steps: steps.trim(), deadline }, language
+      learnerId, { title: title.trim(), next_steps: steps.trim(), deadline, action }, language
     ).catch(() => null)
-    setTitle(''); setSteps(''); setDeadline('')
+    setTitle(''); setSteps(''); setDeadline(''); setAction(null)
     setIsSaving(false)
     onAssigned()
   }
@@ -276,6 +301,13 @@ export function GoalComposer({ learnerId, language, subject, onAssigned, framed 
       ) : null}
 
       <div className="tch-composer__form">
+        {/* At the fields, not only in the section header: a teacher typing a
+            title must know the child is the reader, or the goal comes out as
+            an instruction to themselves (the #253 voice bug, by hand). */}
+        <p className="tch-composer__audience" dir="auto">
+          <Icon name="spark" size={13} aria-hidden="true" />
+          {t('tch.goals.field.audience')}
+        </p>
         <label>
           <span>{t('tch.goals.field.title')}</span>
           <input className="sp-input" value={title} dir="auto"
@@ -330,6 +362,17 @@ function DraftCard({ draft, onUse }: { draft: GoalDraft; onUse: () => void }) {
         {draft.next_steps ? <p dir="auto">{draft.next_steps}</p> : null}
         {draft.rationale ? (
           <p className="tch-draft__why" dir="auto">{draft.rationale}</p>
+        ) : null}
+        {/* This goal will be measured: which platform action, how many times.
+            Shown before assigning, so the tracking is a promise the teacher
+            made knowingly, not a surprise on the goals screen. */}
+        {draft.action ? (
+          <p className="tch-goal__progress" dir="auto">
+            <Icon name="target" size={13} aria-hidden="true" />
+            {t(`tch.goals.action.${draft.action.kind}`)}
+            {' · '}
+            {t('tch.goals.action.perWeek', { target: draft.action.target })}
+          </p>
         ) : null}
 
         <button

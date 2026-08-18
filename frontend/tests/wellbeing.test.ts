@@ -42,15 +42,19 @@ const locales = {
 }
 
 describe('the bell lands on the disclosure, not on the profile', () => {
-  it('opens the tab the route names', () => {
-    assert.match(page, /query\.get\('tab'\)/)
-    assert.match(page, /setTab\(wantedTab as Tab\)/)
+  it('scrolls to the section the route names', () => {
+    // There is no tab bar: the wellbeing section is always on the page, and a
+    // deep link means "take me there".
+    assert.match(page, /query\.get\('tab'\) === 'wellbeing'/)
+    assert.match(page, /wellbeingRef\.current\?\.scrollIntoView/)
+    assert.match(page, /focusFlagId=\{focusFlagId\}/)
   })
 
   it('still honours the older link every existing notification carries', () => {
     // A notification's action is written once and never rewritten, so every
     // alert raised before the flag id shipped still says `?focus=flags`.
-    assert.match(page, /query\.get\('focus'\) === 'flags'[\s\S]{0,60}setTab\('wellbeing'\)/)
+    assert.match(page, /query\.get\('focus'\) === 'flags'/)
+    assert.match(page, /fromAlert=\{wantsWellbeing\}/)
   })
 
   it('scrolls to the flag the alert was about, and rings it', () => {
@@ -75,10 +79,11 @@ describe('the bell lands on the disclosure, not on the profile', () => {
     assert.match(bell, /tab=wellbeing/)
   })
 
-  it('counts open flags on the tab itself', () => {
-    // The one thing on this page a teacher must not have to click to discover.
+  it('counts open flags on the section header', () => {
+    // The one thing on this page a teacher must not have to scroll to discover
+    // is that there IS something — the count sits on the section's own header.
     assert.match(page, /openFlags > 0/)
-    assert.match(page, /has-alert/)
+    assert.match(page, /tch-flagCount/)
   })
 
   it('says what the badge counts, for anyone not looking at it', () => {
@@ -199,12 +204,24 @@ describe('an opening carried to the composer', () => {
     for (const key of storage.keys()) storage.removeItem(key)
   })
 
-  it('arrives at the right thread, once', () => {
+  it('arrives at the right thread, and survives a doubled read', () => {
     putMessageSeed({ learnerId: 'kid-1', text: 'ראיתי מה שכתבת, אני כאן.' })
     assert.deepEqual(takeMessageSeed(),
                      { learnerId: 'kid-1', text: 'ראיתי מה שכתבת, אני כאן.' })
-    assert.equal(takeMessageSeed(), null)
+    // StrictMode invokes a useState initializer twice and keeps the SECOND
+    // result — so an immediate re-read answers with the same seed instead of
+    // handing it to the discarded render and null to the real one.
+    assert.deepEqual(takeMessageSeed(),
+                     { learnerId: 'kid-1', text: 'ראיתי מה שכתבת, אני כאן.' })
     assert.equal(storage.size, 0)
+    // Once the moment passes, it is spent — a later visit starts empty.
+    const realNow = Date.now
+    try {
+      Date.now = () => realNow() + 5000
+      assert.equal(takeMessageSeed(), null)
+    } finally {
+      Date.now = realNow
+    }
   })
 
   it('is ignored when it names nobody or says nothing', () => {

@@ -251,6 +251,20 @@ class GeneratedOnceAndKept(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.generate.await_count, 2)
         self.assertEqual(len(self.cache.rows), 2)
 
+    async def test_a_prompt_rewrite_abandons_every_cached_row(self):
+        # The voice fix (#253): suggestions cached under the old prompt address
+        # the teacher, and the fingerprint cannot see a prompt change — only the
+        # cache id can. Bumping the version must strand old rows entirely, even
+        # on a page open, or teachers keep reading the old voice indefinitely.
+        await mentoring_assist.goal_suggestions("kid-a", "teacher-a")
+        with patch.object(mentoring_assist, "_GOAL_PROMPT_VERSION", "v-next"):
+            opened = await mentoring_assist.goal_suggestions(
+                "kid-a", "teacher-a", allow_generate=False)
+            self.assertEqual(opened["goals"], [])
+            regenerated = await mentoring_assist.goal_suggestions("kid-a", "teacher-a")
+            self.assertFalse(regenerated["cached"])
+        self.assertEqual(self.generate.await_count, 2)
+
     async def test_the_no_evidence_card_is_never_cached(self):
         # "Nothing to suggest yet" is a true answer and a terrible thing to
         # remember: the day an observation lands, the button must produce real

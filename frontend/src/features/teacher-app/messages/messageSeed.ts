@@ -27,18 +27,32 @@ export function putMessageSeed(seed: MessageSeed): void {
   }
 }
 
+/* StrictMode invokes a `useState(() => takeMessageSeed())` initializer twice
+ * in development, and React keeps the SECOND result — so a strict read-and-
+ * clear handed the seed to the discarded render and null to the real one.
+ * A just-taken seed stays answerable for a moment; the window is short so a
+ * later visit can never be refilled by a stale one. */
+let justTaken: { seed: MessageSeed; at: number } | null = null
+const RETAKE_MS = 2000
+
 /** Read and clear. An opening acted on is spent — left behind it would refill
  *  the composer the next time the teacher opened messages for anyone. */
 export function takeMessageSeed(): MessageSeed | null {
   try {
     const raw = window.sessionStorage.getItem(KEY)
-    if (!raw) return null
+    if (!raw) {
+      return justTaken && Date.now() - justTaken.at < RETAKE_MS
+        ? justTaken.seed
+        : null
+    }
     window.sessionStorage.removeItem(KEY)
     const parsed = JSON.parse(raw) as Partial<MessageSeed>
     const learnerId = String(parsed?.learnerId ?? '').trim()
     const text = String(parsed?.text ?? '').trim()
     if (!learnerId || !text) return null
-    return { learnerId, text }
+    const seed = { learnerId, text }
+    justTaken = { seed, at: Date.now() }
+    return seed
   } catch {
     return null
   }

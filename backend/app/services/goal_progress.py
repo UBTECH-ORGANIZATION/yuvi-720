@@ -1,0 +1,208 @@
+"""Counting whether a platform-action goal actually happened.
+
+A Yuvi-suggested goal carries ``action: {"kind", "target"}`` — one of the
+observable platform actions the suggestion prompt is allowed to offer (use a
+hint, ask Yuvi, retry after a wrong answer, practise, complete an assigned
+task, learn on more days). This module turns that promise into the numbers a
+teacher reads next to the goal: how many times the action happened inside the
+goal's window, and whether the target was reached.
+
+The count is evidence, not authority: it never completes the goal by itself.
+Completion stays the child's claim and the teacher's approval — the number
+sits beside them so the approval is informed rather than taken on faith.
+
+Sources, one read each per learner (the fold over goals is pure Python):
+- ``learner_activity`` rows — hints (`hint`, `content_hint`), question-scoped
+  Yuvi chat (`yuvi_chat`), completed assigned tasks (`task`).
+- ``learning_events`` — answered/attempted verbs for practice, retries after
+  a wrong answer, and which days were active at all.
+- ``agent_messages`` — the learner's own messages to Yuvi, counted when the
+  durable per-question mirror would undercount free companion chat.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+from typing import Any, Optional
+
+# The closed vocabulary. It must stay in step with the actions
+# `_TEACHER_GOAL_SYSTEM` (mentoring_assist) is allowed to suggest.
+ACTION_KINDS = {
+    "use_hint",
+    "ask_yuvi",
+    "retry_after_wrong",
+    "practice",
+    "complete_task",
+    "active_days",
+}
+
+_TARGET_CAP = 50
+_ANSWER_VERBS = {"answered", "attempted"}
+
+
+def normalize_action(data: Any) -> Optional[dict[str, Any]]:
+    """Validate an action spec from the model or the client.
+
+    Returns ``{"kind", "target"}`` or None. Never trusts the input shape: an
+    unknown kind or a senseless target means "not trackable" rather than an
+    error, because a goal without an action is still a perfectly good goal.
+    """
+    if not isinstance(data, dict):
+        return None
+    kind = str(data.get("kind") or "").strip()
+    if kind not in ACTION_KINDS:
+        return None
+    try:
+        target = int(data.get("target") or 0)
+    except (TypeError, ValueError):
+        return None
+    if target < 1:
+        return None
+    if kind == "active_days":
+        target = min(target, 7)
+    return {"kind": kind, "target": min(target, _TARGET_CAP)}
+
+
+# ── the window ───────────────────────────────────────────────────────────────
+
+def _window(goal: dict[str, Any], assigned_at: str) -> tuple[str, str]:
+    """[assigned, deadline+1d) — or now when there is no deadline yet.
+
+    The deadline is a date; the child owns that whole day, so the window
+    closes at the *end* of it. Everything is compared as ISO strings, which
+    ordering makes safe.
+    """
+    start = assigned_at or ""
+    deadline = str(goal.get("deadline") or "").strip()
+    now = datetime.now(timezone.utc).isoformat()
+    if not deadline:
+        return start, now
+    try:
+        end = (datetime.fromisoformat(deadline) + timedelta(days=1)).isoformat()
+    except ValueError:
+        return start, now
+    return start, min(end, now)
+
+
+def _in(at: Any, start: str, end: str) -> bool:
+    stamp = str(at or "")
+    return bool(stamp) and start <= stamp < end
+
+
+# ── the pure fold ────────────────────────────────────────────────────────────
+
+def _count(kind: str, start: str, end: str,
+           activity: list[dict[str, Any]],
+           events: list[dict[str, Any]],
+           yuvi_messages: list[str]) -> int:
+    if kind == "use_hint":
+        return sum(1 for row in activity
+                   if row.get("kind") in ("hint", "content_hint")
+                   and _in(row.get("at"), start, end))
+
+    if kind == "ask_yuvi":
+        # Two mirrors of the same behaviour: question-scoped chat lands in
+        # learner_activity, free companion chat only in agent_messages. Take
+        # the larger rather than the sum — they overlap, and overstating a
+        # child's effort to a teacher is worse than understating it.
+        scoped = sum(1 for row in activity
+                     if row.get("kind") == "yuvi_chat"
+                     and _in(row.get("at"), start, end))
+        free = sum(1 for at in yuvi_messages if _in(at, start, end))
+        return max(scoped, free)
+
+    if kind == "complete_task":
+        return sum(1 for row in activity
+                   if row.get("kind") == "task"
+                   and _in(row.get("at"), start, end))
+
+    answers = [event for event in events
+               if event.get("verb") in _ANSWER_VERBS
+               and _in(event.get("occurred_at") or event.get("stored_at"),
+                       start, end)]
+
+    if kind == "practice":
+        return len(answers)
+
+    if kind == "active_days":
+        return len({str(event.get("occurred_at") or event.get("stored_at"))[:10]
+                    for event in answers})
+
+    if kind == "retry_after_wrong":
+        # A retry is a later answer on the same question after a miss. Walk
+        # oldest-first; a second wrong answer counts too — trying again is the
+        # behaviour the goal asks for, succeeding is the next goal.
+        ordered = sorted(
+            answers,
+            key=lambda e: str(e.get("occurred_at") or e.get("stored_at") or ""))
+        missed: set[str] = set()
+        retries = 0
+        for event in ordered:
+            key = "|".join(str(event.get(part) or "") for part in
+                           ("launch", "sub_item_id", "question_id"))
+            if key in missed:
+                retries += 1
+            if (event.get("result") or {}).get("success") is False:
+                missed.add(key)
+        return retries
+
+    return 0
+
+
+def progress_from_sources(goal: dict[str, Any], assigned_at: str,
+                          activity: list[dict[str, Any]],
+                          events: list[dict[str, Any]],
+                          yuvi_messages: list[str]) -> Optional[dict[str, Any]]:
+    """The number a teacher reads: ``{kind, target, count, met}``."""
+    action = normalize_action(goal.get("action"))
+    if action is None:
+        return None
+    start, end = _window(goal, assigned_at)
+    count = _count(action["kind"], start, end, activity, events, yuvi_messages)
+    return {**action, "count": count, "met": count >= action["target"]}
+
+
+# ── the one-read-per-source gather ───────────────────────────────────────────
+
+async def _yuvi_message_stamps(learner_id: str) -> list[str]:
+    """Timestamps of the learner's own messages to Yuvi (durable transcript)."""
+    from app.brain.repository import _get_collection_named
+    collection = _get_collection_named("agent_messages")
+    if collection is None:
+        return []
+    try:
+        cursor = collection.find(
+            {"learner_id": learner_id, "message_role": "user"},
+            {"at": 1},
+        ).sort("at", -1).limit(2000)
+        return [str(row.get("at") or "") async for row in cursor]
+    except Exception:  # pragma: no cover - a missing count is not an error
+        return []
+
+
+async def enrich_conversations(learner_id: str,
+                               conversations: list[dict[str, Any]]) -> None:
+    """Attach ``progress`` to every goal that carries an action, in place.
+
+    Goals without an action (hand-written, pre-v6) are left untouched — the
+    teacher screen renders them exactly as before. When nothing is trackable
+    the sources are never read at all.
+    """
+    tracked = [(conversation, goal)
+               for conversation in conversations
+               for goal in (conversation.get("goals") or [])
+               if normalize_action(goal.get("action"))]
+    if not tracked:
+        return
+
+    from app.services import learner_activity
+    from app.services.events import get_learner_events
+
+    activity = await learner_activity._activity_rows(learner_id)
+    events = await get_learner_events(learner_id, limit=2000)
+    yuvi_messages = await _yuvi_message_stamps(learner_id)
+
+    for conversation, goal in tracked:
+        goal["progress"] = progress_from_sources(
+            goal, str(conversation.get("created_at") or ""),
+            activity, events, yuvi_messages)

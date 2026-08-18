@@ -174,6 +174,9 @@ async def assign_goal(
             "title": title,
             "next_steps": (goal.get("next_steps") or "").strip(),
             "deadline": goal.get("deadline") or "",
+            # `_new_goal` validates it; unknown shapes become None, so the
+            # client cannot invent a trackable action that does not exist.
+            "action": goal.get("action"),
         }],
     })
 

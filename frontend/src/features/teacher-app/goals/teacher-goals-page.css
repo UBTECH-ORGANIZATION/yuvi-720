@@ -208,6 +208,19 @@
 /* The state never truncates — it is two words and it is the point of the row. */
 .tch-goalsPage__goal .sp-pill { flex: 0 0 auto; }
 
+/* Tracked-goal counter: "2/3", ✓ when met. Numbers only — the action name is
+   the tooltip, the sentence version lives on roomier screens. */
+.tch-goalsPage__count {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--sp-fs-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-ink-400);
+}
+.tch-goalsPage__count.is-met { color: var(--sp-ink-700); font-weight: 600; }
+
 /* The mix line: what this child's goal load looks like before any titles. */
 .tch-goalsPage__mix {
   margin: 0;
@@ -269,6 +282,16 @@
   border-radius: 14px;
   background: var(--sp-surface-2);
   font-size: var(--sp-fs-sm);
+  /* The reading holds still while the form scrolls — a teacher glances back
+     at it mid-decision, and it must be where they left it. */
+  position: sticky;
+  inset-block-start: 0;
+}
+
+.tch-goalRead__paragraph {
+  margin: 0;
+  color: var(--sp-ink-700);
+  line-height: 1.65;
 }
 
 .tch-goalRead__head {
@@ -320,3 +343,28 @@
 .tch-goalRead__suggestion svg { flex: none; margin-block-start: 3px; }
 
 .tch-goalRead__when { margin: 0; font-size: var(--sp-fs-xs, 0.78rem); color: var(--sp-ink-300); }
+
+/* Inside the dialog the suggestion drafts read as one compact rail beside the
+   form, not a page of cards above it. */
+.tch-goalDialog .tch-drafts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--sp-2);
+}
+
+/* The FORM leads inside the dialog and the drafts follow it — suggestions
+   arriving above the fields shoved the thing the teacher came to type into
+   below the fold. Reordered here rather than in the composer because the
+   composer's DOM order (drafts first) is right for the inline goals board.
+   Visual order only; focus order still follows the DOM, which is acceptable
+   for an optional suggestions rail. */
+.tch-goalDialog .tch-composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.tch-goalDialog .tch-composer .tch-composer__form { order: 1; }
+.tch-goalDialog .tch-composer .tch-composer__made,
+.tch-goalDialog .tch-composer .tch-drafts,
+.tch-goalDialog .tch-composer .sp-empty { order: 2; }
+

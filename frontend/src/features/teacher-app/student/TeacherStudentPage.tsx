@@ -1,41 +1,53 @@
 /* Student profile (F6 student level).
  *
- * Tabs, because a teacher opens this with one question at a time: what is she
- * struggling with, how is she progressing, what did she try, what do I think.
+ * One scrolling screen, no tabs. A teacher opens this with one question —
+ * where is this child in the learning, what needs my depth, and what do I
+ * assign about it — and the page answers in that order: identity and alarms,
+ * Yuvi's one-paragraph read, the status dials, then the work columns. What a
+ * teacher only sometimes wants (portrait, strengths/difficulties, the month
+ * chart) waits behind buttons instead of holding a screen of height.
  *
  * Requirement coverage:
- *   Overview     — struggle items (§1) + tailored recommendations (§2)
- *                  + progress vs objectives per subject (§4) + strengths (N§1)
- *   Activity     — per-question support usage, incl. what Yuvi already tried
- *   Reflections  — self-assessment vs system assessment (N§2)
- *   Notes        — the teacher's own insights into the profile (§3)
+ *   Status band   — planner focus + progress vs objectives per subject (§4)
+ *   Topics        — hardest topics, each with a short digested "why"
+ *   Dialogs       — struggle items (§1) + strengths (N§1) + portrait
+ *   Recommendations — tailored pedagogical recommendations (§2)
+ *   Wellbeing     — open disclosures, deep-linked from safety alerts
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode,
+} from 'react'
 import { navigate } from '../../../app/router'
 import {
-  BarSeries, DualLine, HoverSparkline, ObjectiveStrip,
+  HoverSparkline, ProgressRing,
 } from '../../../components/charts'
 import {
-  Card, EmptyState, ErrorState, Icon, Panel, SectionHeader, Skeleton, SkeletonCard, StatusPill,
+  Card, ErrorState, Icon, Panel, SectionHeader, Skeleton,
+  Hint, SkeletonRows, StatusPill, Tooltip,
 } from '../../../components/primitives'
+import { Modal } from '../../../components/primitives/Modal'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import {
-  getStudentActivity, getStudentDetail, getStudentReflections, getStudentTrends,
-  type LearnerTrends, type QuestionRow, type StrengthDetail, type StudentDetail,
+  generateTopicDigest, getFocusRoadmap, getLearnerRead, getStudentActivity,
+  getStudentDetail,
+  getStudentGoals, getStudentObjectives, getStudentTrends, getTopicDigest,
+  type RoadmapStep,
+  type LearnerRead, type LearnerTrends, type ObjectiveBreakdownRow,
+  type PlannerFocus, type QuestionRow,
+  type StrengthDetail, type StudentDetail, type StudentGoal,
   type StudentPortrait, type StruggleItem, type SubjectProgress,
+  type TeacherRecommendation,
+  type TopicDigest, type TopicDigestItem,
 } from '../../../services/teacher'
 import {
   AttentionRow, RawEvidence, RecommendationCard, withFallback,
 } from '../shared/EvidenceDisclosure'
-import { TeacherGoals } from './TeacherGoals'
-import { TeacherNotes } from './TeacherNotes'
-import { TeacherBadges } from './TeacherBadges'
-import { TeacherConnection } from './TeacherConnection'
+import { GoalProgressLine } from './TeacherGoals'
+import { GoalDialog } from '../goals/GoalDialog'
 import { TeacherWellbeing } from './TeacherWellbeing'
-import { MomentsFeed } from '../moments/MomentsFeed'
-import { getStudentMoments, getStudentBadges, type Moment, type TeacherBadge } from '../../../services/teacher'
+import { getStudentBadges, type TeacherBadge } from '../../../services/teacher'
 import { Badge, type BadgeGlyph, type BadgeTier } from '../../../components/Badge'
 import { useTeacherLive } from '../../../providers/TeacherLiveProvider'
 import { agoLabel } from '../live/LiveNow'
@@ -44,84 +56,115 @@ import './teacher-student.css'
 import { StudentAvatar } from '../shared/StudentAvatar'
 import { countKey } from '../shared/countLabel'
 import { subjectLabel } from '../shared/subjectLabel'
+import { putSeed, type TaskSeed } from '../tasks/taskSeed'
+import { putMessageSeed } from '../messages/messageSeed'
+import { TaskBuilder } from '../tasks/TeacherTasksPage'
 import { useTeacherRoster } from '../../../providers/TeacherRosterProvider'
 
-/** The window every chart on this page shares. One number, so the overview's
- *  sparkline and the activity tab's cover the same month. */
+/** The window every chart on this page shares. One number, so the status
+ *  band's consistency dial and the month chart cover the same month. */
 const TREND_DAYS = 30
 
-type Tab = 'overview' | 'activity' | 'goals' | 'badges' | 'reflections'
-  | 'connection' | 'wellbeing' | 'notes'
-const TABS: Tab[] = ['overview', 'activity', 'goals', 'badges', 'reflections',
-                     'connection', 'wellbeing', 'notes']
+type DigestState = 'idle' | 'ready' | 'generating' | 'unavailable'
 
 export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
   const { t, language } = useI18n()
-  const { subject } = useTeacherScope()
+  const { subject, subjects, groupId } = useTeacherScope()
   const route = useRoute()
-  const [tab, setTab] = useState<Tab>('overview')
   const [detail, setDetail] = useState<StudentDetail | null>(null)
   const [badges, setBadges] = useState<TeacherBadge[]>([])
   const [activity, setActivity] = useState<QuestionRow[] | null>(null)
   const [trends, setTrends] = useState<LearnerTrends | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [digest, setDigest] = useState<TopicDigest | null>(null)
+  const [digestState, setDigestState] = useState<DigestState>('idle')
   const [error, setError] = useState(false)
   const live = useTeacherLive()
-  const { avatarOf } = useTeacherRoster()
+  const { avatarOf, nameOf } = useTeacherRoster()
 
-  /* Landing ON the thing, not at the top of the page.
-     A safety alert's bell row carries `?tab=wellbeing&flag=wb_…`: the tab it
-     lives on, and which disclosure it was. "A student wrote something that
-     needs an adult" used to drop the teacher at a seven-tab profile and leave
-     them to find which sentence it meant.
-
-     `?focus=flags` is the older form of the same intent, and every alert raised
-     before this shipped still carries it — a notification's action is written
-     once and never rewritten. It opens the same tab, without a particular flag
-     to ring. An unrecognised value does nothing, so a plain link still works. */
-  // `useRoute()` hands back pathname + search as one string.
-  const query = new URLSearchParams(route.split('?')[1] ?? '')
-  const wantedTab = query.get('tab')
-  const focusFlagId = query.get('flag')
-  const flagsRef = useRef<HTMLElement | null>(null)
-
-  useEffect(() => {
-    if (wantedTab && (TABS as string[]).includes(wantedTab)) {
-      setTab(wantedTab as Tab)
-    } else if (query.get('focus') === 'flags') {
-      setTab('wellbeing')
-    }
-    // The query is read once per navigation: re-running it on every render
-    // would fight a teacher who then clicks a different tab.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route])
-
+  /* The learner read, fetched once for the whole page: the AI-analysis bar
+     shows its subjects, and the recommendations panel leads with its
+     overview paragraph. Cached server-side for a day, so this is one cheap
+     GET on every visit after the first. */
+  const [read, setRead] = useState<LearnerRead | null>(null)
   useEffect(() => {
     let active = true
-    setIsLoading(true)
+    setRead(null)
+    getLearnerRead(learnerId, language)
+      .then((result) => { if (active) setRead(result) })
+      .catch(() => { if (active) setRead({ unavailable: true }) })
+    return () => { active = false }
+  }, [learnerId, language])
+
+  /* Building a task from a finding on this page opens the builder HERE, in
+     the same dialog the tasks screen uses — the teacher never loses the
+     profile they were reading. Without a group scope there is no builder to
+     mount, so the seed rides to the tasks screen the old way. */
+  const [builderSeed, setBuilderSeed] = useState<TaskSeed | null>(null)
+  const buildTask = (seed: TaskSeed) => {
+    if (groupId) {
+      setBuilderSeed(seed)
+    } else {
+      putSeed(seed)
+      navigate('/teacher/tasks')
+    }
+  }
+
+  /* Landing ON the thing, not at the top of the page.
+     A safety alert's bell row carries `?tab=wellbeing&flag=wb_…` and older
+     alerts carry `?focus=flags` — both written into stored notification
+     actions, so both shapes are honoured forever. There is no tab bar any
+     more; the wellbeing section is always on the page, and a deep link means
+     "scroll me there and ring the flag". An unrecognised value does nothing,
+     so a plain link still works. */
+  // `useRoute()` hands back pathname + search as one string.
+  const query = new URLSearchParams(route.split('?')[1] ?? '')
+  const focusFlagId = query.get('flag')
+  const wantsWellbeing =
+    query.get('tab') === 'wellbeing' || query.get('focus') === 'flags'
+  const wellbeingRef = useRef<HTMLElement | null>(null)
+  /* The full disclosure records live behind the compact card, in a dialog —
+     a deep link means "open it", not just "scroll near it". */
+  const [wbOpen, setWbOpen] = useState(false)
+
+  useEffect(() => {
+    if (!wantsWellbeing || !detail) return
+    wellbeingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setWbOpen(true)
+    // Scrolled once per navigation, once the sections exist to scroll to —
+    // re-running on every render would fight a teacher who scrolled away.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route, detail])
+
+  /* The profile's spine. Deliberately NOT cleared to null on a scope change:
+     the page a teacher is reading stays readable while the narrower answer is
+     fetched, so switching subject re-draws the numbers rather than the whole
+     screen. `detail === null` therefore means "never loaded", which is
+     exactly the state the placeholders below stand in for. */
+  useEffect(() => {
+    let active = true
     setError(false)
     getStudentDetail(learnerId, language, subject ?? undefined)
       .then((result) => { if (active) setDetail(result) })
       .catch(() => { if (active) setError(true) })
-      .finally(() => { if (active) setIsLoading(false) })
     return () => { active = false }
   }, [learnerId, subject, language])
 
   /* Badges load beside the detail, not after it: the header leads with the
      child's latest badge — their own symbol of themselves — instead of a grey
-     initial. Failure degrades to the initial, never blocks the page. */
+     initial. All states are kept: the earned ones decorate, the in-progress
+     ones are what the hover explains the child is working toward. */
   useEffect(() => {
     let active = true
     setBadges([])
     getStudentBadges(learnerId, language)
-      .then((response) => { if (active) setBadges((response.badges ?? []).filter((b) => b.earned)) })
+      .then((response) => { if (active) setBadges(response.badges ?? []) })
       .catch(() => { /* initial avatar is a fine fallback */ })
     return () => { active = false }
   }, [learnerId, language])
 
-  /* The header KPIs come from the same per-question rows the Activity tab
-     shows — success rate, minutes, questions worked. Loaded beside the detail;
-     failure hides the strip rather than blocking the profile. */
+  /* The header KPIs, the independence dial and the topics all read from the
+     same per-question rows. Loaded beside the detail; failure hides those
+     sections rather than blocking the profile. */
   useEffect(() => {
     let active = true
     setActivity(null)
@@ -131,11 +174,9 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
     return () => { active = false }
   }, [learnerId, subject])
 
-  /* The series behind every chart on this page. Loaded once here rather than
-     per tab, because the overview and the activity tab draw from the same
-     window and switching tabs should not re-fetch a month of history.
-     Failure leaves `null`, and each chart renders its own quiet empty state —
-     a profile is still worth reading without its charts. */
+  /* The series behind every chart on this page. Loaded once here; failure
+     leaves `null`, and each chart renders its own quiet empty state — a
+     profile is still worth reading without its charts. */
   useEffect(() => {
     let active = true
     setTrends(null)
@@ -145,72 +186,102 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
     return () => { active = false }
   }, [learnerId])
 
-  if (isLoading) {
-    return (
-      <div className="tch-student" aria-busy="true">
-        {/* Back, meeting prep and the tab bar are the page's furniture — they
-            do not depend on the fetch, so they are here from the first frame
-            and the tabs do not slide into place a second later. */}
-        <header className="tch-student__head">
-          <div className="tch-student__topRow">
-            <button
-              type="button"
-              className="sp-btn sp-btn--ghost sp-btn--sm"
-              onClick={() => navigate('/teacher/students')}
-            >
-              <Icon name="chevronLeft" size={15} aria-hidden="true" />
-              {t('tch.student.back')}
-            </button>
-          </div>
-          <div className="tch-student__identity">
-            <span className="tch-avatar tch-avatar--pending"
-                  style={{ inlineSize: 56, blockSize: 56 }} aria-hidden="true" />
-            <div className="tch-student__who">
-              <h1><Skeleton w={180} h={26} /></h1>
-              <p className="tch-student__seen"><Skeleton w={120} h={13} /></p>
-            </div>
-          </div>
-        </header>
-        <nav className="tch-tabs" role="tablist" aria-label={t('tch.student.tabsLabel')}>
-          {TABS.map((value) => (
-            <button
-              key={value}
-              role="tab"
-              type="button"
-              aria-selected={value === tab}
-              className={value === tab ? 'is-active' : ''}
-              onClick={() => setTab(value)}
-            >
-              {t(`tch.student.tab.${value}`)}
-            </button>
-          ))}
-        </nav>
-        <div style={{ display: 'grid', gap: 'var(--sp-4)', marginBlockStart: 'var(--sp-4)' }}>
-          <SkeletonCard rows={3} />
-          <SkeletonCard rows={2} />
-        </div>
-      </div>
-    )
-  }
-  if (error || !detail) return <ErrorState title={t('tch.error')} />
+  /* The topics digest. The GET is cached-only and costs nothing; when there
+     is evidence but no digest yet, ONE generation is fired automatically —
+     the digest IS the card's reading now. The guard ref keeps a failed
+     generation from re-firing on every re-render; a new scope is a new
+     chance. */
+  const generatedFor = useRef<string | null>(null)
+  useEffect(() => {
+    let active = true
+    setDigest(null)
+    setDigestState('idle')
+    const scopeKey = `${learnerId}|${language}|${subject ?? 'all'}`
+    getTopicDigest(learnerId, language, subject ?? undefined)
+      .then(async (cached) => {
+        if (!active) return
+        if (cached.topics.length) {
+          setDigest(cached)
+          setDigestState('ready')
+          return
+        }
+        if (!cached.has_evidence || generatedFor.current === scopeKey) {
+          setDigest(cached)
+          setDigestState(cached.has_evidence ? 'unavailable' : 'ready')
+          return
+        }
+        generatedFor.current = scopeKey
+        setDigestState('generating')
+        try {
+          const generated = await generateTopicDigest(learnerId, language, subject ?? undefined)
+          if (!active) return
+          setDigest(generated)
+          setDigestState(generated.topics.length ? 'ready' : 'unavailable')
+        } catch {
+          if (active) setDigestState('unavailable')
+        }
+      })
+      .catch(() => { if (active) setDigestState('unavailable') })
+    return () => { active = false }
+  }, [learnerId, subject, language])
 
-  const name = detail.display_name ?? detail.learner_id
-  const latestBadge = badges[0] ?? null
+  const refreshDigest = async () => {
+    setDigestState('generating')
+    try {
+      const generated = await generateTopicDigest(learnerId, language, subject ?? undefined)
+      setDigest(generated)
+      setDigestState(generated.topics.length ? 'ready' : 'unavailable')
+    } catch {
+      setDigestState('unavailable')
+    }
+  }
+
+  /* Nothing is gated on "the page has loaded" any more, because the page does
+     not load as one thing. Six requests answer at six different times, and
+     each section owns the wait for its own: the identity is real on the first
+     frame (the roster already holds the name and the face), the dials land
+     when the detail answers, the figures when the activity does, Yuvi's read
+     whenever the model is done. The only whole-page state left is failure. */
+  if (error && !detail) return <ErrorState title={t('tch.error')} />
+
+  /* The roster resolved every child in this teacher's classes long before
+     this page was opened, so the name in the header is not something to wait
+     for. The detail's own copy is the fallback, and the id the last resort —
+     never a guess, and never a grey bar where a name could have been. */
+  const rosterName = nameOf(learnerId)
+  const name = rosterName ?? detail?.display_name ?? learnerId
+  const nameKnown = Boolean(rosterName || detail)
+  const earnedBadges = badges.filter((badge) => badge.earned)
+  const towardBadges = badges.filter((badge) => badge.state === 'inprogress' && badge.progress > 0)
+    .sort((a, b) => b.progress - a.progress)
+  const latestBadge = earnedBadges[0] ?? null
   const avatarChoice = avatarOf(learnerId)
   const presence = live.presence[learnerId] ?? null
+  /* The newest open disclosure, in the hero — the one line a teacher must not
+     have to scroll for. It links down to the full record. */
+  const distress = (detail?.wellbeing_flags ?? [])[0] ?? null
 
   /* Header KPIs, all derived from data we actually store (never invented):
      material from objectives vs the catalog, minutes from the wall-clock
-     timing the events carry, questions from the rows themselves. */
+     timing the events carry, questions from the rows themselves, help from
+     the support counters the coach already logs. */
   const rows = activity ?? []
   const seconds = rows.reduce((sum, row) => sum + (row.time_seconds || 0), 0)
   const learningsCount = new Set(rows.map((row) => row.component_id).filter(Boolean)).size
-  const progressRows = Object.values(detail.objectives_progress ?? {})
-  const objectivesTotal = progressRows.reduce((sum, row) => sum + row.objectives_total, 0)
-  const objectivesMastered = progressRows.reduce((sum, row) => sum + row.objectives_mastered, 0)
+  const help = {
+    hints: rows.reduce((sum, row) => sum + row.hints_used + row.content_hints_used, 0),
+    explanations: rows.reduce((sum, row) => sum + row.explanations_used, 0),
+    chats: rows.reduce((sum, row) => sum + row.chat_turns, 0),
+  }
+  const helpTotal = help.hints + help.explanations + help.chats
   /* Open disclosures, from the detail payload the page already has — no second
-     request to put a number on a tab. */
-  const openFlags = (detail.wellbeing_flags ?? []).length
+     request to put a number on a section. */
+  const openFlags = (detail?.wellbeing_flags ?? []).length
+
+  const openWellbeing = () => {
+    wellbeingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setWbOpen(true)
+  }
 
   return (
     <div className="tch-student">
@@ -224,6 +295,63 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
             <Icon name="chevronLeft" size={15} aria-hidden="true" />
             {t('tch.student.back')}
           </button>
+
+          {/* The badge cluster balances the back button on the other end of
+              the row, clear of the KPI strip below. The hover answers both
+              questions a cluster of icons raises: what are these, and what is
+              the child working toward. */}
+          {earnedBadges.length ? (
+            <Tooltip
+              label={t('tch.student.quickBadges')}
+              className="tch-student__badgeTip"
+              trigger={(
+                <span className="tch-student__badgeCluster">
+                  <span className="tch-student__badgeLabel">{t('tch.student.quickBadges')}</span>
+                  {earnedBadges.slice(0, 3).map((badge) => (
+                    <Badge
+                      key={`${badge.subject}:${badge.glyph}:${badge.tier}`}
+                      subject={badge.subject}
+                      glyph={badge.glyph as BadgeGlyph}
+                      tier={badge.tier as BadgeTier}
+                      size={22}
+                      title={badge.title}
+                    />
+                  ))}
+                  <span>{earnedBadges.length}</span>
+                </span>
+              )}
+            >
+              <div className="tch-badgeTip">
+                {earnedBadges.slice(0, 4).map((badge) => (
+                  <div key={`${badge.subject}:${badge.glyph}:${badge.tier}`}
+                       className="tch-badgeTip__row">
+                    <Badge subject={badge.subject} glyph={badge.glyph as BadgeGlyph}
+                           tier={badge.tier as BadgeTier} size={20} title={badge.title} />
+                    <span className="tch-badgeTip__text">
+                      <strong dir="auto">{badge.title}</strong>
+                      {badge.meta ? <span dir="auto">{badge.meta}</span> : null}
+                    </span>
+                  </div>
+                ))}
+                {towardBadges.length ? (
+                  <>
+                    <p className="tch-badgeTip__lead">{t('tch.student.badgeToward')}</p>
+                    {towardBadges.slice(0, 2).map((badge) => (
+                      <div key={`${badge.subject}:${badge.glyph}:${badge.tier}`}
+                           className="tch-badgeTip__row is-toward">
+                        <Badge subject={badge.subject} glyph={badge.glyph as BadgeGlyph}
+                               tier={badge.tier as BadgeTier} size={20} title={badge.title} />
+                        <span className="tch-badgeTip__text">
+                          <strong dir="auto">{badge.title}</strong>
+                          <span>{Math.round(badge.progress * 100)}%</span>
+                        </span>
+                      </div>
+                    ))}
+                  </>
+                ) : null}
+              </div>
+            </Tooltip>
+          ) : null}
         </div>
 
         <div className="tch-student__identity">
@@ -244,330 +372,1346 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
             } : null)}
           />
           <div className="tch-student__who">
-            <h1 dir="auto">{name}</h1>
+            {nameKnown
+              ? <h1 dir="auto">{name}</h1>
+              : <h1 aria-busy="true"><Skeleton w={180} h={26} /></h1>}
             <p className="tch-student__seen">
               <Icon name="clock" size={13} aria-hidden />
               {agoLabel(presence?.last_seen_at ?? null, t)}
             </p>
+            {distress ? (
+              /* A child said something that needs an adult. This is hero
+                 material, not something to discover three screens down. */
+              <button
+                type="button"
+                className="tch-student__distress tch-appear"
+                onClick={openWellbeing}
+              >
+                <Icon name="alert" size={13} aria-hidden />
+                <strong>{t('tch.student.heroDistress')}</strong>
+                <span dir="auto">{distress.evidence}</span>
+              </button>
+            ) : null}
           </div>
 
-          {/* Quick look: the three numbers a teacher wants before any tab. */}
-          <dl className="tch-student__quick">
-            {/* Every subject. The old `.slice(0, 2)` dropped whichever ones
-                happened to come third and fourth out of the object, so a child
-                studying three subjects had one silently missing from their own
-                header — and which one depended on key order. */}
-            {Object.entries(detail.progress ?? {}).map(([subjectKey, progress]) => (
-              <div key={subjectKey} className="tch-student__quickItem">
-                <dt>{subjectLabel(subjectKey, t)}</dt>
-                <dd>{progress.objectives_mastered}/{progress.objectives_total}</dd>
-              </div>
-            ))}
-            <div className="tch-student__quickItem">
-              <dt>{t('tch.student.quickBadges')}</dt>
-              <dd className="tch-student__quickBadges">
-                {badges.slice(0, 3).map((badge) => (
-                  <Badge
-                    key={`${badge.subject}:${badge.glyph}:${badge.tier}`}
-                    subject={badge.subject}
-                    glyph={badge.glyph as BadgeGlyph}
-                    tier={badge.tier as BadgeTier}
-                    size={22}
-                    title={badge.title}
-                  />
-                ))}
-                <span>{badges.length}</span>
-              </dd>
-            </div>
-          </dl>
+          {/* The quick numbers, ON the identity row — plain figures with a
+              rule between them. The mastery percentage is NOT here: the
+              status band's dials already are that number, said better. Each
+              figure explains itself on hover/focus, and says so with the
+              dotted underline. Shown only once the child has activity —
+              zeroes would read as a verdict.
+
+              While the rows are still in flight the strip stands in the same
+              place wearing its real captions: what each figure counts was
+              never in question, only the figure. */}
+          {activity === null ? (
+            <section className="tch-student__kpis" aria-busy="true"
+                     aria-label={t('tch.kpi.stripLabel')}>
+              {[t('tch.kpi.learningMinutes'), t('tch.kpi.questionsWorked'),
+                t('tch.kpi.helpUsed')].map((label) => (
+                <span key={label} className="tch-stat">
+                  <Skeleton w={34} h={20} />
+                  <span className="tch-stat__label">{label}</span>
+                </span>
+              ))}
+            </section>
+          ) : rows.length ? (
+            <section className="tch-student__kpis tch-appear"
+                     aria-label={t('tch.kpi.stripLabel')}>
+              <Hint text={seconds > 0 ? t('tch.kpi.minutesTip') : t('tch.pulse.noTiming')}>
+                <button type="button" className="tch-stat">
+                  {/* Wall-clock between events — honest "—" when there is none. */}
+                  <strong className="tch-stat__value">
+                    {seconds > 0 ? Math.round(seconds / 60) : '—'}
+                  </strong>
+                  <span className="tch-stat__label">{t('tch.kpi.learningMinutes')}</span>
+                </button>
+              </Hint>
+              <Hint text={t('tch.kpi.questionsTip', { count: learningsCount })}>
+                <button type="button" className="tch-stat">
+                  <strong className="tch-stat__value">{rows.length}</strong>
+                  <span className="tch-stat__label">{t('tch.kpi.questionsWorked')}</span>
+                </button>
+              </Hint>
+              {/* What Yuvi already tried, before the teacher steps in. */}
+              <Hint text={t('tch.kpi.helpTip', {
+                hints: help.hints, explanations: help.explanations, chats: help.chats,
+              })}>
+                <button type="button" className="tch-stat">
+                  <strong className="tch-stat__value">{helpTotal}</strong>
+                  <span className="tch-stat__label">{t('tch.kpi.helpUsed')}</span>
+                </button>
+              </Hint>
+            </section>
+          ) : null}
         </div>
       </header>
 
-      {/* The quick numbers — same card language as Home's KPI strip. Shown only
-          once the child has activity: four zeroes would read as a verdict. */}
-      {rows.length ? (
-        <section className="tch-stats tch-student__kpis" aria-label={t('tch.kpi.stripLabel')}>
-          {/* Material first. The success rate led this strip and was the least
-              useful number on it: it counts attempts, so a child who works
-              through a hard lesson twice reads worse than one who answered
-              four easy questions once — and the same percentage is already the
-              tone on every card in "what they worked on". What a teacher opens
-              a profile for is how far through the material this child is. */}
-          <Card className="tch-stat">
-            <span className="tch-stat__icon tch-stat__icon--success" aria-hidden="true">
-              <Icon name="target" size={18} />
-            </span>
-            <span className="tch-stat__text">
-              <strong className="tch-stat__value">
-                {objectivesTotal ? `${Math.round((objectivesMastered / objectivesTotal) * 100)}%` : '—'}
-              </strong>
-              <span className="tch-stat__label">{t('tch.kpi.material')}</span>
-              <span className="tch-stat__hint">
-                {t('tch.kpi.materialOf', { mastered: objectivesMastered, total: objectivesTotal })}
-              </span>
-            </span>
-          </Card>
-
-          <Card className="tch-stat">
-            <span className="tch-stat__icon tch-stat__icon--primary" aria-hidden="true">
-              <Icon name="clock" size={18} />
-            </span>
-            <span className="tch-stat__text">
-              {/* Wall-clock between events — honest "—" when there is none. */}
-              <strong className="tch-stat__value">
-                {seconds > 0 ? Math.round(seconds / 60) : '—'}
-              </strong>
-              <span className="tch-stat__label">{t('tch.kpi.learningMinutes')}</span>
-              <span className="tch-stat__hint">
-                {seconds > 0 ? t('tch.kpi.acrossLearnings') : t('tch.pulse.noTiming')}
-              </span>
-            </span>
-          </Card>
-
-          <Card className="tch-stat">
-            <span className="tch-stat__icon tch-stat__icon--primary" aria-hidden="true">
-              <Icon name="help" size={18} />
-            </span>
-            <span className="tch-stat__text">
-              <strong className="tch-stat__value">{rows.length}</strong>
-              <span className="tch-stat__label">{t('tch.kpi.questionsWorked')}</span>
-              <span className="tch-stat__hint">
-                {t('tch.kpi.learningsCount', { count: learningsCount })}
-              </span>
-            </span>
-          </Card>
-
-        </section>
-      ) : null}
-
       {/* Every criterion that fired, not only the top one — the teacher decides
-          which matters, but must be able to see all of them. */}
-      {detail.attention_all?.length ? (
-        <section
-          ref={flagsRef}
-          className="tch-student__flags"
-          data-tour="teacher.studentFlags"
-        >
-          {detail.attention_all.map((flag) => (
-            <AttentionRow key={flag.kind ?? flag.reason} flag={flag} />
-          ))}
-        </section>
-      ) : null}
+          which matters, but must be able to see all of them. Wellbeing is the
+          exception: it is already the hero chip and the disclosure card, and a
+          third copy of the same sentence taught teachers to skim past it. */}
+      {(() => {
+        const attention = (detail?.attention_all ?? []).filter((flag) => flag.kind !== 'wellbeing')
+        return attention.length ? (
+          <section className="tch-student__flags tch-appear" data-tour="teacher.studentFlags">
+            {attention.map((flag) => (
+              <AttentionRow key={flag.kind ?? flag.reason} flag={flag} />
+            ))}
+          </section>
+        ) : null
+      })()}
 
-      <nav className="tch-tabs" role="tablist" aria-label={t('tch.student.tabsLabel')}>
-        {TABS.map((value) => {
-          /* An open disclosure is the one thing on this page a teacher must not
-             have to open a tab to discover. */
-          const alerting = value === 'wellbeing' && openFlags > 0
-          return (
+      <div className="tch-student__body">
+        {detail ? (
+          <div className="tch-appear">
+            <StatusBand
+              learnerId={learnerId}
+              focus={detail.focus ?? null}
+              progress={detail.objectives_progress ?? {}}
+              trends={trends}
+              rows={activity}
+            />
+          </div>
+        ) : (
+          <StatusBandSkeleton subjects={subject ? 1 : subjects.length} />
+        )}
+
+        {/* Yuvi's read of where this child stands — right under the dials it
+            narrates, with its one suggestion turned into a door: build the
+            task it describes. Mounted before the detail answers: the bar is
+            collapsed anyway, and it waits on the model, not on us. */}
+        <ReadSummary learnerId={learnerId}
+                     read={read}
+                     platformSubjects={Object.keys(detail?.objectives_progress ?? {})}
+                     rows={activity}
+                     onBuildTask={buildTask} />
+
+        {/* Two columns: the work (topics, goals) leads, the context
+            (recommendations, wellbeing) rides beside it. On a narrow screen
+            they stack in the same order. */}
+        <div className="tch-student__columns">
+          <div className="tch-student__main">
+            <TopicsPanel
+              rows={activity}
+              learnerId={learnerId}
+              digest={digest}
+              digestState={digestState}
+              onRefresh={refreshDigest}
+              onBuildTask={buildTask}
+            />
+            <GoalsCard learnerId={learnerId} name={name} />
+          </div>
+
+          <div className="tch-student__side">
+            {/* MUST §2 — tailored pedagogical recommendations, each explainable. */}
+            {detail ? (
+              <div className="tch-appear">
+                <RecsPanel
+                  learnerId={learnerId}
+                  rows={activity}
+                  read={read}
+                  recommendations={detail.recommendations}
+                  focus={detail.focus ?? null}
+                  progress={detail.objectives_progress ?? {}}
+                  onBuildTask={buildTask}
+                />
+              </div>
+            ) : (
+              <RecsPanelSkeleton />
+            )}
+
+          </div>
+        </div>
+
+        {/* The sometimes-reading, behind doors: who this child is, what they
+            are strong and weak in, the month's shape — and the wellbeing
+            record, its door wearing the red count. One row of doors, spread
+            over the whole width. */}
+        {!detail ? <MoreDoorsSkeleton /> : (
+        <MoreDialogs
+          detail={detail}
+          trends={trends}
+          extra={(
             <button
-              key={value}
-              role="tab"
               type="button"
-              aria-selected={tab === value}
-              className={`${tab === value ? 'is-active' : ''}${alerting ? ' has-alert' : ''}`}
-              onClick={() => setTab(value)}
+              id="wellbeing"
+              ref={(node) => { wellbeingRef.current = node }}
+              className="sp-btn sp-btn--ghost tch-wbBtn"
+              onClick={() => setWbOpen(true)}
             >
-              {t(`tch.student.tab.${value}`)}
-              {alerting ? (
-                <span className="tch-tabs__count">
+              <Icon name="alert" size={15} aria-hidden />
+              {t('tch.student.wellbeingTitle')}
+              {openFlags > 0 ? (
+                <span className="tch-flagCount">
                   <span aria-hidden="true">{openFlags}</span>
-                  {/* The digit alone is a number next to a word. What it counts
-                      has to be said, or the badge means nothing without sight. */}
+                  {/* The digit alone is a number next to a word. What
+                      it counts has to be said. */}
                   <span className="sp-sr-only">
                     {t('tch.student.openFlags', { count: openFlags })}
                   </span>
                 </span>
               ) : null}
             </button>
-          )
-        })}
-      </nav>
+          )}
+        />
+        )}
 
-      {tab === 'overview' ? <OverviewTab detail={detail} trends={trends} /> : null}
-      {/* `activity` is already loaded for the header strip — the tab used to
-          fetch the very same per-question rows a second time on open, which is
-          one round trip for a payload sitting in state a few lines up. The
-          month strip lives on the overview only: this tab is about what
-          happened inside the work, not when. */}
-      {tab === 'activity' ? <ActivityTab learnerId={learnerId} rows={activity} /> : null}
-      {tab === 'goals' ? <TeacherGoals learnerId={learnerId} /> : null}
-      {tab === 'badges' ? <TeacherBadges learnerId={learnerId} /> : null}
-      {tab === 'reflections' ? <ReflectionsTab learnerId={learnerId} /> : null}
-      {tab === 'connection' ? <TeacherConnection learnerId={learnerId} /> : null}
-      {tab === 'wellbeing'
-        ? <TeacherWellbeing learnerId={learnerId} focusFlagId={focusFlagId}
-                            fromAlert={wantedTab === 'wellbeing' || query.get('focus') === 'flags'} />
-        : null}
-      {tab === 'notes' ? <TeacherNotes learnerId={learnerId} /> : null}
+        {/* The full records, with the words, the reply and the actions —
+            exactly the screen the safety flow was built as, one door in. */}
+        <Modal open={wbOpen} onClose={() => setWbOpen(false)}
+               titleId="tch-wb-dialog" className="tch-student__moreDialog">
+          <h2 id="tch-wb-dialog" className="sp-sr-only">
+            {t('tch.student.wellbeingTitle')}
+          </h2>
+          <TeacherWellbeing
+            learnerId={learnerId}
+            focusFlagId={focusFlagId}
+            fromAlert={wantsWellbeing}
+          />
+        </Modal>
+      </div>
+
+      {/* The task builder, ON the profile — the same dialog the tasks screen
+          mounts, seeded by whichever finding was clicked. The teacher builds
+          and sends without ever leaving this page. */}
+      <Modal
+        open={Boolean(builderSeed && groupId)}
+        onClose={() => setBuilderSeed(null)}
+        titleId="tch-student-builder-title"
+        className="tch-builder__modal"
+        dismissible={false}
+      >
+        <div className="tch-builder__head">
+          <h2 id="tch-student-builder-title" className="tch-builder__modalTitle" dir="auto">
+            {t('tch.tasks.new')}
+          </h2>
+        </div>
+        {builderSeed && groupId ? (
+          <TaskBuilder
+            groupId={groupId}
+            seed={builderSeed}
+            onCancel={() => setBuilderSeed(null)}
+            onDone={() => setBuilderSeed(null)}
+          />
+        ) : null}
+      </Modal>
     </div>
   )
 }
 
-/** This student's own moments — the same feed as Home, scoped to one child. */
-function StudentMoments({ learnerId }: { learnerId: string }) {
-  const { t, language } = useI18n()
-  const [moments, setMoments] = useState<Moment[] | null>(null)
+/* ── the page on its way in ────────────────────────────────────────────────
+ *
+ * These are not grey boxes standing in for "some content". Each one is its
+ * section with the data taken out: the same grid, the same number of cells,
+ * the same 104px dial, the same three recommendation slots — and, printed
+ * rather than greyed, every heading that never depended on a request in the
+ * first place. "עצמאות" is as true before the fetch answers as after it, and
+ * a teacher reading the placeholder already knows what is coming and where.
+ *
+ * What greys out is only what we genuinely do not know yet. The page then
+ * fills in section by section as each request answers, instead of holding
+ * everything back for the slowest one.
+ */
 
-  useEffect(() => {
-    let active = true
-    setMoments(null)
-    getStudentMoments(learnerId, language)
-      .then((response) => { if (active) setMoments(response.moments ?? []) })
-      .catch(() => { if (active) setMoments([]) })
-    return () => { active = false }
-  }, [learnerId, language])
-
-  /* This feed is its own fetch, and it used to render nothing at all until it
-     landed — so the tab settled, the teacher started reading, and then a panel
-     appeared above what they were reading and pushed it down the page. It
-     holds its own space now, like every other panel on this screen. */
-  if (moments === null) {
-    return (
-      <Panel className="tch-student__moments" aria-busy="true">
-        <SectionHeader title={t('tch.moments.title')} subtitle={t('tch.moments.subtitle')} />
-        <SkeletonCard rows={3} />
-      </Panel>
-    )
-  }
-  if (!moments.length) return null
+function StatusBandSkeleton({ subjects }: { subjects: number }) {
+  const { t } = useI18n()
+  /* The row a teacher is about to get, in the count they are about to get
+     it: the focus card, one cell per subject in scope, then the two habit
+     dials. Getting the count right is the whole point — a placeholder that
+     reflows into a different grid is worse than none. */
+  const dials = [t('tch.student.consistency'), t('tch.student.independence')]
   return (
-    <Panel className="tch-student__moments">
-      <SectionHeader title={t('tch.moments.title')} subtitle={t('tch.moments.subtitle')} />
-      <MomentsFeed moments={moments} />
+    <section className="tch-status" aria-busy="true">
+      <div className="tch-status__grid">
+        <Card className="tch-status__cell tch-status__focus">
+          <div className="tch-status__focusTop">
+            <h4 className="tch-status__focusHead">
+              <Icon name="target" size={14} aria-hidden />
+              {t('tch.student.focusTitle')}
+            </h4>
+          </div>
+          <Skeleton w="82%" h={17} />
+          <Skeleton w="46%" h={20} r={999} />
+        </Card>
+
+        {/* Which subjects this child has evidence in is exactly what the
+            detail is being asked, so these headings stay blank — printing a
+            guess and correcting it a moment later is a worse lie than a bar. */}
+        {Array.from({ length: subjects }, (_, index) => (
+          <Card key={index} className="tch-status__cell">
+            <Skeleton w="54%" h={15} />
+            <Skeleton w={104} h={54} r={10} />
+            <Skeleton w="72%" h={12} />
+          </Card>
+        ))}
+
+        {dials.map((label) => (
+          <Card key={label} className="tch-status__cell">
+            <h4>{label}</h4>
+            <Skeleton w={104} h={54} r={10} />
+            <Skeleton w="72%" h={12} />
+          </Card>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function RecsPanelSkeleton() {
+  const { t } = useI18n()
+  /* The three slots are fixed — a profile always answers what is working,
+     what is stuck and what comes next — so the pills are printed and only
+     the sentences are still on their way. */
+  const slots = [
+    { key: 'working', tone: 'strong' },
+    { key: 'stuck', tone: 'steady' },
+    { key: 'next', tone: 'neutral' },
+  ] as const
+  return (
+    <Panel className="tch-recsPanel" aria-busy="true">
+      <SectionHeader
+        title={t('tch.student.recommendations')}
+        subtitle={t('tch.student.recommendationsSubtitle')}
+      />
+      <div className="tch-recs__overviewWait">
+        <Skeleton w="100%" h={13} /><Skeleton w="84%" h={13} />
+      </div>
+      <ul className="tch-recs">
+        {slots.map((slot) => (
+          <li key={slot.key} className="tch-rec">
+            <div className="tch-rec__head">
+              <StatusPill tone={slot.tone}>{t(`tch.recs.slot.${slot.key}`)}</StatusPill>
+            </div>
+            <Skeleton w="100%" h={13} />
+            <Skeleton w="62%" h={13} />
+          </li>
+        ))}
+      </ul>
     </Panel>
   )
 }
 
-function OverviewTab({ detail, trends }: { detail: StudentDetail; trends: LearnerTrends | null }) {
-  const { t, direction } = useI18n()
-  const progress = Object.entries(detail.objectives_progress ?? {})
-
-  /* The struggle panel mixed two different claims under one heading. An
-     evidence row means "answered these and got them wrong"; a questionnaire row
-     is a trait the child described about themselves at onboarding, has no
-     objective behind it, and is never retired — so under a heading called
-     "difficulties" it reads as a permanent deficiency the system detected.
-     Split, not filtered: the questionnaire answers are real, just not that. */
-  const struggles = detail.struggle_items ?? []
-  const evidenced = struggles.filter((item) => item.source !== 'questionnaire')
-  const described = struggles.filter((item) => item.source === 'questionnaire')
-
+/** The bottom row of doors. Which ones open depends on what this child has,
+ *  so the placeholder only holds the row's height and shape. */
+function MoreDoorsSkeleton() {
   return (
-    <div className="tch-student__body" role="tabpanel">
-      {/* The month, at a glance — the first thing a teacher asks and the one
-          thing seven columns of per-question numbers could not answer. */}
-      <TrendStrip trends={trends} />
-
-      {/* MUST §4 — progress against the learning objectives, per subject. */}
-      <Panel data-tour="teacher.subjectProgress">
-        <SectionHeader title={t('tch.student.progress')} />
-        {progress.length ? (
-          <div className="tch-progressGrid">
-            {progress.map(([subjectId, stats]) => (
-              <SubjectProgressCard key={subjectId} subject={subjectId} stats={stats} />
-            ))}
-          </div>
-        ) : (
-          <EmptyState title={t('tch.student.noProgress')} />
-        )}
-      </Panel>
-
-      {/* MUST §1 + nice-to-have §1, as one reading.
-          They used to be two panels a screen apart, which is the one layout
-          that makes them hard to weigh against each other — and weighing them
-          against each other is the entire question a teacher opens this with. */}
-      <Balance strengths={detail.strengths_detail ?? []} difficulties={evidenced} />
-
-      {/* Who this child is, in the system's own words. */}
-      <PortraitPanel portrait={detail.portrait} described={described} />
-
-      {/* MUST §2 — tailored pedagogical recommendations, each explainable. */}
-      <Panel data-tour="teacher.recommendations">
-        <SectionHeader
-          title={t('tch.student.recommendations')}
-          subtitle={t('tch.student.recommendationsSubtitle')}
-        />
-        <ul className="tch-recs">
-          {detail.recommendations.map((recommendation, index) => (
-            <RecommendationCard key={index} recommendation={recommendation} />
-          ))}
-        </ul>
-      </Panel>
+    <div className="tch-student__more" aria-hidden="true">
+      {[0, 1, 2].map((index) => <Skeleton key={index} h={42} r={999} />)}
     </div>
   )
 }
 
-/* One subject's progress against the objectives it actually has.
- *
- * The card used to draw the same fact twice — a ring and a bar, both of them
- * `percent` — and then a legend of three counts, two of which are usually
- * zero. At 0% the ring was an empty circle with "0%" written inside it, which
- * reads as a broken widget rather than as "has not started".
- *
- * So: the bar is the picture (it is the only one of the two that can show
- * mastered vs in-progress vs untouched), the fraction is the number, and the
- * legend names only the segments that exist. */
-function SubjectProgressCard({ subject, stats }: {
-  subject: string
-  stats: SubjectProgress
+/* ── Yuvi's one-paragraph read, with its suggestion made actionable ───────── */
+
+function ReadSummary({ learnerId, read, platformSubjects, rows, onBuildTask }: {
+  learnerId: string
+  /** The page-level learner read — fetched once for the whole profile,
+   *  because the recommendations panel leads with its overview. `null`
+   *  while it loads. */
+  read: LearnerRead | null
+  /** The catalogue subjects — every one gets a column, so "the model had
+   *  nothing to say about math" renders as a stated fact, not a hole. */
+  platformSubjects: string[]
+  /** The per-question rows — the measured performance line each subject
+   *  column leads with, computed here and never asked of the model. */
+  rows: QuestionRow[] | null
+  /** Opens the task builder on this page, seeded with the finding. */
+  onBuildTask: (seed: TaskSeed) => void
 }) {
   const { t } = useI18n()
-  const started = stats.objectives_mastered + stats.objectives_in_progress > 0
-  const segments = [
-    { key: 'mastered', count: stats.objectives_mastered },
-    { key: 'progress', count: stats.objectives_in_progress },
-    { key: 'idle', count: stats.not_started },
-  ].filter((segment) => segment.count > 0)
+  /* Closed by default: the read is depth, not vitals — a teacher who wants
+     Yuvi's account opens the bar, and everyone else keeps a short page. */
+  const [open, setOpen] = useState(false)
+
+  /* Per-subject sections side by side, then the two general lines. Not a
+     paragraph: four different claims must not wear one voice. Every platform
+     subject holds its column even when the read said nothing about it — an
+     absent math column reads as an omission; "no measured progress yet" is
+     the honest sentence. Extra subjects the read DID cover (English lives
+     outside the catalogue) append after. */
+  /* The measured line each column leads with — from the rows, not the model:
+     the one number a teacher takes away even if they skim the prose. */
+  const perf = useMemo(() => {
+    const map = new Map<string, { attempts: number; correct: number; questions: number }>()
+    for (const row of rows ?? []) {
+      const subjectId = (row.subject || '').trim()
+      if (!row.attempts || !subjectId) continue
+      const slot = map.get(subjectId) ?? { attempts: 0, correct: 0, questions: 0 }
+      slot.attempts += row.attempts
+      slot.correct += row.correct
+      slot.questions += 1
+      map.set(subjectId, slot)
+    }
+    return map
+  }, [rows])
+
+  const readSections = read && !read.unavailable ? (read.subjects ?? []) : []
+  const subjects = read && !read.unavailable ? [
+    ...platformSubjects.map((subjectId) => {
+      const section = readSections.find((entry) => entry.subject === subjectId)
+      return {
+        subject: subjectId,
+        summary: section?.summary ?? '',
+        points: section?.points ?? null,
+      }
+    }),
+    ...readSections.filter((section) => !platformSubjects.includes(section.subject))
+      .map((section) => ({
+        subject: section.subject,
+        summary: section.summary ?? '',
+        points: section.points as string[] | null,
+      })),
+  ] : []
+  const generalPoints = read && !read.unavailable ? [
+    ...(read.involvement ? [{ text: read.involvement, kind: 'activity', icon: 'clock' }] : []),
+    ...(read.notable ? [{ text: read.notable, kind: 'notable', icon: 'lightbulb' }] : []),
+  ] : []
 
   return (
-    <Card className="tch-progressCard">
-      <div className="tch-progressCard__head">
-        <strong dir="auto">{subjectLabel(subject, t)}</strong>
-        <span className="tch-progressCard__score">
-          {/* "0%" is a measurement; "טרם התחילו" is what actually happened. */}
-          {started ? (
-            <>
-              <b>{stats.percent}%</b>
-              <small>{t('tch.student.progressOf', {
-                mastered: stats.objectives_mastered, total: stats.objectives_total,
-              })}</small>
-            </>
-          ) : (
-            <small className="tch-progressCard__idle">{t('tch.student.progressNotStarted')}</small>
-          )}
-        </span>
+    /* The same spotlight surface as the class brief on Home — this is the one
+       loud object on the profile, and everything under it stays in the quiet
+       card language. */
+    <section className={`tch-read${open ? ' is-open' : ''}`}
+             aria-label={t('tch.student.readTitle')}>
+      {/* Decorative only, and behind everything — the same slow aurora the
+          class brief carries, so the two "Yuvi speaks" surfaces are one
+          family. `prefers-reduced-motion` stops it dead. */}
+      <div className="tch-read__aurora" aria-hidden="true"><i /><i /><i /></div>
+      <div className="tch-read__inner">
+        <button
+          type="button"
+          className="tch-read__toggle"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <span className="tch-read__eyebrow">
+            <Icon name="spark" size={14} aria-hidden />
+            {t('tch.student.readTitle')}
+          </span>
+          <Icon name={open ? 'chevronUp' : 'chevronLeft'} size={15} aria-hidden />
+        </button>
+        {!open ? null : read === null ? (
+          <div aria-busy="true" className="tch-read__loading">
+            <Skeleton w="100%" h={13} /><Skeleton w="70%" h={13} />
+          </div>
+        ) : read.unavailable ? (
+          <p className="tch-read__none">{t('tch.goalRead.unavailable')}</p>
+        ) : (
+          <>
+            {subjects.length ? (
+              /* One column per subject with a rule between them — the read
+                 answers per subject, the way the teacher plans per subject. */
+              <div className="tch-read__subjects">
+                {subjects.map((section, index) => (
+                  <div key={section.subject} className="tch-read__subjectWrap">
+                    {index > 0 ? <i className="tch-read__rule" aria-hidden="true" /> : null}
+                    <div className="tch-read__subject">
+                      <h5 dir="auto">{subjectLabel(section.subject, t)}</h5>
+                      {(() => {
+                        const stats = perf.get(section.subject)
+                        return stats ? (
+                          <p className="tch-read__perf">
+                            {t('tch.student.readPerf', {
+                              percent: Math.round((stats.correct / stats.attempts) * 100),
+                              questions: stats.questions,
+                            })}
+                          </p>
+                        ) : null
+                      })()}
+                      {/* The model's own account of the subject, in prose —
+                          what goes well and what trips them, above the
+                          numbered points. */}
+                      {section.summary ? (
+                        <p className="tch-read__summary" dir="auto">{section.summary}</p>
+                      ) : null}
+                      {section.points?.length ? (
+                        <ul>
+                          {section.points.map((point) => (
+                            <li key={point}><span dir="auto">{point}</span></li>
+                          ))}
+                        </ul>
+                      ) : section.summary ? null : (
+                        <p className="tch-read__subjectNone">
+                          {t('tch.student.readNoProgress')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {generalPoints.length ? (
+              <ul className="tch-read__points">
+                {generalPoints.map((point) => (
+                  <li key={point.text} className={`is-${point.kind}`}>
+                    <Icon name={point.icon} size={14} aria-hidden />
+                    <span dir="auto">{point.text}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {read.suggestion ? (
+              <div className="tch-read__suggest">
+                <p dir="auto">
+                  <Icon name="target" size={13} aria-hidden />
+                  {read.suggestion}
+                </p>
+                <button
+                  type="button"
+                  className="sp-btn sp-btn--ghost sp-btn--sm"
+                  onClick={() => {
+                    /* The suggestion is anchored server-side to a real
+                       objective or hard topic — the builder opens ON that
+                       material, not on a sentence of advice. */
+                    const anchor = read.suggestion_anchor
+                    onBuildTask({
+                      title: anchor ? t('tch.gaps.taskTitle', { label: anchor.title }) : '',
+                      topic: anchor?.title ?? read.suggestion ?? '',
+                      objectiveId: anchor?.objective_id ?? null,
+                      learnerIds: [learnerId],
+                    })
+                  }}
+                >
+                  <Icon name="backpack" size={14} aria-hidden />
+                  {read.suggestion_anchor
+                    ? t('tch.student.readTaskOn', { topic: read.suggestion_anchor.title })
+                    : t('tch.student.readTask')}
+                </button>
+              </div>
+            ) : null}
+          </>
+        )}
       </div>
-      <ObjectiveStrip
-        mastered={stats.objectives_mastered}
-        inProgress={stats.objectives_in_progress}
-        notStarted={stats.not_started}
-        ariaLabel={t('tch.student.progressAria', {
-          mastered: stats.objectives_mastered, total: stats.objectives_total,
-        })}
-      />
-      {/* Nothing to break down when nothing has been touched — the head
-          already says "טרם התחילו", and a legend repeating it under an empty
-          bar is the same sentence three times. */}
-      <ul className="tch-progressCard__legend" hidden={!started}>
-        {segments.map((segment) => (
-          <li key={segment.key} className={`is-${segment.key}`}>
-            <i aria-hidden="true" />
-            {t(`tch.student.progressSeg.${segment.key}`, { count: segment.count })}
-          </li>
-        ))}
-      </ul>
-    </Card>
+    </section>
   )
 }
 
-/* Strengths and difficulties, side by side with a rule between them.
+/* ── the status band: four dials, one glance ────────────────────────────────
  *
- * Both columns are evidence-backed: a strength here is an objective this child
- * actually mastered or recovered in, a difficulty is one they actually got
- * wrong. Neither side is styled as a verdict, and an empty column says so
- * rather than disappearing — "no difficulties detected" is information, and a
- * card with one lonely column reads as if the other question was never asked. */
+ * The teacher's question is "what does this child need from me", and the band
+ * answers its three parts: position (planner focus + mastery per subject),
+ * rhythm (consistency), and cost (independence). Every number is derived from
+ * data the page already loads — the band invents nothing.
+ */
+
+/* The momentum chip a dial card wears in its corner: which way the metric has
+ * moved across the trend window, with the two measured halves in the tooltip.
+ * The chip says the direction; the hover says the numbers behind it. */
+function TrendChip({ momentum }: {
+  momentum: { dir: string; why: string } | null
+}) {
+  const { t } = useI18n()
+  if (!momentum) return null
+  return (
+    <Hint text={momentum.why} className="tch-trendHint">
+      <span className={`tch-trend is-${momentum.dir}`} tabIndex={0}>
+        {momentum.dir !== 'flat' ? (
+          <Icon name={momentum.dir === 'up' ? 'trendUp' : 'chevronDown'}
+                size={11} aria-hidden />
+        ) : null}
+        {t(`tch.trend.${momentum.dir}`)}
+      </span>
+    </Hint>
+  )
+}
+
+function StatusBand({ learnerId, focus, progress, trends, rows }: {
+  learnerId: string
+  focus: PlannerFocus | null
+  progress: Record<string, SubjectProgress>
+  trends: LearnerTrends | null
+  rows: QuestionRow[] | null
+}) {
+  const { t } = useI18n()
+  const subjects = Object.entries(progress)
+  /* Which subject's per-objective breakdown is open, if any. */
+  const [objSubject, setObjSubject] = useState<string | null>(null)
+  /* The planner's road ahead, behind a click on the focus card. */
+  const [roadOpen, setRoadOpen] = useState(false)
+
+  /* Independence: how many of the questions they answered needed ANY help.
+     Counted per question, never per event — one long Yuvi conversation on one
+     hard question is one question that needed help, not 291 dependencies. */
+  const answeredRows = (rows ?? []).filter((row) => row.attempts > 0)
+  const helpedRows = answeredRows.filter((row) =>
+    row.hints_used + row.content_hints_used + row.explanations_used + row.chat_turns > 0)
+  const independence = answeredRows.length > 0
+    ? (1 - helpedRows.length / answeredRows.length) * 100
+    : null
+  const independenceTone = independence === null ? 'primary'
+    : independence >= 70 ? 'success' : independence >= 40 ? 'warn' : 'danger'
+
+  const consistency = trends && trends.days > 0
+    ? (trends.active_days / trends.days) * 100
+    : null
+  const consistencyTone = consistency === null ? 'primary'
+    : consistency >= 50 ? 'success' : consistency >= 20 ? 'warn' : 'danger'
+
+  /* ── momentum: the same window, cut in half ────────────────────────────────
+     Every chip compares the recent half of the trend window against the half
+     before it — computed from the series the dials already read, never
+     estimated. Too little data on either side means NO chip: a trend drawn
+     from two questions would be a verdict on noise. */
+  const halfIndex = trends ? Math.floor(trends.per_day.length / 2) : 0
+  const boundary = trends?.per_day[halfIndex]?.date ?? null
+  const halfDays = trends ? trends.per_day.length - halfIndex : 0
+
+  const subjectMomentum = (subjectId: string): { dir: string; why: string } | null => {
+    if (!trends || !boundary) return null
+    const series = trends.per_subject.find((s) => s.subject === subjectId)?.series ?? []
+    const agg = (points: { attempts: number; success_rate: number | null }[]) => {
+      const attempts = points.reduce((sum, p) => sum + p.attempts, 0)
+      const correct = points.reduce((sum, p) => sum + p.attempts * (p.success_rate ?? 0), 0)
+      return { attempts, rate: attempts > 0 ? correct / attempts : null }
+    }
+    const prior = agg(series.filter((p) => p.date < boundary))
+    const recent = agg(series.filter((p) => p.date >= boundary))
+    if (prior.attempts < 3 || recent.attempts < 3
+        || prior.rate === null || recent.rate === null) return null
+    const delta = Math.round((recent.rate - prior.rate) * 100)
+    return {
+      dir: delta >= 5 ? 'up' : delta <= -5 ? 'down' : 'flat',
+      why: t('tch.trend.successWhy', {
+        recent: Math.round(recent.rate * 100),
+        prior: Math.round(prior.rate * 100), days: halfDays,
+      }),
+    }
+  }
+
+  const consistencyMomentum = (() => {
+    if (!trends || trends.per_day.length < 8) return null
+    const priorActive = trends.per_day.slice(0, halfIndex)
+      .filter((day) => day.attempts > 0).length
+    const recentActive = trends.per_day.slice(halfIndex)
+      .filter((day) => day.attempts > 0).length
+    const delta = recentActive - priorActive
+    return {
+      dir: delta >= 2 ? 'up' : delta <= -2 ? 'down' : 'flat',
+      why: t('tch.trend.activeWhy', {
+        recent: recentActive, prior: priorActive, days: halfDays,
+      }),
+    }
+  })()
+
+  const independenceMomentum = (() => {
+    if (!boundary) return null
+    /* Each question sits in the half its last touch fell in — a full
+       first-touch history is not in the rows, and the tooltip says "recent
+       questions", which is exactly what this is. */
+    const dated = answeredRows.filter((row) => row.last_at)
+    const needsHelp = (row: QuestionRow) =>
+      row.hints_used + row.content_hints_used + row.explanations_used + row.chat_turns > 0
+    const prior = dated.filter((row) => (row.last_at as string) < boundary)
+    const recent = dated.filter((row) => (row.last_at as string) >= boundary)
+    if (prior.length < 3 || recent.length < 3) return null
+    const priorPct = Math.round((prior.filter(needsHelp).length / prior.length) * 100)
+    const recentPct = Math.round((recent.filter(needsHelp).length / recent.length) * 100)
+    /* The dial's own direction: less help = more independence = up. */
+    const delta = priorPct - recentPct
+    return {
+      dir: delta >= 5 ? 'up' : delta <= -5 ? 'down' : 'flat',
+      why: t('tch.trend.helpWhy', { recent: recentPct, prior: priorPct }),
+    }
+  })()
+
+  return (
+    /* No outer card, no heading: the dials are cards themselves and open the
+       page — a title above them was a label on the obvious. */
+    <section className="tch-status" data-tour="teacher.subjectProgress">
+      <div className="tch-status__grid">
+        {/* Where the planner is pointing, from the same `next_focus` the
+            platform itself follows — the teacher's card and the child's app
+            can never disagree about what comes next. */}
+        <Card className="tch-status__cell tch-status__focus">
+          {/* The whole card opens the planner's roadmap — where this pick
+              leads, step by step. */}
+          <button
+            type="button"
+            className="tch-status__cellOpen tch-status__focusOpen"
+            onClick={() => setRoadOpen(true)}
+            aria-haspopup="dialog"
+          >
+          {/* Head row spans the card: the cell's name at the inline start,
+              the subject chip at the inline end (the top-left corner). */}
+          <div className="tch-status__focusTop">
+            <h4 className="tch-status__focusHead">
+              <Icon name="target" size={14} aria-hidden />
+              {t('tch.student.focusTitle')}
+            </h4>
+            {focus?.subject && focus.mode !== 'complete' ? (
+              <span className="tch-status__focusSubject" dir="auto">
+                {subjectLabel(focus.subject, t)}
+              </span>
+            ) : null}
+          </div>
+          {focus && focus.mode === 'complete' ? (
+            <p className="tch-status__focusDone">
+              <Icon name="check" size={15} aria-hidden />
+              {t('tch.student.focusMode.complete')}
+            </p>
+          ) : focus && (focus.objective_title || focus.subject) ? (
+            <>
+              {/* The objective IS the answer, so it gets the cell's middle
+                  and its weight; the mode pill closes the card. */}
+              <p className="tch-status__focusWhat" dir="auto">
+                {focus.objective_title ?? subjectLabel(focus.subject ?? '', t)}
+              </p>
+              <p className="tch-status__focusMeta">
+                <StatusPill tone={focus.mode === 'review' ? 'steady' : 'strong'}>
+                  {t(`tch.student.focusMode.${focus.mode}`)}
+                </StatusPill>
+              </p>
+            </>
+          ) : (
+            <p className="tch-status__none">{t('tch.student.focusNone')}</p>
+          )}
+          </button>
+        </Card>
+
+        <RoadmapDialog learnerId={learnerId} open={roadOpen}
+                       onClose={() => setRoadOpen(false)} />
+
+        {subjects.map(([subjectId, stats]) => {
+          const hasProgress = stats.objectives_mastered + stats.objectives_in_progress > 0
+          /* "Not started" must mean not started. A child with math ACTIVITY
+             and no objective progress yet has started — that is a 0%, which
+             here is a measurement and not a slur, because the caption says
+             what it measures. */
+          const worked = (rows ?? []).some((row) =>
+            (row.subject || '').trim() === subjectId && row.attempts > 0)
+          return (
+            <Card key={subjectId} className="tch-status__cell">
+              {/* Outside the door button (a chip inside it would nest two
+                  interactive elements), floating on the card's corner. */}
+              <TrendChip momentum={subjectMomentum(subjectId)} />
+              {/* The whole cell is the door to its own breakdown — the dial
+                  says "1 of 3", the dialog says which three. */}
+              <button
+                type="button"
+                className="tch-status__cellOpen"
+                onClick={() => setObjSubject(subjectId)}
+                aria-haspopup="dialog"
+              >
+                <h4 dir="auto">{subjectLabel(subjectId, t)}</h4>
+                {/* The dial is always drawn — a missing gauge beside four drawn
+                    ones reads as a rendering bug, not as a fact. The caption is
+                    what tells the truth: achieved fraction, "worked but nothing
+                    achieved yet", or "not started". */}
+                <ProgressRing arc="half" percent={stats.percent} size={104}
+                              label={subjectLabel(subjectId, t)} />
+                <p className="tch-status__caption">
+                  {hasProgress
+                    ? t('tch.student.progressOf', {
+                        mastered: stats.objectives_mastered, total: stats.objectives_total,
+                      })
+                    : worked
+                      ? t('tch.student.progressWorkedNone')
+                      : t('tch.student.progressNotStarted')}
+                </p>
+              </button>
+            </Card>
+          )
+        })}
+
+        <ObjectivesDialog
+          learnerId={learnerId}
+          subject={objSubject}
+          onClose={() => setObjSubject(null)}
+        />
+
+        {consistency !== null && trends ? (
+          <Card className="tch-status__cell">
+            <TrendChip momentum={consistencyMomentum} />
+            <h4>{t('tch.student.consistency')}</h4>
+            <ProgressRing arc="half" percent={consistency} size={104}
+                          tone={consistencyTone} label={t('tch.student.consistency')} />
+            <p className="tch-status__caption">
+              {t('tch.student.consistencyHint', {
+                active: trends.active_days, days: trends.days,
+              })}
+              {trends.streak > 1
+                ? ` · ${t('tch.student.consistencyStreak', { count: trends.streak })}`
+                : ''}
+            </p>
+          </Card>
+        ) : null}
+
+        <Card className="tch-status__cell">
+          <TrendChip momentum={independenceMomentum} />
+          <h4>{t('tch.student.independence')}</h4>
+          {independence !== null ? (
+            <>
+              <ProgressRing arc="half" percent={independence} size={104}
+                            tone={independenceTone} label={t('tch.student.independence')} />
+              <p className="tch-status__caption">
+                {t('tch.student.independenceHint', {
+                  helped: helpedRows.length, answered: answeredRows.length,
+                })}
+              </p>
+            </>
+          ) : (
+            /* No attempts yet: a dial here would be a confident verdict on no
+               evidence at all. */
+            <p className="tch-status__none">{t('tch.student.independenceThin')}</p>
+          )}
+        </Card>
+      </div>
+    </section>
+  )
+}
+
+/* The planner's road, drawn as the pipeline it is: each stop is what the
+ * ranking will serve once the one before it is completed. Deterministic —
+ * the endpoint replays the live `next_focus` over simulated mastery, so this
+ * can never disagree with the focus card that opened it. */
+function RoadmapDialog({ learnerId, open, onClose }: {
+  learnerId: string
+  open: boolean
+  onClose: () => void
+}) {
+  const { t, language } = useI18n()
+  const [steps, setSteps] = useState<RoadmapStep[] | null>(null)
+
+  useEffect(() => { setSteps(null) }, [learnerId, language])
+
+  useEffect(() => {
+    if (!open || steps !== null) return
+    let active = true
+    getFocusRoadmap(learnerId, language)
+      .then((result) => { if (active) setSteps(result.steps) })
+      .catch(() => { if (active) setSteps([]) })
+    return () => { active = false }
+  }, [open, steps, learnerId, language])
+
+  /* Fewer stops than the window asked for means the simulation ran out of
+     material — the road genuinely ends, and the end is worth a node. */
+  const finished = steps !== null && steps.length > 0 && steps.length < 6
+    && steps[steps.length - 1].mode !== 'complete'
+
+  return (
+    <Modal open={open} onClose={onClose} titleId="tch-roadmap-title"
+           className="tch-roadmapDialog">
+      <h2 id="tch-roadmap-title" className="tch-builder__modalTitle" dir="auto">
+        {t('tch.student.roadmapTitle')}
+      </h2>
+      <p className="tch-roadmap__hint" dir="auto">{t('tch.student.roadmapHint')}</p>
+      {steps === null ? (
+        <div aria-busy="true" className="tch-objDialog__loading">
+          <Skeleton w="100%" h={14} /><Skeleton w="85%" h={14} /><Skeleton w="90%" h={14} />
+        </div>
+      ) : steps.length === 0 ? (
+        <p className="tch-objDialog__none">{t('tch.student.focusNone')}</p>
+      ) : (
+        <ol className="tch-roadmap">
+          {steps.map((step, index) => (
+            <li key={`${step.objective_id ?? 'end'}:${index}`}
+                className={`tch-roadmap__step${index === 0 ? ' is-now' : ''}`}>
+              <span className="tch-roadmap__marker" aria-hidden="true" />
+              <div className="tch-roadmap__body">
+                <span className="tch-roadmap__tags">
+                  {index === 0 ? (
+                    <span className="tch-roadmap__now">{t('tch.student.roadmapNow')}</span>
+                  ) : null}
+                  {step.subject ? (
+                    <span className={`tch-roadmap__subj is-${step.subject}`} dir="auto">
+                      {subjectLabel(step.subject, t)}
+                    </span>
+                  ) : null}
+                  {step.mode !== 'complete' ? (
+                    <span className="tch-roadmap__mode">
+                      {t(`tch.student.focusMode.${step.mode}`)}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="tch-roadmap__title" dir="auto">
+                  {step.mode === 'complete'
+                    ? t('tch.student.focusMode.complete')
+                    : step.objective_title ?? step.objective_id}
+                </span>
+                {/* The sub-material the objective lives in — the same words
+                    the lesson archive uses, and what tells two same-named
+                    objectives apart on one road. */}
+                {step.mode !== 'complete' && step.unit_title
+                  && step.unit_title !== step.objective_title ? (
+                  <span className="tch-roadmap__unit" dir="auto">{step.unit_title}</span>
+                ) : null}
+              </div>
+            </li>
+          ))}
+          {finished ? (
+            <li className="tch-roadmap__step is-end">
+              <span className="tch-roadmap__marker" aria-hidden="true" />
+              <div className="tch-roadmap__body">
+                <span className="tch-roadmap__title">
+                  <Icon name="check" size={14} aria-hidden />
+                  {t('tch.student.focusMode.complete')}
+                </span>
+              </div>
+            </li>
+          ) : null}
+        </ol>
+      )}
+      <div className="tch-builder__actions">
+        <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm" onClick={onClose}>
+          {t('tch.subgroups.cancel')}
+        </button>
+      </div>
+    </Modal>
+  )
+}
+
+/* One subject's objectives, each with its own measured position — the list a
+ * dial's "1 of 3" summarises. Everything here is catalogue + mastery data;
+ * the percentage is mastery's own score, never an estimate made for display. */
+function ObjectivesDialog({ learnerId, subject, onClose }: {
+  learnerId: string
+  subject: string | null
+  onClose: () => void
+}) {
+  const { t, language } = useI18n()
+  const [rows, setRows] = useState<ObjectiveBreakdownRow[] | null>(null)
+
+  useEffect(() => {
+    if (!subject) return
+    let active = true
+    setRows(null)
+    getStudentObjectives(learnerId, subject, language)
+      .then((result) => { if (active) setRows(result.objectives) })
+      .catch(() => { if (active) setRows([]) })
+    return () => { active = false }
+  }, [learnerId, subject, language])
+
+  return (
+    <Modal open={subject !== null} onClose={onClose}
+           titleId="tch-obj-dialog" className="tch-objDialog">
+      <h2 id="tch-obj-dialog" className="tch-builder__modalTitle" dir="auto">
+        {subject ? t('tch.student.objTitle', { subject: subjectLabel(subject, t) }) : ''}
+      </h2>
+      {rows === null ? (
+        <div aria-busy="true" className="tch-objDialog__loading">
+          <Skeleton w="100%" h={14} /><Skeleton w="90%" h={14} /><Skeleton w="95%" h={14} />
+        </div>
+      ) : rows.length === 0 ? (
+        <p className="tch-objDialog__none">{t('tch.student.objEmpty')}</p>
+      ) : (
+        <ul className="tch-objDialog__list">
+          {rows.map((row) => (
+            <li key={row.objective_id} className="tch-objDialog__row">
+              <span className="tch-objDialog__nameCell">
+                <span className="tch-objDialog__name" dir="auto">
+                  {row.title || row.objective_id}
+                  {row.needs_review ? (
+                    <span className="tch-objDialog__review">
+                      {t('tch.student.objReview')}
+                    </span>
+                  ) : null}
+                </span>
+                {/* What actually happened there, in one quiet line — the
+                    numbers a teacher asks right after "where do they stand". */}
+                {row.questions > 0 ? (
+                  <span className="tch-objDialog__meta">
+                    {t('tch.student.objMeta', {
+                      questions: row.questions, minutes: row.minutes,
+                      help: row.help_used,
+                    })}
+                    {row.last_at ? ` · ${agoLabel(row.last_at, t)}` : ''}
+                  </span>
+                ) : null}
+              </span>
+              <span className="tch-objDialog__bar" aria-hidden="true">
+                <i className={`is-${row.status}`}
+                   style={{ inlineSize: `${row.percent}%` }} />
+              </span>
+              <span className="tch-objDialog__figures">
+                <strong className={`is-${row.status}`}>
+                  {row.status === 'mastered'
+                    ? t('tch.student.objStatus.mastered')
+                    : row.status === 'in_progress'
+                      ? `${row.percent}%`
+                      : t('tch.student.objStatus.notStarted')}
+                </strong>
+                {row.attempts > 0 ? (
+                  <span className="tch-objDialog__evidence">
+                    {t('tch.student.objAttempts', {
+                      successes: row.successes, attempts: row.attempts,
+                    })}
+                  </span>
+                ) : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="tch-builder__actions">
+        <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm" onClick={onClose}>
+          {t('tch.subgroups.cancel')}
+        </button>
+      </div>
+    </Modal>
+  )
+}
+
+/* ── recommendations the numbers write themselves ──────────────────────────
+ *
+ * The server's recommendations react to SIGNALS (a streak, an idle spell, a
+ * long question). These react to the TOPIC TABLE: where the child is weakest,
+ * where they are strong enough to give rather than take, and how much help
+ * their answers needed. The datum is in the sentence — no "why?" needed — and
+ * each carries the act it points at: a task seeded on that very material.
+ */
+
+function RecsPanel({ learnerId, rows, read, recommendations, focus, progress, onBuildTask }: {
+  learnerId: string
+  rows: QuestionRow[] | null
+  /** The learner read — its `overview` is the free-prose paragraph the panel
+   *  leads with. `null` while loading. */
+  read: LearnerRead | null
+  /** The server's deterministic MoE-category recommendations — each still
+   *  renders with its "why" evidence, bucketed into the slot it belongs to. */
+  recommendations: TeacherRecommendation[]
+  focus: PlannerFocus | null
+  /** Per-subject objective progress — the "measured win" the working row
+   *  falls back to when no topic is strong enough to name. */
+  progress: Record<string, SubjectProgress>
+  onBuildTask: (seed: TaskSeed) => void
+}) {
+  const { t } = useI18n()
+
+  /* The same signals the panel always derived, now feeding fixed slots. */
+  const derived = useMemo(() => {
+    const topics = buildTopicSections(rows ?? []).flatMap((section) => section.topics)
+    const weakest = topics.filter((topic) => topic.rate < 0.6)[0] ?? null
+    const strongest = [...topics]
+      .filter((topic) => topic.rate >= 0.85 && topic.attempts >= 6)
+      .sort((a, b) => b.rate - a.rate)[0] ?? null
+    const answered = (rows ?? []).filter((row) => row.attempts > 0)
+    const helped = answered.filter((row) =>
+      row.hints_used + row.content_hints_used + row.explanations_used + row.chat_turns > 0)
+    const dependent = answered.length >= 6 && helped.length / answered.length >= 0.5
+    return { weakest, strongest, helped: helped.length, answered: answered.length, dependent }
+  }, [rows])
+
+  const seedFor = (topic: string, objectiveId: string | null) => ({
+    title: t('tch.gaps.taskTitle', { label: topic }),
+    topic,
+    objectiveId,
+    learnerIds: [learnerId],
+  })
+
+  const buildButton = (topic: string, objectiveId: string | null) => (
+    <button
+      type="button"
+      className="sp-btn sp-btn--ghost sp-btn--sm"
+      onClick={() => onBuildTask(seedFor(topic, objectiveId))}
+    >
+      <Icon name="backpack" size={14} aria-hidden />
+      {t('tch.recs.buildTask')}
+    </button>
+  )
+
+  /* Server recommendations, each in the slot its MoE category argues for:
+     extra practice and reinforcement are the child stuck; a referral is a
+     step to take. (Deepening backs the working row when nothing measured
+     qualifies; enrichment-from-strength no longer renders here at all.) */
+  const serverStuck = recommendations.filter((rec) =>
+    rec.category === 'extra_practice' || rec.category === 'reinforce')
+  const serverNext = recommendations.filter((rec) =>
+    rec.category === 'refer_intervention')
+
+  /* The next step is synthesised, not just filtered: close the open gap
+     first, then continue where the planner already points. */
+  const { weakest, strongest, dependent } = derived
+  const focusTitle = focus?.objective_title ?? null
+  const nextStep = weakest
+    ? {
+        text: focusTitle && focus?.objective_id !== weakest.objectiveId
+          ? t('tch.recs.nextPractice', { topic: weakest.label, next: focusTitle })
+          : t('tch.recs.nextPracticeOnly', { topic: weakest.label }),
+        topic: weakest.label,
+        objectiveId: weakest.objectiveId,
+      }
+    : focusTitle
+      ? {
+          text: t('tch.recs.nextFocus', { next: focusTitle }),
+          topic: focusTitle,
+          objectiveId: focus?.objective_id ?? null,
+        }
+      : null
+
+  /* EXACTLY three parts — one per slot, no more. Each slot takes its own
+     best claim: the derived, numbered one when the rows support it, else the
+     server's evidence-backed one (which keeps its "why"). One act only: the
+     build button lives on the NEXT STEP — the stuck row is the diagnosis,
+     and giving both a button seeded the same task twice. */
+  /* The working row is a MEASURED win — a strong topic, or the subject where
+     objectives were actually mastered. Its act is a word to the child: the
+     button lands on the messages screen with this student selected and a
+     praise sentence prefilled, still the teacher's to edit and send. A
+     recorded character strength is not shown here — a teacher cannot act on
+     "wants to succeed", and this row exists to be acted on. */
+  const win = strongest
+    ? {
+        text: t('tch.recs.workingTopic', {
+          topic: strongest.label,
+          percent: Math.round(strongest.rate * 100),
+        }),
+        praiseTopic: strongest.label,
+      }
+    : (() => {
+        const best = Object.entries(progress)
+          .filter(([, stats]) => stats.objectives_mastered > 0)
+          .sort((a, b) => b[1].objectives_mastered - a[1].objectives_mastered)[0]
+        if (!best) return null
+        const subjectName = subjectLabel(best[0], t)
+        return {
+          text: t(countKey('tch.recs.workingMastered', best[1].objectives_mastered), {
+            subject: subjectName, mastered: best[1].objectives_mastered,
+          }),
+          praiseTopic: subjectName,
+        }
+      })()
+
+  const serverDeepen = recommendations.filter((rec) => rec.category === 'deepen')
+  const working: ReactElement | null = win ? (
+    <li key="win" className="tch-rec">
+      <div className="tch-rec__head">
+        <StatusPill tone="strong">{t('tch.recs.slot.working')}</StatusPill>
+        <span className="tch-rec__acts">
+          <button
+            type="button"
+            className="sp-btn sp-btn--ghost sp-btn--sm"
+            onClick={() => {
+              putMessageSeed({
+                learnerId,
+                text: t('tch.recs.praiseSeed', { topic: win.praiseTopic }),
+              })
+              navigate('/teacher/messages')
+            }}
+          >
+            <Icon name="message" size={14} aria-hidden />
+            {t('tch.recs.praise')}
+          </button>
+        </span>
+      </div>
+      <p className="tch-rec__text" dir="auto">{win.text}</p>
+    </li>
+  ) : serverDeepen[0] ? (
+    <RecommendationCard key="sw" recommendation={serverDeepen[0]} />
+  ) : null
+
+  const stuck: ReactElement | null = weakest ? (
+    <li key="weak" className="tch-rec">
+      <div className="tch-rec__head">
+        <StatusPill tone="steady">{t('tch.recs.slot.stuck')}</StatusPill>
+      </div>
+      <p className="tch-rec__text" dir="auto">
+        {t('tch.recs.practiceTopic', {
+          topic: weakest.label,
+          percent: Math.round(weakest.rate * 100),
+          questions: weakest.questions,
+        })}
+      </p>
+    </li>
+  ) : dependent ? (
+    <li key="dependent" className="tch-rec">
+      <div className="tch-rec__head">
+        <StatusPill tone="support">{t('tch.recs.slot.stuck')}</StatusPill>
+      </div>
+      <p className="tch-rec__text" dir="auto">
+        {t('tch.recs.independenceTask', {
+          helped: derived.helped, answered: derived.answered,
+        })}
+      </p>
+    </li>
+  ) : serverStuck[0] ? (
+    <RecommendationCard key="ss" recommendation={serverStuck[0]} />
+  ) : null
+
+  const next: ReactElement | null = nextStep ? (
+    <li key="step" className="tch-rec">
+      <div className="tch-rec__head">
+        <StatusPill tone="neutral">{t('tch.recs.slot.next')}</StatusPill>
+        <span className="tch-rec__acts">
+          {buildButton(nextStep.topic, nextStep.objectiveId)}
+        </span>
+      </div>
+      <p className="tch-rec__text" dir="auto">{nextStep.text}</p>
+    </li>
+  ) : serverNext[0] ? (
+    <RecommendationCard key="sn" recommendation={serverNext[0]} />
+  ) : null
+
+  const items = [working, stuck, next].filter(Boolean) as ReactElement[]
+
+  return (
+    <Panel className="tch-recsPanel" data-tour="teacher.recommendations">
+      <SectionHeader
+        title={t('tch.student.recommendations')}
+        subtitle={t('tch.student.recommendationsSubtitle')}
+      />
+      {/* The overall analysis, in prose with no figures — what is harder for
+          this child and what carries them. The rows below keep the numbers. */}
+      {read === null ? (
+        <div className="tch-recs__overviewWait" aria-busy="true">
+          <Skeleton w="100%" h={13} /><Skeleton w="80%" h={13} />
+        </div>
+      ) : read.overview ? (
+        <p className="tch-recs__overview" dir="auto">{read.overview}</p>
+      ) : null}
+      <ul className="tch-recs">{items}</ul>
+    </Panel>
+  )
+}
+
+/* ── goals: a card, not a screen ────────────────────────────────────────────
+ *
+ * The full goal experience (drafts, data-based suggestions, the learner-read
+ * context column) lives in `GoalDialog`, the same dialog the goals board
+ * opens — one composer, everywhere. The card only answers "what goals are
+ * live and how are they going", and the + hands over to the dialog with this
+ * child already chosen.
+ */
+
+function GoalsCard({ learnerId, name }: { learnerId: string; name: string }) {
+  const { t } = useI18n()
+  const [goals, setGoals] = useState<StudentGoal[] | null>(null)
+  const [isComposing, setComposing] = useState(false)
+  const [version, setVersion] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    getStudentGoals(learnerId)
+      .then((response) => {
+        if (!active) return
+        setGoals((response.conversations ?? []).flatMap((row) => row.goals ?? []))
+      })
+      .catch(() => { if (active) setGoals([]) })
+    return () => { active = false }
+  }, [learnerId, version])
+
+  return (
+    <section id="goals" className="tch-student__goals">
+      <Panel className="tch-goalsCard">
+        <SectionHeader
+          title={t('tch.student.goalsCard')}
+          action={(
+            <button
+              type="button"
+              className="sp-btn sp-btn--ghost sp-btn--sm"
+              onClick={() => setComposing(true)}
+            >
+              <Icon name="plus" size={14} aria-hidden />
+              {t('tch.goalsPage.create')}
+            </button>
+          )}
+        />
+        {goals === null ? (
+          <SkeletonRows rows={2} />
+        ) : goals.length ? (
+          <ul className="tch-goalsCard__list">
+            {goals.slice(0, 5).map((goal) => (
+              <li key={goal.id} className="tch-goalsCard__goal">
+                {/* Title and stage share one line; the stage is a chip beside
+                    the words, never a full-width bar under them. */}
+                <div className="tch-goalsCard__goalHead">
+                  <strong dir="auto">{goal.title}</strong>
+                  {goal.progress_stage ? (
+                    <StatusPill tone={goal.progress_stage === 'summarized' ? 'strong' : 'neutral'}>
+                      {t(`tch.goals.stage.${goal.progress_stage}`)}
+                    </StatusPill>
+                  ) : null}
+                  {goal.deadline ? (
+                    <span className="tch-goalsCard__deadline">
+                      {t('tch.goals.deadline', { date: goal.deadline })}
+                    </span>
+                  ) : null}
+                </div>
+                <GoalProgressLine goal={goal} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="tch-goalsCard__none">{t('tch.student.goalsNone')}</p>
+        )}
+      </Panel>
+
+      <GoalDialog
+        open={isComposing}
+        learnerId={learnerId}
+        candidates={[{ id: learnerId, name }]}
+        onPick={() => { /* one candidate, already chosen */ }}
+        onClose={() => setComposing(false)}
+        onAssigned={() => {
+          setComposing(false)
+          setVersion((value) => value + 1)
+        }}
+      />
+    </section>
+  )
+}
+
+/* ── the sometimes-reading, behind doors ───────────────────────────────────── */
+
+function MoreDialogs({ detail, trends, extra }: {
+  detail: StudentDetail
+  trends: LearnerTrends | null
+  /** An extra door rendered in the same row, same dress — the wellbeing
+   *  button rides here so the bottom of the page is ONE row of doors. */
+  extra?: ReactNode
+}) {
+  const { t } = useI18n()
+  const [open, setOpen] = useState<'portrait' | 'balance' | 'trend' | null>(null)
+
+  const struggles = detail.struggle_items ?? []
+  const evidenced = struggles.filter((item) => item.source !== 'questionnaire')
+  const described = struggles.filter((item) => item.source === 'questionnaire')
+  const hasPortrait = Boolean(detail.portrait?.blocks.length || described.length)
+  const hasBalance = Boolean((detail.strengths_detail ?? []).length || evidenced.length)
+
+  const doors: { key: 'portrait' | 'balance' | 'trend'; icon: string; label: string; show: boolean }[] = [
+    { key: 'portrait', icon: 'face', label: t('tch.student.portrait'), show: hasPortrait },
+    { key: 'balance', icon: 'spark', label: t('tch.student.balanceBtn'), show: hasBalance },
+    { key: 'trend', icon: 'chart', label: t('tch.student.trend'), show: Boolean(trends) },
+  ]
+  if (!doors.some((door) => door.show) && !extra) return null
+
+  return (
+    <div className="tch-student__more">
+      {doors.filter((door) => door.show).map((door) => (
+        <button
+          key={door.key}
+          type="button"
+          className="sp-btn sp-btn--ghost"
+          onClick={() => setOpen(door.key)}
+        >
+          <Icon name={door.icon} size={15} aria-hidden />
+          {door.label}
+        </button>
+      ))}
+      {extra}
+
+      <Modal open={open === 'portrait'} onClose={() => setOpen(null)}
+             titleId="tch-more-portrait" className="tch-student__moreDialog">
+        <h2 id="tch-more-portrait" className="sp-sr-only">{t('tch.student.portrait')}</h2>
+        <PortraitPanel portrait={detail.portrait} described={described} />
+      </Modal>
+
+      <Modal open={open === 'balance'} onClose={() => setOpen(null)}
+             titleId="tch-more-balance" className="tch-student__moreDialog">
+        <h2 id="tch-more-balance" className="sp-sr-only">{t('tch.student.balanceBtn')}</h2>
+        <Balance strengths={detail.strengths_detail ?? []} difficulties={evidenced} />
+      </Modal>
+
+      <Modal open={open === 'trend'} onClose={() => setOpen(null)}
+             titleId="tch-more-trend" className="tch-student__moreDialog">
+        <h2 id="tch-more-trend" className="sp-sr-only">{t('tch.student.trend')}</h2>
+        <TrendStrip trends={trends} />
+      </Modal>
+    </div>
+  )
+}
+
 function Balance({ strengths, difficulties }: {
   strengths: StrengthDetail[]
   difficulties: StruggleItem[]
@@ -575,8 +1719,7 @@ function Balance({ strengths, difficulties }: {
   const { t } = useI18n()
   /* When every strength came from the same place — three from the onboarding
      mapping is the common case — the provenance is a fact about the COLUMN,
-     not about each row. Repeated per row it is the same visual noise as the
-     "חוזקה בפרופיל" chip it replaced, in a quieter colour. */
+     not about each row. */
   const notes = strengths.map((strength) => strengthNote(strength, t))
   const sharedNote = notes.length > 1 && new Set(notes).size === 1 ? notes[0] : null
 
@@ -627,10 +1770,8 @@ function Balance({ strengths, difficulties }: {
   )
 }
 
-/* One strength. The kind used to lead as a pill — "חוזקה בפרופיל" three times
- * down the list, which is a label for the row's provenance shouted louder than
- * the strength itself. The provenance is still here, as the quiet second line
- * where the evidence belongs. */
+/* One strength. The provenance is the quiet second line where the evidence
+ * belongs, not a pill shouted louder than the strength itself. */
 function strengthNote(
   strength: StrengthDetail,
   t: (key: string, params?: Record<string, string | number>) => string,
@@ -661,16 +1802,10 @@ function StrengthRow({ strength, note }: { strength: StrengthDetail; note: strin
 
 /* How the system sees this learner, in the sentences it has already written.
  *
- * This replaces three bare chips from the onboarding questionnaire — real
- * signal, but a list of three noun phrases is not a description of a person.
  * `student_description` (brain A-5) is a running portrait maintained from
- * observed evidence: a mini-tier reconcile pass that runs lazily off the
- * CHILD's coach bundle, debounced, and already paid for. Reading it here adds
- * no model call to this page and no per-teacher generation — which is the
- * answer to "can we do this without it being expensive": it is already written.
- *
- * The questionnaire answers stay, at the bottom, as what they are: what the
- * child said about themselves before any of this was observed. */
+ * observed evidence — already paid for, no model call on this page. The
+ * questionnaire answers stay at the bottom as what they are: what the child
+ * said about themselves before any of this was observed. */
 const PORTRAIT_ICON: Record<string, string> = {
   how_to_reach: 'message',
   what_frustrates: 'alert',
@@ -686,11 +1821,6 @@ function PortraitPanel({ portrait, described }: {
   const [isFull, setFull] = useState(false)
   if (!portrait?.blocks.length && !described.length) return null
 
-  /* Four facets, one sentence each — the newest, because the reconcile pass
-     appends and invalidates, so the last active entry is the current belief.
-     Nine bulleted sentences under four headings is the whole description, and
-     nobody reads a whole description to decide how to open a conversation. The
-     rest is one click away and nothing is hidden. */
   const blocks = portrait?.blocks ?? []
   const extra = blocks.reduce((sum, block) => sum + Math.max(0, block.lines.length - 1), 0)
 
@@ -774,11 +1904,7 @@ function StruggleRow({ item }: { item: StruggleItem }) {
   )
 }
 
-/* The month in one row: what they did each day, how much of it, how often.
- *
- * `per_day` was already being fetched by the old Activity tab and rendered as
- * a seven-column table — the numbers were all there and the SHAPE was not, and
- * the shape is what a teacher reads in a second. */
+/* The month in one row: what they did each day, how much of it, how often. */
 function TrendStrip({ trends }: { trends: LearnerTrends | null }) {
   const { t, language } = useI18n()
   if (!trends) return null
@@ -803,10 +1929,6 @@ function TrendStrip({ trends }: { trends: LearnerTrends | null }) {
       />
       {worked ? (
         <>
-          {/* Every chart says what it counts and every number says what it is.
-              This card used to be two unlabelled lines and four bare figures
-              under captions like "רצף הכי ארוך" — a teacher could not tell
-              whether the spike was Tuesday or what "3" was three OF. */}
           <div className="tch-trend__charts">
             <div className="tch-trend__chart">
               <span className="tch-trend__chartLabel">{t('tch.student.trendAttempts')}</span>
@@ -858,21 +1980,9 @@ function TrendStrip({ trends }: { trends: LearnerTrends | null }) {
             </div>
           </dl>
 
-          {/* A per-subject success strip used to sit here. It was the one chart
-              on the page that had to invent its own data to be drawable: a
-              subject is not studied every day, so most days had no rate, and
-              the line only existed because each gap was filled with the
-              previous day's value. A teacher reading a flat week could not tell
-              "held steady" from "did not touch it", and the footnote saying so
-              was doing work no footnote should have to do. Success by subject
-              is answered properly by the objectives panel below, against
-              evidence rather than against carried-forward guesses. */}
-
           {trends.mastered_steps.length ? (
             <p className="tch-trend__mastered">
               <Icon name="check" size={13} aria-hidden />
-              {/* `t()` has no plural engine — "1 יעדים הושגו" is what the
-                  shared key renders. Same two-key fix as everywhere else. */}
               {t(countKey('tch.student.trendMastered', trends.mastered_steps.length),
                  { count: trends.mastered_steps.length })}
             </p>
@@ -885,371 +1995,318 @@ function TrendStrip({ trends }: { trends: LearnerTrends | null }) {
   )
 }
 
-/* What one row of activity IS, in words.
+/* ── the hardest card's unit of meaning: a topic, not a question ─────────────
  *
- * The profile used to print `row.question_id ?? row.item_id ?? row.question_key`
- * — which is `q1` three times over (the content numbers questions WITHIN a
- * screen, so the raw id names a different question in every screen) and
- * `ENG.G7.FAMILY.GRAMMAR-01-04` for a screen the child only read. The catalogue
- * knows what these are; the row now carries it. */
-function rowLabel(
-  row: QuestionRow,
-  t: (key: string, params?: Record<string, string | number>) => string,
-): string {
-  if (row.ordinal) {
-    const base = t('tch.learnings.questionN', { n: row.ordinal })
-    return row.part ? `${base} · ${t('tch.learnings.partN', { n: row.part })}` : base
+ * "שאלה 2 · פתיחה, הקנייה ותרגול סטנדרטי א" told a teacher which BAR went
+ * badly and nothing about which IDEA did. The objective is the product's
+ * shared word for an idea — mastery, the gaps card, tasks and the coach all
+ * speak in objectives — so it is the grouping key, and every question that
+ * serves the same objective is summed into one row.
+ *
+ * Every label here is authored catalogue content carried on the row by
+ * `learning_analytics.label_learner_rows`; nothing is inferred. Where the
+ * catalogue does not name the objective the row falls to the unit and then to
+ * the lesson — and SAYS so with a level tag, because a lesson title presented
+ * as a topic would be a lie of altitude.
+ *
+ * The same aggregation runs server-side in `topic_digest` (same keys, same
+ * thresholds) — that is how a digest paragraph finds its topic row. Keep the
+ * two in lockstep. */
+
+/** Enough evidence to call a topic hard: total attempts across all its
+ *  questions, matching the class-wide reading (`HARD_QUESTION_MIN_ATTEMPTS`). */
+const TOPIC_MIN_ATTEMPTS = 4
+const TOPICS_PER_SUBJECT = 8
+/** Below this rate a question "went badly" and its authored `teaches` text
+ *  feeds the server-side digest for this topic. */
+const TOPIC_TEACHES_RATE = 0.7
+
+interface Topic {
+  key: string
+  /** Authored catalogue title — objective, or the named fallback level. */
+  label: string
+  /** Which catalogue level `label` names. Only `objective` passes untagged;
+   *  a unit or lesson name is tagged as such on the row. */
+  level: 'objective' | 'unit' | 'lesson'
+  objectiveId: string | null
+  subject: string
+  attempts: number
+  correct: number
+  rate: number
+  questions: number
+  /** The content's own `teaches` text for the questions that went badly —
+   *  the digest's raw material, not shown raw. */
+  teaches: string[]
+  /** Distinct unit titles seen under this topic — the relabel source when two
+   *  objectives share a title. */
+  unitTitles: string[]
+}
+
+function buildTopicSections(rows: QuestionRow[]): { subject: string; topics: Topic[] }[] {
+  const bySubject = new Map<string, Map<string, Topic>>()
+  for (const row of rows) {
+    if (!row.attempts) continue // a screen only read is not evidence of difficulty
+    const objectiveTitle = (row.objective_title || '').trim()
+    const unitTitle = (row.unit_title || '').trim()
+    const learningTitle = (row.learning_title || '').trim()
+    let key: string
+    let label: string
+    let level: Topic['level']
+    if (row.objective_id && objectiveTitle) {
+      key = `obj:${row.objective_id}`
+      label = objectiveTitle
+      level = 'objective'
+    } else if (unitTitle) {
+      key = `unit:${unitTitle}`
+      label = unitTitle
+      level = 'unit'
+    } else if (learningTitle) {
+      key = `lesson:${row.component_id ?? learningTitle}`
+      label = learningTitle
+      level = 'lesson'
+    } else {
+      // The catalogue names this work at no level at all — a topic row must
+      // trace to an authored title, so this row contributes none.
+      continue
+    }
+    const subject = (row.subject || '').trim()
+    const topics = bySubject.get(subject) ?? new Map<string, Topic>()
+    bySubject.set(subject, topics)
+    const topic = topics.get(key) ?? {
+      key, label, level,
+      objectiveId: row.objective_id ?? null,
+      subject,
+      attempts: 0, correct: 0, rate: 0, questions: 0,
+      teaches: [], unitTitles: [],
+    }
+    topics.set(key, topic)
+    topic.attempts += row.attempts
+    topic.correct += row.correct
+    topic.questions += 1
+    if (unitTitle && !topic.unitTitles.includes(unitTitle)) topic.unitTitles.push(unitTitle)
+    const teaches = (row.teaches || '').trim()
+    if (teaches && row.correct / row.attempts < TOPIC_TEACHES_RATE
+        && !topic.teaches.includes(teaches)) {
+      topic.teaches.push(teaches)
+    }
   }
-  // No question number: this is a screen the child spent time on rather than a
-  // question they answered. Say which kind of screen, not which provider id —
-  // and where the catalogue does not even say that, call it a screen, because
-  // calling an unanswered item "שאלה" describes something that is not there.
-  if (row.kind) return t(`tch.learnings.screenKind.${row.kind}`)
-  return t(row.attempts ? 'tch.learnings.question' : 'tch.student.screenItem')
-}
 
-/** The lesson a group of rows belongs to, by the same rule the learnings screen
- *  uses — so a lesson is called one thing across the whole portal. */
-function groupTitle(
-  row: QuestionRow,
-  t: (key: string, params?: Record<string, string | number>) => string,
-): string {
-  return (row.learning_title || '').trim()
-    || (row.objective_title || '').trim()
-    || t('tch.learnings.unnamed')
-}
-
-function ActivityTab({ learnerId, rows }: { learnerId: string; rows: QuestionRow[] | null }) {
-  const { t } = useI18n()
-
-  /* Hardest first — the same reading the learnings detail page gives a whole
-     class, for one child. Thin evidence is excluded: one wrong answer is not a
-     hard question, it is a Tuesday.
-
-     A question they never got right is excluded too, and that is a display
-     decision rather than a judgement about the data: its bar has zero length,
-     so a row of them is a column of labels beside an empty track — the chart
-     compares rates, and there is nothing to compare at the floor. Nothing is
-     lost: every one of them is a red-striped card in "what they worked on"
-     below, where the score is written out. */
-  const hardest = useMemo(() => {
-    return (rows ?? [])
-      .filter((row) => row.attempts >= 2 && row.correct > 0)
-      .map((row) => ({ row, rate: row.correct / row.attempts }))
-      .sort((a, b) => a.rate - b.rate || b.row.attempts - a.row.attempts)
-      .slice(0, 8)
-  }, [rows])
-
-  /* Said out loud rather than silently dropped from the chart above. */
-  const neverRight = useMemo(
-    () => (rows ?? []).filter((row) => row.attempts >= 2 && row.correct === 0).length,
-    [rows],
-  )
-
-  const support = useMemo(() => {
-    const total = (key: keyof QuestionRow) =>
-      (rows ?? []).reduce((sum, row) => sum + (Number(row[key]) || 0), 0)
-    return {
-      hints: total('hints_used') + total('content_hints_used'),
-      explanations: total('explanations_used'),
-      chats: total('chat_turns'),
+  const sections: { subject: string; topics: Topic[] }[] = []
+  for (const [subject, topics] of bySubject) {
+    /* The catalogue's objective titles come from the registry's SUB-TOPIC
+       level, and two objectives under one sub-topic really do share a title
+       (verified live: MASS-PRACTICE and GROSS-NET are both "מסה ונפח של
+       גופים"). Two rows saying the same words would read as a bug, so where
+       objective titles collide within a subject, those topics fall to their
+       distinct unit titles — and the level tag says so. */
+    const labelCount = new Map<string, number>()
+    for (const topic of topics.values()) {
+      if (topic.level !== 'objective') continue
+      labelCount.set(topic.label, (labelCount.get(topic.label) ?? 0) + 1)
     }
-  }, [rows])
-
-  /* Grouped by lesson, in the order the child met them. A flat table of twenty
-     rows called `q1`…`q3` four times over cannot be read at all; the same rows
-     under "פתיחה, הקנייה ותרגול סטנדרטי א" answer the question a teacher came
-     with, which is about a LESSON and not about a provider id. */
-  const lessons = useMemo(() => {
-    const byLesson = new Map<string, { title: string; objective: string | null; rows: QuestionRow[] }>()
-    for (const row of rows ?? []) {
-      const key = row.component_id ?? 'unknown'
-      const entry = byLesson.get(key) ?? {
-        title: groupTitle(row, t),
-        objective: row.objective_title ?? null,
-        rows: [],
+    for (const topic of topics.values()) {
+      if (topic.level !== 'objective' || (labelCount.get(topic.label) ?? 0) < 2) continue
+      if (topic.unitTitles.length) {
+        topic.label = topic.unitTitles.join(' · ')
+        topic.level = 'unit'
       }
-      entry.rows.push(row)
-      byLesson.set(key, entry)
     }
-    for (const entry of byLesson.values()) {
-      entry.rows.sort((a, b) => Number(a.ordinal ?? 999) - Number(b.ordinal ?? 999))
-    }
-    return [...byLesson.entries()].map(([id, entry]) => {
-      const attempts = entry.rows.reduce((sum, row) => sum + row.attempts, 0)
-      const correct = entry.rows.reduce((sum, row) => sum + row.correct, 0)
-      return {
-        id,
-        ...entry,
-        attempts,
-        correct,
-        rate: attempts ? correct / attempts : null,
-        /* Whether this lesson is the one worth opening. Every lesson is closed
-           by default — twenty of them expanded is the wall of text this was —
-           and the summary carries enough to choose between them. */
-        needsAttention: entry.rows.some((row) => row.attempts >= 2 && row.correct / row.attempts < 0.5),
-      }
-    })
-  }, [rows, t])
-
-  if (!rows) return <div aria-busy="true"><SkeletonCard rows={4} /></div>
-  if (!rows.length) return <EmptyState title={t('tch.student.noActivity')} />
-
-  return (
-    /* Inside the tab's own grid, so the gap between the moments feed and the
-       panel below it is the same gap as everywhere else on this page — it used
-       to be a sibling of this container, and two adjacent panels with no rule
-       and no space between them read as one broken card. */
-    <div className="tch-student__body" role="tabpanel">
-      <StudentMoments learnerId={learnerId} />
-
-      {/* What actually went wrong, before the detail of everything. */}
-      {hardest.length || neverRight ? (
-        <Panel>
-          <SectionHeader
-            title={t('tch.student.hardest')}
-            subtitle={t('tch.student.hardestSubtitle')}
-          />
-          {hardest.length ? (
-          <BarSeries
-            ariaLabel={t('tch.student.hardest')}
-            rows={hardest.map(({ row, rate }) => ({
-              // The lesson AND the question: "q1" alone is four different
-              // questions on this screen.
-              label: `${rowLabel(row, t)} · ${groupTitle(row, t)}`,
-              value: Math.round(rate * 100),
-              max: 100,
-              tone: rate < 0.5 ? 'danger' : rate < 0.7 ? 'warn' : 'primary',
-            }))}
-            formatValue={(value) => `${value}%`}
-          />
-          ) : null}
-          {neverRight ? (
-            <p className="tch-student__floor">
-              {t(countKey('tch.student.neverRight', neverRight), { count: neverRight })}
-            </p>
-          ) : null}
-        </Panel>
-      ) : null}
-
-      <Panel>
-        <SectionHeader
-          title={t('tch.student.support')}
-          subtitle={t('tch.student.supportSubtitle')}
-        />
-        <p className="tch-student__support">
-          {t('tch.student.supportLine', {
-            hints: support.hints,
-            explanations: support.explanations,
-            chats: support.chats,
-          })}
-        </p>
-      </Panel>
-
-      {/* ── what they worked on, lesson by lesson ─────────────────────────── */}
-      <Panel>
-        <SectionHeader
-          title={t('tch.student.worked')}
-          subtitle={t('tch.student.workedSubtitle')}
-        />
-        {/* One line per lesson, closed. Twenty lessons × up to ten items ×
-            a paragraph of what each teaches is a page nobody scrolls to the
-            end of — and the thing a teacher came for is which lesson to open,
-            which is exactly what the summary line answers. */}
-        <div className="tch-worked">
-          {lessons.map((lesson) => (
-            <details
-              key={lesson.id}
-              className={`tch-worked__lesson${lesson.needsAttention ? ' is-attention' : ''}`}
-            >
-              <summary className="tch-worked__summary">
-                <Icon name="chevronLeft" size={14} aria-hidden
-                      className="tch-worked__caret" />
-                <span className="tch-worked__title" dir="auto">{lesson.title}</span>
-                <span className="tch-worked__counts">
-                  {t(countKey('tch.student.lessonItems', lesson.rows.length),
-                     { count: lesson.rows.length })}
-                  {lesson.rate !== null
-                    ? ` · ${Math.round(lesson.rate * 100)}%`
-                    : ` · ${t('tch.student.notAnswered')}`}
-                </span>
-                {/* One dot per item, in the order they were met — the shape of
-                    the lesson before it is opened. */}
-                <span className="tch-worked__dots" aria-hidden="true">
-                  {lesson.rows.map((row) => (
-                    <i key={row.question_key} className={`is-${itemTone(row)}`} />
-                  ))}
-                </span>
-              </summary>
-              {lesson.objective ? (
-                <p className="tch-worked__objective" dir="auto">{lesson.objective}</p>
-              ) : null}
-              <ul className="tch-worked__items">
-                {lesson.rows.map((row) => (
-                  <WorkedItem key={row.question_key} row={row} />
-                ))}
-              </ul>
-            </details>
-          ))}
-        </div>
-      </Panel>
-    </div>
-  )
+    const ranked = [...topics.values()]
+      .filter((topic) => topic.attempts >= TOPIC_MIN_ATTEMPTS)
+      .map((topic) => ({ ...topic, rate: topic.correct / topic.attempts }))
+      .sort((a, b) => a.rate - b.rate || b.attempts - a.attempts)
+      .slice(0, TOPICS_PER_SUBJECT)
+    if (ranked.length) sections.push({ subject, topics: ranked })
+  }
+  // Most-worked subject first — the same order the teacher's attention takes.
+  sections.sort((a, b) =>
+    b.topics.reduce((sum, topic) => sum + topic.attempts, 0)
+    - a.topics.reduce((sum, topic) => sum + topic.attempts, 0))
+  return sections
 }
 
-/* One screen or question, told as a sentence rather than as nine columns.
- *
- * The columns are still all here — attempts, correct, hints, explanations,
- * chat, what helped, first and last — but a teacher reads "3 מתוך 4, עם רמז"
- * and not a row of zeros they have to count across. The heading it belongs to
- * is the SCREEN'S own title, and what it teaches is the content's own
- * description of the item, so this is the lesson describing itself. */
-function itemTone(row: QuestionRow): 'none' | 'danger' | 'warn' | 'success' {
-  if (!row.attempts) return 'none'
-  const rate = row.correct / row.attempts
-  return rate < 0.5 ? 'danger' : rate < 0.7 ? 'warn' : 'success'
-}
-
-function WorkedItem({ row }: { row: QuestionRow }) {
+function TopicRow({ topic, learnerId, digestItem, digestState, onBuildTask }: {
+  topic: Topic
+  learnerId: string
+  digestItem: TopicDigestItem | null
+  digestState: DigestState
+  onBuildTask: (seed: TaskSeed) => void
+}) {
   const { t } = useI18n()
-  const answered = row.attempts > 0
-  const tone = itemTone(row)
-  const hints = row.hints_used + row.content_hints_used
+  const percent = Math.round(topic.rate * 100)
+  const tone = topic.rate < 0.5 ? 'danger' : topic.rate < 0.7 ? 'warn' : 'success'
 
-  const support = [
-    hints ? t('tch.student.usedHints', { count: hints }) : null,
-    row.explanations_used ? t('tch.student.usedExplanations', { count: row.explanations_used }) : null,
-    row.chat_turns ? t('tch.student.usedChat', { count: row.chat_turns }) : null,
-  ].filter(Boolean)
-
+  /* A closed drawer per topic: the summary row carries the topic, its subject
+     and its numbers; opening it reveals the digested "why" and the build-task
+     act. The list stays scannable, the depth stays one click away. */
   return (
-    <li className={`tch-worked__item is-${tone}`}>
-      <div className="tch-worked__itemHead">
-        <StatusPill tone={tone === 'danger' ? 'support' : tone === 'warn' ? 'steady' : 'neutral'}>
-          {rowLabel(row, t)}
-        </StatusPill>
-        {row.screen_title ? (
-          <strong dir="auto">{row.screen_title}</strong>
-        ) : null}
-        <span className="tch-worked__score">
-          {answered
-            ? t('tch.student.scoreOf', { correct: row.correct, attempts: row.attempts })
-            : t('tch.student.notAnswered')}
-        </span>
-      </div>
-
-      {/* What the lesson says this item is for. The vendor's own words —
-          nothing here is generated, and where they wrote nothing, nothing
-          shows. */}
-      {row.teaches ? (
-        <p className="tch-worked__teaches" dir="auto">{row.teaches}</p>
-      ) : null}
-
-      {support.length || row.helped_reported?.length ? (
-        <p className="tch-worked__support">
-          {support.join(' · ')}
-          {row.helped_reported?.length ? (
-            <span className="tch-worked__helped">
-              {t('tch.student.saidHelped', {
-                what: row.helped_reported.map((m) => t(`tch.helped.${m}`)).join(' · '),
-              })}
+    <details className="tch-topics__topic">
+      <summary className="tch-topics__row">
+        <span className="tch-topics__name" dir="auto">
+          {topic.label}
+          {topic.level !== 'objective' ? (
+            /* A unit or lesson title standing in for a topic says which level
+               it is naming — never dressed up as an idea it is not. */
+            <span className="tch-topics__levelTag">
+              {t(`tch.student.topicLevel.${topic.level}`)}
             </span>
           ) : null}
-        </p>
-      ) : null}
-
-      {row.last_at ? (
-        <span className="tch-worked__when">{agoLabel(row.last_at, t)}</span>
-      ) : null}
-    </li>
+        </span>
+        {topic.subject ? (
+          <span className={`tch-topics__subj is-${topic.subject}`} dir="auto">
+            {subjectLabel(topic.subject, t)}
+          </span>
+        ) : null}
+        <span className="tch-topics__bar" aria-hidden="true">
+          <i className={`is-${tone}`} style={{ inlineSize: `${percent}%` }} />
+        </span>
+        <span className="tch-topics__figures">
+          <span className={`tch-topics__value is-${tone}`}>
+            {/* A topic never answered right is the headline — and at the
+                floor a percentage compares nothing, so the fraction is
+                written in words instead. */}
+            {topic.correct === 0
+              ? t('tch.student.topicFloor', { attempts: topic.attempts })
+              : `${percent}%`}
+          </span>
+          {/* How much is behind the number, quietly — a real pattern and a
+              thin one must not wear the same paint. */}
+          <span className="tch-topics__evidence">
+            {t(countKey('tch.student.topicQuestions', topic.questions), { count: topic.questions })}
+            {' · '}
+            {t(countKey('tch.student.topicAttempts', topic.attempts), { count: topic.attempts })}
+          </span>
+        </span>
+        <span className="tch-topics__chevron" aria-hidden="true">
+          <Icon name="chevronDown" size={14} />
+        </span>
+      </summary>
+      <div className="tch-topics__detail">
+        {/* One short paragraph on why this topic is hard — grounded in the
+            content's own descriptions and the numbers, written once and
+            cached. The raw source texts never render here. */}
+        {digestItem ? (
+          <p className="tch-topics__why" dir="auto">{digestItem.sentences.join(' ')}</p>
+        ) : digestState === 'generating' ? (
+          <p className="tch-topics__digestWait" aria-live="polite">
+            {t('tch.student.digestGenerating')}
+          </p>
+        ) : null}
+        {/* The finding's next move, on the finding itself — the same seed the
+            dashboard's gap rows plant: the builder opens on this objective,
+            and the child rides along to the send dialog. */}
+        <button
+          type="button"
+          className="sp-btn sp-btn--ghost sp-btn--sm tch-topics__assign"
+          onClick={() => {
+            onBuildTask({
+              title: t('tch.gaps.taskTitle', { label: topic.label }),
+              topic: topic.label,
+              objectiveId: topic.objectiveId,
+              learnerIds: [learnerId],
+            })
+          }}
+        >
+          <Icon name="backpack" size={14} aria-hidden />
+          {t('tch.student.topicAssign')}
+        </button>
+      </div>
+    </details>
   )
 }
 
-function ReflectionsTab({ learnerId }: { learnerId: string }) {
-  const { t, direction } = useI18n()
-  const [data, setData] = useState<Awaited<ReturnType<typeof getStudentReflections>> | null>(null)
-  const [error, setError] = useState(false)
+function TopicsPanel({ rows, learnerId, digest, digestState, onRefresh, onBuildTask }: {
+  rows: QuestionRow[] | null
+  learnerId: string
+  digest: TopicDigest | null
+  digestState: DigestState
+  onRefresh: () => void
+  onBuildTask: (seed: TaskSeed) => void
+}) {
+  const { t } = useI18n()
 
-  useEffect(() => {
-    let active = true
-    setData(null)
-    getStudentReflections(learnerId)
-      .then((result) => { if (active) setData(result) })
-      .catch(() => { if (active) setError(true) })
-    return () => { active = false }
-  }, [learnerId])
+  /* Hardest TOPICS first — "שאלה 2 הקשתה" is a fact a teacher can do nothing
+     with; "מערכת צירים הקשתה" is a lesson plan. */
+  const topicSections = useMemo(() => buildTopicSections(rows ?? []), [rows])
+  /* Which subject's topics are shown — 'all' until the teacher narrows. */
+  const [filter, setFilter] = useState('all')
+  const digestByKey = useMemo(() => {
+    const map = new Map<string, TopicDigestItem>()
+    for (const item of digest?.topics ?? []) map.set(item.key, item)
+    return map
+  }, [digest])
 
-  if (error) return <ErrorState title={t('tch.error')} />
-  if (!data) return <div aria-busy="true"><SkeletonCard rows={4} /></div>
-
-  const awareness = data.self_awareness
-  const samples = awareness?.samples ?? []
-  /* The reflections themselves. This endpoint has always returned them and this
-     screen has always thrown them away — it rendered `samples.length`, a count
-     of how many times a child answered, in place of anything they said. */
-  const written = (data.reflections ?? []).filter(
-    (row) => (row.text || row.note || '').trim())
+  /* The panel's own wait, wearing the panel's own heading: the teacher can
+     see a ranked list of hard topics is coming here, rather than a floating
+     grey card that could turn out to be anything. */
+  if (!rows) {
+    return (
+      <Panel aria-busy="true">
+        <SectionHeader
+          title={t('tch.student.hardest')}
+          subtitle={t('tch.student.hardestSubtitle')}
+        />
+        <div className="sp-skeleton__rows">
+          {[0, 1, 2, 3].map((index) => <Skeleton key={index} h={34} />)}
+        </div>
+      </Panel>
+    )
+  }
+  if (!topicSections.length) return null
 
   return (
-    <div className="tch-student__body" role="tabpanel">
-      <Panel>
-        <SectionHeader
-          title={t('tch.student.selfVsSystem')}
-          subtitle={t('tch.student.selfVsSystemSubtitle')}
-        />
-        {awareness ? (
-          <div className="tch-awareness">
-            <StatusPill tone={awareness.reading === 'calibrated' ? 'strong' : 'steady'}>
-              {t(`tch.awareness.${awareness.reading}`)}
-            </StatusPill>
-            <p dir="auto">{t('tch.awareness.explain')}</p>
-
-            {/* Two lines for ONE child: how they rated the session against how
-                it actually went. The gap between them IS the signal, and a
-                single number ("gap: 0.31") states the conclusion while hiding
-                whether it is a trend or one odd Tuesday. */}
-            {samples.length >= 2 ? (
-              <DualLine
-                /* The self-rating is 1–5 and the estimate is 0–1; both are put
-                   on one 0–1 axis so the distance between the lines is the
-                   thing being read. */
-                a={samples.map((sample) => sample.self_rating / 5)}
-                b={samples.map((sample) => sample.system_estimate)}
-                labelA={t('tch.awareness.self')}
-                labelB={t('tch.awareness.system')}
-                ariaLabel={t('tch.student.selfVsSystem')}
-              />
-            ) : (
-              <p className="tch-awareness__thin">{t('tch.awareness.thin')}</p>
-            )}
-            <RawEvidence raw={{ gap: awareness.gap, samples: samples.length }} />
-          </div>
-        ) : (
-          <EmptyState title={t('tch.student.noReflections')} />
-        )}
-      </Panel>
-
-      {written.length ? (
-        <Panel>
-          <SectionHeader
-            title={t('tch.student.reflectionWords')}
-            subtitle={t('tch.student.reflectionWordsSubtitle')}
-          />
-          <ul className="tch-reflections">
-            {written.map((row, index) => (
-              <li key={row.at ?? index} className="tch-reflection">
-                <p dir="auto">{row.text || row.note}</p>
-                <span className="tch-reflection__meta">
-                  {row.at ? agoLabel(row.at, t) : ''}
-                  {typeof row.self_rating === 'number'
-                    ? ` · ${t('tch.awareness.selfRating', { rating: row.self_rating })}`
-                    : ''}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Panel>
+    <Panel>
+      <SectionHeader
+        title={t('tch.student.hardest')}
+        subtitle={t('tch.student.hardestSubtitle')}
+        action={digest?.stale && digestState !== 'generating' ? (
+          /* The child moved since the digest was written. Refresh is offered,
+             never forced — the stale words are still true about the evidence
+             they were written from. */
+          <button
+            type="button"
+            className="sp-btn sp-btn--ghost sp-btn--sm"
+            onClick={onRefresh}
+          >
+            <Icon name="wand" size={14} aria-hidden />
+            {t('tch.student.digestRefresh')}
+          </button>
+        ) : undefined}
+      />
+      {/* One flat list, a subject chip on every row — the subject headings
+          became a filter. Rows stay ranked within their subject (sections
+          are concatenated, never re-sorted across subjects). */}
+      {topicSections.length > 1 ? (
+        <div className="tch-builder__chips tch-topics__filter">
+          <button type="button" className={`tch-chip${filter === 'all' ? ' is-on' : ''}`}
+                  aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>
+            {t('tch.tasks.allSubjects')}
+          </button>
+          {topicSections.map((section) => (
+            <button key={section.subject || 'other'} type="button"
+                    className={`tch-chip${filter === section.subject ? ' is-on' : ''}`}
+                    aria-pressed={filter === section.subject}
+                    onClick={() => setFilter(section.subject)}>
+              {subjectLabel(section.subject, t) || t('tch.subject.other')}
+            </button>
+          ))}
+        </div>
       ) : null}
-    </div>
+      <div className="tch-topics">
+        {topicSections
+          .filter((section) => filter === 'all' || section.subject === filter)
+          .flatMap((section) => section.topics)
+          .map((topic) => (
+            <TopicRow
+              key={topic.key}
+              topic={topic}
+              learnerId={learnerId}
+              digestItem={digestByKey.get(topic.key) ?? null}
+              digestState={digestState}
+              onBuildTask={onBuildTask}
+            />
+          ))}
+      </div>
+    </Panel>
   )
 }

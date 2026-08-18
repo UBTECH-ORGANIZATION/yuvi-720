@@ -31,6 +31,7 @@ import {
 import { GoalDialog } from './GoalDialog'
 import './teacher-goals-page.css'
 import { StudentAvatar } from '../shared/StudentAvatar'
+import { GoalProgressLine } from '../student/TeacherGoals'
 
 interface LearnerGoals {
   learner_id: string
@@ -95,7 +96,7 @@ export function TeacherGoalsPage() {
     for (const learner of rows ?? []) {
       for (const conversation of learner.conversations) {
         for (const goal of conversation.goals) {
-          if (goal.progress_stage !== 'summarized' || goal.approved_by) continue
+          if (stateOf(goal) !== 'done') continue
           if (!matches(learner.learner_id, goal.title)) continue
           const list = byLearner.get(learner.learner_id) ?? []
           list.push({ learnerId: learner.learner_id, conversationId: conversation.id, goal })
@@ -140,9 +141,9 @@ export function TeacherGoalsPage() {
   if (error) return <ErrorState title={t('tch.error')} />
   if (!busy && !groupId) return <EmptyState title={t('tch.noGroups')} />
 
-  // Collapsed only when there is enough volume for grouping to be the point.
-  const defaultOpen = pendingTotal <= 4
-  const isOpen = (learnerId: string) => toggled[learnerId] ?? defaultOpen
+  // Always collapsed on open: the panel's first answer is WHO is waiting and
+  // how much; the goal list behind a name is a deliberate second click.
+  const isOpen = (learnerId: string) => toggled[learnerId] ?? false
   const BOARD_PREVIEW = 4
 
   const approve = async (row: PendingRow) => {
@@ -254,6 +255,9 @@ export function TeacherGoalsPage() {
                           <span className="tch-goalsPage__goalTitle" dir="auto">
                             {goalTitle(row.goal, t)}
                           </span>
+                          {/* What the platform counted — the approval is a
+                              judgement, and this is its evidence. */}
+                          <GoalProgressLine goal={row.goal} />
                           {row.goal.reward_value ? (
                             <span className="tch-goalsPage__sparks">
                               <Icon name="spark" size={13} aria-hidden />
@@ -330,6 +334,19 @@ export function TeacherGoalsPage() {
                   {learner.goals.slice(0, BOARD_PREVIEW).map((goal) => (
                     <li key={goal.id} className="tch-goalsPage__goal" dir="auto">
                       <span className="tch-goalsPage__goalText">{goalTitle(goal, t)}</span>
+                      {/* Board rows stay one line: the tracked count is just
+                          "2/3", with the action name in the tooltip. The full
+                          sentence lives where there is room — the pending
+                          panel and the student profile. */}
+                      {goal.progress ? (
+                        <span
+                          className={`tch-goalsPage__count${goal.progress.met ? ' is-met' : ''}`}
+                          title={t(`tch.goals.action.${goal.progress.kind}`)}
+                        >
+                          {goal.progress.met ? <Icon name="check" size={12} aria-hidden /> : null}
+                          {goal.progress.count}/{goal.progress.target}
+                        </span>
+                      ) : null}
                       <StatusPill tone={STATE_TONE[stateOf(goal)]}>
                         {t(`tch.goalsPage.state.${stateOf(goal)}`)}
                       </StatusPill>
@@ -368,7 +385,10 @@ export type GoalState = 'approved' | 'done' | 'help' | 'active'
 
 export function stateOf(goal: StudentGoal): GoalState {
   if (goal.approved_by) return 'approved'
-  if (goal.progress_stage === 'summarized') return 'done'
+  /* Done two ways: the child said so (`summarized`), or the platform counted
+     it — an action-tracked goal whose target was reached is finished work
+     even if the child never pressed anything. Both wait for the teacher. */
+  if (goal.progress_stage === 'summarized' || goal.progress?.met) return 'done'
   if (goal.needs_help) return 'help'
   return 'active'
 }

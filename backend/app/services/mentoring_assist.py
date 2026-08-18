@@ -17,6 +17,7 @@ import json
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
+from app.services import goal_progress
 from app.services.ai_usage import UsageContext
 from app.services.llm import call_llm
 
@@ -304,15 +305,54 @@ async def recommend_goal(
 
 # ── teacher-facing goal suggestions (F6 → F5) ────────────────────────────────
 
+# The goal is filed as the CHILD'S OWN goal — the child reads it and earns
+# sparks for completing it — while the rationale stays on the teacher's screen.
+# So the audience is named per field, not once for the whole prompt: flipping
+# everything to "address the student" would hand the teacher a justification
+# written to a child, and the old "address the teacher" produced teaching
+# strategies a child cannot complete ("give the student an example first").
 _TEACHER_GOAL_SYSTEM = (
     "You help a teacher set ONE small, concrete weekly goal for a student.\n"
-    "Write in {language}. Address the teacher, not the student.\n"
+    "The goal is filed as the STUDENT'S OWN goal: the student reads it and "
+    "the student is the one who completes it.\n"
+    "Write in {language}.\n"
+    "`title` and `next_steps` are read by the STUDENT. Address the student "
+    "in the second person, and describe an action THE STUDENT performs — "
+    "never something the teacher does for them, watches for, or applies to "
+    "them. In gendered languages use gender-inclusive second person "
+    "(Hebrew: נסה/י, תסתכל/י).\n"
+    "Every goal is an action the student takes INSIDE the learning platform "
+    "— something the system can watch happen. The actions that exist: open a "
+    "lesson and practise a named subject or topic; complete a task the "
+    "teacher assigned; use a hint when stuck instead of guessing; ask Yuvi "
+    "to explain something unclear before answering; try a question again "
+    "after a wrong answer; come back to learn on more days of the week. "
+    "Pick the action that answers the evidence and, when the evidence names "
+    "a topic, attach it (e.g. לתרגל שיעור אחד בשברים השבוע; לבקש רמז "
+    "כשנתקעים בתרגיל במקום לנחש; לשאול את יובי שאלה כשמשהו לא ברור).\n"
+    "Never suggest study techniques the platform cannot see — saying things "
+    "out loud, imagining, connecting to interests, working with paper. A "
+    "goal like that can never be checked off, so it must not be suggested.\n"
+    "If a piece of evidence cannot be answered by one of these platform "
+    "actions, leave it out — do not bend it into a goal. Two goals that a "
+    "student can really do beat three where one is forced.\n"
+    "`rationale` is read by the TEACHER only: one short sentence on why this "
+    "goal fits, for the person deciding whether to set it.\n"
     "Ground every suggestion ONLY in the evidence given. Do not invent a "
     "difficulty, a topic or a behaviour that is not in it.\n"
     "Each goal must be achievable in a week and observable — something the "
     "student either did or did not do.\n"
     'Return JSON: {{"goals": [{{"title": str, "next_steps": str, '
-    '"rationale": str, "signal": str}}]}} with exactly {count} goals.\n'
+    '"rationale": str, "signal": str, "action": {{"kind": str, '
+    '"target": int}}}}]}} with up to {count} goals.\n'
+    "`action.kind` is the platform action the goal asks for, exactly one of: "
+    "use_hint (use a hint when stuck), ask_yuvi (ask Yuvi a question), "
+    "retry_after_wrong (try again after a wrong answer), practice (answer "
+    "practice questions), complete_task (finish an assigned task), "
+    "active_days (learn on distinct days). `action.target` is how many times "
+    "within the week the goal means — small and honest (2-5 for most kinds, "
+    "2-6 for active_days). The system counts these actions for the teacher, "
+    "so kind and target must match what the goal text literally asks.\n"
     "`signal` names WHICH piece of the evidence the goal answers, copied "
     "verbatim from the evidence keys."
 )
@@ -536,6 +576,10 @@ async def suggest_goals_for_teacher(
                 "rationale": str(item.get("rationale") or "").strip(),
                 "deadline": deadline,
                 "ai": True,
+                # The countable promise. Validated against the closed
+                # vocabulary; a bad shape degrades to an untracked goal
+                # rather than an error.
+                "action": goal_progress.normalize_action(item.get("action")),
                 # Mandatory. A teacher acting on a suggestion must be able to see
                 # which observation produced it — as a sentence, not as the blob
                 # the model was handed.
@@ -570,11 +614,23 @@ async def suggest_goals_for_teacher(
 
 GOAL_SUGGESTION_COLLECTION = "goal_suggestions"
 
+# Part of the cache id, not the fingerprint. Bump when _TEACHER_GOAL_SYSTEM
+# changes in a way that makes previously cached suggestions wrong (v2: goals
+# address the child, not the teacher; v3: goals must name the topic/material
+# they apply to; v4: goals are observable in-platform actions — practise,
+# hint, ask Yuvi, retry, return — never off-platform study techniques). Old
+# rows become unreachable — a teacher never sees old-voice text again — while
+# the fingerprint keeps meaning exactly "the evidence moved" and the
+# anti-reroll property is untouched. v5: unmappable evidence is skipped, up to
+# {count} goals rather than exactly. v6: each goal carries a machine-readable
+# `action` {kind, target} so goal progress is countable.
+_GOAL_PROMPT_VERSION = "v6"
+
 
 def _goal_cache_id(learner_id: str, language: str, subject: str | None) -> str:
     """Language and subject key the row rather than the fingerprint: they change
     which suggestions are wanted, not whether the old ones are still true."""
-    return f"{learner_id}|{language}|{subject or 'all'}"
+    return f"{learner_id}|{language}|{subject or 'all'}|{_GOAL_PROMPT_VERSION}"
 
 
 def _goal_fingerprint(evidence: dict[str, Any]) -> str:

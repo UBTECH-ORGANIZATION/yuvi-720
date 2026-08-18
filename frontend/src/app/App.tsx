@@ -4,6 +4,7 @@ import { StudentDashboardPage } from '../features/student-dashboard/StudentDashb
 import { TeacherHomePage } from '../features/teacher-app/home/TeacherHomePage'
 import { TeacherStudentsPage } from '../features/teacher-app/students/TeacherStudentsPage'
 import { TeacherStudentPage } from '../features/teacher-app/student/TeacherStudentPage'
+import { TeacherCalendarPage } from '../features/teacher-app/calendar/TeacherCalendarPage'
 import { TeacherGoalsPage } from '../features/teacher-app/goals/TeacherGoalsPage'
 import { TeacherLearningsPage } from '../features/teacher-app/learnings/TeacherLearningsPage'
 import { LearningDetailPage } from '../features/teacher-app/learnings/LearningDetailPage'
@@ -30,7 +31,6 @@ import { TaskReviewPage } from '../features/teacher-app/tasks/TaskReviewPage'
 import { TaskTrackingPage } from '../features/teacher-app/tasks/TaskTrackingPage'
 import { ReportIssueDialog } from '../features/support/ReportIssueDialog'
 import { PublicReportPage } from '../features/support/PublicReportPage'
-import { SupportChatPanel } from '../features/support/SupportChatPanel'
 import { useStudioTransition } from '../features/Yuvi-studio/StudioTransitionProvider'
 import { CompanionChat } from '../components/CompanionChat'
 import { YuviCompanionDock } from '../components/YuviCompanionDock'
@@ -184,6 +184,9 @@ function pageForRoute(pathname: string) {
   }
   if (pathname.startsWith('/teacher/goals')) {
     return <TeacherGoalsPage />
+  }
+  if (pathname.startsWith('/teacher/calendar')) {
+    return <TeacherCalendarPage />
   }
   if (pathname.startsWith('/teacher/learnings/')) {
     // /teacher/learnings/:groupId/:componentId — the group travels in the URL
@@ -424,10 +427,13 @@ export function App() {
       ) : routePage}
       {learnerRoute && !isStudioRoute && !isActiveTaskRoute && !isLearningWorldRoute && <YuviCompanionDock />}
       {learnerRoute && <SparkToast />}
-      {/* Teachers report faults from their own lane too, so this is not learner-scoped. */}
+      {/* Teachers report faults from their own lane too, so this is not learner-scoped.
+          It is also the only floating helper left in the teacher lane: the
+          support chat used to ride in the same bottom-left corner as the
+          assistant's launcher, two floating buttons stacked on one another
+          over the page. Reporting a fault covers the same need without
+          standing on the screen. */}
       {user && <ReportIssueDialog />}
-      {/* Support chat is staff-only, and accounts often carry both roles — hence the route check. */}
-      {isTeacher && isTeacherRoute(pathname) && <SupportChatPanel />}
     </TourProvider>
   )
 }

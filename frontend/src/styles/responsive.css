@@ -142,7 +142,8 @@ img, svg, video, canvas { max-inline-size: 100%; }
     transform: translateY(0) scale(1);
   }
 
-  .app-bar.is-compact .app-bar-menu .learner-app-nav {
+  .app-bar.is-compact .app-bar-menu .learner-app-nav,
+  .app-bar.is-compact .app-bar-menu .teacher-app-nav {
     display: grid;
     gap: 6px;
     inline-size: 100%;
@@ -152,7 +153,8 @@ img, svg, video, canvas { max-inline-size: 100%; }
     background: transparent;
   }
 
-  .app-bar.is-compact .app-bar-menu .learner-app-nav button {
+  .app-bar.is-compact .app-bar-menu .learner-app-nav button,
+  .app-bar.is-compact .app-bar-menu .teacher-app-nav button {
     justify-content: flex-start;
     min-block-size: 48px;
     inline-size: 100%;
@@ -161,7 +163,8 @@ img, svg, video, canvas { max-inline-size: 100%; }
     text-align: start;
   }
 
-  .app-bar.is-compact .app-bar-menu .learner-app-nav span { display: inline; }
+  .app-bar.is-compact .app-bar-menu .learner-app-nav span,
+  .app-bar.is-compact .app-bar-menu .teacher-app-nav span { display: inline; }
 
 /* ── Tablet and below (≤ 899px) ──────────────────────────────────────────── */
 

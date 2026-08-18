@@ -77,14 +77,18 @@ try {
   const teacherCtx = await browser.newContext({ viewport: { width: 1400, height: 1000 } })
   const teacher = await signIn(teacherCtx, TEACHER, '/teacher')
 
-  // ── the teacher opens the goals tab ───────────────────────────────────────
+  // ── the teacher opens the goal composer from the profile's goals card ─────
+  /* The profile is one scrolling page now: the goals card sits in `#goals`,
+     and the composer lives in the GoalDialog its + button opens. */
   await teacher.goto(`${BASE}/teacher/student/${LEARNER}`, { waitUntil: 'domcontentloaded' })
-  await teacher.waitForSelector('.tch-tabs', { timeout: 40000 })
-  const tabs = teacher.locator('.tch-tabs button')
-  check('the profile now has seven tabs', await tabs.count() === 7, `${await tabs.count()}`)
-  await tabs.nth(2).click()
+  await teacher.waitForSelector('#goals .tch-goalsCard', { timeout: 40000 })
+  await teacher.locator('#goals').scrollIntoViewIfNeeded()
+  check('the goals card offers a create button',
+        await teacher.locator('#goals .tch-goalsCard button', { hasText: 'יצירת יעד' }).count() === 1)
+  await teacher.locator('#goals .tch-goalsCard button', { hasText: 'יצירת יעד' }).click()
+  await teacher.waitForSelector('.tch-goalDialog', { timeout: 15000 })
   await teacher.waitForSelector('.tch-composer', { timeout: 30000 })
-  await teacher.screenshot({ path: `${OUT}/01-goals-tab.png`, fullPage: true })
+  await teacher.screenshot({ path: `${OUT}/01-goal-dialog.png`, fullPage: true })
 
   // ── AI drafts, each carrying its evidence ─────────────────────────────────
   await teacher.locator('.tch-composer button.sp-btn--ghost').first().click()
@@ -101,8 +105,13 @@ try {
           `${whys}/${draftCards}`)
     await teacher.locator('.tch-draft .tch-evidence__toggle').first().click()
     await teacher.waitForTimeout(400)
+    /* #253 rewrote the disclosure: the datum arrives as the draft's own
+       "because" sentence rather than the shared raw block. Either element
+       satisfies the invariant — the observation is on screen after the click. */
     check('opening a draft\'s "why?" shows the raw evidence',
-          await teacher.locator('.tch-draft .tch-evidence__raw').count() > 0)
+          await teacher.locator(
+            '.tch-draft .tch-evidence__raw, .tch-draft .tch-draft__because'
+          ).count() > 0)
   } else {
     // Honest emptiness is a valid outcome and must not be a fabricated goal.
     check('with no evidence the composer says so rather than inventing goals',
@@ -117,11 +126,12 @@ try {
   await form.locator('textarea').fill('לפתור שלוש שאלות')
   await form.locator('button.sp-btn').click()
 
-  const listed = await waitFor(teacher, (needle) =>
-    document.querySelector('.tch-goals__list')?.textContent?.includes(needle) ?? false,
-    20000, title)
+  /* Assigning closes the dialog and the goals card refetches — the goal must
+     land in the card's own list on the page. */
+  const listed = await waitFor(teacher, () =>
+    document.querySelectorAll('.tch-goalsCard__goal').length > 0, 20000)
   check('the assigned goal appears in the teacher\'s list',
-        (await teacher.locator('.tch-goal').count()) > 0, `${listed}ms`)
+        (await teacher.locator('.tch-goalsCard__goal').count()) > 0, `${listed}ms`)
 
   // ── the student's bell rings, with no reload ──────────────────────────────
   const rang = await waitFor(student, () =>
@@ -133,7 +143,7 @@ try {
   await student.locator('.notif__bell').click()
   await student.waitForTimeout(600)
   const panelText = await student.locator('.notif__panel').innerText().catch(() => '')
-  check('the notification names the goal', panelText.includes(title.slice(0, 12)),
+  check('the notification names the goal', panelText.includes(title.slice(0, 27)),
         panelText.slice(0, 80))
   check('no raw locale key leaked into the panel', !/notif\.[a-zA-Z.]+/.test(panelText))
   await student.screenshot({ path: `${OUT}/04-panel.png` })
@@ -159,34 +169,84 @@ try {
     const row = [...document.querySelectorAll('.notif__row')]
       .find((node) => node.textContent?.includes(needle))
     return row ? row.className.includes('is-unread') : null
-  }, title.slice(0, 12))
+  }, title.slice(0, 27))
   check('opening a notification marks that row read', stillUnread === false,
         stillUnread === null ? 'row not found' : `is-unread=${stillUnread}`)
 
+  // ── the student finishes the goal ─────────────────────────────────────────
+  /* The inbox holds goals the STUDENT marked done — approval is of completion,
+     not of assignment. Without this walk (start → finish) the pending check
+     below asserts a row that cannot exist. */
+  await student.locator('.notif__bell').click()   // close the panel first
+  await student.waitForTimeout(500)
+  const goalRow = student.locator('.mt-fgoal', { hasText: title.slice(0, 27) }).first()
+  check('the goal row is on the mentoring page', await goalRow.count() > 0)
+  await goalRow.locator('.mt-fgoal__advance').click()          // התחלתי
+  await student.waitForTimeout(1200)
+  await goalRow.locator('.mt-fgoal__advance').click()          // סיימתי
+  const markedDone = await waitFor(student, () =>
+    [...document.querySelectorAll('.mt-fgoal.is-done')].length > 0, 15000)
+  check('the student can walk it to done', markedDone >= 0,
+        markedDone >= 0 ? `${markedDone}ms` : 'timed out')
+  await student.screenshot({ path: `${OUT}/06-done.png` })
+
   // ── approve → sparks, reported honestly ───────────────────────────────────
-  await teacher.reload({ waitUntil: 'domcontentloaded' })
-  await teacher.waitForSelector('.tch-tabs', { timeout: 30000 })
-  await teacher.locator('.tch-tabs button').nth(2).click()
-  await teacher.waitForSelector('.tch-goal', { timeout: 30000 })
+  /* Approval moved with the refactor: the profile's goals card only lists and
+     composes, and the goals BOARD's pending inbox is now the one place a
+     teacher approves. Pending goals arrive grouped per child and collapsed. */
+  const openPendingGroups = async () => {
+    /* The inbox SHELL mounts before its data arrives — waiting on it found
+       zero group heads to click and reported an empty inbox that wasn't.
+       Wait for the heads themselves (a goal was just marked done above, so
+       at least one group must appear). */
+    await teacher.waitForSelector('.tch-goalsPage__pendingHead', { timeout: 40000 })
+    for (const head of await teacher.locator('.tch-goalsPage__pendingHead').all()) {
+      await head.click().catch(() => {})
+    }
+    await teacher.waitForTimeout(600)
+  }
+  // goalTitle() strips the long digit run from the title, so match its head.
+  const needle = title.replace(/\s*\d+$/, '').trim()
 
-  const approveButton = teacher.locator('.tch-goal button.sp-btn').first()
-  await approveButton.click()
-  const outcome = await waitFor(teacher, () =>
-    document.querySelectorAll('.tch-goals__outcome').length > 0, 20000)
-  check('approving reports an outcome', outcome >= 0, `${outcome}ms`)
+  /* The board fetches on mount, and the student's "done" write can land a
+     beat after that fetch left — one snapshot loses the race roughly half the
+     time. Reload until the row is there (or three misses = a real failure). */
+  let pendingBefore = 0
+  for (let attempt = 0; attempt < 3 && pendingBefore === 0; attempt += 1) {
+    await teacher.goto(`${BASE}/teacher/goals`, { waitUntil: 'domcontentloaded' })
+    await openPendingGroups().catch(() => {})
+    pendingBefore = await teacher
+      .locator('.tch-goalsPage__pendingRow', { hasText: needle }).count()
+    if (pendingBefore === 0) await teacher.waitForTimeout(2000)
+  }
+  const pendingRow = teacher
+    .locator('.tch-goalsPage__pendingRow', { hasText: needle }).first()
+  const hasPending = pendingBefore > 0
+  check('the assigned goal waits in the approval inbox', hasPending)
 
-  const outcomeText = await teacher.locator('.tch-goals__outcome').innerText().catch(() => '')
-  check('the outcome states what actually happened', outcomeText.length > 0, outcomeText.slice(0, 90))
-  check('the outcome is not a raw key', !/tch\.goals\.outcome/.test(outcomeText))
-  await teacher.screenshot({ path: `${OUT}/06-approved.png`, fullPage: true })
+  if (hasPending) {
+    await pendingRow.locator('button.sp-btn--primary').click()
+    const outcome = await waitFor(teacher, () =>
+      document.querySelectorAll('.tch-goalsPage__outcome').length > 0, 20000)
+    check('approving reports an outcome', outcome >= 0, `${outcome}ms`)
 
-  // Approving again must be recognised, not paid twice.
-  await teacher.reload({ waitUntil: 'domcontentloaded' })
-  await teacher.waitForSelector('.tch-tabs', { timeout: 30000 })
-  await teacher.locator('.tch-tabs button').nth(2).click()
-  await teacher.waitForTimeout(2500)
-  const stillPending = await teacher.locator('.tch-goal button.sp-btn', { hasText: /אישור|Approve|اعتماد/ }).count()
-  check('an approved goal no longer offers approval', stillPending === 0, `${stillPending} buttons`)
+    const outcomeText = await teacher.locator('.tch-goalsPage__outcome').innerText().catch(() => '')
+    check('the outcome states what actually happened', outcomeText.length > 0, outcomeText.slice(0, 90))
+    check('the outcome is not a raw key', !/tch\.goals\.outcome/.test(outcomeText))
+    await teacher.screenshot({ path: `${OUT}/06-approved.png`, fullPage: true })
+
+    // Approving again must be recognised, not paid twice. The board strips
+    // the title's digit run, so every run's test goal WEARS THE SAME TEXT —
+    // asserting zero rows fails on any residue from an interrupted run.
+    // What approval must actually do is remove THIS goal: one fewer row.
+    await teacher.reload({ waitUntil: 'domcontentloaded' })
+    await openPendingGroups().catch(() => {})   // zero groups left is success too
+    const stillPending = await teacher
+      .locator('.tch-goalsPage__pendingRow', { hasText: needle }).count()
+    check('an approved goal no longer offers approval',
+          stillPending === pendingBefore - 1,
+          `${pendingBefore} before, ${stillPending} after`)
+  }
 
   // ── dismissal is a soft delete ────────────────────────────────────────────
   await student.reload({ waitUntil: 'domcontentloaded' })

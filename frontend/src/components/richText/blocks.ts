@@ -11,6 +11,7 @@
  * JSX-free so `node --test` can exercise it directly.
  */
 
+import { AGENDA_LANGUAGE, parseAgendaSpec, type AgendaSpec } from './agenda.ts'
 import { DIAGRAM_LANGUAGE, parseDiagramSpec, type DiagramSpec } from './diagram.ts'
 
 export type Block =
@@ -21,6 +22,7 @@ export type Block =
   | { kind: 'quote'; text: string }
   | { kind: 'rule' }
   | { kind: 'diagram'; spec: DiagramSpec }
+  | { kind: 'agenda'; spec: AgendaSpec }
 
 const TABLE_SEPARATOR = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$/
 const BLOCK_STARTER = /^\s*(?:[-*+]\s+|\d+[.)]\s+|#{1,6}\s+|>\s?|\||```)/
@@ -31,10 +33,10 @@ const BULLET = /^\s*[-*+•]\s+/
 const NUMBERED = /^\s*\d+[.)]\s+/
 const QUOTE = /^\s*>\s?/
 
-/** A fenced diagram, matched whole — for holding it out of text clean-up that
- *  would otherwise edit its JSON. */
+/** A fenced diagram or agenda, matched whole — for holding it out of text
+ *  clean-up that would otherwise edit its JSON. */
 export const DIAGRAM_FENCE = new RegExp(
-  '```[ \\t]*' + DIAGRAM_LANGUAGE + '[ \\t]*\\n[\\s\\S]*?```',
+  '```[ \\t]*(?:' + DIAGRAM_LANGUAGE + '|' + AGENDA_LANGUAGE + ')[ \\t]*\\n[\\s\\S]*?```',
   'g'
 )
 
@@ -68,6 +70,9 @@ export function parseBlocks(source: string): Block[] {
       if (fence[1] === DIAGRAM_LANGUAGE) {
         const spec = parseDiagramSpec(body.join('\n'))
         if (spec) blocks.push({ kind: 'diagram', spec })
+      } else if (fence[1] === AGENDA_LANGUAGE) {
+        const spec = parseAgendaSpec(body.join('\n'))
+        if (spec) blocks.push({ kind: 'agenda', spec })
       }
       continue
     }

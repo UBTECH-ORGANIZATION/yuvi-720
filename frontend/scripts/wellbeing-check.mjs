@@ -67,10 +67,19 @@ try {
   flagId = new URL(page.url()).searchParams.get('flag')
 
   await page.waitForSelector('.tch-flag', { timeout: 15_000 })
-  const active = await page.locator('.tch-tabs button.is-active').textContent()
-  check('the wellbeing tab is the one open', /תשומת לב/.test(active ?? ''), active ?? '')
-  check('the tab carries a count, so it is visible without opening it',
-        (await page.locator('.tch-tabs__count').count()) > 0)
+  /* No tabs any more: the wellbeing section is always on the page, and the
+     deep link's job is to scroll it into view and ring the flag. */
+  check('the wellbeing section is on the page',
+        (await page.locator('#wellbeing').count()) === 1)
+  const scrolled = await page.waitForFunction(() => {
+    const section = document.querySelector('#wellbeing')
+    if (!section) return false
+    const rect = section.getBoundingClientRect()
+    return rect.top < window.innerHeight && rect.bottom > 0
+  }, { timeout: 10_000 }).then(() => true).catch(() => false)
+  check('the deep link scrolls the section into view', scrolled)
+  check('the section carries a count of open flags, visible without opening anything',
+        (await page.locator('.tch-flagCount').count()) > 0)
 
   const card = page.locator('.tch-flag').first()
   check('the flagged card is the focused one',
@@ -84,7 +93,14 @@ try {
 
   console.log('\n— what the card says —')
   const text = (await card.textContent()) ?? ''
-  check('the words themselves are shown', /לישון בלילה/.test(text))
+  /* The child's own words, quoted unedited — whatever this flag's words ARE.
+     Pinning a specific fixture sentence here broke every time the seed data
+     rotated; the invariant is that a real quote is on the card, and that the
+     SAME quote survives closing (asserted below with the captured text). */
+  const quoted = (await card.locator('.tch-flag__words').first()
+    .textContent().catch(() => '')) ?? ''
+  check('the words themselves are shown', quoted.trim().length > 10,
+        quoted.trim().slice(0, 60))
   check('where they were written, in words', /בצ׳אט עם יובי|בצ\'אט עם יובי/.test(text))
   check('and what the student was told back', /מה שהתלמיד\/ה קיבל\/ה בחזרה/.test(text))
   check('who else was alerted', /הותרעו/.test(text))
@@ -132,7 +148,8 @@ try {
   const closedText = (await card.textContent()) ?? ''
   check('it is closed, by a named person, with the reason', /נסגר על ידי/.test(closedText),
         closedText.match(/נסגר על ידי.{0,40}/)?.[0] ?? '')
-  check('and it is still readable afterwards', /לישון בלילה/.test(closedText))
+  check('and it is still readable afterwards',
+        quoted.trim().length > 10 && closedText.includes(quoted.trim()))
   await card.screenshot({ path: `${OUT}/04-closed.png` })
 
   // The strip above the tabs is computed from OPEN flags, so closing here has

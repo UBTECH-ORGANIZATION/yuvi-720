@@ -75,6 +75,7 @@
 .tch-review,
 .tch-messages,
 .tch-goalsPage,
+.tch-cal,
 .tch-learnings,
 .tch-learningDetail {
   max-inline-size: 1240px;
@@ -347,16 +348,29 @@
 
 /* ── recommendations ───────────────────────────────────────────────────────*/
 
-.tch-recs { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+.tch-recs { list-style: none; margin: 0; padding: 0; display: grid; }
 
+/* Rows with a rule between them, not cards inside a card — three bordered
+   boxes in a narrow column read as three alarms. */
 .tch-rec {
   display: grid;
   gap: var(--sp-2);
-  padding: var(--sp-3) var(--sp-4);
-  border-radius: calc(var(--tch-card-radius) - 6px);
-  border: 1px solid var(--sp-border);
-  background: var(--sp-surface);
+  padding-block: var(--sp-3);
+  border-block-end: 1px solid var(--sp-border);
 }
+
+.tch-rec:first-child { padding-block-start: 0; }
+.tch-rec:last-child { border-block-end: 0; padding-block-end: 0; }
+
+.tch-rec__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.tch-rec__acts { display: inline-flex; align-items: center; gap: var(--sp-2); }
 
 .tch-rec__text { margin: 0; color: var(--sp-ink-700); }
 
@@ -405,14 +419,37 @@
 .tch-avatar--badge .yv-badge { display: block; inline-size: 100%; block-size: 100%; }
 
 /* A learner who has not been seen recently keeps their coin but loses the
-   gradient, matching how the card already dims. */
-.tch-studentCard.is-idle .tch-avatar:not(.tch-avatar--badge) {
+   gradient, matching how the card already dims. Not while the face is still
+   being fetched, though: this selector carries four classes and beat the
+   placeholder below on specificity, which flattened it to a near-white disc
+   with no sweep — on an idle card the avatar simply looked missing. */
+.tch-studentCard.is-idle .tch-avatar:not(.tch-avatar--badge):not(.tch-avatar--pending) {
   background: var(--sp-ink-100);
   color: var(--sp-ink-400);
 }
 
-/* The profile header's placeholder, before the learner's avatar is known. */
-.tch-avatar--pending { background: var(--sp-ink-100); }
+/* Before the roster answers, this child's face is genuinely unknown.
+   The fallback initial is not the right thing to show meanwhile: with no
+   name resolved yet it comes from the learner ID, so it renders a confident
+   wrong letter — and a chosen badge coin then replaces it a moment later.
+   A quiet pulsing circle says "not yet" instead, sweeping with the same
+   animation as every other placeholder on these screens. */
+.tch-avatar--pending {
+  background: linear-gradient(
+    90deg,
+    var(--sp-border) 25%,
+    var(--sp-surface-2) 42%,
+    var(--sp-border) 60%
+  );
+  background-size: 220% 100%;
+  animation: sp-skeleton-sweep 1.4s ease-in-out infinite;
+  /* The span still holds its letter for layout; it must not be readable. */
+  color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tch-avatar--pending { animation: none; }
+}
 
 /* ── a sub-group, as faces ─────────────────────────────────────────────────
    The trigger is a `Tooltip` button, so it has to shed the 18px circle that
