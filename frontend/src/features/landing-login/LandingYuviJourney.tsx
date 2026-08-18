@@ -14,9 +14,11 @@ type FlightPoint = {
 const SCENE_POINTS: Record<string, Omit<FlightPoint, 'x'> & { rtlX: number }> = {
   hero: { rtlX: 0.27, y: 0.5, scale: 0.62, opacity: 1 },
   hub: { rtlX: 0.89, y: 0.38, scale: 0.68, opacity: 1 },
-  features: { rtlX: 0.11, y: 0.55, scale: 0.62, opacity: 1 },
+  journey: { rtlX: 0.08, y: 0.2, scale: 0.5, opacity: 1 },
+  features: { rtlX: 0.89, y: 0.55, scale: 0.62, opacity: 1 },
+  audience: { rtlX: 0.08, y: 0.2, scale: 0.5, opacity: 1 },
   faq: { rtlX: 0.89, y: 0.46, scale: 0.58, opacity: 1 },
-  contact: { rtlX: 0.94, y: 0.52, scale: 0.64, opacity: 1 },
+  contact: { rtlX: 0.11, y: 0.52, scale: 0.64, opacity: 1 },
   exit: { rtlX: 0.5, y: -0.28, scale: 0.42, opacity: 0 },
 }
 
