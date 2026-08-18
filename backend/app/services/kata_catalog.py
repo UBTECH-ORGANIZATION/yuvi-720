@@ -442,14 +442,23 @@ def plays_media(row: dict[str, Any]) -> bool:
 
 
 def kind_for_row(row: dict[str, Any]) -> str:
-    """What the screen IS: `watch` | `read` | `question` | `step`.
+    """What the screen IS: `intro` | `watch` | `read` | `question` | `step`.
 
-    MEDIA WINS over "it also asks". `…-01-01-003` is a video playlist with a
-    comprehension question inside it — the learner spends that screen watching,
-    and calling it "שאלה 3" while the clip is playing describes something they
-    are not doing yet. Whether a screen ASKS is a separate fact (`question_count`),
-    and that is what gates the hint/explanation buttons and the numbering.
+    A component's COVER comes first: the native player's opening screen is a
+    real item (it reports `initialized` like any other), and reading it off its
+    media format called it a reading screen — so the chat opened a "learning
+    step" thread for the lesson's own introduction, beside the מבוא the welcome
+    already owns. Kata rows carry no `screen_kind` and are unaffected.
+
+    After that, MEDIA WINS over "it also asks". `…-01-01-003` is a video
+    playlist with a comprehension question inside it — the learner spends that
+    screen watching, and calling it "שאלה 3" while the clip is playing
+    describes something they are not doing yet. Whether a screen ASKS is a
+    separate fact (`question_count`), and that is what gates the
+    hint/explanation buttons and the numbering.
     """
+    if str(row.get("screen_kind") or "") == "intro":
+        return "intro"
     media = str(row.get("media_format") or "")
     if media in _WATCH_MEDIA:
         return "watch"

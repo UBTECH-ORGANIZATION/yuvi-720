@@ -174,6 +174,9 @@ interface CompanionContextValue {
    *  than one question. Empty for single-question screens: naming a part the
    *  learner cannot see on screen would invent structure. */
   questionParts: Record<string, number>
+  /** Screen ids in the lesson's own order, so the chat can lay its sections
+   *  out the way the learner walked them — not the order replies landed in. */
+  itemOrder: string[]
   /** Screens that teach without asking — their threads are captioned as a
    *  learning step rather than given a question number they do not have. */
   teachingItems: string[]
@@ -317,6 +320,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const [teachingItems, setTeachingItems] = useState<string[]>([])
   const [itemKinds, setItemKinds] = useState<Record<string, LessonItemKind>>({})
   const [itemMedia, setItemMedia] = useState<Record<string, string>>({})
+  const [itemOrder, setItemOrder] = useState<string[]>([])
   // The worker reads the kinds at dequeue (a screen can change while an intro
   // waits its turn), so they live in a ref as well as in state.
   const itemKindsRef = useRef<Record<string, LessonItemKind>>({})
@@ -1103,6 +1107,10 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const maybeEnqueueIntro = useCallback((questionKey: string | null) => {
     const { item, question } = introParts(questionKey)
     if (!item) return
+    // The lesson's cover screen is what the WELCOME is about — opening a
+    // "learning step" thread for it beside the מבוא made the introduction look
+    // skipped before the learner had moved at all.
+    if (itemKindsRef.current[item] === 'intro') return
     const disposition = introDisposition(
       item, question, introducedItemsRef.current, introducedQuestionsRef.current
     )
@@ -1180,6 +1188,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         itemKindsRef.current = kinds   // the worker may dequeue before the re-render
         setItemKinds(kinds)
         setItemMedia(media)
+        setItemOrder(state.items.map((row) => row.id).filter(Boolean))
       }
       if (pushSeqRef.current === seenPush) {
         applyQuestionKey(state.question_key || null, 'poll')
@@ -1626,6 +1635,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         supportUsed,
         questionOrdinals,
         questionParts,
+        itemOrder,
         teachingItems,
         itemKinds,
         itemMedia,

@@ -7,6 +7,22 @@
 <link rel="icon" href="data:,">
 <title>Yuvilab · Learning</title>
 <link rel="stylesheet" href="/content/player-assets/player.css">
+<!-- The player is plain ES modules with no bundler, so the browser would other-
+     wise discover them one hop at a time: player.js, then its imports, then
+     theirs. Inside someone else's frame on a school connection that waterfall is
+     the whole first paint. Declaring them here fetches the graph in parallel. -->
+<link rel="modulepreload" href="/content/player-assets/modules/context.js">
+<link rel="modulepreload" href="/content/player-assets/modules/i18n.js">
+<link rel="modulepreload" href="/content/player-assets/modules/dom.js">
+<link rel="modulepreload" href="/content/player-assets/modules/xapi.js">
+<link rel="modulepreload" href="/content/player-assets/modules/speech.js">
+<link rel="modulepreload" href="/content/player-assets/modules/questions.js">
+<link rel="modulepreload" href="/content/player-assets/modules/grading.js">
+<link rel="modulepreload" href="/content/player-assets/modules/media.js">
+<link rel="modulepreload" href="/content/player-assets/modules/q-choice.js">
+<link rel="modulepreload" href="/content/player-assets/modules/q-match.js">
+<link rel="modulepreload" href="/content/player-assets/modules/q-text.js">
+<link rel="modulepreload" href="/content/player-assets/modules/screens.js">
 </head>
 <body>
 <div id="root" class="lp" aria-live="polite">

@@ -16,6 +16,7 @@
       "id": "ENG.G7.FAMILY.LISTEN-01",
       "learningUnitId": "ENG.G7.FAMILY.LISTEN",
       "title": "Listen and meet the Cohen family",
+      "titleTranslations": { "Hebrew": "מאזינים ומכירים את משפחת כהן", "Arabic": "نستمع ونتعرّف إلى عائلة كوهين", "English": "Listen and meet the Cohen family" },
       "componentPurpose": "הבנייה",
       "isAssessment": false,
       "isRequired": true,
@@ -40,6 +41,18 @@
           "informationToBot": "מסך פתיחה של הרכיב. המטרה: להכין את הלומד לפני ההאזנה — מה הוא הולך לשמוע (תיאור קצר של משפחה), ומה הוא אמור לאתר (שמות, גילים, מה כל אחד אוהב לעשות). אסטרטגיה מומלצת: לקרוא את השאלות לפני ההאזנה, ולהאזין פעם ראשונה בלי לעצור. תפיסה שגויה נפוצה: לומדים חושבים שהם חייבים להבין כל מילה — כאן מספיק לאתר פרטים בודדים. אין כאן שאלה מדורגת.",
           "presentation": {
             "kind": "intro",
+            "image": {
+              "prompt": "A girl about thirteen wearing large headphones, sitting on a beanbag in a bright living room, smiling and listening carefully. Nobody else in the picture.",
+              "src": "ENG.G7.FAMILY.LISTEN/listen-01-01-screen-ce884e7a.jpg",
+              "srcset": "ENG.G7.FAMILY.LISTEN/listen-01-01-screen-ce884e7a-480.webp 480w, ENG.G7.FAMILY.LISTEN/listen-01-01-screen-ce884e7a-960.webp 960w",
+              "width": 1024,
+              "height": 1024,
+              "alt": {
+                "en": "A girl wearing headphones, listening carefully.",
+                "he": "נערה עם אוזניות מקשיבה בריכוז.",
+                "ar": "فتاة تضع سمّاعات وتستمع بتركيز."
+              }
+            },
             "prompt": {
               "en": "You are going to hear Maya talk about her family.",
               "he": "עוד רגע תשמעו את מאיה מספרת על המשפחה שלה.",
@@ -63,7 +76,7 @@
           "title": "Maya's family — slow and clear",
           "contentType": "הבנייה",
           "mediaFormat": "audio",
-          "informationToBot": "פריט האזרה מרכזי. הלומד שומע קטע איטי וברור שבו מאיה מציגה ארבעה בני משפחה. יעד: לאתר מידע קונקרטי — שם, גיל, תחביב. אוצר מילים בליבה: brother, sister, grandmother, twins, plays football, paints, cooks. אסטרטגיה: אפשר להאזין שוב כמה פעמים, וכפתור האטה זמין. תפיסות שגויות נפוצות: (1) בלבול בין sister ל-brother כי שתי המילים מופיעות באותו משפט; (2) שמיעת 'thirteen' כ-'thirty' — ההבדל הוא בהטעמה. אם הלומד טועה פעמיים באותה שאלה, כדאי להציע להאזין רק למשפט הרלוונטי במקום לחזור על כל הקטע.",
+          "informationToBot": "פריט האזנה מרכזי. הלומד שומע קטע איטי וברור שבו מאיה מציגה ארבעה בני משפחה. יעד: לאתר מידע קונקרטי — שם, גיל, תחביב. אוצר מילים בליבה: brother, sister, grandmother, twins, plays football, paints, cooks. אסטרטגיה: אפשר להאזין שוב כמה פעמים, וכפתור האטה זמין. תפיסות שגויות נפוצות: (1) בלבול בין sister ל-brother כי שתי המילים מופיעות באותו משפט; (2) שמיעת 'thirteen' כ-'thirty' — ההבדל הוא בהטעמה. אם הלומד טועה פעמיים באותה שאלה, כדאי להציע להאזין רק למשפט הרלוונטי במקום לחזור על כל הקטע.",
           "presentation": {
             "kind": "listening",
             "prompt": {
@@ -139,56 +152,6 @@
               }
             }
           ]
-        },
-        {
-          "id": "ENG.G7.FAMILY.LISTEN-01-03",
-          "title": "What did you notice?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הרכיב (הערכה עצמית אחרי המשימה). המטרה: שהלומד ינסח לעצמו מה עזר לו בהאזנה. אין תשובה נכונה ואין ניקוד. אם הלומד בוחר 'היה לי קשה' — כדאי להציע לו את הרכיב החלופי בייצוג טקסטואלי, לא לחזור על אותו קטע.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "What helped you understand?",
-              "he": "מה עזר לכם להבין?",
-              "ar": "ما الذي ساعدكم على الفهم؟"
-            },
-            "choices": [
-              {
-                "id": "again",
-                "label": {
-                  "en": "Listening more than once",
-                  "he": "האזנה יותר מפעם אחת",
-                  "ar": "الاستماع أكثر من مرّة"
-                }
-              },
-              {
-                "id": "questions-first",
-                "label": {
-                  "en": "Reading the questions first",
-                  "he": "קריאת השאלות לפני ההאזנה",
-                  "ar": "قراءة الأسئلة قبل الاستماع"
-                }
-              },
-              {
-                "id": "transcript",
-                "label": {
-                  "en": "Opening the transcript",
-                  "he": "פתיחת התמליל",
-                  "ar": "فتح النص المكتوب"
-                }
-              },
-              {
-                "id": "hard",
-                "label": {
-                  "en": "It was still hard for me",
-                  "he": "עדיין היה לי קשה",
-                  "ar": "ما زال الأمر صعباً عليّ"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -196,6 +159,7 @@
       "id": "ENG.G7.FAMILY.LISTEN-01B",
       "learningUnitId": "ENG.G7.FAMILY.LISTEN",
       "title": "Read and meet the Cohen family",
+      "titleTranslations": { "Hebrew": "קוראים ומכירים את משפחת כהן", "Arabic": "نقرأ ونتعرّف إلى عائلة كوهين", "English": "Read and meet the Cohen family" },
       "componentPurpose": "הבנייה",
       "isAssessment": false,
       "isRequired": false,
@@ -319,6 +283,7 @@
       "id": "ENG.G7.FAMILY.LISTEN-02",
       "learningUnitId": "ENG.G7.FAMILY.LISTEN",
       "title": "Real speed: a family phone call",
+      "titleTranslations": { "Hebrew": "בקצב אמיתי: שיחת טלפון משפחתית", "Arabic": "بسرعة طبيعية: مكالمة هاتفية عائلية", "English": "Real speed: a family phone call" },
       "componentPurpose": "תרגול",
       "isAssessment": false,
       "isRequired": true,
@@ -461,56 +426,6 @@
               }
             }
           ]
-        },
-        {
-          "id": "ENG.G7.FAMILY.LISTEN-02-02",
-          "title": "How did that go?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי אחרי התרגול בקצב טבעי. יעד: שהלומד יבחין בין 'לא הבנתי מילה' לבין 'לא הספקתי' — שתי בעיות שונות עם פתרונות שונים. אם נבחר 'לא הספקתי', ההמלצה היא להאזין לרעיון הכללי ולא לתרגם; אם נבחר 'מילים לא מוכרות', ההמלצה היא רכיב אוצר המילים.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "The fast version — what was the hard part?",
-              "he": "בגרסה המהירה — מה היה החלק הקשה?",
-              "ar": "في النسخة السريعة — ما كان الجزء الصعب؟"
-            },
-            "choices": [
-              {
-                "id": "speed",
-                "label": {
-                  "en": "They spoke too fast for me",
-                  "he": "הם דיברו מהר מדי בשבילי",
-                  "ar": "تحدّثوا بسرعة كبيرة بالنسبة لي"
-                }
-              },
-              {
-                "id": "words",
-                "label": {
-                  "en": "There were words I did not know",
-                  "he": "היו מילים שלא הכרתי",
-                  "ar": "كانت هناك كلمات لا أعرفها"
-                }
-              },
-              {
-                "id": "two-speakers",
-                "label": {
-                  "en": "Two speakers confused me",
-                  "he": "שני דוברים בלבלו אותי",
-                  "ar": "المتحدّثان أربكاني"
-                }
-              },
-              {
-                "id": "fine",
-                "label": {
-                  "en": "It went well",
-                  "he": "הלך לי טוב",
-                  "ar": "سار الأمر جيداً"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -518,6 +433,7 @@
       "id": "ENG.G7.FAMILY.LISTEN-03",
       "learningUnitId": "ENG.G7.FAMILY.LISTEN",
       "title": "Check: listening to a new family",
+      "titleTranslations": { "Hebrew": "בדיקה: מאזינים למשפחה חדשה", "Arabic": "تحقّق: نستمع إلى عائلة جديدة", "English": "Check: listening to a new family" },
       "componentPurpose": "הערכה",
       "isAssessment": true,
       "isRequired": true,

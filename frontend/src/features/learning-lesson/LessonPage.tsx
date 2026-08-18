@@ -28,6 +28,9 @@ interface ProviderMessage {
   source?: string
   event?: string
   verb?: string
+  // The native player reports its own pass/fail verdict on `component-completed`.
+  // Kata never postMessages, so this is only ever read for our own content.
+  success?: boolean
 }
 
 type FrameState = 'loading' | 'ready' | 'error'
@@ -69,6 +72,12 @@ export function LessonPage() {
   // That is a normal, explainable state — not the "something went wrong" card.
   const [lockedOut, setLockedOut] = useState(false)
   const [completed, setCompleted] = useState(false)
+  // The learner clicked "done" but the level did not pass its gate. The level
+  // stays incomplete (that is the gate's job) — but silence here read as a dead
+  // button, so this opens an honest "attempt finished" dialog with the same
+  // reflection the completion dialog carries.
+  const [attemptFinished, setAttemptFinished] = useState(false)
+  const attemptActionRef = useRef<HTMLButtonElement>(null)
   const [progressionReady, setProgressionReady] = useState(false)
   const [roadmap, setRoadmap] = useState<LearningUnitDTO | null>(null)
   const [travellingFromId, setTravellingFromId] = useState<string | null>(null)
@@ -133,6 +142,7 @@ export function LessonPage() {
           setForceFrame(false)
           setOpenedExternally(false)
           setCompleted(false)
+          setAttemptFinished(false)
           setProgressionReady(false)
           setWhatNowOpen(false)
           stepsAtOpenRef.current = nextSession.roadmap.steps_total ?? null
@@ -254,6 +264,14 @@ export function LessonPage() {
       if (event.data.source !== 'content-provider') return
       setFrameState('ready')
       if (event.data.event === 'component-completed' || event.data.verb === 'completed') {
+        if (event.data.event === 'component-completed' && event.data.success === false) {
+          // Below the gate the catalog will never flip to 'completed', so
+          // polling it would only end in silence. Open the attempt dialog
+          // instead — unless this component was already completed before this
+          // sitting, where "not completed yet" would be a lie.
+          if (!completedRef.current && !wasCompletedAtLaunchRef.current) setAttemptFinished(true)
+          return
+        }
         if (event.data.event === 'component-completed' && !completionPendingRef.current) {
           void confirmPersistedCompletion()
         }
@@ -341,6 +359,16 @@ export function LessonPage() {
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [completed, progressionReady])
+
+  useEffect(() => {
+    if (!attemptFinished) return
+    attemptActionRef.current?.focus()
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setAttemptFinished(false)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [attemptFinished])
 
   useEffect(() => {
     if (!completed) return
@@ -734,6 +762,60 @@ export function LessonPage() {
                       </button>
                     )}
                   </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        ), document.body)}
+
+        {/* The gate held: the attempt finished below the pass mark, the level
+            stays open, and the learner hears that in words instead of silence.
+            Same reflection as a completion — the attempt happened and is worth
+            thinking about either way. */}
+        {attemptFinished && !completed && createPortal((
+          <div className="learning-completion-backdrop" role="presentation">
+            <section
+              className="learning-completion-dialog is-single"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="learning-attempt-title"
+              aria-describedby="learning-attempt-description"
+            >
+              <button
+                className="learning-completion-dialog__close"
+                type="button"
+                aria-label={t('learning.lesson.completionDialog.close')}
+                onClick={() => setAttemptFinished(false)}
+              >
+                ×
+              </button>
+              <div className="learning-completion-work">
+                <header className="learning-completion-work__head">
+                  <div className="learning-completion-icon is-attempt"><Icon name="spark" size={19} /></div>
+                  <div>
+                    <span>{t('learning.lesson.attemptDialog.eyebrow')}</span>
+                    <h2 id="learning-attempt-title">{t('learning.lesson.attemptDialog.title')}</h2>
+                  </div>
+                </header>
+                <p id="learning-attempt-description" className="learning-completion-work__lede">
+                  {t('learning.lesson.attemptDialog.body')}
+                </p>
+                <div className="learning-completion-work__body">
+                  <ReflectionPanel
+                    componentId={session?.component.id || null}
+                    sessionId={session?.session_id || null}
+                    onDone={() => undefined}
+                  />
+                </div>
+                <div className="learning-completion-work__choices">
+                  <button
+                    ref={attemptActionRef}
+                    className="learning-completion-cta"
+                    type="button"
+                    onClick={() => setAttemptFinished(false)}
+                  >
+                    {t('learning.lesson.attemptDialog.keepGoing')}
+                  </button>
                 </div>
               </div>
             </section>

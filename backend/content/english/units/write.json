@@ -16,6 +16,7 @@
       "id": "ENG.G7.FAMILY.WRITE-01",
       "learningUnitId": "ENG.G7.FAMILY.WRITE",
       "title": "Read a model text and find the linking words",
+      "titleTranslations": { "Hebrew": "קוראים טקסט לדוגמה ומאתרים את מילות הקישור", "Arabic": "نقرأ نصّاً نموذجيّاً ونجد كلمات الربط", "English": "Read a model text and find the linking words" },
       "componentPurpose": "הבנייה",
       "isAssessment": false,
       "isRequired": true,
@@ -40,6 +41,18 @@
           "informationToBot": "מסך פתיחה של רכיב ההבנייה ביעד הכתיבה. המטרה: להסביר שלפני שכותבים, קוראים טקסט מודל ולומדים ממנו איך מחברים משפטים. שלוש מילות הקישור בליבה: and (מוסיף מידע), but (ניגוד), because (סיבה). אסטרטגיה: לקרוא קודם את הטקסט כולו, ואז לחפש את מילות הקישור. תפיסות שגויות נפוצות: (1) לומדים חושבים שטקסט טוב הוא טקסט ארוך — כאן המדד הוא בהירות וקישור, לא אורך; (2) שימוש ב-and בין כל שני משפטים, גם כשיש ניגוד או סיבה. אין כאן שאלה מדורגת.",
           "presentation": {
             "kind": "intro",
+            "image": {
+              "prompt": "A teenage boy about thirteen at a desk with an open notebook and a pen, writing a short text, a mug and a small plant beside him.",
+              "src": "ENG.G7.FAMILY.WRITE/write-01-01-screen-c25cde30.jpg",
+              "srcset": "ENG.G7.FAMILY.WRITE/write-01-01-screen-c25cde30-480.webp 480w, ENG.G7.FAMILY.WRITE/write-01-01-screen-c25cde30-960.webp 960w",
+              "width": 1024,
+              "height": 1024,
+              "alt": {
+                "en": "A teenage boy writing a short text in a notebook.",
+                "he": "נער כותב טקסט קצר במחברת.",
+                "ar": "فتى يكتب نصاً قصيراً في دفتر."
+              }
+            },
             "prompt": {
               "en": "Good writing is not long writing. It is writing that connects.",
               "he": "כתיבה טובה היא לא כתיבה ארוכה. היא כתיבה שמחברת בין רעיונות.",
@@ -151,56 +164,6 @@
               }
             }
           ]
-        },
-        {
-          "id": "ENG.G7.FAMILY.WRITE-01-03",
-          "title": "Which word is yours?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי בסוף רכיב ההבנייה. המטרה: שהלומד יזהה איזו מילת קישור כבר מרגישה לו טבעית ואיזו עדיין לא. אין תשובה נכונה ואין ניקוד. אם נבחר 'because עדיין מבלבל אותי' — כדאי להזכיר שהיא תמיד עונה על 'למה', ולהציע לנסח שאלה לפני שכותבים. אם נבחר 'אני משתמש רק ב-and' — זו בדיוק הנקודה שהתרגול הבא מטפל בה.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "Which linking word feels natural to you already?",
-              "he": "איזו מילת קישור כבר מרגישה לכם טבעית?",
-              "ar": "أيّ أداة ربط تبدو لكم طبيعية بالفعل؟"
-            },
-            "choices": [
-              {
-                "id": "and",
-                "label": {
-                  "en": "and — I use it a lot",
-                  "he": "and — אני משתמש בה הרבה",
-                  "ar": "and — أستخدمها كثيراً"
-                }
-              },
-              {
-                "id": "but",
-                "label": {
-                  "en": "but — I understand when to use it",
-                  "he": "but — אני מבין מתי להשתמש בה",
-                  "ar": "but — أفهم متى أستخدمها"
-                }
-              },
-              {
-                "id": "because",
-                "label": {
-                  "en": "because — this one still confuses me",
-                  "he": "because — היא עדיין מבלבלת אותי",
-                  "ar": "because — ما زالت تربكني"
-                }
-              },
-              {
-                "id": "only-and",
-                "label": {
-                  "en": "I only ever use and",
-                  "he": "אני משתמש רק ב-and",
-                  "ar": "أستخدم and فقط دائماً"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -208,6 +171,7 @@
       "id": "ENG.G7.FAMILY.WRITE-01B",
       "learningUnitId": "ENG.G7.FAMILY.WRITE",
       "title": "Hear how the sentences join",
+      "titleTranslations": { "Hebrew": "שומעים איך המשפטים מתחברים", "Arabic": "نسمع كيف تترابط الجمل", "English": "Hear how the sentences join" },
       "componentPurpose": "הבנייה",
       "isAssessment": false,
       "isRequired": false,
@@ -336,56 +300,6 @@
               }
             }
           ]
-        },
-        {
-          "id": "ENG.G7.FAMILY.WRITE-01B-03",
-          "title": "What did you hear?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הייצוג הקולי. המטרה: שהלומד יבחין האם ההאזנה עזרה לו לזהות את מבנה הפסקה. אין ניקוד ואין תשובה נכונה. אם נבחר 'שמעתי משפט אחד ארוך' — ההמלצה היא לחזור לייצוג הכתוב ולראות את הגבולות בעיניים, כי זו בעיה של תפיסת מבנה ולא של אוצר מילים.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "After listening, what is clearer to you?",
-              "he": "אחרי ההאזנה, מה יותר ברור לכם?",
-              "ar": "بعد الاستماع، ما الذي أصبح أوضح لديكم؟"
-            },
-            "choices": [
-              {
-                "id": "borders",
-                "label": {
-                  "en": "Where one sentence ends and the next begins",
-                  "he": "איפה נגמר משפט אחד ומתחיל הבא",
-                  "ar": "أين تنتهي جملة وتبدأ التي تليها"
-                }
-              },
-              {
-                "id": "meaning",
-                "label": {
-                  "en": "What each joining word means",
-                  "he": "מה המשמעות של כל מילת חיבור",
-                  "ar": "ما معنى كلّ أداة ربط"
-                }
-              },
-              {
-                "id": "one-long",
-                "label": {
-                  "en": "I heard it as one long sentence",
-                  "he": "שמעתי את זה כמשפט אחד ארוך",
-                  "ar": "سمعته كجملة واحدة طويلة"
-                }
-              },
-              {
-                "id": "ready",
-                "label": {
-                  "en": "I am ready to write my own",
-                  "he": "אני מוכן לכתוב בעצמי",
-                  "ar": "أنا جاهز للكتابة بنفسي"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -393,6 +307,7 @@
       "id": "ENG.G7.FAMILY.WRITE-02",
       "learningUnitId": "ENG.G7.FAMILY.WRITE",
       "title": "Choose the linking word, then write your own text",
+      "titleTranslations": { "Hebrew": "בוחרים את מילת הקישור, ואז כותבים טקסט משלכם", "Arabic": "نختار كلمة الربط ثم نكتب نصّاً من عندنا", "English": "Choose the linking word, then write your own text" },
       "componentPurpose": "תרגול",
       "isAssessment": false,
       "isRequired": true,
@@ -442,6 +357,7 @@
           "mediaFormat": "text",
           "informationToBot": "תרגול ממוקד בבחירת מילת הקישור. הלומד מקבל שני חצאי משפט וצריך לבחור את המילה שמתאימה ליחס ביניהם. יעד: לבסס את ההבחנה בין הוספה (and), ניגוד (but) וסיבה (because) לפני הכתיבה החופשית. אסטרטגיה: לשאול על כל משפט — האם החצי השני מוסיף, מפתיע או מסביר? תפיסות שגויות נפוצות: (1) שימוש אוטומטי ב-and בכל מקום; (2) שימוש ב-because כשצריך but, כי לומדים מזהים 'קשר בין דברים' ולא את סוג הקשר; (3) שימוש ב-so במקום because כשהסדר של הסיבה והתוצאה מתהפך. אם הלומד טועה פעמיים באותה הבחנה, כדאי להציע לו לקרוא בקול את שני חצאי המשפט בנפרד.",
           "presentation": {
+            "kind": "practice",
             "prompt": {
               "en": "Read both halves. Then choose the word that joins them correctly.",
               "he": "קראו את שני חצאי המשפט. אחר כך בחרו את המילה שמחברת ביניהם נכון.",
@@ -576,6 +492,7 @@
       "id": "ENG.G7.FAMILY.WRITE-02A",
       "learningUnitId": "ENG.G7.FAMILY.WRITE",
       "title": "Challenge: a paragraph with a reason and a contrast",
+      "titleTranslations": { "Hebrew": "אתגר: פסקה עם סיבה ועם ניגוד", "Arabic": "تحدٍّ: فقرة فيها سبب وتضادّ", "English": "Challenge: a paragraph with a reason and a contrast" },
       "componentPurpose": "תרגול",
       "isAssessment": false,
       "isRequired": false,
@@ -617,7 +534,7 @@
             },
             "goal": {
               "en": "A paragraph has ideas that hold on to each other: this happens because of that, but this one is different.",
-              "he": "בפסקה הרעיונות אוחזים זה בזה: זה קורה בגלל זה, אבל זה אחר.",
+              "he": "בפסקה הרעיונות מחוברים זה לזה: דבר אחד קורה בגלל השני, והשני שונה ממנו.",
               "ar": "في الفقرة تتمسّك الأفكار ببعضها: هذا يحدث بسبب ذاك، لكنّ هذا مختلف."
             },
             "strategy": {
@@ -675,48 +592,6 @@
             ]
           },
           "questions": []
-        },
-        {
-          "id": "ENG.G7.FAMILY.WRITE-02A-03",
-          "title": "What was the hard part?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "מסך רפלקציה בסיום משימת הכתיבה המתקדמת. יעד: לזהות איפה בדיוק היה הקושי — ברעיון, במילות הקישור או במבנה. אין תשובה נכונה ואין ניקוד. הבחירה מסייעת לנתב את הצעד הבא: קושי ברעיון מצביע על צורך בבנק רעיונות, קושי במילות קישור מצביע על חזרה לרכיב הדקדוק.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "Which part took you the longest?",
-              "he": "איזה חלק לקח לכם הכי הרבה זמן?",
-              "ar": "أيّ جزء استغرق منكم أطول وقت؟"
-            },
-            "choices": [
-              {
-                "id": "ideas",
-                "label": {
-                  "en": "Thinking what to write about",
-                  "he": "לחשוב על מה לכתוב",
-                  "ar": "التفكير في ما أكتب عنه"
-                }
-              },
-              {
-                "id": "linkers",
-                "label": {
-                  "en": "Choosing the linking words",
-                  "he": "לבחור את מילות הקישור",
-                  "ar": "اختيار أدوات الربط"
-                }
-              },
-              {
-                "id": "english",
-                "label": {
-                  "en": "Saying it in English",
-                  "he": "לומר את זה באנגלית",
-                  "ar": "قولها بالإنجليزيّة"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -724,6 +599,7 @@
       "id": "ENG.G7.FAMILY.WRITE-03",
       "learningUnitId": "ENG.G7.FAMILY.WRITE",
       "title": "Check: writing about a family",
+      "titleTranslations": { "Hebrew": "בדיקה: כותבים על משפחה", "Arabic": "تحقّق: نكتب عن عائلة", "English": "Check: writing about a family" },
       "componentPurpose": "הערכה",
       "isAssessment": true,
       "isRequired": true,
@@ -773,6 +649,7 @@
           "mediaFormat": "text",
           "informationToBot": "פריט הערכה של בחירת מילת הקישור. המשפטים חדשים ועוסקים במשפחה של שרה, כדי שההצלחה תעיד על ההבחנה עצמה ולא על זיכרון המשפטים שתורגלו. יעד: להבחין נכון בין הוספה, ניגוד וסיבה. בזמן ההערכה אין לחשוף את התשובה, אין לרמוז עליה ואין לצמצם אפשרויות. מותר להזכיר אסטרטגיה כללית בלבד: לקרוא כל חצי משפט בנפרד ולשאול מה היחס ביניהם.",
           "presentation": {
+            "kind": "practice",
             "prompt": {
               "en": "Sara is writing about her family. Choose the word that joins each pair of ideas.",
               "he": "שרה כותבת על המשפחה שלה. בחרו את המילה שמחברת כל זוג רעיונות.",
