@@ -43,6 +43,7 @@ KIND_KUDOS = "kudos"
 KIND_ALERT = "alert"
 
 KIND_TASK_ASSIGNED = "task_assigned"
+KIND_DEADLINE_REMINDER = "deadline_reminder"
 
 # The two directions of the direct-message channel. Two kinds and not one,
 # because `recipient_role` decides which bell rings and the two rows deep-link
@@ -53,7 +54,7 @@ KIND_STUDENT_MESSAGE = "student_message"
 
 KINDS = (
     KIND_GOAL_ASSIGNED, KIND_GOAL_APPROVED, KIND_TEACHER_NOTE, KIND_KUDOS, KIND_ALERT,
-    KIND_TASK_ASSIGNED, KIND_TEACHER_MESSAGE, KIND_STUDENT_MESSAGE,
+    KIND_TASK_ASSIGNED, KIND_DEADLINE_REMINDER, KIND_TEACHER_MESSAGE, KIND_STUDENT_MESSAGE,
 )
 
 # One person can be both. `gal` is a learner AND a teacher, and a bell that

@@ -84,6 +84,21 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     return () => { active = false }
   }, [user, nonce, role])
 
+  useEffect(() => {
+    if (!user || role !== 'learner') return
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') refresh()
+    }
+    window.addEventListener('focus', refreshWhenVisible)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    const interval = window.setInterval(refreshWhenVisible, 15 * 60 * 1000)
+    return () => {
+      window.removeEventListener('focus', refreshWhenVisible)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+      window.clearInterval(interval)
+    }
+  }, [user, role, refresh])
+
   // Live arrivals. The learner's stream is the coach channel (which also carries
   // their `user:` topic); a teacher-only account has no such stream, so their
   // bell fills on load and on refresh — teacher-side notifications are not
