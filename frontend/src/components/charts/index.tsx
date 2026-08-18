@@ -27,14 +27,47 @@ interface ProgressRingProps {
   label?: string
   sublabel?: string
   tone?: 'primary' | 'success' | 'warn' | 'danger'
+  /** 'half' draws a top semicircle dial that fills start-to-end. Like every
+   *  plot here it runs left to right in every language. */
+  arc?: 'full' | 'half'
 }
 
 export function ProgressRing({
-  percent, size = 72, label, sublabel, tone = 'primary',
+  percent, size = 72, label, sublabel, tone = 'primary', arc = 'full',
 }: ProgressRingProps) {
   const clamped = Math.max(0, Math.min(100, Math.round(percent)))
   const stroke = 7
   const radius = (size - stroke) / 2
+  const toneVar = `var(--sp-${tone === 'primary' ? 'primary-600' : `${tone}-600`})`
+  const ariaValue = label ? `${label}: ${clamped}%` : `${clamped}%`
+
+  if (arc === 'half') {
+    const cx = size / 2
+    const cy = size / 2
+    const halfLength = Math.PI * radius
+    const path = `M ${cx - radius},${cy} A ${radius},${radius} 0 0 1 ${cx + radius},${cy}`
+    return (
+      <div className="sp-chart-ring sp-chart-ring--half" dir="ltr"
+           style={{ inlineSize: size }}>
+        <svg
+          width={size} height={size / 2 + stroke}
+          viewBox={`0 0 ${size} ${size / 2 + stroke}`}
+          role="img" aria-label={ariaValue}
+        >
+          <path d={path} fill="none" stroke="var(--sp-border)"
+                strokeWidth={stroke} strokeLinecap="round" />
+          <path d={path} fill="none" stroke={toneVar}
+                strokeWidth={stroke} strokeLinecap="round"
+                strokeDasharray={`${(clamped / 100) * halfLength} ${halfLength}`} />
+        </svg>
+        <div className="sp-chart-ring__value" aria-hidden="true">
+          <strong>{clamped}%</strong>
+          {sublabel ? <span>{sublabel}</span> : null}
+        </div>
+      </div>
+    )
+  }
+
   const circumference = 2 * Math.PI * radius
   const filled = (clamped / 100) * circumference
 
@@ -42,7 +75,7 @@ export function ProgressRing({
     <div className="sp-chart-ring" style={{ inlineSize: size }}>
       <svg
         width={size} height={size} viewBox={`0 0 ${size} ${size}`}
-        role="img" aria-label={label ? `${label}: ${clamped}%` : `${clamped}%`}
+        role="img" aria-label={ariaValue}
       >
         <circle
           cx={size / 2} cy={size / 2} r={radius} fill="none"
@@ -50,7 +83,7 @@ export function ProgressRing({
         />
         <circle
           cx={size / 2} cy={size / 2} r={radius} fill="none"
-          stroke={`var(--sp-${tone === 'primary' ? 'primary-600' : `${tone}-600`})`}
+          stroke={toneVar}
           strokeWidth={stroke} strokeLinecap="round"
           strokeDasharray={`${filled} ${circumference}`}
           transform={`rotate(-90 ${size / 2} ${size / 2})`}

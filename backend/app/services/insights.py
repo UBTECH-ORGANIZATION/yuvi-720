@@ -16,7 +16,7 @@ from app.brain.org import get_group, learners_in_group
 from app.brain.repository import get_brain
 from app.services.events import get_recent_events
 from app.services.learning_timing import PROLONGED_INTERACTION_SECONDS
-from app.services.planner import plan_next
+from app.services.planner import next_focus, plan_next
 
 INACTIVITY_DAYS = 6
 LOW_SUCCESS_STREAK = 3
@@ -76,9 +76,9 @@ REC = {
     },
     "build_strength": {"he": "בסס/י על חוזקה קיימת", "ar": "ابنِ على نقطة قوة", "en": "Build on an existing strength"},
     "build_strength_named": {
-        "he": "\"{strength}\" היא כבר חוזקה מתועדת — כדאי לפתוח ממנה אל החומר הקשה",
-        "ar": "\"{strength}\" نقطة قوة موثّقة بالفعل — يُنصح بالانطلاق منها إلى المادة الصعبة",
-        "en": "\"{strength}\" is already a recorded strength — open from there into the hard material",
+        "he": "\"{strength}\" היא חוזקה מתועדת — פתח/י את הנושא הקשה הבא בדוגמה מהתחום הזה, או בנה/י משימה שנשענת עליו",
+        "ar": "\"{strength}\" نقطة قوة موثّقة — افتتح/ي الموضوع الصعب التالي بمثال من هذا المجال، أو ابنِ مهمة تستند إليها",
+        "en": "\"{strength}\" is a recorded strength — open the next hard topic with an example from it, or build a task that leans on it",
     },
     "check_in": {"he": "בדוק/י אם כדאי לפרק את המשימה לצעד קטן או להציע רמז", "ar": "تحقق إن كان من المفيد تقسيم المهمة أو تقديم تلميح", "en": "Check whether to break the task into a smaller step or offer a hint"},
     "check_in_minutes": {
@@ -302,6 +302,93 @@ def objectives_progress(
     return result
 
 
+def objective_breakdown(
+    brain: dict[str, Any], *, subject: str, language: str = "he",
+    activity_rows: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """Every objective the subject has, with where this child stands on it.
+
+    The status band's dial says "1 of 3"; this is the list behind that number —
+    catalogue objectives in curriculum order, each carrying its mastery state
+    and the raw counts it derives from. Nothing is estimated: `percent` is 100
+    when mastery marked it achieved, otherwise the mastery score the evidence
+    engine already keeps, otherwise 0.
+    """
+    from app.brain.mastery import entry_for
+    from app.services import kata_catalog
+
+    mastery = brain.get("mastery") or {}
+
+    # What the child actually DID there, from the same per-question rows the
+    # profile shows — questions touched, minutes, help leaned on, and when.
+    worked: dict[str, dict[str, Any]] = {}
+    for row in activity_rows or []:
+        oid = row.get("objective_id")
+        if not oid or not row.get("attempts"):
+            continue
+        slot = worked.setdefault(oid, {"questions": 0, "seconds": 0.0,
+                                       "help_used": 0, "last_at": None})
+        slot["questions"] += 1
+        slot["seconds"] += float(row.get("time_seconds") or 0)
+        slot["help_used"] += (
+            int(row.get("hints_used") or 0) + int(row.get("content_hints_used") or 0)
+            + int(row.get("explanations_used") or 0) + int(row.get("chat_turns") or 0))
+        last = row.get("last_at")
+        if last and (slot["last_at"] is None or str(last) > str(slot["last_at"])):
+            slot["last_at"] = last
+
+    rows: list[dict[str, Any]] = []
+    for objective in kata_catalog.objectives_for(subject):
+        objective_id = str(objective.get("id") or "")
+        entry = entry_for(mastery, objective_id)
+        achieved = bool(entry.get("achieved"))
+        attempts = int(entry.get("attempts") or 0)
+        score = entry.get("score_ewma")
+        percent = 100 if achieved else (
+            max(0, min(99, round(100 * float(score))))
+            if isinstance(score, (int, float)) else 0)
+        rows.append({
+            "objective_id": objective_id,
+            "title": kata_catalog.objective_title(objective_id, language)
+            or objective.get("title"),
+            # For the collision fallback below — never sent to the client.
+            "_unit_ids": objective.get("unit_ids") or [],
+            "order": objective.get("order"),
+            "status": ("mastered" if achieved
+                       else "in_progress" if attempts else "not_started"),
+            "needs_review": bool(entry.get("needs_review")),
+            "attempts": attempts,
+            "successes": int(entry.get("successes") or 0),
+            "percent": percent,
+            "questions": (worked.get(objective_id) or {}).get("questions", 0),
+            "minutes": round((worked.get(objective_id) or {}).get("seconds", 0) / 60),
+            "help_used": (worked.get(objective_id) or {}).get("help_used", 0),
+            "last_at": (worked.get(objective_id) or {}).get("last_at"),
+        })
+    # The registry names objectives at the SUB-TOPIC level, so two objectives
+    # under one sub-topic genuinely share a title (MASS-PRACTICE and GROSS-NET
+    # are both "מסה ונפח של גופים") — two identical rows read as a bug. Where
+    # titles collide, each row falls to its own unit's title, exactly as the
+    # hardest-topics panel does.
+    title_count: dict[str, int] = {}
+    for row in rows:
+        title_count[row["title"]] = title_count.get(row["title"], 0) + 1
+    for row in rows:
+        if title_count.get(row["title"], 0) >= 2:
+            unit_names = [
+                name for name in (
+                    kata_catalog.unit_title(unit_id, language)
+                    for unit_id in row["_unit_ids"]
+                ) if name
+            ]
+            if unit_names:
+                row["title"] = " · ".join(dict.fromkeys(unit_names))
+        del row["_unit_ids"]
+
+    rows.sort(key=lambda row: (row.get("order") is None, row.get("order") or 0))
+    return rows
+
+
 def _strengths_detail(
     brain: dict[str, Any], events: list[dict[str, Any]], language: str
 ) -> list[dict[str, Any]]:
@@ -425,7 +512,10 @@ async def student_insights(
     await kata_catalog.ensure_loaded()
     brain = await get_brain(learner_id)
     recent = await get_recent_events(learner_id, limit=20)
-    plan = plan_next(brain)
+    # Same computation `plan_next` did, plus the cross-subject pick the student
+    # dashboard's hero is built on — so teacher and child see the same "next".
+    focus = next_focus(brain)
+    plan = focus["plan"]
 
     days_inactive, last_activity_at, activity_source = await _days_inactive(learner_id, recent)
     fail_streak = _trailing_fail_streak(recent)
@@ -744,6 +834,16 @@ async def student_insights(
         "objectives_progress": progress_by_subject,
         "subject_filter": subject,
         "next": {s: plan[s]["next_titles"] for s in plan},
+        # Where the platform would take this child next — the profile's focus
+        # dial. Additive: `next` above keeps its shape for existing consumers.
+        "focus": {
+            "subject": focus.get("subject"),
+            "objective_id": focus.get("objective_id"),
+            "objective_title": kata_catalog.objective_title(
+                focus.get("objective_id"), language)
+            if focus.get("objective_id") else None,
+            "mode": focus.get("mode"),
+        },
         "struggle_items": struggle_items,
         # How the system sees this learner, in sentences it has already written.
         "portrait": _portrait(brain),

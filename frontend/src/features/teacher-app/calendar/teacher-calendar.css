@@ -1,0 +1,402 @@
+@import '../shared/teacher-shared.css';
+
+/* The class calendar.
+ *
+ * The grid is direction-agnostic: it inherits the document's `dir`, so in
+ * he/ar the week reads right-to-left with Sunday on the right, without a
+ * single mirrored rule. The page frame (max-width, centring, padding) is NOT
+ * declared here — `.tch-cal` is in the shared frame list in
+ * `teacher-shared.css`, which `tests/teacher-page-frame.test.ts` enforces.
+ *
+ * One accent per source, used only as a 3px edge and a soft icon chip — never
+ * as a filled row. Four saturated blocks in a month cell is noise, and the
+ * teacher is scanning for shape, not colour. */
+
+.tch-cal {
+  display: grid;
+  gap: var(--sp-4);
+  --cal-event: var(--sp-primary-700);
+  --cal-task: #2d8f8a;
+  --cal-goal: var(--sp-warn-600);
+  --cal-meeting: #7c74a8;
+}
+
+[data-theme='dark'] .tch-cal {
+  --cal-task: #5fd3cb;
+  --cal-meeting: #b3a9e0;
+}
+
+/* ── toolbar ────────────────────────────────────────────────────────────── */
+
+.tch-cal__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.tch-cal__nav { display: flex; align-items: center; gap: var(--sp-2); }
+
+.tch-cal__step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 10px;
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+  color: var(--sp-ink-500);
+  cursor: pointer;
+}
+.tch-cal__step:hover { color: var(--sp-ink-900); border-color: var(--tch-hover-ring); }
+/* One glyph, mirrored — so "next" always points the way the language reads. */
+.tch-cal__step--next .sp-icon { transform: rotate(180deg); }
+
+.tch-cal__heading {
+  margin-inline: var(--sp-2);
+  font-size: var(--sp-fs-lg);
+  color: var(--sp-ink-900);
+  min-inline-size: 160px;
+}
+
+.tch-cal__views {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 12px;
+  background: var(--sp-bg-subtle);
+  border: 1px solid var(--sp-border);
+}
+.tch-cal__view {
+  border: 0;
+  background: transparent;
+  border-radius: 9px;
+  padding: var(--sp-1) var(--sp-3);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+  cursor: pointer;
+}
+.tch-cal__view.is-on {
+  background: var(--sp-surface);
+  color: var(--sp-ink-900);
+  font-weight: var(--sp-fw-semibold);
+  box-shadow: var(--tch-card-shadow);
+}
+
+/* ── filters ────────────────────────────────────────────────────────────── */
+
+.tch-cal__filters {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+.tch-cal__scope { display: grid; gap: var(--sp-1); inline-size: 260px; }
+.tch-cal__scope > span {
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-400);
+}
+
+.tch-cal__legend { display: flex; gap: var(--sp-1); flex-wrap: wrap; }
+
+.tch-cal__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+  border-radius: 999px;
+  padding: 4px var(--sp-2);
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-700);
+  cursor: pointer;
+}
+.tch-cal__chip .sp-icon { color: var(--tone, var(--sp-ink-400)); }
+.tch-cal__chip em {
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-ink-400);
+  background: var(--sp-bg-subtle);
+  border-radius: 999px;
+  padding: 0 6px;
+}
+.tch-cal__chip:hover { border-color: var(--tch-hover-ring); }
+.tch-cal__chip.is-off { opacity: 0.45; }
+.tch-cal__chip.is-off em { text-decoration: line-through; }
+
+.tch-cal__chip--event { --tone: var(--cal-event); }
+.tch-cal__chip--task { --tone: var(--cal-task); }
+.tch-cal__chip--goal { --tone: var(--cal-goal); }
+.tch-cal__chip--meeting { --tone: var(--cal-meeting); }
+
+/* ── the grid ───────────────────────────────────────────────────────────── */
+
+.tch-cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--sp-border);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--tch-card-radius);
+  overflow: hidden;
+  box-shadow: var(--tch-card-shadow);
+}
+
+.tch-cal__weekday {
+  background: var(--sp-bg-subtle);
+  padding: var(--sp-2);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-500);
+  text-align: center;
+}
+
+.tch-cal__cell {
+  background: var(--sp-surface);
+  padding: var(--sp-1) var(--sp-1) var(--sp-2);
+  min-block-size: 118px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 3px;
+  align-content: start;
+}
+.tch-cal__grid--week .tch-cal__cell { min-block-size: 260px; }
+/* Neighbouring months stay in place so the week reads whole, but recede. */
+.tch-cal__cell.is-outside { background: var(--sp-bg-subtle); }
+.tch-cal__cell.is-outside .tch-cal__date { opacity: 0.5; }
+
+.tch-cal__dateBtn {
+  justify-self: start;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+.tch-cal__date {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 24px;
+  block-size: 24px;
+  border-radius: 999px;
+  padding-inline: 6px;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  font-variant-numeric: tabular-nums;
+}
+.tch-cal__dateBtn:hover .tch-cal__date {
+  background: var(--sp-bg-subtle);
+  color: var(--sp-ink-900);
+}
+/* Today is a filled coin, not a coloured numeral: findable at a glance on a
+   grid of forty-two numbers. */
+.tch-cal__cell.is-today .tch-cal__date {
+  background: var(--sp-primary-700);
+  color: #fff;
+  font-weight: var(--sp-fw-semibold);
+}
+
+.tch-cal__items { display: grid; gap: 2px; align-content: start; min-inline-size: 0; }
+
+/* One row per item: kind icon, optional time, title, and the child's name when
+   it belongs to one. Clipped to a single line — a cell is a preview, the day
+   view is the list. */
+.tch-cal__pip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  inline-size: 100%;
+  min-inline-size: 0;
+  border: 0;
+  background: var(--sp-bg-subtle);
+  border-inline-start: 3px solid var(--tone, var(--sp-ink-300));
+  border-radius: 6px;
+  padding: 3px 6px;
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-700);
+  cursor: pointer;
+  text-align: start;
+}
+.tch-cal__pip:hover {
+  background: var(--sp-surface-2, var(--sp-surface));
+  box-shadow: 0 0 0 1px var(--tch-hover-ring);
+}
+.tch-cal__pip .sp-icon { flex: 0 0 auto; color: var(--tone); }
+.tch-cal__pipText {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tch-cal__pipWho {
+  flex: 0 0 auto;
+  max-inline-size: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--sp-ink-400);
+}
+
+.tch-cal__pip--event { --tone: var(--cal-event); }
+.tch-cal__pip--task { --tone: var(--cal-task); }
+.tch-cal__pip--goal { --tone: var(--cal-goal); }
+.tch-cal__pip--meeting { --tone: var(--cal-meeting); }
+
+.tch-cal__time {
+  font-style: normal;
+  color: var(--sp-ink-400);
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+
+.tch-cal__more {
+  justify-self: start;
+  border: 0;
+  background: transparent;
+  padding: 2px 6px;
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-primary-700);
+  cursor: pointer;
+}
+.tch-cal__more:hover { text-decoration: underline; }
+
+/* ── the day list ───────────────────────────────────────────────────────── */
+
+.tch-cal__day { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+.tch-cal__row {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: var(--tch-card-radius);
+  background: var(--tch-card-bg);
+  border: 1px solid var(--tch-card-border);
+  box-shadow: var(--tch-card-shadow);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: start;
+  border-inline-start: 3px solid var(--tone, var(--sp-ink-300));
+}
+.tch-cal__row:hover { box-shadow: 0 0 0 1px var(--tch-hover-ring), var(--tch-card-shadow); }
+.tch-cal__row--event { --tone: var(--cal-event); }
+.tch-cal__row--task { --tone: var(--cal-task); }
+.tch-cal__row--goal { --tone: var(--cal-goal); }
+.tch-cal__row--meeting { --tone: var(--cal-meeting); }
+
+.tch-cal__when {
+  flex: 0 0 auto;
+  min-inline-size: 62px;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The icon chip: the source's colour at 12% behind its own glyph. */
+.tch-cal__badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--tone, var(--sp-ink-300)) 12%, transparent);
+  color: var(--tone, var(--sp-ink-500));
+}
+.tch-cal__badge--event { --tone: var(--cal-event); }
+.tch-cal__badge--task { --tone: var(--cal-task); }
+.tch-cal__badge--goal { --tone: var(--cal-goal); }
+.tch-cal__badge--meeting { --tone: var(--cal-meeting); }
+
+.tch-cal__what { flex: 1; min-inline-size: 0; display: grid; gap: 2px; }
+.tch-cal__what strong {
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tch-cal__sub { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+.tch-cal__rowGo { flex: 0 0 auto; color: var(--sp-ink-300); }
+
+/* ── detail + compose ───────────────────────────────────────────────────── */
+
+.tch-cal__detailHead {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-block-end: var(--sp-3);
+}
+.tch-cal__detailHead h2 { margin: 0; font-size: var(--sp-fs-lg); }
+.tch-cal__detailKind { margin: 2px 0 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+.tch-cal__detail {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--sp-2) var(--sp-3);
+  margin: 0 0 var(--sp-4);
+}
+.tch-cal__detail dt {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  white-space: nowrap;
+}
+.tch-cal__detail dd {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-900);
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.tch-cal__form { display: grid; gap: var(--sp-3); margin-block: var(--sp-3); }
+.tch-cal__form label { display: grid; gap: var(--sp-1); }
+.tch-cal__form label > span { font-size: var(--sp-fs-xs); color: var(--sp-ink-500); }
+.tch-cal__when2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.tch-cal__check { display: flex !important; align-items: center; gap: var(--sp-2); }
+
+/* Kind is four choices, so it is four buttons — a select hides the options
+   behind a click and gives no room for the icon that names them. */
+.tch-cal__kinds { display: flex; gap: var(--sp-1); flex-wrap: wrap; }
+.tch-cal__kind {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+  border-radius: 10px;
+  padding: var(--sp-1) var(--sp-2);
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+  cursor: pointer;
+}
+.tch-cal__kind.is-on {
+  border-color: var(--sp-primary-700);
+  color: var(--sp-primary-700);
+  font-weight: var(--sp-fw-semibold);
+}
+
+.tch-cal__failed { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-danger-600); }
+.tch-cal__actions { display: flex; justify-content: flex-end; gap: var(--sp-2); }
+
+@media (max-width: 860px) {
+  .tch-cal__cell { min-block-size: 84px; }
+  .tch-cal__pipWho { display: none; }
+  .tch-cal__scope { inline-size: 100%; }
+  .tch-cal__when2 { grid-template-columns: 1fr; }
+}

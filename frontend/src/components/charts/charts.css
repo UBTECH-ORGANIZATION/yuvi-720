@@ -24,6 +24,16 @@
   color: var(--sp-ink-400);
 }
 
+/* The half-arc dial: the number sits inside the arc's open base, so the cell
+ * under it stays free for the caller's own caption line. */
+.sp-chart-ring--half {
+  align-items: end;
+}
+
+.sp-chart-ring--half .sp-chart-ring__value {
+  inset-block-end: 2px;
+}
+
 .sp-chart-spark {
   inline-size: 100%;
   block-size: 44px;

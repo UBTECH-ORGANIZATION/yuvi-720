@@ -101,6 +101,78 @@ class ObjectivesProgressTest(unittest.TestCase):
         self.assertEqual(progress, {})
 
 
+class ObjectiveBreakdownTest(unittest.TestCase):
+    """The list behind a status dial: every catalogue objective, measured."""
+
+    def test_every_objective_appears_with_its_measured_state(self):
+        with _CatalogPatch():
+            rows = insights.objective_breakdown(_brain(mastery=_mastery(
+                **{"obj.frac": {"achieved": True, "attempts": 4, "successes": 3},
+                   "obj.linear": {"achieved": False, "attempts": 2,
+                                  "successes": 1, "score_ewma": 0.42}}
+            )), subject="math")
+        self.assertEqual([r["objective_id"] for r in rows],
+                         ["obj.frac", "obj.linear", "obj.ratio"])
+        mastered, working, untouched = rows
+        self.assertEqual(mastered["status"], "mastered")
+        self.assertEqual(mastered["percent"], 100)
+        self.assertEqual(working["status"], "in_progress")
+        self.assertEqual(working["percent"], 42)   # mastery's own score
+        self.assertEqual(working["successes"], 1)
+        self.assertEqual(untouched["status"], "not_started")
+        self.assertEqual(untouched["percent"], 0)
+
+    def test_colliding_titles_fall_to_their_unit_names(self):
+        # The registry names objectives at sub-topic level, so two objectives
+        # really do share a title. Two identical rows in the dialog read as a
+        # duplicate-render bug; each falls to its own unit's name instead.
+        with _CatalogPatch(), \
+             patch("app.services.kata_catalog.objectives_for", return_value=[
+                 {"id": "SCI-A", "order": 1, "unit_ids": ["u1"]},
+                 {"id": "SCI-B", "order": 2, "unit_ids": ["u2"]},
+             ]), \
+             patch("app.services.kata_catalog.objective_title",
+                   side_effect=lambda oid, locale="he": "מסה ונפח"), \
+             patch("app.services.kata_catalog.unit_title",
+                   side_effect=lambda uid, locale="he":
+                   {"u1": "יחידה א", "u2": "יחידה ב"}.get(uid)):
+            rows = insights.objective_breakdown(_brain(), subject="science")
+        self.assertEqual([row["title"] for row in rows], ["יחידה א", "יחידה ב"])
+        self.assertTrue(all("_unit_ids" not in row for row in rows))
+
+    def test_activity_rows_say_what_the_child_did_there(self):
+        rows = [
+            {"objective_id": "obj.frac", "attempts": 3, "time_seconds": 300,
+             "hints_used": 2, "content_hints_used": 0, "explanations_used": 1,
+             "chat_turns": 4, "last_at": "2026-08-18T10:00:00Z"},
+            {"objective_id": "obj.frac", "attempts": 1, "time_seconds": 60,
+             "hints_used": 0, "content_hints_used": 1, "explanations_used": 0,
+             "chat_turns": 0, "last_at": "2026-08-18T11:00:00Z"},
+            # A screen-only read is not work done on the objective.
+            {"objective_id": "obj.frac", "attempts": 0, "time_seconds": 900},
+        ]
+        with _CatalogPatch():
+            out = insights.objective_breakdown(
+                _brain(), subject="math", activity_rows=rows)
+        frac = out[0]
+        self.assertEqual(frac["questions"], 2)
+        self.assertEqual(frac["minutes"], 6)
+        self.assertEqual(frac["help_used"], 8)
+        self.assertEqual(frac["last_at"], "2026-08-18T11:00:00Z")
+        self.assertEqual(out[1]["questions"], 0)   # untouched stays honest
+
+    def test_an_unachieved_score_never_reads_as_done(self):
+        # score_ewma can brush 1.0 before mastery marks it achieved; a 100%
+        # bar beside "in progress" would contradict itself on screen.
+        with _CatalogPatch():
+            rows = insights.objective_breakdown(_brain(mastery=_mastery(
+                **{"obj.frac": {"achieved": False, "attempts": 3,
+                                "successes": 3, "score_ewma": 1.0}}
+            )), subject="math")
+        self.assertEqual(rows[0]["status"], "in_progress")
+        self.assertEqual(rows[0]["percent"], 99)
+
+
 class RecommendationTest(unittest.TestCase):
     def _insights(self, brain, recent):
         with _CatalogPatch(), \

@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from app.brain.repository import _get_collection_named, apply_brain_updates, get_brain
-from app.services import rewards
+from app.services import goal_progress, rewards
 from learner_state import normalize_learner_id  # type: ignore
 
 _FALLBACK = Path(__file__).resolve().parents[2] / ".runtime" / "mentoring.json"
@@ -51,6 +51,10 @@ def _new_goal(data: dict[str, Any]) -> dict[str, Any]:
         "title": (data.get("title") or data.get("goal_title") or "").strip(),
         "next_steps": (data.get("next_steps") or "").strip(),
         "deadline": data.get("deadline", ""),
+        # The observable platform action this goal asks for ({kind, target}),
+        # validated to the closed vocabulary — None for hand-written goals.
+        # This is what lets the teacher screen show "did it actually happen".
+        "action": goal_progress.normalize_action(data.get("action")),
         "progress_stage": stage,
         "status": "done" if stage == "summarized" else "open",
         "from_yuvi": bool(data.get("from_yuvi")),

@@ -125,6 +125,17 @@ export interface StudentPortrait {
   updated_at: string | null
 }
 
+/** Where the planner is pointing this child right now — the same `next_focus`
+ *  the platform itself follows, so the teacher's card and the child's app can
+ *  never disagree about what comes next. */
+export interface PlannerFocus {
+  subject: string | null
+  objective_id: string | null
+  /** Localized objective title, or null where the catalogue is silent. */
+  objective_title: string | null
+  mode: 'review' | 'new' | 'complete'
+}
+
 /** Full student view. Extends the legacy shape rather than replacing it. */
 export interface StudentDetail extends StudentInsight {
   objectives_progress: Record<string, SubjectProgress>
@@ -134,6 +145,8 @@ export interface StudentDetail extends StudentInsight {
   /** Every criterion that fired, not just the highest-priority one. */
   attention_all: AttentionFlag[]
   self_awareness: { reading: string; gap: number; samples: AwarenessSample[] } | null
+  /** Optional so a not-yet-redeployed backend degrades to no focus card. */
+  focus?: PlannerFocus | null
 }
 
 export interface Engagement {
@@ -301,17 +314,89 @@ export function getStudentBadges(learnerId: string, lang: string) {
   )
 }
 
-/** One reflection the learner wrote at the end of a session. `text` is their
- *  own words, which is why this tab exists at all — it was fetched and thrown
- *  away, and the screen rendered `samples.length` instead. */
-export interface StudentReflection {
-  at?: string | null
-  self_rating?: number | null
-  system_estimate?: number | null
-  text?: string | null
-  note?: string | null
-  mood?: string | null
-  objective_id?: string | null
+/* ── topic digest: the hardest-topics card, in readable sentences ─────────── */
+
+/** One topic's digest. `key` matches the topic key the profile computes
+ *  client-side (`obj:…` / `unit:…` / `lesson:…`), which is how the two join. */
+export interface TopicDigestItem {
+  key: string
+  /** 2–3 short sentences, restating only the authored `teaches` texts and the
+   *  counters — the server enforces that nothing here is invented. */
+  sentences: string[]
+  /** Which of the topic's own numbers are worth surfacing beside the words. */
+  surface: ('rate' | 'attempts' | 'questions' | 'zero_correct')[]
+}
+
+export interface TopicDigest {
+  topics: TopicDigestItem[]
+  cached: boolean
+  generated_at: string | null
+  /** True when the child's progress moved since this was written. */
+  stale: boolean
+  has_evidence: boolean
+  unavailable?: boolean
+}
+
+/** Cached-only read — never triggers a model call. */
+export function getTopicDigest(learnerId: string, language: string, subject?: string) {
+  const params = new URLSearchParams({ language })
+  if (subject) params.set('subject', subject)
+  return apiGet<TopicDigest>(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/topics/digest?${params}`
+  )
+}
+
+/** May generate (one mini-model call), then caches until progress changes. */
+export function generateTopicDigest(learnerId: string, language: string, subject?: string) {
+  return apiPost<TopicDigest>(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/topics/digest`,
+    { language, subject: subject ?? null }
+  )
+}
+
+/** One stop on the planner's predicted road — what it will serve after each
+ *  completion, computed by the same ranking the live focus uses. */
+export interface RoadmapStep {
+  subject: string | null
+  objective_id: string | null
+  objective_title: string | null
+  /** The sub-material (unit) the objective lives in — shown under the title,
+   *  and what tells two same-named objectives apart. */
+  unit_title?: string | null
+  mode: 'review' | 'new' | 'complete'
+}
+
+export function getFocusRoadmap(learnerId: string, language: string) {
+  const params = new URLSearchParams({ language })
+  return apiGet<{ steps: RoadmapStep[] }>(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/focus/roadmap?${params}`
+  )
+}
+
+/** One catalogue objective with where this child stands on it — the list
+ *  behind a status dial's "1 of 3". */
+export interface ObjectiveBreakdownRow {
+  objective_id: string
+  title: string | null
+  order: number | null
+  status: 'mastered' | 'in_progress' | 'not_started'
+  needs_review: boolean
+  attempts: number
+  successes: number
+  /** 100 when mastery marked it achieved; otherwise the mastery score. */
+  percent: number
+  /** What the child actually did there — from the per-question rows. */
+  questions: number
+  minutes: number
+  help_used: number
+  last_at: string | null
+}
+
+export function getStudentObjectives(learnerId: string, subject: string, language: string) {
+  const params = new URLSearchParams({ subject, language })
+  return apiGet<{ subject: string; objectives: ObjectiveBreakdownRow[] }>(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/objectives?${params}`
+  )
 }
 
 export interface AwarenessSample {
@@ -320,14 +405,6 @@ export interface AwarenessSample {
   /** The server's 0–1 success rate for the same session. */
   system_estimate: number
   at?: string | null
-}
-
-export function getStudentReflections(learnerId: string) {
-  return apiGet<{
-    reflections: StudentReflection[]
-    self_awareness:
-      { reading: string; gap: number; samples: AwarenessSample[] } | null
-  }>(`/api/teacher/students/${learnerId}/reflections`)
 }
 
 /* ── trends: the series behind the profile's charts ───────────────────────── */
@@ -478,6 +555,18 @@ export function resolveAlert(alertId: string) {
 
 /* ── Phase 5: goals ───────────────────────────────────────────────────────── */
 
+/** The observable platform action a Yuvi-suggested goal asks for. */
+export interface GoalAction {
+  kind: 'use_hint' | 'ask_yuvi' | 'retry_after_wrong' | 'practice' | 'complete_task' | 'active_days'
+  target: number
+}
+
+/** What actually happened: the count the backend measured for a GoalAction. */
+export interface GoalProgress extends GoalAction {
+  count: number
+  met: boolean
+}
+
 export interface GoalDraft {
   title: string
   next_steps: string
@@ -488,6 +577,8 @@ export interface GoalDraft {
   because: { signal: string; value: unknown; raw: Record<string, unknown> }
   /** Set when there is no evidence to ground a suggestion on. */
   unavailable?: boolean
+  /** Countable platform action — carried onto the goal when assigned. */
+  action?: GoalAction | null
 }
 
 export interface StudentGoal {
@@ -503,6 +594,9 @@ export interface StudentGoal {
   teacher_note?: string
   from_yuvi?: boolean
   needs_help?: boolean
+  action?: GoalAction | null
+  /** Present only on goals with an action: what the system counted. */
+  progress?: GoalProgress | null
 }
 
 export interface GoalConversation {
@@ -560,7 +654,7 @@ export function suggestStudentGoals(learnerId: string, language: string, subject
 
 export function assignStudentGoal(
   learnerId: string,
-  goal: { title: string; next_steps?: string; deadline?: string },
+  goal: { title: string; next_steps?: string; deadline?: string; action?: GoalAction | null },
   language: string
 ) {
   return apiPost<GoalConversation>(
@@ -611,12 +705,6 @@ export interface Moment {
 export function getGroupMoments(groupId: string, language: string, days = 14) {
   return apiGet<{ moments: Moment[] }>(
     `/api/teacher/groups/${encodeURIComponent(groupId)}/moments?language=${language}&days=${days}`
-  )
-}
-
-export function getStudentMoments(learnerId: string, language: string, days = 14) {
-  return apiGet<{ moments: Moment[] }>(
-    `/api/teacher/students/${encodeURIComponent(learnerId)}/moments?language=${language}&days=${days}`
   )
 }
 
@@ -928,10 +1016,25 @@ export function deleteSubgroup(subgroupId: string) {
  *  because a teacher acting on this is entitled to know how old it is, and
  *  `stale` means a refresh was attempted and failed. */
 export interface LearnerRead {
-  difficulties?: string[]
-  improvements?: string[]
+  /** Free prose, no figures — the overall analysis paragraph the
+   *  recommendations panel leads with. */
+  overview?: string
+  /** Per-subject sections — a short performance summary in prose, then the
+   *  points, each point carrying its numbers. */
+  subjects?: { subject: string; summary?: string; points: string[] }[]
   involvement?: string
+  /** Something worth knowing that the numbers don't show — an interest, how
+   *  the child describes their own learning. */
+  notable?: string
   suggestion?: string
+  /** The real material the suggestion points at, validated server-side —
+   *  what the build-task seed opens on. Null when the model named nothing. */
+  suggestion_anchor?: {
+    key: string
+    title: string
+    subject?: string | null
+    objective_id?: string | null
+  } | null
   generated_at?: string
   cached?: boolean
   stale?: boolean
@@ -1021,4 +1124,76 @@ export interface WellbeingSuggestion {
 
 export function suggestWellbeing(flagId: string, intent: 'message' | 'handle' | 'close') {
   return apiPost<WellbeingSuggestion>(flagUrl(flagId, 'suggest'), { intent })
+}
+
+/* ── the class calendar (#241) ─────────────────────────────────────────────
+ *
+ * One list, four owners. Task launches, goal deadlines and mentoring meetings
+ * are read where they live; only `event` rows belong to the calendar itself.
+ * `day` is computed server-side in the school's timezone, so the client never
+ * re-derives which column something falls in — that is the bug this avoids. */
+
+export type CalendarSource = 'event' | 'task' | 'goal' | 'meeting'
+export type CalendarEventKind = 'lesson' | 'reminder' | 'test' | 'event'
+
+export interface CalendarItem {
+  id: string
+  source: CalendarSource
+  /** The event kind for `event` rows; equal to `source` for the rest. */
+  kind: string
+  title: string
+  /** `YYYY-MM-DD` in school time — the day column. Never recompute it. */
+  day: string
+  /** Full timestamp for timed items, null when all-day. */
+  at: string | null
+  all_day: boolean
+  learner_id: string | null
+  learner_ids: string[]
+  targets: { kind: string; id: string }[]
+  subject: string | null
+  href: string | null
+  meta: Record<string, unknown>
+}
+
+export interface CalendarRange {
+  from: string
+  to: string
+  /** The school's IANA zone — times are rendered in it, not the browser's. */
+  timezone: string
+  items: CalendarItem[]
+}
+
+export interface CalendarEventDraft {
+  title: string
+  description?: string
+  kind: CalendarEventKind
+  all_day: boolean
+  /** `YYYY-MM-DD` when all-day, an ISO timestamp when timed. */
+  start_at: string
+  end_at?: string | null
+  targets: { kind: string; id: string }[]
+}
+
+export function getGroupCalendar(
+  groupId: string, from: string, to: string,
+  scope?: { subgroup?: string | null; learner?: string | null }
+) {
+  const query = new URLSearchParams({ from, to })
+  if (scope?.learner) query.set('learner', scope.learner)
+  else if (scope?.subgroup) query.set('subgroup', scope.subgroup)
+  return apiGet<CalendarRange>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/calendar?${query}`
+  )
+}
+
+export function createCalendarEvent(groupId: string, event: CalendarEventDraft) {
+  return apiPost<{ event: Record<string, unknown>; reaches: number }>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/calendar/events`, event
+  )
+}
+
+export function deleteCalendarEvent(eventId: string) {
+  return apiDelete<{ deleted: boolean }>(
+    `/api/teacher/calendar/events/${encodeURIComponent(eventId)}`
+  )
 }

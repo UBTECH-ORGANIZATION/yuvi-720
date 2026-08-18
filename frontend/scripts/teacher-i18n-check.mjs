@@ -99,25 +99,25 @@ try {
       check(`${language.code}/${screen.name}: no sideways scroll`, overflow <= 0, `${overflow}px`)
     }
 
-    // One student profile per language — the deepest screen, seven tabs of
-    // generated text.
+    // One student profile per language — the deepest screen, one long page
+    // of generated text now that the tabs are gone.
     await page.goto(`${BASE}/teacher/students`, { waitUntil: 'domcontentloaded' })
     await page.waitForSelector('.tch-studentCard', { timeout: 60000 }).catch(() => {})
     if (await page.locator('.tch-studentCard').count()) {
       await page.locator('.tch-studentCard').first().click()
-      await page.waitForSelector('.tch-tabs', { timeout: 60000 }).catch(() => {})
-      const tabs = await page.locator('.tch-tabs button').all()
-      const leaked = new Set()
-      for (const tab of tabs) {
-        await tab.click().catch(() => {})
-        await page.waitForTimeout(900)
-        for (const toggle of await page.locator('.tch-evidence__toggle').all()) {
-          await toggle.click().catch(() => {})
-        }
-        const text = await page.locator('body').innerText()
-        for (const hit of text.match(KEY_LEAK) ?? []) leaked.add(hit)
+      await page.waitForSelector('.tch-student__body', { timeout: 60000 }).catch(() => {})
+      await page.waitForTimeout(900)
+      /* Open every <details> drawer — the lesson archive, the lessons inside
+         it and the topic rows. innerText skips hidden text, and the generated
+         words this sweep exists for live inside those drawers. */
+      await page.$$eval('details', (els) => els.forEach((el) => { el.open = true }))
+      for (const toggle of await page.locator('.tch-evidence__toggle').all()) {
+        await toggle.click().catch(() => {})
       }
-      check(`${language.code}/profile: no locale key across all ${tabs.length} tabs`,
+      await page.waitForTimeout(300)
+      const text = await page.locator('body').innerText()
+      const leaked = new Set(text.match(KEY_LEAK) ?? [])
+      check(`${language.code}/profile: no locale key anywhere on the page`,
             leaked.size === 0, [...leaked].slice(0, 3).join(', '))
       await page.screenshot({ path: `${OUT}/i18n-${language.code}-profile.png` })
     }

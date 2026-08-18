@@ -15,10 +15,91 @@
   box-shadow: var(--tch-card-shadow);
 }
 
-.tch-student__identity { display: flex; align-items: center; gap: var(--sp-3); }
+.tch-student__identity { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+/* The name column owns the middle so the badge cluster sits at the far end
+   and nothing floats in between. */
+.tch-student__who { flex: 1; min-inline-size: 0; display: grid; gap: 2px; justify-items: start; }
 .tch-student__identity h1 { margin: 0; font-size: var(--sp-fs-xl); color: var(--sp-ink-900); letter-spacing: -0.01em; }
 
-.tch-student__kpis { margin-block-end: var(--sp-4); }
+/* On the identity row itself: plain figures with a hairline between them.
+   The `.tch-stat` names are kept (the harnesses count them) but the shared
+   card look is switched off — no surface, no border, no hover lift. */
+.tch-student__kpis {
+  display: flex;
+  align-items: stretch;
+  margin-inline-start: auto;
+  flex-wrap: wrap;
+}
+
+.tch-student__kpis .tch-stat {
+  display: grid;
+  gap: 1px;
+  justify-items: center;
+  align-content: center;
+  text-align: center;
+  block-size: 100%;
+  padding-block: 0;
+  padding-inline: var(--sp-4);
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  transform: none;
+  transition: none;
+  font: inherit;
+  /* The ink token, not the button default — a bare <button> is black in BOTH
+     themes, which is exactly what the theme probe exists to catch. */
+  color: var(--sp-ink-900);
+  /* Explains itself on hover — and says so. */
+  cursor: help;
+}
+
+.tch-student__kpis .tch-stat:hover {
+  transform: none;
+  box-shadow: none;
+  background: none;
+}
+
+.tch-student__kpis .tch-stat:focus-visible {
+  outline: 2px solid var(--sp-primary-600);
+  outline-offset: 2px;
+  border-radius: var(--sp-radius-md);
+}
+
+/* Each stat sits in a Hint wrapper now, so the rule lives between wrappers. */
+.tch-student__kpis > * + * {
+  border-inline-start: 1px solid var(--sp-border);
+}
+
+.tch-student__kpis .sp-hint { display: flex; align-items: stretch; }
+
+/* The dotted underline is the "there is more here" mark. */
+.tch-student__kpis .tch-stat__label {
+  border-block-end: 1px dashed var(--sp-ink-300, var(--sp-border));
+  padding-block-end: 1px;
+}
+
+.tch-student__kpis .tch-stat__value {
+  font-size: var(--sp-fs-lg);
+  color: var(--sp-ink-900);
+  font-variant-numeric: tabular-nums;
+}
+
+.tch-student__kpis .tch-stat__label {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .tch-student__kpis {
+    margin-inline-start: 0;
+    inline-size: 100%;
+    justify-content: space-between;
+    margin-block-start: var(--sp-2);
+  }
+  .tch-student__kpis .tch-stat { padding-inline: var(--sp-2); }
+}
 .tch-student__flags {
   display: grid;
   gap: var(--sp-2);
@@ -37,102 +118,14 @@
   .tch-student__flags { transition: none; }
 }
 
-/* Segmented control instead of underline tabs — reads as one instrument. */
-.tch-tabs {
-  display: inline-flex;
-  gap: var(--sp-1);
-  padding: var(--sp-1);
-  border-radius: var(--sp-radius-pill);
-  background: var(--sp-bg-subtle);
-  border: 1px solid var(--sp-border);
-  margin-block-end: var(--sp-4);
-  overflow-x: auto;
-  max-inline-size: 100%;
-}
-
-.tch-tabs button {
-  border: 0;
-  background: transparent;
-  padding: var(--sp-2) var(--sp-3);
-  border-radius: var(--sp-radius-pill);
-  font: inherit;
-  font-size: var(--sp-fs-sm);
-  font-weight: var(--sp-fw-semibold);
-  color: var(--sp-ink-400);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: color var(--sp-dur-fast) var(--sp-ease), background var(--sp-dur-fast) var(--sp-ease);
-}
-
-.tch-tabs button:hover { color: var(--sp-ink-700); }
-
-.tch-tabs button.is-active {
-  color: var(--sp-primary-700);
-  background: var(--tch-card-bg);
-  box-shadow: var(--sp-shadow-sm);
-}
-
 .tch-student__body { display: grid; gap: var(--sp-4); }
-
-.tch-progressGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--sp-3);
-}
-
-.tch-progressCard { display: grid; gap: var(--sp-3); padding: var(--sp-4); }
-.tch-progressCard__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--sp-2);
-}
-.tch-progressCard__head strong { font-size: var(--sp-fs-sm); color: var(--sp-ink-800); }
-.tch-progressCard__score { display: flex; align-items: baseline; gap: var(--sp-2); }
-.tch-progressCard__score b {
-  font-size: var(--sp-fs-xl);
-  line-height: 1;
-  font-weight: var(--sp-fw-bold);
-  color: var(--sp-ink-900);
-  font-variant-numeric: tabular-nums;
-}
-.tch-progressCard__score small { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
-.tch-progressCard__idle { color: var(--sp-ink-300); }
-
-/* Only the segments that exist. Two thirds of this legend was "0 בתהליך ·
-   0 טרם התחילו" — counts of nothing, in the same weight as the count of
-   something. The dot ties each label to its band in the strip above. */
-.tch-progressCard__legend {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-1) var(--sp-3);
-  font-size: var(--sp-fs-xs);
-  color: var(--sp-ink-400);
-}
-/* `display: flex` above beats the UA's `[hidden] { display: none }`, so the
-   attribute has to be honoured explicitly or it does nothing. */
-.tch-progressCard__legend[hidden] { display: none; }
-.tch-progressCard__legend li { display: flex; align-items: center; gap: 6px; }
-.tch-progressCard__legend i {
-  inline-size: 7px;
-  block-size: 7px;
-  border-radius: 2px;
-  background: var(--sp-border-strong);
-}
-.tch-progressCard__legend .is-mastered i { background: var(--sp-success-600); }
-.tch-progressCard__legend .is-progress i { background: var(--sp-primary-600); }
-
 .tch-struggles { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
 
 .tch-struggle {
   padding: var(--sp-3);
   border-radius: var(--sp-radius-md);
   border: 1px solid var(--sp-border);
-  /* The evidence list is a list of difficulties; the stripe says so at a
-     glance, the same vocabulary the worked-on list uses. */
+  
   border-inline-start: 3px solid var(--sp-warn-600);
   background: var(--sp-bg-subtle);
   display: grid;
@@ -288,61 +281,6 @@
   margin-inline-end: var(--sp-2);
 }
 
-.tch-awareness { display: grid; gap: var(--sp-2); justify-items: start; }
-.tch-awareness p { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-500); }
-
-/* `.tch-table` now lives in teacher-shared.css — three pages use it. */
-
-/* ── notes ────────────────────────────────────────────────────────────────── */
-
-.tch-notes__form { display: grid; gap: var(--sp-3); margin-block-end: var(--sp-4); }
-.tch-notes__row { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
-.tch-notes__row label { display: grid; gap: var(--sp-1); font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
-
-.tch-notes__row select {
-  padding: var(--sp-2) var(--sp-3);
-  border: 1px solid var(--sp-border);
-  border-radius: var(--sp-radius-sm);
-  background: var(--sp-surface);
-  color: var(--sp-ink-700);
-  font: inherit;
-  font-size: var(--sp-fs-sm);
-}
-
-.tch-notes__text { resize: vertical; min-block-size: 72px; }
-
-.tch-notes__warning {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  margin: 0;
-  padding: var(--sp-2) var(--sp-3);
-  border-radius: var(--sp-radius-sm);
-  background: var(--sp-warn-100);
-  color: var(--sp-warn-600);
-  font-size: var(--sp-fs-xs);
-}
-
-.tch-notes__hint { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
-
-.tch-notes__list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
-
-.tch-note {
-  padding: var(--sp-3);
-  border-radius: var(--sp-radius-md);
-  border: 1px solid var(--sp-border);
-  display: grid;
-  gap: var(--sp-2);
-}
-
-.tch-note__head { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
-.tch-note__head .sp-btn--icon { margin-inline-start: auto; }
-.tch-note p { margin: 0; color: var(--sp-ink-700); font-size: var(--sp-fs-sm); }
-
-@media (max-width: 600px) {
-  .tch-progressGrid { grid-template-columns: 1fr; }
-}
-
 /* ── the rebuilt header ─────────────────────────────────────────────────────*/
 
 .tch-student__topRow { display: flex; justify-content: space-between; gap: var(--sp-2); }
@@ -358,119 +296,6 @@
   gap: var(--sp-1);
   font-size: var(--sp-fs-xs);
   color: var(--sp-ink-400);
-}
-
-/* Quick look: the numbers a teacher wants before opening any tab. */
-.tch-student__quick {
-  margin: 0 0 0 auto;
-  display: flex;
-  gap: var(--sp-4);
-  align-items: stretch;
-  flex-wrap: wrap;
-}
-
-[dir='rtl'] .tch-student__quick { margin: 0 auto 0 0; }
-
-.tch-student__quickItem {
-  display: grid;
-  gap: 2px;
-  padding-inline-start: var(--sp-4);
-  border-inline-start: 1px solid var(--sp-border);
-}
-
-.tch-student__quickItem dt { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
-.tch-student__quickItem dd {
-  margin: 0;
-  font-size: var(--sp-fs-lg);
-  font-weight: var(--sp-fw-bold);
-  color: var(--sp-ink-900);
-  font-variant-numeric: tabular-nums;
-}
-
-.tch-student__quickBadges {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-1);
-}
-
-@media (max-width: 760px) {
-  .tch-student__quick { margin: 0; padding-block-start: var(--sp-2); }
-  .tch-student__quickItem { border-inline-start: 0; padding-inline-start: 0; }
-}
-
-/* ── connection tab ─────────────────────────────────────────────────────────*/
-
-.tch-connection { display: grid; gap: var(--sp-4); }
-
-.tch-connection__kudos { padding: var(--sp-4); border-inline-start: 3px solid var(--sp-teal-500); }
-
-.tch-connection__sent {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-1);
-  margin: 0 0 var(--sp-2);
-  color: var(--sp-success-600);
-  font-size: var(--sp-fs-sm);
-}
-
-.tch-connection__composer { display: flex; gap: var(--sp-2); }
-
-.tch-connection__composer input {
-  flex: 1;
-  min-inline-size: 0;
-  font: inherit;
-  font-size: var(--sp-fs-sm);
-  color: var(--sp-ink-700);
-  background: var(--sp-bg-subtle);
-  border: 1px solid var(--sp-border);
-  border-radius: var(--sp-radius-pill);
-  padding: var(--sp-2) var(--sp-4);
-}
-
-.tch-connection__composer input:focus-visible {
-  outline: 2px solid var(--sp-primary-600);
-  outline-offset: 1px;
-}
-
-.tch-connection__timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
-
-.tch-connection__entry {
-  display: flex;
-  gap: var(--sp-3);
-  padding: var(--sp-3);
-  border-radius: calc(var(--tch-card-radius) - 6px);
-  background: var(--sp-surface);
-  border: 1px solid var(--sp-border);
-}
-
-.tch-connection__entryIcon {
-  inline-size: 32px;
-  block-size: 32px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--tch-chip-bg);
-  color: var(--sp-primary-600);
-  flex-shrink: 0;
-}
-
-.tch-connection__entryBody { display: grid; gap: var(--sp-1); min-inline-size: 0; flex: 1; }
-.tch-connection__entryHead { display: flex; align-items: center; gap: var(--sp-2); }
-.tch-connection__date { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); font-variant-numeric: tabular-nums; }
-
-.tch-connection__goals { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-1); }
-.tch-connection__goals li {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-1);
-  font-size: var(--sp-fs-sm);
-  color: var(--sp-ink-700);
-}
-
-.tch-connection__approved {
-  font-size: var(--sp-fs-xs);
-  color: var(--sp-success-600);
-  font-weight: var(--sp-fw-semibold);
 }
 
 /* ── the month, in one strip ───────────────────────────────────────────────*/
@@ -540,200 +365,42 @@
 
 .tch-trend__quiet { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-400); }
 
-/* ── activity tab ──────────────────────────────────────────────────────────*/
+/* ── the topics that were hardest ──────────────────────────────────────────
+   One row per IDEA (objective, or its named fallback level), not per question
+   — every question on the topic summed into one rate, with the evidence
+   (questions · attempts) said next to the bar so a real pattern and a thin
+   one cannot wear the same paint. Each row expands to the content's own
+   `teaches` text and an assign-a-task action. */
 
-.tch-student__support {
-  margin: 0 0 var(--sp-3);
-  font-size: var(--sp-fs-sm);
-  color: var(--sp-ink-700);
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── what they worked on, lesson by lesson ─────────────────────────────────
-   Replaces a nine-column table whose first column was `q1` four times over.
-   Nothing was dropped — attempts, correct, hints, explanations, chat, what
-   helped and when are all still here, said as a sentence instead of counted
-   across a row of zeros. */
-
-.tch-worked { display: grid; gap: var(--sp-2); }
-
-/* Every lesson is closed by default. Twenty lessons, each with up to ten items
-   and a paragraph on what each one teaches, is a page nobody reaches the end
-   of — and the question a teacher arrives with is WHICH lesson to open, which
-   the summary line answers without opening anything. */
-.tch-worked__lesson {
-  border: 1px solid var(--sp-border);
-  border-radius: var(--sp-radius-md);
-  background: var(--sp-bg-subtle);
-  overflow: hidden;
-}
-.tch-worked__lesson.is-attention { border-inline-start: 3px solid var(--sp-warn-600); }
-
-.tch-worked__summary {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-  padding: var(--sp-3);
-  cursor: pointer;
-  list-style: none;
-}
-.tch-worked__summary::-webkit-details-marker { display: none; }
-.tch-worked__summary:hover { background: var(--sp-bg-hover, transparent); }
-.tch-worked__summary:focus-visible {
-  outline: 2px solid var(--sp-primary-600);
-  outline-offset: -2px;
-}
-/* The caret points along the reading direction and turns down when open —
-   `chevronLeft` is mirrored by the RTL sheet, so this rotates rather than
-   swapping glyphs. */
-.tch-worked__caret { color: var(--sp-ink-300); transition: transform .15s ease; }
-.tch-worked__lesson[open] .tch-worked__caret { transform: rotate(-90deg); }
-
-.tch-worked__title {
-  flex: 1 1 12rem;
-  min-inline-size: 0;
-  font-size: var(--sp-fs-sm);
-  font-weight: var(--sp-fw-semibold);
-  color: var(--sp-ink-800);
-}
-.tch-worked__counts {
-  font-size: var(--sp-fs-xs);
-  color: var(--sp-ink-400);
-  white-space: nowrap;
-}
-/* One dot per item, in the order they were met: the shape of the lesson
-   before it is opened. */
-.tch-worked__dots { display: flex; gap: 3px; align-items: center; }
-.tch-worked__dots i {
-  inline-size: 6px;
-  block-size: 6px;
-  border-radius: 50%;
-  background: var(--sp-border);
-}
-.tch-worked__dots i.is-danger  { background: var(--sp-danger-600); }
-.tch-worked__dots i.is-warn    { background: var(--sp-warn-600); }
-.tch-worked__dots i.is-success { background: var(--sp-success-600); }
-
-.tch-worked__objective {
-  margin: 0;
-  padding: 0 var(--sp-3) var(--sp-2);
-  font-size: var(--sp-fs-xs);
-  color: var(--sp-ink-400);
-}
-.tch-worked__lesson[open] .tch-worked__items { padding: 0 var(--sp-3) var(--sp-3); }
-
-.tch-student__floor {
-  margin: var(--sp-3) 0 0;
-  font-size: var(--sp-fs-xs);
-  color: var(--sp-ink-400);
-}
-
-.tch-worked__items { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
-
-/* A tone stripe on the reading-start edge: a teacher scanning a long lesson
-   sees where it went wrong before reading a word. */
-.tch-worked__item {
+/* Bounded: past this the list scrolls inside its panel instead of pushing
+   the goals card (and the whole column) down the page. */
+.tch-topics {
   display: grid;
-  gap: var(--sp-1);
-  padding: var(--sp-3);
-  border-radius: var(--sp-radius-md);
-  border: 1px solid var(--sp-border);
-  border-inline-start: 3px solid var(--sp-border);
-  background: var(--sp-bg-subtle);
+  gap: var(--sp-3);
+  max-block-size: 420px;
+  overflow-y: auto;
+  padding-inline-end: var(--sp-1);
 }
-.tch-worked__item.is-danger  { border-inline-start-color: var(--sp-danger-600); }
-.tch-worked__item.is-warn    { border-inline-start-color: var(--sp-warn-600); }
-.tch-worked__item.is-success { border-inline-start-color: var(--sp-success-600); }
+.tch-topics__section { display: grid; gap: var(--sp-2); }
 
-.tch-worked__itemHead {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-}
-.tch-worked__itemHead strong {
-  font-size: var(--sp-fs-sm);
-  color: var(--sp-ink-800);
-  font-weight: var(--sp-fw-semibold);
-  min-inline-size: 0;
-}
-.tch-worked__score {
-  margin-inline-start: auto;
-  font-size: var(--sp-fs-xs);
-  color: var(--sp-ink-500);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-/* The content's own description of the item. Clamped: these run several
-   sentences, and the row is a summary, not the lesson plan. */
-.tch-worked__teaches {
+.tch-topics__subject {
   margin: 0;
   font-size: var(--sp-fs-xs);
-  line-height: 1.6;
-  color: var(--sp-ink-500);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.tch-worked__support { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
-.tch-worked__helped { color: var(--sp-success-600); margin-inline-start: var(--sp-2); }
-.tch-worked__when { font-size: var(--sp-fs-xs); color: var(--sp-ink-300); }
-
-/* The self-described traits are now a quiet line at the foot of the portrait
-   (`.tch-portrait__said`) rather than a panel of their own — three noun
-   phrases under their own heading read as a section with nothing in it. */
-
-/* ── reflections in their own words ────────────────────────────────────────*/
-
-.tch-reflections { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
-
-.tch-reflection {
-  padding: var(--sp-3);
-  border-radius: var(--sp-radius-md);
-  border: 1px solid var(--sp-border);
-  background: var(--sp-bg-subtle);
-}
-.tch-reflection p { margin: 0; font-size: var(--sp-fs-sm); line-height: 1.6; color: var(--sp-ink-800); }
-.tch-reflection__meta {
-  display: block;
-  margin-block-start: var(--sp-1);
-  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: .04em;
   color: var(--sp-ink-400);
 }
 
-.tch-awareness__thin { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
-
-/* ── a disclosure, and what was done about it ─────────────────────────────── */
-
-/* The count rides ON the tab, because an open disclosure is the one thing on
-   this page a teacher must not have to click to discover.
-
-   Said the way software says "there is something here": a filled red disc with
-   a slow halo, the shape a person already reads as unread. `--sp-danger-600` is
-   a salmon in dark mode — correct for an inline warning, too soft for a badge
-   whose whole job is to be spotted in peripheral vision — so this keeps its own
-   red and holds it in both themes. */
-.tch-tabs {
-  /* Not the token: see above. Deliberately the one saturated red on the page. */
+/* The open-disclosure count on the wellbeing section header. Not the status
+   token: an alert disc is the one element whose whole job is to be spotted in
+   peripheral vision, so it keeps its own red and holds it in both themes. */
+.tch-flagCount {
+  /* Deliberately the one saturated red on the page. */
   --tch-alert: #e5484d;
-}
-:root[data-theme='dark'] .tch-tabs { --tch-alert: #ff5a5a; }
-
-.tch-tabs button { position: relative; }
-
-/* An unopened tab that carries one reads as unread rather than as ordinary. */
-.tch-tabs button.has-alert:not(.is-active) { color: var(--sp-ink-700); }
-
-.tch-tabs__count {
   position: relative;
   display: inline-grid;
   place-items: center;
-  margin-inline-start: var(--sp-2);
   min-inline-size: 18px;
   block-size: 18px;
   padding-inline: 5px;
@@ -743,13 +410,11 @@
   font-size: 11px;
   font-weight: var(--sp-fw-bold);
   line-height: 1;
-  /* Separates the disc from whatever the tab sits on, in either theme. */
+  /* Separates the disc from whatever it sits on, in either theme. */
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--tch-alert) 26%, transparent);
-  /* The halo is a second shadow rather than a scaled pseudo-element: the tab
-     strip scrolls (`overflow-x: auto`), which clips a transformed child, and a
-     `z-index: -1` ring would sit behind the active tab's own background. */
   animation: tch-alertPulse 2.4s var(--sp-ease) infinite;
 }
+:root[data-theme='dark'] .tch-flagCount { --tch-alert: #ff5a5a; }
 
 @keyframes tch-alertPulse {
   0% {
@@ -765,7 +430,7 @@
 /* The badge is the signal; the pulse is only emphasis, so the pulse goes and
    the badge — ring included — stays exactly as it was. */
 @media (prefers-reduced-motion: reduce) {
-  .tch-tabs__count { animation: none; }
+  .tch-flagCount { animation: none; }
 }
 
 .tch-wellbeing { display: grid; gap: var(--sp-4); }
@@ -913,3 +578,1104 @@
   color: var(--sp-ink-500);
   font-weight: var(--sp-fw-semibold);
 }
+
+/* ── status band: four dials, one glance ─────────────────────────────────── */
+
+.tch-status__grid {
+  display: grid;
+  /* Low enough that all five cells (focus + two subjects + two habit dials)
+     share one row on a desktop content column — a 200px floor fit only four
+     and stranded the fifth dial alone under the row. */
+  grid-template-columns: repeat(auto-fit, minmax(176px, 1fr));
+  gap: var(--sp-3);
+}
+
+.tch-status__cell {
+  /* Relative so the momentum chip can float on the corner without joining
+     the cell's own layout (grid or the door-cell flex both stay intact). */
+  position: relative;
+  display: grid;
+  justify-items: center;
+  /* The row equalises cell heights; the content spreads over the height it
+     was given instead of clustering at the top with a band of air below. */
+  align-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-4);
+  text-align: center;
+}
+
+/* ── the momentum chip on a dial's corner ───────────────────────────────────
+   Direction on the chip, the two measured halves in its tooltip. */
+.tch-status__cell > .tch-trendHint {
+  position: absolute;
+  inset-block-start: var(--sp-2);
+  inset-inline-end: var(--sp-2);
+  z-index: 2;
+}
+
+.tch-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+  /* Explains itself on hover — the same promise the header KPIs make. */
+  cursor: help;
+}
+
+.tch-trend.is-up {
+  color: var(--sp-success-600);
+  background: color-mix(in srgb, var(--sp-success-600) 12%, transparent);
+}
+
+.tch-trend.is-down {
+  color: var(--sp-warn-600);
+  background: color-mix(in srgb, var(--sp-warn-600) 14%, transparent);
+}
+
+.tch-trend.is-flat {
+  color: var(--sp-ink-400);
+  background: var(--sp-surface-2);
+}
+
+.tch-trend:focus-visible {
+  outline: 2px solid var(--sp-primary-600);
+  outline-offset: 1px;
+}
+
+.tch-status__cell h4 {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-700);
+}
+
+/* A subject cell is a door: the card gives up its own padding and becomes a
+   flex box so the button genuinely stretches to every edge — inside a grid
+   with content-sized rows, `block-size: 100%` never did. */
+.tch-status__cell:has(> .tch-status__cellOpen) {
+  padding: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.tch-status__cellOpen {
+  flex: 1;
+  display: grid;
+  justify-items: center;
+  align-content: space-between;
+  gap: var(--sp-2);
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--sp-4);
+  box-sizing: border-box;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.tch-status__cellOpen:hover { background: var(--sp-surface-2); }
+.tch-status__cellOpen:focus-visible {
+  outline: 2px solid var(--sp-primary-600);
+  outline-offset: -2px;
+}
+
+/* ── the list behind a dial: one subject's objectives, measured ───────────── */
+
+.tch-objDialog { max-inline-size: 760px; inline-size: min(760px, 92vw); }
+
+.tch-objDialog__nameCell { display: grid; gap: 2px; min-inline-size: 0; }
+
+.tch-objDialog__meta {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  font-variant-numeric: tabular-nums;
+}
+
+.tch-objDialog__loading { display: grid; gap: var(--sp-2); padding-block: var(--sp-3); }
+
+.tch-objDialog__none { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-400); }
+
+.tch-objDialog__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.tch-objDialog__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(90px, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-4);
+  padding-block: var(--sp-3);
+  border-block-end: 1px solid var(--sp-border);
+}
+
+.tch-objDialog__row:last-child { border-block-end: 0; }
+
+.tch-objDialog__name {
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-inline-size: 0;
+}
+
+.tch-objDialog__review {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-warn-600);
+  background: var(--sp-warn-100);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.tch-objDialog__bar {
+  block-size: 6px;
+  border-radius: 999px;
+  background: var(--sp-border);
+  overflow: hidden;
+}
+
+.tch-objDialog__bar i {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+}
+
+.tch-objDialog__bar .is-mastered { background: var(--sp-success-600); }
+.tch-objDialog__bar .is-in_progress { background: var(--sp-primary-500); }
+.tch-objDialog__bar .is-not_started { background: transparent; }
+
+.tch-objDialog__figures {
+  display: grid;
+  justify-items: end;
+  gap: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tch-objDialog__figures strong { font-size: var(--sp-fs-sm); }
+.tch-objDialog__figures .is-mastered { color: var(--sp-success-600); }
+.tch-objDialog__figures .is-in_progress { color: var(--sp-ink-700); }
+.tch-objDialog__figures .is-not_started {
+  color: var(--sp-ink-400);
+  font-weight: var(--sp-fw-regular);
+}
+
+.tch-objDialog__evidence { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+/* ── the planner's road, as a pipeline ────────────────────────────────────── */
+
+.tch-roadmapDialog { max-inline-size: 480px; inline-size: min(480px, 92vw); }
+
+.tch-roadmap__hint {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+
+.tch-roadmap {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.tch-roadmap__step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: var(--sp-3);
+  padding-block: var(--sp-3);
+}
+
+/* The line the road runs on — through every marker, stopping at the ends. */
+.tch-roadmap__step::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 11px;
+  inline-size: 2px;
+  background: var(--sp-border);
+}
+
+.tch-roadmap__step:first-child::before { inset-block-start: 50%; }
+.tch-roadmap__step:last-child::before { inset-block-end: 50%; }
+.tch-roadmap__step:only-child::before { display: none; }
+
+.tch-roadmap__marker {
+  position: relative;
+  z-index: 1;
+  align-self: center;
+  justify-self: center;
+  inline-size: 12px;
+  block-size: 12px;
+  border-radius: 50%;
+  background: var(--sp-surface);
+  border: 2px solid var(--sp-ink-300, var(--sp-border));
+}
+
+.tch-roadmap__step.is-now .tch-roadmap__marker {
+  border-color: var(--sp-primary-600);
+  background: var(--sp-primary-600);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sp-primary-600) 18%, transparent);
+}
+
+.tch-roadmap__step.is-end .tch-roadmap__marker { border-color: var(--sp-success-600); }
+
+.tch-roadmap__body { display: grid; gap: 3px; min-inline-size: 0; }
+
+.tch-roadmap__tags {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+/* The current stop announces itself as a filled pill, not a word — it is the
+   one tag on the road that means "this is live right now". */
+.tch-roadmap__now {
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-bold);
+  color: #fff;
+  background: var(--sp-primary-600);
+  border-radius: 999px;
+  padding: 1px 10px;
+  letter-spacing: .02em;
+}
+
+/* Subject tags: one hue per subject, so the road's switches read at a
+   glance without a single word. */
+.tch-roadmap__subj {
+  font-size: var(--sp-fs-xs);
+  border-radius: 999px;
+  padding: 1px 10px;
+  color: var(--sp-ink-500);
+  background: var(--sp-surface-2);
+  white-space: nowrap;
+}
+
+.tch-roadmap__subj.is-math {
+  color: var(--sp-primary-600);
+  background: color-mix(in srgb, var(--sp-primary-600) 10%, transparent);
+}
+
+.tch-roadmap__subj.is-science {
+  color: var(--sp-success-600);
+  background: color-mix(in srgb, var(--sp-success-600) 10%, transparent);
+}
+
+.tch-roadmap__subj.is-english {
+  color: var(--sp-warn-600);
+  background: color-mix(in srgb, var(--sp-warn-600) 12%, transparent);
+}
+
+.tch-roadmap__mode { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+.tch-roadmap__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-900);
+}
+
+/* The current stop's material carries the most weight on the page — it is the
+   same words as the focus card that opened this dialog. */
+.tch-roadmap__step.is-now .tch-roadmap__title {
+  font-size: var(--sp-fs-md, 1rem);
+  color: var(--sp-primary-700, var(--sp-primary-600));
+}
+
+/* The sub-material, quietly under the objective it belongs to. */
+.tch-roadmap__unit {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+
+.tch-roadmap__step.is-end .tch-roadmap__title { color: var(--sp-success-600); }
+
+.tch-status__caption {
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+
+/* "Not started" and "not enough data" are answers, not absences — they hold
+   the cell so an empty dial never has to. */
+.tch-status__none {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
+  align-self: center;
+}
+
+/* The pointer cell: it answers a different question than the dials beside it
+   ("where to next", not "how much"), so it wears a quiet primary tint and its
+   accent edge instead of a gauge. Three rows filling the card — head, the
+   objective in the middle, the mode at the foot. */
+.tch-status__focus {
+  justify-items: start;
+  text-align: start;
+  align-content: stretch;
+  grid-template-rows: auto 1fr auto;
+  background:
+    linear-gradient(135deg,
+      color-mix(in srgb, var(--sp-primary-600) 7%, transparent),
+      transparent 55%);
+  border-inline-start: 3px solid var(--sp-primary-600);
+}
+
+/* The focus card's door keeps the card's own composition — start-aligned,
+   three rows — where the dial doors centre theirs. */
+.tch-status__focusOpen {
+  justify-items: start;
+  text-align: start;
+  align-content: stretch;
+  grid-template-rows: auto 1fr auto;
+}
+
+.tch-status__focusTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  inline-size: 100%;
+}
+
+.tch-status__focusHead {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  color: var(--sp-primary-600) !important;
+}
+
+.tch-status__focusWhat {
+  margin: 0;
+  align-self: center;
+  font-size: var(--sp-fs-md);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-900);
+  line-height: 1.35;
+}
+
+.tch-status__focusMeta {
+  margin: 0;
+  align-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.tch-status__focusSubject {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-primary-600);
+  background: color-mix(in srgb, var(--sp-primary-600) 10%, transparent);
+  border-radius: 999px;
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+
+.tch-status__focusDone {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--sp-success-600);
+  font-size: var(--sp-fs-sm);
+}
+
+/* ── goals: the card, not the screen ─────────────────────────────────────── */
+
+.tch-goalsCard__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-3);
+  /* Bounded like the topics list: a class with many goals scrolls inside
+     the card instead of stretching the whole column. */
+  max-block-size: 360px;
+  overflow-y: auto;
+  padding-inline-end: var(--sp-1);
+}
+
+.tch-goalsCard__none {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
+}
+
+@keyframes tch-digestWait {
+  from { opacity: 0.5; }
+  to { opacity: 1; }
+}
+
+/* ── wellbeing as a door in the bottom row: the deep-link target is the
+      button itself ──────────────────────────────────────────────────────── */
+
+.tch-wbBtn { scroll-margin-block-start: var(--sp-6); }
+
+/* ── the hero distress chip: a disclosure is hero material ───────────────── */
+
+.tch-student__distress {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-block-start: var(--sp-1);
+  padding: 3px var(--sp-3);
+  border: 1px solid color-mix(in srgb, var(--sp-danger-600) 35%, transparent);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-danger-100, var(--sp-bg-subtle));
+  color: var(--sp-danger-600);
+  font-size: var(--sp-fs-xs);
+  cursor: pointer;
+  max-inline-size: 100%;
+}
+
+.tch-student__distress span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--sp-ink-700);
+}
+
+/* ── the badge hover: what these are, and what is being worked toward ────── */
+
+/* The whole cluster is the tooltip's trigger, and the shared trigger style is
+   a fixed 18px "?" circle — three badges inside that circle is the overflow
+   this override removes. The trigger becomes a pill sized by its content. */
+.tch-student__badgeTip .sp-tip__trigger {
+  inline-size: auto;
+  block-size: auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.tch-student__badgeCluster {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-weight: var(--sp-fw-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-ink-700);
+}
+
+/* The badge SVG scales to its box's width; without a hard height the box
+   follows the SVG's intrinsic ratio and pushes the row taller than the pill. */
+.tch-student__badgeCluster .yv-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+.tch-student__badgeCluster .yv-badge svg { display: block; }
+
+.tch-student__badgeLabel {
+  font-weight: var(--sp-fw-regular);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  margin-inline-end: var(--sp-1);
+}
+
+.tch-badgeTip {
+  display: grid;
+  gap: var(--sp-2);
+  min-inline-size: 200px;
+}
+
+.tch-badgeTip__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.tch-badgeTip__row.is-toward { opacity: 0.85; }
+
+.tch-badgeTip__text {
+  display: grid;
+  gap: 1px;
+  font-size: var(--sp-fs-xs);
+}
+
+.tch-badgeTip__text strong { color: var(--sp-ink-900); }
+.tch-badgeTip__text span { color: var(--sp-ink-400); }
+
+.tch-badgeTip__lead {
+  margin: var(--sp-1) 0 0;
+  padding-block-start: var(--sp-2);
+  border-block-start: 1px solid var(--sp-border);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-500);
+}
+
+/* ── Yuvi's one-paragraph read ────────────────────────────────────────────── */
+
+/* The same spotlight recipe as Home's daily brief — deliberately dark in both
+   themes, because it is the one loud object on the page. No scene, no aurora:
+   one child gets one paragraph. */
+.tch-read {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin-block-end: var(--sp-4);
+  border-radius: var(--sp-radius-lg);
+  background:
+    radial-gradient(120% 140% at 100% 0%, #2a2160 0%, transparent 60%),
+    linear-gradient(140deg, #171334 0%, #221a4d 55%, #14112b 100%);
+  box-shadow: 0 14px 36px rgba(23, 19, 52, .24);
+  color: #eceaff;
+}
+
+/* Lit glass, not a flat dark rectangle. */
+.tch-read::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .14),
+    inset 0 0 0 1px rgba(255, 255, 255, .05);
+}
+
+.tch-read__inner {
+  position: relative;
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.tch-read__loading { display: grid; gap: var(--sp-2); }
+
+.tch-read__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: rgba(236, 234, 255, .6);
+}
+
+/* The whole header row is the door. Closed, the section is one slim bar. */
+.tch-read__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  inline-size: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: rgba(236, 234, 255, .75);
+  cursor: pointer;
+  font: inherit;
+}
+
+.tch-read__toggle:focus-visible { outline: 2px solid #a99ef7; outline-offset: 4px; }
+
+.tch-read:not(.is-open) .tch-read__inner { padding-block: var(--sp-3); }
+
+.tch-read__none { margin: 0; font-size: var(--sp-fs-sm); color: rgba(236, 234, 255, .6); }
+
+/* One column per subject, a rule between them. */
+.tch-read__subjects { display: flex; align-items: stretch; gap: var(--sp-4); }
+
+.tch-read__subjectWrap {
+  display: flex;
+  gap: var(--sp-4);
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.tch-read__rule { inline-size: 1px; background: rgba(236, 234, 255, .16); }
+
+.tch-read__subject {
+  flex: 1;
+  min-inline-size: 0;
+  display: grid;
+  gap: var(--sp-2);
+  align-content: start;
+  text-align: start;
+}
+
+.tch-read__subject h5 {
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  letter-spacing: .03em;
+  color: rgba(236, 234, 255, .65);
+}
+
+.tch-read__subject ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-1);
+}
+
+.tch-read__subject li {
+  position: relative;
+  padding-inline-start: 14px;
+  font-size: var(--sp-fs-sm);
+  line-height: 1.55;
+  color: #eceaff;
+  text-align: start;
+}
+
+/* The measured line a subject column leads with — the number, quietly. */
+.tch-read__perf {
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  color: rgba(236, 234, 255, .7);
+  font-variant-numeric: tabular-nums;
+}
+
+.tch-read__subjectNone {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: rgba(236, 234, 255, .55);
+}
+
+/* The model's prose account of the subject — sits between the measured line
+   and the numbered points, and reads as a sentence, not a bullet. */
+.tch-read__summary {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  line-height: 1.55;
+  color: #eceaff;
+  text-align: start;
+}
+
+.tch-read__subject li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: .55em;
+  inline-size: 5px;
+  block-size: 5px;
+  border-radius: 50%;
+  background: #a99ef7;
+}
+
+@media (max-width: 760px) {
+  .tch-read__subjects { flex-direction: column; }
+  .tch-read__subjectWrap { flex-direction: column; }
+  .tch-read__rule { inline-size: auto; block-size: 1px; }
+}
+
+/* Claims as rows, each marked by its kind — not one paragraph in one voice. */
+.tch-read__points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.tch-read__points li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-sm);
+  line-height: 1.55;
+  color: #eceaff;
+  /* Follows the PAGE's direction — a `dir="auto"` on the flex row itself let
+     the row pick its own and the icons drifted to the wrong side. */
+  text-align: start;
+}
+
+.tch-read__points li .sp-icon { flex-shrink: 0; translate: 0 2px; }
+.tch-read__points li.is-hard .sp-icon { color: #ffb4a8; }
+.tch-read__points li.is-gain .sp-icon { color: #9be8b7; }
+.tch-read__points li.is-activity .sp-icon { color: #b7c8ff; }
+.tch-read__points li.is-notable .sp-icon { color: #ffe08f; }
+
+.tch-read__suggest {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  background: rgba(255, 255, 255, .08);
+}
+
+.tch-read__suggest p {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-sm);
+  color: rgba(236, 234, 255, .92);
+  line-height: 1.5;
+}
+
+.tch-read__suggest button { flex: none; color: #eceaff; border-color: rgba(255, 255, 255, .3); }
+
+/* ── the two work columns ─────────────────────────────────────────────────── */
+
+.tch-student__columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: var(--sp-4);
+  /* Stretch, deliberately: the columns share one bottom line, and each
+     column's last panel grows to reach it. */
+  align-items: stretch;
+}
+
+/* Flex columns whose LAST panel grows: the two columns end on one line, so
+   the page's midsection reads as one aligned block. */
+.tch-student__main,
+.tch-student__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-inline-size: 0;
+}
+
+.tch-student__main > :last-child,
+.tch-student__side > :last-child { flex: 1; }
+
+@media (max-width: 980px) {
+  .tch-student__columns { grid-template-columns: 1fr; }
+}
+
+/* ── the doors: sometimes-reading behind buttons ─────────────────────────── */
+
+/* One row of doors covering the whole width — every door gets an equal
+   share, wellbeing included. */
+.tch-student__more {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.tch-student__more > .sp-btn {
+  flex: 1;
+  justify-content: center;
+  min-inline-size: 180px;
+}
+
+.tch-student__moreDialog { width: min(860px, 100%); max-block-size: min(85vh, 820px); overflow-y: auto; }
+
+/* The band itself is frameless — the dials are the cards. */
+.tch-status { display: grid; gap: var(--sp-3); }
+
+/* ── topics as drawers: name · subject · bar · figures, a rule between ───── */
+
+.tch-topics__topic {
+  display: grid;
+  gap: var(--sp-1);
+  padding-block: var(--sp-3);
+  border-block-end: 1px solid var(--sp-border);
+}
+
+.tch-topics__topic:last-child { border-block-end: 0; padding-block-end: 0; }
+
+/* Each topic is a <details> drawer: the summary row scans (name · subject ·
+   bar · figures), the drawer holds the "why" prose and the build-task act. */
+.tch-topics__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) auto minmax(80px, 1fr) auto auto;
+  align-items: center;
+  gap: var(--sp-3);
+  cursor: pointer;
+  list-style: none;
+  /* The hover wash bleeds past the text without moving it. */
+  border-radius: var(--sp-radius-md);
+  padding-inline: var(--sp-2);
+  margin-inline: calc(-1 * var(--sp-2));
+  padding-block: var(--sp-1);
+  transition: background var(--sp-dur-fast) var(--sp-ease);
+}
+
+.tch-topics__row:hover { background: var(--sp-surface-2); }
+
+/* The default disclosure triangle — the chevron at the row's end is the
+   affordance, drawn once instead of twice. */
+.tch-topics__row::-webkit-details-marker { display: none; }
+.tch-topics__row::marker { content: ''; }
+
+.tch-topics__chevron {
+  display: inline-flex;
+  color: var(--sp-ink-300);
+  transition: transform var(--sp-dur-fast) var(--sp-ease);
+}
+
+.tch-topics__topic[open] .tch-topics__chevron { transform: rotate(180deg); }
+
+/* The subject on the row itself — same hue scheme as the roadmap's tags. */
+.tch-topics__subj {
+  font-size: var(--sp-fs-xs);
+  border-radius: 999px;
+  padding: 1px 10px;
+  color: var(--sp-ink-500);
+  background: var(--sp-surface-2);
+  white-space: nowrap;
+}
+
+.tch-topics__subj.is-math {
+  color: var(--sp-primary-600);
+  background: color-mix(in srgb, var(--sp-primary-600) 10%, transparent);
+}
+
+.tch-topics__subj.is-science {
+  color: var(--sp-success-600);
+  background: color-mix(in srgb, var(--sp-success-600) 10%, transparent);
+}
+
+.tch-topics__subj.is-english {
+  color: var(--sp-warn-600);
+  background: color-mix(in srgb, var(--sp-warn-600) 12%, transparent);
+}
+
+.tch-topics__detail {
+  display: grid;
+  gap: var(--sp-2);
+  justify-items: start;
+  padding-block-start: var(--sp-2);
+}
+
+.tch-topics__filter { margin-block-end: var(--sp-3); }
+
+.tch-topics__name {
+  font-weight: var(--sp-fw-semibold);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-900);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-inline-size: 0;
+}
+
+.tch-topics__levelTag {
+  flex: none;
+  font-size: 10px;
+  font-weight: var(--sp-fw-regular);
+  color: var(--sp-ink-400);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  padding: 1px var(--sp-2);
+}
+
+.tch-topics__bar {
+  block-size: 8px;
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-bg-subtle);
+  overflow: hidden;
+}
+
+.tch-topics__bar i { display: block; block-size: 100%; border-radius: inherit; }
+.tch-topics__bar i.is-danger { background: var(--sp-danger-600); }
+.tch-topics__bar i.is-warn { background: var(--sp-warn-600); }
+.tch-topics__bar i.is-success { background: var(--sp-success-600); }
+
+.tch-topics__figures { display: grid; gap: 1px; justify-items: end; }
+
+.tch-topics__value {
+  font-weight: var(--sp-fw-bold);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--sp-fs-sm);
+}
+.tch-topics__value.is-danger { color: var(--sp-danger-600); }
+.tch-topics__value.is-warn { color: var(--sp-warn-600); }
+.tch-topics__value.is-success { color: var(--sp-success-600); }
+
+.tch-topics__evidence { font-size: var(--sp-fs-xs); color: var(--sp-ink-300); white-space: nowrap; }
+
+.tch-topics__assign { flex: none; }
+
+/* The digested "why" — a short paragraph under the row, never the vendor's
+   raw prose. */
+.tch-topics__why {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  line-height: 1.6;
+  color: var(--sp-ink-500);
+}
+
+.tch-topics__digestWait {
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  animation: tch-digestWait 1.4s ease-in-out infinite alternate;
+}
+
+@media (max-width: 760px) {
+  .tch-topics__row { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .tch-topics__bar { display: none; }
+  .tch-topics__subj { display: none; }
+}
+
+/* ── goal rows: one head line, a rule between goals ──────────────────────── */
+
+.tch-goalsCard__goal {
+  display: grid;
+  gap: var(--sp-1);
+  justify-items: start;
+  padding-block-end: var(--sp-3);
+  border-block-end: 1px solid var(--sp-border);
+}
+
+.tch-goalsCard__goal:last-child { border-block-end: 0; padding-block-end: 0; }
+
+.tch-goalsCard__goalHead {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.tch-goalsCard__goalHead strong { font-size: var(--sp-fs-sm); }
+
+.tch-goalsCard__deadline {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  margin-inline-start: auto;
+}
+
+/* ── the read hero's aurora — same recipe as the class brief ─────────────── */
+
+.tch-read { container-type: inline-size; }
+
+.tch-read__aurora {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  opacity: .85;
+}
+
+.tch-read__aurora::before {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(124, 108, 255, .16) 70deg,
+    transparent 150deg,
+    rgba(76, 201, 240, .12) 250deg,
+    transparent 340deg);
+  animation: tch-read-sheen 64s linear infinite;
+  will-change: transform;
+}
+
+@keyframes tch-read-sheen { to { transform: rotate(1turn); } }
+
+.tch-read__aurora i {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  filter: blur(48px);
+  will-change: transform;
+}
+
+.tch-read__aurora i:nth-child(1) {
+  inline-size: clamp(200px, 28cqi, 380px); block-size: clamp(200px, 28cqi, 380px);
+  inset-block-start: -110px; inset-inline-start: -50px;
+  background: radial-gradient(circle, rgba(124, 108, 255, .75), transparent 70%);
+  animation: tch-read-drift-a 19s ease-in-out infinite;
+}
+
+.tch-read__aurora i:nth-child(2) {
+  inline-size: clamp(170px, 22cqi, 300px); block-size: clamp(170px, 22cqi, 300px);
+  inset-block-end: -120px; inset-inline-start: 35%;
+  background: radial-gradient(circle, rgba(76, 201, 240, .55), transparent 70%);
+  animation: tch-read-drift-b 23s ease-in-out infinite;
+}
+
+.tch-read__aurora i:nth-child(3) {
+  inline-size: clamp(190px, 26cqi, 360px); block-size: clamp(190px, 26cqi, 360px);
+  inset-block-start: -70px; inset-inline-end: -70px;
+  background: radial-gradient(circle, rgba(255, 122, 199, .38), transparent 70%);
+  animation: tch-read-drift-c 29s ease-in-out infinite;
+}
+
+@keyframes tch-read-drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(60px, 40px, 0) scale(1.15); }
+}
+@keyframes tch-read-drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.1); }
+  50% { transform: translate3d(-70px, -30px, 0) scale(.9); }
+}
+@keyframes tch-read-drift-c {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(.95); }
+  50% { transform: translate3d(-40px, 60px, 0) scale(1.2); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tch-read__aurora::before, .tch-read__aurora i { animation: none; }
+}
+
+/* Fine grain so the blurred blobs do not band on 8-bit panels. */
+.tch-read::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: .16;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+}
+
+.tch-read__inner { z-index: 2; }
+
+/* ── the recommendations panel: overview prose, then three fixed slots ──────
+ *
+ * The paragraph is the reading between the numbers; the slots below keep the
+ * numbers. Three slots always render, in the same order — what works, what is
+ * stuck, the next step — so the teacher's eye learns where the good news
+ * lives, and an empty slot says why instead of vanishing.
+ */
+
+.tch-recs__overview {
+  margin: 0 0 var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  background: color-mix(in srgb, var(--sp-primary-600) 7%, transparent);
+  border-inline-start: 3px solid color-mix(in srgb, var(--sp-primary-600) 45%, transparent);
+  font-size: var(--sp-fs-sm);
+  line-height: 1.6;
+  color: var(--sp-ink-700);
+  text-align: start;
+}
+
+.tch-recs__overviewWait {
+  display: grid;
+  gap: var(--sp-2);
+  margin-block-end: var(--sp-3);
+}
+
+/* One flat, compact list: no sections, no dividers — the theme lives in the
+   pill each row leads with (מה עובד / מה תקוע / הצעד הבא), and rows separate
+   by air alone. */
+.tch-recsPanel .tch-rec {
+  border-block-end: 0;
+  padding-block: var(--sp-2);
+  gap: 2px;
+}
+
+.tch-recsPanel .tch-rec__text {
+  font-size: var(--sp-fs-sm);
+  line-height: 1.5;
+}
+

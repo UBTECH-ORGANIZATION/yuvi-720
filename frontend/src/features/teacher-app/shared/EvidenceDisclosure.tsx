@@ -6,7 +6,7 @@
  * be constructed without its evidence.
  */
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Icon, StatusPill } from '../../../components/primitives'
 import { useI18n } from '../../../i18n/I18nProvider'
 import type { AttentionFlag, TeacherRecommendation } from '../../../services/teacher'
@@ -146,7 +146,12 @@ const CATEGORY_TONE: Record<string, 'strong' | 'steady' | 'support' | 'neutral'>
   refer_intervention: 'support',
 }
 
-export function RecommendationCard({ recommendation }: { recommendation: TeacherRecommendation }) {
+export function RecommendationCard({ recommendation, action }: {
+  recommendation: TeacherRecommendation
+  /** An act the recommendation makes possible (e.g. a build-task seed),
+   *  rendered on the head row beside the category. */
+  action?: ReactNode
+}) {
   const { t, language } = useI18n()
   const [open, setOpen] = useState(false)
   /* One sentence, keyed off the signal — the reason a teacher can read. The
@@ -161,21 +166,26 @@ export function RecommendationCard({ recommendation }: { recommendation: Teacher
   )
   return (
     <li className="tch-rec">
+      {/* One head row: the kind of advice at the start, its acts at the end —
+          a chip alone on a line was a row of air in a narrow column. */}
       <div className="tch-rec__head">
         <StatusPill tone={CATEGORY_TONE[recommendation.category] ?? 'neutral'}>
           {recommendation.category_label}
         </StatusPill>
+        <span className="tch-rec__acts">
+          {action}
+          <button
+            type="button"
+            className="tch-evidence__toggle"
+            aria-expanded={open}
+            onClick={() => setOpen((value) => !value)}
+          >
+            <Icon name={open ? 'chevronUp' : 'chevronLeft'} size={14} aria-hidden="true" />
+            {t('tch.evidence.why')}
+          </button>
+        </span>
       </div>
       <p className="tch-rec__text" dir="auto">{recommendation.text}</p>
-      <button
-        type="button"
-        className="tch-evidence__toggle"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-      >
-        <Icon name={open ? 'chevronUp' : 'chevronLeft'} size={14} aria-hidden="true" />
-        {t('tch.evidence.why')}
-      </button>
       {open ? (
         <div className="tch-rec__because">
           {why.map((sentence, index) => (

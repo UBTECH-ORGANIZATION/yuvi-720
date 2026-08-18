@@ -102,7 +102,7 @@ export function TeacherWellbeing({ learnerId, focusFlagId, fromAlert }: {
 
   if (!flags.length) {
     return (
-      <div className="tch-student__body" role="tabpanel">
+      <div className="tch-student__body">
         {/* Arriving from a bell that said something happened, to a tab that
             holds nothing, is the exact confusion this whole screen exists to
             end. It is possible for one reason only — a notification older than
@@ -126,7 +126,7 @@ export function TeacherWellbeing({ learnerId, focusFlagId, fromAlert }: {
     focusFlagId && !flags.some((flag) => flag._id === focusFlagId))
 
   return (
-    <div className="tch-student__body tch-wellbeing" role="tabpanel">
+    <div className="tch-student__body tch-wellbeing">
       {focusMissing ? (
         <p className="tch-wellbeing__missing" dir="auto">
           <Icon name="alert" size={15} aria-hidden="true" />

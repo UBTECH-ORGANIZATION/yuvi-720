@@ -4,6 +4,7 @@ import { StudentDashboardPage } from '../features/student-dashboard/StudentDashb
 import { TeacherHomePage } from '../features/teacher-app/home/TeacherHomePage'
 import { TeacherStudentsPage } from '../features/teacher-app/students/TeacherStudentsPage'
 import { TeacherStudentPage } from '../features/teacher-app/student/TeacherStudentPage'
+import { TeacherCalendarPage } from '../features/teacher-app/calendar/TeacherCalendarPage'
 import { TeacherGoalsPage } from '../features/teacher-app/goals/TeacherGoalsPage'
 import { TeacherLearningsPage } from '../features/teacher-app/learnings/TeacherLearningsPage'
 import { LearningDetailPage } from '../features/teacher-app/learnings/LearningDetailPage'
@@ -184,6 +185,9 @@ function pageForRoute(pathname: string) {
   }
   if (pathname.startsWith('/teacher/goals')) {
     return <TeacherGoalsPage />
+  }
+  if (pathname.startsWith('/teacher/calendar')) {
+    return <TeacherCalendarPage />
   }
   if (pathname.startsWith('/teacher/learnings/')) {
     // /teacher/learnings/:groupId/:componentId — the group travels in the URL

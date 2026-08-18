@@ -12,6 +12,7 @@ the learner's real mastery evidence.
 
 from __future__ import annotations
 
+import copy
 from typing import Any
 
 from app.services.kata_catalog import objectives_for
@@ -143,3 +144,49 @@ def next_focus(brain: dict[str, Any], subjects: tuple[str, ...] = DEFAULT_SUBJEC
         "mode": "new",
         "plan": plan,
     }
+
+
+def focus_roadmap(brain: dict[str, Any], steps: int = 6,
+                  subjects: tuple[str, ...] = DEFAULT_SUBJECTS) -> list[dict[str, Any]]:
+    """The planner's own prediction of the road ahead: run `next_focus`, mark
+    its pick completed on a SIMULATED mastery table, and ask again — `steps`
+    times. Because each step is the real ranking function over the simulated
+    state, the roadmap can never disagree with what the planner would actually
+    serve; it IS the planner, played forward.
+
+    The simulation marks a step complete the way reality would read it: the
+    objective achieved, its review satisfied, and its subject freshly
+    practiced — which is what lets the ranking switch subjects mid-road
+    exactly as it would live. The caller's brain is never touched.
+    """
+    from app.brain.mastery import mastery_key
+
+    sim = {**brain, "mastery": copy.deepcopy(brain.get("mastery") or {})}
+    road: list[dict[str, Any]] = []
+    for index in range(max(0, steps)):
+        focus = next_focus(sim, subjects)
+        if focus.get("mode") == "complete" or not focus.get("objective_id"):
+            if not road:
+                road.append({"subject": None, "objective_id": None, "mode": "complete"})
+            break
+        road.append({"subject": focus["subject"],
+                     "objective_id": focus["objective_id"],
+                     "mode": focus["mode"]})
+        key = mastery_key(focus["objective_id"])
+        entry = dict(sim["mastery"].get(key)
+                     or sim["mastery"].get(str(focus["objective_id"])) or {})
+        entry.update({
+            "achieved": True,
+            "needs_review": False,
+            # Far enough that no simulated step re-triggers spaced review.
+            "review_due": "9999-01-01T00:00:00+00:00",
+            # Monotonic future stamps: the completed subject reads as the most
+            # recently practiced, exactly as it would after a real completion.
+            "last_evidence_at": f"9998-01-01T00:00:{index:02d}+00:00",
+        })
+        sim["mastery"][key] = entry
+        # A stale duplicate under the raw (dotted) key would shadow nothing —
+        # entry_for prefers the safe key — but tidy it away all the same.
+        if str(focus["objective_id"]) != key:
+            sim["mastery"].pop(str(focus["objective_id"]), None)
+    return road

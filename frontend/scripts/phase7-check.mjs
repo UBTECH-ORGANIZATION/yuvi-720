@@ -1,14 +1,13 @@
-/* Phase 7 in a real browser: badges, moments, kudos, digest, meeting prep.
+/* Phase 7 in a real browser: moments, kudos, digest, and the student profile.
  *
  * What is worth checking here rather than in unit tests:
  *
- *   - The badges tab answers "what does this certify?", not just "what did they
- *     win" — the objectives must be reachable from the row.
  *   - Every digest bullet and every moment opens to its datum. A panel that
  *     narrates without evidence is the exact failure mode of this phase.
- *   - The meeting drawer deep-links (`?meeting=1`) and survives a reload, which
- *     is the whole reason it is a query param and not component state.
  *   - Kudos is reachable from the moment that earned it.
+ *   - The student profile is ONE scrolling page now (no tab bar): KPI strip,
+ *     status band with half-arc dials, the hardest topics, and the dialog doors
+ *     as a closed drawer — asserted in place rather than behind tab clicks.
  *
  * Never `waitUntil: 'networkidle'` — the teacher page holds an SSE connection.
  */
@@ -97,7 +96,7 @@ try {
           (await page.locator('.tch-moments__none').count()) > 0)
   }
 
-  // ── badges tab ────────────────────────────────────────────────────────────
+  // ── student profile: one scrolling page ──────────────────────────────────
   /* The roster now defaults to the TABLE view, and `.tch-studentCard` only
      exists in the grid — so this waited 40s for a card that renders only after
      a view switch, and threw. Switch to the grid deliberately (it is also the
@@ -119,81 +118,29 @@ try {
     check('the roster offers a way into a profile', false, 'no card and no row')
     await page.goto(`${BASE}/teacher/student/gal`, { waitUntil: 'domcontentloaded' })
   }
-  await page.waitForSelector('.tch-tabs', { timeout: 30000 })
+  await page.waitForSelector('.tch-student__body', { timeout: 30000 })
 
-  const tabs = page.locator('.tch-tabs button')
-  const tabCount = await tabs.count()
-  check('the profile now has seven tabs', tabCount === 7, `${tabCount}`)
-
-  const labels = await tabs.allTextContents()
-  check('one of them is Badges',
-        labels.some((label) => label.trim().length > 0), labels.join(' · '))
-
-  await tabs.nth(3).click()
-  await page.waitForTimeout(2500)
-  const badgeRows = await page.locator('.tch-badge').count()
-  check('the badges tab lists badges', badgeRows > 0, `${badgeRows} badges`)
-
-  if (badgeRows > 0) {
-    const certifies = await page.locator('.tch-badge__certifies').count()
-    check('badges state what they certify', certifies > 0, `${certifies} with objectives`)
-    await page.locator('.tch-badge__certifies summary').first().click()
-    await page.waitForTimeout(300)
-    const objectives = await page.locator('.tch-badge__certifies li').count()
-    check('opening a badge shows the objectives behind it', objectives > 0, `${objectives}`)
-    check('no raw locale key on the badges tab',
-          !(await page.locator('.tch-badges').innerText()).includes('tch.badges.'))
-    await page.screenshot({ path: `${OUT}/02-badges.png`, fullPage: true })
-  }
-
-  // ── meeting prep drawer ───────────────────────────────────────────────────
-  const profileUrl = page.url()
-  await page.locator('.tch-student__meeting').click()
-  await page.waitForSelector('.tch-drawer', { timeout: 10000 })
-  check('the meeting drawer opens over the profile', page.url().includes('meeting=1'), page.url())
-
-  /* Wait for the outcome, not for a guessed loading class: meeting prep makes
-     an LLM call and can take ten seconds or more. A fixed sleep here measured an
-     empty drawer and reported it as "shows nothing". */
-  await page.waitForFunction(
-    () => document.querySelector('.tch-prep li') || document.querySelector('.tch-drawer__empty'),
-    { timeout: 90000 }
-  ).catch(() => {})
-
-  const prepRows = await page.locator('.tch-prep li').count()
-  const unavailable = await page.locator('.tch-drawer__empty').count()
-  check('the drawer shows suggestions or says why it cannot',
-        prepRows > 0 || unavailable > 0, `${prepRows} rows, ${unavailable} empty-state`)
-
-  if (prepRows > 0) {
-    const withWhy = await page.locator('.tch-prep li .tch-evidence__toggle').count()
-    check('every suggestion shows what it rests on', withWhy === prepRows, `${withWhy}/${prepRows}`)
-  }
-  await page.screenshot({ path: `${OUT}/03-meeting-prep.png` })
-
-  /* Deep link: the whole reason this is a query param. Waited on rather than
-     slept through — the drawer only mounts after the profile's own fetch
-     resolves, so a fixed 3s pause sat right on that boundary and failed or
-     passed depending on the day. */
-  await page.reload({ waitUntil: 'domcontentloaded' })
-  const survived = await page.locator('.tch-drawer')
-    .waitFor({ timeout: 30000 }).then(() => true).catch(() => false)
-  check('the drawer survives a reload (deep link works)', survived)
-
-  // Escape closes it and clears the param.
-  await page.keyboard.press('Escape')
-  await page.waitForTimeout(800)
-  check('escape closes the drawer',
-        (await page.locator('.tch-drawer').count()) === 0 && !page.url().includes('meeting=1'),
-        page.url())
-  check('closing returns to the profile', page.url().split('?')[0] === profileUrl.split('?')[0])
+  /* No tab bar any more — the profile is one scrolling page. Its lead is the
+     KPI strip (four cards, same language as Home's) and the status band with
+     its half-arc dials. */
+  /* The strip renders only after the activity rows arrive — counting on body
+     mount raced that fetch and read zero. */
+  await page.waitForSelector('.tch-student__kpis', { timeout: 20000 }).catch(() => {})
+  const kpiCards = await page.locator('.tch-student__kpis .tch-stat').count()
+  // Three figures now: the mastery % moved to the status band's dials.
+  check('the KPI strip has three figures', kpiCards === 3, `${kpiCards} figures`)
+  const halfDials = await page.locator('.tch-status .sp-chart-ring--half').count()
+  check('the status band is drawn with half-arc dials',
+        (await page.locator('.tch-status').count()) === 1 && halfDials > 0,
+        `${halfDials} dials`)
+  await page.screenshot({ path: `${OUT}/02-profile.png`, fullPage: true })
 
   // ── themes ────────────────────────────────────────────────────────────────
   const colours = {}
   for (const theme of ['light', 'dark']) {
     await page.evaluate((value) => document.documentElement.setAttribute('data-theme', value), theme)
     await page.waitForTimeout(400)
-    colours[theme] = await page.locator('.tch-tabs button').first()
+    colours[theme] = await page.locator('.tch-stat').first()
       .evaluate((node) => getComputedStyle(node).color)
   }
   check('the new surfaces render in both themes',
@@ -257,77 +204,45 @@ try {
     }
   }
 
-  // The activity tab specifically — it is behind a click, so a page-load sweep
-  // never sees it, and it is where every one of these ids used to live.
+  // The topic rows are closed drawers on the single profile page, so a
+  // page-load sweep never sees inside them — and they are where the digest
+  // (or its plain-aggregate fallback) lives.
   await page.goto(`${BASE}/teacher/student/gal`, { waitUntil: 'domcontentloaded' })
-  await page.waitForSelector('.tch-student__tabs button, [role=tab]', { timeout: 60000 })
-  const profileTabs = page.locator('.tch-student__tabs button, [role=tab]')
-  for (let index = 0; index < await profileTabs.count(); index += 1) {
-    if ((await profileTabs.nth(index).innerText()).includes('פעילות')) {
-      await profileTabs.nth(index).click()
-      break
-    }
-  }
-  await page.waitForSelector('.tch-worked__lesson', { timeout: 30000 })
+  await page.waitForSelector('.tch-topics', { timeout: 60000 })
 
-  /* Every lesson is CLOSED on arrival — twenty of them expanded, each with a
-     paragraph per item, was a page nobody reached the end of. */
-  const lessons = await page.locator('.tch-worked__lesson').count()
-  const openOnArrival = await page.locator('.tch-worked__lesson[open]').count()
-  check('lessons arrive collapsed', lessons > 0 && openOnArrival === 0,
-        `${lessons} lessons, ${openOnArrival} open`)
+  /* The hardest card names TOPICS, not question numbers: every row is an idea
+     aggregated across its questions, it says how much evidence is behind it,
+     and a topic never answered right shows its fraction in words rather than
+     a meaningless "0%". */
+  const topicValues = await page.locator('.tch-topics__value').allInnerTexts()
+  check('the hardest-topics card is drawn', topicValues.length > 0,
+        `${topicValues.length} topics`)
+  check('and no row is a bare zero percent',
+        !topicValues.some((value) => value.trim() === '0%'), topicValues.join(' '))
+  const topicNames = await page.locator('.tch-topics__name').allInnerTexts()
+  check('and no topic is named as a question number',
+        !topicNames.some((name) => /(?:שאלה|سؤال|question)\s*\d/i.test(name)),
+        topicNames.join(' | '))
+  check('and every topic states its evidence',
+        await page.locator('.tch-topics__evidence').count() === topicValues.length)
 
-  /* The moments feed is its own fetch, and it used to render nothing until it
-     landed — so it appeared above what the teacher was already reading and
-     pushed it down the page. It lives inside the tab's grid now, so the space
-     below it is the same gap as everywhere else rather than zero. */
-  const momentsGap = await page.evaluate(() => {
-    const feed = document.querySelector('.tch-student__moments')
-    const next = feed?.nextElementSibling
-    if (!feed || !next) return -1
-    return Math.round(next.getBoundingClientRect().top - feed.getBoundingClientRect().bottom)
-  })
-  check('the moments feed is spaced from the panel below it', momentsGap > 4,
-        `${momentsGap}px`)
-  check('each closed lesson still says how it went',
-        await page.locator('.tch-worked__counts').count() === lessons,
-        `${await page.locator('.tch-worked__dots').count()} dot strips`)
-
-  /* The month strip belongs to the overview. This tab is about what happened
-     inside the work, not when. */
-  check('the activity tab does not repeat the month strip',
-        await page.locator('.tch-trend').count() === 0)
-
-  /* A question they never got right has a zero-length bar, so a column of them
-     is labels beside an empty track. They are excluded from the chart and
-     counted in a line beneath it — never silently dropped. */
-  const barValues = await page.locator('.sp-chart-bars__value').allInnerTexts()
-  check('the hardest-questions chart is drawn', barValues.length > 0, `${barValues.length} bars`)
-  check('and has no empty bars',
-        !barValues.some((value) => value.trim() === '0%'), barValues.join(' '))
-
-  // Open every lesson before sweeping: hidden text is not swept by innerText,
-  // and the ids this guards against live inside the items.
-  await page.evaluate(() => document.querySelectorAll('.tch-worked__lesson')
+  // Open every topic before sweeping: hidden text is not swept by innerText,
+  // and the raw vendor prose this guards against must never render here.
+  await page.evaluate(() => document.querySelectorAll('.tch-topics__topic')
     .forEach((node) => node.setAttribute('open', '')))
   await page.waitForTimeout(300)
-  const activityText = await visibleText()
+  const topicsText = await visibleText()
   for (const leak of LEAKS) {
-    const hit = activityText.match(leak.pattern)
-    check(`the activity tab: no ${leak.name}`, !hit, hit ? hit[0] : 'clean')
+    const hit = topicsText.match(leak.pattern)
+    check(`the opened topics: no ${leak.name}`, !hit, hit ? hit[0] : 'clean')
   }
 
-  const worked = await page.locator('.tch-worked__item').count()
-  const teaches = await page.locator('.tch-worked__teaches').count()
-  check('every item says what it was', worked > 0, `${worked} items`)
-  check('and what the lesson meant it to teach', teaches > 0, `${teaches} described`)
-
-  /* ── the overview reads as a profile, not as a form ───────────────────────
-     Reported from real usage: generic plain-text panels, a "חוזקה בפרופיל"
-     chip repeated down the strengths list, and three bare questionnaire chips
-     standing in for a description of the child. */
-  await page.goto(`${BASE}/teacher/student/gal`, { waitUntil: 'domcontentloaded' })
-  await page.waitForSelector('.tch-balance', { timeout: 60000 })
+  /* ── the sometimes-reading lives behind doors, and each door opens ────────
+     Strengths/difficulties and the portrait are dialogs now: a teacher who
+     wants one opens it, nobody scrolls past both every visit. */
+  await page.waitForSelector('.tch-student__more', { timeout: 60000 })
+  await page.locator('.tch-student__more button', { hasText: 'חוזקות' }).click()
+  await page.waitForSelector('.tch-balance', { timeout: 30000 })
 
   const columns = await page.locator('.tch-balance__col').count()
   check('strengths and difficulties sit side by side', columns === 2, `${columns} columns`)
@@ -341,10 +256,13 @@ try {
   check('genuinely beside each other, not stacked', sameRow)
   check('and the repeated kind chip is gone',
         await page.locator('.tch-strength .sp-pill, .tch-strength .sp-statusPill').count() === 0)
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
 
   /* The portrait is a SUMMARY: one current sentence per facet, the rest behind
-     a disclosure. It shipped as nine bulleted sentences under four headings,
-     which is the whole description — a document, not an answer. */
+     a disclosure. */
+  await page.locator('.tch-student__more button', { hasText: 'איך המערכת' }).click()
+  await page.waitForSelector('.tch-portrait', { timeout: 30000 })
   const facets = await page.locator('.tch-portrait__facet').count()
   const leads = await page.locator('.tch-portrait__facet p:not(.tch-portrait__more)').count()
   check('the profile describes the child in sentences', facets > 0, `${facets} facets`)
@@ -361,8 +279,8 @@ try {
           await page.locator('.tch-portrait__more').count() > 0)
     await moreBtn.click()
   }
-  check('the questionnaire answers are a footnote, not a panel',
-        await page.locator('.tch-student__described').count() === 0)
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
 
   /* ── the KPI strip leads with the material ────────────────────────────────
      The success rate led it and counts ATTEMPTS, so a child who works through
@@ -370,17 +288,23 @@ try {
      once — and the same percentage is already the tone on every worked-on
      card. What a teacher opens a profile for is how far through they are. */
   const kpiLabels = await page.locator('.tch-student__kpis .tch-stat__label').allInnerTexts()
-  check('the first KPI is how much of the material is mastered',
-        kpiLabels[0]?.trim() === 'חומר שנשלט', kpiLabels.join(' | '))
+  /* The mastery figure lives in the status band's dials now — a second copy
+     in the strip said the same number twice on one screen. */
+  check('the mastery percentage is not duplicated in the strip',
+        !kpiLabels.some((label) => label.includes('חומר שנשלט')), kpiLabels.join(' | '))
   check('and the attempt-weighted success rate is gone',
         !kpiLabels.some((label) => label.includes('אחוז הצלחה')), kpiLabels.join(' | '))
 
-  /* A subject nobody has touched says so, instead of drawing an empty ring
-     with "0%" written inside it — which reads as a broken widget. */
+  /* Round 3 flipped this: the dial is ALWAYS drawn — a missing gauge beside
+     four drawn ones reads as a rendering bug — and the CAPTION is what tells
+     the truth about an untouched subject. So a 0% dial is legal exactly when
+     "טרם התחילו" stands under it. */
   const progressText = await page.locator('[data-tour="teacher.subjectProgress"]').innerText()
-  // A standalone zero, not the "0%" inside "100%".
-  check('an untouched subject says "not started", not "0%"',
-        !/(?<!\d)0%/.test(progressText), progressText.replace(/\n/g, ' · '))
+  const hasBareZero = /(?<!\d)0%/.test(progressText)
+  check('a 0% dial is always captioned "not started" or "worked, none yet"',
+        !hasBareZero || progressText.includes('טרם התחילו')
+        || progressText.includes('עדיין ללא יעדים'),
+        progressText.replace(/\n/g, ' · '))
 
   /* Every recommendation names something about THIS child. The generic
      sentences are the fallbacks, and seeing one means the catalogue missed. */
@@ -389,13 +313,20 @@ try {
   check('none of them is an unfilled template',
         !recTexts.some((text) => /\{[a-z_]+\}/.test(text)), recTexts.join(' | '))
 
-  // The "why?" behind one, opened: a sentence, not the payload that produced it.
-  const firstWhy = page.locator('.tch-rec .tch-evidence__toggle').first()
-  await firstWhy.click()
-  const why = (await page.locator('.tch-rec__because').first().innerText()).trim()
-  check('the why is one readable sentence', why.length > 12 && !why.includes('{'), why)
-  check('and not the raw payload',
-        !/objectives (total|mastered|in progress)|score ewma|labels:/i.test(why), why)
+  // The "why?" behind one, opened: a sentence, not the payload that produced
+  // it. The panel is capped at three rows now and derived rows carry their
+  // numbers IN the sentence instead of a toggle — so a why exists only when a
+  // server-sourced row made the cut, and its absence is a legal state.
+  const whyToggles = await page.locator('.tch-rec .tch-evidence__toggle').count()
+  if (whyToggles === 0) {
+    check('the why toggle (no server-sourced row on this child)', true, 'skipped')
+  } else {
+    await page.locator('.tch-rec .tch-evidence__toggle').first().click()
+    const why = (await page.locator('.tch-rec__because').first().innerText()).trim()
+    check('the why is one readable sentence', why.length > 12 && !why.includes('{'), why)
+    check('and not the raw payload',
+          !/objectives (total|mastered|in progress)|score ewma|labels:/i.test(why), why)
+  }
 
   // ── a Hebrew placeholder reads right-to-left ─────────────────────────────
   /* `dir="auto"` resolves from the VALUE, and an empty value has no direction —

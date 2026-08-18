@@ -96,31 +96,103 @@ class TestFlattening:
 
 class TestClean:
     def test_a_model_that_said_nothing_is_not_cached_as_a_finding(self):
-        # "No difficulties" and "the model returned an empty object" are
+        # "Nothing to say" and "the model returned an empty object" are
         # different claims, and a teacher cannot tell them apart on screen.
-        assert learner_read._clean({}) is None
-        assert learner_read._clean({"difficulties": [], "improvements": [],
-                                    "involvement": "", "suggestion": ""}) is None
+        assert learner_read._clean({}, []) is None
+        assert learner_read._clean({"subjects": [], "involvement": "",
+                                    "notable": "", "suggestion": ""}, []) is None
 
-    def test_an_empty_improvements_list_beside_real_content_is_kept(self):
+    def test_an_empty_subjects_list_beside_real_content_is_kept(self):
         read = learner_read._clean({
-            "difficulties": ["5 שגיאות ברצף"], "improvements": [],
-            "involvement": "פעיל/ה", "suggestion": "לחזור על השברים",
-        })
+            "subjects": [],
+            "involvement": "פעילות יומית", "suggestion": "לחזור על השברים",
+        }, [])
         assert read is not None
-        assert read["improvements"] == []
+        assert read["subjects"] == []
 
-    def test_lists_are_bounded(self):
+    def test_sections_and_lines_are_bounded(self):
         read = learner_read._clean({
-            "difficulties": [f"point {index}" for index in range(20)],
+            "subjects": [
+                {"subject": f"s{index}",
+                 "points": [f"point {p}" for p in range(9)]}
+                for index in range(9)
+            ],
             "involvement": "x" * 900,
-        })
-        assert len(read["difficulties"]) == learner_read.MAX_POINTS
+        }, [])
+        assert len(read["subjects"]) == learner_read.MAX_SUBJECTS
+        assert all(len(s["points"]) == learner_read.MAX_SUBJECT_POINTS
+                   for s in read["subjects"])
         assert len(read["involvement"]) <= learner_read.MAX_POINT_CHARS
 
+    def test_a_subject_the_evidence_never_named_is_dropped(self):
+        # A section about an unnamed subject could only be invented.
+        read = learner_read._clean({
+            "subjects": [
+                {"subject": "math", "points": ["הושג יעד 1 מתוך 3"]},
+                {"subject": "history", "points": ["משפט בדוי"]},
+            ],
+            "involvement": "פעילות",
+        }, [], known_subjects={"math", "science"})
+        assert [s["subject"] for s in read["subjects"]] == ["math"]
+
     def test_a_non_dict_is_refused(self):
-        assert learner_read._clean(["difficulties"]) is None
-        assert learner_read._clean(None) is None
+        assert learner_read._clean(["subjects"], []) is None
+        assert learner_read._clean(None, []) is None
+
+    def test_a_subject_with_only_a_summary_survives(self):
+        # The per-subject prose is a finding of its own — bullets are optional.
+        read = learner_read._clean({
+            "subjects": [{"subject": "math", "summary": "מתקדם יפה בתרגול."}],
+        }, [], known_subjects={"math"})
+        assert read is not None
+        assert read["subjects"][0]["summary"] == "מתקדם יפה בתרגול."
+        assert read["subjects"][0]["points"] == []
+
+    def test_an_overview_that_restates_percentages_is_dropped(self):
+        # The overview promised prose with no figures; "%" means the model
+        # restated the dashboard instead of reading between its numbers.
+        read = learner_read._clean({
+            "overview": "מצליח ב-80% מהשאלות.",
+            "involvement": "פעילות יומית",
+        }, [])
+        assert read["overview"] == ""
+
+    def test_an_overview_alone_is_a_finding(self):
+        read = learner_read._clean({
+            "overview": "לומד בהתמדה ומתקשה בשאלות מילוליות.",
+        }, [])
+        assert read is not None
+        assert read["overview"].startswith("לומד")
+
+
+class TestSuggestionAnchor:
+    """The suggestion points somewhere real, or it points nowhere."""
+
+    ANCHORS = [{"key": "obj:MATH-1", "title": "מערכת צירים",
+                "subject": "math", "objective_id": "MATH-1"}]
+
+    def test_a_valid_target_becomes_our_anchor_not_the_models(self):
+        read = learner_read._clean({
+            "involvement": "פעילות יומית",
+            "suggestion": "לחזק את מערכת הצירים",
+            "suggestion_target": "obj:MATH-1",
+        }, self.ANCHORS)
+        assert read["suggestion_anchor"] == {
+            "key": "obj:MATH-1", "title": "מערכת צירים",
+            "subject": "math", "objective_id": "MATH-1"}
+
+    def test_an_invented_target_is_dropped_not_trusted(self):
+        read = learner_read._clean({
+            "involvement": "פעילות יומית",
+            "suggestion": "לעבוד על נושא שלא קיים",
+            "suggestion_target": "obj:INVENTED",
+        }, self.ANCHORS)
+        assert read is not None
+        assert read["suggestion_anchor"] is None
+
+    def test_the_cache_key_carries_the_prompt_version(self):
+        # A v1 read has no anchor; it must never be served as a v2 one.
+        assert learner_read.PROMPT_VERSION in learner_read.read_id("kid", "he")
 
 
 class TestServingStale:

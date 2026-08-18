@@ -52,16 +52,21 @@ export function GoalDialog({
         {t('tch.goalsPage.create')}
       </h2>
 
-      <label className="tch-builder__field tch-goalDialog__who">
-        <span>{t('tch.goalsPage.composeFor')}</span>
-        <select className="sp-input" value={learnerId}
-                onChange={(event) => onPick(event.target.value)}>
-          <option value="">{t('tch.goalsPage.composePick')}</option>
-          {candidates.map((row) => (
-            <option key={row.id} value={row.id}>{row.name}</option>
-          ))}
-        </select>
-      </label>
+      {/* Opened from a student's own profile there is nobody to pick — the
+          child is the context, and a one-option dropdown would only ask the
+          teacher to confirm what the page already said. */}
+      {candidates.length > 1 || !learnerId ? (
+        <label className="tch-builder__field tch-goalDialog__who">
+          <span>{t('tch.goalsPage.composeFor')}</span>
+          <select className="sp-input" value={learnerId}
+                  onChange={(event) => onPick(event.target.value)}>
+            <option value="">{t('tch.goalsPage.composePick')}</option>
+            {candidates.map((row) => (
+              <option key={row.id} value={row.id}>{row.name}</option>
+            ))}
+          </select>
+        </label>
+      ) : null}
 
       {learnerId ? (
         <div className="tch-goalDialog__body">
@@ -137,32 +142,18 @@ function LearnerReadPanel({ learnerId }: { learnerId: string }) {
         <p className="tch-goalRead__none">{t('tch.goalRead.unavailable')}</p>
       ) : (
         <>
-          {read.difficulties?.length ? (
-            <section className="tch-goalRead__block">
-              <h3>{t('tch.goalRead.difficulties')}</h3>
-              <ul>{read.difficulties.map((line, index) => (
-                <li key={index} dir="auto">{line}</li>))}</ul>
-            </section>
-          ) : null}
-
-          {/* An empty list is a real answer and is shown as one. "Nothing has
-              improved yet" is information; an absent section reads as a bug. */}
-          <section className="tch-goalRead__block">
-            <h3>{t('tch.goalRead.improvements')}</h3>
-            {read.improvements?.length ? (
-              <ul>{read.improvements.map((line, index) => (
-                <li key={index} dir="auto">{line}</li>))}</ul>
-            ) : (
-              <p className="tch-goalRead__none">{t('tch.goalRead.noImprovements')}</p>
-            )}
-          </section>
-
-          {read.involvement ? (
-            <section className="tch-goalRead__block">
-              <h3>{t('tch.goalRead.involvement')}</h3>
-              <p dir="auto">{read.involvement}</p>
-            </section>
-          ) : null}
+          {/* One paragraph, not four labeled sections: the reading is context
+              a teacher absorbs in one breath before choosing a draft, and a
+              headed document beside a form made the dialog two competing
+              screens. The sentences are the same ones — joined, in the same
+              order the sections told them. */}
+          <p className="tch-goalRead__paragraph" dir="auto">
+            {[...(read.subjects ?? []).flatMap((section) =>
+                [...(section.summary ? [section.summary] : []), ...section.points]),
+              ...(read.involvement ? [read.involvement] : []),
+              ...(read.notable ? [read.notable] : [])].join(' ')
+              || t('tch.goalRead.noImprovements')}
+          </p>
 
           {read.suggestion ? (
             <p className="tch-goalRead__suggestion" dir="auto">

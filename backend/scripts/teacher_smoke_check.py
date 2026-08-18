@@ -61,6 +61,8 @@ REQUIRED_INDEXES: dict[str, list[tuple[str, ...]]] = {
     "wellbeing_flags": [("learner_id", "at"), ("status",)],
     # Cached goal suggestions, read by _id and cleared per learner.
     "goal_suggestions": [("learner_id",)],
+    # Free calendar events. Read by (group, start_at) on every calendar open.
+    "calendar_events": [("group_id", "start_at")],
 }
 
 # Brain paths the teacher assistant must never be able to read.

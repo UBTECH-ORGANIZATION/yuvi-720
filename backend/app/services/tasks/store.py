@@ -403,6 +403,19 @@ async def list_launches(task_id: str) -> list[dict[str, Any]]:
     return rows
 
 
+async def list_launches_for_group(group_id: str) -> list[dict[str, Any]]:
+    """Every opening in one class, by due date — what the calendar reads.
+
+    Group-scoped rather than task-scoped because the calendar asks "what is due
+    in this class", a question the per-task listing can only answer with an
+    N+1. Undated launches sort last: they are real work, just not work with a
+    day, and the caller drops them from a date range.
+    """
+    rows = await _find(LAUNCHES, {"group_id": group_id})
+    rows.sort(key=lambda row: (not row.get("due_at"), str(row.get("due_at") or "")))
+    return rows
+
+
 async def set_launch_status(launch: str, status: str) -> Optional[dict[str, Any]]:
     if status not in LAUNCH_STATUSES:
         raise TaskStoreError("bad_status")

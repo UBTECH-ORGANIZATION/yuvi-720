@@ -17,7 +17,8 @@ import { TourButton } from './tour/TourButton'
 import { Icon } from './primitives'
 import './teacher-app-bar.css'
 
-type TeacherSection = 'home' | 'students' | 'learnings' | 'tasks' | 'goals' | 'messages'
+type TeacherSection =
+  'home' | 'students' | 'learnings' | 'tasks' | 'goals' | 'calendar' | 'messages'
 
 /* Order matters: every branch must be tested before the bare `/teacher`
    catch-all, or a new section highlights "home" while the teacher stands on
@@ -25,6 +26,7 @@ type TeacherSection = 'home' | 'students' | 'learnings' | 'tasks' | 'goals' | 'm
    worked, and nothing in the nav either led to it or lit up on it. */
 function sectionForRoute(pathname: string): TeacherSection | null {
   if (pathname.startsWith('/teacher/goals')) return 'goals'
+  if (pathname.startsWith('/teacher/calendar')) return 'calendar'
   if (pathname.startsWith('/teacher/learnings')) return 'learnings'
   if (pathname.startsWith('/teacher/tasks')) return 'tasks'
   if (pathname.startsWith('/teacher/messages')) return 'messages'
@@ -91,6 +93,16 @@ export function TeacherAppBar() {
       >
         <Icon name="target" size={16} />
         <span>{t('tch.nav.goals')}</span>
+      </button>
+      <button
+        type="button"
+        className={active === 'calendar' ? 'is-active' : ''}
+        aria-current={active === 'calendar' ? 'page' : undefined}
+        onClick={() => navigate('/teacher/calendar')}
+        data-tour="teacher.nav.calendar"
+      >
+        <Icon name="calendar" size={16} />
+        <span>{t('tch.nav.calendar')}</span>
       </button>
       <button
         type="button"

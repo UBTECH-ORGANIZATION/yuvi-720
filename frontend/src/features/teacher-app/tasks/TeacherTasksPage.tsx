@@ -325,7 +325,7 @@ function TaskRow({ task, onChanged }: { task: TaskSummary; onChanged: () => void
  *  **It survives being closed.** The form writes itself to the teacher's own
  *  machine as they type, and the dialog no longer closes on a stray click.
  */
-function TaskBuilder({ groupId, seed, onDone, onCancel }: {
+export function TaskBuilder({ groupId, seed, onDone, onCancel }: {
   groupId: string
   /** A task started from a finding elsewhere, rather than from a blank form. */
   seed?: TaskSeed | null
@@ -1049,9 +1049,17 @@ function LessonPicker({ lessons, loading, value, lesson, disabled, onPick }: {
               <button type="button" className="tch-picker__row"
                       onClick={() => { onPick(row.component_id); setOpen(false) }}>
                 <span dir="auto">{row.title ?? row.component_id}</span>
-                {/* The unit, quietly: two lessons in a curriculum routinely
-                    share a name and differ only by which unit they sit in. */}
-                <small dir="auto">{row.unit_title ?? row.objective_title ?? ''}</small>
+                {/* WHAT THE LESSON TEACHES leads the sub-line — vendor lesson
+                    names ("בסיסית 1", "ממוצעת 1") are edition labels a teacher
+                    cannot navigate by; the objective is the idea they are
+                    actually looking for. The unit follows only when it says
+                    something the other two lines have not. */}
+                <small dir="auto">
+                  {[row.objective_title, row.unit_title]
+                    .filter((text, index, all) => text && text !== row.title
+                      && all.indexOf(text) === index)
+                    .join(' · ')}
+                </small>
               </button>
             </li>
           ))}

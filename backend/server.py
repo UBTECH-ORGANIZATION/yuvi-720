@@ -29,6 +29,7 @@ from app.routes.teacher_wellbeing import router as teacher_wellbeing_router
 from app.routes.teacher_tasks import router as teacher_tasks_router
 from app.routes.student_tasks import router as student_tasks_router
 from app.routes.teacher_live import router as teacher_live_router
+from app.routes.teacher_calendar import router as teacher_calendar_router
 from app.routes.notifications import router as notifications_router
 from app.routes.me import router as me_router
 from app.routes.teacher_assistant import router as teacher_assistant_router
@@ -119,8 +120,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     from app.agents.teacher_tools import registry as teacher_tool_registry
     from app.services import (
         daily_brief, direct_messages, kudos, mentoring_assist, notifications,
-        org_repository, teacher_alerts, teacher_insights_store, weekly_digest,
-        wellbeing,
+        org_repository, school_calendar, teacher_alerts, teacher_insights_store,
+        weekly_digest, wellbeing,
     )
 
     index_steps = (
@@ -143,6 +144,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         ("wellbeing_flags", wellbeing.ensure_indexes),
         # Cleared per learner when a teacher's suggestions are invalidated.
         ("goal_suggestions", mentoring_assist.ensure_goal_suggestion_indexes),
+        # Read by (group_id, start_at) on every open of the class calendar.
+        ("calendar_events", school_calendar.ensure_indexes),
     )
     await run_index_steps(index_steps)
 
@@ -199,6 +202,7 @@ def create_app() -> FastAPI:
     app.include_router(teacher_tasks_router)
     app.include_router(student_tasks_router)
     app.include_router(teacher_live_router)
+    app.include_router(teacher_calendar_router)
     app.include_router(notifications_router)
     app.include_router(me_router)
     app.include_router(teacher_assistant_router)
