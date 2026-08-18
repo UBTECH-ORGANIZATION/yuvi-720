@@ -13,7 +13,6 @@ adds only what nothing else owns: free events. Two rules it keeps:
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -21,16 +20,12 @@ from fastapi.responses import JSONResponse
 
 from app.auth.dependencies import require_teacher_session
 from app.brain import org
-from app.services import mentoring, school_calendar, subgroups
-from app.services.tasks import assign, store
+from app.services import school_calendar, subgroups
+from app.services.tasks import assign
 
 router = APIRouter(prefix="/api/teacher", tags=["teacher"])
 
 _NO_STORE = {"Cache-Control": "private, no-store"}
-
-#: A class is ~30 learners; never let one slow store turn a page open into an
-#: unbounded burst. Same ceiling the group goals route uses.
-_FANOUT = 8
 
 
 def _ok(content: Any) -> JSONResponse:
@@ -91,42 +86,15 @@ async def group_calendar(
     except Exception:
         return _denied()
 
-    # ── free events (ours) ────────────────────────────────────────────────
-    events = await school_calendar.list_events(group_id)
-    items = school_calendar.events_to_items(events, start, end)
-
-    # ── task launches (owned by the tasks store) ──────────────────────────
-    launches = await store.list_launches_for_group(group_id)
-    tasks = await store.list_tasks(group_id=group_id)
-    titles = {str(task.get("_id")): str((task.get("spec") or {}).get("title") or "")
-              for task in tasks}
-    subjects = {str(task.get("_id")): (task.get("spec") or {}).get("subject") or None
-                for task in tasks}
-    items += school_calendar.launches_to_items(launches, titles, subjects, start, end)
-
-    # ── goals + meetings (owned by mentoring) ─────────────────────────────
-    learner_ids = await org.learners_in_group(group_id)
-    if scope is not None:
-        # Only read the children actually in view. A single-student calendar
-        # must not fan out across the whole class to answer.
-        learner_ids = [lid for lid in learner_ids if lid in scope]
-    semaphore = asyncio.Semaphore(_FANOUT)
-
-    async def _one(learner_id: str) -> list[dict[str, Any]]:
-        async with semaphore:
-            conversations = await mentoring.list_conversations(learner_id, "teacher")
-        return school_calendar.conversations_to_items(
-            learner_id, conversations, start, end)
-
-    for rows in await asyncio.gather(*(_one(lid) for lid in learner_ids)):
-        items += rows
-
-    items = school_calendar.filter_for_learners(items, scope)
+    # The fold itself lives in the service: the teaching assistant reads this
+    # same timeline through its own tool, and two implementations of "what is
+    # on this class's calendar" would eventually answer differently.
+    items = await school_calendar.collect(group_id, start, end, scope)
     return _ok({
         "from": start,
         "to": end,
         "timezone": school_calendar.SCHOOL_TIMEZONE,
-        "items": school_calendar.sort_items(items),
+        "items": items,
     })
 
 

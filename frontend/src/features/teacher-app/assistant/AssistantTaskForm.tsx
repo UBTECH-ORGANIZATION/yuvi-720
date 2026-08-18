@@ -19,7 +19,8 @@ import { useI18n } from '../../../i18n/I18nProvider'
 import { Icon } from '../../../components/primitives'
 import {
   approveStudentGoal, assignGroupGoal, assignStudentGoal, acknowledgeAlert,
-  createTeacherInsight, sendKudos,
+  createCalendarEvent, createTeacherInsight, sendKudos, updateCalendarEvent,
+  type CalendarEventKind,
 } from '../../../services/teacher'
 import {
   createTask, listCatalogLearnings, startGeneration,
@@ -54,6 +55,8 @@ export function AssistantTaskForm(props: Props) {
     case 'draft_note':   return <NoteForm {...props} />
     case 'draft_kudos':  return <KudosForm {...props} />
     case 'draft_task':   return <TaskForm {...props} />
+    case 'draft_calendar_event':
+    case 'edit_calendar_event': return <CalendarForm {...props} />
     case 'approve_goals': return <ApproveList {...props} />
     case 'ack_alerts':   return <AlertList {...props} />
     default:             return null
@@ -440,6 +443,122 @@ function TaskForm({ action, groupId, language, onDone, onCancel }: Props) {
 
       <Foot label={t('tch.assistant.form.taskCreate')} busy={busy}
             disabled={missingTitle || missingSubject || missingMatter || !parts.length}
+            error={error} onConfirm={() => void confirm()} onCancel={onCancel} />
+    </Shell>
+  )
+}
+
+/* ── the class calendar ───────────────────────────────────────────────────── */
+
+/** The four things a free calendar event can be — `school_calendar.EVENT_KINDS`,
+ *  in the order the calendar screen's composer offers them. */
+const EVENT_KINDS = ['test', 'lesson', 'reminder', 'event'] as const
+
+/** One form for both offers. Creating and changing an event ask for exactly
+ *  the same fields; the only difference is which endpoint the press calls, so
+ *  writing this twice would be writing the same date rules twice. */
+function CalendarForm({ action, groupId, onDone, onCancel }: Props) {
+  const { t } = useI18n()
+  const editing = action.kind === 'edit_calendar_event'
+  const [title, setTitle] = useState(action.title ?? '')
+  const [description, setDescription] = useState(action.description ?? '')
+  const [kind, setKind] = useState(
+    EVENT_KINDS.includes(action.event_kind as typeof EVENT_KINDS[number])
+      ? action.event_kind as typeof EVENT_KINDS[number] : 'event')
+  const allDay = action.all_day !== false
+  /* Split, because the two are different inputs and different shapes on the
+     wire: a `date` for an all-day event, a `datetime-local` otherwise. The
+     server refuses the mix outright, which is what stops an all-day event
+     sliding a day across a timezone boundary. */
+  const [day, setDay] = useState(
+    allDay ? (action.start_at ?? '').slice(0, 10) : (action.start_at ?? '').slice(0, 16))
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  const missingTitle = !title.trim()
+  const missingDay = !day
+  /* An edit knows its own group; a creation is offered against the class the
+     draft named, falling back to the one the teacher is scoped to. */
+  const target = action.group_id || groupId
+
+  const confirm = async () => {
+    setBusy(true); setError('')
+    const draft = {
+      title: title.trim(),
+      description: description.trim(),
+      kind: kind as CalendarEventKind,
+      all_day: allDay,
+      start_at: allDay ? day : new Date(day).toISOString(),
+      targets: action.targets?.length ? action.targets : [{ kind: 'group', id: target }],
+    }
+    try {
+      if (editing) {
+        await updateCalendarEvent(action.event_id ?? '', draft)
+        onDone(t('tch.assistant.form.calendarChanged', { title: draft.title }))
+      } else {
+        await createCalendarEvent(target, draft)
+        onDone(t('tch.assistant.form.calendarAdded', { title: draft.title }))
+      }
+    } catch {
+      setError(t('tch.assistant.form.failed')); setBusy(false)
+    }
+  }
+
+  return (
+    <Shell title={t(editing ? 'tch.assistant.form.calendarEditTitle'
+                            : 'tch.assistant.form.calendarTitle')}>
+      <label className="tch-dock__field">
+        <span>
+          {t('tch.calendar.field.title')}
+          {missingTitle ? (
+            <em className="tch-dock__needed">{t('tch.assistant.form.needed')}</em>
+          ) : null}
+        </span>
+        <input className="sp-input" dir="auto" value={title}
+               onChange={(event) => setTitle(event.target.value)} />
+      </label>
+
+      <p className="tch-dock__fieldLabel">{t('tch.calendar.field.kind')}</p>
+      <ul className="tch-dock__people">
+        {EVENT_KINDS.map((option) => (
+          <li key={option}>
+            <button type="button" className={`tch-chip${kind === option ? ' is-on' : ''}`}
+                    aria-pressed={kind === option} dir="auto"
+                    onClick={() => setKind(option)}>
+              {t(`tch.calendar.kind.${option}`)}
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      <label className="tch-dock__field">
+        <span>
+          {t('tch.calendar.field.date')}
+          {missingDay ? (
+            <em className="tch-dock__needed">{t('tch.assistant.form.needed')}</em>
+          ) : null}
+        </span>
+        <input className="sp-input" type={allDay ? 'date' : 'datetime-local'} value={day}
+               onChange={(event) => setDay(event.target.value)} />
+      </label>
+
+      <label className="tch-dock__field">
+        <span>{t('tch.calendar.detail.notes')}</span>
+        <textarea className="sp-input" dir="auto" rows={2} value={description}
+                  onChange={(event) => setDescription(event.target.value)} />
+      </label>
+
+      {/* Who it reaches, said plainly. An event drafted for the whole class and
+          one drafted for six children look identical otherwise, and the
+          difference is the entire point of confirming it. */}
+      <p className="tch-dock__formNote">
+        {action.targets?.length && action.targets[0].kind !== 'group'
+          ? t('tch.calendar.reaches', { count: action.targets.length })
+          : t('tch.calendar.field.reach')}
+      </p>
+
+      <Foot label={t(editing ? 'tch.calendar.save' : 'tch.assistant.form.calendarCreate')}
+            busy={busy} disabled={missingTitle || missingDay || !target}
             error={error} onConfirm={() => void confirm()} onCancel={onCancel} />
     </Shell>
   )

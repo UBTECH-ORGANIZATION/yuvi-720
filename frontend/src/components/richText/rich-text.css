@@ -72,3 +72,113 @@
   stroke: rgba(159, 122, 254, .28);
 }
 [data-theme='dark'] .sp-md-diagram__label { fill: rgba(232, 230, 251, .85); }
+
+/* ── an agenda, as day cards ───────────────────────────────────────────────
+   A schedule read down rather than along. Shared by both chats for the same
+   reason the diagram is: whatever draws a dated thing should draw it the
+   same way everywhere, and these rows deliberately echo the calendar
+   screen's own pips — kind icon, then what, then when.
+
+   Everything is logical (`inline-start`, not `left`) so the cards mirror
+   under RTL without a second rule. */
+
+.sp-md-agenda { display: grid; gap: var(--sp-2, 8px); }
+
+.sp-md-agenda__title {
+  margin: 0;
+  font-size: var(--sp-fs-xs, 12px);
+  font-weight: 700;
+  color: var(--sp-ink-400, #6b6880);
+}
+
+.sp-md-agenda__day {
+  border: 1px solid var(--sp-border, #e8e2f7);
+  border-radius: var(--sp-radius-md, 12px);
+  background: var(--sp-surface, #fff);
+  padding: var(--sp-2, 8px) var(--sp-3, 12px);
+  display: grid;
+  gap: 4px;
+}
+
+/* Today is the row a teacher is looking for; the accent edge is what lets
+   them find it without reading every heading. */
+.sp-md-agenda__day.is-today {
+  border-color: var(--sp-primary-400, #9f88ff);
+  border-inline-start-width: 3px;
+}
+
+.sp-md-agenda__date {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: var(--sp-fs-xs, 12px);
+  font-weight: 750;
+  color: var(--sp-ink-600, #4a475e);
+}
+
+.sp-md-agenda__today {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sp-primary-600, #6f5bff);
+}
+
+.sp-md-agenda__items { list-style: none; margin: 0; padding: 0; display: grid; }
+
+.sp-md-agenda__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-block: 5px;
+  min-inline-size: 0;
+}
+
+.sp-md-agenda__item + .sp-md-agenda__item {
+  border-block-start: 1px solid var(--sp-border, #e8e2f7);
+}
+
+.sp-md-agenda__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 22px;
+  block-size: 22px;
+  border-radius: 50%;
+  background: var(--sp-bg-subtle, #eee9fb);
+  color: var(--sp-ink-600, #4a475e);
+}
+
+/* A test is the one kind worth marking apart: it is the item a teacher
+   plans a week around. The rest share the neutral coin. */
+.sp-md-agenda__item--test .sp-md-agenda__icon {
+  background: var(--sp-danger-050, rgba(200, 60, 40, .1));
+  color: var(--sp-danger-600, #a82c1c);
+}
+
+.sp-md-agenda__body { flex: 1; min-inline-size: 0; display: grid; gap: 1px; }
+
+.sp-md-agenda__what {
+  font-size: var(--sp-fs-chat-meta, 14px);
+  color: var(--sp-ink-900, #1c1a2e);
+  overflow-wrap: anywhere;
+}
+
+.sp-md-agenda__who {
+  font-size: 11.5px;
+  color: var(--sp-ink-400, #6b6880);
+}
+
+.sp-md-agenda__time,
+.sp-md-agenda__allDay {
+  flex: none;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-ink-400, #6b6880);
+  /* A time is a number and must not mirror: "9:00" reads the same in an RTL
+     line, and letting it flip produces "00:9". */
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.sp-md-agenda__allDay { direction: inherit; }

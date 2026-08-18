@@ -1192,6 +1192,17 @@ export function createCalendarEvent(groupId: string, event: CalendarEventDraft) 
   )
 }
 
+/** Change an event already on the calendar.
+ *
+ *  The server rebuilds the whole event from `stored + patch` and runs it
+ *  through exactly the validation a creation gets, so a partial body is safe
+ *  and the all-day day-shape rule cannot be edited around. */
+export function updateCalendarEvent(eventId: string, patch: Partial<CalendarEventDraft>) {
+  return apiPatch<{ event: Record<string, unknown> }>(
+    `/api/teacher/calendar/events/${encodeURIComponent(eventId)}`, patch
+  )
+}
+
 export function deleteCalendarEvent(eventId: string) {
   return apiDelete<{ deleted: boolean }>(
     `/api/teacher/calendar/events/${encodeURIComponent(eventId)}`

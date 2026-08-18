@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { AgendaView } from './AgendaView'
 import { DiagramView } from './DiagramView'
 import { parseBlocks, type Block } from './blocks.ts'
 
@@ -78,6 +79,11 @@ export function renderBlock(
       )
     case 'diagram':
       return <DiagramView key={key} spec={block.spec} />
+    case 'agenda':
+      // The one block that renders its own text through the inline layer:
+      // an item can name a child, and a student reference must become the
+      // same chip inside a card as it is inside a sentence.
+      return <AgendaView key={key} spec={block.spec} inline={inline} />
     default:
       return (
         <p className={classNames(options.paragraphClass)} key={key} dir="auto">

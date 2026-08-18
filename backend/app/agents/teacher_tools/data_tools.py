@@ -479,6 +479,74 @@ async def _get_my_alerts(context: TeacherToolContext, args: dict) -> dict:
     return result
 
 
+# ── the class calendar ───────────────────────────────────────────────────────
+
+#: How far ahead "what is coming up" looks when the teacher names no window.
+DEFAULT_CALENDAR_DAYS = 14
+
+#: The most rows one answer carries. A month of a busy class is well over a
+#: hundred items, and a model handed all of them summarises the middle of the
+#: list rather than the next thing that matters.
+MAX_CALENDAR_ITEMS = 40
+
+
+async def _get_class_calendar(context: TeacherToolContext, args: dict) -> dict:
+    """Everything dated in one class, over a window — the same fold the
+    calendar screen renders.
+
+    Read-only, and read from `school_calendar.collect` rather than from a
+    second query of its own: a task's due date, a goal's deadline and a
+    meeting all live in their own stores, and the assistant must never
+    describe a week the screen would draw differently.
+
+    Learner ids are returned, never names — `scrub` guarantees it and the
+    `{{student:…}}` substitution puts the names back in the teacher's browser.
+    """
+    from datetime import date, timedelta
+
+    from app.services import school_calendar
+
+    group_id = str(args["group_id"])
+
+    # A window the model can express either way: two explicit days, or "the
+    # next N". `normalize_range` is what the route uses, so a malformed date
+    # degrades to the same default month rather than to an error.
+    from_day = str(args.get("from") or "").strip()
+    to_day = str(args.get("to") or "").strip()
+    if not from_day and not to_day:
+        days = args.get("days")
+        days = days if isinstance(days, int) and 1 <= days <= 120 else DEFAULT_CALENDAR_DAYS
+        today = date.today()
+        from_day = today.isoformat()
+        to_day = (today + timedelta(days=days)).isoformat()
+    start, end = school_calendar.normalize_range(from_day or None, to_day or None)
+
+    learner_id = str(args.get("learner_id") or "").strip()
+    scope = {learner_id} if learner_id else None
+
+    items = await school_calendar.collect(group_id, start, end, scope)
+    if not items:
+        return empty("nothing_scheduled_in_window", **{"from": start, "to": end})
+
+    # Trimmed to what a sentence can honestly be built from, and the truncation
+    # is stated: "there are 12 more" is usable, a silently short list is not.
+    head = [
+        {"event_id": item.get("id"), "day": item.get("day"), "at": item.get("at"),
+         "all_day": item.get("all_day"), "source": item.get("source"),
+         "kind": item.get("kind"), "title": item.get("title"),
+         "subject": item.get("subject"),
+         "learner_ids": item.get("learner_ids") or []}
+        for item in items[:MAX_CALENDAR_ITEMS]
+    ]
+    return {"data": scrub({
+        "from": start, "to": end,
+        "timezone": school_calendar.SCHOOL_TIMEZONE,
+        "total": len(items),
+        "shown": len(head),
+        "items": head,
+    })}
+
+
 async def _get_live_classroom(context: TeacherToolContext, args: dict) -> dict:
     from app.services import presence
 
@@ -661,4 +729,37 @@ def register_all() -> None:
         description="Who in a group is online, in a lesson, struggling, or has asked for help right now.",
         parameters={"type": "object", "properties": dict(_GROUP_ID), "required": ["group_id"]},
         handler=_get_live_classroom, group_args=("group_id",),
+    ))
+    register(TeacherTool(
+        name="get_class_calendar",
+        description=(
+            "Everything with a date on it in one class over a window: tests, lessons "
+            "and reminders the teacher scheduled, task due dates, goal deadlines and "
+            "mentoring meetings — the same timeline the calendar screen shows.\n"
+            "CALL THIS BEFORE PROPOSING ANY DATE. It is how you know a Tuesday "
+            "already has a test on it, that a goal is due the same week as the task "
+            "you are about to suggest, or that the class has nothing scheduled at "
+            "all. Also call it whenever the teacher asks what is coming up, what is "
+            "on a given day, or whether they are free.\n"
+            "Read-only: scheduling something is draft_calendar_event."
+        ),
+        parameters={"type": "object", "properties": {
+            **_GROUP_ID,
+            "from": {"type": "string",
+                     "description": "First day, `YYYY-MM-DD`. Omit with `to` to use `days`."},
+            "to": {"type": "string", "description": "Last day, `YYYY-MM-DD`."},
+            "days": {
+                "type": "integer",
+                "description": (
+                    "Instead of from/to: how many days ahead from today. "
+                    f"Default {DEFAULT_CALENDAR_DAYS}, max 120."
+                ),
+            },
+            "learner_id": {
+                "type": "string",
+                "description": "Optional — narrow to one child. Class-wide items stay.",
+            },
+        }, "required": ["group_id"]},
+        handler=_get_class_calendar,
+        group_args=("group_id",), learner_args=("learner_id",),
     ))

@@ -65,6 +65,11 @@ class NothingWritesTests(unittest.IsolatedAsyncioTestCase):
             "app.services.teacher_alerts.acknowledge": AsyncMock(),
             "app.services.teacher_alerts.raise_alert": AsyncMock(),
             "app.services.notifications.notify": AsyncMock(),
+            # The calendar writes through one function, and both calendar
+            # drafts read from the same module — so "reads the event" and
+            # "stores the event" are one rename apart.
+            "app.services.school_calendar.save_event": AsyncMock(),
+            "app.services.school_calendar.delete_event": AsyncMock(),
         }
         patches = [patch(target, mock) for target, mock in writes.items()]
 
@@ -73,6 +78,7 @@ class NothingWritesTests(unittest.IsolatedAsyncioTestCase):
             "learner_ids": ["kid-a", "kid-b"], "learner_id": "kid-a",
             "title": "assign this now", "text": "save this", "message": "send this",
             "questions": ["and then?"], "screen": "students",
+            "group_id": "group-1", "event_id": "evt-1", "start_at": "2026-08-25",
         }
 
         for entered in patches:

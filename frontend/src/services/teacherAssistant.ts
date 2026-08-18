@@ -25,6 +25,7 @@ export interface ToolTraceEntry {
  * calls. Nothing here has written anything. */
 export type ActionKind =
   | 'navigate' | 'draft_goal' | 'draft_note' | 'draft_kudos' | 'draft_task'
+  | 'draft_calendar_event' | 'edit_calendar_event'
   | 'approve_goals' | 'ack_alerts' | 'followups'
 
 export interface PendingGoal {
@@ -71,6 +72,18 @@ export interface AssistantAction {
   /** The catalogue lesson the task is built on, as an id. Ids rather than the
    *  lesson text, for the same reason `TaskSpecInput.source` holds ids. */
   source_component_id?: string
+  /* draft_calendar_event / edit_calendar_event — `title` is shared again.
+     `event_kind` rather than `kind`, which is the ACTION's own discriminator;
+     one field named `kind` meaning two things is how a form ends up reading
+     the wrong one. */
+  group_id?: string
+  event_id?: string
+  description?: string
+  event_kind?: string
+  all_day?: boolean
+  start_at?: string
+  end_at?: string
+  targets?: { kind: string; id: string }[]
   /* approve_goals / ack_alerts / followups */
   goals?: PendingGoal[]
   alerts?: OpenAlert[]

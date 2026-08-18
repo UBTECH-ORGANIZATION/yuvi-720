@@ -426,6 +426,60 @@ def sort_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
                                            str(item.get("title") or "")))
 
 
+#: How many learners' mentoring records are read at once. A class of forty
+#: would otherwise open forty concurrent reads to answer one calendar.
+_FANOUT = 8
+
+
+async def collect(group_id: str, start: str, end: str,
+                  scope: Optional[set[str]] = None) -> list[dict[str, Any]]:
+    """The whole timeline for one class and one window, sorted.
+
+    The four sources, folded in the one place that knows how to fold them.
+    This lives here rather than in the route because it now has two callers —
+    the calendar screen and the teaching assistant — and an assistant reading
+    a *second* implementation of "what is on this class's calendar" is how the
+    two would start disagreeing about the same week.
+
+    `scope` narrows to a sub-group or one child. Resolving *who* that is stays
+    with the caller: it is an authorization question, and this function is not
+    where authorization should live.
+    """
+    import asyncio
+
+    from app.brain import org
+    from app.services import mentoring
+    from app.services.tasks import store
+
+    events = await list_events(group_id)
+    items = events_to_items(events, start, end)
+
+    launches = await store.list_launches_for_group(group_id)
+    tasks = await store.list_tasks(group_id=group_id)
+    titles = {str(task.get("_id")): str((task.get("spec") or {}).get("title") or "")
+              for task in tasks}
+    subjects = {str(task.get("_id")): (task.get("spec") or {}).get("subject") or None
+                for task in tasks}
+    items += launches_to_items(launches, titles, subjects, start, end)
+
+    learner_ids = await org.learners_in_group(group_id)
+    if scope is not None:
+        # Only read the children actually in view. A single-student calendar
+        # must not fan out across the whole class to answer.
+        learner_ids = [lid for lid in learner_ids if lid in scope]
+    semaphore = asyncio.Semaphore(_FANOUT)
+
+    async def _one(learner_id: str) -> list[dict[str, Any]]:
+        async with semaphore:
+            conversations = await mentoring.list_conversations(learner_id, "teacher")
+        return conversations_to_items(learner_id, conversations, start, end)
+
+    for rows in await asyncio.gather(*(_one(lid) for lid in learner_ids)):
+        items += rows
+
+    return sort_items(filter_for_learners(items, scope))
+
+
 def filter_for_learners(items: list[dict[str, Any]],
                         learner_ids: Optional[set[str]]) -> list[dict[str, Any]]:
     """Narrow to a sub-group or one student.
