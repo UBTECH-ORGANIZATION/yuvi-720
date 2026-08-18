@@ -28,6 +28,7 @@ from app.routes.teacher_subgroups import router as teacher_subgroups_router
 from app.routes.teacher_wellbeing import router as teacher_wellbeing_router
 from app.routes.teacher_tasks import router as teacher_tasks_router
 from app.routes.student_tasks import router as student_tasks_router
+from app.routes.student_calendar import router as student_calendar_router
 from app.routes.teacher_live import router as teacher_live_router
 from app.routes.notifications import router as notifications_router
 from app.routes.me import router as me_router
@@ -198,6 +199,7 @@ def create_app() -> FastAPI:
     app.include_router(teacher_catalog_router)
     app.include_router(teacher_tasks_router)
     app.include_router(student_tasks_router)
+    app.include_router(student_calendar_router)
     app.include_router(teacher_live_router)
     app.include_router(notifications_router)
     app.include_router(me_router)

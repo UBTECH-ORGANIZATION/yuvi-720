@@ -17,6 +17,7 @@ from app.auth.dependencies import require_learner, require_learner_session
 from app.agents import safety
 from app.agents import sessions
 from app.agents.coach import DIAGRAM_FENCE, SUPPORT_PROMPTS, run_coach_stream
+from app.brain.memory import classify_query_intent
 from app.agents.manim_visual import (
     is_explicit_visual_request,
     plan_manim_visual,
@@ -80,6 +81,13 @@ def _worth_visual_planning(message: str, response_text: str) -> bool:
     if any(pattern.match(question) for pattern in _SOCIAL_TURN.values()):
         return False
     return len(question) >= _MIN_QUESTION_CHARS
+
+
+def _auto_visual_for_coach(message: str, language: str, screen: str) -> bool:
+    return (
+        screen != "learning_lesson"
+        and classify_query_intent(message, language) != "calendar_query"
+    )
 
 
 async def _current_question_context(learner_id: str) -> str:
@@ -743,7 +751,7 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
             response_text=response_text,
             language=language,
             on_lesson_screen=request.surface.screen == "learning_lesson",
-            auto_visual=request.surface.screen != "learning_lesson",
+            auto_visual=_auto_visual_for_coach(message, language, request.surface.screen),
         ):
             yield event
 

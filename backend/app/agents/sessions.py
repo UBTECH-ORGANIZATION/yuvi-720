@@ -889,6 +889,10 @@ async def append_turn(
     title_source: Optional[str] = None,
     question_key: Optional[str] = None,
     assistant_meta: Optional[dict] = None,
+    query_intent: Optional[str] = None,
+    calendar_period: Optional[str] = None,
+    calendar_weekday: Optional[str] = None,
+    calendar_route_source: Optional[str] = None,
 ) -> None:
     """Append an exchange to bounded prompt memory and durable transcript.
 
@@ -909,8 +913,19 @@ async def append_turn(
     now = now_value.isoformat()
     assistant_at = (now_value + timedelta(microseconds=1)).isoformat()
     safe_exchange = normalize_session_id(exchange_id or uuid4().hex)
+    user_turn = {"role": "user", "content": user, "at": now}
+    if query_intent:
+        user_turn["query_intent"] = str(query_intent)[:40]
+    if calendar_period in {"today", "tomorrow", "this_week", "next_week"}:
+        user_turn["calendar_period"] = calendar_period
+    if calendar_weekday in {
+        "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday",
+    }:
+        user_turn["calendar_weekday"] = calendar_weekday
+    if calendar_route_source in {"deterministic", "llm_followup", "session_followup"}:
+        user_turn["calendar_route_source"] = calendar_route_source
     new_turns = [
-        {"role": "user", "content": user, "at": now},
+        user_turn,
         {"role": "assistant", "content": assistant, "at": assistant_at},
     ]
     collection = _get_collection_named("agent_sessions")

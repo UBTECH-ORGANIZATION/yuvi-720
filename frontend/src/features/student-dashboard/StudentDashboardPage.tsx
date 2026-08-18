@@ -4,6 +4,7 @@ import { EmptyState, ErrorState, Icon } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useBrain } from '../../providers/BrainProvider'
 import { getDashboard, updateGoalStatus, type DashboardDTO } from '../../services/brain'
+import { getCalendarUpcoming, type CalendarItem } from '../../services/calendar'
 import {
   getLearningCatalog,
   type LearningComponentDTO,
@@ -15,10 +16,11 @@ import { DashboardHero } from './DashboardHero'
 import { DashboardLoadingScreen } from './DashboardLoadingScreen'
 import { LearningMap } from './LearningMap'
 import { MyGoals } from './MyGoals'
-import { MyTasks } from './MyTasks'
 import { RecentLessons } from './RecentLessons'
 import { ActivenessMapSection } from './ActivenessMapSection'
 import { StudentConnectionsPane } from './StudentConnectionsPane'
+import { StudentCalendarPage } from './StudentCalendarPage'
+import { UpcomingStrip } from './UpcomingStrip'
 import './student-dashboard.css'
 
 /**
@@ -30,6 +32,7 @@ export function StudentDashboardPage() {
   const { t, language } = useI18n()
   const { learnerId, brain, refresh: refreshBrain } = useBrain()
   const [dashboard, setDashboard] = useState<DashboardDTO | null>(null)
+  const [todayItems, setTodayItems] = useState<CalendarItem[]>([])
   const [roadmapUnits, setRoadmapUnits] = useState<LearningUnitDTO[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -49,9 +52,14 @@ export function StudentDashboardPage() {
     const controller = new AbortController()
     if (!dashboard) setLoading(true)
     setError(false)
-    getDashboard(learnerId, language, controller.signal)
-      .then((next) => {
-        if (active) setDashboard(next)
+    Promise.all([
+      getDashboard(learnerId, language, controller.signal),
+      getCalendarUpcoming(controller.signal).catch(() => null),
+    ])
+      .then(([nextDashboard, upcoming]) => {
+        if (!active) return
+        setDashboard(nextDashboard)
+        if (upcoming) setTodayItems(upcoming.items)
       })
       .catch(() => {
         if (active && !controller.signal.aborted) setError(true)
@@ -139,14 +147,11 @@ export function StudentDashboardPage() {
 
   const studentName = dashboard?.name || brain?.identity.display_name || t('sdash.learnerFallback')
 
-  const utilityPane = window.location.pathname.endsWith('/chat')
-    ? 'chat'
-    : window.location.pathname.endsWith('/calendar')
-      ? 'calendar'
-      : null
-
-  if (utilityPane) {
-    return <StudentConnectionsPane mode={utilityPane} studentName={studentName} />
+  if (window.location.pathname.endsWith('/calendar')) {
+    return <StudentCalendarPage studentName={studentName} />
+  }
+  if (window.location.pathname.endsWith('/chat')) {
+    return <StudentConnectionsPane studentName={studentName} />
   }
 
   if (!minimumLoadElapsed || (loading && !dashboard)) return <DashboardLoadingScreen />
@@ -174,6 +179,7 @@ export function StudentDashboardPage() {
 
         {dashboard && (dashboard.hasProfile || dashboard.hasLearningEvidence) && (
           <>
+            <UpcomingStrip items={todayItems} />
             {/* Hero + recent lessons share one card: the current objective and
                 the lessons that continue it read as a single "what's next" panel. */}
             <section className="sd-hero-card">
@@ -196,8 +202,6 @@ export function StudentDashboardPage() {
                 <LearningMap competencies={dashboard.competencies} />
               </aside>
               <div className="sd-grid__main">
-                {/* Renders nothing when nothing is outstanding — see MyTasks. */}
-                <MyTasks />
                 <MyGoals
                   goals={dashboard.goals}
                   onSeeAll={() => navigate('/mentoring')}

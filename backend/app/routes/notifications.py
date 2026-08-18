@@ -20,6 +20,16 @@ router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 _NO_STORE = {"Cache-Control": "private, no-store"}
 
 
+async def _reconcile_learner_deadlines(recipient_id: str, role: Optional[str]) -> None:
+    if role != notifications.ROLE_LEARNER:
+        return
+    try:
+        from app.services import student_calendar
+        await student_calendar.reconcile_due_reminders(recipient_id)
+    except Exception as exc:
+        print(f"⚠️ deadline reminder reconciliation skipped: {type(exc).__name__}")
+
+
 async def _recipient(request: Request) -> str:
     """Any signed-in user. The read/unread/dismiss mechanics are identical for
     both roles — only the content differs, and `role` below scopes that."""
@@ -60,6 +70,7 @@ async def list_notifications(
     recipient_id: str = Depends(_recipient),
 ):
     scope = await _role(request, role)
+    await _reconcile_learner_deadlines(recipient_id, scope)
     rows = await notifications.list_for(
         recipient_id, unread_only=unread_only,
         include_dismissed=include_dismissed, limit=limit, role=scope,
@@ -81,6 +92,7 @@ async def read_unread_count(
     recipient_id: str = Depends(_recipient),
 ):
     scope = await _role(request, role)
+    await _reconcile_learner_deadlines(recipient_id, scope)
     return JSONResponse(
         content={"unread": await notifications.unread_count(recipient_id, role=scope)},
         headers=_NO_STORE,
