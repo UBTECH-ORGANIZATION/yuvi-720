@@ -19,8 +19,8 @@ import { useI18n } from '../../../i18n/I18nProvider'
 import { Icon } from '../../../components/primitives'
 import {
   approveStudentGoal, assignGroupGoal, assignStudentGoal, acknowledgeAlert,
-  createCalendarEvent, createTeacherInsight, sendKudos, updateCalendarEvent,
-  type CalendarEventKind,
+  createCalendarEvent, createTeacherInsight, listSubgroups, sendKudos,
+  updateCalendarEvent, type CalendarEventKind,
 } from '../../../services/teacher'
 import {
   createTask, listCatalogLearnings, startGeneration,
@@ -481,6 +481,26 @@ function CalendarForm({ action, groupId, onDone, onCancel }: Props) {
      draft named, falling back to the one the teacher is scoped to. */
   const target = action.group_id || groupId
 
+  /* Who it is for, as an editable choice rather than a statement.
+     It shipped for a day as a line of text saying "the whole class will see
+     this", which is the tool's *fallback* when the model named nobody — so a
+     שיעור פרטי, which is by definition for one child, was drafted for thirty
+     and the teacher had no way to say otherwise. The same picker the calendar
+     screen's own composer offers, and the draft's target is only its default. */
+  const drafted = action.targets?.[0]
+  const [who, setWho] = useState(
+    drafted && drafted.kind !== 'group' ? `${drafted.kind}:${drafted.id}` : `group:${target}`)
+  const { students } = useTeacherRoster()
+  const [subgroups, setSubgroups] = useState<{ id: string; name: string }[]>([])
+  useEffect(() => {
+    let active = true
+    if (!target) return
+    listSubgroups(target)
+      .then((result) => { if (active) setSubgroups(result.subgroups ?? []) })
+      .catch(() => { /* the class and the roster are still choices */ })
+    return () => { active = false }
+  }, [target])
+
   const confirm = async () => {
     setBusy(true); setError('')
     const draft = {
@@ -489,7 +509,7 @@ function CalendarForm({ action, groupId, onDone, onCancel }: Props) {
       kind: kind as CalendarEventKind,
       all_day: allDay,
       start_at: allDay ? day : new Date(day).toISOString(),
-      targets: action.targets?.length ? action.targets : [{ kind: 'group', id: target }],
+      targets: [{ kind: who.split(':')[0], id: who.slice(who.indexOf(':') + 1) }],
     }
     try {
       if (editing) {
@@ -548,14 +568,32 @@ function CalendarForm({ action, groupId, onDone, onCancel }: Props) {
                   onChange={(event) => setDescription(event.target.value)} />
       </label>
 
-      {/* Who it reaches, said plainly. An event drafted for the whole class and
-          one drafted for six children look identical otherwise, and the
-          difference is the entire point of confirming it. */}
-      <p className="tch-dock__formNote">
-        {action.targets?.length && action.targets[0].kind !== 'group'
-          ? t('tch.calendar.reaches', { count: action.targets.length })
-          : t('tch.calendar.field.reach')}
-      </p>
+      {/* Who it reaches — chosen here, not merely reported. The whole point of
+          confirming a draft is being able to change what it got wrong, and who
+          an event is for is the field a model is least able to infer. */}
+      <label className="tch-dock__field">
+        <span>{t('tch.calendar.field.who')}</span>
+        <select className="sp-input" value={who}
+                onChange={(event) => setWho(event.target.value)}>
+          <option value={`group:${target}`}>{t('tch.calendar.scope.all')}</option>
+          {subgroups.length ? (
+            <optgroup label={t('tch.calendar.scope.subgroups')}>
+              {subgroups.map((row) => (
+                <option key={row.id} value={`subgroup:${row.id}`}>{row.name}</option>
+              ))}
+            </optgroup>
+          ) : null}
+          {students.length ? (
+            <optgroup label={t('tch.calendar.scope.students')}>
+              {students.map((row) => (
+                <option key={row.learner_id} value={`learner:${row.learner_id}`}>
+                  {row.display_name ?? row.learner_id}
+                </option>
+              ))}
+            </optgroup>
+          ) : null}
+        </select>
+      </label>
 
       <Foot label={t(editing ? 'tch.calendar.save' : 'tch.assistant.form.calendarCreate')}
             busy={busy} disabled={missingTitle || missingDay || !target}

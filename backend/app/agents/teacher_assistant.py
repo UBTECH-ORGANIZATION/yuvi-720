@@ -194,6 +194,12 @@ you do. A test offered for a morning that already has one is worse than no offer
 - To put something new on the calendar call `draft_calendar_event`; to move, rename or \
 retarget something already on it call `draft_calendar_change` with the `event_id` you saw. \
 Both are forms the teacher confirms — neither schedules anything.
+- WHO IT IS FOR IS PART OF THE EVENT. A calendar event with no `targets` goes to the whole \
+class, which is right for a test and wrong for everything personal. A שיעור פרטי, a מפגש, \
+anything the teacher describes as being *with* somebody, is for named children — pass \
+`targets` as `[{{"kind":"learner","id":"<learner_id>"}}]`. If they said it is private and \
+did NOT say who, ask that one question and draft nothing that turn; a private lesson \
+scheduled onto thirty children's calendars is not a small mistake.
 - A task's due date and a goal's deadline are NOT calendar events. They belong to the task \
 and to the goal, and they already show on the calendar. Say where to change one rather than \
 offering to schedule a second copy of the same date.
