@@ -23,7 +23,7 @@ import {
   HoverSparkline, ProgressRing,
 } from '../../../components/charts'
 import {
-  Card, ErrorState, Icon, Panel, SectionHeader, Skeleton, SkeletonCard,
+  Card, ErrorState, Icon, Panel, SectionHeader, Skeleton,
   Hint, SkeletonRows, StatusPill, Tooltip,
 } from '../../../components/primitives'
 import { Modal } from '../../../components/primitives/Modal'
@@ -69,7 +69,7 @@ type DigestState = 'idle' | 'ready' | 'generating' | 'unavailable'
 
 export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
   const { t, language } = useI18n()
-  const { subject, groupId } = useTeacherScope()
+  const { subject, subjects, groupId } = useTeacherScope()
   const route = useRoute()
   const [detail, setDetail] = useState<StudentDetail | null>(null)
   const [badges, setBadges] = useState<TeacherBadge[]>([])
@@ -77,10 +77,9 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
   const [trends, setTrends] = useState<LearnerTrends | null>(null)
   const [digest, setDigest] = useState<TopicDigest | null>(null)
   const [digestState, setDigestState] = useState<DigestState>('idle')
-  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(false)
   const live = useTeacherLive()
-  const { avatarOf } = useTeacherRoster()
+  const { avatarOf, nameOf } = useTeacherRoster()
 
   /* The learner read, fetched once for the whole page: the AI-analysis bar
      shows its subjects, and the recommendations panel leads with its
@@ -128,22 +127,25 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
   const [wbOpen, setWbOpen] = useState(false)
 
   useEffect(() => {
-    if (!wantsWellbeing || isLoading) return
+    if (!wantsWellbeing || !detail) return
     wellbeingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     setWbOpen(true)
     // Scrolled once per navigation, once the sections exist to scroll to —
     // re-running on every render would fight a teacher who scrolled away.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route, isLoading])
+  }, [route, detail])
 
+  /* The profile's spine. Deliberately NOT cleared to null on a scope change:
+     the page a teacher is reading stays readable while the narrower answer is
+     fetched, so switching subject re-draws the numbers rather than the whole
+     screen. `detail === null` therefore means "never loaded", which is
+     exactly the state the placeholders below stand in for. */
   useEffect(() => {
     let active = true
-    setIsLoading(true)
     setError(false)
     getStudentDetail(learnerId, language, subject ?? undefined)
       .then((result) => { if (active) setDetail(result) })
       .catch(() => { if (active) setError(true) })
-      .finally(() => { if (active) setIsLoading(false) })
     return () => { active = false }
   }, [learnerId, subject, language])
 
@@ -234,41 +236,21 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="tch-student" aria-busy="true">
-        {/* Back and the identity row are the page's furniture — they do not
-            depend on the fetch, so they are here from the first frame. */}
-        <header className="tch-student__head">
-          <div className="tch-student__topRow">
-            <button
-              type="button"
-              className="sp-btn sp-btn--ghost sp-btn--sm"
-              onClick={() => navigate('/teacher/students')}
-            >
-              <Icon name="chevronLeft" size={15} aria-hidden="true" />
-              {t('tch.student.back')}
-            </button>
-          </div>
-          <div className="tch-student__identity">
-            <span className="tch-avatar tch-avatar--pending"
-                  style={{ inlineSize: 56, blockSize: 56 }} aria-hidden="true" />
-            <div className="tch-student__who">
-              <h1><Skeleton w={180} h={26} /></h1>
-              <p className="tch-student__seen"><Skeleton w={120} h={13} /></p>
-            </div>
-          </div>
-        </header>
-        <div style={{ display: 'grid', gap: 'var(--sp-4)', marginBlockStart: 'var(--sp-4)' }}>
-          <SkeletonCard rows={3} />
-          <SkeletonCard rows={2} />
-        </div>
-      </div>
-    )
-  }
-  if (error || !detail) return <ErrorState title={t('tch.error')} />
+  /* Nothing is gated on "the page has loaded" any more, because the page does
+     not load as one thing. Six requests answer at six different times, and
+     each section owns the wait for its own: the identity is real on the first
+     frame (the roster already holds the name and the face), the dials land
+     when the detail answers, the figures when the activity does, Yuvi's read
+     whenever the model is done. The only whole-page state left is failure. */
+  if (error && !detail) return <ErrorState title={t('tch.error')} />
 
-  const name = detail.display_name ?? detail.learner_id
+  /* The roster resolved every child in this teacher's classes long before
+     this page was opened, so the name in the header is not something to wait
+     for. The detail's own copy is the fallback, and the id the last resort —
+     never a guess, and never a grey bar where a name could have been. */
+  const rosterName = nameOf(learnerId)
+  const name = rosterName ?? detail?.display_name ?? learnerId
+  const nameKnown = Boolean(rosterName || detail)
   const earnedBadges = badges.filter((badge) => badge.earned)
   const towardBadges = badges.filter((badge) => badge.state === 'inprogress' && badge.progress > 0)
     .sort((a, b) => b.progress - a.progress)
@@ -277,7 +259,7 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
   const presence = live.presence[learnerId] ?? null
   /* The newest open disclosure, in the hero — the one line a teacher must not
      have to scroll for. It links down to the full record. */
-  const distress = (detail.wellbeing_flags ?? [])[0] ?? null
+  const distress = (detail?.wellbeing_flags ?? [])[0] ?? null
 
   /* Header KPIs, all derived from data we actually store (never invented):
      material from objectives vs the catalog, minutes from the wall-clock
@@ -294,7 +276,7 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
   const helpTotal = help.hints + help.explanations + help.chats
   /* Open disclosures, from the detail payload the page already has — no second
      request to put a number on a section. */
-  const openFlags = (detail.wellbeing_flags ?? []).length
+  const openFlags = (detail?.wellbeing_flags ?? []).length
 
   const openWellbeing = () => {
     wellbeingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -390,7 +372,9 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
             } : null)}
           />
           <div className="tch-student__who">
-            <h1 dir="auto">{name}</h1>
+            {nameKnown
+              ? <h1 dir="auto">{name}</h1>
+              : <h1 aria-busy="true"><Skeleton w={180} h={26} /></h1>}
             <p className="tch-student__seen">
               <Icon name="clock" size={13} aria-hidden />
               {agoLabel(presence?.last_seen_at ?? null, t)}
@@ -400,7 +384,7 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
                  material, not something to discover three screens down. */
               <button
                 type="button"
-                className="tch-student__distress"
+                className="tch-student__distress tch-appear"
                 onClick={openWellbeing}
               >
                 <Icon name="alert" size={13} aria-hidden />
@@ -415,9 +399,25 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
               status band's dials already are that number, said better. Each
               figure explains itself on hover/focus, and says so with the
               dotted underline. Shown only once the child has activity —
-              zeroes would read as a verdict. */}
-          {rows.length ? (
-            <section className="tch-student__kpis" aria-label={t('tch.kpi.stripLabel')}>
+              zeroes would read as a verdict.
+
+              While the rows are still in flight the strip stands in the same
+              place wearing its real captions: what each figure counts was
+              never in question, only the figure. */}
+          {activity === null ? (
+            <section className="tch-student__kpis" aria-busy="true"
+                     aria-label={t('tch.kpi.stripLabel')}>
+              {[t('tch.kpi.learningMinutes'), t('tch.kpi.questionsWorked'),
+                t('tch.kpi.helpUsed')].map((label) => (
+                <span key={label} className="tch-stat">
+                  <Skeleton w={34} h={20} />
+                  <span className="tch-stat__label">{label}</span>
+                </span>
+              ))}
+            </section>
+          ) : rows.length ? (
+            <section className="tch-student__kpis tch-appear"
+                     aria-label={t('tch.kpi.stripLabel')}>
               <Hint text={seconds > 0 ? t('tch.kpi.minutesTip') : t('tch.pulse.noTiming')}>
                 <button type="button" className="tch-stat">
                   {/* Wall-clock between events — honest "—" when there is none. */}
@@ -452,9 +452,9 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
           exception: it is already the hero chip and the disclosure card, and a
           third copy of the same sentence taught teachers to skim past it. */}
       {(() => {
-        const attention = (detail.attention_all ?? []).filter((flag) => flag.kind !== 'wellbeing')
+        const attention = (detail?.attention_all ?? []).filter((flag) => flag.kind !== 'wellbeing')
         return attention.length ? (
-          <section className="tch-student__flags" data-tour="teacher.studentFlags">
+          <section className="tch-student__flags tch-appear" data-tour="teacher.studentFlags">
             {attention.map((flag) => (
               <AttentionRow key={flag.kind ?? flag.reason} flag={flag} />
             ))}
@@ -463,20 +463,27 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
       })()}
 
       <div className="tch-student__body">
-        <StatusBand
-          learnerId={learnerId}
-          focus={detail.focus ?? null}
-          progress={detail.objectives_progress ?? {}}
-          trends={trends}
-          rows={activity}
-        />
+        {detail ? (
+          <div className="tch-appear">
+            <StatusBand
+              learnerId={learnerId}
+              focus={detail.focus ?? null}
+              progress={detail.objectives_progress ?? {}}
+              trends={trends}
+              rows={activity}
+            />
+          </div>
+        ) : (
+          <StatusBandSkeleton subjects={subject ? 1 : subjects.length} />
+        )}
 
         {/* Yuvi's read of where this child stands — right under the dials it
             narrates, with its one suggestion turned into a door: build the
-            task it describes. */}
+            task it describes. Mounted before the detail answers: the bar is
+            collapsed anyway, and it waits on the model, not on us. */}
         <ReadSummary learnerId={learnerId}
                      read={read}
-                     platformSubjects={Object.keys(detail.objectives_progress ?? {})}
+                     platformSubjects={Object.keys(detail?.objectives_progress ?? {})}
                      rows={activity}
                      onBuildTask={buildTask} />
 
@@ -498,15 +505,21 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
 
           <div className="tch-student__side">
             {/* MUST §2 — tailored pedagogical recommendations, each explainable. */}
-            <RecsPanel
-              learnerId={learnerId}
-              rows={activity}
-              read={read}
-              recommendations={detail.recommendations}
-              focus={detail.focus ?? null}
-              progress={detail.objectives_progress ?? {}}
-              onBuildTask={buildTask}
-            />
+            {detail ? (
+              <div className="tch-appear">
+                <RecsPanel
+                  learnerId={learnerId}
+                  rows={activity}
+                  read={read}
+                  recommendations={detail.recommendations}
+                  focus={detail.focus ?? null}
+                  progress={detail.objectives_progress ?? {}}
+                  onBuildTask={buildTask}
+                />
+              </div>
+            ) : (
+              <RecsPanelSkeleton />
+            )}
 
           </div>
         </div>
@@ -515,6 +528,7 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
             are strong and weak in, the month's shape — and the wellbeing
             record, its door wearing the red count. One row of doors, spread
             over the whole width. */}
+        {!detail ? <MoreDoorsSkeleton /> : (
         <MoreDialogs
           detail={detail}
           trends={trends}
@@ -541,6 +555,7 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
             </button>
           )}
         />
+        )}
 
         {/* The full records, with the words, the reply and the actions —
             exactly the screen the safety flow was built as, one door in. */}
@@ -581,6 +596,108 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
           />
         ) : null}
       </Modal>
+    </div>
+  )
+}
+
+/* ── the page on its way in ────────────────────────────────────────────────
+ *
+ * These are not grey boxes standing in for "some content". Each one is its
+ * section with the data taken out: the same grid, the same number of cells,
+ * the same 104px dial, the same three recommendation slots — and, printed
+ * rather than greyed, every heading that never depended on a request in the
+ * first place. "עצמאות" is as true before the fetch answers as after it, and
+ * a teacher reading the placeholder already knows what is coming and where.
+ *
+ * What greys out is only what we genuinely do not know yet. The page then
+ * fills in section by section as each request answers, instead of holding
+ * everything back for the slowest one.
+ */
+
+function StatusBandSkeleton({ subjects }: { subjects: number }) {
+  const { t } = useI18n()
+  /* The row a teacher is about to get, in the count they are about to get
+     it: the focus card, one cell per subject in scope, then the two habit
+     dials. Getting the count right is the whole point — a placeholder that
+     reflows into a different grid is worse than none. */
+  const dials = [t('tch.student.consistency'), t('tch.student.independence')]
+  return (
+    <section className="tch-status" aria-busy="true">
+      <div className="tch-status__grid">
+        <Card className="tch-status__cell tch-status__focus">
+          <div className="tch-status__focusTop">
+            <h4 className="tch-status__focusHead">
+              <Icon name="target" size={14} aria-hidden />
+              {t('tch.student.focusTitle')}
+            </h4>
+          </div>
+          <Skeleton w="82%" h={17} />
+          <Skeleton w="46%" h={20} r={999} />
+        </Card>
+
+        {/* Which subjects this child has evidence in is exactly what the
+            detail is being asked, so these headings stay blank — printing a
+            guess and correcting it a moment later is a worse lie than a bar. */}
+        {Array.from({ length: subjects }, (_, index) => (
+          <Card key={index} className="tch-status__cell">
+            <Skeleton w="54%" h={15} />
+            <Skeleton w={104} h={54} r={10} />
+            <Skeleton w="72%" h={12} />
+          </Card>
+        ))}
+
+        {dials.map((label) => (
+          <Card key={label} className="tch-status__cell">
+            <h4>{label}</h4>
+            <Skeleton w={104} h={54} r={10} />
+            <Skeleton w="72%" h={12} />
+          </Card>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function RecsPanelSkeleton() {
+  const { t } = useI18n()
+  /* The three slots are fixed — a profile always answers what is working,
+     what is stuck and what comes next — so the pills are printed and only
+     the sentences are still on their way. */
+  const slots = [
+    { key: 'working', tone: 'strong' },
+    { key: 'stuck', tone: 'steady' },
+    { key: 'next', tone: 'neutral' },
+  ] as const
+  return (
+    <Panel className="tch-recsPanel" aria-busy="true">
+      <SectionHeader
+        title={t('tch.student.recommendations')}
+        subtitle={t('tch.student.recommendationsSubtitle')}
+      />
+      <div className="tch-recs__overviewWait">
+        <Skeleton w="100%" h={13} /><Skeleton w="84%" h={13} />
+      </div>
+      <ul className="tch-recs">
+        {slots.map((slot) => (
+          <li key={slot.key} className="tch-rec">
+            <div className="tch-rec__head">
+              <StatusPill tone={slot.tone}>{t(`tch.recs.slot.${slot.key}`)}</StatusPill>
+            </div>
+            <Skeleton w="100%" h={13} />
+            <Skeleton w="62%" h={13} />
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  )
+}
+
+/** The bottom row of doors. Which ones open depends on what this child has,
+ *  so the placeholder only holds the row's height and shape. */
+function MoreDoorsSkeleton() {
+  return (
+    <div className="tch-student__more" aria-hidden="true">
+      {[0, 1, 2].map((index) => <Skeleton key={index} h={42} r={999} />)}
     </div>
   )
 }
@@ -2119,7 +2236,22 @@ function TopicsPanel({ rows, learnerId, digest, digestState, onRefresh, onBuildT
     return map
   }, [digest])
 
-  if (!rows) return <div aria-busy="true"><SkeletonCard rows={4} /></div>
+  /* The panel's own wait, wearing the panel's own heading: the teacher can
+     see a ranked list of hard topics is coming here, rather than a floating
+     grey card that could turn out to be anything. */
+  if (!rows) {
+    return (
+      <Panel aria-busy="true">
+        <SectionHeader
+          title={t('tch.student.hardest')}
+          subtitle={t('tch.student.hardestSubtitle')}
+        />
+        <div className="sp-skeleton__rows">
+          {[0, 1, 2, 3].map((index) => <Skeleton key={index} h={34} />)}
+        </div>
+      </Panel>
+    )
+  }
   if (!topicSections.length) return null
 
   return (

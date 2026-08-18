@@ -2,17 +2,53 @@
 
 /* Container metrics come from teacher-shared.css. */
 
-/* The header is a hero card, not floating text: identity, flags and actions
-   share one grounded surface, matching the card language of everything below. */
+/* The header sits ON the page, not on a card of its own.
+   It wore the same white surface as everything below it, which made the
+   child's name compete with the dials for the eye instead of introducing
+   them — a card inside a page of cards is just another card. The elements
+   are unchanged; only the surface under them is gone, so the identity row
+   now reads as the page's title rather than as its first panel. */
 .tch-student__head {
   display: grid;
   gap: var(--sp-3);
   margin-block-end: var(--sp-4);
-  padding: var(--sp-4) var(--sp-5);
-  border-radius: var(--tch-card-radius);
-  background: var(--tch-card-bg);
-  border: 1px solid var(--tch-card-border);
-  box-shadow: var(--tch-card-shadow);
+}
+
+/* ── arriving ──────────────────────────────────────────────────────────────
+   The profile is six requests, not one, and they answer at six different
+   times. Each section is mounted the moment its own data lands and fades up
+   into place on the way in, so the page fills in under the reading eye
+   instead of snapping into existence all at once when the slowest request
+   finally returns. Short and small on purpose: this marks that something
+   arrived, it is not an entrance. */
+.tch-appear {
+  animation: tch-appear-in 260ms var(--sp-ease, ease-out) both;
+}
+
+@keyframes tch-appear-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tch-appear { animation: none; }
+}
+
+/* Placeholders standing on the page rather than on a card.
+   The shared skeleton is drawn from the two tints immediately above and
+   below a card's white, so it disappears the moment there is no card under
+   it — which is exactly what the hero did when it lost its panel. On the
+   page's own surface it needs the next step of contrast, taken from the
+   same token ramp so light and dark both follow without a second rule. */
+.tch-student__head .sp-skeleton,
+.tch-student__more > .sp-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--sp-border) 25%,
+    var(--sp-surface-2) 42%,
+    var(--sp-border) 60%
+  );
+  background-size: 220% 100%;
 }
 
 .tch-student__identity { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
@@ -1366,7 +1402,10 @@
   flex-wrap: wrap;
 }
 
-.tch-student__more > .sp-btn {
+.tch-student__more > .sp-btn,
+/* The placeholder doors share the row's metrics so the real ones land in
+   exactly the same places. */
+.tch-student__more > .sp-skeleton {
   flex: 1;
   justify-content: center;
   min-inline-size: 180px;
