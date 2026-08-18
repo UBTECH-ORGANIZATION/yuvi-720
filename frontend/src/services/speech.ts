@@ -43,12 +43,14 @@ function languageKey(language: string): SpeechLanguage {
   return language === 'ar' || language === 'en' ? language : 'he'
 }
 
-/** Text-only normalization used by browser speech when Azure is unavailable. */
+/** Text-only normalization used by browser speech when Azure is unavailable.
+ *  Kept in sync with `normalize_math_for_speech` in backend/app/services/speech.py. */
 export function normalizeMathForSpeech(text: string, language: string): string {
   const terms = SPEECH_TERMS[languageKey(language)]
   let spoken = (text || '')
     .replace(/```[^\n]*\n?[\s\S]*?```/g, ' ')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/^[ \t]*(?:[-*+•]|\d+[.)])[ \t]+/gm, '')
     .replace(/\\[\[(]([\s\S]*?)\\[\])]/g, ' $1 ')
     .replace(/\$\$/g, ' ')
     .replace(/\$/g, ' ')
@@ -79,6 +81,8 @@ export function normalizeMathForSpeech(text: string, language: string): string {
     .replace(/(?<=\s)-(?=\s|\d)/g, ` ${terms.minus} `)
     .replace(/\*\*|__|`/g, '')
     .replace(/\\(?:left|right|mathrm|text|operatorname)\b/g, ' ')
+    .replace(/(?<=\d)\s*\/\s*(?=\d)/g, ` ${terms.divided} `)
+    .replace(/[/\\@#~|<>^"'‘’“”״׳`*_]/g, '')
     .replace(/[{}]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
