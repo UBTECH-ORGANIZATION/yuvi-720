@@ -1,0 +1,97 @@
+/* Deliberately plain: this is a workbench, and every pixel of personality here
+   is a pixel competing with the content it exists to show. The frames carry the
+   design; the chrome around them stays out of the way. */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #12101f;
+  color: #e8e6f5;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 15px;
+}
+
+.gl-bar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: rgba(18, 16, 31, .94);
+  backdrop-filter: blur(10px);
+  border-block-end: 1px solid #2c2947;
+}
+
+.gl-bar__title { display: flex; gap: 10px; align-items: baseline; }
+.gl-muted { color: #a6a2c4; font-size: .88em; }
+
+.gl-controls { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.gl-controls label {
+  display: inline-flex; gap: 6px; align-items: center;
+  color: #a6a2c4; font-size: .82em;
+}
+.gl-controls select {
+  font: inherit; font-size: .92em; padding: 6px 8px;
+  background: #1d1a33; color: #e8e6f5;
+  border: 1px solid #35315a; border-radius: 8px;
+}
+
+.gl-btn {
+  font: inherit; font-size: .9em; padding: 7px 14px; cursor: pointer;
+  background: #4b46c9; color: #fff; border: 0; border-radius: 8px;
+}
+.gl-btn--small { padding: 4px 10px; font-size: .82em; background: #2f2b52; }
+.gl-btn:hover { filter: brightness(1.12); }
+
+/* Frames keep their exact declared size — the point is to see the player at a
+   real viewport, so nothing here may scale or squeeze them. The grid wraps. */
+.gl-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  align-items: start;
+  padding: 22px;
+}
+
+.gl-card {
+  background: #1a1830;
+  border: 1px solid #2c2947;
+  border-radius: 14px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gl-card__head {
+  display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center;
+  font-size: .82em;
+}
+.gl-card__title { font-weight: 700; font-size: 1.05em; }
+.gl-card__id { color: #8f8bb0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.gl-card__kinds { color: #8f8bb0; }
+.gl-badge {
+  padding: 2px 8px; border-radius: 99px; font-size: .9em;
+  background: #4a2f1c; color: #f0b183;
+}
+.gl-open { color: #9b95ff; text-decoration: none; margin-inline-start: auto; }
+.gl-open:hover { text-decoration: underline; }
+
+/* Clips the scaled frame to its painted size and anchors the scale to the
+   top-left, so cards tile predictably whatever the zoom. */
+.gl-holder { overflow: hidden; border-radius: 10px; }
+
+.gl-frame {
+  border: 0;
+  background: #fff;      /* so a frame that fails to boot is obviously blank */
+  display: block;
+  transform-origin: top left;
+}
+
+.gl-empty { padding: 40px 22px; color: #a6a2c4; }
+.gl-empty code { color: #e8e6f5; }

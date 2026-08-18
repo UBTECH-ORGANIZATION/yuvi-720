@@ -16,6 +16,7 @@
       "id": "ENG.G7.FAMILY.PHON-01",
       "learningUnitId": "ENG.G7.FAMILY.PHON",
       "title": "Listen to the th sound",
+      "titleTranslations": { "Hebrew": "מאזינים לצליל th", "Arabic": "نستمع إلى صوت th", "English": "Listen to the th sound" },
       "componentPurpose": "הבנייה",
       "isAssessment": false,
       "isRequired": true,
@@ -40,6 +41,18 @@
           "informationToBot": "מסך פתיחה של רכיב ההבנייה ביעד ההגייה והכתיב. המטרה: להכין את הלומד לכך שהוא הולך לשמוע את הצליל th במילות משפחה (mother, father, brother, three), ולהבין שמדובר בצליל שנוצר כשהלשון יוצאת מעט בין השיניים. אסטרטגיה מומלצת: להאזין, ואז לחזור בקול רם — גם אם אף אחד לא מקליט. תפיסות שגויות נפוצות בשלב הזה: (1) דוברי עברית חושבים ש-th זה פשוט t או d, כי הצליל הזה לא קיים בעברית; (2) לומדים חוששים שצריך 'מבטא מושלם' — היעד הוא הגייה מובנת, לא מבטא של דובר יליד. אין כאן שאלה מדורגת.",
           "presentation": {
             "kind": "intro",
+            "image": {
+              "prompt": "A boy about thirteen wearing headphones and standing in front of a mirror, watching his own mouth carefully as he practises saying a word.",
+              "src": "ENG.G7.FAMILY.PHON/phon-01-01-screen-6c829f75.jpg",
+              "srcset": "ENG.G7.FAMILY.PHON/phon-01-01-screen-6c829f75-480.webp 480w, ENG.G7.FAMILY.PHON/phon-01-01-screen-6c829f75-960.webp 960w",
+              "width": 1024,
+              "height": 1024,
+              "alt": {
+                "en": "A boy wearing headphones watching his mouth in a mirror as he practises a word.",
+                "he": "נער עם אוזניות מסתכל על הפה שלו במראה ומתאמן על מילה.",
+                "ar": "فتى يضع سمّاعات وينظر إلى فمه في المرآة وهو يتدرّب على كلمة."
+              }
+            },
             "prompt": {
               "en": "English has one sound that Hebrew does not have: th.",
               "he": "לאנגלית יש צליל אחד שאין בעברית: th.",
@@ -86,6 +99,56 @@
               "questionType": "single-choice",
               "questionText": "Which word has the th sound?",
               "answers": ["tree", "three", "teacher", "table"],
+              "answerMedia": {
+                "tree": {
+                  "prompt": "One leafy green tree standing alone on a patch of grass, plain sky behind it. An empty landscape — NO people anywhere in the scene.",
+                  "src": "ENG.G7.FAMILY.PHON/phon-01-02-q1-option-tree-c67801e0.jpg",
+                  "srcset": "ENG.G7.FAMILY.PHON/phon-01-02-q1-option-tree-c67801e0-480.webp 480w, ENG.G7.FAMILY.PHON/phon-01-02-q1-option-tree-c67801e0-960.webp 960w",
+                  "width": 1024,
+                  "height": 1024,
+                  "alt": {
+                    "en": "A single leafy tree on grass.",
+                    "he": "עץ ירוק בודד על דשא.",
+                    "ar": "شجرة خضراء وحيدة على العشب."
+                  }
+                },
+                "three": {
+                  "prompt": "Close-up still life photograph composition: a bare wooden tabletop against a plain neutral wall, with exactly three identical red apples in a straight row on it. The frame contains only the tabletop, the wall and the apples — strictly NO people, NO hands, NO faces, NO furniture.",
+                  "src": "ENG.G7.FAMILY.PHON/phon-01-02-q1-option-three-adc9a085.jpg",
+                  "srcset": "ENG.G7.FAMILY.PHON/phon-01-02-q1-option-three-adc9a085-480.webp 480w, ENG.G7.FAMILY.PHON/phon-01-02-q1-option-three-adc9a085-960.webp 960w",
+                  "width": 1024,
+                  "height": 1024,
+                  "alt": {
+                    "en": "Three red apples in a row.",
+                    "he": "שלושה תפוחים אדומים בשורה.",
+                    "ar": "ثلاث تفّاحات حمراء في صفّ."
+                  }
+                },
+                "teacher": {
+                  "prompt": "A friendly teacher standing beside a completely blank whiteboard, holding a pointer and smiling.",
+                  "src": "ENG.G7.FAMILY.PHON/phon-01-02-q1-option-teacher-8ce00461.jpg",
+                  "srcset": "ENG.G7.FAMILY.PHON/phon-01-02-q1-option-teacher-8ce00461-480.webp 480w, ENG.G7.FAMILY.PHON/phon-01-02-q1-option-teacher-8ce00461-960.webp 960w",
+                  "width": 1024,
+                  "height": 1024,
+                  "alt": {
+                    "en": "A teacher standing beside a blank whiteboard.",
+                    "he": "מורה עומדת ליד לוח ריק.",
+                    "ar": "معلّمة تقف بجانب لوح فارغ."
+                  }
+                },
+                "table": {
+                  "prompt": "A simple empty wooden table with four legs, seen from the side, nothing on it, in an otherwise empty room. NO chairs and NO people anywhere in the scene.",
+                  "src": "ENG.G7.FAMILY.PHON/phon-01-02-q1-option-table-ffea776e.jpg",
+                  "srcset": "ENG.G7.FAMILY.PHON/phon-01-02-q1-option-table-ffea776e-480.webp 480w, ENG.G7.FAMILY.PHON/phon-01-02-q1-option-table-ffea776e-960.webp 960w",
+                  "width": 1024,
+                  "height": 1024,
+                  "alt": {
+                    "en": "An empty wooden table.",
+                    "he": "שולחן עץ ריק.",
+                    "ar": "طاولة خشبيّة فارغة."
+                  }
+                }
+              },
               "correctAnswers": ["three"],
               "feedback": {
                 "correct": {
@@ -144,56 +207,6 @@
               }
             }
           ]
-        },
-        {
-          "id": "ENG.G7.FAMILY.PHON-01-03",
-          "title": "How did your mouth feel?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי בסוף רכיב ההבנייה. המטרה: שהלומד יבחין בין 'אני לא שומע את ההבדל' לבין 'אני שומע אבל לא מצליח להפיק' — שתי בעיות שונות עם המשך שונה. אין תשובה נכונה ואין ניקוד. אם נבחר 'לא שמעתי את ההבדל' — כדאי להפנות לייצוג הטקסטואלי שבו רואים את האותיות; אם נבחר 'שמעתי אבל קשה לי להגיד' — כדאי לעודד חזרה בקול רם, זה תרגול מוטורי ולוקח זמן.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "You tried the th sound. What happened?",
-              "he": "ניסיתם את הצליל th. מה קרה?",
-              "ar": "جرّبتم صوت th. ماذا حدث؟"
-            },
-            "choices": [
-              {
-                "id": "easy",
-                "label": {
-                  "en": "I heard it and I could say it",
-                  "he": "שמעתי את הצליל והצלחתי להגיד אותו",
-                  "ar": "سمعت الصوت واستطعت نطقه"
-                }
-              },
-              {
-                "id": "hear-not-say",
-                "label": {
-                  "en": "I heard it, but saying it is hard",
-                  "he": "שמעתי אותו, אבל קשה לי להגיד אותו",
-                  "ar": "سمعته، لكن نطقه صعب عليّ"
-                }
-              },
-              {
-                "id": "no-difference",
-                "label": {
-                  "en": "th and t still sound the same to me",
-                  "he": "th ו-t עדיין נשמעים לי אותו דבר",
-                  "ar": "ما زال th و t يبدوان لي متشابهين"
-                }
-              },
-              {
-                "id": "known",
-                "label": {
-                  "en": "I already knew this sound",
-                  "he": "כבר הכרתי את הצליל הזה",
-                  "ar": "كنت أعرف هذا الصوت من قبل"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -201,6 +214,7 @@
       "id": "ENG.G7.FAMILY.PHON-01B",
       "learningUnitId": "ENG.G7.FAMILY.PHON",
       "title": "See the th sound — read and check",
+      "titleTranslations": { "Hebrew": "רואים את הצליל th: קוראים ובודקים", "Arabic": "نرى صوت th: نقرأ ونتحقّق", "English": "See the th sound — read and check" },
       "componentPurpose": "הבנייה",
       "isAssessment": false,
       "isRequired": false,
@@ -332,56 +346,6 @@
               }
             }
           ]
-        },
-        {
-          "id": "ENG.G7.FAMILY.PHON-01B-03",
-          "title": "What helped you?",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי בסוף הייצוג הטקסטואלי. המטרה: שהלומד ינסח מה עזר לו — לראות את האותיות, לשמוע את השורה, או לחזור בקול. אין ניקוד ואין תשובה נכונה. אם נבחר 'עדיין מתבלבל בכתיב' — ההמשך המומלץ הוא תרגול הכתיב ברכיב התרגול, לא חזרה על אותה קריאה.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "What helped you most here?",
-              "he": "מה הכי עזר לכם כאן?",
-              "ar": "ما الذي ساعدكم أكثر هنا؟"
-            },
-            "choices": [
-              {
-                "id": "seeing",
-                "label": {
-                  "en": "Seeing the letters",
-                  "he": "לראות את האותיות",
-                  "ar": "رؤية الحروف"
-                }
-              },
-              {
-                "id": "tapping",
-                "label": {
-                  "en": "Tapping a line to hear it",
-                  "he": "ללחוץ על שורה כדי לשמוע אותה",
-                  "ar": "الضغط على السطر لسماعه"
-                }
-              },
-              {
-                "id": "aloud",
-                "label": {
-                  "en": "Reading out loud after the voice",
-                  "he": "לקרוא בקול רם אחרי הקול",
-                  "ar": "القراءة بصوت عالٍ بعد الصوت"
-                }
-              },
-              {
-                "id": "spelling-hard",
-                "label": {
-                  "en": "I still mix up the spelling",
-                  "he": "אני עדיין מתבלבל בכתיב",
-                  "ar": "ما زلت أخلط في الكتابة"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -389,6 +353,7 @@
       "id": "ENG.G7.FAMILY.PHON-02",
       "learningUnitId": "ENG.G7.FAMILY.PHON",
       "title": "Hear the difference, write the word",
+      "titleTranslations": { "Hebrew": "שומעים את ההבדל, כותבים את המילה", "Arabic": "نسمع الفرق ونكتب الكلمة", "English": "Hear the difference, write the word" },
       "componentPurpose": "תרגול",
       "isAssessment": false,
       "isRequired": true,
@@ -539,6 +504,7 @@
           "mediaFormat": "text",
           "informationToBot": "תרגול כתיב של מילות הליבה היצרניות: mother, father, brother, grandmother, aunt, uncle, cousin, daughter. יעד: לכתוב נכון את המילים שהלומד כבר יודע להגות. אסטרטגיה: לחלק את המילה להברות ולבדוק אם יש בה th. תפיסות שגויות נפוצות ואופייניות לדוברי עברית וערבית: (1) השמטת ה-h — 'moter', 'broter'; (2) כתיב פונטי של הצליל — 'muther', 'fader'; (3) בלבול בין aunt (דודה) לבין ant (נמלה), כי הן נשמעות כמעט זהה; (4) 'cousin' נכתב 'cusin' או 'couzin'. אם הלומד טועה, כדאי להפנות אותו לחשוב איזה צליל הוא שומע ואיזה צירוף אותיות מייצג אותו, בלי לתת את המילה.",
           "presentation": {
+            "kind": "practice",
             "prompt": {
               "en": "Now the spelling. Think about the sound, then choose the correct written word.",
               "he": "עכשיו הכתיב. חשבו על הצליל, ואז בחרו את המילה הכתובה נכון.",
@@ -623,56 +589,6 @@
               }
             }
           ]
-        },
-        {
-          "id": "ENG.G7.FAMILY.PHON-02-04",
-          "title": "Check yourself",
-          "contentType": "רפלקציה",
-          "mediaFormat": "text",
-          "informationToBot": "פיגום מטה-קוגניטיבי של ניטור אחרי התרגול. המטרה: שהלומד יזהה מה בדיוק עדיין קשה — האזנה, כתיב, או שניהם. אין ניקוד ואין תשובה נכונה. אם נבחר 'הכתיב' — ההמלצה היא לחזור לייצוג הטקסטואלי שבו רואים את האותיות; אם נבחר 'ההאזנה' — ההמלצה היא להאזין שוב למודל האיטי, לא לתרגול המהיר.",
-          "presentation": {
-            "kind": "reflection",
-            "prompt": {
-              "en": "Which part is still hard for you?",
-              "he": "איזה חלק עדיין קשה לכם?",
-              "ar": "أيّ جزء ما زال صعباً عليكم؟"
-            },
-            "choices": [
-              {
-                "id": "listening",
-                "label": {
-                  "en": "Hearing which word was said",
-                  "he": "לשמוע איזו מילה נאמרה",
-                  "ar": "سماع أيّ كلمة قيلت"
-                }
-              },
-              {
-                "id": "spelling",
-                "label": {
-                  "en": "Writing the words correctly",
-                  "he": "לכתוב את המילים נכון",
-                  "ar": "كتابة الكلمات بشكل صحيح"
-                }
-              },
-              {
-                "id": "both",
-                "label": {
-                  "en": "Both of them",
-                  "he": "שניהם",
-                  "ar": "كلاهما"
-                }
-              },
-              {
-                "id": "ready",
-                "label": {
-                  "en": "Neither — I am ready to go on",
-                  "he": "אף אחד מהם — אני מוכן להמשיך",
-                  "ar": "لا هذا ولا ذاك — أنا جاهز للمتابعة"
-                }
-              }
-            ]
-          },
-          "questions": []
         }
       ]
     },
@@ -680,6 +596,7 @@
       "id": "ENG.G7.FAMILY.PHON-03",
       "learningUnitId": "ENG.G7.FAMILY.PHON",
       "title": "Check: sounds and spelling",
+      "titleTranslations": { "Hebrew": "בדיקה: צלילים וכתיב", "Arabic": "تحقّق: الأصوات والإملاء", "English": "Check: sounds and spelling" },
       "componentPurpose": "הערכה",
       "isAssessment": true,
       "isRequired": true,
@@ -807,6 +724,7 @@
           "mediaFormat": "text",
           "informationToBot": "פריט הערכה של הכתיב. יעד: לכתוב נכון את מילות הליבה היצרניות שנלמדו — mother, father, brother, grandmother, aunt, uncle, cousin, daughter. חשוב: זהו רכיב הערכה — אין לחשוף את הכתיב הנכון, אין לאיית את המילה ללומד ואין לצמצם את האפשרויות. מותר להנחות אסטרטגית בלבד: לחלק את המילה להברות, לבדוק אם יש th, לזכור שלא תמיד כותבים את מה ששומעים. תפיסות שגויות נפוצות שממשיכות להופיע גם כאן: השמטת ה-h, כתיב פונטי של תנועות, ובלבול aunt/ant.",
           "presentation": {
+            "kind": "practice",
             "prompt": {
               "en": "Choose the correct spelling for each family word.",
               "he": "בחרו את הכתיב הנכון לכל מילת משפחה.",

@@ -14,3 +14,5 @@ UNITY_WORLD_DIR = REACT_APP_DIR / "unity-world"
 LEARNING_GAME_FILE = LEARNING_AGENT_DIR / "game.html"
 # The Yuvilab lomda player — a standalone document, framed by us and by 720.
 ENGLISH_PLAYER_DIR = LEARNING_AGENT_DIR / "english-player"
+#: Generated unit imagery, versioned in git beside the content that names it.
+ENGLISH_ASSETS_DIR = BASE_DIR / "backend" / "content" / "english" / "assets"

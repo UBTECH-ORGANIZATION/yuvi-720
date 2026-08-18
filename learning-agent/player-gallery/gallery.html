@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<!-- The workbench chrome is LTR and English even though the content is Hebrew:
+     each frame sets its own direction from its own `lang`, and an RTL shell made
+     the card grid flow away from the corner you start reading from. -->
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:,">
+<title>Lomda gallery · Yuvilab</title>
+<link rel="stylesheet" href="/content/player-gallery/asset/gallery.css">
+</head>
+<body>
+<header class="gl-bar">
+  <div class="gl-bar__title">
+    <strong>Lomda gallery</strong>
+    <span id="gl-count" class="gl-muted">loading…</span>
+  </div>
+
+  <div class="gl-controls">
+    <label>Width
+      <select id="gl-viewport">
+        <option value="1280x800" selected>desktop 1280×800</option>
+        <option value="1024x768">laptop 1024×768</option>
+        <option value="768x1024">tablet 768×1024</option>
+        <option value="640x360">phone landscape 640×360</option>
+        <option value="360x640">phone 360×640</option>
+      </select>
+    </label>
+
+    <!-- Scales the frame for display only: it still LAYS OUT at the chosen
+         viewport, so what you are judging is the real breakpoint, just smaller. -->
+    <label>Zoom
+      <select id="gl-zoom">
+        <option value="1">100%</option>
+        <option value="0.7">70%</option>
+        <option value="0.5" selected>50%</option>
+        <option value="0.35">35%</option>
+      </select>
+    </label>
+
+    <label>Theme
+      <select id="gl-theme">
+        <option value="">device</option>
+        <option value="light" selected>light</option>
+        <option value="dark">dark</option>
+      </select>
+    </label>
+
+    <label>Language
+      <select id="gl-lang">
+        <option value="he" selected>עברית</option>
+        <option value="ar">العربية</option>
+        <option value="en">English</option>
+      </select>
+    </label>
+
+    <label>Unit
+      <select id="gl-unit"><option value="">all units</option></select>
+    </label>
+
+    <label>Kind
+      <select id="gl-kind"><option value="">all kinds</option></select>
+    </label>
+
+    <button id="gl-reload" type="button" class="gl-btn">Reload all</button>
+  </div>
+</header>
+
+<main id="gl-grid" class="gl-grid" aria-live="polite"></main>
+
+<p id="gl-empty" class="gl-empty" hidden>
+  Nothing to show. If this is a fresh checkout, confirm the backend is running and
+  that <code>backend/content/english/units/</code> has units in it.
+</p>
+
+<script src="/content/player-gallery/asset/gallery.js" type="module"></script>
+</body>
+</html>

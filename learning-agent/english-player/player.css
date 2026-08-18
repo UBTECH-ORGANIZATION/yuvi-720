@@ -1,6 +1,21 @@
 /* Yuvilab lomda player.
    Content-only surface: no app chrome, responsive, 16:9-friendly, mouse+touch.
-   Palette follows the 720 UI direction (deep navy / royal blue / soft teal). */
+   Palette follows the 720 UI direction (deep navy / royal blue / soft teal).
+
+   THE FRAME IS THE CARD — one edge-to-edge surface, like the Methodica players
+   this sits beside in the same catalog. A slim top strip, the material, and a
+   hairline-divided footer; no nested boxes fighting for the learner's eye, and
+   no margin the embedding page did not ask for.
+
+   LAYOUT LAW — the page itself never scrolls. This runs inside someone else's
+   iframe, where a scrollbar on our document is either invisible or fights the
+   host's own scrolling, and a learner who has to scroll to find the "continue"
+   button concludes the screen is broken. So `.lp` is a three-row grid pinned to
+   the viewport: strip, material, footer. Only the middle row may scroll, and
+   only when the content genuinely cannot fit (a 320px phone in landscape, or a
+   learner at 200% zoom — WCAG 1.4.4 requires that to keep working, so "nothing
+   ever scrolls" is not a rule we are allowed to keep). The chrome — progress,
+   navigation, accessibility tools — is always on screen. */
 
 :root {
   --lp-ink: #1a1a3d;
@@ -8,18 +23,73 @@
   --lp-line: #e5e6f2;
   --lp-line-soft: #eff0f9;
   --lp-surface: #ffffff;
+  --lp-surface-2: #fbfbff;
   --lp-canvas: #f3f5fc;
+  --lp-glass: rgba(255, 255, 255, .92);
   --lp-brand: #3f3ca6;
   --lp-brand-soft: #eeeefc;
+  --lp-brand-ink: #ffffff;
   --lp-teal: #14867f;
   --lp-teal-soft: #e4f5f3;
   --lp-warn: #a8552c;
   --lp-warn-soft: #fdf1e8;
+  /* נספח 1 §2.3 puts a hard floor of 15px on body text, and every secondary
+     label here is sized in `em` — so on a phone, where the base sits at ~15.8px,
+     a `.74em` kicker rendered at 11.7px. Each of those sizes is now `max()`ed
+     against this floor: the hierarchy is carried by weight, letter-spacing and
+     colour instead, which cost nothing in legibility. */
+  --lp-fs-floor: 15px;
   --lp-radius: 18px;
   --lp-radius-lg: 24px;
   --lp-shadow: 0 12px 38px rgba(26, 26, 61, 0.07);
   --lp-shadow-soft: 0 4px 16px rgba(26, 26, 61, 0.05);
-  --lp-gap: clamp(14px, 2.2vw, 24px);
+  --lp-gap: clamp(10px, 1.8vw, 22px);
+}
+
+/* Dark is a full palette, not the light one dimmed: the surfaces lift off the
+   canvas the same way, and the brand stays the brand. Both the system setting
+   and an explicit `?theme=dark` are honoured — the gallery uses the latter to
+   show every screen in both themes side by side. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --lp-ink: #eceaff;
+    --lp-ink-soft: #a9a5c8;
+    --lp-line: #34315e;
+    --lp-line-soft: #2a2750;
+    --lp-surface: #221f42;
+    --lp-surface-2: #262350;
+    --lp-canvas: #16142e;
+    --lp-glass: rgba(34, 31, 66, .92);
+    --lp-brand: #9b95ff;
+    --lp-brand-soft: #2e2a5e;
+    --lp-brand-ink: #16142e;
+    --lp-teal: #58d6c9;
+    --lp-teal-soft: #163f42;
+    --lp-warn: #f0a97d;
+    --lp-warn-soft: #43291f;
+    --lp-shadow: 0 12px 38px rgba(0, 0, 0, .38);
+    --lp-shadow-soft: 0 4px 16px rgba(0, 0, 0, .28);
+  }
+}
+
+:root[data-theme='dark'] {
+  --lp-ink: #eceaff;
+  --lp-ink-soft: #a9a5c8;
+  --lp-line: #34315e;
+  --lp-line-soft: #2a2750;
+  --lp-surface: #221f42;
+  --lp-surface-2: #262350;
+  --lp-canvas: #16142e;
+  --lp-glass: rgba(34, 31, 66, .92);
+  --lp-brand: #9b95ff;
+  --lp-brand-soft: #2e2a5e;
+  --lp-brand-ink: #16142e;
+  --lp-teal: #58d6c9;
+  --lp-teal-soft: #163f42;
+  --lp-warn: #f0a97d;
+  --lp-warn-soft: #43291f;
+  --lp-shadow: 0 12px 38px rgba(0, 0, 0, .38);
+  --lp-shadow-soft: 0 4px 16px rgba(0, 0, 0, .28);
 }
 
 * { box-sizing: border-box; }
@@ -27,26 +97,38 @@
 html, body {
   margin: 0;
   padding: 0;
-  min-block-size: 100%;
-  background:
-    radial-gradient(120% 60% at 50% 0%, #ffffff 0%, rgba(255, 255, 255, 0) 60%),
-    var(--lp-canvas);
+  block-size: 100vh;      /* fallback for browsers without dynamic units */
+  block-size: 100dvh;
+  overflow: hidden;       /* the page never scrolls — see LAYOUT LAW above */
+  background: var(--lp-surface);
   color: var(--lp-ink);
   font-family: 'Rubik', 'Assistant', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Floor is 15px (נספח 1 §2.3); it grows with the viewport, not past 18px. */
   font-size: clamp(15px, 1.05vw + 12px, 18px);
   line-height: 1.6;
   -webkit-text-size-adjust: 100%;
 }
 
 .lp {
+  /* The shell is the container the card's layout is queried against. A container
+     cannot style itself from its own size, so the inner grid's one-vs-two-pane
+     decision has to be asked here, one level up. `size` rather than
+     `inline-size` so image caps can be written in `cqb` — the frame's height —
+     which is safe here and only here, because the shell is pinned to the
+     viewport and its size never depends on its content. */
+  container-type: size;
+  container-name: lp-shell;
   inline-size: 100%;
-  max-inline-size: 940px;
-  margin-inline: auto;
-  padding: var(--lp-gap);
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-block-size: 100vh;
+  display: grid;
+  /* strip · material · footer. `minmax(0, 1fr)` is what lets the middle row
+     shrink below its content instead of pushing the footer off screen. */
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  block-size: 100vh;
+  block-size: 100dvh;
+  /* The surface is painted here as well as on the body, so the learner-facing
+     high-contrast toggle — which is scoped to `.lp` — recolors what is actually
+     behind the words. */
+  background: var(--lp-surface);
 }
 
 /* Clean line icons — never emojis (720 UI direction). */
@@ -67,7 +149,7 @@ html, body {
 }
 
 /* ── boot ─────────────────────────────────────────────────────────────── */
-.lp-boot { display: flex; gap: 8px; justify-content: center; padding: 30vh 0; }
+.lp-boot { grid-row: 2; margin: auto; display: flex; gap: 8px; justify-content: center; }
 .lp-boot__dot {
   inline-size: 10px; block-size: 10px; border-radius: 50%;
   background: var(--lp-brand); opacity: .35;
@@ -77,28 +159,39 @@ html, body {
 .lp-boot__dot:nth-child(3) { animation-delay: .3s; }
 @keyframes lp-pulse { 50% { opacity: 1; transform: translateY(-4px); } }
 
-/* ── header: progress + accessibility (720 §1.4 / §1.5) ───────────────── */
+/* ── top strip: progress + accessibility (720 §1.4 / §1.5) ────────────── */
+/* Not a card — a slim strip on the shared surface, separated from the material
+   by a hairline. It is a grid row pinned to the top of the viewport, so it
+   cannot scroll away and does not need to fight for a z-index. */
 .lp-head {
-  position: sticky; inset-block-start: 0; z-index: 5;
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 10px 16px;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, .92);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--lp-line);
-  border-radius: var(--lp-radius);
-  box-shadow: var(--lp-shadow-soft);
+  gap: 8px 16px;
+  align-items: center;
+  padding: 10px clamp(14px, 2.4vw, 28px);
+  border-block-end: 1px solid var(--lp-line);
 }
-.lp-head__title { margin: 0; font-size: .98em; font-weight: 600; min-inline-size: 0; }
+.lp-head__title { margin: 0; font-size: max(var(--lp-fs-floor), .98em); font-weight: 600; min-inline-size: 0; }
 .lp-head__title span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lp-head__title small {
-  display: block; font-weight: 500; color: var(--lp-brand); font-size: .76em;
+  display: block; font-weight: 500; color: var(--lp-brand); font-size: max(var(--lp-fs-floor), .76em);
   letter-spacing: .04em;
 }
 
 /* One segment per screen, so "where am I" is answered without counting. */
 .lp-steps { display: flex; gap: 5px; grid-column: 1 / -1; }
+
+/* With room, the whole strip is one slim row: title at the start, the step
+   segments riding the middle, tools at the end — the Methodica silhouette. */
+@container lp-shell (min-inline-size: 720px) {
+  .lp-head { grid-template-columns: auto minmax(140px, 1fr) auto; }
+  .lp-head__title { max-inline-size: 34cqi; }
+  .lp-steps {
+    grid-column: 2; grid-row: 1;
+    align-self: center; justify-self: center;
+    inline-size: 100%; max-inline-size: 420px;
+  }
+}
 .lp-step {
   block-size: 6px; flex: 1; border-radius: 99px; background: var(--lp-line);
   border: 0; padding: 0; cursor: pointer; min-inline-size: 10px;
@@ -122,22 +215,108 @@ html, body {
 .lp-tool[aria-pressed='true'] { background: var(--lp-brand-soft); border-color: var(--lp-brand); color: var(--lp-brand); }
 .lp-tool:focus-visible { outline: 3px solid var(--lp-brand); outline-offset: 2px; }
 
-/* ── card ─────────────────────────────────────────────────────────────── */
-/* Three zones, always in the same order: what to do (in the learner's language),
-   the English material, then the task. Reading a screen should never mean
-   working out which paragraph is an instruction and which is the content. */
+/* ── card: the surface itself ─────────────────────────────────────────── */
+/* Four zones, always in the same order: what to do (in the learner's language),
+   the picture, the English material, then the task. Reading a screen should
+   never mean working out which paragraph is an instruction and which is the
+   content. */
+/* The card is the middle grid row and the ONLY thing allowed to scroll, and only
+   as an overflow fallback. It carries no border of its own any more — it IS the
+   surface. `container-type: inline-size` keeps the option grid and type scale
+   responding to the card's own width rather than the viewport's. */
 .lp-card {
-  background: var(--lp-surface);
-  border: 1px solid var(--lp-line);
-  border-radius: var(--lp-radius-lg);
-  box-shadow: var(--lp-shadow);
-  padding: clamp(18px, 3.2vw, 34px);
-  display: flex; flex-direction: column; gap: clamp(18px, 2.6vw, 26px);
+  container-type: inline-size;
+  container-name: lp-card;
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;   /* a scroll at the end must not scroll the host */
+  padding: clamp(16px, 2.8vw, 36px);
+  display: flex; flex-direction: column;
+}
+
+/* Everything visible lives in this wrapper. Its auto block margins are the whole
+   vertical-centering strategy: a sparse screen (an opening card with one line
+   and a picture) floats to the middle of the frame, and a dense one collapses
+   the margins to zero, top-aligns, and scrolls — no measuring, no modes. */
+.lp-card__inner {
+  margin-block: auto;
+  margin-inline: auto;
+  inline-size: 100%;
+  max-inline-size: 760px;
+  display: flex; flex-direction: column; gap: clamp(14px, 2.2vw, 24px);
+}
+
+/* With room, the zones spread into panes, Methodica-style: the task beside what
+   it asks about, the picture in a pane of its own. Which template applies is
+   read off the card's zone classes; every template names every area a zone of
+   that variant can occupy, so nothing ever lands in an implicit row.
+
+   The zone → area mapping is global and the templates below are per-variant:
+   an element whose named area is missing from the template would create an
+   implicit track, so each variant's template lists exactly the zones that can
+   exist under its own class guard. */
+@container lp-shell (min-inline-size: 720px) {
+  .lp-card__inner > .lp-brief { grid-area: brief; }
+  .lp-card__inner > .lp-media { grid-area: media; }
+  .lp-card__inner > .lp-stage { grid-area: stage; }
+  .lp-card__inner > .lp-task  { grid-area: task; }
+
+  /* A task and its picture, no material — the canonical Kata screen: question
+     and options on one side, the image in its reserved pane on the other. */
+  .lp-card--task.lp-card--media:not(.lp-card--stage) .lp-card__inner {
+    display: grid;
+    max-inline-size: 1160px;
+    grid-template-columns: minmax(0, 1fr) clamp(220px, 32cqi, 420px);
+    grid-template-areas: 'brief media' 'task media' 'stage media';
+    align-items: start;
+    column-gap: clamp(20px, 3cqi, 40px);
+  }
+  .lp-card--task.lp-card--media:not(.lp-card--stage) .lp-card__inner > .lp-media {
+    align-self: center;
+  }
+
+  /* Material plus a task: the thing you study beside the thing you answer.
+     This is what stops the tallest screens from overflowing — the height is
+     the taller column, not the sum. The material column is the wider one:
+     English reading lines must not wrap just because a question moved in
+     beside them, while option pills read fine a little narrower. The
+     instruction band spans both columns: it introduces the whole screen, not
+     one side of it. A picture joins the material column — and the `media` row
+     exists only when there IS one, because an empty grid row still charges
+     its row-gap. */
+  .lp-card--task.lp-card--stage .lp-card__inner {
+    display: grid;
+    max-inline-size: 1160px;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    grid-template-areas: 'brief brief' 'stage task';
+    align-items: start;
+    column-gap: clamp(20px, 3cqi, 40px);
+  }
+  .lp-card--task.lp-card--stage.lp-card--media .lp-card__inner {
+    grid-template-areas: 'brief brief' 'media task' 'stage task';
+  }
+  /* The material label sits inside the stage panel's padding; give the task
+     the same inset so "שאלה 1 מתוך 3" tops out on the same line as the label. */
+  .lp-card--task.lp-card--stage .lp-card__inner > .lp-task {
+    padding-block-start: calc(clamp(12px, 2vw, 20px) + 1px);
+  }
+
+  /* A picture with no task — an opening or closing card. The words and the
+     picture sit side by side, both centered: the one screen that is allowed
+     to feel like a poster. */
+  .lp-card--media:not(.lp-card--task) .lp-card__inner {
+    display: grid;
+    max-inline-size: 1060px;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    grid-template-areas: 'brief media' 'stage media';
+    align-items: center;
+    column-gap: clamp(20px, 3cqi, 40px);
+  }
 }
 
 .lp-brief { display: flex; flex-direction: column; gap: 10px; }
 .lp-kicker {
-  margin: 0; font-size: .74em; letter-spacing: .08em; text-transform: uppercase;
+  margin: 0; font-size: max(var(--lp-fs-floor), .74em); letter-spacing: .08em; text-transform: uppercase;
   color: var(--lp-brand); font-weight: 600;
 }
 .lp-prompt { margin: 0; font-size: clamp(1.24em, 2.4vw, 1.5em); font-weight: 600; line-height: 1.35; }
@@ -148,14 +327,14 @@ html, body {
   display: flex; gap: 10px; align-items: flex-start;
   margin: 0; padding: 12px 14px; border-radius: 14px;
   background: var(--lp-teal-soft); color: var(--lp-ink);
-  font-size: .93em;
+  font-size: max(var(--lp-fs-floor), .93em);
 }
 .lp-tip .lp-i { color: var(--lp-teal); margin-block-start: .2em; }
 
 .lp-support {
   margin: 0; padding: 11px 14px; border-radius: 12px;
   background: var(--lp-line-soft); color: var(--lp-ink-soft);
-  font-size: .9em;
+  font-size: max(var(--lp-fs-floor), .9em);
 }
 
 /* ── stage: the English material ──────────────────────────────────────── */
@@ -164,13 +343,13 @@ html, body {
 .lp-stage {
   border: 1px solid var(--lp-line);
   border-radius: var(--lp-radius);
-  background: linear-gradient(180deg, #fbfbff, #f5f6fe);
-  padding: clamp(14px, 2.2vw, 20px);
+  background: var(--lp-surface-2);
+  padding: clamp(12px, 2vw, 20px);
   display: flex; flex-direction: column; gap: 14px;
 }
 .lp-stage__label {
   display: flex; align-items: center; gap: 8px; margin: 0;
-  font-size: .76em; font-weight: 600; letter-spacing: .06em;
+  font-size: max(var(--lp-fs-floor), .76em); font-weight: 600; letter-spacing: .06em;
   text-transform: uppercase; color: var(--lp-brand);
 }
 
@@ -182,13 +361,13 @@ html, body {
 .lp-play {
   display: inline-flex; align-items: center; gap: 10px;
   padding: 12px 22px; border-radius: 99px; border: 0; cursor: pointer;
-  background: var(--lp-brand); color: #fff; font: inherit; font-weight: 600;
+  background: var(--lp-brand); color: var(--lp-brand-ink); font: inherit; font-weight: 600;
 }
 .lp-play[data-playing='true'] { background: var(--lp-warn); }
 .lp-play:focus-visible { outline: 3px solid var(--lp-ink); outline-offset: 3px; }
 .lp-chip {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 9px 15px; border-radius: 99px; cursor: pointer; font: inherit; font-size: .92em;
+  padding: 9px 15px; border-radius: 99px; cursor: pointer; font: inherit; font-size: max(var(--lp-fs-floor), .92em);
   border: 1px solid var(--lp-line); background: var(--lp-surface); color: var(--lp-ink);
   min-block-size: 44px;
 }
@@ -208,10 +387,65 @@ html, body {
 .lp-line[data-speaking='true'] { border-color: var(--lp-brand); background: var(--lp-brand-soft); }
 .lp-line:focus-visible { outline: 3px solid var(--lp-brand); outline-offset: 2px; }
 
+/* Every line lays out as a row so the speaker chip has an edge to sit on. */
+.lp-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.lp-line__value { flex: 1 1 auto; min-inline-size: 0; }
+
+/* The audible affordance — the same round-chip language as the chat panel's
+   microphone. Decorative (`aria-hidden`): the line itself is the button. */
+.lp-line__play {
+  flex: none; margin-inline-start: auto;
+  /* Small enough that the text, not the chip, sets the line's height. */
+  inline-size: 28px; block-size: 28px; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 1px solid var(--lp-line); background: var(--lp-surface);
+  color: var(--lp-brand);
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.lp-line__play .lp-i { inline-size: 15px; block-size: 15px; }
+.lp-line:hover .lp-line__play { border-color: var(--lp-brand); background: var(--lp-brand-soft); }
+.lp-line[data-speaking='true'] .lp-line__play {
+  border-color: var(--lp-brand); background: var(--lp-brand); color: var(--lp-brand-ink);
+}
+
+/* A reading text is a document, not prose: an invitation has a title, a notice
+   has fields, a thread has speakers. Drawn as identical grey paragraphs, the
+   capitals authored into a real poster read as shouting; drawn as what they
+   are, they read as a poster. */
+.lp-line--heading {
+  border: 0; background: transparent; padding-block: 4px; padding-inline: 2px;
+  font-weight: 700; font-size: 1.16em; letter-spacing: .02em; line-height: 1.35;
+  color: var(--lp-brand);
+}
+.lp-line--heading:hover { border: 0; background: var(--lp-brand-soft); }
+
+/* Label beside value, so the eye can run down the labels alone — which is
+   exactly the scanning these comprehension questions ask for. */
+.lp-line--field { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.lp-line__label {
+  flex: none; font-weight: 700; font-size: max(var(--lp-fs-floor), .82em);
+  letter-spacing: .04em; color: var(--lp-brand);
+}
+.lp-line--field .lp-line__value { min-inline-size: 0; flex: 1 1 12ch; }
+
+/* A conversation. The name is a tag rather than the first word of the sentence,
+   so who-said-what is answerable without reading a single message. */
+.lp-line--speaker { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.lp-line__who {
+  flex: none; padding: 2px 10px; border-radius: 99px;
+  background: var(--lp-brand-soft); color: var(--lp-brand);
+  font-weight: 700; font-size: max(var(--lp-fs-floor), .8em);
+}
+.lp-line--speaker .lp-line__value { min-inline-size: 0; flex: 1 1 14ch; }
+
+/* The break between two documents on one screen. */
+.lp-lines__gap { padding-block: 2px; }
+.lp-lines__gap hr { border: 0; border-block-start: 1px dashed var(--lp-line); margin: 0; }
+
 .lp-glossary { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .lp-glossary li {
   padding: 6px 12px; border-radius: 99px; background: var(--lp-surface);
-  border: 1px solid var(--lp-line); color: var(--lp-ink); font-size: .86em;
+  border: 1px solid var(--lp-line); color: var(--lp-ink); font-size: max(var(--lp-fs-floor), .86em);
 }
 
 /* ── speaking ─────────────────────────────────────────────────────────── */
@@ -233,48 +467,238 @@ html, body {
 .lp-task { display: flex; flex-direction: column; gap: 14px; }
 .lp-q { display: flex; flex-direction: column; gap: 12px; }
 
-/* A question is a task, not another paragraph — it gets its own numbered card. */
-.lp-qcard {
-  border: 1px solid var(--lp-line);
-  border-radius: var(--lp-radius);
-  padding: clamp(14px, 2.2vw, 20px);
-  background: var(--lp-surface);
-  box-shadow: var(--lp-shadow-soft);
-}
+/* A question is not a nested box any more: on a single surface it reads as a
+   small heading over its options, the way Methodica draws it. The class stays —
+   the harnesses and the option renderers hang off it. */
+.lp-qcard { border: 0; padding: 0; background: transparent; box-shadow: none; }
 .lp-qnum {
-  margin: 0 0 10px; font-size: .76em; font-weight: 600;
+  margin: 0; font-size: max(var(--lp-fs-floor), .76em); font-weight: 600;
   letter-spacing: .05em; color: var(--lp-ink-soft);
 }
-.lp-q__text { margin: 0; font-weight: 600; font-size: 1.06em; }
+.lp-q__text { margin: 0; font-weight: 600; font-size: 1.12em; line-height: 1.5; }
+
+/* Options are one column of full-width pills — a single set to run the eye
+   down, exactly as the Methodica players draw it. The room that used to force
+   a 2×2 block now goes to the side-pane layouts instead. */
 .lp-options { display: grid; gap: 10px; grid-template-columns: 1fr; }
-@media (min-width: 640px) { .lp-options { grid-template-columns: 1fr 1fr; } }
+/* Long answers were already single-column when options could be 2×2; the class
+   still arrives from the renderer and now simply agrees with the default. */
+.lp-options--long { grid-template-columns: 1fr; }
 
 .lp-option {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 12px;
   text-align: start; font: inherit; cursor: pointer;
-  padding: 14px 16px; border-radius: 12px; min-block-size: 54px;
+  padding: 12px 14px; border-radius: 14px; min-block-size: 52px;
   border: 1.5px solid var(--lp-line); background: var(--lp-surface); color: var(--lp-ink);
-  transition: border-color .15s ease, background .15s ease;
+  transition: border-color .15s ease, background .15s ease, transform .12s ease;
 }
+/* The key sits in a chip so the answer text starts on one consistent line,
+   however long or short the answer is. */
+.lp-option__key {
+  flex: none; display: grid; place-items: center;
+  inline-size: 28px; block-size: 28px; border-radius: 9px;
+  background: var(--lp-brand-soft); color: var(--lp-brand);
+  font-size: max(var(--lp-fs-floor), .82em); font-weight: 700; font-variant-numeric: tabular-nums;
+  transition: background .15s ease, color .15s ease;
+}
+.lp-option__text { min-inline-size: 0; }
 .lp-option:hover:not(:disabled) { border-color: var(--lp-brand); background: var(--lp-brand-soft); }
+.lp-option:active:not(:disabled) { transform: scale(.99); }
 .lp-option[data-verdict='correct'] { border-color: var(--lp-teal); background: var(--lp-teal-soft); }
+.lp-option[data-verdict='correct'] .lp-option__key { background: var(--lp-teal); color: var(--lp-brand-ink); }
 .lp-option[data-verdict='incorrect'] { border-color: var(--lp-warn); background: var(--lp-warn-soft); }
+.lp-option[data-verdict='incorrect'] .lp-option__key { background: var(--lp-warn); color: var(--lp-brand-ink); }
 .lp-option:disabled { cursor: default; opacity: .6; }
 .lp-option[data-verdict] { opacity: 1; }
 .lp-option:focus-visible { outline: 3px solid var(--lp-brand); outline-offset: 2px; }
 
+/* One surface for the verdict: the author's sentence and — on a wrong answer —
+   the retry button, side by side in the same tinted panel. Two stacked boxes
+   each with its own circular arrow read as clutter; one panel with one action
+   reads as "here is what happened, here is what you do". */
 .lp-feedback {
-  display: flex; gap: 10px; align-items: flex-start;
+  display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center;
   margin: 0; padding: 12px 14px; border-radius: 12px;
   background: var(--lp-brand-soft); border-inline-start: 4px solid var(--lp-brand);
 }
-.lp-feedback .lp-i { margin-block-start: .22em; }
+.lp-feedback > .lp-i { flex: none; }
+.lp-feedback__msg { flex: 1 1 240px; min-inline-size: 0; }
+.lp-feedback .lp-retry { margin-inline-start: auto; flex: none; }
 /* `display: flex` would otherwise beat the [hidden] attribute. */
 .lp-feedback[hidden] { display: none; }
 .lp-feedback[data-verdict='correct'] { background: var(--lp-teal-soft); border-inline-start-color: var(--lp-teal); }
-.lp-feedback[data-verdict='correct'] .lp-i { color: var(--lp-teal); }
+.lp-feedback[data-verdict='correct'] > .lp-i { color: var(--lp-teal); }
 .lp-feedback[data-verdict='incorrect'] { background: var(--lp-warn-soft); border-inline-start-color: var(--lp-warn); }
-.lp-feedback[data-verdict='incorrect'] .lp-i { color: var(--lp-warn); }
+
+/* ── imagery ──────────────────────────────────────────────────────────── */
+/* `width`/`height` are on every <img>, so the browser knows the ratio before the
+   bytes land; these two lines are what let it scale without re-flowing. */
+.lp-img { max-inline-size: 100%; block-size: auto; border-radius: 12px; display: block; }
+
+/* The screen's one media pane — the screen picture, or a question picture the
+   card hoisted out of the task. Its height cap is written in `cqb`, the shell's
+   own height, so a short embed gives room back to the words instead of pushing
+   them off — the shell, not the browser window, is what the picture must share.
+   In a side pane the column is narrow, so the width cap does the real work and
+   the height cap is just a backstop for portrait images. */
+.lp-media { margin: 0; display: flex; justify-content: center; min-block-size: 0; }
+.lp-media .lp-img {
+  /* Stacked above the words in a narrow frame, the picture must leave most of
+     the height to them. In a side pane (raised below) it can breathe. */
+  max-block-size: min(23cqb, 280px); inline-size: auto; max-inline-size: 100%;
+  box-shadow: var(--lp-shadow-soft);
+}
+@container lp-shell (min-inline-size: 720px) {
+  .lp-media .lp-img { max-block-size: min(56cqb, 440px); }
+}
+
+/* The in-task fallback, for the rare screen whose pane is already taken by a
+   screen picture while a question carries one of its own. */
+.lp-q__figure { margin: 0; display: flex; justify-content: center; }
+.lp-q__figure .lp-img { max-block-size: min(34cqb, 260px); inline-size: auto; }
+
+/* Picture options: the image carries the meaning, the word underneath keeps it
+   available to a learner who cannot see the image or does not recognise it. */
+.lp-options--picture { grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); }
+.lp-options--picture .lp-option {
+  flex-direction: column; align-items: stretch; gap: 8px;
+  padding: 10px; text-align: center; min-block-size: 0;
+}
+.lp-options--picture .lp-option .lp-img {
+  inline-size: 100%; aspect-ratio: 1 / 1; object-fit: cover;
+}
+.lp-options--picture .lp-option__key {
+  position: absolute; inset-block-start: 14px; inset-inline-start: 14px;
+  background: var(--lp-surface); box-shadow: var(--lp-shadow-soft);
+}
+.lp-options--picture .lp-option { position: relative; }
+.lp-options--picture .lp-option__text { font-weight: 600; }
+
+/* ── matching ─────────────────────────────────────────────────────────── */
+/* Announced, never drawn — for the parts of an interaction that a learner who
+   can see the screen is already being told by the screen. */
+.lp-sr {
+  position: absolute; inline-size: 1px; block-size: 1px; margin: -1px;
+  padding: 0; border: 0; overflow: hidden; white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.lp-match { display: flex; flex-direction: column; gap: 10px; }
+/* `display: flex`/`inline-flex` would otherwise beat the [hidden] attribute. */
+.lp-match__pool[hidden], .lp-match__check[hidden] { display: none; }
+.lp-match__how[hidden], .lp-match__status[hidden] { display: none; }
+.lp-match__how, .lp-match__status, .lp-text__how {
+  margin: 0; color: var(--lp-ink-soft); font-size: max(var(--lp-fs-floor), .86em);
+}
+.lp-match__prompts { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+
+/* One row per thing to be paired: what it is on one side, what it has been
+   paired with on the other, and the gap between them is the task. */
+.lp-match__prompt {
+  inline-size: 100%; display: flex; align-items: center; gap: 12px;
+  font: inherit; text-align: start; cursor: pointer;
+  /* 48px keeps the row a comfortable tap target while four of them still
+     leave the card room for the feedback underneath. */
+  padding: 8px 12px; border-radius: 14px; min-block-size: 48px;
+  border: 1.5px solid var(--lp-line); background: var(--lp-surface); color: var(--lp-ink);
+  transition: border-color .15s ease, background .15s ease;
+}
+.lp-match__prompt .lp-img { inline-size: 44px; block-size: 44px; object-fit: cover; flex: none; }
+.lp-match__label { font-weight: 600; min-inline-size: 0; }
+/* The empty slot is drawn, not implied — a dashed box says "something goes
+   here" to a learner who has never met this kind of question. */
+.lp-match__slot {
+  margin-inline-start: auto; min-inline-size: 92px; min-block-size: 34px;
+  display: grid; place-items: center; padding: 4px 10px; border-radius: 10px;
+  border: 1.5px dashed var(--lp-line); color: var(--lp-ink-soft);
+}
+.lp-match__slot--filled {
+  border-style: solid; border-color: var(--lp-brand);
+  background: var(--lp-brand-soft); color: var(--lp-brand); font-weight: 600;
+}
+.lp-match__prompt[data-active], .lp-match__prompt[data-over] {
+  border-color: var(--lp-brand); background: var(--lp-brand-soft);
+}
+.lp-match__prompt[data-verdict='correct'] { border-color: var(--lp-teal); background: var(--lp-teal-soft); }
+.lp-match__prompt[data-verdict='incorrect'] { border-color: var(--lp-warn); background: var(--lp-warn-soft); }
+.lp-match__prompt:focus-visible, .lp-match__chip:focus-visible {
+  outline: 3px solid var(--lp-brand); outline-offset: 2px;
+}
+.lp-match__prompt:disabled, .lp-match__chip:disabled { cursor: default; }
+
+.lp-match__pool { display: flex; flex-wrap: wrap; gap: 8px; }
+.lp-match__chip {
+  font: inherit; font-weight: 600; cursor: pointer;
+  padding: 10px 16px; border-radius: 99px; min-block-size: 44px;
+  border: 1.5px solid var(--lp-line); background: var(--lp-surface); color: var(--lp-ink);
+  touch-action: none;   /* so a drag is a drag and not the page scrolling */
+}
+.lp-match__chip[data-active] { border-color: var(--lp-brand); background: var(--lp-brand-soft); color: var(--lp-brand); }
+.lp-match__chip[data-used] { opacity: .32; }
+.lp-match__chip[data-dragging] { opacity: .32; }
+.lp-match__check { align-self: flex-start; }
+
+/* Follows the pointer during a drag. Positioned in PHYSICAL coordinates on
+   purpose — it is placed from clientX/clientY, which do not flip in RTL. */
+.lp-match__ghost {
+  position: fixed; left: 0; top: 0; z-index: 40; pointer-events: none;
+  padding: 10px 16px; border-radius: 99px; font-weight: 600;
+  background: var(--lp-brand); color: var(--lp-brand-ink);
+  box-shadow: 0 8px 24px rgb(0 0 0 / .25);
+}
+
+/* ── typed answer ─────────────────────────────────────────────────────── */
+/* A second go is offered, never forced — a ghost button under the response, so
+   it reads as an invitation next to "continue" rather than a demand. */
+.lp-retry[hidden] { display: none; }
+.lp-choice { display: flex; flex-direction: column; gap: 10px; }
+
+/* ── toast ────────────────────────────────────────────────────────────── */
+/* Transient trouble floats in the corner, the same shape the host app uses —
+   it is about the moment, not the material, so it never joins the page flow. */
+.lp-toasts {
+  position: fixed; inset-block-start: 14px; inset-inline-end: 14px;
+  display: flex; flex-direction: column; gap: 10px; z-index: 60;
+  max-inline-size: min(340px, calc(100vw - 28px));
+}
+.lp-toast {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 12px 16px; border-radius: 16px; cursor: pointer;
+  background: var(--lp-surface); color: var(--lp-ink);
+  border: 1px solid var(--lp-line); border-inline-start: 4px solid var(--lp-warn);
+  box-shadow: 0 12px 30px rgb(15 23 42 / .16);
+  animation: lp-toast-pop .3s cubic-bezier(.2, .9, .3, 1.2);
+}
+.lp-toast .lp-i { color: var(--lp-warn); flex: none; margin-block-start: .12em; }
+.lp-toast__msg { font-size: max(var(--lp-fs-floor), .93em); }
+.lp-toast[data-leaving] { opacity: 0; translate: 0 -6px; transition: opacity .3s, translate .3s; }
+@keyframes lp-toast-pop {
+  from { opacity: 0; translate: 0 -10px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-toast { animation: none; }
+  .lp-toast[data-leaving] { transition: none; }
+}
+
+.lp-text { display: flex; flex-direction: column; gap: 10px; }
+.lp-text__row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.lp-text__input {
+  flex: 1 1 200px; min-inline-size: 0; font: inherit; font-size: 1.06em;
+  padding: 12px 14px; border-radius: 14px; min-block-size: 52px;
+  border: 1.5px solid var(--lp-line); background: var(--lp-surface); color: var(--lp-ink);
+}
+.lp-text__input:focus-visible { outline: 3px solid var(--lp-brand); outline-offset: 2px; }
+.lp-text__input:disabled { opacity: .75; }
+
+/* The text being mediated FROM — the learner's own language, set apart from the
+   English task around it so it is obviously a quoted document and not
+   instructions. `dir: auto` lets it lay itself out whichever language it is. */
+.lp-source {
+  padding: 12px 14px; border-radius: 12px; white-space: pre-line;
+  background: var(--lp-surface-2); border: 1px dashed var(--lp-line);
+  color: var(--lp-ink);
+}
 
 .lp-write { display: flex; flex-direction: column; gap: 10px; }
 .lp-write textarea {
@@ -297,25 +721,26 @@ html, body {
 .lp-coach__praise { font-weight: 600; }
 .lp-coach__next { display: flex; gap: 10px; align-items: flex-start; }
 .lp-coach__next .lp-i { flex: none; color: var(--lp-teal); margin-block-start: .2em; }
-.lp-coach__ai { color: var(--lp-ink-soft); font-size: .8em; }
+.lp-coach__ai { color: var(--lp-ink-soft); font-size: max(var(--lp-fs-floor), .8em); }
 
 /* ── footer nav (720 §1.5 — learner owns the pace) ────────────────────── */
-/* A short screen must not stretch its card into a page of empty white \u2014 the
-   card hugs its content and the nav settles at the bottom instead. */
+/* Pinned as the last grid row, so "continue" sits in the same place on every
+   screen and is never something a learner has to scroll to find. A hairline
+   above it is all that separates it from the material: back holds the
+   inline-start corner, the primary holds the inline-end corner — the
+   Methodica footer, in logical properties so RTL and LTR each put the
+   primary where that direction expects it. */
 .lp-foot {
-  margin-block-start: auto;
   display: flex; flex-wrap: wrap; gap: 10px 12px; align-items: center;
-  padding: 12px 16px;
+  justify-content: space-between;
+  padding: 10px clamp(14px, 2.4vw, 28px);
   background: var(--lp-surface);
-  border: 1px solid var(--lp-line);
-  border-radius: var(--lp-radius);
-  box-shadow: var(--lp-shadow-soft);
+  border-block-start: 1px solid var(--lp-line);
 }
-.lp-foot__spacer { flex: 1; }
 .lp-btn {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 12px 24px; border-radius: 99px; font: inherit; font-weight: 600;
-  border: 1.5px solid var(--lp-brand); background: var(--lp-brand); color: #fff; cursor: pointer;
+  border: 1.5px solid var(--lp-brand); background: var(--lp-brand); color: var(--lp-brand-ink); cursor: pointer;
   min-block-size: 48px;
 }
 .lp-btn--ghost { background: transparent; color: var(--lp-brand); }
@@ -324,26 +749,71 @@ html, body {
 /* One chevron asset, mirrored by direction. */
 html[dir='rtl'] .lp-i[data-flip] { transform: scaleX(-1); }
 
-.lp-help { color: var(--lp-ink-soft); font-size: .86em; margin: 0; flex: 1 1 200px; }
-
 /* ── break offer (720 §1.6) ───────────────────────────────────────────── */
+/* Break and error occupy the material row on their own — centered blocks on
+   the open surface, not banners pinned to a corner of it. */
 .lp-break {
   display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
-  padding: 14px 16px; border-radius: var(--lp-radius);
+  margin: auto; max-inline-size: 560px;
+  padding: 18px 22px; border-radius: var(--lp-radius);
   background: var(--lp-teal-soft); border: 1px solid var(--lp-teal);
 }
 .lp-break p { margin: 0; flex: 1 1 240px; }
 
 .lp-error {
+  /* The error is the shell's only child, so it must claim the material row
+     itself — auto-placement would drop it into the slim top row. */
+  grid-row: 2;
+  margin: auto; max-inline-size: 560px;
   padding: 20px; border-radius: var(--lp-radius);
   background: var(--lp-warn-soft); border: 1px solid var(--lp-warn);
 }
 
 @media (max-width: 599px) {
-  /* The primary action stays a full-width target; the help line moves under it. */
+  /* The primary action stays a full-width target. */
   .lp-foot .lp-btn { flex: 1 1 auto; justify-content: center; }
-  .lp-foot__spacer { display: none; }
-  .lp-help { order: 3; flex-basis: 100%; text-align: center; }
+}
+
+/* A short viewport — a phone in landscape, a small embed, or a learner at 200%
+   zoom — spends its height on the material, not on padding. Nothing here
+   shrinks type below the 15px floor. */
+@media (max-height: 560px) {
+  :root { --lp-gap: 8px; }
+  .lp-head { padding: 6px 12px; gap: 6px 12px; }
+  .lp-card { padding: 12px 16px; }
+  .lp-card__inner { gap: 12px; }
+  .lp-foot { padding: 8px 12px; }
+  .lp-tool { inline-size: 36px; block-size: 36px; }
+  .lp-option { min-block-size: 46px; padding: 10px 12px; }
+}
+
+/* High contrast is a learner-facing toggle in the header, so it has to win over
+   whichever theme is in play — including dark, where the light-mode overrides
+   alone would have produced black text on a near-black card. */
+.lp[data-contrast='high'] {
+  --lp-surface-2: var(--lp-surface);
+  --lp-glass: var(--lp-surface);
+  --lp-brand-soft: var(--lp-surface);
+  --lp-teal-soft: var(--lp-surface);
+  --lp-warn-soft: var(--lp-surface);
+  --lp-shadow-soft: none;
+}
+:root[data-theme='dark'] .lp[data-contrast='high'],
+.lp[data-theme='dark'][data-contrast='high'] {
+  --lp-ink: #ffffff;
+  --lp-ink-soft: #f0f0f0;
+  --lp-line: #ffffff;
+  --lp-surface: #000000;
+  --lp-canvas: #000000;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .lp[data-contrast='high'] {
+    --lp-ink: #ffffff;
+    --lp-ink-soft: #f0f0f0;
+    --lp-line: #ffffff;
+    --lp-surface: #000000;
+    --lp-canvas: #000000;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

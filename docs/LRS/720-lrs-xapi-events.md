@@ -105,7 +105,7 @@ POST https://lrs-stg.education.gov.il/auth/oauth/v2/token
 ### 3.5 שאלון רפלקציה
 | # | אירוע | Verb | Object type | הערות |
 |---|---|---|---|---|
-| 11 | תחילת שאלון | `initialized` | `questionnaire` | id כולל `reflection` · `extensions.reflactionTrigger` |
+| 11 | תחילת שאלון | `initialized` | `questionnaire` | id כולל `reflection` · `extensions.reflectionTrigger` |
 | 12 | מענה (פתוח) | `answered` | `question` | `result.response` |
 | 13 | מענה (דירוג) | `answered` | `question` | `result.score` |
 | 14 | דילוג על שאלה | `skipped` | `question` | `parent` → השאלון |
