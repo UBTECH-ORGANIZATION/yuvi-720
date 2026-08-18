@@ -12,8 +12,11 @@
  * the rule rather than the exception: the coin the learner chose is who they
  * are in this product, so it is who they are in the teacher's list too.
  *
- * The initial is not a placeholder — a learner who has chosen no badge must
- * render a letter, never an empty coin.
+ * The initial is not a placeholder — a learner who has *chosen* no badge must
+ * render a letter, never an empty coin. That is only true once the roster has
+ * answered, though: before it does, the letter would be cut from the learner
+ * id rather than their name, so a not-yet-known face renders as a pulsing
+ * circle instead of a wrong letter.
  */
 
 import { Badge } from '../../../components/Badge'
@@ -32,12 +35,23 @@ interface Props {
 }
 
 export function StudentAvatar({ learnerId, name, size = 32, className, choice }: Props) {
-  const { avatarOf, nameOf } = useTeacherRoster()
+  const { avatarOf, nameOf, isLoading } = useTeacherRoster()
   const active = choice ?? avatarOf(learnerId)
   const label = (name ?? nameOf(learnerId) ?? learnerId).trim()
 
   const classes = ['tch-avatar', className].filter(Boolean).join(' ')
   const style = { inlineSize: size, blockSize: size, fontSize: Math.round(size * 0.42) }
+
+  /* Nothing is known yet — not the coin, and often not even the name, so the
+     initial would come from the learner id and render a confidently wrong
+     letter that a badge then replaces. A circle in its place is honest about
+     the wait, and it is the same shape and size as the answer. */
+  if (!active && isLoading) {
+    return (
+      <span className={`${classes} tch-avatar--pending`} style={style}
+            aria-hidden="true" data-pending="true" />
+    )
+  }
 
   if (active && active.kind === 'badge') {
     return (

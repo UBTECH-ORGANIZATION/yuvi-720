@@ -237,6 +237,14 @@
   overflow-y: auto;
   padding: var(--sp-4);
   display: grid;
+  /* `minmax(0, 1fr)`, not the implicit `auto`.
+     An auto column is sized to its widest item's max-content, so one wide
+     answer — a table of the class, say — stretched the column past the dock
+     and every other row with it: the whole conversation scrolled sideways
+     and the timestamps ran off the edge. The table has its own scroll box
+     (`.sp-md-tablewrap` below); it can only use it if the column it sits in
+     refuses to grow for it, which is what the 0 minimum says. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--sp-4);
   align-content: start;
 }
@@ -364,6 +372,14 @@
   block-size: 1px;
   background: var(--sp-border);
   margin-block: var(--sp-2);
+}
+
+/* A table is a layout, not a sentence. The 84% a bubble gives up is what
+   keeps a conversation looking like one — but spending it on a table just
+   buys more scrolling inside the table instead, so an answer that carries
+   one takes the whole lane. */
+.tch-dock__row--assistant:has(.sp-md-tablewrap) .tch-dock__stack {
+  max-inline-size: 100%;
 }
 
 /* A wide table scrolls inside its own box and never widens the dock. */

@@ -31,7 +31,6 @@ import { TaskReviewPage } from '../features/teacher-app/tasks/TaskReviewPage'
 import { TaskTrackingPage } from '../features/teacher-app/tasks/TaskTrackingPage'
 import { ReportIssueDialog } from '../features/support/ReportIssueDialog'
 import { PublicReportPage } from '../features/support/PublicReportPage'
-import { SupportChatPanel } from '../features/support/SupportChatPanel'
 import { useStudioTransition } from '../features/Yuvi-studio/StudioTransitionProvider'
 import { CompanionChat } from '../components/CompanionChat'
 import { YuviCompanionDock } from '../components/YuviCompanionDock'
@@ -428,10 +427,13 @@ export function App() {
       ) : routePage}
       {learnerRoute && !isStudioRoute && !isActiveTaskRoute && !isLearningWorldRoute && <YuviCompanionDock />}
       {learnerRoute && <SparkToast />}
-      {/* Teachers report faults from their own lane too, so this is not learner-scoped. */}
+      {/* Teachers report faults from their own lane too, so this is not learner-scoped.
+          It is also the only floating helper left in the teacher lane: the
+          support chat used to ride in the same bottom-left corner as the
+          assistant's launcher, two floating buttons stacked on one another
+          over the page. Reporting a fault covers the same need without
+          standing on the screen. */}
       {user && <ReportIssueDialog />}
-      {/* Support chat is staff-only, and accounts often carry both roles — hence the route check. */}
-      {isTeacher && isTeacherRoute(pathname) && <SupportChatPanel />}
     </TourProvider>
   )
 }
