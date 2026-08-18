@@ -38,11 +38,13 @@ COACH_INSTRUCTIONS = {
         "- הכלל אוסר להכריע — לא לדון. כשהתלמיד/ה שואל/ת על אפשרות מסוימת (\"תסביר לי את תשובה ג'\") — אל תסרב/י, ואל תענה/י בנוסח חמקני כמו \"נבדוק אם היא מתאימה או לא\", שלא אומר כלום. הסבר/י מה אותה אפשרות בעצם טוענת ועל איזו אידיאה היא נשענת, ותנ/י לתלמיד/ה בדיקה קונקרטית שאפשר להפעיל עליה לבד. השמט/י רק את הפסיקה: אל תאמר/י שהיא נכונה או שגויה, ואל תרמז/י לכך דרך פסילה של האחרות.\n"
         "- דבר חם, מכבד, לא ילדותי, קצר (1–3 משפטים).\n"
         "- פנייה דקדוקית: אם התלמיד/ה כתב/ה על עצמו/ה בלשון זכר או נקבה — פנה באותה צורה בעקביות לאורך כל השיחה. אם עוד לא ברור, השתמש בניסוחים ניטרליים (\"אפשר לנסות\", \"בוא נבדוק יחד\") — לעולם אל תערבב צורות באותה הודעה.\n"
+        "- לעולם אל תכתוב צורת לוכסן לציון מין (\"בוא/י\", \"התלמיד/ה\", \"מוכן/ה\") — התשובה מוקראת בקול והלוכסן נשמע כרעש. בחר צורה אחת וכתוב אותה במלואה.\n"
         "- התאם את דרך ההסבר, הקצב והניסוח לסגנון הלמידה ולהעדפות שבהקשר, בלי לתייג את התלמיד/ה ובלי לחשוף את נתוני הפרופיל.\n"
         "- השתמש בחוזקות ובתחומי עניין רק כשזה רלוונטי; אל תדחוף פרט אישי לכל תשובה.\n"
         "- אל תפתח/י את התשובה בברכת הסכמה ריקה (\"ברור\", \"בטח\", \"מעולה\", \"אין בעיה\") — פתח/י ישר בעניין עצמו.\n"
         "- אל תשתמש/י בנקודה-פסיק (;) לחיבור משפטים — פצל/י לשני משפטים קצרים וטבעיים.\n"
-        "- כתוב/י אך ורק בעברית (עם מספרים, סימני מתמטיקה ומונחים באנגלית כשצריך). לעולם אל תשלב/י אותיות סיניות, יפניות, קוריאניות או כתב זר אחר, גם לא כתרגום או הבהרה.\n"
+        "- כתוב/י אך ורק בעברית. לעולם אל תשלב/י אותיות סיניות, יפניות, קוריאניות או כתב זר אחר, גם לא כתרגום או הבהרה.\n"
+        "- סדר השפות: כל ההסבר בעברית, מתחילת התשובה. אם נדרשת אנגלית — מילה, מונח, או משפט לדוגמה — הצמד אותה בסוף התשובה בלבד, כדוגמה קצרה אחת אחרי ההסבר בעברית. למשל לשאלה \"מה אומרת השאלה הראשונה\": \"השאלה הראשונה מתעסקת בפעלים, לדוגמה he plays football\". אל תפתח באנגלית, ואל תשבץ אנגלית באמצע משפט עברי.\n"
         "- כשמשתמשים בדימוי או בייצוג מעולם העניין של התלמיד/ה: קודם מסגר/י במשפט קצר מה השאלה עצמה מבקשת (לפי נתוני השאלה, כולל שמות או הקשר אם מופיעים), ורק אז גשר/י לדימוי — כשהקשר בין הדימוי לשאלה מפורש והמיפוי ברור. אל תפתח/י בהחלפת ייצוג מנותקת מהשאלה.\n"
         "- אם קיימת אסטרטגיה שעבדה בעבר, העדף אותה. כבד הנחיית מורה רלוונטית אך לעולם אל תצטט או תחשוף אותה.\n"
         "- student_description, mastery_stance ו-coaching_hints מנחים איך לגשת ולנסח — פעל לפיהם בשקט, בלי לצטט או לחשוף אותם.\n"
@@ -355,9 +357,17 @@ _PERSONALIZATION_TRIGGERS = {"idle", "mistake", "slow_progress", "misconception"
 # override. The rung itself is evidence-derived (services/english_ladder.py);
 # the coach is told which one it is and never picks.
 _ENGLISH_MODE = {
-    "he": "זהו שיעור אנגלית. מותר ואף רצוי לשלב אנגלית בתוך העברית — כתבו את המילים והמשפטים באנגלית באנגלית, ואת ההסבר סביבם בשפת התלמיד/ה, לפי מדיניות השלב הבאה:",
-    "ar": "هذا درس إنجليزية. يُسمح بل يُستحسن دمج الإنجليزية داخل العربية — اكتبوا الكلمات والجمل الإنجليزية بالإنجليزية، والشرح حولها بلغة الطالب/ة، وفق سياسة المرحلة التالية:",
-    "en": "This is an English lesson. Mixing English into the learner's own language is expected — keep English words and sentences in English and the explanation around them in their language, following this stage policy:",
+    "he": "זהו שיעור אנגלית. ההסבר נכתב בעברית, והאנגלית מגיעה בסוף התשובה בלבד — מילה או משפט לדוגמה אחד, אחרי שההסבר בעברית הושלם. אל תשבצו אנגלית באמצע משפט עברי, לפי מדיניות השלב הבאה:",
+    "ar": "هذا درس إنجليزية. يُكتب الشرح بالعربية، وتأتي الإنجليزية في نهاية الرد فقط — كلمة أو جملة مثال واحدة بعد اكتمال الشرح، وفق سياسة المرحلة التالية:",
+    "en": "This is an English lesson. Write the explanation in the learner's own language and place English at the END of the reply only — one example word or sentence, after the explanation is complete. Do not splice English into the middle of a sentence. Follow this stage policy:",
+}
+
+# At the top rung the learner has earned an English-only conversation, so the
+# "own language first, English last" ordering no longer applies.
+_ENGLISH_ONLY_MODE = {
+    "he": "זהו שיעור אנגלית, והלומד כבר הגיע לשלב של שיחה באנגלית בלבד — כלל \"עברית תחילה\" לא חל כאן, לפי מדיניות השלב הבאה:",
+    "ar": "هذا درس إنجليزية، وقد بلغ المتعلّم مرحلة المحادثة بالإنجليزية فقط — قاعدة \"اللغة الأم أولًا\" لا تنطبق هنا، وفق سياسة المرحلة التالية:",
+    "en": "This is an English lesson and the learner has reached the English-only stage — the 'own language first' ordering does not apply here. Follow this stage policy:",
 }
 
 
@@ -371,8 +381,10 @@ def _english_mode_instruction(bundle: dict, language: str) -> Optional[str]:
     from app.services import english_ladder
 
     stage = ((bundle or {}).get("profile") or {}).get("english_speaking") or {}
-    lead = _ENGLISH_MODE.get(language) or _ENGLISH_MODE["he"]
-    return f"{lead} {english_ladder.policy_for(stage.get('stage'), language)}"
+    rung = stage.get("stage")
+    leads = _ENGLISH_ONLY_MODE if rung == english_ladder.STAGE_ENGLISH else _ENGLISH_MODE
+    lead = leads.get(language) or leads["he"]
+    return f"{lead} {english_ladder.policy_for(rung, language)}"
 
 
 def _has_personalization(bundle: dict) -> bool:

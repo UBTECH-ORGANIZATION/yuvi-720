@@ -165,7 +165,7 @@ def mastery_ratio(mastery: Optional[dict[str, Any]]) -> float:
 SPEAKING_POLICY = {
     STAGE_L1: {
         "he": (
-            "הלומד/ת בתחילת הדרך בדיבור. פתחו כל משימה בהסבר קצר בעברית, ואז אמרו את "
+            "הלומד בתחילת הדרך בדיבור. פתחו כל משימה בהסבר קצר בעברית, ורק בסוף אמרו את "
             "המשפט באנגלית לאט וברור. מותר לגמרי לענות לכם בעברית — אל תדרשו אנגלית. "
             "בקשו לחזור על משפט קצר אחד בכל פעם, ושבחו כל ניסיון להשמיע קול."
         ),
@@ -183,9 +183,9 @@ SPEAKING_POLICY = {
     },
     STAGE_MIXED: {
         "he": (
-            "הלומד/ת כבר מדבר/ת קצת אנגלית. נהלו את השיחה באנגלית פשוטה, ועברו לעברית רק "
-            "כשרואים תקיעה אמיתית — משפט אחד של תיווך ואז חזרה לאנגלית. עודדו משפטים ארוכים "
-            "קצת יותר, ושאלו שאלת המשך אחת בכל תור."
+            "הלומד כבר מדבר קצת אנגלית. ההסבר עדיין נכתב בעברית, אבל סיימו כל תשובה במשפט "
+            "אנגלי לדוגמה — ארוך ומאתגר קצת יותר מקודם — ובקשו לחזור עליו או להרחיב אותו. "
+            "האנגלית תמיד בסוף התשובה, אחרי ההסבר, ולא באמצע משפט עברי."
         ),
         "ar": (
             "المتعلّم/ة يتحدّث بعض الإنجليزية. أديروا الحديث بإنجليزية بسيطة، وانتقلوا إلى "
@@ -193,17 +193,17 @@ SPEAKING_POLICY = {
             "شجّعوا جملاً أطول قليلاً، واطرحوا سؤال متابعة واحداً في كل دور."
         ),
         "en": (
-            "This learner already speaks some English. Run the conversation in simple "
-            "English and switch to their own language only at a real breakdown — one "
-            "mediating sentence, then back to English. Encourage slightly longer sentences "
-            "and ask one follow-up question per turn."
+            "This learner already speaks some English. Keep the explanation in their own "
+            "language, but close every reply with one English example sentence — a little "
+            "longer and more demanding than before — and invite them to repeat or extend it. "
+            "English always comes last, after the explanation, never mid-sentence."
         ),
     },
     STAGE_ENGLISH: {
         "he": (
-            "הלומד/ת מוכן/ה לשיחה באנגלית בלבד. דברו רק אנגלית, גם כשמבקשים מכם עברית — "
-            "במקום לתרגם, נסחו מחדש במילים פשוטות יותר. אתגרו במשפטים ארוכים, בשאלות פתוחות "
-            "ובאוצר מילים חדש, ובקשו לענות באנגלית בלבד."
+            "הלומד מוכן לשיחה באנגלית בלבד, ובשלב הזה כלל העברית תחילה לא חל. דברו רק "
+            "אנגלית, גם כשמבקשים מכם עברית — במקום לתרגם, נסחו מחדש במילים פשוטות יותר. "
+            "אתגרו במשפטים ארוכים, בשאלות פתוחות ובאוצר מילים חדש, ובקשו לענות באנגלית בלבד."
         ),
         "ar": (
             "المتعلّم/ة جاهز/ة لمحادثة بالإنجليزية فقط. تحدّثوا بالإنجليزية فقط، حتى عند "

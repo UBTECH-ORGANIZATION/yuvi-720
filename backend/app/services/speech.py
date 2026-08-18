@@ -97,6 +97,11 @@ _FRAC = re.compile(r"\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}")
 _SQRT = re.compile(r"\\sqrt\s*\{([^{}]+)\}")
 _POWER_BRACED = re.compile(r"([\w\d)]+)\s*\^\s*\{([^{}]+)\}")
 _POWER_SIMPLE = re.compile(r"([\w\d)]+)\s*\^\s*([\w\d]+)")
+_LIST_MARKER = re.compile(r"^[ \t]*(?:[-*+\u2022]|\d+[.)])[ \t]+", re.MULTILINE)
+_SLASH_BETWEEN_DIGITS = re.compile(r"(?<=\d)\s*/\s*(?=\d)")
+# Punctuation a neural voice either announces out loud ("slash", "at") or trips
+# over. Removed without a space so a gendered slash form reads as one word.
+_UNSPOKEN = re.compile(r"[/\\@#~|<>^\"'\u2018\u2019\u201c\u201d\u05f4\u05f3`*_]")
 
 
 def normalize_math_for_speech(text: str, language: str) -> str:
@@ -109,6 +114,7 @@ def normalize_math_for_speech(text: str, language: str) -> str:
     terms = _SPEECH_TERMS[lang]
     spoken = _FENCED_BLOCK.sub(" ", text or "")
     spoken = _MARKDOWN_IMAGE.sub(" ", spoken)
+    spoken = _LIST_MARKER.sub("", spoken)
     spoken = _LATEX_WRAPPER.sub(lambda match: f" {match.group(1)} ", spoken)
     spoken = spoken.replace("$$", " ").replace("$", " ")
 
@@ -164,6 +170,8 @@ def normalize_math_for_speech(text: str, language: str) -> str:
     spoken = re.sub(r"(?<=\s)-(?=\s|\d)", f" {terms['minus']} ", spoken)
     spoken = spoken.replace("**", "").replace("__", "").replace("`", "")
     spoken = re.sub(r"\\(?:left|right|mathrm|text|operatorname)\b", " ", spoken)
+    spoken = _SLASH_BETWEEN_DIGITS.sub(f" {terms['divided']} ", spoken)
+    spoken = _UNSPOKEN.sub("", spoken)
     spoken = re.sub(r"[{}]", " ", spoken)
     spoken = re.sub(r"\s+", " ", spoken).strip()
     return spoken[:MAX_SPEECH_CHARACTERS]
