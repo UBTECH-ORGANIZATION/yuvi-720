@@ -16,6 +16,7 @@ import re
 from typing import AsyncGenerator, Optional
 
 from app.agents import answer_guard
+from app.agents import coach_calendar
 from app.agents import manim_visual
 from app.agents import safety
 from app.agents import sessions
@@ -195,6 +196,26 @@ QUERY_MODE_INSTRUCTIONS = {
         "he": "התלמיד/ה ביקש/ה לשכוח פרט. אשר בקצרה שלא תשתמש בו עוד; אל תתווכח ואל תבקש הצדקה.",
         "ar": "طلب الطالب نسيان معلومة. أكّد باختصار أنك لن تستخدمها بعد الآن، ولا تجادل أو تطلب تبريرًا.",
         "en": "The learner asked you to forget something. Briefly confirm you will no longer use it; do not argue or ask for justification.",
+    },
+    "calendar_query": {
+        "he": (
+            "השאלה היא על היומן של התלמיד/ה. ענה/י רק מתוך calendar_context: ציין/י ימים ושעות כפי שהם מופיעים שם, "
+            "והבדל/י בבירור בין שיעורים, אירועים, משימות, יעדים ומפגשים. אם status הוא available והרשימה ריקה, "
+            "אמור/י שאין פריטים בטווח המבוקש. אם status הוא unavailable, אמור/י שלא הצלחת לבדוק כרגע — לעולם אל תציג/י "
+            "תקלה כיומן ריק. אל תחשב/י תאריכים, אל תמציא/י פריטים ואל תטען/י שאת/ה זוכר/ת את היומן."
+        ),
+        "ar": (
+            "السؤال عن تقويم الطالب. أجب فقط من calendar_context، واذكر الأيام والأوقات كما تظهر فيه، وميّز بوضوح "
+            "بين الدروس والأحداث والمهام والأهداف والاجتماعات. إذا كانت الحالة available والقائمة فارغة، فقل إنه لا توجد "
+            "عناصر في الفترة المطلوبة. وإذا كانت الحالة unavailable، فقل إنك لم تتمكن من التحقق الآن، ولا تعرض الخطأ كتقويم "
+            "فارغ. لا تحسب التواريخ ولا تختلق عناصر ولا تدّع أنك تتذكر التقويم."
+        ),
+        "en": (
+            "The learner is asking about their calendar. Answer only from calendar_context, name days and times exactly as provided, "
+            "and clearly distinguish lessons, events, tasks, goals, and meetings. If status is available and items is empty, say there "
+            "are no items in the requested period. If status is unavailable, say you could not check right now; never present a failure "
+            "as an empty calendar. Do not calculate dates, invent items, or claim to remember the calendar."
+        ),
     },
 }
 
@@ -562,6 +583,22 @@ def _render_context(bundle: dict, learner_message: str = "") -> str:
         f"verb={event.get('verb') or '—'}, component={event.get('component_id') or '—'}, question={event.get('question_id') or '—'}, object={event.get('object_id') or '—'}, success={event.get('success')}, misconception={event.get('misconception') or '—'}, elapsed_seconds={event.get('elapsed_seconds')}, timing_quality={event.get('timing_quality') or '—'}"
         for event in (current.get("recent_events") or [])
     )
+    calendar = bundle.get("calendar_context") or {}
+    calendar_items = joined(
+        f"kind={item.get('kind') or '—'}, title={item.get('title') or '—'}, subject={item.get('subject') or '—'}, start_at={item.get('start_at') or '—'}, end_at={item.get('end_at') or '—'}, all_day={item.get('all_day')}, status={item.get('status') or '—'}"
+        for item in (calendar.get("items") or [])
+    )
+    calendar_lines = [
+        f"calendar_context_status: {calendar.get('status') or 'unavailable'}",
+        f"calendar_context_period: {calendar.get('period') or '—'}",
+        f"calendar_context_weekday: {calendar.get('weekday') or '—'}",
+        f"calendar_context_timezone: {calendar.get('timezone') or '—'}",
+        f"calendar_context_start_date: {calendar.get('start_date') or '—'}",
+        f"calendar_context_end_date: {calendar.get('end_date') or '—'}",
+        f"calendar_context_items: {calendar_items}",
+        f"calendar_context_total_count: {calendar.get('total_count') if calendar.get('total_count') is not None else '—'}",
+        f"calendar_context_has_more: {calendar.get('has_more') if calendar.get('has_more') is not None else '—'}",
+    ] if "calendar_context" in bundle else []
     # The lesson pointer outlives the lesson screen. Naming these values
     # `current_*` on the dashboard told the model a question was in front of the
     # learner when it was not, and every off-topic ask got redirected back to it.
@@ -590,6 +627,7 @@ def _render_context(bundle: dict, learner_message: str = "") -> str:
         f"current_objective: {current.get('objective_title') or '—'}",
         f"current_pace: {current.get('pace') or '—'}",
         f"recent_learning_evidence: {recent}",
+        *calendar_lines,
         # WHERE THE LEARNER IS, first and in one line, because everything below
         # is only meaningful relative to it. A screen can carry a medium AND a
         # question (`…-01-01-003` is a video playlist with a comprehension
@@ -779,11 +817,24 @@ async def run_coach_stream(
         prompt_text = PROACTIVE_PROMPTS.get(trigger or "idle", PROACTIVE_PROMPTS["idle"])[lang]
         memory_user = f"[proactive:{trigger}]"
 
-    query_intent = (
+    history = await sessions.get_recent(
+        learner_id, "coach", limit=8, session_id=session_id
+    )
+    base_intent = (
         f"support_{support_mode}" if support_mode in SUPPORT_PROMPTS
         else classify_query_intent(prompt_text, lang) if user_message is not None
         else "proactive"
     )
+    calendar_route: dict = {"intent": base_intent}
+    if user_message is not None and support_mode not in SUPPORT_PROMPTS:
+        calendar_route = await coach_calendar.resolve_calendar_route(
+            prompt_text,
+            lang,
+            base_intent,
+            history,
+            usage_context=usage_context.for_operation("coach.calendar_intent"),
+        )
+    query_intent = str(calendar_route.get("intent") or base_intent)
     memory_processed_before_reply = False
     if user_message is not None and query_intent in {"memory_correct", "memory_forget"}:
         try:
@@ -807,6 +858,14 @@ async def run_coach_stream(
         query_intent=query_intent,
         pinned_question_key=pinned_question_key,
     )
+    if query_intent == "calendar_query":
+        period = calendar_route.get("period") or coach_calendar.resolve_calendar_period(prompt_text, lang)
+        weekday = calendar_route.get("weekday") or coach_calendar.resolve_calendar_weekday(prompt_text, lang)
+        bundle["calendar_context"] = await coach_calendar.load_calendar_context(
+            learner_id,
+            period,
+            weekday,
+        )
     # A question-intro only makes sense on a real question. On the component's
     # intro/cover frame (no current question resolved) stay SILENT — yield nothing
     # and persist nothing, so the client shows no orphan message.
@@ -829,7 +888,7 @@ async def run_coach_stream(
     if language not in COACH_INSTRUCTIONS:
         lang = bundle.get("locale") or lang
     title_task: Optional[asyncio.Task[tuple[str, str]]] = None
-    if user_message is not None and await sessions.conversation_needs_title(
+    if user_message is not None and query_intent != "calendar_clarification" and await sessions.conversation_needs_title(
         learner_id, session_id, role="coach"
     ):
         title_basis = await sessions.get_first_user_message(
@@ -840,9 +899,6 @@ async def run_coach_stream(
             lang,
             usage_context.for_operation("coach.title"),
         ))
-    history = await sessions.get_recent(
-        learner_id, "coach", limit=8, session_id=session_id
-    )
     bundle["conversation_memory"] = await sessions.get_conversation_memory(
         learner_id, "coach", session_id=session_id
     )
@@ -975,7 +1031,14 @@ async def run_coach_stream(
     # end of the preceding sentence is no longer at the start of a line, so the
     # client read "…השוואה. | מונח | הסבר |" as prose with pipes in it.
     pending_gap = " "
-    async for chunk in _stream_coach_model(messages, usage_context):
+    async def reply_chunks():
+        if query_intent == "calendar_clarification":
+            yield coach_calendar.calendar_clarification(lang)
+            return
+        async for model_chunk in _stream_coach_model(messages, usage_context):
+            yield model_chunk
+
+    async for chunk in reply_chunks():
         out = safety.screen_output(chunk, lang).text   # tier-1 on the way out
         if sentence_count >= max_sentences:
             continue
@@ -1029,11 +1092,14 @@ async def run_coach_stream(
         yield separator + redirect
 
     if not collected.strip():
-        collected = (
-            profile_answer_fallback(bundle.get("portrait") or {}, lang)
-            if query_intent == "profile_question"
-            else FALLBACK_REPLY[lang]
-        )
+        if query_intent == "profile_question":
+            collected = profile_answer_fallback(bundle.get("portrait") or {}, lang)
+        elif query_intent == "calendar_query":
+            from app.agents.coach_calendar import calendar_fallback
+
+            collected = calendar_fallback(bundle.get("calendar_context") or {}, lang)
+        else:
+            collected = FALLBACK_REPLY[lang]
         yield collected
 
     # Persist the turn as working memory so the chat resumes (no localStorage).
@@ -1069,11 +1135,19 @@ async def run_coach_stream(
         conversation_title=conversation_title,
         title_source=title_source,
         question_key=question_key,
+        query_intent=query_intent,
+        calendar_period=(calendar_route.get("period") if query_intent == "calendar_query" else None),
+        calendar_weekday=(calendar_route.get("weekday") if query_intent == "calendar_query" else None),
+        calendar_route_source=(calendar_route.get("source") if query_intent == "calendar_query" else None),
     )
 
     # Chat persists (§5.7): consolidate durable signals (interests) from the turn.
     # Only for real learner messages, and never a blocker on the reply.
-    if user_message is not None and not memory_processed_before_reply:
+    if (
+        user_message is not None
+        and not memory_processed_before_reply
+        and query_intent not in {"calendar_query", "calendar_clarification"}
+    ):
         try:
             from app.brain.consolidator import capture_and_consolidate
             await capture_and_consolidate(

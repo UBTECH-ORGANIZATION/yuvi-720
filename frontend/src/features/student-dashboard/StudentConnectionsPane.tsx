@@ -27,18 +27,10 @@ import {
 import './student-connections.css'
 
 interface StudentConnectionsPaneProps {
-  mode: 'chat' | 'calendar'
   studentName: string
 }
 
-interface CalendarItem {
-  date: string
-  kind: 'meeting' | 'goal'
-  title: string
-  teacher: string
-}
-
-export function StudentConnectionsPane({ mode, studentName }: StudentConnectionsPaneProps) {
+export function StudentConnectionsPane({ studentName }: StudentConnectionsPaneProps) {
   const { learnerId } = useBrain()
   const { t, language } = useI18n()
   const [rows, setRows] = useState<MentoringConversation[] | null>(null)
@@ -107,31 +99,6 @@ export function StudentConnectionsPane({ mode, studentName }: StudentConnections
     [activeTeacher, rows],
   )
 
-  const calendarItems = useMemo(() => {
-    const items: CalendarItem[] = []
-    for (const row of rows || []) {
-      if (row.date) {
-        items.push({
-          date: row.date,
-          kind: 'meeting',
-          title: row.meeting_stage || t('sdash.calendar.meeting'),
-          teacher: row.teacher_name,
-        })
-      }
-      for (const goal of row.goals || []) {
-        if (goal.deadline && (goal.title || goal.next_steps)) {
-          items.push({
-            date: goal.deadline,
-            kind: 'goal',
-            title: goal.title || goal.next_steps || '',
-            teacher: row.teacher_name,
-          })
-        }
-      }
-    }
-    return items.sort((a, b) => a.date.localeCompare(b.date))
-  }, [rows, t])
-
   const formatDate = (value: string) => {
     const date = new Date(`${value}T12:00:00`)
     if (Number.isNaN(date.getTime())) return value
@@ -146,19 +113,19 @@ export function StudentConnectionsPane({ mode, studentName }: StudentConnections
       <main className="sd-connections">
         <header className="sd-connections__heading">
           <span className="sd-connections__icon" aria-hidden="true">
-            <Icon name={mode === 'chat' ? 'message' : 'calendar'} size={25} />
+            <Icon name="message" size={25} />
           </span>
           <div>
-            <h1>{t(`sdash.${mode}.title`)}</h1>
-            <p>{t(`sdash.${mode}.subtitle`)}</p>
+            <h1>{t('sdash.chat.title')}</h1>
+            <p>{t('sdash.chat.subtitle')}</p>
           </div>
         </header>
 
         {error ? (
-          <ErrorState title={t(`sdash.${mode}.error`)} />
+          <ErrorState title={t('sdash.chat.error')} />
         ) : rows === null ? (
-          <LoadingState title={t(`sdash.${mode}.loading`)} />
-        ) : mode === 'chat' ? (
+          <LoadingState title={t('sdash.chat.loading')} />
+        ) : (
           <section className="sd-chat-window" aria-label={t('sdash.chat.windowLabel')}>
             <aside className="sd-chat-window__teachers">
               <h2>{t('sdash.chat.teachers')}</h2>
@@ -182,32 +149,6 @@ export function StudentConnectionsPane({ mode, studentName }: StudentConnections
               summaries={teacherRows}
               formatDate={formatDate}
             />
-          </section>
-        ) : (
-          <section className="sd-calendar-window" aria-label={t('sdash.calendar.windowLabel')}>
-            {calendarItems.length ? calendarItems.map((item) => (
-              <article className="sd-calendar-item" key={`${item.kind}-${item.date}-${item.title}`}>
-                <time dateTime={item.date}>
-                  <Icon name="calendar" size={18} />
-                  {formatDate(item.date)}
-                </time>
-                <div className={`sd-calendar-item__marker sd-calendar-item__marker--${item.kind}`} aria-hidden="true">
-                  <Icon name={item.kind === 'meeting' ? 'teacher' : 'target'} size={19} />
-                </div>
-                <div className="sd-calendar-item__copy">
-                  <span>{t(`sdash.calendar.kind.${item.kind}`)}</span>
-                  <strong dir="auto">{item.title}</strong>
-                  {item.teacher && <small dir="auto">{item.teacher}</small>}
-                </div>
-              </article>
-            )) : (
-              <EmptyState
-                icon="calendar"
-                title={t('sdash.calendar.empty')}
-                body={t('sdash.calendar.emptyBody')}
-                action={<button className="sd-connections__action" type="button" onClick={() => navigate('/mentoring')}>{t('sdash.calendar.openMentoring')}</button>}
-              />
-            )}
           </section>
         )}
       </main>

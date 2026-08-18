@@ -95,6 +95,49 @@ class WhatMayBeScheduled(unittest.TestCase):
         self.assertEqual(len(event["targets"]), 1)
 
 
+class TheLearnerProjectionCanReadWhatWeWrite(unittest.TestCase):
+    """The contract with `services/calendar_events.py`.
+
+    That module answers "what is on MY calendar" for a learner off this very
+    collection, and it reads three fields by names this side would not
+    otherwise use. They were written in parallel, and the mismatch is silent:
+    an event missing `creator_id` is skipped, an all-day event without `date`
+    resolves to no day and is skipped, and a `deleted` row with no `active`
+    flag stays visible to the class forever. Nothing fails loudly — the
+    students simply never see it.
+    """
+
+    def _build(self, **overrides):
+        data = {"title": "מבחן", "kind": "test", "all_day": True,
+                "start_at": "2026-08-20",
+                "targets": [{"kind": "group", "id": "g1"}]}
+        data.update(overrides)
+        return cal.build_event(data, **GROUP)
+
+    def test_targets_are_resolvable_by_the_learner_side(self):
+        # It calls `resolve_one(creator_id, target)` and skips the event when
+        # `creator_id` is empty — which would hide every teacher event.
+        event = self._build()
+        self.assertEqual(event["creator_id"], GROUP["teacher_id"])
+
+    def test_an_all_day_event_carries_the_day_the_learner_side_reads(self):
+        event = self._build()
+        self.assertEqual(event["date"], "2026-08-20")
+        self.assertEqual(event["start_at"], "2026-08-20")
+
+    def test_a_timed_event_has_no_day_field_to_be_misread(self):
+        event = self._build(all_day=False, start_at="2026-08-21T09:00:00+03:00")
+        self.assertIsNone(event["date"])
+
+    def test_a_new_event_is_active(self):
+        self.assertIs(self._build()["active"], True)
+
+    def test_the_timezone_is_left_for_the_school_to_decide(self):
+        # The learner side resolves the group's own school zone; stamping this
+        # process's global default would override a more accurate answer.
+        self.assertNotIn("timezone", self._build())
+
+
 class TheFold(unittest.TestCase):
     """Four sources, one list — and only what falls inside the window."""
 

@@ -196,6 +196,24 @@ def build_event(data: dict[str, Any], *, group_id: str, teacher_id: str) -> dict
         "created_at": _now(),
         "updated_at": _now(),
         "deleted": False,
+        # ── the learner projection's contract (services/calendar_events.py) ──
+        # That module reads this same collection to answer "what is on MY
+        # calendar", and it reads three fields this side would not otherwise
+        # write. They are duplicates of fields above rather than replacements,
+        # so both readers stay correct:
+        #   `creator_id` — it resolves targets with `resolve_one(creator_id,…)`
+        #     and skips any event without one, so every teacher event would be
+        #     invisible to students without it.
+        #   `date` — it reads the day from `date` for all-day events, while
+        #     this side keeps the day in `start_at`.
+        #   `active` — its visibility filter is `active != False`, which a
+        #     `deleted` flag alone would never satisfy.
+        # Deliberately NOT written: `timezone`. The learner side resolves the
+        # school's own zone from the group, which is more accurate than
+        # stamping this process's global default onto the row.
+        "creator_id": teacher_id,
+        "date": start_at if all_day else None,
+        "active": True,
     }
 
 
@@ -251,12 +269,17 @@ async def list_events(group_id: str) -> list[dict[str, Any]]:
     collection = _get_collection_named(COLLECTION)
     if collection is not None:
         try:
-            cursor = collection.find({"group_id": group_id, "deleted": {"$ne": True}})
+            # `active` is the learner side's visibility flag; honouring it here
+            # too means an event retired by either lane disappears from both.
+            cursor = collection.find({"group_id": group_id,
+                                      "deleted": {"$ne": True},
+                                      "active": {"$ne": False}})
             return [row async for row in cursor]
         except Exception as exc:
             print(f"⚠️ calendar list failed, using fallback: {type(exc).__name__}")
     return [row for row in _read_fallback()
-            if row.get("group_id") == group_id and not row.get("deleted")]
+            if row.get("group_id") == group_id and not row.get("deleted")
+            and row.get("active") is not False]
 
 
 async def delete_event(event_id: str) -> bool:
@@ -266,6 +289,10 @@ async def delete_event(event_id: str) -> bool:
     if event is None:
         return False
     event["deleted"] = True
+    # The learner projection hides an event on `active`, not on `deleted`, so
+    # without this a teacher could delete an event and the class would keep
+    # seeing it. Both flags are set, and both readers agree.
+    event["active"] = False
     event["deleted_at"] = _now()
     event["updated_at"] = _now()
     await save_event(event)

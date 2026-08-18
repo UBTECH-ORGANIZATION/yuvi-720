@@ -154,6 +154,18 @@ class LearnerMemoryTests(unittest.TestCase):
         self.assertEqual(classify_query_intent("אל תזכור שאני אוהב כדורגל", "he"), "memory_forget")
         self.assertEqual(classify_query_intent("בעצם אני מעדיף דוגמאות", "he"), "memory_correct")
 
+    def test_calendar_query_intent_is_multilingual_and_specific(self) -> None:
+        self.assertEqual(classify_query_intent("איזה שיעורים יש לי השבוע?", "he"), "calendar_query")
+        self.assertEqual(classify_query_intent("אילו שיעורים יש לי בחמישי", "he"), "calendar_query")
+        self.assertEqual(classify_query_intent("מה יש לי מחר?", "he"), "calendar_query")
+        self.assertEqual(classify_query_intent("אפשר איור של מערכת השעות שלי?", "he"), "calendar_query")
+        self.assertEqual(classify_query_intent("هل لدي حصة غدًا؟", "ar"), "calendar_query")
+        self.assertEqual(classify_query_intent("ماذا لدي غدًا؟", "ar"), "calendar_query")
+        self.assertEqual(classify_query_intent("What is on my calendar next week?", "en"), "calendar_query")
+        self.assertEqual(classify_query_intent("What do I have tomorrow?", "en"), "calendar_query")
+        self.assertEqual(classify_query_intent("תסביר לי את השיעור של היום", "he"), "learning_help")
+        self.assertEqual(classify_query_intent("Explain today's lesson", "en"), "learning_help")
+
 
 class QueryAwareContextTests(unittest.IsolatedAsyncioTestCase):
     async def test_profile_query_gets_portrait_but_not_evidence_internals(self) -> None:

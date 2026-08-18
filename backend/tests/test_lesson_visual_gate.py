@@ -53,3 +53,22 @@ class LessonVisualGateTests(unittest.TestCase):
 
     def test_outside_a_lesson_the_planner_still_judges_for_itself(self):
         self.assertTrue(self._planned("מה זה אומר במשפט הזה?", auto_visual=True))
+
+    def test_calendar_query_disables_automatic_visuals(self):
+        self.assertFalse(agent_routes._auto_visual_for_coach(
+            "מה יש לי מחר?", "he", "student_dashboard",
+        ))
+
+    def test_regular_dashboard_query_keeps_automatic_visuals(self):
+        self.assertTrue(agent_routes._auto_visual_for_coach(
+            "איך עובד מחזור המים?", "he", "student_dashboard",
+        ))
+
+    def test_explicit_calendar_visual_request_still_draws(self):
+        auto_visual = agent_routes._auto_visual_for_coach(
+            "אפשר איור של מערכת השעות שלי?", "he", "student_dashboard",
+        )
+        self.assertFalse(auto_visual)
+        self.assertTrue(self._planned(
+            "אפשר איור של מערכת השעות שלי?", auto_visual=auto_visual,
+        ))

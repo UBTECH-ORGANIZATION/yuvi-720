@@ -25,7 +25,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.auth.dependencies import require_learner_session
-from app.services.tasks import attempts, store
+from app.services.tasks import attempts, learner
 from app.services.tasks.attempts import AttemptError
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
@@ -67,40 +67,7 @@ async def my_tasks(session=Depends(require_learner_session)):
     sees it twice, because they are two papers — and `repeat` says which sitting
     this is, so a list with two identical titles is not a mystery.
     """
-    learner_id = session["sub"]
-    rows = {str(row.get("_id")): row
-            for row in await store.list_attempts_for_learner(learner_id)}
-
-    tasks = []
-    seen_task: dict[str, int] = {}
-    for activation in reversed(await store.list_activations_for_learner(learner_id)):
-        launch_id = str(activation.get("launch_id") or "")
-        task_id = str(activation.get("task_id"))
-        task = await store.get_task(task_id)
-        if task is None or task.get("status") == "draft":
-            continue
-        launch = await store.get_launch(launch_id) if launch_id else None
-        attempt = rows.get(store.activation_id(launch_id, learner_id)) or {}
-        seen_task[task_id] = seen_task.get(task_id, 0) + 1
-        tasks.append({
-            "task_id": task_id,
-            "launch_id": launch_id,
-            # 1 for the first sitting, 2 for a retake — the client shows the
-            # chip only when it is greater than 1.
-            "repeat": seen_task[task_id],
-            "title": (task.get("spec") or {}).get("title"),
-            "subject": (task.get("spec") or {}).get("subject"),
-            "components": (task.get("spec") or {}).get("components") or [],
-            "assigned_at": activation.get("assigned_at"),
-            "due_at": activation.get("due_at"),
-            "status": attempt.get("status") or "not_started",
-            "completed_at": attempt.get("completed_at"),
-            "closed": bool(launch and launch.get("status") != "active"),
-            # Words, never a mark — the score is the teacher's view.
-            "feedback": attempt.get("feedback"),
-        })
-    tasks.reverse()
-    return _ok({"tasks": tasks})
+    return _ok({"tasks": await learner.list_for_learner(session["sub"])})
 
 
 @router.get("/{launch_id}")

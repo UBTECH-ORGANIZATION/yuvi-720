@@ -10,6 +10,7 @@ import { apiGet, apiPost } from './api'
 export type NotificationKind =
   | 'goal_assigned' | 'goal_approved' | 'teacher_note' | 'kudos' | 'alert'
   | 'task_assigned'
+  | 'deadline_reminder'
   // The direct channel, one kind per direction — they ring different bells and
   // deep-link to different screens.
   | 'teacher_message' | 'student_message'
