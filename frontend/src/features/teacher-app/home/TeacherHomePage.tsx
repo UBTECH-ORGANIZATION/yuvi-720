@@ -57,7 +57,7 @@ export function TeacherHomePage() {
     setIsLoading(true)
     setError(false)
     Promise.all([
-      getGroupSnapshot(groupId, language, subject ?? undefined),
+      getGroupSnapshot(groupId, language),
       getGroupEngagement(groupId),
       getGroupGaps(groupId, language, subject ?? undefined),
     ])

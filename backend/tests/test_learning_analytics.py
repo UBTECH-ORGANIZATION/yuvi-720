@@ -156,6 +156,66 @@ class GroupLearnings(unittest.IsolatedAsyncioTestCase):
         view_math = await self._run({"kid-a": []}, subject="math")
         self.assertEqual(len(view_math["learnings"]), 2)
 
+    async def test_the_offered_subjects_survive_being_filtered_by_one(self):
+        """Picking a subject must not delete the other subjects from the list.
+
+        `subjects` used to be read off the already-narrowed rows, so choosing
+        "math" returned `["math"]` — the control that had just been used to
+        filter erased every other way back out of the filter.
+        """
+        rows = {"kid-a": [{**_row("gone-1", "q1", attempts=2, correct=0),
+                           "subject": "english"}]}
+        wide = await self._run(rows)
+        self.assertEqual(wide["subjects"], ["english", "math"])
+        narrowed = await self._run(rows, subject="math")
+        self.assertEqual(narrowed["subjects"], ["english", "math"])
+
+
+class ClassSubjects(unittest.IsolatedAsyncioTestCase):
+    """What the scope bar is allowed to offer."""
+
+    async def _subjects(self, per_learner: dict[str, list[dict]]):
+        from app.services import learning_analytics
+
+        async def _summary(learner_id, subject=None, component_id=None):
+            return per_learner.get(learner_id, [])
+
+        with ExitStack() as stack:
+            stack.enter_context(patch("app.brain.org.learners_in_group",
+                                      AsyncMock(return_value=list(per_learner))))
+            stack.enter_context(patch("app.services.learner_activity.question_summary",
+                                      side_effect=_summary))
+            _catalog_patches(stack)
+            return await learning_analytics.class_subjects("g1", language="he")
+
+    async def test_a_class_with_no_history_still_has_its_catalogue(self):
+        # Nothing worked yet is not "no subjects": the material exists, and a
+        # teacher planning next week narrows by it before anyone has opened it.
+        self.assertEqual(await self._subjects({"kid-a": []}), ["math"])
+
+    async def test_a_subject_only_the_class_history_knows_is_offered(self):
+        """English reaches a teacher through here or not at all.
+
+        `kata_client.subject_from_objective` collapses everything that is not
+        SCI or MATH into `other`, so the published catalogue cannot name
+        English. The only place the real subject survives is a row for a
+        component the catalogue no longer publishes — which is why this list is
+        folded from observed rows and not read off the spine.
+        """
+        subjects = await self._subjects({
+            "kid-a": [{**_row("gone-eng", "q1", attempts=3, correct=1),
+                       "subject": "english"}],
+            "kid-b": [_row("cmp-1", "q1", attempts=2, correct=2)],
+        })
+        self.assertEqual(subjects, ["english", "math"])
+
+    async def test_an_untagged_row_adds_no_blank_option(self):
+        # A blank segment in the bar is unreadable and unclearable.
+        subjects = await self._subjects({
+            "kid-a": [{**_row("gone-2", "q1", attempts=1, correct=0), "subject": None}],
+        })
+        self.assertEqual(subjects, ["math"])
+
 
 class LearningDetail(unittest.IsolatedAsyncioTestCase):
     async def test_detail_returns_questions_and_screen_spine(self):
@@ -368,6 +428,32 @@ class GroupLearningsRoute(unittest.IsolatedAsyncioTestCase):
                 "g1", "cmp-1", language="he", session={"sub": "teacher-1"})
         self.assertEqual(response.status_code, 403)
         engine.assert_not_awaited()
+
+    async def test_the_subject_list_is_scoped_like_every_other_group_read(self):
+        from app.routes import teacher_students as routes
+
+        with patch.object(routes, "_guard_group", AsyncMock(return_value=False)), \
+             patch("app.services.learning_analytics.class_subjects",
+                   AsyncMock()) as engine:
+            response = await routes.group_subjects(
+                "g1", language="he", session={"sub": "teacher-1"})
+        self.assertEqual(response.status_code, 403)
+        engine.assert_not_awaited()
+
+    async def test_the_snapshot_no_longer_accepts_a_subject_it_drops(self):
+        """`group_insights` has no subject parameter and never had one.
+
+        The signature declared `subject`, FastAPI bound it, and it went nowhere
+        — which was invisible only because the scope subject was permanently
+        null. Pinned here because the fix is a deletion, and a deletion grows
+        back the moment someone wires the bar to this endpoint by analogy.
+        """
+        import inspect
+        from app.routes import teacher_students as routes
+        from app.services import insights
+
+        self.assertNotIn("subject", inspect.signature(routes.group_snapshot).parameters)
+        self.assertNotIn("subject", inspect.signature(insights.group_insights).parameters)
 
     async def test_reports_dashboard_viewed_only_after_guard(self):
         from app.routes import teacher_students as routes

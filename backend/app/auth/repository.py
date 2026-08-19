@@ -45,6 +45,12 @@ DEFAULT_PREFERENCES: dict[str, Any] = {
     # instead of snapping back to whichever group sorts first. A view preference
     # only: authorization is re-derived from org scoping on every request.
     "teacher_group_id": None,
+    # The other two thirds of a teacher's scope, remembered for the same reason
+    # and with the same standing. Null means "not narrowed": the whole class,
+    # every subject. Neither is an access grant — both are re-checked against org
+    # scoping wherever they are honoured.
+    "teacher_subgroup_id": None,
+    "teacher_subject": None,
     # How a teacher reads their roster. Table is the default: a card wall is
     # scannable at twelve students and unusable at thirty, and comparing children
     # is a columns job. Stored per user rather than per browser so a teacher who

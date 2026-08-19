@@ -57,6 +57,13 @@ class PreferencesRequest(BaseModel):
     # every teacher endpoint still re-checks the group against org scoping, so a
     # stale or crafted id here buys nothing.
     teacher_group_id: Optional[str] = Field(default=None, max_length=128)
+    # The rest of that same scope: which sub-group and which subject the teacher
+    # is currently looking through. Same standing as the class — a view
+    # preference, re-checked server-side on every request that honours it. A
+    # sub-group can be deleted between sessions, so the client must resolve a
+    # dangling id to "the whole class" rather than to an empty roster.
+    teacher_subgroup_id: Optional[str] = Field(default=None, max_length=128)
+    teacher_subject: Optional[str] = Field(default=None, max_length=64)
 
 
 def _cookie_is_secure() -> bool:

@@ -274,10 +274,21 @@ export function getTeacherRoster() {
 
 /* ── group ────────────────────────────────────────────────────────────────── */
 
-export function getGroupSnapshot(groupId: string, language: string, subject?: string) {
-  const params = new URLSearchParams({ language })
-  if (subject) params.set('subject', subject)
-  return apiGet<GroupInsight>(`/api/teacher/groups/${groupId}/snapshot?${params}`)
+/* Class-wide, and deliberately not narrowable by subject: `group_insights`
+   never had a subject parameter, so the one this function used to send was
+   accepted by the route and dropped. Attention, status and trends would each
+   need their own per-subject meaning before this could honestly take one. */
+export function getGroupSnapshot(groupId: string, language: string) {
+  return apiGet<GroupInsight>(
+    `/api/teacher/groups/${groupId}/snapshot?${new URLSearchParams({ language })}`)
+}
+
+/* The subjects this class can be narrowed to — per class, from what it has
+   material or history in, so the scope bar never offers one that empties a
+   screen. */
+export function getGroupSubjects(groupId: string, language: string) {
+  return apiGet<{ subjects: string[] }>(
+    `/api/teacher/groups/${groupId}/subjects?${new URLSearchParams({ language })}`)
 }
 
 export function getGroupEngagement(groupId: string, days = 7) {

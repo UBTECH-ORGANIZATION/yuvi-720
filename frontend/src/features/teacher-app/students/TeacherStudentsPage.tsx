@@ -87,7 +87,7 @@ function initialQuery(): {
 export function TeacherStudentsPage() {
   const { t, language } = useI18n()
   const { user, updatePreferences } = useAuth()
-  const { groupId, subject, isLoading: scopeLoading } = useTeacherScope()
+  const { groupId, isLoading: scopeLoading } = useTeacherScope()
   const live = useTeacherLive()
   const [snapshot, setSnapshot] = useState<GroupInsight | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -136,12 +136,12 @@ export function TeacherStudentsPage() {
     let active = true
     setIsLoading(true)
     setError(false)
-    getGroupSnapshot(groupId, language, subject ?? undefined)
+    getGroupSnapshot(groupId, language)
       .then((result) => { if (active) setSnapshot(result) })
       .catch(() => { if (active) setError(true) })
       .finally(() => { if (active) setIsLoading(false) })
     return () => { active = false }
-  }, [groupId, subject, language])
+  }, [groupId, language])
 
   function chooseView(next: View) {
     setView(next)
