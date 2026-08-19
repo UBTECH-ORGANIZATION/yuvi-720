@@ -50,6 +50,32 @@ ROUTES: dict[str, str] = {
     "admin": "/admin",
 }
 
+# What each screen HOLDS, in the model's own prompt.
+#
+# The enum used to be bare keys, which asks the model to guess what a word
+# means from the word alone — and it guessed wrong in the obvious direction: a
+# teacher who asked to see the mentoring screen was offered the roster, because
+# both are "about students" and only one of them had ever been described. A
+# screen name is not a description; this is.
+#
+# Keyed by the same names as ROUTES, and a test requires the two to agree, so a
+# screen cannot be added to one without the other.
+SCREEN_PURPOSE: dict[str, str] = {
+    "home": "the class overview — today's brief, what needs attention, who is here now",
+    "students": "the roster: every student as a row, filterable by status",
+    "student": "ONE child's profile — their learning, topics, goals and wellbeing",
+    "mentoring": (
+        "the conversations held with each student: what was discussed, the "
+        "goals that came out of each talk, and the finished goals waiting for "
+        "the teacher's approval. This is where a teacher DOCUMENTS a talk"
+    ),
+    "learnings": "the class's learning material, and how far the class has got through it",
+    "tasks": "tasks the teacher built and sent, and how the class is doing on them",
+    "calendar": "everything with a date — lessons, tasks and meetings, on one timeline",
+    "messages": "the message threads between the teacher and their students",
+    "admin": "the control plane: schools, groups, and who is connected to whom",
+}
+
 async def _how_to(context: TeacherToolContext, args: dict) -> dict:
     from app.services import teacher_help_kb
     return teacher_help_kb.how_to(str(args.get("topic") or ""))
@@ -153,10 +179,19 @@ def register_all() -> None:
         name="navigate",
         description=(
             "Offer the teacher a button to a screen. This does NOT move them; "
-            "they choose to click."
+            "they choose to click. Pick the screen by what they asked to SEE, "
+            "not by what you last looked up: a question about conversations, "
+            "write-ups or goals waiting for approval is `mentoring`, not "
+            "`students`."
         ),
         parameters={"type": "object", "properties": {
-            "screen": {"type": "string", "enum": sorted(ROUTES)},
+            "screen": {
+                "type": "string",
+                "enum": sorted(ROUTES),
+                "description": "Which screen. " + " ".join(
+                    f"`{name}` — {SCREEN_PURPOSE[name]}." for name in sorted(ROUTES)
+                ),
+            },
             "learner_id": {"type": "string", "description": "Required for the `student` screen."},
             "filter": {
                 "type": "string", "enum": sorted(ROSTER_FILTERS),

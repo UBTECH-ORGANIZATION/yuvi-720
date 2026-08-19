@@ -128,7 +128,7 @@ export const teacherTourSteps: TourStep[] = [
   },
   {
     id: 'profile',
-    target: 'teacher.studentFlags',
+    target: 'teacher.studentHero',
     route: `/teacher/student/${STUDENT_TOKEN}`,
     titleKey: 'tour.teacher.profile.title',
     bodyKey: 'tour.teacher.profile.body',
