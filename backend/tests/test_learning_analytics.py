@@ -174,8 +174,13 @@ class GroupLearnings(unittest.IsolatedAsyncioTestCase):
 class ClassSubjects(unittest.IsolatedAsyncioTestCase):
     """What the scope bar is allowed to offer."""
 
-    async def _subjects(self, per_learner: dict[str, list[dict]]):
+    async def _subjects(self, per_learner: dict[str, list[dict]], *, group_id="g1"):
         from app.services import learning_analytics
+
+        # The answer is cached per class for ten minutes, which is right in a
+        # process and wrong across tests that all fold different fixtures for
+        # the same class.
+        learning_analytics._subjects_cache.clear()
 
         async def _summary(learner_id, subject=None, component_id=None):
             return per_learner.get(learner_id, [])
@@ -186,7 +191,7 @@ class ClassSubjects(unittest.IsolatedAsyncioTestCase):
             stack.enter_context(patch("app.services.learner_activity.question_summary",
                                       side_effect=_summary))
             _catalog_patches(stack)
-            return await learning_analytics.class_subjects("g1", language="he")
+            return await learning_analytics.class_subjects(group_id, language="he")
 
     async def test_a_class_with_no_history_still_has_its_catalogue(self):
         # Nothing worked yet is not "no subjects": the material exists, and a
@@ -208,6 +213,50 @@ class ClassSubjects(unittest.IsolatedAsyncioTestCase):
             "kid-b": [_row("cmp-1", "q1", attempts=2, correct=2)],
         })
         self.assertEqual(subjects, ["english", "math"])
+
+    async def test_one_class_is_folded_once_per_window_not_once_per_page(self):
+        """The scope bar asks on every teacher page load.
+
+        Without the cache, the cost of opening the learnings screen — every
+        learner's rows, folded — sits behind opening any screen at all.
+        """
+        from app.services import learning_analytics
+
+        learning_analytics._subjects_cache.clear()
+        calls = 0
+
+        async def _summary(learner_id, subject=None, component_id=None):
+            nonlocal calls
+            calls += 1
+            return []
+
+        with ExitStack() as stack:
+            stack.enter_context(patch("app.brain.org.learners_in_group",
+                                      AsyncMock(return_value=["kid-a", "kid-b"])))
+            stack.enter_context(patch("app.services.learner_activity.question_summary",
+                                      side_effect=_summary))
+            _catalog_patches(stack)
+            first = await learning_analytics.class_subjects("g1", language="he")
+            second = await learning_analytics.class_subjects("g1", language="he")
+            # A second class is its own answer, not the first one reused.
+            await learning_analytics.class_subjects("g2", language="he")
+
+        self.assertEqual(first, second)
+        self.assertEqual(calls, 4)  # two learners, twice: g1 once and g2 once
+
+    async def test_a_caller_cannot_edit_the_next_callers_answer(self):
+        # The cached list is handed out by value; a client that sorts or appends
+        # to what it got back must not be editing everyone else's copy.
+        from app.services import learning_analytics
+
+        subjects = await self._subjects({"kid-a": []}, group_id="g9")
+        subjects.append("hacked")
+        with ExitStack() as stack:
+            stack.enter_context(patch("app.brain.org.learners_in_group",
+                                      AsyncMock(return_value=[])))
+            _catalog_patches(stack)
+            again = await learning_analytics.class_subjects("g9", language="he")
+        self.assertEqual(again, ["math"])
 
     async def test_an_untagged_row_adds_no_blank_option(self):
         # A blank segment in the bar is unreadable and unclearable.

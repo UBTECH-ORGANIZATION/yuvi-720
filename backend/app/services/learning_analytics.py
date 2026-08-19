@@ -383,6 +383,15 @@ def _subjects_of(rows: Iterable[dict[str, Any]]) -> list[str]:
     return sorted({row["subject"] for row in rows if row.get("subject")})
 
 
+# The subject list is chrome: the scope bar reads it on every teacher page
+# load, and it is folded from every learner's rows, so an uncached read would
+# put the cost of opening the learnings screen behind opening any screen at all.
+# What it answers changes about as often as the catalogue does — a class that
+# starts a new subject sees it within the window.
+_SUBJECTS_CACHE_TTL = 10 * 60
+_subjects_cache: dict[tuple[str, str], tuple[float, list[str]]] = {}
+
+
 async def class_subjects(group_id: str, *, language: str = "he") -> list[str]:
     """Every subject this class has material or history in.
 
@@ -393,8 +402,15 @@ async def class_subjects(group_id: str, *, language: str = "he") -> list[str]:
     worked in that the catalogue no longer publishes, which is exactly what the
     fold below picks up and the spine does not.
     """
+    import time
+
     from app.brain import org
     from app.services import kata_catalog
+
+    key = (group_id, language)
+    cached = _subjects_cache.get(key)
+    if cached and cached[0] > time.monotonic():
+        return list(cached[1])
 
     try:
         await kata_catalog.ensure_loaded()
@@ -403,10 +419,12 @@ async def class_subjects(group_id: str, *, language: str = "he") -> list[str]:
 
     spine = _catalog_spine(language)
     folded = _fold(await _per_learner_rows(await org.learners_in_group(group_id), None))
-    return _subjects_of([
+    subjects = _subjects_of([
         *spine.values(),
         *(agg for component_id, agg in folded.items() if component_id not in spine),
     ])
+    _subjects_cache[key] = (time.monotonic() + _SUBJECTS_CACHE_TTL, subjects)
+    return list(subjects)
 
 
 async def group_learnings(
