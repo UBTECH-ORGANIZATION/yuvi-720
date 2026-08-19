@@ -380,3 +380,40 @@ class ScreenRouteTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ScreenPurposeTests(unittest.TestCase):
+    """A screen name is not a description.
+
+    The `screen` enum was bare keys, so the model had to infer what each word
+    meant from the word alone — and asked to open the mentoring screen it
+    offered the roster, both being "about students" and only one of them ever
+    described. Every route now carries what it HOLDS, and the two tables are
+    pinned together so a new screen cannot be added to one alone.
+    """
+
+    def test_every_route_says_what_it_holds(self):
+        from app.agents.teacher_tools import help_tools
+
+        self.assertEqual(set(help_tools.ROUTES), set(help_tools.SCREEN_PURPOSE))
+        for name, purpose in help_tools.SCREEN_PURPOSE.items():
+            self.assertGreater(len(purpose.split()), 4, f"{name} is described in a phrase")
+
+    def test_the_mentoring_screen_is_described_as_the_place_talks_are_written(self):
+        from app.agents.teacher_tools import help_tools
+
+        purpose = help_tools.SCREEN_PURPOSE["mentoring"].lower()
+        self.assertIn("conversation", purpose)
+        self.assertIn("approval", purpose)
+
+    def test_the_description_reaches_the_model(self):
+        """Registered in the schema, not merely defined beside it."""
+        from app.agents.teacher_tools import help_tools, registry
+
+        registry.reset_for_tests()
+        help_tools.register_all()
+        tool = registry.get("navigate")
+        schema = tool.as_openai_schema()["function"]["parameters"]
+        described = schema["properties"]["screen"]["description"]
+        for name in help_tools.ROUTES:
+            self.assertIn(f"`{name}`", described)

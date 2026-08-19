@@ -42,7 +42,7 @@ import {
   type TopicDigest, type TopicDigestItem,
 } from '../../../services/teacher'
 import {
-  AttentionRow, RawEvidence, RecommendationCard, withFallback,
+  RawEvidence, RecommendationCard, withFallback,
 } from '../shared/EvidenceDisclosure'
 import { GoalProgressLine } from './TeacherGoals'
 import { GoalDialog } from '../goals/GoalDialog'
@@ -225,17 +225,6 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
     return () => { active = false }
   }, [learnerId, subject, language])
 
-  const refreshDigest = async () => {
-    setDigestState('generating')
-    try {
-      const generated = await generateTopicDigest(learnerId, language, subject ?? undefined)
-      setDigest(generated)
-      setDigestState(generated.topics.length ? 'ready' : 'unavailable')
-    } catch {
-      setDigestState('unavailable')
-    }
-  }
-
   /* Nothing is gated on "the page has loaded" any more, because the page does
      not load as one thing. Six requests answer at six different times, and
      each section owns the wait for its own: the identity is real on the first
@@ -292,7 +281,11 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
 
   return (
     <div className="tch-student">
-      <header className="tch-student__head">
+      {/* The tour's anchor for "this is a student profile". It used to hang on
+          the strip of attention flags below, which was a list of alarms and is
+          now gone; the identity row is the thing that says whose page this
+          is. */}
+      <header className="tch-student__head" data-tour="teacher.studentHero">
         <div className="tch-student__topRow">
           <button
             type="button"
@@ -454,20 +447,14 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
         </div>
       </header>
 
-      {/* Every criterion that fired, not only the top one — the teacher decides
-          which matters, but must be able to see all of them. Wellbeing is the
-          exception: it is already the hero chip and the disclosure card, and a
-          third copy of the same sentence taught teachers to skim past it. */}
-      {(() => {
-        const attention = (detail?.attention_all ?? []).filter((flag) => flag.kind !== 'wellbeing')
-        return attention.length ? (
-          <section className="tch-student__flags tch-appear" data-tour="teacher.studentFlags">
-            {attention.map((flag) => (
-              <AttentionRow key={flag.kind ?? flag.reason} flag={flag} />
-            ))}
-          </section>
-        ) : null
-      })()}
+      {/* The strip of attention flags that used to sit here is gone.
+          It listed every criterion that fired, which was the right instinct
+          and the wrong place: between the identity row and the dials, it was
+          the first thing read about a child and it was a list of alarms. The
+          same criteria are still on the page — the wellbeing chip is in the
+          hero, the rest are the recommendations column, each one already
+          carrying its own evidence — so this was a third telling, above the
+          two that explain themselves. */}
 
       <div className="tch-student__body">
         {detail ? (
@@ -504,7 +491,6 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
               learnerId={learnerId}
               digest={digest}
               digestState={digestState}
-              onRefresh={refreshDigest}
               onBuildTask={buildTask}
             />
             <GoalsCard learnerId={learnerId} name={name} />
@@ -2236,12 +2222,11 @@ function TopicRow({ topic, learnerId, digestItem, digestState, onBuildTask }: {
   )
 }
 
-function TopicsPanel({ rows, learnerId, digest, digestState, onRefresh, onBuildTask }: {
+function TopicsPanel({ rows, learnerId, digest, digestState, onBuildTask }: {
   rows: QuestionRow[] | null
   learnerId: string
   digest: TopicDigest | null
   digestState: DigestState
-  onRefresh: () => void
   onBuildTask: (seed: TaskSeed) => void
 }) {
   const { t } = useI18n()
@@ -2277,22 +2262,14 @@ function TopicsPanel({ rows, learnerId, digest, digestState, onRefresh, onBuildT
 
   return (
     <Panel>
+      {/* No refresh button. It appeared only when the digest had gone stale,
+          which made it a control that exists on some visits and not others —
+          and what it offered was to re-word a summary of rows the teacher can
+          already read underneath it. The rows are always current; the summary
+          catches up on its own. */}
       <SectionHeader
         title={t('tch.student.hardest')}
         subtitle={t('tch.student.hardestSubtitle')}
-        action={digest?.stale && digestState !== 'generating' ? (
-          /* The child moved since the digest was written. Refresh is offered,
-             never forced — the stale words are still true about the evidence
-             they were written from. */
-          <button
-            type="button"
-            className="sp-btn sp-btn--ghost sp-btn--sm"
-            onClick={onRefresh}
-          >
-            <Icon name="wand" size={14} aria-hidden />
-            {t('tch.student.digestRefresh')}
-          </button>
-        ) : undefined}
       />
       {/* One flat list, a subject chip on every row — the subject headings
           became a filter. Rows stay ranked within their subject (sections

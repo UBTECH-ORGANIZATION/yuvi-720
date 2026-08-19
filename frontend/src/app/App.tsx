@@ -102,17 +102,44 @@ function isLandingRoute(pathname: string) {
   return pathname === '/' || pathname === ''
 }
 
-/* Every prefix pageForRoute can actually render. Anything else is a typo or a
-   dead link, and rendering the landing page there would leave a lying address
-   bar — the same disease the auth guard cures. Kept as data so the unknown-
-   route effect and pageForRoute cannot drift apart silently. */
+/* Every route `pageForRoute` can actually render. Anything else is a typo or a
+   dead link, and rendering *something* there leaves a lying address bar — the
+   same disease the auth guard cures.
+ *
+ * Kept as data so this and `pageForRoute` cannot drift apart silently, which
+ * they had already done twice, in both directions:
+ *
+ *   - `/teacher` sat here as a bare PREFIX, so every mistyped teacher URL was
+ *     a "known" route. The redirect below never fired, and `pageForRoute`'s
+ *     `/teacher` catch-all quietly rendered the teacher home under an address
+ *     that said `/teacher/nonsense`. The learner lane never showed this
+ *     because its screens are leaves; the teacher lane has a home page behind
+ *     the same prefix as seven others.
+ *   - `/report` was missing entirely, so the public report page — deliberately
+ *     outside the auth guard so that somebody locked out can still reach it —
+ *     was redirected to the landing page before it could render.
+ *
+ * A trailing segment is only "under" a route at a `/` boundary, so
+ * `/studentsomething` is not `/students`. `pathname` carries the query string
+ * (see `useRoute`), which is stripped before matching — `?compose=1` is not
+ * part of the address in the sense that matters here. */
 const KNOWN_ROUTES = [
-  '/learner-mapping', '/results', '/yuvi-studio', '/student-dashboard',
-  '/badges', '/teacher', '/admin', '/mentoring', '/learning', '/tasks',
+  '/report', '/learner-mapping', '/results', '/yuvi-studio', '/student-dashboard',
+  '/badges', '/tasks', '/admin', '/mentoring', '/learning',
+  // The teacher lane, screen by screen rather than by its shared prefix.
+  '/teacher/student', '/teacher/students', '/teacher/goals', '/teacher/calendar',
+  '/teacher/learnings', '/teacher/messages', '/teacher/tasks',
 ]
 
+/** `/teacher` IS a screen — the home page — but only exactly. */
+const TEACHER_HOME = '/teacher'
+
 function isKnownRoute(pathname: string) {
-  return isLandingRoute(pathname) || KNOWN_ROUTES.some((route) => pathname.startsWith(route))
+  const path = pathname.split(/[?#]/)[0].replace(/\/+$/, '') || '/'
+  if (isLandingRoute(path)) return true
+  if (path === TEACHER_HOME) return true
+  return KNOWN_ROUTES.some(
+    (route) => path === route || path.startsWith(`${route}/`))
 }
 
 /* The most specific home this account can open. An admin who cannot teach must
@@ -353,8 +380,16 @@ export function App() {
   // "not found" page would only ever be a dead end a child has to escape from.
   useEffect(() => {
     if (isKnownRoute(pathname)) return
-    navigate(user ? homeFor(user) : '/', { replace: true })
-  }, [user, pathname])
+    // A dead link stays in the lane it was in. `homeFor` picks the account's
+    // most specific home, which for a teacher who is ALSO a learner is the
+    // student dashboard — so a teacher mistyping a teacher URL would land in
+    // the child's product, having asked for nothing of the sort.
+    const home = !user ? '/'
+      : isTeacherRoute(pathname) && isTeacher ? '/teacher'
+        : isAdminRoute(pathname) && isAdmin ? '/admin'
+          : homeFor(user)
+    navigate(home, { replace: true })
+  }, [user, pathname, isTeacher, isAdmin])
 
   // A learner who already finished the mapping questionnaire cannot open it
   // again by typing /learner-mapping — send them home instead of re-asking the

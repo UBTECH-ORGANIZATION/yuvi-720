@@ -136,24 +136,6 @@
   }
   .tch-student__kpis .tch-stat { padding-inline: var(--sp-2); }
 }
-.tch-student__flags {
-  display: grid;
-  gap: var(--sp-2);
-  margin-block-end: var(--sp-4);
-  border-radius: 16px;
-  transition: box-shadow var(--sp-dur-slow, 400ms) var(--sp-ease);
-}
-
-/* Two seconds of "this is the thing the bell meant", then gone. A permanent
-   marker would still be there next week, claiming urgency it no longer has. */
-.tch-student__flags.is-focused {
-  box-shadow: 0 0 0 3px var(--sp-primary-600), 0 0 0 9px var(--sp-primary-050, transparent);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tch-student__flags { transition: none; }
-}
-
 .tch-student__body { display: grid; gap: var(--sp-4); }
 .tch-struggles { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
 
