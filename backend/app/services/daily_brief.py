@@ -221,7 +221,7 @@ async def _goal_backlog(learner_ids: list[str]) -> dict[str, int]:
         async with semaphore:
             try:
                 conversations = await mentoring.list_conversations(
-                    learner_id, viewer_role="teacher")
+                    learner_id, viewer_role="teacher", price_backfill=False)
             except Exception:
                 return 0, 0
         waiting = helping = 0

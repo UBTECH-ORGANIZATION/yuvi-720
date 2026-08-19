@@ -29,6 +29,27 @@
   color: var(--sp-primary-700);
 }
 
+/* How many goals are waiting for a signature, wherever the teacher happens to
+   be standing. Red because this is the one nav count that is somebody else
+   waiting on them — a child finished a goal and cannot be paid for it until a
+   teacher looks. It renders only when the number is above zero: a permanent
+   grey "0" is a badge that teaches people to stop seeing badges. */
+.teacher-app-nav__badge {
+  min-inline-size: 18px;
+  block-size: 18px;
+  padding-inline: 5px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sp-ink-chat-alert, #d7263d);
+  color: #fff;
+  font-size: 11px;
+  font-weight: var(--sp-fw-semibold);
+  line-height: 1;
+}
+.teacher-app-nav button.is-active .teacher-app-nav__badge { color: #fff; }
+
 .teacher-app-scope {
   display: flex;
   align-items: center;
@@ -77,4 +98,70 @@
   padding-inline: var(--sp-2);
   gap: var(--sp-1);
   white-space: nowrap;
+}
+
+/* ── the folded screens ───────────────────────────────────────────────────── */
+
+/* Tasks, calendar and messages behind one trigger. Hover opens it, because a
+   nav item that used to be one press should not become two; the click toggle
+   is what makes it work for keyboards and touch, where hover is not a thing a
+   person can do. */
+.teacher-app-nav__more { position: relative; display: inline-flex; }
+
+.teacher-app-nav__moreTrigger .sp-icon { opacity: 0.7; }
+.teacher-app-nav__more.is-open .teacher-app-nav__moreTrigger {
+  background: var(--sp-surface-2);
+  color: var(--sp-ink-700);
+}
+
+.teacher-app-nav__pop {
+  position: absolute;
+  inset-block-start: calc(100% + 6px);
+  inset-inline-end: 0;
+  z-index: 40;
+  display: grid;
+  gap: 2px;
+  min-inline-size: 196px;
+  padding: 6px;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface);
+  box-shadow: 0 12px 28px rgba(20, 16, 44, 0.14);
+  /* Kept in the DOM and hidden, not unmounted: the compact rules below reveal
+     it in place, and a menu that only exists while open cannot be flattened
+     into the sheet it lives inside down there. */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity var(--sp-dur-fast) var(--sp-ease),
+              transform var(--sp-dur-fast) var(--sp-ease),
+              visibility var(--sp-dur-fast);
+}
+.teacher-app-nav__more.is-open .teacher-app-nav__pop {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+.teacher-app-nav__pop button { inline-size: 100%; justify-content: flex-start; }
+
+/* Below the fold-point the whole nav is already a sheet behind a hamburger.
+   A dropdown inside that sheet is a second door onto the same three screens,
+   so they simply sit in the list. */
+.app-bar-menu .teacher-app-nav__moreTrigger { display: none; }
+.app-bar-menu .teacher-app-nav__more { display: contents; }
+.app-bar-menu .teacher-app-nav__pop {
+  position: static;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  display: contents;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  min-inline-size: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .teacher-app-nav__pop { transition: none; }
 }

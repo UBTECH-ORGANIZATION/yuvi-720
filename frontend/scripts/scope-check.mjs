@@ -23,6 +23,13 @@ try {
     await fetch('/api/auth/preferences', { method: 'PATCH', credentials: 'include',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ teacher_subject: null, teacher_subgroup_id: null }) })
+    /* Same reasoning, one screen further: this teacher has one write-up, and
+       `/teacher/goals` resumes it on arrival — so a draft left open by a
+       previous run mounts the composer over the screen this script is here to
+       read. Cleared through the endpoint the composer itself writes to. */
+    await fetch('/api/teacher/state', { method: 'PATCH', credentials: 'include',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ mentoring_draft: null }) })
   })
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tch-stat', { timeout: 40000 })
@@ -122,8 +129,16 @@ try {
 
   await page.goto(`${BASE}/teacher/goals`, { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(3000)
-  const goalCards = await page.locator('.tch-goalsBoard > *, .tch-goalsPage [class*=card i]').count()
-  check('goals narrows to the members', goalCards <= 4, `${goalCards} cards`)
+  /* One row per student in scope. This used to be `.tch-goalsBoard > *,
+     .tch-goalsPage [class*=card i]` bounded at `<= 4` — `.tch-goalsBoard` has
+     never existed in this codebase, so the check passed on zero matches and
+     proved nothing. The history keeps a row for a student with no talks yet,
+     which is what makes an exact count the right assertion: the sub-group has
+     two members, so the screen has two rows. */
+  await page.waitForSelector('.tch-goalsPage__student, .sp-state', { timeout: 30000 })
+  const talkRows = await page.locator('.tch-goalsPage__student').count()
+  check('the conversation history narrows to the members', talkRows === 2,
+        `${talkRows} rows`)
 
   await page.goto(`${BASE}/teacher/messages`, { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(2500)

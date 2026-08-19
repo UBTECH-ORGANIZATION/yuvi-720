@@ -57,6 +57,7 @@ export function ScopeControl() {
     groups, groupId, setGroupId, group,
     subgroups, subgroupId, setSubgroupId, subgroup,
     subjects, subject, setSubject,
+    isLoading, subgroupsReady, subjectsReady,
   } = useTeacherScope()
 
   /* Which segment's list is open, if any. One at a time — two open lists in a
@@ -74,8 +75,29 @@ export function ScopeControl() {
   const showSubgroup = subgroups.length > 0
   const showSubject = subjects.length > 0
 
-  /* The admin console: no class, nothing to scope. */
-  if (!showClass && !showSubgroup && !showSubject) return null
+  /* Three lists, three requests, three moments — and the bar grew at each one,
+     shoving the whole nav sideways twice while the teacher was already reading
+     it. A segment whose list has not landed holds its width instead.
+
+     "Not landed" is not "empty": the two are indistinguishable in the arrays
+     above and mean opposite things, which is what `*Ready` is for. */
+  const classPending = isLoading
+  const subgroupPending = !isLoading && showClass && !subgroupsReady
+  const subjectPending = !isLoading && showClass && !subjectsReady
+
+  /* The admin console: no class, nothing to scope. Only once we know that —
+     during the first load it is also what an ordinary teacher looks like. */
+  if (!classPending && !showClass && !showSubgroup && !showSubject) return null
+
+  if (classPending) {
+    return (
+      <div className="tch-scope" aria-busy="true" data-tour="teacher.scope">
+        <Pending width={132} />
+        <Pending width={104} />
+        <Pending width={116} />
+      </div>
+    )
+  }
 
   /* On a screen that is not about a class, picking one has to go somewhere: the
      child whose profile is open is not in the class just chosen, so staying put
@@ -129,6 +151,7 @@ export function ScopeControl() {
           onPick={(value) => setSubgroupId(value || null)}
         />
       )}
+      {subgroupPending && <Pending width={104} />}
 
       {showSubject && (
         <Segment
@@ -149,7 +172,21 @@ export function ScopeControl() {
           onPick={(value) => setSubject(value || null)}
         />
       )}
+      {subjectPending && <Pending width={116} />}
     </div>
+  )
+}
+
+/** A segment's width, held while its list is in flight.
+ *
+ *  Widths are the typical value's, not a maximum: the point is that the bar
+ *  stops moving, and reserving the widest possible class name would trade one
+ *  jump for a permanent hole. `aria-hidden` because there is nothing here to
+ *  announce — the wrapper's `aria-busy` is what a screen reader needs. */
+function Pending({ width }: { width: number }) {
+  return (
+    <span className="tch-scope__seg tch-scope__seg--pending"
+          style={{ inlineSize: width }} aria-hidden />
   )
 }
 

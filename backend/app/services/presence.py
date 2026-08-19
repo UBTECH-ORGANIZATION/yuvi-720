@@ -45,6 +45,16 @@ STATUS_IN_LESSON = "in_lesson"
 # idle socket, not a child leaving. Wait it out before saying they are gone.
 OFFLINE_GRACE_SECONDS = 45.0
 
+# A chat turn is a sign of life that fires on every message. Re-broadcast at
+# most this often per learner: enough to keep the live view honest, cheap
+# enough to sit on the chat hot path.
+CHAT_FRAME_MIN_SECONDS = 60.0
+
+# Most-recently-seen learners loaded back into memory at boot. Bounded because
+# this collection grows with every learner the deployment has ever served, and
+# a boot must not read all of them.
+REHYDRATE_LIMIT = 2000
+
 # Verbs that mean "working inside content right now".
 _IN_LESSON_VERBS = {"entered", "answered", "attempted", "played", "interacted", "experienced"}
 # Verbs that mean "done with this piece of content".
@@ -63,6 +73,20 @@ _TEACHER_CACHE_TTL = 30.0
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _seconds_since(stamp: Optional[str]) -> float:
+    """Age of an ISO stamp in seconds; infinite when absent or unparseable —
+    so a missing timestamp reads as "long ago", never as "just now"."""
+    if not stamp:
+        return float("inf")
+    try:
+        moment = datetime.fromisoformat(stamp)
+    except ValueError:
+        return float("inf")
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - moment).total_seconds()
 
 
 def _blank(learner_id: str) -> dict[str, Any]:
@@ -84,6 +108,15 @@ def _blank(learner_id: str) -> dict[str, Any]:
         "lesson_entered_at": None,
         "struggling": None,
         "help_requested_at": None,
+        # Where the learner is in the product, as reported by their own client.
+        # Advisory only: it never sets `status`, because a client claim must not
+        # be able to fake being in a lesson. Filled in by the surface signal.
+        "surface": None,
+        "surface_at": None,
+        # Last chat turn. "In a chat with Yuvi" is derived from how recent this
+        # is rather than reported, so it decays on its own — a reported flag
+        # would stay true forever if the client never sent the closing one.
+        "chat_at": None,
     }
 
 
@@ -204,6 +237,59 @@ def note_disconnection(learner_id: str) -> None:
     _offline_timers[learner_id] = loop.call_later(OFFLINE_GRACE_SECONDS, _go_offline)
 
 
+# Fields that survive a restart, because they describe something that happened
+# rather than something that is true right now. An allow-list on purpose: a
+# field added later must be considered before it can be resurrected as a
+# liveness claim by a process that holds no connections.
+_DURABLE_ON_BOOT = (
+    "last_seen_at",
+    "help_requested_at",
+    "component_id", "unit_id", "objective_id",
+    "subject", "unit_title", "objective_title",
+    "session_id",
+)
+
+
+async def rehydrate() -> int:
+    """Load the last persisted snapshots back into memory at boot.
+
+    Presence is derived from connections held by *this* process, so a restart
+    starts empty and every child reads offline until they happen to reconnect —
+    in front of a teacher running a lesson. The snapshot written on transitions
+    is the only thing that survives, so it is read back.
+
+    What comes back is deliberately partial. `status`, `connections`,
+    `struggling` and `lesson_entered_at` are all claims about *now*, and this
+    process has no evidence for any of them, so they reset to the blank values:
+    "offline, last seen 10 minutes ago" is honest, "in a lesson" would not be.
+    Learners who already reconnected are left alone.
+    """
+    from app.brain.repository import _get_collection_named
+    handle = _get_collection_named(COLLECTION)
+    if handle is None:
+        return 0
+    try:
+        rows = await (
+            handle.find({}).sort("last_seen_at", -1).limit(REHYDRATE_LIMIT)
+        ).to_list(length=REHYDRATE_LIMIT)
+    except Exception as exc:  # pragma: no cover — a cold start must never fail here
+        print(f"⚠️ presence rehydrate failed: {type(exc).__name__}")
+        return 0
+
+    loaded = 0
+    for row in rows or []:
+        learner_id = row.get("learner_id") or row.get("_id")
+        if not learner_id or learner_id in _state:
+            continue
+        entry = _blank(str(learner_id))
+        for field in _DURABLE_ON_BOOT:
+            if row.get(field) is not None:
+                entry[field] = row[field]
+        _state[str(learner_id)] = entry
+        loaded += 1
+    return loaded
+
+
 def _on_topic(topic: str, handler) -> None:
     if topic.startswith(_TOPIC_PREFIX):
         handler(topic[len(_TOPIC_PREFIX):])
@@ -225,12 +311,24 @@ def install_hooks() -> None:
 # ── activity ─────────────────────────────────────────────────────────────────
 
 def note_activity(learner_id: str) -> None:
-    """Any sign of life that is not an xAPI verb (a chat turn). Memory only —
-    this fires often and says nothing a teacher's screen needs to re-render."""
+    """Any sign of life that is not an xAPI verb (a chat turn).
+
+    Never persisted: this fires on every turn, and a chat is not a transition.
+    It does re-broadcast, but at most once a minute per learner — without that
+    a teacher watching the live view saw "last seen 40 minutes ago" beside a
+    child who was mid-conversation with Yuvi, because nothing between the
+    lesson verbs ever reached the screen.
+    """
     entry = _entry(learner_id)
-    entry["last_seen_at"] = _now()
+    previous_chat_at = entry.get("chat_at")
+    now = _now()
+    entry["last_seen_at"] = now
+    entry["chat_at"] = now
     if entry["status"] == STATUS_OFFLINE:
         entry["status"] = STATUS_ONLINE
+        _changed(learner_id, persist=False)
+        return
+    if _seconds_since(previous_chat_at) >= CHAT_FRAME_MIN_SECONDS:
         _changed(learner_id, persist=False)
 
 

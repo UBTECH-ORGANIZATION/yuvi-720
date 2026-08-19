@@ -149,7 +149,13 @@ try {
   await student.screenshot({ path: `${OUT}/04-panel.png` })
 
   // ── clicking it lands on the goal itself ──────────────────────────────────
-  await student.locator('.notif__row .notif__rowMain').first().click()
+  /* THIS goal's row, not the newest one. The bell now also carries "a
+     conversation with you was recorded" from the mentoring composer, so the
+     first row is whatever happened most recently in this account — which sent
+     the check to a different conversation and then failed to find its goal. */
+  const goalNotif = student.locator('.notif__row', { hasText: title.slice(0, 27) }).first()
+  await (await goalNotif.count() ? goalNotif.locator('.notif__rowMain')
+    : student.locator('.notif__row .notif__rowMain').first()).click()
   await student.waitForTimeout(3000)
   check('the notification deep-links to the mentoring page',
         student.url().includes('/mentoring?conversation='), student.url())

@@ -60,6 +60,14 @@ class NothingWritesTests(unittest.IsolatedAsyncioTestCase):
             "app.services.goal_approval.assign_to_group": AsyncMock(),
             "app.services.mentoring.create_conversation": AsyncMock(),
             "app.services.mentoring.update_goal_progress": AsyncMock(),
+            # The mentoring composer's write path. The two `draft_mentoring`
+            # tools propose exactly what this function saves, which is the
+            # closest any tool here comes to the endpoint it drafts for.
+            "app.services.goal_approval.document_conversation": AsyncMock(),
+            # And the teacher's own draft: a tool that seeded it server-side
+            # would be writing on the teacher's behalf before they saw the
+            # composer. The BROWSER seeds it, after the button is pressed.
+            "app.services.teacher_state.update_teacher_state": AsyncMock(),
             "app.services.kudos.send_kudos": AsyncMock(),
             "app.services.teacher_insights_store.create": AsyncMock(),
             "app.services.teacher_alerts.acknowledge": AsyncMock(),

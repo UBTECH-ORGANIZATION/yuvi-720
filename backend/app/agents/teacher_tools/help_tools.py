@@ -32,7 +32,12 @@ ROUTES: dict[str, str] = {
     "home": "/teacher",
     "students": "/teacher/students",
     "student": "/teacher/student/{learner_id}",
-    "goals": "/teacher/goals",
+    # The route is still `/teacher/goals` — a live URL nobody's bookmark should
+    # break over — but the screen behind it is the mentoring page now: the
+    # conversations held with each student, with the goal approvals inside them.
+    # The KEY is what the model picks by name, so it is the half that had to
+    # change: asked where to write up a talk, nothing called "goals" reads right.
+    "mentoring": "/teacher/goals",
     "learnings": "/teacher/learnings",
     "messages": "/teacher/messages",
     "admin": "/admin",

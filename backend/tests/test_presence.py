@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import unittest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 
 from app.services import presence, realtime
@@ -262,3 +263,157 @@ class IdlePresenceTest(unittest.IsolatedAsyncioTestCase):
         triggers._last_published.clear()
         triggers.publish_idle("kid", "OBJ.1")
         self.assertEqual(await teacher_alerts.list_alerts("anyone"), [])
+
+
+class ChatRecencyTest(unittest.IsolatedAsyncioTestCase):
+    """A child mid-conversation with Yuvi must not read "last seen 40 min ago".
+
+    Chat turns are the only sign of life between lesson verbs, but they arrive
+    per message, so they are throttled rather than dropped.
+    """
+
+    async def asyncSetUp(self):
+        presence.reset_for_tests()
+        realtime.reset_for_tests()
+        self._collection = patch("app.brain.repository._get_collection_named", return_value=None)
+        self._collection.start()
+        self._teachers = patch("app.brain.org.teachers_for_learner",
+                               new=AsyncMock(return_value=[]))
+        self._teachers.start()
+        presence.note_connection("kid")
+
+    async def asyncTearDown(self):
+        self._collection.stop()
+        self._teachers.stop()
+
+    async def test_a_chat_turn_stamps_when_it_happened(self):
+        presence.note_activity("kid")
+        self.assertIsNotNone(presence.snapshot("kid")["chat_at"])
+
+    async def test_a_burst_of_turns_costs_one_frame(self):
+        with patch.object(presence, "_changed") as changed:
+            for _ in range(6):
+                presence.note_activity("kid")
+        self.assertEqual(changed.call_count, 1, "six messages must not be six frames")
+
+    async def test_the_next_frame_comes_once_the_window_has_passed(self):
+        presence.note_activity("kid")
+        stale = datetime.now(timezone.utc) - timedelta(
+            seconds=presence.CHAT_FRAME_MIN_SECONDS + 1)
+        presence._state["kid"]["chat_at"] = stale.isoformat()
+        with patch.object(presence, "_changed") as changed:
+            presence.note_activity("kid")
+        self.assertEqual(changed.call_count, 1)
+
+    async def test_a_chat_turn_is_never_written_to_the_database(self):
+        """This is the hot path of every conversation. It broadcasts; it does
+        not persist — a chat turn is not a transition."""
+        with patch.object(presence, "_changed") as changed:
+            presence.note_activity("kid")
+        self.assertTrue(changed.call_args_list)
+        for call in changed.call_args_list:
+            self.assertFalse(call.kwargs["persist"])
+
+
+class _FakeCursor:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def sort(self, *_args, **_kwargs):
+        return self
+
+    def limit(self, *_args, **_kwargs):
+        return self
+
+    async def to_list(self, length=None):
+        return list(self._rows)
+
+
+class _FakeCollection:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def find(self, *_args, **_kwargs):
+        return _FakeCursor(self._rows)
+
+
+class RehydrateTest(unittest.IsolatedAsyncioTestCase):
+    """After a restart the class must not all read offline — and must not read
+    online either. What comes back is what was *seen*, never what is true now."""
+
+    STORED = {
+        "_id": "kid", "learner_id": "kid",
+        # Claims about "now" that this process has no evidence for:
+        "status": presence.STATUS_IN_LESSON,
+        "connections": 3,
+        "lesson_entered_at": "2026-08-19T08:55:00+00:00",
+        "struggling": {"kind": "wheel_spinning", "since": "2026-08-19T08:57:00+00:00"},
+        "chat_at": "2026-08-19T08:59:00+00:00",
+        "surface": "lesson",
+        # Things that actually happened:
+        "last_seen_at": "2026-08-19T09:00:00+00:00",
+        "help_requested_at": "2026-08-19T08:58:00+00:00",
+        "subject": "מתמטיקה",
+        "unit_title": "מערכת צירים",
+    }
+
+    async def asyncSetUp(self):
+        presence.reset_for_tests()
+        realtime.reset_for_tests()
+        # No database by default — `_rehydrate` supplies one for the call under
+        # test. Without this, `note_connection` persists against the real one.
+        self._collection = patch("app.brain.repository._get_collection_named", return_value=None)
+        self._collection.start()
+        self._teachers = patch("app.brain.org.teachers_for_learner",
+                               new=AsyncMock(return_value=[]))
+        self._teachers.start()
+
+    async def asyncTearDown(self):
+        self._collection.stop()
+        self._teachers.stop()
+
+    async def _rehydrate(self, rows):
+        with patch("app.brain.repository._get_collection_named",
+                   return_value=_FakeCollection(rows)):
+            return await presence.rehydrate()
+
+    async def test_a_restored_learner_is_never_claimed_to_be_online(self):
+        loaded = await self._rehydrate([dict(self.STORED)])
+        self.assertEqual(loaded, 1)
+        snapshot = presence.snapshot("kid")
+        self.assertEqual(snapshot["status"], presence.STATUS_OFFLINE)
+        self.assertEqual(snapshot["connections"], 0)
+        self.assertIsNone(snapshot["lesson_entered_at"])
+        self.assertIsNone(snapshot["struggling"])
+
+    async def test_a_stale_chat_or_surface_is_not_resurrected(self):
+        """Both drive "where is this child right now". Restoring them would put
+        a disconnected learner in a chat that ended before the restart."""
+        await self._rehydrate([dict(self.STORED)])
+        snapshot = presence.snapshot("kid")
+        self.assertIsNone(snapshot["chat_at"])
+        self.assertIsNone(snapshot["surface"])
+
+    async def test_what_was_seen_survives(self):
+        await self._rehydrate([dict(self.STORED)])
+        snapshot = presence.snapshot("kid")
+        self.assertEqual(snapshot["last_seen_at"], "2026-08-19T09:00:00+00:00")
+        self.assertEqual(snapshot["subject"], "מתמטיקה")
+        self.assertEqual(snapshot["unit_title"], "מערכת צירים")
+
+    async def test_a_raised_hand_outlives_a_restart(self):
+        """It is a request that nobody answered, not a claim about liveness.
+        Losing it on deploy drops a child who asked for help."""
+        await self._rehydrate([dict(self.STORED)])
+        self.assertEqual(
+            presence.snapshot("kid")["help_requested_at"], "2026-08-19T08:58:00+00:00")
+
+    async def test_a_learner_who_already_reconnected_is_left_alone(self):
+        presence.note_connection("kid")
+        loaded = await self._rehydrate([dict(self.STORED)])
+        self.assertEqual(loaded, 0)
+        self.assertEqual(presence.snapshot("kid")["status"], presence.STATUS_ONLINE)
+
+    async def test_no_database_is_not_an_error(self):
+        with patch("app.brain.repository._get_collection_named", return_value=None):
+            self.assertEqual(await presence.rehydrate(), 0)

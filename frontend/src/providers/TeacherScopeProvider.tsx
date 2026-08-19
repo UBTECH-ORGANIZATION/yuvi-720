@@ -64,6 +64,15 @@ interface TeacherScopeValue {
   subject: string | null
   setSubject: (subject: string | null) => void
   isLoading: boolean
+  /** Whether the two per-class lists have landed FOR THE CURRENT CLASS.
+   *
+   *  Not "are they empty": empty and not-yet-known look identical from the
+   *  outside and mean opposite things. The scope bar needs the difference to
+   *  hold a segment's width open while its list is in flight — three lists
+   *  arriving separately is three widths, and each one shoved the whole nav
+   *  sideways as it landed. */
+  subgroupsReady: boolean
+  subjectsReady: boolean
   error: boolean
 }
 
@@ -251,9 +260,14 @@ export function TeacherScopeProvider({ children }: { children: ReactNode }) {
       subject,
       setSubject: selectSubject,
       isLoading,
+      // `*For` holds the class its list describes, so this is "landed, and for
+      // the class we are actually showing" rather than "landed at some point".
+      subgroupsReady: !groupId || subgroupsFor === groupId,
+      subjectsReady: !groupId || subjectsFor === groupId,
       error,
     }
   }, [groups, groupId, subgroups, subgroupId, subjects, subject, isLoading, error,
+      subgroupsFor, subjectsFor,
       selectGroup, selectSubgroup, selectSubject, refreshSubgroups])
 
   return (

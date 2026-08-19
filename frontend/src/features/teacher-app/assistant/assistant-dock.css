@@ -669,6 +669,25 @@
 }
 .tch-dock__rowDone { color: var(--sp-ink-chat-ok); display: inline-flex; }
 
+/* Why a student is on the "who to meet" list — under their name, because the
+   reason is what makes the ranking checkable rather than an assertion. */
+.tch-dock__rowWhy {
+  display: block;
+  font: 500 var(--sp-fs-chat-meta)/1.4 var(--sp-font);
+  color: var(--sp-ink-500);
+}
+
+/* The write-up the assistant proposed, shown as something quoted rather than
+   as the dock's own words: the teacher is about to edit it, not accept it. */
+.tch-dock__formQuote {
+  margin: 0;
+  padding-inline-start: var(--sp-2);
+  border-inline-start: 2px solid var(--sp-border-strong);
+  font: 500 var(--sp-fs-chat-meta)/1.5 var(--sp-font);
+  color: var(--sp-ink-700);
+  white-space: pre-wrap;
+}
+
 .tch-dock__formFoot { display: flex; gap: 6px; margin-block-start: 2px; }
 .tch-dock__formError { margin: 0; font: 600 var(--sp-fs-chat-meta)/1.45 var(--sp-font); color: var(--sp-ink-chat-alert); }
 

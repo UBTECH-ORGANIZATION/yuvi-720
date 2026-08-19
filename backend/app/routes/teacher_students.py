@@ -179,7 +179,10 @@ async def group_goals(group_id: str, session=Depends(require_teacher_session)):
 
     async def _one(learner_id: str) -> dict:
         async with semaphore:
-            conversations = await mentoring.list_conversations(learner_id, "teacher")
+            # No price backfill: this runs once per learner in the class, and
+            # the pricing pass is per-learner bounded, not per-request.
+            conversations = await mentoring.list_conversations(
+                learner_id, "teacher", price_backfill=False)
             # Counts read nothing for learners with no action-tracked goal.
             await goal_progress.enrich_conversations(learner_id, conversations)
         return {"learner_id": learner_id, "conversations": conversations}
@@ -594,6 +597,9 @@ async def assign_student_goal(
         record = await goal_approval.assign_goal(
             session["sub"], safe_id, data.get("goal") or data,
             language=normalize_language(data.get("language")),
+            # The teacher's MoE session: this path does not go through the
+            # learner's route, so without it the goal reports nothing.
+            lrs_session_id=session.get("sid"),
         )
     except goal_approval.ApprovalError as exc:
         status = 403 if exc.code == "not_authorized" else 400
@@ -644,6 +650,7 @@ async def assign_group_goal(
             [str(value) for value in (data.get("learner_ids") or [])],
             data.get("goal") or {},
             language=normalize_language(data.get("language")),
+            lrs_session_id=session.get("sid"),
         )
     except goal_approval.ApprovalError as exc:
         status = 403 if exc.code == "not_authorized" else 400
@@ -871,3 +878,153 @@ async def learner_read(
         # A blank panel that says why beats an error page over a dialog the
         # teacher opened to do something else entirely.
         return _ok({"unavailable": True})
+
+
+# ── Mentoring: the talk a goal came out of ───────────────────────────────────
+
+@router.post("/students/{learner_id}/mentoring")
+async def document_mentoring(
+    learner_id: str, data: dict, session=Depends(require_teacher_session)
+):
+    """Record a conversation the teacher had, with the goals agreed in it.
+
+    The teacher's counterpart to `POST /api/mentoring`, which is learner-only.
+    Until this existed the only way for a teacher to create a mentoring record
+    was `POST .../goals`, which makes one conversation per goal and has nowhere
+    to put what was discussed.
+
+    Several goals arrive together and become one conversation, so the pricing
+    loop, the brain projection, the LRS report and the learner's notification
+    each run once for the talk rather than once per goal.
+    """
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    from app.services import goal_approval
+    try:
+        record = await goal_approval.document_conversation(
+            session["sub"], safe_id,
+            notes=str(data.get("notes") or ""),
+            goals=data.get("goals") or [],
+            meeting_stage=str(data.get("meeting_stage") or ""),
+            teacher_only_note=str(data.get("teacher_only_note") or ""),
+            visibility=str(data.get("visibility") or "shared"),
+            draft_id=str(data.get("draft_id") or ""),
+            language=normalize_language(data.get("language")),
+            lrs_session_id=session.get("sid"),
+        )
+    except goal_approval.ApprovalError as exc:
+        status = 403 if exc.code == "not_authorized" else 400
+        return JSONResponse(content={"error": exc.code}, status_code=status, headers=_NO_STORE)
+    return _ok(record)
+
+
+@router.post("/students/{learner_id}/mentoring/assist")
+async def mentoring_assist_for_teacher(
+    learner_id: str, data: dict, session=Depends(require_teacher_session)
+):
+    """Yuvi helps the teacher write the conversation up.
+
+    The learner's `/api/mentoring/assist` writes in the child's first person,
+    so it cannot serve this: a teacher records what a student said, they do not
+    say it. Same turn contract, different voice.
+
+    Guarded per learner even though the learner id never enters the prompt —
+    the teacher is documenting a conversation with a specific child, and who
+    they may write about is exactly the roster question.
+    """
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    from app.services import mentoring_assist as assist
+    return _ok(await assist.guide_teacher_documentation(
+        session["sub"],
+        language=normalize_language(data.get("language")),
+        qa=data.get("qa"),
+        notes=str(data.get("notes") or ""),
+        more=bool(data.get("more")),
+    ))
+
+
+@router.post("/students/{learner_id}/mentoring/goal-ideas")
+async def mentoring_goal_ideas(
+    learner_id: str, data: dict, session=Depends(require_teacher_session)
+):
+    """Goals that follow from the write-up the teacher just wrote.
+
+    The other flavour — `/goals/suggest` — reads observed evidence and never
+    sees the conversation. Both are offered side by side on the goals step,
+    because "what the numbers say" and "what we just agreed" are different
+    questions and a teacher wants both.
+    """
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    from app.services import mentoring_assist as assist
+    goals = await assist.suggest_goals_from_conversation(
+        safe_id, session["sub"],
+        language=normalize_language(data.get("language")),
+        notes=str(data.get("notes") or ""),
+        count=int(data.get("count") or 3),
+    )
+    return _ok({"goals": goals})
+
+
+@router.get("/goals/pending-count")
+async def pending_goal_count(session=Depends(require_teacher_session)):
+    """How many finished goals across this teacher's classes await sign-off.
+
+    Its own endpoint, and deliberately the cheapest one in this file: the app
+    bar shows this number on every screen, so a teacher learns there is
+    something waiting without having to open the mentoring page to find out.
+    `GET /groups/{id}/goals` would answer the same question by shipping every
+    conversation of every learner on every page load.
+
+    Scope comes from the session's own groups — there is no id to guard here,
+    because the caller cannot name anyone.
+    """
+    from app.brain import org
+    from app.services import mentoring
+
+    groups = await org.groups_for_teacher(session["sub"])
+    learner_ids: list[str] = []
+    seen: set[str] = set()
+    for group in groups:
+        for learner_id in await org.learners_in_group(str(group.get("_id") or "")):
+            if learner_id not in seen:
+                seen.add(learner_id)
+                learner_ids.append(learner_id)
+
+    return _ok({"count": await mentoring.count_pending_approvals(learner_ids)})
+
+
+@router.delete("/students/{learner_id}/mentoring/{conversation_id}")
+async def remove_mentoring(
+    learner_id: str, conversation_id: str, session=Depends(require_teacher_session)
+):
+    """Remove a conversation this teacher documented.
+
+    Filing a talk against the wrong child was, until now, permanent: the
+    service refused every delete whose author was not the learner, which was
+    the right rule while `assign_goal` was the only way a teacher could make a
+    record — it wrote a goal, not a paragraph about a student. The composer
+    writes paragraphs, so the mistake it makes possible needs an undo.
+
+    The scope gate answers "may you see this child"; `mentoring.delete_
+    conversation` answers the narrower question this actually turns on — did
+    YOU write it. A colleague's write-up, and a child's own reflection, are
+    both refused here.
+    """
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    from app.services import mentoring
+
+    outcome = await mentoring.delete_conversation(
+        safe_id, conversation_id, actor="teacher", teacher_id=session["sub"],
+    )
+    if outcome == "not_found":
+        return JSONResponse({"ok": False, "error": "not_found"}, status_code=404)
+    if outcome == "forbidden":
+        return _denied()
+    return _ok({"deleted": True})

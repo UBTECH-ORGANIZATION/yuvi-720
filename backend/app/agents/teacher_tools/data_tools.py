@@ -559,6 +559,82 @@ async def _get_live_classroom(context: TeacherToolContext, args: dict) -> dict:
 
 # ── registration ─────────────────────────────────────────────────────────────
 
+# ── mentoring ────────────────────────────────────────────────────────────────
+
+def days_since(day: Any) -> Optional[int]:
+    """Whole days from a `YYYY-MM-DD` to today, or None if it cannot be read.
+
+    Shared with `action_tools.suggest_students_to_meet`, which ranks by exactly
+    this number — two copies of "how long ago was that" is two answers to the
+    question the assistant is about to say out loud.
+    """
+    from datetime import datetime, timezone
+
+    try:
+        then = datetime.strptime(str(day)[:10], "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return None
+    return max(0, (datetime.now(timezone.utc).date() - then).days)
+
+
+async def _get_student_mentorings(context: TeacherToolContext, args: dict) -> dict:
+    """The conversations held with one student, newest first.
+
+    `get_student_goals` flattens the same records down to their goals, which
+    answers "what was agreed" and loses "when did anyone last sit with this
+    child, and about what". Both questions are asked; only one had a tool.
+
+    One deliberate narrowing: `teacher_only_note` is returned only when THIS
+    teacher wrote it. `get_teacher_notes` already draws that line — another
+    teacher's private note about a shared student is theirs, not assistant fuel
+    — and a teachers-only note is the same kind of writing under another name.
+    """
+    from app.services import mentoring
+
+    learner_id = str(args["learner_id"])
+    try:
+        limit = int(args.get("limit") or 5)
+    except (TypeError, ValueError):
+        limit = 5
+    limit = max(1, min(20, limit))
+
+    # Read-only and possibly one of many in a turn, so the legacy pricing pass
+    # stays off: nothing here renders a spark value.
+    conversations = await mentoring.list_conversations(
+        learner_id, viewer_role="teacher", price_backfill=False)
+    if not conversations:
+        return empty("no_mentoring_conversations", learner_id=learner_id)
+
+    rows = []
+    for conversation in conversations[:limit]:
+        mine = str(conversation.get("teacher_id") or "") == context.teacher_id
+        rows.append({
+            "conversation_id": conversation.get("id"),
+            "date": conversation.get("date"),
+            "days_ago": days_since(conversation.get("date")),
+            # `teacher_name` is deliberately absent — the model refers to people
+            # by id, and a staff member's name is no more its business than a
+            # child's.
+            "author": conversation.get("author"),
+            "by_me": mine,
+            "meeting_stage": conversation.get("meeting_stage") or "",
+            "visible_to_learner": conversation.get("visibility", "shared") == "shared",
+            "notes": conversation.get("notes") or "",
+            **({"teacher_only_note": conversation.get("teacher_only_note") or ""}
+               if mine and conversation.get("teacher_only_note") else {}),
+            "goals": [{
+                "goal_id": goal.get("id"),
+                "title": goal.get("title"),
+                "deadline": goal.get("deadline"),
+                "progress_stage": goal.get("progress_stage"),
+                "approved": bool(goal.get("approved_by")),
+                "needs_help": bool(goal.get("needs_help")),
+            } for goal in (conversation.get("goals") or [])],
+        })
+
+    return {"data": scrub(rows), "total": len(conversations)}
+
+
 _GROUP_ID = {"group_id": {"type": "string", "description": "A group id from list_my_groups."}}
 _LEARNER_ID = {"learner_id": {"type": "string", "description": "A learner id from list_students."}}
 
@@ -762,4 +838,20 @@ def register_all() -> None:
         }, "required": ["group_id"]},
         handler=_get_class_calendar,
         group_args=("group_id",), learner_args=("learner_id",),
+    ))
+    register(TeacherTool(
+        name="get_student_mentorings",
+        description=(
+            "The conversations documented with one student — when they were, who "
+            "wrote them up, what was discussed, and which goals came out of each.\n"
+            "Use it for anything about MEETING a student: when they were last "
+            "spoken to, what was agreed then, whether a follow-up is overdue. "
+            "get_student_goals gives the goals alone and cannot answer any of that."
+        ),
+        parameters={"type": "object", "properties": {
+            **_LEARNER_ID,
+            "limit": {"type": "integer",
+                      "description": "How many of the most recent (default 5, max 20)."},
+        }, "required": ["learner_id"]},
+        handler=_get_student_mentorings, learner_args=("learner_id",),
     ))

@@ -60,7 +60,13 @@ try {
   }
 
   // ── the roster tells the truth about who has not started ─────────────────
-  await page.goto(`${BASE}/teacher/students`, { waitUntil: 'domcontentloaded' })
+  /* `?view=cards` explicitly. The roster remembers table-vs-cards in
+     `teacher_roster_view`, so which one renders depends on what this account
+     last clicked — and every assertion below is about the CARD's pill and its
+     evidence line. Without this the file times out on `.tch-studentCard` for
+     any teacher whose stored preference is the table, which is not a
+     regression in the roster but a hole in the check. */
+  await page.goto(`${BASE}/teacher/students?view=cards`, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tch-studentCard', { timeout: 60000 })
 
   const chips = page.locator('.tch-roster__filters button')
@@ -97,6 +103,11 @@ try {
   await page.waitForTimeout(200)
 
   // ── the goals workspace at volume ────────────────────────────────────────
+  /* One write-up per teacher, resumed on arrival — so a draft anybody left
+     open, in a previous run or by hand, mounts the composer over this page and
+     eats every click on it. Cleared through the same endpoint the composer
+     itself writes to, before the page is asked for. */
+  await page.request.patch(`${BASE}/api/teacher/state`, { data: { mentoring_draft: null } })
   await page.goto(`${BASE}/teacher/goals`, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tch-goalsPage__inbox', { timeout: 60000 })
   await dismissTourIfOpen(page)
@@ -147,16 +158,40 @@ try {
   })
   check('nothing overflows its card', spill.length === 0, spill.slice(0, 3).join(' | '))
 
-  // The board card shows a bounded sample plus the way to the rest.
+  /* The board became the conversation history: one CARD per student, carrying
+     their own numbers, with the talks themselves behind a dialog. The card
+     class is unchanged — it still means "one student's card" — but it now
+     leads with when they were last spoken to rather than with a sample of
+     their goals, and opening one no longer moves the cards around it. */
   const boardCards = await page.locator('.tch-goalsPage__student').count()
   if (boardCards) {
-    const perCard = await page.locator('.tch-goalsPage__student').evaluateAll(
-      (nodes) => nodes.map((node) => node.querySelectorAll('.tch-goalsPage__goal').length))
-    check('no board card lists more than a preview',
-          perCard.every((count) => count <= 4), `max ${Math.max(...perCard)} rows`)
-    const mixes = await page.locator('.tch-goalsPage__mix').count()
-    check('each board card leads with the mix, not with titles',
-          mixes === boardCards, `${mixes} of ${boardCards}`)
+    const closed = await page.locator('.tch-goalsPage__talk').count()
+    check('no talks are on the page until one is asked for', closed === 0,
+          `${closed} talks showing`)
+
+    const heads = await page.locator('.tch-goalsPage__talkToggle').count()
+    check('every student card offers its conversations',
+          heads === boardCards, `${heads} of ${boardCards}`)
+
+    // Every card states its own numbers, not just the child's name.
+    const stats = await page.locator('.tch-goalsPage__student .tch-talkCard__stats dd').count()
+    check('every card carries its two counts', stats === boardCards * 2,
+          `${stats} of ${boardCards * 2}`)
+
+    // Opening one shows that student's talks and nobody else's, in a dialog
+    // over the grid rather than inside the card.
+    const openable = page.locator('.tch-goalsPage__talkToggle:not([disabled])').first()
+    if (await openable.count()) {
+      await openable.click()
+      await page.waitForSelector('.tch-talksDialog', { timeout: 10000 })
+      const dialogs = await page.locator('.tch-talksDialog').count()
+      const inCards = await page
+        .locator('.tch-goalsPage__student .tch-goalsPage__talk').count()
+      check('opening a card opens exactly one dialog', dialogs === 1, `${dialogs} open`)
+      check('and the talks stay out of the grid', inCards === 0, `${inCards} inside cards`)
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(300)
+    }
   }
   await page.screenshot({ path: `${OUT}/goals-01-grouped.png`, fullPage: true })
 

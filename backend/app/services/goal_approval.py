@@ -141,14 +141,18 @@ async def assign_goal(
     goal: dict[str, Any],
     *,
     language: str = "he",
+    lrs_session_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """Create a teacher-authored goal on a learner's profile.
 
     Routed through the ordinary `mentoring.create_conversation` with
-    `author="teacher"` so `_new_goal`, `_project_goals`, `pricing.price_goal` and
-    the LRS `student-goal initialized` report (which already attaches
-    `instructor_exid` for teacher-authored goals) all run once, in the path that
-    is already tested.
+    `author="teacher"` so `_new_goal`, `_project_goals` and `rewards.price_goal`
+    all run once, in the path that is already tested.
+
+    `lrs_session_id` is the teacher's MoE session. It has to be passed in
+    because the reporting used to live in the learner's route, which this
+    function does not go through — so until now a teacher-assigned goal
+    produced **no xAPI at all**, while the docstring here claimed it did.
 
     A teacher-assigned goal is worth sparks exactly like a self-authored one —
     the child still does the work.
@@ -170,6 +174,7 @@ async def assign_goal(
         "language": language,
         "source": "teacher",
         "visible_to_learner": True,
+        "lrs_session_id": lrs_session_id,
         "goals": [{
             "title": title,
             "next_steps": (goal.get("next_steps") or "").strip(),
@@ -197,6 +202,131 @@ async def assign_goal(
     return record
 
 
+# A talk produces a handful of goals, not a backlog. The cap is a sanity bound
+# on a client payload, not a pedagogical opinion.
+MAX_GOALS_PER_CONVERSATION = 6
+_MAX_TITLE = 120
+_MAX_NEXT_STEPS = 600
+
+
+async def document_conversation(
+    teacher_id: str,
+    learner_id: str,
+    *,
+    notes: str = "",
+    goals: Optional[list[dict[str, Any]]] = None,
+    meeting_stage: str = "",
+    teacher_only_note: str = "",
+    visibility: str = "shared",
+    draft_id: str = "",
+    language: str = "he",
+    lrs_session_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """Record a mentoring conversation a teacher had, with the goals it produced.
+
+    This is the write behind the mentoring page, and the reason it exists is
+    that `assign_goal` creates **one conversation per goal**. A teacher who
+    agreed three things in one talk got three unrelated records, none of which
+    held what was actually discussed.
+
+    Everything that must happen exactly once falls out of the single
+    `create_conversation` call: pricing loops the goals before the insert,
+    `_project_goals` rebuilds the brain mirror after it, and the LRS report
+    sends one meeting plus one statement per shared goal. The notification is
+    one bell for the conversation, not one per goal.
+
+    Deliberately **not** deduped by title the way `assign_to_group` is: several
+    goals in one talk are intentional, and re-setting last week's objective
+    after this week's conversation is the normal case, not a double-click. The
+    accident this actually needs protection from is a resubmitted form, which
+    is what `draft_id` is for.
+    """
+    from app.brain import org
+    from app.services import mentoring, notifications
+
+    if not await org.teacher_can_access_learner(teacher_id, learner_id):
+        raise ApprovalError("not_authorized")
+
+    cleaned: list[dict[str, Any]] = []
+    for goal in (goals or [])[:MAX_GOALS_PER_CONVERSATION]:
+        if not isinstance(goal, dict):
+            continue
+        title = (goal.get("title") or "").strip()[:_MAX_TITLE]
+        next_steps = (goal.get("next_steps") or "").strip()[:_MAX_NEXT_STEPS]
+        if not title and not next_steps:
+            continue
+        cleaned.append({
+            "title": title,
+            "next_steps": next_steps,
+            "deadline": goal.get("deadline") or "",
+            # `_new_goal` normalizes this against the closed vocabulary, so an
+            # invented action degrades to an untracked goal rather than an error.
+            "action": goal.get("action"),
+        })
+
+    notes = (notes or "").strip()
+    # A talk with no goal is still a talk worth recording; a submission with
+    # neither notes nor goals is an empty form.
+    if not notes and not cleaned:
+        raise ApprovalError("empty_conversation")
+
+    # A resubmit — a double-click, a retry, a back-then-forward — must not
+    # produce a second record. Pricing runs a model call per goal, so the
+    # window where the button is still live is seconds wide, not milliseconds.
+    if draft_id:
+        existing = await _conversation_for_draft(learner_id, draft_id)
+        if existing is not None:
+            return existing
+
+    record = await mentoring.create_conversation({
+        "learner_id": learner_id,
+        "author": "teacher",
+        "teacher_id": teacher_id,
+        "source": "teacher",
+        "language": language,
+        "visibility": "teacher_only" if visibility == "teacher_only" else "shared",
+        "meeting_stage": meeting_stage,
+        "notes": notes,
+        "teacher_only_note": (teacher_only_note or "").strip(),
+        "draft_id": draft_id or None,
+        "lrs_session_id": lrs_session_id,
+        "goals": cleaned,
+    })
+
+    # One bell for the conversation. N goals were agreed in one sitting, so N
+    # notifications would be one conversation ringing a child's phone six times.
+    # Nothing is sent for a teacher-only record: the child cannot open it, so
+    # the notification would be a dead link.
+    if record.get("visibility") == "shared":
+        await notifications.notify(
+            learner_id,
+            notifications.KIND_GOAL_ASSIGNED,
+            notification_id=f"mentoring_documented:{record.get('id')}",
+            title_key=(
+                "notif.mentoring.documented" if cleaned
+                else "notif.mentoring.documented.noGoals"
+            ),
+            params={"count": len(cleaned)},
+            actions=[{
+                "label_key": "notif.action.openGoal",
+                "route": f"/mentoring?conversation={record.get('id')}",
+            }],
+            actor_id=teacher_id,
+            recipient_role="learner",
+        )
+    return record
+
+
+async def _conversation_for_draft(learner_id: str, draft_id: str) -> Optional[dict[str, Any]]:
+    """The conversation already written for this composer draft, if any."""
+    from app.services import mentoring
+    try:
+        rows = await mentoring.list_conversations(learner_id, "teacher")
+    except Exception:      # a lookup failure must not block a legitimate write
+        return None
+    return next((row for row in rows if row.get("draft_id") == draft_id), None)
+
+
 async def assign_to_group(
     teacher_id: str,
     group_id: str,
@@ -204,6 +334,7 @@ async def assign_to_group(
     goal: dict[str, Any],
     *,
     language: str = "he",
+    lrs_session_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """One goal to a sub-group — the actionable form of "split into sub-groups".
 
@@ -233,7 +364,10 @@ async def assign_to_group(
             skipped.append({"learner_id": learner_id, "reason": "already_assigned_this_week"})
             continue
         try:
-            await assign_goal(teacher_id, learner_id, goal, language=language)
+            await assign_goal(
+                teacher_id, learner_id, goal,
+                language=language, lrs_session_id=lrs_session_id,
+            )
             assigned.append(learner_id)
         except ApprovalError as exc:
             skipped.append({"learner_id": learner_id, "reason": exc.code})

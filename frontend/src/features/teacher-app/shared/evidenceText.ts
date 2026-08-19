@@ -403,12 +403,61 @@ const SIGNAL_SENTENCE: Record<string, SignalSentence> = {
     return labels.length ? t('tch.why.goalGaps', { list: labels.join(' · ') }) : null
   },
   challenges: (raw, _value, t) => {
-    const items = list(raw.challenges)
+    /* Challenges arrive two ways: as bare strings from the goal drafts, and as
+       `{label, status}` objects from the brain view the prep sheet reads. The
+       string-only version returned null for the second, which dropped through
+       to the generic renderer and printed
+       `0: {'label': '...', 'status': 'working'}` under a Hebrew sentence. */
+    const items = list(raw.challenges).length ? list(raw.challenges)
+      : (Array.isArray(raw.challenges) ? raw.challenges : [])
+        .map((entry) => (entry && typeof entry === 'object'
+          ? String((entry as Record<string, unknown>).label ?? '').trim() : ''))
+        .filter(Boolean)
     return items.length ? t('tch.why.goalChallenges', { list: items.join(' · ') }) : null
   },
   student_description: (raw, _value, t) => {
     const observation = typeof raw.observation === 'string' ? raw.observation.trim() : ''
     return observation ? t('tch.why.goalDescription', { observation }) : null
+  },
+  /* The prep sheet's own three. `strengths` and `open_goals` arrive as label
+     lists like the two above; the other two are the learnings map and whether
+     the child has been here at all — the numbers a prep line rests on when it
+     claims something moved. */
+  strengths: (raw, _value, t) => {
+    const labels = list(raw.labels)
+    return labels.length ? t('tch.why.strengths', { list: labels.join(' · ') }) : null
+  },
+  open_goals: (raw, _value, t) => {
+    const labels = list(raw.labels)
+    return labels.length ? t('tch.why.openGoals', { list: labels.join(' · ') }) : null
+  },
+  objectives_progress: (raw, _value, t) => {
+    const rows = Object.entries(raw)
+      .filter((entry): entry is [string, Record<string, unknown>] =>
+        Boolean(entry[1]) && typeof entry[1] === 'object')
+      .slice(0, 2)
+    if (!rows.length) return null
+    return rows.map(([subject, row]) => t('tch.why.objectivesMap', {
+      subject: subjectLabel(subject, t),
+      mastered: num(row.mastered) ?? 0,
+      total: num(row.total) ?? 0,
+    })).join(' · ')
+  },
+  activity: (raw, _value, t, language) => {
+    // "Never opened anything" and "quiet for nine days" are different facts,
+    // and a prep line resting on either should say which.
+    if (raw.started === false) return t('tch.why.neverStarted')
+    const last = typeof raw.last_event_at === 'string'
+      ? formatDate(raw.last_event_at, language) : null
+    const days = num(raw.days_inactive)
+    if (last) return t('tch.why.lastActive', { date: last, days: days ?? 0 })
+    return null
+  },
+  /* The teacher's own sentence, from the write-up they just finished — the one
+     piece of grounding they can check without leaving the screen. */
+  conversation: (raw, _value, t) => {
+    const observation = typeof raw.observation === 'string' ? raw.observation.trim() : ''
+    return observation ? t('tch.why.goalConversation', { observation }) : null
   },
   no_evidence: (_raw, _value, t) => t('tch.why.noEvidence'),
   // The engine emitted no signal at all — say so, rather than dressing a

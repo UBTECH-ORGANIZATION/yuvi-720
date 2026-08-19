@@ -110,6 +110,7 @@ describe('counts that read like a language', () => {
     'tch.assistant.action.draftGoal',
     'tch.assistant.action.approveGoals',
     'tch.assistant.action.ackAlerts',
+    'tch.assistant.action.meetStudents',
     'tch.assistant.form.assign',
     'tch.assistant.form.goalDoneSkipped',
     'tch.assistant.form.approvedAll',

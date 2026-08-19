@@ -44,10 +44,10 @@ export interface MentoringConversation {
 export function createMentoring(conv: MentoringConversation) {
   return apiPost<MentoringConversation>('/api/mentoring', conv)
 }
-export function listMentoring(role: 'teacher' | 'learner') {
-  return apiGet<{ conversations: MentoringConversation[] }>(
-    `/api/mentoring?role=${role}`
-  )
+/** The learner's own conversations. The viewer role is the server's to decide —
+ *  it used to be a query arg, which let the caller ask for the teacher's view. */
+export function listMentoring() {
+  return apiGet<{ conversations: MentoringConversation[] }>('/api/mentoring')
 }
 
 export function updateGoalProgress(

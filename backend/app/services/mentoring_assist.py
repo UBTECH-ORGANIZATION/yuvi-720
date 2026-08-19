@@ -755,21 +755,115 @@ async def ensure_goal_suggestion_indexes() -> None:
 
 # ── meeting preparation (F5, Phase 7) ────────────────────────────────────────
 
-_MEETING_SYSTEM = """You prepare a teacher for a one-to-one conversation with a \
-student. Write in {language}.
+#: Which `attention_all` rows may be handed to the prep model — an ALLOW-list,
+#: deliberately, because the one kind that must never appear here is the one a
+#: block-list would forget. `kind: "wellbeing"` carries the child's own words
+#: from a distress disclosure (`insights.py`), and handing that to a model to
+#: paraphrase puts a private sentence — possibly a WRONG private sentence — on
+#: a sheet the teacher reads with the child walking toward them. The presence
+#: of such a flag still reaches the sheet, through `wellbeing_open`; the words
+#: stay on the profile, behind the affordance built for them.
+_BEHAVIOUR_KINDS = frozenset({
+    "inactivity", "low_success", "slow_progress",
+    "rapid_guessing", "wheel_spinning", "overdue_goal", "help_requested",
+})
 
-You are given only real observations about this student. Rules:
-- Every question and every insight must follow from an observation you were given. \
-Do not invent events, scores or history.
-- Questions are for the student to answer, open and non-accusatory. "What makes \
-fractions feel hard?" — not "Why did you fail three times?".
-- Never compare this student to anyone else.
-- If the observations are thin, produce fewer items rather than padding.
+_MEETING_SYSTEM = """You are an experienced pedagogical adviser preparing a \
+teacher for a one-to-one conversation with a student. They will read what you \
+write in the thirty seconds before that student sits down. Write in {language}.
+
+You are given `observations`, all of them real. `struggle_items`, \
+`objectives_progress` and `open_goals` say where this student STANDS. \
+`behaviour`, `recommendations` and `focus` say how they WORK and what the \
+platform would do next. `strengths`, `challenges` and `student_description` \
+say who they are.
+
+THE TEST EVERY LINE MUST PASS: read on its own, by someone who has seen none \
+of this data, is it clear WHAT was observed and WHY it is worth raising? \
+"In space, it is worth opening through the wish to succeed" fails — the \
+subject is a bare noun and "it" refers to nothing. "Fractions take a lot of \
+tries, but the same student explains mass and volume confidently — worth \
+asking what makes the difference" passes.
+
+- Ground every line in the observations. Never invent an event, a score, a \
+date or a trajectory. You have no history, so nothing improved, dropped or \
+changed over time.
+- WRITE IT SO IT STANDS ALONE. Name the subject, the topic or the behaviour in \
+full words. No bare labels, no pronoun without the thing it refers to, no \
+shorthand only the data explains.
+- One or two sentences, up to about 30 words. Long enough to carry the \
+context, short enough to read standing up. Prefer the shorter version that \
+still explains itself; a line the teacher has to decode is worse than a long \
+one.
+- LEAD WITH BEHAVIOUR AND STRATEGY, not with score-keeping. What they do when \
+it is hard, what they avoid, what they lean on, what already works. A teacher \
+can read the counts on the profile; they cannot read this anywhere.
+- A number earns its place only when it carries information: many tries on one \
+objective, a long silence, a streak. NEVER write a count that says nothing — \
+"0 of 1 goals", "0 days since the last event", "1 of 2".
+- Insights are for the TEACHER: the thing worth noticing, or what to steer the \
+conversation toward. At most one may restate the standing.
+- Questions are for the STUDENT, in the second person, and each is one move: \
+say the observation in plain words, then ask about THEIR experience of it — \
+what helps, what gets in the way, what it is like when it happens. Never two \
+questions in one, never "why did you", never an accusation.
+- Use the strengths. At least one question starts from something that already \
+works for this student and asks how to carry it into what does not.
+- Goal ideas are what the two of them could agree on, addressed to the student, \
+small enough to be true within a week, and each says what to DO — not what to \
+be better at.
+- If `wellbeing_open` is true, one insight may tell the teacher to leave room \
+for how the student is doing, without guessing at what they said.
+- Never compare this student to anyone else, and never turn a total into a \
+verdict ("weak", "behind").
+- GIVE THREE OF EACH. Three questions, three insights, three goal ideas, each \
+resting on a DIFFERENT observation. Fall to two only when there is genuinely \
+nothing else grounded to say, and never pad with a line that could have been \
+written about any student.
+- NEVER ASSUME THE STUDENT'S GENDER. You have not been told it. In Hebrew and \
+Arabic use gender-free phrasing, or the slash forms the platform already uses \
+("נסה/י", "תלמיד/ה"). Never a bare masculine "אתה" or a bare imperative.
+- `signal` must be exactly one of `valid_signals` — the key of the observation \
+the line rests on. A line whose signal is not in that list is discarded.
 
 Return JSON:
-{{"questions": [{{"text": "...", "signal": "<which observation key>"}}],
-  "insights":  [{{"text": "...", "signal": "<which observation key>"}}],
-  "goal_ideas":[{{"text": "...", "signal": "<which observation key>"}}]}}"""
+{{"questions": [{{"text": "...", "signal": "<one of valid_signals>"}}],
+  "insights":  [{{"text": "...", "signal": "<one of valid_signals>"}}],
+  "goal_ideas":[{{"text": "...", "signal": "<one of valid_signals>"}}]}}"""
+
+
+def _meeting_raw(signal: str, evidence: dict[str, Any]) -> dict[str, Any]:
+    """The `raw` the disclosure can turn into a sentence, per signal.
+
+    `describeSignal` writes one localized line per signal from a shape it knows
+    — `{"labels": [...]}` for the objective lists, `{"observation": "..."}` for
+    the description. Handing it the evidence object verbatim, which is what
+    this did, made it fall through to the generic renderer and print the
+    payload the model was given. The row still cites the same signal; it just
+    arrives in the shape the reader speaks.
+    """
+    value = evidence.get(signal)
+    if signal == "struggle_items":
+        return {"labels": [item.get("label") for item in (value or []) if item.get("label")],
+                "items": value or []}
+    if signal == "strengths":
+        return {"labels": [str(item) for item in (value or []) if item]}
+    if signal == "challenges":
+        return {"challenges": list(value or [])}
+    if signal == "open_goals":
+        return {"labels": [goal.get("title") for goal in (value or []) if goal.get("title")]}
+    if signal == "student_description":
+        return {"observation": " ".join(str(value or "").split())[:200]}
+    if signal == "behaviour":
+        return {"labels": [item.get("observed") for item in (value or [])
+                           if item.get("observed")]}
+    if signal == "recommendations":
+        return {"labels": [row.get("text") for row in (value or []) if row.get("text")]}
+    if signal == "focus":
+        return {"observation": (value or {}).get("objective_title") or ""}
+    # `objectives_progress`, `activity` and `self_awareness_gap` are already
+    # small keyed objects the renderer reads directly.
+    return value if isinstance(value, dict) else {"value": value}
 
 
 def _meeting_fallback(language: str, evidence: dict[str, Any]) -> dict[str, Any]:
@@ -813,18 +907,104 @@ def _meeting_fallback(language: str, evidence: dict[str, Any]) -> dict[str, Any]
     return {"questions": questions, "insights": insights_out, "goal_ideas": goals}
 
 
+MEETING_PREP_COLLECTION = "meeting_prep"
+
+#: A week. The sheet is grounded in a term's worth of learning, not in this
+#: morning — and regenerating it on every composer open cost a model call per
+#: open and, worse, handed the teacher three DIFFERENT things to raise each
+#: time they looked. Prep a teacher cannot rely on is prep they stop reading.
+#: The window is deliberately long for the same reason `goal_suggestions` is
+#: cached at all: suggestions that change under you are suggestions you learn
+#: to disbelieve.
+_PREP_TTL_SECONDS = 7 * 24 * 60 * 60
+
+#: Part of the id, so a prompt change makes old rows unreachable rather than
+#: mixing two generations of wording in one class. v1: the sheet was rewritten
+#: to quote the numbers from the learnings map. v2: one short sentence per
+#: line. v3: behaviour and strategy over score-keeping — v2 quoted the counts
+#: faithfully and produced "0 of 1 learning goals", which is bookkeeping a
+#: teacher can already read on the profile. v4: lines that stand on their own,
+#: three per band — v3 bought its brevity with sentences only the data
+#: explained, and lost most of its rows to invented citation keys. v5:
+#: gender-free — v4 addressed every child as "אתה".
+_PREP_VERSION = "v5"
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _prep_cache_id(learner_id: str, language: str) -> str:
+    """Keyed by the LEARNER, not the teacher.
+
+    Two teachers preparing for the same child should read the same sheet — it
+    is a reading of that child's learning, not of who is about to talk to them
+    — and the second one should not pay for it again.
+    """
+    return f"{learner_id}|{language}|{_PREP_VERSION}"
+
+
+def _prep_is_fresh(document: dict[str, Any] | None) -> bool:
+    if not document or not document.get("generated_at"):
+        return False
+    try:
+        made = datetime.fromisoformat(str(document["generated_at"]))
+    except ValueError:
+        return False
+    if made.tzinfo is None:
+        made = made.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - made).total_seconds() < _PREP_TTL_SECONDS
+
+
+async def _load_meeting_prep(cache_id: str) -> dict[str, Any] | None:
+    from app.brain.repository import _get_collection_named
+    collection = _get_collection_named(MEETING_PREP_COLLECTION)
+    if collection is None:
+        return None
+    try:
+        return await collection.find_one({"_id": cache_id})
+    except Exception:      # pragma: no cover — a cache miss is not an error
+        return None
+
+
+async def _store_meeting_prep(cache_id: str, document: dict[str, Any]) -> None:
+    from app.brain.repository import _get_collection_named
+    collection = _get_collection_named(MEETING_PREP_COLLECTION)
+    if collection is None:
+        return
+    try:
+        await collection.update_one({"_id": cache_id},
+                                    {"$set": {"_id": cache_id, **document}}, upsert=True)
+    except Exception as exc:      # pragma: no cover — never fail the request
+        print(f"⚠️ meeting prep not cached: {type(exc).__name__}: {exc}")
+
+
 async def suggest_meeting_prep(
     learner_id: str,
     teacher_id: str,
     *,
     language: str = "he",
+    refresh: bool = False,
 ) -> dict[str, Any]:
     """What to ask, what to say, and what to aim at — each with its `because`.
 
     Grounded in the same `teacher_assistant` brain view as the goal suggestions,
     so a meeting sheet can never reference something the teacher cannot open.
+
+    Cached for a week (see `_PREP_TTL_SECONDS`). `refresh=True` is the explicit
+    "this is out of date" door; nothing calls it on a page load.
     """
     language = language if language in _LANG_NAME else "he"
+    cache_id = _prep_cache_id(learner_id, language)
+
+    if not refresh:
+        cached = await _load_meeting_prep(cache_id)
+        if _prep_is_fresh(cached) and cached is not None:
+            return {"questions": cached.get("questions") or [],
+                    "insights": cached.get("insights") or [],
+                    "goal_ideas": cached.get("goal_ideas") or [],
+                    "generated_at": cached.get("generated_at"),
+                    **({"unavailable": True} if cached.get("unavailable") else {})}
 
     from app.brain.context_engine import AgentScopeError, view_for
     from app.services import insights
@@ -841,9 +1021,33 @@ async def suggest_meeting_prep(
     evidence: dict[str, Any] = {
         "struggle_items": [
             {"objective_id": item.get("objective_id"), "label": item.get("label"),
-             "evidence": item.get("evidence")}
+             "subject": item.get("subject"),
+             "evidence": item.get("evidence"),
+             # The counts, not only the label. Without them the model can say
+             # "there is difficulty in mass and volume", which the teacher
+             # already knew; with them it can say "80 right out of 164 tries",
+             # which is a sentence worth opening a conversation with.
+             **{key: (item.get("raw_evidence") or {}).get(key)
+                for key in ("attempts", "successes", "failures", "level")
+                if (item.get("raw_evidence") or {}).get(key) is not None},
+             }
             for item in (student.get("struggle_items") or [])
         ][:4],
+        # The learnings map: how much of each subject's objectives this learner
+        # has actually mastered. The one place the prep can say what MOVED.
+        "objectives_progress": {
+            subject: {
+                "mastered": row.get("objectives_mastered"),
+                "total": row.get("objectives_total"),
+                "in_progress": row.get("objectives_in_progress"),
+                "percent": row.get("percent"),
+            }
+            for subject, row in (student.get("objectives_progress") or {}).items()
+            if row.get("objectives_total")
+        },
+        # Whether they are here at all, and when they last were. A prep sheet
+        # that ignores a fortnight of silence is preparing the wrong meeting.
+        "activity": student.get("activity") or {},
         "strengths": [
             item.get("label") if isinstance(item, dict) else str(item)
             for item in (student.get("strengths_detail") or [])
@@ -855,26 +1059,74 @@ async def suggest_meeting_prep(
             {"title": goal.get("title"), "stage": goal.get("progress_stage")}
             for goal in (view.get("goals") or []) if not goal.get("approved_by")
         ][:3],
+        # ── how this learner WORKS, not how much they have done ──────────────
+        # The counts above say where a learner stands. These say what they do
+        # when it gets hard — going round in circles on one objective, guessing
+        # fast, sitting on a question for eleven minutes, letting a deadline
+        # pass. That is the material a conversation is actually made of, and
+        # the sheet was preparing teachers without it.
+        "behaviour": [
+            {"kind": item.get("kind"), "observed": item.get("evidence"),
+             **{key: (item.get("raw_evidence") or {}).get(key)
+                for key in ("objective_id", "objective_title", "opportunities",
+                            "fail_streak", "days_inactive", "rapid_guesses",
+                            "elapsed_seconds")
+                if (item.get("raw_evidence") or {}).get(key) is not None}}
+            for item in (student.get("attention_all") or [])
+            if item.get("kind") in _BEHAVIOUR_KINDS
+        ][:4],
+        # The platform's own pedagogical reading, already categorised the way
+        # the ministry categorises it (practise / reinforce / deepen / refer)
+        # and already naming the topic. A prep sheet that ignores it is asking
+        # a model to re-derive, worse, what the system already decided.
+        "recommendations": [
+            {"category": row.get("category"), "text": row.get("text")}
+            for row in (student.get("recommendations") or [])
+        ][:4],
+        # Where the platform would take this child next — the same "next" the
+        # child's own dashboard shows, so a goal agreed in the room and the
+        # goal the system is about to offer cannot contradict each other.
+        "focus": {key: (student.get("focus") or {}).get(key)
+                  for key in ("subject", "objective_title", "mode")
+                  if (student.get("focus") or {}).get(key)},
+        # Presence only, never the words. What a child disclosed to Yuvi is on
+        # the profile behind its own affordance; a prep card repeating it would
+        # put a private sentence in front of whoever is standing behind the
+        # teacher — and a model paraphrasing it would put a WRONG one there.
+        "wellbeing_open": bool(student.get("wellbeing_flags")),
     }
 
+    # `objectives_progress` counts too: a learner who has mastered nine of
+    # twenty objectives and struggles with none is a real, preparable
+    # conversation — the sheet used to call that "no observations".
     has_evidence = any(evidence[key] for key in
-                       ("struggle_items", "strengths", "challenges", "open_goals")) \
+                       ("struggle_items", "strengths", "challenges", "open_goals",
+                        "objectives_progress", "behaviour", "recommendations")) \
         or _has_description(evidence["student_description"])
     if not has_evidence:
-        return {
+        # Cached too, and for the same week. "There is nothing to prepare from"
+        # is an answer worth not recomputing on every composer open.
+        empty = {
             "questions": [], "insights": [], "goal_ideas": [],
             "unavailable": True,
             "because": {"signal": "no_evidence", "value": None,
                         "raw": {"reason": "no_observations_for_this_learner"}},
         }
+        await _store_meeting_prep(cache_id, {**empty, "generated_at": _now_iso()})
+        return empty
 
     try:
         raw = await call_llm(
             [
                 {"role": "system",
                  "content": _MEETING_SYSTEM.format(language=_LANG_NAME[language])},
-                {"role": "user", "content": json.dumps(evidence, ensure_ascii=False,
-                                                       default=str)},
+                # The valid citations are named, not left to be inferred from
+                # the payload's shape. A row whose `signal` is not a real key
+                # is dropped below, and the model was quietly losing two of
+                # every three lines to invented key names.
+                {"role": "user", "content": json.dumps(
+                    {"observations": evidence, "valid_signals": sorted(evidence)},
+                    ensure_ascii=False, default=str)},
             ],
             usage_context=UsageContext(
                 actor_id=teacher_id,
@@ -904,15 +1156,399 @@ async def suggest_meeting_prep(
                 out.append({
                     "text": (getattr(screened, "text", None) or text).strip(),
                     "because": {"signal": signal, "value": None,
-                                "raw": evidence.get(signal)},
+                                "raw": _meeting_raw(signal, evidence)},
                 })
             return out
 
         result = {"questions": _rows("questions"), "insights": _rows("insights"),
                   "goal_ideas": _rows("goal_ideas")}
         if any(result.values()):
-            return result
+            generated_at = _now_iso()
+            await _store_meeting_prep(cache_id, {**result, "generated_at": generated_at})
+            return {**result, "generated_at": generated_at}
     except Exception as exc:
         print(f"⚠️ meeting prep suggestion failed: {type(exc).__name__}: {exc}")
 
+    # The deterministic sheet is NOT cached: it is what we fall back to when the
+    # model was unavailable, and storing it for a week would keep answering with
+    # the fallback long after the model came back.
     return _meeting_fallback(language, evidence)
+
+
+# ── teacher-facing guided writing (F5) ───────────────────────────────────────
+
+# The learner's `guide_documentation` writes in the child's first person: "I
+# felt", "we decided". A teacher writing up the same conversation is a
+# different voice about a different subject — they are recording what a student
+# said, not saying it — so this cannot reuse that prompt. What it does reuse is
+# the shape: one question at a time, chips to tap, a draft rebuilt from the
+# answers, and a stop.
+#
+# The no-invention rule is carried over word for word, and matters MORE here.
+# A model that fills a gap in a child's own account writes a sentence they
+# might have said; a model that fills a gap here fabricates what a child said
+# to their teacher, inside a record the child can read.
+_TEACHER_DOC_SYSTEM = (
+    "You help a TEACHER write up a one-to-one conversation they have just had "
+    "with a student. This is NOT a free chat — you are a GUIDED WRITING "
+    "assistant. You receive the questions already asked, the teacher's answers "
+    "so far, and the current draft.\n"
+    "Write in {language}.\n"
+    "VOICE: the teacher is writing. Refer to the student in the THIRD person "
+    "and to the teacher in the first ('דיברנו על…', 'היא סיפרה ש…'). NEVER "
+    "write in the student's first person — no 'הרגשתי', no 'אני'. This is a "
+    "record about a student, not a diary by one.\n"
+    "The student's name is never given to you and must never be invented: "
+    "write 'התלמיד/ה' or the equivalent, and the screen fills the name in.\n"
+    "Do TWO things:\n"
+    "(1) Write the FULL draft: a short professional write-up, 2 to 6 lines, "
+    "plain language, using ONLY what the teacher actually answered. NEVER "
+    "invent what the student said, felt or agreed to. This is the record of a "
+    "real conversation and the student can read it — a plausible sentence "
+    "nobody said is a false record, not a helpful draft. If a draft already "
+    "exists, keep the teacher's wording and build on it.\n"
+    "EVERY SENTENCE MUST CARRY A FACT. A sentence that only reports that a "
+    "topic came up is padding and must not be written: never 'the student "
+    "spoke about a difficulty', never 'the student described the difficulty', "
+    "never 'we discussed the matter'. If all you know is that a subject came "
+    "up, do not write a sentence about it — ASK what it was instead. A "
+    "three-line draft that says three real things beats a six-line one that "
+    "says the conversation happened.\n"
+    "(2) If more would genuinely help, offer ONE short next question plus 2 to "
+    "4 quick-choice options the teacher can tap.\n"
+    "THE OPTIONS ARE ANSWERS, NOT PROMPTS. Each one must be a complete, "
+    "plausible ANSWER to the question you just asked, in the teacher's own "
+    "voice, ready to be written into the record as it stands ('שהחומר מרגיש "
+    "לה גדול מדי', 'שהיא מתביישת לשאול מול הכיתה'). NEVER offer an option "
+    "that is itself a question or a topic label ('how they described it', "
+    "'what might help', 'something else') — the teacher taps it and it becomes "
+    "their answer, so a topic label becomes a sentence that says nothing.\n"
+    "DIG IN RATHER THAN MOVE ON. When the teacher names a difficulty, a "
+    "behaviour or an achievement in general terms, your next question asks for "
+    "the specific: which topic, which moment, what the student actually said, "
+    "what has already been tried. Move to the next area only once the current "
+    "one holds something concrete. Across the questions aim to cover: what was "
+    "discussed, what the student said or how they explained it, what was "
+    "agreed, and what the teacher will watch for before the next conversation. "
+    "Do NOT ask how the student felt — a feeling is the student's to report, "
+    "not the teacher's to record.\n"
+    "Use your OWN judgment about when enough is written: when the key points "
+    "are covered, or the answers become short or repetitive, STOP — set phase "
+    "to 'ready' and return an EMPTY question and EMPTY options. Usually 3 to 5 "
+    "questions is plenty; never loop, never re-ask something already answered.\n"
+    "No grades, no scores, no other students, no private details.\n"
+    "Return ONLY JSON: "
+    '{{"draft": "<the full write-up so far>", "question": "<one short question>", '
+    '"options": ["<short chip>", "<short chip>", "<short chip>"], '
+    '"phase": "asking" | "ready"}}. '
+    "Always answer in {language}."
+)
+
+# Deliberately four steps, matching the coverage the prompt asks for, with the
+# feeling step of `_GUIDE` replaced by what the student said. A teacher
+# documenting a talk has no feeling of their own to file.
+#
+# Every option is a finished ANSWER, phrased the way a teacher would write it
+# into the record — because tapping one IS the answer. The first version mixed
+# in topic labels ("on a difficulty", "something else"), and a topic label
+# filed as an answer produces exactly the write-up this whole prompt exists to
+# prevent: "the student spoke about a difficulty". "Something else" is gone as
+# well; the composer already carries a "in my own words" button, which is the
+# honest version of the same escape hatch.
+_TEACHER_GUIDE = {
+    "he": [
+        {"q": "על מה דיברתם בשיחה?",
+         "options": ["על משהו שהצליח לאחרונה", "על חומר שמרגיש קשה",
+                     "על מה שקורה בשיעור עצמו", "על מה שרוצים לשפר עד השיחה הבאה"]},
+        {"q": "מה התלמיד/ה סיפר/ה, במילים שלו/ה?",
+         "options": ["שקשה להתרכז לאורך זמן", "שהחומר מרגיש גדול מדי",
+                     "שמתביישים לשאול מול הכיתה", "שכשמבינים את השלב הראשון השאר זורם"]},
+        {"q": "מה סיכמתם יחד?",
+         "options": ["לפרק כל משימה לשלבים לפני שמתחילים", "לשאול את יובי לפני שמוותרים",
+                     "לתרגל קצת בכל יום במקום הרבה בבת אחת", "לשבת שוב בעוד שבועיים"]},
+        {"q": "על מה תשימו לב עד השיחה הבאה?",
+         "options": ["אם מבקשים עזרה כשנתקעים", "אם המשימות מוגשות בזמן",
+                     "אם ההתמדה נשמרת גם בימים עמוסים", "אם ההשתתפות בשיעור עולה"]},
+    ],
+    "ar": [
+        {"q": "عمّ تحدثتم في المحادثة؟",
+         "options": ["عن شيء نجح مؤخرًا", "عن مادة تبدو صعبة",
+                     "عمّا يجري داخل الحصة نفسها", "عمّا نريد تحسينه حتى المحادثة القادمة"]},
+        {"q": "ماذا قال الطالب/ة بكلماته الخاصة؟",
+         "options": ["أن التركيز لوقت طويل صعب", "أن المادة تبدو كبيرة جدًا",
+                     "أن السؤال أمام الصف محرج", "أنه حين يفهم الخطوة الأولى يسير الباقي"]},
+        {"q": "ماذا اتفقتم عليه معًا؟",
+         "options": ["تقسيم كل مهمة إلى خطوات قبل البدء", "سؤال يوفي قبل الاستسلام",
+                     "التدرّب قليلًا كل يوم بدل الكثير دفعة واحدة", "الجلوس معًا بعد أسبوعين"]},
+        {"q": "ما الذي ستنتبهون له حتى المحادثة القادمة؟",
+         "options": ["إن طلب المساعدة عند التعثّر", "إن سُلّمت المهام في وقتها",
+                     "إن استمرت المثابرة في الأيام المزدحمة", "إن ازدادت المشاركة في الحصة"]},
+    ],
+    "en": [
+        {"q": "What did you talk about?",
+         "options": ["Something that went well recently", "Material that feels hard",
+                     "What happens during the lesson itself",
+                     "What to improve before the next conversation"]},
+        {"q": "What did the student say, in their own words?",
+         "options": ["That concentrating for long is hard", "That the material feels too big",
+                     "That asking in front of the class is embarrassing",
+                     "That once the first step makes sense the rest follows"]},
+        {"q": "What did you agree together?",
+         "options": ["Break every task into steps before starting",
+                     "Ask Yuvi before giving up",
+                     "Practise a little daily rather than a lot at once",
+                     "Sit down together again in two weeks"]},
+        {"q": "What will you watch for before the next conversation?",
+         "options": ["Whether they ask for help when stuck",
+                     "Whether tasks are handed in on time",
+                     "Whether persistence holds on busy days",
+                     "Whether participation in class goes up"]},
+    ],
+}
+
+_TEACHER_MORE_Q = {
+    "he": "יש עוד משהו שכדאי לתעד מהשיחה?",
+    "ar": "هل هناك شيء آخر يستحق التوثيق من المحادثة؟",
+    "en": "Anything else worth recording from the conversation?",
+}
+_TEACHER_MORE_OPTS = {
+    "he": ["הקשר מהבית או מהכיתה", "מה ניסינו כבר", "משהו במילים שלי"],
+    "ar": ["سياق من البيت أو الصف", "ما جرّبناه سابقًا", "شيء بكلماتي"],
+    "en": ["Context from home or class", "What we already tried", "Something in my words"],
+}
+
+
+def _fallback_teacher_guide(
+    language: str, qa: list[dict[str, str]], more: bool = False
+) -> dict[str, Any]:
+    """The scripted walk, for when the model is unavailable.
+
+    Same contract as `_fallback_guide`: the draft is the teacher's own answers
+    joined together — honest, if plain — and the script stops rather than
+    looping once it is exhausted.
+    """
+    guide = _TEACHER_GUIDE.get(language, _TEACHER_GUIDE["he"])
+    answers = [pair["a"] for pair in qa if pair.get("a")]
+    draft = "\n".join(answers)[:800]
+    index = len(answers)
+    if index < len(guide):
+        item = guide[index]
+        return {"draft": draft, "question": item["q"],
+                "options": list(item["options"]), "phase": "asking"}
+    if more:
+        return {
+            "draft": draft,
+            "question": _TEACHER_MORE_Q.get(language, _TEACHER_MORE_Q["he"]),
+            "options": list(_TEACHER_MORE_OPTS.get(language, _TEACHER_MORE_OPTS["he"])),
+            "phase": "asking",
+        }
+    return {"draft": draft, "question": "", "options": [], "phase": "ready"}
+
+
+async def guide_teacher_documentation(
+    teacher_id: str,
+    *,
+    language: str = "he",
+    qa: Any = None,
+    notes: str = "",
+    more: bool = False,
+    **_ignore: Any,
+) -> dict[str, Any]:
+    """One turn of the teacher's guided write-up.
+
+    Same `{draft, question, options, phase, ai}` contract as the learner's
+    `guide_documentation`, so one composer shape serves both. The difference is
+    entirely the voice and the questions.
+    """
+    language = language if language in _LANG_NAME else "he"
+    pairs = _clean_qa(qa)
+
+    try:
+        llm_messages: list[dict[str, str]] = [
+            {"role": "system", "content": _TEACHER_DOC_SYSTEM.format(language=_LANG_NAME[language])},
+        ]
+        if notes.strip():
+            llm_messages.append({
+                "role": "system",
+                "content": "Context (do not repeat verbatim): draft so far: "
+                           + notes.strip()[:400],
+            })
+        if pairs:
+            transcript = "\n\n".join(f"Q: {p['q']}\nA: {p['a']}" for p in pairs)
+            user = "Questions asked and the teacher's answers so far:\n" + transcript
+            if more:
+                user += (
+                    "\n\nThe teacher tapped 'ask me another question' — offer ONE fresh, "
+                    "different question (not already asked) with new options."
+                )
+        else:
+            user = (
+                "[The teacher just opened the writing helper and the draft is empty. "
+                "Give a first question with 2-4 quick options; keep the draft empty.]"
+            )
+        llm_messages.append({"role": "user", "content": user})
+
+        raw = await call_llm(
+            llm_messages,
+            usage_context=UsageContext(
+                actor_id=teacher_id,
+                actor_type="teacher",
+                endpoint="/api/teacher/students/{id}/mentoring/assist",
+                feature="feature_5_mentoring",
+                operation="teacher.mentoring_documentation",
+                source="mentoring_assist",
+            ),
+            max_tokens=480,
+            json_mode=True,
+            model_tier="mini",
+        )
+        data = json.loads(raw or "{}") or {}
+        draft = str(data.get("draft") or "").strip()
+        question = str(data.get("question") or "").strip()
+        options = [str(o).strip() for o in (data.get("options") or []) if str(o).strip()][:4]
+        phase = "ready" if str(data.get("phase")) == "ready" else "asking"
+        if draft or question:
+            from app.agents.safety import screen_output
+            if draft:
+                draft = screen_output(draft, language).text or draft
+            if question:
+                question = screen_output(question, language).text or question
+            return {"draft": draft, "question": question,
+                    "options": options, "phase": phase, "ai": True}
+    except Exception as exc:      # never break the composer — fall back
+        print(f"⚠️ teacher mentoring assist failed: {type(exc).__name__}")
+
+    return {**_fallback_teacher_guide(language, pairs, more), "ai": False}
+
+
+# ── goals grounded in the conversation just written (F5) ─────────────────────
+
+# Distinct from the two generators that already exist, and it has to be:
+#   * `recommend_goal` reads what a CHILD wrote and answers in the child's
+#     voice, one goal, learner-side;
+#   * `suggest_goals_for_teacher` reads OBSERVED evidence — mastery gaps,
+#     challenges, the student description — and never sees the conversation.
+# Neither can answer "what should come out of the talk we just had", which is
+# the whole premise of the mentoring page.
+#
+# Deliberately NOT cached. `goal_suggestions`' cache id is
+# `{learner}|{language}|{subject}|{version}` with no notes component, and its
+# fingerprint excludes free text on purpose — so routing these through it would
+# either return the evidence-flavoured goals under this heading or poison the
+# shared row. The anti-reroll property is preserved a different way: this is
+# called once on entering the goals step, and there is no button to ask again.
+_CONVERSATION_GOAL_SYSTEM = (
+    "A teacher has just written up a one-to-one conversation with a student. "
+    "Propose up to {count} small weekly goals that follow from THAT "
+    "conversation.\n"
+    "Write in {language}.\n"
+    "`title` and `next_steps` are read by the STUDENT. Address the student in "
+    "the second person, and describe an action THE STUDENT performs — never "
+    "something the teacher does for them. In gendered languages use "
+    "gender-inclusive second person (Hebrew: נסה/י, תסתכל/י).\n"
+    "Every goal is an action the student takes INSIDE the learning platform, "
+    "something the system can watch happen: open a lesson and practise a named "
+    "topic; complete an assigned task; use a hint when stuck instead of "
+    "guessing; ask Yuvi to explain something before answering; try a question "
+    "again after a wrong answer; come back to learn on more days.\n"
+    "Never suggest study techniques the platform cannot see — saying things "
+    "out loud, imagining, working with paper. A goal like that can never be "
+    "checked off, so it must not be suggested.\n"
+    "Ground every goal ONLY in what the write-up actually says. If the "
+    "conversation does not support a goal, return fewer — or none at all. Do "
+    "not invent a difficulty, a topic or an agreement that is not written "
+    "there.\n"
+    "`rationale` is read by the TEACHER only: one short sentence on why this "
+    "follows from the conversation.\n"
+    "`quote` is the phrase FROM THE WRITE-UP the goal came out of, copied "
+    "verbatim and kept short — it is what lets the teacher check the goal "
+    "against what they wrote.\n"
+    'Return JSON: {{"goals": [{{"title": str, "next_steps": str, '
+    '"rationale": str, "quote": str, "action": {{"kind": str, '
+    '"target": int}}}}]}}.\n'
+    "`action.kind` is exactly one of: use_hint, ask_yuvi, retry_after_wrong, "
+    "practice, complete_task, active_days. `action.target` is how many times "
+    "within the week — small and honest (2-5 for most kinds, 2-6 for "
+    "active_days), and it must match what the goal text literally asks."
+)
+
+
+async def suggest_goals_from_conversation(
+    learner_id: str,
+    teacher_id: str,
+    *,
+    language: str = "he",
+    notes: str = "",
+    count: int = 3,
+) -> list[dict[str, Any]]:
+    """Goals that follow from the write-up the teacher just produced.
+
+    Returns the same draft shape the goals step already renders — `title`,
+    `next_steps`, `rationale`, `deadline`, `action`, `because`, `ai` — so the
+    existing card renders these beside the evidence-grounded ones with no new
+    component.
+
+    Returns `[]` rather than inventing anything: with no notes, or a model that
+    failed, there is nothing this function knows. `suggest_goals_for_teacher`
+    makes the same choice when it has no evidence, and for the same reason —
+    a suggestion with nothing behind it is worse than an empty column.
+    """
+    language = language if language in _LANG_NAME else "he"
+    notes = (notes or "").strip()
+    if len(notes) < 20:
+        return []
+    count = max(1, min(int(count or 3), 5))
+    deadline = (date.today() + timedelta(days=7)).isoformat()
+
+    try:
+        raw = await call_llm(
+            [
+                {"role": "system", "content": _CONVERSATION_GOAL_SYSTEM.format(
+                    language=_LANG_NAME[language], count=count)},
+                {"role": "user", "content": "The write-up of the conversation:\n"
+                                            + notes[:1500]},
+            ],
+            usage_context=UsageContext(
+                actor_id=teacher_id,
+                actor_type="teacher",
+                endpoint="/api/teacher/students/{id}/mentoring/goal-ideas",
+                feature="feature_5_mentoring",
+                operation="teacher.goals_from_conversation",
+                source="mentoring_assist",
+            ),
+            max_tokens=700,
+            json_mode=True,
+            model_tier="mini",
+        )
+        data = json.loads(raw or "{}") or {}
+    except Exception as exc:
+        print(f"⚠️ conversation goal suggestion failed: {type(exc).__name__}")
+        return []
+
+    from app.agents.safety import screen_output
+
+    drafts: list[dict[str, Any]] = []
+    for item in (data.get("goals") or [])[:count]:
+        if not isinstance(item, dict):
+            continue
+        title = str(item.get("title") or "").strip()
+        if not title:
+            continue
+        quote = str(item.get("quote") or "").strip()[:200]
+        drafts.append({
+            "title": (screen_output(title, language).text or title).strip(),
+            "next_steps": str(item.get("next_steps") or "").strip(),
+            "rationale": str(item.get("rationale") or "").strip(),
+            "deadline": deadline,
+            # Normalized against the closed vocabulary, so an invented action
+            # degrades to an untracked goal rather than a broken one.
+            "action": goal_progress.normalize_action(item.get("action")),
+            "ai": True,
+            # A new signal: the grounding is the teacher's own sentence, which
+            # is the one piece of evidence they can check without leaving the
+            # screen. `describeSignal` needs a matching entry for "conversation".
+            "because": {"signal": "conversation", "value": None,
+                        "raw": {"observation": quote}} if quote else
+                       {"signal": "no_evidence", "value": None, "raw": {}},
+        })
+    return drafts
