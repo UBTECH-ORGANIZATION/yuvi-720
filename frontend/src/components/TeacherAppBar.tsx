@@ -135,5 +135,17 @@ export function TeacherAppBar() {
     </div>
   )
 
-  return <AppBar center={navigation} leading={<ScopeControl />} trailing={trailing} />
+  /* 1310, not the default 1200: the scope segments make this bar wider than a
+     learner's, and below that the navigation and the scope overlap rather than
+     either of them giving way. Folding the nav sooner is the right trade —
+     scope is what the teacher must always be able to see. Measured, not
+     guessed: raise the nav's spacing and this number has to move with it. */
+  return (
+    <AppBar
+      center={navigation}
+      leading={<ScopeControl />}
+      trailing={trailing}
+      compactBelow={1310}
+    />
+  )
 }

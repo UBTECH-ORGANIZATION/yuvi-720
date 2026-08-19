@@ -158,13 +158,18 @@
    one opens under the thing that was clicked. */
 .tch-scope__pop { inset-inline-start: 0; }
 
-@media (max-width: 1100px) {
-  /* The class is the segment a teacher already knows; a filter they have set is
-     the one they might have forgotten. So the class gives up room first, and
-     only while something is actually narrowed. */
-  .tch-scope:has(.is-narrowed) .tch-scope__seg:first-child .tch-scope__value {
-    max-inline-size: 8ch;
-  }
+/* The class is the segment a teacher already knows; a filter they have set is
+   the one they might have forgotten. So the class is what gives up room, at any
+   width — with three segments in the bar something has to, and it must not be
+   the narrowing. */
+.tch-scope__seg:first-child { min-inline-size: 0; flex: 0 1 auto; }
+.tch-scope__seg:not(:first-child) { flex: none; }
+
+/* Below this the bar cannot hold a long class name, the three segments and the
+   full navigation at once. The class is what shortens — a teacher knows which
+   class they are in; they may well have forgotten which subject is filtered. */
+@media (max-width: 1400px) {
+  .tch-scope__seg:first-child .tch-scope__value { max-inline-size: 12ch; }
   .tch-scope__trigger { padding-inline: var(--sp-2); }
 }
 
