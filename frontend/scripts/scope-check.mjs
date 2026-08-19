@@ -36,14 +36,18 @@ try {
   await page.goto(`${BASE}/teacher`, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tch-stat', { timeout: 30000 })
   await page.waitForTimeout(1200)
-  await page.locator('.tch-scope__trigger').click()
+  const segs = await page.locator('.tch-scope__value').allInnerTexts()
+  check('every dimension is visible on the bar without opening anything',
+        segs.some((v) => v.includes('כל המקצועות')), segs.join(' | '))
+  await page.keyboard.press('Escape')
+  await page.locator('.tch-scope__seg', { hasText: 'כל המקצועות' })
+    .locator('.tch-scope__trigger').click()
   await page.waitForSelector('.tch-scope__pop')
-  const legends = await page.locator('.tch-scope__legend').allInnerTexts()
-  check('Home offers the subject even though Home ignores it', legends.includes('מקצוע'),
-        legends.join(' | '))
   await page.locator('.tch-scope__option', { hasText: 'מתמטיקה' }).first().click()
   await page.waitForTimeout(1200)
-  check('the chip is lit', await page.locator('.tch-scope__chip').count() === 1)
+  check('the subject segment now reads the subject, on the bar itself',
+        (await page.locator('.tch-scope__seg.is-narrowed .tch-scope__value').innerText())
+          .includes('מתמטיקה'))
   const notice = await page.locator('.tch-scopeNotice').innerText().catch(() => '')
   check('and Home says it does not use it', notice.includes('מקצוע'), JSON.stringify(notice))
   await page.screenshot({ path: `${OUT}/V-home-notice.png`, clip: { x: 500, y: 0, width: 1000, height: 260 } })
@@ -63,20 +67,21 @@ try {
   await page.locator('.tch-learnings__filters .tch-chip', { hasText: 'מדעים' }).first().click()
   await page.waitForTimeout(900)
   check('and clicking a chip there updates the bar',
-        (await page.locator('.tch-scope__chip').innerText()).includes('מדעים'),
-        await page.locator('.tch-scope__chip').innerText())
+        (await page.locator('.tch-scope__seg.is-narrowed .tch-scope__value').innerText())
+          .includes('מדעים'))
 
   // ── the tasks row is the same filter ────────────────────────────────────
   await page.goto(`${BASE}/teacher/tasks`, { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(2500)
   check('the tasks screen carries the same subject',
-        (await page.locator('.tch-scope__chip').innerText().catch(() => '')).includes('מדעים'))
+        (await page.locator('.tch-scope__seg.is-narrowed .tch-scope__value').innerText()
+           .catch(() => '')).includes('מדעים'))
 
   // ── the profile: class shown, switching would leave for the roster ──────
   await page.goto(`${BASE}/teacher/student/demo-ari`, { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(3000)
   check('the profile shows the class as well as the subject',
-        (await page.locator('.tch-scope__class').innerText()).includes('כיתה'),
+        (await page.locator('.tch-scope__value').first().innerText()).includes('כיתה'),
         await page.locator('.tch-scope').innerText())
   await page.screenshot({ path: `${OUT}/V-profile.png`, clip: { x: 500, y: 0, width: 1000, height: 200 } })
 

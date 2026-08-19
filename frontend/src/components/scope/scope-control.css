@@ -15,7 +15,7 @@
   align-items: center;
   gap: var(--sp-1);
   padding: var(--sp-2) var(--sp-3);
-  border: 1px solid transparent;
+  border: 0;
   border-radius: var(--sp-radius-pill);
   background: transparent;
   color: var(--sp-ink-700);
@@ -35,43 +35,41 @@
 .tch-scope__trigger--static { cursor: default; padding-inline: var(--sp-2); }
 .tch-scope__trigger--static:hover { background: transparent; }
 
-/* Something is filtered. The border is the third of the four redundant signals
-   (pill, this, the per-segment clear, and the scope-aware empty states), and it
-   is the one that survives when the chips scroll out of a narrow bar. */
-.tch-scope__trigger.is-narrowed {
+/* One segment: its value, its caret, and its ✕ when it is filtering. They share
+   a background so a narrowed segment reads as one pill rather than a button
+   with a stray button beside it. */
+.tch-scope__seg {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--sp-radius-pill);
+  min-inline-size: 0;
+}
+
+/* Something is filtered. Loud on purpose, and readable without opening
+   anything: the value is on the segment, not behind it. */
+.tch-scope__seg.is-narrowed {
   border-color: var(--sp-primary-300, var(--sp-primary-100));
   background: var(--sp-primary-100);
   color: var(--sp-primary-700);
 }
 
-/* The class name gives up room before anything else does: it is the segment a
-   teacher already knows, and the narrowing is the one they might not. */
-.tch-scope__class {
+.tch-scope__seg.is-narrowed .tch-scope__trigger { color: var(--sp-primary-700); }
+.tch-scope__seg.is-narrowed .tch-scope__trigger:hover { background: transparent; }
+
+/* The value never truncates on a narrowed segment: a filter a teacher cannot
+   finish reading is one they cannot act on. An unset segment may shrink. */
+.tch-scope__value {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-inline-size: 0;
 }
 
-.tch-scope__caret { flex: none; opacity: 0.6; }
+.tch-scope__seg.is-narrowed .tch-scope__value { overflow: visible; }
 
-.tch-scope__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-1);
-  padding-block: var(--sp-1);
-  padding-inline: var(--sp-2) var(--sp-1);
-  border-radius: var(--sp-radius-pill);
-  background: var(--sp-primary-100);
-  color: var(--sp-primary-700);
-  font-size: var(--sp-fs-sm);
-  font-weight: var(--sp-fw-semibold);
-  /* Deliberately no `max-inline-size` and no ellipsis: a warning a teacher
-     cannot finish reading is not a warning. If the bar is too narrow for the
-     whole sentence, the class name above shrinks and this stays whole. */
-  white-space: nowrap;
-  flex: none;
-}
+.tch-scope__caret { flex: none; opacity: 0.6; }
 
 .tch-scope__clear {
   display: inline-flex;
@@ -88,6 +86,7 @@
   opacity: 0.7;
 }
 
+.tch-scope__clear { margin-inline-end: var(--sp-1); }
 .tch-scope__clear:hover { background: var(--sp-surface); opacity: 1; }
 .tch-scope__clear:focus-visible { outline: var(--sp-ring); opacity: 1; }
 
@@ -155,12 +154,17 @@
 
 .tch-scope__option:has(input:focus-visible) { outline: var(--sp-ring); }
 
-@media (max-width: 900px) {
-  /* The class name is context the teacher already has; the narrowing is not, so
-     the class is what gives up room. Only when a chip is actually there,
-     though — dropping it unconditionally left an empty 18px control on a
-     teacher with one class and nothing narrowed. */
-  .tch-scope:has(.tch-scope__chip) .tch-scope__class { display: none; }
+/* The segment's list hangs off the segment, not off the whole control, so each
+   one opens under the thing that was clicked. */
+.tch-scope__pop { inset-inline-start: 0; }
+
+@media (max-width: 1100px) {
+  /* The class is the segment a teacher already knows; a filter they have set is
+     the one they might have forgotten. So the class gives up room first, and
+     only while something is actually narrowed. */
+  .tch-scope:has(.is-narrowed) .tch-scope__seg:first-child .tch-scope__value {
+    max-inline-size: 8ch;
+  }
   .tch-scope__trigger { padding-inline: var(--sp-2); }
 }
 

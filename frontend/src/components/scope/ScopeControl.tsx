@@ -6,17 +6,23 @@
  * permanently null), and the sub-group was re-fetched and re-encoded by six
  * screens with no memory between them.
  *
- * It reads as a sentence and stays quiet when nothing is narrowed:
+ * One visible segment per dimension, each showing what it is currently set to
+ * and opening only its own list:
  *
- *     ז׳2                          ← just the class: plain ink, no decoration
- *     ז׳2 · [קבוצת חיזוק ×] · [מתמטיקה ×]
+ *     [ז׳2 ⌄] [כל הכיתה ⌄] [כל המקצועות ⌄]      ← nothing narrowed: plain ink
+ *     [ז׳2 ⌄] [קבוצת חיזוק ✕] [מתמטיקה ✕]       ← narrowed: filled, clearable
+ *
+ * NOT one trigger opening a sheet with all three inside. That version was built
+ * first and failed the only requirement that mattered: a teacher looking at the
+ * bar could not tell whether a subject was set without clicking. "Always show
+ * the subject and class filter" means on the screen, not one click away.
  *
  * The narrowed segments are loud on purpose. All three parts persist to the
- * user document now, so a teacher can arrive on Monday still filtered to six
+ * user document, so a teacher can arrive on Monday still filtered to six
  * children from last Tuesday and read the whole portal as the truth about their
- * class. Four things guard against that: the filled pill, the accent on the
- * trigger, a clear on each segment, and — elsewhere — every scope-caused empty
- * state naming the scope and offering to clear it.
+ * class. What guards against that: the filled segment, its own ✕, the value
+ * being readable without opening anything, and — on screens that do not narrow
+ * by it — the notice that says so.
  *
  * It sits in the bar's LEADING slot, beside the logo. Not `center`: under
  * 1200px that collapses into an aria-hidden sheet behind a hamburger, which is
@@ -25,18 +31,11 @@
  * (`.teacher-app-scope__field`) clamped it to `8ch` — which is where a scope
  * stops being a sentence.
  *
- * Every segment is shown on every teacher screen. An earlier version hid the
- * ones a screen could not narrow by, and that was worse than the problem it
- * solved: the student profile hides class and sub-group, so when its subject
- * list failed to load the whole control vanished — and a control that is not
- * there is indistinguishable from one that is broken.
- *
- * Nothing is hidden and nothing is silently ignored: `scopeDimensions.ts` says
- * what each screen narrows by, and a dimension that is SET but not narrowed by
- * is announced on the screen itself (see `ScopeNotice`). Setting it still
- * works from anywhere — scope is one thing for the whole portal, and choosing
- * maths on Home is a choice that applies the moment the teacher opens a
- * profile or the learnings list.
+ * Every segment shows on every teacher screen, and can be set from every
+ * teacher screen: scope is one thing for the whole portal, and choosing maths
+ * on Home is a choice that applies the moment the teacher opens a profile. A
+ * screen that does not narrow by a dimension says so instead of ignoring it
+ * quietly — see `ScopeNotice` and `scopeDimensions.ts`.
  */
 
 import { useRef, useState } from 'react'
@@ -49,6 +48,8 @@ import { Icon } from '../primitives'
 import { narrowsBy } from './scopeDimensions'
 import './scope-control.css'
 
+type Dimension = 'class' | 'subgroup' | 'subject'
+
 export function ScopeControl() {
   const pathname = useRoute()
   const { t } = useI18n()
@@ -58,13 +59,15 @@ export function ScopeControl() {
     subjects, subject, setSubject,
   } = useTeacherScope()
 
-  const [isOpen, setIsOpen] = useState(false)
+  /* Which segment's list is open, if any. One at a time — two open lists in a
+     bar this size sit on top of each other. */
+  const [open, setOpen] = useState<Dimension | null>(null)
   const wrapper = useRef<HTMLDivElement>(null)
-  useDismiss(wrapper, isOpen, () => setIsOpen(false))
+  useDismiss(wrapper, open !== null, () => setOpen(null))
 
   const narrows = narrowsBy(pathname)
 
-  /* Shown because the teacher has a class, a subject list and sub-groups — not
+  /* Shown because the teacher HAS a class, sub-groups and a subject list — not
      because this screen happens to use them. The only thing that hides a
      segment is having nothing to put in it. */
   const showClass = Boolean(groupId)
@@ -74,16 +77,6 @@ export function ScopeControl() {
   /* The admin console: no class, nothing to scope. */
   if (!showClass && !showSubgroup && !showSubject) return null
 
-  /* A teacher with one class, no sub-groups and no subject list has nothing to
-     choose. The control still renders, because the class name is the frame
-     every screen is read inside, but as a line rather than a button that opens
-     an empty sheet. */
-  const canOpen = (showClass && groups.length > 1) || showSubgroup || showSubject
-
-  const narrowedSubgroup = subgroup
-  const narrowedSubject = subject
-  const isNarrowed = Boolean(narrowedSubgroup || narrowedSubject)
-
   /* On a screen that is not about a class, picking one has to go somewhere: the
      child whose profile is open is not in the class just chosen, so staying put
      would leave the bar and the page describing different people. */
@@ -92,151 +85,153 @@ export function ScopeControl() {
     if (!narrows.class) navigate('/teacher/students')
   }
 
-  /* The class is always the lead, on every screen — it is the frame the whole
-     portal is read inside, and a bar that dropped it on a profile left a lone
-     caret with nothing beside it. */
-  const lead = showClass ? (group?.name ?? '') : t('tch.scope.label')
-
-  const segments = (
-    <>
-      <span className="tch-scope__class">{lead}</span>
-      {canOpen && <Icon name="chevronDown" size={14} aria-hidden className="tch-scope__caret" />}
-    </>
-  )
-
   return (
-    /* `data-tour` on the WRAPPER, not the trigger: a teacher with one class and
-       no sub-groups gets a `<span>` below, and anchoring the tour to a button
-       that does not exist would make the step a silent no-op for exactly the
-       people with the simplest setup. */
+    /* `data-tour` on the WRAPPER rather than on a segment: a teacher with one
+       class renders that segment as a `<span>`, and anchoring the tour to a
+       button that does not exist would make the step a silent no-op for exactly
+       the people with the simplest setup. */
     <div className="tch-scope" ref={wrapper} data-tour="teacher.scope">
-      {canOpen ? (
-        <button
-          type="button"
-          className={`tch-scope__trigger${isNarrowed ? ' is-narrowed' : ''}`}
-          aria-expanded={isOpen}
-          aria-haspopup="dialog"
-          aria-label={t('tch.scope.label')}
-          onClick={() => setIsOpen((open) => !open)}
-        >
-          {segments}
-        </button>
-      ) : (
-        <span className="tch-scope__trigger tch-scope__trigger--static">{segments}</span>
+      {showClass && (
+        <Segment
+          dimension="class"
+          legend={t('tch.scope.group')}
+          /* The class is never "cleared" — a teacher is always looking at one —
+             so it carries no ✕ and never reads as a filter that is on. */
+          label={group?.name ?? ''}
+          narrowed={false}
+          open={open}
+          setOpen={setOpen}
+          value={groupId ?? ''}
+          options={groups.map((row) => ({ value: row.id, label: row.name }))}
+          onPick={pickClass}
+        />
       )}
 
-      {/* One chip per narrowing, each with its own way out. Never truncated:
-          a warning you cannot finish reading is not a warning. */}
-      {narrowedSubgroup && (
-        <span className="tch-scope__chip">
-          <span className="tch-scope__chipLabel">{narrowedSubgroup.name}</span>
-          <button
-            type="button"
-            className="tch-scope__clear"
-            aria-label={t('tch.scope.clearSubgroup', { name: narrowedSubgroup.name })}
-            onClick={() => setSubgroupId(null)}
-          >
-            <Icon name="close" size={12} aria-hidden />
-          </button>
-        </span>
-      )}
-      {narrowedSubject && (
-        <span className="tch-scope__chip">
-          <span className="tch-scope__chipLabel">{subjectLabel(narrowedSubject, t)}</span>
-          <button
-            type="button"
-            className="tch-scope__clear"
-            aria-label={t('tch.scope.clearSubject', {
-              name: subjectLabel(narrowedSubject, t),
-            })}
-            onClick={() => setSubject(null)}
-          >
-            <Icon name="close" size={12} aria-hidden />
-          </button>
-        </span>
+      {showSubgroup && (
+        <Segment
+          dimension="subgroup"
+          legend={t('tch.scope.subgroup')}
+          label={subgroup?.name ?? t('tch.subgroups.wholeClass')}
+          narrowed={Boolean(subgroup)}
+          clearLabel={subgroup
+            ? t('tch.scope.clearSubgroup', { name: subgroup.name }) : undefined}
+          onClear={() => setSubgroupId(null)}
+          open={open}
+          setOpen={setOpen}
+          value={subgroupId ?? ''}
+          options={[
+            { value: '', label: t('tch.subgroups.wholeClass') },
+            ...subgroups.map((row) => ({
+              value: row.id,
+              label: t('tch.scope.subgroupOption', { name: row.name, count: row.size }),
+            })),
+          ]}
+          onPick={(value) => setSubgroupId(value || null)}
+        />
       )}
 
-      {isOpen && canOpen && (
-        <div className="tch-scope__pop" role="dialog" aria-label={t('tch.scope.label')}>
-          {showClass && groups.length > 1 && (
-            <Choice
-              legend={t('tch.scope.group')}
-              name="tch-scope-group"
-              value={groupId ?? ''}
-              options={groups.map((row) => ({ value: row.id, label: row.name }))}
-              onPick={(value) => { pickClass(value); setIsOpen(false) }}
-            />
-          )}
-          {showSubgroup && (
-            <Choice
-              legend={t('tch.scope.subgroup')}
-              name="tch-scope-subgroup"
-              value={subgroupId ?? ''}
-              options={[
-                { value: '', label: t('tch.subgroups.wholeClass') },
-                ...subgroups.map((row) => ({
-                  value: row.id,
-                  label: t('tch.scope.subgroupOption', { name: row.name, count: row.size }),
-                })),
-              ]}
-              onPick={(value) => { setSubgroupId(value || null); setIsOpen(false) }}
-            />
-          )}
-          {showSubject && (
-            <Choice
-              legend={t('tch.scope.subject')}
-              name="tch-scope-subject"
-              value={subject ?? ''}
-              options={[
-                { value: '', label: t('tch.scope.allSubjects') },
-                ...subjects.map((entry) => ({
-                  value: entry, label: subjectLabel(entry, t),
-                })),
-              ]}
-              onPick={(value) => { setSubject(value || null); setIsOpen(false) }}
-            />
-          )}
-        </div>
+      {showSubject && (
+        <Segment
+          dimension="subject"
+          legend={t('tch.scope.subject')}
+          label={subject ? subjectLabel(subject, t) : t('tch.scope.allSubjects')}
+          narrowed={Boolean(subject)}
+          clearLabel={subject
+            ? t('tch.scope.clearSubject', { name: subjectLabel(subject, t) }) : undefined}
+          onClear={() => setSubject(null)}
+          open={open}
+          setOpen={setOpen}
+          value={subject ?? ''}
+          options={[
+            { value: '', label: t('tch.scope.allSubjects') },
+            ...subjects.map((entry) => ({ value: entry, label: subjectLabel(entry, t) })),
+          ]}
+          onPick={(value) => setSubject(value || null)}
+        />
       )}
     </div>
   )
 }
 
-/* One dimension: pick exactly one of a set. Native radios rather than a styled
-   listbox — arrow-key navigation, the group semantics and the announced
-   "3 of 5" all come free, and none of them survive a div wearing a role. */
-function Choice({ legend, name, value, options, onPick }: {
+/** One dimension: what it is set to, and the list of what it could be. */
+function Segment({
+  dimension, legend, label, narrowed, clearLabel, onClear,
+  open, setOpen, value, options, onPick,
+}: {
+  dimension: Dimension
   legend: string
-  name: string
+  label: string
+  narrowed: boolean
+  clearLabel?: string
+  onClear?: () => void
+  open: Dimension | null
+  setOpen: (next: Dimension | null) => void
   value: string
   options: { value: string; label: string }[]
   onPick: (value: string) => void
 }) {
+  const isOpen = open === dimension
+  /* Only one real option means there is nothing to choose. The segment still
+     renders — its value is the frame the screen is read inside — but as a line
+     rather than a button that opens a list of one. */
+  const canOpen = options.length > 1
+
   return (
-    <fieldset className="tch-scope__group">
-      <legend className="tch-scope__legend">{legend}</legend>
-      {options.map((option) => (
-        <label
-          key={option.value || '__all'}
-          className={`tch-scope__option${option.value === value ? ' is-picked' : ''}`}
-          /* `change` does not fire when the already-checked radio is clicked,
-             so picking what is already picked left the sheet open with no
-             response — the one click a teacher makes to say "yes, this one,
-             now go away". `onPick` is idempotent, so calling it from both is
-             safe whichever order the events arrive in. */
-          onClick={() => onPick(option.value)}
+    <span className={`tch-scope__seg${narrowed ? ' is-narrowed' : ''}`}>
+      {canOpen ? (
+        <button
+          type="button"
+          className="tch-scope__trigger"
+          aria-expanded={isOpen}
+          aria-haspopup="dialog"
+          aria-label={`${legend}: ${label}`}
+          onClick={() => setOpen(isOpen ? null : dimension)}
         >
-          <input
-            type="radio"
-            name={name}
-            value={option.value}
-            checked={option.value === value}
-            onChange={() => onPick(option.value)}
-          />
-          <span dir="auto">{option.label}</span>
-          {option.value === value && <Icon name="check" size={14} aria-hidden />}
-        </label>
-      ))}
-    </fieldset>
+          <span className="tch-scope__value" dir="auto">{label}</span>
+          <Icon name="chevronDown" size={14} aria-hidden className="tch-scope__caret" />
+        </button>
+      ) : (
+        <span className="tch-scope__trigger tch-scope__trigger--static">
+          <span className="tch-scope__value" dir="auto">{label}</span>
+        </span>
+      )}
+
+      {narrowed && clearLabel && onClear && (
+        <button type="button" className="tch-scope__clear"
+                aria-label={clearLabel} onClick={onClear}>
+          <Icon name="close" size={12} aria-hidden />
+        </button>
+      )}
+
+      {isOpen && canOpen && (
+        <div className="tch-scope__pop" role="dialog" aria-label={legend}>
+          <fieldset className="tch-scope__group">
+            <legend className="tch-scope__legend">{legend}</legend>
+            {options.map((option) => (
+              <label
+                key={option.value || '__all'}
+                className={`tch-scope__option${option.value === value ? ' is-picked' : ''}`}
+                /* `change` does not fire when the already-checked radio is
+                   clicked, so picking what is already picked left the list open
+                   with no response — the one click a teacher makes to say "yes,
+                   this one, now go away". `onPick` is idempotent, so firing
+                   from both is safe in whichever order the events arrive. */
+                onClick={() => { onPick(option.value); setOpen(null) }}
+              >
+                <input
+                  type="radio"
+                  name={`tch-scope-${dimension}`}
+                  value={option.value}
+                  checked={option.value === value}
+                  onChange={() => { onPick(option.value); setOpen(null) }}
+                />
+                <span dir="auto">{option.label}</span>
+                {option.value === value && <Icon name="check" size={14} aria-hidden />}
+              </label>
+            ))}
+          </fieldset>
+        </div>
+      )}
+    </span>
   )
 }
