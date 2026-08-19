@@ -347,7 +347,7 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
         <AgentsDiagram />
       </div>
 
-      <section className="landing720-journey" id="how" data-Yuvi-reveal>
+      <section className="landing720-journey" id="how" data-Yuvi-stop="journey" data-Yuvi-reveal>
         <header className="landing720-section-head">
           <span className="landing720-eyebrow">{t('landing.journey.eyebrow')}</span>
           <h2>{t('landing.journey.title')}</h2>
@@ -428,7 +428,7 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
         </article>
       </section>
 
-      <section className="landing720-audience" id="audience" data-Yuvi-reveal>
+      <section className="landing720-audience" id="audience" data-Yuvi-stop="audience" data-Yuvi-reveal>
         <header className="landing720-section-head">
           <span className="landing720-eyebrow">{t('landing.audience.eyebrow')}</span>
           <h2>{t('landing.audience.title')}</h2>

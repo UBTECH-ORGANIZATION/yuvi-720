@@ -790,6 +790,16 @@ async def run_coach_stream(
         prompt_text = screened.text or FALLBACK_REPLY[lang]
         memory_user = prompt_text
 
+        # The Safety classifier needs the immediately preceding tutoring turns
+        # to distinguish a valid choice such as "like an address" from a
+        # disclosure. It bounds and PII-redacts the window before provider use.
+        try:
+            history = await sessions.get_recent(
+                learner_id, "coach", limit=8, session_id=session_id
+            )
+        except Exception:
+            history = []
+
         # Cross-cutting Safety gate: distress / personal-PII disclosures get a
         # disclosure + redirect instead of a normal answer. Distress also raises a
         # teacher wellbeing flag (learner's own words as evidence). Academic
@@ -800,6 +810,7 @@ async def run_coach_stream(
             prompt_text,
             lang,
             usage_context=usage_context.for_operation("safety.disclosure_classification"),
+            recent_conversation=history,
         )
         if category in ("distress", "personal"):
             if category == "distress":
@@ -817,9 +828,10 @@ async def run_coach_stream(
         prompt_text = PROACTIVE_PROMPTS.get(trigger or "idle", PROACTIVE_PROMPTS["idle"])[lang]
         memory_user = f"[proactive:{trigger}]"
 
-    history = await sessions.get_recent(
-        learner_id, "coach", limit=8, session_id=session_id
-    )
+    if user_message is None:
+        history = await sessions.get_recent(
+            learner_id, "coach", limit=8, session_id=session_id
+        )
     base_intent = (
         f"support_{support_mode}" if support_mode in SUPPORT_PROMPTS
         else classify_query_intent(prompt_text, lang) if user_message is not None

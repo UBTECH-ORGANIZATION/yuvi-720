@@ -199,8 +199,9 @@ export function YuviRobot3D({
     })
     const jointMat = new THREE.MeshPhysicalMaterial({ color: 0x2b2560, roughness: 0.34, metalness: 0.75, envMapIntensity: 1.15, clearcoat: 0.5, clearcoatRoughness: 0.28 })
     const whiteMat = new THREE.MeshPhysicalMaterial({ color: 0x342c6d, roughness: 0.4, metalness: 0.3, envMapIntensity: 1.05, clearcoat: 0.7, clearcoatRoughness: 0.24, sheen: 0.4, sheenColor: new THREE.Color(0x7c6bff) })
-    const faceMat = new THREE.MeshPhysicalMaterial({ color: 0x07061a, roughness: 0.07, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 1.5 })
-    const visorSheenMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.085, depthTest: false, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending })
+    const faceMat = new THREE.MeshPhysicalMaterial({ color: 0x07061a, roughness: 0.3, metalness: 0, clearcoat: 0.35, clearcoatRoughness: 0.22, envMapIntensity: 0.25 })
+    const matteFaceMat = new THREE.MeshBasicMaterial({ color: 0x07061a, toneMapped: false })
+    const visorSheenMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.07, depthWrite: false, toneMapped: false })
     const glowMat = new THREE.MeshBasicMaterial({ color: 0x4eeef0 })
     const ringMat = new THREE.MeshStandardMaterial({ color: 0x3fd9e0, emissive: 0x3fd9e0, emissiveIntensity: 1.8, roughness: 0.3, toneMapped: false })
     const earCapMat = new THREE.MeshStandardMaterial({ color: 0x3fd9e0, emissive: 0x3fd9e0, emissiveIntensity: 0.6, roughness: 0.3, toneMapped: false })
@@ -595,7 +596,7 @@ export function YuviRobot3D({
     const visorSheen = makeFlatRoundedRect(0.78, 0.11, 0.055, visorSheenMat)
     visorSheen.position.set(-0.05, 0.14, 0.472)
     visorSheen.rotation.z = -0.2
-    visorSheen.renderOrder = 9
+    visorSheen.renderOrder = 6
     head.add(visorSheen)
 
     const faceGlow = new THREE.PointLight(0x4eeef0, 0.28, 1.1)
@@ -797,6 +798,7 @@ export function YuviRobot3D({
     let armRZ = 0.095
     let lastAccessoryT = 0
     let frame = 0
+    let usingMatteFace = false
     const loop = () => {
       frame = requestAnimationFrame(loop)
       if (container.offsetParent === null) return
@@ -843,6 +845,12 @@ export function YuviRobot3D({
       const waving = isWaving || isEntryWaving
       const atEdge = isWaving || isSettling
       const leanActive = isWaving || isSettling || isRetreating
+      const suppressFaceReflection = leanActive || isEntryWaving
+      visorSheen.visible = !suppressFaceReflection
+      if (usingMatteFace !== suppressFaceReflection) {
+        screen.material = suppressFaceReflection ? matteFaceMat : faceMat
+        usingMatteFace = suppressFaceReflection
+      }
       const gait = Math.sin(t * 8.2)
 
       // Intro stage: Yuvi peeks + waves from the left corner, slides back out of

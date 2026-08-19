@@ -269,7 +269,7 @@
 [dir='rtl'] .sd-button--directional .sp-icon { transform: scaleX(-1); }
 .sp-state .sd-button--primary { background: var(--sp-primary-600); color: #fff; }
 .sd-journey-hero__tip { display: inline-flex; align-items: center; gap: 8px; max-inline-size: 470px; margin-block-start: 14px; padding: 7px 13px; border: 1px solid rgba(90, 78, 150, .16); border-radius: var(--sp-radius-pill); background: rgba(244, 243, 252, .7); color: var(--sp-ink-400); }
-.sd-journey-hero__tip-text { min-inline-size: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--sp-fs-xs); line-height: 1.45; }
+.sd-journey-hero__tip-text { min-inline-size: 0; overflow-wrap: anywhere; font-size: var(--sp-fs-xs); line-height: 1.45; }
 .sd-journey-hero__tip strong { color: #a9740c; font-weight: 700; }
 /* A "lit" amber bulb: soft glow behind, light rays gently pulsing outward. */
 .sd-journey-hero__tip-bulb { position: relative; flex: none; display: grid; place-items: center; inline-size: 20px; block-size: 20px; color: #eaa32e; }

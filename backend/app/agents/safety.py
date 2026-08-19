@@ -222,6 +222,8 @@ def disclosure(language: str = "he") -> str:
 _MAX_WELLBEING_FLAGS = 30
 
 _DISCLOSURE_CATEGORIES = ("none", "frustration", "personal", "interest", "distress")
+_DISCLOSURE_CONTEXT_TURNS = 4
+_DISCLOSURE_CONTEXT_CHARS = 500
 
 # The deep-flow test caught the classifier's worst failure mode live: a routine
 # "קשה לי עם השאלה הזאת, אני לא מבין איך להתחיל" was labeled distress, so the
@@ -243,7 +245,12 @@ _CLASSIFY_PROMPT = {
         "'I can't do it / this is hard / I don't understand / I want to quit' about a TASK or SUBJECT is frustration, never distress.",
         "distress requires harm to the child as a person or their relationships — not difficulty with learning material.",
         "When genuinely ambiguous between frustration and distress, choose distress.",
-        "'personal' is only for private facts with no distress.",
+        "'personal' is only for a private fact about the learner or family with no distress. Do not use it merely because the learner says they have, carry, like, or choose an ordinary object.",
+        "Use recent_conversation only to understand the current learning exchange. A learner repeating, selecting, or paraphrasing the tutor's immediately preceding example or choice is ordinary learning talk, not personal, unless the learner supplies a concrete identifying detail.",
+        "Words such as 'address' and 'phone number' can be educational concepts or tutor-provided examples. Classify them as personal only when the learner actually shares a private fact about themselves or family.",
+        "Examples that are NONE, not personal: 'I have my phone', 'my backpack and house keys', 'a phone and a notebook', or choosing one of those objects in a learning exercise. These name ordinary possessions and reveal no identifying or sensitive private fact.",
+        "Hebrew examples that are NONE, not personal: 'כמו כתובת', 'אני אראה דברים כמו הכתובת', 'הכתובת של הנקודה היא 3, 2', 'טלפון נייד', and 'המפתחות של הבית'. Here כתובת means an abstract learning concept, not the learner's home address.",
+        "Examples that are PERSONAL: an actual home address, phone number, email address, identity number, or a private family fact such as 'my mother is pregnant'.",
     ],
 }
 
@@ -257,8 +264,14 @@ async def classify_disclosure(
     language: str,
     *,
     usage_context: "UsageContext",
+    recent_conversation: Optional[list[dict[str, object]]] = None,
 ) -> str:
     """Return none|frustration|interest|personal|distress for a learner message.
+
+    ``recent_conversation`` is a small role-tagged window ending before this
+    learner turn. It gives the classifier the immediate tutoring context, but
+    is redacted and bounded here so callers cannot accidentally send a full
+    transcript or raw identifiers to the provider.
 
     LLM-driven (no brittle keyword lists). Fails CLOSED (B-8): if the model is
     unreachable the category is "review" — the reply continues normally, but a
@@ -273,6 +286,9 @@ async def classify_disclosure(
         payload = dict(_CLASSIFY_PROMPT)
         payload["output_language"] = language
         payload["message"] = message
+        context = _disclosure_context_window(recent_conversation)
+        if context:
+            payload["recent_conversation"] = context
         raw = await call_llm(
             [{"role": "user", "content": _json_dumps(payload)}],
             usage_context=usage_context,
@@ -282,6 +298,24 @@ async def classify_disclosure(
         return category if category in _DISCLOSURE_CATEGORIES else "none"
     except Exception:
         return "review"
+
+
+def _disclosure_context_window(
+    turns: Optional[list[dict[str, object]]],
+) -> list[dict[str, str]]:
+    """Return the smallest privacy-safe history useful to a turn classifier."""
+    window: list[dict[str, str]] = []
+    for turn in (turns or [])[-_DISCLOSURE_CONTEXT_TURNS:]:
+        if not isinstance(turn, dict):
+            continue
+        role = str(turn.get("role") or "")
+        if role not in {"user", "assistant"}:
+            continue
+        content, _ = strip_pii(str(turn.get("content") or ""))
+        content = " ".join(content.split())[:_DISCLOSURE_CONTEXT_CHARS]
+        if content:
+            window.append({"role": role, "content": content})
+    return window
 
 
 async def record_classifier_outage(learner_id: str, language: str) -> None:
