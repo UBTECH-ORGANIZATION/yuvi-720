@@ -8,36 +8,6 @@
 .tch-home__subtitle { margin: var(--sp-1) 0 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
 .tch-home__dot { unicode-bidi: isolate; white-space: pre; }
 
-/* The class picker IS the page title: same type, plus an affordance chevron.
-   A teacher switches class here, on the dashboard — not in the chrome. */
-.tch-home__classPick { position: relative; display: inline-flex; align-items: center; }
-
-.tch-home__classPick select {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  font: inherit;
-  font-size: var(--sp-fs-2xl);
-  font-weight: var(--sp-fw-bold);
-  color: var(--sp-ink-900);
-  letter-spacing: -0.01em;
-  padding: 0 var(--sp-1);
-  padding-inline-end: 26px;
-  cursor: pointer;
-  border-radius: var(--sp-radius-sm);
-}
-
-.tch-home__classPick select:hover { background: var(--sp-bg-subtle); }
-.tch-home__classPick select:focus-visible { outline: 2px solid var(--sp-primary-600); outline-offset: 2px; }
-
-.tch-home__classChevron {
-  position: absolute;
-  inset-inline-end: 4px;
-  color: var(--sp-ink-400);
-  pointer-events: none;
-  transform: rotate(180deg);
-}
-
 /* Flat lists: rows separate themselves with hairlines, the container adds none. */
 .tch-home__attention { display: grid; gap: 0; }
 

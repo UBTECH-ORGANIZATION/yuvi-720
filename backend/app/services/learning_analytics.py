@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import asyncio
 import re
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 # The MoE xAPI sub-content id: `…/item-id#q3` means question 3 of that screen.
 _SUB_CONTENT_ID = re.compile(r"^q(\d+)$", re.IGNORECASE)
@@ -372,6 +372,61 @@ def _activity_view(component_id: str, agg: dict[str, Any], group_size: int) -> d
     }
 
 
+def _subjects_of(rows: Iterable[dict[str, Any]]) -> list[str]:
+    """The subjects a set of learning rows names, in a stable order.
+
+    One definition, because two callers must agree exactly: the learnings screen
+    lists these as its own filter, and the scope bar offers them portal-wide. A
+    bar that offers a subject this set does not contain narrows a screen to
+    nothing and gives the teacher no way to see why.
+    """
+    return sorted({row["subject"] for row in rows if row.get("subject")})
+
+
+# The subject list is chrome: the scope bar reads it on every teacher page
+# load, and it is folded from every learner's rows, so an uncached read would
+# put the cost of opening the learnings screen behind opening any screen at all.
+# What it answers changes about as often as the catalogue does — a class that
+# starts a new subject sees it within the window.
+_SUBJECTS_CACHE_TTL = 10 * 60
+_subjects_cache: dict[tuple[str, str], tuple[float, list[str]]] = {}
+
+
+async def class_subjects(group_id: str, *, language: str = "he") -> list[str]:
+    """Every subject this class has material or history in.
+
+    Deliberately per class and from observed rows rather than from the catalogue
+    alone. ``kata_client.subject_from_objective`` collapses anything that is not
+    SCI or MATH into ``other``, so the catalogue cannot name English — the only
+    place a real subject beyond that trio surfaces is a component the class
+    worked in that the catalogue no longer publishes, which is exactly what the
+    fold below picks up and the spine does not.
+    """
+    import time
+
+    from app.brain import org
+    from app.services import kata_catalog
+
+    key = (group_id, language)
+    cached = _subjects_cache.get(key)
+    if cached and cached[0] > time.monotonic():
+        return list(cached[1])
+
+    try:
+        await kata_catalog.ensure_loaded()
+    except Exception:
+        pass  # the spine degrades to empty; the observed rows still stand
+
+    spine = _catalog_spine(language)
+    folded = _fold(await _per_learner_rows(await org.learners_in_group(group_id), None))
+    subjects = _subjects_of([
+        *spine.values(),
+        *(agg for component_id, agg in folded.items() if component_id not in spine),
+    ])
+    _subjects_cache[key] = (time.monotonic() + _SUBJECTS_CACHE_TTL, subjects)
+    return list(subjects)
+
+
 async def group_learnings(
     group_id: str,
     *,
@@ -426,6 +481,11 @@ async def group_learnings(
             "evidence": {},
         })
 
+    # Read the offered subjects BEFORE narrowing to one of them. Computed after,
+    # picking "math" left the list holding only "math" — the chips that had just
+    # been used to filter erased every other way back out.
+    subjects = _subjects_of(results)
+
     if subject:
         results = [row for row in results if not row.get("subject") or row["subject"] == subject]
 
@@ -443,7 +503,7 @@ async def group_learnings(
     return {
         "group_id": group_id,
         "subject": subject,
-        "subjects": sorted({row["subject"] for row in results if row.get("subject")}),
+        "subjects": subjects,
         "learnings": results,
         "totals": {
             "learnings": len(started),

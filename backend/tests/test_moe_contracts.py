@@ -290,7 +290,7 @@ class DeniedRequestsEmitNoLrsView(unittest.IsolatedAsyncioTestCase):
         from app.routes import teacher_students
 
         response, reporter = await self._call(
-            teacher_students.group_snapshot, group_id="group-x", language="he", subject=None)
+            teacher_students.group_snapshot, group_id="group-x", language="he")
         self.assertEqual(response.status_code, 403)
         reporter.assert_not_awaited()
 

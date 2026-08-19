@@ -3,7 +3,7 @@
 .teacher-app-nav {
   display: flex;
   align-items: center;
-  gap: var(--sp-1);
+  gap: var(--sp-2);
 }
 
 .teacher-app-nav button {
@@ -35,31 +35,46 @@
   gap: var(--sp-2);
 }
 
-.teacher-app-scope__field {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-1);
+
+/* ── the bar holds three things now ──────────────────────────────────────────
+   Scope moved into the leading slot, and a teacher with a class, a sub-group
+   and a subject puts three pills there.
+
+   The bar was `1fr auto 1fr`: the outer tracks share the leftover space
+   EQUALLY, so the left column was held to the same width as the account
+   cluster no matter what was in it. At 1500px that is a 419px track holding
+   470px of logo and scope — and since a grid item does not wrap its column, the
+   overflow ran straight through the navigation. There was never a shortage of
+   room: the whole bar measured 1270px inside 1500.
+
+   So the two content columns take what they need and the navigation takes the
+   rest. It centres inside that middle track rather than in the page, which is
+   the honest arrangement — the nav is what should move when scope grows, not
+   the thing scope is allowed to grow over.
+
+   Scoped to the teacher shell: the learner lane has one item in that slot and
+   no reason to change. */
+.sp-teacher-shell .app-bar {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.sp-teacher-shell .app-bar-left { min-inline-size: 0; }
+
+/* Where the scope ends and the navigation begins. Two groups of pills with
+   nothing between them read as one row of eleven things — the rule says which
+   of them answer "who am I looking at" and which answer "where am I". */
+.sp-teacher-shell .tch-scope {
+  padding-inline-end: var(--sp-3);
+  border-inline-end: 1px solid var(--sp-border);
+}
+
+/* Tighter than before, to buy that room back — seven items at the old padding
+   cost 578px, which is what pushed the bar past the width it had. The icon does
+   most of the work of telling these apart, so the padding either side of the
+   label is what gives, and the label itself is left alone: an icon-only nav is
+   unreadable to anyone who does not already know the icons. */
+.teacher-app-nav button {
   padding-inline: var(--sp-2);
-  border: 1px solid var(--sp-border);
-  border-radius: var(--sp-radius-pill);
-  background: var(--sp-surface);
-  color: var(--sp-ink-400);
-}
-
-.teacher-app-scope__field select {
-  border: 0;
-  background: transparent;
-  color: var(--sp-ink-700);
-  font: inherit;
-  font-size: var(--sp-fs-sm);
-  padding-block: var(--sp-2);
-  padding-inline-end: var(--sp-1);
-  max-inline-size: 12ch;
-  cursor: pointer;
-}
-
-.teacher-app-scope__field select:focus-visible { outline: var(--sp-ring); }
-
-@media (max-width: 900px) {
-  .teacher-app-scope__field select { max-inline-size: 8ch; }
+  gap: var(--sp-1);
+  white-space: nowrap;
 }

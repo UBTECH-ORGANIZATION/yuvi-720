@@ -117,11 +117,18 @@ try {
   const gapsText = await page.locator('[data-tour="teacher.gaps"]').innerText().catch(() => '')
   check('learning gaps zone present', gapsText.length > 0)
 
-  // ── class switching is a dashboard act (the chrome carries no dropdowns) ──
-  const classPick = page.locator('[data-tour="teacher.scope"]')
-  check('the class switcher lives in the dashboard header', await classPick.count() === 1)
-  check('the chrome itself has no scope dropdowns',
-        await page.locator('.teacher-app-scope select').count() === 0)
+  /* ── scope lives in the chrome ─────────────────────────────────────────────
+     This used to read "class switching is a dashboard act", and the picker was
+     the Home page title. It is one control in the bar now, because a teacher
+     reads the roster, the tasks and the calendar of a class too — and from any
+     of those, changing class meant going back to Home first. Exactly one
+     anchor, wherever it lives: two would make the tour spotlight a coin toss. */
+  check('there is exactly one scope control',
+        await page.locator('[data-tour="teacher.scope"]').count() === 1)
+  check('and it is in the app bar, beside the logo',
+        await page.locator('.app-bar-left [data-tour="teacher.scope"]').count() === 1)
+  check('Home no longer carries a picker of its own',
+        await page.locator('.tch-home__classPick').count() === 0)
 
   // ── roster ────────────────────────────────────────────────────────────────
   /* The roster has two views and remembers which one this teacher chose, so a
@@ -176,6 +183,12 @@ try {
 
   check('the goals card is on the page',
         await page.locator('#goals .tch-goalsCard').count() === 1)
+  /* The profile arrives in pieces now — six requests, each section revealed as
+     its own answers. So wait for the section rather than for a duration: the
+     fixed wait above measured the page mid-stream and reported the wellbeing
+     block and the doors as missing when they were merely still loading. */
+  await page.waitForSelector('#wellbeing', { timeout: 20000 }).catch(() => {})
+  await page.waitForSelector('.tch-student__more button', { timeout: 20000 }).catch(() => {})
   check('the wellbeing section is always mounted',
         await page.locator('#wellbeing').count() === 1)
   check('the work sits in two columns',

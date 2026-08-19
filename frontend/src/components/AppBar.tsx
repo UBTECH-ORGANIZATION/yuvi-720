@@ -12,11 +12,23 @@ import { UserMenu } from './UserMenu'
 interface AppBarProps {
   activeStep?: number
   center?: ReactNode
+  /** Rendered beside the logo. For chrome that must stay visible at every
+   *  width — `center` collapses into a hidden sheet behind the hamburger below
+   *  1200px, which is the wrong place for a filter that persists between
+   *  sessions (see `scope/ScopeControl.tsx`). */
+  leading?: ReactNode
   /** Rendered just before the user menu (e.g. the learner's spark balance). */
   trailing?: ReactNode
+  /** Below this width the navigation folds into the hamburger. Default 1200,
+   *  which is what a bar with a logo, a nav and an account cluster needs. A bar
+   *  carrying more in its leading slot needs to fold sooner — the teacher's,
+   *  with three scope segments, runs out at about 1265. */
+  compactBelow?: number
 }
 
-export function AppBar({ activeStep, center, trailing }: AppBarProps) {
+export function AppBar({
+  activeStep, center, leading, trailing, compactBelow = 1200,
+}: AppBarProps) {
   const { t } = useI18n()
   const [isNavigationOpen, setIsNavigationOpen] = useState(false)
   const [isCompact, setIsCompact] = useState(false)
@@ -31,11 +43,11 @@ export function AppBar({ activeStep, center, trailing }: AppBarProps) {
     }
 
     const observer = new ResizeObserver(([entry]) => {
-      setIsCompact(entry.contentRect.width < 1200)
+      setIsCompact(entry.contentRect.width < compactBelow)
     })
     observer.observe(appBar)
     return () => observer.disconnect()
-  }, [hasNavigation])
+  }, [hasNavigation, compactBelow])
 
   useEffect(() => {
     if (!isCompact) setIsNavigationOpen(false)
@@ -59,6 +71,7 @@ export function AppBar({ activeStep, center, trailing }: AppBarProps) {
         <div className="app-bar-brand" aria-label={t('app.brand')}>
           <BrandLogo />
         </div>
+        {leading}
       </div>
       {typeof activeStep === 'number' && (
         <div className="app-bar-steps app-bar-steps--progress">

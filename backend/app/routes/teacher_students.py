@@ -104,11 +104,18 @@ async def teacher_brief(
 @router.get("/groups/{group_id}/snapshot")
 async def group_snapshot(
     group_id: str,
-    subject: Optional[str] = Query(None),
     language: str = Query("he"),
     session=Depends(require_teacher_session),
 ):
-    """Group state: aggregate trends + per-student attention flags (F6 group §1)."""
+    """Group state: aggregate trends + per-student attention flags (F6 group §1).
+
+    Takes no `subject`: `group_insights` has no such parameter, so the one this
+    signature used to declare was accepted and dropped on the floor. Harmless
+    while the scope subject was permanently null, and a lie the moment a teacher
+    could set one — the screens that read this endpoint (Home, the roster) are
+    class-wide by design, and narrowing "who needs attention" by subject is a
+    pedagogy question, not plumbing. Tracked as its own ADO item.
+    """
     if not await _guard_group(session, group_id):
         return _denied()
     view = await insights.group_insights(group_id, normalize_language(language))
@@ -179,6 +186,27 @@ async def group_goals(group_id: str, session=Depends(require_teacher_session)):
 
     rows = await _asyncio.gather(*(_one(learner_id) for learner_id in learner_ids))
     return _ok({"learners": rows})
+
+
+@router.get("/groups/{group_id}/subjects")
+async def group_subjects(
+    group_id: str,
+    language: str = Query("he"),
+    session=Depends(require_teacher_session),
+):
+    """Which subjects this class can be narrowed to.
+
+    Feeds the scope bar, which offers exactly these and nothing else. Per class
+    rather than a fixed list because the portal's previous constant — math and
+    science — was a guess that could not name a subject the class actually works
+    in.
+    """
+    if not await _guard_group(session, group_id):
+        return _denied()
+    from app.services import learning_analytics
+    return _ok({"subjects": await learning_analytics.class_subjects(
+        group_id, language=normalize_language(language),
+    )})
 
 
 @router.get("/groups/{group_id}/learnings")

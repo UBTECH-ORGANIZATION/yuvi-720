@@ -1,0 +1,205 @@
+/* The scope control in the app bar. Logical properties throughout — this sits
+   beside the logo in Hebrew, English and Arabic, and `left`/`right` here would
+   put the caret on the wrong side of the sentence in two of the three. */
+
+.tch-scope {
+  position: relative;   /* the popover below anchors to this */
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-inline-size: 0;
+}
+
+.tch-scope__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-3);
+  border: 0;
+  border-radius: var(--sp-radius-pill);
+  background: transparent;
+  color: var(--sp-ink-700);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  cursor: pointer;
+  min-inline-size: 0;
+  transition: background var(--sp-dur-fast) var(--sp-ease),
+              border-color var(--sp-dur-fast) var(--sp-ease);
+}
+
+.tch-scope__trigger:hover { background: var(--sp-surface-2); }
+.tch-scope__trigger:focus-visible { outline: var(--sp-ring); }
+
+/* Not a button, so nothing about it may look pressable. */
+.tch-scope__trigger--static { cursor: default; padding-inline: var(--sp-2); }
+.tch-scope__trigger--static:hover { background: transparent; }
+
+/* One segment: its value, its caret, and its ✕ when it is filtering. They share
+   a background so a narrowed segment reads as one pill rather than a button
+   with a stray button beside it. */
+.tch-scope__seg {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--sp-radius-pill);
+  min-inline-size: 0;
+}
+
+/* Something is filtered. Loud on purpose, and readable without opening
+   anything: the value is on the segment, not behind it. */
+.tch-scope__seg.is-narrowed {
+  border-color: var(--sp-primary-300, var(--sp-primary-100));
+  background: var(--sp-primary-100);
+  color: var(--sp-primary-700);
+}
+
+.tch-scope__seg.is-narrowed .tch-scope__trigger { color: var(--sp-primary-700); }
+.tch-scope__seg.is-narrowed .tch-scope__trigger:hover { background: transparent; }
+
+/* The value never truncates on a narrowed segment: a filter a teacher cannot
+   finish reading is one they cannot act on. An unset segment may shrink. */
+.tch-scope__value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-inline-size: 0;
+}
+
+.tch-scope__seg.is-narrowed .tch-scope__value { overflow: visible; }
+
+.tch-scope__caret { flex: none; opacity: 0.6; }
+
+.tch-scope__clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 18px;
+  block-size: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.tch-scope__clear { margin-inline-end: var(--sp-1); }
+.tch-scope__clear:hover { background: var(--sp-surface); opacity: 1; }
+.tch-scope__clear:focus-visible { outline: var(--sp-ring); opacity: 1; }
+
+/* ── the popover ─────────────────────────────────────────────────────────── */
+
+.tch-scope__pop {
+  position: absolute;
+  inset-block-start: calc(100% + var(--sp-2));
+  inset-inline-start: 0;
+  z-index: 60;
+  min-inline-size: 220px;
+  max-inline-size: min(320px, calc(100vw - var(--sp-4)));
+  max-block-size: min(60vh, 480px);
+  overflow-y: auto;
+  padding: var(--sp-2);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface);
+  box-shadow: var(--sp-shadow-lg, 0 12px 32px rgb(0 0 0 / 18%));
+}
+
+.tch-scope__group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.tch-scope__group + .tch-scope__group {
+  margin-block-start: var(--sp-2);
+  padding-block-start: var(--sp-2);
+  border-block-start: 1px solid var(--sp-border);
+}
+
+.tch-scope__legend {
+  padding: 0 var(--sp-2);
+  color: var(--sp-ink-400);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+}
+
+.tch-scope__option {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border-radius: var(--sp-radius-sm);
+  color: var(--sp-ink-700);
+  font-size: var(--sp-fs-sm);
+  cursor: pointer;
+}
+
+.tch-scope__option > span { flex: 1; min-inline-size: 0; }
+.tch-scope__option:hover { background: var(--sp-surface-2); }
+.tch-scope__option.is-picked { color: var(--sp-primary-700); font-weight: var(--sp-fw-semibold); }
+
+/* The radio itself is the semantics, not the picture: it keeps arrow-key
+   navigation and the group announcement, and the row is what is drawn. */
+.tch-scope__option input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tch-scope__option:has(input:focus-visible) { outline: var(--sp-ring); }
+
+/* The segment's list hangs off the segment, not off the whole control, so each
+   one opens under the thing that was clicked. */
+.tch-scope__pop { inset-inline-start: 0; }
+
+/* The class is the segment a teacher already knows; a filter they have set is
+   the one they might have forgotten. So the class is what gives up room, at any
+   width — with three segments in the bar something has to, and it must not be
+   the narrowing. */
+.tch-scope__seg:first-child { min-inline-size: 0; flex: 0 1 auto; }
+.tch-scope__seg:not(:first-child) { flex: none; }
+
+/* Below this the bar cannot hold a long class name, the three segments and the
+   full navigation at once. The class is what shortens — a teacher knows which
+   class they are in; they may well have forgotten which subject is filtered. */
+@media (max-width: 1400px) {
+  .tch-scope__seg:first-child .tch-scope__value { max-inline-size: 12ch; }
+  .tch-scope__trigger { padding-inline: var(--sp-2); }
+}
+
+/* ── "this filter does not apply here" ───────────────────────────────────── */
+
+/* The frame — max-width, centring, inline padding, and the reduced vertical
+   padding — is declared in `teacher-shared.css` beside the page frame it has to
+   line up with, so source order settles the override rather than specificity.
+   Only appearance is here. */
+.tch-scopeNotice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-3);
+  color: var(--sp-ink-500);
+  font-size: var(--sp-fs-sm);
+}
+
+.tch-scopeNotice > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* A quiet mark rather than a warning triangle: nothing has gone wrong, the
+   teacher is simply being told what this screen does with their filter. */
+.tch-scopeNotice > span::before {
+  content: "";
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: var(--sp-primary-300, var(--sp-primary-100));
+  flex: none;
+}

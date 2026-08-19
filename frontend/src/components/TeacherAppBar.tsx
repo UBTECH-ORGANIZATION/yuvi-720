@@ -4,9 +4,14 @@
  * dock, and live presence is the top of Home. A nav that lists every capability
  * is a nav a teacher has to read.
  *
- * The class switcher deliberately does NOT live here anymore: switching class
- * is a dashboard act, so it sits in the Home header, and the chrome carries
- * only what applies everywhere — the bell and the way back into the tour.
+ * Scope DOES live here, and that reverses an earlier decision recorded in this
+ * file: the class switcher was moved out of the chrome and onto the Home page
+ * title, on the reasoning that switching class is a dashboard act. It is not.
+ * A teacher reads the roster, the tasks and the calendar of a class too, and
+ * with the picker on Home the only way to change class from any of them was to
+ * go back to Home first — which is also why the subject filter, whose plumbing
+ * has existed for months, never got a control at all and stayed permanently
+ * null. One control in the chrome, and the whole portal follows it.
  */
 
 import { navigate, useRoute } from '../app/router'
@@ -15,6 +20,7 @@ import { AppBar } from './AppBar'
 import { NotificationBell } from './NotificationBell'
 import { TourButton } from './tour/TourButton'
 import { Icon } from './primitives'
+import { ScopeControl } from './scope/ScopeControl'
 import './teacher-app-bar.css'
 
 type TeacherSection =
@@ -129,5 +135,17 @@ export function TeacherAppBar() {
     </div>
   )
 
-  return <AppBar center={navigation} trailing={trailing} />
+  /* 1310, not the default 1200: the scope segments make this bar wider than a
+     learner's, and below that the navigation and the scope overlap rather than
+     either of them giving way. Folding the nav sooner is the right trade —
+     scope is what the teacher must always be able to see. Measured, not
+     guessed: raise the nav's spacing and this number has to move with it. */
+  return (
+    <AppBar
+      center={navigation}
+      leading={<ScopeControl />}
+      trailing={trailing}
+      compactBelow={1310}
+    />
+  )
 }

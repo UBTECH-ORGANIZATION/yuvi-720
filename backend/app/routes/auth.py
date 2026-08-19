@@ -57,6 +57,17 @@ class PreferencesRequest(BaseModel):
     # every teacher endpoint still re-checks the group against org scoping, so a
     # stale or crafted id here buys nothing.
     teacher_group_id: Optional[str] = Field(default=None, max_length=128)
+    # The rest of that same scope: which sub-group and which subject the teacher
+    # is currently looking through. Same standing as the class — a view
+    # preference, re-checked server-side on every request that honours it. A
+    # sub-group can be deleted between sessions, so the client must resolve a
+    # dangling id to "the whole class" rather than to an empty roster.
+    teacher_subgroup_id: Optional[str] = Field(default=None, max_length=128)
+    teacher_subject: Optional[str] = Field(default=None, max_length=64)
+
+
+# Preferences whose null is a value rather than an absence. See `patch_preferences`.
+CLEARABLE_PREFERENCES = {"teacher_subgroup_id", "teacher_subject"}
 
 
 def _cookie_is_secure() -> bool:
@@ -196,10 +207,21 @@ async def patch_preferences(
     session=Depends(current_user),
 ) -> dict[str, Any]:
     response.headers.update(_NO_STORE)
+    # `exclude_none` is the rule for everything here: a preference is a
+    # value-or-default, and a client sending an absent field as an explicit null
+    # means "no opinion", not "erase the theme".
+    #
+    # Scope is the exception, because for scope null IS a value — "the whole
+    # class", "every subject" — and it is the value a teacher reaches for most:
+    # clearing a filter, switching class, or the client resolving a sub-group
+    # that has since been deleted. Without this, the ✕ on a scope chip cleared
+    # the screen and not the document, so the filter came back on the next load.
+    sent = payload.model_fields_set
     updates = {
         key: value
-        for key, value in payload.model_dump(exclude_none=True).items()
+        for key, value in payload.model_dump().items()
         if key in ALLOWED_PREFERENCES
+        and (value is not None or (key in CLEARABLE_PREFERENCES and key in sent))
     }
     # A stamp on its own means nothing — it only dates a theme choice.
     if "theme" not in updates:

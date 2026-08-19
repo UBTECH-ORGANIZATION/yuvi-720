@@ -28,6 +28,12 @@ export interface UserPreferences {
   /** The class a teacher last looked at. A view preference, so it survives a
       reload; access is still re-checked server-side on every request. */
   teacher_group_id: string | null
+  /** The rest of that scope, remembered the same way. Null means "not
+      narrowed". A sub-group can be deleted between sessions, so a remembered id
+      that no longer resolves must fall back to the whole class — never to an
+      empty roster. */
+  teacher_subgroup_id: string | null
+  teacher_subject: string | null
   /** How a teacher reads their roster. Table by default — a card wall stops
       being scannable at about fifteen students. */
   teacher_roster_view: 'table' | 'cards'
