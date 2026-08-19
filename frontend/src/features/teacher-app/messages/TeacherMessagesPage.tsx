@@ -35,7 +35,7 @@ import { useTeacherLive } from '../../../providers/TeacherLiveProvider'
 import { PresenceDot, agoLabel } from '../live/LiveNow'
 import {
   createTeacherInsight, getGroupSnapshot, getStudentGoals, getStudentKudos,
-  listSubgroups, listTeacherInsights, sendKudos, type Subgroup,
+  listTeacherInsights, sendKudos, type Subgroup,
 } from '../../../services/teacher'
 import {
   MessageRefused, listMessages, listSubgroupBroadcasts, markMessagesRead,
@@ -61,7 +61,11 @@ type ExtraLane = 'kudos' | 'note'
 
 export function TeacherMessagesPage() {
   const { t, language } = useI18n()
-  const { groupId, isLoading: scopeLoading } = useTeacherScope()
+  /* The provider's list — the rail's sub-group THREADS are addresses, not the
+     scope narrowing, so `sub:` selection stays this page's own. */
+  const {
+    groupId, isLoading: scopeLoading, subgroups, subgroupId, subgroupLearnerIds,
+  } = useTeacherScope()
   const live = useTeacherLive()
 
   const [students, setStudents] = useState<{ learner_id: string; display_name: string | null }[] | null>(null)
@@ -69,7 +73,6 @@ export function TeacherMessagesPage() {
   /* One selection across two kinds of correspondent. A sub-group is prefixed so
      an id can never be mistaken for a learner's — the rail holds both. */
   const [selected, setSelected] = useState<string | null>(null)
-  const [subgroups, setSubgroups] = useState<Subgroup[]>([])
   /* Arriving from a disclosure: the child to write to, and the opening the
      teacher picked. Read once, here, so the rail's default selection does not
      overwrite it a moment later when the roster lands. */
@@ -98,16 +101,6 @@ export function TeacherMessagesPage() {
       .catch(() => { if (active) setError(true) })
     return () => { active = false }
   }, [groupId, language, seed])
-
-  useEffect(() => {
-    if (!groupId) { setSubgroups([]); return }
-    let active = true
-    listSubgroups(groupId)
-      .then((payload) => { if (active) setSubgroups(payload.subgroups ?? []) })
-      // A class with no named groups is the ordinary case, not a failure.
-      .catch(() => { if (active) setSubgroups([]) })
-    return () => { active = false }
-  }, [groupId])
 
   if (scopeLoading || (students === null && !error)) {
     return (
@@ -182,7 +175,12 @@ export function TeacherMessagesPage() {
           {subgroups.length ? (
             <p className="tch-messages__railHead">{t('tch.messages.students')}</p>
           ) : null}
-          {students.map((student) => {
+          {/* The scope's sub-group narrows WHO IS LISTED, not who is reachable:
+              the group threads above stay, and clearing the scope brings the
+              rest of the class back. Derived per render — never copied. */}
+          {(subgroupId
+            ? students.filter((row) => subgroupLearnerIds.includes(row.learner_id))
+            : students).map((student) => {
             const presence = live.presence[student.learner_id] ?? null
             return (
               <button

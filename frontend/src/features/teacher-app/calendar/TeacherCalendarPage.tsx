@@ -26,7 +26,7 @@ import { useI18n } from '../../../i18n/I18nProvider'
 import { useTeacherRoster } from '../../../providers/TeacherRosterProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import {
-  createCalendarEvent, deleteCalendarEvent, getGroupCalendar, listSubgroups,
+  createCalendarEvent, deleteCalendarEvent, getGroupCalendar,
   type CalendarEventKind, type CalendarItem, type CalendarSource, type Subgroup,
 } from '../../../services/teacher'
 import './teacher-calendar.css'
@@ -120,7 +120,9 @@ const localeOf = (language: string) =>
 
 export function TeacherCalendarPage() {
   const { t, language } = useI18n()
-  const { groupId, isLoading: scopeLoading } = useTeacherScope()
+  const {
+    groupId, isLoading: scopeLoading, subgroups: subgroupList, subgroupId,
+  } = useTeacherScope()
   const { students, nameOf } = useTeacherRoster()
 
   const [view, setView] = useState<ViewMode>('month')
@@ -128,8 +130,9 @@ export function TeacherCalendarPage() {
   const [items, setItems] = useState<CalendarItem[] | null>(null)
   const [zone, setZone] = useState('Asia/Jerusalem')
   const [error, setError] = useState(false)
-  const [subgroupList, setSubgroupList] = useState<Subgroup[]>([])
-  /** One control, two kinds of narrowing: `sub:<id>` or `learner:<id>`. */
+  /* One child, as a drill-down. The sub-group narrowing left this control for
+     the scope bar — a sub-group is who the teacher is looking at everywhere,
+     but "just this child's calendar" is a question about one page. */
   const [scope, setScope] = useState('')
   const [hidden, setHidden] = useState<Set<CalendarSource>>(new Set())
   const [composeDay, setComposeDay] = useState<string | null>(null)
@@ -143,23 +146,19 @@ export function TeacherCalendarPage() {
     () => students.filter((row) => row.group_id === groupId),
     [students, groupId])
 
-  useEffect(() => {
-    if (!groupId) return
-    let active = true
-    setScope('')
-    listSubgroups(groupId)
-      .then((result) => { if (active) setSubgroupList(result.subgroups ?? []) })
-      .catch(() => { if (active) setSubgroupList([]) })
-    return () => { active = false }
-  }, [groupId])
+  /* The learner drill-down is class-specific; the sub-group needs no clearing
+     here because the provider clears it in the same commit as the class. */
+  useEffect(() => { setScope('') }, [groupId])
 
   useEffect(() => {
     if (!groupId) return
     let active = true
     setItems(null); setError(false)
     const [kind, id] = scope.split(':')
+    /* A picked child wins over the bar's sub-group: the more specific answer to
+       "whose calendar". The two are never sent together. */
     getGroupCalendar(groupId, range.from, range.to, {
-      subgroup: kind === 'sub' ? id : null,
+      subgroup: kind === 'learner' ? null : subgroupId,
       learner: kind === 'learner' ? id : null,
     })
       .then((result) => {
@@ -169,7 +168,7 @@ export function TeacherCalendarPage() {
       })
       .catch(() => { if (active) { setError(true); setItems([]) } })
     return () => { active = false }
-  }, [groupId, range.from, range.to, scope, nonce])
+  }, [groupId, range.from, range.to, scope, subgroupId, nonce])
 
   /* One pass into day buckets. Keyed by the server's `day` — the client's own
      clock never gets a vote on which column something belongs to. */
@@ -276,13 +275,6 @@ export function TeacherCalendarPage() {
           <select className="sp-input" value={scope}
                   onChange={(event) => setScope(event.target.value)}>
             <option value="">{t('tch.calendar.scope.all')}</option>
-            {subgroupList.length ? (
-              <optgroup label={t('tch.calendar.scope.subgroups')}>
-                {subgroupList.map((row) => (
-                  <option key={row.id} value={`sub:${row.id}`}>{row.name}</option>
-                ))}
-              </optgroup>
-            ) : null}
             {classmates.length ? (
               <optgroup label={t('tch.calendar.scope.students')}>
                 {classmates.map((row) => (

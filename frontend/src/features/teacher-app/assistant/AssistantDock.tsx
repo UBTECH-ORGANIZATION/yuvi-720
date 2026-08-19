@@ -32,6 +32,7 @@ import { YuviHeadIcon } from '../../../components/YuviHeadIcon'
 import { formatMessageTime } from '../../../hooks/messageTime'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
+import { narrowsBy } from '../../../components/scope/scopeDimensions'
 import { useTeacherRoster } from '../../../providers/TeacherRosterProvider'
 import { useRoute } from '../../../app/router'
 import {
@@ -70,7 +71,13 @@ interface DockMessage {
 const STORED_KEY = /^\[(tch\.[A-Za-z0-9.]+)\]$/
 
 /** Derive what the teacher is looking at from the route. Advisory only. */
-function screenFor(pathname: string, groupId: string | null, subject: string | null): ScreenContext {
+/* The subject the SCREEN means, not the subject the bar holds: `narrowsBy`
+   is the same table the scope notice reads, so the assistant's belief about
+   what the teacher is looking at matches what the page actually narrows. A
+   subject set but not applied here would have the assistant answering about
+   maths over a screen showing every subject. */
+function screenFor(pathname: string, groupId: string | null, scopeSubject: string | null): ScreenContext {
+  const subject = narrowsBy(pathname).subject ? scopeSubject : null
   if (pathname.startsWith('/teacher/student/')) {
     return {
       route: pathname,

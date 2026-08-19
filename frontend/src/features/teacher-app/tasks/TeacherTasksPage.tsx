@@ -346,7 +346,12 @@ export function TaskBuilder({ groupId, seed, onDone, onCancel }: {
   const [topic, setTopic] = useState('')
   const [notes, setNotes] = useState('')
   const [sourceId, setSourceId] = useState('')
-  const [subject, setSubject] = useState('')
+  /* Seeded from the scope, owned by the send: a teacher filtered to maths is
+     almost certainly building a maths task, but this select is an INPUT — what
+     the task is about — so changing it here narrows nothing and the bar does
+     not follow it. A seed from a gap row below still wins over the scope. */
+  const { subject: scopeSubject } = useTeacherScope()
+  const [subject, setSubject] = useState(scopeSubject ?? '')
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
   const [components, setComponents] = useState<BuildableComponent[]>(['practice'])
   const [counts, setCounts] = useState({ practice: 8, test: 10, presentation: 7 })

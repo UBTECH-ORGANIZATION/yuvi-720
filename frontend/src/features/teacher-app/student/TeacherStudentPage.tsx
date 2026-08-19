@@ -251,8 +251,15 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
   const rosterName = nameOf(learnerId)
   const name = rosterName ?? detail?.display_name ?? learnerId
   const nameKnown = Boolean(rosterName || detail)
-  const earnedBadges = badges.filter((badge) => badge.earned)
-  const towardBadges = badges.filter((badge) => badge.state === 'inprogress' && badge.progress > 0)
+  /* Badges are per subject, so an active subject filter narrows them like
+     everything else on the page — a science filter showing a maths coin would
+     be the one element ignoring the bar. Client-side, because the earned list
+     is already loaded whole for the hero's newest-badge slot. */
+  const inSubject = (badge: TeacherBadge) =>
+    !subject || !badge.subject || badge.subject === subject
+  const earnedBadges = badges.filter((badge) => badge.earned && inSubject(badge))
+  const towardBadges = badges
+    .filter((badge) => badge.state === 'inprogress' && badge.progress > 0 && inSubject(badge))
     .sort((a, b) => b.progress - a.progress)
   const latestBadge = earnedBadges[0] ?? null
   const avatarChoice = avatarOf(learnerId)
@@ -512,7 +519,13 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
                   rows={activity}
                   read={read}
                   recommendations={detail.recommendations}
-                  focus={detail.focus ?? null}
+                  /* The same rule as the status band's focus card: an
+                     off-subject planner pick steps aside under a subject
+                     filter, or the "next step" sentence would name a maths
+                     lesson on a science-filtered page. */
+                  focus={subject && detail.focus?.subject
+                         && detail.focus.subject !== subject
+                    ? null : detail.focus ?? null}
                   progress={detail.objectives_progress ?? {}}
                   onBuildTask={buildTask}
                 />
@@ -916,7 +929,7 @@ function TrendChip({ momentum }: {
   )
 }
 
-function StatusBand({ learnerId, focus, progress, trends, rows }: {
+function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows }: {
   learnerId: string
   focus: PlannerFocus | null
   progress: Record<string, SubjectProgress>
@@ -924,6 +937,14 @@ function StatusBand({ learnerId, focus, progress, trends, rows }: {
   rows: QuestionRow[] | null
 }) {
   const { t } = useI18n()
+  const { subject: scopeSubject } = useTeacherScope()
+  /* The planner's pick is cross-subject by design — `next_focus` answers "where
+     does the platform take this child next", whatever the subject. Under an
+     active subject filter an off-subject pick would be the one card on the band
+     contradicting the bar, so it steps aside; clear the filter and it is back.
+     The roadmap dialog stays whole-path either way — it says it is. */
+  const focus = scopeSubject && rawFocus?.subject && rawFocus.subject !== scopeSubject
+    ? null : rawFocus
   const subjects = Object.entries(progress)
   /* Which subject's per-objective breakdown is open, if any. */
   const [objSubject, setObjSubject] = useState<string | null>(null)

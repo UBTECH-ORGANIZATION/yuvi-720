@@ -29,15 +29,15 @@ const app = readFileSync(
     reach. `false` does not mean "hidden": it means the screen does not narrow
     by it, and must say so when it is set. */
 const TABLE: [string, boolean, boolean, boolean][] = [
-  ['/teacher',                          true,  true,  false],
+  ['/teacher',                          true,  false, false],
   ['/teacher/students',                 true,  true,  false],
   ['/teacher/student/kid-1',            false, false, true],
   ['/teacher/goals',                    true,  true,  false],
   ['/teacher/calendar',                 true,  true,  false],
   ['/teacher/learnings',                true,  false, true ],
-  ['/teacher/learnings/g-1/cmp-1',      true,  true,  false],
+  ['/teacher/learnings/g-1/cmp-1',      true,  false, false],
   ['/teacher/messages',                 true,  true,  false],
-  ['/teacher/tasks',                    true,  true,  true ],
+  ['/teacher/tasks',                    true,  false, true ],
   ['/teacher/tasks/t-1',                true,  true,  false],
   ['/teacher/tasks/t-1/review',         true,  false, false],
   ['/admin',                            false, false, false],
@@ -120,8 +120,14 @@ describe('the screens that must announce a filter they ignore', () => {
        deferring it honestly costs one sentence on the screen. */
     assert.equal(narrowsBy('/teacher').subject, false)
     assert.equal(narrowsBy('/teacher/students').subject, false)
+    /* Home's KPIs, brief, engagement and gaps are class aggregates — none
+       recomputes for six children, so the sub-group is announced, not applied. */
+    assert.equal(narrowsBy('/teacher').subgroup, false)
     // The learnings fold is class-wide, so a sub-group cannot narrow it exactly.
     assert.equal(narrowsBy('/teacher/learnings').subgroup, false)
+    /* A class-wide task still belongs to the sub-group's children — a task-list
+       filter would either hide their work or hide nothing. */
+    assert.equal(narrowsBy('/teacher/tasks').subgroup, false)
     // One task already has a subject; narrowing its cohort by another is noise.
     assert.equal(narrowsBy('/teacher/tasks/t-1').subject, false)
   })

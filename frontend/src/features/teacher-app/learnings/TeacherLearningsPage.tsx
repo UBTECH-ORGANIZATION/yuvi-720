@@ -304,14 +304,21 @@ export function TeacherLearningsPage() {
       </div>
 
       {/* ── what to reinforce — the gaps engine's reading of this data ─────── */}
-      {view.recommendations.length ? (
+      {(subject
+        ? view.recommendations.filter((row) => row.subject === subject)
+        : view.recommendations).length ? (
         <Panel className="tch-learnings__analysis" data-tour="teacher.learningsAnalysis">
           <SectionHeader
             title={t('tch.learnings.analysis')}
             subtitle={t('tch.learnings.analysisSub')}
           />
           <ul className="tch-learnings__recs">
-            {view.recommendations.map((recommendation) => (
+            {/* Narrowed with the rows above, client-side like them: a maths
+                filter with a science "what to reinforce" under it would be the
+                one panel on the screen ignoring the bar. */}
+            {(subject
+              ? view.recommendations.filter((row) => row.subject === subject)
+              : view.recommendations).map((recommendation) => (
               <li key={`${recommendation.action}:${recommendation.objective_id}`}>
                 <div className="tch-learnings__recRow">
                   <Icon name="wand" size={15} aria-hidden className="tch-learnings__recIcon" />

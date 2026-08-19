@@ -31,7 +31,7 @@ import { useTeacherLive } from '../../../providers/TeacherLiveProvider'
 import { formatMessageTime } from '../../../hooks/messageTime'
 import { PresenceDot, agoLabel } from '../live/LiveNow'
 import {
-  createSubgroup, deleteSubgroup, getGroupSnapshot, listSubgroups, updateSubgroup,
+  createSubgroup, deleteSubgroup, getGroupSnapshot, updateSubgroup,
   type GroupInsight, type Subgroup,
 } from '../../../services/teacher'
 import { withFallback } from '../shared/EvidenceDisclosure'
@@ -87,7 +87,10 @@ function initialQuery(): {
 export function TeacherStudentsPage() {
   const { t, language } = useI18n()
   const { user, updatePreferences } = useAuth()
-  const { groupId, isLoading: scopeLoading } = useTeacherScope()
+  const {
+    groupId, isLoading: scopeLoading,
+    subgroups, subgroupId, setSubgroupId, subgroupLearnerIds, refreshSubgroups,
+  } = useTeacherScope()
   const live = useTeacherLive()
   const [snapshot, setSnapshot] = useState<GroupInsight | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -104,8 +107,6 @@ export function TeacherStudentsPage() {
     { key: 'name', direction: 'asc' }
   )
   const [showMore, setShowMore] = useState(false)
-  const [subgroups, setSubgroups] = useState<Subgroup[]>([])
-  const [activeSubgroup, setActiveSubgroup] = useState<string | null>(null)
   /* One dialog for creating and for amending, and one for the confirmation.
      There is no longer a "picking mode" on the roster: choosing who is in a
      group used to turn the table into a checkbox grid, which took away the
@@ -171,9 +172,17 @@ export function TeacherStudentsPage() {
     }),
     [snapshot, live.presence, language, t]
   )
+  /* The sub-group narrowing, DERIVED from the provider on every render — never
+     copied into this page's state. The copy is what broke: the class changed,
+     the list refreshed, and the copied learner ids stayed behind, so the new
+     class was filtered by the old class's children — zero rows, four zeroed
+     KPIs, and no card active to explain it. */
+  const subgroupFilter = subgroupId ? subgroupLearnerIds : null
+
   const visible = useMemo(
-    () => sortRows(filterRows(rows, filters), sort.key, sort.direction),
-    [rows, filters, sort]
+    () => sortRows(filterRows(rows, { ...filters, subgroup: subgroupFilter }),
+                   sort.key, sort.direction),
+    [rows, filters, subgroupFilter, sort]
   )
 
   /* Counted against every filter EXCEPT the status chip itself — which is what
@@ -181,8 +190,9 @@ export function TeacherStudentsPage() {
      behaviour) let a chip read "(5)" and then produce an empty table, because
      search and presence had already excluded all five. */
   const counts = useMemo(
-    () => countByStatus(filterRows(rows, { ...filters, status: 'all' })),
-    [rows, filters]
+    () => countByStatus(filterRows(rows,
+      { ...filters, subgroup: subgroupFilter, status: 'all' })),
+    [rows, filters, subgroupFilter]
   )
 
   /* Everyone the teacher is currently looking at — the class, or the sub-group
@@ -191,8 +201,8 @@ export function TeacherStudentsPage() {
      roster showing two flagged children in "קשויי הבנה" is the card contradicting
      the list underneath it. */
   const inScope = useMemo(
-    () => filterRows(rows, { ...NO_FILTERS, subgroup: filters.subgroup }),
-    [rows, filters.subgroup]
+    () => filterRows(rows, { ...NO_FILTERS, subgroup: subgroupFilter }),
+    [rows, subgroupFilter]
   )
 
   const kpis = useMemo(() => ({
@@ -208,7 +218,7 @@ export function TeacherStudentsPage() {
      every reset below, or a teacher who narrowed to "קבוצת חיזוק" and then
      pressed a KPI would be silently looking at the whole class again. */
   const scoped = (next: Partial<RosterFilters>): RosterFilters =>
-    ({ ...NO_FILTERS, subgroup: filters.subgroup, ...next })
+    ({ ...NO_FILTERS, ...next })
 
   /** A KPI is a saved filter: pressing it puts the teacher in that list. */
   function applyPreset(preset: 'online' | 'attention' | 'not_started') {
@@ -236,21 +246,11 @@ export function TeacherStudentsPage() {
      Membership arrives resolved: the server compares the stored ids against the
      live class on every read, so this never has to reconcile a learner who
      transferred out. */
-  useEffect(() => {
-    if (!groupId) { setSubgroups([]); return }
-    let active = true
-    listSubgroups(groupId)
-      .then((result) => { if (active) setSubgroups(result.subgroups ?? []) })
-      // A class with no named slices is the normal case, and a failed read must
-      // not take the roster down with it.
-      .catch(() => { if (active) setSubgroups([]) })
-    return () => { active = false }
-  }, [groupId])
-
+  /* No fetch here any more: the provider owns the list, one read for the whole
+     portal, and this page's selection IS the portal's — narrow here and the
+     tracking page, the calendar and the bar all mean the same six children. */
   function selectSubgroup(subgroupId: string | null) {
-    setActiveSubgroup(subgroupId)
-    const chosen = subgroups.find((row) => row.id === subgroupId)
-    setFilters((current) => ({ ...current, subgroup: chosen ? chosen.learner_ids : null }))
+    setSubgroupId(subgroupId)
   }
 
   async function saveSubgroup(draft: { name: string; learnerIds: string[] }) {
@@ -265,21 +265,16 @@ export function TeacherStudentsPage() {
     setPickError('')
     try {
       if (editing) {
-        const saved = await updateSubgroup(editing.id, {
-          name, learner_ids: draft.learnerIds,
-        })
-        setSubgroups((current) => current.map((row) => (row.id === saved.id ? saved : row)))
-        if (activeSubgroup === saved.id) {
-          setFilters((current) => ({ ...current, subgroup: saved.learner_ids }))
-        }
+        const saved = await updateSubgroup(editing.id, { name, learner_ids: draft.learnerIds })
+        refreshSubgroups(saved)
       } else {
         const created = await createSubgroup(groupId, name, draft.learnerIds)
-        setSubgroups((current) => [...current, created]
-          .sort((a, b) => a.name.localeCompare(b.name)))
-        // Land the teacher inside what they just made — otherwise the only
-        // sign anything happened is a new card they have to notice.
-        setActiveSubgroup(created.id)
-        setFilters((current) => ({ ...current, subgroup: created.learner_ids }))
+        /* The result goes INTO the provider's list before the id is selected —
+           selecting first read as a dangling id against the pre-create list,
+           and the reconcile widened the teacher straight back out of the group
+           they had just made. Then land them inside it. */
+        refreshSubgroups(created)
+        setSubgroupId(created.id)
       }
       setComposing(null)
     } catch (error) {
@@ -297,8 +292,8 @@ export function TeacherStudentsPage() {
     setDeleting(null)
     try {
       await deleteSubgroup(subgroup.id)
-      setSubgroups((current) => current.filter((row) => row.id !== subgroup.id))
-      if (activeSubgroup === subgroup.id) selectSubgroup(null)
+      if (subgroupId === subgroup.id) setSubgroupId(null)
+      refreshSubgroups()
     } catch { /* still listed; the next read will tell the truth */ }
   }
 
@@ -331,7 +326,7 @@ export function TeacherStudentsPage() {
         <SubgroupBar
           total={rows.length}
           subgroups={subgroups}
-          selected={activeSubgroup}
+          selected={subgroupId}
           nameOf={(learnerId) =>
             rows.find((row) => row.learner_id === learnerId)?.name ?? learnerId}
           onSelect={selectSubgroup}
@@ -451,7 +446,7 @@ export function TeacherStudentsPage() {
               {/* "of N students in the class" stops being true the moment the
                   scope is a sub-group, and the count beside it is the thing
                   that makes the sentence checkable. */}
-              {t(filters.subgroup
+              {t(subgroupFilter
                 ? 'tch.students.kpi.activeWeekHint.subgroup'
                 : 'tch.students.kpi.activeWeekHint', { total: inScope.length })}
             </span>

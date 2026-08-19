@@ -37,7 +37,7 @@ import './teacher-home.css'
 export function TeacherHomePage() {
   const { t, language } = useI18n()
   const {
-    groupId, group, subject,
+    groupId, group,
     isLoading: scopeLoading, error: scopeError,
   } = useTeacherScope()
   const live = useTeacherLive()
@@ -59,7 +59,11 @@ export function TeacherHomePage() {
     Promise.all([
       getGroupSnapshot(groupId, language),
       getGroupEngagement(groupId),
-      getGroupGaps(groupId, language, subject ?? undefined),
+      /* No subject: the scope notice above this page says the filter does not
+         apply here, and a gaps panel that quietly narrowed anyway would make
+         that sentence a lie in the other direction. Tracked with the
+         group-insights item — Home goes subject-aware as a whole or not at all. */
+      getGroupGaps(groupId, language),
     ])
       .then(([snapshotResult, engagementResult, gapsResult]) => {
         if (!active) return
@@ -71,7 +75,7 @@ export function TeacherHomePage() {
       .catch(() => { if (active) setError(true) })
       .finally(() => { if (active) setIsLoading(false) })
     return () => { active = false }
-  }, [groupId, subject, language])
+  }, [groupId, language])
 
   /* The feed fans out across every learner in the group, so it loads on its own
      rather than holding up the stats a teacher opens Home for. An empty feed is

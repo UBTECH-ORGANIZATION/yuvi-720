@@ -27,7 +27,8 @@ import { Icon } from '../../../components/primitives'
 import { Modal } from '../../../components/primitives/Modal'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { useTeacherRoster } from '../../../providers/TeacherRosterProvider'
-import { getGroupSnapshot, listSubgroups, type Subgroup } from '../../../services/teacher'
+import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
+import { getGroupSnapshot } from '../../../services/teacher'
 import { StudentAvatar } from '../shared/StudentAvatar'
 import './teacher-tasks.css'
 
@@ -55,7 +56,11 @@ export function LaunchDialog({
 }: Props) {
   const { t, language } = useI18n()
   const { nameOf } = useTeacherRoster()
-  const [subgroups, setSubgroups] = useState<Subgroup[]>([])
+  /* The provider's list — its one `groupId` prop is always the scoped class
+     (TaskReviewPage reads it off the same provider), so a second fetch here was
+     the same list twice. The AUDIENCE stays the dialog's own: who receives a
+     task is this send's question, not the portal's. */
+  const { subgroups } = useTeacherScope()
   /* THIS class's learners, not the teacher's whole roster.
      `useTeacherRoster` is every learner across every class a teacher has — it
      exists so a name can be resolved wherever an id turns up — and using it
@@ -72,8 +77,6 @@ export function LaunchDialog({
 
   useEffect(() => {
     if (!open || !groupId) return
-    listSubgroups(groupId).then((payload) => setSubgroups(payload.subgroups))
-      .catch(() => setSubgroups([]))
     getGroupSnapshot(groupId, language)
       .then((snapshot) => setMembers(
         (snapshot.students ?? []).map((student) => student.learner_id)))

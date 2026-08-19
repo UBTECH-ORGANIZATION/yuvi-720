@@ -54,8 +54,11 @@ interface TeacherScopeValue {
   /** Who the current narrowing means. Empty array = the whole class, so a
    *  screen must check `subgroupId`, not this length, before filtering. */
   subgroupLearnerIds: string[]
-  /** Re-read the list after a sub-group is created, renamed or deleted. */
-  refreshSubgroups: () => void
+  /** Re-read the list after a sub-group is created, renamed or deleted.
+   *  Pass the written row to make it visible IMMEDIATELY: selecting a just-
+   *  created id against the pre-create list reads as dangling, and the
+   *  reconcile would widen the selection away before the re-read lands. */
+  refreshSubgroups: (written?: Subgroup) => void
   /** Subjects this class has material or history in. */
   subjects: string[]
   subject: string | null
@@ -215,7 +218,16 @@ export function TeacherScopeProvider({ children }: { children: ReactNode }) {
     void updatePreferences({ teacher_subject: next }).catch(() => {})
   }, [updatePreferences])
 
-  const refreshSubgroups = useCallback(() => setReloadSubgroups((n) => n + 1), [])
+  const refreshSubgroups = useCallback((written?: Subgroup) => {
+    /* The merge is what lets a caller select what it just created in the same
+       breath: the row is in the list before the reconcile next looks. The
+       re-read still happens — the server's copy wins over the optimistic one. */
+    if (written) {
+      setSubgroups((current) => [...current.filter((row) => row.id !== written.id), written]
+        .sort((a, b) => a.name.localeCompare(b.name)))
+    }
+    setReloadSubgroups((n) => n + 1)
+  }, [])
 
   const value = useMemo<TeacherScopeValue>(() => {
     const active = subgroups.find((row) => row.id === subgroupId) ?? null

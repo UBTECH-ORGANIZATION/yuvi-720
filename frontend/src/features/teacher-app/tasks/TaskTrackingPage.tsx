@@ -22,7 +22,7 @@ import { useI18n } from '../../../i18n/I18nProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import { useTeacherRoster } from '../../../providers/TeacherRosterProvider'
 import { apiGet } from '../../../services/api'
-import { listSubgroups, type Subgroup } from '../../../services/teacher'
+
 import { MathText } from '../../tasks/MathText'
 import { StudentAvatar } from '../shared/StudentAvatar'
 import {
@@ -44,7 +44,12 @@ interface TaskSummaryProse {
 
 export function TaskTrackingPage({ taskId }: { taskId: string }) {
   const { t, language } = useI18n()
-  const { groupId } = useTeacherScope()
+  /* The sub-group scope is the PORTAL's, not this page's. The page used to
+     fetch its own list and keep its own `'all'`, which is how switching class
+     kept the old selection and sent a stale `subgroup_id` the server 403'd
+     into a swallowed catch. The chips below still render — they are this
+     screen's handle on the same scope, like the roster's cards. */
+  const { groupId, subgroups, subgroupId, setSubgroupId } = useTeacherScope()
   const { nameOf } = useTeacherRoster()
   const [data, setData] = useState<TaskTracking | null>(null)
   const [prose, setProse] = useState<TaskSummaryProse | null>(null)
@@ -54,8 +59,6 @@ export function TaskTrackingPage({ taskId }: { taskId: string }) {
      of nowhere and pushed the per-question list the teacher was reading down
      the page. */
   const [proseLoading, setProseLoading] = useState(true)
-  const [subgroups, setSubgroups] = useState<Subgroup[]>([])
-  const [scope, setScope] = useState<string>('all')
   const [openLearner, setOpenLearner] = useState<string | null>(null)
   const [error, setError] = useState(false)
   const [launches, setLaunches] = useState<TaskLaunch[]>([])
@@ -98,10 +101,7 @@ export function TaskTrackingPage({ taskId }: { taskId: string }) {
     return () => controller.abort()
   }, [taskId, launchId])
 
-  useEffect(() => {
-    if (!groupId) return
-    listSubgroups(groupId).then((payload) => setSubgroups(payload.subgroups)).catch(() => setSubgroups([]))
-  }, [groupId])
+  const scope = subgroupId ?? 'all'
 
   /* The prose is refetched per scope because it is a summary *of that scope* —
      a class paragraph shown above a sub-group's numbers would be describing
@@ -236,13 +236,13 @@ export function TaskTrackingPage({ taskId }: { taskId: string }) {
       {subgroups.length > 0 ? (
         <div className="tch-track__scope">
           <button type="button" className={`tch-chip${scope === 'all' ? ' is-on' : ''}`}
-                  onClick={() => setScope('all')}>
+                  onClick={() => setSubgroupId(null)}>
             {t('tch.tasks.scope.class')}
           </button>
           {subgroups.map((subgroup) => (
             <button key={subgroup.id} type="button"
                     className={`tch-chip${scope === subgroup.id ? ' is-on' : ''}`}
-                    onClick={() => setScope(subgroup.id)}>
+                    onClick={() => setSubgroupId(subgroup.id)}>
               {subgroup.name}
             </button>
           ))}

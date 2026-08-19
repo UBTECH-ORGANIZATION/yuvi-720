@@ -46,7 +46,9 @@ interface PendingRow {
 
 export function TeacherGoalsPage() {
   const { t, language } = useI18n()
-  const { groupId, isLoading: scopeLoading } = useTeacherScope()
+  const {
+    groupId, isLoading: scopeLoading, subgroupId, subgroupLearnerIds,
+  } = useTeacherScope()
 
   const [rows, setRows] = useState<LearnerGoals[] | null>(null)
   const [names, setNames] = useState<Map<string, string | null>>(new Map())
@@ -88,12 +90,21 @@ export function TeacherGoalsPage() {
       || (title ?? '').toLowerCase().includes(needle)
   }, [query, nameOf])
 
+  /* The scope's sub-group, applied exactly: each row is one child, so the
+     narrowing is a membership check, not an approximation. Derived per render
+     from the provider — never copied — for the same reason as the roster. */
+  const scopedRows = useMemo(() => {
+    if (!subgroupId) return rows
+    const inScope = new Set(subgroupLearnerIds)
+    return (rows ?? []).filter((learner) => inScope.has(learner.learner_id))
+  }, [rows, subgroupId, subgroupLearnerIds])
+
   /* Waiting-for-you, grouped by child. The unit of the teacher's attention is
      the student, not the goal — fourteen rows from one child is one decision
      with fourteen clicks in it. */
   const pendingGroups = useMemo(() => {
     const byLearner = new Map<string, PendingRow[]>()
-    for (const learner of rows ?? []) {
+    for (const learner of scopedRows ?? []) {
       for (const conversation of learner.conversations) {
         for (const goal of conversation.goals) {
           if (stateOf(goal) !== 'done') continue
@@ -108,7 +119,7 @@ export function TeacherGoalsPage() {
       .map(([learnerId, goals]) => ({ learnerId, goals }))
       .sort((a, b) => b.goals.length - a.goals.length
         || nameOf(a.learnerId).localeCompare(nameOf(b.learnerId)))
-  }, [rows, matches, nameOf])
+  }, [scopedRows, matches, nameOf])
 
   const pendingTotal = pendingGroups.reduce((sum, group) => sum + group.goals.length, 0)
 
@@ -116,7 +127,7 @@ export function TeacherGoalsPage() {
      card shows the head of that list — never the whole tail. */
   const RANK: Record<string, number> = { help: 0, done: 1, active: 2, approved: 3 }
 
-  const board = useMemo(() => (rows ?? [])
+  const board = useMemo(() => (scopedRows ?? [])
     .map((learner) => {
       const goals = learner.conversations
         .flatMap((conversation) => conversation.goals)
@@ -135,7 +146,7 @@ export function TeacherGoalsPage() {
     // Under a search they are dropped, because they match nothing.
     .filter((learner) => learner.goals.length > 0 || !query.trim())
     .sort((a, b) => nameOf(a.learnerId).localeCompare(nameOf(b.learnerId))),
-  [rows, matches, nameOf, query])
+  [scopedRows, matches, nameOf, query])
 
   const busy = scopeLoading || (rows === null && !error)
   if (error) return <ErrorState title={t('tch.error')} />

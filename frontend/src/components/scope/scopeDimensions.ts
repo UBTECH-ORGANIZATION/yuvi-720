@@ -65,19 +65,27 @@ const ROUTES: [prefix: string, dimensions: ScopeDimensions][] = [
      class numbers under a sub-group's name. The drill-down reads one
      lesson, so no subject, and takes its class from the URL so a link survives
      a reload. */
-  ['/teacher/learnings/', { class: true, subgroup: true, subject: false }],
+  ['/teacher/learnings/', { class: true, subgroup: false, subject: false }],
   ['/teacher/learnings', { class: true, subgroup: false, subject: true }],
 
   ['/teacher/messages', CLASS_AND_SUBGROUP],
 
   /* Tasks. `/review` is handled above — the class is context there and there is
      no cohort to narrow. Tracking is one task's cohort, so sub-group but never
-     subject: the task already has one. The list narrows by subject, through the
-     same chips-bound-to-scope arrangement as learnings. */
+     subject: the task already has one. The list narrows by subject through the
+     same chips-bound-to-scope arrangement as learnings — but NOT by sub-group:
+     a class-wide task still belongs to the sub-group's children, so a filter
+     would either hide their work or hide nothing. The notice says so. */
   ['/teacher/tasks/', { class: true, subgroup: true, subject: false }],
-  ['/teacher/tasks', { class: true, subgroup: true, subject: true }],
+  ['/teacher/tasks', { class: true, subgroup: false, subject: true }],
 
-  ['/teacher', CLASS_AND_SUBGROUP],
+  /* Home's four KPIs, the brief, engagement and the gaps panel are all class
+     aggregates — none of them recomputes for six children, so claiming the
+     sub-group here would put a lit filter over numbers it does not narrow.
+     The one honest exception was considered and rejected: filtering only the
+     attention inbox would make half the screen mean the sub-group and half the
+     class, on the page a teacher reads fastest. */
+  ['/teacher', { class: true, subgroup: false, subject: false }],
 
   /* The control plane borrows the teacher chrome, but it is about who is
      connected to whom across every group. Nothing to narrow. */
