@@ -39,6 +39,13 @@ ROUTES: dict[str, str] = {
     # change: asked where to write up a talk, nothing called "goals" reads right.
     "mentoring": "/teacher/goals",
     "learnings": "/teacher/learnings",
+    # Both of these exist as screens and neither was listed, so the assistant
+    # could describe a task it had just drafted and then not offer to open the
+    # screen holding it. The rule this restores: every screen in the teacher
+    # nav is a screen `navigate` can reach, or the offer is missing exactly
+    # where the conversation was heading.
+    "tasks": "/teacher/tasks",
+    "calendar": "/teacher/calendar",
     "messages": "/teacher/messages",
     "admin": "/admin",
 }

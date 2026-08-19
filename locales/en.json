@@ -3318,5 +3318,7 @@
   "tch.mentoring.history.remove.title": "Delete this conversation record?",
   "tch.mentoring.history.remove.body": "The record from {date} and the goals set in it will also disappear from the student’s page.",
   "tch.mentoring.history.remove.confirm": "Delete the record",
-  "tch.nav.more": "More"
+  "tch.nav.more": "More",
+  "tch.assistant.action.open.tasks": "Open the tasks screen",
+  "tch.assistant.action.open.calendar": "Open the calendar"
 }

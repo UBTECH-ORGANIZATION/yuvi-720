@@ -3318,5 +3318,7 @@
   "tch.mentoring.history.remove.title": "حذف سجل هذه المحادثة؟",
   "tch.mentoring.history.remove.body": "سيُزال سجل {date} والأهداف التي حُدّدت فيه من صفحة الطالب/ة أيضًا.",
   "tch.mentoring.history.remove.confirm": "حذف السجل",
-  "tch.nav.more": "المزيد"
+  "tch.nav.more": "المزيد",
+  "tch.assistant.action.open.tasks": "فتح شاشة المهام",
+  "tch.assistant.action.open.calendar": "فتح التقويم"
 }

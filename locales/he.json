@@ -3318,5 +3318,7 @@
   "tch.mentoring.history.remove.title": "למחוק את תיעוד השיחה?",
   "tch.mentoring.history.remove.body": "התיעוד מ־{date} והיעדים שנקבעו בו יוסרו גם מהעמוד של התלמיד/ה.",
   "tch.mentoring.history.remove.confirm": "מחיקת התיעוד",
-  "tch.nav.more": "עוד"
+  "tch.nav.more": "עוד",
+  "tch.assistant.action.open.tasks": "פתיחת מסך המשימות",
+  "tch.assistant.action.open.calendar": "פתיחת לוח השנה"
 }
