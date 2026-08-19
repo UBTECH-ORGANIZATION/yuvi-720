@@ -37,7 +37,7 @@ import './teacher-home.css'
 export function TeacherHomePage() {
   const { t, language } = useI18n()
   const {
-    groups, groupId, setGroupId, group, subject,
+    groupId, group, subject,
     isLoading: scopeLoading, error: scopeError,
   } = useTeacherScope()
   const live = useTeacherLive()
@@ -191,25 +191,10 @@ export function TeacherHomePage() {
           frame the brief is read inside: a summary with no class name on it is a
           summary of nothing in particular. */}
       <header className="tch-home__head">
-        {/* Switching class is a dashboard act — the picker lives here, on the
-            title itself, not as a dropdown in the chrome. */}
-        {groups.length > 1 ? (
-          <label className="tch-home__classPick" data-tour="teacher.scope">
-            <span className="sp-sr-only">{t('tch.scope.group')}</span>
-            <select
-              value={groupId ?? ''}
-              onChange={(event) => setGroupId(event.target.value)}
-              aria-label={t('tch.scope.group')}
-            >
-              {groups.map((row) => (
-                <option key={row.id} value={row.id}>{row.name}</option>
-              ))}
-            </select>
-            <Icon name="chevronUp" size={16} aria-hidden className="tch-home__classChevron" />
-          </label>
-        ) : (
-          <h1 dir="auto" data-tour="teacher.scope">{group?.name ?? t('tch.title')}</h1>
-        )}
+        {/* A title again, not a picker. Switching class moved to the scope
+            control in the bar, where it applies to the roster and the calendar
+            too — from here it only ever applied to the screen it was on. */}
+        <h1 dir="auto">{group?.name ?? t('tch.title')}</h1>
         <p className="tch-home__subtitle">
           {today}
           <span className="tch-home__dot" aria-hidden="true"> · </span>

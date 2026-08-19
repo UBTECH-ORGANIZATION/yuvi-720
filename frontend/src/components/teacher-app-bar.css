@@ -35,31 +35,3 @@
   gap: var(--sp-2);
 }
 
-.teacher-app-scope__field {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-1);
-  padding-inline: var(--sp-2);
-  border: 1px solid var(--sp-border);
-  border-radius: var(--sp-radius-pill);
-  background: var(--sp-surface);
-  color: var(--sp-ink-400);
-}
-
-.teacher-app-scope__field select {
-  border: 0;
-  background: transparent;
-  color: var(--sp-ink-700);
-  font: inherit;
-  font-size: var(--sp-fs-sm);
-  padding-block: var(--sp-2);
-  padding-inline-end: var(--sp-1);
-  max-inline-size: 12ch;
-  cursor: pointer;
-}
-
-.teacher-app-scope__field select:focus-visible { outline: var(--sp-ring); }
-
-@media (max-width: 900px) {
-  .teacher-app-scope__field select { max-inline-size: 8ch; }
-}

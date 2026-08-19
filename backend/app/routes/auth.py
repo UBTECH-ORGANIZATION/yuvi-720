@@ -66,6 +66,10 @@ class PreferencesRequest(BaseModel):
     teacher_subject: Optional[str] = Field(default=None, max_length=64)
 
 
+# Preferences whose null is a value rather than an absence. See `patch_preferences`.
+CLEARABLE_PREFERENCES = {"teacher_subgroup_id", "teacher_subject"}
+
+
 def _cookie_is_secure() -> bool:
     public_url = os.environ.get("PUBLIC_APP_URL") or os.environ.get("FRONTEND_URL") or ""
     return public_url.startswith("https://")
@@ -203,10 +207,21 @@ async def patch_preferences(
     session=Depends(current_user),
 ) -> dict[str, Any]:
     response.headers.update(_NO_STORE)
+    # `exclude_none` is the rule for everything here: a preference is a
+    # value-or-default, and a client sending an absent field as an explicit null
+    # means "no opinion", not "erase the theme".
+    #
+    # Scope is the exception, because for scope null IS a value — "the whole
+    # class", "every subject" — and it is the value a teacher reaches for most:
+    # clearing a filter, switching class, or the client resolving a sub-group
+    # that has since been deleted. Without this, the ✕ on a scope chip cleared
+    # the screen and not the document, so the filter came back on the next load.
+    sent = payload.model_fields_set
     updates = {
         key: value
-        for key, value in payload.model_dump(exclude_none=True).items()
+        for key, value in payload.model_dump().items()
         if key in ALLOWED_PREFERENCES
+        and (value is not None or (key in CLEARABLE_PREFERENCES and key in sent))
     }
     # A stamp on its own means nothing — it only dates a theme choice.
     if "theme" not in updates:

@@ -12,11 +12,16 @@ import { UserMenu } from './UserMenu'
 interface AppBarProps {
   activeStep?: number
   center?: ReactNode
+  /** Rendered beside the logo. For chrome that must stay visible at every
+   *  width — `center` collapses into a hidden sheet behind the hamburger below
+   *  1200px, which is the wrong place for a filter that persists between
+   *  sessions (see `scope/ScopeControl.tsx`). */
+  leading?: ReactNode
   /** Rendered just before the user menu (e.g. the learner's spark balance). */
   trailing?: ReactNode
 }
 
-export function AppBar({ activeStep, center, trailing }: AppBarProps) {
+export function AppBar({ activeStep, center, leading, trailing }: AppBarProps) {
   const { t } = useI18n()
   const [isNavigationOpen, setIsNavigationOpen] = useState(false)
   const [isCompact, setIsCompact] = useState(false)
@@ -59,6 +64,7 @@ export function AppBar({ activeStep, center, trailing }: AppBarProps) {
         <div className="app-bar-brand" aria-label={t('app.brand')}>
           <BrandLogo />
         </div>
+        {leading}
       </div>
       {typeof activeStep === 'number' && (
         <div className="app-bar-steps app-bar-steps--progress">
