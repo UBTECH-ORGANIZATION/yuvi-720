@@ -1,0 +1,585 @@
+@import '../shared/teacher-shared.css';
+
+/* The mentoring composer.
+ *
+ * The learner composer's `mt-*` rules are scoped to the learner shell and
+ * carry its tokens, so none of them can be reused here — the shape is ported,
+ * the CSS is not. Logical properties throughout: this screen is read
+ * right-to-left by default. */
+
+.tch-mentoringModal {
+  /* Wide on purpose. Two panes of Hebrew prose and a column of goal cards do
+     not fit a dialog sized for a form, and every card wrapped into a tower at
+     1040px. */
+  inline-size: min(1280px, 96vw);
+  /* One height for the two writing steps, not the height of whatever each
+     one happens to hold. Sized from the goals step — the tallest — because
+     otherwise the dialog grew under the teacher on every "next", moving the
+     buttons they were about to press. */
+  block-size: min(840px, 90vh);
+  max-block-size: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+/* The read-back is the exception: it holds a short summary and nothing to
+   decide, so it takes the height it needs rather than the height its two
+   predecessors needed. */
+.tch-mentoringModal--review {
+  inline-size: min(760px, 94vw);
+  block-size: auto;
+}
+
+.tch-mentoringModal__head h2 {
+  margin: 0;
+  font-size: var(--sp-fs-lg);
+}
+.tch-mentoringModal__head p {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+}
+
+/* ── who is this about ────────────────────────────────────────────────────── */
+
+/* Sized and shaped for a real class. Forty children in a single 420px column
+   is a list you scroll past rather than a set you pick from — so: a search box
+   at the top, and a two-column grid of tiles under it. */
+.tch-pickDialog { inline-size: min(560px, 94vw); }
+.tch-pickDialog h2 { margin: 0; font-size: var(--sp-fs-lg); }
+.tch-pickDialog__search {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin-block: var(--sp-3) var(--sp-2);
+  padding-inline-start: var(--sp-2);
+  border: 1px solid var(--tch-card-border);
+  border-radius: 999px;
+  color: var(--sp-ink-500);
+}
+.tch-pickDialog__search .sp-input {
+  flex: 1;
+  min-inline-size: 0;
+  border: 0;
+  background: none;
+  padding-inline-start: 0;
+}
+.tch-pickDialog__search .sp-input:focus { outline: none; }
+
+.tch-pickDialog__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: var(--sp-1);
+  max-block-size: 52vh;
+  overflow-y: auto;
+}
+.tch-pickDialog__list button {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border: 1px solid transparent;
+  border-radius: var(--tch-card-radius);
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+}
+.tch-pickDialog__list button > span {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tch-pickDialog__list button:hover {
+  background: var(--tch-chip-bg);
+  border-color: var(--tch-card-border);
+}
+
+/* ── stepper ──────────────────────────────────────────────────────────────── */
+/*
+ * A rail, not three bullets. The first version was a left-aligned row of small
+ * numbered circles, which read as a list of links rather than as three stages
+ * of one piece of work — and at 22px the number was the loudest thing in it.
+ * Centred, larger, and joined by a line that fills as the teacher advances, so
+ * the shape itself says "you are part-way through something".
+ */
+
+/* Done is green, and green is the same green the rest of the teacher app uses
+   for "this is finished". Declared once here so the rail and the dot cannot
+   drift apart. */
+.tch-mentoringModal { --tch-step-done: var(--sp-ink-chat-ok, #2f9e6b); }
+
+.tch-stepper {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0 0 var(--sp-3);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  border-block-end: 1px solid var(--tch-card-border);
+  inline-size: min(560px, 100%);
+}
+.tch-stepper li {
+  flex: 1;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  position: relative;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+  text-align: center;
+}
+/* The connector belongs to the step on its trailing side, and is drawn behind
+   the dot rather than between elements — a flex gap cannot be coloured. */
+.tch-stepper li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 15px;
+  inset-inline-start: calc(50% + 20px);
+  inline-size: calc(100% - 40px);
+  block-size: 2px;
+  border-radius: 2px;
+  background: var(--tch-card-border);
+}
+.tch-stepper li.is-complete::after { background: var(--tch-step-done); }
+
+.tch-stepper__dot {
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--tch-card-border);
+  background: var(--sp-bg, transparent);
+  font-size: var(--sp-fs-sm);
+  font-weight: 600;
+  position: relative;
+  z-index: 1;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.tch-stepper li.is-current { color: var(--sp-ink-900); font-weight: 600; }
+.tch-stepper li.is-current .tch-stepper__dot {
+  border-color: currentColor;
+  box-shadow: 0 0 0 4px var(--tch-chip-bg);
+}
+.tch-stepper li.is-complete { color: var(--tch-step-done); }
+.tch-stepper li.is-complete .tch-stepper__dot {
+  background: var(--tch-step-done);
+  border-color: transparent;
+  color: var(--sp-bg, #fff);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tch-stepper__dot { transition: none; }
+}
+
+/* ── body: context beside the step ────────────────────────────────────────── */
+
+.tch-mentoringModal__body {
+  display: grid;
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  /* One row, exactly the height that is left. Without it the row is sized by
+     whichever column is taller — the reading panel, always — so the stage was
+     as tall as its neighbour, never overflowed, and never scrolled: the
+     teachers-only note at the foot of step one was simply unreachable. */
+  grid-template-rows: minmax(0, 1fr);
+  gap: var(--sp-4);
+  min-block-size: 0;
+  flex: 1;
+}
+/* Nothing beside the read-back, so the stage takes the whole width instead of
+   sitting in the 300px slot the context column left behind. */
+.tch-mentoringModal--review .tch-mentoringModal__body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Each column scrolls on its own, so reading the context does not move the
+   form and vice versa. */
+.tch-mentoringModal__stage,
+.tch-mentoringModal__body > .tch-goalRead,
+.tch-mentoringModal__body > .tch-prepPanel {
+  overflow-y: auto;
+  min-block-size: 0;
+  padding-inline-end: var(--sp-1);
+}
+
+@media (max-width: 900px) {
+  /* Stacked rather than hidden. The prep is what the teacher came to read, and
+     dropping it on a narrow screen would leave them writing from memory —
+     capped instead, so it cannot push the form off the bottom. */
+  .tch-mentoringModal__body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .tch-mentoringModal__body > .tch-prepPanel { max-block-size: 30vh; }
+}
+
+.tch-step { display: grid; gap: var(--sp-3); }
+.tch-step__guide {
+  margin: 0 0 var(--sp-3);
+  display: grid;
+  gap: 2px;
+}
+.tch-step__guide strong { font-size: var(--sp-fs-sm); }
+.tch-step__guide span { font-size: var(--sp-fs-xs); color: var(--sp-ink-500); }
+
+.tch-step__field { display: grid; gap: var(--sp-1); }
+.tch-step__field > span { font-size: var(--sp-fs-xs); color: var(--sp-ink-500); }
+.tch-step__notes { min-block-size: 132px; resize: vertical; }
+.tch-step__hint { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-500); }
+
+.tch-step__aside > summary {
+  cursor: pointer;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+.tch-step__aside[open] { display: grid; gap: var(--sp-2); }
+
+/* ── conversation prep — the context column ───────────────────────────────── */
+/*
+ * Cards, not bullets. This is the column a teacher reads in the thirty seconds
+ * before a child sits down, so each line has to be findable on its own: a
+ * dotted list of six sentences in three sections is one grey block at a glance.
+ */
+
+.tch-prepPanel {
+  display: grid;
+  align-content: start;
+  gap: var(--sp-2);
+  --tch-prep-accent: var(--sp-primary-700);
+}
+
+/* One accent per band, carried by the panel from whichever band is showing —
+   the toggle pill, the card edges and the card tint all read from it, so
+   switching bands recolours the column in one move. `color-mix` over the app's
+   own tokens rather than new colours: the palette does not grow for this. */
+.tch-prepPanel[data-tone='notice'],
+.tch-prepPanel__tabs[data-tone='notice'],
+.tch-prepPanel__tab[data-tone='notice'] { --tch-prep-accent: #b8860b; }
+/* Blue rather than the app's purple. Purple is what every primary button on
+   this screen already is, so the questions band read as another control among
+   controls instead of as its own kind of thing. */
+.tch-prepPanel[data-tone='ask'],
+.tch-prepPanel__tabs[data-tone='ask'],
+.tch-prepPanel__tab[data-tone='ask'] { --tch-prep-accent: #2f6fb5; }
+.tch-prepPanel[data-tone='aim'],
+.tch-prepPanel__tabs[data-tone='aim'],
+.tch-prepPanel__tab[data-tone='aim'] { --tch-prep-accent: #2f7d6b; }
+
+/* The toggle IS the header of this column. No gap between the tabs, so the
+   sliding pill's arithmetic stays exact. */
+.tch-prepPanel__tabs {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--sp-bg-subtle);
+  border: 1px solid var(--tch-card-border);
+  isolation: isolate;
+}
+
+/* The pill moves and re-tints together — the colour change is what tells the
+   teacher a different KIND of thing is below, and the travel is what tells
+   them it is the same column. */
+.tch-prepPanel__thumb {
+  position: absolute;
+  z-index: 0;
+  inset-block: 3px;
+  inline-size: calc((100% - 6px) / var(--tch-tab-count, 1));
+  inset-inline-start: calc(3px + (100% - 6px) / var(--tch-tab-count, 1) * var(--tch-tab-index, 0));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tch-prep-accent) 15%, var(--sp-surface));
+  border: 1px solid color-mix(in srgb, var(--tch-prep-accent) 32%, transparent);
+  transition: inset-inline-start 240ms cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 240ms ease, border-color 240ms ease;
+}
+
+.tch-prepPanel__tab {
+  position: relative;
+  z-index: 1;
+  appearance: none;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  min-inline-size: 0;
+  padding: 6px var(--sp-2);
+  border-radius: 999px;
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  font-weight: 600;
+  color: var(--sp-ink-500);
+  transition: color 200ms ease;
+}
+.tch-prepPanel__tab > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tch-prepPanel__tab svg { color: var(--tch-prep-accent); opacity: 0.5; transition: opacity 200ms ease; }
+.tch-prepPanel__tab[aria-selected='true'] { color: var(--tch-prep-accent); }
+.tch-prepPanel__tab[aria-selected='true'] svg { opacity: 1; }
+.tch-prepPanel__tab:focus-visible { outline: 2px solid var(--tch-prep-accent); outline-offset: 2px; }
+
+.tch-prepPanel__cards {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--sp-1);
+  animation: tch-prepSwap 240ms ease both;
+}
+@keyframes tch-prepSwap {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.tch-prepCard {
+  border: 1px solid var(--tch-card-border);
+  border-inline-start: 3px solid var(--tch-prep-accent);
+  border-radius: var(--tch-card-radius);
+  background: color-mix(in srgb, var(--tch-prep-accent) 5%, var(--tch-card-bg));
+  padding: var(--sp-2);
+  display: grid;
+  gap: 4px;
+}
+.tch-prepCard p { margin: 0; font-size: var(--sp-fs-sm); line-height: 1.5; }
+
+.tch-prepPanel__none { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-500); }
+.tch-prepPanel__loading { display: grid; gap: var(--sp-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tch-prepPanel__thumb { transition: none; }
+  .tch-prepPanel__cards { animation: none; }
+}
+
+/* ── guided writing ───────────────────────────────────────────────────────── */
+
+.tch-guide {
+  border: 1px solid var(--tch-card-border);
+  border-radius: var(--tch-card-radius);
+  padding: var(--sp-3);
+  display: grid;
+  gap: var(--sp-2);
+}
+.tch-guide__title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+.tch-guide__q { margin: 0; font-size: var(--sp-fs-sm); font-weight: 600; }
+.tch-guide__thinking { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-500); }
+.tch-guide__chips { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+.tch-guide__own { display: flex; gap: var(--sp-1); }
+.tch-guide__own .sp-input { flex: 1; }
+
+.tch-chip {
+  border: 1px solid var(--tch-card-border);
+  background: var(--tch-chip-bg);
+  border-radius: 999px;
+  padding: 4px var(--sp-2);
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  cursor: pointer;
+  color: inherit;
+}
+.tch-chip:hover { box-shadow: var(--tch-hover-ring); }
+.tch-chip--own { display: inline-flex; align-items: center; gap: 4px; }
+
+/* ── goals step ───────────────────────────────────────────────────────────── */
+
+/* One list, two bands. Side by side, each column was ~280px inside the modal
+   and every card wrapped into a tower — and worse, the arrangement said the
+   two sources were alternatives when one of them (the teacher's own talk) is
+   simply first. */
+.tch-goalsStep__band > header { margin-block-end: var(--sp-2); }
+.tch-goalsStep__band h4 { margin: 0; font-size: var(--sp-fs-sm); }
+.tch-goalsStep__band small { color: var(--sp-ink-500); font-size: var(--sp-fs-xs); display: block; }
+.tch-goalsStep__band + .tch-goalsStep__band {
+  margin-block-start: var(--sp-3);
+  padding-block-start: var(--sp-3);
+  border-block-start: 1px solid var(--tch-card-border);
+}
+.tch-goalsStep__none { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-500); }
+
+/* ── writing one by hand ──────────────────────────────────────────────────── */
+/*
+ * A single full-width button. It was a bordered disclosure containing a hint
+ * and a second button, so adding a goal by hand took two presses and the first
+ * one revealed nothing worth reading.
+ */
+
+.tch-goalsStep__addOwn {
+  inline-size: 100%;
+  justify-content: center;
+  gap: var(--sp-1);
+}
+
+.tch-goalsStep__chosen h4 { margin: 0 0 var(--sp-2); font-size: var(--sp-fs-sm); }
+
+.tch-chosenGoals { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+.tch-chosenGoals > li {
+  border: 1px solid var(--tch-card-border);
+  border-radius: var(--tch-card-radius);
+  background: var(--tch-card-bg);
+}
+.tch-chosenGoals__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+}
+.tch-chosenGoals__head > button:first-child {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+}
+.tch-chosenGoals__warn { font-size: var(--sp-fs-xs); color: var(--sp-ink-chat-alert); }
+.tch-chosenGoals__remove {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: var(--sp-ink-500);
+  display: inline-flex;
+}
+.tch-chosenGoals__body {
+  padding: 0 var(--sp-3) var(--sp-3);
+  display: grid;
+  gap: var(--sp-2);
+}
+.tch-chosenGoals__body label { display: grid; gap: var(--sp-1); }
+.tch-chosenGoals__body label > span { font-size: var(--sp-fs-xs); color: var(--sp-ink-500); }
+
+/* ── review ───────────────────────────────────────────────────────────────── */
+
+/* Three blocks, three audiences: what the child reads, what only the staff
+   room reads, and what the platform will be tracking. Each says which it is in
+   its own header rather than in a grey line underneath, so the two things a
+   teacher checks here — is it right, who sees it — are next to each other. */
+.tch-review { gap: var(--sp-2); }
+
+.tch-reviewCard {
+  display: grid;
+  gap: var(--sp-2);
+  border: 1px solid var(--tch-card-border);
+  border-radius: var(--tch-card-radius);
+  padding: var(--sp-3);
+  background: var(--tch-card-bg);
+  --tch-review-accent: var(--sp-primary-700);
+}
+.tch-reviewCard[data-tone='shared'] { --tch-review-accent: #2f6fb5; }
+.tch-reviewCard[data-tone='private'] { --tch-review-accent: var(--sp-ink-500); border-style: dashed; }
+.tch-reviewCard[data-tone='aim'] { --tch-review-accent: #2f7d6b; }
+
+.tch-reviewCard__head { display: flex; align-items: flex-start; gap: var(--sp-2); }
+.tch-reviewCard__head > span:last-child { display: grid; gap: 2px; min-inline-size: 0; }
+.tch-reviewCard__head strong { font-size: var(--sp-fs-sm); }
+.tch-reviewCard__head small { font-size: var(--sp-fs-xs); color: var(--sp-ink-500); }
+.tch-reviewCard__glyph {
+  flex: none;
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tch-review-accent);
+  background: color-mix(in srgb, var(--tch-review-accent) 13%, transparent);
+}
+
+.tch-review__notes { margin: 0; white-space: pre-wrap; font-size: var(--sp-fs-sm); line-height: 1.55; }
+.tch-review__none { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-500); }
+
+.tch-review__goals { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--sp-2); }
+.tch-reviewGoal {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-bg-subtle);
+}
+/* The number carries the ordering an `<ol>` marker used to, but inside the
+   card rather than in a gutter beside it — a marker in the page's inline
+   padding drifts away from the row it belongs to as the row grows. */
+.tch-reviewGoal__no {
+  flex: none;
+  inline-size: 22px;
+  block-size: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--sp-fs-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--tch-review-accent);
+  background: color-mix(in srgb, var(--tch-review-accent) 15%, transparent);
+}
+.tch-reviewGoal__body { display: grid; gap: 4px; min-inline-size: 0; }
+.tch-reviewGoal__body strong { font-size: var(--sp-fs-sm); line-height: 1.4; }
+.tch-reviewGoal__body > p:not(.tch-reviewGoal__chips) {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+}
+
+.tch-reviewGoal__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin: 2px 0 0;
+}
+.tch-reviewGoal__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px var(--sp-2);
+  border-radius: 999px;
+  border: 1px solid var(--tch-card-border);
+  background: var(--sp-surface);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+  white-space: nowrap;
+}
+/* The one chip that is a promise: the platform will count this. */
+.tch-reviewGoal__chip--aim {
+  color: var(--tch-review-accent);
+  border-color: color-mix(in srgb, var(--tch-review-accent) 34%, transparent);
+  background: color-mix(in srgb, var(--tch-review-accent) 8%, var(--sp-surface));
+  white-space: normal;
+}
+.tch-reviewGoal__chip--off { border-style: dashed; }
+
+/* ── footer ───────────────────────────────────────────────────────────────── */
+
+.tch-mentoringModal__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  border-block-start: 1px solid var(--tch-card-border);
+  padding-block-start: var(--sp-3);
+}

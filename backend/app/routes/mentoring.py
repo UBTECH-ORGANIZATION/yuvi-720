@@ -23,39 +23,31 @@ async def create_mentoring(data: dict, session=Depends(require_learner_session))
     """Create a mentoring conversation (F5)."""
     learner_id = session["sub"]
     # The whole dict is forwarded to the service, so pin the identity here.
-    record = await mentoring.create_conversation({**data, "learner_id": learner_id})
-    # MoE 720: the documented meeting → mentor-student-meeting `completed`;
-    # a shared next-steps goal → student-goal `initialized`. Mentor/student
-    # extension ids use the stub reporting identity until real MoE ids land.
-    if session.get("sid"):
-        from app.services.lrs import config as lrs_config
-        stub_exid = lrs_config.test_exidentifier()
-        await lrs_reporter.report_mentor_meeting_completed(
-            learner_id,
-            session["sid"],
-            record["id"],
-            mentor_exid=stub_exid,
-            student_exid=stub_exid,
-            meeting_date=record["date"],
-            mentoring_phase=record.get("meeting_stage") or None,
-        )
-        if record.get("visibility") == "shared":
-            for goal in record.get("goals", []):
-                await lrs_reporter.report_student_goal(
-                    learner_id,
-                    session["sid"],
-                    "initialized",
-                    goal["id"],
-                    "academic",
-                    instructor_exid=stub_exid if record.get("author") == "teacher" else None,
-                )
+    # MoE 720 reporting (mentor-student-meeting `completed` + a `student-goal
+    # initialized` per shared goal) now happens inside `create_conversation`,
+    # so it runs for every writer rather than only for this one.
+    record = await mentoring.create_conversation({
+        **data,
+        "learner_id": learner_id,
+        "lrs_session_id": session.get("sid"),
+    })
     return JSONResponse(content=record)
 
 
 @router.get("/mentoring")
-async def list_mentoring(role: str = "teacher", learner_id: str = Depends(require_learner)):
-    """List a learner's mentoring conversations (learner hides teacher-only notes)."""
-    rows = await mentoring.list_conversations(learner_id, role)
+async def list_mentoring(learner_id: str = Depends(require_learner)):
+    """List a learner's own mentoring conversations, teacher-only notes stripped.
+
+    The viewer role is NOT a parameter. It used to be `role: str = "teacher"`,
+    an unvalidated query arg — so a learner who called this without one (or with
+    `?role=teacher`) read the teacher-only notes written about them. Only the
+    frontend's convention of sending `role=learner` kept that shut.
+
+    `require_learner` already proves the caller is the learner whose records
+    these are, so the role is a constant here. A teacher reads the same data
+    through `GET /api/teacher/students/{id}/goals`, behind `_guard_learner`.
+    """
+    rows = await mentoring.list_conversations(learner_id, "learner")
     return JSONResponse(content={"conversations": rows})
 
 

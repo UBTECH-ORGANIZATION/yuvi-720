@@ -43,7 +43,7 @@ export function StudentConnectionsPane({ studentName }: StudentConnectionsPanePr
     setError(false)
     // The learner is resolved server-side from the session; learnerId only
     // keys the refetch when the signed-in learner changes.
-    listMentoring('learner')
+    listMentoring()
       .then((response) => {
         if (active) setRows(response.conversations)
       })

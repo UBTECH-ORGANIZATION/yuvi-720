@@ -610,11 +610,25 @@ export interface StudentGoal {
   progress?: GoalProgress | null
 }
 
+/** A documented conversation and the goals that came out of it.
+ *
+ *  `list_conversations` has always returned the whole record; only the goals
+ *  were ever declared here, because only the goals were ever rendered. The
+ *  conversation history reads the rest of what was already on the wire. */
 export interface GoalConversation {
   id: string
   author?: string
   date?: string
   goals: StudentGoal[]
+  /** What was discussed. Present on records written through the composer. */
+  notes?: string
+  meeting_stage?: string
+  /** Withheld from the learner — `list_conversations` strips it for them. */
+  teacher_only_note?: string
+  teacher_name?: string
+  /** Which teacher documented it. Absent on records written before it was stored. */
+  teacher_id?: string | null
+  visibility?: 'shared' | 'teacher_only'
 }
 
 export interface ApprovalResult {
@@ -1218,4 +1232,156 @@ export function deleteCalendarEvent(eventId: string) {
   return apiDelete<{ deleted: boolean }>(
     `/api/teacher/calendar/events/${encodeURIComponent(eventId)}`
   )
+}
+
+/* ── mentoring: the talk a goal came out of ───────────────────────────────── */
+
+/** One row of the meeting-prep sheet.
+ *
+ *  Two shapes, and consumers must handle both: the model path writes `text`,
+ *  while the deterministic fallback returns a locale `text_key` plus `params`
+ *  so it can speak all three languages without a model. */
+export interface MeetingPrepRow {
+  text?: string
+  text_key?: string
+  params?: Record<string, string | number>
+  because?: GoalDraft['because']
+}
+
+export interface MeetingPrep {
+  questions: MeetingPrepRow[]
+  insights: MeetingPrepRow[]
+  goal_ideas: MeetingPrepRow[]
+}
+
+/** What is worth raising with this student — offered before the conversation. */
+export function getMeetingPrep(learnerId: string, language: string) {
+  return apiGet<MeetingPrep>(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/meeting-prep`
+    + `?language=${encodeURIComponent(language)}`
+  )
+}
+
+/** One turn of Yuvi's guided write-up — the teacher's voice, not the child's. */
+export function assistTeacherMentoring(
+  learnerId: string,
+  body: { language: string; qa: { q: string; a: string }[]; notes: string; more?: boolean },
+) {
+  return apiPost<{
+    draft: string
+    question: string
+    options: string[]
+    phase: 'asking' | 'ready'
+    ai: boolean
+  }>(`/api/teacher/students/${encodeURIComponent(learnerId)}/mentoring/assist`, body)
+}
+
+/** Goals that follow from the write-up, as opposed to from observed evidence. */
+export function mentoringGoalIdeas(
+  learnerId: string, body: { language: string; notes: string; count?: number },
+) {
+  return apiPost<{ goals: GoalDraft[] }>(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/mentoring/goal-ideas`, body
+  )
+}
+
+export interface DocumentedConversation {
+  id: string
+  learner_id: string
+  date: string
+  notes: string
+  goals: StudentGoal[]
+}
+
+/** Write the conversation and every goal agreed in it, as one record.
+ *
+ *  `draft_id` is the idempotency key: pricing runs a model call per goal, so
+ *  the button stays live for seconds and a second click must not produce a
+ *  second conversation. */
+export function documentMentoring(
+  learnerId: string,
+  body: {
+    notes: string
+    goals: { title: string; next_steps: string; deadline: string; action: GoalAction | null }[]
+    meeting_stage?: string
+    teacher_only_note?: string
+    visibility?: 'shared' | 'teacher_only'
+    draft_id: string
+    language: string
+  },
+) {
+  return apiPost<DocumentedConversation>(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/mentoring`, body
+  )
+}
+
+/** Remove a write-up this teacher filed.
+ *
+ *  Only their own: the server refuses a colleague's record and a child's own
+ *  reflection alike. Soft — the row is kept and never listed again. */
+export function deleteMentoringConversation(learnerId: string, conversationId: string) {
+  return apiDelete<{ deleted: boolean }>(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}`
+    + `/mentoring/${encodeURIComponent(conversationId)}`
+  )
+}
+
+/* ── teacher UI state ─────────────────────────────────────────────────────── */
+
+/** One goal being drafted inside a mentoring write-up.
+ *
+ *  `action` is carried through every edit on purpose: a suggestion that came
+ *  with a countable action must not quietly become an untracked goal because
+ *  the teacher reworded its title. */
+export interface MentoringGoalDraft {
+  title: string
+  next_steps: string
+  deadline: string
+  action: GoalAction | null
+  /** Where the goal came from. `assistant` is the teaching assistant's draft —
+   *  it carries an `action` like the generated ones, so it is not `manual`. */
+  origin: 'conversation' | 'evidence' | 'manual' | 'assistant'
+  because?: GoalDraft['because']
+}
+
+/** The teacher's in-progress mentoring write-up.
+ *
+ *  Server-side rather than in the browser: this is a record of a conversation
+ *  with a child, so it should survive the device it was typed on. `qa` is here
+ *  and not only in component state — the learner composer loses its guided
+ *  writing thread on reload and re-asks question one. */
+export interface TeacherMentoringDraft {
+  open: boolean
+  /** Idempotency key, so a resubmitted form finds its own conversation. */
+  draft_id: string
+  learner_id: string
+  step: number
+  notes: string
+  teacher_only_note: string
+  meeting_stage: string
+  goals: MentoringGoalDraft[]
+  qa: { q: string; a: string }[]
+}
+
+export interface TeacherState {
+  teacher_id: string
+  mentoring_draft: TeacherMentoringDraft | null
+}
+
+export function getTeacherState() {
+  return apiGet<TeacherState>('/api/teacher/state')
+}
+
+/** Omitting `mentoring_draft` leaves it alone; sending `null` clears it. */
+export function updateTeacherState(patch: Partial<Pick<TeacherState, 'mentoring_draft'>>) {
+  return apiPatch<TeacherState>('/api/teacher/state', patch)
+}
+
+/* ── the nav badge ────────────────────────────────────────────────────────── */
+
+/** How many finished goals are waiting for this teacher's sign-off, across
+ *  every class they teach. Its own endpoint because the app bar asks for it on
+ *  every screen — see the route's docstring. */
+export function getPendingGoalCount() {
+  return apiGet<{ count: number }>('/api/teacher/goals/pending-count')
 }

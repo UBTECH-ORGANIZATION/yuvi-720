@@ -281,7 +281,8 @@ async def report_reflection_completed(
 # ── Mentoring + goals ────────────────────────────────────────────────────────
 async def report_mentor_meeting_completed(
     learner_id: str,
-    session_id: str,
+    # `None` when there is no session to name — see `report_mentoring_record`.
+    session_id: Optional[str],
     meeting_id: str,
     mentor_exid: str,
     student_exid: str,
@@ -302,7 +303,7 @@ async def report_mentor_meeting_completed(
 
 async def report_student_goal(
     learner_id: str,
-    session_id: str,
+    session_id: Optional[str],
     action: str,  # initialized | updated | completed
     goal_id: str,
     goal_type: str,
@@ -319,6 +320,71 @@ async def report_student_goal(
         builder, learner_id, session_id, goal_id, goal_type,
         instructor_exid=instructor_exid,
     )
+
+
+async def report_mentoring_record(
+    record: dict[str, Any],
+    *,
+    session_id: Optional[str],
+) -> None:
+    """A documented conversation and the goals that came out of it.
+
+    Lives here rather than in a route because it used to live in one: only
+    `POST /api/mentoring` reported, while `goal_approval.assign_goal` called
+    `mentoring.create_conversation` directly — so every goal a *teacher* set
+    was invisible to the ministry, despite a docstring claiming otherwise.
+    Reporting belongs beside the write, not beside one caller of it.
+
+    Two rules carried over verbatim from that route:
+      * a `teacher_only` conversation reports nothing at all — the child never
+        sees it, so there is no learning event to report;
+      * `instructor_exid` is attached only when the teacher authored it.
+
+    ## No session grouping on a teacher-authored record
+
+    The actor of every statement here is the LEARNER — it is their goal, their
+    meeting. But when a teacher documents the talk, the `sid` the route holds
+    is the **teacher's** MoE session, and `build_grouping` would hang it on the
+    statement as `.../session/{sid}`: the learner's event, filed inside someone
+    else's session. Borrowing it is not a smaller error than omitting it, so
+    these report with no session activity at all, which `build_grouping`
+    already allows. A teacher writing up a conversation is genuinely not inside
+    a learning session, and saying nothing is the only honest option available.
+
+    That also means a teacher-authored record reports whether or not the caller
+    has a session to offer; only the learner's own writing still needs one.
+    """
+    if not record:
+        return
+    learner_id = record.get("learner_id")
+    if not learner_id:
+        return
+    if record.get("author") == "teacher":
+        session_id = None
+    elif not session_id:
+        return
+    stub_exid = config.test_exidentifier()
+    await report_mentor_meeting_completed(
+        learner_id,
+        session_id,
+        record["id"],
+        mentor_exid=stub_exid,
+        student_exid=stub_exid,
+        meeting_date=record.get("date") or "",
+        mentoring_phase=record.get("meeting_stage") or None,
+    )
+    if record.get("visibility") != "shared":
+        return
+    instructor = stub_exid if record.get("author") == "teacher" else None
+    for goal in record.get("goals") or []:
+        await report_student_goal(
+            learner_id,
+            session_id,
+            "initialized",
+            goal["id"],
+            "academic",
+            instructor_exid=instructor,
+        )
 
 
 # ── Help + selection ─────────────────────────────────────────────────────────

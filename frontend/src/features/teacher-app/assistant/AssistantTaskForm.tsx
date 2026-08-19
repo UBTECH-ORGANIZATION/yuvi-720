@@ -19,9 +19,11 @@ import { useI18n } from '../../../i18n/I18nProvider'
 import { Icon } from '../../../components/primitives'
 import {
   approveStudentGoal, assignGroupGoal, assignStudentGoal, acknowledgeAlert,
-  createCalendarEvent, createTeacherInsight, listSubgroups, sendKudos,
-  updateCalendarEvent, type CalendarEventKind,
+  createCalendarEvent, createTeacherInsight, getTeacherState, listSubgroups,
+  sendKudos, updateCalendarEvent, updateTeacherState,
+  type CalendarEventKind, type TeacherMentoringDraft,
 } from '../../../services/teacher'
+import { emptyDraft, newDraftId } from '../goals/teacherMentoringDraft'
 import {
   createTask, listCatalogLearnings, startGeneration,
   type CatalogLearning, type TaskComponent, type TaskSpecInput,
@@ -57,6 +59,8 @@ export function AssistantTaskForm(props: Props) {
     case 'draft_task':   return <TaskForm {...props} />
     case 'draft_calendar_event':
     case 'edit_calendar_event': return <CalendarForm {...props} />
+    case 'draft_mentoring': return <MentoringOffer {...props} />
+    case 'meet_students': return <MeetList {...props} />
     case 'approve_goals': return <ApproveList {...props} />
     case 'ack_alerts':   return <AlertList {...props} />
     default:             return null
@@ -598,6 +602,182 @@ function CalendarForm({ action, groupId, onDone, onCancel }: Props) {
       <Foot label={t(editing ? 'tch.calendar.save' : 'tch.assistant.form.calendarCreate')}
             busy={busy} disabled={missingTitle || missingDay || !target}
             error={error} onConfirm={() => void confirm()} onCancel={onCancel} />
+    </Shell>
+  )
+}
+
+/* ── documenting a conversation ───────────────────────────────────────────── */
+
+/* The one offer in this file that does not write, and must not.
+ *
+ * Everything else here ends in a real endpoint call. A conversation with a
+ * child is different in kind: the model was not in the room. So pressing this
+ * seeds the teacher's draft and opens the composer on the goals screen — every
+ * word still editable, nothing saved until the teacher presses save there.
+ *
+ * The merge rule is the whole design. There is ONE draft per teacher, so an
+ * offer arriving while a write-up is open must not silently replace it: text
+ * the teacher typed always wins over text the model proposed, goals are
+ * appended rather than substituted, and an offer about a DIFFERENT child says
+ * so and asks, because that one cannot be merged at all.
+ */
+
+/** The teacher's open write-up, or null. `undefined` while it is being read —
+ *  a distinct state from "none", because confirming before the answer arrives
+ *  is exactly how one gets discarded. */
+function useOpenDraft() {
+  const [draft, setDraft] = useState<TeacherMentoringDraft | null | undefined>(undefined)
+  useEffect(() => {
+    let active = true
+    getTeacherState()
+      .then((state) => { if (active) setDraft(state.mentoring_draft) })
+      // A state we cannot read is treated as no draft: the teacher can still
+      // start one, and the merge below only ever adds to what it found.
+      .catch(() => { if (active) setDraft(null) })
+    return () => { active = false }
+  }, [])
+  return { loading: draft === undefined, open: draft?.open ? draft : null }
+}
+
+function mergeMentoringDraft(
+  base: TeacherMentoringDraft | null, action: AssistantAction, learnerId: string,
+): TeacherMentoringDraft {
+  const start = base ?? emptyDraft(learnerId, newDraftId())
+  const notes = start.notes.trim() ? start.notes : (action.notes ?? '')
+  return {
+    ...start,
+    open: true,
+    learner_id: learnerId,
+    notes,
+    teacher_only_note: start.teacher_only_note.trim()
+      ? start.teacher_only_note : (action.teacher_only_note ?? ''),
+    meeting_stage: start.meeting_stage || (action.meeting_stage ?? ''),
+    goals: [...start.goals, ...(action.goal_drafts ?? [])],
+    /* The offer says which step it filled in — but with nothing in "what was
+       discussed" the first thing needed is that, whatever the offer asked for.
+       The composer cannot save without it. */
+    step: notes.trim() ? (action.step ?? 0) : 0,
+  }
+}
+
+function MentoringOffer({ action, nameOf, onDone, onCancel }: Props) {
+  const { t } = useI18n()
+  const learnerId = action.learner_id ?? ''
+  const name = labelFor(learnerId, nameOf(learnerId))
+  const { loading, open } = useOpenDraft()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  const clash = Boolean(open && open.learner_id !== learnerId)
+  const goals = action.goal_drafts ?? []
+
+  const confirm = async () => {
+    setBusy(true); setError('')
+    try {
+      const merged = mergeMentoringDraft(clash ? null : open, action, learnerId)
+      // Server-side, so it survives the navigation — the composer reads its
+      // draft from `/api/teacher/state` when the goals screen mounts.
+      await updateTeacherState({ mentoring_draft: merged })
+      onDone(t('tch.assistant.form.mentoringOpened', { name }))
+      navigate('/teacher/goals')
+    } catch {
+      setError(t('tch.assistant.form.failed')); setBusy(false)
+    }
+  }
+
+  return (
+    <Shell title={t('tch.assistant.form.mentoringTitle', { name })}>
+      <p className="tch-dock__formNote">{t('tch.assistant.form.mentoringNote')}</p>
+      {action.notes ? (
+        <p className="tch-dock__formQuote" dir="auto">{action.notes}</p>
+      ) : null}
+      {goals.length ? (
+        <ul className="tch-dock__rows">
+          {goals.map((goal, index) => (
+            <li key={`${goal.title}:${index}`}>
+              <span dir="auto">{goal.title}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {/* Named, not silently resolved: one draft per teacher means confirming
+          this leaves the other write-up behind, and that is the teacher's
+          decision to make with their eyes open. */}
+      {clash ? (
+        <p className="tch-dock__formNote" dir="auto">
+          {t('tch.assistant.form.mentoringOther',
+             { name: labelFor(open?.learner_id ?? '', nameOf(open?.learner_id ?? '')) })}
+        </p>
+      ) : null}
+      <Foot label={t('tch.assistant.form.mentoringOpen')} busy={busy}
+            disabled={!learnerId || loading}
+            error={error} onConfirm={() => void confirm()} onCancel={onCancel} />
+    </Shell>
+  )
+}
+
+/* ── who to sit down with ─────────────────────────────────────────────────── */
+
+function MeetList({ action, nameOf, onDone, onCancel }: Props) {
+  const { t } = useI18n()
+  const students = action.students ?? []
+  const { loading, open } = useOpenDraft()
+  const [busy, setBusy] = useState('')
+  const [error, setError] = useState('')
+
+  const start = async (learnerId: string) => {
+    setBusy(learnerId); setError('')
+    try {
+      // A fresh draft, not a merge: this row is a decision to start a NEW
+      // write-up about this child, and there is nothing of the model's to keep.
+      await updateTeacherState({ mentoring_draft: emptyDraft(learnerId, newDraftId()) })
+      onDone(t('tch.assistant.form.mentoringOpened',
+               { name: labelFor(learnerId, nameOf(learnerId)) }))
+      navigate('/teacher/goals')
+    } catch {
+      setError(t('tch.assistant.form.failed')); setBusy('')
+    }
+  }
+
+  return (
+    <Shell title={t('tch.assistant.form.meetTitle')}>
+      {/* One draft per teacher, so starting one here leaves an open write-up
+          behind. Said before the row is pressed, not after. */}
+      {open ? (
+        <p className="tch-dock__formNote" dir="auto">
+          {t('tch.assistant.form.mentoringOther',
+             { name: labelFor(open.learner_id, nameOf(open.learner_id)) })}
+        </p>
+      ) : null}
+      <ul className="tch-dock__rows">
+        {students.map((student) => (
+          <li key={student.learner_id}>
+            <span dir="auto">
+              <strong>{labelFor(student.learner_id, nameOf(student.learner_id))}</strong>
+              {/* Why this child is on the list, in the teacher's language. The
+                  server ranked on these; showing anything else would make the
+                  order unexplainable. */}
+              <small className="tch-dock__rowWhy">
+                {student.because
+                  .map((reason) => t(`tch.assistant.form.meetWhy.${reason}`,
+                                     { days: student.days_since_meeting ?? 0 }))
+                  .join(' · ')}
+              </small>
+            </span>
+            <button type="button" className="sp-btn sp-btn--sm"
+                    disabled={loading || busy === student.learner_id}
+                    onClick={() => void start(student.learner_id)}>
+              {t('tch.assistant.form.meetDocument')}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {error ? <p className="tch-dock__formError" role="status">{error}</p> : null}
+      <div className="tch-dock__formFoot">
+        <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm" onClick={onCancel}>
+          {t('tch.assistant.form.close')}
+        </button>
+      </div>
     </Shell>
   )
 }

@@ -2,12 +2,38 @@
    beside the logo in Hebrew, English and Arabic, and `left`/`right` here would
    put the caret on the wrong side of the sentence in two of the three. */
 
+/* The width is RESERVED, not measured.
+ *
+ * Three segments, three separate requests, and the control grew as each one
+ * landed — which moved the nav beside it twice while the teacher was already
+ * reading it. Placeholders alone did not fix that: they only made the growth
+ * happen in different steps, because a placeholder is never exactly as wide as
+ * the words that replace it.
+ *
+ * So the container holds one width from the first paint and the segments fill
+ * it as they arrive. The number is the ordinary three-segment case; a teacher
+ * with less in their bar gets a little unused space rather than a moving nav,
+ * which is the trade this is making on purpose. Content wider than this still
+ * grows — once, not three times. */
 .tch-scope {
   position: relative;   /* the popover below anchors to this */
   display: flex;
   align-items: center;
   gap: var(--sp-1);
-  min-inline-size: 0;
+  /* An exact size, not a floor. A floor still moved the nav by the six pixels
+     the real labels overshot it by, which is the same defect in miniature —
+     the width has to be knowable before the data is, so it is declared rather
+     than derived. There is headroom for the ordinary three segments, and
+     `.tch-scope__value` already truncates, so an unusually long class name
+     spends an ellipsis instead of everyone else's stable layout. */
+  --tch-scope-reserve: 384px;
+  inline-size: var(--tch-scope-reserve);
+}
+
+/* Below the fold-point the bar has no room to hold space open, and the nav is
+   behind a hamburger anyway — nothing left for a reservation to protect. */
+@media (max-width: 1100px) {
+  .tch-scope { inline-size: auto; min-inline-size: 0; }
 }
 
 .tch-scope__trigger {
@@ -45,6 +71,23 @@
   border: 1px solid transparent;
   border-radius: var(--sp-radius-pill);
   min-inline-size: 0;
+}
+
+/* A segment whose list has not arrived. Same box, same height, no content —
+   so the bar is its full width from the first paint and the nav beside it
+   never moves. Deliberately faint: it is a reservation, not a thing to read. */
+.tch-scope__seg--pending {
+  block-size: 34px;
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-surface-2);
+  animation: tch-scope-pending 1.4s ease-in-out infinite;
+}
+@keyframes tch-scope-pending {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.95; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tch-scope__seg--pending { animation: none; }
 }
 
 /* Something is filtered. Loud on purpose, and readable without opening

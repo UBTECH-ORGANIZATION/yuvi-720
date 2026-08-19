@@ -24,6 +24,7 @@ from app.routes.admin_org import router as admin_org_router
 from app.routes.teacher import router as teacher_router
 from app.routes.teacher_students import router as teacher_students_router
 from app.routes.teacher_catalog import router as teacher_catalog_router
+from app.routes.teacher_state import router as teacher_state_router
 from app.routes.teacher_subgroups import router as teacher_subgroups_router
 from app.routes.teacher_wellbeing import router as teacher_wellbeing_router
 from app.routes.teacher_tasks import router as teacher_tasks_router
@@ -150,6 +151,17 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     )
     await run_index_steps(index_steps)
 
+    # Presence lives in this process's memory, so a restart wipes it and every
+    # child reads offline until they next reconnect. Read the last snapshots
+    # back — after the indexes, because unlike `install_hooks()` above this one
+    # needs the database. Liveness is not restored, only what was last seen.
+    try:
+        restored = await presence.rehydrate()
+        if restored:
+            print(f"↻ presence: {restored} learners restored as last-seen (none online)")
+    except Exception as exc:  # a cold cache is a slow screen, never a failed boot
+        print(f"⚠️ presence rehydrate skipped: {type(exc).__name__}")
+
     # The bus is in-process, so with more than one worker a learner's events and
     # their teacher's stream can land on different processes and simply never
     # meet. Warn loudly rather than let it look like a flaky feature.
@@ -197,6 +209,7 @@ def create_app() -> FastAPI:
     app.include_router(agent_router)
     app.include_router(teacher_router)
     app.include_router(teacher_students_router)
+    app.include_router(teacher_state_router)
     app.include_router(teacher_subgroups_router)
     app.include_router(teacher_wellbeing_router)
     app.include_router(teacher_catalog_router)

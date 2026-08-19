@@ -39,6 +39,7 @@ import re
 from typing import Any, Optional
 
 from app.agents.teacher_tools.registry import TeacherTool, TeacherToolContext, register
+from app.services.goal_progress import ACTION_KINDS as GOAL_ACTION_KINDS, normalize_action
 from app.services.school_calendar import EVENT_KINDS as CALENDAR_KINDS
 
 # The routes a `navigate` offer may point at. Validated against this rather than
@@ -210,7 +211,11 @@ async def _list_pending_goal_approvals(context: TeacherToolContext, args: dict) 
 
     pending: list[dict[str, Any]] = []
     for target in targets:
-        conversations = await mentoring.list_conversations(target, viewer_role="teacher")
+        # Up to MAX_OFFER_LEARNERS of these in one tool call — the pricing
+        # backfill is bounded per learner, so leaving it on multiplies it by
+        # the roster while the assistant waits.
+        conversations = await mentoring.list_conversations(
+            target, viewer_role="teacher", price_backfill=False)
         for conversation in (conversations or []):
             for goal in (conversation.get("goals") or []):
                 if goal.get("progress_stage") != "summarized" or goal.get("approved_by"):
@@ -534,6 +539,279 @@ async def _suggest_followups(context: TeacherToolContext, args: dict) -> dict:
     }
 
 
+# ── documenting a conversation ───────────────────────────────────────────────
+#
+# Two offers, one composer. `draft_mentoring_conversation` starts a write-up
+# from what the chat just established; `draft_goals_into_conversation` adds
+# goals to one. Both emit the same `draft_mentoring` kind, because pressing
+# either lands the teacher in the same three-step composer on the goals screen
+# — a second kind would be a second form rendering the same fields.
+#
+# Neither writes, and neither is a shortcut past the composer: the offer seeds
+# the teacher's server-side draft and opens it. Every word is editable before
+# anything is saved, which matters more here than anywhere else in this file —
+# this is the record of a conversation with a child, and a model has not heard
+# it. The prompt says so; the composer makes it true.
+
+#: The same cap `goal_approval.document_conversation` enforces on the way in.
+MAX_DRAFT_GOALS = 6
+
+#: The goal shape both mentoring drafts accept.
+#:
+#: `action.kind` is DERIVED from `goal_progress.ACTION_KINDS`, never restated.
+#: That vocabulary is already written down in three places that have to agree —
+#: the counter, the suggestion prompt's prose, and its machine list — and a
+#: literal here would make it four. The copy that drifts is always the one
+#: nothing imports. `draft_calendar_event` sets the same precedent with
+#: `EVENT_KINDS`.
+_GOALS_SCHEMA = {
+    "type": "array",
+    "description": f"Up to {MAX_DRAFT_GOALS} goals agreed in the conversation.",
+    "items": {"type": "object", "properties": {
+        "title": {"type": "string", "description": "Short and concrete, to the student."},
+        "next_steps": {"type": "string", "description": "What they should actually do."},
+        "deadline": {"type": "string", "description": "YYYY-MM-DD."},
+        "action": {
+            "type": "object",
+            "description": (
+                "Optional — only when the goal is one of the platform actions "
+                "Yuvi can count. Anything else is a perfectly good goal with no "
+                "action; do not invent one to fill this in."
+            ),
+            "properties": {
+                "kind": {"type": "string", "enum": sorted(GOAL_ACTION_KINDS)},
+                "target": {"type": "integer", "description": "How many times."},
+            },
+            "required": ["kind", "target"],
+        },
+    }, "required": ["title"]},
+}
+
+#: `group_id` is optional here, unlike the calendar drafts: "who should I sit
+#: down with" is a fair question about everyone this teacher teaches.
+_GROUP_ID_ARG = {"group_id": {
+    "type": "string",
+    "description": "A class from list_my_groups. Omit for every student you teach.",
+}}
+
+
+def _draft_goals(raw: Any) -> list[dict[str, Any]]:
+    """Goals for the composer's draft, in its own shape.
+
+    `action` runs through `goal_progress.normalize_action`, so an invented
+    action kind becomes None — an untracked goal — rather than a goal promising
+    a count nothing measures.
+    """
+    goals: list[dict[str, Any]] = []
+    for entry in (raw if isinstance(raw, list) else []):
+        if not isinstance(entry, dict):
+            continue
+        title = _clean(entry.get("title"), 120)
+        next_steps = _clean(entry.get("next_steps"), 600)
+        if not (title or next_steps):
+            continue
+        deadline = str(entry.get("deadline") or "")
+        goals.append({
+            "title": title or next_steps,
+            "next_steps": next_steps,
+            # Same rule as `_draft_goal`: a malformed date is dropped, not
+            # repaired, and the composer flags the empty field.
+            "deadline": deadline if _DATE.match(deadline) else "",
+            "action": normalize_action(entry.get("action")),
+            "origin": "assistant",
+        })
+        if len(goals) >= MAX_DRAFT_GOALS:
+            break
+    return goals
+
+
+def _mentoring_offer(learner_id: str, *, step: int, notes: str = "",
+                     teacher_only_note: str = "", meeting_stage: str = "",
+                     goals: Optional[list[dict[str, Any]]] = None,
+                     missing: Optional[list[str]] = None) -> dict[str, Any]:
+    return _offer(
+        "draft_mentoring",
+        "tch.assistant.action.draftMentoring",
+        learner_id=learner_id,
+        notes=notes,
+        teacher_only_note=teacher_only_note,
+        meeting_stage=meeting_stage,
+        # `goal_drafts`, not `goals`: an offer's `goals` field already means the
+        # finished goals `approve_goals` lists, and one name for two shapes is
+        # how a form ends up reading the wrong one — the same reason
+        # `draft_calendar_event` carries `event_kind` rather than `kind`.
+        goal_drafts=goals or [],
+        #: Which step the composer opens on — what the teacher still has to do,
+        #: not where the wizard begins.
+        step=step,
+        missing=missing or [],
+        params={"learner_id": learner_id},
+        icon="note",
+    )
+
+
+async def _draft_mentoring_conversation(context: TeacherToolContext, args: dict) -> dict:
+    """Propose a write-up of a talk with a student. Writes nothing.
+
+    `notes` is reported missing even when goals were drafted, and that is not
+    over-strictness: the composer cannot save a record with nothing in the
+    "what was discussed" field, so an offer without notes would open a form
+    whose save button is dead. The model is meant to ask the one question that
+    fills it — what did you talk about — which is also the only part of this a
+    model genuinely cannot know.
+    """
+    learner_id = str(args.get("learner_id") or "")
+    notes = _clean(args.get("notes"), 2000)
+    teacher_only_note = _clean(args.get("teacher_only_note"), 1000)
+    meeting_stage = _clean(args.get("meeting_stage"), 40)
+    goals = _draft_goals(args.get("goals"))
+
+    missing = [name for name, value in (("learner", learner_id), ("notes", notes))
+               if not value]
+    return {
+        "data": {"goal_count": len(goals), "missing": missing},
+        "offer": _mentoring_offer(
+            learner_id, step=0, notes=notes, teacher_only_note=teacher_only_note,
+            meeting_stage=meeting_stage, goals=goals, missing=missing),
+    }
+
+
+async def _draft_goals_into_conversation(context: TeacherToolContext, args: dict) -> dict:
+    """Propose goals to go into a write-up. Writes nothing.
+
+    The difference from `draft_goal` is where they land: `draft_goal` assigns
+    each one on its own, this one puts them in the conversation they came out
+    of. Several goals agreed in one talk are one record, not three unrelated
+    assignments — that is the whole reason the composer exists.
+    """
+    learner_id = str(args.get("learner_id") or "")
+    goals = _draft_goals(args.get("goals"))
+
+    missing = [name for name, value in (("learner", learner_id), ("goals", goals))
+               if not value]
+    return {
+        "data": {"goal_count": len(goals), "missing": missing},
+        # Opens on the goals step: the teacher is being handed goals, and the
+        # write-up around them is whatever is already in their draft.
+        "offer": _mentoring_offer(learner_id, step=1, goals=goals, missing=missing),
+    }
+
+
+# ── who to sit down with ─────────────────────────────────────────────────────
+
+#: What "we have not spoken in a while" means when nobody says. Three school
+#: weeks — long enough that a class of thirty does not all light up at once,
+#: short enough that a term cannot pass in silence.
+MEET_STALE_DAYS = 21
+
+#: Why a student is on the list, and what each reason is worth.
+#:
+#: The ranking is arithmetic over these, never a model score. "These are the
+#: children who need you" is a claim about real people, and a claim like that
+#: has to be checkable — so the teacher is shown exactly the reasons the sort
+#: used, as codes the client renders in their own language.
+_MEET_REASONS: dict[str, int] = {
+    "never_met": 4,
+    "asked_for_help": 3,
+    "goal_overdue": 2,
+    "no_recent_meeting": 2,
+}
+
+
+async def _suggest_students_to_meet(context: TeacherToolContext, args: dict) -> dict:
+    """Rank who is most overdue a conversation. Writes nothing.
+
+    One `list_conversations` per learner, bounded by `MAX_OFFER_LEARNERS` and
+    with the pricing backfill off — the same shape and the same reason as
+    `list_pending_goal_approvals`, which fans out over the identical set.
+    """
+    from datetime import datetime, timezone
+
+    from app.agents.teacher_tools.data_tools import days_since
+    from app.brain import org
+    from app.services import mentoring
+
+    group_id = str(args.get("group_id") or "")
+    roster = await org.learners_in_group(group_id) if group_id \
+        else sorted(context.allowed_learner_ids)
+    learner_ids = _in_scope(context, [str(entry) for entry in (roster or []) if entry])
+    if not learner_ids:
+        return {"data": None, "reason": "group_has_no_students"}
+
+    today = datetime.now(timezone.utc).date().isoformat()
+    rows: list[dict[str, Any]] = []
+    for learner_id in learner_ids:
+        conversations = await mentoring.list_conversations(
+            learner_id, viewer_role="teacher", price_backfill=False)
+
+        last_met, gap = "", None
+        for conversation in (conversations or []):
+            day = str(conversation.get("date") or "")
+            if day > last_met:
+                last_met = day
+        if last_met:
+            gap = days_since(last_met)
+
+        because: list[str] = []
+        if not last_met:
+            because.append("never_met")
+        elif gap is not None and gap >= MEET_STALE_DAYS:
+            because.append("no_recent_meeting")
+
+        overdue = help_wanted = 0
+        for conversation in (conversations or []):
+            for goal in (conversation.get("goals") or []):
+                if goal.get("progress_stage") == "summarized" or goal.get("approved_by"):
+                    continue
+                if goal.get("needs_help"):
+                    help_wanted += 1
+                deadline = str(goal.get("deadline") or "")
+                if _DATE.match(deadline) and deadline < today:
+                    overdue += 1
+        if help_wanted:
+            because.append("asked_for_help")
+        if overdue:
+            because.append("goal_overdue")
+
+        if not because:
+            continue
+        rows.append({
+            "learner_id": learner_id,
+            "last_met": last_met or None,
+            "days_since_meeting": gap,
+            "open_goals_overdue": overdue,
+            "open_goals_needing_help": help_wanted,
+            "because": because,
+            "_score": sum(_MEET_REASONS[reason] for reason in because),
+            # How long it has been, for the tie-break. Never met sorts as the
+            # longest gap there is; a stored date we cannot read sorts as the
+            # shortest, because claiming a gap we did not measure is the one
+            # thing this list must not do.
+            "_gap": 10 ** 6 if not last_met else (gap or 0),
+        })
+
+    if not rows:
+        return {"data": None, "reason": "nobody_is_overdue_a_conversation"}
+
+    # Fully determined: score, then how long it has been, then the id. Two runs
+    # over unchanged data must produce the same list in the same order.
+    rows.sort(key=lambda row: (-row["_score"], -row["_gap"], row["learner_id"]))
+    head = [{key: value for key, value in row.items() if not key.startswith("_")}
+            for row in rows[:6]]
+
+    return {
+        "data": {"count": len(rows), "students": head,
+                 "stale_after_days": MEET_STALE_DAYS},
+        "offer": _offer(
+            "meet_students",
+            "tch.assistant.action.meetStudents",
+            students=head,
+            params={"count": len(rows)},
+            icon="users",
+        ),
+    }
+
+
 # ── registration ─────────────────────────────────────────────────────────────
 
 def register_all() -> None:
@@ -711,4 +989,63 @@ def register_all() -> None:
             },
         }, "required": ["questions"]},
         handler=_suggest_followups,
+    ))
+    register(TeacherTool(
+        name="draft_mentoring_conversation",
+        description=(
+            "Propose a write-up of a conversation the teacher had with a student — "
+            "what was discussed, and any goals that came out of it — and offer it "
+            "as a composer they finish and confirm. This does NOT save it.\n"
+            "Use it when the teacher tells you about a talk they have had, or is "
+            "about to have. Goals agreed in one conversation belong in ONE record: "
+            "pass them all here rather than calling draft_goal several times.\n"
+            "You did not hear the conversation. Write only what the teacher told "
+            "you; if they have not said what it was about, call this anyway and ask "
+            "them in your reply — the composer will flag the empty field."
+        ),
+        parameters={"type": "object", "properties": {
+            "learner_id": {"type": "string"},
+            "notes": {
+                "type": "string",
+                "description": "What was discussed, in the teacher's own words and "
+                               "in their language. Third person about the child.",
+            },
+            "teacher_only_note": {
+                "type": "string",
+                "description": "Optional. Something the child must NOT see. Only "
+                               "when the teacher has said it is private.",
+            },
+            "meeting_stage": {"type": "string", "description": "Optional, e.g. a term or a round."},
+            "goals": _GOALS_SCHEMA,
+        }, "required": ["learner_id"]},
+        handler=_draft_mentoring_conversation, learner_args=("learner_id",),
+    ))
+    register(TeacherTool(
+        name="draft_goals_into_conversation",
+        description=(
+            "Propose goals that came out of a conversation, into the write-up of "
+            "that conversation rather than as separate assignments. Offers the "
+            "composer, open on its goals step. This does NOT assign them.\n"
+            "Prefer this over draft_goal whenever the goals came out of a talk. "
+            "Use draft_goal for a goal the teacher is simply setting, and for "
+            "anything aimed at more than one student."
+        ),
+        parameters={"type": "object", "properties": {
+            "learner_id": {"type": "string"},
+            "goals": _GOALS_SCHEMA,
+        }, "required": ["learner_id", "goals"]},
+        handler=_draft_goals_into_conversation, learner_args=("learner_id",),
+    ))
+    register(TeacherTool(
+        name="suggest_students_to_meet",
+        description=(
+            "Which students in a class are most overdue a conversation, and why. "
+            "Ranked on the record — how long since anyone documented a talk with "
+            "them, whether they have asked for help on a goal, whether a goal's "
+            "deadline has passed — never on an impression.\n"
+            "Every row carries the reasons it is there. Say them: 'nobody has "
+            "written up a talk with them' is useful, 'they need attention' is not."
+        ),
+        parameters={"type": "object", "properties": dict(_GROUP_ID_ARG)},
+        handler=_suggest_students_to_meet, group_args=("group_id",),
     ))

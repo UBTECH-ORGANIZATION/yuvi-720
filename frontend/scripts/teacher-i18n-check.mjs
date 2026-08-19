@@ -34,7 +34,11 @@ const LANGUAGES = [
 
 const SCREENS = [
   { name: 'home', path: '/teacher', ready: '.tch-stat' },
-  { name: 'students', path: '/teacher/students', ready: '.tch-studentCard, .sp-state' },
+  /* The roster renders as a table or as cards depending on this teacher's
+     stored `teacher_roster_view`, and the ready selector named only the cards
+     — so the screen "failed to render" for anyone who last chose the table. */
+  { name: 'students', path: '/teacher/students',
+    ready: '.tch-studentCard, .tch-roster__table, .sp-state' },
   { name: 'learnings', path: '/teacher/learnings', ready: '.tch-learning' },
   { name: 'goals', path: '/teacher/goals', ready: '.tch-goalsPage__inbox' },
   { name: 'messages', path: '/teacher/messages', ready: '.tch-messages__layout' },

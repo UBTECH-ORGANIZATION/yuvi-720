@@ -471,7 +471,8 @@ async def collect(group_id: str, start: str, end: str,
 
     async def _one(learner_id: str) -> list[dict[str, Any]]:
         async with semaphore:
-            conversations = await mentoring.list_conversations(learner_id, "teacher")
+            conversations = await mentoring.list_conversations(
+                learner_id, "teacher", price_backfill=False)
         return conversations_to_items(learner_id, conversations, start, end)
 
     for rows in await asyncio.gather(*(_one(lid) for lid in learner_ids)):

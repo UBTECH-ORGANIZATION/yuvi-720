@@ -7,6 +7,7 @@
 
 import { streamAgent } from './agents'
 import { apiDelete, apiGet, apiPost } from './api'
+import type { MentoringGoalDraft } from './teacher'
 
 export type ToolStatus = 'ok' | 'empty' | 'error'
 
@@ -26,6 +27,7 @@ export interface ToolTraceEntry {
 export type ActionKind =
   | 'navigate' | 'draft_goal' | 'draft_note' | 'draft_kudos' | 'draft_task'
   | 'draft_calendar_event' | 'edit_calendar_event'
+  | 'draft_mentoring' | 'meet_students'
   | 'approve_goals' | 'ack_alerts' | 'followups'
 
 export interface PendingGoal {
@@ -34,6 +36,20 @@ export interface PendingGoal {
   conversation_id: string
   title: string
   reward_value?: number | null
+}
+
+/** A student `suggest_students_to_meet` put on the list, and why.
+ *
+ *  `because` is a list of codes, never sentences: the ranking is arithmetic
+ *  the server can show its working for, and the reasons render in the
+ *  teacher's own language rather than in whichever one the model was in. */
+export interface MeetCandidate {
+  learner_id: string
+  last_met: string | null
+  days_since_meeting: number | null
+  open_goals_overdue: number
+  open_goals_needing_help: number
+  because: string[]
 }
 
 export interface OpenAlert {
@@ -84,6 +100,17 @@ export interface AssistantAction {
   start_at?: string
   end_at?: string
   targets?: { kind: string; id: string }[]
+  /* draft_mentoring — `notes` is the write-up, not `text`.
+     `goal_drafts` rather than `goals`, which below means finished goals waiting
+     for approval: one field name for two shapes is how a form reads the wrong
+     one. `step` is which step of the composer to open on. */
+  notes?: string
+  teacher_only_note?: string
+  meeting_stage?: string
+  goal_drafts?: MentoringGoalDraft[]
+  step?: number
+  /* meet_students */
+  students?: MeetCandidate[]
   /* approve_goals / ack_alerts / followups */
   goals?: PendingGoal[]
   alerts?: OpenAlert[]

@@ -210,6 +210,7 @@ export function GoalComposer({ learnerId, language, subject, onAssigned, framed 
      the platform cannot promise to count something it was never told about. */
   const [action, setAction] = useState<GoalAction | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [failed, setFailed] = useState(false)
 
   /* What was suggested last time, if anything — read only, no model call. A
      teacher who was here yesterday sees the same three today, immediately,
@@ -244,14 +245,26 @@ export function GoalComposer({ learnerId, language, subject, onAssigned, framed 
     setAction(draft.action ?? null)
   }
 
+  /* A failed assign used to be indistinguishable from a successful one: the
+     error was swallowed, the fields were cleared anyway, and `onAssigned()`
+     closed the dialog. The teacher watched it close and believed the child had
+     a goal. So: clear and hand off only after the write actually lands, and
+     keep what they typed when it doesn't. */
   const assign = async () => {
     if (!title.trim()) return
     setIsSaving(true)
-    await assignStudentGoal(
-      learnerId, { title: title.trim(), next_steps: steps.trim(), deadline, action }, language
-    ).catch(() => null)
+    setFailed(false)
+    try {
+      await assignStudentGoal(
+        learnerId, { title: title.trim(), next_steps: steps.trim(), deadline, action }, language
+      )
+    } catch {
+      setFailed(true)
+      return
+    } finally {
+      setIsSaving(false)
+    }
     setTitle(''); setSteps(''); setDeadline(''); setAction(null)
-    setIsSaving(false)
     onAssigned()
   }
 
@@ -331,12 +344,21 @@ export function GoalComposer({ learnerId, language, subject, onAssigned, framed 
         >
           {t('tch.goals.assign')}
         </button>
+        {failed ? (
+          <p className="tch-composer__failed" role="status" dir="auto">
+            {t('tch.goals.assignFailed')}
+          </p>
+        ) : null}
       </div>
     </Frame>
   )
 }
 
-function DraftCard({ draft, onUse }: { draft: GoalDraft; onUse: () => void }) {
+/* Exported so the mentoring composer shows suggestions the same way this
+   screen does — the `because` disclosure and the "this will be measured" line
+   are the parts that took work to get right, and two renderings of a grounded
+   suggestion is one of them eventually drifting. */
+export function DraftCard({ draft, onUse }: { draft: GoalDraft; onUse: () => void }) {
   const { t, language } = useI18n()
   const [open, setOpen] = useState(false)
 
@@ -353,16 +375,19 @@ function DraftCard({ draft, onUse }: { draft: GoalDraft; onUse: () => void }) {
   return (
     <li className="tch-draft">
       <div className="tch-draft__card">
-        <div className="tch-draft__head">
-          <strong dir="auto">{draft.title}</strong>
-          <StatusPill tone={draft.ai ? 'strong' : 'neutral'}>
-            {draft.ai ? t('tch.goals.draft.ai') : t('tch.goals.draft.derived')}
-          </StatusPill>
-        </div>
+        {/* Two paragraphs, not three. The card used to carry the title, the
+            next step AND the rationale, and the first two say nearly the same
+            thing in nearly the same words — three stacked paragraphs of Hebrew
+            in a 240px column is a wall, and the teacher stops reading before
+            the part that would have persuaded them. The rationale moved into
+            "why?", which is the question it answers.
+
+            The `הצעת יובי` pill went with it. Every card in this column is a
+            suggestion; labelling each one as such is a badge that carries no
+            information and competes with the title for the eye. */}
+        <strong className="tch-draft__title" dir="auto">{draft.title}</strong>
         {draft.next_steps ? <p dir="auto">{draft.next_steps}</p> : null}
-        {draft.rationale ? (
-          <p className="tch-draft__why" dir="auto">{draft.rationale}</p>
-        ) : null}
+
         {/* This goal will be measured: which platform action, how many times.
             Shown before assigning, so the tracking is a promise the teacher
             made knowingly, not a surprise on the goals screen. */}
@@ -384,21 +409,24 @@ function DraftCard({ draft, onUse }: { draft: GoalDraft; onUse: () => void }) {
           <Icon name={open ? 'chevronUp' : 'chevronLeft'} size={13} aria-hidden="true" />
           {t('tch.evidence.why')}
         </button>
-        {/* One sentence, keyed off the signal — the same treatment a
-            recommendation gets. This used to print the whole evidence payload
-            the model was given: the struggle list, the challenge dicts and the
-            description CONTAINER, rendered as `label: value` lines. A teacher
-            asking "why this goal?" was answered with `blocks [object Object]`
-            and `events since generation 4`. */}
+        {/* The model's reason first, then the observation under it. This used
+            to print the whole evidence payload the model was given: the
+            struggle list, the challenge dicts and the description CONTAINER,
+            rendered as `label: value` lines. A teacher asking "why this goal?"
+            was answered with `blocks [object Object]`. */}
         {open ? (
           <div className="tch-draft__because">
+            {draft.rationale ? <p dir="auto">{draft.rationale}</p> : null}
             {describeSignal(draft.because.signal, draft.because.value,
                             draft.because.raw, t, language)
               .map((sentence, index) => <p key={index} dir="auto">{sentence}</p>)}
           </div>
         ) : null}
 
-        <button type="button" className="sp-btn sp-btn--sm sp-btn--ghost" onClick={onUse}>
+        {/* Centred at the foot. Pinned to the inline-end it read as a chip
+            hanging off the corner of the text rather than as the one thing to
+            press on a card whose whole purpose is being chosen. */}
+        <button type="button" className="sp-btn sp-btn--sm tch-draft__use" onClick={onUse}>
           {t('tch.goals.draft.use')}
         </button>
       </div>

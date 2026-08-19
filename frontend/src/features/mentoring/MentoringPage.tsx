@@ -123,7 +123,7 @@ function StudentGoalsPage() {
     setRows(null)
     setError(false)
     setFocus(0)
-    listMentoring('learner')
+    listMentoring()
       .then((response) => setRows(response.conversations))
       .catch(() => setError(true))
   }

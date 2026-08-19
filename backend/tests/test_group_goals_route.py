@@ -18,7 +18,7 @@ class GroupGoalsRoute(unittest.IsolatedAsyncioTestCase):
              patch("app.brain.org.learners_in_group",
                    AsyncMock(return_value=["kid-a", "kid-b"])), \
              patch("app.services.mentoring.list_conversations",
-                   AsyncMock(side_effect=lambda lid, role: [
+                   AsyncMock(side_effect=lambda lid, role, **_kwargs: [
                        {"learner": lid, "role": role, "goals": []}])) as listing:
             response = await routes.group_goals("g1", session={"sub": "teacher-1"})
         return response, listing
@@ -37,6 +37,14 @@ class GroupGoalsRoute(unittest.IsolatedAsyncioTestCase):
         # The projection the learner must never see is exactly the one used here.
         for call in listing.await_args_list:
             self.assertEqual(call.args[1], "teacher")
+
+    async def test_the_class_read_does_not_price_goals_per_learner(self):
+        """The legacy pricing backfill is bounded per learner, not per request,
+        so leaving it on here multiplies model calls by the size of the class."""
+        _response, listing = await self._call(guarded=True)
+        self.assertTrue(listing.await_args_list)
+        for call in listing.await_args_list:
+            self.assertFalse(call.kwargs.get("price_backfill", True))
 
 
 if __name__ == "__main__":

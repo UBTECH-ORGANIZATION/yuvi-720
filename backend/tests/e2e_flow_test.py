@@ -422,11 +422,18 @@ async def main():
         check("goal visible on dashboard", any("10 דקות" in g["text"] for g in d3["goals"]))
         check("goal deadline visible on dashboard",
               any(g.get("deadline") == "2026-07-20" for g in d3["goals"]))
-        as_teacher = (await c.get("/api/mentoring", params={"learner_id": LID, "role": "teacher"})).json()
+        # `/api/mentoring` is the LEARNER's own endpoint, so the viewer role is
+        # not negotiable. It used to take `?role=`, defaulting to "teacher" —
+        # asking for the teacher view of your own records handed you the notes
+        # written about you. Both calls below must now come back identical.
+        forced = (await c.get("/api/mentoring", params={"learner_id": LID, "role": "teacher"})).json()
         as_learner = (await c.get("/api/mentoring", params={"learner_id": LID, "role": "learner"})).json()
-        check("teacher sees teacher_only note", any(cv.get("teacher_only_note") for cv in as_teacher["conversations"]))
         check("learner NEVER sees teacher_only note",
               all("teacher_only_note" not in cv for cv in as_learner["conversations"]))
+        check("learner cannot force the teacher view of their own records",
+              all("teacher_only_note" not in cv for cv in forced["conversations"]))
+        # The teacher reads the note through their own guarded endpoint instead:
+        # GET /api/teacher/students/{id}/goals (require_teacher_session + _guard_learner).
 
         # ═══ F7 · Feedback ════════════════════════════════════════════════════
         print("\n── F7 Feedback ──")
