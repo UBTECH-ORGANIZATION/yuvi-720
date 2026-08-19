@@ -1871,6 +1871,8 @@
   "tch.scope.subgroupOption": "{name} · {count} طلاب",
   "tch.scope.clearSubgroup": "عرض كل الصف بدل {name}",
   "tch.scope.clearSubject": "عرض كل المواضيع بدل {name}",
+  "tch.scope.notice.subject": "لا تنطبق تصفية الموضوع على هذه الشاشة — الأرقام هنا تشمل كل المواضيع.",
+  "tch.scope.notice.subgroup": "لا تنطبق تصفية المجموعة الفرعية على هذه الشاشة — الأرقام هنا تشمل كل الصف.",
   "tch.subject.math": "الرياضيات",
   "tch.subject.science": "العلوم",
   "tch.subject.english": "الإنجليزية",

@@ -65,12 +65,18 @@ export function questionLabel(
 
 export function TeacherLearningsPage() {
   const { t, language } = useI18n()
-  const { groupId, isLoading: scopeLoading } = useTeacherScope()
+  /* The subject chips below are not this screen's own state any more: they read
+     and write the portal-wide scope, so arriving here with maths already set
+     lights the maths chip, and picking one here keeps it on when the teacher
+     moves to a profile. Two independent filters that looked identical was the
+     confusing part, not the chips. */
+  const {
+    groupId, subject, setSubject, subjects, isLoading: scopeLoading,
+  } = useTeacherScope()
 
   const [view, setView] = useState<LearningsView | null>(null)
   const [error, setError] = useState(false)
   const [query, setQuery] = useState('')
-  const [subject, setSubject] = useState<string | null>(null)
   const [onlyStarted, setOnlyStarted] = useState(false)
 
   useEffect(() => {
@@ -271,7 +277,10 @@ export function TeacherLearningsPage() {
           >
             {t('tch.scope.allSubjects')}
           </button>
-          {(view.subjects ?? []).map((entry) => (
+          {/* From scope, not from `view.subjects`: the chips and the bar must
+              offer the same list, or a subject set in one is unreachable in the
+              other. Both are folded from the same rows server-side. */}
+          {subjects.map((entry) => (
             <button
               key={entry}
               type="button"

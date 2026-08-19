@@ -1871,6 +1871,8 @@
   "tch.scope.subgroupOption": "{name} · {count} students",
   "tch.scope.clearSubgroup": "Show the whole class instead of {name}",
   "tch.scope.clearSubject": "Show all subjects instead of {name}",
+  "tch.scope.notice.subject": "The subject filter does not apply on this screen — these figures cover every subject.",
+  "tch.scope.notice.subgroup": "The sub-group filter does not apply on this screen — these figures cover the whole class.",
   "tch.subject.math": "Mathematics",
   "tch.subject.science": "Science",
   "tch.subject.english": "English",

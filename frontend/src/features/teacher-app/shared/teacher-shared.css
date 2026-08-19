@@ -77,11 +77,21 @@
 .tch-goalsPage,
 .tch-cal,
 .tch-learnings,
-.tch-learningDetail {
+.tch-learningDetail,
+/* Not a page, but it sits directly above one and has to line up with it: the
+   scope notice in the teacher shell. It resets the vertical padding in
+   `scope-control.css`; the inline frame is the same frame, declared here once
+   like everything else in this list. */
+.tch-scopeNotice {
   max-inline-size: 1240px;
   margin-inline: auto;
   padding: var(--sp-5) clamp(var(--sp-4), 3vw, var(--sp-8)) var(--sp-10);
 }
+
+/* The notice above a page is not a page: same inline frame, none of a page's
+   vertical room. Immediately after the block it overrides, so this is settled
+   by source order and not by out-specifying the frame. */
+.tch-scopeNotice { padding-block: var(--sp-3) 0; }
 
 /* ── zones ─────────────────────────────────────────────────────────────────*/
 

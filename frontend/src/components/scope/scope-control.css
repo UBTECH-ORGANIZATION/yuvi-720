@@ -163,3 +163,34 @@
   .tch-scope:has(.tch-scope__chip) .tch-scope__class { display: none; }
   .tch-scope__trigger { padding-inline: var(--sp-2); }
 }
+
+/* ── "this filter does not apply here" ───────────────────────────────────── */
+
+/* The frame — max-width, centring, inline padding, and the reduced vertical
+   padding — is declared in `teacher-shared.css` beside the page frame it has to
+   line up with, so source order settles the override rather than specificity.
+   Only appearance is here. */
+.tch-scopeNotice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-3);
+  color: var(--sp-ink-500);
+  font-size: var(--sp-fs-sm);
+}
+
+.tch-scopeNotice > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* A quiet mark rather than a warning triangle: nothing has gone wrong, the
+   teacher is simply being told what this screen does with their filter. */
+.tch-scopeNotice > span::before {
+  content: "";
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: var(--sp-primary-300, var(--sp-primary-100));
+  flex: none;
+}

@@ -1871,6 +1871,8 @@
   "tch.scope.subgroupOption": "{name} · {count} תלמידים",
   "tch.scope.clearSubgroup": "הצגת כל הכיתה, במקום {name}",
   "tch.scope.clearSubject": "הצגת כל המקצועות, במקום {name}",
+  "tch.scope.notice.subject": "הסינון לפי מקצוע לא חל על המסך הזה — המספרים כאן על כל המקצועות.",
+  "tch.scope.notice.subgroup": "הסינון לפי תת-קבוצה לא חל על המסך הזה — המספרים כאן על כל הכיתה.",
   "tch.subject.math": "מתמטיקה",
   "tch.subject.science": "מדעים",
   "tch.subject.english": "אנגלית",

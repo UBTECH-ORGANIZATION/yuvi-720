@@ -25,18 +25,28 @@
  * (`.teacher-app-scope__field`) clamped it to `8ch` — which is where a scope
  * stops being a sentence.
  *
- * Which segments appear is not decided here: `scopeDimensions.ts` answers that
- * per route, so the bar can never offer a filter the screen behind it ignores.
+ * Every segment is shown on every teacher screen. An earlier version hid the
+ * ones a screen could not narrow by, and that was worse than the problem it
+ * solved: the student profile hides class and sub-group, so when its subject
+ * list failed to load the whole control vanished — and a control that is not
+ * there is indistinguishable from one that is broken.
+ *
+ * Nothing is hidden and nothing is silently ignored: `scopeDimensions.ts` says
+ * what each screen narrows by, and a dimension that is SET but not narrowed by
+ * is announced on the screen itself (see `ScopeNotice`). Setting it still
+ * works from anywhere — scope is one thing for the whole portal, and choosing
+ * maths on Home is a choice that applies the moment the teacher opens a
+ * profile or the learnings list.
  */
 
 import { useRef, useState } from 'react'
-import { useRoute } from '../../app/router'
+import { navigate, useRoute } from '../../app/router'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useTeacherScope } from '../../providers/TeacherScopeProvider'
 import { subjectLabel } from '../../features/teacher-app/shared/subjectLabel'
 import { useDismiss } from '../../features/teacher-app/shared/useDismiss'
 import { Icon } from '../primitives'
-import { dimensionsFor } from './scopeDimensions'
+import { narrowsBy } from './scopeDimensions'
 import './scope-control.css'
 
 export function ScopeControl() {
@@ -52,35 +62,40 @@ export function ScopeControl() {
   const wrapper = useRef<HTMLDivElement>(null)
   useDismiss(wrapper, isOpen, () => setIsOpen(false))
 
-  const dimensions = dimensionsFor(pathname)
-  const showClass = dimensions.class && Boolean(groupId)
-  const showSubgroup = dimensions.subgroup && subgroups.length > 0
-  const showSubject = dimensions.subject && subjects.length > 0
+  const narrows = narrowsBy(pathname)
 
-  /* Nothing to say. The admin console, and a profile whose class has no
-     subjects to narrow by — an empty popover is worse than no control. */
+  /* Shown because the teacher has a class, a subject list and sub-groups — not
+     because this screen happens to use them. The only thing that hides a
+     segment is having nothing to put in it. */
+  const showClass = Boolean(groupId)
+  const showSubgroup = subgroups.length > 0
+  const showSubject = subjects.length > 0
+
+  /* The admin console: no class, nothing to scope. */
   if (!showClass && !showSubgroup && !showSubject) return null
 
-  /* A teacher with one class and no sub-groups has nothing to choose. The
-     control still renders, because the class name is the frame every screen is
-     read inside, but as a line rather than a button that opens an empty sheet. */
+  /* A teacher with one class, no sub-groups and no subject list has nothing to
+     choose. The control still renders, because the class name is the frame
+     every screen is read inside, but as a line rather than a button that opens
+     an empty sheet. */
   const canOpen = (showClass && groups.length > 1) || showSubgroup || showSubject
 
-  const narrowedSubgroup = dimensions.subgroup ? subgroup : null
-  const narrowedSubject = dimensions.subject ? subject : null
+  const narrowedSubgroup = subgroup
+  const narrowedSubject = subject
   const isNarrowed = Boolean(narrowedSubgroup || narrowedSubject)
 
-  /* What the trigger says before any chip. The class, when the screen is about
-     a class — otherwise the dimension that IS offered here, so the control is
-     never a bare chevron with nothing beside it. That is what the student
-     profile got: it hides the class and the sub-group, so with only the class
-     rendered as a label there was a lone caret in the bar and no way to tell
-     what it opened. */
-  const lead = showClass
-    ? (group?.name ?? '')
-    : showSubject
-      ? (narrowedSubject ? t('tch.scope.subject') : t('tch.scope.allSubjects'))
-      : (narrowedSubgroup ? t('tch.scope.subgroup') : t('tch.subgroups.wholeClass'))
+  /* On a screen that is not about a class, picking one has to go somewhere: the
+     child whose profile is open is not in the class just chosen, so staying put
+     would leave the bar and the page describing different people. */
+  const pickClass = (id: string) => {
+    setGroupId(id)
+    if (!narrows.class) navigate('/teacher/students')
+  }
+
+  /* The class is always the lead, on every screen — it is the frame the whole
+     portal is read inside, and a bar that dropped it on a profile left a lone
+     caret with nothing beside it. */
+  const lead = showClass ? (group?.name ?? '') : t('tch.scope.label')
 
   const segments = (
     <>
@@ -149,7 +164,7 @@ export function ScopeControl() {
               name="tch-scope-group"
               value={groupId ?? ''}
               options={groups.map((row) => ({ value: row.id, label: row.name }))}
-              onPick={(value) => { setGroupId(value); setIsOpen(false) }}
+              onPick={(value) => { pickClass(value); setIsOpen(false) }}
             />
           )}
           {showSubgroup && (

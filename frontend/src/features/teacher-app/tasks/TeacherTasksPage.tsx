@@ -63,12 +63,17 @@ const DRAFT_DEBOUNCE_MS = 400
 
 export function TeacherTasksPage() {
   const { t } = useI18n()
-  const { groupId } = useTeacherScope()
+  const { groupId, subject: scopeSubject, setSubject: setScopeSubject } = useTeacherScope()
   const [tasks, setTasks] = useState<TaskSummary[] | null>(null)
   const [error, setError] = useState(false)
   const [building, setBuilding] = useState(false)
   const [query, setQuery] = useState('')
-  const [subject, setSubject] = useState('all')
+  /* Scope, not local state: the chip row and the bar are two surfaces on one
+     filter, so a subject chosen in either is lit in both and survives leaving
+     the screen. `'all'` is this row's spelling of "not narrowed"; the scope
+     spells it `null`. */
+  const subject = scopeSubject ?? 'all'
+  const setSubject = (next: string) => setScopeSubject(next === 'all' ? null : next)
   /* Arriving from somewhere that already knows what the task is about — the
      class-gaps panel sends the objective and the children it is a gap for. */
   const [seed, setSeed] = useState<TaskSeed | null>(null)

@@ -1,31 +1,36 @@
-/* Which parts of a teacher's scope a screen actually honours.
+/* Which parts of a teacher's scope a screen actually narrows by.
  *
- * The scope bar offers class, sub-group and subject portal-wide. Not every
- * screen means all three — a student's profile is about one child, so a
- * sub-group filter there is nonsense, and the task review screen reads one task
- * the whole class already has.
+ * The scope bar always shows class and subject, on every teacher screen. It
+ * used to hide the segments a screen could not honour, and that was worse than
+ * the problem it solved: a control that vanishes is indistinguishable from a
+ * control that is broken, and the student profile — which hides class and
+ * sub-group — disappeared entirely the moment its subject list failed to load.
  *
- * A dimension a screen cannot honour is HIDDEN rather than disabled: a control
- * that is visible and does nothing is the failure this file exists to prevent.
- * `/groups/{id}/snapshot` used to declare a `subject` query parameter and drop
- * it on the floor — the two most-used screens sent a filter nowhere, and it
- * survived review because it was invisible while the subject was always null.
+ * So nothing is hidden, and nothing is silently ignored either. This table says
+ * which dimensions a screen's data actually narrows by, and it drives two
+ * things: what the screen filters, and — when a dimension is SET and this
+ * screen does not narrow by it — the one line the screen prints to say so.
+ * That line is the whole point. `/groups/{id}/snapshot` used to declare a
+ * `subject` query parameter and drop it on the floor, so Home and the roster
+ * sent a filter nowhere; showing "maths" over class-wide figures without
+ * saying so would be that same lie with a control attached to it.
  *
  * **The standing rule this encodes:** no `subject` or `subgroup` may be passed
- * to a service call whose endpoint has no such parameter, and no dimension may
- * be offered for a route that does not narrow by it. If you add a route, add it
- * here and to `tests/scope-dimensions.test.ts` in the same change.
+ * to a service call whose endpoint has no such parameter, and any dimension a
+ * teacher has set that a screen does not narrow by must be SAID, never merely
+ * dropped. If you add a route, add it here and to
+ * `tests/scope-dimensions.test.ts` in the same change.
  *
  * JSX-free on purpose so `node --test` can import it directly, the same reason
  * `actionKey.ts` is its own module.
  */
 
 export interface ScopeDimensions {
-  /** The class picker. Off only where the screen is not about a class at all. */
+  /** This screen's data is about the selected class. */
   class: boolean
-  /** The sub-group picker. */
+  /** It narrows to the selected sub-group's members. */
   subgroup: boolean
-  /** The subject picker. */
+  /** It narrows to the selected subject. */
   subject: boolean
 }
 
@@ -42,35 +47,35 @@ const CLASS_AND_SUBGROUP: ScopeDimensions = { class: true, subgroup: true, subje
    both before the bare `/teacher`, or every route resolves to Home's answer. */
 const ROUTES: [prefix: string, dimensions: ScopeDimensions][] = [
   /* One child. The class and the sub-group they belong to are facts about
-     them, not filters on them — but every panel on this page reads a subject,
-     so that one dimension is the whole scope here. */
+     them, not filters on them, so the page narrows by neither — the bar still
+     shows the class, and picking a different one takes the teacher to that
+     class's roster, because the child they were reading is not in it. Every
+     panel here reads a subject. */
   ['/teacher/student/', { class: false, subgroup: false, subject: true }],
 
   ['/teacher/students', CLASS_AND_SUBGROUP],
   ['/teacher/goals', CLASS_AND_SUBGROUP],
   ['/teacher/calendar', CLASS_AND_SUBGROUP],
 
-  /* Learnings: the listing narrows by subject exactly, and by sub-group only
-     approximately — the analytics fold is class-wide, so the screen says so in
-     a line rather than pretending. The drill-down takes its class from the URL
-     so a link survives a reload, and reads one lesson, so no subject.
-
-     `subject: false` on the listing is TEMPORARY: the screen still owns its own
-     subject chips, and two controls for one filter is worse than one control in
-     the wrong place. Flips to `true` in the commit that deletes those chips. */
+  /* Learnings. The listing narrows by subject exactly; its own chip row is not
+     a second control any more — the chips read and write the same scope, so
+     arriving with maths already set lights the maths chip. It narrows by
+     NOT by sub-group — the analytics fold behind it is class-wide — so a
+     teacher who has narrowed to six children is told so rather than shown
+     class numbers under a sub-group's name. The drill-down reads one
+     lesson, so no subject, and takes its class from the URL so a link survives
+     a reload. */
   ['/teacher/learnings/', { class: true, subgroup: true, subject: false }],
-  ['/teacher/learnings', { class: true, subgroup: true, subject: false }],
+  ['/teacher/learnings', { class: true, subgroup: false, subject: true }],
 
   ['/teacher/messages', CLASS_AND_SUBGROUP],
 
   /* Tasks. `/review` is handled above — the class is context there and there is
      no cohort to narrow. Tracking is one task's cohort, so sub-group but never
-     subject: the task already has a subject.
-
-     The list narrows by subject too; `false` here is TEMPORARY for the same
-     reason as learnings, and flips when its own `'all'` chip row is deleted. */
+     subject: the task already has one. The list narrows by subject, through the
+     same chips-bound-to-scope arrangement as learnings. */
   ['/teacher/tasks/', { class: true, subgroup: true, subject: false }],
-  ['/teacher/tasks', { class: true, subgroup: true, subject: false }],
+  ['/teacher/tasks', { class: true, subgroup: true, subject: true }],
 
   ['/teacher', CLASS_AND_SUBGROUP],
 
@@ -87,13 +92,13 @@ function taskTail(pathname: string): string | null {
 }
 
 /**
- * What the scope bar may offer on `pathname`.
+ * What `pathname` narrows by.
  *
  * Takes the path only. Scope travels in path segments and is adopted into the
  * provider; the query string stays transient screen state, so a query parameter
- * can never change which controls appear.
+ * can never change what a screen claims to filter.
  */
-export function dimensionsFor(pathname: string): ScopeDimensions {
+export function narrowsBy(pathname: string): ScopeDimensions {
   const path = (pathname || '').split(/[?#]/)[0].replace(/\/+$/, '') || '/'
 
   /* One task, before anyone has it. The class is the context the task was

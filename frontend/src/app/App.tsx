@@ -11,6 +11,7 @@ import { LearningDetailPage } from '../features/teacher-app/learnings/LearningDe
 import { TeacherMessagesPage } from '../features/teacher-app/messages/TeacherMessagesPage'
 import { AdminConsolePage } from '../features/admin/AdminConsolePage'
 import { TeacherAppBar } from '../components/TeacherAppBar'
+import { ScopeNotice } from '../components/scope/ScopeNotice'
 import { AssistantDock } from '../features/teacher-app/assistant/AssistantDock'
 import { TeacherScopeProvider } from '../providers/TeacherScopeProvider'
 import { TeacherRosterProvider } from '../providers/TeacherRosterProvider'
@@ -147,7 +148,13 @@ function TeacherShell({ children }: { children: React.ReactNode }) {
               companion is always beside you" contract as the student's chat
               panel, not a launcher hiding in a corner (A8). */}
           <div className="sp-teacher-shell__work">
-            <main className="sp-teacher-shell__main">{children}</main>
+            {/* Above every page, never inside one: a screen that does not narrow
+                by a filter the teacher has set must say so, and a new screen
+                must not be able to forget to. */}
+            <main className="sp-teacher-shell__main">
+              <ScopeNotice />
+              {children}
+            </main>
             <AssistantDock />
           </div>
         </div>
