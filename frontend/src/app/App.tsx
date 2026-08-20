@@ -31,6 +31,7 @@ import { TeacherTasksPage } from '../features/teacher-app/tasks/TeacherTasksPage
 import { TaskReviewPage } from '../features/teacher-app/tasks/TaskReviewPage'
 import { TaskTrackingPage } from '../features/teacher-app/tasks/TaskTrackingPage'
 import { ReportIssueDialog } from '../features/support/ReportIssueDialog'
+import { LearnerMessageToast } from '../components/LearnerMessageToast'
 import { PublicReportPage } from '../features/support/PublicReportPage'
 import { useStudioTransition } from '../features/Yuvi-studio/StudioTransitionProvider'
 import { CompanionChat } from '../components/CompanionChat'
@@ -469,6 +470,7 @@ export function App() {
       ) : routePage}
       {learnerRoute && !isStudioRoute && !isActiveTaskRoute && !isLearningWorldRoute && <YuviCompanionDock />}
       {learnerRoute && <SparkToast />}
+      {learnerRoute && <LearnerMessageToast />}
       {/* Teachers report faults from their own lane too, so this is not learner-scoped.
           It is also the only floating helper left in the teacher lane: the
           support chat used to ride in the same bottom-left corner as the

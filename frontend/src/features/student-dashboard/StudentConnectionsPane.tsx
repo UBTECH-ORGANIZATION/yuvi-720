@@ -12,7 +12,7 @@
  * that moment should not be depending on their teacher opening a thread.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { navigate } from '../../app/router'
 import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { EmptyState, ErrorState, Icon, LoadingState } from '../../components/primitives'
@@ -21,9 +21,10 @@ import { useBrain } from '../../providers/BrainProvider'
 import { listMentoring, type MentoringConversation } from '../../services/mentoring'
 import { getMyTeachers, type MyTeacher } from '../../services/me'
 import {
-  MessageRefused, listMyMessages, markMyMessagesRead, sendMyMessage,
+  MessageRefused, getMyUnread, listMyMessages, markMyMessagesRead, sendMyMessage,
   type DirectMessage,
 } from '../../services/directMessages'
+import { subscribe } from '../../services/realtime'
 import './student-connections.css'
 
 interface StudentConnectionsPaneProps {
@@ -94,6 +95,34 @@ export function StudentConnectionsPane({ studentName }: StudentConnectionsPanePr
   )
   const activeTeacher = active.name
 
+  /* WhatsApp-style: which teachers have written something not yet read.
+     Seeded from the counters, zeroed locally when that thread opens, bumped
+     by live frames on the stream the page already holds. */
+  const [unreadMap, setUnreadMap] = useState<Record<string, number>>({})
+  const [threadNonce, setThreadNonce] = useState(0)
+  const activeIdRef = useRef(active.id)
+  useEffect(() => { activeIdRef.current = active.id }, [active.id])
+
+  useEffect(() => {
+    let mounted = true
+    getMyUnread()
+      .then((result) => { if (mounted) setUnreadMap(result.unread ?? {}) })
+      .catch(() => {})
+    return () => { mounted = false }
+  }, [learnerId])
+
+  useEffect(() => {
+    return subscribe('learner-triggers', () => '/api/agent/triggers/subscribe', (frame) => {
+      if (frame.type !== 'direct_message' || frame.sender !== 'teacher') return
+      const from = String(frame.teacher_id || '')
+      if (from && from === activeIdRef.current) {
+        setThreadNonce((value) => value + 1)     // the open thread shows it
+      } else if (from) {
+        setUnreadMap((current) => ({ ...current, [from]: (current[from] ?? 0) + 1 }))
+      }
+    })
+  }, [])
+
   const teacherRows = useMemo(
     () => (rows || []).filter((row) => row.teacher_name.trim() === activeTeacher),
     [activeTeacher, rows],
@@ -133,12 +162,31 @@ export function StudentConnectionsPane({ studentName }: StudentConnectionsPanePr
                 .map((teacher) => (
                 <button
                   key={teacher.name}
-                  className={teacher.name === activeTeacher ? 'is-active' : ''}
+                  className={`${teacher.name === activeTeacher ? 'is-active' : ''}${
+                    teacher.id && unreadMap[teacher.id] ? ' has-unread' : ''}`}
                   type="button"
-                  onClick={() => setSelectedTeacher(teacher.name)}
+                  onClick={() => {
+                    setSelectedTeacher(teacher.name)
+                    // Opening reads it; the thread tells the server, this
+                    // clears the badge without waiting for a refetch.
+                    if (teacher.id) {
+                      setUnreadMap((current) => {
+                        if (!current[teacher.id as string]) return current
+                        const next = { ...current }
+                        delete next[teacher.id as string]
+                        return next
+                      })
+                    }
+                  }}
                 >
                   <span className="sd-chat-window__avatar" aria-hidden="true">{teacher.name.charAt(0)}</span>
                   <span><strong dir="auto">{teacher.name}</strong><small>{t('sdash.chat.teacherRole')}</small></span>
+                  {teacher.id && unreadMap[teacher.id] ? (
+                    <span className="sd-chat-window__unread"
+                          aria-label={t('sdash.chat.unread', { count: unreadMap[teacher.id] })}>
+                      {unreadMap[teacher.id] > 99 ? '99+' : unreadMap[teacher.id]}
+                    </span>
+                  ) : null}
                 </button>
               ))}
             </aside>
@@ -148,6 +196,7 @@ export function StudentConnectionsPane({ studentName }: StudentConnectionsPanePr
               teacherName={activeTeacher}
               summaries={teacherRows}
               formatDate={formatDate}
+              reloadNonce={threadNonce}
             />
           </section>
         )}
@@ -164,13 +213,15 @@ export function StudentConnectionsPane({ studentName }: StudentConnectionsPanePr
  * sort onto the start of their day — the alternative, a separate rail for
  * summaries, is the two-lists problem again.
  */
-function TeacherThread({ teacherId, teacherName, summaries, formatDate }: {
+function TeacherThread({ teacherId, teacherName, summaries, formatDate, reloadNonce = 0 }: {
   /** Null for a teacher who exists only in old conversations — readable
    *  history, no live link, so nothing can be sent to them. */
   teacherId: string | null
   teacherName: string
   summaries: MentoringConversation[]
   formatDate: (value: string) => string
+  /** Bumped by the pane when a live message lands in THIS thread. */
+  reloadNonce?: number
 }) {
   const { t, language } = useI18n()
   const [messages, setMessages] = useState<DirectMessage[]>([])
@@ -179,6 +230,10 @@ function TeacherThread({ teacherId, teacherName, summaries, formatDate }: {
   const [failed, setFailed] = useState<'refused' | 'network' | null>(null)
   const [refusalKey, setRefusalKey] = useState<string | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
+  /* Where "unread" begins. Captured once, on first load — mark-read fires
+     right below, so recomputing on a later reload would silently take the
+     bar away while the child is still reading up to it. */
+  const unreadFrom = useRef<string | null | 'unset'>('unset')
 
   const load = useCallback(() => {
     if (!teacherId) { setMessages([]); return }
@@ -186,6 +241,11 @@ function TeacherThread({ teacherId, teacherName, summaries, formatDate }: {
     listMyMessages(teacherId)
       .then((rows) => {
         if (!active) return
+        if (unreadFrom.current === 'unset') {
+          const firstUnread = rows.find(
+            (row) => row.sender === 'teacher' && !row.read_at)
+          unreadFrom.current = firstUnread ? firstUnread.id : null
+        }
         setMessages(rows)
         void markMyMessagesRead(teacherId).catch(() => {})
       })
@@ -194,6 +254,8 @@ function TeacherThread({ teacherId, teacherName, summaries, formatDate }: {
   }, [teacherId])
 
   useEffect(() => load(), [load])
+  // A live arrival in the open thread: refetch in place.
+  useEffect(() => { if (reloadNonce) return load() }, [reloadNonce, load])
 
   /* Latest at the bottom — a thread that opens on its oldest line is a thread
      nobody reads the end of. */
@@ -275,12 +337,18 @@ function TeacherThread({ teacherId, teacherName, summaries, formatDate }: {
           }
           const message = row.body as DirectMessage
           return (
-            <article
-              className={`sd-chat-bubble sd-chat-bubble--${row.kind === 'from_me' ? 'me' : 'them'}`}
-              key={row.key}
-            >
-              <p dir="auto">{message.text}</p>
-            </article>
+            <Fragment key={row.key}>
+              {message.id === unreadFrom.current && (
+                <p className="sd-chat-unreadBar" role="separator">
+                  {t('sdash.chat.unreadFromHere')}
+                </p>
+              )}
+              <article
+                className={`sd-chat-bubble sd-chat-bubble--${row.kind === 'from_me' ? 'me' : 'them'}`}
+              >
+                <p dir="auto">{message.text}</p>
+              </article>
+            </Fragment>
           )
         }) : (
           <EmptyState icon="message" title={t('sdash.chat.empty')} body={t('sdash.chat.emptyBody')} />

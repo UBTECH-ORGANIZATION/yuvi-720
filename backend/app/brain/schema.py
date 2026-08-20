@@ -168,6 +168,9 @@ def flatten_updates(updates: dict[str, Any], prefix: str = "") -> dict[str, Any]
 _OPAQUE_LEAF_KEYS = {
     "resume_token", "mapping_scores", "mapping_measures", "next_recommendations",
     "support_used", "hint_ladder",
+    # Set to None on unpin and on completion; re-pinning would then dot-$set
+    # into that null and hit the same WriteError 28.
+    "pinned_next",
 }
 _OPAQUE_PARENT_KEYS = {"mastery", "progress"}
 

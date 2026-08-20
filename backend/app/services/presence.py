@@ -50,6 +50,12 @@ OFFLINE_GRACE_SECONDS = 45.0
 # enough to sit on the chat hot path.
 CHAT_FRAME_MIN_SECONDS = 60.0
 
+# How often an ACTIVE learner's row is re-persisted even without a transition.
+# This is what lets a teacher served by a different worker (or container) see
+# them at all: the cross-process read merges the persisted rows, and rows that
+# only update on transitions go stale the moment a child works quietly.
+HEARTBEAT_PERSIST_SECONDS = 60.0
+
 # Most-recently-seen learners loaded back into memory at boot. Bounded because
 # this collection grows with every learner the deployment has ever served, and
 # a boot must not read all of them.
@@ -108,10 +114,18 @@ def _blank(learner_id: str) -> dict[str, Any]:
         "lesson_entered_at": None,
         "struggling": None,
         "help_requested_at": None,
+        # The catalog's name (and subject key) for the learning the client
+        # reports being on (lesson screen only). Display-level, server-side.
+        "surface_title": None,
+        "surface_subject": None,
         # Where the learner is in the product, as reported by their own client.
         # Advisory only: it never sets `status`, because a client claim must not
         # be able to fake being in a lesson. Filled in by the surface signal.
+        # `surface` is the coarse place the live model reasons over;
+        # `surface_screen` is the exact screen the client named, so the live
+        # view can say "בפורטל הלמידה" rather than a generic "בסביבה".
         "surface": None,
+        "surface_screen": None,
         "surface_at": None,
         # Last chat turn. "In a chat with Yuvi" is derived from how recent this
         # is rather than reported, so it decays on its own — a reported flag
@@ -129,14 +143,67 @@ def snapshot(learner_id: str) -> dict[str, Any]:
     return dict(_state.get(learner_id) or _blank(learner_id))
 
 
+# A persisted row claiming "online" from another process is trusted only this
+# long past its last sign of life. The other worker persists transitions and a
+# 60s heartbeat while the learner is active, so a row older than this belongs
+# to a process that died holding the connection — presenting its claim as
+# current would show a phantom child online for the rest of the day.
+STALE_ONLINE_SECONDS = 900.0
+
+
+def _merged(learner_id: str, stored: Optional[dict[str, Any]]) -> dict[str, Any]:
+    """One learner's presence across processes: memory when it is ours or
+    fresher, else the persisted row another worker wrote — with its liveness
+    claims capped by recency, never taken on faith."""
+    memory = snapshot(learner_id)
+    # A connection held by THIS process is the one thing we know first-hand.
+    if stored is None or memory.get("connections"):
+        return memory
+    # ISO-8601 UTC stamps compare lexicographically; a missing one loses.
+    if (memory.get("last_seen_at") or "") >= (stored.get("last_seen_at") or ""):
+        return memory
+    row = _blank(learner_id)
+    for key in row:
+        if key in stored and stored[key] is not None:
+            row[key] = stored[key]
+    row["_id"] = learner_id
+    row["learner_id"] = learner_id
+    if row["status"] != STATUS_OFFLINE and (
+        _seconds_since(row.get("last_seen_at")) > STALE_ONLINE_SECONDS
+    ):
+        row["status"] = STATUS_OFFLINE
+        row["connections"] = 0
+        row["struggling"] = None
+        row["lesson_entered_at"] = None
+    return row
+
+
 async def snapshot_for_group(group_id: str) -> list[dict[str, Any]]:
     """Presence for every learner enrolled in a group, offline ones included.
 
     A live strip that only lists who is online cannot answer "is anyone missing?"
     — the absent learners are the point.
+
+    Merged with the persisted rows so a class split across workers (or served
+    by a container this process is not) still reads truthfully: this is the
+    read the teacher's poll lands on, and the in-process dict only knows about
+    connections held HERE.
     """
     from app.brain import org
-    return [snapshot(learner_id) for learner_id in await org.learners_in_group(group_id)]
+    from app.brain.repository import _get_collection_named
+
+    learner_ids = await org.learners_in_group(group_id)
+    stored_by_id: dict[str, dict[str, Any]] = {}
+    handle = _get_collection_named(COLLECTION)
+    if handle is not None:
+        try:
+            rows = await handle.find(
+                {"_id": {"$in": learner_ids}}
+            ).to_list(length=len(learner_ids) or 1)
+            stored_by_id = {str(row["_id"]): row for row in rows or []}
+        except Exception:  # pragma: no cover — degrade to process-local truth
+            stored_by_id = {}
+    return [_merged(learner_id, stored_by_id.get(learner_id)) for learner_id in learner_ids]
 
 
 # ── change propagation ───────────────────────────────────────────────────────
@@ -178,6 +245,9 @@ async def _persist(learner_id: str) -> None:
     if handle is None:
         return
     try:
+        entry = _state.get(learner_id)
+        if entry is not None:
+            entry["persisted_at"] = _now()
         document = snapshot(learner_id)
         await handle.update_one(
             {"_id": learner_id}, {"$set": document}, upsert=True
@@ -327,9 +397,127 @@ def note_activity(learner_id: str) -> None:
     if entry["status"] == STATUS_OFFLINE:
         entry["status"] = STATUS_ONLINE
         _changed(learner_id, persist=False)
+        _heartbeat_persist(learner_id, entry)
         return
     if _seconds_since(previous_chat_at) >= CHAT_FRAME_MIN_SECONDS:
         _changed(learner_id, persist=False)
+    _heartbeat_persist(learner_id, entry)
+
+
+def _heartbeat_persist(learner_id: str, entry: dict[str, Any]) -> None:
+    """Re-persist an active row at most once a minute, without a frame.
+
+    Not a transition — nothing changed for a teacher on THIS worker — but a
+    teacher on another one only sees what reaches the database.
+    """
+    if _seconds_since(entry.get("persisted_at")) >= HEARTBEAT_PERSIST_SECONDS:
+        entry["persisted_at"] = _now()
+        _schedule(_persist(learner_id))
+
+
+# What the live view calls each screen the client can report. Coarser than the
+# client's ids on purpose: a teacher scanning thirty rows needs "lesson /
+# studio / browsing", not eight route names. `chat` is deliberately absent —
+# it is derived from `chat_at` recency, never reported, so it decays on its
+# own instead of trusting the client to send a closing claim.
+_SURFACE_OF_SCREEN = {
+    # A lesson PAGE is a browsing-level fact: the client saying "I am on a
+    # lesson screen" must never read as "in a lesson" — `whereOf` only grants
+    # that from xAPI-fed status. Mapping it to "lesson" here sent these rows
+    # to "unknown" instead (the client claim was recorded, then refused).
+    # The exact screen still rides in `surface_screen`, so the teacher reads
+    # "בדף שיעור" until real activity upgrades it.
+    "learning_lesson": "browsing",
+    "learning_create": "studio",
+    # Dual-role accounts (a teacher who is also enrolled as a learner) report
+    # from the teaching side too — without this they read "unknown" on the
+    # live board the whole time they wear the other hat.
+    "teacher_app": "browsing",
+    "results": "browsing",
+    "student_dashboard": "browsing",
+    "mentoring": "browsing",
+    "learning_portal": "browsing",
+    "learning_world": "browsing",
+}
+
+
+def note_surface(
+    learner_id: str,
+    screen: str,
+    unit_id: str | None = None,
+    component_id: str | None = None,
+) -> None:
+    """Where the learner's own client says it is.
+
+    Advisory by construction: it fills `surface`, never `status` — lesson state
+    stays xAPI-authoritative, so a client report cannot fake being in a lesson.
+    Only a *change* costs a frame and a write, and `surface_at` is stamped only
+    then, so it reads "when they arrived here" — which is what the studio-budget
+    and concentration work will consume — not "when they last reported".
+
+    Change is judged on the exact SCREEN, not the coarse bucket: dashboard →
+    results are both "browsing", but the live view names them apart, so a move
+    between them must reach it. On the lesson screen the LEARNING is part of
+    the place — the ids from the lesson URL resolve to a title through the
+    catalog, so moving between two lessons (same screen) is still a move. The
+    title, not the ids, is what gets stored: it is display-only, resolved
+    against the catalog the server trusts, never text the client sent.
+    """
+    surface = _SURFACE_OF_SCREEN.get(screen, "unknown")
+    surface_screen = screen if screen in _SURFACE_OF_SCREEN else None
+    surface_title, surface_subject = (
+        _surface_labels(unit_id, component_id)
+        if screen == "learning_lesson" else (None, None)
+    )
+    entry = _entry(learner_id)
+    if (
+        entry.get("surface") == surface
+        and entry.get("surface_screen") == surface_screen
+        and entry.get("surface_title") == surface_title
+        and entry.get("surface_subject") == surface_subject
+    ):
+        return
+    entry["surface"] = surface
+    entry["surface_screen"] = surface_screen
+    entry["surface_title"] = surface_title
+    entry["surface_subject"] = surface_subject
+    entry["surface_at"] = _now()
+    entry["last_seen_at"] = _now()
+    _changed(learner_id, persist=True)
+
+
+def _surface_labels(
+    unit_id: str | None, component_id: str | None,
+) -> tuple[str | None, str | None]:
+    """The catalog's name and subject key for the learning the client is on.
+
+    The name is the LEARNING OBJECTIVE's ("מערכת צירים - מספרים חיוביים"),
+    not the exercise's — a teacher scanning locations thinks in objectives;
+    "תרגול בסיסי + סטנדרטי ב" says nothing about where the child is. Unit and
+    component titles are only the fallback when no objective resolves.
+
+    Same best-effort rule as `_stamp_labels`: a dict lookup against the boot
+    snapshot, and an id the catalog does not know simply yields no labels —
+    never an error, and never the client's own words.
+    """
+    try:
+        from app.services import kata_catalog
+
+        component = (
+            kata_catalog.get_component(str(component_id)) or {} if component_id else {}
+        )
+        unit = kata_catalog.get_unit(str(unit_id)) or {} if unit_id else {}
+        title = None
+        objective_id = str(component.get("objective_id") or unit.get("objective_id") or "")
+        if objective_id:
+            objective_title = kata_catalog.localized_objective_title(objective_id)
+            if objective_title and objective_title != objective_id:
+                title = objective_title
+        title = title or unit.get("title") or component.get("title")
+        subject = component.get("subject") or unit.get("subject")
+        return (str(title) if title else None, str(subject) if subject else None)
+    except Exception:      # pragma: no cover — labels are decoration
+        return (None, None)
 
 
 def _stamp_labels(entry: dict[str, Any]) -> None:
@@ -388,6 +576,8 @@ def note_event(learner_id: str, event: dict[str, Any]) -> None:
     # events inside one lesson would otherwise be a write per keystroke-ish.
     if entry["status"] != previous:
         _changed(learner_id, persist=True)
+    else:
+        _heartbeat_persist(learner_id, entry)
 
 
 # ── struggle + help ──────────────────────────────────────────────────────────

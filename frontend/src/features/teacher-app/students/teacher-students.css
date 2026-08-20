@@ -335,3 +335,63 @@
 }
 
 .tch-roster__none { color: var(--sp-ink-300, var(--sp-ink-400)); }
+
+/* ── live ↔ manage toggle (#249) ─────────────────────────────────────────── */
+
+/* The toggle sits at the inline END — the left edge in the Hebrew shell —
+   clear of the scope bar and the headline that read from the start edge. */
+.tch-roster__modeRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.tch-modeToggle {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 3px;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-bg-subtle);
+}
+
+.tch-modeToggle__thumb {
+  position: absolute;
+  inset-block: 3px;
+  inset-inline-start: 3px;
+  inline-size: calc(50% - 3px);
+  border-radius: var(--sp-radius-pill);
+  background: color-mix(in srgb, var(--sp-success-600) 18%, var(--sp-surface));
+  border: 1px solid color-mix(in srgb, var(--sp-success-600) 45%, transparent);
+  transition: inset-inline-start 200ms var(--sp-ease),
+              background 200ms var(--sp-ease), border-color 200ms var(--sp-ease);
+}
+
+.tch-modeToggle[data-mode='manage'] .tch-modeToggle__thumb {
+  inset-inline-start: 50%;
+  background: color-mix(in srgb, var(--sp-primary-600) 16%, var(--sp-surface));
+  border-color: color-mix(in srgb, var(--sp-primary-600) 45%, transparent);
+}
+
+.tch-modeToggle button {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  padding: 6px var(--sp-4);
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+  cursor: pointer;
+  border-radius: var(--sp-radius-pill);
+  white-space: nowrap;
+}
+
+.tch-modeToggle button.is-active { color: var(--sp-ink-900); font-weight: var(--sp-fw-medium); }
+.tch-modeToggle[data-mode='live'] button.is-active { color: var(--sp-success-600); }
+.tch-modeToggle[data-mode='manage'] button.is-active { color: var(--sp-primary-700); }
+.tch-modeToggle button:focus-visible { outline: none; box-shadow: var(--sp-ring); }

@@ -102,7 +102,7 @@ try {
      a view switch, and threw. Switch to the grid deliberately (it is also the
      view whose card→profile link is worth exercising) and fall back to a direct
      visit if the toggle is not there. */
-  await page.goto(`${BASE}/teacher/students`, { waitUntil: 'domcontentloaded' })
+  await page.goto(`${BASE}/teacher/students?view=cards`, { waitUntil: 'domcontentloaded' })
   /* Wait for the LIST, not the container: `.tch-roster` is on screen while the
      roster is still fetching (that is what its `aria-busy` is for), so clicking
      the view toggle on its arrival switched views on an empty list and then
@@ -129,6 +129,9 @@ try {
   const kpiCards = await page.locator('.tch-student__kpis .tch-stat').count()
   // Three figures now: the mastery % moved to the status band's dials.
   check('the KPI strip has three figures', kpiCards === 3, `${kpiCards} figures`)
+  /* The profile arrives in pieces; the band's dials land after the KPI strip.
+     Counting on the strip's arrival read the band mid-skeleton. */
+  await page.waitForSelector('.tch-status .sp-chart-ring--half', { timeout: 30000 }).catch(() => {})
   const halfDials = await page.locator('.tch-status .sp-chart-ring--half').count()
   check('the status band is drawn with half-arc dials',
         (await page.locator('.tch-status').count()) === 1 && halfDials > 0,

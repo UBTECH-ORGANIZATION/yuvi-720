@@ -146,6 +146,10 @@ export type CoachScreenId =
   | 'learning_world'
   | 'learning_lesson'
   | 'learning_create'
+  /** Presence-only: a dual-role account standing on the teaching side.
+   *  Never produced by `coachSurfaceForPath` — the coach context does not
+   *  describe teacher screens. */
+  | 'teacher_app'
   | 'unknown'
 
 export interface CoachSurfaceContext {
@@ -175,6 +179,26 @@ export function coachSurfaceForPath(pathname: string): CoachSurfaceContext {
   if (pathname === '/learning' || pathname.startsWith('/learning?')) return { screen: 'learning_world' }
   if (pathname.startsWith('/learning')) return { screen: 'learning_portal' }
   return { screen: 'unknown' }
+}
+
+/** The child asks for a person (#249 raise-hand). Recipients are resolved
+ *  server-side from the roster — the client cannot address a teacher of its
+ *  own choosing. `notified: 0` is an answer, not an error: a learner in no
+ *  staffed group, and the UI must say "we could not reach a teacher" rather
+ *  than promise help that is not coming. */
+export function postCoachHandoff(payload: {
+  reason: string
+  objective_id?: string
+  component_id?: string
+}) {
+  return apiPost<{ notified: number }>('/api/agent/coach/handoff', payload)
+}
+
+/** Tell presence where this client is, for the teacher's live view.
+ *  Fire-and-forget: a lost report costs one stale row until the next
+ *  navigation, and the server dedupes repeats, so there is nothing to retry. */
+export function reportCoachSurface(surface: CoachSurfaceContext): void {
+  void apiPost('/api/agent/presence/surface', { ...surface }).catch(() => undefined)
 }
 
 export async function streamAgent(

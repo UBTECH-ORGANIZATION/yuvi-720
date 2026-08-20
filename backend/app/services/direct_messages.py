@@ -411,7 +411,16 @@ async def _notify(
         actor_id=actor,
         recipient_role=role,
     )
-    realtime.publish(topic, {"type": "direct_message", "message_id": message_id})
+    # Who and which thread, but never the words: the receiving client uses this
+    # to toast "you have a message" and bump the thread's badge, and it fetches
+    # the thread itself — through the membership check — to read anything.
+    realtime.publish(topic, {
+        "type": "direct_message",
+        "message_id": message_id,
+        "sender": sender,
+        "teacher_id": teacher_id,
+        "learner_id": learner_id,
+    })
 
 
 # ── the reads ────────────────────────────────────────────────────────────────
@@ -467,6 +476,17 @@ async def unread_for_teacher(teacher_id: str) -> dict[str, int]:
         {"teacher_id": teacher_id, "unread_teacher": {"$gt": 0}}
     ).to_list(length=200)
     return {row["learner_id"]: int(row.get("unread_teacher") or 0) for row in rows}
+
+
+async def unread_for_learner(learner_id: str) -> dict[str, int]:
+    """Per-teacher unread counts — the learner-side mirror of the map above."""
+    collection = _collection(CONVERSATIONS)
+    if collection is None:
+        return {}
+    rows = await collection.find(
+        {"learner_id": learner_id, "unread_learner": {"$gt": 0}}
+    ).to_list(length=200)
+    return {row["teacher_id"]: int(row.get("unread_learner") or 0) for row in rows}
 
 
 async def ensure_indexes() -> None:

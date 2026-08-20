@@ -339,3 +339,44 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ── unread (WhatsApp-style) ─────────────────────────────────────────────── */
+
+.tch-messages__unread {
+  min-inline-size: 18px;
+  block-size: 18px;
+  padding-inline: 5px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sp-ink-chat-alert, #d7263d);
+  color: #fff;
+  font-size: 11px;
+  font-weight: var(--sp-fw-semibold);
+  line-height: 1;
+  flex: none;
+}
+
+.tch-messages__person.has-unread .tch-messages__personText > span {
+  font-weight: var(--sp-fw-bold);
+}
+
+/* Where the unread part of the thread begins. */
+.tch-thread__unreadBar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: var(--sp-2) 0;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-medium);
+  color: var(--sp-danger-600);
+}
+
+.tch-thread__unreadBar::before,
+.tch-thread__unreadBar::after {
+  content: '';
+  flex: 1;
+  block-size: 1px;
+  background: color-mix(in srgb, var(--sp-danger-600) 40%, transparent);
+}

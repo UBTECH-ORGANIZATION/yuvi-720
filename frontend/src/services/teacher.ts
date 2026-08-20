@@ -513,6 +513,23 @@ export interface Presence {
   lesson_entered_at: string | null
   struggling: { kind: string; since: string; evidence: Record<string, unknown> } | null
   help_requested_at: string | null
+  /** Where the learner's own client says it is. Advisory: it never drives
+   *  `status`, so a claim of the lesson screen cannot fake lesson state. */
+  surface: 'lesson' | 'studio' | 'browsing' | 'unknown' | null
+  /** The exact screen behind `surface`, when the client named one the server
+   *  recognises — what lets the live view say which browsing screen. */
+  surface_screen: string | null
+  /** The catalog's name for the learning the client reports being on (lesson
+   *  screen only) — resolved server-side, never client text. */
+  surface_title: string | null
+  /** That learning's subject KEY (e.g. "math"), same lifecycle as the title. */
+  surface_subject: string | null
+  /** When they ARRIVED at `surface` — stamped on change only, so "how long
+   *  in the studio" reads from it directly. */
+  surface_at: string | null
+  /** Last chat turn with Yuvi. "In a chat" is derived from its recency, never
+   *  reported, so it decays on its own. */
+  chat_at: string | null
 }
 
 export type AlertKind =
@@ -972,6 +989,64 @@ export function getLearningDetail(groupId: string, componentId: string, language
   return apiGet<LearningDetail>(
     `/api/teacher/groups/${encodeURIComponent(groupId)}/learnings/${
       encodeURIComponent(componentId)}?language=${language}`
+  )
+}
+
+/* Pin-next (#249, the minimal slice of #244). The target is always a catalog
+ * component picked from `getGroupLearnings` above — the server resolves unit,
+ * objective and subject from the id, so only the id crosses the wire. */
+export interface PinnedNext {
+  component_id: string
+  unit_id: string | null
+  objective_id: string | null
+  pinned_by: string
+  pinned_at: string
+}
+
+/** Where the planner is pointing one learner right now — the profile's
+ *  "מיקוד", read class-wide for the live view's rows and subject gauges. */
+export interface LearnerFocus {
+  learner_id: string
+  subject: string | null
+  subject_name: string
+  objective_id: string | null
+  objective_title: string | null
+  /** True when the focus IS a teacher-set pin (the route honours it). */
+  pinned: boolean
+}
+
+export function getGroupFocus(groupId: string, language: string) {
+  return apiGet<{ learners: LearnerFocus[] }>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/focus?language=${language}`
+  )
+}
+
+/** The planner's own answer for one learner, incl. the exact next component —
+ *  what makes the focus panel's "fits now" a fact rather than a guess. */
+export interface PinFocus {
+  subject: string | null
+  subject_name: string
+  objective_id: string | null
+  objective_title: string | null
+  next_component_id: string | null
+}
+
+export function getPinnedNext(learnerId: string, language: string) {
+  return apiGet<{ pinned: PinnedNext | null; focus: PinFocus }>(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/pin-next?language=${language}`
+  )
+}
+
+export function pinNext(learnerId: string, componentId: string) {
+  return apiPost<{ pinned: PinnedNext }>(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/pin-next`,
+    { component_id: componentId }
+  )
+}
+
+export function unpinNext(learnerId: string) {
+  return apiDelete<{ pinned: null }>(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/pin-next`
   )
 }
 

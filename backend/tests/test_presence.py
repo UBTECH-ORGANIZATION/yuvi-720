@@ -417,3 +417,132 @@ class RehydrateTest(unittest.IsolatedAsyncioTestCase):
     async def test_no_database_is_not_an_error(self):
         with patch("app.brain.repository._get_collection_named", return_value=None):
             self.assertEqual(await presence.rehydrate(), 0)
+
+
+class SurfaceSignalTest(unittest.IsolatedAsyncioTestCase):
+    """The learner's own client reports where it is. Advisory by design: it may
+    place a child in the studio or on their dashboard, but it must never be able
+    to fake the lesson state that xAPI owns — and repeats must cost nothing,
+    because the client fires on every navigation."""
+
+    async def asyncSetUp(self):
+        presence.reset_for_tests()
+        realtime.reset_for_tests()
+        self._collection = patch("app.brain.repository._get_collection_named", return_value=None)
+        self._collection.start()
+        self._teachers = patch("app.brain.org.teachers_for_learner",
+                               new=AsyncMock(return_value=[]))
+        self._teachers.start()
+
+    async def asyncTearDown(self):
+        self._collection.stop()
+        self._teachers.stop()
+
+    async def test_screens_map_to_the_places_the_live_view_knows(self):
+        for screen, surface in (
+            # A lesson PAGE maps to browsing, never to "lesson": whereOf only
+            # grants the lesson state from xAPI-fed status, so a "lesson"
+            # surface would be recorded and then refused — rendering unknown.
+            ("learning_lesson", "browsing"),
+            ("teacher_app", "browsing"),
+            ("learning_create", "studio"),
+            ("results", "browsing"),
+            ("student_dashboard", "browsing"),
+            ("mentoring", "browsing"),
+            ("learning_portal", "browsing"),
+            ("learning_world", "browsing"),
+            ("something_new", "unknown"),
+        ):
+            with self.subTest(screen=screen):
+                presence.reset_for_tests()
+                presence.note_surface("kid", screen)
+                self.assertEqual(presence.snapshot("kid")["surface"], surface)
+
+    async def test_a_surface_report_never_touches_status(self):
+        """The one rule that makes the signal safe to accept from a client:
+        claiming the lesson screen must not put you in a lesson."""
+        presence.note_surface("kid", "learning_lesson")
+        self.assertEqual(presence.snapshot("kid")["status"], presence.STATUS_OFFLINE)
+
+        presence.note_connection("kid")
+        presence.note_event("kid", {"verb": "entered", "component_id": "cmp-1"})
+        presence.note_surface("kid", "results")     # left the lesson, says the client
+        self.assertEqual(presence.snapshot("kid")["status"], presence.STATUS_IN_LESSON)
+
+    async def test_reporting_the_same_screen_costs_nothing(self):
+        presence.note_surface("kid", "results")
+        with patch.object(presence, "_changed") as changed:
+            presence.note_surface("kid", "results")
+            presence.note_surface("kid", "results")
+        self.assertEqual(changed.call_count, 0)
+
+    async def test_moving_between_screens_of_one_bucket_still_reaches_the_view(self):
+        """Dashboard and results are both "browsing", but the live view names
+        them apart — so the move between them must cost a frame."""
+        presence.note_surface("kid", "student_dashboard")
+        with patch.object(presence, "_changed") as changed:
+            presence.note_surface("kid", "results")
+        self.assertEqual(changed.call_count, 1)
+        self.assertEqual(presence.snapshot("kid")["surface_screen"], "results")
+
+    async def test_the_lesson_page_names_its_learning_from_the_catalog(self):
+        """The chip should say WHICH learning, not "on a lesson page" — and the
+        name is the catalog's, never text the client sent."""
+        with patch("app.services.kata_catalog.get_unit",
+                   return_value={"id": "u-1", "title": "מערכת צירים", "subject": "math"}):
+            presence.note_surface("kid", "learning_lesson", unit_id="u-1")
+        self.assertEqual(presence.snapshot("kid")["surface_title"], "מערכת צירים")
+        self.assertEqual(presence.snapshot("kid")["surface_subject"], "math")
+
+        # Leaving the lesson screen clears the labels with the screen.
+        presence.note_surface("kid", "results")
+        self.assertIsNone(presence.snapshot("kid")["surface_title"])
+        self.assertIsNone(presence.snapshot("kid")["surface_subject"])
+
+    async def test_moving_between_two_lessons_is_still_a_move(self):
+        """Same screen, different learning: the title is part of the place, so
+        the change must cost a frame."""
+        def unit(unit_id, _language=None):
+            return {"id": unit_id, "title": f"שיעור {unit_id}"}
+        with patch("app.services.kata_catalog.get_unit", side_effect=unit):
+            presence.note_surface("kid", "learning_lesson", unit_id="u-1")
+            with patch.object(presence, "_changed") as changed:
+                presence.note_surface("kid", "learning_lesson", unit_id="u-2")
+                presence.note_surface("kid", "learning_lesson", unit_id="u-2")
+        self.assertEqual(changed.call_count, 1)
+        self.assertEqual(presence.snapshot("kid")["surface_title"], "שיעור u-2")
+
+    async def test_the_objective_name_outranks_the_exercise_name(self):
+        """A teacher thinks in objectives; the exercise title is the fallback,
+        never the headline."""
+        with patch("app.services.kata_catalog.get_component",
+                   return_value={"id": "c-1", "title": "תרגול בסיסי + סטנדרטי ב",
+                                 "objective_id": "obj-1", "subject": "math"}), \
+             patch("app.services.kata_catalog.get_unit", return_value=None), \
+             patch("app.services.kata_catalog.localized_objective_title",
+                   return_value="מערכת צירים - מספרים חיוביים"):
+            presence.note_surface("kid", "learning_lesson", component_id="c-1")
+        self.assertEqual(
+            presence.snapshot("kid")["surface_title"], "מערכת צירים - מספרים חיוביים")
+        self.assertEqual(presence.snapshot("kid")["surface_subject"], "math")
+
+    async def test_an_unknown_unit_falls_back_to_no_title(self):
+        with patch("app.services.kata_catalog.get_unit", return_value=None), \
+             patch("app.services.kata_catalog.get_component", return_value=None):
+            presence.note_surface("kid", "learning_lesson", unit_id="ghost")
+        self.assertIsNone(presence.snapshot("kid")["surface_title"])
+        self.assertEqual(presence.snapshot("kid")["surface_screen"], "learning_lesson")
+
+    async def test_a_change_is_broadcast_and_persisted(self):
+        with patch.object(presence, "_changed") as changed:
+            presence.note_surface("kid", "learning_create")
+        changed.assert_called_once_with("kid", persist=True)
+
+    async def test_surface_at_is_when_they_arrived_not_when_they_last_reported(self):
+        """This stamp is what the studio-budget and concentration work will
+        read as "how long have they been here" — re-stamping it on every
+        report would reset that clock to zero forever."""
+        presence.note_surface("kid", "learning_create")
+        arrived = presence.snapshot("kid")["surface_at"]
+        presence.note_surface("kid", "learning_create")
+        self.assertEqual(presence.snapshot("kid")["surface_at"], arrived)

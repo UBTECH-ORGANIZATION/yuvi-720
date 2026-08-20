@@ -129,7 +129,9 @@ test('every target is rendered by the screen its step navigates to', () => {
   for (const [index, step] of teacherTourSteps.entries()) {
     if (!step.target) continue
     const route = effectiveRoute(index)
-    const owner = route ? ROUTE_OWNERS[route] : null
+    // Owners are keyed by pathname; a step's route may carry a query (e.g.
+    // `?view=table` opens the roster in manage mode) that the same screen owns.
+    const owner = route ? ROUTE_OWNERS[route.split('?')[0]] : null
     assert.ok(owner, `step "${step.id}" declares route ${route}, which owns no screen`)
 
     const files = sources.get(step.target) ?? []
@@ -205,7 +207,7 @@ test('a step with no route stays where it is', () => {
 test('every route the tour navigates to is a real teacher route', () => {
   for (const step of teacherTourSteps) {
     if (!step.route) continue
-    const resolved = step.route.replace(STUDENT_TOKEN, 'someone')
+    const resolved = step.route.split('?')[0].replace(STUDENT_TOKEN, 'someone')
     assert.match(
       resolved, /^\/teacher(\/students|\/student\/[^/]+)?$/,
       `step "${step.id}" navigates to ${resolved}, which App.tsx does not route`

@@ -21,7 +21,7 @@
  * a teacher expects from something shaped like a chat.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { navigate } from '../../../app/router'
 import {
   EmptyState, ErrorState, Icon, Skeleton, SkeletonRows,
@@ -38,9 +38,10 @@ import {
   listTeacherInsights, sendKudos, type Subgroup,
 } from '../../../services/teacher'
 import {
-  MessageRefused, listMessages, listSubgroupBroadcasts, markMessagesRead,
-  sendMessage, sendSubgroupMessage, type SubgroupBroadcast,
+  MessageRefused, getTeacherUnread, listMessages, listSubgroupBroadcasts,
+  markMessagesRead, sendMessage, sendSubgroupMessage, type SubgroupBroadcast,
 } from '../../../services/directMessages'
+import { subscribe } from '../../../services/realtime'
 import './teacher-messages.css'
 import { StudentAvatar } from '../shared/StudentAvatar'
 import { useDismiss } from '../shared/useDismiss'
@@ -77,6 +78,44 @@ export function TeacherMessagesPage() {
      teacher picked. Read once, here, so the rail's default selection does not
      overwrite it a moment later when the roster lands. */
   const [seed] = useState(() => takeMessageSeed())
+  /* Arriving from a toast or a notification: `?student=` names the thread to
+     open. Read once for the same reason as the seed. */
+  const [urlStudent] = useState(() =>
+    new URLSearchParams(window.location.search).get('student'))
+  /* WhatsApp-style: which threads hold messages the teacher has not read.
+     Seeded from the counters, zeroed locally the moment a thread opens (the
+     server is told by the thread's own mark-read), bumped by live frames. */
+  const [unreadMap, setUnreadMap] = useState<Record<string, number>>({})
+  /* Bumped when the OPEN thread receives a live message, so it refetches. */
+  const [threadNonce, setThreadNonce] = useState(0)
+  const selectedRef = useRef<string | null>(null)
+  useEffect(() => { selectedRef.current = selected }, [selected])
+
+  useEffect(() => {
+    let active = true
+    getTeacherUnread()
+      .then((result) => { if (active) setUnreadMap(result.unread ?? {}) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    if (!groupId) return
+    // The same stream the live provider holds — refcounted, so this adds a
+    // handler, not a connection.
+    return subscribe(
+      `teacher-live:${groupId}`,
+      () => `/api/teacher/stream?group_id=${encodeURIComponent(groupId)}`,
+      (frame) => {
+        if (frame.type !== 'direct_message' || frame.sender !== 'learner') return
+        const from = String(frame.learner_id || '')
+        if (from && from === selectedRef.current) {
+          setThreadNonce((value) => value + 1)   // the open thread shows it
+        } else if (from) {
+          setUnreadMap((current) => ({ ...current, [from]: (current[from] ?? 0) + 1 }))
+        }
+      })
+  }, [groupId])
 
   useEffect(() => {
     if (!groupId) return
@@ -89,9 +128,13 @@ export function TeacherMessagesPage() {
         setStudents(rows)
         setSelected((current) => {
           // The child the teacher came here to write to wins over both the
-          // previous selection and the first row of the rail.
+          // previous selection and the first row of the rail; a `?student=`
+          // deep link (a toast, the bell) is the same intent said by address.
           if (seed && rows.some((row) => row.learner_id === seed.learnerId)) {
             return seed.learnerId
+          }
+          if (urlStudent && rows.some((row) => row.learner_id === urlStudent)) {
+            return urlStudent
           }
           return current && rows.some((row) => row.learner_id === current)
             ? current
@@ -186,8 +229,19 @@ export function TeacherMessagesPage() {
               <button
                 key={student.learner_id}
                 type="button"
-                className={`tch-messages__person${selected === student.learner_id ? ' is-active' : ''}`}
-                onClick={() => setSelected(student.learner_id)}
+                className={`tch-messages__person${selected === student.learner_id ? ' is-active' : ''}${
+                  unreadMap[student.learner_id] ? ' has-unread' : ''}`}
+                onClick={() => {
+                  setSelected(student.learner_id)
+                  // Opening reads it; the thread tells the server, this tells
+                  // the rail — waiting for a refetch leaves a lying badge.
+                  setUnreadMap((current) => {
+                    if (!current[student.learner_id]) return current
+                    const next = { ...current }
+                    delete next[student.learner_id]
+                    return next
+                  })
+                }}
               >
                 <StudentAvatar
                   learnerId={student.learner_id}
@@ -198,6 +252,13 @@ export function TeacherMessagesPage() {
                   <span dir="auto">{student.display_name ?? student.learner_id}</span>
                   <small>{agoLabel(presence?.last_seen_at ?? null, t)}</small>
                 </span>
+                {unreadMap[student.learner_id] ? (
+                  <span className="tch-messages__unread"
+                        aria-label={t('tch.messages.unread', {
+                          count: unreadMap[student.learner_id] })}>
+                    {unreadMap[student.learner_id] > 99 ? '99+' : unreadMap[student.learner_id]}
+                  </span>
+                ) : null}
                 <PresenceDot presence={presence} />
               </button>
             )
@@ -213,6 +274,7 @@ export function TeacherMessagesPage() {
           />
         ) : selected ? (
           <Thread key={selected} learnerId={selected} name={nameOf(selected)}
+                  reloadNonce={threadNonce}
                   opening={seed?.learnerId === selected ? seed.text : undefined} />
         ) : (
           <EmptyState title={t('tch.messages.pick')} />
@@ -365,12 +427,14 @@ function SubgroupThread({ subgroup, nameOf }: {
   )
 }
 
-function Thread({ learnerId, name, opening }: {
+function Thread({ learnerId, name, opening, reloadNonce = 0 }: {
   learnerId: string
   name: string
   /** A sentence carried in from elsewhere — a suggested opening the teacher
    *  picked while reading a disclosure. Editable, and never sent by arriving. */
   opening?: string
+  /** Bumped by the page when a live message lands in THIS thread. */
+  reloadNonce?: number
 }) {
   const { t, language } = useI18n()
   const [events, setEvents] = useState<ThreadEvent[] | null>(null)
@@ -385,6 +449,13 @@ function Thread({ learnerId, name, opening }: {
   const menuRef = useRef<HTMLDivElement>(null)
   useDismiss(menuRef, menuOpen, () => setMenuOpen(false))
 
+  /* Where "unread" begins — the WhatsApp bar. Captured once, on the thread's
+     FIRST load: mark-read fires right below, so any later reload would find
+     nothing unread and silently take the bar away while the teacher is still
+     scrolling up to it. `'unset'` distinguishes "not yet computed" from
+     "computed: nothing was unread". */
+  const unreadFrom = useRef<string | null | 'unset'>('unset')
+
   const load = useCallback(() => {
     let active = true
     Promise.all([
@@ -394,6 +465,11 @@ function Thread({ learnerId, name, opening }: {
       getStudentGoals(learnerId).catch(() => ({ conversations: [] })),
     ]).then(([messages, kudos, insights, goals]) => {
       if (!active) return
+      if (unreadFrom.current === 'unset') {
+        const firstUnread = messages.find(
+          (message) => message.sender === 'learner' && !message.read_at)
+        unreadFrom.current = firstUnread ? `m:${firstUnread.id}` : null
+      }
       const rows: ThreadEvent[] = []
       for (const message of messages) {
         rows.push({
@@ -446,6 +522,8 @@ function Thread({ learnerId, name, opening }: {
   }, [learnerId])
 
   useEffect(() => { setEvents(null); return load() }, [load])
+  // A live arrival in the open thread: refetch in place (no skeleton flash).
+  useEffect(() => { if (reloadNonce) return load() }, [reloadNonce, load])
 
   /* Latest at the bottom, which no version of this screen did — the thread grew
      downwards behind the fold and a teacher opened a conversation looking at
@@ -506,7 +584,13 @@ function Thread({ learnerId, name, opening }: {
           <div aria-busy="true"><SkeletonRows rows={4} /></div>
         ) : events.length ? (
           events.map((event) => (
-            <article key={event.key} className={`tch-thread__event tch-thread__event--${event.kind}`}>
+            <Fragment key={event.key}>
+            {event.key === unreadFrom.current && (
+              <p className="tch-thread__unreadBar" role="separator">
+                {t('tch.messages.unreadFromHere')}
+              </p>
+            )}
+            <article className={`tch-thread__event tch-thread__event--${event.kind}`}>
               {event.kind === 'message_out' || event.kind === 'message_in' ? (
                 <>
                   <div className="tch-thread__bubble">
@@ -551,6 +635,7 @@ function Thread({ learnerId, name, opening }: {
                 </>
               )}
             </article>
+            </Fragment>
           ))
         ) : (
           <p className="tch-thread__empty">{t('tch.messages.empty', { name })}</p>

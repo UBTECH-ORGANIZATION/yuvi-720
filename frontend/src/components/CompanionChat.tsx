@@ -4,6 +4,7 @@ import { useCompanion, type CoachMessage } from '../providers/CompanionProvider'
 import { YuviAvatar3D } from '../features/Yuvi-studio/YuviAvatar3D'
 import { useYuviDesign } from '../features/Yuvi-studio/YuviDesignProvider'
 import { Icon } from './primitives'
+import { subscribe } from '../services/realtime'
 import { CoachMarkdown } from './CoachMarkdown'
 import { VisualCTA } from './VisualCTA'
 import { YuviHeadIcon } from './YuviHeadIcon'
@@ -11,7 +12,13 @@ import { ThinkingOrbit } from './ThinkingOrbit'
 import { QuestionExplainer } from './QuestionExplainer'
 import type { VisualMode } from '../services/agents'
 import type { CoachVisual } from '../services/agents'
-import { rateCoachConversation, saveHelpedAttribution, type HelpMethod } from '../services/agents'
+import {
+  coachSurfaceForPath,
+  postCoachHandoff,
+  rateCoachConversation,
+  saveHelpedAttribution,
+  type HelpMethod,
+} from '../services/agents'
 import { playCoachSpeech, stopCoachSpeech, type SpeechState } from '../services/speech'
 import { navigate, useRoute } from '../app/router'
 import { formatMessageTime } from '../hooks/messageTime'
@@ -199,6 +206,64 @@ export function CompanionChat() {
   const [expandedVisual, setExpandedVisual] = useState<CoachVisual | null>(null)
   const [isResizing, setIsResizing] = useState(false)
   const [taskView, setTaskView] = useState<'chat' | 'roadmap'>('chat')
+  // Raise-hand (#249): the child asks for a person, from inside a lesson only.
+  // Confirmed in a dialog inside the panel — a hand raised to the whole staff
+  // room must not be a slip of the finger — and a 5-minute client cooldown
+  // after a delivered one: the teacher already has the alert, and mashing the
+  // button must not turn one stuck moment into a stack of interrupts. No
+  // retraction here; the teacher resolving the alert is the existing clear path.
+  const [handState, setHandState] =
+    useState<'idle' | 'confirming' | 'sending' | 'sent' | 'unreached'>('idle')
+  const [handCooling, setHandCooling] = useState(false)
+  const handTimers = useRef<{ note?: number; cool?: number }>({})
+  useEffect(() => () => {
+    window.clearTimeout(handTimers.current.note)
+    window.clearTimeout(handTimers.current.cool)
+  }, [])
+  const raiseHand = () => {
+    if (handState === 'sending' || handCooling) return
+    setHandState((value) => (value === 'confirming' ? 'idle' : 'confirming'))
+  }
+  // The teacher marking the request handled unlocks the button early — the
+  // cooldown guards against re-sending into an alert nobody has seen yet, and
+  // a resolved alert is the opposite of that. Shared refcounted stream: this
+  // is the same connection the message toast rides.
+  useEffect(() => {
+    return subscribe('learner-triggers', () => '/api/agent/triggers/subscribe', (frame) => {
+      if (frame.type !== 'hand_resolved') return
+      window.clearTimeout(handTimers.current.cool)
+      window.clearTimeout(handTimers.current.note)
+      setHandCooling(false)
+      setHandState('idle')
+    })
+  }, [])
+  const sendHand = async () => {
+    if (handState === 'sending' || handCooling) return
+    setHandState('sending')
+    try {
+      // The surface parse already extracts the component from the lesson URL;
+      // the server falls back to the live pointer when it is absent.
+      const surface = coachSurfaceForPath(pathname)
+      const { notified } = await postCoachHandoff({
+        reason: 'hand_raised',
+        ...(surface.component_id ? { component_id: surface.component_id } : {}),
+      })
+      // `notified: 0` reported honestly — no cooldown either, because nothing
+      // was delivered and blocking the retry would strand the child.
+      setHandState(notified > 0 ? 'sent' : 'unreached')
+      if (notified > 0) {
+        setHandCooling(true)
+        handTimers.current.cool = window.setTimeout(() => setHandCooling(false), 5 * 60_000)
+      }
+    } catch {
+      setHandState('unreached')
+    }
+    window.clearTimeout(handTimers.current.note)
+    handTimers.current.note = window.setTimeout(
+      () => setHandState((value) => (value === 'sending' ? value : 'idle')),
+      6000)
+  }
+  const handLabel = handCooling ? t('companion.hand.sent') : t('companion.hand.raise')
   const [speech, setSpeech] = useState<{ messageId: string | null; state: SpeechState }>({
     messageId: null,
     state: 'idle',
@@ -854,6 +919,19 @@ export function CompanionChat() {
         {disclosure || t('companion.disclosure')}
       </p>
 
+      {/* Raise-hand outcome, said out loud: a child who asked for a person must
+          see whether one is coming. `role="status"` so it is announced too. */}
+      {(handState === 'sent' || handState === 'unreached') && (
+        <p
+          className={`sp-companion__hand-status${handState === 'unreached' ? ' is-unreached' : ''}`}
+          role="status"
+          dir="auto"
+        >
+          <Icon name="hand" size={13} strokeWidth={2} aria-hidden="true" />
+          {t(handState === 'sent' ? 'companion.hand.sent' : 'companion.hand.unreached')}
+        </p>
+      )}
+
       {isTaskMode && (
         <div className="sp-companion__task-tabs" role="tablist" aria-label={t('companion.task.tabs')}>
           <button
@@ -1198,10 +1276,65 @@ export function CompanionChat() {
               aria-label={t('companion.placeholder')}
               dir={draft.trim() ? 'auto' : direction}
             />
-            <button type="submit" disabled={isStreaming || !draft.trim()} aria-label={t('companion.send')}>
+            {/* Send sits BESIDE the box, not inside it, so the raise-hand can
+                stand next to it as a peer: writing to Yuvi and calling a person
+                are the two ways out of being stuck, said in one row. */}
+            <button
+              type="submit"
+              className="sp-companion__send"
+              disabled={isStreaming || !draft.trim()}
+              aria-label={t('companion.send')}
+            >
               <Icon name="arrow" size={18} />
             </button>
+            {isTaskMode && (
+              <button
+                type="button"
+                className={`sp-companion__handBtn${handState === 'confirming' ? ' is-armed' : ''}`}
+                onClick={raiseHand}
+                disabled={handState === 'sending' || handCooling}
+                aria-label={handLabel}
+                aria-expanded={handState === 'confirming'}
+                data-tooltip={handLabel}
+              >
+                <Icon name="hand" size={18} />
+              </button>
+            )}
           </form>
+          {/* The confirmation, as a dialog inside the panel: the question is
+              asked in words, with a real yes and a real no — not a second tap
+              on the same icon that a child has to know about. */}
+          {handState === 'confirming' && (
+            <div
+              className="sp-companion__handConfirm"
+              role="alertdialog"
+              aria-label={t('companion.hand.confirmTitle')}
+            >
+              <span className="sp-companion__handConfirmIcon" aria-hidden="true">
+                <Icon name="hand" size={20} />
+              </span>
+              <p className="sp-companion__handConfirmTitle">{t('companion.hand.confirmTitle')}</p>
+              <p className="sp-companion__handConfirmBody">{t('companion.hand.confirmBody')}</p>
+              <div className="sp-companion__handConfirmActions">
+                <button
+                  type="button"
+                  className="sp-companion__handConfirmYes"
+                  onClick={() => void sendHand()}
+                  // eslint-disable-next-line jsx-a11y/no-autofocus
+                  autoFocus
+                >
+                  {t('companion.hand.confirmYes')}
+                </button>
+                <button
+                  type="button"
+                  className="sp-companion__handConfirmNo"
+                  onClick={() => setHandState('idle')}
+                >
+                  {t('companion.hand.confirmNo')}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </section>

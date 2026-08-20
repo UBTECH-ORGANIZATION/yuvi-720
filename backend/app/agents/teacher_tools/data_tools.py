@@ -802,7 +802,15 @@ def register_all() -> None:
     ))
     register(TeacherTool(
         name="get_live_classroom",
-        description="Who in a group is online, in a lesson, struggling, or has asked for help right now.",
+        description=(
+            "Who in a group is online, in a lesson, struggling, or has asked for "
+            "help right now. Each row also carries where the learner's own client "
+            "says it is (`surface`: lesson/studio/browsing — advisory, it cannot "
+            "fake lesson state), when they arrived there (`surface_at`), their "
+            "last chat turn with Yuvi (`chat_at`), a raised hand "
+            "(`help_requested_at`), and the raw detector evidence behind any "
+            "`struggling` flag — cite that evidence when you claim a difficulty."
+        ),
         parameters={"type": "object", "properties": dict(_GROUP_ID), "required": ["group_id"]},
         handler=_get_live_classroom, group_args=("group_id",),
     ))

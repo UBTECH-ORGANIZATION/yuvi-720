@@ -20,6 +20,7 @@ import { navigate, useRoute } from '../app/router'
 import { useDismiss } from '../features/teacher-app/shared/useDismiss'
 import { useI18n } from '../i18n/I18nProvider'
 import { getPendingGoalCount } from '../services/teacher'
+import { getTeacherUnread } from '../services/directMessages'
 import { AppBar } from './AppBar'
 import { NotificationBell } from './NotificationBell'
 import { TourButton } from './tour/TourButton'
@@ -92,11 +93,43 @@ function usePendingGoals(pathname: string) {
   return count
 }
 
+/** Messages waiting to be read, same contract as the goals badge: counted
+ *  where the teacher already is, re-read on entering/leaving the screen that
+ *  changes it, and absent rather than guessed when it cannot be counted. */
+function useUnreadMessages(pathname: string) {
+  const [count, setCount] = useState(0)
+  const onMessages = pathname.startsWith('/teacher/messages')
+
+  useEffect(() => {
+    let active = true
+    const read = () => {
+      getTeacherUnread()
+        .then((result) => { if (active) setCount(result.total ?? 0) })
+        .catch(() => { if (active) setCount(0) })
+    }
+    read()
+    const timer = window.setInterval(read, PENDING_REFRESH_MS)
+    return () => { active = false; window.clearInterval(timer) }
+  }, [onMessages])
+
+  return count
+}
+
+function NavBadge({ count, label }: { count: number; label: string }) {
+  if (count <= 0) return null
+  return (
+    <span className="teacher-app-nav__badge" aria-label={label}>
+      {count > 99 ? '99+' : count}
+    </span>
+  )
+}
+
 export function TeacherAppBar() {
   const pathname = useRoute()
   const { t } = useI18n()
   const active = sectionForRoute(pathname)
   const pending = usePendingGoals(pathname)
+  const unreadMessages = useUnreadMessages(pathname)
 
   const [moreOpen, setMoreOpen] = useState(false)
   const moreRef = useRef<HTMLDivElement>(null)
@@ -187,6 +220,11 @@ export function TeacherAppBar() {
         >
           <span>{t('tch.nav.more')}</span>
           <Icon name="chevronDown" size={14} aria-hidden />
+          {/* The messages screen lives inside this fold, so its badge must
+              surface on the trigger — a count behind a closed menu tells the
+              teacher nothing until they already opened it. */}
+          <NavBadge count={unreadMessages}
+                    label={t('tch.nav.unreadMessages', { count: unreadMessages })} />
         </button>
         {/* Always in the DOM, shown by class. Below the fold-point this whole
             nav becomes a sheet behind a hamburger, and a dropdown inside a
@@ -205,6 +243,10 @@ export function TeacherAppBar() {
             >
               <Icon name={entry.icon} size={16} />
               <span>{t(entry.labelKey)}</span>
+              {entry.id === 'messages' && (
+                <NavBadge count={unreadMessages}
+                          label={t('tch.nav.unreadMessages', { count: unreadMessages })} />
+              )}
             </button>
           ))}
         </div>

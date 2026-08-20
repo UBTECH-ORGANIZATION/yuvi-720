@@ -123,12 +123,22 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .tch-dot--in_lesson .tch-dot__mark { animation: tch-pulse 2.4s var(--sp-ease) infinite; }
+  /* Every live dot BLINKS — the fade in and out is what says "this is NOW",
+     not a snapshot. Offline dots hold still. */
+  .tch-dot--in_lesson .tch-dot__mark,
+  .tch-dot--online .tch-dot__mark { animation: tch-blink 1.8s var(--sp-ease) infinite; }
 }
 
 @keyframes tch-pulse {
   0%, 100% { box-shadow: 0 0 0 3px var(--sp-primary-100); }
   50%      { box-shadow: 0 0 0 6px transparent; }
+}
+
+/* The live blink: a real fade in and out, visible at a glance across a row
+   of thirty — the ripple above is too quiet to read as "live". */
+@keyframes tch-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.2; }
 }
 
 /* ── alert rows ───────────────────────────────────────────────────────────── */

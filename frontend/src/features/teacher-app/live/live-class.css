@@ -1,0 +1,640 @@
+/* The live classroom view (#249, B5). Tokens only; the presence dot and the
+   alert-row rules stay in live-now.css and are reused, not restated. */
+
+.tch-liveClass { display: grid; gap: var(--sp-4); }
+
+/* ── top bar ──────────────────────────────────────────────────────────────── */
+
+.tch-liveBar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.tch-liveBar__conn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+
+.tch-liveBar__connDot {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--sp-ink-300);
+}
+
+.tch-liveBar__conn.is-live { color: var(--sp-success-600); }
+.tch-liveBar__conn.is-live .tch-liveBar__connDot { background: var(--sp-success-600); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .tch-liveBar__conn.is-live .tch-liveBar__connDot {
+    animation: tch-pulse 2.4s var(--sp-ease) infinite;
+  }
+}
+
+.tch-liveBar__manage { margin-inline-start: auto; }
+
+/* ── the pulse card ───────────────────────────────────────────────────────── */
+
+/* One card, two clusters: "who needs me" and "where is everyone". Each number
+   is still a momentary filter; the location cluster also draws the class as a
+   proportion strip. */
+.tch-livePulse {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-lg);
+  background: var(--sp-surface);
+  flex-wrap: wrap;
+}
+
+.tch-livePulse__cluster {
+  display: grid;
+  gap: var(--sp-2);
+  align-content: start;
+  flex: 1 1 260px;
+  min-inline-size: 0;
+}
+
+.tch-livePulse__clusterLabel {
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-medium);
+  color: var(--sp-ink-400);
+}
+
+.tch-livePulse__divider {
+  inline-size: 1px;
+  background: var(--sp-border);
+  align-self: stretch;
+}
+
+.tch-livePulse__segs { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+
+.tch-liveKpi {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-bg-subtle);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 140ms var(--sp-ease), background 140ms var(--sp-ease);
+}
+
+.tch-liveKpi .sp-icon { align-self: center; color: var(--sp-ink-400); }
+.tch-liveKpi__value {
+  font-size: var(--sp-fs-md);
+  font-weight: var(--sp-fw-bold);
+  color: var(--sp-ink-900);
+  font-variant-numeric: tabular-nums;
+}
+.tch-liveKpi__label { font-size: var(--sp-fs-sm); color: var(--sp-ink-500); white-space: nowrap; }
+
+.tch-liveKpi:hover { border-color: var(--sp-primary-400); }
+.tch-liveKpi:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+.tch-liveKpi.is-active {
+  border-color: var(--sp-primary-600);
+  background: var(--sp-primary-050);
+}
+
+/* A hand up or a live struggle is the reason this screen exists — those two
+   may raise their voice; the location segments never do. The hand raises it
+   in the warm amber the hand wears everywhere else (button, chip, toast);
+   a live struggle stays red. */
+.tch-liveKpi.is-hot { border-color: var(--sp-danger-600); background: var(--sp-danger-100); }
+.tch-liveKpi.is-hot .sp-icon,
+.tch-liveKpi.is-hot .tch-liveKpi__value { color: var(--sp-danger-600); }
+
+.tch-liveKpi--hand.is-hot { border-color: var(--sp-warn-600); background: var(--sp-warn-100); }
+.tch-liveKpi--hand.is-hot .sp-icon,
+.tch-liveKpi--hand.is-hot .tch-liveKpi__value { color: var(--sp-warn-600); }
+
+/* A standing hand BLEEPS: an expanding amber ring, until someone resolves
+   it. The one animated element on the pulse card, on purpose. */
+@media (prefers-reduced-motion: no-preference) {
+  .tch-liveKpi--hand.is-hot { animation: tch-kpi-bleep 1.4s var(--sp-ease) infinite; }
+}
+
+@keyframes tch-kpi-bleep {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--sp-warn-600) 50%, transparent); }
+  70%  { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+
+/* ── spread strip ─────────────────────────────────────────────────────────── */
+
+.tch-liveSpread {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.tch-liveSpread__label { font-size: var(--sp-fs-sm); color: var(--sp-ink-500); }
+
+.tch-liveSpread__count {
+  display: inline-grid;
+  place-items: center;
+  min-inline-size: 20px;
+  block-size: 20px;
+  padding-inline: 4px;
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-primary-100);
+  color: var(--sp-primary-700);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-bold);
+}
+
+.tch-liveClass__filterNote {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+}
+
+/* ── the table ────────────────────────────────────────────────────────────── */
+
+/* One column template, declared once and read by the header AND every row —
+   the only way a header can stay truthfully above its column. */
+/* Sized by its CONTAINER, not the viewport: the assistant side panel and the
+   sub-group bar both narrow this table without a resize, so every breakpoint
+   below is a container query. */
+.tch-liveTable {
+  /* The actions track is FIXED, never content-sized: the header (whose cell
+     is empty) and the rows (whose cell holds two buttons) resolve this
+     template independently, and any content-dependent track would give the
+     two grids different columns — headers drifting off their data. */
+  --live-cols: minmax(140px, 0.9fr) minmax(230px, 1.7fr) minmax(96px, 0.5fr)
+               minmax(0, 1.4fr) 158px;
+  container-type: inline-size;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-lg);
+  background: var(--sp-surface);
+}
+
+.tch-liveHead {
+  display: grid;
+  grid-template-columns: var(--live-cols);
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-block-end: 1px solid var(--sp-border);
+  background: var(--sp-bg-subtle);
+  border-start-start-radius: var(--sp-radius-lg);
+  border-start-end-radius: var(--sp-radius-lg);
+}
+
+.tch-liveHead__cell {
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-medium);
+  color: var(--sp-ink-400);
+  white-space: nowrap;
+  min-inline-size: 0;
+}
+
+/* A header that filters: the cell anchors its own dropdown, so the table
+   wrapper must never clip (`overflow: hidden` would eat the menu). */
+.tch-liveHead__filter { position: relative; }
+
+.tch-liveHead__filterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  max-inline-size: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-radius: var(--sp-radius-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tch-liveHead__filterBtn:hover { color: var(--sp-ink-700); }
+.tch-liveHead__filterBtn:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+.tch-liveHead__filter.is-filtered .tch-liveHead__filterBtn { color: var(--sp-primary-700); }
+
+.tch-liveHead__menu {
+  position: absolute;
+  inset-block-start: calc(100% + 4px);
+  inset-inline-start: 0;
+  z-index: 30;
+  min-inline-size: 190px;
+  display: grid;
+  gap: 2px;
+  padding: var(--sp-1);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface);
+  box-shadow: var(--sp-shadow-md);
+}
+
+.tch-liveHead__menu button {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  border: 0;
+  border-radius: var(--sp-radius-sm);
+  background: transparent;
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+  cursor: pointer;
+  text-align: start;
+}
+
+.tch-liveHead__menu button:hover { background: var(--sp-bg-subtle); }
+.tch-liveHead__menu button[aria-pressed='true'] {
+  background: var(--sp-primary-050);
+  color: var(--sp-primary-700);
+}
+
+.tch-liveHead__optCount {
+  margin-inline-start: auto;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The column chips: four calm tints shared by subject cells, where cells and
+   the filter menus, so a color read once holds everywhere on the screen. */
+.tch-liveChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 2px var(--sp-2);
+  border-radius: var(--sp-radius-pill);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-medium);
+  background: var(--sp-bg-subtle);
+  color: var(--sp-ink-500);
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tch-liveChip.is-hue-0 { background: var(--sp-primary-100); color: var(--sp-primary-700); }
+.tch-liveChip.is-hue-1 { background: var(--sp-success-100); color: var(--sp-success-600); }
+.tch-liveChip.is-hue-2 { background: var(--sp-warn-100); color: var(--sp-warn-600); }
+.tch-liveChip.is-hue-3 { background: var(--sp-info-100); color: var(--sp-info-600); }
+
+/* ── rows ─────────────────────────────────────────────────────────────────── */
+
+.tch-liveRows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.tch-liveRow { border-block-end: 1px solid var(--sp-border); }
+.tch-liveRow:last-child { border-block-end: 0; }
+
+/* Urgency is a border accent, not a repaint: rows must stay one calm surface
+   the eye can scan, with only the start edge saying who needs someone. */
+.tch-liveRow.has-hand { border-inline-start: 3px solid var(--sp-danger-600); }
+.tch-liveRow.has-struggling { border-inline-start: 3px solid var(--sp-warn-600); }
+.tch-liveRow.is-offline { opacity: 0.66; }
+
+.tch-liveRow__main {
+  display: grid;
+  grid-template-columns: var(--live-cols);
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+}
+
+/* Narrowed (assistant panel open, split screen): actions drop to icons —
+   their labels stay in the DOM for the accessible name — and the shared
+   template shrinks its fixed actions track to match. */
+@container (max-width: 1080px) {
+  .tch-liveHead,
+  .tch-liveRow__main {
+    grid-template-columns: minmax(120px, 0.9fr) minmax(180px, 1.7fr) minmax(84px, 0.5fr)
+                           minmax(0, 1.3fr) 76px;
+    gap: var(--sp-2);
+  }
+  .tch-liveRow__actLabel {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* Truly narrow: the header goes (filters live on in the KPI cards), and each
+   row stacks into a compact three-column card row. */
+@container (max-width: 820px) {
+  .tch-liveHead { display: none; }
+  .tch-liveRow__main {
+    grid-template-columns: minmax(130px, 1fr) minmax(0, 1.2fr) auto;
+    padding: var(--sp-2) var(--sp-3);
+  }
+}
+
+.tch-liveRow__who {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: var(--sp-ink-900);
+  cursor: pointer;
+  text-align: start;
+  min-inline-size: 0;
+}
+
+.tch-liveRow__who:focus-visible {
+  outline: none;
+  box-shadow: var(--sp-ring);
+  border-radius: var(--sp-radius-sm);
+}
+
+.tch-liveRow__name { font-weight: var(--sp-fw-medium); }
+
+/* The where cell stacks: the place line always, the signal beneath it only
+   when one exists — which is why signals no longer deserve a column. */
+.tch-liveRow__where { display: grid; gap: 2px; min-inline-size: 0; justify-items: start; }
+
+.tch-liveRow__place {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  min-inline-size: 0;
+}
+
+.tch-liveRow__seen {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  white-space: nowrap;
+}
+
+.tch-liveRow__subject,
+.tch-liveRow__objective {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tch-liveRow__blank { color: var(--sp-ink-300); }
+
+.tch-liveRow__objLive {
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-medium);
+  color: var(--sp-primary-700);
+}
+
+.tch-liveRow__objFocus {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+}
+
+.tch-liveRow__objFocus .sp-icon { color: var(--sp-primary-600); }
+
+/* The raised hand, whole in one chip: state, age and the resolve action. */
+.tch-handChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  max-inline-size: 100%;
+  padding-block: 2px;
+  padding-inline: var(--sp-2) 4px;
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-warn-100);
+  color: var(--sp-warn-600);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-medium);
+}
+
+.tch-handChip__text { white-space: nowrap; }
+
+.tch-handChip__done {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-inline-start: 2px;
+  padding: 1px var(--sp-2);
+  border: 1px solid color-mix(in srgb, var(--sp-warn-600) 45%, transparent);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-surface);
+  color: var(--sp-warn-600);
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tch-handChip__done:hover { background: color-mix(in srgb, var(--sp-warn-600) 12%, var(--sp-surface)); }
+.tch-handChip__done:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+.tch-liveRow__struggle { display: grid; justify-items: start; gap: var(--sp-1); }
+.tch-liveRow__quiet { font-size: var(--sp-fs-xs); color: var(--sp-ink-500); }
+
+.tch-liveRow__do {
+  display: inline-flex;
+  gap: var(--sp-1);
+  justify-self: end;
+}
+
+/* Compact on purpose — the actions are the least important column and every
+   pixel they give up goes to the subject and objective. */
+.tch-liveRow__do .sp-btn {
+  padding-block: 3px;
+  padding-inline: var(--sp-2);
+  font-size: var(--sp-fs-xs);
+  gap: 3px;
+  white-space: nowrap;
+}
+
+/* ── inline action panels ─────────────────────────────────────────────────── */
+
+.tch-liveRow__panel {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  padding: var(--sp-2) var(--sp-3) var(--sp-3);
+  background: var(--sp-bg-subtle);
+}
+
+.tch-liveRow__panel .sp-input { flex: 1; min-inline-size: 200px; }
+
+.tch-liveRow__panelNote {
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+
+.tch-liveRow__panelNote.is-error { color: var(--sp-danger-600); }
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ── subject gauges ───────────────────────────────────────────────────────── */
+
+.tch-livePulse__gauges { display: flex; gap: var(--sp-4); flex-wrap: wrap; }
+
+.tch-gauge {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  min-inline-size: 64px;
+}
+
+.tch-gauge svg { inline-size: 60px; block-size: 34px; }
+
+.tch-gauge__pct {
+  margin-block-start: -18px;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-bold);
+  color: var(--sp-ink-900);
+  font-variant-numeric: tabular-nums;
+}
+
+.tch-gauge__label { font-size: var(--sp-fs-xs); color: var(--sp-ink-500); }
+
+/* ── the focus panel ──────────────────────────────────────────────────────── */
+
+.tch-liveRow__panel--focus { display: grid; justify-items: stretch; gap: var(--sp-2); }
+
+.tch-focusPanel__current {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+}
+
+.tch-focusPanel__skeleton { padding-block: var(--sp-2); }
+
+/* Chips wrap instead of rows stacking, so a whole objective fits in a couple
+   of lines and the panel rarely needs its scroll (kept only as a backstop
+   for very large catalogs). */
+.tch-focusPanel__subjects {
+  display: grid;
+  gap: var(--sp-3);
+  max-block-size: 460px;
+  overflow-y: auto;
+}
+
+.tch-focusPanel__subjectName {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-1);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-900);
+}
+
+.tch-focusPanel__tag {
+  padding: 1px var(--sp-2);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-medium);
+  color: var(--sp-ink-500);
+}
+
+.tch-focusPanel__tag--fit {
+  border-color: color-mix(in srgb, var(--sp-success-600) 50%, transparent);
+  background: color-mix(in srgb, var(--sp-success-600) 10%, var(--sp-surface));
+  color: var(--sp-success-600);
+}
+
+.tch-focusPanel__objective {
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface);
+  margin-block-end: var(--sp-1);
+}
+
+.tch-focusPanel__objective.is-recommended {
+  border-color: color-mix(in srgb, var(--sp-success-600) 45%, transparent);
+}
+
+.tch-focusPanel__objective summary {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+  cursor: pointer;
+  list-style: none;
+}
+
+.tch-focusPanel__objective summary::-webkit-details-marker { display: none; }
+.tch-focusPanel__objective summary .sp-icon {
+  transition: transform 160ms var(--sp-ease);
+}
+.tch-focusPanel__objective[open] summary .sp-icon { transform: rotate(180deg); }
+
+.tch-focusPanel__rows {
+  list-style: none;
+  margin: 0;
+  padding: var(--sp-1) var(--sp-2) var(--sp-2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* The li is only a React key holder; the chips flow directly in the wrap. */
+.tch-focusPanel__rows li { display: contents; }
+
+.tch-focusPanel__option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 3px var(--sp-3);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-surface);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+  cursor: pointer;
+  text-align: start;
+}
+
+.tch-focusPanel__option:hover:not(:disabled) { border-color: var(--sp-primary-400); }
+.tch-focusPanel__option:disabled { cursor: default; }
+.tch-focusPanel__option.is-current {
+  border-color: var(--sp-primary-600);
+  background: var(--sp-primary-050);
+}
+.tch-focusPanel__option.is-next {
+  border-color: color-mix(in srgb, var(--sp-success-600) 45%, transparent);
+}

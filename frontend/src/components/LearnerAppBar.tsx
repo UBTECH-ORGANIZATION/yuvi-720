@@ -1,12 +1,43 @@
+import { useEffect, useState } from 'react'
 import { useRoute, navigate } from '../app/router'
 import { useI18n } from '../i18n/I18nProvider'
 import { useBrain } from '../providers/BrainProvider'
+import { getMyUnread } from '../services/directMessages'
+import { subscribe } from '../services/realtime'
 import { AppBar } from './AppBar'
 import { Icon } from './primitives'
 import { StudioLaunchButton } from './StudioLaunchButton'
 import { WalletChip } from './WalletChip'
 import { NotificationBell } from './NotificationBell'
 import './learner-app-bar.css'
+
+/** Unread teacher messages: counted on load, re-read on entering or leaving
+ *  the chat (which is where it changes), and bumped live off the same stream
+ *  the page already holds — a badge that waits for a poll is a badge that
+ *  says "nothing" while the toast above it says otherwise. */
+function useMyUnread(pathname: string) {
+  const [count, setCount] = useState(0)
+  const onChat = pathname.startsWith('/student-dashboard/chat')
+
+  useEffect(() => {
+    let active = true
+    const read = () => {
+      getMyUnread()
+        .then((result) => { if (active) setCount(result.total ?? 0) })
+        .catch(() => { if (active) setCount(0) })
+    }
+    read()
+    const timer = window.setInterval(read, 120_000)
+    const unsubscribe = subscribe(
+      'learner-triggers', () => '/api/agent/triggers/subscribe',
+      (frame) => {
+        if (frame.type === 'direct_message' && frame.sender === 'teacher') read()
+      })
+    return () => { active = false; window.clearInterval(timer); unsubscribe() }
+  }, [onChat])
+
+  return count
+}
 
 type LearnerSection = 'dashboard' | 'learning' | 'tasks' | 'goals' | 'chat' | 'calendar'
 
@@ -29,6 +60,7 @@ export function LearnerAppBar({ studentName }: LearnerAppBarProps) {
   const { t } = useI18n()
   const { brain } = useBrain()
   const activeSection = sectionForRoute(pathname)
+  const unread = useMyUnread(pathname)
   const displayName = studentName || brain?.identity.display_name || t('sdash.learnerFallback')
 
   const navigation = (
@@ -77,6 +109,14 @@ export function LearnerAppBar({ studentName }: LearnerAppBarProps) {
       >
         <Icon name="message" size={16} />
         <span>{t('sdash.nav.chat')}</span>
+        {/* Messages waiting from a teacher, visible from any screen — the
+            same contract as the teacher's own badges. */}
+        {unread > 0 && (
+          <span className="learner-app-nav__badge"
+                aria-label={t('sdash.nav.unreadMessages', { count: unread })}>
+            {unread > 99 ? '99+' : unread}
+          </span>
+        )}
       </button>
       <button
         className={activeSection === 'calendar' ? 'is-active' : ''}

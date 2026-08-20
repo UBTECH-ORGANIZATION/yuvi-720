@@ -121,7 +121,9 @@ export const teacherTourSteps: TourStep[] = [
   {
     id: 'roster',
     target: 'teacher.rosterFilters',
-    route: '/teacher/students',
+    // The students screen lands on the LIVE view now (#249); the filters this
+    // step points at exist only in manage mode, which the query opens.
+    route: '/teacher/students?view=table',
     titleKey: 'tour.teacher.roster.title',
     bodyKey: 'tour.teacher.roster.body',
     placement: 'bottom',
