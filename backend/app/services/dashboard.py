@@ -24,6 +24,7 @@ DEFAULT_SUBJECTS = ("math", "science")
 SUBJECT_NAMES = {
     "math":    {"he": "מתמטיקה", "en": "Mathematics", "ar": "الرياضيات"},
     "science": {"he": "מדע וטכנולוגיה", "en": "Science & Technology", "ar": "العلوم والتكنولوجيا"},
+    "english": {"he": "אנגלית", "en": "English", "ar": "الإنجليزية"},
 }
 SUBJECT_ICON = {"math": "📐", "science": "🔬"}
 SUBJECT_GRADIENT = {
@@ -86,6 +87,11 @@ HERO_REASON = {
         "he": "השלמת את כל היעדים הזמינים במסלול הנוכחי.",
         "en": "You completed all currently available objectives.",
         "ar": "أكملت جميع الأهداف المتاحة حاليًا.",
+    },
+    "pinned": {
+        "he": "המורה בחר/ה בשבילך את הצעד הזה.",
+        "en": "Your teacher chose this step for you.",
+        "ar": "اختار معلّمك/معلّمتك هذه الخطوة لك.",
     },
 }
 
@@ -243,6 +249,45 @@ def _hero(
     """Build a read-only resume/next preview; never mutate current_state."""
     mastery = brain.get("mastery") or {}
     current = brain.get("current_state") or {}
+
+    # A teacher's pin outranks everything, resume included: it exists precisely
+    # for "not that one — this one", said to a child mid-something-else. Only an
+    # uncompleted pin steers; a completed one is spent, and the hero falls
+    # through to its own logic rather than pointing at finished work.
+    pinned = brain.get("pinned_next") or {}
+    pinned_component_id = pinned.get("component_id")
+    if pinned_component_id and str(pinned_component_id) not in set(completed_ids):
+        pinned_component = get_component(pinned_component_id) or {}
+        pinned_objective_id = pinned.get("objective_id") or pinned_component.get("objective_id")
+        from app.brain.mastery import entry_for
+        subject = pinned_component.get("subject") or entry_for(
+            mastery, pinned_objective_id).get("subject")
+        plan: dict[str, Any] = {}
+        if pinned_objective_id:
+            plan = content_catalog.objective_plan(
+                pinned_objective_id,
+                mastery_entry=entry_for(mastery, pinned_objective_id),
+                completed_ids=completed_ids,
+                signals=content_catalog.learner_signals(brain),
+                locale=language,
+            ) or {}
+        return {
+            "mode": "pinned",
+            "subjectKey": subject,
+            "subjectName": _t(SUBJECT_NAMES, subject, language),
+            "objectiveId": pinned_objective_id,
+            "objectiveTitle": localized_objective_title(pinned_objective_id, language)
+            if pinned_objective_id else pinned_component.get("title"),
+            **_goal_context(pinned_objective_id),
+            "componentId": pinned_component_id,
+            "unitId": pinned.get("unit_id") or pinned_component.get("unit_id"),
+            "pathNodeId": f"{pinned_component_id}#1",
+            "progressRatio": plan.get("progress_ratio"),
+            "canResume": False,
+            "reason": _t(HERO_REASON, "pinned", language),
+            "pace": _t(PACE_WORDS, current.get("pace"), language) if current.get("pace") else None,
+        }
+
     current_component_id = current.get("component_id") or current.get("item_id")
     current_component = get_component(current_component_id) if current_component_id else None
     current_objective_id = (current_component or {}).get("objective_id")

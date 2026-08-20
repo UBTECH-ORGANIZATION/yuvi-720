@@ -1028,3 +1028,193 @@ async def remove_mentoring(
     if outcome == "forbidden":
         return _denied()
     return _ok({"deleted": True})
+
+
+@router.post("/students/{learner_id}/pin-next")
+async def pin_next(
+    learner_id: str, data: dict, session=Depends(require_teacher_session)
+):
+    """Pin one catalog component as this learner's next step (#249, slice of #244).
+
+    The client sends only the component id; unit, objective and subject are
+    resolved from the catalog here, so the stored pin can never disagree with
+    what the learner's route will actually open. An id the catalog does not
+    know is a 422, not a pin that silently steers nowhere.
+
+    Written via `apply_brain_updates` — the authenticated portal write lane,
+    the same one directives use — never an agent write scope.
+    """
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+
+    from datetime import datetime, timezone
+
+    from app.brain.repository import apply_brain_updates
+    from app.services import kata_catalog, notifications
+
+    await kata_catalog.ensure_loaded()
+    component_id = str(data.get("component_id") or "")
+    component = kata_catalog.get_component(component_id)
+    if component is None:
+        return JSONResponse(
+            content={"error": "unknown_component"}, status_code=422, headers=_NO_STORE
+        )
+
+    pinned = {
+        "component_id": component_id,
+        "unit_id": component.get("unit_id"),
+        "objective_id": component.get("objective_id"),
+        "pinned_by": session["sub"],
+        "pinned_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await apply_brain_updates(safe_id, {"pinned_next": pinned})
+
+    # Deterministic id: re-pinning the same component (a retry, a double-click)
+    # must not ring the bell twice. Pinning a DIFFERENT component is a new fact
+    # and rings once for it.
+    await notifications.notify(
+        safe_id,
+        notifications.KIND_PINNED_NEXT,
+        notification_id=f"pinned_next:{safe_id}:{component_id}",
+        title_key="notif.pinnedNext",
+        params={"title": component.get("title") or ""},
+        actions=[{
+            "label_key": "notif.action.openLesson",
+            "route": (
+                f"/learning/lesson?component={component_id}"
+                + (f"&unit={pinned['unit_id']}" if pinned["unit_id"] else "")
+            ),
+        }],
+        actor_id=session["sub"],
+    )
+    return _ok({"pinned": pinned})
+
+
+@router.get("/groups/{group_id}/focus")
+async def group_focus(
+    group_id: str,
+    language: str = Query("he"),
+    session=Depends(require_teacher_session),
+):
+    """Where the planner is pointing each learner right now (#249).
+
+    One row per learner: the subject and objective their route would open on —
+    a teacher-set pin included, because the route honours it. This is the
+    class-wide version of the profile's "מיקוד": the live view's rows and its
+    per-subject division both read from it.
+
+    Deliberately cheap: one brain read per learner and the pure `next_focus`
+    over it. The exact next component needs each learner's event history, so
+    it lives on the single-learner pin read, never in this fan-out.
+    """
+    if not await _guard_group(session, group_id):
+        return _denied()
+    from app.brain.repository import get_brain
+    from app.services import kata_catalog
+    from app.services.dashboard import SUBJECT_NAMES, _t
+    from app.services.planner import next_focus
+
+    await kata_catalog.ensure_loaded()
+    lang = normalize_language(language)
+    learners = []
+    for learner_id in await org.learners_in_group(group_id):
+        brain = await get_brain(learner_id)
+        pinned = brain.get("pinned_next") or {}
+        if pinned.get("component_id"):
+            component = kata_catalog.get_component(str(pinned["component_id"])) or {}
+            subject = component.get("subject")
+            objective_id = pinned.get("objective_id") or component.get("objective_id")
+            is_pinned = True
+        else:
+            focus = next_focus(brain)
+            subject = focus.get("subject")
+            objective_id = focus.get("objective_id")
+            is_pinned = False
+        learners.append({
+            "learner_id": learner_id,
+            "subject": subject,
+            "subject_name": _t(SUBJECT_NAMES, subject, lang) or (subject or ""),
+            "objective_id": objective_id,
+            "objective_title": kata_catalog.localized_objective_title(objective_id, lang)
+            if objective_id else None,
+            "pinned": is_pinned,
+        })
+    return _ok({"learners": learners})
+
+
+@router.get("/messages-unread")
+async def messages_unread(session=Depends(require_teacher_session)):
+    """Per-learner unread message counts, plus the total for the nav badge.
+
+    One cheap indexed read over the conversation counters — polled from the
+    app bar, so it must never fan out into the threads themselves.
+    """
+    from app.services import direct_messages
+
+    unread = await direct_messages.unread_for_teacher(session["sub"])
+    return _ok({"unread": unread, "total": sum(unread.values())})
+
+
+@router.get("/students/{learner_id}/pin-next")
+async def get_pin_next(
+    learner_id: str,
+    language: str = Query("he"),
+    session=Depends(require_teacher_session),
+):
+    """The standing pin, plus where the planner is pointing THIS learner.
+
+    The focus panel grounds its recommendation on this: the subject and
+    objective the route would open on, and the exact component the planner
+    would serve next — so "the step that fits now" is the planner's own answer,
+    never a guess over the catalog. One learner, so the event read is fine
+    here; the group fan-out (`/groups/{id}/focus`) deliberately omits it.
+    """
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    from app.brain.mastery import entry_for
+    from app.brain.repository import get_brain
+    from app.services import content_catalog, kata_catalog
+    from app.services.dashboard import SUBJECT_NAMES, _t
+    from app.services.events import get_learner_events
+    from app.services.planner import next_focus
+
+    await kata_catalog.ensure_loaded()
+    lang = normalize_language(language)
+    brain = await get_brain(safe_id)
+    focus = next_focus(brain)
+    payload: dict[str, Any] = {
+        "subject": focus.get("subject"),
+        "subject_name": _t(SUBJECT_NAMES, focus.get("subject"), lang)
+        or (focus.get("subject") or ""),
+        "objective_id": focus.get("objective_id"),
+        "objective_title": None,
+        "next_component_id": None,
+    }
+    if focus.get("objective_id"):
+        objective_id = str(focus["objective_id"])
+        payload["objective_title"] = kata_catalog.localized_objective_title(objective_id, lang)
+        events = await get_learner_events(safe_id)
+        plan = content_catalog.objective_plan(
+            objective_id,
+            mastery_entry=entry_for(brain.get("mastery"), objective_id),
+            completed_ids=content_catalog.completed_component_ids(events),
+            signals=content_catalog.learner_signals(brain),
+            locale=lang,
+        ) or {}
+        payload["next_component_id"] = plan.get("next_component_id")
+    return _ok({"pinned": brain.get("pinned_next") or None, "focus": payload})
+
+
+@router.delete("/students/{learner_id}/pin-next")
+async def unpin_next(learner_id: str, session=Depends(require_teacher_session)):
+    """Clear the pin. Silent for the learner — un-choosing is not an event a
+    child needs a bell for, and the hero simply returns to the planner's pick."""
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    from app.brain.repository import apply_brain_updates
+
+    await apply_brain_updates(safe_id, {"pinned_next": None})
+    return _ok({"pinned": None})

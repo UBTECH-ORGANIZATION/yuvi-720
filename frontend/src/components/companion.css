@@ -604,6 +604,23 @@
   transform: none;
 }
 
+.sp-companion__hand-status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 7px 18px;
+  border-block-end: 1px solid var(--sp-border);
+  background: color-mix(in srgb, var(--sp-ok, #2f7d6b) 12%, transparent);
+  color: var(--sp-ink-chat-meta);
+  font-size: var(--sp-fs-chat-meta);
+  line-height: var(--sp-lh-chat-meta);
+}
+
+.sp-companion__hand-status.is-unreached {
+  background: color-mix(in srgb, #b8860b 14%, transparent);
+}
+
 .sp-companion__head-actions [data-tooltip],
 .sp-companion__conversation-delete[data-tooltip] {
   position: relative;
@@ -1678,21 +1695,28 @@
   color: #fff;
 }
 
+/* A row, not a box-with-a-button-inside: the send sits beside the input, and
+   in a lesson the raise-hand stands next to it as a peer. `overflow: visible`
+   so the hand's tooltip can escape the row. */
 .sp-companion__composer {
   position: relative;
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 0;
   border: 0;
   background: none;
+  overflow: visible;
 }
 
 .sp-companion__composer input {
+  flex: 1;
   inline-size: 100%;
   min-inline-size: 0;
   min-block-size: 48px;
   border: 1px solid var(--sp-border-strong);
   border-radius: 18px;
-  padding-inline: 18px 56px;
+  padding-inline: 18px;
   background: var(--sp-bg);
   color: var(--sp-ink-700);
   font: 400 var(--sp-fs-chat-body)/1.2 var(--sp-font);
@@ -1705,15 +1729,12 @@
 }
 
 .sp-companion__composer input:focus-visible { border-color: var(--sp-primary-500); box-shadow: var(--sp-ring); }
-.sp-companion__composer button {
-  position: absolute;
-  inset-inline-end: 6px;
-  inset-block-start: 50%;
-  transform: translateY(-50%);
+.sp-companion__send {
+  flex: none;
   display: grid;
   place-items: center;
-  inline-size: 38px;
-  block-size: 38px;
+  inline-size: 42px;
+  block-size: 42px;
   border: none;
   border-radius: 13px;
   background: linear-gradient(135deg, var(--sp-primary-600), var(--sp-purple-600));
@@ -1722,9 +1743,134 @@
   box-shadow: 0 6px 14px rgba(111, 91, 255, 0.22);
 }
 
-.sp-companion__composer button:disabled { background: var(--sp-border-strong); box-shadow: none; cursor: not-allowed; }
-.sp-companion__composer button .sp-icon { transform: scaleX(1); }
-[dir="rtl"] .sp-companion__composer button .sp-icon { transform: scaleX(-1); }
+.sp-companion__send:disabled { background: var(--sp-border-strong); box-shadow: none; cursor: not-allowed; }
+.sp-companion__send .sp-icon { transform: scaleX(1); }
+[dir="rtl"] .sp-companion__send .sp-icon { transform: scaleX(-1); }
+
+/* Raise-hand, beside the send (#249). Its own warm identity — it calls a
+   person, not the model — and an armed state that reads as a question. */
+.sp-companion__handBtn {
+  flex: none;
+  position: relative;
+  display: grid;
+  place-items: center;
+  inline-size: 42px;
+  block-size: 42px;
+  border: 1.5px solid color-mix(in srgb, var(--sp-warn-600, #b8860b) 55%, transparent);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--sp-warn-600, #b8860b) 10%, var(--sp-surface));
+  color: var(--sp-warn-600, #b8860b);
+  cursor: pointer;
+}
+
+.sp-companion__handBtn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--sp-warn-600, #b8860b) 18%, var(--sp-surface));
+}
+
+.sp-companion__handBtn.is-armed {
+  background: color-mix(in srgb, var(--sp-warn-600, #b8860b) 26%, var(--sp-surface));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sp-warn-600, #b8860b) 22%, transparent);
+}
+
+.sp-companion__handBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* The tooltip must escape the composer row — `overflow: visible` up the chain
+   and a raised z-index here are what keep it whole. */
+.sp-companion__handBtn[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  inset-block-end: calc(100% + 8px);
+  inset-inline-end: 0;
+  z-index: 30;
+  padding: 5px 10px;
+  border-radius: 9px;
+  background: var(--sp-ink-900);
+  color: #fff;
+  font-size: var(--sp-fs-xs);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms var(--sp-ease);
+}
+
+.sp-companion__handBtn[data-tooltip]:hover::after,
+.sp-companion__handBtn[data-tooltip]:focus-visible::after { opacity: 1; }
+
+/* The confirmation card floats just above the composer, inside the panel —
+   anchored to the shell (which is why the shell is positioned), above the
+   tooltip layer. */
+.sp-companion__composer-shell { position: relative; }
+
+.sp-companion__handConfirm {
+  position: absolute;
+  inset-block-end: calc(100% + 10px);
+  inset-inline: 12px;
+  z-index: 31;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1.5px solid color-mix(in srgb, var(--sp-warn-600, #b8860b) 45%, transparent);
+  border-radius: 16px;
+  background: var(--sp-surface);
+  box-shadow: var(--sp-shadow-md);
+  text-align: center;
+}
+
+.sp-companion__handConfirmIcon {
+  display: grid;
+  place-items: center;
+  inline-size: 38px;
+  block-size: 38px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--sp-warn-600, #b8860b) 14%, var(--sp-surface));
+  color: var(--sp-warn-600, #b8860b);
+}
+
+.sp-companion__handConfirmTitle {
+  margin: 0;
+  font-size: var(--sp-fs-md);
+  font-weight: var(--sp-fw-bold);
+  color: var(--sp-ink-900);
+}
+
+.sp-companion__handConfirmBody {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+}
+
+.sp-companion__handConfirmActions {
+  display: flex;
+  gap: 8px;
+  margin-block-start: 4px;
+}
+
+.sp-companion__handConfirmYes,
+.sp-companion__handConfirmNo {
+  padding: 8px 16px;
+  border-radius: 12px;
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-medium);
+  cursor: pointer;
+}
+
+.sp-companion__handConfirmYes {
+  border: 0;
+  background: var(--sp-warn-600, #b8860b);
+  color: #fff;
+}
+
+.sp-companion__handConfirmYes:hover { filter: brightness(1.06); }
+
+.sp-companion__handConfirmNo {
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+  color: var(--sp-ink-700);
+}
+
+.sp-companion__handConfirmNo:hover { background: var(--sp-bg-subtle); }
 
 @media (max-width: 767px) {
   .sp-companion-backdrop {

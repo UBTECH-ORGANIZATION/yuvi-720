@@ -305,7 +305,8 @@ class CoachSurfaceContext(BaseModel):
     model_config = ConfigDict(extra="forbid")
     screen: Literal[
         "results", "student_dashboard", "mentoring", "learning_portal",
-        "learning_world", "learning_lesson", "learning_create", "unknown",
+        "learning_world", "learning_lesson", "learning_create", "teacher_app",
+        "unknown",
     ] = "unknown"
     unit_id: str | None = Field(default=None, min_length=1, max_length=180)
     component_id: str | None = Field(default=None, min_length=1, max_length=180)
@@ -1229,3 +1230,25 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@router.post("/presence/surface")
+async def presence_surface(
+    request: CoachSurfaceContext, learner_id: str = Depends(require_learner)
+):
+    """Where this learner's client is in the product, for the live classroom.
+
+    The body is the same bounded `CoachSurfaceContext` every coach call already
+    sends — a closed enum of screens, no free text or URLs — so there is no new
+    wire shape to validate. Advisory on the other end too: presence maps it to
+    a `surface` field and never to `status`, which stays xAPI-authoritative.
+    """
+    from app.services import presence
+
+    # The lesson ids ride along so the live view can NAME the learning the
+    # client is standing on; they resolve to a catalog title server-side.
+    presence.note_surface(
+        learner_id, request.screen,
+        unit_id=request.unit_id, component_id=request.component_id,
+    )
+    return JSONResponse(content={"ok": True})

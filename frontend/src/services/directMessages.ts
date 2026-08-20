@@ -80,6 +80,25 @@ export function markMessagesRead(learnerId: string) {
 
 /* ── the learner's lane ────────────────────────────────────────────────────── */
 
+/** Per-thread unread counts plus the total, for badges. Cheap by contract:
+ *  both endpoints read the conversation counters, never the threads. */
+export interface UnreadMap {
+  unread: Record<string, number>
+  total: number
+}
+
+export async function getTeacherUnread(): Promise<UnreadMap> {
+  const response = await fetch('/api/teacher/messages-unread', { credentials: 'include' })
+  if (!response.ok) throw new Error(`unread ${response.status}`)
+  return response.json()
+}
+
+export async function getMyUnread(): Promise<UnreadMap> {
+  const response = await fetch('/api/me/messages-unread', { credentials: 'include' })
+  if (!response.ok) throw new Error(`unread ${response.status}`)
+  return response.json()
+}
+
 export async function listMyMessages(teacherId: string): Promise<DirectMessage[]> {
   const response = await fetch(`/api/me/messages/${encodeURIComponent(teacherId)}`,
     { credentials: 'include' })

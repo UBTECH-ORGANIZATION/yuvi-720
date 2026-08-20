@@ -1390,6 +1390,15 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
             set_updates["current_state.pace"] = pace
         if (event.get("result") or {}).get("success"):
             set_updates["current_state.hint_ladder"] = {}   # fresh ladder next task
+        # A completed pin is spent (#249). Cleared here — the one place
+        # completion is adjudicated — so the hero and the route both stop
+        # steering to it in the same moment, with no second judge to drift.
+        # `launch` is the id `is_component_completion` matched on. Cleared on a
+        # failed completion too: done-is-done, and the after-fail routing owns
+        # what comes next — a pin that survived failure would loop the child.
+        pinned_component = (brain.get("pinned_next") or {}).get("component_id")
+        if pinned_component and str(pinned_component) == str(event.get("launch") or ""):
+            set_updates["pinned_next"] = None
 
     if objective_id and verb in SCORING_VERBS and not _already_credited(event, prior_state):
         now = event.get("occurred_at") or _now()

@@ -114,9 +114,13 @@ export function TourProvider({ children, resolveParams }: ProviderProps) {
 
   // Land on the step's route before measuring, or the target is guaranteed
   // missing and every cross-route step would skip itself.
+  // Matched on PATHNAME only, both sides: a step may carry a query
+  // (`?view=table` opens the roster in manage mode) that the address bar will
+  // not echo back — comparing it verbatim would re-navigate every render,
+  // which is the exact loop the route-remount comment in App.tsx records.
   useEffect(() => {
     if (!step || !wantedRoute) return
-    if (route.split('?')[0] !== wantedRoute) navigate(wantedRoute)
+    if (route.split('?')[0] !== wantedRoute.split('?')[0]) navigate(wantedRoute)
   }, [step, wantedRoute, route])
 
   /* Both signals, because they mean different things: the stored preference is
@@ -126,7 +130,7 @@ export function TourProvider({ children, resolveParams }: ProviderProps) {
     || (typeof window !== 'undefined'
         && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
 
-  const onRoute = !wantedRoute || route.split('?')[0] === wantedRoute
+  const onRoute = !wantedRoute || route.split('?')[0] === wantedRoute.split('?')[0]
   const rect = useTargetRect(step && onRoute ? step.target : null, reducedMotion)
 
   // Past the end (or before the start) means the tour is over.

@@ -138,6 +138,11 @@ try {
      assertion below it with it. One selector spanning both views. */
   const ROW = '.tch-studentCard, .tch-roster__row'
   await page.locator('.teacher-app-nav button').nth(1).click()
+  /* The screen lands on the LIVE view now (#249); the table/cards this block
+     asserts live behind the manage button. Clicking through it is deliberate —
+     it also proves the live→manage door exists. */
+  await page.waitForSelector('.tch-liveBar__manage', { timeout: 30000 })
+  await page.locator('.tch-liveBar__manage').click()
   await page.waitForSelector(ROW, { timeout: 30000 })
   const cards = await page.locator(ROW).count()
   check('roster lists the class', cards > 0, `${cards} students`)

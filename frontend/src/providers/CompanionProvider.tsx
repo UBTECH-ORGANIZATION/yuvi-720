@@ -8,6 +8,7 @@ import {
   getPendingKudos,
   listCoachConversations,
   listCoachMessages,
+  reportCoachSurface,
   streamCoach,
   streamCoachSupport,
   streamProactive,
@@ -273,6 +274,30 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const pathname = useRoute()
   const surface = useMemo(() => coachSurfaceForPath(pathname), [pathname])
+  // Tell presence where this client is, for the teacher's live view. Keyed on
+  // the SCREEN, not the pathname: moving between questions inside one lesson
+  // is not a move the live view renders, so it must not cost a report. The
+  // 500ms debounce collapses redirect chains into one send. Gated on HOLDING
+  // the learner role — not on lacking the teacher one: gal and moti wear both
+  // hats, and the teacher-negative gate left their learner tabs reading
+  // "location unknown" on the live board. An account with no learner role has
+  // no presence row for a report to land on anyway.
+  // Teacher routes are outside `coachSurfaceForPath` (the coach never
+  // describes them), but presence still deserves better than "unknown" when a
+  // dual-role account stands on the teaching side.
+  const surfaceScreen = pathname.startsWith('/teacher') ? 'teacher_app' : surface.screen
+  const isLearner = Boolean(user?.roles.includes('learner'))
+  useEffect(() => {
+    if (!isLearner) return
+    const handle = window.setTimeout(
+      () => reportCoachSurface(surfaceScreen === 'teacher_app'
+        ? { screen: 'teacher_app' }
+        : coachSurfaceForPath(pathname)), 500)
+    return () => window.clearTimeout(handle)
+    // `pathname` is read, not depended on: the freshest ids ride along when the
+    // screen changes, but a same-screen navigation does not re-fire.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLearner, surfaceScreen])
   // Being on a lesson ROUTE is not enough to run the lesson machinery: a tab
   // whose session has expired still matches the route, and every lesson-scoped
   // effect here calls a learner-only endpoint. A stale tab left open therefore

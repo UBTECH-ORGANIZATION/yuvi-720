@@ -51,10 +51,13 @@ KIND_DEADLINE_REMINDER = "deadline_reminder"
 # teacher's opens the child's chat.
 KIND_TEACHER_MESSAGE = "teacher_message"
 KIND_STUDENT_MESSAGE = "student_message"
+# The teacher pinned a specific learning as this learner's next step (#249/#244).
+KIND_PINNED_NEXT = "pinned_next"
 
 KINDS = (
     KIND_GOAL_ASSIGNED, KIND_GOAL_APPROVED, KIND_TEACHER_NOTE, KIND_KUDOS, KIND_ALERT,
     KIND_TASK_ASSIGNED, KIND_DEADLINE_REMINDER, KIND_TEACHER_MESSAGE, KIND_STUDENT_MESSAGE,
+    KIND_PINNED_NEXT,
 )
 
 # One person can be both. `gal` is a learner AND a teacher, and a bell that

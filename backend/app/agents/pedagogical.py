@@ -27,6 +27,28 @@ async def select_next(learner_id: str, locale: str = "he") -> dict[str, Any]:
     """Choose the next objective + component and record it in the brain (F1)."""
     await kata_catalog.ensure_loaded()
     brain = await get_brain(learner_id)
+
+    # A teacher's pin outranks the planner (#249): "next" was chosen by a
+    # person standing in the room, so the route honours it until the component
+    # is completed — the xAPI fold clears the pin at that moment, and a spent
+    # pin that somehow survived is skipped here rather than served again.
+    pinned = brain.get("pinned_next") or {}
+    if pinned.get("component_id"):
+        component = kata_catalog.get_component(str(pinned["component_id"]))
+        events = await get_learner_events(learner_id)
+        completed = content_catalog.completed_component_ids(events)
+        if component and str(pinned["component_id"]) not in completed:
+            objective_id = pinned.get("objective_id") or component.get("objective_id")
+            return {
+                "subject": component.get("subject"),
+                "objective_id": objective_id,
+                "component": component,
+                "difficulty": None,
+                "reason": "pinned",
+                "plan": {},
+                "explanation": f"next = {objective_id} — pinned by the teacher",
+            }
+
     # Cross-subject focus: global review-due first, else most-behind subject.
     focus = next_focus(brain)
     plan = focus["plan"]

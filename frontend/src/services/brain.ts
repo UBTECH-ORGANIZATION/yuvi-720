@@ -114,7 +114,8 @@ export interface DashboardSubject {
 }
 
 export interface DashboardHero {
-  mode: 'resume' | 'next' | 'complete'
+  /** `pinned` = the teacher chose this exact step (#249); it outranks resume. */
+  mode: 'resume' | 'next' | 'complete' | 'pinned'
   subjectKey: 'math' | 'science' | null
   subjectName: string | null
   objectiveId: string | null

@@ -46,7 +46,9 @@ await page.evaluate(async () => {
 try {
   // ── the switcher replaces the caption ─────────────────────────────────────
   console.log('\n— the switcher —')
-  await page.goto(`${base}/teacher/students`, { waitUntil: 'load' })
+  // ?view=table: the screen lands on the live view now (#249); this file
+  // checks the manage table, so it asks for it by address.
+  await page.goto(`${base}/teacher/students?view=table`, { waitUntil: 'load' })
   await page.waitForSelector('.tch-roster__table', { timeout: 60_000 })
 
   if (await page.locator('.tch-subgroups').count()) ok('the class subtitle is a switcher')

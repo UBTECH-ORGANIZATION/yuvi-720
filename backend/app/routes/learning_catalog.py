@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
@@ -17,6 +18,31 @@ from app.services.events import get_session_events, verify_launch
 
 
 router = APIRouter(prefix="/api/learning", tags=["learning-catalog"])
+
+# The provider's units, briefly held per language. Every dashboard visit was
+# re-fetching the summary page plus every unit detail from CET over fresh TLS
+# connections — most of this route's ~2s, paid for content that changes only
+# on an import. Five minutes matches the staleness the kata_catalog snapshot
+# already accepts. Projection stays per-request (it is the personalized part),
+# and `project_unit_roadmap` deep-copies before projecting, so the cached
+# units are never written to.
+_UNITS_TTL_SECONDS = 300.0
+_units_cache: dict[str, tuple[float, list[dict]]] = {}
+
+
+async def _units_for(lang: str) -> list[dict]:
+    import time
+
+    held = _units_cache.get(lang)
+    if held and (time.monotonic() - held[0]) < _UNITS_TTL_SECONDS:
+        return held[1]
+    units = await content_provider.list_units(language=lang)
+    _units_cache[lang] = (time.monotonic(), units)
+    return units
+
+
+def reset_units_cache_for_tests() -> None:
+    _units_cache.clear()
 
 
 class LearningSessionRequest(BaseModel):
@@ -45,9 +71,9 @@ async def read_catalog(lang: str = "he", learner_id: str = Depends(require_learn
     try:
         from app.services import kata_catalog
         await kata_catalog.ensure_loaded()
-        units = await content_provider.list_units(language=lang)
-        projected = []
-        for unit in units:
+        units = await _units_for(lang)
+
+        async def _project(unit: dict) -> dict:
             roadmap = await project_unit_roadmap(unit, learner_id, locale=lang)
             # The ministry's own names for where this unit sits (נושא → תת נושא).
             # The client used to map the dotted key through a hand-written table,
@@ -66,8 +92,14 @@ async def read_catalog(lang: str = "he", learner_id: str = Depends(require_learn
             for component in roadmap.get("components") or []:
                 component.pop("information_by_item", None)
                 component.pop("questions_by_item", None)
-            projected.append(roadmap)
-        units = projected
+            return roadmap
+
+        # The per-unit reads (this learner's unit events, brain, illustration)
+        # are independent of each other; awaiting them one unit at a time made
+        # this route ~2s on a real account — the dashboard's "recent lessons"
+        # rail visibly trailing the page. Concurrency, not caching: the payload
+        # stays identical, order included (gather preserves it).
+        units = list(await asyncio.gather(*(_project(unit) for unit in units)))
     except content_provider.ContentProviderError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
     return {

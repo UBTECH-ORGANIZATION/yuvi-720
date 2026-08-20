@@ -211,3 +211,17 @@ async def mark_my_messages_read(
     changed = await direct_messages.mark_read(
         teacher_id, learner_id, reader=direct_messages.SENDER_LEARNER)
     return {"read": changed}
+
+
+@router.get("/messages-unread")
+async def my_messages_unread(response: Response, session=Depends(current_user)):
+    """Per-teacher unread counts plus the total — the learner side's badge.
+
+    One indexed read over the conversation counters; the nav polls this, so it
+    must never open the threads themselves.
+    """
+    response.headers.update(_NO_STORE)
+    from app.services import direct_messages
+
+    unread = await direct_messages.unread_for_learner(session["sub"])
+    return {"unread": unread, "total": sum(unread.values())}

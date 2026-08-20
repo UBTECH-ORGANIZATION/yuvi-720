@@ -111,7 +111,7 @@ try {
         body: JSON.stringify({ name: 'קבוצת חיזוק', learner_ids: ['demo-shir', 'demo-tal'] }) })
     }
   })
-  await page.goto(`${BASE}/teacher/students`, { waitUntil: 'domcontentloaded' })
+  await page.goto(`${BASE}/teacher/students?view=table`, { waitUntil: 'domcontentloaded' })
   // wait for DATA, not chrome: the subgroup cards render before the snapshot.
   await page.waitForSelector('.tch-roster__table tbody tr', { timeout: 30000 })
   const allRows = await page.locator('.tch-roster__table tbody tr').count()
@@ -159,7 +159,7 @@ try {
   // clear from the bar, roster whole again
   await page.locator('.tch-scope__seg.is-narrowed .tch-scope__clear').first().click()
   await page.waitForTimeout(900)
-  await page.goto(`${BASE}/teacher/students`, { waitUntil: 'domcontentloaded' })
+  await page.goto(`${BASE}/teacher/students?view=table`, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tch-roster__table tbody tr', { timeout: 30000 })
   await page.waitForTimeout(600)
   check('clearing restores the whole class',

@@ -30,9 +30,10 @@ import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import { useTeacherLive } from '../../../providers/TeacherLiveProvider'
 import { formatMessageTime } from '../../../hooks/messageTime'
 import { PresenceDot, agoLabel } from '../live/LiveNow'
+import { LiveClassView } from '../live/LiveClassView'
 import {
-  createSubgroup, deleteSubgroup, getGroupSnapshot, updateSubgroup,
-  type GroupInsight, type Subgroup,
+  createSubgroup, deleteSubgroup, getGroupFocus, getGroupSnapshot, updateSubgroup,
+  type GroupInsight, type LearnerFocus, type Subgroup,
 } from '../../../services/teacher'
 import { withFallback } from '../shared/EvidenceDisclosure'
 import {
@@ -127,6 +128,31 @@ export function TeacherStudentsPage() {
      teacher picked. */
   const savedView = (user?.preferences?.teacher_roster_view as View | undefined) ?? 'table'
   const [view, setView] = useState<View>(entry.view ?? savedView)
+  /* Live is what the teacher LANDS on (#249): the question they have while a
+     class works in front of them is "who is where and who needs me", not a
+     sortable table. Manage (table/cards) stays one click away, and a deep link
+     that names a view or a filter goes straight to manage — those links exist
+     to show a filtered LIST. `teacher_roster_view` is untouched: it remembers
+     table-vs-cards INSIDE manage, not this. */
+  const [mode, setMode] = useState<'live' | 'manage'>(
+    entry.view || entry.status || entry.minDaysInactive !== null ? 'manage' : 'live')
+
+  /* Where the planner points each child — the live rows' "מיקוד" line and the
+     pulse card's subject gauges. Re-read when the focus panel changes a pin. */
+  const [focusOf, setFocusOf] = useState<Record<string, LearnerFocus>>({})
+  const [focusNonce, setFocusNonce] = useState(0)
+  useEffect(() => {
+    if (!groupId) return
+    let active = true
+    getGroupFocus(groupId, language)
+      .then((result) => {
+        if (!active) return
+        setFocusOf(Object.fromEntries(
+          (result.learners ?? []).map((row) => [row.learner_id, row])))
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [groupId, language, focusNonce])
   const savedColumns = user?.preferences?.teacher_roster_columns ?? []
   const columns: ColumnKey[] = savedColumns.length
     ? (savedColumns.filter((key: string) => COLUMN_KEYS.includes(key as ColumnKey)) as ColumnKey[])
@@ -361,6 +387,29 @@ export function TeacherStudentsPage() {
         onConfirm={() => deleting && void removeSubgroup(deleting)}
       />
 
+      {/* One fixed switch, both modes, same spot — the two views are two ends
+          of a slider, not a screen and its escape hatch. */}
+      <div className="tch-roster__modeRow">
+        <ModeToggle mode={mode} onChange={setMode} />
+      </div>
+
+      {mode === 'live' ? (
+        busy ? (
+          <div className="tch-roster__grid">
+            {Array.from({ length: 8 }, (_, i) => <SkeletonCard key={i} rows={2} />)}
+          </div>
+        ) : (
+          <LiveClassView
+            rows={inScope}
+            presence={live.presence}
+            focusOf={focusOf}
+            isConnected={live.isConnected}
+            groupId={groupId}
+            onFocusChanged={() => setFocusNonce((value) => value + 1)}
+          />
+        )
+      ) : (
+        <>
       {/* The numbers the teacher reads before scanning any row. Same
           `.tch-stats` language as Home and the learnings screen, so "the top of
           a teacher screen is four numbers" is one idea rather than four. */}
@@ -661,6 +710,8 @@ export function TeacherStudentsPage() {
           ))}
         </ul>
       )}
+        </>
+      )}
     </div>
   )
 }
@@ -669,4 +720,45 @@ export function TeacherStudentsPage() {
    translated in three languages — map rather than rename. */
 const CHIP_KEY: Record<StatusFilter, string> = {
   all: 'all', attention: 'attention', not_started: 'notStarted', active: 'active',
+}
+
+/** Live ↔ manage, as one sliding two-state switch. Always on screen in the
+ *  same spot — a mode with a visible other end, not a screen with an exit.
+ *  The manage tab carries `.tch-liveBar__manage` for the browser guards that
+ *  door through it. */
+function ModeToggle({ mode, onChange }: {
+  mode: 'live' | 'manage'
+  onChange: (mode: 'live' | 'manage') => void
+}) {
+  const { t } = useI18n()
+  return (
+    <div
+      className="tch-modeToggle"
+      role="tablist"
+      aria-label={t('tch.liveView.modeLabel')}
+      data-mode={mode}
+    >
+      <span className="tch-modeToggle__thumb" aria-hidden="true" />
+      <button
+        type="button"
+        role="tab"
+        aria-selected={mode === 'live'}
+        className={mode === 'live' ? 'is-active' : ''}
+        onClick={() => onChange('live')}
+      >
+        <Icon name="pulse" size={14} aria-hidden />
+        {t('tch.liveView.mode.live')}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={mode === 'manage'}
+        className={`tch-liveBar__manage${mode === 'manage' ? ' is-active' : ''}`}
+        onClick={() => onChange('manage')}
+      >
+        <Icon name="document" size={14} aria-hidden />
+        {t('tch.liveView.mode.manage')}
+      </button>
+    </div>
+  )
 }
