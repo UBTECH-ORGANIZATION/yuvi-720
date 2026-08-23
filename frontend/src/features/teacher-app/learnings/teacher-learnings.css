@@ -122,7 +122,20 @@
   align-items: start;
 }
 
-.tch-learning { padding: var(--sp-4); display: grid; gap: var(--sp-3); }
+.tch-learning { position: relative; padding: var(--sp-4); display: grid; gap: var(--sp-3); }
+
+/* The per-card preview: pinned to the far top corner, above the open-button
+   (which cannot contain it — nested buttons are not honoured). The head keeps
+   clear of it with padding so an assessment pill never slides underneath. */
+.tch-learning__preview {
+  position: absolute;
+  inset-block-start: var(--sp-2);
+  inset-inline-end: var(--sp-2);
+  padding: var(--sp-1);
+  color: var(--sp-ink-400);
+}
+.tch-learning__preview:hover { color: var(--sp-primary-700); }
+.tch-learning__head { padding-inline-end: var(--sp-6); }
 
 /* Untouched material is present but quiet — findable, never shouting. */
 .tch-learning--idle { opacity: .82; }
@@ -219,6 +232,14 @@
 /* ── the drill-down: one learning, opened up ───────────────────────────────*/
 
 .tch-learningDetail__head { display: grid; gap: var(--sp-3); margin-block-end: var(--sp-5); justify-items: start; }
+/* Back at the inline-start, the lomda preview at the far corner. */
+.tch-learningDetail__topRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  inline-size: 100%;
+  gap: var(--sp-2);
+}
 .tch-learningDetail__titles h1 { margin: 0; font-size: var(--sp-fs-2xl); color: var(--sp-ink-900); letter-spacing: -0.01em; }
 .tch-learningDetail__meta { margin: var(--sp-1) 0 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
 
@@ -237,56 +258,17 @@
 .tch-learningDetail__chart { padding: var(--sp-4); }
 .tch-learningDetail__noTiming { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-400); }
 
-.tch-learningDetail__questions,
-.tch-learningDetail__spine { padding: var(--sp-4); margin-block-end: var(--sp-4); }
+.tch-learningDetail__questions { padding: var(--sp-4); margin-block-end: var(--sp-4); }
+.tch-learningDetail__difficulties { margin-block-end: var(--sp-4); }
 
 .tch-table__rate { font-weight: var(--sp-fw-semibold); font-variant-numeric: tabular-nums; }
 .tch-table__rate.is-success { color: var(--sp-success-600); }
 .tch-table__rate.is-warn { color: var(--sp-warn-600); }
 .tch-table__rate.is-danger { color: var(--sp-danger-600); }
 
-/* The lesson's own order, screens included. */
-.tch-spine { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; counter-reset: spine; }
-
-.tch-spine__row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding: var(--sp-2) var(--sp-1);
-  border-block-end: 1px solid var(--sp-border);
-}
-
-.tch-spine__row:last-child { border-block-end: 0; }
-
-.tch-spine__index {
-  inline-size: 22px;
-  font-size: var(--sp-fs-xs);
-  color: var(--sp-ink-400);
-  font-variant-numeric: tabular-nums;
-  flex: none;
-}
-
-.tch-spine__icon {
-  inline-size: 26px;
-  block-size: 26px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--sp-bg-subtle);
-  color: var(--sp-ink-500);
-  flex: none;
-}
-
-.tch-spine__row.is-question .tch-spine__icon { background: var(--tch-chip-bg); color: var(--sp-primary-600); }
-
-.tch-spine__title { flex: 1; min-inline-size: 0; display: grid; font-size: var(--sp-fs-sm); color: var(--sp-ink-700); }
-.tch-spine__title small { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
-
-.tch-spine__rate { font-weight: var(--sp-fw-semibold); font-variant-numeric: tabular-nums; font-size: var(--sp-fs-sm); }
-.tch-spine__rate.is-success { color: var(--sp-success-600); }
-.tch-spine__rate.is-warn { color: var(--sp-warn-600); }
-.tch-spine__rate.is-danger { color: var(--sp-danger-600); }
-.tch-spine__rate.is-none { color: var(--sp-ink-400); font-weight: var(--sp-fw-regular); font-size: var(--sp-fs-xs); }
+/* The topic column: the one cell allowed to wrap — a name may be four words,
+   and the shared table's nowrap would push every other column off screen. */
+.tch-learningDetail__topicCell { white-space: normal; max-inline-size: 260px; }
 
 /* Two lines and an optional flag — the card's whole body.
    `--rate` keeps the tone colour; the bar that repeated it is gone. */

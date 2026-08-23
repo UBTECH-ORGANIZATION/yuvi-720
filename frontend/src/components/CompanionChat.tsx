@@ -173,6 +173,7 @@ export function CompanionChat() {
     teachingItems,
     itemKinds,
     itemMedia,
+    itemOrder,
     currentQuestionKey,
     pendingAlternative,
     pendingKudos,
@@ -294,7 +295,7 @@ export function CompanionChat() {
   // (welcome); groups tied to a screen are the questions, numbered in order.
   const sections = useMemo(() => {
     let seen = 0
-    return messageGroups.map((group) => {
+    const mapped = messageGroups.map((group) => {
       const isIntro = group.item === ''
       if (!isIntro) seen += 1
       // Not every screen asks something: a component can teach on a screen and
@@ -332,7 +333,26 @@ export function CompanionChat() {
       const plays = WATCHABLE.has(itemMedia[group.item] || '')
       return { group, isIntro, isTeaching, asksNothing, kind, questionNumber, partIndex, plays }
     })
-  }, [messageGroups, questionOrdinals, questionParts, teachingItems, itemKinds, itemMedia])
+    // The lesson's own order, not the visit order. Paging BACK to question 1
+    // after question 2 used to append its thread at the bottom — below שאלה 2 —
+    // because groups are created as messages arrive. Sections sit where the
+    // lesson's spine puts their screen (intro always first); a screen the
+    // catalog does not know keeps its encounter position (stable sort, and
+    // both unknowns compare equal). Two questions sharing one screen keep the
+    // player's own סעיף order via the question part.
+    return mapped.slice().sort((a, b) => {
+      if (a.isIntro !== b.isIntro) return a.isIntro ? -1 : 1
+      const at = itemOrder[a.group.item]
+      const bt = itemOrder[b.group.item]
+      if (at === undefined || bt === undefined || at === bt) {
+        if (at === bt && a.group.item === b.group.item) {
+          return (a.partIndex ?? 0) - (b.partIndex ?? 0)
+        }
+        return 0
+      }
+      return at - bt
+    })
+  }, [messageGroups, questionOrdinals, questionParts, teachingItems, itemKinds, itemMedia, itemOrder])
   const [sectionOverrides, setSectionOverrides] = useState<Record<string, boolean>>({})
   const bodyRef = useRef<HTMLDivElement>(null)
   const historyRef = useRef<HTMLDivElement>(null)

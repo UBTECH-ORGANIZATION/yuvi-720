@@ -667,3 +667,42 @@ def resolve_catalog_item_id(
     # 4. Give up gracefully — keep the runtime id (identity may already be right
     #    for a 0-offset component; a wrong-but-present id is no worse than before).
     return runtime_item_id
+
+
+def resolve_object_item(
+    component_id: Optional[str], object_id: Any
+) -> tuple[Optional[str], Optional[str]]:
+    """Recognise a statement object id as one of the component's OWN items.
+
+    CET screens identify themselves by their catalog ``subContent`` id verbatim
+    — a full metadata URL (``…/metadata/{activity}/{screen}``), which the
+    ``{component}-NNN`` tail parser in ``events.resolve_item_question`` can
+    never see. Without this, every CET event stores ``sub_item_id: null``, the
+    coach never learns which screen the learner is on, and the teacher's
+    per-question analytics see nothing (measured on a framed run, 2026-08-23).
+
+    Returns ``(item_id, question_id)``: exact id match first, then tail match
+    (some catalog rows carry a composite ``{component}-item-{url}`` id whose
+    tail is still the screen id), then the tail as one of the component's OWN
+    question ids (resolved to its owning item — only when exactly one owns it).
+    Anything else, including the component-level object, is ``(None, None)``.
+    """
+    component = get_component(component_id) if component_id else None
+    if not component or not isinstance(object_id, str) or not object_id:
+        return None, None
+    tail = object_id.rstrip("/").rsplit("/", 1)[-1]
+    if not tail or tail == component_id:
+        return None, None
+    items = component.get("items") or []
+    for row in items:
+        item_id = str(row.get("id") or "")
+        if item_id and (item_id == object_id or item_id.rstrip("/").rsplit("/", 1)[-1] == tail):
+            return item_id, None
+    qbi = component.get("questions_by_item") or {}
+    owners = [
+        cid for cid, rows in qbi.items()
+        if any(str(row.get("questionId") or "") == tail for row in (rows or []))
+    ]
+    if len(owners) == 1:
+        return owners[0], tail
+    return None, None

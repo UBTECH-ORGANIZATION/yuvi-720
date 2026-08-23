@@ -25,6 +25,7 @@ adding a new field or a new tool is covered by construction.
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -227,6 +228,64 @@ class NoComparisonContract(unittest.IsolatedAsyncioTestCase):
             self.assertLessEqual(
                 len(_learner_ids_in(gap)), 1,
                 "a gap carried several learner ids to the model — that is a roster slice")
+
+    async def test_the_learning_detail_tool_hands_the_model_no_learner_ids(self):
+        """#455 sanctioned `difficulties[].learner_ids` for the TEACHER's screen.
+
+        The model-facing tool keeps its explicit projection — a future "just
+        pass the row through" refactor must trip here, not ship.
+        """
+        from app.services import learning_analytics
+
+        view = {
+            "group_id": "g1",
+            "learning": {"component_id": "cmp-1", "title": "x", "started": True,
+                         "attempts": 6, "correct": 2, "learners_engaged": 2},
+            "questions": [{"question_id": "q1", "attempts": 6, "correct": 2,
+                           "success_rate": 0.33, "learners": 2,
+                           "topic": "נושא", "question_text": "טקסט"}],
+            "difficulties": [{"question_id": "q1", "attempts": 6,
+                              "learner_ids": ["kid-a", "kid-b"],
+                              "evidence": {"tried_count": 2, "failed_count": 2}}],
+            "topics_pending": False,
+        }
+        with patch("app.brain.org.teacher_can_access_group", AsyncMock(return_value=True)), \
+             patch.object(learning_analytics, "learning_detail", AsyncMock(return_value=view)):
+            result = await registry.dispatch(
+                "get_learning_detail", {"group_id": "group-1", "component_id": "cmp-1"},
+                context())
+
+        self.assertEqual(_learner_ids_in(result), [])
+        self.assertNotIn("kid-a", json.dumps(result, ensure_ascii=False))
+        self.assertEqual(_ranking_keys_in(result), [])
+
+    async def test_difficulties_payload_names_no_ranking(self):
+        """The teacher-facing difficulties rows carry a selection, never a rank."""
+        from app.services import learning_analytics
+
+        rows = {
+            "kid-a": [{
+                "question_key": "cmp-1|item-1|q1", "component_id": "cmp-1",
+                "item_id": "item-1", "question_id": "q1", "objective_id": "obj-1",
+                "subject": "math", "attempts": 4, "correct": 0, "time_seconds": 0,
+                "hints_used": 0, "content_hints_used": 0, "explanations_used": 0,
+                "different_way_used": 0, "chat_turns": 0, "helped_reported": [],
+                "first_at": None, "last_at": "2026-08-01T10:00:00Z",
+            }],
+        }
+
+        async def _summary(learner_id, subject=None, component_id=None):
+            return rows.get(learner_id, [])
+
+        with patch("app.brain.org.learners_in_group", AsyncMock(return_value=list(rows))), \
+             patch("app.services.learner_activity.question_summary", side_effect=_summary), \
+             patch("app.services.question_topics.topics_for", AsyncMock(return_value={})), \
+             patch("app.services.kata_catalog.ensure_loaded", AsyncMock()):
+            view = await learning_analytics.learning_detail("g1", "cmp-1", language="he")
+
+        self.assertEqual(_ranking_keys_in(view), [])
+        for row in view["difficulties"]:
+            self.assertIsInstance(row["learner_ids"], list)
 
     async def test_list_students_is_a_set_not_a_ranking(self):
         """The roster tool returns ids only: no metric to sort children by."""

@@ -905,6 +905,12 @@ export interface HardQuestion {
   /** The content's own heading for the screen this question sits on. */
   screen_title?: string
   kind?: string
+  /** Generated 2–4 word topic (#455) — null means "looked at, could not be
+   *  named honestly"; the label falls back on the screen title, never a bare
+   *  number. Absent on payloads that never carry topics. */
+  topic?: string | null
+  /** The authored question text, teacher clients only — the tooltip body. */
+  question_text?: string | null
   attempts: number
   correct: number
   success_rate: number | null
@@ -914,17 +920,12 @@ export interface HardQuestion {
   chat_turns?: number
 }
 
-/** One screen of a learning — including the ones that only teach. */
-export interface LearningScreen {
-  item_id: string
-  title: string
-  kind: 'question' | 'watch' | 'read' | 'step' | string
-  question_count: number
-  attempts: number
-  correct: number
-  success_rate: number | null
-  learners: number
-  avg_seconds: number | null
+/** A hard question opened up with WHO (#455): learners who attempted it and
+ *  never answered it correctly. Roster order, unscored and unnumbered — a
+ *  selection, never a ranking (the learning_gaps.learner_ids shape). */
+export interface DifficultyRow extends HardQuestion {
+  learner_ids: string[]
+  evidence: Record<string, unknown>
 }
 
 /** One Kata component, aggregated across the whole group. Counts only — the
@@ -986,7 +987,10 @@ export interface LearningDetail {
   group_id: string
   learning: LearningRow
   questions: HardQuestion[]
-  screens: LearningScreen[]
+  difficulties: DifficultyRow[]
+  /** True when some question has no stored topic decision yet — the page
+   *  fires one `generateQuestionTopics` and patches the rows from its map. */
+  topics_pending: boolean
 }
 
 export function getGroupLearnings(groupId: string, language: string, subject?: string) {
@@ -1001,6 +1005,35 @@ export function getLearningDetail(groupId: string, componentId: string, language
   return apiGet<LearningDetail>(
     `/api/teacher/groups/${encodeURIComponent(groupId)}/learnings/${
       encodeURIComponent(componentId)}?language=${language}`
+  )
+}
+
+/** Generate-and-store topic names for this lomda's questions (#455). The GET
+ *  above never generates; this is fired once when `topics_pending` arrives
+ *  true, and the rows are patched from the returned map (`item|question`-keyed
+ *  under the component). Anti-reroll server-side: decided questions are never
+ *  re-asked. */
+export function generateQuestionTopics(groupId: string, componentId: string, language: string) {
+  return apiPost<{ topics: Record<string, string | null>; generated: number; cached: boolean }>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/learnings/${
+      encodeURIComponent(componentId)}/topics`,
+    { language }
+  )
+}
+
+/** A content-only launch URL so the teacher can open the lomda themselves —
+ *  no learner, no chat, no tracking (the server hands the content an xAPI sink
+ *  that rejects everything). Group-free on purpose: previewing is looking at
+ *  the catalog, not at learners. */
+export interface LearningPreview {
+  player_url: string
+  embeddable: boolean
+  title: string
+}
+
+export function previewLearning(componentId: string) {
+  return apiPost<LearningPreview>(
+    `/api/teacher/learnings/${encodeURIComponent(componentId)}/preview`, {}
   )
 }
 

@@ -41,6 +41,12 @@ interface Props {
   editing: Subgroup | null
   /** Everyone in THIS class — never the teacher's whole roster. */
   roster: { id: string; name: string }[]
+  /** Create path only (#455): a suggestion's members, pre-ticked so "make a
+   *  sub-group of these" is a confirm, not a re-pick. Ignored while editing —
+   *  an edit starts from the group's own membership, always. */
+  preselect?: string[]
+  /** Create path only: a suggested name (e.g. the difficulty's topic). */
+  initialName?: string
   busy?: boolean
   error?: string
   onClose: () => void
@@ -48,7 +54,7 @@ interface Props {
 }
 
 export function SubgroupDialog({
-  open, editing, roster, busy, error, onClose, onSave,
+  open, editing, roster, preselect, initialName, busy, error, onClose, onSave,
 }: Props) {
   const { t } = useI18n()
   const [name, setName] = useState('')
@@ -60,9 +66,12 @@ export function SubgroupDialog({
      from the last time is a selection nobody made for this one. */
   useEffect(() => {
     if (!open) return
-    setName(editing?.name ?? '')
-    setPicked(new Set(editing?.learner_ids ?? []))
+    setName(editing?.name ?? initialName ?? '')
+    setPicked(new Set(editing?.learner_ids ?? preselect ?? []))
     setQuery('')
+    // `preselect`/`initialName` are read at open time only — the seed of THIS
+    // opening, not live state to chase.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing])
 
   const shown = useMemo(() => {

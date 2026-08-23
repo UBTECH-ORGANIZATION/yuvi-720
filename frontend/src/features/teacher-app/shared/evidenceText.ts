@@ -76,6 +76,28 @@ const num = (value: unknown): number | null =>
   typeof value === 'number' && Number.isFinite(value) ? value : null
 
 const TEMPLATES: Template[] = [
+  /* ── a hard question's difficulty row (#455) ──────────────────────────────
+     The claim is "these children found this question hard"; the datum is who
+     tried and who never got it, plus the rule that made the row exist. */
+  {
+    needs: ['tried_count', 'failed_count'],
+    consumes: ['tried_count', 'failed_count',
+      'hard_question_min_attempts', 'hard_question_max_success'],
+    render: (raw, t) => {
+      const parts = [t('tch.why.hardQuestion', {
+        failed: num(raw.failed_count) ?? 0,
+        tried: num(raw.tried_count) ?? 0,
+      })]
+      const attempts = num(raw.hard_question_min_attempts)
+      const rate = num(raw.hard_question_max_success)
+      if (attempts !== null && rate !== null) {
+        parts.push(t('tch.why.hardQuestionRule', {
+          attempts, percent: Math.round(rate * 100),
+        }))
+      }
+      return parts.join(' ')
+    },
+  },
   /* ── the coach's own detectors, mirrored onto a teacher alert ─────────────
      `teacher_alerts.escalate_trigger` stores the trigger payload verbatim as
      the alert's evidence, so "why?" opened onto the detector's internals:

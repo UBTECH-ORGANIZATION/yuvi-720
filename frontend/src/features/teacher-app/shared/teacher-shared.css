@@ -610,3 +610,98 @@
   font-size: var(--sp-fs-sm);
 }
 .tch-alert__objectiveLabel { color: var(--sp-ink-400); }
+
+/* ── the difficulties-and-actions card (#455; shared with #450) ──────────── */
+
+.tch-difficulties__list { list-style: none; margin: 0; padding: 0; display: grid; }
+
+.tch-difficulty {
+  display: grid;
+  gap: var(--sp-2);
+  padding-block: var(--sp-3);
+  border-block-end: 1px solid var(--sp-border);
+}
+
+.tch-difficulty:last-child { border-block-end: 0; padding-block-end: var(--sp-1); }
+
+.tch-difficulty__what { display: grid; gap: 2px; justify-items: start; }
+
+.tch-difficulty__title {
+  font-size: var(--sp-fs-md);
+  color: var(--sp-ink-900);
+}
+
+/* The trigger is the name itself, not a `?` beside it — the row is a scan
+   target and the bubble holds the authored question. The base trigger is an
+   18px circle (the facepile resets it the same way). */
+.tch-difficulty__tip .sp-tip__trigger {
+  inline-size: auto;
+  block-size: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: help;
+  text-align: start;
+  border-block-end: 1px dashed var(--sp-border-strong);
+}
+
+.tch-difficulty__where { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+.tch-difficulty__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.tch-difficulties__empty {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+}
+
+.tch-difficulty__resolved { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+/* A question pill wearing the tooltip: the pill IS the trigger. */
+.tch-questionTip .sp-tip__trigger {
+  inline-size: auto;
+  block-size: auto;
+  border: 0;
+  border-radius: var(--sp-radius-pill);
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  cursor: help;
+  text-align: start;
+}
+
+/* ── the lomda preview dialog (teacher's own window into the content) ──────
+   A near-fullscreen frame: the content is a whole lesson player, and a
+   440px default modal would show it through a keyhole. */
+.tch-preview__modal {
+  width: min(1100px, 94vw);
+  block-size: min(780px, 88vh);
+  padding: var(--sp-4);
+  gap: var(--sp-3);
+}
+.tch-preview__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+.tch-preview__head h2 { margin: 0; font-size: var(--sp-fs-lg); color: var(--sp-ink-900); }
+.tch-preview__frame,
+.tch-preview__loading {
+  flex: 1;
+  min-block-size: 0;
+  inline-size: 100%;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-bg);
+}
+.tch-preview__frame { border: 0; }
+.tch-preview__error { margin: var(--sp-6) 0; text-align: center; color: var(--sp-ink-500); }

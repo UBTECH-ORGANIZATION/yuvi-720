@@ -215,12 +215,14 @@ try {
   check('a subject filter is offered', chipCount >= 2, `${chipCount} chips`)
   if (chipCount >= 2) {
     await subjectChips.nth(1).click()
-    await page.waitForTimeout(300)
+    /* Picking a subject REFETCHES the list server-side — the cards drop to a
+       skeleton first, so a fixed wait reads 0 mid-flight. Wait for rows. */
+    await page.waitForSelector('.tch-learning', { timeout: 20000 }).catch(() => {})
     const filtered = await page.locator('.tch-learning').count()
     check('subject filter narrows the catalogue', filtered > 0 && filtered <= cards,
           `${filtered} of ${cards}`)
     await subjectChips.nth(0).click()
-    await page.waitForTimeout(300)
+    await page.waitForSelector('.tch-learning', { timeout: 20000 }).catch(() => {})
   }
   await page.screenshot({ path: `${OUT}/learnings-01-list.png` })
 
@@ -240,15 +242,39 @@ try {
   check('the detail screen opens with its own KPIs', stats >= 4, `${stats} cards`)
   const rows = await page.locator('.tch-learningDetail__questions tbody tr').count()
   check('every question is listed with its numbers', rows > 0, `${rows} questions`)
-  const spine = await page.locator('.tch-spine__row').count()
-  check('the lesson spine shows the screens', spine > 0, `${spine} screens`)
+  /* The difficulties card replaced the spine (#455): always present, and when
+     it has rows each carries a who-facepile and the two actions. */
+  const diffCard = await page.locator('.tch-difficulties').count()
+  check('the difficulties card replaced the spine', diffCard === 1)
+  /* Every row either offers actions (with its who-facepile: build-task always,
+     sub-group only when there are ≥2 stuck learners — a group of one is not a
+     group) or says honestly that no one is currently stuck — never a silent
+     actionless row. */
+  const diffRows = await page.locator('.tch-difficulty').count()
+  if (diffRows > 0) {
+    let wired = 0
+    for (let index = 0; index < diffRows; index += 1) {
+      const row = page.locator('.tch-difficulty').nth(index)
+      const actions = await row.locator('.tch-difficulty__actions .sp-btn').count()
+      const resolved = await row.locator('.tch-difficulty__resolved').count()
+      const faces = await row.locator('.tch-facepile').count()
+      if ((actions >= 1 && actions <= 2 && faces === 1) || (actions === 0 && resolved === 1)) wired += 1
+    }
+    check('every difficulty offers its actions or says no one is stuck',
+          wired === diffRows, `${wired}/${diffRows} rows`)
+  } else {
+    check('every difficulty offers its actions or says no one is stuck',
+          true, 'no hard questions in this lesson')
+  }
   const labelled = await page.locator('.tch-learningDetail__questions tbody tr .sp-pill').first().innerText()
   check('questions are named, not raw ids', !/^[a-z0-9]{8,}$/i.test(labelled.trim()), labelled.trim())
   const noKey = await page.locator('.tch-learningDetail').innerText()
   check('no raw locale key on the detail screen', !noKey.includes('tch.learnings.'))
   await page.screenshot({ path: `${OUT}/learnings-02-detail.png`, fullPage: true })
 
-  await page.locator('.tch-learningDetail__head .sp-btn').click()
+  // The top row now holds two buttons — back at the start, lomda preview at
+  // the end. Back is the first.
+  await page.locator('.tch-learningDetail__head .sp-btn').first().click()
   await settled(page)
   check('back returns to the catalogue', page.url().includes('/teacher/learnings'))
 

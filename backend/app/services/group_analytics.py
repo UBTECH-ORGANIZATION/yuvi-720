@@ -78,7 +78,7 @@ async def engagement(group_id: str, days: int = DEFAULT_WINDOW_DAYS) -> dict[str
     usable timing exists the field is reported as `None` with
     `timing_available: False` — an honest gap beats a confident zero.
     """
-    from app.services.learning_timing import PROLONGED_INTERACTION_SECONDS
+    from app.services.learning_timing import capped_elapsed
 
     learner_ids = await learners_in_group(group_id)
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
@@ -91,12 +91,9 @@ async def engagement(group_id: str, days: int = DEFAULT_WINDOW_DAYS) -> dict[str
         ]
         seconds = 0.0
         for event in recent:
-            elapsed = (event.get("timing") or {}).get("elapsed_since_previous_seconds")
-            quality = (event.get("timing") or {}).get("quality")
-            # Cap each gap: a learner who left the tab open overnight would
-            # otherwise register as a marathon study session.
-            if isinstance(elapsed, (int, float)) and quality != "unreliable":
-                seconds += min(float(elapsed), PROLONGED_INTERACTION_SECONDS)
+            elapsed = capped_elapsed(event.get("timing"))
+            if elapsed is not None:
+                seconds += elapsed
         days_active = len({
             parsed.date().isoformat()
             for event in recent if (parsed := _parse(event.get("stored_at")))

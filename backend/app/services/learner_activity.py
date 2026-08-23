@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from app.brain.repository import _get_collection_named
+from app.services import learning_timing
 
 # hint / explanation / different_way are one-shot per question; yuvi_chat is a
 # repeatable turn (counts up each question-scoped message the learner sends).
@@ -233,9 +234,9 @@ async def question_summary(
         slot["attempts"] += 1
         if (event.get("result") or {}).get("success") is True:
             slot["correct"] += 1
-        seconds = (event.get("timing") or {}).get("elapsed_since_previous_seconds")
-        if isinstance(seconds, (int, float)):
-            slot["time_seconds"] += float(seconds)
+        seconds = learning_timing.capped_elapsed(event.get("timing"))
+        if seconds is not None:
+            slot["time_seconds"] += seconds
         stamp = event.get("occurred_at") or event.get("stored_at")
         if stamp:
             slot["first_at"] = min(slot["first_at"], stamp) if slot["first_at"] else stamp

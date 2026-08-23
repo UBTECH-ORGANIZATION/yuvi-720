@@ -2,17 +2,17 @@
  *
  * The listing answers "which lesson needs another pass". This answers the next
  * question a teacher always asks: *what exactly* went wrong inside it — which
- * question, on which screen, how long they sat on it, how much help they took.
+ * question, how long they sat on it, how much help they took — and what to DO
+ * about it: the difficulties card names the hard questions, the children who
+ * tried them and never got them, and offers a task or a sub-group for exactly
+ * those children (#455).
  *
- * Three views of the same evidence, because teachers read this three ways:
- *   the spine   — the lesson in its own order, screens included, so the shape
- *                 on this page matches the shape the class saw;
- *   per question — sorted hardest first, with time and support beside success;
- *   the charts   — success and time per question, so an outlier is visible
- *                 before it is read.
+ * Questions are named by their generated topic (stored server-side, decided
+ * once), falling back to the screen's own heading — never a bare "שאלה N"
+ * while a name exists. Hovering a name shows the authored question text.
  *
- * Counts only, never a ranking of children (MoE C5) — the payload behind this
- * screen carries no learner ids at all.
+ * Counts stay the rule (MoE C5); `difficulties[].learner_ids` is the one
+ * sanctioned "who" — a selection in roster order, never a ranking.
  */
 
 import { useEffect, useState } from 'react'
@@ -20,22 +20,36 @@ import { navigate } from '../../../app/router'
 import { BarSeries } from '../../../components/charts'
 import {
   Card, EmptyState, ErrorState, Icon, Panel, SectionHeader, Skeleton, SkeletonCard, StatusPill,
+  Tooltip,
 } from '../../../components/primitives'
+import { Modal } from '../../../components/primitives/Modal'
 import { useI18n } from '../../../i18n/I18nProvider'
+import { useTeacherRoster } from '../../../providers/TeacherRosterProvider'
+import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import {
-  getLearningDetail, type HardQuestion, type LearningDetail,
+  createSubgroup, generateQuestionTopics, getLearningDetail,
+  type DifficultyRow, type HardQuestion, type LearningDetail,
 } from '../../../services/teacher'
+import { DifficultiesCard, type DifficultyItem } from '../shared/DifficultiesCard'
+import { formatSeconds } from '../shared/formatDuration'
+import { LearningPreviewDialog } from '../shared/LearningPreviewDialog'
 import { ObjectiveLine } from '../shared/ObjectiveRef'
 import { subjectLabel } from '../shared/subjectLabel'
+import { SubgroupDialog } from '../students/SubgroupDialog'
+import { TaskBuilder } from '../tasks/TeacherTasksPage'
+import { type TaskSeed } from '../tasks/taskSeed'
 import { learningName } from './learningRows'
 import { questionLabel, ratePercent, rateTone } from './TeacherLearningsPage'
 import './teacher-learnings.css'
 
-const SCREEN_ICON: Record<string, string> = {
-  question: 'help',
-  watch: 'play',
-  read: 'book',
-  step: 'chevronLeft',
+/** Patch stored topic decisions into rows already on screen. */
+function withTopics<T extends HardQuestion>(
+  rows: T[], componentId: string, topics: Record<string, string | null>,
+): T[] {
+  return rows.map((row) => {
+    const key = `${componentId}|${row.item_id}|${row.question_id}`
+    return key in topics ? { ...row, topic: topics[key] } : row
+  })
 }
 
 export function LearningDetailPage({ groupId, componentId }: {
@@ -55,6 +69,65 @@ export function LearningDetailPage({ groupId, componentId }: {
       .catch(() => { if (active) setError(true) })
     return () => { active = false }
   }, [groupId, componentId, language])
+
+  /* Topic names are decided server-side, once, and the GET never generates —
+     so a first-ever visit arrives with `topics_pending` and fires exactly one
+     POST, then patches the rows from its map. No retry loop: a failure leaves
+     honest screen-title labels, and the next visit simply asks again. */
+  useEffect(() => {
+    if (!view?.topics_pending) return
+    let active = true
+    generateQuestionTopics(groupId, componentId, language)
+      .then(({ topics }) => {
+        if (!active) return
+        setView((current) => current ? {
+          ...current,
+          topics_pending: false,
+          questions: withTopics(current.questions, componentId, topics),
+          difficulties: withTopics(current.difficulties, componentId, topics),
+        } : current)
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [view?.topics_pending, groupId, componentId, language])
+
+  /* The card's two actions. The task builder opens HERE, in the same dialog
+     the tasks screen uses (the TeacherStudentPage pattern) — a teacher acting
+     on a finding never loses the page the finding is on. The sub-group dialog
+     is the students page's own, pre-ticked with the difficulty's children. */
+  const { students } = useTeacherRoster()
+  const { refreshSubgroups } = useTeacherScope()
+  const [builderSeed, setBuilderSeed] = useState<TaskSeed | null>(null)
+  const [subgroupFor, setSubgroupFor] = useState<DifficultyItem | null>(null)
+  const [subgroupBusy, setSubgroupBusy] = useState(false)
+  const [subgroupError, setSubgroupError] = useState('')
+  const [previewId, setPreviewId] = useState<string | null>(null)
+
+  const classRoster = students
+    .filter((row) => row.group_id === groupId)
+    .map((row) => ({ id: row.learner_id, name: row.display_name ?? row.learner_id }))
+
+  async function saveSubgroup(draft: { name: string; learnerIds: string[] }) {
+    if (!draft.learnerIds.length || subgroupBusy) return
+    const groupName = draft.name
+      || t('tch.subgroups.defaultName', { count: draft.learnerIds.length })
+    setSubgroupBusy(true)
+    setSubgroupError('')
+    try {
+      // Into the provider's list BEFORE anything selects it — the same
+      // load-bearing order the students page keeps. No scope change here:
+      // the teacher is reading a lesson, not the roster.
+      const created = await createSubgroup(groupId, groupName, draft.learnerIds)
+      refreshSubgroups(created)
+      setSubgroupFor(null)
+    } catch (err) {
+      const code = (err as { message?: string })?.message ?? ''
+      setSubgroupError(t(`tch.subgroups.error.${code}`) === `tch.subgroups.error.${code}`
+        ? t('tch.subgroups.error.generic') : t(`tch.subgroups.error.${code}`))
+    } finally {
+      setSubgroupBusy(false)
+    }
+  }
 
   if (view === null && !error) {
     return (
@@ -94,17 +167,51 @@ export function LearningDetailPage({ groupId, componentId }: {
     (a, b) => (a.success_rate ?? 1) - (b.success_rate ?? 1) || b.attempts - a.attempts)
   const timed = questions.filter((row) => row.avg_seconds)
 
+  const difficulties: DifficultyItem[] = view.difficulties.map((row: DifficultyRow) => {
+    const label = questionLabel(row, t)
+    return {
+      id: `${row.item_id}:${row.question_id}`,
+      title: label,
+      // The screen is the subtitle only when the title is a TOPIC — otherwise
+      // the label already IS the screen and saying it twice reads as an echo.
+      subtitle: row.topic ? row.screen_title || null : null,
+      tooltip: row.question_text ?? undefined,
+      learnerIds: row.learner_ids,
+      evidence: row.evidence,
+      seed: {
+        title: t('tch.learnings.diffTaskTitle', { topic: label }),
+        topic: label,
+        objectiveId: learning.objective_id,
+        learnerIds: row.learner_ids,
+      },
+      subgroupName: label,
+    }
+  })
+
   return (
     <div className="tch-learningDetail">
       <header className="tch-learningDetail__head">
-        <button
-          type="button"
-          className="sp-btn sp-btn--ghost sp-btn--sm"
-          onClick={() => navigate('/teacher/learnings')}
-        >
-          <Icon name="chevronLeft" size={15} aria-hidden />
-          {t('tch.learnings.backToList')}
-        </button>
+        {/* Back at the inline-start, preview at the inline-end — the far top
+            corner, so the teacher's own window into the lomda is always one
+            click away without crowding the title. */}
+        <div className="tch-learningDetail__topRow">
+          <button
+            type="button"
+            className="sp-btn sp-btn--ghost sp-btn--sm"
+            onClick={() => navigate('/teacher/learnings')}
+          >
+            <Icon name="chevronLeft" size={15} aria-hidden />
+            {t('tch.learnings.backToList')}
+          </button>
+          <button
+            type="button"
+            className="sp-btn sp-btn--ghost sp-btn--sm"
+            onClick={() => setPreviewId(componentId)}
+          >
+            <Icon name="play" size={15} aria-hidden />
+            {t('tch.learnings.preview')}
+          </button>
+        </div>
         <div className="tch-learningDetail__titles">
           {/* Same naming rule as the card that opened this page, so the two
               agree — including the untitled case, where the id is shown as an
@@ -247,13 +354,24 @@ export function LearningDetailPage({ groupId, componentId }: {
                       value: question.avg_seconds ?? 0,
                       tone: 'primary' as const,
                     }))}
-                  formatValue={(value) => t('tch.learnings.seconds', { n: value })}
+                  formatValue={(value) => formatSeconds(value, t)}
                 />
               ) : (
                 <p className="tch-learningDetail__noTiming">{t('tch.pulse.noTiming')}</p>
               )}
             </Panel>
           </div>
+
+          {/* ── the difficulties, and what to do about them (#455) ────────── */}
+          <DifficultiesCard
+            className="tch-learningDetail__difficulties"
+            title={t('tch.learnings.diffTitle')}
+            subtitle={t('tch.learnings.diffSubtitle')}
+            items={difficulties}
+            emptyLabel={t('tch.learnings.diffEmpty')}
+            onBuildTask={setBuilderSeed}
+            onCreateSubgroup={setSubgroupFor}
+          />
 
           {/* ── every question, hardest first ─────────────────────────────── */}
           <Panel className="tch-learningDetail__questions">
@@ -284,38 +402,53 @@ export function LearningDetailPage({ groupId, componentId }: {
             </div>
           </Panel>
 
-          {/* ── the lesson's own shape ────────────────────────────────────── */}
-          <Panel className="tch-learningDetail__spine">
-            <SectionHeader
-              title={t('tch.learnings.spine')}
-              subtitle={t('tch.learnings.spineSub')}
-            />
-            <ol className="tch-spine">
-              {view.screens.map((screen, index) => (
-                <li key={screen.item_id} className={`tch-spine__row is-${screen.kind}`}>
-                  <span className="tch-spine__index">{index + 1}</span>
-                  <span className="tch-spine__icon" aria-hidden="true">
-                    <Icon name={SCREEN_ICON[screen.kind] ?? 'chevronLeft'} size={14} />
-                  </span>
-                  <span className="tch-spine__title" dir="auto">
-                    {screen.title || t(`tch.learnings.screenKind.${screen.kind}`)}
-                    <small>{t(`tch.learnings.screenKind.${screen.kind}`)}</small>
-                  </span>
-                  {screen.attempts ? (
-                    <span className={`tch-spine__rate is-${rateTone(screen.success_rate)}`}>
-                      {ratePercent(screen.success_rate)}
-                    </span>
-                  ) : (
-                    <span className="tch-spine__rate is-none">
-                      {screen.question_count ? t('tch.learnings.noAnswersYet') : '—'}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ol>
-          </Panel>
         </>
       )}
+
+      {/* The task builder, ON this page — seeded by whichever difficulty was
+          clicked, so building for "the four who never got it" is two clicks. */}
+      <Modal
+        open={Boolean(builderSeed)}
+        onClose={() => setBuilderSeed(null)}
+        titleId="tch-learning-builder-title"
+        className="tch-builder__modal"
+        dismissible={false}
+      >
+        <div className="tch-builder__head">
+          <h2 id="tch-learning-builder-title" className="tch-builder__modalTitle" dir="auto">
+            {t('tch.tasks.new')}
+          </h2>
+        </div>
+        {builderSeed ? (
+          <TaskBuilder
+            groupId={groupId}
+            seed={builderSeed}
+            onCancel={() => setBuilderSeed(null)}
+            onDone={() => setBuilderSeed(null)}
+          />
+        ) : null}
+      </Modal>
+
+      {/* The students page's own create dialog, pre-ticked with the
+          difficulty's children and pre-named by its topic. */}
+      <SubgroupDialog
+        open={Boolean(subgroupFor)}
+        editing={null}
+        roster={classRoster}
+        preselect={subgroupFor?.learnerIds}
+        initialName={subgroupFor?.subgroupName}
+        busy={subgroupBusy}
+        error={subgroupError}
+        onClose={() => { setSubgroupFor(null); setSubgroupError('') }}
+        onSave={(draft) => void saveSubgroup(draft)}
+      />
+
+      <LearningPreviewDialog
+        componentId={previewId}
+        title={name.title}
+        onClose={() => setPreviewId(null)}
+      />
+
       {/* Direction is used by the table's numeric columns via CSS only. */}
       <span hidden data-direction={direction} />
     </div>
@@ -325,18 +458,28 @@ export function LearningDetailPage({ groupId, componentId }: {
 function QuestionRow({ question }: { question: HardQuestion }) {
   const { t } = useI18n()
   const tone = rateTone(question.success_rate)
+  const pill = (
+    <StatusPill tone={tone === 'danger' ? 'support' : tone === 'warn' ? 'steady' : 'neutral'}>
+      {questionLabel(question, t)}
+    </StatusPill>
+  )
   return (
     <tr>
-      <td>
-        <StatusPill tone={tone === 'danger' ? 'support' : tone === 'warn' ? 'steady' : 'neutral'}>
-          {questionLabel(question, t)}
-        </StatusPill>
+      <td className="tch-learningDetail__topicCell">
+        {/* The exact authored question, on hover/focus — the app tooltip, not
+            `title=`, which touch and keyboard never see. */}
+        {question.question_text ? (
+          <Tooltip label={t('tch.learnings.diffSource')} trigger={pill}
+                   className="tch-questionTip">
+            <span dir="auto">{question.question_text}</span>
+          </Tooltip>
+        ) : pill}
       </td>
       <td dir="auto">{question.screen_title || '—'}</td>
       <td className={`tch-table__rate is-${tone}`}>{ratePercent(question.success_rate)}</td>
       <td>{question.attempts}</td>
       <td>{question.learners}</td>
-      <td>{question.avg_seconds ? t('tch.learnings.seconds', { n: question.avg_seconds }) : '—'}</td>
+      <td>{question.avg_seconds ? formatSeconds(question.avg_seconds, t) : '—'}</td>
       <td>{question.hints_used ?? 0}</td>
       <td>{question.chat_turns ?? 0}</td>
     </tr>
