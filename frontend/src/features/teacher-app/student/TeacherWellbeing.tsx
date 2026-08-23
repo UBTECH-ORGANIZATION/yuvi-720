@@ -43,10 +43,12 @@ import { useTeacherRoster } from '../../../providers/TeacherRosterProvider'
 import { navigate } from '../../../app/router'
 import { putMessageSeed } from '../messages/messageSeed'
 import {
-  acknowledgeWellbeingFlag, closeWellbeingFlag, listWellbeingFlags,
-  logWellbeingAction, reopenWellbeingFlag, suggestWellbeing,
-  type WellbeingFlag,
+  acknowledgeWellbeingFlag, closeWellbeingFlag, getStudentInsights,
+  listWellbeingFlags, logWellbeingAction, reopenWellbeingFlag, suggestWellbeing,
+  type StudentInsight, type WellbeingFlag,
 } from '../../../services/teacher'
+import { ValenceFace } from '../../checkin/ValenceFaces'
+import type { Valence } from '../../checkin/feelings'
 
 type Intent = 'message' | 'handle' | 'close'
 
@@ -103,6 +105,7 @@ export function TeacherWellbeing({ learnerId, focusFlagId, fromAlert }: {
   if (!flags.length) {
     return (
       <div className="tch-student__body">
+        <CheckinStrip learnerId={learnerId} />
         {/* Arriving from a bell that said something happened, to a tab that
             holds nothing, is the exact confusion this whole screen exists to
             end. It is possible for one reason only — a notification older than
@@ -127,6 +130,7 @@ export function TeacherWellbeing({ learnerId, focusFlagId, fromAlert }: {
 
   return (
     <div className="tch-student__body tch-wellbeing">
+      <CheckinStrip learnerId={learnerId} />
       {focusMissing ? (
         <p className="tch-wellbeing__missing" dir="auto">
           <Icon name="alert" size={15} aria-hidden="true" />
@@ -509,5 +513,66 @@ function ClosePanel({ flag, busy, t, onSubmit }: {
         ) : null}
       </div>
     </div>
+  )
+}
+
+/* ── the daily check-in strip (#452) ─────────────────────────────────────────
+ *
+ * Today's feeling, a 14-day valence-dot strip, and the skip streak — read
+ * from the same guarded insight payload as the rest of the profile. Additive
+ * and quiet: a child with no check-in history renders nothing at all, and a
+ * feeling here never escalates anything — it is a conversation opener. */
+
+function CheckinStrip({ learnerId }: { learnerId: string }) {
+  const { t, language } = useI18n()
+  const [insight, setInsight] = useState<StudentInsight | null>(null)
+
+  useEffect(() => {
+    let active = true
+    getStudentInsights(learnerId, language)
+      .then((data) => { if (active) setInsight(data) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [learnerId, language])
+
+  const history = insight?.checkin_history ?? []
+  if (!insight || history.length === 0) return null
+  const today = insight.today_feeling
+  const streak = insight.checkin_skip_streak ?? 0
+
+  return (
+    <Panel className="tch-checkinStrip">
+      <h3 className="tch-checkinStrip__title">{t('tch.checkin.title')}</h3>
+      <p className="tch-checkinStrip__today" dir="auto">
+        {today?.feeling ? (
+          <>
+            <span className={`tch-checkinStrip__face is-${today.valence}`}>
+              <ValenceFace valence={today.valence as Valence} size={22} />
+            </span>
+            {t('tch.checkin.today', { feeling: t(`checkin.feeling.${today.feeling}`) })}
+          </>
+        ) : (
+          t('tch.checkin.noToday')
+        )}
+      </p>
+      <div className="tch-checkinStrip__days" role="img"
+           aria-label={t('tch.checkin.historyAria')}>
+        {[...history].reverse().map((day) => (
+          <span
+            key={day.date}
+            className={`tch-checkinStrip__dot${day.valence ? ` is-${day.valence}` : ' is-skipped'}`}
+            title={day.valence
+              ? `${day.date} · ${t(`checkin.feeling.${day.feeling}`)}`
+              : `${day.date} · ${t('tch.checkin.skipped')}`}
+          />
+        ))}
+      </div>
+      {streak >= 3 && (
+        <p className="tch-checkinStrip__streak" dir="auto">
+          <Icon name="alert" size={14} aria-hidden="true" />
+          {t('tch.checkin.skipStreak', { count: streak })}
+        </p>
+      )}
+    </Panel>
   )
 }

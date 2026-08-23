@@ -32,6 +32,7 @@ import { TaskReviewPage } from '../features/teacher-app/tasks/TaskReviewPage'
 import { TaskTrackingPage } from '../features/teacher-app/tasks/TaskTrackingPage'
 import { ReportIssueDialog } from '../features/support/ReportIssueDialog'
 import { LearnerMessageToast } from '../components/LearnerMessageToast'
+import { CheckinGate } from '../features/checkin/CheckinDialog'
 import { PublicReportPage } from '../features/support/PublicReportPage'
 import { useStudioTransition } from '../features/Yuvi-studio/StudioTransitionProvider'
 import { CompanionChat } from '../components/CompanionChat'
@@ -471,6 +472,12 @@ export function App() {
       {learnerRoute && !isStudioRoute && !isActiveTaskRoute && !isLearningWorldRoute && <YuviCompanionDock />}
       {learnerRoute && <SparkToast />}
       {learnerRoute && <LearnerMessageToast />}
+      {/* Learner-scoped ON PURPOSE (never `user &&`): a teacher must not be
+          asked how they feel today. Mounted on ALL learner routes — the day's
+          first landing may be a deep link into a lesson, and the ask belongs
+          to the day, not to the dashboard. Outside the keyed div, like its
+          neighbours, so navigation does not re-run the gate. */}
+      {learnerRoute && <CheckinGate />}
       {/* Teachers report faults from their own lane too, so this is not learner-scoped.
           It is also the only floating helper left in the teacher lane: the
           support chat used to ride in the same bottom-left corner as the

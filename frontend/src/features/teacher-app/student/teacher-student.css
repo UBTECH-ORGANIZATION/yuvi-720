@@ -1700,3 +1700,55 @@
   line-height: 1.5;
 }
 
+
+/* ── the daily check-in strip (#452) ─────────────────────────────────────── */
+
+.tch-checkinStrip { display: grid; gap: var(--sp-2); }
+
+.tch-checkinStrip__title {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+  font-weight: var(--sp-fw-medium);
+}
+
+.tch-checkinStrip__today {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  font-size: var(--sp-fs-md);
+  color: var(--sp-ink-900);
+}
+
+.tch-checkinStrip__face { display: inline-flex; }
+.tch-checkinStrip__face.is-great { color: var(--sp-success-600); }
+.tch-checkinStrip__face.is-good { color: var(--sp-teal-600, var(--sp-success-600)); }
+.tch-checkinStrip__face.is-okay { color: var(--sp-primary-600); }
+.tch-checkinStrip__face.is-uneasy { color: var(--sp-warn-600); }
+.tch-checkinStrip__face.is-upset { color: var(--sp-danger-600); }
+
+.tch-checkinStrip__days { display: flex; gap: 5px; align-items: center; }
+
+.tch-checkinStrip__dot {
+  inline-size: 12px;
+  block-size: 12px;
+  border-radius: 50%;
+  background: var(--sp-bg-subtle);
+  border: 1px solid var(--sp-border);
+}
+
+.tch-checkinStrip__dot.is-great { background: var(--sp-success-600); border-color: transparent; }
+.tch-checkinStrip__dot.is-good { background: var(--sp-teal-600, var(--sp-success-600)); border-color: transparent; }
+.tch-checkinStrip__dot.is-okay { background: var(--sp-primary-400, var(--sp-primary-600)); border-color: transparent; }
+.tch-checkinStrip__dot.is-uneasy { background: var(--sp-warn-600); border-color: transparent; }
+.tch-checkinStrip__dot.is-upset { background: var(--sp-danger-600); border-color: transparent; }
+
+.tch-checkinStrip__streak {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-warn-600);
+}

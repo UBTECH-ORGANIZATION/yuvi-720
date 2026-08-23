@@ -175,6 +175,42 @@ def gather_evidence(brain: dict[str, Any]) -> dict[str, Any]:
     if reflections:
         evidence["reflections"] = reflections
 
+    # The daily check-in (#452) rides `reflections_recent` with its feeling in
+    # `meta` — invisible to the self_rating filter above, so read it apart.
+    # Hard days inform what_frustrates, bright days how_to_reach, and a run of
+    # skips is itself a signal (a child avoiding the question is saying
+    # something) — but only a RUN: one skip is a busy morning.
+    checkin_items = [
+        item for item in (brain.get("reflections_recent") or [])
+        if isinstance(item, dict)
+        and str(item.get("prompt_id") or "").startswith("daily_checkin:")
+        and isinstance(item.get("meta"), dict)
+    ]
+    hard_days = [
+        f"checkin[{item.get('at', '')[:10]}]: הרגשה '{item['meta'].get('feeling')}' ({item['meta'].get('valence')})"
+        for item in checkin_items[-5:]
+        if item["meta"].get("valence") in {"uneasy", "upset"}
+    ]
+    if hard_days:
+        evidence["checkin_hard_feelings"] = hard_days[-3:]
+    bright_days = [
+        f"checkin[{item.get('at', '')[:10]}]: הרגשה '{item['meta'].get('feeling')}' ({item['meta'].get('valence')})"
+        for item in checkin_items[-5:]
+        if item["meta"].get("valence") in {"great", "good"}
+    ]
+    if bright_days:
+        evidence["checkin_positive_feelings"] = bright_days[-3:]
+    skip_streak = 0
+    for item in reversed(checkin_items):
+        if item["meta"].get("skipped"):
+            skip_streak += 1
+        else:
+            break
+    if skip_streak >= 3:
+        evidence["checkin_skips"] = (
+            f"daily_checkin: דילוג על שאלת ההרגשה {skip_streak} ימים ברצף"
+        )
+
     signals = [
         f"behavior[{s.get('at', '')[:10]}]: {s.get('type')}"
         for s in (brain.get("behavior_signals") or [])[-3:]

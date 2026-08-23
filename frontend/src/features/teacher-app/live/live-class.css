@@ -174,7 +174,7 @@
      is empty) and the rows (whose cell holds two buttons) resolve this
      template independently, and any content-dependent track would give the
      two grids different columns — headers drifting off their data. */
-  --live-cols: minmax(140px, 0.9fr) minmax(230px, 1.7fr) minmax(96px, 0.5fr)
+  --live-cols: minmax(140px, 0.9fr) 44px minmax(230px, 1.7fr) minmax(96px, 0.5fr)
                minmax(0, 1.4fr) 158px;
   container-type: inline-size;
   border: 1px solid var(--sp-border);
@@ -325,7 +325,7 @@
 @container (max-width: 1080px) {
   .tch-liveHead,
   .tch-liveRow__main {
-    grid-template-columns: minmax(120px, 0.9fr) minmax(180px, 1.7fr) minmax(84px, 0.5fr)
+    grid-template-columns: minmax(120px, 0.9fr) 36px minmax(180px, 1.7fr) minmax(84px, 0.5fr)
                            minmax(0, 1.3fr) 76px;
     gap: var(--sp-2);
   }
@@ -370,6 +370,16 @@
 }
 
 .tch-liveRow__name { font-weight: var(--sp-fw-medium); }
+
+/* Today's check-in face, in the family's own color. */
+.tch-liveRow__feeling { display: flex; justify-content: center; }
+.tch-liveRow__mood { display: inline-flex; align-items: center; }
+.tch-liveRow__mood.is-none { color: var(--sp-ink-300); }
+.tch-liveRow__mood.is-great { color: var(--sp-success-600); }
+.tch-liveRow__mood.is-good { color: var(--sp-teal-600, var(--sp-success-600)); }
+.tch-liveRow__mood.is-okay { color: var(--sp-primary-600); }
+.tch-liveRow__mood.is-uneasy { color: var(--sp-warn-600); }
+.tch-liveRow__mood.is-upset { color: var(--sp-danger-600); }
 
 /* The where cell stacks: the place line always, the signal beneath it only
    when one exists — which is why signals no longer deserve a column. */

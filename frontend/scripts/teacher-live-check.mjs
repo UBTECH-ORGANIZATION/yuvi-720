@@ -12,6 +12,7 @@
 import { chromium } from 'playwright'
 import { mkdirSync } from 'node:fs'
 import { dismissTourIfOpen } from './lib/tour.mjs'
+import { dismissCheckin } from './lib/checkin.mjs'
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:5199'
 const OUT = 'artifacts/teacher-live'
@@ -95,6 +96,7 @@ const signIn = async (context, username, landing) => {
   // Phase 8: the tour opens itself for an account that has not seen it,
   // and its scrim blocks clicks. Dismiss it as a teacher would.
   await dismissTourIfOpen(page)
+  await dismissCheckin(page)
   return page
 }
 

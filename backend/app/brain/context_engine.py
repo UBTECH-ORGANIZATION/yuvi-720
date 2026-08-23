@@ -16,6 +16,26 @@ from app.brain.repository import get_brain, apply_brain_updates
 from app.brain.schema import project, flatten_updates, path_allowed, get_path
 
 
+def _today_school_date() -> str:
+    """Lazy proxy — `school_calendar` imports services this module must not
+    load at import time."""
+    from app.services.school_calendar import today_school_date
+
+    return today_school_date()
+
+
+def today_valid_feeling(daily_feeling: Any) -> Optional[dict[str, Any]]:
+    """The check-in feeling, only while its school day lasts (#452).
+
+    Expiry is READ-SIDE and lives here alone: a feeling stamped with an
+    earlier date simply stops being returned at the Israeli midnight — no
+    cron, no writer, no second place to keep in sync.
+    """
+    if isinstance(daily_feeling, dict) and daily_feeling.get("date") == _today_school_date():
+        return daily_feeling
+    return None
+
+
 class AgentScopeError(PermissionError):
     """Raised when an agent attempts a write outside its allow-list (§5.8)."""
 
@@ -95,6 +115,14 @@ AGENT_VIEWS: dict[str, dict[str, list[str]]] = {
     "safety": {
         "read": ["identity.locale"],
         "write": ["wellbeing_flags"],
+    },
+    "checkin": {
+        # The daily feelings check-in (#452): it reads just enough to phrase
+        # its optional callback (locale + what was hard last time) and may
+        # write exactly one thing — today's feeling. Skips are data, but they
+        # live in the check-in doc and the reflection, not in the brain.
+        "read": ["identity.locale", "reflections_recent"],
+        "write": ["current_state.daily_feeling"],
     },
 }
 
@@ -616,7 +644,14 @@ async def build_coach_bundle(
         interests_view, preferences_view, learning_style_view, strategies, locale
     )
 
+    daily_feeling = today_valid_feeling(get_path(brain, "current_state.daily_feeling"))
+
     return {
+        "daily_feeling": (
+            {"valence": safe_text(daily_feeling.get("valence"), 20),
+             "feeling": safe_text(daily_feeling.get("feeling"), 40)}
+            if daily_feeling else None
+        ),
         "profile": {
             "interests": interests_view,
             "characteristics": memory_characteristics

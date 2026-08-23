@@ -26,9 +26,21 @@ export interface TeacherRecommendation {
  *  the "needs attention" strip. The full record, with its state and its
  *  history, is `WellbeingFlag` below and comes from its own endpoint. */
 export interface WellbeingSnippet { evidence: string; at?: string; source?: string }
+export interface CheckinDay {
+  date: string
+  valence: string | null
+  feeling: string | null
+  skipped: boolean
+}
+
 export interface StudentInsight {
   learner_id: string
   display_name: string | null
+  /** Today's check-in feeling (#452) — null once the school day turns. */
+  today_feeling?: CheckinDay | null
+  /** The last 14 check-in days, newest first. */
+  checkin_history?: CheckinDay[]
+  checkin_skip_streak?: number
   progress: Record<string, { objectives_total: number; objectives_mastered: number }>
   next: Record<string, string[]>
   struggle_items: StruggleItem[]
@@ -1013,6 +1025,9 @@ export interface LearnerFocus {
   objective_title: string | null
   /** True when the focus IS a teacher-set pin (the route honours it). */
   pinned: boolean
+  /** Today's check-in feeling (#452), read-side expired at the Israeli
+   *  midnight — null once the day turns or when the child never answered. */
+  feeling: { valence: string; feeling: string } | null
 }
 
 export function getGroupFocus(groupId: string, language: string) {

@@ -823,9 +823,34 @@ async def student_insights(
         else STATUS_ACTIVE
     )
 
+    # The daily check-in (#452): today's feeling (null once the school day
+    # turns), a 14-day strip, and the skip streak. Visible to every scoped
+    # teacher through the same `_guard_learner` gate as the rest of this
+    # payload; deliberately NO automatic escalation — a feeling is a
+    # conversation opener, not an alert.
+    from app.services import checkin_flow
+    from app.services.school_calendar import today_school_date
+
+    checkin_history = await checkin_flow.history(learner_id)
+    today_key = today_school_date()
+    today_feeling = next(
+        (row for row in checkin_history
+         if row["date"] == today_key and row["valence"]),
+        None,
+    )
+    checkin_skip_streak = 0
+    for row in checkin_history:                     # newest first
+        if row["skipped"]:
+            checkin_skip_streak += 1
+        else:
+            break
+
     return {
         "learner_id": learner_id,
         "display_name": (brain.get("identity") or {}).get("display_name"),
+        "today_feeling": today_feeling,
+        "checkin_history": checkin_history,
+        "checkin_skip_streak": checkin_skip_streak,
         "progress": brain.get("progress") or {},
         "activity": activity,
         "status": status,

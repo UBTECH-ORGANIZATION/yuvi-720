@@ -39,13 +39,20 @@ async def store_reflection(
     answer: str,
     self_rating: Optional[int] = None,
     system_estimate: Optional[float] = None,
+    meta: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
-    """Persist a reflection (full log + recent window) with self vs system estimate."""
+    """Persist a reflection (full log + recent window) with self vs system estimate.
+
+    `meta` rides along whole, in both the log and the recent window — the daily
+    check-in (#452) stores its valence/feeling/skip there, which is what lets
+    the description engine read feelings history without a second collection.
+    """
     entry = {
         "prompt_id": prompt_id,
         "answer": (answer or "").strip(),
         "self_rating": self_rating,
         "system_estimate": system_estimate,
+        **({"meta": meta} if meta else {}),
         "at": datetime.now(timezone.utc).isoformat(),
     }
 
