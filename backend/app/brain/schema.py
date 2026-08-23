@@ -171,6 +171,10 @@ _OPAQUE_LEAF_KEYS = {
     # Set to None on unpin and on completion; re-pinning would then dot-$set
     # into that null and hit the same WriteError 28.
     "pinned_next",
+    # The daily check-in's feeling (#452): written whole each morning, read
+    # behind a today-only filter, and None between days — the same
+    # merge-into-null trap as the others.
+    "daily_feeling",
 }
 _OPAQUE_PARENT_KEYS = {"mastery", "progress"}
 

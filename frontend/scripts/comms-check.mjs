@@ -14,6 +14,7 @@
  * Never `waitUntil: 'networkidle'` — both portals hold SSE connections.
  */
 import { chromium } from 'playwright'
+import { dismissCheckin } from './lib/checkin.mjs'
 import { mkdirSync } from 'node:fs'
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:5199'
@@ -46,6 +47,8 @@ try {
   // when the teacher acts — that is the "live, no reload" claim.
   const studentPage = await student.newPage()
   await studentPage.goto(`${BASE}/student-dashboard`, { waitUntil: 'domcontentloaded' })
+  await studentPage.waitForTimeout(2000)
+  await dismissCheckin(studentPage)
   await studentPage.waitForSelector('.sd-page, .sp-learner-shell', { timeout: 45000 })
   await studentPage.waitForTimeout(2000)
 

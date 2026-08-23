@@ -44,6 +44,7 @@ from app.routes.learner_mapping import router as learner_mapping_router
 from app.routes.learner_state import router as learner_state_router
 from app.routes.learning_catalog import router as learning_catalog_router
 from app.routes.learning_content import router as learning_content_router
+from app.routes.checkin import router as checkin_router
 from app.routes.illustrations import router as illustrations_router
 from app.routes.mapping_chat import router as mapping_chat_router
 from app.routes.profile import router as profile_router
@@ -232,6 +233,7 @@ def create_app() -> FastAPI:
     app.include_router(campaign_router)
     app.include_router(support_router)
     app.include_router(support_internal_router)
+    app.include_router(checkin_router)
 
     mount_content_catalog_mcp(app)
 

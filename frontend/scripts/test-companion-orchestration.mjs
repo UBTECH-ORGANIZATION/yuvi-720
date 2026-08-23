@@ -22,6 +22,7 @@
  */
 
 import { chromium } from 'playwright'
+import { dismissCheckin } from './lib/checkin.mjs'
 import { execFileSync } from 'node:child_process'
 import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
@@ -156,6 +157,7 @@ async function main() {
   try {
     log(`Opening lesson: ${COMPONENT}`)
     await page.goto(`${BASE_URL}/learning/lesson?unit=${UNIT}&component=${COMPONENT}`, { waitUntil: 'domcontentloaded', timeout: 30_000 })
+    await dismissCheckin(page)
     await page.locator('#Yuvi-companion-panel').waitFor({ state: 'visible', timeout: 30_000 })
     await sleep(3500)   // let the lesson session establish + reset current_state
 

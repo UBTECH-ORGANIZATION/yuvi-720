@@ -13,6 +13,7 @@
 import { chromium } from 'playwright'
 import { mkdirSync } from 'node:fs'
 import { dismissTourIfOpen } from './lib/tour.mjs'
+import { dismissCheckin } from './lib/checkin.mjs'
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:5199'
 const OUT = 'artifacts/live-class'
@@ -43,6 +44,7 @@ const signIn = async (context, username, landing) => {
   await page.goto(`${BASE}${landing}`, { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(2000)
   await dismissTourIfOpen(page)
+  await dismissCheckin(page)
   return page
 }
 
@@ -73,7 +75,7 @@ try {
   // The rows are a table: five named columns above them (signals ride inside
   // the where cell — they stopped being a column of their own).
   const headCells = await teacher.locator('.tch-liveHead__cell').count()
-  check('the rows carry a five-column header', headCells === 5, `${headCells} cells`)
+  check('the rows carry a six-column header', headCells === 6, `${headCells} cells`)
 
   // A column filter must be honest twice over: the count on the menu option
   // and the rows it leaves behind are the same number.

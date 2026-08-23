@@ -1,0 +1,401 @@
+/* The daily check-in (#452). One accent pair (`--ck-accent`/`--ck-tint`)
+   rebinds per picked valence family on the ROOT via `data-valence`, so the
+   faces, chips and creature warm or cool together — the mentoring-view
+   `color-mix()` precedent, over `--sp-*` tokens only. */
+
+/* Wide enough that the longest family's five word chips sit on one row. */
+.ck-dialog { max-inline-size: 690px; inline-size: min(690px, calc(100vw - 32px)); }
+
+.ck-root {
+  --ck-accent: var(--sp-primary-600);
+  --ck-tint: color-mix(in srgb, var(--sp-primary-600) 10%, var(--sp-surface));
+  --ck-chip-bg: color-mix(in srgb, var(--sp-primary-600) 7%, var(--sp-surface));
+  position: relative;
+  display: grid;
+  gap: var(--sp-4);
+  padding: var(--sp-2);
+}
+
+/* The always-there escape hatch — small, in the top-left corner (physical
+   left in every language, like a dialog close button in RTL). */
+.ck-skipTop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  padding: 3px 10px;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-surface);
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+  cursor: pointer;
+}
+
+.ck-skipTop:hover { background: var(--sp-bg-subtle); }
+.ck-skipTop:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+.ck-skipTop:disabled { opacity: 0.6; cursor: default; }
+
+.ck-root[data-valence='great'] {
+  --ck-accent: var(--sp-success-600);
+  --ck-tint: color-mix(in srgb, var(--sp-success-600) 12%, var(--sp-surface));
+  --ck-chip-bg: color-mix(in srgb, var(--sp-success-600) 8%, var(--sp-surface));
+}
+
+.ck-root[data-valence='good'] {
+  --ck-accent: var(--sp-teal-600, var(--sp-success-600));
+  --ck-tint: color-mix(in srgb, var(--sp-teal-600, var(--sp-success-600)) 12%, var(--sp-surface));
+  --ck-chip-bg: color-mix(in srgb, var(--sp-teal-600, var(--sp-success-600)) 8%, var(--sp-surface));
+}
+
+.ck-root[data-valence='okay'] {
+  --ck-accent: var(--sp-primary-600);
+}
+
+.ck-root[data-valence='uneasy'] {
+  --ck-accent: var(--sp-warn-600);
+  --ck-tint: color-mix(in srgb, var(--sp-warn-600) 12%, var(--sp-surface));
+  --ck-chip-bg: color-mix(in srgb, var(--sp-warn-600) 8%, var(--sp-surface));
+}
+
+.ck-root[data-valence='upset'] {
+  --ck-accent: var(--sp-danger-600);
+  --ck-tint: color-mix(in srgb, var(--sp-danger-600) 12%, var(--sp-surface));
+  --ck-chip-bg: color-mix(in srgb, var(--sp-danger-600) 8%, var(--sp-surface));
+}
+
+.ck-head { display: grid; gap: var(--sp-1); text-align: center; }
+.ck-head h2 { margin: 0; font-size: var(--sp-fs-xl); color: var(--sp-ink-900); }
+.ck-subtitle { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-500); }
+
+.ck-step { display: grid; gap: var(--sp-3); justify-items: center; }
+
+.ck-question {
+  margin: 0;
+  font-size: var(--sp-fs-md);
+  color: var(--sp-ink-700);
+  text-align: center;
+}
+
+.ck-answer {
+  inline-size: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-bg-subtle);
+  font: inherit;
+  color: var(--sp-ink-900);
+  resize: vertical;
+}
+
+.ck-answer:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+
+/* ── the five faces ───────────────────────────────────────────────────────── */
+
+.ck-faces {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  justify-content: center;
+  /* The valence scale reads great→upset left-to-right in EVERY language —
+     it is a scale, not a sentence, so it does not mirror with the UI. */
+  direction: ltr;
+}
+
+/* Round tinted buttons, the reference design's face row: each face sits in
+   its own family color always — the row IS the legend. */
+.ck-face {
+  display: grid;
+  place-items: center;
+  inline-size: 46px;
+  block-size: 46px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: color-mix(in srgb, currentColor 12%, var(--sp-surface));
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 140ms var(--sp-ease), background 140ms var(--sp-ease),
+              transform 140ms var(--sp-ease);
+}
+
+.ck-face:hover { transform: translateY(-2px) scale(1.05); }
+.ck-face:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+
+.ck-face--great { color: var(--sp-success-600); }
+.ck-face--good { color: var(--sp-teal-600, var(--sp-success-600)); }
+.ck-face--okay { color: var(--sp-primary-600); }
+.ck-face--uneasy { color: var(--sp-warn-600); }
+.ck-face--upset { color: var(--sp-danger-600); }
+
+.ck-face.is-picked {
+  border-color: currentColor;
+  background: color-mix(in srgb, currentColor 20%, var(--sp-surface));
+  transform: scale(1.1);
+}
+
+/* ── the sentence ─────────────────────────────────────────────────────────── */
+
+.ck-sentence {
+  margin: 0;
+  font-size: var(--sp-fs-md);
+  color: var(--sp-ink-900);
+  text-align: center;
+}
+
+.ck-sentence__word {
+  color: var(--ck-accent);
+  border-block-end: 2px solid var(--ck-accent);
+  padding-inline: 2px;
+}
+
+.ck-sentence__word.is-empty {
+  color: var(--sp-ink-300);
+  border-block-end-color: var(--sp-ink-300);
+}
+
+/* ── the word chips, definition panel and creature ────────────────────────── */
+
+.ck-creature { display: grid; place-items: center; }
+
+/* ── the creature moves the way the feeling moves ─────────────────────────
+   `ck-fig--*` is the whole figure (the ground shadow stays put); `ck-p-*`
+   are props doing their own thing — rain falls, hearts float, sweat drips,
+   a lightning bolt flashes, one arm waves. The word picks the motion
+   (`FEELING_MOTION` in CheckinCreatures.tsx). */
+
+.ck-creature .ck-fig,
+.ck-creature [class^='ck-p-'] {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+.ck-creature .ck-fig--breathe { animation: ck-m-breathe 3.4s ease-in-out infinite; }
+.ck-creature .ck-fig--bounce { animation: ck-m-bounce 1.9s ease-in-out infinite; }
+.ck-creature .ck-fig--hop { animation: ck-m-hop 1.1s ease-in-out infinite; }
+.ck-creature .ck-fig--sway { animation: ck-m-sway 3s ease-in-out infinite; }
+.ck-creature .ck-fig--wobble { animation: ck-m-wobble 2.6s ease-in-out infinite; }
+.ck-creature .ck-fig--tremble { animation: ck-m-tremble 0.8s ease-in-out infinite; }
+.ck-creature .ck-fig--shake { animation: ck-m-shake 0.5s linear infinite; }
+.ck-creature .ck-fig--sink { animation: ck-m-sink 4s ease-in-out infinite; }
+.ck-creature .ck-fig--drift { animation: ck-m-drift 4.5s ease-in-out infinite; }
+
+@keyframes ck-m-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+
+@keyframes ck-m-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes ck-m-hop {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  15% { transform: translateY(1px) scaleY(0.96); }
+  45% { transform: translateY(-11px) scaleY(1.02); }
+  70% { transform: translateY(0) scaleY(1); }
+  82% { transform: translateY(1px) scaleY(0.97); }
+}
+
+@keyframes ck-m-sway {
+  0%, 100% { transform: rotate(-2.5deg); }
+  50% { transform: rotate(2.5deg); }
+}
+
+@keyframes ck-m-wobble {
+  0%, 100% { transform: rotate(0deg); }
+  30% { transform: rotate(4deg); }
+  65% { transform: rotate(-2deg); }
+}
+
+@keyframes ck-m-tremble {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-1.5px); }
+  75% { transform: translateX(1.5px); }
+}
+
+@keyframes ck-m-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2.2px); }
+  75% { transform: translateX(2.2px); }
+}
+
+@keyframes ck-m-sink {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  50% { transform: translateY(3.5px) scaleY(0.975); }
+}
+
+@keyframes ck-m-drift {
+  0%, 20%, 100% { transform: translateX(0); }
+  35%, 50% { transform: translateX(-4px); }
+  70%, 85% { transform: translateX(4px); }
+}
+
+/* Props. */
+.ck-creature .ck-p-float { animation: ck-p-float 2.6s ease-in-out infinite; }
+.ck-creature .ck-p-twinkle { animation: ck-p-twinkle 1.5s ease-in-out infinite; }
+.ck-creature .ck-p-drip { animation: ck-p-drip 1.8s ease-in infinite; }
+.ck-creature .ck-p-rain { animation: ck-p-rain 1.1s linear infinite; }
+.ck-creature .ck-p-rise { animation: ck-p-rise 2.2s ease-out infinite; }
+.ck-creature .ck-p-flash { animation: ck-p-flash 2s steps(1) infinite; }
+.ck-creature .ck-p-wobble { animation: ck-m-wobble 2s ease-in-out infinite; }
+.ck-creature .ck-p-zz { animation: ck-p-float 3s ease-in-out infinite; }
+.ck-creature .ck-p-wave { transform-origin: 30% 100%; animation: ck-p-wave 1.4s ease-in-out infinite; }
+.ck-creature .ck-p-scratch { transform-origin: 80% 100%; animation: ck-p-scratch 1s ease-in-out infinite; }
+
+@keyframes ck-p-float {
+  0%, 100% { transform: translateY(0); opacity: 1; }
+  50% { transform: translateY(-4px); opacity: 0.75; }
+}
+
+@keyframes ck-p-twinkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.85); }
+}
+
+@keyframes ck-p-drip {
+  0%, 55% { transform: translateY(0); opacity: 1; }
+  90% { transform: translateY(7px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 0; }
+}
+
+@keyframes ck-p-rain {
+  0% { transform: translateY(0); opacity: 1; }
+  80% { transform: translateY(8px); opacity: 0.1; }
+  100% { transform: translateY(0); opacity: 0; }
+}
+
+@keyframes ck-p-rise {
+  0% { transform: translateY(0); opacity: 0.9; }
+  70% { transform: translateY(-6px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 0; }
+}
+
+@keyframes ck-p-flash {
+  0%, 100% { opacity: 1; }
+  45% { opacity: 0.15; }
+  60% { opacity: 1; }
+  70% { opacity: 0.3; }
+  80% { opacity: 1; }
+}
+
+@keyframes ck-p-wave {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-14deg); }
+}
+
+@keyframes ck-p-scratch {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(5deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ck-creature .ck-fig,
+  .ck-creature [class^='ck-p-'],
+  .ck-creature .ck-p-wave,
+  .ck-creature .ck-p-scratch { animation: none; }
+}
+
+.ck-defPanel {
+  display: grid;
+  gap: var(--sp-2);
+  justify-items: center;
+  inline-size: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--sp-radius-lg);
+  background: var(--ck-tint);
+}
+
+.ck-defPanel__text {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-medium);
+  color: var(--ck-accent);
+  text-align: center;
+}
+
+.ck-chips {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.ck-chip {
+  padding: 6px var(--sp-4);
+  border: 1.5px solid color-mix(in srgb, var(--ck-accent) 45%, transparent);
+  border-radius: var(--sp-radius-pill);
+  background: var(--ck-chip-bg);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  color: var(--ck-accent);
+  cursor: pointer;
+  transition: background 140ms var(--sp-ease), transform 140ms var(--sp-ease);
+}
+
+/* Hover never restyles the picked chip — picked stays solid accent. */
+.ck-chip:hover:not(:disabled):not(.is-picked) {
+  background: var(--ck-tint);
+  transform: translateY(-1px);
+}
+
+.ck-chip:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+.ck-chip:disabled { opacity: 0.6; cursor: default; }
+
+.ck-chip.is-picked {
+  background: var(--ck-accent);
+  border-color: var(--ck-accent);
+  color: #fff;
+}
+
+/* The send-failed note, back on the feeling step with the pick intact. */
+.ck-error {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-danger-600);
+  text-align: center;
+}
+
+/* ── closing ─────────────────────────────────────────────────────────────── */
+
+.ck-step--closing { padding-block: var(--sp-2); }
+
+.ck-closing {
+  margin: 0;
+  font-size: var(--sp-fs-md);
+  color: var(--sp-ink-700);
+  text-align: center;
+  max-inline-size: 40ch;
+}
+
+/* ── actions ─────────────────────────────────────────────────────────────── */
+
+.ck-actions { display: flex; gap: var(--sp-2); justify-content: center; }
+
+.ck-btn {
+  padding: 8px var(--sp-5);
+  border-radius: var(--sp-radius-pill);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-medium);
+  cursor: pointer;
+}
+
+.ck-btn--primary {
+  border: 0;
+  background: var(--ck-accent);
+  color: #fff;
+}
+
+.ck-btn--primary:hover { filter: brightness(1.06); }
+
+.ck-btn--ghost {
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+  color: var(--sp-ink-500);
+}
+
+.ck-btn--ghost:hover { background: var(--sp-bg-subtle); }
+.ck-btn:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+.ck-btn:disabled { opacity: 0.6; cursor: default; }

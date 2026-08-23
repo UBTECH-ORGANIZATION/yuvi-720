@@ -112,6 +112,17 @@ def _in_range(day: Optional[str], start: str, end: str) -> bool:
     return bool(day) and start <= day <= end
 
 
+def today_school_date() -> str:
+    """Today as YYYY-MM-DD on the SCHOOL's wall clock.
+
+    The public form of the bucketing rule everything above already obeys: a
+    thing that resets "daily" resets at midnight in Israel, not at midnight
+    UTC and not on a rolling 24 hours. The daily check-in (#452) keys on this;
+    anything else with a school-day boundary should too.
+    """
+    return datetime.now(_school_zone()).date().isoformat()
+
+
 def normalize_range(from_day: Any, to_day: Any) -> tuple[str, str]:
     """The window to read, defaulting to the month around today."""
     if is_day_shaped(from_day) and is_day_shaped(to_day):

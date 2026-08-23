@@ -1110,7 +1110,9 @@ async def group_focus(
     """
     if not await _guard_group(session, group_id):
         return _denied()
+    from app.brain.context_engine import today_valid_feeling
     from app.brain.repository import get_brain
+    from app.brain.schema import get_path
     from app.services import kata_catalog
     from app.services.dashboard import SUBJECT_NAMES, _t
     from app.services.planner import next_focus
@@ -1131,6 +1133,10 @@ async def group_focus(
             subject = focus.get("subject")
             objective_id = focus.get("objective_id")
             is_pinned = False
+        # Today's check-in feeling (#452) rides the same brain read — the live
+        # row wears it as a small face. Read-side expiry: gone at the Israeli
+        # midnight, exactly like the coach's copy.
+        feeling = today_valid_feeling(get_path(brain, "current_state.daily_feeling"))
         learners.append({
             "learner_id": learner_id,
             "subject": subject,
@@ -1139,6 +1145,10 @@ async def group_focus(
             "objective_title": kata_catalog.localized_objective_title(objective_id, lang)
             if objective_id else None,
             "pinned": is_pinned,
+            "feeling": (
+                {"valence": feeling.get("valence"), "feeling": feeling.get("feeling")}
+                if feeling else None
+            ),
         })
     return _ok({"learners": learners})
 

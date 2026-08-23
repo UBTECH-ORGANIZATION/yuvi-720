@@ -17,7 +17,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { navigate } from '../../../app/router'
-import { EmptyState, Icon, SkeletonRows, StatusPill } from '../../../components/primitives'
+import { EmptyState, Hint, Icon, SkeletonRows, StatusPill } from '../../../components/primitives'
 import { useI18n } from '../../../i18n/I18nProvider'
 import {
   getGroupLearnings, getPinnedNext, pinNext, unpinNext,
@@ -25,6 +25,8 @@ import {
 } from '../../../services/teacher'
 import { MessageRefused, sendMessage } from '../../../services/directMessages'
 import { useTeacherLive } from '../../../providers/TeacherLiveProvider'
+import { NoFeelingFace, ValenceFace } from '../../checkin/ValenceFaces'
+import { VALENCES, type Valence } from '../../checkin/feelings'
 import { RawEvidence } from '../shared/EvidenceDisclosure'
 import { StudentAvatar } from '../shared/StudentAvatar'
 import { useDismiss } from '../shared/useDismiss'
@@ -411,6 +413,7 @@ export function LiveClassView({
       <div className="tch-liveTable">
         <div className="tch-liveHead">
           <span className="tch-liveHead__cell">{t('tch.liveView.col.student')}</span>
+          <span className="tch-liveHead__cell">{t('tch.liveView.col.feeling')}</span>
           <HeadFilter label={t('tch.liveView.col.where')} options={whereOptions}
                       value={whereFilter}
                       onChange={(id) => setWhereFilter(id as Where | null)} t={t} />
@@ -566,6 +569,26 @@ function LiveRow({
           <StudentAvatar learnerId={row.learner_id} name={row.name} size={34} />
           <span className="tch-liveRow__name" dir="auto">{row.name}</span>
         </button>
+
+        {/* Today's check-in feeling (#452), a column of its own: just the
+            face — the word rides the app tooltip (a native `title` is too
+            slow to ever be seen). A child who has not answered yet wears the
+            dashed empty face, never a blank cell. */}
+        <span className="tch-liveRow__feeling">
+          {focus?.feeling && VALENCES.includes(focus.feeling.valence as Valence) ? (
+            <Hint text={t(`checkin.feeling.${focus.feeling.feeling}`)}>
+              <span className={`tch-liveRow__mood is-${focus.feeling.valence}`}>
+                <ValenceFace valence={focus.feeling.valence as Valence} size={22} />
+              </span>
+            </Hint>
+          ) : (
+            <Hint text={t('tch.liveView.noFeeling')}>
+              <span className="tch-liveRow__mood is-none">
+                <NoFeelingFace size={22} />
+              </span>
+            </Hint>
+          )}
+        </span>
 
         <span className="tch-liveRow__where">
           <span className="tch-liveRow__place">

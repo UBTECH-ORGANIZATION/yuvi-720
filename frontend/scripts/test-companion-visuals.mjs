@@ -12,6 +12,7 @@
  */
 
 import { chromium } from 'playwright'
+import { dismissCheckin } from './lib/checkin.mjs'
 import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
@@ -333,6 +334,7 @@ async function runScenario(page, scenario, index) {
   const pass = (message) => checks.push({ status: 'pass', message })
 
   await page.goto(`${BASE_URL}/student-dashboard`, { waitUntil: 'domcontentloaded', timeout: 30_000 })
+  await dismissCheckin(page)
   const localizedBody = await page.locator('body').innerText()
   invariant(!localizedBody.includes('language.switcherLabel'), 'UI exposed raw locale keys during startup')
   await page.locator('.Yuvi-companion-dock__portal').waitFor({ state: 'attached', timeout: 30_000 })
