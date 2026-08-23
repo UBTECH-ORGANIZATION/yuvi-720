@@ -267,13 +267,8 @@ class ClassSubjects(unittest.IsolatedAsyncioTestCase):
 
 
 class LearningDetail(unittest.IsolatedAsyncioTestCase):
-    async def test_detail_returns_questions_and_screen_spine(self):
+    async def _detail(self, rows, *, topics=None):
         from app.services import learning_analytics
-
-        rows = {
-            "kid-a": [_row("cmp-1", "q1", attempts=4, correct=1, seconds=200)],
-            "kid-b": [_row("cmp-1", "q1", attempts=2, correct=2, seconds=60)],
-        }
 
         async def _summary(learner_id, subject=None, component_id=None):
             return rows.get(learner_id, [])
@@ -283,18 +278,64 @@ class LearningDetail(unittest.IsolatedAsyncioTestCase):
                                       AsyncMock(return_value=list(rows))))
             stack.enter_context(patch("app.services.learner_activity.question_summary",
                                       side_effect=_summary))
+            stack.enter_context(patch("app.services.question_topics.topics_for",
+                                      AsyncMock(return_value=topics or {})))
             _catalog_patches(stack)
-            view = await learning_analytics.learning_detail("g1", "cmp-1", language="he")
+            return await learning_analytics.learning_detail("g1", "cmp-1", language="he")
+
+    async def test_detail_returns_questions_and_difficulties(self):
+        # kid-a really worked at q1 and never got it; kid-b solved it. The
+        # question is hard (6 attempts, 50% ≤ 60%) and the difficulty row must
+        # name exactly the learner who tried and never succeeded.
+        view = await self._detail({
+            "kid-a": [_row("cmp-1", "q1", attempts=4, correct=0, seconds=200)],
+            "kid-b": [_row("cmp-1", "q1", attempts=2, correct=2, seconds=60)],
+        })
 
         self.assertEqual(view["learning"]["title"], "הקנייה א")
         self.assertEqual(view["learning"]["attempts"], 6)
         self.assertEqual(len(view["questions"]), 1)
         self.assertEqual(view["questions"][0]["attempts"], 6)
         self.assertEqual(view["questions"][0]["learners"], 2)
-        # The spine is the lesson's own shape, not only what was answered.
-        self.assertEqual([screen["item_id"] for screen in view["screens"]], ["item-1"])
-        self.assertEqual(view["screens"][0]["attempts"], 6)
-        self.assertNotIn("kid-a", json.dumps(view))
+        # The screens spine is gone — the difficulties replaced it (#455).
+        self.assertNotIn("screens", view)
+        self.assertEqual(len(view["difficulties"]), 1)
+        difficulty = view["difficulties"][0]
+        self.assertEqual(difficulty["learner_ids"], ["kid-a"])
+        self.assertEqual(difficulty["evidence"]["tried_count"], 2)
+        self.assertEqual(difficulty["evidence"]["failed_count"], 1)
+
+    async def test_learner_ids_appear_nowhere_but_the_difficulties(self):
+        # The C5 exception is exactly one field wide: strip
+        # `difficulties[].learner_ids` and no learner id may remain anywhere.
+        view = await self._detail({
+            "kid-a": [_row("cmp-1", "q1", attempts=4, correct=0)],
+            "kid-b": [_row("cmp-1", "q1", attempts=2, correct=2)],
+        })
+        stripped = json.loads(json.dumps(view))
+        for row in stripped["difficulties"]:
+            ids = row.pop("learner_ids")
+            self.assertNotIn("kid-b", ids)  # solved it — a selection, not a roster echo
+        self.assertNotIn("kid-a", json.dumps(stripped))
+        self.assertNotIn("kid-b", json.dumps(stripped))
+
+    async def test_topics_and_texts_ride_the_question_rows(self):
+        view = await self._detail(
+            {"kid-a": [_row("cmp-1", "q1", attempts=4, correct=0)]},
+            topics={"cmp-1|item-1|q1": "זיהוי תוצאה חריגה"},
+        )
+        row = view["questions"][0]
+        self.assertEqual(row["topic"], "זיהוי תוצאה חריגה")
+        self.assertIn("question_text", row)
+        # A key with no stored decision is what flips the pending flag off/on.
+        self.assertFalse(view["topics_pending"])
+
+    async def test_missing_topic_decisions_flip_pending(self):
+        view = await self._detail(
+            {"kid-a": [_row("cmp-1", "q1", attempts=4, correct=0)]},
+            topics={},
+        )
+        self.assertTrue(view["topics_pending"])
 
 
 class NamesReachTheScreen(unittest.IsolatedAsyncioTestCase):
@@ -382,6 +423,8 @@ class NamesReachTheScreen(unittest.IsolatedAsyncioTestCase):
                                       AsyncMock(return_value=list(rows))))
             stack.enter_context(patch("app.services.learner_activity.question_summary",
                                       side_effect=_summary))
+            stack.enter_context(patch("app.services.question_topics.topics_for",
+                                      AsyncMock(return_value={})))
             _catalog_patches(stack)
             view = await learning_analytics.learning_detail("g1", "gone-1", language="he")
 
@@ -475,6 +518,17 @@ class GroupLearningsRoute(unittest.IsolatedAsyncioTestCase):
                    AsyncMock()) as engine:
             response = await routes.group_learning_detail(
                 "g1", "cmp-1", language="he", session={"sub": "teacher-1"})
+        self.assertEqual(response.status_code, 403)
+        engine.assert_not_awaited()
+
+    async def test_topics_generation_is_scoped_and_never_paid_on_403(self):
+        from app.routes import teacher_students as routes
+
+        with patch.object(routes, "_guard_group", AsyncMock(return_value=False)), \
+             patch("app.services.question_topics.ensure_topics",
+                   AsyncMock()) as engine:
+            response = await routes.generate_question_topics(
+                "g1", "cmp-1", data={"language": "he"}, session={"sub": "teacher-1"})
         self.assertEqual(response.status_code, 403)
         engine.assert_not_awaited()
 

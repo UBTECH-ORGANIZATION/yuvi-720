@@ -17,9 +17,14 @@ Honesty rules, carried over from ``group_analytics``:
 * Timing is wall-clock between events, not focused-attention time. When no
   learner produced timing evidence the aggregate says so (``timing_available:
   False``) instead of showing a confident 0.
-* Counts only, never a per-student ranking (MoE C5). Learner ids never appear
-  in the output — ``struggling_count`` is a number, and the per-question rows
-  carry how many learners tried them, not who.
+* Counts remain the default (MoE C5) — ``struggling_count`` is a number, and
+  the per-question rows carry how many learners tried them, not who. The ONE
+  exception is ``difficulties[].learner_ids`` on the detail view: present so
+  the teacher can act on the sub-group (build a task, split the class) and so
+  the row can say WHO it is about. The list arrives in roster order, unscored
+  and unnumbered — a set of names, never a ranking — the same sanctioned shape
+  as ``group_analytics.learning_gaps.learner_ids``. Nothing model-facing and
+  nothing on the listing carries ids.
 * Every "hard question" row IS its own evidence: the attempts/correct counters
   that put it there are the row.
 """
@@ -54,13 +59,21 @@ def _rate(correct: int, attempts: int) -> Optional[float]:
 
 
 def _question_label(component_id: str, item_id: Optional[str],
-                    question_id: Optional[str]) -> dict[str, Any]:
+                    question_id: Optional[str],
+                    *,
+                    topics: Optional[dict[str, Optional[str]]] = None,
+                    texts: Optional[dict[str, Optional[str]]] = None) -> dict[str, Any]:
     """What this question IS, in the words the learner sees on screen.
 
     Without this a teacher reading "43% success" had no way to know which
     question failed — the row carried a raw provider id. The ordinal is the
     number the player's own navigation shows, the part index is the סעיף inside
     it, and the screen title is the content's own heading.
+
+    ``topics``/``texts`` are optional maps keyed ``component|item|question``:
+    the stored generated topic (#455) and the authored question text. Passed
+    only on teacher detail paths — when absent the fields are simply not in
+    the row, so nothing model-facing or learner-facing grows them by accident.
     """
     from app.services import kata_catalog
 
@@ -80,12 +93,17 @@ def _question_label(component_id: str, item_id: Optional[str],
         if match:
             ordinal = int(match.group(1))
 
-    return {
+    label: dict[str, Any] = {
         "ordinal": ordinal,
         "part": parts.get(key),
         "screen_title": profile.get("title") or "",
         "kind": profile.get("kind") or "",
     }
+    if topics is not None or texts is not None:
+        full_key = f"{component_id}|{item_id}|{question_id}"
+        label["topic"] = (topics or {}).get(full_key)
+        label["question_text"] = (texts or {}).get(full_key)
+    return label
 
 
 def _objective_title(objective_id: Optional[str], language: str) -> Optional[str]:
@@ -163,25 +181,31 @@ def _blank_activity(group_size: int) -> dict[str, Any]:
 
 async def _per_learner_rows(
     learner_ids: list[str], subject: Optional[str]
-) -> list[list[dict[str, Any]]]:
+) -> list[tuple[str, list[dict[str, Any]]]]:
+    """Each learner's per-question rows, WITH the learner id kept beside them.
+
+    The id used to be dropped at this gather boundary, which made "who found
+    this hard" unanswerable downstream. Order follows ``learner_ids`` — the
+    roster — so anything accumulated in iteration order is roster-ordered.
+    """
     from app.services import learner_activity
 
     semaphore = asyncio.Semaphore(_FANOUT)
 
-    async def _rows(learner_id: str) -> list[dict[str, Any]]:
+    async def _rows(learner_id: str) -> tuple[str, list[dict[str, Any]]]:
         async with semaphore:
             try:
-                return await learner_activity.question_summary(learner_id, subject=subject)
+                return learner_id, await learner_activity.question_summary(learner_id, subject=subject)
             except Exception:
-                return []
+                return learner_id, []
 
     return list(await asyncio.gather(*(_rows(learner_id) for learner_id in learner_ids)))
 
 
-def _fold(per_learner: list[list[dict[str, Any]]]) -> dict[str, dict[str, Any]]:
+def _fold(per_learner: list[tuple[str, list[dict[str, Any]]]]) -> dict[str, dict[str, Any]]:
     """Aggregate every learner's per-question rows into per-component buckets."""
     learnings: dict[str, dict[str, Any]] = {}
-    for rows in per_learner:
+    for learner_id, rows in per_learner:
         # Per-learner counters within one learning, folded once the learner's
         # rows are done — struggling is judged per learner, not per question.
         learner_in: dict[str, dict[str, int]] = {}
@@ -234,6 +258,11 @@ def _fold(per_learner: list[list[dict[str, Any]]]) -> dict[str, dict[str, Any]]:
                     "learners": 0,
                     "hints_used": 0,
                     "chat_turns": 0,
+                    # Private (popped before any public row): who tried this
+                    # question and who ever solved it, in roster order — the
+                    # difficulties card's "who" is tried − solved.
+                    "_tried": [],
+                    "_solved": [],
                 })
                 question["attempts"] += attempts
                 question["correct"] += correct
@@ -241,6 +270,10 @@ def _fold(per_learner: list[list[dict[str, Any]]]) -> dict[str, dict[str, Any]]:
                 question["learners"] += 1
                 question["hints_used"] += int(row.get("hints_used") or 0) + int(row.get("content_hints_used") or 0)
                 question["chat_turns"] += int(row.get("chat_turns") or 0)
+                if learner_id not in question["_tried"]:
+                    question["_tried"].append(learner_id)
+                if correct > 0 and learner_id not in question["_solved"]:
+                    question["_solved"].append(learner_id)
 
         for component_id, mine in learner_in.items():
             agg = learnings[component_id]
@@ -255,11 +288,18 @@ def _fold(per_learner: list[list[dict[str, Any]]]) -> dict[str, dict[str, Any]]:
     return learnings
 
 
-def _question_rows(component_id: str, questions: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+def _question_rows(
+    component_id: str,
+    questions: dict[str, dict[str, Any]],
+    *,
+    topics: Optional[dict[str, Optional[str]]] = None,
+    texts: Optional[dict[str, Optional[str]]] = None,
+) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for question in questions.values():
         rate = _rate(question["correct"], question["attempts"])
-        label = _question_label(component_id, question.get("item_id"), question["question_id"])
+        label = _question_label(component_id, question.get("item_id"), question["question_id"],
+                                topics=topics, texts=texts)
         rows.append({
             "question_id": question["question_id"],
             "item_id": question.get("item_id"),
@@ -295,6 +335,8 @@ def _teaches(raw: Optional[str]) -> Optional[str]:
 
 def label_learner_rows(
     rows: list[dict[str, Any]], *, language: str = "he",
+    topics: Optional[dict[str, Optional[str]]] = None,
+    texts: Optional[dict[str, Optional[str]]] = None,
 ) -> list[dict[str, Any]]:
     """Attach what each per-question row IS, for a teacher reading one child.
 
@@ -328,7 +370,8 @@ def label_learner_rows(
                 "learning_title": kata_catalog.component_title(component_id, language) or "",
                 "unit_title": kata_catalog.unit_title(component.get("unit_id"), language),
             }
-        label = _question_label(component_id, row.get("item_id"), row.get("question_id"))
+        label = _question_label(component_id, row.get("item_id"), row.get("question_id"),
+                                topics=topics, texts=texts)
         teaches = _teaches(kata_catalog.information_for_item(component_id, row.get("item_id")))
         labelled.append({
             **row,
@@ -519,20 +562,43 @@ async def group_learnings(
     }
 
 
+def question_texts(component_id: str) -> dict[str, Optional[str]]:
+    """The authored question text per question, keyed ``component|item|question``.
+
+    A deliberate, scoped projection of the server-only snapshots: the TEXT
+    travels (truncated, for a teacher's tooltip), ``answers`` and
+    ``correctAnswers`` never do — the same discipline as
+    ``lrs/hierarchy._question_digest``. Teacher detail paths only.
+    """
+    from app.services import kata_catalog
+
+    texts: dict[str, Optional[str]] = {}
+    for profile in kata_catalog.item_profiles(component_id):
+        item_id = profile.get("id")
+        for question in kata_catalog.questions_for_item(component_id, item_id):
+            question_id = question.get("questionId")
+            if not question_id:
+                continue
+            text = str(question.get("questionText") or "").strip()
+            texts[f"{component_id}|{item_id}|{question_id}"] = text[:300] or None
+    return texts
+
+
 async def learning_detail(
     group_id: str,
     component_id: str,
     *,
     language: str = "he",
 ) -> dict[str, Any]:
-    """One learning, opened up: every question, every screen, class-wide.
+    """One learning, opened up: every question plus the difficulties, class-wide.
 
     The listing answers "which lesson needs another pass"; this answers "what
-    exactly went wrong inside it" — per question success, time and support use,
-    plus the screens that ask nothing so the spine reads as the lesson does.
+    exactly went wrong inside it and what to do next" — per question success,
+    time and support use, and the ``difficulties`` rows: the hard questions,
+    who tried them and never got them, and the evidence behind the claim.
     """
     from app.brain import org
-    from app.services import kata_catalog
+    from app.services import kata_catalog, question_topics
 
     try:
         await kata_catalog.ensure_loaded()
@@ -546,32 +612,48 @@ async def learning_detail(
     folded = _fold(await _per_learner_rows(learner_ids, None))
     agg = folded.get(component_id)
 
+    texts = question_texts(component_id)
+    topics = await question_topics.topics_for(component_id, language)
+
     activity = _activity_view(component_id, agg, group_size) if agg \
         else _blank_activity(group_size)
-    questions = _question_rows(component_id, agg["questions"]) if agg else []
+    questions = _question_rows(component_id, agg["questions"],
+                               topics=topics, texts=texts) if agg else []
 
-    # The screen spine, so a teacher sees the lesson's shape — including the
-    # screens that only teach. A question row with no data is not a gap in the
-    # report, it is a question the class has not reached.
-    screens = []
-    for profile in kata_catalog.item_profiles(component_id):
-        item_id = profile.get("id")
-        rows = [row for row in questions if row.get("item_id") == item_id]
-        attempts = sum(row["attempts"] for row in rows)
-        correct = sum(row["correct"] for row in rows)
-        screens.append({
-            "item_id": item_id,
-            "title": profile.get("title") or "",
-            "kind": kata_catalog.kind_for_row(profile),
-            "question_count": profile.get("question_count") or 0,
-            "attempts": attempts,
-            "correct": correct,
-            "success_rate": _rate(correct, attempts),
-            "learners": max((row["learners"] for row in rows), default=0),
-            "avg_seconds": round(
-                sum((row["avg_seconds"] or 0) * row["attempts"] for row in rows) / attempts
-            ) if attempts else None,
+    # A key with no stored decision (even a stored null IS a decision) means
+    # the topic generator has not seen this question — the client fires one
+    # POST /topics and patches the rows from its answer.
+    topics_pending = any(
+        f"{component_id}|{row.get('item_id')}|{row.get('question_id')}" not in topics
+        for row in questions
+    )
+
+    # The difficulties: the same hard-question judgement the listing already
+    # makes, opened up with WHO — learners who attempted the question and never
+    # answered it correctly (roster order; a selection, never a ranking).
+    by_id = (agg or {}).get("questions", {})
+    difficulties = []
+    for row in questions:
+        if row["attempts"] < HARD_QUESTION_MIN_ATTEMPTS:
+            continue
+        if row["success_rate"] is None or row["success_rate"] > HARD_QUESTION_MAX_SUCCESS:
+            continue
+        bucket = by_id.get(row["question_id"]) or {}
+        tried = bucket.get("_tried") or []
+        solved = set(bucket.get("_solved") or [])
+        failed = [learner for learner in tried if learner not in solved]
+        difficulties.append({
+            **row,
+            "learner_ids": failed,
+            "evidence": {
+                "hard_question_min_attempts": HARD_QUESTION_MIN_ATTEMPTS,
+                "hard_question_max_success": HARD_QUESTION_MAX_SUCCESS,
+                "tried_count": len(tried),
+                "failed_count": len(failed),
+            },
         })
+    difficulties.sort(key=lambda row: (row["success_rate"], -row["attempts"]))
+    difficulties = difficulties[:HARD_QUESTIONS_PER_LEARNING]
 
     # Off the catalogue, the objective is the only human name the row can carry —
     # the same fallback the listing builds, so the card and the page it opens
@@ -589,5 +671,6 @@ async def learning_detail(
         "group_id": group_id,
         "learning": {**(spine or off_catalogue), **activity},
         "questions": questions,
-        "screens": screens,
+        "difficulties": difficulties,
+        "topics_pending": topics_pending,
     }

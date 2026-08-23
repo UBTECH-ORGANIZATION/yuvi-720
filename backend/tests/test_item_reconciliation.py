@@ -99,5 +99,70 @@ class ReconcileItemIdTests(unittest.TestCase):
         self.assertEqual(kata_catalog.resolve_catalog_item_id(None, f"{C}-002"), f"{C}-002")
 
 
+# ── CET-shaped components: the object id IS the catalog item id ──────────────
+CET = "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.WRITE-00001"
+_META = "https://learning.cet.ac.il/metadata/6a5cd81c15692669432e4e5d"
+
+_CET_COMPONENT = {
+    "id": CET,
+    "items": [
+        {"id": f"{_META}/mriro31m3ib50cl4i", "title": "חפש את המטמון"},
+        {"id": f"{_META}/mriwy5ub14z7d79e2", "title": "לוח השחמט"},
+        # Some rows carry a composite id whose TAIL is still the screen id.
+        {"id": f"{CET}-item-{_META}/mrj2jntc3fjzenkxg", "title": "נקודה"},
+    ],
+    "questions_by_item": {
+        f"{_META}/mriwy5ub14z7d79e2": [{"questionId": "mrix0rcacunhro62"}],
+    },
+}
+
+
+class ResolveObjectItemTests(unittest.TestCase):
+    """CET screens (measured 2026-08-23) send their catalog ``subContent`` id
+    verbatim — a full metadata URL the ``{component}-NNN`` parser never sees.
+    Without this match every CET event stored ``sub_item_id: null`` and the
+    coach never learned which screen the learner was on."""
+
+    def setUp(self):
+        self._prev = kata_catalog._SNAPSHOT.get("components")
+        kata_catalog._SNAPSHOT["components"] = {CET: _CET_COMPONENT}
+
+    def tearDown(self):
+        kata_catalog._SNAPSHOT["components"] = self._prev
+
+    def test_the_exact_catalog_url_is_the_item(self):
+        self.assertEqual(
+            kata_catalog.resolve_object_item(CET, f"{_META}/mriwy5ub14z7d79e2"),
+            (f"{_META}/mriwy5ub14z7d79e2", None),
+        )
+
+    def test_a_composite_catalog_id_is_matched_by_tail(self):
+        self.assertEqual(
+            kata_catalog.resolve_object_item(CET, f"{_META}/mrj2jntc3fjzenkxg"),
+            (f"{CET}-item-{_META}/mrj2jntc3fjzenkxg", None),
+        )
+
+    def test_a_question_object_resolves_to_its_owning_item(self):
+        self.assertEqual(
+            kata_catalog.resolve_object_item(CET, f"{_META}/mrix0rcacunhro62"),
+            (f"{_META}/mriwy5ub14z7d79e2", "mrix0rcacunhro62"),
+        )
+
+    def test_the_component_level_object_is_not_an_item(self):
+        self.assertEqual(
+            kata_catalog.resolve_object_item(
+                CET, f"https://learning.cet.ac.il/metadata/{CET}"),
+            (None, None),
+        )
+
+    def test_a_foreign_object_matches_nothing(self):
+        self.assertEqual(
+            kata_catalog.resolve_object_item(CET, f"{_META}/zznotascreen"),
+            (None, None),
+        )
+        self.assertEqual(kata_catalog.resolve_object_item(None, "x"), (None, None))
+        self.assertEqual(kata_catalog.resolve_object_item(CET, None), (None, None))
+
+
 if __name__ == "__main__":
     unittest.main()

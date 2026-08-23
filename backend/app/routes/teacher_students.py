@@ -11,13 +11,13 @@ Two invariants every route in this file keeps:
 
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
 from app.auth.dependencies import require_teacher_session
 from app.brain import org
 from app.core.localization import normalize_language
-from app.services import group_analytics, insights, teacher_insights_store
+from app.services import group_analytics, insights, kata_client, teacher_insights_store
 from app.services.lrs import reporter as lrs_reporter
 from learner_state import normalize_learner_id  # type: ignore
 
@@ -302,8 +302,21 @@ async def student_activity(
         await kata_catalog.ensure_loaded()
     except Exception:
         pass
+    # Stored topic names + authored question text (#455): the same maps the
+    # class-wide detail rides, so both screens name the same question the same
+    # way. Read-only here — this path never generates.
+    from app.services import question_topics
+
+    lang = normalize_language(language)
+    component_ids = list(dict.fromkeys(
+        row.get("component_id") for row in rows if row.get("component_id")
+    ))
+    topics = await question_topics.topics_for_components(component_ids, lang)
+    texts: dict[str, Optional[str]] = {}
+    for cid in component_ids:
+        texts.update(learning_analytics.question_texts(cid))
     return _ok({"questions": learning_analytics.label_learner_rows(
-        rows, language=normalize_language(language))})
+        rows, language=lang, topics=topics, texts=texts)})
 
 
 @router.get("/students/{learner_id}/trends")
@@ -1228,3 +1241,54 @@ async def unpin_next(learner_id: str, session=Depends(require_teacher_session)):
 
     await apply_brain_updates(safe_id, {"pinned_next": None})
     return _ok({"pinned": None})
+
+
+@router.post("/groups/{group_id}/learnings/{component_id:path}/topics")
+async def generate_question_topics(
+    group_id: str,
+    component_id: str,
+    data: dict,
+    session=Depends(require_teacher_session),
+):
+    """Generate-and-store topic names for this lomda's questions (#455).
+
+    The write half of the split: `learning_detail` (the GET) only ever reads
+    stored decisions, so opening the screen never pays a model call; this is
+    what the client fires once when the detail arrives with `topics_pending`.
+    Idempotent and anti-reroll — questions already decided (topic or null) are
+    never re-asked; only fingerprint drift (the vendor changed the content)
+    regenerates a row.
+    """
+    if not await _guard_group(session, group_id):
+        return _denied()
+    from app.services import question_topics
+
+    language = normalize_language(str((data or {}).get("language") or "he"))
+    result = await question_topics.ensure_topics(
+        component_id, session["sub"], language=language,
+    )
+    return _ok(result)
+
+
+@router.post("/learnings/{component_id:path}/preview")
+async def preview_learning(
+    component_id: str,
+    request: Request,
+    session=Depends(require_teacher_session),
+):
+    """A content-only launch URL so the teacher can open the lomda themselves.
+
+    Teacher-scoped, group-free: previewing is looking at the catalog, not at
+    learners. The launch carries a sink xAPI context (see
+    ``learning_sessions.create_preview_launch``) — nothing a teacher does in
+    the preview is recorded anywhere.
+    """
+    from app.services import learning_sessions
+
+    try:
+        view = await learning_sessions.create_preview_launch(
+            session["sub"], component_id, request_base_url=str(request.base_url)
+        )
+    except kata_client.KataError as exc:
+        return JSONResponse(content={"error": exc.code}, status_code=exc.status_code)
+    return _ok(view)

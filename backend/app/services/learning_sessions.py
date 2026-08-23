@@ -18,6 +18,7 @@ Launch/relay flow (plan §4):
 from __future__ import annotations
 
 import os
+import time
 from typing import Any, Optional
 from urllib.parse import urlsplit
 
@@ -50,17 +51,15 @@ def _public_base_url(request_base_url: str) -> str:
 # say so before the learner watches a reload storm. Configurable, because this is
 # a property of a provider's deployment on a given day — not of our code.
 #
-# Why the default is what it is (verified 2026-08-02): CET's player SPA at
-# learning.cet.ac.il boots, finds no CET SSO session (our learners authenticate
-# against 720, never against CET), and runs auth.cet.ac.il/v2/logout →
-# apigateway.cet.ac.il/AccessMngApi/logout/timeout → back to the player, once
-# every ~2.5s, forever. Its session cookies (CetState*) are SameSite=Lax, so they
-# can never reach a cross-site frame; the bounce also drops the `slxapi` query
-# parameter, losing the launch context. Reproduced in a bare <iframe> with no
-# platform code involved, with and without our sandbox attribute, and top-level
-# (where it loads exactly once). Delete this entry the day CET authenticates the
-# player from the launch `registration` instead of a browser session.
-_DEFAULT_NON_EMBEDDABLE_HOSTS = "learning.cet.ac.il"
+# learning.cet.ac.il lived here from 2026-08-02 (its SPA found no SSO session in
+# a cross-site frame and reload-looped through auth.cet.ac.il/v2/logout forever)
+# until 2026-08-23, when the promised day came: the player now authenticates
+# from the launch context itself (POST /api/authentication/content-session
+# succeeds inside a frame), renders, grades and persists state, and its relayed
+# events were verified arriving in our LRS from a framed run. The client-side
+# reload-storm detector (`embedGuard`) remains the safety net if any provider —
+# CET included — regresses; re-blocking is an env change, not a deploy.
+_DEFAULT_NON_EMBEDDABLE_HOSTS = ""
 
 
 def _non_embeddable_hosts() -> set[str]:
@@ -267,7 +266,13 @@ async def create_provider_session(
     return {
         "unit": {
             "id": unit["id"],
-            "title": unit["title"],
+            # The flat `title` on CET rows is an English machine label; the
+            # learner-facing name lives in the translations (same trap
+            # `title_translations` documents). Requested language first,
+            # Hebrew-first fallback like every other catalog surface.
+            "title": (unit.get("titles") or {}).get(language)
+                     or (unit.get("titles") or {}).get("he")
+                     or unit["title"],
             "sub_topic": unit["sub_topic"],
             "objective_id": unit["objective_id"],
             "subject": unit["subject"],
@@ -291,3 +296,46 @@ async def create_provider_session(
         "resume_token": None,
         "source": "kata",
     }
+
+
+# ── Teacher preview ───────────────────────────────────────────────────────────
+# One Kata launch per component is enough for every preview open within the
+# TTL — the launcher mints a registration per context, and a teacher paging
+# through lomdot should not mint dozens.
+_PREVIEW_TTL_SECONDS = 30 * 60
+_preview_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+
+
+async def create_preview_launch(
+    teacher_id: str, component_id: str, *, request_base_url: str
+) -> dict[str, Any]:
+    """A playable URL for a teacher's own eyes — content only, no tracking.
+
+    Unlike a learner session: no route gate (a teacher may look at anything in
+    the catalog), no learner state touched, no launch token minted on our side.
+    The xAPI context handed to Kata points at ``/api/xapi/preview/`` — not a
+    valid launch token, so our ingest 401s every statement the content reports
+    and nothing ever reaches the Brain or the LRS. The studentId is a
+    ``preview-`` pseudonym so even Kata's own records never mistake a teacher's
+    browsing for a learner working.
+    """
+    now = time.monotonic()
+    cached = _preview_cache.get(component_id)
+    if cached and now - cached[0] < _PREVIEW_TTL_SECONDS:
+        return cached[1]
+    unit, component = await kata_client.resolve_component(component_id, None)
+    public_base = _public_base_url(request_base_url)
+    context = await kata_client.create_launch_context(
+        component_id=component["id"],
+        student_id=f"preview-{normalize_learner_id(teacher_id)}",
+        platform_url=public_base,
+        lrs_endpoint=f"{public_base}/api/xapi/preview/",
+        lrs_auth="Basic preview",
+    )
+    result = {
+        "player_url": context["launch_url"],
+        "embeddable": is_embeddable(context["launch_url"]),
+        "title": component.get("title") or unit.get("title") or component["id"],
+    }
+    _preview_cache[component_id] = (now, result)
+    return result

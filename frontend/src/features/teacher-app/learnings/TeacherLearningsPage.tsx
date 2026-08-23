@@ -32,6 +32,7 @@ import {
 } from '../../../services/teacher'
 import { countKey } from '../shared/countLabel'
 import { EvidenceToggle } from '../shared/EvidenceDisclosure'
+import { LearningPreviewDialog } from '../shared/LearningPreviewDialog'
 import { ObjectiveLine } from '../shared/ObjectiveRef'
 import { subjectLabel } from '../shared/subjectLabel'
 import { agoLabel } from '../live/LiveNow'
@@ -53,14 +54,27 @@ export function rateTone(rate: number | null): 'success' | 'warn' | 'danger' | '
   return 'success'
 }
 
-/** "שאלה 3 · סעיף 2" when the catalogue knows, the raw id only as a last resort. */
+/** The question's TOPIC when one was generated (#455); otherwise the screen's
+ *  own heading plus the content's part letter; never a bare number when a name
+ *  exists. "שאלה N" survives only as the very last resort — a row the
+ *  catalogue cannot place at all. */
 export function questionLabel(
-  question: { ordinal?: number | null; part?: number | null; question_id: string },
+  question: {
+    ordinal?: number | null; part?: number | null; question_id: string
+    topic?: string | null; screen_title?: string
+  },
   t: (key: string, params?: Record<string, string | number>) => string,
 ): string {
+  const part = question.part && question.part <= 6
+    ? t(`tch.learnings.part.${question.part}`)
+    : question.part ? t('tch.learnings.partN', { n: question.part }) : null
+  if (question.topic) return part ? `${question.topic} · ${part}` : question.topic
+  if (question.screen_title) {
+    return part ? `${question.screen_title} · ${part}` : question.screen_title
+  }
   if (!question.ordinal) return t('tch.learnings.question')
   const base = t('tch.learnings.questionN', { n: question.ordinal })
-  return question.part ? `${base} · ${t('tch.learnings.partN', { n: question.part })}` : base
+  return part ? `${base} · ${part}` : base
 }
 
 export function TeacherLearningsPage() {
@@ -78,6 +92,8 @@ export function TeacherLearningsPage() {
   const [error, setError] = useState(false)
   const [query, setQuery] = useState('')
   const [onlyStarted, setOnlyStarted] = useState(false)
+  /* One preview dialog for the whole page; each card only says which lomda. */
+  const [preview, setPreview] = useState<{ id: string; title: string } | null>(null)
 
   useEffect(() => {
     if (!groupId) return
@@ -346,7 +362,8 @@ export function TeacherLearningsPage() {
           <p className="tch-learnings__unitNote">{t('tch.learnings.attentionSub')}</p>
           <div className="tch-learnings__grid">
             {attention.map((row) => (
-              <LearningCard key={row.component_id} row={row} groupId={groupId} />
+              <LearningCard key={row.component_id} row={row} groupId={groupId}
+                            onPreview={setPreview} />
             ))}
           </div>
         </section>
@@ -363,7 +380,8 @@ export function TeacherLearningsPage() {
             </h2>
             <div className="tch-learnings__grid">
               {unit.rows.map((row) => (
-                <LearningCard key={row.component_id} row={row} groupId={groupId} />
+                <LearningCard key={row.component_id} row={row} groupId={groupId}
+                              onPreview={setPreview} />
               ))}
             </div>
           </section>
@@ -374,11 +392,21 @@ export function TeacherLearningsPage() {
           body={query ? t('tch.learnings.noMatchesBody') : t('tch.learnings.emptyBody')}
         />
       )}
+
+      <LearningPreviewDialog
+        componentId={preview?.id ?? null}
+        title={preview?.title}
+        onClose={() => setPreview(null)}
+      />
     </div>
   )
 }
 
-function LearningCard({ row, groupId }: { row: LearningRow; groupId: string }) {
+function LearningCard({ row, groupId, onPreview }: {
+  row: LearningRow
+  groupId: string
+  onPreview: (target: { id: string; title: string }) => void
+}) {
   const { t } = useI18n()
   const tone = rateTone(row.success_rate)
   const name = learningName(row)
@@ -390,6 +418,17 @@ function LearningCard({ row, groupId }: { row: LearningRow; groupId: string }) {
       className={`tch-learning${row.struggling_count ? ' tch-learning--hot' : ''}${
         row.started ? '' : ' tch-learning--idle'}`}
     >
+      {/* The teacher's own window into this lomda — OUTSIDE the card's open
+          button (a button inside a button is not a thing a browser honours),
+          pinned to the far corner by CSS. */}
+      <button
+        type="button"
+        className="sp-btn sp-btn--ghost sp-btn--sm tch-learning__preview"
+        onClick={() => onPreview({ id: row.component_id, title: name.title })}
+        aria-label={t('tch.learnings.preview')}
+      >
+        <Icon name="play" size={14} aria-hidden />
+      </button>
       <button type="button" className="tch-learning__open" onClick={open}>
         <div className="tch-learning__head">
           <div className="tch-learning__titles">

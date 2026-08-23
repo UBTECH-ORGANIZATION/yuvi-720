@@ -182,6 +182,12 @@ interface CompanionContextValue {
    *  (`…-01-01-003` is a video playlist ending in a question), and the thread
    *  says so instead of looking like a plain question. */
   itemMedia: Record<string, string>
+  /** Screen id → its position in the lesson's own spine. The chat orders its
+   *  sections by THIS, so paging back to question 1 after question 2 files the
+   *  thread where the lesson puts it — not at the bottom, where visit order
+   *  would drop it. Empty when the catalog has no snapshot; encounter order
+   *  then stands. */
+  itemOrder: Record<string, number>
   /** The question the learner is on RIGHT NOW (`component|item|question`), which
    *  moves backwards too when they page back in the iframe. The chat marks and
    *  opens the matching thread from this rather than assuming it is the last. */
@@ -338,6 +344,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const [teachingItems, setTeachingItems] = useState<string[]>([])
   const [itemKinds, setItemKinds] = useState<Record<string, LessonItemKind>>({})
   const [itemMedia, setItemMedia] = useState<Record<string, string>>({})
+  const [itemOrder, setItemOrder] = useState<Record<string, number>>({})
   // The worker reads the kinds at dequeue (a screen can change while an intro
   // waits its turn), so they live in a ref as well as in state.
   const itemKindsRef = useRef<Record<string, LessonItemKind>>({})
@@ -1188,14 +1195,17 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       if (state.items) {
         const kinds: Record<string, LessonItemKind> = {}
         const media: Record<string, string> = {}
-        for (const row of state.items) {
-          if (!row.id) continue
+        const order: Record<string, number> = {}
+        state.items.forEach((row, index) => {
+          if (!row.id) return
           kinds[row.id] = row.kind
+          order[row.id] = index
           if (row.media_format) media[row.id] = row.media_format
-        }
+        })
         itemKindsRef.current = kinds   // the worker may dequeue before the re-render
         setItemKinds(kinds)
         setItemMedia(media)
+        setItemOrder(order)
       }
       if (pushSeqRef.current === seenPush) {
         applyQuestionKey(state.question_key || null, 'poll')
@@ -1645,6 +1655,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         teachingItems,
         itemKinds,
         itemMedia,
+        itemOrder,
         currentQuestionKey,
         onQuestionFrame,
         pendingAlternative,

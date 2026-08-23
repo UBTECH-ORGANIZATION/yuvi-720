@@ -17,6 +17,23 @@ MAX_REASONABLE_INTERVAL_SECONDS = 60 * 60 * 4
 PROLONGED_INTERACTION_SECONDS = int(os.environ.get("PROLONGED_INTERACTION_SECONDS", "180"))
 
 
+def capped_elapsed(timing: Optional[dict[str, Any]]) -> Optional[float]:
+    """The one shared reading rule for an inter-event gap.
+
+    Caps each gap at ``PROLONGED_INTERACTION_SECONDS`` — a learner who left the
+    tab open overnight must not register as a marathon study session — and
+    refuses gaps whose quality is marked unreliable. Every consumer that sums
+    elapsed time goes through here, so no two screens can disagree about what
+    a gap is worth.
+    """
+    elapsed = (timing or {}).get("elapsed_since_previous_seconds")
+    if not isinstance(elapsed, (int, float)):
+        return None
+    if (timing or {}).get("quality") == "unreliable":
+        return None
+    return min(float(elapsed), PROLONGED_INTERACTION_SECONDS)
+
+
 def parse_timestamp(value: object) -> Optional[datetime]:
     if not isinstance(value, str) or not value:
         return None

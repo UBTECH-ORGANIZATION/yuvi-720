@@ -74,7 +74,7 @@ async def learner_trends(
     """Per-day activity, per-subject success, streaks, and mastery milestones."""
     from app.brain.repository import get_brain
     from app.services.events import get_learner_events
-    from app.services.learning_timing import PROLONGED_INTERACTION_SECONDS
+    from app.services.learning_timing import capped_elapsed
 
     # `None` means "no preference" and takes the default; `0` is a request for
     # zero days and is clamped to one. `days or DEFAULT_DAYS` conflates them and
@@ -100,10 +100,9 @@ async def learner_trends(
         if not day or day < first_day.isoformat() or day > today.isoformat():
             continue
 
-        timing = event.get("timing") or {}
-        elapsed = timing.get("elapsed_since_previous_seconds")
-        if isinstance(elapsed, (int, float)) and timing.get("quality") != "unreliable":
-            buckets[day]["seconds"] += min(float(elapsed), PROLONGED_INTERACTION_SECONDS)
+        elapsed = capped_elapsed(event.get("timing"))
+        if elapsed is not None:
+            buckets[day]["seconds"] += elapsed
 
         if event.get("verb") not in ("answered", "attempted"):
             continue

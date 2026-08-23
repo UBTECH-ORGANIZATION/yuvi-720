@@ -389,7 +389,26 @@ async def _reconcile_sub_item_id(event: dict[str, Any]) -> None:
     """
     runtime_item = event.get("sub_item_id")
     component_id = event.get("launch")
-    if not runtime_item or not component_id:
+    if not component_id:
+        return
+    if not runtime_item:
+        # CET screens identify themselves by their catalog id verbatim (a full
+        # metadata URL) — a shape the `{component}-NNN` tail parser returns
+        # None for. Match the object id against the component's own catalog
+        # before giving up, or every CET event stays untracked.
+        try:
+            from app.services import kata_catalog
+
+            await kata_catalog.ensure_loaded()
+            item_id, question_id = kata_catalog.resolve_object_item(
+                component_id, event.get("object_id")
+            )
+            if item_id:
+                event["sub_item_id"] = item_id
+                if question_id and not event.get("question_id"):
+                    event["question_id"] = question_id
+        except Exception as exc:  # reconciliation must never block ingest
+            print(f"⚠️ object-id item match skipped: {type(exc).__name__}")
         return
     # Preserve the raw PLAYER id: `sub_item_id` becomes the catalog id, so the
     # ordinal anchor for LATER events must read runtime suffixes from here (prior
