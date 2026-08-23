@@ -22,10 +22,14 @@ SCHOOL_HOMEPAGE = f"{MOE}/school"
 ECAT_ITEM_BASE = f"{MOE}/ecat/item"
 # `grouping→content-vendor` identifies the content SUPPLIER (MoE, 03/08), which
 # is not the same thing as a catalog ITEM id — so it gets its own IRI space.
-# The base follows the ministry's own examples page (720_xAPI_JSON_Examples,
-# refreshed 16/08): `…/xapi/moe/content-vendor/<catalog-id>` — chosen over the
-# `…/moe/ecat/content-vendor/…` spelling from the email thread, per Gal, 17/08.
-CONTENT_VENDOR_BASE = f"{MOE}/content-vendor"
+# Integration report 4 (against spec v1.1) settled the base the other way from
+# the 16/08 examples page: the required shape is
+# `…/xapi/moe/ecat/content-vendor/<vendorId>` — the bare `…/moe/content-vendor/…`
+# spelling we sent was rejected ("שדה לא תקין: content-vendor.id").
+CONTENT_VENDOR_BASE = f"{MOE}/ecat/content-vendor"
+# The base report 4 retired — anything configured/cached under it is rewritten
+# onto CONTENT_VENDOR_BASE before it reaches the wire.
+_LEGACY_CONTENT_VENDOR_BASE = f"{MOE}/content-vendor"
 
 # 720 media dictionary. The Activity type of a media object follows the media
 # kind ("סוג ה-Activity יהיה בהתאם לסוג המדיה"). Anything outside the dictionary
@@ -93,12 +97,18 @@ def build_grouping(
     grouping.append(activity(config.program_iri(), "program"))
     if ecat_item_id:
         # Already an IRI (the supplier id, namespaced by `hierarchy`) → sent as
-        # it is; a bare catalog item id is namespaced here.
-        identifier = (
-            ecat_item_id
-            if str(ecat_item_id).startswith(("http://", "https://"))
-            else f"{ECAT_ITEM_BASE}/{ecat_item_id}"
-        )
+        # it is; a bare vendor/catalog id is namespaced here. Report 4 pinned
+        # the one valid base (…/moe/ecat/content-vendor/…), so the retired one
+        # is rewritten rather than trusted — env maps configured before v1.1
+        # must not keep the old spelling on the wire.
+        identifier = str(ecat_item_id)
+        if identifier.startswith(f"{_LEGACY_CONTENT_VENDOR_BASE}/"):
+            identifier = (
+                f"{CONTENT_VENDOR_BASE}/"
+                f"{identifier[len(_LEGACY_CONTENT_VENDOR_BASE) + 1:]}"
+            )
+        elif not identifier.startswith(("http://", "https://")):
+            identifier = f"{CONTENT_VENDOR_BASE}/{identifier}"
         grouping.append(activity(identifier, "content-vendor"))
     if extra:
         # De-dupe so content-origin statements can't add a SECOND lms/session/

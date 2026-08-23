@@ -7,6 +7,15 @@ content ancestry (`grouping` = unit → component → item, `parent` = the level
 directly above, `context.extensions` = every level's metadata) — posts them to the
 configured LRS, and writes a CSV of what was sent.
 
+Fixes applied after integration report 4 (spec v1.1):
+  · grouping→content-vendor id under the required base —
+    …/xapi/moe/ecat/content-vendor/<vendorId> (was …/moe/content-vendor/<id>)
+  · unit metadata `targetSector` → `targetSectors` (plural, array)
+  · component metadata `cognitiveLevel` → `cognitiveLevels` (plural, array)
+  · component metadata `manufacture` → `manufacturer`
+  · the generic ITEM skip is retired; a COMPONENT-level `skipped` is sent
+    ("דילוג על פריט הוחלף בדילוג על רכיב")
+
 Fixes applied after integration report 3 (17/08), shaped to match the ministry's
 examples page (720_xAPI_JSON_Examples.html, refreshed 16/08):
   · grouping→content-vendor carries the ministry catalog id as a full IRI
@@ -139,6 +148,14 @@ async def build_all(identity: dict, session_id: str) -> list[tuple[str, str, dic
         duration_seconds=1290, ecat_item_id=ecat,
         name_he="פתיחה, הקנייה ותרגול סטנדרטי א", hierarchy=component_level,
     ))
+    # Report 4 (spec v1.1): the ITEM skip is retired and the skip is reported at
+    # the COMPONENT level — "יש לשלוח הודעת רכיב - skipped".
+    add("component", "skipped", statements.content_skipped(
+        identity, session_id,
+        object_id=hierarchy.component_activity(COMPONENT_ID)["id"],
+        object_type="component", name_he="פתיחה, הקנייה ותרגול סטנדרטי א",
+        ecat_item_id=ecat, hierarchy=component_level,
+    ))
 
     # ── Agency questionnaire (answered carries result.score) ──────────────────
     add("questionnaire (agency)", "initialized",
@@ -248,8 +265,9 @@ async def build_all(identity: dict, session_id: str) -> list[tuple[str, str, dic
         ecat_item_id=ecat, hierarchy=answer_level,
     ))
 
-    # ── Item skipped (the questionnaire screen, typed as what it is) ──────────
-    add("questionnaire", "skipped", statements.item_skipped(
+    # ── Questionnaire skipped (the screen, typed as what it is; the generic
+    #    item-level skip is retired per spec v1.1 — see the component skip) ────
+    add("questionnaire", "skipped", statements.content_skipped(
         identity, session_id,
         object_id=f"{CONTENT_BASE}/{COMPONENT_ID}/{QUESTION_ITEM_ID}",
         object_type="questionnaire", name_he="תרגול: מדידת מסה",

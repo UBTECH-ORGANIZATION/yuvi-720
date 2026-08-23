@@ -214,10 +214,12 @@ class HierarchyTests(unittest.TestCase):
             item=ITEM, level="item",
         )
         keys = _short(built["extensions"])
-        self.assertEqual(keys["targetSector"], ["general"])
+        # Report 4 (spec v1.1) renamed these: targetSectors / cognitiveLevels
+        # are plural ARRAYS, and the provider field is `manufacturer`.
+        self.assertEqual(keys["targetSectors"], ["general"])
         self.assertEqual(keys["targetAudience"], ["grade-7"])
         self.assertEqual(keys["skills"], ["problem-solving"])
-        self.assertEqual(keys["manufacture"], "Kata")
+        self.assertEqual(keys["manufacturer"], "Kata")
         self.assertEqual(keys["componentId"], COMPONENT["id"])
         self.assertIn("informationToBot", keys)
         self.assertEqual(keys["questions"][0]["questionId"], "q1")

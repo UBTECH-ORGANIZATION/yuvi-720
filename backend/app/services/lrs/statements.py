@@ -751,19 +751,23 @@ def media_event(
     )
 
 
-def item_skipped(
+def content_skipped(
     identity: ReportingIdentity,
     session_id: str,
     *,
     object_id: str,
-    object_type: str = "item",
+    object_type: str = "component",
     name_he: Optional[str] = None,
     hierarchy: Optional[dict[str, Any]] = None,
     ecat_item_id: Optional[str] = None,
 ) -> dict[str, Any]:
-    """`object_type` follows what the skipped thing IS (the ministry's example
-    skips a questionnaire, typed `questionnaire`) — the same id must never be
-    typed differently across statements."""
+    """A `skipped` on a piece of content.
+
+    Spec v1.1 (integration report 4) retired the generic ITEM skip — "דילוג על
+    פריט הוחלף בדילוג על רכיב" — so the default level is the COMPONENT.
+    `object_type` still follows what the skipped thing IS (a questionnaire
+    screen keeps its own type; the same id must never be typed differently
+    across statements)."""
     return _base(
         identity, "skipped", activity(object_id, object_type, name_he), session_id,
         hierarchy=hierarchy,

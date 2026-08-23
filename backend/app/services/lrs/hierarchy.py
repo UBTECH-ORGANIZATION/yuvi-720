@@ -26,7 +26,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from app.services.lrs import config
-from app.services.lrs.context import MEDIA_ACTIVITY_TYPES, activity
+from app.services.lrs.context import CONTENT_VENDOR_BASE, MEDIA_ACTIVITY_TYPES, activity
 
 
 def _iri(kind: str, identifier: str) -> str:
@@ -65,8 +65,9 @@ def unit_metadata(unit: Optional[dict[str, Any]]) -> dict[str, Any]:
         "prerequisiteLearningObjective": unit.get("prerequisites") or [],
         # Who the unit was authored FOR — both are in the spec's unit table and
         # both are already normalized off the catalog, they were simply never
-        # mapped through to the statement.
-        "targetSector": unit.get("target_sector") or None,
+        # mapped through to the statement. Report 4 (spec v1.1): the sector
+        # field is PLURAL and an ARRAY — `targetSectors`, not `targetSector`.
+        "targetSectors": _as_list(unit.get("target_sector")),
         "targetAudience": unit.get("target_audience") or None,
     })
 
@@ -84,7 +85,9 @@ def component_metadata(component: Optional[dict[str, Any]]) -> dict[str, Any]:
         "masteryLevel": component.get("mastery_level"),
         "order": component.get("order"),
         "depthLevel": component.get("depth_level"),
-        "cognitiveLevel": component.get("cognitive_level"),
+        # Report 4 (spec v1.1): plural and an array. Kata publishes a single
+        # `cognitiveLevel` per component, so it ships as a one-element list.
+        "cognitiveLevels": _as_list(component.get("cognitive_level")),
         "estimatedTimeInMinutes": component.get("estimated_minutes"),
         "languages": component.get("languages") or None,
         # `mediaFormat` belongs to the ITEM in the 720 metadata table; emitting a
@@ -96,7 +99,10 @@ def component_metadata(component: Optional[dict[str, Any]]) -> dict[str, Any]:
         # component exercises, and the provider it came from (provenance in a
         # multi-provider catalog).
         "skills": component.get("skills") or [],
-        "manufacture": component.get("manufacture"),
+        # Report 4 (spec v1.1): the field is `manufacturer`. The catalog (and
+        # our normalized snapshot) still spell it `manufacture` — only the wire
+        # key changes.
+        "manufacturer": component.get("manufacture"),
     })
 
 
@@ -157,6 +163,14 @@ _ALWAYS_REPORTED: tuple[str, ...] = (
     "recommendedAfterFail",
     "skills",
 )
+
+
+def _as_list(value: Any) -> Optional[list[Any]]:
+    """Spec v1.1 array fields (`targetSectors`, `cognitiveLevels`) — a catalog
+    scalar becomes a one-element list, an absent value stays absent."""
+    if value in (None, "", [], {}):
+        return None
+    return list(value) if isinstance(value, (list, tuple)) else [value]
 
 
 def _clean(values: dict[str, Any]) -> dict[str, Any]:
@@ -253,15 +267,17 @@ async def ecat_item_for(
     catalog is asked first (a provider that publishes its ECAT id is the source
     of truth), then the configured map.
 
-    The integration report reviewed 13/08 rejected the SUPPLIER placeholder
-    ("methodica"/"10") this used to fall back to when no real catalog id was
-    registered — it wants an actual catalog item id, not a stand-in for the
-    vendor name. `config.content_vendor_id()` answered "who made this", never
-    "what item is this in the ministry's catalog", so it is no longer consulted
-    here: a field we do not have (Kata publishes no ECAT id today) is a field we
-    do not send, same as everywhere else in this module.
+    Report 3 (17/08) then pinned the catalog VENDOR ids as the values the
+    ministry actually wants here (מטח 10 · קמפוס 521 · מתודיקה 310), and report
+    4 (spec v1.1) pinned the one valid IRI shape:
+    `…/xapi/moe/ecat/content-vendor/<vendorId>`. So after the per-item
+    registrations (a published ECAT id, then the configured map) the supplier
+    map answers, keyed by the catalog's `manufacture` — resolved from the
+    content, never maintained by hand, exactly as the MoE asked on 03/08.
     """
     published: Optional[str] = None
+    manufacture: Optional[str] = None
+    subject: Optional[str] = None
     try:
         from app.services import kata_catalog
 
@@ -270,13 +286,29 @@ async def ecat_item_for(
         resolved_unit_id = unit_id or (component or {}).get("unit_id")
         unit = kata_catalog.get_unit(resolved_unit_id) if resolved_unit_id else None
         published = (component or {}).get("ecat_item_id") or (unit or {}).get("ecat_item_id")
+        # The supplier lives on components; a unit-level statement borrows it
+        # from the unit's own components (one unit never mixes suppliers).
+        manufacture = (component or {}).get("manufacture") or next(
+            (
+                c.get("manufacture")
+                for c in (unit or {}).get("components") or []
+                if c.get("manufacture")
+            ),
+            None,
+        )
+        subject = (unit or {}).get("subject")
         unit_id = resolved_unit_id or unit_id
     except Exception:  # the catalog is an optimization here, never a gate
         published = None
     configured = config.ecat_item_id(
         item_id=item_id, component_id=component_id, unit_id=unit_id
     )
-    return published or configured or None
+    if published or configured:
+        return published or configured
+    vendor_id = config.content_vendor_id(manufacture, subject=subject)
+    if vendor_id:
+        return f"{CONTENT_VENDOR_BASE}/{vendor_id}"
+    return None
 
 
 async def for_content(

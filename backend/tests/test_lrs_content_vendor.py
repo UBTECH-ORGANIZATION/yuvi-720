@@ -15,8 +15,9 @@ someone maintains by hand. Kata publishes the supplier per component as
 `manufacture` ("מתודיקה", "מטח - תוכן"), so that is the key.
 
 Integration round 3 (17/08) pinned the actual catalog ids — מטח 10, קמפוס 521,
-מתודיקה 310 — sent under the base the ministry's own examples page uses:
-`…/xapi/moe/content-vendor/<id>`.
+מתודיקה 310. Integration round 4 (spec v1.1) then pinned the one valid IRI
+base: `…/xapi/moe/ecat/content-vendor/<vendorId>` — the bare
+`…/moe/content-vendor/…` spelling was rejected as "שדה לא תקין".
 """
 
 from __future__ import annotations
@@ -80,21 +81,21 @@ class SupplierIdTests(unittest.TestCase):
 
 
 class GroupingTests(unittest.TestCase):
-    def test_the_vendor_iri_matches_the_ministry_examples_page_exactly(self):
-        """The examples page (720_xAPI_JSON_Examples, 16/08) shows
-        `https://lxp.education.gov.il/xapi/moe/content-vendor/10` for מטח — the
-        wire value must be byte-identical to that shape."""
+    def test_the_vendor_iri_matches_report_4_exactly(self):
+        """Report 4 (spec v1.1): the required shape is
+        `https://lxp.education.gov.il/xapi/moe/ecat/content-vendor/{vendorId}` —
+        the wire value must be byte-identical to that shape."""
         self.assertEqual(
             f"{context.CONTENT_VENDOR_BASE}/10",
-            "https://lxp.education.gov.il/xapi/moe/content-vendor/10",
+            "https://lxp.education.gov.il/xapi/moe/ecat/content-vendor/10",
         )
         self.assertEqual(
             f"{context.CONTENT_VENDOR_BASE}/{config.content_vendor_id('קמפוס')}",
-            "https://lxp.education.gov.il/xapi/moe/content-vendor/521",
+            "https://lxp.education.gov.il/xapi/moe/ecat/content-vendor/521",
         )
         self.assertEqual(
             f"{context.CONTENT_VENDOR_BASE}/{config.content_vendor_id('מתודיקה')}",
-            "https://lxp.education.gov.il/xapi/moe/content-vendor/310",
+            "https://lxp.education.gov.il/xapi/moe/ecat/content-vendor/310",
         )
 
     def test_a_supplier_iri_is_sent_as_it_is(self):
@@ -108,13 +109,28 @@ class GroupingTests(unittest.TestCase):
         )
         self.assertEqual(entry["id"], vendor)
 
-    def test_a_bare_catalog_item_id_is_still_namespaced(self):
+    def test_a_bare_id_is_namespaced_under_the_v11_base(self):
         grouping = context.build_grouping("sess-1", ecat_item_id="12345")
         entry = next(
             g for g in grouping
             if (g.get("definition") or {}).get("type", "").endswith("/content-vendor")
         )
-        self.assertEqual(entry["id"], f"{context.ECAT_ITEM_BASE}/12345")
+        self.assertEqual(entry["id"], f"{context.CONTENT_VENDOR_BASE}/12345")
+
+    def test_the_retired_base_is_rewritten_not_trusted(self):
+        """An env map (or cached value) configured before v1.1 still carries the
+        old `…/moe/content-vendor/…` spelling — report 4 rejected it, so it is
+        rewritten onto the required base rather than passed through."""
+        legacy = "https://lxp.education.gov.il/xapi/moe/content-vendor/310"
+        grouping = context.build_grouping("sess-1", ecat_item_id=legacy)
+        entry = next(
+            g for g in grouping
+            if (g.get("definition") or {}).get("type", "").endswith("/content-vendor")
+        )
+        self.assertEqual(
+            entry["id"],
+            "https://lxp.education.gov.il/xapi/moe/ecat/content-vendor/310",
+        )
 
     def test_content_vendor_is_absent_when_nothing_resolves(self):
         """A platform-only event (a session, a dashboard) has no supplier, and an
