@@ -28,6 +28,21 @@ import 'katex/dist/katex.min.css'
 import SceneRenderer from '../features/visuals/SceneRenderer'
 import './companion.css'
 
+const COACH_ACTION_PATHS: Readonly<Record<string, string>> = {
+  open_dashboard: '/student-dashboard',
+  open_learning: '/learning',
+  open_tasks: '/tasks',
+  open_calendar: '/student-dashboard/calendar',
+  open_goals: '/mentoring',
+  open_profile: '/results',
+  open_badges: '/badges',
+}
+
+function validatedActionPath(action: { action_id: string; path: string }): string | null {
+  const expectedPath = COACH_ACTION_PATHS[action.action_id]
+  return expectedPath === action.path ? expectedPath : null
+}
+
 interface MessageGroup {
   key: string
   /** Screen (item) + sub-question these messages belong to. */
@@ -196,6 +211,7 @@ export function CompanionChat() {
   const [draft, setDraft] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [openToolTraceId, setOpenToolTraceId] = useState<string | null>(null)
   const [fullscreenAnim, setFullscreenAnim] = useState<'in' | 'out' | null>(null)
   const fullscreenAnimTimer = useRef<number | null>(null)
   const closeTimer = useRef<number | null>(null)
@@ -613,15 +629,44 @@ export function CompanionChat() {
     canVisualize?: boolean,
     createdAt?: string,
     attribution?: CoachMessage['attribution'],
+    actions?: CoachMessage['actions'],
+    toolTrace?: CoachMessage['toolTrace'],
   ) => (
     <div
       className="sp-companion__message-row sp-companion__message-row--assistant"
       data-message-complete={isComplete ? 'true' : 'false'}
       key={key}
     >
-      <span className={`sp-companion__message-avatar${key === activeAssistantId && !text ? ' is-thinking' : ''}`}>
-        <YuviHeadIcon />
-      </span>
+      <div className={`sp-companion__message-avatar-wrap${key === activeAssistantId && !text ? ' is-thinking' : ''}`}>
+        <span className="sp-companion__message-avatar"><YuviHeadIcon /></span>
+        {key ? (
+          <>
+            <button
+              type="button"
+              className="sp-companion__tool-trace-toggle"
+              onClick={() => setOpenToolTraceId((current) => current === key ? null : key)}
+              aria-label={t('companion.tools.open')}
+              aria-expanded={openToolTraceId === key}
+              title={t('companion.tools.open')}
+            >
+              <Icon name="chip" size={14} />
+            </button>
+            {openToolTraceId === key && (
+              <div className="sp-companion__tool-trace" role="status" dir="auto">
+                <p>{t('companion.tools.title')}</p>
+                {(toolTrace ?? []).length ? <ul>
+                  {(toolTrace ?? []).map((step, index) => (
+                    <li key={`${step.name}-${index}`} data-source={step.source}>
+                      <code>{step.name}</code>
+                      <span data-status={step.status}>{t(`companion.tools.status.${step.status}`)}</span>
+                    </li>
+                  ))}
+                </ul> : <p>{t('companion.tools.empty')}</p>}
+              </div>
+            )}
+          </>
+        ) : null}
+      </div>
       <div className="sp-companion__message-stack">
         <div className="sp-companion__msg sp-companion__msg--assistant" dir="auto">
           {isComplete && text && key && (
@@ -693,6 +738,20 @@ export function CompanionChat() {
               onRequest={(mode: VisualMode) => void requestVisual(key, mode)}
             />
           )}
+          {isComplete && actions?.map((action) => {
+            const path = validatedActionPath(action)
+            if (!path) return null
+            return (
+              <button
+                key={action.action_id}
+                type="button"
+                className="sp-companion__action"
+                onClick={() => navigate(path)}
+              >
+                {t(action.label_key)}
+              </button>
+            )
+          })}
         </div>
         {text && (createdAt || (isComplete && key)) && (
           <div className="sp-companion__msg-footer">
@@ -738,7 +797,7 @@ export function CompanionChat() {
 
   const renderMessage = (m: CoachMessage) => (
     m.role === 'assistant'
-      ? assistantMessage(m.text, m.id, m.visual, m.isVisualizing, m.textAfter, m.isComplete, m.visualFailed, m.canVisualize, m.createdAt, m.attribution)
+      ? assistantMessage(m.text, m.id, m.visual, m.isVisualizing, m.textAfter, m.isComplete, m.visualFailed, m.canVisualize, m.createdAt, m.attribution, m.actions, m.toolTrace)
       : (
         <div key={m.id} className="sp-companion__message-row sp-companion__message-row--user">
           <div className="sp-companion__message-stack sp-companion__message-stack--user">
@@ -1237,7 +1296,7 @@ export function CompanionChat() {
         <div className="sp-companion__composer-shell">
           {isTaskMode ? (
             !isStreaming
-              && (pendingAlternative || (openSectionAsks && (!supportUsed.hint || !supportUsed.explanation))) && (
+              && (pendingAlternative || (openSectionAsks && (supportUsed.hintLevel < supportUsed.maxHintLevel || !supportUsed.explanation))) && (
               <div className="sp-companion__support-options" role="group" aria-label={t('companion.task.actions')}>
                 {pendingAlternative && (
                   <button
@@ -1249,7 +1308,7 @@ export function CompanionChat() {
                     <span>{t('companion.task.altSwitch')}</span>
                   </button>
                 )}
-                {openSectionAsks && !supportUsed.hint && (
+                {openSectionAsks && supportUsed.hintLevel < supportUsed.maxHintLevel && (
                   <button
                     type="button"
                     className="sp-companion__support-option"

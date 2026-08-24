@@ -11,18 +11,29 @@ Working memory (last N turns) lives in `agent_sessions`, so the chat resumes.
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import re
 from typing import AsyncGenerator, Optional
 
 from app.agents import answer_guard
 from app.agents import coach_calendar
+from app.agents.coach_modes import (
+    CoachMode,
+    GENERAL_COMPANION_INSTRUCTIONS,
+    project_bundle,
+    resolve_mode,
+)
 from app.agents import manim_visual
 from app.agents import safety
 from app.agents import sessions
+from app.agents import coach_tools
+from app.agents.coach_tools import registry as coach_tool_registry
 from app.agents.client import build_chat_client
 from app.brain.context_engine import build_coach_bundle
 from app.brain.memory import classify_query_intent, profile_answer_fallback
+from app.services import coach_actions
+from app.services import coach_debug_trace
 from app.services.ai_usage import UsageContext
 from app.services.llm import LlmModelTier, call_llm, call_llm_stream
 
@@ -217,6 +228,20 @@ QUERY_MODE_INSTRUCTIONS = {
             "as an empty calendar. Do not calculate dates, invent items, or claim to remember the calendar."
         ),
     },
+    "calendar_action_request": {
+        "he": (
+            "התלמיד/ה מבקש/ת לבצע פעולה ביומן. אין לך הרשאה לקבוע, לשנות או לבטל פריט. "
+            "הסבר/י בקצרה שאפשר להמשיך ביומן, בלי לטעון שהפעולה בוצעה ובלי להמציא זמינות."
+        ),
+        "ar": (
+            "يطلب الطالب تنفيذ إجراء في التقويم. لا تملك صلاحية حجز عنصر أو تغييره أو إلغائه. "
+            "اشرح بإيجاز أنه يمكن المتابعة في التقويم، من دون الادعاء بأن الإجراء نُفذ أو اختلاق توفر."
+        ),
+        "en": (
+            "The learner is asking to perform a calendar action. You are not authorized to book, change, or cancel an item. "
+            "Briefly explain that they can continue in the calendar, without claiming the action was completed or inventing availability."
+        ),
+    },
 }
 
 # Proactive nudges (used by the trigger engine in P4).
@@ -293,6 +318,16 @@ PROACTIVE_PROMPTS = {
         "ar": "دخل/ت الطالب/ة للتوّ إلى الدرس، وقد قيلت له/ها سطر افتتاحيّ شخصيّ يناديه/ها باسمه/ها ويسأل عن حاله/ها اليوم — لا ترحّب/ي مجدّدًا، ولا تسأل/ي مرّة أخرى عن حاله/ها، ولا تستخدم/ي اسمه/ها. تابع/ي مباشرة من ذلك السطر بدفء وإيجاز (جملة أو جملتان): اذكر/ي بكلماتك عمّ يدور هذا الدرس وفق current_objective (إن غاب فتابع/ي دون اختلاق موضوع)، وقل/قولي إنّك هنا للمرافقة والمساعدة على طول الطريق. دون حلّ، دون قوائم، ودون عبارة موافقة فارغة. اختم/ي بدعوة دافئة للبدء تترك مجالًا للردّ أوّلًا على سؤال \"كيف حالك\" إن أراد/ت.",
         "en": "The learner has just opened the lesson and has ALREADY been greeted by name and asked how they are today — do not greet again, do not ask how they are again, and do not use their name. Continue straight on from that line, warmly and briefly (1–2 sentences): say in your own words what THIS lesson is about per current_objective (if it's missing, continue without inventing a topic), and that you're here to guide and help along the way. No solving, no lists, no empty agreement phrase. End with a warm invitation to begin that still leaves room for them to answer the \"how are you\" first, if they want to.",
     },
+}
+
+# A question intro is offered before the learner asks for help. If its generated
+# wording would reveal the answer, keep Yuvi present without making it sound as
+# though the learner requested a solution. Learner-initiated turns retain the
+# answer guard's normal redirect.
+QUESTION_INTRO_BLOCKED_FALLBACK = {
+    "he": "אני כאן איתך. קח/י רגע להסתכל על מה שמופיע בשאלה, וכשתרצה/י נחשוב יחד על הצעד הראשון.",
+    "ar": "أنا هنا معك. خذ/ي لحظة للنظر إلى ما يظهر في السؤال، وعندما ترغب/ين يمكننا التفكير معًا في الخطوة الأولى.",
+    "en": "I am here with you. Take a moment to look at what the question shows, and when you are ready we can think through the first step together.",
 }
 
 # The one line in the whole companion that says the learner's own name.
@@ -459,6 +494,47 @@ def _has_personalization(bundle: dict) -> bool:
     return bool(bundle.get("student_description") or bundle.get("strategies"))
 
 
+def _fallback_navigation_action(
+    query_intent: str,
+    bundle: dict,
+    calendar_context: dict | None = None,
+) -> str | None:
+    """Return the relevant learner area when a requested fact is unavailable."""
+    if query_intent == "calendar_action_request":
+        return "open_calendar"
+    if query_intent == "calendar_clarification":
+        return "open_calendar"
+    if query_intent in {"calendar_query", "calendar_action_request"}:
+        context = calendar_context or {}
+        if context.get("status") != "available" or not context.get("items"):
+            return "open_calendar"
+        return None
+    if query_intent == "goal_planning" and not (bundle.get("goals") or []):
+        return "open_goals"
+    if query_intent == "task_query":
+        current = bundle.get("current") or {}
+        if current.get("task_status") != "resume_available":
+            return "open_tasks"
+        return None
+    if query_intent == "profile_question" and not _has_personalization(bundle):
+        return "open_profile"
+    if query_intent == "dashboard_query" and not _has_personalization(bundle):
+        return "open_dashboard"
+    return None
+
+
+def _append_fallback_navigation_action(
+    action_offers: list[dict[str, object]], action_id: str | None, mode: CoachMode
+) -> None:
+    """Attach one catalog-validated fallback action without duplication."""
+    if not action_id or any(item.get("action_id") == action_id for item in action_offers):
+        return
+    result = coach_actions.offer(action_id, mode)
+    offer = result.get("data") if result.get("status") == "available" else None
+    if isinstance(offer, dict):
+        action_offers.append(offer)
+
+
 FALLBACK_REPLY = {
     "he": "אני כאן איתך. בוא/י ננסה צעד קטן ביחד — מה החלק שהכי מאתגר עכשיו?",
     "ar": "أنا هنا معك. لنجرّب خطوة صغيرة معًا — ما الجزء الأصعب الآن؟",
@@ -613,7 +689,7 @@ def _render_context(bundle: dict, learner_message: str = "") -> str:
         for g in (bundle.get("goals") or [])
     )
     recent = joined(
-        f"verb={event.get('verb') or '—'}, component={event.get('component_id') or '—'}, question={event.get('question_id') or '—'}, object={event.get('object_id') or '—'}, success={event.get('success')}, misconception={event.get('misconception') or '—'}, elapsed_seconds={event.get('elapsed_seconds')}, timing_quality={event.get('timing_quality') or '—'}"
+        f"verb={event.get('verb') or '—'}, component={event.get('component_id') or '—'}, question={event.get('question_id') or '—'}, object={event.get('object_id') or '—'}, success={event.get('success')}, response={event.get('response') or '—'}, answer_diagnostic={event.get('answer_diagnostic') or '—'}, misconception={event.get('misconception') or '—'}, elapsed_seconds={event.get('elapsed_seconds')}, timing_quality={event.get('timing_quality') or '—'}"
         for event in (current.get("recent_events") or [])
     )
     calendar = bundle.get("calendar_context") or {}
@@ -747,6 +823,72 @@ def _coach_tier() -> LlmModelTier:
     return "strong" if choice == "strong" else "mini"
 
 
+def _tool_calling_enabled() -> bool:
+    """Keep provider-selected tools opt-in until shadow validation is complete."""
+    return (os.environ.get("COACH_TOOL_CALLING_ENABLED") or "").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
+
+
+async def _plan_coach_tools(
+    messages: list[dict[str, object]],
+    context: coach_tool_registry.CoachToolContext,
+    usage_context: UsageContext,
+    debug_trace: Optional[list[dict[str, str]]] = None,
+) -> list[dict[str, object]]:
+    """Let the model make bounded, read-only data requests before replying.
+
+    The final learner response still uses the ordinary guarded stream. Planning
+    output is never shown directly, so an unavailable provider/tool preserves
+    the existing Coach fallback path.
+    """
+    available_schemas = coach_tool_registry.schemas(context.mode)
+    if not _tool_calling_enabled() or not available_schemas:
+        coach_debug_trace.append(debug_trace, "tool_plan", "skipped")
+        return messages
+
+    planned_messages = list(messages)
+    for index in range(2):
+        response = await call_llm(
+            planned_messages,
+            usage_context=usage_context.for_operation(
+                f"{context.mode.value}.tool_plan.{index}"
+            ),
+            max_tokens=300,
+            model_tier=_coach_tier(),
+            tools=available_schemas,
+            tool_choice="auto",
+        )
+        if not isinstance(response, dict) or not response.get("tool_calls"):
+            break
+
+        planned_messages.append(response)
+        for call in response["tool_calls"]:
+            function = call.get("function") or {}
+            name = str(function.get("name") or "")
+            try:
+                arguments = json.loads(function.get("arguments") or "{}")
+            except (TypeError, ValueError):
+                arguments = {}
+            if not isinstance(arguments, dict):
+                arguments = {}
+            result = await coach_tool_registry.dispatch(name, arguments, context)
+            coach_debug_trace.append(
+                debug_trace,
+                name or "unknown_tool",
+                "error" if result.get("error") else "ok",
+            )
+            planned_messages.append({
+                "role": "tool",
+                "tool_call_id": call.get("id"),
+                "name": name,
+                "content": json.dumps(result, ensure_ascii=False, default=str),
+            })
+        if context.budget_exhausted():
+            break
+    return planned_messages
+
+
 async def _stream_coach_model(
     messages: list[dict[str, str]], usage_context: UsageContext
 ) -> AsyncGenerator[str, None]:
@@ -799,10 +941,16 @@ async def run_coach_stream(
     endpoint: str = "/api/agent/coach/stream",
     surface_context: Optional[dict] = None,
     support_mode: Optional[str] = None,
+    hint_level: Optional[int] = None,
     pinned_question_key: Optional[str] = None,
+    action_offers: Optional[list[dict[str, object]]] = None,
+    visual_requests: Optional[list[dict[str, str]]] = None,
+    debug_trace: Optional[list[dict[str, str]]] = None,
 ) -> AsyncGenerator[str, None]:
     """Stream a Coach reply (chat or proactive), Safety-gated, then persist it."""
     lang = language if language in COACH_INSTRUCTIONS else "he"
+    coach_mode = resolve_mode(surface_context)
+    coach_role = coach_mode.value
     usage_context = UsageContext(
         actor_id=learner_id,
         actor_type="learner",
@@ -825,15 +973,21 @@ async def run_coach_stream(
         memory_user = f"[support:{support_mode}]"
     elif user_message is not None:
         screened = safety.screen_input(user_message, lang)
+        coach_debug_trace.append(debug_trace, "screen_input")
         prompt_text = screened.text or FALLBACK_REPLY[lang]
         memory_user = prompt_text
+
+        if safety.has_unrespectful_language(prompt_text):
+            coach_debug_trace.append(debug_trace, "respectful_language", "blocked")
+            yield safety.redirect_message("respect", lang)
+            return
 
         # The Safety classifier needs the immediately preceding tutoring turns
         # to distinguish a valid choice such as "like an address" from a
         # disclosure. It bounds and PII-redacts the window before provider use.
         try:
             history = await sessions.get_recent(
-                learner_id, "coach", limit=8, session_id=session_id
+                learner_id, coach_role, limit=8, session_id=session_id
             )
         except Exception:
             history = []
@@ -849,6 +1003,9 @@ async def run_coach_stream(
             lang,
             usage_context=usage_context.for_operation("safety.disclosure_classification"),
             recent_conversation=history,
+        )
+        coach_debug_trace.append(
+            debug_trace, "classify_disclosure", "blocked" if category in {"distress", "personal"} else "ok"
         )
         if category in ("distress", "personal"):
             if category == "distress":
@@ -868,7 +1025,7 @@ async def run_coach_stream(
 
     if user_message is None:
         history = await sessions.get_recent(
-            learner_id, "coach", limit=8, session_id=session_id
+            learner_id, coach_role, limit=8, session_id=session_id
         )
     base_intent = (
         f"support_{support_mode}" if support_mode in SUPPORT_PROMPTS
@@ -908,7 +1065,9 @@ async def run_coach_stream(
         query_intent=query_intent,
         pinned_question_key=pinned_question_key,
     )
-    if query_intent == "calendar_query":
+    coach_debug_trace.append(debug_trace, "build_coach_bundle")
+    bundle = project_bundle(bundle, coach_mode)
+    if query_intent in {"calendar_query", "calendar_action_request"}:
         period = calendar_route.get("period") or coach_calendar.resolve_calendar_period(prompt_text, lang)
         weekday = calendar_route.get("weekday") or coach_calendar.resolve_calendar_weekday(prompt_text, lang)
         bundle["calendar_context"] = await coach_calendar.load_calendar_context(
@@ -916,6 +1075,17 @@ async def run_coach_stream(
             period,
             weekday,
         )
+        coach_debug_trace.append(
+            debug_trace,
+            "get_calendar",
+            "ok" if bundle["calendar_context"].get("status") == "available" else "error",
+        )
+    fallback_action_id = _fallback_navigation_action(
+        query_intent, bundle, bundle.get("calendar_context"),
+    )
+    _append_fallback_navigation_action(
+        action_offers if action_offers is not None else [], fallback_action_id, coach_mode,
+    )
     # A question-intro only makes sense on a real question. On the component's
     # intro/cover frame (no current question resolved) stay SILENT — yield nothing
     # and persist nothing, so the client shows no orphan message.
@@ -939,10 +1109,10 @@ async def run_coach_stream(
         lang = bundle.get("locale") or lang
     title_task: Optional[asyncio.Task[tuple[str, str]]] = None
     if user_message is not None and query_intent != "calendar_clarification" and await sessions.conversation_needs_title(
-        learner_id, session_id, role="coach"
+        learner_id, session_id, role=coach_role
     ):
         title_basis = await sessions.get_first_user_message(
-            learner_id, session_id, role="coach"
+            learner_id, session_id, role=coach_role
         ) or memory_user
         title_task = asyncio.create_task(generate_conversation_title(
             title_basis,
@@ -950,9 +1120,13 @@ async def run_coach_stream(
             usage_context.for_operation("coach.title"),
         ))
     bundle["conversation_memory"] = await sessions.get_conversation_memory(
-        learner_id, "coach", session_id=session_id
+        learner_id, coach_role, session_id=session_id
     )
-    instructions = COACH_INSTRUCTIONS[lang]
+    instructions = (
+        COACH_INSTRUCTIONS[lang]
+        if coach_mode is CoachMode.LESSON
+        else GENERAL_COMPANION_INSTRUCTIONS[lang]
+    )
     instructions = f"{instructions}\n- {GROUNDING_GUARDRAIL[lang]}"
     on_lesson_screen = (bundle.get("current") or {}).get("on_lesson_screen", True)
     if not on_lesson_screen:
@@ -961,6 +1135,21 @@ async def run_coach_stream(
         instructions = f"{instructions}\n- {VISUAL_REQUEST_ACK[lang]}"
     if support_mode in SUPPORT_PROMPTS:
         instructions = f"{instructions}\n- {SUPPORT_PROMPTS[support_mode][lang]}"
+    latest_diagnostic = next(
+        (
+            event.get("answer_diagnostic")
+            for event in (bundle.get("current") or {}).get("recent_events") or []
+            if isinstance(event.get("answer_diagnostic"), dict)
+        ),
+        None,
+    )
+    if (latest_diagnostic or {}).get("outcome") == "partial":
+        partial_instruction = {
+            "he": "הניסיון האחרון נכון חלקית לפי אבחון דטרמיניסטי. הכיר/י רק ברעיון או ברכיב שכבר עובד, וכוון/ני אך ורק לרכיב החסר. אל תחזור/י ללמד כלל שהניסיון החלקי כבר מוכיח שהלומד/ת מבין/ה.",
+            "ar": "المحاولة الأخيرة صحيحة جزئيًا وفق تشخيص حتمي. اعترف/ي فقط بالفكرة أو بالجزء الذي يعمل، ووجّه/ي إلى الجزء الناقص فقط. لا تعِد/ي تعليم قاعدة يثبت الحل الجزئي أن الطالب/ة يفهمها.",
+            "en": "The latest attempt is partially correct according to deterministic evidence. Acknowledge only the idea or component that is working, then guide only the missing component. Do not reteach a rule that the partial attempt already demonstrates the learner understands.",
+        }
+        instructions = f"{instructions}\n- {partial_instruction[lang]}"
     # On a help moment, tell the coach to adapt the FORM of help to this learner's
     # known style — but only when the profile actually has signal (else the
     # personalization-gap prompts in the context handle the cold-start ask).
@@ -985,39 +1174,43 @@ async def run_coach_stream(
     if media_note:
         instructions = f"{instructions}\n- {media_note[lang]}"
 
-    # A-4b tutor decision layer: classify the moment → fixed-taxonomy strategy +
-    # intention → condition the generation → log the triple (teacher-explainable).
+    # A-4b is lesson-only policy. General chat has no active question to tutor.
     from app.agents import tutor_decision
     recent_view = (bundle.get("current") or {}).get("recent_events") or []
-    hint_level = 1
+    resolved_hint_level = hint_level or 1
     component_for_ladder = (surface_context or {}).get("component_id")
     # The VanLehn ladder escalates on repeated HINT requests only; an
     # explanation is its own strategy and must not push the learner toward the
     # L3 worked-example bottom-out.
-    is_hint = support_mode == "hint"
-    if is_hint:
-        hint_level = tutor_decision.next_hint_level(
+    is_hint = coach_mode is CoachMode.LESSON and support_mode == "hint"
+    if is_hint and hint_level is None:
+        resolved_hint_level = tutor_decision.next_hint_level(
             {"hint_ladder": (bundle.get("current") or {}).get("hint_ladder") or {}},
             component_for_ladder,
         )
-    decision = tutor_decision.decide(
-        error_type=tutor_decision.classify_error_type(recent_view),
-        query_intent=query_intent,
-        support_mode=support_mode,
-        trigger=trigger,
-        hint_level=hint_level,
-        has_open_misconception=any(e.get("misconception") for e in recent_view),
-    )
+    decision = None
+    if coach_mode is CoachMode.LESSON:
+        decision = tutor_decision.decide(
+            error_type=tutor_decision.classify_error_type(recent_view),
+            query_intent=query_intent,
+            support_mode=support_mode,
+            trigger=trigger,
+            hint_level=resolved_hint_level,
+            has_open_misconception=any(e.get("misconception") for e in recent_view),
+        )
+        coach_debug_trace.append(debug_trace, "tutor_decision")
+    else:
+        coach_debug_trace.append(debug_trace, "tutor_decision", "skipped")
     if decision is not None:
-        instructions = f"{instructions}\n- {tutor_decision.guidance_line(decision, hint_level)}"
+        instructions = f"{instructions}\n- {tutor_decision.guidance_line(decision, resolved_hint_level)}"
         await tutor_decision.log_decision(
             learner_id, decision,
             session_id=session_id, exchange_id=exchange_id,
-            hint_level=hint_level if is_hint else None,
+            hint_level=resolved_hint_level if is_hint else None,
             surface_component=component_for_ladder,
         )
-        if is_hint:
-            await tutor_decision.record_hint_level(learner_id, component_for_ladder, hint_level)
+        if is_hint and hint_level is None:
+            await tutor_decision.record_hint_level(learner_id, component_for_ladder, resolved_hint_level)
 
     # Naming a specific option ("סעיף א'", "תשובה 2", "אופציה ג'", "אפשרות 3")
     # is resolved deterministically in `_referenced_option`, but handing the
@@ -1054,13 +1247,27 @@ async def run_coach_stream(
                 )
 
     messages = _build_messages(instructions, _render_context(bundle, prompt_text), history, prompt_text)
+    tool_context = coach_tool_registry.CoachToolContext(
+        learner_id=learner_id,
+        mode=coach_mode,
+        language=lang,
+        session_id=session_id,
+        exchange_id=exchange_id,
+        bundle=bundle,
+        action_offers=action_offers if action_offers is not None else [],
+        visual_requests=visual_requests if visual_requests is not None else [],
+    )
+    messages = await _plan_coach_tools(messages, tool_context, usage_context, debug_trace)
 
     # Ground truth is in the prompt so the coach can guide accurately, and a
     # prompt rule alone does not survive "just give me the answer". Every
     # sentence is checked BEFORE it is yielded, so a reveal never reaches the
     # client. With the question unknown it still blocks an "the answer is …"
     # assertion, which is never a coaching move.
-    guard = answer_guard.build((bundle.get("current") or {}).get("question"))
+    guard = answer_guard.build(
+        (bundle.get("current") or {}).get("question")
+        if coach_mode is CoachMode.LESSON else None
+    )
     blocked = False
 
     collected = ""
@@ -1081,7 +1288,11 @@ async def run_coach_stream(
         yield deterministic_opener
     pending_output = ""
     sentence_count = 0
-    max_sentences = 6 if support_mode == "explanation" else 3
+    # A learner can ask about a question whose stem itself contains several
+    # sentences. Three sentences would exhaust the reply before Yuvi answered
+    # the learner's actual question, so lesson chat gets the same bounded room
+    # as an explicit explanation.
+    max_sentences = 6 if support_mode == "explanation" or coach_mode is CoachMode.LESSON else 3
     # The whitespace that followed the last sentence emitted. Rejoining with a
     # flat " " is what silently broke every table: a header row glued onto the
     # end of the preceding sentence is no longer at the start of a line, so the
@@ -1138,14 +1349,20 @@ async def run_coach_stream(
             yield separator + remainder
 
     # The reveal is dropped, not trimmed around: whatever followed it was built
-    # on the answer being out. The learner gets the refusal the prompt asks for,
-    # and the stored turn matches exactly what they saw.
+    # on the answer being out. A blocked automatic question intro gets a safe
+    # availability fallback; all other turns retain the answer-protection
+    # redirect. The stored turn always matches exactly what the learner saw.
     if blocked:
         print(f"🛡️ coach answer-reveal blocked (learner={learner_id}, mode={support_mode or query_intent})")
-        redirect = answer_guard.REDIRECT.get(lang) or answer_guard.REDIRECT["he"]
+        redirect = (
+            QUESTION_INTRO_BLOCKED_FALLBACK.get(lang) or QUESTION_INTRO_BLOCKED_FALLBACK["he"]
+            if trigger == "question_intro"
+            else answer_guard.REDIRECT.get(lang) or answer_guard.REDIRECT["he"]
+        )
         separator = " " if collected else ""
         collected += separator + redirect
         yield separator + redirect
+    coach_debug_trace.append(debug_trace, "answer_guard", "blocked" if blocked else "ok")
 
     if not collected.strip():
         if query_intent == "profile_question":
@@ -1157,6 +1374,11 @@ async def run_coach_stream(
         else:
             collected = FALLBACK_REPLY[lang]
         yield collected
+
+    # A fenced Yuvi diagram is rendered in the client from this exact response;
+    # record it separately from the planned/rendered scene-visual pipeline.
+    if DIAGRAM_FENCE in collected:
+        coach_debug_trace.append(debug_trace, "embedded_diagram")
 
     # Persist the turn as working memory so the chat resumes (no localStorage).
     conversation_title: Optional[str] = None
@@ -1182,7 +1404,7 @@ async def run_coach_stream(
     )
     await sessions.append_turn(
         learner_id,
-        "coach",
+        coach_role,
         user=memory_user,
         assistant=collected,
         session_id=session_id,
@@ -1192,17 +1414,19 @@ async def run_coach_stream(
         title_source=title_source,
         question_key=question_key,
         query_intent=query_intent,
-        calendar_period=(calendar_route.get("period") if query_intent == "calendar_query" else None),
-        calendar_weekday=(calendar_route.get("weekday") if query_intent == "calendar_query" else None),
-        calendar_route_source=(calendar_route.get("source") if query_intent == "calendar_query" else None),
+        calendar_period=(calendar_route.get("period") if query_intent in {"calendar_query", "calendar_action_request"} else None),
+        calendar_weekday=(calendar_route.get("weekday") if query_intent in {"calendar_query", "calendar_action_request"} else None),
+        calendar_route_source=(calendar_route.get("source") if query_intent in {"calendar_query", "calendar_action_request"} else None),
+        assistant_meta={"actions": tool_context.action_offers} if tool_context.action_offers else None,
     )
+    coach_debug_trace.append(debug_trace, "persist_conversation_turn")
 
     # Chat persists (§5.7): consolidate durable signals (interests) from the turn.
     # Only for real learner messages, and never a blocker on the reply.
     if (
         user_message is not None
         and not memory_processed_before_reply
-        and query_intent not in {"calendar_query", "calendar_clarification"}
+        and query_intent not in {"calendar_query", "calendar_action_request", "calendar_clarification"}
     ):
         try:
             from app.brain.consolidator import capture_and_consolidate

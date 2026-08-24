@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import re
 from typing import Any, Optional
 
 import certifi
@@ -55,6 +56,10 @@ _SAFE_PRICING_FIELDS = {
     "effective_from": 1,
     "effective_to": 1,
 }
+
+_SAFE_TRACE_FIELDS = {"_id": 0, "steps.name": 1, "steps.status": 1, "created_at": 1}
+_TRACE_NAME = re.compile(r"[a-z][a-z0-9_:.]{0,79}")
+_TRACE_STATUSES = {"ok", "skipped", "blocked", "error"}
 
 
 class UsageEventRepository:
@@ -127,6 +132,26 @@ class UsageEventRepository:
             )
             latest.setdefault(key, document)
         return list(latest.values())
+
+    async def fetch_coach_debug_trace(self, exchange_id: str) -> Optional[dict[str, Any]]:
+        """Return the narrow technical projection used by the admin trace viewer."""
+        document = await self._collection().database["coach_debug_traces"].find_one(
+            {"_id": exchange_id}, _SAFE_TRACE_FIELDS,
+        )
+        if not isinstance(document, dict):
+            return None
+        steps = []
+        for step in (document.get("steps") or [])[:24]:
+            if not isinstance(step, dict):
+                continue
+            name, status = str(step.get("name") or ""), str(step.get("status") or "")
+            if _TRACE_NAME.fullmatch(name) and status in _TRACE_STATUSES:
+                steps.append({"name": name, "status": status})
+        created_at = document.get("created_at")
+        return {
+            "created_at": created_at.isoformat() if isinstance(created_at, datetime) else str(created_at or ""),
+            "steps": steps,
+        }
 
     def close(self) -> None:
         if self._client is not None:

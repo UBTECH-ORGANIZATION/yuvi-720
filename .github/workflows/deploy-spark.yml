@@ -70,6 +70,8 @@ jobs:
               WEBSITES_PORT=8000 \
               LLM_STRONG_DEPLOYMENT_NAME=gpt-5.4 \
               LLM_MINI_DEPLOYMENT_NAME=gpt-5.4-mini \
+              COACH_TOOL_CALLING_ENABLED=true \
+              COACH_DEBUG_TRACE_ENABLED=false \
             --output none
 
       - name: Verify required Dev slot settings
@@ -90,6 +92,8 @@ jobs:
             PUBLIC_APP_URL
             SECRET_KEY
             WEBSITES_PORT
+            COACH_TOOL_CALLING_ENABLED
+            COACH_DEBUG_TRACE_ENABLED
             LRS_ENABLED
             LRS_TOKEN_URL
             LRS_STATEMENTS_URL
@@ -105,6 +109,17 @@ jobs:
           done
           if (( ${#missing_settings[@]} )); then
             printf 'Missing required Dev slot settings: %s\n' "${missing_settings[*]}"
+            exit 1
+          fi
+
+          trace_enabled="$(az webapp config appsettings list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --slot ${{ env.SLOT_NAME }} \
+            --query \"[?name=='COACH_DEBUG_TRACE_ENABLED'].value | [0]\" \
+            --output tsv | tr '[:upper:]' '[:lower:]')"
+          if [[ "$trace_enabled" == "1" || "$trace_enabled" == "true" || "$trace_enabled" == "yes" || "$trace_enabled" == "on" ]]; then
+            echo "COACH_DEBUG_TRACE_ENABLED must remain disabled in the Dev slot"
             exit 1
           fi
 
@@ -132,6 +147,20 @@ jobs:
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Verify production Coach controls
+        run: |
+          production_flags="$(az webapp config appsettings list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --query \"[?name=='COACH_TOOL_CALLING_ENABLED' || name=='COACH_DEBUG_TRACE_ENABLED'].{name:name,value:value}\" \
+            --output json)"
+          tool_enabled="$(jq -r '.[] | select(.name == \"COACH_TOOL_CALLING_ENABLED\") | .value' <<< \"$production_flags\" | tr '[:upper:]' '[:lower:]')"
+          trace_enabled="$(jq -r '.[] | select(.name == \"COACH_DEBUG_TRACE_ENABLED\") | .value' <<< \"$production_flags\" | tr '[:upper:]' '[:lower:]')"
+          if [[ "$tool_enabled" != "true" || "$trace_enabled" == "1" || "$trace_enabled" == "true" || "$trace_enabled" == "yes" || "$trace_enabled" == "on" ]]; then
+            echo "Production Coach flags must be COACH_TOOL_CALLING_ENABLED=true and COACH_DEBUG_TRACE_ENABLED=false"
+            exit 1
+          fi
 
       - name: Swap Dev slot → Production
         run: |

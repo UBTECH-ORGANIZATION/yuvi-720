@@ -114,6 +114,46 @@ class AdminRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json()["detail"], "admin_authentication_required")
 
+    def test_coach_trace_is_admin_only_and_exposes_only_technical_steps(self) -> None:
+        class FakeRepository:
+            async def fetch_coach_debug_trace(self, exchange_id: str):
+                self.exchange_id = exchange_id
+                return {
+                    "created_at": "2026-08-20T12:00:00+00:00",
+                    "steps": [{"name": "tool_plan", "status": "skipped"}],
+                    "learner_id": "must-not-leak",
+                    "prompt": "must-not-leak",
+                }
+
+        repository = FakeRepository()
+        self.app.state.usage_repository = repository
+        unauthenticated = self.client.get("/api/coach-debug-traces/exchange-1")
+        self.assertEqual(unauthenticated.status_code, 401)
+
+        self._sign_in()
+        response = self.client.get("/api/coach-debug-traces/exchange-1")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["cache-control"], "no-store")
+        self.assertEqual(response.json(), {
+            "created_at": "2026-08-20T12:00:00+00:00",
+            "steps": [{"name": "tool_plan", "status": "skipped"}],
+        })
+        self.assertEqual(repository.exchange_id, "exchange-1")
+
+    def test_coach_trace_rejects_invalid_exchange_id(self) -> None:
+        self._sign_in()
+        response = self.client.get("/api/coach-debug-traces/not%20a%20trace")
+        self.assertEqual(response.status_code, 404)
+
+    def test_public_preview_never_exposes_coach_traces(self) -> None:
+        public_app = create_app(TEST_SETTINGS, public_access=True)
+        public_client = TestClient(public_app)
+
+        response = public_client.get("/api/coach-debug-traces/exchange-1")
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()["detail"], "admin_authentication_required")
+
     def test_authenticated_usage_report_reads_sanitized_events(self) -> None:
         class FakeRepository:
             async def fetch_events(self, **_):

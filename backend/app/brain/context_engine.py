@@ -80,7 +80,7 @@ AGENT_VIEWS: dict[str, dict[str, list[str]]] = {
             "profile.preferences", "profile.environment", "profile.activeness",
             "profile.mapping_clarifications", "strengths",
             "challenges", "strategies", "goals", "current_state",
-            "teacher_directives", "memory", "mastery", "student_description",
+            "teacher_directives", "memory", "mastery", "student_description", "reflections_recent",
         ],
         "write": [],   # coach's durable writes go through the memory consolidator (§5.7)
     },
@@ -489,6 +489,8 @@ async def build_coach_bundle(
         {
             "verb": safe_text(e.get("verb"), 60),
             "success": (e.get("result") or {}).get("success"),
+            "response": safe_text((e.get("result") or {}).get("response"), 200),
+            "answer_diagnostic": (e.get("result") or {}).get("answer_diagnostic"),
             "effortful": e.get("effortful"),
             "misconception": safe_text(e.get("misconception"), 120),
             "question_id": safe_text(e.get("question_id"), 100),
@@ -671,6 +673,16 @@ async def build_coach_bundle(
         "coaching_hints": coaching_hints,
         "personalization_gaps": personalization_gaps,
         "mapping_clarifications": clarifications,
+        "reflection_summary": {
+            "has_recent_reflection": bool(brain.get("reflections_recent")),
+            "recent_count": min(len(brain.get("reflections_recent") or []), 8),
+            "most_recent_prompt_id": safe_text(
+                ((brain.get("reflections_recent") or [{}])[-1] or {}).get("prompt_id"), 80
+            ) if isinstance((brain.get("reflections_recent") or [{}])[-1], dict) else "",
+            "most_recent_at": safe_text(
+                ((brain.get("reflections_recent") or [{}])[-1] or {}).get("at"), 40
+            ) if isinstance((brain.get("reflections_recent") or [{}])[-1], dict) else "",
+        },
         "goals": [
             {
                 "text": safe_text(g.get("text")),

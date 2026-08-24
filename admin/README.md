@@ -14,6 +14,7 @@ Google administrator authentication is required by default. `ADMIN_PUBLIC_ACCESS
 - When public mode is disabled, Google OpenID Connect establishes the administrator identity and `ADMIN_EMAILS` is rechecked on every authenticated request.
 - The API reads only an explicit allowlist of operational fields from `ai_usage_events`.
 - Prompts, model responses, names, learner emails, disclosures, provider URLs, headers, secrets, and exception messages are never queried.
+- Coach debug traces are always admin-only, including when public preview is enabled. They expose only an exchange timestamp and bounded technical step names/statuses; they never query learner identity, conversation content, prompts, tool arguments, model output, URLs, headers, or secrets.
 - The current container startup synchronizes the approved pricing catalog. Its MongoDB credential therefore needs read access to `ai_usage_events` and read/upsert/index access to `ai_usage_pricing`. It does not need write access to usage events.
 - The learner-facing Spark backend has the inverse responsibility: it inserts `ai_usage_events` and reads effective pricing from `ai_usage_pricing` when finalizing each event.
 

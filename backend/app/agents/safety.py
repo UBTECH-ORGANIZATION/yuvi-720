@@ -133,6 +133,12 @@ PERSONAL_REDIRECT = {
     "en": "One moment before we continue — I'm Yuvi, an AI 🤖. It's best not to share personal details about you or your family with me. Let's get back to learning 💜",
 }
 
+RESPECTFUL_LANGUAGE_REDIRECT = {
+    "he": "רגע לפני שנמשיך — חשוב לדבר כאן בכבוד. אני יובי, בינה מלאכותית 🤖, ואשמח לעזור כשננסח את השאלה בלי קללות או פגיעה. בוא/י נחזור ללמידה 💜",
+    "ar": "لحظة قبل أن نكمل — من المهم أن نتحدث هنا باحترام. أنا يوفي، ذكاء اصطناعي 🤖، وسأساعدك بكل سرور عندما نصوغ السؤال من دون شتائم أو إساءة. لنعد إلى التعلّم 💜",
+    "en": "One moment before we continue — it is important to speak respectfully here. I'm Yuvi, an AI 🤖, and I'll be glad to help when we phrase the question without swearing or hurtful language. Let's get back to learning 💜",
+}
+
 # Reply when a learner shares emotional/social/family DISTRESS (e.g. "my friends
 # don't like me", "my parents are divorcing", "I hate myself"): AI disclosure +
 # warmly point them to a trusted adult. A wellbeing flag is recorded for the
@@ -146,7 +152,11 @@ DISTRESS_SUPPORT = {
 
 def redirect_message(category: str, language: str) -> str:
     """Localized learner-facing reply for a Safety disclosure category."""
-    table = DISTRESS_SUPPORT if category == "distress" else PERSONAL_REDIRECT
+    table = (
+        DISTRESS_SUPPORT if category == "distress"
+        else RESPECTFUL_LANGUAGE_REDIRECT if category == "respect"
+        else PERSONAL_REDIRECT
+    )
     return table.get(language, table["he"])
 
 
@@ -159,7 +169,7 @@ def is_safety_redirect(text: str) -> bool:
     stripped = text.strip()
     return any(
         stripped == table[lang]
-        for table in (DISTRESS_SUPPORT, PERSONAL_REDIRECT)
+        for table in (DISTRESS_SUPPORT, PERSONAL_REDIRECT, RESPECTFUL_LANGUAGE_REDIRECT)
         for lang in table
     )
 
@@ -190,6 +200,13 @@ def screen_input(text: str, language: str = "he") -> SafetyResult:
     flagged = found or bool(_BLOCKLIST.search(sanitized))
     reason = "israeli_id" if real_id else "pii_or_blocklist" if flagged else None
     return SafetyResult(text=sanitized.strip(), flagged=flagged, reason=reason)
+
+
+def has_unrespectful_language(text: str) -> bool:
+    """Whether deterministic moderation recognizes profanity or an insult."""
+    from app.services import content_filter
+
+    return content_filter.check_content(text).category == content_filter.PROFANITY
 
 
 def screen_output(text: str, language: str = "he") -> SafetyResult:

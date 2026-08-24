@@ -145,9 +145,15 @@ export function LessonPage() {
           )
           setReentryOpen(!isRedo && persisted?.progress_state === 'completed')
           wasCompletedAtLaunchRef.current = persisted?.progress_state === 'completed'
-          // Re-resolve the companion thread: the SAME open thread on a resume,
-          // or the freshly reset one after a redo.
-          window.dispatchEvent(new CustomEvent('yuvilab:lesson-session-created'))
+          // Every provider launch owns a clean Coach thread. Send its immutable
+          // launch id so the companion never reloads a prior lesson entry.
+          window.dispatchEvent(new CustomEvent('yuvilab:lesson-session-created', {
+            detail: {
+              sessionId: nextSession.session_id,
+              unitId: nextSession.unit.id,
+              componentId: nextSession.component.id,
+            },
+          }))
         }
       })
       .catch((reason: unknown) => {

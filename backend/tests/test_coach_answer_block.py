@@ -37,9 +37,14 @@ BALLOON_BUNDLE = {
 }
 
 
-def _drive(model_output: list[str], user_message: str = "תן לי את התשובה"):
+def _drive(
+    model_output: list[str],
+    user_message: str | None = "תן לי את התשובה",
+    trigger: str | None = None,
+):
     """Run the coach with a stubbed model; return (streamed_text, persisted)."""
     persisted: dict = {}
+    debug_trace: list[dict[str, str]] = []
 
     async def fake_stream(messages, usage_context):
         for chunk in model_output:
@@ -72,9 +77,13 @@ def _drive(model_output: list[str], user_message: str = "תן לי את התשו
     async def run():
         chunks = []
         async for piece in coach.run_coach_stream(
-            "test-learner", user_message=user_message, language="he", session_id="s1"
+            "test-learner", user_message=user_message, trigger=trigger,
+            language="he", session_id="s1",
+            surface_context={"screen": "learning_lesson", "component_id": "mass-component"},
+            debug_trace=debug_trace,
         ):
             chunks.append(piece)
+        persisted["debug_trace"] = debug_trace
         return "".join(chunks)
 
     from app.agents import tutor_decision
@@ -129,6 +138,18 @@ class CoachAnswerBlockTests(unittest.TestCase):
         self.assertIn("מה זה אומר על המאזניים", streamed)
         self.assertNotIn(answer_guard.REDIRECT["he"], streamed)
 
+    def test_lesson_question_context_does_not_consume_the_entire_reply_budget(self):
+        streamed, _ = _drive([
+            "השאלה הפעילה היא מצאו את האוצר. ",
+            "לפניכם שתי תיבות. ",
+            "המסה של כל אחת מהן היא 10 ק\"ג. ",
+            "סימנת נפח התיבה. ",
+            "כדי להשוות משקל צריך לבדוק גם את המסה. ",
+        ], user_message="מה השאלה הפעילה ומה סימנתי?")
+
+        self.assertIn("סימנת נפח התיבה", streamed)
+        self.assertIn("כדי להשוות משקל", streamed)
+
     def test_persisted_turn_matches_what_the_learner_saw(self):
         streamed, persisted = _drive([
             "התשובה היא שהבלון המנופח כבד יותר. ",
@@ -139,6 +160,28 @@ class CoachAnswerBlockTests(unittest.TestCase):
     def test_hint_mode_is_guarded_too(self):
         streamed, _ = _drive(["הבלון המנופח כבד יותר, כי יש בו אוויר. "])
         self.assertIn(answer_guard.REDIRECT["he"], streamed)
+
+    def test_blocked_question_intro_uses_safe_availability_fallback(self):
+        streamed, persisted = _drive(
+            ["הבלון המנופח כבד יותר, כי יש בו אוויר. "],
+            user_message=None,
+            trigger="question_intro",
+        )
+        fallback = coach.QUESTION_INTRO_BLOCKED_FALLBACK["he"]
+        self.assertEqual(streamed, fallback)
+        self.assertEqual(persisted.get("assistant"), fallback)
+        self.assertNotIn(answer_guard.REDIRECT["he"], streamed)
+        self.assertNotIn("המנופח כבד יותר", streamed)
+
+    def test_safe_question_intro_streams_normally(self):
+        streamed, persisted = _drive(
+            ["בוא/י נבדוק מה קורה כשמנפחים את הבלון. "],
+            user_message=None,
+            trigger="question_intro",
+        )
+        self.assertEqual(streamed, "בוא/י נבדוק מה קורה כשמנפחים את הבלון.")
+        self.assertEqual(persisted.get("assistant"), streamed)
+        self.assertNotIn(coach.QUESTION_INTRO_BLOCKED_FALLBACK["he"], streamed)
 
 
 if __name__ == "__main__":

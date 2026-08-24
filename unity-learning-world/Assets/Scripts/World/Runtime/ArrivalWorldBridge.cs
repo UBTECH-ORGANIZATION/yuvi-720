@@ -34,6 +34,7 @@ namespace Yuvi720.LearningWorld.World
 
         private readonly Dictionary<string, Transform> landmarkById = new();
         private readonly List<CloudCurtain> curtains = new();
+        private readonly Queue<Vector3> travelRoute = new();
         private WorldConfig config;
         private string selectedId;
         private string travellingId;
@@ -56,6 +57,8 @@ namespace Yuvi720.LearningWorld.World
         private const float MoveSpeed = 7f;
         private const float ArriveDist = 1.3f;
         private const float ProjScaleBase = 22f;   // camera-to-player distance that maps to scale ≈ 1.0
+        private static readonly Vector3 BluffRampBase = new(-5f, .23f, 12f);
+        private static readonly Vector3 BluffRampTop = new(-5f, 2.42f, 15f);
 
         private void Awake()
         {
@@ -104,6 +107,7 @@ namespace Yuvi720.LearningWorld.World
             {
                 // Single-scene build: the slots are already wired at build time — just map them in order.
                 RebuildLandmarkMapping();
+                EnsureBluffRampIsWalkable(SceneManager.GetActiveScene());
             }
 
             configured = true;
@@ -114,6 +118,7 @@ namespace Yuvi720.LearningWorld.World
         // landmark slots, collect its cloud curtains, then re-map landmarks→slots in config order.
         private void OnSectionLoaded(string sectionId, Scene scene)
         {
+            EnsureBluffRampIsWalkable(scene);
             foreach (var root in scene.GetRootGameObjects())
             {
                 foreach (var pop in root.GetComponentsInChildren<ProximityPopAnimator>(true))
@@ -130,6 +135,24 @@ namespace Yuvi720.LearningWorld.World
             {
                 firstSectionBound = true;
                 if (!travelling && playerController != null) playerController.enabled = true;
+            }
+        }
+
+        private static void EnsureBluffRampIsWalkable(Scene scene)
+        {
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                foreach (var transform in root.GetComponentsInChildren<Transform>(true))
+                {
+                    if (transform.name != "Transition-overlook-rise") continue;
+                    transform.gameObject.SetActive(true);
+                    foreach (var filter in transform.GetComponentsInChildren<MeshFilter>(true))
+                    {
+                        if (filter.sharedMesh == null || filter.GetComponent<Collider>() != null) continue;
+                        filter.gameObject.AddComponent<MeshCollider>().sharedMesh = filter.sharedMesh;
+                    }
+                    return;
+                }
             }
         }
 
@@ -176,9 +199,25 @@ namespace Yuvi720.LearningWorld.World
             if (!landmarkById.TryGetValue(landmarkId, out var slot) || slot == null) return;
             selectedId = landmarkId;
             travellingId = landmarkId;
-            travelTarget = slot.position;
+            BuildTravelRoute(slot.position);
+            travelTarget = travelRoute.Dequeue();
             travelling = true;
             if (playerController != null) playerController.enabled = false; // bridge drives movement while routing
+        }
+
+        private void BuildTravelRoute(Vector3 destination)
+        {
+            travelRoute.Clear();
+
+            // The Arrival bluff is separated from the plaza by a cliff. Its authored ramp is the only
+            // walkable connection, so route between elevation bands through its two endpoints.
+            if (destination.y > 1.2f && player.position.y < 1.8f)
+            {
+                travelRoute.Enqueue(BluffRampBase);
+                travelRoute.Enqueue(BluffRampTop);
+            }
+
+            travelRoute.Enqueue(destination);
         }
 
         // ── loop ────────────────────────────────────────────────────────────────────────────
@@ -196,6 +235,11 @@ namespace Yuvi720.LearningWorld.World
             var delta = to - player.position; delta.y = 0f;
             if (delta.magnitude < ArriveDist)
             {
+                if (travelRoute.Count > 0)
+                {
+                    travelTarget = travelRoute.Dequeue();
+                    return;
+                }
                 travelling = false;
                 if (playerController != null) playerController.enabled = true;
                 var done = travellingId; travellingId = null;

@@ -20,7 +20,9 @@ ISRAEL_TIMEZONE = ZoneInfo("Asia/Jerusalem")
 CalendarWeekday = Literal[
     "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday",
 ]
-CalendarRouteIntent = Literal["calendar_query", "learning_help", "calendar_clarification"]
+CalendarRouteIntent = Literal[
+    "calendar_query", "calendar_action_request", "learning_help", "calendar_clarification",
+]
 
 _WEEKDAY_INDEX: dict[CalendarWeekday, int] = {
     "monday": 0,
@@ -216,9 +218,9 @@ async def resolve_calendar_route(
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Keep clear requests deterministic; ask a mini model only for ambiguous follow-ups."""
-    if base_intent == "calendar_query":
+    if base_intent in {"calendar_query", "calendar_action_request"}:
         return {
-            "intent": "calendar_query",
+            "intent": base_intent,
             "period": resolve_calendar_period(message, language, now=now),
             "weekday": resolve_calendar_weekday(message, language),
             "source": "deterministic",

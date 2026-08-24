@@ -16,7 +16,9 @@ import {
   requestVisualization,
   saveHelpedAttribution,
   type CoachConversation,
+  type CoachActionOffer,
   type CoachHistoryMessage,
+  type CoachToolTraceStep,
   type CoachVisual,
   type CoachSupportMode,
   type HelpMethod,
@@ -43,6 +45,10 @@ export interface CoachMessage {
   visualFailed?: boolean
   /** LLM decided this reply is explanatory → offer the on-demand visual buttons. */
   canVisualize?: boolean
+  /** Server-validated navigation offers attached to this assistant reply. */
+  actions?: CoachActionOffer[]
+  /** In-memory development trace, available only for the active streamed reply. */
+  toolTrace?: CoachToolTraceStep[]
   isComplete: boolean
   createdAt?: string
   /** The question (component|item|question) this message belongs to, so the
@@ -56,6 +62,12 @@ export interface CoachMessage {
   /** Success nudges only: the help methods the learner actually used on this
    *  question, offered as "what helped you?" chips. Absent = no reflection UI. */
   attribution?: { methods: HelpMethod[]; questionKey: string | null }
+}
+
+interface LessonLaunch {
+  sessionId: string
+  unitId: string
+  componentId: string
 }
 
 /** A single queued turn of Yuvi's voice. The worker plays these one at a time. */
@@ -109,6 +121,29 @@ function diesWithScreen(action: ChatAction): boolean {
 const RETRY_LIMIT = 1
 const RETRY_DELAY_MS = 900
 
+const TOOL_TRACE_STATUSES = new Set<CoachToolTraceStep['status']>([
+  'ok', 'skipped', 'blocked', 'error',
+])
+const TOOL_TRACE_SOURCES = new Set<CoachToolTraceStep['source']>(['system', 'agent'])
+
+function parseToolTrace(value: unknown): CoachToolTraceStep[] | null {
+  if (!Array.isArray(value) || value.length > 24) return null
+  const steps: CoachToolTraceStep[] = []
+  for (const step of value) {
+    if (!step || typeof step !== 'object') return null
+    const { name, status, source } = step as Record<string, unknown>
+    if (typeof name !== 'string' || !/^[a-z][a-z0-9_:.]{0,79}$/.test(name)) return null
+    if (typeof status !== 'string' || !TOOL_TRACE_STATUSES.has(status as CoachToolTraceStep['status'])) return null
+    if (source !== undefined && (typeof source !== 'string' || !TOOL_TRACE_SOURCES.has(source as CoachToolTraceStep['source']))) return null
+    steps.push({
+      name,
+      status: status as CoachToolTraceStep['status'],
+      source: source as CoachToolTraceStep['source'] ?? 'system',
+    })
+  }
+  return steps
+}
+
 /** Hard ceiling on ONE turn before the worker takes the queue back. Above any
  * real turn including an inline visual render, so it only ever fires on a turn
  * that is not coming back. */
@@ -160,9 +195,9 @@ interface CompanionContextValue {
   canStartNewConversation: boolean
   send: (text: string) => Promise<void>
   requestSupport: (support: CoachSupportMode) => Promise<void>
-  /** One-shot per question: which support buttons were already used on the
-   *  question the learner is currently on (re-armed on progression). */
-  supportUsed: { hint: boolean; explanation: boolean }
+  /** Support used on the active question. Hints remain available through the
+   *  server-approved ladder; explanation is one-shot. */
+  supportUsed: { hint: boolean; hintLevel: number; maxHintLevel: number; explanation: boolean }
   /** Screen id → the question number the learner sees for it, from the catalog.
    *  The chat titles each question thread from this, so the heading matches the
    *  lesson instead of counting sections on screen. */
@@ -227,11 +262,15 @@ const COMPANION_CLOSING_MS = 1500
 
 function historyMessage(message: CoachHistoryMessage): CoachMessage {
   return {
-    id: message.id,
+    // Persisted turns retain their original client-generated `live-` ids.
+    // Prefix them on reload so the lesson panel never mistakes old transcript
+    // rows for messages streamed during the current launch.
+    id: `history-${message.id}`,
     role: message.role,
     text: message.text,
     textAfter: message.text_after || undefined,
     visual: message.visual,
+    actions: message.meta?.actions,
     isComplete: true,
     createdAt: message.at,
     questionKey: message.question_key ?? null,
@@ -312,6 +351,14 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const activityScoped = Boolean(user)
     && surface.screen === 'learning_lesson'
     && Boolean(surface.unit_id && surface.component_id)
+  const [lessonLaunch, setLessonLaunch] = useState<LessonLaunch | null>(null)
+  // Updated synchronously in the launch event so an older async turn can be
+  // rejected before React has had a chance to render the new state.
+  const lessonLaunchRef = useRef<LessonLaunch | null>(null)
+  const lessonLaunchReady = activityScoped
+    && lessonLaunch?.unitId === surface.unit_id
+    && lessonLaunch?.componentId === surface.component_id
+  const conversationMode = activityScoped ? 'lesson_coach' : 'general_companion'
   const [isOpen, setIsOpen] = useState(false)
   const [isOpening, setIsOpening] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
@@ -338,7 +385,9 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const [activity, setActivity] = useState<CompanionActivity>('idle')
   const [unreadCount, setUnreadCount] = useState(0)
   const [disclosure, setDisclosure] = useState<string | null>(null)
-  const [supportUsed, setSupportUsed] = useState({ hint: false, explanation: false })
+  const [supportUsed, setSupportUsed] = useState({
+    hint: false, hintLevel: 0, maxHintLevel: 3, explanation: false,
+  })
   const [questionOrdinals, setQuestionOrdinals] = useState<Record<string, number>>({})
   const [questionParts, setQuestionParts] = useState<Record<string, number>>({})
   const [teachingItems, setTeachingItems] = useState<string[]>([])
@@ -355,13 +404,31 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const [currentQuestionKey, setCurrentQuestionKey] = useState<string | null>(null)
   const [explainerOpen, setExplainerOpen] = useState(false)
   const [pendingAlternative, setPendingAlternative] = useState<TriggerAlternative | null>(null)
-  // Bumped when the lesson page (re)creates a provider session — on an ordinary
-  // relaunch this just re-resolves the SAME open activity thread (continuity,
-  // 720 §6); on an explicit redo the backend already reset it, so re-resolving
-  // lands on the fresh thread and re-reads the cleared one-shot support state.
+  // Bumped when the lesson page creates a provider session. Every provider
+  // launch gets its own clean Coach thread, keyed by the immutable session id.
   const [lessonEpoch, setLessonEpoch] = useState(0)
   useEffect(() => {
-    const onLessonSession = () => setLessonEpoch((epoch) => epoch + 1)
+    const onLessonSession = (event: Event) => {
+      const detail = (event as CustomEvent<Partial<LessonLaunch>>).detail
+      if (!detail?.sessionId || !detail.unitId || !detail.componentId) return
+      const nextLaunch = {
+        sessionId: detail.sessionId,
+        unitId: detail.unitId,
+        componentId: detail.componentId,
+      }
+      // A queued or in-flight turn can belong to the previous launch. Abort it
+      // before clearing the panel so it cannot write an old answer afterwards.
+      inFlightRef.current?.controller.abort()
+      queueRef.current = []
+      activeConversationIdRef.current = null
+      setActiveConversationId(null)
+      setMessages([])
+      setMessageCursor(null)
+      setHasMoreMessages(false)
+      lessonLaunchRef.current = nextLaunch
+      setLessonLaunch(nextLaunch)
+      setLessonEpoch((epoch) => epoch + 1)
+    }
     window.addEventListener('yuvilab:lesson-session-created', onLessonSession)
     return () => window.removeEventListener('yuvilab:lesson-session-created', onLessonSession)
   }, [])
@@ -382,6 +449,9 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // Mirrors activeConversationId so a serial queue turn reuses the id the
   // previous turn created without waiting for a re-render.
   const activeConversationIdRef = useRef<string | null>(null)
+  // Current lesson thread id. Prior launch threads stay audit-only and are
+  // superseded server-side when the next launch is created.
+  const lessonConversationIdRef = useRef<string | null>(null)
   // Items (question SCREENS) whose arrival intro has played this launch, and the
   // specific sub-questions (`item|question`) intro'd within them — so each
   // sub-question on a multi-question screen (q1→q2) gets one starting message and
@@ -430,6 +500,11 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { messagesRef.current = messages }, [messages])
   useEffect(() => { activeConversationIdRef.current = activeConversationId }, [activeConversationId])
+  useEffect(() => {
+    if (activityScoped && activeConversationId && activeConversationId !== 'default') {
+      lessonConversationIdRef.current = activeConversationId
+    }
+  }, [activityScoped, activeConversationId])
   // A relaunch is a fresh start — re-arm the per-question intro, and drop any
   // queued non-user actions from the previous screen/launch.
   useEffect(() => {
@@ -462,13 +537,16 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // streaming — so the finished activity's messages stayed on screen through the
   // transition and the next lesson's opening line landed underneath them, as if
   // it were more of the same conversation.
-  const lastComponentRef = useRef<string | null>(null)
+  const lastLessonActivityRef = useRef<string | null>(null)
   useEffect(() => {
-    const component = surface.component_id || null
-    if (lastComponentRef.current === component) return
-    const previous = lastComponentRef.current
-    lastComponentRef.current = component
+    const activity = activityScoped
+      ? `${surface.unit_id || ''}|${surface.component_id || ''}`
+      : null
+    if (lastLessonActivityRef.current === activity) return
+    const previous = lastLessonActivityRef.current
+    lastLessonActivityRef.current = activity
     if (previous === null) return   // first activity of the session: nothing to clear
+    lessonConversationIdRef.current = null
     // Anything still streaming belongs to the activity being left.
     inFlightRef.current?.controller.abort()
     queueRef.current = []
@@ -487,10 +565,17 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     welcomedThreadsRef.current = new Set()
     welcomedEpochRef.current = -1
     setPendingAlternative(null)
-    setSupportUsed({ hint: false, explanation: false })
-  }, [surface.component_id])
+    setSupportUsed({ hint: false, hintLevel: 0, maxHintLevel: 3, explanation: false })
+  }, [activityScoped, surface.component_id, surface.unit_id])
 
   const nextId = () => `live-${Date.now()}-${counter.current++}`
+
+  const createCurrentConversation = useCallback(async (): Promise<CoachConversation> => {
+    if (activityScoped && !lessonLaunchReady) {
+      throw new Error('Lesson launch is not ready')
+    }
+    return createCoachConversation(surface, lessonLaunchReady ? lessonLaunch?.sessionId : undefined)
+  }, [activityScoped, lessonLaunch?.sessionId, lessonLaunchReady, surface])
 
   // Drain the queue serially: exactly one stream at a time, staleness re-checked
   // at DEQUEUE (a nudge queued behind a long intro may no longer be worth
@@ -647,6 +732,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     if (onLesson) {
       open()
     } else if (wasOnLessonRef.current) {
+      lessonConversationIdRef.current = null
       if (openingTimer.current) clearTimeout(openingTimer.current)
       if (closingTimer.current) clearTimeout(closingTimer.current)
       openingTimer.current = null
@@ -679,7 +765,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     setHistoryError(false)
     messageLoading.current = true
     try {
-      const page = await listCoachMessages(conversationId)
+      const page = await listCoachMessages(conversationId, undefined, 20, conversationMode)
       if (messageRequest.current !== request) return
       setMessages(page.messages.map(historyMessage))
       setMessageCursor(page.next_cursor)
@@ -693,7 +779,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         setIsLoadingMessages(false)
       }
     }
-  }, [])
+  }, [conversationMode])
 
   const reloadHistory = useCallback(async () => {
     if (conversationLoading.current) return
@@ -701,7 +787,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     setIsLoadingConversations(true)
     setHistoryError(false)
     try {
-      const page = await listCoachConversations()
+      const page = await listCoachConversations(undefined, 12, conversationMode)
       setConversations(page.conversations)
       setConversationCursor(page.next_cursor)
       setHasMoreConversations(page.has_more)
@@ -711,17 +797,18 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       conversationLoading.current = false
       setIsLoadingConversations(false)
     }
-  }, [])
+  }, [conversationMode])
 
   useEffect(() => {
+    if (activityScoped && !lessonLaunchReady) return
     let active = true
     conversationLoading.current = true
     setIsLoadingConversations(true)
     const initialize = async () => {
       const activityConversation = activityScoped
-        ? await createCoachConversation(surface)
+        ? await createCurrentConversation()
         : null
-      const page = await listCoachConversations()
+      const page = await listCoachConversations(undefined, 12, conversationMode)
       return { activityConversation, page }
     }
     initialize()
@@ -755,14 +842,14 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       active = false
       messageRequest.current += 1
     }
-  }, [activityScoped, lessonEpoch, pathname, selectConversation, surface])
+  }, [activityScoped, conversationMode, createCurrentConversation, lessonEpoch, lessonLaunchReady, pathname, selectConversation])
 
   const loadMoreConversations = useCallback(async () => {
     if (!hasMoreConversations || !conversationCursor || conversationLoading.current) return
     conversationLoading.current = true
     setIsLoadingConversations(true)
     try {
-      const page = await listCoachConversations(conversationCursor)
+      const page = await listCoachConversations(conversationCursor, 12, conversationMode)
       setConversations((current) => mergeUnique(current, page.conversations))
       setConversationCursor(page.next_cursor)
       setHasMoreConversations(page.has_more)
@@ -772,7 +859,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       conversationLoading.current = false
       setIsLoadingConversations(false)
     }
-  }, [conversationCursor, hasMoreConversations])
+  }, [conversationCursor, conversationMode, hasMoreConversations])
 
   const loadMoreMessages = useCallback(async () => {
     if (!activeConversationId || !hasMoreMessages || !messageCursor || messageLoading.current) return
@@ -780,7 +867,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     messageReads.current += 1
     setIsLoadingMessages(true)
     try {
-      const page = await listCoachMessages(activeConversationId, messageCursor)
+      const page = await listCoachMessages(activeConversationId, messageCursor, 20, conversationMode)
       setMessages((current) => {
         const existing = new Set(current.map((message) => message.id))
         return [
@@ -799,14 +886,15 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         setIsLoadingMessages(false)
       }
     }
-  }, [activeConversationId, hasMoreMessages, messageCursor])
+  }, [activeConversationId, conversationMode, hasMoreMessages, messageCursor])
 
   const startNewConversation = useCallback(async () => {
     if (isStreaming) return
+    if (activityScoped && !lessonLaunchReady) return
     setHistoryError(false)
     try {
       if (activityScoped) {
-        const conversation = await createCoachConversation(surface)
+        const conversation = await createCurrentConversation()
         setConversations((current) => [
           conversation,
           ...current.filter((item) => item.id !== conversation.id),
@@ -819,19 +907,19 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         await selectConversation(existingEmpty.id)
         return
       }
-      const conversation = await createCoachConversation(surface)
+      const conversation = await createCurrentConversation()
       setConversations((current) => [conversation, ...current.filter((item) => item.id !== conversation.id)])
       await selectConversation(conversation.id)
     } catch {
       setHistoryError(true)
     }
-  }, [activityScoped, conversations, isStreaming, selectConversation, surface])
+  }, [activityScoped, conversations, createCurrentConversation, isStreaming, lessonLaunchReady, selectConversation])
 
   const deleteConversation = useCallback(async (conversationId: string) => {
     if (isStreaming) return false
     setHistoryError(false)
     try {
-      await deleteCoachConversation(conversationId)
+      await deleteCoachConversation(conversationId, conversationMode)
       const remaining = conversations.filter((item) => item.id !== conversationId)
       setConversations(remaining)
       if (activeConversationId === conversationId) {
@@ -842,7 +930,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         if (remaining[0]) {
           await selectConversation(remaining[0].id)
         } else {
-          const conversation = await createCoachConversation(surface)
+          const conversation = await createCurrentConversation()
           setConversations([conversation])
           await selectConversation(conversation.id)
         }
@@ -852,14 +940,19 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       setHistoryError(true)
       return false
     }
-  }, [activeConversationId, conversations, isStreaming, selectConversation, surface])
+  }, [activeConversationId, conversationMode, conversations, createCurrentConversation, isStreaming, selectConversation])
 
   // Ensure a conversation exists (mirrored in a ref so serial queue turns reuse
   // the id the previous turn created, without waiting for a re-render).
   const ensureConversationId = useCallback(async (): Promise<string | null> => {
     if (activeConversationIdRef.current) return activeConversationIdRef.current
+    if (activityScoped && !lessonLaunchReady) return null
+    const expectedLaunchId = activityScoped ? lessonLaunchRef.current?.sessionId : null
     try {
-      const conversation = await createCoachConversation(surface)
+      const conversation = await createCurrentConversation()
+      // The request started for an earlier lesson launch. Its response and any
+      // later stream must never become the active conversation for this page.
+      if (activityScoped && lessonLaunchRef.current?.sessionId !== expectedLaunchId) return null
       activeConversationIdRef.current = conversation.id
       setActiveConversationId(conversation.id)
       // A lesson thread is scoped to the lesson and is not offered in the chat
@@ -872,7 +965,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     } catch {
       return null
     }
-  }, [surface, activityScoped])
+  }, [activityScoped, createCurrentConversation, lessonLaunchReady])
 
   // Mark the streamed assistant row complete and stamp it for the grace window.
   const completeAssistant = useCallback((assistantId: string) => {
@@ -939,6 +1032,21 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           setMessages((prev) => prev.map((m) => (
             m.id === assistantId ? { ...m, canVisualize } : m
           ))),
+        onEvent: (event) => {
+          const actions = event.actions
+          const toolTrace = parseToolTrace(event.tool_trace) ?? []
+          const hasToolTrace = Object.prototype.hasOwnProperty.call(event, 'tool_trace')
+          if (!Array.isArray(actions) && !hasToolTrace) return
+          setMessages((prev) => prev.map((m) => (
+            m.id === assistantId
+              ? {
+                ...m,
+                ...(Array.isArray(actions) ? { actions: actions as CoachActionOffer[] } : {}),
+                ...(hasToolTrace ? { toolTrace } : {}),
+              }
+              : m
+          )))
+        },
       }, conversationId, surface), () => received)
     } catch {
       setMessages((prev) => prev.map((m) => (
@@ -1012,6 +1120,13 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           setMessages((prev) => prev.map((m) => (
             m.id === assistantId ? { ...m, text: m.text + chunk } : m
           ))),
+        onEvent: (event) => {
+          if (!Object.prototype.hasOwnProperty.call(event, 'tool_trace')) return
+          const toolTrace = parseToolTrace(event.tool_trace) ?? []
+          setMessages((prev) => prev.map((m) => (
+            m.id === assistantId ? { ...m, toolTrace } : m
+          )))
+        },
       }, conversationId, surface, questionKey)
     } catch {
       /* An intro must never disrupt the learner. */
@@ -1043,7 +1158,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // any question) Yuvi greets them with what THIS lesson is about + an offer to
   // help — grounded in `current_objective` — replacing the generic greeting. A
   // silent/empty reply is dropped like an intro.
-  const playWelcome = useCallback(async (_action: ChatAction) => {
+  const playWelcome = useCallback(async (action: ChatAction) => {
     // DECIDE first, claim the turn second. `liveTurnInProgress` tells the
     // conversation effect "don't replace `messages`, a bubble is being written"
     // — and holding it across the arrival check below meant the effect skipped
@@ -1063,11 +1178,13 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     // this launch's live turns, that left the learner with a completely empty
     // panel and no sign the companion was there at all.
     let conversation: CoachConversation | null = null
+    const expectedLaunchId = activityScoped ? lessonLaunchRef.current?.sessionId : null
     try {
-      conversation = await createCoachConversation(surface)
+      conversation = await createCurrentConversation()
     } catch {
       return
     }
+    if (activityScoped && lessonLaunchRef.current?.sessionId !== expectedLaunchId) return
     // Greeted in THIS tab already (an epoch bump, a bounce to the roadmap and
     // back) — the panel still shows that greeting, so a second one is a repeat.
     if (welcomedThreadsRef.current.has(conversation.id)) {
@@ -1097,12 +1214,20 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     setActivity('thinking')
     try {
       await streamProactive('lesson_welcome', language, {
+        signal: action.signal,
         onDisclosure: (value) => setDisclosure(value),
         onPhase: setActivity,
         onText: (chunk) =>
           setMessages((prev) => prev.map((m) => (
             m.id === assistantId ? { ...m, text: m.text + chunk } : m
           ))),
+        onEvent: (event) => {
+          if (!Object.prototype.hasOwnProperty.call(event, 'tool_trace')) return
+          const toolTrace = parseToolTrace(event.tool_trace) ?? []
+          setMessages((prev) => prev.map((m) => (
+            m.id === assistantId ? { ...m, toolTrace } : m
+          )))
+        },
       }, conversationId, surface)
     } catch {
       /* A welcome must never disrupt the learner. */
@@ -1169,7 +1294,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     }
     if (source === 'push') {
       pushSeqRef.current += 1
-      setSupportUsed({ hint: false, explanation: false })   // poll is authoritative
+      setSupportUsed({ hint: false, hintLevel: 0, maxHintLevel: 3, explanation: false })   // poll is authoritative
     }
     activitySeqRef.current += 1
     maybeEnqueueIntro(key)
@@ -1185,7 +1310,12 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     try {
       const seenPush = pushSeqRef.current
       const state = await getCoachSupportState(surface.component_id, signal)
-      setSupportUsed({ hint: state.hint_used, explanation: state.explanation_used })
+      setSupportUsed({
+        hint: state.hint_level > 0,
+        hintLevel: state.hint_level,
+        maxHintLevel: state.max_hint_level,
+        explanation: state.explanation_used,
+      })
       // The learner's own question numbering, straight from the catalog, so a
       // chat thread can be titled "שאלה 3" because it IS question 3 of the
       // lesson — not because it happens to be the third section on screen.
@@ -1218,7 +1348,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!activityScoped) {
-      setSupportUsed({ hint: false, explanation: false })
+      setSupportUsed({ hint: false, hintLevel: 0, maxHintLevel: 3, explanation: false })
       currentQuestionKeyRef.current = null
       setCurrentQuestionKey(null)
       return
@@ -1251,7 +1381,13 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     if (!conversationId) {
       setHistoryError(true)
       liveTurnInProgress.current = false
-      setSupportUsed((current) => ({ ...current, [support]: false }))   // give the one-shot back
+      setSupportUsed((current) => support === 'hint'
+        ? {
+          ...current,
+          hintLevel: Math.max(0, current.hintLevel - 1),
+          hint: current.hintLevel > 1,
+        }
+        : { ...current, explanation: false })
       return
     }
     messageRequest.current += 1
@@ -1289,6 +1425,13 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           setMessages((current) => current.map((m) => (
             m.id === assistantId ? { ...m, canVisualize } : m
           ))),
+        onEvent: (event) => {
+          if (!Object.prototype.hasOwnProperty.call(event, 'tool_trace')) return
+          const toolTrace = parseToolTrace(event.tool_trace) ?? []
+          setMessages((current) => current.map((m) => (
+            m.id === assistantId ? { ...m, toolTrace } : m
+          )))
+        },
       }, conversationId, surface), () => received)
     } catch {
       setMessages((current) => current.map((m) => (
@@ -1307,9 +1450,17 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   }, [completeAssistant, ensureConversationId, language, reloadHistory, surface])
 
   const requestSupport = useCallback(async (support: CoachSupportMode) => {
-    if (supportUsed[support]) return
+    if (support === 'hint'
+      ? supportUsed.hintLevel >= supportUsed.maxHintLevel
+      : supportUsed.explanation) return
     // Optimistic button feedback + dup-guard at enqueue (server also 409s a dup).
-    setSupportUsed((current) => ({ ...current, [support]: true }))
+    setSupportUsed((current) => support === 'hint'
+      ? {
+        ...current,
+        hint: true,
+        hintLevel: Math.min(current.maxHintLevel, current.hintLevel + 1),
+      }
+      : { ...current, explanation: true })
     activitySeqRef.current += 1
     enqueueChatAction({ kind: 'support', support, targetQuestionKey: currentQuestionKeyRef.current }, { front: true })
   }, [enqueueChatAction, supportUsed])
@@ -1388,6 +1539,13 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           setMessages((prev) => prev.map((m) => (
             m.id === assistantId ? { ...m, text: m.text + chunk } : m
           ))),
+        onEvent: (event) => {
+          if (!Object.prototype.hasOwnProperty.call(event, 'tool_trace')) return
+          const toolTrace = parseToolTrace(event.tool_trace) ?? []
+          setMessages((prev) => prev.map((m) => (
+            m.id === assistantId ? { ...m, toolTrace } : m
+          )))
+        },
       }, conversationId, surface, action.targetQuestionKey)
     } catch {
       /* Proactivity must never disrupt the learner. */

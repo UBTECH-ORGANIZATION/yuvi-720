@@ -711,6 +711,37 @@ async def _ensure_indexes(collection) -> None:
         pass
 
 
+async def _attach_answer_diagnostic(event: dict[str, Any]) -> None:
+    """Attach deterministic answer evidence without changing provider scoring."""
+    if event.get("verb") not in {"answered", "attempted"}:
+        return
+    result = event.get("result") or {}
+    response = result.get("response")
+    if response in (None, "", []):
+        return
+    try:
+        from app.services import kata_catalog
+        from app.services.answer_diagnostics import diagnose_answer
+
+        questions = kata_catalog.questions_for_item(event.get("launch"), event.get("sub_item_id"))
+        question = next(
+            (row for row in questions if row.get("questionId") == event.get("question_id")),
+            None,
+        )
+        if question is None:
+            return
+        diagnostic = diagnose_answer(
+            question,
+            response,
+            provider_success=result.get("success"),
+            provider_score_scaled=result.get("score_scaled"),
+        )
+        if diagnostic:
+            result["answer_diagnostic"] = diagnostic
+    except Exception as exc:  # diagnostics must never block xAPI ingestion
+        print(f"⚠️ answer diagnostic skipped: {type(exc).__name__}")
+
+
 async def ingest_statement(
     statement: dict[str, Any], launch: dict[str, Any]
 ) -> dict[str, Any]:
@@ -740,6 +771,7 @@ async def ingest_statement(
     # (player `-002` == catalog `-001`, a leading-cover offset). Self-anchored
     # from the catalog + this session's visited screens; best-effort, never fatal.
     await _reconcile_sub_item_id(event)
+    await _attach_answer_diagnostic(event)
 
     # Drop the provider's decorative animation ticker before it reaches the
     # evidence store. Checked AFTER reconciliation so the key matches the item

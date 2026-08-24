@@ -173,9 +173,10 @@ async def _ensure_indexes() -> None:
         await conversations.create_index(
             [
                 ("learner_id", 1), ("role", 1), ("activity_unit_id", 1),
-                ("activity_component_id", 1), ("activity_status", 1),
+                ("activity_component_id", 1), ("activity_launch_session_id", 1),
+                ("activity_status", 1),
             ],
-            name="learner_activity_open",
+            name="learner_activity_launch_open",
         )
         await messages.create_index(
             [("learner_id", 1), ("conversation_id", 1), ("at", -1)],
@@ -196,6 +197,7 @@ def _conversation_payload(document: dict[str, Any]) -> dict[str, Any]:
         "updated_at": document.get("updated_at") or document.get("created_at") or _now(),
         "activity_unit_id": document.get("activity_unit_id"),
         "activity_component_id": document.get("activity_component_id"),
+        "activity_launch_session_id": document.get("activity_launch_session_id"),
         "activity_status": document.get("activity_status"),
     }
 
@@ -344,18 +346,20 @@ async def create_conversation(
     role: str = "coach",
     unit_id: object = None,
     component_id: object = None,
+    launch_session_id: object = None,
 ) -> dict[str, Any]:
-    """Resolve the open activity thread, or create a durable empty thread.
+    """Resolve one launch-scoped activity thread, or create an empty thread.
 
-    Activity-scoped conversations remain open across reloads until a trusted
-    xAPI completion closes them. Unscoped callers retain the legacy behavior of
-    reusing only a globally empty thread.
+    A lesson launch owns its Coach transcript. A later launch for the same
+    component must never resume it, but repeated calls for the same launch are
+    idempotent. Unscoped callers retain the legacy empty-thread behavior.
     """
     await _ensure_indexes()
     safe_id = normalize_learner_id(learner_id)
     safe_unit = normalize_activity_id(unit_id)
     safe_component = normalize_activity_id(component_id)
-    activity_scoped = bool(safe_unit and safe_component)
+    safe_launch = normalize_session_id(launch_session_id)
+    activity_scoped = bool(safe_unit and safe_component and safe_launch != "default")
     collection = _get_collection_named("agent_conversations")
     use_fallback = collection is None
     if collection is not None:
@@ -369,6 +373,7 @@ async def create_conversation(
                 query.update({
                     "activity_unit_id": safe_unit,
                     "activity_component_id": safe_component,
+                    "activity_launch_session_id": safe_launch,
                     "activity_status": "open",
                 })
             else:
@@ -390,23 +395,28 @@ async def create_conversation(
             use_fallback = True
 
     history = _read_history_fallback()
-    empty_fallbacks = (
-        [
+    if not use_fallback:
+        empty_fallbacks = []
+    elif activity_scoped:
+        empty_fallbacks = [
             document for document in history["conversations"].values()
             if document.get("learner_id") == safe_id
             and document.get("role") == role
             and document.get("is_deleted") is not True
-            and (
-                document.get("activity_unit_id") == safe_unit
-                and document.get("activity_component_id") == safe_component
-                and document.get("activity_status") == "open"
-                if activity_scoped
-                else int(document.get("message_count") or 0) == 0
-                and not document.get("activity_component_id")
-            )
+            and document.get("activity_unit_id") == safe_unit
+            and document.get("activity_component_id") == safe_component
+            and document.get("activity_launch_session_id") == safe_launch
+            and document.get("activity_status") == "open"
         ]
-        if use_fallback else []
-    )
+    else:
+        empty_fallbacks = [
+            document for document in history["conversations"].values()
+            if document.get("learner_id") == safe_id
+            and document.get("role") == role
+            and document.get("is_deleted") is not True
+            and int(document.get("message_count") or 0) == 0
+            and not document.get("activity_component_id")
+        ]
     if empty_fallbacks:
         empty_fallbacks.sort(
             key=lambda item: (item.get("updated_at", ""), item.get("_id", "")),
@@ -414,7 +424,10 @@ async def create_conversation(
         )
         return _conversation_payload(empty_fallbacks[0])
 
-    session_id = f"chat-{uuid4().hex}"
+    # The provider launch is already an opaque, unique identifier. Reusing it
+    # as the lesson conversation id makes simultaneous create requests for one
+    # launch converge on the same Mongo `_id` rather than creating two threads.
+    session_id = safe_launch if activity_scoped else f"chat-{uuid4().hex}"
     now = _now()
     document = {
         "_id": _key(safe_id, role, session_id),
@@ -433,6 +446,7 @@ async def create_conversation(
         document.update({
             "activity_unit_id": safe_unit,
             "activity_component_id": safe_component,
+            "activity_launch_session_id": safe_launch,
             "activity_status": "open",
         })
     if collection is not None:
@@ -443,10 +457,78 @@ async def create_conversation(
                   f"scoped={activity_scoped})")
             return _conversation_payload(document)
         except Exception as exc:
+            if activity_scoped:
+                try:
+                    existing = await collection.find_one({
+                        "_id": document["_id"],
+                        "learner_id": safe_id,
+                        "role": role,
+                        "activity_status": "open",
+                    })
+                    if existing:
+                        return _conversation_payload(existing)
+                except Exception:
+                    pass
             print(f"⚠️ conversation create failed, using fallback: {exc}")
     history["conversations"][document["_id"]] = document
     _write_history_fallback(history)
     return _conversation_payload(document)
+
+
+async def supersede_activity_conversations(
+    learner_id: str,
+    unit_id: object,
+    component_id: object,
+    role: str = "lesson_coach",
+) -> int:
+    """Retire open lesson threads before a new launch of the same activity.
+
+    Superseded transcripts stay available for operational audit, but cannot be
+    selected as the current learner-facing Coach thread or model history.
+    """
+    safe_id = normalize_learner_id(learner_id)
+    safe_unit = normalize_activity_id(unit_id)
+    safe_component = normalize_activity_id(component_id)
+    if not safe_unit or not safe_component:
+        return 0
+    superseded_at = _now()
+    query = {
+        "learner_id": safe_id,
+        "role": role,
+        "activity_unit_id": safe_unit,
+        "activity_component_id": safe_component,
+        "activity_status": "open",
+        "is_deleted": {"$ne": True},
+    }
+    collection = _get_collection_named("agent_conversations")
+    if collection is not None:
+        try:
+            result = await collection.update_many(query, {"$set": {
+                "activity_status": "superseded",
+                "activity_superseded_at": superseded_at,
+            }})
+            return int(result.modified_count)
+        except Exception as exc:
+            print(f"⚠️ activity conversation supersession failed, using fallback: {exc}")
+    history = _read_history_fallback()
+    superseded = 0
+    for document in history["conversations"].values():
+        if (
+            document.get("learner_id") == safe_id
+            and document.get("role") == role
+            and document.get("activity_unit_id") == safe_unit
+            and document.get("activity_component_id") == safe_component
+            and document.get("activity_status") == "open"
+            and document.get("is_deleted") is not True
+        ):
+            document.update({
+                "activity_status": "superseded",
+                "activity_superseded_at": superseded_at,
+            })
+            superseded += 1
+    if superseded:
+        _write_history_fallback(history)
+    return superseded
 
 
 async def reset_activity_conversations(
@@ -811,6 +893,56 @@ async def soft_delete_conversation(
     return True
 
 
+async def end_lesson_conversation(learner_id: str, session_id: str) -> bool:
+    """Permanently remove the temporary lesson Coach thread on lesson exit."""
+    safe_id = normalize_learner_id(learner_id)
+    safe_session = normalize_session_id(session_id)
+    role = "lesson_coach"
+    key = _key(safe_id, role, safe_session)
+    conversations = _get_collection_named("agent_conversations")
+    messages = _get_collection_named("agent_messages")
+    working_memory = _get_collection_named("agent_sessions")
+    if conversations is not None and messages is not None and working_memory is not None:
+        try:
+            conversation = await conversations.find_one({
+                "_id": key,
+                "learner_id": safe_id,
+                "role": role,
+            }, {"_id": 1})
+            if conversation is None:
+                return False
+            await messages.delete_many({
+                "learner_id": safe_id,
+                "conversation_id": safe_session,
+                "agent_role": role,
+            })
+            await working_memory.delete_one({"_id": key, "learner_id": safe_id, "role": role})
+            await conversations.delete_one({"_id": key, "learner_id": safe_id, "role": role})
+            return True
+        except Exception as exc:
+            print(f"⚠️ lesson conversation cleanup failed, using fallback: {exc}")
+
+    history = _read_history_fallback()
+    conversation = history["conversations"].get(key)
+    if not conversation or conversation.get("learner_id") != safe_id or conversation.get("role") != role:
+        return False
+    history["conversations"].pop(key, None)
+    history["messages"] = {
+        message_id: document
+        for message_id, document in history["messages"].items()
+        if not (
+            document.get("learner_id") == safe_id
+            and document.get("conversation_id") == safe_session
+            and document.get("agent_role") == role
+        )
+    }
+    _write_history_fallback(history)
+    fallback = _read_fallback()
+    fallback.pop(key, None)
+    _write_fallback(fallback)
+    return True
+
+
 async def list_messages(
     learner_id: str,
     session_id: str,
@@ -1049,7 +1181,8 @@ async def append_turn(
     conversation_document["created_at"] = existing.get("created_at") or now
     conversation_document["message_count"] = int(existing.get("message_count") or 0) + inserted
     for field in (
-        "activity_unit_id", "activity_component_id", "activity_status", "activity_closed_at",
+        "activity_unit_id", "activity_component_id", "activity_launch_session_id",
+        "activity_status", "activity_closed_at", "activity_superseded_at",
     ):
         if existing.get(field) is not None:
             conversation_document[field] = existing[field]

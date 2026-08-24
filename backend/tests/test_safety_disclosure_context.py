@@ -26,6 +26,20 @@ def _usage_context() -> UsageContext:
 
 
 class SafetyDisclosureContextTests(unittest.IsolatedAsyncioTestCase):
+    async def test_coach_redirects_profanity_without_calling_the_disclosure_model(self) -> None:
+        with patch.object(coach.safety, "classify_disclosure", new=AsyncMock()) as classify:
+            streamed = [
+                piece async for piece in coach.run_coach_stream(
+                    "test-learner",
+                    user_message="יא בן זונה",
+                    language="he",
+                    session_id="respect-test",
+                )
+            ]
+
+        self.assertEqual("".join(streamed), safety.RESPECTFUL_LANGUAGE_REDIRECT["he"])
+        classify.assert_not_awaited()
+
     async def test_coach_passes_prior_yuvi_turn_before_personal_redirect(self) -> None:
         previous_question = (
             "מה יותר ברור לך עכשיו, לספור ימינה ולמעלה או לחשוב על נקודה כמו כתובת?"

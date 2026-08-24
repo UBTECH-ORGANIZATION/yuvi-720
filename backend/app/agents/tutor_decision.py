@@ -15,9 +15,10 @@ descriptive teacher signal, never a score.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import re
 from typing import Any, Optional
 
-ERROR_TYPES = ("guess", "careless", "misinterpret", "right-idea", "no-attempt", "unknown")
+ERROR_TYPES = ("guess", "careless", "misinterpret", "partial", "right-idea", "no-attempt", "unknown")
 STRATEGIES = (
     "explain", "question", "hint", "worked-example", "simplify",
     "change-representation", "affirm", "encourage",
@@ -27,6 +28,16 @@ INTENTIONS = (
 )
 
 MAX_HINT_LEVEL = 3
+
+# Chat-originated hints must use the same controlled support lane as the hint
+# button. This deliberately recognises only an explicit Hebrew request for a
+# hint, not a discussion *about* the word "רמז" and not broader help requests.
+_HINT_TOKEN = re.compile(r"(?<![\u0590-\u05ff])(?:ל)?רמז(?![\u0590-\u05ff])")
+_HINT_REQUEST_PREFIXES = {
+    "אפשר", "אפשרי", "תן לי", "תני לי", "תנו לי", "אשמח", "רוצה",
+    "רציתי", "צריך", "צריכה", "זקוק", "זקוקה", "בבקשה", "עזור לי",
+    "עזרי לי", "תעזור לי", "תעזרי לי", "עוד",
+}
 
 # Strategy → generation guidance (Hebrew-first; the coach answers in the
 # learner's language regardless — this line steers the MOVE, not the words).
@@ -46,6 +57,23 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def is_explicit_hint_request(message: str) -> bool:
+    """Whether a learner explicitly asks for a Hebrew ``רמז`` in chat.
+
+    The matcher is intentionally narrow: requests such as "אפשר רמז?" and
+    "אשמח לרמז" consume the hint allowance, while explanatory mentions such
+    as "מה פירוש המילה רמז?" stay ordinary chat.
+    """
+    text = re.sub(r"\s+", " ", str(message or "")).strip()
+    token = _HINT_TOKEN.search(text)
+    if token is None:
+        return False
+    if text == "רמז":
+        return True
+    prefix = text[:token.start()].strip(" \t\n\r.,!?…:;—-\"").casefold()
+    return prefix in _HINT_REQUEST_PREFIXES
+
+
 def classify_error_type(recent_events: list[dict[str, Any]]) -> str:
     """Deterministic error-type read from the newest scored evidence.
 
@@ -62,6 +90,8 @@ def classify_error_type(recent_events: list[dict[str, Any]]) -> str:
         return "right-idea"
     if newest.get("effortful") is False:
         return "guess"
+    if ((newest.get("answer_diagnostic") or {}).get("outcome") == "partial"):
+        return "partial"
     if newest.get("misconception"):
         return "misinterpret"
     # A miss right after successes on the same objective → likely careless slip.
@@ -105,6 +135,8 @@ def decide(
         strategy, intention = "change-representation", "correct"
     elif error_type == "careless":
         strategy, intention = "question", "check-understanding"
+    elif error_type == "partial":
+        strategy, intention = "question", "diagnose"
     elif error_type == "right-idea":
         strategy, intention = "question", "elaborate"
     else:
@@ -153,7 +185,7 @@ async def record_hint_level(learner_id: str, component_id: Optional[str], level:
         pass
 
 
-# ── One-shot support gating (hint/explanation once per question) ─────────────
+# ── Per-question support gating (three hints, one explanation) ───────────────
 def support_question_key(
     current_state: dict[str, Any], surface_component_id: Optional[str]
 ) -> str:
@@ -177,25 +209,39 @@ def support_question_key(
 
 def support_used(
     current_state: dict[str, Any], question_key: str
-) -> dict[str, bool]:
-    """Which support modes were already used on this question."""
+) -> dict[str, bool | int]:
+    """Which support modes are exhausted on this question and its hint level."""
     used = (current_state or {}).get("support_used") or {}
     if used.get("question_key") != question_key:
-        return {"hint": False, "explanation": False}
-    return {"hint": bool(used.get("hint")), "explanation": bool(used.get("explanation"))}
+        return {"hint": False, "explanation": False, "hint_level": 0}
+    # Existing one-shot records predate `hint_level`; treat a stored `hint=True`
+    # as exhausted rather than accidentally reopening historical support.
+    level = int(used.get("hint_level") or (MAX_HINT_LEVEL if used.get("hint") else 0))
+    level = min(max(level, 0), MAX_HINT_LEVEL)
+    return {
+        "hint": level >= MAX_HINT_LEVEL,
+        "explanation": bool(used.get("explanation")),
+        "hint_level": level,
+    }
 
 
 async def record_support_used(
     learner_id: str, question_key: str, support_mode: str
-) -> None:
-    """Persist one support use for this question (trusted lane, never blocks)."""
+) -> Optional[int]:
+    """Persist one approved support use and return its hint level when relevant."""
     try:
         from app.brain.repository import apply_brain_operators, get_brain
 
         brain = await get_brain(learner_id)
         state = brain.get("current_state") or {}
         used = support_used(state, question_key)
-        used[support_mode] = True
+        hint_level: Optional[int] = None
+        if support_mode == "hint":
+            hint_level = min(int(used["hint_level"]) + 1, MAX_HINT_LEVEL)
+            used["hint_level"] = hint_level
+            used["hint"] = hint_level >= MAX_HINT_LEVEL
+        else:
+            used[support_mode] = True
         await apply_brain_operators(learner_id, {
             "current_state.support_used": {
                 "question_key": question_key,
@@ -203,8 +249,9 @@ async def record_support_used(
                 "updated_at": _now(),
             },
         })
+        return hint_level
     except Exception:
-        pass
+        return None
 
 
 async def recent_tutor_decisions(learner_id: str, limit: int = 300) -> list[dict[str, Any]]:

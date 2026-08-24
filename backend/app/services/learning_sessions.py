@@ -206,19 +206,17 @@ async def create_provider_session(
         lrs_auth=launch["slxapi"]["auth"],
     )
 
-    # Continuity is the default (720 §6: "save the student's progress and return
-    # to the same point" — the CONTENT owns position, keyed by the stable
-    # studentId we pass). We therefore preserve the coach thread + one-shot hint
-    # state across a relaunch. Only an EXPLICIT redo (§6 re-entry-after-completion
-    # → "redo the component") is a fresh attempt that resets our side.
-    if restart:
-        try:
-            from app.agents import sessions as agent_sessions
-            await agent_sessions.reset_activity_conversations(
-                safe_learner_id, unit["id"], component["id"]
-            )
-        except Exception as exc:  # a reset failure must never block the launch
-            print(f"⚠️ activity conversation reset failed: {exc}")
+    # Content progress may resume according to the provider contract, but the
+    # learner-facing Coach chat always starts clean for a new platform launch.
+    # The old transcript remains audit-only rather than being mistaken for a
+    # completed activity or deleted before the new launch exists.
+    try:
+        from app.agents import sessions as agent_sessions
+        await agent_sessions.supersede_activity_conversations(
+            safe_learner_id, unit["id"], component["id"], role="lesson_coach"
+        )
+    except Exception as exc:  # launch-scoped lookup still prevents stale reuse
+        print(f"⚠️ activity conversation supersession failed: {exc}")
 
     # Kata's content ALWAYS restarts on (re)launch — its iframe does not resume
     # its own position (that is content-side per §6; we verified the launch is
@@ -228,9 +226,8 @@ async def create_provider_session(
     # content, then re-establish per-question as the learner navigates/answers
     # (each screen emits a sub-item event). Preserving them stranded the coach a
     # screen behind — the hint stayed "used" and old messages lingered after a
-    # reload. The activity CONVERSATION is preserved (continuity); a question's
-    # messages reappear when the learner returns to it (they are tagged by
-    # question). An explicit redo additionally clears the conversation, above.
+    # reload. The activity conversation is isolated to this launch, so a
+    # question's messages never reappear from an earlier entry.
     updates: dict[str, Any] = {
         "current_state.unit_id": unit["id"],
         "current_state.component_id": component["id"],

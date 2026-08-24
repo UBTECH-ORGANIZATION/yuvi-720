@@ -132,20 +132,36 @@ class SupportKeyTest(unittest.TestCase):
             }
         }
         same = tutor_decision.support_used(state, "cmp|cmp-001|q1")
-        self.assertEqual(same, {"hint": True, "explanation": False})
+        self.assertEqual(same, {"hint": True, "explanation": False, "hint_level": 3})
         moved = tutor_decision.support_used(state, "cmp|cmp-002|q1")
-        self.assertEqual(moved, {"hint": False, "explanation": False})
+        self.assertEqual(moved, {"hint": False, "explanation": False, "hint_level": 0})
 
     def test_used_flags_empty_state(self):
         self.assertEqual(
             tutor_decision.support_used({}, "cmp||"),
-            {"hint": False, "explanation": False},
+            {"hint": False, "explanation": False, "hint_level": 0},
         )
 
 
-class RedoResetTest(unittest.IsolatedAsyncioTestCase):
-    """§6 explicit "redo the component" resets our coach thread (ordinary
-    relaunches preserve it — continuity is the default)."""
+class ExplicitChatHintRequestTest(unittest.TestCase):
+    def test_explicit_hebrew_hint_requests_are_recognized(self):
+        for message in ("רמז", "אפשר רמז?", "תן לי רמז", "אשמח לרמז"):
+            with self.subTest(message=message):
+                self.assertTrue(tutor_decision.is_explicit_hint_request(message))
+
+    def test_explanatory_or_broader_help_stays_normal_chat(self):
+        for message in (
+            "מה פירוש המילה רמז?",
+            "למה קוראים לזה רמז?",
+            "אפשר כיוון?",
+            "אני לא מבין את השאלה",
+        ):
+            with self.subTest(message=message):
+                self.assertFalse(tutor_decision.is_explicit_hint_request(message))
+
+
+class LessonLaunchResetTest(unittest.IsolatedAsyncioTestCase):
+    """Every lesson launch gets a clean Coach transcript."""
 
     async def asyncSetUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -164,35 +180,44 @@ class RedoResetTest(unittest.IsolatedAsyncioTestCase):
         self.collection_patch.stop()
         self.temp_dir.cleanup()
 
-    async def test_redo_archives_used_thread_and_prunes_empty_one(self) -> None:
+    async def test_new_launch_supersedes_used_thread(self) -> None:
         learner_id = "relaunch-learner"
         unit_id, component_id = "unit-1", "cmp-1"
 
         used = await sessions.create_conversation(
-            learner_id, unit_id=unit_id, component_id=component_id
+            learner_id,
+            role="lesson_coach",
+            unit_id=unit_id,
+            component_id=component_id,
+            launch_session_id="launch-one",
         )
         await sessions.append_turn(
-            learner_id, "coach",
+            learner_id, "lesson_coach",
             user="[support:hint]", assistant="hint text",
             session_id=used["id"], exchange_id="x1",
             include_user_in_history=False,
         )
-        await sessions.reset_activity_conversations(learner_id, unit_id, component_id)
+        await sessions.supersede_activity_conversations(learner_id, unit_id, component_id)
 
-        # The used thread is closed, so a new lesson load resolves a FRESH one.
+        # A second launch of the same component gets a fresh, empty thread.
         fresh = await sessions.create_conversation(
-            learner_id, unit_id=unit_id, component_id=component_id
+            learner_id,
+            role="lesson_coach",
+            unit_id=unit_id,
+            component_id=component_id,
+            launch_session_id="launch-two",
         )
         self.assertNotEqual(fresh["id"], used["id"])
-
-        # An untouched (empty) thread is pruned on redo, not archived.
-        await sessions.reset_activity_conversations(learner_id, unit_id, component_id)
+        messages = await sessions.list_messages(
+            learner_id, fresh["id"], role="lesson_coach"
+        )
+        self.assertEqual(messages["messages"], [])
         history = sessions._read_history_fallback()
-        empty_survivors = [
+        used_doc = next(
             doc for doc in history["conversations"].values()
-            if doc.get("session_id") == fresh["id"] and doc.get("is_deleted") is not True
-        ]
-        self.assertEqual(empty_survivors, [])
+            if doc.get("session_id") == used["id"]
+        )
+        self.assertEqual(used_doc["activity_status"], "superseded")
 
 
 if __name__ == "__main__":
