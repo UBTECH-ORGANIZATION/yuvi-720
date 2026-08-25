@@ -18,6 +18,22 @@ class CoachMode(StrEnum):
 
 LESSON_SCREEN = "learning_lesson"
 
+# Personal learner-management information belongs in the general companion,
+# where it is not competing with the active lesson.
+LESSON_MANAGEMENT_INTENTS = frozenset({
+    "calendar_action_request",
+    "calendar_clarification",
+    "calendar_query",
+    "goal_planning",
+    "task_query",
+})
+
+LESSON_MANAGEMENT_REDIRECT = {
+    "he": "היי, עכשיו אני מתמקד איתך בלמידת הלומדה. כדי לקבל מידע בנושא, אפשר לצאת מהלומדה ולדבר איתי שם. 📚",
+    "ar": "مرحبًا، أنا أركز معك الآن على التعلّم في اللومدة. للحصول على معلومات في هذا الموضوع، يمكنك الخروج من اللومدة والتحدث معي هناك. 📚",
+    "en": "Hi, I am focusing with you on this lesson right now. To get information about that, you can leave the lesson and talk with me there. 📚",
+}
+
 
 GENERAL_COMPANION_INSTRUCTIONS = {
     "he": (
@@ -55,6 +71,13 @@ def resolve_mode(surface_context: dict[str, Any] | None) -> CoachMode:
     """
     screen = str((surface_context or {}).get("screen") or "")
     return CoachMode.LESSON if screen == LESSON_SCREEN else CoachMode.GENERAL
+
+
+def lesson_management_redirect(intent: str, language: str) -> str | None:
+    """Return the fixed lesson-focus reply for out-of-lesson management asks."""
+    if intent not in LESSON_MANAGEMENT_INTENTS:
+        return None
+    return LESSON_MANAGEMENT_REDIRECT.get(language, LESSON_MANAGEMENT_REDIRECT["he"])
 
 
 def project_bundle(bundle: dict[str, Any], mode: CoachMode) -> dict[str, Any]:

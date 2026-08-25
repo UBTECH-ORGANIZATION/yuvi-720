@@ -21,10 +21,10 @@ from app.services import coach_actions  # noqa: E402
 from app.agents import coach  # noqa: E402
 
 
-def _context() -> CoachToolContext:
+def _context(mode: CoachMode = CoachMode.GENERAL) -> CoachToolContext:
     return CoachToolContext(
         learner_id="learner-1",
-        mode=CoachMode.GENERAL,
+        mode=mode,
         language="he",
         session_id="general-1",
         exchange_id="exchange-1",
@@ -66,6 +66,16 @@ class CoachActionTests(unittest.TestCase):
         )
         values = schema["function"]["parameters"]["properties"]["action_id"]["enum"]
         self.assertEqual(set(values), set(coach_actions.action_ids(CoachMode.GENERAL)))
+
+    def test_lesson_schema_excludes_navigation_action_tool(self):
+        names = {item["function"]["name"] for item in schemas(CoachMode.LESSON)}
+        self.assertNotIn("offer_student_action", names)
+
+    def test_lesson_mode_cannot_dispatch_navigation_action_tool(self):
+        result = asyncio.run(dispatch(
+            "offer_student_action", {"action_id": "open_calendar"}, _context(CoachMode.LESSON),
+        ))
+        self.assertEqual(result, {"error": "tool_not_allowed_for_mode"})
 
     def test_fallback_navigation_targets_the_requested_unavailable_area(self):
         empty_bundle = {"goals": [], "profile": {}, "current": {"task_status": "no_open_task"}}

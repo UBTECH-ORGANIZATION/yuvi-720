@@ -32,5 +32,5 @@ register(CoachTool(
         "required": ["action_id"],
     },
     handler=_offer_student_action,
-    allowed_modes=frozenset({CoachMode.LESSON, CoachMode.GENERAL}),
+    allowed_modes=frozenset({CoachMode.GENERAL}),
 ))

@@ -8,6 +8,14 @@ from typing import Optional
 from app.agents import tutor_decision
 
 
+class SupportQuestionChangedError(RuntimeError):
+    """The learner moved before the requested support reached the server."""
+
+    def __init__(self, current_question_key: str) -> None:
+        super().__init__("support_question_changed")
+        self.current_question_key = current_question_key
+
+
 @dataclass(frozen=True)
 class SupportReservation:
     question_key: str
@@ -21,6 +29,7 @@ async def reserve_support(
     surface_component_id: Optional[str],
     session_id: Optional[str],
     conversation_id: str,
+    expected_question_key: Optional[str] = None,
 ) -> Optional[SupportReservation]:
     """Reserve one support use and record its shared learning evidence.
 
@@ -36,6 +45,8 @@ async def reserve_support(
     brain = await get_brain(learner_id)
     current_state = brain.get("current_state") or {}
     question_key = tutor_decision.support_question_key(current_state, surface_component_id)
+    if expected_question_key and expected_question_key != question_key:
+        raise SupportQuestionChangedError(question_key)
     if tutor_decision.support_used(current_state, question_key).get(support):
         return None
 

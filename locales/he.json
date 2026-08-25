@@ -614,6 +614,8 @@
   "companion.explainer.done": "הבנתי, תודה",
   "companion.thread.intro": "מבוא",
   "companion.thread.question": "שאלה {n}",
+  "companion.thread.status.unattempted": "טרם התקבלה תשובה",
+  "companion.thread.status.all_correct": "כל הסעיפים נענו נכון",
   "companion.thread.step": "שלב לימוד",
   "companion.thread.watch": "סרטון",
   "companion.thread.read": "קטע לימוד",

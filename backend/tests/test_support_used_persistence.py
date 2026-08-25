@@ -82,9 +82,9 @@ class SupportRoundTripTests(unittest.IsolatedAsyncioTestCase):
             await tutor_decision.record_support_used("L", "c|i|q1", "hint")
 
         used = tutor_decision.support_used(stored["current_state"], "c|i|q1")
-        self.assertEqual(used, {"hint": False, "explanation": False, "hint_level": 1})
+        self.assertEqual(used, {"hint": True, "explanation": False, "hint_level": 1})
 
-    async def test_three_hints_exhaust_only_the_current_question(self):
+    async def test_one_hint_exhausts_only_the_current_question(self):
         from unittest.mock import AsyncMock, patch
 
         from app.agents import tutor_decision
@@ -98,15 +98,12 @@ class SupportRoundTripTests(unittest.IsolatedAsyncioTestCase):
             patch("app.brain.repository.get_brain", new=AsyncMock(side_effect=lambda _lid: stored)),
             patch("app.brain.repository.apply_brain_operators", new=fake_apply),
         ):
-            levels = [
-                await tutor_decision.record_support_used("L", "c|i|q1", "hint")
-                for _ in range(3)
-            ]
+            levels = [await tutor_decision.record_support_used("L", "c|i|q1", "hint")]
 
-        self.assertEqual(levels, [1, 2, 3])
+        self.assertEqual(levels, [1])
         self.assertEqual(
             tutor_decision.support_used(stored["current_state"], "c|i|q1"),
-            {"hint": True, "explanation": False, "hint_level": 3},
+            {"hint": True, "explanation": False, "hint_level": 1},
         )
 
     async def test_moving_to_the_next_question_re_arms_the_buttons(self):

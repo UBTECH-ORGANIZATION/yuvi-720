@@ -28,11 +28,11 @@ class CoachDebugTraceTests(unittest.TestCase):
 
     def test_trace_is_opt_in_and_contains_only_safe_step_metadata(self):
         steps: list[dict[str, str]] = []
-        coach_debug_trace.append(steps, "get_calendar", "ok")
+        coach_debug_trace.append(steps, "load_calendar_context", "ok")
         coach_debug_trace.append(steps, "get_active_goals", "ok", "agent")
         coach_debug_trace.append(steps, "bad name / learner@example.com", "unexpected")
         self.assertEqual(steps, [
-            {"name": "get_calendar", "status": "ok", "source": "system"},
+            {"name": "load_calendar_context", "status": "ok", "source": "system"},
             {"name": "get_active_goals", "status": "ok", "source": "agent"},
         ])
 

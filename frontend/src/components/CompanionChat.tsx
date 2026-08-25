@@ -185,6 +185,7 @@ export function CompanionChat() {
     supportUsed,
     questionOrdinals,
     questionParts,
+    questionStatuses,
     teachingItems,
     itemKinds,
     itemMedia,
@@ -345,9 +346,10 @@ export function CompanionChat() {
       // each one — but the caption must say which סעיף of which question it is,
       // because that is what the player's own nav shows the learner.
       const partIndex = isIntro ? undefined : questionParts[`${group.item}|${group.question}`]
+      const questionStatus = isIntro ? undefined : questionStatuses[group.item]
       // A question screen can still be a video screen — the thread shows it.
       const plays = WATCHABLE.has(itemMedia[group.item] || '')
-      return { group, isIntro, isTeaching, asksNothing, kind, questionNumber, partIndex, plays }
+      return { group, isIntro, isTeaching, asksNothing, kind, questionNumber, partIndex, questionStatus, plays }
     })
     // The lesson's own order, not the visit order. Paging BACK to question 1
     // after question 2 used to append its thread at the bottom — below שאלה 2 —
@@ -368,7 +370,7 @@ export function CompanionChat() {
       }
       return at - bt
     })
-  }, [messageGroups, questionOrdinals, questionParts, teachingItems, itemKinds, itemMedia, itemOrder])
+  }, [messageGroups, questionOrdinals, questionParts, questionStatuses, teachingItems, itemKinds, itemMedia, itemOrder])
   const [sectionOverrides, setSectionOverrides] = useState<Record<string, boolean>>({})
   const bodyRef = useRef<HTMLDivElement>(null)
   const historyRef = useRef<HTMLDivElement>(null)
@@ -855,8 +857,12 @@ export function CompanionChat() {
     ? !activeSection.isIntro && !activeSection.asksNothing
       && (activeSection.kind === 'question' || activeSection.questionNumber !== undefined)
     // No thread yet (Yuvi has not opened the screen) — fall back to the lesson's
-    // own position rather than hiding help the learner may already need.
-    : !(Boolean(liveItem) && teachingItems.includes(liveItem))
+    // own position rather than hiding help the learner may already need. A
+    // catalog-known `step` never asks, so it is safe to hide support immediately
+    // while the refreshed teaching-items list is still in flight after a move.
+    : !(Boolean(liveItem) && (
+      teachingItems.includes(liveItem) || itemKinds[liveItem] === 'step'
+    ))
   const toggleSection = (key: string, open: boolean) =>
     setSectionOverrides((prev) => ({ ...prev, [key]: open }))
 
@@ -1152,7 +1158,7 @@ export function CompanionChat() {
           </div>
         </section>
       )}
-      {(!historyOpen || fullscreen) && (
+      {(!historyOpen || fullscreen || isTaskMode) && (
         <>
           {!isTaskMode && !fullscreen && <div className="sp-companion__thread-bar">
             <span><Icon name="message" size={15} /></span>
@@ -1200,7 +1206,7 @@ export function CompanionChat() {
                 so the generic greeting only shows in the general companion. */}
             {!isTaskMode && !isLoadingMessages && messages.length === 0 && assistantMessage(t('companion.greeting'))}
             {isTaskMode
-              ? sections.map(({ group, isIntro, isTeaching, asksNothing, kind, questionNumber, partIndex, plays }) => {
+              ? sections.map(({ group, isIntro, isTeaching, asksNothing, kind, questionNumber, partIndex, questionStatus, plays }) => {
                   const open = isSectionOpen(group)
                   const isCurrent = group.key === currentGroupKey
                   return (
@@ -1236,15 +1242,18 @@ export function CompanionChat() {
                             {/* Captioned for what the screen IS. A video that also
                                 asks keeps its number alongside the medium, so the
                                 thread is honest about both. */}
-                            <span>{
+                            <span>{[
                               isIntro ? t('companion.thread.intro')
                                 : kind === 'watch' || kind === 'read' ? [
                                     t(kind === 'watch' ? 'companion.thread.watch' : 'companion.thread.read'),
                                     questionNumber ? questionLabel(questionNumber, partIndex) : '',
                                   ].filter(Boolean).join(' · ')
                                 : asksNothing || !questionNumber ? t('companion.thread.step')
-                                : questionLabel(questionNumber, partIndex)
-                            }</span>
+                                : questionLabel(questionNumber, partIndex),
+                              questionNumber && questionStatus && questionStatus.status !== 'answered_not_all_correct'
+                                ? t(`companion.thread.status.${questionStatus.status}`)
+                                : '',
+                            ].filter(Boolean).join(' · ')}</span>
                             {!open && <span className="sp-companion__qcount">{group.messages.length}</span>}
                           </span>
                           <span className="sp-companion__qdivider-rule" aria-hidden="true" />
@@ -1292,11 +1301,11 @@ export function CompanionChat() {
         </div>
       )}
 
-      {(!historyOpen || fullscreen) && (!isTaskMode || taskView === 'chat') && (
+      {(!historyOpen || fullscreen || isTaskMode) && (!isTaskMode || taskView === 'chat') && (
         <div className="sp-companion__composer-shell">
           {isTaskMode ? (
             !isStreaming
-              && (pendingAlternative || (openSectionAsks && (supportUsed.hintLevel < supportUsed.maxHintLevel || !supportUsed.explanation))) && (
+              && (pendingAlternative || (openSectionAsks && (!supportUsed.contentHint && supportUsed.hintLevel < supportUsed.maxHintLevel || !supportUsed.explanation))) && (
               <div className="sp-companion__support-options" role="group" aria-label={t('companion.task.actions')}>
                 {pendingAlternative && (
                   <button
@@ -1308,7 +1317,7 @@ export function CompanionChat() {
                     <span>{t('companion.task.altSwitch')}</span>
                   </button>
                 )}
-                {openSectionAsks && supportUsed.hintLevel < supportUsed.maxHintLevel && (
+                {openSectionAsks && !supportUsed.contentHint && supportUsed.hintLevel < supportUsed.maxHintLevel && (
                   <button
                     type="button"
                     className="sp-companion__support-option"

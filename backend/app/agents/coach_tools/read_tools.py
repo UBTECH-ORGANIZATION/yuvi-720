@@ -4,16 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.agents import coach_calendar
 from app.agents.coach_modes import CoachMode
 from app.agents.coach_tools.registry import CoachTool, CoachToolContext, register
 
 
 _BOTH_MODES = frozenset({CoachMode.LESSON, CoachMode.GENERAL})
-_PERIODS = ["today", "tomorrow", "this_week", "next_week"]
-_WEEKDAYS = [
-    "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday",
-]
+_GENERAL_ONLY = frozenset({CoachMode.GENERAL})
 
 
 def _available(data: Any, reason: str) -> dict[str, Any]:
@@ -61,21 +57,12 @@ async def _get_reflection_summary(context: CoachToolContext, _args: dict[str, An
     } if summary.get("has_recent_reflection") else {}, "reflection_completion_summary")
 
 
-async def _get_calendar(context: CoachToolContext, args: dict[str, Any]) -> dict[str, Any]:
-    """Load one bounded learner-owned calendar period on demand."""
-    return await coach_calendar.load_calendar_context(
-        context.learner_id,
-        args["period"],
-        args.get("weekday"),
-    )
-
-
 register(CoachTool(
     name="get_active_goals",
     description="Get the learner-visible goals currently stored for this learner.",
     parameters={"type": "object", "properties": {}, "required": []},
     handler=_get_active_goals,
-    allowed_modes=_BOTH_MODES,
+    allowed_modes=_GENERAL_ONLY,
 ))
 
 register(CoachTool(
@@ -102,17 +89,4 @@ register(CoachTool(
     allowed_modes=_BOTH_MODES,
 ))
 
-register(CoachTool(
-    name="get_calendar",
-    description="Get the learner's calendar items for a requested bounded period.",
-    parameters={
-        "type": "object",
-        "properties": {
-            "period": {"type": "string", "enum": _PERIODS},
-            "weekday": {"type": "string", "enum": _WEEKDAYS},
-        },
-        "required": ["period"],
-    },
-    handler=_get_calendar,
-    allowed_modes=_BOTH_MODES,
-))
+# Calendar context is loaded deterministically by the Coach before it responds.

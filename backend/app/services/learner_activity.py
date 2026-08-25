@@ -180,6 +180,32 @@ async def _activity_rows(learner_id: str) -> list[dict[str, Any]]:
     return [row for row in _read_fallback() if row.get("learner_id") == learner_id]
 
 
+async def has_content_hint(
+    learner_id: str,
+    *,
+    component_id: Optional[str],
+    item_id: Optional[str],
+    question_id: Optional[str],
+) -> bool:
+    """Whether the learner opened the embedded content hint for this question."""
+    if not (component_id and item_id and question_id):
+        return False
+    query = {
+        "learner_id": learner_id,
+        "kind": "content_hint",
+        "component_id": component_id,
+        "item_id": item_id,
+        "question_id": question_id,
+    }
+    collection = _get_collection_named("learner_activity")
+    if collection is not None:
+        try:
+            return bool(await collection.find_one(query, {"_id": 1}))
+        except Exception:
+            pass
+    return any(all(row.get(key) == value for key, value in query.items()) for row in _read_fallback())
+
+
 def _question_key(component_id: Any, item_id: Any, question_id: Any) -> str:
     return "|".join(str(part or "") for part in (component_id, item_id, question_id))
 

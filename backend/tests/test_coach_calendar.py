@@ -296,7 +296,7 @@ class CoachCalendarIntegrationTests(unittest.TestCase):
         self.assertEqual(append_turn.await_args.kwargs["query_intent"], "calendar_query")
         self.assertEqual(append_turn.await_args.kwargs["calendar_period"], "tomorrow")
         self.assertEqual(append_turn.await_args.kwargs["calendar_route_source"], "deterministic")
-        self.assertIn({"name": "get_calendar", "status": "ok", "source": "system"}, trace)
+        self.assertIn({"name": "load_calendar_context", "status": "ok", "source": "system"}, trace)
 
     def test_empty_calendar_turn_attaches_calendar_action(self) -> None:
         _output, _messages, _load_context, _append_turn, actions, _trace = self._run(

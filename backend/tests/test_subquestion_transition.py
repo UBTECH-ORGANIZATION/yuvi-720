@@ -62,21 +62,23 @@ class StickyQuestionFoldTests(unittest.IsolatedAsyncioTestCase):
             effective = await events._apply_event_to_brain(event)
         return effective, captured.get("set", {})
 
-    def _event(self, sub_item, question_id):
+    def _event(self, sub_item, question_id, verb="answered"):
         # No objective_id → the mastery/scoring block is skipped; we exercise only
         # the current_state (sticky question) logic.
         return {
-            "learner_id": "L", "verb": "answered", "launch": "comp-01",
+            "learner_id": "L", "verb": verb, "launch": "comp-01",
             "unit_id": "unit-1", "sub_item_id": sub_item, "question_id": question_id,
         }
 
     async def test_new_screen_adopts_incoming_question(self) -> None:
-        eff, sets = await self._fold(
-            self._event("comp-01-002", None), {"item_id": "comp-01-001", "question_id": "q1"}
-        )
+        with patch("app.services.kata_catalog.default_question_id", return_value="q1"):
+            eff, sets = await self._fold(
+                self._event("comp-01-002", None, verb="enter"),
+                {"item_id": "comp-01-001", "question_id": "q1"},
+            )
         self.assertEqual(sets["current_state.item_id"], "comp-01-002")
-        self.assertIsNone(sets["current_state.question_id"])
-        self.assertIsNone(eff["question_id"])
+        self.assertEqual(sets["current_state.question_id"], "q1")
+        self.assertEqual(eff["question_id"], "q1")
 
     async def test_same_screen_advances_to_specific_question(self) -> None:
         # q1 → q2 on ONE screen: the exact bug scenario.
@@ -94,6 +96,43 @@ class StickyQuestionFoldTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertNotIn("current_state.question_id", sets)
         self.assertEqual(eff["question_id"], "q1")
+
+    async def test_new_items_advance_independently_of_answer_outcomes(self) -> None:
+        """Question identity follows the lomda pointer, not answer correctness."""
+        state = {"item_id": "comp-01-001", "question_id": "q1"}
+        transitions = (
+            ("comp-01-002", "q1", False),
+            ("comp-01-003", "q1", True),
+            ("comp-01-004", None, None),
+        )
+
+        for item_id, question_id, success in transitions:
+            event = self._event(item_id, question_id)
+            event["result"] = {"success": success}
+            effective, updates = await self._fold(event, state)
+
+            self.assertEqual(updates["current_state.item_id"], item_id)
+            self.assertEqual(effective["item_id"], item_id)
+            self.assertEqual(effective["question_id"], question_id)
+            state = {"item_id": item_id, "question_id": question_id}
+
+
+class QuestionIdentityNormalizationTests(unittest.TestCase):
+    def test_attempted_extracts_question_id_from_object_tail(self) -> None:
+        statement = {
+            "id": "attempt-q2",
+            "verb": {"id": "http://adlnet.gov/expapi/verbs/attempted"},
+            "object": {"id": "https://kata.example/comp-01/comp-01-002/q2"},
+            "context": {"extensions": {}},
+            "result": {"success": False},
+        }
+        launch = {"lid": "L", "cmp": "comp-01", "unit": "unit-1", "src": "kata"}
+
+        event = events.normalize_statement(statement, launch)
+
+        self.assertIsNotNone(event)
+        self.assertEqual(event["sub_item_id"], "comp-01-002")
+        self.assertEqual(event["question_id"], "q2")
 
 
 class ScreenChangeCooldownResetTests(unittest.TestCase):

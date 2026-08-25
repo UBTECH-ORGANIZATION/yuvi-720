@@ -27,17 +27,24 @@ INTENTIONS = (
     "diagnose", "elaborate", "correct", "motivate", "check-understanding", "consolidate",
 )
 
-MAX_HINT_LEVEL = 3
+MAX_HINT_LEVEL = 1
 
 # Chat-originated hints must use the same controlled support lane as the hint
-# button. This deliberately recognises only an explicit Hebrew request for a
-# hint, not a discussion *about* the word "רמז" and not broader help requests.
-_HINT_TOKEN = re.compile(r"(?<![\u0590-\u05ff])(?:ל)?רמז(?![\u0590-\u05ff])")
-_HINT_REQUEST_PREFIXES = {
-    "אפשר", "אפשרי", "תן לי", "תני לי", "תנו לי", "אשמח", "רוצה",
-    "רציתי", "צריך", "צריכה", "זקוק", "זקוקה", "בבקשה", "עזור לי",
-    "עזרי לי", "תעזור לי", "תעזרי לי", "עוד",
+# button. We recognize all common forms of the Hebrew ר-מ-ז root, but consume a
+# hint only when that form occurs in a request, never in a definition question.
+# The optional ו covers forms such as "לרמוז" and "תרמוז".
+_HINT_TOKEN = re.compile(r"(?<![\u0590-\u05ff])[\u0590-\u05ff]*רמ(?:ו)?ז[\u0590-\u05ff]*(?![\u0590-\u05ff])")
+_HINT_DEFINITION = re.compile(
+    r"(?:מה\s+(?:ה)?(?:פירוש|משמעות|הגדרה)(?:\s+(?:של|המילה))?|מה\s+זה|"
+    r"(?:פירוש|משמעות|הגדרה)\s+(?:המילה\s+)?)\s*(?:ל)?רמ(?:ו)?ז"
+)
+_HINT_REQUEST_CUES = {
+    "אפשר", "אפשרי", "תן", "תני", "תנו", "תרשום", "תרשמי", "תכתוב",
+    "תכתבי", "תביא", "תביאי", "אשמח", "רוצה", "רציתי", "צריך", "צריכה",
+    "זקוק", "זקוקה", "בבקשה", "עזור", "עזרי", "תעזור", "תעזרי", "יכול",
+    "יכולה", "יכולים", "יכולות", "יש",
 }
+_HINT_IMPERATIVE = re.compile(r"^(?:ת)?רמ(?:ו)?ז(?:י|ו)?$")
 
 # Strategy → generation guidance (Hebrew-first; the coach answers in the
 # learner's language regardless — this line steers the MOVE, not the words).
@@ -58,20 +65,17 @@ def _now() -> str:
 
 
 def is_explicit_hint_request(message: str) -> bool:
-    """Whether a learner explicitly asks for a Hebrew ``רמז`` in chat.
-
-    The matcher is intentionally narrow: requests such as "אפשר רמז?" and
-    "אשמח לרמז" consume the hint allowance, while explanatory mentions such
-    as "מה פירוש המילה רמז?" stay ordinary chat.
-    """
+    """Whether a Hebrew hint-root message explicitly requests support."""
     text = re.sub(r"\s+", " ", str(message or "")).strip()
-    token = _HINT_TOKEN.search(text)
-    if token is None:
+    if not _HINT_TOKEN.search(text) or _HINT_DEFINITION.search(text):
         return False
-    if text == "רמז":
+    words = re.findall(r"[\u0590-\u05ff]+", text.casefold())
+    if len(words) == 1 and _HINT_TOKEN.fullmatch(words[0]):
         return True
-    prefix = text[:token.start()].strip(" \t\n\r.,!?…:;—-\"").casefold()
-    return prefix in _HINT_REQUEST_PREFIXES
+    return (
+        any(word in _HINT_REQUEST_CUES for word in words)
+        or any(_HINT_IMPERATIVE.fullmatch(word) for word in words)
+    )
 
 
 def classify_error_type(recent_events: list[dict[str, Any]]) -> str:
@@ -185,7 +189,7 @@ async def record_hint_level(learner_id: str, component_id: Optional[str], level:
         pass
 
 
-# ── Per-question support gating (three hints, one explanation) ───────────────
+# ── Per-question support gating (one hint, one explanation) ──────────────────
 def support_question_key(
     current_state: dict[str, Any], surface_component_id: Optional[str]
 ) -> str:

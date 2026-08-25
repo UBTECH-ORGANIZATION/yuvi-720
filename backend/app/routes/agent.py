@@ -34,7 +34,8 @@ from app.services.lrs import reporter as lrs_reporter
 from app.services.speech import SpeechUnavailable, synthesize_speech
 from app.services import triggers
 from app.services import coach_debug_trace
-from app.services.coach_support import reserve_support
+from app.services import question_status
+from app.services.coach_support import SupportQuestionChangedError, reserve_support
 
 
 def _safe_tool_trace(steps: list[dict[str, str]]) -> list[dict[str, str]]:
@@ -126,7 +127,7 @@ async def _current_question_context(learner_id: str) -> str:
     planner can SEE must never widen what it could draw.
     """
     from app.brain.repository import get_brain
-    from app.services import kata_catalog
+    from app.services import kata_catalog, question_status
 
     try:
         brain = await get_brain(learner_id)
@@ -371,6 +372,7 @@ class CoachSupportRequest(BaseModel):
     support: Literal["hint", "explanation"]
     language: str = Field(default="he", max_length=8)
     surface: CoachSurfaceContext = Field(default_factory=CoachSurfaceContext)
+    question_key: Optional[str] = Field(default=None, max_length=400)
 
 
 class CompetencyChatMessage(BaseModel):
@@ -1197,7 +1199,7 @@ async def coach_support_state(
     + question), so moving to the next question re-arms the buttons."""
     from app.agents import tutor_decision
     from app.brain.repository import get_brain
-    from app.services import kata_catalog
+    from app.services import kata_catalog, learner_activity
 
     brain = await get_brain(learner_id)
     current = brain.get("current_state") or {}
@@ -1207,6 +1209,8 @@ async def coach_support_state(
     # "שאלה 3" because it IS the third question — not because it is the third
     # section on screen. Empty when the catalog has no snapshot for this
     # component; the client then falls back to the order it encountered them in.
+    active_component = component_id or current.get("component_id")
+    item_questions = []
     try:
         await kata_catalog.ensure_loaded()
         # The caption belongs to the lesson ON SCREEN, so the requested component
@@ -1214,10 +1218,12 @@ async def coach_support_state(
         # is the learner's position, which only events may move.) Falling back to
         # the brain's component the other way round numbered a freshly-opened
         # lesson from whichever one the learner was in before.
-        active_component = component_id or current.get("component_id")
         ordinals = kata_catalog.question_item_ordinals(active_component)
         question_parts = kata_catalog.question_part_indexes(active_component)
         teaching_only = kata_catalog.non_question_items(active_component)
+        item_questions = kata_catalog.questions_for_item(
+            active_component, current.get("item_id")
+        )
         item_spine = [
             {
                 "id": row.get("id"),
@@ -1230,9 +1236,31 @@ async def coach_support_state(
         ]
     except Exception:  # numbering must never break the support buttons
         ordinals, question_parts, teaching_only, item_spine = {}, {}, [], []
+    try:
+        status = await question_status.status_for_item(
+            learner_id,
+            component_id=active_component,
+            item_id=current.get("item_id"),
+            questions=item_questions,
+        )
+    except Exception:  # status must never block support controls
+        status = {
+            "status": question_status.STATUS_UNATTEMPTED,
+            "answer_count": 0,
+            "section_count": len(item_questions),
+            "correct_section_count": 0,
+        }
+    content_hint_used = await learner_activity.has_content_hint(
+        learner_id,
+        component_id=active_component,
+        item_id=current.get("item_id"),
+        question_id=current.get("question_id"),
+    )
     return {
         "question_key": question_key,
+        "question_status": status,
         "hint_used": used["hint"],
+        "content_hint_used": content_hint_used,
         "hint_level": used["hint_level"],
         "max_hint_level": tutor_decision.MAX_HINT_LEVEL,
         "explanation_used": used["explanation"],
@@ -1265,13 +1293,20 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
     # Three-level hint ladder plus a one-shot explanation (server-enforced; the
     # UI disables optimistically). Button and qualifying chat requests reserve
     # this allowance through one shared workflow.
-    reservation = await reserve_support(
-        learner_id,
-        request.support,
-        surface_component_id=request.surface.component_id,
-        session_id=session.get("sid"),
-        conversation_id=conversation_id,
-    )
+    try:
+        reservation = await reserve_support(
+            learner_id,
+            request.support,
+            surface_component_id=request.surface.component_id,
+            session_id=session.get("sid"),
+            conversation_id=conversation_id,
+            expected_question_key=request.question_key,
+        )
+    except SupportQuestionChangedError as exc:
+        return JSONResponse(
+            content={"error": "question_changed", "question_key": exc.current_question_key},
+            status_code=409,
+        )
     if reservation is None:
         return JSONResponse(
             content={"error": "support_already_used"},

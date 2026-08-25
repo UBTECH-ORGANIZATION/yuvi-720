@@ -129,6 +129,42 @@ class CoachApiLifecycleTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(response.status_code, 422)
 
+    async def test_support_state_returns_question_status(self):
+        self.get_brain.return_value = {
+            "current_state": {
+                "component_id": "hexagons",
+                "item_id": "hexagons-001",
+                "question_id": "q1",
+            }
+        }
+
+        with (
+            patch("app.services.kata_catalog.ensure_loaded", new=AsyncMock()),
+            patch("app.services.kata_catalog.question_item_ordinals", return_value={"hexagons-001": 1}),
+            patch("app.services.kata_catalog.question_part_indexes", return_value={}),
+            patch("app.services.kata_catalog.non_question_items", return_value=[]),
+            patch("app.services.kata_catalog.questions_for_item", return_value=[{"questionId": "q1"}]),
+            patch("app.services.kata_catalog.item_profiles", return_value=[]),
+            patch("app.services.learner_activity.has_content_hint", new=AsyncMock(return_value=True)),
+            patch.object(
+                agent.question_status,
+                "status_for_item",
+                new=AsyncMock(return_value={
+                    "status": "unattempted",
+                    "answer_count": 0,
+                    "section_count": 1,
+                    "correct_section_count": 0,
+                }),
+            ),
+        ):
+            response = await self.client.get(
+                "/api/agent/coach/support/state?component_id=hexagons"
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["question_status"]["status"], "unattempted")
+        self.assertTrue(response.json()["content_hint_used"])
+
     async def test_explicit_lesson_chat_hint_uses_support_lane(self):
         self.get_brain.return_value = {
             "current_state": {
@@ -167,6 +203,7 @@ class CoachApiLifecycleTests(unittest.IsolatedAsyncioTestCase):
             surface_component_id="hexagons",
             session_id=None,
             conversation_id="lesson-hint-chat",
+            expected_question_key=None,
         )
         stream_kwargs = stream_calls[0]
         self.assertEqual(stream_kwargs["user_message"], "תן לי רמז")

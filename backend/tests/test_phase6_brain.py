@@ -102,9 +102,7 @@ def test_hint_ladder_progression():
     from app.agents.tutor_decision import next_hint_level
     assert next_hint_level({}, "comp-1") == 1
     state = {"hint_ladder": {"component_id": "comp-1", "level": 1}}
-    assert next_hint_level(state, "comp-1") == 2
-    state = {"hint_ladder": {"component_id": "comp-1", "level": 3}}
-    assert next_hint_level(state, "comp-1") == 3          # capped
+    assert next_hint_level(state, "comp-1") == 1          # capped
     assert next_hint_level(state, "comp-OTHER") == 1      # new component resets
 
 

@@ -220,6 +220,13 @@ export function reportCoachSurface(surface: CoachSurfaceContext): void {
   void apiPost('/api/agent/presence/surface', { ...surface }).catch(() => undefined)
 }
 
+export class AgentStreamError extends Error {
+  constructor(public readonly status: number, path: string) {
+    super(`stream ${path} failed`)
+    this.name = 'AgentStreamError'
+  }
+}
+
 export async function streamAgent(
   path: string,
   body: Record<string, unknown>,
@@ -238,7 +245,7 @@ export async function streamAgent(
     body: JSON.stringify(body),
     signal: handlers.signal,
   })
-  if (!response.ok || !response.body) throw new Error(`stream ${path} failed`)
+  if (!response.ok || !response.body) throw new AgentStreamError(response.status, path)
 
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
@@ -410,12 +417,28 @@ export function streamProactive(
 
 export type CoachSupportMode = 'hint' | 'explanation'
 
+export type ItemAnswerStatus =
+  | 'unattempted'
+  | 'all_correct'
+  | 'answered_not_all_correct'
+
+export interface QuestionStatus {
+  status: ItemAnswerStatus
+  answer_count: number
+  section_count: number
+  correct_section_count: number
+}
+
 /** Per-question hint ladder plus one-shot explanation availability.
  * `question_key` changes when the learner progresses, re-arming the buttons. */
 export interface CoachSupportState {
   question_key: string
+  /** Server-derived item status from catalog sections and real xAPI answers. */
+  question_status: QuestionStatus
   /** True only after all hint levels for the current question were served. */
   hint_used: boolean
+  /** True when the learner already opened this question's embedded content hint. */
+  content_hint_used: boolean
   hint_level: number
   max_hint_level: number
   explanation_used: boolean
@@ -490,11 +513,12 @@ export function streamCoachSupport(
   language: string,
   handlers: CoachStreamHandlers,
   conversationId: string = 'default',
-  surface: CoachSurfaceContext = { screen: 'learning_lesson' }
+  surface: CoachSurfaceContext = { screen: 'learning_lesson' },
+  questionKey: string | null = null,
 ): Promise<void> {
   return streamAgent(
     '/api/agent/coach/support',
-    { conversation_id: conversationId, support, language, surface },
+    { conversation_id: conversationId, support, language, surface, question_key: questionKey },
     handlers,
     // ONE worker owns Yuvi's voice, so a stream that never ends never ends the
     // queue either: every intro, nudge and reaction behind it is stranded, and

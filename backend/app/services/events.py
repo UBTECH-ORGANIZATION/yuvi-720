@@ -13,6 +13,7 @@ Authoritative vocabulary: `.github/skills/720-content-standards/references/xapi-
 from __future__ import annotations
 
 import base64
+import asyncio
 import hashlib
 import hmac
 import json
@@ -80,6 +81,11 @@ _MEDIA_NOISE_WINDOW_SECONDS = 5.0
 _MEDIA_NOISE_MEMORY_LIMIT = 400
 _media_last_seen: dict[str, float] = {}
 _media_epoch: dict[str, int] = {}
+
+# A provider can POST a small batch concurrently. Folding each learner's batch
+# in arrival order makes the timestamp guard below effective: a late old event
+# then reads the screen written by the newer one and cannot rewind it.
+_brain_fold_locks: dict[str, asyncio.Lock] = {}
 
 
 def _is_empty_result(event: dict[str, Any]) -> bool:
@@ -502,7 +508,7 @@ def normalize_statement(
     object_id = obj.get("id")
     sub_item_id, parsed_question_id = resolve_item_question(object_id, launch.get("cmp"))
     question_id = ext.get("question_id") or parsed_question_id
-    if not question_id and slug == "answered" and isinstance(object_id, str):
+    if not question_id and slug in {"answered", "attempted"} and isinstance(object_id, str):
         tail = object_id.rstrip("/").rsplit("/", 1)[-1].rsplit("#", 1)[-1]
         if tail.lower().startswith("q") and tail[1:].isdigit():
             question_id = tail
@@ -823,7 +829,9 @@ async def ingest_statement(
         effective_state: Optional[dict[str, Any]] = None
         try:
             await _update_item_stats(event)
-            effective_state = await _apply_event_to_brain(event)
+            fold_lock = _brain_fold_locks.setdefault(event["learner_id"], asyncio.Lock())
+            async with fold_lock:
+                effective_state = await _apply_event_to_brain(event)
         except Exception as exc:
             print(f"⚠️ brain fold failed for {event.get('_id')}: {type(exc).__name__}")
         try:

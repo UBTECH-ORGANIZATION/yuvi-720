@@ -15,6 +15,7 @@ import unittest
 from unittest.mock import patch
 
 from app.agents import sessions, tutor_decision
+from app.services.coach_support import SupportQuestionChangedError, reserve_support
 from app.services.events import (
     is_component_completion,
     normalize_statement,
@@ -132,7 +133,7 @@ class SupportKeyTest(unittest.TestCase):
             }
         }
         same = tutor_decision.support_used(state, "cmp|cmp-001|q1")
-        self.assertEqual(same, {"hint": True, "explanation": False, "hint_level": 3})
+        self.assertEqual(same, {"hint": True, "explanation": False, "hint_level": 1})
         moved = tutor_decision.support_used(state, "cmp|cmp-002|q1")
         self.assertEqual(moved, {"hint": False, "explanation": False, "hint_level": 0})
 
@@ -143,18 +144,48 @@ class SupportKeyTest(unittest.TestCase):
         )
 
 
+class SupportReservationTest(unittest.IsolatedAsyncioTestCase):
+    async def test_rejects_hint_when_ui_question_is_stale(self):
+        state = {
+            "current_state": {
+                "component_id": "cmp",
+                "item_id": "cmp-003",
+                "question_id": "q1",
+            }
+        }
+        with patch("app.brain.repository.get_brain", return_value=state):
+            with self.assertRaises(SupportQuestionChangedError) as raised:
+                await reserve_support(
+                    "learner-1",
+                    "hint",
+                    surface_component_id="cmp",
+                    session_id=None,
+                    conversation_id="conversation-1",
+                    expected_question_key="cmp|cmp-001|q1",
+                )
+        self.assertEqual(raised.exception.current_question_key, "cmp|cmp-003|q1")
+
+
 class ExplicitChatHintRequestTest(unittest.TestCase):
-    def test_explicit_hebrew_hint_requests_are_recognized(self):
-        for message in ("רמז", "אפשר רמז?", "תן לי רמז", "אשמח לרמז"):
+    def test_hebrew_hint_request_uses_the_hint_support_lane(self):
+        for message in (
+            "רמז", "אפשר רמז?", "תן לי רמז", "אשמח לרמז", "אני אשמח לרמז",
+            "אפשר תרשום לי רמז לפתרון?", "אפשר רמזים?", "תרמוז לי",
+            "אתה יכול לרמוז?",
+        ):
             with self.subTest(message=message):
                 self.assertTrue(tutor_decision.is_explicit_hint_request(message))
 
-    def test_explanatory_or_broader_help_stays_normal_chat(self):
+    def test_definition_and_non_request_messages_stay_normal_chat(self):
         for message in (
-            "מה פירוש המילה רמז?",
-            "למה קוראים לזה רמז?",
+            "מה הפירוש המילה רמז?",
+            "אפשר להסביר מה זה רמז?",
+            "מה המשמעות של רמז?",
+            "הוא מרמז לי",
+            "רמזתי קודם",
             "אפשר כיוון?",
             "אני לא מבין את השאלה",
+            "אפשר להסביר את השאלה?",
         ):
             with self.subTest(message=message):
                 self.assertFalse(tutor_decision.is_explicit_hint_request(message))

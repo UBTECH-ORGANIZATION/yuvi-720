@@ -19,10 +19,10 @@ from app.agents.coach_tools.registry import (  # noqa: E402
 )
 
 
-def _context() -> CoachToolContext:
+def _context(mode: CoachMode = CoachMode.GENERAL) -> CoachToolContext:
     return CoachToolContext(
         learner_id="learner-1",
-        mode=CoachMode.GENERAL,
+        mode=mode,
         language="he",
         session_id="general-1",
         exchange_id="exchange-1",
@@ -62,7 +62,21 @@ class CoachReadToolsTests(unittest.TestCase):
         names = {schema["function"]["name"] for schema in schemas(CoachMode.GENERAL)}
         self.assertEqual(
             names,
-            {"get_active_goals", "get_profile_summary", "get_learning_status", "get_reflection_summary", "get_calendar"},
+            {"get_active_goals", "get_profile_summary", "get_learning_status", "get_reflection_summary"},
+        )
+
+    def test_lesson_schemas_exclude_goals(self):
+        names = {schema["function"]["name"] for schema in schemas(CoachMode.LESSON)}
+        self.assertEqual(
+            names,
+            {"get_profile_summary", "get_learning_status", "get_reflection_summary"},
+        )
+
+    def test_lesson_mode_cannot_dispatch_goals(self):
+        lesson_context = _context(CoachMode.LESSON)
+        self.assertEqual(
+            asyncio.run(dispatch("get_active_goals", {}, lesson_context)),
+            {"error": "tool_not_allowed_for_mode"},
         )
 
     def test_profile_projection_omits_teacher_guidance(self):

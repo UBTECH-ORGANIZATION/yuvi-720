@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import {
   acknowledgeKudos,
   createCoachConversation,
+  AgentStreamError,
   coachSurfaceForPath,
   deleteCoachConversation,
   getCoachSupportState,
@@ -24,6 +25,7 @@ import {
   type HelpMethod,
   type LessonItemKind,
   type PendingKudos,
+  type QuestionStatus,
   type TriggerAlternative,
   type VisualMode,
 } from '../services/agents'
@@ -197,7 +199,13 @@ interface CompanionContextValue {
   requestSupport: (support: CoachSupportMode) => Promise<void>
   /** Support used on the active question. Hints remain available through the
    *  server-approved ladder; explanation is one-shot. */
-  supportUsed: { hint: boolean; hintLevel: number; maxHintLevel: number; explanation: boolean }
+  supportUsed: {
+    hint: boolean
+    contentHint: boolean
+    hintLevel: number
+    maxHintLevel: number
+    explanation: boolean
+  }
   /** Screen id → the question number the learner sees for it, from the catalog.
    *  The chat titles each question thread from this, so the heading matches the
    *  lesson instead of counting sections on screen. */
@@ -206,6 +214,8 @@ interface CompanionContextValue {
    *  than one question. Empty for single-question screens: naming a part the
    *  learner cannot see on screen would invent structure. */
   questionParts: Record<string, number>
+  /** Item id → server-derived answer status from catalog and real xAPI evidence. */
+  questionStatuses: Record<string, QuestionStatus>
   /** Screens that teach without asking — their threads are captioned as a
    *  learning step rather than given a question number they do not have. */
   teachingItems: string[]
@@ -386,10 +396,11 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0)
   const [disclosure, setDisclosure] = useState<string | null>(null)
   const [supportUsed, setSupportUsed] = useState({
-    hint: false, hintLevel: 0, maxHintLevel: 3, explanation: false,
+    hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 1, explanation: false,
   })
   const [questionOrdinals, setQuestionOrdinals] = useState<Record<string, number>>({})
   const [questionParts, setQuestionParts] = useState<Record<string, number>>({})
+  const [questionStatuses, setQuestionStatuses] = useState<Record<string, QuestionStatus>>({})
   const [teachingItems, setTeachingItems] = useState<string[]>([])
   const [itemKinds, setItemKinds] = useState<Record<string, LessonItemKind>>({})
   const [itemMedia, setItemMedia] = useState<Record<string, string>>({})
@@ -407,6 +418,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // Bumped when the lesson page creates a provider session. Every provider
   // launch gets its own clean Coach thread, keyed by the immutable session id.
   const [lessonEpoch, setLessonEpoch] = useState(0)
+  const [supportStateEpoch, setSupportStateEpoch] = useState(-1)
   useEffect(() => {
     const onLessonSession = (event: Event) => {
       const detail = (event as CustomEvent<Partial<LessonLaunch>>).detail
@@ -425,8 +437,12 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       setMessages([])
       setMessageCursor(null)
       setHasMoreMessages(false)
+      currentQuestionKeyRef.current = null
+      setCurrentQuestionKey(null)
+      setQuestionStatuses({})
       lessonLaunchRef.current = nextLaunch
       setLessonLaunch(nextLaunch)
+      setSupportStateEpoch(-1)
       setLessonEpoch((epoch) => epoch + 1)
     }
     window.addEventListener('yuvilab:lesson-session-created', onLessonSession)
@@ -565,7 +581,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     welcomedThreadsRef.current = new Set()
     welcomedEpochRef.current = -1
     setPendingAlternative(null)
-    setSupportUsed({ hint: false, hintLevel: 0, maxHintLevel: 3, explanation: false })
+    setSupportUsed({ hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 3, explanation: false })
   }, [activityScoped, surface.component_id, surface.unit_id])
 
   const nextId = () => `live-${Date.now()}-${counter.current++}`
@@ -660,11 +676,12 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // why a reload "fixed" it (one mount, one epoch, nothing to race).
   useEffect(() => {
     if (!activityScoped || !surface.component_id || lessonEpoch === 0) return
+    if (supportStateEpoch !== lessonEpoch) return
     if (welcomedEpochRef.current === lessonEpoch) return
     if (introParts(currentQuestionKeyRef.current).question) return
     welcomedEpochRef.current = lessonEpoch
     enqueueChatAction({ kind: 'welcome', targetQuestionKey: currentQuestionKeyRef.current })
-  }, [activityScoped, surface.component_id, lessonEpoch, currentQuestionKey, enqueueChatAction])
+  }, [activityScoped, surface.component_id, lessonEpoch, supportStateEpoch, currentQuestionKey, enqueueChatAction])
 
   const finishOpening = useCallback(() => {
     if (openingTimer.current) clearTimeout(openingTimer.current)
@@ -1294,7 +1311,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     }
     if (source === 'push') {
       pushSeqRef.current += 1
-      setSupportUsed({ hint: false, hintLevel: 0, maxHintLevel: 3, explanation: false })   // poll is authoritative
+      setSupportUsed({ hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 1, explanation: false })   // poll is authoritative
     }
     activitySeqRef.current += 1
     maybeEnqueueIntro(key)
@@ -1312,6 +1329,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       const state = await getCoachSupportState(surface.component_id, signal)
       setSupportUsed({
         hint: state.hint_level > 0,
+        contentHint: state.content_hint_used,
         hintLevel: state.hint_level,
         maxHintLevel: state.max_hint_level,
         explanation: state.explanation_used,
@@ -1321,6 +1339,14 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       // lesson — not because it happens to be the third section on screen.
       if (state.question_ordinals) setQuestionOrdinals(state.question_ordinals)
       if (state.question_parts) setQuestionParts(state.question_parts)
+      const statusParts = introParts(state.question_key)
+      if (statusParts.item && state.question_status) {
+        const statusKey = statusParts.item
+        setQuestionStatuses((previous) => ({
+          ...previous,
+          [statusKey]: state.question_status,
+        }))
+      }
       if (state.teaching_items) setTeachingItems(state.teaching_items)
       if (state.items) {
         const kinds: Record<string, LessonItemKind> = {}
@@ -1340,15 +1366,16 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       if (pushSeqRef.current === seenPush) {
         applyQuestionKey(state.question_key || null, 'poll')
       }
+      setSupportStateEpoch(lessonEpoch)
     } catch {
       /* transient — next tick retries */
     }
-  }, [applyQuestionKey, surface.component_id])
+  }, [applyQuestionKey, lessonEpoch, surface.component_id])
   useEffect(() => { syncSupportStateRef.current = () => syncSupportState() }, [syncSupportState])
 
   useEffect(() => {
     if (!activityScoped) {
-      setSupportUsed({ hint: false, hintLevel: 0, maxHintLevel: 3, explanation: false })
+      setSupportUsed({ hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 3, explanation: false })
       currentQuestionKeyRef.current = null
       setCurrentQuestionKey(null)
       return
@@ -1433,7 +1460,12 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           )))
         },
       }, conversationId, surface), () => received)
-    } catch {
+    } catch (error) {
+      if (error instanceof AgentStreamError && error.status === 409) {
+        setMessages((current) => current.filter((message) => message.id !== assistantId))
+        await syncSupportState()
+        return
+      }
       setMessages((current) => current.map((m) => (
         m.id === assistantId && !m.text
           ? { ...m, text: '…', isVisualizing: false }
@@ -1447,7 +1479,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       await reloadHistory()
       liveTurnInProgress.current = false
     }
-  }, [completeAssistant, ensureConversationId, language, reloadHistory, surface])
+  }, [completeAssistant, ensureConversationId, language, reloadHistory, surface, syncSupportState])
 
   const requestSupport = useCallback(async (support: CoachSupportMode) => {
     if (support === 'hint'
@@ -1810,6 +1842,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         supportUsed,
         questionOrdinals,
         questionParts,
+        questionStatuses,
         teachingItems,
         itemKinds,
         itemMedia,

@@ -614,6 +614,8 @@
   "companion.explainer.done": "Got it, thanks",
   "companion.thread.intro": "Introduction",
   "companion.thread.question": "Question {n}",
+  "companion.thread.status.unattempted": "No answer received yet",
+  "companion.thread.status.all_correct": "All parts answered correctly",
   "companion.thread.step": "Learning step",
   "companion.thread.watch": "Video",
   "companion.thread.read": "Reading",
