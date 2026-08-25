@@ -30,7 +30,7 @@ import { StudentAvatar } from '../shared/StudentAvatar'
 import { agoLabel } from '../live/LiveNow'
 import { MomentScene } from './MomentScene'
 import { momentSentence } from './momentText'
-import { bookWeek, coverVariant, platePlan, topMoments } from './bookModel'
+import { bookWeek, coverVariant, platePlan, project, topMoments } from './bookModel'
 import './moments-album.css'
 
 const TURN_MS = 750
@@ -238,9 +238,20 @@ export function MomentsAlbum({
       if (now - state.lastWheel > 400 || Math.sign(event.deltaY) !== Math.sign(state.acc || event.deltaY)) {
         state.acc = 0
       }
+      /* Distance alone cannot tell a flick from a crawl, and making a flick
+         travel the same 40px as a slow drag is what makes a turner feel
+         heavy. So ask where the gesture is HEADING, not only where it has
+         been: project the momentum from the current velocity and commit as
+         soon as the projection clears the threshold. A fast two-finger flick
+         turns on its second frame; a gentle scroll still accumulates. The
+         first event of a fresh gesture has no velocity to read (its `dt`
+         spans the pause that reset it) and contributes distance only. */
+      const dt = Math.max(now - state.lastWheel, 1)
+      const velocity = (event.deltaY / dt) * 1000 // px per second
       state.lastWheel = now
       state.acc += event.deltaY
-      if (Math.abs(state.acc) < 40) return
+      const projected = state.acc + project(velocity)
+      if (Math.abs(projected) < 40) return
       const direction = state.acc > 0 ? 1 : -1
       state.acc = 0
       state.lastTurn = now

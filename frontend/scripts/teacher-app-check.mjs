@@ -84,8 +84,11 @@ try {
   await page.waitForTimeout(500)
   await page.screenshot({ path: `${OUT}/03-home.png`, fullPage: true })
 
-  const attentionRows = await page.locator('.tch-attention').count()
-  check('attention inbox lists flagged students', attentionRows > 0, `${attentionRows} rows`)
+  /* The attention inbox this used to assert was removed in #450: one
+     deterministic band per student replaced the separate flagged-list, so the
+     question "who needs me" is answered in the students card instead. */
+  const bandCards = await page.locator('.tch-bands').count()
+  check('the students card groups the class by band', bandCards > 0, `${bandCards} cards`)
 
   const whyButtons = await page.locator('.tch-evidence__toggle').count()
   check('every surface offers a "why?" disclosure', whyButtons > 0, `${whyButtons} toggles`)

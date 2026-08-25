@@ -91,3 +91,18 @@ export function topMoments(moments: Moment[], limit: number = BOOK_SIZE): Moment
     })
     .slice(0, limit)
 }
+
+/* Where a flick is heading, from the velocity it is travelling at — Apple's
+ * momentum projection (UIScrollView's exponential decay), used by the book's
+ * floor turner to commit a fast gesture without waiting for it to travel the
+ * full threshold.
+ *
+ * `velocity` is px/second; the result is the additional distance the gesture
+ * would coast through if released now. The deceleration constant is the
+ * SNAPPY one (0.99, ~99x velocity/s) rather than the scroll-like 0.998
+ * (~499x): at 0.998 even a slow two-finger crawl projects past a page-turn
+ * threshold, which would turn the gentle-scroll case into a hair trigger.
+ */
+export function project(velocity: number, deceleration: number = 0.99): number {
+  return (velocity / 1000) * deceleration / (1 - deceleration)
+}

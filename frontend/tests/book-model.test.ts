@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-  PLATE_VARIANTS, bookWeek, coverVariant, platePlan, topMoments,
+  PLATE_VARIANTS, bookWeek, coverVariant, platePlan, project, topMoments,
 } from '../src/features/teacher-app/moments/bookModel.ts'
 import type { Moment } from '../src/services/teacher.ts'
 
@@ -77,4 +77,21 @@ test('the cover artwork is stable per class and always a real plate', () => {
     const variant = coverVariant(name)
     assert.ok(variant >= 1 && variant <= 3)
   }
+})
+
+/* The floor turner reads intent from speed, not distance alone: a flick
+   commits early, a crawl still has to travel. The deceleration constant is
+   what separates the two, so it is pinned here rather than tuned by feel. */
+test('a flick projects past the page-turn threshold and a crawl does not', () => {
+  const THRESHOLD = 40
+  // a gentle two-finger crawl: ~4px every 50ms
+  assert.ok(Math.abs(project((4 / 50) * 1000)) < THRESHOLD)
+  // a deliberate flick: ~30px every 8ms
+  assert.ok(Math.abs(project((30 / 8) * 1000)) > THRESHOLD)
+})
+
+test('projection carries the sign of the gesture and rests at zero', () => {
+  assert.equal(project(0), 0)
+  assert.ok(project(-1200) < 0)
+  assert.ok(project(1200) > 0)
 })
