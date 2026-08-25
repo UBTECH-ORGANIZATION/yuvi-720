@@ -112,3 +112,34 @@ async def hand_off(
             },
         },
     )
+
+
+async def cancel(learner_id: str) -> int:
+    """The child takes their hand down (#450).
+
+    Clears the live strip immediately, then resolves the open ``coach_handoff``
+    alerts so the teacher's inbox agrees with the room. STRICTLY that one kind:
+    a safety escalation also sets `help_requested_at`, but its ALERT must
+    survive anything a child can press — `resolve_open_for_learner` enforces
+    the kind, and the invariant is pinned by test. Resolving republishes
+    `hand_resolved` to the learner topic, which is exactly the cooldown unlock
+    the client wants after a cancel.
+    """
+    from app.services import presence, teacher_alerts
+
+    presence.clear_help_requested(learner_id)
+    return await teacher_alerts.resolve_open_for_learner(
+        learner_id, kind="coach_handoff")
+
+
+def hand_state(learner_id: str) -> dict[str, Any]:
+    """Is this learner's hand up right now — server truth for the button glow.
+
+    A pure presence read (GET never generates): the client initializes from
+    this on mount so a reload cannot silently lower a raised hand's glow.
+    """
+    from app.services import presence
+
+    entry = presence.snapshot(learner_id) or {}
+    raised_at = entry.get("help_requested_at")
+    return {"raised": bool(raised_at), "since": raised_at}

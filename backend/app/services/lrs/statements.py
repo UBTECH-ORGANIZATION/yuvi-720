@@ -295,7 +295,7 @@ def conversation_interacted(
     conversation_id: str,
     *,
     speaker: str,  # student | bot
-    conversation_trigger: str,  # student-request | success-effort | misconception | idle-time
+    conversation_trigger: str,  # student-request | success-effort | student-error | idle-time | other
     help_type: Optional[str] = None,  # hint | explanation | alternative-content | other | bot-help-offer | motivation
     component_id: Optional[str] = None,
     item_id: Optional[str] = None,
@@ -303,10 +303,20 @@ def conversation_interacted(
     hierarchy: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     obj = activity(f"{_domain()}/conversation/{conversation_id}", "conversation")
+    # Spec v1.1 closed the trigger list and replaced `misconception` with
+    # `student-error`; an off-list value becomes `other` rather than a rejection.
+    allowed_triggers = {
+        "student-request", "success-effort", "student-error", "idle-time", "other"
+    }
+    trigger = {"misconception": "student-error"}.get(
+        conversation_trigger, conversation_trigger
+    )
+    if trigger not in allowed_triggers:
+        trigger = "other"
     ext = extensions(
         {
             "speaker": speaker,
-            "conversationTrigger": conversation_trigger,
+            "conversationTrigger": trigger,
             # Required by the review, which found it missing. A turn that is not
             # a specific kind of help is still a kind: "other". Never absent.
             "helpType": help_type or "other",
@@ -689,13 +699,11 @@ def _moe_verb(raw_verb: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
 
 
 def _seconds(value: Optional[float]) -> Optional[float]:
-    """mediaPosition / mediaDuration are PLAIN SECONDS, not ISO-8601.
+    """mediaPosition is PLAIN SECONDS, not ISO-8601.
 
     The spec is explicit ("המיקום במדיה, בשניות") and its examples are bare
-    numbers — `"mediaPosition": 105`, `"mediaDuration": 120`. Only
-    `result.duration` is an ISO-8601 duration. We were sending `PT1M45S` for
-    both, which is the right instant expressed in a type the field does not
-    take. Whole values stay ints so the JSON reads `120`, not `120.0`.
+    numbers — `"mediaPosition": 105`. Only `result.duration` is an ISO-8601
+    duration. Whole values stay ints so the JSON reads `120`, not `120.0`.
     """
     if value is None:
         return None
@@ -711,7 +719,6 @@ def media_event(
     object_id: str,
     media_format: str,                   # video | audio | animation
     media_position_seconds: Optional[float] = None,
-    media_duration_seconds: Optional[float] = None,
     duration_seconds: Optional[float] = None,   # result.duration (watched so far)
     name_he: Optional[str] = None,
     hierarchy: Optional[dict[str, Any]] = None,
@@ -719,10 +726,10 @@ def media_event(
 ) -> dict[str, Any]:
     """`played` / `paused` / `completed` on a video, audio or animation.
 
-    The review: all three were missing `mediaFormat`, `mediaPosition` and
-    `mediaDuration`, and `paused`/`completed` were missing `result.duration`.
-    Position/duration are only ever what the content told us — an unknown one is
-    omitted, never guessed.
+    Spec v1.1 removed the `mediaDuration` extension — only `mediaFormat` and
+    `mediaPosition` remain, plus `result.duration` for actual watch time.
+    Position is only ever what the content told us — an unknown one is omitted,
+    never guessed.
     """
     obj = activity(
         object_id, _MEDIA_ACTIVITY_TYPES.get(str(media_format or "").lower(), "item"), name_he
@@ -742,7 +749,6 @@ def media_event(
             "extensions": extensions({
                 "mediaFormat": media_format,
                 "mediaPosition": _seconds(media_position_seconds),
-                "mediaDuration": _seconds(media_duration_seconds),
             })
         },
         hierarchy=hierarchy,

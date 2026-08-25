@@ -115,16 +115,9 @@ describe('counts that read like a language', () => {
     'tch.assistant.form.goalDoneSkipped',
     'tch.assistant.form.approvedAll',
     'tch.assistant.form.ackedAll',
-    // The hero's own two, which carried the same bug in the same screenshot.
-    'tch.brief.action.assign',
-    'tch.brief.action.openRoster',
-    // And the sub-group dialog's, reached from the hero. (`tch.subgroup.open`
-    // and `.kept` went with the buttons that used them: the gaps list builds a
-    // task now, and keeping a selection as a named group belongs to the roster
-    // screen that can also edit one.)
-    'tch.subgroup.assign',
-    'tch.subgroup.assigned',
-    'tch.subgroup.assignedWithSkips',
+    // The brief hero and the sub-group goal dialog left with #450, and their
+    // five pairs went with them — the gaps card now seeds tasks and named
+    // sub-groups through the shared dialogs, which carry their own copy.
     // The gaps list's replacement, carrying the same count into the same shape.
     'tch.gaps.buildTask',
     'tch.tasks.fromGap',
@@ -260,63 +253,9 @@ describe('every offer the tools can make has a form that renders it', () => {
   })
 })
 
-describe('the hero scenes the model may choose from', () => {
-  const backend = read('../../backend/app/services/daily_brief.py')
-
-  /** `daily_brief.SCENES` — read from source, because it is the only place the
-   *  two languages meet. A model that picks a mood this catalogue cannot draw
-   *  leaves the hero's whole illustration half blank. */
-  const offered = (backend.match(/^SCENES = \(([^)]*)\)/m)?.[1] ?? '')
-    .match(/"([a-z_]+)"/g)?.map((q) => q.replaceAll('"', '')) ?? []
-
-  it('found the backend set at all', () => {
-    assert.ok(offered.length >= 5, `parsed only ${JSON.stringify(offered)}`)
-  })
-
-  it('draws every mood the backend can send', () => {
-    for (const scene of offered) {
-      assert.ok(isSceneKey(scene), `backend offers "${scene}" and the catalogue has no art`)
-    }
-  })
-
-  it('offers no mood the backend cannot send', () => {
-    // The other direction matters too: a key here with no backend entry is art
-    // nobody will ever see, and a sign the two drifted.
-    for (const key of SCENE_KEYS) {
-      assert.ok(offered.includes(key), `catalogue has "${key}" and the backend never sends it`)
-    }
-  })
-
-  it('falls back to a real scene rather than nothing', () => {
-    assert.ok(isSceneKey(DEFAULT_SCENE))
-  })
-
-  it('rejects anything that is not a known mood', () => {
-    for (const value of ['hopeful', '', null, undefined, 42, 'CELEBRATING']) {
-      assert.equal(isSceneKey(value), false, String(value))
-    }
-  })
-
-  it('has a label for every scene in all three languages', () => {
-    for (const [language, table] of Object.entries(locales)) {
-      for (const key of SCENE_KEYS) {
-        assert.ok(table[`tch.brief.scene.${key}`],
-                  `${language} is missing tch.brief.scene.${key}`)
-      }
-    }
-  })
-
-  it('maps a subject onto a prop it actually has art for', () => {
-    assert.equal(propFor('math'), 'math')
-    assert.equal(propFor('Science'), 'science')
-    assert.equal(propFor('english'), 'english')
-    // The backend emits these too; none of them may fall through to nothing.
-    for (const subject of ['biology', 'physics', 'other', '', null, undefined]) {
-      assert.ok(PROP_KEYS.includes(propFor(subject)), String(subject))
-    }
-  })
-})
-
+/* The hero-scenes contract left with the brief hero (#450): the scenes
+   catalogue now serves only the check-in creatures, which carry their own
+   coverage. */
 describe('an action belongs to the message that offered it', () => {
   it('two turns offering the same tool do not share an open form', () => {
     // Backend ids are `{tool}:{index}` per TURN, so the first goal offered in

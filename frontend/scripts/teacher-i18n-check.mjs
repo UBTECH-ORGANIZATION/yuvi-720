@@ -38,7 +38,9 @@ const SCREENS = [
      stored `teacher_roster_view`, and the ready selector named only the cards
      — so the screen "failed to render" for anyone who last chose the table. */
   { name: 'students', path: '/teacher/students',
-    ready: '.tch-studentCard, .tch-roster__table, .sp-state' },
+    /* …and since #249 the screen opens in LIVE mode, whose view is
+       `.tch-liveClass` — neither a card nor the manage-mode table. */
+    ready: '.tch-liveClass, .tch-studentCard, .tch-roster__table, .sp-state' },
   { name: 'learnings', path: '/teacher/learnings', ready: '.tch-learning' },
   { name: 'goals', path: '/teacher/goals', ready: '.tch-goalsPage__inbox' },
   { name: 'messages', path: '/teacher/messages', ready: '.tch-messages__layout' },

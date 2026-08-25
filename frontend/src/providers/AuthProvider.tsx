@@ -40,6 +40,10 @@ export interface UserPreferences {
   /** Visible roster columns, by key. Empty means "the defaults": a teacher who
       never opened the chooser has no opinion to freeze against future columns. */
   teacher_roster_columns: string[]
+  /** Which week's class book was already unwrapped, per group id ({group_id:
+      that week's Sunday, "YYYY-MM-DD"}). Server-side so the once-per-edition
+      gift ceremony follows the TEACHER, not the browser. */
+  teacher_book_seen: Record<string, string>
 }
 
 export interface AuthUser {

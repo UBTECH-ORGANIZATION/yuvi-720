@@ -79,13 +79,17 @@ const ROUTES: [prefix: string, dimensions: ScopeDimensions][] = [
   ['/teacher/tasks/', { class: true, subgroup: true, subject: false }],
   ['/teacher/tasks', { class: true, subgroup: false, subject: true }],
 
-  /* Home's four KPIs, the brief, engagement and the gaps panel are all class
-     aggregates — none of them recomputes for six children, so claiming the
-     sub-group here would put a lit filter over numbers it does not narrow.
-     The one honest exception was considered and rejected: filtering only the
-     attention inbox would make half the screen mean the sub-group and half the
-     class, on the page a teacher reads fastest. */
-  ['/teacher', { class: true, subgroup: false, subject: false }],
+  /* Home narrows by sub-group since #450: the students band card — the page's
+     centrepiece — filters to the picked sub-group client-side, and says so in
+     its own subtitle while the KPIs, the live card and the gaps stay
+     class-wide (they are class aggregates; recomputing them for six children
+     would make the same number mean two things on one screen). The previous
+     rationale rejected a partial narrowing when the only narrowable block was
+     the attention inbox; a card of every student is a different trade — hiding
+     the filter from the screen teachers triage on cost more than the split
+     scope does, and the notice keeps the split honest (never silently
+     ignore). */
+  ['/teacher', { class: true, subgroup: true, subject: false }],
 
   /* The control plane borrows the teacher chrome, but it is about who is
      connected to whom across every group. Nothing to narrow. */

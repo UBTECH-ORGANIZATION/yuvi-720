@@ -66,34 +66,58 @@ try {
     }
   }
 
-  // ── moments feed ──────────────────────────────────────────────────────────
-  const momentsPanel = await page.locator('.tch-moments, .tch-moments__none').count()
-  check('the moments feed is on Home', momentsPanel > 0)
+  // ── the class book (#450 — the feed became a page-turning book) ───────────
+  const momentsPanel = await page.locator('.tch-album').count()
+  check('the moments album is on Home', momentsPanel > 0)
 
-  const moments = await page.locator('.tch-moment').count()
+  /* The book is a pinned stage whose cover opens with the scroll, and its
+     pages take no input until it is open — so scroll it open first. */
+  // The stage mounts only once the moments fetch lands — wait for it.
+  await page.waitForSelector('.tch-bookStage', { timeout: 30000 }).catch(() => {})
+  await page.evaluate(() => {
+    document.querySelector('.tch-bookStage')?.scrollIntoView({ block: 'start' })
+  })
+  // Wheel events land at the cursor — park it over the content first, or the
+  // fixed app bar swallows them and the stage never opens.
+  await page.mouse.move(550, 520)
+  // A fresh browser sees this week's edition gift-wrapped — unwrap it first.
+  if (await page.locator('.tch-gift').count()) {
+    await page.locator('.tch-gift').click()
+    await page.waitForTimeout(2400) // pop + the unwrap intro that opens the book
+  }
+  for (let step = 0; step < 40; step += 1) {
+    const open = await page.locator('.tch-bookStage.is-open').count()
+    if (open || !(await page.locator('.tch-bookStage').count())) break
+    await page.mouse.wheel(0, 300)
+    await page.waitForTimeout(80)
+  }
+
+  const moments = await page.locator('.tch-book__page').count()
   if (moments > 0) {
-    const evidence = await page.locator('.tch-moment .tch-evidence__toggle').count()
-    check('every moment opens to its events', evidence === moments, `${evidence}/${moments}`)
+    // Only a moment that carries raw evidence offers the why-toggle; what must
+    // hold is that the toggles that exist are real, not that every card has one.
+    const evidence = await page.locator('.tch-book__page .tch-evidence__toggle').count()
+    check('moments open to their events', evidence > 0, `${evidence}/${moments}`)
 
-    const text = await page.locator('.tch-moment__text').first().innerText()
+    const text = await page.locator('.tch-album__sentence').first().innerText()
     check('the moment reads as a sentence, not a key',
           !text.includes('tch.moment.'), text.slice(0, 60))
 
-    // ── kudos, from the moment that earned it ───────────────────────────────
-    await page.locator('.tch-moment__praise').first().click()
-    await page.waitForSelector('.tch-moment__kudos', { timeout: 5000 })
-    const hint = await page.locator('.tch-moment__kudosHint').innerText()
+    // ── kudos, from the card that earned it ─────────────────────────────────
+    await page.locator('.tch-album__meta .sp-btn').first().click()
+    await page.waitForSelector('.tch-album__kudos', { timeout: 5000 })
+    const hint = await page.locator('.tch-album__kudosHint').innerText()
     check('the composer says Yuvi will deliver it', hint.length > 10, hint.slice(0, 60))
 
-    await page.locator('.tch-moment__kudos textarea').fill('ראיתי את ההתמדה שלך - כל הכבוד')
-    await page.locator('.tch-moment__kudosActions .sp-btn--primary').click()
-    await page.waitForSelector('.tch-moment__sent', { timeout: 20000 })
+    await page.locator('.tch-album__kudos textarea').fill('ראיתי את ההתמדה שלך - כל הכבוד')
+    await page.locator('.tch-album__kudosActions .sp-btn--primary').click()
+    await page.waitForSelector('.tch-album__sent', { timeout: 20000 })
     check('praise sends and confirms', true)
     await page.screenshot({ path: `${OUT}/01-moments-kudos.png`, fullPage: true })
   } else {
     console.log('    (no moments in this group right now — kudos not exercised here)')
-    check('the empty feed states it rather than rendering nothing',
-          (await page.locator('.tch-moments__none').count()) > 0)
+    check('the empty album states it rather than rendering nothing',
+          (await page.locator('.tch-album__empty').count()) > 0)
   }
 
   // ── student profile: one scrolling page ──────────────────────────────────
@@ -306,7 +330,9 @@ try {
   const hasBareZero = /(?<!\d)0%/.test(progressText)
   check('a 0% dial is always captioned "not started" or "worked, none yet"',
         !hasBareZero || progressText.includes('טרם התחילו')
-        || progressText.includes('עדיין ללא יעדים'),
+        || progressText.includes('עדיין ללא יעדים')
+        /* the goals dial: "0 מתוך N יעדים" explains its zero just as honestly */
+        || /0 מתוך \d+ יעדים/.test(progressText),
         progressText.replace(/\n/g, ' · '))
 
   /* Every recommendation names something about THIS child. The generic

@@ -960,16 +960,16 @@ async def _forward_to_moe_lrs(
     )
 
 
-# The xAPI Video Profile's own field names for "where in the clip" and "how long
-# the clip is", both in SECONDS — exactly what the MoE's `mediaPosition` /
-# `mediaDuration` want. Reading the STANDARD names (rather than anything Kata
-# specific) means any provider that follows the profile satisfies the ministry
-# automatically, and Kata starts complying the day it sends them.
+# The xAPI Video Profile's own field names for "where in the clip", in SECONDS —
+# exactly what the MoE's `mediaPosition` wants. Reading the STANDARD names
+# (rather than anything Kata specific) means any provider that follows the
+# profile satisfies the ministry automatically, and Kata starts complying the
+# day it sends them. (`mediaDuration` was removed in spec v1.1, so the profile's
+# `length` key is no longer read.)
 _VIDEO_TIME_KEYS = (
     "https://w3id.org/xapi/video/extensions/time",
     "https://w3id.org/xapi/video/extensions/time-to",
 )
-_VIDEO_LENGTH_KEY = "https://w3id.org/xapi/video/extensions/length"
 
 
 def _video_profile_seconds(statement: dict[str, Any]) -> dict[str, Any]:
@@ -998,11 +998,8 @@ def _video_profile_seconds(statement: dict[str, Any]) -> dict[str, Any]:
 
     found: dict[str, Any] = {}
     position = pick(_VIDEO_TIME_KEYS)
-    length = pick(_VIDEO_LENGTH_KEY)
     if position is not None:
         found["mediaPosition"] = int(position) if position == int(position) else position
-    if length is not None:
-        found["mediaDuration"] = int(length) if length == int(length) else length
     return found
 
 
@@ -1012,8 +1009,8 @@ async def _content_report_fields(
     """The per-verb fields the MoE review asked for on relayed content events.
 
     - answered → `questionId` (not `question_id`), `questionType`, `attemptNumber`
-    - media    → `mediaFormat`, `mediaPosition`/`mediaDuration` when the player
-      reports them, and `result.duration` on paused/completed
+    - media    → `mediaFormat`, `mediaPosition` when the player reports it,
+      and `result.duration` on paused/completed (`mediaDuration` removed, v1.1)
     Everything is read from what we already know (catalog + stored events + the
     relayed statement). A value nobody told us — the position inside a clip that
     Kata never reports — is left out rather than invented.

@@ -82,7 +82,12 @@ def component_metadata(component: Optional[dict[str, Any]]) -> dict[str, Any]:
         "isAssessment": component.get("is_assessment"),
         "isRequired": component.get("is_required"),
         "relativeDifficulty": component.get("relative_difficulty"),
-        "masteryLevel": component.get("mastery_level"),
+        # Report 5: `masteryLevel` is REQUIRED on content statements, but Kata
+        # publishes it as null today — so the catalog value wins when it ever
+        # arrives, and the band is otherwise derived from `relativeDifficulty`
+        # (the same stand-in the planner uses when masteryLevel is absent).
+        "masteryLevel": component.get("mastery_level")
+        or _mastery_band(component.get("relative_difficulty")),
         "order": component.get("order"),
         "depthLevel": component.get("depth_level"),
         # Report 4 (spec v1.1): plural and an array. Kata publishes a single
@@ -99,10 +104,12 @@ def component_metadata(component: Optional[dict[str, Any]]) -> dict[str, Any]:
         # component exercises, and the provider it came from (provenance in a
         # multi-provider catalog).
         "skills": component.get("skills") or [],
-        # Report 4 (spec v1.1): the field is `manufacturer`. The catalog (and
-        # our normalized snapshot) still spell it `manufacture` — only the wire
-        # key changes.
-        "manufacturer": component.get("manufacture"),
+        # Report 4 (spec v1.1): the field is `manufacturer`. Report 5: it must
+        # carry the ministry's VENDOR CODE ("קוד ספק תוכן"), not the catalog's
+        # name string ("מתודיקה" → 310) — numeric, like the spec's own example
+        # (`"manufacturer": 33`). An unmapped vendor sends nothing — re-sending
+        # the rejected name would guarantee the same finding.
+        "manufacturer": _vendor_code(component.get("manufacture")),
     })
 
 
@@ -163,6 +170,33 @@ _ALWAYS_REPORTED: tuple[str, ...] = (
     "recommendedAfterFail",
     "skills",
 )
+
+
+def _vendor_code(manufacture: Any) -> Optional[int | str]:
+    """The ministry vendor code for a catalog `manufacture` name — numeric when
+    it is a number (the spec example sends `"manufacturer": 33`)."""
+    code = config.content_vendor_id(manufacture if isinstance(manufacture, str) else None)
+    if not code:
+        return None
+    return int(code) if code.isdigit() else code
+
+
+def _mastery_band(relative_difficulty: Any) -> Optional[str]:
+    """`masteryLevel` band derived from `relativeDifficulty` (1–5).
+
+    The spec's closed list is basic/intermediate/advanced (the ministry's own
+    Postman example sends "intermediate"). 1–2 → basic, 3 → intermediate,
+    4–5 → advanced; no difficulty → no band — a value we cannot ground in the
+    catalog is a value we do not invent."""
+    try:
+        value = float(relative_difficulty)
+    except (TypeError, ValueError):
+        return None
+    if value <= 2:
+        return "basic"
+    if value >= 4:
+        return "advanced"
+    return "intermediate"
 
 
 def _as_list(value: Any) -> Optional[list[Any]]:
@@ -286,15 +320,20 @@ async def ecat_item_for(
         resolved_unit_id = unit_id or (component or {}).get("unit_id")
         unit = kata_catalog.get_unit(resolved_unit_id) if resolved_unit_id else None
         published = (component or {}).get("ecat_item_id") or (unit or {}).get("ecat_item_id")
-        # The supplier lives on components; a unit-level statement borrows it
-        # from the unit's own components (one unit never mixes suppliers).
-        manufacture = (component or {}).get("manufacture") or next(
-            (
-                c.get("manufacture")
-                for c in (unit or {}).get("components") or []
-                if c.get("manufacture")
-            ),
-            None,
+        # The supplier: the component's own, else the unit's (where Kata's v1.1
+        # catalog publishes it), else the unit's components (one unit never
+        # mixes suppliers).
+        manufacture = (
+            (component or {}).get("manufacture")
+            or (unit or {}).get("manufacture")
+            or next(
+                (
+                    c.get("manufacture")
+                    for c in (unit or {}).get("components") or []
+                    if c.get("manufacture")
+                ),
+                None,
+            )
         )
         subject = (unit or {}).get("subject")
         unit_id = resolved_unit_id or unit_id

@@ -141,15 +141,27 @@ try {
         `${talkRows} rows`)
 
   await page.goto(`${BASE}/teacher/messages`, { waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(2500)
+  // wait for the rail to settle on the narrowed list, not a fixed pause — the
+  // roster paints the whole class first and the scope filter lands after it
+  await page.waitForFunction(() => document.querySelectorAll(
+    '.tch-messages__person:not(.tch-messages__person--group)').length === 2,
+  { timeout: 15000 }).catch(() => {})
   const rail = await page.locator('.tch-messages__person:not(.tch-messages__person--group)').count()
   check('the messages rail lists only the sub-group', rail === 2, `${rail} people`)
 
   await page.goto(`${BASE}/teacher`, { waitUntil: 'domcontentloaded' })
-  await page.waitForSelector('.tch-stat', { timeout: 30000 })
+  await page.waitForSelector('.tch-home:not([aria-busy="true"]) .tch-bands', { timeout: 60000 })
   await page.waitForTimeout(800)
-  check('Home announces the sub-group it does not apply',
-        (await page.locator('.tch-scopeNotice').innerText().catch(() => '')).includes('תת-קבוצה'))
+  /* #450 flipped this dimension: the students-band card narrows by the
+     sub-group, so the bar notice must NOT name it — the card itself says which
+     sub-group it is showing, and the chip counts shrink to the members. */
+  check('Home no longer announces the sub-group — it narrows by it',
+        !(await page.locator('.tch-scopeNotice').innerText().catch(() => '')).includes('תת-קבוצה'))
+  const bandTotal = (await page.locator('.tch-bands__chipCount').allInnerTexts())
+    .reduce((sum, value) => sum + Number(value), 0)
+  check('the students card narrows to the members', bandTotal === 2, `${bandTotal} students`)
+  check('and the card names the sub-group it is showing',
+        (await page.locator('.tch-bands').innerText()).includes('חיזוק'))
 
   await page.goto(`${BASE}/teacher/tasks`, { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(1500)

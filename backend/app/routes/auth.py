@@ -8,7 +8,9 @@ import uuid
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from pydantic import BaseModel, Field
+import re
+
+from pydantic import BaseModel, Field, field_validator
 
 from app.auth.dependencies import COOKIE_NAME, current_user, optional_user
 from app.auth.passwords import burn_timing, verify_password
@@ -64,6 +66,24 @@ class PreferencesRequest(BaseModel):
     # dangling id to "the whole class" rather than to an empty roster.
     teacher_subgroup_id: Optional[str] = Field(default=None, max_length=128)
     teacher_subject: Optional[str] = Field(default=None, max_length=64)
+    # The class-book unwrap ledger: {group_id: "YYYY-MM-DD" of that edition's
+    # Sunday}. The client sends the full merged map. Bounded and shape-checked
+    # because preferences round-trip on every /api/auth/me.
+    teacher_book_seen: Optional[dict[str, str]] = None
+
+    @field_validator("teacher_book_seen")
+    @classmethod
+    def _bounded_book_seen(cls, value: Optional[dict[str, str]]) -> Optional[dict[str, str]]:
+        if value is None:
+            return None
+        if len(value) > 50:
+            raise ValueError("too_many_groups")
+        for group_id, week in value.items():
+            if not group_id or len(group_id) > 128:
+                raise ValueError("bad_group_id")
+            if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", week):
+                raise ValueError("bad_week")
+        return value
 
 
 # Preferences whose null is a value rather than an absence. See `patch_preferences`.

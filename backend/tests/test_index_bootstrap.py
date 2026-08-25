@@ -123,7 +123,6 @@ class IndexBootstrap(unittest.TestCase):
             "direct_messages": {"dm_messages", "dm_conversations"},
             "teacher_insights": {"teacher_insights"},
             "group_digests": {"group_digests"},
-            "teacher_briefs": {"teacher_briefs"},
             "teacher_tool_calls": {"teacher_tool_calls"},
             "wellbeing_flags": {"wellbeing_flags"},
             "goal_suggestions": {"goal_suggestions"},

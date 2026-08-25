@@ -140,7 +140,12 @@ export function TeacherScopeProvider({ children }: { children: ReactNode }) {
       .catch(() => { if (active) setError(true) })
       .finally(() => { if (active) setIsLoading(false) })
     return () => { active = false }
-  }, [user, isTeacher, remembered])
+    /* Keyed on WHO is signed in, never on the user OBJECT: `updatePreferences`
+       replaces that object on every write (optimistically, then again with the
+       echo), and with `user` here a theme toggle — or the class book recording
+       its unwrap — flashed the whole portal back into its loading skeleton,
+       unmounting every screen mid-interaction. */
+  }, [user?.user_id, isTeacher, remembered])
 
   /* One read of the sub-groups for the whole portal. The roster, task tracking,
      the calendar, the message rail and the launch dialog each used to fetch

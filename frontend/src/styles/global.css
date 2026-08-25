@@ -34,6 +34,19 @@ body {
   transition: color var(--sp-dur) var(--sp-ease), background-color var(--sp-dur) var(--sp-ease);
 }
 
+/* Arabic is a joined script: letter-spacing pulls the connected letterforms
+   apart and the word stops reading as one word. Our components are written
+   once and rendered in all three locales, so tracking set for Latin or Hebrew
+   — the uppercase kickers, the tightened display headings — lands on Arabic
+   too. Neutralised here rather than audited at ~40 call sites.
+   `!important` because component CSS may load after this file (Vite hoists
+   `@import`s, so source order does not decide the winner) and the two would
+   otherwise tie on specificity. Hebrew is deliberately left alone: its
+   tracking is cosmetic, not corrupting, and the screens were tuned with it. */
+:lang(ar), :lang(ar) * {
+  letter-spacing: normal !important;
+}
+
 button, input, select {
   font: inherit;
 }

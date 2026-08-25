@@ -74,31 +74,6 @@ async def teacher_roster(session=Depends(require_teacher_session)):
     return _ok(await roster_service.roster_for_teacher(session["sub"]))
 
 
-@router.get("/brief")
-async def teacher_brief(
-    group_id: str = Query(...),
-    language: str = Query("he"),
-    refresh: bool = Query(False),
-    session=Depends(require_teacher_session),
-):
-    """What changed in this class since the teacher was last here.
-
-    Generated on visit rather than on a clock — there is no scheduler here, and
-    one that ran in-process would fan out per worker. The service caps itself at
-    one generation per day per teacher per class; `refresh` is the manual
-    override behind the card's own button.
-    """
-    if not await _guard_group(session, group_id):
-        return _denied()
-
-    from app.services import daily_brief
-
-    return _ok(await daily_brief.get_brief(
-        session["sub"], group_id,
-        language=normalize_language(language), force=refresh,
-    ))
-
-
 # ── group ────────────────────────────────────────────────────────────────────
 
 @router.get("/groups/{group_id}/snapshot")

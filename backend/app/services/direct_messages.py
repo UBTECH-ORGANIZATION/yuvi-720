@@ -501,3 +501,41 @@ async def ensure_indexes() -> None:
             await conversations.create_index([("learner_id", 1), ("last_message_at", -1)])
     except Exception as exc:      # pragma: no cover
         print(f"⚠️ direct-message index setup skipped: {type(exc).__name__}")
+
+
+async def blocked_moderation_events(
+    user_ids: list[str], *, days: int = 7
+) -> dict[str, list[dict[str, Any]]]:
+    """Recent blocked messages per user — the signal that was stored and never read.
+
+    Every refused harmful message lands in ``moderation_events`` with the sender
+    as ``user_id``; until #450 nothing aggregated it, so a child sending blocked
+    messages was invisible on the dashboard. One windowed ``$in`` query over the
+    roster keeps the scan bounded (there is no ``user_id+created_at`` index —
+    the window plus the id filter is what stands in for one). Newest first per
+    user; failures degrade to "no signal", never to an error.
+    """
+    if not user_ids:
+        return {}
+    out: dict[str, list[dict[str, Any]]] = {}
+    try:
+        collection = _collection(MODERATION_EVENTS)
+        if collection is None:
+            return {}
+        from datetime import timedelta
+
+        since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        cursor = collection.find({
+            "user_id": {"$in": list(user_ids)},
+            "created_at": {"$gte": since},
+            "action_taken": "blocked",
+        }).sort("created_at", -1)
+        async for row in cursor:
+            out.setdefault(row.get("user_id"), []).append({
+                "created_at": row.get("created_at"),
+                "category": row.get("category"),
+                "context": row.get("context"),
+            })
+    except Exception as exc:  # a missing signal must never break the snapshot
+        print(f"⚠️ moderation events read skipped: {type(exc).__name__}")
+    return out

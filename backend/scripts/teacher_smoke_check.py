@@ -54,7 +54,6 @@ REQUIRED_INDEXES: dict[str, list[tuple[str, ...]]] = {
     "dm_conversations": [("teacher_id", "last_message_at")],
     "teacher_insights": [("learner_id", "deleted")],
     "group_digests": [("week",)],
-    "teacher_briefs": [("generated_at",)],
     "teacher_tool_calls": [("teacher_id", "at")],
     # A child's disclosure and what was done about it. Read by (learner, at)
     # every time a teacher opens the wellbeing tab.

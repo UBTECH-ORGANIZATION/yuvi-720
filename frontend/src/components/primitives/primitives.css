@@ -131,6 +131,14 @@
               color var(--sp-dur) var(--sp-ease);
 }
 .sp-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--sp-shadow-md); }
+/* The press lands on pointerdown, not on release: a button that only reacts
+   when the finger lifts reads as laggy even when the handler is instant. Fast
+   and shallow — this is acknowledgement, not an animation to sit through. */
+.sp-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: var(--sp-shadow-sm);
+  transition-duration: var(--sp-dur-fast);
+}
 .sp-btn:focus-visible { outline: none; box-shadow: var(--sp-ring); }
 .sp-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 
@@ -155,7 +163,12 @@
   border-color: var(--sp-danger-600, #d1495b);
   color: #fff;
 }
-.sp-btn--danger:hover:not(:disabled) { filter: brightness(1.08); }
+/* Lifted via `background`, which is already in the transition list, rather
+   than `filter: brightness()` — a filter is off the compositor's fast path and
+   was snapping instead of easing, since it was never transitioned. */
+.sp-btn--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--sp-danger-600) 92%, #fff);
+}
 .sp-btn--ghost:hover:not(:disabled) {
   background: var(--sp-primary-050);
   color: var(--sp-primary-600);
