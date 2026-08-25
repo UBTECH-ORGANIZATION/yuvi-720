@@ -77,9 +77,12 @@ try {
         greeting.length > 0 && !greeting.includes('tch.'), greeting)
   check('exactly three KPIs', await page.locator('.tch-stat').count() === 3,
         `${await page.locator('.tch-stat').count()}`)
-  const kpiValue = (await page.locator('.tch-stat--button .tch-stat__value').innerText()).trim()
-  check('the attention KPI shows the payload count', Number(kpiValue) === expectedRed,
-        `${kpiValue} vs ${expectedRed}`)
+  const topicValue = (await page.locator('.tch-stat--button .tch-stat__value').innerText()).trim()
+  const topicHint = (await page.locator('.tch-stat--button .tch-stat__hint').innerText()).trim()
+  check('the third KPI names a topic to teach, not a head-count',
+        topicValue.length > 0 && !/^\d+%?$/.test(topicValue) && !topicValue.includes('tch.'),
+        topicValue)
+  check('and says how much of the class it blocks', /\d+.*\d+/.test(topicHint), topicHint)
   check('the brief hero is gone', await page.locator('.tch-brief, .tch-home__brief').count() === 0)
   // v4: the KPIs sit on real cards, and the attention KPI lost its red side-bar
   const kpiLook = await page.locator('.tch-stat--button').evaluate((node) => {
@@ -164,18 +167,26 @@ try {
   check('movers sit on top of their band', freshFirst)
   await page.screenshot({ path: `${OUT}/home-01-top.png` })
 
-  // ── the attention KPI drives the card ─────────────────────────────────────
+  // ── the topic KPI leads to the row that can act on it ─────────────────────
   await page.locator('.tch-stat--button').click()
   await page.waitForTimeout(900) // smooth scroll
-  check('the KPI presses the red chip',
-        await bands.locator('.tch-bands__chip.is-red[aria-pressed="true"]').count() === 1)
+  const gapsTop = await page.locator('[data-tour="teacher.gaps"]').evaluate(
+    (node) => node.getBoundingClientRect().top)
+  check('the topic KPI scrolls to the difficulties card',
+        gapsTop > -60 && gapsTop < 400, `top ${Math.round(gapsTop)}px`)
+  const namedTopic = await page.locator('[data-tour="teacher.gaps"]').innerText()
+  check('and that card carries the topic it named', namedTopic.includes(topicValue),
+        `${topicValue} in the card`)
+  await page.screenshot({ path: `${OUT}/home-02-blocking-topic.png` })
+
+  // The chips still narrow the card; the KPI simply is not what presses them.
+  await bands.locator('.tch-bands__chip.is-red').click()
+  await page.waitForTimeout(400)
   const filteredBands = await bands.locator('.tch-bands__student').evaluateAll(
     (nodes) => [...new Set(nodes.map((node) => node.className.match(/is-(red|orange|green)/)?.[1]))])
-  check('and the card shows only red rows', filteredBands.join(' ') === 'red')
-  const bandsTop = await bands.evaluate((node) => node.getBoundingClientRect().top)
-  check('and scrolls the card into view', bandsTop > -60 && bandsTop < 400, `top ${Math.round(bandsTop)}px`)
-  await page.screenshot({ path: `${OUT}/home-02-red-filter.png` })
+  check('the red chip still shows only red rows', filteredBands.join(' ') === 'red')
   await bands.locator('.tch-bands__chip.is-red').click() // release the filter
+  await page.waitForTimeout(300)
 
   // ── the ? on the card explains the system ─────────────────────────────────
   await bands.locator('.tch-bands__help').click()

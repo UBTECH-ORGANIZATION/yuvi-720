@@ -200,6 +200,21 @@
   line-height: 1.15;
 }
 
+/* A value that is a NAME rather than a figure — the blocking topic. It keeps
+   the value slot's prominence (this is still the headline of its tile) but
+   steps down a size and is allowed to wrap to two lines, because an objective
+   label is a phrase and truncating it to "שברים פשוטים ומספרים…" answers the
+   question with the half a teacher already knew. Tabular figures are dropped:
+   they exist to align digits and do nothing for words. */
+.tch-stat__value--topic {
+  font-size: var(--sp-fs-lg);
+  font-variant-numeric: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .tch-stat__hint { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
 
 /* A KPI that demands action carries the accent the inbox does. */

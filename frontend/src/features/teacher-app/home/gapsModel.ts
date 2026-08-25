@@ -39,3 +39,25 @@ export function gapToDifficultyItem(gap: LearningGap, t: Translate): DifficultyI
     subgroupName: gap.label,
   }
 }
+
+/* The one topic holding the class back most — the KPI that answers "what do I
+ * teach next" rather than "how many are struggling".
+ *
+ * Ranked by how much of the class is stuck on it, not by raw head-count: in a
+ * split class an objective 12 of 15 struggle with matters more than one 14 of
+ * 41 do. Ties break toward the topic with more corroborating evidence, so the
+ * tile prefers the gap the teacher can actually see the working for (C4), and
+ * a gap nobody has attempted yet never wins — with no evidence behind it, it
+ * is a guess, and a dashboard that names the wrong topic costs a lesson.
+ */
+export function mostBlockingGap(gaps: LearningGap[]): LearningGap | null {
+  const candidates = gaps.filter(
+    (gap) => gap.kind === 'gap' && gap.with_evidence > 0 && gap.struggling_count > 0)
+  if (candidates.length === 0) return null
+  return candidates.reduce((worst, gap) => {
+    if (gap.struggle_share !== worst.struggle_share) {
+      return gap.struggle_share > worst.struggle_share ? gap : worst
+    }
+    return gap.with_evidence > worst.with_evidence ? gap : worst
+  })
+}

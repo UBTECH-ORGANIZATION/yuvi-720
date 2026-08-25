@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-  PLATE_VARIANTS, bookWeek, coverVariant, platePlan, project, topMoments,
+  PLATE_VARIANTS, bookWeek, coverVariant, momentsInWeek, platePlan, project, topMoments,
 } from '../src/features/teacher-app/moments/bookModel.ts'
 import type { Moment } from '../src/services/teacher.ts'
 
@@ -60,15 +60,35 @@ test('the plan is deterministic — the same book always wears the same pictures
   assert.deepEqual(platePlan(pages), platePlan(pages))
 })
 
-test('the book is a Sunday-to-Friday weekly edition', () => {
-  // a Tuesday belongs to the week that started the previous Sunday
+test('the book is about the week that FINISHED, not the one in progress', () => {
+  // read on a Tuesday, the edition is the week before the one running now
   const midWeek = bookWeek(new Date(2026, 7, 25))
-  assert.equal(midWeek.key, '2026-08-23')
-  assert.equal(midWeek.label, '23/08-28/08')
-  // Sunday starts a fresh edition; every day of the week shares its key
-  assert.equal(bookWeek(new Date(2026, 7, 23)).key, '2026-08-23')
-  assert.equal(bookWeek(new Date(2026, 7, 28)).key, '2026-08-23')
-  assert.equal(bookWeek(new Date(2026, 7, 30)).key, '2026-08-30')
+  assert.equal(midWeek.key, '2026-08-16')
+  assert.equal(midWeek.label, '16/08-21/08')
+  // every day of the current week reads the same finished edition…
+  assert.equal(bookWeek(new Date(2026, 7, 23)).key, '2026-08-16')
+  assert.equal(bookWeek(new Date(2026, 7, 28)).key, '2026-08-16')
+  // …and Sunday closes the week just gone and hands it over as the new book
+  assert.equal(bookWeek(new Date(2026, 7, 30)).key, '2026-08-23')
+})
+
+test('the pages come from the week the cover names, and nowhere else', () => {
+  const week = bookWeek(new Date(2026, 7, 25)) // edition of 16/08-21/08
+  const pages = momentsInWeek([
+    moment('recovery', '2026-08-14T10:00:00Z'),  // the week before — too old
+    moment('recovery', '2026-08-16T06:00:00Z'),  // the Sunday it opens on
+    moment('comeback', '2026-08-20T12:00:00Z'),  // mid-week
+    moment('comeback', '2026-08-22T09:00:00Z'),  // Saturday still counts
+    moment('breakthrough', '2026-08-24T08:00:00Z'), // this week — not yet its book
+  ], week)
+  assert.deepEqual(pages.map((row) => row.at), [
+    '2026-08-16T06:00:00Z', '2026-08-20T12:00:00Z', '2026-08-22T09:00:00Z',
+  ])
+})
+
+test('an undated moment is left out rather than assumed recent', () => {
+  const week = bookWeek(new Date(2026, 7, 25))
+  assert.deepEqual(momentsInWeek([moment('recovery', '')], week), [])
 })
 
 test('the cover artwork is stable per class and always a real plate', () => {

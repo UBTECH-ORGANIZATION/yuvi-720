@@ -14,14 +14,15 @@
  * on its front, incoming on its back. Buttons, arrow keys and a horizontal
  * swipe all turn it. In LTR the whole geometry mirrors.
  *
- * The book holds the week's top ten via `bookModel.topMoments` — a rating of
- * MOMENTS (improvement first), never of students (C5). Each page's picture is
- * one of the kind's drawn plates, assigned per-page by `platePlan`, with
- * the hand-drawn SVG scene as the final fallback.
+ * The book holds the top ten of the FINISHED week via `bookModel.topMoments`
+ * over `momentsInWeek` — a rating of MOMENTS (improvement first), never of
+ * students (C5). Each page's picture is one of the kind's drawn plates,
+ * assigned per-page by `platePlan`, with the hand-drawn SVG scene as the
+ * final fallback.
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { Icon, SectionHeader } from '../../../components/primitives'
+import { Icon, SectionHeader, Skeleton } from '../../../components/primitives'
 import { useAuth } from '../../../providers/AuthProvider'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { sendKudos, type Moment } from '../../../services/teacher'
@@ -30,7 +31,9 @@ import { StudentAvatar } from '../shared/StudentAvatar'
 import { agoLabel } from '../live/LiveNow'
 import { MomentScene } from './MomentScene'
 import { momentSentence } from './momentText'
-import { bookWeek, coverVariant, platePlan, project, topMoments } from './bookModel'
+import {
+  bookWeek, coverVariant, momentsInWeek, platePlan, project, topMoments,
+} from './bookModel'
 import './moments-album.css'
 
 const TURN_MS = 750
@@ -40,16 +43,23 @@ const TURN_MS = 750
 const OPEN_AT = 0.85
 
 export function MomentsAlbum({
-  moments, nameOf, groupName = null, groupId = null,
+  moments, nameOf, groupName = null, groupId = null, isLoading = false,
 }: {
   moments: Moment[]
   nameOf: (learnerId: string) => string | null
   groupName?: string | null
   groupId?: string | null
+  /** Whether the feed is still in flight. An empty list means "quiet week"
+   *  only once this is false — see the quiet-week block below. */
+  isLoading?: boolean
 }) {
   const { t, direction } = useI18n()
   const { user, updatePreferences } = useAuth()
-  const pages = topMoments(moments)
+  /* The edition this book IS — the finished week, not the one in progress —
+     and the pages are drawn from that window alone, so the range stamped on
+     the cover describes what is actually inside. */
+  const week = bookWeek()
+  const pages = topMoments(momentsInWeek(moments, week))
   /* variants[i] is page i's plate — same-kind pages never share a picture */
   const variants = platePlan(pages)
   const spreadCount = Math.ceil(pages.length / 2)
@@ -66,7 +76,6 @@ export function MomentsAlbum({
      recorded on the user's preferences ({group_id: week}), so the ceremony
      follows them across browsers and survives a cleared cache — and next
      Sunday's edition (a new week key) arrives wrapped again. */
-  const week = bookWeek()
   const groupKey = groupId ?? 'all'
   const [gift, setGift] = useState<'wrapped' | 'popping' | 'emerging' | 'done'>(() => (
     user?.preferences.teacher_book_seen?.[groupKey] === week.key ? 'done' : 'wrapped'
@@ -286,11 +295,53 @@ export function MomentsAlbum({
     ? (turn.forward ? pageAt(turn.to * 2) : pageAt(turn.to * 2 + 1))
     : null
 
+  /* Still fetching. Holds the quiet week's exact shape so the section does not
+     jump when the answer arrives, and — crucially — does not claim the week was
+     quiet before anyone has looked. */
+  if (isLoading) {
+    return (
+      <section className="sp-panel tch-album tch-album--quiet" data-tour="teacher.moments" aria-busy="true">
+        <SectionHeader title={t('tch.album.title')} subtitle={t('tch.album.subtitle')} />
+        <div className="tch-quiet">
+          <div className="tch-quiet__book tch-quiet__book--pending" aria-hidden="true" />
+          <div className="tch-quiet__text">
+            <Skeleton w="120px" h={16} />
+            <Skeleton w="260px" h={12} />
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  /* A quiet week is a NORMAL week, not a failure state — a holiday, a short
+     week, a class that spent it off-screen. Now that the book is about a
+     finished week, this is a page a teacher will genuinely meet, so it says
+     which week was quiet and when the next book comes rather than leaving a
+     grey line where a section should be.
+     No present, and nothing recorded as unwrapped: there is no edition to
+     hand over, and next week's book must still arrive gift-wrapped. */
   if (pages.length === 0) {
     return (
-      <section className="sp-panel tch-album" data-tour="teacher.moments">
+      <section className="sp-panel tch-album tch-album--quiet" data-tour="teacher.moments">
         <SectionHeader title={t('tch.album.title')} subtitle={t('tch.album.subtitle')} />
-        <p className="tch-album__empty">{t('tch.album.empty')}</p>
+        <div className="tch-quiet">
+          <div className="tch-quiet__book" aria-hidden="true">
+            {coverArtOk ? (
+              <img
+                className="tch-quiet__cover"
+                src={`/moments/cover-${coverVariant(groupName)}.jpg`}
+                alt=""
+                onError={() => setCoverArtOk(false)}
+              />
+            ) : null}
+            <span className="tch-quiet__band"><bdi dir="ltr">{week.label}</bdi></span>
+          </div>
+          <div className="tch-quiet__text">
+            <strong className="tch-quiet__title">{t('tch.album.quietTitle')}</strong>
+            <p className="tch-album__empty">{t('tch.album.quietBody')}</p>
+            <p className="tch-quiet__next">{t('tch.album.quietNext')}</p>
+          </div>
+        </div>
       </section>
     )
   }

@@ -10,6 +10,69 @@
 
 .tch-album__empty { margin: 0; color: var(--sp-ink-400); }
 
+/* ── a quiet week ──────────────────────────────────────────────────────────
+   The closed book, still recognisably THIS class's cover, with the week
+   banded across it. Muted rather than absent: the section keeps its shape in
+   the page so a quiet week reads as "nothing happened", not as "something
+   failed to load". */
+.tch-quiet {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  margin-block-start: var(--sp-4);
+}
+.tch-quiet__book {
+  position: relative;
+  flex: none;
+  inline-size: 92px;
+  block-size: 124px;
+  border-radius: 4px 10px 10px 4px;   /* the spine edge is the tight one */
+  overflow: hidden;
+  background: var(--sp-surface-2);
+  box-shadow: var(--sp-shadow-sm);
+  /* tilted shut on the shelf, and drained of the cover's colour */
+  rotate: -3deg;
+  filter: grayscale(0.55);
+  opacity: 0.75;
+}
+/* in LTR the spine is on the other side, so the rounding mirrors */
+[dir='ltr'] .tch-quiet__book { border-radius: 10px 4px 4px 10px; rotate: 3deg; }
+.tch-quiet__cover {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  display: block;
+}
+.tch-quiet__band {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 14px;
+  padding-block: 3px;
+  background: rgba(24, 20, 48, 0.72);
+  color: #fff;
+  font-size: var(--sp-fs-xs);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+/* the same book-shaped hole, before we know what goes in it */
+.tch-quiet__book--pending {
+  background: var(--sp-surface-2);
+  border: 1px solid var(--sp-border);
+  filter: none;
+  opacity: 0.6;
+}
+
+.tch-quiet__text { display: grid; gap: 4px; }
+.tch-quiet__title { color: var(--sp-ink-900); font-size: var(--sp-fs-md); }
+.tch-quiet__next { margin: 0; color: var(--sp-ink-300); font-size: var(--sp-fs-xs); }
+
+@media (max-width: 560px) {
+  .tch-quiet { flex-direction: column; align-items: flex-start; gap: var(--sp-4); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tch-quiet__book { rotate: none; }
+}
+
 /* ── the stage: a tall scroll run with the viewport pinned on the book ─────
  *
  * --p is written by the component (0 at the stage's top edge reaching the

@@ -67,19 +67,56 @@ export function coverVariant(groupName: string | null): number {
   return (hashString(groupName ?? '') % COVER_VARIANTS) + 1
 }
 
-/* The book is a WEEKLY edition: the school week it collects (Sunday→Friday),
-   stamped on the cover so the teacher knows when the next book arrives, and
-   keyed so the gift-wrapped first sight happens once per edition. */
-export function bookWeek(now: Date = new Date()): { key: string; label: string } {
+export interface BookWeek {
+  /** the edition's identity: its Sunday, "YYYY-MM-DD" */
+  key: string
+  /** what the cover is stamped with: "dd/mm-dd/mm" over the school days */
+  label: string
+  /** the window the pages are drawn from, [start, end) as epoch ms */
+  start: number
+  end: number
+}
+
+/* The book is a WEEKLY edition, and it looks BACKWARD: it tells the story of
+   the week that finished, not the one in progress. A book about the current
+   week would be half-written every time it was opened — Monday's edition
+   holding one day of school — and its cover would promise a range that had
+   not happened yet. So Sunday brings a closed, complete book about the week
+   just gone, which is also when a teacher actually has room to look back.
+
+   The window spans the whole calendar week (Sunday through Saturday) while
+   the cover names the school days (Sunday→Friday): a child who practised on
+   Saturday belongs in the book, and printing "22/08" on a cover for a class
+   that meets Sunday to Friday would read as an error rather than as accuracy. */
+export function bookWeek(now: Date = new Date()): BookWeek {
   const sunday = new Date(now)
   sunday.setHours(0, 0, 0, 0)
-  sunday.setDate(sunday.getDate() - sunday.getDay())
+  sunday.setDate(sunday.getDate() - sunday.getDay() - 7)
   const friday = new Date(sunday)
   friday.setDate(sunday.getDate() + 5)
+  const nextSunday = new Date(sunday)
+  nextSunday.setDate(sunday.getDate() + 7)
   const two = (value: number) => String(value).padStart(2, '0')
   const label = (date: Date) => `${two(date.getDate())}/${two(date.getMonth() + 1)}`
   const key = `${sunday.getFullYear()}-${two(sunday.getMonth() + 1)}-${two(sunday.getDate())}`
-  return { key, label: `${label(sunday)}-${label(friday)}` }
+  return {
+    key,
+    label: `${label(sunday)}-${label(friday)}`,
+    start: sunday.getTime(),
+    end: nextSunday.getTime(),
+  }
+}
+
+/* Only what actually happened that week. The feed the dashboard fetches is a
+   rolling 14-day window, which always CONTAINS the finished week but reaches
+   past it on both sides — and a cover stamped with a date range has to be
+   telling the truth about the pages behind it. An undated moment is dropped
+   rather than assumed recent, for the same reason. */
+export function momentsInWeek(moments: Moment[], week: BookWeek): Moment[] {
+  return moments.filter((row) => {
+    const at = Date.parse(row.at ?? '')
+    return Number.isFinite(at) && at >= week.start && at < week.end
+  })
 }
 
 export function topMoments(moments: Moment[], limit: number = BOOK_SIZE): Moment[] {

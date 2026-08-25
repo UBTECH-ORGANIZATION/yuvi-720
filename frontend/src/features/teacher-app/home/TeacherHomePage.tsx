@@ -40,7 +40,7 @@ import { type TaskSeed } from '../tasks/taskSeed'
 import { MomentsAlbum } from '../moments/MomentsAlbum'
 import { type Band } from './BandFace'
 import { type BandedStudent } from './bandModel'
-import { gapToDifficultyItem } from './gapsModel'
+import { gapToDifficultyItem, mostBlockingGap } from './gapsModel'
 import { StudentBandDialog } from './StudentBandDialog'
 import { StudentsBandCard } from './StudentsBandCard'
 import './teacher-home.css'
@@ -57,12 +57,14 @@ export function TeacherHomePage() {
   const [engagement, setEngagement] = useState<Engagement | null>(null)
   const [gaps, setGaps] = useState<LearningGap[]>([])
   const [moments, setMoments] = useState<Moment[]>([])
+  const [momentsLoading, setMomentsLoading] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(false)
 
   const [bandFilter, setBandFilter] = useState<Band | null>(null)
   const [openStudent, setOpenStudent] = useState<BandedStudent | null>(null)
   const bandsRef = useRef<HTMLElement | null>(null)
+  const gapsRef = useRef<HTMLDivElement | null>(null)
 
   const [builderSeed, setBuilderSeed] = useState<TaskSeed | null>(null)
   const [subgroupFor, setSubgroupFor] = useState<DifficultyItem | null>(null)
@@ -93,14 +95,19 @@ export function TeacherHomePage() {
   }, [groupId, language])
 
   /* The album fans out across every learner, so it loads on its own rather
-     than holding up the numbers. An empty week is information too. */
+     than holding up the numbers. Its own loading flag, though: "not fetched
+     yet" and "a week with nothing in it" are opposite things — the quiet week
+     is a real, designed page — and an empty list looks like both until the
+     fetch lands. Without this the quiet week flashed on every load. */
   useEffect(() => {
     if (!groupId) return
     let active = true
     setMoments([])
+    setMomentsLoading(true)
     getGroupMoments(groupId, language)
       .then((response) => { if (active) setMoments(response.moments ?? []) })
       .catch(() => { if (active) setMoments([]) })
+      .finally(() => { if (active) setMomentsLoading(false) })
     return () => { active = false }
   }, [groupId, language])
 
@@ -117,14 +124,12 @@ export function TeacherHomePage() {
   if (scopeError || error) return <ErrorState title={t('tch.error')} />
 
   const students = (snapshot?.students ?? []) as unknown as BandedStudent[]
-  const redCount = snapshot?.trends?.needing_attention_red ?? 0
   const rosterNames = new Map(
     (snapshot?.students ?? []).map((row) => [row.learner_id, row.display_name])
   )
 
-  const focusRed = () => {
-    setBandFilter('red')
-    bandsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const focusGaps = () => {
+    gapsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   const saveSubgroup = async (draft: { name: string; learnerIds: string[] }) => {
@@ -170,6 +175,7 @@ export function TeacherHomePage() {
 
   const gapItems = gaps.filter((gap) => gap.kind === 'gap')
     .map((gap) => gapToDifficultyItem(gap, t))
+  const blockingGap = mostBlockingGap(gaps)
   const strengths = gaps.filter((gap) => gap.kind === 'strength')
 
   return (
@@ -223,25 +229,47 @@ export function TeacherHomePage() {
             </div>
           </Hint>
 
-          <Hint text={t('tch.kpi.needsAttentionHint')}>
-            <button
-              type="button"
-              className={`tch-stat tch-stat--button${redCount ? ' tch-stat--alert' : ''}`}
-              onClick={focusRed}
-              aria-label={t('tch.kpi.needsAttention.open')}
-            >
-              <span className={`tch-stat__icon tch-stat__icon--${redCount ? 'danger' : 'success'}`} aria-hidden="true">
-                <Icon name="alert" size={18} />
-              </span>
-              <span className="tch-stat__text">
-                <strong className="tch-stat__value">{redCount}</strong>
-                <span className="tch-stat__label">{t('tch.kpi.needsAttention')}</span>
-                <span className="tch-stat__hint">{t('tch.kpi.needsAttentionOf', {
-                  total: snapshot?.trends?.students_total ?? students.length,
-                })}
+          {/* Not a count of people but a teaching decision: the topic holding
+              the class back most, and one click to the row that can turn it
+              into a task or a sub-group. "Who needs me" is answered directly
+              below by the students card, which groups and explains every
+              child — a number here only said it twice. */}
+          <Hint text={t('tch.kpi.blockingTopic.hint')}>
+            {blockingGap ? (
+              <button
+                type="button"
+                className="tch-stat tch-stat--button"
+                onClick={focusGaps}
+                aria-label={t('tch.kpi.blockingTopic.open', { label: blockingGap.label })}
+              >
+                <span className="tch-stat__icon tch-stat__icon--warn" aria-hidden="true">
+                  <Icon name="target" size={18} />
                 </span>
-              </span>
-            </button>
+                <span className="tch-stat__text">
+                  <strong className="tch-stat__value tch-stat__value--topic" dir="auto">
+                    {blockingGap.label}
+                  </strong>
+                  <span className="tch-stat__label">{t('tch.kpi.blockingTopic')}</span>
+                  <span className="tch-stat__hint">
+                    {t('tch.kpi.blockingTopic.of', {
+                      count: blockingGap.struggling_count,
+                      total: blockingGap.group_size,
+                    })}
+                  </span>
+                </span>
+              </button>
+            ) : (
+              <div className="tch-stat">
+                <span className="tch-stat__icon tch-stat__icon--success" aria-hidden="true">
+                  <Icon name="target" size={18} />
+                </span>
+                <span className="tch-stat__text">
+                  <strong className="tch-stat__value">—</strong>
+                  <span className="tch-stat__label">{t('tch.kpi.blockingTopic')}</span>
+                  <span className="tch-stat__hint">{t('tch.kpi.blockingTopic.none')}</span>
+                </span>
+              </div>
+            )}
           </Hint>
         </div>
       </section>
@@ -258,7 +286,7 @@ export function TeacherHomePage() {
       />
 
       {/* ── gaps become sub-group moves the teacher approves ───────────────── */}
-      <div data-tour="teacher.gaps">
+      <div data-tour="teacher.gaps" ref={gapsRef}>
       <DifficultiesCard
         className="tch-home__gaps"
         title={t('tch.gaps.card.title')}
@@ -299,6 +327,7 @@ export function TeacherHomePage() {
              the view, the closed cover fills it, and the book opens ─────────── */}
       <MomentsAlbum
         moments={moments}
+        isLoading={momentsLoading}
         nameOf={(id) => rosterNames.get(id) ?? null}
         groupName={group?.name ?? null}
         groupId={group?.id ?? null}
