@@ -845,9 +845,23 @@ async def student_insights(
         else:
             break
 
+    # The deterministic dashboard band (#450). Base only: the two group-stage
+    # inputs (blocked messages, week-over-week trends) are folded in by
+    # `group_insights`, each able to move a student one way (red / green-up).
+    from app.services import teacher_bands
+
+    band = teacher_bands.base_band(
+        brain,
+        attention_all=attention_all,
+        today_feeling=today_feeling,
+        status=status,
+        objectives_progress=progress_by_subject,
+    )
+
     return {
         "learner_id": learner_id,
         "display_name": (brain.get("identity") or {}).get("display_name"),
+        "band": band,
         "today_feeling": today_feeling,
         "checkin_history": checkin_history,
         "checkin_skip_streak": checkin_skip_streak,
@@ -931,6 +945,17 @@ def _self_awareness_gap(reflections: list) -> dict[str, Any] | None:
 
 async def group_insights(group_id: str, language: str = "he") -> dict[str, Any]:
     """Group aggregates + per-student summaries. NO student-to-student comparison."""
+    from app.services import teacher_bands
+
+    # A short TTL because #450 doubled what this computes (bands + a lazy
+    # trends fan-out) and the dashboard, the roster and the students page all
+    # call it. 60s of staleness on a summary screen is invisible; the second
+    # tab paying the full fan-out again was not.
+    cache_key = (group_id, language)
+    cached = teacher_bands.cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     group = await get_group(group_id)
     learner_ids = await learners_in_group(group_id)
     # Fan out, don't queue: this used to await one learner at a time, so a
@@ -944,6 +969,42 @@ async def group_insights(group_id: str, language: str = "he") -> dict[str, Any]:
 
     students = list(await asyncio.gather(*(_one(lid) for lid in learner_ids)))
 
+    # ── finalize the bands (#450) ────────────────────────────────────────────
+    # Two group-stage inputs. Blocked messages: one windowed roster query — a
+    # RED input regardless of anything else. Week-over-week improvement: a
+    # trends read per student, LAZILY — only students the cheap rules left
+    # orange with some activity can be upgraded, so most classes pay for a
+    # handful, not for everyone.
+    from app.services import learner_trends as learner_trends_service
+    from app.services.direct_messages import blocked_moderation_events
+
+    blocked_by_user = await blocked_moderation_events(learner_ids)
+    for s in students:
+        s["band"] = teacher_bands.apply_blocked_messages(
+            s["band"], blocked_by_user.get(s["learner_id"]) or [])
+
+    upgradeable = [
+        s for s in students
+        if s["band"]["band"] == "orange" and s["status"] == STATUS_ACTIVE
+    ]
+
+    async def _maybe_upgrade(s: dict[str, Any]) -> None:
+        async with semaphore:
+            try:
+                trends = await learner_trends_service.learner_trends(
+                    s["learner_id"], days=14)
+            except Exception:
+                return
+        reason = teacher_bands.improvement_from_trends(trends)
+        if reason:
+            s["band"] = {"band": "green", "reasons": [reason]}
+
+    await asyncio.gather(*(_maybe_upgrade(s) for s in upgradeable))
+
+    # Movement memory for the "new" badge — first sighting stores silently.
+    changes = await teacher_bands.note_band_changes(
+        {s["learner_id"]: s["band"]["band"] for s in students})
+
     active_7d = sum(1 for s in students if s["timeline"] and _days_since(s["timeline"][0]["at"]) is not None
                     and _days_since(s["timeline"][0]["at"]) <= 7)
     needing_attention = [s for s in students if s["attention"]]
@@ -952,12 +1013,16 @@ async def group_insights(group_id: str, language: str = "he") -> dict[str, Any]:
         for s in students
     )
 
-    return {
+    payload = {
         "group": group,
         "students": [
             {"learner_id": s["learner_id"], "display_name": s["display_name"],
              "progress": s["progress"], "attention": s["attention"],
-             "status": s["status"], "activity": s["activity"]}
+             "status": s["status"], "activity": s["activity"],
+             # The band, its whys, and when it last moved (None until a real
+             # transition — a child is not "new" for existing).
+             "band": {**s["band"], **changes.get(s["learner_id"], {})},
+             "today_feeling": s["today_feeling"]}
             for s in students
         ],
         # Aggregate trends only (no comparisons between students).
@@ -965,6 +1030,9 @@ async def group_insights(group_id: str, language: str = "he") -> dict[str, Any]:
             "students_total": len(students),
             "active_last_7d": active_7d,
             "needing_attention": len(needing_attention),
+            # The dashboard KPI: how many students read RED right now.
+            "needing_attention_red": sum(
+                1 for s in students if s["band"]["band"] == "red"),
             # Enrolled but never seen. A count, like every other trend — it says
             # how many, never who is "behind" whom.
             "not_started": sum(1 for s in students if s["status"] == STATUS_NOT_STARTED),
@@ -975,3 +1043,5 @@ async def group_insights(group_id: str, language: str = "he") -> dict[str, Any]:
             for s in needing_attention
         ],
     }
+    teacher_bands.cache_put(cache_key, payload)
+    return payload

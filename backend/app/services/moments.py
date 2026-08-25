@@ -26,7 +26,7 @@ because the teacher can switch language at any time.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any, Optional
 
 # How far back a feed looks, and how many events are worth scanning per learner.
@@ -48,6 +48,10 @@ KIND_MISCONCEPTION_RESOLVED = "misconception_resolved"
 KIND_BREAKTHROUGH = "breakthrough"
 KIND_WELLBEING_SHARED = "wellbeing_shared"
 KIND_GOAL_DONE = "goal_done"
+# The #450 album's three additions.
+KIND_HARD_QUESTION_CRACKED = "hard_question_cracked"
+KIND_PERSONAL_BEST = "personal_best"
+KIND_FEELINGS_JOURNEY = "feelings_journey"
 
 TEXT_KEYS = {
     KIND_RECOVERY: "tch.moment.recovery",
@@ -58,6 +62,9 @@ TEXT_KEYS = {
     KIND_BREAKTHROUGH: "tch.moment.breakthrough",
     KIND_WELLBEING_SHARED: "tch.moment.wellbeingShared",
     KIND_GOAL_DONE: "tch.moment.goalDone",
+    KIND_HARD_QUESTION_CRACKED: "tch.moment.hardQuestionCracked",
+    KIND_PERSONAL_BEST: "tch.moment.personalBest",
+    KIND_FEELINGS_JOURNEY: "tch.moment.feelingsJourney",
 }
 
 # How much a teacher would want to be told this, 0–100. Used to CHOOSE which
@@ -68,10 +75,19 @@ BASE_WEIGHT = {
     KIND_WELLBEING_SHARED: 100,
     KIND_BREAKTHROUGH: 80,
     KIND_GOAL_DONE: 60,
+    # A resilience note, not a distress alert: a child who checked in heavy and
+    # still showed up to learn. Below goal_done, far below wellbeing_shared.
+    KIND_FEELINGS_JOURNEY: 55,
+    # A real win over material the CLASS finds hard — above a same-session
+    # recovery, below a finished goal.
+    KIND_HARD_QUESTION_CRACKED: 45,
     KIND_RECOVERY: 40,
     KIND_FIRST_MASTERY: 35,
     KIND_MISCONCEPTION_RESOLVED: 30,
     KIND_COMEBACK: 25,
+    # Routine-positive: a streak or a best-ever day against the child's OWN
+    # history only (C5 — never against another child's).
+    KIND_PERSONAL_BEST: 20,
     KIND_SUSTAINED_EFFORT: 10,
 }
 
@@ -83,6 +99,16 @@ BREAKTHROUGH_MIN_FAILURES = 5
 
 # One child cannot own the class feed. Their own profile shows everything.
 MAX_PER_LEARNER = 2
+
+# personal_best: this many school days active in a row is a streak worth a
+# photo; a best-ever day needs a real prior history to beat.
+PERSONAL_BEST_STREAK = 5
+PERSONAL_BEST_MIN_PRIOR_DAYS = 3
+
+# hard_question_cracked (group path): the same judgement #455's difficulties
+# card uses — imported at the call site so the two can never drift.
+HARD_QUESTION_MIN_TRIED = 2
+GROUP_EVENT_SCAN_LIMIT = 6000
 
 
 def _parse(value: Any) -> Optional[datetime]:
@@ -115,14 +141,16 @@ def _label(objective_id: Optional[str], language: str) -> str:
 def _moment(kind: str, at: datetime, *, raw: dict[str, Any],
             objective_id: Optional[str] = None, label: str = "",
             params: Optional[dict[str, Any]] = None,
-            boost: int = 0) -> dict[str, Any]:
+            boost: int = 0, text_key: Optional[str] = None) -> dict[str, Any]:
     weight = min(100, BASE_WEIGHT.get(kind, 10) + max(0, boost))
     return {
         "kind": kind,
         "at": at.isoformat(),
         "objective_id": objective_id,
         "label": label,
-        "text_key": TEXT_KEYS[kind],
+        # A kind with more than one story (personal_best: a streak vs a
+        # best-ever day) names the right sentence explicitly.
+        "text_key": text_key or TEXT_KEYS[kind],
         "params": {"label": label, **(params or {})},
         # C4: the datum behind the sentence, always openable.
         "evidence": {"raw": raw},
@@ -351,6 +379,78 @@ async def moments_for_learner(
                 params={"tag": misconception.get("tag") or ""},
             ))
 
+    # ── personal best: their own history, and only their own (#450) ─────────
+    # Two shapes: an active-day streak reaching the milestone, or a day with
+    # more real answers than any of the child's own previous days. Both are
+    # self-comparisons — C5 forbids the other kind, and gets none here.
+    day_attempts: dict[str, int] = {}
+    day_last_at: dict[str, datetime] = {}
+    for event in ordered:
+        at = _stamp(event)
+        if at is None or event.get("verb") not in ("answered", "attempted"):
+            continue
+        if event.get("effortful") is False:
+            continue
+        day = at.date().isoformat()
+        day_attempts[day] = day_attempts.get(day, 0) + 1
+        day_last_at[day] = at
+    active_days = sorted(day_attempts)
+    if active_days:
+        # streak of consecutive calendar days ending at the latest active day
+        streak = 1
+        for index in range(len(active_days) - 1, 0, -1):
+            gap = (date.fromisoformat(active_days[index])
+                   - date.fromisoformat(active_days[index - 1])).days
+            if gap == 1:
+                streak += 1
+            else:
+                break
+        last_day = active_days[-1]
+        last_at = day_last_at[last_day]
+        if streak >= PERSONAL_BEST_STREAK and last_at.timestamp() >= cutoff:
+            moments.append(_moment(
+                KIND_PERSONAL_BEST, last_at,
+                raw={"streak_days": streak, "last_day": last_day},
+                params={"days": streak},
+                # the streak story, not the best-day one — the sentence must
+                # say WHICH record this is
+                text_key="tch.moment.personalBestStreak",
+            ))
+        elif len(active_days) > PERSONAL_BEST_MIN_PRIOR_DAYS and last_at.timestamp() >= cutoff:
+            previous_best = max(day_attempts[day] for day in active_days[:-1])
+            if day_attempts[last_day] > previous_best:
+                moments.append(_moment(
+                    KIND_PERSONAL_BEST, last_at,
+                    raw={"date": last_day, "answers": day_attempts[last_day],
+                         "previous_best": previous_best},
+                    params={"answers": day_attempts[last_day]},
+                ))
+
+    # ── the feelings journey: checked in heavy, learned anyway (#450) ───────
+    # The check-in's own rule stands — a feeling is a conversation opener,
+    # never an alert — so this renders resilience, not distress: the heavy
+    # morning is only a moment because real learning happened the same school
+    # day. Newest such day only; the strip on the profile tells the rest.
+    try:
+        from app.services import checkin_flow
+
+        for row in await checkin_flow.history(learner_id, limit=days):
+            if row.get("valence") not in checkin_flow.NEGATIVE_VALENCES:
+                continue
+            attempts = day_attempts.get(str(row.get("date")) or "", 0)
+            at = day_last_at.get(str(row.get("date")) or "")
+            if not attempts or at is None or at.timestamp() < cutoff:
+                continue
+            moments.append(_moment(
+                KIND_FEELINGS_JOURNEY, at,
+                raw={"date": row.get("date"), "valence": row.get("valence"),
+                     "feeling": row.get("feeling"), "answers": attempts},
+                params={},
+            ))
+            break
+    except Exception as exc:  # a check-in read must never cost the feed
+        print(f"⚠️ feelings-journey detector skipped: {type(exc).__name__}")
+
     return _trim(moments, limit)
 
 
@@ -394,8 +494,89 @@ async def moments_for_group(
 
     gathered = await asyncio.gather(*(one(learner_id) for learner_id in learner_ids))
     merged = [row for rows in gathered for row in rows]
+
+    # ── hard questions cracked (#450) — a GROUP-path detector, because "hard"
+    # is a claim about the class: the same judgement the #455 difficulties card
+    # renders (imported thresholds, never copied), applied to the group's own
+    # answer events; any learner who solved such a question in the window gets
+    # a photo. The per-learner feed cannot see this kind (no class context) —
+    # deliberate, documented here.
+    try:
+        merged.extend(await _hard_question_cracks(learner_ids, days=days))
+    except Exception as exc:  # class stats must never cost the feed
+        print(f"⚠️ hard-question detector skipped: {type(exc).__name__}")
+
     # Weight decides who makes the page; time decides the order they read in.
     merged.sort(key=lambda moment: (moment["weight"], moment["at"]), reverse=True)
     merged = merged[:limit]
     merged.sort(key=lambda moment: moment["at"], reverse=True)
     return merged
+
+
+async def _hard_question_cracks(
+    learner_ids: list[str], *, days: int
+) -> list[dict[str, Any]]:
+    """Who solved a question the class finds hard, from the group's raw events.
+
+    One bounded window query; per question the class's tried/solved sets and
+    success rate; "hard" reuses `learning_analytics`' constants
+    (min attempts / max success). A cracked question is one a solver got RIGHT
+    while the class rate stayed at or under the cut with several children
+    having tried — a selection of wins, never a ranking of children.
+    """
+    from app.services.events import _events_collection
+    from app.services.learning_analytics import (
+        HARD_QUESTION_MAX_SUCCESS, HARD_QUESTION_MIN_ATTEMPTS,
+    )
+
+    collection = await _events_collection()
+    if collection is None or not learner_ids:
+        return []
+    since = (datetime.now(timezone.utc)).timestamp() - days * 86400
+    since_iso = datetime.fromtimestamp(since, tz=timezone.utc).isoformat()
+    cursor = collection.find({
+        "learner_id": {"$in": list(learner_ids)},
+        "verb": {"$in": ["answered", "attempted"]},
+        "stored_at": {"$gte": since_iso},
+    }).limit(GROUP_EVENT_SCAN_LIMIT)
+
+    stats: dict[str, dict[str, Any]] = {}
+    async for event in cursor:
+        question = event.get("question_id")
+        item = event.get("sub_item_id")
+        if not question or not item:
+            continue
+        key = f"{event.get('launch') or ''}|{item}|{question}"
+        row = stats.setdefault(key, {
+            "attempts": 0, "correct": 0, "tried": set(), "solved": {},
+            "component_id": event.get("launch"),
+        })
+        row["attempts"] += 1
+        learner = event.get("learner_id")
+        row["tried"].add(learner)
+        if (event.get("result") or {}).get("success") is True:
+            row["correct"] += 1
+            at = _stamp(event)
+            if at is not None:
+                row["solved"][learner] = at
+
+    out: list[dict[str, Any]] = []
+    for key, row in stats.items():
+        if row["attempts"] < HARD_QUESTION_MIN_ATTEMPTS:
+            continue
+        if len(row["tried"]) < HARD_QUESTION_MIN_TRIED:
+            continue
+        rate = row["correct"] / row["attempts"]
+        if rate > HARD_QUESTION_MAX_SUCCESS:
+            continue
+        for learner_id, at in row["solved"].items():
+            moment = _moment(
+                KIND_HARD_QUESTION_CRACKED, at,
+                raw={"question_key": key, "class_attempts": row["attempts"],
+                     "class_success_rate": round(rate, 2),
+                     "tried_count": len(row["tried"])},
+                params={"rate": round(rate * 100)},
+            )
+            moment["learner_id"] = learner_id
+            out.append(moment)
+    return out

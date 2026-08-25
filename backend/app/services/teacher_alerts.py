@@ -455,3 +455,39 @@ async def ensure_indexes() -> None:
 def reset_for_tests() -> None:
     _seq.clear()
     _memory.clear()
+
+
+async def resolve_open_for_learner(learner_id: str, *, kind: str) -> int:
+    """Resolve every unresolved alert of ONE kind about one learner — the
+    student-cancel path (#450).
+
+    The kind filter is the safety invariant, not an optimisation: a child
+    cancelling their own raised hand may only ever close ``coach_handoff``
+    rows. A ``safety_flag`` describes something a safety screen saw and MUST
+    stay in front of a teacher until a teacher resolves it — no code path that
+    a child can trigger is allowed to touch it, so callers pass the kind
+    explicitly and this function never accepts a list.
+    """
+    handle = _collection()
+    rows: list[dict[str, Any]] = []
+    if handle is None:
+        # The same in-memory fallback every other path here takes.
+        rows = [
+            row for row in _memory.values()
+            if row.get("learner_id") == learner_id and row.get("kind") == kind
+            and row.get("status") != STATUS_RESOLVED
+        ]
+    else:
+        cursor = handle.find({
+            "learner_id": learner_id,
+            "kind": kind,
+            "status": {"$ne": STATUS_RESOLVED},
+        })
+        async for row in cursor:
+            rows.append(row)
+    resolved = 0
+    for row in rows:
+        done = await _set_status(row["teacher_id"], row["_id"], STATUS_RESOLVED)
+        if done is not None:
+            resolved += 1
+    return resolved

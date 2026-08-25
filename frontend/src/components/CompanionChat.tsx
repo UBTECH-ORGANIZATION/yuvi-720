@@ -13,7 +13,9 @@ import { QuestionExplainer } from './QuestionExplainer'
 import type { VisualMode } from '../services/agents'
 import type { CoachVisual } from '../services/agents'
 import {
+  cancelCoachHandoff,
   coachSurfaceForPath,
+  getCoachHandoffState,
   postCoachHandoff,
   rateCoachConversation,
   saveHelpedAttribution,
@@ -211,18 +213,50 @@ export function CompanionChat() {
   // Confirmed in a dialog inside the panel — a hand raised to the whole staff
   // room must not be a slip of the finger — and a 5-minute client cooldown
   // after a delivered one: the teacher already has the alert, and mashing the
-  // button must not turn one stuck moment into a stack of interrupts. No
-  // retraction here; the teacher resolving the alert is the existing clear path.
+  // button must not turn one stuck moment into a stack of interrupts.
+  // While raised the button glows and CANCELS instead (#450) — taking your own
+  // hand down is safe and needs no confirm; the server keeps a safety
+  // escalation out of that path's reach.
   const [handState, setHandState] =
     useState<'idle' | 'confirming' | 'sending' | 'sent' | 'unreached'>('idle')
   const [handCooling, setHandCooling] = useState(false)
+  const [handRaised, setHandRaised] = useState(false)
   const handTimers = useRef<{ note?: number; cool?: number }>({})
   useEffect(() => () => {
     window.clearTimeout(handTimers.current.note)
     window.clearTimeout(handTimers.current.cool)
   }, [])
+  // Server truth on mount: a reload must not silently lower a raised hand's
+  // glow, and the client cooldown alone forgets on refresh.
+  useEffect(() => {
+    if (!isTaskMode) return
+    let alive = true
+    getCoachHandoffState()
+      .then((state) => {
+        if (!alive || !state.raised) return
+        setHandRaised(true)
+        setHandCooling(true)
+      })
+      .catch(() => { /* the glow is a convenience — never an error */ })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTaskMode])
+  const lowerHand = async () => {
+    try {
+      await cancelCoachHandoff()
+    } catch {
+      return // still raised server-side; keep the glow honest
+    }
+    window.clearTimeout(handTimers.current.cool)
+    window.clearTimeout(handTimers.current.note)
+    setHandRaised(false)
+    setHandCooling(false)
+    setHandState('idle')
+  }
   const raiseHand = () => {
-    if (handState === 'sending' || handCooling) return
+    if (handState === 'sending') return
+    if (handRaised) { void lowerHand(); return }
+    if (handCooling) return
     setHandState((value) => (value === 'confirming' ? 'idle' : 'confirming'))
   }
   // The teacher marking the request handled unlocks the button early — the
@@ -234,6 +268,7 @@ export function CompanionChat() {
       if (frame.type !== 'hand_resolved') return
       window.clearTimeout(handTimers.current.cool)
       window.clearTimeout(handTimers.current.note)
+      setHandRaised(false)
       setHandCooling(false)
       setHandState('idle')
     })
@@ -253,6 +288,7 @@ export function CompanionChat() {
       // was delivered and blocking the retry would strand the child.
       setHandState(notified > 0 ? 'sent' : 'unreached')
       if (notified > 0) {
+        setHandRaised(true)
         setHandCooling(true)
         handTimers.current.cool = window.setTimeout(() => setHandCooling(false), 5 * 60_000)
       }
@@ -264,7 +300,9 @@ export function CompanionChat() {
       () => setHandState((value) => (value === 'sending' ? value : 'idle')),
       6000)
   }
-  const handLabel = handCooling ? t('companion.hand.sent') : t('companion.hand.raise')
+  const handLabel = handRaised
+    ? t('companion.hand.raisedTooltip')
+    : handCooling ? t('companion.hand.sent') : t('companion.hand.tooltip')
   const [speech, setSpeech] = useState<{ messageId: string | null; state: SpeechState }>({
     messageId: null,
     state: 'idle',
@@ -1310,9 +1348,9 @@ export function CompanionChat() {
             {isTaskMode && (
               <button
                 type="button"
-                className={`sp-companion__handBtn${handState === 'confirming' ? ' is-armed' : ''}`}
+                className={`sp-companion__handBtn${handState === 'confirming' ? ' is-armed' : ''}${handRaised ? ' is-raised' : ''}`}
                 onClick={raiseHand}
-                disabled={handState === 'sending' || handCooling}
+                disabled={handState === 'sending' || (handCooling && !handRaised)}
                 aria-label={handLabel}
                 aria-expanded={handState === 'confirming'}
                 data-tooltip={handLabel}

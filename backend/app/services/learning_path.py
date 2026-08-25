@@ -84,7 +84,12 @@ def band_for(entry: dict[str, Any], signals: Optional[dict[str, Any]] = None) ->
     failures = int(entry.get("failures") or 0)
     level = entry.get("level") or "basic"
     sig = signals or {}
+    # `rapid_answer_cycling` is the type the detector actually stores
+    # (detectors.detect_answer_cycling → brain.behavior_signals); the two
+    # aliases before it never matched a stored row, so the cycling signal was
+    # silently dead here until #450.
     struggling_signal = bool(sig.get("wheel_spinning") or sig.get("rapid_guessing")
+                             or sig.get("rapid_answer_cycling")
                              or sig.get("answer_cycling") or sig.get("answer-cycling"))
     if (struggling_signal
             or (score is not None and score < _STRUGGLE_SCORE)

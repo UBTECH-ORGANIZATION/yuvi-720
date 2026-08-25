@@ -204,7 +204,7 @@ class HierarchyTests(unittest.TestCase):
         simply never mapped into the statement."""
         built = hierarchy.build(
             unit={**UNIT, "target_sector": ["general"], "target_audience": ["grade-7"]},
-            component={**COMPONENT, "skills": ["problem-solving"], "manufacture": "Kata",
+            component={**COMPONENT, "skills": ["problem-solving"], "manufacture": "מתודיקה",
                        "information_by_item": {ITEM["id"]: "מה חשוב שהתלמיד יבין…"},
                        "questions_by_item": {ITEM["id"]: [{
                            "questionId": "q1", "questionType": "multiple-choice",
@@ -215,14 +215,73 @@ class HierarchyTests(unittest.TestCase):
         )
         keys = _short(built["extensions"])
         # Report 4 (spec v1.1) renamed these: targetSectors / cognitiveLevels
-        # are plural ARRAYS, and the provider field is `manufacturer`.
+        # are plural ARRAYS, and the provider field is `manufacturer`. Report 5:
+        # `manufacturer` carries the ministry's vendor CODE, not the name.
         self.assertEqual(keys["targetSectors"], ["general"])
         self.assertEqual(keys["targetAudience"], ["grade-7"])
         self.assertEqual(keys["skills"], ["problem-solving"])
-        self.assertEqual(keys["manufacturer"], "Kata")
+        # Numeric, like the spec's own example (`"manufacturer": 33`).
+        self.assertEqual(keys["manufacturer"], 310)
         self.assertEqual(keys["componentId"], COMPONENT["id"])
         self.assertIn("informationToBot", keys)
         self.assertEqual(keys["questions"][0]["questionId"], "q1")
+
+    def test_mastery_level_is_derived_when_the_catalog_publishes_none(self):
+        """Report 5: `masteryLevel` is required on content statements, but Kata
+        publishes null — the band comes from `relativeDifficulty` (1–2 basic,
+        3 intermediate, 4–5 advanced), and a catalog value wins when it exists."""
+        for difficulty, band in ((1, "basic"), (2, "basic"), (3, "intermediate"),
+                                 (4, "advanced"), (5, "advanced")):
+            built = hierarchy.build(
+                unit=UNIT,
+                component={**COMPONENT, "mastery_level": None,
+                           "relative_difficulty": difficulty},
+                item=ITEM, level="item",
+            )
+            self.assertEqual(
+                _short(built["extensions"])["masteryLevel"], band, difficulty
+            )
+        published = hierarchy.build(
+            unit=UNIT,
+            component={**COMPONENT, "mastery_level": "advanced",
+                       "relative_difficulty": 1},
+            item=ITEM, level="item",
+        )
+        self.assertEqual(_short(published["extensions"])["masteryLevel"], "advanced")
+        unknowable = hierarchy.build(
+            unit=UNIT,
+            component={**COMPONENT, "mastery_level": None,
+                       "relative_difficulty": None},
+            item=ITEM, level="item",
+        )
+        self.assertNotIn("masteryLevel", _short(unknowable["extensions"]))
+
+    def test_an_unmapped_vendor_sends_no_manufacturer_rather_than_the_name(self):
+        """Re-sending the name string is exactly what report 5 rejected."""
+        built = hierarchy.build(
+            unit=UNIT, component={**COMPONENT, "manufacture": "ספק עלום"},
+            item=ITEM, level="item",
+        )
+        self.assertNotIn("manufacturer", _short(built["extensions"]))
+
+    def test_conversation_triggers_stay_on_the_v11_closed_list(self):
+        """`misconception` was replaced by `student-error`; anything off-list
+        is reported as `other`, never as an invented enum value."""
+        for sent, expected in (
+            ("misconception", "student-error"),
+            ("student-error", "student-error"),
+            ("student-request", "student-request"),
+            ("lesson_welcome", "other"),
+        ):
+            with self.subTest(sent=sent):
+                stmt = statements.conversation_interacted(
+                    IDENTITY, SESSION, "conv-1",
+                    speaker="bot", conversation_trigger=sent,
+                )
+                self.assertEqual(
+                    _short(stmt["context"]["extensions"])["conversationTrigger"],
+                    expected,
+                )
 
     def test_the_answer_key_never_leaves_with_the_questions_array(self):
         """`questions` describes what is asked. The catalog rows also carry the
@@ -290,21 +349,21 @@ class ContentStatementTests(unittest.TestCase):
         self.assertEqual(stmt["context"]["contextActivities"]["parent"],
                          [self.hierarchy["self"]])
 
-    def test_media_events_carry_format_position_and_duration(self):
+    def test_media_events_carry_format_position_and_watch_duration(self):
         paused = statements.media_event(
             IDENTITY, SESSION, "paused",
             object_id="https://lomdot.education.gov.il/act/item",
-            media_format="video", media_position_seconds=38,
-            media_duration_seconds=73, duration_seconds=38,
+            media_format="video", media_position_seconds=38, duration_seconds=38,
             hierarchy=self.hierarchy,
         )
         ext = _short(paused["context"]["extensions"])
         self.assertEqual(ext["mediaFormat"], "video")
         # SECONDS, not ISO-8601 — the spec says "המיקום במדיה, בשניות" and its
         # examples are bare numbers (`"mediaPosition": 105`). Only
-        # `result.duration` is a duration string.
+        # `result.duration` is a duration string. Spec v1.1 removed the
+        # `mediaDuration` extension entirely.
         self.assertEqual(ext["mediaPosition"], 38)
-        self.assertEqual(ext["mediaDuration"], 73)
+        self.assertNotIn("mediaDuration", ext)
         self.assertIsInstance(ext["mediaPosition"], int)
         self.assertEqual(paused["result"]["duration"], "PT38S")
 
@@ -350,11 +409,10 @@ class ContentStatementTests(unittest.TestCase):
         played = statements.media_event(
             IDENTITY, SESSION, "played",
             object_id="https://lomdot.education.gov.il/act/item",
-            media_format="video", media_position_seconds=0, media_duration_seconds=120,
+            media_format="video", media_position_seconds=0,
         )
         ext = _short(played["context"]["extensions"])
         self.assertEqual(ext["mediaPosition"], 0)
-        self.assertEqual(ext["mediaDuration"], 120)
 
     def test_selection_type_is_kebab_case(self):
         stmt = statements.selected(

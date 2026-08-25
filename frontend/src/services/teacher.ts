@@ -68,14 +68,27 @@ export interface StudentActivity {
   days_inactive: number | null
 }
 
+/** The deterministic dashboard band (#450): red/orange/green with its whys.
+ *  `changed_at`/`previous` power the "new" chip — null until a real
+ *  transition, so a first sighting is never marked as movement. */
+export interface StudentBand {
+  band: 'red' | 'orange' | 'green'
+  reasons: { signal: string; evidence: Record<string, unknown> }[]
+  changed_at?: string | null
+  previous?: string | null
+}
+
 export interface GroupInsight {
   group: { id: string; name: string; subject?: string } | null
   students: {
     learner_id: string; display_name: string | null; attention: AttentionFlag | null
     progress: unknown; status: StudentStatus; activity: StudentActivity
+    band: StudentBand
+    today_feeling: { valence: string; feeling: string; date: string } | null
   }[]
   trends: {
     students_total: number; active_last_7d: number; needing_attention: number
+    needing_attention_red: number
     not_started: number; objectives_mastered_total: number
   }
   attention: (AttentionFlag & { learner_id: string; display_name: string | null })[]
@@ -806,76 +819,6 @@ export function getGroupDigest(groupId: string, language: string, refresh = fals
   return apiGet<Digest>(
     `/api/teacher/groups/${encodeURIComponent(groupId)}/digest?language=${language}&refresh=${refresh}`
   )
-}
-
-/* ── the daily brief ──────────────────────────────────────────────────────── */
-
-/** A move the teacher can make. `learner_ids` is assembled server-side from
- *  mastery evidence — the model writes the prose and never picks the children. */
-export interface BriefAction {
-  kind: 'assign_subgroup' | 'open_roster'
-  objective_id?: string
-  label?: string
-  filter?: string
-  learner_ids: string[]
-  because: { signal: string; value: unknown; raw: Record<string, unknown> }
-}
-
-export interface BriefStat {
-  key: 'active_in_window' | 'needing_attention' | 'not_started'
-  value: number | null
-  total?: number | null
-}
-
-/** A bullet in the brief.
- *
- * `why` is the model's own explanation of what the claim rests on, in the
- * teacher's language. It replaces `describeEvidence` for AI briefs, which — fed
- * a one-key `{signal: value}` raw that matched no template — was rendering
- * `active in window: 10` in English inside an RTL card. The deterministic
- * fallback keeps `text_key` + `because.raw` and still goes through the template. */
-export interface BriefBullet extends DigestBullet {
-  why?: string
-  /** Who this claim is about, attached server-side AFTER generation from the
-   *  same evidence the actions use. Empty for claims about the material rather
-   *  than about people. The model is never given a learner id. */
-  learner_ids?: string[]
-}
-
-export interface DailyBrief {
-  /** Start of the window this brief covers — the previous brief, or last login. */
-  since: string | null
-  generated_at: string | null
-  window_days: number
-  headline: BriefBullet | null
-  /** Two or three sentences tying the window together. Model-written. */
-  summary?: string
-  bullets: BriefBullet[]
-  /** Still on the payload — the deterministic half of the contract, and what
-   *  the fallback path is built from — but no longer rendered by the hero:
-   *  every value is on the KPI strip directly above it. */
-  stats: BriefStat[]
-  actions: BriefAction[]
-  /** The mood, from a closed set. Selects a hand-drawn scene; never markup. */
-  scene: string | null
-  /** What the class actually spent the window on, or null. */
-  worked_on: {
-    title: string | null
-    subject: string | null
-    attempts: number | null
-    success_rate: number | null
-    learners_engaged: number | null
-    struggling_count: number | null
-  } | null
-  source: 'ai' | 'fallback' | 'empty'
-  cached: boolean
-  reason?: string
-}
-
-export function getDailyBrief(groupId: string, language: string, refresh = false) {
-  const params = new URLSearchParams({ group_id: groupId, language })
-  if (refresh) params.set('refresh', 'true')
-  return apiGet<DailyBrief>(`/api/teacher/brief?${params}`)
 }
 
 export interface TeacherBadge {

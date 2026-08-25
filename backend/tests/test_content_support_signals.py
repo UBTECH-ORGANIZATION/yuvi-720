@@ -145,6 +145,39 @@ class MetadataPassThroughTests(unittest.TestCase):
         self.assertEqual(row["target_sector"], ["Arab Sector", "State-General"])
         self.assertEqual(row["target_audience"], ["General"])
 
+    def test_the_v11_catalog_spellings_are_read(self):
+        """Kata migrated to spec v1.1 in 08/2026: `manufacturer` moved to the
+        unit, `targetSectors` and `cognitiveLevels` went plural. Components
+        inherit the unit's provider when they publish none of their own."""
+        from app.services.kata_client import normalize_unit
+
+        row = normalize_unit({
+            "id": "u", "title": "t", "subTopic": "MOE.SCI.SUB",
+            "manufacturer": "מתודיקה",
+            "targetSectors": ["state-general", "arab-sector"],
+            "components": [{
+                "id": "c1", "learningUnitId": "u", "title": "t1",
+                "cognitiveLevels": ["analyzing"],
+            }],
+        })
+        self.assertEqual(row["manufacture"], "מתודיקה")
+        self.assertEqual(row["target_sector"], ["arab-sector", "state-general"])
+        component = row["components"][0]
+        self.assertEqual(component["manufacture"], "מתודיקה")  # inherited
+        self.assertEqual(component["cognitive_level"], ["analyzing"])
+
+    def test_a_component_s_own_provider_beats_the_inherited_one(self):
+        from app.services.kata_client import normalize_unit
+
+        row = normalize_unit({
+            "id": "u", "title": "t", "manufacturer": "מתודיקה",
+            "components": [{
+                "id": "c1", "learningUnitId": "u", "title": "t1",
+                "manufacturer": "מטח - תוכן",
+            }],
+        })
+        self.assertEqual(row["components"][0]["manufacture"], "מטח - תוכן")
+
     def test_an_absent_closed_list_stays_absent(self):
         """Never invent a Ministry index value the provider did not send."""
         from app.services.kata_client import normalize_unit

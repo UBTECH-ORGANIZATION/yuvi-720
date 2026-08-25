@@ -72,11 +72,13 @@ export const teacherTourSteps: TourStep[] = [
     placement: 'bottom',
   },
   {
-    id: 'attention',
-    target: 'teacher.attentionInbox',
+    // The attention inbox left with #450; the band card is where "who needs
+    // me" lives now — every student, one computed state, reasons on click.
+    id: 'bands',
+    target: 'teacher.bands',
     route: '/teacher',
-    titleKey: 'tour.teacher.attention.title',
-    bodyKey: 'tour.teacher.attention.body',
+    titleKey: 'tour.teacher.bands.title',
+    bodyKey: 'tour.teacher.bands.body',
     placement: 'bottom',
   },
   {

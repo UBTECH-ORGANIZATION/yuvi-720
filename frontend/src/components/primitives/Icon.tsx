@@ -46,6 +46,7 @@ const ICON_PATHS: Record<string, ReactNode> = {
   handoff: <><path d="M3 12h11" /><path d="m10 8 4 4-4 4" /><path d="M17 4.5a3.5 3.5 0 0 1 0 15" /></>,
   send: <><path d="M20.5 3.5 3.5 10l6.5 2.5L12.5 19z" /><path d="M20.5 3.5 10 12.5" /></>,
   trendUp: <><path d="M3.5 17.5 9 12l3.5 3.5 7-7.5" /><path d="M14.5 8h5v5" /></>,
+  trendDown: <><path d="M3.5 6.5 9 12l3.5-3.5 7 7.5" /><path d="M14.5 16h5v-5" /></>,
   /* Learnings: a shelf of lessons. The speech bubble this used to be said
      "conversation", which is what the messages lane means — two nav items
      cannot share a metaphor. */

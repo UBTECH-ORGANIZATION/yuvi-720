@@ -147,11 +147,13 @@ describe('a gap is answered with material, not with a goal', () => {
     ar: JSON.parse(read('../../locales/ar.json')) as Record<string, string>,
   }
 
-  it('sends the objective AND the children from the gaps panel', () => {
-    const call = home.split('putSeed({')[1].split('navigate(')[0]
-    assert.match(call, /objectiveId: gap\.objective_id/)
-    assert.match(call, /learnerIds: gap\.learner_ids/)
-    assert.match(home, /navigate\('\/teacher\/tasks'\)/)
+  it('sends the objective AND the children from the gaps card', () => {
+    // #450: the seed is built by the gaps mapper and opens the builder IN
+    // PLACE (the same modal wiring as the lomda screen) — no navigation hop.
+    const mapper = read('../src/features/teacher-app/home/gapsModel.ts')
+    assert.match(mapper, /objectiveId: gap\.objective_id/)
+    assert.match(mapper, /learnerIds: gap\.learner_ids/)
+    assert.match(home, /TaskBuilder/)
   })
 
   it('no longer opens the goal dialog there', () => {

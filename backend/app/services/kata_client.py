@@ -287,7 +287,12 @@ def normalize_component(component: dict[str, Any]) -> dict[str, Any]:
         # provider (provenance across a multi-provider catalog), and the two
         # timestamps are how a re-import knows which snapshot it holds.
         "skills": _string_list(component.get("skills")),
-        "manufacture": str(component.get("manufacture") or "") or None,
+        # Kata moved to the spec-v1.1 spelling (`manufacturer`) and to the UNIT
+        # level in 08/2026 — both spellings are read, and `normalize_unit`
+        # back-fills components from the unit when the component carries none.
+        "manufacture": str(
+            component.get("manufacturer") or component.get("manufacture") or ""
+        ) or None,
         "created_at": component.get("createdAt"),
         "updated_at": component.get("updatedAt"),
         "information_to_bot": information_to_bot,
@@ -301,7 +306,11 @@ def normalize_component(component: dict[str, Any]) -> dict[str, Any]:
         # always None and the env map stands in — but reading it costs nothing
         # and the mapping stops being configuration the day it appears.
         "ecat_item_id": _ecat_item_id(component),
-        "cognitive_level": component.get("cognitiveLevel"),
+        # Spec v1.1 renamed this to the plural array `cognitiveLevels`; the LRS
+        # layer sends whatever shape lands here as an array either way.
+        "cognitive_level": (
+            component.get("cognitiveLevels") or component.get("cognitiveLevel")
+        ),
         "depth_level": component.get("depthLevel"),
         "media_format": (
             (component.get("subContent") or [{}])[0].get("mediaFormat")
@@ -325,11 +334,16 @@ def subject_from_objective(objective_key: str, sub_topic: str = "") -> str:
 
 
 def normalize_unit(unit: dict[str, Any]) -> dict[str, Any]:
+    manufacturer = str(
+        unit.get("manufacturer") or unit.get("manufacture") or ""
+    ) or None
     components = [
         normalize_component(component)
         for component in unit.get("components") or []
         if isinstance(component, dict) and component.get("id")
     ]
+    for component in components:
+        component["manufacture"] = component["manufacture"] or manufacturer
     locales = sorted({locale for component in components for locale in component["languages"]})
     unit_id = str(unit.get("id") or "")
     sub_topic = str(unit.get("subTopic") or "")
@@ -357,8 +371,15 @@ def normalize_unit(unit: dict[str, Any]) -> dict[str, Any]:
         "prerequisites": prerequisites,
         # Who the unit was authored FOR (720 closed lists מגזר / אוכלוסיית יעד).
         # Kept verbatim — no value is invented when the provider omits them.
-        "target_sector": _string_list(unit.get("targetSector")),
+        # Spec v1.1 renamed the sector list to the plural `targetSectors`.
+        "target_sector": _string_list(
+            unit.get("targetSectors") or unit.get("targetSector")
+        ),
         "target_audience": _string_list(unit.get("targetAudience")),
+        # The provider moved to the UNIT level in Kata's v1.1 catalog; each
+        # component inherits it below unless it publishes its own (a future
+        # multi-vendor unit keeps per-component provenance).
+        "manufacture": manufacturer,
         "ecat_item_id": _ecat_item_id(unit),
         "languages": locales,
         "components": components,

@@ -1,0 +1,744 @@
+/* The class book (#450 v2) — an open two-page spread with a real turning leaf.
+ *
+ * Geometry: the book is a 2-column grid; because it inherits the document
+ * direction, the FIRST half (the "opening" page) lands on the right in Hebrew
+ * and on the left in English with no extra rules. The leaf is an absolutely
+ * positioned half that rotates around the spine in 3D; which half it covers
+ * and which way it sweeps depends on direction × forward/back, spelled out in
+ * the four combos below rather than computed cleverly.
+ */
+
+.tch-album__empty { margin: 0; color: var(--sp-ink-400); }
+
+/* ── the stage: a tall scroll run with the viewport pinned on the book ─────
+ *
+ * --p is written by the component (0 at the stage's top edge reaching the
+ * viewport top, 1 when its bottom reaches the viewport bottom). Three phases
+ * derive from it here:  --rise (the closed book scales up into view),
+ * --open (the cover turns), --reveal (the second page fades in under the
+ * landing cover). Scrolling back up runs everything in reverse for free. */
+
+/* The stage is the page's FLOOR: it is the last element, its travel ends
+   exactly where scrolling ends, and once the book is open further wheeling
+   turns pages (the component intercepts it) rather than leaving the book.
+   --stage-vh is the SCROLLER's height, written by the component — the teacher
+   pages scroll in `.sp-teacher-shell__main`, so 100vh (which includes the app
+   bar) would overshoot the floor and let the book scroll off the top. */
+.tch-bookStage {
+  position: relative;
+  block-size: calc(var(--stage-vh, 100vh) * 1.9);
+  margin-block-end: 0;
+  --p: 0;
+}
+.tch-bookStage__pin {
+  position: sticky;
+  inset-block-start: 0;
+  block-size: var(--stage-vh, 100vh);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--sp-3);
+  padding-block: var(--sp-4);
+  box-sizing: border-box;
+  align-items: center;
+}
+.tch-bookStage__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  /* the chrome fades in with the book */
+  opacity: calc(0.3 + 0.7 * clamp(0, calc(var(--p) / 0.2), 1));
+}
+.tch-bookStage__titles { display: grid; gap: 2px; }
+.tch-bookStage__titles h2 { margin: 0; font-size: var(--sp-fs-lg); color: var(--sp-ink-900); }
+.tch-bookStage__dates {
+  color: var(--sp-ink-400);
+  font-weight: 400;
+  font-size: var(--sp-fs-md);
+  font-variant-numeric: tabular-nums;
+}
+.tch-bookStage__titles p { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-400); }
+
+.tch-book3d {
+  --rise: clamp(0, calc(var(--p) / 0.3), 1);
+  --open: clamp(0, calc((var(--p) - 0.3) / 0.55), 1);
+  /* How much of the far half the flying cover has covered: 0 until the cover
+     passes vertical, then -cos of its angle — the book's clip (see .tch-book)
+     rides this EXACTLY, so the far half is revealed precisely under the
+     descending cover: never a page sliver ahead of it, never a clipped cover. */
+  --covered: max(0, calc(-1 * cos(var(--open) * 180deg)));
+  /* while closed, the visible half-book is CENTRED; the shift eases away as
+     the spread unfurls, leaving the open book centred too */
+  --shift: calc((1 - clamp(0, calc((var(--p) - 0.3) / 0.4), 1)) * 25%);
+  perspective: 2600px;
+  /* the page turners position against the book, not the whole stage */
+  position: relative;
+  /* centred in the pin's free row — the floor view is the book alone, so it
+     should sit in the middle of the space, not hug the header */
+  align-self: center;
+  transform:
+    translateX(var(--shift-x, 0px))
+    translateY(calc((1 - var(--rise)) * 60px))
+    scale(calc(0.84 + 0.16 * var(--rise)));
+  transform-origin: center 30%;
+}
+/* the closed block sits on the spine side: left in Hebrew, right in English */
+.tch-book3d.is-rtl { --shift-x: var(--shift); }
+.tch-book3d.is-ltr { --shift-x: calc(-1 * var(--shift)); }
+
+/* Until the cover has opened, the pages take no input (the component also
+   gates its handlers on the same threshold). */
+.tch-bookStage:not(.is-open) .tch-book { pointer-events: none; }
+
+/* No title page (v7): lifting the cover reveals the spread's real page — the
+   book starts at its content. */
+
+/* ── the front cover: leather over the CLOSING half, hinged on the spine ──
+ *
+ * Real Hebrew-book physics: the closed block lies on the spine's left, the
+ * cover lifts from its free (left) edge and swings RIGHTWARD over the spine,
+ * landing where the turned pages will pile up. English mirrors the whole
+ * thing. (v5 had this mirrored — the cover opened like an English book.) */
+
+.tch-book__cover {
+  position: absolute;
+  inset-block: 0;
+  inline-size: 50%;
+  z-index: 4;
+  transform-style: preserve-3d;
+  pointer-events: none;
+  /* once it has lain flat, it fades so the page beneath takes over */
+  opacity: calc(1 - clamp(0, calc((var(--open, 1) - 0.88) / 0.12), 1));
+}
+.is-rtl .tch-book__cover {
+  left: 0;
+  transform-origin: right center;
+  transform: rotateY(calc(var(--open, 1) * 180deg));
+}
+.is-ltr .tch-book__cover {
+  right: 0;
+  transform-origin: left center;
+  transform: rotateY(calc(var(--open, 1) * -180deg));
+}
+.tch-book__coverFace {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+}
+/* The cover's artwork: a drawn plate under glass — gilt-framed, sitting above
+   the title plaque. The front face stacks them as one centred column. */
+.tch-book__coverFace--front {
+  grid-template-rows: 1fr auto;
+  align-items: stretch;
+  justify-items: center;
+  padding: 26px 30px 30px;
+  gap: var(--sp-4);
+}
+.tch-book__coverArt {
+  display: block;
+  inline-size: min(100%, 340px);
+  min-block-size: 0;
+  border: 2px solid rgba(220, 182, 116, 0.65);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 0 3px rgba(0, 0, 0, 0.22),
+    0 0 0 4px rgba(0, 0, 0, 0.14),
+    0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.tch-book__coverArt img {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  /* it sits on leather in candle-light, not on a screen */
+  filter: saturate(0.92) brightness(0.96);
+}
+.tch-book__coverFace--front {
+  /* leather: warm grain (fine repeating streaks), a window-light sheen from
+     the top corner, and a deep vignette toward the edges */
+  background:
+    radial-gradient(140% 100% at 28% 8%, rgba(255, 220, 170, 0.16), transparent 52%),
+    radial-gradient(120% 120% at 50% 55%, transparent 55%, rgba(0, 0, 0, 0.35)),
+    repeating-linear-gradient(115deg, rgba(0, 0, 0, 0.06) 0 2px, transparent 2px 5px),
+    repeating-linear-gradient(25deg, rgba(255, 255, 255, 0.025) 0 3px, transparent 3px 7px),
+    linear-gradient(160deg, #82563a, #5f3c25 55%, #45271a);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 2px 6px rgba(255, 235, 190, 0.12),
+    inset 0 0 46px rgba(0, 0, 0, 0.38),
+    0 18px 40px rgba(30, 20, 10, 0.35);
+}
+/* the stitched seam just inside the cover's edge */
+.tch-book__coverFace--front::before {
+  content: '';
+  position: absolute;
+  inset: 9px;
+  border: 1px dashed rgba(232, 207, 158, 0.38);
+  border-radius: 9px;
+  pointer-events: none;
+}
+.tch-book__coverFace--inner {
+  transform: rotateY(180deg);
+  background:
+    repeating-linear-gradient(115deg, rgba(0, 0, 0, 0.05) 0 2px, transparent 2px 5px),
+    linear-gradient(160deg, #6b4429, #4c2e1c);
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.4);
+}
+/* the embossed plate: gilded double frame, emblem, title, class, a rule */
+.tch-book__coverFrame {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-6) var(--sp-8);
+  border: 2px solid rgba(220, 182, 116, 0.65);
+  border-radius: 10px;
+  box-shadow:
+    inset 0 0 0 3px rgba(0, 0, 0, 0.22),
+    inset 0 0 0 4px rgba(232, 207, 158, 0.28),
+    0 0 0 4px rgba(0, 0, 0, 0.14),
+    0 2px 10px rgba(0, 0, 0, 0.3);
+  background: radial-gradient(120% 130% at 50% 0%, rgba(255, 235, 190, 0.07), transparent 60%);
+  color: #ecd5a4;
+}
+.tch-book__coverFrame strong {
+  font-size: var(--sp-fs-2xl);
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6), 0 -1px 0 rgba(255, 235, 190, 0.3);
+}
+.tch-book__coverGroup {
+  font-size: var(--sp-fs-md);
+  letter-spacing: 0.04em;
+  color: rgba(236, 213, 164, 0.85);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+/* the edition's week, stamped like a print date */
+.tch-book__coverDates {
+  font-size: var(--sp-fs-sm);
+  letter-spacing: 0.14em;
+  font-variant-numeric: tabular-nums;
+  color: rgba(220, 185, 118, 0.9);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+  direction: ltr;
+}
+.tch-book__coverEmblem {
+  display: grid;
+  place-items: center;
+  color: rgba(236, 213, 164, 0.9);
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.55));
+  margin-block-end: var(--sp-1);
+}
+.tch-book__coverRule {
+  inline-size: 84px;
+  block-size: 2px;
+  margin-block-start: var(--sp-1);
+  background: linear-gradient(to right, transparent, rgba(220, 182, 116, 0.75), transparent);
+  border-radius: 1px;
+}
+
+/* ── the week's present: the first sight of an edition, gift-wrapped ──────
+ *
+ * While the stage carries `.is-gift`, the book stands invisible and the
+ * present takes its place. The click flies the lid (with the bow), sinks the
+ * box, bursts the confetti — and the book is "born" underneath with a spring.
+ */
+
+.tch-bookStage.is-gift .tch-book3d {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tch-gift {
+  position: absolute;
+  /* physical centring — direction must not shift the present */
+  top: 52%;
+  left: 50%;
+  translate: -50% -50%;
+  z-index: 7;
+  border: 0;
+  padding: var(--sp-4);
+  background: none;
+  cursor: pointer;
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-2);
+  /* it arrives with the scroll, like the book it hides */
+  opacity: calc(0.25 + 0.75 * var(--rise, 1));
+}
+.tch-gift:focus-visible { outline: 2px solid var(--sp-primary-500); outline-offset: 4px; border-radius: 18px; }
+/* big and proud, but never wider than a phone */
+.tch-gift__art { overflow: visible; max-width: 84vw; height: auto; }
+/* an impatient shake — a real rattle with a little hop, then rest */
+.tch-gift:not(.is-popping) .tch-gift__art {
+  animation: tchGiftShake 2.2s ease-in-out infinite;
+  transform-origin: 50% 92%;
+}
+.tch-gift:not(.is-popping):hover .tch-gift__art { scale: 1.05; transition: scale 0.2s ease; }
+/* cartoon squash-and-stretch: wind up flat, hop tall, land with a splat */
+@keyframes tchGiftShake {
+  0%, 58%, 100% { rotate: 0deg; translate: 0 0; scale: 1 1; }
+  62% { rotate: 0deg; translate: 0 2px; scale: 1.08 0.88; }
+  66% { rotate: -7deg; translate: 0 -6px; scale: 0.96 1.06; }
+  70% { rotate: 6deg; translate: 0 -9px; scale: 0.97 1.04; }
+  74% { rotate: -5deg; translate: 0 -3px; scale: 1 1; }
+  78% { rotate: 4deg; translate: 0 -6px; scale: 0.98 1.03; }
+  82% { rotate: -2.5deg; translate: 0 1px; scale: 1.05 0.94; }
+  86% { rotate: 1deg; translate: 0 0; scale: 1 1; }
+  90% { rotate: 0deg; translate: 0 0; scale: 1 1; }
+}
+.tch-gift__sparks path { animation: tchGiftTwinkle 2.2s ease-in-out infinite; }
+.tch-gift__sparks path:nth-of-type(2) { animation-delay: 0.6s; }
+.tch-gift__sparks path:nth-of-type(3) { animation-delay: 1.3s; }
+.tch-gift__sparks path:nth-of-type(4) { animation-delay: 0.9s; }
+.tch-gift__sparks path:nth-of-type(5) { animation-delay: 0.3s; }
+@keyframes tchGiftTwinkle {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+/* ── the nudge for a hesitant teacher: a cursor TAPS the present ────────── */
+
+.tch-gift__cursor {
+  position: absolute;
+  top: 47%;
+  left: 58%;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  filter: drop-shadow(0 3px 6px rgba(30, 20, 60, 0.4));
+}
+.tch-gift.has-hint:not(.is-popping) .tch-gift__cursor {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  animation: tchCursorTap 1.8s ease-in-out infinite;
+}
+@keyframes tchCursorTap {
+  0%, 40%, 100% { translate: 0 0; scale: 1; }
+  14% { translate: -3px 7px; scale: 0.86; }
+  26% { translate: 0 0; scale: 1; }
+}
+/* the click rings, blooming from the tap point */
+.tch-gift__cursorRing {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.2;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.tch-gift.has-hint:not(.is-popping) .tch-gift__cursorRing {
+  animation: tchCursorRing 1.8s ease-out infinite;
+}
+.tch-gift.has-hint:not(.is-popping) .tch-gift__cursorRing--late {
+  animation-delay: 0.14s;
+  stroke: rgba(255, 255, 255, 0.6);
+}
+@keyframes tchCursorRing {
+  0%, 12% { opacity: 0; transform: scale(0.25); }
+  16% { opacity: 0.95; transform: scale(0.45); }
+  52% { opacity: 0; transform: scale(2.2); }
+  100% { opacity: 0; transform: scale(2.2); }
+}
+
+.tch-gift__hint {
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-primary-600, #6d5ae6);
+  color: #fff;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  box-shadow: 0 6px 18px rgba(60, 40, 160, 0.35);
+  opacity: 0;
+  scale: 0.7;
+}
+.tch-gift.has-hint .tch-gift__hint {
+  animation: tchGiftHint 1.6s ease-in-out infinite;
+}
+@keyframes tchGiftHint {
+  0%, 100% { opacity: 1; scale: 1; translate: 0 0; }
+  50% { opacity: 1; scale: 1; translate: 0 -5px; }
+}
+
+/* ── the pop ── */
+.tch-gift.is-popping { pointer-events: none; }
+.tch-gift.is-popping .tch-gift__hint { animation: none; opacity: 0; transition: opacity 0.15s; }
+.tch-gift.is-popping .tch-gift__lid {
+  animation: tchGiftLid 0.75s cubic-bezier(0.3, 0, 0.7, -0.2) forwards;
+  transform-origin: 110px 96px;
+}
+@keyframes tchGiftLid {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  30% { transform: translate(6px, -46px) rotate(-7deg); opacity: 1; }
+  100% { transform: translate(42px, -150px) rotate(22deg); opacity: 0; }
+}
+.tch-gift.is-popping .tch-gift__box {
+  animation: tchGiftBox 0.5s ease-in 0.3s forwards;
+  transform-origin: 110px 210px;
+}
+@keyframes tchGiftBox {
+  to { transform: scale(0.72); opacity: 0; }
+}
+.tch-gift.is-popping .tch-gift__sparks { opacity: 0; }
+.tch-gift__confetti > * { opacity: 0; }
+.tch-gift.is-popping .tch-gift__confetti > * {
+  animation: tchGiftFling 0.9s cubic-bezier(0.15, 0.6, 0.4, 1) 0.05s forwards;
+}
+.tch-gift.is-popping .tch-gift__confetti > :nth-child(1) { --fling: -84px, -122px; }
+.tch-gift.is-popping .tch-gift__confetti > :nth-child(2) { --fling: 66px, -138px; }
+.tch-gift.is-popping .tch-gift__confetti > :nth-child(3) { --fling: -124px, -70px; }
+.tch-gift.is-popping .tch-gift__confetti > :nth-child(4) { --fling: 128px, -80px; }
+.tch-gift.is-popping .tch-gift__confetti > :nth-child(5) { --fling: -52px, -158px; }
+.tch-gift.is-popping .tch-gift__confetti > :nth-child(6) { --fling: 104px, -134px; }
+.tch-gift.is-popping .tch-gift__confetti > :nth-child(7) { --fling: -146px, -104px; }
+.tch-gift.is-popping .tch-gift__confetti > :nth-child(8) { --fling: 38px, -168px; }
+.tch-gift.is-popping .tch-gift__confetti > :nth-child(9) { --fling: -20px, -150px; --spin: -460deg; }
+.tch-gift.is-popping .tch-gift__confetti > :nth-child(10) { --fling: 146px, -110px; --spin: 380deg; }
+.tch-gift.is-popping .tch-gift__confetti > :nth-child(11) { --fling: -160px, -56px; --spin: -380deg; }
+.tch-gift.is-popping .tch-gift__confetti > :nth-child(12) { --fling: 84px, -156px; --spin: 500deg; }
+.tch-gift.is-popping .tch-gift__confetti > :nth-child(13) { --fling: -98px, -142px; --spin: -520deg; }
+.tch-gift.is-popping .tch-gift__confetti > :nth-child(14) { --fling: 160px, -46px; --spin: 340deg; }
+.tch-gift.is-popping .tch-gift__confetti > :nth-child(15) { --fling: -64px, -96px; --spin: 440deg; }
+.tch-gift.is-popping .tch-gift__confetti > :nth-child(16) { --fling: 18px, -132px; --spin: -400deg; }
+@keyframes tchGiftFling {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--fling)) rotate(var(--spin, 420deg)); }
+}
+
+/* The book RISES out of the opened present — small and low (where the box
+   stands), up with an overshoot, landing as the centred closed cover; the
+   intro then swings the cover open on a clock. A golden flash blooms behind
+   it as it clears the box. */
+.tch-book3d.is-born .tch-book {
+  animation: tchBookBorn 1s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes tchBookBorn {
+  0% { transform: scale(0.3) translateY(140px); opacity: 0; }
+  35% { opacity: 1; }
+  70% { transform: scale(1.05) translateY(-12px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.tch-book3d.is-born::after {
+  content: '';
+  position: absolute;
+  inset: -14%;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgba(242, 205, 128, 0.6), rgba(242, 205, 128, 0) 70%);
+  animation: tchBornGlow 1.5s ease-out both;
+}
+@keyframes tchBornGlow {
+  0% { opacity: 0; scale: 0.45; }
+  30% { opacity: 1; }
+  100% { opacity: 0; scale: 1.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tch-gift:not(.is-popping) .tch-gift__art,
+  .tch-gift__sparks path,
+  .tch-gift.has-hint:not(.is-popping) .tch-gift__cursor,
+  .tch-gift.has-hint:not(.is-popping) .tch-gift__cursorRing,
+  .tch-book3d.is-born .tch-book { animation: none; }
+  .tch-book3d.is-born::after { animation: none; opacity: 0; }
+}
+
+/* the warm-up copies of every plate — fetched, never seen */
+.tch-book__preload {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tch-bookStage { block-size: auto; }
+  .tch-bookStage__pin { position: static; block-size: auto; }
+  .tch-book__cover { display: none; }
+  .tch-book__half--closing .tch-book__page { opacity: 1; }
+}
+
+.tch-album__flip { transform: scaleX(-1); }
+
+/* the page turners, riding the book's outer edges like lightbox arrows —
+   they surface with the cover (opacity follows --open) */
+.tch-album__navBtn {
+  position: absolute;
+  inset-block-start: 50%;
+  translate: 0 -50%;
+  z-index: 6;
+  inline-size: 42px;
+  block-size: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+  color: var(--sp-ink-700);
+  font: inherit;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(30, 30, 60, 0.18);
+  opacity: var(--open, 1);
+}
+.tch-album__navBtn:disabled { opacity: calc(var(--open, 1) * 0.35); cursor: default; }
+.tch-album__navBtn:not(:disabled):hover { color: var(--sp-primary-600); border-color: var(--sp-primary-500); }
+/* Hebrew pages advance leftward: NEXT on the left edge, PREV on the right */
+.is-rtl .tch-album__navBtn--next { left: -21px; }
+.is-rtl .tch-album__navBtn--prev { right: -21px; }
+.is-ltr .tch-album__navBtn--next { right: -21px; }
+.is-ltr .tch-album__navBtn--prev { left: -21px; }
+
+/* the folio line under the spread */
+.tch-album__pageOf {
+  display: block;
+  text-align: center;
+  margin-block-start: var(--sp-3);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
+  font-variant-numeric: tabular-nums;
+  opacity: var(--open, 1);
+}
+
+/* ── the open book ───────────────────────────────────────────────────────── */
+
+.tch-book {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  perspective: 2400px;
+  border-radius: 16px;
+  /* the binding: a leather rim around the open spread, and the closed stack
+     of pages peeking out under it */
+  padding: 10px;
+  background: linear-gradient(160deg, #7a4f32, #5a3822 55%, #46281a);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 0 26px rgba(0, 0, 0, 0.3),
+    0 3px 0 -1px #efe6d4,
+    0 5px 0 0 #d9cbb2,
+    0 20px 44px rgba(30, 20, 10, 0.3);
+  outline: none;
+  touch-action: pan-y;
+  /* Paper is paper in both themes: the book re-scopes the ink/surface tokens
+     so every nested primitive (buttons, evidence, kudos) paints for cream
+     pages instead of following the app theme. */
+  --sp-surface: #faf4e6;
+  --sp-bg: #f1e8d4;
+  --sp-border: #ddd2b8;
+  --sp-ink-900: #2d2a24;
+  --sp-ink-700: #4b463c;
+  --sp-ink-500: #6d6656;
+  --sp-ink-400: #8b8371;
+  --sp-ink-300: #a89f8c;
+  /* Closed, the book IS just its cover: the far half is clipped away at the
+     spine (the flat cut edge reads as the closed book's spine) and released
+     as the cover swings past vertical. The generous negative outsets keep
+     shadows and the flying cover unclipped on every other side. */
+  clip-path: inset(-120px var(--clip-r, -120px) -120px var(--clip-l, -120px));
+}
+.tch-book.is-rtl { --clip-r: calc((1 - var(--covered, 1)) * 50% - var(--covered, 1) * 120px); }
+.tch-book.is-ltr { --clip-l: calc((1 - var(--covered, 1)) * 50% - var(--covered, 1) * 120px); }
+/* Viewed a little off the spine's axis, so the cover never vanishes edge-on
+   at ninety degrees and the whole turn reads deeper. */
+.tch-book.is-rtl { perspective-origin: 30% 45%; }
+.tch-book.is-ltr { perspective-origin: 70% 45%; }
+.tch-book:focus-visible { outline: 2px solid var(--sp-primary-500); outline-offset: 3px; }
+
+.tch-book__spine {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 50%;
+  width: 0;
+  z-index: 2;
+  box-shadow: 0 0 22px 6px rgba(30, 30, 60, 0.18);
+}
+
+.tch-book__half {
+  min-inline-size: 0;
+  /* the title-page overlay positions against its own half, not the book */
+  position: relative;
+}
+
+/* Paper: cream in light, deep in dark, with the gutter shading toward the
+   spine. The first half's gutter is on its inline-END, the second's on its
+   START — logical properties keep this true in both directions. */
+.tch-book__half,
+.tch-book__leafFace {
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.5), transparent 30%),
+    var(--sp-surface);
+}
+/* Each half's OUTER edge (away from the spine) gets the book's rounding; the
+   spine side stays nearly square. The opening half is the grid's first child,
+   so its outer edge is its inline-START in both directions. */
+.tch-book__half--opening {
+  border-start-start-radius: 14px;
+  border-end-start-radius: 14px;
+  border-start-end-radius: 4px;
+  border-end-end-radius: 4px;
+  background: linear-gradient(to var(--tch-gutter-opening, left), rgba(30, 30, 60, 0.09), transparent 10%) var(--sp-surface);
+}
+.tch-book__half--closing {
+  border-start-end-radius: 14px;
+  border-end-end-radius: 14px;
+  border-start-start-radius: 4px;
+  border-end-start-radius: 4px;
+  background: linear-gradient(to var(--tch-gutter-closing, right), rgba(30, 30, 60, 0.09), transparent 10%) var(--sp-surface);
+}
+/* Gutter sides: the dark end of `linear-gradient(to X, dark, …)` sits OPPOSITE
+   X, and each page's shading belongs at its spine edge. RTL: opening page is
+   the right half (spine on its left) → dark-at-left → `to right`. */
+.tch-book.is-rtl { --tch-gutter-opening: right; --tch-gutter-closing: left; }
+.tch-book.is-ltr { --tch-gutter-opening: left; --tch-gutter-closing: right; }
+
+/* ── one page ────────────────────────────────────────────────────────────── */
+
+.tch-book__page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  block-size: 100%;
+  padding: var(--sp-5) var(--sp-5) var(--sp-4);
+}
+
+.tch-book__plate {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--sp-border);
+  background: var(--sp-bg);
+}
+.tch-book__plate img,
+.tch-book__plate svg {
+  display: block;
+  inline-size: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  user-select: none;
+}
+
+.tch-album__sentence {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--sp-fs-lg);
+  line-height: 1.55;
+  color: var(--sp-ink-900);
+}
+
+.tch-book__byline {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  font-weight: var(--sp-fw-semibold);
+  font-size: var(--sp-fs-md);
+  color: var(--sp-ink-700);
+}
+.tch-album__ago { font-size: var(--sp-fs-sm); color: var(--sp-ink-400); font-weight: 400; }
+
+.tch-album__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-block-start: auto; /* footer sits on the page's bottom margin */
+}
+
+/* a small centred rule, the way a folio closes a printed page */
+.tch-book__folio {
+  align-self: center;
+  inline-size: 34px;
+  block-size: 2px;
+  border-radius: 1px;
+  background: var(--sp-border);
+}
+
+/* ── the turning leaf ────────────────────────────────────────────────────── */
+
+.tch-book__leaf {
+  position: absolute;
+  inset-block: 0;
+  inline-size: 50%;
+  z-index: 3;
+  transform-style: preserve-3d;
+  will-change: transform;
+  animation-duration: 0.72s;
+  animation-timing-function: cubic-bezier(0.45, 0, 0.25, 1);
+  animation-fill-mode: forwards;
+}
+.tch-book__leafFace {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  overflow: hidden;
+  box-shadow: 0 6px 28px rgba(30, 30, 60, 0.22);
+}
+.tch-book__leafFace--back { transform: rotateY(180deg); }
+
+/* Four combos: which half the leaf starts on and which way it sweeps.
+   Forward always turns the CLOSING page over onto the opening half; back
+   turns the OPENING page onto the closing half. */
+.tch-book.is-rtl .tch-book__leaf.is-forward {
+  left: 0; transform-origin: right center; animation-name: tchTurnPos;
+}
+.tch-book.is-rtl .tch-book__leaf.is-back {
+  right: 0; transform-origin: left center; animation-name: tchTurnNeg;
+}
+.tch-book.is-ltr .tch-book__leaf.is-forward {
+  right: 0; transform-origin: left center; animation-name: tchTurnNeg;
+}
+.tch-book.is-ltr .tch-book__leaf.is-back {
+  left: 0; transform-origin: right center; animation-name: tchTurnPos;
+}
+
+@keyframes tchTurnPos {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(180deg); }
+}
+@keyframes tchTurnNeg {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(-180deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tch-book__leaf { animation-duration: 0.01s; }
+}
+
+/* ── kudos on the page footer (shared class names with the old album) ────── */
+
+.tch-album__kudos { display: grid; gap: var(--sp-2); }
+.tch-album__kudosHint { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-400); }
+.tch-album__kudos textarea {
+  inline-size: 100%;
+  resize: vertical;
+  border: 1px solid var(--sp-border);
+  border-radius: 10px;
+  background: var(--sp-bg);
+  color: var(--sp-ink-900);
+  padding: var(--sp-2) var(--sp-3);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+}
+.tch-album__kudosActions { display: flex; gap: var(--sp-2); }
+.tch-album__sent {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin: 0;
+  color: var(--sp-success-600);
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+}
+.tch-album__error { margin: 0; color: var(--sp-danger-600); font-size: var(--sp-fs-xs); }
+
+@media (max-width: 760px) {
+  /* One page at a time on a narrow screen: the closing half folds under, and
+     the cover/clip theatre (built for a two-half spread) stands down. */
+  .tch-book { grid-template-columns: 1fr; clip-path: none; }
+  .tch-book__half--closing, .tch-book__spine, .tch-book__leaf,
+  .tch-book__cover { display: none; }
+  .tch-book3d { --shift-x: 0px; }
+}

@@ -1774,6 +1774,24 @@
 
 .sp-companion__handBtn:disabled { opacity: 0.55; cursor: not-allowed; }
 
+/* While the hand is up (#450): a steady yellow glow that survives reload
+   (server truth), pulsing gently so "still raised" reads at a glance. The
+   button stays enabled — pressing it now takes the hand DOWN. */
+.sp-companion__handBtn.is-raised {
+  color: var(--sp-warn-600);
+  border-color: var(--sp-warn-600);
+  background: var(--sp-warn-100);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--sp-warn-600) 55%, transparent);
+  animation: spHandGlow 2.2s ease-in-out infinite;
+}
+@keyframes spHandGlow {
+  0%, 100% { box-shadow: 0 0 4px 1px color-mix(in srgb, var(--sp-warn-600) 40%, transparent); }
+  50% { box-shadow: 0 0 12px 4px color-mix(in srgb, var(--sp-warn-600) 60%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sp-companion__handBtn.is-raised { animation: none; }
+}
+
 /* The tooltip must escape the composer row — `overflow: visible` up the chain
    and a raised z-index here are what keep it whole. */
 .sp-companion__handBtn[data-tooltip]::after {

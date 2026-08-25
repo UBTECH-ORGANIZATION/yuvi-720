@@ -324,6 +324,57 @@ const TEMPLATES: Template[] = [
       minutes: num(raw.minutes) ?? 0,
     }),
   },
+  { // personal best, the streak story — school days of practice in a row
+    needs: ['streak_days'],
+    consumes: ['streak_days', 'last_day'],
+    render: (raw, t, language) => {
+      const sentence = t('tch.evidence.sent.practiceStreak', {
+        days: num(raw.streak_days) ?? 0,
+      })
+      return typeof raw.last_day === 'string'
+        ? `${sentence} ${t('tch.evidence.sent.onDate', {
+            date: formatDate(raw.last_day, language),
+          })}`
+        : sentence
+    },
+  },
+  { // personal best, the best-day story — beat their own busiest day
+    needs: ['answers', 'previous_best'],
+    consumes: ['answers', 'previous_best', 'date'],
+    render: (raw, t, language) => {
+      const sentence = t('tch.evidence.sent.bestDay', {
+        answers: num(raw.answers) ?? 0,
+        previous: num(raw.previous_best) ?? 0,
+      })
+      return typeof raw.date === 'string'
+        ? `${sentence} ${t('tch.evidence.sent.onDate', {
+            date: formatDate(raw.date, language),
+          })}`
+        : sentence
+    },
+  },
+  { // a heavy morning that still became a learning day
+    needs: ['valence'],
+    consumes: ['valence', 'feeling', 'date', 'answers'],
+    render: (raw, t, language) => {
+      const sentence = t('tch.evidence.sent.feelingsJourney', {
+        answers: num(raw.answers) ?? 0,
+      })
+      return typeof raw.date === 'string'
+        ? `${sentence} ${t('tch.evidence.sent.onDate', {
+            date: formatDate(raw.date, language),
+          })}`
+        : sentence
+    },
+  },
+  { // cracked a question most of the class finds hard
+    needs: ['class_success_rate'],
+    consumes: ['class_success_rate', 'class_attempts', 'question_key', 'tried_count'],
+    render: (raw, t) => t('tch.evidence.sent.classHard', {
+      tried: num(raw.tried_count) ?? 0,
+      percent: Math.round((num(raw.class_success_rate) ?? 0) * 100),
+    }),
+  },
   { // a misconception that stopped coming back
     needs: ['tag'],
     consumes: ['tag', 'resolved_at', 'objective_id'],
@@ -410,6 +461,60 @@ const SIGNAL_SENTENCE: Record<string, SignalSentence> = {
     total: num(raw.objectives_total) ?? 0,
     percent: num(raw.percent) ?? num(value) ?? 0,
   }),
+  /* ── the dashboard band's reasons (#450) ─────────────────────────────────
+     Each signal the classifier can emit gets its sentence; the classifier
+     prefers emitting names that already exist above (days_inactive,
+     trailing_fail_streak) where the shape matches. */
+  wellbeing_distress: (_raw, _value, t) => t('tch.why.wellbeingDistress'),
+  blocked_message: (raw, _value, t) => t('tch.why.blockedMessage', {
+    count: num(raw.count) ?? 1,
+  }),
+  heavy_feeling_today: (raw, _value, t) => {
+    const feeling = typeof raw.feeling === 'string' ? raw.feeling : ''
+    return t('tch.why.heavyFeeling', {
+      feeling: feeling ? t(`checkin.feeling.${feeling}`) : t('tch.why.heavyFeelingPlain'),
+    })
+  },
+  fail_streak: (raw, value, t) => t('tch.why.failStreak', {
+    count: num(raw.fail_streak) ?? num(value) ?? 3, topic: '',
+  }),
+  wheel_spinning: (raw, _value, t) => t('tch.why.wheelSpinning', {
+    attempts: num(raw.opportunities) ?? num(raw.attempts) ?? 10,
+  }),
+  rapid_guessing: (raw, _value, t) => t('tch.why.rapidGuessing', {
+    count: num(raw.count) ?? num(raw.rapid_guesses) ?? 3,
+  }),
+  answer_cycling: (_raw, _value, t) => t('tch.why.answerCycling'),
+  overdue_goal: (raw, _value, t) => {
+    const title = typeof raw.goal_text === 'string' ? raw.goal_text.trim() : ''
+    return t(title ? 'tch.why.overdueGoalTitled' : 'tch.why.overdueGoal', { title })
+  },
+  help_requested: (_raw, _value, t) => t('tch.why.helpUnanswered'),
+  high_mastery: (raw, _value, t) => t('tch.why.highMastery', {
+    percent: Math.round((num(raw.score_ewma) ?? 0) * 100),
+  }),
+  mastery_level_confirmed: (raw, _value, t) => t('tch.why.masteryConfirmed', {
+    percent: Math.round((num(raw.score_ewma) ?? 0) * 100),
+  }),
+  success_streak: (raw, _value, t) => t('tch.why.successStreak', {
+    count: num(raw.streak) ?? 3,
+  }),
+  subject_strength: (raw, _value, t) => t('tch.why.subjectStrength', {
+    subject: subjectLabel(raw.subject as string | null | undefined, t),
+    percent: num(raw.percent) ?? 80,
+  }),
+  improving_week: (raw, _value, t) => {
+    const now = num(raw.rate_now)
+    if (now !== null) {
+      return t('tch.why.improvingRates', {
+        now: Math.round(now * 100),
+        before: Math.round((num(raw.rate_prior) ?? 0) * 100),
+      })
+    }
+    return t('tch.why.improvingMastery')
+  },
+  insufficient_evidence: (_raw, _value, t) => t('tch.why.insufficientEvidence'),
+  steady: (_raw, _value, t) => t('tch.why.steady'),
   existing_strength: (raw, value, t) => {
     const labels = Array.isArray(raw.labels)
       ? raw.labels.map((entry) => String(entry).trim()).filter(Boolean) : []

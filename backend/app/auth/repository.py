@@ -60,6 +60,11 @@ DEFAULT_PREFERENCES: dict[str, Any] = {
     # a teacher who has never opened the chooser has no opinion to store, and
     # persisting the default set would freeze it against future columns.
     "teacher_roster_columns": [],
+    # Which week's class book this teacher has already unwrapped, per group
+    # ({group_id: that week's Sunday, "YYYY-MM-DD"}). On the user rather than
+    # localStorage (project rule): the once-per-edition gift ceremony belongs
+    # to the teacher, not to whichever browser they opened first.
+    "teacher_book_seen": {},
 }
 ALLOWED_PREFERENCES = set(DEFAULT_PREFERENCES)
 

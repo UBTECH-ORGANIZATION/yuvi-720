@@ -194,6 +194,17 @@ export function postCoachHandoff(payload: {
   return apiPost<{ notified: number }>('/api/agent/coach/handoff', payload)
 }
 
+/** The child takes their hand down (#450). Self-scoped server-side; resolves
+ *  only `coach_handoff` alerts — a safety escalation survives this by design. */
+export function cancelCoachHandoff() {
+  return apiPost<{ resolved: number }>('/api/agent/coach/handoff/cancel', {})
+}
+
+/** Server truth for the raised-hand glow — a reload must not lower it. */
+export function getCoachHandoffState() {
+  return apiGet<{ raised: boolean; since: string | null }>('/api/agent/coach/handoff/state')
+}
+
 /** Tell presence where this client is, for the teacher's live view.
  *  Fire-and-forget: a lost report costs one stale row until the next
  *  navigation, and the server dedupes repeats, so there is nothing to retry. */

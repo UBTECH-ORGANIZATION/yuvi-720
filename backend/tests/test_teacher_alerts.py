@@ -440,3 +440,51 @@ class AuditFixTest(unittest.IsolatedAsyncioTestCase):
 
         await teacher_alerts.acknowledge("teacher-a", alert["_id"])
         self.assertIsNotNone(presence.snapshot("kid-1")["help_requested_at"])
+
+
+class StudentCancelInvariant(unittest.IsolatedAsyncioTestCase):
+    """#450's raise-hand cancel: a child may lower their OWN hand — and nothing
+    a child can trigger may ever resolve a safety escalation."""
+
+    async def asyncSetUp(self):
+        teacher_alerts.reset_for_tests()
+        realtime.reset_for_tests()
+        self._collection = patch(
+            "app.brain.repository._get_collection_named", return_value=None)
+        self._collection.start()
+
+    async def asyncTearDown(self):
+        self._collection.stop()
+
+    async def _raise(self, kind: str):
+        with patch("app.brain.org.teachers_for_learner",
+                   new=AsyncMock(return_value=["teacher-a"])), \
+             patch("app.services.notifications.notify", new=AsyncMock()):
+            await teacher_alerts.raise_alert(
+                "kid-1", kind,
+                title_key=f"tch.alert.{kind}",
+                evidence=_evidence(),
+            )
+
+    async def test_cancel_resolves_the_hand_and_never_the_safety_flag(self):
+        await self._raise("coach_handoff")
+        await self._raise("safety_flag")
+
+        from app.services import coach_handoff, presence
+
+        presence.note_help_requested("kid-1")
+        resolved = await coach_handoff.cancel("kid-1")
+
+        self.assertEqual(resolved, 1)
+        rows = await teacher_alerts.list_alerts("teacher-a")
+        by_kind = {row["kind"]: row["status"] for row in rows}
+        self.assertEqual(by_kind["coach_handoff"], teacher_alerts.STATUS_RESOLVED)
+        # The invariant: the safety escalation is still in front of the teacher.
+        self.assertNotEqual(by_kind["safety_flag"], teacher_alerts.STATUS_RESOLVED)
+        # And the live strip is lowered.
+        self.assertIsNone(presence.snapshot("kid-1").get("help_requested_at"))
+
+    async def test_cancel_with_nothing_raised_is_a_quiet_no_op(self):
+        from app.services import coach_handoff
+
+        self.assertEqual(await coach_handoff.cancel("kid-1"), 0)

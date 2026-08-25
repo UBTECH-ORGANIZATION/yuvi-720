@@ -29,7 +29,7 @@ const app = readFileSync(
     reach. `false` does not mean "hidden": it means the screen does not narrow
     by it, and must say so when it is set. */
 const TABLE: [string, boolean, boolean, boolean][] = [
-  ['/teacher',                          true,  false, false],
+  ['/teacher',                          true,  true,  false],
   ['/teacher/students',                 true,  true,  false],
   ['/teacher/student/kid-1',            false, false, true],
   ['/teacher/goals',                    true,  true,  false],
@@ -120,9 +120,10 @@ describe('the screens that must announce a filter they ignore', () => {
        deferring it honestly costs one sentence on the screen. */
     assert.equal(narrowsBy('/teacher').subject, false)
     assert.equal(narrowsBy('/teacher/students').subject, false)
-    /* Home's KPIs, brief, engagement and gaps are class aggregates — none
-       recomputes for six children, so the sub-group is announced, not applied. */
-    assert.equal(narrowsBy('/teacher').subgroup, false)
+    /* Home narrows by sub-group since #450: the students band card filters to
+       it client-side and says so; the KPIs, live card and gaps stay class-wide
+       aggregates. */
+    assert.equal(narrowsBy('/teacher').subgroup, true)
     // The learnings fold is class-wide, so a sub-group cannot narrow it exactly.
     assert.equal(narrowsBy('/teacher/learnings').subgroup, false)
     /* A class-wide task still belongs to the sub-group's children — a task-list

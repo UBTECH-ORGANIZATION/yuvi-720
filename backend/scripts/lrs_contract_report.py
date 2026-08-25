@@ -7,6 +7,17 @@ content ancestry (`grouping` = unit → component → item, `parent` = the level
 directly above, `context.extensions` = every level's metadata) — posts them to the
 configured LRS, and writes a CSV of what was sent.
 
+Fixes applied after integration report 5 (against the full v1.1 spec text):
+  · `masteryLevel` on every content statement — the catalog value when Kata
+    publishes one, else a band derived from `relativeDifficulty`
+    (1–2 basic · 3 intermediate · 4–5 advanced)
+  · `manufacturer` carries the ministry's vendor CODE (מתודיקה → 310), never
+    the catalog's name string — numeric, per the spec's own example, and on
+    COMPONENT metadata only (the v1.1 unit table has no manufacturer)
+  · media events drop the `mediaDuration` extension (removed in v1.1)
+  · `conversationTrigger` follows the v1.1 closed list (`misconception` →
+    `student-error`, off-list values → `other`)
+
 Fixes applied after integration report 4 (spec v1.1):
   · grouping→content-vendor id under the required base —
     …/xapi/moe/ecat/content-vendor/<vendorId> (was …/moe/content-vendor/<id>)
@@ -278,16 +289,16 @@ async def build_all(identity: dict, session_id: str) -> list[tuple[str, str, dic
     media_object = f"{CONTENT_BASE}/{COMPONENT_ID}/{MEDIA_ITEM_ID}"
     add("video / audio / animation (media)", "played", statements.media_event(
         identity, session_id, "played", object_id=media_object, media_format="video",
-        media_position_seconds=0, media_duration_seconds=73, ecat_item_id=ecat, hierarchy=media_level,
+        media_position_seconds=0, ecat_item_id=ecat, hierarchy=media_level,
     ))
     add("video / audio / animation (media)", "paused", statements.media_event(
         identity, session_id, "paused", object_id=media_object, media_format="video",
-        media_position_seconds=38, media_duration_seconds=73, duration_seconds=38,
+        media_position_seconds=38, duration_seconds=38,
         ecat_item_id=ecat, hierarchy=media_level,
     ))
     add("video / audio / animation (media)", "completed", statements.media_event(
         identity, session_id, "completed", object_id=media_object, media_format="video",
-        media_position_seconds=73, media_duration_seconds=73, duration_seconds=73,
+        media_position_seconds=73, duration_seconds=73,
         ecat_item_id=ecat, hierarchy=media_level,
     ))
 

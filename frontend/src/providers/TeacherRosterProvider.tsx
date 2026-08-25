@@ -30,7 +30,7 @@ interface TeacherRosterValue {
   /** The learner's chosen avatar, or null when they have not picked one.
    *  Fetched with the roster so a badge coin costs no extra request per row. */
   avatarOf: (learnerId: string) => AvatarChoice | null
-  /** For components that still take a Map (SubGroupAssign, MomentsFeed). */
+  /** For components that still take a Map (the band card, the album). */
   names: Map<string, string | null>
   isLoading: boolean
 }

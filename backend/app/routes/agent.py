@@ -264,18 +264,20 @@ def _surface_component_iri(surface: "CoachSurfaceContext") -> str | None:
     return None
 
 
-# MoE conversationTrigger enum ← our internal trigger names.
+# MoE conversationTrigger enum ← our internal trigger names. Spec v1.1 closed
+# the list to student-request | success-effort | student-error | idle-time |
+# other (`misconception` retired in favour of `student-error`).
 _MOE_TRIGGER = {
     "idle": "idle-time",
-    "misconception": "misconception",
-    "mistake": "misconception",
+    "misconception": "student-error",
+    "mistake": "student-error",
     "slow_progress": "idle-time",
     "success": "success-effort",
-    "rapid_guessing": "idle-time",
-    "wheel_spinning": "misconception",
-    "question_intro": "idle-time",
-    "lesson_step_intro": "idle-time",
-    "lesson_welcome": "idle-time",
+    "rapid_guessing": "student-error",
+    "wheel_spinning": "student-error",
+    "question_intro": "other",
+    "lesson_step_intro": "other",
+    "lesson_welcome": "other",
 }
 
 
@@ -670,6 +672,33 @@ async def coach_handoff(data: dict, learner_id: str = Depends(require_learner)):
     return JSONResponse(content={"notified": len(alerts)})
 
 
+@router.post("/coach/handoff/cancel")
+async def coach_handoff_cancel(learner_id: str = Depends(require_learner)):
+    """The child takes their hand down (#450).
+
+    Learner-authed and self-scoped — the identity comes from the session, so a
+    child can only ever lower their OWN hand. Resolves `coach_handoff` alerts
+    strictly; a safety escalation survives anything this route can do (the
+    service enforces the kind, a test pins it).
+    """
+    from app.services import coach_handoff as handoff
+
+    resolved = await handoff.cancel(learner_id)
+    return JSONResponse(content={"resolved": resolved})
+
+
+@router.get("/coach/handoff/state")
+async def coach_handoff_state(learner_id: str = Depends(require_learner)):
+    """Is this learner's hand up — server truth for the button's glow.
+
+    A pure presence read (GET never generates), so a page reload cannot
+    silently lower a raised hand's visual state.
+    """
+    from app.services import coach_handoff as handoff
+
+    return JSONResponse(content=handoff.hand_state(learner_id))
+
+
 @router.get("/triggers/subscribe")
 async def triggers_subscribe(learner_id: str = Depends(require_learner)):
     """SSE stream of proactive triggers for a learner (idle/misconception/success)."""
@@ -906,7 +935,7 @@ async def coach_proactive(request: CoachProactiveRequest, session=Depends(requir
                 await lrs_reporter.report_conversation_interacted(
                     learner_id, session["sid"], conversation_id,
                     speaker="bot",
-                    conversation_trigger=_MOE_TRIGGER.get(trigger, "idle-time"),
+                    conversation_trigger=_MOE_TRIGGER.get(trigger, "other"),
                     help_type="bot-help-offer",
                     component_id=_surface_component_iri(request.surface),
                 )

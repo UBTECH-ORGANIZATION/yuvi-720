@@ -492,3 +492,148 @@ class NoEvidenceCardTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertTrue(all(d.get("unavailable") for d in drafts))
         llm.assert_not_awaited()   # and it costs nothing to say "I don't know"
+
+
+class NewAlbumKindsTests(unittest.IsolatedAsyncioTestCase):
+    """#450's three album additions: a personal best measured only against the
+    child's own history, a heavy-morning-kept-learning day, and (group path) a
+    hard question cracked — each firing only when its story is really there."""
+
+    async def _moments(self, events, brain=None, checkins=None):
+        with _Catalog(), \
+             patch("app.services.events.get_learner_events", AsyncMock(return_value=events)), \
+             patch("app.brain.repository.get_brain",
+                   AsyncMock(return_value=brain or {"mastery": {}})), \
+             patch("app.services.checkin_flow.history",
+                   AsyncMock(return_value=checkins or [])):
+            return await moments.moments_for_learner("kid-a", language="he")
+
+    async def test_a_streak_of_active_days_is_a_personal_best(self):
+        events = [
+            _event(_id=f"d{day}", occurred_at=_iso(day), success=day % 2 == 0)
+            for day in range(1, moments.PERSONAL_BEST_STREAK + 1)
+        ]
+        rows = await self._moments(events)
+        best = [row for row in rows if row["kind"] == moments.KIND_PERSONAL_BEST]
+        self.assertTrue(best)
+        self.assertGreaterEqual(
+            best[0]["evidence"]["raw"]["streak_days"], moments.PERSONAL_BEST_STREAK)
+        # the streak story carries its OWN sentence — "most practice in one
+        # day" would misdescribe it
+        self.assertEqual(best[0]["text_key"], "tch.moment.personalBestStreak")
+
+    async def test_two_active_days_are_not_a_personal_best(self):
+        events = [
+            _event(_id="d1", occurred_at=_iso(2)),
+            _event(_id="d2", occurred_at=_iso(1)),
+        ]
+        rows = await self._moments(events)
+        self.assertEqual(
+            [row for row in rows if row["kind"] == moments.KIND_PERSONAL_BEST], [])
+
+    async def test_a_best_ever_day_beats_only_their_own_history(self):
+        events = (
+            [_event(_id=f"a{i}", occurred_at=_iso(9)) for i in range(2)]
+            + [_event(_id=f"b{i}", occurred_at=_iso(6)) for i in range(2)]
+            + [_event(_id=f"c{i}", occurred_at=_iso(4)) for i in range(1)]
+            + [_event(_id=f"d{i}", occurred_at=_iso(0.2)) for i in range(5)]
+        )
+        rows = await self._moments(events)
+        best = [row for row in rows if row["kind"] == moments.KIND_PERSONAL_BEST]
+        self.assertTrue(best)
+        raw = best[0]["evidence"]["raw"]
+        self.assertEqual(raw["answers"], 5)
+        self.assertEqual(raw["previous_best"], 2)
+
+    async def test_a_heavy_checkin_with_learning_is_a_feelings_journey(self):
+        day = _iso(0.2)[:10]
+        events = [_event(_id="s1", occurred_at=_iso(0.2))]
+        rows = await self._moments(
+            events,
+            checkins=[{"date": day, "valence": "upset", "feeling": "sad", "skipped": False}],
+        )
+        journey = [row for row in rows if row["kind"] == moments.KIND_FEELINGS_JOURNEY]
+        self.assertTrue(journey)
+        self.assertEqual(journey[0]["evidence"]["raw"]["valence"], "upset")
+
+    async def test_a_heavy_checkin_with_no_learning_stays_out_of_the_album(self):
+        """The check-in's own rule: a feeling alone is a conversation opener,
+        not an album photo — the moment is the LEARNING that followed it."""
+        day = _iso(0.2)[:10]
+        rows = await self._moments(
+            [_event(_id="s1", occurred_at=_iso(3))],   # activity on another day
+            checkins=[{"date": day, "valence": "upset", "feeling": "sad", "skipped": False}],
+        )
+        self.assertEqual(
+            [row for row in rows if row["kind"] == moments.KIND_FEELINGS_JOURNEY], [])
+
+    async def test_hard_question_cracked_uses_class_stats(self):
+        rows_in_db = [
+            # four attempts, one correct → 25% ≤ the 0.6 cut; two learners tried
+            {"learner_id": "kid-a", "verb": "answered", "question_id": "q9",
+             "sub_item_id": "item-1", "launch": "cmp-1", "stored_at": _iso(1),
+             "occurred_at": _iso(1), "result": {"success": True}},
+            {"learner_id": "kid-b", "verb": "answered", "question_id": "q9",
+             "sub_item_id": "item-1", "launch": "cmp-1", "stored_at": _iso(1.1),
+             "occurred_at": _iso(1.1), "result": {"success": False}},
+            {"learner_id": "kid-b", "verb": "answered", "question_id": "q9",
+             "sub_item_id": "item-1", "launch": "cmp-1", "stored_at": _iso(1.2),
+             "occurred_at": _iso(1.2), "result": {"success": False}},
+            {"learner_id": "kid-c", "verb": "answered", "question_id": "q9",
+             "sub_item_id": "item-1", "launch": "cmp-1", "stored_at": _iso(1.3),
+             "occurred_at": _iso(1.3), "result": {"success": False}},
+        ]
+
+        class _Cursor:
+            def __init__(self, rows): self._rows = rows
+            def limit(self, _n): return self
+            def __aiter__(self):
+                self._it = iter(self._rows)
+                return self
+            async def __anext__(self):
+                try:
+                    return next(self._it)
+                except StopIteration:
+                    raise StopAsyncIteration
+
+        class _Collection:
+            def find(self, _query): return _Cursor(rows_in_db)
+
+        with patch("app.services.events._events_collection",
+                   AsyncMock(return_value=_Collection())):
+            out = await moments._hard_question_cracks(
+                ["kid-a", "kid-b", "kid-c"], days=14)
+
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0]["learner_id"], "kid-a")
+        self.assertEqual(out[0]["kind"], moments.KIND_HARD_QUESTION_CRACKED)
+        self.assertEqual(out[0]["evidence"]["raw"]["class_attempts"], 4)
+
+    async def test_an_easy_question_is_never_cracked(self):
+        rows_in_db = [
+            {"learner_id": kid, "verb": "answered", "question_id": "q1",
+             "sub_item_id": "item-1", "launch": "cmp-1", "stored_at": _iso(1),
+             "occurred_at": _iso(1), "result": {"success": True}}
+            for kid in ("kid-a", "kid-b", "kid-c", "kid-d")
+        ]
+
+        class _Cursor:
+            def __init__(self, rows): self._rows = rows
+            def limit(self, _n): return self
+            def __aiter__(self):
+                self._it = iter(self._rows)
+                return self
+            async def __anext__(self):
+                try:
+                    return next(self._it)
+                except StopIteration:
+                    raise StopAsyncIteration
+
+        class _Collection:
+            def find(self, _query): return _Cursor(rows_in_db)
+
+        with patch("app.services.events._events_collection",
+                   AsyncMock(return_value=_Collection())):
+            out = await moments._hard_question_cracks(
+                ["kid-a", "kid-b", "kid-c", "kid-d"], days=14)
+        self.assertEqual(out, [])

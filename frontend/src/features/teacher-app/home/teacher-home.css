@@ -1,194 +1,286 @@
 @import '../shared/teacher-shared.css';
 
 /* Container metrics come from teacher-shared.css — only page-specific layout
-   lives here, so the three pages cannot drift apart on width or padding. */
+   lives here, so the teacher pages cannot drift apart on width or padding.
+   The #450 refactor: the brief hero, the attention inbox and the sub-group
+   goal dialog left this file with their components. */
+
+/* Home ends on the class book, and the book stage is the scroll FLOOR: the
+   shared page frame's bottom padding would let the page scroll past the pinned
+   book, so home alone drops it. Doubled class: the shared frame rule can land
+   AFTER this file in the bundle (Vite hoists teacher-shared.css to its first
+   import), so source order alone cannot win. */
+.tch-home.tch-home { padding-block-end: 0; }
 
 .tch-home__head { margin-block-end: var(--sp-5); }
 .tch-home__head h1 { margin: 0; font-size: var(--sp-fs-2xl); color: var(--sp-ink-900); letter-spacing: -0.01em; }
-.tch-home__subtitle { margin: var(--sp-1) 0 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
-.tch-home__dot { unicode-bidi: isolate; white-space: pre; }
-
-/* Flat lists: rows separate themselves with hairlines, the container adds none. */
-.tch-home__attention { display: grid; gap: 0; }
-
-/* Two short reads share a row where there is room; the row collapses cleanly. */
-.tch-home__row {
-  display: grid;
-  gap: var(--sp-4);
-  align-items: start;
-}
-
-@media (min-width: 980px) {
-  .tch-home__row { grid-template-columns: 1fr 1fr; }
-  .tch-home__row .tch-zone { margin-block-end: var(--sp-5); }
-  /* One panel left in this row since the weekly digest was superseded by the
-     brief at the top of the page — a lone card in a 1fr 1fr grid is a card and
-     an equal column of nothing. */
-  .tch-home__row--single { grid-template-columns: 1fr; }
-}
-
-/* Quiet-panel subtitle — replaces the old stuttering double header. */
-.tch-panelSub {
-  margin: 0 0 var(--sp-3);
-  font-size: var(--sp-fs-xs);
-  color: var(--sp-ink-400);
-}
-
 
 /* KPI strip styles live in teacher-shared.css (`.tch-stats` / `.tch-stat`) —
-   the same cards head Home, the student profile and the learnings screen. */
-
-/* ── the inbox ────────────────────────────────────────────────────────────── */
-
-/* Was a two-column split with the live board beside it. The live board moved to
-   the roster — "who is here right now" is a question about the class list — and
-   the inbox took the full width rather than leaving a 2fr column of air. */
-.tch-home__cols {
-  display: grid;
-  gap: var(--sp-4);
-  align-items: start;
+   the same cards head Home, the student profile and the learnings screen.
+   Home's third KPI is a real <button> (it filters the bands card), so it
+   resets button chrome back to the shared card look. */
+.tch-stat--button {
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  color: inherit;
+}
+.tch-stat--button:focus-visible {
+  outline: 2px solid var(--sp-primary-500);
+  outline-offset: 2px;
+}
+/* Home's KPIs sit on cards (v3) — all three identical, and the attention KPI
+   carries no red side-bar: its icon and its number are the alarm. The button
+   reset above stops painting UA chrome because this rule paints all three. */
+.tch-home .tch-stats .tch-stat {
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(30, 30, 60, 0.06);
 }
 
-/* The inbox scrolls inside its card: five students visible, the rest a wheel
-   away — the page keeps its shape no matter how loud the week was. */
-.tch-home__inboxScroll {
-  display: grid;
-  gap: var(--sp-2);
-  max-block-size: 460px;
-  overflow-y: auto;
-  padding-inline-end: 2px;
+.tch-home > .sp-panel { margin-block-end: var(--sp-4); }
+
+/* ── the students band card ──────────────────────────────────────────────── */
+
+.tch-bands { display: grid; gap: var(--sp-3); }
+
+/* One chrome row: title on the start side, filters + the live door on the
+   end side (left in Hebrew). Wraps on a narrow screen. */
+.tch-bands__bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
 }
-
-/* Gap rows: flat, hairline-separated, each carrying its own inline meter —
-   the picture the old bar chart drew lives on the row itself now. */
-.tch-gaps__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
-
-.tch-gap {
-  padding: var(--sp-3) var(--sp-1);
-  display: grid;
-  gap: var(--sp-2);
-  border-block-end: 1px solid var(--sp-border);
-}
-
-.tch-gap:last-child { border-block-end: 0; }
-
-/* Two headed lists rather than one interleaved list sorted by struggle share,
-   so a strength and a gap are never adjacent rows distinguished only by the
-   colour of a bar. */
-.tch-gaps__group + .tch-gaps__group { margin-block-start: var(--sp-4); }
-
-.tch-gaps__groupTitle {
-  margin: 0 0 var(--sp-1);
-  font-size: var(--sp-fs-xs);
-  font-weight: var(--sp-fw-semibold);
-  color: var(--sp-ink-400);
-  text-transform: none;
-}
-
-.tch-gap__label { color: var(--sp-ink-900); }
-
-/* The row's whole meaning, in words: which way it points, how many, and out of
-   what. `--start` is the only colour cue left, and it is now redundant rather
-   than load-bearing. */
-.tch-gap__sentence {
+.tch-bands__titles { display: grid; gap: 2px; }
+.tch-bands__titles h2 {
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-lg);
+  color: var(--sp-ink-900);
+}
+.tch-bands__titles p { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-400); }
+
+/* the ? beside the title — how the three marks are decided */
+.tch-bands__help {
+  inline-size: 20px;
+  block-size: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--sp-border);
+  background: var(--sp-bg);
+  color: var(--sp-ink-500);
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-bold);
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.tch-bands__help:hover { color: var(--sp-primary-600); border-color: var(--sp-primary-500); }
+
+.tch-bandHelp { width: min(780px, 100%); }
+/* the three bands side by side — read across, not down */
+.tch-bandHelp__bands {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
+}
+@media (max-width: 640px) {
+  .tch-bandHelp__bands { grid-template-columns: 1fr; }
+}
+.tch-bandHelp__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.tch-bandHelp__head h2 { margin: 0; font-size: var(--sp-fs-lg); color: var(--sp-ink-900); }
+.tch-bandHelp__intro { margin: 0; color: var(--sp-ink-500); font-size: var(--sp-fs-sm); line-height: 1.55; }
+.tch-bandHelp__band {
+  display: grid;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-bg);
+}
+.tch-bandHelp__band h3 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
   font-size: var(--sp-fs-sm);
-  line-height: 1.55;
+  color: var(--sp-ink-900);
+}
+.tch-bandHelp__band p { margin: 0; color: var(--sp-ink-700); font-size: var(--sp-fs-sm); line-height: 1.55; }
+.tch-bandHelp__new {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  color: var(--sp-ink-500);
+  font-size: var(--sp-fs-sm);
+}
+/* icon + its meaning, boxed together so the mark reads as a named symbol */
+.tch-bandHelp__legend {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding-block: 2px;
+  padding-inline: 2px var(--sp-2); /* the icon leads, the label breathes */
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-bg);
   color: var(--sp-ink-700);
 }
-
-.tch-gap__classSize { color: var(--sp-ink-400); }
-
-.tch-gap { border-inline-start: 3px solid transparent; padding-inline-start: var(--sp-3); }
-.tch-gap--gap { border-inline-start-color: var(--sp-warn-600); }
-.tch-gap--strength { border-inline-start-color: var(--sp-success-600); }
-
-.tch-gap__actions {
+.tch-bands__tools {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
   flex-wrap: wrap;
 }
 
-.tch-groupRecs { display: grid; gap: var(--sp-2); padding-block-start: var(--sp-2); }
-.tch-groupRecs ul { margin: 0; padding-inline-start: var(--sp-4); display: grid; gap: var(--sp-2); }
-.tch-groupRecs li { color: var(--sp-ink-700); font-size: var(--sp-fs-sm); }
-/* The faces sit at the end of the move's sentence, not on a line of their own:
-   the list is short and scanned, and a second row per item would double its
-   height for four coins. */
-.tch-groupRecs__who { margin-inline-start: var(--sp-2); }
+.tch-bands__filters { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.tch-bands__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--sp-radius-pill);
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+  color: var(--sp-ink-700);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  cursor: pointer;
+}
+.tch-bands__chip.is-active.is-red { border-color: var(--sp-danger-600); background: var(--sp-danger-100); }
+.tch-bands__chip.is-active.is-orange { border-color: var(--sp-warn-600); background: var(--sp-warn-100); }
+.tch-bands__chip.is-active.is-green { border-color: var(--sp-success-600); background: var(--sp-success-100); }
+.tch-bands__chipCount {
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-ink-500);
+}
 
+.tch-bands__empty { margin: 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
+
+.tch-bands__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-1);
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+.tch-bands__student {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  border: 1px solid transparent;
+  border-radius: var(--sp-radius-sm);
+  background: transparent;
+  color: var(--sp-ink-900);
+  font: inherit;
+  cursor: pointer;
+  text-align: start;
+}
+.tch-bands__student:hover { background: var(--sp-bg); border-color: var(--sp-border); }
+.tch-bands__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-inline-size: 0;
+}
+/* Momentum, not a label: a fresh mover wears the DIRECTION it moved — up
+   toward green, down toward red. Settled students wear nothing. */
+.tch-bands__move {
+  margin-inline-start: auto;
+  inline-size: 18px;
+  block-size: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.tch-bands__move.is-up { background: var(--sp-success-100); color: var(--sp-success-600); }
+.tch-bands__move.is-down { background: var(--sp-danger-100); color: var(--sp-danger-600); }
+
+/* the movers filter chip, beside the three band chips */
+.tch-bands__chip.is-fresh { color: var(--sp-primary-600); }
+.tch-bands__chip.is-active.is-fresh {
+  border-color: var(--sp-primary-500);
+  background: var(--sp-primary-100, #ece9ff);
+}
+
+.tch-bands__more { justify-self: start; }
+
+/* ── the why-dialog ──────────────────────────────────────────────────────── */
+
+.tch-bandDialog { width: min(480px, 100%); }
+.tch-bandDialog__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.tch-bandDialog__who { display: grid; gap: 2px; min-inline-size: 0; }
+.tch-bandDialog__who h2 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-lg);
+  color: var(--sp-ink-900);
+}
+.tch-bandDialog__state { margin: 0; font-size: var(--sp-fs-sm); font-weight: var(--sp-fw-semibold); }
+.tch-bandDialog__state.is-red { color: var(--sp-danger-600); }
+.tch-bandDialog__state.is-orange { color: var(--sp-warn-600); }
+.tch-bandDialog__state.is-green { color: var(--sp-success-600); }
+.tch-bandDialog__moved { color: var(--sp-ink-400); font-weight: 400; }
+.tch-bandDialog__close { margin-inline-start: auto; }
+
+.tch-bandDialog__reasons {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+.tch-bandDialog__reasons li {
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-bg);
+  color: var(--sp-ink-700);
+  font-size: var(--sp-fs-sm);
+  line-height: 1.5;
+}
+.tch-bandDialog__actions { display: flex; justify-content: flex-end; }
+
+/* ── the quiet tail: strengths + deterministic moves ─────────────────────── */
+
+.tch-home__quiet { display: grid; gap: var(--sp-3); }
+.tch-home__quiet h4 {
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-400);
+}
+.tch-home__strengths ul {
+  list-style: none;
+  margin: var(--sp-1) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-1);
+}
+.tch-home__strengths li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+}
 @media (max-width: 600px) {
   .tch-home { padding-block-start: var(--sp-4); }
   .tch-stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 }
-
-/* Realtime alerts sit above the derived attention flags: minutes old outranks
-   days old. */
-.tch-home__alerts { display: grid; gap: 0; }
-
-/* ── sub-group goal assignment ─────────────────────────────────────────────
-   A centred dialog. It used to expand in place, which nested a chip grid and
-   three fields inside a gap row that was already a sentence plus a disclosure.
-   Names are listed unnumbered and unscored — a selection set, never a ranking
-   (MoE C5). */
-
-.tch-subgroup__modal { width: min(620px, 100%); max-block-size: min(86vh, 860px); }
-.tch-subgroup__heading { margin: 0; font-size: 1.32rem; font-weight: 700; }
-
-/* Only the form scrolls; the heading and the action row stay put, so the
-   assign button is reachable however many names are in the sub-group. */
-.tch-subgroup__body {
-  display: grid;
-  gap: var(--sp-3);
-  overflow-y: auto;
-  padding-inline-end: var(--sp-2);
-  margin-inline-end: calc(var(--sp-2) * -1);
-}
-
-/* Naming a kept sub-group, in a labelled field rather than `window.prompt`. */
-.tch-subgroup__spacer { flex: 1; }
-
-.tch-subgroup__people { display: grid; gap: var(--sp-1); }
-
-.tch-subgroup__peopleLabel {
-  font-size: var(--sp-fs-xs);
-  font-weight: 600;
-  color: var(--sp-ink-400);
-}
-
-.tch-subgroup__people ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-1);
-}
-
-.tch-subgroup__grid {
-  display: grid;
-  gap: var(--sp-2) var(--sp-3);
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-}
-
-.tch-subgroup__field { display: grid; gap: var(--sp-1); align-content: start; }
-.tch-subgroup__field--wide { grid-column: 1 / -1; }
-
-.tch-subgroup__field label {
-  font-size: var(--sp-fs-xs);
-  font-weight: 600;
-  color: var(--sp-ink-400);
-}
-
-.tch-subgroup__field textarea { resize: vertical; }
-
-.tch-subgroup__actions { display: flex; justify-content: flex-end; }
-
-.tch-subgroup__outcome { margin: 0; font-size: var(--sp-fs-sm); }
-.tch-subgroup__outcome--ok { color: var(--sp-success-600); }
-.tch-subgroup__outcome--error { color: var(--sp-danger-600); }
-
-/* Mixed-direction rows: the separator must stay neutral and not be absorbed
-   into whichever run the bidi algorithm resolves around it. */
-.tch-groupRecs__sep { unicode-bidi: isolate; white-space: pre; }
