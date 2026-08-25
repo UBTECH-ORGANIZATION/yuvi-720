@@ -1251,11 +1251,6 @@
   display: none;
 }
 
-[data-theme='dark'] .sd-journey-hero__glow {
-  background:
-    radial-gradient(circle 220px at var(--sd-pointer-x) var(--sd-pointer-y), rgba(146, 112, 250, calc(.09 * var(--sd-pointer-opacity))), transparent 72%);
-}
-
 /* Primary CTA — the landing's lilac pill: a soft violet gradient, a bright
    inner top highlight and a gentle (non-neon) glow. Shared by every dashboard
    primary button so the whole page presses the same button. */
@@ -1279,12 +1274,6 @@
 [data-theme='dark'] .sd-journey-hero .sd-button--primary:hover:not(:disabled) {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55), 0 22px 50px rgba(126, 92, 255, .6);
 }
-
-/* The angle is the panel's visual anchor: give it a touch more room, a slightly
-   softer divider, fainter grid lines and a bolder central readout. */
-[data-theme='dark'] .sd-journey-hero__visual { border-inline-start-color: var(--sdd-card-border); }
-[data-theme='dark'] .sd-journey-hero__visual .sd-hero-viz > svg { max-inline-size: 640px; }
-[data-theme='dark'] .sd-viz-readout__value { font-size: 50px; filter: drop-shadow(0 2px 10px rgba(146, 112, 250, .45)); }
 
 /* Tip becomes a quiet supporting status pill — dark, faint border, well below
    the CTA in weight so it never competes with the primary action. */

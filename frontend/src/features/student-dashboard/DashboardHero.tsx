@@ -1,16 +1,12 @@
-import { type PointerEvent as ReactPointerEvent } from 'react'
 import { Icon } from '../../components/primitives'
-import { useMediaQuery } from '../../hooks/useResponsive'
 import { useI18n } from '../../i18n/I18nProvider'
 import type { DashboardDTO } from '../../services/brain'
-import { HeroInteractive } from './HeroInteractive'
 
 interface DashboardHeroProps {
   dashboard: DashboardDTO
   isStarting: boolean
   actionError: boolean
   onStart: () => void
-  onBrowse: () => void
 }
 
 export function DashboardHero({
@@ -18,7 +14,6 @@ export function DashboardHero({
   isStarting,
   actionError,
   onStart,
-  onBrowse,
 }: DashboardHeroProps) {
   const { t } = useI18n()
   const { hero } = dashboard
@@ -30,30 +25,9 @@ export function DashboardHero({
   const greetingParts = t('sdash.greeting', {
     name: `${NAME_MARK}${dashboard.name}${NAME_MARK}`,
   }).split(NAME_MARK)
-  const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
-
-  const updateHeroGlow = (event: ReactPointerEvent<HTMLElement>) => {
-    if (prefersReducedMotion || event.pointerType !== 'mouse') return
-    const bounds = event.currentTarget.getBoundingClientRect()
-    const x = ((event.clientX - bounds.left) / bounds.width) * 100
-    const y = ((event.clientY - bounds.top) / bounds.height) * 100
-    event.currentTarget.style.setProperty('--sd-pointer-x', `${x}%`)
-    event.currentTarget.style.setProperty('--sd-pointer-y', `${y}%`)
-    event.currentTarget.style.setProperty('--sd-pointer-opacity', '1')
-  }
-
-  const hideHeroGlow = (event: ReactPointerEvent<HTMLElement>) => {
-    event.currentTarget.style.setProperty('--sd-pointer-opacity', '0')
-  }
 
   return (
-    <section
-      className="sd-journey-hero"
-      aria-labelledby="sd-journey-title"
-      onPointerMove={updateHeroGlow}
-      onPointerLeave={hideHeroGlow}
-    >
-      <div className="sd-journey-hero__glow" aria-hidden="true" />
+    <section className="sd-journey-hero" aria-labelledby="sd-journey-title">
       <div className="sd-journey-hero__content">
         <div className="sd-journey-hero__head">
           <p className="sd-journey-hero__welcome" dir="auto">
@@ -100,18 +74,6 @@ export function DashboardHero({
             </span>
           </aside>
         )}
-      </div>
-
-      <div className="sd-journey-hero__visual">
-        {/* Playable topic visual — fills the full column height, no card frame. */}
-        <HeroInteractive
-          title={hero.objectiveTitle}
-          context={{
-            subTopicTitle: hero.subTopicTitle,
-            topicTitle: hero.topicTitle,
-            description: hero.goalDescription,
-          }}
-        />
       </div>
     </section>
   )

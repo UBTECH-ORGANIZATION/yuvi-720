@@ -14,7 +14,7 @@ import { navigate } from '../../app/router'
 import { selectNextRoute } from '../../services/agents'
 import { DashboardHero } from './DashboardHero'
 import { DashboardLoadingScreen } from './DashboardLoadingScreen'
-import { LearningMap } from './LearningMap'
+import { ActivenessWeb } from './ActivenessWeb'
 import { MyGoals } from './MyGoals'
 import { RecentLessons } from './RecentLessons'
 import { ActivenessMapSection } from './ActivenessMapSection'
@@ -180,27 +180,25 @@ export function StudentDashboardPage() {
         {dashboard && (dashboard.hasProfile || dashboard.hasLearningEvidence) && (
           <>
             <UpcomingStrip items={todayItems} />
-            {/* Hero + recent lessons share one card: the current objective and
-                the lessons that continue it read as a single "what's next" panel. */}
-            <section className="sd-hero-card">
+            {/* One hero card, two halves: what to do next, and where the learner
+                actually stands on the six activeness competencies. */}
+            <section className="sd-hero-card sd-hero-card--split">
               <DashboardHero
                 dashboard={dashboard}
                 isStarting={isStarting}
                 actionError={actionError}
                 onStart={() => void startHeroStep()}
-                onBrowse={() => navigate('/learning')}
               />
+              <ActivenessWeb competencies={dashboard.competencies} />
+            </section>
+            <section className="sd-hero-card sd-hero-card--lessons">
               <RecentLessons
                 units={roadmapUnits}
                 onOpenLearning={() => navigate('/learning')}
                 onOpenComponent={openRoadmapComponent}
               />
             </section>
-            {/* Goals and the learning map stack full-width below the hero card. */}
             <div className="sd-grid">
-              <aside className="sd-grid__rail">
-                <LearningMap competencies={dashboard.competencies} />
-              </aside>
               <div className="sd-grid__main">
                 <MyGoals
                   goals={dashboard.goals}

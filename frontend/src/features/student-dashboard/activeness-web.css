@@ -1,0 +1,426 @@
+/* Activeness web — the hero-sized radar of the six activeness competencies.
+   Standalone on purpose: the sheet/overlay rules in `activeness-map.css` are
+   still owned by the 3D islands view and must not be pulled in here. */
+
+.aweb {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 1.2vw, 14px);
+    margin: 0;
+    block-size: 100%;
+}
+
+.aweb__head {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.aweb__title {
+    margin: 0;
+    color: var(--sp-ink-900);
+    font-size: var(--sp-fs-lg);
+    font-weight: 800;
+    line-height: var(--sp-lh-tight);
+}
+
+.aweb__subtitle {
+    margin: 0;
+    color: var(--sp-ink-400);
+    font-size: var(--sp-fs-xs);
+    line-height: 1.45;
+}
+
+/* The board is square and, thanks to the `cqw` sizing below, everything it
+   draws stays inside its own box — so the stage only has to centre it. */
+.aweb__stage {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    min-block-size: 0;
+    padding-inline: clamp(4px, 2%, 16px);
+}
+
+.aweb__board {
+    position: relative;
+    container-type: inline-size;
+    inline-size: min(100%, 420px);
+    aspect-ratio: 1;
+}
+
+.aweb__svg {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: visible;
+}
+
+/* ── Grid ─────────────────────────────────────────────────────────────────── */
+/* Ten layers, mostly whisper-faint, with every second one a shade firmer. The
+   finer mesh is what makes a few points of movement legible as movement. */
+.aweb__ring {
+    fill: none;
+    stroke: rgba(111, 91, 255, .062);
+    stroke-width: 1;
+}
+
+.aweb__ring:nth-of-type(even) {
+    stroke: rgba(111, 91, 255, .11);
+}
+
+.aweb__ring:last-of-type {
+    stroke: rgba(111, 91, 255, .24);
+    stroke-width: 1.2;
+}
+
+.aweb__spoke {
+    stroke: rgba(111, 91, 255, .1);
+    stroke-width: 1;
+}
+
+/* The ray toward the "focus now" domain gets a gentle light. */
+.aweb__spoke.is-focus {
+    stroke: rgba(111, 91, 255, .32);
+    stroke-width: 1.4;
+}
+
+/* ── The level shape ──────────────────────────────────────────────────────── */
+.aweb__data-g {
+    filter: drop-shadow(0 5px 14px rgba(111, 91, 255, .22));
+}
+
+.aweb__fill-in {
+    stop-color: rgba(124, 106, 255, .26);
+}
+
+.aweb__fill-mid {
+    stop-color: rgba(111, 91, 255, .15);
+}
+
+.aweb__fill-out {
+    stop-color: rgba(76, 201, 240, .12);
+}
+
+.aweb__data {
+    stroke: #6f5bff;
+    stroke-width: 2.2;
+    stroke-linejoin: round;
+}
+
+/* Vertices stay in one violet family so the shape reads as a whole, not a
+   rainbow. Only the focus dot picks up its domain accent. */
+.aweb__dot {
+    fill: #fff;
+    stroke: #6f5bff;
+    stroke-width: 2;
+}
+
+.aweb__dot.is-focus {
+    fill: color-mix(in srgb, var(--c) 24%, #fff);
+    stroke: var(--c);
+    stroke-width: 2.4;
+}
+
+/* A moved domain paints its own vertex: green up, red down, and the bigger the
+   dot the bigger the move. Listed after `.is-focus` so a focused domain that
+   also moved still shows the news. */
+.aweb__dot.is-changed {
+    stroke-width: 2.2;
+}
+
+.aweb__dot.is-changed--up {
+    fill: #2bb37c;
+    stroke: #14764d;
+}
+
+.aweb__dot.is-changed--down {
+    fill: #ef6a6a;
+    stroke: #b93434;
+}
+
+.aweb__dot.is-changed--major {
+    stroke-width: 2.6;
+}
+
+.aweb__dot.is-changed--up.is-changed--major {
+    filter: drop-shadow(0 0 6px rgba(31, 157, 107, .55));
+}
+
+.aweb__dot.is-changed--down.is-changed--major {
+    filter: drop-shadow(0 0 6px rgba(224, 82, 82, .55));
+}
+
+/* ── Emblems ON each vertex ───────────────────────────────────────────────── */
+.aweb__emblem {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+    pointer-events: none;
+}
+
+.aweb__emblem-inner {
+    display: block;
+}
+
+/* Sized against the board, not in fixed px: the SVG geometry reserves a share of
+   the radius for the dome, and that share has to hold at any card width. */
+.aweb__emblem-dome {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: 8cqw;
+    block-size: 8cqw;
+    border-radius: 50%;
+    color: color-mix(in srgb, var(--c) 74%, #342e68);
+    background:
+        radial-gradient(circle at 50% 34%, color-mix(in srgb, var(--c) 13%, transparent), transparent 74%),
+        linear-gradient(180deg, #fff, #f7f5ff);
+    border: 1.5px solid color-mix(in srgb, var(--c) 32%, rgba(111, 91, 255, .16));
+    box-shadow: 0 5px 14px rgba(91, 72, 176, .15);
+}
+
+/* Double-ring used only by the focus node. */
+.aweb__emblem-dome::after {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    border-radius: 50%;
+    border: 1.5px solid transparent;
+    pointer-events: none;
+}
+
+.aweb__emblem-dome .sp-icon {
+    position: relative;
+    inline-size: 46%;
+    block-size: 46%;
+}
+
+.aweb__trend-badge {
+    position: absolute;
+    inset-block-start: -18%;
+    inset-inline-end: -18%;
+    display: grid;
+    place-items: center;
+    inline-size: 4.8cqw;
+    block-size: 4.8cqw;
+    min-inline-size: 14px;
+    min-block-size: 14px;
+    border: 1.5px solid #fff;
+    border-radius: 50%;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(49, 43, 104, .2);
+}
+
+.aweb__trend {
+    inline-size: 68%;
+    block-size: 68%;
+}
+
+.aweb__trend-badge--up {
+    background: #1f9d6b;
+}
+
+.aweb__trend-badge--down {
+    background: #e05252;
+}
+
+.aweb__trend-badge--major {
+    inline-size: 6.2cqw;
+    block-size: 6.2cqw;
+    min-inline-size: 17px;
+    min-block-size: 17px;
+    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent), 0 3px 8px rgba(49, 43, 104, .24);
+}
+
+/* THE focus node — "my focus now". The one thing the eye should land on first. */
+.aweb__emblem.is-focus {
+    z-index: 5;
+}
+
+.aweb__emblem.is-focus .aweb__emblem-dome {
+    inline-size: 10cqw;
+    block-size: 10cqw;
+    border-color: color-mix(in srgb, var(--c) 66%, transparent);
+    box-shadow: 0 10px 22px rgba(91, 72, 176, .2), 0 0 18px color-mix(in srgb, var(--c) 24%, transparent);
+}
+
+.aweb__emblem.is-focus .aweb__emblem-dome::after {
+    border-color: color-mix(in srgb, var(--c) 40%, transparent);
+    animation: aweb-focus-pulse 3s ease-in-out infinite;
+}
+
+@keyframes aweb-focus-pulse {
+
+    0%,
+    100% {
+        opacity: .5;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+}
+
+/* ── Labels ───────────────────────────────────────────────────────────────── */
+.aweb__label {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    max-inline-size: 15cqw;
+    color: var(--sp-ink-500, #4a4668);
+    font-size: clamp(10px, 3.1cqw, 12.5px);
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    text-wrap: balance;
+    pointer-events: none;
+}
+
+.aweb__label.is-focus {
+    color: var(--sp-primary-700, #4a3f8f);
+    font-weight: 800;
+}
+
+/* Tone, for screen readers only — the map itself is a picture, never a score. */
+.aweb__sr {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ── Legend for the change markers ────────────────────────────────────────── */
+.aweb__legend {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding-block-start: clamp(10px, 1.6vw, 16px);
+    text-align: center;
+    text-wrap: balance;
+}
+
+.aweb__legend-count {
+    color: var(--sp-ink-600, #3d3963);
+    font-size: var(--sp-fs-sm);
+    font-weight: 800;
+    letter-spacing: .01em;
+}
+
+.aweb__legend-key {
+    color: var(--sp-ink-500, #4a4668);
+    font-size: var(--sp-fs-xs);
+    font-weight: 650;
+    line-height: 1.7;
+    letter-spacing: .02em;
+    word-spacing: .14em;
+}
+
+/* ── Dark theme ───────────────────────────────────────────────────────────── */
+[data-theme='dark'] .aweb__title {
+    color: #f1efff;
+}
+
+[data-theme='dark'] .aweb__ring {
+    stroke: rgba(170, 178, 235, .11);
+}
+
+[data-theme='dark'] .aweb__ring:last-of-type {
+    stroke: rgba(180, 188, 240, .22);
+}
+
+[data-theme='dark'] .aweb__spoke {
+    stroke: rgba(160, 170, 235, .11);
+}
+
+[data-theme='dark'] .aweb__spoke.is-focus {
+    stroke: rgba(150, 168, 255, .36);
+}
+
+[data-theme='dark'] .aweb__fill-in {
+    stop-color: rgba(140, 120, 240, .34);
+}
+
+[data-theme='dark'] .aweb__fill-mid {
+    stop-color: rgba(96, 110, 220, .18);
+}
+
+[data-theme='dark'] .aweb__fill-out {
+    stop-color: rgba(80, 96, 200, .08);
+}
+
+[data-theme='dark'] .aweb__data-g {
+    filter: drop-shadow(0 5px 16px rgba(120, 132, 235, .3));
+}
+
+[data-theme='dark'] .aweb__data {
+    stroke: rgba(198, 206, 250, .82);
+}
+
+[data-theme='dark'] .aweb__dot {
+    fill: rgba(206, 214, 252, .92);
+    stroke: rgba(150, 164, 240, .9);
+}
+
+[data-theme='dark'] .aweb__dot.is-changed--up {
+    fill: #34d399;
+    stroke: #0f7a52;
+}
+
+[data-theme='dark'] .aweb__dot.is-changed--down {
+    fill: #ff7a7a;
+    stroke: #a52d2d;
+}
+
+[data-theme='dark'] .aweb__emblem-dome {
+    color: color-mix(in srgb, var(--c) 58%, #eef0ff 42%);
+    background:
+        radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--c) 16%, transparent), transparent 72%),
+        linear-gradient(180deg, rgba(32, 28, 62, .92), rgba(18, 15, 40, .94));
+    border-color: color-mix(in srgb, var(--c) 42%, rgba(150, 160, 220, .18));
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .4);
+}
+
+[data-theme='dark'] .aweb__emblem.is-focus .aweb__emblem-dome {
+    box-shadow: 0 14px 30px rgba(0, 0, 0, .5), 0 0 24px color-mix(in srgb, var(--c) 46%, transparent);
+}
+
+[data-theme='dark'] .aweb__label {
+    color: rgba(224, 226, 245, .78);
+}
+
+[data-theme='dark'] .aweb__label.is-focus {
+    color: #fff;
+}
+
+[data-theme='dark'] .aweb__legend-count {
+    color: #e7e5ff;
+}
+
+[data-theme='dark'] .aweb__legend-key {
+    color: rgba(224, 226, 245, .78);
+}
+
+/* Reduced motion: no draw-on, no pulse — the map simply is what it is. */
+@media (prefers-reduced-motion: reduce) {
+
+    .aweb__emblem.is-focus .aweb__emblem-dome::after {
+        animation: none;
+        opacity: .9;
+    }
+}
+
+@media (max-width: 860px) {
+    .aweb__board {
+        inline-size: min(100%, 380px);
+    }
+}
