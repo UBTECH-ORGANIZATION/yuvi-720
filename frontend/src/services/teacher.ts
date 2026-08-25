@@ -775,12 +775,27 @@ export function getGroupMoments(groupId: string, language: string, days = 14) {
   )
 }
 
+/** What a teacher may attach to a good word (#467). The server owns this set
+ *  too — this copy exists so the composer can render the buttons. */
+export const KUDOS_SPARK_AMOUNTS = [10, 20, 40] as const
+
 export function sendKudos(
-  learnerId: string, message: string, language: string, moment?: Record<string, unknown>
+  learnerId: string, message: string, language: string,
+  moment?: Record<string, unknown>,
+  opts?: {
+    sparks?: number
+    /** Stable per composer, NOT per attempt: a double-clicked send writes two
+     *  kudos rows, and this is what stops the second one paying again. */
+    draftId?: string
+  },
 ) {
-  return apiPost<{ kudos_id: string; message: string }>(
+  return apiPost<{ kudos_id: string; message: string; sparks: number }>(
     `/api/teacher/students/${encodeURIComponent(learnerId)}/kudos`,
-    { message, language, moment: moment ?? null }
+    {
+      message, language, moment: moment ?? null,
+      sparks: opts?.sparks ?? 0,
+      draft_id: opts?.draftId ?? null,
+    }
   )
 }
 

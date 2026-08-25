@@ -14,7 +14,7 @@ from typing import Any, Optional
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.auth.dependencies import require_teacher_session
 from app.services import subgroups as subgroup_service
@@ -150,4 +150,51 @@ async def send_subgroup_message(
         # refusal, which is how the client tells it apart from FastAPI's own 422.
         return JSONResponse(content={"detail": exc.code},
                             status_code=exc.status_code, headers=_NO_STORE)
+    return _ok(result)
+
+
+class SubgroupKudosRequest(BaseModel):
+    message: str = Field(max_length=400)
+    language: Optional[str] = None
+    # Optional gift (#467). Validated against the wallet's allowed set rather
+    # than a range: a teacher picks from three buttons, so anything else is a
+    # malformed request.
+    sparks: int = 0
+    draft_id: Optional[str] = Field(default=None, max_length=120)
+
+    @field_validator("sparks")
+    @classmethod
+    def _allowed_amount(cls, value: int) -> int:
+        from app.services import rewards
+
+        if value and not rewards.is_teacher_spark_amount(value):
+            raise ValueError("sparks must be one of "
+                             f"{list(rewards.TEACHER_SPARK_AMOUNTS)}")
+        return value
+
+
+@router.post("/subgroups/{subgroup_id}/kudos")
+async def send_subgroup_kudos(
+    subgroup_id: str, payload: SubgroupKudosRequest,
+    session=Depends(require_teacher_session),
+):
+    """One good word — and optionally one gift each — to a whole group (#467).
+
+    Fans out per child so membership and both screens are re-checked per
+    recipient; see `kudos.send_kudos_to_subgroup`.
+    """
+    from app.core.localization import normalize_language
+    from app.services import kudos as kudos_service
+
+    try:
+        result = await kudos_service.send_kudos_to_subgroup(
+            session["sub"], subgroup_id, payload.message,
+            language=normalize_language(payload.language),
+            sparks=payload.sparks,
+            draft_id=payload.draft_id,
+        )
+    except kudos_service.KudosError as exc:
+        status = 403 if exc.code == "not_authorized" else 400
+        return JSONResponse(content={"error": exc.code},
+                            status_code=status, headers=_NO_STORE)
     return _ok(result)

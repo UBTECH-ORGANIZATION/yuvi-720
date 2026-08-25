@@ -43,6 +43,7 @@ import {
 } from '../../../services/directMessages'
 import { subscribe } from '../../../services/realtime'
 import './teacher-messages.css'
+import { KudosSparks, useDraftId } from '../shared/KudosSparks'
 import { StudentAvatar } from '../shared/StudentAvatar'
 import { useDismiss } from '../shared/useDismiss'
 
@@ -734,12 +735,15 @@ function ExtraLaneDialog({ lane, learnerId, name, onClose, onSent }: {
 }) {
   const { t, language } = useI18n()
   const [text, setText] = useState('')
+  const [sparks, setSparks] = useState(0)
+  const draftId = useDraftId()
   const [isBusy, setIsBusy] = useState(false)
   const [failed, setFailed] = useState(false)
 
   // Reset per opening: a half-typed kudos must not reappear inside the note
-  // dialog the next time the menu is used.
-  useEffect(() => { setText(''); setFailed(false) }, [lane])
+  // dialog the next time the menu is used. The gift resets with it — an amount
+  // chosen for one child must never ride along to the next.
+  useEffect(() => { setText(''); setFailed(false); setSparks(0) }, [lane])
 
   if (!lane) return null
 
@@ -750,7 +754,7 @@ function ExtraLaneDialog({ lane, learnerId, name, onClose, onSent }: {
     setFailed(false)
     try {
       if (lane === 'kudos') {
-        await sendKudos(learnerId, body, language)
+        await sendKudos(learnerId, body, language, undefined, { sparks, draftId })
       } else {
         await createTeacherInsight(learnerId, {
           kind: 'note', text: body, visibility: 'shared',
@@ -785,6 +789,9 @@ function ExtraLaneDialog({ lane, learnerId, name, onClose, onSent }: {
           onChange={(event) => setText(event.target.value)}
         />
       </label>
+      {lane === 'kudos' ? (
+        <KudosSparks value={sparks} onChange={setSparks} disabled={isBusy} />
+      ) : null}
       {failed ? (
         <p className="tch-thread__failed" role="status">{t('tch.kudos.failed')}</p>
       ) : null}

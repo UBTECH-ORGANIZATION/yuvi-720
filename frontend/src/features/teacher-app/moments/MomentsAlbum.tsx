@@ -27,6 +27,7 @@ import { useAuth } from '../../../providers/AuthProvider'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { sendKudos, type Moment } from '../../../services/teacher'
 import { RawEvidence } from '../shared/EvidenceDisclosure'
+import { KudosSparks, useDraftId } from '../shared/KudosSparks'
 import { StudentAvatar } from '../shared/StudentAvatar'
 import { agoLabel } from '../live/LiveNow'
 import { MomentScene } from './MomentScene'
@@ -566,6 +567,8 @@ function BookPage({ moment, variant, nameOf }: {
   const [showWhy, setShowWhy] = useState(false)
   const [isPraising, setIsPraising] = useState(false)
   const [draft, setDraft] = useState('')
+  const [sparks, setSparks] = useState(0)
+  const draftId = useDraftId()
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle')
   const name = moment.learner_id ? nameOf(moment.learner_id) : null
   const hasWhy = Boolean(moment.evidence?.raw && Object.keys(moment.evidence.raw).length)
@@ -578,7 +581,7 @@ function BookPage({ moment, variant, nameOf }: {
     try {
       await sendKudos(moment.learner_id, draft.trim(), language, {
         kind: moment.kind, at: moment.at, objective_id: moment.objective_id,
-      })
+      }, { sparks, draftId })
       setState('sent')
       setIsPraising(false)
     } catch {
@@ -653,6 +656,7 @@ function BookPage({ moment, variant, nameOf }: {
             aria-label={t('tch.kudos.title')}
             onChange={(event) => setDraft(event.target.value)}
           />
+          <KudosSparks value={sparks} onChange={setSparks} disabled={state === 'sending'} />
           <div className="tch-album__kudosActions">
             <button
               type="button"

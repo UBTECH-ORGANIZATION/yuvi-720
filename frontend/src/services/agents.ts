@@ -701,6 +701,8 @@ export interface PendingKudos {
   message: string
   created_at: string | null
   teacher_name: string | null
+  /** Sparks the teacher gave with it (#467); 0 for a plain good word. */
+  sparks: number
 }
 
 export function getPendingKudos() {

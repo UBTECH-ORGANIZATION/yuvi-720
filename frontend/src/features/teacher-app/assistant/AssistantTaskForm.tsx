@@ -28,6 +28,7 @@ import {
   createTask, listCatalogLearnings, startGeneration,
   type CatalogLearning, type TaskComponent, type TaskSpecInput,
 } from '../../../services/tasks'
+import { KudosSparks, useDraftId } from '../shared/KudosSparks'
 import { subjectLabel } from '../shared/subjectLabel'
 import type { AssistantAction } from '../../../services/teacherAssistant'
 import { useTeacherRoster } from '../../../providers/TeacherRosterProvider'
@@ -266,13 +267,15 @@ function KudosForm({ action, language, nameOf, onDone, onCancel }: Props) {
   const { t } = useI18n()
   const learnerId = action.learner_id ?? ''
   const [message, setMessage] = useState(action.message ?? '')
+  const [sparks, setSparks] = useState(0)
+  const draftId = useDraftId()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
   const confirm = async () => {
     setBusy(true); setError('')
     try {
-      await sendKudos(learnerId, message.trim(), language)
+      await sendKudos(learnerId, message.trim(), language, undefined, { sparks, draftId })
       onDone(t('tch.assistant.form.kudosDone', { name: labelFor(learnerId, nameOf(learnerId)) }))
     } catch {
       setError(t('tch.assistant.form.failed')); setBusy(false)
@@ -289,6 +292,7 @@ function KudosForm({ action, language, nameOf, onDone, onCancel }: Props) {
         <textarea className="sp-input" dir="auto" rows={3} value={message}
                   onChange={(event) => setMessage(event.target.value)} />
       </label>
+      <KudosSparks value={sparks} onChange={setSparks} disabled={busy} />
       <Foot label={t('tch.assistant.form.send')} busy={busy} disabled={!message.trim()}
             error={error} onConfirm={() => void confirm()} onCancel={onCancel} />
     </Shell>

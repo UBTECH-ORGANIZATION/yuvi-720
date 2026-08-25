@@ -720,3 +720,50 @@
 }
 .tch-preview__frame { border: 0; }
 .tch-preview__error { margin: var(--sp-6) 0; text-align: center; color: var(--sp-ink-500); }
+
+/* ── the gift a good word can carry (#467) ─────────────────────────────────
+   Shared by all three composers (album footer, messages lane, assistant form),
+   so a teacher meets the same control wherever they praise a child. Chips
+   rather than a number field: the amounts are a closed set with shared meaning,
+   and "no sparks" is the resting state because most good words are just words. */
+.tch-kudosSparks { margin-block-start: var(--sp-3); }
+.tch-kudosSparks__label {
+  display: block;
+  margin-block-end: var(--sp-2);
+  color: var(--sp-ink-500);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+}
+.tch-kudosSparks__row { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.tch-kudosSparks__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: var(--sp-1) var(--sp-3);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-surface);
+  color: var(--sp-ink-500);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background var(--sp-dur) var(--sp-ease),
+              border-color var(--sp-dur) var(--sp-ease),
+              color var(--sp-dur) var(--sp-ease),
+              transform var(--sp-dur-fast) var(--sp-ease);
+}
+.tch-kudosSparks__chip:hover:not(:disabled) { border-color: var(--sp-border-strong); }
+/* the press lands on pointerdown, like every other control (fluid-motion) */
+.tch-kudosSparks__chip:active:not(:disabled) { transform: translateY(1px) scale(0.98); }
+.tch-kudosSparks__chip:disabled { opacity: 0.55; cursor: not-allowed; }
+.tch-kudosSparks__chip.is-on {
+  border-color: var(--sp-warn-600);
+  background: color-mix(in srgb, var(--sp-warn-600) 14%, transparent);
+  color: var(--sp-ink-900);
+}
+.tch-kudosSparks__hint {
+  margin: var(--sp-2) 0 0;
+  color: var(--sp-ink-400);
+  font-size: var(--sp-fs-xs);
+}

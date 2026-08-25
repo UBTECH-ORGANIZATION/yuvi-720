@@ -28,6 +28,7 @@ import {
 import { useI18n } from '../i18n/I18nProvider'
 import { useRoute } from '../app/router'
 import { useAuth } from './AuthProvider'
+import { useRewards } from './RewardsProvider'
 
 /* CompanionProvider — owns Yuvi's live state and paginated server history (F3).
    The prompt window and full transcript remain in Mongo/Cosmos; no localStorage. */
@@ -278,6 +279,7 @@ function introDisposition(
 export function CompanionProvider({ children }: { children: ReactNode }) {
   const { language } = useI18n()
   const { user } = useAuth()
+  const { refresh: refreshRewards } = useRewards()
   const pathname = useRoute()
   const surface = useMemo(() => coachSurfaceForPath(pathname), [pathname])
   // Tell presence where this client is, for the teacher's live view. Keyed on
@@ -1561,10 +1563,15 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       .then((result) => {
         if (!result.kudos) return
         setPendingKudos(result.kudos)
+        /* The gift was banked before this card existed, but nothing pushes a
+           wallet change — so a child sitting in the app would read "20
+           ניצוצות" on the card while the counter above it still showed the old
+           number. Refresh as the card arrives, not only when it is dismissed. */
+        if (result.kudos.sparks > 0) refreshRewards()
         if (options.open) open()
       })
       .catch(() => { /* praise is not worth an error state */ })
-  }, [user, open])
+  }, [user, open, refreshRewards])
   loadKudosRef.current = loadKudos
 
   useEffect(() => { loadKudos() }, [loadKudos])
@@ -1578,11 +1585,16 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     const current = pendingKudos
     setPendingKudos(null)          // optimistic: the child pressed OK
     if (!current) return
+    /* A teacher's gift (#467) was banked before the card ever appeared, but
+       nothing pushes a wallet change — there is no realtime topic for the
+       balance, only this kudos nudge. Without a refresh here the counter in the
+       top bar still shows the old number while the card says sparks arrived. */
+    if (current.sparks > 0) refreshRewards()
     await acknowledgeKudos(current.id).catch(() => { /* server retries on reload */ })
     // Praise queues oldest-first, so a child who was away for a week reads one
     // card at a time rather than being handed a stack.
     loadKudos()
-  }, [pendingKudos, loadKudos])
+  }, [pendingKudos, loadKudos, refreshRewards])
 
   // The offer is scoped to the question it was raised on — drop it when the
   // learner moves to a new screen or component (including after accepting it),

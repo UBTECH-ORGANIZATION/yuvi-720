@@ -98,6 +98,10 @@ async def pending_kudos(response: Response, session=Depends(current_user)) -> di
         # the name is the point — "someone" noticing is not the same as "המורה
         # שלך" noticing.
         "teacher_name": teacher.get("display_name") or None,
+        # What the teacher gave with it, if anything (#467). Already granted by
+        # the time this row exists, so the card reports a fact rather than a
+        # promise — and the words stay the headline, the gift a footnote.
+        "sparks": int(row.get("sparks") or 0),
     }}
 
 

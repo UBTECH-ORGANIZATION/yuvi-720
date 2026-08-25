@@ -688,8 +688,20 @@ async def student_moments(
 async def send_kudos(
     learner_id: str, data: dict, session=Depends(require_teacher_session)
 ):
-    """Teacher praise, delivered by Yuvi in the learner's own chat (A11 #4)."""
+    """Teacher praise, delivered by Yuvi in the learner's own chat (A11 #4).
+
+    Praise may carry a gift of sparks (#467). The amount is checked here rather
+    than only inside the wallet, because the wallet's answer to a bad figure is
+    to grant nothing — which would deliver the good word while quietly dropping
+    the sparks the teacher believes they sent.
+    """
     from app.services import kudos as kudos_service
+    from app.services import rewards
+
+    sparks = data.get("sparks") or 0
+    if sparks and not rewards.is_teacher_spark_amount(sparks):
+        return JSONResponse(content={"error": "invalid_sparks"},
+                            status_code=400, headers=_NO_STORE)
 
     try:
         record = await kudos_service.send_kudos(
@@ -697,11 +709,18 @@ async def send_kudos(
             str(data.get("message") or ""),
             moment=data.get("moment") if isinstance(data.get("moment"), dict) else None,
             language=normalize_language(data.get("language")),
+            sparks=int(sparks or 0),
+            draft_id=str(data.get("draft_id") or "") or None,
         )
     except kudos_service.KudosError as exc:
         status = 403 if exc.code == "not_authorized" else 400
         return JSONResponse(content={"error": exc.code}, status_code=status, headers=_NO_STORE)
-    return _ok({"kudos_id": record["_id"], "message": record["message"]})
+    return _ok({
+        "kudos_id": record["_id"],
+        "message": record["message"],
+        # What actually landed, not what was asked for.
+        "sparks": int(record.get("sparks") or 0),
+    })
 
 
 @router.get("/students/{learner_id}/kudos")
