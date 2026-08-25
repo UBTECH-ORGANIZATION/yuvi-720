@@ -196,7 +196,21 @@
 @media (max-width: 899px) { .sd-upcoming__item { flex-basis: calc((100% - 10px) / 2); } }
 @media (max-width: 599px) { .sd-upcoming__bubble { max-inline-size: 100%; } .sd-upcoming__scrollStage { block-size: 118px; } .sd-upcoming__items { inset-inline: 54px; gap: 8px; } .sd-upcoming__item { flex-basis: 100%; } .sd-upcoming__scrollArrow--back { inset-inline-start: 24px; } .sd-upcoming__scrollArrow--forward { inset-inline-end: 24px; } .sd-upcoming__close { inset-inline-end: 24px; } .sd-upcoming__copy strong { font-size: 12px; } }
 
-/* Hero + recent lessons live in one card — a single "what's next" panel. */
+/* One hero card holding two halves: what to do next, and the activeness web
+   showing where the learner actually stands. They part at 860px and stack, with
+   the hairline turning from a column divider into a row one. Recent lessons
+   follow in a card of their own — the carousel needs the full page width. */
+.sd-hero-card--split { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1fr); gap: clamp(18px, 2.6vw, 38px); align-items: stretch; }
+.sd-hero-card--split > .aweb { padding-inline-start: clamp(18px, 2.6vw, 38px); border-inline-start: 1px solid rgba(111, 91, 255, .13); }
+[data-theme='dark'] .sd-hero-card--split > .aweb { border-inline-start-color: var(--sdd-card-border); }
+@media (max-width: 860px) {
+  .sd-hero-card--split { grid-template-columns: 1fr; }
+  .sd-hero-card--split > .aweb { padding-inline-start: 0; padding-block-start: clamp(18px, 4vw, 28px); border-inline-start: 0; border-block-start: 1px solid rgba(111, 91, 255, .13); }
+  [data-theme='dark'] .sd-hero-card--split > .aweb { border-block-start-color: var(--sdd-card-border); }
+}
+/* The lessons carousel keeps the full page width and owns its card outright. */
+.sd-hero-card--lessons { overflow: clip; }
+.sd-hero-card--lessons .sd-section { margin-block-start: 0; }
 .sd-hero-card {
   position: relative;
   isolation: isolate;
@@ -222,8 +236,6 @@
   background: radial-gradient(120% 78% at 72% 20%, rgba(111, 91, 255, .09), transparent 62%);
 }
 [dir='rtl'] .sd-hero-card::before { background: radial-gradient(120% 78% at 28% 20%, rgba(111, 91, 255, .09), transparent 62%); }
-/* The lessons half sits below the hero, parted by a hairline, not a gap alone. */
-.sd-hero-card .sd-lessons { margin-block-start: clamp(16px, 2.4vw, 26px); padding-block-start: clamp(16px, 2.4vw, 26px); border-block-start: 1px solid rgba(111, 91, 255, .12); }
 [data-theme='dark'] .sd-hero-card {
   border-color: var(--sdd-card-border);
   background: var(--sdd-card-bg);
@@ -232,19 +244,11 @@
 [data-theme='dark'] .sd-hero-card::before { background: radial-gradient(120% 78% at 72% 20%, rgba(146, 112, 250, .16), transparent 62%); }
 [dir='rtl'] [data-theme='dark'] .sd-hero-card::before,
 [data-theme='dark'] [dir='rtl'] .sd-hero-card::before { background: radial-gradient(120% 78% at 28% 20%, rgba(146, 112, 250, .16), transparent 62%); }
-[data-theme='dark'] .sd-hero-card .sd-lessons { border-block-start-color: var(--sdd-card-border); }
 
-/* Compact hero: content (title → progress → CTA → KPI row) is the main area;
-   the illustration sits alone in the second column (inline-end = left in RTL).
+/* Compact hero: greeting → objective → CTA → tip, in a single column.
    Height follows content — no forced min-block-size. */
-.sd-journey-hero { --sd-pointer-x: 50%; --sd-pointer-y: 50%; --sd-pointer-opacity: 0; position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 0.86fr) minmax(400px, 1.06fr); gap: 10px clamp(20px, 2.6vw, 40px); align-items: stretch; padding: clamp(6px, 1.2vw, 14px) 0; overflow: visible; color: var(--sp-ink-700); }
-/* Depth is carried by the card wash (.sd-hero-card::before) so it stays inside
-   the rounded frame; the hero itself paints no bleeding background layer. */
-.sd-journey-hero::before { display: none; }
-[dir='rtl'] .sd-journey-hero::before { display: none; }
-.sd-journey-hero::after { display: none; }
-.sd-journey-hero__glow { display: none; }
-.sd-journey-hero__content { display: flex; flex-direction: column; justify-content: center; gap: 18px; min-inline-size: 0; inline-size: min(100%, 540px); justify-self: center; padding: 6px 0; }
+.sd-journey-hero { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; block-size: 100%; padding: clamp(6px, 1.2vw, 14px) 0; overflow: visible; color: var(--sp-ink-700); }
+.sd-journey-hero__content { display: flex; flex-direction: column; justify-content: center; gap: 18px; min-inline-size: 0; inline-size: 100%; padding: 6px 0; }
 .sd-journey-hero__name { font-weight: 900; background: linear-gradient(115deg, var(--sp-primary-600) 8%, #4cc9f0 92%); -webkit-background-clip: text; background-clip: text; color: transparent; padding-inline: 1px; letter-spacing: .01em; }
 [data-theme='dark'] .sd-journey-hero__name { background: linear-gradient(115deg, #b9a5ff 8%, #6fe0ff 92%); -webkit-background-clip: text; background-clip: text; }
 .sd-journey-hero__head { display: flex; flex-direction: column; }
@@ -280,92 +284,10 @@
 @media (prefers-reduced-motion: reduce) { .sd-journey-hero__tip-bulb .sd-tip-rays { animation: none; opacity: .85; } }
 [data-theme='dark'] .sd-journey-hero__tip-bulb { color: #f4bd54; }
 .sd-journey-hero__tip span { font-size: var(--sp-fs-xs); line-height: 1.5; }
-.sd-journey-hero__visual { position: relative; display: grid; place-items: center; min-inline-size: 0; block-size: 100%; padding: 0; padding-inline-start: clamp(16px, 2vw, 30px); }
-/* Radial depth behind the angle — dark, brightest right behind the vertex. */
-.sd-journey-hero__visual::before { content: ''; position: absolute; inset: 4% 0; z-index: 0; pointer-events: none; background: radial-gradient(48% 52% at 50% 58%, rgba(111, 91, 255, .12), transparent 70%); }
-.sd-journey-hero__visual .sd-hero-viz { position: relative; z-index: 1; block-size: 100%; justify-content: center; align-content: center; }
-
-/* ── Interactive hero visual — frameless, fills the whole column ─────────── */
-.sd-hero-viz { position: relative; inline-size: 100%; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; justify-items: center; }
-/* Fill the column width (aspect preserved via block-size:auto); the SVG grows
-   with the column and the column stretches to the hero's full height. */
-.sd-hero-viz > svg { inline-size: 100%; max-inline-size: 580px; block-size: auto; display: block; overflow: visible; touch-action: none; }
-/* Helper text, not an action: plain and muted, no chip or button look. */
-.sd-hero-viz__hint { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 0; padding: 0; border: 0; background: none; color: var(--sp-ink-400); font-size: var(--sp-fs-xs); font-weight: 500; text-align: center; }
-.sd-hero-viz__hint .sp-icon { flex: none; color: var(--sp-primary-500); opacity: .8; }
-[data-theme='dark'] .sd-hero-viz__hint .sp-icon { color: #b9a5ff; }
-.sd-viz-grid { stroke: rgba(111, 91, 255, .08); stroke-width: 1; }
-/* Perspective floor — faint receding lines, fading out toward the edges so it
-   reads as depth under the angle, not a chart grid. */
-.sd-viz-floor { stroke: rgba(111, 91, 255, .1); stroke-width: 1; }
-.sd-viz-floor line { mask-image: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent); }
-.sd-viz-ray { stroke: rgba(84, 70, 160, .5); stroke-width: 7.5; stroke-linecap: round; }
-.sd-viz-vertex { fill: #4a3f8f; filter: drop-shadow(0 0 6px rgba(111, 91, 255, .5)); }
-.sd-viz-handle { cursor: grab; outline: none; }
-.sd-viz-handle:active { cursor: grabbing; }
-.sd-viz-handle:focus-visible .sd-viz-handle__dot,
-.sd-viz-handle:focus-visible .sd-viz-comet { stroke: var(--sp-primary-600); stroke-width: 4; }
-.sd-viz-handle__dot { filter: drop-shadow(0 6px 14px rgba(46, 33, 110, .35)); transition: r .15s var(--sp-ease); }
-.sd-viz-handle:hover .sd-viz-handle__dot { r: 14; }
-.sd-viz-readout { pointer-events: none; }
-.sd-viz-readout__value { font: 800 42px/1 var(--sp-font); fill: #342e68; }
-.sd-viz-readout__label { font: 750 15px/1 var(--sp-font); }
-.sd-viz-plate { fill: rgba(111, 91, 255, .06); stroke: rgba(111, 91, 255, .16); stroke-width: 1.5; }
-.sd-viz-slice { fill: rgba(111, 91, 255, .1); stroke: #fff; stroke-width: 2.5; cursor: pointer; transition: fill .18s var(--sp-ease), transform .18s var(--sp-ease); transform-box: fill-box; transform-origin: center; outline: none; }
-.sd-viz-slice:hover { fill: rgba(111, 91, 255, .22); }
-.sd-viz-slice.is-on { fill: #6f5bff; }
-.sd-viz-slice.is-on:hover { fill: #5b48e0; }
-.sd-viz-slice:focus-visible { stroke: var(--sp-teal-600); stroke-width: 3.5; }
-.sd-hero-viz [data-scene] .sd-viz-readout { color: #342e68; }
-.sd-viz-orbit-path { fill: none; stroke: rgba(111, 91, 255, .28); stroke-width: 1.6; }
-.sd-viz-orbit-path--inner { stroke-dasharray: 5 7; stroke: rgba(76, 201, 240, .4); }
-.sd-viz-star { fill: rgba(111, 91, 255, .16); }
-.sd-viz-star__core { fill: #6f5bff; }
-
-/* ── Balance scene ────────────────────────────────────────────────────────
-   The instrument this goal is actually built on ("מאזני כפות/זרוע"). The beam
-   follows the drag rather than animating on its own, so the learner feels the
-   load move; when the pans level out the beam takes on the success tone —
-   balancing IS the skill being taught. */
-.sd-viz-beam__arm { fill: none; stroke: rgba(111, 91, 255, .85); stroke-width: 6; stroke-linecap: round; }
-.sd-viz-pan { fill: rgba(111, 91, 255, .16); stroke: rgba(111, 91, 255, .7); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
-.sd-viz-balance-cord { fill: none; stroke: rgba(111, 91, 255, .5); stroke-width: 2.2; stroke-linecap: round; }
-.sd-viz-balance-post { fill: none; stroke: rgba(84, 70, 160, .55); stroke-width: 7; stroke-linecap: round; }
-.sd-viz-balance-base { fill: rgba(111, 91, 255, .14); stroke: rgba(84, 70, 160, .5); stroke-width: 3; stroke-linejoin: round; }
-/* A pool of light under the instrument, so it stands on something. */
-.sd-viz-balance-halo { fill: rgba(111, 91, 255, .07); }
-/* The load: one block per pan, sized by how the mass is split between them. */
-.sd-viz-mass { fill: #6f5bff; stroke: rgba(255, 255, 255, .85); stroke-width: 2; filter: drop-shadow(0 5px 12px rgba(46, 33, 110, .35)); }
-.sd-viz-mass.is-balanced { fill: #25b984; }
-.sd-viz-handle:focus-visible .sd-viz-mass { stroke: var(--sp-primary-600); stroke-width: 3.5; }
-.sd-viz-beam { transition: none; }
-.sd-viz-beam.is-balanced .sd-viz-beam__arm { stroke: #25b984; }
-.sd-viz-beam.is-balanced .sd-viz-pan { fill: rgba(37, 185, 132, .2); stroke: rgba(37, 185, 132, .8); }
-[data-theme='dark'] .sd-viz-beam__arm { stroke: rgba(167, 139, 250, .95); }
-[data-theme='dark'] .sd-viz-pan { fill: rgba(167, 139, 250, .2); stroke: rgba(167, 139, 250, .8); }
-[data-theme='dark'] .sd-viz-balance-cord { stroke: rgba(167, 139, 250, .6); }
-[data-theme='dark'] .sd-viz-balance-post { stroke: rgba(198, 186, 255, .55); }
-[data-theme='dark'] .sd-viz-balance-base { fill: rgba(167, 139, 250, .16); stroke: rgba(198, 186, 255, .5); }
-[data-theme='dark'] .sd-viz-balance-halo { fill: rgba(159, 122, 254, .1); }
-[data-theme='dark'] .sd-viz-mass { fill: #a78bfa; stroke: rgba(255, 255, 255, .7); }
-[data-theme='dark'] .sd-viz-mass.is-balanced { fill: #34d399; }
-.sd-viz-comet { fill: #4cc9f0; filter: drop-shadow(0 4px 12px rgba(35, 150, 200, .5)); }
-[data-theme='dark'] .sd-viz-grid { stroke: rgba(150, 170, 240, .07); }
-[data-theme='dark'] .sd-viz-floor { stroke: rgba(150, 170, 240, .12); }
-[data-theme='dark'] .sd-viz-ray { stroke: rgba(216, 209, 255, .45); }
-[data-theme='dark'] .sd-viz-vertex { fill: #eae6ff; filter: drop-shadow(0 0 8px rgba(146, 112, 250, .6)); }
-[data-theme='dark'] .sd-viz-readout__value { fill: #f1efff; }
-[data-theme='dark'] .sd-viz-slice { stroke: #1c2044; }
-[data-theme='dark'] .sd-viz-plate { fill: rgba(159, 122, 254, .09); stroke: rgba(159, 122, 254, .25); }
-[data-theme='dark'] .sd-hero-viz__hint { color: rgba(214, 216, 245, .55); }
 /* Quiet status line — a calm row of facts under the CTA, never cards. */
 .sd-journey-hero__stats { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0; padding: 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); line-height: 1.4; }
 .sd-journey-hero__stats span:not(.sd-journey-hero__stats-sep) { color: var(--sp-ink-500); font-weight: 600; }
 .sd-journey-hero__stats-sep { color: var(--sp-ink-300); }
-
-@media (prefers-reduced-motion: reduce) {
-  .sd-journey-hero { --sd-pointer-opacity: 0 !important; }
-}
 
 [data-theme='dark'] .sd-journey-hero { border: 0; background: none; box-shadow: none; }
 [data-theme='dark'] .sd-journey-hero__title { color: #f1efff; }
@@ -377,10 +299,9 @@
 
 .sd-section { margin-block-start: clamp(42px, 6vw, 72px); }
 
-/* ── Two-column layout (landing-style glass cards) ─────────────────────────
-   Main column: the learner's own activity (lessons, goals). Side rail: the
-   learning map, sticky under the app bar so strengths/reinforcements stay in
-   view while scrolling. RTL flips automatically (grid + logical properties). */
+/* ── Goals column (landing-style glass cards) ──────────────────────────────
+   One full-width column under the hero for the learner's own activity. RTL
+   flips automatically (grid + logical properties). */
 .sd-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -391,17 +312,15 @@
 /* minmax(0,1fr) is load-bearing: the default auto track sizes to the widest
    child's max-content (the lesson carousel), letting sections escape the
    column and span the page. */
-.sd-grid__main,
-.sd-grid__rail { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(18px, 2.2vw, 28px); min-inline-size: 0; }
+.sd-grid__main { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(18px, 2.2vw, 28px); min-inline-size: 0; }
 
 /* Sections inside the grid are cards themselves — kill the stacked-page rhythm. */
 .sd-grid .sd-section { margin-block-start: 0; }
 .sd-grid .sd-section__heading { align-items: center; margin-block-end: 16px; }
 
-/* One card language for all three panels: soft glass, top sheen, same radius. */
+/* One card language for every panel: soft glass, top sheen, same radius. */
 .sd-grid .sd-lessons,
-.sd-grid .sd-goals,
-.sd-grid .sd-lmap {
+.sd-grid .sd-goals {
   position: relative;
   border: 1px solid rgba(255, 255, 255, .88);
   border-radius: 28px;
@@ -1140,8 +1059,7 @@
 [data-theme='dark'] .sd-goals { border-color: var(--sdd-card-border); background: var(--sdd-card-bg); box-shadow: var(--sdd-card-shadow); }
 /* The unified grid cards share the landing's dark card language. */
 [data-theme='dark'] .sd-grid .sd-lessons,
-[data-theme='dark'] .sd-grid .sd-goals,
-[data-theme='dark'] .sd-grid .sd-lmap {
+[data-theme='dark'] .sd-grid .sd-goals {
   border-color: var(--sdd-card-border);
   background: var(--sdd-card-bg);
   box-shadow: var(--sdd-card-shadow);
@@ -1183,7 +1101,6 @@
   .sd-dashboard { inline-size: min(100% - 28px, 680px); padding-block-start: 18px; }
   .sd-journey-hero { grid-template-columns: 1fr; padding: 20px; border-radius: 26px; }
   .sd-journey-hero__content { padding: 6px 0 12px; }
-  .sd-journey-hero__visual { margin: 0; padding: 0; }
   .sd-today-grid { grid-template-columns: 1fr; }
   .sd-focus-card--challenge { grid-column: auto; }
   .sd-section__heading { align-items: flex-start; }
