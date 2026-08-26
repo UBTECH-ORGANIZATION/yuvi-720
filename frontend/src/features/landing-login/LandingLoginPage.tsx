@@ -6,6 +6,7 @@ import { ThemeSwitcher } from '../../components/ThemeSwitcher'
 import { UserMenu } from '../../components/UserMenu'
 import { useI18n } from '../../i18n/I18nProvider'
 import { apiPost } from '../../services/api'
+import { MoeSignInButton } from '../auth/MoeSignInButton'
 import { AgentsDiagram } from './AgentsDiagram'
 import { LandingYuviArtwork, LandingYuviJourney } from './LandingYuviJourney'
 import { LoginDialog } from './LoginDialog'
@@ -315,6 +316,11 @@ export function LandingLoginPage({ initialDialog }: { initialDialog?: LoginInten
               key existed from the start but nothing rendered it, so the teacher
               lane was only reachable by deep-linking while signed out. */}
           <aside className="landing720-login">
+            {/* The ministry door comes first and carries the official owl:
+                connection guidelines §5.2.ה require the icon on the home page,
+                and for a real school this is the only way in. The two role
+                doors below stay for the team's local password login. */}
+            <MoeSignInButton returnTo="/" />
             <button className="landing720-login-btn student" onClick={() => setLoginIntent('student')}>
               <GraduationCapIcon />
               <span>{t('landing.login.student')}</span>

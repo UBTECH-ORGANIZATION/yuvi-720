@@ -17,6 +17,7 @@ from app.core.env import ensure_env_loaded
 ensure_env_loaded()
 
 from app.routes.auth import router as auth_router
+from app.routes.auth_moe import router as auth_moe_router
 from app.routes.badges import router as badges_router
 from app.routes.brain import router as brain_router
 from app.routes.agent import router as agent_router
@@ -121,6 +122,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # index after it — the slowest possible failure mode, and invisible.
     # A missing index is slow, never broken, and must never stop a boot.
     from app.agents.teacher_tools import registry as teacher_tool_registry
+    from app.auth.moe import transactions as moe_transactions
     from app.services import (
         daily_brief, direct_messages, kudos, mentoring_assist, notifications,
         org_repository, school_calendar, teacher_alerts, teacher_insights_store,
@@ -130,6 +132,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     index_steps = (
         # Authorization hot path: every teacher read resolves links + enrollments.
         ("org", org_repository.ensure_indexes),
+        # TTL on in-flight MoE sign-ins, so abandoned logins expire themselves.
+        ("oidc_transactions", moe_transactions.ensure_indexes),
         # The replay cursor query, (teacher_id, seq).
         ("teacher_alerts", teacher_alerts.ensure_indexes),
         ("notifications", notifications.ensure_indexes),
@@ -200,6 +204,21 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(auth_router)
+    app.include_router(auth_moe_router)
+    # Development-only OpenID provider, so the ministry sign-in path can be
+    # built and demoed before the ministry issues real connection details.
+    from app.auth.moe import config as moe_config
+
+    if moe_config.mock_enabled():
+        from app.routes.dev_oidc import router as dev_oidc_router
+
+        app.include_router(dev_oidc_router)
+        print("🔑 MoE mock IdP enabled at /dev-idp — never use in production")
+    elif moe_config.is_enabled():
+        print("🔑 MoE unified sign-in enabled")
+    else:
+        missing = ", ".join(moe_config.missing_settings())
+        print(f"🔑 MoE unified sign-in disabled (missing: {missing or 'MOE_OIDC_ENABLED'})")
     app.include_router(learner_mapping_router)
     app.include_router(learner_state_router)
     app.include_router(brain_router)

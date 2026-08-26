@@ -51,6 +51,10 @@ DEFAULT_PREFERENCES: dict[str, Any] = {
     # scoping wherever they are honoured.
     "teacher_subgroup_id": None,
     "teacher_subject": None,
+    # Which of a ministry account's schools the person is currently working in.
+    # Only meaningful when the unified-identity token named more than one
+    # (guidelines §5.2.ו); null everywhere else.
+    "active_institution": None,
     # How a teacher reads their roster. Table is the default: a card wall is
     # scannable at twelve students and unusable at thirty, and comparing children
     # is a columns job. Stored per user rather than per browser so a teacher who
@@ -115,6 +119,12 @@ def public_user(document: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
         "display_name": document.get("display_name"),
         "roles": list(document.get("roles") or []),
         "preferences": preferences,
+        # How this account authenticates: "moe" for unified sign-in, else local.
+        # The UI needs it to route logout through the ministry.
+        "identity_source": document.get("identity_source") or "local",
+        # Ministry school placements, for the multi-institution picker. School
+        # symbols only — `exidentifier` stays server-side and is never returned.
+        "institutions": list(document.get("institutions") or []),
     }
 
 

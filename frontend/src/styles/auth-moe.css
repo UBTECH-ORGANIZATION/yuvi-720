@@ -1,0 +1,116 @@
+/* Ministry unified sign-in (הזדהות אחידה): the owl button, the failure screen
+   and the multi-school picker. Logical properties throughout — every one of
+   these surfaces renders in Hebrew and Arabic RTL as well as English LTR. */
+
+.moe-signin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--sp-border, rgba(20, 40, 120, 0.16));
+  background: var(--sp-surface, #ffffff);
+  color: var(--sp-text, #14213d);
+  font-size: 15px;
+  font-weight: 700;
+  padding-block: 13px;
+  padding-inline: 18px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.moe-signin:hover {
+  transform: translateY(-1px);
+  border-color: var(--sp-accent, rgba(43, 86, 245, 0.4));
+  box-shadow: 0 12px 24px rgba(20, 40, 120, 0.14);
+}
+
+.moe-signin:focus-visible {
+  outline: 3px solid var(--sp-focus, #2b56f5);
+  outline-offset: 2px;
+}
+
+.moe-signin--primary {
+  inline-size: 100%;
+}
+
+.moe-signin__mark {
+  inline-size: 26px;
+  block-size: 26px;
+  object-fit: contain;
+}
+
+.auth-dialog__moe {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-block-end: 14px;
+}
+
+.auth-dialog__divider {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--sp-text-muted, #5a6685);
+}
+
+/* ---- Sign-in failure / not permitted ---- */
+.sp-auth-error {
+  min-block-size: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.sp-auth-error__card {
+  max-inline-size: 34rem;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: start;
+  border-radius: 20px;
+  border: 1px solid var(--sp-border, rgba(20, 40, 120, 0.16));
+  background: var(--sp-surface, #ffffff);
+  padding: 28px;
+  box-shadow: 0 18px 40px rgba(20, 40, 120, 0.12);
+}
+
+.sp-auth-error__title {
+  margin: 0;
+  font-size: 22px;
+}
+
+.sp-auth-error__body {
+  margin: 0;
+  color: var(--sp-text-muted, #5a6685);
+  line-height: 1.6;
+}
+
+.sp-auth-error__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-block-start: 6px;
+}
+
+.sp-auth-error__support {
+  font-size: 13px;
+  color: var(--sp-text-muted, #5a6685);
+}
+
+/* ---- Multi-institution picker ---- */
+.institution-picker__list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.institution-picker__option {
+  inline-size: 100%;
+  justify-content: flex-start;
+  text-align: start;
+}

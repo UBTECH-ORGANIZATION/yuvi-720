@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-import os
 import time
-import uuid
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from app.auth.dependencies import COOKIE_NAME, current_user, optional_user
+from app.auth.moe import config as moe_config
 from app.auth.passwords import burn_timing, verify_password
 from app.auth.repository import (
     ALLOWED_PREFERENCES,
@@ -23,13 +22,12 @@ from app.auth.repository import (
     touch_last_login,
     update_preferences,
 )
+from app.auth.session import NO_STORE as _NO_STORE, establish_session
 from app.auth.tokens import TOKEN_LIFETIME, create_session_token
 from app.services.lrs import reporter as lrs_reporter
 from learner_state import update_learner_state  # type: ignore
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
-
-_NO_STORE = {"Cache-Control": "private, no-store"}
 
 
 class LoginRequest(BaseModel):
@@ -64,61 +62,24 @@ class PreferencesRequest(BaseModel):
     # dangling id to "the whole class" rather than to an empty roster.
     teacher_subgroup_id: Optional[str] = Field(default=None, max_length=128)
     teacher_subject: Optional[str] = Field(default=None, max_length=64)
+    # Which ministry school the person is currently working in. Same standing as
+    # the teacher scope above: remembered for the UI, never trusted for access.
+    active_institution: Optional[str] = Field(default=None, max_length=32)
 
 
 # Preferences whose null is a value rather than an absence. See `patch_preferences`.
 CLEARABLE_PREFERENCES = {"teacher_subgroup_id", "teacher_subject"}
 
 
-def _cookie_is_secure() -> bool:
-    public_url = os.environ.get("PUBLIC_APP_URL") or os.environ.get("FRONTEND_URL") or ""
-    return public_url.startswith("https://")
-
-
-def _device_from_request(request: Request) -> dict[str, str]:
-    """Best-effort device extensions for the MoE session `enter` statement."""
-    ua = request.headers.get("user-agent", "")
-    lowered = ua.lower()
-    if "ipad" in lowered or "tablet" in lowered:
-        device_type = "Tablet"
-    elif "mobile" in lowered or "iphone" in lowered or "android" in lowered:
-        device_type = "Mobile"
-    else:
-        device_type = "Desktop"
-    if "windows" in lowered:
-        operating_system = "Windows"
-    elif "mac os" in lowered or "macintosh" in lowered:
-        operating_system = "macOS"
-    elif "android" in lowered:
-        operating_system = "Android"
-    elif "iphone" in lowered or "ipad" in lowered or "ios" in lowered:
-        operating_system = "iOS"
-    elif "linux" in lowered:
-        operating_system = "Linux"
-    else:
-        operating_system = "Other"
-    if "edg/" in lowered:
-        browser = "Edge"
-    elif "chrome/" in lowered:
-        browser = "Chrome"
-    elif "firefox/" in lowered:
-        browser = "Firefox"
-    elif "safari/" in lowered:
-        browser = "Safari"
-    else:
-        browser = "Other"
-    return {
-        "deviceType": device_type,
-        "platform": "Web",
-        "operatingSystem": operating_system,
-        "browser": browser,
-    }
-
-
 @router.post("/login")
 async def login(
     payload: LoginRequest, request: Request, response: Response
 ) -> dict[str, Any]:
+    if not moe_config.local_login_enabled():
+        # Production signs in through the ministry only. Password login stays
+        # for the team's own machines, where the ministry IdP is unreachable.
+        raise HTTPException(status_code=403, detail="local_login_disabled")
+
     document = await get_user_by_username(payload.username)
     if document is None:
         # Burn the same CPU as a real verify so response time cannot be used to
@@ -129,35 +90,13 @@ async def login(
         raise HTTPException(status_code=401, detail="invalid_credentials")
 
     user = public_user(document)
-    # MoE LRS session: one visit, minted here, carried by every outbound 720
-    # statement of this visit; `exit` (logout) reports the gross duration.
-    moe_session_id = str(uuid.uuid4())
-    token = create_session_token(
-        user_id=user["user_id"],
-        username=user["username"],
-        roles=user["roles"],
-        session_id=moe_session_id,
-    )
-    response.set_cookie(
-        COOKIE_NAME,
-        token,
-        httponly=True,
-        samesite="lax",
-        secure=_cookie_is_secure(),
-        max_age=int(TOKEN_LIFETIME.total_seconds()),
-        path="/",
-    )
-    response.headers.update(_NO_STORE)
-    await touch_last_login(user["user_id"])
-    await set_current_moe_session(user["user_id"], moe_session_id)
-    await lrs_reporter.report_session_enter(
-        user["user_id"], moe_session_id, _device_from_request(request)
-    )
+    await establish_session(request=request, response=response, user=user)
     return {"authenticated": True, "user": user}
 
 
 @router.post("/logout")
 async def logout(response: Response, session=Depends(optional_user)) -> dict[str, Any]:
+    ministry_account = bool(session) and session.get("sub", "").startswith("moe_")
     if session and session.get("sid"):
         duration_seconds = max(0.0, time.time() - float(session.get("iat") or time.time()))
         await lrs_reporter.report_session_exit(
@@ -166,7 +105,11 @@ async def logout(response: Response, session=Depends(optional_user)) -> dict[str
         await set_current_moe_session(session["sub"], None)
     response.delete_cookie(COOKIE_NAME, path="/")
     response.headers.update(_NO_STORE)
-    return {"ok": True}
+    # Clearing our cookie leaves the ministry SSO session standing, so the next
+    # click on the owl would sign the same person straight back in. Guidelines
+    # §5.2.ח: send them through the ministry's logout page.
+    logout_url = moe_config.logout_url() if ministry_account else ""
+    return {"ok": True, "logout_url": logout_url or None}
 
 
 @router.post("/session/suspend")
@@ -188,16 +131,27 @@ async def session_resume(session=Depends(optional_user)) -> dict[str, Any]:
 @router.get("/me")
 async def me(response: Response, session=Depends(optional_user)) -> dict[str, Any]:
     response.headers.update(_NO_STORE)
+    # Which sign-in methods this deployment offers. The landing page needs it
+    # before anyone is authenticated, so it rides the unauthenticated answer too.
+    methods = {
+        "moe": moe_config.is_enabled(),
+        "local": moe_config.local_login_enabled(),
+    }
     if session is None:
-        return {"authenticated": False, "user": None}
+        return {"authenticated": False, "user": None, "auth_methods": methods}
     document = await get_user_by_id(session["sub"])
     user = public_user(document)
     if user is None:
         # Account removed while a token was still live.
         response.delete_cookie(COOKIE_NAME, path="/")
-        return {"authenticated": False, "user": None}
+        return {"authenticated": False, "user": None, "auth_methods": methods}
     # session_id: the MoE LRS sid — the frontend suspend/resume beacon uses it.
-    return {"authenticated": True, "user": user, "session_id": session.get("sid")}
+    return {
+        "authenticated": True,
+        "user": user,
+        "session_id": session.get("sid"),
+        "auth_methods": methods,
+    }
 
 
 @router.patch("/preferences")

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Modal } from '../../components/primitives/Modal'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useAuth, type AuthUser } from '../../providers/AuthProvider'
+import { MoeSignInButton } from '../auth/MoeSignInButton'
 import { YuviRobot3D } from '../learner-mapping/YuviRobot3D'
 
 /* Sign-in dialog. Opens in place over the landing page so a deep link the user
@@ -18,7 +19,7 @@ interface LoginDialogProps {
 
 export function LoginDialog({ open, onClose, onSuccess }: LoginDialogProps) {
   const { t, direction } = useI18n()
-  const { login } = useAuth()
+  const { login, authMethods } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -97,8 +98,22 @@ export function LoginDialog({ open, onClose, onSuccess }: LoginDialogProps) {
 
       <div className="auth-forge__card" dir={direction}>
       <h2 className="sp-modal__title" id="auth-dialog-title">{t('auth.dialog.title')}</h2>
-      <p className="sp-modal__subtitle">{t('auth.dialog.subtitle')}</p>
+      <p className="sp-modal__subtitle">
+        {t(authMethods.local ? 'auth.dialog.subtitle' : 'auth.dialog.subtitleMoe')}
+      </p>
 
+      {authMethods.moe ? (
+        <div className="auth-dialog__moe">
+          <MoeSignInButton />
+          {authMethods.local ? (
+            <p className="auth-dialog__divider">{t('auth.dialog.or')}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* No password form in production: the ministry is the only identity
+          source there, and a dead field would just invite support calls. */}
+      {authMethods.local ? (
       <form className="sp-modal__form" onSubmit={onSubmit}>
         <div className="sp-modal__field">
           <label className="sp-modal__label" htmlFor="auth-username">{t('auth.field.username')}</label>
@@ -145,6 +160,13 @@ export function LoginDialog({ open, onClose, onSuccess }: LoginDialogProps) {
           </button>
         </div>
       </form>
+      ) : (
+        <div className="sp-modal__actions">
+          <button type="button" className="sp-btn sp-btn--ghost sp-btn--pill" onClick={close}>
+            {t('auth.action.cancel')}
+          </button>
+        </div>
+      )}
       </div>
     </Modal>
   )

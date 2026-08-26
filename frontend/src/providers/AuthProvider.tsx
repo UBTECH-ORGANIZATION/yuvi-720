@@ -34,6 +34,9 @@ export interface UserPreferences {
       empty roster. */
   teacher_subgroup_id: string | null
   teacher_subject: string | null
+  /** Which ministry school the person is currently working in, when their
+      unified-identity token named more than one. Null everywhere else. */
+  active_institution: string | null
   /** How a teacher reads their roster. Table by default — a card wall stops
       being scannable at about fifteen students. */
   teacher_roster_view: 'table' | 'cards'
@@ -48,11 +51,34 @@ export interface AuthUser {
   display_name: string
   roles: string[]
   preferences: UserPreferences
+  /** 'moe' when this account signed in through the ministry's unified
+      identity. Decides whether sign-out has to travel through the ministry. */
+  identity_source: 'moe' | 'local'
+  /** Ministry school placements. School symbols only — the exidentifier never
+      leaves the backend. More than one means the person must pick. */
+  institutions: Institution[]
+}
+
+export interface Institution {
+  symbol: string
+  entity_type: string
+  roles: string[]
+  school_class: string | null
+  parallel: string | null
+  group_key: string | null
+}
+
+/** Which doors this deployment opens. Ministry sign-in is the real one;
+    password sign-in is a development affordance and is off in production. */
+export interface AuthMethods {
+  moe: boolean
+  local: boolean
 }
 
 interface MeResponse {
   authenticated: boolean
   user: AuthUser | null
+  auth_methods?: AuthMethods
 }
 
 export class InvalidCredentialsError extends Error {
@@ -66,22 +92,29 @@ interface AuthContextValue {
   user: AuthUser | null
   isLoading: boolean
   isTeacher: boolean
+  authMethods: AuthMethods
+  signInWithMoe: (returnTo?: string) => void
   login: (username: string, password: string) => Promise<AuthUser>
   logout: () => Promise<void>
   updatePreferences: (partial: Partial<UserPreferences>) => Promise<void>
 }
 
+const DEFAULT_METHODS: AuthMethods = { moe: false, local: true }
+
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
+  const [authMethods, setAuthMethods] = useState<AuthMethods>(DEFAULT_METHODS)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     let active = true
     apiGet<MeResponse>('/api/auth/me')
       .then((data) => {
-        if (active) setUser(data.authenticated ? data.user : null)
+        if (!active) return
+        setUser(data.authenticated ? data.user : null)
+        if (data.auth_methods) setAuthMethods(data.auth_methods)
       })
       .catch(() => {
         if (active) setUser(null)
@@ -139,12 +172,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.user
   }, [])
 
+  /* Ministry sign-in is a full-page navigation, not a fetch: the ministry
+     serves its own password page, and the round trip must carry the browser so
+     an existing ministry SSO session can be reused. */
+  const signInWithMoe = useCallback((returnTo?: string) => {
+    const target = returnTo ?? `${window.location.pathname}${window.location.search}`
+    window.location.assign(`/api/auth/moe/login?return_to=${encodeURIComponent(target)}`)
+  }, [])
+
   const logout = useCallback(async () => {
+    let ministryLogout: string | null = null
     try {
-      await apiPost('/api/auth/logout', {})
+      const data = await apiPost<{ ok: boolean; logout_url?: string | null }>(
+        '/api/auth/logout',
+        {}
+      )
+      ministryLogout = data.logout_url ?? null
     } finally {
       setUser(null)
     }
+    // Clearing our cookie leaves the ministry SSO session standing, so without
+    // this the next sign-in would be silent and the person would never really
+    // be signed out on a shared classroom machine.
+    if (ministryLogout) window.location.assign(ministryLogout)
   }, [])
 
   const updatePreferences = useCallback(async (partial: Partial<UserPreferences>) => {
@@ -180,11 +230,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isLoading,
       isTeacher: Boolean(user?.roles.includes('teacher')),
+      authMethods,
+      signInWithMoe,
       login,
       logout,
       updatePreferences
     }),
-    [user, isLoading, login, logout, updatePreferences]
+    [user, isLoading, authMethods, signInWithMoe, login, logout, updatePreferences]
   )
 
   // Gate the tree on the session so no child renders against an unknown user.

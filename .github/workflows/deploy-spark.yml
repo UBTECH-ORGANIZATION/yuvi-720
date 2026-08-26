@@ -70,8 +70,16 @@ jobs:
               WEBSITES_PORT=8000 \
               LLM_STRONG_DEPLOYMENT_NAME=gpt-5.4 \
               LLM_MINI_DEPLOYMENT_NAME=gpt-5.4-mini \
+              MOE_OIDC_REDIRECT_URI=https://dev.spark.yuvilab.ai/api/auth/moe/callback \
+              MOE_OIDC_MOCK=false \
             --output none
 
+      # MoE unified sign-in is NOT in the required list below on purpose: the
+      # ministry issues MOE_OIDC_DISCOVERY_URL / CLIENT_ID / CLIENT_SECRET only
+      # after the supplier connection form is approved, and until then the app
+      # deliberately falls back to local login rather than failing to deploy.
+      # When they arrive, set them plus MOE_ID_PEPPER as slot settings, add them
+      # here, and set AUTH_LOCAL_LOGIN_ENABLED=false.
       - name: Verify required Dev slot settings
         run: |
           configured_settings="$(az webapp config appsettings list \

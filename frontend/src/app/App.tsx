@@ -34,6 +34,8 @@ import { ReportIssueDialog } from '../features/support/ReportIssueDialog'
 import { LearnerMessageToast } from '../components/LearnerMessageToast'
 import { CheckinGate } from '../features/checkin/CheckinDialog'
 import { PublicReportPage } from '../features/support/PublicReportPage'
+import { AuthErrorPage } from '../features/auth/AuthErrorPage'
+import { InstitutionGate } from '../features/auth/InstitutionGate'
 import { useStudioTransition } from '../features/Yuvi-studio/StudioTransitionProvider'
 import { CompanionChat } from '../components/CompanionChat'
 import { YuviCompanionDock } from '../components/YuviCompanionDock'
@@ -126,7 +128,7 @@ function isLandingRoute(pathname: string) {
  * (see `useRoute`), which is stripped before matching — `?compose=1` is not
  * part of the address in the sense that matters here. */
 const KNOWN_ROUTES = [
-  '/report', '/learner-mapping', '/results', '/yuvi-studio', '/student-dashboard',
+  '/report', '/auth/error', '/learner-mapping', '/results', '/yuvi-studio', '/student-dashboard',
   '/badges', '/tasks', '/admin', '/mentoring', '/learning',
   // The teacher lane, screen by screen rather than by its shared prefix.
   '/teacher/student', '/teacher/students', '/teacher/goals', '/teacher/calendar',
@@ -197,6 +199,9 @@ function pageForRoute(pathname: string) {
   if (pathname === '/' || pathname === '') return <LandingLoginPage />
   // Deliberately outside PROTECTED_ROUTES: someone locked out must still reach it.
   if (pathname.startsWith('/report')) return <PublicReportPage />
+  // Same reasoning, and more so: this is where a ministry sign-in that failed —
+  // including one that succeeded but carries no role — has to be able to land.
+  if (pathname.startsWith('/auth/error')) return <AuthErrorPage />
   if (pathname.startsWith('/learner-mapping')) return <LearnerMappingPage />
   if (pathname.startsWith('/results')) return <ResultsPage />
   if (pathname.startsWith('/yuvi-studio')) return <YuviStudioPage />
@@ -485,6 +490,10 @@ export function App() {
           over the page. Reporting a fault covers the same need without
           standing on the screen. */}
       {user && <ReportIssueDialog />}
+      {/* Outside the keyed div for the same reason as the check-in gate: the
+          choice belongs to the session, not to whichever page happened to be
+          open when the person signed in. */}
+      {user && <InstitutionGate />}
     </TourProvider>
   )
 }

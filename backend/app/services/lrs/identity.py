@@ -1,9 +1,10 @@
 """Resolve a learner's MoE reporting identity: exidentifier + school + nmm.
 
-v1 (staging): env-configured stub values, overridable by optional fields on
-the learner's `users` document (`exidentifier`, `school_symbol`, `nmm_id`)
-when those exist. Follow-up (tracked in the plan): real MoE SSO exidentifier
-+ org mapping.
+The real values come from unified sign-in: `app.auth.moe.provisioning` writes
+`exidentifier` and `school_symbol` onto the `users` document at every login, and
+they win here. The env stubs remain only for local runs and for accounts that
+predate ministry sign-in — without them a credential-less dev box would report
+nothing at all.
 
 PII boundary: the exidentifier returned here is used ONLY to build outbound
 LRS statements. Never write it to the brain, an LLM prompt, or logs.
