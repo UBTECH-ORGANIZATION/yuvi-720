@@ -1254,6 +1254,15 @@ export function CompanionChat() {
                 : t('companion.kudos.from')}
             </p>
             <p className="sp-companion__kudos-message" dir="auto">{pendingKudos.message}</p>
+            {/* The gift sits UNDER the sentence, small. A card that led with the
+                number would read as a payment slip, and the thing worth having
+                here is being noticed by a person, not the sparks. */}
+            {pendingKudos.sparks > 0 && (
+              <p className="sp-companion__kudos-sparks">
+                <Icon name="spark" size={14} aria-hidden />
+                {t('companion.kudos.sparks', { sparks: pendingKudos.sparks })}
+              </p>
+            )}
             {pendingKudos.created_at && (
               <time className="sp-companion__kudos-time" dateTime={pendingKudos.created_at}>
                 {formatMessageTime(pendingKudos.created_at, language)}

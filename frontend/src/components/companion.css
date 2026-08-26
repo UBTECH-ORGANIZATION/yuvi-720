@@ -2351,6 +2351,20 @@ body.is-companion-fullscreen { overflow: hidden; }
   color: #1d1836;
 }
 
+.sp-companion__kudos-sparks {
+  position: relative;
+  margin: 8px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--sp-radius-pill);
+  background: rgba(224, 158, 42, 0.14);
+  color: #8a5a12;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+}
+
 .sp-companion__kudos-time {
   position: relative;
   font-size: var(--sp-fs-chat-meta);
@@ -2395,3 +2409,6 @@ body.is-companion-fullscreen { overflow: hidden; }
   border-color: rgba(188, 168, 255, 0.28);
 }
 [data-theme='dark'] .sp-companion__kudos-message { color: #f2eefe; }
+[data-theme='dark'] .sp-companion__kudos-sparks {
+  background: rgba(243, 201, 106, 0.18); color: #f3c96a;
+}

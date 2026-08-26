@@ -505,9 +505,15 @@ def _portrait(brain: dict[str, Any]) -> dict[str, Any] | None:
 
 
 async def student_insights(
-    learner_id: str, language: str = "he", subject: str | None = None
+    learner_id: str, language: str = "he", subject: str | None = None,
+    window_days: int = 7,
 ) -> dict[str, Any]:
-    """Explainable per-student insight — struggle, progress, attention + evidence."""
+    """Explainable per-student insight — struggle, progress, attention + evidence.
+
+    `window_days` is the dashboard's selected period; it reaches only the band,
+    which re-judges against it (see `teacher_bands.base_band`). Everything else
+    here describes the child's current state and is period-independent.
+    """
     from app.services import kata_catalog
     await kata_catalog.ensure_loaded()
     brain = await get_brain(learner_id)
@@ -856,6 +862,7 @@ async def student_insights(
         today_feeling=today_feeling,
         status=status,
         objectives_progress=progress_by_subject,
+        window_days=window_days,
     )
 
     return {
@@ -943,15 +950,22 @@ def _self_awareness_gap(reflections: list) -> dict[str, Any] | None:
     return {"reading": reading, "gap": round(gap, 2), "samples": samples}
 
 
-async def group_insights(group_id: str, language: str = "he") -> dict[str, Any]:
-    """Group aggregates + per-student summaries. NO student-to-student comparison."""
+async def group_insights(
+    group_id: str, language: str = "he", window_days: int = 7,
+) -> dict[str, Any]:
+    """Group aggregates + per-student summaries. NO student-to-student comparison.
+
+    `window_days` is the dashboard's period. It re-judges every band, so it is
+    part of the cache identity — without it the weekly and monthly readings of
+    the same class would serve each other's answers for a minute.
+    """
     from app.services import teacher_bands
 
     # A short TTL because #450 doubled what this computes (bands + a lazy
     # trends fan-out) and the dashboard, the roster and the students page all
     # call it. 60s of staleness on a summary screen is invisible; the second
     # tab paying the full fan-out again was not.
-    cache_key = (group_id, language)
+    cache_key = (group_id, language, window_days)
     cached = teacher_bands.cache_get(cache_key)
     if cached is not None:
         return cached
@@ -965,13 +979,13 @@ async def group_insights(group_id: str, language: str = "he") -> dict[str, Any]:
 
     async def _one(learner_id: str) -> dict[str, Any]:
         async with semaphore:
-            return await student_insights(learner_id, language)
+            return await student_insights(learner_id, language, window_days=window_days)
 
     students = list(await asyncio.gather(*(_one(lid) for lid in learner_ids)))
 
     # ── finalize the bands (#450) ────────────────────────────────────────────
     # Two group-stage inputs. Blocked messages: one windowed roster query — a
-    # RED input regardless of anything else. Week-over-week improvement: a
+    # RED input regardless of anything else. Period-over-period improvement: a
     # trends read per student, LAZILY — only students the cheap rules left
     # orange with some activity can be upgraded, so most classes pay for a
     # handful, not for everyone.
@@ -992,10 +1006,10 @@ async def group_insights(group_id: str, language: str = "he") -> dict[str, Any]:
         async with semaphore:
             try:
                 trends = await learner_trends_service.learner_trends(
-                    s["learner_id"], days=14)
+                    s["learner_id"], days=window_days * 2)
             except Exception:
                 return
-        reason = teacher_bands.improvement_from_trends(trends)
+        reason = teacher_bands.improvement_from_trends(trends, window_days)
         if reason:
             s["band"] = {"band": "green", "reasons": [reason]}
 
@@ -1005,8 +1019,11 @@ async def group_insights(group_id: str, language: str = "he") -> dict[str, Any]:
     changes = await teacher_bands.note_band_changes(
         {s["learner_id"]: s["band"]["band"] for s in students})
 
+    # Follows the period like the bands do. The key keeps its name because the
+    # weekly digest reads it and takes the default 7, where it means exactly
+    # what it always did.
     active_7d = sum(1 for s in students if s["timeline"] and _days_since(s["timeline"][0]["at"]) is not None
-                    and _days_since(s["timeline"][0]["at"]) <= 7)
+                    and _days_since(s["timeline"][0]["at"]) <= window_days)
     needing_attention = [s for s in students if s["attention"]]
     total_mastered = sum(
         sum(p.get("objectives_mastered", 0) for p in (s["progress"] or {}).values())
@@ -1028,6 +1045,7 @@ async def group_insights(group_id: str, language: str = "he") -> dict[str, Any]:
         # Aggregate trends only (no comparisons between students).
         "trends": {
             "students_total": len(students),
+            "window_days": window_days,
             "active_last_7d": active_7d,
             "needing_attention": len(needing_attention),
             # The dashboard KPI: how many students read RED right now.

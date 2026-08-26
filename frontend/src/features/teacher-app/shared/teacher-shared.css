@@ -33,6 +33,15 @@
   --sp-surface: #2c2456;
   --sp-surface-2: #362d63;
   --sp-bg-subtle: #241d4b;
+  /* `--sp-bg` is declared ONCE in tokens.css, on the light `:root`, and never
+     redefined for dark — so every teacher surface that recesses against a card
+     (a hovered student row, the band legend, the album's rails) was painting
+     itself #f4f1fe: a near-white slab in the middle of a dark screen. Fixed
+     here rather than in tokens.css because that variable has twenty-seven
+     users across the student app, the landing page and the studio, several of
+     which already compensate for it in their own dark rules; correcting it
+     globally is a separate job with a separate blast radius. */
+  --sp-bg: #241d4b;
   --sp-border: rgba(188, 168, 255, .14);
   --sp-border-strong: rgba(200, 182, 255, .30);
 }
@@ -216,6 +225,72 @@
 }
 
 .tch-stat__hint { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+
+/* The value and its change, on one baseline. `baseline` rather than `center`
+   so the small chip sits with the bottom of the big number instead of floating
+   at its middle, and `gap` in ch so the spacing tracks the type size. */
+.tch-stat__line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6ch;
+  min-inline-size: 0;
+  flex-wrap: wrap;
+}
+
+/* How this period compares to the one before it. Small, quiet, and never the
+   thing read first — the number is the headline and this is its footnote. */
+.tch-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  font-variant-numeric: tabular-nums;
+  padding: 1px 6px;
+  border-radius: var(--sp-radius-pill);
+  /* The chip carries a phrase now ("לעומת 3 הימים הקודמים"), not two glyphs.
+     It must never truncate — a period clipped to "לעומת 3 הימ…" is worse than
+     no period at all, since the whole reason it is here is to say which days
+     the change is measured against. So it wraps: `.tch-stat__line` drops it to
+     its own row first, and on a narrow card the pill itself breaks over two
+     lines rather than losing the end of the sentence. */
+  flex-wrap: wrap;
+  max-inline-size: 100%;
+  /* The arrow glyph is directional punctuation, not text: in an RTL paragraph
+     the bidi algorithm would otherwise be free to reorder it away from its
+     number. */
+  unicode-bidi: isolate;
+}
+.tch-delta--up   { color: var(--sp-success-600); background: rgba(46, 174, 111, .12); }
+.tch-delta--down { color: var(--sp-danger-600);  background: rgba(226, 74, 94, .12); }
+.tch-delta--flat { color: var(--sp-ink-400);     background: var(--tch-chip-bg); }
+
+/* The stretch the change is measured against, inside the chip. A step quieter
+   and unweighted: the movement is the news and the period is the frame around
+   it. `currentColor` at reduced opacity rather than an ink token, because it
+   has to stay legible on all three of the chip's tinted backgrounds in both
+   themes. */
+.tch-delta__when {
+  font-weight: var(--sp-fw-regular);
+  opacity: .78;
+  padding-inline-start: 2px;
+}
+
+/* What became of the blocking topic. Its own line under the hint rather than a
+   chip beside the value: the value is already a phrase that may wrap to two
+   lines, and hanging a second phrase off it would give the tile two headlines. */
+.tch-stat__shift {
+  margin-block-start: 2px;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-500);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* A topic the class is no longer stuck on is the one piece of good news this
+   tile can carry, and it is easy to miss because the topic simply vanishes. */
+.tch-stat__shift--cleared { color: var(--sp-success-600); }
 
 /* A KPI that demands action carries the accent the inbox does. */
 .tch-stat--alert { border-inline-start: 3px solid var(--sp-danger-600); }
@@ -720,3 +795,50 @@
 }
 .tch-preview__frame { border: 0; }
 .tch-preview__error { margin: var(--sp-6) 0; text-align: center; color: var(--sp-ink-500); }
+
+/* ── the gift a good word can carry (#467) ─────────────────────────────────
+   Shared by all three composers (album footer, messages lane, assistant form),
+   so a teacher meets the same control wherever they praise a child. Chips
+   rather than a number field: the amounts are a closed set with shared meaning,
+   and "no sparks" is the resting state because most good words are just words. */
+.tch-kudosSparks { margin-block-start: var(--sp-3); }
+.tch-kudosSparks__label {
+  display: block;
+  margin-block-end: var(--sp-2);
+  color: var(--sp-ink-500);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+}
+.tch-kudosSparks__row { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.tch-kudosSparks__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: var(--sp-1) var(--sp-3);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-surface);
+  color: var(--sp-ink-500);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background var(--sp-dur) var(--sp-ease),
+              border-color var(--sp-dur) var(--sp-ease),
+              color var(--sp-dur) var(--sp-ease),
+              transform var(--sp-dur-fast) var(--sp-ease);
+}
+.tch-kudosSparks__chip:hover:not(:disabled) { border-color: var(--sp-border-strong); }
+/* the press lands on pointerdown, like every other control (fluid-motion) */
+.tch-kudosSparks__chip:active:not(:disabled) { transform: translateY(1px) scale(0.98); }
+.tch-kudosSparks__chip:disabled { opacity: 0.55; cursor: not-allowed; }
+.tch-kudosSparks__chip.is-on {
+  border-color: var(--sp-warn-600);
+  background: color-mix(in srgb, var(--sp-warn-600) 14%, transparent);
+  color: var(--sp-ink-900);
+}
+.tch-kudosSparks__hint {
+  margin: var(--sp-2) 0 0;
+  color: var(--sp-ink-400);
+  font-size: var(--sp-fs-xs);
+}

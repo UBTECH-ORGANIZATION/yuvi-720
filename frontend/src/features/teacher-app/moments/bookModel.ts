@@ -67,55 +67,74 @@ export function coverVariant(groupName: string | null): number {
   return (hashString(groupName ?? '') % COVER_VARIANTS) + 1
 }
 
-export interface BookWeek {
-  /** the edition's identity: its Sunday, "YYYY-MM-DD" */
+export interface BookEdition {
+  /** the edition's identity — the day it was made, "YYYY-MM-DD" */
   key: string
-  /** what the cover is stamped with: "dd/mm-dd/mm" over the school days */
+  /** what the cover is stamped with: "dd/mm-dd/mm", or one date for a day */
   label: string
   /** the window the pages are drawn from, [start, end) as epoch ms */
   start: number
   end: number
+  /** how long the edition covers, in whole days */
+  days: number
 }
 
-/* The book is a WEEKLY edition, and it looks BACKWARD: it tells the story of
-   the week that finished, not the one in progress. A book about the current
-   week would be half-written every time it was opened — Monday's edition
-   holding one day of school — and its cover would promise a range that had
-   not happened yet. So Sunday brings a closed, complete book about the week
-   just gone, which is also when a teacher actually has room to look back.
+/* The book looks BACKWARD: it tells the story of the period that FINISHED, not
+   the one in progress. A book about the current period would be half-written
+   every time it was opened, and its cover would promise days that had not
+   happened yet. So the pages are the period BEFORE the one the dashboard is
+   reading — pick "week" and the book is last week's.
 
-   The window spans the whole calendar week (Sunday through Saturday) while
-   the cover names the school days (Sunday→Friday): a child who practised on
-   Saturday belongs in the book, and printing "22/08" on a cover for a class
-   that meets Sunday to Friday would read as an error rather than as accuracy. */
-export function bookWeek(now: Date = new Date()): BookWeek {
-  const sunday = new Date(now)
-  sunday.setHours(0, 0, 0, 0)
-  sunday.setDate(sunday.getDate() - sunday.getDay() - 7)
-  const friday = new Date(sunday)
-  friday.setDate(sunday.getDate() + 5)
-  const nextSunday = new Date(sunday)
-  nextSunday.setDate(sunday.getDate() + 7)
+   Editions are day-aligned even though the numbers above them are not. The
+   KPIs use raw trailing windows because that keeps both halves exactly equal
+   and is the same length of time in every timezone; a book has a date range
+   printed on its cover, so it has to start and end at midnights the teacher
+   would recognise — and midnight here means the teacher's own, which is why
+   this is computed on the client and not on the server.
+
+   The key is the day the edition was made rather than the window it covers.
+   Trailing editions roll forward daily, so this is what makes the gift
+   ceremony once per class per day: switching period does not re-wrap a book
+   already opened this morning. */
+export function bookEdition(days: number, now: Date = new Date()): BookEdition {
+  const span = Math.max(1, Math.round(days))
+  const midnight = new Date(now)
+  midnight.setHours(0, 0, 0, 0)
+
+  // The current period is today plus the `span - 1` days before it; this
+  // edition is the `span` days before that.
+  const start = new Date(midnight)
+  start.setDate(start.getDate() - (2 * span - 1))
+  const end = new Date(midnight)
+  end.setDate(end.getDate() - (span - 1))
+  // The cover names the last day INSIDE the window, not the exclusive edge —
+  // stamping the morning after as the closing date reads as an error.
+  const lastDay = new Date(end)
+  lastDay.setDate(lastDay.getDate() - 1)
+
   const two = (value: number) => String(value).padStart(2, '0')
-  const label = (date: Date) => `${two(date.getDate())}/${two(date.getMonth() + 1)}`
-  const key = `${sunday.getFullYear()}-${two(sunday.getMonth() + 1)}-${two(sunday.getDate())}`
+  const stamp = (date: Date) => `${two(date.getDate())}/${two(date.getMonth() + 1)}`
   return {
-    key,
-    label: `${label(sunday)}-${label(friday)}`,
-    start: sunday.getTime(),
-    end: nextSunday.getTime(),
+    key: `${midnight.getFullYear()}-${two(midnight.getMonth() + 1)}-${two(midnight.getDate())}`,
+    // A one-day edition is one date. "25/08-25/08" says the same thing twice
+    // and reads as a broken range.
+    label: span === 1 ? stamp(start) : `${stamp(start)}-${stamp(lastDay)}`,
+    start: start.getTime(),
+    end: end.getTime(),
+    days: span,
   }
 }
 
-/* Only what actually happened that week. The feed the dashboard fetches is a
-   rolling 14-day window, which always CONTAINS the finished week but reaches
-   past it on both sides — and a cover stamped with a date range has to be
-   telling the truth about the pages behind it. An undated moment is dropped
-   rather than assumed recent, for the same reason. */
-export function momentsInWeek(moments: Moment[], week: BookWeek): Moment[] {
+/* Only what actually happened in that edition. The feed is fetched with a day
+   of headroom on each side — the server's window is a raw trailing one and this
+   one is day-aligned to the teacher's clock — so it always CONTAINS the edition
+   but reaches past it on both sides, and a cover stamped with a date range has
+   to be telling the truth about the pages behind it. An undated moment is
+   dropped rather than assumed recent, for the same reason. */
+export function momentsInEdition(moments: Moment[], edition: BookEdition): Moment[] {
   return moments.filter((row) => {
     const at = Date.parse(row.at ?? '')
-    return Number.isFinite(at) && at >= week.start && at < week.end
+    return Number.isFinite(at) && at >= edition.start && at < edition.end
   })
 }
 

@@ -60,12 +60,44 @@ _LEVEL_RECHECK_EWMA = 0.6
 _SUBJECT_STRONG_PERCENT = 80
 _RECENT_MASTERY_DAYS = 7
 
-# Week-over-week improvement (the optional trends upgrade for orange students):
-# this week's success rate beats last week's by a real margin, on enough
-# attempts that the margin is not one lucky answer.
+# The dashboard's period (#455 follow-up) re-judges the bands: a class read over
+# a month should be more forgiving than the same class read over three days.
+# Every window below follows it EXCEPT the floor here.
+#
+# The floor exists because "inactive for N days" is a RED signal, and letting N
+# follow the period all the way down would make every child who has not logged
+# in since midnight red on the daily view — the whole class painted red every
+# morning, which is not a reading of anything. Three days is the shortest span
+# where silence means something, so daily and 3-day judge alike and only the
+# longer periods loosen.
+_MIN_INACTIVITY_DAYS = 3
+# The period this dashboard was fixed at before it was choosable. The threshold
+# is SCALED from it rather than replaced by it, so a teacher on the default
+# week gets exactly the detector's own cut and nothing about today's screen
+# changes for anyone who never touches the control.
+_BASELINE_WINDOW_DAYS = 7
+
+# Period-over-period improvement (the optional trends upgrade for orange
+# students): this period's success rate beats the previous one's by a real
+# margin, on enough attempts that the margin is not one lucky answer.
 _IMPROVE_MIN_ATTEMPTS = 5
 _IMPROVE_MIN_PRIOR_ATTEMPTS = 3
 _IMPROVE_RATE_DELTA = 0.15
+
+
+def inactivity_threshold(window_days: int) -> int:
+    """How long silence must last before it reads as RED, for this period.
+
+    Scaled from the detector's own cut rather than set to the period outright:
+    at the default week this returns exactly `insights.INACTIVITY_DAYS`, so the
+    band a teacher sees today is the band they saw before the period existed. A
+    month roughly quadruples it; anything shorter than the floor is the floor.
+    """
+    from app.services.insights import INACTIVITY_DAYS  # local: insights imports us
+
+    days = int(window_days or _BASELINE_WINDOW_DAYS)
+    scaled = round(INACTIVITY_DAYS * days / _BASELINE_WINDOW_DAYS)
+    return max(_MIN_INACTIVITY_DAYS, scaled)
 
 
 def _days_since(stamp: Any) -> Optional[float]:
@@ -87,24 +119,37 @@ def base_band(
     today_feeling: Optional[dict[str, Any]],
     status: str,
     objectives_progress: Optional[dict[str, dict[str, Any]]] = None,
+    window_days: int = _RECENT_MASTERY_DAYS,
 ) -> dict[str, Any]:
     """The band from everything already in scope inside ``student_insights``.
 
     Two inputs arrive later, at the group stage, and can only move a student in
-    one direction each: a blocked message (adds RED), and week-over-week
+    one direction each: a blocked message (adds RED), and period-over-period
     improvement (upgrades ORANGE to GREEN). So this base is final for red
     students and correct-or-pending for the rest.
+
+    ``window_days`` is the dashboard's selected period. It re-judges the band
+    rather than only relabelling it: silence has to last that long to read red,
+    and a mastery has to be that recent to read green.
     """
     reasons: list[dict[str, Any]] = []
+    quiet_for = inactivity_threshold(window_days)
 
     # ── RED: any one signal ──────────────────────────────────────────────────
     for flag in attention_all or []:
         signal = _RED_ATTENTION_KINDS.get(str(flag.get("kind") or ""))
-        if signal:
-            reasons.append({
-                "signal": signal,
-                "evidence": dict(flag.get("raw_evidence") or {}),
-            })
+        if not signal:
+            continue
+        evidence = dict(flag.get("raw_evidence") or {})
+        # The detector fires on its own fixed threshold; the period decides
+        # whether that silence is long enough to matter on THIS reading. A
+        # child quiet for five days is red on the weekly view and unremarkable
+        # on the monthly one.
+        if signal == "days_inactive":
+            quiet = evidence.get("days_inactive")
+            if isinstance(quiet, (int, float)) and quiet < quiet_for:
+                continue
+        reasons.append({"signal": signal, "evidence": evidence})
     # Heavy feeling on TODAY's check-in (callers pass today_feeling only when
     # its date is the current school day). Rendering only — never an alert.
     from app.services.checkin_flow import NEGATIVE_VALENCES
@@ -154,7 +199,7 @@ def base_band(
                             "evidence": {"streak": entry.get("consecutive_successes")}})
             break
         achieved_days = _days_since(entry.get("achieved_at"))
-        if achieved_days is not None and achieved_days <= _RECENT_MASTERY_DAYS:
+        if achieved_days is not None and achieved_days <= window_days:
             reasons.append({"signal": "improving_week",
                             "evidence": {"achieved_days_ago": round(achieved_days, 1)}})
             break
@@ -191,17 +236,21 @@ def apply_blocked_messages(band: dict[str, Any], blocked: list[dict[str, Any]]) 
     return {"band": "red", "reasons": [reason]}
 
 
-def improvement_from_trends(trends: dict[str, Any]) -> Optional[dict[str, Any]]:
-    """Week-over-week: sum the per-day series halves and compare rates.
+def improvement_from_trends(
+    trends: dict[str, Any], window_days: int = _RECENT_MASTERY_DAYS,
+) -> Optional[dict[str, Any]]:
+    """Period-over-period: sum the per-day series halves and compare rates.
 
-    ``per_day`` is chronological and gapless (learner_trends); with days=14 the
-    last 7 rows are this week. Only ever returns an upgrade reason — never a
-    downgrade: a quiet week is orange by other rules, not a penalty here.
+    ``per_day`` is chronological and gapless (learner_trends); fetched over
+    ``2 * window_days`` the last ``window_days`` rows are the current period.
+    Only ever returns an upgrade reason — never a downgrade: a quiet period is
+    orange by other rules, not a penalty here.
     """
     per_day = trends.get("per_day") or []
-    if len(per_day) < 14:
+    span = max(1, int(window_days or _RECENT_MASTERY_DAYS))
+    if len(per_day) < span * 2:
         return None
-    prior, current = per_day[:7], per_day[-7:]
+    prior, current = per_day[-span * 2:-span], per_day[-span:]
     attempts_now = sum(row.get("attempts") or 0 for row in current)
     attempts_prior = sum(row.get("attempts") or 0 for row in prior)
     if attempts_now < _IMPROVE_MIN_ATTEMPTS or attempts_prior < _IMPROVE_MIN_PRIOR_ATTEMPTS:
@@ -281,12 +330,12 @@ _ttl_cache: dict[tuple[str, str], tuple[float, dict[str, Any]]] = {}
 _TTL_SECONDS = 60.0
 
 
-def cache_get(key: tuple[str, str]) -> Optional[dict[str, Any]]:
+def cache_get(key: tuple[Any, ...]) -> Optional[dict[str, Any]]:
     row = _ttl_cache.get(key)
     if row and time.monotonic() - row[0] < _TTL_SECONDS:
         return row[1]
     return None
 
 
-def cache_put(key: tuple[str, str], value: dict[str, Any]) -> None:
+def cache_put(key: tuple[Any, ...], value: dict[str, Any]) -> None:
     _ttl_cache[key] = (time.monotonic(), value)

@@ -90,6 +90,70 @@ class SparkWalletTests(unittest.IsolatedAsyncioTestCase):
         self.assertLessEqual(current["balance"], wallet.DAILY_SPARK_CAP)
         self.assertEqual(current["dailyGoals"], wallet.DAILY_GOAL_CAP)
 
+    # ── a teacher's gift (#467) ───────────────────────────────────────────────
+    # Sparks a person chose to give, not ones the learner earned. The rules are
+    # deliberately different from every test above this line.
+
+    async def test_a_teacher_gift_pays_in_full_at_the_daily_cap(self) -> None:
+        """The cap stops farming; a gift is not farming.
+
+        A teacher told the child they were given 40. If the cap silently paid 0
+        because the child had a good day, the teacher would be made a liar by
+        the reward system.
+        """
+        for index in range(12):
+            await rewards.grant_goal_stage(LEARNER, f"goal-{index}", "summarized", RICH_GOAL)
+        earned = await rewards.get_wallet(LEARNER)
+        self.assertEqual(earned["dailyEarned"], wallet.DAILY_SPARK_CAP)
+
+        gift = await rewards.grant_teacher_kudos(
+            LEARNER, draft_id="d1", amount=40, teacher_id="teacher-1")
+        self.assertEqual(gift["granted"], 40)
+        after = await rewards.get_wallet(LEARNER)
+        self.assertEqual(after["balance"], earned["balance"] + 40)
+
+    async def test_a_gift_does_not_spend_the_learners_own_daily_allowance(self) -> None:
+        await rewards.grant_teacher_kudos(
+            LEARNER, draft_id="d2", amount=40, teacher_id="teacher-1")
+        after_gift = await rewards.get_wallet(LEARNER)
+        self.assertEqual(after_gift["balance"], 40)
+        # the gift is banked, but the child can still earn a full day
+        self.assertEqual(after_gift["dailyEarned"], 0)
+
+    async def test_a_gift_pays_once_per_draft(self) -> None:
+        """Keyed on the composer's draft, not the kudos row.
+
+        A double-clicked send writes two kudos rows, so a kudos-keyed grant
+        would pay twice for one gesture.
+        """
+        first = await rewards.grant_teacher_kudos(
+            LEARNER, draft_id="d3", amount=20, teacher_id="teacher-1")
+        replay = await rewards.grant_teacher_kudos(
+            LEARNER, draft_id="d3", amount=20, teacher_id="teacher-1")
+        self.assertEqual(first["granted"], 20)
+        self.assertEqual(replay["granted"], 0)
+        self.assertTrue(replay["duplicate"])
+        self.assertEqual((await rewards.get_wallet(LEARNER))["balance"], 20)
+
+    async def test_a_teacher_cannot_invent_an_amount(self) -> None:
+        for bad in (35, 1000, 0.5, -20, "lots", None):
+            outcome = await rewards.grant_teacher_kudos(
+                LEARNER, draft_id=f"bad-{bad}", amount=bad, teacher_id="teacher-1")
+            self.assertEqual(outcome["granted"], 0, bad)
+        self.assertEqual((await rewards.get_wallet(LEARNER))["balance"], 0)
+
+    async def test_the_ledger_says_a_person_gave_it(self) -> None:
+        """A gift and a milestone must not read as the same event."""
+        await rewards.grant_goal_stage(LEARNER, "g9", "started", GOAL_VALUE)
+        await rewards.grant_teacher_kudos(
+            LEARNER, draft_id="d4", amount=10, teacher_id="teacher-7")
+        rows = await rewards.list_ledger(LEARNER, limit=10)
+        gift = [r for r in rows if r["reason"] == "kudos.teacher"]
+        earned = [r for r in rows if r["reason"] == "goal.started"]
+        self.assertEqual(len(gift), 1)
+        self.assertEqual(gift[0]["granted_by"], "teacher-7")
+        self.assertNotIn("granted_by", earned[0])
+
     async def test_purchase_requires_balance_and_price_comes_from_server(self) -> None:
         poor = await rewards.purchase_asset(LEARNER, "astro")
         self.assertFalse(poor["ok"])

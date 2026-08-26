@@ -12,8 +12,70 @@
    import), so source order alone cannot win. */
 .tch-home.tch-home { padding-block-end: 0; }
 
-.tch-home__head { margin-block-end: var(--sp-5); }
+/* The greeting and the period, one row: who is being spoken to at the leading
+   edge, what stretch they are reading at the trailing one — physically the
+   top-left in Hebrew. `wrap` rather than a media query so a long greeting or a
+   large font setting drops the control onto its own line instead of crushing
+   it. */
+.tch-home__head {
+  margin-block-end: var(--sp-5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
 .tch-home__head h1 { margin: 0; font-size: var(--sp-fs-2xl); color: var(--sp-ink-900); letter-spacing: -0.01em; }
+
+/* The period: four segments in one track, the chosen one lifted onto a surface
+   card so the choice reads at a glance rather than by comparing weights. */
+.tch-period {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: var(--tch-chip-bg);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-lg);
+}
+
+.tch-period__seg {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 6px 12px;
+  border-radius: var(--sp-radius-md);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-500);
+  cursor: pointer;
+  white-space: nowrap;
+  /* Colour and background only. The segment must not move under the finger:
+     these sit in a row a teacher scans, and a transform on hover would make
+     the whole track shimmer as the pointer crosses it. */
+  transition: background var(--sp-dur-fast) var(--sp-ease),
+              color var(--sp-dur-fast) var(--sp-ease);
+}
+
+.tch-period__seg:hover:not(:disabled):not(.is-on) { color: var(--sp-ink-700); }
+
+.tch-period__seg.is-on {
+  background: var(--sp-surface);
+  color: var(--sp-ink-900);
+  box-shadow: var(--sp-shadow-sm);
+}
+
+/* Feedback on press, not on release (fluid-motion): the screen behind this is
+   about to refetch, and the button has to acknowledge the finger before the
+   data can. */
+.tch-period__seg:active:not(:disabled) { transform: translateY(1px); }
+
+.tch-period__seg:disabled { cursor: default; opacity: .6; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tch-period__seg { transition-duration: 1ms; }
+  .tch-period__seg:active:not(:disabled) { transform: none; }
+}
 
 /* KPI strip styles live in teacher-shared.css (`.tch-stats` / `.tch-stat`) —
    the same cards head Home, the student profile and the learnings screen.

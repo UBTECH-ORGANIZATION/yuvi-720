@@ -66,8 +66,13 @@ class PreferencesRequest(BaseModel):
     # dangling id to "the whole class" rather than to an empty roster.
     teacher_subgroup_id: Optional[str] = Field(default=None, max_length=128)
     teacher_subject: Optional[str] = Field(default=None, max_length=64)
-    # The class-book unwrap ledger: {group_id: "YYYY-MM-DD" of that edition's
-    # Sunday}. The client sends the full merged map. Bounded and shape-checked
+    # The stretch of time the dashboard is read over. Pattern-checked against
+    # the exact four the client offers rather than left open: this decides the
+    # window every one of that screen's numbers is computed over, so an
+    # arbitrary string here would reach the analytics layer as a day count.
+    teacher_period: Optional[str] = Field(default=None, pattern="^(day|3day|week|month)$")
+    # The class-book unwrap ledger: {group_id: "YYYY-MM-DD", the day of that
+    # edition}. The client sends the full merged map. Bounded and shape-checked
     # because preferences round-trip on every /api/auth/me.
     teacher_book_seen: Optional[dict[str, str]] = None
 

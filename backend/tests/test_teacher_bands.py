@@ -16,13 +16,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from app.services import teacher_bands  # noqa: E402
 
 
-def _band(brain=None, *, attention=None, feeling=None, status="active", progress=None):
+def _band(brain=None, *, attention=None, feeling=None, status="active", progress=None,
+          window_days=7):
     return teacher_bands.base_band(
         brain or {},
         attention_all=attention or [],
         today_feeling=feeling,
         status=status,
         objectives_progress=progress,
+        window_days=window_days,
     )
 
 
@@ -113,6 +115,87 @@ class GreenRules(unittest.TestCase):
         self.assertIsNone(teacher_bands.improvement_from_trends(
             {"per_day": [{"attempts": 0, "correct": 0}] * 7
              + [{"attempts": 2, "correct": 2}] * 7}))
+
+
+class ThePeriodRejudgesTheBand(unittest.TestCase):
+    """The dashboard's period is not a label on the same verdict — it changes it.
+
+    A class read over a month should be more forgiving than the same class read
+    over three days, because how long a child has been quiet only means
+    something relative to the stretch being looked at.
+    """
+
+    def _quiet_for(self, days, *, window_days):
+        return _band(
+            attention=[{"kind": "inactivity", "raw_evidence": {"days_inactive": days}}],
+            window_days=window_days,
+        )
+
+    def test_the_default_period_is_exactly_the_detector_cut(self):
+        """The band a teacher sees on the default week must be the band they
+        saw before the period control existed. The threshold is SCALED from the
+        detector's own number, not replaced by the window length — replacing it
+        would have quietly moved the weekly cut from six days to seven."""
+        from app.services.insights import INACTIVITY_DAYS
+        self.assertEqual(teacher_bands.inactivity_threshold(7), INACTIVITY_DAYS)
+        self.assertEqual(self._quiet_for(INACTIVITY_DAYS, window_days=7)["band"], "red")
+        self.assertNotEqual(
+            self._quiet_for(INACTIVITY_DAYS - 1, window_days=7)["band"], "red")
+
+    def test_silence_is_red_only_once_it_outlasts_the_period(self):
+        # Six days quiet: a real signal on the weekly view…
+        self.assertEqual(self._quiet_for(6, window_days=7)["band"], "red")
+        # …and unremarkable on the monthly one, where the class is being read
+        # over four times that span.
+        self.assertNotEqual(self._quiet_for(6, window_days=30)["band"], "red")
+        # Long enough, and it is red on every view.
+        self.assertEqual(self._quiet_for(31, window_days=30)["band"], "red")
+        # The scale is monotonic: a wider window is never stricter.
+        thresholds = [teacher_bands.inactivity_threshold(d) for d in (1, 3, 7, 30)]
+        self.assertEqual(thresholds, sorted(thresholds))
+
+    def test_the_daily_view_does_not_paint_the_class_red_every_morning(self):
+        """The floor that stops the shortest period from being useless.
+
+        Without it, "inactive for >= 1 day" would fire for every child who has
+        not logged in since midnight — the entire class red before first period,
+        which is a reading of the clock, not of the children.
+        """
+        self.assertEqual(teacher_bands.inactivity_threshold(1), 3)
+        self.assertEqual(teacher_bands.inactivity_threshold(3), 3)
+        self.assertNotEqual(self._quiet_for(1, window_days=1)["band"], "red")
+        self.assertNotEqual(self._quiet_for(2, window_days=1)["band"], "red")
+        # Three days of silence still reaches a teacher on the daily view.
+        self.assertEqual(self._quiet_for(3, window_days=1)["band"], "red")
+        # And the longer periods are never pulled DOWN to the floor.
+        self.assertGreater(teacher_bands.inactivity_threshold(30), 3)
+
+    def test_the_period_never_softens_anything_but_silence(self):
+        """Only the inactivity rule scales. Distress does not get more
+        acceptable because a teacher widened the window."""
+        for kind in teacher_bands._RED_ATTENTION_KINDS:
+            if kind == "inactivity":
+                continue
+            result = _band(attention=[{"kind": kind, "raw_evidence": {}}], window_days=30)
+            self.assertEqual(result["band"], "red", kind)
+
+    def test_a_detector_that_reports_no_day_count_is_still_heard(self):
+        # The threshold is applied to evidence, and missing evidence must fail
+        # open: a flag with nothing to measure stays the red signal it was.
+        result = _band(attention=[{"kind": "inactivity", "raw_evidence": {}}],
+                       window_days=30)
+        self.assertEqual(result["band"], "red")
+
+    def test_improvement_splits_the_series_at_the_period(self):
+        flat = [{"attempts": 2, "correct": 1}]
+        better = [{"attempts": 2, "correct": 2}]
+        # Three days against the three before them, on a 6-row series.
+        series = flat * 3 + better * 3
+        self.assertIsNotNone(
+            teacher_bands.improvement_from_trends({"per_day": series}, 3))
+        # The same series is too short to say anything about a week.
+        self.assertIsNone(
+            teacher_bands.improvement_from_trends({"per_day": series}, 7))
 
 
 class OrangeRules(unittest.TestCase):

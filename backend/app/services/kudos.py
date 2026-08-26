@@ -53,11 +53,19 @@ async def send_kudos(
     *,
     moment: Optional[dict[str, Any]] = None,
     language: str = "he",
+    sparks: int = 0,
+    draft_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """Queue praise for Yuvi to deliver, and ring the learner's bell.
 
     `moment` is the thing being praised — a moments-feed row or a goal — kept so
     the record says what the teacher was looking at, not just what they typed.
+
+    `sparks` is an optional gift riding the good word (#467), granted only once
+    the words have passed every screen below: a sentence the moderator refuses
+    is never delivered, and must not pay either. `draft_id` is the composer's
+    idempotency key — a double-clicked send mints a second kudos row, so the
+    grant is keyed on the draft instead and pays exactly once.
     """
     from app.agents import safety
     from app.brain import org
@@ -88,6 +96,20 @@ async def send_kudos(
         raise KudosError("moderation")
 
     kudos_id = f"kudos_{uuid.uuid4().hex[:10]}"
+
+    # The gift is granted BEFORE the row is written, so a wallet failure means
+    # no praise claiming sparks that were never paid. `granted` is what actually
+    # landed — the card and the notification both speak from it, never from what
+    # was requested, so a capped or duplicate grant cannot be announced as a
+    # payment the child did not receive.
+    granted = 0
+    if sparks and draft_id:
+        from app.services import rewards
+
+        outcome = await rewards.grant_teacher_kudos(
+            learner_id, draft_id=draft_id, amount=sparks, teacher_id=teacher_id)
+        granted = int(outcome.get("granted") or 0)
+
     document = {
         "_id": kudos_id,
         "teacher_id": teacher_id,
@@ -95,6 +117,7 @@ async def send_kudos(
         "message": text,
         "moment": moment or {},
         "language": language,
+        "sparks": granted,
         "created_at": _now(),
         "delivered_at": None,
     }
@@ -109,8 +132,9 @@ async def send_kudos(
         learner_id,
         notifications.KIND_KUDOS,
         notification_id=f"kudos:{kudos_id}",
-        title_key="notif.kudos.received",
-        params={"message": text},
+        title_key=("notif.kudos.receivedWithSparks" if granted
+                   else "notif.kudos.received"),
+        params={"message": text, "sparks": granted},
         actions=[{
             # Opens the chat and shows the card — the notification is the way
             # back to praise that arrived while the child was offline.
@@ -126,6 +150,70 @@ async def send_kudos(
     realtime.publish(f"learner:{learner_id}", {"type": "kudos", "kudos_id": kudos_id})
 
     return document
+
+
+async def send_kudos_to_subgroup(
+    teacher_id: str,
+    subgroup_id: str,
+    message: str,
+    *,
+    language: str = "he",
+    sparks: int = 0,
+    draft_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """One good word — and optionally one gift each — to every member of a group.
+
+    Fanned out through `send_kudos` per child rather than written in a batch, so
+    membership, the PII screen and the moderation screen are all re-checked per
+    recipient. That is a few redundant screens of the same sentence and it keeps
+    the one chokepoint honest — the same trade `direct_messages.send_to_subgroup`
+    makes, and for the same reason.
+
+    A child who left the class since the group was drawn is skipped and
+    reported, never silently dropped. The GRANT is keyed per child
+    (`{draft_id}:{learner_id}`), so one member failing cannot double-pay another
+    on a retry, and a resend of the same draft pays nobody twice.
+    """
+    from app.services import subgroups as subgroup_service
+
+    # `members_of` is the authorization: a teacher who may not see the group
+    # cannot get its member list.
+    try:
+        members = await subgroup_service.members_of(teacher_id, subgroup_id)
+    except Exception:
+        raise KudosError("not_authorized")
+    if not members:
+        raise KudosError("no_members")
+
+    sent: list[str] = []
+    skipped: list[str] = []
+    granted_total = 0
+    for learner_id in members:
+        try:
+            record = await send_kudos(
+                teacher_id, learner_id, message,
+                language=language, sparks=sparks,
+                draft_id=f"{draft_id}:{learner_id}" if draft_id else None,
+            )
+        except KudosError as error:
+            # A refusal of the TEXT would refuse it for everyone, on the first
+            # member, before anyone has it — which is the outcome we want. A
+            # per-child failure (they left the class) is one copy, not the batch.
+            if error.code == "moderation" and not sent:
+                raise
+            skipped.append(learner_id)
+            print(f"⚠️ subgroup kudos skipped {learner_id}: {error.code}")
+            continue
+        sent.append(learner_id)
+        granted_total += int(record.get("sparks") or 0)
+
+    return {
+        "subgroup_id": subgroup_id,
+        "sent": sent,
+        "skipped": skipped,
+        "sparks_each": sparks if granted_total else 0,
+        "sparks_total": granted_total,
+    }
 
 
 async def pending_for(learner_id: str) -> Optional[dict[str, Any]]:

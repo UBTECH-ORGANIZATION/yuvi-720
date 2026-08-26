@@ -44,6 +44,16 @@ HELP_REWARD = 5
 DAILY_SPARK_CAP = 150
 DAILY_GOAL_CAP = 4
 
+# What a teacher may attach to a good word (#467). Fixed rather than free-entry
+# so the amounts keep a shared meaning across teachers and a child learns what
+# each one means. The server owns this set exactly as `clamp_goal_value` owns
+# the goal band — a client never names its own figure.
+#
+# The ceiling is 40 deliberately: it equals the final stage of a top-priced goal
+# and a tier-1 cosmetic, so the largest gift a teacher can give is generous
+# without out-paying anything the system awards for real work.
+TEACHER_SPARK_AMOUNTS = (10, 20, 40)
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -205,6 +215,9 @@ async def list_ledger(learner_id: Optional[str], limit: int = 20) -> list[dict[s
             "amount": int(r.get("amount") or 0),
             "reason": r.get("reason"),
             "at": r.get("at"),
+            # Present only when a person chose to give these (#467). The child's
+            # history should not read as if the system awarded a teacher's gift.
+            **({"granted_by": r["granted_by"]} if r.get("granted_by") else {}),
         }
         for r in rows
     ]
@@ -217,8 +230,23 @@ async def _grant(
     reason: str,
     ref: dict[str, Any],
     goal_id: Optional[str] = None,
+    count_daily: bool = True,
+    granted_by: Optional[str] = None,
 ) -> dict[str, Any]:
-    """Add sparks once per ``key``. Returns the grant outcome + fresh wallet."""
+    """Add sparks once per ``key``. Returns the grant outcome + fresh wallet.
+
+    ``count_daily=False`` is for sparks a PERSON chose to give (#467), not ones
+    the learner earned. The daily caps above exist to stop a child farming their
+    own rewards; a teacher's gift is not farming, and silently paying 0 of a
+    gift the teacher believes they sent is the worst outcome available — the
+    teacher is told they gave 40, the child receives nothing, and nobody finds
+    out. So a gift neither consumes the child's daily allowance nor is blocked
+    by it.
+
+    ``granted_by`` records WHO caused the grant. Without it a teacher's gift and
+    a learner's own milestone write identical ledger rows, and the child cannot
+    be told the sparks came from a person.
+    """
     lid = normalize_learner_id(learner_id)
     amount = max(0, int(amount))
     wallet = await _load_wallet(lid)
@@ -227,19 +255,24 @@ async def _grant(
         daily = {"date": _today(), "earned": 0, "goal_ids": []}
 
     goal_ids: list[str] = list(daily.get("goal_ids") or [])
-    capped = False
-    if int(daily.get("earned") or 0) >= DAILY_SPARK_CAP:
-        capped = True
-    elif goal_id and goal_id not in goal_ids and len(goal_ids) >= DAILY_GOAL_CAP:
-        capped = True
-    if capped:
-        return {"granted": 0, "capped": True, "wallet": _public(wallet)}
+    if count_daily:
+        capped = False
+        if int(daily.get("earned") or 0) >= DAILY_SPARK_CAP:
+            capped = True
+        elif goal_id and goal_id not in goal_ids and len(goal_ids) >= DAILY_GOAL_CAP:
+            capped = True
+        if capped:
+            return {"granted": 0, "capped": True, "wallet": _public(wallet)}
 
-    payable = min(amount, DAILY_SPARK_CAP - int(daily.get("earned") or 0))
-    if payable <= 0:
-        return {"granted": 0, "capped": True, "wallet": _public(wallet)}
+        payable = min(amount, DAILY_SPARK_CAP - int(daily.get("earned") or 0))
+        if payable <= 0:
+            return {"granted": 0, "capped": True, "wallet": _public(wallet)}
+    else:
+        payable = amount
+        if payable <= 0:
+            return {"granted": 0, "wallet": _public(wallet)}
 
-    claimed = await _ledger_claim({
+    entry = {
         "_id": key,
         "learner_id": lid,
         "kind": "earn",
@@ -248,7 +281,10 @@ async def _grant(
         "ref": ref,
         "balance_after": int(wallet.get("balance") or 0) + payable,
         "at": _now(),
-    })
+    }
+    if granted_by:
+        entry["granted_by"] = granted_by
+    claimed = await _ledger_claim(entry)
     if not claimed:
         # Already granted for this exact milestone — a replay, not a new reward.
         return {"granted": 0, "duplicate": True, "wallet": _public(wallet)}
@@ -259,7 +295,9 @@ async def _grant(
     wallet["lifetime_earned"] = int(wallet.get("lifetime_earned") or 0) + payable
     wallet["daily"] = {
         "date": _today(),
-        "earned": int(daily.get("earned") or 0) + payable,
+        # A gift is left out of the day's tally entirely: it was not earned, so
+        # it must not eat into what the child can still earn today.
+        "earned": int(daily.get("earned") or 0) + (payable if count_daily else 0),
         "goal_ids": goal_ids,
     }
     wallet["learner_id"] = lid
@@ -289,6 +327,44 @@ async def grant_goal_stage(
         f"goal.{stage}",
         {"goal_id": goal_id, "stage": stage},
         goal_id=goal_id,
+    )
+
+
+def is_teacher_spark_amount(raw: Any) -> bool:
+    """Whether ``raw`` is one of the amounts a teacher may attach to a good word."""
+    try:
+        return int(raw) in TEACHER_SPARK_AMOUNTS
+    except (TypeError, ValueError):
+        return False
+
+
+async def grant_teacher_kudos(
+    learner_id: str, *, draft_id: str, amount: int, teacher_id: str,
+) -> dict[str, Any]:
+    """Sparks a TEACHER chose to give, riding a good word (#467).
+
+    Keyed on the composer's ``draft_id`` rather than the kudos id: a retried
+    send mints a new kudos row, so a kudos-keyed grant would pay twice on a
+    double-click. The draft id is stable across those retries — the same
+    reasoning as `mentoring`'s composer key.
+
+    Outside the daily caps (see `_grant`), and stamped with the teacher so the
+    child can be told a person did this.
+    """
+    if not is_teacher_spark_amount(amount):
+        # Not clamped into range like a goal value: a teacher picks from three
+        # buttons, so anything else is a malformed request, not a near miss.
+        return {"granted": 0, "invalid_amount": True,
+                "wallet": await get_wallet(learner_id)}
+    lid = normalize_learner_id(learner_id)
+    return await _grant(
+        lid,
+        f"earn:{lid}:kudos:{draft_id}",
+        int(amount),
+        "kudos.teacher",
+        {"draft_id": draft_id, "teacher_id": teacher_id},
+        count_daily=False,
+        granted_by=teacher_id,
     )
 
 

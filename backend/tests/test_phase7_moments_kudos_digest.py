@@ -299,6 +299,59 @@ class KudosTests(unittest.IsolatedAsyncioTestCase):
     async def test_nothing_pending_shows_nothing(self):
         self.assertIsNone(await kudos.pending_for("kid-a"))
 
+    # ── sparks riding the good word (#467) ────────────────────────────────────
+
+    async def test_a_good_word_can_carry_a_gift(self):
+        with patch("app.services.rewards.grant_teacher_kudos",
+                   AsyncMock(return_value={"granted": 20})) as grant:
+            record, notify, _ = await self._send_with_sparks(sparks=20, draft_id="d1")
+        grant.assert_awaited_once()
+        self.assertEqual(record["sparks"], 20)
+        # the bell says so, and says how much
+        self.assertEqual(notify.call_args.kwargs["title_key"],
+                         "notif.kudos.receivedWithSparks")
+        self.assertEqual(notify.call_args.kwargs["params"]["sparks"], 20)
+
+    async def test_a_good_word_without_a_gift_grants_nothing(self):
+        with patch("app.services.rewards.grant_teacher_kudos", AsyncMock()) as grant:
+            record, notify, _ = await self._send()
+        grant.assert_not_awaited()
+        self.assertEqual(record["sparks"], 0)
+        self.assertEqual(notify.call_args.kwargs["title_key"], "notif.kudos.received")
+
+    async def test_refused_praise_never_pays(self):
+        """The words and the gift travel together — one refusal stops both.
+
+        Sparks arriving for a sentence the moderator would not deliver is the
+        one outcome that would let a blocked message still reach the child.
+        """
+        with patch("app.services.content_review.screen",
+                   AsyncMock(return_value=type("V", (), {"flagged": True})())), \
+             patch("app.services.rewards.grant_teacher_kudos", AsyncMock()) as grant, \
+             patch("app.brain.org.teacher_can_access_learner", AsyncMock(return_value=True)), \
+             patch("app.agents.safety.screen_output", lambda text, lang: type("S", (), {"text": text})):
+            with self.assertRaises(kudos.KudosError) as caught:
+                await kudos.send_kudos("teacher-a", "kid-a", "משהו", sparks=40, draft_id="d2")
+        self.assertEqual(caught.exception.code, "moderation")
+        grant.assert_not_awaited()
+
+    async def test_the_card_announces_what_landed_not_what_was_asked(self):
+        """A capped or duplicate grant must not be announced as a payment."""
+        with patch("app.services.rewards.grant_teacher_kudos",
+                   AsyncMock(return_value={"granted": 0, "duplicate": True})):
+            record, notify, _ = await self._send_with_sparks(sparks=40, draft_id="d3")
+        self.assertEqual(record["sparks"], 0)
+        self.assertEqual(notify.call_args.kwargs["title_key"], "notif.kudos.received")
+
+    async def _send_with_sparks(self, *, sparks, draft_id, message="כל הכבוד"):
+        with patch("app.brain.org.teacher_can_access_learner", AsyncMock(return_value=True)), \
+             patch("app.services.notifications.notify", AsyncMock()) as notify, \
+             patch("app.services.realtime.publish") as publish, \
+             patch("app.agents.safety.screen_output", lambda text, lang: type("S", (), {"text": text})):
+            record = await kudos.send_kudos(
+                "teacher-a", "kid-a", message, sparks=sparks, draft_id=draft_id)
+        return record, notify, publish
+
     async def test_two_kudos_arrive_in_the_order_they_were_sent(self):
         await self._send(message="ראשון")
         await self._send(message="שני")

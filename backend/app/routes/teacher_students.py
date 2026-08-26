@@ -80,6 +80,7 @@ async def teacher_roster(session=Depends(require_teacher_session)):
 async def group_snapshot(
     group_id: str,
     language: str = Query("he"),
+    days: int = Query(7, ge=1, le=120),
     session=Depends(require_teacher_session),
 ):
     """Group state: aggregate trends + per-student attention flags (F6 group §1).
@@ -90,10 +91,15 @@ async def group_snapshot(
     could set one — the screens that read this endpoint (Home, the roster) are
     class-wide by design, and narrowing "who needs attention" by subject is a
     pedagogy question, not plumbing. Tracked as its own ADO item.
+
+    It DOES take `days` — the dashboard's period — because that re-judges every
+    band: over a month, a week of quiet is not the red signal it is over three
+    days.
     """
     if not await _guard_group(session, group_id):
         return _denied()
-    view = await insights.group_insights(group_id, normalize_language(language))
+    view = await insights.group_insights(
+        group_id, normalize_language(language), window_days=days)
     await _report(session, "learning-group")
     return _ok(view)
 
@@ -115,14 +121,29 @@ async def group_gaps(
     group_id: str,
     subject: Optional[str] = Query(None),
     language: str = Query("he"),
+    days: int = Query(0, ge=0, le=120),
     session=Depends(require_teacher_session),
 ):
-    """Group learning gaps + sub-group teaching moves (nice-to-have §3–4)."""
+    """Group learning gaps + sub-group teaching moves (nice-to-have §3–4).
+
+    `days` narrows to the objectives the class worked on in that trailing
+    window and returns the window before it as `previous`, so the dashboard can
+    say what the class is stuck on now AND what it was stuck on before. The
+    default of 0 means the whole history — the shape every other caller reads.
+    """
     if not await _guard_group(session, group_id):
         return _denied()
-    gaps = await group_analytics.learning_gaps(group_id, subject=subject)
+    if days:
+        windows = await group_analytics.learning_gaps_compared(
+            group_id, days=days, subject=subject)
+        gaps, previous = windows["gaps"], windows["previous"]
+    else:
+        gaps, previous = await group_analytics.learning_gaps(
+            group_id, subject=subject), []
     return _ok({
         "gaps": gaps,
+        "previous_gaps": previous,
+        "window_days": days or None,
         "recommendations": group_analytics.group_recommendations(
             gaps, normalize_language(language)
         ),
@@ -651,18 +672,24 @@ async def assign_group_goal(
 @router.get("/groups/{group_id}/moments")
 async def group_moments(
     group_id: str,
-    days: int = Query(14, ge=1, le=60),
+    days: int = Query(14, ge=1, le=90),
+    offset_days: int = Query(0, ge=0, le=90),
     limit: int = Query(25, ge=1, le=60),
     language: str = Query("he"),
     session=Depends(require_teacher_session),
 ):
-    """The story of the class — what changed, newest first (A11 #2)."""
+    """The story of the class — what changed, newest first (A11 #2).
+
+    `offset_days` slides the window back a whole period, which is how the class
+    book asks for the edition BEFORE this one.
+    """
     if not await _guard_group(session, group_id):
         return _denied()
     from app.services import moments
 
     rows = await moments.moments_for_group(
-        group_id, language=normalize_language(language), days=days, limit=limit)
+        group_id, language=normalize_language(language), days=days, limit=limit,
+        offset_days=offset_days)
     return _ok({"moments": rows})
 
 
@@ -688,8 +715,20 @@ async def student_moments(
 async def send_kudos(
     learner_id: str, data: dict, session=Depends(require_teacher_session)
 ):
-    """Teacher praise, delivered by Yuvi in the learner's own chat (A11 #4)."""
+    """Teacher praise, delivered by Yuvi in the learner's own chat (A11 #4).
+
+    Praise may carry a gift of sparks (#467). The amount is checked here rather
+    than only inside the wallet, because the wallet's answer to a bad figure is
+    to grant nothing — which would deliver the good word while quietly dropping
+    the sparks the teacher believes they sent.
+    """
     from app.services import kudos as kudos_service
+    from app.services import rewards
+
+    sparks = data.get("sparks") or 0
+    if sparks and not rewards.is_teacher_spark_amount(sparks):
+        return JSONResponse(content={"error": "invalid_sparks"},
+                            status_code=400, headers=_NO_STORE)
 
     try:
         record = await kudos_service.send_kudos(
@@ -697,11 +736,18 @@ async def send_kudos(
             str(data.get("message") or ""),
             moment=data.get("moment") if isinstance(data.get("moment"), dict) else None,
             language=normalize_language(data.get("language")),
+            sparks=int(sparks or 0),
+            draft_id=str(data.get("draft_id") or "") or None,
         )
     except kudos_service.KudosError as exc:
         status = 403 if exc.code == "not_authorized" else 400
         return JSONResponse(content={"error": exc.code}, status_code=status, headers=_NO_STORE)
-    return _ok({"kudos_id": record["_id"], "message": record["message"]})
+    return _ok({
+        "kudos_id": record["_id"],
+        "message": record["message"],
+        # What actually landed, not what was asked for.
+        "sparks": int(record.get("sparks") or 0),
+    })
 
 
 @router.get("/students/{learner_id}/kudos")

@@ -421,13 +421,21 @@ class RosterStatusTest(unittest.TestCase):
 
 
 class GroupAnalyticsTest(unittest.TestCase):
-    def _gaps(self, brains, learner_ids):
+    def _gaps(self, brains, learner_ids, **kwargs):
         with _CatalogPatch(), \
              patch("app.services.group_analytics.learners_in_group",
                    new=AsyncMock(return_value=learner_ids)), \
              patch("app.services.group_analytics.get_brain",
                    new=AsyncMock(side_effect=lambda lid: brains[lid])):
-            return run(group_analytics.learning_gaps("g1"))
+            return run(group_analytics.learning_gaps("g1", **kwargs))
+
+    def _gaps_compared(self, brains, learner_ids, *, days):
+        with _CatalogPatch(), \
+             patch("app.services.group_analytics.learners_in_group",
+                   new=AsyncMock(return_value=learner_ids)), \
+             patch("app.services.group_analytics.get_brain",
+                   new=AsyncMock(side_effect=lambda lid: brains[lid])):
+            return run(group_analytics.learning_gaps_compared("g1", days=days))
 
     def test_gap_reported_when_enough_of_the_group_struggles(self):
         struggling = {"subject": "math", "attempts": 5, "score_ewma": 0.2,
@@ -507,6 +515,100 @@ class GroupAnalyticsTest(unittest.TestCase):
         # No usable timing evidence → say so, never report a confident zero.
         self.assertIsNone(stats["avg_active_minutes"])
         self.assertFalse(stats["timing_available"])
+
+    # ── the dashboard's period (#455 follow-up) ──────────────────────────────
+
+    def _struggling(self, seen_days_ago):
+        """A learner stuck on obj.frac, whose last evidence landed N days ago."""
+        from datetime import datetime as real_datetime, timedelta, timezone as real_tz
+        when = (real_datetime.now(real_tz.utc)
+                - timedelta(days=seen_days_ago)).isoformat()
+        return {"subject": "math", "attempts": 5, "score_ewma": 0.2,
+                "achieved": False, "last_evidence_at": when,
+                "misconceptions": [{"tag": "denominator", "last_seen": when}]}
+
+    def test_a_window_reports_only_what_the_class_worked_on_inside_it(self):
+        # Four learners, all stuck — but they last touched it twenty days ago.
+        brains = {f"k{i}": _brain(mastery=_mastery(**{"obj.frac": self._struggling(20)}))
+                  for i in range(4)}
+        ids = list(brains)
+
+        # Unwindowed, this is the class's biggest gap, as it always was.
+        self.assertTrue(any(g["objective_id"] == "obj.frac"
+                            for g in self._gaps(brains, ids)))
+        # Over the last week it is not a finding at all: nobody has been near
+        # it. Reporting it would tell a teacher to reteach something the class
+        # has not touched since.
+        self.assertEqual(self._gaps(brains, ids, window_days=7), [])
+        # Over a month it is back — same evidence, a window that contains it.
+        self.assertTrue(any(g["objective_id"] == "obj.frac"
+                            for g in self._gaps(brains, ids, window_days=30)))
+
+    def test_the_previous_window_is_the_one_before_this_one(self):
+        # Two cohorts: one struggling this week, one struggling the week before.
+        brains = {}
+        for i in range(4):
+            brains[f"now{i}"] = _brain(
+                mastery=_mastery(**{"obj.frac": self._struggling(2)}))
+            brains[f"then{i}"] = _brain(
+                mastery=_mastery(**{"obj.ratio": self._struggling(9)}))
+        windows = self._gaps_compared(brains, list(brains), days=7)
+
+        current = {g["objective_id"] for g in windows["gaps"]}
+        previous = {g["objective_id"] for g in windows["previous"]}
+        self.assertIn("obj.frac", current)
+        self.assertNotIn("obj.ratio", current)
+        self.assertIn("obj.ratio", previous)
+        self.assertNotIn("obj.frac", previous)
+
+    def test_a_windowed_gap_carries_only_the_misconceptions_hit_inside_it(self):
+        old = self._struggling(20)
+        brains = {f"k{i}": _brain(mastery=_mastery(**{"obj.frac": dict(old)}))
+                  for i in range(4)}
+        gaps = self._gaps(brains, list(brains), window_days=30)
+        frac = next(g for g in gaps if g["objective_id"] == "obj.frac")
+        self.assertTrue(frac["evidence"]["sample_misconceptions"])
+        # The same objective read over a window that predates the misconception
+        # has no misconception evidence to show for it.
+        recent = self._struggling(1)
+        recent["misconceptions"] = [{"tag": "denominator",
+                                     "last_seen": self._struggling(40)["last_evidence_at"]}]
+        brains = {f"k{i}": _brain(mastery=_mastery(**{"obj.frac": dict(recent)}))
+                  for i in range(4)}
+        gaps = self._gaps(brains, list(brains), window_days=7)
+        frac = next(g for g in gaps if g["objective_id"] == "obj.frac")
+        self.assertEqual(frac["evidence"]["sample_misconceptions"], [])
+
+    def test_engagement_compares_against_the_equal_window_before_it(self):
+        from datetime import datetime as real_datetime, timezone as real_tz
+        # k1 worked in both weeks, k2 only in the earlier one. So engagement
+        # HALVED — and that is exactly what the comparison has to show.
+        events = {
+            "k1": [{"stored_at": "2026-08-20T10:00:00+00:00", "timing": {}},
+                   {"stored_at": "2026-08-12T10:00:00+00:00", "timing": {}}],
+            "k2": [{"stored_at": "2026-08-12T11:00:00+00:00", "timing": {}}],
+        }
+        with patch("app.services.group_analytics.learners_in_group",
+                   new=AsyncMock(return_value=["k1", "k2"])), \
+             patch("app.services.group_analytics.get_learner_events",
+                   new=AsyncMock(side_effect=lambda lid, limit=1000: events[lid])), \
+             patch("app.services.group_analytics.datetime") as clock:
+            clock.now.return_value = real_datetime(2026, 8, 22, 12, 0, tzinfo=real_tz.utc)
+            clock.fromisoformat = real_datetime.fromisoformat
+            stats = run(group_analytics.engagement("g1", days=7))
+
+        self.assertEqual(stats["active_students"], 1)
+        self.assertEqual(stats["active_pct"], 50)
+        self.assertEqual(stats["previous"]["active_students"], 2)
+        self.assertEqual(stats["previous"]["active_pct"], 100)
+
+    def test_the_comparison_can_be_declined(self):
+        with patch("app.services.group_analytics.learners_in_group",
+                   new=AsyncMock(return_value=[])), \
+             patch("app.services.group_analytics.get_learner_events",
+                   new=AsyncMock(return_value=[])):
+            self.assertNotIn(
+                "previous", run(group_analytics.engagement("g1", compare=False)))
 
 
 if __name__ == "__main__":
