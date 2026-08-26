@@ -50,6 +50,11 @@ class CatchesTheObvious(unittest.TestCase):
         self.assertEqual(category("you nigger"), cf.HATE)
         self.assertEqual(category("יא מפגר"), cf.HATE)
 
+    def test_hebrew_slur_spellings_are_hate(self):
+        for text in ["מתחנגל", "ימתחנגל"]:
+            with self.subTest(text=text):
+                self.assertEqual(category(text), cf.HATE)
+
 
 class Evasion(unittest.TestCase):
     def test_leet(self):

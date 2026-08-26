@@ -222,7 +222,7 @@ HATE_WORDS = {
     "faggot", "fag", "tranny", "dyke",
     "nazi", "hitler",
     "מפגר", "מפגרת", "מפגרים",   # a disability slur, not an insult like the rest
-    "קוקסינל",
+    "קוקסינל", "מתחנגל", "ימתחנגל",
     "היטלר", "נאצי",
 }
 
