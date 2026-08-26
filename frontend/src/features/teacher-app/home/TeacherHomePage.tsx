@@ -55,7 +55,7 @@ import {
   DEFAULT_PERIOD, delta, isPeriodId, periodDays, topicShift,
   type PeriodId, type TopicShift,
 } from '../shared/periodModel'
-import { StatBaseline, StatDelta } from './StatDelta'
+import { StatDelta } from './StatDelta'
 import { StudentBandDialog } from './StudentBandDialog'
 import { StudentsBandCard } from './StudentsBandCard'
 import './teacher-home.css'
@@ -243,11 +243,12 @@ export function TeacherHomePage() {
      turns that into a claim about the CLASS rather than about the period,
      which is both much stronger and untrue. */
   const inWhen = t(`tch.period.in.${period}`)
-  /* The stretch the baseline came from, in the bare form the "vs …" line
-     needs. The chip carries the figure; this names the days it covers, because
-     "↓2% from 14.4" against yesterday and against last month are different
-     pieces of news. */
-  const prevWhen = t(`tch.period.prevBare.${period}`)
+  /* What the chips are measured against, phrased once: "לעומת השבוע שעבר".
+     Both KPIs compare to the same stretch, so it is built here rather than
+     twice at the call sites where the two could drift apart. */
+  const comparedTo = t('tch.stat.comparedTo', {
+    when: t(`tch.period.prevBare.${period}`),
+  })
 
   /* Computed once each: the chip beside the value and the baseline under the
      hint are two views of one comparison, and deriving them separately is how
@@ -261,8 +262,6 @@ export function TeacherHomePage() {
     engagement?.timing_available ? engagement.avg_active_minutes : null,
     engagement?.previous?.timing_available ? engagement.previous.avg_active_minutes : null,
   )
-  const asPercent = (value: number) => `${value}%`
-  const asMinutes = (value: number) => t('tch.pulse.minutesValue', { n: value })
 
   return (
     <div className="tch-home">
@@ -286,7 +285,7 @@ export function TeacherHomePage() {
                   <StatDelta
                     delta={engagementDelta}
                     label={t('tch.pulse.engagement')}
-                    formatValue={asPercent}
+                    when={comparedTo}
                   />
                 </span>
                 <span className="tch-stat__label">{t('tch.pulse.engagement')}</span>
@@ -297,7 +296,6 @@ export function TeacherHomePage() {
                     days: engagement?.window_days ?? days,
                   })}
                 </span>
-                <StatBaseline delta={engagementDelta} when={prevWhen} />
               </span>
             </div>
           </Hint>
@@ -321,7 +319,7 @@ export function TeacherHomePage() {
                   <StatDelta
                     delta={minutesDelta}
                     label={t('tch.pulse.avgMinutes')}
-                    formatValue={asMinutes}
+                    when={comparedTo}
                   />
                 </span>
                 <span className="tch-stat__label">{t('tch.pulse.avgMinutes')}</span>
@@ -330,7 +328,6 @@ export function TeacherHomePage() {
                     ? t('tch.pulse.minutesPerLearner')
                     : t('tch.pulse.noTiming')}
                 </span>
-                <StatBaseline delta={minutesDelta} when={prevWhen} />
               </span>
             </div>
           </Hint>

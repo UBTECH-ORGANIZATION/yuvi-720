@@ -248,7 +248,14 @@
   font-variant-numeric: tabular-nums;
   padding: 1px 6px;
   border-radius: var(--sp-radius-pill);
-  white-space: nowrap;
+  /* The chip carries a phrase now ("לעומת 3 הימים הקודמים"), not two glyphs.
+     It must never truncate — a period clipped to "לעומת 3 הימ…" is worse than
+     no period at all, since the whole reason it is here is to say which days
+     the change is measured against. So it wraps: `.tch-stat__line` drops it to
+     its own row first, and on a narrow card the pill itself breaks over two
+     lines rather than losing the end of the sentence. */
+  flex-wrap: wrap;
+  max-inline-size: 100%;
   /* The arrow glyph is directional punctuation, not text: in an RTL paragraph
      the bidi algorithm would otherwise be free to reorder it away from its
      number. */
@@ -258,17 +265,15 @@
 .tch-delta--down { color: var(--sp-danger-600);  background: rgba(226, 74, 94, .12); }
 .tch-delta--flat { color: var(--sp-ink-400);     background: var(--tch-chip-bg); }
 
-/* What the figure was in the period before. Its own line under the hint, not
-   inside the chip: a baseline packed into a coloured pill competes with the
-   figure it exists to give context to, and "מ-14.4" beside a number reads as a
-   date in Hebrew. Quiet, unweighted, and always naming its stretch of time. */
-.tch-stat__was {
-  margin-block-start: 2px;
-  font-size: var(--sp-fs-xs);
-  color: var(--sp-ink-400);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* The stretch the change is measured against, inside the chip. A step quieter
+   and unweighted: the movement is the news and the period is the frame around
+   it. `currentColor` at reduced opacity rather than an ink token, because it
+   has to stay legible on all three of the chip's tinted backgrounds in both
+   themes. */
+.tch-delta__when {
+  font-weight: var(--sp-fw-regular);
+  opacity: .78;
+  padding-inline-start: 2px;
 }
 
 /* What became of the blocking topic. Its own line under the hint rather than a

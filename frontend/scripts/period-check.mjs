@@ -57,10 +57,9 @@ try {
         hints: stats.map((s) => text(s.querySelector('.tch-stat__hint'))),
         deltas: [...document.querySelectorAll('.tch-delta')].map((d) => ({
           text: text(d),
-          from: text(d.querySelector('.tch-delta__from')),
+          when: text(d.querySelector('.tch-delta__when')),
           dir: [...d.classList].find((c) => c.startsWith('tch-delta--')),
         })),
-        baselines: [...document.querySelectorAll('.tch-stat__was')].map(text),
         shift: text(document.querySelector('.tch-stat__shift')),
         bands: {
           red: document.querySelectorAll('.tch-band--red, [data-band="red"]').length,
@@ -107,29 +106,23 @@ try {
   check('direction is carried by a class, not colour alone', dirs.size > 0,
     [...dirs].join(' '))
 
-  /* A change with no baseline is not checkable: "↓2%" against yesterday and
-     against last month are different pieces of news. The chip carries the
-     figure it moved FROM, and the line under it names the stretch. */
-  const moved = Object.values(seen).flatMap((s) => s.deltas)
-    .filter((d) => d.dir !== 'tch-delta--flat')
-  check('a moved chip says what it moved from', moved.every((d) => d.from.length > 0),
-    moved.map((d) => d.from).join(' '))
+  /* A change with no period is not checkable: "↓2%" against yesterday and
+     against last month are different pieces of news, which is the entire
+     point of the control above. Every chip names its own stretch, inside the
+     chip, so the two can never be read as unrelated. */
+  const chips = Object.values(seen).flatMap((s) => s.deltas)
+  check('every chip names the stretch it is measured against',
+    chips.length > 0 && chips.every((d) => d.when.length > 0),
+    `${chips.filter((d) => d.when).length}/${chips.length}`)
 
-  const flat = Object.values(seen).flatMap((s) => s.deltas)
-    .filter((d) => d.dir === 'tch-delta--flat')
-  check('an unchanged chip does not print the same figure twice',
-    flat.every((d) => d.from === ''), `${flat.length} flat`)
+  const periods = new Set(Object.entries(seen)
+    .flatMap(([, s]) => s.deltas.map((d) => d.when)))
+  check('and that stretch follows the chosen period',
+    periods.size > 1, [...periods].join(' · '))
 
-  const baselines = new Set(Object.entries(seen)
-    .flatMap(([, s]) => s.baselines))
-  check('every baseline names its own stretch of time',
-    baselines.size > 1 && [...baselines].every((b) => b.length > 0),
-    [...baselines].join(' · '))
-
-  const pairs = Object.entries(seen).filter(([, s]) => s.deltas.length > 0)
-  check('a chip never appears without the line that dates it',
-    pairs.every(([, s]) => s.baselines.length >= s.deltas.length),
-    pairs.map(([k, s]) => `${k}:${s.deltas.length}/${s.baselines.length}`).join(' '))
+  check('the old figure is not printed a second time beside the value',
+    Object.values(seen).every((s) => s.deltas.every((d) => !/\bמ-\d/.test(d.text))),
+    'no "מ-24%" fragments')
 
   const bookWindows = new Set(Object.values(seen).map((s) => s.bookDates))
   check('the book covers a different window per period',
