@@ -22,6 +22,7 @@ from app.agents.coach_modes import (
     CoachMode,
     GENERAL_COMPANION_INSTRUCTIONS,
     lesson_management_redirect,
+    navigation_action_reply_instruction,
     project_bundle,
     resolve_mode,
 )
@@ -1224,6 +1225,14 @@ async def run_coach_stream(
     else:
         messages = _build_messages(instructions, _render_context(bundle, prompt_text), history, prompt_text)
         messages = await _plan_coach_tools(messages, tool_context, usage_context, debug_trace)
+        if coach_mode is CoachMode.GENERAL and tool_context.action_offers:
+            messages.append({
+                "role": "system",
+                "content": navigation_action_reply_instruction(
+                    lang,
+                    str(tool_context.action_offers[-1].get("action_id") or ""),
+                ),
+            })
 
     # Ground truth is in the prompt so the coach can guide accurately, and a
     # prompt rule alone does not survive "just give me the answer". Every
@@ -1254,7 +1263,10 @@ async def run_coach_stream(
         yield deterministic_opener
     pending_output = ""
     sentence_count = 0
-    max_sentences = 6 if support_mode == "explanation" else 3
+    max_sentences = (
+        1 if coach_mode is CoachMode.GENERAL and tool_context.action_offers
+        else 6 if support_mode == "explanation" else 3
+    )
     # The whitespace that followed the last sentence emitted. Rejoining with a
     # flat " " is what silently broke every table: a header row glued onto the
     # end of the preceding sentence is no longer at the start of a line, so the

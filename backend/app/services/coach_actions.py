@@ -28,8 +28,14 @@ _ACTIONS: dict[str, CoachAction] = {
     "open_dashboard": CoachAction(
         "open_dashboard", "/student-dashboard", "companion.action.dashboard", "navigation", _BOTH_MODES,
     ),
+    "open_teacher_chat": CoachAction(
+        "open_teacher_chat", "/student-dashboard/chat", "companion.action.teacher_chat", "navigation", _BOTH_MODES,
+    ),
     "open_learning": CoachAction(
         "open_learning", "/learning", "companion.action.learning", "navigation", _BOTH_MODES,
+    ),
+    "open_yuvi_studio": CoachAction(
+        "open_yuvi_studio", "/yuvi-studio", "companion.action.yuvi_studio", "navigation", _BOTH_MODES,
     ),
     "open_tasks": CoachAction(
         "open_tasks", "/tasks", "companion.action.tasks", "navigation", _BOTH_MODES,

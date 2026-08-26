@@ -30,7 +30,9 @@ import './companion.css'
 
 const COACH_ACTION_PATHS: Readonly<Record<string, string>> = {
   open_dashboard: '/student-dashboard',
+  open_teacher_chat: '/student-dashboard/chat',
   open_learning: '/learning',
+  open_yuvi_studio: '/yuvi-studio',
   open_tasks: '/tasks',
   open_calendar: '/student-dashboard/calendar',
   open_goals: '/mentoring',

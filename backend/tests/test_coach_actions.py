@@ -53,6 +53,26 @@ class CoachActionTests(unittest.TestCase):
         self.assertNotIn("endpoint", result["data"])
         self.assertNotIn("payload", result["data"])
 
+    def test_catalog_exposes_teacher_chat_and_yuvi_studio(self):
+        self.assertEqual(
+            coach_actions.offer("open_teacher_chat", CoachMode.GENERAL)["data"],
+            {
+                "action_id": "open_teacher_chat",
+                "path": "/student-dashboard/chat",
+                "label_key": "companion.action.teacher_chat",
+                "category": "navigation",
+            },
+        )
+        self.assertEqual(
+            coach_actions.offer("open_yuvi_studio", CoachMode.GENERAL)["data"],
+            {
+                "action_id": "open_yuvi_studio",
+                "path": "/yuvi-studio",
+                "label_key": "companion.action.yuvi_studio",
+                "category": "navigation",
+            },
+        )
+
     def test_action_tool_rejects_a_model_invented_action_id(self):
         result = asyncio.run(dispatch(
             "offer_student_action", {"action_id": "delete_everything"}, _context()

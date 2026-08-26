@@ -63,6 +63,63 @@ GENERAL_COMPANION_INSTRUCTIONS = {
 }
 
 
+# Applied only after the general companion successfully offers a validated
+# navigation action. The button owns the destination, so ordinary navigation
+# requests should be acknowledged directly rather than framed as a limitation.
+NAVIGATION_ACTION_REPLY_INSTRUCTIONS = {
+    "he": (
+        "זה עתה הוצעה לתלמיד/ה פעולת ניווט מאומתת. כתוב/י משפט אחד קצר בלבד, "
+        "חם ומתאים לגיל. התייחס/י לפעולה הספציפית שהתלמיד/ה ביקש/ה במילים טבעיות, "
+        "ואמור/י שהוספת כפתור שמוביל ליעד המבוקש. אפשר להוסיף אימוג'י אחד רק אם הוא מתאים טבעית. "
+        "אל תאמר/י שאינך יכול/ה לבצע את הבקשה, אלא אם ניתנה לך הנחיה מפורשת לכך. "
+        "אל תכתוב/י קישור, נתיב, הוראות לחיצה, שם כפתור או תיאור של מבנה האתר. "
+        "אל תטען/י מה קיים או מה אפשר לעשות ביעד."
+    ),
+    "ar": (
+        "تم الآن تقديم إجراء انتقال موثوق للطالب/ة. اكتب/ي جملة واحدة قصيرة فقط، "
+        "ودّية ومناسبة للعمر. أشر/ي بكلمات طبيعية إلى الإجراء المحدد الذي طلبه الطالب/ة، "
+        "وقُل/قولي إنك أضفت زرًا يقود إلى الوجهة المطلوبة. يمكن إضافة رمز تعبيري واحد فقط إذا كان مناسبًا طبيعيًا. "
+        "لا تقُل/تقولي إنك لا تستطيع/ين تنفيذ الطلب إلا إذا تلقيت تعليمات صريحة بذلك. "
+        "لا تكتب/ي رابطًا أو مسارًا أو تعليمات نقر أو اسم زر أو وصفًا لبنية الموقع. "
+        "لا تدّعِ ما الموجود أو الممكن في الوجهة."
+    ),
+    "en": (
+        "A validated navigation action was just offered to the learner. Write exactly one short, "
+        "warm, age-appropriate sentence. Refer naturally to the specific action the learner asked for and say "
+        "that you added a button leading to the requested destination. Use one emoji only if it fits naturally. "
+        "Do not say you cannot complete the request unless you were explicitly instructed to do so. Do not "
+        "write a link, path, click instruction, button name, or description of the site's layout. Do not "
+        "claim what exists or can be done at the destination."
+    ),
+}
+
+
+TEACHER_CHAT_ACTION_REPLY_INSTRUCTIONS = {
+    "he": (
+        "הבקשה היא ליצור קשר עם מורה או לתאם שיעור. כתוב/י משפט אחד קצר בלבד, חם ומתאים לגיל. "
+        "הבהר/י שאינך יכול/ה ליצור קשר או לקבוע במקומו/ה של התלמיד/ה, אבל שהוספת כפתור לשיחה עם המורה. "
+        "אפשר להוסיף אימוג'י אחד רק אם הוא מתאים טבעית. אל תכתוב/י קישור, נתיב, הוראות לחיצה או שם כפתור."
+    ),
+    "ar": (
+        "الطلب هو التواصل مع معلّم/ة أو ترتيب درس. اكتب/ي جملة واحدة قصيرة فقط، ودّية ومناسبة للعمر. "
+        "وضّح/ي أنك لا تستطيع/ين التواصل أو ترتيب ذلك بدلًا من الطالب/ة، لكنك أضفت زرًا للمحادثة مع المعلّم/ة. "
+        "يمكن إضافة رمز تعبيري واحد فقط إذا كان مناسبًا طبيعيًا. لا تكتب/ي رابطًا أو مسارًا أو تعليمات نقر أو اسم زر."
+    ),
+    "en": (
+        "The request is to contact a teacher or arrange a lesson. Write exactly one short, warm, age-appropriate sentence. "
+        "Make clear that you cannot contact or arrange it on the learner's behalf, but that you added a button for teacher chat. "
+        "Use one emoji only if it fits naturally. Do not write a link, path, click instruction, or button name."
+    ),
+}
+
+
+def navigation_action_reply_instruction(language: str, action_id: str) -> str:
+    """Return the reply boundary appropriate for the offered navigation action."""
+    if action_id == "open_teacher_chat":
+        return TEACHER_CHAT_ACTION_REPLY_INSTRUCTIONS.get(language, TEACHER_CHAT_ACTION_REPLY_INSTRUCTIONS["he"])
+    return NAVIGATION_ACTION_REPLY_INSTRUCTIONS.get(language, NAVIGATION_ACTION_REPLY_INSTRUCTIONS["he"])
+
+
 def resolve_mode(surface_context: dict[str, Any] | None) -> CoachMode:
     """Resolve the chat role from the current product surface.
 

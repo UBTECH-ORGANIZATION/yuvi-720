@@ -20,7 +20,11 @@ async def _offer_student_action(context: CoachToolContext, args: dict[str, Any])
 
 register(CoachTool(
     name="offer_student_action",
-    description="Offer one validated navigation action already available to the learner.",
+    description=(
+        "Offer one validated navigation action already available to the learner. "
+        "Use open_teacher_chat when the learner wants to contact a teacher or arrange a lesson, "
+        "and open_yuvi_studio when the learner wants Yuvi Studio or their virtual room."
+    ),
     parameters={
         "type": "object",
         "properties": {
