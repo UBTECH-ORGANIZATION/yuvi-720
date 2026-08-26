@@ -48,34 +48,69 @@ export function periodIdForDays(days: number): PeriodId {
   ), PERIODS[0]).id
 }
 
+/* How a change is measured — and it is not one choice for every KPI.
+ *
+ * `relative` is the ordinary "up 12%" of a plain quantity: minutes, counts.
+ *
+ * `points` is for a metric that is ITSELF a percentage. Engagement moving from
+ * 24% to 83% is a rise of 59 percentage points; reported relatively it is
+ * "+246%", which is arithmetically true and unreadable — engagement cannot
+ * more-than-triple when its ceiling is 100, so the number reads as a bug even
+ * though it is not. Percentage points are the honest unit for a percentage,
+ * and they are labelled as such on screen so the two can never be confused.
+ */
+export type DeltaUnit = 'relative' | 'points'
+
 export interface Delta {
-  /** Whole percent, signed. */
-  pct: number
+  /** Signed magnitude, in `unit`. */
+  value: number
+  unit: DeltaUnit
   direction: 'up' | 'down' | 'flat'
+  /** What it was — so the chip can say where the arrow came from. */
+  previous: number
 }
 
 /* The change from the previous window to this one.
  *
  * `null` means "no comparison to make", and it is deliberately NOT folded into
- * a zero or an arrow. Three different things arrive here as a missing previous
- * value — the window before this one had no data, the metric itself is
+ * a zero or an arrow. Several different things arrive here as a missing
+ * previous value — the window before this one had no data, the metric itself is
  * unavailable (no usable timing evidence), or the class is new — and every one
  * of them is a reason to say nothing rather than to draw a flat line that reads
  * as "unchanged".
  *
- * A previous value of exactly 0 is the sharpest case: any rise off zero is an
- * infinite percentage, so there is no honest number to print. The KPI shows the
- * new value with no arrow instead of "+∞%" or a fabricated "+100%".
+ * A previous value of exactly 0 only defeats `relative`, where any rise off
+ * zero is an infinite percentage and there is no honest number to print. In
+ * `points` it is an ordinary subtraction: a class that went from nobody active
+ * to 90% active rose 90 points, which is both true and the single most worth
+ * saying. That case is why the unit is per-metric and not a global choice.
  */
 export function delta(
   current: number | null | undefined,
   previous: number | null | undefined,
+  unit: DeltaUnit = 'relative',
 ): Delta | null {
   if (typeof current !== 'number' || !Number.isFinite(current)) return null
   if (typeof previous !== 'number' || !Number.isFinite(previous)) return null
-  if (previous === 0) return current === 0 ? { pct: 0, direction: 'flat' } : null
-  const pct = Math.round(((current - previous) / Math.abs(previous)) * 100)
-  return { pct, direction: pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat' }
+
+  if (unit === 'points') {
+    const value = Math.round(current - previous)
+    return {
+      value, unit, previous,
+      direction: value > 0 ? 'up' : value < 0 ? 'down' : 'flat',
+    }
+  }
+
+  if (previous === 0) {
+    return current === 0
+      ? { value: 0, unit, previous, direction: 'flat' }
+      : null
+  }
+  const value = Math.round(((current - previous) / Math.abs(previous)) * 100)
+  return {
+    value, unit, previous,
+    direction: value > 0 ? 'up' : value < 0 ? 'down' : 'flat',
+  }
 }
 
 /* What happened to the topic holding the class back.

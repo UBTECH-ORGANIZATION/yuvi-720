@@ -29,30 +29,50 @@ test('days map back to a period so the book can name the stretch it covers', () 
   assert.equal(periodIdForDays(1000), 'month')
 })
 
-test('a delta is a signed whole percent with its direction', () => {
-  assert.deepEqual(delta(60, 50), { pct: 20, direction: 'up' })
-  assert.deepEqual(delta(40, 50), { pct: -20, direction: 'down' })
-  assert.deepEqual(delta(50, 50), { pct: 0, direction: 'flat' })
+test('a relative delta is a signed whole percent of the previous value', () => {
+  assert.deepEqual(delta(60, 50), { value: 20, unit: 'relative', direction: 'up', previous: 50 })
+  assert.deepEqual(delta(40, 50), { value: -20, unit: 'relative', direction: 'down', previous: 50 })
+  assert.deepEqual(delta(50, 50), { value: 0, unit: 'relative', direction: 'flat', previous: 50 })
 })
 
-test('a missing baseline is silence, never a zero', () => {
-  /* Each of these is a real state on the dashboard, and every one of them
-     would read as "nothing changed" if it were rendered as a flat 0%. */
-  assert.equal(delta(60, null), null, 'the previous window had no data')
-  assert.equal(delta(null, 50), null, 'this window has no data')
-  assert.equal(delta(12, undefined), null, 'no comparison was requested')
-  assert.equal(delta(NaN, 50), null)
-  assert.equal(delta(60, NaN), null)
+test('a percentage is compared in POINTS, not relatively', () => {
+  /* The bug this pins: engagement rising from 24% to 83% was reported as
+     "+246%" — arithmetically true, and unreadable on a metric whose ceiling is
+     100. It cannot more-than-triple, so the number reads as broken. */
+  assert.deepEqual(delta(83, 24, 'points'),
+    { value: 59, unit: 'points', direction: 'up', previous: 24 })
+  assert.equal(delta(83, 24).value, 246, 'the relative reading is still what it was')
+
+  assert.deepEqual(delta(40, 55, 'points'),
+    { value: -15, unit: 'points', direction: 'down', previous: 55 })
+  assert.equal(delta(50, 50, 'points').direction, 'flat')
 })
 
-test('a rise off exactly zero has no honest percentage', () => {
-  // Any increase from 0 is an infinite rise. The KPI shows the new value with
-  // no arrow rather than "+∞%" or a fabricated "+100%".
-  assert.equal(delta(30, 0), null)
-  // Zero to zero, though, genuinely did not change.
-  assert.deepEqual(delta(0, 0), { pct: 0, direction: 'flat' })
-  // And a fall TO zero is a real, finite, and rather important -100%.
-  assert.deepEqual(delta(0, 40), { pct: -100, direction: 'down' })
+test('points survive a zero baseline, where a relative change cannot', () => {
+  /* A class that went from nobody active to 90% active rose ninety points —
+     true, finite, and the single most worth saying. Relatively it is an
+     infinite rise with no honest number, which is why the unit is chosen per
+     metric rather than globally. */
+  assert.deepEqual(delta(90, 0, 'points'),
+    { value: 90, unit: 'points', direction: 'up', previous: 0 })
+  assert.equal(delta(90, 0), null)
+})
+
+test('the delta carries what it moved from, so the chip can say so', () => {
+  // A change with no baseline beside it invites "from what?" — the chip needs
+  // both halves of the sentence.
+  assert.equal(delta(83, 24, 'points').previous, 24)
+  assert.equal(delta(14.1, 14.4).previous, 14.4)
+})
+
+test('a missing baseline is silence in either unit', () => {
+  for (const unit of ['relative', 'points']) {
+    assert.equal(delta(60, null, unit), null, `${unit}: the previous window had no data`)
+    assert.equal(delta(null, 50, unit), null, `${unit}: this window has no data`)
+    assert.equal(delta(12, undefined, unit), null, `${unit}: no comparison requested`)
+    assert.equal(delta(NaN, 50, unit), null)
+    assert.equal(delta(60, NaN, unit), null)
+  }
 })
 
 test('the blocking topic reports which of four things happened', () => {

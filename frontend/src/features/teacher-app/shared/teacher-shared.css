@@ -33,6 +33,15 @@
   --sp-surface: #2c2456;
   --sp-surface-2: #362d63;
   --sp-bg-subtle: #241d4b;
+  /* `--sp-bg` is declared ONCE in tokens.css, on the light `:root`, and never
+     redefined for dark — so every teacher surface that recesses against a card
+     (a hovered student row, the band legend, the album's rails) was painting
+     itself #f4f1fe: a near-white slab in the middle of a dark screen. Fixed
+     here rather than in tokens.css because that variable has twenty-seven
+     users across the student app, the landing page and the studio, several of
+     which already compensate for it in their own dark rules; correcting it
+     globally is a separate job with a separate blast radius. */
+  --sp-bg: #241d4b;
   --sp-border: rgba(188, 168, 255, .14);
   --sp-border-strong: rgba(200, 182, 255, .30);
 }
@@ -248,6 +257,19 @@
 .tch-delta--up   { color: var(--sp-success-600); background: rgba(46, 174, 111, .12); }
 .tch-delta--down { color: var(--sp-danger-600);  background: rgba(226, 74, 94, .12); }
 .tch-delta--flat { color: var(--sp-ink-400);     background: var(--tch-chip-bg); }
+
+/* What the figure was in the period before. Its own line under the hint, not
+   inside the chip: a baseline packed into a coloured pill competes with the
+   figure it exists to give context to, and "מ-14.4" beside a number reads as a
+   date in Hebrew. Quiet, unweighted, and always naming its stretch of time. */
+.tch-stat__was {
+  margin-block-start: 2px;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* What became of the blocking topic. Its own line under the hint rather than a
    chip beside the value: the value is already a phrase that may wrap to two

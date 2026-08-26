@@ -3513,8 +3513,8 @@
   "tch.period.prev.3day": "בשלושת הימים הקודמים",
   "tch.period.prev.week": "בשבוע שעבר",
   "tch.period.prev.month": "בחודש שעבר",
-  "tch.delta.up": "{label}: עלייה של {pct} אחוזים לעומת התקופה הקודמת",
-  "tch.delta.down": "{label}: ירידה של {pct} אחוזים לעומת התקופה הקודמת",
+  "tch.delta.up": "{label}: עלייה של {amount} לעומת התקופה הקודמת",
+  "tch.delta.down": "{label}: ירידה של {amount} לעומת התקופה הקודמת",
   "tch.delta.flat": "{label}: ללא שינוי לעומת התקופה הקודמת",
   "tch.delta.same": "ללא שינוי",
   "tch.kpi.blockingTopic.same": "גם בתקופה הקודמת",
@@ -3525,5 +3525,14 @@
   "tch.period.in.week": "בשבוע האחרון",
   "tch.period.in.month": "בחודש האחרון",
   "tch.gaps.noneInPeriod": "לא זוהו פערים קבוצתיים {when} — הכיתה לא עבדה על נושא חדש בטווח הזה",
-  "tch.kpi.blockingTopic.noneInPeriod": "אין נושא חוסם {when}"
+  "tch.kpi.blockingTopic.noneInPeriod": "אין נושא חוסם {when}",
+  "tch.delta.amount.points": "{n} נקודות אחוז",
+  "tch.delta.amount.relative": "{n} אחוזים",
+  "tch.pulse.minutesValue": "{n} דק׳",
+  "tch.delta.from": "מ-{previous}",
+  "tch.stat.comparedTo": "לעומת {when}",
+  "tch.period.prevBare.day": "אתמול",
+  "tch.period.prevBare.3day": "שלושת הימים הקודמים",
+  "tch.period.prevBare.week": "השבוע שעבר",
+  "tch.period.prevBare.month": "החודש שעבר"
 }

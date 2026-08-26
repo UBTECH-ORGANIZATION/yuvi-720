@@ -3513,8 +3513,8 @@
   "tch.period.prev.3day": "في الأيام الثلاثة السابقة",
   "tch.period.prev.week": "في الأسبوع الماضي",
   "tch.period.prev.month": "في الشهر الماضي",
-  "tch.delta.up": "{label}: ارتفاع بنسبة {pct} بالمئة مقارنة بالفترة السابقة",
-  "tch.delta.down": "{label}: انخفاض بنسبة {pct} بالمئة مقارنة بالفترة السابقة",
+  "tch.delta.up": "{label}: ارتفاع بمقدار {amount} مقارنة بالفترة السابقة",
+  "tch.delta.down": "{label}: انخفاض بمقدار {amount} مقارنة بالفترة السابقة",
   "tch.delta.flat": "{label}: دون تغيير مقارنة بالفترة السابقة",
   "tch.delta.same": "دون تغيير",
   "tch.kpi.blockingTopic.same": "وفي الفترة السابقة أيضًا",
@@ -3525,5 +3525,14 @@
   "tch.period.in.week": "في الأسبوع الأخير",
   "tch.period.in.month": "في الشهر الأخير",
   "tch.gaps.noneInPeriod": "لم تُكتشف فجوات جماعية {when} — لم يعمل الصف على موضوع جديد في هذه المدة",
-  "tch.kpi.blockingTopic.noneInPeriod": "لا يوجد موضوع معيق {when}"
+  "tch.kpi.blockingTopic.noneInPeriod": "لا يوجد موضوع معيق {when}",
+  "tch.delta.amount.points": "{n} نقطة مئوية",
+  "tch.delta.amount.relative": "{n} بالمئة",
+  "tch.pulse.minutesValue": "{n} دقيقة",
+  "tch.delta.from": "من {previous}",
+  "tch.stat.comparedTo": "مقارنة بـ{when}",
+  "tch.period.prevBare.day": "أمس",
+  "tch.period.prevBare.3day": "الأيام الثلاثة السابقة",
+  "tch.period.prevBare.week": "الأسبوع الماضي",
+  "tch.period.prevBare.month": "الشهر الماضي"
 }

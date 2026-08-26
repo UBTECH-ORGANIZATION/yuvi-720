@@ -57,8 +57,10 @@ try {
         hints: stats.map((s) => text(s.querySelector('.tch-stat__hint'))),
         deltas: [...document.querySelectorAll('.tch-delta')].map((d) => ({
           text: text(d),
+          from: text(d.querySelector('.tch-delta__from')),
           dir: [...d.classList].find((c) => c.startsWith('tch-delta--')),
         })),
+        baselines: [...document.querySelectorAll('.tch-stat__was')].map(text),
         shift: text(document.querySelector('.tch-stat__shift')),
         bands: {
           red: document.querySelectorAll('.tch-band--red, [data-band="red"]').length,
@@ -105,6 +107,30 @@ try {
   check('direction is carried by a class, not colour alone', dirs.size > 0,
     [...dirs].join(' '))
 
+  /* A change with no baseline is not checkable: "↓2%" against yesterday and
+     against last month are different pieces of news. The chip carries the
+     figure it moved FROM, and the line under it names the stretch. */
+  const moved = Object.values(seen).flatMap((s) => s.deltas)
+    .filter((d) => d.dir !== 'tch-delta--flat')
+  check('a moved chip says what it moved from', moved.every((d) => d.from.length > 0),
+    moved.map((d) => d.from).join(' '))
+
+  const flat = Object.values(seen).flatMap((s) => s.deltas)
+    .filter((d) => d.dir === 'tch-delta--flat')
+  check('an unchanged chip does not print the same figure twice',
+    flat.every((d) => d.from === ''), `${flat.length} flat`)
+
+  const baselines = new Set(Object.entries(seen)
+    .flatMap(([, s]) => s.baselines))
+  check('every baseline names its own stretch of time',
+    baselines.size > 1 && [...baselines].every((b) => b.length > 0),
+    [...baselines].join(' · '))
+
+  const pairs = Object.entries(seen).filter(([, s]) => s.deltas.length > 0)
+  check('a chip never appears without the line that dates it',
+    pairs.every(([, s]) => s.baselines.length >= s.deltas.length),
+    pairs.map(([k, s]) => `${k}:${s.deltas.length}/${s.baselines.length}`).join(' '))
+
   const bookWindows = new Set(Object.values(seen).map((s) => s.bookDates))
   check('the book covers a different window per period',
     bookWindows.size > 1, [...bookWindows].join(' · '))
@@ -140,6 +166,22 @@ try {
   })
   check('the chosen segment is painted in dark mode',
     contrast.bg !== 'rgba(0, 0, 0, 0)', JSON.stringify(contrast))
+
+  /* `--sp-bg` is declared only on the light `:root`, so every teacher surface
+     that recesses against a card used to paint a near-white slab in dark mode.
+     The hovered student row is the loudest of them. */
+  await dark.hover('.tch-bands__student').catch(() => {})
+  await dark.waitForTimeout(300)
+  const hover = await dark.evaluate(() => {
+    const row = document.querySelector('.tch-bands__student')
+    if (!row) return null
+    const [r, g, b] = getComputedStyle(row).backgroundColor
+      .match(/\d+/g).slice(0, 3).map(Number)
+    return { css: getComputedStyle(row).backgroundColor, luminance: (r + g + b) / 3 }
+  })
+  check('a hovered row in dark mode is not a light slab',
+    hover === null || hover.luminance < 120,
+    hover ? `${hover.css} (mean ${Math.round(hover.luminance)})` : 'no rows')
   await dark.close()
 
   // Leave the account as we found it.
