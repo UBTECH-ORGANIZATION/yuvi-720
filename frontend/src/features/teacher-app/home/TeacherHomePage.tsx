@@ -1,7 +1,16 @@
 /* Teacher home (F6 group level) — the #450 refactor.
  *
  * One question, answered top to bottom: which of my students is fine, which is
- * wobbling, which needs me today. In order:
+ * wobbling, which needs me today — over a stretch of time the teacher chooses.
+ *
+ * The period (day / 3 days / week / month) is not a label on the same numbers:
+ * it re-reads all four zones. The KPIs recompute over it AND against the equal
+ * window before it, the bands re-judge against it, the gaps narrow to what the
+ * class worked on inside it, and the book becomes the edition before it. Every
+ * window is trailing, so the two halves of a comparison are always the same
+ * length — see `periodModel`.
+ *
+ * In order:
  *   1. Greeting          — a person saying hello, not a data header
  *   2. Three KPIs        — each with a tooltip stating its own calculation
  *   3. Every student     — one deterministic band each (red/orange/green),
@@ -41,21 +50,37 @@ import { MomentsAlbum } from '../moments/MomentsAlbum'
 import { type Band } from './BandFace'
 import { type BandedStudent } from './bandModel'
 import { gapToDifficultyItem, mostBlockingGap } from './gapsModel'
+import { PeriodControl } from './PeriodControl'
+import {
+  DEFAULT_PERIOD, delta, isPeriodId, periodDays, topicShift,
+  type PeriodId, type TopicShift,
+} from '../shared/periodModel'
+import { StatDelta } from './StatDelta'
 import { StudentBandDialog } from './StudentBandDialog'
 import { StudentsBandCard } from './StudentsBandCard'
 import './teacher-home.css'
 
 export function TeacherHomePage() {
   const { t, language } = useI18n()
-  const { user } = useAuth()
+  const { user, updatePreferences } = useAuth()
   const {
     groupId, group, subgroup, subgroupLearnerIds,
     isLoading: scopeLoading, error: scopeError, refreshSubgroups,
   } = useTeacherScope()
 
+  /* The period is remembered on the user, not in this component's state alone:
+     a teacher who reads their class by the month should not have to say so
+     every morning, and it must follow them to the classroom machine. Seeded
+     from preferences so the first paint is already the right window. */
+  const stored = user?.preferences?.teacher_period
+  const [period, setPeriod] = useState<PeriodId>(
+    isPeriodId(stored) ? stored : DEFAULT_PERIOD)
+  const days = periodDays(period)
+
   const [snapshot, setSnapshot] = useState<GroupInsight | null>(null)
   const [engagement, setEngagement] = useState<Engagement | null>(null)
   const [gaps, setGaps] = useState<LearningGap[]>([])
+  const [previousGaps, setPreviousGaps] = useState<LearningGap[]>([])
   const [moments, setMoments] = useState<Moment[]>([])
   const [momentsLoading, setMomentsLoading] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
@@ -77,22 +102,25 @@ export function TeacherHomePage() {
     setIsLoading(true)
     setError(false)
     Promise.all([
-      getGroupSnapshot(groupId, language),
-      getGroupEngagement(groupId),
+      getGroupSnapshot(groupId, language, days),
+      getGroupEngagement(groupId, days),
       /* No subject: the scope bar says the subject filter does not apply here,
-         and a gaps panel that quietly narrowed anyway would make that a lie. */
-      getGroupGaps(groupId, language),
+         and a gaps panel that quietly narrowed anyway would make that a lie.
+         `days` is not a subject filter — it is the window all three of these
+         are read over, and every one of them honours it. */
+      getGroupGaps(groupId, language, undefined, days),
     ])
       .then(([snapshotResult, engagementResult, gapsResult]) => {
         if (!active) return
         setSnapshot(snapshotResult)
         setEngagement(engagementResult)
         setGaps(gapsResult.gaps)
+        setPreviousGaps(gapsResult.previous_gaps ?? [])
       })
       .catch(() => { if (active) setError(true) })
       .finally(() => { if (active) setIsLoading(false) })
     return () => { active = false }
-  }, [groupId, language])
+  }, [groupId, language, days])
 
   /* The album fans out across every learner, so it loads on its own rather
      than holding up the numbers. Its own loading flag, though: "not fetched
@@ -104,12 +132,35 @@ export function TeacherHomePage() {
     let active = true
     setMoments([])
     setMomentsLoading(true)
-    getGroupMoments(groupId, language)
+    /* The book is the edition BEFORE the current period, so the fetch is
+       offset by a whole period — and widened by a day at each edge, because
+       the server's window is a raw trailing one while the book's is aligned to
+       midnights in the teacher's own timezone. `momentsInEdition` trims the
+       overshoot, so the cover never claims a day the pages do not cover. */
+    getGroupMoments(groupId, language, days + 2, Math.max(0, days - 1))
       .then((response) => { if (active) setMoments(response.moments ?? []) })
       .catch(() => { if (active) setMoments([]) })
       .finally(() => { if (active) setMomentsLoading(false) })
     return () => { active = false }
-  }, [groupId, language])
+  }, [groupId, language, days])
+
+  /* `user` can arrive after the first render, so the seed above may have fallen
+     back to the default before the real preference was readable. Adopt it when
+     it lands — but only until the teacher has touched the control, or a slow
+     /auth/me would yank the screen back off the period they just picked. */
+  const touchedPeriod = useRef(false)
+  useEffect(() => {
+    if (touchedPeriod.current) return
+    if (isPeriodId(stored) && stored !== period) setPeriod(stored)
+  }, [stored, period])
+
+  const selectPeriod = (next: PeriodId) => {
+    touchedPeriod.current = true
+    setPeriod(next)
+    /* Fire-and-forget, like the scope bar's: a failed preference write must
+       never stop a teacher from reading their own class over a month. */
+    void updatePreferences({ teacher_period: next }).catch(() => {})
+  }
 
   /* The greeting: the hour decides the wording, the account decides the name.
      Deterministic — this replaced a model-written brief on purpose. */
@@ -158,6 +209,10 @@ export function TeacherHomePage() {
       <div className="tch-home" aria-busy="true">
         <header className="tch-home__head">
           <h1 dir="auto">{greeting}</h1>
+          {/* Live during the load, not a placeholder: switching period is what
+              a teacher is most likely to want while waiting, and disabling it
+              would make the screen feel stuck rather than busy. */}
+          <PeriodControl value={period} onChange={selectPeriod} />
         </header>
         <section className="tch-zone" aria-label={t('tch.pulse.title')}>
           <div className="tch-stats">
@@ -176,31 +231,49 @@ export function TeacherHomePage() {
   const gapItems = gaps.filter((gap) => gap.kind === 'gap')
     .map((gap) => gapToDifficultyItem(gap, t))
   const blockingGap = mostBlockingGap(gaps)
+  /* What the class was stuck on in the window before this one, ranked by the
+     SAME rule — "what to teach next" is only actionable if a teacher can see
+     whether last period's answer worked. */
+  const shift = topicShift(blockingGap, mostBlockingGap(previousGaps))
   const strengths = gaps.filter((gap) => gap.kind === 'strength')
+
+  /* Every "nothing here" on this screen has to name the window it is about.
+     Narrowed to three days, a class that simply has not opened anything yet
+     this week has no gaps — and the unqualified "no group-wide gaps detected"
+     turns that into a claim about the CLASS rather than about the period,
+     which is both much stronger and untrue. */
+  const inWhen = t(`tch.period.in.${period}`)
 
   return (
     <div className="tch-home">
-      {/* ── a person saying hello ──────────────────────────────────────────── */}
+      {/* ── a person saying hello, and the stretch they are reading over ──── */}
       <header className="tch-home__head">
         <h1 dir="auto">{greeting}</h1>
+        <PeriodControl value={period} onChange={selectPeriod} />
       </header>
 
       {/* ── three numbers, each explaining itself ──────────────────────────── */}
       <section className="tch-zone" data-tour="teacher.pulse" aria-label={t('tch.pulse.title')}>
         <div className="tch-stats">
-          <Hint text={t('tch.kpi.engagement.hint', { days: engagement?.window_days ?? 7 })}>
+          <Hint text={t('tch.kpi.engagement.hint', { days: engagement?.window_days ?? days })}>
             <div className="tch-stat">
               <span className="tch-stat__icon tch-stat__icon--primary" aria-hidden="true">
                 <Icon name="users" size={18} />
               </span>
               <span className="tch-stat__text">
-                <strong className="tch-stat__value">{engagement?.active_pct ?? 0}%</strong>
+                <span className="tch-stat__line">
+                  <strong className="tch-stat__value">{engagement?.active_pct ?? 0}%</strong>
+                  <StatDelta
+                    delta={delta(engagement?.active_pct, engagement?.previous?.active_pct)}
+                    label={t('tch.pulse.engagement')}
+                  />
+                </span>
                 <span className="tch-stat__label">{t('tch.pulse.engagement')}</span>
                 <span className="tch-stat__hint">
                   {t('tch.pulse.activeOf', {
                     active: engagement?.active_students ?? 0,
                     total: engagement?.students_total ?? 0,
-                    days: engagement?.window_days ?? 7,
+                    days: engagement?.window_days ?? days,
                   })}
                 </span>
               </span>
@@ -213,12 +286,25 @@ export function TeacherHomePage() {
                 <Icon name="clock" size={18} />
               </span>
               <span className="tch-stat__text">
-                {/* Honest about missing timing rather than a confident 0. */}
-                <strong className="tch-stat__value">
-                  {engagement?.timing_available && engagement.avg_active_minutes !== null
-                    ? engagement.avg_active_minutes
-                    : '—'}
-                </strong>
+                <span className="tch-stat__line">
+                  {/* Honest about missing timing rather than a confident 0. */}
+                  <strong className="tch-stat__value">
+                    {engagement?.timing_available && engagement.avg_active_minutes !== null
+                      ? engagement.avg_active_minutes
+                      : '—'}
+                  </strong>
+                  {/* No timing evidence in EITHER window means no comparison —
+                      `delta` is given the nulls rather than a substituted zero,
+                      and answers with nothing. */}
+                  <StatDelta
+                    delta={delta(
+                      engagement?.timing_available ? engagement.avg_active_minutes : null,
+                      engagement?.previous?.timing_available
+                        ? engagement.previous.avg_active_minutes : null,
+                    )}
+                    label={t('tch.pulse.avgMinutes')}
+                  />
+                </span>
                 <span className="tch-stat__label">{t('tch.pulse.avgMinutes')}</span>
                 <span className="tch-stat__hint">
                   {engagement?.timing_available
@@ -256,6 +342,7 @@ export function TeacherHomePage() {
                       total: blockingGap.group_size,
                     })}
                   </span>
+                  <TopicShiftLine shift={shift} />
                 </span>
               </button>
             ) : (
@@ -266,7 +353,10 @@ export function TeacherHomePage() {
                 <span className="tch-stat__text">
                   <strong className="tch-stat__value">—</strong>
                   <span className="tch-stat__label">{t('tch.kpi.blockingTopic')}</span>
-                  <span className="tch-stat__hint">{t('tch.kpi.blockingTopic.none')}</span>
+                  <span className="tch-stat__hint">
+                    {t('tch.kpi.blockingTopic.noneInPeriod', { when: inWhen })}
+                  </span>
+                  <TopicShiftLine shift={shift} />
                 </span>
               </div>
             )}
@@ -293,7 +383,7 @@ export function TeacherHomePage() {
         subtitle={t('tch.gaps.card.subtitle')}
         items={gapItems}
         names={rosterNames}
-        emptyLabel={t('tch.gaps.none')}
+        emptyLabel={t('tch.gaps.noneInPeriod', { when: inWhen })}
         onBuildTask={(seed) => setBuilderSeed(seed)}
         onCreateSubgroup={(item) => setSubgroupFor(item)}
       />
@@ -328,6 +418,7 @@ export function TeacherHomePage() {
       <MomentsAlbum
         moments={moments}
         isLoading={momentsLoading}
+        periodDays={days}
         nameOf={(id) => rosterNames.get(id) ?? null}
         groupName={group?.name ?? null}
         groupId={group?.id ?? null}
@@ -368,5 +459,26 @@ export function TeacherHomePage() {
         onSave={(draft) => void saveSubgroup(draft)}
       />
     </div>
+  )
+}
+
+/* What happened to the blocking topic since the previous period.
+ *
+ * Silent when there is nothing to compare against — a class with no evidence in
+ * the window before this one has not "stayed the same", and saying so would be
+ * inventing a baseline. The other three outcomes are genuinely different news:
+ * still stuck on the same thing, stuck on something new, or no longer stuck at
+ * all. Only the last is good, and it is the one a teacher would otherwise never
+ * be told about, because the topic simply disappears from the card.
+ */
+function TopicShiftLine({ shift }: { shift: TopicShift }) {
+  const { t } = useI18n()
+  if (shift.kind === 'unknown') return null
+  return (
+    <span className={`tch-stat__shift tch-stat__shift--${shift.kind}`}>
+      {shift.kind === 'same' ? t('tch.kpi.blockingTopic.same')
+        : shift.kind === 'cleared' ? t('tch.kpi.blockingTopic.cleared', { label: shift.from })
+          : t('tch.kpi.blockingTopic.was', { label: shift.from })}
+    </span>
   )
 }

@@ -174,9 +174,9 @@ export interface StudentDetail extends StudentInsight {
   focus?: PlannerFocus | null
 }
 
-export interface Engagement {
-  group_id: string
-  window_days: number
+/** The group-level shape of one window. Shared by the current window and the
+ *  one before it, so a delta compares like with like. */
+export interface EngagementWindow {
   students_total: number
   active_students: number
   active_pct: number
@@ -184,7 +184,16 @@ export interface Engagement {
   avg_active_minutes: number | null
   timing_available: boolean
   avg_days_active: number
+}
+
+export interface Engagement extends EngagementWindow {
+  group_id: string
+  window_days: number
   per_day_active: { date: string; active: number }[]
+  /** The same window length immediately before this one — the baseline the
+   *  dashboard's up/down arrows are measured against. Absent when the caller
+   *  did not ask for a comparison. */
+  previous?: EngagementWindow
 }
 
 export interface LearningGap {
@@ -303,9 +312,13 @@ export function getTeacherRoster() {
    never had a subject parameter, so the one this function used to send was
    accepted by the route and dropped. Attention, status and trends would each
    need their own per-subject meaning before this could honestly take one. */
-export function getGroupSnapshot(groupId: string, language: string) {
-  return apiGet<GroupInsight>(
-    `/api/teacher/groups/${groupId}/snapshot?${new URLSearchParams({ language })}`)
+/* `days` is the dashboard's period. It is not a filter on this endpoint — it
+   re-judges every band, because how long a child has been quiet only means
+   something relative to the stretch being read. */
+export function getGroupSnapshot(groupId: string, language: string, days?: number) {
+  const params = new URLSearchParams({ language })
+  if (days) params.set('days', String(days))
+  return apiGet<GroupInsight>(`/api/teacher/groups/${groupId}/snapshot?${params}`)
 }
 
 /* The subjects this class can be narrowed to — per class, from what it has
@@ -320,12 +333,22 @@ export function getGroupEngagement(groupId: string, days = 7) {
   return apiGet<Engagement>(`/api/teacher/groups/${groupId}/engagement?days=${days}`)
 }
 
-export function getGroupGaps(groupId: string, language: string, subject?: string) {
+/* With `days`, the gaps narrow to what the class actually worked on in that
+   trailing window, and `previous_gaps` carries the window before it — which is
+   what lets the dashboard say not just what the class is stuck on, but whether
+   that changed. */
+export function getGroupGaps(
+  groupId: string, language: string, subject?: string, days?: number,
+) {
   const params = new URLSearchParams({ language })
   if (subject) params.set('subject', subject)
-  return apiGet<{ gaps: LearningGap[]; recommendations: GroupRecommendation[] }>(
-    `/api/teacher/groups/${groupId}/gaps?${params}`
-  )
+  if (days) params.set('days', String(days))
+  return apiGet<{
+    gaps: LearningGap[]
+    previous_gaps?: LearningGap[]
+    window_days?: number | null
+    recommendations: GroupRecommendation[]
+  }>(`/api/teacher/groups/${groupId}/gaps?${params}`)
 }
 
 /* ── student ──────────────────────────────────────────────────────────────── */
@@ -769,9 +792,15 @@ export interface Moment {
   headline: boolean
 }
 
-export function getGroupMoments(groupId: string, language: string, days = 14) {
+/* `offsetDays` slides the window back without changing its length — how the
+   class book asks for the edition BEFORE the one the dashboard is reading. */
+export function getGroupMoments(
+  groupId: string, language: string, days = 14, offsetDays = 0,
+) {
+  const params = new URLSearchParams({ language, days: String(days) })
+  if (offsetDays) params.set('offset_days', String(offsetDays))
   return apiGet<{ moments: Moment[] }>(
-    `/api/teacher/groups/${encodeURIComponent(groupId)}/moments?language=${language}&days=${days}`
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/moments?${params}`
   )
 }
 

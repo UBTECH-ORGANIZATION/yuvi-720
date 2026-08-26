@@ -80,6 +80,7 @@ async def teacher_roster(session=Depends(require_teacher_session)):
 async def group_snapshot(
     group_id: str,
     language: str = Query("he"),
+    days: int = Query(7, ge=1, le=120),
     session=Depends(require_teacher_session),
 ):
     """Group state: aggregate trends + per-student attention flags (F6 group §1).
@@ -90,10 +91,15 @@ async def group_snapshot(
     could set one — the screens that read this endpoint (Home, the roster) are
     class-wide by design, and narrowing "who needs attention" by subject is a
     pedagogy question, not plumbing. Tracked as its own ADO item.
+
+    It DOES take `days` — the dashboard's period — because that re-judges every
+    band: over a month, a week of quiet is not the red signal it is over three
+    days.
     """
     if not await _guard_group(session, group_id):
         return _denied()
-    view = await insights.group_insights(group_id, normalize_language(language))
+    view = await insights.group_insights(
+        group_id, normalize_language(language), window_days=days)
     await _report(session, "learning-group")
     return _ok(view)
 
@@ -115,14 +121,29 @@ async def group_gaps(
     group_id: str,
     subject: Optional[str] = Query(None),
     language: str = Query("he"),
+    days: int = Query(0, ge=0, le=120),
     session=Depends(require_teacher_session),
 ):
-    """Group learning gaps + sub-group teaching moves (nice-to-have §3–4)."""
+    """Group learning gaps + sub-group teaching moves (nice-to-have §3–4).
+
+    `days` narrows to the objectives the class worked on in that trailing
+    window and returns the window before it as `previous`, so the dashboard can
+    say what the class is stuck on now AND what it was stuck on before. The
+    default of 0 means the whole history — the shape every other caller reads.
+    """
     if not await _guard_group(session, group_id):
         return _denied()
-    gaps = await group_analytics.learning_gaps(group_id, subject=subject)
+    if days:
+        windows = await group_analytics.learning_gaps_compared(
+            group_id, days=days, subject=subject)
+        gaps, previous = windows["gaps"], windows["previous"]
+    else:
+        gaps, previous = await group_analytics.learning_gaps(
+            group_id, subject=subject), []
     return _ok({
         "gaps": gaps,
+        "previous_gaps": previous,
+        "window_days": days or None,
         "recommendations": group_analytics.group_recommendations(
             gaps, normalize_language(language)
         ),
@@ -651,18 +672,24 @@ async def assign_group_goal(
 @router.get("/groups/{group_id}/moments")
 async def group_moments(
     group_id: str,
-    days: int = Query(14, ge=1, le=60),
+    days: int = Query(14, ge=1, le=90),
+    offset_days: int = Query(0, ge=0, le=90),
     limit: int = Query(25, ge=1, le=60),
     language: str = Query("he"),
     session=Depends(require_teacher_session),
 ):
-    """The story of the class — what changed, newest first (A11 #2)."""
+    """The story of the class — what changed, newest first (A11 #2).
+
+    `offset_days` slides the window back a whole period, which is how the class
+    book asks for the edition BEFORE this one.
+    """
     if not await _guard_group(session, group_id):
         return _denied()
     from app.services import moments
 
     rows = await moments.moments_for_group(
-        group_id, language=normalize_language(language), days=days, limit=limit)
+        group_id, language=normalize_language(language), days=days, limit=limit,
+        offset_days=offset_days)
     return _ok({"moments": rows})
 
 

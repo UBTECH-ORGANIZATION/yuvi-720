@@ -90,8 +90,20 @@ try {
   const bandCards = await page.locator('.tch-bands').count()
   check('the students card groups the class by band', bandCards > 0, `${bandCards} cards`)
 
+  /* The why-toggles on Home hang off the difficulties rows, and those are now
+     read over the dashboard's PERIOD rather than over all time. A fixture class
+     that has not opened anything for a week therefore has no rows — correctly,
+     because the alternative is telling a teacher to reteach a topic nobody has
+     touched. So the assertion is conditional on there being a claim to explain,
+     the same way the hard-topic panel below already is. What must never happen
+     is a row WITHOUT its evidence. */
+  const gapRows = await page.locator('.tch-difficulty').count()
   const whyButtons = await page.locator('.tch-evidence__toggle').count()
-  check('every surface offers a "why?" disclosure', whyButtons > 0, `${whyButtons} toggles`)
+  if (gapRows === 0 && whyButtons === 0) {
+    console.log('    (no in-period difficulties for this class — nothing to explain)')
+  } else {
+    check('every surface offers a "why?" disclosure', whyButtons > 0, `${whyButtons} toggles`)
+  }
 
   if (whyButtons > 0) {
     await page.locator('.tch-evidence__toggle').first().click()

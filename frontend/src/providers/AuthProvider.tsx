@@ -34,15 +34,20 @@ export interface UserPreferences {
       empty roster. */
   teacher_subgroup_id: string | null
   teacher_subject: string | null
+  /** The stretch of time the dashboard is read over. Not part of the scope
+      above: scope says WHO and applies portal-wide, this says over how long and
+      applies to one screen. Typed loosely because the period vocabulary belongs
+      to the dashboard (`home/periodModel`), which validates it on read. */
+  teacher_period: string
   /** How a teacher reads their roster. Table by default — a card wall stops
       being scannable at about fifteen students. */
   teacher_roster_view: 'table' | 'cards'
   /** Visible roster columns, by key. Empty means "the defaults": a teacher who
       never opened the chooser has no opinion to freeze against future columns. */
   teacher_roster_columns: string[]
-  /** Which week's class book was already unwrapped, per group id ({group_id:
-      that week's Sunday, "YYYY-MM-DD"}). Server-side so the once-per-edition
-      gift ceremony follows the TEACHER, not the browser. */
+  /** Which edition of the class book was already unwrapped, per group id
+      ({group_id: the edition's day, "YYYY-MM-DD"}). Server-side so the
+      once-per-edition gift ceremony follows the TEACHER, not the browser. */
   teacher_book_seen: Record<string, string>
 }
 

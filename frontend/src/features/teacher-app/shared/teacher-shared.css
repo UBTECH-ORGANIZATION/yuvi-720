@@ -217,6 +217,54 @@
 
 .tch-stat__hint { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
 
+/* The value and its change, on one baseline. `baseline` rather than `center`
+   so the small chip sits with the bottom of the big number instead of floating
+   at its middle, and `gap` in ch so the spacing tracks the type size. */
+.tch-stat__line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6ch;
+  min-inline-size: 0;
+  flex-wrap: wrap;
+}
+
+/* How this period compares to the one before it. Small, quiet, and never the
+   thing read first — the number is the headline and this is its footnote. */
+.tch-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  font-variant-numeric: tabular-nums;
+  padding: 1px 6px;
+  border-radius: var(--sp-radius-pill);
+  white-space: nowrap;
+  /* The arrow glyph is directional punctuation, not text: in an RTL paragraph
+     the bidi algorithm would otherwise be free to reorder it away from its
+     number. */
+  unicode-bidi: isolate;
+}
+.tch-delta--up   { color: var(--sp-success-600); background: rgba(46, 174, 111, .12); }
+.tch-delta--down { color: var(--sp-danger-600);  background: rgba(226, 74, 94, .12); }
+.tch-delta--flat { color: var(--sp-ink-400);     background: var(--tch-chip-bg); }
+
+/* What became of the blocking topic. Its own line under the hint rather than a
+   chip beside the value: the value is already a phrase that may wrap to two
+   lines, and hanging a second phrase off it would give the tile two headlines. */
+.tch-stat__shift {
+  margin-block-start: 2px;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-500);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* A topic the class is no longer stuck on is the one piece of good news this
+   tile can carry, and it is easy to miss because the topic simply vanishes. */
+.tch-stat__shift--cleared { color: var(--sp-success-600); }
+
 /* A KPI that demands action carries the accent the inbox does. */
 .tch-stat--alert { border-inline-start: 3px solid var(--sp-danger-600); }
 .tch-stat--live  { border-inline-start: 3px solid var(--sp-primary-500); }

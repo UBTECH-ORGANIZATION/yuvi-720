@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-  PLATE_VARIANTS, bookWeek, coverVariant, momentsInWeek, platePlan, project, topMoments,
+  PLATE_VARIANTS, bookEdition, coverVariant, momentsInEdition, platePlan, project, topMoments,
 } from '../src/features/teacher-app/moments/bookModel.ts'
 import type { Moment } from '../src/services/teacher.ts'
 
@@ -60,35 +60,83 @@ test('the plan is deterministic — the same book always wears the same pictures
   assert.deepEqual(platePlan(pages), platePlan(pages))
 })
 
-test('the book is about the week that FINISHED, not the one in progress', () => {
-  // read on a Tuesday, the edition is the week before the one running now
-  const midWeek = bookWeek(new Date(2026, 7, 25))
-  assert.equal(midWeek.key, '2026-08-16')
-  assert.equal(midWeek.label, '16/08-21/08')
-  // every day of the current week reads the same finished edition…
-  assert.equal(bookWeek(new Date(2026, 7, 23)).key, '2026-08-16')
-  assert.equal(bookWeek(new Date(2026, 7, 28)).key, '2026-08-16')
-  // …and Sunday closes the week just gone and hands it over as the new book
-  assert.equal(bookWeek(new Date(2026, 7, 30)).key, '2026-08-23')
+test('the book is about the period that FINISHED, not the one in progress', () => {
+  // Read on Tue 25/08. The weekly edition is the seven days before the seven
+  // running now: 12/08–18/08, not "last calendar week".
+  const week = bookEdition(7, new Date(2026, 7, 25))
+  assert.equal(week.label, '12/08-18/08')
+  assert.equal(week.days, 7)
+
+  // A day's book is yesterday, and one date rather than a range said twice.
+  assert.equal(bookEdition(1, new Date(2026, 7, 25)).label, '24/08')
+
+  // Three days: 20/08–22/08 sits immediately before the running 23/08–25/08.
+  assert.equal(bookEdition(3, new Date(2026, 7, 25)).label, '20/08-22/08')
+
+  // A month reaches back sixty days and stops thirty short of today.
+  assert.equal(bookEdition(30, new Date(2026, 7, 25)).label, '27/06-26/07')
 })
 
-test('the pages come from the week the cover names, and nowhere else', () => {
-  const week = bookWeek(new Date(2026, 7, 25)) // edition of 16/08-21/08
-  const pages = momentsInWeek([
-    moment('recovery', '2026-08-14T10:00:00Z'),  // the week before — too old
-    moment('recovery', '2026-08-16T06:00:00Z'),  // the Sunday it opens on
-    moment('comeback', '2026-08-20T12:00:00Z'),  // mid-week
-    moment('comeback', '2026-08-22T09:00:00Z'),  // Saturday still counts
-    moment('breakthrough', '2026-08-24T08:00:00Z'), // this week — not yet its book
+test('the edition rolls forward daily, and its key is the day it was made', () => {
+  // Trailing windows move every day — that is what the teacher chose over
+  // calendar anchoring — so consecutive days are different editions.
+  assert.equal(bookEdition(7, new Date(2026, 7, 25)).key, '2026-08-25')
+  assert.equal(bookEdition(7, new Date(2026, 7, 26)).key, '2026-08-26')
+  assert.notEqual(
+    bookEdition(7, new Date(2026, 7, 25)).label,
+    bookEdition(7, new Date(2026, 7, 26)).label,
+  )
+  // The key is the DAY, not the period: switching period must not hand a
+  // teacher a second present for a book they already opened this morning.
+  const day = new Date(2026, 7, 25)
+  assert.equal(bookEdition(1, day).key, bookEdition(30, day).key)
+})
+
+test('the pages come from the window the cover names, and nowhere else', () => {
+  const week = bookEdition(7, new Date(2026, 7, 25)) // edition of 12/08-18/08
+  const pages = momentsInEdition([
+    moment('recovery', '2026-08-11T10:00:00Z'),     // the period before — too old
+    moment('recovery', '2026-08-12T06:00:00Z'),     // the day it opens on
+    moment('comeback', '2026-08-15T12:00:00Z'),     // mid-window
+    moment('breakthrough', '2026-08-19T08:00:00Z'), // the current period — not yet its book
   ], week)
   assert.deepEqual(pages.map((row) => row.at), [
-    '2026-08-16T06:00:00Z', '2026-08-20T12:00:00Z', '2026-08-22T09:00:00Z',
+    '2026-08-12T06:00:00Z', '2026-08-15T12:00:00Z',
   ])
 })
 
+test('the window is half-open, so no moment lands in two consecutive books', () => {
+  /* Built from the edition's own edges rather than from fixed UTC strings:
+     the window is aligned to the teacher's LOCAL midnight, so a hardcoded
+     offset would pass in Israel and fail in CI. */
+  const week = bookEdition(7, new Date(2026, 7, 25))
+  const atEnd = moment('comeback', new Date(week.end).toISOString())
+  const justBefore = moment('comeback', new Date(week.end - 1000).toISOString())
+  const atStart = moment('recovery', new Date(week.start).toISOString())
+
+  assert.deepEqual(momentsInEdition([atEnd], week), [], 'the closing edge belongs to the next book')
+  assert.equal(momentsInEdition([justBefore], week).length, 1)
+  assert.equal(momentsInEdition([atStart], week).length, 1, 'the opening edge is inside')
+
+  // …and the moment on the boundary is the NEXT edition's first page, so it is
+  // published exactly once.
+  const next = bookEdition(7, new Date(2026, 7, 25 + 7))
+  assert.equal(next.start, week.end)
+})
+
+test('editions are day-aligned, so a cover date never half-covers a day', () => {
+  // Same day, two different clock times: the window must not shift with the
+  // hour a teacher happens to open the dashboard.
+  const morning = bookEdition(7, new Date(2026, 7, 25, 7, 30))
+  const evening = bookEdition(7, new Date(2026, 7, 25, 23, 45))
+  assert.equal(morning.start, evening.start)
+  assert.equal(morning.end, evening.end)
+  assert.equal(new Date(morning.start).getHours(), 0)
+})
+
 test('an undated moment is left out rather than assumed recent', () => {
-  const week = bookWeek(new Date(2026, 7, 25))
-  assert.deepEqual(momentsInWeek([moment('recovery', '')], week), [])
+  const week = bookEdition(7, new Date(2026, 7, 25))
+  assert.deepEqual(momentsInEdition([moment('recovery', '')], week), [])
 })
 
 test('the cover artwork is stable per class and always a real plate', () => {

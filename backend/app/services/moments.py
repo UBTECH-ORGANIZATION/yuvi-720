@@ -183,9 +183,17 @@ def _trim(moments: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
 
 async def moments_for_learner(
     learner_id: str, *, language: str = "he", days: int = DEFAULT_WINDOW_DAYS,
-    limit: int = 20,
+    limit: int = 20, offset_days: int = 0,
 ) -> list[dict[str, Any]]:
-    """Narrated changes for one learner, newest first."""
+    """Narrated changes for one learner, newest first.
+
+    `offset_days` slides the window back without changing its length, so a
+    caller can ask for "the period BEFORE this one" — which is what the class
+    book does. It cannot be folded into `days`: the detectors below use the
+    lower edge as their horizon (recovery has to see the failures that came
+    before a success), so the older edge has to keep moving with the window
+    while the newer edge is applied once, at the end.
+    """
     from app.brain import detectors
     from app.brain.repository import get_brain
     from app.services import kata_catalog
@@ -197,7 +205,10 @@ async def moments_for_learner(
         return []
 
     now = datetime.now(timezone.utc)
-    cutoff = now.timestamp() - days * 86400
+    cutoff = now.timestamp() - (days + max(0, offset_days)) * 86400
+    # Exclusive upper edge. `offset_days=0` leaves it at "now", so an unoffset
+    # call keeps its old behaviour exactly.
+    ceiling = now.timestamp() - max(0, offset_days) * 86400
 
     # Oldest first: recovery needs the events that came *before* each success.
     ordered = sorted(
@@ -451,12 +462,21 @@ async def moments_for_learner(
     except Exception as exc:  # a check-in read must never cost the feed
         print(f"⚠️ feelings-journey detector skipped: {type(exc).__name__}")
 
+    # The newer edge, applied once here rather than threaded through every
+    # detector above. Trimming AFTER this matters: `_trim` keeps the strongest
+    # moments, and it must choose them from inside the window, not from a set
+    # that was already spent on moments the caller never asked for.
+    if offset_days > 0:
+        moments = [
+            moment for moment in moments
+            if (at := _parse(moment.get("at"))) is not None and at.timestamp() < ceiling
+        ]
     return _trim(moments, limit)
 
 
 async def moments_for_group(
     group_id: str, *, language: str = "he", days: int = DEFAULT_WINDOW_DAYS,
-    limit: int = 25,
+    limit: int = 25, offset_days: int = 0,
 ) -> list[dict[str, Any]]:
     """The class's story: every learner's moments, merged newest first.
 
@@ -480,7 +500,8 @@ async def moments_for_group(
         async with semaphore:
             try:
                 rows = await moments_for_learner(
-                    learner_id, language=language, days=days, limit=limit)
+                    learner_id, language=language, days=days, limit=limit,
+                    offset_days=offset_days)
             except Exception as exc:      # one learner's bad data is not the feed's problem
                 print(f"⚠️ moments failed for {learner_id}: {type(exc).__name__}")
                 return []

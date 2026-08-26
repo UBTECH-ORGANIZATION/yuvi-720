@@ -51,6 +51,12 @@ DEFAULT_PREFERENCES: dict[str, Any] = {
     # scoping wherever they are honoured.
     "teacher_subgroup_id": None,
     "teacher_subject": None,
+    # The stretch of time the dashboard is read over — "day" | "3day" | "week" |
+    # "month". Not part of the scope bar: scope says WHO a teacher is looking
+    # at and applies portal-wide, while this says over how long and applies to
+    # one screen. Remembered per user so a teacher who reads their class by the
+    # month does not have to say so every morning.
+    "teacher_period": "week",
     # How a teacher reads their roster. Table is the default: a card wall is
     # scannable at twelve students and unusable at thirty, and comparing children
     # is a columns job. Stored per user rather than per browser so a teacher who

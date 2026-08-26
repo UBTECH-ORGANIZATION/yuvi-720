@@ -70,61 +70,48 @@ async def _gather(learner_ids: list[str], factory) -> list[Any]:
     return list(await asyncio.gather(*(_one(lid) for lid in learner_ids)))
 
 
-async def engagement(group_id: str, days: int = DEFAULT_WINDOW_DAYS) -> dict[str, Any]:
-    """Engagement: share of active learners + average active minutes (F6 §1).
+def _window_stats(
+    events: list[dict[str, Any]], start: datetime, end: datetime
+) -> dict[str, Any]:
+    """One learner's activity inside `[start, end)`.
 
-    "Active minutes" is measured from real inter-event timing, and events whose
-    timing evidence is untrustworthy are excluded rather than guessed. When no
-    usable timing exists the field is reported as `None` with
-    `timing_available: False` — an honest gap beats a confident zero.
+    Events arrive newest-first, so the first one inside the window is the
+    window's last activity.
     """
     from app.services.learning_timing import capped_elapsed
 
-    learner_ids = await learners_in_group(group_id)
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    seconds = 0.0
+    days_seen: set[str] = set()
+    count = 0
+    last_at: Optional[str] = None
+    for event in events:
+        parsed = _parse(event.get("stored_at"))
+        if parsed is None or parsed < start or parsed >= end:
+            continue
+        count += 1
+        if last_at is None:
+            last_at = event.get("stored_at")
+        elapsed = capped_elapsed(event.get("timing"))
+        if elapsed is not None:
+            seconds += elapsed
+        days_seen.add(parsed.date().isoformat())
+    return {
+        "events": count,
+        "minutes": seconds / 60.0,
+        "days_active": len(days_seen),
+        "last_at": last_at,
+    }
 
-    async def _for(learner_id: str) -> dict[str, Any]:
-        events = await get_learner_events(learner_id, limit=1000)
-        recent = [
-            event for event in events
-            if (parsed := _parse(event.get("stored_at"))) and parsed >= cutoff
-        ]
-        seconds = 0.0
-        for event in recent:
-            elapsed = capped_elapsed(event.get("timing"))
-            if elapsed is not None:
-                seconds += elapsed
-        days_active = len({
-            parsed.date().isoformat()
-            for event in recent if (parsed := _parse(event.get("stored_at")))
-        })
-        return {
-            "learner_id": learner_id,
-            "events": len(recent),
-            "minutes": seconds / 60.0,
-            "days_active": days_active,
-            "last_at": recent[0].get("stored_at") if recent else None,
-        }
 
-    rows = await _gather(learner_ids, _for)
+def _aggregate(rows: list[dict[str, Any]], students_total: int) -> dict[str, Any]:
+    """The group-level shape of one window. Counts and averages only — nothing
+    here orders learners against each other (C5)."""
     active = [row for row in rows if row["events"] > 0]
     with_minutes = [row for row in active if row["minutes"] > 0]
-
-    per_day: dict[str, int] = {}
-    for index in range(days):
-        day = (datetime.now(timezone.utc) - timedelta(days=index)).date().isoformat()
-        per_day[day] = 0
-    for row in rows:
-        parsed = _parse(row["last_at"])
-        if parsed and parsed.date().isoformat() in per_day:
-            per_day[parsed.date().isoformat()] += 1
-
     return {
-        "group_id": group_id,
-        "window_days": days,
-        "students_total": len(learner_ids),
+        "students_total": students_total,
         "active_students": len(active),
-        "active_pct": round(100 * len(active) / len(learner_ids)) if learner_ids else 0,
+        "active_pct": round(100 * len(active) / students_total) if students_total else 0,
         "avg_active_minutes": (
             round(sum(row["minutes"] for row in with_minutes) / len(with_minutes), 1)
             if with_minutes else None
@@ -134,27 +121,117 @@ async def engagement(group_id: str, days: int = DEFAULT_WINDOW_DAYS) -> dict[str
             round(sum(row["days_active"] for row in active) / len(active), 1)
             if active else 0
         ),
-        "per_day_active": [{"date": day, "active": count} for day, count in sorted(per_day.items())],
     }
 
 
-async def learning_gaps(
-    group_id: str, *, subject: Optional[str] = None, threshold: float = GAP_THRESHOLD
-) -> list[dict[str, Any]]:
-    """Objectives where a meaningful share of the group struggles — or excels.
+async def engagement(
+    group_id: str, days: int = DEFAULT_WINDOW_DAYS, *, compare: bool = True
+) -> dict[str, Any]:
+    """Engagement: share of active learners + average active minutes (F6 §1).
 
-    Nice-to-have §3. Counts only: `struggling`/`mastered` are numbers, never an
-    ordered list of children.
+    "Active minutes" is measured from real inter-event timing, and events whose
+    timing evidence is untrustworthy are excluded rather than guessed. When no
+    usable timing exists the field is reported as `None` with
+    `timing_available: False` — an honest gap beats a confident zero.
+
+    With `compare`, the SAME window length immediately before this one is
+    reported alongside as `previous`, so the dashboard can show a direction
+    without asking twice. Both windows are read from one fetch per learner:
+    the previous window is not a second round trip, it is a second filter over
+    events already in hand.
+
+    Windows are trailing, not calendar-anchored — `days` back from now, and the
+    `days` before that. Both are therefore always the same length, so the
+    comparison never measures a part-finished week against a whole one.
+    """
+    learner_ids = await learners_in_group(group_id)
+    now = datetime.now(timezone.utc)
+    current_start = now - timedelta(days=days)
+    previous_start = now - timedelta(days=2 * days)
+
+    # The read has to cover BOTH windows, so it scales with the span rather than
+    # sitting at a flat 1000 — at a month's comparison that is 60 days of
+    # evidence, and a busy learner would have had the older half truncated away,
+    # which reads as "they stopped" rather than "we stopped looking".
+    limit = max(1000, min(6000, days * 2 * 50))
+
+    async def _for(learner_id: str) -> dict[str, Any]:
+        events = await get_learner_events(learner_id, limit=limit)
+        return {
+            "learner_id": learner_id,
+            **_window_stats(events, current_start, now),
+            "previous": _window_stats(events, previous_start, current_start),
+        }
+
+    rows = await _gather(learner_ids, _for)
+
+    per_day: dict[str, int] = {}
+    for index in range(days):
+        day = (now - timedelta(days=index)).date().isoformat()
+        per_day[day] = 0
+    for row in rows:
+        parsed = _parse(row["last_at"])
+        if parsed and parsed.date().isoformat() in per_day:
+            per_day[parsed.date().isoformat()] += 1
+
+    payload = {
+        "group_id": group_id,
+        "window_days": days,
+        **_aggregate(rows, len(learner_ids)),
+        "per_day_active": [{"date": day, "active": count} for day, count in sorted(per_day.items())],
+    }
+    if compare:
+        payload["previous"] = _aggregate(
+            [row["previous"] for row in rows], len(learner_ids))
+    return payload
+
+
+Window = tuple[datetime, datetime]
+
+
+def trailing_windows(days: int, now: Optional[datetime] = None) -> tuple[Window, Window]:
+    """The current window and the one of equal length immediately before it.
+
+    Trailing rather than calendar-anchored, so both halves are always the same
+    length and a comparison is never a part-finished period measured against a
+    whole one.
+    """
+    now = now or datetime.now(timezone.utc)
+    current_start = now - timedelta(days=days)
+    return (current_start, now), (now - timedelta(days=2 * days), current_start)
+
+
+def _in_window(stamp: Any, window: Optional[Window]) -> bool:
+    if window is None:
+        return True
+    parsed = _parse(stamp if isinstance(stamp, str) else None)
+    return parsed is not None and window[0] <= parsed < window[1]
+
+
+def _gaps_from_brains(
+    learner_ids: list[str],
+    brains: list[Any],
+    *,
+    subject: Optional[str],
+    threshold: float,
+    window: Optional[Window],
+) -> list[dict[str, Any]]:
+    """The gap computation itself, over brains already in hand.
+
+    Split out from `learning_gaps` so the dashboard can read two windows from
+    one fan-out: a teacher comparing this week to last week must not cost twice
+    the roster.
+
+    `window` restricts the evidence to objectives a learner actually WORKED ON
+    in that span, by `last_evidence_at`. The mastery score itself stays the
+    cumulative one — the brain keeps a single timestamp per objective, not a
+    history — which is exact whenever a learner's last evidence falls inside the
+    window (nothing has moved it since) and an approximation only for a learner
+    who practised in both windows. Said plainly rather than hidden: this is the
+    limit of what the stored shape supports.
     """
     from app.brain.mastery import entry_for
     from app.services import kata_catalog
-
-    await kata_catalog.ensure_loaded()
-    learner_ids = await learners_in_group(group_id)
-    if not learner_ids:
-        return []
-
-    brains = await _gather(learner_ids, get_brain)
 
     gaps: list[dict[str, Any]] = []
     for subject_id in kata_catalog.subjects():
@@ -168,15 +245,23 @@ async def learning_gaps(
                 entry = entry_for((brain or {}).get("mastery"), objective_id)
                 if not entry or not entry.get("attempts"):
                     continue
+                if not _in_window(entry.get("last_evidence_at"), window):
+                    continue
                 with_evidence += 1
                 if entry.get("achieved"):
                     mastered.append(learner_id)
                 elif (entry.get("score_ewma") or 0) < 0.6 or entry.get("needs_review"):
                     struggling.append(learner_id)
                 for misconception in (entry.get("misconceptions") or []):
-                    if isinstance(misconception, dict) and not misconception.get("resolved"):
-                        tag = misconception.get("tag")
-                        misconceptions[tag] = misconceptions.get(tag, 0) + 1
+                    if not isinstance(misconception, dict) or misconception.get("resolved"):
+                        continue
+                    # A misconception carries its own `last_seen`, so a windowed
+                    # read shows the ones the class actually hit in that span
+                    # rather than every unresolved one ever recorded.
+                    if not _in_window(misconception.get("last_seen"), window):
+                        continue
+                    tag = misconception.get("tag")
+                    misconceptions[tag] = misconceptions.get(tag, 0) + 1
 
             if with_evidence < MIN_GROUP_EVIDENCE:
                 continue
@@ -219,6 +304,64 @@ async def learning_gaps(
 
     gaps.sort(key=lambda gap: -gap["struggle_share"])
     return gaps
+
+
+async def _roster_brains(group_id: str) -> tuple[list[str], list[Any]]:
+    from app.services import kata_catalog
+
+    await kata_catalog.ensure_loaded()
+    learner_ids = await learners_in_group(group_id)
+    if not learner_ids:
+        return [], []
+    return learner_ids, await _gather(learner_ids, get_brain)
+
+
+async def learning_gaps(
+    group_id: str,
+    *,
+    subject: Optional[str] = None,
+    threshold: float = GAP_THRESHOLD,
+    window_days: Optional[int] = None,
+) -> list[dict[str, Any]]:
+    """Objectives where a meaningful share of the group struggles — or excels.
+
+    Nice-to-have §3. Counts only: `struggling`/`mastered` are numbers, never an
+    ordered list of children.
+
+    Without `window_days` this reads the whole history, which is what every
+    caller outside the dashboard wants.
+    """
+    learner_ids, brains = await _roster_brains(group_id)
+    if not learner_ids:
+        return []
+    window = trailing_windows(window_days)[0] if window_days else None
+    return _gaps_from_brains(
+        learner_ids, brains, subject=subject, threshold=threshold, window=window)
+
+
+async def learning_gaps_compared(
+    group_id: str,
+    *,
+    days: int,
+    subject: Optional[str] = None,
+    threshold: float = GAP_THRESHOLD,
+) -> dict[str, list[dict[str, Any]]]:
+    """This window's gaps and the previous window's, from one fan-out.
+
+    The dashboard needs both to say what the class is stuck on now AND what it
+    was stuck on before. Two `learning_gaps` calls would read every brain in the
+    class twice for an answer that is one pass over the same data.
+    """
+    learner_ids, brains = await _roster_brains(group_id)
+    if not learner_ids:
+        return {"gaps": [], "previous": []}
+    current, previous = trailing_windows(days)
+    return {
+        "gaps": _gaps_from_brains(
+            learner_ids, brains, subject=subject, threshold=threshold, window=current),
+        "previous": _gaps_from_brains(
+            learner_ids, brains, subject=subject, threshold=threshold, window=previous),
+    }
 
 
 def group_recommendations(
