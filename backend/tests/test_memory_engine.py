@@ -154,6 +154,13 @@ class LearnerMemoryTests(unittest.TestCase):
         self.assertEqual(classify_query_intent("אל תזכור שאני אוהב כדורגל", "he"), "memory_forget")
         self.assertEqual(classify_query_intent("בעצם אני מעדיף דוגמאות", "he"), "memory_correct")
 
+    def test_capabilities_query_intent_is_multilingual_and_general(self) -> None:
+        self.assertEqual(classify_query_intent("מה אתה יכול לעשות?", "he"), "capabilities_query")
+        self.assertEqual(classify_query_intent("במה יובי יכול לעזור?", "he"), "capabilities_query")
+        self.assertEqual(classify_query_intent("ماذا يمكنك أن تفعل؟", "ar"), "capabilities_query")
+        self.assertEqual(classify_query_intent("What can Yuvi do?", "en"), "capabilities_query")
+        self.assertEqual(classify_query_intent("מה אתה יודע עליי?", "he"), "profile_question")
+
     def test_calendar_query_intent_is_multilingual_and_specific(self) -> None:
         self.assertEqual(classify_query_intent("איזה שיעורים יש לי השבוע?", "he"), "calendar_query")
         self.assertEqual(classify_query_intent("אילו שיעורים יש לי בחמישי", "he"), "calendar_query")

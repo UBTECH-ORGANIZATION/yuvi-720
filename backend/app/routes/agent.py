@@ -34,7 +34,6 @@ from app.services.lrs import reporter as lrs_reporter
 from app.services.speech import SpeechUnavailable, synthesize_speech
 from app.services import triggers
 from app.services import coach_debug_trace
-from app.services import question_status
 from app.services.coach_support import SupportQuestionChangedError, reserve_support
 
 
@@ -127,7 +126,7 @@ async def _current_question_context(learner_id: str) -> str:
     planner can SEE must never widen what it could draw.
     """
     from app.brain.repository import get_brain
-    from app.services import kata_catalog, question_status
+    from app.services import kata_catalog
 
     try:
         brain = await get_brain(learner_id)
@@ -201,6 +200,8 @@ async def _stream_visual_tail(
             await _current_question_context(learner_id)
             if will_plan and on_lesson_screen else ""
         )
+        if will_plan:
+            yield f"data: {json.dumps({'visual_status': 'planning'}, ensure_ascii=False)}\n\n"
         scene = None if not will_plan else await plan_manim_visual(  # noqa: F841 (read after try)
             screened_message,
             response_text,
@@ -369,7 +370,7 @@ class CoachProactiveRequest(BaseModel):
 
 class CoachSupportRequest(BaseModel):
     conversation_id: str = Field(default="default", min_length=1, max_length=120)
-    support: Literal["hint", "explanation"]
+    support: Literal["hint", "explanation", "video_summary", "video_visual"]
     language: str = Field(default="he", max_length=8)
     surface: CoachSurfaceContext = Field(default_factory=CoachSurfaceContext)
     question_key: Optional[str] = Field(default=None, max_length=400)
@@ -423,6 +424,13 @@ _SPEECH_UNAVAILABLE = {
     "he": "שירות ההקראה אינו זמין כרגע.",
     "ar": "خدمة القراءة غير متاحة حاليًا.",
     "en": "Read-aloud is currently unavailable.",
+}
+
+
+_VIDEO_VISUAL_REQUEST = {
+    "he": "צור/י המחשה לימודית מונפשת, ברורה ומעניינת שמסבירה את הרעיונות המרכזיים של הסרטון. השתמש/י אך ורק במידע המאושר שמופיע בתוכן המקור, בלי להוסיף עובדות או פתרון לשאלת הבנה.",
+    "ar": "أنشئ/ي توضيحًا تعليميًا متحركًا وواضحًا وجذابًا يشرح الأفكار المركزية في الفيديو. استخدم/ي فقط المعلومات المعتمدة في محتوى المصدر، من دون إضافة حقائق أو حل سؤال فهم.",
+    "en": "Create a clear, engaging animated educational visual that explains the video's central ideas. Use only the authorized source content, without adding facts or solving a comprehension question.",
 }
 
 
@@ -789,6 +797,7 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
         action_offers: list[dict[str, object]] = []
         visual_requests: list[dict[str, str]] = []
         debug_trace: list[dict[str, str]] = []
+        query_intent: list[str] = []
         async for chunk in run_coach_stream(
             learner_id,
             user_message=message,
@@ -802,11 +811,15 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
             action_offers=action_offers,
             visual_requests=visual_requests,
             debug_trace=debug_trace,
+            intent_out=query_intent,
         ):
             response_parts.append(chunk)
             # Forward every model chunk immediately. The frontend already
             # appends text events, so Yuvi visibly speaks while generating.
             yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
+
+        if query_intent:
+            yield f"data: {json.dumps({'query_intent': query_intent[0]}, ensure_ascii=False)}\n\n"
 
         if action_offers:
             yield f"data: {json.dumps({'actions': action_offers}, ensure_ascii=False)}\n\n"
@@ -1193,7 +1206,7 @@ async def coach_support_state(
     component_id: str | None = Query(default=None, max_length=180),
     learner_id: str = Depends(require_learner),
 ):
-    """Per-question support state for the hint/explanation buttons.
+    """Per-question support state and the lesson item spine for Coach actions.
 
     The key derives from the event-driven `current_state` (component + sub-item
     + question), so moving to the next question re-arms the buttons."""
@@ -1236,20 +1249,6 @@ async def coach_support_state(
         ]
     except Exception:  # numbering must never break the support buttons
         ordinals, question_parts, teaching_only, item_spine = {}, {}, [], []
-    try:
-        status = await question_status.status_for_item(
-            learner_id,
-            component_id=active_component,
-            item_id=current.get("item_id"),
-            questions=item_questions,
-        )
-    except Exception:  # status must never block support controls
-        status = {
-            "status": question_status.STATUS_UNATTEMPTED,
-            "answer_count": 0,
-            "section_count": len(item_questions),
-            "correct_section_count": 0,
-        }
     content_hint_used = await learner_activity.has_content_hint(
         learner_id,
         component_id=active_component,
@@ -1258,12 +1257,15 @@ async def coach_support_state(
     )
     return {
         "question_key": question_key,
-        "question_status": status,
         "hint_used": used["hint"],
         "content_hint_used": content_hint_used,
         "hint_level": used["hint_level"],
         "max_hint_level": tutor_decision.MAX_HINT_LEVEL,
         "explanation_used": used["explanation"],
+        # Video support is scoped to the active client visit, not learner
+        # history. The browser keeps these flags in its in-memory UI state.
+        "video_summary_used": False,
+        "video_visual_used": False,
         "question_ordinals": ordinals,
         # Which סעיף of a shared screen this is — present only where the screen
         # really does hold several, so the chat never invents a part.
@@ -1290,32 +1292,96 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
     # Pressing "רמז" / "הסבר" is a chat turn — reading the answer is not idling.
     triggers.note_chat_activity(learner_id)
 
-    # Three-level hint ladder plus a one-shot explanation (server-enforced; the
-    # UI disables optimistically). Button and qualifying chat requests reserve
-    # this allowance through one shared workflow.
-    try:
-        reservation = await reserve_support(
-            learner_id,
-            request.support,
-            surface_component_id=request.surface.component_id,
-            session_id=session.get("sid"),
-            conversation_id=conversation_id,
-            expected_question_key=request.question_key,
-        )
-    except SupportQuestionChangedError as exc:
-        return JSONResponse(
-            content={"error": "question_changed", "question_key": exc.current_question_key},
-            status_code=409,
-        )
-    if reservation is None:
-        return JSONResponse(
-            content={"error": "support_already_used"},
-            status_code=409,
-        )
-    hint_level = reservation.hint_level
+    hint_level = None
+    video_context: dict[str, str | None] | None = None
+    if request.support in {"video_summary", "video_visual"}:
+        # Video help is allowed only for the video the learner is actually on.
+        # `informationToBot` is the catalog-authorized source; no transcript or
+        # plausible-looking content is fetched or invented at request time.
+        from app.brain.repository import get_brain
+        from app.services import kata_catalog
+
+        current_state = (await get_brain(learner_id)).get("current_state") or {}
+        component_id = current_state.get("component_id") or request.surface.component_id
+        item_id = current_state.get("item_id")
+        try:
+            await kata_catalog.ensure_loaded()
+            item = kata_catalog.item_profile(component_id, item_id)
+            source_text = kata_catalog.information_for_item(component_id, item_id)
+        except Exception:
+            item, source_text = {}, None
+        if (
+            request.surface.screen != "learning_lesson"
+            or str(item.get("media_format") or "") != "video"
+            or not str(source_text or "").strip()
+        ):
+            return JSONResponse(content={"error": "video_summary_unavailable"}, status_code=409)
+        video_context = {
+            "component_id": component_id,
+            "item_id": item_id,
+            "question_id": current_state.get("question_id"),
+            "source_text": str(source_text).strip(),
+        }
+    else:
+        # The hint ladder and one-shot explanation are server-enforced. Button
+        # and qualifying chat requests reserve the same allowance.
+        try:
+            reservation = await reserve_support(
+                learner_id,
+                request.support,
+                surface_component_id=request.surface.component_id,
+                session_id=session.get("sid"),
+                conversation_id=conversation_id,
+                expected_question_key=request.question_key,
+            )
+        except SupportQuestionChangedError as exc:
+            return JSONResponse(
+                content={"error": "question_changed", "question_key": exc.current_question_key},
+                status_code=409,
+            )
+        if reservation is None:
+            return JSONResponse(
+                content={"error": "support_already_used"},
+                status_code=409,
+            )
+        hint_level = reservation.hint_level
 
     async def event_generator():
         yield f"data: {json.dumps({'disclosure': safety.disclosure(language), 'support': request.support}, ensure_ascii=False)}\n\n"
+        if request.support == "video_visual":
+            try:
+                yield f"data: {json.dumps({'phase': 'thinking', 'visual_status': 'planning'}, ensure_ascii=False)}\n\n"
+                scene = await plan_manim_visual(
+                    _VIDEO_VISUAL_REQUEST[language],
+                    video_context["source_text"] if video_context else "",
+                    language,
+                    usage_context=UsageContext(
+                        actor_id=learner_id,
+                        actor_type="learner",
+                        endpoint="/api/agent/coach/support",
+                        feature="feature_3_learning_companion",
+                        operation="coach.video_visual",
+                        source="coach_video_visual_tool",
+                        session_id=conversation_id,
+                        exchange_id=exchange_id,
+                    ),
+                    text_filter=lambda text: safety.screen_output(text, language).text,
+                    prefer_animation=True,
+                    force_visual=True,
+                )
+                if scene:
+                    scene["animated"] = True
+                    yield f"data: {json.dumps({'visual_status': 'rendering'}, ensure_ascii=False)}\n\n"
+                    visual = await render_visual(scene)
+                    yield f"data: {json.dumps({'visual': visual}, ensure_ascii=False)}\n\n"
+                else:
+                    yield f"data: {json.dumps({'visual_status': 'none'}, ensure_ascii=False)}\n\n"
+            except Exception as exc:  # pragma: no cover - optional visual support
+                print(f"⚠️ Video visual tool failed: {exc}")
+                yield f"data: {json.dumps({'visual_status': 'none'}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+            return
+
         response_parts = []
         debug_trace: list[dict[str, str]] = []
         async for chunk in run_coach_stream(
@@ -1332,22 +1398,23 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
             response_parts.append(chunk)
             yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
 
-        # Same visual layer as chat replies: a math-shaped hint/explanation can
-        # auto-render a scene, and wordy ones offer the on-demand image/video
-        # buttons. The support prompt stands in for the (absent) user message.
-        support_prompt = SUPPORT_PROMPTS[request.support]
-        async for event in _stream_visual_tail(
-            learner_id=learner_id,
-            conversation_id=conversation_id,
-            exchange_id=exchange_id,
-            endpoint="/api/agent/coach/support",
-            user_message=support_prompt.get(language) or support_prompt["he"],
-            response_text="".join(response_parts),
-            language=language,
-            on_lesson_screen=request.surface.screen == "learning_lesson",
-            debug_trace=debug_trace,
-        ):
-            yield event
+        response_text = "".join(response_parts).strip()
+        # A video summary is deliberately text-only. Other support replies may
+        # still offer or render a visual when that supports the current lesson.
+        if request.support != "video_summary":
+            support_prompt = SUPPORT_PROMPTS[request.support]
+            async for event in _stream_visual_tail(
+                learner_id=learner_id,
+                conversation_id=conversation_id,
+                exchange_id=exchange_id,
+                endpoint="/api/agent/coach/support",
+                user_message=support_prompt.get(language) or support_prompt["he"],
+                response_text=response_text,
+                language=language,
+                on_lesson_screen=request.surface.screen == "learning_lesson",
+                debug_trace=debug_trace,
+            ):
+                yield event
         await coach_debug_trace.record(exchange_id, debug_trace)
         yield f"data: {json.dumps({'tool_trace': _safe_tool_trace(debug_trace)}, ensure_ascii=False)}\n\n"
         # Re-stamp on completion: a long answer can outlive the idle timer the

@@ -365,14 +365,21 @@ async def run_competency_chat_stream(
         return
     last_user = turns[-1]["content"]
 
-    # Same cross-cutting Safety gate as the main coach: distress/personal
-    # disclosures get a redirect, distress raises the wellbeing flag.
+    # Tier 1 catches known harmful forms without a model call. Self-harm is
+    # intentionally excluded by the helper and continues to the distress path.
+    if safety.harmful_content_category(last_user):
+        yield safety.redirect_message("harmful", lang)
+        return
+
+    # Tier 2 catches personal/distress disclosures and semantic harmful content
+    # that the deterministic filter did not recognize. Distress alone raises the
+    # wellbeing flag; harmful content receives the same respectful redirect.
     category = await safety.classify_disclosure(
         last_user,
         lang,
         usage_context=usage_context.for_operation("safety.disclosure_classification"),
     )
-    if category in ("distress", "personal"):
+    if category in ("distress", "personal", "harmful"):
         if category == "distress":
             await safety.record_wellbeing_flag(
                 learner_id, evidence=last_user, language=lang, source="competency_chat"

@@ -39,6 +39,7 @@ class AgentChatHistoryTests(unittest.IsolatedAsyncioTestCase):
                 assistant=f"answer {index}",
                 session_id=first["id"],
                 exchange_id=f"exchange-{index}",
+                query_intent="learning_help" if index == 0 else None,
             )
         second = await sessions.create_conversation(learner_id)
         await sessions.append_turn(
@@ -73,6 +74,8 @@ class AgentChatHistoryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(loaded), 10)
         self.assertEqual([item["role"] for item in loaded[:2]], ["user", "assistant"])
         self.assertEqual(loaded[0]["text"], "question 0")
+        self.assertEqual(loaded[0]["query_intent"], "learning_help")
+        self.assertEqual(loaded[1]["query_intent"], "learning_help")
         self.assertEqual(loaded[-1]["text"], "answer 4")
         self.assertEqual(
             await sessions.get_first_user_message(learner_id, first["id"]),

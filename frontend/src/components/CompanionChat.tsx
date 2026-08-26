@@ -187,7 +187,6 @@ export function CompanionChat() {
     supportUsed,
     questionOrdinals,
     questionParts,
-    questionStatuses,
     teachingItems,
     itemKinds,
     itemMedia,
@@ -209,6 +208,8 @@ export function CompanionChat() {
   } = useCompanion()
   const pathname = useRoute()
   const isTaskMode = pathname.startsWith('/learning/lesson')
+  const latestReplySupportsSuggestions = messages.at(-1)?.role === 'assistant'
+    && messages.at(-1)?.queryIntent === 'learning_help'
   const { snapshot: lessonRoadmap } = useLessonRoadmap()
   const { design, loaded } = useYuviDesign()
   const [draft, setDraft] = useState('')
@@ -348,10 +349,9 @@ export function CompanionChat() {
       // each one — but the caption must say which סעיף of which question it is,
       // because that is what the player's own nav shows the learner.
       const partIndex = isIntro ? undefined : questionParts[`${group.item}|${group.question}`]
-      const questionStatus = isIntro ? undefined : questionStatuses[group.item]
       // A question screen can still be a video screen — the thread shows it.
       const plays = WATCHABLE.has(itemMedia[group.item] || '')
-      return { group, isIntro, isTeaching, asksNothing, kind, questionNumber, partIndex, questionStatus, plays }
+      return { group, isIntro, isTeaching, asksNothing, kind, questionNumber, partIndex, plays }
     })
     // The lesson's own order, not the visit order. Paging BACK to question 1
     // after question 2 used to append its thread at the bottom — below שאלה 2 —
@@ -372,7 +372,7 @@ export function CompanionChat() {
       }
       return at - bt
     })
-  }, [messageGroups, questionOrdinals, questionParts, questionStatuses, teachingItems, itemKinds, itemMedia, itemOrder])
+  }, [messageGroups, questionOrdinals, questionParts, teachingItems, itemKinds, itemMedia, itemOrder])
   const [sectionOverrides, setSectionOverrides] = useState<Record<string, boolean>>({})
   const bodyRef = useRef<HTMLDivElement>(null)
   const historyRef = useRef<HTMLDivElement>(null)
@@ -855,6 +855,7 @@ export function CompanionChat() {
   // A screen that plays a video AND asks still counts — its section is captioned
   // "סרטון · שאלה N", the question is real, and its hint has to stay.
   const activeSection = sections.find((s) => s.group.key === (currentGroupKey || openGroupKey))
+  const isVideoScreen = Boolean(liveItem && itemMedia[liveItem] === 'video')
   const openSectionAsks = activeSection
     ? !activeSection.isIntro && !activeSection.asksNothing
       && (activeSection.kind === 'question' || activeSection.questionNumber !== undefined)
@@ -1208,7 +1209,7 @@ export function CompanionChat() {
                 so the generic greeting only shows in the general companion. */}
             {!isTaskMode && !isLoadingMessages && messages.length === 0 && assistantMessage(t('companion.greeting'))}
             {isTaskMode
-              ? sections.map(({ group, isIntro, isTeaching, asksNothing, kind, questionNumber, partIndex, questionStatus, plays }) => {
+              ? sections.map(({ group, isIntro, isTeaching, asksNothing, kind, questionNumber, partIndex, plays }) => {
                   const open = isSectionOpen(group)
                   const isCurrent = group.key === currentGroupKey
                   return (
@@ -1252,9 +1253,6 @@ export function CompanionChat() {
                                   ].filter(Boolean).join(' · ')
                                 : asksNothing || !questionNumber ? t('companion.thread.step')
                                 : questionLabel(questionNumber, partIndex),
-                              questionNumber && questionStatus && questionStatus.status !== 'answered_not_all_correct'
-                                ? t(`companion.thread.status.${questionStatus.status}`)
-                                : '',
                             ].filter(Boolean).join(' · ')}</span>
                             {!open && <span className="sp-companion__qcount">{group.messages.length}</span>}
                           </span>
@@ -1307,7 +1305,7 @@ export function CompanionChat() {
         <div className="sp-companion__composer-shell">
           {isTaskMode ? (
             !isStreaming
-              && (pendingAlternative || (openSectionAsks && (!supportUsed.contentHint && supportUsed.hintLevel < supportUsed.maxHintLevel || !supportUsed.explanation))) && (
+              && (pendingAlternative || isVideoScreen || (openSectionAsks && (!supportUsed.contentHint && supportUsed.hintLevel < supportUsed.maxHintLevel || !supportUsed.explanation))) && (
               <div className="sp-companion__support-options" role="group" aria-label={t('companion.task.actions')}>
                 {pendingAlternative && (
                   <button
@@ -1319,6 +1317,28 @@ export function CompanionChat() {
                     <span>{t('companion.task.altSwitch')}</span>
                   </button>
                 )}
+                {isVideoScreen ? (
+                  <>
+                    {!supportUsed.videoSummary && <button
+                      type="button"
+                      className="sp-companion__support-option"
+                      onClick={() => void requestSupport('video_summary')}
+                    >
+                      <Icon name="book" size={16} />
+                      <span>{t('companion.task.videoSummary')}</span>
+                    </button>
+                    }
+                    {!supportUsed.videoVisual && <button
+                      type="button"
+                      className="sp-companion__support-option"
+                      onClick={() => void requestSupport('video_visual')}
+                    >
+                      <Icon name="spark" size={16} />
+                      <span>{t('companion.task.button2')}</span>
+                    </button>
+                    }
+                  </>
+                ) : <>
                 {openSectionAsks && !supportUsed.contentHint && supportUsed.hintLevel < supportUsed.maxHintLevel && (
                   <button
                     type="button"
@@ -1339,10 +1359,11 @@ export function CompanionChat() {
                     <span>{t('companion.task.explain')}</span>
                   </button>
                 )}
+                </>}
               </div>
             )
           ) : (
-            !isStreaming && !draft.trim() && messages.length > 0 && (
+            !isStreaming && !draft.trim() && latestReplySupportsSuggestions && (
               <div className="sp-companion__suggestions" role="group" aria-label={t('companion.suggestions.label')}>
                 {SUGGESTION_KEYS.map((key) => (
                   <button

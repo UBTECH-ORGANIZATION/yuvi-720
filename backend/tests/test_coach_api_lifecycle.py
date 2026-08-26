@@ -129,42 +129,6 @@ class CoachApiLifecycleTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(response.status_code, 422)
 
-    async def test_support_state_returns_question_status(self):
-        self.get_brain.return_value = {
-            "current_state": {
-                "component_id": "hexagons",
-                "item_id": "hexagons-001",
-                "question_id": "q1",
-            }
-        }
-
-        with (
-            patch("app.services.kata_catalog.ensure_loaded", new=AsyncMock()),
-            patch("app.services.kata_catalog.question_item_ordinals", return_value={"hexagons-001": 1}),
-            patch("app.services.kata_catalog.question_part_indexes", return_value={}),
-            patch("app.services.kata_catalog.non_question_items", return_value=[]),
-            patch("app.services.kata_catalog.questions_for_item", return_value=[{"questionId": "q1"}]),
-            patch("app.services.kata_catalog.item_profiles", return_value=[]),
-            patch("app.services.learner_activity.has_content_hint", new=AsyncMock(return_value=True)),
-            patch.object(
-                agent.question_status,
-                "status_for_item",
-                new=AsyncMock(return_value={
-                    "status": "unattempted",
-                    "answer_count": 0,
-                    "section_count": 1,
-                    "correct_section_count": 0,
-                }),
-            ),
-        ):
-            response = await self.client.get(
-                "/api/agent/coach/support/state?component_id=hexagons"
-            )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["question_status"]["status"], "unattempted")
-        self.assertTrue(response.json()["content_hint_used"])
-
     async def test_explicit_lesson_chat_hint_uses_support_lane(self):
         self.get_brain.return_value = {
             "current_state": {
@@ -203,13 +167,103 @@ class CoachApiLifecycleTests(unittest.IsolatedAsyncioTestCase):
             surface_component_id="hexagons",
             session_id=None,
             conversation_id="lesson-hint-chat",
-            expected_question_key=None,
         )
         stream_kwargs = stream_calls[0]
         self.assertEqual(stream_kwargs["user_message"], "תן לי רמז")
         self.assertEqual(stream_kwargs["support_mode"], "hint")
         self.assertEqual(stream_kwargs["hint_level"], 1)
         self.assertEqual(stream_kwargs["endpoint"], "/api/agent/coach/support")
+
+    async def test_video_summary_requires_active_video_and_uses_summary_mode(self):
+        self.get_brain.return_value = {
+            "current_state": {
+                "component_id": "science-mass",
+                "item_id": "science-mass-003",
+                "question_id": "q1",
+            }
+        }
+        stream_calls = []
+
+        async def capture_coach_stream(learner_id: str, **kwargs):
+            stream_calls.append(kwargs)
+            yield "תקציר בטוח"
+
+        from app.services import kata_catalog
+
+        with (
+            patch.object(kata_catalog, "ensure_loaded", new=AsyncMock()),
+            patch.object(kata_catalog, "item_profile", return_value={"media_format": "video"}),
+            patch.object(kata_catalog, "information_for_item", return_value="עקרונות המדידה"),
+            patch.object(agent, "reserve_support", new=AsyncMock()) as reserve,
+            patch.object(agent, "run_coach_stream", capture_coach_stream),
+            patch.object(agent.coach_debug_trace, "record", new=AsyncMock()),
+            patch("app.agents.tutor_decision.record_support_used", new=AsyncMock()),
+            patch("app.services.learner_activity.record", new=AsyncMock()) as activity_record,
+        ):
+            async with self.client.stream("POST", "/api/agent/coach/support", json={
+                "conversation_id": "video-summary",
+                "support": "video_summary",
+                "language": "he",
+                "surface": {"screen": "learning_lesson", "component_id": "science-mass"},
+            }) as response:
+                self.assertEqual(response.status_code, 200)
+                await response.aread()
+
+        reserve.assert_not_awaited()
+        self.assertEqual(stream_calls[0]["support_mode"], "video_summary")
+        self.assertEqual(stream_calls[0]["hint_level"], None)
+        activity_record.assert_awaited_once_with(
+            LEARNER_ID,
+            "video_summary",
+            component_id="science-mass",
+            item_id="science-mass-003",
+            question_id="q1",
+            meta={"source": "information_to_bot", "delivery": "completed"},
+        )
+
+        with (
+            patch.object(kata_catalog, "ensure_loaded", new=AsyncMock()),
+            patch.object(kata_catalog, "item_profile", return_value={"media_format": "interactive-content"}),
+            patch.object(kata_catalog, "information_for_item", return_value="לא רלוונטי"),
+        ):
+            response = await self.client.post("/api/agent/coach/support", json={
+                "conversation_id": "not-video",
+                "support": "video_summary",
+                "language": "he",
+                "surface": {"screen": "learning_lesson", "component_id": "science-mass"},
+            })
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["error"], "video_summary_unavailable")
+
+    async def test_video_summary_is_rejected_after_use_on_the_same_video(self):
+        self.get_brain.return_value = {
+            "current_state": {
+                "component_id": "science-mass",
+                "item_id": "science-mass-003",
+                "question_id": "q1",
+                "support_used": {
+                    "question_key": "science-mass|science-mass-003|q1",
+                    "video_summary": True,
+                },
+            }
+        }
+        from app.services import kata_catalog
+
+        with (
+            patch.object(kata_catalog, "ensure_loaded", new=AsyncMock()),
+            patch.object(kata_catalog, "item_profile", return_value={"media_format": "video"}),
+            patch.object(kata_catalog, "information_for_item", return_value="עקרונות המדידה"),
+        ):
+            response = await self.client.post("/api/agent/coach/support", json={
+                "conversation_id": "video-summary-again",
+                "support": "video_summary",
+                "language": "he",
+                "surface": {"screen": "learning_lesson", "component_id": "science-mass"},
+            })
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["error"], "video_summary_already_used")
 
     async def test_general_history_survives_and_lesson_history_is_erased_via_api(self):
         general = await self.client.post(

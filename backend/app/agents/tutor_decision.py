@@ -217,7 +217,13 @@ def support_used(
     """Which support modes are exhausted on this question and its hint level."""
     used = (current_state or {}).get("support_used") or {}
     if used.get("question_key") != question_key:
-        return {"hint": False, "explanation": False, "hint_level": 0}
+        return {
+            "hint": False,
+            "explanation": False,
+            "video_summary": False,
+            "video_visual": False,
+            "hint_level": 0,
+        }
     # Existing one-shot records predate `hint_level`; treat a stored `hint=True`
     # as exhausted rather than accidentally reopening historical support.
     level = int(used.get("hint_level") or (MAX_HINT_LEVEL if used.get("hint") else 0))
@@ -225,6 +231,8 @@ def support_used(
     return {
         "hint": level >= MAX_HINT_LEVEL,
         "explanation": bool(used.get("explanation")),
+        "video_summary": bool(used.get("video_summary")),
+        "video_visual": bool(used.get("video_visual")),
         "hint_level": level,
     }
 

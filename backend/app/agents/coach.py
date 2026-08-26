@@ -87,11 +87,13 @@ COACH_INSTRUCTIONS = {
         "- הכלל אוסר להכריע — לא לדון. \"תשובה\", \"סעיף\", \"אופציה\" ו\"אפשרות\" הן מילים נרדפות לחלוטין לאפשרות תשובה: כשמופיעה אחת מהן עם מספר או אות (\"תשובה 2\", \"סעיף ב'\", \"אופציה א'\", \"אפשרות 3\", וגם \"מה סעיף ב אומר?\", \"מה כתוב בסעיף א'?\", \"לא הבנתי מה כתוב בסעיף ב'\"), הכוונה תמיד לאותה אפשרות תשובה ב-current_question_options לפי המיקום (1=א, 2=ב, 3=ג, 4=ד וכו') — אף פעם לא לנוסח השאלה המודפס ולא לתת-שאלה אחרת במסך, גם אם current_question_text עצמו מתחיל באותה תווית \"סעיף א/ב\". אם learner_referenced_option מופיע בהקשר — זו הוראה מחייבת: פתח/י במשפט שאומר את התוכן המדויק של האפשרות (כולל שם, ערך או פרט מזהה כפי שהוא מופיע בה), למשל: \"אפשרות א׳ אומרת ששחר הוא זה שהתוצאה שלו חריגה.\" גם ניסוחים כמו \"מה כתוב\", \"מה אומר\", \"מה הכוונה\" או \"לא הבנתי\" מתייחסים לאותה אפשרות. אל תסתפק/י בחזרה על נושא השאלה הכללי, ואל תסרב/י. השמט/י רק את הפסיקה: אל תאמר/י שהיא נכונה או שגויה, ואל תרמז/י לכך דרך פסילה של האחרות.\n"
         "- דבר חם, מכבד, לא ילדותי, קצר (1–3 משפטים).\n"
         "- פנייה דקדוקית: אם התלמיד/ה כתב/ה על עצמו/ה בלשון זכר או נקבה — פנה באותה צורה בעקביות לאורך כל השיחה. אם עוד לא ברור, השתמש בניסוחים ניטרליים (\"אפשר לנסות\", \"בוא נבדוק יחד\") — לעולם אל תערבב צורות באותה הודעה.\n"
+
         "- התאם את דרך ההסבר, הקצב והניסוח לסגנון הלמידה ולהעדפות שבהקשר, בלי לתייג את התלמיד/ה ובלי לחשוף את נתוני הפרופיל.\n"
         "- השתמש בחוזקות ובתחומי עניין רק כשזה רלוונטי; אל תדחוף פרט אישי לכל תשובה.\n"
         "- אל תפתח/י את התשובה בברכת הסכמה ריקה (\"ברור\", \"בטח\", \"מעולה\", \"אין בעיה\") — פתח/י ישר בעניין עצמו.\n"
         "- כשמבקשים ממך דבר מסוים שאפשר לתת (איור, דוגמה, הסבר, סיכום) — היענות לבקשה היא התשובה: משפט פתיחה קצר שמאשר ואומר מה מגיע עכשיו (למשל \"בשמחה — הנה הסבר קצר על איך פוטוסינתזה עובדת\"), ומיד אחריו התוכן עצמו. אישור כזה הוא היענות, לא ברכה ריקה. אל תפתח/י בהגדרה מחדש של הבקשה (\"השאלה היא על…\", \"בעצם שאלת…\") ואל תחליף/י את מה שביקשו במשהו אחר.\n"
         "- אל תשתמש/י בנקודה-פסיק (;) לחיבור משפטים — פצל/י לשני משפטים קצרים וטבעיים.\n"
+
         "- כתוב/י אך ורק בעברית (עם מספרים, סימני מתמטיקה ומונחים באנגלית כשצריך). לעולם אל תשלב/י אותיות סיניות, יפניות, קוריאניות או כתב זר אחר, גם לא כתרגום או הבהרה.\n"
         "- כשמשתמשים בדימוי או בייצוג מעולם העניין של התלמיד/ה: קודם מסגר/י במשפט קצר מה השאלה עצמה מבקשת (לפי נתוני השאלה, כולל שמות או הקשר אם מופיעים), ורק אז גשר/י לדימוי — כשהקשר בין הדימוי לשאלה מפורש והמיפוי ברור. אל תפתח/י בהחלפת ייצוג מנותקת מהשאלה.\n"
         "- אם קיימת אסטרטגיה שעבדה בעבר, העדף אותה. כבד הנחיית מורה רלוונטית אך לעולם אל תצטט או תחשוף אותה.\n"
@@ -180,6 +182,29 @@ COACH_INSTRUCTIONS = {
 }
 
 QUERY_MODE_INSTRUCTIONS = {
+    "capabilities_query": {
+        "he": (
+            "התלמיד/ה שואל/ת מי אתה ומה אפשר לקבל ממך. נסח/י תשובה מקורית, קלילה, חמה וכיפית של שני משפטים בדיוק, "
+            "בשפה יומיומית וטבעית של מלווה לימודי חבר שאפשר לחשוב, ללמוד ולהתקדם איתו. שלב/י אימוג'י אחד שמתאים "
+            "באופן טבעי, בלי להגזים ובלי לדבר בצורה ילדותית. דבר/י באופן כללי בלבד: אין רשימה, "
+            "אין תבליטים, אין פירוט של מסכים, כפתורים או כלים, אין הבטחה לבצע פעולה מסוימת, ואין ניסוח של "
+            "מגבלות טכניות. אל תעתיק/י את רשימת היכולות; השתמש/י בה רק כדי לשמור על תשובה אמיתית."
+        ),
+        "ar": (
+            "يسأل الطالب/ة من أنت وما الذي يمكن أن يطلبه منك. صغ/ي إجابة أصلية وخفيفة ودافئة ولطيفة من جملتين بالضبط، "
+            "بلغة يومية طبيعية لمرافق تعلّم ودود يمكن التفكير والتعلّم والتقدّم معه. أضف/ي رمزًا تعبيريًا واحدًا مناسبًا "
+            "بطريقة طبيعية، من دون مبالغة أو أسلوب طفولي. تحدث/ي بصورة عامة فقط: لا قائمة، ولا نقاط، "
+            "ولا تفاصيل عن الشاشات أو الأزرار أو الأدوات، ولا وعد بتنفيذ إجراء محدّد، ولا حديث عن قيود تقنية. "
+            "لا تنسخ/ي قائمة القدرات؛ استخدمها فقط كي يبقى الرد صادقًا."
+        ),
+        "en": (
+            "The learner is asking who you are and what they can ask of you. Write an original, light, warm, playful answer in exactly "
+            "two sentences, in the everyday voice of a friendly learning companion they can think, learn, and grow with. Add one "
+            "natural fitting emoji, without overdoing it or sounding childish. Stay general: no list, bullets, screen, "
+            "button, or tool details, no promise to perform a specific action, and no technical limitations. Do not copy the capability "
+            "list; use it only to keep the reply truthful."
+        ),
+    },
     "profile_question": {
         "he": (
             "השאלה היא על מה שלמדת על התלמיד/ה. סכם תמונת לומד/ת אישית ולא רשימת שדות: "
@@ -229,6 +254,23 @@ QUERY_MODE_INSTRUCTIONS = {
             "as an empty calendar. Do not calculate dates, invent items, or claim to remember the calendar."
         ),
     },
+}
+
+# The model sees this only to keep the short, friendly capabilities reply
+# grounded. It must not expose it as a product-feature list to the learner.
+CAPABILITIES_REFERENCE = {
+    "he": (
+        "יכולות מאושרות בלבד: ליווי בתהליך הלמידה, הסברים ודוגמאות, תמיכה בהתארגנות ובחשיבה, "
+        "עזרה כללית עם יעדים, משימות ויומן, וניווט בטוח במערכת."
+    ),
+    "ar": (
+        "القدرات المعتمدة فقط: مرافقة التعلّم، الشرح والأمثلة، دعم التنظيم والتفكير، "
+        "مساعدة عامة في الأهداف والمهام والتقويم، والتنقّل الآمن في النظام."
+    ),
+    "en": (
+        "Approved capabilities only: learning companionship, explanations and examples, support with organisation and thinking, "
+        "general help with goals, tasks, and calendar, and safe system navigation."
+    ),
 }
 
 # Proactive nudges (used by the trigger engine in P4).
@@ -379,7 +421,65 @@ SUPPORT_PROMPTS = {
         "ar": "اشرح/ي الفكرة المطلوبة في المشكلة الحالية بعمق وعلى مراحل، اعتمادًا فقط على معلومات العنصر والأحداث الأخيرة. اربط/ي الشرح بالصعوبة الظاهرة في الأدلة إن وجدت، دون كشف الإجابة النهائية أو اختلاق صعوبة. اختم/ي بسؤال تحقّق قصير أو بدعوة لتجربة الخطوة التالية وإخبارك بالنتيجة — حتى يستمر الحوار.",
         "en": "Explain the idea required by the current problem in depth and in steps, using only the item information and recent events. Connect it to evidence of difficulty when present, without revealing the final answer or inventing difficulty. End with one short check-in question or an invitation to try the next step and report back — so the conversation can continue.",
     },
+    "video_summary": {
+        "he": "התלמיד/ה נמצא/ת במסך וידאו וביקש/ה סיכום במקום צפייה. כתוב/י סיכום ברור של 4–5 משפטים, אך ורק על בסיס current.informationToBot של פריט הווידאו. הסבר/י את הרעיונות המרכזיים בסדר הגיוני, הדגש/י נקודות פדגוגיות או טעות נפוצה שרלוונטית לפי הנתונים, והתאם/י את הניסוח בעדינות להעדפות ולקשיים שמופיעים בהקשר. אל תטען/י שצפית בסרטון, אל תוסיף/י פרטים שלא נמסרו, ואל תבקש/י מהתלמיד/ה לענות על שאלת ההבנה שבפריט.",
+        "ar": "الطالب/ة موجود/ة في شاشة فيديو وطلب/ت ملخصًا بدل المشاهدة. اكتب/ي ملخصًا واضحًا من 4 إلى 5 جمل، بالاعتماد فقط على current.informationToBot لعنصر الفيديو. رتّب/ي الأفكار المركزية منطقيًا، وأبرز/ي نقطة تربوية أو خطأً شائعًا عندما تدعمه البيانات، وكيّف/ي الصياغة بلطف مع التفضيلات والصعوبات الظاهرة في السياق. لا تدّعِ مشاهدة الفيديو، ولا تضف/ي تفاصيل غير مقدمة، ولا تطلب/ي من الطالب/ة الإجابة عن سؤال الفهم في العنصر.",
+        "en": "The learner is on a video screen and asked for a summary instead of watching. Write a clear 4-5 sentence summary using ONLY the video's current.informationToBot. Order the central ideas logically, emphasize a pedagogically relevant point or common misconception only when the data supports it, and gently adapt the wording to preferences and difficulties in context. Do not claim to have watched the video, add no unprovided details, and do not ask the learner to answer the item's comprehension question.",
+    },
 }
+
+
+# A hint that the answer guard blocks is useful evidence for bounded retries,
+# not a reason to give the learner the generic answer-refusal. The retry stays
+# behind the same guard and falls back to a deliberately content-free question.
+MAX_HINT_GENERATION_ATTEMPTS = 3
+HINT_GUARD_RETRY_PROMPT = {
+    "he": "הרמז הקודם חשף את התשובה או צמצם אותה יותר מדי. כתוב/י רמז חדש שיהיה כללי יותר מהטיוטה הקודמת: אסטרטגיית חשיבה כללית ושאלה מנחה אחת בלבד. אל תזכיר/י ערכים, מספרים, שמות, אותיות, אפשרויות או סדר פעולות שמוביל לפתרון.",
+    "ar": "كشف التلميح السابق الإجابة أو ضيّقها أكثر من اللازم. اكتب/ي تلميحًا جديدًا أكثر عمومية من المسودة السابقة: استراتيجية تفكير عامة وسؤالًا موجّهًا واحدًا فقط. لا تذكر/ي قيمًا أو أرقامًا أو أسماءً أو حروفًا أو خيارات أو تسلسل خطوات يقود إلى الحل.",
+    "en": "The previous hint revealed or narrowed the answer too far. Write a new hint that is more general than the previous draft: one general thinking strategy and one guiding question only. Do not mention values, numbers, names, letters, options, or a sequence of steps that leads to the solution.",
+}
+
+HINT_GUARD_FALLBACK = {
+    "he": "בוא/י נתחיל מהדרך ולא מהתשובה: איזה מידע בשאלה נראה לך הכי חשוב לבדוק קודם?",
+    "ar": "لنبدأ بالطريقة لا بالإجابة: ما المعلومة في السؤال التي تبدو لك الأهم للتحقق منها أولًا؟",
+    "en": "Let's start with the method, not the answer: what information in the question seems most important to check first?",
+}
+
+
+async def _guarded_hint_draft(
+    messages: list[dict[str, str]],
+    guard: answer_guard.AnswerGuard,
+    lang: str,
+    usage_context: UsageContext,
+) -> tuple[str, bool]:
+    """Generate a hint privately, retrying up to twice when it reveals an answer."""
+    async def generate(request_messages: list[dict[str, str]], request_context: UsageContext) -> str:
+        parts = []
+        async for chunk in _stream_coach_model(request_messages, request_context):
+            parts.append(safety.screen_output(chunk, lang).text)
+        return "".join(parts).strip()[:600]
+
+    draft = await generate(messages, usage_context)
+    for attempt in range(1, MAX_HINT_GENERATION_ATTEMPTS):
+        if not guard.reveals(draft):
+            return draft, attempt > 1
+        retry_messages = [
+            *messages,
+            {
+                "role": "system",
+                "content": (
+                    f"{HINT_GUARD_RETRY_PROMPT[lang]}\n\n"
+                    f"Previous blocked hint draft:\n{draft}"
+                ),
+            },
+        ]
+        draft = await generate(
+            retry_messages,
+            usage_context.for_operation(f"coach.support.hint_retry_{attempt}"),
+        )
+    if draft and not guard.reveals(draft):
+        return draft, True
+    return HINT_GUARD_FALLBACK[lang], True
 
 # Anti-fabrication guardrail (all modes). Kata's events are sparse, so the
 # current question data may be missing or lag the screen the learner is on. In
@@ -596,43 +696,6 @@ OPTION_OPENER_TEMPLATE = {
     "en": lambda letter, text: f"Option {letter} says: {text}.",
 }
 
-ITEM_ALL_CORRECT_INTRO = {
-    "he": "כל הכבוד, ענית נכון על כל סעיפי השאלה 🙂🙂",
-    "ar": "أحسنت، أجبت بشكل صحيح عن جميع بنود السؤال 🙂🙂",
-    "en": "Well done, you answered every part of the question correctly 🙂🙂",
-}
-
-
-async def _attach_item_answer_status(
-    bundle: dict, learner_id: str
-) -> Optional[dict[str, object]]:
-    """Attach catalog-backed item evidence for a question intro, when available."""
-    current = bundle.get("current") or {}
-    component_id = current.get("component_id")
-    item_id = current.get("item_id")
-    if not component_id or not item_id:
-        return None
-    try:
-        from app.services import kata_catalog, question_status
-
-        await kata_catalog.ensure_loaded()
-        questions = kata_catalog.questions_for_item(component_id, item_id)
-        if not questions:
-            return None
-        status = await question_status.status_for_item(
-            learner_id,
-            component_id=component_id,
-            item_id=item_id,
-            questions=questions,
-        )
-        current["item_answer_status"] = status.get("status")
-        bundle["current"] = current
-        return status
-    except Exception:
-        # The intro must remain available when catalog or event evidence is delayed.
-        return None
-
-
 def _render_context(bundle: dict, learner_message: str = "") -> str:
     """Render the non-identifying bundle as delimited DATA (not instructions).
 
@@ -713,7 +776,6 @@ def _render_context(bundle: dict, learner_message: str = "") -> str:
         f"{scope}_screen_chosen_path: {(current.get('item') or {}).get('chosen_path') or '—'}",
         # Derived from their OWN xAPI evidence, not from the catalog.
         f"{scope}_screen_stage: {(current.get('item') or {}).get('stage') or '—'}",
-        f"{scope}_item_answer_status: {current.get('item_answer_status') or '—'}",
         f"current_question_status: {_question_status(current)}",
         # WHICH סעיף of a shared screen this is ("3/4"), or — when the screen holds
         # only one question. The learner sees these as parts of ONE question, so
@@ -904,6 +966,7 @@ async def run_coach_stream(
     action_offers: Optional[list[dict[str, object]]] = None,
     visual_requests: Optional[list[dict[str, str]]] = None,
     debug_trace: Optional[list[dict[str, str]]] = None,
+    intent_out: Optional[list[str]] = None,
 ) -> AsyncGenerator[str, None]:
     """Stream a Coach reply (chat or proactive), Safety-gated, then persist it."""
     lang = language if language in COACH_INSTRUCTIONS else "he"
@@ -935,9 +998,10 @@ async def run_coach_stream(
         prompt_text = screened.text or FALLBACK_REPLY[lang]
         memory_user = prompt_text
 
-        if safety.has_unrespectful_language(prompt_text):
-            coach_debug_trace.append(debug_trace, "respectful_language", "blocked")
-            yield safety.redirect_message("respect", lang)
+        harmful_category = safety.harmful_content_category(prompt_text)
+        if harmful_category:
+            coach_debug_trace.append(debug_trace, "harmful_content", "blocked")
+            yield safety.redirect_message("harmful", lang)
             return
 
         # The Safety classifier needs the immediately preceding tutoring turns
@@ -950,10 +1014,11 @@ async def run_coach_stream(
         except Exception:
             history = []
 
-        # Cross-cutting Safety gate: distress / personal-PII disclosures get a
-        # disclosure + redirect instead of a normal answer. Distress also raises a
-        # teacher wellbeing flag (learner's own words as evidence). Academic
-        # frustration is a COACHING moment — it flows to the normal reply.
+        # Cross-cutting Safety gate: distress / personal-PII disclosures and
+        # semantic harmful content get a redirect instead of a normal answer.
+        # Distress alone raises a teacher wellbeing flag; harmful content gets
+        # the respectful-language boundary without an alert. Academic frustration
+        # is a COACHING moment — it flows to the normal reply.
         # "review" = classifier outage (fail-closed): reply normally, teacher
         # gets a throttled screen-was-down flag.
         category = await safety.classify_disclosure(
@@ -963,9 +1028,11 @@ async def run_coach_stream(
             recent_conversation=history,
         )
         coach_debug_trace.append(
-            debug_trace, "classify_disclosure", "blocked" if category in {"distress", "personal"} else "ok"
+            debug_trace,
+            "classify_disclosure",
+            "blocked" if category in {"distress", "personal", "harmful"} else "ok",
         )
-        if category in ("distress", "personal"):
+        if category in ("distress", "personal", "harmful"):
             if category == "distress":
                 await safety.record_wellbeing_flag(
                     learner_id, evidence=prompt_text, language=lang, source="coach_chat"
@@ -1008,6 +1075,8 @@ async def run_coach_stream(
             usage_context=usage_context.for_operation("coach.calendar_intent"),
         )
     query_intent = str(calendar_route.get("intent") or base_intent)
+    if intent_out is not None:
+        intent_out[:] = [query_intent]
     if coach_mode is CoachMode.LESSON:
         redirect = lesson_management_redirect(query_intent, lang)
         if redirect:
@@ -1050,19 +1119,10 @@ async def run_coach_stream(
     # A question-intro only makes sense on a real question. On the component's
     # intro/cover frame (no current question resolved) stay SILENT — yield nothing
     # and persist nothing, so the client shows no orphan message.
-    item_answer_status = None
     if trigger == "question_intro":
         current_question = (bundle.get("current") or {}).get("question") or {}
         if not (current_question.get("text") or "").strip():
             return
-        item_answer_status = await _attach_item_answer_status(bundle, learner_id)
-    deterministic_intro = (
-        ITEM_ALL_CORRECT_INTRO[lang]
-        if (item_answer_status or {}).get("status") == "all_correct"
-        else None
-    )
-    if deterministic_intro:
-        coach_debug_trace.append(debug_trace, "item_answer_status", "all_correct")
     # A teaching-step intro needs something real to introduce: the item's own
     # notes or at least its identity (title/kind). With neither, the model would
     # be guessing what is on screen — so stay silent instead.
@@ -1128,6 +1188,8 @@ async def run_coach_stream(
     mode_instruction = QUERY_MODE_INSTRUCTIONS.get(query_intent, {})
     if mode_instruction:
         instructions = f"{instructions}\n- {mode_instruction.get(lang) or mode_instruction['he']}"
+    if query_intent == "capabilities_query":
+        instructions = f"{instructions}\n- {CAPABILITIES_REFERENCE.get(lang, CAPABILITIES_REFERENCE['he'])}"
     # Some screens carry a video or a reading BESIDE their question (`-01-01-003`
     # is a video playlist that ends in a question). Naming what is on screen keeps
     # the opening line true to what the learner is looking at — so it is said only
@@ -1220,19 +1282,16 @@ async def run_coach_stream(
         action_offers=action_offers if action_offers is not None else [],
         visual_requests=visual_requests if visual_requests is not None else [],
     )
-    if deterministic_intro:
-        messages = []
-    else:
-        messages = _build_messages(instructions, _render_context(bundle, prompt_text), history, prompt_text)
-        messages = await _plan_coach_tools(messages, tool_context, usage_context, debug_trace)
-        if coach_mode is CoachMode.GENERAL and tool_context.action_offers:
-            messages.append({
-                "role": "system",
-                "content": navigation_action_reply_instruction(
-                    lang,
-                    str(tool_context.action_offers[-1].get("action_id") or ""),
-                ),
-            })
+    messages = _build_messages(instructions, _render_context(bundle, prompt_text), history, prompt_text)
+    messages = await _plan_coach_tools(messages, tool_context, usage_context, debug_trace)
+    if coach_mode is CoachMode.GENERAL and tool_context.action_offers:
+        messages.append({
+            "role": "system",
+            "content": navigation_action_reply_instruction(
+                lang,
+                str(tool_context.action_offers[-1].get("action_id") or ""),
+            ),
+        })
 
     # Ground truth is in the prompt so the coach can guide accurately, and a
     # prompt rule alone does not survive "just give me the answer". Every
@@ -1244,6 +1303,14 @@ async def run_coach_stream(
         if coach_mode is CoachMode.LESSON else None
     )
     blocked = False
+    hint_guard_blocked = False
+    prefetched_hint = None
+    if support_mode == "hint":
+        # Do not stream the first hint draft: should it leak an answer, a retry
+        # must replace the whole response rather than trail behind partial help.
+        prefetched_hint, hint_guard_blocked = await _guarded_hint_draft(
+            messages, guard, lang, usage_context
+        )
 
     collected = ""
     # The welcome opens with the learner's own name and a real check-in, written
@@ -1264,8 +1331,9 @@ async def run_coach_stream(
     pending_output = ""
     sentence_count = 0
     max_sentences = (
-        1 if coach_mode is CoachMode.GENERAL and tool_context.action_offers
-        else 6 if support_mode == "explanation" else 3
+        2 if query_intent == "capabilities_query"
+        else 1 if coach_mode is CoachMode.GENERAL and tool_context.action_offers
+        else 6 if support_mode == "explanation" else 5 if support_mode == "video_summary" else 3
     )
     # The whitespace that followed the last sentence emitted. Rejoining with a
     # flat " " is what silently broke every table: a header row glued onto the
@@ -1273,11 +1341,11 @@ async def run_coach_stream(
     # client read "…השוואה. | מונח | הסבר |" as prose with pipes in it.
     pending_gap = " "
     async def reply_chunks():
-        if deterministic_intro:
-            yield deterministic_intro
-            return
         if query_intent == "calendar_clarification":
             yield coach_calendar.calendar_clarification(lang)
+            return
+        if prefetched_hint is not None:
+            yield prefetched_hint
             return
         async for model_chunk in _stream_coach_model(messages, usage_context):
             yield model_chunk
@@ -1317,7 +1385,7 @@ async def run_coach_stream(
             break
 
     if not blocked and sentence_count < max_sentences and pending_output.strip():
-        remainder = pending_output.strip()[:1200 if support_mode == "explanation" else 600]
+        remainder = pending_output.strip()[:1200 if support_mode in {"explanation", "video_summary"} else 600]
         if guard.reveals(remainder):
             blocked = True
         else:
@@ -1338,7 +1406,9 @@ async def run_coach_stream(
         separator = " " if collected else ""
         collected += separator + redirect
         yield separator + redirect
-    coach_debug_trace.append(debug_trace, "answer_guard", "blocked" if blocked else "ok")
+    coach_debug_trace.append(
+        debug_trace, "answer_guard", "blocked" if blocked or hint_guard_blocked else "ok"
+    )
 
     if not collected.strip():
         if query_intent == "profile_question":

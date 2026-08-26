@@ -210,6 +210,7 @@ def _message_payload(document: dict[str, Any]) -> dict[str, Any]:
         "text_after": document.get("text_after") or "",
         "at": document.get("at") or _now(),
         "question_key": document.get("question_key"),
+        "query_intent": document.get("query_intent"),
     }
     if isinstance(document.get("visual"), dict):
         payload["visual"] = document["visual"]
@@ -1100,6 +1101,7 @@ async def append_turn(
             "text_after": "",
             "at": now,
             "question_key": question_key,
+            "query_intent": query_intent,
         })
     message_documents.append({
         "_id": f"{safe_exchange}:1",
@@ -1111,6 +1113,7 @@ async def append_turn(
         "text_after": "",
         "at": assistant_at,
         "question_key": question_key,
+        "query_intent": query_intent,
         "meta": assistant_meta if isinstance(assistant_meta, dict) else None,
     })
     title = " ".join((conversation_title or "").split())[:72]

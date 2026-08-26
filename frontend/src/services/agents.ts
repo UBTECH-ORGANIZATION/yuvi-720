@@ -124,6 +124,8 @@ export interface CoachHistoryMessage {
   /** The question this message belongs to (component|item|question); lets the
    *  companion scope the visible thread per question and restore it on resume. */
   question_key?: string | null
+  /** Server-classified intent of the learner request that produced this turn. */
+  query_intent?: string | null
   meta?: { actions?: CoachActionOffer[] }
 }
 
@@ -283,6 +285,7 @@ export async function streamAgent(
             can_visualize?: boolean
             actions?: CoachActionOffer[]
             tool_trace?: CoachToolTraceStep[]
+            query_intent?: string
             phase?: 'thinking' | 'speaking'
           }
           handlers.onEvent?.(parsed as Record<string, unknown>)
@@ -415,26 +418,12 @@ export function streamProactive(
   )
 }
 
-export type CoachSupportMode = 'hint' | 'explanation'
-
-export type ItemAnswerStatus =
-  | 'unattempted'
-  | 'all_correct'
-  | 'answered_not_all_correct'
-
-export interface QuestionStatus {
-  status: ItemAnswerStatus
-  answer_count: number
-  section_count: number
-  correct_section_count: number
-}
+export type CoachSupportMode = 'hint' | 'explanation' | 'video_summary' | 'video_visual'
 
 /** Per-question hint ladder plus one-shot explanation availability.
  * `question_key` changes when the learner progresses, re-arming the buttons. */
 export interface CoachSupportState {
   question_key: string
-  /** Server-derived item status from catalog sections and real xAPI answers. */
-  question_status: QuestionStatus
   /** True only after all hint levels for the current question were served. */
   hint_used: boolean
   /** True when the learner already opened this question's embedded content hint. */
@@ -442,6 +431,10 @@ export interface CoachSupportState {
   hint_level: number
   max_hint_level: number
   explanation_used: boolean
+  /** True when the learner has already received a summary for this video item. */
+  video_summary_used: boolean
+  /** True when the learner has already received a visual for this video item. */
+  video_visual_used: boolean
   /** `item|question` (and bare `item`) → its 1-based question number in this
    * component, from the catalog. Lets the chat title a thread with the number
    * the learner sees. Absent when the catalog has no snapshot. */

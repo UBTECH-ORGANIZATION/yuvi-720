@@ -25,7 +25,6 @@ import {
   type HelpMethod,
   type LessonItemKind,
   type PendingKudos,
-  type QuestionStatus,
   type TriggerAlternative,
   type VisualMode,
 } from '../services/agents'
@@ -56,6 +55,8 @@ export interface CoachMessage {
   /** The question (component|item|question) this message belongs to, so the
    *  panel can scope the thread per question. Null = untagged (always shown). */
   questionKey?: string | null
+  /** Server-classified intent of the learner request that produced this turn. */
+  queryIntent?: string | null
   /** Epoch ms at creation / completion — drive the visibility grace window so a
    *  reaction stays readable for a few seconds even after Kata auto-advances the
    *  screen out from under it (replaces the old `sticky` flag). */
@@ -205,6 +206,8 @@ interface CompanionContextValue {
     hintLevel: number
     maxHintLevel: number
     explanation: boolean
+    videoSummary: boolean
+    videoVisual: boolean
   }
   /** Screen id → the question number the learner sees for it, from the catalog.
    *  The chat titles each question thread from this, so the heading matches the
@@ -214,8 +217,6 @@ interface CompanionContextValue {
    *  than one question. Empty for single-question screens: naming a part the
    *  learner cannot see on screen would invent structure. */
   questionParts: Record<string, number>
-  /** Item id → server-derived answer status from catalog and real xAPI evidence. */
-  questionStatuses: Record<string, QuestionStatus>
   /** Screens that teach without asking — their threads are captioned as a
    *  learning step rather than given a question number they do not have. */
   teachingItems: string[]
@@ -284,6 +285,7 @@ function historyMessage(message: CoachHistoryMessage): CoachMessage {
     isComplete: true,
     createdAt: message.at,
     questionKey: message.question_key ?? null,
+    queryIntent: message.query_intent ?? null,
   }
 }
 
@@ -396,11 +398,10 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0)
   const [disclosure, setDisclosure] = useState<string | null>(null)
   const [supportUsed, setSupportUsed] = useState({
-    hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 1, explanation: false,
+    hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 1, explanation: false, videoSummary: false, videoVisual: false,
   })
   const [questionOrdinals, setQuestionOrdinals] = useState<Record<string, number>>({})
   const [questionParts, setQuestionParts] = useState<Record<string, number>>({})
-  const [questionStatuses, setQuestionStatuses] = useState<Record<string, QuestionStatus>>({})
   const [teachingItems, setTeachingItems] = useState<string[]>([])
   const [itemKinds, setItemKinds] = useState<Record<string, LessonItemKind>>({})
   const [itemMedia, setItemMedia] = useState<Record<string, string>>({})
@@ -439,7 +440,6 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       setHasMoreMessages(false)
       currentQuestionKeyRef.current = null
       setCurrentQuestionKey(null)
-      setQuestionStatuses({})
       lessonLaunchRef.current = nextLaunch
       setLessonLaunch(nextLaunch)
       setSupportStateEpoch(-1)
@@ -581,7 +581,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     welcomedThreadsRef.current = new Set()
     welcomedEpochRef.current = -1
     setPendingAlternative(null)
-    setSupportUsed({ hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 3, explanation: false })
+    setSupportUsed({ hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 3, explanation: false, videoSummary: false, videoVisual: false })
   }, [activityScoped, surface.component_id, surface.unit_id])
 
   const nextId = () => `live-${Date.now()}-${counter.current++}`
@@ -1053,13 +1053,15 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           const actions = event.actions
           const toolTrace = parseToolTrace(event.tool_trace) ?? []
           const hasToolTrace = Object.prototype.hasOwnProperty.call(event, 'tool_trace')
-          if (!Array.isArray(actions) && !hasToolTrace) return
+          const queryIntent = typeof event.query_intent === 'string' ? event.query_intent : undefined
+          if (!Array.isArray(actions) && !hasToolTrace && !queryIntent) return
           setMessages((prev) => prev.map((m) => (
             m.id === assistantId
               ? {
                 ...m,
                 ...(Array.isArray(actions) ? { actions: actions as CoachActionOffer[] } : {}),
                 ...(hasToolTrace ? { toolTrace } : {}),
+                ...(queryIntent ? { queryIntent } : {}),
               }
               : m
           )))
@@ -1311,7 +1313,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     }
     if (source === 'push') {
       pushSeqRef.current += 1
-      setSupportUsed({ hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 1, explanation: false })   // poll is authoritative
+      setSupportUsed({ hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 1, explanation: false, videoSummary: false, videoVisual: false })   // poll is authoritative
     }
     activitySeqRef.current += 1
     maybeEnqueueIntro(key)
@@ -1327,26 +1329,22 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     try {
       const seenPush = pushSeqRef.current
       const state = await getCoachSupportState(surface.component_id, signal)
-      setSupportUsed({
+      setSupportUsed((current) => ({
         hint: state.hint_level > 0,
         contentHint: state.content_hint_used,
         hintLevel: state.hint_level,
         maxHintLevel: state.max_hint_level,
         explanation: state.explanation_used,
-      })
+        // These actions are one-use only during the active UI visit. They are
+        // intentionally absent from learner history and are reset on re-entry.
+        videoSummary: current.videoSummary,
+        videoVisual: current.videoVisual,
+      }))
       // The learner's own question numbering, straight from the catalog, so a
       // chat thread can be titled "שאלה 3" because it IS question 3 of the
       // lesson — not because it happens to be the third section on screen.
       if (state.question_ordinals) setQuestionOrdinals(state.question_ordinals)
       if (state.question_parts) setQuestionParts(state.question_parts)
-      const statusParts = introParts(state.question_key)
-      if (statusParts.item && state.question_status) {
-        const statusKey = statusParts.item
-        setQuestionStatuses((previous) => ({
-          ...previous,
-          [statusKey]: state.question_status,
-        }))
-      }
       if (state.teaching_items) setTeachingItems(state.teaching_items)
       if (state.items) {
         const kinds: Record<string, LessonItemKind> = {}
@@ -1375,7 +1373,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!activityScoped) {
-      setSupportUsed({ hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 3, explanation: false })
+      setSupportUsed({ hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 3, explanation: false, videoSummary: false, videoVisual: false })
       currentQuestionKeyRef.current = null
       setCurrentQuestionKey(null)
       return
@@ -1414,7 +1412,9 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           hintLevel: Math.max(0, current.hintLevel - 1),
           hint: current.hintLevel > 1,
         }
-        : { ...current, explanation: false })
+        : support === 'explanation' ? { ...current, explanation: false }
+          : support === 'video_summary' ? { ...current, videoSummary: false }
+            : support === 'video_visual' ? { ...current, videoVisual: false } : current)
       return
     }
     messageRequest.current += 1
@@ -1444,10 +1444,12 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
             if (status === 'none') return { ...m, isVisualizing: false }
             return { ...m, text: textBefore ?? m.text, textAfter, isVisualizing: true }
           })),
-        onVisual: (visual) =>
+        onVisual: (visual) => {
+          received = true
           setMessages((current) => current.map((m) => (
             m.id === assistantId ? { ...m, visual, isVisualizing: false } : m
-          ))),
+          )))
+        },
         onCanVisualize: (canVisualize) =>
           setMessages((current) => current.map((m) => (
             m.id === assistantId ? { ...m, canVisualize } : m
@@ -1484,7 +1486,8 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const requestSupport = useCallback(async (support: CoachSupportMode) => {
     if (support === 'hint'
       ? supportUsed.hintLevel >= supportUsed.maxHintLevel
-      : supportUsed.explanation) return
+      : support === 'explanation' ? supportUsed.explanation
+        : support === 'video_summary' ? supportUsed.videoSummary : supportUsed.videoVisual) return
     // Optimistic button feedback + dup-guard at enqueue (server also 409s a dup).
     setSupportUsed((current) => support === 'hint'
       ? {
@@ -1492,7 +1495,9 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         hint: true,
         hintLevel: Math.min(current.maxHintLevel, current.hintLevel + 1),
       }
-      : { ...current, explanation: true })
+      : support === 'explanation' ? { ...current, explanation: true }
+        : support === 'video_summary' ? { ...current, videoSummary: true }
+          : { ...current, videoVisual: true })
     activitySeqRef.current += 1
     enqueueChatAction({ kind: 'support', support, targetQuestionKey: currentQuestionKeyRef.current }, { front: true })
   }, [enqueueChatAction, supportUsed])
@@ -1842,7 +1847,6 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         supportUsed,
         questionOrdinals,
         questionParts,
-        questionStatuses,
         teachingItems,
         itemKinds,
         itemMedia,

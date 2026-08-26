@@ -52,7 +52,6 @@ def _drive(
     trigger: str,
     bundle: dict,
     model_output=("בוא נצפה יחד בסרטון הקצר הזה. ",),
-    item_answer_status: dict | None = None,
 ):
     """Run the real proactive path with a stubbed model; return (streamed, instructions)."""
     seen: dict = {}
@@ -103,7 +102,6 @@ def _drive(
          mock.patch.object(coach.safety, "classify_disclosure", safe), \
          mock.patch.object(coach.safety, "screen_input", passthrough), \
          mock.patch.object(coach.safety, "screen_output", passthrough), \
-         mock.patch.object(coach, "_attach_item_answer_status", new=mock.AsyncMock(return_value=item_answer_status)), \
          mock.patch.object(coach.sessions, "conversation_needs_title", async_false), \
          mock.patch.object(coach.sessions, "get_recent", async_list), \
          mock.patch.object(coach.sessions, "get_conversation_memory", async_dict), \
@@ -159,21 +157,6 @@ class TeachingScreenIntroTests(unittest.TestCase):
         bundle["current"]["item"]["kind"] = "question"
         _, messages = _drive("question_intro", bundle, model_output=("בוא נסתכל על המסך. ",))
         self.assertIn(coach.MEDIA_AWARENESS["video"]["he"], _prompt_text(messages))
-
-    def test_all_correct_question_intro_is_a_deterministic_congratulation(self):
-        bundle = copy.deepcopy(VIDEO_SCREEN)
-        bundle["current"]["question"] = {"text": "מהי מסת הצנצנת?", "options": [], "correct": []}
-        bundle["current"]["item"]["kind"] = "question"
-
-        streamed, _ = _drive(
-            "question_intro",
-            bundle,
-            model_output=("המודל לא אמור להיקרא.",),
-            item_answer_status={"status": "all_correct"},
-        )
-
-        self.assertEqual(streamed, coach.ITEM_ALL_CORRECT_INTRO["he"])
-
 
 if __name__ == "__main__":
     unittest.main()

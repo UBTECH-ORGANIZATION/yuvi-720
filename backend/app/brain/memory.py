@@ -36,6 +36,25 @@ _PROFILE_QUERY_PATTERNS = {
     "ar": re.compile(r"ماذا.{0,18}(?:تعرف|تتذكر|تعلمت).{0,30}(?:عني|عن طريقة تعلمي)|كيف أتعلم|من أنا", re.IGNORECASE),
     "en": re.compile(r"what (?:do you|have you) (?:know|remember|learned) about (?:me|how i learn)|how do i learn|who am i", re.IGNORECASE),
 }
+_CAPABILITIES_QUERY_PATTERNS = {
+    "he": re.compile(
+        r"(?:מה\s+(?:(?:אתה|את|אתם|יובי)\s+)?(?:יכול(?:ה|ים)?|יודע(?:ת|ים)?)\s+(?:לעשות|לעזור)|"
+        r"מה\s+יובי\s+(?:יכול|יודע)\s+(?:לעשות|לעזור)|"
+        r"(?:במה|איך)\s+(?:אתה|את|יובי)\s+יכול(?:ה)?\s+לעזור|"
+        r"מה\s+אפשר\s+לעשות\s+(?:איתך|עם\s+יובי))",
+        re.IGNORECASE,
+    ),
+    "ar": re.compile(
+        r"(?:ماذا\s+(?:يمكنك|تستطيع|يوفي\s+يستطيع)\s+(?:أن\s+)?(?:تفعل|تساعد)|"
+        r"كيف\s+(?:يمكنك|يستطيع\s+يوفي)\s+أن\s+تساعد)",
+        re.IGNORECASE,
+    ),
+    "en": re.compile(
+        r"(?:what\s+(?:can|do)\s+(?:you|yuvi)\s+(?:do|help\s+with)|"
+        r"how\s+can\s+(?:you|yuvi)\s+help|what\s+can\s+i\s+do\s+with\s+(?:you|yuvi))",
+        re.IGNORECASE,
+    ),
+}
 _CALENDAR_QUERY_PATTERNS = {
     "he": re.compile(
         r"(?:יומן|לוח\s*(?:ה?שנה|זמנים)|מערכת\s*ה?שעות)|"
@@ -452,6 +471,8 @@ def classify_query_intent(message: str, language: str) -> str:
         return "memory_correct"
     if _PROFILE_QUERY_PATTERNS[lang].search(text):
         return "profile_question"
+    if _CAPABILITIES_QUERY_PATTERNS[lang].search(text):
+        return "capabilities_query"
     if _CALENDAR_ACTION_PATTERNS[lang].search(text):
         return "calendar_action_request"
     if _CALENDAR_QUERY_PATTERNS[lang].search(text):

@@ -8,7 +8,7 @@ module adds the SUPPORT side that was previously only transient (kept in
 full task context.
 
 ``question_summary`` joins the two into one per-question row — performance, time,
-and each kind of help used — filterable by task (component) or subject, so a
+and each kind of help used — including video-summary deliveries — filterable by task (component) or subject, so a
 future teacher view can be built directly on top of it.
 """
 
@@ -22,8 +22,9 @@ from typing import Any, Optional
 from app.brain.repository import _get_collection_named
 from app.services import learning_timing
 
-# hint / explanation / different_way are one-shot per question; yuvi_chat is a
-# repeatable turn (counts up each question-scoped message the learner sends).
+# hint / explanation / video_summary / different_way are bounded learner support
+# actions; yuvi_chat is a repeatable turn (counts up each question-scoped message
+# the learner sends).
 # `content_hint` is the CONTENT's own hint button ("אפשר רמז?" inside the iframe,
 # reported as xAPI `requested`) — 720 §3.3 names it explicitly as evidence
 # ("מספר הפעמים שהתלמיד השתמש ברמזים מן התוכן"), and it stayed invisible
@@ -36,7 +37,7 @@ from app.services import learning_timing
 # `learning_events`, and this is the durable per-learner record that a task was
 # done. It carries no component/item/question, so `question_summary` skips it;
 # the identifier lives in `meta.task_id`.
-KINDS = {"hint", "explanation", "different_way", "yuvi_chat", "content_hint",
+KINDS = {"hint", "explanation", "video_summary", "different_way", "yuvi_chat", "content_hint",
          "content_choice", "task"}
 #: Kinds that are not per-question and must never open a `question_summary` row.
 NON_QUESTION_KINDS = {"task"}
@@ -243,6 +244,7 @@ async def question_summary(
                 "hints_used": 0,
                 "content_hints_used": 0,   # the content's own hint button
                 "explanations_used": 0,
+                "video_summaries_used": 0,
                 "different_way_used": 0,
                 "chat_turns": 0,         # question-scoped messages sent to Yuvi
                 "helped_reported": [],   # learner's self-attribution: what helped
@@ -272,6 +274,7 @@ async def question_summary(
         "hint": "hints_used",
         "content_hint": "content_hints_used",
         "explanation": "explanations_used",
+        "video_summary": "video_summaries_used",
         "different_way": "different_way_used",
         "yuvi_chat": "chat_turns",
     }
