@@ -151,6 +151,10 @@ def configure_telemetry(app, service_name: str = "spark-backend") -> bool:
         resource = Resource.create(
             {
                 "service.name": service_name,
+                # Azure Monitor builds cloud_RoleName as "namespace.name", so
+                # putting the slot here is what keeps a dev-slot deploy from
+                # dragging the production latency percentiles around.
+                "service.namespace": _environment(),
                 "service.version": _service_version(),
                 "service.instance.id": os.getenv("WEBSITE_INSTANCE_ID", "local"),
                 "deployment.environment": _environment(),
@@ -325,7 +329,11 @@ def browser_config() -> dict[str, Optional[str] | bool | float]:
     return {
         "enabled": bool(connection_string),
         "connectionString": connection_string or None,
-        "roleName": os.getenv("SPARK_BROWSER_ROLE_NAME", "spark-web"),
+        # Same "<slot>.<service>" shape the backend reports, so one dashboard
+        # filter covers the browser and the server it talked to.
+        "roleName": os.getenv(
+            "SPARK_BROWSER_ROLE_NAME", f"{_environment()}.spark-web"
+        ),
         "environment": _environment(),
         "release": _service_version(),
         "samplingPercentage": max(0.0, min(100.0, sampling)),

@@ -132,6 +132,9 @@ def configure_telemetry(app, service_name: str = "spark-admin") -> bool:
         resource = Resource.create(
             {
                 "service.name": service_name,
+                # cloud_RoleName becomes "<slot>.spark-admin" — the admin API
+                # and the learner app must never share a latency series.
+                "service.namespace": _environment(),
                 "service.version": _service_version(),
                 "service.instance.id": os.getenv("WEBSITE_INSTANCE_ID", "local"),
                 "deployment.environment": _environment(),

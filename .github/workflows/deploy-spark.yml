@@ -74,6 +74,17 @@ jobs:
               COACH_DEBUG_TRACE_ENABLED=false \
             --output none
 
+      - name: Stamp the release on the Dev slot
+        run: |
+          # Deliberately NOT a slot setting: it has to travel with the image
+          # through the swap, or production reports the version it replaced.
+          az webapp config appsettings set \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --slot ${{ env.SLOT_NAME }} \
+            --settings SPARK_RELEASE=${{ github.sha }} \
+            --output none
+
       - name: Verify required Dev slot settings
         run: |
           configured_settings="$(az webapp config appsettings list \
@@ -100,6 +111,8 @@ jobs:
             LRS_CLIENT_ID
             LRS_CLIENT_SECRET
             LRS_SUPPLIER_DOMAIN
+            APPLICATIONINSIGHTS_CONNECTION_STRING
+            SPARK_ENVIRONMENT
           )
           missing_settings=()
           for setting_name in "${required_settings[@]}"; do
