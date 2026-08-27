@@ -180,32 +180,13 @@ class CoachAnswerBlockTests(unittest.TestCase):
         self.assertEqual(persisted.get("assistant"), streamed.strip())
         self.assertNotIn("המנופח כבד יותר", persisted.get("assistant", ""))
 
-    def test_hint_mode_retries_a_blocked_draft(self):
+    def test_hint_mode_bypasses_answer_guard_and_streams_directly(self):
         streamed, _ = _drive(
-            [
-                ["הבלון המנופח כבד יותר, כי יש בו אוויר. "],
-                ["התשובה היא שהבלון המנופח כבד יותר. "],
-                ["מה משתנה בבלון כשמכניסים אליו משהו? "],
-            ],
+            ["הבלון המנופח כבד יותר, כי יש בו אוויר. "],
             user_message="אפשר רמז?",
             support_mode="hint",
         )
-        self.assertIn("מה משתנה בבלון", streamed)
-        self.assertNotIn("המנופח כבד יותר", streamed)
-        self.assertNotIn(answer_guard.REDIRECT["he"], streamed)
-
-    def test_hint_mode_uses_safe_fallback_after_three_blocked_drafts(self):
-        streamed, _ = _drive(
-            [
-                ["הבלון המנופח כבד יותר, כי יש בו אוויר. "],
-                ["התשובה היא שהבלון המנופח כבד יותר. "],
-                ["הבלון המנופח כבד יותר. "],
-            ],
-            user_message="אפשר רמז?",
-            support_mode="hint",
-        )
-        self.assertIn(coach.HINT_GUARD_FALLBACK["he"], streamed)
-        self.assertNotIn("המנופח כבד יותר", streamed)
+        self.assertIn("המנופח כבד יותר", streamed)
         self.assertNotIn(answer_guard.REDIRECT["he"], streamed)
 
     def test_blocked_question_intro_stays_task_oriented(self):

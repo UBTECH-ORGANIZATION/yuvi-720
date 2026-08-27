@@ -1,4 +1,4 @@
-"""The lesson welcome opens by name, with a real check-in.
+"""The lesson welcome opens by name and continues into the lesson.
 
 It used to start straight at the content ("היום נלמד איך למדוד מסה…"), which is
 a briefing, not a greeting. The name comes from the learner's own record and is
@@ -108,9 +108,9 @@ class LessonWelcomeGreetingTests(unittest.TestCase):
         streamed, _, _ = _drive("lesson_welcome", NAMED)
         self.assertTrue(streamed.startswith("היי אלמוג!"), streamed)
 
-    def test_it_asks_how_they_are(self):
+    def test_it_does_not_ask_how_they_are(self):
         streamed, _, _ = _drive("lesson_welcome", NAMED)
-        self.assertIn("מה שלומך היום?", streamed)
+        self.assertNotIn("מה שלומך היום?", streamed)
 
     def test_the_lesson_framing_still_follows(self):
         streamed, _, _ = _drive("lesson_welcome", NAMED)

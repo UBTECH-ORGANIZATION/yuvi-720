@@ -343,9 +343,9 @@ PROACTIVE_PROMPTS = {
     # the generic greeting. Grounds on `current_objective` (the unit/lesson
     # title); if that's missing it welcomes without inventing a topic.
     "lesson_welcome": {
-        "he": "התלמיד/ה נכנס/ה זה עתה לשיעור, וכבר נאמרה לו/ה שורת פתיחה אישית שפונה בשמו/ה ושואלת מה שלומו/ה היום — אל תברך/י שוב, אל תשאל/י שוב מה שלומו/ה ואל תשתמש/י בשמו/ה. המשך/י ישירות מאותה שורה, בחום ובקצרה (1–2 משפטים): ציין/י במילים שלך על מה השיעור הזה לפי current_objective (אם חסר — המשך/י בלי להמציא נושא), ואמור/י שאת/ה כאן כדי ללוות ולעזור לאורך הדרך. בלי לפתור, בלי רשימות, ובלי לפתוח בברכת הסכמה ריקה. סיים/י בהזמנה חמה להתחיל — ובאופן שמשאיר מקום לענות קודם על שאלת \"מה שלומך\", אם הוא/היא רוצה.",
-        "ar": "دخل/ت الطالب/ة للتوّ إلى الدرس، وقد قيلت له/ها سطر افتتاحيّ شخصيّ يناديه/ها باسمه/ها ويسأل عن حاله/ها اليوم — لا ترحّب/ي مجدّدًا، ولا تسأل/ي مرّة أخرى عن حاله/ها، ولا تستخدم/ي اسمه/ها. تابع/ي مباشرة من ذلك السطر بدفء وإيجاز (جملة أو جملتان): اذكر/ي بكلماتك عمّ يدور هذا الدرس وفق current_objective (إن غاب فتابع/ي دون اختلاق موضوع)، وقل/قولي إنّك هنا للمرافقة والمساعدة على طول الطريق. دون حلّ، دون قوائم، ودون عبارة موافقة فارغة. اختم/ي بدعوة دافئة للبدء تترك مجالًا للردّ أوّلًا على سؤال \"كيف حالك\" إن أراد/ت.",
-        "en": "The learner has just opened the lesson and has ALREADY been greeted by name and asked how they are today — do not greet again, do not ask how they are again, and do not use their name. Continue straight on from that line, warmly and briefly (1–2 sentences): say in your own words what THIS lesson is about per current_objective (if it's missing, continue without inventing a topic), and that you're here to guide and help along the way. No solving, no lists, no empty agreement phrase. End with a warm invitation to begin that still leaves room for them to answer the \"how are you\" first, if they want to.",
+        "he": "התלמיד/ה נכנס/ה זה עתה לשיעור, וכבר נאמרה לו/ה שורת פתיחה אישית שפונה בשמו/ה — אל תברך/י שוב ואל תשתמש/י בשמו/ה. המשך/י ישירות מאותה שורה, בחום ובקצרה (1–2 משפטים): ציין/י במילים שלך על מה השיעור הזה לפי current_objective (אם חסר — המשך/י בלי להמציא נושא), ואמור/י שאת/ה כאן כדי ללוות ולעזור לאורך הדרך. בלי לפתור, בלי רשימות, ובלי לפתוח בברכת הסכמה ריקה. סיים/י בהזמנה חמה להתחיל.",
+        "ar": "دخل/ت الطالب/ة للتوّ إلى الدرس، وقد قيلت له/ها سطر افتتاحيّ شخصيّ يناديه/ها باسمه/ها — لا ترحّب/ي مجدّدًا، ولا تستخدم/ي اسمه/ها. تابع/ي مباشرة من ذلك السطر بدفء وإيجاز (جملة أو جملتان): اذكر/ي بكلماتك عمّ يدور هذا الدرس وفق current_objective (إن غاب فتابع/ي دون اختلاق موضوع)، وقل/قولي إنّك هنا للمرافقة والمساعدة على طول الطريق. دون حلّ، دون قوائم، ودون عبارة موافقة فارغة. اختم/ي بدعوة دافئة للبدء.",
+        "en": "The learner has just opened the lesson and has ALREADY been greeted by name — do not greet again and do not use their name. Continue straight on from that line, warmly and briefly (1–2 sentences): say in your own words what THIS lesson is about per current_objective (if it's missing, continue without inventing a topic), and that you're here to guide and help along the way. No solving, no lists, no empty agreement phrase. End with a warm invitation to begin.",
     },
 }
 
@@ -356,12 +356,12 @@ PROACTIVE_PROMPTS = {
 # learner without ever reaching the model. Kept as data (not a prompt) for the
 # same reason — a model asked to "greet them by name" would need the name.
 WELCOME_GREETING = {
-    "he": {"named": "היי {name}! שמח לראות אותך. מה שלומך היום?",
-           "plain": "היי! שמח לראות אותך. מה שלומך היום?"},
-    "ar": {"named": "أهلًا {name}! سعيد برؤيتك. كيف حالك اليوم؟",
-           "plain": "أهلًا! سعيد برؤيتك. كيف حالك اليوم؟"},
-    "en": {"named": "Hi {name}! Good to see you. How are you doing today?",
-           "plain": "Hi! Good to see you. How are you doing today?"},
+    "he": {"named": "היי {name}! שמח לראות אותך.",
+        "plain": "היי! שמח לראות אותך."},
+    "ar": {"named": "أهلًا {name}! سعيد برؤيتك.",
+        "plain": "أهلًا! سعيد برؤيتك."},
+    "en": {"named": "Hi {name}! Good to see you.",
+        "plain": "Hi! Good to see you."},
 }
 
 
@@ -428,58 +428,6 @@ SUPPORT_PROMPTS = {
     },
 }
 
-
-# A hint that the answer guard blocks is useful evidence for bounded retries,
-# not a reason to give the learner the generic answer-refusal. The retry stays
-# behind the same guard and falls back to a deliberately content-free question.
-MAX_HINT_GENERATION_ATTEMPTS = 3
-HINT_GUARD_RETRY_PROMPT = {
-    "he": "הרמז הקודם חשף את התשובה או צמצם אותה יותר מדי. כתוב/י רמז חדש שיהיה כללי יותר מהטיוטה הקודמת: אסטרטגיית חשיבה כללית ושאלה מנחה אחת בלבד. אל תזכיר/י ערכים, מספרים, שמות, אותיות, אפשרויות או סדר פעולות שמוביל לפתרון.",
-    "ar": "كشف التلميح السابق الإجابة أو ضيّقها أكثر من اللازم. اكتب/ي تلميحًا جديدًا أكثر عمومية من المسودة السابقة: استراتيجية تفكير عامة وسؤالًا موجّهًا واحدًا فقط. لا تذكر/ي قيمًا أو أرقامًا أو أسماءً أو حروفًا أو خيارات أو تسلسل خطوات يقود إلى الحل.",
-    "en": "The previous hint revealed or narrowed the answer too far. Write a new hint that is more general than the previous draft: one general thinking strategy and one guiding question only. Do not mention values, numbers, names, letters, options, or a sequence of steps that leads to the solution.",
-}
-
-HINT_GUARD_FALLBACK = {
-    "he": "בוא/י נתחיל מהדרך ולא מהתשובה: איזה מידע בשאלה נראה לך הכי חשוב לבדוק קודם?",
-    "ar": "لنبدأ بالطريقة لا بالإجابة: ما المعلومة في السؤال التي تبدو لك الأهم للتحقق منها أولًا؟",
-    "en": "Let's start with the method, not the answer: what information in the question seems most important to check first?",
-}
-
-
-async def _guarded_hint_draft(
-    messages: list[dict[str, str]],
-    guard: answer_guard.AnswerGuard,
-    lang: str,
-    usage_context: UsageContext,
-) -> tuple[str, bool]:
-    """Generate a hint privately, retrying up to twice when it reveals an answer."""
-    async def generate(request_messages: list[dict[str, str]], request_context: UsageContext) -> str:
-        parts = []
-        async for chunk in _stream_coach_model(request_messages, request_context):
-            parts.append(safety.screen_output(chunk, lang).text)
-        return "".join(parts).strip()[:600]
-
-    draft = await generate(messages, usage_context)
-    for attempt in range(1, MAX_HINT_GENERATION_ATTEMPTS):
-        if not guard.reveals(draft):
-            return draft, attempt > 1
-        retry_messages = [
-            *messages,
-            {
-                "role": "system",
-                "content": (
-                    f"{HINT_GUARD_RETRY_PROMPT[lang]}\n\n"
-                    f"Previous blocked hint draft:\n{draft}"
-                ),
-            },
-        ]
-        draft = await generate(
-            retry_messages,
-            usage_context.for_operation(f"coach.support.hint_retry_{attempt}"),
-        )
-    if draft and not guard.reveals(draft):
-        return draft, True
-    return HINT_GUARD_FALLBACK[lang], True
 
 # Anti-fabrication guardrail (all modes). Kata's events are sparse, so the
 # current question data may be missing or lag the screen the learner is on. In
@@ -986,19 +934,16 @@ async def run_coach_stream(
         exchange_id=exchange_id,
     )
 
-    # Resolve the prompt: a chat message (Safety-screened) or a proactive nudge.
-    # `memory_user` is what we PERSIST — always the sanitized text, never raw PII,
-    # because working memory is re-injected into later prompts (§4.1 / R7).
-    if support_mode in SUPPORT_PROMPTS:
-        prompt_text = SUPPORT_PROMPTS[support_mode][lang]
-        memory_user = f"[support:{support_mode}]"
-    elif user_message is not None:
+    # Every learner message crosses the Safety gate before support-mode routing.
+    # A hint request must not let harmful language skip the respectful boundary.
+    history: list[dict] = []
+    screened_message = None
+    if user_message is not None:
         screened = safety.screen_input(user_message, lang)
         coach_debug_trace.append(debug_trace, "screen_input")
-        prompt_text = screened.text or FALLBACK_REPLY[lang]
-        memory_user = prompt_text
+        screened_message = screened.text or FALLBACK_REPLY[lang]
 
-        harmful_category = safety.harmful_content_category(prompt_text)
+        harmful_category = safety.harmful_content_category(screened_message)
         if harmful_category:
             coach_debug_trace.append(debug_trace, "harmful_content", "blocked")
             yield safety.redirect_message("harmful", lang)
@@ -1022,7 +967,7 @@ async def run_coach_stream(
         # "review" = classifier outage (fail-closed): reply normally, teacher
         # gets a throttled screen-was-down flag.
         category = await safety.classify_disclosure(
-            prompt_text,
+            screened_message,
             lang,
             usage_context=usage_context.for_operation("safety.disclosure_classification"),
             recent_conversation=history,
@@ -1044,11 +989,20 @@ async def run_coach_stream(
                 await safety.record_classifier_outage(learner_id, lang)
             except Exception:
                 pass
+
+    # Resolve the prompt after the universal learner-input Safety gate. `memory_user`
+    # is always sanitized because working memory is re-injected into later prompts.
+    if support_mode in SUPPORT_PROMPTS:
+        prompt_text = SUPPORT_PROMPTS[support_mode][lang]
+        memory_user = f"[support:{support_mode}]"
+    elif screened_message is not None:
+        prompt_text = screened_message
+        memory_user = prompt_text
     else:
         prompt_text = PROACTIVE_PROMPTS.get(trigger or "idle", PROACTIVE_PROMPTS["idle"])[lang]
         memory_user = f"[proactive:{trigger}]"
 
-    if user_message is None or support_mode in SUPPORT_PROMPTS:
+    if user_message is None:
         try:
             history = await sessions.get_recent(
                 learner_id, coach_role, limit=8, session_id=session_id
@@ -1303,14 +1257,7 @@ async def run_coach_stream(
         if coach_mode is CoachMode.LESSON else None
     )
     blocked = False
-    hint_guard_blocked = False
-    prefetched_hint = None
-    if support_mode == "hint":
-        # Do not stream the first hint draft: should it leak an answer, a retry
-        # must replace the whole response rather than trail behind partial help.
-        prefetched_hint, hint_guard_blocked = await _guarded_hint_draft(
-            messages, guard, lang, usage_context
-        )
+    bypass_answer_guard = support_mode == "hint"
 
     collected = ""
     # The welcome opens with the learner's own name and a real check-in, written
@@ -1344,9 +1291,6 @@ async def run_coach_stream(
         if query_intent == "calendar_clarification":
             yield coach_calendar.calendar_clarification(lang)
             return
-        if prefetched_hint is not None:
-            yield prefetched_hint
-            return
         async for model_chunk in _stream_coach_model(messages, usage_context):
             yield model_chunk
 
@@ -1369,7 +1313,7 @@ async def run_coach_stream(
             pending_output = pending_output[boundary.end():]
             if not sentence:
                 continue
-            if guard.reveals(sentence):
+            if not bypass_answer_guard and guard.reveals(sentence):
                 blocked = True
                 break
             separator = pending_gap if collected else ""
@@ -1386,7 +1330,7 @@ async def run_coach_stream(
 
     if not blocked and sentence_count < max_sentences and pending_output.strip():
         remainder = pending_output.strip()[:1200 if support_mode in {"explanation", "video_summary"} else 600]
-        if guard.reveals(remainder):
+        if not bypass_answer_guard and guard.reveals(remainder):
             blocked = True
         else:
             separator = pending_gap if collected else ""
@@ -1407,7 +1351,7 @@ async def run_coach_stream(
         collected += separator + redirect
         yield separator + redirect
     coach_debug_trace.append(
-        debug_trace, "answer_guard", "blocked" if blocked or hint_guard_blocked else "ok"
+        debug_trace, "answer_guard", "blocked" if blocked else "skipped" if bypass_answer_guard else "ok"
     )
 
     if not collected.strip():

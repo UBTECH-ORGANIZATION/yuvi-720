@@ -200,8 +200,6 @@ async def _stream_visual_tail(
             await _current_question_context(learner_id)
             if will_plan and on_lesson_screen else ""
         )
-        if will_plan:
-            yield f"data: {json.dumps({'visual_status': 'planning'}, ensure_ascii=False)}\n\n"
         scene = None if not will_plan else await plan_manim_visual(  # noqa: F841 (read after try)
             screened_message,
             response_text,

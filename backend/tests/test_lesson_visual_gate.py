@@ -106,3 +106,21 @@ class LessonVisualGateTests(unittest.TestCase):
         scene = {"use_visual": True, "elements": []}
         statuses = [event["visual_status"] for event in self._events(scene) if "visual_status" in event]
         self.assertEqual(statuses, ["rendering"])
+
+    def test_on_demand_general_chat_visual_is_attached_to_its_message(self):
+        visual = {"id": "visual-1", "type": "image", "scene": {}}
+        attached = AsyncMock(return_value=True)
+        request = agent_routes.VisualizeRequest(
+            user_message="אפשר לראות את זה?",
+            assistant_text="כך פועל התהליך.",
+            conversation_id="chat-1",
+            assistant_message_id="exchange-1:1",
+        )
+        with patch.object(agent_routes, "plan_manim_visual", AsyncMock(return_value={"elements": []})), \
+             patch.object(agent_routes, "render_visual", AsyncMock(return_value=visual)), \
+             patch.object(agent_routes.sessions, "attach_visual", attached):
+            asyncio.run(agent_routes.visualize(request, {"sub": "learner-1"}))
+        attached.assert_awaited_once_with(
+            "learner-1", "chat-1", "exchange-1:1", visual,
+            "כך פועל התהליך.", "", role="general_companion",
+        )
