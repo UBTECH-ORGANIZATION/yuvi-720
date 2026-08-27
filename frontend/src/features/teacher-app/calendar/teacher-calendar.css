@@ -394,6 +394,15 @@
 .tch-cal__failed { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-danger-600); }
 .tch-cal__actions { display: flex; justify-content: flex-end; gap: var(--sp-2); }
 
+/* The pin action's outcome, said in place (#244). */
+.tch-cal__pinNote {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+  text-align: end;
+}
+.tch-cal__pinNote.is-error { color: var(--sp-danger-600); }
+
 @media (max-width: 860px) {
   .tch-cal__cell { min-block-size: 84px; }
   .tch-cal__pipWho { display: none; }

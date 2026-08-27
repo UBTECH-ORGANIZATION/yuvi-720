@@ -263,6 +263,26 @@
 .sd-journey-hero__title-row .sd-journey-hero__title { margin: 0; flex: 0 1 auto; }
 .sd-journey-hero__title-row .sd-button { flex: none; min-inline-size: 0; }
 .sd-journey-hero__error { margin: 12px 0 0; color: var(--sp-warn-600); font-size: var(--sp-fs-xs); }
+
+/* The way back to a lesson the pin displaced (#244): a quiet text link under
+   the primary — the pin owns the hero, this is a door, not a rival CTA. */
+.sd-journey-hero__resumeAside {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-block-start: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sp-ink-500);
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sd-journey-hero__resumeAside:hover { color: var(--sp-ink-700); }
 .sd-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-block-size: 46px; padding-inline: 20px; border: 1px solid transparent; border-radius: var(--sp-radius-pill); font: 700 var(--sp-fs-sm)/1 var(--sp-font); cursor: pointer; transition: transform var(--sp-dur-fast) var(--sp-ease), box-shadow var(--sp-dur) var(--sp-ease); }
 .sd-button:hover:not(:disabled) { transform: translateY(-2px); }
 .sd-button:focus-visible { outline: none; box-shadow: var(--sp-ring); }

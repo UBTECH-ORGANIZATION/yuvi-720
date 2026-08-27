@@ -26,7 +26,8 @@ import { useI18n } from '../../../i18n/I18nProvider'
 import { useTeacherRoster } from '../../../providers/TeacherRosterProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import {
-  createCalendarEvent, deleteCalendarEvent, getGroupCalendar,
+  bulkPinNext, createCalendarEvent, deleteCalendarEvent, getGroupCalendar,
+  pinNext,
   type CalendarEventKind, type CalendarItem, type CalendarSource, type Subgroup,
 } from '../../../services/teacher'
 import './teacher-calendar.css'
@@ -492,8 +493,40 @@ function EventDetails({ item, zone, nameOf, onClose, onDeleted }: {
   onDeleted: () => void
 }) {
   const { t, language } = useI18n()
+  const { groupId } = useTeacherScope()
   const [busy, setBusy] = useState(false)
+  const [pinNote, setPinNote] = useState<'done' | 'failed' | null>(null)
   const description = String((item.meta?.description as string) ?? '')
+
+  /* Only a TASK row is pinnable from here: its id IS the launch the child's
+     own route opens, so the pin can point at exactly this paper. A goal or a
+     meeting has nothing behind it a hero could show. */
+  const pinnable = item.source === 'task'
+    && Boolean(item.learner_id || item.learner_ids.length)
+
+  const pinTask = async () => {
+    if (busy) return
+    setBusy(true)
+    setPinNote(null)
+    try {
+      if (item.learner_id) {
+        await pinNext(item.learner_id, { launch_id: item.id })
+      } else if (groupId) {
+        /* Many children: through the bulk route, whose per-learner activation
+           check absorbs roster drift — a child who left since the launch is
+           reported, never silently pinned to a 404. */
+        await bulkPinNext(groupId, {
+          targets: item.learner_ids.map((id) => ({ kind: 'learner' as const, id })),
+          pin: { launch_id: item.id },
+        })
+      }
+      setPinNote('done')
+    } catch {
+      setPinNote('failed')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const when = useMemo(() => {
     const day = new Intl.DateTimeFormat(localeOf(language), {
@@ -571,6 +604,13 @@ function EventDetails({ item, zone, nameOf, onClose, onDeleted }: {
             {t('tch.calendar.delete')}
           </button>
         ) : null}
+        {pinnable ? (
+          <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
+                  disabled={busy} onClick={() => void pinTask()}>
+            <Icon name="target" size={15} aria-hidden />
+            {t('tch.calendar.pinTask')}
+          </button>
+        ) : null}
         {item.href ? (
           <button type="button" className="sp-btn sp-btn--sm"
                   onClick={() => navigate(item.href as string)}>
@@ -578,6 +618,11 @@ function EventDetails({ item, zone, nameOf, onClose, onDeleted }: {
           </button>
         ) : null}
       </div>
+      {pinNote && (
+        <p role="status" className={`tch-cal__pinNote${pinNote === 'failed' ? ' is-error' : ''}`}>
+          {t(pinNote === 'done' ? 'tch.calendar.pinTaskDone' : 'tch.calendar.pinTaskFailed')}
+        </p>
+      )}
     </Modal>
   )
 }

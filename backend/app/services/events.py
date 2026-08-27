@@ -1412,9 +1412,15 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
         # `launch` is the id `is_component_completion` matched on. Cleared on a
         # failed completion too: done-is-done, and the after-fail routing owns
         # what comes next — a pin that survived failure would loop the child.
-        pinned_component = (brain.get("pinned_next") or {}).get("component_id")
-        if pinned_component and str(pinned_component) == str(event.get("launch") or ""):
+        # The ending survives as `pinned_last` (#244): without it, "done" and
+        # "never pinned" were the same blank to the teacher who set it.
+        pinned = brain.get("pinned_next") or {}
+        if pinned.get("component_id") \
+                and str(pinned["component_id"]) == str(event.get("launch") or ""):
+            from app.services import pinning
             set_updates["pinned_next"] = None
+            set_updates["pinned_last"] = pinning.spent_record(
+                pinned, pinning.OUTCOME_COMPLETED)
 
     if objective_id and verb in SCORING_VERBS and not _already_credited(event, prior_state):
         now = event.get("occurred_at") or _now()

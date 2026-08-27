@@ -145,34 +145,28 @@ try {
   check('Home no longer carries a picker of its own',
         await page.locator('.tch-home__classPick').count() === 0)
 
-  // ── roster ────────────────────────────────────────────────────────────────
-  /* The roster has two views and remembers which one this teacher chose, so a
-     check pinned to `.tch-studentCard` only ever ran for an account whose
-     stored preference happened to be `cards` — and the default is `table`.
-     This waited 30s for a node that cannot exist and then threw, taking every
-     assertion below it with it. One selector spanning both views. */
-  const ROW = '.tch-studentCard, .tch-roster__row'
-  await page.locator('.teacher-app-nav button').nth(1).click()
-  /* The screen lands on the LIVE view now (#249); the table/cards this block
-     asserts live behind the manage button. Clicking through it is deliberate —
-     it also proves the live→manage door exists. */
-  await page.waitForSelector('.tch-liveBar__manage', { timeout: 30000 })
-  await page.locator('.tch-liveBar__manage').click()
-  await page.waitForSelector(ROW, { timeout: 30000 })
-  const cards = await page.locator(ROW).count()
-  check('roster lists the class', cards > 0, `${cards} students`)
+  // ── students: the live view IS the screen ─────────────────────────────────
+  /* The manage roster (table/cards, filters) is retired from this page — the
+     live rows are the list now, and the profile opens from a row. The bar may
+     be compact here (assistant dock + search trigger narrow it), which folds
+     the whole nav behind the hamburger — open whatever door is offered. */
+  const studentsNav = page.locator('[data-tour="teacher.nav.students"]')
+  if (!await studentsNav.isVisible().catch(() => false)) {
+    const burger = page.locator('.app-bar-menu-toggle')
+    const more = page.locator('.teacher-app-nav__moreTrigger')
+    if (await burger.isVisible().catch(() => false)) await burger.click()
+    else await more.click()
+  }
+  await studentsNav.click()
+  await page.waitForSelector('.tch-liveRow', { timeout: 30000 })
+  const cards = await page.locator('.tch-liveRow').count()
+  check('the live view lists the class', cards > 0, `${cards} students`)
+  check('the manage toggle is gone',
+        await page.locator('.tch-modeToggle').count() === 0)
   await page.screenshot({ path: `${OUT}/05-roster.png`, fullPage: true })
 
-  // filter to "needs attention"
-  await page.locator('.tch-roster__filters button').nth(1).click()
-  await page.waitForTimeout(600)
-  const flagged = await page.locator(ROW).count()
-  check('attention filter narrows the roster', flagged > 0 && flagged <= cards,
-        `${flagged} of ${cards}`)
-  await page.screenshot({ path: `${OUT}/06-roster-filtered.png` })
-
   // ── student profile: one scrolling page, no tabs ──────────────────────────
-  await page.locator(ROW).first().click()
+  await page.locator('.tch-liveRow__who').first().click()
   await page.waitForSelector('.tch-student__body', { timeout: 30000 })
   check('opened a student profile', page.url().includes('/teacher/student/'), page.url())
   await page.screenshot({ path: `${OUT}/07-student-overview.png`, fullPage: true })

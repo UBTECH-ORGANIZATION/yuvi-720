@@ -128,14 +128,11 @@ export function TeacherStudentsPage() {
      teacher picked. */
   const savedView = (user?.preferences?.teacher_roster_view as View | undefined) ?? 'table'
   const [view, setView] = useState<View>(entry.view ?? savedView)
-  /* Live is what the teacher LANDS on (#249): the question they have while a
-     class works in front of them is "who is where and who needs me", not a
-     sortable table. Manage (table/cards) stays one click away, and a deep link
-     that names a view or a filter goes straight to manage — those links exist
-     to show a filtered LIST. `teacher_roster_view` is untouched: it remembers
-     table-vs-cards INSIDE manage, not this. */
-  const [mode, setMode] = useState<'live' | 'manage'>(
-    entry.view || entry.status || entry.minDaysInactive !== null ? 'manage' : 'live')
+  /* Live is the screen (#249, hardened later): the question a teacher has
+     while a class works in front of them is "who is where and who needs me".
+     The manage roster (table/cards, filters, columns) is retired from this
+     page — its JSX is kept below, unreachable, until it finds a new home. */
+  const mode = 'live' as 'live' | 'manage'
 
   /* Where the planner points each child — the live rows' "מיקוד" line and the
      pulse card's subject gauges. Re-read when the focus panel changes a pin. */
@@ -386,12 +383,6 @@ export function TeacherStudentsPage() {
         onClose={() => setDeleting(null)}
         onConfirm={() => deleting && void removeSubgroup(deleting)}
       />
-
-      {/* One fixed switch, both modes, same spot — the two views are two ends
-          of a slider, not a screen and its escape hatch. */}
-      <div className="tch-roster__modeRow">
-        <ModeToggle mode={mode} onChange={setMode} />
-      </div>
 
       {mode === 'live' ? (
         busy ? (

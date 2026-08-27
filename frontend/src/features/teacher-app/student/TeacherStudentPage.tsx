@@ -32,10 +32,14 @@ import { useI18n } from '../../../i18n/I18nProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import { PraiseDialog } from '../shared/PraiseDialog'
 import type { StrengthItem } from '../shared/DifficultiesCard'
+import { useAuth } from '../../../providers/AuthProvider'
+import { FocusPanel } from '../live/FocusPanel'
 import {
-  generateTopicDigest, getFocusRoadmap, getLearnerRead, getStudentActivity,
+  generateTopicDigest, getFocusRoadmap, getLearnerRead, getPinnedNext,
+  getStudentActivity,
   getStudentDetail,
   getStudentGoals, getStudentObjectives, getStudentTrends, getTopicDigest,
+  unpinNext,
   type RoadmapStep,
   type LearnerRead, type LearnerTrends, type ObjectiveBreakdownRow,
   type PlannerFocus, type QuestionRow,
@@ -934,8 +938,9 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows }: {
   trends: LearnerTrends | null
   rows: QuestionRow[] | null
 }) {
-  const { t } = useI18n()
-  const { subject: scopeSubject } = useTeacherScope()
+  const { t, language } = useI18n()
+  const { subject: scopeSubject, groupId } = useTeacherScope()
+  const { user } = useAuth()
   /* The planner's pick is cross-subject by design — `next_focus` answers "where
      does the platform take this child next", whatever the subject. Under an
      active subject filter an off-subject pick would be the one card on the band
@@ -948,6 +953,51 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows }: {
   const [objSubject, setObjSubject] = useState<string | null>(null)
   /* The planner's road ahead, behind a click on the focus card. */
   const [roadOpen, setRoadOpen] = useState(false)
+
+  /* The pin (#244). This card used to read `next_focus` alone, so a pin set
+     from the live view left the profile CONTRADICTING the child's hero — the
+     one screen a teacher opens to see what the child sees. Now it reads the
+     same fact the hero honours, and shows how the last pin ended: "done ✓"
+     and "never pinned" are different answers. */
+  const [pinView, setPinView] = useState<
+    Awaited<ReturnType<typeof getPinnedNext>> | null>(null)
+  const [pinNonce, setPinNonce] = useState(0)
+  const [pinOpen, setPinOpen] = useState(false)
+  const [pinBusy, setPinBusy] = useState(false)
+  useEffect(() => {
+    let active = true
+    getPinnedNext(learnerId, language)
+      .then((result) => { if (active) setPinView(result) })
+      // The band still stands without the pin lane — the planner focus is
+      // real either way; a failed read just means no pin strip.
+      .catch(() => { if (active) setPinView(null) })
+    return () => { active = false }
+  }, [learnerId, language, pinNonce])
+
+  const activePin = pinView?.pin_state === 'active' ? pinView.pinned : null
+  const pinnedBy = activePin
+    ? (activePin.pinned_by === user?.user_id
+      ? (user?.display_name || activePin.pinned_by) : activePin.pinned_by)
+    : ''
+  /* A spent pin stays worth a line for a week — after that it is history,
+     not context. */
+  const recentLast = pinView?.last && pinView.last.ended_at
+    && Date.now() - Date.parse(pinView.last.ended_at) < 7 * 24 * 3600 * 1000
+    ? pinView.last : null
+
+  const unpin = async () => {
+    if (pinBusy) return
+    setPinBusy(true)
+    try {
+      await unpinNext(learnerId)
+      setPinNonce((nonce) => nonce + 1)
+    } catch {
+      /* The strip re-reads on the next nonce; a failed unpin leaves the pin
+         visibly standing, which is the truthful outcome. */
+    } finally {
+      setPinBusy(false)
+    }
+  }
 
   /* Independence: how many of the questions they answered needed ANY help.
      Counted per question, never per event — one long Yuvi conversation on one
@@ -1056,12 +1106,13 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows }: {
         style={cellCount > 5
           ? { '--tch-status-cols': Math.ceil(cellCount / 2) } as CSSProperties
           : undefined}>
-        {/* Where the planner is pointing, from the same `next_focus` the
-            platform itself follows — the teacher's card and the child's app
-            can never disagree about what comes next. */}
+        {/* Where the child's app is pointing — the pin when one stands (the
+            hero honours it), the planner's own pick otherwise. This card and
+            the child's dashboard can never disagree about what comes next. */}
         <Card className="tch-status__cell tch-status__focus">
           {/* The whole card opens the planner's roadmap — where this pick
-              leads, step by step. */}
+              leads, step by step. The pin strip below sits OUTSIDE this door:
+              buttons inside a button is markup that cannot be clicked apart. */}
           <button
             type="button"
             className="tch-status__cellOpen tch-status__focusOpen"
@@ -1075,13 +1126,25 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows }: {
               <Icon name="target" size={14} aria-hidden />
               {t('tch.student.focusTitle')}
             </h4>
-            {focus?.subject && focus.mode !== 'complete' ? (
+            {!activePin && focus?.subject && focus.mode !== 'complete' ? (
               <span className="tch-status__focusSubject" dir="auto">
                 {subjectLabel(focus.subject, t)}
               </span>
             ) : null}
           </div>
-          {focus && focus.mode === 'complete' ? (
+          {activePin ? (
+            <>
+              {/* The pinned step IS what the child sees on their hero. */}
+              <p className="tch-status__focusWhat" dir="auto">
+                {pinView?.pinned_title ?? ''}
+              </p>
+              <p className="tch-status__focusMeta">
+                <StatusPill tone="strong">
+                  {t('tch.student.pin.by', { name: pinnedBy })}
+                </StatusPill>
+              </p>
+            </>
+          ) : focus && focus.mode === 'complete' ? (
             <p className="tch-status__focusDone">
               <Icon name="check" size={15} aria-hidden />
               {t('tch.student.focusMode.complete')}
@@ -1103,7 +1166,57 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows }: {
             <p className="tch-status__none">{t('tch.student.focusNone')}</p>
           )}
           </button>
+
+          {/* The pin lane: act on the pin, or read how the last one ended.
+              Rendered only once the pin read answered — a strip that appears
+              and rewords itself mid-glance would cost more than it says. */}
+          {pinView && (
+            <div className="tch-status__pinBar">
+              {pinView.pin_state === 'expired' && (
+                <span className="tch-status__pinNote" dir="auto">
+                  {t('tch.student.pin.outcome.expired',
+                    { title: pinView.pinned_title ?? '' })}
+                </span>
+              )}
+              {!pinView.pinned && recentLast && recentLast.outcome !== 'expired' && (
+                <span className="tch-status__pinNote" dir="auto">
+                  {recentLast.outcome === 'completed'
+                    ? <Icon name="check" size={13} aria-hidden /> : null}
+                  {t(`tch.student.pin.outcome.${recentLast.outcome}`,
+                    { title: pinView.last_title ?? '' })}
+                </span>
+              )}
+              {activePin && (
+                <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
+                        disabled={pinBusy} onClick={() => void unpin()}>
+                  {t('tch.liveView.act.unpin')}
+                </button>
+              )}
+              {groupId && (
+                <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
+                        aria-haspopup="dialog" onClick={() => setPinOpen(true)}>
+                  {t('tch.student.pin.change')}
+                </button>
+              )}
+            </div>
+          )}
         </Card>
+
+        {/* The same panel the live view opens — two pin dialogs would be two
+            opinions about what a pin is. No scope lever here: this page is
+            about ONE child. */}
+        {/* The panel carries its own heading now — the modal borrows it as
+            the accessible title instead of stacking a second one above it. */}
+        <Modal open={pinOpen} onClose={() => setPinOpen(false)}
+               titleId="tch-focus-panel-title" className="tch-focusModal">
+          {pinOpen && groupId ? (
+            <FocusPanel
+              learnerId={learnerId}
+              groupId={groupId}
+              onChanged={() => setPinNonce((nonce) => nonce + 1)}
+            />
+          ) : null}
+        </Modal>
 
         <RoadmapDialog learnerId={learnerId} open={roadOpen}
                        onClose={() => setRoadOpen(false)} />
