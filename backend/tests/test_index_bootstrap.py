@@ -127,6 +127,8 @@ class IndexBootstrap(unittest.TestCase):
             "wellbeing_flags": {"wellbeing_flags"},
             "goal_suggestions": {"goal_suggestions"},
             "calendar_events": {"calendar_events"},
+            "learner_signals": {"learner_signals"},
+            "learner_activity": {"learner_activity"},
         }
         self.assertEqual(
             steps, set(owned), "server.py index_steps changed — update `owned` here too")

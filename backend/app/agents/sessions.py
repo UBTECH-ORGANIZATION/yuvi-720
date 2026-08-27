@@ -1292,3 +1292,60 @@ async def record_action_outcome(
         _write_history_fallback(history)
         return True
     return False
+
+
+async def set_question_quality(
+    owner_id: str,
+    session_id: str,
+    exchange_id: str,
+    quality: dict[str, Any],
+    role: str = "coach",
+) -> bool:
+    """Stamp the question-quality label (PBI 451) on one user message.
+
+    TOP-LEVEL field, deliberately not ``meta.*``: ``_message_payload`` forwards
+    ``meta`` wholesale to the learner client, and this label is a judgement for
+    the teacher's Independence score — it must never reach the child. Top-level
+    fields are whitelisted out of the payload.
+
+    Write-once: the ``$exists: False`` clause makes a second classification of
+    the same message a no-op — labels are never re-judged.
+
+    Ownership is part of the query, like ``record_action_outcome``.
+    """
+    safe_id = normalize_learner_id(owner_id)
+    safe_session = normalize_session_id(session_id)
+    message_id = f"{normalize_session_id(exchange_id)}:0"
+    stamped = {**quality, "at": _now()}
+
+    collection = _get_collection_named("agent_messages")
+    if collection is not None:
+        try:
+            result = await collection.update_one(
+                {
+                    "_id": message_id,
+                    "learner_id": safe_id,
+                    "conversation_id": safe_session,
+                    "agent_role": role,
+                    "message_role": "user",
+                    "question_quality": {"$exists": False},
+                },
+                {"$set": {"question_quality": stamped}},
+            )
+            return bool(result.matched_count)
+        except Exception as exc:
+            print(f"⚠️ question quality write failed, using fallback: {exc}")
+
+    history = _read_history_fallback()
+    message = history["messages"].get(message_id)
+    if (
+        message
+        and message.get("learner_id") == safe_id
+        and message.get("conversation_id") == safe_session
+        and message.get("message_role") == "user"
+        and not message.get("question_quality")
+    ):
+        message["question_quality"] = stamped
+        _write_history_fallback(history)
+        return True
+    return False

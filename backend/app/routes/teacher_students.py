@@ -377,6 +377,22 @@ async def student_trends(
     return _ok(await learner_trends.learner_trends(safe_id, days=days))
 
 
+@router.get("/students/{learner_id}/scores")
+async def student_scores(
+    learner_id: str,
+    session=Depends(require_teacher_session),
+):
+    """Independence & Concentration (PBI 451) — weighted, evidence-gated,
+    teacher-only. Every sub-score ships its raw evidence; missing signals are
+    renormalized and reported in `coverage`, never silently scored around."""
+    from app.services import learner_scores
+
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    return _ok(await learner_scores.student_scores(safe_id))
+
+
 @router.get("/students/{learner_id}/badges")
 async def student_badges(
     learner_id: str,

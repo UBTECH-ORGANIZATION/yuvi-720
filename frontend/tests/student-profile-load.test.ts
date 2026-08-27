@@ -60,7 +60,7 @@ describe('the profile streams in', () => {
        the teacher nothing while they wait. These four are true before any
        request answers, so they are rendered as words in the skeletons. */
     const skeletons = page.slice(page.indexOf('/* ── the page on its way in'))
-    for (const key of ['tch.student.focusTitle', 'tch.student.consistency',
+    for (const key of ['tch.student.focusTitle', 'tch.student.concentration',
                        'tch.student.independence', 'tch.student.recommendations']) {
       assert.ok(skeletons.includes(key), `the placeholders no longer print ${key}`)
     }

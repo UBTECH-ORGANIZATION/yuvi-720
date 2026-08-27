@@ -62,6 +62,11 @@ REQUIRED_INDEXES: dict[str, list[tuple[str, ...]]] = {
     "goal_suggestions": [("learner_id",)],
     # Free calendar events. Read by (group, start_at) on every calendar open.
     "calendar_events": [("group_id", "start_at")],
+    # Durable signal episodes (idle/recovery/sustained/question-quality).
+    # Read by (learner, at) on every open of a student's score dialogs.
+    "learner_signals": [("learner_id", "at"), ("dedupe_key",)],
+    # Support-usage rows. Read unbounded by learner on every profile open.
+    "learner_activity": [("learner_id", "at")],
 }
 
 # Brain paths the teacher assistant must never be able to read.

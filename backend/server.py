@@ -122,7 +122,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # A missing index is slow, never broken, and must never stop a boot.
     from app.agents.teacher_tools import registry as teacher_tool_registry
     from app.services import (
-        direct_messages, kudos, mentoring_assist, notifications,
+        direct_messages, kudos, learner_activity, learner_signals,
+        mentoring_assist, notifications,
         org_repository, school_calendar, teacher_alerts, teacher_insights_store,
         weekly_digest, wellbeing,
     )
@@ -148,6 +149,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         ("goal_suggestions", mentoring_assist.ensure_goal_suggestion_indexes),
         # Read by (group_id, start_at) on every open of the class calendar.
         ("calendar_events", school_calendar.ensure_indexes),
+        # Read by (learner_id, at) on every open of a student's score dialogs.
+        ("learner_signals", learner_signals.ensure_indexes),
+        # Read unbounded by learner_id on every profile open; was unindexed.
+        ("learner_activity", learner_activity.ensure_indexes),
     )
     await run_index_steps(index_steps)
 

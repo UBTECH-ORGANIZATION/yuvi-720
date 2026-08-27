@@ -181,6 +181,25 @@ async def _activity_rows(learner_id: str) -> list[dict[str, Any]]:
     return [row for row in _read_fallback() if row.get("learner_id") == learner_id]
 
 
+async def rows(learner_id: str) -> list[dict[str, Any]]:
+    """All activity rows for a learner, timestamps included. Public accessor for
+    readers that need the ``at`` ordering ``question_summary`` drops (the
+    Independence score joins support rows against the attempt timeline)."""
+    return await _activity_rows(learner_id)
+
+
+async def ensure_indexes() -> None:
+    """(learner_id, at) — every profile open runs an otherwise-unindexed
+    ``find({"learner_id": …})`` over this collection. Wired into server.py."""
+    collection = _get_collection_named("learner_activity")
+    if collection is None:
+        return
+    try:
+        await collection.create_index([("learner_id", 1), ("at", -1)], name="learner_at")
+    except Exception as exc:
+        print(f"⚠️ learner_activity learner_at index skipped: {type(exc).__name__}")
+
+
 async def has_content_hint(
     learner_id: str,
     *,

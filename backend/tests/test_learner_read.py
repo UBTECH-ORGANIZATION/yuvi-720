@@ -99,13 +99,26 @@ class TestClean:
         # "Nothing to say" and "the model returned an empty object" are
         # different claims, and a teacher cannot tell them apart on screen.
         assert learner_read._clean({}, []) is None
-        assert learner_read._clean({"subjects": [], "involvement": "",
-                                    "notable": "", "suggestion": ""}, []) is None
+        assert learner_read._clean({"subjects": [], "overview": "",
+                                    "suggestion": ""}, []) is None
+
+    def test_the_removed_prose_fields_no_longer_count_as_content(self):
+        # PBI 451: `involvement`/`notable` were the two repeated prose lines.
+        # A model payload carrying ONLY them is now an empty read — and the
+        # cleaned shape never carries the keys.
+        assert learner_read._clean({"involvement": "פעילות יומית",
+                                    "notable": "אוהב/ת טבלאות"}, []) is None
+        read = learner_read._clean({
+            "suggestion": "לחזור על השברים",
+            "involvement": "פעילות יומית", "notable": "אוהב/ת טבלאות",
+        }, [])
+        assert read is not None
+        assert "involvement" not in read and "notable" not in read
 
     def test_an_empty_subjects_list_beside_real_content_is_kept(self):
         read = learner_read._clean({
             "subjects": [],
-            "involvement": "פעילות יומית", "suggestion": "לחזור על השברים",
+            "suggestion": "לחזור על השברים",
         }, [])
         assert read is not None
         assert read["subjects"] == []
@@ -117,12 +130,10 @@ class TestClean:
                  "points": [f"point {p}" for p in range(9)]}
                 for index in range(9)
             ],
-            "involvement": "x" * 900,
         }, [])
         assert len(read["subjects"]) == learner_read.MAX_SUBJECTS
         assert all(len(s["points"]) == learner_read.MAX_SUBJECT_POINTS
                    for s in read["subjects"])
-        assert len(read["involvement"]) <= learner_read.MAX_POINT_CHARS
 
     def test_a_subject_the_evidence_never_named_is_dropped(self):
         # A section about an unnamed subject could only be invented.
@@ -131,7 +142,6 @@ class TestClean:
                 {"subject": "math", "points": ["הושג יעד 1 מתוך 3"]},
                 {"subject": "history", "points": ["משפט בדוי"]},
             ],
-            "involvement": "פעילות",
         }, [], known_subjects={"math", "science"})
         assert [s["subject"] for s in read["subjects"]] == ["math"]
 
@@ -153,7 +163,7 @@ class TestClean:
         # restated the dashboard instead of reading between its numbers.
         read = learner_read._clean({
             "overview": "מצליח ב-80% מהשאלות.",
-            "involvement": "פעילות יומית",
+            "suggestion": "לחזור על השברים",
         }, [])
         assert read["overview"] == ""
 
@@ -173,7 +183,6 @@ class TestSuggestionAnchor:
 
     def test_a_valid_target_becomes_our_anchor_not_the_models(self):
         read = learner_read._clean({
-            "involvement": "פעילות יומית",
             "suggestion": "לחזק את מערכת הצירים",
             "suggestion_target": "obj:MATH-1",
         }, self.ANCHORS)
@@ -183,7 +192,6 @@ class TestSuggestionAnchor:
 
     def test_an_invented_target_is_dropped_not_trusted(self):
         read = learner_read._clean({
-            "involvement": "פעילות יומית",
             "suggestion": "לעבוד על נושא שלא קיים",
             "suggestion_target": "obj:INVENTED",
         }, self.ANCHORS)
