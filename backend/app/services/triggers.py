@@ -65,6 +65,19 @@ _last_streak_session: dict[str, str] = {}
 # evidence — a NEW `answered` still is, so a genuine second attempt is celebrated.
 _success_acknowledged: dict[str, set[str]] = {}
 _SUCCESS_MEMORY_LIMIT = 200
+# Strong refs for fire-and-forget signal writes from sync callbacks (the loop
+# only weak-refs tasks; without this a GC could cancel one mid-write).
+_signal_tasks: set[asyncio.Task] = set()
+
+
+async def _record_signal(learner_id: str, kind: str, **kwargs: Any) -> None:
+    """Persist one detector firing (PBI 451). Guarded — a signals failure must
+    never break trigger evaluation (same stance as the teacher escalation)."""
+    try:
+        from app.services import learner_signals
+        await learner_signals.record(learner_id, kind, **kwargs)
+    except Exception as exc:
+        print(f"⚠️ signal persistence failed: {type(exc).__name__}: {exc}")
 
 
 def _screen_success_key(event: dict[str, Any]) -> str:
@@ -303,6 +316,16 @@ async def evaluate(learner_id: str, event: dict[str, Any]) -> Optional[dict[str,
             prior = [e for e in recent if e.get("_id") != event.get("_id")]
             if detectors.detect_recovery(prior, event):
                 reason = "recovery"
+                # Durable trail (PBI 451): the firing used to vanish with the
+                # nudge. Recorded here — the only once-per-event path — never on
+                # the read paths (moments/insights re-run detectors per view).
+                # Deduped by event id: ingest is idempotent, replays re-enter.
+                await _record_signal(
+                    learner_id, "recovery",
+                    objective_id=objective_id,
+                    session_id=event.get("session_id"),
+                    dedupe_key=f"recovery:{event.get('_id')}",
+                )
         streak_session = None
         if reason is None and event.get("session_id"):
             session_id = event["session_id"]
@@ -312,6 +335,14 @@ async def evaluate(learner_id: str, event: dict[str, Any]) -> Optional[dict[str,
                     await get_session_events(learner_id, session_id)
                 ):
                     reason, streak_session = "streak", session_id
+                    # Once per session even across restarts (the in-memory
+                    # `_last_streak_session` guard above does not survive one).
+                    await _record_signal(
+                        learner_id, "sustained_effort",
+                        objective_id=objective_id,
+                        session_id=session_id,
+                        dedupe_key=f"sustained:{learner_id}:{session_id}",
+                    )
         # A plain effortful correct answer also earns a short acknowledgement —
         # the 120s cooldown keeps it occasional, not a slot machine. (Observed
         # live: a learner answered correctly and the chat said nothing at all.)
@@ -424,6 +455,21 @@ def publish_idle(learner_id: str, objective_id: Optional[str] = None) -> None:
         _arm_idle(learner_id, objective_id, delay=IDLE_SECONDS - chatted_ago)
         return
     _publish(learner_id, {"type": "idle", "objective_id": objective_id})
+    # Durable trail (PBI 451): one row per genuinely fired idle episode — past
+    # the cooldown and chat-rearm returns above, so retro idle-share can be
+    # computed. No dedupe key: each firing is a distinct ≥IDLE_SECONDS stretch
+    # by construction (the handle is spent; only a real event re-arms). This is
+    # a sync loop callback, so the write is a fire-and-forget task.
+    try:
+        from app.services import learner_signals
+        task = asyncio.get_running_loop().create_task(learner_signals.record(
+            learner_id, "idle", objective_id=objective_id,
+            meta={"idle_seconds": IDLE_SECONDS, "lesson_open": True},
+        ))
+        _signal_tasks.add(task)
+        task.add_done_callback(_signal_tasks.discard)
+    except Exception as exc:
+        print(f"⚠️ idle signal write skipped: {type(exc).__name__}")
     # Idle is published straight from the watchdog, not through `evaluate`'s
     # priority loop, so the teacher escalation there never saw it. A learner
     # sitting on one screen doing nothing is exactly what the live strip is for.

@@ -57,17 +57,20 @@ describe('the profile streams in', () => {
 
   it('prints the headings it already knows instead of greying them', () => {
     /* A placeholder that greys out a caption it could simply print teaches
-       the teacher nothing while they wait. These four are true before any
-       request answers, so they are rendered as words in the skeletons. */
+       the teacher nothing while they wait. These are true before any request
+       answers, so they are rendered as words in the skeletons. */
     const skeletons = page.slice(page.indexOf('/* ── the page on its way in'))
-    for (const key of ['tch.student.focusTitle', 'tch.student.consistency',
-                       'tch.student.independence', 'tch.student.recommendations']) {
+    for (const key of ['tch.student.focusTitle', 'tch.student.recommendations']) {
       assert.ok(skeletons.includes(key), `the placeholders no longer print ${key}`)
     }
-    /* And the KPI captions, which live in the hero itself. */
-    for (const key of ['tch.kpi.learningMinutes', 'tch.kpi.questionsWorked', 'tch.kpi.helpUsed']) {
-      assert.ok(page.includes(key), `the KPI strip no longer names ${key}`)
-    }
+    /* The hero strip's two habit scores (they replaced the raw KPI counters,
+       Gal 2026-08-27): their loading state must keep wearing the real
+       captions, which ScoreStats prints from the kind list. */
+    const stats = readFileSync(`${dir}ScoreCards.tsx`, 'utf8')
+    assert.ok(stats.includes('tch.student.${kind}'),
+              'the score stats no longer caption themselves by kind')
+    assert.ok(stats.includes("'concentration', 'independence'"),
+              'the score stats lost their kind list')
   })
 
   it('reads the name from the roster rather than waiting for the fetch', () => {

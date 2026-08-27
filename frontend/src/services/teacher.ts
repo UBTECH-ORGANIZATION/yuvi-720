@@ -545,6 +545,51 @@ export function getStudentTrends(learnerId: string, days = 30) {
     `/api/teacher/students/${encodeURIComponent(learnerId)}/trends?days=${days}`)
 }
 
+/* ── habit scores: independence & concentration (PBI 451) ─────────────────── */
+
+export interface ScoreTrend {
+  direction: 'up' | 'down' | 'flat' | null
+  deltaPoints: number | null
+}
+
+export interface SubScore {
+  key: string
+  /** 0..1 — shown in the UI: the weighted mean is visible, never a black box. */
+  weight: number
+  /** 0..100, or null when this signal is not measured (yet). */
+  value: number | null
+  /** Raw numbers behind the value — a claim never travels without its datum. */
+  evidence: Record<string, unknown>
+}
+
+export interface ScoreBlock {
+  /** 0..100, or null below the evidence threshold — never a thin guess. */
+  value: number | null
+  confidence: number
+  evidenceOk: boolean
+  trend: ScoreTrend
+  subscores: SubScore[]
+  /** Signals that could not be measured; the weights renormalize over the rest. */
+  coverage: { missing: string[]; renormalized: boolean }
+}
+
+export interface ConcentrationScore extends ScoreBlock {
+  /** The normaliser the five signals are read against — never a weighted tile. */
+  sessionShape: { connectedMinutes: number | null; questionsAnswered: number }
+}
+
+export interface StudentScores {
+  independence: ScoreBlock
+  concentration: ConcentrationScore
+  windowDays: number
+  windowTruncated: boolean
+}
+
+export function getStudentScores(learnerId: string) {
+  return apiGet<StudentScores>(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/scores`)
+}
+
 /* ── teacher-authored insights (MUST S3) ──────────────────────────────────── */
 
 export function listTeacherInsights(learnerId: string) {
@@ -1034,8 +1079,12 @@ export function getGroupLearnings(groupId: string, language: string, subject?: s
 /** One smart-search hit: a REAL catalog learning (the server drops anything
  *  the model made up) plus the model's one-line reason it fits the ask. */
 export interface FoundLearning {
-  component_id: string
+  /** A learning GOAL — pinning it lets the planner allocate the fitting
+   *  lomda inside it as the child progresses. */
+  objective_id: string
   title: string
+  /** Where the goal lives — the search is catalog-wide, every subject. */
+  subject: string | null
   reason: string
 }
 
@@ -1093,11 +1142,14 @@ export function previewLearning(componentId: string) {
  * else (unit, objective, the task's title) from the id, so only the id and an
  * optional end date cross the wire. */
 export interface PinnedNext {
-  /** Absent on pins written before #244 — read that as 'component'. */
-  kind?: 'component' | 'task'
+  /** Absent on pins written before #244 — read that as 'component'.
+   *  'objective' = a learning GOAL: the planner allocates within it. */
+  kind?: 'component' | 'task' | 'objective'
   component_id?: string
   unit_id?: string | null
   objective_id?: string | null
+  /** Objective pins: where the goal lives, for the class map's row label. */
+  subject?: string | null
   /** Task pins: the opening the child's own route accepts, and the task. */
   launch_id?: string
   task_id?: string
@@ -1180,6 +1232,10 @@ export function getPinnedNext(learnerId: string, language: string) {
 /** Exactly one of `component_id` / `launch_id`; `expires_at` optional — a bare
  *  date means "through that day" in the classroom's timezone. */
 export interface PinRequest {
+  /** Exactly one target. `objective_id` pins a learning GOAL (the dialog's
+   *  only learnings currency now); `component_id` survives for older
+   *  surfaces; `launch_id` pins an assigned task. */
+  objective_id?: string
   component_id?: string
   launch_id?: string
   expires_at?: string
@@ -1278,16 +1334,12 @@ export function deleteSubgroup(subgroupId: string) {
  *  because a teacher acting on this is entitled to know how old it is, and
  *  `stale` means a refresh was attempted and failed. */
 export interface LearnerRead {
-  /** Free prose, no figures — the overall analysis paragraph the
-   *  recommendations panel leads with. */
+  /** Free prose, no figures — the overall analysis paragraph. Opens the goal
+   *  dialog's context reading; the recommendations panel no longer prints it. */
   overview?: string
   /** Per-subject sections — a short performance summary in prose, then the
    *  points, each point carrying its numbers. */
   subjects?: { subject: string; summary?: string; points: string[] }[]
-  involvement?: string
-  /** Something worth knowing that the numbers don't show — an interest, how
-   *  the child describes their own learning. */
-  notable?: string
   suggestion?: string
   /** The real material the suggestion points at, validated server-side —
    *  what the build-task seed opens on. Null when the model named nothing. */

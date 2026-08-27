@@ -76,6 +76,101 @@ const num = (value: unknown): number | null =>
   typeof value === 'number' && Number.isFinite(value) ? value : null
 
 const TEMPLATES: Template[] = [
+  /* ── the habit-score sub-scores (PBI 451) ─────────────────────────────────
+     FIRST in the list on purpose: these key pairs are specific, and the older
+     detector templates below would otherwise consume a shared key (observed:
+     `rapid_guesses` swallowed by the A-3 nudge sentence, which then claimed
+     "the last 5 questions" about a 7-day window). Each sub-score's counters,
+     told as the one sentence a teacher would ask for. */
+  {
+    needs: ['support_requests', 'after_own_attempt'],
+    consumes: ['support_requests', 'after_own_attempt'],
+    render: (raw, t) => t('tch.evidence.sent.score.tried', {
+      total: num(raw.support_requests) ?? 0,
+      after: num(raw.after_own_attempt) ?? 0,
+    }),
+  },
+  {
+    needs: ['labels', 'scored_messages'],
+    consumes: ['labels', 'scored_messages'],
+    render: (raw, t) => {
+      const labels = (raw.labels ?? {}) as Record<string, unknown>
+      const listed = Object.entries(labels)
+        .filter(([, count]) => num(count))
+        .map(([label, count]) => `${fieldLabel(label, t)} ×${num(count)}`)
+        .join(', ')
+      return listed
+        ? t('tch.evidence.sent.score.quality', { list: listed })
+        : t('tch.evidence.sent.score.qualityNone')
+    },
+  },
+  {
+    needs: ['solved', 'unassisted'],
+    consumes: ['solved', 'unassisted'],
+    render: (raw, t) => t('tch.evidence.sent.score.unassisted', {
+      solved: num(raw.solved) ?? 0,
+      unassisted: num(raw.unassisted) ?? 0,
+    }),
+  },
+  {
+    needs: ['struggled_questions', 'gave_up'],
+    consumes: ['struggled_questions', 'gave_up'],
+    render: (raw, t) => t('tch.evidence.sent.score.persistence', {
+      struggled: num(raw.struggled_questions) ?? 0,
+      gaveUp: num(raw.gave_up) ?? 0,
+    }),
+  },
+  {
+    needs: ['struggle_runs', 'recovered'],
+    consumes: ['struggle_runs', 'recovered'],
+    render: (raw, t) => t('tch.evidence.sent.score.recovery', {
+      runs: num(raw.struggle_runs) ?? 0,
+      recovered: num(raw.recovered) ?? 0,
+    }),
+  },
+  {
+    needs: ['support_decisions', 'ladder_max'],
+    consumes: ['support_decisions', 'mean_hint_level', 'ladder_max'],
+    render: (raw, t) => t('tch.evidence.sent.score.depth', {
+      times: num(raw.support_decisions) ?? 0,
+      mean: num(raw.mean_hint_level) ?? 0,
+      max: num(raw.ladder_max) ?? 1,
+    }),
+  },
+  {
+    needs: ['idle_episodes', 'lesson_seconds'],
+    consumes: ['idle_episodes', 'idle_seconds_min', 'lesson_seconds'],
+    render: (raw, t) => t('tch.evidence.sent.score.idle', {
+      episodes: num(raw.idle_episodes) ?? 0,
+      idleMinutes: Math.round((num(raw.idle_seconds_min) ?? 0) / 60),
+      lessonMinutes: Math.round((num(raw.lesson_seconds) ?? 0) / 60),
+    }),
+  },
+  {
+    needs: ['answers', 'rapid_guesses'],
+    consumes: ['answers', 'rapid_guesses'],
+    render: (raw, t) => t('tch.evidence.sent.score.rapid', {
+      answers: num(raw.answers) ?? 0,
+      rapid: num(raw.rapid_guesses) ?? 0,
+    }),
+  },
+  {
+    needs: ['work_sessions', 'sustained_streaks'],
+    consumes: ['work_sessions', 'sustained_streaks'],
+    render: (raw, t) => t('tch.evidence.sent.score.sustained', {
+      sessions: num(raw.work_sessions) ?? 0,
+      streaks: num(raw.sustained_streaks) ?? 0,
+    }),
+  },
+  {
+    needs: ['labeled_messages', 'off_topic'],
+    consumes: ['labeled_messages', 'off_topic'],
+    render: (raw, t) => t('tch.evidence.sent.score.offtopic', {
+      total: num(raw.labeled_messages) ?? 0,
+      off: num(raw.off_topic) ?? 0,
+    }),
+  },
+
   /* ── a hard question's difficulty row (#455) ──────────────────────────────
      The claim is "these children found this question hard"; the datum is who
      tried and who never got it, plus the rule that made the row exist. */
@@ -410,6 +505,7 @@ const TEMPLATES: Template[] = [
       return raw.approved_by ? `${who} ${t('tch.evidence.sent.goalApproved')}` : who
     },
   },
+
 ]
 
 /* ── why a recommendation was made ──────────────────────────────────────────

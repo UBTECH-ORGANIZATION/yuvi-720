@@ -59,6 +59,30 @@ async def select_next(learner_id: str, locale: str = "he") -> dict[str, Any]:
                 "explanation": f"next = {objective_id} — pinned by the teacher",
             }
 
+    # An OBJECTIVE pin names the goal and leaves the allocation to this very
+    # planner: `objective_next` runs the same per-objective engine the roadmap
+    # reads, so the child moves through the pinned goal exactly as they would
+    # have moved through it unpinned. A goal that has run dry falls through —
+    # the planner's own answer resumes.
+    if pinned is not None and pinning.pin_kind(pinned) == pinning.KIND_OBJECTIVE:
+        events = await get_learner_events(learner_id)
+        completed = content_catalog.completed_component_ids(events)
+        component = pinning.objective_next(pinned, brain, completed, locale)
+        if component is not None:
+            objective_id = str(pinned["objective_id"])
+            return {
+                "subject": component.get("subject") or pinned.get("subject"),
+                "objective_id": objective_id,
+                "component": component,
+                "difficulty": component.get("_band"),
+                "reason": "pinned",
+                "plan": {},
+                "explanation": (
+                    f"next = {objective_id} — the goal is pinned by the teacher; "
+                    "the component is the planner's own allocation within it"
+                ),
+            }
+
     # Cross-subject focus: global review-due first, else most-behind subject.
     focus = next_focus(brain)
     plan = focus["plan"]

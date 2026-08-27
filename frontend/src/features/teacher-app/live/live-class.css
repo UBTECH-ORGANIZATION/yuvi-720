@@ -571,36 +571,6 @@
   color: var(--sp-ink-500);
 }
 
-/* Learnings | tasks — a full-width segmented switch, not two floating pills. */
-.tch-focusPanel__tabs {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  gap: 2px;
-  padding: 3px;
-  border: 1px solid var(--sp-border);
-  border-radius: var(--sp-radius-md);
-  background: var(--sp-bg);
-}
-
-.tch-focusPanel__tab {
-  border: 0;
-  border-radius: calc(var(--sp-radius-md) - 3px);
-  padding: var(--sp-1) var(--sp-3);
-  background: transparent;
-  color: var(--sp-ink-500);
-  font: inherit;
-  font-size: var(--sp-fs-sm);
-  font-weight: var(--sp-fw-semibold);
-  cursor: pointer;
-}
-
-.tch-focusPanel__tab.is-active {
-  background: var(--sp-surface);
-  color: var(--sp-primary-700);
-  box-shadow: inset 0 0 0 1px var(--sp-border);
-}
-
 /* The end date frames what a click on the catalog MEANS, so it reads as a
    setting above the pick, not a stray. */
 .tch-focusPanel__options {
@@ -632,9 +602,6 @@
 }
 
 .tch-focusPanel__note.is-error { color: var(--sp-danger-600); }
-
-/* The tasks tab: a flat list, not chips — a task's title is a sentence. */
-.tch-focusPanel__rows--tasks { display: grid; gap: var(--sp-1); }
 
 /* The standing state as a framed strip — "you are changing FROM this". */
 .tch-focusPanel__current {
@@ -685,29 +652,6 @@
 
 .tch-focusPanel__searchBox .sp-icon { color: var(--sp-primary-600); flex-shrink: 0; }
 .tch-focusPanel__searchBox .sp-input { flex: 1; min-inline-size: 0; }
-
-.tch-focusPanel__suggest {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--sp-1);
-  margin: 0;
-  font-size: var(--sp-fs-xs);
-  color: var(--sp-ink-500);
-}
-
-.tch-focusPanel__suggestChip {
-  padding: 1px var(--sp-2);
-  border: 1px dashed var(--sp-border);
-  border-radius: var(--sp-radius-pill);
-  background: transparent;
-  font: inherit;
-  font-size: var(--sp-fs-xs);
-  color: var(--sp-ink-700);
-  cursor: pointer;
-}
-
-.tch-focusPanel__suggestChip:hover:not(:disabled) { border-color: var(--sp-primary-400); }
 
 /* The answer block sits above the shelf, visibly its own thing. */
 .tch-focusPanel__results {
@@ -806,26 +750,29 @@
   color: var(--sp-success-600);
 }
 
-/* An objective is a heading over its steps — nothing folds, nothing hides. */
-.tch-focusPanel__objGroup { display: grid; gap: var(--sp-1); }
-
-.tch-focusPanel__objHead {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
+/* The shelf is a grid of GOAL cards — the teacher picks the destination;
+   which lomda inside it the child meets first is the planner's call. */
+.tch-focusPanel__goals {
+  list-style: none;
   margin: 0;
-  font-size: var(--sp-fs-xs);
-  font-weight: var(--sp-fw-semibold);
-  color: var(--sp-ink-500);
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--sp-2);
+  align-items: stretch;
 }
 
-.tch-focusPanel__objHead::after {
-  content: '';
-  flex: 1;
-  min-inline-size: var(--sp-4);
-  block-size: 1px;
-  background: var(--sp-border);
+.tch-focusPanel__goals li { display: contents; }
+
+.tch-focusPanel__option--goal {
+  align-content: start;
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.tch-focusPanel__goalMeta {
+  margin-block-start: 2px;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
 }
 
 .tch-focusPanel__rows {

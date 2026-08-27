@@ -223,7 +223,7 @@ class PinLocaleTest(unittest.TestCase):
                         "sdash.hero.resumeAside",
                         "notif.pinnedNext", "notif.action.openLesson",
                         "notif.action.openTask",
-                        "tch.liveView.focusPanel.tab.tasks",
+                        "tch.liveView.focusPanel.search.go",
                         "tch.liveView.focusPanel.until",
                         "tch.liveView.focusPanel.title",
                         "tch.student.pin.by",
@@ -558,6 +558,137 @@ class TaskSubmitClearsPinTest(unittest.IsolatedAsyncioTestCase):
         with patch("app.brain.repository.get_brain",
                    AsyncMock(side_effect=RuntimeError("db down"))):
             await attempts._clear_task_pin("tsk-abc:1", "kid")  # must not raise
+
+
+# ── objective pins: the teacher names the GOAL, the planner allocates ────────
+
+_OBJ_PIN = {
+    "kind": "objective", "objective_id": "OBJ.1", "subject": "math",
+    "pinned_by": "teacher-1", "pinned_at": "2026-08-20T08:00:00+00:00",
+}
+
+
+class ObjectivePinTest(unittest.TestCase):
+    def test_kind_and_target(self):
+        from app.services import pinning
+
+        self.assertEqual(pinning.pin_kind(_OBJ_PIN), pinning.KIND_OBJECTIVE)
+        self.assertEqual(pinning.target_id(_OBJ_PIN), "OBJ.1")
+
+    def test_the_allocation_is_the_planners_own(self):
+        """`objective_next` delegates to `select_component` — the same engine
+        the roadmap reads — so a pinned goal sequences exactly as unpinned."""
+        from app.services import pinning
+
+        with patch("app.services.content_catalog.select_component",
+                   return_value={"id": "cmp-pin"}) as pick, \
+             patch("app.services.content_catalog.learner_signals", lambda _b: {}):
+            chosen = pinning.objective_next(_OBJ_PIN, {"mastery": {}}, {"cmp-done"})
+        self.assertEqual(chosen["id"], "cmp-pin")
+        self.assertEqual(pick.call_args.args[0], "OBJ.1")
+        self.assertEqual(pick.call_args.kwargs["completed_ids"], {"cmp-done"})
+
+
+class HeroObjectivePinTest(HeroPinTest):
+    def _hero_obj(self, brain, allocated, completed_ids=frozenset()):
+        with patch("app.services.content_catalog.select_component",
+                   return_value=allocated), \
+             patch("app.services.content_catalog.learner_signals", lambda _b: {}):
+            return self._hero(brain, completed_ids)
+
+    def test_a_goal_pin_steers_to_the_planners_allocation(self):
+        hero = self._hero_obj(
+            {"pinned_next": dict(_OBJ_PIN), "current_state": {}, "mastery": {}},
+            allocated=dict(_COMPONENT),
+        )
+        self.assertEqual(hero["mode"], "pinned")
+        self.assertEqual(hero["pinnedKind"], "objective")
+        self.assertEqual(hero["componentId"], "cmp-pin")
+        self.assertEqual(hero["objectiveId"], "OBJ.1")
+
+    def test_a_finished_goal_stops_steering(self):
+        """None from the allocator = the goal ran dry — the hero must fall
+        back to its own reading, never render a dead pinned card."""
+        hero = self._hero_obj(
+            {"pinned_next": dict(_OBJ_PIN), "current_state": {}, "mastery": {}},
+            allocated=None,
+        )
+        self.assertNotEqual(hero["mode"], "pinned")
+
+    def test_the_resume_aside_is_suppressed_when_it_is_the_allocation(self):
+        """The goal pin resolved to the very lesson the child is mid-way in —
+        a second link to the primary is noise."""
+        hero = self._hero_obj(
+            {"pinned_next": dict(_OBJ_PIN),
+             "current_state": {"component_id": "cmp-pin"}, "mastery": {}},
+            allocated=dict(_COMPONENT),
+        )
+        self.assertEqual(hero["mode"], "pinned")
+        self.assertIsNone(hero["resume"])
+
+
+class SelectNextObjectivePinTest(SelectNextPinTest):
+    async def _select_obj(self, brain, allocated):
+        from app.agents import pedagogical
+
+        with patch("app.services.content_catalog.select_component",
+                   return_value=allocated), \
+             patch("app.services.content_catalog.learner_signals", lambda _b: {}):
+            return await self._select(brain, events=[])
+
+    async def test_the_route_serves_the_goal_via_the_planners_allocation(self):
+        decision, planner = await self._select_obj(
+            {"pinned_next": dict(_OBJ_PIN), "mastery": {}},
+            allocated={**_COMPONENT, "_band": "on_track"},
+        )
+        self.assertEqual(decision["reason"], "pinned")
+        self.assertEqual(decision["component"]["id"], "cmp-pin")
+        self.assertEqual(decision["objective_id"], "OBJ.1")
+        planner.assert_not_called()
+
+    async def test_a_finished_goal_falls_through_to_the_planner(self):
+        decision, planner = await self._select_obj(
+            {"pinned_next": dict(_OBJ_PIN), "mastery": {}}, allocated=None)
+        self.assertNotEqual(decision.get("reason"), "pinned")
+        planner.assert_called_once()
+
+
+class ObjectivePinRouteTest(unittest.IsolatedAsyncioTestCase):
+    async def _pin(self, *, objective, body=None):
+        from app.routes import teacher_students as routes
+
+        with patch.object(routes, "_guard_learner", AsyncMock(return_value="kid")), \
+             patch("app.services.kata_catalog.ensure_loaded", AsyncMock()), \
+             patch("app.services.kata_catalog.get_objective", return_value=objective), \
+             patch("app.services.kata_catalog.localized_objective_title",
+                   return_value="פעולות בשברים"), \
+             patch("app.brain.repository.get_brain", AsyncMock(return_value={})), \
+             patch("app.brain.repository.apply_brain_updates", AsyncMock()) as write, \
+             patch("app.services.notifications.notify", AsyncMock()) as notify:
+            response = await routes.pin_next(
+                "kid", body or {"objective_id": "OBJ.1"},
+                session={"sub": "teacher-1"},
+            )
+        return response, write, notify
+
+    async def test_a_goal_pin_stores_the_goal_and_its_subject(self):
+        response, write, notify = await self._pin(objective={"subject": "math"})
+        self.assertEqual(response.status_code, 200)
+        pinned = write.await_args.args[1]["pinned_next"]
+        self.assertEqual(pinned["kind"], "objective")
+        self.assertEqual(pinned["objective_id"], "OBJ.1")
+        self.assertEqual(pinned["subject"], "math")
+        self.assertEqual(
+            notify.await_args.kwargs["notification_id"], "pinned_next:kid:OBJ.1")
+        # A goal has no single lesson to deep-link; the bell opens the hero.
+        self.assertEqual(
+            notify.await_args.kwargs["actions"][0]["route"], "/student-dashboard")
+
+    async def test_a_goal_the_catalog_does_not_know_is_a_422_not_a_pin(self):
+        response, write, notify = await self._pin(objective=None)
+        self.assertEqual(response.status_code, 422)
+        write.assert_not_awaited()
+        notify.assert_not_awaited()
 
 
 class PinnedLastSchemaTest(unittest.TestCase):

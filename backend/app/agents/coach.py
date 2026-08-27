@@ -35,6 +35,7 @@ from app.agents.client import build_chat_client
 from app.brain.context_engine import build_coach_bundle
 from app.brain.memory import classify_query_intent, profile_answer_fallback
 from app.services import coach_debug_trace
+from app.services import question_quality
 from app.services.ai_usage import UsageContext
 from app.services.llm import LlmModelTier, call_llm, call_llm_stream
 
@@ -1461,6 +1462,25 @@ async def run_coach_stream(
         assistant_meta={"actions": tool_context.action_offers} if tool_context.action_offers else None,
     )
     coach_debug_trace.append(debug_trace, "persist_conversation_turn")
+
+    # Question-quality label (PBI 451): judge WHAT the learner asked, once, at
+    # write time — learning chat only, never companion chat, never pseudo-
+    # messages ([support:*]/[proactive:*] have no user row to label). Fired as
+    # a task so it never delays the stream's [DONE].
+    if user_message is not None and question_quality.is_learning_chat(
+        question_key, surface_context
+    ):
+        question_quality.spawn(question_quality.classify_and_store(
+            learner_id,
+            session_id,
+            exchange_id,
+            memory_user,
+            subject=_cur.get("subject"),
+            question_key=question_key,
+            lang=lang,
+            role=coach_role,
+            usage_context=usage_context.for_operation("coach.question_quality"),
+        ))
 
     # Chat persists (§5.7): consolidate durable signals (interests) from the turn.
     # Only for real learner messages, and never a blocker on the reply.

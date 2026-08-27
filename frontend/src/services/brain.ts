@@ -119,7 +119,9 @@ export interface DashboardHero {
   /** Which kind of thing the pin points at (#244). A task pin has no catalog
    *  coordinates: the start button must navigate to `/tasks/{launchId}` and
    *  never ask the route agent, which speaks only components. */
-  pinnedKind?: 'component' | 'task'
+  /** 'objective' = a pinned learning GOAL: `componentId` is the planner's
+   *  current allocation inside it, so routing works exactly as 'component'. */
+  pinnedKind?: 'component' | 'task' | 'objective'
   taskId?: string | null
   launchId?: string | null
   /** The lesson a pin displaced, so "continue where you stopped" stays one
