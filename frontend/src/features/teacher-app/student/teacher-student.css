@@ -691,6 +691,30 @@
   align-items: stretch;
 }
 
+/* The focus card grew a pin lane under its door (#244); the flex above laid
+   the two out SIDE BY SIDE, so it stacks when the lane is present. */
+.tch-status__focus:has(> .tch-status__pinBar) { flex-direction: column; }
+
+.tch-status__pinBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  padding: var(--sp-1) var(--sp-3) var(--sp-2);
+  border-block-start: 1px solid var(--sp-border);
+}
+
+.tch-status__pinNote {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+
+/* The pin panel, in a dialog: the same component the live row drops inline. */
+
 .tch-status__cellOpen {
   flex: 1;
   display: grid;

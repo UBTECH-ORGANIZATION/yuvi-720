@@ -1031,6 +1031,26 @@ export function getGroupLearnings(groupId: string, language: string, subject?: s
   )
 }
 
+/** One smart-search hit: a REAL catalog learning (the server drops anything
+ *  the model made up) plus the model's one-line reason it fits the ask. */
+export interface FoundLearning {
+  component_id: string
+  title: string
+  reason: string
+}
+
+/** The pin dialog's smart search. `similar_topic` is only ever set when
+ *  `options` is empty — a navigation hint ("I do have something about X"),
+ *  never a fourth result. */
+export function findLearnings(
+  groupId: string,
+  body: { query: string; subject?: string; language?: string },
+) {
+  return apiPost<{ options: FoundLearning[]; similar_topic: string | null }>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/learnings/find`, body
+  )
+}
+
 export function getLearningDetail(groupId: string, componentId: string, language: string) {
   return apiGet<LearningDetail>(
     `/api/teacher/groups/${encodeURIComponent(groupId)}/learnings/${
@@ -1067,15 +1087,44 @@ export function previewLearning(componentId: string) {
   )
 }
 
-/* Pin-next (#249, the minimal slice of #244). The target is always a catalog
- * component picked from `getGroupLearnings` above — the server resolves unit,
- * objective and subject from the id, so only the id crosses the wire. */
+/* Pin-next (#249 shipped the component slice; #244 completed it). The target
+ * is a catalog component picked from `getGroupLearnings` above, or a task the
+ * learner was actually assigned — either way the server resolves everything
+ * else (unit, objective, the task's title) from the id, so only the id and an
+ * optional end date cross the wire. */
 export interface PinnedNext {
-  component_id: string
-  unit_id: string | null
-  objective_id: string | null
+  /** Absent on pins written before #244 — read that as 'component'. */
+  kind?: 'component' | 'task'
+  component_id?: string
+  unit_id?: string | null
+  objective_id?: string | null
+  /** Task pins: the opening the child's own route accepts, and the task. */
+  launch_id?: string
+  task_id?: string
+  /** The task's title, frozen at pin time — the catalog has never seen it. */
+  title?: string
   pinned_by: string
   pinned_at: string
+  /** Absent = the pin holds until done or unpinned. Past = it stopped
+   *  steering already; `pin_state` says which reading is true. */
+  expires_at?: string
+}
+
+/** How the previous pin ended — what lets a teacher tell "done ✓" apart from
+ *  "never pinned". */
+export interface PinnedLast extends PinnedNext {
+  outcome: 'completed' | 'expired' | 'unpinned'
+  ended_at: string
+}
+
+/** An open task opening the pin panel may offer — already assigned, not yet
+ *  handed in, so pinning it can never point at a paper the child cannot open. */
+export interface PinnableTask {
+  launch_id: string
+  task_id: string
+  title: string | null
+  due_at: string | null
+  status: string
 }
 
 /** Where the planner is pointing one learner right now — the profile's
@@ -1110,15 +1159,50 @@ export interface PinFocus {
 }
 
 export function getPinnedNext(learnerId: string, language: string) {
-  return apiGet<{ pinned: PinnedNext | null; focus: PinFocus }>(
+  return apiGet<{
+    pinned: PinnedNext | null
+    /** Display name for the standing pin, resolved server-side — the task's
+     *  frozen title or the pinned learning's localized one. */
+    pinned_title: string | null
+    /** Null when nothing is pinned. 'expired' and 'spent' (the pinned
+     *  component was already completed) keep a dead record readable rather
+     *  than pretending it never was — either way it steers nobody. */
+    pin_state: 'active' | 'expired' | 'spent' | null
+    last: PinnedLast | null
+    last_title: string | null
+    tasks: PinnableTask[]
+    focus: PinFocus
+  }>(
     `/api/teacher/students/${encodeURIComponent(learnerId)}/pin-next?language=${language}`
   )
 }
 
-export function pinNext(learnerId: string, componentId: string) {
+/** Exactly one of `component_id` / `launch_id`; `expires_at` optional — a bare
+ *  date means "through that day" in the classroom's timezone. */
+export interface PinRequest {
+  component_id?: string
+  launch_id?: string
+  expires_at?: string
+}
+
+export function pinNext(learnerId: string, body: PinRequest) {
   return apiPost<{ pinned: PinnedNext }>(
-    `/api/teacher/students/${encodeURIComponent(learnerId)}/pin-next`,
-    { component_id: componentId }
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/pin-next`, body
+  )
+}
+
+/** One pin, many children. Targets resolve server-side against the LIVE
+ *  roster; a child a task-pin cannot reach comes back in `skipped`, named. */
+export function bulkPinNext(
+  groupId: string,
+  body: {
+    targets: { kind: 'learner' | 'subgroup' | 'group'; id: string }[]
+    pin: PinRequest
+    expires_at?: string
+  }
+) {
+  return apiPost<{ pinned: string[]; skipped: { learner_id: string; reason: string }[] }>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/pin-next`, body
   )
 }
 

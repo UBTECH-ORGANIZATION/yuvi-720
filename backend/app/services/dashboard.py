@@ -247,19 +247,78 @@ def _hero(
     brain: dict, language: str, completed_ids: frozenset[str] | set[str] = frozenset()
 ) -> dict[str, Any]:
     """Build a read-only resume/next preview; never mutate current_state."""
+    from app.brain.mastery import entry_for
+    from app.services import pinning
+
     mastery = brain.get("mastery") or {}
     current = brain.get("current_state") or {}
 
+    # The resume candidate is judged BEFORE the pin (#244), even though the pin
+    # outranks it: while a pin holds the hero, the unfinished lesson is still
+    # sitting in `current_state`, and the child must be able to get back to it.
+    # Resume used to require `current_state.resume_token`, which is only ever
+    # written from an xAPI extension no provider has ever sent — so the branch
+    # was dead and a learner mid-lesson was greeted with "start something new".
+    # The real signal is the one we already have: they launched a component and
+    # have not finished it. §6 puts the position INSIDE the component on the
+    # content anyway ("שמירת התקדמות … וחזרה לאותה הנקודה"), so the token is a
+    # bonus, never the gate.
+    current_component_id = current.get("component_id") or current.get("item_id")
+    current_component = get_component(current_component_id) if current_component_id else None
+    current_objective_id = (current_component or {}).get("objective_id")
+    can_resume = bool(
+        current_component
+        and str(current_component_id) not in set(completed_ids)
+        and not entry_for(mastery, current_objective_id).get("achieved")
+    )
+
     # A teacher's pin outranks everything, resume included: it exists precisely
-    # for "not that one — this one", said to a child mid-something-else. Only an
-    # uncompleted pin steers; a completed one is spent, and the hero falls
-    # through to its own logic rather than pointing at finished work.
-    pinned = brain.get("pinned_next") or {}
-    pinned_component_id = pinned.get("component_id")
-    if pinned_component_id and str(pinned_component_id) not in set(completed_ids):
+    # for "not that one — this one", said to a child mid-something-else. What
+    # still steers is `pinning.active_pin`'s single judgement — uncompleted,
+    # unexpired — shared with the route and the teacher reads, so the four can
+    # never disagree about whether a pin is live.
+    pinned = pinning.active_pin(brain, completed_ids=completed_ids)
+    if pinned is not None:
+        # The lesson the pin displaced, carried on the payload so the hero can
+        # keep "continue where you stopped" reachable as a secondary door. Not
+        # when it IS the pinned thing — a second link to the primary is noise.
+        aside = None
+        if can_resume and str(current_component_id) != pinning.target_id(pinned):
+            aside = {
+                "componentId": current_component_id,
+                "unitId": (current_component or {}).get("unit_id") or current.get("unit_id"),
+                "objectiveTitle": localized_objective_title(current_objective_id, language)
+                or (current_component or {}).get("title"),
+            }
+
+        if pinning.pin_kind(pinned) == pinning.KIND_TASK:
+            # A task is not catalog content: no component, no unit, no plan —
+            # the frontend routes straight to `/tasks/{launchId}` and must not
+            # ask the planner, which only speaks components.
+            return {
+                "mode": "pinned",
+                "pinnedKind": "task",
+                "taskId": pinned.get("task_id"),
+                "launchId": pinned.get("launch_id"),
+                "subjectKey": None,
+                "subjectName": None,
+                "objectiveId": None,
+                # The task's own title, frozen at pin time — the one honest
+                # headline we have for content the catalog has never seen.
+                "objectiveTitle": pinned.get("title"),
+                **_goal_context(None),
+                "componentId": None,
+                "unitId": None,
+                "canResume": False,
+                "resume": aside,
+                "reason": _t(HERO_REASON, "pinned", language),
+                "pace": _t(PACE_WORDS, current.get("pace"), language)
+                if current.get("pace") else None,
+            }
+
+        pinned_component_id = pinned["component_id"]
         pinned_component = get_component(pinned_component_id) or {}
         pinned_objective_id = pinned.get("objective_id") or pinned_component.get("objective_id")
-        from app.brain.mastery import entry_for
         subject = pinned_component.get("subject") or entry_for(
             mastery, pinned_objective_id).get("subject")
         plan: dict[str, Any] = {}
@@ -273,6 +332,7 @@ def _hero(
             ) or {}
         return {
             "mode": "pinned",
+            "pinnedKind": "component",
             "subjectKey": subject,
             "subjectName": _t(SUBJECT_NAMES, subject, language),
             "objectiveId": pinned_objective_id,
@@ -284,26 +344,10 @@ def _hero(
             "pathNodeId": f"{pinned_component_id}#1",
             "progressRatio": plan.get("progress_ratio"),
             "canResume": False,
+            "resume": aside,
             "reason": _t(HERO_REASON, "pinned", language),
             "pace": _t(PACE_WORDS, current.get("pace"), language) if current.get("pace") else None,
         }
-
-    current_component_id = current.get("component_id") or current.get("item_id")
-    current_component = get_component(current_component_id) if current_component_id else None
-    current_objective_id = (current_component or {}).get("objective_id")
-    from app.brain.mastery import entry_for
-    # Resume used to require `current_state.resume_token`, which is only ever
-    # written from an xAPI extension no provider has ever sent — so the branch
-    # was dead and a learner mid-lesson was greeted with "start something new".
-    # The real signal is the one we already have: they launched a component and
-    # have not finished it. §6 puts the position INSIDE the component on the
-    # content anyway ("שמירת התקדמות … וחזרה לאותה הנקודה"), so the token is a
-    # bonus, never the gate.
-    can_resume = bool(
-        current_component
-        and str(current_component_id) not in set(completed_ids)
-        and not entry_for(mastery, current_objective_id).get("achieved")
-    )
 
     if can_resume:
         subject = entry_for(mastery, current_objective_id).get("subject")
@@ -316,6 +360,7 @@ def _hero(
             )
         return {
             "mode": "resume",
+            "resume": None,
             "subjectKey": subject,
             "subjectName": _t(SUBJECT_NAMES, subject, language),
             "objectiveId": current_objective_id,
@@ -342,7 +387,6 @@ def _hero(
     objective_id = focus["objective_id"]
 
     if objective_id:
-        from app.brain.mastery import entry_for
         # The SAME plan the roadmap renders — the hero used to run its own picker
         # and could name a component the route did not consider next.
         plan = content_catalog.objective_plan(
@@ -354,6 +398,7 @@ def _hero(
         ) or {}
         return {
             "mode": "next",
+            "resume": None,
             "subjectKey": subject,
             "subjectName": _t(SUBJECT_NAMES, subject, language),
             "objectiveId": objective_id,
@@ -372,6 +417,7 @@ def _hero(
 
     return {
         "mode": "complete",
+        "resume": None,
         "subjectKey": None,
         "subjectName": None,
         "objectiveId": None,

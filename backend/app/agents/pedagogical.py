@@ -31,9 +31,19 @@ async def select_next(learner_id: str, locale: str = "he") -> dict[str, Any]:
     # A teacher's pin outranks the planner (#249): "next" was chosen by a
     # person standing in the room, so the route honours it until the component
     # is completed — the xAPI fold clears the pin at that moment, and a spent
-    # pin that somehow survived is skipped here rather than served again.
-    pinned = brain.get("pinned_next") or {}
-    if pinned.get("component_id"):
+    # or expired pin is skipped here rather than served again. One judgement,
+    # shared with the hero (`pinning.active_pin`), so route and hero can never
+    # disagree about whether a pin is live.
+    #
+    # A TASK pin is deliberately NOT honoured here (#244): this agent speaks
+    # only catalog components, and a task has none. The hero owns task-pin
+    # steering — its start button navigates straight to `/tasks/{launch_id}`
+    # without asking this route — so a caller landing here under a task pin is
+    # mid-something-else, and the planner's own answer is the right one.
+    from app.services import pinning
+
+    if (pinned := pinning.active_pin(brain)) is not None \
+            and pinning.pin_kind(pinned) == pinning.KIND_COMPONENT:
         component = kata_catalog.get_component(str(pinned["component_id"]))
         events = await get_learner_events(learner_id)
         completed = content_catalog.completed_component_ids(events)

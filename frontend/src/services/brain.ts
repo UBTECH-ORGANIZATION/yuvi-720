@@ -116,6 +116,15 @@ export interface DashboardSubject {
 export interface DashboardHero {
   /** `pinned` = the teacher chose this exact step (#249); it outranks resume. */
   mode: 'resume' | 'next' | 'complete' | 'pinned'
+  /** Which kind of thing the pin points at (#244). A task pin has no catalog
+   *  coordinates: the start button must navigate to `/tasks/{launchId}` and
+   *  never ask the route agent, which speaks only components. */
+  pinnedKind?: 'component' | 'task'
+  taskId?: string | null
+  launchId?: string | null
+  /** The lesson a pin displaced, so "continue where you stopped" stays one
+   *  press away while the pin holds the hero. Null in every other mode. */
+  resume?: { componentId: string; unitId: string | null; objectiveTitle: string | null } | null
   subjectKey: 'math' | 'science' | null
   subjectName: string | null
   objectiveId: string | null

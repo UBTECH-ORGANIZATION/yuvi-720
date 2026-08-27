@@ -125,6 +125,14 @@ export function StudentDashboardPage() {
   const startHeroStep = async () => {
     if (!dashboard || dashboard.hero.mode === 'complete' || isStarting) return
     setActionError(false)
+    // A pinned TASK is not catalog content: `selectNextRoute` speaks only
+    // components and would answer with a lesson, not the paper the teacher
+    // pinned. Straight to the opening the child's own task route accepts.
+    if (dashboard.hero.mode === 'pinned'
+        && dashboard.hero.pinnedKind === 'task' && dashboard.hero.launchId) {
+      navigate(`/tasks/${encodeURIComponent(dashboard.hero.launchId)}`)
+      return
+    }
     if (dashboard.hero.mode === 'resume') {
       navigate(routeForComponent(dashboard.hero.componentId, dashboard.hero.unitId))
       return
@@ -188,6 +196,10 @@ export function StudentDashboardPage() {
                 isStarting={isStarting}
                 actionError={actionError}
                 onStart={() => void startHeroStep()}
+                onResume={dashboard.hero.resume ? () => navigate(routeForComponent(
+                  dashboard.hero.resume?.componentId ?? null,
+                  dashboard.hero.resume?.unitId,
+                )) : undefined}
               />
               <ActivenessWeb competencies={dashboard.competencies} />
             </section>

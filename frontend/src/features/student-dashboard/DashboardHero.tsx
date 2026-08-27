@@ -7,6 +7,9 @@ interface DashboardHeroProps {
   isStarting: boolean
   actionError: boolean
   onStart: () => void
+  /** Open the lesson a pin displaced (#244). Only rendered when the hero
+   *  carries one — a child mid-something-else keeps a door back to it. */
+  onResume?: () => void
 }
 
 export function DashboardHero({
@@ -14,6 +17,7 @@ export function DashboardHero({
   isStarting,
   actionError,
   onStart,
+  onResume,
 }: DashboardHeroProps) {
   const { t } = useI18n()
   const { hero } = dashboard
@@ -49,6 +53,17 @@ export function DashboardHero({
             <button className={`sd-button sd-button--primary${hero.mode === 'next' ? ' sd-button--directional' : ''}`} type="button" onClick={onStart} disabled={isStarting}>
               <span>{isStarting ? t('sdash.hero.starting') : t(`sdash.hero.${hero.mode}.action`)}</span>
               <Icon name={hero.mode === 'resume' ? 'reflect' : 'arrow'} size={18} />
+            </button>
+          )}
+          {/* The lesson the pin displaced (#244). A text link, not a second
+              button: the pin owns the hero, this is the way back — and the
+              head column has no vertical room for two filled buttons. */}
+          {hero.mode === 'pinned' && hero.resume && onResume && (
+            <button className="sd-journey-hero__resumeAside" type="button" onClick={onResume} dir="auto">
+              <Icon name="reflect" size={14} />
+              <span>{t('sdash.hero.resumeAside', {
+                title: hero.resume.objectiveTitle ?? '',
+              })}</span>
             </button>
           )}
         </div>

@@ -536,37 +536,259 @@
 
 /* ── the focus panel ──────────────────────────────────────────────────────── */
 
-.tch-liveRow__panel--focus { display: grid; justify-items: stretch; gap: var(--sp-2); }
+/* The panel's own grid lives on ITS root now (#244): it renders inside a live
+   row today and inside a profile modal tomorrow, and only the caller-supplied
+   classes say where it sits. `--focus` keeps the row placement. */
+.tch-focusPanel { display: grid; justify-items: stretch; gap: var(--sp-2); }
 
+/* The dialog frame both callers wrap the panel in — the live table and the
+   profile open the SAME pin dialog, floating over the page, never inline. */
+.tch-focusModal {
+  inline-size: min(620px, 100%);
+  display: grid;
+  gap: var(--sp-2);
+}
+
+/* The heading earns its room: everything below it is one gesture (pick →
+   pinned), and the lead sentence is what makes that gesture legible. */
+.tch-focusPanel__head { display: grid; gap: 2px; }
+
+.tch-focusPanel__title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-bold);
+  color: var(--sp-ink-900);
+}
+
+.tch-focusPanel__title .sp-icon { color: var(--sp-primary-600); }
+
+.tch-focusPanel__lead {
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+
+/* Learnings | tasks — a full-width segmented switch, not two floating pills. */
+.tch-focusPanel__tabs {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-bg);
+}
+
+.tch-focusPanel__tab {
+  border: 0;
+  border-radius: calc(var(--sp-radius-md) - 3px);
+  padding: var(--sp-1) var(--sp-3);
+  background: transparent;
+  color: var(--sp-ink-500);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  cursor: pointer;
+}
+
+.tch-focusPanel__tab.is-active {
+  background: var(--sp-surface);
+  color: var(--sp-primary-700);
+  box-shadow: inset 0 0 0 1px var(--sp-border);
+}
+
+/* The end date frames what a click on the catalog MEANS, so it reads as a
+   setting above the pick, not a stray. */
+.tch-focusPanel__options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-bg);
+}
+
+.tch-focusPanel__until .sp-icon { color: var(--sp-ink-500); flex-shrink: 0; }
+
+.tch-focusPanel__until {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-700);
+}
+
+.tch-focusPanel__until .sp-input { inline-size: auto; padding-block: 2px; }
+
+.tch-focusPanel__note {
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+
+.tch-focusPanel__note.is-error { color: var(--sp-danger-600); }
+
+/* The tasks tab: a flat list, not chips — a task's title is a sentence. */
+.tch-focusPanel__rows--tasks { display: grid; gap: var(--sp-1); }
+
+/* The standing state as a framed strip — "you are changing FROM this". */
 .tch-focusPanel__current {
   display: flex;
   align-items: center;
-  gap: var(--sp-2);
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-2);
   margin: 0;
+  padding: var(--sp-1) var(--sp-2);
+  border: 1px solid color-mix(in srgb, var(--sp-primary-400) 30%, var(--sp-border));
+  border-radius: var(--sp-radius-md);
+  background: color-mix(in srgb, var(--sp-primary-400) 7%, var(--sp-surface));
   font-size: var(--sp-fs-sm);
   color: var(--sp-ink-700);
 }
 
+.tch-focusPanel__current .sp-icon { color: var(--sp-primary-600); flex-shrink: 0; }
+
+.tch-focusPanel__current .sp-btn { margin-inline-start: auto; }
+
 .tch-focusPanel__skeleton { padding-block: var(--sp-2); }
 
-/* Chips wrap instead of rows stacking, so a whole objective fits in a couple
-   of lines and the panel rarely needs its scroll (kept only as a backstop
-   for very large catalogs). */
+/* The selected subject's shelf. Scrolls on its own so the dialog's frame —
+   heading, tabs, settings — never leaves the screen. */
 .tch-focusPanel__subjects {
   display: grid;
+  align-content: start;
   gap: var(--sp-3);
-  max-block-size: 460px;
+  max-block-size: min(46vh, 440px);
   overflow-y: auto;
+  padding-inline-end: 2px;
 }
 
-.tch-focusPanel__subjectName {
+/* The smart search: describe it instead of scanning for it. */
+.tch-focusPanel__searchRow {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  margin: 0 0 var(--sp-1);
-  font-size: var(--sp-fs-sm);
-  color: var(--sp-ink-900);
 }
+
+.tch-focusPanel__searchBox {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-inline-size: 0;
+}
+
+.tch-focusPanel__searchBox .sp-icon { color: var(--sp-primary-600); flex-shrink: 0; }
+.tch-focusPanel__searchBox .sp-input { flex: 1; min-inline-size: 0; }
+
+.tch-focusPanel__suggest {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+
+.tch-focusPanel__suggestChip {
+  padding: 1px var(--sp-2);
+  border: 1px dashed var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: transparent;
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-700);
+  cursor: pointer;
+}
+
+.tch-focusPanel__suggestChip:hover:not(:disabled) { border-color: var(--sp-primary-400); }
+
+/* The answer block sits above the shelf, visibly its own thing. */
+.tch-focusPanel__results {
+  display: grid;
+  gap: var(--sp-1);
+  padding: var(--sp-2);
+  border: 1px solid color-mix(in srgb, var(--sp-primary-400) 30%, var(--sp-border));
+  border-radius: var(--sp-radius-md);
+  background: color-mix(in srgb, var(--sp-primary-400) 5%, var(--sp-surface));
+}
+
+.tch-focusPanel__resultsHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-700);
+}
+
+.tch-focusPanel__rank {
+  min-inline-size: 18px;
+  block-size: 18px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--sp-primary-100);
+  color: var(--sp-primary-700);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.tch-focusPanel__similar {
+  padding: var(--sp-1) var(--sp-2);
+  border: 1px dashed color-mix(in srgb, var(--sp-primary-400) 45%, var(--sp-border));
+  border-radius: var(--sp-radius-md);
+  background: transparent;
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-primary-700);
+  cursor: pointer;
+  text-align: start;
+}
+
+.tch-focusPanel__similar:hover:not(:disabled) { background: var(--sp-primary-050); }
+
+/* One subject on display at a time — the rail is the map, the shelf below is
+   the territory. The compass marks the subject the child is actually in. */
+.tch-focusPanel__subjNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+
+.tch-focusPanel__subjChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 3px var(--sp-3);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-surface);
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-medium);
+  color: var(--sp-ink-700);
+  cursor: pointer;
+}
+
+.tch-focusPanel__subjChip:hover { border-color: var(--sp-primary-400); }
+
+.tch-focusPanel__subjChip.is-active {
+  border-color: var(--sp-primary-600);
+  background: var(--sp-primary-100);
+  color: var(--sp-primary-700);
+}
+
+.tch-focusPanel__subjChip .sp-icon { flex-shrink: 0; }
 
 .tch-focusPanel__tag {
   padding: 1px var(--sp-2);
@@ -584,62 +806,75 @@
   color: var(--sp-success-600);
 }
 
-.tch-focusPanel__objective {
-  border: 1px solid var(--sp-border);
-  border-radius: var(--sp-radius-md);
-  background: var(--sp-surface);
-  margin-block-end: var(--sp-1);
-}
+/* An objective is a heading over its steps — nothing folds, nothing hides. */
+.tch-focusPanel__objGroup { display: grid; gap: var(--sp-1); }
 
-.tch-focusPanel__objective.is-recommended {
-  border-color: color-mix(in srgb, var(--sp-success-600) 45%, transparent);
-}
-
-.tch-focusPanel__objective summary {
+.tch-focusPanel__objHead {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--sp-2);
-  padding: var(--sp-1) var(--sp-2);
-  font-size: var(--sp-fs-sm);
-  color: var(--sp-ink-700);
-  cursor: pointer;
-  list-style: none;
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-500);
 }
 
-.tch-focusPanel__objective summary::-webkit-details-marker { display: none; }
-.tch-focusPanel__objective summary .sp-icon {
-  transition: transform 160ms var(--sp-ease);
+.tch-focusPanel__objHead::after {
+  content: '';
+  flex: 1;
+  min-inline-size: var(--sp-4);
+  block-size: 1px;
+  background: var(--sp-border);
 }
-.tch-focusPanel__objective[open] summary .sp-icon { transform: rotate(180deg); }
 
 .tch-focusPanel__rows {
   list-style: none;
   margin: 0;
-  padding: var(--sp-1) var(--sp-2) var(--sp-2);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-1);
 }
 
-/* The li is only a React key holder; the chips flow directly in the wrap. */
 .tch-focusPanel__rows li { display: contents; }
 
+/* A step is a full row with room to say what it is — name first, then the
+   full title and the step's size. The whole row is the pin button. */
 .tch-focusPanel__option {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-1);
-  padding: 3px var(--sp-3);
+  display: grid;
+  gap: 2px;
+  padding: var(--sp-1) var(--sp-2);
   border: 1px solid var(--sp-border);
-  border-radius: var(--sp-radius-pill);
+  border-radius: var(--sp-radius-md);
   background: var(--sp-surface);
   font: inherit;
-  font-size: var(--sp-fs-sm);
   color: var(--sp-ink-700);
   cursor: pointer;
   text-align: start;
 }
 
-.tch-focusPanel__option:hover:not(:disabled) { border-color: var(--sp-primary-400); }
+.tch-focusPanel__optMain {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-2);
+}
+
+.tch-focusPanel__optName {
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-medium);
+  color: var(--sp-ink-900);
+}
+
+.tch-focusPanel__optDesc {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+
+.tch-focusPanel__option:hover:not(:disabled) {
+  border-color: var(--sp-primary-400);
+  background: var(--sp-primary-050);
+}
 .tch-focusPanel__option:disabled { cursor: default; }
 .tch-focusPanel__option.is-current {
   border-color: var(--sp-primary-600);
@@ -647,4 +882,5 @@
 }
 .tch-focusPanel__option.is-next {
   border-color: color-mix(in srgb, var(--sp-success-600) 45%, transparent);
+  background: color-mix(in srgb, var(--sp-success-600) 5%, var(--sp-surface));
 }

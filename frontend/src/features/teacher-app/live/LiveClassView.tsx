@@ -17,12 +17,13 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { navigate } from '../../../app/router'
-import { EmptyState, Hint, Icon, SkeletonRows, StatusPill } from '../../../components/primitives'
+import { EmptyState, Hint, Icon, StatusPill } from '../../../components/primitives'
+import { Modal } from '../../../components/primitives/Modal'
 import { useI18n } from '../../../i18n/I18nProvider'
 import {
-  getGroupLearnings, getPinnedNext, pinNext, unpinNext,
-  type LearnerFocus, type LearningRow, type PinFocus, type PinnedNext, type Presence,
+  type LearnerFocus, type Presence,
 } from '../../../services/teacher'
+import { FocusPanel } from './FocusPanel'
 import { MessageRefused, sendMessage } from '../../../services/directMessages'
 import { useTeacherLive } from '../../../providers/TeacherLiveProvider'
 import { NoFeelingFace, ValenceFace } from '../../checkin/ValenceFaces'
@@ -659,9 +660,15 @@ function LiveRow({
       {open === 'message' && (
         <MessagePanel learnerId={row.learner_id} name={row.name} onClose={() => onOpen(null)} />
       )}
+      {/* The pin dialog floats over the table (#244 follow-up): inline it
+          pushed the roster apart and read as more rows. The shared Modal owns
+          dismissal and borrows the panel's heading as its title. */}
       {open === 'focus' && (
-        <FocusPanel learnerId={row.learner_id} groupId={groupId}
-                    onChanged={onFocusChanged} onClose={() => onOpen(null)} />
+        <Modal open onClose={() => onOpen(null)} titleId="tch-focus-panel-title"
+               className="tch-focusModal">
+          <FocusPanel learnerId={row.learner_id} groupId={groupId}
+                      onChanged={onFocusChanged} />
+        </Modal>
       )}
     </li>
   )
@@ -782,286 +789,6 @@ function MessagePanel({ learnerId, name, onClose }: {
       {sent && <p role="status" className="tch-liveRow__panelNote">{t('tch.liveView.msg.sent')}</p>}
       {errorKey && (
         <p role="status" className="tch-liveRow__panelNote is-error">{t(errorKey)}</p>
-      )}
-    </div>
-  )
-}
-
-/** A raw catalogue id, read as words — the fallback of last resort for rows
- *  the catalogue publishes no name for (the seeded English components today):
- *  "MOE.ENG.G7.PEOPLE.FAMILY.GRAMMAR" → "Family · Grammar". A guess about
- *  presentation only, never about meaning: it reorders nothing and adds no
- *  words the id does not carry. */
-function prettyId(id: string): string {
-  const parts = id.split('.')
-    .filter((part) => part && !/^(MOE|CET|ENG|MATH|SCI|G\d+)$/i.test(part))
-    .slice(-2)
-    .map((part) => part
-      .replace(/-0*(\d+)$/, ' $1')
-      .toLowerCase()
-      .replace(/^./, (first) => first.toUpperCase()))
-  return parts.join(' · ') || id
-}
-
-/** A learning's display name: its own title unless that title IS the raw id
- *  (the catalogue had nothing better), in which case the id reads as words. */
-function learningName(row: LearningRow): string {
-  return row.title && row.title !== row.component_id ? row.title : prettyId(row.component_id)
-}
-
-/** The part of one learning's name that distinguishes it from its siblings.
- *
- *  Titles inside an objective share a long stem ("כתיבת שיעורי נקודה - …"),
- *  and chips repeating it nine times bury the only words that matter
- *  ("הקניה", "בסיסית 2"). The shared prefix is computed and cut exactly where
- *  the titles diverge — but only honoured when that cut lands on a separator,
- *  so no word is ever split; the full title stays on the chip's tooltip. */
-function variantOf(learning: LearningRow, siblings: LearningRow[]): string {
-  const title = learningName(learning)
-  if (siblings.length < 2) return title
-  const names = siblings.map(learningName)
-  let prefix = names[0]
-  for (const name of names) {
-    let index = 0
-    while (index < prefix.length && index < name.length
-           && prefix[index] === name[index]) index += 1
-    prefix = prefix.slice(0, index)
-  }
-  if (prefix.length < 8) return title
-  const remainder = title.slice(prefix.length)
-  const boundary = /[\s\-–:·]$/.test(prefix) || /^[\s\-–:·]/.test(remainder)
-  const rest = remainder.replace(/^[\s\-–:·]+/, '').trim()
-  return boundary && rest.length >= 2 ? rest : title
-}
-
-/* Changing one child's focus.
- *
- * Grounded twice: the panel opens on what the planner already intends (the
- * exact next component, from the learner's own plan) and the catalog is laid
- * out subject → objective, with the learner's current objective first and
- * open. The teacher can still choose anything — the panel recommends, it
- * does not fence — but the fitting step is always one glance away, so the
- * easy path is the one that matches where the child actually is.
- */
-function FocusPanel({ learnerId, groupId, onChanged, onClose }: {
-  learnerId: string
-  groupId: string | null
-  onChanged: () => void
-  onClose: () => void
-}) {
-  const { t, language } = useI18n()
-  const [learnings, setLearnings] = useState<LearningRow[] | null>(null)
-  const [current, setCurrent] = useState<PinnedNext | null>(null)
-  const [focus, setFocus] = useState<PinFocus | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [failed, setFailed] = useState(false)
-  const panelRef = useRef<HTMLDivElement | null>(null)
-  useDismiss(panelRef, true, onClose)
-
-  useEffect(() => {
-    if (!groupId) return
-    let active = true
-    getGroupLearnings(groupId, language)
-      .then((view) => { if (active) setLearnings(view.learnings) })
-      .catch(() => { if (active) setLearnings([]) })
-    getPinnedNext(learnerId, language)
-      .then((result) => {
-        if (!active) return
-        setCurrent(result.pinned)
-        setFocus(result.focus)
-      })
-      .catch(() => {})
-    return () => { active = false }
-  }, [groupId, learnerId, language])
-
-  /* subject → objective → learnings, in catalog order; the learner's own
-     subject first so the fitting material is never below the fold. */
-  const tree = useMemo(() => {
-    if (!learnings) return null
-    const subjects = new Map<string, {
-      key: string
-      name: string
-      objectives: Map<string, { id: string; title: string; rows: LearningRow[] }>
-    }>()
-    for (const row of learnings) {
-      const subjectKey = row.subject || 'other'
-      let subject = subjects.get(subjectKey)
-      if (!subject) {
-        // The shared `tch.subject.*` labels; an unmapped key falls back to
-        // itself rather than to a blank heading.
-        const labelKey = `tch.subject.${subjectKey}`
-        const label = t(labelKey)
-        subject = {
-          key: subjectKey,
-          name: label !== labelKey ? label : subjectKey,
-          objectives: new Map(),
-        }
-        subjects.set(subjectKey, subject)
-      }
-      const objectiveKey = row.objective_id || row.unit_id || row.component_id
-      let objective = subject.objectives.get(objectiveKey)
-      if (!objective) {
-        // The objective's NAME heads the group — but a registry with no
-        // localized name for it (English today) hands back the raw id or
-        // nothing, and "ENG.G7.FAMILY.GRAMMAR-01" is not a heading. Fall to
-        // the unit's name, then to the id read as words.
-        const named = row.objective_title && row.objective_title !== row.objective_id
-          ? row.objective_title : ''
-        objective = {
-          id: row.objective_id || '',
-          title: named || row.unit_title
-            || prettyId(row.objective_id || row.component_id),
-          rows: [],
-        }
-        subject.objectives.set(objectiveKey, objective)
-      }
-      objective.rows.push(row)
-    }
-    const ordered = [...subjects.values()]
-    ordered.sort((a, b) => {
-      if (a.key === focus?.subject) return -1
-      if (b.key === focus?.subject) return 1
-      return a.name.localeCompare(b.name)
-    })
-    return ordered
-  }, [learnings, focus, t])
-
-  async function choose(componentId: string) {
-    if (busy) return
-    setBusy(true)
-    setFailed(false)
-    try {
-      const { pinned } = await pinNext(learnerId, componentId)
-      setCurrent(pinned)
-      onChanged()
-    } catch {
-      setFailed(true)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function clear() {
-    if (busy) return
-    setBusy(true)
-    setFailed(false)
-    try {
-      await unpinNext(learnerId)
-      setCurrent(null)
-      onChanged()
-    } catch {
-      setFailed(true)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const titleOf = (componentId: string | null | undefined) => {
-    if (!componentId) return ''
-    const row = learnings?.find((held) => held.component_id === componentId)
-    return row ? learningName(row) : prettyId(componentId)
-  }
-
-  return (
-    <div className="tch-liveRow__panel tch-liveRow__panel--focus" ref={panelRef}>
-      {/* The standing state, first: a manual focus if one is set, else where
-          Yuvi's own route is pointing — so "change" always says change FROM. */}
-      <p className="tch-focusPanel__current" dir="auto">
-        {current ? (
-          <>
-            <Icon name="target" size={13} aria-hidden />
-            {t('tch.liveView.focusPanel.pinned', { title: titleOf(current.component_id) })}
-            <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm" disabled={busy}
-                    onClick={() => void clear()}>
-              {t('tch.liveView.act.unpin')}
-            </button>
-          </>
-        ) : focus ? (
-          t('tch.liveView.focusPanel.planner', {
-            subject: focus.subject_name || '',
-            title: focus.objective_title ?? t('tch.liveView.spread.unnamed'),
-          })
-        ) : (
-          t('tch.loading')
-        )}
-      </p>
-
-      {tree === null ? (
-        <div aria-busy="true" className="tch-focusPanel__skeleton"><SkeletonRows rows={4} /></div>
-      ) : tree.length === 0 ? (
-        <p className="tch-liveRow__panelNote">{t('tch.liveView.pin.emptyCatalog')}</p>
-      ) : (
-        <div className="tch-focusPanel__subjects">
-          {tree.map((subject) => (
-            <section key={subject.key} className="tch-focusPanel__subject">
-              <h4 className="tch-focusPanel__subjectName" dir="auto">
-                {subject.name}
-                {subject.key === focus?.subject && (
-                  <span className="tch-focusPanel__tag">
-                    {t('tch.liveView.focusPanel.currentSubject')}
-                  </span>
-                )}
-              </h4>
-              {[...subject.objectives.values()].map((objective) => {
-                const recommended = Boolean(
-                  focus?.objective_id && objective.id === focus.objective_id)
-                return (
-                  <details
-                    key={objective.id || objective.title}
-                    className={`tch-focusPanel__objective${recommended ? ' is-recommended' : ''}`}
-                    open={recommended}
-                  >
-                    <summary dir="auto">
-                      <Icon name="chevronDown" size={13} aria-hidden />
-                      <span>{objective.title}</span>
-                      {recommended && (
-                        <span className="tch-focusPanel__tag tch-focusPanel__tag--fit">
-                          {t('tch.liveView.focusPanel.recommended')}
-                        </span>
-                      )}
-                    </summary>
-                    <ul className="tch-focusPanel__rows">
-                      {objective.rows.map((learning) => {
-                        const isCurrent = current?.component_id === learning.component_id
-                        const isNext = focus?.next_component_id === learning.component_id
-                        const short = variantOf(learning, objective.rows)
-                        return (
-                          <li key={learning.component_id}>
-                            <button
-                              type="button"
-                              className={`tch-focusPanel__option${isCurrent ? ' is-current' : ''}${
-                                isNext ? ' is-next' : ''}`}
-                              disabled={busy || isCurrent}
-                              title={learning.title}
-                              onClick={() => void choose(learning.component_id)}
-                            >
-                              <span dir="auto">{short || learning.component_id}</span>
-                              {isNext && (
-                                <span className="tch-focusPanel__tag tch-focusPanel__tag--fit">
-                                  {t('tch.liveView.focusPanel.fitsNow')}
-                                </span>
-                              )}
-                              {isCurrent && (
-                                <span className="tch-focusPanel__tag">
-                                  {t('tch.liveView.focusPanel.chosen')}
-                                </span>
-                              )}
-                            </button>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  </details>
-                )
-              })}
-            </section>
-          ))}
-        </div>
-      )}
-      {failed && (
-        <p role="status" className="tch-liveRow__panelNote is-error">
-          {t('tch.liveView.pin.failed')}
-        </p>
       )}
     </div>
   )
