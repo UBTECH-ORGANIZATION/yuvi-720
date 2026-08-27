@@ -104,8 +104,7 @@ def ecat_items() -> dict[str, str]:
 # ── content-vendor: the SUPPLIER's ministry id ───────────────────────────────
 # Clarified by the MoE on 03/08: `grouping→content-vendor` carries the content
 # SUPPLIER's number — "לכל תחום דעת ולכל שכבת גיל יהיה משהו אחר (כרגע יש את מט"ח
-# ומתודיקה), בינתיים כיתבו methodica עבור מתודיקה ו-10 עבור מטח" — and it must be
-# derived from the catalog, not maintained by hand ("לא אמורה להעשות שום עבודה
+# ומתודיקה)" — and it must be derived from the catalog, not maintained by hand ("לא אמורה להעשות שום עבודה
 # ידנית, אתם אמורים להתחבר לקטלוג ולשלוף ממנו את המידע המתאים").
 #
 # Kata publishes the supplier per component as `manufacture` ("מתודיקה",

@@ -522,6 +522,68 @@ class ContentStatementTests(unittest.TestCase):
         self.assertEqual(grouping[-1]["definition"]["type"], f"{ACTIVITY}/item")
         self.assertNotIn(f"{ACTIVITY}/video", _types(grouping))
 
+    # ── Report 6 (25/08): "לא נשלח definition.name בתיוג של video ב-grouping" ──
+    def test_media_and_selection_tags_carry_the_items_name(self):
+        """The deepest grouping entry must be the object verbatim (report 3) AND
+        carry `definition.name` (report 6). The content sends a bare object, so
+        the name comes from the catalog level the object sits at."""
+        media = statements.media_event(
+            IDENTITY, SESSION, "played",
+            object_id="https://lomdot.education.gov.il/act/item",
+            media_format="video", media_position_seconds=0,
+            hierarchy=self.hierarchy,
+        )
+        choice = statements.selected(
+            IDENTITY, SESSION,
+            object_id="https://lomdot.education.gov.il/act/item",
+            object_type="video", selection_type="learning-type", response="listening",
+            hierarchy=self.hierarchy,
+        )
+        for stmt in (media, choice):
+            with self.subTest(verb=stmt["verb"]["id"]):
+                grouping = stmt["context"]["contextActivities"]["grouping"]
+                self.assertEqual(stmt["object"]["definition"]["name"],
+                                 {"he": ITEM["title"]})
+                self.assertEqual(grouping[-1], stmt["object"])
+
+    def test_a_relayed_media_event_is_named_from_the_catalog(self):
+        """Live media events arrive from the content as `{"id": …}` — no
+        definition at all — and go out through the relay, not `media_event`."""
+        raw = {
+            "verb": {"id": "https://lxp.education.gov.il/xapi/moe/verbs/played"},
+            "object": {"id": "https://lomdot.education.gov.il/act/item"},
+        }
+        stmt = statements.enriched_content_statement(
+            IDENTITY, SESSION, raw, hierarchy=self.hierarchy,
+        )
+        grouping = stmt["context"]["contextActivities"]["grouping"]
+        self.assertEqual(stmt["object"]["definition"]["name"], {"he": ITEM["title"]})
+        self.assertEqual(grouping[-1], stmt["object"])
+
+    def test_the_content_keeps_the_name_it_sent_itself(self):
+        raw = {
+            "verb": {"id": "https://lxp.education.gov.il/xapi/moe/verbs/played"},
+            "object": {"id": "https://lomdot.education.gov.il/act/item",
+                       "definition": {"type": f"{ACTIVITY}/video",
+                                      "name": {"he": "שם ששלח התוכן"}}},
+        }
+        stmt = statements.enriched_content_statement(
+            IDENTITY, SESSION, raw, hierarchy=self.hierarchy,
+        )
+        self.assertEqual(stmt["object"]["definition"]["name"], {"he": "שם ששלח התוכן"})
+
+    def test_a_question_is_not_labelled_with_its_screens_name(self):
+        """A question sits BELOW the hierarchy's deepest level — borrowing the
+        screen's title would name it something it is not."""
+        raw = {
+            "verb": {"id": "http://adlnet.gov/expapi/verbs/answered"},
+            "object": {"id": "https://lomdot.education.gov.il/act/item/q1"},
+        }
+        stmt = statements.enriched_content_statement(
+            IDENTITY, SESSION, raw, hierarchy=self.hierarchy, object_below_self=True,
+        )
+        self.assertNotIn("name", stmt["object"]["definition"])
+
     def test_a_conversation_still_carries_the_catalog_item_in_grouping(self):
         """A conversation's object lives OUTSIDE the content tree, so its
         grouping keeps the catalog's own entry for the item it is about."""

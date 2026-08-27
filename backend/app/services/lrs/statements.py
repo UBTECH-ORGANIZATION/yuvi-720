@@ -60,6 +60,45 @@ def _domain() -> str:
     return config.supplier_domain()
 
 
+def _catalog_name(hierarchy: Optional[dict[str, Any]]) -> Optional[str]:
+    """The Hebrew title of the catalog level a content object sits at.
+
+    Integration report 6 flagged that media and `selected` statements arrive
+    with no `definition.name` on the video tag in `grouping`. They can't have
+    one: the deepest grouping entry must be the object verbatim (report 3), and
+    the object comes from the content — which sends a bare `{"id": …}`. The
+    name it lacks is already resolved for the envelope, in the hierarchy's
+    `self` entry (the item/component/unit this event is about), so it is read
+    from there instead of being invented. Content ids and catalog IRIs differ,
+    so the level is matched by position in the tree, not by id.
+    """
+    entry = (hierarchy or {}).get("self")
+    if not entry:
+        grouping = (hierarchy or {}).get("grouping") or []
+        entry = grouping[-1] if grouping else None
+    return (((entry or {}).get("definition") or {}).get("name") or {}).get("he")
+
+
+def _name_content_object(
+    obj: Any, hierarchy: dict[str, Any], object_below_self: bool = False
+) -> None:
+    """Give a content object the catalog's name for its level, in place.
+
+    In place and BEFORE the object is copied into `grouping`, so `object` and
+    the deepest grouping entry stay byte-identical. Skipped for an object one
+    level BELOW the hierarchy's deepest level (a question inside its screen) —
+    the screen's title is not the question's.
+    """
+    if object_below_self or not isinstance(obj, dict):
+        return
+    definition = obj.get("definition")
+    if not isinstance(definition, dict) or definition.get("name"):
+        return
+    name = _catalog_name(hierarchy)
+    if name:
+        definition["name"] = {"he": name}
+
+
 def _base(
     identity: ReportingIdentity,
     verb_slug: str,
@@ -96,6 +135,8 @@ def _base(
     question(object)] and parent = [questionnaire], not [component].
     """
     hierarchy = hierarchy or {}
+    if content_object:
+        _name_content_object(obj, hierarchy, object_below_self)
     extra = list(hierarchy.get("grouping") or [])
     if content_object:
         if object_below_self and hierarchy.get("self"):
@@ -864,8 +905,14 @@ def enriched_content_statement(
                 or ("question" if object_below_self else _infer_object_type(hierarchy))
             )
             definition["type"] = f"{ACTIVITY}/{inferred}"
-        if name_he and not definition.get("name"):
-            definition["name"] = {"he": name_he}
+        # …and the same for `definition.name` (integration report 6): the name
+        # the content omitted is taken from the catalog level this object IS,
+        # never from the level above a question.
+        resolved_name = name_he or (
+            None if object_below_self else _catalog_name(hierarchy)
+        )
+        if resolved_name and not definition.get("name"):
+            definition["name"] = {"he": resolved_name}
         if definition:
             obj["definition"] = definition
         # Object definition extensions are content-controlled too — bare keys
