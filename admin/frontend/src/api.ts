@@ -1,5 +1,6 @@
 import type {
   AuthStatus,
+  CoachDebugTrace,
   ConversationStatus,
   Lead,
   LeadBoard,
@@ -52,6 +53,13 @@ export function getUsageSummary(filters: UsageFilters, signal?: AbortSignal): Pr
   if (filters.actorId) params.set('actor_id', filters.actorId)
   if (filters.endpoint) params.set('endpoint', filters.endpoint)
   return apiFetch<UsageSummary>(`/api/ai-usage/summary?${params}`, {
+    signal,
+    cache: 'no-store',
+  })
+}
+
+export function getCoachDebugTrace(exchangeId: string, signal?: AbortSignal): Promise<CoachDebugTrace> {
+  return apiFetch<CoachDebugTrace>(`/api/coach-debug-traces/${encodeURIComponent(exchangeId)}`, {
     signal,
     cache: 'no-store',
   })

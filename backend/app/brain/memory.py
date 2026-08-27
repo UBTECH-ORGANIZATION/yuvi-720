@@ -36,25 +36,59 @@ _PROFILE_QUERY_PATTERNS = {
     "ar": re.compile(r"ماذا.{0,18}(?:تعرف|تتذكر|تعلمت).{0,30}(?:عني|عن طريقة تعلمي)|كيف أتعلم|من أنا", re.IGNORECASE),
     "en": re.compile(r"what (?:do you|have you) (?:know|remember|learned) about (?:me|how i learn)|how do i learn|who am i", re.IGNORECASE),
 }
+_CAPABILITIES_QUERY_PATTERNS = {
+    "he": re.compile(
+        r"(?:מה\s+(?:(?:אתה|את|אתם|יובי)\s+)?(?:יכול(?:ה|ים)?|יודע(?:ת|ים)?)\s+(?:לעשות|לעזור)|"
+        r"מה\s+יובי\s+(?:יכול|יודע)\s+(?:לעשות|לעזור)|"
+        r"(?:במה|איך)\s+(?:אתה|את|יובי)\s+יכול(?:ה)?\s+לעזור|"
+        r"מה\s+אפשר\s+לעשות\s+(?:איתך|עם\s+יובי))",
+        re.IGNORECASE,
+    ),
+    "ar": re.compile(
+        r"(?:ماذا\s+(?:يمكنك|تستطيع|يوفي\s+يستطيع)\s+(?:أن\s+)?(?:تفعل|تساعد)|"
+        r"كيف\s+(?:يمكنك|يستطيع\s+يوفي)\s+أن\s+تساعد)",
+        re.IGNORECASE,
+    ),
+    "en": re.compile(
+        r"(?:what\s+(?:can|do)\s+(?:you|yuvi)\s+(?:do|help\s+with)|"
+        r"how\s+can\s+(?:you|yuvi)\s+help|what\s+can\s+i\s+do\s+with\s+(?:you|yuvi))",
+        re.IGNORECASE,
+    ),
+}
 _CALENDAR_QUERY_PATTERNS = {
     "he": re.compile(
         r"(?:יומן|לוח\s*(?:ה?שנה|זמנים)|מערכת\s*ה?שעות)|"
         r"(?:מה|איזה|אילו|האם|יש\s*לי).{0,35}(?:שיעור|אירוע|משימה|יעד|פגישה).{0,25}(?:היום|מחר|השבוע|שבוע\s*הבא|ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)|"
-        r"(?:מה\s*יש\s*לי|יש\s*לי\s*(?:משהו|מה)).{0,20}(?:היום|מחר|השבוע|שבוע\s*הבא)",
+        r"(?:מה\s*יש\s*לי|יש\s*לי\s*(?:משהו|מה)).{0,20}(?:היום|מחר|השבוע|שבוע\s*הבא|בבוקר|בצהריים|בערב|בלילה)",
         re.IGNORECASE,
     ),
     "ar": re.compile(
         r"(?:تقويم|جدول\s*(?:الدروس|الحصص|المواعيد))|"
         r"(?:ماذا|ما|أي|هل\s*لدي).{0,35}(?:درس|حصة|حدث|مهمة|هدف|موعد).{0,25}(?:اليوم|غد[ًاا]?|هذا\s*الأسبوع|الأسبوع\s*القادم|الأحد|الاثنين|الثلاثاء|الأربعاء|الخميس|الجمعة|السبت)|"
-        r"(?:ماذا\s*لدي|هل\s*لدي\s*(?:شيء|أي\s*شيء)).{0,20}(?:اليوم|غد[ًاا]?|هذا\s*الأسبوع|الأسبوع\s*القادم)",
+        r"(?:ماذا\s*لدي|هل\s*لدي\s*(?:شيء|أي\s*شيء)).{0,20}(?:اليوم|غد[ًاا]?|هذا\s*الأسبوع|الأسبوع\s*القادم|صباحًا|بعد\s*الظهر|مساءً|ليلًا)",
         re.IGNORECASE,
     ),
     "en": re.compile(
         r"(?:calendar|class\s*schedule|timetable)|"
         r"(?:what|which|do\s+i\s+have|are\s+there).{0,35}(?:class|lesson|event|task|goal|meeting).{0,25}(?:today|tomorrow|this\s+week|next\s+week|sunday|monday|tuesday|wednesday|thursday|friday|saturday)|"
-        r"(?:what\s+do\s+i\s+have|do\s+i\s+have\s+(?:something|anything)).{0,20}(?:today|tomorrow|this\s+week|next\s+week)",
+        r"(?:what\s+do\s+i\s+have|do\s+i\s+have\s+(?:something|anything)).{0,20}(?:today|tomorrow|this\s+week|next\s+week|this\s+morning|this\s+afternoon|this\s+evening|tonight)",
         re.IGNORECASE,
     ),
+}
+_CALENDAR_ACTION_PATTERNS = {
+    "he": re.compile(r"(?:לקבוע|ת(?:קבע|קבעי)|להזמין|לשנות|לבטל).{0,35}(?:שיעור|פגישה|מפגש|אירוע)|(?:שיעור|פגישה|מפגש|אירוע).{0,20}(?:למחר|להיום|לשבוע הבא|ביומן)", re.IGNORECASE),
+    "ar": re.compile(r"(?:حجز|احجز|جدولة|غي(?:ر|ّـر)|إلغاء).{0,35}(?:درس|حصة|موعد|اجتماع|حدث)|(?:درس|حصة|موعد|اجتماع|حدث).{0,20}(?:غد[ًاا]?|اليوم|الأسبوع القادم|التقويم)", re.IGNORECASE),
+    "en": re.compile(r"(?:schedule|book|set up|change|cancel).{0,35}(?:lesson|class|meeting|appointment|event)|(?:lesson|class|meeting|appointment|event).{0,20}(?:tomorrow|today|next week|calendar)", re.IGNORECASE),
+}
+_TASK_QUERY_PATTERNS = {
+    "he": re.compile(r"(?:המשימות שלי|המשימה שלי|אילו משימות|איזה משימות|מה נשאר לי לעשות|מה יש לי לעשות)", re.IGNORECASE),
+    "ar": re.compile(r"(?:مهامي|مهماتي|ما المهام|ما الذي علي فعله)", re.IGNORECASE),
+    "en": re.compile(r"(?:my tasks|my task|what tasks|which tasks|what do i have to do)", re.IGNORECASE),
+}
+_DASHBOARD_QUERY_PATTERNS = {
+    "he": re.compile(r"(?:לוח ההתקדמות|דשבורד|לוח הבקרה|איך ההתקדמות שלי|ההתקדמות שלי)", re.IGNORECASE),
+    "ar": re.compile(r"(?:لوحة التقدم|لوحة المعلومات|تقدمي)", re.IGNORECASE),
+    "en": re.compile(r"(?:my dashboard|progress dashboard|my progress)", re.IGNORECASE),
 }
 _FORGET_PATTERNS = {
     "he": re.compile(r"(?:אל|לא)\s+ת(?:זכור|זכרי|שמור|שמרי)|תשכח|תשכחי|מחק", re.IGNORECASE),
@@ -437,8 +471,16 @@ def classify_query_intent(message: str, language: str) -> str:
         return "memory_correct"
     if _PROFILE_QUERY_PATTERNS[lang].search(text):
         return "profile_question"
+    if _CAPABILITIES_QUERY_PATTERNS[lang].search(text):
+        return "capabilities_query"
+    if _CALENDAR_ACTION_PATTERNS[lang].search(text):
+        return "calendar_action_request"
     if _CALENDAR_QUERY_PATTERNS[lang].search(text):
         return "calendar_query"
+    if _TASK_QUERY_PATTERNS[lang].search(text):
+        return "task_query"
+    if _DASHBOARD_QUERY_PATTERNS[lang].search(text):
+        return "dashboard_query"
     lower = text.casefold()
     if any(token in lower for token in ("קשה לי", "לא מצליח", "محبط", "صعب", "frustrated", "too hard")):
         return "encouragement"

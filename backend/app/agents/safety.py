@@ -133,6 +133,12 @@ PERSONAL_REDIRECT = {
     "en": "One moment before we continue — I'm Yuvi, an AI 🤖. It's best not to share personal details about you or your family with me. Let's get back to learning 💜",
 }
 
+RESPECTFUL_LANGUAGE_REDIRECT = {
+    "he": "רגע לפני שנמשיך — חשוב לדבר כאן בכבוד. אני יובי, בינה מלאכותית 🤖, ואשמח לעזור כשננסח את השאלה בלי קללות או פגיעה. בוא/י נחזור ללמידה 💜",
+    "ar": "لحظة قبل أن نكمل — من المهم أن نتحدث هنا باحترام. أنا يوفي، ذكاء اصطناعي 🤖، وسأساعدك بكل سرور عندما نصوغ السؤال من دون شتائم أو إساءة. لنعد إلى التعلّم 💜",
+    "en": "One moment before we continue — it is important to speak respectfully here. I'm Yuvi, an AI 🤖, and I'll be glad to help when we phrase the question without swearing or hurtful language. Let's get back to learning 💜",
+}
+
 # Reply when a learner shares emotional/social/family DISTRESS (e.g. "my friends
 # don't like me", "my parents are divorcing", "I hate myself"): AI disclosure +
 # warmly point them to a trusted adult. A wellbeing flag is recorded for the
@@ -146,7 +152,11 @@ DISTRESS_SUPPORT = {
 
 def redirect_message(category: str, language: str) -> str:
     """Localized learner-facing reply for a Safety disclosure category."""
-    table = DISTRESS_SUPPORT if category == "distress" else PERSONAL_REDIRECT
+    table = (
+        DISTRESS_SUPPORT if category == "distress"
+        else RESPECTFUL_LANGUAGE_REDIRECT if category in {"respect", "harmful"}
+        else PERSONAL_REDIRECT
+    )
     return table.get(language, table["he"])
 
 
@@ -159,7 +169,7 @@ def is_safety_redirect(text: str) -> bool:
     stripped = text.strip()
     return any(
         stripped == table[lang]
-        for table in (DISTRESS_SUPPORT, PERSONAL_REDIRECT)
+        for table in (DISTRESS_SUPPORT, PERSONAL_REDIRECT, RESPECTFUL_LANGUAGE_REDIRECT)
         for lang in table
     )
 
@@ -192,6 +202,30 @@ def screen_input(text: str, language: str = "he") -> SafetyResult:
     return SafetyResult(text=sanitized.strip(), flagged=flagged, reason=reason)
 
 
+def harmful_content_category(text: str) -> Optional[str]:
+    """Return a deterministic harmful-content category for learner chat.
+
+    This is Tier 1: it catches known sexual, hate, threat, and profanity forms
+    before the semantic disclosure classifier is called. Self-harm stays on the
+    disclosure path so the learner receives adult-support guidance instead of a
+    respectful-language redirect.
+    """
+    from app.services import content_filter
+
+    category = content_filter.check_content(text).category
+    return category if category in {
+        content_filter.SEXUAL,
+        content_filter.HATE,
+        content_filter.THREAT,
+        content_filter.PROFANITY,
+    } else None
+
+
+def has_unrespectful_language(text: str) -> bool:
+    """Compatibility wrapper for callers that only need a boolean verdict."""
+    return harmful_content_category(text) is not None
+
+
 def screen_output(text: str, language: str = "he") -> SafetyResult:
     """Tier-1 gate on model output: never let PII leak back to the learner."""
     sanitized, found = strip_pii(text or "")
@@ -221,7 +255,9 @@ def disclosure(language: str = "he") -> str:
 # they record the signal and point the learner to a trusted adult.
 _MAX_WELLBEING_FLAGS = 30
 
-_DISCLOSURE_CATEGORIES = ("none", "frustration", "personal", "interest", "distress")
+_DISCLOSURE_CATEGORIES = (
+    "none", "frustration", "personal", "interest", "distress", "harmful",
+)
 _DISCLOSURE_CONTEXT_TURNS = 4
 _DISCLOSURE_CONTEXT_CHARS = 500
 
@@ -239,12 +275,15 @@ _CLASSIFY_PROMPT = {
         "interest": "a hobby, interest, favorite team/player/game, or preference to remember (e.g. 'I like Messi').",
         "personal": "NON-harmful personal/identifying info about self or family (e.g. 'my mom is pregnant', an address, family jobs) — not a safety concern, just private.",
         "distress": "emotional, social, or family harm/distress BEYOND schoolwork: self-harm or wanting to die, self-hatred as a person, being bullied or friendless, family conflict/divorce, abuse, or serious persistent sadness.",
+        "harmful": "learner-authored harmful language that must be stopped: sexual content or solicitation, threats, hate speech, racism, sexism, abusive language, insults, or profanity that the deterministic filter did not recognize.",
     },
     "rules": [
-        "Return JSON only: {\"category\": one of [none, frustration, interest, personal, distress]}.",
+        "Return JSON only: {\"category\": one of [none, frustration, interest, personal, distress, harmful]}.",
         "'I can't do it / this is hard / I don't understand / I want to quit' about a TASK or SUBJECT is frustration, never distress.",
         "distress requires harm to the child as a person or their relationships — not difficulty with learning material.",
         "When genuinely ambiguous between frustration and distress, choose distress.",
+        "If the learner says someone threatens, harasses, bullies, abuses, or harms THEM or another child, classify distress, not harmful. Self-harm or wanting to die is always distress, not harmful.",
+        "Use harmful only when the learner is writing or directing the harmful content, not when discussing a neutral academic, historical, social, or safety topic.",
         "'personal' is only for a private fact about the learner or family with no distress. Do not use it merely because the learner says they have, carry, like, or choose an ordinary object.",
         "Use recent_conversation only to understand the current learning exchange. A learner repeating, selecting, or paraphrasing the tutor's immediately preceding example or choice is ordinary learning talk, not personal, unless the learner supplies a concrete identifying detail.",
         "Words such as 'address' and 'phone number' can be educational concepts or tutor-provided examples. Classify them as personal only when the learner actually shares a private fact about themselves or family.",
@@ -266,7 +305,7 @@ async def classify_disclosure(
     usage_context: "UsageContext",
     recent_conversation: Optional[list[dict[str, object]]] = None,
 ) -> str:
-    """Return none|frustration|interest|personal|distress for a learner message.
+    """Return none|frustration|interest|personal|distress|harmful for a learner message.
 
     ``recent_conversation`` is a small role-tagged window ending before this
     learner turn. It gives the classifier the immediate tutoring context, but

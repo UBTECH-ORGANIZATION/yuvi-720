@@ -1098,6 +1098,46 @@ depends on. Everything else becomes a projection or an agent over that substrate
 
 ---
 
+### 12.1 Coach conversation lifecycle and operational controls
+
+The Learning Coach has two server-resolved modes. The mode is derived from the
+trusted surface context before prompt construction, not from the learner's
+message or a model instruction:
+
+- `lesson_coach` is active only while a learner is inside a lesson. It receives
+  the bounded current-item context and uses a temporary lesson thread. On lesson
+  exit, the backend hard-deletes that thread's `agent_messages`,
+  `agent_sessions`, and `agent_conversations` records. It must not be visible in
+  the general history.
+- `general_companion` serves the learner outside a lesson. Its history is
+  durable, while its context projection excludes stale lesson questions,
+  answers, hints, and teacher-only guidance.
+
+Coach tool calling is opt-in through `COACH_TOOL_CALLING_ENABLED`; every model
+request remains in the approved APIM/usage-tracking path and tools accept only
+their narrow server-owned schemas. `COACH_DEBUG_TRACE_ENABLED` is fail-closed
+and disabled in deployed slots. When temporarily enabled for an authorized
+investigation, a trace contains only bounded technical step names and statuses.
+The standalone admin service is the only trace viewer, and its endpoint always
+requires an authenticated, allowlisted administrator even when usage-report
+public preview is enabled.
+
+#### 12.1.1 Deployment evidence checklist
+
+The repository tests the contracts above with local and mocked Mongo interfaces.
+Before a production promotion, operators must additionally record these live
+checks using a non-identifying test learner and an allowlisted administrator:
+
+1. In Cosmos/Mongo, start and exit one lesson; verify the lesson thread is absent
+  from all three temporary collections while a general-companion thread remains.
+2. Use the deployed Google OAuth flow, then verify an authenticated admin can
+  read only timestamp/step-status trace metadata and an anonymous or public-
+  preview request receives `401`.
+3. Verify App Service settings before promotion:
+  `COACH_TOOL_CALLING_ENABLED=true` and
+  `COACH_DEBUG_TRACE_ENABLED=false`. The deployment workflow blocks promotion
+  when the production slot violates these values.
+
 ## 13. `.github` toolchain alignment
 
 To keep the whole agent toolchain focused on this architecture:

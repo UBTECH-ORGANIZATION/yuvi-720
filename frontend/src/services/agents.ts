@@ -86,6 +86,21 @@ export interface CoachVisualStatus {
   textAfter?: string
 }
 
+export interface CoachActionOffer {
+  action_id: string
+  path: string
+  label_key: string
+  category: 'navigation'
+}
+
+/** Content-free, development-only record of a registered Coach tool call. */
+export interface CoachToolTraceStep {
+  name: string
+  status: 'ok' | 'skipped' | 'blocked' | 'error'
+  /** `system` is a required server workflow step; `agent` was selected by Yuvi. */
+  source: 'system' | 'agent'
+}
+
 export interface CoachConversation {
   id: string
   title: string
@@ -95,7 +110,8 @@ export interface CoachConversation {
   updated_at: string
   activity_unit_id?: string | null
   activity_component_id?: string | null
-  activity_status?: 'open' | 'completed' | null
+  activity_launch_session_id?: string | null
+  activity_status?: 'open' | 'completed' | 'superseded' | null
 }
 
 export interface CoachHistoryMessage {
@@ -108,6 +124,9 @@ export interface CoachHistoryMessage {
   /** The question this message belongs to (component|item|question); lets the
    *  companion scope the visible thread per question and restore it on resume. */
   question_key?: string | null
+  /** Server-classified intent of the learner request that produced this turn. */
+  query_intent?: string | null
+  meta?: { actions?: CoachActionOffer[] }
 }
 
 export interface CoachConversationPage {
@@ -115,6 +134,8 @@ export interface CoachConversationPage {
   next_cursor: string | null
   has_more: boolean
 }
+
+export type CoachConversationMode = 'lesson_coach' | 'general_companion'
 
 export interface CoachMessagePage {
   messages: CoachHistoryMessage[]
@@ -212,6 +233,13 @@ export function reportCoachSurface(surface: CoachSurfaceContext): void {
   void apiPost('/api/agent/presence/surface', { ...surface }).catch(() => undefined)
 }
 
+export class AgentStreamError extends Error {
+  constructor(public readonly status: number, path: string) {
+    super(`stream ${path} failed`)
+    this.name = 'AgentStreamError'
+  }
+}
+
 export async function streamAgent(
   path: string,
   body: Record<string, unknown>,
@@ -230,7 +258,7 @@ export async function streamAgent(
     body: JSON.stringify(body),
     signal: handlers.signal,
   })
-  if (!response.ok || !response.body) throw new Error(`stream ${path} failed`)
+  if (!response.ok || !response.body) throw new AgentStreamError(response.status, path)
 
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
@@ -266,6 +294,9 @@ export async function streamAgent(
             text_after?: string
             visual?: CoachVisual
             can_visualize?: boolean
+            actions?: CoachActionOffer[]
+            tool_trace?: CoachToolTraceStep[]
+            query_intent?: string
             phase?: 'thinking' | 'speaking'
           }
           handlers.onEvent?.(parsed as Record<string, unknown>)
@@ -309,7 +340,8 @@ export async function requestVisualization(
   assistantText: string,
   mode: VisualMode,
   language: string,
-  conversationId: string = 'default'
+  conversationId: string = 'default',
+  assistantMessageId?: string,
 ): Promise<CoachVisual | null> {
   const result = await apiPost<{ visual: CoachVisual | null }>('/api/agent/visualize', {
     user_message: userMessage,
@@ -317,6 +349,7 @@ export async function requestVisualization(
     mode,
     language,
     conversation_id: conversationId,
+    assistant_message_id: assistantMessageId,
   })
   return result.visual ?? null
 }
@@ -398,14 +431,28 @@ export function streamProactive(
   )
 }
 
-export type CoachSupportMode = 'hint' | 'explanation'
+export type CoachSupportMode = 'hint' | 'explanation' | 'video_summary' | 'video_visual'
 
-/** One-shot hint/explanation availability for the question the learner is on.
+/** Per-question hint ladder plus one-shot explanation availability.
  * `question_key` changes when the learner progresses, re-arming the buttons. */
 export interface CoachSupportState {
   question_key: string
+  /** True only after all hint levels for the current question were served. */
   hint_used: boolean
+  /** True when the learner already opened this question's embedded content hint. */
+  content_hint_used: boolean
+  hint_level: number
+  max_hint_level: number
   explanation_used: boolean
+  /** True when the learner has already received a summary for this video item. */
+  video_summary_used: boolean
+  /** True when the learner has already received a visual for this video item. */
+  video_visual_used: boolean
+  /** Bumped by the backend when the CURRENT item re-`initialized` mid-visit —
+   * the only signal that a screen's embedded video moved to its next clip
+   * without the catalog item id changing. Combine with `item` to key per-clip
+   * support state (`item|generation`), so clip 2 re-arms the buttons clip 1 used. */
+  item_generation?: number
   /** `item|question` (and bare `item`) → its 1-based question number in this
    * component, from the catalog. Lets the chat title a thread with the number
    * the learner sees. Absent when the catalog has no snapshot. */
@@ -477,11 +524,12 @@ export function streamCoachSupport(
   language: string,
   handlers: CoachStreamHandlers,
   conversationId: string = 'default',
-  surface: CoachSurfaceContext = { screen: 'learning_lesson' }
+  surface: CoachSurfaceContext = { screen: 'learning_lesson' },
+  questionKey: string | null = null,
 ): Promise<void> {
   return streamAgent(
     '/api/agent/coach/support',
-    { conversation_id: conversationId, support, language, surface },
+    { conversation_id: conversationId, support, language, surface, question_key: questionKey },
     handlers,
     // ONE worker owns Yuvi's voice, so a stream that never ends never ends the
     // queue either: every intro, nudge and reaction behind it is stranded, and
@@ -494,9 +542,11 @@ export function streamCoachSupport(
 
 export function listCoachConversations(
   cursor?: string | null,
-  limit: number = 12
+  limit: number = 12,
+  mode: CoachConversationMode = 'general_companion'
 ): Promise<CoachConversationPage> {
   const params = new URLSearchParams({ limit: String(limit) })
+  params.set('mode', mode)
   if (cursor) params.set('cursor', cursor)
   return apiGet<CoachConversationPage>(
     `/api/agent/coach/conversations?${params}`,
@@ -505,20 +555,24 @@ export function listCoachConversations(
 }
 
 export function createCoachConversation(
-  surface: CoachSurfaceContext = { screen: 'unknown' }
+  surface: CoachSurfaceContext = { screen: 'unknown' },
+  launchSessionId?: string,
 ): Promise<CoachConversation> {
   return apiPost<CoachConversation>('/api/agent/coach/conversations', {
     unit_id: surface.unit_id,
     component_id: surface.component_id,
+    launch_session_id: launchSessionId,
   })
 }
 
 export function listCoachMessages(
   conversationId: string,
   cursor?: string | null,
-  limit: number = 20
+  limit: number = 20,
+  mode: CoachConversationMode = 'general_companion'
 ): Promise<CoachMessagePage> {
   const params = new URLSearchParams({ limit: String(limit) })
+  params.set('mode', mode)
   if (cursor) params.set('cursor', cursor)
   return apiGet<CoachMessagePage>(
     `/api/agent/coach/conversations/${encodeURIComponent(conversationId)}/messages?${params}`,
@@ -527,10 +581,21 @@ export function listCoachMessages(
 }
 
 export function deleteCoachConversation(
-  conversationId: string
+  conversationId: string,
+  mode: CoachConversationMode = 'general_companion'
 ): Promise<{ ok: true }> {
+  const params = new URLSearchParams({ mode })
   return apiDelete<{ ok: true }>(
-    `/api/agent/coach/conversations/${encodeURIComponent(conversationId)}`
+    `/api/agent/coach/conversations/${encodeURIComponent(conversationId)}?${params}`
+  )
+}
+
+export function endLessonCoachConversation(
+  conversationId: string
+): Promise<{ ok: true; deleted: boolean }> {
+  return apiPost<{ ok: true; deleted: boolean }>(
+    `/api/agent/coach/lesson-conversations/${encodeURIComponent(conversationId)}/end`,
+    {}
   )
 }
 

@@ -1046,10 +1046,7 @@
   margin-block-start: -8px;
 }
 
-/* Yuvi's avatar only marks the first bubble of a run, not every message. */
-.sp-companion__message-row--assistant + .sp-companion__message-row--assistant .sp-companion__message-avatar {
-  visibility: hidden;
-}
+.sp-companion__message-avatar-wrap { position: relative; flex: none; }
 
 .sp-companion__message-avatar {
   display: grid;
@@ -1064,7 +1061,54 @@
 }
 
 .sp-companion__message-avatar svg { inline-size: 29px; block-size: 29px; }
-.sp-companion__message-avatar.is-thinking { animation: sp-companion-head-think 1.25s ease-in-out infinite; }
+.sp-companion__message-avatar-wrap.is-thinking .sp-companion__message-avatar { animation: sp-companion-head-think 1.25s ease-in-out infinite; }
+
+.sp-companion__tool-trace-toggle {
+  position: absolute;
+  inset-inline-end: -7px;
+  inset-block-end: -6px;
+  display: grid;
+  place-items: center;
+  inline-size: 21px;
+  block-size: 21px;
+  padding: 0;
+  border: 1px solid var(--sp-primary-300);
+  border-radius: 50%;
+  color: var(--sp-primary-700);
+  background: #fff;
+  cursor: pointer;
+}
+
+.sp-companion__tool-trace-toggle:hover,
+.sp-companion__tool-trace-toggle:focus-visible { background: var(--sp-primary-050); }
+
+.sp-companion__tool-trace {
+  position: absolute;
+  z-index: 8;
+  inset-inline-start: 42px;
+  inset-block-end: 0;
+  inline-size: max-content;
+  max-inline-size: min(360px, 78vw);
+  padding: 9px;
+  border: 1px solid var(--sp-border);
+  border-radius: 8px;
+  color: var(--sp-ink-800);
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(37, 31, 79, .18);
+  font-size: var(--sp-fs-chat-meta);
+}
+
+.sp-companion__tool-trace p { margin: 0 0 6px; font-weight: 750; }
+.sp-companion__tool-trace ul { margin: 0; padding: 0; list-style: none; }
+.sp-companion__tool-trace li { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.sp-companion__tool-trace li + li { margin-block-start: 5px; }
+.sp-companion__tool-trace code { min-inline-size: 0; overflow-wrap: anywhere; }
+.sp-companion__tool-trace li[data-source='system'] code { color: var(--sp-primary-700); }
+.sp-companion__tool-trace li[data-source='agent'] code { color: var(--sp-warning-700, #9a5b00); }
+.sp-companion__tool-trace span { flex: none; white-space: nowrap; }
+.sp-companion__tool-trace span[data-status='ok'] { color: var(--sp-success-700, #18754b); }
+.sp-companion__tool-trace span[data-status='error'],
+.sp-companion__tool-trace span[data-status='blocked'] { color: var(--sp-danger-700, #b33131); }
 
 .sp-companion__message-stack {
   display: flex;
@@ -1233,6 +1277,28 @@
 }
 [data-theme='dark'] .sp-visual-cta__btn:hover { background: rgba(159, 122, 254, 0.22); }
 [data-theme='dark'] .sp-visual-cta__btn .sp-icon { color: #b9a5ff; }
+
+.sp-companion__action {
+  display: inline-flex;
+  align-items: center;
+  max-inline-size: 100%;
+  margin-block-start: 10px;
+  padding: 8px 12px;
+  border: 1px solid rgba(124, 108, 255, 0.28);
+  border-radius: 8px;
+  background: rgba(244, 241, 255, 0.8);
+  color: var(--sp-ink-chat-accent);
+  font: 750 var(--sp-fs-chat-meta)/1.25 var(--sp-font);
+  text-align: start;
+  cursor: pointer;
+}
+.sp-companion__action:hover { background: rgba(111, 91, 255, 0.14); }
+.sp-companion__action:focus-visible { outline: 3px solid rgba(111, 91, 255, 0.28); outline-offset: 2px; }
+[data-theme='dark'] .sp-companion__action {
+  border-color: rgba(159, 122, 254, 0.34);
+  background: rgba(159, 122, 254, 0.12);
+}
+[data-theme='dark'] .sp-companion__action:hover { background: rgba(159, 122, 254, 0.22); }
 
 .sp-companion__visual {
   inline-size: 100%;

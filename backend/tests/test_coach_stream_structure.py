@@ -68,10 +68,14 @@ class CoachStreamStructureTests(unittest.TestCase):
         self.assertIn("| נוזל | מים |", streamed)
 
     def test_a_diagram_payload_arrives_whole_and_still_parses(self):
-        streamed, _ = _drive(_chunked(DIAGRAM), user_message="איך עובד מחזור המים?")
+        streamed, persisted = _drive(_chunked(DIAGRAM), user_message="איך עובד מחזור המים?")
         self.assertEqual(streamed.count("```"), 2, streamed)
         body = streamed.split("```yuvi-diagram", 1)[1].split("```", 1)[0]
         self.assertEqual(json.loads(body)["kind"], "cycle")
+        self.assertIn(
+            {"name": "embedded_diagram", "status": "ok", "source": "system"},
+            persisted["debug_trace"],
+        )
 
     def test_plain_prose_is_still_joined_by_a_space(self):
         streamed, _ = _drive(_chunked("משפט ראשון. משפט שני."), user_message="שלום")

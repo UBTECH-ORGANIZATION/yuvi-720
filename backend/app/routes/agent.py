@@ -13,10 +13,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.auth.dependencies import require_learner, require_learner_session
+from app.auth.dependencies import require_admin, require_learner, require_learner_session
 from app.agents import safety
 from app.agents import sessions
 from app.agents.coach import DIAGRAM_FENCE, SUPPORT_PROMPTS, run_coach_stream
+from app.agents.coach_tools import registry as coach_tool_registry
 from app.brain.memory import classify_query_intent
 from app.agents.manim_visual import (
     is_explicit_visual_request,
@@ -32,6 +33,28 @@ from app.services.ai_usage import UsageContext
 from app.services.lrs import reporter as lrs_reporter
 from app.services.speech import SpeechUnavailable, synthesize_speech
 from app.services import triggers
+from app.services import coach_debug_trace
+from app.services.coach_support import SupportQuestionChangedError, reserve_support
+
+
+def _safe_tool_trace(steps: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Return only executed, fixed-shape steps from the active Coach turn."""
+    safe_steps = []
+    for step in steps:
+        if not isinstance(step, dict):
+            continue
+        name = step.get("name")
+        status = step.get("status")
+        if not isinstance(name, str) or not re.fullmatch(r"[a-z][a-z0-9_:.]{0,79}", name):
+            continue
+        if status not in {"ok", "blocked", "error"}:
+            continue
+        safe_steps.append({
+            "name": name,
+            "status": status,
+            "source": "agent" if step.get("source") == "agent" else "system",
+        })
+    return safe_steps
 
 
 # The gate used to be a list of MATHS words — triangle, angle, fraction, graph,
@@ -136,6 +159,7 @@ async def _stream_visual_tail(
     language: str,
     on_lesson_screen: bool,
     auto_visual: bool = True,
+    debug_trace: list[dict[str, str]] | None = None,
 ):
     """SSE tail shared by chat + hint/explanation replies: the optional visual.
 
@@ -155,6 +179,7 @@ async def _stream_visual_tail(
     screened_message = user_message
     scene = None
     will_plan = False
+    visual_stage = "plan"
     try:
         screened_message = safety.screen_input(user_message, language).text or user_message
         # Yuvi has just promised the picture (VISUAL_REQUEST_ACK), so the planner
@@ -168,11 +193,6 @@ async def _stream_visual_tail(
             or safety.is_safety_redirect(response_text)
             or not _worth_visual_planning(screened_message, response_text)
         )
-        if will_plan:
-            # Early signal, BEFORE the planner model runs: the client can
-            # show "preparing a visual" on the message immediately instead
-            # of the message looking finished and then suddenly growing.
-            yield f"data: {json.dumps({'visual_status': 'planning'}, ensure_ascii=False)}\n\n"
         # The pointer outlives the lesson screen, and the planner is told the
         # question is what the learner is looking at — so off the lesson it would
         # drag an unrelated request back to the last question's numbers.
@@ -180,6 +200,8 @@ async def _stream_visual_tail(
             await _current_question_context(learner_id)
             if will_plan and on_lesson_screen else ""
         )
+        if will_plan:
+            yield f"data: {json.dumps({'visual_status': 'planning'}, ensure_ascii=False)}\n\n"
         scene = None if not will_plan else await plan_manim_visual(  # noqa: F841 (read after try)
             screened_message,
             response_text,
@@ -198,8 +220,11 @@ async def _stream_visual_tail(
             text_filter=lambda text: safety.screen_output(text, language).text,
             question_context=question_context,
         )
+        if will_plan:
+            coach_debug_trace.append(
+                debug_trace, "visual_plan", "ok" if scene else "blocked"
+            )
         if will_plan and not scene:
-            # Planner declined — clear the loader so the message closes.
             yield f"data: {json.dumps({'visual_status': 'none'}, ensure_ascii=False)}\n\n"
         if scene:
             text_before, text_after = split_visual_response(response_text)
@@ -209,7 +234,9 @@ async def _stream_visual_tail(
                 'text_after': text_after,
             }
             yield f"data: {json.dumps(status, ensure_ascii=False)}\n\n"
+            visual_stage = "render"
             visual = await render_visual(scene)
+            coach_debug_trace.append(debug_trace, "visual_render")
             attached = await sessions.attach_visual(
                 learner_id,
                 conversation_id,
@@ -222,6 +249,7 @@ async def _stream_visual_tail(
                 print(f"⚠️ Coach visual was rendered but not attached to {exchange_id}:1")
             yield f"data: {json.dumps({'visual': visual}, ensure_ascii=False)}\n\n"
     except Exception as exc:  # pragma: no cover - optional visual support
+        coach_debug_trace.append(debug_trace, f"visual_{visual_stage}", "error")
         print(f"⚠️ Coach visual tool failed: {exc}")
         # Never leave the client stuck on a "preparing a visual" loader.
         yield f"data: {json.dumps({'visual_status': 'none'}, ensure_ascii=False)}\n\n"
@@ -299,6 +327,10 @@ class CoachConversationRequest(BaseModel):
 
     unit_id: str | None = Field(default=None, min_length=1, max_length=180)
     component_id: str | None = Field(default=None, min_length=1, max_length=180)
+    launch_session_id: str | None = Field(default=None, min_length=1, max_length=80)
+
+
+CoachConversationMode = Literal["lesson_coach", "general_companion"]
 
 
 class CoachSurfaceContext(BaseModel):
@@ -340,9 +372,10 @@ class CoachProactiveRequest(BaseModel):
 
 class CoachSupportRequest(BaseModel):
     conversation_id: str = Field(default="default", min_length=1, max_length=120)
-    support: Literal["hint", "explanation"]
+    support: Literal["hint", "explanation", "video_summary", "video_visual"]
     language: str = Field(default="he", max_length=8)
     surface: CoachSurfaceContext = Field(default_factory=CoachSurfaceContext)
+    question_key: Optional[str] = Field(default=None, max_length=400)
 
 
 class CompetencyChatMessage(BaseModel):
@@ -362,6 +395,7 @@ class VisualizeRequest(BaseModel):
     mode: Literal["image", "video"] = "image"
     language: str = Field(default="he", max_length=8)
     conversation_id: str = Field(default="default", min_length=1, max_length=120)
+    assistant_message_id: str | None = Field(default=None, min_length=3, max_length=120)
 
 
 class CompetencyChatRequest(BaseModel):
@@ -393,6 +427,13 @@ _SPEECH_UNAVAILABLE = {
     "he": "שירות ההקראה אינו זמין כרגע.",
     "ar": "خدمة القراءة غير متاحة حاليًا.",
     "en": "Read-aloud is currently unavailable.",
+}
+
+
+_VIDEO_VISUAL_REQUEST = {
+    "he": "צור/י המחשה לימודית מונפשת, ברורה ומעניינת שמסבירה את הרעיונות המרכזיים של הסרטון. השתמש/י אך ורק במידע המאושר שמופיע בתוכן המקור, בלי להוסיף עובדות או פתרון לשאלת הבנה.",
+    "ar": "أنشئ/ي توضيحًا تعليميًا متحركًا وواضحًا وجذابًا يشرح الأفكار المركزية في الفيديو. استخدم/ي فقط المعلومات المعتمدة في محتوى المصدر، من دون إضافة حقائق أو حل سؤال فهم.",
+    "en": "Create a clear, engaging animated educational visual that explains the video's central ideas. Use only the authorized source content, without adding facts or solving a comprehension question.",
 }
 
 
@@ -720,6 +761,31 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
     conversation_id = sessions.normalize_session_id(request.conversation_id)
     exchange_id = uuid4().hex
 
+    # An explicit Hebrew request for a hint belongs to the same bounded,
+    # measurable support lane as the hint button, never unrestricted chat help.
+    from app.agents import tutor_decision
+    from app.brain.repository import get_brain
+
+    routed_hint_level = None
+    is_chat_hint = False
+    if request.surface.screen == "learning_lesson" and tutor_decision.is_explicit_hint_request(message):
+        current_state = (await get_brain(learner_id)).get("current_state") or {}
+        is_chat_hint = bool(current_state.get("item_id") and current_state.get("question_id"))
+        if is_chat_hint:
+            reservation = await reserve_support(
+                learner_id,
+                "hint",
+                surface_component_id=request.surface.component_id,
+                session_id=session.get("sid"),
+                conversation_id=conversation_id,
+            )
+            if reservation is None:
+                return JSONResponse(
+                    content={"error": "support_already_used"},
+                    status_code=409,
+                )
+            routed_hint_level = reservation.hint_level
+
     # Talking to Yuvi is working: hold off the idle watchdog, which otherwise
     # only watches the content iframe and would nudge mid-conversation.
     triggers.note_chat_activity(learner_id)
@@ -728,7 +794,7 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
     # bot's reply when the stream completes. Chat text is never sent.
     moe_sid = session.get("sid")
     component_iri = _surface_component_iri(request.surface)
-    if moe_sid:
+    if moe_sid and not is_chat_hint:
         await lrs_reporter.report_conversation_interacted(
             learner_id, moe_sid, conversation_id,
             speaker="student", conversation_trigger="student-request",
@@ -744,7 +810,7 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
         from app.services import learner_activity
 
         current_state = (await get_brain(learner_id)).get("current_state") or {}
-        if current_state.get("item_id"):
+        if current_state.get("item_id") and not is_chat_hint:
             await learner_activity.record(
                 learner_id, "yuvi_chat",
                 component_id=current_state.get("component_id") or request.surface.component_id,
@@ -758,34 +824,58 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
         # First event carries the mandatory AI-use disclosure.
         yield f"data: {json.dumps({'disclosure': safety.disclosure(language)}, ensure_ascii=False)}\n\n"
         response_parts = []
+        action_offers: list[dict[str, object]] = []
+        visual_requests: list[dict[str, str]] = []
+        debug_trace: list[dict[str, str]] = []
+        query_intent: list[str] = []
         async for chunk in run_coach_stream(
             learner_id,
             user_message=message,
             language=language,
             session_id=conversation_id,
             exchange_id=exchange_id,
+            endpoint=("/api/agent/coach/support" if is_chat_hint else "/api/agent/coach/stream"),
             surface_context=request.surface.model_dump(),
+            support_mode="hint" if is_chat_hint else None,
+            hint_level=routed_hint_level,
+            action_offers=action_offers,
+            visual_requests=visual_requests,
+            debug_trace=debug_trace,
+            intent_out=query_intent,
         ):
             response_parts.append(chunk)
             # Forward every model chunk immediately. The frontend already
             # appends text events, so Yuvi visibly speaks while generating.
             yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
 
+        if query_intent:
+            yield f"data: {json.dumps({'query_intent': query_intent[0]}, ensure_ascii=False)}\n\n"
+
+        if action_offers:
+            yield f"data: {json.dumps({'actions': action_offers}, ensure_ascii=False)}\n\n"
+
         response_text = "".join(response_parts)
         async for event in _stream_visual_tail(
             learner_id=learner_id,
             conversation_id=conversation_id,
             exchange_id=exchange_id,
-            endpoint="/api/agent/coach/stream",
+            endpoint=("/api/agent/coach/support" if is_chat_hint else "/api/agent/coach/stream"),
             user_message=message,
             response_text=response_text,
             language=language,
             on_lesson_screen=request.surface.screen == "learning_lesson",
-            auto_visual=_auto_visual_for_coach(message, language, request.surface.screen),
+            auto_visual=(
+                bool(visual_requests)
+                or _auto_visual_for_coach(message, language, request.surface.screen)
+            ),
+            debug_trace=debug_trace,
         ):
             yield event
 
-        if moe_sid:  # the bot's turn of this exchange
+        await coach_debug_trace.record(exchange_id, debug_trace)
+        yield f"data: {json.dumps({'tool_trace': _safe_tool_trace(debug_trace)}, ensure_ascii=False)}\n\n"
+
+        if moe_sid and not is_chat_hint:  # the bot's turn of this exchange
             await lrs_reporter.report_conversation_interacted(
                 learner_id, moe_sid, conversation_id,
                 speaker="bot", conversation_trigger="student-request",
@@ -806,17 +896,29 @@ async def coach_stream(request: CoachStreamRequest, session=Depends(require_lear
     )
 
 
+@router.get("/coach/debug-traces/{exchange_id}")
+async def get_coach_debug_trace(exchange_id: str, _: str = Depends(require_admin)):
+    """Read one development-only, content-free Coach execution timeline."""
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", exchange_id):
+        raise HTTPException(status_code=404, detail="Trace not found")
+    trace = await coach_debug_trace.read(exchange_id)
+    if trace is None:
+        raise HTTPException(status_code=404, detail="Trace not found")
+    return JSONResponse(content=trace, headers={"Cache-Control": "no-store"})
+
+
 @router.get("/coach/conversations")
 async def coach_conversations(
     limit: int = Query(default=12, ge=1, le=30),
     cursor: str | None = Query(default=None, max_length=400),
+    mode: CoachConversationMode = Query(default="general_companion"),
     learner_id: str = Depends(require_learner),
 ):
     """Page through learner-owned Coach threads, newest first."""
     safe_id = learner_id
     return JSONResponse(
         content=await sessions.list_conversations(
-            safe_id, role="coach", limit=limit, cursor=cursor
+            safe_id, role=mode, limit=limit, cursor=cursor
         ),
         headers={"Cache-Control": "private, no-store"},
     )
@@ -825,14 +927,22 @@ async def coach_conversations(
 @router.post("/coach/conversations", status_code=201)
 async def create_coach_conversation(request: CoachConversationRequest, learner_id: str = Depends(require_learner)):
     """Start a new empty Coach thread without storing state in the browser."""
+    lesson_requested = bool(request.unit_id or request.component_id)
+    if lesson_requested and not (request.unit_id and request.component_id and request.launch_session_id):
+        raise HTTPException(status_code=422, detail="Lesson conversations require unit, component, and launch session")
     safe_id = learner_id
     return JSONResponse(
         status_code=201,
         content=await sessions.create_conversation(
             safe_id,
-            role="coach",
+            role=(
+                "lesson_coach"
+                if request.unit_id and request.component_id
+                else "general_companion"
+            ),
             unit_id=request.unit_id,
             component_id=request.component_id,
+            launch_session_id=request.launch_session_id,
         ),
     )
 
@@ -842,6 +952,7 @@ async def coach_conversation_messages(
     conversation_id: str,
     limit: int = Query(default=20, ge=1, le=50),
     cursor: str | None = Query(default=None, max_length=400),
+    mode: CoachConversationMode = Query(default="general_companion"),
     learner_id: str = Depends(require_learner),
 ):
     """Page backward through one conversation for scroll-up loading."""
@@ -850,7 +961,7 @@ async def coach_conversation_messages(
         content=await sessions.list_messages(
             safe_id,
             sessions.normalize_session_id(conversation_id),
-            role="coach",
+            role=mode,
             limit=limit,
             cursor=cursor,
         ),
@@ -859,17 +970,34 @@ async def coach_conversation_messages(
 
 
 @router.delete("/coach/conversations/{conversation_id}")
-async def delete_coach_conversation(conversation_id: str, learner_id: str = Depends(require_learner)):
+async def delete_coach_conversation(
+    conversation_id: str,
+    mode: CoachConversationMode = Query(default="general_companion"),
+    learner_id: str = Depends(require_learner),
+):
     """Soft-delete a learner-owned thread while retaining its durable records."""
     safe_id = learner_id
     deleted = await sessions.soft_delete_conversation(
         safe_id,
         sessions.normalize_session_id(conversation_id),
-        role="coach",
+        role=mode,
     )
     if not deleted:
         raise HTTPException(status_code=404, detail="Conversation not found")
     return JSONResponse(content={"ok": True})
+
+
+@router.post("/coach/lesson-conversations/{conversation_id}/end")
+async def end_lesson_coach_conversation(
+    conversation_id: str,
+    learner_id: str = Depends(require_learner),
+):
+    """Erase the temporary lesson-scoped Coach thread when the learner leaves."""
+    deleted = await sessions.end_lesson_conversation(
+        learner_id,
+        sessions.normalize_session_id(conversation_id),
+    )
+    return JSONResponse(content={"ok": True, "deleted": deleted})
 
 
 @router.post("/coach/tts")
@@ -941,6 +1069,7 @@ async def coach_proactive(request: CoachProactiveRequest, session=Depends(requir
                 )
             except Exception:
                 pass
+        debug_trace: list[dict[str, str]] = []
         async for chunk in run_coach_stream(
             learner_id,
             trigger=trigger,
@@ -950,8 +1079,11 @@ async def coach_proactive(request: CoachProactiveRequest, session=Depends(requir
             endpoint="/api/agent/coach/proactive",
             surface_context=request.surface.model_dump(),
             pinned_question_key=request.question_key,
+            debug_trace=debug_trace,
         ):
             yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
+        await coach_debug_trace.record(exchange_id, debug_trace)
+        yield f"data: {json.dumps({'tool_trace': _safe_tool_trace(debug_trace)}, ensure_ascii=False)}\n\n"
         triggers.note_chat_activity(learner_id, by_learner=False)
         yield "data: [DONE]\n\n"
 
@@ -1096,6 +1228,18 @@ async def visualize(request: VisualizeRequest, session=Depends(require_learner_s
     except Exception as exc:  # pragma: no cover - optional visual support
         print(f"⚠️ On-demand visual failed: {exc}")
         return JSONResponse(content={"visual": None})
+    if request.assistant_message_id:
+        attached = await sessions.attach_visual(
+            learner_id,
+            conversation_id,
+            request.assistant_message_id,
+            visual,
+            request.assistant_text,
+            "",
+            role="general_companion",
+        )
+        if not attached:
+            print(f"⚠️ On-demand visual was rendered but not attached to {request.assistant_message_id}")
     return JSONResponse(content={"visual": visual})
 
 
@@ -1104,13 +1248,13 @@ async def coach_support_state(
     component_id: str | None = Query(default=None, max_length=180),
     learner_id: str = Depends(require_learner),
 ):
-    """Per-question one-shot state for the hint/explanation buttons.
+    """Per-question support state and the lesson item spine for Coach actions.
 
     The key derives from the event-driven `current_state` (component + sub-item
     + question), so moving to the next question re-arms the buttons."""
     from app.agents import tutor_decision
     from app.brain.repository import get_brain
-    from app.services import kata_catalog
+    from app.services import kata_catalog, learner_activity
 
     brain = await get_brain(learner_id)
     current = brain.get("current_state") or {}
@@ -1120,6 +1264,8 @@ async def coach_support_state(
     # "שאלה 3" because it IS the third question — not because it is the third
     # section on screen. Empty when the catalog has no snapshot for this
     # component; the client then falls back to the order it encountered them in.
+    active_component = component_id or current.get("component_id")
+    item_questions = []
     try:
         await kata_catalog.ensure_loaded()
         # The caption belongs to the lesson ON SCREEN, so the requested component
@@ -1127,10 +1273,12 @@ async def coach_support_state(
         # is the learner's position, which only events may move.) Falling back to
         # the brain's component the other way round numbered a freshly-opened
         # lesson from whichever one the learner was in before.
-        active_component = component_id or current.get("component_id")
         ordinals = kata_catalog.question_item_ordinals(active_component)
         question_parts = kata_catalog.question_part_indexes(active_component)
         teaching_only = kata_catalog.non_question_items(active_component)
+        item_questions = kata_catalog.questions_for_item(
+            active_component, current.get("item_id")
+        )
         item_spine = [
             {
                 "id": row.get("id"),
@@ -1143,10 +1291,28 @@ async def coach_support_state(
         ]
     except Exception:  # numbering must never break the support buttons
         ordinals, question_parts, teaching_only, item_spine = {}, {}, [], []
+    content_hint_used = await learner_activity.has_content_hint(
+        learner_id,
+        component_id=active_component,
+        item_id=current.get("item_id"),
+        question_id=current.get("question_id"),
+    )
     return {
         "question_key": question_key,
         "hint_used": used["hint"],
+        "content_hint_used": content_hint_used,
+        "hint_level": used["hint_level"],
+        "max_hint_level": tutor_decision.MAX_HINT_LEVEL,
         "explanation_used": used["explanation"],
+        # Video support is scoped to the active client visit, not learner
+        # history. The browser keeps these flags in its in-memory UI state.
+        "video_summary_used": False,
+        "video_visual_used": False,
+        # Bumped when this SAME catalog item re-`initialized` mid-visit — the
+        # only signal a screen's embedded video moved to its next clip (see
+        # events._apply_event_to_brain). The client keys its per-video support
+        # flags by item + generation so clip 2 re-arms the buttons clip 1 used.
+        "item_generation": current.get("item_generation") or 0,
         "question_ordinals": ordinals,
         # Which סעיף of a shared screen this is — present only where the screen
         # really does hold several, so the chat never invents a part.
@@ -1173,58 +1339,98 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
     # Pressing "רמז" / "הסבר" is a chat turn — reading the answer is not idling.
     triggers.note_chat_activity(learner_id)
 
-    # One-shot per question (server-enforced; the UI disables optimistically):
-    # a second identical request on the same question is refused, not streamed.
-    from app.agents import tutor_decision
-    from app.brain.repository import get_brain
+    hint_level = None
+    video_context: dict[str, str | None] | None = None
+    if request.support in {"video_summary", "video_visual"}:
+        # Video help is allowed only for the video the learner is actually on.
+        # `informationToBot` is the catalog-authorized source; no transcript or
+        # plausible-looking content is fetched or invented at request time.
+        from app.brain.repository import get_brain
+        from app.services import kata_catalog
 
-    brain = await get_brain(learner_id)
-    current_state = brain.get("current_state") or {}
-    question_key = tutor_decision.support_question_key(
-        current_state, request.surface.component_id
-    )
-    if tutor_decision.support_used(current_state, question_key)[request.support]:
-        return JSONResponse(
-            content={"error": "support_already_used", "question_key": question_key},
-            status_code=409,
-        )
-    await tutor_decision.record_support_used(learner_id, question_key, request.support)
-
-    # Durable teacher-analytics trail: which help the learner used, per question.
-    try:
-        from app.services import learner_activity
-        await learner_activity.record(
-            learner_id, request.support,
-            component_id=current_state.get("component_id") or request.surface.component_id,
-            item_id=current_state.get("item_id"),
-            question_id=current_state.get("question_id"),
-        )
-    except Exception:
-        pass
-
-    # MoE 720: the hint/explanation button IS the help-request event. Object =
-    # the component when known, else the conversation itself.
-    if session.get("sid"):
-        component_iri = _surface_component_iri(request.surface)
-        from app.services.lrs import config as lrs_config
-        await lrs_reporter.report_help_requested(
-            learner_id,
-            session["sid"],
-            object_id=component_iri
-            or f"{lrs_config.supplier_domain()}/conversation/{conversation_id}",
-            object_type="component" if component_iri else "conversation",
-            help_source="platform",
-            help_type=request.support,
-            # Pin the ancestry to the component the object actually is — left to
-            # the brain's full current position, it can resolve a level DEEPER
-            # (the current item), and `grouping` would then carry an item that
-            # has nothing to do with this (component-level) object.
-            component_id=request.surface.component_id if component_iri else None,
-        )
+        current_state = (await get_brain(learner_id)).get("current_state") or {}
+        component_id = current_state.get("component_id") or request.surface.component_id
+        item_id = current_state.get("item_id")
+        try:
+            await kata_catalog.ensure_loaded()
+            item = kata_catalog.item_profile(component_id, item_id)
+            source_text = kata_catalog.information_for_item(component_id, item_id)
+        except Exception:
+            item, source_text = {}, None
+        if (
+            request.surface.screen != "learning_lesson"
+            or str(item.get("media_format") or "") != "video"
+            or not str(source_text or "").strip()
+        ):
+            return JSONResponse(content={"error": "video_summary_unavailable"}, status_code=409)
+        video_context = {
+            "component_id": component_id,
+            "item_id": item_id,
+            "question_id": current_state.get("question_id"),
+            "source_text": str(source_text).strip(),
+        }
+    else:
+        # The hint ladder and one-shot explanation are server-enforced. Button
+        # and qualifying chat requests reserve the same allowance.
+        try:
+            reservation = await reserve_support(
+                learner_id,
+                request.support,
+                surface_component_id=request.surface.component_id,
+                session_id=session.get("sid"),
+                conversation_id=conversation_id,
+                expected_question_key=request.question_key,
+            )
+        except SupportQuestionChangedError as exc:
+            return JSONResponse(
+                content={"error": "question_changed", "question_key": exc.current_question_key},
+                status_code=409,
+            )
+        if reservation is None:
+            return JSONResponse(
+                content={"error": "support_already_used"},
+                status_code=409,
+            )
+        hint_level = reservation.hint_level
 
     async def event_generator():
         yield f"data: {json.dumps({'disclosure': safety.disclosure(language), 'support': request.support}, ensure_ascii=False)}\n\n"
+        if request.support == "video_visual":
+            try:
+                yield f"data: {json.dumps({'phase': 'thinking', 'visual_status': 'planning'}, ensure_ascii=False)}\n\n"
+                scene = await plan_manim_visual(
+                    _VIDEO_VISUAL_REQUEST[language],
+                    video_context["source_text"] if video_context else "",
+                    language,
+                    usage_context=UsageContext(
+                        actor_id=learner_id,
+                        actor_type="learner",
+                        endpoint="/api/agent/coach/support",
+                        feature="feature_3_learning_companion",
+                        operation="coach.video_visual",
+                        source="coach_video_visual_tool",
+                        session_id=conversation_id,
+                        exchange_id=exchange_id,
+                    ),
+                    text_filter=lambda text: safety.screen_output(text, language).text,
+                    prefer_animation=True,
+                    force_visual=True,
+                )
+                if scene:
+                    scene["animated"] = True
+                    yield f"data: {json.dumps({'visual_status': 'rendering'}, ensure_ascii=False)}\n\n"
+                    visual = await render_visual(scene)
+                    yield f"data: {json.dumps({'visual': visual}, ensure_ascii=False)}\n\n"
+                else:
+                    yield f"data: {json.dumps({'visual_status': 'none'}, ensure_ascii=False)}\n\n"
+            except Exception as exc:  # pragma: no cover - optional visual support
+                print(f"⚠️ Video visual tool failed: {exc}")
+                yield f"data: {json.dumps({'visual_status': 'none'}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+            return
+
         response_parts = []
+        debug_trace: list[dict[str, str]] = []
         async for chunk in run_coach_stream(
             learner_id,
             language=language,
@@ -1233,25 +1439,31 @@ async def coach_support(request: CoachSupportRequest, session=Depends(require_le
             endpoint="/api/agent/coach/support",
             surface_context=request.surface.model_dump(),
             support_mode=request.support,
+            hint_level=hint_level,
+            debug_trace=debug_trace,
         ):
             response_parts.append(chunk)
             yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
 
-        # Same visual layer as chat replies: a math-shaped hint/explanation can
-        # auto-render a scene, and wordy ones offer the on-demand image/video
-        # buttons. The support prompt stands in for the (absent) user message.
-        support_prompt = SUPPORT_PROMPTS[request.support]
-        async for event in _stream_visual_tail(
-            learner_id=learner_id,
-            conversation_id=conversation_id,
-            exchange_id=exchange_id,
-            endpoint="/api/agent/coach/support",
-            user_message=support_prompt.get(language) or support_prompt["he"],
-            response_text="".join(response_parts),
-            language=language,
-            on_lesson_screen=request.surface.screen == "learning_lesson",
-        ):
-            yield event
+        response_text = "".join(response_parts).strip()
+        # A video summary is deliberately text-only. Other support replies may
+        # still offer or render a visual when that supports the current lesson.
+        if request.support != "video_summary":
+            support_prompt = SUPPORT_PROMPTS[request.support]
+            async for event in _stream_visual_tail(
+                learner_id=learner_id,
+                conversation_id=conversation_id,
+                exchange_id=exchange_id,
+                endpoint="/api/agent/coach/support",
+                user_message=support_prompt.get(language) or support_prompt["he"],
+                response_text=response_text,
+                language=language,
+                on_lesson_screen=request.surface.screen == "learning_lesson",
+                debug_trace=debug_trace,
+            ):
+                yield event
+        await coach_debug_trace.record(exchange_id, debug_trace)
+        yield f"data: {json.dumps({'tool_trace': _safe_tool_trace(debug_trace)}, ensure_ascii=False)}\n\n"
         # Re-stamp on completion: a long answer can outlive the idle timer the
         # request reset, and the silence worth nudging starts when Yuvi stops
         # talking, not when he started.

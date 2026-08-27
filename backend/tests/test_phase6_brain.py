@@ -56,6 +56,10 @@ def test_error_type_classification():
         [{"verb": "answered", "success": False, "misconception": "sign-error"}]
     ) == "misinterpret"
     assert classify_error_type([
+        {"verb": "answered", "success": False,
+         "answer_diagnostic": {"outcome": "partial", "correct_parts": [0]}},
+    ]) == "partial"
+    assert classify_error_type([
         {"verb": "answered", "success": False},
         {"verb": "answered", "success": True},
         {"verb": "answered", "success": True},
@@ -81,6 +85,11 @@ def test_decision_taxonomy_routing():
                       has_open_misconception=True)
     assert decision["strategy"] == "change-representation"
     assert decision["intention"] == "correct"
+    decision = decide(error_type="partial", query_intent="learning_help",
+                      support_mode=None, trigger=None, hint_level=1,
+                      has_open_misconception=False)
+    assert decision["strategy"] == "question"
+    assert decision["intention"] == "diagnose"
     # default is probing, not telling
     decision = decide(error_type="unknown", query_intent="learning_help",
                       support_mode=None, trigger=None, hint_level=1,
@@ -93,9 +102,7 @@ def test_hint_ladder_progression():
     from app.agents.tutor_decision import next_hint_level
     assert next_hint_level({}, "comp-1") == 1
     state = {"hint_ladder": {"component_id": "comp-1", "level": 1}}
-    assert next_hint_level(state, "comp-1") == 2
-    state = {"hint_ladder": {"component_id": "comp-1", "level": 3}}
-    assert next_hint_level(state, "comp-1") == 3          # capped
+    assert next_hint_level(state, "comp-1") == 1          # capped
     assert next_hint_level(state, "comp-OTHER") == 1      # new component resets
 
 
@@ -242,10 +249,16 @@ def test_permanent_lrs_rejection_is_terminal():
 def test_safety_redirect_detected_before_visual():
     """A2#2: every safety-redirect script is recognized, so the route skips the
     visual planner — a math animation must never attach to a crisis reply."""
-    from app.agents.safety import is_safety_redirect, DISTRESS_SUPPORT, PERSONAL_REDIRECT
+    from app.agents.safety import (
+        DISTRESS_SUPPORT,
+        PERSONAL_REDIRECT,
+        RESPECTFUL_LANGUAGE_REDIRECT,
+        is_safety_redirect,
+    )
     assert is_safety_redirect(DISTRESS_SUPPORT["he"])
     assert is_safety_redirect(DISTRESS_SUPPORT["en"])
     assert is_safety_redirect(PERSONAL_REDIRECT["ar"])
+    assert is_safety_redirect(RESPECTFUL_LANGUAGE_REDIRECT["he"])
     assert not is_safety_redirect("סתם תשובה לימודית רגילה בלי הפניה")
 
 

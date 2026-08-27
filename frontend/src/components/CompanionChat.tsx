@@ -30,6 +30,23 @@ import 'katex/dist/katex.min.css'
 import SceneRenderer from '../features/visuals/SceneRenderer'
 import './companion.css'
 
+const COACH_ACTION_PATHS: Readonly<Record<string, string>> = {
+  open_dashboard: '/student-dashboard',
+  open_teacher_chat: '/student-dashboard/chat',
+  open_learning: '/learning',
+  open_yuvi_studio: '/yuvi-studio',
+  open_tasks: '/tasks',
+  open_calendar: '/student-dashboard/calendar',
+  open_goals: '/mentoring',
+  open_profile: '/results',
+  open_badges: '/badges',
+}
+
+function validatedActionPath(action: { action_id: string; path: string }): string | null {
+  const expectedPath = COACH_ACTION_PATHS[action.action_id]
+  return expectedPath === action.path ? expectedPath : null
+}
+
 interface MessageGroup {
   key: string
   /** Screen (item) + sub-question these messages belong to. */
@@ -193,11 +210,14 @@ export function CompanionChat() {
   } = useCompanion()
   const pathname = useRoute()
   const isTaskMode = pathname.startsWith('/learning/lesson')
+  const latestReplySupportsSuggestions = messages.at(-1)?.role === 'assistant'
+    && messages.at(-1)?.queryIntent === 'learning_help'
   const { snapshot: lessonRoadmap } = useLessonRoadmap()
   const { design, loaded } = useYuviDesign()
   const [draft, setDraft] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [openToolTraceId, setOpenToolTraceId] = useState<string | null>(null)
   const [fullscreenAnim, setFullscreenAnim] = useState<'in' | 'out' | null>(null)
   const fullscreenAnimTimer = useRef<number | null>(null)
   const closeTimer = useRef<number | null>(null)
@@ -651,15 +671,44 @@ export function CompanionChat() {
     canVisualize?: boolean,
     createdAt?: string,
     attribution?: CoachMessage['attribution'],
+    actions?: CoachMessage['actions'],
+    toolTrace?: CoachMessage['toolTrace'],
   ) => (
     <div
       className="sp-companion__message-row sp-companion__message-row--assistant"
       data-message-complete={isComplete ? 'true' : 'false'}
       key={key}
     >
-      <span className={`sp-companion__message-avatar${key === activeAssistantId && !text ? ' is-thinking' : ''}`}>
-        <YuviHeadIcon />
-      </span>
+      <div className={`sp-companion__message-avatar-wrap${key === activeAssistantId && !text ? ' is-thinking' : ''}`}>
+        <span className="sp-companion__message-avatar"><YuviHeadIcon /></span>
+        {key ? (
+          <>
+            <button
+              type="button"
+              className="sp-companion__tool-trace-toggle"
+              onClick={() => setOpenToolTraceId((current) => current === key ? null : key)}
+              aria-label={t('companion.tools.open')}
+              aria-expanded={openToolTraceId === key}
+              title={t('companion.tools.open')}
+            >
+              <Icon name="chip" size={14} />
+            </button>
+            {openToolTraceId === key && (
+              <div className="sp-companion__tool-trace" role="status" dir="auto">
+                <p>{t('companion.tools.title')}</p>
+                {(toolTrace ?? []).length ? <ul>
+                  {(toolTrace ?? []).map((step, index) => (
+                    <li key={`${step.name}-${index}`} data-source={step.source}>
+                      <code>{step.name}</code>
+                      <span data-status={step.status}>{t(`companion.tools.status.${step.status}`)}</span>
+                    </li>
+                  ))}
+                </ul> : <p>{t('companion.tools.empty')}</p>}
+              </div>
+            )}
+          </>
+        ) : null}
+      </div>
       <div className="sp-companion__message-stack">
         <div className="sp-companion__msg sp-companion__msg--assistant" dir="auto">
           {isComplete && text && key && (
@@ -731,6 +780,20 @@ export function CompanionChat() {
               onRequest={(mode: VisualMode) => void requestVisual(key, mode)}
             />
           )}
+          {isComplete && actions?.map((action) => {
+            const path = validatedActionPath(action)
+            if (!path) return null
+            return (
+              <button
+                key={action.action_id}
+                type="button"
+                className="sp-companion__action"
+                onClick={() => navigate(path)}
+              >
+                {t(action.label_key)}
+              </button>
+            )
+          })}
         </div>
         {text && (createdAt || (isComplete && key)) && (
           <div className="sp-companion__msg-footer">
@@ -776,7 +839,7 @@ export function CompanionChat() {
 
   const renderMessage = (m: CoachMessage) => (
     m.role === 'assistant'
-      ? assistantMessage(m.text, m.id, m.visual, m.isVisualizing, m.textAfter, m.isComplete, m.visualFailed, m.canVisualize, m.createdAt, m.attribution)
+      ? assistantMessage(m.text, m.id, m.visual, m.isVisualizing, m.textAfter, m.isComplete, m.visualFailed, m.canVisualize, m.createdAt, m.attribution, m.actions, m.toolTrace)
       : (
         <div key={m.id} className="sp-companion__message-row sp-companion__message-row--user">
           <div className="sp-companion__message-stack sp-companion__message-stack--user">
@@ -830,12 +893,17 @@ export function CompanionChat() {
   // A screen that plays a video AND asks still counts — its section is captioned
   // "סרטון · שאלה N", the question is real, and its hint has to stay.
   const activeSection = sections.find((s) => s.group.key === (currentGroupKey || openGroupKey))
+  const isVideoScreen = Boolean(liveItem && itemMedia[liveItem] === 'video')
   const openSectionAsks = activeSection
     ? !activeSection.isIntro && !activeSection.asksNothing
       && (activeSection.kind === 'question' || activeSection.questionNumber !== undefined)
     // No thread yet (Yuvi has not opened the screen) — fall back to the lesson's
-    // own position rather than hiding help the learner may already need.
-    : !(Boolean(liveItem) && teachingItems.includes(liveItem))
+    // own position rather than hiding help the learner may already need. A
+    // catalog-known `step` never asks, so it is safe to hide support immediately
+    // while the refreshed teaching-items list is still in flight after a move.
+    : !(Boolean(liveItem) && (
+      teachingItems.includes(liveItem) || itemKinds[liveItem] === 'step'
+    ))
   const toggleSection = (key: string, open: boolean) =>
     setSectionOverrides((prev) => ({ ...prev, [key]: open }))
 
@@ -1131,7 +1199,7 @@ export function CompanionChat() {
           </div>
         </section>
       )}
-      {(!historyOpen || fullscreen) && (
+      {(!historyOpen || fullscreen || isTaskMode) && (
         <>
           {!isTaskMode && !fullscreen && <div className="sp-companion__thread-bar">
             <span><Icon name="message" size={15} /></span>
@@ -1215,15 +1283,15 @@ export function CompanionChat() {
                             {/* Captioned for what the screen IS. A video that also
                                 asks keeps its number alongside the medium, so the
                                 thread is honest about both. */}
-                            <span>{
+                            <span>{[
                               isIntro ? t('companion.thread.intro')
                                 : kind === 'watch' || kind === 'read' ? [
                                     t(kind === 'watch' ? 'companion.thread.watch' : 'companion.thread.read'),
                                     questionNumber ? questionLabel(questionNumber, partIndex) : '',
                                   ].filter(Boolean).join(' · ')
                                 : asksNothing || !questionNumber ? t('companion.thread.step')
-                                : questionLabel(questionNumber, partIndex)
-                            }</span>
+                                : questionLabel(questionNumber, partIndex),
+                            ].filter(Boolean).join(' · ')}</span>
                             {!open && <span className="sp-companion__qcount">{group.messages.length}</span>}
                           </span>
                           <span className="sp-companion__qdivider-rule" aria-hidden="true" />
@@ -1280,11 +1348,11 @@ export function CompanionChat() {
         </div>
       )}
 
-      {(!historyOpen || fullscreen) && (!isTaskMode || taskView === 'chat') && (
+      {(!historyOpen || fullscreen || isTaskMode) && (!isTaskMode || taskView === 'chat') && (
         <div className="sp-companion__composer-shell">
           {isTaskMode ? (
             !isStreaming
-              && (pendingAlternative || (openSectionAsks && (!supportUsed.hint || !supportUsed.explanation))) && (
+              && (pendingAlternative || isVideoScreen || (openSectionAsks && (!supportUsed.contentHint && supportUsed.hintLevel < supportUsed.maxHintLevel || !supportUsed.explanation))) && (
               <div className="sp-companion__support-options" role="group" aria-label={t('companion.task.actions')}>
                 {pendingAlternative && (
                   <button
@@ -1296,7 +1364,29 @@ export function CompanionChat() {
                     <span>{t('companion.task.altSwitch')}</span>
                   </button>
                 )}
-                {openSectionAsks && !supportUsed.hint && (
+                {isVideoScreen ? (
+                  <>
+                    {!supportUsed.videoSummary && <button
+                      type="button"
+                      className="sp-companion__support-option"
+                      onClick={() => void requestSupport('video_summary')}
+                    >
+                      <Icon name="book" size={16} />
+                      <span>{t('companion.task.videoSummary')}</span>
+                    </button>
+                    }
+                    {!supportUsed.videoVisual && <button
+                      type="button"
+                      className="sp-companion__support-option"
+                      onClick={() => void requestSupport('video_visual')}
+                    >
+                      <Icon name="spark" size={16} />
+                      <span>{t('companion.task.button2')}</span>
+                    </button>
+                    }
+                  </>
+                ) : <>
+                {openSectionAsks && !supportUsed.contentHint && supportUsed.hintLevel < supportUsed.maxHintLevel && (
                   <button
                     type="button"
                     className="sp-companion__support-option"
@@ -1316,10 +1406,11 @@ export function CompanionChat() {
                     <span>{t('companion.task.explain')}</span>
                   </button>
                 )}
+                </>}
               </div>
             )
           ) : (
-            !isStreaming && !draft.trim() && messages.length > 0 && (
+            !isStreaming && !draft.trim() && latestReplySupportsSuggestions && (
               <div className="sp-companion__suggestions" role="group" aria-label={t('companion.suggestions.label')}>
                 {SUGGESTION_KEYS.map((key) => (
                   <button

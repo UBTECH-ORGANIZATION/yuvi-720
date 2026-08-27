@@ -79,6 +79,28 @@ def is_embeddable(player_url: str) -> bool:
     return host.lower() not in _non_embeddable_hosts()
 
 
+def _session_state_updates(
+    unit: dict[str, Any], component: dict[str, Any], prior_state: dict[str, Any], restart: bool
+) -> dict[str, Any]:
+    """Clear the prior launch position until the new launch reports its screen."""
+    updates: dict[str, Any] = {
+        "current_state.unit_id": unit["id"],
+        "current_state.component_id": component["id"],
+    }
+    updates.update({
+        "current_state.item_id": None,
+        "current_state.question_id": None,
+        "current_state.resume_token": None,
+        "current_state.support_used": None,
+        "current_state.praised_screens": [],
+        "current_state.scored_screens": [],
+        "current_state.learning_choice": None,
+        "current_state.item_generation": 0,
+        "current_state.at": None,
+    })
+    return updates
+
+
 async def probe_relay_base_url() -> None:
     """Warn loudly, at startup, when the address we hand Kata is not reachable.
 
@@ -206,53 +228,23 @@ async def create_provider_session(
         lrs_auth=launch["slxapi"]["auth"],
     )
 
-    # Continuity is the default (720 §6: "save the student's progress and return
-    # to the same point" — the CONTENT owns position, keyed by the stable
-    # studentId we pass). We therefore preserve the coach thread + one-shot hint
-    # state across a relaunch. Only an EXPLICIT redo (§6 re-entry-after-completion
-    # → "redo the component") is a fresh attempt that resets our side.
-    if restart:
-        try:
-            from app.agents import sessions as agent_sessions
-            await agent_sessions.reset_activity_conversations(
-                safe_learner_id, unit["id"], component["id"]
-            )
-        except Exception as exc:  # a reset failure must never block the launch
-            print(f"⚠️ activity conversation reset failed: {exc}")
+    # Content progress may resume according to the provider contract, but the
+    # learner-facing Coach chat always starts clean for a new platform launch.
+    # The old transcript remains audit-only rather than being mistaken for a
+    # completed activity or deleted before the new launch exists.
+    try:
+        from app.agents import sessions as agent_sessions
+        await agent_sessions.supersede_activity_conversations(
+            safe_learner_id, unit["id"], component["id"], role="lesson_coach"
+        )
+    except Exception as exc:  # launch-scoped lookup still prevents stale reuse
+        print(f"⚠️ activity conversation supersession failed: {exc}")
 
-    # Kata's content ALWAYS restarts on (re)launch — its iframe does not resume
-    # its own position (that is content-side per §6; we verified the launch is
-    # stable and hand Kata everything it needs, but it re-initialises from the
-    # top). So the "current question" pointer + one-shot hint state are reset on
-    # EVERY launch: the coach panel and hint start fresh to match the restarted
-    # content, then re-establish per-question as the learner navigates/answers
-    # (each screen emits a sub-item event). Preserving them stranded the coach a
-    # screen behind — the hint stayed "used" and old messages lingered after a
-    # reload. The activity CONVERSATION is preserved (continuity); a question's
-    # messages reappear when the learner returns to it (they are tagged by
-    # question). An explicit redo additionally clears the conversation, above.
-    updates: dict[str, Any] = {
-        "current_state.unit_id": unit["id"],
-        "current_state.component_id": component["id"],
-        "current_state.item_id": None,
-        "current_state.question_id": None,
-        "current_state.resume_token": None,
-        "current_state.support_used": None,
-        # Which screens were already congratulated. A relaunch is a new sitting,
-        # and the keys are session-scoped anyway — clearing keeps the list from
-        # growing across every launch of every lesson.
-        "current_state.praised_screens": [],
-        # …and which screen completions were already folded into mastery. Same
-        # reason: session-scoped keys, cleared with the sitting.
-        "current_state.scored_screens": [],
-        "current_state.learning_choice": None,
-        # The position clock belongs to ONE attempt. It exists so a stale or
-        # replayed statement cannot rewind the learner mid-lesson; carrying it
-        # into a new launch would instead freeze them, because the content
-        # restarts its own timeline and every fresh event would look older than
-        # the last one of the previous run.
-        "current_state.at": None,
-    }
+    # A normal route re-render mints a new provider launch. It must not erase
+    # the event-derived location while the learner remains in the same lesson;
+    # explicit redo and a different component begin a new question context.
+    prior_state = (await get_brain(safe_learner_id)).get("current_state") or {}
+    updates = _session_state_updates(unit, component, prior_state, restart)
     await apply_brain_updates(safe_learner_id, updates)
 
     roadmap = await project_unit_roadmap(unit, safe_learner_id)

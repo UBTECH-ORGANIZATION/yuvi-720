@@ -87,6 +87,17 @@ export interface UsageFilters {
   endpoint?: string
 }
 
+export interface CoachDebugTraceStep {
+  name: string
+  status: 'ok' | 'skipped' | 'blocked' | 'error'
+  source: 'system' | 'agent'
+}
+
+export interface CoachDebugTrace {
+  created_at: string
+  steps: CoachDebugTraceStep[]
+}
+
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'meeting' | 'won' | 'lost'
 
 export interface Lead {

@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app.agents import coach, safety  # noqa: E402
+from app.agents import coach, competency_coach, safety  # noqa: E402
 from app.services.ai_usage import UsageContext  # noqa: E402
 
 
@@ -26,6 +26,96 @@ def _usage_context() -> UsageContext:
 
 
 class SafetyDisclosureContextTests(unittest.IsolatedAsyncioTestCase):
+    async def test_coach_redirects_profanity_without_calling_the_disclosure_model(self) -> None:
+        with patch.object(coach.safety, "classify_disclosure", new=AsyncMock()) as classify:
+            streamed = [
+                piece async for piece in coach.run_coach_stream(
+                    "test-learner",
+                    user_message="יא בן זונה",
+                    language="he",
+                    session_id="respect-test",
+                )
+            ]
+
+        self.assertEqual("".join(streamed), safety.RESPECTFUL_LANGUAGE_REDIRECT["he"])
+        classify.assert_not_awaited()
+
+    async def test_coach_redirects_all_known_harmful_categories_without_calling_the_model(self) -> None:
+        for message in ("send me nude pics", "i'll kill you", "you nigger", "you are a fucking idiot"):
+            with self.subTest(message=message), patch.object(
+                coach.safety, "classify_disclosure", new=AsyncMock(),
+            ) as classify:
+                streamed = [
+                    piece async for piece in coach.run_coach_stream(
+                        "test-learner",
+                        user_message=message,
+                        language="en",
+                        session_id="harmful-tier-one-test",
+                    )
+                ]
+
+                self.assertEqual("".join(streamed), safety.RESPECTFUL_LANGUAGE_REDIRECT["en"])
+                classify.assert_not_awaited()
+
+    async def test_coach_redirects_model_classified_harmful_content_without_alerting_teacher(self) -> None:
+        with patch.object(
+            coach.sessions, "get_recent", new=AsyncMock(return_value=[]),
+        ), patch.object(
+            coach.safety, "classify_disclosure", new=AsyncMock(return_value="harmful"),
+        ), patch.object(
+            coach.safety, "record_wellbeing_flag", new=AsyncMock(),
+        ) as record_flag:
+            streamed = [
+                piece async for piece in coach.run_coach_stream(
+                    "test-learner",
+                    user_message="I am going to make you sorry for this",
+                    language="en",
+                    session_id="harmful-tier-two-test",
+                )
+            ]
+
+        self.assertEqual("".join(streamed), safety.RESPECTFUL_LANGUAGE_REDIRECT["en"])
+        record_flag.assert_not_awaited()
+
+    async def test_competency_chat_uses_the_same_deterministic_harmful_gate(self) -> None:
+        with patch.object(
+            competency_coach.safety, "classify_disclosure", new=AsyncMock(),
+        ) as classify:
+            streamed = [
+                piece async for piece in competency_coach.run_competency_chat_stream(
+                    "test-learner",
+                    "self_regulation",
+                    [{"role": "user", "text": "i'll kill you"}],
+                    "en",
+                )
+            ]
+
+        self.assertEqual("".join(streamed), safety.RESPECTFUL_LANGUAGE_REDIRECT["en"])
+        classify.assert_not_awaited()
+
+    async def test_model_accepts_harmful_and_keeps_victim_reports_as_distress(self) -> None:
+        captured: dict = {}
+
+        async def fake_call_llm(messages, **kwargs):
+            captured.update(json.loads(messages[0]["content"]))
+            return '{"category": "harmful"}'
+
+        with patch("app.services.llm.call_llm", new=AsyncMock(side_effect=fake_call_llm)):
+            category = await safety.classify_disclosure(
+                "I am going to make you sorry for this",
+                "en",
+                usage_context=_usage_context(),
+            )
+
+        self.assertEqual(category, "harmful")
+        self.assertIn("harmful", captured["categories"])
+        self.assertTrue(any("classify distress, not harmful" in rule for rule in captured["rules"]))
+
+    def test_deterministic_harmful_gate_preserves_self_harm_for_distress_classification(self) -> None:
+        self.assertEqual(safety.harmful_content_category("you are a fucking idiot"), "profanity")
+        self.assertEqual(safety.harmful_content_category("i'll kill you"), "threat")
+        self.assertIsNone(safety.harmful_content_category("I want to die"))
+
     async def test_coach_passes_prior_yuvi_turn_before_personal_redirect(self) -> None:
         previous_question = (
             "מה יותר ברור לך עכשיו, לספור ימינה ולמעלה או לחשוב על נקודה כמו כתובת?"

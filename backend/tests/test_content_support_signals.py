@@ -65,6 +65,24 @@ class ContentSupportTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(kwargs["item_id"], f"{COMP}-004")
         self.assertEqual(kwargs["question_id"], "q1")
 
+    async def test_content_hint_lookup_is_scoped_to_the_same_question(self):
+        from app.services import learner_activity
+
+        rows = [{
+            "learner_id": "L", "kind": "content_hint", "component_id": COMP,
+            "item_id": f"{COMP}-004", "question_id": "q1",
+        }]
+        with (
+            patch("app.services.learner_activity._get_collection_named", return_value=None),
+            patch("app.services.learner_activity._read_fallback", return_value=rows),
+        ):
+            self.assertTrue(await learner_activity.has_content_hint(
+                "L", component_id=COMP, item_id=f"{COMP}-004", question_id="q1"
+            ))
+            self.assertFalse(await learner_activity.has_content_hint(
+                "L", component_id=COMP, item_id=f"{COMP}-004", question_id="q2"
+            ))
+
     async def test_it_is_kept_apart_from_yuvis_own_hint(self):
         """A teacher must be able to tell who the learner asked."""
         from app.services import learner_activity

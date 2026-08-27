@@ -9,8 +9,9 @@ import csv
 import io
 import os
 from pathlib import Path
+import re
 import secrets
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from authlib.integrations.starlette_client import OAuth
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, WebSocket, WebSocketDisconnect
@@ -70,6 +71,16 @@ _TICKET_EXPORT_COLUMNS = (
 class AdminIdentity(BaseModel):
     email: str
     name: str
+
+
+class CoachDebugTraceStep(BaseModel):
+    name: str = Field(pattern=r"^[a-z][a-z0-9_:.]{0,79}$")
+    status: Literal["ok", "skipped", "blocked", "error"]
+
+
+class CoachDebugTrace(BaseModel):
+    created_at: str
+    steps: list[CoachDebugTraceStep] = Field(max_length=24)
 
 
 class Lead(BaseModel):
@@ -465,6 +476,24 @@ def create_app(
             pricing=pricing,
             access_mode="public_preview" if resolved_public_access else "authenticated_admin",
         )
+
+    @app.get("/api/coach-debug-traces/{exchange_id}", response_model=CoachDebugTrace)
+    async def coach_debug_trace(
+        exchange_id: str,
+        _: dict[str, Any] = Depends(admin_required),
+        usage_repository: UsageEventRepository = Depends(_repository),
+    ) -> JSONResponse:
+        """Read a development trace without exposing learner or model content."""
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", exchange_id):
+            raise HTTPException(status_code=404, detail="trace_not_found")
+        try:
+            trace = await usage_repository.fetch_coach_debug_trace(exchange_id)
+        except Exception as exc:
+            print(f"⚠️ Admin Coach trace query failed: {type(exc).__name__}")
+            raise HTTPException(status_code=503, detail="trace_data_unavailable") from None
+        if trace is None:
+            raise HTTPException(status_code=404, detail="trace_not_found")
+        return JSONResponse(content=CoachDebugTrace.model_validate(trace).model_dump(), headers={"Cache-Control": "no-store"})
 
     def _lead_window(days: Optional[int]) -> tuple[Optional[datetime], Optional[datetime]]:
         if days is None:

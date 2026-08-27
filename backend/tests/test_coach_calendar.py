@@ -229,6 +229,8 @@ class CoachCalendarIntegrationTests(unittest.TestCase):
         captured_messages: list[dict[str, str]] = []
         load_context = AsyncMock(return_value=calendar_context or {})
         append_turn = AsyncMock()
+        action_offers: list[dict[str, object]] = []
+        debug_trace: list[dict[str, str]] = []
 
         async def fake_stream(messages, _usage_context):
             captured_messages.extend(messages)
@@ -242,6 +244,8 @@ class CoachCalendarIntegrationTests(unittest.TestCase):
                 user_message="מה יש לי מחר?" if intent == "calendar_query" else "תסביר לי שברים",
                 language="he",
                 session_id="thread-1",
+                action_offers=action_offers,
+                debug_trace=debug_trace,
             ):
                 chunks.append(chunk)
             return "".join(chunks)
@@ -264,7 +268,7 @@ class CoachCalendarIntegrationTests(unittest.TestCase):
              patch.object(tutor_decision, "record_hint_level", AsyncMock()), \
              patch("app.brain.consolidator.capture_and_consolidate", AsyncMock(return_value=[])):
             output = asyncio.run(collect())
-        return output, captured_messages, load_context, append_turn
+        return output, captured_messages, load_context, append_turn, action_offers, debug_trace
 
     def test_calendar_turn_reads_once_and_renders_ephemeral_context(self) -> None:
         context = {
@@ -281,7 +285,7 @@ class CoachCalendarIntegrationTests(unittest.TestCase):
             "total_count": 1,
             "has_more": False,
         }
-        output, messages, load_context, append_turn = self._run("calendar_query", context)
+        output, messages, load_context, append_turn, _actions, trace = self._run("calendar_query", context)
 
         load_context.assert_awaited_once_with("session-learner", "tomorrow", None)
         rendered = "\n".join(message["content"] for message in messages)
@@ -292,9 +296,17 @@ class CoachCalendarIntegrationTests(unittest.TestCase):
         self.assertEqual(append_turn.await_args.kwargs["query_intent"], "calendar_query")
         self.assertEqual(append_turn.await_args.kwargs["calendar_period"], "tomorrow")
         self.assertEqual(append_turn.await_args.kwargs["calendar_route_source"], "deterministic")
+        self.assertIn({"name": "load_calendar_context", "status": "ok", "source": "system"}, trace)
+
+    def test_empty_calendar_turn_attaches_calendar_action(self) -> None:
+        _output, _messages, _load_context, _append_turn, actions, _trace = self._run(
+            "calendar_query", {"status": "available", "items": []},
+        )
+
+        self.assertEqual([action["action_id"] for action in actions], ["open_calendar"])
 
     def test_learning_turn_does_not_read_calendar(self) -> None:
-        _output, messages, load_context, _append_turn = self._run("learning_help")
+        _output, messages, load_context, _append_turn, _actions, _trace = self._run("learning_help")
 
         load_context.assert_not_awaited()
         rendered = "\n".join(message["content"] for message in messages)
@@ -315,7 +327,7 @@ class CoachCalendarIntegrationTests(unittest.TestCase):
             "total_count": 1,
             "has_more": False,
         }
-        output, _messages, _load_context, _append_turn = self._run(
+        output, _messages, _load_context, _append_turn, _actions, _trace = self._run(
             "calendar_query", context, model_text="",
         )
 
@@ -356,6 +368,15 @@ class CoachCalendarIntegrationTests(unittest.TestCase):
 
         self.assertIn("לא הייתי בטוח", output)
         model_stream.assert_not_called()
+
+    def test_query_intent_classifies_tasks_and_dashboard(self) -> None:
+        self.assertEqual(coach.classify_query_intent("אילו משימות יש לי?", "he"), "task_query")
+        self.assertEqual(coach.classify_query_intent("איך ההתקדמות שלי?", "he"), "dashboard_query")
+        self.assertEqual(coach.classify_query_intent("מה יש לי בערב?", "he"), "calendar_query")
+        self.assertEqual(
+            coach.classify_query_intent("אני רוצה לקבוע שיעור למחר", "he"),
+            "calendar_action_request",
+        )
 
 
 if __name__ == "__main__":

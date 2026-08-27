@@ -4,15 +4,17 @@ import { LanguageSwitcher, useI18n } from './i18n/I18nProvider'
 import { LeadsDashboard } from './leads/LeadsDashboard'
 import { SupportDashboard } from './support/SupportDashboard'
 import type { AdminIdentity, AuthStatus } from './types'
+import { CoachDebugTraceDashboard } from './usage/CoachDebugTraceDashboard'
 import { UsageDashboard } from './usage/UsageDashboard'
 
 
 type LoadState = 'loading' | 'ready' | 'error'
-type Section = 'usage' | 'leads' | 'support'
+type Section = 'usage' | 'traces' | 'leads' | 'support'
 
 function sectionFromHash(): Section {
   if (window.location.hash === '#leads') return 'leads'
   if (window.location.hash === '#support') return 'support'
+  if (window.location.hash === '#traces') return 'traces'
   return 'usage'
 }
 
@@ -175,6 +177,16 @@ function AdminShell({
             <UsageIcon />
             <span>{t('nav.aiUsage')}</span>
           </a>
+          {admin ? <a
+            className={`nav-item${activeSection === 'traces' ? ' nav-item--active' : ''}`}
+            href="#traces"
+            title={t('nav.coachTraces')}
+            aria-current={activeSection === 'traces' ? 'page' : undefined}
+            onClick={() => setSection('traces')}
+          >
+            <TraceIcon />
+            <span>{t('nav.coachTraces')}</span>
+          </a> : null}
           {canSeeLeads ? (
             <>
               <p className="nav-label">{t('nav.growth')}</p>
@@ -228,6 +240,7 @@ function AdminShell({
         </header>
         {activeSection === 'leads' ? <LeadsDashboard onUnauthorized={onUnauthorized} /> : null}
         {activeSection === 'support' ? <SupportDashboard onUnauthorized={onUnauthorized} /> : null}
+        {activeSection === 'traces' && admin ? <CoachDebugTraceDashboard onUnauthorized={onUnauthorized} /> : null}
         {activeSection === 'usage' ? <UsageDashboard onUnauthorized={onUnauthorized} /> : null}
       </div>
     </div>
@@ -251,6 +264,14 @@ function UsageIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M4 19V9M10 19V5M16 19v-7M22 19H2" />
+    </svg>
+  )
+}
+
+function TraceIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5 4h14M5 20h14M7 4v5l3 3-3 3v5M17 4v5l-3 3 3 3v5" />
     </svg>
   )
 }

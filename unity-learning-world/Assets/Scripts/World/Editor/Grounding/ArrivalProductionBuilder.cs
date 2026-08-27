@@ -12,7 +12,7 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
     /// fountain, conifers, rocks, background mountains) placed for the fixed section camera. Living water
     /// (Yuvi/Water shader) animates the ocean and the fountain basins; clickable task buildings carry a
     /// <see cref="ProximityPopAnimator"/> that pops + shows a marker when Yuvi is near. Grounding stays
-    /// untouched; dressing lives under a Dressing root, and the plaza→bluff stairs are hidden (Yuvi flies).
+    /// untouched; dressing lives under a Dressing root, and the plaza→bluff ramp remains visible and walkable.
     /// </summary>
     public static class ArrivalProductionBuilder
     {
@@ -33,9 +33,7 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var world = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
 
-            // Yuvi flies to the overlook, so the plaza→bluff (and pond) stairs are not needed —
-            // hide them for a clean, uncluttered Arrival read.
-            HideConnector(world, "Transition-overlook-rise");
+            // The plaza→bluff ramp is Yuvi's traversable route to the raised pavilion.
             HideConnector(world, "Transition-pond-descent");
             // Replace the flat static water plane with an animated ocean below.
             HideByName(world, "WaterPlane");
@@ -98,7 +96,6 @@ namespace Yuvi720.LearningWorld.Editor.Grounding
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ProductionGroundingWorldBuilder.PrefabPath);
             var sectionScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var world = (GameObject)PrefabUtility.InstantiatePrefab(prefab, sectionScene);
-            HideConnector(world, "Transition-overlook-rise");
             HideConnector(world, "Transition-pond-descent");
             HideByName(world, "WaterPlane");
             AddTerrainColliders(world);

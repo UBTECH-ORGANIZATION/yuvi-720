@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import {
   acknowledgeKudos,
   createCoachConversation,
+  AgentStreamError,
   coachSurfaceForPath,
   deleteCoachConversation,
   getCoachSupportState,
@@ -16,7 +17,9 @@ import {
   requestVisualization,
   saveHelpedAttribution,
   type CoachConversation,
+  type CoachActionOffer,
   type CoachHistoryMessage,
+  type CoachToolTraceStep,
   type CoachVisual,
   type CoachSupportMode,
   type HelpMethod,
@@ -44,11 +47,17 @@ export interface CoachMessage {
   visualFailed?: boolean
   /** LLM decided this reply is explanatory → offer the on-demand visual buttons. */
   canVisualize?: boolean
+  /** Server-validated navigation offers attached to this assistant reply. */
+  actions?: CoachActionOffer[]
+  /** In-memory development trace, available only for the active streamed reply. */
+  toolTrace?: CoachToolTraceStep[]
   isComplete: boolean
   createdAt?: string
   /** The question (component|item|question) this message belongs to, so the
    *  panel can scope the thread per question. Null = untagged (always shown). */
   questionKey?: string | null
+  /** Server-classified intent of the learner request that produced this turn. */
+  queryIntent?: string | null
   /** Epoch ms at creation / completion — drive the visibility grace window so a
    *  reaction stays readable for a few seconds even after Kata auto-advances the
    *  screen out from under it (replaces the old `sticky` flag). */
@@ -57,6 +66,12 @@ export interface CoachMessage {
   /** Success nudges only: the help methods the learner actually used on this
    *  question, offered as "what helped you?" chips. Absent = no reflection UI. */
   attribution?: { methods: HelpMethod[]; questionKey: string | null }
+}
+
+interface LessonLaunch {
+  sessionId: string
+  unitId: string
+  componentId: string
 }
 
 /** A single queued turn of Yuvi's voice. The worker plays these one at a time. */
@@ -110,6 +125,29 @@ function diesWithScreen(action: ChatAction): boolean {
 const RETRY_LIMIT = 1
 const RETRY_DELAY_MS = 900
 
+const TOOL_TRACE_STATUSES = new Set<CoachToolTraceStep['status']>([
+  'ok', 'skipped', 'blocked', 'error',
+])
+const TOOL_TRACE_SOURCES = new Set<CoachToolTraceStep['source']>(['system', 'agent'])
+
+function parseToolTrace(value: unknown): CoachToolTraceStep[] | null {
+  if (!Array.isArray(value) || value.length > 24) return null
+  const steps: CoachToolTraceStep[] = []
+  for (const step of value) {
+    if (!step || typeof step !== 'object') return null
+    const { name, status, source } = step as Record<string, unknown>
+    if (typeof name !== 'string' || !/^[a-z][a-z0-9_:.]{0,79}$/.test(name)) return null
+    if (typeof status !== 'string' || !TOOL_TRACE_STATUSES.has(status as CoachToolTraceStep['status'])) return null
+    if (source !== undefined && (typeof source !== 'string' || !TOOL_TRACE_SOURCES.has(source as CoachToolTraceStep['source']))) return null
+    steps.push({
+      name,
+      status: status as CoachToolTraceStep['status'],
+      source: source as CoachToolTraceStep['source'] ?? 'system',
+    })
+  }
+  return steps
+}
+
 /** Hard ceiling on ONE turn before the worker takes the queue back. Above any
  * real turn including an inline visual render, so it only ever fires on a turn
  * that is not coming back. */
@@ -133,6 +171,11 @@ async function streamWithRetry(run: () => Promise<void>, hasOutput: () => boolea
 }
 
 export type CompanionActivity = 'idle' | 'thinking' | 'speaking'
+
+interface VideoSupportUsed {
+  summary: boolean
+  visual: boolean
+}
 
 interface CompanionContextValue {
   isOpen: boolean
@@ -161,9 +204,17 @@ interface CompanionContextValue {
   canStartNewConversation: boolean
   send: (text: string) => Promise<void>
   requestSupport: (support: CoachSupportMode) => Promise<void>
-  /** One-shot per question: which support buttons were already used on the
-   *  question the learner is currently on (re-armed on progression). */
-  supportUsed: { hint: boolean; explanation: boolean }
+  /** Support used on the active question. Hints remain available through the
+   *  server-approved ladder; explanation is one-shot. */
+  supportUsed: {
+    hint: boolean
+    contentHint: boolean
+    hintLevel: number
+    maxHintLevel: number
+    explanation: boolean
+    videoSummary: boolean
+    videoVisual: boolean
+  }
   /** Screen id → the question number the learner sees for it, from the catalog.
    *  The chat titles each question thread from this, so the heading matches the
    *  lesson instead of counting sections on screen. */
@@ -228,14 +279,19 @@ const COMPANION_CLOSING_MS = 1500
 
 function historyMessage(message: CoachHistoryMessage): CoachMessage {
   return {
-    id: message.id,
+    // Persisted turns retain their original client-generated `live-` ids.
+    // Prefix them on reload so the lesson panel never mistakes old transcript
+    // rows for messages streamed during the current launch.
+    id: `history-${message.id}`,
     role: message.role,
     text: message.text,
     textAfter: message.text_after || undefined,
     visual: message.visual,
+    actions: message.meta?.actions,
     isComplete: true,
     createdAt: message.at,
     questionKey: message.question_key ?? null,
+    queryIntent: message.query_intent ?? null,
   }
 }
 
@@ -255,6 +311,13 @@ function introParts(key: string | null | undefined): { item: string; question: s
   const raw = parts[2] || ''
   const question = raw.includes('/') ? raw.replace(/\/+$/, '').split('/').pop() || raw : raw
   return { item: parts[1] || '', question }
+}
+// A screen with an embedded video playlist reuses the SAME catalog item id for
+// every clip — Kata never names the clip itself, so `item` alone cannot key
+// per-clip support state. `item_generation` (bumped by the backend when the
+// item re-`initialized` mid-visit) disambiguates clip 2 from clip 1.
+function videoItemKey(item: string, generation: number): string {
+  return `${item}#${generation}`
 }
 function itemHasAnyQuestionIntro(introducedQuestions: Set<string>, item: string): boolean {
   const prefix = `${item}|`
@@ -314,6 +377,14 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const activityScoped = Boolean(user)
     && surface.screen === 'learning_lesson'
     && Boolean(surface.unit_id && surface.component_id)
+  const [lessonLaunch, setLessonLaunch] = useState<LessonLaunch | null>(null)
+  // Updated synchronously in the launch event so an older async turn can be
+  // rejected before React has had a chance to render the new state.
+  const lessonLaunchRef = useRef<LessonLaunch | null>(null)
+  const lessonLaunchReady = activityScoped
+    && lessonLaunch?.unitId === surface.unit_id
+    && lessonLaunch?.componentId === surface.component_id
+  const conversationMode = activityScoped ? 'lesson_coach' : 'general_companion'
   const [isOpen, setIsOpen] = useState(false)
   const [isOpening, setIsOpening] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
@@ -340,7 +411,13 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const [activity, setActivity] = useState<CompanionActivity>('idle')
   const [unreadCount, setUnreadCount] = useState(0)
   const [disclosure, setDisclosure] = useState<string | null>(null)
-  const [supportUsed, setSupportUsed] = useState({ hint: false, explanation: false })
+  const [supportUsed, setSupportUsed] = useState({
+    hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 1, explanation: false,
+  })
+  // Video support is a one-time affordance for each catalog item during this
+  // browser visit. A component may contain several videos, so component id is
+  // too broad a key; `question_key` supplies the current item id.
+  const [videoSupportByItem, setVideoSupportByItem] = useState<Record<string, VideoSupportUsed>>({})
   const [questionOrdinals, setQuestionOrdinals] = useState<Record<string, number>>({})
   const [questionParts, setQuestionParts] = useState<Record<string, number>>({})
   const [teachingItems, setTeachingItems] = useState<string[]>([])
@@ -355,15 +432,42 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const supportUsedRef = useRef(supportUsed)
   useEffect(() => { supportUsedRef.current = supportUsed }, [supportUsed])
   const [currentQuestionKey, setCurrentQuestionKey] = useState<string | null>(null)
+  // The active item's video generation (see `videoItemKey`). Read from a ref in
+  // click handlers so they never act on a stale clip after a fast re-init, and
+  // mirrored to state so the rendered support flags follow it too.
+  const itemGenerationRef = useRef(0)
+  const [itemGeneration, setItemGeneration] = useState(0)
   const [explainerOpen, setExplainerOpen] = useState(false)
   const [pendingAlternative, setPendingAlternative] = useState<TriggerAlternative | null>(null)
-  // Bumped when the lesson page (re)creates a provider session — on an ordinary
-  // relaunch this just re-resolves the SAME open activity thread (continuity,
-  // 720 §6); on an explicit redo the backend already reset it, so re-resolving
-  // lands on the fresh thread and re-reads the cleared one-shot support state.
+  // Bumped when the lesson page creates a provider session. Every provider
+  // launch gets its own clean Coach thread, keyed by the immutable session id.
   const [lessonEpoch, setLessonEpoch] = useState(0)
+  const [supportStateEpoch, setSupportStateEpoch] = useState(-1)
   useEffect(() => {
-    const onLessonSession = () => setLessonEpoch((epoch) => epoch + 1)
+    const onLessonSession = (event: Event) => {
+      const detail = (event as CustomEvent<Partial<LessonLaunch>>).detail
+      if (!detail?.sessionId || !detail.unitId || !detail.componentId) return
+      const nextLaunch = {
+        sessionId: detail.sessionId,
+        unitId: detail.unitId,
+        componentId: detail.componentId,
+      }
+      // A queued or in-flight turn can belong to the previous launch. Abort it
+      // before clearing the panel so it cannot write an old answer afterwards.
+      inFlightRef.current?.controller.abort()
+      queueRef.current = []
+      activeConversationIdRef.current = null
+      setActiveConversationId(null)
+      setMessages([])
+      setMessageCursor(null)
+      setHasMoreMessages(false)
+      currentQuestionKeyRef.current = null
+      setCurrentQuestionKey(null)
+      lessonLaunchRef.current = nextLaunch
+      setLessonLaunch(nextLaunch)
+      setSupportStateEpoch(-1)
+      setLessonEpoch((epoch) => epoch + 1)
+    }
     window.addEventListener('yuvilab:lesson-session-created', onLessonSession)
     return () => window.removeEventListener('yuvilab:lesson-session-created', onLessonSession)
   }, [])
@@ -384,6 +488,9 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // Mirrors activeConversationId so a serial queue turn reuses the id the
   // previous turn created without waiting for a re-render.
   const activeConversationIdRef = useRef<string | null>(null)
+  // Current lesson thread id. Prior launch threads stay audit-only and are
+  // superseded server-side when the next launch is created.
+  const lessonConversationIdRef = useRef<string | null>(null)
   // Items (question SCREENS) whose arrival intro has played this launch, and the
   // specific sub-questions (`item|question`) intro'd within them — so each
   // sub-question on a multi-question screen (q1→q2) gets one starting message and
@@ -432,6 +539,11 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { messagesRef.current = messages }, [messages])
   useEffect(() => { activeConversationIdRef.current = activeConversationId }, [activeConversationId])
+  useEffect(() => {
+    if (activityScoped && activeConversationId && activeConversationId !== 'default') {
+      lessonConversationIdRef.current = activeConversationId
+    }
+  }, [activityScoped, activeConversationId])
   // A relaunch is a fresh start — re-arm the per-question intro, and drop any
   // queued non-user actions from the previous screen/launch.
   useEffect(() => {
@@ -464,13 +576,16 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // streaming — so the finished activity's messages stayed on screen through the
   // transition and the next lesson's opening line landed underneath them, as if
   // it were more of the same conversation.
-  const lastComponentRef = useRef<string | null>(null)
+  const lastLessonActivityRef = useRef<string | null>(null)
   useEffect(() => {
-    const component = surface.component_id || null
-    if (lastComponentRef.current === component) return
-    const previous = lastComponentRef.current
-    lastComponentRef.current = component
+    const activity = activityScoped
+      ? `${surface.unit_id || ''}|${surface.component_id || ''}`
+      : null
+    if (lastLessonActivityRef.current === activity) return
+    const previous = lastLessonActivityRef.current
+    lastLessonActivityRef.current = activity
     if (previous === null) return   // first activity of the session: nothing to clear
+    lessonConversationIdRef.current = null
     // Anything still streaming belongs to the activity being left.
     inFlightRef.current?.controller.abort()
     queueRef.current = []
@@ -489,10 +604,17 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     welcomedThreadsRef.current = new Set()
     welcomedEpochRef.current = -1
     setPendingAlternative(null)
-    setSupportUsed({ hint: false, explanation: false })
-  }, [surface.component_id])
+    setSupportUsed({ hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 3, explanation: false })
+  }, [activityScoped, surface.component_id, surface.unit_id])
 
   const nextId = () => `live-${Date.now()}-${counter.current++}`
+
+  const createCurrentConversation = useCallback(async (): Promise<CoachConversation> => {
+    if (activityScoped && !lessonLaunchReady) {
+      throw new Error('Lesson launch is not ready')
+    }
+    return createCoachConversation(surface, lessonLaunchReady ? lessonLaunch?.sessionId : undefined)
+  }, [activityScoped, lessonLaunch?.sessionId, lessonLaunchReady, surface])
 
   // Drain the queue serially: exactly one stream at a time, staleness re-checked
   // at DEQUEUE (a nudge queued behind a long intro may no longer be worth
@@ -577,11 +699,12 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // why a reload "fixed" it (one mount, one epoch, nothing to race).
   useEffect(() => {
     if (!activityScoped || !surface.component_id || lessonEpoch === 0) return
+    if (supportStateEpoch !== lessonEpoch) return
     if (welcomedEpochRef.current === lessonEpoch) return
     if (introParts(currentQuestionKeyRef.current).question) return
     welcomedEpochRef.current = lessonEpoch
     enqueueChatAction({ kind: 'welcome', targetQuestionKey: currentQuestionKeyRef.current })
-  }, [activityScoped, surface.component_id, lessonEpoch, currentQuestionKey, enqueueChatAction])
+  }, [activityScoped, surface.component_id, lessonEpoch, supportStateEpoch, currentQuestionKey, enqueueChatAction])
 
   const finishOpening = useCallback(() => {
     if (openingTimer.current) clearTimeout(openingTimer.current)
@@ -649,6 +772,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     if (onLesson) {
       open()
     } else if (wasOnLessonRef.current) {
+      lessonConversationIdRef.current = null
       if (openingTimer.current) clearTimeout(openingTimer.current)
       if (closingTimer.current) clearTimeout(closingTimer.current)
       openingTimer.current = null
@@ -681,7 +805,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     setHistoryError(false)
     messageLoading.current = true
     try {
-      const page = await listCoachMessages(conversationId)
+      const page = await listCoachMessages(conversationId, undefined, 20, conversationMode)
       if (messageRequest.current !== request) return
       setMessages(page.messages.map(historyMessage))
       setMessageCursor(page.next_cursor)
@@ -695,7 +819,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         setIsLoadingMessages(false)
       }
     }
-  }, [])
+  }, [conversationMode])
 
   const reloadHistory = useCallback(async () => {
     if (conversationLoading.current) return
@@ -703,7 +827,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     setIsLoadingConversations(true)
     setHistoryError(false)
     try {
-      const page = await listCoachConversations()
+      const page = await listCoachConversations(undefined, 12, conversationMode)
       setConversations(page.conversations)
       setConversationCursor(page.next_cursor)
       setHasMoreConversations(page.has_more)
@@ -713,17 +837,18 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       conversationLoading.current = false
       setIsLoadingConversations(false)
     }
-  }, [])
+  }, [conversationMode])
 
   useEffect(() => {
+    if (activityScoped && !lessonLaunchReady) return
     let active = true
     conversationLoading.current = true
     setIsLoadingConversations(true)
     const initialize = async () => {
       const activityConversation = activityScoped
-        ? await createCoachConversation(surface)
+        ? await createCurrentConversation()
         : null
-      const page = await listCoachConversations()
+      const page = await listCoachConversations(undefined, 12, conversationMode)
       return { activityConversation, page }
     }
     initialize()
@@ -757,14 +882,14 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       active = false
       messageRequest.current += 1
     }
-  }, [activityScoped, lessonEpoch, pathname, selectConversation, surface])
+  }, [activityScoped, conversationMode, createCurrentConversation, lessonEpoch, lessonLaunchReady, pathname, selectConversation])
 
   const loadMoreConversations = useCallback(async () => {
     if (!hasMoreConversations || !conversationCursor || conversationLoading.current) return
     conversationLoading.current = true
     setIsLoadingConversations(true)
     try {
-      const page = await listCoachConversations(conversationCursor)
+      const page = await listCoachConversations(conversationCursor, 12, conversationMode)
       setConversations((current) => mergeUnique(current, page.conversations))
       setConversationCursor(page.next_cursor)
       setHasMoreConversations(page.has_more)
@@ -774,7 +899,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       conversationLoading.current = false
       setIsLoadingConversations(false)
     }
-  }, [conversationCursor, hasMoreConversations])
+  }, [conversationCursor, conversationMode, hasMoreConversations])
 
   const loadMoreMessages = useCallback(async () => {
     if (!activeConversationId || !hasMoreMessages || !messageCursor || messageLoading.current) return
@@ -782,7 +907,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     messageReads.current += 1
     setIsLoadingMessages(true)
     try {
-      const page = await listCoachMessages(activeConversationId, messageCursor)
+      const page = await listCoachMessages(activeConversationId, messageCursor, 20, conversationMode)
       setMessages((current) => {
         const existing = new Set(current.map((message) => message.id))
         return [
@@ -801,14 +926,15 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         setIsLoadingMessages(false)
       }
     }
-  }, [activeConversationId, hasMoreMessages, messageCursor])
+  }, [activeConversationId, conversationMode, hasMoreMessages, messageCursor])
 
   const startNewConversation = useCallback(async () => {
     if (isStreaming) return
+    if (activityScoped && !lessonLaunchReady) return
     setHistoryError(false)
     try {
       if (activityScoped) {
-        const conversation = await createCoachConversation(surface)
+        const conversation = await createCurrentConversation()
         setConversations((current) => [
           conversation,
           ...current.filter((item) => item.id !== conversation.id),
@@ -816,24 +942,26 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         await selectConversation(conversation.id)
         return
       }
-      const existingEmpty = conversations.find((item) => item.message_count === 0)
+      const existingEmpty = conversations.find(
+        (item) => item.message_count === 0 && item.id !== activeConversationId
+      )
       if (existingEmpty) {
         await selectConversation(existingEmpty.id)
         return
       }
-      const conversation = await createCoachConversation(surface)
+      const conversation = await createCurrentConversation()
       setConversations((current) => [conversation, ...current.filter((item) => item.id !== conversation.id)])
       await selectConversation(conversation.id)
     } catch {
       setHistoryError(true)
     }
-  }, [activityScoped, conversations, isStreaming, selectConversation, surface])
+  }, [activityScoped, conversations, createCurrentConversation, isStreaming, lessonLaunchReady, selectConversation])
 
   const deleteConversation = useCallback(async (conversationId: string) => {
     if (isStreaming) return false
     setHistoryError(false)
     try {
-      await deleteCoachConversation(conversationId)
+      await deleteCoachConversation(conversationId, conversationMode)
       const remaining = conversations.filter((item) => item.id !== conversationId)
       setConversations(remaining)
       if (activeConversationId === conversationId) {
@@ -844,7 +972,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         if (remaining[0]) {
           await selectConversation(remaining[0].id)
         } else {
-          const conversation = await createCoachConversation(surface)
+          const conversation = await createCurrentConversation()
           setConversations([conversation])
           await selectConversation(conversation.id)
         }
@@ -854,14 +982,19 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       setHistoryError(true)
       return false
     }
-  }, [activeConversationId, conversations, isStreaming, selectConversation, surface])
+  }, [activeConversationId, conversationMode, conversations, createCurrentConversation, isStreaming, selectConversation])
 
   // Ensure a conversation exists (mirrored in a ref so serial queue turns reuse
   // the id the previous turn created, without waiting for a re-render).
   const ensureConversationId = useCallback(async (): Promise<string | null> => {
     if (activeConversationIdRef.current) return activeConversationIdRef.current
+    if (activityScoped && !lessonLaunchReady) return null
+    const expectedLaunchId = activityScoped ? lessonLaunchRef.current?.sessionId : null
     try {
-      const conversation = await createCoachConversation(surface)
+      const conversation = await createCurrentConversation()
+      // The request started for an earlier lesson launch. Its response and any
+      // later stream must never become the active conversation for this page.
+      if (activityScoped && lessonLaunchRef.current?.sessionId !== expectedLaunchId) return null
       activeConversationIdRef.current = conversation.id
       setActiveConversationId(conversation.id)
       // A lesson thread is scoped to the lesson and is not offered in the chat
@@ -874,7 +1007,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     } catch {
       return null
     }
-  }, [surface, activityScoped])
+  }, [activityScoped, createCurrentConversation, lessonLaunchReady])
 
   // Mark the streamed assistant row complete and stamp it for the grace window.
   const completeAssistant = useCallback((assistantId: string) => {
@@ -941,6 +1074,23 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           setMessages((prev) => prev.map((m) => (
             m.id === assistantId ? { ...m, canVisualize } : m
           ))),
+        onEvent: (event) => {
+          const actions = event.actions
+          const toolTrace = parseToolTrace(event.tool_trace) ?? []
+          const hasToolTrace = Object.prototype.hasOwnProperty.call(event, 'tool_trace')
+          const queryIntent = typeof event.query_intent === 'string' ? event.query_intent : undefined
+          if (!Array.isArray(actions) && !hasToolTrace && !queryIntent) return
+          setMessages((prev) => prev.map((m) => (
+            m.id === assistantId
+              ? {
+                ...m,
+                ...(Array.isArray(actions) ? { actions: actions as CoachActionOffer[] } : {}),
+                ...(hasToolTrace ? { toolTrace } : {}),
+                ...(queryIntent ? { queryIntent } : {}),
+              }
+              : m
+          )))
+        },
       }, conversationId, surface), () => received)
     } catch {
       setMessages((prev) => prev.map((m) => (
@@ -1014,6 +1164,13 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           setMessages((prev) => prev.map((m) => (
             m.id === assistantId ? { ...m, text: m.text + chunk } : m
           ))),
+        onEvent: (event) => {
+          if (!Object.prototype.hasOwnProperty.call(event, 'tool_trace')) return
+          const toolTrace = parseToolTrace(event.tool_trace) ?? []
+          setMessages((prev) => prev.map((m) => (
+            m.id === assistantId ? { ...m, toolTrace } : m
+          )))
+        },
       }, conversationId, surface, questionKey)
     } catch {
       /* An intro must never disrupt the learner. */
@@ -1045,7 +1202,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // any question) Yuvi greets them with what THIS lesson is about + an offer to
   // help — grounded in `current_objective` — replacing the generic greeting. A
   // silent/empty reply is dropped like an intro.
-  const playWelcome = useCallback(async (_action: ChatAction) => {
+  const playWelcome = useCallback(async (action: ChatAction) => {
     // DECIDE first, claim the turn second. `liveTurnInProgress` tells the
     // conversation effect "don't replace `messages`, a bubble is being written"
     // — and holding it across the arrival check below meant the effect skipped
@@ -1065,11 +1222,13 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     // this launch's live turns, that left the learner with a completely empty
     // panel and no sign the companion was there at all.
     let conversation: CoachConversation | null = null
+    const expectedLaunchId = activityScoped ? lessonLaunchRef.current?.sessionId : null
     try {
-      conversation = await createCoachConversation(surface)
+      conversation = await createCurrentConversation()
     } catch {
       return
     }
+    if (activityScoped && lessonLaunchRef.current?.sessionId !== expectedLaunchId) return
     // Greeted in THIS tab already (an epoch bump, a bounce to the roadmap and
     // back) — the panel still shows that greeting, so a second one is a repeat.
     if (welcomedThreadsRef.current.has(conversation.id)) {
@@ -1099,12 +1258,20 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     setActivity('thinking')
     try {
       await streamProactive('lesson_welcome', language, {
+        signal: action.signal,
         onDisclosure: (value) => setDisclosure(value),
         onPhase: setActivity,
         onText: (chunk) =>
           setMessages((prev) => prev.map((m) => (
             m.id === assistantId ? { ...m, text: m.text + chunk } : m
           ))),
+        onEvent: (event) => {
+          if (!Object.prototype.hasOwnProperty.call(event, 'tool_trace')) return
+          const toolTrace = parseToolTrace(event.tool_trace) ?? []
+          setMessages((prev) => prev.map((m) => (
+            m.id === assistantId ? { ...m, toolTrace } : m
+          )))
+        },
       }, conversationId, surface)
     } catch {
       /* A welcome must never disrupt the learner. */
@@ -1171,7 +1338,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     }
     if (source === 'push') {
       pushSeqRef.current += 1
-      setSupportUsed({ hint: false, explanation: false })   // poll is authoritative
+      setSupportUsed({ hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 1, explanation: false })   // poll is authoritative
     }
     activitySeqRef.current += 1
     maybeEnqueueIntro(key)
@@ -1187,13 +1354,21 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     try {
       const seenPush = pushSeqRef.current
       const state = await getCoachSupportState(surface.component_id, signal)
-      setSupportUsed({ hint: state.hint_used, explanation: state.explanation_used })
+      setSupportUsed((current) => ({
+        hint: state.hint_level > 0,
+        contentHint: state.content_hint_used,
+        hintLevel: state.hint_level,
+        maxHintLevel: state.max_hint_level,
+        explanation: state.explanation_used,
+      }))
       // The learner's own question numbering, straight from the catalog, so a
       // chat thread can be titled "שאלה 3" because it IS question 3 of the
       // lesson — not because it happens to be the third section on screen.
       if (state.question_ordinals) setQuestionOrdinals(state.question_ordinals)
       if (state.question_parts) setQuestionParts(state.question_parts)
       if (state.teaching_items) setTeachingItems(state.teaching_items)
+      itemGenerationRef.current = state.item_generation ?? 0
+      setItemGeneration(itemGenerationRef.current)
       if (state.items) {
         const kinds: Record<string, LessonItemKind> = {}
         const media: Record<string, string> = {}
@@ -1212,15 +1387,16 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       if (pushSeqRef.current === seenPush) {
         applyQuestionKey(state.question_key || null, 'poll')
       }
+      setSupportStateEpoch(lessonEpoch)
     } catch {
       /* transient — next tick retries */
     }
-  }, [applyQuestionKey, surface.component_id])
+  }, [applyQuestionKey, lessonEpoch, surface.component_id])
   useEffect(() => { syncSupportStateRef.current = () => syncSupportState() }, [syncSupportState])
 
   useEffect(() => {
     if (!activityScoped) {
-      setSupportUsed({ hint: false, explanation: false })
+      setSupportUsed({ hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 3, explanation: false })
       currentQuestionKeyRef.current = null
       setCurrentQuestionKey(null)
       return
@@ -1253,7 +1429,27 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     if (!conversationId) {
       setHistoryError(true)
       liveTurnInProgress.current = false
-      setSupportUsed((current) => ({ ...current, [support]: false }))   // give the one-shot back
+      setSupportUsed((current) => support === 'hint'
+        ? {
+          ...current,
+          hintLevel: Math.max(0, current.hintLevel - 1),
+          hint: current.hintLevel > 1,
+        }
+        : support === 'explanation' ? { ...current, explanation: false }
+          : current)
+      if (support === 'video_summary' || support === 'video_visual') {
+        const item = introParts(action.targetQuestionKey).item
+        if (item) {
+          const key = videoItemKey(item, itemGenerationRef.current)
+          setVideoSupportByItem((current) => ({
+            ...current,
+            [key]: {
+              ...current[key],
+              ...(support === 'video_summary' ? { summary: false } : { visual: false }),
+            },
+          }))
+        }
+      }
       return
     }
     messageRequest.current += 1
@@ -1283,16 +1479,30 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
             if (status === 'none') return { ...m, isVisualizing: false }
             return { ...m, text: textBefore ?? m.text, textAfter, isVisualizing: true }
           })),
-        onVisual: (visual) =>
+        onVisual: (visual) => {
+          received = true
           setMessages((current) => current.map((m) => (
             m.id === assistantId ? { ...m, visual, isVisualizing: false } : m
-          ))),
+          )))
+        },
         onCanVisualize: (canVisualize) =>
           setMessages((current) => current.map((m) => (
             m.id === assistantId ? { ...m, canVisualize } : m
           ))),
+        onEvent: (event) => {
+          if (!Object.prototype.hasOwnProperty.call(event, 'tool_trace')) return
+          const toolTrace = parseToolTrace(event.tool_trace) ?? []
+          setMessages((current) => current.map((m) => (
+            m.id === assistantId ? { ...m, toolTrace } : m
+          )))
+        },
       }, conversationId, surface), () => received)
-    } catch {
+    } catch (error) {
+      if (error instanceof AgentStreamError && error.status === 409) {
+        setMessages((current) => current.filter((message) => message.id !== assistantId))
+        await syncSupportState()
+        return
+      }
       setMessages((current) => current.map((m) => (
         m.id === assistantId && !m.text
           ? { ...m, text: '…', isVisualizing: false }
@@ -1306,20 +1516,43 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       await reloadHistory()
       liveTurnInProgress.current = false
     }
-  }, [completeAssistant, ensureConversationId, language, reloadHistory, surface])
+  }, [completeAssistant, ensureConversationId, language, reloadHistory, surface, syncSupportState])
 
   const requestSupport = useCallback(async (support: CoachSupportMode) => {
-    if (supportUsed[support]) return
+    const videoItem = introParts(currentQuestionKeyRef.current).item
+    const videoKey = videoItem ? videoItemKey(videoItem, itemGenerationRef.current) : null
+    const videoSupport = videoKey ? videoSupportByItem[videoKey] : undefined
+    if (support === 'hint'
+      ? supportUsed.hintLevel >= supportUsed.maxHintLevel
+      : support === 'explanation' ? supportUsed.explanation
+        : support === 'video_summary' ? videoSupport?.summary : videoSupport?.visual) return
     // Optimistic button feedback + dup-guard at enqueue (server also 409s a dup).
-    setSupportUsed((current) => ({ ...current, [support]: true }))
+    setSupportUsed((current) => support === 'hint'
+      ? {
+        ...current,
+        hint: true,
+        hintLevel: Math.min(current.maxHintLevel, current.hintLevel + 1),
+      }
+      : support === 'explanation' ? { ...current, explanation: true }
+        : current)
+    if ((support === 'video_summary' || support === 'video_visual') && videoKey) {
+      setVideoSupportByItem((current) => ({
+        ...current,
+        [videoKey]: {
+          ...current[videoKey],
+          ...(support === 'video_summary' ? { summary: true } : { visual: true }),
+        },
+      }))
+    }
     activitySeqRef.current += 1
     enqueueChatAction({ kind: 'support', support, targetQuestionKey: currentQuestionKeyRef.current }, { front: true })
-  }, [enqueueChatAction, supportUsed])
+  }, [enqueueChatAction, supportUsed, videoSupportByItem])
 
   // On-demand visual: the learner tapped "show me a video / image" under a
   // text-only reply. We plan + render from that message's text plus its
-  // prompting user turn. Not persisted to history — regenerated on demand.
+  // prompting user turn, then retain it on that assistant message.
   const requestVisual = useCallback(async (messageId: string, mode: VisualMode) => {
+    if (activityScoped) return
     const current = messagesRef.current
     const index = current.findIndex((message) => message.id === messageId)
     if (index === -1) return
@@ -1329,6 +1562,10 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     for (let i = index - 1; i >= 0; i -= 1) {
       if (current[i].role === 'user' && current[i].text) { userMessage = current[i].text; break }
     }
+    // This request renders an attachment on an existing reply; it is not a new
+    // Yuvi chat turn, so leave the global avatar idle and show only the
+    // message-level visual preparation status.
+    setActivity('idle')
     setMessages((prev) =>
       prev.map((message) =>
         message.id === messageId ? { ...message, isVisualizing: true, visualFailed: false } : message
@@ -1340,7 +1577,8 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         assistantText,
         mode,
         language,
-        activeConversationId || 'default'
+        activeConversationId || 'default',
+        messageId,
       )
       setMessages((prev) =>
         prev.map((message) =>
@@ -1358,7 +1596,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         )
       )
     }
-  }, [activeConversationId, language])
+  }, [activeConversationId, activityScoped, language])
 
   // Proactive nudges stream into the active thread without taking control of
   // the screen. Only the learner-visible assistant message enters history.
@@ -1390,6 +1628,13 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           setMessages((prev) => prev.map((m) => (
             m.id === assistantId ? { ...m, text: m.text + chunk } : m
           ))),
+        onEvent: (event) => {
+          if (!Object.prototype.hasOwnProperty.call(event, 'tool_trace')) return
+          const toolTrace = parseToolTrace(event.tool_trace) ?? []
+          setMessages((prev) => prev.map((m) => (
+            m.id === assistantId ? { ...m, toolTrace } : m
+          )))
+        },
       }, conversationId, surface, action.targetQuestionKey)
     } catch {
       /* Proactivity must never disrupt the learner. */
@@ -1629,6 +1874,15 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // On a real question screen (item part of the key present), the per-question
   // intro replaces the generic greeting; on the cover frame it stays.
   const onQuestionFrame = activityScoped && Boolean(currentQuestionKey && currentQuestionKey.split('|')[1])
+  const currentVideoItem = introParts(currentQuestionKey).item
+  const currentVideoSupport = currentVideoItem
+    ? videoSupportByItem[videoItemKey(currentVideoItem, itemGeneration)]
+    : undefined
+  const displayedSupportUsed = {
+    ...supportUsed,
+    videoSummary: currentVideoSupport?.summary ?? false,
+    videoVisual: currentVideoSupport?.visual ?? false,
+  }
 
   return (
     <CompanionContext.Provider
@@ -1661,7 +1915,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           && !conversations.some((conversation) => conversation.message_count === 0),
         send,
         requestSupport,
-        supportUsed,
+        supportUsed: displayedSupportUsed,
         questionOrdinals,
         questionParts,
         teachingItems,

@@ -13,6 +13,7 @@ Authoritative vocabulary: `.github/skills/720-content-standards/references/xapi-
 from __future__ import annotations
 
 import base64
+import asyncio
 import hashlib
 import hmac
 import json
@@ -80,6 +81,11 @@ _MEDIA_NOISE_WINDOW_SECONDS = 5.0
 _MEDIA_NOISE_MEMORY_LIMIT = 400
 _media_last_seen: dict[str, float] = {}
 _media_epoch: dict[str, int] = {}
+
+# A provider can POST a small batch concurrently. Folding each learner's batch
+# in arrival order makes the timestamp guard below effective: a late old event
+# then reads the screen written by the newer one and cannot rewind it.
+_brain_fold_locks: dict[str, asyncio.Lock] = {}
 
 
 def _is_empty_result(event: dict[str, Any]) -> bool:
@@ -502,7 +508,7 @@ def normalize_statement(
     object_id = obj.get("id")
     sub_item_id, parsed_question_id = resolve_item_question(object_id, launch.get("cmp"))
     question_id = ext.get("question_id") or parsed_question_id
-    if not question_id and slug == "answered" and isinstance(object_id, str):
+    if not question_id and slug in {"answered", "attempted"} and isinstance(object_id, str):
         tail = object_id.rstrip("/").rsplit("/", 1)[-1].rsplit("#", 1)[-1]
         if tail.lower().startswith("q") and tail[1:].isdigit():
             question_id = tail
@@ -711,6 +717,37 @@ async def _ensure_indexes(collection) -> None:
         pass
 
 
+async def _attach_answer_diagnostic(event: dict[str, Any]) -> None:
+    """Attach deterministic answer evidence without changing provider scoring."""
+    if event.get("verb") not in {"answered", "attempted"}:
+        return
+    result = event.get("result") or {}
+    response = result.get("response")
+    if response in (None, "", []):
+        return
+    try:
+        from app.services import kata_catalog
+        from app.services.answer_diagnostics import diagnose_answer
+
+        questions = kata_catalog.questions_for_item(event.get("launch"), event.get("sub_item_id"))
+        question = next(
+            (row for row in questions if row.get("questionId") == event.get("question_id")),
+            None,
+        )
+        if question is None:
+            return
+        diagnostic = diagnose_answer(
+            question,
+            response,
+            provider_success=result.get("success"),
+            provider_score_scaled=result.get("score_scaled"),
+        )
+        if diagnostic:
+            result["answer_diagnostic"] = diagnostic
+    except Exception as exc:  # diagnostics must never block xAPI ingestion
+        print(f"⚠️ answer diagnostic skipped: {type(exc).__name__}")
+
+
 async def ingest_statement(
     statement: dict[str, Any], launch: dict[str, Any]
 ) -> dict[str, Any]:
@@ -740,6 +777,7 @@ async def ingest_statement(
     # (player `-002` == catalog `-001`, a leading-cover offset). Self-anchored
     # from the catalog + this session's visited screens; best-effort, never fatal.
     await _reconcile_sub_item_id(event)
+    await _attach_answer_diagnostic(event)
 
     # Drop the provider's decorative animation ticker before it reaches the
     # evidence store. Checked AFTER reconciliation so the key matches the item
@@ -791,7 +829,9 @@ async def ingest_statement(
         effective_state: Optional[dict[str, Any]] = None
         try:
             await _update_item_stats(event)
-            effective_state = await _apply_event_to_brain(event)
+            fold_lock = _brain_fold_locks.setdefault(event["learner_id"], asyncio.Lock())
+            async with fold_lock:
+                effective_state = await _apply_event_to_brain(event)
         except Exception as exc:
             print(f"⚠️ brain fold failed for {event.get('_id')}: {type(exc).__name__}")
         try:
@@ -1348,8 +1388,23 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
             # two questions later. (The `selected` branch below re-sets it in the
             # same update when the arrival IS the choice.)
             set_updates["current_state.learning_choice"] = None
+            # A new screen starts its media at generation 0 (see below).
+            set_updates["current_state.item_generation"] = 0
         elif incoming_question is not None:
             set_updates["current_state.question_id"] = incoming_question
+        elif event.get("verb") == "initialized":
+            # A screen with an embedded video playlist reuses the SAME catalog
+            # item id for every clip (Kata never names the clip itself — see
+            # `_reconcile_sub_item_id`): `played`/`paused` always target the
+            # component, not the item, and repeated `initialized` statements for
+            # this item are byte-identical bar their timestamp. The only signal
+            # that a NEW clip started (not a rewind of the current one) is this
+            # screen re-`initialized`-ing while it is already the current item.
+            # Bump a generation counter so the client can re-arm per-clip support
+            # (video summary / visual) without mistaking it for a different item.
+            set_updates["current_state.item_generation"] = (
+                prior_state.get("item_generation") or 0
+            ) + 1
         # else: same screen, no question (bare re-emit) — keep sticky question_id.
     elif event.get("question_id") and not pointer_is_stale:
         set_updates["current_state.question_id"] = event["question_id"]

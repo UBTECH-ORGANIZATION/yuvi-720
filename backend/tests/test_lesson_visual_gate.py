@@ -10,6 +10,7 @@ scene still offers the on-demand "show me" buttons.
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import sys
 import unittest
@@ -24,6 +25,30 @@ REPLY = "המילה 'מדידה' כאן מתארת את מה שהתקבל מהמ
 
 
 class LessonVisualGateTests(unittest.TestCase):
+    def _events(self, planner_result: dict | None) -> list[dict]:
+        planner = AsyncMock(return_value=planner_result)
+        renderer = AsyncMock(return_value={"renderer": "svg-fallback", "scene": {}, "caption": ""})
+        with patch.object(agent_routes, "plan_manim_visual", planner), \
+             patch.object(agent_routes, "render_visual", renderer), \
+             patch.object(agent_routes.sessions, "attach_visual", AsyncMock(return_value=True)), \
+             patch.object(agent_routes, "should_offer_visual", AsyncMock(return_value=False)), \
+             patch.object(agent_routes, "_current_question_context", AsyncMock(return_value="")):
+            async def collect():
+                return [
+                    json.loads(event.removeprefix("data: ").strip())
+                    async for event in agent_routes._stream_visual_tail(
+                        learner_id="L",
+                        conversation_id="c",
+                        exchange_id="e",
+                        endpoint="/api/agent/coach/stream",
+                        user_message="איך עובד מחזור המים?",
+                        response_text=REPLY,
+                        language="he",
+                        on_lesson_screen=False,
+                    )
+                ]
+            return asyncio.run(collect())
+
     def _planned(self, message: str, *, auto_visual: bool) -> bool:
         planner = AsyncMock(return_value=None)
         with patch.object(agent_routes, "plan_manim_visual", planner), \
@@ -72,3 +97,12 @@ class LessonVisualGateTests(unittest.TestCase):
         self.assertTrue(self._planned(
             "אפשר איור של מערכת השעות שלי?", auto_visual=auto_visual,
         ))
+
+    def test_declined_visual_plan_never_emits_a_preparing_status(self):
+        statuses = [event["visual_status"] for event in self._events(None) if "visual_status" in event]
+        self.assertEqual(statuses, ["none"])
+
+    def test_accepted_visual_plan_starts_visible_rendering_only_after_a_scene_exists(self):
+        scene = {"use_visual": True, "elements": []}
+        statuses = [event["visual_status"] for event in self._events(scene) if "visual_status" in event]
+        self.assertEqual(statuses, ["rendering"])

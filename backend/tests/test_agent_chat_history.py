@@ -39,6 +39,7 @@ class AgentChatHistoryTests(unittest.IsolatedAsyncioTestCase):
                 assistant=f"answer {index}",
                 session_id=first["id"],
                 exchange_id=f"exchange-{index}",
+                query_intent="learning_help" if index == 0 else None,
             )
         second = await sessions.create_conversation(learner_id)
         await sessions.append_turn(
@@ -73,6 +74,8 @@ class AgentChatHistoryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(loaded), 10)
         self.assertEqual([item["role"] for item in loaded[:2]], ["user", "assistant"])
         self.assertEqual(loaded[0]["text"], "question 0")
+        self.assertEqual(loaded[0]["query_intent"], "learning_help")
+        self.assertEqual(loaded[1]["query_intent"], "learning_help")
         self.assertEqual(loaded[-1]["text"], "answer 4")
         self.assertEqual(
             await sessions.get_first_user_message(learner_id, first["id"]),
@@ -133,66 +136,66 @@ class AgentChatHistoryTests(unittest.IsolatedAsyncioTestCase):
         next_conversation = await sessions.create_conversation(learner_id)
         self.assertNotEqual(next_conversation["id"], first["id"])
 
-    async def test_activity_conversation_resumes_until_completion_then_rotates(self) -> None:
+    async def test_lesson_conversation_is_clean_for_each_launch(self) -> None:
         learner_id = "activity-thread-learner"
         unit_id = "YuviDori-math-angles-00001"
         component_id = "YuviDori-math-angles-00001-00002-basic"
         first = await sessions.create_conversation(
             learner_id,
+            role="lesson_coach",
             unit_id=unit_id,
             component_id=component_id,
+            launch_session_id="launch-one",
         )
         await sessions.append_turn(
             learner_id,
-            "coach",
+            "lesson_coach",
             user="I need a hint for this activity.",
             assistant="Let us inspect the two rays.",
             session_id=first["id"],
             exchange_id="activity-first-turn",
         )
 
-        resumed = await sessions.create_conversation(
+        same_launch = await sessions.create_conversation(
             learner_id,
+            role="lesson_coach",
             unit_id=unit_id,
             component_id=component_id,
+            launch_session_id="launch-one",
         )
-        other_component = await sessions.create_conversation(
-            learner_id,
-            unit_id=unit_id,
-            component_id="YuviDori-math-angles-00001-00003-basic",
-        )
-        self.assertEqual(resumed["id"], first["id"])
-        self.assertNotEqual(other_component["id"], first["id"])
+        self.assertEqual(same_launch["id"], first["id"])
 
-        closed = await sessions.close_activity_conversations(
-            learner_id,
-            unit_id,
-            component_id,
+        superseded = await sessions.supersede_activity_conversations(
+            learner_id, unit_id, component_id
         )
-        self.assertEqual(closed, 1)
-        next_attempt = await sessions.create_conversation(
+        self.assertEqual(superseded, 1)
+        next_launch = await sessions.create_conversation(
             learner_id,
+            role="lesson_coach",
             unit_id=unit_id,
             component_id=component_id,
+            launch_session_id="launch-two",
         )
-        self.assertNotEqual(next_attempt["id"], first["id"])
+        self.assertNotEqual(next_launch["id"], first["id"])
+        fresh_messages = await sessions.list_messages(
+            learner_id, next_launch["id"], role="lesson_coach"
+        )
+        self.assertEqual(fresh_messages["messages"], [])
 
-        # Lesson threads are scoped to the lesson: they resume, rotate and close
-        # exactly as above, but they are NOT offered in the learner's chat
-        # history — that list is for the conversations they started themselves.
+        # Lesson threads stay out of the learner's general companion history.
         history = await sessions.list_conversations(learner_id, limit=10)
         listed = {item["id"] for item in history["conversations"]}
         self.assertNotIn(first["id"], listed)
-        self.assertNotIn(next_attempt["id"], listed)
+        self.assertNotIn(next_launch["id"], listed)
 
-        # …and the closure bookkeeping the list used to prove still holds, read
-        # straight from the store since it is no longer surfaced by the list.
+        # The prior transcript remains audit-only rather than masquerading as a
+        # completed activity or being returned to the new launch.
         stored = {
             document.get("session_id"): document
             for document in sessions._read_history_fallback()["conversations"].values()
         }
-        self.assertEqual(stored[first["id"]]["activity_status"], "completed")
-        self.assertEqual(stored[next_attempt["id"]]["activity_status"], "open")
+        self.assertEqual(stored[first["id"]]["activity_status"], "superseded")
+        self.assertEqual(stored[next_launch["id"]]["activity_status"], "open")
 
     async def test_working_memory_summarizes_only_turns_outside_recent_window(self) -> None:
         learner_id = "rolling-memory-learner"

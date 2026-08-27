@@ -48,7 +48,11 @@ BARE_SCREEN = {
 }
 
 
-def _drive(trigger: str, bundle: dict, model_output=("בוא נצפה יחד בסרטון הקצר הזה. ",)):
+def _drive(
+    trigger: str,
+    bundle: dict,
+    model_output=("בוא נצפה יחד בסרטון הקצר הזה. ",),
+):
     """Run the real proactive path with a stubbed model; return (streamed, instructions)."""
     seen: dict = {}
 
@@ -81,7 +85,12 @@ def _drive(trigger: str, bundle: dict, model_output=("בוא נצפה יחד ב�
     async def run():
         chunks = []
         async for piece in coach.run_coach_stream(
-            "test-learner", user_message=None, language="he", session_id="s1", trigger=trigger
+            "test-learner",
+            user_message=None,
+            language="he",
+            session_id="s1",
+            trigger=trigger,
+            surface_context={"screen": "learning_lesson"},
         ):
             chunks.append(piece)
         return "".join(chunks)
@@ -148,7 +157,6 @@ class TeachingScreenIntroTests(unittest.TestCase):
         bundle["current"]["item"]["kind"] = "question"
         _, messages = _drive("question_intro", bundle, model_output=("בוא נסתכל על המסך. ",))
         self.assertIn(coach.MEDIA_AWARENESS["video"]["he"], _prompt_text(messages))
-
 
 if __name__ == "__main__":
     unittest.main()
