@@ -210,8 +210,10 @@ export function CompanionChat() {
   } = useCompanion()
   const pathname = useRoute()
   const isTaskMode = pathname.startsWith('/learning/lesson')
-  const latestReplySupportsSuggestions = messages.at(-1)?.role === 'assistant'
-    && messages.at(-1)?.queryIntent === 'learning_help'
+  // Indexed, not `.at(-1)`: the build's lib is ES2020, which has no Array.at.
+  const latestReply = messages[messages.length - 1]
+  const latestReplySupportsSuggestions = latestReply?.role === 'assistant'
+    && latestReply?.queryIntent === 'learning_help'
   const { snapshot: lessonRoadmap } = useLessonRoadmap()
   const { design, loaded } = useYuviDesign()
   const [draft, setDraft] = useState('')
