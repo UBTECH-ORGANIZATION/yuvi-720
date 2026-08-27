@@ -278,12 +278,25 @@ def _hero(
     # unexpired — shared with the route and the teacher reads, so the four can
     # never disagree about whether a pin is live.
     pinned = pinning.active_pin(brain, completed_ids=completed_ids)
+    # An objective pin resolves to a component HERE, per read: the teacher
+    # named the goal, the planner allocates the fitting step inside it as the
+    # child progresses. None = the goal ran dry for this learner — the pin is
+    # spent, and the hero falls back to its own reading of the moment.
+    allocated = None
+    if pinned is not None and pinning.pin_kind(pinned) == pinning.KIND_OBJECTIVE:
+        allocated = pinning.objective_next(pinned, brain, completed_ids, language)
+        if allocated is None:
+            pinned = None
     if pinned is not None:
         # The lesson the pin displaced, carried on the payload so the hero can
         # keep "continue where you stopped" reachable as a secondary door. Not
         # when it IS the pinned thing — a second link to the primary is noise.
         aside = None
-        if can_resume and str(current_component_id) != pinning.target_id(pinned):
+        pinned_target = (
+            str(allocated.get("id")) if allocated is not None
+            else pinning.target_id(pinned)
+        )
+        if can_resume and str(current_component_id) != pinned_target:
             aside = {
                 "componentId": current_component_id,
                 "unitId": (current_component or {}).get("unit_id") or current.get("unit_id"),
@@ -316,9 +329,18 @@ def _hero(
                 if current.get("pace") else None,
             }
 
-        pinned_component_id = pinned["component_id"]
-        pinned_component = get_component(pinned_component_id) or {}
-        pinned_objective_id = pinned.get("objective_id") or pinned_component.get("objective_id")
+        if allocated is not None:
+            # The goal's allocation, already resolved above — the payload is a
+            # component pin's in every field the frontend routes on, so the
+            # child's start button needs no new path.
+            pinned_component_id = str(allocated.get("id"))
+            pinned_component = allocated
+            pinned_objective_id = str(pinned["objective_id"])
+        else:
+            pinned_component_id = pinned["component_id"]
+            pinned_component = get_component(pinned_component_id) or {}
+            pinned_objective_id = (
+                pinned.get("objective_id") or pinned_component.get("objective_id"))
         subject = pinned_component.get("subject") or entry_for(
             mastery, pinned_objective_id).get("subject")
         plan: dict[str, Any] = {}
@@ -332,7 +354,7 @@ def _hero(
             ) or {}
         return {
             "mode": "pinned",
-            "pinnedKind": "component",
+            "pinnedKind": pinning.pin_kind(pinned),
             "subjectKey": subject,
             "subjectName": _t(SUBJECT_NAMES, subject, language),
             "objectiveId": pinned_objective_id,

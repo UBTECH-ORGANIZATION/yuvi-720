@@ -1170,12 +1170,13 @@ async def _build_pin(
 ) -> dict[str, Any]:
     """Resolve a pin request into the record the brain stores.
 
-    Exactly one target: `component_id` (catalog) or `launch_id` (a task the
-    learner was actually assigned). Everything else on the record — unit,
-    objective, the task's title — is resolved server-side, so the stored pin
-    can never disagree with what the learner's route will actually open. An id
-    we cannot resolve raises `_BadPin`, a 422, never a pin that silently
-    steers nowhere.
+    Exactly one target: `objective_id` (a learning GOAL — the planner keeps
+    allocating the fitting component inside it), `launch_id` (a task the
+    learner was actually assigned), or `component_id` (kept for older callers
+    and live #249 pins). Everything else on the record is resolved
+    server-side, so the stored pin can never disagree with what the learner's
+    route will actually open. An id we cannot resolve raises `_BadPin`, a
+    422, never a pin that silently steers nowhere.
     """
     from datetime import datetime, timezone
 
@@ -1210,16 +1211,33 @@ async def _build_pin(
             **base,
         }
 
+    # A `component_id` wins over a stray `objective_id` riding the same body:
+    # #249 clients sent the component with its coordinates alongside, and
+    # those coordinates must stay ignored, never promoted to the target.
     component_id = str(data.get("component_id") or "")
-    component = kata_catalog.get_component(component_id)
-    if component is None:
-        raise _BadPin("unknown_component")
+    if component_id:
+        component = kata_catalog.get_component(component_id)
+        if component is None:
+            raise _BadPin("unknown_component")
+        return {
+            "kind": "component",
+            "component_id": component_id,
+            "unit_id": component.get("unit_id"),
+            "objective_id": component.get("objective_id"),
+            "pinned_by": teacher_id,
+            **base,
+        }
+
+    objective_id = str(data.get("objective_id") or "")
+    objective = kata_catalog.get_objective(objective_id) if objective_id else None
+    if objective is None:
+        raise _BadPin("unknown_objective")
     return {
-        "kind": "component",
-        "component_id": component_id,
-        "unit_id": component.get("unit_id"),
-        "objective_id": component.get("objective_id"),
-        "pinned_by": teacher_id,
+        "kind": "objective",
+        "objective_id": objective_id,
+        # The subject rides the record so the class focus map can label
+        # the row without resolving the objective per learner.
+        "subject": objective.get("subject"),
         **base,
     }
 
@@ -1247,6 +1265,13 @@ async def _write_pin(safe_id: str, pin: dict[str, Any], actor_id: str) -> None:
         target = str(pin["launch_id"])
         title = pin.get("title") or ""
         action = {"label_key": "notif.action.openTask", "route": f"/tasks/{target}"}
+    elif pin.get("kind") == "objective":
+        # A goal, not a single lesson: WHICH component serves it is re-judged
+        # per read, so the bell points at the dashboard hero — the surface
+        # that always shows the goal's current allocation.
+        target = str(pin["objective_id"])
+        title = kata_catalog.localized_objective_title(target, "he") or ""
+        action = {"label_key": "notif.action.openLesson", "route": "/student-dashboard"}
     else:
         target = str(pin["component_id"])
         title = (kata_catalog.get_component(target) or {}).get("title") or ""
@@ -1419,6 +1444,12 @@ async def group_focus(
             objective_id = None
             title_override = pinned.get("title")
             is_pinned = True
+        elif pinned is not None and pinning.pin_kind(pinned) == pinning.KIND_OBJECTIVE:
+            # The goal itself IS the row — which component serves it today is
+            # a per-learner event read this fan-out deliberately skips.
+            subject = pinned.get("subject")
+            objective_id = pinned.get("objective_id")
+            is_pinned = True
         elif pinned is not None:
             component = kata_catalog.get_component(str(pinned["component_id"])) or {}
             subject = component.get("subject")
@@ -1527,9 +1558,14 @@ async def get_pin_next(
     raw_pin = brain.get("pinned_next") or None
     pin_state = None
     if raw_pin:
+        live = pinning.active_pin(brain, completed_ids=completed_ids)
+        if live is not None and pinning.pin_kind(live) == pinning.KIND_OBJECTIVE \
+                and pinning.objective_next(live, brain, completed_ids, lang) is None:
+            # The goal ran dry for this learner — the same resolution the hero
+            # applies, so "active" here can never mean "steering nobody".
+            live = None
         pin_state = (
-            "active"
-            if pinning.active_pin(brain, completed_ids=completed_ids) is not None
+            "active" if live is not None
             else "expired" if pinning.is_expired(raw_pin)
             else "spent"
         )

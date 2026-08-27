@@ -1,9 +1,10 @@
 """The pin dialog's smart search — grounding over helpfulness.
 
-The one property that matters: a teacher is never shown a learning that does
-not exist in their group's catalog, no matter what the model says. The
-adjacent-topic hint exists to navigate, so it only ever appears when there
-are no real answers to stand next to.
+The one property that matters: a teacher is never shown a goal that does not
+exist in their group's catalog, no matter what the model says. The search is
+catalog-wide — a math request typed while browsing science must still find
+the math goal. The adjacent-topic hint exists to navigate, so it only ever
+appears when there are no real answers to stand next to.
 """
 
 import json
@@ -12,11 +13,14 @@ from unittest.mock import AsyncMock, patch
 
 _CATALOG = [
     {"component_id": "CET.MATH.FRAC-01", "title": "חיבור שברים",
-     "unit_title": "שברים", "objective_title": "פעולות בשברים", "subject": "math"},
+     "unit_title": "שברים", "objective_id": "MOE.MATH.FRACTIONS",
+     "objective_title": "פעולות בשברים", "subject": "math"},
     {"component_id": "CET.MATH.FRAC-02", "title": "חיסור שברים",
-     "unit_title": "שברים", "objective_title": "פעולות בשברים", "subject": "math"},
+     "unit_title": "שברים", "objective_id": "MOE.MATH.FRACTIONS",
+     "objective_title": "פעולות בשברים", "subject": "math"},
     {"component_id": "CET.SCI.MASS-01", "title": "מסה ונפח",
-     "unit_title": "חומרים", "objective_title": "תכונות החומר", "subject": "science"},
+     "unit_title": "חומרים", "objective_id": "MOE.SCI.MATTER",
+     "objective_title": "תכונות החומר", "subject": "science"},
 ]
 
 
@@ -37,24 +41,37 @@ class FinderGroundingTest(unittest.IsolatedAsyncioTestCase):
                 "grp-1", query=query, teacher_id="teacher-1")
         return result, llm
 
-    async def test_a_hallucinated_id_never_reaches_the_teacher(self):
+    async def test_a_hallucinated_goal_never_reaches_the_teacher(self):
         result, _ = await self._find({"options": [
-            {"component_id": "CET.MATH.FRAC-01", "reason": "בדיוק הנושא"},
-            {"component_id": "CET.MADE.UP-99", "reason": "נשמע קרוב"},
-            {"component_id": "CET.MATH.FRAC-01", "reason": "שוב"},
-            {"component_id": "CET.MATH.FRAC-02", "reason": "אותו יעד"},
+            {"objective_id": "MOE.MATH.FRACTIONS", "reason": "בדיוק הנושא"},
+            {"objective_id": "MOE.MADE.UP", "reason": "נשמע קרוב"},
+            {"objective_id": "MOE.MATH.FRACTIONS", "reason": "שוב"},
+            {"objective_id": "MOE.SCI.MATTER", "reason": "קרוב"},
         ], "similar_topic": None})
-        ids = [option["component_id"] for option in result["options"]]
-        self.assertEqual(ids, ["CET.MATH.FRAC-01", "CET.MATH.FRAC-02"])
-        # The title is read off the catalog, never off the model.
-        self.assertEqual(result["options"][0]["title"], "חיבור שברים")
+        ids = [option["objective_id"] for option in result["options"]]
+        self.assertEqual(ids, ["MOE.MATH.FRACTIONS", "MOE.SCI.MATTER"])
+        # Title and subject are read off the catalog, never off the model —
+        # the subject is what lets the dialog say where the goal lives.
+        self.assertEqual(result["options"][0]["title"], "פעולות בשברים")
+        self.assertEqual(result["options"][0]["subject"], "math")
+
+    async def test_the_search_reads_the_whole_catalog_not_one_subject(self):
+        """The teacher may be browsing science while asking for math."""
+        from app.services import learning_finder
+
+        rows = AsyncMock(return_value=_view(_CATALOG))
+        with patch.object(learning_finder.learning_analytics, "group_learnings", rows), \
+             patch("app.services.llm.call_llm", AsyncMock(return_value='{"options": []}')):
+            await learning_finder.find_learnings(
+                "grp-1", query="שברים", subject="science", teacher_id="teacher-1")
+        self.assertNotIn("subject", rows.await_args.kwargs)
 
     async def test_the_hint_only_appears_when_there_are_no_answers(self):
-        withHits, _ = await self._find({
-            "options": [{"component_id": "CET.MATH.FRAC-01", "reason": "מתאים"}],
+        with_hits, _ = await self._find({
+            "options": [{"objective_id": "MOE.MATH.FRACTIONS", "reason": "מתאים"}],
             "similar_topic": "שברים",
         })
-        self.assertIsNone(withHits["similar_topic"])
+        self.assertIsNone(with_hits["similar_topic"])
 
         empty, _ = await self._find({"options": [], "similar_topic": "מסה ונפח"})
         self.assertEqual(empty["options"], [])
@@ -73,11 +90,14 @@ class FinderGroundingTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, {"options": [], "similar_topic": None})
         llm.assert_not_awaited()
 
-    async def test_the_prompt_carries_the_catalog_and_the_request(self):
+    async def test_the_prompt_carries_goals_with_their_lessons(self):
         _, llm = await self._find({"options": []}, query="חיבור שברים פשוטים")
         prompt = llm.await_args.args[0][0]["content"]
         self.assertIn("חיבור שברים פשוטים", prompt)
-        self.assertIn("CET.SCI.MASS-01", prompt)
+        # Goals, not components: the objective line carries its lessons.
+        self.assertIn("MOE.MATH.FRACTIONS | פעולות בשברים | math | "
+                      "חיבור שברים; חיסור שברים", prompt)
+        self.assertNotIn("CET.MATH.FRAC-01 |", prompt)
 
 
 class FinderRouteTest(unittest.IsolatedAsyncioTestCase):
@@ -109,11 +129,10 @@ class FinderRouteTest(unittest.IsolatedAsyncioTestCase):
         with patch.object(routes, "_guard_group", AsyncMock(return_value=True)), \
              patch("app.services.learning_finder.find_learnings", find):
             response = await routes.find_group_learnings(
-                "grp-1", {"query": "שברים", "subject": "math", "language": "he"},
+                "grp-1", {"query": "שברים", "language": "he"},
                 session={"sub": "teacher-1"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(json.loads(response.body), answer)
-        self.assertEqual(find.await_args.kwargs["subject"], "math")
         self.assertEqual(find.await_args.kwargs["teacher_id"], "teacher-1")
 
 

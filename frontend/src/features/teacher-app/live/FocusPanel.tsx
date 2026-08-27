@@ -1,24 +1,21 @@
-/* Changing one child's focus — or everyone's at once.
+/* Pinning one child's next step — a learning GOAL, never a single lomda.
  *
- * Grounded twice: the panel opens on what the planner already intends (the
- * exact next component, from the learner's own plan) and the catalog is laid
- * out subject → objective, with the learner's current objective first and
- * open. The teacher can still choose anything — the panel recommends, it
- * does not fence — but the fitting step is always one glance away, so the
- * easy path is the one that matches where the child actually is.
+ * The teacher names the destination; WHICH lomda inside it the child meets
+ * is the planner's own allocation, re-judged as they progress — so a pin can
+ * never fight the sequencing the platform would have applied anyway. The
+ * shelf is goal cards, one subject at a time, the child's own subject first
+ * and their current goal marked; the teacher can still pick anything.
  *
- * Extracted from LiveClassView (#244): the live row, the student profile and
- * the calendar all open the SAME panel, because two pin dialogs would be two
- * opinions about what a pin is. The row-scoped positioning stays with each
- * caller (via `className`); this component owns only its content.
+ * Extracted from LiveClassView (#244): the live row and the student profile
+ * open the SAME dialog, because two pin dialogs would be two opinions about
+ * what a pin is. Task pinning lives on the calendar's task lane — this
+ * dialog deals only in goals (a standing task pin still displays here).
  *
- * #244 additions: a tasks tab (the child's open assignments — pinning one
- * makes it the dashboard hero), an optional end date, and a smart search —
- * the teacher DESCRIBES the learning they want and the server matches it
- * against this group's catalog (grounded: only real component ids come back;
- * a near-miss becomes a "search with {similar_topic}?" pointer instead).
- * The dialog is about the ONE child it was opened for — bulk pinning lives
- * on the calendar's task lane, not here.
+ * The smart search is grounded and catalog-wide: the teacher DESCRIBES the
+ * learning they want, the server matches it against the group's catalog
+ * across every subject (only real goal ids come back; a near-miss becomes a
+ * "search with {similar_topic}?" pointer instead). The dialog is about the
+ * ONE child it was opened for — bulk pinning lives on the calendar lane.
  */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -26,10 +23,9 @@ import { Icon, SkeletonRows } from '../../../components/primitives'
 import { useI18n } from '../../../i18n/I18nProvider'
 import {
   findLearnings, getGroupLearnings, getPinnedNext, pinNext, unpinNext,
-  type FoundLearning, type LearningRow, type PinFocus, type PinnableTask,
-  type PinnedNext,
+  type FoundLearning, type LearningRow, type PinFocus, type PinnedNext,
 } from '../../../services/teacher'
-import { learningName, prettyId, variantOf } from './learning-names'
+import { learningName, prettyId } from './learning-names'
 import './live-class.css'
 
 export function FocusPanel({ learnerId, groupId, onChanged, className }: {
@@ -42,11 +38,9 @@ export function FocusPanel({ learnerId, groupId, onChanged, className }: {
 }) {
   const { t, language } = useI18n()
   const [learnings, setLearnings] = useState<LearningRow[] | null>(null)
-  const [tasks, setTasks] = useState<PinnableTask[]>([])
   const [current, setCurrent] = useState<PinnedNext | null>(null)
   const [pinState, setPinState] = useState<'active' | 'expired' | 'spent' | null>(null)
   const [focus, setFocus] = useState<PinFocus | null>(null)
-  const [tab, setTab] = useState<'learnings' | 'tasks'>('learnings')
   /** Which subject's shelf is on display. null = the child's own subject —
    *  the tree keeps it first, so the fitting material opens the dialog. */
   const [subjectPick, setSubjectPick] = useState<string | null>(null)
@@ -75,7 +69,6 @@ export function FocusPanel({ learnerId, groupId, onChanged, className }: {
         if (!active) return
         setCurrent(result.pinned)
         setPinState(result.pin_state)
-        setTasks(result.tasks ?? [])
         setFocus(result.focus)
       })
       .catch(() => {})
@@ -147,11 +140,10 @@ export function FocusPanel({ learnerId, groupId, onChanged, className }: {
     setSearching(true)
     setSearchFailed(false)
     try {
-      setFound(await findLearnings(groupId, {
-        query: asked,
-        subject: shown?.key === 'other' ? undefined : shown?.key,
-        language,
-      }))
+      // Catalog-wide on purpose: a math request typed while the science
+      // shelf is open must still find the math goal. Each hit says where
+      // it lives.
+      setFound(await findLearnings(groupId, { query: asked, language }))
     } catch {
       setSearchFailed(true)
     } finally {
@@ -162,7 +154,7 @@ export function FocusPanel({ learnerId, groupId, onChanged, className }: {
   /** One pick, one child. (Pinning a whole audience lives on the calendar's
    *  task lane via the bulk route — the dialog stays about the one child it
    *  was opened for.) */
-  async function pick(body: { component_id?: string; launch_id?: string }) {
+  async function pick(body: { objective_id?: string; launch_id?: string }) {
     if (busy) return
     setBusy(true)
     setFailed(false)
@@ -197,6 +189,13 @@ export function FocusPanel({ learnerId, groupId, onChanged, className }: {
 
   const titleOf = (pin: PinnedNext) => {
     if (pin.kind === 'task') return pin.title || pin.launch_id || ''
+    if (pin.kind === 'objective') {
+      const row = learnings?.find((held) => held.objective_id === pin.objective_id)
+      const named = row?.objective_title && row.objective_title !== row.objective_id
+        ? row.objective_title : ''
+      return named || row?.unit_title || prettyId(pin.objective_id || '')
+    }
+    // Component pins survive from #249 and from the calendar's older lane.
     const componentId = pin.component_id
     if (!componentId) return ''
     const row = learnings?.find((held) => held.component_id === componentId)
@@ -253,24 +252,10 @@ export function FocusPanel({ learnerId, groupId, onChanged, className }: {
         </p>
       )}
 
-      {/* What kind of thing to pin — then, in their own framed row, for whom
-          and until when. Audience and date must sit ABOVE the catalog: a click
-          on an option pins immediately, so anything that changes what that
-          click means has to be seen first. */}
-      <div className="tch-focusPanel__tabs" role="tablist">
-        {(['learnings', 'tasks'] as const).map((name) => (
-          <button
-            key={name}
-            type="button"
-            role="tab"
-            aria-selected={tab === name}
-            className={`tch-focusPanel__tab${tab === name ? ' is-active' : ''}`}
-            onClick={() => setTab(name)}
-          >
-            {t(`tch.liveView.focusPanel.tab.${name}`)}
-          </button>
-        ))}
-      </div>
+      {/* The end date sits ABOVE the catalog: a click on a goal pins
+          immediately, so anything that changes what that click means has to
+          be seen first. (Task pinning lives on the calendar's task lane —
+          this dialog deals only in learning goals.) */}
       <div className="tch-focusPanel__options">
         <label className="tch-focusPanel__until">
           <Icon name="calendar" size={13} aria-hidden />
@@ -285,45 +270,7 @@ export function FocusPanel({ learnerId, groupId, onChanged, className }: {
         </label>
       </div>
 
-      {tab === 'tasks' ? (
-        tasks.length === 0 ? (
-          <p className="tch-focusPanel__note">{t('tch.liveView.focusPanel.noTasks')}</p>
-        ) : (
-          <ul className="tch-focusPanel__rows tch-focusPanel__rows--tasks">
-            {tasks.map((task) => {
-              const isCurrent = current?.kind === 'task' && current.launch_id === task.launch_id
-              return (
-                <li key={task.launch_id}>
-                  <button
-                    type="button"
-                    className={`tch-focusPanel__option${isCurrent ? ' is-current' : ''}`}
-                    disabled={busy || isCurrent}
-                    onClick={() => void pick({ launch_id: task.launch_id })}
-                  >
-                    <span className="tch-focusPanel__optMain" dir="auto">
-                      <span className="tch-focusPanel__optName">
-                        {task.title || task.launch_id}
-                      </span>
-                      {isCurrent && (
-                        <span className="tch-focusPanel__tag">
-                          {t('tch.liveView.focusPanel.chosen')}
-                        </span>
-                      )}
-                    </span>
-                    {task.due_at && (
-                      <span className="tch-focusPanel__optDesc" dir="auto">
-                        {t('tch.liveView.focusPanel.due', {
-                          date: new Date(task.due_at).toLocaleDateString(language),
-                        })}
-                      </span>
-                    )}
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        )
-      ) : tree === null ? (
+      {tree === null ? (
         <div aria-busy="true" className="tch-focusPanel__skeleton"><SkeletonRows rows={4} /></div>
       ) : tree.length === 0 ? (
         <p className="tch-focusPanel__note">{t('tch.liveView.pin.emptyCatalog')}</p>
@@ -332,9 +279,6 @@ export function FocusPanel({ learnerId, groupId, onChanged, className }: {
         const objectives = [...shown.objectives.values()]
         objectives.sort((a, b) =>
           Number(focus?.objective_id === b.id) - Number(focus?.objective_id === a.id))
-        /* Topic starters: the shown subject's own objective names — clicking
-           one IS a search, so the box teaches itself. */
-        const suggestions = objectives.map((objective) => objective.title).slice(0, 3)
         return (
           <>
             {/* Say it instead of scanning for it: the description goes to the
@@ -366,22 +310,6 @@ export function FocusPanel({ learnerId, groupId, onChanged, className }: {
                 {searching ? t('tch.loading') : t('tch.liveView.focusPanel.search.go')}
               </button>
             </div>
-            {found === null && !searchFailed && suggestions.length > 0 && (
-              <p className="tch-focusPanel__suggest" dir="auto">
-                <span>{t('tch.liveView.focusPanel.search.suggest')}</span>
-                {suggestions.map((topic) => (
-                  <button
-                    key={topic}
-                    type="button"
-                    className="tch-focusPanel__suggestChip"
-                    disabled={searching}
-                    onClick={() => { setQuery(topic); void search(topic) }}
-                  >
-                    {topic}
-                  </button>
-                ))}
-              </p>
-            )}
             {searchFailed && (
               <p role="status" className="tch-focusPanel__note is-error">
                 {t('tch.liveView.focusPanel.search.failed')}
@@ -402,22 +330,32 @@ export function FocusPanel({ learnerId, groupId, onChanged, className }: {
                 {found.options.length > 0 ? (
                   <ul className="tch-focusPanel__rows">
                     {found.options.map((hit, index) => {
-                      const isCurrent = current?.kind !== 'task'
-                        && current?.component_id === hit.component_id
+                      const isCurrent = current?.kind === 'objective'
+                        && current.objective_id === hit.objective_id
+                      const subjectKey = `tch.subject.${hit.subject}`
+                      const subjectName = hit.subject
+                        ? (t(subjectKey) !== subjectKey ? t(subjectKey) : hit.subject)
+                        : null
                       return (
-                        <li key={hit.component_id}>
+                        <li key={hit.objective_id}>
                           <button
                             type="button"
                             className={`tch-focusPanel__option${
                               isCurrent ? ' is-current' : ''}`}
                             disabled={busy || isCurrent}
-                            onClick={() => void pick({ component_id: hit.component_id })}
+                            onClick={() => void pick({ objective_id: hit.objective_id })}
                           >
                             <span className="tch-focusPanel__optMain" dir="auto">
                               <span className="tch-focusPanel__rank" aria-hidden>
                                 {index + 1}
                               </span>
                               <span className="tch-focusPanel__optName">{hit.title}</span>
+                              {/* The search reads every subject — the hit
+                                  says where it lives, since the shelf below
+                                  may be showing a different one. */}
+                              {subjectName && (
+                                <span className="tch-focusPanel__tag">{subjectName}</span>
+                              )}
                               {isCurrent && (
                                 <span className="tch-focusPanel__tag">
                                   {t('tch.liveView.focusPanel.chosen')}
@@ -477,81 +415,61 @@ export function FocusPanel({ learnerId, groupId, onChanged, className }: {
               ))}
             </div>
             <div className="tch-focusPanel__subjects">
-              {objectives.map((objective) => {
-                const recommended = Boolean(
-                  focus?.objective_id && objective.id === focus.objective_id)
-                return (
-                  <section
-                    key={objective.id || objective.title}
-                    className={`tch-focusPanel__objGroup${recommended ? ' is-recommended' : ''}`}
-                  >
-                    <h4 className="tch-focusPanel__objHead" dir="auto">
-                      <span>{objective.title}</span>
-                      {recommended && (
-                        <span className="tch-focusPanel__tag tch-focusPanel__tag--fit">
-                          {t('tch.liveView.focusPanel.recommended')}
+              <ul className="tch-focusPanel__goals">
+                {/* A goal without an objective id (off-catalog activity rows)
+                    cannot be pinned — so it is not offered. */}
+                {objectives.filter((objective) => objective.id).map((objective) => {
+                  const recommended = Boolean(
+                    focus?.objective_id && objective.id === focus.objective_id)
+                  const isCurrent = current?.kind === 'objective'
+                    && current.objective_id === objective.id
+                  /* The card says what the goal is ABOUT: the lomdot it
+                     contains, then its size. The planner — not the teacher —
+                     picks which of them the child meets first. */
+                  const names = objective.rows.map((row) => learningName(row))
+                  const preview = names.slice(0, 3).join(' · ')
+                  const extra = names.length - 3
+                  const minutes = objective.rows.reduce(
+                    (sum, row) => sum + (row.estimated_minutes || 0), 0)
+                  return (
+                    <li key={objective.id}>
+                      <button
+                        type="button"
+                        className={`tch-focusPanel__option tch-focusPanel__option--goal${
+                          isCurrent ? ' is-current' : ''}${recommended ? ' is-next' : ''}`}
+                        disabled={busy || isCurrent}
+                        onClick={() => void pick({ objective_id: objective.id })}
+                      >
+                        <span className="tch-focusPanel__optMain" dir="auto">
+                          <span className="tch-focusPanel__optName">{objective.title}</span>
+                          {recommended && (
+                            <span className="tch-focusPanel__tag tch-focusPanel__tag--fit">
+                              {t('tch.liveView.focusPanel.recommended')}
+                            </span>
+                          )}
+                          {isCurrent && (
+                            <span className="tch-focusPanel__tag">
+                              {t('tch.liveView.focusPanel.chosen')}
+                            </span>
+                          )}
                         </span>
-                      )}
-                    </h4>
-                    <ul className="tch-focusPanel__rows">
-                      {objective.rows.map((learning) => {
-                        const isCurrent = current?.kind !== 'task'
-                          && current?.component_id === learning.component_id
-                        const isNext = focus?.next_component_id === learning.component_id
-                        const full = learningName(learning)
-                        const short = variantOf(learning, objective.rows)
-                        /* The row's second line is what the chips never had
-                           room for: the full name when the first line is a
-                           trimmed variant, then the step's size. */
-                        const meta: string[] = []
-                        if (learning.questions_total > 0) {
-                          meta.push(t('tch.liveView.focusPanel.qs',
-                                      { count: learning.questions_total }))
-                        }
-                        if (learning.estimated_minutes) {
-                          meta.push(t('tch.liveView.focusPanel.min',
-                                      { count: learning.estimated_minutes }))
-                        }
-                        if (learning.is_assessment) {
-                          meta.push(t('tch.learnings.assessment'))
-                        }
-                        const desc = [short !== full ? full : null, meta.join(' · ')]
-                          .filter(Boolean).join(' · ')
-                        return (
-                          <li key={learning.component_id}>
-                            <button
-                              type="button"
-                              className={`tch-focusPanel__option${isCurrent ? ' is-current' : ''}${
-                                isNext ? ' is-next' : ''}`}
-                              disabled={busy || isCurrent}
-                              onClick={() => void pick({ component_id: learning.component_id })}
-                            >
-                              <span className="tch-focusPanel__optMain" dir="auto">
-                                <span className="tch-focusPanel__optName">
-                                  {short || learning.component_id}
-                                </span>
-                                {isNext && (
-                                  <span className="tch-focusPanel__tag tch-focusPanel__tag--fit">
-                                    {t('tch.liveView.focusPanel.fitsNow')}
-                                  </span>
-                                )}
-                                {isCurrent && (
-                                  <span className="tch-focusPanel__tag">
-                                    {t('tch.liveView.focusPanel.chosen')}
-                                  </span>
-                                )}
-                              </span>
-                              {desc && (
-                                <span className="tch-focusPanel__optDesc" dir="auto">{desc}</span>
-                              )}
-                            </button>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  </section>
-                )
-              })}
+                        <span className="tch-focusPanel__optDesc" dir="auto">
+                          {preview}
+                          {extra > 0
+                            ? ` · ${t('tch.liveView.focusPanel.more', { count: extra })}`
+                            : ''}
+                        </span>
+                        <span className="tch-focusPanel__goalMeta" dir="auto">
+                          {t('tch.liveView.focusPanel.parts', { count: names.length })}
+                          {minutes > 0
+                            ? ` · ${t('tch.liveView.focusPanel.min', { count: minutes })}`
+                            : ''}
+                        </span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
             </div>
           </>
         )

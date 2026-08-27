@@ -1079,8 +1079,12 @@ export function getGroupLearnings(groupId: string, language: string, subject?: s
 /** One smart-search hit: a REAL catalog learning (the server drops anything
  *  the model made up) plus the model's one-line reason it fits the ask. */
 export interface FoundLearning {
-  component_id: string
+  /** A learning GOAL — pinning it lets the planner allocate the fitting
+   *  lomda inside it as the child progresses. */
+  objective_id: string
   title: string
+  /** Where the goal lives — the search is catalog-wide, every subject. */
+  subject: string | null
   reason: string
 }
 
@@ -1138,11 +1142,14 @@ export function previewLearning(componentId: string) {
  * else (unit, objective, the task's title) from the id, so only the id and an
  * optional end date cross the wire. */
 export interface PinnedNext {
-  /** Absent on pins written before #244 — read that as 'component'. */
-  kind?: 'component' | 'task'
+  /** Absent on pins written before #244 — read that as 'component'.
+   *  'objective' = a learning GOAL: the planner allocates within it. */
+  kind?: 'component' | 'task' | 'objective'
   component_id?: string
   unit_id?: string | null
   objective_id?: string | null
+  /** Objective pins: where the goal lives, for the class map's row label. */
+  subject?: string | null
   /** Task pins: the opening the child's own route accepts, and the task. */
   launch_id?: string
   task_id?: string
@@ -1225,6 +1232,10 @@ export function getPinnedNext(learnerId: string, language: string) {
 /** Exactly one of `component_id` / `launch_id`; `expires_at` optional — a bare
  *  date means "through that day" in the classroom's timezone. */
 export interface PinRequest {
+  /** Exactly one target. `objective_id` pins a learning GOAL (the dialog's
+   *  only learnings currency now); `component_id` survives for older
+   *  surfaces; `launch_id` pins an assigned task. */
+  objective_id?: string
   component_id?: string
   launch_id?: string
   expires_at?: string

@@ -68,15 +68,16 @@ try {
   check('the profile opens the same focus panel', true)
   check('no bulk lever anywhere — the dialog is about one child',
         await teacher.locator('.tch-focusPanel__scope').count() === 0)
-  check('the panel offers a tasks tab and an end date',
-        await teacher.locator('.tch-focusPanel__tab').count() === 2
-        && await teacher.locator('.tch-focusPanel__until input').count() === 1)
 
   await teacher.waitForSelector('.tch-focusPanel__option', { timeout: 30000 })
-  /* Pin the "fits now" step when the planner marks one — it is uncompleted by
-     construction, so the hero must flip to pinned mode. An arbitrary option
-     might be a component this child already finished, which the hero rightly
-     treats as spent. */
+  // Asserted after the shelf loads — the search row renders with the catalog.
+  check('the panel offers the smart search and an end date',
+        await teacher.locator('.tch-focusPanel__searchBox input').count() === 1
+        && await teacher.locator('.tch-focusPanel__until input').count() === 1)
+  /* Pin the child's CURRENT goal when the planner marks one — its allocation
+     is non-empty by construction, so the hero must flip to pinned mode. An
+     arbitrary goal might already be finished for this child, which the hero
+     rightly treats as spent. */
   const fitting = teacher.locator('.tch-focusPanel__option.is-next')
   const option = (await fitting.count()) > 0
     ? fitting.first() : teacher.locator('.tch-focusPanel__option').first()

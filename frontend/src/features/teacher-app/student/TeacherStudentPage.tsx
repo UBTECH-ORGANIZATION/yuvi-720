@@ -1059,11 +1059,13 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows }: {
                     { title: pinView.pinned_title ?? '' })}
                 </span>
               )}
-              {!pinView.pinned && recentLast && recentLast.outcome !== 'expired' && (
+              {/* Only a COMPLETED pin earns a line: "the teacher removed a
+                  pin" is an act, not an outcome, and reporting it read as
+                  noise on the card. */}
+              {!pinView.pinned && recentLast?.outcome === 'completed' && (
                 <span className="tch-status__pinNote" dir="auto">
-                  {recentLast.outcome === 'completed'
-                    ? <Icon name="check" size={13} aria-hidden /> : null}
-                  {t(`tch.student.pin.outcome.${recentLast.outcome}`,
+                  <Icon name="check" size={13} aria-hidden />
+                  {t('tch.student.pin.outcome.completed',
                     { title: pinView.last_title ?? '' })}
                 </span>
               )}
