@@ -108,12 +108,34 @@ async def group_snapshot(
 async def group_engagement(
     group_id: str,
     days: int = Query(7, ge=1, le=90),
+    subject: Optional[str] = Query(None),
     session=Depends(require_teacher_session),
 ):
     """% active learners + average active minutes (F6 group §1, engagement)."""
     if not await _guard_group(session, group_id):
         return _denied()
-    return _ok(await group_analytics.engagement(group_id, days=days))
+    return _ok(await group_analytics.engagement(
+        group_id, days=days, subject=subject or None))
+
+
+@router.get("/groups/{group_id}/mood")
+async def group_mood(
+    group_id: str,
+    days: int = Query(7, ge=1, le=120),
+    session=Depends(require_teacher_session),
+):
+    """How the class has been feeling over the window, and the one before it.
+
+    The daily check-in has been storing an answer per child per school day
+    since #452 and nothing has ever read them at class level. Aggregate only —
+    counts by valence, never a learner id: a mood is the most personal thing
+    the product holds, and the class view has no business naming who is having
+    a bad week (C5). The teacher reaches an individual child through their
+    profile, where that child's own strip already lives.
+    """
+    if not await _guard_group(session, group_id):
+        return _denied()
+    return _ok(await group_analytics.class_mood(group_id, days=days))
 
 
 @router.get("/groups/{group_id}/gaps")
@@ -674,6 +696,7 @@ async def group_moments(
     group_id: str,
     days: int = Query(14, ge=1, le=90),
     offset_days: int = Query(0, ge=0, le=90),
+    subject: Optional[str] = Query(None),
     limit: int = Query(25, ge=1, le=60),
     language: str = Query("he"),
     session=Depends(require_teacher_session),
@@ -689,8 +712,8 @@ async def group_moments(
 
     rows = await moments.moments_for_group(
         group_id, language=normalize_language(language), days=days, limit=limit,
-        offset_days=offset_days)
-    return _ok({"moments": rows})
+        offset_days=offset_days, subject=subject or None)
+    return _ok({"moments": rows, "subject": subject or None})
 
 
 @router.get("/students/{learner_id}/moments")

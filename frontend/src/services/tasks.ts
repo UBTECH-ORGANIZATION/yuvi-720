@@ -13,7 +13,7 @@
  * them; this is the second lock on the same door.
  */
 
-import { apiGet, apiPost, apiPut } from './api'
+import { apiDelete, apiGet, apiPost, apiPut } from './api'
 import type { CoachVisual } from './agents'
 import type { MathSegment } from '../features/tasks/mathSegments'
 
@@ -254,6 +254,12 @@ export interface TaskSpecInput {
   components: TaskComponent[]
   difficulty?: 'easy' | 'medium' | 'hard'
   notes?: string
+  /** Who the task was built FOR, when it came from a finding about particular
+   *  children. An input to generation, not only a send list: the server turns
+   *  these ids into an anonymous shared brief (which mistakes they repeat, which
+   *  questions they missed) and weights it above the general topic. Ids never
+   *  reach a model — see `backend/app/services/tasks/audience.py`. */
+  audience?: { learner_ids: string[] }
   practice?: { question_count?: number }
   test?: {
     question_count?: number
@@ -479,6 +485,21 @@ export function listTaskLaunches(taskId: string, signal?: AbortSignal) {
 }
 
 /** Stop accepting work. No `launchId` closes every opening of the task. */
+/** What deleting a task would take with it, read before the confirmation is
+ *  shown. A draft nobody ever saw and a test forty children sat are very
+ *  different decisions, and only one of them should give pause. */
+export function taskImpact(taskId: string) {
+  return apiGet<{ launches: number; attempts: number; learners: number }>(
+    `/api/teacher/tasks/${encodeURIComponent(taskId)}/impact`)
+}
+
+/** Irreversible, and it takes the openings, the activations and the children's
+ *  submitted attempts with it. Confirm first — see `taskImpact`. */
+export function deleteTask(taskId: string) {
+  return apiDelete<{ deleted: boolean; removed: Record<string, number> }>(
+    `/api/teacher/tasks/${encodeURIComponent(taskId)}`)
+}
+
 export function closeTask(taskId: string, launchId?: string) {
   return apiPost<{ task_id: string; status: TaskStatus; closed: string[] }>(
     `/api/teacher/tasks/${encodeURIComponent(taskId)}/close`,

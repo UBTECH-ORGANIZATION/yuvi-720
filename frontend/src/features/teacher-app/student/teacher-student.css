@@ -608,6 +608,17 @@
   gap: var(--sp-3);
 }
 
+/* Six or more cells: two even rows, columns counted by the component (which
+   knows how many cells it renders — the closed dialogs in here are children
+   too, so CSS could not count them). Only above the width where ceil(n/2)
+   columns genuinely fit; narrower than that, the minmax wrap above already
+   breaks the band into as many rows as the screen needs. */
+@media (min-width: 880px) {
+  .tch-status__grid--two-rows {
+    grid-template-columns: repeat(var(--tch-status-cols), minmax(0, 1fr));
+  }
+}
+
 .tch-status__cell {
   /* Relative so the momentum chip can float on the corner without joining
      the cell's own layout (grid or the door-cell flex both stay intact). */
@@ -1751,4 +1762,17 @@
   margin: 0;
   font-size: var(--sp-fs-sm);
   color: var(--sp-warn-600);
+}
+
+/* "Good word sent" — what replaces the button once it has been said, until the
+   win itself changes. A quiet acknowledgement rather than a disabled button:
+   a greyed-out control invites a second click and looks like a fault, while
+   this says the thing was done and closes the loop. */
+.tch-rec__said {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-medium);
+  color: var(--sp-success-600);
 }

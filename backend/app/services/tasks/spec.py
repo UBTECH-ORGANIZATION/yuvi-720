@@ -1064,6 +1064,23 @@ def normalize_spec(raw: Any) -> dict[str, Any]:
         "notes": sanitize_math(str(raw.get("notes") or ""))[:600].strip(),
     }
 
+    # Who the task is FOR, when it was built from a finding about particular
+    # children. Ids only, and they never reach a model: at generation they are
+    # resolved into an anonymous shared brief (`tasks/audience.py`). Stored on
+    # the spec rather than passed at generation time so a regenerate a week
+    # later is aimed at the same children as the first pass — otherwise the
+    # second attempt is the generic worksheet the first one avoided.
+    audience = raw.get("audience")
+    if isinstance(audience, dict):
+        learner_ids = [
+            str(entry).strip()[:120] for entry in (audience.get("learner_ids") or [])
+            if str(entry or "").strip()
+        ]
+        if learner_ids:
+            # Capped: a task "for" the whole school is a task for nobody, and
+            # an unbounded list is an unbounded fan-out at generation.
+            spec["audience"] = {"learner_ids": list(dict.fromkeys(learner_ids))[:60]}
+
     # Which catalogue lesson this task is built on, if the teacher picked one.
     # Ids only: the titles and the per-screen `informationToBot` are read from
     # the live catalogue at generation time, so a stored spec cannot go stale

@@ -77,21 +77,44 @@ try {
         greeting.length > 0 && !greeting.includes('tch.'), greeting)
   check('exactly three KPIs', await page.locator('.tch-stat').count() === 3,
         `${await page.locator('.tch-stat').count()}`)
-  const topicValue = (await page.locator('.tch-stat--button .tch-stat__value').innerText()).trim()
-  const topicHint = (await page.locator('.tch-stat--button .tch-stat__hint').innerText()).trim()
-  check('the third KPI names a topic to teach, not a head-count',
-        topicValue.length > 0 && !/^\d+%?$/.test(topicValue) && !topicValue.includes('tch.'),
-        topicValue)
-  check('and says how much of the class it blocks', /\d+.*\d+/.test(topicHint), topicHint)
+  /* The third KPI is the class's MOOD (ADO #500). It has now held three
+     different things: a head-count of students needing attention, then the
+     topic blocking the class — and lost each to the card below it, because
+     everything under this row is already "what is wrong with the class" in
+     rising detail. Mood is the one reading on the page nothing else repeats.
+     It is no longer a button: it summarises, it does not filter. */
+  const moodCell = page.locator('.tch-stat').nth(2)
+  const moodValue = (await moodCell.locator('.tch-stat__value').innerText()).trim()
+  check('the third KPI is a share of feelings, or an honest dash',
+        /^(\d+%|—)$/.test(moodValue), moodValue)
+  const moodHint = (await moodCell.locator('.tch-stat__hint').innerText()).trim()
+  check('and says how many children it heard from, never who',
+        moodHint.length > 0 && !moodHint.includes('tch.'), moodHint)
+  check('nothing on the row filters the class any more',
+        await page.locator('.tch-stat--button').count() === 0)
   check('the brief hero is gone', await page.locator('.tch-brief, .tch-home__brief').count() === 0)
-  // v4: the KPIs sit on real cards, and the attention KPI lost its red side-bar
-  const kpiLook = await page.locator('.tch-stat--button').evaluate((node) => {
+  /* One panel, three readings (#501). They are not three independent facts to
+     pick between — they are one answer to "how has this class been over the
+     stretch I chose", recomputed together whenever the period changes. The
+     cards were merged into a single surface divided by hairlines. */
+  const kpiLook = await page.locator('.tch-stats').evaluate((node) => {
     const style = getComputedStyle(node)
-    return { bg: style.backgroundColor, accent: style.borderInlineStartWidth }
+    const cells = [...node.querySelectorAll('.tch-stat')]
+    return {
+      bg: style.backgroundColor,
+      radius: style.borderTopLeftRadius,
+      // Every cell but the first carries a divider, in whichever axis it wraps.
+      dividers: cells.filter((cell) => {
+        const rule = getComputedStyle(cell.parentElement)
+        return rule.borderInlineStartWidth === '1px' || rule.borderBlockStartWidth === '1px'
+      }).length,
+    }
   })
-  check('the KPIs sit on cards without the red side-bar',
-        kpiLook.bg !== 'rgba(0, 0, 0, 0)' && kpiLook.accent === '1px',
-        `bg ${kpiLook.bg} · accent ${kpiLook.accent}`)
+  check('the three readings share one panel',
+        kpiLook.bg !== 'rgba(0, 0, 0, 0)' && kpiLook.radius !== '0px',
+        `bg ${kpiLook.bg} · radius ${kpiLook.radius}`)
+  check('divided by hairlines, not by gaps', kpiLook.dividers === 2,
+        `${kpiLook.dividers} of 2 cells carry a rule`)
   check('the live card is gone (v2)', await page.locator('.tch-liveCard').count() === 0)
   check('the recommendations block is gone (v2)',
         await page.locator('.tch-groupRecs').count() === 0)
@@ -167,16 +190,25 @@ try {
   check('movers sit on top of their band', freshFirst)
   await page.screenshot({ path: `${OUT}/home-01-top.png` })
 
-  // ── the topic KPI leads to the row that can act on it ─────────────────────
-  await page.locator('.tch-stat--button').click()
-  await page.waitForTimeout(900) // smooth scroll
-  const gapsTop = await page.locator('[data-tour="teacher.gaps"]').evaluate(
-    (node) => node.getBoundingClientRect().top)
-  check('the topic KPI scrolls to the difficulties card',
-        gapsTop > -60 && gapsTop < 400, `top ${Math.round(gapsTop)}px`)
-  const namedTopic = await page.locator('[data-tour="teacher.gaps"]').innerText()
-  check('and that card carries the topic it named', namedTopic.includes(topicValue),
-        `${topicValue} in the card`)
+  /* ── the difficulties card carries both halves ────────────────────────────
+     The blocking topic used to be a KPI that scrolled down to this card; it is
+     now stated here directly, where the topic already lives, and the card was
+     split so what the class HAS got is not filed underneath as a lesser
+     feature. A card that only ever names failures teaches a teacher to dread
+     opening it. */
+  const gapsCard = page.locator('[data-tour="teacher.gaps"]')
+  const actionableRows = await gapsCard.locator('.tch-difficulty').count()
+  const strengthRows = await gapsCard.locator('.tch-strength').count()
+  check('the card names difficulties to act on', actionableRows > 0,
+        `${actionableRows} rows`)
+  check('and, under a rule, what the class has got',
+        strengthRows > 0 || actionableRows === 0, `${strengthRows} strengths`)
+  /* Every gap row shows how the class divides on it, INCLUDING the children
+     who have not tried it — "15 of 33" in a class of 41 means eight have not
+     touched it, which changes whether the answer is to reteach. */
+  check('each difficulty shows how the class splits on it',
+        await gapsCard.locator('.tch-split').count() >= actionableRows,
+        `${await gapsCard.locator('.tch-split').count()} bars for ${actionableRows} rows`)
   await page.screenshot({ path: `${OUT}/home-02-blocking-topic.png` })
 
   // The chips still narrow the card; the KPI simply is not what presses them.

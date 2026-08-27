@@ -120,7 +120,11 @@ describe('counts that read like a language', () => {
     // sub-groups through the shared dialogs, which carry their own copy.
     // The gaps list's replacement, carrying the same count into the same shape.
     'tch.gaps.buildTask',
-    'tch.tasks.fromGap',
+    /* `tch.tasks.fromGap` was here and is retired. The builder used to open
+       with "started from a gap · 9 children will be pre-ticked"; it now shows
+       those children as removable chips at the top of the dialog, so the
+       sentence counting them was the same fact twice and the less useful of
+       the two. No call site, no key, no pair to keep in step. */
     // And the learnings card's, which was the same bug on the screen this
     // list's own fixes were shipped for: "1 students are struggling".
     'tch.learnings.struggling',

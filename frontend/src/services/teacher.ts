@@ -189,7 +189,13 @@ export interface EngagementWindow {
 export interface Engagement extends EngagementWindow {
   group_id: string
   window_days: number
-  per_day_active: { date: string; active: number }[]
+  /** `partial` marks today — a bucket the window only half covers, because it
+   *  is still being lived through. Real data, but not part of a SHAPE: a series
+   *  ending on a half-finished day always dips at the right. */
+  per_day_active: { date: string; active: number; partial?: boolean }[]
+  /** Minutes per learner who studied that day — the headline average, one day
+   *  at a time. All zeros when no usable timing evidence exists. */
+  per_day_minutes?: { date: string; minutes: number; partial?: boolean }[]
   /** The same window length immediately before this one — the baseline the
    *  dashboard's up/down arrows are measured against. Absent when the caller
    *  did not ask for a comparison. */
@@ -329,8 +335,43 @@ export function getGroupSubjects(groupId: string, language: string) {
     `/api/teacher/groups/${groupId}/subjects?${new URLSearchParams({ language })}`)
 }
 
-export function getGroupEngagement(groupId: string, days = 7) {
-  return apiGet<Engagement>(`/api/teacher/groups/${groupId}/engagement?days=${days}`)
+export function getGroupEngagement(groupId: string, days = 7, subject?: string | null) {
+  const params = new URLSearchParams({ days: String(days) })
+  if (subject) params.set('subject', subject)
+  return apiGet<Engagement>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/engagement?${params}`)
+}
+
+/** The five valence families the daily check-in offers, ordered from best to
+ *  hardest. Mirrored from `checkin_flow.VALENCE_FEELINGS` — the server owns
+ *  the vocabulary; this copy exists so the bar can render in a fixed order
+ *  rather than in whatever order a JSON object arrives in. */
+export const VALENCES = ['great', 'good', 'okay', 'uneasy', 'upset'] as const
+export type Valence = typeof VALENCES[number]
+
+export interface MoodWindow {
+  students_total: number
+  /** Distinct children who answered — NOT the number of answers. */
+  answered_students: number
+  answers: number
+  skipped: number
+  by_valence: Record<Valence, number>
+  /** Share of ANSWERS that read positive, never a share of the class. */
+  positive_pct: number
+  /** False below the evidence gate: show the shape, do not lead with a share. */
+  enough: boolean
+}
+
+export interface ClassMood extends MoodWindow {
+  window_days: number
+  previous?: MoodWindow
+}
+
+/* How the class has been feeling. Aggregate only — no learner id is returned,
+   deliberately: the class view never names who is having a bad week (C5). */
+export function getGroupMood(groupId: string, days: number) {
+  return apiGet<ClassMood>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/mood?days=${days}`)
 }
 
 /* With `days`, the gaps narrow to what the class actually worked on in that
@@ -796,9 +837,11 @@ export interface Moment {
    class book asks for the edition BEFORE the one the dashboard is reading. */
 export function getGroupMoments(
   groupId: string, language: string, days = 14, offsetDays = 0,
+  subject?: string | null,
 ) {
   const params = new URLSearchParams({ language, days: String(days) })
   if (offsetDays) params.set('offset_days', String(offsetDays))
+  if (subject) params.set('subject', subject)
   return apiGet<{ moments: Moment[] }>(
     `/api/teacher/groups/${encodeURIComponent(groupId)}/moments?${params}`
   )

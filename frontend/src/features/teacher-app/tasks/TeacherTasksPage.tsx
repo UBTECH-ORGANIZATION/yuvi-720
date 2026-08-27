@@ -26,14 +26,15 @@ import { useI18n } from '../../../i18n/I18nProvider'
 import { useAuth } from '../../../providers/AuthProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import {
-  closeTask, createTask, listCatalogLearnings, listTeacherTasks,
+  closeTask, createTask, deleteTask, listCatalogLearnings, listTeacherTasks,
+  taskImpact,
   startGeneration, suggestTaskNotes,
   type CatalogLearning, type TaskComponent, type TaskSpecInput, type TaskSummary,
 } from '../../../services/tasks'
-import { countKey } from '../shared/countLabel'
 import { subjectLabel } from '../shared/subjectLabel'
 import { clearDraft, isEmptyDraft, loadDraft, saveDraft } from './builderDraft'
 import { putAudience, takeSeed, type TaskSeed } from './taskSeed'
+import { TaskAudience } from './TaskAudience'
 import './teacher-tasks.css'
 
 /** What a teacher may ask for. "Activity" is gone: its scored blocks were
@@ -156,9 +157,10 @@ export function TeacherTasksPage() {
           <h2 id="tch-task-builder-title" className="tch-builder__modalTitle" dir="auto">
             {t('tch.tasks.new')}
           </h2>
-          {/* The brief note moved INTO the first step, beside the fields it is
-              about. As a permanent header it was four lines of prose above
-              every field in the dialog, read once and scrolled past forever. */}
+          {/* No explanatory prose up here. The "what you write is all Yuvi
+              knows" note lived first as a permanent header, then inside the
+              first step, and was cut entirely: read once and scrolled past
+              forever, it only pushed the fields down. */}
         </div>
         {groupId ? (
           <TaskBuilder
@@ -225,6 +227,22 @@ export function TeacherTasksPage() {
 function TaskRow({ task, onChanged }: { task: TaskSummary; onChanged: () => void }) {
   const { t } = useI18n()
   const [busy, setBusy] = useState(false)
+  /* The delete confirmation, and what it will cost. `impact` is null until the
+     server answers — the dialog shows the counts, so it must not open with a
+     guess and then correct itself under the teacher's cursor. */
+  const [confirming, setConfirming] = useState(false)
+  const [impact, setImpact] = useState<
+    { launches: number; attempts: number; learners: number } | null>(null)
+  const [deleteFailed, setDeleteFailed] = useState(false)
+
+  const askToDelete = () => {
+    setImpact(null)
+    setDeleteFailed(false)
+    setConfirming(true)
+    // Never blocks the dialog: with no answer it falls back to the general
+    // warning, which is still true.
+    void taskImpact(task.id).then(setImpact).catch(() => setImpact(null))
+  }
 
   const tone: StatusTone = task.status === 'live' ? 'strong'
     : task.status === 'generating' ? 'steady'
@@ -311,7 +329,79 @@ function TaskRow({ task, onChanged }: { task: TaskSummary; onChanged: () => void
             {t('tch.tasks.close')}
           </button>
         ) : null}
+        {/* Last in the row and icon-only: a destructive action should be
+            reachable, not prominent, and it must not sit where a thumb aiming
+            for "review" lands. */}
+        <button
+          type="button"
+          className="sp-btn sp-btn--ghost sp-btn--sm tch-task__delete"
+          disabled={busy}
+          aria-label={t('tch.tasks.delete.action', { title: task.title ?? '' })}
+          onClick={askToDelete}
+        >
+          <Icon name="trash" size={15} />
+        </button>
       </div>
+
+      <Modal
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        titleId={`tch-task-delete-${task.id}`}
+      >
+        <div className="tch-taskDelete">
+          <h2 id={`tch-task-delete-${task.id}`} className="tch-taskDelete__title">
+            {t('tch.tasks.delete.title')}
+          </h2>
+          <p className="tch-taskDelete__what" dir="auto">
+            {task.title ?? t('tasks.untitled')}
+          </p>
+          {/* What it costs, in real numbers where the server could count them.
+              "This will delete the task" and "this will delete 41 papers from
+              23 children" are different decisions and deserve different
+              sentences. */}
+          <p className="tch-taskDelete__body">
+            {impact && impact.attempts > 0
+              ? t('tch.tasks.delete.withWork', {
+                attempts: impact.attempts, learners: impact.learners,
+              })
+              : t('tch.tasks.delete.body')}
+          </p>
+          <p className="tch-taskDelete__warn">{t('tch.tasks.delete.irreversible')}</p>
+          {deleteFailed ? (
+            <p className="tch-taskDelete__failed" role="status">
+              {t('tch.tasks.delete.failed')}
+            </p>
+          ) : null}
+          <div className="tch-taskDelete__actions">
+            <button type="button" className="sp-btn sp-btn--ghost" disabled={busy}
+                    onClick={() => setConfirming(false)}>
+              {t('tch.tasks.cancel')}
+            </button>
+            <button
+              type="button"
+              className="sp-btn sp-btn--danger"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true)
+                setDeleteFailed(false)
+                try {
+                  await deleteTask(task.id)
+                  setConfirming(false)
+                  onChanged()
+                } catch {
+                  // Kept open with the reason: closing it would look like it
+                  // worked, and the row is still there to prove otherwise.
+                  setDeleteFailed(true)
+                } finally {
+                  setBusy(false)
+                }
+              }}
+            >
+              {t('tch.tasks.delete.confirm')}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </li>
   )
 }
@@ -350,7 +440,7 @@ export function TaskBuilder({ groupId, seed, onDone, onCancel }: {
      almost certainly building a maths task, but this select is an INPUT — what
      the task is about — so changing it here narrows nothing and the bar does
      not follow it. A seed from a gap row below still wins over the scope. */
-  const { subject: scopeSubject } = useTeacherScope()
+  const { subject: scopeSubject, subgroupLearnerIds } = useTeacherScope()
   const [subject, setSubject] = useState(scopeSubject ?? '')
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
   const [components, setComponents] = useState<BuildableComponent[]>(['practice'])
@@ -362,6 +452,9 @@ export function TaskBuilder({ groupId, seed, onDone, onCancel }: {
     theme: 'auto', density: 'balanced', examples: true,
     diagrams: true, self_check: true, teacher_notes: true, key_concepts: '',
   })
+  /* Who the task is for. Seeded from the finding and editable — and it is an
+     INPUT to generation, not only the send list: see `TaskAudience`. */
+  const [audience, setAudience] = useState<string[]>(seed?.learnerIds ?? [])
   const [deadline, setDeadline] = useState(defaultDeadline())
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState<string | null>(null)
@@ -548,7 +641,30 @@ export function TaskBuilder({ groupId, seed, onDone, onCancel }: {
   /* The three questions this dialog asks, and what each one cannot leave
      unanswered. A step gates on ITS OWN fields only — being sent back two
      sections to fix something is what makes a wizard worse than a form. */
-  const STEPS = ['about', 'parts', 'brief'] as const
+  /* The brief step disappears when the system started this task FOR particular
+     children. That step exists so a teacher can tell Yuvi what to concentrate
+     on — and here the system already knows, in more detail than a teacher would
+     type: the questions these children actually got wrong and the mistakes they
+     repeat. Asking them to write it out again would be asking them to guess at
+     what the dashboard just measured.
+
+     It comes back the moment the audience is empty — a teacher who removes
+     everyone has taken away the very thing that replaced the step, and a task
+     with neither would generate from a title alone. Also stays for a task
+     started from a blank form, even if children are added by hand: there the
+     teacher's own words are the brief, and adding an audience should sharpen
+     it, not silently delete it. */
+  const autoBriefed = Boolean(seed?.learnerIds?.length) && audience.length > 0
+  const STEPS = (autoBriefed
+    ? ['about', 'parts']
+    : ['about', 'parts', 'brief']) as readonly string[]
+
+  /* Emptying the audience on the last step grows the list under the teacher —
+     harmless. Filling it while ON the brief step would strand `step` past the
+     end and render nothing at all. */
+  useEffect(() => {
+    if (step > STEPS.length - 1) setStep(STEPS.length - 1)
+  }, [step, STEPS.length])
   const gaps: string[][] = [
     [
       ...(title.trim() ? [] : ['title']),
@@ -589,6 +705,12 @@ export function TaskBuilder({ groupId, seed, onDone, onCancel }: {
       test: { question_count: counts.test },
       presentation: { slide_count: counts.presentation, ...deck },
       ...(source ? { source } : {}),
+      /* Who it is FOR — an input to generation, not only the send list. Ids
+         only; the server resolves them into an anonymous shared brief at
+         generation time and no name or id ever reaches the model. Omitted
+         entirely when empty, so "for nobody in particular" stays a different
+         thing from "for these children". */
+      ...(audience.length ? { audience: { learner_ids: audience } } : {}),
     }
     try {
       const created = await createTask({
@@ -598,7 +720,9 @@ export function TaskBuilder({ groupId, seed, onDone, onCancel }: {
       // Who it was built for, remembered for the send dialog — the children a
       // gap was a gap for. A suggestion carried forward, not a send: nothing
       // reaches anyone until the teacher has read what Yuvi wrote.
-      if (seed?.learnerIds.length) putAudience(created.task._id, seed.learnerIds)
+      // The EDITED list, not the seed's: a teacher who removed two children
+      // from the brief must not find them ticked again in the send dialog.
+      if (audience.length) putAudience(created.task._id, audience)
       // Straight into generation: a draft nobody generates is a task that
       // never happens, and the teacher has already said what they want.
       await startGeneration(created.task._id)
@@ -678,24 +802,23 @@ export function TaskBuilder({ groupId, seed, onDone, onCancel }: {
         </p>
 
         {step === 0 ? <>
-          {/* Said where the pre-filled fields are, not left to be inferred: a
-              dialog that opens already typed-in has to say who typed it. */}
-          {seed ? (
-            <p className="tch-builder__note" dir="auto">
-              <Icon name="wand" size={16} aria-hidden="true" />
-              <span>{seed.learnerIds.length
-                ? t(countKey('tch.tasks.fromGap', seed.learnerIds.length),
-                    { count: seed.learnerIds.length })
-                : t('tch.tasks.fromGap.none')}</span>
-            </p>
-          ) : null}
+          {/* Only when the task came FROM a finding. On a blank form there is
+              no audience to correct and nothing the system knows about anyone
+              yet, so the block would be an empty box asking a teacher to build
+              a mailing list before they have written the task — the audience is
+              chosen at send time, which is what the launch dialog is for.
 
-          {/* The single most load-bearing sentence in this dialog, now beside
-              the fields it is actually about. */}
-          <p className="tch-builder__note" dir="auto">
-            <Icon name="lightbulb" size={16} aria-hidden="true" />
-            <span>{t('tch.tasks.builderNote')}</span>
-          </p>
+              Seeded, it is the FIRST thing on the form: what these children got
+              wrong outranks the topic in the generation prompt, so the control
+              that sets it cannot sit below the fields it outranks. */}
+          {seed ? (
+            <TaskAudience
+              value={audience}
+              onChange={setAudience}
+              subgroupLearnerIds={subgroupLearnerIds}
+              disabled={busy}
+            />
+          ) : null}
 
           <label className="tch-builder__field">
             <span>{t('tch.tasks.field.title')}</span>

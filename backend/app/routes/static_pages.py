@@ -29,6 +29,34 @@ def mount_static_assets(app: FastAPI) -> None:
     if UNITY_WORLD_DIR.exists():
         app.mount("/unity-world", StaticFiles(directory=str(UNITY_WORLD_DIR)), name="unity-world")
 
+    # Everything Vite copies verbatim from `frontend/public` lands at the build
+    # ROOT (`/moments/…`, `/yuvi-favicon.png`), not under `/assets` — only
+    # hashed bundle output goes there. Nothing mounted above covers the root, so
+    # every one of those files answered 404 in every deployed environment while
+    # working perfectly in dev, where Vite's own server serves `public/` at `/`.
+    # That divergence is why it went unnoticed: the class book quietly fell back
+    # to its hand-drawn SVG scenes in production and looked deliberate.
+    #
+    # Mounted per directory rather than mounting the build root at "/", which
+    # would sit in front of the API routers and the SPA shell.
+    for public_dir in ("moments",):
+        directory = REACT_APP_DIR / public_dir
+        if directory.exists():
+            app.mount(
+                f"/{public_dir}",
+                StaticFiles(directory=str(directory)),
+                name=f"react-public-{public_dir}",
+            )
+
+
+@router.get("/yuvi-favicon.png", include_in_schema=False)
+async def favicon():
+    """The tab icon — `public/`, so it had no route either (see above)."""
+    icon = REACT_APP_DIR / "yuvi-favicon.png"
+    if icon.exists():
+        return FileResponse(icon)
+    return JSONResponse(content={"error": "not found"}, status_code=404)
+
 
 def serve_react_app():
     """Serve the built React SPA shell, or a clear error if it is missing."""

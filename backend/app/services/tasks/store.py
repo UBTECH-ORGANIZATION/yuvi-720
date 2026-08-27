@@ -300,6 +300,64 @@ async def list_tasks(
     return rows
 
 
+async def delete_task(task_id: str) -> dict[str, int]:
+    """Remove a task and everything downstream of it. Irreversible.
+
+    A task is not one document. It is the task, its generated content per
+    component, every opening of it, every child's activation of those openings
+    and every attempt they submitted — five collections. Deleting only the task
+    row would leave a child holding a live activation pointing at material that
+    no longer exists, which is worse than the clutter the teacher was trying to
+    clear.
+
+    Ordered downstream-first for the same reason: if the run dies half way, what
+    survives is a task whose parts are gone (visible, re-deletable) rather than
+    orphans whose parent is gone (invisible, and nothing left to delete them
+    by).
+
+    Returns what was removed, per collection, so the caller can say so — a
+    confirmation that reports "3 openings, 41 attempts" is a different decision
+    from one that reports nothing.
+    """
+    removed: dict[str, int] = {}
+
+    launches = await list_launches(task_id)
+    launch_ids = [str(row.get("_id")) for row in launches if row.get("_id")]
+
+    async def _drop(collection: str, ids: list[str]) -> int:
+        if not ids:
+            return 0
+        handle = _get_collection_named(collection)
+        if handle is not None:
+            try:
+                result = await handle.delete_many({"_id": {"$in": ids}})
+                return int(result.deleted_count)
+            except Exception as exc:
+                print(f"⚠️ task delete failed on {collection}: {type(exc).__name__}: {exc}")
+        key = _FALLBACK_KEYS[collection]
+        data = _read_fallback()
+        keep = [row for row in data.get(key, []) if str(row.get("_id")) not in set(ids)]
+        gone = len(data.get(key, [])) - len(keep)
+        data[key] = keep
+        _write_fallback(data)
+        return gone
+
+    # By TASK, not by walking the launches. Both collections carry `task_id`,
+    # and the direct query also sweeps up any row whose launch has already gone
+    # — which is exactly the orphan a half-finished earlier delete would leave.
+    attempts = [str(row.get("_id")) for row in await list_attempts_for_task(task_id)
+                if row.get("_id")]
+    activations = [str(row.get("_id")) for row in await list_activations_for_task(task_id)
+                   if row.get("_id")]
+    removed["attempts"] = await _drop(ATTEMPTS, attempts)
+    removed["activations"] = await _drop(ACTIVATIONS, activations)
+    removed["launches"] = await _drop(LAUNCHES, launch_ids)
+    removed["content"] = await _drop(
+        CONTENT, [content_id(task_id, component) for component in COMPONENTS])
+    removed["tasks"] = await _drop(TASKS, [task_id])
+    return removed
+
+
 async def update_task(task_id: str, **fields: Any) -> Optional[dict[str, Any]]:
     task = await get_task(task_id)
     if task is None:

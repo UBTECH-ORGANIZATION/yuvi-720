@@ -16,7 +16,8 @@
  */
 
 import {
-  useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode,
+  useEffect, useMemo, useRef, useState,
+  type CSSProperties, type ReactElement, type ReactNode,
 } from 'react'
 import { navigate } from '../../../app/router'
 import {
@@ -29,6 +30,8 @@ import {
 import { Modal } from '../../../components/primitives/Modal'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
+import { PraiseDialog } from '../shared/PraiseDialog'
+import type { StrengthItem } from '../shared/DifficultiesCard'
 import {
   generateTopicDigest, getFocusRoadmap, getLearnerRead, getStudentActivity,
   getStudentDetail,
@@ -57,7 +60,6 @@ import { StudentAvatar } from '../shared/StudentAvatar'
 import { countKey } from '../shared/countLabel'
 import { subjectLabel } from '../shared/subjectLabel'
 import { putSeed, type TaskSeed } from '../tasks/taskSeed'
-import { putMessageSeed } from '../messages/messageSeed'
 import { TaskBuilder } from '../tasks/TeacherTasksPage'
 import { useTeacherRoster } from '../../../providers/TeacherRosterProvider'
 
@@ -620,9 +622,19 @@ function StatusBandSkeleton({ subjects }: { subjects: number }) {
      dials. Getting the count right is the whole point — a placeholder that
      reflows into a different grid is worse than none. */
   const dials = [t('tch.student.consistency'), t('tch.student.independence')]
+  /* Same split rule as the live band (focus + subjects + both dials): six-plus
+     placeholders that sit in one row and then snap into two when the data
+     lands would be exactly the reflow this component exists to prevent. The
+     live band may still drop the consistency dial and re-balance once, but
+     that is a fact arriving, not a guess being corrected. */
+  const cellCount = 1 + subjects + dials.length
   return (
     <section className="tch-status" aria-busy="true">
-      <div className="tch-status__grid">
+      <div
+        className={`tch-status__grid${cellCount > 5 ? ' tch-status__grid--two-rows' : ''}`}
+        style={cellCount > 5
+          ? { '--tch-status-cols': Math.ceil(cellCount / 2) } as CSSProperties
+          : undefined}>
         <Card className="tch-status__cell tch-status__focus">
           <div className="tch-status__focusTop">
             <h4 className="tch-status__focusHead">
@@ -1022,11 +1034,28 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows }: {
     }
   })()
 
+  /* How many cells the grid is about to hold: focus + one dial per subject +
+     the habit dials (consistency renders only when it can be measured).
+     Counted here rather than in CSS because the dialogs below are children of
+     the same grid — closed they render nothing, but a selector counting DOM
+     children could never rely on that. */
+  const cellCount = 1 + subjects.length + (consistency !== null && trends ? 1 : 0) + 1
+
   return (
     /* No outer card, no heading: the dials are cards themselves and open the
        page — a title above them was a label on the obvious. */
     <section className="tch-status" data-tour="teacher.subjectProgress">
-      <div className="tch-status__grid">
+      <div
+        /* Five cells share one row. Past five, `auto-fit` fills a first row
+           and strands the remainder alone under it — one orphaned dial reads
+           as a layout accident, not as a sixth measurement. So six-plus cells
+           split into two even rows instead (7 → 4+3, 8 → 4+4); the class
+           applies only above the width where two rows genuinely fit — below
+           it the minmax wrap keeps doing the right thing. */
+        className={`tch-status__grid${cellCount > 5 ? ' tch-status__grid--two-rows' : ''}`}
+        style={cellCount > 5
+          ? { '--tch-status-cols': Math.ceil(cellCount / 2) } as CSSProperties
+          : undefined}>
         {/* Where the planner is pointing, from the same `next_focus` the
             platform itself follows — the teacher's card and the child's app
             can never disagree about what comes next. */}
@@ -1384,6 +1413,17 @@ function RecsPanel({ learnerId, rows, read, recommendations, focus, progress, on
   onBuildTask: (seed: TaskSeed) => void
 }) {
   const { t } = useI18n()
+  const { nameOf } = useTeacherRoster()
+  const [praiseFor, setPraiseFor] = useState<StrengthItem | null>(null)
+  /* Which win has already had its good word said. Per browser, on purpose:
+     this suppresses a NUDGE, it is not a record of anything. A teacher on a
+     second machine seeing the button again is a much smaller cost than storing
+     a growing map of praised topics on the account — and the kudos itself,
+     which is the real artefact, is on the server already. */
+  const praisedKey = `yuvi.teacher.praised:${learnerId}`
+  const [praisedFor, setPraisedFor] = useState<string | null>(() => {
+    try { return window.localStorage.getItem(praisedKey) } catch { return null }
+  })
 
   /* The same signals the panel always derived, now feeding fixed slots. */
   const derived = useMemo(() => {
@@ -1479,26 +1519,57 @@ function RecsPanel({ learnerId, rows, read, recommendations, focus, progress, on
         }
       })()
 
+  const praiseDialog = (
+    <PraiseDialog
+      strength={praiseFor}
+      names={new Map([[learnerId, nameOf(learnerId)]])}
+      onClose={(sent) => {
+        if (sent && praiseFor) {
+          setPraisedFor(praiseFor.title)
+          try { window.localStorage.setItem(praisedKey, praiseFor.title) } catch { /* private mode */ }
+        }
+        setPraiseFor(null)
+      }}
+    />
+  )
+
   const serverDeepen = recommendations.filter((rec) => rec.category === 'deepen')
   const working: ReactElement | null = win ? (
     <li key="win" className="tch-rec">
       <div className="tch-rec__head">
         <StatusPill tone="strong">{t('tch.recs.slot.working')}</StatusPill>
         <span className="tch-rec__acts">
-          <button
-            type="button"
-            className="sp-btn sp-btn--ghost sp-btn--sm"
-            onClick={() => {
-              putMessageSeed({
-                learnerId,
-                text: t('tch.recs.praiseSeed', { topic: win.praiseTopic }),
-              })
-              navigate('/teacher/messages')
-            }}
-          >
-            <Icon name="message" size={14} aria-hidden />
-            {t('tch.recs.praise')}
-          </button>
+          {/* Opens the composer HERE rather than navigating to the messages
+              screen with a sentence pre-seeded. Leaving the profile to say a
+              good word cost the teacher the context they were reading — and
+              landing on a different screen with words already typed made the
+              act feel like the system's rather than theirs.
+
+              Hidden once said, until the win itself changes. The row is a
+              standing observation, not an inbox item, so it keeps saying the
+              same true thing every time the page is opened; without this the
+              button invites the same message about the same topic every week,
+              which is how praise stops meaning anything. A NEW strongest topic
+              brings it back — that is a new thing to say. */}
+          {praisedFor === win.praiseTopic ? (
+            <span className="tch-rec__said">
+              <Icon name="check" size={13} aria-hidden />
+              {t('tch.recs.praised')}
+            </span>
+          ) : (
+            <button
+              type="button"
+              className="sp-btn sp-btn--ghost sp-btn--sm"
+              onClick={() => setPraiseFor({
+                id: win.praiseTopic,
+                title: win.praiseTopic,
+                learnerIds: [learnerId],
+              })}
+            >
+              <Icon name="message" size={14} aria-hidden />
+              {t('tch.recs.praise')}
+            </button>
+          )}
         </span>
       </div>
       <p className="tch-rec__text" dir="auto">{win.text}</p>
@@ -1567,6 +1638,7 @@ function RecsPanel({ learnerId, rows, read, recommendations, focus, progress, on
         <p className="tch-recs__overview" dir="auto">{read.overview}</p>
       ) : null}
       <ul className="tch-recs">{items}</ul>
+      {praiseDialog}
     </Panel>
   )
 }

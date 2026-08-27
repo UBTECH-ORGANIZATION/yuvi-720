@@ -184,8 +184,21 @@ describe('a gap is answered with material, not with a goal', () => {
   it('hands the children to the send dialog, and to nothing else', () => {
     // Nothing is assigned by building. The suggestion is stored beside the new
     // task id and spent by the launch dialog, which the teacher drives.
-    assert.match(builder, /putAudience\(created\.task\._id, seed\.learnerIds\)/)
+    //
+    // The EDITED audience, not the seed's list: the builder now lets a teacher
+    // add and remove children, and the send dialog must reflect what they
+    // actually decided rather than what the detector proposed. Someone removed
+    // from the task must not come back ticked.
+    assert.match(builder, /putAudience\(created\.task\._id, audience\)/)
+    assert.equal(/putAudience\(created\.task\._id, seed\./.test(builder), false)
     assert.equal(/assignGroupGoal/.test(builder), false)
+  })
+
+  it('sends the audience to generation, as ids and never as names', () => {
+    /* The point of the whole feature: the children shape what gets WRITTEN,
+       not just who receives it. Ids only — the server resolves them into an
+       anonymous shared brief, so no name reaches a prompt. */
+    assert.match(builder, /audience: \{ learner_ids: audience \}/)
   })
 
   it('ticks only children still in this class', () => {

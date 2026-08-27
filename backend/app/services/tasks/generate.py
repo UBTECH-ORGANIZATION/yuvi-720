@@ -387,7 +387,8 @@ def _deck_settings(settings: dict[str, Any]) -> str:
     return lines
 
 
-def _instruction(component: str, task_spec: dict[str, Any], outline: list[str]) -> str:
+def _instruction(component: str, task_spec: dict[str, Any], outline: list[str],
+                 audience_block: str = "") -> str:
     language = task_spec.get("language", "he")
     settings = task_spec.get(component) or {}
     rules = _COMPONENT_RULES[component].format(**{
@@ -430,7 +431,7 @@ Topic: {task_spec.get('topic')}
 Subject: {task_spec.get('subject') or 'unspecified'}
 Year group: {task_spec.get('grade') or 'middle school'}
 Teacher's notes: {task_spec.get('notes') or 'none'}
-{source_grounding(task_spec, language)}{grounding}{_MATH_RULES}{rules}
+{audience_block}{source_grounding(task_spec, language)}{grounding}{_MATH_RULES}{rules}
 Write all content in {language}. Return JSON only."""
 
 
@@ -530,12 +531,13 @@ def _focus_line(focus: Optional[dict[str, Any]]) -> str:
 async def _call(component: str, task_id: str, task_spec: dict[str, Any],
                 outline: list[str], *,
                 existing: Optional[dict[str, Any]] = None,
-                focus: Optional[dict[str, Any]] = None) -> Any:
+                focus: Optional[dict[str, Any]] = None,
+                audience_block: str = "") -> Any:
     import json
 
     from app.services.llm import call_llm
 
-    instruction = _instruction(component, task_spec, outline)
+    instruction = _instruction(component, task_spec, outline, audience_block)
     if existing:
         instruction += _REVISE_RULES.format(
             existing=json.dumps(existing, ensure_ascii=False)[:12000],
@@ -618,11 +620,45 @@ async def _add_topic_art(slides: list[dict[str, Any]], task_spec: dict[str, Any]
         print(f"⚠️ topic art not attached: {type(exc).__name__}: {exc}")
 
 
+async def audience_block_for(task_id: str, task_spec: dict[str, Any]) -> str:
+    """The prompt's "who this is for" section, or "" when nobody was named.
+
+    Failure is swallowed on purpose. This is context that makes a task sharper;
+    it is not the task. A brain that will not load must not cost a teacher the
+    worksheet they asked for — they get the generic one, which is exactly what
+    they got before this existed.
+    """
+    learner_ids = ((task_spec.get("audience") or {}).get("learner_ids") or [])
+    if not learner_ids:
+        return ""
+    try:
+        from app.services import kata_catalog
+        from app.services.tasks import audience as audience_module
+
+        task = await store.get_task(task_id) or {}
+        source = task_spec.get("source") or {}
+        objective_id = source.get("objective_id")
+        brief = await audience_module.audience_brief(
+            list(learner_ids),
+            group_id=task.get("group_id"),
+            objective_id=objective_id,
+            component_id=source.get("component_id"),
+            language=task_spec.get("language", "he"),
+        )
+        return audience_module.render(
+            brief, kata_catalog.objective_title(objective_id,
+                                                task_spec.get("language", "he")))
+    except Exception as exc:
+        print(f"⚠️ audience block failed for {task_id}: {type(exc).__name__}: {exc}")
+        return ""
+
+
 async def generate_component(
     task_id: str, component: str, task_spec: dict[str, Any],
     *, outline: Optional[list[str]] = None,
     existing: Optional[dict[str, Any]] = None,
     focus: Optional[dict[str, Any]] = None,
+    audience_block: Optional[str] = None,
 ) -> dict[str, Any]:
     """Generate and store one component. Raises on a payload nothing survives.
 
@@ -633,8 +669,14 @@ async def generate_component(
     what it was before revision existed.
     """
     language = task_spec.get("language", "he")
+    # Computed once per RUN by `generate_task` and handed down, because it fans
+    # out over the audience's brains and three components would otherwise pay
+    # for it three times. A revision calls this directly and gets its own.
+    if audience_block is None:
+        audience_block = await audience_block_for(task_id, task_spec)
     payload = await _call(component, task_id, task_spec, outline or [],
-                          existing=existing, focus=focus)
+                          existing=existing, focus=focus,
+                          audience_block=audience_block)
     if payload is None:
         raise spec_module.SpecError("unparseable_response")
 
@@ -715,6 +757,10 @@ async def generate_task(task_id: str) -> dict[str, Any]:
     task_spec = task.get("spec") or {}
     await store.update_task(task_id, status="generating")
 
+    # Once per run, before the loop: every component is written for the same
+    # children.
+    audience_block = await audience_block_for(task_id, task_spec)
+
     outline: list[str] = []
     produced = 0
     for component in _ORDER:
@@ -723,6 +769,7 @@ async def generate_task(task_id: str) -> dict[str, Any]:
         try:
             content = await generate_component(
                 task_id, component, task_spec, outline=outline,
+                audience_block=audience_block,
             )
             if component == "presentation":
                 outline = outline_of(content)

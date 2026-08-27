@@ -11,7 +11,9 @@ import type { LearningGap } from '../../../services/teacher'
 
 type Translate = (key: string, params?: Record<string, string | number>) => string
 
-export function gapToDifficultyItem(gap: LearningGap, t: Translate): DifficultyItem {
+export function gapToDifficultyItem(
+  gap: LearningGap, t: Translate, note: string | null = null,
+): DifficultyItem {
   return {
     id: gap.objective_id,
     title: gap.label,
@@ -20,9 +22,19 @@ export function gapToDifficultyItem(gap: LearningGap, t: Translate): DifficultyI
           count: gap.struggling_count, tried: gap.with_evidence,
         })} ${t('tch.gaps.classSize', { size: gap.group_size })}`
       : t('tch.gaps.noneTried'),
-    tooltip: gap.evidence?.sample_misconceptions?.length
-      ? gap.evidence.sample_misconceptions.map(([tag]) => tag).join(' · ')
-      : undefined,
+    /* NO tooltip of misconception tags.
+     *
+     * It printed `sample_misconceptions` verbatim — "off-by-one · place-value ·
+     * sign-error" — into a Hebrew interface. Those are not copy: they arrive
+     * from the content vendor's xAPI extension (`events.py`, `ext["misconception"]`),
+     * so the vocabulary is open-ended, unlocalised and outside our control.
+     * Translating them is not possible in general and dropping the unknown ones
+     * would leave a tooltip that silently says less than it seems to.
+     *
+     * Nothing is lost that a teacher is owed: the tags are still in the raw
+     * evidence behind "למה?", which is the disclosure MoE C4 actually requires.
+     * Machine identifiers belong there, not in a hover on a headline. */
+    subjectLabel: gap.subject ?? null,
     learnerIds: gap.learner_ids ?? [],
     evidence: {
       struggling_count: gap.struggling_count,
@@ -37,6 +49,13 @@ export function gapToDifficultyItem(gap: LearningGap, t: Translate): DifficultyI
       learnerIds: gap.learner_ids ?? [],
     },
     subgroupName: gap.label,
+    split: {
+      struggling: gap.struggling_count,
+      mastered: gap.mastered_count,
+      tried: gap.with_evidence,
+      groupSize: gap.group_size,
+    },
+    note,
   }
 }
 

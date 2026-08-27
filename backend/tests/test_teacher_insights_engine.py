@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
+import json
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -609,6 +610,166 @@ class GroupAnalyticsTest(unittest.TestCase):
                    new=AsyncMock(return_value=[])):
             self.assertNotIn(
                 "previous", run(group_analytics.engagement("g1", compare=False)))
+
+    def test_the_per_day_series_counts_every_day_a_learner_worked(self):
+        """The series was built from each learner's LAST event only, so a child
+        who worked every day appeared on one day and the whole series summed to
+        at most `active_students`. It was never rendered, which is why the error
+        survived — as a chart it would have drawn a confident, wrong week."""
+        from datetime import datetime as real_datetime, timezone as real_tz
+        events = {
+            # One learner, three separate days inside the window.
+            "k1": [{"stored_at": "2026-08-22T10:00:00+00:00", "timing": {}},
+                   {"stored_at": "2026-08-21T10:00:00+00:00", "timing": {}},
+                   {"stored_at": "2026-08-20T10:00:00+00:00", "timing": {}}],
+            "k2": [{"stored_at": "2026-08-22T09:00:00+00:00", "timing": {}}],
+        }
+        with patch("app.services.group_analytics.learners_in_group",
+                   new=AsyncMock(return_value=["k1", "k2"])), \
+             patch("app.services.group_analytics.get_learner_events",
+                   new=AsyncMock(side_effect=lambda lid, limit=1000: events[lid])), \
+             patch("app.services.group_analytics.datetime") as clock:
+            clock.now.return_value = real_datetime(2026, 8, 22, 12, 0, tzinfo=real_tz.utc)
+            clock.fromisoformat = real_datetime.fromisoformat
+            stats = run(group_analytics.engagement("g1", days=7))
+
+        by_day = {row["date"]: row["active"] for row in stats["per_day_active"]}
+        self.assertEqual(by_day["2026-08-22"], 2)
+        self.assertEqual(by_day["2026-08-21"], 1)
+        self.assertEqual(by_day["2026-08-20"], 1)
+        # The old shape could never exceed the head-count; the real one does.
+        self.assertGreater(sum(by_day.values()), stats["active_students"])
+
+    def test_daily_minutes_average_over_who_studied_that_day(self):
+        """Minutes per day, on the same terms as the headline average.
+
+        The trap is the denominator. Dividing the day's seconds by the whole
+        class would report a quiet day as a collapse in how long each child
+        worked, when what actually happened is that fewer children were there —
+        two very different things for a teacher to act on. So the average is
+        taken over the learners who studied that day, and a day nobody studied
+        is 0 rather than a gap the client has to guess at.
+        """
+        from datetime import datetime as real_datetime, timezone as real_tz
+        # 600s of wall clock, but a gap counts for at most three minutes
+        # (`capped_elapsed`) — an open tab is not time spent learning. The
+        # daily series inherits that cap, exactly as the window total does.
+        timing = {"elapsed_since_previous_seconds": 600, "quality": "reliable"}
+        events = {
+            # Both learners on the 22nd, one alone on the 21st.
+            "k1": [{"stored_at": "2026-08-22T10:00:00+00:00", "timing": timing},
+                   {"stored_at": "2026-08-21T10:00:00+00:00", "timing": timing}],
+            "k2": [{"stored_at": "2026-08-22T09:00:00+00:00", "timing": timing}],
+        }
+        with patch("app.services.group_analytics.learners_in_group",
+                   new=AsyncMock(return_value=["k1", "k2"])), \
+             patch("app.services.group_analytics.get_learner_events",
+                   new=AsyncMock(side_effect=lambda lid, limit=1000: events[lid])), \
+             patch("app.services.group_analytics.datetime") as clock:
+            clock.now.return_value = real_datetime(2026, 8, 22, 12, 0, tzinfo=real_tz.utc)
+            clock.fromisoformat = real_datetime.fromisoformat
+            stats = run(group_analytics.engagement("g1", days=7))
+
+        by_day = {row["date"]: row["minutes"] for row in stats["per_day_minutes"]}
+        # Three capped minutes each, two learners — the average is three, not
+        # one and a half. The denominator is who studied, not the class.
+        self.assertEqual(by_day["2026-08-22"], 3.0)
+        self.assertEqual(by_day["2026-08-21"], 3.0)
+        self.assertEqual(by_day["2026-08-19"], 0.0)
+        # Every day of the window is present, so the client can draw a series
+        # without inferring the gaps.
+        self.assertEqual(len(stats["per_day_minutes"]), 7)
+
+
+class ClassMoodTest(unittest.TestCase):
+    """The class's mood, from the daily check-in.
+
+    Aggregate only: this is the most personal thing the product holds, and the
+    class view has no business naming who is having a bad week (C5).
+    """
+
+    def _mood(self, histories, *, days=7, today="2026-08-22"):
+        from datetime import date
+
+        def _history(learner_id, limit=20):
+            return histories.get(learner_id, [])
+
+        with patch("app.services.group_analytics.learners_in_group",
+                   new=AsyncMock(return_value=list(histories))), \
+             patch("app.services.checkin_flow.history",
+                   new=AsyncMock(side_effect=_history)), \
+             patch("app.services.school_calendar.today_school_date",
+                   return_value=today):
+            return run(group_analytics.class_mood("g1", days=days))
+
+    def test_it_counts_by_valence_and_names_nobody(self):
+        mood = self._mood({
+            "k1": [{"date": "2026-08-22", "valence": "great", "skipped": False}],
+            "k2": [{"date": "2026-08-21", "valence": "good", "skipped": False}],
+            "k3": [{"date": "2026-08-20", "valence": "upset", "skipped": False}],
+        })
+        self.assertEqual(mood["by_valence"]["great"], 1)
+        self.assertEqual(mood["by_valence"]["good"], 1)
+        self.assertEqual(mood["by_valence"]["upset"], 1)
+        self.assertEqual(mood["answered_students"], 3)
+        # Two of three answers read positive.
+        self.assertEqual(mood["positive_pct"], 67)
+        # C5: not one learner id anywhere in the payload.
+        self.assertNotIn("k1", json.dumps(mood))
+
+    def test_answers_and_answering_children_are_not_the_same_number(self):
+        """One child over a month answers many times. Reporting 24 answers as
+        24 children would describe a class that does not exist."""
+        mood = self._mood({
+            "k1": [{"date": f"2026-08-{day}", "valence": "good", "skipped": False}
+                   for day in (22, 21, 20, 19)],
+            "k2": [{"date": "2026-08-22", "valence": "okay", "skipped": False}],
+        })
+        self.assertEqual(mood["answers"], 5)
+        self.assertEqual(mood["answered_students"], 2)
+
+    def test_a_skipped_check_in_is_not_a_feeling(self):
+        mood = self._mood({
+            "k1": [{"date": "2026-08-22", "valence": None, "skipped": True}],
+            "k2": [{"date": "2026-08-22", "valence": "good", "skipped": False}],
+        })
+        self.assertEqual(mood["skipped"], 1)
+        self.assertEqual(mood["answers"], 1)
+        self.assertEqual(mood["answered_students"], 1)
+
+    def test_too_few_answers_is_said_rather_than_scored(self):
+        """A confident '100% feel good' built on two answers is worse than
+        saying nothing — the same gate `engagement` puts on timing."""
+        thin = self._mood({
+            "k1": [{"date": "2026-08-22", "valence": "good", "skipped": False}],
+            "k2": [{"date": "2026-08-22", "valence": "great", "skipped": False}],
+        })
+        self.assertFalse(thin["enough"])
+        enough = self._mood({
+            f"k{i}": [{"date": "2026-08-22", "valence": "good", "skipped": False}]
+            for i in range(4)
+        })
+        self.assertTrue(enough["enough"])
+
+    def test_the_window_before_is_reported_beside_it(self):
+        mood = self._mood({
+            "k1": [{"date": "2026-08-22", "valence": "good", "skipped": False},
+                   {"date": "2026-08-12", "valence": "upset", "skipped": False}],
+            "k2": [{"date": "2026-08-21", "valence": "good", "skipped": False},
+                   {"date": "2026-08-13", "valence": "upset", "skipped": False}],
+            "k3": [{"date": "2026-08-20", "valence": "great", "skipped": False},
+                   {"date": "2026-08-14", "valence": "uneasy", "skipped": False}],
+        })
+        self.assertEqual(mood["positive_pct"], 100)
+        self.assertEqual(mood["previous"]["positive_pct"], 0)
+        self.assertEqual(mood["previous"]["answers"], 3)
+
+    def test_a_check_in_outside_the_window_is_not_counted(self):
+        mood = self._mood({
+            "k1": [{"date": "2026-06-01", "valence": "great", "skipped": False}],
+        }, days=7)
+        self.assertEqual(mood["answers"], 0)
+        self.assertFalse(mood["enough"])
 
 
 if __name__ == "__main__":

@@ -49,7 +49,7 @@ try {
   check('the control is on every teacher screen', Object.values(present).every((n) => n === 1),
         JSON.stringify(present))
 
-  // ── set a subject from Home, where Home cannot use it ───────────────────
+  // ── set a subject from Home, which now NARROWS by it ────────────────────
   await page.goto(`${BASE}/teacher`, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tch-stat', { timeout: 30000 })
   await page.waitForTimeout(1200)
@@ -65,8 +65,22 @@ try {
   check('the subject segment now reads the subject, on the bar itself',
         (await page.locator('.tch-scope__seg.is-narrowed .tch-scope__value').innerText())
           .includes('מתמטיקה'))
+  /* Home used to print "this screen does not use the subject" here, and this
+     asserted it. It no longer does, because it no longer ignores it: the KPIs,
+     the difficulties card and the class book all re-read on a subject change.
+     The notice is the promise for screens that IGNORE a set dimension, so a
+     screen that started honouring one must stop printing it — a line saying a
+     filter is ignored, above a screen that just applied it, is the same lie in
+     the opposite direction.
+
+     What is asserted instead is that the narrowing is real. */
   const notice = await page.locator('.tch-scopeNotice').innerText().catch(() => '')
-  check('and Home says it does not use it', notice.includes('מקצוע'), JSON.stringify(notice))
+  check('Home no longer disclaims the subject, because it uses it',
+        !notice.includes('מקצוע'), JSON.stringify(notice))
+  const gapSubjects = await page.locator('.tch-difficulty__subject').allInnerTexts()
+  check('and every difficulty on screen belongs to the chosen subject',
+        gapSubjects.length === 0 || gapSubjects.every((s) => s.includes('מתמטיקה')),
+        gapSubjects.join(' | ') || '(no gaps in this subject)')
   await page.screenshot({ path: `${OUT}/V-home-notice.png`, clip: { x: 500, y: 0, width: 1000, height: 260 } })
 
   // ── the learnings chip is already lit when you arrive ────────────────────

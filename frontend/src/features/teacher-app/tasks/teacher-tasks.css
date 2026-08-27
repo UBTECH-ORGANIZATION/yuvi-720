@@ -896,3 +896,147 @@
 @media (max-width: 720px) {
   .tch-quality__dim { grid-template-columns: 1fr; }
 }
+
+/* ── who the task is for, at the top of the builder ────────────────────────
+   Set off as its own block rather than dropped in as another field: it is the
+   strongest input on the form — what these children got wrong outranks the
+   topic in the generation prompt — and a control that decides the shape of
+   everything under it should not look like one more text box among them. */
+.tch-audience {
+  margin-block-end: var(--sp-4);
+  padding: var(--sp-3);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface-2);
+}
+
+.tch-audience__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.tch-audience__title {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-900);
+}
+
+.tch-audience__count {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The surprising part, said outright: picking children here changes the
+   QUESTIONS, not just who receives them. */
+.tch-audience__hint {
+  margin: var(--sp-1) 0 var(--sp-2);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+  line-height: var(--sp-lh);
+}
+
+.tch-audience__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  /* A class of forty must not push the rest of the form off the dialog. */
+  max-block-size: 26dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.tch-audience__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 3px var(--sp-1) 3px 3px;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-surface);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-700);
+}
+
+.tch-audience__remove {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 2px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--sp-radius-pill);
+  color: var(--sp-ink-300);
+  cursor: pointer;
+  /* Colour only — a chip that moves as the pointer crosses a row of forty
+     would make the whole block shimmer. */
+  transition: color var(--sp-dur-fast) var(--sp-ease),
+              background var(--sp-dur-fast) var(--sp-ease);
+}
+.tch-audience__remove:hover:not(:disabled) {
+  color: var(--sp-danger-600);
+  background: var(--sp-danger-100);
+}
+.tch-audience__remove:focus-visible {
+  outline: 2px solid var(--sp-primary-500);
+  outline-offset: 1px;
+}
+
+.tch-audience__chip--picker { padding: 0; border: 0; background: none; }
+.tch-audience__select { min-inline-size: 180px; font-size: var(--sp-fs-xs); }
+
+/* ── deleting a task ───────────────────────────────────────────────────────
+   Reachable, not prominent. Icon-only and last in the row, so it is never
+   where a thumb aiming for "review" lands — and it only turns red on the way
+   to being pressed, because a permanently red control in a list of tasks
+   reads as an alarm about the task rather than as an action on it. */
+.tch-task__delete { color: var(--sp-ink-300); }
+.tch-task__delete:hover:not(:disabled) {
+  color: var(--sp-danger-600);
+  background: var(--sp-danger-100);
+}
+
+.tch-taskDelete { display: grid; gap: var(--sp-3); max-inline-size: 42ch; }
+
+.tch-taskDelete__title {
+  margin: 0;
+  font-size: var(--sp-fs-lg);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-900);
+}
+
+/* The task's own name, quoted back. A confirmation that does not say WHICH
+   task is a confirmation a teacher cannot actually check. */
+.tch-taskDelete__what {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface-2);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-900);
+}
+
+.tch-taskDelete__body { margin: 0; color: var(--sp-ink-500); line-height: var(--sp-lh); }
+
+.tch-taskDelete__warn {
+  margin: 0;
+  color: var(--sp-danger-600);
+  font-weight: var(--sp-fw-semibold);
+  font-size: var(--sp-fs-sm);
+}
+
+.tch-taskDelete__failed { margin: 0; color: var(--sp-danger-600); font-size: var(--sp-fs-sm); }
+
+.tch-taskDelete__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}

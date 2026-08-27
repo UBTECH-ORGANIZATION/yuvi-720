@@ -388,6 +388,52 @@ async def close_task(task_id: str, payload: Optional[LaunchActionRequest] = None
         return _failed(error)
 
 
+@router.delete("/tasks/{task_id}")
+async def delete_task(task_id: str, session=Depends(require_teacher_session)):
+    """Delete a task and every trace of it. Irreversible, and it takes history.
+
+    A DELETE rather than a soft archive flag, because that is what was asked
+    for and what "delete all the history" means: the openings, the children's
+    activations and their submitted attempts go with it. Nothing here is a
+    child's own record — an attempt at a teacher's task belongs to the task —
+    but it IS work a child did, so the confirmation on the client states the
+    counts before this is called, and this route is the point of no return.
+
+    Ownership is checked the same way every other write on this router checks
+    it: the task must belong to the teacher asking. A teacher who has been
+    handed someone else's task id gets `not_authorized`, not a 404 that
+    confirms it exists.
+    """
+    try:
+        await _owned(session["sub"], task_id)
+    except AssignError as error:
+        return _failed(error)
+    removed = await store.delete_task(task_id)
+    return _ok({"deleted": True, "removed": removed})
+
+
+@router.get("/tasks/{task_id}/impact")
+async def task_impact(task_id: str, session=Depends(require_teacher_session)):
+    """What deleting this task would take with it.
+
+    Read before the confirmation is shown, so the dialog can name real numbers
+    instead of a generic warning. A teacher deleting a draft nobody ever saw
+    and a teacher deleting a test forty children sat are making very different
+    decisions, and only one of them should give pause.
+    """
+    try:
+        await _owned(session["sub"], task_id)
+    except AssignError as error:
+        return _failed(error)
+    launches = await store.list_launches(task_id)
+    attempts = await store.list_attempts_for_task(task_id)
+    return _ok({
+        "launches": len(launches),
+        "attempts": len(attempts),
+        "learners": len({str(row.get("learner_id")) for row in attempts if row.get("learner_id")}),
+    })
+
+
 @router.post("/tasks/{task_id}/reopen")
 async def reopen_task(task_id: str, payload: LaunchActionRequest,
                       session=Depends(require_teacher_session)):

@@ -1,0 +1,136 @@
+/* Student search in the teacher chrome. Trigger matches the bell beside it;
+   the panel matches the bar's other popovers (nav fold, scope lists). All
+   logical properties — the panel hangs off the trailing cluster's edge in
+   either direction. */
+
+.tch-search { position: relative; display: inline-flex; }
+
+.tch-search__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  block-size: 36px;
+  padding-inline: var(--sp-2);
+  border: 0;
+  border-radius: var(--sp-radius-pill);
+  background: transparent;
+  color: var(--sp-ink-500);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* Same pulse as the scope's pending segments, so the whole bar breathes in
+   one rhythm while its lists arrive. */
+.tch-search__btn--pending {
+  background: var(--sp-surface-2);
+  animation: tch-search-pending 1.4s ease-in-out infinite;
+}
+@keyframes tch-search-pending {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.95; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tch-search__btn--pending { animation: none; }
+}
+
+.tch-search__btn:hover { background: var(--sp-surface-2); color: var(--sp-ink-700); }
+.tch-search__btn:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+.tch-search__btn[aria-expanded='true'] {
+  background: var(--sp-primary-100);
+  color: var(--sp-primary-700);
+}
+
+.tch-search__panel {
+  position: absolute;
+  inset-block-start: calc(100% + 6px);
+  inset-inline-end: 0;
+  z-index: 40;
+  /* Wide enough for a long name AND its class label on one row; never wider
+     than the viewport leaves room for on a phone. */
+  inline-size: min(320px, calc(100vw - 24px));
+  padding: var(--sp-2);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface);
+  box-shadow: 0 12px 28px rgba(20, 16, 44, 0.14);
+}
+
+.tch-search__field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.tch-search__fieldIcon {
+  position: absolute;
+  inset-inline-start: var(--sp-2);
+  color: var(--sp-ink-400);
+  pointer-events: none;
+}
+
+.tch-search__field input {
+  inline-size: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  padding-inline-start: calc(var(--sp-2) + 15px + var(--sp-2));
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-surface);
+  color: var(--sp-ink-700);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+}
+
+.tch-search__field input:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+
+.tch-search__hint {
+  margin: var(--sp-2) var(--sp-2) 0;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-400);
+}
+
+.tch-search__list {
+  margin: var(--sp-1) 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+}
+
+.tch-search__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border-radius: var(--sp-radius-sm);
+  cursor: pointer;
+}
+
+/* One highlight for mouse and keyboard alike — `is-active` follows both. */
+.tch-search__row.is-active { background: var(--sp-surface-2); }
+
+.tch-search__name {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-700);
+}
+
+.tch-search__group {
+  flex: none;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+
+.tch-search__none {
+  margin: var(--sp-2) var(--sp-2) var(--sp-1);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+}

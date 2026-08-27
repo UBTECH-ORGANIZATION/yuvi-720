@@ -476,21 +476,39 @@ async def moments_for_learner(
 
 async def moments_for_group(
     group_id: str, *, language: str = "he", days: int = DEFAULT_WINDOW_DAYS,
-    limit: int = 25, offset_days: int = 0,
+    limit: int = 25, offset_days: int = 0, subject: Optional[str] = None,
 ) -> list[dict[str, Any]]:
     """The class's story: every learner's moments, merged newest first.
 
     Chronological, never ranked — this is a feed of what happened, not a
     league table of who is doing best (C5). Each row names one child and
     describes only that child.
+
+    With `subject`, only moments about an objective in that subject survive.
+    Resolved through the catalogue rather than stored on the moment: a moment
+    is about an OBJECTIVE, and which subject an objective belongs to is the
+    catalogue's fact to state, not one to copy onto every row and let drift.
+    A moment with no objective at all — the ones about a learner rather than
+    about material — is dropped under a subject filter, because there is no
+    honest way to say it belongs to the subject the teacher asked for.
     """
     import asyncio
 
     from app.brain import org
+    from app.services import kata_catalog
 
+    await kata_catalog.ensure_loaded()
     learner_ids = await org.learners_in_group(group_id)
     if not learner_ids:
         return []
+
+    def _in_subject(moment: dict[str, Any]) -> bool:
+        if not subject:
+            return True
+        objective_id = moment.get("objective_id")
+        if not objective_id:
+            return False
+        return kata_catalog.subject_of(objective_id) == subject
 
     # Bounded fan-out: the group snapshot already taught us that one round-trip
     # per learner, serialized, is what makes a 30-student page feel broken.
@@ -508,6 +526,10 @@ async def moments_for_group(
         # Their best two. One very active child used to fill the entire class
         # feed with their own week while eleven others went unmentioned; the
         # rest of their story is one click away on their profile.
+        # Narrowed BEFORE the per-learner cap, or a child's two best moments
+        # could both be in another subject and their work in this one would
+        # vanish from a feed that claims to be about it.
+        rows = [row for row in rows if _in_subject(row)]
         rows = sorted(rows, key=lambda row: (row["weight"], row["at"]), reverse=True)[:MAX_PER_LEARNER]
         for row in rows:
             row["learner_id"] = learner_id

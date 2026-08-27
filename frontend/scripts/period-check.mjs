@@ -145,7 +145,21 @@ try {
 
   await page.screenshot({ path: '/tmp/period-month.png' })
 
-  // Dark mode, since new surfaces are involved.
+  /* Dark mode, since new surfaces are involved.
+
+     `emulateMedia` alone is NOT enough and quietly wasn't: the theme comes from
+     the account's stored preference, and the media query only decides anything
+     while that preference is `system`. On an account left explicitly on light
+     this whole block asserted dark-mode rules against the light build and
+     failed with a light colour it had itself caused. So the theme is SET here,
+     and put back at the end. */
+  const priorTheme = await (async () => {
+    const me = await context.request.get(`${BASE}/api/auth/me`)
+    return (await me.json())?.user?.preferences?.theme ?? 'system'
+  })()
+  await context.request.patch(`${BASE}/api/auth/preferences`, {
+    data: { theme: 'dark', theme_updated_at: Date.now() },
+  })
   const dark = await context.newPage()
   await dark.emulateMedia({ colorScheme: 'dark' })
   await dark.goto(`${BASE}/teacher`, { waitUntil: 'load' })
@@ -184,7 +198,10 @@ try {
     body: JSON.stringify({ teacher_period: 'week' }),
   }))
   await page.waitForTimeout(800)
-  console.log('\n  (restored gal\'s period to "week")')
+  await context.request.patch(`${BASE}/api/auth/preferences`, {
+    data: { theme: priorTheme, theme_updated_at: Date.now() },
+  })
+  console.log(`\n  (restored gal's period to "week" and theme to "${priorTheme}")`)
 } finally {
   await browser.close()
 }

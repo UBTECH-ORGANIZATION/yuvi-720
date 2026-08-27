@@ -89,7 +89,23 @@ const ROUTES: [prefix: string, dimensions: ScopeDimensions][] = [
      the filter from the screen teachers triage on cost more than the split
      scope does, and the notice keeps the split honest (never silently
      ignore). */
-  ['/teacher', { class: true, subgroup: true, subject: false }],
+  /* Home now narrows by SUBJECT too: the KPIs, the difficulties card and the
+     class book all read the selected subject and re-fetch when it changes.
+
+     Two blocks on the page still cannot, and they say so on themselves rather
+     than through the page-level notice (which only fires when a screen narrows
+     by NOTHING of a set dimension):
+
+       * The students card. A band is a judgement about a CHILD — "needs me
+         today" — assembled from activity, mastery movement and inactivity
+         across everything they do. Rebuilding it per subject would make the
+         same red mark mean two different things depending on a dropdown, and
+         `group_snapshot`'s docstring records that as a pedagogy decision of
+         its own rather than plumbing.
+       * The mood ring. A daily check-in asks how a child is, not how they are
+         in science. There is no subject on the data and inventing one would be
+         a fabrication, not a filter. */
+  ['/teacher', { class: true, subgroup: true, subject: true }],
 
   /* The control plane borrows the teacher chrome, but it is about who is
      connected to whom across every group. Nothing to narrow. */

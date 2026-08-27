@@ -202,6 +202,18 @@ def get_objective(objective_id: str) -> Optional[dict[str, Any]]:
     return _SNAPSHOT["objectives"].get(objective_id)
 
 
+def subject_of(objective_id: Optional[str]) -> Optional[str]:
+    """Which subject an objective belongs to, or ``None`` if unknown.
+
+    The catalogue is the single place that knows this. Callers that need to
+    narrow by subject resolve through here rather than copying a `subject` onto
+    their own rows, so a re-import can never leave two answers in the system.
+    """
+    if not objective_id:
+        return None
+    return (get_objective(objective_id) or {}).get("subject")
+
+
 def get_component(component_id: str) -> Optional[dict[str, Any]]:
     return _SNAPSHOT["components"].get(component_id)
 

@@ -91,17 +91,89 @@
   outline: 2px solid var(--sp-primary-500);
   outline-offset: 2px;
 }
-/* Home's KPIs sit on cards (v3) — all three identical, and the attention KPI
-   carries no red side-bar: its icon and its number are the alarm. The button
-   reset above stops painting UA chrome because this rule paints all three. */
-.tch-home .tch-stats .tch-stat {
+/* ── the pulse: ONE panel, three readings ──────────────────────────────────
+   Three separate floating cards was the wrong unit. They are not three
+   independent facts a teacher picks between — they are one answer to "how has
+   this class been, over the stretch I chose", and every one of them is
+   recomputed together the moment the period changes. Three cards said "three
+   things"; a single surface divided by hairlines says "one thing, read three
+   ways", which is what the period control actually does to them.
+
+   It also buys the room the graphics needed: the ring and the series now sit
+   at the far end of their own cell instead of stacked under a hint line. */
+.tch-home .tch-stats {
   background: var(--sp-surface);
   border: 1px solid var(--sp-border);
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: 0 4px 14px rgba(30, 30, 60, 0.06);
+  /* Not `gap` — the cells must MEET so a hairline can sit between them; a gap
+     would leave the divider floating in panel background. */
+  gap: 0;
+  overflow: hidden;
 }
 
-.tch-home > .sp-panel { margin-block-end: var(--sp-4); }
+/* The cell: mark · reading · graphic, with the mood key spanning underneath.
+   A grid rather than the shared flex row, because this cell has a second row
+   the others do not, and because `minmax(0, 1fr)` on the middle column is what
+   stops the text being squeezed to nothing between two fixed-width graphics —
+   a flex item's `auto` minimum size would let the icon and the ring win the
+   width fight, which is exactly how the label and the chip ended up wrapping
+   mid-phrase. */
+.tch-home .tch-stats .tch-stat {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: var(--sp-4);
+  block-size: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  /* Tighter than the shared card's `--sp-3`: three cells share one panel here,
+     and every pixel of gutter comes straight out of the reading column. */
+  column-gap: var(--sp-2);
+  row-gap: 0;
+}
+/* The graphic is a fixed companion to the figure, never a competitor for its
+   width — it may shrink out of the way but never push the reading around. */
+.tch-home .tch-stats .tch-stat__viz { min-inline-size: 0; }
+
+/* The divider goes on the GRID CHILD, not on `.tch-stat`. Each KPI is wrapped
+   in a `<span class="sp-hint">` by the tooltip primitive, so `.tch-stat` is the
+   first child of its own wrapper every time — `:first-child` on it would match
+   all three and draw no dividers at all.
+
+   A logical border, so it lands between the cells in Hebrew and in English
+   without either physical side being named. */
+.tch-home .tch-stats > * {
+  display: block;
+  min-inline-size: 0;
+  border-inline-start: 1px solid var(--sp-border);
+}
+.tch-home .tch-stats > :first-child { border-inline-start: 0; }
+
+/* One surface, so lifting a cell out of it on hover is wrong: the whole panel
+   would appear to come apart. The shared `.tch-stat:hover` translate is undone
+   here rather than removed at source — the roster, learnings and student
+   screens still use the KPI card as a card, and there the lift is right. */
+.tch-home .tch-stats .tch-stat:hover { transform: none; }
+
+@media (max-width: 900px) {
+  /* Stacked: the rule turns with the flow, and the first cell is the only one
+     that never carries it in either arrangement. */
+  .tch-home .tch-stats > * {
+    border-inline-start: 0;
+    border-block-start: 1px solid var(--sp-border);
+  }
+  .tch-home .tch-stats > :first-child { border-block-start: 0; }
+}
+
+/* One rhythm down the page. `.tch-home__zone` is here because a card wrapped
+   for the product tour is still a card as far as spacing is concerned — the
+   selector matched `.sp-panel` only, so a wrapped one silently lost its
+   bottom margin and the next panel butted against it. */
+.tch-home > .sp-panel,
+.tch-home > .tch-home__zone { margin-block-end: var(--sp-4); }
 
 /* ── the students band card ──────────────────────────────────────────────── */
 
@@ -226,6 +298,22 @@
 
 .tch-bands__empty { margin: 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
 
+/* The loading stand-in for the student grid: face-and-name pairs in the same
+   rhythm as `.tch-bands__list`, so the card neither grows nor reflows when the
+   real children replace them. */
+.tch-bands__skeletonList {
+  display: grid;
+  gap: var(--sp-1);
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.tch-bands__skeletonStudent {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+}
+
 .tch-bands__list {
   list-style: none;
   margin: 0;
@@ -319,30 +407,110 @@
 }
 .tch-bandDialog__actions { display: flex; justify-content: flex-end; }
 
-/* ── the quiet tail: strengths + deterministic moves ─────────────────────── */
-
-.tch-home__quiet { display: grid; gap: var(--sp-3); }
-.tch-home__quiet h4 {
-  margin: 0;
-  font-size: var(--sp-fs-xs);
-  font-weight: var(--sp-fw-semibold);
-  color: var(--sp-ink-400);
-}
-.tch-home__strengths ul {
-  list-style: none;
-  margin: var(--sp-1) 0 0;
-  padding: 0;
-  display: grid;
-  gap: var(--sp-1);
-}
-.tch-home__strengths li {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  font-size: var(--sp-fs-sm);
-  color: var(--sp-ink-700);
-}
+/* The strengths tail that used to live here as its own panel now sits inside
+   the difficulties card, under a rule — see `.tch-strengths` in
+   teacher-shared.css. Two cards made what the class HAS got look like a
+   separate, lesser feature under what it has not. */
 @media (max-width: 600px) {
   .tch-home { padding-block-start: var(--sp-4); }
   .tch-stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 }
+
+/* ── the good word from a strength row (#467) ──────────────────────────────
+   The one encouraging action on the page. Deliberately a dialog rather than an
+   inline composer: it is a written message to named children, and writing it
+   in a 200px column beside a list of the class's failures is the wrong frame
+   for it. */
+.tch-praise { display: grid; gap: var(--sp-4); }
+
+.tch-praise__title {
+  margin: 0;
+  font-size: var(--sp-fs-lg);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-900);
+}
+
+/* The topic being praised, stated once so the words are written about
+   something rather than into the air. */
+.tch-praise__topic {
+  margin: 0;
+  color: var(--sp-ink-500);
+  font-size: var(--sp-fs-sm);
+}
+
+.tch-praise__who { border: 0; margin: 0; padding: 0; min-inline-size: 0; }
+.tch-praise__who legend {
+  padding: 0;
+  margin-block-end: var(--sp-2);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-700);
+}
+
+/* Capped and scrolled: a class of forty would otherwise push the message box
+   and the send button off the bottom of the dialog. */
+.tch-praise__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  max-block-size: 30dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Selected is the default state, so "off" is what has to look different —
+   dimmed and hollow, rather than the selection being the decorated one. */
+.tch-praise__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 4px var(--sp-2) 4px 4px;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: var(--sp-surface);
+  color: var(--sp-ink-400);
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  cursor: pointer;
+  transition: background var(--sp-dur-fast) var(--sp-ease),
+              color var(--sp-dur-fast) var(--sp-ease),
+              border-color var(--sp-dur-fast) var(--sp-ease);
+}
+.tch-praise__chip.is-on {
+  border-color: var(--sp-primary-500);
+  background: var(--tch-chip-bg);
+  color: var(--sp-ink-900);
+}
+.tch-praise__chip:focus-visible {
+  outline: 2px solid var(--sp-primary-500);
+  outline-offset: 2px;
+}
+
+.tch-praise__field { display: grid; gap: var(--sp-1); }
+.tch-praise__field > span {
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-700);
+}
+.tch-praise__field textarea { resize: vertical; min-block-size: 72px; }
+
+.tch-praise__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.tch-praise__status { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-success-600); }
+.tch-praise__status.is-bad { color: var(--sp-danger-600); }
+
+/* A block that cannot honour the subject the teacher set, saying so on itself.
+   The page-level scope notice only fires when a SCREEN narrows by nothing of a
+   set dimension; Home does narrow by subject, so the two blocks that cannot
+   would otherwise be the silent drop the scope contract forbids. */
+.tch-home__scopeNote {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+.tch-stat__hint--scope { color: var(--sp-ink-300); }

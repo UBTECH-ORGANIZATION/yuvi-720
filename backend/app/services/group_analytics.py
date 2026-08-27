@@ -71,34 +71,54 @@ async def _gather(learner_ids: list[str], factory) -> list[Any]:
 
 
 def _window_stats(
-    events: list[dict[str, Any]], start: datetime, end: datetime
+    events: list[dict[str, Any]], start: datetime, end: datetime,
+    subject: Optional[str] = None,
 ) -> dict[str, Any]:
     """One learner's activity inside `[start, end)`.
 
     Events arrive newest-first, so the first one inside the window is the
     window's last activity.
+
+    With `subject`, only events tagged with that subject count. An event whose
+    subject is unknown is EXCLUDED rather than kept: the teacher asked for one
+    subject, and folding untagged work into the answer would quietly report
+    more than they asked about.
     """
     from app.services.learning_timing import capped_elapsed
 
     seconds = 0.0
     days_seen: set[str] = set()
+    # Where the seconds fell, not just how many there were. The daily minutes
+    # series is built from this, and it cannot be derived after the fact: a
+    # window total divided by its days would report the same flat line for a
+    # learner who worked one long session and one who worked every day.
+    seconds_by_day: dict[str, float] = {}
     count = 0
     last_at: Optional[str] = None
     for event in events:
         parsed = _parse(event.get("stored_at"))
         if parsed is None or parsed < start or parsed >= end:
             continue
+        if subject and event.get("subject") != subject:
+            continue
         count += 1
         if last_at is None:
             last_at = event.get("stored_at")
+        day = parsed.date().isoformat()
         elapsed = capped_elapsed(event.get("timing"))
         if elapsed is not None:
             seconds += elapsed
-        days_seen.add(parsed.date().isoformat())
+            seconds_by_day[day] = seconds_by_day.get(day, 0.0) + elapsed
+        days_seen.add(day)
     return {
         "events": count,
         "minutes": seconds / 60.0,
         "days_active": len(days_seen),
+        # Which days, not just how many. The per-day series is built from this;
+        # it used to be built from `last_at` alone, which counted each learner
+        # once on their most recent day — see `engagement`.
+        "days_seen": days_seen,
+        "seconds_by_day": seconds_by_day,
         "last_at": last_at,
     }
 
@@ -125,7 +145,8 @@ def _aggregate(rows: list[dict[str, Any]], students_total: int) -> dict[str, Any
 
 
 async def engagement(
-    group_id: str, days: int = DEFAULT_WINDOW_DAYS, *, compare: bool = True
+    group_id: str, days: int = DEFAULT_WINDOW_DAYS, *, compare: bool = True,
+    subject: Optional[str] = None,
 ) -> dict[str, Any]:
     """Engagement: share of active learners + average active minutes (F6 §1).
 
@@ -159,26 +180,72 @@ async def engagement(
         events = await get_learner_events(learner_id, limit=limit)
         return {
             "learner_id": learner_id,
-            **_window_stats(events, current_start, now),
-            "previous": _window_stats(events, previous_start, current_start),
+            **_window_stats(events, current_start, now, subject),
+            "previous": _window_stats(events, previous_start, current_start, subject),
         }
 
     rows = await _gather(learner_ids, _for)
 
+    # How many learners were active on each day of the window.
+    #
+    # This counted each learner ONCE, on the day of their most recent event
+    # (`row["last_at"]`), so a child who worked every day appeared on one day
+    # and the series summed to at most `active_students`. It was never rendered,
+    # which is why the error survived: as a chart it would have drawn a
+    # confident, wrong picture of the week. `days_seen` is every day the learner
+    # actually produced something.
     per_day: dict[str, int] = {}
+    today_key = now.date().isoformat()
+    # Seconds and the head-count they came from, per day. The average has to be
+    # taken over the learners who actually studied that day — dividing by the
+    # whole class would turn a quiet Friday into a collapse in the average
+    # rather than into what it is, fewer people present.
+    seconds_day: dict[str, float] = {}
+    counted_day: dict[str, int] = {}
     for index in range(days):
         day = (now - timedelta(days=index)).date().isoformat()
         per_day[day] = 0
+        seconds_day[day] = 0.0
+        counted_day[day] = 0
     for row in rows:
-        parsed = _parse(row["last_at"])
-        if parsed and parsed.date().isoformat() in per_day:
-            per_day[parsed.date().isoformat()] += 1
+        for day in row["days_seen"]:
+            if day in per_day:
+                per_day[day] += 1
+        for day, seconds in row["seconds_by_day"].items():
+            if day in seconds_day and seconds > 0:
+                seconds_day[day] += seconds
+                counted_day[day] += 1
 
     payload = {
         "group_id": group_id,
         "window_days": days,
+        # Echoed so a client can never show a narrowed figure under a heading
+        # that says otherwise.
+        "subject": subject,
         **_aggregate(rows, len(learner_ids)),
-        "per_day_active": [{"date": day, "active": count} for day, count in sorted(per_day.items())],
+        # `partial` marks a bucket the window only half covers — today, which
+        # is being lived through. Reported rather than dropped here, because
+        # "how many worked today so far" is a real answer to a real question;
+        # it is the SHAPE that must not include it. A series ending on a
+        # half-finished day always dips at the right, and a teacher reads that
+        # dip as the class falling off rather than as lunchtime.
+        "per_day_active": [
+            {"date": day, "active": count, "partial": day == today_key}
+            for day, count in sorted(per_day.items())
+        ],
+        # Same shape and the same rule as the headline average, one day at a
+        # time: minutes per learner who had usable timing that day, 0 when
+        # nobody did. Reported even when `timing_available` is false, in which
+        # case it is all zeros and the client draws nothing.
+        "per_day_minutes": [
+            {
+                "date": day,
+                "minutes": round(seconds_day[day] / 60.0 / counted_day[day], 1)
+                if counted_day[day] else 0.0,
+                "partial": day == today_key,
+            }
+            for day in sorted(seconds_day)
+        ],
     }
     if compare:
         payload["previous"] = _aggregate(
@@ -424,3 +491,109 @@ async def group_analytics(
         "gaps": gaps,
         "recommendations": group_recommendations(gaps, language),
     }
+
+
+# ── the class's mood ─────────────────────────────────────────────────────────
+# The daily check-in (#452) has been asking every child how the day feels and
+# storing the answer per learner per school day. Nothing has ever read those
+# answers at CLASS level — a teacher could see one child's strip on their
+# profile and never the shape of the room.
+#
+# Reported as a distribution, never as a name and never as an alert. That is
+# the check-in's own rule (`checkin_flow`): a feeling is a conversation opener,
+# not an alarm, and it is the reason this returns counts by valence rather than
+# "who is upset".
+
+# Below this many answers the shape is noise, and a confident "68% feel good"
+# built on two children is worse than saying nothing — the same evidence gate
+# `engagement` applies to timing.
+MIN_MOOD_ANSWERS = 3
+
+
+def _mood_window(days: int, offset: int = 0) -> list[str]:
+    """The school-date keys of one window, newest first.
+
+    Day-granular by necessity: a check-in IS a day-shaped fact, so unlike the
+    engagement windows — which are raw trailing hours — this counts whole
+    school days back from today.
+    """
+    from app.services.school_calendar import today_school_date
+
+    today = datetime.fromisoformat(today_school_date()).date()
+    return [
+        (today - timedelta(days=index + offset)).isoformat()
+        for index in range(days)
+    ]
+
+
+def _mood_shape(rows: list[dict[str, Any]], keys: set[str], roster: int) -> dict[str, Any]:
+    """Counts by valence over one window, plus the share that read positive."""
+    from app.services.checkin_flow import POSITIVE_VALENCES, VALENCES
+
+    by_valence = {valence: 0 for valence in VALENCES}
+    answered_by: set[str] = set()
+    skipped = 0
+    for row in rows:
+        if row.get("date") not in keys:
+            continue
+        valence = row.get("valence")
+        if valence in by_valence:
+            by_valence[valence] += 1
+            answered_by.add(row["learner_id"])
+        else:
+            skipped += 1
+
+    answers = sum(by_valence.values())
+    positive = sum(by_valence[valence] for valence in POSITIVE_VALENCES)
+    return {
+        "students_total": roster,
+        # Distinct children who said something, which is what the hint reports.
+        # NOT the same as `answers`: one child over a month answers many times,
+        # and "24 answers" from four children is not a class of twenty-four.
+        "answered_students": len(answered_by),
+        "answers": answers,
+        "skipped": skipped,
+        "by_valence": by_valence,
+        # Share of ANSWERS, not of the class — the caller must say so, because
+        # "68% feel good" reads as a fact about everyone otherwise.
+        "positive_pct": round(100 * positive / answers) if answers else 0,
+        # Below the gate the numbers above are still returned (they are true),
+        # but the screen is told not to lead with a share built on nothing.
+        "enough": answers >= MIN_MOOD_ANSWERS,
+    }
+
+
+async def class_mood(group_id: str, *, days: int, compare: bool = True) -> dict[str, Any]:
+    """How the class has been feeling over a window, and over the one before.
+
+    Aggregate only. No learner id leaves this function: a mood is the most
+    personal thing the product holds, and the class view has no business
+    naming who is having a bad week (C5). The teacher reaches an individual
+    child through their profile, where the child's own strip already lives.
+    """
+    from app.services import checkin_flow
+
+    learner_ids = await learners_in_group(group_id)
+    if not learner_ids:
+        return {"window_days": days, **_mood_shape([], set(), 0)}
+
+    current = set(_mood_window(days))
+    previous = set(_mood_window(days, offset=days))
+
+    async def _for(learner_id: str) -> list[dict[str, Any]]:
+        try:
+            rows = await checkin_flow.history(learner_id, limit=2 * days + 2)
+        except Exception:      # one child's bad row is not the class's problem
+            return []
+        return [{**row, "learner_id": learner_id} for row in rows]
+
+    gathered = await _gather(learner_ids, _for)
+    rows = [row for batch in gathered for row in batch]
+
+    payload = {
+        "window_days": days,
+        **_mood_shape(rows, current, len(learner_ids)),
+    }
+    if compare:
+        payload["previous"] = _mood_shape(rows, previous, len(learner_ids))
+    return payload

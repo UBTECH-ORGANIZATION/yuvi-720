@@ -26,6 +26,7 @@ import { NotificationBell } from './NotificationBell'
 import { TourButton } from './tour/TourButton'
 import { Icon } from './primitives'
 import { ScopeControl } from './scope/ScopeControl'
+import { StudentSearch } from './StudentSearch'
 import './teacher-app-bar.css'
 
 type TeacherSection =
@@ -260,23 +261,28 @@ export function TeacherAppBar() {
 
   const trailing = (
     <div className="teacher-app-scope">
+      {/* A trigger, not an inline input: the bar has no width to spare (see
+          the fold threshold below), so the field lives in a panel. */}
+      <StudentSearch />
       <NotificationBell />
       {/* Last, and quiet: the way back into the tour after it was dismissed. */}
       <TourButton />
     </div>
   )
 
-  /* 1310, not the default 1200: the scope segments make this bar wider than a
-     learner's, and below that the navigation and the scope overlap rather than
-     either of them giving way. Folding the nav sooner is the right trade —
-     scope is what the teacher must always be able to see. Measured, not
-     guessed: raise the nav's spacing and this number has to move with it. */
+  /* Above the default 1200 because the scope segments make this bar wider than
+     a learner's, and below the threshold the navigation and the scope overlap
+     rather than either of them giving way. Folding the nav sooner is the right
+     trade — scope is what the teacher must always be able to see. Measured,
+     not guessed (1310 before the search trigger joined the trailing cluster):
+     raise the nav's spacing or add to either cluster and this number has to
+     move with it. */
   return (
     <AppBar
       center={navigation}
       leading={<ScopeControl />}
       trailing={trailing}
-      compactBelow={1310}
+      compactBelow={1360}
     />
   )
 }

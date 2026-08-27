@@ -276,6 +276,301 @@
   padding-inline-start: 2px;
 }
 
+/* ── proportion bars ───────────────────────────────────────────────────────
+   Two of them, same mechanics: a row of flex segments whose grow factors are
+   the counts, so the bar is always full and reads as a COMPOSITION rather
+   than as progress toward a target. Both exist for the same reason (#500,
+   #501) — the screen was stating distributions as sentences a teacher had to
+   do arithmetic on, and a shape says it at a glance. */
+
+/* ── the per-day series under the engagement figure ────────────────────────
+   An SVG shape with no `fill` declared paints BLACK — the browser's initial
+   value, not "nothing". These rules were missing entirely, so the strip
+   rendered as a solid black block on the card. Worth stating plainly: an
+   unstyled `<polygon>` fails loud and ugly, while an unstyled `<polyline>`
+   (stroke: none by default) fails invisibly. */
+.tch-spark {
+  display: block;
+  flex: none;
+  inline-size: 72px;
+  block-size: 40px;
+  overflow: visible;
+}
+.tch-spark__area {
+  fill: var(--sp-primary-600);
+  /* Low enough to read as a tint behind the line rather than as a second
+     element competing with the number above it. */
+  opacity: .16;
+  stroke: none;
+}
+.tch-spark__line {
+  fill: none;
+  stroke: var(--sp-primary-600);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* The strip is scaled non-uniformly (`preserveAspectRatio="none"`), which
+     would otherwise stretch the stroke thicker horizontally than vertically. */
+  vector-effect: non-scaling-stroke;
+}
+
+.tch-split {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  margin-block-start: 6px;
+  block-size: 6px;
+  border-radius: var(--sp-radius-pill);
+  overflow: hidden;
+}
+
+.tch-split__seg {
+  flex-basis: 0;
+  min-inline-size: 3px;
+  border-radius: var(--sp-radius-pill);
+}
+
+/* ── the five check-in valence families ────────────────────────────────────
+   A DIVERGING scale: green at the easy end, neutral slate in the middle, warm
+   at the hard end. The first attempt ran warm-to-cool to avoid a green-to-red
+   alarm — and produced amber for "מצוין" sitting next to green for "טוב",
+   which is a sequence with no direction in it at all. A reader cannot tell
+   which end of a ring is the good end if the colours do not agree on one.
+
+   Calm is still the constraint, and it is met by WHICH warm rather than by
+   refusing warmth: a muted rose at the hard end, never a signal red. A child
+   having a hard week is not an error state, and the check-in's own rule is
+   that a feeling opens a conversation instead of raising an alarm — a rose
+   slice invites a question, a red one reports a fault.
+
+   Neutral in the middle is the other half of it: "בסדר" is genuinely neither,
+   and giving it a colour of its own would put a thumb on the scale.
+
+   Declared once as custom properties because the ring and its key are two
+   views of one distribution — a slice and its face drifting apart in colour is
+   exactly what would stop the key working as a key. `.tch-moodKey` carries the
+   palette itself because the tooltip it lives in is rendered through a PORTAL,
+   at the end of the document, outside `.tch-stats` entirely. */
+.tch-stats,
+.tch-donut,
+.tch-moodKey {
+  --tch-mood-great:  #0e9b6c;   /* deep green   — מצוין */
+  --tch-mood-good:   #63ac4a;   /* leaf green   — טוב   */
+  --tch-mood-okay:   #7c839c;   /* slate        — בסדר  */
+  --tch-mood-uneasy: #c98a33;   /* amber        — לא נוח */
+  --tch-mood-upset:  #b8536e;   /* muted rose   — קשה   */
+}
+
+/* Lifted on dark, where the light-theme tones sit too close to the panel to
+   read as five distinct families. Same order, same direction. */
+[data-theme='dark'] .tch-stats,
+[data-theme='dark'] .tch-donut,
+[data-theme='dark'] .tch-moodKey {
+  --tch-mood-great:  #35c795;
+  --tch-mood-good:   #86ce6b;
+  --tch-mood-okay:   #9aa4c4;
+  --tch-mood-uneasy: #e8b25c;
+  --tch-mood-upset:  #e58aa4;
+}
+
+/* The ring. Replaces a 6px stacked bar: five slices of a stripe that thin were
+   too small to compare against each other, and a bar reads as a scale running
+   from good to bad — the one thing a spread of feelings must not look like. */
+.tch-donut { display: block; flex: none; }
+.tch-donut__arc { transition: stroke-dasharray var(--sp-dur-med, 320ms) var(--sp-ease, ease-out); }
+.tch-donut__arc--great  { stroke: var(--tch-mood-great); }
+.tch-donut__arc--good   { stroke: var(--tch-mood-good); }
+.tch-donut__arc--okay   { stroke: var(--tch-mood-okay); }
+.tch-donut__arc--uneasy { stroke: var(--tch-mood-uneasy); }
+.tch-donut__arc--upset  { stroke: var(--tch-mood-upset); }
+
+/* The key, inside the card's tooltip: the face the child tapped, that family
+   named in words, and how many tapped it. One family per line — the bubble has
+   the width for names, which is the entire reason the legend moved into it. */
+.tch-moodKey {
+  display: grid;
+  gap: 5px;
+  margin-block-start: var(--sp-2);
+  padding-block-start: var(--sp-2);
+  border-block-start: 1px solid currentColor;
+  /* The rule is the bubble's own ink at a whisper, so it separates the legend
+     from the sentence above without introducing a second border colour that
+     would have to be themed twice. */
+  border-color: color-mix(in srgb, currentColor 22%, transparent);
+}
+.tch-moodKey__item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  line-height: 1.2;
+  /* `currentColor` is what the stroke-only faces draw themselves in, so one
+     declaration colours the face, its name and its count together. */
+}
+/* The colour rides the FACE only. Setting it on the row tinted the name and
+   the number too, and a mid-tone green or amber as body text on the bubble's
+   pale surface is a contrast failure — the swatch is a graphic and answers to
+   3:1, the words are text and answer to 4.5:1. */
+.tch-moodKey__label { flex: 1; color: var(--sp-ink-700); }
+.tch-moodKey__count {
+  color: var(--sp-ink-900);
+  font-variant-numeric: tabular-nums;
+}
+.tch-moodKey__item--great  { color: var(--tch-mood-great); }
+.tch-moodKey__item--good   { color: var(--tch-mood-good); }
+.tch-moodKey__item--okay   { color: var(--tch-mood-okay); }
+.tch-moodKey__item--uneasy { color: var(--tch-mood-uneasy); }
+.tch-moodKey__item--upset  { color: var(--tch-mood-upset); }
+
+/* The graphic at the cell's far end — the ring, or the engagement series.
+   Opposite the mark and after the text in source order, so the reading is
+   always figure-then-shape in both directions without a physical side being
+   named anywhere. */
+.tch-stat__viz {
+  flex: none;
+  display: flex;
+  align-items: center;
+  margin-inline-start: auto;
+}
+
+/* The gap row's split. Here the status colours ARE the meaning, so they use
+   the shared danger/success language — but `untried` is deliberately neutral:
+   a child who has not attempted the topic is not failing at it. */
+.tch-split__seg--struggling { background: var(--sp-danger-600); }
+.tch-split__seg--neither    { background: var(--sp-warn-600); }
+.tch-split__seg--mastered   { background: var(--sp-success-600); }
+.tch-split__seg--untried    { background: var(--sp-border-strong); }
+
+/* The rule between what the class has not got and what it has. A hairline,
+   not a gap: the two halves belong to one reading, and space alone would let
+   them drift back into looking like two features. */
+.tch-difficulties__rule {
+  border: 0;
+  border-block-start: 1px solid var(--sp-border);
+  margin-block: var(--sp-4) var(--sp-3);
+}
+
+/* ── two columns, one picture ──────────────────────────────────────────────
+   What the class has not got and what it has, side by side with a rule down
+   the middle. Stacked, the strengths read as an appendix to the failures and
+   the difficulties half looked empty whenever a class had a single gap.
+
+   The rule is a logical border on the second column, so it lands between them
+   in Hebrew and in English without a physical side being named. */
+.tch-difficulties__cols {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: var(--sp-5);
+  align-items: start;
+}
+.tch-difficulties__cols > :last-child {
+  border-inline-start: 1px solid var(--sp-border);
+  padding-inline-start: var(--sp-5);
+}
+
+/* Capped, and scrolled past the cap. A class with eight difficulties pushed
+   the book two screens down and turned the page into a ledger; the point of
+   the card is the top of each list, and the rest stays reachable rather than
+   dominant. `dvh` so a phone's collapsing address bar does not change it
+   mid-scroll. */
+.tch-difficulties__col {
+  min-inline-size: 0;
+  max-block-size: min(420px, 55dvh);
+  overflow-y: auto;
+  /* Room for the scrollbar so the last row is not sliced by it. */
+  padding-inline-end: var(--sp-1);
+  /* Contain the scroll chaining: reaching the end of this list must not start
+     scrolling the page under it mid-gesture. */
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 900px) {
+  /* One column: the rule turns with the flow and becomes the separator above
+     the strengths, and neither half is capped — on a narrow screen the page
+     scroll is the only scroll a reader should have to think about. */
+  .tch-difficulties__cols { grid-template-columns: 1fr; gap: var(--sp-4); }
+  .tch-difficulties__cols > :last-child {
+    border-inline-start: 0;
+    padding-inline-start: 0;
+    border-block-start: 1px solid var(--sp-border);
+    padding-block-start: var(--sp-4);
+  }
+  .tch-difficulties__col { max-block-size: none; overflow-y: visible; }
+}
+
+/* NOTE: every rule below is scoped to `.tch-difficulties`, and has to be.
+   `.tch-strength` is ALSO the student profile's own strength card
+   (`teacher-student.css`) — a green-edged tinted box, a different component
+   that happens to have the same name in a global stylesheet. Unscoped, that
+   file's rules land later in the bundle and win, and the strengths column here
+   silently rendered as somebody else's cards. */
+.tch-difficulties .tch-strengths__title {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-700);
+}
+
+.tch-difficulties .tch-strengths__list {
+  margin: 0; padding: 0; list-style: none; display: block;
+}
+
+/* Separated by rules, exactly like the difficulties beside them. Cards were
+   tried and were wrong: a boxed row on one side facing plain rows on the other
+   made the two halves look like different KINDS of thing, when the whole point
+   of putting them side by side is that they are one reading of one class. The
+   rule between rows is the same rule the other column uses. */
+.tch-difficulties .tch-strength {
+  display: grid;
+  gap: var(--sp-2);
+  /* The reset is not tidiness — it is the whole fix. The student profile's
+     `.tch-strength` paints a border, a 3px green inline edge, a radius and a
+     tinted background; out-specifying it only decides who wins per PROPERTY,
+     so anything left unsaid here keeps coming from there. That is why the
+     column kept rendering as somebody else's cards. */
+  border: 0;
+  border-radius: 0;
+  background: none;
+  padding: var(--sp-3) 0;
+  font-size: inherit;
+  color: inherit;
+  border-block-start: 1px solid var(--sp-border);
+}
+.tch-difficulties .tch-strength:first-child { border-block-start: 0; padding-block-start: 0; }
+
+.tch-difficulties .tch-strength__title {
+  color: var(--sp-ink-900);
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  min-inline-size: 0;
+}
+
+/* "These are different children." An objective can be both a gap and a
+   strength at once, and without saying so the repeat reads as a bug. */
+.tch-difficulties .tch-strength__note {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+
+.tch-difficulties .tch-strength__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.tch-difficulties .tch-strength__praise { margin-inline-start: auto; }
+
+/* A standing note on a difficulty row — "also last period". */
+.tch-difficulty__note {
+  display: block;
+  margin-block-start: 4px;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-ink-500);
+}
+
 /* What became of the blocking topic. Its own line under the hint rather than a
    chip beside the value: the value is already a phrase that may wrap to two
    lines, and hanging a second phrase off it would give the tile two headlines. */
@@ -841,4 +1136,33 @@
   margin: var(--sp-2) 0 0;
   color: var(--sp-ink-400);
   font-size: var(--sp-fs-xs);
+}
+
+/* The subject a row belongs to, at its corner. The dashboard reads every
+   subject at once, so three rows of topic names alone leave a teacher unable
+   to tell their own lesson from someone else's. Quiet by design: it is a
+   filing label, not a finding. */
+.tch-difficulties .tch-difficulty,
+.tch-difficulties .tch-strength { position: relative; }
+
+.tch-difficulty__subject {
+  position: absolute;
+  /* Level with the row's CONTENT, not with its border box. At 0 the chip sat
+     hard against the rule above it — an absolutely positioned box is offset
+     from the padding edge, so it has to be pushed in by the row's own padding
+     to line up with the title beside it. */
+  inset-block-start: var(--sp-3);
+  /* The far corner — physically top-left in Hebrew, top-right in English —
+     opposite the title, which starts at the reading edge. */
+  inset-inline-end: 0;
+  font-size: var(--sp-fs-xs);
+  font-weight: var(--sp-fw-medium);
+  color: var(--sp-ink-400);
+  background: var(--tch-chip-bg);
+  border-radius: var(--sp-radius-pill);
+  padding: 2px var(--sp-2);
+  white-space: nowrap;
+  /* Never in the way of the title: on a narrow column the heading wraps under
+     it rather than colliding with it. */
+  pointer-events: none;
 }

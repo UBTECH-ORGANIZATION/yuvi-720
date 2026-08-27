@@ -29,7 +29,7 @@ const app = readFileSync(
     reach. `false` does not mean "hidden": it means the screen does not narrow
     by it, and must say so when it is set. */
 const TABLE: [string, boolean, boolean, boolean][] = [
-  ['/teacher',                          true,  true,  false],
+  ['/teacher',                          true,  true,  true ],
   ['/teacher/students',                 true,  true,  false],
   ['/teacher/student/kid-1',            false, false, true],
   ['/teacher/goals',                    true,  true,  false],
@@ -114,12 +114,19 @@ describe('the path is the only thing it reads', () => {
 describe('the screens that must announce a filter they ignore', () => {
 
   it('names them, so a silent drop is a test failure and not a support ticket', () => {
-    /* Every `false` here is a promise that the screen prints a line. Home and
-       the roster are class-wide whatever the subject says, because "who needs
+    /* Every `false` here is a promise that the screen prints a line. The
+       roster is class-wide whatever the subject says, because "who needs
        attention, in maths" has no defined meaning yet — that is deferred, and
        deferring it honestly costs one sentence on the screen. */
-    assert.equal(narrowsBy('/teacher').subject, false)
     assert.equal(narrowsBy('/teacher/students').subject, false)
+    /* Home DOES narrow by subject now: its KPIs, its difficulties card and its
+       book all re-read on a subject change. The two blocks that cannot — the
+       band card and the mood ring — carry their own inline note instead of the
+       page-level one, because a screen that narrows by a dimension gets no
+       page-level line even where one block ignores it. Bands are a judgement
+       about a child rather than about material, and a daily check-in has no
+       subject on it at all. */
+    assert.equal(narrowsBy('/teacher').subject, true)
     /* Home narrows by sub-group since #450: the students band card filters to
        it client-side and says so; the KPIs, live card and gaps stay class-wide
        aggregates. */

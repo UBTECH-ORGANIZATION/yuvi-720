@@ -51,7 +51,6 @@ export function StudentFacepile({
     names?.get(learnerId) ?? nameOf(learnerId) ?? learnerId
 
   const shown = learnerIds.slice(0, max)
-  const overflow = learnerIds.length - shown.length
 
   return (
     <Tooltip
@@ -64,11 +63,21 @@ export function StudentFacepile({
               <StudentAvatar learnerId={learnerId} name={nameFor(learnerId)} size={size} />
             </span>
           ))}
-          {overflow ? (
-            /* A count, so it is read as a number in every script rather than
-               flipped into "3+" by the bidi algorithm on a Hebrew row. */
-            <span className="tch-facepile__more" dir="ltr">+{overflow}</span>
-          ) : null}
+          {/* The TOTAL, not the remainder. "+11" beside five faces asks the
+              teacher to add — and the number they actually want is how many
+              children this row is about, which was the one number the stack
+              never showed. Always drawn, even when every face fits, so the
+              badge means the same thing every time it is read.
+
+              `dir="ltr"` so the bidi algorithm cannot reorder the digits on a
+              Hebrew row. */}
+          <span
+            className="tch-facepile__more"
+            dir="ltr"
+            title={label}
+          >
+            {learnerIds.length}
+          </span>
         </span>
       }
     >
