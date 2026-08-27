@@ -17,6 +17,7 @@
     "test:path": "node --test \"tests/**/*.test.ts\""
   },
   "dependencies": {
+    "@microsoft/applicationinsights-web": "^3.4.3",
     "@rdkit/rdkit": "^2025.3.4-1.0.0",
     "@vitejs/plugin-react": "latest",
     "animejs": "^4.5.0",

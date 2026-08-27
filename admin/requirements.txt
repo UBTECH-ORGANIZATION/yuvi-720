@@ -9,6 +9,10 @@ PyJWT>=2.9.0,<3.0
 itsdangerous>=2.2.0,<3.0
 azure-monitor-opentelemetry>=1.6,<2
 opentelemetry-instrumentation-fastapi
+# The distro does not auto-instrument these, and they are where the admin
+# console's latency actually is: Mongo reads and outbound HTTP.
+opentelemetry-instrumentation-httpx
+opentelemetry-instrumentation-pymongo
 azure-storage-blob>=12.20,<13
 aiohttp>=3.10,<4
 azure-identity>=1.17,<2

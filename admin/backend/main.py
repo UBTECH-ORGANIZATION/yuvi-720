@@ -16,6 +16,7 @@ from typing import Any, Literal, Optional
 from authlib.integrations.starlette_client import OAuth
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 from starlette.middleware.sessions import SessionMiddleware
@@ -328,6 +329,10 @@ def create_app(
         same_site="lax",
         https_only=resolved_settings.secure_cookies,
     )
+    # Nothing was compressing the admin bundle or the usage-report JSON, and
+    # both are large enough to notice. Level 6 rather than the library default
+    # of 9: the last few percent of size is not worth the CPU on every response.
+    app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):

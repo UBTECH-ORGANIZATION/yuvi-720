@@ -17,6 +17,26 @@ from app.core.paths import (
 
 router = APIRouter(tags=["static"])
 
+#: One year, the maximum the spec gives any meaning to.
+_IMMUTABLE_CACHE = "public, max-age=31536000, immutable"
+
+
+class ImmutableStaticFiles(StaticFiles):
+    """Serve content-hashed build output as permanently cacheable.
+
+    Vite puts a content hash in every filename under `/assets`, so a given URL's
+    bytes can never change — a new build produces a new name. Without
+    `immutable` the browser still revalidates each file on every navigation:
+    on a school connection that is a round trip per asset before anything can
+    render, which is most of what "the site is slow" feels like even when the
+    files are already on disk.
+    """
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers.setdefault("Cache-Control", _IMMUTABLE_CACHE)
+        return response
+
 
 def mount_static_assets(app: FastAPI) -> None:
     """Mount shared static directories used by React and iframe content."""
@@ -25,7 +45,11 @@ def mount_static_assets(app: FastAPI) -> None:
     if CAMPAIGN_DIR.exists():
         app.mount("/campaign", StaticFiles(directory=str(CAMPAIGN_DIR)), name="campaign")
     if REACT_ASSETS_DIR.exists():
-        app.mount("/assets", StaticFiles(directory=str(REACT_ASSETS_DIR)), name="react-assets")
+        app.mount(
+            "/assets",
+            ImmutableStaticFiles(directory=str(REACT_ASSETS_DIR)),
+            name="react-assets",
+        )
     if UNITY_WORLD_DIR.exists():
         app.mount("/unity-world", StaticFiles(directory=str(UNITY_WORLD_DIR)), name="unity-world")
 
