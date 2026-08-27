@@ -1,24 +1,27 @@
-/* The two habit scores on the status band (PBI 451): עצמאות rebuilt around HOW
- * the child uses Yuvi, and קשב וריכוז in place of התמדה.
+/* The two habit scores on the hero identity row (PBI 451): עצמאות rebuilt
+ * around HOW the child uses Yuvi, and קשב וריכוז in place of התמדה.
  *
  * Reut's brief shapes every choice here: "בסוף זה טוב שהוא משתמש ביובי, השאלה
  * איך הוא משתמש ביובי" — so the score comes from the server's weighted read of
  * how the child works, never from counting help events; and "לא בהכרח קשת אלא
  * משהו נתוני" — which lives in the DIALOG as sentences with numbers in them:
- * what lowers the score first, what strengthens it after. The card headline
- * is the same half-dial as the subject cells, so the band reads as one row of
- * instruments (both calls: Gal, 2026-08-27).
+ * what lowers the score first, what strengthens it after.
+ *
+ * The scores stand where the minutes/questions/help-used counters stood
+ * (Gal, 2026-08-27): the raw counters were exactly the kind of number Reut
+ * retired — 420 "שימוש בעזרה" reads as a verdict — and the minutes and
+ * question counts live on in the trend dialog's charts. Each stat is a door
+ * to its score dialog, so the band below stays subjects-only.
  *
  * Rendering rules the server contract enforces and this file must not soften:
  * `value: null` with `evidenceOk: false` means "not enough evidence yet" — a
- * sentence, never a dial on thin data; `coverage.renormalized` means the score
- * runs on partial signals and the card caption SAYS so; `trend: null` means no
+ * dash, never a number on thin data; `coverage.renormalized` means the score
+ * runs on partial signals and the stat's hint SAYS so; `trend: null` means no
  * chip, never a flat arrow.
  */
 
 import { useState } from 'react'
-import { ProgressRing } from '../../../components/charts'
-import { Card, Skeleton } from '../../../components/primitives'
+import { Hint, Skeleton } from '../../../components/primitives'
 import { Modal } from '../../../components/primitives/Modal'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { describeEvidence } from '../shared/evidenceText'
@@ -26,23 +29,24 @@ import { StatDelta } from '../home/StatDelta'
 import type { ScoreBlock, StudentScores, SubScore } from '../../../services/teacher'
 import { deltaFromTrend, groupSubscores, scoreTone, type ScoreKind } from './scoreModel'
 
-export function ScoreCards({ scores }: { scores: StudentScores | null }) {
+export function ScoreStats({ scores }: { scores: StudentScores | null }) {
   const { t } = useI18n()
   const [open, setOpen] = useState<ScoreKind | null>(null)
 
   if (scores === null) {
-    /* Loading (or the read failed): quiet skeleton cells, no door — a door
-       onto nothing would be a promise the click cannot keep. */
+    /* Loading (or the read failed): the strip stands in the same place
+       wearing its real captions — what each figure measures was never in
+       question, only the figure. */
     return (
-      <>
+      <section className="tch-student__kpis" aria-busy="true"
+               aria-label={t('tch.kpi.stripLabel')}>
         {(['concentration', 'independence'] as const).map((kind) => (
-          <Card key={kind} className="tch-status__cell">
-            <h4>{t(`tch.student.${kind}`)}</h4>
-            <Skeleton w={104} h={54} r={10} />
-            <Skeleton w="72%" h={12} />
-          </Card>
+          <span key={kind} className="tch-stat">
+            <Skeleton w={34} h={20} />
+            <span className="tch-stat__label">{t(`tch.student.${kind}`)}</span>
+          </span>
         ))}
-      </>
+      </section>
     )
   }
 
@@ -53,41 +57,34 @@ export function ScoreCards({ scores }: { scores: StudentScores | null }) {
 
   return (
     <>
-      {blocks.map(({ kind, block }) => (
-        <Card key={kind} className="tch-status__cell tch-status__cell--score">
-          {/* Outside the door button — two interactive elements cannot nest.
-              Renders nothing without an honest two-window comparison. */}
-          <span className="tch-status__scoreDelta">
-            <StatDelta delta={deltaFromTrend(block.trend)}
-                       label={t(`tch.student.${kind}`)}
-                       when={t('tch.period.prev.week')} />
-          </span>
-          <button
-            type="button"
-            className="tch-status__cellOpen"
-            onClick={() => setOpen(kind)}
-            aria-haspopup="dialog"
-          >
-            <h4>{t(`tch.student.${kind}`)}</h4>
-            {block.evidenceOk && block.value !== null ? (
-              /* The same 104px dial as the subject cells, so the band reads as
-                 one row of instruments. The DIALOG behind it stays bars and
-                 numbers — that is where Reut's "משהו נתוני" lives. */
-              <ProgressRing arc="half" percent={block.value} size={104}
-                            tone={scoreTone(block.value)}
-                            label={t(`tch.student.${kind}`)} />
-            ) : (
-              /* Thin evidence: the honest sentence. The card stays a door —
-                 the dialog is where "why not" is answered. */
-              <p className="tch-status__none">{t('tch.score.noEvidence')}</p>
-            )}
-            <p className="tch-status__caption">
-              {t('tch.score.window', { days: scores.windowDays })}
-              {block.coverage.renormalized ? ` · ${t('tch.score.partial')}` : ''}
-            </p>
-          </button>
-        </Card>
-      ))}
+      <section className="tch-student__kpis tch-appear"
+               aria-label={t('tch.kpi.stripLabel')}>
+        {blocks.map(({ kind, block }) => {
+          const measured = block.evidenceOk && block.value !== null
+          const hint = measured
+            ? t('tch.score.window', { days: scores.windowDays })
+              + (block.coverage.renormalized ? ` · ${t('tch.score.partial')}` : '')
+            : t('tch.score.noEvidence')
+          return (
+            <Hint key={kind} text={hint}>
+              <button
+                type="button"
+                className="tch-stat"
+                onClick={() => setOpen(kind)}
+                aria-haspopup="dialog"
+              >
+                <strong
+                  className={`tch-stat__value${measured ? ` is-${scoreTone(block.value)}` : ''}`}
+                  dir="ltr"
+                >
+                  {measured ? `${block.value}%` : '—'}
+                </strong>
+                <span className="tch-stat__label">{t(`tch.student.${kind}`)}</span>
+              </button>
+            </Hint>
+          )
+        })}
+      </section>
 
       <ScoreDialog
         kind={open}
@@ -104,7 +101,7 @@ export function ScoreCards({ scores }: { scores: StudentScores | null }) {
  * one sentence carrying its own numbers; what strengthens the score follows.
  * Nothing else: no gauges, no bars, no weights, no session-context panel, no
  * not-yet-measured footnote — signals without evidence simply don't appear,
- * and the card caption already marks a partial score. */
+ * and the stat's hover hint already marks a partial score. */
 function ScoreDialog({ kind, scores, onClose }: {
   kind: ScoreKind | null
   scores: StudentScores

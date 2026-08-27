@@ -78,7 +78,7 @@ SCREEN_PURPOSE: dict[str, str] = {
 
 async def _how_to(context: TeacherToolContext, args: dict) -> dict:
     from app.services import teacher_help_kb
-    return teacher_help_kb.how_to(str(args.get("topic") or ""))
+    return teacher_help_kb.how_to(str(args.get("topic") or ""), context.language)
 
 
 async def _explain_metric(context: TeacherToolContext, args: dict) -> dict:

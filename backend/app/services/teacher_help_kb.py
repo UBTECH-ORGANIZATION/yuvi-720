@@ -20,7 +20,11 @@ reasons over the number.
 
 from __future__ import annotations
 
+import json
+from functools import lru_cache
 from typing import Any
+
+from app.core.paths import LOCALES_DIR
 
 # Topic → the locale key the client renders. Keys live in `tch.help.*`.
 HELP_TOPICS: dict[str, str] = {
@@ -34,6 +38,11 @@ HELP_TOPICS: dict[str, str] = {
     "alerts": "tch.help.alerts",
     "notes": "tch.help.notes",
     "coach_directive": "tch.help.coachDirective",
+    # The custom task builder — generation, the automatic quality checks, and
+    # the two edit paths. Added because the assistant, asked "is there no
+    # automatic refinement after building a task?", improvised a "no" when the
+    # review screen runs quality checks and offers AI-edit (2026-08-27).
+    "custom_tasks": "tch.help.customTasks",
     "notifications": "tch.help.notifications",
     "groups": "tch.help.groups",
     "no_comparisons": "tch.help.noComparisons",
@@ -45,11 +54,27 @@ def topics() -> list[str]:
     return sorted(HELP_TOPICS)
 
 
-def how_to(topic: str) -> dict[str, Any]:
+@lru_cache(maxsize=8)
+def _locale_texts(lang: str) -> dict[str, str]:
+    path = LOCALES_DIR / f"{lang}.json"
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def how_to(topic: str, language: str = "he") -> dict[str, Any]:
     key = HELP_TOPICS.get(str(topic or "").strip())
     if key is None:
         return {"data": None, "reason": "unknown_topic", "available_topics": topics()}
-    return {"data": {"topic": topic, "text_key": key}}
+    # The resolved text rides the result because the MODEL is the reader: a
+    # tool call that returns only a locale key satisfies the grounding gate
+    # while leaving the model to improvise the substance — which is how the
+    # assistant told a teacher there is no automatic refinement after building
+    # a task, when the review screen runs exactly that (2026-08-27).
+    lang = str(language or "he").split("-")[0] or "he"
+    text = _locale_texts(lang).get(key) or _locale_texts("he").get(key)
+    return {"data": {"topic": topic, "text_key": key, "text": text}}
 
 
 def _metrics() -> dict[str, dict[str, Any]]:

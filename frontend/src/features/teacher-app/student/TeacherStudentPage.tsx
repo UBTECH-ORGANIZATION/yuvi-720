@@ -34,7 +34,7 @@ import { PraiseDialog } from '../shared/PraiseDialog'
 import type { StrengthItem } from '../shared/DifficultiesCard'
 import { useAuth } from '../../../providers/AuthProvider'
 import { FocusPanel } from '../live/FocusPanel'
-import { ScoreCards } from './ScoreCards'
+import { ScoreStats } from './ScoreCards'
 import {
   generateTopicDigest, getFocusRoadmap, getLearnerRead, getPinnedNext,
   getStudentActivity,
@@ -279,19 +279,6 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
      have to scroll for. It links down to the full record. */
   const distress = (detail?.wellbeing_flags ?? [])[0] ?? null
 
-  /* Header KPIs, all derived from data we actually store (never invented):
-     material from objectives vs the catalog, minutes from the wall-clock
-     timing the events carry, questions from the rows themselves, help from
-     the support counters the coach already logs. */
-  const rows = activity ?? []
-  const seconds = rows.reduce((sum, row) => sum + (row.time_seconds || 0), 0)
-  const learningsCount = new Set(rows.map((row) => row.component_id).filter(Boolean)).size
-  const help = {
-    hints: rows.reduce((sum, row) => sum + row.hints_used + row.content_hints_used, 0),
-    explanations: rows.reduce((sum, row) => sum + row.explanations_used, 0),
-    chats: rows.reduce((sum, row) => sum + row.chat_turns, 0),
-  }
-  const helpTotal = help.hints + help.explanations + help.chats
   /* Open disclosures, from the detail payload the page already has — no second
      request to put a number on a section. */
   const openFlags = (detail?.wellbeing_flags ?? []).length
@@ -416,56 +403,14 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
             ) : null}
           </div>
 
-          {/* The quick numbers, ON the identity row — plain figures with a
-              rule between them. The mastery percentage is NOT here: the
-              status band's dials already are that number, said better. Each
-              figure explains itself on hover/focus, and says so with the
-              dotted underline. Shown only once the child has activity —
-              zeroes would read as a verdict.
-
-              While the rows are still in flight the strip stands in the same
-              place wearing its real captions: what each figure counts was
-              never in question, only the figure. */}
-          {activity === null ? (
-            <section className="tch-student__kpis" aria-busy="true"
-                     aria-label={t('tch.kpi.stripLabel')}>
-              {[t('tch.kpi.learningMinutes'), t('tch.kpi.questionsWorked'),
-                t('tch.kpi.helpUsed')].map((label) => (
-                <span key={label} className="tch-stat">
-                  <Skeleton w={34} h={20} />
-                  <span className="tch-stat__label">{label}</span>
-                </span>
-              ))}
-            </section>
-          ) : rows.length ? (
-            <section className="tch-student__kpis tch-appear"
-                     aria-label={t('tch.kpi.stripLabel')}>
-              <Hint text={seconds > 0 ? t('tch.kpi.minutesTip') : t('tch.pulse.noTiming')}>
-                <button type="button" className="tch-stat">
-                  {/* Wall-clock between events — honest "—" when there is none. */}
-                  <strong className="tch-stat__value">
-                    {seconds > 0 ? Math.round(seconds / 60) : '—'}
-                  </strong>
-                  <span className="tch-stat__label">{t('tch.kpi.learningMinutes')}</span>
-                </button>
-              </Hint>
-              <Hint text={t('tch.kpi.questionsTip', { count: learningsCount })}>
-                <button type="button" className="tch-stat">
-                  <strong className="tch-stat__value">{rows.length}</strong>
-                  <span className="tch-stat__label">{t('tch.kpi.questionsWorked')}</span>
-                </button>
-              </Hint>
-              {/* What Yuvi already tried, before the teacher steps in. */}
-              <Hint text={t('tch.kpi.helpTip', {
-                hints: help.hints, explanations: help.explanations, chats: help.chats,
-              })}>
-                <button type="button" className="tch-stat">
-                  <strong className="tch-stat__value">{helpTotal}</strong>
-                  <span className="tch-stat__label">{t('tch.kpi.helpUsed')}</span>
-                </button>
-              </Hint>
-            </section>
-          ) : null}
+          {/* The two habit scores, ON the identity row (PBI 451). The raw
+              counters that stood here — minutes, questions, help-used — are
+              gone: counting help events is exactly the reading Reut retired,
+              and the minutes and question counts live on in the trend
+              dialog's charts. Each stat is the score itself, a door to the
+              why-is-it-down dialog; its hover hint carries the window and
+              the partial-signals marker. */}
+          <ScoreStats scores={scores} />
         </div>
       </header>
 
@@ -487,7 +432,6 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
               progress={detail.objectives_progress ?? {}}
               trends={trends}
               rows={activity}
-              scores={scores}
             />
           </div>
         ) : (
@@ -638,16 +582,11 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
 function StatusBandSkeleton({ subjects }: { subjects: number }) {
   const { t } = useI18n()
   /* The row a teacher is about to get, in the count they are about to get
-     it: the focus card, one cell per subject in scope, then the two habit
-     dials. Getting the count right is the whole point — a placeholder that
-     reflows into a different grid is worse than none. */
-  const dials = [t('tch.student.concentration'), t('tch.student.independence')]
-  /* Same split rule as the live band (focus + subjects + both scores): six-plus
-     placeholders that sit in one row and then snap into two when the data
-     lands would be exactly the reflow this component exists to prevent. The
-     live band always renders both score cells — gated or loading they still
-     hold their place — so the counts genuinely agree. */
-  const cellCount = 1 + subjects + dials.length
+     it: the focus card, then one cell per subject in scope — the two habit
+     scores live on the hero strip now, not here. Getting the count right is
+     the whole point — a placeholder that reflows into a different grid is
+     worse than none. */
+  const cellCount = 1 + subjects
   return (
     <section className="tch-status" aria-busy="true">
       <div
@@ -677,13 +616,6 @@ function StatusBandSkeleton({ subjects }: { subjects: number }) {
           </Card>
         ))}
 
-        {dials.map((label) => (
-          <Card key={label} className="tch-status__cell">
-            <h4>{label}</h4>
-            <Skeleton w={104} h={54} r={10} />
-            <Skeleton w="72%" h={12} />
-          </Card>
-        ))}
       </div>
     </section>
   )
@@ -933,13 +865,12 @@ function TrendChip({ momentum }: {
   )
 }
 
-function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows, scores }: {
+function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows }: {
   learnerId: string
   focus: PlannerFocus | null
   progress: Record<string, SubjectProgress>
   trends: LearnerTrends | null
   rows: QuestionRow[] | null
-  scores: StudentScores | null
 }) {
   const { t, language } = useI18n()
   const { subject: scopeSubject, groupId } = useTeacherScope()
@@ -1006,8 +937,8 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows, scores
      The subject chips compare the recent half of the trend window against the
      half before it — computed from the series the dials already read, never
      estimated. Too little data on either side means NO chip: a trend drawn
-     from two questions would be a verdict on noise. (The two habit scores
-     carry their own server-computed trend — see ScoreCards.) */
+     from two questions would be a verdict on noise. (The two habit scores on
+     the hero strip carry their own server-computed trend — see ScoreStats.) */
   const halfIndex = trends ? Math.floor(trends.per_day.length / 2) : 0
   const boundary = trends?.per_day[halfIndex]?.date ?? null
   const halfDays = trends ? trends.per_day.length - halfIndex : 0
@@ -1034,13 +965,12 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows, scores
     }
   }
 
-  /* How many cells the grid is about to hold: focus + one dial per subject +
-     the two habit scores (always rendered — gated or loading they still hold
-     their cell, so the band never reflows when the read lands).
+  /* How many cells the grid is about to hold: focus + one dial per subject —
+     the two habit scores moved up to the hero strip (Gal, 2026-08-27).
      Counted here rather than in CSS because the dialogs below are children of
      the same grid — closed they render nothing, but a selector counting DOM
      children could never rely on that. */
-  const cellCount = 1 + subjects.length + 2
+  const cellCount = 1 + subjects.length
 
   return (
     /* No outer card, no heading: the dials are cards themselves and open the
@@ -1219,11 +1149,6 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows, scores
           subject={objSubject}
           onClose={() => setObjSubject(null)}
         />
-
-        {/* קשב וריכוז and עצמאות — server-computed, evidence-gated, each a
-            door to its weights-and-evidence dialog (PBI 451). Replaces the
-            התמדה dial and the client-side help-count ratio. */}
-        <ScoreCards scores={scores} />
       </div>
     </section>
   )

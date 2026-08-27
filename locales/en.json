@@ -2285,6 +2285,7 @@
   "tch.help.alerts": "Alerts arrive in realtime and persist until resolved. Each one carries its evidence.",
   "tch.help.notes": "Notes come in three levels: private, shared with the student, and a directive Yuvi will use when talking to them.",
   "tch.help.coachDirective": "A note marked as a directive changes what Yuvi says to the student. It is off by default.",
+  "tch.help.customTasks": "The task builder writes a lesson, questions and an answer key from your request. Automatic quality checks run on the result and flag, per item, what to look at — they guide, never block; the call is always the teacher's. Before sending you can edit without limit: an AI edit that takes a plain description of the change (\"make question 3 easier\"), or a full regenerate. The preview is exactly what the student sees, with the answer key behind a toggle. After sending the content is frozen — a task never changes under a student mid-attempt.",
   "tch.help.notifications": "The bell holds personal updates. Dismissing keeps the record — you can show it again.",
   "tch.help.groups": "Groups are managed in the admin console. A teacher is linked to a group; a student is enrolled in it.",
   "tch.help.noComparisons": "The system never compares or ranks students — a Ministry of Education requirement.",

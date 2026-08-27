@@ -57,15 +57,29 @@ describe('the habit scores', () => {
   it('say when they score on partial signals', () => {
     /* The banner, the unmeasured footnote and the session-context panel are
        all gone (Gal, 2026-08-27); the one surviving honesty marker is the
-       card caption flagging a renormalized score — it must not vanish too. */
+       stat's hover hint flagging a renormalized score — it must not vanish
+       too. */
     assert.ok(cards.includes('coverage.renormalized'),
-              'the card no longer marks a renormalized score')
+              'the stat hint no longer marks a renormalized score')
     assert.ok(cards.includes('tch.score.partial'),
-              'the card caption lost its partial-signals marker')
+              'the stat hint lost its partial-signals marker')
     assert.ok(!cards.includes('tch.score.unmeasured'),
               'the unmeasured footnote came back')
     assert.ok(!cards.includes('tch.score.session'),
               'the session-shape context panel came back')
+  })
+
+  it('live on the hero strip, not the status band', () => {
+    /* Gal, 2026-08-27: the scores replaced the raw minutes/questions/help
+       counters on the identity row — counting help events is exactly the
+       reading Reut retired — and left the band to the subjects. Each stat is
+       a door to the dialog; a card creeping back into the band would say the
+       same number twice. */
+    assert.ok(page.includes('<ScoreStats'), 'the hero strip lost its score stats')
+    assert.ok(!page.includes('tch.kpi.helpUsed'),
+              'the raw help-used counter is back on the hero')
+    assert.ok(!/cellCount = 1 \+ subjects(\.length)? \+/.test(page),
+              'the status band counts score cells again')
   })
 
   it('answer "why is it down" as sentences, not a table', () => {

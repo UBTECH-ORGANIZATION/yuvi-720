@@ -121,6 +121,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The habit scores carry the dial's tone into the figure itself — the strip
+   has no arc, so the color is where the at-a-glance reading lives. */
+.tch-student__kpis .tch-stat__value.is-success { color: var(--sp-success-600); }
+.tch-student__kpis .tch-stat__value.is-warn { color: var(--sp-warn-600); }
+.tch-student__kpis .tch-stat__value.is-danger { color: var(--sp-danger-600); }
+
 .tch-student__kpis .tch-stat__label {
   font-size: var(--sp-fs-xs);
   color: var(--sp-ink-400);
@@ -1756,22 +1762,13 @@
   color: var(--sp-success-600);
 }
 
-/* ── the two habit scores (PBI 451): dial cards + evidence dialogs ──────────
+/* ── the two habit scores (PBI 451): hero-strip stats + evidence dialogs ────
  *
- * The card headline is the same half-dial as the subject cells (one row of
- * instruments). Reut's "לא בהכרח קשת אלא משהו נתוני" lives in the DIALOG: the
- * weighted mean laid open — every sub-score with its weight, its bar, and its
- * raw numbers behind the standard "why?" toggle, no arc. The bars are
- * quantities, not time axes, so they fill from inline-start (right, in
- * Hebrew) like the objective bars do.
+ * The scores are two clickable stats on the hero identity row — the colored
+ * figure IS the reading. Reut's "לא בהכרח קשת אלא משהו נתוני" lives in the
+ * DIALOG: what lowers the score, then what strengthens it, each signal one
+ * sentence carrying its own numbers.
  */
-
-.tch-status__cell > .tch-status__scoreDelta {
-  position: absolute;
-  inset-block-start: var(--sp-2);
-  inset-inline-end: var(--sp-2);
-  z-index: 2;
-}
 
 .tch-scoreCard__value {
   margin: 0;

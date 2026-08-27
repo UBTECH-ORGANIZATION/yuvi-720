@@ -30,26 +30,25 @@ async function run(lang, theme, learner = 'tamar') {
     document.documentElement.setAttribute('data-theme', t)
   }, theme)
   await page.waitForSelector('.tch-status__grid', { timeout: 30000 })
-  // The scores fetch resolves after the band mounts; wait for a card dial
-  // (or the gated "not enough evidence" sentence).
-  await page.waitForSelector(
-    '.tch-status__cell--score .sp-chart-ring--half, .tch-status__cell--score .tch-status__none',
-    { timeout: 30000 })
+  // The scores land on the HERO strip (Gal, 2026-08-27): two clickable stats
+  // where the minutes/questions/help counters stood. Wait for a real figure
+  // (or the gated dash) to replace the skeleton.
+  await page.waitForSelector('.tch-student__kpis .tch-stat__value', { timeout: 30000 })
   await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme)
   await page.waitForTimeout(800)
 
-  const cards = page.locator('.tch-status__cell--score')
-  check(`${tag}: two score cards render`, await cards.count() === 2,
-        `count=${await cards.count()}`)
-  // The headline is the same half-dial as the subject cells (Gal, 2026-08-27).
-  const dials = await cards.locator('.sp-chart-ring--half').count()
-  check(`${tag}: each measured score draws the half-dial`, dials >= 1,
-        `dials=${dials}`)
+  const stats = page.locator('.tch-student__kpis .tch-stat')
+  check(`${tag}: the hero strip is exactly the two scores`,
+        await stats.count() === 2, `stats=${await stats.count()}`)
+  check(`${tag}: no score cards left on the status band`,
+        await page.locator('.tch-status__cell--score').count() === 0)
+  check(`${tag}: the raw help-used counter is gone`,
+        !(await page.locator('.tch-student__kpis').innerText()).includes('420'))
 
   await page.screenshot({ path: `${OUT}/band-${tag}.png`, fullPage: false })
 
-  // Open the concentration dialog (first score card is concentration).
-  await cards.first().locator('.tch-status__cellOpen').click()
+  // Open the concentration dialog (first stat is concentration).
+  await stats.first().click()
   const dialog = page.locator('[role="dialog"].tch-scoreDialog, .tch-scoreDialog')
   await dialog.waitFor({ state: 'visible', timeout: 10000 })
   // One component: drag/strength groups of sentences and nothing else — no
@@ -70,13 +69,11 @@ async function run(lang, theme, learner = 'tamar') {
   await page.screenshot({ path: `${OUT}/dialog-concentration-${tag}.png` })
   await page.keyboard.press('Escape')
 
-  // Independence dialog: same shape, no session panel.
-  await cards.nth(1).locator('.tch-status__cellOpen').click()
+  // Independence dialog: same shape.
+  await stats.nth(1).click()
   await dialog.waitFor({ state: 'visible', timeout: 10000 })
   check(`${tag}: independence dialog has sentence lines`,
         await dialog.locator('.tch-scoreDialog__group li').count() >= 4)
-  check(`${tag}: no session panel on independence`,
-        await dialog.locator('.tch-scoreDialog__session').count() === 0)
   await page.screenshot({ path: `${OUT}/dialog-independence-${tag}.png` })
   await page.keyboard.press('Escape')
 
