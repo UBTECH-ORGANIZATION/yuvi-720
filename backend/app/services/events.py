@@ -1051,6 +1051,7 @@ async def _content_report_fields(
     - answered → `questionId` (not `question_id`), `questionType`, `attemptNumber`
     - media    → `mediaFormat`, `mediaPosition` when the player reports it,
       and `result.duration` on paused/completed (`mediaDuration` removed, v1.1)
+    - selected → `selectionType`, from the choice category the content declared
     Everything is read from what we already know (catalog + stored events + the
     relayed statement). A value nobody told us — the position inside a clip that
     Kata never reports — is left out rather than invented.
@@ -1079,6 +1080,17 @@ async def _content_report_fields(
         # reports `result.completion: true` (media completions carry only
         # duration). Tautological on a completed event, so never invented.
         result_extra["completion"] = True
+
+    if verb == "selected" and event.get("selection_category"):
+        # בחירה שאינה לימודית carries `selectionType` from the 720 dictionary.
+        # The content declares the kind of choice as a context CATEGORY
+        # (`…/categories/isUnderstood`); only a value that IS in the dictionary
+        # is forwarded — an unknown category is not a selection type.
+        from app.services.lrs.statements import SELECTION_TYPES, kebab
+
+        selection_type = kebab(event["selection_category"])
+        if selection_type in SELECTION_TYPES:
+            extensions["selectionType"] = selection_type
 
     if verb in {"played", "paused", "watched", "listened"} or (
         verb == "completed" and _is_media_item(component_id, item_id)

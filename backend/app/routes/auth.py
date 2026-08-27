@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import os
+import re
 import time
 import uuid
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-import re
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -100,8 +100,23 @@ def _cookie_is_secure() -> bool:
     return public_url.startswith("https://")
 
 
+def _ua_version(user_agent: str, *patterns: str) -> Optional[str]:
+    """First version number one of `patterns` captures in the User-Agent."""
+    for pattern in patterns:
+        match = re.search(pattern, user_agent, re.IGNORECASE)
+        if match:
+            return match.group(1).replace("_", ".").strip()
+    return None
+
+
 def _device_from_request(request: Request) -> dict[str, str]:
-    """Best-effort device extensions for the MoE session `enter` statement."""
+    """Best-effort device extensions for the MoE session `enter` statement.
+
+    The 720 test script (TC-SES-01/07) asks for seven: deviceType, platform,
+    operatingSystem, osVersion, browser, browserVersion, applicationVersion.
+    Everything but the last is read off the User-Agent; a version that header
+    does not disclose is omitted rather than guessed.
+    """
     ua = request.headers.get("user-agent", "")
     lowered = ua.lower()
     if "ipad" in lowered or "tablet" in lowered:
@@ -112,32 +127,56 @@ def _device_from_request(request: Request) -> dict[str, str]:
         device_type = "Desktop"
     if "windows" in lowered:
         operating_system = "Windows"
+    elif "android" in lowered:
+        # Before macOS and Linux: an Android UA says "Linux", and an iPhone UA
+        # says "like Mac OS X" — checked in this order, both used to be misread.
+        operating_system = "Android"
+    elif "iphone" in lowered or "ipad" in lowered or "ipod" in lowered:
+        operating_system = "iOS"
     elif "mac os" in lowered or "macintosh" in lowered:
         operating_system = "macOS"
-    elif "android" in lowered:
-        operating_system = "Android"
-    elif "iphone" in lowered or "ipad" in lowered or "ios" in lowered:
-        operating_system = "iOS"
     elif "linux" in lowered:
         operating_system = "Linux"
     else:
         operating_system = "Other"
     if "edg/" in lowered:
         browser = "Edge"
+        browser_version = _ua_version(ua, r"Edg/([\d.]+)")
     elif "chrome/" in lowered:
         browser = "Chrome"
+        browser_version = _ua_version(ua, r"Chrome/([\d.]+)")
     elif "firefox/" in lowered:
         browser = "Firefox"
+        browser_version = _ua_version(ua, r"Firefox/([\d.]+)")
     elif "safari/" in lowered:
         browser = "Safari"
+        browser_version = _ua_version(ua, r"Version/([\d.]+)")
     else:
         browser = "Other"
-    return {
+        browser_version = None
+    os_version = _ua_version(
+        ua,
+        r"Windows NT ([\d.]+)",
+        r"Mac OS X ([\d_.]+)",
+        r"(?:iPhone|CPU) OS ([\d_.]+)",
+        r"Android ([\d.]+)",
+    )
+    device = {
         "deviceType": device_type,
         "platform": "Web",
         "operatingSystem": operating_system,
         "browser": browser,
     }
+    # The build the learner is actually running, set by the deploy pipeline.
+    # Absent (a local run) it is left out — a made-up version is worse than none.
+    for key, value in (
+        ("osVersion", os_version),
+        ("browserVersion", browser_version),
+        ("applicationVersion", os.getenv("APP_VERSION", "").strip()),
+    ):
+        if value:
+            device[key] = value
+    return device
 
 
 @router.post("/login")
