@@ -82,14 +82,11 @@ def is_embeddable(player_url: str) -> bool:
 def _session_state_updates(
     unit: dict[str, Any], component: dict[str, Any], prior_state: dict[str, Any], restart: bool
 ) -> dict[str, Any]:
-    """Keep the live question on ordinary same-component relaunches."""
+    """Clear the prior launch position until the new launch reports its screen."""
     updates: dict[str, Any] = {
         "current_state.unit_id": unit["id"],
         "current_state.component_id": component["id"],
     }
-    is_same_component = prior_state.get("component_id") == component["id"]
-    if not restart and is_same_component:
-        return updates
     updates.update({
         "current_state.item_id": None,
         "current_state.question_id": None,
@@ -98,6 +95,7 @@ def _session_state_updates(
         "current_state.praised_screens": [],
         "current_state.scored_screens": [],
         "current_state.learning_choice": None,
+        "current_state.item_generation": 0,
         "current_state.at": None,
     })
     return updates

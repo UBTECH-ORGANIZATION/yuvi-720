@@ -329,7 +329,8 @@ export async function requestVisualization(
   assistantText: string,
   mode: VisualMode,
   language: string,
-  conversationId: string = 'default'
+  conversationId: string = 'default',
+  assistantMessageId?: string,
 ): Promise<CoachVisual | null> {
   const result = await apiPost<{ visual: CoachVisual | null }>('/api/agent/visualize', {
     user_message: userMessage,
@@ -337,6 +338,7 @@ export async function requestVisualization(
     mode,
     language,
     conversation_id: conversationId,
+    assistant_message_id: assistantMessageId,
   })
   return result.visual ?? null
 }
@@ -435,6 +437,11 @@ export interface CoachSupportState {
   video_summary_used: boolean
   /** True when the learner has already received a visual for this video item. */
   video_visual_used: boolean
+  /** Bumped by the backend when the CURRENT item re-`initialized` mid-visit —
+   * the only signal that a screen's embedded video moved to its next clip
+   * without the catalog item id changing. Combine with `item` to key per-clip
+   * support state (`item|generation`), so clip 2 re-arms the buttons clip 1 used. */
+  item_generation?: number
   /** `item|question` (and bare `item`) → its 1-based question number in this
    * component, from the catalog. Lets the chat title a thread with the number
    * the learner sees. Absent when the catalog has no snapshot. */

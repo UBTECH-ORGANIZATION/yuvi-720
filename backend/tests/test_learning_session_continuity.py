@@ -1,4 +1,4 @@
-"""Learning session relaunches preserve the Coach's live question context."""
+"""A new provider launch must not expose the prior launch's Coach context."""
 
 import unittest
 
@@ -15,13 +15,11 @@ PRIOR_STATE = {
 
 
 class LearningSessionContinuityTests(unittest.TestCase):
-    def test_same_component_relaunch_preserves_current_question(self):
+    def test_same_component_relaunch_clears_current_question(self):
         updates = _session_state_updates(UNIT, COMPONENT, PRIOR_STATE, restart=False)
 
-        self.assertEqual(updates, {
-            "current_state.unit_id": "unit-1",
-            "current_state.component_id": "component-1",
-        })
+        self.assertIsNone(updates["current_state.item_id"])
+        self.assertIsNone(updates["current_state.question_id"])
 
     def test_explicit_redo_resets_current_question(self):
         updates = _session_state_updates(UNIT, COMPONENT, PRIOR_STATE, restart=True)

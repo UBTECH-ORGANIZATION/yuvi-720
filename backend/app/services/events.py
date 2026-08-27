@@ -1391,8 +1391,23 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
             # two questions later. (The `selected` branch below re-sets it in the
             # same update when the arrival IS the choice.)
             set_updates["current_state.learning_choice"] = None
+            # A new screen starts its media at generation 0 (see below).
+            set_updates["current_state.item_generation"] = 0
         elif incoming_question is not None:
             set_updates["current_state.question_id"] = incoming_question
+        elif event.get("verb") == "initialized":
+            # A screen with an embedded video playlist reuses the SAME catalog
+            # item id for every clip (Kata never names the clip itself — see
+            # `_reconcile_sub_item_id`): `played`/`paused` always target the
+            # component, not the item, and repeated `initialized` statements for
+            # this item are byte-identical bar their timestamp. The only signal
+            # that a NEW clip started (not a rewind of the current one) is this
+            # screen re-`initialized`-ing while it is already the current item.
+            # Bump a generation counter so the client can re-arm per-clip support
+            # (video summary / visual) without mistaking it for a different item.
+            set_updates["current_state.item_generation"] = (
+                prior_state.get("item_generation") or 0
+            ) + 1
         # else: same screen, no question (bare re-emit) — keep sticky question_id.
     elif event.get("question_id") and not pointer_is_stale:
         set_updates["current_state.question_id"] = event["question_id"]

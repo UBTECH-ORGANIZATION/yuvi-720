@@ -171,6 +171,11 @@ async function streamWithRetry(run: () => Promise<void>, hasOutput: () => boolea
 
 export type CompanionActivity = 'idle' | 'thinking' | 'speaking'
 
+interface VideoSupportUsed {
+  summary: boolean
+  visual: boolean
+}
+
 interface CompanionContextValue {
   isOpen: boolean
   isOpening: boolean
@@ -306,6 +311,13 @@ function introParts(key: string | null | undefined): { item: string; question: s
   const question = raw.includes('/') ? raw.replace(/\/+$/, '').split('/').pop() || raw : raw
   return { item: parts[1] || '', question }
 }
+// A screen with an embedded video playlist reuses the SAME catalog item id for
+// every clip — Kata never names the clip itself, so `item` alone cannot key
+// per-clip support state. `item_generation` (bumped by the backend when the
+// item re-`initialized` mid-visit) disambiguates clip 2 from clip 1.
+function videoItemKey(item: string, generation: number): string {
+  return `${item}#${generation}`
+}
 function itemHasAnyQuestionIntro(introducedQuestions: Set<string>, item: string): boolean {
   const prefix = `${item}|`
   for (const k of introducedQuestions) if (k.startsWith(prefix)) return true
@@ -398,8 +410,12 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0)
   const [disclosure, setDisclosure] = useState<string | null>(null)
   const [supportUsed, setSupportUsed] = useState({
-    hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 1, explanation: false, videoSummary: false, videoVisual: false,
+    hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 1, explanation: false,
   })
+  // Video support is a one-time affordance for each catalog item during this
+  // browser visit. A component may contain several videos, so component id is
+  // too broad a key; `question_key` supplies the current item id.
+  const [videoSupportByItem, setVideoSupportByItem] = useState<Record<string, VideoSupportUsed>>({})
   const [questionOrdinals, setQuestionOrdinals] = useState<Record<string, number>>({})
   const [questionParts, setQuestionParts] = useState<Record<string, number>>({})
   const [teachingItems, setTeachingItems] = useState<string[]>([])
@@ -414,6 +430,11 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const supportUsedRef = useRef(supportUsed)
   useEffect(() => { supportUsedRef.current = supportUsed }, [supportUsed])
   const [currentQuestionKey, setCurrentQuestionKey] = useState<string | null>(null)
+  // The active item's video generation (see `videoItemKey`). Read from a ref in
+  // click handlers so they never act on a stale clip after a fast re-init, and
+  // mirrored to state so the rendered support flags follow it too.
+  const itemGenerationRef = useRef(0)
+  const [itemGeneration, setItemGeneration] = useState(0)
   const [explainerOpen, setExplainerOpen] = useState(false)
   const [pendingAlternative, setPendingAlternative] = useState<TriggerAlternative | null>(null)
   // Bumped when the lesson page creates a provider session. Every provider
@@ -581,7 +602,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     welcomedThreadsRef.current = new Set()
     welcomedEpochRef.current = -1
     setPendingAlternative(null)
-    setSupportUsed({ hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 3, explanation: false, videoSummary: false, videoVisual: false })
+    setSupportUsed({ hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 3, explanation: false })
   }, [activityScoped, surface.component_id, surface.unit_id])
 
   const nextId = () => `live-${Date.now()}-${counter.current++}`
@@ -919,7 +940,9 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         await selectConversation(conversation.id)
         return
       }
-      const existingEmpty = conversations.find((item) => item.message_count === 0)
+      const existingEmpty = conversations.find(
+        (item) => item.message_count === 0 && item.id !== activeConversationId
+      )
       if (existingEmpty) {
         await selectConversation(existingEmpty.id)
         return
@@ -1313,7 +1336,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     }
     if (source === 'push') {
       pushSeqRef.current += 1
-      setSupportUsed({ hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 1, explanation: false, videoSummary: false, videoVisual: false })   // poll is authoritative
+      setSupportUsed({ hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 1, explanation: false })   // poll is authoritative
     }
     activitySeqRef.current += 1
     maybeEnqueueIntro(key)
@@ -1335,10 +1358,6 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         hintLevel: state.hint_level,
         maxHintLevel: state.max_hint_level,
         explanation: state.explanation_used,
-        // These actions are one-use only during the active UI visit. They are
-        // intentionally absent from learner history and are reset on re-entry.
-        videoSummary: current.videoSummary,
-        videoVisual: current.videoVisual,
       }))
       // The learner's own question numbering, straight from the catalog, so a
       // chat thread can be titled "שאלה 3" because it IS question 3 of the
@@ -1346,6 +1365,8 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       if (state.question_ordinals) setQuestionOrdinals(state.question_ordinals)
       if (state.question_parts) setQuestionParts(state.question_parts)
       if (state.teaching_items) setTeachingItems(state.teaching_items)
+      itemGenerationRef.current = state.item_generation ?? 0
+      setItemGeneration(itemGenerationRef.current)
       if (state.items) {
         const kinds: Record<string, LessonItemKind> = {}
         const media: Record<string, string> = {}
@@ -1373,7 +1394,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!activityScoped) {
-      setSupportUsed({ hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 3, explanation: false, videoSummary: false, videoVisual: false })
+      setSupportUsed({ hint: false, contentHint: false, hintLevel: 0, maxHintLevel: 3, explanation: false })
       currentQuestionKeyRef.current = null
       setCurrentQuestionKey(null)
       return
@@ -1413,8 +1434,20 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           hint: current.hintLevel > 1,
         }
         : support === 'explanation' ? { ...current, explanation: false }
-          : support === 'video_summary' ? { ...current, videoSummary: false }
-            : support === 'video_visual' ? { ...current, videoVisual: false } : current)
+          : current)
+      if (support === 'video_summary' || support === 'video_visual') {
+        const item = introParts(action.targetQuestionKey).item
+        if (item) {
+          const key = videoItemKey(item, itemGenerationRef.current)
+          setVideoSupportByItem((current) => ({
+            ...current,
+            [key]: {
+              ...current[key],
+              ...(support === 'video_summary' ? { summary: false } : { visual: false }),
+            },
+          }))
+        }
+      }
       return
     }
     messageRequest.current += 1
@@ -1484,10 +1517,13 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   }, [completeAssistant, ensureConversationId, language, reloadHistory, surface, syncSupportState])
 
   const requestSupport = useCallback(async (support: CoachSupportMode) => {
+    const videoItem = introParts(currentQuestionKeyRef.current).item
+    const videoKey = videoItem ? videoItemKey(videoItem, itemGenerationRef.current) : null
+    const videoSupport = videoKey ? videoSupportByItem[videoKey] : undefined
     if (support === 'hint'
       ? supportUsed.hintLevel >= supportUsed.maxHintLevel
       : support === 'explanation' ? supportUsed.explanation
-        : support === 'video_summary' ? supportUsed.videoSummary : supportUsed.videoVisual) return
+        : support === 'video_summary' ? videoSupport?.summary : videoSupport?.visual) return
     // Optimistic button feedback + dup-guard at enqueue (server also 409s a dup).
     setSupportUsed((current) => support === 'hint'
       ? {
@@ -1496,16 +1532,25 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         hintLevel: Math.min(current.maxHintLevel, current.hintLevel + 1),
       }
       : support === 'explanation' ? { ...current, explanation: true }
-        : support === 'video_summary' ? { ...current, videoSummary: true }
-          : { ...current, videoVisual: true })
+        : current)
+    if ((support === 'video_summary' || support === 'video_visual') && videoKey) {
+      setVideoSupportByItem((current) => ({
+        ...current,
+        [videoKey]: {
+          ...current[videoKey],
+          ...(support === 'video_summary' ? { summary: true } : { visual: true }),
+        },
+      }))
+    }
     activitySeqRef.current += 1
     enqueueChatAction({ kind: 'support', support, targetQuestionKey: currentQuestionKeyRef.current }, { front: true })
-  }, [enqueueChatAction, supportUsed])
+  }, [enqueueChatAction, supportUsed, videoSupportByItem])
 
   // On-demand visual: the learner tapped "show me a video / image" under a
   // text-only reply. We plan + render from that message's text plus its
-  // prompting user turn. Not persisted to history — regenerated on demand.
+  // prompting user turn, then retain it on that assistant message.
   const requestVisual = useCallback(async (messageId: string, mode: VisualMode) => {
+    if (activityScoped) return
     const current = messagesRef.current
     const index = current.findIndex((message) => message.id === messageId)
     if (index === -1) return
@@ -1515,6 +1560,10 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     for (let i = index - 1; i >= 0; i -= 1) {
       if (current[i].role === 'user' && current[i].text) { userMessage = current[i].text; break }
     }
+    // This request renders an attachment on an existing reply; it is not a new
+    // Yuvi chat turn, so leave the global avatar idle and show only the
+    // message-level visual preparation status.
+    setActivity('idle')
     setMessages((prev) =>
       prev.map((message) =>
         message.id === messageId ? { ...message, isVisualizing: true, visualFailed: false } : message
@@ -1526,7 +1575,8 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         assistantText,
         mode,
         language,
-        activeConversationId || 'default'
+        activeConversationId || 'default',
+        messageId,
       )
       setMessages((prev) =>
         prev.map((message) =>
@@ -1544,7 +1594,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         )
       )
     }
-  }, [activeConversationId, language])
+  }, [activeConversationId, activityScoped, language])
 
   // Proactive nudges stream into the active thread without taking control of
   // the screen. Only the learner-visible assistant message enters history.
@@ -1812,6 +1862,15 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // On a real question screen (item part of the key present), the per-question
   // intro replaces the generic greeting; on the cover frame it stays.
   const onQuestionFrame = activityScoped && Boolean(currentQuestionKey && currentQuestionKey.split('|')[1])
+  const currentVideoItem = introParts(currentQuestionKey).item
+  const currentVideoSupport = currentVideoItem
+    ? videoSupportByItem[videoItemKey(currentVideoItem, itemGeneration)]
+    : undefined
+  const displayedSupportUsed = {
+    ...supportUsed,
+    videoSummary: currentVideoSupport?.summary ?? false,
+    videoVisual: currentVideoSupport?.visual ?? false,
+  }
 
   return (
     <CompanionContext.Provider
@@ -1844,7 +1903,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           && !conversations.some((conversation) => conversation.message_count === 0),
         send,
         requestSupport,
-        supportUsed,
+        supportUsed: displayedSupportUsed,
         questionOrdinals,
         questionParts,
         teachingItems,

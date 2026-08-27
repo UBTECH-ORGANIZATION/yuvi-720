@@ -393,6 +393,7 @@ class VisualizeRequest(BaseModel):
     mode: Literal["image", "video"] = "image"
     language: str = Field(default="he", max_length=8)
     conversation_id: str = Field(default="default", min_length=1, max_length=120)
+    assistant_message_id: str | None = Field(default=None, min_length=3, max_length=120)
 
 
 class CompetencyChatRequest(BaseModel):
@@ -1198,6 +1199,18 @@ async def visualize(request: VisualizeRequest, session=Depends(require_learner_s
     except Exception as exc:  # pragma: no cover - optional visual support
         print(f"⚠️ On-demand visual failed: {exc}")
         return JSONResponse(content={"visual": None})
+    if request.assistant_message_id:
+        attached = await sessions.attach_visual(
+            learner_id,
+            conversation_id,
+            request.assistant_message_id,
+            visual,
+            request.assistant_text,
+            "",
+            role="general_companion",
+        )
+        if not attached:
+            print(f"⚠️ On-demand visual was rendered but not attached to {request.assistant_message_id}")
     return JSONResponse(content={"visual": visual})
 
 
@@ -1266,6 +1279,11 @@ async def coach_support_state(
         # history. The browser keeps these flags in its in-memory UI state.
         "video_summary_used": False,
         "video_visual_used": False,
+        # Bumped when this SAME catalog item re-`initialized` mid-visit — the
+        # only signal a screen's embedded video moved to its next clip (see
+        # events._apply_event_to_brain). The client keys its per-video support
+        # flags by item + generation so clip 2 re-arms the buttons clip 1 used.
+        "item_generation": current.get("item_generation") or 0,
         "question_ordinals": ordinals,
         # Which סעיף of a shared screen this is — present only where the screen
         # really does hold several, so the chat never invents a part.
