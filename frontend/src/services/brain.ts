@@ -213,17 +213,6 @@ export function getCoachBundle(learnerId: string, signal?: AbortSignal) {
   )
 }
 
-/** Create a learner self-goal derived from an activeness domain (mirrors to F4 goals). */
-export function createActivenessGoal(
-  learnerId: string,
-  payload: { domain: string; text: string },
-) {
-  return apiPost<{ id: string; text: string; domain: string }>(
-    `/api/brain/${encodeURIComponent(learnerId)}/activeness-goal`,
-    payload,
-  )
-}
-
 /** Learner updates a goal's progress from the "My goals" card (reports MoE
  *  student-goal updated/completed). */
 export function updateGoalStatus(

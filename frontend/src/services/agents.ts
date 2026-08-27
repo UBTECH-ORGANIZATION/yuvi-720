@@ -325,11 +325,6 @@ export async function streamAgent(
   }
 }
 
-export interface CompetencyChatMessage {
-  role: 'user' | 'assistant'
-  text: string
-}
-
 export type VisualMode = 'image' | 'video'
 
 /** On-demand visual: the learner asked to see a text-only reply as an image or
@@ -352,38 +347,6 @@ export async function requestVisualization(
     assistant_message_id: assistantMessageId,
   })
   return result.visual ?? null
-}
-
-/** Why did one activeness domain move since the learner last opened the map?
- * Returns a short verbal, non-numeric blurb (or null when none could be built). */
-export async function explainActivenessChange(
-  competency: string,
-  direction: 'up' | 'down',
-  language: string,
-): Promise<string | null> {
-  const result = await apiPost<{ text: string | null }>('/api/agent/activeness/change-explain', {
-    competency,
-    direction,
-    language,
-  })
-  return result.text ?? null
-}
-
-/** Ephemeral learning-map topic chat: the transcript lives only in the client
- * (never saved to conversation history); memory capture still runs server-side. */
-export function streamCompetencyChat(
-  competency: string,
-  messages: CompetencyChatMessage[],
-  conversationId: string,
-  language: string,
-  handlers: CoachStreamHandlers
-): Promise<void> {
-  return streamAgent('/api/agent/competency-chat', {
-    competency,
-    messages,
-    conversation_id: conversationId,
-    language,
-  }, handlers)
 }
 
 /** Silence that means a learner-facing stream has died rather than paused. The

@@ -17,7 +17,6 @@ import { DashboardLoadingScreen } from './DashboardLoadingScreen'
 import { ActivenessWeb } from './ActivenessWeb'
 import { MyGoals } from './MyGoals'
 import { RecentLessons } from './RecentLessons'
-import { ActivenessMapSection } from './ActivenessMapSection'
 import { StudentConnectionsPane } from './StudentConnectionsPane'
 import { StudentCalendarPage } from './StudentCalendarPage'
 import { UpcomingStrip } from './UpcomingStrip'
@@ -216,10 +215,6 @@ export function StudentDashboardPage() {
               <Icon name="check" size={14} />
               {t('sdash.live')}
             </p>
-            <ActivenessMapSection
-              competencies={dashboard.competencies}
-              studentName={studentName}
-            />
           </>
         )}
       </main>
