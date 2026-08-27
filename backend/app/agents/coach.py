@@ -914,13 +914,13 @@ async def _stream_coach_model(
 ) -> AsyncGenerator[str, None]:
     """Stream through Agent Framework without bypassing the tracked APIM lane."""
     tier = _coach_tier()
-    client = build_chat_client(usage_context, model_tier=tier, max_tokens=700)
+    client = build_chat_client(usage_context, model_tier=tier, max_tokens=800)
     if client is None:
         async for chunk in call_llm_stream(
             messages,
             usage_context=usage_context,
             model_tier=tier,
-            max_tokens=700,
+            max_tokens=800,
         ):
             yield chunk
         return
@@ -946,7 +946,7 @@ async def _stream_coach_model(
                 messages,
                 usage_context=usage_context,
                 model_tier=tier,
-                max_tokens=700,
+                max_tokens=800,
             ):
                 yield chunk
 

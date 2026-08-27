@@ -311,10 +311,9 @@ function introParts(key: string | null | undefined): { item: string; question: s
   const question = raw.includes('/') ? raw.replace(/\/+$/, '').split('/').pop() || raw : raw
   return { item: parts[1] || '', question }
 }
-// A screen with an embedded video playlist reuses the SAME catalog item id for
-// every clip — Kata never names the clip itself, so `item` alone cannot key
-// per-clip support state. `item_generation` (bumped by the backend when the
-// item re-`initialized` mid-visit) disambiguates clip 2 from clip 1.
+// Kata reuses one catalog item for every clip in an embedded playlist. The
+// backend generation advances on provider clip-boundary events, so support used
+// for clip 1 does not consume the one-time affordances for clip 2.
 function videoItemKey(item: string, generation: number): string {
   return `${item}#${generation}`
 }
@@ -430,9 +429,6 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const supportUsedRef = useRef(supportUsed)
   useEffect(() => { supportUsedRef.current = supportUsed }, [supportUsed])
   const [currentQuestionKey, setCurrentQuestionKey] = useState<string | null>(null)
-  // The active item's video generation (see `videoItemKey`). Read from a ref in
-  // click handlers so they never act on a stale clip after a fast re-init, and
-  // mirrored to state so the rendered support flags follow it too.
   const itemGenerationRef = useRef(0)
   const [itemGeneration, setItemGeneration] = useState(0)
   const [explainerOpen, setExplainerOpen] = useState(false)

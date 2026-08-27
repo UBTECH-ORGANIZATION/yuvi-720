@@ -1,12 +1,10 @@
 """A screen's embedded video can hold several clips under ONE catalog item id.
 
 Live proof (27/08, `…-01-01-003`, session `fDhHX_l_2ruB-F0A`): `played`/`paused`
-always target the COMPONENT (no clip id anywhere), and the three `initialized`
-statements this item sent in one visit are byte-identical bar their timestamp.
-The only signal a NEW clip started — not a rewind of the current one — is this
-same item re-`initialized` while it is already the current item. That bumps
-`current_state.item_generation` so the client can re-arm per-clip support
-(video summary / visual) without a distinct catalog item id.
+always target the COMPONENT (no clip id anywhere). Kata variants signal a new
+clip either by re-`initialized` on the current item or by `completed` on that
+same video item after an intermediate question. Both bump `item_generation` so
+the client can re-arm per-clip support without a distinct catalog item id.
 """
 
 from __future__ import annotations
@@ -85,6 +83,54 @@ class GenerationFoldTests(unittest.IsolatedAsyncioTestCase):
             prior,
         )
         self.assertEqual(updates.get("current_state.item_generation"), 2)
+
+    async def test_completing_checkpoint_on_current_video_bumps_generation(self):
+        """Observed live: q1 completes and clip 2 appears without another initialized."""
+        prior = {"component_id": C, "item_id": f"{C}-003", "question_id": "q1", "item_generation": 0}
+        with mock.patch.object(
+            kata_catalog, "item_profile", return_value={"media_format": "video"}
+        ):
+            updates = await self._fold(
+                {
+                    "learner_id": "t", "launch": C, "verb": "completed",
+                    "sub_item_id": f"{C}-003", "question_id": None,
+                },
+                prior,
+            )
+        self.assertEqual(updates.get("current_state.item_generation"), 1)
+        self.assertTrue(updates.get("current_state.video_boundary_from_completion"))
+
+    async def test_reinit_after_completed_boundary_does_not_double_bump(self):
+        prior = {
+            "component_id": C,
+            "item_id": f"{C}-003",
+            "question_id": "q1",
+            "item_generation": 1,
+            "video_boundary_from_completion": True,
+        }
+        updates = await self._fold(
+            {
+                "learner_id": "t", "launch": C, "verb": "initialized",
+                "sub_item_id": f"{C}-003", "question_id": None,
+            },
+            prior,
+        )
+        self.assertNotIn("current_state.item_generation", updates)
+        self.assertFalse(updates.get("current_state.video_boundary_from_completion"))
+
+    async def test_completing_current_non_video_does_not_bump_generation(self):
+        prior = {"component_id": C, "item_id": f"{C}-004", "question_id": "q1", "item_generation": 0}
+        with mock.patch.object(
+            kata_catalog, "item_profile", return_value={"media_format": "interactive-content"}
+        ):
+            updates = await self._fold(
+                {
+                    "learner_id": "t", "launch": C, "verb": "completed",
+                    "sub_item_id": f"{C}-004", "question_id": None,
+                },
+                prior,
+            )
+        self.assertNotIn("current_state.item_generation", updates)
 
     async def test_answering_the_same_item_does_not_bump_generation(self):
         """Only a fresh `initialized` is evidence of a new clip — an `answered`

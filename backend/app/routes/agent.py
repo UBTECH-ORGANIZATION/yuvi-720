@@ -1279,10 +1279,10 @@ async def coach_support_state(
         # history. The browser keeps these flags in its in-memory UI state.
         "video_summary_used": False,
         "video_visual_used": False,
-        # Bumped when this SAME catalog item re-`initialized` mid-visit — the
-        # only signal a screen's embedded video moved to its next clip (see
-        # events._apply_event_to_brain). The client keys its per-video support
-        # flags by item + generation so clip 2 re-arms the buttons clip 1 used.
+        # Bumped when this SAME video item signals a clip boundary by either
+        # re-`initialized` or `completed` (see events._apply_event_to_brain).
+        # The client keys its per-video support flags by item + generation so
+        # clip 2 re-arms the buttons clip 1 used.
         "item_generation": current.get("item_generation") or 0,
         "question_ordinals": ordinals,
         # Which סעיף of a shared screen this is — present only where the screen

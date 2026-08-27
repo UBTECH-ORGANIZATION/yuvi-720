@@ -437,10 +437,10 @@ export interface CoachSupportState {
   video_summary_used: boolean
   /** True when the learner has already received a visual for this video item. */
   video_visual_used: boolean
-  /** Bumped by the backend when the CURRENT item re-`initialized` mid-visit —
-   * the only signal that a screen's embedded video moved to its next clip
-   * without the catalog item id changing. Combine with `item` to key per-clip
-   * support state (`item|generation`), so clip 2 re-arms the buttons clip 1 used. */
+  /** Bumped by the backend when the CURRENT video item signals a clip boundary
+   * by re-initializing or completing without changing its catalog item id.
+   * Combine with `item` to key per-clip support state (`item|generation`), so
+   * clip 2 re-arms the buttons clip 1 used. */
   item_generation?: number
   /** `item|question` (and bare `item`) → its 1-based question number in this
    * component, from the catalog. Lets the chat title a thread with the number
