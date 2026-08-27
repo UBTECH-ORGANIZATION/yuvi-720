@@ -1895,8 +1895,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         hasMoreMessages,
         historyError,
         canStartNewConversation: !activityScoped
-          && !isLoadingConversations
-          && !conversations.some((conversation) => conversation.message_count === 0),
+          && !isLoadingConversations,
         send,
         requestSupport,
         supportUsed: displayedSupportUsed,
