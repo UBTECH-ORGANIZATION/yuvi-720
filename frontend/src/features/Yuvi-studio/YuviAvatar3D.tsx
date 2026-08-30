@@ -35,7 +35,7 @@ export interface YuviAvatarHandle {
   /** Glide the studio camera to the part of Yuvi the learner is editing. */
   focus: (view: YuviFocus) => void
   /** Send Yuvi walking to a spot on the room floor. */
-  walkTo: (x: number, z: number) => void
+  walkTo: (x: number, z: number, station?: LabRoomZoneId | null) => void
   /** Walk Yuvi back onto the upgrade platform. */
   recenter: () => void
 }
@@ -92,6 +92,8 @@ interface Props {
   firstPerson?: boolean
   /** Fires when Yuvi steps onto or off one of the room's stations. */
   onZoneChange?: (zone: LabRoomZoneId | null) => void
+  /** Reports the explicit station destination of an automated walk. */
+  onStationIntentChange?: (zone: LabRoomZoneId | null) => void
   /** The learner's placed props. A new array identity re-syncs the room. */
   roomItems?: RoomItem[]
   /** Where the two walk-in stations stand. A new identity re-syncs them. */
@@ -135,7 +137,7 @@ function mixWhite([r, g, b]: number[], t: number): [number, number, number] {
 const rgba = ([r, g, b]: number[], a: number) => `rgba(${r}, ${g}, ${b}, ${a})`
 
 export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAvatar3D(
-  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard', roam = false, firstPerson = false, onZoneChange, roomItems, stations = null, roomStyle = null, placing = null, placeTarget = null, onPlaceAt, lockRoam = false, onItemMenu },
+  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard', roam = false, firstPerson = false, onZoneChange, onStationIntentChange, roomItems, stations = null, roomStyle = null, placing = null, placeTarget = null, onPlaceAt, lockRoam = false, onItemMenu },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null)
@@ -163,6 +165,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   const roamRef = useRef(roam)
   const firstPersonRef = useRef(firstPerson)
   const onZoneChangeRef = useRef(onZoneChange)
+  const onStationIntentChangeRef = useRef(onStationIntentChange)
   const roomItemsRef = useRef(roomItems)
   const stationsRef = useRef(stations)
   const roomStyleRef = useRef(roomStyle)
@@ -199,6 +202,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   useEffect(() => { roamRef.current = roam }, [roam])
   useEffect(() => { firstPersonRef.current = firstPerson }, [firstPerson])
   useEffect(() => { onZoneChangeRef.current = onZoneChange }, [onZoneChange])
+  useEffect(() => { onStationIntentChangeRef.current = onStationIntentChange }, [onStationIntentChange])
   useEffect(() => { roomItemsRef.current = roomItems }, [roomItems])
   useEffect(() => { stationsRef.current = stations }, [stations])
   useEffect(() => { roomStyleRef.current = roomStyle }, [roomStyle])
@@ -214,7 +218,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     setVariant: (variant, animate = true) => controllerRef.current?.setVariant(variant, animate),
     applyDesign: (design, animate = false) => controllerRef.current?.applyDesign(design, animate),
     focus: (view) => controllerRef.current?.focus(view),
-    walkTo: (x, z) => controllerRef.current?.walkTo(x, z),
+    walkTo: (x, z, station = null) => controllerRef.current?.walkTo(x, z, station),
     recenter: () => controllerRef.current?.recenter(),
   }), [])
 
@@ -390,6 +394,9 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     const roamSide = new THREE.Vector3()
     let roamSpeed = 0               // eased 0..1, drives the gait
     let roamZone: LabRoomZoneId | null = null
+    // A station button is an explicit destination. Passing another station on
+    // the way there must not replace the panel the learner asked to open.
+    let requestedZone: LabRoomZoneId | null = null
     // Set when he has just stepped onto a station and still has to turn around.
     let faceLearnerPending = false
     let deckBlend = roam ? 0 : 1    // 1 = on the platform, 0 = on the floor
@@ -435,7 +442,9 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       point.y = THREE.MathUtils.clamp(point.y, walkLimits.minZ, walkLimits.maxZ)
     }
 
-    const walkTo = (x: number, z: number) => {
+    const walkTo = (x: number, z: number, station: LabRoomZoneId | null = null) => {
+      requestedZone = station
+      onStationIntentChangeRef.current?.(station)
       roamTarget.set(x, z)
       resolveCollisions(roamTarget)
     }
@@ -1276,6 +1285,8 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
           if (roamDir.lengthSq() > 1e-6) {
             roamDir.normalize()
             roamTarget.copy(roamPos)                     // keys win over the last click
+            requestedZone = null
+            onStationIntentChangeRef.current?.(null)
             roamStep.set(roamDir.x, roamDir.z).multiplyScalar(ROAM_SPEED * dt)
           } else {
             roamStep.set(roamTarget.x - roamPos.x, roamTarget.y - roamPos.y)
@@ -1301,7 +1312,8 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
           for (const zone of room?.zones ?? []) {
             if (Math.hypot(roamPos.x - zone.x, roamPos.y - zone.z) <= zone.radius) { nextZone = zone.id; break }
           }
-          if (nextZone !== roamZone) {
+          const passingUnrequestedZone = Boolean(requestedZone && nextZone && nextZone !== requestedZone)
+          if (!passingUnrequestedZone && nextZone !== roamZone) {
             roamZone = nextZone
             room?.setZoneHighlight(nextZone)
             onZoneChangeRef.current?.(nextZone)
@@ -1310,7 +1322,11 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
               // of the way to the middle instead of stopping wherever he
               // happened to cross the ring.
               const zone = room?.zones.find((entry) => entry.id === nextZone)
-              if (zone) { heldKeys.clear(); walkTo(zone.x, zone.z) }
+              if (zone) { heldKeys.clear(); walkTo(zone.x, zone.z, requestedZone) }
+            }
+            if (nextZone === requestedZone) {
+              requestedZone = null
+              onStationIntentChangeRef.current?.(null)
             }
             faceLearnerPending = Boolean(nextZone)
           }

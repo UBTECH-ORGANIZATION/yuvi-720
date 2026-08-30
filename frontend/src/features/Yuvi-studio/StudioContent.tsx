@@ -134,6 +134,7 @@ export function StudioContent({
   // Walking the hall from behind Yuvi's eyes. It is a way of moving, not a
   // place to be, so every station the learner walks into hands the camera back.
   const [firstPerson, setFirstPerson] = useState(false)
+  const requestedStationRef = useRef<'avatar' | 'room' | null>(null)
   const [placing, setPlacing] = useState<YuviPlacing | null>(null)
   // Right-clicking a prop opens its own menu over it, Sims-style.
   const [propMenu, setPropMenu] = useState<PropMenuState | null>(null)
@@ -251,6 +252,8 @@ export function StudioContent({
 
   /** Stepping onto a station opens it; stepping off closes it again. */
   const handleZoneChange = (zone: 'avatar' | 'room' | null) => {
+    if (requestedStationRef.current && zone !== requestedStationRef.current) return
+    if (zone === requestedStationRef.current) requestedStationRef.current = null
     setPropMenu(null)
     if (zone === 'avatar') {
       setPlacing(null)
@@ -273,6 +276,25 @@ export function StudioContent({
     setPlacing(null)
     setPropMenu(null)
     avatarRef.current?.walkTo(STEP_OFF[0], STEP_OFF[1])
+  }
+  const goToStation = (station: 'avatar' | 'room') => {
+    requestedStationRef.current = station
+    setPlacing(null)
+    setPropMenu(null)
+    setFirstPerson(false)
+    setMode(station)
+    if (station === 'avatar') {
+      avatarRef.current?.focus(FOCUS_BY_TAB[activeTab])
+      avatarRef.current?.walkTo(
+        roomState.room.stations.avatar.x,
+        roomState.room.stations.avatar.z,
+        station,
+      )
+      return
+    }
+    const spot = roomStandingSpot(roomState.room.stations.room)
+    avatarRef.current?.focus('room')
+    avatarRef.current?.walkTo(spot.x, spot.z, station)
   }
 
   // ── Walkthrough actions ──
@@ -641,6 +663,7 @@ export function StudioContent({
               roam
               firstPerson={firstPerson && mode === 'roam' && !tutorial}
               onZoneChange={handleZoneChange}
+              onStationIntentChange={(station) => { requestedStationRef.current = station }}
               roomItems={visibleRoomItems}
               stations={roomState.room.stations}
               roomStyle={roomStyle}
@@ -672,7 +695,7 @@ export function StudioContent({
             <button
               type="button"
               className="ys-station"
-              onClick={() => avatarRef.current?.walkTo(roomState.room.stations.avatar.x, roomState.room.stations.avatar.z)}
+              onClick={() => goToStation('avatar')}
             >
               <Icon name="spark" size={16} />
               <span>{t('YuviStudio.zone.avatar')}</span>
@@ -680,10 +703,7 @@ export function StudioContent({
             <button
               type="button"
               className="ys-station"
-              onClick={() => {
-                const spot = roomStandingSpot(roomState.room.stations.room)
-                avatarRef.current?.walkTo(spot.x, spot.z)
-              }}
+              onClick={() => goToStation('room')}
             >
               <Icon name="home" size={16} />
               <span>{t('YuviStudio.zone.room')}</span>
