@@ -23,7 +23,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { navigate } from '../../../app/router'
 import {
-  Card, EmptyState, ErrorState, Icon, Panel, SectionHeader, Skeleton, SkeletonCard, StatusPill,
+  Card, EmptyState, ErrorState, Icon, Panel, SkeletonCard, StatusPill,
 } from '../../../components/primitives'
 import { useI18n } from '../../../i18n/I18nProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
@@ -31,12 +31,14 @@ import {
   getGroupLearnings, type LearningRow, type LearningsView,
 } from '../../../services/teacher'
 import { countKey } from '../shared/countLabel'
-import { EvidenceToggle } from '../shared/EvidenceDisclosure'
 import { LearningPreviewDialog } from '../shared/LearningPreviewDialog'
-import { ObjectiveLine } from '../shared/ObjectiveRef'
+import { ObjectiveLine, ObjectiveRef } from '../shared/ObjectiveRef'
 import { subjectLabel } from '../shared/subjectLabel'
 import { agoLabel } from '../live/LiveNow'
-import { byAttention, learningName, needsAttention } from './learningRows'
+import {
+  byAttention, groupByObjective, learningName, needsAttention,
+  type ObjectiveGroup,
+} from './learningRows'
 import './teacher-learnings.css'
 
 /** The bucket for rows whose unit the catalogue does not know. Not an id, so it
@@ -92,6 +94,11 @@ export function TeacherLearningsPage() {
   const [error, setError] = useState(false)
   const [query, setQuery] = useState('')
   const [onlyStarted, setOnlyStarted] = useState(false)
+  /* Which objective the teacher stepped into. The first glance is objective
+     cards; opening one swaps the whole body for its lomdot, with the way back
+     at the top. Route state, deliberately not a route: the way back must also
+     survive nothing — leaving the page and returning starts at the map. */
+  const [openObjective, setOpenObjective] = useState<string | null>(null)
   /* One preview dialog for the whole page; each card only says which lomda. */
   const [preview, setPreview] = useState<{ id: string; title: string } | null>(null)
 
@@ -108,6 +115,10 @@ export function TeacherLearningsPage() {
     return () => { active = false }
   }, [groupId, language])
 
+  /* A different class or a different subject lane is a different map — an open
+     objective from the old one must not keep the teacher trapped inside it. */
+  useEffect(() => { setOpenObjective(null) }, [groupId, subject])
+
   const filtered = useMemo(() => {
     const rows = view?.learnings ?? []
     const needle = query.trim().toLowerCase()
@@ -123,6 +134,39 @@ export function TeacherLearningsPage() {
     })
   }, [view, query, subject, onlyStarted])
 
+  /* The map: one card per objective, grouped under subject headings. */
+  const objectiveGroups = useMemo(() => groupByObjective(filtered), [filtered])
+
+  const drill = useMemo(
+    () => openObjective
+      ? objectiveGroups.find((group) => group.key === openObjective) ?? null
+      : null,
+    [openObjective, objectiveGroups])
+
+  const subjectSections = useMemo(() => {
+    const bySubject = new Map<string, ObjectiveGroup<LearningRow>[]>()
+    for (const group of objectiveGroups) {
+      const key = group.subject ?? ''
+      bySubject.set(key, [...(bySubject.get(key) ?? []), group])
+    }
+    /* The scope's own subject order first — the sections and the chips must
+       tell the same story — then whatever the catalogue knows that the scope
+       does not, the subject-less bucket last. */
+    const known = subjects.filter((entry) => bySubject.has(entry))
+    const extras = [...bySubject.keys()]
+      .filter((entry) => entry && !known.includes(entry)).sort()
+    const order = [...known, ...extras, ...(bySubject.has('') ? [''] : [])]
+    return order.map((entry) => ({
+      subject: entry || null,
+      groups: bySubject.get(entry)!,
+    }))
+  }, [objectiveGroups, subjects])
+
+  /* Inside an objective — or under a search, which cuts across objectives —
+     the body is lomda cards: the pinned went-badly group, then unit sections. */
+  const searching = query.trim() !== ''
+  const visibleRows = drill ? drill.rows : filtered
+
   /* The pinned group: material that went badly, worst first.
      Ranking LEARNINGS is not ranking children — the rows are class-wide counts
      and the payload behind this screen carries no learner ids at all (MoE C5).
@@ -130,7 +174,7 @@ export function TeacherLearningsPage() {
      second list: the same card twice, a screen apart, is the duplication this
      dashboard already removed once from the KPI strip. */
   const attention = useMemo(
-    () => byAttention(filtered.filter(needsAttention)), [filtered])
+    () => byAttention(visibleRows.filter(needsAttention)), [visibleRows])
 
   /* Everything else grouped by unit, units ordered by whichever was worked most
      recently — a teacher scanning mid-term wants live material at the top, not
@@ -138,7 +182,7 @@ export function TeacherLearningsPage() {
   const units = useMemo(() => {
     const pinned = new Set(attention.map((row) => row.component_id))
     const byUnit = new Map<string, { title: string | null; rows: LearningRow[] }>()
-    for (const row of filtered) {
+    for (const row of visibleRows) {
       if (pinned.has(row.component_id)) continue
       // One bucket for everything the catalogue could not place, rather than a
       // section per orphan headed by its own component id.
@@ -156,7 +200,7 @@ export function TeacherLearningsPage() {
           (latest, row) => (row.last_activity_at ?? '') > latest ? row.last_activity_at! : latest, ''),
       }))
       .sort((a, b) => b.lastAt.localeCompare(a.lastAt))
-  }, [filtered, attention])
+  }, [visibleRows, attention])
 
   /* Same frame while loading: the real title, the real search box and the real
      toggle — only the four KPI values and the cards below them are placeholders,
@@ -207,6 +251,59 @@ export function TeacherLearningsPage() {
         <p className="tch-learnings__subtitle">{t('tch.learnings.subtitle')}</p>
       </header>
 
+      {drill ? (
+        /* ── inside one objective: the way back, then a hero naming it ────── */
+        <section className="tch-learnings__drillHead">
+          <button
+            type="button"
+            className="sp-btn sp-btn--ghost sp-btn--sm"
+            onClick={() => setOpenObjective(null)}
+          >
+            <Icon name="chevronLeft" size={15} aria-hidden />
+            {t('tch.learnings.backToObjectives')}
+          </button>
+          <Panel className="tch-learnings__drillCard">
+            <div className="tch-learnings__drillTitles">
+              {/* The title IS the "what does this objective mean" door — one
+                  name, clickable, instead of a heading with the same words
+                  repeated as a link under it. */}
+              <h2 dir="auto">
+                {drill.objectiveId ? (
+                  <ObjectiveRef
+                    objectiveId={drill.objectiveId}
+                    fallback={drill.title ?? undefined}
+                    className="tch-learnings__drillRef"
+                  />
+                ) : (drill.title ?? t('tch.learnings.noObjective'))}
+              </h2>
+              <p className="tch-learnings__drillMeta" dir="auto">
+                {[
+                  subjectLabel(drill.subject, t),
+                  t(countKey('tch.learnings.lomdot', drill.rows.length),
+                    { count: drill.rows.length }),
+                  drill.started
+                    ? t('tch.learnings.objStarted', {
+                        started: drill.started, total: drill.rows.length })
+                    : null,
+                ].filter(Boolean).join(' · ')}
+              </p>
+            </div>
+            {drill.started ? (
+              <div className={`tch-learnings__drillRate is-${rateTone(drill.successRate)}`}>
+                <strong dir="ltr">{ratePercent(drill.successRate)}</strong>
+                <span>{t('tch.kpi.successOf', {
+                  correct: drill.correct, attempts: drill.attempts })}</span>
+              </div>
+            ) : (
+              <p className="tch-learning__idle">
+                <Icon name="clock" size={14} aria-hidden />
+                {t('tch.learnings.objIdle')}
+              </p>
+            )}
+          </Panel>
+        </section>
+      ) : (
+        <>
       {/* ── the class totals over everything they learned ─────────────────── */}
       <section className="tch-stats" aria-label={t('tch.kpi.stripLabel')}>
         <Card className="tch-stat">
@@ -318,41 +415,43 @@ export function TeacherLearningsPage() {
           </button>
         </div>
       </div>
+        </>
+      )}
 
-      {/* ── what to reinforce — the gaps engine's reading of this data ─────── */}
-      {(subject
-        ? view.recommendations.filter((row) => row.subject === subject)
-        : view.recommendations).length ? (
-        <Panel className="tch-learnings__analysis" data-tour="teacher.learningsAnalysis">
-          <SectionHeader
-            title={t('tch.learnings.analysis')}
-            subtitle={t('tch.learnings.analysisSub')}
+      {/* ── the objectives map: the first glance, unless the teacher stepped
+             into one or a search cuts across them ──────────────────────────── */}
+      {!drill && !searching ? (
+        subjectSections.length ? (
+          subjectSections.map((section) => (
+            <section key={section.subject ?? 'none'} className="tch-learnings__unit">
+              <h2 className="tch-learnings__unitTitle" dir="auto">
+                <Icon name="library" size={15} aria-hidden />
+                {section.subject
+                  ? subjectLabel(section.subject, t)
+                  : t('tch.learnings.noSubject')}
+                <span className="tch-learnings__unitCount">{section.groups.length}</span>
+              </h2>
+              <div className="tch-learnings__grid">
+                {section.groups.map((group) => (
+                  <ObjectiveCard
+                    key={group.key}
+                    group={group}
+                    onOpen={() => setOpenObjective(group.key)}
+                  />
+                ))}
+              </div>
+            </section>
+          ))
+        ) : (
+          <EmptyState
+            title={t('tch.learnings.empty')}
+            body={t('tch.learnings.emptyBody')}
           />
-          <ul className="tch-learnings__recs">
-            {/* Narrowed with the rows above, client-side like them: a maths
-                filter with a science "what to reinforce" under it would be the
-                one panel on the screen ignoring the bar. */}
-            {(subject
-              ? view.recommendations.filter((row) => row.subject === subject)
-              : view.recommendations).map((recommendation) => (
-              <li key={`${recommendation.action}:${recommendation.objective_id}`}>
-                <div className="tch-learnings__recRow">
-                  <Icon name="wand" size={15} aria-hidden className="tch-learnings__recIcon" />
-                  <span>
-                    <strong dir="auto">{recommendation.text}</strong>
-                    <span className="tch-learnings__recSep"> — </span>
-                    <bdi dir="auto">{recommendation.label}</bdi>
-                  </span>
-                </div>
-                <EvidenceToggle raw={recommendation.because.raw} />
-              </li>
-            ))}
-          </ul>
-        </Panel>
+        )
       ) : null}
 
       {/* ── what went badly, ahead of the curriculum order ─────────────────── */}
-      {attention.length ? (
+      {(drill || searching) && attention.length ? (
         <section className="tch-learnings__unit tch-learnings__unit--attention">
           <h2 className="tch-learnings__unitTitle" dir="auto">
             <Icon name="alert" size={15} aria-hidden />
@@ -363,35 +462,37 @@ export function TeacherLearningsPage() {
           <div className="tch-learnings__grid">
             {attention.map((row) => (
               <LearningCard key={row.component_id} row={row} groupId={groupId}
-                            onPreview={setPreview} />
+                            onPreview={setPreview} showObjective={!drill} />
             ))}
           </div>
         </section>
       ) : null}
 
       {/* ── the rest, in curriculum order, grouped by unit ─────────────────── */}
-      {units.length || attention.length ? (
-        units.map((unit) => (
-          <section key={unit.id} className="tch-learnings__unit">
-            <h2 className="tch-learnings__unitTitle" dir="auto">
-              <Icon name="library" size={15} aria-hidden />
-              {unit.title ?? t('tch.learnings.noUnit')}
-              <span className="tch-learnings__unitCount">{unit.rows.length}</span>
-            </h2>
-            <div className="tch-learnings__grid">
-              {unit.rows.map((row) => (
-                <LearningCard key={row.component_id} row={row} groupId={groupId}
-                              onPreview={setPreview} />
-              ))}
-            </div>
-          </section>
-        ))
-      ) : (
-        <EmptyState
-          title={query ? t('tch.learnings.noMatches') : t('tch.learnings.empty')}
-          body={query ? t('tch.learnings.noMatchesBody') : t('tch.learnings.emptyBody')}
-        />
-      )}
+      {drill || searching ? (
+        units.length || attention.length ? (
+          units.map((unit) => (
+            <section key={unit.id} className="tch-learnings__unit">
+              <h2 className="tch-learnings__unitTitle" dir="auto">
+                <Icon name="library" size={15} aria-hidden />
+                {unit.title ?? t('tch.learnings.noUnit')}
+                <span className="tch-learnings__unitCount">{unit.rows.length}</span>
+              </h2>
+              <div className="tch-learnings__grid">
+                {unit.rows.map((row) => (
+                  <LearningCard key={row.component_id} row={row} groupId={groupId}
+                                onPreview={setPreview} showObjective={!drill} />
+                ))}
+              </div>
+            </section>
+          ))
+        ) : (
+          <EmptyState
+            title={t('tch.learnings.noMatches')}
+            body={t('tch.learnings.noMatchesBody')}
+          />
+        )
+      ) : null}
 
       <LearningPreviewDialog
         componentId={preview?.id ?? null}
@@ -402,10 +503,78 @@ export function TeacherLearningsPage() {
   )
 }
 
-function LearningCard({ row, groupId, onPreview }: {
+/** One learning objective, folded over its lomdot — the map's card.
+ *
+ *  Deliberately the same visual grammar as `LearningCard` (same classes, same
+ *  rate line, same hot/idle states), because a card that opens a drill-down
+ *  and a card that opens a detail page must not read as two different UIs.
+ */
+function ObjectiveCard({ group, onOpen }: {
+  group: ObjectiveGroup<LearningRow>
+  onOpen: () => void
+}) {
+  const { t } = useI18n()
+  const tone = rateTone(group.successRate)
+
+  return (
+    <Panel
+      className={`tch-learning${group.attention ? ' tch-learning--hot' : ''}${
+        group.started ? '' : ' tch-learning--idle'}`}
+    >
+      <button type="button" className="tch-learning__open" onClick={onOpen}>
+        <div className="tch-learning__head">
+          <div className="tch-learning__titles">
+            <strong dir="auto">{group.title ?? t('tch.learnings.noObjective')}</strong>
+            <span className="tch-learning__meta" dir="auto">
+              {t(countKey('tch.learnings.lomdot', group.rows.length),
+                 { count: group.rows.length })}
+            </span>
+          </div>
+        </div>
+      </button>
+
+      {group.started ? (
+        <div className="tch-learning__lines">
+          <p className={`tch-learning__line tch-learning__line--rate is-${tone}`}>
+            <strong>{ratePercent(group.successRate)}</strong>
+            <span>{t('tch.kpi.successOf', {
+              correct: group.correct, attempts: group.attempts })}</span>
+          </p>
+          <p className="tch-learning__line">
+            {t('tch.learnings.objStarted', {
+              started: group.started, total: group.rows.length })}
+          </p>
+          {group.attention ? (
+            <p className="tch-learning__struggling">
+              <Icon name="alert" size={14} aria-hidden />
+              {t(countKey('tch.learnings.objAttention', group.attention),
+                 { count: group.attention })}
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        /* Untouched is information, not an empty state — it is how a teacher
+           finds an objective to assign next. */
+        <p className="tch-learning__idle">
+          <Icon name="clock" size={14} aria-hidden />
+          {t('tch.learnings.objIdle')}
+        </p>
+      )}
+
+      <p className="tch-learning__when">
+        {group.started ? agoLabel(group.lastAt, t) : ''}
+      </p>
+    </Panel>
+  )
+}
+
+function LearningCard({ row, groupId, onPreview, showObjective = true }: {
   row: LearningRow
   groupId: string
   onPreview: (target: { id: string; title: string }) => void
+  /** False inside an objective drill-down, where the hero above the grid
+   *  already names the objective — repeating it on every card is noise. */
+  showObjective?: boolean
 }) {
   const { t } = useI18n()
   const tone = rateTone(row.success_rate)
@@ -457,7 +626,7 @@ function LearningCard({ row, groupId, onPreview }: {
           OUTSIDE the card's own open button, because a button inside a button
           is not a thing a browser will honour. It used to be the tail of the
           meta line: a name with no way to ask what it means. */}
-      {name.title !== row.objective_title ? (
+      {showObjective && name.title !== row.objective_title ? (
         <ObjectiveLine
           objectiveId={row.objective_id}
           fallback={row.objective_title ?? undefined}

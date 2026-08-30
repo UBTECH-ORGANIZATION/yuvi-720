@@ -6,27 +6,63 @@
 
 .tch-learnings > .tch-stats { margin-block-end: var(--sp-5); }
 
-/* ── the analysis panel ────────────────────────────────────────────────────*/
+/* ── inside one objective: the way back + a hero naming it ─────────────────*/
 
-.tch-learnings__analysis {
+.tch-learnings__drillHead {
+  display: grid;
+  gap: var(--sp-3);
+  justify-items: start;
+  margin-block-end: var(--sp-5);
+}
+
+.tch-learnings__drillCard {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
   padding: var(--sp-4) var(--sp-5);
-  margin-block-end: var(--sp-6);
   border-inline-start: 3px solid var(--sp-primary-600);
 }
 
-.tch-learnings__recs { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); }
-.tch-learnings__recs li { display: grid; gap: var(--sp-1); }
-
-.tch-learnings__recRow {
-  display: flex;
-  align-items: baseline;
-  gap: var(--sp-2);
-  color: var(--sp-ink-700);
+.tch-learnings__drillTitles { display: grid; gap: var(--sp-1); justify-items: start; }
+.tch-learnings__drillTitles h2 {
+  margin: 0;
+  font-size: var(--sp-fs-xl);
+  color: var(--sp-ink-900);
+}
+/* The title doubles as the objective's meaning-door; at heading size the
+   base ref's small-print styling must not shrink or grey it. */
+.tch-learnings__drillRef {
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+.tch-learnings__drillMeta {
+  margin: 0;
   font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
 }
 
-.tch-learnings__recIcon { color: var(--sp-primary-600); flex: none; align-self: center; }
-.tch-learnings__recSep { unicode-bidi: isolate; white-space: pre; }
+/* The fold of the whole objective, opposite the name — the same tone scale
+   the lomda cards use, so one glance says how this objective is going. */
+.tch-learnings__drillRate {
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+  text-align: end;
+}
+.tch-learnings__drillRate strong {
+  font-size: var(--sp-fs-2xl);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.tch-learnings__drillRate span { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+.tch-learnings__drillRate.is-success strong { color: var(--sp-success-600); }
+.tch-learnings__drillRate.is-warn strong { color: var(--sp-warn-600); }
+.tch-learnings__drillRate.is-danger strong { color: var(--sp-danger-600); }
+.tch-learnings__drillRate.is-none strong { color: var(--sp-ink-400); }
 
 /* ── find it: search + subject tabs ────────────────────────────────────────*/
 
