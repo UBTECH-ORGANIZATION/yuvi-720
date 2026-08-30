@@ -908,6 +908,149 @@ function buildReactorCore() {
 }
 
 
+/* ── earned gear ───────────────────────────────────────────────────────────
+   Not for sale. Each is granted server-side off a real badge or a live day
+   streak (`backend/app/services/unlocks.py`), so wearing one is a claim the
+   brain can back up. */
+function buildLaurelWreath() {
+  const g = new THREE.Group()
+  const ring = new THREE.Group(); ring.position.y = 0.62; g.add(ring)
+  const leafMats: THREE.MeshStandardMaterial[] = []
+  // Two arcs of leaves that stop short at the front, so it frames the face
+  // instead of closing into another crown.
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < 7; i++) {
+      const k = i / 6
+      const a = side * (0.42 + k * 1.9)
+      const leafMat = mat('#6fe39a', { roughness: 0.5, metalness: 0.12 })
+      leafMats.push(leafMat)
+      const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 8), leafMat)
+      leaf.scale.set(0.34, 1, 0.5)
+      leaf.position.set(Math.sin(a) * 0.47, k * 0.16, Math.cos(a) * 0.44)
+      leaf.rotation.set(0.4 - k * 0.5, a, side * (0.5 - k * 0.3))
+      ring.add(leaf)
+    }
+  }
+  const band = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.014, 8, 44, Math.PI * 1.55), metal('#e8c86a'))
+  band.rotation.set(Math.PI / 2, 0, -Math.PI * 0.78); ring.add(band)
+  const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.075), emissive('#ffe6a8', 2.4))
+  gem.position.set(0, 0.19, 0.42); ring.add(gem)
+  const halo = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.035, 8, 20), holo('#ffe6a8', 0.3))
+  halo.position.copy(gem.position); halo.rotation.x = Math.PI / 2; ring.add(halo)
+  g.userData.animate = (t: number) => {
+    gem.rotation.y = t * 1.2
+    ;(halo.material as THREE.MeshBasicMaterial).opacity = 0.22 + Math.sin(t * 2.4) * 0.1
+    leafMats.forEach((m, i) => { m.emissiveIntensity = 0 ; m.color.setHSL(0.36, 0.55, 0.55 + Math.sin(t * 1.4 + i * 0.4) * 0.04) })
+  }
+  return g
+}
+function buildExplorerGoggles() {
+  const g = new THREE.Group()
+  const strap = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.035, 10, 40), fabric('#3a3878'))
+  strap.rotation.x = Math.PI / 2; strap.position.set(0, 0.06, 0); g.add(strap)
+  const lensMats: THREE.MeshBasicMaterial[] = []
+  for (const side of [-1, 1]) {
+    const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.17, 0.14, 20), metal('#c9a227'))
+    cup.rotation.x = Math.PI / 2
+    cup.position.set(side * 0.19, 0.06, 0.44); g.add(cup)
+    const lens = new THREE.Mesh(new THREE.CircleGeometry(0.13, 22), glass('#8fe8ff', 0.55))
+    lens.position.set(side * 0.19, 0.06, 0.515); g.add(lens)
+    const sheenMat = holo('#bff3ff', 0.34)
+    const sheen = new THREE.Mesh(new THREE.CircleGeometry(0.115, 22), sheenMat)
+    sheen.position.set(side * 0.19, 0.06, 0.52); sheen.renderOrder = 12; g.add(sheen)
+    lensMats.push(sheenMat)
+  }
+  // The bridge sits proud of the visor so the pair reads as one object.
+  const bridge = new THREE.Mesh(new RoundedBoxGeometry(0.14, 0.06, 0.09, 3, 0.02), metal('#e8c86a'))
+  bridge.position.set(0, 0.06, 0.47); g.add(bridge)
+  const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.07, 14), metal('#c9a227'))
+  lamp.rotation.x = Math.PI / 2; lamp.position.set(0, 0.27, 0.44); g.add(lamp)
+  const beamMat = holo('#fff0c2', 0.24)
+  const beam = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.55, 14, 1, true), beamMat)
+  beam.rotation.x = -Math.PI / 2; beam.position.set(0, 0.27, 0.74); g.add(beam)
+  g.userData.animate = (t: number) => {
+    beamMat.opacity = 0.16 + Math.abs(Math.sin(t * 1.1)) * 0.16
+    lensMats.forEach((m, i) => { m.opacity = 0.24 + Math.sin(t * 1.8 + i * 1.2) * 0.12 })
+  }
+  return g
+}
+function buildStreakScarf() {
+  const g = new THREE.Group()
+  // Two loops at slightly different tilts, so the neck wrap has thickness from
+  // every angle instead of collapsing to a bar when seen head-on.
+  for (const [r, y, tilt, color] of [[0.37, 0.07, 0.1, '#ff7a3d'], [0.34, -0.04, -0.14, '#ffb374']] as const) {
+    const loop = new THREE.Mesh(new THREE.TorusGeometry(r, 0.11, 12, 30), fabric(color))
+    loop.rotation.set(Math.PI / 2 + 0.18, 0, tilt)
+    loop.position.y = y
+    g.add(loop)
+  }
+  const knot = new THREE.Mesh(new RoundedBoxGeometry(0.2, 0.19, 0.16, 4, 0.06), fabric('#ff5d73'))
+  knot.position.set(0.2, 0.02, 0.26); knot.rotation.z = -0.3; g.add(knot)
+  // The tail falls across the chest rather than straight down, which is what
+  // stops the silhouette reading as a stem.
+  const tail: THREE.Mesh[] = []
+  for (let i = 0; i < 5; i++) {
+    const k = i / 4
+    const seg = new THREE.Mesh(
+      new RoundedBoxGeometry(0.2 - k * 0.05, 0.16, 0.07, 3, 0.03),
+      fabric(i % 2 ? '#ff7a3d' : '#ffb374'),
+    )
+    seg.position.set(0.26 + k * 0.17, -0.12 - i * 0.13, 0.24 - k * 0.05)
+    seg.rotation.z = -0.35 - k * 0.25
+    g.add(seg); tail.push(seg)
+  }
+  // Flame tips at the loose end: the streak itself, not decoration on a collar.
+  const flames: THREE.MeshBasicMaterial[] = []
+  for (let i = 0; i < 3; i++) {
+    const flameMat = holo(i === 1 ? '#ffd166' : '#ff8a4c', 0.45)
+    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.07 - i * 0.012, 0.24 - i * 0.04, 6), flameMat)
+    flame.position.set(0.72 + i * 0.05, -0.66 - i * 0.06, 0.19)
+    flame.rotation.z = -0.9 - i * 0.15
+    g.add(flame); flames.push(flameMat)
+  }
+  g.userData.animate = (t: number) => {
+    tail.forEach((seg, i) => {
+      seg.rotation.z = -0.35 - (i / 4) * 0.25 + Math.sin(t * 1.7 - i * 0.55) * 0.13
+      seg.rotation.x = Math.sin(t * 1.3 - i * 0.4) * 0.09
+    })
+    flames.forEach((m, i) => { m.opacity = 0.28 + Math.abs(Math.sin(t * 3.2 + i * 0.9)) * 0.3 })
+  }
+  return g
+}
+function buildCometTrail() {
+  const g = new THREE.Group()
+  const core = new THREE.Mesh(new THREE.SphereGeometry(0.13, 18, 14), emissive('#bff3ff', 2.6))
+  core.position.set(0, 0.1, -0.3); g.add(core)
+  const shellGlow = new THREE.Mesh(new THREE.SphereGeometry(0.22, 18, 14), holo('#7fd8ff', 0.28))
+  shellGlow.position.copy(core.position); g.add(shellGlow)
+  // Three tapering streamers, each a chain of shrinking shards, so the trail
+  // reads as motion rather than as a pair of wings.
+  const shards: THREE.Mesh[] = []
+  const shardMats: THREE.MeshBasicMaterial[] = []
+  for (let s = 0; s < 3; s++) {
+    const spread = (s - 1) * 0.36
+    for (let i = 0; i < 6; i++) {
+      const k = i / 5
+      const shardMat = holo(i % 2 ? '#7fd8ff' : '#a896ff', 0.42 - k * 0.3)
+      const shard = new THREE.Mesh(new THREE.ConeGeometry(0.09 - k * 0.06, 0.34 - k * 0.18, 5), shardMat)
+      shard.position.set(spread * (0.4 + k), 0.1 + Math.sin(k * 2) * 0.12 - k * 0.1, -0.42 - k * 0.62)
+      shard.rotation.x = Math.PI / 2 + 0.12
+      shard.rotation.z = spread * 0.5
+      g.add(shard); shards.push(shard); shardMats.push(shardMat)
+    }
+  }
+  g.userData.animate = (t: number) => {
+    ;(shellGlow.material as THREE.MeshBasicMaterial).opacity = 0.2 + Math.sin(t * 2.6) * 0.1
+    shards.forEach((shard, i) => {
+      const phase = t * 3.4 - i * 0.35
+      shard.scale.setScalar(1 + Math.sin(phase) * 0.14)
+      shardMats[i].opacity = Math.max(0.05, (0.4 - (i % 6) * 0.055) + Math.sin(phase) * 0.1)
+    })
+  }
+  return g
+}
+
+
 export interface YuviAsset {
   id: string
   slot: YuviSlot
@@ -937,17 +1080,20 @@ export const Yuvi_CATALOG: YuviAsset[] = [
   { id: 'ironhelmet', slot: 'headTop', labelKey: 'YuviStudio.item.ironhelmet', build: buildBattleHelmet, requirementKey: 'YuviStudio.unlock.achievement', hideEars: true },
   { id: 'crown', slot: 'headTop', labelKey: 'YuviStudio.item.crown', build: buildLightCrown, requirementKey: 'YuviStudio.unlock.section4' },
   { id: 'propeller', slot: 'headTop', labelKey: 'YuviStudio.item.propeller', build: buildCompanionDrone, requirementKey: 'YuviStudio.unlock.challenges3' },
+  { id: 'laurel', slot: 'headTop', labelKey: 'YuviStudio.item.laurel', build: buildLaurelWreath, requirementKey: 'YuviStudio.unlock.badge.on_fire', isNew: true },
   // ── face ──
   { id: 'shades', slot: 'face', labelKey: 'YuviStudio.item.shades', build: buildShades },
   { id: 'hud', slot: 'face', labelKey: 'YuviStudio.item.hud', build: buildHudVisor, isNew: true },
   { id: 'warpaint', slot: 'face', labelKey: 'YuviStudio.item.warpaint', build: buildWarPaint },
   { id: 'heromask', slot: 'face', labelKey: 'YuviStudio.item.heromask', build: buildCyberMask, requirementKey: 'YuviStudio.unlock.achievement' },
+  { id: 'explorerGoggles', slot: 'face', labelKey: 'YuviStudio.item.explorerGoggles', build: buildExplorerGoggles, requirementKey: 'YuviStudio.unlock.badge.comeback', isNew: true },
   // ── body ──
   { id: 'jacket', slot: 'body', labelKey: 'YuviStudio.item.jacket', build: buildJacket, isNew: true },
   { id: 'jersey', slot: 'body', labelKey: 'YuviStudio.item.jersey', build: buildJersey },
   { id: 'rig', slot: 'body', labelKey: 'YuviStudio.item.rig', build: buildUtilityRig },
   { id: 'heroarmor', slot: 'body', labelKey: 'YuviStudio.item.heroarmor', build: buildExoArmor, requirementKey: 'YuviStudio.unlock.achievement' },
   { id: 'ironman', slot: 'body', labelKey: 'YuviStudio.item.ironman', build: buildReactorCore, requirementKey: 'YuviStudio.unlock.section6' },
+  { id: 'streakScarf', slot: 'body', labelKey: 'YuviStudio.item.streakScarf', build: buildStreakScarf, requirementKey: 'YuviStudio.unlock.streak.3', isNew: true },
   // ── hand ──
   { id: 'skate', slot: 'handR', labelKey: 'YuviStudio.item.skate', build: buildSkate },
   { id: 'drone', slot: 'handR', labelKey: 'YuviStudio.item.drone', build: buildHandDrone },
@@ -959,6 +1105,7 @@ export const Yuvi_CATALOG: YuviAsset[] = [
   { id: 'hoverboard', slot: 'back', labelKey: 'YuviStudio.item.hoverboard', build: buildHoverboard, isNew: true },
   { id: 'dragonwings', slot: 'back', labelKey: 'YuviStudio.item.dragonwings', build: buildEnergyWings, requirementKey: 'YuviStudio.unlock.achievement' },
   { id: 'jetpack', slot: 'back', labelKey: 'YuviStudio.item.jetpack', build: buildThrusters, requirementKey: 'YuviStudio.unlock.section5' },
+  { id: 'cometTrail', slot: 'back', labelKey: 'YuviStudio.item.cometTrail', build: buildCometTrail, requirementKey: 'YuviStudio.unlock.streak.7', isNew: true },
 ]
 
 export function getAsset(id: string | null): YuviAsset | null {

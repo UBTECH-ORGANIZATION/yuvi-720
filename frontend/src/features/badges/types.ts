@@ -31,6 +31,8 @@ export interface BadgeDTO {
   noStars?: boolean
   /** decorative background pattern behind the glyph. */
   motif?: BadgeMotif
+  /** Cosmetics winning this coin grants (`app/services/unlocks.py`). */
+  unlocks?: { id: string; kind: 'avatar' | 'prop' }[]
 }
 
 /** The stored profile-avatar choice (`learner_state.avatar`). */

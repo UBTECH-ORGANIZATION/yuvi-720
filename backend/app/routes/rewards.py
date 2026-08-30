@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.auth.dependencies import require_learner
-from app.services import rewards
+from app.services import rewards, unlock_sync, unlocks
 from learner_state import get_learner_state  # type: ignore
 
 
@@ -19,11 +19,24 @@ async def read_wallet(learner_id: str = Depends(require_learner)):
 
 @router.get("/catalog")
 async def read_catalog(learner_id: str = Depends(require_learner)):
-    """Shop rows with server-side prices plus the learner's owned items."""
+    """Shop rows with server-side prices, plus what the learner has earned."""
+    # Opening the studio is the moment a learner expects a new reward to be
+    # there, so grants are settled on the way in rather than by a background job.
+    try:
+        earned = await unlock_sync.sync_unlocks(learner_id)
+    except Exception as exc:
+        print(f"⚠️ unlock sync skipped: {type(exc).__name__}")
+        earned = {"avatar_unlocks": [], "room_unlocks": [], "streak": 0, "newly_unlocked": []}
     state = await get_learner_state(learner_id)
+    owned_avatar = state.get("avatar_unlocks") or earned["avatar_unlocks"]
+    owned_props = state.get("room_unlocks") or earned["room_unlocks"]
     return JSONResponse(content={
-        "items": rewards.catalog_for_client(state.get("avatar_unlocks") or []),
+        "items": rewards.catalog_for_client(owned_avatar),
         "wallet": await rewards.get_wallet(learner_id),
+        "unlocks": unlocks.catalog_for_client(owned_avatar, owned_props),
+        "roomUnlocks": sorted(owned_props),
+        "streak": earned["streak"],
+        "newlyUnlocked": earned["newly_unlocked"],
     })
 
 
