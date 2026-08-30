@@ -101,32 +101,46 @@ def _session_state_updates(
     return updates
 
 
-async def probe_relay_base_url() -> None:
+async def probe_relay_base_url(attempts: int = 6, delay: float = 2.0) -> None:
     """Warn loudly, at startup, when the address we hand Kata is not reachable.
 
     ``PUBLIC_APP_URL`` is what Kata relays content xAPI to. When it points at a
     dead tunnel every statement is dropped *silently*: the lesson renders, the
     learner works, and nothing reaches the Brain. That has happened, so the check
     is worth a single HEAD request at boot.
+
+    Retried, because in dev this address is a tunnel that loops straight back
+    here — and at boot it resolves before uvicorn accepts connections, so the
+    first attempt returns 502 no matter how healthy the tunnel is. Crying wolf
+    every start is not free: this warning is the only thing standing between a
+    genuinely dead relay and days of silently lost evidence.
     """
+    import asyncio
+
     base = (os.environ.get("PUBLIC_APP_URL") or "").rstrip("/")
     if not base:
         return
-    try:
-        import httpx
+    last: Optional[Exception] = None
+    for attempt in range(attempts):
+        try:
+            import httpx
 
-        async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
-            response = await client.get(f"{base}/api/health")
-        if response.status_code >= 500:
-            raise RuntimeError(f"status {response.status_code}")
-        print(f"✅ xAPI relay base reachable: {base}")
-    except Exception as exc:
-        print(
-            f"⚠️ PUBLIC_APP_URL ({base}) is NOT reachable ({type(exc).__name__}: {exc}). "
-            "Kata relays content xAPI to this address — while it is down, NOTHING "
-            "the learner does reaches the Brain, the roadmap or the LRS. Restart "
-            "the tunnel and update PUBLIC_APP_URL."
-        )
+            async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
+                response = await client.get(f"{base}/api/health")
+            if response.status_code >= 500:
+                raise RuntimeError(f"status {response.status_code}")
+            print(f"✅ xAPI relay base reachable: {base}")
+            return
+        except Exception as exc:
+            last = exc
+            if attempt + 1 < attempts:
+                await asyncio.sleep(delay)
+    print(
+        f"⚠️ PUBLIC_APP_URL ({base}) is NOT reachable ({type(last).__name__}: {last}). "
+        "Kata relays content xAPI to this address — while it is down, NOTHING "
+        "the learner does reaches the Brain, the roadmap or the LRS. Restart "
+        "the tunnel and update PUBLIC_APP_URL."
+    )
 
 
 async def _assert_component_reachable(

@@ -49,6 +49,8 @@ MAX_DRIFT = 28        # hard cap on |effective - base|
 GAIN = 0.45           # live weight at full confidence (base keeps ≥ 0.55)
 EVIDENCE_FULL = 12    # relevant events for a domain to reach full confidence
 MIN_CAUSE_CONF = 0.3  # below this we don't assert a behavioural cause (too little data)
+MOVEMENT_DAYS = 7     # the card compares against ~a week ago; drivers must match it
+MOVED_POINTS = 0.75   # contribution points a signal must shift to count as moved
 GUESS_SECS = 3.5      # a scored answer faster than this reads as a guess
 
 
@@ -80,13 +82,21 @@ def _mean(xs: list[float], default: float = 0.0) -> float:
 
 
 # ── Windowed signal rollup ────────────────────────────────────────────────────
-def _metrics(brain: dict, events: list[dict], decisions: list[dict]) -> dict[str, Any]:
-    now = datetime.now(timezone.utc)
+def _metrics(
+    brain: dict, events: list[dict], decisions: list[dict],
+    as_of: Optional[datetime] = None,
+) -> dict[str, Any]:
+    """Roll the signals up over the window ending at `as_of` (default: now).
+
+    Re-running this a week back is how "why did it go down?" gets answered: the
+    current numbers describe where the learner stands, never what moved.
+    """
+    now = as_of or datetime.now(timezone.utc)
     cutoff = now - timedelta(days=WINDOW_DAYS)
 
     def in_window(item: dict, field: str) -> bool:
         t = _parse(item.get(field))
-        return t is None or t >= cutoff  # undated → assume recent, don't drop
+        return t is None or cutoff <= t <= now  # undated → assume recent, don't drop
 
     win = [e for e in events if in_window(e, "occurred_at")]
     scored = [e for e in win if e.get("verb") in SCORING_VERBS]
@@ -113,6 +123,31 @@ def _metrics(brain: dict, events: list[dict], decisions: list[dict]) -> dict[str
             if dur < GUESS_SECS:
                 guesses += 1
 
+    # Per-objective detail, so a driver can name the lesson it actually came
+    # from instead of describing the week in the abstract.
+    per_obj: dict[str, dict[str, Any]] = {}
+    for e in scored:
+        oid = e.get("objective_id")
+        if not oid:
+            continue
+        slot = per_obj.setdefault(str(oid), {
+            "answered": 0, "completed": 0, "failures": 0, "fast": 0,
+            "recovered": False, "last_at": None,
+        })
+        slot["answered"] += 1
+        if e.get("verb") == "completed":
+            slot["completed"] += 1
+        res = e.get("result") or {}
+        sc = event_score(res)
+        if sc is not None and not event_success(res, sc):
+            slot["failures"] += 1
+        dur = _dur_seconds(res.get("duration"))
+        if dur is not None and dur < GUESS_SECS:
+            slot["fast"] += 1
+        at = e.get("occurred_at")
+        if at and (slot["last_at"] is None or str(at) > str(slot["last_at"])):
+            slot["last_at"] = at
+
     # Recovery: objectives where a failure was later followed by a success.
     by_obj: dict[Any, list[dict]] = {}
     for e in scored:
@@ -137,6 +172,8 @@ def _metrics(brain: dict, events: list[dict], decisions: list[dict]) -> dict[str
             failed_objs += 1
             if recovered:
                 recovered_objs += 1
+            if str(oid) in per_obj:
+                per_obj[str(oid)]["recovered"] = recovered
 
     # Mastery rollup (per-objective durable stance).
     mastery = [m for m in (brain.get("mastery") or {}).values() if isinstance(m, dict)]
@@ -144,10 +181,11 @@ def _metrics(brain: dict, events: list[dict], decisions: list[dict]) -> dict[str
     review_ratio = (needs_review / len(mastery)) if mastery else 0.0
     avg_streak = _mean([float(m.get("consecutive_successes") or 0) for m in mastery])
 
-    # Reflections (self-awareness). Prefer windowed, else recent count.
+    # Reflections (self-awareness), strictly windowed. No all-time fallback: it
+    # would report reflections the learner did not make in this window, and
+    # `in_window` already keeps undated entries, so an empty window means zero.
     refl = [r for r in (brain.get("reflections_recent") or []) if isinstance(r, dict)]
-    refl_win = [r for r in refl if in_window(r, "at")]
-    reflections = len(refl_win) if refl_win else len(refl)
+    reflections = len([r for r in refl if in_window(r, "at")])
 
     # Hint / help usage (best-effort; neutral when absent).
     hint_events = [d for d in decisions if (d.get("strategy") in HINT_STRATEGIES) or d.get("hint_level")]
@@ -172,6 +210,7 @@ def _metrics(brain: dict, events: list[dict], decisions: list[dict]) -> dict[str
         "n_hint": n_hint,
         "hint_rate": (n_hint / n) if n else None,
         "max_hint": max_hint,
+        "per_obj": per_obj,
     }
 
 
@@ -254,6 +293,74 @@ def _cause_tags(key: str, contribs: list[tuple[str, float]], value: float, conf:
     return tags
 
 
+def _attribute(tag: str, direction: str, per_obj: dict[str, dict[str, Any]]) -> Optional[str]:
+    """The objective a driver most plausibly came from, or ``None``.
+
+    Only some signals are lesson-shaped. Showing up regularly, or stopping to
+    reflect, is about the week rather than about one lesson — naming one there
+    would be a guess dressed up as evidence.
+    """
+    items = list(per_obj.items())
+    if not items:
+        return None
+
+    def top(keep, rank) -> Optional[str]:
+        pool = [(oid, s) for oid, s in items if keep(s)]
+        return max(pool, key=lambda x: rank(x[1]))[0] if pool else None
+
+    if tag == "low_engagement":
+        if direction == "down":                       # started it, never finished
+            return top(lambda s: s["answered"] and not s["completed"], lambda s: s["answered"])
+        return top(lambda s: s["completed"], lambda s: str(s["last_at"] or ""))
+    if tag == "quits_on_fail":
+        if direction == "down":                       # missed it and moved on
+            return top(lambda s: s["failures"] and not s["recovered"], lambda s: s["failures"])
+        return top(lambda s: s["recovered"], lambda s: str(s["last_at"] or ""))
+    if tag == "guessing" and direction == "down":
+        return top(lambda s: s["fast"], lambda s: s["fast"])
+    return None
+
+
+def _drivers(
+    contribs: list[tuple[str, float]],
+    prior_contribs: list[tuple[str, float]],
+    conf: float,
+    per_obj: Optional[dict[str, dict[str, Any]]] = None,
+) -> list[dict[str, str]]:
+    """What CHANGED in this domain since last week, strongest first.
+
+    Deliberately not the current state. A domain can dip while every signal is
+    still positive — today's numbers then hold no explanation for the dip, and a
+    coach reading them can only recite the good news. The answer is which signal
+    weakened, which exists only by running the same maths at two points in time.
+    """
+    if conf < MIN_CAUSE_CONF:
+        return []
+
+    def aggregate(rows: list[tuple[str, float]]) -> dict[str, float]:
+        out: dict[str, float] = {}
+        for tag, pts in rows:
+            out[tag] = out.get(tag, 0.0) + pts
+        return out
+
+    now_agg, then_agg = aggregate(contribs), aggregate(prior_contribs)
+    moved = {
+        tag: now_agg.get(tag, 0.0) - then_agg.get(tag, 0.0)
+        for tag in set(now_agg) | set(then_agg)
+    }
+    out: list[dict[str, str]] = []
+    for tag, delta in sorted(moved.items(), key=lambda x: -abs(x[1])):
+        if abs(delta) < MOVED_POINTS:
+            continue
+        direction = "up" if delta > 0 else "down"
+        entry = {"tag": tag, "dir": direction}
+        objective_id = _attribute(tag, direction, per_obj or {})
+        if objective_id:
+            entry["objective_id"] = objective_id
+        out.append(entry)
+    return out
+
+
 def effective_activeness(
     brain: dict,
     events: Optional[list[dict]] = None,
@@ -266,6 +373,22 @@ def effective_activeness(
     """
     base_map = (brain.get("profile") or {}).get("activeness") or {}
     m = _metrics(brain, events or [], decisions or [])
+    # The same rollup a week back, so `drivers` can say what MOVED rather than
+    # what merely is. Mastery-derived signals (review ratio, streaks) are current
+    # either way — they have no per-day history to rewind.
+    now = datetime.now(timezone.utc)
+    prior = _metrics(brain, events or [], decisions or [], as_of=now - timedelta(days=MOVEMENT_DAYS))
+
+    # An empty prior window means either "they had not started yet" or "we were
+    # not recording" — identical in the events, opposite in meaning. Activity
+    # from BEFORE that window separates them: a beginner has none, a learner
+    # whose relay went dark does. Without this, ingest coming back online reads
+    # as the learner improving.
+    prior_start = now - timedelta(days=MOVEMENT_DAYS + WINDOW_DAYS)
+    silent_gap = any(
+        (t := _parse(e.get("occurred_at"))) is not None and t < prior_start
+        for e in (events or [])
+    )
 
     out: dict[str, dict[str, Any]] = {}
     for key in COMPETENCY_KEYS:
@@ -275,11 +398,24 @@ def effective_activeness(
         conf = _clamp(_evidence(key, m) / EVIDENCE_FULL, 0, 1)
         delta = _clamp(conf * GAIN * raw_delta, -MAX_DRIFT, MAX_DRIFT)
         value = int(round(_clamp(base + delta, 0, 100)))
+        # The same score as of a week ago, so the arrow the learner sees and the
+        # reason behind it come from ONE calculation. Deriving the arrow from a
+        # stored snapshot instead let a domain show a dip that the event data
+        # could not explain — the card asked "why?" where there was no answer.
+        prior_contribs = _contribs(key, prior)
+        prior_conf = _clamp(_evidence(key, prior) / EVIDENCE_FULL, 0, 1)
+        prior_value = int(round(_clamp(
+            base + _clamp(prior_conf * GAIN * sum(p for _, p in prior_contribs),
+                          -MAX_DRIFT, MAX_DRIFT), 0, 100)))
+        # Claim no movement at all rather than movement we cannot vouch for.
+        blind = silent_gap and prior_conf < MIN_CAUSE_CONF
         out[key] = {
             "base": int(round(base)),
             "value": value,
             "delta": round(delta, 1),
             "confidence": round(conf, 2),
             "causes": _cause_tags(key, contribs, value, conf),
+            "drivers": [] if blind else _drivers(contribs, prior_contribs, conf, m.get("per_obj")),
+            "prior_value": value if blind else prior_value,
         }
     return out

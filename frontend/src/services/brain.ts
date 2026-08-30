@@ -209,6 +209,15 @@ export interface DashboardDTO {
     /** State-aware "how to improve" cause tags from live signals (behavioural,
      * no numbers). Empty when there's no activity evidence yet. */
     improve?: string[]
+    /** Where this domain stood about a week ago, from the same engine that
+     * produces `drivers`. The web prefers this over its own stored snapshot so
+     * an arrow always has a reason behind it. */
+    priorValue?: number | null
+    /** What actually moved this domain, strongest first, each with the direction
+     * it pushed. Unlike `improve` this includes what went well, so a domain that
+     * rose has a real behaviour to name. `lesson` is present only where the
+     * signal is lesson-shaped. */
+    drivers?: { tag: string; dir: 'up' | 'down'; lesson?: string }[]
     /** True only when there's enough real activity to explain *why* this domain
      * sits where it does. The activeness map gates its change arrow on this, so
      * it never shows a movement it can't ground in evidence. */

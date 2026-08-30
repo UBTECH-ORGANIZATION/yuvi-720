@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { animate, stagger, svg } from 'animejs'
 import { Icon } from '../../components/primitives'
+import { useCompanion } from '../../providers/CompanionProvider'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useMediaQuery } from '../../hooks/useResponsive'
 import { getLearnerState, updateLearnerState } from '../../services/api'
@@ -48,6 +49,13 @@ const DAY_MS = 86400000
 const APPEND_GAP_MS = 20 * 60 * 60 * 1000 // ≈one history point per day
 const BASELINE_WAIT_MS = 1200 // how long the intro waits for the stored baseline
 const HISTORY_DEPTH = 24
+
+// Every cause tag `app/brain/activeness.py` can emit. `t()` falls back to the raw
+// key, so an unlisted tag would put `actmap.why.<tag>` on a child's screen.
+const DRIVER_TAGS = new Set([
+    'inconsistent', 'low_engagement', 'quits_on_fail', 'hint_reliance',
+    'guessing', 'low_reflection', 'isolation',
+])
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 const clampLevel = (v: number) => Math.max(0.08, Math.min(1, v / 100))
@@ -102,6 +110,7 @@ interface Axis extends Competency {
 export function ActivenessWeb({ competencies }: ActivenessWebProps) {
     const { t } = useI18n()
     const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
+    const { open: openCompanion, send: askCompanion } = useCompanion()
 
     const boardRef = useRef<HTMLDivElement>(null)
     const dataRef = useRef<SVGGElement>(null)
@@ -148,7 +157,11 @@ export function ActivenessWeb({ competencies }: ActivenessWebProps) {
         return list.map((c, i) => {
             const ang = (-90 + (i * 360) / n) * (Math.PI / 180)
             const level = clampLevel(Number(c.value) || 0)
-            const rawLast = baseline?.[c.key]
+            // The server's own week-ago score wins over the stored snapshot: it
+            // comes from the same engine as `drivers`, so an arrow drawn from it
+            // always has a reason to show. The snapshot stays as the fallback
+            // for a brain with no live signal yet, and still drives the morph.
+            const rawLast = typeof c.priorValue === 'number' ? c.priorValue : baseline?.[c.key]
             const last = typeof rawLast === 'number' ? rawLast : null
             const oldLevel = last != null ? clampLevel(last) : level
             const delta = last != null ? (Number(c.value) || 0) - last : 0
@@ -176,6 +189,28 @@ export function ActivenessWeb({ competencies }: ActivenessWebProps) {
 
     const hasBaseline = axes.some((a) => a.last != null)
     const changedAxes = axes.filter((a) => a.changed)
+
+    // The dip goes to the everyday companion, phrased as the learner's own
+    // question. When we know which lesson drove it, the question says so —
+    // otherwise Yuvi answers with generic hypotheses instead of their week.
+    const askYuvi = (a: Axis) => {
+        const lesson = driverFor(a)?.lesson
+        openCompanion()
+        const text = lesson
+            ? t('actmap.ask.questionInLesson', { topic: a.label, lesson })
+            : t('actmap.ask.question', { topic: a.label })
+        void askCompanion(text).catch(() => undefined)
+    }
+
+    // Why the domain moved, named as something the learner actually did. Only a
+    // driver pushing the same way as the movement can explain it — anything else
+    // would pair "you finished what you started" with a dip.
+    const driverFor = (a: Axis) =>
+        (a.drivers ?? []).find((d) => d.dir === a.dir && DRIVER_TAGS.has(d.tag)) ?? null
+    const whyFor = (a: Axis) => {
+        const driver = driverFor(a)
+        return driver ? t(`actmap.why.${driver.tag}.${driver.dir}`) : t('actmap.change.fallback')
+    }
 
     // The single domain worth focusing on now — the lowest level (unless a domain
     // is already declining, which takes priority). Exactly one domain is promoted
@@ -376,6 +411,61 @@ export function ActivenessWeb({ competencies }: ActivenessWebProps) {
                             </span>
                         </span>
                     ))}
+
+                    {/* Why a domain moved, on hover or focus. It hangs off the emblem
+                        — the dot is small and lives in an aria-hidden SVG, so the
+                        affordance is a real button over the icon out here. */}
+                    {changedAxes.map((a) => {
+                        const moved = t(`actmap.change.moved.${a.dir}.${a.size}`)
+                        const why = whyFor(a)
+                        const lesson = driverFor(a)?.lesson
+                        return (
+                            <div
+                                key={a.key}
+                                className={`aweb__probe${a.key === focusKey ? ' is-focus' : ''}${a.ey < C ? ' is-below' : ''}`}
+                                style={{
+                                    left: `${pct(a.ex)}%`,
+                                    top: `${pct(a.ey)}%`,
+                                    '--c': visualFor(a.key).color,
+                                    // Lean the bubble back towards the middle of the board so a
+                                    // side domain's tooltip cannot hang off the card.
+                                    '--aweb-tip-bias': `${(-50 - Math.cos(a.ang) * 22).toFixed(0)}%`,
+                                } as CSSProperties}
+                            >
+                                <button
+                                    type="button"
+                                    className="aweb__probe-hit"
+                                    aria-label={`${a.label} — ${moved}. ${why}${lesson ? ` ${t('actmap.why.inLesson', { lesson })}` : ''}`}
+                                />
+                                <span className="aweb__tip">
+                                    <span className="aweb__tip-text" aria-hidden="true">
+                                        <span className="aweb__tip-title" dir="auto">{a.label}</span>
+                                        <span className="aweb__tip-move" dir="auto">{moved}</span>
+                                        <span className="aweb__tip-why" dir="auto">{why}</span>
+                                        {/* The lesson it came from, when the signal is lesson-shaped
+                                            — "showing up regularly" belongs to no single lesson. */}
+                                        {lesson && (
+                                            <span className="aweb__tip-lesson" dir="auto">
+                                                {t('actmap.why.inLesson', { lesson })}
+                                            </span>
+                                        )}
+                                    </span>
+                                    {/* Only on the way down: a dip is the moment a kid deserves
+                                        more than one line, and Yuvi can walk through it. */}
+                                    {a.dir === 'down' && (
+                                        <button
+                                            type="button"
+                                            className="aweb__tip-ask"
+                                            onClick={() => askYuvi(a)}
+                                        >
+                                            <Icon name="message" size={13} />
+                                            <span>{t('actmap.ask.cta')}</span>
+                                        </button>
+                                    )}
+                                </span>
+                            </div>
+                        )
+                    })}
                 </div>
             </div>
 

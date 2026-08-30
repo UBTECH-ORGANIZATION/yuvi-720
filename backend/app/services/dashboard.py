@@ -248,6 +248,22 @@ def _project_competencies(
             "mappingLevelKey": (measure_row or {}).get("level_key") or None,
             # State-aware "how to improve" cause tags (behavioural, no numbers).
             "improve": list(eff.get("causes") or []),
+            # Where this domain stood a week ago, from the same engine that
+            # names the reason — so the arrow and its explanation cannot
+            # disagree. Null when there is no live signal to compare.
+            "priorValue": eff.get("prior_value"),
+            # What actually moved this domain, signed. The learner UI names it
+            # when explaining a change, so the reason is an observed behaviour.
+            "drivers": [
+                {
+                    **{k: v for k, v in d.items() if k != "objective_id"},
+                    # Resolved here, not in the brain: the ministry title is a
+                    # catalog concern and it has to follow the UI's language.
+                    **({"lesson": localized_objective_title(d["objective_id"], language)}
+                       if d.get("objective_id") else {}),
+                }
+                for d in (eff.get("drivers") or [])
+            ],
             # True only when there's enough real activity to name *why* the score
             # sits where it does. The map gates its change arrow on this so it can
             # never claim a movement it couldn't explain (seeded/fabricated

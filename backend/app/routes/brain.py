@@ -159,6 +159,20 @@ async def read_dashboard(learner_id: str, lang: str = "he", actor: dict = Depend
     from app.agents.tutor_decision import recent_tutor_decisions
     decisions = await recent_tutor_decisions(safe_id)
     effective = effective_activeness(brain, events, decisions)
+    # Park the strongest driver per domain on the brain. The companion is a
+    # different request with no access to this computation, and without it a kid
+    # asking "why did this go down?" gets plausible guesses instead of their week.
+    # A list, not a dict: `flatten_updates` deep-merges dicts, which would leave
+    # a domain's stale driver behind after it stops driving anything.
+    movement = [
+        {"key": key, **(row.get("drivers") or [{}])[0]}
+        for key, row in effective.items() if row.get("drivers")
+    ]
+    if movement != ((brain.get("profile") or {}).get("activeness_drivers") or []):
+        try:
+            await apply_brain_updates(safe_id, {"profile.activeness_drivers": movement})
+        except Exception as exc:
+            print(f"⚠️ activeness drivers not persisted: {exc}")
     from app.services.content_catalog import completed_component_ids
     dashboard = project_dashboard(
         brain,

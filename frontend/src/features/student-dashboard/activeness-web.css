@@ -297,6 +297,205 @@
     border: 0;
 }
 
+/* ── "Why did this move?" ─────────────────────────────────────────────────── */
+/* A hit area over the emblem of each domain that changed — sized to the dome it
+   covers, so the ring it lights up reads as the icon reacting. */
+.aweb__probe {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    z-index: 4;
+    inline-size: 8cqw;
+    block-size: 8cqw;
+    min-inline-size: 30px;
+    min-block-size: 30px;
+}
+
+.aweb__probe-hit {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    cursor: help;
+}
+
+.aweb__probe.is-focus {
+    inline-size: 10cqw;
+    block-size: 10cqw;
+    z-index: 6;
+}
+
+.aweb__probe::before {
+    content: '';
+    position: absolute;
+    inset: -14%;
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 34%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .16s var(--sp-ease, ease);
+}
+
+.aweb__probe:hover,
+.aweb__probe:focus-within {
+    z-index: 7;
+}
+
+.aweb__probe:hover::before,
+.aweb__probe:focus-within::before {
+    opacity: 1;
+}
+
+.aweb__probe-hit:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--c) 45%, transparent);
+    outline-offset: 2px;
+}
+
+.aweb__tip {
+    position: absolute;
+    /* Physical `left`, deliberately: the bubble is centred on a point and the
+       nudge below is a physical translate, so a logical inset would anchor from
+       the far side in RTL and throw it half a bubble off the dot. */
+    left: 50%;
+    inset-block-end: calc(100% + 9px);
+    display: grid;
+    gap: 3px;
+    inline-size: max-content;
+    max-inline-size: min(212px, 52cqw);
+    padding: 9px 12px;
+    transform: translateX(var(--aweb-tip-bias, -50%)) translateY(4px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    border: 1px solid color-mix(in srgb, var(--c) 26%, rgba(111, 91, 255, .16));
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 14px 34px rgba(49, 43, 104, .18);
+    text-align: start;
+    transition: opacity .16s ease, transform .16s ease, visibility 0s linear .16s;
+}
+
+/* A dot in the upper half hangs its bubble below, so it never leaves the card. */
+.aweb__probe.is-below .aweb__tip {
+    inset-block-end: auto;
+    inset-block-start: calc(100% + 9px);
+    transform: translateX(var(--aweb-tip-bias, -50%)) translateY(-4px);
+}
+
+/* Focus-within, not just hover: on a touch screen a tap is the only way in, and
+   the card holds a button the learner has to be able to reach. */
+.aweb__probe:hover .aweb__tip,
+.aweb__probe:focus-within .aweb__tip {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(var(--aweb-tip-bias, -50%)) translateY(0);
+    transition-delay: 0s;
+}
+
+/* A transparent bridge across the gap, so the pointer can travel from the
+   emblem into the card without passing through dead space and closing it. */
+.aweb__tip::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: -11px;
+    block-size: 11px;
+}
+
+.aweb__probe.is-below .aweb__tip::after {
+    inset-block-end: auto;
+    inset-block-start: -11px;
+}
+
+.aweb__tip-ask {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-block-start: 2px;
+    padding: 7px 12px;
+    border: 1px solid color-mix(in srgb, var(--c) 34%, transparent);
+    border-radius: var(--sp-radius-pill);
+    background: color-mix(in srgb, var(--c) 10%, #fff);
+    color: color-mix(in srgb, var(--c) 66%, #2f2f44);
+    font: 800 11px/1 var(--sp-font);
+    cursor: pointer;
+    transition: background .15s var(--sp-ease, ease), border-color .15s var(--sp-ease, ease);
+}
+
+.aweb__tip-ask:hover {
+    background: color-mix(in srgb, var(--c) 18%, #fff);
+    border-color: color-mix(in srgb, var(--c) 52%, transparent);
+}
+
+.aweb__tip-ask:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--c) 40%, transparent);
+    outline-offset: 2px;
+}
+
+.aweb__tip-text {
+    display: grid;
+    gap: 3px;
+}
+
+.aweb__tip-title {
+    color: color-mix(in srgb, var(--c) 62%, #2f2f44);
+    font-size: clamp(10px, 3cqw, 12px);
+    font-weight: 800;
+}
+
+.aweb__tip-move {
+    color: var(--sp-ink-900, #1f1d3d);
+    font-size: clamp(11px, 3.2cqw, 13px);
+    font-weight: 700;
+}
+
+.aweb__tip-why {
+    color: var(--sp-ink-500, #4a4668);
+    font-size: clamp(10px, 3cqw, 12px);
+    font-weight: 500;
+    line-height: 1.45;
+}
+
+.aweb__tip-lesson {
+    display: block;
+    margin-block-start: 3px;
+    color: color-mix(in srgb, var(--c) 60%, #4a4668);
+    font-size: clamp(10px, 2.9cqw, 11.5px);
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+[data-theme='dark'] .aweb__tip {
+    border-color: color-mix(in srgb, var(--c) 34%, rgba(159, 122, 254, .24));
+    background: #201e42;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, .42);
+}
+
+[data-theme='dark'] .aweb__tip-move {
+    color: #f1f0ff;
+}
+
+[data-theme='dark'] .aweb__tip-why {
+    color: rgba(214, 216, 245, .8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .aweb__probe::before,
+    .aweb__tip {
+        transition: none;
+    }
+}
+
+[data-theme='dark'] .aweb__tip-ask {
+    background: color-mix(in srgb, var(--c) 22%, #201e42);
+    color: #f1f0ff;
+}
+
 /* ── Legend for the change markers ────────────────────────────────────────── */
 .aweb__legend {
     display: flex;
