@@ -215,6 +215,11 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         if sweeper:
             sweeper.cancel()
         relay_probe.cancel()
+        # Usage metering is written off the request path, so drain it here or a
+        # restart loses the events for every in-flight AI call.
+        from app.services import ai_usage
+
+        await ai_usage.flush_pending()
 
 
 def create_app() -> FastAPI:
