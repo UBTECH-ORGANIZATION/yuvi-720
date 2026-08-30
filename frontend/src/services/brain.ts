@@ -103,6 +103,10 @@ export interface DashboardSubject {
   progress: number
   level: string
   levelClass: string
+  /** The mastery scale (`basic`/`intermediate`/`advanced`), median across the
+   *  subject's worked objectives, or `starting` before any attempt. Localized
+   *  client-side via `sdash.subjects.level.<key>`. */
+  levelKey: 'starting' | 'basic' | 'intermediate' | 'advanced'
   gradient: string
   description: string
   curriculum: {
@@ -110,6 +114,10 @@ export interface DashboardSubject {
     topic: string
     status: string
     statusClass: 'curr-done' | 'curr-current' | 'curr-upcoming'
+    /** 0…100 against mastery — 100 only once mastery says achieved. Drawn as a
+     *  bar and never shown to the learner as a number (§3.4). */
+    percent: number
+    needsReview: boolean
   }[]
 }
 
