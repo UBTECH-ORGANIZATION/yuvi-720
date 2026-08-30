@@ -12,6 +12,7 @@ from pathlib import Path
 import re
 import secrets
 from typing import Any, Literal, Optional
+from urllib.parse import urlsplit
 
 from authlib.integrations.starlette_client import OAuth
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, WebSocket, WebSocketDisconnect
@@ -200,6 +201,46 @@ class AuthStatus(BaseModel):
     public_access: bool = False
 
 
+class EnvironmentBadge(BaseModel):
+    """Which environment and database this console is actually reading."""
+
+    environment: str
+    host: str
+    database: str
+    is_production: bool
+
+
+_PRODUCTION_DB_HOSTS = frozenset({
+    "yuvi720.mongocluster.cosmos.azure.com",
+    "yuvi720.global.mongocluster.cosmos.azure.com",
+})
+
+
+def _connection_host(connection_string: str) -> str:
+    """The host of a Mongo URI, with the credentials left behind.
+
+    Parsing rather than slicing, because a badly formed URI must never leak a
+    password into a log line or an API response.
+    """
+    if not connection_string:
+        return ""
+    host = urlsplit(connection_string).hostname
+    if host:
+        return host
+    match = re.search(r"@([^/?,]+)", connection_string)
+    return match.group(1).split(":")[0] if match else ""
+
+
+def _environment_badge(settings: Settings) -> EnvironmentBadge:
+    host = _connection_host(settings.mongodb_connection_string)
+    return EnvironmentBadge(
+        environment=settings.environment or "unknown",
+        host=host or "(not configured)",
+        database=settings.mongodb_database or "(not configured)",
+        is_production=host in _PRODUCTION_DB_HOSTS,
+    )
+
+
 def _environment_flag(name: str, default: bool) -> bool:
     value = os.getenv(name)
     if value is None:
@@ -291,6 +332,12 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
+        badge = _environment_badge(resolved_settings)
+        suffix = " ← PRODUCTION" if badge.is_production else ""
+        print(
+            f"🗄️ admin environment={badge.environment} "
+            f"host={badge.host} database={badge.database}{suffix}"
+        )
         if resolved_public_access:
             print("⚠️ Admin public access is enabled; Google authentication is bypassed")
         elif not resolved_settings.admin_emails:
@@ -447,6 +494,14 @@ def create_app(
         if resolved_public_access:
             return {"role": "public_preview"}
         return await admin_required(request)
+
+    @app.get("/api/environment", response_model=EnvironmentBadge)
+    async def environment_badge(
+        _: dict[str, Any] = Depends(usage_access),
+    ) -> EnvironmentBadge:
+        # Host and database only. Whoever reads a number here needs to know
+        # which database produced it.
+        return _environment_badge(resolved_settings)
 
     @app.get("/api/ai-usage/summary", response_model=UsageSummary)
     async def usage_summary(

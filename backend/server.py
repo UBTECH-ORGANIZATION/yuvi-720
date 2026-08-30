@@ -17,6 +17,7 @@ from app.core.env import ensure_env_loaded
 # Service process settings retain precedence over file values.
 ensure_env_loaded()
 
+from app.core import database
 from app.routes.auth import router as auth_router
 from app.routes.badges import router as badges_router
 from app.routes.brain import router as brain_router
@@ -218,6 +219,11 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     """Create and configure the Yuvilab Spark API application."""
+    # Before anything else: refuse to boot against a store this environment is
+    # not allowed to open, and say out loud which one it is.
+    database.verify_configuration()
+    database.announce()
+
     app = FastAPI(title="Yuvilab Spark", version="1.0.0", lifespan=lifespan)
 
     # Credentialed requests (the session cookie) are incompatible with a
