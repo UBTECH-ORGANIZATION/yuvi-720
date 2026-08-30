@@ -319,7 +319,6 @@ export function App() {
      the surrounding chrome is a way to lose work, so the shell collapses. */
   const isActiveTaskRoute = pathname.startsWith('/learning/lesson')
     || pathname.startsWith('/tasks/')
-  const isLearningWorldRoute = pathname === '/learning' || pathname.startsWith('/learning?')
   // While signed out the guard renders the landing page, so the learner shell
   // and its companion must not wrap it.
   const learnerRoute = isLearnerRoute(pathname) && Boolean(user)
@@ -463,7 +462,7 @@ export function App() {
           content (and re-run its localization) whenever the language changes. */}
       {learnerRoute ? (
         <div
-          className={`sp-learner-shell${isActiveTaskRoute ? ' is-task-route' : ''}${isLearningWorldRoute ? ' is-world-route' : ''}${isOpen && !isOpening && !isClosing ? ' is-companion-open' : ''}${isOpening ? ' is-companion-opening' : ''}${isClosing ? ' is-companion-closing' : ''}`}
+          className={`sp-learner-shell${isActiveTaskRoute ? ' is-task-route' : ''}${isOpen && !isOpening && !isClosing ? ' is-companion-open' : ''}${isOpening ? ' is-companion-opening' : ''}${isClosing ? ' is-companion-closing' : ''}`}
           style={{ '--sp-companion-width': `${panelWidth}px` } as React.CSSProperties}
         >
           <CompanionChat />
@@ -475,7 +474,7 @@ export function App() {
            than living inside it. */
         <TeacherShell>{routePage}</TeacherShell>
       ) : routePage}
-      {learnerRoute && !isStudioRoute && !isActiveTaskRoute && !isLearningWorldRoute && <YuviCompanionDock />}
+      {learnerRoute && !isStudioRoute && !isActiveTaskRoute && <YuviCompanionDock />}
       {learnerRoute && <SparkToast />}
       {learnerRoute && <LearnerMessageToast />}
       {/* Learner-scoped ON PURPOSE (never `user &&`): a teacher must not be
