@@ -88,10 +88,19 @@ def apply_ops(
             continue
         entries = blocks[block_key]
 
+        inherited: list[str] = []
         if action in {"update", "delete"} and replaces:
             for entry in entries:
                 if not entry.get("invalid_at") and str(entry.get("text") or "").strip() == replaces:
                     entry["invalid_at"] = now
+                    # Attribution survives rewording (#454): a teacher-asserted
+                    # sentence the regen rephrases is still the teacher's voice,
+                    # and must keep its chip, its withdraw path, and its
+                    # override bell. Only a true delete drops the key.
+                    inherited.extend(
+                        str(item) for item in entry.get("evidence") or []
+                        if str(item).startswith("stated_by_teacher")
+                    )
         if action in {"add", "update"} and text:
             already = any(
                 str(e.get("text") or "").strip() == text for e in active_entries(entries)
@@ -99,7 +108,7 @@ def apply_ops(
             if not already:
                 entries.append({
                     "text": text,
-                    "evidence": evidence,
+                    "evidence": (evidence + [key for key in inherited if key not in evidence])[:8],
                     "valid_at": now,
                     "invalid_at": None,
                 })
@@ -220,12 +229,20 @@ def gather_evidence(brain: dict[str, Any]) -> dict[str, Any]:
         evidence["behavior_signals"] = signals
 
     memory = brain.get("memory") if isinstance(brain.get("memory"), dict) else memory_defaults()
-    themes = [
-        f"memory.{theme.get('kind')}: {theme.get('value')}"
-        for theme in active_themes(memory, limit=6)
-    ]
-    if themes:
-        evidence["stated_by_learner"] = themes
+    # The teacher's voice (#454) is an assertion by an adult who knows the
+    # child, not an observation of the child — the regen must see whose claim
+    # each theme is, so the two are surfaced apart and never merged.
+    learner_themes, teacher_themes = [], []
+    for theme in active_themes(memory, limit=8):
+        line = f"memory.{theme.get('kind')}: {theme.get('value')}"
+        if "teacher" in (theme.get("source_types") or []):
+            teacher_themes.append(line)
+        else:
+            learner_themes.append(line)
+    if learner_themes:
+        evidence["stated_by_learner"] = learner_themes[:6]
+    if teacher_themes:
+        evidence["stated_by_teacher"] = teacher_themes[:6]
     # Beliefs the learner explicitly took back. Without this the regen cannot
     # tell "no counter-evidence" from "evidence withdrawn", and a sentence like
     # "connects through football" would survive as a stable trait after the
@@ -255,6 +272,8 @@ _REGEN_PROMPT = (
     "\"text\":\"משפט קצר\",\"replaces\":\"טקסט קיים אם מעדכנים/מוחקים\",\"evidence\":[\"מפתח ראיה\"]}]}. "
     "תכונה יציבה שאין ראיה נגדה — אל תיגע בה. "
     "אם משפט קיים נשען על פריט שמופיע ב-withdrawn_by_learner (התלמיד/ה חזר/ה בו/בה) — מחק או עדכן אותו. "
+    "משפט שראיה שלו מתחילה ב-stated_by_teacher נכתב בידי מורה שמכיר/ה את התלמיד/ה: "
+    "אל תמחק ואל תעדכן אותו אלא אם ראיות התנהגותיות עקביות סותרות אותו במפורש. "
     "אם אין עדכון מוצדק החזר ops ריק."
 )
 
@@ -340,12 +359,38 @@ async def regenerate(learner_id: str) -> None:
         except (TypeError, ValueError, json.JSONDecodeError):
             ops = []
 
+    # Symmetry (#454): we warn the teacher before their insight overrides Yuvi,
+    # so when the evidence overrides the teacher we must tell them too. Snapshot
+    # the teacher-asserted entries before applying — apply_ops invalidates the
+    # same entry dicts in place, so the diff needs a copy taken first.
+    teacher_entries_before = [
+        {"text": str(entry.get("text") or ""), "evidence": list(entry.get("evidence") or [])}
+        for key in BLOCK_KEYS
+        for entry in active_entries((description.get("blocks") or {}).get(key))
+        if any(str(e).startswith("stated_by_teacher") for e in entry.get("evidence") or [])
+    ]
+
     now = _now()
     updated = apply_ops(description, ops, now=now)
     updated["stale"] = False
     updated["events_since_generation"] = 0
     updated["last_generated_at"] = now
     await apply_brain_updates(learner_id, {"student_description": updated})
+
+    still_active = {
+        str(entry.get("text") or "")
+        for key in BLOCK_KEYS
+        for entry in active_entries((updated.get("blocks") or {}).get(key))
+    }
+    overridden = [entry for entry in teacher_entries_before if entry["text"] not in still_active]
+    if overridden:
+        from app.services.student_model_insight import notify_teacher_overridden
+
+        for entry in overridden:
+            try:
+                await notify_teacher_overridden(learner_id, entry["text"], entry["evidence"])
+            except Exception as exc:  # a bell must never break regeneration
+                print(f"⚠️ teacher-insight override notification failed: {type(exc).__name__}")
 
 
 async def seed_from_onboarding(learner_id: str) -> None:

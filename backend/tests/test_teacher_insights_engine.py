@@ -1019,7 +1019,7 @@ class PortraitTest(unittest.TestCase):
             ],
         }))
         portrait = insights._portrait(brain)
-        lines = [line for block in portrait["blocks"] for line in block["lines"]]
+        lines = [line["text"] for block in portrait["blocks"] for line in block["lines"]]
         self.assertEqual(lines, ["צעדים קטנים"])
 
     def test_blocks_come_out_in_reading_order(self):
@@ -1055,7 +1055,10 @@ class PortraitTest(unittest.TestCase):
              patch("app.services.insights.get_recent_events", new=AsyncMock(return_value=[])), \
              patch("app.services.insights.plan_next", return_value={}):
             view = run(insights.student_insights("kid", "he"))
-        self.assertEqual(view["portrait"]["blocks"][0]["lines"], ["צעדים קטנים"])
+        self.assertEqual(
+            view["portrait"]["blocks"][0]["lines"],
+            [{"text": "צעדים קטנים", "by_teacher": False}],
+        )
 
     def test_reading_a_portrait_never_calls_a_model(self):
         """The whole point: the description is maintained lazily off the CHILD's

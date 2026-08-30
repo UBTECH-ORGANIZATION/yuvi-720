@@ -304,6 +304,106 @@
   font-size: var(--sp-fs-xs);
   margin-inline-end: var(--sp-2);
 }
+.tch-portrait__empty {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-400);
+}
+/* A sentence the teacher asserted, attributed apart from the inferred ones —
+   the two voices are never merged (#454). */
+.tch-portrait__byTeacher {
+  display: inline-block;
+  margin-inline-start: var(--sp-2);
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--sp-primary-200);
+  background: var(--sp-primary-100);
+  color: var(--sp-primary-600);
+  font-size: var(--sp-fs-xs);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* The regret path: a quiet link beside the chip, not a red button — the
+   withdrawal itself is also bi-temporal and recoverable. */
+.tch-portrait__undo {
+  margin-inline-start: var(--sp-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sp-ink-400);
+  font-size: var(--sp-fs-xs);
+  text-decoration: underline;
+  cursor: pointer;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.tch-portrait__undo:hover { color: var(--sp-danger-600); }
+
+/* ── the teacher's insight entering the model (#454) ───────────────────────*/
+.tch-insight__door {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+  margin-block-start: var(--sp-3);
+  padding-block-start: var(--sp-3);
+  border-block-start: 1px solid var(--sp-border);
+}
+.tch-insight__savedNote { font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+.tch-insight {
+  display: grid;
+  gap: var(--sp-2);
+  margin-block-start: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  border: 1px solid var(--sp-border);
+  background: var(--sp-bg-subtle);
+}
+.tch-insight__intro {
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+.tch-insight__field {
+  display: grid;
+  gap: var(--sp-1);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+.tch-insight__field textarea { resize: vertical; }
+.tch-insight__actions { display: flex; gap: var(--sp-2); justify-content: flex-end; }
+.tch-insight__error { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-danger-600); }
+.tch-insight--warn { border-color: var(--sp-danger-600); }
+.tch-insight__warnTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+  color: var(--sp-danger-600);
+}
+.tch-insight__reasons {
+  margin: 0;
+  padding-inline-start: var(--sp-4);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-700);
+  display: grid;
+  gap: 2px;
+}
+.tch-insight__current {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-inline-start: 3px solid var(--sp-border);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+}
+.tch-insight__currentLabel {
+  display: block;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
 
 /* ── the rebuilt header ─────────────────────────────────────────────────────*/
 

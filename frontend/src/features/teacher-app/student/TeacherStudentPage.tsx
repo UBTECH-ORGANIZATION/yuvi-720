@@ -36,6 +36,7 @@ import { useAuth } from '../../../providers/AuthProvider'
 import { FocusPanel } from '../live/FocusPanel'
 import { ScoreStats } from './ScoreCards'
 import {
+  addModelInsight, withdrawModelInsight,
   generateTopicDigest, getFocusRoadmap, getLearnerRead, getPinnedNext,
   getStudentActivity,
   getStudentDetail,
@@ -43,8 +44,10 @@ import {
   getTopicDigest,
   unpinNext,
   type RoadmapStep,
-  type LearnerRead, type LearnerTrends, type ObjectiveBreakdownRow,
-  type PlannerFocus, type QuestionRow, type StudentScores,
+  type LearnerRead, type LearnerTrends, type ModelInsightDiff,
+  type ObjectiveBreakdownRow,
+  type PlannerFocus, type PortraitBlock, type PortraitLine,
+  type QuestionRow, type StudentScores,
   type StrengthDetail, type StudentDetail, type StudentGoal,
   type StudentPortrait, type StruggleItem, type SubjectProgress,
   type TeacherRecommendation,
@@ -87,6 +90,9 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
   const [digest, setDigest] = useState<TopicDigest | null>(null)
   const [digestState, setDigestState] = useState<DigestState>('idle')
   const [error, setError] = useState(false)
+  /* Bumped when a teacher insight lands in the student model (#454), so the
+     portrait re-reads what the model now believes. */
+  const [detailNonce, setDetailNonce] = useState(0)
   const live = useTeacherLive()
   const { avatarOf, nameOf } = useTeacherRoster()
 
@@ -156,7 +162,7 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
       .then((result) => { if (active) setDetail(result) })
       .catch(() => { if (active) setError(true) })
     return () => { active = false }
-  }, [learnerId, subject, language])
+  }, [learnerId, subject, language, detailNonce])
 
   /* Badges load beside the detail, not after it: the header leads with the
      child's latest badge — their own symbol of themselves — instead of a grey
@@ -497,6 +503,8 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
         <MoreDialogs
           detail={detail}
           trends={trends}
+          learnerId={learnerId}
+          onModelChanged={() => setDetailNonce((value) => value + 1)}
           extra={(
             <button
               type="button"
@@ -1676,9 +1684,12 @@ function GoalsCard({ learnerId, name }: { learnerId: string; name: string }) {
 
 /* ── the sometimes-reading, behind doors ───────────────────────────────────── */
 
-function MoreDialogs({ detail, trends, extra }: {
+function MoreDialogs({ detail, trends, learnerId, onModelChanged, extra }: {
   detail: StudentDetail
   trends: LearnerTrends | null
+  learnerId: string
+  /** A teacher insight just entered the student model — re-read the portrait. */
+  onModelChanged: () => void
   /** An extra door rendered in the same row, same dress — the wellbeing
    *  button rides here so the bottom of the page is ONE row of doors. */
   extra?: ReactNode
@@ -1689,7 +1700,9 @@ function MoreDialogs({ detail, trends, extra }: {
   const struggles = detail.struggle_items ?? []
   const evidenced = struggles.filter((item) => item.source !== 'questionnaire')
   const described = struggles.filter((item) => item.source === 'questionnaire')
-  const hasPortrait = Boolean(detail.portrait?.blocks.length || described.length)
+  // Always a door (#454): even before anything was observed, the dialog is
+  // where a teacher puts what THEY know into the model.
+  const hasPortrait = true
   const hasBalance = Boolean((detail.strengths_detail ?? []).length || evidenced.length)
 
   const doors: { key: 'portrait' | 'balance' | 'trend'; icon: string; label: string; show: boolean }[] = [
@@ -1717,7 +1730,8 @@ function MoreDialogs({ detail, trends, extra }: {
       <Modal open={open === 'portrait'} onClose={() => setOpen(null)}
              titleId="tch-more-portrait" className="tch-student__moreDialog">
         <h2 id="tch-more-portrait" className="sp-sr-only">{t('tch.student.portrait')}</h2>
-        <PortraitPanel portrait={detail.portrait} described={described} />
+        <PortraitPanel portrait={detail.portrait} described={described}
+                       learnerId={learnerId} onModelChanged={onModelChanged} />
       </Modal>
 
       <Modal open={open === 'balance'} onClose={() => setOpen(null)}
@@ -1836,13 +1850,43 @@ const PORTRAIT_ICON: Record<string, string> = {
   motivational_patterns: 'spark',
 }
 
-function PortraitPanel({ portrait, described }: {
+/* A backend that has not been redeployed yet still sends plain strings —
+ * degrade to an unattributed line rather than a blank box. */
+function normalizeLine(line: PortraitLine | string): PortraitLine {
+  return typeof line === 'string' ? { text: line, by_teacher: false } : line
+}
+
+function PortraitLineText({ line, onWithdraw }: {
+  line: PortraitLine | string
+  /** The regret path (#454) — only offered on teacher-asserted lines. */
+  onWithdraw?: (line: PortraitLine) => void
+}) {
+  const { t } = useI18n()
+  const norm = normalizeLine(line)
+  return (
+    <>
+      {norm.text}
+      {norm.by_teacher ? (
+        <span className="tch-portrait__byTeacher">{t('tch.insight.byTeacher')}</span>
+      ) : null}
+      {norm.by_teacher && onWithdraw ? (
+        <button type="button" className="tch-portrait__undo"
+                onClick={() => onWithdraw(norm)}>
+          {t('tch.insight.withdraw')}
+        </button>
+      ) : null}
+    </>
+  )
+}
+
+function PortraitPanel({ portrait, described, learnerId, onModelChanged }: {
   portrait: StudentPortrait | null
   described: StruggleItem[]
+  learnerId: string
+  onModelChanged: () => void
 }) {
   const { t } = useI18n()
   const [isFull, setFull] = useState(false)
-  if (!portrait?.blocks.length && !described.length) return null
 
   const blocks = portrait?.blocks ?? []
   const extra = blocks.reduce((sum, block) => sum + Math.max(0, block.lines.length - 1), 0)
@@ -1859,15 +1903,22 @@ function PortraitPanel({ portrait, described }: {
             {blocks.map((block) => {
               const lead = block.lines[block.lines.length - 1]
               const rest = isFull ? block.lines.slice(0, -1) : []
+              const withdraw = (line: PortraitLine) => {
+                withdrawModelInsight(learnerId, { block: block.key, text: line.text })
+                  .then(onModelChanged)
+                  .catch(() => {})
+              }
               return (
                 <section key={block.key} className="tch-portrait__facet">
                   <h4>
                     <Icon name={PORTRAIT_ICON[block.key] ?? 'spark'} size={13} aria-hidden />
                     {t(`tch.portrait.${block.key}`)}
                   </h4>
-                  <p dir="auto">{lead}</p>
+                  <p dir="auto"><PortraitLineText line={lead} onWithdraw={withdraw} /></p>
                   {rest.map((line, index) => (
-                    <p key={index} className="tch-portrait__more" dir="auto">{line}</p>
+                    <p key={index} className="tch-portrait__more" dir="auto">
+                      <PortraitLineText line={line} onWithdraw={withdraw} />
+                    </p>
                   ))}
                 </section>
               )
@@ -1893,7 +1944,9 @@ function PortraitPanel({ portrait, described }: {
             ) : null}
           </div>
         </>
-      ) : null}
+      ) : (
+        <p className="tch-portrait__empty">{t('tch.insight.emptyPortrait')}</p>
+      )}
 
       {described.length ? (
         <p className="tch-portrait__said" dir="auto">
@@ -1901,7 +1954,140 @@ function PortraitPanel({ portrait, described }: {
           {described.map((item) => item.label).filter(Boolean).join(' · ')}
         </p>
       ) : null}
+
+      {/* Last on purpose (#454): the teacher reads what the system currently
+          believes BEFORE adding to it. */}
+      <InsightComposer learnerId={learnerId} onSaved={onModelChanged} />
     </Panel>
+  )
+}
+
+/* The teacher's voice entering the model (#454). Three faces: a closed door,
+ * the form, and — when the server refuses without confirmation — the warning
+ * that says what Yuvi currently believes, the evidence behind it, and what
+ * this insight would change. The 409 loop is the contract: the warning is
+ * computed server-side and cannot be skipped by a hasty client. */
+function InsightComposer({ learnerId, onSaved }: {
+  learnerId: string
+  onSaved: () => void
+}) {
+  const { t } = useI18n()
+  const [isOpen, setOpen] = useState(false)
+  const [block, setBlock] = useState<PortraitBlock>('learning_preferences')
+  const [text, setText] = useState('')
+  const [diff, setDiff] = useState<ModelInsightDiff | null>(null)
+  const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle')
+
+  const reset = () => {
+    setOpen(false); setText(''); setDiff(null); setState('idle')
+  }
+
+  const submit = async (confirmed: boolean) => {
+    setState('saving')
+    try {
+      const result = await addModelInsight(learnerId, { block, text, confirmed })
+      if ('needs_confirmation' in result) {
+        setDiff(result.diff)
+        setState('idle')
+        return
+      }
+      // Close and clear — the saved sentence now lives in the portrait above,
+      // and a lingering filled form invites an accidental double-save.
+      setOpen(false)
+      setText('')
+      setDiff(null)
+      setState('saved')
+      onSaved()
+    } catch {
+      setState('failed')
+    }
+  }
+
+  if (!isOpen) {
+    return (
+      <div className="tch-insight__door">
+        {state === 'saved' ? (
+          <span className="tch-insight__savedNote">{t('tch.insight.saved')}</span>
+        ) : null}
+        <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
+                onClick={() => { setOpen(true); setState('idle') }}>
+          <Icon name="plus" size={14} aria-hidden />
+          {t('tch.insight.add')}
+        </button>
+      </div>
+    )
+  }
+
+  if (diff) {
+    const shown = diff.contradicted ?? diff.displaced
+    return (
+      <div className="tch-insight tch-insight--warn">
+        <h4 className="tch-insight__warnTitle">
+          <Icon name="alert" size={14} aria-hidden />
+          {t('tch.insight.warnTitle')}
+        </h4>
+        <ul className="tch-insight__reasons">
+          {diff.reasons.map((reason) => (
+            <li key={reason}>
+              {reason === 'strong_evidence'
+                ? t('tch.insight.warn.strong_evidence', { count: shown?.evidence_count ?? 0 })
+                : t(`tch.insight.warn.${reason}`)}
+            </li>
+          ))}
+        </ul>
+        {shown ? (
+          <blockquote className="tch-insight__current" dir="auto">
+            <span className="tch-insight__currentLabel">{t('tch.insight.currentBelief')}</span>
+            {shown.text}
+          </blockquote>
+        ) : null}
+        <div className="tch-insight__actions">
+          <button type="button" className="sp-btn sp-btn--sm" disabled={state === 'saving'}
+                  onClick={() => submit(true)}>
+            {t('tch.insight.confirm')}
+          </button>
+          <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
+                  onClick={() => setDiff(null)}>
+            {t('tch.insight.back')}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="tch-insight">
+      <p className="tch-insight__intro">{t('tch.insight.intro')}</p>
+      <label className="tch-insight__field">
+        <span>{t('tch.insight.facet')}</span>
+        <select className="sp-input" value={block}
+                onChange={(event) => setBlock(event.target.value as PortraitBlock)}>
+          {(['learning_preferences', 'motivational_patterns', 'what_frustrates', 'how_to_reach'] as PortraitBlock[])
+            .map((key) => (
+              <option key={key} value={key}>{t(`tch.portrait.${key}`)}</option>
+            ))}
+        </select>
+      </label>
+      <label className="tch-insight__field">
+        <span>{t('tch.insight.text')}</span>
+        <textarea className="sp-input" rows={2} maxLength={300} dir="auto"
+                  value={text} placeholder={t('tch.insight.placeholder')}
+                  onChange={(event) => setText(event.target.value)} />
+      </label>
+      {state === 'failed' ? (
+        <p className="tch-insight__error">{t('tch.insight.failed')}</p>
+      ) : null}
+      <div className="tch-insight__actions">
+        <button type="button" className="sp-btn sp-btn--sm"
+                disabled={state === 'saving' || text.trim().length < 3}
+                onClick={() => submit(false)}>
+          {t('tch.insight.save')}
+        </button>
+        <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm" onClick={reset}>
+          {t('tch.insight.cancel')}
+        </button>
+      </div>
+    </div>
   )
 }
 

@@ -17,7 +17,9 @@ from fastapi.responses import JSONResponse
 from app.auth.dependencies import require_teacher_session
 from app.brain import org
 from app.core.localization import normalize_language
-from app.services import group_analytics, insights, kata_client, teacher_insights_store
+from app.services import (
+    group_analytics, insights, kata_client, student_model_insight, teacher_insights_store,
+)
 from app.services.lrs import reporter as lrs_reporter
 from learner_state import normalize_learner_id  # type: ignore
 
@@ -596,6 +598,61 @@ async def create_insight(
     except ValueError as exc:
         return JSONResponse(content={"error": str(exc)}, status_code=400, headers=_NO_STORE)
     return _ok(insight)
+
+
+@router.post("/students/{learner_id}/model-insight")
+async def add_model_insight(
+    learner_id: str, data: dict, session=Depends(require_teacher_session)
+):
+    """A teacher insight entering the student model itself (#454).
+
+    Unlike `/insights` above (notes beside the model), this writes into what
+    Yuvi believes and acts on. A drastic change — touching `how_to_reach`,
+    disagreeing with an active belief, or displacing a strongly-evidenced
+    sentence — returns 409 with the diff until the client re-posts
+    `confirmed: true`, so the warning cannot be skipped.
+    """
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    try:
+        result = await student_model_insight.add_insight(
+            safe_id,
+            session["sub"],
+            block=str(data.get("block") or ""),
+            text=str(data.get("text") or ""),
+            confirmed=bool(data.get("confirmed")),
+        )
+    except student_model_insight.InsightError as exc:
+        return JSONResponse(content={"error": exc.code}, status_code=422, headers=_NO_STORE)
+    except student_model_insight.DrasticChange as exc:
+        return JSONResponse(
+            content={"needs_confirmation": True, "diff": exc.diff},
+            status_code=409,
+            headers=_NO_STORE,
+        )
+    return _ok(result)
+
+
+@router.post("/students/{learner_id}/model-insight/withdraw")
+async def withdraw_model_insight(
+    learner_id: str, data: dict, session=Depends(require_teacher_session)
+):
+    """The regret path: withdraw a teacher-asserted sentence and restore what
+    the model believed beforehand — bi-temporally, nothing erased."""
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    try:
+        result = await student_model_insight.withdraw_insight(
+            safe_id,
+            session["sub"],
+            block=str(data.get("block") or ""),
+            text=str(data.get("text") or ""),
+        )
+    except student_model_insight.InsightError as exc:
+        return JSONResponse(content={"error": exc.code}, status_code=422, headers=_NO_STORE)
+    return _ok(result)
 
 
 @router.delete("/students/{learner_id}/insights/{insight_id}")
