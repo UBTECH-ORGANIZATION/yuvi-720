@@ -56,6 +56,16 @@ def _get_collection() -> Optional[Any]:
             "serverSelectionTimeoutMS": 5000,
             "connectTimeoutMS": 5000,
             "socketTimeoutMS": 10000,
+            # A bounded pool is what keeps a burst survivable. The default of
+            # 100 sockets meant a teacher-dashboard load (ten endpoints, each
+            # fanning out over a class) could stampede the cluster; when a
+            # query then passed 10s the driver abandoned the socket but the
+            # SERVER kept executing — zombie queries piled onto Cosmos until
+            # every request (even currentOp) queued behind them and the dev
+            # cluster read as down while idle (2026-08-30). Twenty sockets
+            # queue the burst client-side instead, where waiting is cheap.
+            "maxPoolSize": 20,
+            "waitQueueTimeoutMS": 10000,
         }
         if certifi is not None:
             kwargs["tlsCAFile"] = certifi.where()

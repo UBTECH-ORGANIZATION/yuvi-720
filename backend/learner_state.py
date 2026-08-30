@@ -57,6 +57,12 @@ def _get_collection() -> Optional[Any]:
             "serverSelectionTimeoutMS": 5000,
             "connectTimeoutMS": 5000,
             "socketTimeoutMS": 10000,
+            # Bounded like the app repository's client and for the same
+            # reason: an unbounded burst of sockets turns one slow moment
+            # into a cluster-wide zombie-query pileup (2026-08-30). See
+            # app/brain/repository.py for the full account.
+            "maxPoolSize": 10,
+            "waitQueueTimeoutMS": 10000,
         }
         if certifi is not None:
             kwargs["tlsCAFile"] = certifi.where()
