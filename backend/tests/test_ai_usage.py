@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import asyncio
 import json
 import sys
 import unittest
@@ -126,6 +127,7 @@ class UsagePersistenceTests(unittest.IsolatedAsyncioTestCase):
                     "cached_input_tokens": 2,
                 },
             )
+            await ai_usage.flush_pending()
 
         self.assertEqual(len(collection.documents), 1)
         self.assertEqual(event["total_tokens"], 13)
@@ -133,6 +135,46 @@ class UsagePersistenceTests(unittest.IsolatedAsyncioTestCase):
         for forbidden in ("messages", "prompt", "response_text", "email", "api_key", "headers", "ssml"):
             self.assertNotIn(f'"{forbidden}"', serialized)
         self.assertNotIn("cost_usd\": 0", serialized)
+
+    async def test_slow_store_never_blocks_the_ai_call(self):
+        insert_started = asyncio.Event()
+
+        class _HangingCollection(_InsertCollection):
+            async def insert_one(self, document: dict):
+                insert_started.set()
+                await asyncio.sleep(3600)
+
+        hanging = _HangingCollection()
+
+        def collection_for(name: str):
+            return hanging if name == "ai_usage_events" else None
+
+        ai_usage._indexes_ready = False
+        with patch.object(ai_usage, "_get_collection_named", side_effect=collection_for):
+            await asyncio.wait_for(ai_usage.record_usage(
+                context=UsageContext(
+                    actor_id="demo-learner",
+                    actor_type="learner",
+                    endpoint="/api/agent/coach/stream",
+                    feature="feature_3_learning_companion",
+                    operation="coach.reply",
+                    source="unit_test",
+                ),
+                timer=UsageTimer.start(),
+                provider="azure_openai",
+                gateway="apim",
+                deployment="test-deployment",
+                api_version="test-version",
+                streaming=True,
+                meter="tokens",
+                status="completed",
+                usage_status="unavailable",
+            ), timeout=1)
+            await asyncio.wait_for(insert_started.wait(), timeout=1)
+            pending = set(ai_usage._PENDING_WRITES)
+            for task in pending:
+                task.cancel()
+            await asyncio.gather(*pending, return_exceptions=True)
 
     def test_usage_parser_never_estimates_missing_counts(self):
         self.assertIsNone(ai_usage.token_usage_from_payload({}))
