@@ -1910,9 +1910,11 @@ export function updateTeacherState(patch: Partial<Pick<TeacherState, 'mentoring_
 
 /* ── the nav badge ────────────────────────────────────────────────────────── */
 
-/** How many finished goals are waiting for this teacher's sign-off, across
- *  every class they teach. Its own endpoint because the app bar asks for it on
- *  every screen — see the route's docstring. */
-export function getPendingGoalCount() {
-  return apiGet<{ count: number }>('/api/teacher/goals/pending-count')
+/** How many finished goals are waiting for this teacher's sign-off in the
+ *  selected class — the badge must agree with the class picker beside it.
+ *  Without a group it spans every class they teach. Its own endpoint because
+ *  the app bar asks for it on every screen — see the route's docstring. */
+export function getPendingGoalCount(groupId?: string | null) {
+  const query = groupId ? `?group_id=${encodeURIComponent(groupId)}` : ''
+  return apiGet<{ count: number }>(`/api/teacher/goals/pending-count${query}`)
 }
