@@ -1,7 +1,7 @@
 /* Teacher view + org clients (F6/F8). Every insight/flag carries raw evidence;
    access is group-scoped server-side. */
 
-import { apiDelete, apiGet, apiPatch, apiPost } from './api'
+import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from './api'
 import type { AvatarChoice } from '../features/badges/types'
 
 export interface AttentionFlag {
@@ -1521,7 +1521,7 @@ export function suggestWellbeing(flagId: string, intent: 'message' | 'handle' | 
  * `day` is computed server-side in the school's timezone, so the client never
  * re-derives which column something falls in — that is the bug this avoids. */
 
-export type CalendarSource = 'event' | 'task' | 'goal' | 'meeting'
+export type CalendarSource = 'event' | 'task' | 'goal' | 'meeting' | 'lesson'
 export type CalendarEventKind = 'lesson' | 'reminder' | 'test' | 'event'
 
 export interface CalendarItem {
@@ -1595,6 +1595,98 @@ export function deleteCalendarEvent(eventId: string) {
   return apiDelete<{ deleted: boolean }>(
     `/api/teacher/calendar/events/${encodeURIComponent(eventId)}`
   )
+}
+
+/* ── the weekly spine (#242): rules, not events ───────────────────────────
+   A slot is a recurring weekly rule the calendar expands on read; the
+   calendar items it becomes arrive through `getGroupCalendar` like every
+   other source. These calls manage the rules themselves, one week's
+   exceptions, and the school's editable days-off list. */
+
+export interface TimetableSlot {
+  _id: string
+  group_id: string
+  school_id: string
+  subgroup_id: string | null
+  subject: string
+  subject_key: string | null
+  teacher_name: string | null
+  room: string | null
+  /** 0=Sunday … 6=Saturday — the Israeli school week. */
+  weekday: number
+  start_time: string
+  end_time: string
+  valid_from: string
+  valid_to: string | null
+}
+
+export interface SchoolDay {
+  _id: string
+  school_id: string
+  date: string
+  kind: 'holiday' | 'vacation' | 'closed' | 'half_day'
+  label: string
+  closed_from?: string
+}
+
+export interface TimetableSlotDraft {
+  subject: string
+  subject_key?: string | null
+  weekday: number
+  start_time: string
+  end_time: string
+  valid_from: string
+  valid_to?: string | null
+  subgroup_id?: string | null
+  room?: string | null
+  teacher_name?: string | null
+}
+
+export function getGroupTimetable(groupId: string) {
+  return apiGet<{ school_id: string; slots: TimetableSlot[]; school_days: SchoolDay[] }>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/timetable`)
+}
+
+export function createTimetableSlot(groupId: string, draft: TimetableSlotDraft) {
+  return apiPost<{ slot: TimetableSlot }>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/timetable/slots`, draft)
+}
+
+export function updateTimetableSlot(slotId: string, patch: Partial<TimetableSlotDraft>) {
+  return apiPatch<{ slot: TimetableSlot }>(
+    `/api/teacher/timetable/slots/${encodeURIComponent(slotId)}`, patch)
+}
+
+export function deleteTimetableSlot(slotId: string) {
+  return apiDelete<{ deleted: boolean }>(
+    `/api/teacher/timetable/slots/${encodeURIComponent(slotId)}`)
+}
+
+/** Cancel or move ONE week's lesson; the rule underneath stays intact. */
+export function setLessonException(
+  slotId: string, day: string,
+  body: { kind: 'cancelled' | 'moved'; date?: string;
+          start_time?: string; end_time?: string; note?: string },
+) {
+  return apiPut<{ exception: Record<string, unknown> }>(
+    `/api/teacher/timetable/slots/${encodeURIComponent(slotId)}/occurrences/${day}`, body)
+}
+
+export function clearLessonException(slotId: string, day: string) {
+  return apiDelete<{ restored: boolean }>(
+    `/api/teacher/timetable/slots/${encodeURIComponent(slotId)}/occurrences/${day}`)
+}
+
+export function addSchoolDay(groupId: string, body: {
+  date: string; kind: SchoolDay['kind']; label: string; closed_from?: string
+}) {
+  return apiPost<{ day: SchoolDay }>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/school-days`, body)
+}
+
+export function removeSchoolDay(groupId: string, day: string) {
+  return apiDelete<{ deleted: boolean }>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/school-days/${day}`)
 }
 
 /* ── mentoring: the talk a goal came out of ───────────────────────────────── */
