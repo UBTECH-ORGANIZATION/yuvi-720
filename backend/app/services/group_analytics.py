@@ -499,15 +499,22 @@ async def group_analytics(
 # answers at CLASS level — a teacher could see one child's strip on their
 # profile and never the shape of the room.
 #
-# Reported as a distribution, never as a name and never as an alert. That is
-# the check-in's own rule (`checkin_flow`): a feeling is a conversation opener,
-# not an alarm, and it is the reason this returns counts by valence rather than
-# "who is upset".
+# Reported as a distribution first, with the names behind each family one
+# deliberate click deeper (ADO #505) — never as an alert. The check-in's rule
+# (`checkin_flow`) stands: a feeling is a conversation opener, not an alarm.
+# The click-through exists so the teacher can open that conversation with the
+# right child, the same per-child feeling the live view already shows (#452);
+# what C5 still forbids is a ranking, and a list of who said "hard" is kept
+# unordered by anything that could read as one.
 
 # Below this many answers the shape is noise, and a confident "68% feel good"
 # built on two children is worse than saying nothing — the same evidence gate
 # `engagement` applies to timing.
 MIN_MOOD_ANSWERS = 3
+
+# The dialog's notes tab is a read, not an archive — enough to hear the room,
+# few enough to actually be read.
+MAX_MOOD_NOTES = 60
 
 
 def _mood_window(days: int, offset: int = 0) -> list[str]:
@@ -526,11 +533,20 @@ def _mood_window(days: int, offset: int = 0) -> list[str]:
     ]
 
 
-def _mood_shape(rows: list[dict[str, Any]], keys: set[str], roster: int) -> dict[str, Any]:
-    """Counts by valence over one window, plus the share that read positive."""
+def _mood_shape(
+    rows: list[dict[str, Any]], keys: set[str], roster: int, *, names: bool = False,
+) -> dict[str, Any]:
+    """Counts by valence over one window, plus the share that read positive.
+
+    With `names`, each family also carries the children behind it (#505) —
+    one entry per child per family, their most recent answer in the window,
+    so a teacher can open the conversation the number is asking for. The
+    compare window stays aggregate: last period's names serve no conversation.
+    """
     from app.services.checkin_flow import POSITIVE_VALENCES, VALENCES
 
     by_valence = {valence: 0 for valence in VALENCES}
+    students: dict[str, dict[str, dict[str, Any]]] = {v: {} for v in VALENCES}
     answered_by: set[str] = set()
     skipped = 0
     for row in rows:
@@ -540,12 +556,27 @@ def _mood_shape(rows: list[dict[str, Any]], keys: set[str], roster: int) -> dict
         if valence in by_valence:
             by_valence[valence] += 1
             answered_by.add(row["learner_id"])
+            held = students[valence].get(row["learner_id"])
+            if held is None or (row.get("date") or "") > (held.get("date") or ""):
+                students[valence][row["learner_id"]] = {
+                    "learner_id": row["learner_id"],
+                    "date": row.get("date"),
+                    "feeling": row.get("feeling"),
+                }
         else:
             skipped += 1
 
     answers = sum(by_valence.values())
     positive = sum(by_valence[valence] for valence in POSITIVE_VALENCES)
+    shape: dict[str, Any] = {}
+    if names:
+        shape["students"] = {
+            valence: sorted(held.values(), key=lambda row: row["date"] or "",
+                            reverse=True)
+            for valence, held in students.items() if held
+        }
     return {
+        **shape,
         "students_total": roster,
         # Distinct children who said something, which is what the hint reports.
         # NOT the same as `answers`: one child over a month answers many times,
@@ -566,10 +597,12 @@ def _mood_shape(rows: list[dict[str, Any]], keys: set[str], roster: int) -> dict
 async def class_mood(group_id: str, *, days: int, compare: bool = True) -> dict[str, Any]:
     """How the class has been feeling over a window, and over the one before.
 
-    Aggregate only. No learner id leaves this function: a mood is the most
-    personal thing the product holds, and the class view has no business
-    naming who is having a bad week (C5). The teacher reaches an individual
-    child through their profile, where the child's own strip already lives.
+    The current window carries the children behind each family (#505), so the
+    click on "3 said hard" can land on the right conversations — the same
+    per-child feeling the live view already shows (#452). The compare window
+    stays aggregate, and nothing here orders children against each other (C5):
+    a mood is the most personal thing the product holds, and it leaves as a
+    conversation opener, never as a ranking or an alarm.
     """
     from app.services import checkin_flow
 
@@ -582,7 +615,8 @@ async def class_mood(group_id: str, *, days: int, compare: bool = True) -> dict[
 
     async def _for(learner_id: str) -> list[dict[str, Any]]:
         try:
-            rows = await checkin_flow.history(learner_id, limit=2 * days + 2)
+            rows = await checkin_flow.history(
+                learner_id, limit=2 * days + 2, with_text=True)
         except Exception:      # one child's bad row is not the class's problem
             return []
         return [{**row, "learner_id": learner_id} for row in rows]
@@ -592,7 +626,25 @@ async def class_mood(group_id: str, *, days: int, compare: bool = True) -> dict[
 
     payload = {
         "window_days": days,
-        **_mood_shape(rows, current, len(learner_ids)),
+        **_mood_shape(rows, current, len(learner_ids), names=True),
+        # The written words behind the numbers (#505) — current window only,
+        # newest first, and only days a child actually wrote something. The
+        # question rides along: a quote without what it answered is noise.
+        "notes": sorted(
+            (
+                {
+                    "learner_id": row["learner_id"],
+                    "date": row.get("date"),
+                    "valence": row.get("valence"),
+                    "feeling": row.get("feeling"),
+                    "question": (row.get("note") or {}).get("question"),
+                    "text": (row.get("note") or {}).get("text"),
+                }
+                for row in rows
+                if row.get("date") in current and (row.get("note") or {}).get("text")
+            ),
+            key=lambda note: note["date"] or "", reverse=True,
+        )[:MAX_MOOD_NOTES],
     }
     if compare:
         payload["previous"] = _mood_shape(rows, previous, len(learner_ids))

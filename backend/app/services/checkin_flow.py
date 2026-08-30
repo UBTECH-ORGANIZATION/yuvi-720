@@ -434,11 +434,35 @@ async def complete(checkin_id: str, learner_id: str) -> dict[str, Any]:
     return doc
 
 
-async def history(learner_id: str, limit: int = 14) -> list[dict[str, Any]]:
+def _note_of(doc: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """The day's written words, if any, with the question they answered.
+
+    First non-empty answer wins — the dialog asks one opening question, and a
+    note without its question would read as a bare quote out of context.
+    """
+    for answer in doc.get("step0_answers") or []:
+        text = str(answer.get("text") or "").strip()
+        if not text:
+            continue
+        question = next(
+            (str(q.get("text") or "") for q in doc.get("questions") or []
+             if q.get("id") == answer.get("id")),
+            None,
+        )
+        return {"question": question, "text": text}
+    return None
+
+
+async def history(
+    learner_id: str, limit: int = 14, *, with_text: bool = False,
+) -> list[dict[str, Any]]:
     """The last days' check-ins, newest first — the teacher-profile strip.
 
-    Rows are day-shaped facts (date, valence, feeling, skipped) — never the
-    free-text answers, which stay in the learner's own lane.
+    Rows are day-shaped facts (date, valence, feeling, skipped). With
+    `with_text` each row also carries `note` — the child's written words with
+    the question they answered (#505), PII-stripped at write time. Off by
+    default on purpose: only the class-mood click-through asks for the words,
+    and every other reader keeps them in the learner's own lane.
     """
     rows: list[dict[str, Any]] = []
     collection = await _collection()
@@ -461,6 +485,7 @@ async def history(learner_id: str, limit: int = 14) -> list[dict[str, Any]]:
             "valence": doc.get("valence"),
             "feeling": doc.get("feeling"),
             "skipped": doc.get("valence") is None,
+            **({"note": _note_of(doc)} if with_text else {}),
         }
         for doc in rows
     ]
