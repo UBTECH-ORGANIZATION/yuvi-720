@@ -421,6 +421,12 @@ export function StudioContent({
     avatarRef.current?.equip(worn.slot, design.equipped[worn.slot] ?? null, true)
     setPreview(null)
   }
+  // Trying something on only exists inside the panel offering to sell it. Off
+  // the station there is no buy button and no cancel, so a borrowed hat would
+  // stay on Yuvi's head over a footer cheerfully reporting "all saved".
+  useEffect(() => {
+    if (mode !== 'avatar') clearPreview()
+  }, [mode])
   const goToTab = (tab: Tab) => {
     clearPreview()
     setActiveTab(tab)
