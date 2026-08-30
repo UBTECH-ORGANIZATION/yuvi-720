@@ -167,3 +167,167 @@ async def remove_event(event_id: str, session=Depends(require_teacher_session)):
         return _denied()
     await school_calendar.delete_event(event_id)
     return _ok({"deleted": True})
+
+
+# ── the weekly spine (#242) ──────────────────────────────────────────────────
+# Slots are rules; the calendar above shows their expansion. These routes are
+# the write side and the manager's read: raw rules and the school's days off.
+# Teacher-owned for the pilot — the school-wide admin skeleton can arrive
+# later without changing this contract, only who else may call it.
+
+from app.services import org_repository, timetable  # noqa: E402
+
+
+async def _group_school(group_id: str) -> str:
+    group = await org_repository.get_group(group_id)
+    return str((group or {}).get("school_id") or "")
+
+
+async def _subgroup_ok(group_id: str, subgroup_id: str | None) -> bool:
+    if not subgroup_id:
+        return True
+    subgroup = await org_repository.get_subgroup(subgroup_id)
+    return bool(subgroup and subgroup.get("active") is not False
+                and subgroup.get("group_id") == group_id)
+
+
+@router.get("/groups/{group_id}/timetable")
+async def group_timetable(group_id: str, session=Depends(require_teacher_session)):
+    """The rules themselves plus the school's days off — the manager's read.
+
+    Expanded occurrences deliberately do NOT ride here: the calendar already
+    carries them as items, and a second expansion path is how two screens
+    start disagreeing about the same week.
+    """
+    if not await _guard_group(session, group_id):
+        return _denied()
+    school_id = await _group_school(group_id)
+    return _ok({
+        "school_id": school_id,
+        "slots": await timetable.list_slots(group_id),
+        "school_days": await timetable.list_school_days(school_id) if school_id else [],
+    })
+
+
+@router.post("/groups/{group_id}/timetable/slots")
+async def create_slot(group_id: str, request: Request,
+                      session=Depends(require_teacher_session)):
+    if not await _guard_group(session, group_id):
+        return _denied()
+    body = await request.json()
+    if not isinstance(body, dict):
+        return _bad("bad_body")
+    if not await _subgroup_ok(group_id, str(body.get("subgroup_id") or "") or None):
+        return _bad("bad_subgroup")
+    try:
+        slot = timetable.build_slot(
+            body, group_id=group_id,
+            school_id=await _group_school(group_id),
+            teacher_id=session["sub"])
+    except timetable.TimetableError as exc:
+        return _bad(str(exc))
+    await timetable.save_slot(slot)
+    return _ok({"slot": slot})
+
+
+@router.patch("/timetable/slots/{slot_id}")
+async def update_slot(slot_id: str, request: Request,
+                      session=Depends(require_teacher_session)):
+    if (slot := await timetable.get_slot(slot_id)) is None:
+        return _bad("not_found")
+    group_id = str(slot.get("group_id") or "")
+    if not await _guard_group(session, group_id):
+        return _denied()
+    body = await request.json()
+    if not isinstance(body, dict):
+        return _bad("bad_body")
+    merged = {**slot, **body}
+    if not await _subgroup_ok(group_id, str(merged.get("subgroup_id") or "") or None):
+        return _bad("bad_subgroup")
+    # Rebuilt rather than patched, so an edit passes exactly the validation a
+    # creation does — the same rule the free events above follow.
+    try:
+        rebuilt = timetable.build_slot(
+            merged, group_id=group_id,
+            school_id=str(slot.get("school_id") or ""),
+            teacher_id=str(slot.get("created_by") or session["sub"]))
+    except timetable.TimetableError as exc:
+        return _bad(str(exc))
+    rebuilt["_id"] = slot["_id"]
+    rebuilt["created_at"] = slot.get("created_at") or rebuilt["created_at"]
+    await timetable.save_slot(rebuilt)
+    return _ok({"slot": rebuilt})
+
+
+@router.delete("/timetable/slots/{slot_id}")
+async def remove_slot(slot_id: str, session=Depends(require_teacher_session)):
+    if (slot := await timetable.get_slot(slot_id)) is None:
+        return _bad("not_found")
+    if not await _guard_group(session, str(slot.get("group_id") or "")):
+        return _denied()
+    await timetable.deactivate_slot(slot_id)
+    return _ok({"deleted": True})
+
+
+@router.put("/timetable/slots/{slot_id}/occurrences/{day}")
+async def set_occurrence_exception(slot_id: str, day: str, request: Request,
+                                   session=Depends(require_teacher_session)):
+    """Cancel or move ONE week's lesson; the rule underneath stays intact."""
+    if (slot := await timetable.get_slot(slot_id)) is None:
+        return _bad("not_found")
+    if not await _guard_group(session, str(slot.get("group_id") or "")):
+        return _denied()
+    body = await request.json()
+    if not isinstance(body, dict):
+        return _bad("bad_body")
+    try:
+        exception = timetable.build_exception(
+            slot, day, body, teacher_id=session["sub"])
+    except timetable.TimetableError as exc:
+        return _bad(str(exc))
+    await timetable.save_exception(exception)
+    return _ok({"exception": exception})
+
+
+@router.delete("/timetable/slots/{slot_id}/occurrences/{day}")
+async def clear_occurrence_exception(slot_id: str, day: str,
+                                     session=Depends(require_teacher_session)):
+    if (slot := await timetable.get_slot(slot_id)) is None:
+        return _bad("not_found")
+    if not await _guard_group(session, str(slot.get("group_id") or "")):
+        return _denied()
+    await timetable.clear_exception(f"{slot_id}:{day}")
+    return _ok({"restored": True})
+
+
+@router.post("/groups/{group_id}/school-days")
+async def add_school_day(group_id: str, request: Request,
+                         session=Depends(require_teacher_session)):
+    """A holiday, vacation day or short day — editable, never compiled in."""
+    if not await _guard_group(session, group_id):
+        return _denied()
+    school_id = await _group_school(group_id)
+    if not school_id:
+        return _bad("no_school")
+    body = await request.json()
+    if not isinstance(body, dict):
+        return _bad("bad_body")
+    try:
+        row = timetable.build_school_day(
+            body, school_id=school_id, teacher_id=session["sub"])
+    except timetable.TimetableError as exc:
+        return _bad(str(exc))
+    await timetable.save_school_day(row)
+    return _ok({"day": row})
+
+
+@router.delete("/groups/{group_id}/school-days/{day}")
+async def remove_school_day(group_id: str, day: str,
+                            session=Depends(require_teacher_session)):
+    if not await _guard_group(session, group_id):
+        return _denied()
+    school_id = await _group_school(group_id)
+    if not school_id:
+        return _bad("no_school")
+    await timetable.delete_school_day(school_id, day)
+    return _ok({"deleted": True})

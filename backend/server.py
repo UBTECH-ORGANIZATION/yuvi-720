@@ -127,7 +127,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         direct_messages, kudos, learner_activity, learner_signals,
         mentoring_assist, notifications,
         org_repository, school_calendar, teacher_alerts, teacher_insights_store,
-        weekly_digest, wellbeing,
+        timetable, weekly_digest, wellbeing,
     )
 
     index_steps = (
@@ -151,12 +151,25 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         ("goal_suggestions", mentoring_assist.ensure_goal_suggestion_indexes),
         # Read by (group_id, start_at) on every open of the class calendar.
         ("calendar_events", school_calendar.ensure_indexes),
+        # The weekly spine (#242): slots by group, exceptions by occurrence,
+        # days off by (school, date) — read on every calendar open, both lanes.
+        ("timetable", timetable.ensure_indexes),
         # Read by (learner_id, at) on every open of a student's score dialogs.
         ("learner_signals", learner_signals.ensure_indexes),
         # Read unbounded by learner_id on every profile open; was unindexed.
         ("learner_activity", learner_activity.ensure_indexes),
     )
     await run_index_steps(index_steps)
+
+    # The national school calendar (#242): insert-if-absent, so every school —
+    # existing and future — has the published days off without hand entry, and
+    # a day someone deliberately retired stays retired across boots.
+    try:
+        seeded = await timetable.ensure_national_days()
+        if seeded:
+            print(f"↻ timetable: {seeded} national days off seeded")
+    except Exception as exc:  # pragma: no cover - best effort by design
+        print(f"⚠️ national days seed skipped: {type(exc).__name__}")
 
     # Presence lives in this process's memory, so a restart wipes it and every
     # child reads offline until they next reconnect. Read the last snapshots

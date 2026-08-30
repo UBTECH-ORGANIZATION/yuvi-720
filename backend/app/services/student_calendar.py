@@ -212,16 +212,34 @@ def _sort_key(item: CalendarItem) -> tuple[datetime, str, str]:
     return moment, item.kind, item.id
 
 
+def _holiday_item(row: dict, now: datetime) -> CalendarItem:
+    """A day off as an all-day row (#242): the week says ראש השנה, not an
+    unexplained empty Monday. Rides as kind `event` — no new vocabulary."""
+    day = str(row.get("date") or "")
+    moment = datetime.combine(date.fromisoformat(day), time.min, ISRAEL_TIMEZONE)
+    past = _is_past(moment, True, now)
+    return CalendarItem(
+        id=f"holiday:{day}",
+        kind="event",
+        title=str(row.get("label") or ""),
+        start_at=day,
+        all_day=True,
+        status="completed" if past else "upcoming",
+        proximity=None if past else _proximity(moment, True, now),
+    )
+
+
 async def _all_items(
     learner_id: str, start: date, end: date, *, now: datetime | None = None,
 ) -> tuple[list[CalendarItem], datetime]:
     local_now = _local_now(now)
-    task_rows, brain, conversations, events, lessons = await asyncio.gather(
+    task_rows, brain, conversations, events, lessons, days_off = await asyncio.gather(
         learner_tasks.list_for_learner(learner_id),
         get_brain(learner_id),
         mentoring.list_conversations(learner_id, "learner"),
         calendar_events.list_for_learner(learner_id, start, end),
         timetable.list_for_learner(learner_id, start, end),
+        timetable.holidays_for_learner(learner_id, start, end),
     )
     items = [item for item in (
         *(_task_item(row, local_now) for row in task_rows),
@@ -229,6 +247,7 @@ async def _all_items(
         *(_meeting_item(row) for row in conversations),
         *(_source_item(row, local_now) for row in events),
         *(_source_item(row, local_now) for row in lessons),
+        *(_holiday_item(row, local_now) for row in days_off),
     ) if item is not None]
     items.sort(key=_sort_key)
     return items, local_now

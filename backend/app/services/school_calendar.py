@@ -428,6 +428,70 @@ def conversations_to_items(learner_id: str, conversations: list[dict[str, Any]],
     return items
 
 
+def holidays_to_items(days: list[dict[str, Any]],
+                      start: str, end: str) -> list[dict[str, Any]]:
+    """Days off as all-day rows (#242) — the calendar says WHY a day is empty.
+
+    They ride as `event`-source items with kind `holiday` so both lanes render
+    them with no new vocabulary; the id prefix and `meta.national` are what
+    the client uses to know this row has no delete and no owner screen.
+    """
+    items = []
+    for day_rule in days:
+        day = str(day_rule.get("date") or "")
+        if not _in_range(day, start, end):
+            continue
+        items.append(_item(
+            "event",
+            id=f"holiday:{day}",
+            kind="holiday",
+            title=str(day_rule.get("label") or ""),
+            day=day,
+            all_day=True,
+            targets=[{"kind": "group"}],
+            meta={"day_kind": day_rule.get("kind"),
+                  "closed_from": day_rule.get("closed_from"),
+                  "national": not str(day_rule.get("school_id") or "")},
+        ))
+    return items
+
+
+def lessons_to_items(occurrences: list[dict[str, Any]],
+                     subgroup_members: dict[str, list[str]],
+                     start: str, end: str) -> list[dict[str, Any]]:
+    """Timetable occurrences (#242) as calendar items.
+
+    A class-wide lesson carries a group target so a sub-group-scoped view
+    keeps it (it is true for those children too); a sub-group lesson carries
+    its members so scoping works the same way it does for every other item.
+    """
+    items = []
+    for occurrence in occurrences:
+        day = str(occurrence.get("local_date") or "")
+        if not _in_range(day, start, end):
+            continue
+        subgroup_id = str(occurrence.get("subgroup_id") or "") or None
+        items.append(_item(
+            "lesson",
+            id=str(occurrence.get("id") or ""),
+            kind="lesson",
+            title=str(occurrence.get("title") or ""),
+            day=day,
+            at=str(occurrence.get("start_at") or ""),
+            all_day=False,
+            subject=occurrence.get("subject_key"),
+            learner_ids=list(subgroup_members.get(subgroup_id) or []) if subgroup_id else [],
+            targets=[] if subgroup_id else [{"kind": "group"}],
+            meta={"slot_id": occurrence.get("slot_id"),
+                  "status": occurrence.get("status"),
+                  "end_at": occurrence.get("end_at"),
+                  "room": occurrence.get("room"),
+                  "teacher_name": occurrence.get("teacher_name"),
+                  "subgroup_id": subgroup_id},
+        ))
+    return items
+
+
 def sort_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """By day, then all-day first, then time. Within a day column an all-day
     item is a heading for the day rather than a moment inside it."""
@@ -457,13 +521,39 @@ async def collect(group_id: str, start: str, end: str,
     where authorization should live.
     """
     import asyncio
+    from datetime import date as _date
 
     from app.brain import org
-    from app.services import mentoring
+    from app.services import mentoring, org_repository, timetable
     from app.services.tasks import store
 
     events = await list_events(group_id)
     items = events_to_items(events, start, end)
+
+    # The weekly spine (#242): expanded on read, never copied — a slot edit
+    # changes this screen with no second write, same rule as everything here.
+    try:
+        occurrences = await timetable.list_for_group(
+            group_id, _date.fromisoformat(start), _date.fromisoformat(end))
+    except ValueError:
+        occurrences = []
+    subgroup_members: dict[str, list[str]] = {}
+    for subgroup_id in {str(row.get("subgroup_id") or "")
+                        for row in occurrences if row.get("subgroup_id")}:
+        subgroup = await org_repository.get_subgroup(subgroup_id)
+        subgroup_members[subgroup_id] = list((subgroup or {}).get("learner_ids") or [])
+    items += lessons_to_items(occurrences, subgroup_members, start, end)
+
+    # Days off as visible rows, not just suppressed lessons — a Monday with no
+    # מתמטיקה should say ראש השנה, not look like a rendering gap.
+    group = await org_repository.get_group(group_id)
+    school_ids = {str((group or {}).get("school_id") or "")} - {""}
+    try:
+        days_off = await timetable.holidays_for(
+            school_ids, _date.fromisoformat(start), _date.fromisoformat(end))
+    except ValueError:
+        days_off = []
+    items += holidays_to_items(days_off, start, end)
 
     launches = await store.list_launches_for_group(group_id)
     tasks = await store.list_tasks(group_id=group_id)
