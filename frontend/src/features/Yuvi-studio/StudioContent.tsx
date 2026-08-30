@@ -10,7 +10,7 @@ import { assetsForSlot, getThumbnails, type YuviAsset } from './YuviAssets'
 import type { YuviColors, YuviSlot, YuviVariant } from './YuviDesign'
 import type { StudioDesign } from './useStudioDesign'
 import { useRoomDesign } from './useRoomDesign'
-import { ROOM_CATEGORIES, itemsInCategory, roomItemSpec, type RoomItemCategory } from './RoomCatalog'
+import { getRoomThumbnails, ROOM_CATEGORIES, itemsInCategory, roomItemSpec, type RoomItemCategory } from './RoomCatalog'
 import { MAX_ROOM_ITEMS, MOODS, ROOM_STYLES, WALL_STYLES, type StationId } from './RoomDesign'
 import { roomStandingSpot } from './YuviLabRoom'
 import { StationPanel } from './panel/StationPanel'
@@ -973,6 +973,8 @@ function RoomPanel({
   const [category, setCategory] = useState<RoomItemCategory>('seating')
   const { room, items, full, selected, setSelectedUid } = state
   const selectedSpec = selected ? roomItemSpec(selected.kind) : null
+  const categoryItems = useMemo(() => itemsInCategory(category), [category])
+  const roomThumbnails = useMemo(() => getRoomThumbnails(categoryItems), [categoryItems])
 
   const pick = (kind: string) => {
     if (full || isPropLocked(kind)) return
@@ -1077,12 +1079,13 @@ function RoomPanel({
         {full && <p className="ys-note">{t('YuviStudio.room.full')}</p>}
 
         <div className="ys-grid">
-          {itemsInCategory(category).map((spec) => {
+          {categoryItems.map((spec) => {
             const locked = isPropLocked(spec.id)
             return (
               <ItemCard
                 key={spec.id}
                 label={t(`YuviStudio.room.item.${spec.id}`)}
+                thumb={roomThumbnails[spec.id]}
                 dot={spec.tint ?? 'var(--ys-accent)'}
                 selected={!placing?.uid && placing?.kind === spec.id}
                 locked={locked}
@@ -1134,6 +1137,7 @@ function RoomPanel({
               <ItemCard
                 key={item.uid}
                 label={t(`YuviStudio.room.item.${item.kind}`)}
+                thumb={roomThumbnails[item.kind]}
                 dot={item.tint ?? roomItemSpec(item.kind)?.tint ?? 'var(--ys-accent)'}
                 selected={selected?.uid === item.uid}
                 onClick={() => { setPlacing(null); setSelectedUid(item.uid) }}

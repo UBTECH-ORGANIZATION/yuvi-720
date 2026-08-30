@@ -8,9 +8,9 @@ export function ItemCard({
   label, thumb, dot, none, selected, previewing, locked, isNew, price, tip, disabled, onClick,
 }: {
   label: string
-  /** Rendered image for avatar gear. */
+  /** Rendered image for avatar gear or room props. */
   thumb?: string
-  /** Flat colour for room props, which have no thumbnail. */
+  /** Flat-colour fallback when a rendered thumbnail is unavailable. */
   dot?: string
   none?: boolean
   selected?: boolean
@@ -25,7 +25,7 @@ export function ItemCard({
   const buyable = Boolean(locked) && typeof price === 'number'
   const classes = [
     'ys-card',
-    dot ? 'ys-card--dot' : '',
+    dot && !thumb ? 'ys-card--dot' : '',
     selected ? 'is-selected' : '',
     previewing ? 'is-previewing' : '',
     locked ? 'is-locked' : '',
@@ -43,9 +43,9 @@ export function ItemCard({
       <span className="ys-card__media">
         {none || (!thumb && !dot)
           ? <span className="ys-card__none" />
-          : dot
-            ? <span className="ys-card__dot" style={{ background: dot }} />
-            : <img src={thumb} alt="" />}
+          : thumb
+            ? <img src={thumb} alt="" />
+            : <span className="ys-card__dot" style={{ background: dot }} />}
       </span>
       <span className="ys-card__label">{label}</span>
       {selected && (
