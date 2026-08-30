@@ -3520,6 +3520,8 @@
   "tch.album.title": "רגעים {when}",
   "tch.band.dialogClose": "סגירה",
   "tch.band.empty": "אין תלמידים להצגה בסינון הזה",
+  "tch.band.filtered": "מציג {count} מתוך הכיתה",
+  "tch.band.filterClear": "לכל הכיתה",
   "tch.band.filterAria": "סינון לפי מצב",
   "tch.band.freshFilter": "השתנו לאחרונה",
   "tch.band.green": "במקום טוב",

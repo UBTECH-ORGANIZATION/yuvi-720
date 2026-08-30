@@ -296,7 +296,34 @@
   color: var(--sp-ink-500);
 }
 
-.tch-bands__empty { margin: 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
+.tch-bands__empty {
+  margin: 0;
+  color: var(--sp-ink-400);
+  font-size: var(--sp-fs-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* Filtered said out loud, with the way back beside it (#506) — the same
+   note-and-release pair the live view wears. */
+.tch-bands__filterNote {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+}
+
+/* The ✕ an active filter chip wears (#506): the visible promise that the same
+   click turns the filter off, not a second control. */
+.tch-chipOff {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: 2px;
+  opacity: 0.65;
+}
 
 /* The loading stand-in for the student grid: face-and-name pairs in the same
    rhythm as `.tch-bands__list`, so the card neither grows nor reflows when the
