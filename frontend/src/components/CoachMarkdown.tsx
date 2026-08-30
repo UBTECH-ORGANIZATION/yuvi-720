@@ -1,6 +1,4 @@
-import type { ReactNode } from 'react'
-import katex from 'katex'
-import 'katex/dist/katex.min.css'
+import { useEffect, useState, type ReactNode } from 'react'
 import { mapProse, trimIncompleteBlocks } from './richText/blocks.ts'
 import { renderRichText } from './richText/RichText'
 
@@ -11,6 +9,50 @@ import { renderRichText } from './richText/RichText'
    by the shared renderer that the teacher's assistant uses too. What lives
    here is the learner's own inline layer (bold, inline code, KaTeX) and the
    text clean-ups only a model talking to a child needs. */
+
+/* KaTeX is ~270KB of JS and CSS for a feature most replies never use, and the
+   companion dock is mounted on every screen — so it is fetched the first time a
+   formula is actually rendered, not at startup. Until it arrives the formula
+   shows as its own source text, which stays readable rather than blank. */
+type Katex = typeof import('katex').default
+
+let katex: Katex | null = null
+let katexRequest: Promise<void> | null = null
+
+function loadKatex(): Promise<void> {
+  katexRequest ??= Promise.all([import('katex'), import('katex/dist/katex.min.css')])
+    .then(([module]) => { katex = module.default })
+    .catch(() => { katexRequest = null })
+  return katexRequest
+}
+
+function Formula({ formula, displayMode }: { formula: string; displayMode: boolean }) {
+  const [, redraw] = useState(0)
+  useEffect(() => {
+    if (katex) return
+    let alive = true
+    void loadKatex().then(() => { if (alive) redraw((tick) => tick + 1) })
+    return () => { alive = false }
+  }, [formula])
+
+  const className = `sp-companion__math${displayMode ? ' sp-companion__math--display' : ''}`
+  if (!katex) return <span className={className} dir="ltr">{formula}</span>
+  return (
+    <span
+      className={className}
+      dir="ltr"
+      dangerouslySetInnerHTML={{
+        __html: katex.renderToString(formula, {
+          displayMode,
+          output: 'htmlAndMathml',
+          strict: 'ignore',
+          throwOnError: false,
+          trust: false,
+        }),
+      }}
+    />
+  )
+}
 
 const INLINE_FORMAT = /(\\\([^]*?\\\)|\\\[[^]*?\\\]|\$\$[^]*?\$\$|\$[^$\n]+\$|\*\*[^*]+\*\*|`[^`\n]+`)/g
 
@@ -26,20 +68,7 @@ function inlineContent(text: string): ReactNode[] {
       const delimiterLength = token.startsWith('$$') || token.startsWith('\\') ? 2 : 1
       const formula = token.slice(delimiterLength, -delimiterLength).trim()
       nodes.push(
-        <span
-          className={`sp-companion__math${displayMode ? ' sp-companion__math--display' : ''}`}
-          dir="ltr"
-          key={`${index}-${token}`}
-          dangerouslySetInnerHTML={{
-            __html: katex.renderToString(formula, {
-              displayMode,
-              output: 'htmlAndMathml',
-              strict: 'ignore',
-              throwOnError: false,
-              trust: false,
-            }),
-          }}
-        />
+        <Formula displayMode={displayMode} formula={formula} key={`${index}-${token}`} />
       )
     } else if (token.startsWith('**')) {
       nodes.push(<strong key={`${index}-${token}`}>{token.slice(2, -2)}</strong>)

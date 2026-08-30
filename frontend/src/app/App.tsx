@@ -23,7 +23,11 @@ import { LearningPortalPage } from '../features/learning-portal/LearningPortalPa
 import { LessonPage } from '../features/learning-lesson/LessonPage'
 import { LomdaCreatorPage } from '../features/learning-create/LomdaCreatorPage'
 import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
-import { YuviStudioPage } from '../features/Yuvi-studio/YuviStudioPage'
+/* The studio is a 3D room editor: it owns the avatar renderer, the lab room and
+   the asset catalog. Loading it with the rest of the app put Three.js on every
+   learner's and teacher's first paint, for a route most sessions never open. */
+const YuviStudioPage = lazy(() =>
+  import('../features/Yuvi-studio/YuviStudioPage').then((m) => ({ default: m.YuviStudioPage })))
 import { BadgesPage } from '../features/badges/BadgesPage'
 import { MyTasksPage } from '../features/student-tasks/MyTasksPage'
 import { SolveTaskPage } from '../features/student-tasks/SolveTaskPage'
@@ -38,7 +42,7 @@ import { useStudioTransition } from '../features/Yuvi-studio/StudioTransitionPro
 import { CompanionChat } from '../components/CompanionChat'
 import { YuviCompanionDock } from '../components/YuviCompanionDock'
 import { SparkToast } from '../components/SparkToast'
-import { useCallback, useEffect } from 'react'
+import { lazy, Suspense, useCallback, useEffect } from 'react'
 import { ErrorState, LoadingState } from '../components/primitives'
 import { useI18n } from '../i18n/I18nProvider'
 import { useAuth } from '../providers/AuthProvider'
@@ -199,7 +203,9 @@ function pageForRoute(pathname: string) {
   if (pathname.startsWith('/report')) return <PublicReportPage />
   if (pathname.startsWith('/learner-mapping')) return <LearnerMappingPage />
   if (pathname.startsWith('/results')) return <ResultsPage />
-  if (pathname.startsWith('/yuvi-studio')) return <YuviStudioPage />
+  if (pathname.startsWith('/yuvi-studio')) {
+    return <Suspense fallback={null}><YuviStudioPage /></Suspense>
+  }
   if (pathname.startsWith('/student-dashboard')) return <StudentDashboardPage />
   if (pathname.startsWith('/badges')) return <BadgesPage />
   // Solve before list, or `/tasks/:id` resolves to the list — the same

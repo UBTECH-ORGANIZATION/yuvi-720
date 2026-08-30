@@ -17,6 +17,7 @@ from app.services import goal_progress, rewards
 from learner_state import normalize_learner_id  # type: ignore
 
 _FALLBACK = Path(__file__).resolve().parents[2] / ".runtime" / "mentoring.json"
+_indexes_ready = False
 
 REQUIRED_FIELDS = ("date", "teacher_name", "learner_name", "meeting_stage", "notes", "next_steps", "deadline")
 PROGRESS_STAGES = {"chosen", "started", "progressed", "summarized"}
@@ -144,6 +145,29 @@ def _brain_goal_entry(conversation: dict[str, Any], goal: dict[str, Any]) -> dic
         "assigned_by_teacher": conversation.get("author") == "teacher",
         "visible_to_learner": conversation.get("visibility", "shared") == "shared",
     }
+
+
+async def ensure_indexes() -> None:
+    """Goals are read per learner on every dashboard and per class on the roster.
+
+    `{learner_id, deleted}` serves both the single-learner read and the
+    `{learner_id: $in}` group count; `{id, learner_id}` is the single-record
+    load behind every goal edit.
+    """
+    global _indexes_ready
+    if _indexes_ready:
+        return
+    collection = _get_collection_named("mentoring_conversations")
+    if collection is None:
+        return
+    try:
+        await collection.create_index(
+            [("learner_id", 1), ("deleted", 1)], name="learner_deleted")
+        await collection.create_index(
+            [("id", 1), ("learner_id", 1)], name="conversation_learner")
+        _indexes_ready = True
+    except Exception as exc:  # Cosmos may manage indexes outside the Mongo API.
+        print(f"⚠️ mentoring index setup skipped: {type(exc).__name__}")
 
 
 async def _raw_conversations(lid: str) -> list[dict[str, Any]]:

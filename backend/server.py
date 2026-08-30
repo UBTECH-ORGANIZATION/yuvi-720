@@ -123,11 +123,13 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # index after it — the slowest possible failure mode, and invisible.
     # A missing index is slow, never broken, and must never stop a boot.
     from app.agents.teacher_tools import registry as teacher_tool_registry
+    from app.agents import tutor_decision
     from app.services import (
-        direct_messages, kudos, mentoring_assist, notifications,
-        org_repository, school_calendar, teacher_alerts, teacher_insights_store,
-        weekly_digest, wellbeing,
+        direct_messages, events, kudos, learner_activity, mentoring,
+        mentoring_assist, notifications, org_repository, school_calendar,
+        teacher_alerts, teacher_insights_store, weekly_digest, wellbeing,
     )
+    from app.services.rewards import wallet
 
     index_steps = (
         # Authorization hot path: every teacher read resolves links + enrollments.
@@ -150,6 +152,18 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         ("goal_suggestions", mentoring_assist.ensure_goal_suggestion_indexes),
         # Read by (group_id, start_at) on every open of the class calendar.
         ("calendar_events", school_calendar.ensure_indexes),
+        # The evidence store behind every projection. Indexed here rather than
+        # on first ingest so a replica that only ever *reads* is fast too — a
+        # dashboard served before the first statement arrives used to scan.
+        ("learning_events", events.ensure_indexes),
+        # Read per learner on every task open and every hint check.
+        ("learner_activity", learner_activity.ensure_indexes),
+        # Goals: per learner on the dashboard, per class on the roster.
+        ("mentoring_conversations", mentoring.ensure_indexes),
+        # The Sparks ledger, read newest-first per learner.
+        ("reward_ledger", wallet.ensure_indexes),
+        # Coach decision history, read newest-first per learner.
+        ("tutor_decisions", tutor_decision.ensure_indexes),
     )
     await run_index_steps(index_steps)
 

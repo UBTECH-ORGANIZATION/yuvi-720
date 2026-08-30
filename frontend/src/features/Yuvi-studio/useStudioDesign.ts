@@ -9,7 +9,7 @@ import {
   DEFAULT_DESIGN, cloneDesign, normalizeDesign,
   type YuviColors, type YuviDesign, type YuviSlot, type YuviVariant,
 } from './YuviDesign'
-import { type YuviAsset } from './YuviAssets'
+import type { YuviAsset } from './YuviAssets'
 import { useYuviDesign } from './YuviDesignProvider'
 
 /**

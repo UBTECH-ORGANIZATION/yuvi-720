@@ -1,10 +1,15 @@
 // @ts-nocheck
 /* eslint-disable */
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { StudioContent } from './StudioContent'
+import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useStudioDesign } from './useStudioDesign'
 import { navigate } from '../../app/router'
 import '../../styles/Yuvi-studio.css'
+
+/* This provider wraps the whole app, but the studio it can open is a Three.js
+   room editor. Importing the content eagerly put the renderer on every user's
+   first paint; the overlay only ever mounts it after `openStudio`. */
+const StudioContent = lazy(() =>
+  import('./StudioContent').then((m) => ({ default: m.StudioContent })))
 
 type Phase = 'closed' | 'opening' | 'open' | 'closing'
 
@@ -204,7 +209,9 @@ export function StudioTransitionProvider({ children }: { children: ReactNode }) 
       {children}
       {overlayMounted && (
         <div className={`studio-overlay${overlayVisible ? ' is-visible' : ''}`}>
-          <StudioContent studio={studio} onClose={() => void closeStudio()} />
+          <Suspense fallback={null}>
+            <StudioContent studio={studio} onClose={() => void closeStudio()} />
+          </Suspense>
         </div>
       )}
       {burst && (

@@ -553,6 +553,9 @@ def normalize_statement(
 
 
 # ── Ingestion (idempotent) + brain update ────────────────────────────────────
+_indexes_ready = False
+
+
 async def _events_collection():
     return _get_collection_named("learning_events")
 
@@ -708,13 +711,39 @@ async def _attach_timing_evidence(event: dict[str, Any]) -> None:
     }
 
 
-async def _ensure_indexes(collection) -> None:
+async def ensure_indexes() -> None:
+    """Index the evidence store to match how it is actually read.
+
+    Every read here is one learner's slice in time order. Filtering on
+    `learner_id` alone leaves the sort to be done in memory over the learner's
+    whole history, which grows for a year and is never noticed — so the sort key
+    is part of each index.
+    """
+    global _indexes_ready
+    if _indexes_ready:
+        return
+    collection = await _events_collection()
+    if collection is None:
+        return
     try:
-        await collection.create_index("learner_id")
-        await collection.create_index([("learner_id", 1), ("objective_id", 1)])
-        await collection.create_index([("learner_id", 1), ("session_id", 1)])
-    except Exception:  # pragma: no cover - best effort; _id is unique by default
-        pass
+        # `{learner_id} sort stored_at desc` — the Coach bundle, the triggers,
+        # and the dashboard's 500-event projection. Also serves the teacher's
+        # `{learner_id: $in, stored_at: $gte}` group scan.
+        await collection.create_index(
+            [("learner_id", 1), ("stored_at", -1)], name="learner_stored")
+        await collection.create_index(
+            [("learner_id", 1), ("objective_id", 1), ("stored_at", -1)],
+            name="learner_objective_stored")
+        await collection.create_index(
+            [("learner_id", 1), ("session_id", 1), ("occurred_at", 1)],
+            name="learner_session_occurred")
+        # The roadmap projection, which had no index of any kind.
+        await collection.create_index(
+            [("learner_id", 1), ("unit_id", 1), ("occurred_at", 1)],
+            name="learner_unit_occurred")
+        _indexes_ready = True
+    except Exception as exc:  # Cosmos may manage indexes outside the Mongo API.
+        print(f"⚠️ learning_events index setup skipped: {type(exc).__name__}")
 
 
 async def _attach_answer_diagnostic(event: dict[str, Any]) -> None:
@@ -792,7 +821,7 @@ async def ingest_statement(
     is_new = True
     if collection is not None:
         try:
-            await _ensure_indexes(collection)
+            await ensure_indexes()
             res = await collection.update_one(
                 {"_id": event["_id"]},
                 {"$setOnInsert": event},
