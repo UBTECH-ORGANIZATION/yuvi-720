@@ -378,12 +378,6 @@ class CoachSupportRequest(BaseModel):
     question_key: Optional[str] = Field(default=None, max_length=400)
 
 
-class CompetencyChatMessage(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    role: Literal["user", "assistant"]
-    text: str = Field(min_length=1, max_length=1500)
-
-
 class VisualizeRequest(BaseModel):
     """On-demand visual: the learner tapped 'show me a video / image' under a
     text-only reply. `assistant_text` is our own prior model output; both texts
@@ -396,31 +390,6 @@ class VisualizeRequest(BaseModel):
     language: str = Field(default="he", max_length=8)
     conversation_id: str = Field(default="default", min_length=1, max_length=120)
     assistant_message_id: str | None = Field(default=None, min_length=3, max_length=120)
-
-
-class CompetencyChatRequest(BaseModel):
-    """Ephemeral learning-map topic chat: the client holds the transcript,
-    the server persists nothing to conversation history."""
-
-    competency: Literal[
-        "motivation_relevance", "growth_mindset", "initiative_responsibility",
-        "self_regulation", "self_awareness", "support_emotional",
-    ]
-    language: str = Field(default="he", max_length=8)
-    conversation_id: str = Field(default="default", min_length=1, max_length=120)
-    messages: list[CompetencyChatMessage] = Field(min_length=1, max_length=16)
-
-
-class ActivenessChangeRequest(BaseModel):
-    """Ask why one activeness domain moved since the learner last opened the map.
-    Returns a short verbal, non-numeric explanation (no scores leaked)."""
-
-    competency: Literal[
-        "motivation_relevance", "growth_mindset", "initiative_responsibility",
-        "self_regulation", "self_awareness", "support_emotional",
-    ]
-    direction: Literal["up", "down"]
-    language: str = Field(default="he", max_length=8)
 
 
 _SPEECH_UNAVAILABLE = {
@@ -1088,103 +1057,6 @@ async def coach_proactive(request: CoachProactiveRequest, session=Depends(requir
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
-
-
-@router.post("/activeness/change-explain")
-async def activeness_change_explain(
-    request: ActivenessChangeRequest, learner_id: str = Depends(require_learner)
-):
-    """Why did one activeness domain move since last visit? A short verbal blurb.
-
-    Learner id comes from the session (never the client). The reply is verbal
-    only — activeness scores never enter the prompt or the response."""
-    from app.agents.competency_coach import run_change_explanation
-
-    text = await run_change_explanation(
-        learner_id,
-        request.competency,
-        request.direction,
-        normalize_language(request.language),
-    )
-    return JSONResponse(content={"text": text})
-
-
-@router.post("/competency-chat")
-async def competency_chat(
-    request: CompetencyChatRequest, session=Depends(require_learner_session)
-):
-    """Focused, history-less chat about one learning-map competency (F4).
-
-    The transcript never enters `sessions` (a deliberate privacy boundary for
-    weakness talk); the memory consolidator still runs so durable facts land
-    in the brain. MoE conversation `interacted` events are reported per turn —
-    chat text is never sent."""
-    from app.agents.competency_coach import run_competency_chat_stream
-
-    learner_id = session["sub"]
-    language = normalize_language(request.language)
-    if request.messages[-1].role != "user":
-        raise HTTPException(status_code=422, detail="last message must be from the learner")
-    conversation_id = sessions.normalize_session_id(
-        f"lmap-{request.competency}-{request.conversation_id}"
-    )
-    exchange_id = uuid4().hex
-
-    moe_sid = session.get("sid")
-    if moe_sid:
-        await lrs_reporter.report_conversation_interacted(
-            learner_id, moe_sid, conversation_id,
-            speaker="student", conversation_trigger="student-request",
-        )
-
-    async def event_generator():
-        yield f"data: {json.dumps({'disclosure': safety.disclosure(language)}, ensure_ascii=False)}\n\n"
-        reply_parts = []
-        async for chunk in run_competency_chat_stream(
-            learner_id,
-            request.competency,
-            [m.model_dump() for m in request.messages],
-            language,
-            conversation_id=conversation_id,
-            exchange_id=exchange_id,
-        ):
-            reply_parts.append(chunk)
-            yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
-
-        # LLM-gated on-demand visual offer (same rule as the main coach).
-        reply_text = "".join(reply_parts)
-        can_visualize = False
-        try:
-            if len(reply_text.strip()) >= 30 and not safety.is_safety_redirect(reply_text):
-                can_visualize = await should_offer_visual(
-                    request.messages[-1].text, reply_text, language,
-                    usage_context=UsageContext(
-                        actor_id=learner_id,
-                        actor_type="learner",
-                        endpoint="/api/agent/competency-chat",
-                        feature="feature_4_dashboard",
-                        operation="coach.visual_offer",
-                        source="competency_coach_agent",
-                        session_id=conversation_id,
-                        exchange_id=exchange_id,
-                    ),
-                )
-        except Exception as exc:  # pragma: no cover
-            print(f"⚠️ visual-offer classify failed: {exc}")
-        yield f"data: {json.dumps({'can_visualize': can_visualize}, ensure_ascii=False)}\n\n"
-
-        if moe_sid:
-            await lrs_reporter.report_conversation_interacted(
-                learner_id, moe_sid, conversation_id,
-                speaker="bot", conversation_trigger="student-request",
-            )
-        yield "data: [DONE]\n\n"
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
-    )
 
 
 @router.post("/visualize")
