@@ -5,7 +5,7 @@
     {
       "type": 1,
       "content": {
-        "json": "## Spark — is it slow, and on what?\n\nRead top to bottom. Section 1 says whether there is a problem; every section after it narrows down where the time goes. `Service` is always `<slot>.<component>` — `production.spark-backend`, `dev.spark-backend`, `production.spark-web` (the browser), `production.spark-admin`. Green is fine, orange is over the slow bar, red is roughly \"a child gave up waiting\"."
+        "json": "## Spark — is it slow, and on what?\n\nRead top to bottom. Section 1 says whether there is a problem; every section after it narrows down where the time goes. Green is fine, orange is over the slow bar, red is roughly \"a child gave up waiting\".\n\n`Service` is `<slot>.<component>` — `production.spark-backend`, `dev.spark-backend`, `production.spark-web` (the browser), `production.spark-admin`. A service reporting **without** a slot prefix (plain `spark-backend`) is running an image older than the slot-tagging change; it is grouped under the slot **`unlabelled`** so it is still visible here."
       },
       "name": "intro"
     },
@@ -41,8 +41,8 @@
             "quote": "'",
             "delimiter": ",",
             "typeSettings": { "additionalResourceOptions": [], "showDefault": false },
-            "query": "union isfuzzy=true requests, customMetrics\n| where timestamp {TimeRange}\n| extend env = tostring(split(cloud_RoleName, '.')[0])\n| where isnotempty(env)\n| distinct env\n| order by env asc",
-            "value": ["production"],
+            "query": "union isfuzzy=true requests, customMetrics\n| where timestamp {TimeRange}\n| extend env = iff(cloud_RoleName has '.', tostring(split(cloud_RoleName, '.')[0]), 'unlabelled')\n| where isnotempty(env)\n| distinct env\n| project value = env, label = env\n| union (print value = '*', label = 'All slots')\n| order by label asc",
+            "value": ["*"],
             "queryType": 0,
             "resourceType": "microsoft.insights/components"
           },
@@ -72,7 +72,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "requests\n| where timestamp {TimeRange}\n| extend env = tostring(split(cloud_RoleName, '.')[0])\n| where env in ({Env})\n| summarize\n    Requests = count(),\n    ['p50 ms'] = round(percentile(duration, 50)),\n    ['p95 ms'] = round(percentile(duration, 95)),\n    ['p99 ms'] = round(percentile(duration, 99)),\n    ['slow %'] = round(100.0 * countif(duration > {SlowMs}) / count(), 1),\n    ['failed %'] = round(100.0 * countif(success == false) / count(), 1)\n  by Service = cloud_RoleName\n| order by ['p95 ms'] desc",
+        "query": "requests\n| where timestamp {TimeRange}\n| extend env = iff(cloud_RoleName has '.', tostring(split(cloud_RoleName, '.')[0]), 'unlabelled')\n| where '*' in ({Env}) or env in ({Env})\n| summarize\n    Requests = count(),\n    ['p50 ms'] = round(percentile(duration, 50)),\n    ['p95 ms'] = round(percentile(duration, 95)),\n    ['p99 ms'] = round(percentile(duration, 99)),\n    ['slow %'] = round(100.0 * countif(duration > {SlowMs}) / count(), 1),\n    ['failed %'] = round(100.0 * countif(success == false) / count(), 1)\n  by Service = cloud_RoleName\n| order by ['p95 ms'] desc",
         "size": 0,
         "title": "Server health by service and slot",
         "timeContextFromParameter": "TimeRange",
@@ -126,7 +126,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "requests\n| where timestamp {TimeRange}\n| extend env = tostring(split(cloud_RoleName, '.')[0])\n| where env in ({Env})\n| summarize ['p95 ms'] = round(percentile(duration, 95)) by bin(timestamp, {TimeRange:grain}), Service = cloud_RoleName\n| render timechart",
+        "query": "requests\n| where timestamp {TimeRange}\n| extend env = iff(cloud_RoleName has '.', tostring(split(cloud_RoleName, '.')[0]), 'unlabelled')\n| where '*' in ({Env}) or env in ({Env})\n| summarize ['p95 ms'] = round(percentile(duration, 95)) by bin(timestamp, {TimeRange:grain}), Service = cloud_RoleName\n| render timechart",
         "size": 0,
         "title": "p95 latency over time — a step up here is a deploy or a cold start",
         "timeContextFromParameter": "TimeRange",
@@ -145,7 +145,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "requests\n| where timestamp {TimeRange}\n| extend env = tostring(split(cloud_RoleName, '.')[0])\n| where env in ({Env})\n| summarize\n    Calls = count(),\n    ['p50 ms'] = round(percentile(duration, 50)),\n    ['p95 ms'] = round(percentile(duration, 95)),\n    ['worst ms'] = round(max(duration)),\n    Slow = countif(duration > {SlowMs})\n  by Endpoint = name, Service = cloud_RoleName\n| extend ['slow %'] = round(100.0 * Slow / Calls, 1)\n| extend ['time spent (s)'] = round(Calls * ['p50 ms'] / 1000.0)\n| project Endpoint, Service, Calls, ['p50 ms'], ['p95 ms'], ['worst ms'], ['slow %'], ['time spent (s)']\n| top 30 by ['p95 ms'] desc",
+        "query": "requests\n| where timestamp {TimeRange}\n| extend env = iff(cloud_RoleName has '.', tostring(split(cloud_RoleName, '.')[0]), 'unlabelled')\n| where '*' in ({Env}) or env in ({Env})\n| summarize\n    Calls = count(),\n    ['p50 ms'] = round(percentile(duration, 50)),\n    ['p95 ms'] = round(percentile(duration, 95)),\n    ['worst ms'] = round(max(duration)),\n    Slow = countif(duration > {SlowMs})\n  by Endpoint = name, Service = cloud_RoleName\n| extend ['slow %'] = round(100.0 * Slow / Calls, 1)\n| extend ['time spent (s)'] = round(Calls * ['p50 ms'] / 1000.0)\n| project Endpoint, Service, Calls, ['p50 ms'], ['p95 ms'], ['worst ms'], ['slow %'], ['time spent (s)']\n| top 30 by ['p95 ms'] desc",
         "size": 0,
         "title": "Slowest endpoints — sort by 'time spent' to fix what costs the most in total",
         "timeContextFromParameter": "TimeRange",
@@ -191,7 +191,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "let slow = requests\n  | where timestamp {TimeRange}\n  | extend env = tostring(split(cloud_RoleName, '.')[0])\n  | where env in ({Env})\n  | where duration > {SlowMs}\n  | project operation_Id, Endpoint = name;\ndependencies\n| where timestamp {TimeRange}\n| join kind=inner slow on operation_Id\n| summarize\n    Calls = count(),\n    ['total ms'] = round(sum(duration)),\n    ['p95 ms'] = round(percentile(duration, 95)),\n    Failures = countif(success == false)\n  by Endpoint, Dependency = strcat(type, ' · ', target)\n| top 30 by ['total ms'] desc",
+        "query": "let slow = requests\n  | where timestamp {TimeRange}\n  | extend env = iff(cloud_RoleName has '.', tostring(split(cloud_RoleName, '.')[0]), 'unlabelled')\n  | where '*' in ({Env}) or env in ({Env})\n  | where duration > {SlowMs}\n  | project operation_Id, Endpoint = name;\ndependencies\n| where timestamp {TimeRange}\n| join kind=inner slow on operation_Id\n| summarize\n    Calls = count(),\n    ['total ms'] = round(sum(duration)),\n    ['p95 ms'] = round(percentile(duration, 95)),\n    Failures = countif(success == false)\n  by Endpoint, Dependency = strcat(type, ' · ', target)\n| top 30 by ['total ms'] desc",
         "size": 0,
         "title": "Inside the slow requests: which dependency ate the time",
         "timeContextFromParameter": "TimeRange",
@@ -212,7 +212,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "dependencies\n| where timestamp {TimeRange}\n| extend env = tostring(split(cloud_RoleName, '.')[0])\n| where env in ({Env})\n| summarize\n    Calls = count(),\n    ['p50 ms'] = round(percentile(duration, 50)),\n    ['p95 ms'] = round(percentile(duration, 95)),\n    ['failed %'] = round(100.0 * countif(success == false) / count(), 1)\n  by Type = type, Target = target\n| top 25 by ['p95 ms'] desc",
+        "query": "dependencies\n| where timestamp {TimeRange}\n| extend env = iff(cloud_RoleName has '.', tostring(split(cloud_RoleName, '.')[0]), 'unlabelled')\n| where '*' in ({Env}) or env in ({Env})\n| summarize\n    Calls = count(),\n    ['p50 ms'] = round(percentile(duration, 50)),\n    ['p95 ms'] = round(percentile(duration, 95)),\n    ['failed %'] = round(100.0 * countif(success == false) / count(), 1)\n  by Type = type, Target = target\n| top 25 by ['p95 ms'] desc",
         "size": 0,
         "title": "All outbound calls — Mongo, APIM/Azure OpenAI, Kata, LRS",
         "timeContextFromParameter": "TimeRange",
@@ -248,7 +248,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "customMetrics\n| where timestamp {TimeRange}\n| where name == 'spark.vitals.lcp'\n| extend env = tostring(split(cloud_RoleName, '.')[0])\n| where env in ({Env})\n| extend Device = tostring(customDimensions['spark.deviceClass']),\n         Network = tostring(customDimensions['spark.networkType'])\n| summarize\n    Sessions = dcount(session_Id),\n    ['LCP p50 ms'] = round(percentile(value, 50)),\n    ['LCP p75 ms'] = round(percentile(value, 75)),\n    ['LCP p95 ms'] = round(percentile(value, 95))\n  by Device, Network\n| order by ['LCP p75 ms'] desc",
+        "query": "customMetrics\n| where timestamp {TimeRange}\n| where name == 'spark.vitals.lcp'\n| extend env = iff(cloud_RoleName has '.', tostring(split(cloud_RoleName, '.')[0]), 'unlabelled')\n| where '*' in ({Env}) or env in ({Env})\n| extend Device = tostring(customDimensions['spark.deviceClass']),\n         Network = tostring(customDimensions['spark.networkType'])\n| summarize\n    Sessions = dcount(session_Id),\n    ['LCP p50 ms'] = round(percentile(value, 50)),\n    ['LCP p75 ms'] = round(percentile(value, 75)),\n    ['LCP p95 ms'] = round(percentile(value, 95))\n  by Device, Network\n| order by ['LCP p75 ms'] desc",
         "size": 0,
         "title": "Page load by device class and network — the school-hardware question",
         "timeContextFromParameter": "TimeRange",
@@ -278,7 +278,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "customMetrics\n| where timestamp {TimeRange}\n| where name startswith 'spark.vitals.'\n| extend env = tostring(split(cloud_RoleName, '.')[0])\n| where env in ({Env})\n| extend Vital = replace_string(name, 'spark.vitals.', '')\n| summarize\n    Samples = count(),\n    p50 = round(percentile(value, 50), 1),\n    p75 = round(percentile(value, 75), 1),\n    p95 = round(percentile(value, 95), 1)\n  by Vital\n| order by Vital asc",
+        "query": "customMetrics\n| where timestamp {TimeRange}\n| where name startswith 'spark.vitals.'\n| extend env = iff(cloud_RoleName has '.', tostring(split(cloud_RoleName, '.')[0]), 'unlabelled')\n| where '*' in ({Env}) or env in ({Env})\n| extend Vital = replace_string(name, 'spark.vitals.', '')\n| summarize\n    Samples = count(),\n    p50 = round(percentile(value, 50), 1),\n    p75 = round(percentile(value, 75), 1),\n    p95 = round(percentile(value, 95), 1)\n  by Vital\n| order by Vital asc",
         "size": 0,
         "title": "Web vitals — lcp/fcp/ttfb/inp in ms, cls unitless, transferKB in KB, longTaskMs is main-thread blocking",
         "timeContextFromParameter": "TimeRange",
@@ -292,7 +292,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "customMetrics\n| where timestamp {TimeRange}\n| where name == 'spark.api.duration'\n| extend env = tostring(split(cloud_RoleName, '.')[0])\n| where env in ({Env})\n| extend Endpoint = tostring(customDimensions['spark.endpoint']),\n         Ok = tostring(customDimensions['spark.ok'])\n| summarize\n    Calls = count(),\n    ['browser p50 ms'] = round(percentile(value, 50)),\n    ['browser p95 ms'] = round(percentile(value, 95)),\n    ['failed %'] = round(100.0 * countif(Ok == 'false') / count(), 1)\n  by Endpoint\n| top 25 by ['browser p95 ms'] desc",
+        "query": "customMetrics\n| where timestamp {TimeRange}\n| where name == 'spark.api.duration'\n| extend env = iff(cloud_RoleName has '.', tostring(split(cloud_RoleName, '.')[0]), 'unlabelled')\n| where '*' in ({Env}) or env in ({Env})\n| extend Endpoint = tostring(customDimensions['spark.endpoint']),\n         Ok = tostring(customDimensions['spark.ok'])\n| summarize\n    Calls = count(),\n    ['browser p50 ms'] = round(percentile(value, 50)),\n    ['browser p95 ms'] = round(percentile(value, 95)),\n    ['failed %'] = round(100.0 * countif(Ok == 'false') / count(), 1)\n  by Endpoint\n| top 25 by ['browser p95 ms'] desc",
         "size": 0,
         "title": "API calls as the browser felt them — the gap vs section 2 is the network",
         "timeContextFromParameter": "TimeRange",
@@ -316,7 +316,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "requests\n| where timestamp {TimeRange}\n| extend env = tostring(split(cloud_RoleName, '.')[0])\n| where env in ({Env})\n| where success == false\n| summarize Count = count(), Users = dcount(user_Id) by Endpoint = name, Code = resultCode, Service = cloud_RoleName\n| top 25 by Count desc",
+        "query": "requests\n| where timestamp {TimeRange}\n| extend env = iff(cloud_RoleName has '.', tostring(split(cloud_RoleName, '.')[0]), 'unlabelled')\n| where '*' in ({Env}) or env in ({Env})\n| where success == false\n| summarize Count = count(), Users = dcount(user_Id) by Endpoint = name, Code = resultCode, Service = cloud_RoleName\n| top 25 by Count desc",
         "size": 0,
         "title": "Failed requests",
         "timeContextFromParameter": "TimeRange",
@@ -333,7 +333,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "exceptions\n| where timestamp {TimeRange}\n| extend env = tostring(split(cloud_RoleName, '.')[0])\n| where env in ({Env})\n| summarize Count = count() by Type = type, Method = tostring(method), Service = cloud_RoleName\n| top 20 by Count desc",
+        "query": "exceptions\n| where timestamp {TimeRange}\n| extend env = iff(cloud_RoleName has '.', tostring(split(cloud_RoleName, '.')[0]), 'unlabelled')\n| where '*' in ({Env}) or env in ({Env})\n| summarize Count = count() by Type = type, Method = tostring(method), Service = cloud_RoleName\n| top 20 by Count desc",
         "size": 0,
         "title": "Server exceptions by type",
         "timeContextFromParameter": "TimeRange",
@@ -347,7 +347,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "customEvents\n| where timestamp {TimeRange}\n| where name == 'spark.failure'\n| extend env = tostring(split(cloud_RoleName, '.')[0])\n| where env in ({Env})\n| summarize Count = count(), Sessions = dcount(session_Id)\n  by Where = tostring(customDimensions['spark.label']), Kind = tostring(customDimensions['spark.errorKind'])\n| top 20 by Count desc",
+        "query": "customEvents\n| where timestamp {TimeRange}\n| where name == 'spark.failure'\n| extend env = iff(cloud_RoleName has '.', tostring(split(cloud_RoleName, '.')[0]), 'unlabelled')\n| where '*' in ({Env}) or env in ({Env})\n| summarize Count = count(), Sessions = dcount(session_Id)\n  by Where = tostring(customDimensions['spark.label']), Kind = tostring(customDimensions['spark.errorKind'])\n| top 20 by Count desc",
         "size": 0,
         "title": "Client-side failures — label and error class only, never the message",
         "timeContextFromParameter": "TimeRange",
