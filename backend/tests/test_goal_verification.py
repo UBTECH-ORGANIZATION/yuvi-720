@@ -184,5 +184,53 @@ class BadgeCountsVerifiedGoals(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(count, 1)   # a broken read never breaks the badge
 
 
+class TheBadgeFollowsTheClassPicker(unittest.TestCase):
+    """A badge saying 8 over an inbox showing 5 reads as a bug. The route
+    narrows to the picker's class when asked — and only to a class the
+    session actually teaches, so a foreign id counts nothing rather than
+    leaking a number."""
+
+    GROUPS = [{"_id": "class-a"}, {"_id": "class-b"}]
+    ROSTERS = {"class-a": ["gal", "dana"], "class-b": ["moti"]}
+
+    def _count(self, url: str) -> tuple[int, AsyncMock]:
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+
+        from app.auth.dependencies import require_teacher_session
+        from app.routes import teacher_students as routes
+
+        app = FastAPI()
+        app.include_router(routes.router)
+        app.dependency_overrides[require_teacher_session] = (
+            lambda: {"sub": "teach"})
+        counted = AsyncMock(return_value=0)
+        with (
+            patch("app.brain.org.groups_for_teacher",
+                  new=AsyncMock(return_value=list(self.GROUPS))),
+            patch("app.brain.org.learners_in_group",
+                  new=AsyncMock(side_effect=lambda gid: self.ROSTERS.get(gid, []))),
+            patch("app.services.mentoring.count_pending_approvals", new=counted),
+        ):
+            response = TestClient(app).get(url)
+        self.assertEqual(response.status_code, 200)
+        return response.json()["count"], counted
+
+    def test_without_a_group_the_count_spans_every_class(self):
+        _, counted = self._count("/api/teacher/goals/pending-count")
+        counted.assert_awaited_once_with(["gal", "dana", "moti"])
+
+    def test_a_group_id_narrows_to_that_class(self):
+        _, counted = self._count(
+            "/api/teacher/goals/pending-count?group_id=class-a")
+        counted.assert_awaited_once_with(["gal", "dana"])
+
+    def test_a_class_the_session_does_not_teach_counts_nothing(self):
+        count, counted = self._count(
+            "/api/teacher/goals/pending-count?group_id=someone-elses")
+        counted.assert_awaited_once_with([])
+        self.assertEqual(count, 0)
+
+
 if __name__ == "__main__":
     unittest.main()

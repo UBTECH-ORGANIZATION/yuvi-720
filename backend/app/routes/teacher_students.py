@@ -1148,8 +1148,10 @@ async def mentoring_goal_ideas(
 
 
 @router.get("/goals/pending-count")
-async def pending_goal_count(session=Depends(require_teacher_session)):
-    """How many finished goals across this teacher's classes await sign-off.
+async def pending_goal_count(
+    group_id: str | None = None, session=Depends(require_teacher_session)
+):
+    """How many finished goals in the selected class await sign-off.
 
     Its own endpoint, and deliberately the cheapest one in this file: the app
     bar shows this number on every screen, so a teacher learns there is
@@ -1157,13 +1159,17 @@ async def pending_goal_count(session=Depends(require_teacher_session)):
     `GET /groups/{id}/goals` would answer the same question by shipping every
     conversation of every learner on every page load.
 
-    Scope comes from the session's own groups — there is no id to guard here,
-    because the caller cannot name anyone.
+    `group_id` narrows to one class so the badge agrees with the class picker
+    and with the inbox under it. It is honored only when it names one of the
+    session's own groups — a foreign id counts nothing rather than leaking a
+    number. Without it, the count spans every class the teacher has.
     """
     from app.brain import org
     from app.services import mentoring
 
     groups = await org.groups_for_teacher(session["sub"])
+    if group_id:
+        groups = [g for g in groups if str(g.get("_id") or "") == group_id]
     learner_ids: list[str] = []
     seen: set[str] = set()
     for group in groups:
