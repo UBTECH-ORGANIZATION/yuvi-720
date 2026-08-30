@@ -1,0 +1,295 @@
+/* The workshop. Three columns on a desktop: the conversation, the thing being
+   built, and everything built before. Logical properties throughout — this
+   screen is used in Hebrew, Arabic and English and the layout must mirror. */
+
+.sp-workshop {
+  display: grid;
+  grid-template-columns: minmax(300px, 22rem) minmax(0, 1fr) minmax(180px, 14rem);
+  gap: var(--sp-space-4, 16px);
+  align-items: start;
+  padding: var(--sp-space-4, 16px);
+  max-inline-size: var(--sp-container, 1360px);
+  margin-inline: auto;
+  block-size: calc(100vh - 72px);
+}
+
+.sp-workshop__rail,
+.sp-workshop__stage,
+.sp-workshop__library {
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-lg, 16px);
+  padding: var(--sp-space-4, 16px);
+  block-size: 100%;
+  overflow: hidden;
+}
+
+.sp-workshop__rail {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--sp-space-3, 12px);
+}
+
+.sp-workshop__intro h1 {
+  margin: 0;
+  font-size: var(--sp-fs-2xl, 26px);
+  color: var(--sp-ink-900);
+}
+
+.sp-workshop__intro p {
+  margin: 4px 0 0;
+  color: var(--sp-ink-400);
+}
+
+.sp-workshop__turns {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-3, 12px);
+}
+
+.sp-workshop__turn p {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--sp-radius-lg, 16px);
+  line-height: 1.5;
+}
+
+.sp-workshop__turn--learner p {
+  background: var(--sp-primary-100);
+  color: var(--sp-ink-900);
+  margin-inline-start: auto;
+  max-inline-size: 85%;
+}
+
+.sp-workshop__turn--yuvi p {
+  background: var(--sp-surface-2);
+  color: var(--sp-ink-700);
+  border: 1px solid var(--sp-border);
+}
+
+.sp-workshop__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-start: 8px;
+}
+
+.sp-workshop__chip {
+  border: 1px solid var(--sp-primary-500);
+  background: var(--sp-surface);
+  color: var(--sp-primary-700);
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.sp-workshop__chip:hover {
+  background: var(--sp-primary-050);
+}
+
+.sp-workshop__plan h2,
+.sp-workshop__cards h3,
+.sp-workshop__library h2,
+.sp-workshop__versions h2 {
+  margin: 0 0 8px;
+  font-size: var(--sp-fs-sm, 14px);
+  text-transform: none;
+  color: var(--sp-ink-400);
+}
+
+.sp-workshop__plan ol {
+  margin: 0;
+  padding-inline-start: 1.2em;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--sp-ink-700);
+}
+
+.sp-workshop__plan span {
+  display: block;
+  color: var(--sp-ink-400);
+  font-size: var(--sp-fs-sm, 14px);
+}
+
+.sp-workshop__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sp-workshop__cards article {
+  background: var(--sp-teal-100);
+  border-radius: var(--sp-radius-md, 12px);
+  padding: 10px 14px;
+}
+
+.sp-workshop__cards p {
+  margin: 0;
+  color: var(--sp-ink-700);
+}
+
+.sp-workshop__notice {
+  margin: 0;
+  color: var(--sp-warn-600);
+  background: var(--sp-warn-100);
+  border-radius: var(--sp-radius-md, 12px);
+  padding: 8px 12px;
+}
+
+.sp-workshop__composer {
+  display: flex;
+  gap: 8px;
+}
+
+.sp-workshop__composer input {
+  flex: 1;
+  min-inline-size: 0;
+  border: 1px solid var(--sp-border-strong);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font: inherit;
+  color: var(--sp-ink-900);
+  background: var(--sp-surface);
+}
+
+.sp-workshop__composer button {
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font: inherit;
+  cursor: pointer;
+  color: #fff;
+  background: var(--sp-gradient-soft);
+}
+
+.sp-workshop__composer button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.sp-workshop__stage {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--sp-space-3, 12px);
+}
+
+.sp-workshop__tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sp-workshop__spacer {
+  flex: 1;
+}
+
+.sp-workshop__tabs button {
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+  color: var(--sp-ink-500);
+  border-radius: 999px;
+  padding: 6px 16px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sp-workshop__tabs button.is-active {
+  border-color: var(--sp-primary-500);
+  color: var(--sp-primary-700);
+  background: var(--sp-primary-050);
+}
+
+.sp-workshop__tabs button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.sp-workshop__frame {
+  inline-size: 100%;
+  block-size: 100%;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-md, 12px);
+  background: #fff;
+}
+
+/* The code pane is read left-to-right in every language: it is source, not
+   prose, and mirroring it makes it unreadable. */
+.sp-workshop__code {
+  margin: 0;
+  overflow: auto;
+  direction: ltr;
+  text-align: start;
+  background: var(--sp-ink-900);
+  color: #d7d3f5;
+  border-radius: var(--sp-radius-md, 12px);
+  padding: 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.sp-workshop__versions ul,
+.sp-workshop__library ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sp-workshop__library ul {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  overflow-y: auto;
+}
+
+.sp-workshop__versions button,
+.sp-workshop__library button {
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+  color: var(--sp-ink-700);
+  border-radius: var(--sp-radius-sm, 8px);
+  padding: 6px 12px;
+  font: inherit;
+  cursor: pointer;
+  text-align: start;
+}
+
+.sp-workshop__library button {
+  inline-size: 100%;
+}
+
+.sp-workshop__versions button.is-active,
+.sp-workshop__library button.is-active {
+  border-color: var(--sp-primary-500);
+  color: var(--sp-primary-700);
+  background: var(--sp-primary-050);
+}
+
+.sp-workshop__library p {
+  margin: 0;
+  color: var(--sp-ink-300);
+}
+
+@media (max-width: 1100px) {
+  .sp-workshop {
+    grid-template-columns: minmax(0, 1fr);
+    block-size: auto;
+  }
+
+  .sp-workshop__rail,
+  .sp-workshop__stage {
+    block-size: auto;
+  }
+
+  .sp-workshop__frame,
+  .sp-workshop__code {
+    block-size: 60vh;
+  }
+}

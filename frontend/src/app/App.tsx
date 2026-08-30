@@ -21,7 +21,7 @@ import { getGroupSnapshot, listGroups } from '../services/teacher'
 import { MentoringPage } from '../features/mentoring/MentoringPage'
 import { LearningPortalPage } from '../features/learning-portal/LearningPortalPage'
 import { LessonPage } from '../features/learning-lesson/LessonPage'
-import { LomdaCreatorPage } from '../features/learning-create/LomdaCreatorPage'
+import { WorkshopPage } from '../features/workshop/WorkshopPage'
 import { LandingLoginPage } from '../features/landing-login/LandingLoginPage'
 /* The studio is a 3D room editor: it owns the avatar renderer, the lab room and
    the asset catalog. Loading it with the rest of the app put Three.js on every
@@ -278,7 +278,7 @@ function pageForRoute(pathname: string) {
   }
   if (pathname.startsWith('/mentoring')) return <MentoringPage />
   if (pathname.startsWith('/learning/lesson')) return <LessonPage />
-  if (pathname.startsWith('/learning/create')) return <LomdaCreatorPage />
+  if (pathname.startsWith('/learning/create')) return <WorkshopPage />
   if (pathname.startsWith('/learning')) return <LearningPortalPage />
   return <LandingLoginPage />
 }
