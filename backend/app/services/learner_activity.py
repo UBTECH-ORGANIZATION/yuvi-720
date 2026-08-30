@@ -45,6 +45,7 @@ NON_QUESTION_KINDS = {"task"}
 # distinct from the objective usage counts above. Kept per question (latest wins).
 HELP_METHODS = {"hint", "explanation", "yuvi_chat"}
 _FALLBACK = Path(__file__).resolve().parents[2] / ".runtime" / "learner_activity.json"
+_indexes_ready = False
 
 
 def _now() -> str:
@@ -189,15 +190,29 @@ async def rows(learner_id: str) -> list[dict[str, Any]]:
 
 
 async def ensure_indexes() -> None:
-    """(learner_id, at) — every profile open runs an otherwise-unindexed
-    ``find({"learner_id": …})`` over this collection. Wired into server.py."""
+    """Read on every task open (`{learner_id}`) and on every hint check.
+
+    The hint lookup is an equality match on five fields, so a compound index
+    over all of them answers it from the index alone. Wired into server.py.
+    """
+    global _indexes_ready
+    if _indexes_ready:
+        return
     collection = _get_collection_named("learner_activity")
     if collection is None:
         return
     try:
         await collection.create_index([("learner_id", 1), ("at", -1)], name="learner_at")
-    except Exception as exc:
-        print(f"⚠️ learner_activity learner_at index skipped: {type(exc).__name__}")
+        await collection.create_index(
+            [
+                ("learner_id", 1), ("kind", 1), ("component_id", 1),
+                ("item_id", 1), ("question_id", 1),
+            ],
+            name="learner_kind_question",
+        )
+        _indexes_ready = True
+    except Exception as exc:  # Cosmos may manage indexes outside the Mongo API.
+        print(f"⚠️ learner_activity index setup skipped: {type(exc).__name__}")
 
 
 async def has_content_hint(

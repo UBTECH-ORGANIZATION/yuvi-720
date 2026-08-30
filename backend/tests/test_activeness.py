@@ -21,6 +21,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from app.brain.activeness import (  # noqa: E402
+    CAUSE_HINTS,
     COMPETENCY_KEYS,
     MAX_DRIFT,
     MIN_CAUSE_CONF,
@@ -278,22 +279,20 @@ def test_confidence_grows_with_evidence():
 
 
 def test_every_emitted_cause_is_grounded_in_the_coach():
-    # The change-explanation blurb is grounded by mapping each cause tag to an
-    # internal phrase. If the model can emit a tag the coach can't verbalize, the
+    # Any surface that explains a move grounds it by mapping each cause tag to an
+    # internal phrase. If the model can emit a tag nothing can verbalize, the
     # kid would get an ungrounded ("LLM guess") reason — so every cause the model
     # produces across all scenarios must have a hint.
-    from app.agents.competency_coach import _CAUSE_HINTS
-
     emitted = set()
     for _label, brain, events, decisions in _all_scenarios():
         out = effective_activeness(brain, events, decisions)
         for key in COMPETENCY_KEYS:
             emitted.update(out[key]["causes"])
     assert emitted, "scenarios produced no causes — coverage check is vacuous"
-    missing = emitted - set(_CAUSE_HINTS)
+    missing = emitted - set(CAUSE_HINTS)
     assert not missing, f"causes with no grounding phrase: {missing}"
     for tag in emitted:
-        assert set(_CAUSE_HINTS[tag]) >= {"he", "ar", "en"}, f"{tag} missing a locale"
+        assert set(CAUSE_HINTS[tag]) >= {"he", "ar", "en"}, f"{tag} missing a locale"
 
 
 def test_value_clamps_at_ceiling_and_floor():

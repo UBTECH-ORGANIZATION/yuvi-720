@@ -7,6 +7,8 @@
    A 401 is broadcast as a window event rather than handled here: the transport
    must not know about routing. AuthProvider listens and clears the session. */
 
+import { trackApiCall } from './telemetry'
+
 export const UNAUTHORIZED_EVENT = 'spark:unauthorized'
 
 export class UnauthorizedError extends Error {
@@ -24,30 +26,44 @@ export class ForbiddenError extends Error {
 }
 
 async function request<T>(method: string, path: string, body?: unknown, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    method,
-    credentials: 'include',
-    headers: body === undefined
-      ? init?.headers
-      : { 'Content-Type': 'application/json', ...(init?.headers || {}) },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) })
-  })
+  // Every backend call in the app goes through here, which makes this the one
+  // place that can answer "which endpoint is slow, on which kind of device".
+  // The measurement is the browser's, wall-clock, including the network — the
+  // number the learner actually waits for, not the server's view of itself.
+  const startedAt = performance.now()
+  let status = 0
+  try {
+    const response = await fetch(path, {
+      ...init,
+      method,
+      credentials: 'include',
+      headers: body === undefined
+        ? init?.headers
+        : { 'Content-Type': 'application/json', ...(init?.headers || {}) },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) })
+    })
+    status = response.status
 
-  if (response.status === 401) {
-    window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT))
-    throw new UnauthorizedError(path)
+    if (response.status === 401) {
+      window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT))
+      throw new UnauthorizedError(path)
+    }
+    if (response.status === 403) throw new ForbiddenError(path)
+    if (!response.ok) {
+      // Carry the status on the error: callers that must distinguish an expected
+      // refusal (a 409 for a component the route has not opened) from a genuine
+      // failure should not have to parse the message to do it.
+      const failure = new Error(`${method} ${path} failed with ${response.status}`) as Error & { status: number }
+      failure.status = response.status
+      throw failure
+    }
+    return await (response.json() as Promise<T>)
+  } finally {
+    // In `finally` so aborted and failed calls are measured too: a request that
+    // times out is the worst latency there is, and counting only the successes
+    // would hide it.
+    trackApiCall(method, path, performance.now() - startedAt, status)
   }
-  if (response.status === 403) throw new ForbiddenError(path)
-  if (!response.ok) {
-    // Carry the status on the error: callers that must distinguish an expected
-    // refusal (a 409 for a component the route has not opened) from a genuine
-    // failure should not have to parse the message to do it.
-    const failure = new Error(`${method} ${path} failed with ${response.status}`) as Error & { status: number }
-    failure.status = response.status
-    throw failure
-  }
-  return response.json() as Promise<T>
 }
 
 export function apiGet<T>(path: string, init?: RequestInit): Promise<T> {

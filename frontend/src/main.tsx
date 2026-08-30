@@ -12,6 +12,7 @@ import { ThemeProvider } from './providers/ThemeProvider'
 import { StudioTransitionProvider } from './features/Yuvi-studio/StudioTransitionProvider'
 import { YuviDesignProvider } from './features/Yuvi-studio/YuviDesignProvider'
 import { NotificationsProvider } from './providers/NotificationsProvider'
+import { initTelemetry } from './services/telemetry'
 import './styles/tokens.css'
 import './styles/theme.css'
 import './styles/global.css'
@@ -55,3 +56,7 @@ createRoot(document.getElementById('root') as HTMLElement).render(
     </AuthProvider>
   </React.StrictMode>
 )
+
+// After the first render is queued, never before: the SDK loads on idle and
+// must not compete with painting the app. See services/telemetry.ts.
+initTelemetry()
