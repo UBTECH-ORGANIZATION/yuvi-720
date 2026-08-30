@@ -12,6 +12,7 @@ mastery stance, challenges, student_description) plus the competency's VERBAL
 band. Raw activeness scores never reach the prompt (MoE rule).
 """
 
+from datetime import datetime, timedelta, timezone
 from typing import AsyncGenerator, Optional
 from uuid import uuid4
 
@@ -250,10 +251,12 @@ async def _activeness_signals(learner_id: str, brain: dict, competency: str, lan
     """
     try:
         from app.agents.tutor_decision import recent_tutor_decisions
-        from app.brain.activeness import effective_activeness
+        from app.brain.activeness import EVIDENCE_SPAN_DAYS, effective_activeness
         from app.services.events import get_learner_events
 
-        events = await get_learner_events(learner_id)
+        events = await get_learner_events(
+            learner_id, since=datetime.now(timezone.utc) - timedelta(days=EVIDENCE_SPAN_DAYS)
+        )
         decisions = await recent_tutor_decisions(learner_id)
         causes = (effective_activeness(brain, events, decisions).get(competency) or {}).get("causes") or []
         return [

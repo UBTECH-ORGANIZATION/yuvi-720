@@ -52,6 +52,10 @@ MIN_CAUSE_CONF = 0.3  # below this we don't assert a behavioural cause (too litt
 MOVEMENT_DAYS = 7     # the card compares against ~a week ago; drivers must match it
 MOVED_POINTS = 0.75   # contribution points a signal must shift to count as moved
 GUESS_SECS = 3.5      # a scored answer faster than this reads as a guess
+# Oldest evidence this engine can still read: the prior window's far edge. Callers
+# must fetch at least this far back or the week-over-week comparison is measured
+# against a gap in the fetch rather than a gap in the learning.
+EVIDENCE_SPAN_DAYS = WINDOW_DAYS + MOVEMENT_DAYS
 
 
 def _parse(ts: Any) -> Optional[datetime]:
