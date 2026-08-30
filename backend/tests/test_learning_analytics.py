@@ -579,3 +579,80 @@ class GroupLearningsRoute(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GapDiagnosis(unittest.IsolatedAsyncioTestCase):
+    """The real "למה?" behind a class gap (#507): where inside the objective,
+    which questions, and how it goes wrong — folded evidence, never a repeat
+    of the row's own counters."""
+
+    async def _diagnose(self, per_learner, decisions=None, objective_id="obj-1"):
+        from app.services import learning_analytics
+
+        async def _summary(learner_id, subject=None, component_id=None):
+            return per_learner.get(learner_id, [])
+
+        async def _decisions(learner_id, limit=300):
+            return (decisions or {}).get(learner_id, [])
+
+        with ExitStack() as stack:
+            _catalog_patches(stack)
+            stack.enter_context(patch("app.brain.org.learners_in_group",
+                                      new=AsyncMock(return_value=list(per_learner))))
+            stack.enter_context(patch("app.services.learner_activity.question_summary",
+                                      side_effect=_summary))
+            stack.enter_context(patch("app.agents.tutor_decision.recent_tutor_decisions",
+                                      side_effect=_decisions))
+            return await learning_analytics.gap_diagnosis("g1", objective_id)
+
+    async def test_parts_come_back_hardest_first_with_titles(self):
+        diagnosis = await self._diagnose({
+            "k1": [_row("cmp-1", "q-hard", attempts=4, correct=0),
+                   _row("cmp-2", "q1", attempts=4, correct=4)],
+            "k2": [_row("cmp-1", "q-hard", attempts=3, correct=1)],
+        })
+        self.assertEqual([part["component_id"] for part in diagnosis["parts"]],
+                         ["cmp-1", "cmp-2"])
+        hardest = diagnosis["parts"][0]
+        self.assertEqual(hardest["title"], "הקנייה א")
+        self.assertAlmostEqual(hardest["success_rate"], 1 / 7, places=2)
+        self.assertEqual(diagnosis["objective_title"], "title:obj-1")
+
+    async def test_the_failing_question_is_named_the_way_the_learner_sees_it(self):
+        diagnosis = await self._diagnose({
+            "k1": [_row("cmp-1", "q-hard", attempts=4, correct=1)],
+            "k2": [_row("cmp-1", "q-hard", attempts=3, correct=0)],
+        })
+        self.assertEqual(len(diagnosis["hard_questions"]), 1)
+        question = diagnosis["hard_questions"][0]
+        self.assertEqual(question["ordinal"], 3)
+        self.assertEqual(question["screen_title"], "מסך ראשון")
+        self.assertEqual(question["learning_title"], "הקנייה א")
+
+    async def test_error_types_fold_only_diagnostic_kinds_on_this_objective(self):
+        diagnosis = await self._diagnose(
+            {
+                "k1": [_row("cmp-1", "q-hard", attempts=4, correct=1)],
+                "k2": [_row("cmp-1", "q-hard", attempts=4, correct=1)],
+            },
+            decisions={
+                "k1": [
+                    {"objective_id": "obj-1", "error_type": "misinterpret"},
+                    {"objective_id": "obj-1", "error_type": "misinterpret"},
+                    {"objective_id": "obj-1", "error_type": "right-idea"},
+                    {"objective_id": "obj-OTHER", "error_type": "guess"},
+                ],
+                "k2": [{"objective_id": "obj-1", "error_type": "guess"}],
+            },
+        )
+        self.assertEqual(diagnosis["error_types"],
+                         [("misinterpret", 2), ("guess", 1)])
+
+    async def test_an_untouched_objective_diagnoses_to_empty_not_error(self):
+        diagnosis = await self._diagnose(
+            {"k1": [_row("cmp-1", "q1", attempts=2, correct=2)]},
+            objective_id="obj-nobody-met",
+        )
+        self.assertEqual(diagnosis["parts"], [])
+        self.assertEqual(diagnosis["hard_questions"], [])
+        self.assertEqual(diagnosis["error_types"], [])

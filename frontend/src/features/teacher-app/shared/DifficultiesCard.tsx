@@ -16,10 +16,12 @@
 import type { ReactNode } from 'react'
 import { Icon, Panel, SectionHeader, Tooltip } from '../../../components/primitives'
 import { useI18n } from '../../../i18n/I18nProvider'
+import type { GapDiagnosis } from '../../../services/teacher'
 import type { TaskSeed } from '../tasks/taskSeed'
 import { EvidenceToggle } from './EvidenceDisclosure'
 import { subjectLabel } from './subjectLabel'
 import { StudentFacepile } from './StudentFacepile'
+import { DiagnosisToggle } from './WhyDiagnosis'
 
 export interface DifficultyItem {
   /** Row key — a question key here, an objective id for #450. Never shown. */
@@ -112,7 +114,7 @@ export interface StrengthItem {
 
 export function DifficultiesCard({
   title, subtitle, items, names, emptyLabel, onBuildTask, onCreateSubgroup, className,
-  strengths = [], strengthsTitle, strengthsHeading, itemsTitle, onPraise,
+  strengths = [], strengthsTitle, strengthsHeading, itemsTitle, onPraise, loadWhy,
 }: {
   title: string
   subtitle?: string
@@ -140,6 +142,11 @@ export function DifficultiesCard({
    *  Absent on surfaces with no messaging, and the button is then not drawn:
    *  a praise action that cannot send is worse than none. */
   onPraise?: (strength: StrengthItem) => void
+  /** A deeper answer for "למה?" (#507), fetched on first open. The card still
+   *  never fetches on its own — the caller injects the loader, and rows fall
+   *  back to the plain raw-evidence toggle without one (the lomda screen's
+   *  rows are questions, which have no objective-level diagnosis to load). */
+  loadWhy?: (item: DifficultyItem) => Promise<GapDiagnosis | null>
 }) {
   const { t } = useI18n()
   /* Two columns only when there is something to put in the second one. With no
@@ -188,7 +195,9 @@ export function DifficultiesCard({
                   label={t('tch.learnings.diffWho')}
                   heading={t('tch.learnings.diffWho')}
                 />
-                <EvidenceToggle raw={item.evidence} />
+                {loadWhy
+                  ? <DiagnosisToggle item={item} load={loadWhy} />
+                  : <EvidenceToggle raw={item.evidence} />}
                 {/* No one is currently stuck on it (everyone who tried got
                     there in the end) → a finding without a fix-list: the
                     evidence stays, the actions have nobody to act on. */}

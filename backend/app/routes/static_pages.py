@@ -1,8 +1,9 @@
 """Static assets, React shell, and standalone learning content routes."""
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.paths import (
     CAMPAIGN_DIR,
@@ -144,3 +145,28 @@ async def learning_route(path: str = ""):
 async def old_react_app_path(path: str = ""):
     """Redirect the temporary migration URL to the root app."""
     return RedirectResponse(url="/")
+
+
+def install_spa_fallback(app: FastAPI) -> None:
+    """Reloading any client route serves the shell, never `{"detail":"Not Found"}`.
+
+    The routes above are an allow-list, and it kept losing (ADO #507's report
+    caught it): `/teacher` — the entire teacher lane — was never added, so a
+    reload anywhere in it worked in dev (Vite serves everything) and returned
+    raw JSON in every deployed environment. Rather than growing the list one
+    forgotten route at a time, an unmatched GET that a BROWSER is navigating to
+    (`Accept: text/html`) falls back to the React shell and lets the client
+    router take it from there.
+
+    API consumers are untouched: anything under `/api` keeps its JSON 404 with
+    its original detail, as does any request that does not ask for HTML.
+    """
+
+    @app.exception_handler(404)
+    async def _spa_fallback(request: Request, exc: StarletteHTTPException):
+        wants_html = "text/html" in (request.headers.get("accept") or "")
+        if request.method == "GET" and wants_html \
+                and not request.url.path.startswith("/api"):
+            return serve_react_app()
+        detail = getattr(exc, "detail", None) or "Not Found"
+        return JSONResponse(content={"detail": detail}, status_code=404)

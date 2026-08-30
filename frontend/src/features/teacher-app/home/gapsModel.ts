@@ -41,6 +41,9 @@ export function gapToDifficultyItem(
       mastered_count: gap.mastered_count,
       with_evidence: gap.with_evidence,
       group_size: gap.group_size,
+      /* The vendor's misconception tags, in the raw layer where the comment
+         above promises them — machine identifiers belong here, not in copy. */
+      sample_misconceptions: gap.evidence?.sample_misconceptions ?? [],
     },
     seed: {
       title: t('tch.gaps.taskTitle', { label: gap.label }),

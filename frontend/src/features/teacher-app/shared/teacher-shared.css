@@ -1168,3 +1168,77 @@
      it rather than colliding with it. */
   pointer-events: none;
 }
+
+/* ── the real "למה?" on a gap row (#507) ───────────────────────────────────
+   Three folded reads and a composed recommendation; the raw evidence keeps
+   its place at the bottom — the diagnosis interprets, C4 discloses. */
+.tch-why {
+  grid-column: 1 / -1;
+  inline-size: 100%;
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-bg);
+}
+.tch-why__loading, .tch-why__none {
+  margin: 0;
+  color: var(--sp-ink-500);
+  font-size: var(--sp-fs-sm);
+}
+.tch-why__body { display: grid; gap: var(--sp-2); }
+.tch-why__block { display: grid; gap: var(--sp-1); }
+.tch-why__block h5 {
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  font-weight: 600;
+  color: var(--sp-ink-500);
+}
+.tch-why__parts { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--sp-1); }
+.tch-why__parts li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 90px auto;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-sm);
+}
+.tch-why__partName { color: var(--sp-ink-900); }
+.tch-why__meter {
+  block-size: 6px;
+  border-radius: 999px;
+  background: var(--sp-border);
+  overflow: hidden;
+}
+.tch-why__meter > span {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: var(--sp-primary-500);
+  /* fill from the logical start in both directions */
+  margin-inline-end: auto;
+}
+.tch-why__partLine { color: var(--sp-ink-500); font-size: var(--sp-fs-xs); white-space: nowrap; }
+.tch-why__questions {
+  margin: 0; padding: 0; list-style: none;
+  display: grid; gap: var(--sp-1);
+  font-size: var(--sp-fs-sm); color: var(--sp-ink-700);
+}
+.tch-why__errors { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+.tch-why__error {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 2px var(--sp-2);
+  border: 1px solid var(--sp-border);
+  border-radius: 999px;
+  background: var(--sp-surface);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-700);
+}
+.tch-why__errorCount { color: var(--sp-ink-500); }
+.tch-why__rec p {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-900);
+  line-height: 1.5;
+}

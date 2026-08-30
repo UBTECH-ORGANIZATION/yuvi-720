@@ -48,7 +48,9 @@ from app.routes.checkin import router as checkin_router
 from app.routes.illustrations import router as illustrations_router
 from app.routes.mapping_chat import router as mapping_chat_router
 from app.routes.profile import router as profile_router
-from app.routes.static_pages import mount_static_assets, router as static_pages_router
+from app.routes.static_pages import (
+    install_spa_fallback, mount_static_assets, router as static_pages_router,
+)
 from app.routes.support import internal_router as support_internal_router, router as support_router
 from app.routes.xapi import router as xapi_router
 from app.core.telemetry import configure_telemetry
@@ -242,6 +244,7 @@ def create_app() -> FastAPI:
     mount_content_catalog_mcp(app)
 
     mount_static_assets(app)
+    install_spa_fallback(app)
     app.include_router(static_pages_router)
 
     configure_telemetry(app, service_name="spark-backend")

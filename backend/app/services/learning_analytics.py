@@ -674,3 +674,113 @@ async def learning_detail(
         "difficulties": difficulties,
         "topics_pending": topics_pending,
     }
+
+
+# Coach error-types worth telling a teacher about. `right-idea`/`no-attempt`/
+# `unknown` describe the coach's bookkeeping, not a class pattern.
+_DIAGNOSTIC_ERROR_TYPES = {"guess", "partial", "misinterpret", "careless"}
+# Newest decisions per learner that count toward the tally — one stuck child
+# looping all afternoon must not outvote the rest of the class.
+_ERROR_TALLY_PER_LEARNER = 6
+
+
+async def _error_type_tally(
+    learner_ids: list[str], objective_id: str,
+) -> list[tuple[str, int]]:
+    """How the class gets this objective wrong, per the coach's own reads.
+
+    Every tutor decision already carries a deterministic `error_type`
+    (`tutor_decision.classify_error_type`) — this folds the newest few per
+    learner, scoped to the objective, into class-level counts. Counts of
+    DECISIONS, not children, said as such by the caller's copy.
+    """
+    from app.agents.tutor_decision import recent_tutor_decisions
+
+    semaphore = asyncio.Semaphore(_FANOUT)
+
+    async def _one(learner_id: str) -> list[dict[str, Any]]:
+        async with semaphore:
+            try:
+                rows = await recent_tutor_decisions(learner_id, limit=60)
+            except Exception:
+                return []
+        return [row for row in rows if row.get("objective_id") == objective_id]
+
+    counts: dict[str, int] = {}
+    for rows in await asyncio.gather(*(_one(lid) for lid in learner_ids)):
+        for row in rows[:_ERROR_TALLY_PER_LEARNER]:
+            error_type = row.get("error_type")
+            if error_type in _DIAGNOSTIC_ERROR_TYPES:
+                counts[error_type] = counts.get(error_type, 0) + 1
+    return sorted(counts.items(), key=lambda item: -item[1])
+
+
+async def gap_diagnosis(
+    group_id: str, objective_id: str, *, language: str = "he",
+) -> dict[str, Any]:
+    """A real answer to "למה?" on a class gap (#507).
+
+    The gaps card's counters say HOW MANY are stuck; this says WHERE inside the
+    objective (per learning, hardest first), on WHICH questions (the same
+    hard-question rule the learnings screen uses, with the learner-facing
+    labels), and HOW it goes wrong (the coach's own error-type reads). Nothing
+    here is generated — every row is a fold over stored evidence, which is what
+    lets the client compose a grounded recommendation from it.
+    """
+    from app.brain import org
+    from app.services import kata_catalog
+
+    try:
+        await kata_catalog.ensure_loaded()
+    except Exception:
+        pass  # labels degrade; the counters still stand
+
+    learner_ids = await org.learners_in_group(group_id)
+    per_learner = await _per_learner_rows(learner_ids, None)
+    folded = _fold(per_learner)
+
+    parts: list[dict[str, Any]] = []
+    hard: list[dict[str, Any]] = []
+    for component_id, agg in folded.items():
+        if agg.get("objective_id") != objective_id:
+            continue
+        parts.append({
+            "component_id": component_id,
+            "title": kata_catalog.component_title(component_id, language) or "",
+            "attempts": agg["attempts"],
+            "correct": agg["correct"],
+            "success_rate": _rate(agg["correct"], agg["attempts"]),
+            "learners": agg["learners"],
+            "struggling_count": agg["struggling_count"],
+        })
+        for row in _question_rows(component_id, agg["questions"]):
+            if row["attempts"] >= HARD_QUESTION_MIN_ATTEMPTS \
+                    and row["success_rate"] is not None \
+                    and row["success_rate"] <= HARD_QUESTION_MAX_SUCCESS:
+                hard.append({
+                    **row,
+                    "component_id": component_id,
+                    "learning_title":
+                        kata_catalog.component_title(component_id, language) or "",
+                })
+
+    parts.sort(key=lambda part: (
+        part["success_rate"] if part["success_rate"] is not None else 2.0,
+        -part["attempts"],
+    ))
+    hard.sort(key=lambda row: (row["success_rate"], -row["attempts"]))
+
+    # Only learners who actually met the objective feed the error tally — the
+    # rest of the roster has no decisions to read and costs a fan-out anyway.
+    tried = [
+        learner_id for learner_id, rows in per_learner
+        if any(row.get("objective_id") == objective_id
+               and (row.get("attempts") or 0) for row in rows)
+    ]
+    return {
+        "objective_id": objective_id,
+        "objective_title": _objective_title(objective_id, language),
+        "parts": parts,
+        "hard_questions": hard[:HARD_QUESTIONS_PER_LEARNING],
+        "error_types": await _error_type_tally(tried, objective_id),
+    }
