@@ -44,6 +44,24 @@ describe('blocks a reply is made of', () => {
     assert.equal(blocks[0].ordered, true)
   })
 
+  it('keeps described steps in one ordered list across blank lines', () => {
+    const blocks = parseBlocks(
+      '1. מגדירים מה צריך להגיש.\nכותבים במשפט אחד מהו המוצר הסופי.\n\n'
+      + '2. מחלקים לחלקים קטנים.\nמפרקים את העבודה לכמה חלקים קצרים.\n\n'
+      + '3. עובדים לפי סדר קצר וברור.\nמתחילים בחלק הכי קל.'
+    )
+    assert.equal(blocks.length, 1)
+    assert.deepEqual(blocks[0], {
+      kind: 'list',
+      ordered: true,
+      items: [
+        'מגדירים מה צריך להגיש. כותבים במשפט אחד מהו המוצר הסופי.',
+        'מחלקים לחלקים קטנים. מפרקים את העבודה לכמה חלקים קצרים.',
+        'עובדים לפי סדר קצר וברור. מתחילים בחלק הכי קל.',
+      ],
+    })
+  })
+
   it('drops a code block, which neither chat has any business showing', () => {
     assert.deepEqual(parseBlocks('לפני\n```python\nprint(1)\n```\nאחרי').map((b) => b.kind),
       ['paragraph', 'paragraph'])

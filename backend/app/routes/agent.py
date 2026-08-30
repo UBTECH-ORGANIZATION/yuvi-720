@@ -193,6 +193,8 @@ async def _stream_visual_tail(
             or safety.is_safety_redirect(response_text)
             or not _worth_visual_planning(screened_message, response_text)
         )
+        if will_plan:
+            yield f"data: {json.dumps({'visual_status': 'planning'}, ensure_ascii=False)}\n\n"
         # The pointer outlives the lesson screen, and the planner is told the
         # question is what the learner is looking at — so off the lesson it would
         # drag an unrelated request back to the last question's numbers.

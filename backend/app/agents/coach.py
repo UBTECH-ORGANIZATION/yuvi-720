@@ -43,8 +43,20 @@ from app.services.llm import LlmModelTier, call_llm, call_llm_stream
 # The one fenced block the Coach may emit: a validated diagram payload, drawn by
 # the client. Every other fenced block is still forbidden.
 DIAGRAM_FENCE = "```yuvi-diagram"
-# A bare list marker on its own — not a real sentence for the brevity cap.
-_BARE_MARKER = re.compile(r"(?:\d+[.)]|[-*+•])")
+# List items are structural units, not prose sentences. Models legitimately use
+# several Markdown spellings even when the learner never asks for a list.
+_LIST_MARKER_TOKEN = (
+    r"(?:\d+(?:\.\d+)*[.)]?|[א-תA-Za-z\u0621-\u064A][.)]|[-+*•]|"
+    r"(?:שלב|step|الخطوة)\s+\d+\s*:)"
+)
+_LIST_ITEM_START = re.compile(
+    rf"^\s*(?:\*\*)?{_LIST_MARKER_TOKEN}(?:\*\*)?(?:\s+|$)",
+    re.IGNORECASE,
+)
+_BARE_MARKER = re.compile(
+    rf"\s*(?:\*\*)?{_LIST_MARKER_TOKEN}(?:\*\*)?\s*",
+    re.IGNORECASE,
+)
 # A line that is table markup rather than a line of prose.
 _TABLE_ROW = re.compile(r"^\s*\|")
 
@@ -77,6 +89,22 @@ def _counts_as_prose(sentence: str) -> bool:
         return False
     lines = [line for line in text.splitlines() if line.strip()]
     return not (lines and all(_TABLE_ROW.match(line) for line in lines))
+
+
+def _starts_list_item(sentence: str) -> bool:
+    return bool(_LIST_ITEM_START.match(sentence))
+
+
+def _truncate_at_word_boundary(text: str, limit: int) -> tuple[str, bool]:
+    if len(text) <= limit:
+        return text, False
+    candidate = text[:limit - 1].rstrip()
+    boundary = candidate.rfind(" ")
+    if boundary > 0:
+        candidate = candidate[:boundary].rstrip()
+    else:
+        candidate = ""
+    return candidate + "…", True
 
 
 COACH_INSTRUCTIONS = {
@@ -915,6 +943,7 @@ async def run_coach_stream(
     visual_requests: Optional[list[dict[str, str]]] = None,
     debug_trace: Optional[list[dict[str, str]]] = None,
     intent_out: Optional[list[str]] = None,
+    diagnostics_out: Optional[dict[str, object]] = None,
 ) -> AsyncGenerator[str, None]:
     """Stream a Coach reply (chat or proactive), Safety-gated, then persist it."""
     lang = language if language in COACH_INSTRUCTIONS else "he"
@@ -1277,6 +1306,16 @@ async def run_coach_stream(
         yield deterministic_opener
     pending_output = ""
     sentence_count = 0
+    in_structural_list = False
+    list_break_pending = False
+    list_item_count = 0
+    current_list_item_allowed = True
+    pending_list_marker = ""
+    pending_list_marker_gap = " "
+    generated_chars = 0
+    delivered_chars = 0
+    sentence_cap_hit = False
+    remainder_char_cap_hit = False
     max_sentences = (
         2 if query_intent == "capabilities_query"
         else 1 if coach_mode is CoachMode.GENERAL and tool_context.action_offers
@@ -1296,16 +1335,18 @@ async def run_coach_stream(
 
     async for chunk in reply_chunks():
         out = safety.screen_output(chunk, lang).text   # tier-1 on the way out
-        if sentence_count >= max_sentences:
-            continue
+        generated_chars += len(out)
         pending_output += out
-        while sentence_count < max_sentences:
+        while True:
             # Whitespace REQUIRED after the punctuation: the buffer often ends
             # mid-token ("**12." inside "**12.1**"), and an end-of-buffer
             # alternative counted that as a finished sentence — hitting the cap
             # there dropped the rest and shipped unbalanced Markdown. The true
             # end of stream is handled by the remainder flush below.
-            boundary = re.match(r"^([\s\S]*?[.!?؟]+)(\s+)", pending_output)
+            boundary = re.match(
+                r"^([\s\S]*?(?:[.!?؟]+|:(?=\s*\n)))(\s+)",
+                pending_output,
+            )
             if boundary is None:
                 break
             sentence = boundary.group(1).strip()
@@ -1313,29 +1354,113 @@ async def run_coach_stream(
             pending_output = pending_output[boundary.end():]
             if not sentence:
                 continue
-            if not bypass_answer_guard and guard.reveals(sentence):
+
+            starts_list_item = _starts_list_item(sentence)
+            marker_only = bool(_BARE_MARKER.fullmatch(sentence))
+            if list_break_pending and not starts_list_item and not pending_list_marker:
+                in_structural_list = False
+                current_list_item_allowed = True
+            if starts_list_item:
+                if not in_structural_list:
+                    list_item_count = 0
+                in_structural_list = True
+                list_break_pending = False
+                list_item_count += 1
+                current_list_item_allowed = list_item_count <= 5
+
+            if marker_only:
+                if current_list_item_allowed:
+                    pending_list_marker = sentence
+                    pending_list_marker_gap = _line_gap(gap)
+                else:
+                    sentence_cap_hit = True
+                continue
+
+            delivered_sentence = sentence
+            if pending_list_marker:
+                delivered_sentence = (
+                    pending_list_marker + pending_list_marker_gap + delivered_sentence
+                )
+                pending_list_marker = ""
+            counts_as_prose = _counts_as_prose(delivered_sentence)
+            should_deliver = (
+                (in_structural_list and current_list_item_allowed)
+                or not counts_as_prose
+                or sentence_count < max_sentences
+            )
+            if not should_deliver:
+                sentence_cap_hit = True
+                list_break_pending = in_structural_list and gap.count("\n") >= 2
+                continue
+            if not bypass_answer_guard and guard.reveals(delivered_sentence):
                 blocked = True
                 break
             separator = pending_gap if collected else ""
             pending_gap = _line_gap(gap)
-            collected += separator + sentence
-            yield separator + sentence
-            # A bare list marker ("1.", "-", "•") is not a sentence — otherwise a
-            # numbered/bulleted list is cut off after two markers. Only count
-            # sentences with real content toward the brevity cap.
-            if _counts_as_prose(sentence):
+            collected += separator + delivered_sentence
+            delivered = separator + delivered_sentence
+            delivered_chars += len(delivered)
+            yield delivered
+            if counts_as_prose and not in_structural_list:
                 sentence_count += 1
+            list_break_pending = in_structural_list and gap.count("\n") >= 2
         if blocked:
             break
 
-    if not blocked and sentence_count < max_sentences and pending_output.strip():
-        remainder = pending_output.strip()[:1200 if support_mode in {"explanation", "video_summary"} else 600]
-        if not bypass_answer_guard and guard.reveals(remainder):
+    if not blocked and pending_output.strip():
+        stripped_remainder = pending_output.strip()
+        starts_list_item = _starts_list_item(stripped_remainder)
+        if starts_list_item and not in_structural_list:
+            in_structural_list = True
+            list_item_count += 1
+            current_list_item_allowed = list_item_count <= 5
+        if pending_list_marker:
+            stripped_remainder = (
+                pending_list_marker + pending_list_marker_gap + stripped_remainder
+            )
+            pending_list_marker = ""
+        counts_as_prose = _counts_as_prose(stripped_remainder)
+        should_deliver = (
+            (in_structural_list and current_list_item_allowed)
+            or not counts_as_prose
+            or sentence_count < max_sentences
+        )
+        remainder_limit = (
+            1200
+            if in_structural_list or support_mode in {"explanation", "video_summary"}
+            else 600
+        )
+        remainder, remainder_char_cap_hit = _truncate_at_word_boundary(
+            stripped_remainder, remainder_limit
+        )
+        if not should_deliver:
+            sentence_cap_hit = True
+        elif not bypass_answer_guard and guard.reveals(remainder):
             blocked = True
         else:
             separator = pending_gap if collected else ""
             collected += separator + remainder
-            yield separator + remainder
+            delivered = separator + remainder
+            delivered_chars += len(delivered)
+            yield delivered
+
+    coach_debug_trace.append(
+        debug_trace, "response_sentence_cap", "blocked" if sentence_cap_hit else "ok"
+    )
+    coach_debug_trace.append(
+        debug_trace, "response_remainder_cap", "blocked" if remainder_char_cap_hit else "ok"
+    )
+    if diagnostics_out is not None:
+        diagnostics_out.update({
+            "coach_mode": coach_mode.value,
+            "query_intent": query_intent,
+            "max_sentences": max_sentences,
+            "delivered_sentences": sentence_count,
+            "generated_chars": generated_chars,
+            "delivered_chars": delivered_chars,
+            "sentence_cap_hit": sentence_cap_hit,
+            "remainder_char_cap_hit": remainder_char_cap_hit,
+        })
 
     # The reveal is dropped, not trimmed around: whatever followed it was built
     # on the answer being out. The learner gets the refusal the prompt asks for,

@@ -41,7 +41,10 @@ export interface UsageEvent {
   usage_status: string
   input_tokens: number | null
   output_tokens: number | null
+  reasoning_tokens: number | null
   total_tokens: number | null
+  finish_reason: string | null
+  stream_termination: string | null
   quantity: number | null
   cost_usd: number | null
   latency_ms: number
