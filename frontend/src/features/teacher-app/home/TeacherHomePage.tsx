@@ -48,6 +48,7 @@ import { SubgroupDialog } from '../students/SubgroupDialog'
 import { TaskBuilder } from '../tasks/TeacherTasksPage'
 import { type TaskSeed } from '../tasks/taskSeed'
 import { MomentsAlbum } from '../moments/MomentsAlbum'
+import { bookEdition } from '../moments/bookModel'
 import { BandFace, type Band } from './BandFace'
 import { type BandedStudent } from './bandModel'
 import { gapToDifficultyItem, mostBlockingGap } from './gapsModel'
@@ -142,12 +143,19 @@ export function TeacherHomePage() {
     let active = true
     setMoments([])
     setMomentsLoading(true)
-    /* The book is the edition BEFORE the current period, so the fetch is
-       offset by a whole period — and widened by a day at each edge, because
-       the server's window is a raw trailing one while the book's is aligned to
-       midnights in the teacher's own timezone. `momentsInEdition` trims the
-       overshoot, so the cover never claims a day the pages do not cover. */
-    getGroupMoments(groupId, language, days + 2, Math.max(0, days - 1), subject)
+    /* The fetch window is derived from the edition itself — the weekly book
+       is calendar-aligned (last completed Sun–Sat) while other periods roll,
+       so hardcoded offsets fit one and miss the other. The offset excludes
+       days newer than the edition (their moments would spend the row limit on
+       pages the book will not print), the day count reaches back past the
+       edition's first midnight, and `momentsInEdition` trims the overshoot so
+       the cover never claims a day the pages do not cover. */
+    const DAY = 86_400_000
+    const edition = bookEdition(days)
+    const offsetDays = Math.max(0, Math.floor((Date.now() - edition.end) / DAY))
+    const fetchDays = Math.max(1,
+      Math.ceil((Date.now() - edition.start) / DAY) - offsetDays + 1)
+    getGroupMoments(groupId, language, fetchDays, offsetDays, subject)
       .then((response) => { if (active) setMoments(response.moments ?? []) })
       .catch(() => { if (active) setMoments([]) })
       .finally(() => { if (active) setMomentsLoading(false) })
