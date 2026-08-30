@@ -488,58 +488,99 @@ async def delete_conversation(
 
 
 def _is_pending(goal: dict[str, Any]) -> bool:
-    """A goal the learner has finished that nobody has signed off.
+    """A goal that earned its sign-off and nobody has given it.
 
     The single definition of "waiting for you" in this product — the goals
     screen's inbox, the assistant's `list_pending_goal_approvals` and the nav
     badge all mean this and must not drift into three meanings.
+
+    Two ways a goal earns the queue (#462): the child summarized it, or its
+    tracked action was verified as met — for `ask_yuvi`, met by SUBSTANTIVE
+    messages judged from stored quality labels, never by counting. The `met`
+    arm reads the `progress` that `goal_progress.enrich_conversations`
+    attaches; on an unenriched goal it simply contributes nothing, so callers
+    that skip enrichment get the strict (summarized-only) subset rather than a
+    wrong answer.
     """
     return (not goal.get("deleted")
-            and goal.get("progress_stage") == "summarized"
-            and not goal.get("approved_by"))
+            and not goal.get("approved_by")
+            and (goal.get("progress_stage") == "summarized"
+                 or bool((goal.get("progress") or {}).get("met"))))
+
+
+def _needs_verification(goal: dict[str, Any]) -> bool:
+    """Unapproved, not yet summarized, but carrying a trackable action — the
+    only goals whose pendingness depends on evidence we have to go read."""
+    from app.services.goal_progress import normalize_action
+
+    return (not goal.get("deleted")
+            and not goal.get("approved_by")
+            and goal.get("progress_stage") != "summarized"
+            and normalize_action(goal.get("action")) is not None)
 
 
 async def count_pending_approvals(learner_ids: list[str]) -> int:
     """How many finished goals across these learners still need sign-off.
 
-    ONE query for the whole roster, not one read per learner. This number is
-    fetched by the teacher app bar, which is on screen everywhere — the
-    per-learner version that `list_pending_goal_approvals` uses would put forty
-    round trips behind every teacher's page load.
+    ONE query for the whole roster, then evidence reads ONLY for the learners
+    who actually have an unapproved, unsummarized action goal (#462) — the
+    common poll (nothing tracked, or everything already summarized) stays a
+    single query. Verification failing never breaks the badge: those goals
+    just fall back to the strict subset for this poll.
     """
     ids = [normalize_learner_id(entry) for entry in learner_ids if entry]
     if not ids:
         return 0
 
+    rows: list[dict[str, Any]] = []
     collection = _get_collection_named("mentoring_conversations")
     if collection is not None:
         try:
             cursor = collection.find(
                 {"learner_id": {"$in": ids}, "deleted": {"$ne": True}},
-                {"goals": 1, "_id": 0},
+                {"goals": 1, "learner_id": 1, "created_at": 1, "_id": 0},
             )
-            # Counted in a plain loop on purpose. `sum(1 async for row in ...
+            # Collected in a plain loop on purpose. `sum(1 async for row in ...
             # for goal in ...)` builds an ASYNC generator, which `sum` cannot
             # consume — it raised `'async_generator' object is not iterable`
             # on every call, and the except below turned that into the JSON
             # fallback, which on a Mongo deployment holds nothing. So the app
             # bar's badge read zero for everybody, always, and looked exactly
             # like a class with nothing waiting.
-            total = 0
             async for row in cursor:
-                total += sum(
-                    1 for goal in (row.get("goals") or []) if _is_pending(goal)
-                )
-            return total
+                rows.append(row)
         except Exception as exc:
             print(f"⚠️ pending approval count failed, using fallback: {exc}")
+            rows = []
+    if not rows:
+        wanted = set(ids)
+        rows = [
+            row for row in _read_fallback()
+            if row.get("learner_id") in wanted and not row.get("deleted")
+        ]
 
-    wanted = set(ids)
-    return sum(
-        1 for row in _read_fallback()
-        if row.get("learner_id") in wanted and not row.get("deleted")
-        for goal in (row.get("goals") or []) if _is_pending(goal)
-    )
+    from app.services import goal_progress
+
+    by_learner: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        by_learner.setdefault(str(row.get("learner_id") or ""), []).append(row)
+
+    total = 0
+    for lid, conversations in by_learner.items():
+        if lid and any(
+            _needs_verification(goal)
+            for conversation in conversations
+            for goal in (conversation.get("goals") or [])
+        ):
+            try:
+                await goal_progress.enrich_conversations(lid, conversations)
+            except Exception as exc:  # strict subset beats a broken badge
+                print(f"⚠️ goal verification skipped for badge: {type(exc).__name__}")
+        total += sum(
+            1 for conversation in conversations
+            for goal in (conversation.get("goals") or []) if _is_pending(goal)
+        )
+    return total
 
 
 async def _backfill_goal_prices(lid: str, rows: list[dict[str, Any]]) -> None:

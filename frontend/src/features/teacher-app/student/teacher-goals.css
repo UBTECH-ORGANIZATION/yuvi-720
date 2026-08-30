@@ -45,6 +45,32 @@
 }
 .tch-goal__progress--met { color: var(--sp-ink-700); font-weight: 600; }
 
+/* The verified ask_yuvi verdict and its basis (#462). */
+.tch-goal__progressWrap { display: grid; gap: var(--sp-1); }
+.tch-goal__uncertain {
+  margin-inline-start: var(--sp-2);
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--sp-danger-600);
+  color: var(--sp-danger-600);
+  font-size: var(--sp-fs-xs);
+  font-weight: 400;
+  white-space: nowrap;
+}
+.tch-goal__quality { display: grid; gap: 2px; }
+.tch-goal__quality > p {
+  margin: 0;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-400);
+}
+.tch-goal__qualityLabels {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+}
+
 /* The outcome strip states what actually happened, including "nothing". */
 .tch-goals__outcome {
   display: flex;

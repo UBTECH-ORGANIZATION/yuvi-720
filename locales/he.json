@@ -3559,5 +3559,14 @@
   "tch.insight.saved": "התובנה נשמרה ונכנסה למודל התלמיד/ה.",
   "tch.insight.failed": "השמירה נכשלה. אפשר לנסות שוב.",
   "tch.insight.emptyPortrait": "המערכת עדיין לא כתבה תיאור — אפשר להיות הקול הראשון.",
-  "tch.insight.withdraw": "ביטול התובנה"
+  "tch.insight.withdraw": "ביטול התובנה",
+  "tch.goals.quality.basis": "מתוך {chatted} הודעות ליובי, {substantive} נמצאו ענייניות — רק הן נספרות.",
+  "tch.goals.quality.uncertain": "דרושה העין שלך — ההודעות טרם סווגו",
+  "tch.goals.quality.breakdown": "מה נשאל בפועל",
+  "tch.goals.quality.label.answer_seeking": "בקשות לקבל את התשובה",
+  "tch.goals.quality.label.procedural": "שאלות איך מבצעים",
+  "tch.goals.quality.label.verification": "בקשות לבדוק תשובה",
+  "tch.goals.quality.label.conceptual": "שאלות הבנה",
+  "tch.goals.quality.label.self_diagnostic": "שאלות על הלמידה עצמה",
+  "tch.goals.quality.label.off_topic": "לא קשור ללמידה"
 }

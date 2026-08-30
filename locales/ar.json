@@ -3559,5 +3559,14 @@
   "tch.insight.saved": "حُفظت الملاحظة ودخلت نموذج التلميذ/ة.",
   "tch.insight.failed": "فشل الحفظ. يمكن المحاولة مجددًا.",
   "tch.insight.emptyPortrait": "لم تكتب المنظومة وصفًا بعد — يمكنكم أن تكونوا الصوت الأول.",
-  "tch.insight.withdraw": "إلغاء الملاحظة"
+  "tch.insight.withdraw": "إلغاء الملاحظة",
+  "tch.goals.quality.basis": "من أصل {chatted} رسائل ليوفي، وُجدت {substantive} جوهرية — وهي وحدها تُحتسب.",
+  "tch.goals.quality.uncertain": "بحاجة إلى نظرتكم — الرسائل لم تُصنَّف بعد",
+  "tch.goals.quality.breakdown": "ما الذي سُئل فعليًا",
+  "tch.goals.quality.label.answer_seeking": "طلبات الحصول على الإجابة",
+  "tch.goals.quality.label.procedural": "أسئلة عن طريقة التنفيذ",
+  "tch.goals.quality.label.verification": "طلبات التحقق من إجابة",
+  "tch.goals.quality.label.conceptual": "أسئلة فهم",
+  "tch.goals.quality.label.self_diagnostic": "أسئلة عن التعلّم نفسه",
+  "tch.goals.quality.label.off_topic": "غير متعلق بالتعلّم"
 }

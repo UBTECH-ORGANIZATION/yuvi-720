@@ -862,10 +862,24 @@ export interface GoalAction {
   target: number
 }
 
-/** What actually happened: the count the backend measured for a GoalAction. */
+/** The judgement behind an ask_yuvi count (#462): how many messages were
+ *  substantive, out of how many were sent, by stored per-message labels. */
+export interface GoalQuality {
+  substantive: number
+  chatted: number
+  labels: Record<string, number>
+  /** The child visibly chatted enough but no labels exist — needs the
+   *  teacher's eye rather than a silent verdict either way. */
+  uncertain: boolean
+}
+
+/** What actually happened: the count the backend measured for a GoalAction.
+ *  For ask_yuvi, `count` is the SUBSTANTIVE message count — judged from the
+ *  stored quality labels, never by the teacher — and `quality` is the basis. */
 export interface GoalProgress extends GoalAction {
   count: number
   met: boolean
+  quality?: GoalQuality | null
 }
 
 export interface GoalDraft {
