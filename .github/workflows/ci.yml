@@ -62,11 +62,12 @@ jobs:
           deselect=()
           for node in "${quarantined[@]}"; do deselect+=(--deselect "$node"); done
           echo "Deselected ${#quarantined[@]} quarantined test(s)."
-          # A test that blocks on a socket the runner has no route to would
-          # otherwise sit there until the job timeout; fail it with a traceback.
+          # A hung test must name itself and let the rest of the suite run, so
+          # SIGALRM (signal) rather than the thread method, which dumps every
+          # stack and kills the process before pytest can attribute the failure.
           python -m pytest tests "${deselect[@]}" \
             -p no:cacheprovider \
-            --timeout=60 --timeout-method=thread --durations=15 \
+            --timeout=60 --timeout-method=signal --durations=15 \
             --cov=app --cov=learner_state --cov=mock_data \
             --cov-report=term-missing:skip-covered \
             --cov-report=xml:coverage.xml \
@@ -102,7 +103,7 @@ jobs:
             exit 0
           fi
           set +e
-          output="$(python -m pytest "${quarantined[@]}" -q -p no:cacheprovider --no-header --timeout=60 --timeout-method=thread 2>&1)"
+          output="$(python -m pytest "${quarantined[@]}" -q -p no:cacheprovider --no-header --timeout=60 --timeout-method=signal 2>&1)"
           set -e
           {
             echo "## Quarantined backend tests (not blocking)"
