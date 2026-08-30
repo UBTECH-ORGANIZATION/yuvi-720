@@ -254,11 +254,11 @@ export function TeacherCalendarPage() {
                   aria-label={t('tch.calendar.prev')} onClick={() => step(-1)}>
             <Icon name="chevronLeft" size={16} aria-hidden />
           </button>
+          <strong className="tch-cal__heading" dir="auto">{heading}</strong>
           <button type="button" className="tch-cal__step tch-cal__step--next"
                   aria-label={t('tch.calendar.next')} onClick={() => step(1)}>
             <Icon name="chevronLeft" size={16} aria-hidden />
           </button>
-          <strong className="tch-cal__heading" dir="auto">{heading}</strong>
           <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
                   onClick={() => setCursor(dayString(new Date()))}>
             {t('tch.calendar.today')}

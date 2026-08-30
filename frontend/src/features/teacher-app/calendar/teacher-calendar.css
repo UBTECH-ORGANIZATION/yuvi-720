@@ -53,14 +53,18 @@
   cursor: pointer;
 }
 .tch-cal__step:hover { color: var(--sp-ink-900); border-color: var(--tch-hover-ring); }
-/* One glyph, mirrored — so "next" always points the way the language reads. */
+/* One glyph, mirrored twice over — per button ("next" opposes "prev") and per
+   direction (in RTL, forward is leftward). */
 .tch-cal__step--next .sp-icon { transform: rotate(180deg); }
+[dir='rtl'] .tch-cal__step .sp-icon { transform: rotate(180deg); }
+[dir='rtl'] .tch-cal__step--next .sp-icon { transform: none; }
 
 .tch-cal__heading {
   margin-inline: var(--sp-2);
   font-size: var(--sp-fs-lg);
   color: var(--sp-ink-900);
   min-inline-size: 160px;
+  text-align: center;
 }
 
 .tch-cal__views {
