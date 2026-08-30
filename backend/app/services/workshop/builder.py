@@ -1,4 +1,4 @@
-"""The build loop behind Yuvi Studio.
+"""The build loop behind Yuvi Workshop.
 
 A child does not arrive with a specification. They arrive with "אני רוצה משחק
 חלל", and the job of this module is to turn that into something they can play in
@@ -31,7 +31,7 @@ from app.core.localization import normalize_language
 from app.services.ai_usage import UsageContext
 from app.services.llm import call_llm, call_llm_stream
 
-FEATURE = "feature_9_creation_studio"
+FEATURE = "feature_1_creation_workshop"
 MAX_TURN_MESSAGES = 12
 
 _LANGUAGE_NAMES = {"he": "Hebrew", "ar": "Arabic", "en": "English"}
@@ -125,10 +125,10 @@ def _usage(learner_id: str, operation: str, session_id: Optional[str] = None) ->
     return UsageContext(
         actor_id=learner_id,
         actor_type="learner",
-        endpoint="/api/studio/projects/{id}/build",
+        endpoint="/api/workshop/projects/{id}/build",
         feature=FEATURE,
         operation=operation,
-        source="studio_builder",
+        source="workshop_builder",
         session_id=session_id,
     )
 
@@ -193,7 +193,7 @@ async def understand(
             *_history_messages(history),
             {"role": "user", "content": message},
         ],
-        usage_context=_usage(learner_id, "studio.understand"),
+        usage_context=_usage(learner_id, "workshop.understand"),
         max_tokens=400,
         json_mode=True,
     )
@@ -226,7 +226,7 @@ async def plan(
             {"role": "system", "content": f"{PLAN_SYSTEM}\n\n{_language_rule(language)}"},
             {"role": "user", "content": context},
         ],
-        usage_context=_usage(learner_id, "studio.plan"),
+        usage_context=_usage(learner_id, "workshop.plan"),
         max_tokens=600,
         json_mode=True,
     )
@@ -258,7 +258,7 @@ async def cards(
                 {"role": "system", "content": f"{CARDS_SYSTEM}\n\n{_language_rule(language)}"},
                 {"role": "user", "content": context},
             ],
-            usage_context=_usage(learner_id, "studio.cards"),
+            usage_context=_usage(learner_id, "workshop.cards"),
             max_tokens=350,
             json_mode=True,
         )
@@ -272,7 +272,7 @@ async def cards(
 
 
 def worker_url() -> str:
-    return (os.environ.get("STUDIO_WORKER_URL") or "").strip().rstrip("/")
+    return (os.environ.get("WORKSHOP_WORKER_URL") or "").strip().rstrip("/")
 
 
 async def build(
@@ -312,7 +312,7 @@ async def build(
             *_history_messages(history),
             {"role": "user", "content": "\n\n".join(user_parts)},
         ],
-        usage_context=_usage(learner_id, "studio.build"),
+        usage_context=_usage(learner_id, "workshop.build"),
         max_tokens=8000,
         model_tier="strong",
     ):

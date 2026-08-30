@@ -1,4 +1,4 @@
-"""Blob storage for Yuvi Studio artifacts.
+"""Blob storage for Yuvi Workshop artifacts.
 
 Artifacts are immutable: every build writes a new version path and nothing is
 ever overwritten, so "restore version 3" is a pointer move rather than a rebuild.
@@ -16,7 +16,7 @@ from pathlib import Path
 import re
 from typing import Optional
 
-CONTAINER = "studio-projects"
+CONTAINER = "workshop-projects"
 
 _FALLBACK_ROOT = Path(__file__).resolve().parents[3] / ".runtime" / CONTAINER
 _SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
@@ -36,11 +36,11 @@ def build_path(learner_id: str, project_id: str, version: int) -> str:
 
 
 def _connection_string() -> str:
-    return (os.environ.get("STUDIO_STORAGE_CONNECTION_STRING") or "").strip()
+    return (os.environ.get("WORKSHOP_STORAGE_CONNECTION_STRING") or "").strip()
 
 
 def _account_url() -> str:
-    return (os.environ.get("STUDIO_STORAGE_ACCOUNT_URL") or "").strip().rstrip("/")
+    return (os.environ.get("WORKSHOP_STORAGE_ACCOUNT_URL") or "").strip().rstrip("/")
 
 
 def is_configured() -> bool:
@@ -74,12 +74,12 @@ async def put(blob_path: str, html: str) -> None:
     if not is_configured():
         target = _fallback_path(blob_path)
         if target is None:
-            raise StorageError("studio_storage_unavailable")
+            raise StorageError("workshop_storage_unavailable")
         try:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(data)
         except OSError:
-            raise StorageError("studio_storage_unavailable") from None
+            raise StorageError("workshop_storage_unavailable") from None
         return
 
     service, container = _container_client()
@@ -103,8 +103,8 @@ async def put(blob_path: str, html: str) -> None:
     except Exception as exc:
         if "BlobAlreadyExists" in str(exc):
             raise StorageError("artifact_already_exists") from None
-        print(f"⚠️ studio artifact upload failed: {type(exc).__name__}")
-        raise StorageError("studio_storage_unavailable") from None
+        print(f"⚠️ workshop artifact upload failed: {type(exc).__name__}")
+        raise StorageError("workshop_storage_unavailable") from None
     finally:
         await service.close()
 
@@ -125,7 +125,7 @@ async def get(blob_path: str) -> str:
     except Exception as exc:
         if "BlobNotFound" in str(exc):
             raise StorageError("artifact_not_found") from None
-        print(f"⚠️ studio artifact download failed: {type(exc).__name__}")
-        raise StorageError("studio_storage_unavailable") from None
+        print(f"⚠️ workshop artifact download failed: {type(exc).__name__}")
+        raise StorageError("workshop_storage_unavailable") from None
     finally:
         await service.close()

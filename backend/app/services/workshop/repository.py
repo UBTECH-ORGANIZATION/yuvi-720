@@ -1,4 +1,4 @@
-"""Mongo metadata for Yuvi Studio projects and versions.
+"""Mongo metadata for Yuvi Workshop projects and versions.
 
 Only metadata lives here — artifact HTML is in blob storage, because a document
 that grows with every build is exactly the shape Cosmos punishes.
@@ -14,13 +14,13 @@ import uuid
 
 from app.brain.repository import _get_collection_named
 
-PROJECTS = "studio_projects"
-VERSIONS = "studio_versions"
+PROJECTS = "workshop_projects"
+VERSIONS = "workshop_versions"
 
 MAX_PROJECTS_PER_LEARNER = 40
 KINDS = ("game", "site", "lomda")
 
-_FALLBACK_FILE = Path(__file__).resolve().parents[3] / ".runtime" / "studio.json"
+_FALLBACK_FILE = Path(__file__).resolve().parents[3] / ".runtime" / "workshop.json"
 
 
 def _now() -> str:
@@ -45,7 +45,7 @@ def _write_fallback(data: dict[str, Any]) -> None:
         _FALLBACK_FILE.parent.mkdir(parents=True, exist_ok=True)
         _FALLBACK_FILE.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     except OSError as exc:
-        print(f"⚠️ studio fallback write failed: {exc}")
+        print(f"⚠️ workshop fallback write failed: {exc}")
 
 
 def public_project(document: dict[str, Any]) -> dict[str, Any]:
@@ -101,7 +101,7 @@ async def create_project(
             await collection.insert_one(dict(document))
             return document
         except Exception as exc:
-            print(f"⚠️ studio project create failed, using fallback: {exc}")
+            print(f"⚠️ workshop project create failed, using fallback: {exc}")
 
     data = _read_fallback()
     data["projects"][document["_id"]] = document
@@ -117,7 +117,7 @@ async def get_project(project_id: str) -> Optional[dict[str, Any]]:
             if document is not None:
                 return None if document.get("deleted") else document
         except Exception as exc:
-            print(f"⚠️ studio project read failed, using fallback: {exc}")
+            print(f"⚠️ workshop project read failed, using fallback: {exc}")
 
     document = _read_fallback()["projects"].get(project_id)
     if document is None or document.get("deleted"):
@@ -136,7 +136,7 @@ async def list_projects(learner_id: str, limit: int = 30) -> list[dict[str, Any]
             )
             return await cursor.to_list(length=limit)
         except Exception as exc:
-            print(f"⚠️ studio project list failed, using fallback: {exc}")
+            print(f"⚠️ workshop project list failed, using fallback: {exc}")
 
     documents = [
         document for document in _read_fallback()["projects"].values()
@@ -154,7 +154,7 @@ async def count_projects(learner_id: str) -> int:
                 {"learner_id": learner_id, "deleted": {"$ne": True}}
             )
         except Exception as exc:
-            print(f"⚠️ studio project count failed, using fallback: {exc}")
+            print(f"⚠️ workshop project count failed, using fallback: {exc}")
 
     return len([
         document for document in _read_fallback()["projects"].values()
@@ -171,7 +171,7 @@ async def update_project(project_id: str, updates: dict[str, Any]) -> None:
             await collection.update_one({"_id": project_id}, {"$set": payload})
             return
         except Exception as exc:
-            print(f"⚠️ studio project update failed, using fallback: {exc}")
+            print(f"⚠️ workshop project update failed, using fallback: {exc}")
 
     data = _read_fallback()
     document = data["projects"].get(project_id)
@@ -208,7 +208,7 @@ async def add_version(
             await collection.insert_one(dict(document))
             return document
         except Exception as exc:
-            print(f"⚠️ studio version create failed, using fallback: {exc}")
+            print(f"⚠️ workshop version create failed, using fallback: {exc}")
 
     data = _read_fallback()
     data["versions"][document["_id"]] = document
@@ -224,7 +224,7 @@ async def get_version(project_id: str, version: int) -> Optional[dict[str, Any]]
             if document is not None:
                 return document
         except Exception as exc:
-            print(f"⚠️ studio version read failed, using fallback: {exc}")
+            print(f"⚠️ workshop version read failed, using fallback: {exc}")
 
     return _read_fallback()["versions"].get(f"{project_id}:{version}")
 
@@ -236,7 +236,7 @@ async def list_versions(project_id: str, limit: int = 20) -> list[dict[str, Any]
             cursor = collection.find({"project_id": project_id}).sort("version", -1).limit(limit)
             return await cursor.to_list(length=limit)
         except Exception as exc:
-            print(f"⚠️ studio version list failed, using fallback: {exc}")
+            print(f"⚠️ workshop version list failed, using fallback: {exc}")
 
     documents = [
         document for document in _read_fallback()["versions"].values()
@@ -255,7 +255,7 @@ async def count_builds_since(learner_id: str, since: str) -> int:
                 {"learner_id": learner_id, "created_at": {"$gte": since}}
             )
         except Exception as exc:
-            print(f"⚠️ studio build count failed, using fallback: {exc}")
+            print(f"⚠️ workshop build count failed, using fallback: {exc}")
 
     return len([
         document for document in _read_fallback()["versions"].values()
