@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getLearnerState, updateLearnerState } from '../../services/api'
 import {
-  DEFAULT_ROOM, MAX_ROOM_ITEMS, cloneRoom, newItemUid, normalizeRoom, sameRoom,
+  DEFAULT_ROOM, MAX_ROOM_ITEMS, cloneRoom, newItemUid, normalizeRoom, resetRoom, sameRoom,
   type MoodId, type RoomDesign, type RoomItem, type RoomStyleId, type StationId, type WallStyleId,
 } from './RoomDesign'
 import { roomItemSpec } from './RoomCatalog'
@@ -102,7 +102,7 @@ export function useRoomDesign(autoLoad = true) {
   }
 
   const reset = () => {
-    setRoom(cloneRoom(DEFAULT_ROOM))
+    setRoom(resetRoom)
     setSelectedUid(null)
   }
 

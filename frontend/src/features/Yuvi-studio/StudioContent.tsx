@@ -121,6 +121,9 @@ export function StudioContent({
   // is confirmed rather than prevented.
   const [exitAsk, setExitAsk] = useState(false)
   const [exitError, setExitError] = useState(false)
+  // Reset throws away a room a child may have spent weeks on. It is undoable
+  // only by leaving without saving, which is not a thing a child knows.
+  const [resetAsk, setResetAsk] = useState(false)
   // Walking is the default state of the studio; panels are something you step
   // into, and step out of.
   const [mode, setMode] = useState<StudioMode>('roam')
@@ -220,6 +223,7 @@ export function StudioContent({
     return results.every(Boolean)
   }
   const resetAll = () => {
+    setResetAsk(false)
     setPlacing(null)
     reset()
     roomState.reset()
@@ -443,7 +447,7 @@ export function StudioContent({
       <button type="button" className="ys-btn ys-btn--primary ys-btn--sm" onClick={saveAll} disabled={busy || !anyDirty}>
         {t('YuviStudio.save')}
       </button>
-      <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={resetAll} disabled={busy}>
+      <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => setResetAsk(true)} disabled={busy}>
         {t('YuviStudio.reset')}
       </button>
     </>
@@ -802,6 +806,28 @@ export function StudioContent({
             >
               {t('YuviStudio.exit.cancel')}
             </button>
+          </div>
+        </div>
+      )}
+      {resetAsk && (
+        <div className="ys-shop-backdrop" role="presentation" onClick={() => setResetAsk(false)}>
+          <div
+            className="ys-shop ys-shop--confirm"
+            role="alertdialog"
+            aria-modal="true"
+            aria-label={t('YuviStudio.reset.title')}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2>{t('YuviStudio.reset.title')}</h2>
+            <p className="ys-shop__balance">{t('YuviStudio.reset.body')}</p>
+            <div className="ys-shop__actions">
+              <button type="button" className="ys-btn ys-btn--primary" onClick={resetAll}>
+                {t('YuviStudio.reset.confirm')}
+              </button>
+              <button type="button" className="ys-btn ys-btn--ghost" onClick={() => setResetAsk(false)}>
+                {t('YuviStudio.reset.cancel')}
+              </button>
+            </div>
           </div>
         </div>
       )}

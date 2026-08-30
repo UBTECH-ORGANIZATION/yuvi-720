@@ -84,6 +84,17 @@ export function cloneRoom(room: RoomDesign): RoomDesign {
   }
 }
 
+/**
+ * The room as it shipped — except for the walkthrough, which is not decoration.
+ *
+ * `tutorialDone` records something about the learner, not about the room, and
+ * resetting it through `DEFAULT_ROOM` meant a saved reset handed them the same
+ * three-step walkthrough again on their next visit, every time.
+ */
+export function resetRoom(room: RoomDesign): RoomDesign {
+  return { ...cloneRoom(DEFAULT_ROOM), tutorialDone: room.tutorialDone }
+}
+
 let uidSeed = 0
 export function newItemUid(): string {
   uidSeed += 1
