@@ -122,8 +122,9 @@ export function StudioContent({
   const [exitAsk, setExitAsk] = useState(false)
   const [exitError, setExitError] = useState(false)
   // Reset throws away a room a child may have spent weeks on. It is undoable
-  // only by leaving without saving, which is not a thing a child knows.
-  const [resetAsk, setResetAsk] = useState(false)
+  // only by leaving without saving, which is not a thing a child knows. Holds
+  // the station being reset, because each one resets only its own work.
+  const [resetAsk, setResetAsk] = useState<'avatar' | 'room' | null>(null)
   // Walking is the default state of the studio; panels are something you step
   // into, and step out of.
   const [mode, setMode] = useState<StudioMode>('roam')
@@ -222,10 +223,21 @@ export function StudioContent({
     ])
     return results.every(Boolean)
   }
-  const resetAll = () => {
-    setResetAsk(false)
+  /**
+   * Reset belongs to the station the learner is standing at. Clearing the room
+   * used to take Yuvi's hat with it, which is not what anyone tidying up a
+   * floor is asking for.
+   */
+  const resetScope = (scope: 'avatar' | 'room') => {
+    setResetAsk(null)
+    if (scope === 'avatar') {
+      // The design is being replaced, so a previewed item has nothing to sit on.
+      setPreview(null)
+      reset()
+      return
+    }
     setPlacing(null)
-    reset()
+    setPropMenu(null)
     roomState.reset()
   }
 
@@ -438,8 +450,10 @@ export function StudioContent({
     return true
   })
 
-  // Save sits with the thing it saves, so both stations share one footer.
-  const panelFooter = (
+  // Save sits with the thing it saves, so both stations share one footer. Save
+  // stays whole — storing everything is never destructive — but Reset is per
+  // station, and says which one it is before it is pressed.
+  const footerFor = (scope: 'avatar' | 'room') => (
     <>
       <span className={`ys-panel__state${savedNow ? ' is-saved' : anyDirty ? ' is-dirty' : ''}`}>
         {savedNow ? t('YuviStudio.saved') : anyDirty ? t('YuviStudio.unsaved') : t('YuviStudio.allSaved')}
@@ -447,8 +461,8 @@ export function StudioContent({
       <button type="button" className="ys-btn ys-btn--primary ys-btn--sm" onClick={saveAll} disabled={busy || !anyDirty}>
         {t('YuviStudio.save')}
       </button>
-      <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => setResetAsk(true)} disabled={busy}>
-        {t('YuviStudio.reset')}
+      <button type="button" className="ys-btn ys-btn--ghost ys-btn--sm" onClick={() => setResetAsk(scope)} disabled={busy}>
+        {t(`YuviStudio.reset.${scope}`)}
       </button>
     </>
   )
@@ -463,7 +477,7 @@ export function StudioContent({
             placing={placing}
             setPlacing={setPlacing}
             onLeave={leaveStation}
-            footer={panelFooter}
+            footer={footerFor('room')}
             isPropLocked={isPropLocked}
             requirementFor={requirementFor}
             t={t}
@@ -518,10 +532,9 @@ export function StudioContent({
                 )}
               />
             )}
-            footer={panelFooter}
+            footer={footerFor('avatar')}
           >
-            {activeTab === 'colors' ? (
-              <ColorsPanel design={design} onPick={setColor} t={t} />
+            {activeTab === 'colors' ? (              <ColorsPanel design={design} onPick={setColor} t={t} />
             ) : (
               <>
                 {activeTab === 'headTop' && (
@@ -810,21 +823,21 @@ export function StudioContent({
         </div>
       )}
       {resetAsk && (
-        <div className="ys-shop-backdrop" role="presentation" onClick={() => setResetAsk(false)}>
+        <div className="ys-shop-backdrop" role="presentation" onClick={() => setResetAsk(null)}>
           <div
             className="ys-shop ys-shop--confirm"
             role="alertdialog"
             aria-modal="true"
-            aria-label={t('YuviStudio.reset.title')}
+            aria-label={t(`YuviStudio.reset.${resetAsk}.title`)}
             onClick={(event) => event.stopPropagation()}
           >
-            <h2>{t('YuviStudio.reset.title')}</h2>
-            <p className="ys-shop__balance">{t('YuviStudio.reset.body')}</p>
+            <h2>{t(`YuviStudio.reset.${resetAsk}.title`)}</h2>
+            <p className="ys-shop__balance">{t(`YuviStudio.reset.${resetAsk}.body`)}</p>
             <div className="ys-shop__actions">
-              <button type="button" className="ys-btn ys-btn--primary" onClick={resetAll}>
+              <button type="button" className="ys-btn ys-btn--primary" onClick={() => resetScope(resetAsk)}>
                 {t('YuviStudio.reset.confirm')}
               </button>
-              <button type="button" className="ys-btn ys-btn--ghost" onClick={() => setResetAsk(false)}>
+              <button type="button" className="ys-btn ys-btn--ghost" onClick={() => setResetAsk(null)}>
                 {t('YuviStudio.reset.cancel')}
               </button>
             </div>
