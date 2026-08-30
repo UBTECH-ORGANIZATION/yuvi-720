@@ -3753,5 +3753,14 @@
   "tch.evidence.sent.score.sustained": "في {sessions} جلسات عمل، سُجِّلت {streaks} فترات من العمل المتواصل.",
   "tch.evidence.sent.score.offtopic": "من بين {total} رسالة مصنَّفة، لم يكن {off} منها متعلقًا بالتعلم.",
   "tch.score.drags": "ما الذي يخفض النتيجة",
-  "tch.score.strengths": "ما الذي يعزز النتيجة"
+  "tch.score.strengths": "ما الذي يعزز النتيجة",
+  "tch.goals.quality.basis": "من أصل {chatted} رسائل ليوفي، وُجدت {substantive} جوهرية — وهي وحدها تُحتسب.",
+  "tch.goals.quality.uncertain": "بحاجة إلى نظرتكم — الرسائل لم تُصنَّف بعد",
+  "tch.goals.quality.breakdown": "ما الذي سُئل فعليًا",
+  "tch.goals.quality.label.answer_seeking": "طلبات الحصول على الإجابة",
+  "tch.goals.quality.label.procedural": "أسئلة عن طريقة التنفيذ",
+  "tch.goals.quality.label.verification": "طلبات التحقق من إجابة",
+  "tch.goals.quality.label.conceptual": "أسئلة فهم",
+  "tch.goals.quality.label.self_diagnostic": "أسئلة عن التعلّم نفسه",
+  "tch.goals.quality.label.off_topic": "غير متعلق بالتعلّم"
 }

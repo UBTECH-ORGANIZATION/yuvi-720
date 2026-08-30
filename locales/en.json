@@ -3753,5 +3753,14 @@
   "tch.evidence.sent.score.sustained": "Across {sessions} work sessions, {streaks} stretches of sustained work were recorded.",
   "tch.evidence.sent.score.offtopic": "Of {total} classified messages, {off} were not about learning.",
   "tch.score.drags": "What lowers the score",
-  "tch.score.strengths": "What strengthens the score"
+  "tch.score.strengths": "What strengthens the score",
+  "tch.goals.quality.basis": "Of {chatted} messages to Yuvi, {substantive} were substantive — only those count.",
+  "tch.goals.quality.uncertain": "Needs your eye — the messages are not yet classified",
+  "tch.goals.quality.breakdown": "What was actually asked",
+  "tch.goals.quality.label.answer_seeking": "Requests for the answer",
+  "tch.goals.quality.label.procedural": "How-to questions",
+  "tch.goals.quality.label.verification": "Answer-checking requests",
+  "tch.goals.quality.label.conceptual": "Understanding questions",
+  "tch.goals.quality.label.self_diagnostic": "Questions about the learning itself",
+  "tch.goals.quality.label.off_topic": "Not related to learning"
 }
