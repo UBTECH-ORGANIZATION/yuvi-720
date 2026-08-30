@@ -75,3 +75,9 @@ async def held_props(learner_id: str) -> set[str]:
     """Room items this learner has earned. Used to screen room writes."""
     state = await get_learner_state(learner_id)
     return set(state.get("room_unlocks") or [])
+
+
+async def held_cosmetics(learner_id: str) -> set[str]:
+    """Yuvi cosmetics this learner has earned. Used to screen design writes."""
+    state = await get_learner_state(learner_id)
+    return set(state.get("avatar_unlocks") or [])

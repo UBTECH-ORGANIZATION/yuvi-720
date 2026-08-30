@@ -63,6 +63,25 @@ UNLOCKS: dict[str, dict[str, Any]] = {
 AVATAR_IDS = frozenset(k for k, v in UNLOCKS.items() if v["kind"] == "avatar")
 PROP_IDS = frozenset(k for k, v in UNLOCKS.items() if v["kind"] == "prop")
 
+# Cosmetics the studio locks but no server rule grants. The mapping-section
+# prizes are announced by the client and then dropped, because `avatar_unlocks`
+# is not client-writable; `propeller` has no granter at all, on either side.
+# Listed here so the equipped screen agrees with the padlock the learner sees —
+# actually handing them out is a separate fix.
+UNGRANTED_IDS = frozenset({"crown", "jetpack", "ironman", "propeller"})
+
+
+def is_gated_cosmetic(asset_id: str) -> bool:
+    """True when this Yuvi cosmetic may only be worn once it has been earned.
+
+    Three sources, because a cosmetic can be bought with sparks, won with a
+    badge or a streak, or promised for a mapping section. Read from the shop
+    rather than copied, so a price added there cannot quietly become free.
+    """
+    from app.services.rewards.catalog import CATALOG
+
+    return asset_id in AVATAR_IDS or asset_id in CATALOG or asset_id in UNGRANTED_IDS
+
 # `project_badges` identifies a milestone by its coin colour, which is unique per
 # milestone. This maps that back to the readable key the rules above use.
 _MILESTONE_KEY = {

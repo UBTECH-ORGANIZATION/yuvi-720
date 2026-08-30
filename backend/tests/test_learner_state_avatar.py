@@ -108,5 +108,77 @@ class WhatAClientMayWrite(unittest.TestCase):
         self.assertIn("yuvi_design", learner_state_store._empty_state(LEARNER))
 
 
+async def _screen(payload: dict, held: set[str]) -> dict:
+    """Run a PATCH body through the equipped screen with a fixed unlock set."""
+    with patch.object(route.unlock_sync, "held_cosmetics", AsyncMock(return_value=held)):
+        await route._screen_equipped(LEARNER, payload)
+    return payload
+
+
+def _design(**equipped) -> dict:
+    slots = {"headTop": None, "face": None, "back": None, "handR": None, "body": None}
+    return {**DESIGN, "equipped": {**slots, **equipped}}
+
+
+class YuviWearsOnlyWhatWasEarned(unittest.IsolatedAsyncioTestCase):
+    """The studio hides locked items, which stops a learner and stops nobody
+    else. The design is client-writable, so without this a hand-written PATCH
+    dressed Yuvi in the whole shop for free — and sparks are the reward loop."""
+
+    async def test_an_unpaid_shop_item_comes_straight_back_off(self) -> None:
+        body = await _screen({"yuvi_design": _design(headTop="ironhelmet")}, held=set())
+        self.assertIsNone(body["yuvi_design"]["equipped"]["headTop"])
+
+    async def test_an_unearned_badge_cosmetic_comes_off_too(self) -> None:
+        body = await _screen({"yuvi_design": _design(headTop="laurel")}, held=set())
+        self.assertIsNone(body["yuvi_design"]["equipped"]["headTop"])
+
+    async def test_what_the_learner_paid_for_stays_on(self) -> None:
+        body = await _screen({"yuvi_design": _design(headTop="ironhelmet")}, held={"ironhelmet"})
+        self.assertEqual(body["yuvi_design"]["equipped"]["headTop"], "ironhelmet")
+
+    async def test_free_gear_never_needs_permission(self) -> None:
+        body = await _screen({"yuvi_design": _design(headTop="snapback", body="jacket")}, held=set())
+        self.assertEqual(body["yuvi_design"]["equipped"]["headTop"], "snapback")
+        self.assertEqual(body["yuvi_design"]["equipped"]["body"], "jacket")
+
+    async def test_only_the_offending_slot_is_emptied(self) -> None:
+        """The rest of the design is the learner's own work — refusing the whole
+        write would throw away colours they really did choose."""
+        body = await _screen(
+            {"yuvi_design": _design(headTop="ironhelmet", body="jacket")}, held=set(),
+        )
+        design = body["yuvi_design"]
+        self.assertIsNone(design["equipped"]["headTop"])
+        self.assertEqual(design["equipped"]["body"], "jacket")
+        self.assertEqual(design["variant"], "girl")
+        self.assertEqual(design["colors"], DESIGN["colors"])
+
+    async def test_the_old_field_is_not_a_way_around_the_screen(self) -> None:
+        """A design written to `avatar` is still served back as the design (see
+        `_legacy_design`), so it has to be screened as one."""
+        body = await _screen({"avatar": _design(handR="lightsaber")}, held=set())
+        self.assertIsNone(body["avatar"]["equipped"]["handR"])
+
+    async def test_a_profile_picture_choice_is_left_alone(self) -> None:
+        body = await _screen({"avatar": COIN}, held=set())
+        self.assertEqual(body["avatar"], COIN)
+
+    async def test_a_write_with_nothing_gated_asks_the_database_nothing(self) -> None:
+        """The screen runs on every PATCH — language, progress, mentoring — so
+        it must not cost a read on writes with no cosmetics in them."""
+        held = AsyncMock(return_value=set())
+        with patch.object(route.unlock_sync, "held_cosmetics", held):
+            await route._screen_equipped(LEARNER, {"language": "ar"})
+            await route._screen_equipped(LEARNER, {"yuvi_design": _design(headTop="snapback")})
+        held.assert_not_awaited()
+
+    async def test_an_unreadable_unlock_list_undresses_rather_than_trusts(self) -> None:
+        with patch.object(route.unlock_sync, "held_cosmetics", AsyncMock(side_effect=RuntimeError)):
+            body = {"yuvi_design": _design(headTop="ironhelmet")}
+            await route._screen_equipped(LEARNER, body)
+        self.assertIsNone(body["yuvi_design"]["equipped"]["headTop"])
+
+
 if __name__ == "__main__":
     unittest.main()

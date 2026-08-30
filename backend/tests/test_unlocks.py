@@ -80,6 +80,26 @@ class UnlockRuleTests(unittest.TestCase):
         self.assertFalse(unlocks.is_gated_prop("desk"))
         self.assertFalse(unlocks.is_gated_prop("laurel"))  # a cosmetic, not a prop
 
+    def test_every_earned_cosmetic_is_gated(self) -> None:
+        """All three promises — sparks, badges and mapping sections — or the
+        padlock the learner sees is the only thing enforcing any of them."""
+        for asset_id in ("laurel", "explorerGoggles", "streakScarf", "cometTrail"):
+            self.assertTrue(unlocks.is_gated_cosmetic(asset_id), asset_id)
+        for asset_id in ("crown", "jetpack", "ironman", "propeller"):
+            self.assertTrue(unlocks.is_gated_cosmetic(asset_id), asset_id)
+
+    def test_the_shop_cannot_drift_away_from_the_gate(self) -> None:
+        """Read from the catalog, never copied — a new priced item is gated the
+        moment it has a price, without anyone remembering a second list."""
+        from app.services.rewards.catalog import CATALOG
+
+        for asset_id in CATALOG:
+            self.assertTrue(unlocks.is_gated_cosmetic(asset_id), asset_id)
+
+    def test_free_cosmetics_stay_free(self) -> None:
+        for asset_id in ("snapback", "jacket", "shades", "backpack", "guitar"):
+            self.assertFalse(unlocks.is_gated_cosmetic(asset_id), asset_id)
+
     def test_mapping_section_rewards_are_left_alone(self) -> None:
         # crown / jetpack / ironman / propeller are the mapping-section promise.
         # Badges must not quietly take them over.

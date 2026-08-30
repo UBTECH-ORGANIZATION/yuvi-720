@@ -133,11 +133,49 @@ async def _screen_room_items(learner_id: str, data: dict) -> None:
     ]
 
 
+async def _screen_equipped(learner_id: str, data: dict) -> None:
+    """Take off any Yuvi cosmetic the learner has not earned, slot by slot.
+
+    The studio hides locked items, which stops a learner and stops nobody else:
+    the design is client-writable, so a hand-written PATCH could dress Yuvi in
+    every item in the shop without spending a spark. Sparks are the reward loop,
+    so the server needs its own opinion about what may be worn.
+
+    Emptying the slot rather than refusing the write, exactly as the room does:
+    the colours, the variant and every legitimate slot are the learner's work,
+    and rejecting the whole design would throw all of it away.
+
+    Both fields are screened. A design saved before `yuvi_design` existed is
+    still served back from `avatar` (see `_legacy_design`), so screening only
+    the new field would leave the old one as a way in.
+    """
+    designs = [
+        design for design in (data.get("yuvi_design"), _legacy_design(data.get("avatar")))
+        if isinstance(design, dict) and isinstance(design.get("equipped"), dict)
+    ]
+    gated = [
+        (design, slot, worn)
+        for design in designs
+        for slot, worn in design["equipped"].items()
+        if isinstance(worn, str) and unlocks.is_gated_cosmetic(worn)
+    ]
+    if not gated:
+        return
+    try:
+        held = await unlock_sync.held_cosmetics(learner_id)
+    except Exception:
+        held = set()
+    for design, slot, worn in gated:
+        if worn not in held:
+            design["equipped"][slot] = None
+
+
 @router.patch("/learner-state")
 async def patch_learner_state(data: dict, session=Depends(require_learner_session)):
     """Persist learner UI state such as language, mapping, profile, dashboard, or progress."""
     learner_id = session["sub"]
     await _screen_room_items(learner_id, data)
+    await _screen_equipped(learner_id, data)
     # A badge chosen as the profile picture must actually be earned — the picker
     # only offers earned coins, so this rejects tampering, not normal use.
     avatar = data.get("avatar")
