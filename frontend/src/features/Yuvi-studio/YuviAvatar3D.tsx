@@ -895,17 +895,106 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     let lastX = 0, lastY = 0
     let robotYaw = 0
     // A tap is an orbit drag that never went anywhere — that is what tells
-    // "look around" apart from "walk over there".
+    // "look around" apart from "walk over there". A finger is shakier than a
+    // mouse, so the same intent has to survive a wider wobble.
     let pressX = 0, pressY = 0, pressAt = 0
+    const TAP_SLOP_MOUSE = 6
+    const TAP_SLOP_TOUCH = 12
+    let tapSlop = TAP_SLOP_MOUSE
+
+    // ── Touch ──
+    // The room is furniture you pick up, turn and put down, and until now every
+    // one of those verbs was a mouse verb: the prop menu was right-click only,
+    // zoom was the wheel, panning was a right-drag. On the tablets classrooms
+    // actually own, half the studio simply did not exist.
+    const livePointers = new Map<number, { x: number; y: number }>()
+    let pinchDistance = 0
+    let pinchX = 0, pinchY = 0
+    // Set once a gesture has become something other than a tap, so the release
+    // does not also walk Yuvi across the room or drop a sofa.
+    let gestureConsumed = false
+    let holdTimer = 0
+    const HOLD_MS = 500
+    const cancelHold = () => {
+      if (holdTimer) { window.clearTimeout(holdTimer); holdTimer = 0 }
+    }
+    const pinchCentre = () => {
+      const [a, b] = [...livePointers.values()]
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) }
+    }
+
+    /** The prop (or station) under a screen point, opened as its own menu. */
+    const openMenuAt = (clientX: number, clientY: number) => {
+      const report = onItemMenuRef.current
+      if (!report || !room) return false
+      const rect = renderer.domElement.getBoundingClientRect()
+      if (!rect.width || !rect.height) return false
+      ndc.x = ((clientX - rect.left) / rect.width) * 2 - 1
+      ndc.y = -((clientY - rect.top) / rect.height) * 2 + 1
+      raycaster.setFromCamera(ndc, camera)
+      const uid = room.pickItem(raycaster)
+      const station = uid ? null : room.pickStation(raycaster)
+      if (!uid && !station) { report(null); return false }
+      const anchor = uid ? room.itemAnchor(uid) : room.stationAnchor(station!)
+      if (!anchor) { report(null); return false }
+      anchor.project(camera)
+      report({
+        uid: uid ?? `station:${station}`,
+        x: rect.left + ((anchor.x + 1) / 2) * rect.width,
+        y: rect.top + ((1 - anchor.y) / 2) * rect.height,
+      })
+      return true
+    }
+
     const onOrbitDown = (event: PointerEvent) => {
+      const touch = event.pointerType === 'touch'
+      tapSlop = touch ? TAP_SLOP_TOUCH : TAP_SLOP_MOUSE
+      if (touch) {
+        livePointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+        if (livePointers.size === 2) {
+          // A second finger turns the gesture into pinch/pan, so whatever the
+          // first one had started is abandoned rather than finished.
+          cancelHold()
+          dragging = null
+          gestureConsumed = true
+          const centre = pinchCentre()
+          pinchDistance = centre.d; pinchX = centre.x; pinchY = centre.y
+          return
+        }
+        if (livePointers.size > 2) return
+      }
       dragging = event.button === 0 && !event.shiftKey ? 'orbit' : 'pan'
       lastX = event.clientX; lastY = event.clientY; velYaw = 0
       pressX = event.clientX; pressY = event.clientY; pressAt = performance.now()
+      gestureConsumed = false
       renderer.domElement.style.cursor = dragging === 'pan' ? 'move' : 'grabbing'
       // Any camera move pulls the ground out from under an anchored prop menu.
       if (event.button === 0) onItemMenuRef.current?.(null)
+      // Press and hold is the finger's right-click.
+      if (touch) {
+        cancelHold()
+        holdTimer = window.setTimeout(() => {
+          holdTimer = 0
+          if (openMenuAt(pressX, pressY)) { dragging = null; gestureConsumed = true }
+        }, HOLD_MS)
+      }
     }
     const onOrbitMove = (event: PointerEvent) => {
+      if (livePointers.has(event.pointerId)) {
+        livePointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+        if (livePointers.size === 2) {
+          const centre = pinchCentre()
+          if (pinchDistance > 0) {
+            userZoom = THREE.MathUtils.clamp(userZoom * (pinchDistance / centre.d), 0.42, 1.85)
+            // Two fingers sliding together is the only pan a tablet has.
+            userPanX = THREE.MathUtils.clamp(userPanX - (centre.x - pinchX) * 0.006, -1.6, 1.6)
+            userPanY = THREE.MathUtils.clamp(userPanY + (centre.y - pinchY) * 0.006, -1.1, 1.1)
+          }
+          pinchDistance = centre.d; pinchX = centre.x; pinchY = centre.y
+          return
+        }
+      }
+      if (holdTimer && Math.hypot(event.clientX - pressX, event.clientY - pressY) > tapSlop) cancelHold()
       if (!dragging) return
       const dx = event.clientX - lastX, dy = event.clientY - lastY
       lastX = event.clientX; lastY = event.clientY
@@ -925,15 +1014,20 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       }
     }
     const onOrbitUp = (event: PointerEvent) => {
+      cancelHold()
+      livePointers.delete(event.pointerId)
+      if (livePointers.size < 2) pinchDistance = 0
       const wasOrbit = dragging === 'orbit'
+      const consumed = gestureConsumed
       dragging = null
+      gestureConsumed = false
       renderer.domElement.style.cursor = 'grab'
-      if (!wasOrbit || !roamRef.current) return
+      if (consumed || !wasOrbit || !roamRef.current) return
       // In first person the arrows are the whole vocabulary: a tap on the floor
       // would teleport the eyes the learner is looking through.
       if (firstPersonRef.current) return
       const travelled = Math.hypot(event.clientX - pressX, event.clientY - pressY)
-      if (travelled > 6 || performance.now() - pressAt > 500) return
+      if (travelled > tapSlop || performance.now() - pressAt > 500) return
       const spot = pickFloor(event)
       if (!spot) return
       const placingNow = placingRef.current
@@ -944,29 +1038,22 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
         walkTo(spot.x, spot.z)
       }
     }
+    // A browser that decides the gesture was really a scroll takes the pointer
+    // with it and never sends the release, stranding `dragging` mid-drag.
+    const onPointerCancel = (event: PointerEvent) => {
+      cancelHold()
+      livePointers.delete(event.pointerId)
+      if (livePointers.size < 2) pinchDistance = 0
+      dragging = null
+      gestureConsumed = false
+      renderer.domElement.style.cursor = 'grab'
+    }
     // Right-click a placed prop for its own menu, Sims-style. The browser menu
     // is always suppressed over the bay — right-drag is how you pan.
     const onContextMenu = (event: MouseEvent) => {
       event.preventDefault()
-      const report = onItemMenuRef.current
-      if (!report || !room) return
-      if (Math.hypot(event.clientX - pressX, event.clientY - pressY) > 6) return
-      const rect = renderer.domElement.getBoundingClientRect()
-      if (!rect.width || !rect.height) return
-      ndc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-      ndc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
-      raycaster.setFromCamera(ndc, camera)
-      const uid = room.pickItem(raycaster)
-      const station = uid ? null : room.pickStation(raycaster)
-      if (!uid && !station) { report(null); return }
-      const anchor = uid ? room.itemAnchor(uid) : room.stationAnchor(station!)
-      if (!anchor) { report(null); return }
-      anchor.project(camera)
-      report({
-        uid: uid ?? `station:${station}`,
-        x: rect.left + ((anchor.x + 1) / 2) * rect.width,
-        y: rect.top + ((1 - anchor.y) / 2) * rect.height,
-      })
+      if (Math.hypot(event.clientX - pressX, event.clientY - pressY) > TAP_SLOP_MOUSE) return
+      openMenuAt(event.clientX, event.clientY)
     }
     // While a prop is on the cursor, the room shows exactly where it will land.
     let lastPointerAt: { clientX: number; clientY: number } | null = null
@@ -1014,6 +1101,10 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     const onOrbitReset = () => resetUserView()
     if (orbit) {
       renderer.domElement.style.cursor = 'grab'
+      // Only the studio claims the browser's gestures. Every other Yuvi is a
+      // small canvas sitting in a page the learner still has to be able to
+      // scroll past.
+      renderer.domElement.style.touchAction = 'none'
       renderer.domElement.addEventListener('pointerdown', onOrbitDown)
       renderer.domElement.addEventListener('wheel', onOrbitWheel, { passive: false })
       renderer.domElement.addEventListener('dblclick', onOrbitReset)
@@ -1021,6 +1112,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       renderer.domElement.addEventListener('pointermove', onGhostMove, { passive: true })
       window.addEventListener('pointermove', onOrbitMove)
       window.addEventListener('pointerup', onOrbitUp)
+      window.addEventListener('pointercancel', onPointerCancel)
       window.addEventListener('keydown', onRoamKeyDown)
       window.addEventListener('keyup', onRoamKeyUp)
       window.addEventListener('blur', onRoamBlur)
@@ -1557,6 +1649,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
 
     return () => {
       cancelAnimationFrame(frame)
+      cancelHold()
       renderObserver?.disconnect()
       document.removeEventListener('visibilitychange', onVisibilityChange)
       renderer.domElement.removeEventListener('webglcontextlost', onContextLost)
@@ -1573,6 +1666,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
       renderer.domElement.removeEventListener('pointermove', onGhostMove)
       window.removeEventListener('pointermove', onOrbitMove)
       window.removeEventListener('pointerup', onOrbitUp)
+      window.removeEventListener('pointercancel', onPointerCancel)
       window.removeEventListener('keydown', onRoamKeyDown)
       window.removeEventListener('keyup', onRoamKeyUp)
       window.removeEventListener('blur', onRoamBlur)

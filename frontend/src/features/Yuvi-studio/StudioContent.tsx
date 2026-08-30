@@ -2,6 +2,7 @@
 /* eslint-disable */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../../i18n/I18nProvider'
+import { useResponsive } from '../../hooks/useResponsive'
 import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { Icon } from '../../components/primitives'
 import { YuviAvatar3D, type YuviPlacing } from './YuviAvatar3D'
@@ -110,6 +111,11 @@ export function StudioContent({
   robotHidden?: boolean
 }) {
   const { t } = useI18n()
+  const { isTouch } = useResponsive()
+  // Four hints name a mouse the learner may not have. On a school tablet they
+  // described a wheel, arrow keys and a right-click — including inside the
+  // walkthrough, which is the one screen that has to be followable.
+  const hint = (key: string) => t(isTouch ? `${key}.touch` : key)
   const thumbnails = useMemo(() => getThumbnails(), [])
   const [pending, setPending] = useState<YuviAsset | null>(null)
   const [purchaseError, setPurchaseError] = useState<string | null>(null)
@@ -327,7 +333,7 @@ export function StudioContent({
         what: t('YuviStudio.tut.turn.what'),
         why: t('YuviStudio.tut.turn.why'),
         how: t('YuviStudio.tut.turn.how'),
-        tip: t('YuviStudio.tut.turn.tip'),
+        tip: hint('YuviStudio.tut.turn.tip'),
         primary: {
           label: t('YuviStudio.tut.turn.action'),
           icon: 'reflect',
@@ -658,10 +664,10 @@ export function StudioContent({
               : placing
                 ? t(placing.uid || placing.station ? 'YuviStudio.room.moveHint' : 'YuviStudio.room.placeHint')
                 : mode === 'room'
-                  ? t('YuviStudio.room.menuHint')
+                  ? hint('YuviStudio.room.menuHint')
                   : mode === 'roam'
-                    ? t(firstPerson ? 'YuviStudio.fpv.hint' : 'YuviStudio.roam.hint')
-                    : t('YuviStudio.hint')}
+                    ? firstPerson ? t('YuviStudio.fpv.hint') : hint('YuviStudio.roam.hint')
+                    : hint('YuviStudio.hint')}
         </div>
         {mode === 'roam' && !firstPerson && !tutorial && (
           // Two doors, always visible: dress Yuvi, or build the room.
@@ -690,7 +696,10 @@ export function StudioContent({
         {/* Out of the studio, and sound: the only two controls the bay itself
            owns now that saving lives in the panel doing the changing. */}
         <div className="ys-stage-tools">
-          {mode === 'roam' && !tutorial && (
+          {/* Behind Yuvi's eyes you walk with the arrow keys and nothing else —
+             the floor tap is deliberately dead there. Offering it on a tablet
+             is offering a room the learner cannot leave. */}
+          {mode === 'roam' && !tutorial && !isTouch && (
             <button
               type="button"
               className={`ys-iconbtn${firstPerson ? ' is-on' : ''}`}

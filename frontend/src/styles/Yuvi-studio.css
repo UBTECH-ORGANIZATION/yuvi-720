@@ -803,6 +803,10 @@
 @media (prefers-reduced-motion: reduce) {
   .ys-propmenu { animation: none; }
 }
+/* Reached by press-and-hold on a tablet, so the rows have to be finger-sized. */
+@media (pointer: coarse) {
+  .ys-propmenu__item { min-block-size: 44px; }
+}
 
 /* ── Room-design walkthrough ───────────────────────────────────────────────
    A card that sits over the bay rather than beside it: every step points at
