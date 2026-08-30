@@ -86,10 +86,6 @@ const FOCUS_BY_TAB: Record<Tab, string> = {
 type Filter = 'all' | 'owned' | 'new' | 'special'
 const FILTERS: Filter[] = ['all', 'owned', 'new', 'special']
 
-// Locked items are real again: they are bought with sparks or earned at a
-// milestone, which is the whole point of the reward loop.
-const PREVIEW_ALL = false
-
 const COLOR_OPTIONS: Record<keyof YuviColors, string[]> = {
   body: ['#F1F2FB', '#9cc1e8', '#ff9ec4', '#b5f2c9', '#ffd27a', '#c9b6ff', '#8ee6f2', '#ff8f8f', '#9ad0ff'],
   eyes: ['#4eeef0', '#7c5cff', '#ff5d73', '#ffd166', '#5ce67e', '#ff8fd0'],
@@ -97,18 +93,13 @@ const COLOR_OPTIONS: Record<keyof YuviColors, string[]> = {
   glow: ['#7C6BFF', '#3fd9e0', '#ff5d73', '#ffd166', '#aef7ff'],
 }
 
-/**
- * Presentational studio UI. `robotHidden` keeps the stage robot mounted (and
- * warming up) but invisible while the flight overlay animates onto its spot.
- */
+/** Presentational studio UI. */
 export function StudioContent({
   studio,
   onClose,
-  robotHidden = false,
 }: {
   studio: StudioDesign
   onClose: () => void
-  robotHidden?: boolean
 }) {
   const { t } = useI18n()
   const { isTouch } = useResponsive()
@@ -455,7 +446,7 @@ export function StudioContent({
 
   const slotAssets = activeTab === 'colors' ? [] : assetsForSlot(activeTab as YuviSlot)
   const visibleAssets = slotAssets.filter((asset) => {
-    const locked = PREVIEW_ALL ? false : isLocked(asset)
+    const locked = isLocked(asset)
     if (filter === 'owned') return !locked
     if (filter === 'new') return Boolean(asset.isNew)
     if (filter === 'special') return Boolean(asset.requirementKey)
@@ -593,7 +584,7 @@ export function StudioContent({
                       />
                     )}
                     {visibleAssets.map((asset) => {
-                      const locked = PREVIEW_ALL ? false : isLocked(asset)
+                      const locked = isLocked(asset)
                       const price = locked ? priceOf(asset.id) : null
                       return (
                         <ItemCard
@@ -633,7 +624,7 @@ export function StudioContent({
 
       <section className="ys-stage">
         <div className="ys-stage__backdrop" aria-hidden />
-        <div className={`ys-stage__canvas${robotHidden ? ' is-flight-hidden' : ''}`}>
+        <div className="ys-stage__canvas">
           {loaded && (
             <YuviAvatar3D
               ref={avatarRef}
@@ -821,7 +812,7 @@ export function StudioContent({
               <button
                 type="button"
                 className="ys-btn ys-btn--ghost"
-                disabled={saving}
+                disabled={busy}
                 onClick={() => { setExitAsk(false); onClose() }}
               >
                 {t('YuviStudio.exit.discard')}

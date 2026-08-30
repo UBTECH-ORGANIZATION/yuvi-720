@@ -1648,6 +1648,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     requestFrame()
 
     return () => {
+      void audioCtx?.close()
       cancelAnimationFrame(frame)
       cancelHold()
       renderObserver?.disconnect()

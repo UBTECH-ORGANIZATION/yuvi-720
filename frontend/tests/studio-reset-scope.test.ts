@@ -54,6 +54,12 @@ test('each confirmation promises the other half is safe', () => {
   assert.match(he['YuviStudio.reset.room.body'], /יובי לא ישתנה/)
 })
 
+test('exit actions both wait for either pending save', () => {
+  const exitDialog = studio.slice(studio.indexOf('{exitAsk && ('), studio.indexOf('{resetAsk && ('))
+  assert.equal((exitDialog.match(/disabled=\{busy\}/g) || []).length, 2)
+  assert.ok(!exitDialog.includes('disabled={saving}'))
+})
+
 test('the retired shared strings are gone from every locale', () => {
   for (const lang of ['he', 'en', 'ar']) {
     const bundle = JSON.parse(readFileSync(join(ROOT, `locales/${lang}.json`), 'utf8'))
