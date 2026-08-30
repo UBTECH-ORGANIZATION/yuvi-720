@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useResponsive } from '../../hooks/useResponsive'
-import { YuviAvatar3D } from '../Yuvi-studio/YuviAvatar3D'
+import { YuviAvatar3D } from '../Yuvi-studio/YuviAvatar3DLazy'
 import { DEFAULT_DESIGN } from '../Yuvi-studio/YuviDesign'
 
 type FlightPoint = {

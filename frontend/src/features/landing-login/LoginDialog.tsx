@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Modal } from '../../components/primitives/Modal'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useAuth, type AuthUser } from '../../providers/AuthProvider'
-import { YuviRobot3D } from '../learner-mapping/YuviRobot3D'
+import { YuviRobot3D } from '../learner-mapping/YuviRobot3DLazy'
 
 /* Sign-in dialog. Opens in place over the landing page so a deep link the user
    was sent to is still there behind them once they authenticate. */

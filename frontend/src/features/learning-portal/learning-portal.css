@@ -7,6 +7,16 @@
   color: var(--sp-ink-700);
 }
 
+/* --sp-bg intentionally stays light in dark mode (tokens.css), so painting it
+   here floods the track light. Keep only the glows over the midnight canvas. */
+[data-theme='dark'] .learning-catalog-page {
+  background:
+    radial-gradient(circle at 8% 12%, rgba(76, 201, 240, .10), transparent 30%),
+    radial-gradient(circle at 92% 6%, rgba(159, 122, 254, .16), transparent 32%),
+    radial-gradient(900px 620px at 26% 92%, rgba(120, 92, 240, .10), transparent 60%),
+    var(--sp-bg-subtle);
+}
+
 .learning-catalog-main {
   inline-size: min(100% - (2 * var(--sp-gutter)), 1240px);
   margin-inline: auto;
@@ -62,8 +72,8 @@
 .learning-catalog-hero p { margin: 0; color: var(--sp-ink-400); font-size: var(--sp-fs-md); }
 
 .learning-catalog-tools {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 480px);
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-4);
   margin-block-end: var(--sp-6);

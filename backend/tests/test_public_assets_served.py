@@ -3,7 +3,7 @@
 The bug this pins: the class book's picture plates live in `frontend/public/
 moments/`, and Vite copies that directory verbatim to the build ROOT — only
 hashed bundle output goes under `/assets`. `mount_static_assets` mounted
-`/assets`, `/shared`, `/locales`, `/campaign` and `/unity-world`, and nothing
+`/assets`, `/shared`, `/locales` and `/campaign`, and nothing
 covering the root, so `/moments/breakthrough-1.jpg` answered 404 on every
 deployed environment. So did `/yuvi-favicon.png`, which had been broken far
 longer without anyone noticing.
@@ -55,11 +55,10 @@ class PublicAssetsAreServed(unittest.TestCase):
 
         self._originals = {
             name: getattr(static_pages, name)
-            for name in ("REACT_APP_DIR", "REACT_ASSETS_DIR", "UNITY_WORLD_DIR")
+            for name in ("REACT_APP_DIR", "REACT_ASSETS_DIR")
         }
         static_pages.REACT_APP_DIR = self.tmp
         static_pages.REACT_ASSETS_DIR = self.tmp / "assets"
-        static_pages.UNITY_WORLD_DIR = self.tmp / "unity-world"
 
         app = FastAPI()
         static_pages.mount_static_assets(app)

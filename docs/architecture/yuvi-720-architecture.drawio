@@ -50,9 +50,6 @@
         <mxCell id="p1c2" value="&lt;b&gt;Teacher + Admin SPA&lt;/b&gt; — same bundle, role-gated&lt;br&gt;⚠ built and tested, not merged to main → not deployed" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#FDECEC;strokeColor=#C0392B;fontSize=10;fontColor=#7B241C;dashed=1" vertex="1" parent="1">
           <mxGeometry x="458" y="148" width="380" height="48" as="geometry" />
         </mxCell>
-        <mxCell id="p1c3" value="&lt;b&gt;Unity WebGL learning world&lt;/b&gt;&lt;br&gt;26 MB wasm served as static assets" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#3E4C59;fontSize=10;fontColor=#1F2933" vertex="1" parent="1">
-          <mxGeometry x="858" y="148" width="364" height="48" as="geometry" />
-        </mxCell>
         <mxCell id="p1c4" value="&lt;b&gt;Kata / CET content player&lt;/b&gt; — cross-origin iframe&lt;br&gt;CET's own player cannot be framed (SameSite SSO loop) → host blocklist + own tab" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#F1F3F5;strokeColor=#6B7684;fontSize=10;fontColor=#333D47" vertex="1" parent="1">
           <mxGeometry x="58" y="204" width="380" height="48" as="geometry" />
         </mxCell>
@@ -489,7 +486,7 @@
           <mxGeometry x="40" y="52" width="1100" height="34" as="geometry" />
         </mxCell>
 
-        <mxCell id="p4e1" value="&lt;b&gt;Azure Front Door&lt;/b&gt; — WAF, TLS, caching for static and Unity assets, single public entry point" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#F3ECFB;strokeColor=#6B46C1;fontSize=11;fontColor=#3C2A6B;dashed=1" vertex="1" parent="61">
+        <mxCell id="p4e1" value="&lt;b&gt;Azure Front Door&lt;/b&gt; — WAF, TLS, caching for static assets, single public entry point" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#F3ECFB;strokeColor=#6B46C1;fontSize=11;fontColor=#3C2A6B;dashed=1" vertex="1" parent="61">
           <mxGeometry x="40" y="110" width="560" height="60" as="geometry" />
         </mxCell>
         <mxCell id="p4e2" value="&lt;b&gt;✓ APIM AI Gateway&lt;/b&gt; — exists today and stays the single control point for model access" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#E3EDFB;strokeColor=#2B6CB0;strokeWidth=2.5;fontSize=11;fontColor=#1A365D" vertex="1" parent="61">

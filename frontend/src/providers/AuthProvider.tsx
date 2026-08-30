@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { apiGet, apiPatch, apiPost, UNAUTHORIZED_EVENT } from '../services/api'
+import { setTelemetryUser } from '../services/telemetry'
 
 /* AuthProvider — the single source of "who is using the app".
 
@@ -109,6 +110,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.addEventListener(UNAUTHORIZED_EVENT, onUnauthorized)
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized)
   }, [])
+
+  // Tie performance telemetry to the *internal* id and the role, and nothing
+  // else. That is enough to ask "is it slow for one school, or for teachers
+  // only, or for everyone" without any name, email or username ever reaching
+  // Application Insights.
+  useEffect(() => {
+    const role = user?.roles?.includes('teacher') ? 'teacher' : user ? 'learner' : undefined
+    setTelemetryUser(user?.user_id ?? null, role)
+  }, [user?.user_id, user?.roles])
 
   // MoE 720 session suspend/resume: report focus loss/return while signed in.
   // sendBeacon so the suspend survives tab switches and page unloads; the
