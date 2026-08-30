@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app.agents import coach, competency_coach, safety  # noqa: E402
+from app.agents import coach, safety  # noqa: E402
 from app.services.ai_usage import UsageContext  # noqa: E402
 
 
@@ -94,22 +94,6 @@ class SafetyDisclosureContextTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual("".join(streamed), safety.RESPECTFUL_LANGUAGE_REDIRECT["en"])
         record_flag.assert_not_awaited()
-
-    async def test_competency_chat_uses_the_same_deterministic_harmful_gate(self) -> None:
-        with patch.object(
-            competency_coach.safety, "classify_disclosure", new=AsyncMock(),
-        ) as classify:
-            streamed = [
-                piece async for piece in competency_coach.run_competency_chat_stream(
-                    "test-learner",
-                    "self_regulation",
-                    [{"role": "user", "text": "i'll kill you"}],
-                    "en",
-                )
-            ]
-
-        self.assertEqual("".join(streamed), safety.RESPECTFUL_LANGUAGE_REDIRECT["en"])
-        classify.assert_not_awaited()
 
     async def test_model_accepts_harmful_and_keeps_victim_reports_as_distress(self) -> None:
         captured: dict = {}

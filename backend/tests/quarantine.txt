@@ -1,0 +1,34 @@
+# Backend tests that were already failing when CI was introduced (30/08/2026).
+#
+# Until CI existed nothing ran these suites, so production code drifted away
+# from its tests without anyone noticing. Deselecting them keeps the deployment
+# gate meaningful — a NEW failure blocks the build — while these are fixed.
+# CI still runs this list in a separate, non-blocking step and prints the
+# result in the job summary.
+#
+# Delete a line as soon as its test passes again. Do not add lines here to make
+# a red build green: a test that fails because of a change in the same pull
+# request is exactly what this gate is for.
+
+tests/test_coach_actions.py::CoachActionTests::test_calendar_action_request_opens_calendar_even_when_schedule_is_available
+tests/test_coach_actions.py::CoachActionTests::test_calendar_fallback_navigation_opens_calendar_when_data_is_unavailable
+tests/test_coach_actions.py::CoachActionTests::test_fallback_action_is_catalog_validated_and_not_duplicated
+tests/test_coach_actions.py::CoachActionTests::test_fallback_navigation_does_not_offer_available_data_area
+tests/test_coach_actions.py::CoachActionTests::test_fallback_navigation_targets_the_requested_unavailable_area
+tests/test_coach_api_lifecycle.py::CoachApiLifecycleTests::test_video_summary_is_rejected_after_use_on_the_same_video
+tests/test_coach_api_lifecycle.py::CoachApiLifecycleTests::test_video_summary_requires_active_video_and_uses_summary_mode
+tests/test_coach_calendar.py::CoachCalendarIntegrationTests::test_empty_calendar_turn_attaches_calendar_action
+tests/test_coach_stream_structure.py::CoachStreamStructureTests::test_a_diagram_payload_arrives_whole_and_still_parses
+tests/test_lesson_visual_gate.py::LessonVisualGateTests::test_accepted_visual_plan_starts_visible_rendering_only_after_a_scene_exists
+tests/test_lesson_visual_gate.py::LessonVisualGateTests::test_declined_visual_plan_never_emits_a_preparing_status
+tests/test_memory_engine.py::LearnerMemoryTests::test_calendar_query_intent_is_multilingual_and_specific
+tests/test_memory_engine.py::MemoryConsolidationTests::test_chat_consolidation_writes_only_whitelisted_fields
+tests/test_memory_engine.py::MemoryConsolidationTests::test_explicit_preference_becomes_evidence_backed_theme
+tests/test_memory_engine.py::MemoryConsolidationTests::test_learner_retraction_forgets_theme_and_ripples
+tests/test_memory_engine.py::QueryAwareContextTests::test_profile_query_gets_portrait_but_not_evidence_internals
+tests/test_phase6_brain.py::test_decision_taxonomy_routing
+tests/test_support_gating.py::SupportKeyTest::test_used_flags_empty_state
+tests/test_support_gating.py::SupportKeyTest::test_used_flags_reset_when_key_changes
+tests/test_support_used_persistence.py::SupportRoundTripTests::test_a_hint_is_recorded_over_a_null_parent
+tests/test_support_used_persistence.py::SupportRoundTripTests::test_moving_to_the_next_question_re_arms_the_buttons
+tests/test_support_used_persistence.py::SupportRoundTripTests::test_one_hint_exhausts_only_the_current_question

@@ -49,7 +49,7 @@
         <mxCell id="c-users" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/identity/Users.svg;" value="Learners · Teachers&lt;br&gt;Admins" vertex="1">
           <mxGeometry height="64" width="64" x="76" y="600" as="geometry" />
         </mxCell>
-        <mxCell id="c-browser" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/general/Browser.svg;" value="Browser — React SPA,&lt;br&gt;Unity WebGL, content iframe" vertex="1">
+        <mxCell id="c-browser" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/general/Browser.svg;" value="Browser — React SPA,&lt;br&gt;content iframe" vertex="1">
           <mxGeometry height="64" width="64" x="76" y="730" as="geometry" />
         </mxCell>
         <mxCell id="c-gh" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/general/Builds.svg;" value="GitHub Actions" vertex="1">
@@ -275,7 +275,7 @@
         <mxCell id="t-waf" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/networking/Web_Application_Firewall_Policies_WAF.svg;" value="WAF policy" vertex="1">
           <mxGeometry height="64" width="64" x="570" y="245" as="geometry" />
         </mxCell>
-        <mxCell id="t-n-edge" parent="11" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=10;fontColor=#52606D" value="TLS termination, WAF rules, and edge caching for the static bundle and the 26 MB Unity payload — which the application currently serves itself on every cold load." vertex="1">
+        <mxCell id="t-n-edge" parent="11" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=10;fontColor=#52606D" value="TLS termination, WAF rules, and edge caching for the static bundle — which the application currently serves itself on every cold load." vertex="1">
           <mxGeometry height="80" width="470" x="700" y="245" as="geometry" />
         </mxCell>
         <mxCell id="t-api" parent="11" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=11;fontColor=#1F2933;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/other/Container_App_Environments.svg;" value="spark-api&lt;br&gt;KEDA · HTTP concurrency" vertex="1">

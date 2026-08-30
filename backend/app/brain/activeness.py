@@ -254,6 +254,62 @@ def _cause_tags(key: str, contribs: list[tuple[str, float]], value: float, conf:
     return tags
 
 
+# Internal, non-numeric descriptor for every cause tag `_cause_tags` can emit.
+# Never shown verbatim: whatever surface explains a move to a learner phrases it
+# warmly in their own language, and these ground that phrasing in the behaviour
+# actually measured rather than letting a model invent a reason.
+#
+# Kept beside the tags themselves so the two cannot drift — a tag with no hint
+# is a cause nothing can verbalize, which `test_activeness` fails on.
+CAUSE_HINTS = {
+    "inconsistent": {
+        "he": "הופעה לא סדירה — פערים בין ימי הלמידה",
+        "ar": "حضور غير منتظم — فجوات بين أيام التعلّم",
+        "en": "irregular attendance — gaps between learning days",
+    },
+    "quits_on_fail": {
+        "he": "אחרי טעות נוטה לעצור במקום לנסות שוב",
+        "ar": "بعد الخطأ يميل إلى التوقّف بدل المحاولة مجددًا",
+        "en": "after a mistake tends to stop instead of trying again",
+    },
+    "guessing": {
+        "he": "תשובות מהירות מדי — סימן לניחוש במקום עצירה לחשוב",
+        "ar": "إجابات سريعة جدًا — إشارة إلى التخمين بدل التوقّف للتفكير",
+        "en": "very fast answers — a sign of guessing rather than pausing to think",
+    },
+    "hint_reliance": {
+        "he": "פנייה מהירה לרמזים לפני ניסיון עצמאי",
+        "ar": "اللجوء السريع إلى التلميحات قبل محاولة مستقلة",
+        "en": "reaching for hints before an independent attempt",
+    },
+    "low_engagement": {
+        "he": "מעט פעילות והשלמות בתקופה האחרונה",
+        "ar": "نشاط وإنجازات قليلة في الفترة الأخيرة",
+        "en": "little activity and few completions recently",
+    },
+    "low_reflection": {
+        "he": "כמעט בלי רפלקציה או עצירה לחשוב אחרי שיעורים",
+        "ar": "شبه غياب للتأمّل بعد الدروس",
+        "en": "almost no reflection after lessons",
+    },
+    "isolation": {
+        "he": "התמודדות עם קושי בלי לבקש עזרה",
+        "ar": "مواجهة الصعوبة دون طلب المساعدة",
+        "en": "facing difficulty without asking for help",
+    },
+    "keep": {
+        "he": "המשך יציב וטוב — כדאי לשמור על הקצב",
+        "ar": "تقدّم ثابت وجيد — يُستحسن الحفاظ على الوتيرة",
+        "en": "steady, good progress — worth keeping the pace",
+    },
+    "stretch": {
+        "he": "ביצוע חזק — אפשר לקחת אתגר גדול יותר",
+        "ar": "أداء قوي — يمكن خوض تحدٍّ أكبر",
+        "en": "strong performance — ready for a bigger challenge",
+    },
+}
+
+
 def effective_activeness(
     brain: dict,
     events: Optional[list[dict]] = None,

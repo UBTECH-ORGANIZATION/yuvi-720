@@ -8,6 +8,7 @@ import yuviFaviconUrl from '../../assets/yuvi-favicon.png'
 import { buildBlondeHair, buildEyebrowsBundle, getAsset } from '../Yuvi-studio/YuviAssets'
 import { useYuviDesign } from '../Yuvi-studio/YuviDesignProvider'
 import { normalizeDesign, type YuviDesign, type YuviSlot, type YuviVariant } from '../Yuvi-studio/YuviDesign'
+import { Yuvi_INTRO_READY_DELAY_MS } from './yuviIntroTiming'
 
 const INTRO_PEEK_DURATION = 2.55
 const INTRO_SETTLE_DURATION = 1.0
@@ -19,9 +20,7 @@ const INTRO_READY_BUFFER = 0.12
 // A brief, friendly hello the calm intro Yuvi plays on entry (no walk-in).
 const ENTRY_WAVE_DURATION = 2.4
 
-export const Yuvi_INTRO_READY_DELAY_MS = Math.ceil(
-  (INTRO_ENTRANCE_DURATION + INTRO_TURN_DELAY + INTRO_TURN_DURATION + INTRO_READY_BUFFER) * 1000
-)
+export { Yuvi_INTRO_READY_DELAY_MS }
 
 // The chest-badge favicon is shared across every Yuvi instance. Loading it once
 // at module scope means later robots (the intro→question overlay and the ring
