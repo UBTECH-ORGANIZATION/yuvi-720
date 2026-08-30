@@ -3543,6 +3543,8 @@
   "tch.album.title": "لحظات {when}",
   "tch.band.dialogClose": "إغلاق",
   "tch.band.empty": "لا يوجد طلاب لعرضهم بهذه التصفية",
+  "tch.band.filtered": "يعرض {count} من الصف",
+  "tch.band.filterClear": "كل الصف",
   "tch.band.filterAria": "تصفية حسب الحالة",
   "tch.band.freshFilter": "تغيّروا مؤخرًا",
   "tch.band.green": "في مكان جيد",

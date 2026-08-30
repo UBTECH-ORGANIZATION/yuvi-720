@@ -3543,6 +3543,8 @@
   "tch.album.title": "Moments {when}",
   "tch.band.dialogClose": "Close",
   "tch.band.empty": "No students to show for this filter",
+  "tch.band.filtered": "Showing {count} of the class",
+  "tch.band.filterClear": "Whole class",
   "tch.band.filterAria": "Filter by state",
   "tch.band.freshFilter": "Changed lately",
   "tch.band.green": "In a good place",

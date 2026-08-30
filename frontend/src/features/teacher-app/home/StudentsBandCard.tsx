@@ -47,6 +47,14 @@ export const StudentsBandCard = forwardRef<HTMLElement, {
     inScope.filter((row) => row.band.band === band).length
   const freshCount = inScope.filter((row) => isFreshChange(row.band)).length
 
+  /* One click back to the whole class (#506): releasing a filter used to mean
+     re-finding the chip that set it and knowing to press it again. */
+  const anyFilter = bandFilter !== null || freshOnly
+  const clearFilters = () => {
+    onBandFilter(null)
+    setFreshOnly(false)
+  }
+
   return (
     /* `Panel` is a plain function component (no ref forwarding) and the
        attention KPI needs to scroll here — so the sp-panel class sits on a
@@ -88,6 +96,11 @@ export const StudentsBandCard = forwardRef<HTMLElement, {
                 <BandFace band={band} size={20} />
                 {t(`tch.band.${band}`)}
                 <span className="tch-bands__chipCount">{countOf(band)}</span>
+                {bandFilter === band && (
+                  /* The ✕ on the chip itself says the same click releases the
+                     filter (#506); aria-pressed already carries the state. */
+                  <span className="tch-chipOff" aria-hidden="true"><Icon name="close" size={12} /></span>
+                )}
               </button>
             ))}
             {/* the movers: who changed band in the last two days */}
@@ -100,13 +113,40 @@ export const StudentsBandCard = forwardRef<HTMLElement, {
               <Icon name="pulse" size={14} aria-hidden />
               {t('tch.band.freshFilter')}
               <span className="tch-bands__chipCount">{freshCount}</span>
+              {freshOnly && (
+                <span className="tch-chipOff" aria-hidden="true"><Icon name="close" size={12} /></span>
+              )}
             </button>
           </div>
         </div>
       </div>
 
+      {/* Filtered = said out loud, with the way back beside it — the same
+          note-and-release pair the live view wears (#506). The empty state
+          below carries its own release, so the pair steps aside for it —
+          two "לכל הכיתה" buttons stacked would read as a rendering fault. */}
+      {anyFilter && filtered.length > 0 && (
+        <p className="tch-bands__filterNote" role="status">
+          {t('tch.band.filtered', { count: filtered.length })}
+          <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
+                  onClick={clearFilters}>
+            {t('tch.band.filterClear')}
+          </button>
+        </p>
+      )}
+
       {filtered.length === 0 ? (
-        <p className="tch-bands__empty">{t('tch.band.empty')}</p>
+        /* The dead-end carries its own exit: an empty filtered list with no
+           visible way out reads as "the system is stuck" (#506). */
+        <p className="tch-bands__empty">
+          {t('tch.band.empty')}
+          {anyFilter && (
+            <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
+                    onClick={clearFilters}>
+              {t('tch.band.filterClear')}
+            </button>
+          )}
+        </p>
       ) : (
         <ul className="tch-bands__list">
           {shown.map((student) => {

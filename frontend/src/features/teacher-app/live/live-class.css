@@ -162,6 +162,15 @@
   color: var(--sp-ink-500);
 }
 
+/* The ✕ an active filter chip wears (#506): the visible promise that the same
+   click turns the filter off, not a second control. */
+.tch-chipOff {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: 2px;
+  opacity: 0.65;
+}
+
 /* ── the table ────────────────────────────────────────────────────────────── */
 
 /* One column template, declared once and read by the header AND every row —
