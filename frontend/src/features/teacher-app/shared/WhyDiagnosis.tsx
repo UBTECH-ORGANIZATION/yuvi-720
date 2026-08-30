@@ -1,17 +1,18 @@
 /* The gap row's "למה?" made worth pressing (#507).
  *
  * It used to open the row's own counters said again — "8 מתוך 13 מתקשים",
- * which the row already says twice. Now it answers the actual question, in
- * three reads folded from stored evidence (never generated):
- *   - WHERE inside the objective: its learnings, hardest first, with success;
- *   - WHICH questions fail, named the way the learner sees them on screen;
- *   - HOW it goes wrong: the coach's own deterministic error-type reads.
- * A closing recommendation is composed HERE from those same rows — grounded
- * by construction, because every clause names data the panel just showed.
+ * which the row already says twice. Now it opens ONE paragraph: what is
+ * actually hard for the class and what to focus on, phrased by the server
+ * (`focus_text`) from folded evidence — the objective's per-learning success,
+ * the failing questions' own `informationToBot` topic descriptions, the
+ * coach's error-type reads. Grounded by construction: the model may only
+ * reword that fold, and when phrasing is unavailable the same rows compose a
+ * deterministic sentence here instead. Nothing else renders — no sections, no
+ * raw dump; the counters live on the row itself (the sentence and the split
+ * bar), which is where C4's disclosure always was.
  *
  * Fetched on first open, not with the page: the fold fans out over the
- * roster's events and decisions, and a teacher opens one gap at a time. The
- * raw evidence stays at the bottom — the diagnosis interprets, C4 discloses.
+ * roster's events and decisions, and a teacher opens one gap at a time.
  */
 
 import { useState } from 'react'
@@ -19,11 +20,6 @@ import { Icon } from '../../../components/primitives'
 import { useI18n } from '../../../i18n/I18nProvider'
 import type { GapDiagnosis } from '../../../services/teacher'
 import type { DifficultyItem } from './DifficultiesCard'
-import { RawEvidence } from './EvidenceDisclosure'
-
-function pct(rate: number | null): number | null {
-  return rate === null ? null : Math.round(rate * 100)
-}
 
 /* `informationToBot` is the author's full brief — understanding goals, answer
    values, strategy tips. The topic is its opening; the rest belongs to the
@@ -72,11 +68,10 @@ export function DiagnosisToggle({ item, load }: {
             <p className="tch-why__loading">{t('tch.why.loading')}</p>
           ) : null}
           {state.kind === 'failed' ? (
-            /* The fold failed — the raw layer below still answers C4. */
-            <RawEvidence raw={item.evidence} />
+            <p className="tch-why__none">{t('tch.why.none')}</p>
           ) : null}
           {state.kind === 'ready' ? (
-            <DiagnosisBody diagnosis={state.diagnosis} raw={item.evidence} />
+            <DiagnosisBody diagnosis={state.diagnosis} />
           ) : null}
         </div>
       ) : null}
@@ -84,131 +79,48 @@ export function DiagnosisToggle({ item, load }: {
   )
 }
 
-function DiagnosisBody({ diagnosis, raw }: {
-  diagnosis: GapDiagnosis
-  raw: Record<string, unknown>
-}) {
+/* ONE paragraph, by request (#507 follow-up): the guidance, nothing else —
+ * no folded sections, no raw-data toggle. The folds still exist in the
+ * payload as the phrasing's grounding, and the counters the raw layer used
+ * to repeat are already on the row itself (the sentence and the split bar),
+ * so the C4 disclosure lives where it always did. */
+function DiagnosisBody({ diagnosis }: { diagnosis: GapDiagnosis }) {
   const { t } = useI18n()
-  const parts = diagnosis.parts
-  const questions = diagnosis.hard_questions
-  const errors = diagnosis.error_types
-  const empty = !parts.length && !questions.length && !errors.length
+  const guidance = diagnosis.focus_text || composedGuidance(diagnosis, t)
 
   return (
     <div className="tch-why__body">
-      {empty ? <p className="tch-why__none">{t('tch.why.none')}</p> : null}
-
-      {parts.length > 0 && (
-        <section className="tch-why__block">
-          <h5>{t('tch.why.parts.title')}</h5>
-          <ul className="tch-why__parts">
-            {parts.map((part) => {
-              const rate = pct(part.success_rate)
-              return (
-                <li key={part.component_id}>
-                  <span className="tch-why__partName" dir="auto">{part.title || part.component_id}</span>
-                  {rate !== null ? (
-                    <span className="tch-why__meter" aria-hidden="true">
-                      <span style={{ inlineSize: `${rate}%` }} />
-                    </span>
-                  ) : null}
-                  <span className="tch-why__partLine">
-                    {rate !== null ? t('tch.why.parts.line', {
-                      pct: rate, struggling: part.struggling_count,
-                    }) : null}
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
-        </section>
-      )}
-
-      {questions.length > 0 && (
-        <section className="tch-why__block">
-          <h5>{t('tch.why.questions.title')}</h5>
-          <ul className="tch-why__questions">
-            {questions.map((question) => (
-              /* Topic first (the content's own description of what the
-                 question teaches), mechanics second — a teacher plans a
-                 lesson around "מושגי ברוטו ונטו", not around "שאלה 2". */
-              <li key={`${question.component_id}:${question.question_id}`} dir="auto">
-                <strong>
-                  {(question.teaches && topicLine(question.teaches))
-                    || (question.ordinal !== null
-                      ? t('tch.why.questionName', { ordinal: question.ordinal })
-                      : question.screen_title || question.learning_title)}
-                </strong>
-                <span className="tch-why__qMeta">
-                  {question.teaches && question.ordinal !== null
-                    ? `${t('tch.why.questionName', { ordinal: question.ordinal })} · `
-                    : ''}
-                  {t('tch.why.questions.line', {
-                    pct: pct(question.success_rate) ?? 0,
-                    attempts: question.attempts,
-                    learners: question.learners,
-                  })}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {errors.length > 0 && (
-        <section className="tch-why__block">
-          <h5>{t('tch.why.errors.title')}</h5>
-          <div className="tch-why__errors">
-            {errors.map(([kind, count]) => (
-              <span key={kind} className="tch-why__error">
-                {t(`tch.why.error.${kind}`)}
-                {count > 1 ? <span className="tch-why__errorCount">×{count}</span> : null}
-              </span>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <Recommendation diagnosis={diagnosis} />
-
-      <RawEvidence raw={raw} />
+      {guidance
+        ? <p className="tch-why__text" dir="auto">{guidance}</p>
+        : <p className="tch-why__none">{t('tch.why.none')}</p>}
     </div>
   )
 }
 
-/* What to focus on. The server's `focus_text` leads when present — Yuvi's own
- * phrasing of the topics above, grounded because it may only reword the folded
- * rows. Without it, deterministic clauses composed from the same rows. */
-function Recommendation({ diagnosis }: { diagnosis: GapDiagnosis }) {
-  const { t } = useI18n()
-  if (diagnosis.focus_text) {
-    return (
-      <section className="tch-why__block tch-why__rec">
-        <h5>{t('tch.why.rec.title')}</h5>
-        <p dir="auto">{diagnosis.focus_text}</p>
-      </section>
-    )
-  }
+/* The no-model fallback: deterministic clauses composed from the same folded
+ * rows the phrasing would have reworded. */
+function composedGuidance(
+  diagnosis: GapDiagnosis,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string | null {
   const clauses: string[] = []
   const worst = diagnosis.parts[0]
   if (worst && diagnosis.parts.length > 1 && worst.title) {
     clauses.push(t('tch.why.rec.part', { part: worst.title }))
   }
   const question = diagnosis.hard_questions[0]
-  if (question && question.ordinal !== null) {
-    clauses.push(t('tch.why.rec.question', {
-      ordinal: question.ordinal,
-      learning: question.learning_title || question.screen_title,
-    }))
+  if (question) {
+    const topic = question.teaches && topicLine(question.teaches)
+    if (topic) {
+      clauses.push(t('tch.why.rec.topic', { topic }))
+    } else if (question.ordinal !== null) {
+      clauses.push(t('tch.why.rec.question', {
+        ordinal: question.ordinal,
+        learning: question.learning_title || question.screen_title,
+      }))
+    }
   }
   const error = diagnosis.error_types[0]
   if (error) clauses.push(t(`tch.why.rec.error.${error[0]}`))
-  if (!clauses.length) return null
-
-  return (
-    <section className="tch-why__block tch-why__rec">
-      <h5>{t('tch.why.rec.title')}</h5>
-      <p dir="auto">{clauses.join(' ')}</p>
-    </section>
-  )
+  return clauses.length ? clauses.join(' ') : null
 }

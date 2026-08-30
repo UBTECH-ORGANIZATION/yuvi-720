@@ -724,15 +724,20 @@ _diagnosis_cache: dict[tuple[str, str, str], tuple[float, dict[str, Any]]] = {}
 
 
 _FOCUS_PROMPT = (
-    "You help a teacher understand why their class is stuck on one learning "
-    "objective. You get the objective's name, its learnings with success "
-    "rates, the TOPIC DESCRIPTIONS of the specific questions the class fails "
-    "(written by the content's authors), and the coach's tallied error kinds.\n"
-    "Write 2-3 short sentences IN THE GIVEN LANGUAGE for the teacher: name the "
-    "topics that are hard in plain words (from the topic descriptions — never "
-    "invent a topic that is not described), and say what to focus on with the "
-    "students. No student names, no numbers the input does not contain, no "
-    "greetings. Return JSON: {\"text\": \"...\"}."
+    "You help a teacher plan what to do about one learning objective their "
+    "class is stuck on. You get the objective's name, its learnings with "
+    "success rates, the TOPIC DESCRIPTIONS of the specific questions the "
+    "class fails (written by the content's authors), and the coach's tallied "
+    "error kinds.\n"
+    "Write ONE short paragraph (2-4 sentences) IN THE GIVEN LANGUAGE, spoken "
+    "directly to the teacher. Open with what is actually hard for the class, "
+    "in plain everyday words — name the concept from the topic descriptions, "
+    "never a question number and never a topic that is not described. Then "
+    "give one or two concrete moves for the next lesson (what to open with, "
+    "what to practice, what to ask the students to explain). Warm and direct, "
+    "no jargon, no student names, no numbers the input does not contain, no "
+    "greetings, do not quote the answer values from the descriptions. "
+    "Return JSON: {\"text\": \"...\"}."
 )
 
 

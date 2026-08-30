@@ -18,20 +18,21 @@ test('the gaps surface injects the diagnosis loader', () => {
   assert.match(home, /loadWhy=\{\(item\) => getGapDiagnosis\(/)
 })
 
-test('the raw layer keeps its place under the diagnosis (C4)', () => {
-  assert.match(panel, /<RawEvidence raw=\{raw\} \/>/)
-  // The misconception tags the gapsModel comment promises to the raw layer
-  // are actually passed to it.
+test('the panel is one paragraph and nothing else', () => {
+  // By request: only the guidance renders — no folded sections, no raw dump.
+  // The folds stay in the payload as the phrasing's grounding, and the
+  // counters live on the row itself (sentence + split bar), where C4's
+  // disclosure always was.
+  assert.doesNotMatch(panel, /tch-why__parts|tch-why__questions|tch-why__errors/)
+  assert.doesNotMatch(panel, /RawEvidence/)
+  // The misconception tags stay in the gap row's evidence payload.
   assert.match(gapsModel, /sample_misconceptions/)
 })
 
 test('every why key exists in all three languages', () => {
   const keys = [
-    'tch.why.loading', 'tch.why.none', 'tch.why.parts.title', 'tch.why.parts.line',
-    'tch.why.questions.title', 'tch.why.questionName', 'tch.why.questions.line',
-    'tch.why.errors.title', 'tch.why.error.guess', 'tch.why.error.partial',
-    'tch.why.error.misinterpret', 'tch.why.error.careless',
-    'tch.why.rec.title', 'tch.why.rec.part', 'tch.why.rec.question',
+    'tch.why.loading', 'tch.why.none',
+    'tch.why.rec.part', 'tch.why.rec.topic', 'tch.why.rec.question',
     'tch.why.rec.error.guess', 'tch.why.rec.error.partial',
     'tch.why.rec.error.misinterpret', 'tch.why.rec.error.careless',
   ]
