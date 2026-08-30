@@ -193,6 +193,8 @@ async def _stream_visual_tail(
             or safety.is_safety_redirect(response_text)
             or not _worth_visual_planning(screened_message, response_text)
         )
+        if will_plan:
+            yield f"data: {json.dumps({'visual_status': 'planning'}, ensure_ascii=False)}\n\n"
         # The pointer outlives the lesson screen, and the planner is told the
         # question is what the learner is looking at — so off the lesson it would
         # drag an unrelated request back to the last question's numbers.
@@ -200,8 +202,6 @@ async def _stream_visual_tail(
             await _current_question_context(learner_id)
             if will_plan and on_lesson_screen else ""
         )
-        if will_plan:
-            yield f"data: {json.dumps({'visual_status': 'planning'}, ensure_ascii=False)}\n\n"
         scene = None if not will_plan else await plan_manim_visual(  # noqa: F841 (read after try)
             screened_message,
             response_text,
@@ -1180,10 +1180,10 @@ async def coach_support_state(
         # history. The browser keeps these flags in its in-memory UI state.
         "video_summary_used": False,
         "video_visual_used": False,
-        # Bumped when this SAME catalog item re-`initialized` mid-visit — the
-        # only signal a screen's embedded video moved to its next clip (see
-        # events._apply_event_to_brain). The client keys its per-video support
-        # flags by item + generation so clip 2 re-arms the buttons clip 1 used.
+        # Bumped when this SAME video item signals a clip boundary by either
+        # re-`initialized` or `completed` (see events._apply_event_to_brain).
+        # The client keys its per-video support flags by item + generation so
+        # clip 2 re-arms the buttons clip 1 used.
         "item_generation": current.get("item_generation") or 0,
         "question_ordinals": ordinals,
         # Which סעיף of a shared screen this is — present only where the screen

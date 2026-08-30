@@ -96,6 +96,7 @@ def _session_state_updates(
         "current_state.scored_screens": [],
         "current_state.learning_choice": None,
         "current_state.item_generation": 0,
+        "current_state.video_boundary_from_completion": False,
         "current_state.at": None,
     })
     return updates

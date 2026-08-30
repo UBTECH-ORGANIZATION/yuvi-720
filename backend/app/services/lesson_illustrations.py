@@ -292,12 +292,15 @@ for _key, _svg in _SOURCES.items():
 # Longest, most specific keywords first so e.g. "vertical" beats "angle".
 _RESOLVER_RULES: list[tuple[tuple[str, ...], str]] = [
     (("vertical", "קודקוד", "متقابل", "opposite"), "angles-vertical"),
+    (("congru", "חפיפ", "משולשים חופפים", "تطابق", "متطابق"), "triangle-angles"),
     (("triangle", "משולש", "مثلث"), "triangle-angles"),
     (("angle", "זווית", "زاوية", "geometr", "גאומטר", "هندس"), "angles-types"),
+    (("coord", "קואורדינט", "מערכת צירים", "ציר", "إحداثي", "محور"), "statistics"),
     (("percent", "אחוז", "نسبة", "مئوي"), "percent"),
     (("fraction", "שבר", "שברים", "كسر", "كسور"), "fractions"),
     (("statistic", "distribution", "average", "mean", "data", "סטטיסט", "התפלגות", "ממוצע", "נתונים", "إحصاء", "توزيع"), "statistics"),
     (("circuit", "electric", "current", "series", "מעגל", "חשמל", "זרם", "טורי", "كهرب", "دائرة", "تيار"), "circuit"),
+    (("mass", "volume", "density", "weigh", "מסה", "נפח", "צפיפות", "שקיל", "מאזני", "كتلة", "حجم", "كثافة"), "matter-states"),
     (("matter", "states", "solid", "liquid", "gas", "changes", "חומר", "צבירה", "מוצק", "נוזל", "גז", "مادة", "حالات"), "matter-states"),
     (("cell", "biolog", "organ", "dna", "תא", "ביולוג", "גרעין", "خلية", "أحياء"), "cell"),
     (("astro", "solar", "planet", "space", "orbit", "star", "אסטרו", "כוכב", "מסלול", "חלל", "شمس", "كوكب", "فلك"), "astronomy"),

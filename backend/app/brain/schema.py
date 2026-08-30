@@ -171,6 +171,10 @@ _OPAQUE_LEAF_KEYS = {
     # Set to None on unpin and on completion; re-pinning would then dot-$set
     # into that null and hit the same WriteError 28.
     "pinned_next",
+    # The spent pin (#244): how the last pin ended. Records of different pins
+    # have different fields (component vs task), so a merge would keep stale
+    # keys from the longer predecessor — always replaced whole.
+    "pinned_last",
     # The daily check-in's feeling (#452): written whole each morning, read
     # behind a today-only filter, and None between days — the same
     # merge-into-null trap as the others.

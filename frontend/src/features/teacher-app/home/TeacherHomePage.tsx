@@ -26,7 +26,7 @@
  * with evidence, never a ranking.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { navigate } from '../../../app/router'
 import {
   EmptyState, ErrorState, Hint, Icon, Skeleton, SkeletonCard,
@@ -37,6 +37,7 @@ import { useI18n } from '../../../i18n/I18nProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import {
   createSubgroup,
+  getGapDiagnosis,
   getGroupEngagement, getGroupGaps, getGroupMoments, getGroupMood, getGroupSnapshot,
   type ClassMood, type Engagement, type GroupInsight, type LearningGap,
   type Moment,
@@ -48,9 +49,11 @@ import { SubgroupDialog } from '../students/SubgroupDialog'
 import { TaskBuilder } from '../tasks/TeacherTasksPage'
 import { type TaskSeed } from '../tasks/taskSeed'
 import { MomentsAlbum } from '../moments/MomentsAlbum'
+import { bookEdition } from '../moments/bookModel'
 import { BandFace, type Band } from './BandFace'
 import { type BandedStudent } from './bandModel'
 import { gapToDifficultyItem, mostBlockingGap } from './gapsModel'
+import { MoodDialog } from './MoodDialog'
 import { MoodDonut, MoodKey, overallValence } from './MoodViz'
 import { ValenceFace } from '../../checkin/ValenceFaces'
 import { PeriodControl } from './PeriodControl'
@@ -95,6 +98,7 @@ export function TeacherHomePage() {
 
   const [bandFilter, setBandFilter] = useState<Band | null>(null)
   const [openStudent, setOpenStudent] = useState<BandedStudent | null>(null)
+  const [moodOpen, setMoodOpen] = useState(false)
   const bandsRef = useRef<HTMLElement | null>(null)
 
   const [builderSeed, setBuilderSeed] = useState<TaskSeed | null>(null)
@@ -142,12 +146,19 @@ export function TeacherHomePage() {
     let active = true
     setMoments([])
     setMomentsLoading(true)
-    /* The book is the edition BEFORE the current period, so the fetch is
-       offset by a whole period — and widened by a day at each edge, because
-       the server's window is a raw trailing one while the book's is aligned to
-       midnights in the teacher's own timezone. `momentsInEdition` trims the
-       overshoot, so the cover never claims a day the pages do not cover. */
-    getGroupMoments(groupId, language, days + 2, Math.max(0, days - 1), subject)
+    /* The fetch window is derived from the edition itself — the weekly book
+       is calendar-aligned (last completed Sun–Sat) while other periods roll,
+       so hardcoded offsets fit one and miss the other. The offset excludes
+       days newer than the edition (their moments would spend the row limit on
+       pages the book will not print), the day count reaches back past the
+       edition's first midnight, and `momentsInEdition` trims the overshoot so
+       the cover never claims a day the pages do not cover. */
+    const DAY = 86_400_000
+    const edition = bookEdition(days)
+    const offsetDays = Math.max(0, Math.floor((Date.now() - edition.end) / DAY))
+    const fetchDays = Math.max(1,
+      Math.ceil((Date.now() - edition.start) / DAY) - offsetDays + 1)
+    getGroupMoments(groupId, language, fetchDays, offsetDays, subject)
       .then((response) => { if (active) setMoments(response.moments ?? []) })
       .catch(() => { if (active) setMoments([]) })
       .finally(() => { if (active) setMomentsLoading(false) })
@@ -551,6 +562,10 @@ export function TeacherHomePage() {
               cell, so a nested tooltip would open two bubbles on the same
               hover, and the ring is the last place a teacher would think to
               point at to find out what it means. */}
+          {/* With answers behind it the cell is a real button (#505): the
+              click the distribution always invited, opening who is behind
+              each family. Without answers it stays a plain cell — a disabled
+              button would also swallow the hover the hint rides on. */}
           <Hint
             text={(
               <>
@@ -559,7 +574,7 @@ export function TeacherHomePage() {
               </>
             )}
           >
-            <div className="tch-stat">
+            <MoodCell clickable={!!mood?.answers} onOpen={() => setMoodOpen(true)}>
               {/* The icon says the answer, not the topic. A generic smiley here
                   was the same mark whether the class was having its best week
                   or its worst — decoration in the one slot on the row that had
@@ -602,7 +617,7 @@ export function TeacherHomePage() {
               <span className="tch-stat__viz">
                 {mood ? <MoodDonut mood={mood} /> : null}
               </span>
-            </div>
+            </MoodCell>
           </Hint>
         </div>
       </section>
@@ -641,6 +656,9 @@ export function TeacherHomePage() {
         strengthsTitle={t('tch.gaps.group.strengths')}
         strengthsHeading={t('tch.gaps.who.strength')}
         onPraise={setPraiseFor}
+        /* "למה?" answers the question now (#507): the row's id IS the
+           objective id on this surface, so the loader reads its diagnosis. */
+        loadWhy={(item) => getGapDiagnosis(groupId, item.id, language).catch(() => null)}
       />
       </div>
 
@@ -657,6 +675,16 @@ export function TeacherHomePage() {
       />
 
       <StudentBandDialog student={openStudent} onClose={() => setOpenStudent(null)} />
+
+      {/* Who is behind each feeling (#505) — opened from the mood KPI. */}
+      {mood ? (
+        <MoodDialog
+          mood={mood}
+          nameOf={(id) => rosterNames.get(id) ?? id}
+          open={moodOpen}
+          onClose={() => setMoodOpen(false)}
+        />
+      ) : null}
 
       {/* The one encouraging action on the page: a good word, sparks optional,
           to the children who got a topic (#467). */}
@@ -699,6 +727,27 @@ export function TeacherHomePage() {
         onSave={(draft) => void saveSubgroup(draft)}
       />
     </div>
+  )
+}
+
+/* The mood KPI's shell: a real <button> when there are answers to open
+   (#505), a plain cell when there are not — a disabled button would also
+   swallow the hover the cell's hint rides on. Same body either way. */
+function MoodCell({ clickable, onOpen, children }: {
+  clickable: boolean
+  onOpen: () => void
+  children: ReactNode
+}) {
+  if (!clickable) return <div className="tch-stat">{children}</div>
+  return (
+    <button
+      type="button"
+      className="tch-stat tch-stat--button"
+      onClick={onOpen}
+      aria-haspopup="dialog"
+    >
+      {children}
+    </button>
   )
 }
 

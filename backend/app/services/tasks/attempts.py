@@ -259,6 +259,7 @@ async def submit(
         time_spent=max(int(attempt.get("time_spent") or 0), int(time_spent or 0)),
     )
     await _record_completion(store.task_of_launch(launch), learner_id, score)
+    await _clear_task_pin(launch, learner_id)
     return {"status": "submitted", **feedback,
             "content": _with_explanations(snapshot, per_component)}
 
@@ -339,6 +340,30 @@ async def _record_completion(task_id: str, learner_id: str, score: Optional[int]
         )
     except Exception as exc:
         print(f"⚠️ task completion activity write failed: {type(exc).__name__}")
+
+
+async def _clear_task_pin(launch: str, learner_id: str) -> None:
+    """A submitted task pin is spent (#244). Best-effort, never blocking.
+
+    A teacher task writes no learning_events, so the xAPI fold — where a
+    component pin is cleared — never hears about this submission. Submission
+    is the moment task completion is adjudicated, so the pin is retired here,
+    the same way and for the same reason: hero and route must stop steering to
+    it together. On the child's hot path, so a failed brain write loses only
+    the bookkeeping, never the submission.
+    """
+    try:
+        from app.brain.repository import apply_brain_updates, get_brain
+        from app.services import pinning
+
+        pin = (await get_brain(learner_id)).get("pinned_next") or {}
+        if pin.get("kind") == "task" and str(pin.get("launch_id")) == str(launch):
+            await apply_brain_updates(learner_id, {
+                "pinned_next": None,
+                "pinned_last": pinning.spent_record(pin, pinning.OUTCOME_COMPLETED),
+            })
+    except Exception as exc:
+        print(f"⚠️ task pin clear failed: {type(exc).__name__}")
 
 
 async def learner_view(launch: str, learner_id: str) -> dict[str, Any]:

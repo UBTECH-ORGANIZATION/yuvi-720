@@ -11,7 +11,7 @@ Two invariants every route in this file keeps:
 
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
 from app.auth.dependencies import require_teacher_session
@@ -127,11 +127,11 @@ async def group_mood(
     """How the class has been feeling over the window, and the one before it.
 
     The daily check-in has been storing an answer per child per school day
-    since #452 and nothing has ever read them at class level. Aggregate only —
-    counts by valence, never a learner id: a mood is the most personal thing
-    the product holds, and the class view has no business naming who is having
-    a bad week (C5). The teacher reaches an individual child through their
-    profile, where that child's own strip already lives.
+    since #452. Counts by valence lead; the current window also names the
+    children behind each family (#505) so the teacher can open the right
+    conversation — the same per-child feeling the live view already shows.
+    Never a ranking and never an alarm (C5): the compare window stays
+    aggregate, and each child's own history lives on their profile strip.
     """
     if not await _guard_group(session, group_id):
         return _denied()
@@ -170,6 +170,28 @@ async def group_gaps(
             gaps, normalize_language(language)
         ),
     })
+
+
+@router.get("/groups/{group_id}/gaps/{objective_id}/diagnosis")
+async def gap_diagnosis(
+    group_id: str,
+    objective_id: str,
+    language: str = Query("he"),
+    session=Depends(require_teacher_session),
+):
+    """The real answer behind a gap row's "למה?" (#507).
+
+    The row's counters already say how many are stuck; this says WHERE inside
+    the objective, on WHICH questions, and HOW it goes wrong — folded from
+    stored evidence only (activity rows, the coach's own error-type reads),
+    never generated. Read on click, not with the page: it fans out over the
+    roster's events and decisions, and a teacher opens one gap at a time.
+    """
+    if not await _guard_group(session, group_id):
+        return _denied()
+    from app.services import learning_analytics
+    return _ok(await learning_analytics.gap_diagnosis(
+        group_id, objective_id, language=normalize_language(language)))
 
 
 @router.get("/groups/{group_id}/goals")
@@ -254,6 +276,31 @@ async def group_learnings(
     view["recommendations"] = group_analytics.group_recommendations(gaps, lang)
     await _report(session, "learning-group")
     return _ok(view)
+
+
+@router.post("/groups/{group_id}/learnings/find")
+async def find_group_learnings(
+    group_id: str, data: dict, session=Depends(require_teacher_session),
+):
+    """The pin dialog's smart search: a teacher's free-text description in,
+    up to three ranked catalog matches out (or one adjacent-topic hint when
+    nothing fits). Grounded in the group's own catalog — the service drops
+    any id the model did not read off that list."""
+    if not await _guard_group(session, group_id):
+        return _denied()
+    query = str(data.get("query") or "").strip()
+    if not query or len(query) > 300:
+        raise HTTPException(status_code=422, detail="bad_query")
+    subject = str(data.get("subject") or "").strip() or None
+    from app.services import learning_finder
+    result = await learning_finder.find_learnings(
+        group_id,
+        query=query,
+        subject=subject,
+        language=normalize_language(str(data.get("language") or "he")),
+        teacher_id=str(session.get("sub") or ""),
+    )
+    return _ok(result)
 
 
 @router.get("/groups/{group_id}/learnings/{component_id:path}")
@@ -350,6 +397,22 @@ async def student_trends(
     if safe_id is None:
         return _denied()
     return _ok(await learner_trends.learner_trends(safe_id, days=days))
+
+
+@router.get("/students/{learner_id}/scores")
+async def student_scores(
+    learner_id: str,
+    session=Depends(require_teacher_session),
+):
+    """Independence & Concentration (PBI 451) — weighted, evidence-gated,
+    teacher-only. Every sub-score ships its raw evidence; missing signals are
+    renormalized and reported in `coverage`, never silently scored around."""
+    from app.services import learner_scores
+
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    return _ok(await learner_scores.student_scores(safe_id))
 
 
 @router.get("/students/{learner_id}/badges")
@@ -1087,16 +1150,139 @@ async def remove_mentoring(
     return _ok({"deleted": True})
 
 
+# ── pinning (#249 shipped the component slice; #244 completed the instrument) ─
+
+class _BadPin(Exception):
+    """A pin request that must not become a pin; `.args[0]` is the 422 error."""
+
+
+async def _build_pin(
+    data: dict, learner_id: str, teacher_id: str
+) -> dict[str, Any]:
+    """Resolve a pin request into the record the brain stores.
+
+    Exactly one target: `objective_id` (a learning GOAL — the planner keeps
+    allocating the fitting component inside it), `launch_id` (a task the
+    learner was actually assigned), or `component_id` (kept for older callers
+    and live #249 pins). Everything else on the record is resolved
+    server-side, so the stored pin can never disagree with what the learner's
+    route will actually open. An id we cannot resolve raises `_BadPin`, a
+    422, never a pin that silently steers nowhere.
+    """
+    from datetime import datetime, timezone
+
+    from app.services import kata_catalog
+
+    # No end date, by design (Gal, 2026-08-30): a pin holds until the child
+    # finishes what it points at, or until the teacher unpins it.
+    base = {
+        "pinned_by": teacher_id,
+        "pinned_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    launch_id = str(data.get("launch_id") or "")
+    if launch_id:
+        from app.services.tasks import store as task_store
+
+        # The activation IS the authorization boundary — the same rule the
+        # learner's own `/api/tasks/{launch_id}` applies. A task the child was
+        # never given cannot be made their next step.
+        activation = await task_store.get_activation(launch_id, learner_id)
+        if activation is None:
+            raise _BadPin("not_assigned")
+        task_id = task_store.task_of_launch(launch_id)
+        task = await task_store.get_task(task_id) or {}
+        return {
+            "kind": "task",
+            "task_id": task_id,
+            "launch_id": launch_id,
+            # Frozen at pin time: the one honest headline for content the
+            # catalog has never seen, and the notification's title too.
+            "title": (task.get("spec") or {}).get("title") or "",
+            **base,
+        }
+
+    # A `component_id` wins over a stray `objective_id` riding the same body:
+    # #249 clients sent the component with its coordinates alongside, and
+    # those coordinates must stay ignored, never promoted to the target.
+    component_id = str(data.get("component_id") or "")
+    if component_id:
+        component = kata_catalog.get_component(component_id)
+        if component is None:
+            raise _BadPin("unknown_component")
+        return {
+            "kind": "component",
+            "component_id": component_id,
+            "unit_id": component.get("unit_id"),
+            "objective_id": component.get("objective_id"),
+            "pinned_by": teacher_id,
+            **base,
+        }
+
+    objective_id = str(data.get("objective_id") or "")
+    objective = kata_catalog.get_objective(objective_id) if objective_id else None
+    if objective is None:
+        raise _BadPin("unknown_objective")
+    return {
+        "kind": "objective",
+        "objective_id": objective_id,
+        # The subject rides the record so the class focus map can label
+        # the row without resolving the objective per learner.
+        "subject": objective.get("subject"),
+        **base,
+    }
+
+
+async def _write_pin(safe_id: str, pin: dict[str, Any], actor_id: str) -> None:
+    """Store one learner's pin and ring their bell once.
+
+    Shared by the single and the bulk routes so the two can never drift on
+    what a pin write means. The notification id is deterministic per (learner,
+    target): a retry or double-click re-writes the same object and rings no
+    second bell; a different target is a new fact and rings once.
+    """
+    from app.brain.repository import apply_brain_updates
+    from app.services import kata_catalog, notifications
+
+    await apply_brain_updates(safe_id, {"pinned_next": pin})
+
+    if pin.get("kind") == "task":
+        target = str(pin["launch_id"])
+        title = pin.get("title") or ""
+        action = {"label_key": "notif.action.openTask", "route": f"/tasks/{target}"}
+    elif pin.get("kind") == "objective":
+        # A goal, not a single lesson: WHICH component serves it is re-judged
+        # per read, so the bell points at the dashboard hero — the surface
+        # that always shows the goal's current allocation.
+        target = str(pin["objective_id"])
+        title = kata_catalog.localized_objective_title(target, "he") or ""
+        action = {"label_key": "notif.action.openLesson", "route": "/student-dashboard"}
+    else:
+        target = str(pin["component_id"])
+        title = (kata_catalog.get_component(target) or {}).get("title") or ""
+        action = {
+            "label_key": "notif.action.openLesson",
+            "route": (
+                f"/learning/lesson?component={target}"
+                + (f"&unit={pin['unit_id']}" if pin.get("unit_id") else "")
+            ),
+        }
+    await notifications.notify(
+        safe_id,
+        notifications.KIND_PINNED_NEXT,
+        notification_id=f"pinned_next:{safe_id}:{target}",
+        title_key="notif.pinnedNext",
+        params={"title": title},
+        actions=[action],
+        actor_id=actor_id,
+    )
+
+
 @router.post("/students/{learner_id}/pin-next")
 async def pin_next(
     learner_id: str, data: dict, session=Depends(require_teacher_session)
 ):
-    """Pin one catalog component as this learner's next step (#249, slice of #244).
-
-    The client sends only the component id; unit, objective and subject are
-    resolved from the catalog here, so the stored pin can never disagree with
-    what the learner's route will actually open. An id the catalog does not
-    know is a 422, not a pin that silently steers nowhere.
+    """Pin a catalog component or an assigned task as this learner's next step.
 
     Written via `apply_brain_updates` — the authenticated portal write lane,
     the same one directives use — never an agent write scope.
@@ -1105,47 +1291,96 @@ async def pin_next(
     if safe_id is None:
         return _denied()
 
-    from datetime import datetime, timezone
-
-    from app.brain.repository import apply_brain_updates
-    from app.services import kata_catalog, notifications
+    from app.services import kata_catalog
 
     await kata_catalog.ensure_loaded()
-    component_id = str(data.get("component_id") or "")
-    component = kata_catalog.get_component(component_id)
-    if component is None:
+    try:
+        pin = await _build_pin(data, safe_id, session["sub"])
+    except _BadPin as error:
         return JSONResponse(
-            content={"error": "unknown_component"}, status_code=422, headers=_NO_STORE
+            content={"error": error.args[0]}, status_code=422, headers=_NO_STORE
+        )
+    await _write_pin(safe_id, pin, session["sub"])
+    return _ok({"pinned": pin})
+
+
+@router.post("/groups/{group_id}/pin-next")
+async def bulk_pin_next(
+    group_id: str, data: dict, session=Depends(require_teacher_session)
+):
+    """One pin, many children: a class, a sub-group, or a named few (#244).
+
+    Membership resolves through `tasks.assign.resolve_targets` — the one path
+    that re-reads a sub-group against the live roster and refuses a foreign
+    target BEFORE any write, so a stale member list can neither pin a child
+    who left nor skip one who joined. The pin target is validated once; what
+    is per-child is only the task activation check, and a child the task was
+    never given is reported in `skipped`, never silently pinned to a 404.
+    """
+    if not await _guard_group(session, group_id):
+        return _denied()
+
+    from app.services import kata_catalog
+    from app.services.tasks.assign import AssignError, resolve_targets
+
+    await kata_catalog.ensure_loaded()
+    targets = data.get("targets") or []
+    try:
+        learner_ids = await resolve_targets(session["sub"], targets)
+    except AssignError as error:
+        code = str(error) or "bad_target"
+        if code == "not_authorized":
+            return _denied()
+        return JSONResponse(
+            content={"error": code}, status_code=422, headers=_NO_STORE
+        )
+    if not learner_ids:
+        return JSONResponse(
+            content={"error": "no_learners"}, status_code=422, headers=_NO_STORE
+        )
+    # The same cap the goal fan-out wears: nothing legitimate pins more than a
+    # class at once, and a runaway target list must fail loudly, not slowly.
+    if len(learner_ids) > 60:
+        return JSONResponse(
+            content={"error": "too_many_learners"}, status_code=422, headers=_NO_STORE
         )
 
-    pinned = {
-        "component_id": component_id,
-        "unit_id": component.get("unit_id"),
-        "objective_id": component.get("objective_id"),
-        "pinned_by": session["sub"],
-        "pinned_at": datetime.now(timezone.utc).isoformat(),
-    }
-    await apply_brain_updates(safe_id, {"pinned_next": pinned})
+    pin_body = data.get("pin") or {}
+    payload = dict(pin_body)
+    launch_id = str(pin_body.get("launch_id") or "")
 
-    # Deterministic id: re-pinning the same component (a retry, a double-click)
-    # must not ring the bell twice. Pinning a DIFFERENT component is a new fact
-    # and rings once for it.
-    await notifications.notify(
-        safe_id,
-        notifications.KIND_PINNED_NEXT,
-        notification_id=f"pinned_next:{safe_id}:{component_id}",
-        title_key="notif.pinnedNext",
-        params={"title": component.get("title") or ""},
-        actions=[{
-            "label_key": "notif.action.openLesson",
-            "route": (
-                f"/learning/lesson?component={component_id}"
-                + (f"&unit={pinned['unit_id']}" if pinned["unit_id"] else "")
-            ),
-        }],
-        actor_id=session["sub"],
-    )
-    return _ok({"pinned": pinned})
+    # Validate the shared target once, against the first learner — for a
+    # component pin the answer is learner-independent, and `_BadPin` here
+    # means nobody gets pinned rather than sixty identical failures.
+    try:
+        first_pin = await _build_pin(payload, learner_ids[0], session["sub"])
+    except _BadPin as error:
+        if not (launch_id and error.args[0] == "not_assigned"):
+            return JSONResponse(
+                content={"error": error.args[0]}, status_code=422, headers=_NO_STORE
+            )
+        first_pin = None
+
+    pinned: list[str] = []
+    skipped: list[dict[str, str]] = []
+    for index, one in enumerate(learner_ids):
+        if launch_id:
+            # Per-child boundary: only children the task was actually
+            # activated for can have it pinned.
+            if index == 0 and first_pin is not None:
+                pin = first_pin
+            else:
+                try:
+                    pin = await _build_pin(payload, one, session["sub"])
+                except _BadPin:
+                    skipped.append({"learner_id": one, "reason": "not_assigned"})
+                    continue
+        else:
+            pin = dict(first_pin or {})
+        await _write_pin(one, pin, session["sub"])
+        pinned.append(one)
+
+    return _ok({"pinned": pinned, "skipped": skipped})
 
 
 @router.get("/groups/{group_id}/focus")
@@ -1175,12 +1410,29 @@ async def group_focus(
     from app.services.planner import next_focus
 
     await kata_catalog.ensure_loaded()
+    from app.services import pinning
+
     lang = normalize_language(language)
     learners = []
     for learner_id in await org.learners_in_group(group_id):
         brain = await get_brain(learner_id)
-        pinned = brain.get("pinned_next") or {}
-        if pinned.get("component_id"):
+        # `active_pin` is the shared judgement (#244): an expired pin stops
+        # counting here in the same moment it stops steering the child.
+        pinned = pinning.active_pin(brain)
+        title_override = None
+        if pinned is not None and pinning.pin_kind(pinned) == pinning.KIND_TASK:
+            # A task has no catalog coordinates; its frozen title is the row.
+            subject = None
+            objective_id = None
+            title_override = pinned.get("title")
+            is_pinned = True
+        elif pinned is not None and pinning.pin_kind(pinned) == pinning.KIND_OBJECTIVE:
+            # The goal itself IS the row — which component serves it today is
+            # a per-learner event read this fan-out deliberately skips.
+            subject = pinned.get("subject")
+            objective_id = pinned.get("objective_id")
+            is_pinned = True
+        elif pinned is not None:
             component = kata_catalog.get_component(str(pinned["component_id"])) or {}
             subject = component.get("subject")
             objective_id = pinned.get("objective_id") or component.get("objective_id")
@@ -1199,8 +1451,9 @@ async def group_focus(
             "subject": subject,
             "subject_name": _t(SUBJECT_NAMES, subject, lang) or (subject or ""),
             "objective_id": objective_id,
-            "objective_title": kata_catalog.localized_objective_title(objective_id, lang)
-            if objective_id else None,
+            "objective_title": title_override
+            or (kata_catalog.localized_objective_title(objective_id, lang)
+                if objective_id else None),
             "pinned": is_pinned,
             "feeling": (
                 {"valence": feeling.get("valence"), "feeling": feeling.get("feeling")}
@@ -1242,14 +1495,20 @@ async def get_pin_next(
         return _denied()
     from app.brain.mastery import entry_for
     from app.brain.repository import get_brain
-    from app.services import content_catalog, kata_catalog
+    from app.services import content_catalog, kata_catalog, pinning
     from app.services.dashboard import SUBJECT_NAMES, _t
     from app.services.events import get_learner_events
     from app.services.planner import next_focus
+    from app.services.tasks import learner as learner_tasks
 
     await kata_catalog.ensure_loaded()
     lang = normalize_language(language)
     brain = await get_brain(safe_id)
+    # One learner, so the event read is affordable here — and it serves twice:
+    # the planner's exact next component, and the spent-pin gate below. This is
+    # the single-learner read; the group fan-out deliberately skips both.
+    events = await get_learner_events(safe_id)
+    completed_ids = content_catalog.completed_component_ids(events)
     focus = next_focus(brain)
     payload: dict[str, Any] = {
         "subject": focus.get("subject"),
@@ -1262,28 +1521,94 @@ async def get_pin_next(
     if focus.get("objective_id"):
         objective_id = str(focus["objective_id"])
         payload["objective_title"] = kata_catalog.localized_objective_title(objective_id, lang)
-        events = await get_learner_events(safe_id)
         plan = content_catalog.objective_plan(
             objective_id,
             mastery_entry=entry_for(brain.get("mastery"), objective_id),
-            completed_ids=content_catalog.completed_component_ids(events),
+            completed_ids=completed_ids,
             signals=content_catalog.learner_signals(brain),
             locale=lang,
         ) or {}
         payload["next_component_id"] = plan.get("next_component_id")
-    return _ok({"pinned": brain.get("pinned_next") or None, "focus": payload})
+
+    # The raw record goes out even when it no longer steers — the teacher who
+    # set it must be able to SEE that it lapsed or was already finished;
+    # `pin_state` says which reading is true. Judged with `completed_ids`, the
+    # SAME gate the hero applies: a pin on a component the child had already
+    # finished must not read "active" to the teacher while steering nobody.
+    # `last` is how the previous pin ended (#244): "done ✓" and "never pinned"
+    # stopped being the same blank.
+    raw_pin = brain.get("pinned_next") or None
+    pin_state = None
+    if raw_pin:
+        live = pinning.active_pin(brain, completed_ids=completed_ids)
+        if live is not None and pinning.pin_kind(live) == pinning.KIND_OBJECTIVE \
+                and pinning.objective_next(live, brain, completed_ids, lang) is None:
+            # The goal ran dry for this learner — the same resolution the hero
+            # applies, so "active" here can never mean "steering nobody".
+            live = None
+        pin_state = "active" if live is not None else "spent"
+
+    # What the panel's task tab can offer: openings that are still open and
+    # not yet handed in. The learner's own list route builds these rows, so
+    # the tab can never offer a paper the child could not actually open.
+    tasks = [
+        {
+            "launch_id": row["launch_id"],
+            "task_id": row["task_id"],
+            "title": row["title"],
+            "due_at": row["due_at"],
+            "status": row["status"],
+        }
+        for row in await learner_tasks.list_for_learner(safe_id)
+        if not row["closed"] and row["status"] not in ("submitted", "graded")
+    ]
+
+    def _title_of(pin: Optional[dict]) -> Optional[str]:
+        """A display name for a stored pin: the task's frozen title, or the
+        pinned learning's — resolved here because the profile has no catalog
+        of its own to look one up in."""
+        if not pin:
+            return None
+        if pin.get("kind") == "task":
+            return pin.get("title") or None
+        objective_id = pin.get("objective_id")
+        if objective_id:
+            title = kata_catalog.localized_objective_title(str(objective_id), lang)
+            if title:
+                return title
+        component = kata_catalog.get_component(str(pin.get("component_id") or ""))
+        return (component or {}).get("title") or pin.get("component_id")
+
+    return _ok({
+        "pinned": raw_pin,
+        "pinned_title": _title_of(raw_pin),
+        "pin_state": pin_state,
+        "last": brain.get("pinned_last") or None,
+        "last_title": _title_of(brain.get("pinned_last")),
+        "tasks": tasks,
+        "focus": payload,
+    })
 
 
 @router.delete("/students/{learner_id}/pin-next")
 async def unpin_next(learner_id: str, session=Depends(require_teacher_session)):
     """Clear the pin. Silent for the learner — un-choosing is not an event a
-    child needs a bell for, and the hero simply returns to the planner's pick."""
+    child needs a bell for, and the hero simply returns to the planner's pick.
+
+    The ending is recorded (#244): `unpinned`, the teacher withdrew it — the
+    only ending besides completion now that a pin has no clock.
+    """
     safe_id = await _guard_learner(session, learner_id)
     if safe_id is None:
         return _denied()
-    from app.brain.repository import apply_brain_updates
+    from app.brain.repository import apply_brain_updates, get_brain
+    from app.services import pinning
 
-    await apply_brain_updates(safe_id, {"pinned_next": None})
+    pin = (await get_brain(safe_id)).get("pinned_next") or {}
+    updates: dict[str, Any] = {"pinned_next": None}
+    if pin:
+        updates["pinned_last"] = pinning.spent_record(pin, pinning.OUTCOME_UNPINNED)
+    await apply_brain_updates(safe_id, updates)
     return _ok({"pinned": None})
 
 

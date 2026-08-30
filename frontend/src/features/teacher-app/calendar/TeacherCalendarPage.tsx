@@ -26,9 +26,11 @@ import { useI18n } from '../../../i18n/I18nProvider'
 import { useTeacherRoster } from '../../../providers/TeacherRosterProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import {
-  createCalendarEvent, deleteCalendarEvent, getGroupCalendar,
+  bulkPinNext, createCalendarEvent, deleteCalendarEvent, getGroupCalendar,
+  pinNext,
   type CalendarEventKind, type CalendarItem, type CalendarSource, type Subgroup,
 } from '../../../services/teacher'
+import { LessonDetails, TimetableManager } from './TimetableManager'
 import './teacher-calendar.css'
 
 type ViewMode = 'month' | 'week' | 'day'
@@ -36,14 +38,14 @@ type ViewMode = 'month' | 'week' | 'day'
 /** Sunday-first: the school week this product is used in starts on Sunday. */
 const WEEK_START = 0
 
-const SOURCES: CalendarSource[] = ['event', 'task', 'goal', 'meeting']
+const SOURCES: CalendarSource[] = ['event', 'lesson', 'task', 'goal', 'meeting']
 
 /** The icon each row wears. Deliberately the owning section's own icon — a
  *  task looks like the Tasks tab, a goal like the Goals tab — so the calendar
  *  reads as a window onto them rather than a separate world. */
 const ICONS: Record<string, string> = {
   event: 'calendar', task: 'backpack', goal: 'target', meeting: 'teacher',
-  lesson: 'book', reminder: 'bell', test: 'document',
+  lesson: 'book', reminder: 'bell', test: 'document', holiday: 'spark',
 }
 
 const iconFor = (item: Pick<CalendarItem, 'source' | 'kind'>) =>
@@ -137,6 +139,7 @@ export function TeacherCalendarPage() {
   const [hidden, setHidden] = useState<Set<CalendarSource>>(new Set())
   const [composeDay, setComposeDay] = useState<string | null>(null)
   const [detail, setDetail] = useState<CalendarItem | null>(null)
+  const [timetableOpen, setTimetableOpen] = useState(false)
   const [nonce, setNonce] = useState(0)
 
   const range = useMemo(() => rangeFor(view, cursor), [view, cursor])
@@ -229,11 +232,19 @@ export function TeacherCalendarPage() {
         title={t('tch.calendar.title')}
         subtitle={t('tch.calendar.subtitle')}
         action={
-          <button type="button" className="sp-btn sp-btn--sm"
-                  onClick={() => setComposeDay(cursor)}>
-            <Icon name="plus" size={15} aria-hidden />
-            {t('tch.calendar.create')}
-          </button>
+          <span className="tch-cal__actions">
+            {/* The weekly spine's manager (#242): rules, not dated events. */}
+            <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
+                    onClick={() => setTimetableOpen(true)}>
+              <Icon name="book" size={15} aria-hidden />
+              {t('tch.timetable.manage')}
+            </button>
+            <button type="button" className="sp-btn sp-btn--sm"
+                    onClick={() => setComposeDay(cursor)}>
+              <Icon name="plus" size={15} aria-hidden />
+              {t('tch.calendar.create')}
+            </button>
+          </span>
         }
       />
 
@@ -243,11 +254,11 @@ export function TeacherCalendarPage() {
                   aria-label={t('tch.calendar.prev')} onClick={() => step(-1)}>
             <Icon name="chevronLeft" size={16} aria-hidden />
           </button>
+          <strong className="tch-cal__heading" dir="auto">{heading}</strong>
           <button type="button" className="tch-cal__step tch-cal__step--next"
                   aria-label={t('tch.calendar.next')} onClick={() => step(1)}>
             <Icon name="chevronLeft" size={16} aria-hidden />
           </button>
-          <strong className="tch-cal__heading" dir="auto">{heading}</strong>
           <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
                   onClick={() => setCursor(dayString(new Date()))}>
             {t('tch.calendar.today')}
@@ -317,10 +328,21 @@ export function TeacherCalendarPage() {
               onOpen={setDetail} />
       )}
 
-      {detail ? (
+      {detail && detail.source === 'lesson' ? (
+        <LessonDetails item={detail} zone={zone}
+                       onClose={() => setDetail(null)}
+                       onChanged={reload}
+                       onManage={() => { setDetail(null); setTimetableOpen(true) }} />
+      ) : detail ? (
         <EventDetails item={detail} zone={zone} nameOf={nameOf}
                       onClose={() => setDetail(null)}
                       onDeleted={() => { setDetail(null); reload() }} />
+      ) : null}
+
+      {timetableOpen && groupId ? (
+        <TimetableManager groupId={groupId} subgroups={subgroupList}
+                          onClose={() => setTimetableOpen(false)}
+                          onChanged={reload} />
       ) : null}
 
       {composeDay ? (
@@ -413,7 +435,7 @@ function EventPip({ item, zone, nameOf, onOpen }: {
   const label = item.title || t(`tch.calendar.source.${item.source}`)
   return (
     <button type="button"
-            className={`tch-cal__pip tch-cal__pip--${item.source}`}
+            className={`tch-cal__pip tch-cal__pip--${item.source}${item.meta?.status === 'cancelled' ? ' is-cancelled' : ''}`}
             title={who ? `${label} · ${who}` : label}
             onClick={() => onOpen(item)}>
       <Icon name={iconFor(item)} size={12} aria-hidden />
@@ -454,7 +476,7 @@ function DayList({ items, zone, onOpen, onAdd }: {
         return (
           <li key={`${item.source}:${item.id}`}>
             <button type="button"
-                    className={`tch-cal__row tch-cal__row--${item.source}`}
+                    className={`tch-cal__row tch-cal__row--${item.source}${item.meta?.status === 'cancelled' ? ' is-cancelled' : ''}`}
                     onClick={() => onOpen(item)}>
               <span className="tch-cal__when">
                 {item.all_day ? t('tch.calendar.allDay') : timeIn(zone, item.at)}
@@ -492,8 +514,40 @@ function EventDetails({ item, zone, nameOf, onClose, onDeleted }: {
   onDeleted: () => void
 }) {
   const { t, language } = useI18n()
+  const { groupId } = useTeacherScope()
   const [busy, setBusy] = useState(false)
+  const [pinNote, setPinNote] = useState<'done' | 'failed' | null>(null)
   const description = String((item.meta?.description as string) ?? '')
+
+  /* Only a TASK row is pinnable from here: its id IS the launch the child's
+     own route opens, so the pin can point at exactly this paper. A goal or a
+     meeting has nothing behind it a hero could show. */
+  const pinnable = item.source === 'task'
+    && Boolean(item.learner_id || item.learner_ids.length)
+
+  const pinTask = async () => {
+    if (busy) return
+    setBusy(true)
+    setPinNote(null)
+    try {
+      if (item.learner_id) {
+        await pinNext(item.learner_id, { launch_id: item.id })
+      } else if (groupId) {
+        /* Many children: through the bulk route, whose per-learner activation
+           check absorbs roster drift — a child who left since the launch is
+           reported, never silently pinned to a 404. */
+        await bulkPinNext(groupId, {
+          targets: item.learner_ids.map((id) => ({ kind: 'learner' as const, id })),
+          pin: { launch_id: item.id },
+        })
+      }
+      setPinNote('done')
+    } catch {
+      setPinNote('failed')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const when = useMemo(() => {
     const day = new Intl.DateTimeFormat(localeOf(language), {
@@ -563,12 +617,21 @@ function EventDetails({ item, zone, nameOf, onClose, onDeleted }: {
         </button>
         {/* Only our own events are deletable here. A goal or a launch is edited
             where it lives — deleting one from a calendar view would be the
-            duplication this feature exists to avoid. */}
-        {item.source === 'event' ? (
+            duplication this feature exists to avoid. A day off (#242) is not
+            an event either: the school's list in the timetable manager owns
+            it, and the national layer is not any teacher's to delete. */}
+        {item.source === 'event' && item.kind !== 'holiday' ? (
           <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
                   disabled={busy} onClick={() => void remove()}>
             <Icon name="trash" size={15} aria-hidden />
             {t('tch.calendar.delete')}
+          </button>
+        ) : null}
+        {pinnable ? (
+          <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
+                  disabled={busy} onClick={() => void pinTask()}>
+            <Icon name="target" size={15} aria-hidden />
+            {t('tch.calendar.pinTask')}
           </button>
         ) : null}
         {item.href ? (
@@ -578,6 +641,11 @@ function EventDetails({ item, zone, nameOf, onClose, onDeleted }: {
           </button>
         ) : null}
       </div>
+      {pinNote && (
+        <p role="status" className={`tch-cal__pinNote${pinNote === 'failed' ? ' is-error' : ''}`}>
+          {t(pinNote === 'done' ? 'tch.calendar.pinTaskDone' : 'tch.calendar.pinTaskFailed')}
+        </p>
+      )}
     </Modal>
   )
 }

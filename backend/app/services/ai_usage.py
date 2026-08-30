@@ -85,12 +85,32 @@ def token_usage_from_payload(payload: Any) -> Optional[dict[str, int]]:
         return None
     details = payload.get("prompt_tokens_details") or payload.get("input_tokens_details") or {}
     cached_tokens = details.get("cached_tokens") if isinstance(details, dict) else None
+    completion_details = (
+        payload.get("completion_tokens_details")
+        or payload.get("output_tokens_details")
+        or {}
+    )
+    reasoning_tokens = (
+        completion_details.get("reasoning_tokens")
+        if isinstance(completion_details, dict) else None
+    )
     return {
         "input_tokens": input_tokens if isinstance(input_tokens, int) else None,
         "output_tokens": output_tokens if isinstance(output_tokens, int) else None,
         "total_tokens": total_tokens if isinstance(total_tokens, int) else None,
         "cached_input_tokens": cached_tokens if isinstance(cached_tokens, int) else None,
+        "reasoning_tokens": reasoning_tokens if isinstance(reasoning_tokens, int) else None,
     }
+
+
+def sanitized_lifecycle_value(value: Any) -> Optional[str]:
+    """Keep only short provider lifecycle enums, never arbitrary response text."""
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    if not normalized:
+        return None
+    return normalized[:40]
 
 
 def provider_request_id(headers: Any) -> Optional[str]:
@@ -231,6 +251,8 @@ async def record_usage(
     error: Optional[BaseException] = None,
     response_bytes: Optional[int] = None,
     model_tier: Optional[str] = None,
+    finish_reason: Optional[str] = None,
+    stream_termination: Optional[str] = None,
 ) -> dict[str, Any]:
     """Persist exactly one sanitized event for one external provider attempt."""
     finished_at = datetime.now(timezone.utc)
@@ -261,6 +283,8 @@ async def record_usage(
         "latency_ms": timer.latency_ms(),
         "provider_request_id": provider_request,
         "error_type": sanitized_error_type(error),
+        "finish_reason": sanitized_lifecycle_value(finish_reason),
+        "stream_termination": sanitized_lifecycle_value(stream_termination),
         "cost_usd": cost_usd,
         "pricing_snapshot": pricing_snapshot,
     }
@@ -270,6 +294,7 @@ async def record_usage(
             "output_tokens": None,
             "total_tokens": None,
             "cached_input_tokens": None,
+            "reasoning_tokens": None,
         })
     else:
         event.update({

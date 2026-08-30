@@ -1,0 +1,270 @@
+/* ── "My subjects" (F4) ────────────────────────────────────────────────────
+   Where the learner stands, by subject and by the learning objectives inside
+   it. Two columns split by a hairline: the subjects, and the objectives of
+   whichever subject is open.
+
+   Nothing here is a launcher — there is no CTA in this sheet on purpose.
+
+   The whole panel lives inside a FIXED-height row so the section can never
+   grow when a subject is opened; each column scrolls on its own instead. */
+
+.sd-subjects {
+  /* Sized against the carousel this replaced (~390px of body at a 936px card),
+     so the card keeps the height the dashboard was laid out around. */
+  --sd-subjects-h: clamp(280px, 46vh, 384px);
+  --sd-subjects-rule: rgba(111, 91, 255, .13);
+}
+.sd-subjects .sd-section__heading { align-items: center; margin-block-end: 12px; }
+.sd-subjects .sd-section__heading .sd-text-action { align-self: center; }
+
+/* ── Subject filter row (the only filter — there is no second tier) ──────── */
+.sd-subjects__filters { display: flex; flex-wrap: wrap; gap: 8px; margin-block-end: 12px; }
+.sd-subjects__filter {
+  padding: 6px 13px;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: transparent;
+  color: var(--sp-ink-400);
+  font: 700 var(--sp-fs-xs)/1 var(--sp-font);
+  cursor: pointer;
+  transition: background .15s var(--sp-ease), color .15s var(--sp-ease), border-color .15s var(--sp-ease);
+}
+.sd-subjects__filter:hover { color: var(--sp-primary-600); border-color: rgba(111, 91, 255, .3); }
+.sd-subjects__filter.is-active { background: var(--sp-primary-600); border-color: var(--sp-primary-600); color: #fff; }
+.sd-subjects__filter:focus-visible { outline: 3px solid rgba(111, 91, 255, .26); outline-offset: 2px; }
+
+/* ── The split ──────────────────────────────────────────────────────────── */
+.sd-subjects__cols {
+  display: grid;
+  grid-template-columns: minmax(0, .82fr) minmax(0, 1fr);
+  gap: clamp(16px, 2.4vw, 30px);
+  block-size: var(--sd-subjects-h);
+}
+/* No `overscroll-behavior: contain` here: these columns usually have nothing to
+   scroll, and containing the overscroll then swallows the wheel instead of
+   handing it back to the page — which stalls the section-by-section scroll. */
+.sd-subjects__list,
+.sd-subjects__objectives {
+  min-block-size: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.sd-subjects__objectives {
+  padding-inline-start: clamp(16px, 2.4vw, 30px);
+  border-inline-start: 1px solid var(--sd-subjects-rule);
+}
+
+/* ── Subject row ────────────────────────────────────────────────────────── */
+.sd-subjects__list { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 2px; list-style: none; }
+.sd-subject-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  inline-size: 100%;
+  padding: 13px 15px;
+  border: 1px solid var(--sp-border);
+  border-radius: 20px;
+  background: #fff;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color .18s var(--sp-ease), box-shadow .18s var(--sp-ease), transform .18s var(--sp-ease);
+}
+.sd-subject-row:hover { border-color: rgba(111, 91, 255, .34); box-shadow: var(--sp-shadow-sm); }
+.sd-subject-row:focus-visible { outline: 3px solid rgba(111, 91, 255, .26); outline-offset: 2px; }
+.sd-subject-row.is-open { border-color: var(--sp-primary-600); box-shadow: 0 10px 26px rgba(111, 91, 255, .14); }
+
+.sd-subject-row__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: 14px;
+  color: var(--sp-primary-700);
+}
+.sd-subject-row__body { display: grid; gap: 8px; flex: 1; min-inline-size: 0; }
+.sd-subject-row__head { display: flex; align-items: center; gap: 8px; }
+.sd-subject-row__name {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  color: var(--sp-ink-900);
+  font: 800 var(--sp-fs-sm)/1.25 var(--sp-font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sd-subject-row__chip {
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border-radius: var(--sp-radius-pill);
+  background: rgba(111, 91, 255, .1);
+  color: var(--sp-primary-700);
+  font: 800 10px/1.4 var(--sp-font);
+}
+.sd-subject-row__chip.is-advanced { background: rgba(34, 181, 115, .13); color: #147a4c; }
+.sd-subject-row__chip.is-starting { background: rgba(15, 23, 42, .06); color: var(--sp-ink-400); }
+
+.sd-subject-row__bar {
+  display: block;
+  block-size: 7px;
+  overflow: hidden;
+  border-radius: var(--sp-radius-pill);
+  background: rgba(111, 91, 255, .12);
+}
+.sd-subject-row__bar > span {
+  display: block;
+  block-size: 100%;
+  min-inline-size: 3px;
+  border-radius: inherit;
+  transition: inline-size .5s var(--sp-ease);
+}
+/* Each chevron points at the column it leads to, which swaps with direction:
+   objectives sit at the inline-end, subjects at the inline-start. */
+.sd-subject-row__go { flex: 0 0 auto; color: var(--sp-ink-400); }
+[dir="ltr"] .sd-subject-row__go { transform: scaleX(-1); }
+[dir="rtl"] .sd-subjects__back .sp-icon { transform: scaleX(-1); }
+
+/* ── Objectives column ──────────────────────────────────────────────────── */
+.sd-subjects__objectives-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-block-end: 12px;
+}
+.sd-subjects__objectives-head h3 {
+  margin: 0;
+  overflow: hidden;
+  color: var(--sp-ink-900);
+  font: 800 var(--sp-fs-sm)/1.3 var(--sp-font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sd-subjects__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  padding: 5px 11px 5px 8px;
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-pill);
+  background: transparent;
+  color: var(--sp-primary-700);
+  font: 700 var(--sp-fs-xs)/1 var(--sp-font);
+  cursor: pointer;
+}
+.sd-subjects__back:hover { border-color: rgba(111, 91, 255, .34); }
+.sd-subjects__back:focus-visible { outline: 3px solid rgba(111, 91, 255, .26); outline-offset: 2px; }
+
+.sd-subjects__prompt {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  block-size: 100%;
+  padding: 20px;
+  border: 1px dashed var(--sp-border-strong);
+  border-radius: 22px;
+  color: var(--sp-ink-400);
+  text-align: center;
+}
+.sd-subjects__prompt p { margin: 0; max-inline-size: 24ch; font-size: var(--sp-fs-sm); }
+.sd-subjects__empty { margin: 0; color: var(--sp-ink-400); font-size: var(--sp-fs-sm); }
+
+/* ── Objective card — a reading, never a way in ─────────────────────────── */
+.sd-subjects__objective-list { display: flex; flex-direction: column; gap: 9px; margin: 0; padding: 0 2px 2px; list-style: none; }
+.sd-objective {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 13px;
+  border: 1px solid var(--sp-border);
+  border-radius: 18px;
+  background: #fff;
+}
+.sd-objective__art {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  inline-size: 52px;
+  block-size: 46px;
+  overflow: hidden;
+  padding: 3px;
+  border-radius: 13px;
+  background: rgba(111, 91, 255, .07);
+  color: var(--sp-primary-600);
+}
+/* The diagrams are 16:9 — cropping them to the tile cuts the thing they depict. */
+.sd-objective__art img { inline-size: 100%; block-size: 100%; object-fit: contain; }
+.sd-objective__body { display: grid; gap: 6px; flex: 1; min-inline-size: 0; }
+.sd-objective__title {
+  overflow: hidden;
+  color: var(--sp-ink-900);
+  font: 700 var(--sp-fs-xs)/1.35 var(--sp-font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sd-objective__bar {
+  display: block;
+  block-size: 5px;
+  overflow: hidden;
+  border-radius: var(--sp-radius-pill);
+  background: rgba(15, 23, 42, .07);
+}
+.sd-objective__bar > span {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: var(--sp-primary-600);
+  transition: inline-size .5s var(--sp-ease);
+}
+.sd-objective.is-mastered .sd-objective__bar > span { background: #22b573; }
+.sd-objective.is-notStarted .sd-objective__bar { background: rgba(15, 23, 42, .05); }
+/* The task they are standing in, in small type — the point of the card. */
+.sd-objective__task {
+  overflow: hidden;
+  color: var(--sp-ink-400);
+  font: 600 11px/1.4 var(--sp-font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sd-objective__review {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  border-radius: var(--sp-radius-pill);
+  background: rgba(245, 166, 35, .14);
+  color: #96610a;
+  font: 700 10px/1.4 var(--sp-font);
+}
+
+/* ── Narrow: one pane at a time, so the block-size never changes ─────────── */
+@media (max-width: 860px) {
+  .sd-subjects__cols { grid-template-columns: 1fr; }
+  .sd-subjects__objectives { padding-inline-start: 0; border-inline-start: 0; }
+  .sd-subjects__cols:not(.is-drilled) .sd-subjects__objectives { display: none; }
+  .sd-subjects__cols.is-drilled .sd-subjects__list { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sd-subject-row,
+  .sd-subject-row__bar > span,
+  .sd-objective__bar > span { transition: none; }
+}
+
+/* ── Dark ───────────────────────────────────────────────────────────────── */
+[data-theme='dark'] .sd-subjects { --sd-subjects-rule: var(--sdd-card-border); }
+[data-theme='dark'] .sd-subjects__filter { border-color: rgba(159, 122, 254, .24); color: rgba(214, 216, 245, .72); }
+[data-theme='dark'] .sd-subjects__filter:hover { color: #d8d1ff; }
+[data-theme='dark'] .sd-subjects__filter.is-active { background: #6f5bff; border-color: #6f5bff; color: #fff; }
+[data-theme='dark'] .sd-subject-row,
+[data-theme='dark'] .sd-objective { border-color: var(--sdd-card-border); background: var(--sdd-card-bg, rgba(28, 27, 51, .6)); }
+[data-theme='dark'] .sd-subject-row__name,
+[data-theme='dark'] .sd-objective__title,
+[data-theme='dark'] .sd-subjects__objectives-head h3 { color: #eceafd; }
+[data-theme='dark'] .sd-subject-row__chip { background: rgba(159, 122, 254, .18); color: #d8d1ff; }
+[data-theme='dark'] .sd-subject-row__chip.is-advanced { background: rgba(34, 181, 115, .2); color: #7fe3b4; }
+[data-theme='dark'] .sd-subject-row__chip.is-starting { background: rgba(214, 216, 245, .1); color: rgba(214, 216, 245, .7); }
+[data-theme='dark'] .sd-objective__bar { background: rgba(214, 216, 245, .12); }
+[data-theme='dark'] .sd-subjects__back { border-color: rgba(159, 122, 254, .3); color: #d8d1ff; }

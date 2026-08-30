@@ -103,6 +103,10 @@ export interface DashboardSubject {
   progress: number
   level: string
   levelClass: string
+  /** The mastery scale (`basic`/`intermediate`/`advanced`), median across the
+   *  subject's worked objectives, or `starting` before any attempt. Localized
+   *  client-side via `sdash.subjects.level.<key>`. */
+  levelKey: 'starting' | 'basic' | 'intermediate' | 'advanced'
   gradient: string
   description: string
   curriculum: {
@@ -110,12 +114,27 @@ export interface DashboardSubject {
     topic: string
     status: string
     statusClass: 'curr-done' | 'curr-current' | 'curr-upcoming'
+    /** 0…100 against mastery — 100 only once mastery says achieved. Drawn as a
+     *  bar and never shown to the learner as a number (§3.4). */
+    percent: number
+    needsReview: boolean
   }[]
 }
 
 export interface DashboardHero {
   /** `pinned` = the teacher chose this exact step (#249); it outranks resume. */
   mode: 'resume' | 'next' | 'complete' | 'pinned'
+  /** Which kind of thing the pin points at (#244). A task pin has no catalog
+   *  coordinates: the start button must navigate to `/tasks/{launchId}` and
+   *  never ask the route agent, which speaks only components. */
+  /** 'objective' = a pinned learning GOAL: `componentId` is the planner's
+   *  current allocation inside it, so routing works exactly as 'component'. */
+  pinnedKind?: 'component' | 'task' | 'objective'
+  taskId?: string | null
+  launchId?: string | null
+  /** The lesson a pin displaced, so "continue where you stopped" stays one
+   *  press away while the pin holds the hero. Null in every other mode. */
+  resume?: { componentId: string; unitId: string | null; objectiveTitle: string | null } | null
   subjectKey: 'math' | 'science' | null
   subjectName: string | null
   objectiveId: string | null

@@ -360,6 +360,14 @@
 .ys-iconbtn:active { transform: translateY(1px); }
 .ys-iconbtn:disabled { opacity: .6; cursor: default; transform: none; }
 .ys-iconbtn.is-off { color: var(--sp-ink-400, #6b6880); }
+/* An active view mode has to be readable at a glance: you are standing in the
+   room right now, and this is the way back out. */
+.ys-iconbtn.is-on {
+  background: linear-gradient(140deg, var(--sp-primary-600, #6b57f5), var(--sp-primary-700, #5a45f0));
+  border-color: rgba(255, 255, 255, .3);
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(90, 69, 240, .38);
+}
 /* Leaving the studio is the one irreversible move on this screen, so it keeps
    the danger fill even though it is now icon-only. */
 .ys-iconbtn--exit {
@@ -794,6 +802,126 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .ys-propmenu { animation: none; }
+}
+
+/* ── Room-design walkthrough ───────────────────────────────────────────────
+   A card that sits over the bay rather than beside it: every step points at
+   something in the room, so the room has to stay visible behind it. */
+.ys-tut {
+  position: absolute;
+  inset-block-start: 68px;
+  inset-inline-start: 16px;
+  z-index: 12;
+  inline-size: min(330px, calc(100% - 32px));
+  max-block-size: calc(100% - 100px);
+  overflow: auto;
+  padding: 18px 18px 20px;
+  border-radius: 26px;
+  border: 1px solid var(--ys-line);
+  background: color-mix(in srgb, var(--ys-panel-bg) 92%, transparent);
+  -webkit-backdrop-filter: blur(22px);
+  backdrop-filter: blur(22px);
+  box-shadow: 0 24px 60px rgba(20, 12, 60, .3);
+  scrollbar-width: thin;
+  animation: ys-tut-in .28s ease both;
+}
+@keyframes ys-tut-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+.ys-tut__close {
+  position: absolute;
+  inset-block-start: 14px;
+  inset-inline-end: 14px;
+  inline-size: 30px;
+  block-size: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ys-accent-soft);
+  color: var(--ys-ink-soft);
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease;
+}
+.ys-tut__close:hover { background: rgba(111, 91, 255, .2); color: var(--ys-ink); }
+
+.ys-tut__hero { display: flex; align-items: center; gap: 13px; margin-block-end: 16px; padding-inline-end: 34px; }
+.ys-tut__hero h2 { margin: 0 0 6px; font-size: 1.16rem; font-weight: 800; color: var(--ys-ink); }
+.ys-tut__gem {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 56px;
+  block-size: 56px;
+  border-radius: 18px;
+  color: #fff;
+  background:
+    radial-gradient(120% 120% at 28% 22%, rgba(255, 255, 255, .85), transparent 46%),
+    linear-gradient(150deg, #8a6cff, #5a3fd8);
+  box-shadow: 0 12px 26px rgba(108, 78, 240, .34), inset 0 -6px 14px rgba(20, 8, 60, .28);
+}
+.ys-tut__chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: 999px;
+  background: rgba(111, 91, 255, .13); color: var(--ys-accent-ink);
+  font-size: .74rem; font-weight: 700;
+}
+.ys-tut__chip[data-state='done'] { background: rgba(47, 174, 124, .16); color: #1f8f66; }
+
+.ys-tut__qa { list-style: none; margin: 0 0 16px; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.ys-tut__qa li { display: flex; gap: 11px; align-items: flex-start; }
+.ys-tut__qa i {
+  flex: none; display: grid; place-items: center;
+  inline-size: 30px; block-size: 30px; border-radius: 50%;
+  background: var(--ys-accent-soft); color: var(--ys-accent-ink);
+}
+.ys-tut__qa h3 { margin: 0 0 3px; font-size: .8rem; font-weight: 700; color: var(--ys-ink); }
+.ys-tut__qa p { margin: 0; font-size: .8rem; line-height: 1.5; color: var(--ys-ink-soft); }
+
+.ys-tut__actions { display: flex; flex-direction: column; gap: 9px; }
+.ys-tut__cta {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  inline-size: 100%; padding: 12px 16px;
+  border: 0; border-radius: 15px;
+  background: linear-gradient(140deg, #8a6cff, #6a49ef);
+  color: #fff; font: inherit; font-size: .88rem; font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 12px 26px rgba(108, 78, 240, .32);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.ys-tut__cta:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 16px 32px rgba(108, 78, 240, .38); }
+.ys-tut__cta:disabled { opacity: .55; cursor: default; box-shadow: none; transform: none; }
+.ys-tut__cta[data-on='true'] { background: linear-gradient(140deg, #2fae7c, #1f8f66); box-shadow: 0 12px 26px rgba(31, 143, 102, .3); }
+
+.ys-tut__ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  inline-size: 100%; padding: 11px 16px;
+  border: 1px solid var(--ys-line); border-radius: 15px;
+  background: var(--ys-accent-soft); color: var(--ys-accent-ink);
+  font: inherit; font-size: .84rem; font-weight: 700;
+  cursor: pointer;
+  transition: background .18s ease;
+}
+.ys-tut__ghost:hover { background: rgba(111, 91, 255, .2); }
+
+.ys-tut__expander {
+  display: flex; align-items: center; justify-content: space-between;
+  inline-size: 100%;
+  margin-block-start: 14px;
+  padding: 9px 2px 0;
+  border: 0; border-block-start: 1px solid var(--ys-line);
+  background: transparent; color: var(--ys-ink-soft);
+  font: inherit; font-size: .78rem; font-weight: 600;
+  cursor: pointer;
+}
+.ys-tut__expander svg { transform: rotate(90deg); }
+.ys-tut__expander[aria-expanded='true'] svg { transform: rotate(-90deg); }
+.ys-tut__more { margin: 9px 0 0; font-size: .79rem; line-height: 1.55; color: var(--ys-ink-soft); }
+
+[data-theme='dark'] .ys-tut { box-shadow: 0 24px 60px rgba(0, 0, 0, .5); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ys-tut { animation: none; }
+  .ys-tut__cta:hover:not(:disabled) { transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

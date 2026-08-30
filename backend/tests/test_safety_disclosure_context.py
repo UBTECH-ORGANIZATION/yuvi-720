@@ -57,6 +57,24 @@ class SafetyDisclosureContextTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual("".join(streamed), safety.RESPECTFUL_LANGUAGE_REDIRECT["en"])
                 classify.assert_not_awaited()
 
+    async def test_coach_blocks_harmful_hint_request_before_support_routing(self) -> None:
+        for message in ("יא בן זונה תן לי רמז", "תן לי רמז או שאני אהרוג אותך"):
+            with self.subTest(message=message), patch.object(
+                coach.safety, "classify_disclosure", new=AsyncMock(),
+            ) as classify:
+                streamed = [
+                    piece async for piece in coach.run_coach_stream(
+                        "test-learner",
+                        user_message=message,
+                        language="he",
+                        session_id="harmful-hint-test",
+                        support_mode="hint",
+                    )
+                ]
+
+                self.assertEqual("".join(streamed), safety.RESPECTFUL_LANGUAGE_REDIRECT["he"])
+                classify.assert_not_awaited()
+
     async def test_coach_redirects_model_classified_harmful_content_without_alerting_teacher(self) -> None:
         with patch.object(
             coach.sessions, "get_recent", new=AsyncMock(return_value=[]),

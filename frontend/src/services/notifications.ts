@@ -11,6 +11,10 @@ export type NotificationKind =
   | 'goal_assigned' | 'goal_approved' | 'teacher_note' | 'kudos' | 'alert'
   | 'task_assigned'
   | 'deadline_reminder'
+  // The teacher chose the child's next step (#249; the union missed it until
+  // #244 — nothing switches on it today, but a type that lies about the wire
+  // is a bug waiting for the first code that does).
+  | 'pinned_next'
   // The direct channel, one kind per direction — they ring different bells and
   // deep-link to different screens.
   | 'teacher_message' | 'student_message'

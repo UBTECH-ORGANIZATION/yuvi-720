@@ -208,9 +208,9 @@
   .sd-hero-card--split > .aweb { padding-inline-start: 0; padding-block-start: clamp(18px, 4vw, 28px); border-inline-start: 0; border-block-start: 1px solid rgba(111, 91, 255, .13); }
   [data-theme='dark'] .sd-hero-card--split > .aweb { border-block-start-color: var(--sdd-card-border); }
 }
-/* The lessons carousel keeps the full page width and owns its card outright. */
-.sd-hero-card--lessons { overflow: clip; }
-.sd-hero-card--lessons .sd-section { margin-block-start: 0; }
+/* The subjects panel keeps the full page width and owns its card outright. */
+.sd-hero-card--subjects { overflow: clip; }
+.sd-hero-card--subjects .sd-section { margin-block-start: 0; }
 .sd-hero-card {
   position: relative;
   isolation: isolate;
@@ -236,6 +236,35 @@
   background: radial-gradient(120% 78% at 72% 20%, rgba(111, 91, 255, .09), transparent 62%);
 }
 [dir='rtl'] .sd-hero-card::before { background: radial-gradient(120% 78% at 28% 20%, rgba(111, 91, 255, .09), transparent 62%); }
+
+/* ── Section-by-section scrolling ─────────────────────────────────────────
+   The overview is three tall cards — what's next, my subjects, my goals — so
+   the page settles on one at a time instead of halfway between two. The class
+   is put on <html> by the dashboard route only; every other page scrolls
+   normally. */
+.sd-hero-card--split,
+.sd-hero-card--subjects,
+.sd-dashboard > .sd-grid { scroll-margin-block-start: 88px; }
+html.sd-snap { scroll-snap-type: y proximity; }
+html.sd-snap .sd-hero-card--split,
+html.sd-snap .sd-hero-card--subjects,
+html.sd-snap .sd-dashboard > .sd-grid { scroll-snap-align: start; }
+/* The goals card is the last stop, and the page ends too soon for it to reach
+   the top of the window on its own. The overshoot is deliberate: too much room
+   only leaves whitespace below the fold, while too little just clamps at the
+   bottom with the card still fully in view. */
+html.sd-snap .sd-dashboard { padding-block-end: max(36px, calc(100dvh - 700px)); }
+/* Proximity, never mandatory: what sits below the goals card is not a snap
+   target and has to stay freely scrollable. And a card taller than the window
+   would trap the scroll, so short viewports opt out entirely. */
+@media (max-height: 720px) {
+  html.sd-snap { scroll-snap-type: none; }
+  html.sd-snap .sd-dashboard { padding-block-end: 36px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.sd-snap { scroll-snap-type: none; }
+  html.sd-snap .sd-dashboard { padding-block-end: 36px; }
+}
 [data-theme='dark'] .sd-hero-card {
   border-color: var(--sdd-card-border);
   background: var(--sdd-card-bg);
@@ -263,6 +292,26 @@
 .sd-journey-hero__title-row .sd-journey-hero__title { margin: 0; flex: 0 1 auto; }
 .sd-journey-hero__title-row .sd-button { flex: none; min-inline-size: 0; }
 .sd-journey-hero__error { margin: 12px 0 0; color: var(--sp-warn-600); font-size: var(--sp-fs-xs); }
+
+/* The way back to a lesson the pin displaced (#244): a quiet text link under
+   the primary — the pin owns the hero, this is a door, not a rival CTA. */
+.sd-journey-hero__resumeAside {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-block-start: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sp-ink-500);
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sd-journey-hero__resumeAside:hover { color: var(--sp-ink-700); }
 .sd-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-block-size: 46px; padding-inline: 20px; border: 1px solid transparent; border-radius: var(--sp-radius-pill); font: 700 var(--sp-fs-sm)/1 var(--sp-font); cursor: pointer; transition: transform var(--sp-dur-fast) var(--sp-ease), box-shadow var(--sp-dur) var(--sp-ease); }
 .sd-button:hover:not(:disabled) { transform: translateY(-2px); }
 .sd-button:focus-visible { outline: none; box-shadow: var(--sp-ring); }

@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from app.auth.dependencies import assert_can_read_learner, current_user
 from app.brain.repository import get_brain
-from app.services import kata_catalog
+from app.services import kata_catalog, unlock_sync, unlocks
 from app.services.badges import project_badges
 from app.services.events import get_learner_events
 from learner_state import normalize_learner_id  # type: ignore
@@ -25,11 +25,19 @@ async def _badges_for(learner_id: str, lang: str) -> list:
         events = await get_learner_events(learner_id)
     except Exception:
         events = []
-    return project_badges(brain, locale=lang, events=events)
+    badges = project_badges(brain, locale=lang, events=events)
+    for badge in badges:
+        badge["unlocks"] = unlocks.ids_for_badge(str(badge.get("subject") or ""))
+    return badges
 
 
 @router.get("")
 async def read_own_badges(lang: str = Query("he"), actor: dict = Depends(current_user)):
+    # Looking at the shelf is the other moment a reward is expected to be there.
+    try:
+        await unlock_sync.sync_unlocks(actor["sub"])
+    except Exception as exc:
+        print(f"⚠️ unlock sync skipped: {type(exc).__name__}")
     return JSONResponse(content=await _badges_for(actor["sub"], lang))
 
 

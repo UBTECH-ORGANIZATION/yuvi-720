@@ -182,11 +182,18 @@ async def _activity_rows(learner_id: str) -> list[dict[str, Any]]:
     return [row for row in _read_fallback() if row.get("learner_id") == learner_id]
 
 
+async def rows(learner_id: str) -> list[dict[str, Any]]:
+    """All activity rows for a learner, timestamps included. Public accessor for
+    readers that need the ``at`` ordering ``question_summary`` drops (the
+    Independence score joins support rows against the attempt timeline)."""
+    return await _activity_rows(learner_id)
+
+
 async def ensure_indexes() -> None:
     """Read on every task open (`{learner_id}`) and on every hint check.
 
     The hint lookup is an equality match on five fields, so a compound index
-    over all of them answers it from the index alone.
+    over all of them answers it from the index alone. Wired into server.py.
     """
     global _indexes_ready
     if _indexes_ready:

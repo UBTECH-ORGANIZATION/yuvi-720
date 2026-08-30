@@ -29,6 +29,10 @@ export function useStudioDesign(autoLoad = true) {
   // does after that is unsaved work we must not throw away silently.
   const [baseline, setBaseline] = useState<YuviDesign>(() => cloneDesign(DEFAULT_DESIGN))
   const [unlockedIds, setUnlockedIds] = useState<Set<string>>(() => new Set())
+  const [propUnlocks, setPropUnlocks] = useState<Set<string>>(() => new Set())
+  // id -> locale key naming the badge or streak that grants it.
+  const [requirements, setRequirements] = useState<Record<string, string>>({})
+  const [streak, setStreak] = useState(0)
   const [shop, setShop] = useState<Record<string, ShopItem>>({})
   const [buying, setBuying] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<YuviSlot | 'colors'>('headTop')
@@ -48,9 +52,19 @@ export function useStudioDesign(autoLoad = true) {
     } catch { /* keep default */ }
     try {
       // The shop is the only source of prices — the client never sets one.
+      // The same read settles any badge/streak grant the learner has earned,
+      // so opening the studio is when a new reward becomes real.
       const catalog = await getShop()
       setShop(Object.fromEntries(catalog.items.map((item) => [item.id, item])))
       setWallet(catalog.wallet)
+      setPropUnlocks(new Set(catalog.roomUnlocks ?? []))
+      setStreak(catalog.streak ?? 0)
+      setRequirements(Object.fromEntries((catalog.unlocks ?? []).map((row) => [row.id, row.requirementKey])))
+      // A cosmetic granted by this very request would otherwise stay locked
+      // until the next reload, since the state read above happened first.
+      for (const row of catalog.unlocks ?? []) {
+        if (row.kind === 'avatar' && row.owned) setUnlockedIds((prev) => new Set(prev).add(row.id))
+      }
     } catch { /* shop simply stays unavailable */ }
     setLoaded(true)
   }, [refreshSavedDesign, setWallet])
@@ -58,6 +72,10 @@ export function useStudioDesign(autoLoad = true) {
   useEffect(() => { if (autoLoad) void load() }, [autoLoad, load])
 
   const isLocked = (asset: YuviAsset) => Boolean(asset.requirementKey) && !unlockedIds.has(asset.id)
+  /** True when this room prop has to be earned and has not been. */
+  const isPropLocked = (kind: string) => kind in requirements && !propUnlocks.has(kind)
+  /** Locale key naming what earns an item, for the lock tooltip. */
+  const requirementFor = (id: string): string | undefined => requirements[id]
   /** Sparks price for a locked item, or null when it can only be earned. */
   const priceOf = (assetId: string): number | null => shop[assetId]?.price ?? null
   const canAfford = (assetId: string) => {
@@ -126,7 +144,8 @@ export function useStudioDesign(autoLoad = true) {
   return {
     avatarRef, loaded, design, unlockedIds, activeTab, setActiveTab,
     muted, setMuted, justSaved, saving, dirty,
-    isLocked, equip, setVariant, setColor, reset, save, load,
+    isLocked, isPropLocked, requirementFor, streak,
+    equip, setVariant, setColor, reset, save, load,
     wallet, priceOf, canAfford, buy, buying,
   }
 }

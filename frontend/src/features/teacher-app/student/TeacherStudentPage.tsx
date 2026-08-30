@@ -32,13 +32,19 @@ import { useI18n } from '../../../i18n/I18nProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import { PraiseDialog } from '../shared/PraiseDialog'
 import type { StrengthItem } from '../shared/DifficultiesCard'
+import { useAuth } from '../../../providers/AuthProvider'
+import { FocusPanel } from '../live/FocusPanel'
+import { ScoreStats } from './ScoreCards'
 import {
-  generateTopicDigest, getFocusRoadmap, getLearnerRead, getStudentActivity,
+  generateTopicDigest, getFocusRoadmap, getLearnerRead, getPinnedNext,
+  getStudentActivity,
   getStudentDetail,
-  getStudentGoals, getStudentObjectives, getStudentTrends, getTopicDigest,
+  getStudentGoals, getStudentObjectives, getStudentScores, getStudentTrends,
+  getTopicDigest,
+  unpinNext,
   type RoadmapStep,
   type LearnerRead, type LearnerTrends, type ObjectiveBreakdownRow,
-  type PlannerFocus, type QuestionRow,
+  type PlannerFocus, type QuestionRow, type StudentScores,
   type StrengthDetail, type StudentDetail, type StudentGoal,
   type StudentPortrait, type StruggleItem, type SubjectProgress,
   type TeacherRecommendation,
@@ -77,6 +83,7 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
   const [badges, setBadges] = useState<TeacherBadge[]>([])
   const [activity, setActivity] = useState<QuestionRow[] | null>(null)
   const [trends, setTrends] = useState<LearnerTrends | null>(null)
+  const [scores, setScores] = useState<StudentScores | null>(null)
   const [digest, setDigest] = useState<TopicDigest | null>(null)
   const [digestState, setDigestState] = useState<DigestState>('idle')
   const [error, setError] = useState(false)
@@ -188,6 +195,19 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
     return () => { active = false }
   }, [learnerId])
 
+  /* The two habit scores (PBI 451) — server-computed, whole-child by design:
+     the endpoint takes no subject because how a child works is not a per-
+     subject fact, so the cards stand under any subject filter. Failure leaves
+     the skeleton cells; the band is still worth reading without them. */
+  useEffect(() => {
+    let active = true
+    setScores(null)
+    getStudentScores(learnerId)
+      .then((result) => { if (active) setScores(result) })
+      .catch(() => { if (active) setScores(null) })
+    return () => { active = false }
+  }, [learnerId])
+
   /* The topics digest. The GET is cached-only and costs nothing; when there
      is evidence but no digest yet, ONE generation is fired automatically —
      the digest IS the card's reading now. The guard ref keeps a failed
@@ -259,19 +279,6 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
      have to scroll for. It links down to the full record. */
   const distress = (detail?.wellbeing_flags ?? [])[0] ?? null
 
-  /* Header KPIs, all derived from data we actually store (never invented):
-     material from objectives vs the catalog, minutes from the wall-clock
-     timing the events carry, questions from the rows themselves, help from
-     the support counters the coach already logs. */
-  const rows = activity ?? []
-  const seconds = rows.reduce((sum, row) => sum + (row.time_seconds || 0), 0)
-  const learningsCount = new Set(rows.map((row) => row.component_id).filter(Boolean)).size
-  const help = {
-    hints: rows.reduce((sum, row) => sum + row.hints_used + row.content_hints_used, 0),
-    explanations: rows.reduce((sum, row) => sum + row.explanations_used, 0),
-    chats: rows.reduce((sum, row) => sum + row.chat_turns, 0),
-  }
-  const helpTotal = help.hints + help.explanations + help.chats
   /* Open disclosures, from the detail payload the page already has — no second
      request to put a number on a section. */
   const openFlags = (detail?.wellbeing_flags ?? []).length
@@ -396,56 +403,14 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
             ) : null}
           </div>
 
-          {/* The quick numbers, ON the identity row — plain figures with a
-              rule between them. The mastery percentage is NOT here: the
-              status band's dials already are that number, said better. Each
-              figure explains itself on hover/focus, and says so with the
-              dotted underline. Shown only once the child has activity —
-              zeroes would read as a verdict.
-
-              While the rows are still in flight the strip stands in the same
-              place wearing its real captions: what each figure counts was
-              never in question, only the figure. */}
-          {activity === null ? (
-            <section className="tch-student__kpis" aria-busy="true"
-                     aria-label={t('tch.kpi.stripLabel')}>
-              {[t('tch.kpi.learningMinutes'), t('tch.kpi.questionsWorked'),
-                t('tch.kpi.helpUsed')].map((label) => (
-                <span key={label} className="tch-stat">
-                  <Skeleton w={34} h={20} />
-                  <span className="tch-stat__label">{label}</span>
-                </span>
-              ))}
-            </section>
-          ) : rows.length ? (
-            <section className="tch-student__kpis tch-appear"
-                     aria-label={t('tch.kpi.stripLabel')}>
-              <Hint text={seconds > 0 ? t('tch.kpi.minutesTip') : t('tch.pulse.noTiming')}>
-                <button type="button" className="tch-stat">
-                  {/* Wall-clock between events — honest "—" when there is none. */}
-                  <strong className="tch-stat__value">
-                    {seconds > 0 ? Math.round(seconds / 60) : '—'}
-                  </strong>
-                  <span className="tch-stat__label">{t('tch.kpi.learningMinutes')}</span>
-                </button>
-              </Hint>
-              <Hint text={t('tch.kpi.questionsTip', { count: learningsCount })}>
-                <button type="button" className="tch-stat">
-                  <strong className="tch-stat__value">{rows.length}</strong>
-                  <span className="tch-stat__label">{t('tch.kpi.questionsWorked')}</span>
-                </button>
-              </Hint>
-              {/* What Yuvi already tried, before the teacher steps in. */}
-              <Hint text={t('tch.kpi.helpTip', {
-                hints: help.hints, explanations: help.explanations, chats: help.chats,
-              })}>
-                <button type="button" className="tch-stat">
-                  <strong className="tch-stat__value">{helpTotal}</strong>
-                  <span className="tch-stat__label">{t('tch.kpi.helpUsed')}</span>
-                </button>
-              </Hint>
-            </section>
-          ) : null}
+          {/* The two habit scores, ON the identity row (PBI 451). The raw
+              counters that stood here — minutes, questions, help-used — are
+              gone: counting help events is exactly the reading Reut retired,
+              and the minutes and question counts live on in the trend
+              dialog's charts. Each stat is the score itself, a door to the
+              why-is-it-down dialog; its hover hint carries the window and
+              the partial-signals marker. */}
+          <ScoreStats scores={scores} />
         </div>
       </header>
 
@@ -505,7 +470,6 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
                 <RecsPanel
                   learnerId={learnerId}
                   rows={activity}
-                  read={read}
                   recommendations={detail.recommendations}
                   /* The same rule as the status band's focus card: an
                      off-subject planner pick steps aside under a subject
@@ -618,16 +582,11 @@ export function TeacherStudentPage({ learnerId }: { learnerId: string }) {
 function StatusBandSkeleton({ subjects }: { subjects: number }) {
   const { t } = useI18n()
   /* The row a teacher is about to get, in the count they are about to get
-     it: the focus card, one cell per subject in scope, then the two habit
-     dials. Getting the count right is the whole point — a placeholder that
-     reflows into a different grid is worse than none. */
-  const dials = [t('tch.student.consistency'), t('tch.student.independence')]
-  /* Same split rule as the live band (focus + subjects + both dials): six-plus
-     placeholders that sit in one row and then snap into two when the data
-     lands would be exactly the reflow this component exists to prevent. The
-     live band may still drop the consistency dial and re-balance once, but
-     that is a fact arriving, not a guess being corrected. */
-  const cellCount = 1 + subjects + dials.length
+     it: the focus card, then one cell per subject in scope — the two habit
+     scores live on the hero strip now, not here. Getting the count right is
+     the whole point — a placeholder that reflows into a different grid is
+     worse than none. */
+  const cellCount = 1 + subjects
   return (
     <section className="tch-status" aria-busy="true">
       <div
@@ -657,13 +616,6 @@ function StatusBandSkeleton({ subjects }: { subjects: number }) {
           </Card>
         ))}
 
-        {dials.map((label) => (
-          <Card key={label} className="tch-status__cell">
-            <h4>{label}</h4>
-            <Skeleton w={104} h={54} r={10} />
-            <Skeleton w="72%" h={12} />
-          </Card>
-        ))}
       </div>
     </section>
   )
@@ -685,9 +637,6 @@ function RecsPanelSkeleton() {
         title={t('tch.student.recommendations')}
         subtitle={t('tch.student.recommendationsSubtitle')}
       />
-      <div className="tch-recs__overviewWait">
-        <Skeleton w="100%" h={13} /><Skeleton w="84%" h={13} />
-      </div>
       <ul className="tch-recs">
         {slots.map((slot) => (
           <li key={slot.key} className="tch-rec">
@@ -774,11 +723,6 @@ function ReadSummary({ learnerId, read, platformSubjects, rows, onBuildTask }: {
         points: section.points as string[] | null,
       })),
   ] : []
-  const generalPoints = read && !read.unavailable ? [
-    ...(read.involvement ? [{ text: read.involvement, kind: 'activity', icon: 'clock' }] : []),
-    ...(read.notable ? [{ text: read.notable, kind: 'notable', icon: 'lightbulb' }] : []),
-  ] : []
-
   return (
     /* The same spotlight surface as the class brief on Home — this is the one
        loud object on the profile, and everything under it stays in the quiet
@@ -852,16 +796,10 @@ function ReadSummary({ learnerId, read, platformSubjects, rows, onBuildTask }: {
                 ))}
               </div>
             ) : null}
-            {generalPoints.length ? (
-              <ul className="tch-read__points">
-                {generalPoints.map((point) => (
-                  <li key={point.text} className={`is-${point.kind}`}>
-                    <Icon name={point.icon} size={14} aria-hidden />
-                    <span dir="auto">{point.text}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
+            {/* The two general prose lines that stood here (involvement +
+                notable) are gone per Reut: they repeated themselves visit
+                after visit. The per-subject read above and the suggestion
+                below are the parts that carry information. */}
             {read.suggestion ? (
               <div className="tch-read__suggest">
                 <p dir="auto">
@@ -934,8 +872,9 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows }: {
   trends: LearnerTrends | null
   rows: QuestionRow[] | null
 }) {
-  const { t } = useI18n()
-  const { subject: scopeSubject } = useTeacherScope()
+  const { t, language } = useI18n()
+  const { subject: scopeSubject, groupId } = useTeacherScope()
+  const { user } = useAuth()
   /* The planner's pick is cross-subject by design — `next_focus` answers "where
      does the platform take this child next", whatever the subject. Under an
      active subject filter an off-subject pick would be the one card on the band
@@ -949,29 +888,57 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows }: {
   /* The planner's road ahead, behind a click on the focus card. */
   const [roadOpen, setRoadOpen] = useState(false)
 
-  /* Independence: how many of the questions they answered needed ANY help.
-     Counted per question, never per event — one long Yuvi conversation on one
-     hard question is one question that needed help, not 291 dependencies. */
-  const answeredRows = (rows ?? []).filter((row) => row.attempts > 0)
-  const helpedRows = answeredRows.filter((row) =>
-    row.hints_used + row.content_hints_used + row.explanations_used + row.chat_turns > 0)
-  const independence = answeredRows.length > 0
-    ? (1 - helpedRows.length / answeredRows.length) * 100
-    : null
-  const independenceTone = independence === null ? 'primary'
-    : independence >= 70 ? 'success' : independence >= 40 ? 'warn' : 'danger'
+  /* The pin (#244). This card used to read `next_focus` alone, so a pin set
+     from the live view left the profile CONTRADICTING the child's hero — the
+     one screen a teacher opens to see what the child sees. Now it reads the
+     same fact the hero honours, and shows how the last pin ended: "done ✓"
+     and "never pinned" are different answers. */
+  const [pinView, setPinView] = useState<
+    Awaited<ReturnType<typeof getPinnedNext>> | null>(null)
+  const [pinNonce, setPinNonce] = useState(0)
+  const [pinOpen, setPinOpen] = useState(false)
+  const [pinBusy, setPinBusy] = useState(false)
+  useEffect(() => {
+    let active = true
+    getPinnedNext(learnerId, language)
+      .then((result) => { if (active) setPinView(result) })
+      // The band still stands without the pin lane — the planner focus is
+      // real either way; a failed read just means no pin strip.
+      .catch(() => { if (active) setPinView(null) })
+    return () => { active = false }
+  }, [learnerId, language, pinNonce])
 
-  const consistency = trends && trends.days > 0
-    ? (trends.active_days / trends.days) * 100
-    : null
-  const consistencyTone = consistency === null ? 'primary'
-    : consistency >= 50 ? 'success' : consistency >= 20 ? 'warn' : 'danger'
+  const activePin = pinView?.pin_state === 'active' ? pinView.pinned : null
+  const pinnedBy = activePin
+    ? (activePin.pinned_by === user?.user_id
+      ? (user?.display_name || activePin.pinned_by) : activePin.pinned_by)
+    : ''
+  /* A spent pin stays worth a line for a week — after that it is history,
+     not context. */
+  const recentLast = pinView?.last && pinView.last.ended_at
+    && Date.now() - Date.parse(pinView.last.ended_at) < 7 * 24 * 3600 * 1000
+    ? pinView.last : null
+
+  const unpin = async () => {
+    if (pinBusy) return
+    setPinBusy(true)
+    try {
+      await unpinNext(learnerId)
+      setPinNonce((nonce) => nonce + 1)
+    } catch {
+      /* The strip re-reads on the next nonce; a failed unpin leaves the pin
+         visibly standing, which is the truthful outcome. */
+    } finally {
+      setPinBusy(false)
+    }
+  }
 
   /* ── momentum: the same window, cut in half ────────────────────────────────
-     Every chip compares the recent half of the trend window against the half
-     before it — computed from the series the dials already read, never
+     The subject chips compare the recent half of the trend window against the
+     half before it — computed from the series the dials already read, never
      estimated. Too little data on either side means NO chip: a trend drawn
-     from two questions would be a verdict on noise. */
+     from two questions would be a verdict on noise. (The two habit scores on
+     the hero strip carry their own server-computed trend — see ScoreStats.) */
   const halfIndex = trends ? Math.floor(trends.per_day.length / 2) : 0
   const boundary = trends?.per_day[halfIndex]?.date ?? null
   const halfDays = trends ? trends.per_day.length - halfIndex : 0
@@ -998,48 +965,12 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows }: {
     }
   }
 
-  const consistencyMomentum = (() => {
-    if (!trends || trends.per_day.length < 8) return null
-    const priorActive = trends.per_day.slice(0, halfIndex)
-      .filter((day) => day.attempts > 0).length
-    const recentActive = trends.per_day.slice(halfIndex)
-      .filter((day) => day.attempts > 0).length
-    const delta = recentActive - priorActive
-    return {
-      dir: delta >= 2 ? 'up' : delta <= -2 ? 'down' : 'flat',
-      why: t('tch.trend.activeWhy', {
-        recent: recentActive, prior: priorActive, days: halfDays,
-      }),
-    }
-  })()
-
-  const independenceMomentum = (() => {
-    if (!boundary) return null
-    /* Each question sits in the half its last touch fell in — a full
-       first-touch history is not in the rows, and the tooltip says "recent
-       questions", which is exactly what this is. */
-    const dated = answeredRows.filter((row) => row.last_at)
-    const needsHelp = (row: QuestionRow) =>
-      row.hints_used + row.content_hints_used + row.explanations_used + row.chat_turns > 0
-    const prior = dated.filter((row) => (row.last_at as string) < boundary)
-    const recent = dated.filter((row) => (row.last_at as string) >= boundary)
-    if (prior.length < 3 || recent.length < 3) return null
-    const priorPct = Math.round((prior.filter(needsHelp).length / prior.length) * 100)
-    const recentPct = Math.round((recent.filter(needsHelp).length / recent.length) * 100)
-    /* The dial's own direction: less help = more independence = up. */
-    const delta = priorPct - recentPct
-    return {
-      dir: delta >= 5 ? 'up' : delta <= -5 ? 'down' : 'flat',
-      why: t('tch.trend.helpWhy', { recent: recentPct, prior: priorPct }),
-    }
-  })()
-
-  /* How many cells the grid is about to hold: focus + one dial per subject +
-     the habit dials (consistency renders only when it can be measured).
+  /* How many cells the grid is about to hold: focus + one dial per subject —
+     the two habit scores moved up to the hero strip (Gal, 2026-08-27).
      Counted here rather than in CSS because the dialogs below are children of
      the same grid — closed they render nothing, but a selector counting DOM
      children could never rely on that. */
-  const cellCount = 1 + subjects.length + (consistency !== null && trends ? 1 : 0) + 1
+  const cellCount = 1 + subjects.length
 
   return (
     /* No outer card, no heading: the dials are cards themselves and open the
@@ -1056,12 +987,13 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows }: {
         style={cellCount > 5
           ? { '--tch-status-cols': Math.ceil(cellCount / 2) } as CSSProperties
           : undefined}>
-        {/* Where the planner is pointing, from the same `next_focus` the
-            platform itself follows — the teacher's card and the child's app
-            can never disagree about what comes next. */}
+        {/* Where the child's app is pointing — the pin when one stands (the
+            hero honours it), the planner's own pick otherwise. This card and
+            the child's dashboard can never disagree about what comes next. */}
         <Card className="tch-status__cell tch-status__focus">
           {/* The whole card opens the planner's roadmap — where this pick
-              leads, step by step. */}
+              leads, step by step. The pin strip below sits OUTSIDE this door:
+              buttons inside a button is markup that cannot be clicked apart. */}
           <button
             type="button"
             className="tch-status__cellOpen tch-status__focusOpen"
@@ -1075,13 +1007,25 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows }: {
               <Icon name="target" size={14} aria-hidden />
               {t('tch.student.focusTitle')}
             </h4>
-            {focus?.subject && focus.mode !== 'complete' ? (
+            {!activePin && focus?.subject && focus.mode !== 'complete' ? (
               <span className="tch-status__focusSubject" dir="auto">
                 {subjectLabel(focus.subject, t)}
               </span>
             ) : null}
           </div>
-          {focus && focus.mode === 'complete' ? (
+          {activePin ? (
+            <>
+              {/* The pinned step IS what the child sees on their hero. */}
+              <p className="tch-status__focusWhat" dir="auto">
+                {pinView?.pinned_title ?? ''}
+              </p>
+              <p className="tch-status__focusMeta">
+                <StatusPill tone="strong">
+                  {t('tch.student.pin.by', { name: pinnedBy })}
+                </StatusPill>
+              </p>
+            </>
+          ) : focus && focus.mode === 'complete' ? (
             <p className="tch-status__focusDone">
               <Icon name="check" size={15} aria-hidden />
               {t('tch.student.focusMode.complete')}
@@ -1103,7 +1047,53 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows }: {
             <p className="tch-status__none">{t('tch.student.focusNone')}</p>
           )}
           </button>
+
+          {/* The pin lane: act on the pin, or read how the last one ended.
+              Rendered only once the pin read answered — a strip that appears
+              and rewords itself mid-glance would cost more than it says. */}
+          {pinView && (
+            <div className="tch-status__pinBar">
+              {/* Only a COMPLETED pin earns a line: "the teacher removed a
+                  pin" is an act, not an outcome, and reporting it read as
+                  noise on the card. */}
+              {!pinView.pinned && recentLast?.outcome === 'completed' && (
+                <span className="tch-status__pinNote" dir="auto">
+                  <Icon name="check" size={13} aria-hidden />
+                  {t('tch.student.pin.outcome.completed',
+                    { title: pinView.last_title ?? '' })}
+                </span>
+              )}
+              {activePin && (
+                <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
+                        disabled={pinBusy} onClick={() => void unpin()}>
+                  {t('tch.liveView.act.unpin')}
+                </button>
+              )}
+              {groupId && (
+                <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm"
+                        aria-haspopup="dialog" onClick={() => setPinOpen(true)}>
+                  {t('tch.student.pin.change')}
+                </button>
+              )}
+            </div>
+          )}
         </Card>
+
+        {/* The same panel the live view opens — two pin dialogs would be two
+            opinions about what a pin is. No scope lever here: this page is
+            about ONE child. */}
+        {/* The panel carries its own heading now — the modal borrows it as
+            the accessible title instead of stacking a second one above it. */}
+        <Modal open={pinOpen} onClose={() => setPinOpen(false)}
+               titleId="tch-focus-panel-title" className="tch-focusModal">
+          {pinOpen && groupId ? (
+            <FocusPanel
+              learnerId={learnerId}
+              groupId={groupId}
+              onChanged={() => setPinNonce((nonce) => nonce + 1)}
+            />
+          ) : null}
+        </Modal>
 
         <RoadmapDialog learnerId={learnerId} open={roadOpen}
                        onClose={() => setRoadOpen(false)} />
@@ -1155,43 +1145,6 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows }: {
           subject={objSubject}
           onClose={() => setObjSubject(null)}
         />
-
-        {consistency !== null && trends ? (
-          <Card className="tch-status__cell">
-            <TrendChip momentum={consistencyMomentum} />
-            <h4>{t('tch.student.consistency')}</h4>
-            <ProgressRing arc="half" percent={consistency} size={104}
-                          tone={consistencyTone} label={t('tch.student.consistency')} />
-            <p className="tch-status__caption">
-              {t('tch.student.consistencyHint', {
-                active: trends.active_days, days: trends.days,
-              })}
-              {trends.streak > 1
-                ? ` · ${t('tch.student.consistencyStreak', { count: trends.streak })}`
-                : ''}
-            </p>
-          </Card>
-        ) : null}
-
-        <Card className="tch-status__cell">
-          <TrendChip momentum={independenceMomentum} />
-          <h4>{t('tch.student.independence')}</h4>
-          {independence !== null ? (
-            <>
-              <ProgressRing arc="half" percent={independence} size={104}
-                            tone={independenceTone} label={t('tch.student.independence')} />
-              <p className="tch-status__caption">
-                {t('tch.student.independenceHint', {
-                  helped: helpedRows.length, answered: answeredRows.length,
-                })}
-              </p>
-            </>
-          ) : (
-            /* No attempts yet: a dial here would be a confident verdict on no
-               evidence at all. */
-            <p className="tch-status__none">{t('tch.student.independenceThin')}</p>
-          )}
-        </Card>
       </div>
     </section>
   )
@@ -1397,12 +1350,9 @@ function ObjectivesDialog({ learnerId, subject, onClose }: {
  * each carries the act it points at: a task seeded on that very material.
  */
 
-function RecsPanel({ learnerId, rows, read, recommendations, focus, progress, onBuildTask }: {
+function RecsPanel({ learnerId, rows, recommendations, focus, progress, onBuildTask }: {
   learnerId: string
   rows: QuestionRow[] | null
-  /** The learner read — its `overview` is the free-prose paragraph the panel
-   *  leads with. `null` while loading. */
-  read: LearnerRead | null
   /** The server's deterministic MoE-category recommendations — each still
    *  renders with its "why" evidence, bucketed into the slot it belongs to. */
   recommendations: TeacherRecommendation[]
@@ -1628,15 +1578,9 @@ function RecsPanel({ learnerId, rows, read, recommendations, focus, progress, on
         title={t('tch.student.recommendations')}
         subtitle={t('tch.student.recommendationsSubtitle')}
       />
-      {/* The overall analysis, in prose with no figures — what is harder for
-          this child and what carries them. The rows below keep the numbers. */}
-      {read === null ? (
-        <div className="tch-recs__overviewWait" aria-busy="true">
-          <Skeleton w="100%" h={13} /><Skeleton w="80%" h={13} />
-        </div>
-      ) : read.overview ? (
-        <p className="tch-recs__overview" dir="auto">{read.overview}</p>
-      ) : null}
+      {/* The generic opening paragraph that led this panel is gone per Reut —
+          it read the same for every child. The three slot cards below carry
+          the evidence-backed content. */}
       <ul className="tch-recs">{items}</ul>
       {praiseDialog}
     </Panel>

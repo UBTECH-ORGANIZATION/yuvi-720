@@ -68,10 +68,10 @@ export function LearnerReadPanel({ learnerId }: { learnerId: string }) {
               screens. The sentences are the same ones — joined, in the same
               order the sections told them. */}
           <p className="tch-goalRead__paragraph" dir="auto">
-            {[...(read.subjects ?? []).flatMap((section) =>
-                [...(section.summary ? [section.summary] : []), ...section.points]),
-              ...(read.involvement ? [read.involvement] : []),
-              ...(read.notable ? [read.notable] : [])].join(' ')
+            {[...(read.overview ? [read.overview] : []),
+              ...(read.subjects ?? []).flatMap((section) =>
+                [...(section.summary ? [section.summary] : []), ...section.points])]
+              .join(' ')
               || t('tch.goalRead.noImprovements')}
           </p>
 

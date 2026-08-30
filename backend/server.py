@@ -49,7 +49,9 @@ from app.routes.checkin import router as checkin_router
 from app.routes.illustrations import router as illustrations_router
 from app.routes.mapping_chat import router as mapping_chat_router
 from app.routes.profile import router as profile_router
-from app.routes.static_pages import mount_static_assets, router as static_pages_router
+from app.routes.static_pages import (
+    install_spa_fallback, mount_static_assets, router as static_pages_router,
+)
 from app.routes.support import internal_router as support_internal_router, router as support_router
 from app.routes.telemetry import router as telemetry_router
 from app.routes.xapi import router as xapi_router
@@ -125,9 +127,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     from app.agents.teacher_tools import registry as teacher_tool_registry
     from app.agents import tutor_decision
     from app.services import (
-        direct_messages, events, kudos, learner_activity, mentoring,
-        mentoring_assist, notifications, org_repository, school_calendar,
-        teacher_alerts, teacher_insights_store, weekly_digest, wellbeing,
+        direct_messages, events, kudos, learner_activity, learner_signals,
+        mentoring, mentoring_assist, notifications, org_repository,
+        school_calendar, teacher_alerts, teacher_insights_store, timetable,
+        weekly_digest, wellbeing,
     )
     from app.services.rewards import wallet
 
@@ -156,7 +159,12 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         # on first ingest so a replica that only ever *reads* is fast too — a
         # dashboard served before the first statement arrives used to scan.
         ("learning_events", events.ensure_indexes),
-        # Read per learner on every task open and every hint check.
+        # The weekly spine (#242): slots by group, exceptions by occurrence,
+        # days off by (school, date) — read on every calendar open, both lanes.
+        ("timetable", timetable.ensure_indexes),
+        # Read by (learner_id, at) on every open of a student's score dialogs.
+        ("learner_signals", learner_signals.ensure_indexes),
+        # Read per learner on every profile open, task open, and hint check.
         ("learner_activity", learner_activity.ensure_indexes),
         # Goals: per learner on the dashboard, per class on the roster.
         ("mentoring_conversations", mentoring.ensure_indexes),
@@ -166,6 +174,16 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         ("tutor_decisions", tutor_decision.ensure_indexes),
     )
     await run_index_steps(index_steps)
+
+    # The national school calendar (#242): insert-if-absent, so every school —
+    # existing and future — has the published days off without hand entry, and
+    # a day someone deliberately retired stays retired across boots.
+    try:
+        seeded = await timetable.ensure_national_days()
+        if seeded:
+            print(f"↻ timetable: {seeded} national days off seeded")
+    except Exception as exc:  # pragma: no cover - best effort by design
+        print(f"⚠️ national days seed skipped: {type(exc).__name__}")
 
     # Presence lives in this process's memory, so a restart wipes it and every
     # child reads offline until they next reconnect. Read the last snapshots
@@ -266,6 +284,7 @@ def create_app() -> FastAPI:
     mount_content_catalog_mcp(app)
 
     mount_static_assets(app)
+    install_spa_fallback(app)
     app.include_router(static_pages_router)
 
     configure_telemetry(app, service_name="spark-backend")

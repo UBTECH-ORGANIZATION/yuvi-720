@@ -16,6 +16,7 @@
   display: grid;
   gap: var(--sp-4);
   --cal-event: var(--sp-primary-700);
+  --cal-lesson: #3f6fc4;
   --cal-task: #2d8f8a;
   --cal-goal: var(--sp-warn-600);
   --cal-meeting: #7c74a8;
@@ -23,6 +24,7 @@
 
 [data-theme='dark'] .tch-cal {
   --cal-task: #5fd3cb;
+  --cal-lesson: #82a9ef;
   --cal-meeting: #b3a9e0;
 }
 
@@ -51,14 +53,18 @@
   cursor: pointer;
 }
 .tch-cal__step:hover { color: var(--sp-ink-900); border-color: var(--tch-hover-ring); }
-/* One glyph, mirrored — so "next" always points the way the language reads. */
+/* One glyph, mirrored twice over — per button ("next" opposes "prev") and per
+   direction (in RTL, forward is leftward). */
 .tch-cal__step--next .sp-icon { transform: rotate(180deg); }
+[dir='rtl'] .tch-cal__step .sp-icon { transform: rotate(180deg); }
+[dir='rtl'] .tch-cal__step--next .sp-icon { transform: none; }
 
 .tch-cal__heading {
   margin-inline: var(--sp-2);
   font-size: var(--sp-fs-lg);
   color: var(--sp-ink-900);
   min-inline-size: 160px;
+  text-align: center;
 }
 
 .tch-cal__views {
@@ -131,6 +137,7 @@
 .tch-cal__chip.is-off em { text-decoration: line-through; }
 
 .tch-cal__chip--event { --tone: var(--cal-event); }
+.tch-cal__chip--lesson { --tone: var(--cal-lesson); }
 .tch-cal__chip--task { --tone: var(--cal-task); }
 .tch-cal__chip--goal { --tone: var(--cal-goal); }
 .tch-cal__chip--meeting { --tone: var(--cal-meeting); }
@@ -247,6 +254,7 @@
 }
 
 .tch-cal__pip--event { --tone: var(--cal-event); }
+.tch-cal__pip--lesson { --tone: var(--cal-lesson); }
 .tch-cal__pip--task { --tone: var(--cal-task); }
 .tch-cal__pip--goal { --tone: var(--cal-goal); }
 .tch-cal__pip--meeting { --tone: var(--cal-meeting); }
@@ -293,6 +301,7 @@
 }
 .tch-cal__row:hover { box-shadow: 0 0 0 1px var(--tch-hover-ring), var(--tch-card-shadow); }
 .tch-cal__row--event { --tone: var(--cal-event); }
+.tch-cal__row--lesson { --tone: var(--cal-lesson); }
 .tch-cal__row--task { --tone: var(--cal-task); }
 .tch-cal__row--goal { --tone: var(--cal-goal); }
 .tch-cal__row--meeting { --tone: var(--cal-meeting); }
@@ -318,6 +327,7 @@
   color: var(--tone, var(--sp-ink-500));
 }
 .tch-cal__badge--event { --tone: var(--cal-event); }
+.tch-cal__badge--lesson { --tone: var(--cal-lesson); }
 .tch-cal__badge--task { --tone: var(--cal-task); }
 .tch-cal__badge--goal { --tone: var(--cal-goal); }
 .tch-cal__badge--meeting { --tone: var(--cal-meeting); }
@@ -394,9 +404,66 @@
 .tch-cal__failed { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-danger-600); }
 .tch-cal__actions { display: flex; justify-content: flex-end; gap: var(--sp-2); }
 
+/* The pin action's outcome, said in place (#244). */
+.tch-cal__pinNote {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+  text-align: end;
+}
+.tch-cal__pinNote.is-error { color: var(--sp-danger-600); }
+
 @media (max-width: 860px) {
   .tch-cal__cell { min-block-size: 84px; }
   .tch-cal__pipWho { display: none; }
   .tch-cal__scope { inline-size: 100%; }
   .tch-cal__when2 { grid-template-columns: 1fr; }
 }
+
+
+/* one broken week, said with the item — the rule stays intact */
+.tch-cal__pip.is-cancelled .tch-cal__pipText,
+.tch-cal__row.is-cancelled .tch-cal__what strong { text-decoration: line-through; opacity: 0.65; }
+
+.tch-cal__actions { display: inline-flex; gap: var(--sp-2); }
+
+/* ── the weekly spine's manager (#242) ────────────────────────────────────*/
+.tch-tt { width: min(860px, 100%); }
+.tch-tt__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.tch-tt__head h2 { margin: 0; font-size: var(--sp-fs-lg); color: var(--sp-ink-900); }
+.tch-tt__note, .tch-tt__loading { margin: 0; color: var(--sp-ink-500); font-size: var(--sp-fs-sm); }
+.tch-tt__week { display: grid; gap: var(--sp-2); }
+.tch-tt__day h3 { margin: 0 0 var(--sp-1); font-size: var(--sp-fs-sm); color: var(--sp-ink-700); }
+.tch-tt__empty { margin: 0; color: var(--sp-ink-400); font-size: var(--sp-fs-xs); }
+.tch-tt__slots { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--sp-1); }
+.tch-tt__slot {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-bg);
+  font-size: var(--sp-fs-sm);
+}
+.tch-tt__hours { color: var(--sp-ink-500); font-variant-numeric: tabular-nums; }
+.tch-tt__subject { color: var(--sp-ink-900); font-weight: 600; }
+.tch-tt__who, .tch-tt__until {
+  padding-inline: var(--sp-1);
+  border-radius: 999px;
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+.tch-tt__slotActions { margin-inline-start: auto; display: inline-flex; gap: var(--sp-1); }
+.tch-tt__form { display: grid; gap: var(--sp-2); padding: var(--sp-2); border-radius: var(--sp-radius-sm); background: var(--sp-bg); }
+.tch-tt__form h3 { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-900); }
+.tch-tt__fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--sp-2); }
+.tch-tt__fields label { display: grid; gap: 2px; font-size: var(--sp-fs-xs); color: var(--sp-ink-500); }
+.tch-tt__formActions { display: flex; gap: var(--sp-2); }
+.tch-tt__error { margin: 0; color: var(--sp-danger-600); font-size: var(--sp-fs-sm); }
+.tch-tt__add { justify-self: start; }
+.tch-tt__lesson { width: min(520px, 100%); }
+.tch-tt__lessonWhen { margin: 0; color: var(--sp-ink-500); font-size: var(--sp-fs-sm); }
+.tch-tt__cancelledNote, .tch-tt__movedNote { margin: 0; color: var(--sp-warn-600); font-size: var(--sp-fs-sm); }
+.tch-tt__lessonActions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.tch-tt__moveForm { display: flex; align-items: end; gap: var(--sp-2); }
+.tch-tt__moveForm label { display: grid; gap: 2px; font-size: var(--sp-fs-xs); color: var(--sp-ink-500); }

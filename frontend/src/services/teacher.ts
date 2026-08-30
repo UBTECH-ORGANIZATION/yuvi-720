@@ -1,7 +1,7 @@
 /* Teacher view + org clients (F6/F8). Every insight/flag carries raw evidence;
    access is group-scoped server-side. */
 
-import { apiDelete, apiGet, apiPatch, apiPost } from './api'
+import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from './api'
 import type { AvatarChoice } from '../features/badges/types'
 
 export interface AttentionFlag {
@@ -222,6 +222,60 @@ export interface LearningGap {
   evidence: { sample_misconceptions: [string, number][]; threshold: number }
 }
 
+/* The real answer behind a gap row's "למה?" (#507) — folded from stored
+   evidence on click, never generated: where inside the objective, on which
+   questions, and how it goes wrong per the coach's own error-type reads. */
+export interface GapDiagnosisPart {
+  component_id: string
+  title: string
+  attempts: number
+  correct: number
+  success_rate: number | null
+  learners: number
+  struggling_count: number
+}
+
+export interface GapDiagnosisQuestion {
+  question_id: string
+  component_id: string
+  item_id: string | null
+  ordinal: number | null
+  part: number | null
+  screen_title: string
+  kind: string
+  attempts: number
+  correct: number
+  success_rate: number
+  learners: number
+  learning_title: string
+  /** The content's own `informationToBot` description of what this question
+   *  teaches — the topic behind the number. */
+  teaches: string | null
+}
+
+export type GapErrorType = 'guess' | 'partial' | 'misinterpret' | 'careless'
+
+export interface GapDiagnosis {
+  objective_id: string
+  objective_title: string | null
+  /** Hardest first. */
+  parts: GapDiagnosisPart[]
+  hard_questions: GapDiagnosisQuestion[]
+  /** [error_type, decision count], most common first. */
+  error_types: [GapErrorType, number][]
+  /** The one generated field: the topics-and-focus guidance, phrased from the
+   *  folded rows above and nothing else. Null whenever phrasing failed — the
+   *  client then composes its deterministic sentences instead. */
+  focus_text: string | null
+}
+
+export function getGapDiagnosis(groupId: string, objectiveId: string, language: string) {
+  const params = new URLSearchParams({ language })
+  return apiGet<GapDiagnosis>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/gaps/${
+      encodeURIComponent(objectiveId)}/diagnosis?${params}`)
+}
+
 export interface GroupRecommendation {
   action: 'revisit' | 'change_pace' | 'adapt_method' | 'split_groups' | 'extend'
   text: string
@@ -360,15 +414,38 @@ export interface MoodWindow {
   positive_pct: number
   /** False below the evidence gate: show the shape, do not lead with a share. */
   enough: boolean
+  /** The children behind each family (#505) — current window only, each
+   *  child once per family at their most recent answer. Absent families are
+   *  absent, and the display name is the roster's job, not this payload's. */
+  students?: Partial<Record<Valence, MoodStudent[]>>
+}
+
+export interface MoodStudent {
+  learner_id: string
+  date: string | null
+  feeling: string | null
+}
+
+/** A child's written words from the daily check-in (#505) — current window
+ *  only, PII-stripped at write, always with the question they answered. */
+export interface MoodNote {
+  learner_id: string
+  date: string | null
+  valence: Valence | null
+  feeling: string | null
+  question: string | null
+  text: string
 }
 
 export interface ClassMood extends MoodWindow {
   window_days: number
   previous?: MoodWindow
+  notes?: MoodNote[]
 }
 
-/* How the class has been feeling. Aggregate only — no learner id is returned,
-   deliberately: the class view never names who is having a bad week (C5). */
+/* How the class has been feeling. Counts lead; the current window also names
+   the children behind each family (#505) so the number can become the right
+   conversation — never a ranking (C5), and the compare window stays aggregate. */
 export function getGroupMood(groupId: string, days: number) {
   return apiGet<ClassMood>(
     `/api/teacher/groups/${encodeURIComponent(groupId)}/mood?days=${days}`)
@@ -543,6 +620,51 @@ export interface LearnerTrends {
 export function getStudentTrends(learnerId: string, days = 30) {
   return apiGet<LearnerTrends>(
     `/api/teacher/students/${encodeURIComponent(learnerId)}/trends?days=${days}`)
+}
+
+/* ── habit scores: independence & concentration (PBI 451) ─────────────────── */
+
+export interface ScoreTrend {
+  direction: 'up' | 'down' | 'flat' | null
+  deltaPoints: number | null
+}
+
+export interface SubScore {
+  key: string
+  /** 0..1 — shown in the UI: the weighted mean is visible, never a black box. */
+  weight: number
+  /** 0..100, or null when this signal is not measured (yet). */
+  value: number | null
+  /** Raw numbers behind the value — a claim never travels without its datum. */
+  evidence: Record<string, unknown>
+}
+
+export interface ScoreBlock {
+  /** 0..100, or null below the evidence threshold — never a thin guess. */
+  value: number | null
+  confidence: number
+  evidenceOk: boolean
+  trend: ScoreTrend
+  subscores: SubScore[]
+  /** Signals that could not be measured; the weights renormalize over the rest. */
+  coverage: { missing: string[]; renormalized: boolean }
+}
+
+export interface ConcentrationScore extends ScoreBlock {
+  /** The normaliser the five signals are read against — never a weighted tile. */
+  sessionShape: { connectedMinutes: number | null; questionsAnswered: number }
+}
+
+export interface StudentScores {
+  independence: ScoreBlock
+  concentration: ConcentrationScore
+  windowDays: number
+  windowTruncated: boolean
+}
+
+export function getStudentScores(learnerId: string) {
+  return apiGet<StudentScores>(
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/scores`)
 }
 
 /* ── teacher-authored insights (MUST S3) ──────────────────────────────────── */
@@ -1031,6 +1153,30 @@ export function getGroupLearnings(groupId: string, language: string, subject?: s
   )
 }
 
+/** One smart-search hit: a REAL catalog learning (the server drops anything
+ *  the model made up) plus the model's one-line reason it fits the ask. */
+export interface FoundLearning {
+  /** A learning GOAL — pinning it lets the planner allocate the fitting
+   *  lomda inside it as the child progresses. */
+  objective_id: string
+  title: string
+  /** Where the goal lives — the search is catalog-wide, every subject. */
+  subject: string | null
+  reason: string
+}
+
+/** The pin dialog's smart search. `similar_topic` is only ever set when
+ *  `options` is empty — a navigation hint ("I do have something about X"),
+ *  never a fourth result. */
+export function findLearnings(
+  groupId: string,
+  body: { query: string; subject?: string; language?: string },
+) {
+  return apiPost<{ options: FoundLearning[]; similar_topic: string | null }>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/learnings/find`, body
+  )
+}
+
 export function getLearningDetail(groupId: string, componentId: string, language: string) {
   return apiGet<LearningDetail>(
     `/api/teacher/groups/${encodeURIComponent(groupId)}/learnings/${
@@ -1067,15 +1213,45 @@ export function previewLearning(componentId: string) {
   )
 }
 
-/* Pin-next (#249, the minimal slice of #244). The target is always a catalog
- * component picked from `getGroupLearnings` above — the server resolves unit,
- * objective and subject from the id, so only the id crosses the wire. */
+/* Pin-next (#249 shipped the component slice; #244 completed it). The target
+ * is a catalog component picked from `getGroupLearnings` above, or a task the
+ * learner was actually assigned — either way the server resolves everything
+ * else (unit, objective, the task's title) from the id, so only the id and an
+ * optional end date cross the wire. */
 export interface PinnedNext {
-  component_id: string
-  unit_id: string | null
-  objective_id: string | null
+  /** Absent on pins written before #244 — read that as 'component'.
+   *  'objective' = a learning GOAL: the planner allocates within it. */
+  kind?: 'component' | 'task' | 'objective'
+  component_id?: string
+  unit_id?: string | null
+  objective_id?: string | null
+  /** Objective pins: where the goal lives, for the class map's row label. */
+  subject?: string | null
+  /** Task pins: the opening the child's own route accepts, and the task. */
+  launch_id?: string
+  task_id?: string
+  /** The task's title, frozen at pin time — the catalog has never seen it. */
+  title?: string
   pinned_by: string
   pinned_at: string
+}
+
+/** How the previous pin ended — what lets a teacher tell "done ✓" apart from
+ *  "never pinned". ('expired' survives only on records from before pins lost
+ *  their clock; nothing writes it any more.) */
+export interface PinnedLast extends PinnedNext {
+  outcome: 'completed' | 'expired' | 'unpinned'
+  ended_at: string
+}
+
+/** An open task opening the pin panel may offer — already assigned, not yet
+ *  handed in, so pinning it can never point at a paper the child cannot open. */
+export interface PinnableTask {
+  launch_id: string
+  task_id: string
+  title: string | null
+  due_at: string | null
+  status: string
 }
 
 /** Where the planner is pointing one learner right now — the profile's
@@ -1110,15 +1286,53 @@ export interface PinFocus {
 }
 
 export function getPinnedNext(learnerId: string, language: string) {
-  return apiGet<{ pinned: PinnedNext | null; focus: PinFocus }>(
+  return apiGet<{
+    pinned: PinnedNext | null
+    /** Display name for the standing pin, resolved server-side — the task's
+     *  frozen title or the pinned learning's localized one. */
+    pinned_title: string | null
+    /** Null when nothing is pinned. 'spent' (the pinned material was already
+     *  finished) keeps a dead record readable rather than pretending it never
+     *  was — it steers nobody. A pin has no clock, so these are the only
+     *  states. */
+    pin_state: 'active' | 'spent' | null
+    last: PinnedLast | null
+    last_title: string | null
+    tasks: PinnableTask[]
+    focus: PinFocus
+  }>(
     `/api/teacher/students/${encodeURIComponent(learnerId)}/pin-next?language=${language}`
   )
 }
 
-export function pinNext(learnerId: string, componentId: string) {
+/** Exactly one target; a pin carries no end date — it stands until the child
+ *  finishes it or the teacher unpins it. */
+export interface PinRequest {
+  /** Exactly one target. `objective_id` pins a learning GOAL (the dialog's
+   *  only learnings currency now); `component_id` survives for older
+   *  surfaces; `launch_id` pins an assigned task. */
+  objective_id?: string
+  component_id?: string
+  launch_id?: string
+}
+
+export function pinNext(learnerId: string, body: PinRequest) {
   return apiPost<{ pinned: PinnedNext }>(
-    `/api/teacher/students/${encodeURIComponent(learnerId)}/pin-next`,
-    { component_id: componentId }
+    `/api/teacher/students/${encodeURIComponent(learnerId)}/pin-next`, body
+  )
+}
+
+/** One pin, many children. Targets resolve server-side against the LIVE
+ *  roster; a child a task-pin cannot reach comes back in `skipped`, named. */
+export function bulkPinNext(
+  groupId: string,
+  body: {
+    targets: { kind: 'learner' | 'subgroup' | 'group'; id: string }[]
+    pin: PinRequest
+  }
+) {
+  return apiPost<{ pinned: string[]; skipped: { learner_id: string; reason: string }[] }>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/pin-next`, body
   )
 }
 
@@ -1194,16 +1408,12 @@ export function deleteSubgroup(subgroupId: string) {
  *  because a teacher acting on this is entitled to know how old it is, and
  *  `stale` means a refresh was attempted and failed. */
 export interface LearnerRead {
-  /** Free prose, no figures — the overall analysis paragraph the
-   *  recommendations panel leads with. */
+  /** Free prose, no figures — the overall analysis paragraph. Opens the goal
+   *  dialog's context reading; the recommendations panel no longer prints it. */
   overview?: string
   /** Per-subject sections — a short performance summary in prose, then the
    *  points, each point carrying its numbers. */
   subjects?: { subject: string; summary?: string; points: string[] }[]
-  involvement?: string
-  /** Something worth knowing that the numbers don't show — an interest, how
-   *  the child describes their own learning. */
-  notable?: string
   suggestion?: string
   /** The real material the suggestion points at, validated server-side —
    *  what the build-task seed opens on. Null when the model named nothing. */
@@ -1311,7 +1521,7 @@ export function suggestWellbeing(flagId: string, intent: 'message' | 'handle' | 
  * `day` is computed server-side in the school's timezone, so the client never
  * re-derives which column something falls in — that is the bug this avoids. */
 
-export type CalendarSource = 'event' | 'task' | 'goal' | 'meeting'
+export type CalendarSource = 'event' | 'task' | 'goal' | 'meeting' | 'lesson'
 export type CalendarEventKind = 'lesson' | 'reminder' | 'test' | 'event'
 
 export interface CalendarItem {
@@ -1385,6 +1595,98 @@ export function deleteCalendarEvent(eventId: string) {
   return apiDelete<{ deleted: boolean }>(
     `/api/teacher/calendar/events/${encodeURIComponent(eventId)}`
   )
+}
+
+/* ── the weekly spine (#242): rules, not events ───────────────────────────
+   A slot is a recurring weekly rule the calendar expands on read; the
+   calendar items it becomes arrive through `getGroupCalendar` like every
+   other source. These calls manage the rules themselves, one week's
+   exceptions, and the school's editable days-off list. */
+
+export interface TimetableSlot {
+  _id: string
+  group_id: string
+  school_id: string
+  subgroup_id: string | null
+  subject: string
+  subject_key: string | null
+  teacher_name: string | null
+  room: string | null
+  /** 0=Sunday … 6=Saturday — the Israeli school week. */
+  weekday: number
+  start_time: string
+  end_time: string
+  valid_from: string
+  valid_to: string | null
+}
+
+export interface SchoolDay {
+  _id: string
+  school_id: string
+  date: string
+  kind: 'holiday' | 'vacation' | 'closed' | 'half_day'
+  label: string
+  closed_from?: string
+}
+
+export interface TimetableSlotDraft {
+  subject: string
+  subject_key?: string | null
+  weekday: number
+  start_time: string
+  end_time: string
+  valid_from: string
+  valid_to?: string | null
+  subgroup_id?: string | null
+  room?: string | null
+  teacher_name?: string | null
+}
+
+export function getGroupTimetable(groupId: string) {
+  return apiGet<{ school_id: string; slots: TimetableSlot[]; school_days: SchoolDay[] }>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/timetable`)
+}
+
+export function createTimetableSlot(groupId: string, draft: TimetableSlotDraft) {
+  return apiPost<{ slot: TimetableSlot }>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/timetable/slots`, draft)
+}
+
+export function updateTimetableSlot(slotId: string, patch: Partial<TimetableSlotDraft>) {
+  return apiPatch<{ slot: TimetableSlot }>(
+    `/api/teacher/timetable/slots/${encodeURIComponent(slotId)}`, patch)
+}
+
+export function deleteTimetableSlot(slotId: string) {
+  return apiDelete<{ deleted: boolean }>(
+    `/api/teacher/timetable/slots/${encodeURIComponent(slotId)}`)
+}
+
+/** Cancel or move ONE week's lesson; the rule underneath stays intact. */
+export function setLessonException(
+  slotId: string, day: string,
+  body: { kind: 'cancelled' | 'moved'; date?: string;
+          start_time?: string; end_time?: string; note?: string },
+) {
+  return apiPut<{ exception: Record<string, unknown> }>(
+    `/api/teacher/timetable/slots/${encodeURIComponent(slotId)}/occurrences/${day}`, body)
+}
+
+export function clearLessonException(slotId: string, day: string) {
+  return apiDelete<{ restored: boolean }>(
+    `/api/teacher/timetable/slots/${encodeURIComponent(slotId)}/occurrences/${day}`)
+}
+
+export function addSchoolDay(groupId: string, body: {
+  date: string; kind: SchoolDay['kind']; label: string; closed_from?: string
+}) {
+  return apiPost<{ day: SchoolDay }>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/school-days`, body)
+}
+
+export function removeSchoolDay(groupId: string, day: string) {
+  return apiDelete<{ deleted: boolean }>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/school-days/${day}`)
 }
 
 /* ── mentoring: the talk a goal came out of ───────────────────────────────── */

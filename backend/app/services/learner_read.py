@@ -67,7 +67,8 @@ def _now() -> datetime:
 
 #: Part of the cache key. Bumped when the prompt or the answer shape changes,
 #: so a cached old-shape read is simply never found rather than migrated.
-PROMPT_VERSION = "v6"
+#: v7: dropped `involvement`/`notable` (PBI 451 — the two repeated prose lines).
+PROMPT_VERSION = "v7"
 
 
 def read_id(learner_id: str, language: str) -> str:
@@ -119,23 +120,16 @@ Answer with JSON only:
                "one SHORT sentence: what has been hard OR got better there,
                 with the numbers — omit if the evidence has neither",
                ...up to 2]}}, ...up to 3],
-  "involvement": "one SHORT sentence on what they did lately — pick the two
-                  most telling numbers, do not list them all",
-  "notable": "one SHORT sentence on something worth knowing that the numbers
-              do not show — an interest, how they describe their own learning,
-              what helps them. Empty string if the evidence has nothing like
-              this.",
   "suggestion": "one sentence: the single most useful thing to work on next,
                  naming one item from the list above",
   "suggestion_target": "the key of that item, copied exactly"}}
 
 Rules:
 - Write in {language}.
-- BE BRIEF. The points, involvement and notable together must stay under 55
-  words — a teacher reads them in one glance between two questions. Every
-  sentence at most ~12 words. Cut the least informative claim before you cut
-  a number. The overview and summaries are the only prose; keep each of them
-  to its sentence count.
+- BE BRIEF. The points together must stay under 55 words — a teacher reads
+  them in one glance between two questions. Every sentence at most ~12 words.
+  Cut the least informative claim before you cut a number. The overview and
+  summaries are the only prose; keep each of them to its sentence count.
 - The overview carries NO digits: it is the reading between the numbers, and
   the numbers are already on the screen beside it.
 - Call the child by the school word for a student (Hebrew: תלמיד/ה — never
@@ -151,8 +145,7 @@ Rules:
 - A subject the evidence says nothing about gets NO entry — an empty subjects
   list is a correct answer.
 - Things the student said about themselves in onboarding are self-description,
-  not recorded difficulties. If worth telling, they belong in "notable" (at
-  most one sentence), introduced as what the student says about themselves.
+  not recorded difficulties. Do not list one as one.
 - A goal the student is working on is not a difficulty. Do not list one as one.
 - Never diagnose, never describe the child's character or home life, and never
   compare them to another student.
@@ -396,8 +389,6 @@ def _clean(payload: Any, anchors: list[dict[str, Any]],
     read = {
         "overview": overview,
         "subjects": subjects,
-        "involvement": line("involvement"),
-        "notable": line("notable"),
         "suggestion": line("suggestion"),
         "suggestion_anchor": {
             "key": anchor["key"], "title": anchor["title"],
@@ -407,8 +398,7 @@ def _clean(payload: Any, anchors: list[dict[str, Any]],
     }
     # Every field empty means the model said nothing at all, which is not the
     # same as "this child has nothing to say" and must not be cached as it.
-    if not (read["subjects"] or read["overview"] or read["involvement"]
-            or read["notable"] or read["suggestion"]):
+    if not (read["subjects"] or read["overview"] or read["suggestion"]):
         return None
     return read
 

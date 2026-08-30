@@ -109,5 +109,54 @@ class PublicAssetsAreServed(unittest.TestCase):
         self.assertEqual(response.content[:2], b"\xff\xd8")
 
 
+class SpaFallbackServesTheShell(unittest.TestCase):
+    """Reloading a client route must never answer `{"detail":"Not Found"}`.
+
+    The shell routes are an allow-list and it kept losing — `/teacher`, the
+    whole teacher lane, was never on it (ADO #507's report caught it), so a
+    reload worked in dev and returned raw JSON in every deployed environment.
+    The fallback closes the class of bug: any unmatched GET a browser
+    navigates to gets the shell; API 404s keep their JSON and their detail.
+    """
+
+    def setUp(self) -> None:
+        self.tmp = Path(tempfile.mkdtemp())
+        (self.tmp / "index.html").write_text("<!doctype html><title>shell</title>")
+        self._original = static_pages.REACT_APP_DIR
+        static_pages.REACT_APP_DIR = self.tmp
+
+        app = FastAPI()
+        app.include_router(static_pages.router)
+
+        @app.get("/api/echo")
+        async def _api_echo():  # pragma: no cover - route body irrelevant
+            return {"ok": True}
+
+        static_pages.install_spa_fallback(app)
+        self.client = TestClient(app)
+
+    def tearDown(self) -> None:
+        static_pages.REACT_APP_DIR = self._original
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_a_browser_reload_of_any_client_route_gets_the_shell(self) -> None:
+        for url in ("/teacher", "/teacher/student/kid-1", "/teacher/live", "/admin"):
+            with self.subTest(url=url):
+                response = self.client.get(url, headers={"accept": "text/html,*/*"})
+                self.assertEqual(response.status_code, 200)
+                self.assertIn("shell", response.text)
+
+    def test_api_404s_keep_their_json_and_their_detail(self) -> None:
+        response = self.client.get(
+            "/api/nothing-here", headers={"accept": "text/html,*/*"})
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"detail": "Not Found"})
+
+    def test_a_non_html_request_still_gets_a_json_404(self) -> None:
+        response = self.client.get("/teacher", headers={"accept": "application/json"})
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"detail": "Not Found"})
+
+
 if __name__ == "__main__":
     unittest.main()

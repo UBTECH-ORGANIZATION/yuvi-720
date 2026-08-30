@@ -121,6 +121,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The habit scores carry the dial's tone into the figure itself — the strip
+   has no arc, so the color is where the at-a-glance reading lives. */
+.tch-student__kpis .tch-stat__value.is-success { color: var(--sp-success-600); }
+.tch-student__kpis .tch-stat__value.is-warn { color: var(--sp-warn-600); }
+.tch-student__kpis .tch-stat__value.is-danger { color: var(--sp-danger-600); }
+
 .tch-student__kpis .tch-stat__label {
   font-size: var(--sp-fs-xs);
   color: var(--sp-ink-400);
@@ -690,6 +696,30 @@
   display: flex;
   align-items: stretch;
 }
+
+/* The focus card grew a pin lane under its door (#244); the flex above laid
+   the two out SIDE BY SIDE, so it stacks when the lane is present. */
+.tch-status__focus:has(> .tch-status__pinBar) { flex-direction: column; }
+
+.tch-status__pinBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  padding: var(--sp-1) var(--sp-3) var(--sp-2);
+  border-block-start: 1px solid var(--sp-border);
+}
+
+.tch-status__pinNote {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+
+/* The pin panel, in a dialog: the same component the live row drops inline. */
 
 .tch-status__cellOpen {
   flex: 1;
@@ -1307,33 +1337,6 @@
   .tch-read__rule { inline-size: auto; block-size: 1px; }
 }
 
-/* Claims as rows, each marked by its kind — not one paragraph in one voice. */
-.tch-read__points {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: var(--sp-2);
-}
-
-.tch-read__points li {
-  display: flex;
-  align-items: baseline;
-  gap: var(--sp-2);
-  font-size: var(--sp-fs-sm);
-  line-height: 1.55;
-  color: #eceaff;
-  /* Follows the PAGE's direction — a `dir="auto"` on the flex row itself let
-     the row pick its own and the icons drifted to the wrong side. */
-  text-align: start;
-}
-
-.tch-read__points li .sp-icon { flex-shrink: 0; translate: 0 2px; }
-.tch-read__points li.is-hard .sp-icon { color: #ffb4a8; }
-.tch-read__points li.is-gain .sp-icon { color: #9be8b7; }
-.tch-read__points li.is-activity .sp-icon { color: #b7c8ff; }
-.tch-read__points li.is-notable .sp-icon { color: #ffe08f; }
-
 .tch-read__suggest {
   display: flex;
   align-items: center;
@@ -1671,31 +1674,13 @@
 
 .tch-read__inner { z-index: 2; }
 
-/* ── the recommendations panel: overview prose, then three fixed slots ──────
+/* ── the recommendations panel: three fixed slots ───────────────────────────
  *
- * The paragraph is the reading between the numbers; the slots below keep the
- * numbers. Three slots always render, in the same order — what works, what is
- * stuck, the next step — so the teacher's eye learns where the good news
- * lives, and an empty slot says why instead of vanishing.
+ * Three slots always render, in the same order — what works, what is stuck,
+ * the next step — so the teacher's eye learns where the good news lives, and
+ * an empty slot says why instead of vanishing. (The generic opening paragraph
+ * that led the panel is gone per Reut — it read the same for every child.)
  */
-
-.tch-recs__overview {
-  margin: 0 0 var(--sp-3);
-  padding: var(--sp-3);
-  border-radius: var(--sp-radius-md);
-  background: color-mix(in srgb, var(--sp-primary-600) 7%, transparent);
-  border-inline-start: 3px solid color-mix(in srgb, var(--sp-primary-600) 45%, transparent);
-  font-size: var(--sp-fs-sm);
-  line-height: 1.6;
-  color: var(--sp-ink-700);
-  text-align: start;
-}
-
-.tch-recs__overviewWait {
-  display: grid;
-  gap: var(--sp-2);
-  margin-block-end: var(--sp-3);
-}
 
 /* One flat, compact list: no sections, no dividers — the theme lives in the
    pill each row leads with (מה עובד / מה תקוע / הצעד הבא), and rows separate
@@ -1776,3 +1761,104 @@
   font-weight: var(--sp-fw-medium);
   color: var(--sp-success-600);
 }
+
+/* ── the two habit scores (PBI 451): hero-strip stats + evidence dialogs ────
+ *
+ * The scores are two clickable stats on the hero identity row — the colored
+ * figure IS the reading. Reut's "לא בהכרח קשת אלא משהו נתוני" lives in the
+ * DIALOG: what lowers the score, then what strengthens it, each signal one
+ * sentence carrying its own numbers.
+ */
+
+.tch-scoreCard__value {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.tch-scoreCard__value strong {
+  font-size: 28px;
+  font-weight: var(--sp-fw-bold);
+  line-height: 1.1;
+}
+
+.tch-scoreCard__scale {
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+  margin-inline-start: 2px;
+}
+
+/* The dialog: one readable column of sentences — wide enough that a line of
+   prose doesn't wrap twice, no wider (a 1000px text column stops being read).
+   Doubled selector: `.sp-modal` sets `width: min(440px, 100%)` and this must
+   actually win, not tie. */
+.sp-modal.tch-scoreDialog {
+  inline-size: min(720px, 94vw);
+  max-inline-size: 720px;
+}
+
+.tch-scoreDialog__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  margin-block-end: var(--sp-3);
+}
+
+.tch-scoreDialog__window {
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+
+/* The two signal groups: "what lowers it" first, "what strengthens it" after.
+   One line per signal — name, then the sentence its counters make. */
+.tch-scoreDialog__group {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border-radius: var(--sp-radius-md);
+  text-align: start;
+}
+
+.tch-scoreDialog__group.is-down {
+  background: color-mix(in srgb, var(--sp-warn-600) 6%, transparent);
+}
+
+.tch-scoreDialog__group.is-up {
+  background: color-mix(in srgb, var(--sp-success-600) 6%, transparent);
+}
+
+.tch-scoreDialog__group h3 {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  font-weight: var(--sp-fw-semibold);
+}
+
+.tch-scoreDialog__group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.tch-scoreDialog__group li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--sp-fs-sm);
+  line-height: 1.55;
+}
+
+.tch-scoreDialog__dot {
+  flex-shrink: 0;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 999px;
+  translate: 0 -1px;
+}
+
+.tch-scoreDialog__dot.is-success { background: var(--sp-success-600); }
+.tch-scoreDialog__dot.is-warn { background: var(--sp-warn-600); }
+.tch-scoreDialog__dot.is-danger { background: var(--sp-danger-600); }
+.tch-scoreDialog__dot.is-primary { background: var(--sp-primary-600); }
+
+

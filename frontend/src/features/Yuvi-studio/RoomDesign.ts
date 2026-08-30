@@ -25,11 +25,12 @@ export interface RoomItem {
 export type StationId = 'avatar' | 'room'
 
 /**
- * Where the two walk-in stations stand. The room station's coordinate is the
- * bench itself; the spot the learner stands on is derived from it, so moving
- * the bench takes its doorway with it.
+ * Where the two walk-in stations stand, and which way they face. The room
+ * station's coordinate is the bench itself; the spot the learner stands on is
+ * derived from its position *and* its angle, so turning the bench takes its
+ * doorway with it.
  */
-export type RoomStations = Record<StationId, { x: number; z: number }>
+export type RoomStations = Record<StationId, { x: number; z: number; rot: number }>
 
 export interface RoomDesign {
   version: number
@@ -38,6 +39,8 @@ export interface RoomDesign {
   mood: MoodId
   items: RoomItem[]
   stations: RoomStations
+  /** The learner has been walked through placing and turning the stations. */
+  tutorialDone: boolean
 }
 
 export const ROOM_STYLES: RoomStyleId[] = ['lab', 'wood', 'carpet', 'meadow', 'court']
@@ -47,9 +50,16 @@ export const MOODS: MoodId[] = ['studio', 'sunset', 'night', 'party']
 /** Hard cap. A room full of 200 props is not a design, it is a frame-rate bug. */
 export const MAX_ROOM_ITEMS = 60
 
+/**
+ * The angle the room bench was authored at. Rooms saved before stations could
+ * turn have no angle of their own, so this is what they fall back to and the
+ * layout they were designed in is preserved exactly.
+ */
+export const DEFAULT_BENCH_ROT = 1.2
+
 export const DEFAULT_STATIONS: RoomStations = {
-  avatar: { x: 0, z: 0 },
-  room: { x: -5, z: 2.6 },
+  avatar: { x: 0, z: 0, rot: 0 },
+  room: { x: -9, z: 3.9, rot: DEFAULT_BENCH_ROT },
 }
 
 export const DEFAULT_ROOM: RoomDesign = {
@@ -59,6 +69,7 @@ export const DEFAULT_ROOM: RoomDesign = {
   mood: 'studio',
   items: [],
   stations: DEFAULT_STATIONS,
+  tutorialDone: false,
 }
 
 export function cloneRoom(room: RoomDesign): RoomDesign {
@@ -69,6 +80,7 @@ export function cloneRoom(room: RoomDesign): RoomDesign {
     mood: room.mood,
     items: room.items.map((item) => ({ ...item })),
     stations: { avatar: { ...room.stations.avatar }, room: { ...room.stations.room } },
+    tutorialDone: room.tutorialDone,
   }
 }
 
@@ -115,18 +127,25 @@ export function normalizeRoom(raw: unknown): RoomDesign {
       const spot = rawStations[id] as Record<string, unknown> | undefined
       if (!spot || typeof spot !== 'object') continue
       if (!isFinitePoint(spot.x) || !isFinitePoint(spot.z)) continue
-      base.stations[id] = { x: spot.x, z: spot.z }
+      base.stations[id] = {
+        x: spot.x,
+        z: spot.z,
+        rot: isFinitePoint(spot.rot) ? spot.rot : DEFAULT_STATIONS[id].rot,
+      }
     }
   }
+  base.tutorialDone = record.tutorialDone === true
   return base
 }
 
 /** Layout equality, used for the unsaved-changes guard. */
 export function sameRoom(a: RoomDesign, b: RoomDesign): boolean {
   if (a.floor !== b.floor || a.wall !== b.wall || a.mood !== b.mood) return false
+  if (a.tutorialDone !== b.tutorialDone) return false
   for (const id of ['avatar', 'room'] as StationId[]) {
     if (Math.abs(a.stations[id].x - b.stations[id].x) > 0.001) return false
     if (Math.abs(a.stations[id].z - b.stations[id].z) > 0.001) return false
+    if (Math.abs(a.stations[id].rot - b.stations[id].rot) > 0.001) return false
   }
   if (a.items.length !== b.items.length) return false
   for (let i = 0; i < a.items.length; i++) {

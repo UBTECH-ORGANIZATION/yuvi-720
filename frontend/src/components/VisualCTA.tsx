@@ -20,10 +20,6 @@ export function VisualCTA({
         {failed ? t('companion.visualCta.failed') : t('companion.visualCta.prompt')}
       </span>
       <div className="sp-visual-cta__buttons">
-        <button type="button" className="sp-visual-cta__btn" onClick={() => onRequest('video')}>
-          <Icon name="play" size={14} />
-          <span>{t('companion.visualCta.video')}</span>
-        </button>
         <button type="button" className="sp-visual-cta__btn" onClick={() => onRequest('image')}>
           <Icon name="image" size={14} />
           <span>{t('companion.visualCta.image')}</span>

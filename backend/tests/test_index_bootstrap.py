@@ -127,8 +127,11 @@ class IndexBootstrap(unittest.TestCase):
             "wellbeing_flags": {"wellbeing_flags"},
             "goal_suggestions": {"goal_suggestions"},
             "calendar_events": {"calendar_events"},
+            "timetable": {"timetable_slots", "timetable_exceptions",
+                          "school_calendar_days"},
             # Learner-lane collections: read per learner on every dashboard.
             "learning_events": {"learning_events"},
+            "learner_signals": {"learner_signals"},
             "learner_activity": {"learner_activity"},
             "mentoring_conversations": {"mentoring_conversations"},
             "reward_ledger": {"reward_ledger"},
