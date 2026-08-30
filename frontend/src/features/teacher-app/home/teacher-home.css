@@ -86,6 +86,16 @@
   text-align: start;
   cursor: pointer;
   color: inherit;
+  border-radius: var(--sp-radius-sm);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+/* the cell says it opens: a lift on hover, because nothing else on the strip
+   reacts to the pointer (#505). Specificity matches the pulse panel's
+   `.tch-home .tch-stats .tch-stat` reset below, which zeroes background and
+   shadow and would silently win otherwise. */
+.tch-home .tch-stats .tch-stat--button:hover {
+  background: var(--sp-bg);
+  box-shadow: inset 0 0 0 1px var(--sp-primary-500);
 }
 .tch-stat--button:focus-visible {
   outline: 2px solid var(--sp-primary-500);
@@ -255,6 +265,188 @@
   color: var(--sp-ink-500);
   font-size: var(--sp-fs-sm);
 }
+
+/* ── who is behind each feeling (#505) — the mood KPI's dialog ─────────────
+   A chart first, names second, words on their own tab. The families keep the
+   check-in's framing — no family is a warning state, so the only colours are
+   the ring's own five hues, and no chip is tinted by what its child said. */
+.tch-moodDlg { width: min(920px, 100%); }
+.tch-moodDlg__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.tch-moodDlg__head h2 { margin: 0; font-size: var(--sp-fs-lg); color: var(--sp-ink-900); }
+.tch-moodDlg__note { margin: 0; color: var(--sp-ink-500); font-size: var(--sp-fs-sm); line-height: 1.55; }
+.tch-moodDlg__tabs {
+  display: flex;
+  gap: var(--sp-1);
+  border-block-end: 1px solid var(--sp-border);
+  padding-block-end: var(--sp-1);
+}
+.tch-moodDlg__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-2);
+  border: 0;
+  border-radius: var(--sp-radius-sm);
+  background: none;
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-500);
+  cursor: pointer;
+}
+.tch-moodDlg__tab.is-active { background: var(--sp-bg); color: var(--sp-ink-900); font-weight: 600; }
+.tch-moodDlg__tabCount {
+  padding-inline: var(--sp-1);
+  border-radius: 999px;
+  background: var(--sp-bg);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+.tch-moodDlg__tab.is-active .tch-moodDlg__tabCount { background: var(--sp-surface); }
+.tch-moodDlg__families { display: grid; gap: var(--sp-3); }
+/* the chart IS the control: one proportional bar of family BUTTONS — a
+   family's width is its children, its spot on the bar is where you press */
+.tch-moodDlg__bar {
+  display: flex;
+  gap: 3px;
+  border-radius: var(--sp-radius-sm);
+}
+.tch-moodDlg__seg {
+  flex-basis: 0;
+  flex-shrink: 0;
+  min-inline-size: 88px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--sp-2) var(--sp-1);
+  border: 2px solid transparent;
+  border-radius: var(--sp-radius-sm);
+  font: inherit;
+  font-size: var(--sp-fs-xs);
+  cursor: pointer;
+  /* white on the deep light-theme hues; the lifted dark-theme hues are bright
+     enough to want dark ink instead */
+  color: rgba(255, 255, 255, 0.95);
+  opacity: 0.82;
+  transition: opacity 0.15s ease;
+}
+.tch-moodDlg__seg:hover { opacity: 1; }
+.tch-moodDlg__seg.is-active {
+  opacity: 1;
+  border-color: var(--sp-ink-900);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.18);
+}
+[data-theme='dark'] .tch-moodDlg__seg { color: #1f2733; }
+[data-theme='dark'] .tch-moodDlg__seg.is-active { border-color: #fff; }
+.tch-moodDlg__segLabel { font-weight: 600; }
+.tch-moodDlg__segCount { font-size: var(--sp-fs-sm); font-weight: 700; }
+.tch-moodDlg__seg.is-great  { background: var(--tch-mood-great); }
+.tch-moodDlg__seg.is-good   { background: var(--tch-mood-good); }
+.tch-moodDlg__seg.is-okay   { background: var(--tch-mood-okay); }
+.tch-moodDlg__seg.is-uneasy { background: var(--tch-mood-uneasy); }
+.tch-moodDlg__seg.is-upset  { background: var(--tch-mood-upset); }
+.tch-moodDlg__count {
+  padding-inline: var(--sp-1);
+  border-radius: 999px;
+  background: var(--sp-bg);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+.tch-moodDlg__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+/* a name is a door to the child's page — chip-shaped, never tinted by the
+   feeling: the filter above already says it once */
+.tch-moodDlg__student {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-2);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-surface);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-900);
+  cursor: pointer;
+}
+.tch-moodDlg__student:hover { border-color: var(--sp-primary-500); }
+.tch-moodDlg__said { color: var(--sp-ink-500); font-size: var(--sp-fs-xs); }
+/* the words themselves — one card per child who wrote, then their notes */
+.tch-moodDlg__writers {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--sp-2);
+  max-block-size: min(52vh, 460px);
+  overflow-y: auto;
+}
+.tch-moodDlg__writer {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-surface);
+  font: inherit;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-900);
+  cursor: pointer;
+  text-align: start;
+}
+.tch-moodDlg__writer:hover { border-color: var(--sp-primary-500); }
+.tch-moodDlg__writer .tch-moodDlg__count { margin-inline-start: auto; }
+.tch-moodDlg__oneWriter { display: grid; gap: var(--sp-2); }
+.tch-moodDlg__writerBar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.tch-moodDlg__writerName { font-weight: 600; color: var(--sp-ink-900); margin-inline: auto; }
+.tch-moodDlg__notes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--sp-2);
+  max-block-size: min(46vh, 420px);
+  overflow-y: auto;
+}
+.tch-moodDlg__noteCard {
+  display: grid;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-bg);
+}
+.tch-moodDlg__noteWhen {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--sp-fs-xs);
+  color: var(--sp-ink-500);
+}
+/* the face in its family's own hue — ValenceFace strokes in currentColor, and
+   the palette vars are in scope on .tch-moodDlg */
+.tch-moodDlg__face { display: inline-flex; }
+.tch-moodDlg__face.is-great  { color: var(--tch-mood-great); }
+.tch-moodDlg__face.is-good   { color: var(--tch-mood-good); }
+.tch-moodDlg__face.is-okay   { color: var(--tch-mood-okay); }
+.tch-moodDlg__face.is-uneasy { color: var(--tch-mood-uneasy); }
+.tch-moodDlg__face.is-upset  { color: var(--tch-mood-upset); }
+.tch-moodDlg__noteQ { margin: 0; font-size: var(--sp-fs-xs); color: var(--sp-ink-400); }
+.tch-moodDlg__noteText { margin: 0; font-size: var(--sp-fs-sm); color: var(--sp-ink-700); line-height: 1.5; }
+.tch-moodDlg__empty { margin: 0; color: var(--sp-ink-500); font-size: var(--sp-fs-sm); }
 /* icon + its meaning, boxed together so the mark reads as a named symbol */
 .tch-bandHelp__legend {
   display: inline-flex;

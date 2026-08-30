@@ -360,15 +360,38 @@ export interface MoodWindow {
   positive_pct: number
   /** False below the evidence gate: show the shape, do not lead with a share. */
   enough: boolean
+  /** The children behind each family (#505) — current window only, each
+   *  child once per family at their most recent answer. Absent families are
+   *  absent, and the display name is the roster's job, not this payload's. */
+  students?: Partial<Record<Valence, MoodStudent[]>>
+}
+
+export interface MoodStudent {
+  learner_id: string
+  date: string | null
+  feeling: string | null
+}
+
+/** A child's written words from the daily check-in (#505) — current window
+ *  only, PII-stripped at write, always with the question they answered. */
+export interface MoodNote {
+  learner_id: string
+  date: string | null
+  valence: Valence | null
+  feeling: string | null
+  question: string | null
+  text: string
 }
 
 export interface ClassMood extends MoodWindow {
   window_days: number
   previous?: MoodWindow
+  notes?: MoodNote[]
 }
 
-/* How the class has been feeling. Aggregate only — no learner id is returned,
-   deliberately: the class view never names who is having a bad week (C5). */
+/* How the class has been feeling. Counts lead; the current window also names
+   the children behind each family (#505) so the number can become the right
+   conversation — never a ranking (C5), and the compare window stays aggregate. */
 export function getGroupMood(groupId: string, days: number) {
   return apiGet<ClassMood>(
     `/api/teacher/groups/${encodeURIComponent(groupId)}/mood?days=${days}`)

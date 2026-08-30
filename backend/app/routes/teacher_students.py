@@ -127,11 +127,11 @@ async def group_mood(
     """How the class has been feeling over the window, and the one before it.
 
     The daily check-in has been storing an answer per child per school day
-    since #452 and nothing has ever read them at class level. Aggregate only —
-    counts by valence, never a learner id: a mood is the most personal thing
-    the product holds, and the class view has no business naming who is having
-    a bad week (C5). The teacher reaches an individual child through their
-    profile, where that child's own strip already lives.
+    since #452. Counts by valence lead; the current window also names the
+    children behind each family (#505) so the teacher can open the right
+    conversation — the same per-child feeling the live view already shows.
+    Never a ranking and never an alarm (C5): the compare window stays
+    aggregate, and each child's own history lives on their profile strip.
     """
     if not await _guard_group(session, group_id):
         return _denied()

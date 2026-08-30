@@ -26,7 +26,7 @@
  * with evidence, never a ranking.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { navigate } from '../../../app/router'
 import {
   EmptyState, ErrorState, Hint, Icon, Skeleton, SkeletonCard,
@@ -52,6 +52,7 @@ import { bookEdition } from '../moments/bookModel'
 import { BandFace, type Band } from './BandFace'
 import { type BandedStudent } from './bandModel'
 import { gapToDifficultyItem, mostBlockingGap } from './gapsModel'
+import { MoodDialog } from './MoodDialog'
 import { MoodDonut, MoodKey, overallValence } from './MoodViz'
 import { ValenceFace } from '../../checkin/ValenceFaces'
 import { PeriodControl } from './PeriodControl'
@@ -96,6 +97,7 @@ export function TeacherHomePage() {
 
   const [bandFilter, setBandFilter] = useState<Band | null>(null)
   const [openStudent, setOpenStudent] = useState<BandedStudent | null>(null)
+  const [moodOpen, setMoodOpen] = useState(false)
   const bandsRef = useRef<HTMLElement | null>(null)
 
   const [builderSeed, setBuilderSeed] = useState<TaskSeed | null>(null)
@@ -559,6 +561,10 @@ export function TeacherHomePage() {
               cell, so a nested tooltip would open two bubbles on the same
               hover, and the ring is the last place a teacher would think to
               point at to find out what it means. */}
+          {/* With answers behind it the cell is a real button (#505): the
+              click the distribution always invited, opening who is behind
+              each family. Without answers it stays a plain cell — a disabled
+              button would also swallow the hover the hint rides on. */}
           <Hint
             text={(
               <>
@@ -567,7 +573,7 @@ export function TeacherHomePage() {
               </>
             )}
           >
-            <div className="tch-stat">
+            <MoodCell clickable={!!mood?.answers} onOpen={() => setMoodOpen(true)}>
               {/* The icon says the answer, not the topic. A generic smiley here
                   was the same mark whether the class was having its best week
                   or its worst — decoration in the one slot on the row that had
@@ -610,7 +616,7 @@ export function TeacherHomePage() {
               <span className="tch-stat__viz">
                 {mood ? <MoodDonut mood={mood} /> : null}
               </span>
-            </div>
+            </MoodCell>
           </Hint>
         </div>
       </section>
@@ -666,6 +672,16 @@ export function TeacherHomePage() {
 
       <StudentBandDialog student={openStudent} onClose={() => setOpenStudent(null)} />
 
+      {/* Who is behind each feeling (#505) — opened from the mood KPI. */}
+      {mood ? (
+        <MoodDialog
+          mood={mood}
+          nameOf={(id) => rosterNames.get(id) ?? id}
+          open={moodOpen}
+          onClose={() => setMoodOpen(false)}
+        />
+      ) : null}
+
       {/* The one encouraging action on the page: a good word, sparks optional,
           to the children who got a topic (#467). */}
       <PraiseDialog
@@ -707,6 +723,27 @@ export function TeacherHomePage() {
         onSave={(draft) => void saveSubgroup(draft)}
       />
     </div>
+  )
+}
+
+/* The mood KPI's shell: a real <button> when there are answers to open
+   (#505), a plain cell when there are not — a disabled button would also
+   swallow the hover the cell's hint rides on. Same body either way. */
+function MoodCell({ clickable, onOpen, children }: {
+  clickable: boolean
+  onOpen: () => void
+  children: ReactNode
+}) {
+  if (!clickable) return <div className="tch-stat">{children}</div>
+  return (
+    <button
+      type="button"
+      className="tch-stat tch-stat--button"
+      onClick={onOpen}
+      aria-haspopup="dialog"
+    >
+      {children}
+    </button>
   )
 }
 

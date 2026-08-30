@@ -684,14 +684,16 @@ class GroupAnalyticsTest(unittest.TestCase):
 class ClassMoodTest(unittest.TestCase):
     """The class's mood, from the daily check-in.
 
-    Aggregate only: this is the most personal thing the product holds, and the
-    class view has no business naming who is having a bad week (C5).
+    Counts lead; the names behind each family ride one level deeper (#505) so
+    the teacher can open the conversation the number is asking for. Never a
+    ranking (C5), and the compare window stays aggregate — last period's names
+    serve no conversation.
     """
 
     def _mood(self, histories, *, days=7, today="2026-08-22"):
         from datetime import date
 
-        def _history(learner_id, limit=20):
+        def _history(learner_id, limit=20, with_text=False):
             return histories.get(learner_id, [])
 
         with patch("app.services.group_analytics.learners_in_group",
@@ -702,11 +704,12 @@ class ClassMoodTest(unittest.TestCase):
                    return_value=today):
             return run(group_analytics.class_mood("g1", days=days))
 
-    def test_it_counts_by_valence_and_names_nobody(self):
+    def test_it_counts_by_valence_and_says_who_is_behind_each_family(self):
         mood = self._mood({
             "k1": [{"date": "2026-08-22", "valence": "great", "skipped": False}],
             "k2": [{"date": "2026-08-21", "valence": "good", "skipped": False}],
-            "k3": [{"date": "2026-08-20", "valence": "upset", "skipped": False}],
+            "k3": [{"date": "2026-08-20", "valence": "upset", "feeling": "sad",
+                    "skipped": False}],
         })
         self.assertEqual(mood["by_valence"]["great"], 1)
         self.assertEqual(mood["by_valence"]["good"], 1)
@@ -714,8 +717,54 @@ class ClassMoodTest(unittest.TestCase):
         self.assertEqual(mood["answered_students"], 3)
         # Two of three answers read positive.
         self.assertEqual(mood["positive_pct"], 67)
-        # C5: not one learner id anywhere in the payload.
-        self.assertNotIn("k1", json.dumps(mood))
+        # The click-through (#505): each family carries its children, with the
+        # exact feeling word and when it was said.
+        self.assertEqual(mood["students"]["upset"], [
+            {"learner_id": "k3", "date": "2026-08-20", "feeling": "sad"},
+        ])
+        # An empty family is absent, not an empty list.
+        self.assertNotIn("okay", mood["students"])
+
+    def test_a_repeat_answer_in_one_family_names_the_child_once(self):
+        """The counts count answers; the names count children — a child who
+        said "good" three times this week is one conversation, at its most
+        recent moment."""
+        mood = self._mood({
+            "k1": [{"date": f"2026-08-{day}", "valence": "good", "skipped": False}
+                   for day in (20, 22, 21)],
+        })
+        self.assertEqual(mood["by_valence"]["good"], 3)
+        names = mood["students"]["good"]
+        self.assertEqual(len(names), 1)
+        self.assertEqual(names[0]["date"], "2026-08-22")
+
+    def test_the_compare_window_names_nobody(self):
+        """Last period's names serve no conversation — only the current window
+        carries them."""
+        mood = self._mood({
+            "k1": [{"date": "2026-08-22", "valence": "good", "skipped": False},
+                   {"date": "2026-08-12", "valence": "upset", "skipped": False}],
+        })
+        self.assertIn("students", mood)
+        self.assertNotIn("k1", json.dumps(mood["previous"]))
+
+    def test_written_words_ride_along_with_their_question(self):
+        """A child who wrote something is heard in the notes feed (#505) —
+        current window only, and a day without words is not a note."""
+        mood = self._mood({
+            "k1": [{"date": "2026-08-22", "valence": "upset", "feeling": "sad",
+                    "skipped": False,
+                    "note": {"question": "איך היה היום?", "text": "היה לי קשה בשיעור"}},
+                   {"date": "2026-08-12", "valence": "upset", "feeling": "sad",
+                    "skipped": False,
+                    "note": {"question": "מה שלומך?", "text": "מחוץ לחלון"}}],
+            "k2": [{"date": "2026-08-22", "valence": "good", "skipped": False}],
+        })
+        self.assertEqual(mood["notes"], [{
+            "learner_id": "k1", "date": "2026-08-22", "valence": "upset",
+            "feeling": "sad", "question": "איך היה היום?",
+            "text": "היה לי קשה בשיעור",
+        }])
 
     def test_answers_and_answering_children_are_not_the_same_number(self):
         """One child over a month answers many times. Reporting 24 answers as

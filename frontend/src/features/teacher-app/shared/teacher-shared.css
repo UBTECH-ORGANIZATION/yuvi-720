@@ -353,7 +353,8 @@
    at the end of the document, outside `.tch-stats` entirely. */
 .tch-stats,
 .tch-donut,
-.tch-moodKey {
+.tch-moodKey,
+.tch-moodDlg {
   --tch-mood-great:  #0e9b6c;   /* deep green   — מצוין */
   --tch-mood-good:   #63ac4a;   /* leaf green   — טוב   */
   --tch-mood-okay:   #7c839c;   /* slate        — בסדר  */
@@ -365,7 +366,8 @@
    read as five distinct families. Same order, same direction. */
 [data-theme='dark'] .tch-stats,
 [data-theme='dark'] .tch-donut,
-[data-theme='dark'] .tch-moodKey {
+[data-theme='dark'] .tch-moodKey,
+[data-theme='dark'] .tch-moodDlg {
   --tch-mood-great:  #35c795;
   --tch-mood-good:   #86ce6b;
   --tch-mood-okay:   #9aa4c4;
