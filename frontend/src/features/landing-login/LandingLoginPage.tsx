@@ -9,9 +9,9 @@ import { apiPost } from '../../services/api'
 import { AgentsDiagram } from './AgentsDiagram'
 import { LandingYuviArtwork, LandingYuviJourney } from './LandingYuviJourney'
 import { LoginDialog } from './LoginDialog'
-import userMappingImage from '../../assets/user-mapping-image.png'
-import userAdaptiveImage from '../../assets/user-adaptive-image.png'
-import teacherInsightImage from '../../assets/teacher-insight-image.png'
+import userMappingImage from '../../assets/user-mapping-image.webp'
+import userAdaptiveImage from '../../assets/user-adaptive-image.webp'
+import teacherInsightImage from '../../assets/teacher-insight-image.webp'
 
 const FAQ_KEYS = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6']
 
