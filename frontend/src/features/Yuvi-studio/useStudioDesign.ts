@@ -126,8 +126,8 @@ export function useStudioDesign(autoLoad = true) {
     setSaving(true)
     let ok = false
     try {
-      const state = await updateLearnerState({ avatar: design })
-      const stored = normalizeDesign(state.avatar ?? design)
+      const state = await updateLearnerState({ yuvi_design: design })
+      const stored = normalizeDesign(state.yuvi_design ?? design)
       applySavedDesign(stored)
       setBaseline(cloneDesign(stored))
       setJustSaved(true)

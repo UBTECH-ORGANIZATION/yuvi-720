@@ -38,5 +38,4 @@ export interface BadgeDTO {
 /** The stored profile-avatar choice (`learner_state.avatar`). */
 export type AvatarChoice =
   | { kind: 'initial' }
-  | { kind: 'yuvi'; design?: unknown }
   | { kind: 'badge'; badge: Pick<BadgeDTO, 'subject' | 'glyph' | 'tier'> }

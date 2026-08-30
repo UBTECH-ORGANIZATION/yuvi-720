@@ -40,7 +40,7 @@ export function YuviDesignProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       const state = await getLearnerState()
-      const next = normalizeDesign(state.avatar)
+      const next = normalizeDesign(state.yuvi_design)
       setDesign(next)
       return next
     } catch {

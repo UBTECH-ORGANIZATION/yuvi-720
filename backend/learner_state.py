@@ -90,7 +90,10 @@ def _empty_state(learner_id: str) -> dict[str, Any]:
         "profile_cache": None,
         "dashboard_cache": None,
         "game_progress": {},
+        # `avatar` is the profile-picture choice; `yuvi_design` is the studio's
+        # 3D character. They were one field once, and one silently ate the other.
         "avatar": None,
+        "yuvi_design": None,
         "avatar_unlocks": [],
         "room_unlocks": [],
         "badges": [],
@@ -136,7 +139,7 @@ async def update_learner_state(learner_id: Optional[str], updates: dict[str, Any
     # nothing for a client to write — a stored copy could only go stale.
     allowed = {
         "language", "gender", "mapping_results", "mapping_progress", "profile_summary_progress",
-        "profile_cache", "dashboard_cache", "game_progress", "avatar", "room",
+        "profile_cache", "dashboard_cache", "game_progress", "avatar", "yuvi_design", "room",
         "activeness_map", "mentoring_draft",
     }
     now = datetime.now(timezone.utc).isoformat()

@@ -19,6 +19,22 @@ from learner_state import get_learner_state, update_learner_state
 router = APIRouter(prefix="/api", tags=["learner-state"])
 
 
+def _legacy_design(avatar) -> dict | None:
+    """A Yuvi Studio design that was saved under `avatar` before the split.
+
+    The two features shared one field, so a saved design was read as a
+    profile-picture choice, failed the `kind` test below, and was replaced by
+    the derived coin — the learner's character reset itself on every reload.
+    Recognised by shape and served as `yuvi_design`; nothing is rewritten, so
+    the stale copy simply stops mattering.
+    """
+    if not isinstance(avatar, dict) or avatar.get("kind"):
+        return None
+    if not any(key in avatar for key in ("variant", "colors", "equipped")):
+        return None
+    return avatar
+
+
 @router.get("/learner-state")
 async def read_learner_state(learner_id: str = Depends(require_learner)):
     """Return persisted learner UI state from MongoDB, with local fallback.
@@ -33,6 +49,10 @@ async def read_learner_state(learner_id: str = Depends(require_learner)):
     # learner who pressed "back to my letter", and re-deriving over it would
     # make the reset button do nothing.
     avatar = state.get("avatar")
+    if not state.get("yuvi_design"):
+        legacy = _legacy_design(avatar)
+        if legacy:
+            state = {**state, "yuvi_design": legacy}
     if not (isinstance(avatar, dict) and avatar.get("kind")):
         state = {**state, "avatar": await _earned_avatar(learner_id)}
     return JSONResponse(content=state)

@@ -79,7 +79,10 @@ export interface LearnerState {
   profile_cache?: unknown
   dashboard_cache?: unknown
   game_progress?: Record<string, unknown>
+  /** The profile-picture choice (a badge coin, or the learner's letter). */
   avatar?: unknown
+  /** The Yuvi Studio character: variant, colours and equipped cosmetics. */
+  yuvi_design?: unknown
   avatar_unlocks?: string[]
   /** The learner's own room: floor/wall/mood plus the props they placed. */
   room?: unknown

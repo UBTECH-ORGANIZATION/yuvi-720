@@ -1,4 +1,6 @@
-// Yuvi avatar design model — mirrors the persisted `learner_state.avatar` shape.
+// Yuvi avatar design model — mirrors the persisted `learner_state.yuvi_design`
+// shape. Kept apart from `learner_state.avatar`, which is the profile-picture
+// choice: sharing one field meant each feature erased the other.
 // The design is non-identifying UI state: colours, a variant, and equipped items.
 
 export type YuviVariant = 'classic' | 'girl'
