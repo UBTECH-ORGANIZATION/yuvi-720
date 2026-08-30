@@ -77,12 +77,15 @@
 /* Icon over label: the nav stops being one more row of identical pills. */
 .ys-panel__nav {
   display: flex; gap: 4px;
-  padding: 10px 12px;
+  padding: 10px 12px 8px;
   overflow-x: auto;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ys-accent) var(--ys-surface);
   border-block-end: 1px solid var(--ys-line);
 }
-.ys-panel__nav::-webkit-scrollbar { display: none; }
+.ys-panel__nav::-webkit-scrollbar { block-size: 7px; }
+.ys-panel__nav::-webkit-scrollbar-track { background: var(--ys-surface); border-radius: 999px; }
+.ys-panel__nav::-webkit-scrollbar-thumb { background: var(--ys-accent); border-radius: 999px; }
 .ys-seg {
   flex: 1 1 0;
   display: inline-flex; flex-direction: column; align-items: center; gap: 4px;

@@ -30,6 +30,12 @@ const ROOM_ICONS: Record<RoomItemCategory, string> = {
   seating: 'sofa', desk: 'book', play: 'gamepad', nature: 'leaf',
   light: 'lightbulb', tech: 'chip', wall: 'image',
 }
+type RoomTab = RoomItemCategory | 'floor' | 'wallStyle' | 'mood'
+const ROOM_STYLE_TABS: Array<{ id: Exclude<RoomTab, RoomItemCategory>; labelKey: string; icon: string }> = [
+  { id: 'floor', labelKey: 'YuviStudio.room.floor', icon: 'sofa' },
+  { id: 'wallStyle', labelKey: 'YuviStudio.room.wall', icon: 'image' },
+  { id: 'mood', labelKey: 'YuviStudio.room.mood', icon: 'lightbulb' },
+]
 
 /**
  * The studio is a room, not a form. Yuvi walks around it freely; standing on a
@@ -970,10 +976,14 @@ function RoomPanel({
   requirementFor: (id: string) => string | undefined
   t: (key: string) => string
 }) {
-  const [category, setCategory] = useState<RoomItemCategory>('seating')
+  const [category, setCategory] = useState<RoomTab>('seating')
   const { room, items, full, selected, setSelectedUid } = state
   const selectedSpec = selected ? roomItemSpec(selected.kind) : null
-  const categoryItems = useMemo(() => itemsInCategory(category), [category])
+  const isItemCategory = ROOM_CATEGORIES.includes(category as RoomItemCategory)
+  const categoryItems = useMemo(
+    () => (isItemCategory ? itemsInCategory(category as RoomItemCategory) : []),
+    [category, isItemCategory],
+  )
   const roomThumbnails = useMemo(() => getRoomThumbnails(categoryItems), [categoryItems])
 
   const pick = (kind: string) => {
@@ -988,11 +998,13 @@ function RoomPanel({
     setPlacing({ ...placing, rot: (placing.rot ?? 0) + delta })
   }
 
-  const styleGroups = [
-    { key: 'floor', options: ROOM_STYLES, value: room.floor, set: state.setFloor },
-    { key: 'wall', options: WALL_STYLES, value: room.wall, set: state.setWall },
-    { key: 'mood', options: MOODS, value: room.mood, set: state.setMood },
-  ] as const
+  const activeStyle = category === 'floor'
+    ? { key: 'floor', options: ROOM_STYLES, value: room.floor, set: state.setFloor }
+    : category === 'wallStyle'
+      ? { key: 'wall', options: WALL_STYLES, value: room.wall, set: state.setWall }
+      : category === 'mood'
+        ? { key: 'mood', options: MOODS, value: room.mood, set: state.setMood }
+        : null
 
   return (
     <StationPanel
@@ -1002,9 +1014,12 @@ function RoomPanel({
       nav={(
         <SegmentedNav
           label={t('YuviStudio.room.title')}
-          items={ROOM_CATEGORIES.map((id) => ({
-            id, label: t(`YuviStudio.room.category.${id}`), icon: ROOM_ICONS[id],
-          }))}
+          items={[
+            ...ROOM_CATEGORIES.map((id) => ({
+              id, label: t(`YuviStudio.room.category.${id}`), icon: ROOM_ICONS[id],
+            })),
+            ...ROOM_STYLE_TABS.map((tab) => ({ id: tab.id, label: t(tab.labelKey), icon: tab.icon })),
+          ]}
           value={category}
           onChange={setCategory}
         />
@@ -1066,7 +1081,7 @@ function RoomPanel({
           : null}
       footer={footer}
     >
-      <section className="ys-section">
+      {isItemCategory && <section className="ys-section">
         <div className="ys-section__head">
           <h2 className="ys-section__title">{t(`YuviStudio.room.category.${category}`)}</h2>
           <span className="ys-section__count">
@@ -1096,33 +1111,25 @@ function RoomPanel({
             )
           })}
         </div>
-      </section>
+      </section>}
 
-      {/* Style is the fastest way to make the room feel like yours, so it stays
-         in the same scroll as the props. Chips, not cards: a setting is not a
-         thing you own. */}
-      <section className="ys-section">
+      {activeStyle && <section className="ys-section">
         <div className="ys-section__head">
-          <h2 className="ys-section__title">{t('YuviStudio.room.style')}</h2>
+          <h2 className="ys-section__title">{t(`YuviStudio.room.${activeStyle.key}`)}</h2>
         </div>
-        {styleGroups.map((group) => (
-          <div key={group.key}>
-            <h3 className="ys-subhead">{t(`YuviStudio.room.${group.key}`)}</h3>
-            <div className="ys-chips">
-              {group.options.map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  className={`ys-chip${group.value === id ? ' is-active' : ''}`}
-                  onClick={() => group.set(id)}
-                >
-                  {t(`YuviStudio.room.${group.key}.${id}`)}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-      </section>
+        <div className="ys-chips">
+          {activeStyle.options.map((id) => (
+            <button
+              key={id}
+              type="button"
+              className={`ys-chip${activeStyle.value === id ? ' is-active' : ''}`}
+              onClick={() => activeStyle.set(id)}
+            >
+              {t(`YuviStudio.room.${activeStyle.key}.${id}`)}
+            </button>
+          ))}
+        </div>
+      </section>}
 
       {items.length > 0 && (
         <section className="ys-section">
