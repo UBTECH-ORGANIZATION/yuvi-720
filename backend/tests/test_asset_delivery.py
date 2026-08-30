@@ -64,6 +64,10 @@ class AssetDeliveryTests(unittest.TestCase):
         # Vite's real output shape: a content hash in the filename.
         (assets / "index-abc12345.js").write_bytes(_FAKE_BUNDLE)
         (self.tmp / "index.html").write_text("<!doctype html>")
+        # `public/` output keeps its name across builds — the other cache policy.
+        moments = self.tmp / "moments"
+        moments.mkdir()
+        (moments / "celebration-1.jpg").write_bytes(b"\xff\xd8\xff\xe0 not really a jpeg")
 
         self._originals = {
             name: getattr(static_pages, name)
@@ -124,6 +128,21 @@ class AssetDeliveryTests(unittest.TestCase):
         cache_control = response.headers.get("cache-control", "")
         self.assertIn("immutable", cache_control)
         self.assertIn("max-age=31536000", cache_control)
+
+    def test_stable_named_assets_are_cached_but_still_revalidate(self) -> None:
+        """`public/` output keeps its filename, so it gets the weaker policy.
+
+        These really can change under the same URL on a deploy, so `immutable`
+        would be wrong. Sending nothing at all was the actual bug: the browser
+        then guesses, and re-asks for all 69 moment images every time the album
+        opens.
+        """
+        response = self._get("/moments/celebration-1.jpg")
+
+        cache_control = response.headers.get("cache-control", "")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("max-age=3600", cache_control)
+        self.assertNotIn("immutable", cache_control)
 
     def test_every_response_reports_the_server_s_own_time(self) -> None:
         """`Server-Timing` is what separates "the server is slow" from "the
