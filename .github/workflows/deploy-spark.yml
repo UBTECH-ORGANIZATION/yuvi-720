@@ -77,7 +77,28 @@ jobs:
               LLM_MINI_DEPLOYMENT_NAME=gpt-5.4-mini \
               COACH_TOOL_CALLING_ENABLED=true \
               COACH_DEBUG_TRACE_ENABLED=false \
+              SPARK_ENVIRONMENT=dev \
             --output none
+
+      - name: Refuse to deploy Dev against the production database
+        run: |
+          # Work item 248. MONGODB_CONNECTION_STRING is a slot setting, so this
+          # cannot drift through a swap — but it can be edited by hand, and the
+          # damage would be silent. Check the host, never print the string.
+          dev_connection="$(az webapp config appsettings list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --slot ${{ env.SLOT_NAME }} \
+            --query "[?name=='MONGODB_CONNECTION_STRING'].value | [0]" \
+            --output tsv)"
+          dev_host="$(sed -E 's|.*@([^/?,]+).*|\1|' <<< "$dev_connection")"
+          echo "Dev slot database host: $dev_host"
+          case "$dev_host" in
+            yuvi720.mongocluster.cosmos.azure.com|yuvi720.global.mongocluster.cosmos.azure.com)
+              echo "The Dev slot is pointed at the production cluster. Point it at yuvi720-dev."
+              exit 1
+              ;;
+          esac
 
       - name: Stamp the release on the Dev slot
         run: |
@@ -177,6 +198,31 @@ jobs:
           trace_enabled="$(jq -r '.[] | select(.name == \"COACH_DEBUG_TRACE_ENABLED\") | .value' <<< \"$production_flags\" | tr '[:upper:]' '[:lower:]')"
           if [[ "$tool_enabled" != "true" || "$trace_enabled" == "1" || "$trace_enabled" == "true" || "$trace_enabled" == "yes" || "$trace_enabled" == "on" ]]; then
             echo "Production Coach flags must be COACH_TOOL_CALLING_ENABLED=true and COACH_DEBUG_TRACE_ENABLED=false"
+            exit 1
+          fi
+
+      - name: Verify production still owns the production database
+        run: |
+          # Work item 248. A swap must not move a database: verify the
+          # production slot keeps the production cluster and says so.
+          production_connection="$(az webapp config appsettings list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --query "[?name=='MONGODB_CONNECTION_STRING'].value | [0]" \
+            --output tsv)"
+          production_host="$(sed -E 's|.*@([^/?,]+).*|\1|' <<< "$production_connection")"
+          production_environment="$(az webapp config appsettings list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --query "[?name=='SPARK_ENVIRONMENT'].value | [0]" \
+            --output tsv)"
+          echo "Production database host: $production_host (environment $production_environment)"
+          if [[ "$production_host" != "yuvi720.mongocluster.cosmos.azure.com" ]]; then
+            echo "Production is not pointed at the production cluster; refusing to swap."
+            exit 1
+          fi
+          if [[ "$production_environment" != "production" ]]; then
+            echo "SPARK_ENVIRONMENT on the production slot must be 'production'."
             exit 1
           fi
 

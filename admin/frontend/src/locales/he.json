@@ -18,6 +18,7 @@
   "shell.signedInAs": "מחובר/ת בתור",
   "shell.logout": "יציאה",
   "shell.publicAccess": "גישה ציבורית זמנית",
+  "shell.environment": "סביבה",
   "nav.operations": "תפעול ובקרה",
   "nav.aiUsage": "שימוש בשירותי AI",
   "nav.coachTraces": "מעקב טכני של Yuvi",

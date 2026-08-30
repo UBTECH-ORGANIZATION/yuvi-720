@@ -93,6 +93,14 @@ subtly wrong rather than erroring. Screenshot new UI in both `colorScheme:
 
 ## Mongo
 
-`backend/.env` points at a real CosmosDB. Scripts touching it hit live data.
-Without `MONGODB_CONNECTION_STRING` the app falls back to JSON under
-`backend/.runtime/` (and, for learner_state, repo-root `.runtime/`).
+`backend/.env` points at the **dev** CosmosDB cluster (`yuvi720-dev`), never
+production. Scripts touching it hit live dev data, which is synthetic and can be
+rebuilt with `./.venv/bin/python scripts/seed_dev.py`. To see which cluster a
+process actually reached, run `./.venv/bin/python scripts/which_database.py` —
+it connects and asks the server, rather than trusting config.
+
+The JSON fallback under `backend/.runtime/` (and, for learner_state, repo-root
+`.runtime/`) is now opt-in: set `SPARK_STORAGE=json`. Without either a
+connection string or that flag, the app refuses to boot instead of silently
+writing to disk. See
+[databases: dev and production](../../../docs/architecture/databases-dev-and-production.md).

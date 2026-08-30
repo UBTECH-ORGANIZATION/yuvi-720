@@ -55,6 +55,12 @@ jobs:
 
       - name: Run tests with coverage
         working-directory: backend
+        env:
+          # CI has no database and must not acquire one by accident. Saying so
+          # explicitly is the difference between an offline run and a silently
+          # misconfigured one — see backend/app/core/database.py.
+          SPARK_STORAGE: json
+          SPARK_ENVIRONMENT: test
         run: |
           quarantined=()
           while IFS= read -r node; do quarantined+=("$node"); done \
@@ -97,6 +103,9 @@ jobs:
       - name: Known-failing tests (non-blocking)
         if: always()
         working-directory: backend
+        env:
+          SPARK_STORAGE: json
+          SPARK_ENVIRONMENT: test
         run: |
           quarantined=()
           while IFS= read -r node; do quarantined+=("$node"); done \

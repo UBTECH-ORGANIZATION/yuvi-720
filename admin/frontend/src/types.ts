@@ -10,6 +10,13 @@ export interface AuthStatus {
   public_access: boolean
 }
 
+export interface EnvironmentBadge {
+  environment: string
+  host: string
+  database: string
+  is_production: boolean
+}
+
 export interface UsageBucket {
   key: string
   requests: number
