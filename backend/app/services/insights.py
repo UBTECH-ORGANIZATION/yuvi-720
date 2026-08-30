@@ -491,7 +491,15 @@ def _portrait(brain: dict[str, Any]) -> dict[str, Any] | None:
             # not, and they would leak objective ids onto the screen.
             evidence_keys.update(
                 str(item) for item in (entry.get("evidence") or []) if item)
-            lines.append(text)
+            # Teacher-asserted and system-inferred sentences stay separately
+            # attributed (#454) — never merged into one anonymous paragraph.
+            lines.append({
+                "text": text,
+                "by_teacher": any(
+                    str(item).startswith("stated_by_teacher")
+                    for item in entry.get("evidence") or []
+                ),
+            })
         if lines:
             blocks.append({"key": key, "lines": lines})
 

@@ -267,6 +267,20 @@ async def capture_and_consolidate(
             )
             if contradicted:
                 changed_values.append(str(replaces_value))
+                # Symmetry (#454): if the contradicted belief was asserted by a
+                # teacher, the teacher is told — never silently reversed.
+                for theme in memory.get("themes") or []:
+                    if (
+                        isinstance(theme, dict)
+                        and theme.get("id") in contradicted
+                        and "teacher" in (theme.get("source_types") or [])
+                    ):
+                        try:
+                            from app.services.student_model_insight import notify_theme_overridden
+
+                            await notify_theme_overridden(learner_id, theme)
+                        except Exception as exc:  # a bell must never break consolidation
+                            print(f"⚠️ teacher-insight override bell failed: {type(exc).__name__}")
         memory, theme, changed = upsert_theme(
             memory,
             kind=kind,

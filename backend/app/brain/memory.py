@@ -288,6 +288,7 @@ def contradict_theme_by_value(
     *,
     reference: Optional[str],
     at: Optional[str] = None,
+    source: str = "learner_correction",
 ) -> tuple[dict[str, Any], list[str]]:
     """Supersede a matching belief while retaining an evidence-linked audit trail."""
     state = deepcopy(memory or memory_defaults())
@@ -309,14 +310,14 @@ def contradict_theme_by_value(
             and theme.get("status") not in {"contradicted", "forgotten", "expired"}
         ):
             refs = list(theme.get("evidence_refs") or [])
-            refs.append(_evidence_ref("learner_correction", reference, now))
+            refs.append(_evidence_ref(source, reference, now))
             theme = {
                 **theme,
                 "status": "contradicted",
                 "contradicted_at": now,
                 "last_seen": now,
                 "source_types": sorted(
-                    set(theme.get("source_types") or []) | {"learner_correction"}
+                    set(theme.get("source_types") or []) | {source}
                 ),
                 "evidence_refs": refs[-_MAX_EVIDENCE_REFS:],
             }

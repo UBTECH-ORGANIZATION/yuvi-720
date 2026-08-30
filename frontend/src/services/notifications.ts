@@ -18,6 +18,9 @@ export type NotificationKind =
   // The direct channel, one kind per direction — they ring different bells and
   // deep-link to different screens.
   | 'teacher_message' | 'student_message'
+  // Evidence overrode a teacher-asserted insight in the student model (#454) —
+  // the symmetric half of the drastic-change warning.
+  | 'model_override'
 
 export interface NotificationAction {
   label_key: string
