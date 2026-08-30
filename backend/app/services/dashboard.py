@@ -274,9 +274,10 @@ def _hero(
 
     # A teacher's pin outranks everything, resume included: it exists precisely
     # for "not that one — this one", said to a child mid-something-else. What
-    # still steers is `pinning.active_pin`'s single judgement — uncompleted,
-    # unexpired — shared with the route and the teacher reads, so the four can
-    # never disagree about whether a pin is live.
+    # still steers is `pinning.active_pin`'s single judgement — uncompleted;
+    # a pin has no clock and holds until done or unpinned — shared with the
+    # route and the teacher reads, so the four can never disagree about
+    # whether a pin is live.
     pinned = pinning.active_pin(brain, completed_ids=completed_ids)
     # An objective pin resolves to a component HERE, per read: the teacher
     # named the goal, the planner allocates the fitting step inside it as the

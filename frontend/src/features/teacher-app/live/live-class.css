@@ -571,30 +571,6 @@
   color: var(--sp-ink-500);
 }
 
-/* The end date frames what a click on the catalog MEANS, so it reads as a
-   setting above the pick, not a stray. */
-.tch-focusPanel__options {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-2) var(--sp-4);
-  padding: var(--sp-1) var(--sp-2);
-  border-radius: var(--sp-radius-md);
-  background: var(--sp-bg);
-}
-
-.tch-focusPanel__until .sp-icon { color: var(--sp-ink-500); flex-shrink: 0; }
-
-.tch-focusPanel__until {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-1);
-  font-size: var(--sp-fs-xs);
-  color: var(--sp-ink-700);
-}
-
-.tch-focusPanel__until .sp-input { inline-size: auto; padding-block: 2px; }
-
 .tch-focusPanel__note {
   margin: 0;
   font-size: var(--sp-fs-xs);

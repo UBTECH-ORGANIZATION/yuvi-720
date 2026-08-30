@@ -1157,13 +1157,11 @@ export interface PinnedNext {
   title?: string
   pinned_by: string
   pinned_at: string
-  /** Absent = the pin holds until done or unpinned. Past = it stopped
-   *  steering already; `pin_state` says which reading is true. */
-  expires_at?: string
 }
 
 /** How the previous pin ended — what lets a teacher tell "done ✓" apart from
- *  "never pinned". */
+ *  "never pinned". ('expired' survives only on records from before pins lost
+ *  their clock; nothing writes it any more.) */
 export interface PinnedLast extends PinnedNext {
   outcome: 'completed' | 'expired' | 'unpinned'
   ended_at: string
@@ -1216,10 +1214,11 @@ export function getPinnedNext(learnerId: string, language: string) {
     /** Display name for the standing pin, resolved server-side — the task's
      *  frozen title or the pinned learning's localized one. */
     pinned_title: string | null
-    /** Null when nothing is pinned. 'expired' and 'spent' (the pinned
-     *  component was already completed) keep a dead record readable rather
-     *  than pretending it never was — either way it steers nobody. */
-    pin_state: 'active' | 'expired' | 'spent' | null
+    /** Null when nothing is pinned. 'spent' (the pinned material was already
+     *  finished) keeps a dead record readable rather than pretending it never
+     *  was — it steers nobody. A pin has no clock, so these are the only
+     *  states. */
+    pin_state: 'active' | 'spent' | null
     last: PinnedLast | null
     last_title: string | null
     tasks: PinnableTask[]
@@ -1229,8 +1228,8 @@ export function getPinnedNext(learnerId: string, language: string) {
   )
 }
 
-/** Exactly one of `component_id` / `launch_id`; `expires_at` optional — a bare
- *  date means "through that day" in the classroom's timezone. */
+/** Exactly one target; a pin carries no end date — it stands until the child
+ *  finishes it or the teacher unpins it. */
 export interface PinRequest {
   /** Exactly one target. `objective_id` pins a learning GOAL (the dialog's
    *  only learnings currency now); `component_id` survives for older
@@ -1238,7 +1237,6 @@ export interface PinRequest {
   objective_id?: string
   component_id?: string
   launch_id?: string
-  expires_at?: string
 }
 
 export function pinNext(learnerId: string, body: PinRequest) {
@@ -1254,7 +1252,6 @@ export function bulkPinNext(
   body: {
     targets: { kind: 'learner' | 'subgroup' | 'group'; id: string }[]
     pin: PinRequest
-    expires_at?: string
   }
 ) {
   return apiPost<{ pinned: string[]; skipped: { learner_id: string; reason: string }[] }>(
