@@ -145,7 +145,8 @@ jobs:
           set -o pipefail
           mkdir -p coverage
           node --test --experimental-test-coverage \
-            --test-coverage-lcov=coverage/lcov.info \
+            --test-reporter=spec --test-reporter-destination=stdout \
+            --test-reporter=lcov --test-reporter-destination=coverage/lcov.info \
             "tests/**/*.test.ts" | tee coverage/report.txt
 
       - name: Report coverage
@@ -153,13 +154,21 @@ jobs:
         working-directory: frontend
         run: |
           test -f coverage/report.txt || exit 0
+          totals="$(grep -E '^ℹ all files' coverage/report.txt | cut -d'|' -f2,3,4 | tr -d ' ')"
           {
             echo "## Frontend coverage"
             echo
+            echo "| Lines | Branches | Functions |"
+            echo "| --- | --- | --- |"
+            echo "| ${totals//|/% | }% |"
+            echo
+            echo "<details><summary>Per-file breakdown</summary>"
+            echo
             echo '```'
-            sed -n '/start of coverage report/,/end of coverage report/p' coverage/report.txt \
-              | sed 's/^ℹ //' | tail -n 60
+            sed -n '/start of coverage report/,/end of coverage report/p' coverage/report.txt | sed 's/^ℹ //'
             echo '```'
+            echo
+            echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"
 
       # The image build runs this too; failing here shows it on the pull request
