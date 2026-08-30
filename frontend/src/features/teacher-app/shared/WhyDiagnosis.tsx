@@ -25,6 +25,16 @@ function pct(rate: number | null): number | null {
   return rate === null ? null : Math.round(rate * 100)
 }
 
+/* `informationToBot` is the author's full brief — understanding goals, answer
+   values, strategy tips. The topic is its opening; the rest belongs to the
+   phrased focus below, not to a headline. */
+function topicLine(teaches: string): string {
+  const window = teaches.slice(0, 140)
+  const stop = window.indexOf('.')
+  const head = stop > 30 ? window.slice(0, stop) : window
+  return head.length < teaches.length ? `${head.trimEnd()}…` : head
+}
+
 export function DiagnosisToggle({ item, load }: {
   item: DifficultyItem
   load: (item: DifficultyItem) => Promise<GapDiagnosis | null>
@@ -119,20 +129,26 @@ function DiagnosisBody({ diagnosis, raw }: {
           <h5>{t('tch.why.questions.title')}</h5>
           <ul className="tch-why__questions">
             {questions.map((question) => (
+              /* Topic first (the content's own description of what the
+                 question teaches), mechanics second — a teacher plans a
+                 lesson around "מושגי ברוטו ונטו", not around "שאלה 2". */
               <li key={`${question.component_id}:${question.question_id}`} dir="auto">
                 <strong>
-                  {question.ordinal !== null
-                    ? t('tch.why.questionName', { ordinal: question.ordinal })
-                    : question.screen_title || question.learning_title}
+                  {(question.teaches && topicLine(question.teaches))
+                    || (question.ordinal !== null
+                      ? t('tch.why.questionName', { ordinal: question.ordinal })
+                      : question.screen_title || question.learning_title)}
                 </strong>
-                {question.ordinal !== null && question.screen_title
-                  ? ` · ${question.screen_title}` : ''}
-                {' — '}
-                {t('tch.why.questions.line', {
-                  pct: pct(question.success_rate) ?? 0,
-                  attempts: question.attempts,
-                  learners: question.learners,
-                })}
+                <span className="tch-why__qMeta">
+                  {question.teaches && question.ordinal !== null
+                    ? `${t('tch.why.questionName', { ordinal: question.ordinal })} · `
+                    : ''}
+                  {t('tch.why.questions.line', {
+                    pct: pct(question.success_rate) ?? 0,
+                    attempts: question.attempts,
+                    learners: question.learners,
+                  })}
+                </span>
               </li>
             ))}
           </ul>
@@ -160,11 +176,19 @@ function DiagnosisBody({ diagnosis, raw }: {
   )
 }
 
-/* Composed from the rows above and nothing else — each clause names data the
- * panel just showed, which is what keeps it a grounded reading rather than
- * generated advice. */
+/* What to focus on. The server's `focus_text` leads when present — Yuvi's own
+ * phrasing of the topics above, grounded because it may only reword the folded
+ * rows. Without it, deterministic clauses composed from the same rows. */
 function Recommendation({ diagnosis }: { diagnosis: GapDiagnosis }) {
   const { t } = useI18n()
+  if (diagnosis.focus_text) {
+    return (
+      <section className="tch-why__block tch-why__rec">
+        <h5>{t('tch.why.rec.title')}</h5>
+        <p dir="auto">{diagnosis.focus_text}</p>
+      </section>
+    )
+  }
   const clauses: string[] = []
   const worst = diagnosis.parts[0]
   if (worst && diagnosis.parts.length > 1 && worst.title) {

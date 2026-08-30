@@ -1223,6 +1223,8 @@
   display: grid; gap: var(--sp-1);
   font-size: var(--sp-fs-sm); color: var(--sp-ink-700);
 }
+.tch-why__questions li { display: grid; gap: 2px; }
+.tch-why__qMeta { color: var(--sp-ink-500); font-size: var(--sp-fs-xs); }
 .tch-why__errors { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
 .tch-why__error {
   display: inline-flex;

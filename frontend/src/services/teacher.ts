@@ -248,6 +248,9 @@ export interface GapDiagnosisQuestion {
   success_rate: number
   learners: number
   learning_title: string
+  /** The content's own `informationToBot` description of what this question
+   *  teaches — the topic behind the number. */
+  teaches: string | null
 }
 
 export type GapErrorType = 'guess' | 'partial' | 'misinterpret' | 'careless'
@@ -260,6 +263,10 @@ export interface GapDiagnosis {
   hard_questions: GapDiagnosisQuestion[]
   /** [error_type, decision count], most common first. */
   error_types: [GapErrorType, number][]
+  /** The one generated field: the topics-and-focus guidance, phrased from the
+   *  folded rows above and nothing else. Null whenever phrasing failed — the
+   *  client then composes its deterministic sentences instead. */
+  focus_text: string | null
 }
 
 export function getGapDiagnosis(groupId: string, objectiveId: string, language: string) {

@@ -715,6 +715,91 @@ async def _error_type_tally(
     return sorted(counts.items(), key=lambda item: -item[1])
 
 
+# One diagnosis per (class, objective, language) per window: the fold fans out
+# over the roster's events and decisions and the focus text costs a model call,
+# while the underlying evidence moves at classroom speed. Same shape and TTL
+# philosophy as `_subjects_cache`.
+_DIAGNOSIS_CACHE_TTL = 10 * 60
+_diagnosis_cache: dict[tuple[str, str, str], tuple[float, dict[str, Any]]] = {}
+
+
+_FOCUS_PROMPT = (
+    "You help a teacher understand why their class is stuck on one learning "
+    "objective. You get the objective's name, its learnings with success "
+    "rates, the TOPIC DESCRIPTIONS of the specific questions the class fails "
+    "(written by the content's authors), and the coach's tallied error kinds.\n"
+    "Write 2-3 short sentences IN THE GIVEN LANGUAGE for the teacher: name the "
+    "topics that are hard in plain words (from the topic descriptions — never "
+    "invent a topic that is not described), and say what to focus on with the "
+    "students. No student names, no numbers the input does not contain, no "
+    "greetings. Return JSON: {\"text\": \"...\"}."
+)
+
+
+async def _phrase_focus(
+    payload: dict[str, Any], language: str,
+) -> Optional[str]:
+    """The diagnosis said as guidance — grounded phrasing, never new facts.
+
+    The model only rewords what the fold already produced: the failing
+    questions' own `informationToBot` topic descriptions plus the counters.
+    Anything that fails — no descriptions, no endpoint, bad JSON — returns
+    None and the client composes its deterministic sentences instead.
+    """
+    topics = [
+        {
+            "topic": question.get("teaches"),
+            "success_pct": round((question.get("success_rate") or 0) * 100),
+        }
+        for question in payload["hard_questions"] if question.get("teaches")
+    ]
+    if not topics and not payload["parts"]:
+        return None
+
+    import json as _json
+
+    from app.services.ai_usage import UsageContext
+    from app.services.llm import call_llm
+
+    try:
+        raw = await asyncio.wait_for(call_llm(
+            [
+                {"role": "system", "content": _FOCUS_PROMPT},
+                {"role": "user", "content": _json.dumps({
+                    "language": language,
+                    "objective": payload.get("objective_title"),
+                    "parts": [
+                        {
+                            "title": part["title"],
+                            "success_pct": round((part["success_rate"] or 0) * 100)
+                            if part["success_rate"] is not None else None,
+                            "struggling": part["struggling_count"],
+                        }
+                        for part in payload["parts"][:3]
+                    ],
+                    "hard_topics": topics,
+                    "error_kinds": payload["error_types"],
+                }, ensure_ascii=False)},
+            ],
+            usage_context=UsageContext(
+                actor_id="system",
+                actor_type="system",
+                endpoint="/api/teacher/groups/gaps/diagnosis",
+                feature="feature_6_teacher_insights",
+                operation="teacher.gap_diagnosis_focus",
+                source="learning_analytics",
+            ),
+            max_tokens=260,
+            json_mode=True,
+            model_tier="mini",
+        ), timeout=8.0)
+        text = str((_json.loads(raw or "{}") or {}).get("text") or "").strip()
+        return text if 20 <= len(text) <= 600 else None
+    except Exception as exc:
+        print(f"⚠️ gap diagnosis focus phrasing failed: {type(exc).__name__}")
+        return None
+
+
 async def gap_diagnosis(
     group_id: str, objective_id: str, *, language: str = "he",
 ) -> dict[str, Any]:
@@ -723,12 +808,20 @@ async def gap_diagnosis(
     The gaps card's counters say HOW MANY are stuck; this says WHERE inside the
     objective (per learning, hardest first), on WHICH questions (the same
     hard-question rule the learnings screen uses, with the learner-facing
-    labels), and HOW it goes wrong (the coach's own error-type reads). Nothing
-    here is generated — every row is a fold over stored evidence, which is what
-    lets the client compose a grounded recommendation from it.
+    labels and the content's own topic description of each), and HOW it goes
+    wrong (the coach's own error-type reads). The folded rows are evidence;
+    `focus_text` is the one generated field — a grounded rewording of those
+    rows into what to focus on, absent whenever phrasing is unavailable.
     """
+    import time as _time
+
     from app.brain import org
     from app.services import kata_catalog
+
+    cache_key = (group_id, objective_id, language)
+    cached = _diagnosis_cache.get(cache_key)
+    if cached and cached[0] > _time.monotonic():
+        return cached[1]
 
     try:
         await kata_catalog.ensure_loaded()
@@ -762,6 +855,11 @@ async def gap_diagnosis(
                     "component_id": component_id,
                     "learning_title":
                         kata_catalog.component_title(component_id, language) or "",
+                    # The content's own description of what this question
+                    # teaches (`informationToBot`) — the topic behind the
+                    # number, and the ground the focus phrasing stands on.
+                    "teaches": _teaches(kata_catalog.information_for_item(
+                        component_id, row.get("item_id"))),
                 })
 
     parts.sort(key=lambda part: (
@@ -777,10 +875,14 @@ async def gap_diagnosis(
         if any(row.get("objective_id") == objective_id
                and (row.get("attempts") or 0) for row in rows)
     ]
-    return {
+    payload = {
         "objective_id": objective_id,
         "objective_title": _objective_title(objective_id, language),
         "parts": parts,
         "hard_questions": hard[:HARD_QUESTIONS_PER_LEARNING],
         "error_types": await _error_type_tally(tried, objective_id),
     }
+    payload["focus_text"] = await _phrase_focus(payload, language)
+    _diagnosis_cache[cache_key] = (
+        _time.monotonic() + _DIAGNOSIS_CACHE_TTL, payload)
+    return payload

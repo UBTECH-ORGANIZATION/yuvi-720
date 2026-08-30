@@ -586,8 +586,11 @@ class GapDiagnosis(unittest.IsolatedAsyncioTestCase):
     which questions, and how it goes wrong — folded evidence, never a repeat
     of the row's own counters."""
 
-    async def _diagnose(self, per_learner, decisions=None, objective_id="obj-1"):
+    async def _diagnose(self, per_learner, decisions=None, objective_id="obj-1",
+                        llm=None, group_id="g1"):
         from app.services import learning_analytics
+
+        learning_analytics._diagnosis_cache.clear()
 
         async def _summary(learner_id, subject=None, component_id=None):
             return per_learner.get(learner_id, [])
@@ -597,13 +600,19 @@ class GapDiagnosis(unittest.IsolatedAsyncioTestCase):
 
         with ExitStack() as stack:
             _catalog_patches(stack)
+            stack.enter_context(patch(
+                "app.services.kata_catalog.information_for_item",
+                side_effect=lambda cid, iid: "מטרת הפריט: מושגי ברוטו ונטו"
+                if cid == "cmp-1" else None))
             stack.enter_context(patch("app.brain.org.learners_in_group",
                                       new=AsyncMock(return_value=list(per_learner))))
             stack.enter_context(patch("app.services.learner_activity.question_summary",
                                       side_effect=_summary))
             stack.enter_context(patch("app.agents.tutor_decision.recent_tutor_decisions",
                                       side_effect=_decisions))
-            return await learning_analytics.gap_diagnosis("g1", objective_id)
+            stack.enter_context(patch("app.services.llm.call_llm",
+                                      new=llm or AsyncMock(side_effect=RuntimeError("no llm"))))
+            return await learning_analytics.gap_diagnosis(group_id, objective_id)
 
     async def test_parts_come_back_hardest_first_with_titles(self):
         diagnosis = await self._diagnose({
@@ -656,3 +665,43 @@ class GapDiagnosis(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(diagnosis["parts"], [])
         self.assertEqual(diagnosis["hard_questions"], [])
         self.assertEqual(diagnosis["error_types"], [])
+        self.assertIsNone(diagnosis["focus_text"])
+
+    async def test_the_failing_question_carries_its_topic_description(self):
+        """`informationToBot` is the topic behind the number — without it the
+        panel can only talk in question mechanics, which is the complaint."""
+        diagnosis = await self._diagnose({
+            "k1": [_row("cmp-1", "q-hard", attempts=4, correct=1)],
+            "k2": [_row("cmp-1", "q-hard", attempts=3, correct=0)],
+        })
+        self.assertEqual(diagnosis["hard_questions"][0]["teaches"],
+                         "מושגי ברוטו ונטו")
+
+    async def test_focus_text_is_phrased_from_the_fold_or_absent(self):
+        """The one generated field: present when the model rewords the topics,
+        None on any failure — the client then composes deterministically."""
+        import json as _json
+        phrased = await self._diagnose(
+            {"k1": [_row("cmp-1", "q-hard", attempts=4, correct=1)],
+             "k2": [_row("cmp-1", "q-hard", attempts=3, correct=0)]},
+            llm=AsyncMock(return_value=_json.dumps(
+                {"text": "הקושי מתרכז במושגי ברוטו ונטו — כדאי להתחיל מהם."})),
+        )
+        self.assertIn("ברוטו", phrased["focus_text"])
+        silent = await self._diagnose(
+            {"k1": [_row("cmp-1", "q-hard", attempts=4, correct=1)],
+             "k2": [_row("cmp-1", "q-hard", attempts=3, correct=0)]},
+        )
+        self.assertIsNone(silent["focus_text"])
+
+    async def test_a_second_read_is_served_from_cache(self):
+        """The fold fans out over the roster and the phrasing costs a model
+        call — one diagnosis per (class, objective, language) per window."""
+        from app.services import learning_analytics
+        counted = AsyncMock(side_effect=RuntimeError("no llm"))
+        first = await self._diagnose(
+            {"k1": [_row("cmp-1", "q-hard", attempts=4, correct=1)]}, llm=counted)
+        # Same key, NO patches active — a recompute would blow up on the real
+        # roster read, so returning the same payload proves the cache answered.
+        second = await learning_analytics.gap_diagnosis("g1", "obj-1")
+        self.assertIs(second, first)
