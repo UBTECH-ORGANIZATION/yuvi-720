@@ -98,11 +98,29 @@ class LessonVisualGateTests(unittest.TestCase):
             "אפשר איור של מערכת השעות שלי?", auto_visual=auto_visual,
         ))
 
-    def test_declined_visual_plan_never_emits_a_preparing_status(self):
+    def test_declined_visual_plan_clears_the_preparing_status(self):
         statuses = [event["visual_status"] for event in self._events(None) if "visual_status" in event]
-        self.assertEqual(statuses, ["none"])
+        self.assertEqual(statuses, ["planning", "none"])
 
-    def test_accepted_visual_plan_starts_visible_rendering_only_after_a_scene_exists(self):
+    def test_accepted_visual_plan_reports_planning_before_rendering(self):
         scene = {"use_visual": True, "elements": []}
         statuses = [event["visual_status"] for event in self._events(scene) if "visual_status" in event]
-        self.assertEqual(statuses, ["rendering"])
+        self.assertEqual(statuses, ["planning", "rendering"])
+
+    def test_on_demand_general_chat_visual_is_attached_to_its_message(self):
+        visual = {"id": "visual-1", "type": "image", "scene": {}}
+        attached = AsyncMock(return_value=True)
+        request = agent_routes.VisualizeRequest(
+            user_message="אפשר לראות את זה?",
+            assistant_text="כך פועל התהליך.",
+            conversation_id="chat-1",
+            assistant_message_id="exchange-1:1",
+        )
+        with patch.object(agent_routes, "plan_manim_visual", AsyncMock(return_value={"elements": []})), \
+             patch.object(agent_routes, "render_visual", AsyncMock(return_value=visual)), \
+             patch.object(agent_routes.sessions, "attach_visual", attached):
+            asyncio.run(agent_routes.visualize(request, {"sub": "learner-1"}))
+        attached.assert_awaited_once_with(
+            "learner-1", "chat-1", "exchange-1:1", visual,
+            "כך פועל התהליך.", "", role="general_companion",
+        )

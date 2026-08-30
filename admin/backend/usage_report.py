@@ -41,7 +41,10 @@ class UsageEvent(BaseModel):
     usage_status: str
     input_tokens: Optional[int]
     output_tokens: Optional[int]
+    reasoning_tokens: Optional[int]
     total_tokens: Optional[int]
+    finish_reason: Optional[str]
+    stream_termination: Optional[str]
     quantity: Optional[int]
     cost_usd: Optional[float]
     latency_ms: int
@@ -179,7 +182,13 @@ def _recent_event(event: dict[str, Any]) -> UsageEvent:
         usage_status=_text(event.get("usage_status")),
         input_tokens=_optional_number(event.get("input_tokens")),
         output_tokens=_optional_number(event.get("output_tokens")),
+        reasoning_tokens=_optional_number(event.get("reasoning_tokens")),
         total_tokens=_optional_number(event.get("total_tokens")),
+        finish_reason=_text(event.get("finish_reason")) if event.get("finish_reason") else None,
+        stream_termination=(
+            _text(event.get("stream_termination"))
+            if event.get("stream_termination") else None
+        ),
         quantity=_optional_number(event.get("quantity")),
         cost_usd=_cost(event.get("cost_usd")),
         latency_ms=_number(event.get("latency_ms")),

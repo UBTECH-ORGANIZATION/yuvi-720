@@ -40,6 +40,7 @@ BALLOON_BUNDLE = {
 def _drive(
     model_output: list[str] | list[list[str]], user_message: str = "תן לי את התשובה", support_mode: str | None = None,
     trigger: str | None = None, bundle: dict | None = None, query_intent: str = "learning_help",
+    diagnostics_out: dict | None = None, surface_screen: str = "learning_lesson",
 ):
     """Run the coach with a stubbed model; return (streamed_text, persisted)."""
     persisted: dict = {}
@@ -75,6 +76,9 @@ def _drive(
     async def async_dict(*args, **kwargs):
         return {}
 
+    async def no_tool_plan(messages, *args, **kwargs):
+        return messages
+
     async def safe(*args, **kwargs):
         return "safe"
 
@@ -83,13 +87,17 @@ def _drive(
 
     async def run():
         chunks = []
+        debug_trace: list[dict[str, str]] = []
         async for piece in coach.run_coach_stream(
             "test-learner", user_message=user_message, language="he", session_id="s1",
             support_mode=support_mode,
             trigger=trigger,
-            surface_context={"screen": "learning_lesson"},
+            surface_context={"screen": surface_screen},
+            diagnostics_out=diagnostics_out,
+            debug_trace=debug_trace,
         ):
             chunks.append(piece)
+        persisted["debug_trace"] = debug_trace
         return "".join(chunks)
 
     from app.agents import tutor_decision
@@ -99,6 +107,7 @@ def _drive(
          mock.patch.object(coach.safety, "classify_disclosure", safe), \
          mock.patch.object(coach.safety, "screen_input", passthrough), \
          mock.patch.object(coach.safety, "screen_output", passthrough), \
+         mock.patch.object(coach, "_plan_coach_tools", no_tool_plan), \
          mock.patch.object(coach, "classify_query_intent", lambda *a, **k: query_intent), \
          mock.patch.object(coach.sessions, "conversation_needs_title", async_false), \
          mock.patch.object(coach.sessions, "get_recent", async_list), \
@@ -180,32 +189,13 @@ class CoachAnswerBlockTests(unittest.TestCase):
         self.assertEqual(persisted.get("assistant"), streamed.strip())
         self.assertNotIn("המנופח כבד יותר", persisted.get("assistant", ""))
 
-    def test_hint_mode_retries_a_blocked_draft(self):
+    def test_hint_mode_bypasses_answer_guard_and_streams_directly(self):
         streamed, _ = _drive(
-            [
-                ["הבלון המנופח כבד יותר, כי יש בו אוויר. "],
-                ["התשובה היא שהבלון המנופח כבד יותר. "],
-                ["מה משתנה בבלון כשמכניסים אליו משהו? "],
-            ],
+            ["הבלון המנופח כבד יותר, כי יש בו אוויר. "],
             user_message="אפשר רמז?",
             support_mode="hint",
         )
-        self.assertIn("מה משתנה בבלון", streamed)
-        self.assertNotIn("המנופח כבד יותר", streamed)
-        self.assertNotIn(answer_guard.REDIRECT["he"], streamed)
-
-    def test_hint_mode_uses_safe_fallback_after_three_blocked_drafts(self):
-        streamed, _ = _drive(
-            [
-                ["הבלון המנופח כבד יותר, כי יש בו אוויר. "],
-                ["התשובה היא שהבלון המנופח כבד יותר. "],
-                ["הבלון המנופח כבד יותר. "],
-            ],
-            user_message="אפשר רמז?",
-            support_mode="hint",
-        )
-        self.assertIn(coach.HINT_GUARD_FALLBACK["he"], streamed)
-        self.assertNotIn("המנופח כבד יותר", streamed)
+        self.assertIn("המנופח כבד יותר", streamed)
         self.assertNotIn(answer_guard.REDIRECT["he"], streamed)
 
     def test_blocked_question_intro_stays_task_oriented(self):

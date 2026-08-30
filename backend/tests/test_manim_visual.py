@@ -10,6 +10,7 @@ import unittest.mock
 from app.agents.manim_visual import (
     build_scene_visual,
     render_visual,
+    split_visual_response,
     _svg_fallback,
     _visual_benefit_signal,
     sanitize_scene,
@@ -25,6 +26,34 @@ from app.agents.visuals.maths import (
 
 
 class VisualIntentTests(unittest.TestCase):
+    def test_visual_is_placed_after_a_complete_numbered_list(self) -> None:
+        response = (
+            "אפשר לפרק את העבודה כך:\n\n"
+            "1. להבין מה צריך להגיש.\n\n"
+            "2. לחלק לחלקים קטנים.\n\n"
+            "3. לעשות חלק אחד בכל פעם."
+        )
+
+        text_before, text_after = split_visual_response(response)
+
+        self.assertEqual(text_before, response)
+        self.assertEqual(text_after, "")
+
+    def test_duplicate_diagram_is_removed_without_splitting_the_reply(self) -> None:
+        response = (
+            "פתיח קצר.\n\n"
+            "```yuvi-diagram\n{\"kind\":\"cycle\"}\n```\n\n"
+            "1. שלב ראשון.\n2. שלב שני.\n3. שלב שלישי."
+        )
+
+        text_before, text_after = split_visual_response(response)
+
+        self.assertEqual(
+            text_before,
+            "פתיח קצר.\n\n1. שלב ראשון.\n2. שלב שני.\n3. שלב שלישי.",
+        )
+        self.assertEqual(text_after, "")
+
     def test_implicit_relationships_are_visual_candidates_without_draw_word(self) -> None:
         self.assertTrue(_visual_benefit_signal("למה y=x עולה באותו יחס?", "he"))
         self.assertTrue(_visual_benefit_signal("Explain how the parts change between steps", "en"))
