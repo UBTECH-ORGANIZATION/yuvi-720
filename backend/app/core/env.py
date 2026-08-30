@@ -55,3 +55,30 @@ def ensure_env_loaded() -> None:
 
 
 ensure_env_loaded()
+
+
+_DEV_SIGNING_SECRET = "yuvi720-dev-secret"
+_PRODUCTION_NAMES = {"production", "prod"}
+
+
+def is_production() -> bool:
+    """The App Service sets SPARK_ENVIRONMENT; ENVIRONMENT is the local/.env name."""
+    return any(
+        (os.environ.get(name) or "").strip().lower() in _PRODUCTION_NAMES
+        for name in ("ENVIRONMENT", "SPARK_ENVIRONMENT")
+    )
+
+
+def signing_secret() -> str:
+    """The app-wide HMAC secret for session tokens and xAPI launch tokens.
+
+    Single source of truth on purpose: these two signers previously kept
+    private copies, one of them lost the production guard, and production
+    silently signed real tokens with the public dev secret below.
+    """
+    secret = os.environ.get("SECRET_KEY")
+    if secret:
+        return secret
+    if is_production():
+        raise RuntimeError("SECRET_KEY must be set in production")
+    return _DEV_SIGNING_SECRET

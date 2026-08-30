@@ -26,6 +26,7 @@ from typing import Any, Optional
 
 from app.brain import detectors
 from app.brain import mastery as mastery_model
+from app.core.env import signing_secret
 from app.brain.repository import (
     _get_collection_named,
     apply_brain_operators,
@@ -174,7 +175,7 @@ def _now() -> str:
 
 
 def _secret() -> bytes:
-    return (os.environ.get("SECRET_KEY") or "yuvi720-dev-secret").encode("utf-8")
+    return signing_secret().encode("utf-8")
 
 
 # ── slxapi launch token (stateless, HMAC-signed) ─────────────────────────────
