@@ -103,8 +103,9 @@ export function LearnerMappingPage() {
   const [rewardAssetId, setRewardAssetId] = useState<string | null>(null)
   // Compliance reminder when a submit is attempted with unanswered questions.
   const [showIncompleteReminder, setShowIncompleteReminder] = useState(false)
-  // Already-earned unlocks, loaded once so a reward isn't re-announced on resume.
-  const unlockedRef = useRef<Set<string>>(new Set())
+  // Rewards announced during this view. Their durable ownership is settled by
+  // the server from the persisted mapping answers when Studio or Badges opens.
+  const announcedRewardsRef = useRef<Set<string>>(new Set())
   const chatSequenceRunRef = useRef(0)
   const reflectionSpeechRunRef = useRef(0)
   const transitionRunRef = useRef(0)
@@ -287,28 +288,12 @@ export function LearnerMappingPage() {
     }).catch(() => {})
   }
 
-  // Load already-earned Yuvi unlocks once so completing a section that was
-  // already rewarded (e.g. after a resume) doesn't re-announce the prize.
-  useEffect(() => {
-    void apiGet<{ avatar_unlocks?: string[] }>(
-      '/api/learner-state'
-    )
-      .then((state) => {
-        unlockedRef.current = new Set(Array.isArray(state?.avatar_unlocks) ? state.avatar_unlocks : [])
-      })
-      .catch(() => {})
-  }, [])
-
-  // Reward the learner with a store item when they finish a mapping section.
-  // The unlock is progress-derived (only granted on real completion) and
-  // persisted; the studio reads it to open the matching item.
+  // Celebrate an earned section reward once in this view. The server grants it
+  // from persisted answers when the learner next opens Studio or Badges.
   function grantPhaseReward(partIndex: number) {
     const assetId = PHASE_REWARDS[partIndex]
-    if (!assetId || unlockedRef.current.has(assetId)) return
-    unlockedRef.current.add(assetId)
-    void apiPatch('/api/learner-state', {
-      avatar_unlocks: Array.from(unlockedRef.current),
-    }).catch(() => {})
+    if (!assetId || announcedRewardsRef.current.has(assetId)) return
+    announcedRewardsRef.current.add(assetId)
     setRewardAssetId(assetId)
   }
 

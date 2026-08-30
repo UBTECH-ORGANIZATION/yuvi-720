@@ -27,11 +27,14 @@ Rule = dict[str, Any]
 # id -> {kind, rule, requirement_key}
 #   kind: 'avatar' (a Yuvi cosmetic) or 'prop' (a room item)
 #
-# Deliberately absent: crown / jetpack / ironman / propeller. Those are the
-# mapping-section rewards (`PHASE_REWARDS`), a different promise to the learner,
-# and re-pointing them at badges would silently change what they mean.
 UNLOCKS: dict[str, dict[str, Any]] = {
     # ── Yuvi cosmetics ──
+    "crown": {"kind": "avatar", "rule": {"type": "section", "number": 4},
+              "requirementKey": "YuviStudio.unlock.section4"},
+    "jetpack": {"kind": "avatar", "rule": {"type": "section", "number": 5},
+                "requirementKey": "YuviStudio.unlock.section5"},
+    "ironman": {"kind": "avatar", "rule": {"type": "section", "number": 6},
+                "requirementKey": "YuviStudio.unlock.section6"},
     "laurel": {"kind": "avatar", "rule": {"type": "badge", "key": "on_fire"},
                "requirementKey": "YuviStudio.unlock.badge.on_fire"},
     "explorerGoggles": {"kind": "avatar", "rule": {"type": "badge", "key": "comeback"},
@@ -63,12 +66,9 @@ UNLOCKS: dict[str, dict[str, Any]] = {
 AVATAR_IDS = frozenset(k for k, v in UNLOCKS.items() if v["kind"] == "avatar")
 PROP_IDS = frozenset(k for k, v in UNLOCKS.items() if v["kind"] == "prop")
 
-# Cosmetics the studio locks but no server rule grants. The mapping-section
-# prizes are announced by the client and then dropped, because `avatar_unlocks`
-# is not client-writable; `propeller` has no granter at all, on either side.
-# Listed here so the equipped screen agrees with the padlock the learner sees —
-# actually handing them out is a separate fix.
-UNGRANTED_IDS = frozenset({"crown", "jetpack", "ironman", "propeller"})
+# Cosmetics the studio locks but no server rule grants. `propeller` has no
+# earned source yet, so it remains visibly locked until its separate task.
+UNGRANTED_IDS = frozenset({"propeller"})
 
 
 def is_gated_cosmetic(asset_id: str) -> bool:
@@ -111,15 +111,19 @@ def _earned_badge_keys(badges: Iterable[dict[str, Any]] | None) -> set[str]:
 def satisfied_ids(
     badges: Iterable[dict[str, Any]] | None,
     current_streak: int = 0,
+    completed_sections: Iterable[int] | None = None,
 ) -> set[str]:
     """Every cosmetic id the learner currently qualifies for."""
     earned = _earned_badge_keys(badges)
+    sections = set(completed_sections or [])
     out: set[str] = set()
     for item_id, entry in UNLOCKS.items():
         rule = entry["rule"]
         if rule["type"] == "badge" and rule["key"] in earned:
             out.add(item_id)
         elif rule["type"] == "streak" and current_streak >= int(rule["days"]):
+            out.add(item_id)
+        elif rule["type"] == "section" and rule["number"] in sections:
             out.add(item_id)
     return out
 

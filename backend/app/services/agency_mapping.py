@@ -389,6 +389,17 @@ def required_question_numbers() -> list[int]:
     return sorted(_questions_by_num().keys())
 
 
+def section_question_numbers() -> dict[int, tuple[int, ...]]:
+    """Official question numbers grouped by their measure section."""
+    sections: dict[int, list[int]] = {}
+    for question_number, measure_number in _measure_of_question().items():
+        sections.setdefault(measure_number, []).append(question_number)
+    return {
+        measure_number: tuple(sorted(question_numbers))
+        for measure_number, question_numbers in sections.items()
+    }
+
+
 # ── UI strings (intro / titles) — official Hebrew/Arabic, English internal ─────
 _UI_STRINGS = {
     "he": {
