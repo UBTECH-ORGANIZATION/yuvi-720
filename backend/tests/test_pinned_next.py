@@ -3,9 +3,11 @@
 The behaviours worth protecting: scope before any write, the catalog (or the
 task activation) as the only source of what a pin points at, both chokepoints
 (hero + route) honouring the same pin the same way, the ONE place each kind of
-completion is adjudicated being the one place that kind of pin clears, expiry
-judged read-side by one shared helper, and the ending of a pin surviving as
-`pinned_last` — "done" and "never pinned" must not be the same blank.
+completion is adjudicated being the one place that kind of pin clears, a pin
+having NO clock (it steers until done or unpinned — Gal, 2026-08-30; stale
+`expires_at` stamps on old records are ignored, never honoured), and the
+ending of a pin surviving as `pinned_last` — "done" and "never pinned" must
+not be the same blank.
 """
 
 from __future__ import annotations
@@ -224,7 +226,6 @@ class PinLocaleTest(unittest.TestCase):
                         "notif.pinnedNext", "notif.action.openLesson",
                         "notif.action.openTask",
                         "tch.liveView.focusPanel.search.go",
-                        "tch.liveView.focusPanel.until",
                         "tch.liveView.focusPanel.title",
                         "tch.student.pin.by",
                         "tch.student.pin.outcome.completed",
@@ -232,7 +233,7 @@ class PinLocaleTest(unittest.TestCase):
                 self.assertIn(key, data, f"{key} missing from {lang}")
 
 
-# ── #244: expiry, task pins, the spent record, bulk ─────────────────────────
+# ── #244: task pins, the spent record, bulk ──────────────────────────────────
 
 _TASK_PIN = {
     "kind": "task", "task_id": "tsk-abc", "launch_id": "tsk-abc:1",
@@ -251,20 +252,16 @@ class PinningHelperTest(unittest.TestCase):
         self.assertIsNotNone(pin)
         self.assertEqual(pinning.pin_kind(pin), "component")
 
-    def test_a_future_date_steers_and_a_past_one_does_not(self):
+    def test_a_pin_has_no_clock_and_a_stale_stamp_is_ignored(self):
+        """Pins no longer expire (Gal, 2026-08-30): a record written before
+        that change may still carry `expires_at`, and it must steer exactly
+        like an undated pin — past, future, or unreadable alike."""
         from app.services import pinning
 
-        self.assertIsNotNone(pinning.active_pin(
-            {"pinned_next": {**_PIN, "expires_at": "2999-01-01T00:00:00+00:00"}}))
-        self.assertIsNone(pinning.active_pin(
-            {"pinned_next": {**_PIN, "expires_at": "2020-01-01T00:00:00+00:00"}}))
-
-    def test_a_date_we_cannot_read_fails_closed(self):
-        """A pin we cannot date must not steer a child forever on a typo."""
-        from app.services import pinning
-
-        self.assertIsNone(pinning.active_pin(
-            {"pinned_next": {**_PIN, "expires_at": "not-a-date"}}))
+        for stamp in ("2020-01-01T00:00:00+00:00", "2999-01-01T00:00:00+00:00",
+                      "not-a-date"):
+            self.assertIsNotNone(pinning.active_pin(
+                {"pinned_next": {**_PIN, "expires_at": stamp}}), stamp)
 
     def test_the_spent_gate_is_component_only(self):
         """Task completion is adjudicated at submission, never in events —
@@ -285,8 +282,8 @@ class PinningHelperTest(unittest.TestCase):
         self.assertTrue(record["ended_at"])
 
 
-class HeroPinExpiryTest(HeroPinTest):
-    """The hero reads the shared judgement — expiry and the resume aside."""
+class HeroPinKindsTest(HeroPinTest):
+    """The hero reads the shared judgement — stale stamps and the resume aside."""
 
     def _hero(self, brain, completed_ids=frozenset()):
         from app.services import dashboard
@@ -309,13 +306,15 @@ class HeroPinExpiryTest(HeroPinTest):
              patch("app.services.kata_catalog.get_objective", lambda oid: {}):
             return dashboard._hero(brain, "he", completed_ids)
 
-    def test_an_expired_pin_falls_through_to_resume(self):
+    def test_a_stale_expiry_stamp_does_not_unseat_the_pin(self):
+        """The pin outranks the resume even on a record that still carries a
+        past `expires_at` — pins have no clock, so it holds until done."""
         hero = self._hero({
             "pinned_next": {**_PIN, "expires_at": "2020-01-01T00:00:00+00:00"},
             "current_state": {"component_id": "cmp-other"},
             "mastery": {},
         })
-        self.assertEqual(hero["mode"], "resume")
+        self.assertEqual(hero["mode"], "pinned")
 
     def test_a_task_pin_renders_without_catalog_coordinates(self):
         hero = self._hero({
@@ -389,9 +388,11 @@ class UnpinOutcomeTest(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(updates["pinned_next"])
         self.assertEqual(updates["pinned_last"]["outcome"], "unpinned")
 
-    async def test_clearing_a_lapsed_pin_is_recorded_as_expired(self):
+    async def test_clearing_a_pin_with_a_stale_stamp_is_still_unpinned(self):
+        """No clock means no "expired" ending: the teacher withdrew it, and
+        that is what the record says — whatever old stamp the pin carried."""
         updates = await self._unpin({**_PIN, "expires_at": "2020-01-01T00:00:00+00:00"})
-        self.assertEqual(updates["pinned_last"]["outcome"], "expired")
+        self.assertEqual(updates["pinned_last"]["outcome"], "unpinned")
 
     async def test_unpinning_nothing_writes_no_ending(self):
         updates = await self._unpin(None)
@@ -441,15 +442,15 @@ class TaskPinRouteTest(unittest.IsolatedAsyncioTestCase):
         write.assert_not_awaited()
         notify.assert_not_awaited()
 
-    async def test_a_pin_born_expired_is_refused_before_any_write(self):
-        """Read-side expiry has no sweeper: a pin already past its date would
-        be a record nothing ever honours."""
+    async def test_an_expires_at_in_the_body_is_ignored_not_stored(self):
+        """The עד-תאריך option is gone: a client still sending a date gets a
+        normal pin with no clock — the field must not sneak into the record."""
         response, write, _notify = await self._pin_task(
             activation={"launch_id": "tsk-abc:1"},
             body={"launch_id": "tsk-abc:1", "expires_at": "2020-01-01"},
         )
-        self.assertEqual(response.status_code, 422)
-        write.assert_not_awaited()
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("expires_at", write.await_args.args[1]["pinned_next"])
 
 
 class BulkPinTest(unittest.IsolatedAsyncioTestCase):

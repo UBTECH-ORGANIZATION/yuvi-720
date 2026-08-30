@@ -3,16 +3,16 @@
 The pin is honoured at four independent read sites — the dashboard hero, the
 pedagogical route, the class-wide focus fan-out and the single-learner pin
 read. #249 shipped the same three-line judgement inlined at each of them, and
-adding expiry and a second pin kind would have made four copies of a rule that
-already drifted once (the spent-pin gate was written twice with two different
-casts). These helpers are that rule, once.
+adding a second pin kind would have made four copies of a rule that already
+drifted once (the spent-pin gate was written twice with two different casts).
+These helpers are that rule, once.
 
-Expiry is READ-SIDE, like every date in the brain (`teacher_directives`'
-`expires_at`, the check-in's `daily_feeling.date`): no cron, no sweeper, no
-second place to keep in sync. A pin past its date simply stops steering; the
-record itself is only replaced when a teacher acts again, and `spent_record`
-is what they replace it with — so "the pin ended, and this is how" survives
-the pin itself.
+A pin has no clock (Gal, 2026-08-30 — the עד-תאריך option is gone): it holds
+until the child finishes what it points at, or until the teacher unpins it.
+The two endings are recorded via `spent_record`, so "the pin ended, and this
+is how" survives the pin itself. Old records may still carry an `expires_at`
+stamp from before this change; nothing reads it, and such a pin simply steers
+until done like any other.
 
 Pure and synchronous on purpose: `dashboard._hero` is sync, and nothing here
 needs a database — callers hand in the brain they already read.
@@ -31,9 +31,9 @@ KIND_TASK = "task"
 #: planner's own sequencing within a goal.
 KIND_OBJECTIVE = "objective"
 
-#: The pin's ending, as `pinned_last.outcome`.
+#: The pin's ending, as `pinned_last.outcome`. ("expired" existed before
+#: pins lost their clock; old `pinned_last` rows may still carry it.)
 OUTCOME_COMPLETED = "completed"
-OUTCOME_EXPIRED = "expired"
 OUTCOME_UNPINNED = "unpinned"
 
 
@@ -59,50 +59,27 @@ def target_id(pin: dict[str, Any]) -> str:
     return str(pin.get("component_id") or "")
 
 
-def is_expired(pin: dict[str, Any], now: Optional[datetime] = None) -> bool:
-    """Past its date — or dated in a way we cannot read.
-
-    No date means no expiry: the pin holds until done or unpinned (the
-    decision on #244). An unparseable date fails CLOSED — a pin we cannot
-    date must not steer a child forever on the strength of a typo.
-    """
-    stamp = pin.get("expires_at")
-    if not stamp:
-        return False
-    try:
-        expires = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
-    except ValueError:
-        return True
-    if expires.tzinfo is None:
-        expires = expires.replace(tzinfo=timezone.utc)
-    return expires <= (now or datetime.now(timezone.utc))
-
-
 def active_pin(
     brain: dict[str, Any],
     *,
     completed_ids: Iterable[str] = frozenset(),
-    now: Optional[datetime] = None,
 ) -> Optional[dict[str, Any]]:
     """The pin that currently steers this learner, or None.
 
-    None when there is no pin, the pin names nothing, it is past its date, or
-    (component pins only) its component is already completed — the spent-pin
-    gate. Task pins never consult `completed_ids`: a task writes no learning
-    events, so its completion clears the pin at submission instead
-    (`tasks/attempts`), and a spent task pin cannot reach this check at all.
-    An OBJECTIVE pin passes this gate on expiry alone — whether the goal is
-    finished is a catalog question, answered by `objective_next` returning
-    None, and each read site treats that answer as "spent".
+    None when there is no pin, the pin names nothing, or (component pins
+    only) its component is already completed — the spent-pin gate. Task pins
+    never consult `completed_ids`: a task writes no learning events, so its
+    completion clears the pin at submission instead (`tasks/attempts`), and a
+    spent task pin cannot reach this check at all. An OBJECTIVE pin always
+    passes this gate — whether the goal is finished is a catalog question,
+    answered by `objective_next` returning None, and each read site treats
+    that answer as "spent". A pin never times out: it holds until the child
+    finishes it or the teacher unpins it.
 
-    Read-only: never mutates the brain, never writes `pinned_last`. The lazy
-    sweep of an expired record belongs to the pin/unpin routes, where a
-    teacher is acting anyway.
+    Read-only: never mutates the brain, never writes `pinned_last`.
     """
     pin = brain.get("pinned_next") or {}
     if not target_id(pin):
-        return None
-    if is_expired(pin, now):
         return None
     if pin_kind(pin) == KIND_COMPONENT and str(pin["component_id"]) in set(completed_ids):
         return None

@@ -1053,12 +1053,6 @@ function StatusBand({ learnerId, focus: rawFocus, progress, trends, rows }: {
               and rewords itself mid-glance would cost more than it says. */}
           {pinView && (
             <div className="tch-status__pinBar">
-              {pinView.pin_state === 'expired' && (
-                <span className="tch-status__pinNote" dir="auto">
-                  {t('tch.student.pin.outcome.expired',
-                    { title: pinView.pinned_title ?? '' })}
-                </span>
-              )}
               {/* Only a COMPLETED pin earns a line: "the teacher removed a
                   pin" is an act, not an outcome, and reporting it read as
                   noise on the card. */}
