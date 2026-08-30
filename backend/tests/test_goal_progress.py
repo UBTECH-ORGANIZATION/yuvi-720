@@ -106,12 +106,15 @@ class WhatCounts(unittest.TestCase):
     def test_yuvi_chat_mirrors_take_the_max_never_the_sum(self):
         # Question-scoped chat lands in BOTH learner_activity and
         # agent_messages; summing would tell the teacher the child asked twice.
+        # Since #462 the raw volume lives in quality.chatted — the count
+        # itself is the substantive-message count (test_goal_verification.py).
         goal = {"deadline": "2026-08-17",
                 "action": {"kind": "ask_yuvi", "target": 4}}
         scoped = [_activity("yuvi_chat", "2026-08-11T10:00:00+00:00")]
         free = ["2026-08-11T10:00:00+00:00", "2026-08-12T10:00:00+00:00"]
-        self.assertEqual(
-            self._progress(goal, activity=scoped, yuvi=free)["count"], 2)
+        progress = self._progress(goal, activity=scoped, yuvi=free)
+        self.assertEqual(progress["quality"]["chatted"], 2)
+        self.assertEqual(progress["count"], 0)
 
     def test_no_deadline_counts_up_to_now(self):
         goal = {"action": {"kind": "use_hint", "target": 1}}

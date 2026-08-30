@@ -152,20 +152,66 @@ function GoalRow({ goal, onApprove }: { goal: StudentGoal; onApprove?: () => voi
 
 /** What the platform counted for an action-tracked goal: "hints used 3/5 ✓".
  *  Exported for the class Goals page — the same number must read the same
- *  everywhere. Goals without an action render nothing, exactly as before. */
-export function GoalProgressLine({ goal }: { goal: StudentGoal }) {
+ *  everywhere. Goals without an action render nothing, exactly as before.
+ *
+ *  For ask_yuvi the count is the SUBSTANTIVE message count (#462). `detailed`
+ *  (the approval inbox) additionally shows the verdict's basis — how many of
+ *  the messages counted and what was actually asked — because an automatic
+ *  judgement the teacher cannot inspect is worse than no judgement. */
+export function GoalProgressLine({ goal, detailed = false }: {
+  goal: StudentGoal
+  detailed?: boolean
+}) {
   const { t } = useI18n()
+  const [showBasis, setShowBasis] = useState(false)
   const progress = goal.progress
   if (!progress) return null
+  const quality = progress.quality ?? null
+  const labelRows = quality
+    ? Object.entries(quality.labels).sort((a, b) => b[1] - a[1])
+    : []
   return (
-    <p className={`tch-goal__progress${progress.met ? ' tch-goal__progress--met' : ''}`}
-       dir="auto">
-      <Icon name={progress.met ? 'check' : 'target'} size={13} aria-hidden="true" />
-      {t(`tch.goals.action.${progress.kind}`)}
-      {' · '}
-      {t('tch.goals.action.count', { count: progress.count, target: progress.target })}
-      {progress.met ? ` · ${t('tch.goals.action.met')}` : ''}
-    </p>
+    <div className="tch-goal__progressWrap">
+      <p className={`tch-goal__progress${progress.met ? ' tch-goal__progress--met' : ''}`}
+         dir="auto">
+        <Icon name={progress.met ? 'check' : 'target'} size={13} aria-hidden="true" />
+        {t(`tch.goals.action.${progress.kind}`)}
+        {' · '}
+        {t('tch.goals.action.count', { count: progress.count, target: progress.target })}
+        {progress.met ? ` · ${t('tch.goals.action.met')}` : ''}
+        {quality?.uncertain ? (
+          <span className="tch-goal__uncertain">{t('tch.goals.quality.uncertain')}</span>
+        ) : null}
+      </p>
+      {detailed && quality && quality.chatted > 0 ? (
+        <div className="tch-goal__quality">
+          <p dir="auto">
+            {t('tch.goals.quality.basis', {
+              chatted: quality.chatted, substantive: quality.substantive,
+            })}
+          </p>
+          {labelRows.length ? (
+            <>
+              <button type="button" className="tch-evidence__toggle"
+                      aria-expanded={showBasis}
+                      onClick={() => setShowBasis((value) => !value)}>
+                <Icon name={showBasis ? 'chevronUp' : 'chevronLeft'} size={12} aria-hidden />
+                {t('tch.goals.quality.breakdown')}
+              </button>
+              {showBasis ? (
+                <ul className="tch-goal__qualityLabels">
+                  {labelRows.map(([label, count]) => (
+                    <li key={label} className="tch-evidence__sentence" dir="auto">
+                      {t(`tch.goals.quality.label.${label}`)} × {count}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   )
 }
 

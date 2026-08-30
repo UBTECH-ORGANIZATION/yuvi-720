@@ -112,6 +112,16 @@ AGENT_VIEWS: dict[str, dict[str, list[str]]] = {
         ],
         "write": [],                # read-only: no AI write into a child's brain
     },
+    "teacher_voice": {
+        # #454: a HUMAN teacher's insight entering the student model — not an AI
+        # agent. The "no AI write into a child's brain" rule above is about
+        # model-generated text; this lane carries a judgement a person typed,
+        # PII-scrubbed and warned-about before it gets here
+        # (services/student_model_insight.py). It writes exactly the two
+        # structures the PBI names and nothing else.
+        "read": ["memory", "student_description"],
+        "write": ["memory", "student_description"],
+    },
     "safety": {
         "read": ["identity.locale"],
         "write": ["wellbeing_flags"],

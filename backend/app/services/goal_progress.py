@@ -18,6 +18,10 @@ Sources, one read each per learner (the fold over goals is pure Python):
   a wrong answer, and which days were active at all.
 - ``agent_messages`` — the learner's own messages to Yuvi, counted when the
   durable per-question mirror would undercount free companion chat.
+- ``learner_signals`` `question_quality` rows — the per-message label the
+  learning chat already stores (#451). For ``ask_yuvi`` the label IS the
+  judgement (#462): a goal to "talk with Yuvi" is met by substantive
+  questions, not by message volume — twenty empty messages count as zero.
 """
 
 from __future__ import annotations
@@ -38,6 +42,14 @@ ACTION_KINDS = {
 
 _TARGET_CAP = 50
 _ANSWER_VERBS = {"answered", "attempted"}
+
+# The labels that make a message to Yuvi count toward a conversational goal
+# (#462). Reut's line — "צריך שהשאלות עם יובי יהיו ענייניות ולא סתם הודעות" —
+# draws the boundary: a real question about the material counts, whichever
+# depth it has; asking to be handed the answer and off-topic chatter do not.
+# The taxonomy is #451's closed enum; only ask_yuvi consumes it today, but the
+# split lives here so the next qualitative action kind reuses it unchanged.
+SUBSTANTIVE_LABELS = {"procedural", "verification", "conceptual", "self_diagnostic"}
 
 
 def normalize_action(data: Any) -> Optional[dict[str, Any]]:
@@ -149,17 +161,63 @@ def _count(kind: str, start: str, end: str,
     return 0
 
 
+def _quality_verdict(start: str, end: str, chatted: int, target: int,
+                     quality_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """The judgement behind an ``ask_yuvi`` count (#462), from stored labels.
+
+    ``substantive`` is the number the goal is measured by. ``uncertain`` marks
+    the one honest gap: the child visibly chatted enough, but the messages
+    carry no labels (sent before the classifier existed, or it failed) — that
+    goal needs the teacher's eye, not a silent verdict either way.
+    """
+    labels: dict[str, int] = {}
+    for row in quality_rows:
+        if not _in(row.get("at"), start, end):
+            continue
+        label = str((row.get("meta") or {}).get("label") or "")
+        if label:
+            labels[label] = labels.get(label, 0) + 1
+    substantive = sum(count for label, count in labels.items()
+                      if label in SUBSTANTIVE_LABELS)
+    # The lesson thread is deleted on lesson exit, so the message mirrors can
+    # undercount what the labels prove was sent — a labeled message IS a
+    # message, so the volume never reads below the labeled count.
+    labeled = sum(labels.values())
+    return {
+        "substantive": substantive,
+        "chatted": max(chatted, labeled),
+        "labels": labels,
+        "uncertain": bool(not labels and chatted >= target),
+    }
+
+
 def progress_from_sources(goal: dict[str, Any], assigned_at: str,
                           activity: list[dict[str, Any]],
                           events: list[dict[str, Any]],
-                          yuvi_messages: list[str]) -> Optional[dict[str, Any]]:
-    """The number a teacher reads: ``{kind, target, count, met}``."""
+                          yuvi_messages: list[str],
+                          quality_rows: Optional[list[dict[str, Any]]] = None,
+                          ) -> Optional[dict[str, Any]]:
+    """The number a teacher reads: ``{kind, target, count, met}``.
+
+    For ``ask_yuvi`` the count is the number of SUBSTANTIVE messages (#462) —
+    judged from the stored per-message quality labels, never by the teacher —
+    and ``quality`` carries the basis so the teacher can disagree.
+    """
     action = normalize_action(goal.get("action"))
     if action is None:
         return None
     start, end = _window(goal, assigned_at)
     count = _count(action["kind"], start, end, activity, events, yuvi_messages)
-    return {**action, "count": count, "met": count >= action["target"]}
+    if action["kind"] != "ask_yuvi":
+        return {**action, "count": count, "met": count >= action["target"]}
+
+    quality = _quality_verdict(start, end, count, action["target"], quality_rows or [])
+    return {
+        **action,
+        "count": quality["substantive"],
+        "met": quality["substantive"] >= action["target"],
+        "quality": quality,
+    }
 
 
 # ── the one-read-per-source gather ───────────────────────────────────────────
@@ -195,14 +253,26 @@ async def enrich_conversations(learner_id: str,
     if not tracked:
         return
 
-    from app.services import learner_activity
+    from app.services import learner_activity, learner_signals
     from app.services.events import get_learner_events
 
     activity = await learner_activity._activity_rows(learner_id)
     events = await get_learner_events(learner_id, limit=2000)
     yuvi_messages = await _yuvi_message_stamps(learner_id)
+    # Quality labels only when a conversational goal is actually tracked, from
+    # the earliest such goal's window onward — one read, filtered per goal in
+    # the pure fold.
+    conversational = [
+        str(conversation.get("created_at") or "")
+        for conversation, goal in tracked
+        if (goal.get("action") or {}).get("kind") == "ask_yuvi"
+    ]
+    quality_rows: list[dict[str, Any]] = []
+    if conversational:
+        quality_rows = await learner_signals.recent(
+            learner_id, since=min(conversational), kinds=["question_quality"])
 
     for conversation, goal in tracked:
         goal["progress"] = progress_from_sources(
             goal, str(conversation.get("created_at") or ""),
-            activity, events, yuvi_messages)
+            activity, events, yuvi_messages, quality_rows)
