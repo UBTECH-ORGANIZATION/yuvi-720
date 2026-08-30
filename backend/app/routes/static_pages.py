@@ -11,7 +11,6 @@ from app.core.paths import (
     REACT_APP_DIR,
     REACT_ASSETS_DIR,
     SHARED_DIR,
-    UNITY_WORLD_DIR,
 )
 
 
@@ -50,8 +49,6 @@ def mount_static_assets(app: FastAPI) -> None:
             ImmutableStaticFiles(directory=str(REACT_ASSETS_DIR)),
             name="react-assets",
         )
-    if UNITY_WORLD_DIR.exists():
-        app.mount("/unity-world", StaticFiles(directory=str(UNITY_WORLD_DIR)), name="unity-world")
 
     # Everything Vite copies verbatim from `frontend/public` lands at the build
     # ROOT (`/moments/…`, `/yuvi-favicon.png`), not under `/assets` — only

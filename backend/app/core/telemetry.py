@@ -42,7 +42,6 @@ _EXCLUDED_URLS = ",".join(
         "^/shared",
         "^/locales",
         "^/moments",
-        "^/unity-world",
         "favicon",
         "/healthz",
         "/api/agent/.*stream",

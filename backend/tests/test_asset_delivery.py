@@ -67,11 +67,10 @@ class AssetDeliveryTests(unittest.TestCase):
 
         self._originals = {
             name: getattr(static_pages, name)
-            for name in ("REACT_APP_DIR", "REACT_ASSETS_DIR", "UNITY_WORLD_DIR")
+            for name in ("REACT_APP_DIR", "REACT_ASSETS_DIR")
         }
         static_pages.REACT_APP_DIR = self.tmp
         static_pages.REACT_ASSETS_DIR = assets
-        static_pages.UNITY_WORLD_DIR = self.tmp / "missing"
 
         self.app = FastAPI()
         self.app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
