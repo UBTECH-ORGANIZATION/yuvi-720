@@ -222,6 +222,60 @@ export interface LearningGap {
   evidence: { sample_misconceptions: [string, number][]; threshold: number }
 }
 
+/* The real answer behind a gap row's "למה?" (#507) — folded from stored
+   evidence on click, never generated: where inside the objective, on which
+   questions, and how it goes wrong per the coach's own error-type reads. */
+export interface GapDiagnosisPart {
+  component_id: string
+  title: string
+  attempts: number
+  correct: number
+  success_rate: number | null
+  learners: number
+  struggling_count: number
+}
+
+export interface GapDiagnosisQuestion {
+  question_id: string
+  component_id: string
+  item_id: string | null
+  ordinal: number | null
+  part: number | null
+  screen_title: string
+  kind: string
+  attempts: number
+  correct: number
+  success_rate: number
+  learners: number
+  learning_title: string
+  /** The content's own `informationToBot` description of what this question
+   *  teaches — the topic behind the number. */
+  teaches: string | null
+}
+
+export type GapErrorType = 'guess' | 'partial' | 'misinterpret' | 'careless'
+
+export interface GapDiagnosis {
+  objective_id: string
+  objective_title: string | null
+  /** Hardest first. */
+  parts: GapDiagnosisPart[]
+  hard_questions: GapDiagnosisQuestion[]
+  /** [error_type, decision count], most common first. */
+  error_types: [GapErrorType, number][]
+  /** The one generated field: the topics-and-focus guidance, phrased from the
+   *  folded rows above and nothing else. Null whenever phrasing failed — the
+   *  client then composes its deterministic sentences instead. */
+  focus_text: string | null
+}
+
+export function getGapDiagnosis(groupId: string, objectiveId: string, language: string) {
+  const params = new URLSearchParams({ language })
+  return apiGet<GapDiagnosis>(
+    `/api/teacher/groups/${encodeURIComponent(groupId)}/gaps/${
+      encodeURIComponent(objectiveId)}/diagnosis?${params}`)
+}
+
 export interface GroupRecommendation {
   action: 'revisit' | 'change_pace' | 'adapt_method' | 'split_groups' | 'extend'
   text: string

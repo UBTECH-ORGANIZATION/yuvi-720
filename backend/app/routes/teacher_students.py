@@ -172,6 +172,28 @@ async def group_gaps(
     })
 
 
+@router.get("/groups/{group_id}/gaps/{objective_id}/diagnosis")
+async def gap_diagnosis(
+    group_id: str,
+    objective_id: str,
+    language: str = Query("he"),
+    session=Depends(require_teacher_session),
+):
+    """The real answer behind a gap row's "למה?" (#507).
+
+    The row's counters already say how many are stuck; this says WHERE inside
+    the objective, on WHICH questions, and HOW it goes wrong — folded from
+    stored evidence only (activity rows, the coach's own error-type reads),
+    never generated. Read on click, not with the page: it fans out over the
+    roster's events and decisions, and a teacher opens one gap at a time.
+    """
+    if not await _guard_group(session, group_id):
+        return _denied()
+    from app.services import learning_analytics
+    return _ok(await learning_analytics.gap_diagnosis(
+        group_id, objective_id, language=normalize_language(language)))
+
+
 @router.get("/groups/{group_id}/goals")
 async def group_goals(group_id: str, session=Depends(require_teacher_session)):
     """Every learner's goals in one read — the class Goals screen.

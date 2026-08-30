@@ -37,6 +37,7 @@ import { useI18n } from '../../../i18n/I18nProvider'
 import { useTeacherScope } from '../../../providers/TeacherScopeProvider'
 import {
   createSubgroup,
+  getGapDiagnosis,
   getGroupEngagement, getGroupGaps, getGroupMoments, getGroupMood, getGroupSnapshot,
   type ClassMood, type Engagement, type GroupInsight, type LearningGap,
   type Moment,
@@ -655,6 +656,9 @@ export function TeacherHomePage() {
         strengthsTitle={t('tch.gaps.group.strengths')}
         strengthsHeading={t('tch.gaps.who.strength')}
         onPraise={setPraiseFor}
+        /* "למה?" answers the question now (#507): the row's id IS the
+           objective id on this surface, so the loader reads its diagnosis. */
+        loadWhy={(item) => getGapDiagnosis(groupId, item.id, language).catch(() => null)}
       />
       </div>
 

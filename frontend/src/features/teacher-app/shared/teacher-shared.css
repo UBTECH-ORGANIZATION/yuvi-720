@@ -1168,3 +1168,28 @@
      it rather than colliding with it. */
   pointer-events: none;
 }
+
+/* ── the real "למה?" on a gap row (#507) ───────────────────────────────────
+   Three folded reads and a composed recommendation; the raw evidence keeps
+   its place at the bottom — the diagnosis interprets, C4 discloses. */
+.tch-why {
+  grid-column: 1 / -1;
+  inline-size: 100%;
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-bg);
+}
+.tch-why__loading, .tch-why__none {
+  margin: 0;
+  color: var(--sp-ink-500);
+  font-size: var(--sp-fs-sm);
+}
+.tch-why__body { display: grid; gap: var(--sp-2); justify-items: start; }
+.tch-why__text {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-900);
+  line-height: 1.55;
+}
