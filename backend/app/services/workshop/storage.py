@@ -11,6 +11,7 @@ tab — a short-lived SAS on a public host could not have done that.
 
 from __future__ import annotations
 
+import hashlib
 import os
 from pathlib import Path
 import re
@@ -26,13 +27,27 @@ class StorageError(Exception):
     """Raised when an artifact cannot be stored or read; message is a code."""
 
 
-def build_path(learner_id: str, project_id: str, version: int) -> str:
-    """Compose the immutable path of one artifact version."""
-    owner = re.sub(r"[^A-Za-z0-9_-]", "", learner_id or "")[:64]
-    project = re.sub(r"[^A-Za-z0-9_-]", "", project_id or "")[:64]
-    if not _SEGMENT.fullmatch(owner) or not _SEGMENT.fullmatch(project) or version < 1:
+def owner_segment(learner_id: str) -> str:
+    """The folder a learner's artifacts live under.
+
+    A hash rather than the id itself: blob paths end up in storage logs and
+    diagnostics, and there is no reason for a learner identifier to travel there.
+    """
+    if not (learner_id or "").strip():
         raise StorageError("invalid_artifact_path")
-    return f"{owner}/{project}/v{version}/index.html"
+    return hashlib.sha256(learner_id.encode("utf-8")).hexdigest()[:32]
+
+
+def build_path(learner_id: str, project_id: str, version: int) -> str:
+    """Compose the immutable path of one artifact version.
+
+    The project id is validated rather than sanitized: silently rewriting an id
+    that contains a path separator would store the artifact somewhere nobody
+    asked for.
+    """
+    if not _SEGMENT.fullmatch(project_id or "") or version < 1:
+        raise StorageError("invalid_artifact_path")
+    return f"{owner_segment(learner_id)}/{project_id}/v{version}/index.html"
 
 
 def _connection_string() -> str:
