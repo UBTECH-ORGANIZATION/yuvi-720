@@ -117,6 +117,29 @@ def _level_key(progress: int, has_events: bool) -> str:
     return "building"
 
 
+# Mastery ranks a single objective; a subject needs one word for many of them.
+_MASTERY_RANK = {"basic": 0, "intermediate": 1, "advanced": 2}
+
+
+def _subject_mastery_level(mastery: dict, subject: str) -> str:
+    """One level word for a whole subject, from its objectives' mastery levels.
+
+    The **median**, not the maximum: a single objective carried to `advanced`
+    must not label the entire subject advanced while the rest sit at `basic`.
+    """
+    ranks = sorted(
+        _MASTERY_RANK.get(str(entry.get("level") or "basic"), 0)
+        for entry in mastery.values()
+        if isinstance(entry, dict)
+        and entry.get("subject") == subject
+        and int(entry.get("attempts") or 0) > 0
+    )
+    if not ranks:
+        return "starting"
+    median = ranks[(len(ranks) - 1) // 2]
+    return next(key for key, rank in _MASTERY_RANK.items() if rank == median)
+
+
 def _subject_curriculum(
     brain: dict, subject: str, language: str, next_objective: Optional[str]
 ) -> list[dict[str, Any]]:
@@ -129,6 +152,12 @@ def _subject_curriculum(
         entry = entry_for(mastery, objective_id)
         done = bool(entry.get("achieved"))
         status_key = "done" if done else "current" if objective_id == next_objective else "upcoming"
+        # Same rule as `insights.objective_breakdown`, so the child's bar and the
+        # teacher's row can never disagree about the same objective.
+        score = entry.get("score_ewma")
+        percent = 100 if done else (
+            max(0, min(99, round(100 * float(score))))
+            if isinstance(score, (int, float)) else 0)
         items.append({
             "objectiveId": objective_id,
             "topic": localized_objective_title(objective_id, language),
@@ -136,6 +165,8 @@ def _subject_curriculum(
             "statusClass": (
                 "curr-done" if done else "curr-current" if status_key == "current" else "curr-upcoming"
             ),
+            "percent": percent,
+            "needsReview": bool(entry.get("needs_review")),
         })
     return items
 
@@ -162,6 +193,8 @@ def _project_subjects(brain: dict, language: str) -> list[dict[str, Any]]:
             "progress": pct,
             "level": _t(LEVEL_WORDS, level_key, language),
             "levelClass": "level-great" if pct >= 80 else "level-good" if pct >= 50 else "level-building",
+            # The mastery scale (basic/intermediate/advanced), localized client-side.
+            "levelKey": _subject_mastery_level(brain.get("mastery") or {}, subject),
             "gradient": SUBJECT_GRADIENT.get(subject, "linear-gradient(135deg, #7c5cff, #9f7afe)"),
             "description": _t(LEVEL_WORDS, level_key, language),
             "curriculum": _subject_curriculum(

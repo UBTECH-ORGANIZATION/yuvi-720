@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { LearnerAppBar } from '../../components/LearnerAppBar'
 import { EmptyState, ErrorState, Icon } from '../../components/primitives'
 import { useI18n } from '../../i18n/I18nProvider'
@@ -7,7 +7,6 @@ import { getDashboard, updateGoalStatus, type DashboardDTO } from '../../service
 import { getCalendarUpcoming, type CalendarItem } from '../../services/calendar'
 import {
   getLearningCatalog,
-  type LearningComponentDTO,
   type LearningUnitDTO,
 } from '../../services/learning'
 import { navigate } from '../../app/router'
@@ -16,7 +15,7 @@ import { DashboardHero } from './DashboardHero'
 import { DashboardLoadingScreen } from './DashboardLoadingScreen'
 import { ActivenessWeb } from './ActivenessWeb'
 import { MyGoals } from './MyGoals'
-import { RecentLessons } from './RecentLessons'
+import { MySubjects } from './MySubjects'
 import { ActivenessMapSection } from './ActivenessMapSection'
 import { StudentConnectionsPane } from './StudentConnectionsPane'
 import { StudentCalendarPage } from './StudentCalendarPage'
@@ -107,6 +106,32 @@ export function StudentDashboardPage() {
     }
   }, [])
 
+  // The overview is three tall cards, so it scrolls section by section rather
+  // than settling halfway between two. Scoped to <html> because that is the
+  // scroll container, and only while the overview itself is on screen — the
+  // calendar and chat sub-routes scroll normally.
+  const isOverview = !window.location.pathname.endsWith('/calendar')
+    && !window.location.pathname.endsWith('/chat')
+  const snapReady = isOverview && minimumLoadElapsed && !!dashboard
+
+  useEffect(() => {
+    if (!snapReady) return
+    document.documentElement.classList.add('sd-snap')
+    return () => document.documentElement.classList.remove('sd-snap')
+  }, [snapReady])
+
+  // Open on the first card instead of the strip above it. Once per visit: a
+  // background refresh must never yank a learner back up the page.
+  const openedOnHero = useRef(false)
+  useEffect(() => {
+    if (!snapReady || openedOnHero.current) return
+    openedOnHero.current = true
+    // Never fight a deep link or a scroll position the browser restored.
+    if (window.location.hash || (document.scrollingElement?.scrollTop ?? 0) > 8) return
+    document.querySelector('.sd-hero-card--split')
+      ?.scrollIntoView({ block: 'start', behavior: 'auto' })
+  }, [snapReady])
+
   // The hero now carries its unit, so the lesson opens with both ids. This used
   // to test the component id against `/-00001-/` — one provider's numbering
   // convention, hard-coded — and silently dumped every other unit on the portal.
@@ -115,11 +140,6 @@ export function StudentDashboardPage() {
     const params = new URLSearchParams({ component: componentId })
     if (unitId) params.set('unit', unitId)
     return `/learning/lesson?${params.toString()}`
-  }
-
-  const openRoadmapComponent = (unit: LearningUnitDTO, component: LearningComponentDTO) => {
-    const params = new URLSearchParams({ unit: unit.id, component: component.id })
-    navigate(`/learning/lesson?${params.toString()}`)
   }
 
   const startHeroStep = async () => {
@@ -203,11 +223,11 @@ export function StudentDashboardPage() {
               />
               <ActivenessWeb competencies={dashboard.competencies} />
             </section>
-            <section className="sd-hero-card sd-hero-card--lessons">
-              <RecentLessons
+            <section className="sd-hero-card sd-hero-card--subjects">
+              <MySubjects
+                subjects={dashboard.subjects}
                 units={roadmapUnits}
                 onOpenLearning={() => navigate('/learning')}
-                onOpenComponent={openRoadmapComponent}
               />
             </section>
             <div className="sd-grid">

@@ -208,9 +208,9 @@
   .sd-hero-card--split > .aweb { padding-inline-start: 0; padding-block-start: clamp(18px, 4vw, 28px); border-inline-start: 0; border-block-start: 1px solid rgba(111, 91, 255, .13); }
   [data-theme='dark'] .sd-hero-card--split > .aweb { border-block-start-color: var(--sdd-card-border); }
 }
-/* The lessons carousel keeps the full page width and owns its card outright. */
-.sd-hero-card--lessons { overflow: clip; }
-.sd-hero-card--lessons .sd-section { margin-block-start: 0; }
+/* The subjects panel keeps the full page width and owns its card outright. */
+.sd-hero-card--subjects { overflow: clip; }
+.sd-hero-card--subjects .sd-section { margin-block-start: 0; }
 .sd-hero-card {
   position: relative;
   isolation: isolate;
@@ -236,6 +236,35 @@
   background: radial-gradient(120% 78% at 72% 20%, rgba(111, 91, 255, .09), transparent 62%);
 }
 [dir='rtl'] .sd-hero-card::before { background: radial-gradient(120% 78% at 28% 20%, rgba(111, 91, 255, .09), transparent 62%); }
+
+/* ── Section-by-section scrolling ─────────────────────────────────────────
+   The overview is three tall cards — what's next, my subjects, my goals — so
+   the page settles on one at a time instead of halfway between two. The class
+   is put on <html> by the dashboard route only; every other page scrolls
+   normally. */
+.sd-hero-card--split,
+.sd-hero-card--subjects,
+.sd-dashboard > .sd-grid { scroll-margin-block-start: 88px; }
+html.sd-snap { scroll-snap-type: y proximity; }
+html.sd-snap .sd-hero-card--split,
+html.sd-snap .sd-hero-card--subjects,
+html.sd-snap .sd-dashboard > .sd-grid { scroll-snap-align: start; }
+/* The goals card is the last stop, and the page ends too soon for it to reach
+   the top of the window on its own. The overshoot is deliberate: too much room
+   only leaves whitespace below the fold, while too little just clamps at the
+   bottom with the card still fully in view. */
+html.sd-snap .sd-dashboard { padding-block-end: max(36px, calc(100dvh - 700px)); }
+/* Proximity, never mandatory: what sits below the goals card is not a snap
+   target and has to stay freely scrollable. And a card taller than the window
+   would trap the scroll, so short viewports opt out entirely. */
+@media (max-height: 720px) {
+  html.sd-snap { scroll-snap-type: none; }
+  html.sd-snap .sd-dashboard { padding-block-end: 36px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.sd-snap { scroll-snap-type: none; }
+  html.sd-snap .sd-dashboard { padding-block-end: 36px; }
+}
 [data-theme='dark'] .sd-hero-card {
   border-color: var(--sdd-card-border);
   background: var(--sdd-card-bg);
