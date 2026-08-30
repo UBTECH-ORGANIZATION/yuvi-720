@@ -65,9 +65,12 @@ jobs:
           # A hung test must name itself and let the rest of the suite run, so
           # SIGALRM (signal) rather than the thread method, which dumps every
           # stack and kills the process before pytest can attribute the failure.
+          # 180s, not 60s: the geometry fuzz tests are genuinely heavy under
+          # CI's Python 3.11 coverage tracer (~18s locally on 3.13) and were
+          # never hanging.
           python -m pytest tests "${deselect[@]}" \
             -p no:cacheprovider \
-            --timeout=60 --timeout-method=signal --durations=15 \
+            --timeout=180 --timeout-method=signal --durations=15 \
             --cov=app --cov=learner_state --cov=mock_data \
             --cov-report=term-missing:skip-covered \
             --cov-report=xml:coverage.xml \
