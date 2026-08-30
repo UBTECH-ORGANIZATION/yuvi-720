@@ -150,6 +150,22 @@ def snapshot(learner_id: str) -> dict[str, Any]:
 # current would show a phantom child online for the rest of the day.
 STALE_ONLINE_SECONDS = 900.0
 
+# A raised hand is a "right now" claim, same family as `status` — shown for at
+# most this long. The durable coach_handoff alert in the teacher's inbox is the
+# record that outlives the moment; the live strip waving a hand from days ago
+# is a phantom (a stale persisted row with nothing left to lower it did exactly
+# that: the clear's best-effort persist failed once and the wave was permanent).
+HAND_STALE_SECONDS = 4 * 3600.0
+
+
+def _cap_hand(row: dict[str, Any]) -> dict[str, Any]:
+    if (
+        row.get("help_requested_at")
+        and _seconds_since(row["help_requested_at"]) > HAND_STALE_SECONDS
+    ):
+        row["help_requested_at"] = None
+    return row
+
 
 def _merged(learner_id: str, stored: Optional[dict[str, Any]]) -> dict[str, Any]:
     """One learner's presence across processes: memory when it is ours or
@@ -158,10 +174,10 @@ def _merged(learner_id: str, stored: Optional[dict[str, Any]]) -> dict[str, Any]
     memory = snapshot(learner_id)
     # A connection held by THIS process is the one thing we know first-hand.
     if stored is None or memory.get("connections"):
-        return memory
+        return _cap_hand(memory)
     # ISO-8601 UTC stamps compare lexicographically; a missing one loses.
     if (memory.get("last_seen_at") or "") >= (stored.get("last_seen_at") or ""):
-        return memory
+        return _cap_hand(memory)
     row = _blank(learner_id)
     for key in row:
         if key in stored and stored[key] is not None:
@@ -175,7 +191,7 @@ def _merged(learner_id: str, stored: Optional[dict[str, Any]]) -> dict[str, Any]
         row["connections"] = 0
         row["struggling"] = None
         row["lesson_entered_at"] = None
-    return row
+    return _cap_hand(row)
 
 
 async def snapshot_for_group(group_id: str) -> list[dict[str, Any]]:
@@ -609,9 +625,14 @@ def note_help_requested(learner_id: str) -> None:
 
 
 def clear_help_requested(learner_id: str) -> None:
+    """Lower the hand — unconditionally, and always write through.
+
+    No early return when this process's entry already reads lowered: the stale
+    copy may live only in the persisted row (another worker raised it, or our
+    own clear's best-effort persist failed once), and skipping the write here
+    leaves a hand nothing can ever lower again.
+    """
     entry = _entry(learner_id)
-    if not entry.get("help_requested_at"):
-        return
     entry["help_requested_at"] = None
     _changed(learner_id, persist=True)
 
