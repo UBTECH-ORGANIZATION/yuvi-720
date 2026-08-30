@@ -26,11 +26,9 @@ env:
   WEBAPP_NAME: ubi-yuvi-720
 
 jobs:
-  deploy-production:
+  # Cheap gate first: an unconfirmed dispatch must not spend a full CI run.
+  confirm:
     runs-on: ubuntu-latest
-    environment:
-      name: production
-      url: https://spark.yuvilab.ai
     steps:
       - name: Require explicit confirmation
         if: inputs.confirm != 'DEPLOY-PRODUCTION'
@@ -38,6 +36,20 @@ jobs:
           echo "Refusing to deploy: 'confirm' must be exactly DEPLOY-PRODUCTION."
           exit 1
 
+  # The ref being hotfixed is tested, not the branch the dispatch was made from.
+  tests:
+    needs: confirm
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ inputs.ref }}
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: tests
+    environment:
+      name: production
+      url: https://spark.yuvilab.ai
+    steps:
       - name: Checkout the requested ref
         uses: actions/checkout@v4
         with:

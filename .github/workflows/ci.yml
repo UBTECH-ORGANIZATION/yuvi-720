@@ -1,0 +1,250 @@
+name: CI
+
+# Nothing reaches an image, a slot or production without passing this workflow:
+# deploy-spark.yml and deploy-production-ref.yml call it as a gate, and it also
+# runs on every pull request so a failure is visible before the merge.
+
+on:
+  pull_request:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Git ref to test. Defaults to the ref that called this workflow."
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ inputs.ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      # Same set the runtime image installs: Manim builds pycairo/manimpango
+      # from source, and pip cannot do that without the headers.
+      - name: Install Cairo/Pango build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential ffmpeg libcairo2-dev libpango1.0-dev pkg-config
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r backend/requirements.txt
+          python -m pip install pytest pytest-cov
+
+      - name: Run tests with coverage
+        working-directory: backend
+        run: |
+          quarantined=()
+          while IFS= read -r node; do quarantined+=("$node"); done \
+            < <(sed -e 's/#.*//' -e 's/[[:space:]]//g' tests/quarantine.txt | grep -v '^$')
+          deselect=()
+          for node in "${quarantined[@]}"; do deselect+=(--deselect "$node"); done
+          echo "Deselected ${#quarantined[@]} quarantined test(s)."
+          python -m pytest tests "${deselect[@]}" \
+            -p no:cacheprovider \
+            --cov=app --cov=learner_state --cov=mock_data \
+            --cov-report=term-missing:skip-covered \
+            --cov-report=xml:coverage.xml \
+            --cov-report=html:htmlcov
+
+      - name: Report coverage
+        if: always()
+        working-directory: backend
+        run: |
+          test -f coverage.xml || exit 0
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse("coverage.xml").getroot()
+          lines = float(root.get("line-rate", 0)) * 100
+          branches = float(root.get("branch-rate", 0)) * 100
+          print("## Backend coverage")
+          print()
+          print(f"| Lines | Branches |\n| --- | --- |\n| {lines:.1f}% | {branches:.1f}% |")
+          PY
+
+      # Visibility, not a gate: these were already red before CI existed and are
+      # listed in backend/tests/quarantine.txt.
+      - name: Known-failing tests (non-blocking)
+        if: always()
+        working-directory: backend
+        run: |
+          quarantined=()
+          while IFS= read -r node; do quarantined+=("$node"); done \
+            < <(sed -e 's/#.*//' -e 's/[[:space:]]//g' tests/quarantine.txt | grep -v '^$')
+          if [ "${#quarantined[@]}" -eq 0 ]; then
+            echo "## Quarantine is empty" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          set +e
+          output="$(python -m pytest "${quarantined[@]}" -q -p no:cacheprovider --no-header 2>&1)"
+          set -e
+          {
+            echo "## Quarantined backend tests (not blocking)"
+            echo
+            echo '```'
+            tail -n 30 <<< "$output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: |
+            backend/coverage.xml
+            backend/htmlcov
+          retention-days: 14
+          if-no-files-found: ignore
+
+  frontend:
+    name: Frontend (node:test + build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --prefix frontend
+
+      - name: Run tests with coverage
+        working-directory: frontend
+        run: |
+          # Without pipefail the pipe into tee would swallow a failing suite.
+          set -o pipefail
+          mkdir -p coverage
+          node --test --experimental-test-coverage \
+            --test-coverage-lcov=coverage/lcov.info \
+            "tests/**/*.test.ts" | tee coverage/report.txt
+
+      - name: Report coverage
+        if: always()
+        working-directory: frontend
+        run: |
+          test -f coverage/report.txt || exit 0
+          {
+            echo "## Frontend coverage"
+            echo
+            echo '```'
+            sed -n '/start of coverage report/,/end of coverage report/p' coverage/report.txt \
+              | sed 's/^ℹ //' | tail -n 60
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The image build runs this too; failing here shows it on the pull request
+      # instead of after the merge.
+      - name: Type-check and build
+        run: npm run build --prefix frontend
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+          retention-days: 14
+          if-no-files-found: ignore
+
+  admin:
+    name: Admin (unittest + build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: admin/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r admin/requirements.txt
+          python -m pip install coverage
+
+      - name: Run tests with coverage
+        env:
+          PYTHONPATH: admin
+          ADMIN_ENV: test
+          ADMIN_SECRET_KEY: ci-test-secret
+          ADMIN_EMAILS: admin@example.com
+        run: |
+          python -m coverage run --source=admin/backend --omit='*/tests/*' \
+            -m unittest discover -s admin/backend/tests -v
+          python -m coverage xml -o admin/coverage.xml
+          python -m coverage html -d admin/htmlcov
+          python -m coverage report
+
+      - name: Report coverage
+        if: always()
+        run: |
+          test -f admin/coverage.xml || exit 0
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse("admin/coverage.xml").getroot()
+          lines = float(root.get("line-rate", 0)) * 100
+          branches = float(root.get("branch-rate", 0)) * 100
+          print("## Admin coverage")
+          print()
+          print(f"| Lines | Branches |\n| --- | --- |\n| {lines:.1f}% | {branches:.1f}% |")
+          PY
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: admin/frontend/package-lock.json
+
+      - name: Build frontend
+        run: |
+          npm ci --prefix admin/frontend
+          npm run build --prefix admin/frontend
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-coverage
+          path: |
+            admin/coverage.xml
+            admin/htmlcov
+          retention-days: 14
+          if-no-files-found: ignore
