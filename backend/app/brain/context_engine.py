@@ -495,6 +495,25 @@ async def build_coach_bundle(
         if reconciled and reconciled != item_id:
             item_id = reconciled
 
+    # Entered the lesson, but the player has not reported a screen yet — some
+    # providers (CET) send xAPI only on answers, so on arrival the pointer is
+    # empty and EVERYTHING keyed by (component, item) — the catalog question,
+    # the nightly enrichment/anchors, the pregen texts — goes dark, exactly
+    # when the learner asks "מה אני רואה?". A fresh entry starts at the first
+    # screen, so ground there — flagged as ASSUMED: the coach may use the
+    # content but must never assert the position as fact.
+    position_assumed = False
+    if component_id and not item_id:
+        first_rows = (
+            (provider_component or {}).get("items")
+            or kata_catalog.item_profiles(component_id)
+            or []
+        )
+        first_id = str((first_rows[0] or {}).get("id") or "") if first_rows else ""
+        if first_id:
+            item_id = first_id
+            position_assumed = True
+
     recent_view = [
         {
             "verb": safe_text(e.get("verb"), 60),
@@ -769,6 +788,9 @@ async def build_coach_bundle(
             "component_id": component_id,
             "item_id": item_id,
             "question_id": question_id,
+            # True when item_id is the entry-fallback guess, not learner
+            # evidence — the coach grounds on it but never asserts position.
+            "position_assumed": position_assumed,
         },
         "query_intent": intent,
         "portrait": (

@@ -788,6 +788,12 @@ def _render_context(bundle: dict, learner_message: str = "") -> str:
         # screen — pointing at anything else degrades to a whole-frame glow.
         f"{scope}_screen_pointable_regions: "
         f"{joined(current.get('screen_anchor_regions'))}",
+        # `assumed_first_screen`: the player has not reported a position yet
+        # (some providers only report on answers), so the grounding above is
+        # the lesson's FIRST screen. Use it, but never assert where the
+        # learner is — ask or hedge if position matters to the answer.
+        f"{scope}_screen_position: "
+        f"{'assumed_first_screen' if current.get('position_assumed') else 'reported'}",
         f"query_intent: {bundle.get('query_intent') or 'learning_help'}",
         f"portrait_interests: {joined(portrait.get('interests'))}",
         f"portrait_preferences: {joined(portrait.get('preferences'))}",

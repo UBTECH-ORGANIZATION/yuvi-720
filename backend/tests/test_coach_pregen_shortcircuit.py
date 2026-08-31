@@ -223,6 +223,18 @@ class EveryMissFallsThroughToLive(unittest.TestCase):
         self.assertIn("pregen_miss:question_intro",
                       [t["name"] for t in persisted["debug_trace"]])
 
+    def test_an_assumed_position_is_declared_to_the_model(self):
+        # Entry without a reported screen grounds on the first slide, and the
+        # context says so — the coach may use the content, never the position.
+        _, persisted, _ = _drive(
+            user_message="מה אני רואה?", pregen={},
+            bundle_overrides={"position_assumed": True})
+        context = "".join(str(m) for m in persisted["model_messages"])
+        self.assertIn("assumed_first_screen", context)
+        _, persisted, _ = _drive(user_message="מה אני רואה?", pregen={})
+        context = "".join(str(m) for m in persisted["model_messages"])
+        self.assertIn("_screen_position: reported", context)
+
     def test_an_absent_text_generates_live(self):
         streamed, persisted, model_calls = _drive(
             trigger="question_intro", pregen={})
