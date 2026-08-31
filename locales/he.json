@@ -985,8 +985,6 @@
   "sdash.subjects.subtitle": "רואים מה כבר הושלם, איפה נמצאים ומה מגיע בהמשך.",
   "sdash.subjects.all": "לכל הלמידה",
   "sdash.subjects.path": "מסלול יעדי הלמידה",
-  "sdash.subjects.filter": "סינון לפי מקצוע",
-  "sdash.subjects.filter.all": "הכל",
   "sdash.subjects.pick": "בוחרים מקצוע כדי לראות את יעדי הלמידה שבו.",
   "sdash.subjects.back": "חזרה למקצועות",
   "sdash.subjects.objectives": "יעדי הלמידה ב{subject}",
