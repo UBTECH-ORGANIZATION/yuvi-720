@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "prompt_version": "cp-v2",
-  "generated_at": "2026-08-31T12:40:37Z",
+  "generated_at": "2026-08-31T13:23:33Z",
   "shards": [
     {
       "subject": "math",
@@ -51,6 +51,7 @@
       "CET.AI.G7.AI-COMP.ACP.AI-COMP-PREP.THINK-DISCOVER-00001",
       "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00003",
       "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.COMPL-00009",
+      "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00001",
       "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00002",
       "CET.MATH.G7.NUM.COORD-SYS-A.POS-NUM.PLOT-00006",
       "CET.SCI.G8.CHEM.COMPD.STRUCT-FORM.COUNT-RATIO-00004",

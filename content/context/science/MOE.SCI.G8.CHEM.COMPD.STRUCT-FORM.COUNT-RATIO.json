@@ -13,7 +13,7 @@
       "component_fingerprint": "2b0acd2205271d17",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T12:35:10Z",
+        "probed_at": "2026-08-31T13:17:46Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 6,
         "screens_mapped": 6
@@ -88,8 +88,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:35:10Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:17:46Z"
           }
         },
         {
@@ -142,8 +142,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:35:10Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:17:46Z"
           }
         },
         {
@@ -206,8 +206,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:35:10Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:17:46Z"
           }
         },
         {
@@ -255,8 +255,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:35:10Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:17:46Z"
           }
         },
         {
@@ -305,8 +305,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:35:10Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:17:46Z"
           }
         },
         {
@@ -352,6 +352,15 @@
                   "w": 0.334,
                   "h": 0.148
                 }
+              },
+              {
+                "region": "diagram",
+                "rect": {
+                  "x": 0.047,
+                  "y": 0.068,
+                  "w": 0.906,
+                  "h": 0.797
+                }
               }
             ],
             "capture_viewport": {
@@ -359,8 +368,8 @@
               "h": 594
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:35:10Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:17:46Z"
           }
         },
         {
@@ -454,7 +463,7 @@
       "component_fingerprint": "d58325c53aa8ae5a",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T12:35:36Z",
+        "probed_at": "2026-08-31T13:18:12Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 9,
         "screens_mapped": 9
@@ -519,8 +528,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:35:36Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:18:12Z"
           }
         },
         {
@@ -577,8 +586,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:35:36Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:18:12Z"
           }
         },
         {
@@ -626,8 +635,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:35:36Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:18:12Z"
           }
         },
         {
@@ -684,8 +693,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:35:36Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:18:12Z"
           }
         },
         {
@@ -708,11 +717,11 @@
           },
           "questions": [],
           "enrichment": {
-            "visible_text": "איך יוצרים את התוסס הזה? בתהליך הייצור דוחסים לקולה פחמן דו-חמצני בלחץ גבוה. כשפותחים את הפחית או הבקבוק, הלחץ יורד וחלק מהגז משתחרר החוצה בבת אחת – זה מה שגורם לצליל המוכר של הפתיחה. שאר הפחמן הדו-חמצני נשאר במשקה כבועות. הקודם 3 4 5 6 7 8 9 10 הבא",
+            "visible_text": "איך יוצרים את התוסס הזה? בתהליך הייצור דוחסים לקולה פחמן דו-חמצני בלחץ גבוה. כשפותחים את הפחית או הבקבוק, הלחץ יורד וחלק מהגז משתחרר החוצה בבת אחת – זה מה שגורם לצליל המוכר של הפתיחה. שאר הפחמן הדו-חמצני נשאר במשקה כבועות. 0:00 / 0:10 הקודם 3 4 5 6 7 8 9 10 הבא",
             "media": [
               {
                 "kind": "video",
-                "duration_seconds": null,
+                "duration_seconds": 10,
                 "title": "",
                 "src_digest": "sha1:94eec192e5011892"
               }
@@ -734,8 +743,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:35:36Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:18:12Z"
           }
         },
         {
@@ -783,8 +792,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:35:36Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:18:12Z"
           }
         },
         {
@@ -832,8 +841,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:35:36Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:18:12Z"
           }
         },
         {
@@ -890,8 +899,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:35:36Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:18:12Z"
           }
         },
         {
@@ -948,8 +957,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:35:36Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:18:12Z"
           }
         },
         {
@@ -1003,7 +1012,7 @@
       "component_fingerprint": "0c4ba9a0d5353259",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-08-31T12:36:28Z",
+        "probed_at": "2026-08-31T13:19:05Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 5,
         "screens_mapped": 4
@@ -1097,8 +1106,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:36:28Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:19:05Z"
           }
         },
         {
@@ -1172,15 +1181,6 @@
             "question_rendering": "none",
             "anchors": [
               {
-                "region": "image",
-                "rect": {
-                  "x": 0.164,
-                  "y": 0.169,
-                  "w": 0.643,
-                  "h": 0.136
-                }
-              },
-              {
                 "region": "instruction",
                 "rect": {
                   "x": 0.158,
@@ -1195,8 +1195,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:36:28Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:19:05Z"
           }
         },
         {
@@ -1278,8 +1278,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:36:28Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:19:05Z"
           }
         },
         {
@@ -1346,8 +1346,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:36:28Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:19:05Z"
           }
         }
       ]
@@ -1361,7 +1361,7 @@
       "component_fingerprint": "c60173ee0e3e19c3",
       "extraction": {
         "verdict": "frame_blocked",
-        "probed_at": "2026-08-31T12:25:23Z",
+        "probed_at": "2026-08-31T13:08:17Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 0,
         "screens_mapped": 0
@@ -1522,7 +1522,7 @@
       "component_fingerprint": "db75a0a0ce39d02c",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T12:37:07Z",
+        "probed_at": "2026-08-31T13:19:44Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
         "screens_mapped": 1
@@ -1587,6 +1587,15 @@
             "question_rendering": "none",
             "anchors": [
               {
+                "region": "diagram",
+                "rect": {
+                  "x": 0.158,
+                  "y": 0.219,
+                  "w": 0.684,
+                  "h": 0.668
+                }
+              },
+              {
                 "region": "instruction",
                 "rect": {
                   "x": 0.158,
@@ -1601,8 +1610,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:37:07Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:19:44Z"
           }
         },
         {
@@ -1894,7 +1903,7 @@
       "component_fingerprint": "336ab91432ea340a",
       "extraction": {
         "verdict": "frame_blocked",
-        "probed_at": "2026-08-31T12:25:32Z",
+        "probed_at": "2026-08-31T13:08:26Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 0,
         "screens_mapped": 0
@@ -2152,7 +2161,7 @@
       "component_fingerprint": "824e2a7ba490aed5",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-08-31T12:37:25Z",
+        "probed_at": "2026-08-31T13:20:02Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 2,
         "screens_mapped": 1
@@ -2375,8 +2384,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:37:25Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:20:02Z"
           }
         }
       ]
@@ -2390,7 +2399,7 @@
       "component_fingerprint": "52801c57587ac964",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T12:37:46Z",
+        "probed_at": "2026-08-31T13:20:23Z",
         "player_host": "learning.cet.ac.il",
         "screens_seen": 1,
         "screens_mapped": 1
@@ -2474,9 +2483,9 @@
               {
                 "region": "image",
                 "rect": {
-                  "x": 0.182,
+                  "x": 0.353,
                   "y": 0.17,
-                  "w": 0.464,
+                  "w": 0.122,
                   "h": 0.171
                 }
               },
@@ -2495,8 +2504,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:37:46Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:20:23Z"
           }
         },
         {

@@ -13,7 +13,7 @@
       "component_fingerprint": "b71895d564515320",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T12:38:02Z",
+        "probed_at": "2026-08-31T13:20:39Z",
         "player_host": "lomdot.education.gov.il",
         "screens_seen": 2,
         "screens_mapped": 2
@@ -115,8 +115,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:38:02Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:20:39Z"
           }
         },
         {
@@ -198,8 +198,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:38:02Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:20:39Z"
           }
         },
         {
@@ -640,7 +640,7 @@
       "component_fingerprint": "27c73737006c30ae",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T12:22:32Z",
+        "probed_at": "2026-08-31T13:21:08Z",
         "player_host": "lomdot.education.gov.il",
         "screens_seen": 2,
         "screens_mapped": 2
@@ -764,8 +764,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:22:32Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:21:08Z"
           }
         },
         {
@@ -847,8 +847,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:22:32Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:21:08Z"
           }
         },
         {
@@ -905,7 +905,7 @@
       "component_fingerprint": "1923774df5662aaa",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T12:38:30Z",
+        "probed_at": "2026-08-31T13:21:26Z",
         "player_host": "lomdot.education.gov.il",
         "screens_seen": 2,
         "screens_mapped": 2
@@ -994,8 +994,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:38:30Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:21:26Z"
           }
         },
         {
@@ -1101,8 +1101,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:38:30Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:21:26Z"
           }
         },
         {
@@ -1279,7 +1279,7 @@
       "component_fingerprint": "dbbb5e102dcfc2e0",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-08-31T12:38:50Z",
+        "probed_at": "2026-08-31T13:21:46Z",
         "player_host": "lomdot.education.gov.il",
         "screens_seen": 3,
         "screens_mapped": 1
@@ -1479,8 +1479,8 @@
               "h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 2,
-            "captured_at": "2026-08-31T12:38:50Z"
+            "capture_version": 3,
+            "captured_at": "2026-08-31T13:21:46Z"
           }
         }
       ]
