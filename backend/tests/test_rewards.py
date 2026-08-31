@@ -17,8 +17,8 @@ from app.services import rewards
 from app.services.rewards import catalog, pricing, wallet
 
 LEARNER = "test-learner-rewards"
-GOAL_VALUE = 40      # a mid-band goal: started/progressed 10, summarized 20
-RICH_GOAL = 80       # top of the band: summarized pays 40
+GOAL_VALUE = 40      # a mid-band goal: started pays 10, finishing settles the rest
+RICH_GOAL = 80       # top of the band
 
 
 class SparkWalletTests(unittest.IsolatedAsyncioTestCase):
@@ -59,14 +59,30 @@ class SparkWalletTests(unittest.IsolatedAsyncioTestCase):
         cheap = await rewards.grant_goal_stage(LEARNER, "cheap", "summarized", pricing.GOAL_VALUE_MIN)
         rich = await rewards.grant_goal_stage(LEARNER, "rich", "summarized", RICH_GOAL)
         self.assertLess(cheap["granted"], rich["granted"])
-        self.assertEqual(rich["granted"], 40)
+        self.assertEqual(rich["granted"], RICH_GOAL)
+
+    async def test_finishing_a_goal_pays_exactly_what_it_is_worth(self) -> None:
+        """The card shows one figure — the goal's worth — so that is what must land.
+
+        `summarized` settles the balance instead of paying a fixed share, so the
+        route through the stages cannot change the total. Without this, the
+        unreachable `progressed` share left a quarter of every goal unearnable
+        and the number on the card was simply untrue.
+        """
+        started = await rewards.grant_goal_stage(LEARNER, "g1", "started", GOAL_VALUE)
+        finished = await rewards.grant_goal_stage(LEARNER, "g1", "summarized", GOAL_VALUE)
+        self.assertEqual(started["granted"] + finished["granted"], GOAL_VALUE)
+
+        # Same worth, whether or not the learner passed through every stage.
+        straight = await rewards.grant_goal_stage(LEARNER, "g2", "summarized", GOAL_VALUE)
+        self.assertEqual(straight["granted"], GOAL_VALUE)
 
     async def test_model_cannot_mint_currency(self) -> None:
         self.assertEqual(pricing.clamp_goal_value(10_000), pricing.GOAL_VALUE_MAX)
         self.assertEqual(pricing.clamp_goal_value(-50), pricing.GOAL_VALUE_MIN)
         self.assertEqual(pricing.clamp_goal_value("lots"), pricing.GOAL_VALUE_DEFAULT)
         huge = await rewards.grant_goal_stage(LEARNER, "g1", "summarized", 10_000)
-        self.assertEqual(huge["granted"], int(pricing.GOAL_VALUE_MAX * 0.5))
+        self.assertEqual(huge["granted"], pricing.GOAL_VALUE_MAX)
 
     async def test_unpriced_legacy_goal_still_pays(self) -> None:
         grant = await rewards.grant_goal_stage(LEARNER, "legacy", "started", None)
@@ -83,12 +99,25 @@ class SparkWalletTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(first["granted"], wallet.HELP_REWARD)
         self.assertEqual(replay["granted"], 0)
 
-    async def test_daily_cap_stops_farming(self) -> None:
+    async def test_daily_spark_cap_stops_farming(self) -> None:
         for index in range(12):
             await rewards.grant_goal_stage(LEARNER, f"goal-{index}", "summarized", RICH_GOAL)
         current = await rewards.get_wallet(LEARNER)
-        self.assertLessEqual(current["balance"], wallet.DAILY_SPARK_CAP)
+        self.assertEqual(current["balance"], wallet.DAILY_SPARK_CAP)
+
+    async def test_daily_goal_cap_stops_farming(self) -> None:
+        """Cheap goals never reach the spark cap, so the goal count has to bind.
+
+        Checked separately from the spark cap because a top-band goal now pays
+        its full worth on completion, and two of those exhaust the daily sparks
+        before the goal count is ever reached.
+        """
+        for index in range(12):
+            await rewards.grant_goal_stage(
+                LEARNER, f"goal-{index}", "summarized", pricing.GOAL_VALUE_MIN)
+        current = await rewards.get_wallet(LEARNER)
         self.assertEqual(current["dailyGoals"], wallet.DAILY_GOAL_CAP)
+        self.assertEqual(current["balance"], wallet.DAILY_GOAL_CAP * pricing.GOAL_VALUE_MIN)
 
     # ── a teacher's gift (#467) ───────────────────────────────────────────────
     # Sparks a person chose to give, not ones the learner earned. The rules are
