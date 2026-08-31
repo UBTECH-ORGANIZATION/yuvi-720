@@ -93,6 +93,18 @@ export interface CoachActionOffer {
   category: 'navigation'
 }
 
+/** A server-resolved "look here" directive: geometry from the nightly capture,
+ *  never from the model. `region`/`rect` null = attention on the lesson as a
+ *  whole (the frontend renders its whole-frame glow). Fractions of the
+ *  captured scroll box, valid only for `question_key`'s screen. */
+export interface CoachPointerFrame {
+  region: string | null
+  rect: { x: number; y: number; w: number; h: number } | null
+  no_scroll: boolean
+  capture_viewport: { w?: number; h?: number }
+  question_key: string
+}
+
 /** Content-free, development-only record of a registered Coach tool call. */
 export interface CoachToolTraceStep {
   name: string
@@ -295,6 +307,7 @@ export async function streamAgent(
             visual?: CoachVisual
             can_visualize?: boolean
             actions?: CoachActionOffer[]
+            pointer?: CoachPointerFrame
             tool_trace?: CoachToolTraceStep[]
             query_intent?: string
             phase?: 'thinking' | 'speaking'

@@ -237,6 +237,25 @@ def _title_score(a: str, b: str) -> int:
     return 2 if (a in b or b in a) else 0
 
 
+def components_needing_recapture(
+    model: dict[str, dict[str, Any]], committed: dict[str, dict[str, Any]],
+) -> list[str]:
+    """Browsed lomdot whose stored capture predates the current format.
+
+    A capture-format bump (CAPTURE_VERSION) re-queues them even though their
+    CONTENT is unchanged: carry-over keeps the old capture (its text still
+    grounds generation), but the runtime refuses old-format geometry, so the
+    new fields only exist after a re-browse.
+    """
+    return sorted(
+        cid for cid, comp in committed.items()
+        if cid in model and any(
+            isinstance(s.get("enrichment"), dict)
+            and s["enrichment"].get("capture_version") != ci.CAPTURE_VERSION
+            for s in comp.get("slides") or [])
+    )
+
+
 def map_screens_to_slides(
     screens: list[dict[str, Any]], slides: list[dict[str, Any]],
 ) -> dict[str, dict[str, Any]]:
@@ -305,6 +324,12 @@ async def browse_component(
             "media": [m for m in (screen.get("media") or [])
                       if isinstance(m, dict)][:12],
             "question_rendering": screen.get("question_rendering"),
+            "anchors": [a for a in (screen.get("anchors") or [])
+                        if isinstance(a, dict)
+                        and a.get("region") in ci.ANCHOR_REGIONS],
+            "capture_viewport": screen.get("capture_viewport") or {},
+            "no_internal_scroll": bool(screen.get("no_internal_scroll")),
+            "capture_version": ci.CAPTURE_VERSION,
             "captured_at": probed_at,
         }
     return {
@@ -697,8 +722,9 @@ async def run(args: argparse.Namespace) -> int:
     # ── browse ──
     extractions: dict[str, dict[str, Any]] = {}
     backlog = [c for c in load_backlog(out_dir) if c in model]
-    queue = [cid for cid in dict.fromkeys(backlog + diff["new"] + diff["changed"])
-             if cid in scope]
+    recapture = components_needing_recapture(model, committed)
+    queue = [cid for cid in dict.fromkeys(
+        backlog + diff["new"] + diff["changed"] + recapture) if cid in scope]
     to_browse = [] if args.skip_browser else queue[:args.max_browse]
     backlog_left = [c for c in queue if c not in to_browse] \
         + [c for c in backlog if c not in scope]   # out-of-scope stays queued

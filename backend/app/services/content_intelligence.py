@@ -76,6 +76,18 @@ TEXT_LENGTH_CAPS = {
 #: Keys that must never appear anywhere in a committed shard, at any depth.
 FORBIDDEN_KEYS = frozenset({"correctAnswers", "correct_answers", "correct"})
 
+#: Version of the browser-capture format inside ``enrichment``. Bump when the
+#: extractor's capture changes shape (e.g. anchors added): carry-over then
+#: drops the old capture and the component re-queues for browsing, because a
+#: slide whose CONTENT is unchanged would otherwise never gain the new fields.
+CAPTURE_VERSION = 2
+
+#: The pointing vocabulary — static on purpose: the coach tool's enum bakes at
+#: import time, and geometry resolution happens server-side per slide. Rects
+#: only, never element text (FORBIDDEN_KEYS/PII safe by construction).
+ANCHOR_REGIONS = frozenset(
+    {"question", "options", "image", "video", "table", "instruction"})
+
 #: Caps applied to enrichment on the way OUT (lookup time), not in the file —
 #: the file keeps the full capture so caps can be tuned without a re-browse.
 ENRICHMENT_VISIBLE_TEXT_CAP = 700
@@ -300,6 +312,10 @@ def _index_shard(shard: dict[str, Any], records: dict[str, dict[str, Any]]) -> N
                 "fingerprint": slide.get("fingerprint"),
                 "texts": slide.get("texts") or {},
                 "enrichment": slide.get("enrichment"),
+                "question_ids": [
+                    str(q.get("question_id"))
+                    for q in slide.get("questions") or [] if q.get("question_id")
+                ],
             }
             for question in slide.get("questions") or []:
                 qid = str(question.get("question_id") or "")
@@ -458,6 +474,24 @@ def pregen_text(
     return {"text": text, "fingerprint": record["fingerprint"], "kind": kind}
 
 
+def single_question_id(component_id: str, item_id: str) -> Optional[str]:
+    """The slide's only question id, or None when it has zero or several.
+
+    Arrival intros often carry a partial key (the screen_change push is
+    ``component|item``), and the brain's question pointer can still name the
+    PREVIOUS screen — so a caller that missed on the pointed question may
+    retry with this, exactly as the live path grounds on the slide's first
+    question. Multi-part screens return None: the position is unknown and an
+    intro must not guess which סעיף the learner faces.
+    """
+    if not enabled():
+        return None
+    _ensure_loaded()
+    record = _STATE["records"].get(record_key(component_id, item_id))
+    ids = (record or {}).get("question_ids") or []
+    return str(ids[0]) if len(ids) == 1 else None
+
+
 def enrichment(component_id: str, item_id: str) -> Optional[dict[str, Any]]:
     """Browser-extracted slide context for the live model, bounded, or None."""
     if not enabled():
@@ -487,6 +521,55 @@ def enrichment(component_id: str, item_id: str) -> Optional[dict[str, Any]]:
     return {
         "visible_text": visible[:ENRICHMENT_VISIBLE_TEXT_CAP],
         "media": media,
+    }
+
+
+def screen_anchors(component_id: str, item_id: str) -> Optional[dict[str, Any]]:
+    """The slide's pointing geometry, or None → whole-frame degradation.
+
+    Serves only what the overlay can trust: a fresh capture (same fingerprint
+    gate as ``enrichment``) in the CURRENT capture format, with every fraction
+    clamped to [0, 1] and every region from ``ANCHOR_REGIONS``. The returned
+    shape is what the coach route puts on the wire:
+    ``{"regions": {region: {x,y,w,h}}, "no_internal_scroll": bool,
+       "capture_viewport": {"w": int, "h": int}}``.
+    """
+    if not enabled():
+        return None
+    _ensure_loaded()
+    key = record_key(component_id, item_id)
+    record = _STATE["records"].get(key)
+    if not record:
+        return None
+    raw = record.get("enrichment")
+    if not isinstance(raw, dict) or raw.get("capture_version") != CAPTURE_VERSION:
+        return None
+    if not is_fresh(key, record):
+        return None  # stale geometry points at the wrong thing — worse than none
+    regions: dict[str, dict[str, float]] = {}
+    for anchor in raw.get("anchors") or []:
+        if not isinstance(anchor, dict):
+            continue
+        region = str(anchor.get("region") or "")
+        rect = anchor.get("rect")
+        if region not in ANCHOR_REGIONS or not isinstance(rect, dict):
+            continue
+        try:
+            clamped = {axis: min(1.0, max(0.0, float(rect[axis])))
+                       for axis in ("x", "y", "w", "h")}
+        except (KeyError, TypeError, ValueError):
+            continue
+        if clamped["w"] <= 0 or clamped["h"] <= 0:
+            continue
+        regions.setdefault(region, clamped)
+    if not regions:
+        return None
+    viewport = raw.get("capture_viewport") or {}
+    return {
+        "regions": regions,
+        "no_internal_scroll": bool(raw.get("no_internal_scroll")),
+        "capture_viewport": {
+            "w": int(viewport.get("w") or 0), "h": int(viewport.get("h") or 0)},
     }
 
 

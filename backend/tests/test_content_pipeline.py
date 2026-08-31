@@ -197,6 +197,25 @@ class GenerationTrustsNothing(unittest.TestCase):
             ensure_ascii=False)])
         self.assertNotIn(hint["id"], generated)
 
+    def test_old_capture_formats_requeue_for_browsing(self):
+        model = _model()
+        committed = {
+            "comp-1": {"slides": [{"item_id": "i1", "enrichment": {
+                "visible_text": "x", "capture_version": ci.CAPTURE_VERSION - 1}}]},
+            "comp-legacy": {"slides": [{"item_id": "i1", "enrichment": {
+                "visible_text": "x"}}]},          # pre-versioning capture
+            "comp-current": {"slides": [{"item_id": "i1", "enrichment": {
+                "visible_text": "x", "capture_version": ci.CAPTURE_VERSION}}]},
+            "comp-unbrowsed": {"slides": [{"item_id": "i1"}]},
+            "comp-gone": {"slides": [{"item_id": "i1", "enrichment": {
+                "visible_text": "x"}}]},          # no longer in the catalog
+        }
+        model.update({cid: model["comp-1"] for cid in
+                      ("comp-legacy", "comp-current", "comp-unbrowsed")})
+        self.assertEqual(
+            pipeline.components_needing_recapture(model, committed),
+            ["comp-1", "comp-legacy"])
+
     def test_markdown_emphasis_cannot_hide_an_echoed_answer(self):
         targets = pipeline.collect_generation_targets(_model(), {})
         hint = next(t for t in targets if t["kind"] == "hint_l1")

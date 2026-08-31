@@ -130,11 +130,67 @@ const captureScreen = (frame) => frame.evaluate(() => {
       : anyVisible('[draggable="true"], .h5p-drag-draggable') ? 'drag'
         : anyVisible('input[type="text"], input[type="number"], textarea') ? 'input'
           : 'none'
+
+  // Pointing anchors: one merged document-space rect per REGION, as fractions
+  // of the scroll box. Frame-local coordinates on purpose — the runtime scales
+  // them to its own iframe box. Rects only, never element text or attributes
+  // (a world-readable repo must not carry vendor markup, and H5P attributes
+  // can name answers). Region names are the coach tool's static enum.
+  const scrollBox = document.scrollingElement || document.documentElement
+  const scrollW = Math.max(scrollBox?.scrollWidth || 0, window.innerWidth)
+  const scrollH = Math.max(scrollBox?.scrollHeight || 0, window.innerHeight)
+  const unionRect = (elements) => {
+    let box = null
+    for (const el of elements) {
+      if (!visible(el)) continue
+      if (typeof el.checkVisibility === 'function' && !el.checkVisibility()) continue
+      const r = el.getBoundingClientRect()
+      const abs = {
+        left: r.left + window.scrollX, top: r.top + window.scrollY,
+        right: r.right + window.scrollX, bottom: r.bottom + window.scrollY,
+      }
+      box = box ? {
+        left: Math.min(box.left, abs.left), top: Math.min(box.top, abs.top),
+        right: Math.max(box.right, abs.right), bottom: Math.max(box.bottom, abs.bottom),
+      } : abs
+    }
+    if (!box || !scrollW || !scrollH) return null
+    const rect = {
+      x: box.left / scrollW, y: box.top / scrollH,
+      w: (box.right - box.left) / scrollW, h: (box.bottom - box.top) / scrollH,
+    }
+    const clamp = (v) => Math.min(1, Math.max(0, Math.round(v * 1000) / 1000))
+    return { x: clamp(rect.x), y: clamp(rect.y), w: clamp(rect.w), h: clamp(rect.h) }
+  }
+  const REGION_SELECTORS = {
+    question: '.h5p-question-introduction, .h5p-question-content, [class*="question-text" i]',
+    options: '.h5p-answer, .h5p-alternative, [role="option"], [role="radio"], label:has(input[type="radio"]), select, [role="listbox"]',
+    image: 'img',
+    video: 'video',
+    table: 'table',
+    instruction: '.h5p-question-introduction ~ p, [class*="instruction" i]',
+  }
+  const anchors = []
+  for (const [region, selector] of Object.entries(REGION_SELECTORS)) {
+    let elements = [...document.querySelectorAll(selector)]
+    if (region === 'image') {
+      elements = elements.filter((img) => {
+        const r = img.getBoundingClientRect()
+        return r.width >= 80 && r.height >= 80
+      })
+    }
+    const rect = unionRect(elements)
+    if (rect) anchors.push({ region, rect })
+  }
+
   return {
     title: (heading?.innerText || document.title || '').trim().slice(0, 200),
     visible_text: (document.body?.innerText || '').trim().slice(0, 6000),
     media: media.slice(0, 12),
     question_rendering: rendering,
+    anchors,
+    capture_viewport: { w: window.innerWidth, h: window.innerHeight },
+    no_internal_scroll: scrollH <= window.innerHeight * 1.05,
   }
 })
 

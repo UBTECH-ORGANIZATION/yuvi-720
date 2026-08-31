@@ -784,6 +784,10 @@ def _render_context(bundle: dict, learner_message: str = "") -> str:
         f"{(current.get('screen_enrichment') or {}).get('visible_text') or '—'}",
         f"{scope}_screen_media_inventory: "
         f"{joined((current.get('screen_enrichment') or {}).get('media'))}",
+        # Regions the point_at_screen tool can actually highlight on THIS
+        # screen — pointing at anything else degrades to a whole-frame glow.
+        f"{scope}_screen_pointable_regions: "
+        f"{joined(current.get('screen_anchor_regions'))}",
         f"query_intent: {bundle.get('query_intent') or 'learning_help'}",
         f"portrait_interests: {joined(portrait.get('interests'))}",
         f"portrait_preferences: {joined(portrait.get('preferences'))}",
@@ -949,6 +953,7 @@ async def run_coach_stream(
     pinned_question_key: Optional[str] = None,
     action_offers: Optional[list[dict[str, object]]] = None,
     visual_requests: Optional[list[dict[str, str]]] = None,
+    pointer_requests: Optional[list[dict[str, object]]] = None,
     debug_trace: Optional[list[dict[str, str]]] = None,
     intent_out: Optional[list[str]] = None,
     diagnostics_out: Optional[dict[str, object]] = None,
@@ -1156,10 +1161,23 @@ async def run_coach_stream(
                 if _cur.get("item_id"):
                     entry = content_intelligence.pregen_text(
                         pregen_kind, pregen_component, str(_cur["item_id"]))
-            elif _cur.get("item_id") and _cur.get("question_id"):
-                entry = content_intelligence.pregen_text(
-                    pregen_kind, pregen_component,
-                    str(_cur["item_id"]), str(_cur["question_id"]))
+            elif _cur.get("item_id"):
+                # The arrival push carries `component|item`, so the question
+                # pointer can be empty or still name the previous screen. Try
+                # the pointed question first; a miss on a single-question slide
+                # falls back to its only question — the same grounding the live
+                # path would choose.
+                _item = str(_cur["item_id"])
+                if _cur.get("question_id"):
+                    entry = content_intelligence.pregen_text(
+                        pregen_kind, pregen_component, _item,
+                        str(_cur["question_id"]))
+                if entry is None:
+                    _solo = content_intelligence.single_question_id(
+                        pregen_component, _item)
+                    if _solo and _solo != str(_cur.get("question_id") or ""):
+                        entry = content_intelligence.pregen_text(
+                            pregen_kind, pregen_component, _item, _solo)
         if entry:
             from app.agents import tutor_decision
             body = safety.screen_output(entry["text"], lang).text.strip()
@@ -1372,6 +1390,7 @@ async def run_coach_stream(
         bundle=bundle,
         action_offers=action_offers if action_offers is not None else [],
         visual_requests=visual_requests if visual_requests is not None else [],
+        pointer_requests=pointer_requests if pointer_requests is not None else [],
     )
     messages = _build_messages(instructions, _render_context(bundle, prompt_text), history, prompt_text)
     messages = await _plan_coach_tools(messages, tool_context, usage_context, debug_trace)
@@ -1635,7 +1654,12 @@ async def run_coach_stream(
         calendar_period=(calendar_route.get("period") if query_intent == "calendar_query" else None),
         calendar_weekday=(calendar_route.get("weekday") if query_intent == "calendar_query" else None),
         calendar_route_source=(calendar_route.get("source") if query_intent == "calendar_query" else None),
-        assistant_meta={"actions": tool_context.action_offers} if tool_context.action_offers else None,
+        assistant_meta=({
+            **({"actions": tool_context.action_offers}
+               if tool_context.action_offers else {}),
+            **({"pointer": tool_context.pointer_requests[0]}
+               if tool_context.pointer_requests else {}),
+        } or None),
     )
     coach_debug_trace.append(debug_trace, "persist_conversation_turn")
 

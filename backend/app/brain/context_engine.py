@@ -755,6 +755,13 @@ async def build_coach_bundle(
                     if component_id and item_id else None
                 )) else None
             ),
+            # Which regions of THIS screen the pointing overlay can highlight
+            # (nightly-captured geometry, same freshness gate). Names only —
+            # the tool handler resolves the rects; the model never sees them.
+            "screen_anchor_regions": sorted(
+                (content_intelligence.screen_anchors(component_id, item_id)
+                 or {}).get("regions") or {}
+            ) if component_id and item_id else [],
             "hint_ladder": get_path(brain, "current_state.hint_ladder") or {},
             "recent_events": recent_view,
             # Ids for the per-question message key (chat scoping), so a stored

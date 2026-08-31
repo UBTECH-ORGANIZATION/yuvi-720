@@ -57,8 +57,16 @@ PREGEN = {
 def _drive(
     *, trigger=None, support_mode=None, user_message=None, language="he",
     pregen=None, hint_level=None, model_output=("תשובה חיה מהמודל.",),
+    bundle_overrides=None, solo_question=None, pregen_question_gate=None,
 ):
-    """(streamed, persisted, model_calls) from one run_coach_stream pass."""
+    """(streamed, persisted, model_calls) from one run_coach_stream pass.
+
+    ``bundle_overrides`` merges into ``current`` (e.g. a stale question
+    pointer); ``solo_question`` stubs ``single_question_id``;
+    ``pregen_question_gate`` makes question-scope lookups hit only for that
+    question id — the shape of a config that stores q1 while the brain still
+    points at the previous screen's question.
+    """
     persisted: dict = {}
     counters = {"model": 0}
 
@@ -69,7 +77,9 @@ def _drive(
             yield chunk
 
     async def fake_bundle(*args, **kwargs):
-        return copy.deepcopy(LESSON_BUNDLE)
+        bundle = copy.deepcopy(LESSON_BUNDLE)
+        bundle["current"].update(bundle_overrides or {})
+        return bundle
 
     async def fake_append_turn(*args, **kwargs):
         persisted.update(kwargs)
@@ -78,6 +88,10 @@ def _drive(
         table = pregen if pregen is not None else {}
         text = table.get(kind)
         if text is None:
+            return None
+        if (pregen_question_gate is not None
+                and kind in ("question_intro", "hint_l1", "explanation")
+                and question_id != pregen_question_gate):
             return None
         persisted.setdefault("pregen_lookups", []).append(
             (kind, component_id, item_id, question_id))
@@ -131,6 +145,8 @@ def _drive(
          mock.patch.object(coach.safety, "screen_output", passthrough), \
          mock.patch.object(coach, "_plan_coach_tools", no_tool_plan), \
          mock.patch.object(content_intelligence, "pregen_text", fake_pregen), \
+         mock.patch.object(content_intelligence, "single_question_id",
+                           lambda *a: solo_question), \
          mock.patch.object(content_intelligence, "record_pregen_hit", async_none), \
          mock.patch.object(content_intelligence, "enrichment", lambda *a: None), \
          mock.patch.object(coach.sessions, "conversation_needs_title", async_false), \
@@ -174,6 +190,39 @@ class FreshPregenServesWithoutTheModel(unittest.TestCase):
 
 
 class EveryMissFallsThroughToLive(unittest.TestCase):
+    def test_arrival_with_empty_question_pointer_serves_the_solo_intro(self):
+        # The screen_change push is `component|item` — on arrival the question
+        # pointer is empty. A single-question slide still serves its intro.
+        streamed, persisted, model_calls = _drive(
+            trigger="question_intro", pregen=PREGEN,
+            bundle_overrides={"question_id": ""},
+            solo_question="q1", pregen_question_gate="q1")
+        self.assertEqual(streamed, PREGEN["question_intro"])
+        self.assertEqual(model_calls, 0)
+        self.assertIn(("question_intro", "comp-1", "comp-1-001", "q1"),
+                      persisted["pregen_lookups"])
+
+    def test_a_stale_pointer_from_the_previous_screen_falls_back_to_solo(self):
+        # The brain still names the PREVIOUS screen's question (q3); the new
+        # slide holds only q1 — the miss retries with the slide's one question.
+        streamed, _, model_calls = _drive(
+            trigger="question_intro", pregen=PREGEN,
+            bundle_overrides={"question_id": "q3"},
+            solo_question="q1", pregen_question_gate="q1")
+        self.assertEqual(streamed, PREGEN["question_intro"])
+        self.assertEqual(model_calls, 0)
+
+    def test_a_multi_part_screen_with_unknown_position_stays_live(self):
+        # No question pointer and several questions on the slide: the position
+        # is unknown, and an intro must not guess which סעיף — live it is.
+        _, persisted, model_calls = _drive(
+            trigger="question_intro", pregen=PREGEN,
+            bundle_overrides={"question_id": ""},
+            solo_question=None, pregen_question_gate="q1")
+        self.assertEqual(model_calls, 1)
+        self.assertIn("pregen_miss:question_intro",
+                      [t["name"] for t in persisted["debug_trace"]])
+
     def test_an_absent_text_generates_live(self):
         streamed, persisted, model_calls = _drive(
             trigger="question_intro", pregen={})

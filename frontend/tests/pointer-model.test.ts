@@ -1,0 +1,61 @@
+/* The pointer model's trust ladder: precise rect only when the capture says
+ * no-internal-scroll AND the runtime box is big enough AND there is an iframe;
+ * everything less trustworthy is a whole-frame glow; no iframe (tab playback)
+ * or no pointer draws nothing. Wrong geometry is worse than none. */
+
+import assert from 'node:assert/strict'
+import { test } from 'node:test'
+import { presentPointer, pointerMatchesKey } from '../src/services/pointer.ts'
+import type { CoachPointerFrame } from '../src/services/agents.ts'
+
+const POINTER: CoachPointerFrame = {
+  region: 'question',
+  rect: { x: 0.1, y: 0.2, w: 0.5, h: 0.1 },
+  no_scroll: true,
+  capture_viewport: { w: 1280, h: 860 },
+  question_key: 'comp-1|comp-1-001|q1',
+}
+
+test('a trusted pointer renders its rect', () => {
+  const out = presentPointer(POINTER, 'frame', 900, 600)
+  assert.equal(out.mode, 'rect')
+  assert.deepEqual(out.mode === 'rect' && out.rect, POINTER.rect)
+})
+
+test('a scrolling capture degrades to the glow', () => {
+  const out = presentPointer({ ...POINTER, no_scroll: false }, 'frame', 900, 600)
+  assert.equal(out.mode, 'glow')
+})
+
+test('a rect-less pointer is the glow by design', () => {
+  const out = presentPointer(
+    { ...POINTER, region: null, rect: null }, 'frame', 900, 600)
+  assert.equal(out.mode, 'glow')
+})
+
+test('a too-small box degrades to the glow', () => {
+  assert.equal(presentPointer(POINTER, 'frame', 380, 600).mode, 'glow')
+  assert.equal(presentPointer(POINTER, 'frame', 900, 300).mode, 'glow')
+})
+
+test('tab playback and no pointer render nothing', () => {
+  assert.equal(presentPointer(POINTER, 'tab', 900, 600).mode, 'none')
+  assert.equal(presentPointer(null, 'frame', 900, 600).mode, 'none')
+})
+
+test('fractions are clamped and degenerate rects glow', () => {
+  const wild = { ...POINTER, rect: { x: -0.5, y: 0.2, w: 2, h: 0.1 } }
+  const out = presentPointer(wild, 'frame', 900, 600)
+  assert.equal(out.mode, 'rect')
+  assert.deepEqual(out.mode === 'rect' && out.rect, { x: 0, y: 0.2, w: 1, h: 0.1 })
+  const flat = { ...POINTER, rect: { x: 0.1, y: 0.2, w: 0, h: 0.1 } }
+  assert.equal(presentPointer(flat, 'frame', 900, 600).mode, 'glow')
+})
+
+test('screen identity is component+item — the push key can be partial', () => {
+  assert.ok(pointerMatchesKey('c|i|q1', 'c|i|q2'))
+  assert.ok(pointerMatchesKey('c|i|', 'c|i|q1'))
+  assert.ok(!pointerMatchesKey('c|i|q1', 'c|other|q1'))
+  assert.ok(!pointerMatchesKey('c|i|q1', 'other|i|q1'))
+  assert.ok(pointerMatchesKey('c|i|q1', null))
+})

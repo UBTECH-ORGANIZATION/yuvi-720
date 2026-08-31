@@ -19,6 +19,7 @@ import {
   type CoachConversation,
   type CoachActionOffer,
   type CoachHistoryMessage,
+  type CoachPointerFrame,
   type CoachToolTraceStep,
   type CoachVisual,
   type CoachSupportMode,
@@ -30,6 +31,7 @@ import {
 } from '../services/agents'
 import { useI18n } from '../i18n/I18nProvider'
 import { useRoute } from '../app/router'
+import { pointerMatchesKey } from '../services/pointer'
 import { useAuth } from './AuthProvider'
 import { useRewards } from './RewardsProvider'
 
@@ -303,6 +305,15 @@ function mergeUnique<T extends { id: string }>(current: T[], incoming: T[]): T[]
 // A question key is `component|item|question`. One SCREEN (item) can host several
 // sub-questions (…/q1, …/q2 — e.g. סעיף א/ב) that differ only by the question
 // field, so intro de-dup is question-aware, not just per screen.
+// Yuvi's "look here" directive travels to the lesson page over the yuvilab
+// event channel (the two live under different ancestors — see LessonPage's
+// listener). Null = clear whatever is showing. A pointer for a screen the
+// learner already left is dropped here, before it can ever render.
+function broadcastPointer(detail: CoachPointerFrame | null, currentKey?: string | null) {
+  if (detail && !pointerMatchesKey(detail.question_key, currentKey ?? null)) return
+  window.dispatchEvent(new CustomEvent('yuvilab:coach-point', { detail }))
+}
+
 function introParts(key: string | null | undefined): { item: string; question: string } {
   const parts = (key || '').split('|')
   // A question id stored as a full object URL (Kata mixed both id spaces in one
@@ -1071,6 +1082,9 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
             m.id === assistantId ? { ...m, canVisualize } : m
           ))),
         onEvent: (event) => {
+          if (event.pointer && typeof event.pointer === 'object') {
+            broadcastPointer(event.pointer as CoachPointerFrame, currentQuestionKeyRef.current)
+          }
           const actions = event.actions
           const toolTrace = parseToolTrace(event.tool_trace) ?? []
           const hasToolTrace = Object.prototype.hasOwnProperty.call(event, 'tool_trace')
@@ -1317,6 +1331,8 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     // question they are looking at. A turn they ASKED for is left alone — they
     // are waiting for that answer, wherever they have navigated to since.
     if (movedScreen) screenSeqRef.current += 1
+    // The pointer describes a screen; the screen just changed. Clear it.
+    if (movedScreen) broadcastPointer(null)
     const inFlight = inFlightRef.current
     if (movedScreen && inFlight && diesWithScreen(inFlight.action)) {
       inFlight.controller.abort()
@@ -1486,6 +1502,9 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
             m.id === assistantId ? { ...m, canVisualize } : m
           ))),
         onEvent: (event) => {
+          if (event.pointer && typeof event.pointer === 'object') {
+            broadcastPointer(event.pointer as CoachPointerFrame, currentQuestionKeyRef.current)
+          }
           if (!Object.prototype.hasOwnProperty.call(event, 'tool_trace')) return
           const toolTrace = parseToolTrace(event.tool_trace) ?? []
           setMessages((current) => current.map((m) => (

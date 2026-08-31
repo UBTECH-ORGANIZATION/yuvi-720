@@ -221,6 +221,62 @@ class EnrichmentIsBoundedAndFresh(ContentIntelWorld):
         self.assertIsNone(ci.enrichment(COMPONENT, ITEM))
 
 
+class ScreenAnchorsServeOnlyTrustedGeometry(ContentIntelWorld):
+    def _anchored_shard(self, **enrichment_overrides) -> dict:
+        shard = _shard()
+        shard["lomdot"][0]["slides"][0]["enrichment"].update({
+            "capture_version": ci.CAPTURE_VERSION,
+            "capture_viewport": {"w": 1280, "h": 860},
+            "no_internal_scroll": True,
+            "anchors": [
+                {"region": "question", "rect": {"x": 0.1, "y": 0.2, "w": 0.5, "h": 0.1}},
+                {"region": "image", "rect": {"x": 0.0, "y": 0.4, "w": 0.3, "h": 0.3}},
+            ],
+            **enrichment_overrides,
+        })
+        return shard
+
+    def test_fresh_current_capture_serves_clamped_regions(self):
+        self.write_shard(self._anchored_shard())
+        anchors = ci.screen_anchors(COMPONENT, ITEM)
+        self.assertEqual(set(anchors["regions"]), {"question", "image"})
+        self.assertTrue(anchors["no_internal_scroll"])
+        self.assertEqual(anchors["capture_viewport"], {"w": 1280, "h": 860})
+
+    def test_an_old_capture_format_is_refused(self):
+        self.write_shard(self._anchored_shard(capture_version=1))
+        self.assertIsNone(ci.screen_anchors(COMPONENT, ITEM))
+
+    def test_stale_content_is_refused(self):
+        self.write_shard(self._anchored_shard())
+        self.catalog.update(_catalog_component("שאלה חדשה לגמרי"))
+        self.assertIsNone(ci.screen_anchors(COMPONENT, ITEM))
+
+    def test_junk_anchors_are_filtered_and_fractions_clamped(self):
+        self.write_shard(self._anchored_shard(anchors=[
+            {"region": "sidebar", "rect": {"x": 0, "y": 0, "w": 1, "h": 1}},
+            {"region": "options", "rect": {"x": -0.2, "y": 0.5, "w": 1.7, "h": 0.2}},
+            {"region": "table", "rect": {"x": 0.1, "y": 0.1, "w": 0, "h": 0.2}},
+            {"region": "video", "rect": "not-a-rect"},
+        ]))
+        anchors = ci.screen_anchors(COMPONENT, ITEM)
+        self.assertEqual(set(anchors["regions"]), {"options"})
+        self.assertEqual(anchors["regions"]["options"],
+                         {"x": 0.0, "y": 0.5, "w": 1.0, "h": 0.2})
+
+    def test_no_usable_regions_means_none(self):
+        self.write_shard(self._anchored_shard(anchors=[]))
+        self.assertIsNone(ci.screen_anchors(COMPONENT, ITEM))
+
+    def test_solo_question_id_reads_the_slide(self):
+        self.write_shard(_shard())
+        self.assertEqual(ci.single_question_id(COMPONENT, ITEM), "q1")
+
+    def test_solo_question_id_is_none_off_config(self):
+        self.write_shard(_shard())
+        self.assertIsNone(ci.single_question_id(COMPONENT, "other-item"))
+
+
 class TheHitIsMeasured(ContentIntelWorld):
     def test_record_pregen_hit_swallows_metering_failures(self):
         context = mock.Mock()
