@@ -810,6 +810,17 @@ async def run(args: argparse.Namespace) -> int:
             model, to_browse, args.max_vision_calls)
         if vision_calls:
             print(f"→ described graphics in {vision_calls} vision calls")
+    # A crop that never met the vision model (budget cut, --skip-llm, a
+    # rejected row) would otherwise be stamped current and stay blind forever
+    # — the bytes are about to be stripped. Re-queue its component: the next
+    # browse re-crops and retries.
+    for cid in to_browse:
+        if any(m.get("shot_b64") and not m.get("description")
+               for slide in model.get(cid, {}).get("slides") or []
+               for m in (slide.get("enrichment") or {}).get("media") or []
+               if isinstance(m, dict)):
+            backlog_left.append(cid)
+            print(f"  ⚠️ {cid}: undescribed graphics — re-queued for browsing")
     strip_capture_bytes(model)
 
     # ── generate ──
