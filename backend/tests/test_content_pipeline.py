@@ -1,0 +1,249 @@
+"""The nightly pipeline's promises: idempotent, contained, validated.
+
+Exercised at the stage level with programmatic catalog models (the same shape
+``fetch_catalog_model`` builds), so each property is pinned without HTTP, a
+browser, or a model: a quiet catalog writes byte-identical shards; a removed
+lomda disappears; generation rejects every row that cannot be trusted; and a
+browser failure becomes a verdict, never a crash.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import os
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+from app.services import content_intelligence as ci  # noqa: E402
+from scripts import content_pipeline as pipeline  # noqa: E402
+
+
+def _model(question_text: str = "מהי מסה?") -> dict:
+    """One-component catalog model, fingerprints computed the real way."""
+    info = "מסך על מדידת מסה"
+    q_print = ci.compute_fingerprint_question(question_text, "פתיחה", [], info)
+    i_print = ci.compute_fingerprint_item(
+        "פתיחה", "presentation", "video", info, [question_text])
+    return {"comp-1": {
+        "subject": "MOE.SCI",
+        "objective_id": "MOE.SCI.X",
+        "objective_title_he": "מדידות",
+        "title": "מדידת מסה",
+        "cognitive_level": "understanding",
+        "provider": "methodica",
+        "kata_updated_at": "2026-08-01T00:00:00Z",
+        "component_fingerprint": ci.compute_fingerprint_component(
+            "מדידות", "מדידת מסה", [i_print]),
+        "slides": [{
+            "item_id": "comp-1-001", "title": "פתיחה",
+            "content_type": "presentation", "media_format": "video",
+            "role": "mixed", "position": 1, "information_to_bot": info,
+            "fingerprint": i_print,
+            "questions": [{
+                "question_id": "q1", "question_type": "single-choice",
+                "question_text": question_text,
+                "answers": ["גרם", "ניוטון"], "correct": ["גרם"],
+                "fingerprint": q_print,
+            }],
+        }],
+    }}
+
+
+def _generated_for(model: dict) -> dict:
+    """A valid generation block for every slot the model wants."""
+    out = {}
+    for cid, comp in model.items():
+        targets = pipeline.collect_generation_targets({cid: comp}, {})
+        for target in targets:
+            out[target["id"]] = {
+                "he": "טקסט שנוצר מראש",
+                "prompt_version": ci.PROMPT_VERSION,
+                "source_fingerprint": target["fingerprint"],
+                "generated_at": "2026-08-31T01:00:00Z",
+                "model": "mini",
+            }
+    return out
+
+
+class TheWriteIsIdempotent(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+        self.out = Path(self.dir.name)
+
+    def _write(self, model: dict) -> dict[str, str]:
+        committed = pipeline.load_committed(self.out)
+        shards = pipeline.build_shards(
+            model, committed, {}, _generated_for(model) if not committed else {})
+        pipeline.write_output(self.out, shards, [], {"lomdot": len(model)})
+        return {str(p.relative_to(self.out)): p.read_text(encoding="utf-8")
+                for p in ci.shard_paths(self.out)}
+
+    def test_an_unchanged_catalog_writes_identical_bytes(self):
+        first = self._write(_model())
+        second = self._write(_model())
+        self.assertEqual(first, second)
+        self.assertIn("MOE.SCI/MOE.SCI.X.json", first)
+
+    def test_generated_texts_survive_the_next_quiet_night(self):
+        self._write(_model())
+        rewritten = self._write(_model())
+        shard = json.loads(rewritten["MOE.SCI/MOE.SCI.X.json"])
+        texts = shard["lomdot"][0]["slides"][0]["questions"][0]["texts"]
+        self.assertEqual(texts["question_intro"]["he"], "טקסט שנוצר מראש")
+
+    def test_a_vendor_edit_drops_only_the_affected_texts(self):
+        self._write(_model())
+        edited = _model("מהי מסה? (מנוסח מחדש)")
+        committed = pipeline.load_committed(self.out)
+        shards = pipeline.build_shards(edited, committed, {}, {})
+        lomda = shards[Path("MOE.SCI/MOE.SCI.X.json")]["lomdot"][0]
+        # the welcome hung off the component fingerprint, which changed too —
+        # every text keyed to drifted content is gone, none survive wrongly
+        self.assertEqual(lomda["texts"], {})
+        self.assertEqual(lomda["slides"][0]["questions"][0]["texts"], {})
+
+    def test_a_removed_lomda_leaves_the_config(self):
+        self._write(_model())
+        pipeline.write_output(self.out, {}, [], {})
+        self.assertEqual(ci.shard_paths(self.out), [])
+
+    def test_no_correct_answers_reach_the_disk(self):
+        self._write(_model())
+        for path in ci.shard_paths(self.out):
+            self.assertNotIn("correctAnswers", path.read_text(encoding="utf-8"))
+            self.assertNotIn('"correct"', path.read_text(encoding="utf-8"))
+
+
+class TheTargetsFollowTheFingerprints(unittest.TestCase):
+    def test_a_fresh_config_has_no_targets(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            model = _model()
+            shards = pipeline.build_shards(model, {}, {}, _generated_for(model))
+            pipeline.write_output(out, shards, [], {})
+            committed = pipeline.load_committed(out)
+            self.assertEqual(
+                pipeline.collect_generation_targets(model, committed), [])
+
+    def test_every_slot_of_a_new_lomda_is_a_target(self):
+        targets = pipeline.collect_generation_targets(_model(), {})
+        kinds = sorted(t["kind"] for t in targets)
+        # mixed slide: step intro + video summary; question: all three kinds
+        self.assertEqual(kinds, ["explanation", "hint_l1", "lesson_step_intro",
+                                 "lesson_welcome", "question_intro",
+                                 "video_summary"])
+
+    def test_only_question_kinds_carry_the_answers(self):
+        # Question kinds keep them for echo-validation (an intro must not blurt
+        # the answer either); lesson/slide kinds never see them at all.
+        for target in pipeline.collect_generation_targets(_model(), {}):
+            if target["kind"] in ci.QUESTION_TEXT_KINDS:
+                self.assertEqual(target["correct"], ["גרם"])
+            else:
+                self.assertEqual(target["correct"], [])
+
+
+class GenerationTrustsNothing(unittest.TestCase):
+    def _generate(self, responses: list[str], max_calls: int = 10) -> dict:
+        targets = pipeline.collect_generation_targets(_model(), {})
+        calls = iter(responses)
+        async_mock = mock.AsyncMock(side_effect=lambda *a, **k: next(calls, None))
+        with mock.patch("app.services.llm.call_llm", async_mock):
+            return asyncio.run(pipeline.generate_texts(targets, max_calls)), targets
+
+    def test_valid_rows_land_with_full_metadata(self):
+        targets = pipeline.collect_generation_targets(_model(), {})
+        payload = json.dumps({"rows": [
+            {"id": t["id"], "text": f"טקסט תקין עבור {t['kind']}"}
+            for t in targets if t["kind"] != "hint_l1"]}, ensure_ascii=False)
+        generated, targets = self._generate([payload])
+        self.assertEqual(len(generated), len(targets) - 1)
+        block = generated[targets[0]["id"]]
+        self.assertEqual(block["prompt_version"], ci.PROMPT_VERSION)
+        self.assertEqual(block["source_fingerprint"], targets[0]["fingerprint"])
+
+    def test_renamed_rows_cannot_be_matched_back(self):
+        generated, _ = self._generate([json.dumps(
+            {"rows": [{"id": "someone|else||question_intro", "text": "טקסט"}]})])
+        self.assertEqual(generated, {})
+
+    def test_rows_without_hebrew_are_rejected(self):
+        targets = pipeline.collect_generation_targets(_model(), {})
+        generated, _ = self._generate([json.dumps(
+            {"rows": [{"id": targets[0]["id"], "text": "English only"}]})])
+        self.assertEqual(generated, {})
+
+    def test_over_length_rows_are_rejected(self):
+        targets = pipeline.collect_generation_targets(_model(), {})
+        cap = ci.TEXT_LENGTH_CAPS[targets[0]["kind"]]
+        generated, _ = self._generate([json.dumps(
+            {"rows": [{"id": targets[0]["id"], "text": "ארוך " * cap}]},
+            ensure_ascii=False)])
+        self.assertEqual(generated, {})
+
+    def test_a_hint_that_says_the_answer_is_not_a_hint(self):
+        targets = pipeline.collect_generation_targets(_model(), {})
+        hint = next(t for t in targets if t["kind"] == "hint_l1")
+        generated, _ = self._generate([json.dumps(
+            {"rows": [{"id": hint["id"], "text": "התשובה היא גרם כמובן"}]},
+            ensure_ascii=False)])
+        self.assertNotIn(hint["id"], generated)
+
+    def test_the_budget_stops_the_batches(self):
+        many = {}
+        for n in range(30):
+            many.update({f"comp-{n}": json.loads(json.dumps(
+                _model()["comp-1"], ensure_ascii=False))})
+        targets = pipeline.collect_generation_targets(many, {})
+        self.assertGreater(len(targets), pipeline.BATCH)
+        async_mock = mock.AsyncMock(return_value=json.dumps({"rows": []}))
+        with mock.patch("app.services.llm.call_llm", async_mock):
+            asyncio.run(pipeline.generate_texts(targets, 2))
+        self.assertEqual(async_mock.await_count, 2)
+
+
+class BrowsingFailuresBecomeVerdicts(unittest.TestCase):
+    def test_a_launcher_404_is_a_verdict_not_a_crash(self):
+        from app.services.kata_client import KataError
+
+        with mock.patch.object(pipeline, "_launch_url",
+                               mock.AsyncMock(side_effect=KataError("kata_launch_rejected", 502))):
+            extraction = asyncio.run(pipeline.browse_component(
+                "comp-1", _model()["comp-1"], Path(tempfile.mkdtemp())))
+        self.assertEqual(extraction["verdict"], "launch_404")
+
+    def test_an_unexpected_explosion_is_contained(self):
+        with mock.patch.object(pipeline, "_launch_url",
+                               mock.AsyncMock(side_effect=RuntimeError("boom"))):
+            extraction = asyncio.run(pipeline.browse_component(
+                "comp-1", _model()["comp-1"], Path(tempfile.mkdtemp())))
+        self.assertEqual(extraction["verdict"], "driver_error")
+
+
+class ScreensMapOntoSlides(unittest.TestCase):
+    SLIDES = [{"item_id": f"c-00{n}", "title": t}
+              for n, t in ((1, "פתיחה"), (2, "ניסוי"), (3, "סיכום"))]
+
+    def test_aligned_dumps_map_one_to_one(self):
+        screens = [{"title": "פתיחה"}, {"title": "ניסוי"}, {"title": "סיכום"}]
+        mapped = pipeline.map_screens_to_slides(screens, self.SLIDES)
+        self.assertEqual(mapped["c-001"]["title"], "פתיחה")
+        self.assertEqual(len(mapped), 3)
+
+    def test_a_leading_cover_screen_is_skipped(self):
+        screens = [{"title": "ברוכים הבאים"}, {"title": "פתיחה"},
+                   {"title": "ניסוי"}, {"title": "סיכום"}]
+        mapped = pipeline.map_screens_to_slides(screens, self.SLIDES)
+        self.assertEqual(mapped["c-001"]["title"], "פתיחה")
+        self.assertEqual(mapped["c-003"]["title"], "סיכום")
+
+
+if __name__ == "__main__":
+    unittest.main()
