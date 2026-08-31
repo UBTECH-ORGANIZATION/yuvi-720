@@ -475,6 +475,23 @@ def test_the_absence_rule_never_buys_an_arrow_it_cannot_explain():
             )
 
 
+def test_hint_use_is_windowed_so_leaning_on_help_can_register_as_a_change():
+    """An unwindowed count is the same number at both ends of the comparison, so
+    hint-shaped causes could never move. Two of the seven were inert."""
+    events = [_ev(obj=f"p{d}", days_ago=d) for d in range(22, 28) for _ in range(3)]
+    events += [_ev(obj=f"n{d}", days_ago=d) for d in range(0, 6) for _ in range(3)]
+    decisions = [
+        {"strategy": "hint", "hint_level": 1, "at": (NOW - timedelta(days=d)).isoformat()}
+        for d in range(0, 6) for _ in range(6)
+    ] + [{"strategy": "hint", "hint_level": 1, "at": (NOW - timedelta(days=25)).isoformat()}]
+
+    d = _dom(_brain(), "initiative_responsibility", events, decisions)
+    row = next((x for x in d["drivers"] if x["tag"] == "hint_reliance"), None)
+    assert row, "leaning on hints far more than last week has to be sayable"
+    assert row["dir"] == "down"
+    assert row["facts"]["n_hint"] > row["facts"]["n_hint_prior"]
+
+
 def test_prior_value_is_the_same_score_one_week_back():
     """The card draws its arrow from `value` vs `prior_value`. Both must come
     from this engine — deriving the arrow from a separately stored snapshot let

@@ -191,8 +191,14 @@ def _metrics(
     refl = [r for r in (brain.get("reflections_recent") or []) if isinstance(r, dict)]
     reflections = len([r for r in refl if in_window(r, "at")])
 
-    # Hint / help usage (best-effort; neutral when absent).
-    hint_events = [d for d in decisions if (d.get("strategy") in HINT_STRATEGIES) or d.get("hint_level")]
+    # Hint / help usage (best-effort; neutral when absent). Windowed like every
+    # other signal: an unwindowed count is identical at both ends of the
+    # comparison, so hint-shaped causes could never register a change at all.
+    hint_events = [
+        d for d in decisions
+        if ((d.get("strategy") in HINT_STRATEGIES) or d.get("hint_level"))
+        and in_window(d, "at")
+    ]
     n_hint = len(hint_events)
     max_hint = max([int(d.get("hint_level") or 1) for d in hint_events], default=0)
 

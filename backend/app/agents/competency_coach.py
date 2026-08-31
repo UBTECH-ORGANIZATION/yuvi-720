@@ -257,7 +257,9 @@ async def _activeness_signals(learner_id: str, brain: dict, competency: str, lan
         events = await get_learner_events(
             learner_id, since=datetime.now(timezone.utc) - timedelta(days=EVIDENCE_SPAN_DAYS)
         )
-        decisions = await recent_tutor_decisions(learner_id)
+        decisions = await recent_tutor_decisions(
+            learner_id, since=datetime.now(timezone.utc) - timedelta(days=EVIDENCE_SPAN_DAYS)
+        )
         causes = (effective_activeness(brain, events, decisions).get(competency) or {}).get("causes") or []
         return [
             _CAUSE_HINTS[c].get(lang, _CAUSE_HINTS[c]["he"])

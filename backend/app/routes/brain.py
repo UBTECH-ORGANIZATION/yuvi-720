@@ -158,7 +158,9 @@ async def read_dashboard(learner_id: str, lang: str = "he", actor: dict = Depend
     # Dynamic activeness: the questionnaire base nudged by recent activity.
     from app.brain.activeness import EVIDENCE_SPAN_DAYS, effective_activeness
     from app.agents.tutor_decision import recent_tutor_decisions
-    decisions = await recent_tutor_decisions(safe_id)
+    decisions = await recent_tutor_decisions(
+        safe_id, since=datetime.now(timezone.utc) - timedelta(days=EVIDENCE_SPAN_DAYS)
+    )
     # Its own fetch, spanning both comparison windows. The shared one above is
     # capped by row count, which for an active learner stops short of last week.
     activeness_events = await get_learner_events(
