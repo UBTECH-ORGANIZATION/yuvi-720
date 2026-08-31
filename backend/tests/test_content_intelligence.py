@@ -241,7 +241,9 @@ class ScreenAnchorsServeOnlyTrustedGeometry(ContentIntelWorld):
         anchors = ci.screen_anchors(COMPONENT, ITEM)
         self.assertEqual(set(anchors["regions"]), {"question", "image"})
         self.assertTrue(anchors["no_internal_scroll"])
-        self.assertEqual(anchors["capture_viewport"], {"w": 1280, "h": 860})
+        self.assertEqual(
+            anchors["capture_viewport"],
+            {"w": 1280, "h": 860, "scroll_w": 0, "scroll_h": 0})
 
     def test_an_old_capture_format_is_refused(self):
         self.write_shard(self._anchored_shard(capture_version=1))

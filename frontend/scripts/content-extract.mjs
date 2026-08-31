@@ -185,13 +185,41 @@ const captureScreen = (frame) => frame.evaluate(() => {
   }
   const REGION_MIN_AREA = { image: 0.02, video: 0.02, diagram: 0.03 }
   const anchors = []
+  let shotMark = 0
   for (const [region, selector] of Object.entries(REGION_SELECTORS)) {
     let elements = [...document.querySelectorAll(selector)]
     const minArea = REGION_MIN_AREA[region]
     if (minArea) elements = elements.filter((el) => areaFraction(el) >= minArea)
     const rect = unionRect(elements)
-    if (rect) anchors.push({ region, rect })
+    if (!rect) continue
+    // Per-element rects so the coach can point at "אפשרות 2" or the second
+    // image, not only the merged block. Document order, bounded.
+    const parts = elements.length > 1
+      ? elements.map((el) => unionRect([el])).filter(Boolean).slice(0, 8)
+      : []
+    anchors.push(parts.length > 1 ? { region, rect, parts } : { region, rect })
+    // Mark the graphic surfaces for a Node-side element screenshot — the
+    // vision pass turns those crops into Hebrew descriptions. Marks are
+    // throwaway attributes on a throwaway browse session.
+    if (region === 'image' || region === 'diagram') {
+      for (const el of elements.slice(0, 4)) {
+        shotMark += 1
+        el.setAttribute('data-yx-shot', String(shotMark))
+      }
+    }
   }
+  // Diagram surfaces are not <img> and never made it into `media` — add them
+  // so the vision description has a row to live on.
+  for (const el of document.querySelectorAll('[data-yx-shot]')) {
+    if (el.tagName !== 'IMG') {
+      media.push({ kind: 'diagram', title: '', src: '' })
+    }
+  }
+  const shotMarks = [...document.querySelectorAll('[data-yx-shot]')].map((el) => ({
+    mark: el.getAttribute('data-yx-shot'),
+    kind: el.tagName === 'IMG' ? 'image' : 'diagram',
+    src: el.tagName === 'IMG' ? (el.currentSrc || el.src || '') : '',
+  }))
 
   return {
     title: (heading?.innerText || document.title || '').trim().slice(0, 200),
@@ -199,10 +227,35 @@ const captureScreen = (frame) => frame.evaluate(() => {
     media: media.slice(0, 12),
     question_rendering: rendering,
     anchors,
-    capture_viewport: { w: window.innerWidth, h: window.innerHeight },
+    shot_marks: shotMarks,
+    capture_viewport: {
+      w: window.innerWidth, h: window.innerHeight,
+      scroll_w: scrollW, scroll_h: scrollH,
+    },
     no_internal_scroll: scrollH <= window.innerHeight * 1.05,
   }
 })
+
+// Element screenshots for the marked graphic surfaces — small jpeg crops the
+// nightly vision pass turns into Hebrew descriptions. Keyed back onto media
+// entries by src digest (images) or in diagram order. Never committed: the
+// pipeline strips the bytes after describing them.
+const captureShots = async (frame, screen) => {
+  const shots = []
+  for (const mark of screen.shot_marks || []) {
+    try {
+      const el = frame.locator(`[data-yx-shot="${mark.mark}"]`).first()
+      const buffer = await el.screenshot({ type: 'jpeg', quality: 55, timeout: 4000 })
+      shots.push({
+        kind: mark.kind,
+        src_digest: mark.src ? digest(mark.src) : null,
+        shot_b64: buffer.toString('base64'),
+      })
+    } catch { /* a crop is a bonus, never a failure */ }
+  }
+  delete screen.shot_marks
+  return shots
+}
 
 const clickVisible = async (frame, selectors, { limit = 1 } = {}) => {
   let clicks = 0
@@ -290,9 +343,21 @@ for (let index = 0; index < maxScreens; index += 1) {
   const hash = digest(captured.visible_text)
   if (seenHashes.has(hash)) break // a click that changed nothing means the end
   seenHashes.add(hash)
+  const shots = await captureShots(frame, captured)
   captured.media = captured.media.map(({ src, ...rest }) => ({
     ...rest, src_digest: src ? digest(src) : null,
   }))
+  // Hand each crop to its media row: images by src digest, diagrams in order.
+  const diagramShots = shots.filter((s) => s.kind === 'diagram')
+  for (const entry of captured.media) {
+    if (entry.kind === 'diagram') {
+      const shot = diagramShots.shift()
+      if (shot) entry.shot_b64 = shot.shot_b64
+    } else if (entry.src_digest) {
+      const shot = shots.find((s) => s.src_digest === entry.src_digest)
+      if (shot) entry.shot_b64 = shot.shot_b64
+    }
+  }
   captured.index = index
   captured.advanced_by_answering = false
   screens.push(captured)

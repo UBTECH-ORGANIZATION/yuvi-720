@@ -197,6 +197,16 @@ class GenerationTrustsNothing(unittest.TestCase):
             ensure_ascii=False)])
         self.assertNotIn(hint["id"], generated)
 
+    def test_capture_bytes_never_survive_to_the_write(self):
+        model = {"c": {"slides": [{"enrichment": {"media": [
+            {"kind": "image", "shot_b64": "abc", "description": "תמונה"},
+            {"kind": "video"},
+        ]}}]}}
+        pipeline.strip_capture_bytes(model)
+        media = model["c"]["slides"][0]["enrichment"]["media"]
+        self.assertNotIn("shot_b64", media[0])
+        self.assertEqual(media[0]["description"], "תמונה")
+
     def test_old_capture_formats_requeue_for_browsing(self):
         model = _model()
         committed = {

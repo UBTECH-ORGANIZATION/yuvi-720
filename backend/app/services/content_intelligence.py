@@ -81,7 +81,9 @@ FORBIDDEN_KEYS = frozenset({"correctAnswers", "correct_answers", "correct"})
 #: drops the old capture and the component re-queues for browsing, because a
 #: slide whose CONTENT is unchanged would otherwise never gain the new fields.
 #: v3: decorative-image area floor + the `diagram` region (applets/canvas/svg).
-CAPTURE_VERSION = 3
+#: v4: per-element anchor `parts`, scroll dims in capture_viewport, and vision
+#: descriptions on graphic media (the bytes themselves are stripped pre-write).
+CAPTURE_VERSION = 4
 
 #: The pointing vocabulary — static on purpose: the coach tool's enum bakes at
 #: import time, and geometry resolution happens server-side per slide. Rects
@@ -93,7 +95,7 @@ ANCHOR_REGIONS = frozenset(
 #: the file keeps the full capture so caps can be tuned without a re-browse.
 ENRICHMENT_VISIBLE_TEXT_CAP = 700
 ENRICHMENT_MEDIA_MAX = 6
-ENRICHMENT_MEDIA_LABEL_CAP = 80
+ENRICHMENT_MEDIA_LABEL_CAP = 220  # room for the vision description
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CONFIG_DIR = _REPO_ROOT / "content" / "context"
@@ -514,6 +516,11 @@ def enrichment(component_id: str, item_id: str) -> Optional[dict[str, Any]]:
             continue
         kind = str(entry.get("kind") or "media")
         label = str(entry.get("title") or entry.get("alt") or "").strip()
+        # The vision description — what the picture/diagram actually shows —
+        # is the difference between "image:" and an answerable "מה רואים פה?".
+        description = str(entry.get("description") or "").strip()
+        if description:
+            label = f"{label} — {description}" if label else description
         duration = entry.get("duration_seconds")
         suffix = f" ({int(duration)}s)" if isinstance(duration, (int, float)) else ""
         media.append(f"{kind}: {label}"[:ENRICHMENT_MEDIA_LABEL_CAP] + suffix)
@@ -547,21 +554,28 @@ def screen_anchors(component_id: str, item_id: str) -> Optional[dict[str, Any]]:
         return None
     if not is_fresh(key, record):
         return None  # stale geometry points at the wrong thing — worse than none
-    regions: dict[str, dict[str, float]] = {}
+    def _clamped(rect: Any) -> Optional[dict[str, float]]:
+        if not isinstance(rect, dict):
+            return None
+        try:
+            out = {axis: min(1.0, max(0.0, float(rect[axis])))
+                   for axis in ("x", "y", "w", "h")}
+        except (KeyError, TypeError, ValueError):
+            return None
+        return out if out["w"] > 0 and out["h"] > 0 else None
+
+    regions: dict[str, dict[str, Any]] = {}
     for anchor in raw.get("anchors") or []:
         if not isinstance(anchor, dict):
             continue
         region = str(anchor.get("region") or "")
-        rect = anchor.get("rect")
-        if region not in ANCHOR_REGIONS or not isinstance(rect, dict):
+        clamped = _clamped(anchor.get("rect"))
+        if region not in ANCHOR_REGIONS or clamped is None:
             continue
-        try:
-            clamped = {axis: min(1.0, max(0.0, float(rect[axis])))
-                       for axis in ("x", "y", "w", "h")}
-        except (KeyError, TypeError, ValueError):
-            continue
-        if clamped["w"] <= 0 or clamped["h"] <= 0:
-            continue
+        parts = [p for p in (_clamped(part) for part in anchor.get("parts") or [])
+                 if p is not None][:8]
+        if parts:
+            clamped["parts"] = parts
         regions.setdefault(region, clamped)
     if not regions:
         return None
@@ -570,7 +584,9 @@ def screen_anchors(component_id: str, item_id: str) -> Optional[dict[str, Any]]:
         "regions": regions,
         "no_internal_scroll": bool(raw.get("no_internal_scroll")),
         "capture_viewport": {
-            "w": int(viewport.get("w") or 0), "h": int(viewport.get("h") or 0)},
+            "w": int(viewport.get("w") or 0), "h": int(viewport.get("h") or 0),
+            "scroll_w": int(viewport.get("scroll_w") or 0),
+            "scroll_h": int(viewport.get("scroll_h") or 0)},
     }
 
 

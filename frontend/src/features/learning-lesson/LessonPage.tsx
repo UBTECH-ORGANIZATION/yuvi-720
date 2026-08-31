@@ -325,24 +325,17 @@ export function LessonPage() {
   }, [learnerId, refreshBrain, session])
 
   // Yuvi's pointer: adopt it when the companion broadcasts one, drop it when
-  // the companion says the screen moved (detail: null), and never hold it past
-  // a short attention window. A new session also clears it — the overlay would
-  // otherwise point into a freshly remounted iframe showing something else.
+  // the companion says the screen moved (detail: null) or the learner taps
+  // the dismiss chip — no timer: attention decides, not a clock. A new
+  // session also clears it — the overlay would otherwise point into a freshly
+  // remounted iframe showing something else.
   useEffect(() => {
-    let expiry: number | undefined
     const handlePoint = (event: Event) => {
       const detail = (event as CustomEvent<CoachPointerFrame | null>).detail
-      window.clearTimeout(expiry)
       setCoachPointer(detail ?? null)
-      if (detail) {
-        expiry = window.setTimeout(() => setCoachPointer(null), 7000)
-      }
     }
     window.addEventListener('yuvilab:coach-point', handlePoint)
-    return () => {
-      window.clearTimeout(expiry)
-      window.removeEventListener('yuvilab:coach-point', handlePoint)
-    }
+    return () => window.removeEventListener('yuvilab:coach-point', handlePoint)
   }, [])
   useEffect(() => {
     setCoachPointer(null)
@@ -638,7 +631,12 @@ export function LessonPage() {
                 allow="autoplay; storage-access"
                 onLoad={handleFrameLoad}
               />
-              <LessonPointLayer pointer={coachPointer} playback={playback} />
+              <LessonPointLayer
+                pointer={coachPointer}
+                playback={playback}
+                language={language}
+                onDismiss={() => setCoachPointer(null)}
+              />
               </>
               )}
               {reentryOpen && (

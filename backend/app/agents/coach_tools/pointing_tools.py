@@ -45,8 +45,15 @@ async def _point_at_screen(
     anchors = content_intelligence.screen_anchors(component_id, item_id)
     question_key = "|".join(
         (component_id, item_id, str(current.get("question_id") or "")))
-    rect = (anchors or {}).get("regions", {}).get(region)
-    if rect:
+    spec = (anchors or {}).get("regions", {}).get(region)
+    if spec:
+        rect = {k: spec[k] for k in ("x", "y", "w", "h")}
+        # An ordinal narrows the highlight to one element of the region — the
+        # second option, the first image — when the capture kept parts.
+        parts = spec.get("parts") or []
+        part = args.get("part")
+        if isinstance(part, int) and 1 <= part <= len(parts):
+            rect = parts[part - 1]
         context.pointer_requests.append({
             "region": region,
             "rect": rect,
@@ -82,6 +89,13 @@ register(CoachTool(
                 # the region taxonomy, and the handler decides availability.
                 "enum": ["question", "options", "image", "video", "diagram",
                          "table", "instruction"],
+            },
+            "part": {
+                "type": "integer",
+                "description": (
+                    "מספר סידורי של פריט בתוך האזור (1 = הראשון), למשל "
+                    "האפשרות השנייה או התמונה הראשונה. השמט כדי להדגיש את "
+                    "האזור כולו. הקונטקסט מציין כמה פריטים יש לכל אזור."),
             },
         },
         "required": ["region"],

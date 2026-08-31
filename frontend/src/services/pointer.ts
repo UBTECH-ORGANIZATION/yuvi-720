@@ -11,6 +11,10 @@ import type { CoachPointerFrame } from './agents'
 
 export type PointerPresentation =
   | { mode: 'rect'; rect: { x: number; y: number; w: number; h: number } }
+  /** The target lives below the first viewport of a screen that scrolls
+   *  inside the iframe (whose scroll we cannot read) — show a "look lower"
+   *  chevron at the frame's bottom edge, horizontally near the target. */
+  | { mode: 'edge'; x: number }
   | { mode: 'glow' }
   | { mode: 'none' }
 
@@ -32,7 +36,18 @@ export function presentPointer(
 ): PointerPresentation {
   if (!pointer || playback !== 'frame') return { mode: 'none' }
   const rect = pointer.rect
-  if (!rect || !pointer.no_scroll || boxW < MIN_BOX_W || boxH < MIN_BOX_H) {
+  if (rect && !pointer.no_scroll) {
+    // Fractions are of the SCROLL box: a target whose top sits below the
+    // capture's first viewport is off-screen until the learner scrolls the
+    // iframe — which we cannot detect, so the honest visual is directional.
+    const viewportH = pointer.capture_viewport?.h || 0
+    const scrollH = pointer.capture_viewport?.scroll_h || 0
+    if (viewportH > 0 && scrollH > viewportH && rect.y > viewportH / scrollH) {
+      return { mode: 'edge', x: Math.min(1, Math.max(0, rect.x + rect.w / 2)) }
+    }
+    return { mode: 'glow' }
+  }
+  if (!rect || boxW < MIN_BOX_W || boxH < MIN_BOX_H) {
     return { mode: 'glow' }
   }
   const captureW = pointer.capture_viewport?.w || 0

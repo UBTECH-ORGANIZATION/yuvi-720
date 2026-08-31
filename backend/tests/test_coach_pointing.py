@@ -79,6 +79,31 @@ class PointAtScreen(unittest.TestCase):
         self.assertTrue(pointer["no_scroll"])
         self.assertEqual(pointer["question_key"], "comp-1|comp-1-001|q1")
 
+    def test_a_part_ordinal_narrows_the_rect(self):
+        parts = [{"x": 0.1, "y": 0.2, "w": 0.2, "h": 0.05},
+                 {"x": 0.1, "y": 0.3, "w": 0.2, "h": 0.05}]
+        anchors = {**ANCHORS, "regions": {"options": {
+            "x": 0.1, "y": 0.2, "w": 0.2, "h": 0.15, "parts": parts}}}
+        context = _context()
+        with mock.patch.object(content_intelligence, "screen_anchors",
+                               return_value=anchors):
+            result = asyncio.run(registry.dispatch(
+                "point_at_screen", {"region": "options", "part": 2}, context))
+        self.assertEqual(result["status"], "accepted")
+        self.assertEqual(context.pointer_requests[0]["rect"], parts[1])
+
+    def test_an_out_of_range_part_falls_back_to_the_region(self):
+        anchors = {**ANCHORS, "regions": {"options": {
+            "x": 0.1, "y": 0.2, "w": 0.2, "h": 0.15,
+            "parts": [{"x": 0.1, "y": 0.2, "w": 0.2, "h": 0.05}]}}}
+        context = _context()
+        with mock.patch.object(content_intelligence, "screen_anchors",
+                               return_value=anchors):
+            asyncio.run(registry.dispatch(
+                "point_at_screen", {"region": "options", "part": 9}, context))
+        self.assertEqual(context.pointer_requests[0]["rect"],
+                         {"x": 0.1, "y": 0.2, "w": 0.2, "h": 0.15})
+
     def test_a_missing_region_becomes_a_whole_frame_glow(self):
         context = _context()
         with mock.patch.object(content_intelligence, "screen_anchors",

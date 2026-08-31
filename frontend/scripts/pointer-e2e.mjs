@@ -98,14 +98,20 @@ await send.click()
 const highlight = page.locator('.lesson-point-highlight, .lesson-point-glow')
 await highlight.first().waitFor({ state: 'visible', timeout: 45000 })
   .catch(() => fail('no pointer overlay rendered'))
-const kind = await page.locator('.lesson-point-highlight').count() ? 'highlight' : 'glow'
+const kind = await page.locator('.lesson-point-highlight').count() ? 'highlight'
+  : await page.locator('.lesson-point-edge').count() ? 'edge' : 'glow'
 await page.screenshot({ path: `${OUT}/pointer-${kind}.png` })
 
-// It must not outlive its moment.
+// It holds until dismissed — no clock. The chip closes it.
 await page.waitForTimeout(8000)
+if (!(await highlight.first().isVisible().catch(() => false))) {
+  await fail('pointer overlay vanished without a dismiss')
+}
+await page.locator('.lesson-point-dismiss').click()
+await page.waitForTimeout(500)
 if (await highlight.first().isVisible().catch(() => false)) {
-  await fail('pointer overlay did not expire')
+  await fail('dismiss chip did not close the pointer')
 }
 
-console.log(`✓ pointer overlay rendered (${kind}) and expired; screenshot in ${OUT}`)
+console.log(`✓ pointer overlay rendered (${kind}), held, and dismissed; screenshot in ${OUT}`)
 await browser.close()

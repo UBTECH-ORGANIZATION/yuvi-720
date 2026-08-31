@@ -341,6 +341,73 @@ async def browse_component(
     }
 
 
+# ── Stage C2: describe the graphics the walk photographed ────────────────────
+
+_VISION_PROMPT = (
+    "אלה צילומים של אלמנטים גרפיים ממסך לימוד בשם \"{title}\". כתוב לכל תמונה "
+    "תיאור קצר בעברית (עד 25 מילים): מה רואים בה בפועל — אנשים, חפצים, "
+    "תרשימים, צירים, נקודות, טקסט מסומן. אל תמציא דבר שלא נראה. החזר JSON "
+    "בלבד: {{\"descriptions\": [\"...\"]}} — תיאור אחד לכל תמונה, באותו סדר."
+)
+
+
+async def describe_graphics(
+    model: dict[str, dict[str, Any]], browsed: list[str], max_calls: int,
+) -> int:
+    """Vision pass over freshly captured crops → Hebrew media descriptions.
+
+    One call per screen (all its crops as image parts). A miss leaves the
+    entry description-less — the context line falls back to alt/title, and
+    the next browse retries. Returns the number of calls spent.
+    """
+    from app.services.llm import call_llm
+
+    usage = UsageContext(
+        actor_id="content-pipeline", actor_type="system",
+        endpoint="script:content_pipeline", feature="content_pipeline",
+        operation="content.vision_descriptions", source="content_pipeline",
+    )
+    calls = 0
+    for cid in browsed:
+        for slide in model.get(cid, {}).get("slides") or []:
+            enrichment = slide.get("enrichment") or {}
+            entries = [m for m in enrichment.get("media") or []
+                       if isinstance(m, dict) and m.get("shot_b64")]
+            if not entries or calls >= max_calls:
+                continue
+            content: list[dict[str, Any]] = [{
+                "type": "text",
+                "text": _VISION_PROMPT.format(title=slide.get("title") or ""),
+            }]
+            for entry in entries:
+                content.append({"type": "image_url", "image_url": {
+                    "url": f"data:image/jpeg;base64,{entry['shot_b64']}"}})
+            calls += 1
+            raw = await call_llm(
+                [{"role": "user", "content": content}],
+                usage_context=usage.for_operation("content.vision_descriptions"),
+                max_tokens=500, json_mode=True, model_tier="mini",
+            )
+            try:
+                rows = json.loads(raw or "{}").get("descriptions") or []
+            except (TypeError, ValueError):
+                rows = []
+            for entry, description in zip(entries, rows):
+                text = str(description or "").strip()[:200]
+                if text and _HEBREW.search(text):
+                    entry["description"] = text
+    return calls
+
+
+def strip_capture_bytes(model: dict[str, dict[str, Any]]) -> None:
+    """Image bytes never reach a shard — described or not, they go here."""
+    for comp in model.values():
+        for slide in comp.get("slides") or []:
+            for entry in (slide.get("enrichment") or {}).get("media") or []:
+                if isinstance(entry, dict):
+                    entry.pop("shot_b64", None)
+
+
 # ── Stage D: regenerate what went stale ──────────────────────────────────────
 
 _KIND_RULES = {
@@ -737,6 +804,14 @@ async def run(args: argparse.Namespace) -> int:
         if extraction["verdict"] in ("driver_error", "timeout", "frame_blocked"):
             backlog_left.append(cid)   # transient — try again next night
 
+    # ── describe the captured graphics, then drop the bytes ──
+    if to_browse and not args.skip_llm:
+        vision_calls = await describe_graphics(
+            model, to_browse, args.max_vision_calls)
+        if vision_calls:
+            print(f"→ described graphics in {vision_calls} vision calls")
+    strip_capture_bytes(model)
+
     # ── generate ──
     generated: dict[str, dict[str, Any]] = {}
     targets = [t for t in collect_generation_targets(model, committed)
@@ -793,6 +868,7 @@ def main() -> int:
     parser.add_argument("--skip-llm", action="store_true")
     parser.add_argument("--max-browse", type=int, default=10)
     parser.add_argument("--max-llm-calls", type=int, default=40)
+    parser.add_argument("--max-vision-calls", type=int, default=30)
     parser.add_argument("--out-dir", default=str(DEFAULT_OUT_DIR))
     parser.add_argument("--browser-dump-dir", default=str(DEFAULT_DUMP_DIR))
     args = parser.parse_args()

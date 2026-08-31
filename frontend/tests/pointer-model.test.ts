@@ -27,6 +27,22 @@ test('a scrolling capture degrades to the glow', () => {
   assert.equal(out.mode, 'glow')
 })
 
+test('a below-the-fold target on a scrolly screen becomes the edge chevron', () => {
+  const scrolly = {
+    ...POINTER,
+    no_scroll: false,
+    capture_viewport: { w: 1280, h: 860, scroll_w: 1280, scroll_h: 2000 },
+    rect: { x: 0.3, y: 0.7, w: 0.4, h: 0.1 },
+  }
+  const out = presentPointer(scrolly, 'frame', 900, 600)
+  assert.equal(out.mode, 'edge')
+  assert.equal(out.mode === 'edge' && out.x, 0.5)
+  // A target within the first viewport of the same screen: position unknown
+  // (the learner may have scrolled) — glow, not a wrong rect.
+  const topTarget = { ...scrolly, rect: { x: 0.1, y: 0.1, w: 0.3, h: 0.1 } }
+  assert.equal(presentPointer(topTarget, 'frame', 900, 600).mode, 'glow')
+})
+
 test('a rect-less pointer is the glow by design', () => {
   const out = presentPointer(
     { ...POINTER, region: null, rect: null }, 'frame', 900, 600)

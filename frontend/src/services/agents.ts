@@ -101,7 +101,7 @@ export interface CoachPointerFrame {
   region: string | null
   rect: { x: number; y: number; w: number; h: number } | null
   no_scroll: boolean
-  capture_viewport: { w?: number; h?: number }
+  capture_viewport: { w?: number; h?: number; scroll_w?: number; scroll_h?: number }
   question_key: string
 }
 
