@@ -172,9 +172,21 @@ async def read_dashboard(learner_id: str, lang: str = "he", actor: dict = Depend
     # asking "why did this go down?" gets plausible guesses instead of their week.
     # A list, not a dict: `flatten_updates` deep-merges dicts, which would leave
     # a domain's stale driver behind after it stops driving anything.
+    #
+    # Only a driver pushing the same way as the arrow. Handing the coach the
+    # first one regardless let a domain the card drew in decline be explained in
+    # chat as an improvement — the learner was told both, in the same minute.
+    def _explaining(row: dict) -> dict | None:
+        moved = row["value"] - row["prior_value"]
+        if not moved:
+            return None
+        want = "up" if moved > 0 else "down"
+        return next((d for d in row.get("drivers") or [] if d.get("dir") == want), None)
+
     movement = [
-        {"key": key, **(row.get("drivers") or [{}])[0]}
-        for key, row in effective.items() if row.get("drivers")
+        {"key": key, **driver}
+        for key, row in effective.items()
+        if (driver := _explaining(row))
     ]
     if movement != ((brain.get("profile") or {}).get("activeness_drivers") or []):
         try:

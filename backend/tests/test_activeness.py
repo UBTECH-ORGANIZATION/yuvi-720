@@ -492,6 +492,31 @@ def test_hint_use_is_windowed_so_leaning_on_help_can_register_as_a_change():
     assert row["facts"]["n_hint"] > row["facts"]["n_hint_prior"]
 
 
+def test_no_arrow_the_drivers_contradict():
+    """The card and the chat must never describe the same week differently.
+
+    `value` is confidence-scaled while drivers compare raw contributions, so a
+    domain can slide while the behaviour behind it improved — more evidence of a
+    still-negative signal drags the score down even as the signal gets better.
+    A real learner saw a declining self-awareness emblem and was told in chat,
+    the same minute, that it was improving. Neither was lying; they were reading
+    different halves of one calculation.
+    """
+    for _label, brain, events, decisions in _all_scenarios():
+        out = effective_activeness(brain, events, decisions)
+        for key in COMPETENCY_KEYS:
+            row = out[key]
+            moved = row["value"] - row["prior_value"]
+            if not moved:
+                continue
+            want = "up" if moved > 0 else "down"
+            assert any(d["dir"] == want for d in row["drivers"]), (
+                f"{key}: arrow says {want} with nothing pointing that way "
+                f"({row['prior_value']}->{row['value']}, "
+                f"drivers={[(d['tag'], d['dir']) for d in row['drivers']]})"
+            )
+
+
 def test_prior_value_is_the_same_score_one_week_back():
     """The card draws its arrow from `value` vs `prior_value`. Both must come
     from this engine — deriving the arrow from a separately stored snapshot let

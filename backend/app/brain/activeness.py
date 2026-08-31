@@ -478,6 +478,17 @@ def effective_activeness(
         # which is the "why?" with no answer this card exists to avoid.
         if not drivers:
             change_conf = conf
+        shown_prior = value if blind else prior_value
+        # An arrow nothing explains is the defect this card exists to remove.
+        # `value` is confidence-scaled while drivers compare raw contributions,
+        # so a domain can slide while the behaviour behind it improved: more
+        # evidence of a still-negative signal drags the score down even as the
+        # signal gets better. The card then points down while the coach, reading
+        # the same drivers, says up — and the learner is told both.
+        if shown_prior != value:
+            moved = "up" if value > shown_prior else "down"
+            if not any(d["dir"] == moved for d in drivers):
+                shown_prior = value
         out[key] = {
             "base": int(round(base)),
             "value": value,
@@ -486,6 +497,6 @@ def effective_activeness(
             "change_confidence": round(change_conf, 2),
             "causes": _cause_tags(key, contribs, value, conf),
             "drivers": drivers,
-            "prior_value": value if blind else prior_value,
+            "prior_value": shown_prior,
         }
     return out
