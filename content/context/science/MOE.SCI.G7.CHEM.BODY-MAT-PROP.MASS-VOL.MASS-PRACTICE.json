@@ -13,7 +13,7 @@
       "component_fingerprint": "b71895d564515320",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T13:20:39Z",
+        "probed_at": "2026-08-31T16:47:35Z",
         "player_host": "lomdot.education.gov.il",
         "screens_seen": 2,
         "screens_mapped": 2
@@ -81,12 +81,14 @@
               {
                 "kind": "image",
                 "alt": "דמות סגולה מחזיקה מאזניים דיגיטליים",
-                "src_digest": "sha1:c43b405036c821cc"
+                "src_digest": "sha1:c43b405036c821cc",
+                "description": "דמות פרוותית סגולה מחייכת ומחזיקה מאזניים קטנים ביד אחת."
               },
               {
                 "kind": "image",
                 "alt": "דמות טורקיז לובשת חלוק מעבדה ומחזיקה כוס מדידה",
-                "src_digest": "sha1:aa8b01adefdef667"
+                "src_digest": "sha1:aa8b01adefdef667",
+                "description": "דמות פרוותית כחולה עם חלוק לבן מחזיקה בקבוק מעבדה וביד השנייה מזרק."
               }
             ],
             "question_rendering": "radio",
@@ -98,7 +100,21 @@
                   "y": 0.404,
                   "w": 0.481,
                   "h": 0.261
-                }
+                },
+                "parts": [
+                  {
+                    "x": 0.259,
+                    "y": 0.404,
+                    "w": 0.231,
+                    "h": 0.261
+                  },
+                  {
+                    "x": 0.509,
+                    "y": 0.404,
+                    "w": 0.231,
+                    "h": 0.261
+                  }
+                ]
               },
               {
                 "region": "image",
@@ -107,16 +123,32 @@
                   "y": 0.412,
                   "w": 0.425,
                   "h": 0.245
-                }
+                },
+                "parts": [
+                  {
+                    "x": 0.288,
+                    "y": 0.412,
+                    "w": 0.175,
+                    "h": 0.245
+                  },
+                  {
+                    "x": 0.538,
+                    "y": 0.412,
+                    "w": 0.175,
+                    "h": 0.245
+                  }
+                ]
               }
             ],
             "capture_viewport": {
               "w": 1280,
-              "h": 860
+              "h": 860,
+              "scroll_w": 1280,
+              "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 3,
-            "captured_at": "2026-08-31T13:20:39Z"
+            "capture_version": 4,
+            "captured_at": "2026-08-31T16:47:35Z"
           }
         },
         {
@@ -181,7 +213,33 @@
                   "y": 0.278,
                   "w": 0.472,
                   "h": 0.256
-                }
+                },
+                "parts": [
+                  {
+                    "x": 0.497,
+                    "y": 0.278,
+                    "w": 0.472,
+                    "h": 0.053
+                  },
+                  {
+                    "x": 0.497,
+                    "y": 0.345,
+                    "w": 0.472,
+                    "h": 0.053
+                  },
+                  {
+                    "x": 0.497,
+                    "y": 0.413,
+                    "w": 0.472,
+                    "h": 0.053
+                  },
+                  {
+                    "x": 0.497,
+                    "y": 0.48,
+                    "w": 0.472,
+                    "h": 0.053
+                  }
+                ]
               },
               {
                 "region": "image",
@@ -195,11 +253,13 @@
             ],
             "capture_viewport": {
               "w": 1280,
-              "h": 860
+              "h": 860,
+              "scroll_w": 1280,
+              "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 3,
-            "captured_at": "2026-08-31T13:20:39Z"
+            "capture_version": 4,
+            "captured_at": "2026-08-31T16:47:35Z"
           }
         },
         {
@@ -640,7 +700,7 @@
       "component_fingerprint": "27c73737006c30ae",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T13:21:08Z",
+        "probed_at": "2026-08-31T13:55:15Z",
         "player_host": "lomdot.education.gov.il",
         "screens_seen": 2,
         "screens_mapped": 2
@@ -761,11 +821,13 @@
             ],
             "capture_viewport": {
               "w": 1280,
-              "h": 860
+              "h": 860,
+              "scroll_w": 1280,
+              "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 3,
-            "captured_at": "2026-08-31T13:21:08Z"
+            "capture_version": 4,
+            "captured_at": "2026-08-31T13:55:15Z"
           }
         },
         {
@@ -818,7 +880,8 @@
               {
                 "kind": "image",
                 "alt": "שחר, עדן ופלג מציגים את תוצאות המדידה",
-                "src_digest": "sha1:95fe1ce5cf81a8bb"
+                "src_digest": "sha1:95fe1ce5cf81a8bb",
+                "description": "שלושה תלמידים במעבדה סביב מאזניים, עם שמות מסומנים למטה: שחור, עדן, פלג."
               }
             ],
             "question_rendering": "radio",
@@ -830,7 +893,33 @@
                   "y": 0.397,
                   "w": 0.472,
                   "h": 0.256
-                }
+                },
+                "parts": [
+                  {
+                    "x": 0.497,
+                    "y": 0.397,
+                    "w": 0.472,
+                    "h": 0.053
+                  },
+                  {
+                    "x": 0.497,
+                    "y": 0.464,
+                    "w": 0.472,
+                    "h": 0.053
+                  },
+                  {
+                    "x": 0.497,
+                    "y": 0.532,
+                    "w": 0.472,
+                    "h": 0.053
+                  },
+                  {
+                    "x": 0.497,
+                    "y": 0.599,
+                    "w": 0.472,
+                    "h": 0.053
+                  }
+                ]
               },
               {
                 "region": "image",
@@ -844,11 +933,13 @@
             ],
             "capture_viewport": {
               "w": 1280,
-              "h": 860
+              "h": 860,
+              "scroll_w": 1280,
+              "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 3,
-            "captured_at": "2026-08-31T13:21:08Z"
+            "capture_version": 4,
+            "captured_at": "2026-08-31T13:55:15Z"
           }
         },
         {
@@ -905,7 +996,7 @@
       "component_fingerprint": "1923774df5662aaa",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T13:21:26Z",
+        "probed_at": "2026-08-31T16:48:13Z",
         "player_host": "lomdot.education.gov.il",
         "screens_seen": 2,
         "screens_mapped": 2
@@ -991,11 +1082,13 @@
             ],
             "capture_viewport": {
               "w": 1280,
-              "h": 860
+              "h": 860,
+              "scroll_w": 1280,
+              "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 3,
-            "captured_at": "2026-08-31T13:21:26Z"
+            "capture_version": 4,
+            "captured_at": "2026-08-31T16:48:13Z"
           }
         },
         {
@@ -1076,12 +1169,14 @@
               {
                 "kind": "image",
                 "alt": "מאזניים",
-                "src_digest": "sha1:8295f8ce6134f665"
+                "src_digest": "sha1:8295f8ce6134f665",
+                "description": "משקל דיגיטלי כחול עם פלטה מתכתית, תצוגה שמראה 00.00 וכפתור מסומן ״איפוס״."
               },
               {
                 "kind": "image",
                 "alt": "כוס כימית",
-                "src_digest": "sha1:b8179ae53e65b8f0"
+                "src_digest": "sha1:b8179ae53e65b8f0",
+                "description": "כוס מדידה שקופה עם ידית וסימוני נפח."
               }
             ],
             "question_rendering": "drag",
@@ -1093,16 +1188,32 @@
                   "y": 0.17,
                   "w": 0.363,
                   "h": 0.641
-                }
+                },
+                "parts": [
+                  {
+                    "x": 0.02,
+                    "y": 0.17,
+                    "w": 0.363,
+                    "h": 0.54
+                  },
+                  {
+                    "x": 0.09,
+                    "y": 0.634,
+                    "w": 0.119,
+                    "h": 0.177
+                  }
+                ]
               }
             ],
             "capture_viewport": {
               "w": 1280,
-              "h": 860
+              "h": 860,
+              "scroll_w": 1280,
+              "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 3,
-            "captured_at": "2026-08-31T13:21:26Z"
+            "capture_version": 4,
+            "captured_at": "2026-08-31T16:48:13Z"
           }
         },
         {
@@ -1279,7 +1390,7 @@
       "component_fingerprint": "dbbb5e102dcfc2e0",
       "extraction": {
         "verdict": "extracted",
-        "probed_at": "2026-08-31T13:21:46Z",
+        "probed_at": "2026-08-31T17:00:20Z",
         "player_host": "lomdot.education.gov.il",
         "screens_seen": 3,
         "screens_mapped": 1
@@ -1449,17 +1560,20 @@
               {
                 "kind": "image",
                 "alt": "בקבוק משקה תוסס",
-                "src_digest": "sha1:29dc6134bf693e7e"
+                "src_digest": "sha1:29dc6134bf693e7e",
+                "description": "בקבוק פלסטיק שקוף עם מכסה אדום, מלא חלקית במשקה כהה."
               },
               {
                 "kind": "image",
                 "alt": "צינורית",
-                "src_digest": "sha1:94e0487263d6b908"
+                "src_digest": "sha1:94e0487263d6b908",
+                "description": "צינור שקוף כפוף בצורת U, ללא סימונים או טקסט."
               },
               {
                 "kind": "image",
                 "alt": "מיכל איסוף ריק",
-                "src_digest": "sha1:1b396bf30ac35e6f"
+                "src_digest": "sha1:1b396bf30ac35e6f",
+                "description": "בקבוק זכוכית מדורג עם פקק שחור, כיתוב GAS COLLECTION JAR וסרגל מדידה במיליליטרים."
               }
             ],
             "question_rendering": "none",
@@ -1471,16 +1585,38 @@
                   "y": 0.383,
                   "w": 0.516,
                   "h": 0.314
-                }
+                },
+                "parts": [
+                  {
+                    "x": 0.453,
+                    "y": 0.383,
+                    "w": 0.141,
+                    "h": 0.314
+                  },
+                  {
+                    "x": 0.641,
+                    "y": 0.383,
+                    "w": 0.141,
+                    "h": 0.314
+                  },
+                  {
+                    "x": 0.828,
+                    "y": 0.383,
+                    "w": 0.141,
+                    "h": 0.314
+                  }
+                ]
               }
             ],
             "capture_viewport": {
               "w": 1280,
-              "h": 860
+              "h": 860,
+              "scroll_w": 1280,
+              "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 3,
-            "captured_at": "2026-08-31T13:21:46Z"
+            "capture_version": 4,
+            "captured_at": "2026-08-31T17:00:20Z"
           }
         }
       ]

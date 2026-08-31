@@ -13,7 +13,7 @@
       "component_fingerprint": "5bfcc764f96edea2",
       "extraction": {
         "verdict": "partial",
-        "probed_at": "2026-08-31T13:22:06Z",
+        "probed_at": "2026-08-31T17:11:10Z",
         "player_host": "lomdot.education.gov.il",
         "screens_seen": 5,
         "screens_mapped": 5
@@ -100,7 +100,21 @@
                   "y": 0.345,
                   "w": 0.541,
                   "h": 0.324
-                }
+                },
+                "parts": [
+                  {
+                    "x": 0.23,
+                    "y": 0.345,
+                    "w": 0.231,
+                    "h": 0.324
+                  },
+                  {
+                    "x": 0.539,
+                    "y": 0.345,
+                    "w": 0.231,
+                    "h": 0.324
+                  }
+                ]
               },
               {
                 "region": "video",
@@ -109,16 +123,32 @@
                   "y": 0.349,
                   "w": 0.536,
                   "h": 0.317
-                }
+                },
+                "parts": [
+                  {
+                    "x": 0.232,
+                    "y": 0.349,
+                    "w": 0.227,
+                    "h": 0.317
+                  },
+                  {
+                    "x": 0.541,
+                    "y": 0.349,
+                    "w": 0.227,
+                    "h": 0.317
+                  }
+                ]
               }
             ],
             "capture_viewport": {
               "w": 1280,
-              "h": 860
+              "h": 860,
+              "scroll_w": 1280,
+              "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 3,
-            "captured_at": "2026-08-31T13:22:06Z"
+            "capture_version": 4,
+            "captured_at": "2026-08-31T17:11:10Z"
           }
         },
         {
@@ -174,7 +204,8 @@
               {
                 "kind": "image",
                 "alt": "שתי תיבות — אחת עם אוצר, אחת ריקה",
-                "src_digest": "sha1:32fe1e322deea7ae"
+                "src_digest": "sha1:32fe1e322deea7ae",
+                "description": "מאזניים עם שני ארגזים/תיבות, אחת גדולה ואחת קטנה, וליד כל אחת תווית \"10kg\"."
               }
             ],
             "question_rendering": "radio",
@@ -186,7 +217,33 @@
                   "y": 0.463,
                   "w": 0.472,
                   "h": 0.302
-                }
+                },
+                "parts": [
+                  {
+                    "x": 0.497,
+                    "y": 0.463,
+                    "w": 0.472,
+                    "h": 0.065
+                  },
+                  {
+                    "x": 0.497,
+                    "y": 0.542,
+                    "w": 0.472,
+                    "h": 0.065
+                  },
+                  {
+                    "x": 0.497,
+                    "y": 0.621,
+                    "w": 0.472,
+                    "h": 0.065
+                  },
+                  {
+                    "x": 0.497,
+                    "y": 0.7,
+                    "w": 0.472,
+                    "h": 0.065
+                  }
+                ]
               },
               {
                 "region": "image",
@@ -200,11 +257,13 @@
             ],
             "capture_viewport": {
               "w": 1280,
-              "h": 860
+              "h": 860,
+              "scroll_w": 1280,
+              "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 3,
-            "captured_at": "2026-08-31T13:22:06Z"
+            "capture_version": 4,
+            "captured_at": "2026-08-31T17:11:10Z"
           }
         },
         {
@@ -257,7 +316,8 @@
               {
                 "kind": "image",
                 "alt": "שתי תיבות — אחת עם אוצר, אחת ריקה",
-                "src_digest": "sha1:32fe1e322deea7ae"
+                "src_digest": "sha1:32fe1e322deea7ae",
+                "description": "מאזניים מאוזנים עם תיבה גדולה משמאל ותיבה קטנה מימין, ולשתי הצלחות תגיות \"10kg\"."
               }
             ],
             "question_rendering": "radio",
@@ -269,7 +329,33 @@
                   "y": 0.463,
                   "w": 0.472,
                   "h": 0.3
-                }
+                },
+                "parts": [
+                  {
+                    "x": 0.497,
+                    "y": 0.463,
+                    "w": 0.472,
+                    "h": 0.065
+                  },
+                  {
+                    "x": 0.497,
+                    "y": 0.542,
+                    "w": 0.472,
+                    "h": 0.065
+                  },
+                  {
+                    "x": 0.497,
+                    "y": 0.621,
+                    "w": 0.472,
+                    "h": 0.065
+                  },
+                  {
+                    "x": 0.497,
+                    "y": 0.7,
+                    "w": 0.472,
+                    "h": 0.063
+                  }
+                ]
               },
               {
                 "region": "image",
@@ -283,11 +369,13 @@
             ],
             "capture_viewport": {
               "w": 1280,
-              "h": 860
+              "h": 860,
+              "scroll_w": 1280,
+              "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 3,
-            "captured_at": "2026-08-31T13:22:06Z"
+            "capture_version": 4,
+            "captured_at": "2026-08-31T17:11:10Z"
           }
         },
         {
@@ -355,7 +443,33 @@
                   "y": 0.463,
                   "w": 0.472,
                   "h": 0.298
-                }
+                },
+                "parts": [
+                  {
+                    "x": 0.497,
+                    "y": 0.463,
+                    "w": 0.472,
+                    "h": 0.063
+                  },
+                  {
+                    "x": 0.497,
+                    "y": 0.54,
+                    "w": 0.472,
+                    "h": 0.065
+                  },
+                  {
+                    "x": 0.497,
+                    "y": 0.619,
+                    "w": 0.472,
+                    "h": 0.065
+                  },
+                  {
+                    "x": 0.497,
+                    "y": 0.698,
+                    "w": 0.472,
+                    "h": 0.063
+                  }
+                ]
               },
               {
                 "region": "image",
@@ -369,11 +483,13 @@
             ],
             "capture_viewport": {
               "w": 1280,
-              "h": 860
+              "h": 860,
+              "scroll_w": 1280,
+              "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 3,
-            "captured_at": "2026-08-31T13:22:06Z"
+            "capture_version": 4,
+            "captured_at": "2026-08-31T17:11:10Z"
           }
         },
         {
@@ -431,7 +547,8 @@
               {
                 "kind": "image",
                 "alt": "מזוודה",
-                "src_digest": "sha1:deb299adaa1d2174"
+                "src_digest": "sha1:deb299adaa1d2174",
+                "description": "מזוודת טרולי כחולה עומדת על רצפה, עם ידית טלסקופית וגלגלים, מול קיר בהיר."
               }
             ],
             "question_rendering": "none",
@@ -443,7 +560,21 @@
                   "y": 0.41,
                   "w": 0.581,
                   "h": 0.371
-                }
+                },
+                "parts": [
+                  {
+                    "x": 0.541,
+                    "y": 0.41,
+                    "w": 0.249,
+                    "h": 0.371
+                  },
+                  {
+                    "x": 0.209,
+                    "y": 0.41,
+                    "w": 0.249,
+                    "h": 0.371
+                  }
+                ]
               },
               {
                 "region": "instruction",
@@ -457,11 +588,13 @@
             ],
             "capture_viewport": {
               "w": 1280,
-              "h": 860
+              "h": 860,
+              "scroll_w": 1280,
+              "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 3,
-            "captured_at": "2026-08-31T13:22:06Z"
+            "capture_version": 4,
+            "captured_at": "2026-08-31T17:11:10Z"
           }
         },
         {
@@ -894,11 +1027,11 @@
       "kata_updated_at": "2026-08-16T19:26:07.075508Z",
       "component_fingerprint": "9b6df7a286c59a57",
       "extraction": {
-        "verdict": "partial",
-        "probed_at": "2026-08-31T13:23:09Z",
-        "player_host": "lomdot.education.gov.il",
-        "screens_seen": 2,
-        "screens_mapped": 2
+        "verdict": "launch_404",
+        "probed_at": "2026-08-31T14:25:15Z",
+        "player_host": "",
+        "screens_seen": 0,
+        "screens_mapped": 0
       },
       "texts": {
         "lesson_welcome": {
@@ -981,11 +1114,13 @@
             ],
             "capture_viewport": {
               "w": 1280,
-              "h": 860
+              "h": 860,
+              "scroll_w": 1280,
+              "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 3,
-            "captured_at": "2026-08-31T13:23:09Z"
+            "capture_version": 4,
+            "captured_at": "2026-08-31T14:12:17Z"
           }
         },
         {
@@ -1058,11 +1193,13 @@
             ],
             "capture_viewport": {
               "w": 1280,
-              "h": 860
+              "h": 860,
+              "scroll_w": 1280,
+              "scroll_h": 860
             },
             "no_internal_scroll": true,
-            "capture_version": 3,
-            "captured_at": "2026-08-31T13:23:09Z"
+            "capture_version": 4,
+            "captured_at": "2026-08-31T14:12:17Z"
           }
         },
         {
