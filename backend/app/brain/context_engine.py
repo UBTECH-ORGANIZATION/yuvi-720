@@ -320,7 +320,12 @@ _DRIVER_HINTS = {
 
 
 def _movement_lines(drivers: Any, locale: str, lesson_title) -> list[str]:
-    """One line per domain that moved: the domain, what drove it, and where."""
+    """One line per domain that moved: the domain, what drove it, and where.
+
+    The raw counts ride along. Without them the coach can only repeat the same
+    sentence the card already showed, and a learner asking "but why?" gets the
+    answer they just read back at them.
+    """
     lang = locale if locale in {"he", "ar", "en"} else "he"
     from app.agents.competency_coach import _COMPETENCY_NAMES
 
@@ -333,6 +338,16 @@ def _movement_lines(drivers: Any, locale: str, lesson_title) -> list[str]:
         if not hint or not name:
             continue
         line = f"{name.get(lang, name['he'])}: {hint[lang]}"
+        facts = row.get("facts")
+        if isinstance(facts, dict):
+            parts = [
+                f"{field}: {facts[field]} (was {facts[f'{field}_prior']})"
+                if f"{field}_prior" in facts else f"{field}: {facts[field]}"
+                for field in facts
+                if not field.endswith("_prior")
+            ]
+            if parts:
+                line += f" [{', '.join(parts)}]"
         lesson = lesson_title(row["objective_id"], lang) if row.get("objective_id") else ""
         if lesson:
             line += f" ({lesson})"

@@ -217,7 +217,15 @@ export interface DashboardDTO {
      * it pushed. Unlike `improve` this includes what went well, so a domain that
      * rose has a real behaviour to name. `lesson` is present only where the
      * signal is lesson-shaped. */
-    drivers?: { tag: string; dir: 'up' | 'down'; lesson?: string }[]
+    drivers?: {
+        tag: string
+        dir: 'up' | 'down'
+        lesson?: string
+        /** This week's counts behind the cause, each paired with `<field>_prior`
+         *  from a week earlier. Lets the card pick wording that matches what
+         *  actually happened rather than one sentence per cause. */
+        facts?: Record<string, number>
+    }[]
     /** True only when there's enough real activity to explain *why* this domain
      * sits where it does. The activeness map gates its change arrow on this, so
      * it never shows a movement it can't ground in evidence. */

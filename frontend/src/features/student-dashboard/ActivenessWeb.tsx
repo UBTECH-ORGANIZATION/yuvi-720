@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import { animate, stagger, svg } from 'animejs'
 import { Icon } from '../../components/primitives'
 import { useCompanion } from '../../providers/CompanionProvider'
+import { variantFor } from './driverVariants'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useMediaQuery } from '../../hooks/useResponsive'
 import { getLearnerState, updateLearnerState } from '../../services/api'
@@ -209,7 +210,11 @@ export function ActivenessWeb({ competencies }: ActivenessWebProps) {
         (a.drivers ?? []).find((d) => d.dir === a.dir && DRIVER_TAGS.has(d.tag)) ?? null
     const whyFor = (a: Axis) => {
         const driver = driverFor(a)
-        return driver ? t(`actmap.why.${driver.tag}.${driver.dir}`) : t('actmap.change.fallback')
+        if (!driver) return t('actmap.change.fallback')
+        const variant = variantFor(driver.tag, driver.dir, driver.facts)
+        return variant
+            ? t(`actmap.why.${driver.tag}.${driver.dir}.${variant}`)
+            : t(`actmap.why.${driver.tag}.${driver.dir}`)
     }
 
     // The single domain worth focusing on now — the lowest level (unless a domain

@@ -206,7 +206,9 @@ def _metrics(
         "failures": failures,
         "success_rate": (successes / (successes + failures)) if (successes + failures) else None,
         "guess_rate": (guesses / timed) if timed else None,
+        "guesses": guesses,
         "failed_objs": failed_objs,
+        "recovered_objs": recovered_objs,
         "recovery_rate": (recovered_objs / failed_objs) if failed_objs else None,
         "review_ratio": review_ratio,
         "avg_streak": avg_streak,
@@ -325,12 +327,42 @@ def _attribute(tag: str, direction: str, per_obj: dict[str, dict[str, Any]]) -> 
     return None
 
 
+# The raw counts behind each cause, so the card and the coach can say what
+# actually happened this week instead of repeating one canned sentence per tag.
+_TAG_FACTS: dict[str, tuple[str, ...]] = {
+    "inconsistent": ("active_days",),
+    "low_engagement": ("completions", "objectives"),
+    "quits_on_fail": ("failed_objs", "recovered_objs"),
+    "hint_reliance": ("n_hint",),
+    "guessing": ("guesses",),
+    "low_reflection": ("reflections",),
+    "isolation": ("n_hint", "failures"),
+}
+
+
+def _facts(tag: str, m: dict, prior: dict) -> dict[str, int]:
+    """This week's counts for a cause, paired with the same counts a week ago.
+
+    Both ends travel together: "two days" means nothing to a learner until it
+    sits next to the five they managed last week.
+    """
+    out: dict[str, int] = {}
+    for field in _TAG_FACTS.get(tag, ()):
+        now, then = m.get(field), prior.get(field)
+        if isinstance(now, (int, float)) and not isinstance(now, bool):
+            out[field] = int(now)
+        if isinstance(then, (int, float)) and not isinstance(then, bool):
+            out[f"{field}_prior"] = int(then)
+    return out
+
+
 def _drivers(
     contribs: list[tuple[str, float]],
     prior_contribs: list[tuple[str, float]],
     conf: float,
-    per_obj: Optional[dict[str, dict[str, Any]]] = None,
-) -> list[dict[str, str]]:
+    m: dict,
+    prior: dict,
+) -> list[dict[str, Any]]:
     """What CHANGED in this domain since last week, strongest first.
 
     Deliberately not the current state. A domain can dip while every signal is
@@ -352,15 +384,19 @@ def _drivers(
         tag: now_agg.get(tag, 0.0) - then_agg.get(tag, 0.0)
         for tag in set(now_agg) | set(then_agg)
     }
-    out: list[dict[str, str]] = []
+    per_obj = m.get("per_obj") or {}
+    out: list[dict[str, Any]] = []
     for tag, delta in sorted(moved.items(), key=lambda x: -abs(x[1])):
         if abs(delta) < MOVED_POINTS:
             continue
         direction = "up" if delta > 0 else "down"
-        entry = {"tag": tag, "dir": direction}
-        objective_id = _attribute(tag, direction, per_obj or {})
+        entry: dict[str, Any] = {"tag": tag, "dir": direction}
+        objective_id = _attribute(tag, direction, per_obj)
         if objective_id:
             entry["objective_id"] = objective_id
+        facts = _facts(tag, m, prior)
+        if facts:
+            entry["facts"] = facts
         out.append(entry)
     return out
 
@@ -419,7 +455,7 @@ def effective_activeness(
             "delta": round(delta, 1),
             "confidence": round(conf, 2),
             "causes": _cause_tags(key, contribs, value, conf),
-            "drivers": [] if blind else _drivers(contribs, prior_contribs, conf, m.get("per_obj")),
+            "drivers": [] if blind else _drivers(contribs, prior_contribs, conf, m, prior),
             "prior_value": value if blind else prior_value,
         }
     return out

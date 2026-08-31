@@ -25,6 +25,7 @@ from app.brain.activeness import (  # noqa: E402
     MAX_DRIFT,
     MIN_CAUSE_CONF,
     WINDOW_DAYS,
+    _TAG_FACTS,
     effective_activeness,
 )
 
@@ -444,6 +445,46 @@ def test_a_beginner_is_not_mistaken_for_a_gap():
     d = _dom(_brain(), "motivation_relevance", events)
     assert d["prior_value"] < d["value"]
     assert any(x["dir"] == "up" for x in d["drivers"])
+
+
+# ── Driver facts — the counts that make an explanation specific ──────────────
+def test_a_driver_carries_the_counts_behind_it():
+    """A tag alone can only ever produce one sentence per cause. The counts are
+    what let the card and the coach describe THIS learner's week."""
+    events = [_ev(verb="completed", obj=f"o{d}", days_ago=d) for d in range(22, 28)]
+    events += [_ev(obj=f"o{d}", days_ago=d) for d in range(22, 28)]
+    events += [_ev(verb="completed", obj="now", days_ago=1) for _ in range(4)]
+    d = _dom(_brain(), "motivation_relevance", events)
+    facts = next((x.get("facts") for x in d["drivers"] if x["tag"] == "inconsistent"), None)
+    assert facts, "a driver with no counts leaves every learner the same sentence"
+    assert "active_days" in facts and "active_days_prior" in facts
+    assert facts["active_days"] != facts["active_days_prior"], "a diff that shows no diff"
+
+
+def test_two_learners_with_the_same_tag_get_different_counts():
+    """The whole point: same cause, different week, different explanation."""
+    quiet = [_ev(obj="o1", days_ago=d) for d in range(22, 28)]
+    quiet += [_ev(obj="o1", days_ago=1)]
+    busy = [_ev(obj="o1", days_ago=d) for d in range(22, 28)]
+    busy += [_ev(obj=f"o{d}", days_ago=d) for d in range(0, 5) for _ in range(3)]
+
+    def days(events):
+        drivers = _dom(_brain(), "motivation_relevance", events)["drivers"]
+        row = next((x for x in drivers if x["tag"] == "inconsistent"), None)
+        return (row or {}).get("facts", {}).get("active_days")
+
+    assert days(quiet) != days(busy)
+
+
+def test_facts_never_leak_a_field_the_cause_does_not_use():
+    """Facts are prompt material for the coach, so each cause carries only the
+    counts it is actually about — not a dump of every metric."""
+    events = [_ev(verb="completed", obj=f"o{i}", days_ago=i) for i in range(6)]
+    for key in COMPETENCY_KEYS:
+        for driver in _dom(_brain(), key, events)["drivers"]:
+            allowed = set(_TAG_FACTS.get(driver["tag"], ()))
+            allowed |= {f"{f}_prior" for f in allowed}
+            assert set(driver.get("facts", {})) <= allowed
 
 
 def test_prior_value_exists_even_with_no_activity_at_all():
