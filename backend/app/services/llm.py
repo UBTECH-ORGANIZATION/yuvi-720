@@ -164,6 +164,7 @@ async def call_llm(
     error = None
     status = "failed"
     usage = None
+    finish_reason = None
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.post(url, json=body, headers=headers)
@@ -171,7 +172,9 @@ async def call_llm(
                 data = response.json()
                 usage = token_usage_from_payload(data.get("usage"))
                 status = "completed"
-                message = (data.get("choices") or [{}])[0].get("message", {}) or {}
+                choice = (data.get("choices") or [{}])[0]
+                finish_reason = choice.get("finish_reason")
+                message = choice.get("message", {}) or {}
                 if tools:
                     # A tool turn legitimately has `content: null`, so emptiness
                     # is not a failure here — the caller inspects `tool_calls`.
@@ -218,6 +221,7 @@ async def call_llm(
             provider_request=provider_request_id(response.headers) if response is not None else None,
             error=error,
             model_tier=model_tier,
+            finish_reason=finish_reason,
         )
 
 
@@ -316,6 +320,8 @@ async def call_llm_stream_tools(
     usage = None
     provider_request = None
     error = None
+    finish_reason = None
+    stream_termination = None
     text_parts: list[str] = []
     tool_calls: dict[int, dict] = {}
     try:
@@ -332,13 +338,17 @@ async def call_llm_stream_tools(
                     data_str = line[6:]
                     if data_str == "[DONE]":
                         status = "completed"
+                        stream_termination = "done"
                         break
                     try:
                         chunk = json.loads(data_str)
                         chunk_usage = token_usage_from_payload(chunk.get("usage"))
                         if chunk_usage is not None:
                             usage = chunk_usage
-                        delta = (chunk.get("choices") or [{}])[0].get("delta", {}) or {}
+                        choice = (chunk.get("choices") or [{}])[0]
+                        if choice.get("finish_reason") is not None:
+                            finish_reason = choice.get("finish_reason")
+                        delta = choice.get("delta", {}) or {}
                         content = delta.get("content")
                         if content:
                             text_parts.append(content)
@@ -348,7 +358,8 @@ async def call_llm_stream_tools(
                     except (json.JSONDecodeError, IndexError, KeyError):
                         continue
                 else:
-                    status = "completed"
+                    status = "failed"
+                    stream_termination = "eof"
         if status == "completed":
             message: dict = {"role": "assistant", "content": "".join(text_parts) or None}
             if tool_calls:
@@ -378,6 +389,8 @@ async def call_llm_stream_tools(
             provider_request=provider_request,
             error=error,
             model_tier=model_tier,
+            finish_reason=finish_reason,
+            stream_termination=stream_termination,
         ))
         try:
             await asyncio.shield(write)
@@ -430,6 +443,8 @@ async def call_llm_stream(
     usage = None
     provider_request = None
     error = None
+    finish_reason = None
+    stream_termination = None
     try:
         async with httpx.AsyncClient(timeout=60) as client:
             async with client.stream("POST", url, json=body, headers=headers) as response:
@@ -444,20 +459,25 @@ async def call_llm_stream(
                     data_str = line[6:]
                     if data_str == "[DONE]":
                         status = "completed"
+                        stream_termination = "done"
                         break
                     try:
                         chunk = json.loads(data_str)
                         chunk_usage = token_usage_from_payload(chunk.get("usage"))
                         if chunk_usage is not None:
                             usage = chunk_usage
-                        delta = (chunk.get("choices") or [{}])[0].get("delta", {})
+                        choice = (chunk.get("choices") or [{}])[0]
+                        if choice.get("finish_reason") is not None:
+                            finish_reason = choice.get("finish_reason")
+                        delta = choice.get("delta", {})
                         content = delta.get("content")
                         if content:
                             yield content
                     except (json.JSONDecodeError, IndexError, KeyError):
                         continue
                 else:
-                    status = "completed"
+                    status = "failed"
+                    stream_termination = "eof"
     except asyncio.CancelledError as exc:
         error = exc
         status = "cancelled"
@@ -482,6 +502,8 @@ async def call_llm_stream(
             provider_request=provider_request,
             error=error,
             model_tier=model_tier,
+            finish_reason=finish_reason,
+            stream_termination=stream_termination,
         ))
         try:
             await asyncio.shield(write)

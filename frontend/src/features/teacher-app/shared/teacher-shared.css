@@ -353,7 +353,8 @@
    at the end of the document, outside `.tch-stats` entirely. */
 .tch-stats,
 .tch-donut,
-.tch-moodKey {
+.tch-moodKey,
+.tch-moodDlg {
   --tch-mood-great:  #0e9b6c;   /* deep green   — מצוין */
   --tch-mood-good:   #63ac4a;   /* leaf green   — טוב   */
   --tch-mood-okay:   #7c839c;   /* slate        — בסדר  */
@@ -365,7 +366,8 @@
    read as five distinct families. Same order, same direction. */
 [data-theme='dark'] .tch-stats,
 [data-theme='dark'] .tch-donut,
-[data-theme='dark'] .tch-moodKey {
+[data-theme='dark'] .tch-moodKey,
+[data-theme='dark'] .tch-moodDlg {
   --tch-mood-great:  #35c795;
   --tch-mood-good:   #86ce6b;
   --tch-mood-okay:   #9aa4c4;
@@ -1165,4 +1167,29 @@
   /* Never in the way of the title: on a narrow column the heading wraps under
      it rather than colliding with it. */
   pointer-events: none;
+}
+
+/* ── the real "למה?" on a gap row (#507) ───────────────────────────────────
+   Three folded reads and a composed recommendation; the raw evidence keeps
+   its place at the bottom — the diagnosis interprets, C4 discloses. */
+.tch-why {
+  grid-column: 1 / -1;
+  inline-size: 100%;
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-bg);
+}
+.tch-why__loading, .tch-why__none {
+  margin: 0;
+  color: var(--sp-ink-500);
+  font-size: var(--sp-fs-sm);
+}
+.tch-why__body { display: grid; gap: var(--sp-2); justify-items: start; }
+.tch-why__text {
+  margin: 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-ink-900);
+  line-height: 1.55;
 }

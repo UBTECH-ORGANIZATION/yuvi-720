@@ -419,6 +419,74 @@ class RehydrateTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(await presence.rehydrate(), 0)
 
 
+class StaleHandTest(unittest.IsolatedAsyncioTestCase):
+    """A raised hand is a "right now" claim. The durable alert in the teacher's
+    inbox is what survives the moment — the live strip must not wave a hand from
+    days ago, and lowering one must reach the persisted row even when this
+    process never saw the raise (that exact pair once made a wave permanent)."""
+
+    async def asyncSetUp(self):
+        presence.reset_for_tests()
+        realtime.reset_for_tests()
+        self._collection = patch("app.brain.repository._get_collection_named", return_value=None)
+        self._collection.start()
+        self._teachers = patch("app.brain.org.teachers_for_learner",
+                               new=AsyncMock(return_value=[]))
+        self._teachers.start()
+
+    async def asyncTearDown(self):
+        self._collection.stop()
+        self._teachers.stop()
+
+    @staticmethod
+    def _ago(**delta) -> str:
+        return (datetime.now(timezone.utc) - timedelta(**delta)).isoformat()
+
+    def _stored(self, raised_at: str) -> dict:
+        return {
+            "_id": "kid", "learner_id": "kid",
+            "status": presence.STATUS_OFFLINE, "connections": 0,
+            "last_seen_at": self._ago(minutes=30),
+            "help_requested_at": raised_at,
+        }
+
+    async def test_a_hand_from_days_ago_is_not_still_waving(self):
+        row = presence._merged("kid", self._stored(self._ago(days=6)))
+        self.assertIsNone(row["help_requested_at"])
+
+    async def test_a_recent_hand_in_a_stored_row_still_shows(self):
+        raised_at = self._ago(minutes=10)
+        row = presence._merged("kid", self._stored(raised_at))
+        self.assertEqual(row["help_requested_at"], raised_at)
+
+    async def test_a_fresh_local_hand_is_untouched_by_the_cap(self):
+        presence.note_help_requested("kid")
+        row = presence._merged("kid", None)
+        self.assertIsNotNone(row["help_requested_at"])
+
+    async def test_clearing_a_hand_this_process_never_saw_still_writes_through(self):
+        """The stale copy may live only in the persisted row — another worker's
+        raise, or our own clear's best-effort persist having failed once. An
+        early return on "already lowered here" leaves a hand nothing can ever
+        lower again."""
+        recorder = _RecordingCollection()
+        with patch("app.brain.repository._get_collection_named", return_value=recorder):
+            presence.clear_help_requested("kid")
+            await asyncio.sleep(0)
+        self.assertTrue(recorder.updates, "the clear never reached the store")
+        query, update = recorder.updates[-1]
+        self.assertEqual(query, {"_id": "kid"})
+        self.assertIsNone(update["$set"]["help_requested_at"])
+
+
+class _RecordingCollection:
+    def __init__(self):
+        self.updates: list[tuple[dict, dict]] = []
+
+    async def update_one(self, query, update, upsert=False):
+        self.updates.append((query, update))
+
+
 class SurfaceSignalTest(unittest.IsolatedAsyncioTestCase):
     """The learner's own client reports where it is. Advisory by design: it may
     place a child in the studio or on their dashboard, but it must never be able

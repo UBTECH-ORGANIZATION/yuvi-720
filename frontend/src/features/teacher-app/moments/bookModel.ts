@@ -92,30 +92,55 @@ export interface BookEdition {
    would recognise — and midnight here means the teacher's own, which is why
    this is computed on the client and not on the server.
 
-   The key is the day the edition was made rather than the window it covers.
-   Trailing editions roll forward daily, so this is what makes the gift
-   ceremony once per class per day: switching period does not re-wrap a book
-   already opened this morning. */
+   The key is the edition's identity — a new key is what re-wraps the gift.
+   Rolling editions change content daily, so their key is the day they were
+   made; the weekly edition changes content once a week, so its key is the
+   week itself — a book that re-wrapped every morning while its pages stayed
+   identical would be a ceremony about nothing. Either way, switching period
+   does not re-wrap a book already opened. */
 export function bookEdition(days: number, now: Date = new Date()): BookEdition {
   const span = Math.max(1, Math.round(days))
   const midnight = new Date(now)
   midnight.setHours(0, 0, 0, 0)
 
-  // The current period is today plus the `span - 1` days before it; this
-  // edition is the `span` days before that.
-  const start = new Date(midnight)
-  start.setDate(start.getDate() - (2 * span - 1))
-  const end = new Date(midnight)
-  end.setDate(end.getDate() - (span - 1))
+  const two = (value: number) => String(value).padStart(2, '0')
+  const stamp = (date: Date) => `${two(date.getDate())}/${two(date.getMonth() + 1)}`
+  const dayKey = (date: Date) =>
+    `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}`
+
+  let start: Date
+  let end: Date
+  let key: string
+  if (span === 7) {
+    /* "בשבוע שעבר" is a promise about the CALENDAR, and here the calendar is
+       Israeli: weeks run Sunday to Saturday. So the weekly book is the last
+       COMPLETED Sun–Sat week — on a Sunday morning it advances to the week
+       that ended yesterday, and it holds that window all week long (Gal,
+       2026-08-30). A rolling seven-day cut, one day newer every morning,
+       matched the label on no day of the week but Sunday. */
+    const weekStart = new Date(midnight)
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay())
+    start = new Date(weekStart)
+    start.setDate(start.getDate() - 7)
+    end = weekStart
+    key = dayKey(start)
+  } else {
+    // The current period is today plus the `span - 1` days before it; this
+    // edition is the `span` days before that.
+    start = new Date(midnight)
+    start.setDate(start.getDate() - (2 * span - 1))
+    end = new Date(midnight)
+    end.setDate(end.getDate() - (span - 1))
+    key = dayKey(midnight)
+  }
+
   // The cover names the last day INSIDE the window, not the exclusive edge —
   // stamping the morning after as the closing date reads as an error.
   const lastDay = new Date(end)
   lastDay.setDate(lastDay.getDate() - 1)
 
-  const two = (value: number) => String(value).padStart(2, '0')
-  const stamp = (date: Date) => `${two(date.getDate())}/${two(date.getMonth() + 1)}`
   return {
-    key: `${midnight.getFullYear()}-${two(midnight.getMonth() + 1)}-${two(midnight.getDate())}`,
+    key,
     // A one-day edition is one date. "25/08-25/08" says the same thing twice
     // and reads as a broken range.
     label: span === 1 ? stamp(start) : `${stamp(start)}-${stamp(lastDay)}`,

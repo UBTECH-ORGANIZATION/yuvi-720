@@ -23,7 +23,19 @@ export default defineConfig({
   plugins: [react(), learnerMappingFullReload()],
   build: {
     outDir: '../static/react',
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        /* Several lazy surfaces share these libraries. Naming them keeps one
+           cached copy instead of a duplicate inside every chunk that imports
+           them, and keeps a Three.js upgrade from invalidating app code. */
+        manualChunks(id) {
+          if (id.includes('node_modules/three/')) return 'three'
+          if (id.includes('node_modules/katex/')) return 'katex'
+          return undefined
+        },
+      },
+    },
   },
   server: {
     port: 5173,

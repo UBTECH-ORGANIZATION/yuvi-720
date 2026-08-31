@@ -61,10 +61,11 @@ test('the plan is deterministic — the same book always wears the same pictures
 })
 
 test('the book is about the period that FINISHED, not the one in progress', () => {
-  // Read on Tue 25/08. The weekly edition is the seven days before the seven
-  // running now: 12/08–18/08, not "last calendar week".
+  // Read on Tue 25/08. "בשבוע שעבר" is a calendar promise, and the calendar
+  // here is Israeli (Sun–Sat) — so the weekly edition is the last COMPLETED
+  // week, 16/08–22/08, and it holds that window until Sunday (Gal, 2026-08-30).
   const week = bookEdition(7, new Date(2026, 7, 25))
-  assert.equal(week.label, '12/08-18/08')
+  assert.equal(week.label, '16/08-22/08')
   assert.equal(week.days, 7)
 
   // A day's book is yesterday, and one date rather than a range said twice.
@@ -77,31 +78,37 @@ test('the book is about the period that FINISHED, not the one in progress', () =
   assert.equal(bookEdition(30, new Date(2026, 7, 25)).label, '27/06-26/07')
 })
 
-test('the edition rolls forward daily, and its key is the day it was made', () => {
-  // Trailing windows move every day — that is what the teacher chose over
-  // calendar anchoring — so consecutive days are different editions.
-  assert.equal(bookEdition(7, new Date(2026, 7, 25)).key, '2026-08-25')
-  assert.equal(bookEdition(7, new Date(2026, 7, 26)).key, '2026-08-26')
+test('the weekly edition advances on Sunday, rolling editions every day', () => {
+  // The weekly book keeps its window (and its key — no re-wrapped gift for
+  // identical pages) all week long…
+  assert.equal(bookEdition(7, new Date(2026, 7, 25)).key, '2026-08-16')
+  assert.equal(bookEdition(7, new Date(2026, 7, 29)).key, '2026-08-16')
+  // …and turns over exactly when a new Israeli week begins.
+  assert.equal(bookEdition(7, new Date(2026, 7, 30)).key, '2026-08-23')
+  assert.equal(bookEdition(7, new Date(2026, 7, 30)).label, '23/08-29/08')
+
+  // Rolling periods still move every day — a new edition each morning.
   assert.notEqual(
-    bookEdition(7, new Date(2026, 7, 25)).label,
-    bookEdition(7, new Date(2026, 7, 26)).label,
+    bookEdition(3, new Date(2026, 7, 25)).label,
+    bookEdition(3, new Date(2026, 7, 26)).label,
   )
-  // The key is the DAY, not the period: switching period must not hand a
-  // teacher a second present for a book they already opened this morning.
+  // For rolling periods the key is the DAY, not the period: switching between
+  // them must not hand a teacher a second present for a book they already
+  // opened this morning.
   const day = new Date(2026, 7, 25)
   assert.equal(bookEdition(1, day).key, bookEdition(30, day).key)
 })
 
 test('the pages come from the window the cover names, and nowhere else', () => {
-  const week = bookEdition(7, new Date(2026, 7, 25)) // edition of 12/08-18/08
+  const week = bookEdition(7, new Date(2026, 7, 25)) // edition of 16/08-22/08
   const pages = momentsInEdition([
-    moment('recovery', '2026-08-11T10:00:00Z'),     // the period before — too old
-    moment('recovery', '2026-08-12T06:00:00Z'),     // the day it opens on
-    moment('comeback', '2026-08-15T12:00:00Z'),     // mid-window
-    moment('breakthrough', '2026-08-19T08:00:00Z'), // the current period — not yet its book
+    moment('recovery', '2026-08-14T10:00:00Z'),     // the week before — too old
+    moment('recovery', '2026-08-16T06:00:00Z'),     // the Sunday it opens on
+    moment('comeback', '2026-08-19T12:00:00Z'),     // mid-window
+    moment('breakthrough', '2026-08-24T08:00:00Z'), // the current week — not yet its book
   ], week)
   assert.deepEqual(pages.map((row) => row.at), [
-    '2026-08-12T06:00:00Z', '2026-08-15T12:00:00Z',
+    '2026-08-16T06:00:00Z', '2026-08-19T12:00:00Z',
   ])
 })
 

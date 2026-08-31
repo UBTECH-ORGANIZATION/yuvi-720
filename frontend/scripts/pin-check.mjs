@@ -7,7 +7,7 @@
  *
  * Expiry is deliberately NOT driven here: a pin born in the past is refused
  * by the API (as it should be), so lapsing one needs a direct DB write —
- * `test_pinned_next.py` covers the expired reading at every read site.
+ * `test_pinned_next.py` covers the stale-stamp reading at every read site.
  *
  * Leaves no pins behind: every learner it touches is unpinned at the end.
  */
@@ -71,9 +71,11 @@ try {
 
   await teacher.waitForSelector('.tch-focusPanel__option', { timeout: 30000 })
   // Asserted after the shelf loads — the search row renders with the catalog.
-  check('the panel offers the smart search and an end date',
+  // No end-date field: a pin has no clock (Gal, 2026-08-30) — it stands until
+  // the child finishes it or the teacher unpins it.
+  check('the panel offers the smart search, and no end date',
         await teacher.locator('.tch-focusPanel__searchBox input').count() === 1
-        && await teacher.locator('.tch-focusPanel__until input').count() === 1)
+        && await teacher.locator('.tch-focusPanel__until').count() === 0)
   /* Pin the child's CURRENT goal when the planner marks one — its allocation
      is non-empty by construction, so the hero must flip to pinned mode. An
      arbitrary goal might already be finished for this child, which the hero

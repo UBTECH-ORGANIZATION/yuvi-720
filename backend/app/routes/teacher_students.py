@@ -17,7 +17,9 @@ from fastapi.responses import JSONResponse
 from app.auth.dependencies import require_teacher_session
 from app.brain import org
 from app.core.localization import normalize_language
-from app.services import group_analytics, insights, kata_client, teacher_insights_store
+from app.services import (
+    group_analytics, insights, kata_client, student_model_insight, teacher_insights_store,
+)
 from app.services.lrs import reporter as lrs_reporter
 from learner_state import normalize_learner_id  # type: ignore
 
@@ -127,11 +129,11 @@ async def group_mood(
     """How the class has been feeling over the window, and the one before it.
 
     The daily check-in has been storing an answer per child per school day
-    since #452 and nothing has ever read them at class level. Aggregate only —
-    counts by valence, never a learner id: a mood is the most personal thing
-    the product holds, and the class view has no business naming who is having
-    a bad week (C5). The teacher reaches an individual child through their
-    profile, where that child's own strip already lives.
+    since #452. Counts by valence lead; the current window also names the
+    children behind each family (#505) so the teacher can open the right
+    conversation — the same per-child feeling the live view already shows.
+    Never a ranking and never an alarm (C5): the compare window stays
+    aggregate, and each child's own history lives on their profile strip.
     """
     if not await _guard_group(session, group_id):
         return _denied()
@@ -170,6 +172,28 @@ async def group_gaps(
             gaps, normalize_language(language)
         ),
     })
+
+
+@router.get("/groups/{group_id}/gaps/{objective_id}/diagnosis")
+async def gap_diagnosis(
+    group_id: str,
+    objective_id: str,
+    language: str = Query("he"),
+    session=Depends(require_teacher_session),
+):
+    """The real answer behind a gap row's "למה?" (#507).
+
+    The row's counters already say how many are stuck; this says WHERE inside
+    the objective, on WHICH questions, and HOW it goes wrong — folded from
+    stored evidence only (activity rows, the coach's own error-type reads),
+    never generated. Read on click, not with the page: it fans out over the
+    roster's events and decisions, and a teacher opens one gap at a time.
+    """
+    if not await _guard_group(session, group_id):
+        return _denied()
+    from app.services import learning_analytics
+    return _ok(await learning_analytics.gap_diagnosis(
+        group_id, objective_id, language=normalize_language(language)))
 
 
 @router.get("/groups/{group_id}/goals")
@@ -574,6 +598,61 @@ async def create_insight(
     except ValueError as exc:
         return JSONResponse(content={"error": str(exc)}, status_code=400, headers=_NO_STORE)
     return _ok(insight)
+
+
+@router.post("/students/{learner_id}/model-insight")
+async def add_model_insight(
+    learner_id: str, data: dict, session=Depends(require_teacher_session)
+):
+    """A teacher insight entering the student model itself (#454).
+
+    Unlike `/insights` above (notes beside the model), this writes into what
+    Yuvi believes and acts on. A drastic change — touching `how_to_reach`,
+    disagreeing with an active belief, or displacing a strongly-evidenced
+    sentence — returns 409 with the diff until the client re-posts
+    `confirmed: true`, so the warning cannot be skipped.
+    """
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    try:
+        result = await student_model_insight.add_insight(
+            safe_id,
+            session["sub"],
+            block=str(data.get("block") or ""),
+            text=str(data.get("text") or ""),
+            confirmed=bool(data.get("confirmed")),
+        )
+    except student_model_insight.InsightError as exc:
+        return JSONResponse(content={"error": exc.code}, status_code=422, headers=_NO_STORE)
+    except student_model_insight.DrasticChange as exc:
+        return JSONResponse(
+            content={"needs_confirmation": True, "diff": exc.diff},
+            status_code=409,
+            headers=_NO_STORE,
+        )
+    return _ok(result)
+
+
+@router.post("/students/{learner_id}/model-insight/withdraw")
+async def withdraw_model_insight(
+    learner_id: str, data: dict, session=Depends(require_teacher_session)
+):
+    """The regret path: withdraw a teacher-asserted sentence and restore what
+    the model believed beforehand — bi-temporally, nothing erased."""
+    safe_id = await _guard_learner(session, learner_id)
+    if safe_id is None:
+        return _denied()
+    try:
+        result = await student_model_insight.withdraw_insight(
+            safe_id,
+            session["sub"],
+            block=str(data.get("block") or ""),
+            text=str(data.get("text") or ""),
+        )
+    except student_model_insight.InsightError as exc:
+        return JSONResponse(content={"error": exc.code}, status_code=422, headers=_NO_STORE)
+    return _ok(result)
 
 
 @router.delete("/students/{learner_id}/insights/{insight_id}")
@@ -1069,8 +1148,10 @@ async def mentoring_goal_ideas(
 
 
 @router.get("/goals/pending-count")
-async def pending_goal_count(session=Depends(require_teacher_session)):
-    """How many finished goals across this teacher's classes await sign-off.
+async def pending_goal_count(
+    group_id: str | None = None, session=Depends(require_teacher_session)
+):
+    """How many finished goals in the selected class await sign-off.
 
     Its own endpoint, and deliberately the cheapest one in this file: the app
     bar shows this number on every screen, so a teacher learns there is
@@ -1078,13 +1159,17 @@ async def pending_goal_count(session=Depends(require_teacher_session)):
     `GET /groups/{id}/goals` would answer the same question by shipping every
     conversation of every learner on every page load.
 
-    Scope comes from the session's own groups — there is no id to guard here,
-    because the caller cannot name anyone.
+    `group_id` narrows to one class so the badge agrees with the class picker
+    and with the inbox under it. It is honored only when it names one of the
+    session's own groups — a foreign id counts nothing rather than leaking a
+    number. Without it, the count spans every class the teacher has.
     """
     from app.brain import org
     from app.services import mentoring
 
     groups = await org.groups_for_teacher(session["sub"])
+    if group_id:
+        groups = [g for g in groups if str(g.get("_id") or "") == group_id]
     learner_ids: list[str] = []
     seen: set[str] = set()
     for group in groups:
@@ -1134,37 +1219,6 @@ class _BadPin(Exception):
     """A pin request that must not become a pin; `.args[0]` is the 422 error."""
 
 
-def _parse_expiry(raw: Any) -> Optional[str]:
-    """The optional end date, normalised to an aware ISO stamp.
-
-    A bare date (the `<input type=date>` value) means "through that day" in the
-    classroom's own timezone — a pin meant to last until Thursday must not die
-    at 02:00 Thursday morning because UTC midnight came first. Unparseable or
-    already-past dates are refused here, before any write: read-side expiry has
-    no sweeper, so a pin born expired would be a record nothing ever honours.
-    """
-    if not raw:
-        return None
-    from datetime import datetime, timezone
-    from zoneinfo import ZoneInfo
-
-    text = str(raw)
-    try:
-        if len(text) == 10:
-            day = datetime.fromisoformat(text)
-            stamp = day.replace(
-                hour=23, minute=59, second=59, tzinfo=ZoneInfo("Asia/Jerusalem"))
-        else:
-            stamp = datetime.fromisoformat(text.replace("Z", "+00:00"))
-            if stamp.tzinfo is None:
-                stamp = stamp.replace(tzinfo=timezone.utc)
-    except ValueError:
-        raise _BadPin("bad_expiry")
-    if stamp <= datetime.now(timezone.utc):
-        raise _BadPin("bad_expiry")
-    return stamp.isoformat()
-
-
 async def _build_pin(
     data: dict, learner_id: str, teacher_id: str
 ) -> dict[str, Any]:
@@ -1182,11 +1236,11 @@ async def _build_pin(
 
     from app.services import kata_catalog
 
-    expires_at = _parse_expiry(data.get("expires_at"))
+    # No end date, by design (Gal, 2026-08-30): a pin holds until the child
+    # finishes what it points at, or until the teacher unpins it.
     base = {
         "pinned_by": teacher_id,
         "pinned_at": datetime.now(timezone.utc).isoformat(),
-        **({"expires_at": expires_at} if expires_at else {}),
     }
 
     launch_id = str(data.get("launch_id") or "")
@@ -1246,20 +1300,14 @@ async def _write_pin(safe_id: str, pin: dict[str, Any], actor_id: str) -> None:
     """Store one learner's pin and ring their bell once.
 
     Shared by the single and the bulk routes so the two can never drift on
-    what a pin write means. An expired predecessor is swept into `pinned_last`
-    here — expiry is read-side, so its record only moves when a teacher acts
-    again, which is now. The notification id is deterministic per (learner,
+    what a pin write means. The notification id is deterministic per (learner,
     target): a retry or double-click re-writes the same object and rings no
     second bell; a different target is a new fact and rings once.
     """
-    from app.brain.repository import apply_brain_updates, get_brain
-    from app.services import kata_catalog, notifications, pinning
+    from app.brain.repository import apply_brain_updates
+    from app.services import kata_catalog, notifications
 
-    updates: dict[str, Any] = {"pinned_next": pin}
-    prior = (await get_brain(safe_id)).get("pinned_next") or {}
-    if prior and pinning.is_expired(prior):
-        updates["pinned_last"] = pinning.spent_record(prior, pinning.OUTCOME_EXPIRED)
-    await apply_brain_updates(safe_id, updates)
+    await apply_brain_updates(safe_id, {"pinned_next": pin})
 
     if pin.get("kind") == "task":
         target = str(pin["launch_id"])
@@ -1361,10 +1409,7 @@ async def bulk_pin_next(
         )
 
     pin_body = data.get("pin") or {}
-    payload = {
-        **pin_body,
-        "expires_at": data.get("expires_at") or pin_body.get("expires_at"),
-    }
+    payload = dict(pin_body)
     launch_id = str(pin_body.get("launch_id") or "")
 
     # Validate the shared target once, against the first learner — for a
@@ -1564,11 +1609,7 @@ async def get_pin_next(
             # The goal ran dry for this learner — the same resolution the hero
             # applies, so "active" here can never mean "steering nobody".
             live = None
-        pin_state = (
-            "active" if live is not None
-            else "expired" if pinning.is_expired(raw_pin)
-            else "spent"
-        )
+        pin_state = "active" if live is not None else "spent"
 
     # What the panel's task tab can offer: openings that are still open and
     # not yet handed in. The learner's own list route builds these rows, so
@@ -1617,9 +1658,8 @@ async def unpin_next(learner_id: str, session=Depends(require_teacher_session)):
     """Clear the pin. Silent for the learner — un-choosing is not an event a
     child needs a bell for, and the hero simply returns to the planner's pick.
 
-    The ending is recorded (#244): `unpinned` when the teacher withdrew a live
-    pin, `expired` when they are clearing one that had already lapsed — the
-    lazy half of read-side expiry, settled at the moment someone acts.
+    The ending is recorded (#244): `unpinned`, the teacher withdrew it — the
+    only ending besides completion now that a pin has no clock.
     """
     safe_id = await _guard_learner(session, learner_id)
     if safe_id is None:
@@ -1630,11 +1670,7 @@ async def unpin_next(learner_id: str, session=Depends(require_teacher_session)):
     pin = (await get_brain(safe_id)).get("pinned_next") or {}
     updates: dict[str, Any] = {"pinned_next": None}
     if pin:
-        outcome = (
-            pinning.OUTCOME_EXPIRED if pinning.is_expired(pin)
-            else pinning.OUTCOME_UNPINNED
-        )
-        updates["pinned_last"] = pinning.spent_record(pin, outcome)
+        updates["pinned_last"] = pinning.spent_record(pin, pinning.OUTCOME_UNPINNED)
     await apply_brain_updates(safe_id, updates)
     return _ok({"pinned": None})
 

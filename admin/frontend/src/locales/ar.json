@@ -18,6 +18,7 @@
   "shell.signedInAs": "تم تسجيل الدخول باسم",
   "shell.logout": "تسجيل الخروج",
   "shell.publicAccess": "وصول عام مؤقت",
+  "shell.environment": "البيئة",
   "nav.operations": "التشغيل والمراقبة",
   "nav.aiUsage": "استخدام خدمات الذكاء الاصطناعي",
   "nav.coachTraces": "تتبّع Yuvi التقني",

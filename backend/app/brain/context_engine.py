@@ -113,6 +113,16 @@ AGENT_VIEWS: dict[str, dict[str, list[str]]] = {
         ],
         "write": [],                # read-only: no AI write into a child's brain
     },
+    "teacher_voice": {
+        # #454: a HUMAN teacher's insight entering the student model — not an AI
+        # agent. The "no AI write into a child's brain" rule above is about
+        # model-generated text; this lane carries a judgement a person typed,
+        # PII-scrubbed and warned-about before it gets here
+        # (services/student_model_insight.py). It writes exactly the two
+        # structures the PBI names and nothing else.
+        "read": ["memory", "student_description"],
+        "write": ["memory", "student_description"],
+    },
     "safety": {
         "read": ["identity.locale"],
         "write": ["wellbeing_flags"],
@@ -327,14 +337,14 @@ def _movement_lines(drivers: Any, locale: str, lesson_title) -> list[str]:
     answer they just read back at them.
     """
     lang = locale if locale in {"he", "ar", "en"} else "he"
-    from app.agents.competency_coach import _COMPETENCY_NAMES
+    from app.brain.activeness import COMPETENCY_NAMES
 
     lines: list[str] = []
     for row in drivers if isinstance(drivers, list) else []:
         if not isinstance(row, dict):
             continue
         hint = _DRIVER_HINTS.get((str(row.get("tag")), str(row.get("dir"))))
-        name = _COMPETENCY_NAMES.get(str(row.get("key")))
+        name = COMPETENCY_NAMES.get(str(row.get("key")))
         if not hint or not name:
             continue
         line = f"{name.get(lang, name['he'])}: {hint[lang]}"

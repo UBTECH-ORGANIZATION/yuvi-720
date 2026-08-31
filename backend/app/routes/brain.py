@@ -57,6 +57,13 @@ async def create_activeness_goal(learner_id: str, data: dict, actor: dict = Depe
 
     Writes a `visible_to_learner` goal into `brain.goals` so it appears in the
     dashboard "My goals" card, tagged with its source activeness `domain`.
+
+    NOTE: currently has no caller. The affordance lived on the island world's
+    activeness map, which was removed in c00747d; `ActivenessWeb` renders the
+    same domains but is display-only. Kept rather than deleted because this is
+    the only producer of the MoE `student-goal initialized` statement for a
+    learner-authored goal — deleting it would turn an unwired 720 F5 flow into
+    a missing one. Re-point the dashboard at it when the affordance returns.
     """
     safe_id = await _authorized_id(actor, learner_id)
     text = (data.get("text") or "").strip()

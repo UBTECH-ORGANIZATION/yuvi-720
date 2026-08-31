@@ -1,8 +1,9 @@
 """Static assets, React shell, and standalone learning content routes."""
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.paths import (
     CAMPAIGN_DIR,
@@ -11,23 +12,66 @@ from app.core.paths import (
     REACT_APP_DIR,
     REACT_ASSETS_DIR,
     SHARED_DIR,
-    UNITY_WORLD_DIR,
 )
 
 
 router = APIRouter(tags=["static"])
 
+#: One year, the maximum the spec gives any meaning to.
+_IMMUTABLE_CACHE = "public, max-age=31536000, immutable"
+
+#: An hour, for files served under a stable name (see `RevalidatingStaticFiles`).
+_REVALIDATE_CACHE = "public, max-age=3600"
+
+
+class ImmutableStaticFiles(StaticFiles):
+    """Serve content-hashed build output as permanently cacheable.
+
+    Vite puts a content hash in every filename under `/assets`, so a given URL's
+    bytes can never change — a new build produces a new name. Without
+    `immutable` the browser still revalidates each file on every navigation:
+    on a school connection that is a round trip per asset before anything can
+    render, which is most of what "the site is slow" feels like even when the
+    files are already on disk.
+    """
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers.setdefault("Cache-Control", _IMMUTABLE_CACHE)
+        return response
+
+
+class RevalidatingStaticFiles(StaticFiles):
+    """Serve stable-named assets with a short cache and cheap revalidation.
+
+    Everything outside `/assets` keeps its filename across builds — locales,
+    shared theme and brand files, the moment art. `immutable` would be wrong
+    (a deploy really can change these bytes under the same URL), but sending
+    nothing was worse: with no `Cache-Control` at all the browser falls back to
+    heuristics and re-asks for all 69 moment images every time the album opens.
+
+    An hour bounds how long a deploy can look stale, and the ETag Starlette
+    already sends makes the request after that a 304 rather than a re-download.
+    """
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers.setdefault("Cache-Control", _REVALIDATE_CACHE)
+        return response
+
 
 def mount_static_assets(app: FastAPI) -> None:
     """Mount shared static directories used by React and iframe content."""
-    app.mount("/shared", StaticFiles(directory=str(SHARED_DIR)), name="shared")
-    app.mount("/locales", StaticFiles(directory=str(LOCALES_DIR)), name="locales")
+    app.mount("/shared", RevalidatingStaticFiles(directory=str(SHARED_DIR)), name="shared")
+    app.mount("/locales", RevalidatingStaticFiles(directory=str(LOCALES_DIR)), name="locales")
     if CAMPAIGN_DIR.exists():
-        app.mount("/campaign", StaticFiles(directory=str(CAMPAIGN_DIR)), name="campaign")
+        app.mount("/campaign", RevalidatingStaticFiles(directory=str(CAMPAIGN_DIR)), name="campaign")
     if REACT_ASSETS_DIR.exists():
-        app.mount("/assets", StaticFiles(directory=str(REACT_ASSETS_DIR)), name="react-assets")
-    if UNITY_WORLD_DIR.exists():
-        app.mount("/unity-world", StaticFiles(directory=str(UNITY_WORLD_DIR)), name="unity-world")
+        app.mount(
+            "/assets",
+            ImmutableStaticFiles(directory=str(REACT_ASSETS_DIR)),
+            name="react-assets",
+        )
 
     # Everything Vite copies verbatim from `frontend/public` lands at the build
     # ROOT (`/moments/…`, `/yuvi-favicon.png`), not under `/assets` — only
@@ -44,7 +88,7 @@ def mount_static_assets(app: FastAPI) -> None:
         if directory.exists():
             app.mount(
                 f"/{public_dir}",
-                StaticFiles(directory=str(directory)),
+                RevalidatingStaticFiles(directory=str(directory)),
                 name=f"react-public-{public_dir}",
             )
 
@@ -54,7 +98,7 @@ async def favicon():
     """The tab icon — `public/`, so it had no route either (see above)."""
     icon = REACT_APP_DIR / "yuvi-favicon.png"
     if icon.exists():
-        return FileResponse(icon)
+        return FileResponse(icon, headers={"Cache-Control": _REVALIDATE_CACHE})
     return JSONResponse(content={"error": "not found"}, status_code=404)
 
 
@@ -144,3 +188,28 @@ async def learning_route(path: str = ""):
 async def old_react_app_path(path: str = ""):
     """Redirect the temporary migration URL to the root app."""
     return RedirectResponse(url="/")
+
+
+def install_spa_fallback(app: FastAPI) -> None:
+    """Reloading any client route serves the shell, never `{"detail":"Not Found"}`.
+
+    The routes above are an allow-list, and it kept losing (ADO #507's report
+    caught it): `/teacher` — the entire teacher lane — was never added, so a
+    reload anywhere in it worked in dev (Vite serves everything) and returned
+    raw JSON in every deployed environment. Rather than growing the list one
+    forgotten route at a time, an unmatched GET that a BROWSER is navigating to
+    (`Accept: text/html`) falls back to the React shell and lets the client
+    router take it from there.
+
+    API consumers are untouched: anything under `/api` keeps its JSON 404 with
+    its original detail, as does any request that does not ask for HTML.
+    """
+
+    @app.exception_handler(404)
+    async def _spa_fallback(request: Request, exc: StarletteHTTPException):
+        wants_html = "text/html" in (request.headers.get("accept") or "")
+        if request.method == "GET" and wants_html \
+                and not request.url.path.startswith("/api"):
+            return serve_react_app()
+        detail = getattr(exc, "detail", None) or "Not Found"
+        return JSONResponse(content={"detail": detail}, status_code=404)

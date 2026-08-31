@@ -173,6 +173,11 @@ function KpiSegment({ bucket, counts, active, hot, onPick, t }: {
       <Icon name={KPI_ICON[bucket]} size={15} aria-hidden />
       <strong className="tch-liveKpi__value">{counts[bucket]}</strong>
       <span className="tch-liveKpi__label">{t(`tch.liveView.kpi.${bucket}`)}</span>
+      {active === bucket && (
+        /* The ✕ says, on the chip itself, that the same click releases the
+           filter (#506) — aria-pressed already tells assistive tech. */
+        <span className="tch-chipOff" aria-hidden="true"><Icon name="close" size={12} /></span>
+      )}
     </button>
   )
 }
@@ -393,6 +398,9 @@ export function LiveClassView({
             >
               <span dir="auto">{cluster.title || t('tch.liveView.spread.unnamed')}</span>
               <span className="tch-liveSpread__count">{cluster.count}</span>
+              {objective === cluster.objective_id && (
+                <span className="tch-chipOff" aria-hidden="true"><Icon name="close" size={12} /></span>
+              )}
             </button>
           ))}
         </div>

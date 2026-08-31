@@ -18,7 +18,8 @@ import { fileURLToPath } from 'node:url'
 
 import { subjectLabel } from '../src/features/teacher-app/shared/subjectLabel.ts'
 import {
-  ATTENTION_MAX_SUCCESS, byAttention, learningName, needsAttention,
+  ATTENTION_MAX_SUCCESS, byAttention, groupByObjective, learningName,
+  needsAttention, objectiveKeyOf,
 } from '../src/features/teacher-app/learnings/learningRows.ts'
 
 const read = (relative: string) =>
@@ -208,6 +209,91 @@ describe('the section labels the pinned group needs', () => {
       ]) {
         assert.ok(table[key], `${language} is missing ${key}`)
       }
+    }
+  })
+})
+
+describe('the objectives map', () => {
+  const row = (over: Partial<Parameters<typeof objectiveKeyOf>[0]> & {
+    started?: boolean; struggling_count?: number; success_rate?: number | null
+    last_activity_at?: string | null
+  } = {}) => ({
+    objective_id: 'obj-1', objective_title: 'מסה ונפח של גופים', subject: 'science',
+    attempts: 0, correct: 0, started: false, struggling_count: 0,
+    success_rate: null, last_activity_at: null, ...over,
+  })
+
+  it('folds success over raw attempts, never over per-row rates', () => {
+    // Two attempts on one lomda must not weigh like two hundred on another.
+    const [group] = groupByObjective([
+      row({ started: true, attempts: 200, correct: 100, success_rate: 0.5 }),
+      row({ started: true, attempts: 2, correct: 2, success_rate: 1 }),
+    ])
+    assert.equal(group.rows.length, 2)
+    assert.equal(group.started, 2)
+    assert.equal(group.successRate, 102 / 202)
+  })
+
+  it('keeps a titled-but-id-less objective apart from the objective-less', () => {
+    const groups = groupByObjective([
+      row({ objective_id: null, objective_title: 'יעד ללא מזהה' }),
+      row({ objective_id: null, objective_title: null }),
+    ])
+    assert.equal(groups.length, 2)
+    // The synthetic keys can never collide with a real objective id.
+    for (const group of groups) assert.notEqual(group.key, group.title)
+  })
+
+  it('has no success before anyone has answered', () => {
+    const [group] = groupByObjective([row({ started: true })])
+    assert.equal(group.successRate, null)
+  })
+
+  it('counts the lomdot that would be pinned, so trouble shows on the card', () => {
+    const [group] = groupByObjective([
+      row({ started: true, attempts: 10, correct: 2, success_rate: 0.2 }),
+      row({ started: true, attempts: 10, correct: 9, success_rate: 0.9 }),
+      row(),   // untouched — never counts as trouble
+    ])
+    assert.equal(group.attention, 1)
+  })
+
+  it('surfaces troubled objectives first, then the most recently worked', () => {
+    const groups = groupByObjective([
+      row({ objective_id: 'quiet', last_activity_at: '2026-08-20', started: true,
+            attempts: 4, correct: 4, success_rate: 1 }),
+      row({ objective_id: 'idle' }),
+      row({ objective_id: 'hot', last_activity_at: '2026-08-01', started: true,
+            attempts: 10, correct: 1, success_rate: 0.1 }),
+    ])
+    assert.deepEqual(groups.map((group) => group.key), ['hot', 'quiet', 'idle'])
+  })
+
+  it('has every label the map and the drill-down speak, in all three languages', () => {
+    for (const [language, table] of Object.entries(locales)) {
+      for (const key of [
+        'tch.learnings.backToObjectives',
+        'tch.learnings.noObjective',
+        'tch.learnings.noSubject',
+        'tch.learnings.lomdot.one',
+        'tch.learnings.lomdot.many',
+        'tch.learnings.objStarted',
+        'tch.learnings.objAttention.one',
+        'tch.learnings.objAttention.many',
+        'tch.learnings.objIdle',
+      ]) {
+        assert.ok(table[key], `${language} is missing ${key}`)
+      }
+    }
+  })
+
+  it('no longer ships the removed gaps-analysis panel or its keys', () => {
+    const page = read('../src/features/teacher-app/learnings/TeacherLearningsPage.tsx')
+    assert.equal(page.includes('tch.learnings.analysis'), false)
+    assert.equal(page.includes('view.recommendations'), false)
+    for (const [language, table] of Object.entries(locales)) {
+      assert.equal('tch.learnings.analysis' in table, false,
+                   `${language} still carries the removed panel title`)
     }
   })
 })

@@ -26,11 +26,9 @@ env:
   WEBAPP_NAME: ubi-yuvi-720
 
 jobs:
-  deploy-production:
+  # Cheap gate first: an unconfirmed dispatch must not spend a full CI run.
+  confirm:
     runs-on: ubuntu-latest
-    environment:
-      name: production
-      url: https://spark.yuvilab.ai
     steps:
       - name: Require explicit confirmation
         if: inputs.confirm != 'DEPLOY-PRODUCTION'
@@ -38,6 +36,20 @@ jobs:
           echo "Refusing to deploy: 'confirm' must be exactly DEPLOY-PRODUCTION."
           exit 1
 
+  # The ref being hotfixed is tested, not the branch the dispatch was made from.
+  tests:
+    needs: confirm
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ inputs.ref }}
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: tests
+    environment:
+      name: production
+      url: https://spark.yuvilab.ai
+    steps:
       - name: Checkout the requested ref
         uses: actions/checkout@v4
         with:
@@ -114,6 +126,23 @@ jobs:
               echo "::warning::$setting_name is not set on Production — required only by refs that use it."
             fi
           done
+
+      - name: Verify Production points at the production database
+        run: |
+          # Work item 248. This workflow can deploy an old ref onto Production,
+          # so it is exactly the path where a hand-edited setting would surface.
+          # Only the host is echoed; the connection string carries a password.
+          production_connection="$(az webapp config appsettings list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.WEBAPP_NAME }} \
+            --query "[?name=='MONGODB_CONNECTION_STRING'].value | [0]" \
+            --output tsv)"
+          production_host="$(sed -E 's|.*@([^/?,]+).*|\1|' <<< "$production_connection")"
+          echo "Production database host: $production_host"
+          if [[ "$production_host" != "yuvi720.mongocluster.cosmos.azure.com" ]]; then
+            echo "Production is not pointed at the production cluster; refusing to deploy."
+            exit 1
+          fi
 
       - name: Deploy image to the Production slot
         uses: azure/webapps-deploy@v3

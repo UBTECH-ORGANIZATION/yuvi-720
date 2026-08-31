@@ -44,8 +44,20 @@ from app.services.llm import LlmModelTier, call_llm, call_llm_stream
 # The one fenced block the Coach may emit: a validated diagram payload, drawn by
 # the client. Every other fenced block is still forbidden.
 DIAGRAM_FENCE = "```yuvi-diagram"
-# A bare list marker on its own — not a real sentence for the brevity cap.
-_BARE_MARKER = re.compile(r"(?:\d+[.)]|[-*+•])")
+# List items are structural units, not prose sentences. Models legitimately use
+# several Markdown spellings even when the learner never asks for a list.
+_LIST_MARKER_TOKEN = (
+    r"(?:\d+(?:\.\d+)*[.)]?|[א-תA-Za-z\u0621-\u064A][.)]|[-+*•]|"
+    r"(?:שלב|step|الخطوة)\s+\d+\s*:)"
+)
+_LIST_ITEM_START = re.compile(
+    rf"^\s*(?:\*\*)?{_LIST_MARKER_TOKEN}(?:\*\*)?(?:\s+|$)",
+    re.IGNORECASE,
+)
+_BARE_MARKER = re.compile(
+    rf"\s*(?:\*\*)?{_LIST_MARKER_TOKEN}(?:\*\*)?\s*",
+    re.IGNORECASE,
+)
 # A line that is table markup rather than a line of prose.
 _TABLE_ROW = re.compile(r"^\s*\|")
 
@@ -78,6 +90,22 @@ def _counts_as_prose(sentence: str) -> bool:
         return False
     lines = [line for line in text.splitlines() if line.strip()]
     return not (lines and all(_TABLE_ROW.match(line) for line in lines))
+
+
+def _starts_list_item(sentence: str) -> bool:
+    return bool(_LIST_ITEM_START.match(sentence))
+
+
+def _truncate_at_word_boundary(text: str, limit: int) -> tuple[str, bool]:
+    if len(text) <= limit:
+        return text, False
+    candidate = text[:limit - 1].rstrip()
+    boundary = candidate.rfind(" ")
+    if boundary > 0:
+        candidate = candidate[:boundary].rstrip()
+    else:
+        candidate = ""
+    return candidate + "…", True
 
 
 COACH_INSTRUCTIONS = {
@@ -347,9 +375,9 @@ PROACTIVE_PROMPTS = {
     # the generic greeting. Grounds on `current_objective` (the unit/lesson
     # title); if that's missing it welcomes without inventing a topic.
     "lesson_welcome": {
-        "he": "התלמיד/ה נכנס/ה זה עתה לשיעור, וכבר נאמרה לו/ה שורת פתיחה אישית שפונה בשמו/ה ושואלת מה שלומו/ה היום — אל תברך/י שוב, אל תשאל/י שוב מה שלומו/ה ואל תשתמש/י בשמו/ה. המשך/י ישירות מאותה שורה, בחום ובקצרה (1–2 משפטים): ציין/י במילים שלך על מה השיעור הזה לפי current_objective (אם חסר — המשך/י בלי להמציא נושא), ואמור/י שאת/ה כאן כדי ללוות ולעזור לאורך הדרך. בלי לפתור, בלי רשימות, ובלי לפתוח בברכת הסכמה ריקה. סיים/י בהזמנה חמה להתחיל — ובאופן שמשאיר מקום לענות קודם על שאלת \"מה שלומך\", אם הוא/היא רוצה.",
-        "ar": "دخل/ت الطالب/ة للتوّ إلى الدرس، وقد قيلت له/ها سطر افتتاحيّ شخصيّ يناديه/ها باسمه/ها ويسأل عن حاله/ها اليوم — لا ترحّب/ي مجدّدًا، ولا تسأل/ي مرّة أخرى عن حاله/ها، ولا تستخدم/ي اسمه/ها. تابع/ي مباشرة من ذلك السطر بدفء وإيجاز (جملة أو جملتان): اذكر/ي بكلماتك عمّ يدور هذا الدرس وفق current_objective (إن غاب فتابع/ي دون اختلاق موضوع)، وقل/قولي إنّك هنا للمرافقة والمساعدة على طول الطريق. دون حلّ، دون قوائم، ودون عبارة موافقة فارغة. اختم/ي بدعوة دافئة للبدء تترك مجالًا للردّ أوّلًا على سؤال \"كيف حالك\" إن أراد/ت.",
-        "en": "The learner has just opened the lesson and has ALREADY been greeted by name and asked how they are today — do not greet again, do not ask how they are again, and do not use their name. Continue straight on from that line, warmly and briefly (1–2 sentences): say in your own words what THIS lesson is about per current_objective (if it's missing, continue without inventing a topic), and that you're here to guide and help along the way. No solving, no lists, no empty agreement phrase. End with a warm invitation to begin that still leaves room for them to answer the \"how are you\" first, if they want to.",
+        "he": "התלמיד/ה נכנס/ה זה עתה לשיעור, וכבר נאמרה לו/ה שורת פתיחה אישית שפונה בשמו/ה — אל תברך/י שוב ואל תשתמש/י בשמו/ה. המשך/י ישירות מאותה שורה, בחום ובקצרה (1–2 משפטים): ציין/י במילים שלך על מה השיעור הזה לפי current_objective (אם חסר — המשך/י בלי להמציא נושא), ואמור/י שאת/ה כאן כדי ללוות ולעזור לאורך הדרך. בלי לפתור, בלי רשימות, ובלי לפתוח בברכת הסכמה ריקה. סיים/י בהזמנה חמה להתחיל.",
+        "ar": "دخل/ت الطالب/ة للتوّ إلى الدرس، وقد قيلت له/ها سطر افتتاحيّ شخصيّ يناديه/ها باسمه/ها — لا ترحّب/ي مجدّدًا، ولا تستخدم/ي اسمه/ها. تابع/ي مباشرة من ذلك السطر بدفء وإيجاز (جملة أو جملتان): اذكر/ي بكلماتك عمّ يدور هذا الدرس وفق current_objective (إن غاب فتابع/ي دون اختلاق موضوع)، وقل/قولي إنّك هنا للمرافقة والمساعدة على طول الطريق. دون حلّ، دون قوائم، ودون عبارة موافقة فارغة. اختم/ي بدعوة دافئة للبدء.",
+        "en": "The learner has just opened the lesson and has ALREADY been greeted by name — do not greet again and do not use their name. Continue straight on from that line, warmly and briefly (1–2 sentences): say in your own words what THIS lesson is about per current_objective (if it's missing, continue without inventing a topic), and that you're here to guide and help along the way. No solving, no lists, no empty agreement phrase. End with a warm invitation to begin.",
     },
 }
 
@@ -360,12 +388,12 @@ PROACTIVE_PROMPTS = {
 # learner without ever reaching the model. Kept as data (not a prompt) for the
 # same reason — a model asked to "greet them by name" would need the name.
 WELCOME_GREETING = {
-    "he": {"named": "היי {name}! שמח לראות אותך. מה שלומך היום?",
-           "plain": "היי! שמח לראות אותך. מה שלומך היום?"},
-    "ar": {"named": "أهلًا {name}! سعيد برؤيتك. كيف حالك اليوم؟",
-           "plain": "أهلًا! سعيد برؤيتك. كيف حالك اليوم؟"},
-    "en": {"named": "Hi {name}! Good to see you. How are you doing today?",
-           "plain": "Hi! Good to see you. How are you doing today?"},
+    "he": {"named": "היי {name}! שמח לראות אותך.",
+        "plain": "היי! שמח לראות אותך."},
+    "ar": {"named": "أهلًا {name}! سعيد برؤيتك.",
+        "plain": "أهلًا! سعيد برؤيتك."},
+    "en": {"named": "Hi {name}! Good to see you.",
+        "plain": "Hi! Good to see you."},
 }
 
 
@@ -432,58 +460,6 @@ SUPPORT_PROMPTS = {
     },
 }
 
-
-# A hint that the answer guard blocks is useful evidence for bounded retries,
-# not a reason to give the learner the generic answer-refusal. The retry stays
-# behind the same guard and falls back to a deliberately content-free question.
-MAX_HINT_GENERATION_ATTEMPTS = 3
-HINT_GUARD_RETRY_PROMPT = {
-    "he": "הרמז הקודם חשף את התשובה או צמצם אותה יותר מדי. כתוב/י רמז חדש שיהיה כללי יותר מהטיוטה הקודמת: אסטרטגיית חשיבה כללית ושאלה מנחה אחת בלבד. אל תזכיר/י ערכים, מספרים, שמות, אותיות, אפשרויות או סדר פעולות שמוביל לפתרון.",
-    "ar": "كشف التلميح السابق الإجابة أو ضيّقها أكثر من اللازم. اكتب/ي تلميحًا جديدًا أكثر عمومية من المسودة السابقة: استراتيجية تفكير عامة وسؤالًا موجّهًا واحدًا فقط. لا تذكر/ي قيمًا أو أرقامًا أو أسماءً أو حروفًا أو خيارات أو تسلسل خطوات يقود إلى الحل.",
-    "en": "The previous hint revealed or narrowed the answer too far. Write a new hint that is more general than the previous draft: one general thinking strategy and one guiding question only. Do not mention values, numbers, names, letters, options, or a sequence of steps that leads to the solution.",
-}
-
-HINT_GUARD_FALLBACK = {
-    "he": "בוא/י נתחיל מהדרך ולא מהתשובה: איזה מידע בשאלה נראה לך הכי חשוב לבדוק קודם?",
-    "ar": "لنبدأ بالطريقة لا بالإجابة: ما المعلومة في السؤال التي تبدو لك الأهم للتحقق منها أولًا؟",
-    "en": "Let's start with the method, not the answer: what information in the question seems most important to check first?",
-}
-
-
-async def _guarded_hint_draft(
-    messages: list[dict[str, str]],
-    guard: answer_guard.AnswerGuard,
-    lang: str,
-    usage_context: UsageContext,
-) -> tuple[str, bool]:
-    """Generate a hint privately, retrying up to twice when it reveals an answer."""
-    async def generate(request_messages: list[dict[str, str]], request_context: UsageContext) -> str:
-        parts = []
-        async for chunk in _stream_coach_model(request_messages, request_context):
-            parts.append(safety.screen_output(chunk, lang).text)
-        return "".join(parts).strip()[:600]
-
-    draft = await generate(messages, usage_context)
-    for attempt in range(1, MAX_HINT_GENERATION_ATTEMPTS):
-        if not guard.reveals(draft):
-            return draft, attempt > 1
-        retry_messages = [
-            *messages,
-            {
-                "role": "system",
-                "content": (
-                    f"{HINT_GUARD_RETRY_PROMPT[lang]}\n\n"
-                    f"Previous blocked hint draft:\n{draft}"
-                ),
-            },
-        ]
-        draft = await generate(
-            retry_messages,
-            usage_context.for_operation(f"coach.support.hint_retry_{attempt}"),
-        )
-    if draft and not guard.reveals(draft):
-        return draft, True
-    return HINT_GUARD_FALLBACK[lang], True
 
 # Anti-fabrication guardrail (all modes). Kata's events are sparse, so the
 # current question data may be missing or lag the screen the learner is on. In
@@ -919,13 +895,13 @@ async def _stream_coach_model(
 ) -> AsyncGenerator[str, None]:
     """Stream through Agent Framework without bypassing the tracked APIM lane."""
     tier = _coach_tier()
-    client = build_chat_client(usage_context, model_tier=tier, max_tokens=700)
+    client = build_chat_client(usage_context, model_tier=tier, max_tokens=800)
     if client is None:
         async for chunk in call_llm_stream(
             messages,
             usage_context=usage_context,
             model_tier=tier,
-            max_tokens=700,
+            max_tokens=800,
         ):
             yield chunk
         return
@@ -951,7 +927,7 @@ async def _stream_coach_model(
                 messages,
                 usage_context=usage_context,
                 model_tier=tier,
-                max_tokens=700,
+                max_tokens=800,
             ):
                 yield chunk
 
@@ -972,6 +948,7 @@ async def run_coach_stream(
     visual_requests: Optional[list[dict[str, str]]] = None,
     debug_trace: Optional[list[dict[str, str]]] = None,
     intent_out: Optional[list[str]] = None,
+    diagnostics_out: Optional[dict[str, object]] = None,
 ) -> AsyncGenerator[str, None]:
     """Stream a Coach reply (chat or proactive), Safety-gated, then persist it."""
     lang = language if language in COACH_INSTRUCTIONS else "he"
@@ -991,19 +968,16 @@ async def run_coach_stream(
         exchange_id=exchange_id,
     )
 
-    # Resolve the prompt: a chat message (Safety-screened) or a proactive nudge.
-    # `memory_user` is what we PERSIST — always the sanitized text, never raw PII,
-    # because working memory is re-injected into later prompts (§4.1 / R7).
-    if support_mode in SUPPORT_PROMPTS:
-        prompt_text = SUPPORT_PROMPTS[support_mode][lang]
-        memory_user = f"[support:{support_mode}]"
-    elif user_message is not None:
+    # Every learner message crosses the Safety gate before support-mode routing.
+    # A hint request must not let harmful language skip the respectful boundary.
+    history: list[dict] = []
+    screened_message = None
+    if user_message is not None:
         screened = safety.screen_input(user_message, lang)
         coach_debug_trace.append(debug_trace, "screen_input")
-        prompt_text = screened.text or FALLBACK_REPLY[lang]
-        memory_user = prompt_text
+        screened_message = screened.text or FALLBACK_REPLY[lang]
 
-        harmful_category = safety.harmful_content_category(prompt_text)
+        harmful_category = safety.harmful_content_category(screened_message)
         if harmful_category:
             coach_debug_trace.append(debug_trace, "harmful_content", "blocked")
             yield safety.redirect_message("harmful", lang)
@@ -1027,7 +1001,7 @@ async def run_coach_stream(
         # "review" = classifier outage (fail-closed): reply normally, teacher
         # gets a throttled screen-was-down flag.
         category = await safety.classify_disclosure(
-            prompt_text,
+            screened_message,
             lang,
             usage_context=usage_context.for_operation("safety.disclosure_classification"),
             recent_conversation=history,
@@ -1049,11 +1023,20 @@ async def run_coach_stream(
                 await safety.record_classifier_outage(learner_id, lang)
             except Exception:
                 pass
+
+    # Resolve the prompt after the universal learner-input Safety gate. `memory_user`
+    # is always sanitized because working memory is re-injected into later prompts.
+    if support_mode in SUPPORT_PROMPTS:
+        prompt_text = SUPPORT_PROMPTS[support_mode][lang]
+        memory_user = f"[support:{support_mode}]"
+    elif screened_message is not None:
+        prompt_text = screened_message
+        memory_user = prompt_text
     else:
         prompt_text = PROACTIVE_PROMPTS.get(trigger or "idle", PROACTIVE_PROMPTS["idle"])[lang]
         memory_user = f"[proactive:{trigger}]"
 
-    if user_message is None or support_mode in SUPPORT_PROMPTS:
+    if user_message is None:
         try:
             history = await sessions.get_recent(
                 learner_id, coach_role, limit=8, session_id=session_id
@@ -1308,14 +1291,7 @@ async def run_coach_stream(
         if coach_mode is CoachMode.LESSON else None
     )
     blocked = False
-    hint_guard_blocked = False
-    prefetched_hint = None
-    if support_mode == "hint":
-        # Do not stream the first hint draft: should it leak an answer, a retry
-        # must replace the whole response rather than trail behind partial help.
-        prefetched_hint, hint_guard_blocked = await _guarded_hint_draft(
-            messages, guard, lang, usage_context
-        )
+    bypass_answer_guard = support_mode == "hint"
 
     collected = ""
     # The welcome opens with the learner's own name and a real check-in, written
@@ -1335,6 +1311,16 @@ async def run_coach_stream(
         yield deterministic_opener
     pending_output = ""
     sentence_count = 0
+    in_structural_list = False
+    list_break_pending = False
+    list_item_count = 0
+    current_list_item_allowed = True
+    pending_list_marker = ""
+    pending_list_marker_gap = " "
+    generated_chars = 0
+    delivered_chars = 0
+    sentence_cap_hit = False
+    remainder_char_cap_hit = False
     max_sentences = (
         2 if query_intent == "capabilities_query"
         else 1 if coach_mode is CoachMode.GENERAL and tool_context.action_offers
@@ -1349,24 +1335,23 @@ async def run_coach_stream(
         if query_intent == "calendar_clarification":
             yield coach_calendar.calendar_clarification(lang)
             return
-        if prefetched_hint is not None:
-            yield prefetched_hint
-            return
         async for model_chunk in _stream_coach_model(messages, usage_context):
             yield model_chunk
 
     async for chunk in reply_chunks():
         out = safety.screen_output(chunk, lang).text   # tier-1 on the way out
-        if sentence_count >= max_sentences:
-            continue
+        generated_chars += len(out)
         pending_output += out
-        while sentence_count < max_sentences:
+        while True:
             # Whitespace REQUIRED after the punctuation: the buffer often ends
             # mid-token ("**12." inside "**12.1**"), and an end-of-buffer
             # alternative counted that as a finished sentence — hitting the cap
             # there dropped the rest and shipped unbalanced Markdown. The true
             # end of stream is handled by the remainder flush below.
-            boundary = re.match(r"^([\s\S]*?[.!?؟]+)(\s+)", pending_output)
+            boundary = re.match(
+                r"^([\s\S]*?(?:[.!?؟]+|:(?=\s*\n)))(\s+)",
+                pending_output,
+            )
             if boundary is None:
                 break
             sentence = boundary.group(1).strip()
@@ -1374,29 +1359,113 @@ async def run_coach_stream(
             pending_output = pending_output[boundary.end():]
             if not sentence:
                 continue
-            if guard.reveals(sentence):
+
+            starts_list_item = _starts_list_item(sentence)
+            marker_only = bool(_BARE_MARKER.fullmatch(sentence))
+            if list_break_pending and not starts_list_item and not pending_list_marker:
+                in_structural_list = False
+                current_list_item_allowed = True
+            if starts_list_item:
+                if not in_structural_list:
+                    list_item_count = 0
+                in_structural_list = True
+                list_break_pending = False
+                list_item_count += 1
+                current_list_item_allowed = list_item_count <= 5
+
+            if marker_only:
+                if current_list_item_allowed:
+                    pending_list_marker = sentence
+                    pending_list_marker_gap = _line_gap(gap)
+                else:
+                    sentence_cap_hit = True
+                continue
+
+            delivered_sentence = sentence
+            if pending_list_marker:
+                delivered_sentence = (
+                    pending_list_marker + pending_list_marker_gap + delivered_sentence
+                )
+                pending_list_marker = ""
+            counts_as_prose = _counts_as_prose(delivered_sentence)
+            should_deliver = (
+                (in_structural_list and current_list_item_allowed)
+                or not counts_as_prose
+                or sentence_count < max_sentences
+            )
+            if not should_deliver:
+                sentence_cap_hit = True
+                list_break_pending = in_structural_list and gap.count("\n") >= 2
+                continue
+            if not bypass_answer_guard and guard.reveals(delivered_sentence):
                 blocked = True
                 break
             separator = pending_gap if collected else ""
             pending_gap = _line_gap(gap)
-            collected += separator + sentence
-            yield separator + sentence
-            # A bare list marker ("1.", "-", "•") is not a sentence — otherwise a
-            # numbered/bulleted list is cut off after two markers. Only count
-            # sentences with real content toward the brevity cap.
-            if _counts_as_prose(sentence):
+            collected += separator + delivered_sentence
+            delivered = separator + delivered_sentence
+            delivered_chars += len(delivered)
+            yield delivered
+            if counts_as_prose and not in_structural_list:
                 sentence_count += 1
+            list_break_pending = in_structural_list and gap.count("\n") >= 2
         if blocked:
             break
 
-    if not blocked and sentence_count < max_sentences and pending_output.strip():
-        remainder = pending_output.strip()[:1200 if support_mode in {"explanation", "video_summary"} else 600]
-        if guard.reveals(remainder):
+    if not blocked and pending_output.strip():
+        stripped_remainder = pending_output.strip()
+        starts_list_item = _starts_list_item(stripped_remainder)
+        if starts_list_item and not in_structural_list:
+            in_structural_list = True
+            list_item_count += 1
+            current_list_item_allowed = list_item_count <= 5
+        if pending_list_marker:
+            stripped_remainder = (
+                pending_list_marker + pending_list_marker_gap + stripped_remainder
+            )
+            pending_list_marker = ""
+        counts_as_prose = _counts_as_prose(stripped_remainder)
+        should_deliver = (
+            (in_structural_list and current_list_item_allowed)
+            or not counts_as_prose
+            or sentence_count < max_sentences
+        )
+        remainder_limit = (
+            1200
+            if in_structural_list or support_mode in {"explanation", "video_summary"}
+            else 600
+        )
+        remainder, remainder_char_cap_hit = _truncate_at_word_boundary(
+            stripped_remainder, remainder_limit
+        )
+        if not should_deliver:
+            sentence_cap_hit = True
+        elif not bypass_answer_guard and guard.reveals(remainder):
             blocked = True
         else:
             separator = pending_gap if collected else ""
             collected += separator + remainder
-            yield separator + remainder
+            delivered = separator + remainder
+            delivered_chars += len(delivered)
+            yield delivered
+
+    coach_debug_trace.append(
+        debug_trace, "response_sentence_cap", "blocked" if sentence_cap_hit else "ok"
+    )
+    coach_debug_trace.append(
+        debug_trace, "response_remainder_cap", "blocked" if remainder_char_cap_hit else "ok"
+    )
+    if diagnostics_out is not None:
+        diagnostics_out.update({
+            "coach_mode": coach_mode.value,
+            "query_intent": query_intent,
+            "max_sentences": max_sentences,
+            "delivered_sentences": sentence_count,
+            "generated_chars": generated_chars,
+            "delivered_chars": delivered_chars,
+            "sentence_cap_hit": sentence_cap_hit,
+            "remainder_char_cap_hit": remainder_char_cap_hit,
+        })
 
     # The reveal is dropped, not trimmed around: whatever followed it was built
     # on the answer being out. The learner gets the refusal the prompt asks for,
@@ -1412,7 +1481,7 @@ async def run_coach_stream(
         collected += separator + redirect
         yield separator + redirect
     coach_debug_trace.append(
-        debug_trace, "answer_guard", "blocked" if blocked or hint_guard_blocked else "ok"
+        debug_trace, "answer_guard", "blocked" if blocked else "skipped" if bypass_answer_guard else "ok"
     )
 
     if not collected.strip():

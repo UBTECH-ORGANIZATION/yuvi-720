@@ -67,6 +67,11 @@ REQUIRED_INDEXES: dict[str, list[tuple[str, ...]]] = {
     "learner_signals": [("learner_id", "at"), ("dedupe_key",)],
     # Support-usage rows. Read unbounded by learner on every profile open.
     "learner_activity": [("learner_id", "at")],
+    # The weekly spine (#242). Slots by group on every calendar open (both
+    # lanes), exceptions by their natural occurrence key, days off by school.
+    "timetable_slots": [("group_id", "active")],
+    "timetable_exceptions": [("occurrence_id",)],
+    "school_calendar_days": [("school_id", "date")],
 }
 
 # Brain paths the teacher assistant must never be able to read.

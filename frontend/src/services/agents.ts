@@ -325,11 +325,6 @@ export async function streamAgent(
   }
 }
 
-export interface CompetencyChatMessage {
-  role: 'user' | 'assistant'
-  text: string
-}
-
 export type VisualMode = 'image' | 'video'
 
 /** On-demand visual: the learner asked to see a text-only reply as an image or
@@ -352,38 +347,6 @@ export async function requestVisualization(
     assistant_message_id: assistantMessageId,
   })
   return result.visual ?? null
-}
-
-/** Why did one activeness domain move since the learner last opened the map?
- * Returns a short verbal, non-numeric blurb (or null when none could be built). */
-export async function explainActivenessChange(
-  competency: string,
-  direction: 'up' | 'down',
-  language: string,
-): Promise<string | null> {
-  const result = await apiPost<{ text: string | null }>('/api/agent/activeness/change-explain', {
-    competency,
-    direction,
-    language,
-  })
-  return result.text ?? null
-}
-
-/** Ephemeral learning-map topic chat: the transcript lives only in the client
- * (never saved to conversation history); memory capture still runs server-side. */
-export function streamCompetencyChat(
-  competency: string,
-  messages: CompetencyChatMessage[],
-  conversationId: string,
-  language: string,
-  handlers: CoachStreamHandlers
-): Promise<void> {
-  return streamAgent('/api/agent/competency-chat', {
-    competency,
-    messages,
-    conversation_id: conversationId,
-    language,
-  }, handlers)
 }
 
 /** Silence that means a learner-facing stream has died rather than paused. The
@@ -448,10 +411,10 @@ export interface CoachSupportState {
   video_summary_used: boolean
   /** True when the learner has already received a visual for this video item. */
   video_visual_used: boolean
-  /** Bumped by the backend when the CURRENT item re-`initialized` mid-visit —
-   * the only signal that a screen's embedded video moved to its next clip
-   * without the catalog item id changing. Combine with `item` to key per-clip
-   * support state (`item|generation`), so clip 2 re-arms the buttons clip 1 used. */
+  /** Bumped by the backend when the CURRENT video item signals a clip boundary
+   * by re-initializing or completing without changing its catalog item id.
+   * Combine with `item` to key per-clip support state (`item|generation`), so
+   * clip 2 re-arms the buttons clip 1 used. */
   item_generation?: number
   /** `item|question` (and bare `item`) → its 1-based question number in this
    * component, from the catalog. Lets the chat title a thread with the number

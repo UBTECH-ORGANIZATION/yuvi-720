@@ -28,6 +28,7 @@ INTENTIONS = (
 )
 
 MAX_HINT_LEVEL = 1
+_indexes_ready = False
 # A learner can log thousands of these; the fetch is bounded by time instead.
 DECISION_FETCH_CEILING = 20000
 # Chat-originated hints must use the same controlled support lane as the hint
@@ -267,6 +268,23 @@ async def record_support_used(
         return None
 
 
+async def ensure_indexes() -> None:
+    """`tutor_decisions` is append-only and read newest-first per learner."""
+    global _indexes_ready
+    if _indexes_ready:
+        return
+    try:
+        from app.brain.repository import _get_collection_named
+        collection = _get_collection_named("tutor_decisions")
+        if collection is None:
+            return
+        await collection.create_index([("learner_id", 1), ("at", -1)], name="learner_at")
+        _indexes_ready = True
+    except Exception as exc:  # Cosmos may manage indexes outside the Mongo API.
+        print(f"⚠️ tutor_decisions index setup skipped: {type(exc).__name__}")
+
+
+# The (learner_id, at) index above is what keeps the `since` range below cheap.
 async def recent_tutor_decisions(
     learner_id: str,
     limit: int = 300,

@@ -26,6 +26,7 @@ from typing import Any, Optional
 
 from app.brain import detectors
 from app.brain import mastery as mastery_model
+from app.core.env import signing_secret
 from app.brain.repository import (
     _get_collection_named,
     apply_brain_operators,
@@ -174,7 +175,7 @@ def _now() -> str:
 
 
 def _secret() -> bytes:
-    return (os.environ.get("SECRET_KEY") or "yuvi720-dev-secret").encode("utf-8")
+    return signing_secret().encode("utf-8")
 
 
 # ── slxapi launch token (stateless, HMAC-signed) ─────────────────────────────
@@ -553,6 +554,9 @@ def normalize_statement(
 
 
 # ── Ingestion (idempotent) + brain update ────────────────────────────────────
+_indexes_ready = False
+
+
 async def _events_collection():
     return _get_collection_named("learning_events")
 
@@ -740,13 +744,39 @@ async def _attach_timing_evidence(event: dict[str, Any]) -> None:
     }
 
 
-async def _ensure_indexes(collection) -> None:
+async def ensure_indexes() -> None:
+    """Index the evidence store to match how it is actually read.
+
+    Every read here is one learner's slice in time order. Filtering on
+    `learner_id` alone leaves the sort to be done in memory over the learner's
+    whole history, which grows for a year and is never noticed — so the sort key
+    is part of each index.
+    """
+    global _indexes_ready
+    if _indexes_ready:
+        return
+    collection = await _events_collection()
+    if collection is None:
+        return
     try:
-        await collection.create_index("learner_id")
-        await collection.create_index([("learner_id", 1), ("objective_id", 1)])
-        await collection.create_index([("learner_id", 1), ("session_id", 1)])
-    except Exception:  # pragma: no cover - best effort; _id is unique by default
-        pass
+        # `{learner_id} sort stored_at desc` — the Coach bundle, the triggers,
+        # and the dashboard's 500-event projection. Also serves the teacher's
+        # `{learner_id: $in, stored_at: $gte}` group scan.
+        await collection.create_index(
+            [("learner_id", 1), ("stored_at", -1)], name="learner_stored")
+        await collection.create_index(
+            [("learner_id", 1), ("objective_id", 1), ("stored_at", -1)],
+            name="learner_objective_stored")
+        await collection.create_index(
+            [("learner_id", 1), ("session_id", 1), ("occurred_at", 1)],
+            name="learner_session_occurred")
+        # The roadmap projection, which had no index of any kind.
+        await collection.create_index(
+            [("learner_id", 1), ("unit_id", 1), ("occurred_at", 1)],
+            name="learner_unit_occurred")
+        _indexes_ready = True
+    except Exception as exc:  # Cosmos may manage indexes outside the Mongo API.
+        print(f"⚠️ learning_events index setup skipped: {type(exc).__name__}")
 
 
 async def _attach_answer_diagnostic(event: dict[str, Any]) -> None:
@@ -824,7 +854,7 @@ async def ingest_statement(
     is_new = True
     if collection is not None:
         try:
-            await _ensure_indexes(collection)
+            await ensure_indexes()
             res = await collection.update_one(
                 {"_id": event["_id"]},
                 {"$setOnInsert": event},
@@ -1434,21 +1464,39 @@ async def _apply_event_to_brain(event: dict[str, Any]) -> dict[str, Any]:
             set_updates["current_state.learning_choice"] = None
             # A new screen starts its media at generation 0 (see below).
             set_updates["current_state.item_generation"] = 0
+            set_updates["current_state.video_boundary_from_completion"] = False
         elif incoming_question is not None:
             set_updates["current_state.question_id"] = incoming_question
         elif event.get("verb") == "initialized":
             # A screen with an embedded video playlist reuses the SAME catalog
             # item id for every clip (Kata never names the clip itself — see
-            # `_reconcile_sub_item_id`): `played`/`paused` always target the
-            # component, not the item, and repeated `initialized` statements for
-            # this item are byte-identical bar their timestamp. The only signal
-            # that a NEW clip started (not a rewind of the current one) is this
-            # screen re-`initialized`-ing while it is already the current item.
+            # `_reconcile_sub_item_id`). Some playlists re-`initialized` the
+            # current item when the next clip starts.
             # Bump a generation counter so the client can re-arm per-clip support
             # (video summary / visual) without mistaking it for a different item.
-            set_updates["current_state.item_generation"] = (
-                prior_state.get("item_generation") or 0
-            ) + 1
+            # A provider may emit both signals for one transition. If completion
+            # already re-armed this clip, consume the matching re-init instead of
+            # granting a second allowance for the same video.
+            if prior_state.get("video_boundary_from_completion"):
+                set_updates["current_state.video_boundary_from_completion"] = False
+            else:
+                set_updates["current_state.item_generation"] = (
+                    prior_state.get("item_generation") or 0
+                ) + 1
+        elif event.get("verb") == "completed":
+            # Other Kata playlists do not re-initialize between clips. The live
+            # sequence is `answered` -> `completed` on the SAME video item, with
+            # the next clip already visible and no later navigation statement.
+            # Treat that completion as the clip boundary, but never re-arm video
+            # support for an ordinary question/read screen.
+            from app.services import kata_catalog
+
+            profile = kata_catalog.item_profile(event.get("launch"), new_item)
+            if str(profile.get("media_format") or "") == "video":
+                set_updates["current_state.item_generation"] = (
+                    prior_state.get("item_generation") or 0
+                ) + 1
+                set_updates["current_state.video_boundary_from_completion"] = True
         # else: same screen, no question (bare re-emit) — keep sticky question_id.
     elif event.get("question_id") and not pointer_is_stale:
         set_updates["current_state.question_id"] = event["question_id"]

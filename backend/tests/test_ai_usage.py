@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import asyncio
 import json
 import sys
 import unittest
@@ -34,16 +35,30 @@ class _StreamResponse:
     status_code = 200
     headers = {"x-request-id": "provider-request"}
 
-    def __init__(self, *, pause_after_first: bool = False) -> None:
+    def __init__(
+        self, *, pause_after_first: bool = False,
+        finish_reason: str = "stop", include_done: bool = True,
+    ) -> None:
         self.pause_after_first = pause_after_first
+        self.finish_reason = finish_reason
+        self.include_done = include_done
 
     async def aiter_lines(self):
         yield 'data: {"choices":[{"delta":{"content":"hello"}}]}'
         if self.pause_after_first:
             import asyncio
             await asyncio.Event().wait()
-        yield 'data: {"choices":[],"usage":{"prompt_tokens":10,"completion_tokens":3,"total_tokens":13}}'
-        yield "data: [DONE]"
+        yield json.dumps({
+            "choices": [{"delta": {}, "finish_reason": self.finish_reason}],
+            "usage": {
+                "prompt_tokens": 10,
+                "completion_tokens": 3,
+                "total_tokens": 13,
+                "completion_tokens_details": {"reasoning_tokens": 1},
+            },
+        }).join(("data: ", ""))
+        if self.include_done:
+            yield "data: [DONE]"
 
 
 class _StreamContext:
@@ -112,6 +127,7 @@ class UsagePersistenceTests(unittest.IsolatedAsyncioTestCase):
                     "cached_input_tokens": 2,
                 },
             )
+            await ai_usage.flush_pending()
 
         self.assertEqual(len(collection.documents), 1)
         self.assertEqual(event["total_tokens"], 13)
@@ -120,12 +136,62 @@ class UsagePersistenceTests(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn(f'"{forbidden}"', serialized)
         self.assertNotIn("cost_usd\": 0", serialized)
 
+    async def test_slow_store_never_blocks_the_ai_call(self):
+        insert_started = asyncio.Event()
+
+        class _HangingCollection(_InsertCollection):
+            async def insert_one(self, document: dict):
+                insert_started.set()
+                await asyncio.sleep(3600)
+
+        hanging = _HangingCollection()
+
+        def collection_for(name: str):
+            return hanging if name == "ai_usage_events" else None
+
+        ai_usage._indexes_ready = False
+        with patch.object(ai_usage, "_get_collection_named", side_effect=collection_for):
+            await asyncio.wait_for(ai_usage.record_usage(
+                context=UsageContext(
+                    actor_id="demo-learner",
+                    actor_type="learner",
+                    endpoint="/api/agent/coach/stream",
+                    feature="feature_3_learning_companion",
+                    operation="coach.reply",
+                    source="unit_test",
+                ),
+                timer=UsageTimer.start(),
+                provider="azure_openai",
+                gateway="apim",
+                deployment="test-deployment",
+                api_version="test-version",
+                streaming=True,
+                meter="tokens",
+                status="completed",
+                usage_status="unavailable",
+            ), timeout=1)
+            await asyncio.wait_for(insert_started.wait(), timeout=1)
+            pending = set(ai_usage._PENDING_WRITES)
+            for task in pending:
+                task.cancel()
+            await asyncio.gather(*pending, return_exceptions=True)
+
     def test_usage_parser_never_estimates_missing_counts(self):
         self.assertIsNone(ai_usage.token_usage_from_payload({}))
         parsed = ai_usage.token_usage_from_payload({"prompt_tokens": 8})
         self.assertEqual(parsed["input_tokens"], 8)
         self.assertIsNone(parsed["output_tokens"])
         self.assertIsNone(parsed["total_tokens"])
+        self.assertIsNone(parsed["reasoning_tokens"])
+
+    def test_usage_parser_preserves_provider_reported_reasoning_tokens(self):
+        parsed = ai_usage.token_usage_from_payload({
+            "prompt_tokens": 8,
+            "completion_tokens": 21,
+            "total_tokens": 29,
+            "completion_tokens_details": {"reasoning_tokens": 13},
+        })
+        self.assertEqual(parsed["reasoning_tokens"], 13)
 
     def test_cost_requires_explicit_effective_pricing(self):
         usage = {
@@ -176,6 +242,31 @@ class StreamingUsageTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(kwargs["status"], "completed")
         self.assertEqual(kwargs["usage_status"], "exact")
         self.assertEqual(kwargs["usage"]["total_tokens"], 13)
+        self.assertEqual(kwargs["usage"]["reasoning_tokens"], 1)
+        self.assertEqual(kwargs["finish_reason"], "stop")
+        self.assertEqual(kwargs["stream_termination"], "done")
+
+    async def test_stream_records_length_finish_and_premature_eof(self):
+        recorder = AsyncMock()
+        _FakeAsyncClient.response = _StreamResponse(
+            finish_reason="length", include_done=False,
+        )
+        with (
+            patch.object(llm, "_resolve_llm_config", return_value=("https://example.invalid", "secret", "deployment", "version")),
+            patch.object(llm.httpx, "AsyncClient", _FakeAsyncClient),
+            patch.object(llm, "record_usage", recorder),
+        ):
+            chunks = [chunk async for chunk in llm.call_llm_stream(
+                [{"role": "user", "content": "not persisted"}],
+                usage_context=self.context(),
+            )]
+
+        self.assertEqual(chunks, ["hello"])
+        recorder.assert_awaited_once()
+        kwargs = recorder.await_args.kwargs
+        self.assertEqual(kwargs["status"], "failed")
+        self.assertEqual(kwargs["finish_reason"], "length")
+        self.assertEqual(kwargs["stream_termination"], "eof")
 
     async def test_closed_stream_records_cancellation_once(self):
         recorder = AsyncMock()

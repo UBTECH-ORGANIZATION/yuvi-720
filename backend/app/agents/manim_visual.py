@@ -400,22 +400,19 @@ async def should_offer_visual(
 
 
 def split_visual_response(text: str) -> tuple[str, str]:
-    """Remove a duplicate fenced diagram and place the visual at that point.
+    """Remove a duplicate fenced diagram and place the visual after the reply.
 
-    If the Coach followed its instruction and emitted no duplicate block, the
-    visual is placed after the first paragraph. This is content-agnostic and
-    works for every mathematical topic supported by the scene primitives.
+    Splitting at the first paragraph used to put a visual inside a Markdown
+    list. The client then rendered the text on either side as separate ordered
+    lists, restarting both at 1. Keeping all prose together preserves every
+    structural block and gives the visual one predictable position after it.
     """
     response = (text or "").strip()
     fenced = _FENCED_BLOCK.search(response)
     if fenced:
         before = response[:fenced.start()].rstrip()
         after = response[fenced.end():].lstrip()
-        return before, after
-
-    paragraph_break = re.search(r"\n\s*\n", response)
-    if paragraph_break:
-        return response[:paragraph_break.start()].rstrip(), response[paragraph_break.end():].lstrip()
+        response = "\n\n".join(part for part in (before, after) if part).strip()
     return response, ""
 
 

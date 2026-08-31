@@ -107,8 +107,20 @@ export function parseBlocks(source: string): Block[] {
       const marker = ordered ? NUMBERED : BULLET
       const items: string[] = []
       while (i < lines.length && marker.test(lines[i])) {
-        items.push(lines[i].replace(marker, ''))
+        const item: string[] = [lines[i].replace(marker, '').trim()]
         i += 1
+        while (i < lines.length && lines[i].trim() && !marker.test(lines[i])) {
+          if (BLOCK_STARTER.test(lines[i]) || TABLE_SEPARATOR.test(lines[i])) break
+          item.push(lines[i].trim())
+          i += 1
+        }
+        items.push(item.join(' '))
+
+        if (i < lines.length && !lines[i].trim()) {
+          let next = i
+          while (next < lines.length && !lines[next].trim()) next += 1
+          if (next < lines.length && marker.test(lines[next])) i = next
+        }
       }
       blocks.push({ kind: 'list', ordered, items })
       continue

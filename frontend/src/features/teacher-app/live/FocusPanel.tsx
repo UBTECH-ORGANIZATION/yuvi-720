@@ -39,14 +39,11 @@ export function FocusPanel({ learnerId, groupId, onChanged, className }: {
   const { t, language } = useI18n()
   const [learnings, setLearnings] = useState<LearningRow[] | null>(null)
   const [current, setCurrent] = useState<PinnedNext | null>(null)
-  const [pinState, setPinState] = useState<'active' | 'expired' | 'spent' | null>(null)
+  const [pinState, setPinState] = useState<'active' | 'spent' | null>(null)
   const [focus, setFocus] = useState<PinFocus | null>(null)
   /** Which subject's shelf is on display. null = the child's own subject —
    *  the tree keeps it first, so the fitting material opens the dialog. */
   const [subjectPick, setSubjectPick] = useState<string | null>(null)
-  /** The optional end date, as the `<input type=date>` value (a bare day —
-   *  the server reads it as "through that day" in the classroom's timezone). */
-  const [until, setUntil] = useState('')
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
   /** The smart search: the teacher SAYS what they want and the server matches
@@ -158,9 +155,10 @@ export function FocusPanel({ learnerId, groupId, onChanged, className }: {
     if (busy) return
     setBusy(true)
     setFailed(false)
-    const payload = { ...body, ...(until ? { expires_at: until } : {}) }
     try {
-      const { pinned } = await pinNext(learnerId, payload)
+      /* No end date — a pin has no clock (Gal, 2026-08-30): it stands on the
+         child's dashboard until they finish it, or the teacher unpins it. */
+      const { pinned } = await pinNext(learnerId, body)
       setCurrent(pinned)
       setPinState('active')
       onChanged()
@@ -204,10 +202,10 @@ export function FocusPanel({ learnerId, groupId, onChanged, className }: {
 
   return (
     <div className={`tch-focusPanel${className ? ` ${className}` : ''}`}>
-      {/* The dialog says what it IS before anything else — a bare catalog with
-          a date field reads as noise; the same catalog under "pin the next
-          step" reads as a choice. The profile modal borrows this heading as
-          its accessible title. */}
+      {/* The dialog says what it IS before anything else — a bare catalog
+          reads as noise; the same catalog under "pin the next step" reads as
+          a choice. The profile modal borrows this heading as its accessible
+          title. */}
       <header className="tch-focusPanel__head">
         <h3 className="tch-focusPanel__title" id="tch-focus-panel-title" dir="auto">
           <Icon name="target" size={15} aria-hidden />
@@ -244,32 +242,6 @@ export function FocusPanel({ learnerId, groupId, onChanged, className }: {
           t('tch.loading')
         )}
       </p>
-      {/* A pin that lapsed is a fact the teacher must see, not a blank: the
-          record is still there, it just stopped steering. */}
-      {pinState === 'expired' && (
-        <p className="tch-focusPanel__note" dir="auto">
-          {t('tch.liveView.focusPanel.expired')}
-        </p>
-      )}
-
-      {/* The end date sits ABOVE the catalog: a click on a goal pins
-          immediately, so anything that changes what that click means has to
-          be seen first. (Task pinning lives on the calendar's task lane —
-          this dialog deals only in learning goals.) */}
-      <div className="tch-focusPanel__options">
-        <label className="tch-focusPanel__until">
-          <Icon name="calendar" size={13} aria-hidden />
-          <span>{t('tch.liveView.focusPanel.until')}</span>
-          <input
-            type="date"
-            className="sp-input"
-            value={until}
-            min={new Date().toISOString().slice(0, 10)}
-            onChange={(event) => setUntil(event.target.value)}
-          />
-        </label>
-      </div>
-
       {tree === null ? (
         <div aria-busy="true" className="tch-focusPanel__skeleton"><SkeletonRows rows={4} /></div>
       ) : tree.length === 0 ? (

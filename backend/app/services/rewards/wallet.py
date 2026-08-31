@@ -34,6 +34,7 @@ from learner_state import (  # type: ignore
 )
 
 _FALLBACK = Path(__file__).resolve().parents[3] / ".runtime" / "rewards.json"
+_indexes_ready = False
 
 # Asking for help is a self-regulation win, not a failure — it is rewarded once,
 # at a flat rate, because its worth does not depend on the goal.
@@ -186,6 +187,25 @@ async def _ledger_release(key: str) -> None:
 
 
 # ── public API ────────────────────────────────────────────────────────────────
+
+async def ensure_indexes() -> None:
+    """The Sparks ledger is append-only, and read newest-first per learner.
+
+    The wallet itself is keyed by `_id`, which is already unique — only the
+    ledger's `{learner_id} sort at desc` needs an index of its own.
+    """
+    global _indexes_ready
+    if _indexes_ready:
+        return
+    collection = _get_collection_named("reward_ledger")
+    if collection is None:
+        return
+    try:
+        await collection.create_index([("learner_id", 1), ("at", -1)], name="learner_at")
+        _indexes_ready = True
+    except Exception as exc:  # Cosmos may manage indexes outside the Mongo API.
+        print(f"⚠️ reward_ledger index setup skipped: {type(exc).__name__}")
+
 
 async def get_wallet(learner_id: Optional[str]) -> dict[str, Any]:
     lid = normalize_learner_id(learner_id)

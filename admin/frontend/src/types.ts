@@ -10,6 +10,13 @@ export interface AuthStatus {
   public_access: boolean
 }
 
+export interface EnvironmentBadge {
+  environment: string
+  host: string
+  database: string
+  is_production: boolean
+}
+
 export interface UsageBucket {
   key: string
   requests: number
@@ -41,7 +48,10 @@ export interface UsageEvent {
   usage_status: string
   input_tokens: number | null
   output_tokens: number | null
+  reasoning_tokens: number | null
   total_tokens: number | null
+  finish_reason: string | null
+  stream_termination: string | null
   quantity: number | null
   cost_usd: number | null
   latency_ms: number

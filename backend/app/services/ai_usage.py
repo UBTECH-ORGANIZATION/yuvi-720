@@ -29,6 +29,8 @@ _RUNTIME_DIR = Path(__file__).resolve().parents[2] / ".runtime"
 _FALLBACK_FILE = _RUNTIME_DIR / "ai_usage_events.json"
 _FALLBACK_LOCK = asyncio.Lock()
 _indexes_ready = False
+_PENDING_WRITES: set[asyncio.Task] = set()
+_WRITE_TIMEOUT_SECONDS = 8.0
 
 
 @dataclass(frozen=True)
@@ -85,12 +87,32 @@ def token_usage_from_payload(payload: Any) -> Optional[dict[str, int]]:
         return None
     details = payload.get("prompt_tokens_details") or payload.get("input_tokens_details") or {}
     cached_tokens = details.get("cached_tokens") if isinstance(details, dict) else None
+    completion_details = (
+        payload.get("completion_tokens_details")
+        or payload.get("output_tokens_details")
+        or {}
+    )
+    reasoning_tokens = (
+        completion_details.get("reasoning_tokens")
+        if isinstance(completion_details, dict) else None
+    )
     return {
         "input_tokens": input_tokens if isinstance(input_tokens, int) else None,
         "output_tokens": output_tokens if isinstance(output_tokens, int) else None,
         "total_tokens": total_tokens if isinstance(total_tokens, int) else None,
         "cached_input_tokens": cached_tokens if isinstance(cached_tokens, int) else None,
+        "reasoning_tokens": reasoning_tokens if isinstance(reasoning_tokens, int) else None,
     }
+
+
+def sanitized_lifecycle_value(value: Any) -> Optional[str]:
+    """Keep only short provider lifecycle enums, never arbitrary response text."""
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    if not normalized:
+        return None
+    return normalized[:40]
 
 
 def provider_request_id(headers: Any) -> Optional[str]:
@@ -231,11 +253,17 @@ async def record_usage(
     error: Optional[BaseException] = None,
     response_bytes: Optional[int] = None,
     model_tier: Optional[str] = None,
+    finish_reason: Optional[str] = None,
+    stream_termination: Optional[str] = None,
 ) -> dict[str, Any]:
-    """Persist exactly one sanitized event for one external provider attempt."""
+    """Queue exactly one sanitized event for one external provider attempt.
+
+    Metering is deliberately off the request path: a slow or unreachable store
+    must never stall a learner-facing answer, so the event is written by a
+    background task and priced there (`cost_usd`/`pricing_snapshot` on the
+    returned dict are filled in once that write runs).
+    """
     finished_at = datetime.now(timezone.utc)
-    pricing = await _pricing_for(provider, deployment, meter, timer.started_at)
-    cost_usd, pricing_snapshot = _price_snapshot(pricing, meter, usage, quantity)
     event: dict[str, Any] = {
         "event_id": uuid4().hex,
         "request_id": context.request_id or uuid4().hex,
@@ -261,8 +289,10 @@ async def record_usage(
         "latency_ms": timer.latency_ms(),
         "provider_request_id": provider_request,
         "error_type": sanitized_error_type(error),
-        "cost_usd": cost_usd,
-        "pricing_snapshot": pricing_snapshot,
+        "finish_reason": sanitized_lifecycle_value(finish_reason),
+        "stream_termination": sanitized_lifecycle_value(stream_termination),
+        "cost_usd": None,
+        "pricing_snapshot": None,
     }
     if meter == "tokens":
         event.update(usage or {
@@ -270,6 +300,7 @@ async def record_usage(
             "output_tokens": None,
             "total_tokens": None,
             "cached_input_tokens": None,
+            "reasoning_tokens": None,
         })
     else:
         event.update({
@@ -278,16 +309,53 @@ async def record_usage(
             "response_bytes": response_bytes,
         })
 
-    collection = _get_collection_named("ai_usage_events")
-    if collection is not None:
-        try:
-            await _ensure_indexes()
-            await collection.insert_one(event)
-            return event
-        except Exception as exc:
-            print(f"⚠️ AI usage write failed, using demo fallback: {type(exc).__name__}")
-    await _append_fallback(event)
+    task = asyncio.create_task(_persist(
+        event,
+        provider=provider,
+        deployment=deployment,
+        meter=meter,
+        usage=usage,
+        quantity=quantity,
+        priced_at=timer.started_at,
+    ))
+    _PENDING_WRITES.add(task)
+    task.add_done_callback(_PENDING_WRITES.discard)
     return event
+
+
+async def _persist(
+    event: dict[str, Any],
+    *,
+    provider: str,
+    deployment: str,
+    meter: MeterType,
+    usage: Optional[dict[str, int]],
+    quantity: Optional[int],
+    priced_at: datetime,
+) -> None:
+    try:
+        async with asyncio.timeout(_WRITE_TIMEOUT_SECONDS):
+            pricing = await _pricing_for(provider, deployment, meter, priced_at)
+            event["cost_usd"], event["pricing_snapshot"] = _price_snapshot(
+                pricing, meter, usage, quantity,
+            )
+            collection = _get_collection_named("ai_usage_events")
+            if collection is not None:
+                await _ensure_indexes()
+                await collection.insert_one(dict(event))  # a copy: pymongo adds `_id`
+                return
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:
+        print(f"⚠️ AI usage write failed, using demo fallback: {type(exc).__name__}")
+    await _append_fallback(event)
+
+
+async def flush_pending(timeout: float = 10.0) -> None:
+    """Wait for queued usage writes — shutdown, and tests that assert on them."""
+    pending = set(_PENDING_WRITES)
+    if pending:
+        await asyncio.wait(pending, timeout=timeout)
 
 
 async def _append_fallback(event: dict[str, Any]) -> None:

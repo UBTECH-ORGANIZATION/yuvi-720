@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { getAuthStatus, logout } from './api'
+import { getAuthStatus, getEnvironmentBadge, logout } from './api'
 import { LanguageSwitcher, useI18n } from './i18n/I18nProvider'
 import { LeadsDashboard } from './leads/LeadsDashboard'
 import { SupportDashboard } from './support/SupportDashboard'
-import type { AdminIdentity, AuthStatus } from './types'
+import type { AdminIdentity, AuthStatus, EnvironmentBadge as EnvironmentBadgeData } from './types'
 import { CoachDebugTraceDashboard } from './usage/CoachDebugTraceDashboard'
 import { UsageDashboard } from './usage/UsageDashboard'
 
@@ -217,7 +217,10 @@ function AdminShell({
       </aside>
       <div className="admin-workspace">
         <header className="topbar">
-          <LanguageSwitcher />
+          <div className="topbar-lead">
+            <EnvironmentPill />
+            <LanguageSwitcher />
+          </div>
           {admin && onLogout ? (
             <div className="admin-identity">
               <div>
@@ -244,6 +247,33 @@ function AdminShell({
         {activeSection === 'usage' ? <UsageDashboard onUnauthorized={onUnauthorized} /> : null}
       </div>
     </div>
+  )
+}
+
+function EnvironmentPill() {
+  const { t } = useI18n()
+  const [badge, setBadge] = useState<EnvironmentBadgeData | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    getEnvironmentBadge(controller.signal)
+      .then(setBadge)
+      .catch(() => setBadge(null))
+    return () => controller.abort()
+  }, [])
+
+  if (!badge) return null
+  // Whoever reads a number in this console has to be able to tell which
+  // database produced it, without opening the Azure portal.
+  return (
+    <span
+      className={`environment-pill${badge.is_production ? ' environment-pill--production' : ''}`}
+      title={`${badge.host} / ${badge.database}`}
+    >
+      <span>{t('shell.environment')}</span>
+      <strong dir="ltr">{badge.environment}</strong>
+      <span dir="ltr">{badge.database}</span>
+    </span>
   )
 }
 

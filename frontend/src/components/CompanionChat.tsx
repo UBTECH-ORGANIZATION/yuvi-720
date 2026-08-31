@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
 import { useCompanion, type CoachMessage } from '../providers/CompanionProvider'
-import { YuviAvatar3D } from '../features/Yuvi-studio/YuviAvatar3D'
 import { useYuviDesign } from '../features/Yuvi-studio/YuviDesignProvider'
 import { Icon } from './primitives'
 import { subscribe } from '../services/realtime'
@@ -25,10 +24,16 @@ import { playCoachSpeech, stopCoachSpeech, type SpeechState } from '../services/
 import { navigate, useRoute } from '../app/router'
 import { formatMessageTime } from '../hooks/messageTime'
 import { useLessonRoadmap } from '../providers/LessonRoadmapProvider'
-import { CompanionTrack3D } from '../features/learning-portal/CompanionTrack3D'
-import 'katex/dist/katex.min.css'
 import SceneRenderer from '../features/visuals/SceneRenderer'
 import './companion.css'
+
+/* The dock is mounted on every screen, but both of these render only inside a
+   task. Static imports put all of Three.js in the entry chunk for a surface
+   most sessions never open. */
+const YuviAvatar3D = lazy(() =>
+  import('../features/Yuvi-studio/YuviAvatar3D').then((m) => ({ default: m.YuviAvatar3D })))
+const CompanionTrack3D = lazy(() =>
+  import('../features/learning-portal/CompanionTrack3D').then((m) => ({ default: m.CompanionTrack3D })))
 
 const COACH_ACTION_PATHS: Readonly<Record<string, string>> = {
   open_dashboard: '/student-dashboard',
@@ -977,16 +982,18 @@ export function CompanionChat() {
           >
             <span className="sp-companion__yuvi-orbit" />
             {(loaded || YuviFallbackReady) && showLiveYuvi ? (
-              <YuviAvatar3D
-                key={loaded ? 'persisted-yuvi' : 'fallback-yuvi'}
-                initialDesign={design}
-                label={t('companion.title')}
-                muted
-                frontFacing={settleHeaderYuvi}
-                followPointer
-                thinking={activity === 'thinking'}
-                speaking={activity === 'speaking' || speech.state === 'playing'}
-              />
+              <Suspense fallback={<span className="sp-companion__yuvi-loader" role="presentation" />}>
+                <YuviAvatar3D
+                  key={loaded ? 'persisted-yuvi' : 'fallback-yuvi'}
+                  initialDesign={design}
+                  label={t('companion.title')}
+                  muted
+                  frontFacing={settleHeaderYuvi}
+                  followPointer
+                  thinking={activity === 'thinking'}
+                  speaking={activity === 'speaking' || speech.state === 'playing'}
+                />
+              </Suspense>
             ) : (
               <span className="sp-companion__yuvi-loader" role="presentation" />
             )}
@@ -1213,18 +1220,20 @@ export function CompanionChat() {
           </div>}
           {isTaskMode && taskView === 'roadmap' && lessonRoadmap ? (
             <div className="sp-companion__roadmap-view" role="tabpanel">
-              <CompanionTrack3D
-                unit={lessonRoadmap.unit}
-                activeComponentId={lessonRoadmap.activeComponentId}
-                travellingFromId={lessonRoadmap.travellingFromId}
-                onSelect={(component) => {
-                  const params = new URLSearchParams({
-                    unit: lessonRoadmap.unit.id,
-                    component: component.id,
-                  })
-                  navigate(`/learning/lesson?${params.toString()}`)
-                }}
-              />
+              <Suspense fallback={<span className="sp-companion__yuvi-loader" role="presentation" />}>
+                <CompanionTrack3D
+                  unit={lessonRoadmap.unit}
+                  activeComponentId={lessonRoadmap.activeComponentId}
+                  travellingFromId={lessonRoadmap.travellingFromId}
+                  onSelect={(component) => {
+                    const params = new URLSearchParams({
+                      unit: lessonRoadmap.unit.id,
+                      component: component.id,
+                    })
+                    navigate(`/learning/lesson?${params.toString()}`)
+                  }}
+                />
+              </Suspense>
             </div>
           ) : taskView === 'chat' && <div
             className="sp-companion__body"

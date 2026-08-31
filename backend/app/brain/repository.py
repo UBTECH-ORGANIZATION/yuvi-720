@@ -23,6 +23,7 @@ except ImportError:  # pragma: no cover - local fallback path
     AsyncIOMotorClient = None
 
 from app.core.env import ensure_env_loaded  # side-effect: .env for ANY entrypoint
+from app.core import database as db_config
 from app.brain.schema import empty_brain, flatten_updates
 from app.brain.memory import ensure_memory_state
 
@@ -41,12 +42,13 @@ _mongo_client: Optional[Any] = None
 
 
 def _database_name() -> str:
-    return os.environ.get("MONGODB_DATABASE") or os.environ.get("MONGODB_DB") or "yuvi720"
+    return db_config.database_name()
 
 
 def _get_collection() -> Optional[Any]:
     global _mongo_client
-    connection_string = os.environ.get("MONGODB_CONNECTION_STRING")
+    db_config.verify_configuration()  # never open a store this process may not use
+    connection_string = db_config.connection_string()
     if not connection_string or AsyncIOMotorClient is None:
         return None
     if _mongo_client is None:
@@ -54,6 +56,16 @@ def _get_collection() -> Optional[Any]:
             "serverSelectionTimeoutMS": 5000,
             "connectTimeoutMS": 5000,
             "socketTimeoutMS": 10000,
+            # A bounded pool is what keeps a burst survivable. The default of
+            # 100 sockets meant a teacher-dashboard load (ten endpoints, each
+            # fanning out over a class) could stampede the cluster; when a
+            # query then passed 10s the driver abandoned the socket but the
+            # SERVER kept executing — zombie queries piled onto Cosmos until
+            # every request (even currentOp) queued behind them and the dev
+            # cluster read as down while idle (2026-08-30). Twenty sockets
+            # queue the burst client-side instead, where waiting is cheap.
+            "maxPoolSize": 20,
+            "waitQueueTimeoutMS": 10000,
         }
         if certifi is not None:
             kwargs["tlsCAFile"] = certifi.where()

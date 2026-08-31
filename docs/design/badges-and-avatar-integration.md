@@ -32,7 +32,7 @@ invented state. A backend `badges.py` service computes, per learner:
     all `achieved` at advanced (reuse `mastery.entry.level`). Thresholds live in a
     tunable block.
 - **World badge** (`world` family — "Arrival Valley"): earned when a learning
-  world is completed (all its objectives mastered / the Unity world cleared).
+  world is completed (all its objectives mastered).
   Ties to the existing world-completion signal; gold + confetti (the capstone).
 - **`certifies`** text (for the teacher view) = the subject's objective titles
   (`kata_catalog.localized_objective_title`), so a badge reads as real evidence.
@@ -155,5 +155,5 @@ world-clear badge**:
 3. **Avatar precedence** — if a learner has both a Yuvi-studio 3D avatar and picks
    a badge, which wins as the small profile picture? (Proposed: the explicit
    pick wins; `kind` field disambiguates.)
-4. **World badge trigger** — tie to Unity world completion, full-subject mastery,
+4. **World badge trigger** — tie to full-subject mastery
    or a dedicated capstone assessment?

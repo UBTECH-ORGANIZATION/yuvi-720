@@ -123,9 +123,17 @@ async def subscribe(
     try:
         while True:
             try:
-                yield await asyncio.wait_for(queue.get(), timeout=heartbeat)
+                # `asyncio.timeout` rather than `asyncio.wait_for`: on Python
+                # 3.11 (what the Dockerfile ships) `wait_for` swallows the
+                # CancelledError when the inner future has already resolved,
+                # so a client disconnecting in the same tick as an incoming
+                # event would keep this generator alive and never reach the
+                # `_detach` below — a subscriber leak.
+                async with asyncio.timeout(heartbeat):
+                    event = await queue.get()
             except asyncio.TimeoutError:
-                yield {"type": "_heartbeat"}
+                event = {"type": "_heartbeat"}
+            yield event
     finally:
         _detach(topics, queue)
 

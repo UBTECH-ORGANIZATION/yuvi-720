@@ -299,8 +299,9 @@ export function TeacherGoalsPage() {
                             {goalTitle(row.goal, t)}
                           </span>
                           {/* What the platform counted — the approval is a
-                              judgement, and this is its evidence. */}
-                          <GoalProgressLine goal={row.goal} />
+                              judgement, and this is its evidence. `detailed`
+                              adds the quality verdict's basis (#462). */}
+                          <GoalProgressLine goal={row.goal} detailed />
                           {row.goal.reward_value ? (
                             <span className="tch-goalsPage__sparks">
                               <Icon name="spark" size={13} aria-hidden />

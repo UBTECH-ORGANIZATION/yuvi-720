@@ -1118,12 +1118,9 @@ export function assetsForSlot(slot: YuviSlot): YuviAsset[] {
 }
 
 // Phase rewards: completing a mapping section (0-based part index) unlocks an
-// item. Keys align with the requirement copy (part index 3 == "section 4").
-export const PHASE_REWARDS: Record<number, string> = {
-  3: 'crown',
-  4: 'jetpack',
-  5: 'ironman',
-}
+// item. Defined in `yuviRewards` so the mapping page can read them without
+// pulling this module's Three.js builders in with them.
+export { PHASE_REWARDS } from './yuviRewards'
 
 // ── one-time 3D thumbnails cached at module scope (no per-card canvases) ──
 let thumbCache: Record<string, string> | null = null

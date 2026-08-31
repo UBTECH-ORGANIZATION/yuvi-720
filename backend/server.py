@@ -8,6 +8,7 @@ from typing import AsyncIterator
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from app.core.env import ensure_env_loaded
 
@@ -16,6 +17,7 @@ from app.core.env import ensure_env_loaded
 # Service process settings retain precedence over file values.
 ensure_env_loaded()
 
+from app.core import database
 from app.routes.auth import router as auth_router
 from app.routes.badges import router as badges_router
 from app.routes.brain import router as brain_router
@@ -48,8 +50,11 @@ from app.routes.checkin import router as checkin_router
 from app.routes.illustrations import router as illustrations_router
 from app.routes.mapping_chat import router as mapping_chat_router
 from app.routes.profile import router as profile_router
-from app.routes.static_pages import mount_static_assets, router as static_pages_router
+from app.routes.static_pages import (
+    install_spa_fallback, mount_static_assets, router as static_pages_router,
+)
 from app.routes.support import internal_router as support_internal_router, router as support_router
+from app.routes.telemetry import router as telemetry_router
 from app.routes.xapi import router as xapi_router
 from app.core.telemetry import configure_telemetry
 from app.services.content_catalog_mcp import content_catalog_mcp_lifespan, mount_content_catalog_mcp
@@ -121,12 +126,14 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # index after it — the slowest possible failure mode, and invisible.
     # A missing index is slow, never broken, and must never stop a boot.
     from app.agents.teacher_tools import registry as teacher_tool_registry
+    from app.agents import tutor_decision
     from app.services import (
-        direct_messages, kudos, learner_activity, learner_signals,
-        mentoring_assist, notifications,
-        org_repository, school_calendar, teacher_alerts, teacher_insights_store,
+        direct_messages, events, kudos, learner_activity, learner_signals,
+        mentoring, mentoring_assist, notifications, org_repository,
+        school_calendar, teacher_alerts, teacher_insights_store, timetable,
         weekly_digest, wellbeing,
     )
+    from app.services.rewards import wallet
 
     index_steps = (
         # Authorization hot path: every teacher read resolves links + enrollments.
@@ -149,12 +156,35 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         ("goal_suggestions", mentoring_assist.ensure_goal_suggestion_indexes),
         # Read by (group_id, start_at) on every open of the class calendar.
         ("calendar_events", school_calendar.ensure_indexes),
+        # The evidence store behind every projection. Indexed here rather than
+        # on first ingest so a replica that only ever *reads* is fast too — a
+        # dashboard served before the first statement arrives used to scan.
+        ("learning_events", events.ensure_indexes),
+        # The weekly spine (#242): slots by group, exceptions by occurrence,
+        # days off by (school, date) — read on every calendar open, both lanes.
+        ("timetable", timetable.ensure_indexes),
         # Read by (learner_id, at) on every open of a student's score dialogs.
         ("learner_signals", learner_signals.ensure_indexes),
-        # Read unbounded by learner_id on every profile open; was unindexed.
+        # Read per learner on every profile open, task open, and hint check.
         ("learner_activity", learner_activity.ensure_indexes),
+        # Goals: per learner on the dashboard, per class on the roster.
+        ("mentoring_conversations", mentoring.ensure_indexes),
+        # The Sparks ledger, read newest-first per learner.
+        ("reward_ledger", wallet.ensure_indexes),
+        # Coach decision history, read newest-first per learner.
+        ("tutor_decisions", tutor_decision.ensure_indexes),
     )
     await run_index_steps(index_steps)
+
+    # The national school calendar (#242): insert-if-absent, so every school —
+    # existing and future — has the published days off without hand entry, and
+    # a day someone deliberately retired stays retired across boots.
+    try:
+        seeded = await timetable.ensure_national_days()
+        if seeded:
+            print(f"↻ timetable: {seeded} national days off seeded")
+    except Exception as exc:  # pragma: no cover - best effort by design
+        print(f"⚠️ national days seed skipped: {type(exc).__name__}")
 
     # Presence lives in this process's memory, so a restart wipes it and every
     # child reads offline until they next reconnect. Read the last snapshots
@@ -185,10 +215,20 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         if sweeper:
             sweeper.cancel()
         relay_probe.cancel()
+        # Usage metering is written off the request path, so drain it here or a
+        # restart loses the events for every in-flight AI call.
+        from app.services import ai_usage
+
+        await ai_usage.flush_pending()
 
 
 def create_app() -> FastAPI:
     """Create and configure the Yuvilab Spark API application."""
+    # Before anything else: refuse to boot against a store this environment is
+    # not allowed to open, and say out loud which one it is.
+    database.verify_configuration()
+    database.announce()
+
     app = FastAPI(title="Yuvilab Spark", version="1.0.0", lifespan=lifespan)
 
     # Credentialed requests (the session cookie) are incompatible with a
@@ -202,6 +242,18 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # The built bundle and stylesheet are ~3.7MB of text, and nothing was
+    # compressing them: Starlette's StaticFiles doesn't, and there is no CDN or
+    # reverse proxy in front of App Service doing it for us. Over a school's
+    # uplink that is the single largest cause of "the system is really slow".
+    # gzip takes it to roughly a quarter of that.
+    #
+    # Level 6, not the library default of 9: the last few percent of size costs
+    # a disproportionate amount of CPU on every uncached response, and we have
+    # one worker process to spend it in. SSE (`text/event-stream`) is excluded
+    # by Starlette itself, so the coach's streaming replies stay unbuffered.
+    app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
 
     app.include_router(auth_router)
     app.include_router(learner_mapping_router)
@@ -238,10 +290,12 @@ def create_app() -> FastAPI:
     app.include_router(support_router)
     app.include_router(support_internal_router)
     app.include_router(checkin_router)
+    app.include_router(telemetry_router)
 
     mount_content_catalog_mcp(app)
 
     mount_static_assets(app)
+    install_spa_fallback(app)
     app.include_router(static_pages_router)
 
     configure_telemetry(app, service_name="spark-backend")
