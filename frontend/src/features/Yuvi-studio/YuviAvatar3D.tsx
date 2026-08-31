@@ -112,6 +112,8 @@ interface Props {
   onItemMenu?: (menu: { uid: string; x: number; y: number } | null) => void
   /** The pointer has left the room canvas, so its menu may close. */
   onItemMenuLeave?: () => void
+    /** Fires once when Yuvi enters range of a special in-room object. */
+    onNearRoomItem?: (uid: string) => void
 }
 
 // The chest-badge favicon is shared across every avatar instance.
@@ -137,7 +139,7 @@ function mixWhite([r, g, b]: number[], t: number): [number, number, number] {
 const rgba = ([r, g, b]: number[], a: number) => `rgba(${r}, ${g}, ${b}, ${a})`
 
 export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAvatar3D(
-  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard', roam = false, firstPerson = false, onZoneChange, onStationIntentChange, roomItems, stations = null, roomStyle = null, placing = null, placeTarget = null, onPlaceAt, lockRoam = false, onItemMenu, onItemMenuLeave },
+  { initialDesign, label, muted = false, interactiveY = false, onYClick, onAvatarClick, yTooltip = '', orbit = false, stage = false, thinking = false, speaking = false, pulling = false, pullingSide = 'left', pushing = false, pushingSide = 'right', presenting = false, presentingSide = 'right', frontFacing = false, followPointer = false, grounded = false, flying = false, walking = false, heading = 'down', headingAngle, performanceMode = 'standard', roam = false, firstPerson = false, onZoneChange, onStationIntentChange, roomItems, stations = null, roomStyle = null, placing = null, placeTarget = null, onPlaceAt, lockRoam = false, onItemMenu, onItemMenuLeave, onNearRoomItem },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null)
@@ -175,6 +177,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   const onPlaceAtRef = useRef(onPlaceAt)
   const onItemMenuRef = useRef(onItemMenu)
   const onItemMenuLeaveRef = useRef(onItemMenuLeave)
+    const onNearRoomItemRef = useRef(onNearRoomItem)
   const pullingStartedAtRef = useRef(pulling ? Date.now() : 0)
   useEffect(() => { mutedRef.current = muted }, [muted])
   useEffect(() => { onYClickRef.current = onYClick }, [onYClick])
@@ -213,6 +216,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
   useEffect(() => { onPlaceAtRef.current = onPlaceAt }, [onPlaceAt])
   useEffect(() => { onItemMenuRef.current = onItemMenu }, [onItemMenu])
   useEffect(() => { onItemMenuLeaveRef.current = onItemMenuLeave }, [onItemMenuLeave])
+  useEffect(() => { onNearRoomItemRef.current = onNearRoomItem }, [onNearRoomItem])
 
   useImperativeHandle(ref, () => ({
     equip: (slot, id, animate = true) => controllerRef.current?.equip(slot, id, animate),
@@ -1177,6 +1181,7 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
     window.addEventListener('resize', resize)
 
     let frame = 0
+      let nearbyRoomItem: string | null = null
     let viewportVisible = true
     let contextAvailable = true
     let loop: () => void
@@ -1329,6 +1334,13 @@ export const YuviAvatar3D = forwardRef<YuviAvatarHandle, Props>(function YuviAva
               onStationIntentChangeRef.current?.(null)
             }
             faceLearnerPending = Boolean(nextZone)
+          }
+          const nearby = (roomItemsRef.current ?? []).find((item) => (
+            Math.hypot(roamPos.x - item.x, roamPos.y - item.z) <= 1.45
+          ))?.uid ?? null
+          if (nearby !== nearbyRoomItem) {
+            nearbyRoomItem = nearby
+            if (nearby) onNearRoomItemRef.current?.(nearby)
           }
           // Once he is parked, he turns to the learner — the walk itself keeps
           // overwriting the yaw with whatever direction he was heading in.

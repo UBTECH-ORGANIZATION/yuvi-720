@@ -11,8 +11,9 @@ import { assetsForSlot, getThumbnails, type YuviAsset } from './YuviAssets'
 import type { YuviColors, YuviSlot } from './YuviDesign'
 import type { StudioDesign } from './useStudioDesign'
 import { useRoomDesign } from './useRoomDesign'
-import { getRoomThumbnails, ROOM_CATEGORIES, itemsInCategory, roomItemSpec, type RoomItemCategory } from './RoomCatalog'
+import { getRoomThumbnails, ROOM_CATEGORIES, WEEKLY_SURPRISE_COVERED, itemsInCategory, roomItemSpec, type RoomItemCategory } from './RoomCatalog'
 import { MAX_ROOM_ITEMS, MOODS, ROOM_STYLES, WALL_STYLES, type StationId } from './RoomDesign'
+import { useWeeklyStudioSurprise } from './useWeeklyStudioSurprise'
 import { roomStandingSpot } from './YuviLabRoom'
 import { StationPanel } from './panel/StationPanel'
 import { SegmentedNav } from './panel/SegmentedNav'
@@ -49,6 +50,7 @@ const STEP_OFF: [number, number] = [0, 4.5]
 
 // Anything the learner can recolour uses the same friendly palette.
 const ITEM_TINTS = ['#7C6BFF', '#4eeef0', '#ff5d73', '#ffd166', '#5ce67e', '#ff8fd0', '#4cc9f0', '#ff7a3d', '#f3ecdd', '#9a6b40']
+const WEEKLY_SURPRISE_POSITION = { x: -8.2, z: -10.2, rot: 0 }
 
 // Picking a category glides the lab camera to the part being edited.
 const FOCUS_BY_TAB: Record<Tab, string> = {
@@ -111,7 +113,9 @@ export function StudioContent({
   const [propMenu, setPropMenu] = useState<PropMenuState | null>(null)
   const propMenuCloseTimer = useRef<number | null>(null)
   const [colorPicker, setColorPicker] = useState<{ uid: string; kind: string } | null>(null)
+  const [surpriseNotice, setSurpriseNotice] = useState(false)
   const roomState = useRoomDesign(true, user?.user_id)
+  const weeklySurprise = useWeeklyStudioSurprise(user?.user_id, roomState.loaded && roomState.room.introDone)
   // A stable identity: the 3D room only restyles when one of the three actually
   // changes, not on every keystroke elsewhere in the studio.
   const roomStyle = useMemo(
@@ -121,10 +125,18 @@ export function StudioContent({
   // A prop being carried is drawn as the ghost under the cursor, so the room
   // must not also draw it standing at the spot it is being moved from.
   const movingUid = placing?.uid ?? null
-  const visibleRoomItems = useMemo(
-    () => (movingUid ? roomState.items.filter((item) => item.uid !== movingUid) : roomState.items),
-    [roomState.items, movingUid],
-  )
+  const weeklyUid = weeklySurprise?.week ? `weekly-surprise:${weeklySurprise.week}` : ''
+  useEffect(() => {
+    if (weeklySurprise?.state !== 'revealed' || !weeklySurprise.reward_kind || !weeklyUid) return
+    void roomState.materializeWeeklyReward(weeklyUid, weeklySurprise.reward_kind, WEEKLY_SURPRISE_POSITION.x, WEEKLY_SURPRISE_POSITION.z, WEEKLY_SURPRISE_POSITION.rot)
+  }, [weeklySurprise?.state, weeklySurprise?.reward_kind, weeklyUid, roomState.materializeWeeklyReward])
+  const visibleRoomItems = useMemo(() => {
+    const userItems = movingUid ? roomState.items.filter((item) => item.uid !== movingUid) : roomState.items
+    if (weeklySurprise?.available && weeklySurprise.state === 'covered') {
+      return [...userItems, { uid: weeklyUid, kind: WEEKLY_SURPRISE_COVERED, ...WEEKLY_SURPRISE_POSITION }]
+    }
+    return userItems
+  }, [roomState.items, movingUid, weeklySurprise, weeklyUid])
   const menuItem = propMenu ? roomState.items.find((item) => item.uid === propMenu.uid) ?? null : null
   // Stations are addressed through the same menu, under a reserved uid.
   const menuStation: StationId | null = propMenu?.uid.startsWith('station:')
@@ -136,6 +148,12 @@ export function StudioContent({
   }
   const showPropMenu = (menu: PropMenuState | null) => {
     clearPropMenuClose()
+    if (menu?.uid === weeklyUid) {
+      setSurpriseNotice(true)
+      setPropMenu(null)
+      return
+    }
+    setSurpriseNotice(false)
     setPropMenu((current) => menu && current?.uid === menu.uid ? current : menu)
   }
   const deferPropMenuClose = () => {
@@ -599,7 +617,8 @@ export function StudioContent({
               presentingSide="left"
               onPlaceAt={handlePlaceAt}
               onItemMenu={!placing ? showPropMenu : undefined}
-              onItemMenuLeave={!placing ? deferPropMenuClose : undefined}
+              onItemMenuLeave={!placing ? () => { deferPropMenuClose(); setSurpriseNotice(false) } : undefined}
+              onNearRoomItem={(uid) => { if (uid === weeklyUid) setSurpriseNotice(true) }}
               lockRoam={mode !== 'roam' || introScene !== null}
               label={t('YuviStudio.avatarAlt')}
             />
@@ -724,6 +743,22 @@ export function StudioContent({
               {t('YuviStudio.save')}
             </button>
           </div>
+        )}
+        {surpriseNotice && weeklySurprise?.state === 'covered' && (
+          <aside className="ys-surprise-notice" role="status">
+            <button type="button" className="ys-help__close" onClick={() => setSurpriseNotice(false)} aria-label={t('YuviStudio.surprise.close')} title={t('YuviStudio.surprise.close')}>
+              <Icon name="close" size={15} />
+            </button>
+            <div className="ys-surprise-notice__head">
+              <span className="ys-surprise-notice__spark" aria-hidden="true"><Icon name="spark" size={21} /></span>
+              <strong>{t('YuviStudio.surprise.title')}</strong>
+            </div>
+            <div className="ys-surprise-notice__goal">
+              <span><Icon name="target" size={14} />{t('YuviStudio.surprise.goal')}</span>
+              <bdi dir="auto">{weeklySurprise.goal?.title ?? ''}</bdi>
+            </div>
+            <p>{t('YuviStudio.surprise.notice')}</p>
+          </aside>
         )}
       </section>
       </div>

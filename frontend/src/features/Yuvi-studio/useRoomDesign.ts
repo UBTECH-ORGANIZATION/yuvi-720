@@ -79,6 +79,17 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
     setSelectedUid(null)
   }
 
+  /** A teacher-approved Studio reward becomes ordinary furniture exactly once. */
+  const materializeWeeklyReward = async (uid: string, kind: string, x: number, z: number, rot = 0) => {
+    if (roomRef.current.items.some((item) => item.uid === uid) || !roomItemSpec(kind)) return true
+    const spec = roomItemSpec(kind)!
+    const next = cloneRoom(roomRef.current)
+    next.items.push({ uid, kind, x, z, rot, tint: spec.tintable ? spec.tint : undefined })
+    roomRef.current = next
+    setRoom(next)
+    return save(next)
+  }
+
   const setFloor = (floor: RoomStyleId) => setRoom((prev) => ({ ...prev, floor }))
   const setWall = (wall: WallStyleId) => setRoom((prev) => ({ ...prev, wall }))
   const setMood = (mood: MoodId) => setRoom((prev) => ({ ...prev, mood }))
@@ -150,7 +161,7 @@ export function useRoomDesign(autoLoad = true, reloadKey?: string) {
   return {
     loaded, room, items: room.items, full, dirty, saving, justSaved,
     selectedUid, setSelectedUid, selected,
-    place, move, rotate, tint, remove, clear,
+    place, move, rotate, tint, remove, clear, materializeWeeklyReward,
     setFloor, setWall, setMood, moveStation, rotateStation, completeTutorial, completeIntro, reset, save, load,
   }
 }

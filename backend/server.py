@@ -42,6 +42,7 @@ from app.routes.contact import router as contact_router
 from app.routes.dashboard import router as dashboard_router
 from app.routes.learner_mapping import router as learner_mapping_router
 from app.routes.learner_state import router as learner_state_router
+from app.routes.studio_surprises import router as studio_surprises_router
 from app.routes.learning_catalog import router as learning_catalog_router
 from app.routes.learning_content import router as learning_content_router
 from app.routes.checkin import router as checkin_router
@@ -128,6 +129,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         mentoring_assist, notifications,
         org_repository, school_calendar, teacher_alerts, teacher_insights_store,
         timetable, weekly_digest, wellbeing,
+        studio_surprises,
     )
 
     index_steps = (
@@ -143,6 +145,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         # Read on every open of a student's Notes tab.
         ("teacher_insights", teacher_insights_store.ensure_indexes),
         ("group_digests", weekly_digest.ensure_indexes),
+        ("weekly_studio_surprises", studio_surprises.ensure_indexes),
         # The assistant's audit trail — the only unbounded collection here.
         ("teacher_tool_calls", teacher_tool_registry.ensure_indexes),
         # Read by (learner_id, at) every time a teacher opens the wellbeing tab.
@@ -221,6 +224,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(learner_mapping_router)
     app.include_router(learner_state_router)
+    app.include_router(studio_surprises_router)
     app.include_router(brain_router)
     app.include_router(badges_router)
     app.include_router(xapi_router)

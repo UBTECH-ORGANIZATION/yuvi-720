@@ -112,24 +112,35 @@ async def _screen_room_items(learner_id: str, data: dict) -> None:
     items = room.get("items")
     if not isinstance(items, list):
         return
+    from app.services import studio_surprises
+
+    surprise_kinds = set(studio_surprises.REWARD_KINDS)
     gated = {
         str(item.get("kind"))
         for item in items
         if isinstance(item, dict) and unlocks.is_gated_prop(str(item.get("kind")))
     }
-    if not gated:
+    private_kinds = {
+        str(item.get("kind")) for item in items
+        if isinstance(item, dict) and str(item.get("kind")) in surprise_kinds
+    }
+    if not gated and not private_kinds:
         return
     try:
         held = await unlock_sync.held_props(learner_id)
     except Exception:
         held = set()
-    if gated <= held:
+    permitted_private = {kind for kind in private_kinds if await studio_surprises.can_hold_reward(learner_id, kind)}
+    if gated <= held and private_kinds <= permitted_private:
         return
     room["items"] = [
         item for item in items
         if not (isinstance(item, dict)
                 and unlocks.is_gated_prop(str(item.get("kind")))
                 and str(item.get("kind")) not in held)
+            and not (isinstance(item, dict)
+                 and str(item.get("kind")) in surprise_kinds
+                 and str(item.get("kind")) not in permitted_private)
     ]
 
 

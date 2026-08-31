@@ -1993,6 +1993,11 @@ export function createYuviLabRoom(scene: THREE.Scene, options: LabRoomOptions = 
 
   const update = (t: number, dt: number) => {
     if (!reduceMotion) {
+      for (const built of builtItems.values()) {
+        if (built.kind !== 'weekly_surprise_covered') continue
+        built.object.position.y = FLOOR_Y + Math.abs(Math.sin(t * 1.35)) * 0.06
+        built.object.rotation.z = Math.sin(t * 1.35) * 0.025
+      }
       // The bay breathes: LEDs, floor pool and the light shaft all pulse on
       // slightly different periods so nothing ever looks looped.
       ledMat.emissiveIntensity = 1.35 + Math.sin(t * 1.5) * 0.28

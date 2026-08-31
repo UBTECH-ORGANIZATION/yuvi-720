@@ -768,6 +768,26 @@
 .ys-help__close:focus-visible,
 .ys-help__topic:focus-visible { outline: none; box-shadow: var(--sp-ring, 0 0 0 3px rgba(111, 91, 255, .28)); }
 
+.ys-surprise-notice {
+  position: absolute; inset-block-start: 18px; inset-inline-start: 50%; z-index: 28;
+  inline-size: min(300px, calc(100% - 32px)); transform: translateX(-50%);
+  overflow: hidden; padding: 12px 40px 12px 12px; border: 1px solid rgba(255, 214, 106, .72); border-radius: 8px;
+  background: linear-gradient(118deg, #152553 0%, #284a91 58%, #266f91 100%);
+  box-shadow: 0 18px 42px rgba(6, 12, 42, .45), inset 0 1px rgba(255, 255, 255, .24);
+  animation: ys-surprise-in .34s cubic-bezier(.2, .85, .3, 1.18) both;
+}
+.ys-surprise-notice .ys-help__close { position: absolute; inset-block-start: 7px; inset-inline-end: 7px; z-index: 1; color: rgba(255, 255, 255, .78); }
+.ys-surprise-notice .ys-help__close:hover { background: rgba(255, 255, 255, .15); color: #fff; }
+.ys-surprise-notice__head { display: flex; align-items: center; gap: 9px; }
+.ys-surprise-notice__spark { display: grid; place-items: center; flex: 0 0 auto; inline-size: 34px; block-size: 34px; border: 1px solid rgba(255, 232, 164, .78); border-radius: 50%; color: #ffe3a0; background: rgba(255, 205, 84, .14); box-shadow: 0 0 0 4px rgba(255, 213, 104, .08); }
+.ys-surprise-notice strong { display: block; color: #fff9e8; font-size: 15px; line-height: 1.25; }
+.ys-surprise-notice__goal { margin-block-start: 12px; padding: 9px 10px; border: 1px solid rgba(255, 255, 255, .2); border-radius: 6px; background: rgba(5, 17, 53, .28); }
+.ys-surprise-notice__goal > span { display: flex; align-items: center; gap: 5px; color: #bfeaff; font-size: 11px; font-weight: 800; }
+.ys-surprise-notice bdi { display: block; margin-block-start: 3px; color: #fff; font-size: 14px; font-weight: 900; line-height: 1.35; }
+.ys-surprise-notice p { margin: 10px 0 0; color: #e9f1ff; font-size: 12px; font-weight: 700; line-height: 1.45; text-align: start; }
+@keyframes ys-surprise-in { from { opacity: 0; transform: translate(-50%, -13px) scale(.94); } to { opacity: 1; transform: translateX(-50%) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .ys-surprise-notice { animation: none; } }
+
 /* A chip is a setting (floor, wall, light). A card is a thing you own. Keeping
    those two apart is what stopped the room panel reading as one long list. */
 .ys-chips { display: flex; flex-wrap: wrap; gap: 6px; }
