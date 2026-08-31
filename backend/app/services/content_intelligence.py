@@ -80,13 +80,14 @@ FORBIDDEN_KEYS = frozenset({"correctAnswers", "correct_answers", "correct"})
 #: extractor's capture changes shape (e.g. anchors added): carry-over then
 #: drops the old capture and the component re-queues for browsing, because a
 #: slide whose CONTENT is unchanged would otherwise never gain the new fields.
-CAPTURE_VERSION = 2
+#: v3: decorative-image area floor + the `diagram` region (applets/canvas/svg).
+CAPTURE_VERSION = 3
 
 #: The pointing vocabulary — static on purpose: the coach tool's enum bakes at
 #: import time, and geometry resolution happens server-side per slide. Rects
 #: only, never element text (FORBIDDEN_KEYS/PII safe by construction).
 ANCHOR_REGIONS = frozenset(
-    {"question", "options", "image", "video", "table", "instruction"})
+    {"question", "options", "image", "video", "diagram", "table", "instruction"})
 
 #: Caps applied to enrichment on the way OUT (lookup time), not in the file —
 #: the file keeps the full capture so caps can be tuned without a re-browse.

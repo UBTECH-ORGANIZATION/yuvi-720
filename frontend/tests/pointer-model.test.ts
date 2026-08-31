@@ -38,6 +38,15 @@ test('a too-small box degrades to the glow', () => {
   assert.equal(presentPointer(POINTER, 'frame', 900, 300).mode, 'glow')
 })
 
+test('an aspect too far from the capture degrades to the glow', () => {
+  // capture 1280×860 ≈ 1.49 — a phone-shaped 560×620 box (≈0.9) reflows the
+  // content; fractions no longer land on the same things.
+  const out = presentPointer(POINTER, 'frame', 560, 620)
+  assert.equal(out.mode, 'glow')
+  // A mild drift (desktop lesson area) still renders precisely.
+  assert.equal(presentPointer(POINTER, 'frame', 970, 560).mode, 'rect')
+})
+
 test('tab playback and no pointer render nothing', () => {
   assert.equal(presentPointer(POINTER, 'tab', 900, 600).mode, 'none')
   assert.equal(presentPointer(null, 'frame', 900, 600).mode, 'none')

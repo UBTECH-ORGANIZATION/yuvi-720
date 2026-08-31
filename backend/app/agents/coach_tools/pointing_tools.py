@@ -70,8 +70,8 @@ register(CoachTool(
     description=(
         "הדגשה ויזואלית של אזור במסך הלמידה, מסונכרנת עם התשובה שלך. השתמש/י "
         "כשהלומד/ת שואל/ת על משהו שנראה על המסך, או כשרמז מתייחס לחלק מסוים "
-        "(השאלה, האפשרויות, תמונה, סרטון, טבלה, הוראות). ההודעה שלך צריכה "
-        "להתייחס למה שמודגש, בלי לתאר את פעולת ההדגשה עצמה."
+        "(השאלה, האפשרויות, תמונה, סרטון, תרשים/יישומון, טבלה, הוראות). "
+        "ההודעה שלך צריכה להתייחס למה שמודגש, בלי לתאר את פעולת ההדגשה עצמה."
     ),
     parameters={
         "type": "object",
@@ -80,8 +80,8 @@ register(CoachTool(
                 "type": "string",
                 # Static on purpose (schemas bake at import): the vocabulary is
                 # the region taxonomy, and the handler decides availability.
-                "enum": ["question", "options", "image", "video", "table",
-                         "instruction"],
+                "enum": ["question", "options", "image", "video", "diagram",
+                         "table", "instruction"],
             },
         },
         "required": ["region"],

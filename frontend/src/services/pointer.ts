@@ -18,6 +18,11 @@ export type PointerPresentation =
  *  fractional rects to land on the same content. */
 const MIN_BOX_W = 480
 const MIN_BOX_H = 360
+/** How far the runtime box's aspect may drift from the capture viewport's
+ *  before fractional coordinates stop meaning the same content (a reflowed
+ *  two-column layout, a phone-shaped frame). Beyond it: glow, never a wrong
+ *  rect. */
+const ASPECT_TOLERANCE = 0.35
 
 export function presentPointer(
   pointer: CoachPointerFrame | null,
@@ -29,6 +34,12 @@ export function presentPointer(
   const rect = pointer.rect
   if (!rect || !pointer.no_scroll || boxW < MIN_BOX_W || boxH < MIN_BOX_H) {
     return { mode: 'glow' }
+  }
+  const captureW = pointer.capture_viewport?.w || 0
+  const captureH = pointer.capture_viewport?.h || 0
+  if (captureW > 0 && captureH > 0) {
+    const drift = Math.abs((boxW / boxH) - (captureW / captureH)) / (captureW / captureH)
+    if (drift > ASPECT_TOLERANCE) return { mode: 'glow' }
   }
   const clamp = (value: number) => Math.min(1, Math.max(0, value))
   const clamped = {

@@ -167,18 +167,28 @@ const captureScreen = (frame) => frame.evaluate(() => {
     options: '.h5p-answer, .h5p-alternative, [role="option"], [role="radio"], label:has(input[type="radio"]), select, [role="listbox"]',
     image: 'img',
     video: 'video',
+    // Interactive/graphic surfaces that are NOT <img>: a GeoGebra-style
+    // applet, a plotted grid, a drawn diagram. The area floor below keeps
+    // icon-sized svg/canvas out.
+    diagram: 'canvas, svg, embed, object, iframe',
     table: 'table',
     instruction: '.h5p-question-introduction ~ p, [class*="instruction" i]',
   }
+  // Content must OCCUPY the screen to be pointable — decorative art (the
+  // mascot avatar, corner icons) passes a bare pixel floor and then gets a
+  // highlight that means nothing. Area fractions of the viewport are what
+  // separates a content image (~10%+) from a 90px avatar (<1%).
+  const viewportArea = window.innerWidth * window.innerHeight
+  const areaFraction = (el) => {
+    const r = el.getBoundingClientRect()
+    return (r.width * r.height) / (viewportArea || 1)
+  }
+  const REGION_MIN_AREA = { image: 0.02, video: 0.02, diagram: 0.03 }
   const anchors = []
   for (const [region, selector] of Object.entries(REGION_SELECTORS)) {
     let elements = [...document.querySelectorAll(selector)]
-    if (region === 'image') {
-      elements = elements.filter((img) => {
-        const r = img.getBoundingClientRect()
-        return r.width >= 80 && r.height >= 80
-      })
-    }
+    const minArea = REGION_MIN_AREA[region]
+    if (minArea) elements = elements.filter((el) => areaFraction(el) >= minArea)
     const rect = unionRect(elements)
     if (rect) anchors.push({ region, rect })
   }
